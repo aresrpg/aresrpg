@@ -224,6 +224,37 @@
   border-color: #c8963c;
   background: linear-gradient(135deg, #8b6914, #c8963c, #8b6914);
 }
+/* TARGETS (#2029) — what the run is looking for: a 3-way segmented row, same gold-chip grammar as the
+   pick lists below it, laid out as equal thirds so the choice reads as one control. */
+.gw-asrch__targets {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 4px;
+}
+.gw-asrch__target {
+  padding: 5px 6px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #9ca3af;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 9px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  transition:
+    color 0.2s,
+    border-color 0.2s,
+    background 0.2s;
+}
+.gw-asrch__target:hover {
+  color: #e8c98a;
+  border-color: rgba(200, 150, 60, 0.45);
+}
+.gw-asrch__target--on {
+  color: #17130a;
+  border-color: #c8963c;
+  background: linear-gradient(135deg, #8b6914, #c8963c, #8b6914);
+}
 .gw-asrch__empty {
   color: #6b7280;
   font-size: 9px;

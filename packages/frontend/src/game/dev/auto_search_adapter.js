@@ -43,18 +43,37 @@ import { display_mob_name } from '../../content/mob_name_overrides'
 
 import { zone_world_doc } from '../zone_rows.js'
 
-import { blank_auto_search, reduce_auto_search, zone_key_of } from './auto_search.js'
+import { blank_auto_search, reduce_auto_search, settings_of, zone_key_of } from './auto_search.js'
+import { read_auto_search_settings, save_auto_search_settings } from './auto_search_pref.js'
 
 /** How often the world snapshot is ferried into the fold while the loop is armed. */
 const TICK_MS = 500
 
-/** THE one scouter atom — the fold behind one `input(msg, now)` door (the spawns_adapter idiom). */
+/** Did this fold step change what the player CONFIGURED (as opposed to what the run is doing)? */
+const settings_changed = (before, after) =>
+  before.from_m !== after.from_m ||
+  before.to_m !== after.to_m ||
+  before.targets !== after.targets ||
+  before.wanted !== after.wanted ||
+  before.wanted_resources !== after.wanted_resources
+
+/**
+ * THE one scouter atom — the fold behind one `input(msg, now)` door (the spawns_adapter idiom).
+ *
+ * PERSISTENCE (#2029) is exactly two lines at this edge, and only here: the atom is BORN hydrated from the
+ * saved settings group, and a step that changed that group writes it back. The fold itself stays pure and
+ * knows nothing about storage. The run state is never persisted — arming spends real gas, so it is always
+ * the player's live decision (auto_search_pref.js carries the full reasoning).
+ */
 export const use_auto_search = create((set, get) => ({
   ...blank_auto_search(),
+  ...read_auto_search_settings(),
   input: (input, now = Date.now()) => {
     const state = get()
     const next = reduce_auto_search(state, input, now)
-    if (next !== state) set(next, true)
+    if (next === state) return
+    set(next, true)
+    if (settings_changed(state, next)) save_auto_search_settings(settings_of(next))
   },
 }))
 

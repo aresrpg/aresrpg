@@ -66,20 +66,76 @@ export function AutoSearchRow({ armed, on_toggle, on_config }) {
   )
 }
 
+/** The three things a scouting run can be looking for (#2029) — the fold's own `TARGET_MODES` order. */
+const TARGET_CHOICES = /** @type {const} */ ([
+  { mode: 'mobs', label_key: 'auto_search.targets_mobs' },
+  { mode: 'gatherables', label_key: 'auto_search.targets_gatherables' },
+  { mode: 'both', label_key: 'auto_search.targets_both' },
+])
+
 /**
- * The settings sheet: the scouting annulus (from–to blocks off the world centre) and the wanted mob
- * templates. Portaled to <body> for the same reason every other HUD modal is — every `.gw-panel` sets
- * `backdrop-filter`, which would anchor a fixed child to the panel instead of the viewport.
- * @param {{ from_m: number, to_m: number, wanted: string[],
- *   rows: { template_id: string, name: string }[], loading: boolean,
- *   on_range: (next: { from_m?: number, to_m?: number }) => void,
- *   on_toggle_mob: (template_id: string) => void, on_close: () => void }} props
+ * A pick list: the filtered rows as toggle chips, with an honest empty when nothing matches.
+ * @param {{ rows: { id: string, name: string }[], selected: string[], loading?: boolean,
+ *   empty: string, on_toggle: (id: string) => void }} props
  */
-export function AutoSearchSheet({ from_m, to_m, wanted, rows, loading, on_range, on_toggle_mob, on_close }) {
+function PickList({ rows, selected, loading = false, empty, on_toggle }) {
+  const { t } = useTranslation()
+  return (
+    <div className="gw-asrch__mobs">
+      {rows.map((row) => (
+        <button
+          key={row.id}
+          type="button"
+          className={`gw-asrch__mob${selected.includes(row.id) ? ' gw-asrch__mob--on' : ''}`}
+          aria-pressed={selected.includes(row.id)}
+          onClick={() => on_toggle(row.id)}
+        >
+          {row.name}
+        </button>
+      ))}
+      {rows.length === 0 && <span className="gw-asrch__empty">{loading ? t('common.loading') : empty}</span>}
+    </div>
+  )
+}
+
+/**
+ * The settings sheet: what the run is looking for, the scouting annulus (from–to blocks off the world
+ * centre), and the wanted mob templates / gathering nodes. Portaled to <body> for the same reason every
+ * other HUD modal is — every `.gw-panel` sets `backdrop-filter`, which would anchor a fixed child to the
+ * panel instead of the viewport. Every setting here persists (#2029); arming never does.
+ * @param {{ from_m: number, to_m: number, wanted: string[], wanted_resources: string[],
+ *   targets: 'mobs'|'gatherables'|'both',
+ *   rows: { template_id: string, name: string }[], resource_rows: { id: string, name: string }[],
+ *   loading: boolean,
+ *   on_range: (next: { from_m?: number, to_m?: number }) => void,
+ *   on_targets: (mode: 'mobs'|'gatherables'|'both') => void,
+ *   on_toggle_mob: (template_id: string) => void, on_toggle_resource: (id: string) => void,
+ *   on_close: () => void }} props
+ */
+export function AutoSearchSheet({
+  from_m,
+  to_m,
+  wanted,
+  wanted_resources,
+  targets,
+  rows,
+  resource_rows,
+  loading,
+  on_range,
+  on_targets,
+  on_toggle_mob,
+  on_toggle_resource,
+  on_close,
+}) {
   const { t } = useTranslation()
   const [filter, set_filter] = useState('')
   const term = filter.trim().toLowerCase()
-  const visible = term ? rows.filter((row) => row.name.toLowerCase().includes(term)) : rows
+  const match = (/** @type {{ name: string }[]} */ list) =>
+    term ? list.filter((row) => row.name.toLowerCase().includes(term)) : list
+  const visible = match(rows).map((row) => ({ id: row.template_id, name: row.name }))
+  const visible_resources = match(resource_rows)
+  const shows_mobs = targets === 'mobs' || targets === 'both'
+  const shows_resources = targets === 'gatherables' || targets === 'both'
 
   return createPortal(
     <div className="gw-asrch__backdrop" onClick={on_close}>
@@ -91,6 +147,22 @@ export function AutoSearchSheet({ from_m, to_m, wanted, rows, loading, on_range,
         onClick={(event) => event.stopPropagation()}
       >
         <div className="gw-asrch__title">{t('auto_search.config_title')}</div>
+
+        <div className="gw-asrch__section">{t('auto_search.targets_label')}</div>
+        <div className="gw-asrch__targets" role="radiogroup" aria-label={t('auto_search.targets_label')}>
+          {TARGET_CHOICES.map(({ mode, label_key }) => (
+            <button
+              key={mode}
+              type="button"
+              role="radio"
+              aria-checked={targets === mode}
+              className={`gw-asrch__target${targets === mode ? ' gw-asrch__target--on' : ''}`}
+              onClick={() => on_targets(mode)}
+            >
+              {t(label_key)}
+            </button>
+          ))}
+        </div>
 
         <div className="gw-asrch__section">{t('auto_search.range_label')}</div>
         <div className="gw-asrch__range">
@@ -118,10 +190,6 @@ export function AutoSearchSheet({ from_m, to_m, wanted, rows, loading, on_range,
           </label>
         </div>
 
-        <div className="gw-asrch__section">
-          {t('auto_search.mobs_label')}
-          <span className="gw-asrch__count">{t('auto_search.selected', { count: wanted.length })}</span>
-        </div>
         <input
           type="search"
           className="gw-asrch__filter"
@@ -130,22 +198,37 @@ export function AutoSearchSheet({ from_m, to_m, wanted, rows, loading, on_range,
           aria-label={t('auto_search.mobs_filter')}
           onChange={(event) => set_filter(event.target.value)}
         />
-        <div className="gw-asrch__mobs">
-          {visible.map((row) => (
-            <button
-              key={row.template_id}
-              type="button"
-              className={`gw-asrch__mob${wanted.includes(row.template_id) ? ' gw-asrch__mob--on' : ''}`}
-              aria-pressed={wanted.includes(row.template_id)}
-              onClick={() => on_toggle_mob(row.template_id)}
-            >
-              {row.name}
-            </button>
-          ))}
-          {visible.length === 0 && (
-            <span className="gw-asrch__empty">{loading ? t('common.loading') : t('auto_search.mobs_empty')}</span>
-          )}
-        </div>
+
+        {shows_mobs && (
+          <>
+            <div className="gw-asrch__section">
+              {t('auto_search.mobs_label')}
+              <span className="gw-asrch__count">{t('auto_search.selected', { count: wanted.length })}</span>
+            </div>
+            <PickList
+              rows={visible}
+              selected={wanted}
+              loading={loading}
+              empty={t('auto_search.mobs_empty')}
+              on_toggle={on_toggle_mob}
+            />
+          </>
+        )}
+
+        {shows_resources && (
+          <>
+            <div className="gw-asrch__section">
+              {t('auto_search.gatherables_label')}
+              <span className="gw-asrch__count">{t('auto_search.selected', { count: wanted_resources.length })}</span>
+            </div>
+            <PickList
+              rows={visible_resources}
+              selected={wanted_resources}
+              empty={t('auto_search.gatherables_empty')}
+              on_toggle={on_toggle_resource}
+            />
+          </>
+        )}
 
         <button type="button" className="gw-asrch__done" onClick={on_close}>
           {t('common.close')}

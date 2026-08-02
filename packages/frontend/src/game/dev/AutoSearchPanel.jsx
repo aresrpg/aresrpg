@@ -8,7 +8,9 @@
 // `fee_pending`, and only `fee_confirm` arms the loop. So every enable shows the modal, carried by the
 // house ConfirmDialog (never a native dialog). Opening the settings sheet is a hard stop by the same law.
 
+import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
+import { GATHER_RESOURCES } from '@aresrpg/sdk/jobs'
 
 import { ConfirmDialog } from '../screens/hud/world/ConfirmDialog.jsx'
 
@@ -31,6 +33,19 @@ export function AutoSearchPanel() {
   const from_m = use_auto_search((state) => state.from_m)
   const to_m = use_auto_search((state) => state.to_m)
   const wanted = use_auto_search((state) => state.wanted)
+  const wanted_resources = use_auto_search((state) => state.wanted_resources)
+  const targets = use_auto_search((state) => state.targets)
+
+  // The gathering roster is the sdk's own 3-job × 11-tier table (the SAME rows the jobs panel lists, keyed by
+  // the same items.json slug the zone rows resolve to) — static content, no chain read, no second corpus.
+  const resource_rows = useMemo(
+    () =>
+      Object.values(GATHER_RESOURCES)
+        .flat()
+        .map((resource) => ({ id: resource.id, name: resource.name }))
+        .sort((a, b) => a.name.localeCompare(b.name)),
+    []
+  )
 
   // The roster the sheet picks from — the bestiary's own /v1 door, read only while the sheet is open or a
   // running loop may need to name a find, and SCOPED to the mobs the current world can actually spawn (the
@@ -62,15 +77,27 @@ export function AutoSearchPanel() {
           from_m={from_m}
           to_m={to_m}
           wanted={wanted}
+          wanted_resources={wanted_resources}
+          targets={targets}
           rows={rows}
+          resource_rows={resource_rows}
           loading={loading}
           on_range={(next) => auto_search_input({ type: 'config_set', from_m, to_m, ...next })}
+          on_targets={(mode) => auto_search_input({ type: 'config_set', targets: mode })}
           on_toggle_mob={(template_id) =>
             auto_search_input({
               type: 'config_set',
               wanted: wanted.includes(template_id)
                 ? wanted.filter((id) => id !== template_id)
                 : [...wanted, template_id],
+            })
+          }
+          on_toggle_resource={(resource_id) =>
+            auto_search_input({
+              type: 'config_set',
+              wanted_resources: wanted_resources.includes(resource_id)
+                ? wanted_resources.filter((id) => id !== resource_id)
+                : [...wanted_resources, resource_id],
             })
           }
           on_close={() => auto_search_input({ type: 'config_close' })}

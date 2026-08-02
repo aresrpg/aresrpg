@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 // AUTO-SEARCH (#1106) — the scouting loop's pure core: walk to a zone inside a configured distance
-// annulus, search it, and stop at the first group of a wanted mob template. A small fold over plain data —
+// annulus, search it, and stop at the first WANTED row it reveals — a mob group, a gathering node, or
+// either, per the `targets` axis (#2029). A small fold over plain data —
 // `reduce_auto_search(state, input, now)` — with ZERO effects and no clock of its own. Time is an input.
 //
 // THE SHAPE: every source the loop needs (the player's standing position, the zone grid, the fresh-TTL zone
@@ -11,7 +12,7 @@
 //   [F] lever a human presses) · found (the popup + the alarm + auto-disable) · halt (cancel an in-flight walk) ·
 //   exhausted (no zone left in range — an honest stop).
 //
-// SPEND ORDER: known-rows scan → approach; only when NO revealed zone holds a wanted mob does a leg walk to the
+// SPEND ORDER: known-rows scan → approach; only when NO revealed zone holds a wanted row does a leg walk to the
 // next zone and pay for its search. And an `interrupted` input (the player taking the body back) disarms.
 // Nothing here knows about React, the engine, the chain, or a transaction — that is auto_search_adapter.js.
 //
@@ -20,9 +21,18 @@
 // and a search is single-flight by construction: the fold leaves `search` phase only on a receipt, a
 // failure, or its own timeout — the spawns door's per-zone pending is the second, independent guard.
 
+import { gather_resource_for } from '@aresrpg/sdk/jobs'
+
 /** The default scouting annulus (blocks from the world centre) — the issue's stated defaults. */
 export const DEFAULT_RANGE_FROM_M = 1000
 export const DEFAULT_RANGE_TO_M = 3000
+
+// WHAT THE LOOP IS LOOKING FOR (#2029). A revealed zone shows two kinds of row — mob groups and gathering
+// nodes — and until now only mobs could ever end a run. The axis is an ENUM, not two booleans, because
+// "neither" is not a scouting run: it would burn gas on zone searches that can never stop.
+export const TARGET_MODES = /** @type {const} */ (['mobs', 'gatherables', 'both'])
+/** Today's shipped behaviour stays the default: the loop hunts mobs unless the player says otherwise. */
+export const DEFAULT_TARGETS = 'mobs'
 /** Standing this close to a target group counts as arrived (the auto-run steerer plants well inside it). */
 export const ARRIVE_RADIUS_M = 6
 /** A walk leg that makes no progress for this long is abandoned (cliff / water / player took over). */
@@ -37,11 +47,27 @@ export const zone_key_of = (zx, zy) => `${zx}:${zy}`
 export const zone_center_world = (idx, zone_size, offset) => (idx + 0.5) * zone_size - offset
 
 /**
- * @typedef {{ armed: boolean, fee_pending: boolean, config_open: boolean, from_m: number, to_m: number,
- *   wanted: string[], phase: 'idle'|'travel'|'search'|'scan'|'approach'|'found',
+ * The persisted half of the state — what the player CONFIGURED, as opposed to what a run is doing. The run
+ * state (armed / fee_pending / phase / target) deliberately never leaves memory: see auto_search_pref.js.
+ * @typedef {{ from_m: number, to_m: number, wanted: string[], wanted_resources: string[],
+ *   targets: 'mobs'|'gatherables'|'both' }} AutoSearchSettings
+ */
+
+/**
+ * @typedef {AutoSearchSettings & { armed: boolean, fee_pending: boolean, config_open: boolean,
+ *   phase: 'idle'|'travel'|'search'|'scan'|'approach'|'found',
  *   target: any, leg_at: number, scan_at: number, skipped: string[], found: any,
  *   command: any, seq: number }} AutoSearchState
  */
+
+/** The configured group, lifted out of any state — the one shape the pref module reads and writes. */
+export const settings_of = (/** @type {AutoSearchState} */ state) => ({
+  from_m: state.from_m,
+  to_m: state.to_m,
+  wanted: state.wanted,
+  wanted_resources: state.wanted_resources,
+  targets: state.targets,
+})
 
 /** @returns {AutoSearchState} */
 export const blank_auto_search = () => ({
@@ -51,6 +77,8 @@ export const blank_auto_search = () => ({
   from_m: DEFAULT_RANGE_FROM_M,
   to_m: DEFAULT_RANGE_TO_M,
   wanted: [],
+  wanted_resources: [],
+  targets: DEFAULT_TARGETS,
   phase: 'idle',
   target: null,
   leg_at: 0,
@@ -131,11 +159,34 @@ const in_target_zone = (state, world) => {
   return !!here && here.zx === state.target?.zx && here.zy === state.target?.zy
 }
 
-/** The wanted mob groups the reveal exposed, nearest first. */
+/**
+ * The SELECTION KEY of a revealed row, or null when this row is not something the loop can be told to want.
+ * A mob group is its template id; a gathering node is its roster id — the same items.json slug the jobs
+ * panel lists, derived from the (job, tier) pair the chain row carries. The `targets` axis decides which
+ * kinds are eligible at all, so a mobs-only run never approaches a node it happens to walk past (#2029).
+ */
+const selection_key = (state, marker) => {
+  const wants_mobs = state.targets === 'mobs' || state.targets === 'both'
+  const wants_nodes = state.targets === 'gatherables' || state.targets === 'both'
+  if (marker.kind === 'mob') return wants_mobs ? (marker.template_id ?? null) : null
+  if (marker.kind === 'resource' && wants_nodes) return gather_resource_for(marker.job, marker.tier)?.id ?? null
+  return null
+}
+
+/** The wanted rows the reveal exposed, nearest first — mob groups and/or gathering nodes per `targets`. */
 const wanted_markers = (state, world) =>
   (world.markers ?? [])
-    .filter((m) => m.kind === 'mob' && state.wanted.includes(m.template_id))
-    .map((m) => ({ ...m, reach: distance(world.player.x, world.player.z, Number(m.x), Number(m.z)) }))
+    .map((m) => ({ marker: m, key: selection_key(state, m) }))
+    .filter(
+      ({ marker, key }) =>
+        key !== null &&
+        (marker.kind === 'mob' ? state.wanted : state.wanted_resources).includes(key)
+    )
+    .map(({ marker, key }) => ({
+      ...marker,
+      template_id: key,
+      reach: distance(world.player.x, world.player.z, Number(marker.x), Number(marker.z)),
+    }))
     .sort((a, b) => a.reach - b.reach)
 
 /**
@@ -226,12 +277,18 @@ export function reduce_auto_search(state, input, now) {
       const a = Number.isFinite(Number(input.from_m)) ? Math.max(0, Number(input.from_m)) : state.from_m
       const b = Number.isFinite(Number(input.to_m)) ? Math.max(0, Number(input.to_m)) : state.to_m
       const wanted = Array.isArray(input.wanted) ? input.wanted.map(String) : state.wanted
-      return { ...state, from_m: Math.min(a, b), to_m: Math.max(a, b), wanted }
+      const wanted_resources = Array.isArray(input.wanted_resources)
+        ? input.wanted_resources.map(String)
+        : state.wanted_resources
+      // An unknown mode is ignored rather than stored: `targets` is the enum the whole predicate reads.
+      const targets = TARGET_MODES.includes(input.targets) ? input.targets : state.targets
+      return { ...state, from_m: Math.min(a, b), to_m: Math.max(a, b), wanted, wanted_resources, targets }
     }
 
     // The world's OWN spawn table arrived (or changed with the world): a wanted template that cannot spawn
     // here is not a target, it is an unfindable one — prune it. NEVER widens the selection, and an unknown
     // table (an unread World doc) never reaches this door, so a selection is only ever cut by real truth.
+    // It is the MOB table: the gatherable selection is not its business and is never touched here.
     case 'world_mobs': {
       const allowed = new Set((input.template_ids ?? []).map(String))
       const wanted = state.wanted.filter((id) => allowed.has(id))
