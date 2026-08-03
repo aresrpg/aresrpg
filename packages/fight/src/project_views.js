@@ -2,10 +2,9 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 // fight/project_views.js — pure legacy-shaped board and engine projections.
 
-import { experience_to_level } from '@aresrpg/sdk/experience'
-
 import { GRID_W, GRID_H, decode as decode_xy } from './los.js'
-import { mob_entity_id, participant_entity_id, participant_character_id } from './fight_control.js'
+import { identity_book } from './identity_book.js'
+import { mob_entity_id, participant_entity_id } from './fight_control.js'
 import { claimed_budget_state, committed_truth, display_state, presented_state } from './store.js'
 import { STATUS_ACTIVE, STATUS_FAILED, STATUS_PLACEMENT, STATUS_ROOM_CLEARED, STATUS_WON } from './board_state.js'
 import { fight_fingerprint } from './fingerprint.js'
@@ -34,6 +33,10 @@ import {
 // The END-TURN PRESS LAW moved next to the projections it gates (#1993 train 0 — the view's `turn.input_armed`
 // and control-phase verdict call the one home). Re-exported verbatim: every importer reads them from here.
 export { input_armed, turn_input_armed } from './visible_facts.js'
+// THE ROSTER IDENTITY BOOK (#1993 WP3) — identity is resolved once, in identity_book.js, and this projection is
+// one of its readers rather than a second resolver. Re-exported so a consumer reaches the book and the one label
+// rule through the same door it already imports the projections from.
+export { identity_book, identity_label, short_id } from './identity_book.js'
 
 /** Fighters whose killing damage beat is unacked. This masks rendered liveness only; targeting remains committed. */
 const death_presenting_ids = (s) => {
@@ -59,36 +62,6 @@ const fold_keys_by_entity = (view) => {
   return keys
 }
 
-const character_male = (character) => {
-  if (typeof character?.male === 'boolean') return character.male
-  if (character?.sex === 'male') return true
-  if (character?.sex === 'female') return false
-  return undefined
-}
-
-/** A player fighter's LEVEL off its roster character (the turn card used to hardcode 1, #949). `/v1` serves the
- *  stored progression level once a character has fought (the Progression DF supersedes the frozen genesis
- *  fields); my own `sui.characters` rows carry `experience` only, so the fallback is the same immutable XP curve
- *  the chain runs. No roster row yet (a co-fighter's doc still resolving) → 1, never undefined. */
-const character_level = (character) => {
-  const stored = Number(character?.level)
-  if (Number.isFinite(stored) && stored >= 1) return stored
-  const experience = Number(character?.experience)
-  return Number.isFinite(experience) && experience > 0 ? experience_to_level(experience) : 1
-}
-
-const character_colors = (character) => {
-  if (!character) return null
-  const nested = Array.isArray(character.colors) ? null : character.colors
-  const colors = Array.isArray(character.colors)
-    ? character.colors
-    : [
-        character.color_1 ?? nested?.color_1 ?? 0,
-        character.color_2 ?? nested?.color_2 ?? 0,
-        character.color_3 ?? nested?.color_3 ?? 0,
-      ]
-  return colors.some(Boolean) ? colors : null
-}
 const positive_delta = (value, base) => {
   const delta = Number(value) - Number(base)
   return Number.isFinite(delta) ? Math.max(0, delta) : 0
@@ -278,12 +251,10 @@ export const engine_view = (s, { roster = s.ctx?.roster ?? [] } = {}) => {
       ...(st.flags != null ? { flags: st.flags } : {}),
     }))
   const ctx = s.ctx ?? {}
-  // A mob's display identity is carried by the same stable fighter id every fight surface already uses. Build
-  // this book once per projection; roster order is presentation metadata and may change across phase/viewer
-  // recomposition, so it is never a join key.
-  const mob_identities = new Map()
-  for (const identity of ctx.mob_roster ?? [])
-    if (identity?.id != null) mob_identities.set(String(identity.id), identity)
+  // THE ROSTER IDENTITY BOOK (#1993 WP3) — every fight-visible identity fact, id-keyed, resolved ONCE before this
+  // projection reads any of it. This function no longer chooses between name sources; it looks a row up. The
+  // injected `roster` override stays the door tests/board_fight_authority use, so it enters the book as the ctx.
+  const book = identity_book(view, { ...ctx, roster })
   const map = new Map()
   const ready = new Set()
   for (const [seat, row] of (view.escrow ?? []).entries()) {
@@ -292,17 +263,17 @@ export const engine_view = (s, { roster = s.ctx?.roster ?? [] } = {}) => {
     const post_commit = s.post_commit_budget?.[seat_key(seat)] ?? null
     const f = p.fighters?.[seat_key(seat)] ?? {}
     const cf = c.fighters?.[seat_key(seat)] ?? {}
-    const character_id = participant_character_id(row)
-    const roster_character = roster.find((c) => c.id === character_id)
-    const roster_name = roster_character?.name
-    const male = character_male(roster_character) ?? character_male(row)
+    const identity = book[entity_id]
     if (f.ready ?? row.ready) ready.add(entity_id)
     map.set(entity_id, {
       id: entity_id,
-      owner: row.addr,
-      character_id,
-      name: row.name || roster_name || `${String(row.addr).slice(0, 6)}…${String(row.addr).slice(-4)}`,
-      team: Number(row.team ?? 0), // the CHAIN's side (fight.move seats team 1 only in PvP) — never assumed PvM
+      owner: identity.owner,
+      character_id: identity.character_id,
+      // The book's ONE label rule (`name ?? display_id`). The owner-address slice that used to sit here is gone:
+      // an address is not an identity (#929), and it was one of the three substitutes the same absent row got.
+      name: identity.label,
+      identity_resolved: identity.resolved,
+      team: identity.team,
       // DISPLAY cell — my own walk holds at its pre-move cell until the walk beat presents (the rig follows
       // the run, never teleports to the target ahead of it); health/ap/mp stay the effective/presented fold.
       cell: decode_xy(d.fighters?.[seat_key(seat)]?.cell ?? f.cell ?? row.cell),
@@ -329,19 +300,16 @@ export const engine_view = (s, { roster = s.ctx?.roster ?? [] } = {}) => {
       ap_max: row.base_ap,
       mp: f.mp ?? row.mp,
       mp_max: row.base_mp,
-      level: character_level(roster_character),
+      level: identity.level,
       is_player: true,
       dead:
         !death_hold.has(entity_id) &&
         ((s.busy && s.optimistic_dead?.[seat_key(seat)] != null) || (f.hp != null ? !f.alive : !row.alive)),
-      class_id: row.classe || roster_character?.classe || roster_character?.class || undefined,
-      sex: male == null ? undefined : male ? 'male' : 'female',
-      male,
-      hue: 0, // was color_to_hue(0) ≡ 0 — a constant call; the game/data/color edge died with the promotion
-      // The roster edge is deliberately shape-tolerant: owned/enriched cards carry flat color_N fields while
-      // raw /v1 teammate docs carry them under `colors`. All-zero means "use the authored base texture", exactly
-      // like the roam avatar; `hue` stays the legacy 2D-sprite value above.
-      colors: character_colors(roster_character) ?? character_colors(row),
+      class_id: identity.class_id,
+      sex: identity.sex,
+      male: identity.male,
+      hue: identity.hue,
+      colors: identity.colors,
       invisible: !!f.invisible,
     })
   }
@@ -349,22 +317,16 @@ export const engine_view = (s, { roster = s.ctx?.roster ?? [] } = {}) => {
     const entity_id = mob_entity_id(i)
     const f = p.fighters?.[mob_key(i)] ?? {}
     const cf = c.fighters?.[mob_key(i)] ?? {}
-    // WORLD IDENTITY ROSTER — a claim already composed and rendered the seated templates. That roster crosses
-    // the fight's ctx input keyed by the fold fighter id and wins here; the shared group template remains the
-    // dungeon/legacy fallback. Projection reads ctx directly so identity can heal without re-decoding the chain
-    // snapshot, and an array reorder cannot rename a living fighter mid-fight (#1608).
-    const identity = mob_identities.get(entity_id) ?? null
-    const template = identity?.template_id || m.template || mob_entity_id(i)
-    const mapped_name = view.mob_names?.[template] || null
+    // The book resolved this mob's species and name already (world identity roster → its own chain template;
+    // never the shared group template, #1865). The renderer uses `identity_resolved` to keep the honest id text
+    // on its built-in capsule without requesting the fake hy__missing GLB.
+    const identity = book[entity_id]
     map.set(entity_id, {
       id: entity_id,
-      variant: template,
-      // A missing display read must name the actual template id, never invent the literal "Mob". The renderer
-      // uses identity_resolved to keep that honest text fallback on its built-in capsule without requesting the
-      // fake hy__missing GLB.
-      name: identity?.name || mapped_name || template,
-      identity_resolved: identity?.name != null || mapped_name != null,
-      team: 1,
+      variant: identity.template,
+      name: identity.label,
+      identity_resolved: identity.resolved,
+      team: identity.team,
       cell: decode_xy(d.fighters?.[mob_key(i)]?.cell ?? f.cell ?? m.cell), // DISPLAY cell (walk-hold)
       health: f.hp ?? m.hp,
       presented_health: wave_presenting ? (f.hp ?? m.hp) : (cf.hp ?? m.hp),
@@ -380,12 +342,12 @@ export const engine_view = (s, { roster = s.ctx?.roster ?? [] } = {}) => {
       ap_max: m.base_ap ?? 0,
       mp: m.mp ?? 0,
       mp_max: m.base_mp ?? 0,
-      level: m.level || 1,
+      level: identity.level,
       is_player: false,
       dead:
         !death_hold.has(entity_id) &&
         ((s.busy && s.optimistic_dead?.[mob_key(i)] != null) || (f.hp != null ? !f.alive : !m.alive)),
-      element: Number(identity?.element ?? m.element),
+      element: identity.element,
       invisible: !!f.invisible,
     })
   })
@@ -546,7 +508,8 @@ const build_visible_view = (s) => {
   const view = s?.view ?? null
   const engine = view ? engine_view(s) : null
   const committed = committed_truth(s)
-  const entities = visible_entities(s, engine, fold_keys_by_entity(view))
+  // The ONE identity resolution, shared by both readers: `engine_view` above built its rows off this same book.
+  const entities = visible_entities(s, engine, fold_keys_by_entity(view), identity_book(view, s?.ctx ?? {}))
   const active_entity_id = engine?.active_entity_id ?? null
   const status = view ? projected_status(s) : null
 

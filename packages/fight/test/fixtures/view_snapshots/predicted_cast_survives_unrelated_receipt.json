@@ -112,14 +112,17 @@
             "character_id": "0xchar_a",
             "class_id": "warrior",
             "colors": null,
+            "display_id": "0xchar_a",
             "element": null,
             "hue": 0,
             "is_player": true,
+            "label": "0xchar_a",
             "level": 1,
             "male": null,
-            "name": "0xa11c…11ce",
+            "name": null,
             "owner": "0xa11ce",
-            "resolved": true,
+            "resolved": false,
+            "seat": 0,
             "sex": null,
             "team": 0,
             "template": null
@@ -154,14 +157,17 @@
             "character_id": null,
             "class_id": null,
             "colors": null,
+            "display_id": "0xmob_t",
             "element": 255,
             "hue": null,
             "is_player": false,
+            "label": "0xmob_t",
             "level": 3,
             "male": null,
-            "name": "0xmob_t",
+            "name": null,
             "owner": null,
             "resolved": false,
+            "seat": null,
             "sex": null,
             "team": 1,
             "template": "0xmob_t"
@@ -193,7 +199,9 @@
         "sim_active": false,
         "viewer": {
           "address": "0xa11ce",
-          "controlled_entity_ids": ["0xchar_a"],
+          "controlled_entity_ids": [
+            "0xchar_a"
+          ],
           "my_entity_id": "0xchar_a",
           "my_key": "p0",
           "spectator": false
@@ -235,7 +243,10 @@
         "input_armed": true,
         "is_my_turn": true,
         "my_turn_no": 1,
-        "order": ["0xchar_a", "mob-0"],
+        "order": [
+          "0xchar_a",
+          "mob-0"
+        ],
         "phase": "active",
         "placement": false,
         "placement_cells": {
@@ -285,14 +296,17 @@
             "character_id": "0xchar_a",
             "class_id": "warrior",
             "colors": null,
+            "display_id": "0xchar_a",
             "element": null,
             "hue": 0,
             "is_player": true,
+            "label": "0xchar_a",
             "level": 1,
             "male": null,
-            "name": "0xa11c…11ce",
+            "name": null,
             "owner": "0xa11ce",
-            "resolved": true,
+            "resolved": false,
+            "seat": 0,
             "sex": null,
             "team": 0,
             "template": null
@@ -327,14 +341,17 @@
             "character_id": null,
             "class_id": null,
             "colors": null,
+            "display_id": "0xmob_t",
             "element": 255,
             "hue": null,
             "is_player": false,
+            "label": "0xmob_t",
             "level": 3,
             "male": null,
-            "name": "0xmob_t",
+            "name": null,
             "owner": null,
             "resolved": false,
+            "seat": null,
             "sex": null,
             "team": 1,
             "template": "0xmob_t"
@@ -366,7 +383,9 @@
         "sim_active": false,
         "viewer": {
           "address": "0xa11ce",
-          "controlled_entity_ids": ["0xchar_a"],
+          "controlled_entity_ids": [
+            "0xchar_a"
+          ],
           "my_entity_id": "0xchar_a",
           "my_key": "p0",
           "spectator": false
@@ -408,7 +427,10 @@
         "input_armed": true,
         "is_my_turn": true,
         "my_turn_no": 1,
-        "order": ["0xchar_a", "mob-0"],
+        "order": [
+          "0xchar_a",
+          "mob-0"
+        ],
         "phase": "active",
         "placement": false,
         "placement_cells": {
@@ -458,14 +480,17 @@
             "character_id": "0xchar_a",
             "class_id": "warrior",
             "colors": null,
+            "display_id": "0xchar_a",
             "element": null,
             "hue": 0,
             "is_player": true,
+            "label": "0xchar_a",
             "level": 1,
             "male": null,
-            "name": "0xa11c…11ce",
+            "name": null,
             "owner": "0xa11ce",
-            "resolved": true,
+            "resolved": false,
+            "seat": 0,
             "sex": null,
             "team": 0,
             "template": null
@@ -500,14 +525,17 @@
             "character_id": null,
             "class_id": null,
             "colors": null,
+            "display_id": "0xmob_t",
             "element": 255,
             "hue": null,
             "is_player": false,
+            "label": "0xmob_t",
             "level": 3,
             "male": null,
-            "name": "0xmob_t",
+            "name": null,
             "owner": null,
             "resolved": false,
+            "seat": null,
             "sex": null,
             "team": 1,
             "template": "0xmob_t"
@@ -539,7 +567,9 @@
         "sim_active": false,
         "viewer": {
           "address": "0xa11ce",
-          "controlled_entity_ids": ["0xchar_a"],
+          "controlled_entity_ids": [
+            "0xchar_a"
+          ],
           "my_entity_id": "0xchar_a",
           "my_key": "p0",
           "spectator": false
@@ -581,7 +611,10 @@
         "input_armed": true,
         "is_my_turn": true,
         "my_turn_no": 1,
-        "order": ["0xchar_a", "mob-0"],
+        "order": [
+          "0xchar_a",
+          "mob-0"
+        ],
         "phase": "active",
         "placement": false,
         "placement_cells": {
@@ -631,14 +664,17 @@
             "character_id": "0xchar_a",
             "class_id": "warrior",
             "colors": null,
+            "display_id": "0xchar_a",
             "element": null,
             "hue": 0,
             "is_player": true,
+            "label": "0xchar_a",
             "level": 1,
             "male": null,
-            "name": "0xa11c…11ce",
+            "name": null,
             "owner": "0xa11ce",
-            "resolved": true,
+            "resolved": false,
+            "seat": 0,
             "sex": null,
             "team": 0,
             "template": null
@@ -673,14 +709,17 @@
             "character_id": null,
             "class_id": null,
             "colors": null,
+            "display_id": "0xmob_t",
             "element": 255,
             "hue": null,
             "is_player": false,
+            "label": "0xmob_t",
             "level": 3,
             "male": null,
-            "name": "0xmob_t",
+            "name": null,
             "owner": null,
             "resolved": false,
+            "seat": null,
             "sex": null,
             "team": 1,
             "template": "0xmob_t"
@@ -712,7 +751,9 @@
         "sim_active": false,
         "viewer": {
           "address": "0xa11ce",
-          "controlled_entity_ids": ["0xchar_a"],
+          "controlled_entity_ids": [
+            "0xchar_a"
+          ],
           "my_entity_id": "0xchar_a",
           "my_key": "p0",
           "spectator": false
@@ -754,7 +795,10 @@
         "input_armed": false,
         "is_my_turn": true,
         "my_turn_no": 1,
-        "order": ["0xchar_a", "mob-0"],
+        "order": [
+          "0xchar_a",
+          "mob-0"
+        ],
         "phase": "active",
         "placement": false,
         "placement_cells": {
@@ -804,14 +848,17 @@
             "character_id": "0xchar_a",
             "class_id": "warrior",
             "colors": null,
+            "display_id": "0xchar_a",
             "element": null,
             "hue": 0,
             "is_player": true,
+            "label": "0xchar_a",
             "level": 1,
             "male": null,
-            "name": "0xa11c…11ce",
+            "name": null,
             "owner": "0xa11ce",
-            "resolved": true,
+            "resolved": false,
+            "seat": 0,
             "sex": null,
             "team": 0,
             "template": null
@@ -846,14 +893,17 @@
             "character_id": null,
             "class_id": null,
             "colors": null,
+            "display_id": "0xmob_t",
             "element": 255,
             "hue": null,
             "is_player": false,
+            "label": "0xmob_t",
             "level": 3,
             "male": null,
-            "name": "0xmob_t",
+            "name": null,
             "owner": null,
             "resolved": false,
+            "seat": null,
             "sex": null,
             "team": 1,
             "template": "0xmob_t"
@@ -885,7 +935,9 @@
         "sim_active": false,
         "viewer": {
           "address": "0xa11ce",
-          "controlled_entity_ids": ["0xchar_a"],
+          "controlled_entity_ids": [
+            "0xchar_a"
+          ],
           "my_entity_id": "0xchar_a",
           "my_key": "p0",
           "spectator": false
@@ -927,7 +979,10 @@
         "input_armed": true,
         "is_my_turn": true,
         "my_turn_no": 2,
-        "order": ["0xchar_a", "mob-0"],
+        "order": [
+          "0xchar_a",
+          "mob-0"
+        ],
         "phase": "active",
         "placement": false,
         "placement_cells": {
@@ -977,14 +1032,17 @@
             "character_id": "0xchar_a",
             "class_id": "warrior",
             "colors": null,
+            "display_id": "0xchar_a",
             "element": null,
             "hue": 0,
             "is_player": true,
+            "label": "0xchar_a",
             "level": 1,
             "male": null,
-            "name": "0xa11c…11ce",
+            "name": null,
             "owner": "0xa11ce",
-            "resolved": true,
+            "resolved": false,
+            "seat": 0,
             "sex": null,
             "team": 0,
             "template": null
@@ -1019,14 +1077,17 @@
             "character_id": null,
             "class_id": null,
             "colors": null,
+            "display_id": "0xmob_t",
             "element": 255,
             "hue": null,
             "is_player": false,
+            "label": "0xmob_t",
             "level": 3,
             "male": null,
-            "name": "0xmob_t",
+            "name": null,
             "owner": null,
             "resolved": false,
+            "seat": null,
             "sex": null,
             "team": 1,
             "template": "0xmob_t"
@@ -1058,7 +1119,9 @@
         "sim_active": false,
         "viewer": {
           "address": "0xa11ce",
-          "controlled_entity_ids": ["0xchar_a"],
+          "controlled_entity_ids": [
+            "0xchar_a"
+          ],
           "my_entity_id": "0xchar_a",
           "my_key": "p0",
           "spectator": false
@@ -1100,7 +1163,10 @@
         "input_armed": true,
         "is_my_turn": true,
         "my_turn_no": 2,
-        "order": ["0xchar_a", "mob-0"],
+        "order": [
+          "0xchar_a",
+          "mob-0"
+        ],
         "phase": "active",
         "placement": false,
         "placement_cells": {

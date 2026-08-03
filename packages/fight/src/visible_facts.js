@@ -89,23 +89,30 @@ const snapshot_cell_of = (view, key) => {
  * choosing between `health`, `presented_health` and `committed_health` at every call site.
  * @param {any} s the fight store state @param {any} engine the engine view, or null before a board is adopted
  * @param {Map<string, string>} keys entity id → thin-fold key (built by the projections' own key constructors)
+ * @param {Record<string, any>} book the roster identity book — identity resolved once, id-keyed (#1993 WP3)
  */
-export const visible_entities = (s, engine, keys) => {
+export const visible_entities = (s, engine, keys, book = {}) => {
   const view = s?.view ?? null
   const entities = {}
   for (const [entity_id, fighter] of engine?.fighters ?? []) {
     const key = keys.get(entity_id) ?? null
+    const identity = book[entity_id] ?? null
     entities[entity_id] = {
       id: entity_id,
-      // IDENTITY as currently resolved: a player's name/class/appearance off the chain escrow row healed by the
-      // ctx roster; a mob's off the id-keyed `ctx.mob_roster`, then the group template map, then its own
-      // template id. `resolved` stays honest — an unresolved row names its template, never another creature.
+      // IDENTITY — the roster identity book's row, verbatim. This view does not re-resolve anything and holds no
+      // fallback of its own: `name` is the AUTHORED name or null (absence stays an id), `display_id` is the honest
+      // id to show instead, and `label` is the one rule (`name ?? display_id`) already applied. A surface renders
+      // `label` and branches on `resolved` — it never invents a substitute, which is how two surfaces used to
+      // render one absent fighter under two different names (#1865).
       identity: {
-        name: fighter.name,
+        name: identity?.name ?? null,
+        display_id: identity?.display_id ?? null,
+        label: identity?.label ?? null,
+        resolved: !!identity?.resolved,
         team: fighter.team,
         is_player: fighter.is_player,
         level: fighter.level,
-        resolved: fighter.is_player ? true : !!fighter.identity_resolved,
+        seat: identity?.seat ?? null,
         owner: fighter.owner ?? null,
         character_id: fighter.character_id ?? null,
         template: fighter.variant ?? null,

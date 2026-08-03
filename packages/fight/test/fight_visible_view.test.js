@@ -226,7 +226,14 @@ describe('#1993 train 0 — every field is AT CURRENT PARITY with the fragment t
   test('entities mirror the engine_view fighter rows, regrouped and named', () => {
     for (const [id, row] of Object.entries(view.entities)) {
       const fighter = engine.fighters.get(id)
-      expect(row.identity.name).toBe(fighter.name)
+      // #1993 WP3 — the legacy row's `name` IS the book's applied label, so every surface reading either one
+      // sees the SAME string. `identity.name` is the stricter fact: the AUTHORED name, or null when it is
+      // genuinely absent — and then `label` falls back to `display_id`, the id, never a substitute. This fixture
+      // carries no escrow name and no ctx roster, so its seat is honestly unresolved and takes that arm.
+      expect(row.identity.label).toBe(fighter.name)
+      expect(row.identity.resolved).toBe(row.identity.name != null)
+      expect(row.identity.label).toBe(row.identity.name ?? row.identity.display_id)
+      expect(row.identity.display_id).not.toBe(null)
       expect(row.identity.team).toBe(fighter.team)
       expect(row.identity.level).toBe(fighter.level)
       expect(row.cells.xy).toEqual(fighter.cell)
