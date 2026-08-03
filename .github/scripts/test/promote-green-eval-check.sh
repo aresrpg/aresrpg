@@ -119,12 +119,15 @@ expect_contains "missing-smoke" smoke "$RUNS" "$SMALL_SET"
 RUNS='[]'
 expect_contains "empty-fails-closed" "build, lint, smoke" "$RUNS" "$SMALL_SET"
 
-# ── 6. stale failed + fresh success under the SAME name → not (a re-run must not shadow the
-#      leftover failed run; gate 1 scans ALL existing check-runs, not just the newest per name) ─
-RUNS=$(runs_array \
-  "$(check_run build completed failure)" \
-  "$(check_run build completed success)")
-expect_prefix "stale-failure-not-shadowed" not-green "$RUNS" "$(jq -nc '["build"]')"
+# ── 6. issue #2011, the exact no-issue queue wedge: checks.yml re-runs on one head, so the API
+#      keeps an older failure beside a newer success under the SAME name. The replacement run is
+#      the name's verdict; the stale failure must not strand the PR. The fixture records the two
+#      live reproductions and carries ids/times so "latest" is data, never array-order folklore. ─
+SAME_NAME_RERUN=$(cat "${SCRIPT_DIR}/fixtures/two-same-named-runs.check-runs.json")
+expect_prefix "newer-same-named-success-replaces-stale-failure" green "$SAME_NAME_RERUN" "$(jq -nc '["smoke"]')"
+# API ordering is not part of the evaluator's contract: the run id still identifies the newer row.
+expect_prefix "same-named-selection-is-order-independent" green \
+  "$(jq -c '.check_runs |= reverse' <<<"$SAME_NAME_RERUN")" "$(jq -nc '["smoke"]')"
 
 # ── 7. skipped/neutral count as green (parity with the original assert's allowance) → green ─
 RUNS=$(runs_array \

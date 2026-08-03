@@ -14,13 +14,13 @@
 # (`select(.conclusion != "success" and ...)`), so a required check that simply hadn't been
 # CREATED yet was invisible to it and read as clean — a still-red landing could fast-forward.
 #
-# THE FIX: two independent gates, both must hold.
-#   1. EXISTING — unchanged from the original assert: no check-run that exists on the SHA may be
-#      non-green (a completed failure, or one still queued/in_progress, i.e. conclusion == null).
-#   2. REQUIRED — every name in REQUIRED_CHECKS must have at least one check-run on the SHA that
-#      is `status == completed` with a green conclusion. A name with ZERO matching check-runs
-#      (never registered, or registered but not yet completed) is MISSING and fails closed — this
-#      is the half that catches the race.
+# THE FIX: select the latest check-run per NAME, then apply two independent gates; both must hold.
+#   1. EXISTING — no latest check-run may be non-green (a completed failure, or one still
+#      queued/in_progress, i.e. conclusion == null). An older attempt of that same named check is
+#      history, not a second verdict: `no-issue` legitimately re-fires checks.yml on one head.
+#   2. REQUIRED — every name in REQUIRED_CHECKS must have a latest check-run on the SHA that is
+#      `status == completed` with a green conclusion. A name with ZERO matching check-runs (never
+#      registered) is MISSING and fails closed — this is the half that catches the original race.
 #   An empty check-runs response fails closed via gate 2: every required name is missing.
 #
 # Sourced by promote-land.sh (the real engine) and by test/promote-green-eval-check.sh (canned `gh
@@ -140,6 +140,16 @@ evaluate_green() {
           )
         ) ]
       end' <<<"$runs")
+  # A check-run id is minted for each attempt, so the greatest id is the replacement verdict for
+  # that name. started_at and input position keep short synthetic fixtures deterministic when they
+  # omit ids; production API rows always carry one. Collapse AFTER provenance filtering so a
+  # foreign app/context can neither satisfy a name nor shadow its genuine run.
+  runs=$(jq -c '
+      to_entries
+      | sort_by(.value.name, (.value.id // 0), (.value.started_at // ""), .key)
+      | group_by(.value.name)
+      | map(last.value)
+    ' <<<"$runs")
 
   not_green_count=$(jq '[.[] | select(.conclusion != "success" and .conclusion != "skipped" and .conclusion != "neutral")] | length' <<<"$runs")
   if [ "$not_green_count" != "0" ]; then
