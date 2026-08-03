@@ -62,7 +62,16 @@ const PENDING_WINDOW_KINDS = new Set([
 ])
 
 const fighter_id_from = (event, role, resolve_fighter_id) => {
-  const prefix = role === 'caster' ? 'caster' : role === 'victim' ? 'victim' : role === 'target' ? 'target' : null
+  const prefix =
+    role === 'caster'
+      ? 'caster'
+      : role === 'victim'
+        ? 'victim'
+        : role === 'target'
+          ? 'target'
+          : role === 'fighter'
+            ? 'fighter'
+            : null
   const is_mob = role === 'mob' ? true : prefix ? !!event[`${prefix}_is_mob`] : !!event.is_mob
   const idx = Number(prefix ? event[`${prefix}_idx`] : event.idx)
   const character = role === 'mover' ? event.character : undefined
@@ -371,7 +380,7 @@ export function produce_receipt_render_turns(
     }
     for (const event of effects.filter((candidate) => candidate.kind === 'StanceChanged'))
       append_to(turn, 'status', 0, {
-        target_id: fighter_id_from(event, 'target', resolve_fighter_id),
+        target_id: fighter_id_from(event, 'fighter', resolve_fighter_id),
         status: 'STANCE',
         source_event: event,
       })

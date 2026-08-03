@@ -176,6 +176,33 @@ describe('predicted fight render events', () => {
 })
 
 describe('receipt fight render events', () => {
+  test('StanceChanged resolves its fighter seat to the real participant entity id', () => {
+    const participant_ids = ['0xcharacter-a', '0xcharacter-b']
+    const raw_events = [
+      // Real chain shape: fight_events.move's StanceChanged struct names fighter_is_mob/fighter_idx;
+      // decode_fight_event consumes the SDK's raw { type, parsedJson } event envelope.
+      {
+        type: '0xENGINE::fight_events::StanceChanged',
+        parsedJson: {
+          fight: 'fight-1',
+          fighter_is_mob: false,
+          fighter_idx: '1',
+          stance: '27',
+          active: true,
+        },
+      },
+      {
+        type: '0xENGINE::fight_events::Cast',
+        parsedJson: { fight: 'fight-1', caster_is_mob: false, caster_idx: '0', target_cell: '1' },
+      },
+    ]
+    const resolve_fighter_id = ({ is_mob, idx }) => (is_mob ? `mob-${idx}` : (participant_ids[idx] ?? `player-${idx}`))
+    const receipt = produce_receipt_render_turns(raw_events, { fight_id: 'fight-1', resolve_fighter_id })
+    const stance = receipt.events.find((event) => event.payload.status === 'STANCE')
+
+    expect(stance?.payload.target_id).toBe('0xcharacter-b')
+  })
+
   // RED-FIRST ingestion assert: move_path is a resolver-or-null. A
   // non-null non-function — a producer handing a raw PATH ARRAY — is the exact v1.12.28 P0 (`move_path?.(…)` on an
   // array throws and takes the whole fight render down). The boundary guard (fight_render_events.js:525) must throw
