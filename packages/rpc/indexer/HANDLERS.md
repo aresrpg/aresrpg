@@ -616,14 +616,16 @@ Doc `rpc:fight:{fight}`, char→fight pointer `rpc:char_fight:{character}`, worl
 { "fight":"0x…", "world":"0x…", "spawn_id":"77",           // FightCreated (spawn_id: u64 → string)
   "anchor_x":100, "anchor_z":200, "public_fight":true, "aged_bp":500, "mob_count":3,
   "status":"placement"|"active"|"victory"|"defeat",
-  "participants": { "0x…char": <seat u64>, … },            // FightJoined (idempotent map)
+  "participants": { "0x…char": { "seat":<u64>, "state":"active"|"left" }, … },
+                                                               // FightJoined / Abandoned
   "current_turn": { "is_mob":false, "idx":0, "deadline_ms":0 } | null } // TurnStarted
 ```
 
 | Event | Fields | Redis writes |
 | --- | --- | --- |
 | `FightCreated` | fight, world, spawn_id, anchor_x, anchor_z, public_fight, aged_bp, mob_count | `SET rpc:fight:{fight}` (`status:"placement"`, empty roster); `SADD idx:fights:{world}` |
-| `FightJoined` | fight, character, seat | NX skeleton; `SET $.participants["{character}"] {seat}`; `SET rpc:char_fight:{character} "{fight}"` |
+| `FightJoined` | fight, character, seat | NX skeleton; `SET $.participants["{character}"] {seat,state:"active"}`; `SET rpc:char_fight:{character} "{fight}"` |
+| `Abandoned` | fight, character, seat | preserve the seat; `SET $.participants["{character}"] {seat,state:"left"}` |
 | `TurnStarted` | fight, is_mob, idx, deadline_ms | `SET $.status "active"`; `SET $.current_turn` |
 | `Victory` | fight, aged_bp | `SET $.status "victory"` |
 | `Defeat` | fight | `SET $.status "defeat"` |
@@ -844,7 +846,9 @@ Terminal events that **omit** the membership key force read-time cleanup:
   FightOutcome — no event links the outcome id to the new FightResult id, so it CANNOT be dropped
   or flipped from events alone (the opened truth lands on the NEW ticket doc). A client must treat
   a stale `opened:false` row whose object no longer exists as consumed (pre-flight refuses it).
-- `rpc:char_fight:{character}` is never cleared (terminal events omit the roster); a dangling
+- `rpc:char_fight:{character}` is never cleared: it is only a locator, while participant state
+  is the one liveness fact. `/v1/fights?character=` requires the pointed document's participant
+  state to be `active`; `left` does not match. After a terminal event omits the roster, a dangling
   pointer resolves to a **missing** fight doc → "no active fight" (a refight overwrites it).
 
 **`rpc:idx:runs:{owner}` is NOT in this class** — `RunEnded` carries `player`, so its `SREM` is

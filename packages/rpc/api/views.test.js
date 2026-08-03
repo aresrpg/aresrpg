@@ -537,7 +537,10 @@ beforeAll(async () => {
     aged_bp: 500,
     mob_count: 3,
     status: 'active',
-    participants: { [CH]: 0, [CH2]: 1 },
+    participants: {
+      [CH]: { seat: 0, state: 'active' },
+      [CH2]: { seat: 1, state: 'left' },
+    },
     current_turn: { is_mob: false, idx: 0, deadline_ms: 1700000000000 },
     mob_positions: { 2: 15 }, // mob at slot idx 2 last moved to cell 15 (fight_events::MobMoved)
   })
@@ -1330,8 +1333,8 @@ describe('fights', () => {
     expect(f.spawn_id).toBe('77')
     expect(f.anchor).toEqual({ x: 100, z: 200 })
     expect(f.participants).toEqual([
-      { character: CH, seat: 0 },
-      { character: CH2, seat: 1 },
+      { character: CH, seat: 0, state: 'active' },
+      { character: CH2, seat: 1, state: 'left' },
     ])
     expect(f.current_turn).toEqual({ is_mob: false, idx: 0, deadline_ms: 1700000000000 })
     // MobMoved projection: each mob's latest cell, idx-sorted (a mob has no p2p presence).
@@ -1346,15 +1349,26 @@ describe('fights', () => {
     // so no other test sees it) — proves a pre-MobMoved doc still shapes cleanly. It also has NO
     // group_template doc (no matching (world, spawn_id)) → the join serves null → the honest fallback.
     const NOMOB = '0x0000000000000000000000000000000000000000000000000000000000000f1b'
-    await setj(`rpc:fight:${NOMOB}`, { fight: NOMOB, world: WORLD, status: 'placement' })
+    await setj(`rpc:fight:${NOMOB}`, {
+      fight: NOMOB,
+      world: WORLD,
+      status: 'placement',
+      participants: { [CH]: 2 }, // pre-state indexer document
+    })
     const { data } = await handle_fights(P({ id: NOMOB }))
     expect(data.fights[0].mob_positions).toEqual([])
     expect(data.fights[0].group_template).toBeNull()
+    expect(data.fights[0].participants).toEqual([{ character: CH, seat: 2, state: 'active' }])
   })
 
-  test('by character resolves via the char→fight pointer', async () => {
-    const { data } = await handle_fights(P({ character: CH2 }))
+  test('by character resolves an active participant via the char→fight pointer', async () => {
+    const { data } = await handle_fights(P({ character: CH }))
     expect(data.fights.map((f) => f.fight_id)).toEqual([FIGHT_A])
+  })
+
+  test('by character excludes a left participant while the fight keeps the historical seat', async () => {
+    const { data } = await handle_fights(P({ character: CH2 }))
+    expect(data.fights).toEqual([])
   })
 
   test('by character with a dangling pointer (fight settled) returns empty', async () => {

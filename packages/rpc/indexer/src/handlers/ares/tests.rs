@@ -1397,9 +1397,45 @@ fn fight_joined_maps_seat_and_reverse_pointer() {
         w,
         vec![
             set_nx(key.clone(), "$", json!({ "fight": fs, "participants": {} })),
-            set(key, &format!("$.participants[\"{cs}\"]"), json!(1)),
+            set(
+                key,
+                &format!("$.participants[\"{cs}\"]"),
+                json!({ "seat": 1, "state": "active" }),
+            ),
             set(k_char_fight(&cs), "$", json!(fs)),
         ]
+    );
+}
+
+// #2147 captured journal shape: Abandoned { fight, character, seat: 0 }.
+// The live evidence redacts the middle of both ids, so those bytes are zero-filled here;
+// the visible endpoints, field order, widths, and seat are pinned independently of the
+// Rust encoder. This is deliberately raw BCS, following the captured-wire fixtures below.
+const ABANDONED_WIRE: &[u8] = &[
+    165, 209, 10, 33, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 102,
+    213, 192, 189, 105, 221, 34, 145, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 104, 83, 182, 0, 0, 0, 0, 0, 0, 0, 0,
+];
+
+#[test]
+fn abandoned_captured_journal_shape_marks_seat_left() {
+    let writes = map("fight_events", "Abandoned", PKG, SENDER, TS, ABANDONED_WIRE).unwrap();
+    let fight_bytes: [u8; 32] = ABANDONED_WIRE[..32].try_into().unwrap();
+    let character_bytes: [u8; 32] = ABANDONED_WIRE[32..64].try_into().unwrap();
+    let fight = ObjectID::from_bytes(fight_bytes)
+        .unwrap()
+        .to_canonical_string(true);
+    let character = ObjectID::from_bytes(character_bytes)
+        .unwrap()
+        .to_canonical_string(true);
+
+    assert_eq!(
+        writes,
+        vec![set(
+            k_fight(&fight),
+            &format!("$.participants[\"{character}\"]"),
+            json!({ "seat": 0, "state": "left" }),
+        )]
     );
 }
 

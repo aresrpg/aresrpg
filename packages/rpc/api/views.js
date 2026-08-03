@@ -1079,18 +1079,26 @@ export async function handle_dungeon_runs(params, dungeon_run_reads = dungeon_ru
 //   { fight, world, spawn_id (string — u64 id), anchor_x, anchor_z,
 //     public_fight, aged_bp, mob_count,
 //     status: "placement"|"active"|"victory"|"defeat",   // lifecycle events
-//     participants: { "<character id>": <seat number>, … },  // FightJoined, idempotent map
+//     participants: { "<character id>": { seat, state: "active"|"left" }, … },
+//                                                            // FightJoined / Abandoned
 //     current_turn: { is_mob, idx, deadline_ms } | null,     // TurnStarted
 //     mob_positions: { "<mob idx>": <cell>, … } }            // MobMoved (latest cell per mob)
 // PLUS `group_template` (id | null): NOT on the fight doc — JOINED at read time from
 // `rpc:group_template:{world}:{spawn_id}` (indexer `zones::MobGroupClaimed`) so the client can name the
 // mobs; null when un-projected (pre-arm fight / ticketless ambush/PvP). See `with_group_template`.
 // Settled/Swept DELETE the doc (the on-chain object is destroyed then), so a
-// dangling `rpc:char_fight:{character}` pointer (never cleared — terminal events
-// omit the roster) resolves to a missing doc → "no active fight". The per-world
+// `rpc:char_fight:{character}` is a locator, not a second liveness flag: character
+// reads include the pointed fight only while that participant's state is `active`.
+// A dangling pointer after settlement resolves to a missing doc → "no active fight". The per-world
 // index `rpc:idx:fights:{world}` likewise retains terminal ids (terminal events
 // omit the world), so `?world=` drops missing docs and status-filters at read
 // time — a monotonic cache wart, clean on a fresh re-index.
+function shape_participant(character, participant) {
+  // Numeric seats are pre-state documents from an earlier indexer and remain live.
+  if (typeof participant === 'number') return { character, seat: participant, state: 'active' }
+  return { character, seat: participant.seat, state: participant.state ?? 'active' }
+}
+
 function shape_fight(f) {
   return {
     fight_id: f.fight,
@@ -1102,7 +1110,7 @@ function shape_fight(f) {
     aged_bp: f.aged_bp ?? null,
     mob_count: f.mob_count ?? null,
     participants: Object.entries(f.participants ?? {})
-      .map(([character, seat]) => ({ character, seat }))
+      .map(([character, participant]) => shape_participant(character, participant))
       .sort((a, b) => a.seat - b.seat),
     current_turn: f.current_turn ?? null,
     // Each mob's LATEST cell (idx → cell), projected from `fight_events::MobMoved` — a
@@ -1153,7 +1161,11 @@ export async function handle_fights(params) {
   if (character) {
     const fid = await get_json(K.charFight(character))
     const f = fid ? await get_json(K.fight(fid)) : null // dangling pointer → missing doc → empty
-    return ok({ fights: await enrich_fights(f ? [shape_fight(f)] : []) })
+    const shaped = f ? shape_fight(f) : null
+    const is_live = shaped?.participants.some(
+      (participant) => participant.character === character && participant.state === 'active'
+    )
+    return ok({ fights: await enrich_fights(is_live ? [shaped] : []) })
   }
   if (world) {
     const active = params.get('active') !== 'false' // default: only non-terminal

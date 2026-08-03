@@ -1095,7 +1095,11 @@ pub(super) fn map_with_context(
                     "$",
                     json!({ "fight": fight.clone(), "participants": {} }),
                 ),
-                set(key, &mpath("$.participants", &character), json!(e.seat)),
+                set(
+                    key,
+                    &mpath("$.participants", &character),
+                    json!({ "seat": e.seat, "state": "active" }),
+                ),
                 set(k_char_fight(&character), "$", json!(fight)),
             ]
         }
@@ -1131,6 +1135,19 @@ pub(super) fn map_with_context(
                     json!(e.to_cell),
                 ),
             ]
+        }
+        // Preserve the historical seat while making its liveness honest. The
+        // char→fight pointer remains a locator; the API derives membership from
+        // this participant state instead of maintaining a second liveness flag.
+        ("fight_events", "Abandoned") => {
+            let e: Abandoned = decode(module, name, contents)?;
+            let fight = e.fight.to_canonical_string(true);
+            let character = e.character.to_canonical_string(true);
+            vec![set(
+                k_fight(&fight),
+                &mpath("$.participants", &character),
+                json!({ "seat": e.seat, "state": "left" }),
+            )]
         }
         ("fight_events", "Victory") => {
             let e: FightVictory = decode(module, name, contents)?;
