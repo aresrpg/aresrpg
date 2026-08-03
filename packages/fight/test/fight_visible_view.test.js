@@ -253,7 +253,11 @@ describe('#1993 train 0 — every field is AT CURRENT PARITY with the fragment t
     expect(view.result.decided).toBe(decided_outcome(state))
     expect(view.result.is_over).toBe(is_over(state))
     expect(view.result.settlement_request).toEqual(settlement_request(state))
-    expect(view.result.provenance).toBe(null) // an undecided live fight names no terminal home
+    // #1993 WP4 — provenance is the RECORD's map (fact → the home that answered), shared with the persistent
+    // post-teardown half, not a single string. An undecided live fight has committed nothing, so it is empty.
+    expect(view.result.provenance).toEqual({})
+    expect(view.result.kind).toBe(null)
+    expect(view.result.conflicts).toEqual([])
   })
 
   test('sync/mount/controls mirror the ad-hoc verdicts the surfaces derive today', () => {

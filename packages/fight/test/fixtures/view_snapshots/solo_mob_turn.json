@@ -29,12 +29,18 @@
       },
       "result": {
         "chain_terminal_status": null,
+        "conflicts": [],
         "decided": null,
         "is_over": false,
-        "provenance": null,
+        "kind": null,
+        "loot": [],
+        "loot_units": null,
+        "provenance": {},
+        "run": null,
         "settlement_request": null,
         "status": null,
-        "winner": null
+        "winner": null,
+        "xp": null
       },
       "sync": {
         "actor_unresolved": true,
@@ -208,12 +214,18 @@
       },
       "result": {
         "chain_terminal_status": null,
+        "conflicts": [],
         "decided": null,
         "is_over": false,
-        "provenance": null,
+        "kind": null,
+        "loot": [],
+        "loot_units": null,
+        "provenance": {},
+        "run": null,
         "settlement_request": null,
         "status": 1,
-        "winner": null
+        "winner": null,
+        "xp": null
       },
       "sync": {
         "actor_unresolved": false,
@@ -387,12 +399,18 @@
       },
       "result": {
         "chain_terminal_status": null,
+        "conflicts": [],
         "decided": null,
         "is_over": false,
-        "provenance": null,
+        "kind": null,
+        "loot": [],
+        "loot_units": null,
+        "provenance": {},
+        "run": null,
         "settlement_request": null,
         "status": 1,
-        "winner": null
+        "winner": null,
+        "xp": null
       },
       "sync": {
         "actor_unresolved": false,
@@ -566,12 +584,18 @@
       },
       "result": {
         "chain_terminal_status": null,
+        "conflicts": [],
         "decided": null,
         "is_over": false,
-        "provenance": null,
+        "kind": null,
+        "loot": [],
+        "loot_units": null,
+        "provenance": {},
+        "run": null,
         "settlement_request": null,
         "status": 1,
-        "winner": null
+        "winner": null,
+        "xp": null
       },
       "sync": {
         "actor_unresolved": false,
@@ -745,12 +769,18 @@
       },
       "result": {
         "chain_terminal_status": null,
+        "conflicts": [],
         "decided": null,
         "is_over": false,
-        "provenance": null,
+        "kind": null,
+        "loot": [],
+        "loot_units": null,
+        "provenance": {},
+        "run": null,
         "settlement_request": null,
         "status": 1,
-        "winner": null
+        "winner": null,
+        "xp": null
       },
       "sync": {
         "actor_unresolved": false,

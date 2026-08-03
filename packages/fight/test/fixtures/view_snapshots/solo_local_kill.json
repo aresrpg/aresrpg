@@ -29,12 +29,18 @@
       },
       "result": {
         "chain_terminal_status": null,
+        "conflicts": [],
         "decided": null,
         "is_over": false,
-        "provenance": null,
+        "kind": null,
+        "loot": [],
+        "loot_units": null,
+        "provenance": {},
+        "run": null,
         "settlement_request": null,
         "status": null,
-        "winner": null
+        "winner": null,
+        "xp": null
       },
       "sync": {
         "actor_unresolved": true,
@@ -208,12 +214,18 @@
       },
       "result": {
         "chain_terminal_status": null,
+        "conflicts": [],
         "decided": null,
         "is_over": false,
-        "provenance": null,
+        "kind": null,
+        "loot": [],
+        "loot_units": null,
+        "provenance": {},
+        "run": null,
         "settlement_request": null,
         "status": 1,
-        "winner": null
+        "winner": null,
+        "xp": null
       },
       "sync": {
         "actor_unresolved": false,
@@ -387,12 +399,18 @@
       },
       "result": {
         "chain_terminal_status": null,
+        "conflicts": [],
         "decided": null,
         "is_over": false,
-        "provenance": null,
+        "kind": null,
+        "loot": [],
+        "loot_units": null,
+        "provenance": {},
+        "run": null,
         "settlement_request": null,
         "status": 1,
-        "winner": null
+        "winner": null,
+        "xp": null
       },
       "sync": {
         "actor_unresolved": false,
@@ -566,12 +584,18 @@
       },
       "result": {
         "chain_terminal_status": null,
+        "conflicts": [],
         "decided": null,
         "is_over": false,
-        "provenance": null,
+        "kind": null,
+        "loot": [],
+        "loot_units": null,
+        "provenance": {},
+        "run": null,
         "settlement_request": null,
         "status": 1,
-        "winner": null
+        "winner": null,
+        "xp": null
       },
       "sync": {
         "actor_unresolved": false,
@@ -745,9 +769,16 @@
       },
       "result": {
         "chain_terminal_status": 3,
+        "conflicts": [],
         "decided": 0,
         "is_over": true,
-        "provenance": "chain_terminal",
+        "kind": "victory",
+        "loot": [],
+        "loot_units": null,
+        "provenance": {
+          "winner": "chain_terminal"
+        },
+        "run": null,
         "settlement_request": {
           "last_room": true,
           "phase": "victory",
@@ -758,7 +789,8 @@
           "version": 3
         },
         "status": 3,
-        "winner": 0
+        "winner": 0,
+        "xp": null
       },
       "sync": {
         "actor_unresolved": false,
@@ -932,9 +964,16 @@
       },
       "result": {
         "chain_terminal_status": 3,
+        "conflicts": [],
         "decided": 0,
         "is_over": true,
-        "provenance": "chain_terminal",
+        "kind": "victory",
+        "loot": [],
+        "loot_units": null,
+        "provenance": {
+          "winner": "chain_terminal"
+        },
+        "run": null,
         "settlement_request": {
           "last_room": true,
           "phase": "victory",
@@ -945,7 +984,8 @@
           "version": 3
         },
         "status": 3,
-        "winner": 0
+        "winner": 0,
+        "xp": null
       },
       "sync": {
         "actor_unresolved": false,

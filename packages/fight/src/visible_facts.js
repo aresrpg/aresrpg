@@ -11,6 +11,8 @@
 // produces (`engine_view` rows, the `project_state` predicates, `project_hud`'s pacing posture), regrouped and
 // explicitly named. No reconciliation is introduced here — fold-first family migrations are later trains.
 
+import { STATUS_FAILED, STATUS_ROOM_CLEARED, STATUS_WON } from './board_state.js'
+import { commit_fact, empty_result } from './result_record.js'
 import { project_hud } from './core_project.js'
 import { committed_truth, display_state, min_turn_ready_at, presented_state } from './store.js'
 import {
@@ -22,7 +24,6 @@ import {
   draining,
   is_my_turn,
   is_over,
-  outcome_winner,
   phase,
   presenting,
   settlement_request,
@@ -199,19 +200,63 @@ export const visible_turn = (s, engine, committed, status) => {
   }
 }
 
-/** RESULT — the terminal record with its provenance. */
-export const visible_result = (s, status) => ({
-  // Framing winner: chain-terminal truth when the settle read has landed, else the CLIENT-KNOWABLE receipt-proven
-  // fight-over, so a lagged settle never dead-airs a won fight. Never optimistic.
-  winner: outcome_winner(s),
-  // WHICH home answered — the fact that precedence consumed silently until now.
-  provenance: chain_terminal_status(s) != null ? 'chain_terminal' : decided_outcome(s) != null ? 'decided' : null,
-  chain_terminal_status: chain_terminal_status(s),
-  decided: decided_outcome(s),
-  status,
-  is_over: is_over(s),
-  settlement_request: settlement_request(s),
-})
+/**
+ * RESULT — the terminal record, in the RESULT RECORD's own vocabulary (#1993 WP4, `result_record.js`): the same
+ * `kind`/`winner`/`run` keys, the same `provenance` map, and the same `conflicts` channel the game store's
+ * post-teardown half uses. Two homes read one shape, so a surface that upgrades from the live view to the
+ * persistent card is reading the same fact under the same name.
+ *
+ * BUILT THROUGH THE GUARD, not through a precedence ladder. `outcome_winner`'s `chain_terminal ?? decided`
+ * ordering is still correct — the settle read outranks the client-knowable inference — but it used to consume
+ * the disagreement in silence. Committing chain truth FIRST and offering the decided outcome SECOND yields the
+ * identical winner while naming which home answered and, when the two genuinely contradict, keeping the loser's
+ * claim as data. `winner` stays -1-free here: null means undecided, and `outcome_winner` is re-exported below
+ * unchanged for every caller still on it.
+ *
+ * DECLINED IN THIS TRAIN — the ACROSS-TIME ratchet. A projection has no memory, so nothing here can stop a
+ * later state from answering `null` after an earlier one answered `victory` (a settle read cleared by
+ * `pending_settlement`, or a torn snapshot reviving a mob under `decided_outcome`). That ratchet has to live in
+ * the fold that owns the evidence — and the evidence is the CORE's committed board, which this presentation
+ * fold deliberately cannot see (`fold.js` header, #1027). Moving it is a core-fold change, not a projection
+ * one, so it is its own train rather than a drive-by through a boundary this file is not allowed to cross. The
+ * loot half of the record IS already ratcheted, in the one place its evidence actually accumulates.
+ */
+export const visible_result = (s, status) => {
+  const chain = chain_terminal_status(s)
+  const decided = decided_outcome(s)
+  // A landed settle read ANSWERS — including ROOM_CLEARED's answer of "no terminal winner, the room-clear path
+  // owns this one". The client-knowable inference commits only in its absence, which is `outcome_winner`'s
+  // ordering exactly; what is new is that its claim is not thrown away when the two disagree.
+  const answered = chain != null
+  const record = answered
+    ? commit_fact(
+        empty_result(),
+        'winner',
+        chain === STATUS_WON ? 0 : chain === STATUS_FAILED ? 1 : null,
+        'chain_terminal'
+      )
+    : commit_fact(empty_result(), 'winner', decided, 'decided')
+  const contradicted = answered && decided != null && decided !== record.winner
+  return {
+    ...record,
+    conflicts: contradicted
+      ? [...record.conflicts, { key: 'winner', held: record.winner, offered: decided, source: 'decided' }]
+      : record.conflicts,
+    kind:
+      chain === STATUS_ROOM_CLEARED
+        ? 'room_clear'
+        : record.winner === 0
+          ? 'victory'
+          : record.winner === 1
+            ? 'defeat'
+            : null,
+    chain_terminal_status: chain,
+    decided,
+    status,
+    is_over: is_over(s),
+    settlement_request: settlement_request(s),
+  }
+}
 
 /**
  * SYNC — the fight-health verdict: is the board here, does the turn clock resolve to a real fighter, and how far
