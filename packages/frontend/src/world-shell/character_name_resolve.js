@@ -4,15 +4,15 @@
 // batched resolver; the live fight adopter supplies its full normalized custody/display rows to this composition
 // so names and appearance cannot diverge. Every unresolved surface uses the same short-id fallback.
 
+import { short_id } from '@aresrpg/fight/project'
+
 import { get_characters } from '../rpc/client'
 
 /** Short identity fallback for a Character id whose `/v1/characters?ids=` row is still unavailable — the ONLY
- *  honest display when a real name genuinely can't be resolved (never invent one). */
-export function short_fighter_id(id) {
-  const value = String(id ?? '')
-  if (value.length <= 14) return value
-  return `${value.slice(0, 7)}…${value.slice(-5)}`
-}
+ *  honest display when a real name genuinely can't be resolved (never invent one). The SHAPE now lives with the
+ *  roster identity book (#1993 WP3), which renders it as an unresolved row's `display_id`; this is the same
+ *  function under the name the world-shell surfaces already import, never a second truncation. */
+export const short_fighter_id = short_id
 
 /**
  * Resolve a batch of character ids to their `/v1/characters` docs in ONE read. Empty/no ids → an empty Map,
@@ -44,9 +44,12 @@ export async function resolve_character_name(character_id) {
  * joiner's wallet, and every simulator seat showed the sim chain's ONE mock owner (`0X51M0…0000`) because the
  * seats share it — an address is not an identity when a wallet owns several characters.
  *
- * Four sources, lowest precedence first — later rows win per id, so a real name always beats a placeholder:
- *   · PROVISIONAL — every player fighter with no row yet, named by its own short CHARACTER id (the honest
- *     in-flight display #929 explicitly accepts, never an invented name and never someone's address).
+ * Three sources, lowest precedence first — later rows win per id, so a real name always beats a placeholder.
+ * A PROVISIONAL arm used to sit below them, seeding every unresolved fighter a row named by its own short
+ * character id. It is GONE (#1993 WP3): that row was a fallback wearing a resolved name's clothes, so the
+ * identity book could not tell an authored name from a placeholder and reported `resolved: true` for a seat
+ * nobody had resolved. The book renders the same short id itself, as an unresolved row's `display_id` — the
+ * display is byte-identical and now honestly labelled. This composition carries only what was really resolved.
  *   · CARRIED — the rows already published for THIS fight. The book only grows within a fight, which is what
  *     lets a non-`/v1` seeder (the simulator shim seeds its roster into ctx at start) keep its real names
  *     instead of being wiped by the next recompose — the dual-writer clobber that made #929 fire on EVERY
@@ -55,17 +58,14 @@ export async function resolve_character_name(character_id) {
  *     read_character, the same full appearance home as the owned avatar; there is no second partial fetch.
  *   · MINE — my own kiosk characters, always the freshest truth about my own seats.
  *
- * Pure: no IO, no store read. @param {{ mine?: readonly any[], resolved?: readonly any[],
- *   carried?: readonly any[], fighters?: Map<string, any> | undefined }} sources
+ * Pure: no IO, no store read. `fighters` is accepted and unused — the provisional arm it fed is deleted (above);
+ * the parameter stays so the adoption call site keeps its shape while the fighters map remains what
+ * `missing_roster_character_ids` drives resolution from.
+ * @param {{ mine?: readonly any[], resolved?: readonly any[], carried?: readonly any[] }} sources
  * @returns {any[]} the composed roster rows
  */
-export function compose_fight_roster({ mine = [], resolved = [], carried = [], fighters = undefined } = {}) {
+export function compose_fight_roster({ mine = [], resolved = [], carried = [] } = {}) {
   const by_id = new Map()
-  for (const fighter of fighters?.values?.() ?? []) {
-    if (!fighter?.is_player || !fighter.character_id) continue
-    const id = String(fighter.character_id)
-    by_id.set(id, { id, name: short_fighter_id(id) })
-  }
   for (const rows of [carried, resolved, mine])
     for (const row of rows ?? []) if (row?.id) by_id.set(String(row.id), row)
   return [...by_id.values()]

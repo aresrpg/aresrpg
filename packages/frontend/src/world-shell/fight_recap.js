@@ -32,7 +32,8 @@
  *     adopt — this client discovered an already-live fight rather than starting/joining it fresh), so
  *     duration_ms UNDERSTATES the true length. The card renders it with a "~" prefix instead of false precision.
  * }} args
- * @returns {{ summary: { winner: number, me_id: string | null, participants: Array<{ id: string, name: string, team: number,
+ * @returns {{ summary: { winner: number, me_id: string | null, participants: Array<{ id: string, name: string,
+ *   label: string, resolved: boolean, team: number,
  *   level: number, is_player: boolean, template_id: string | null, alive: boolean }>, duration_ms: number, duration_partial: boolean,
  *   xp: number, loot: never[], cause: null }, won: boolean }}
  */
@@ -52,7 +53,13 @@ export function fight_recap_payload({
       me_id: my_entity_id ?? null,
       participants: [...(fighters?.values() ?? [])].map((f) => ({
         id: f.id,
+        // The identity book's applied LABEL, snapshotted with the fact of whether it is a real name (#1993 WP3).
+        // A terminal card that carries `resolved: false` knows it is showing an id and can UPGRADE it from a
+        // post-fight read; it never has to guess a substitute, which is how the card and the live board used to
+        // render one unresolvable fighter under two different names.
         name: f.name,
+        label: f.name,
+        resolved: !!f.identity_resolved,
         team: f.team,
         level: f.level,
         is_player: f.is_player,

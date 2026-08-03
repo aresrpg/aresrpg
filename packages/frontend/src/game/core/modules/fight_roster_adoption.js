@@ -121,12 +121,10 @@ export function create_fight_roster_adoption({
         ...(carried_by_id.get(String(character.id)) ?? {}),
         ...appearance_roster_row(character),
       }))
-    const rows = compose_fight_roster({
-      mine: get_mine(),
-      resolved,
-      carried,
-      fighters: get_fighters(),
-    })
+    // Only what was really RESOLVED enters the book's roster input (#1993 WP3): the provisional short-id row this
+    // used to seed off `get_fighters()` is deleted, so an unresolved seat has no roster row at all and the
+    // identity book reports it unresolved instead of inheriting a placeholder that reads like a name.
+    const rows = compose_fight_roster({ mine: get_mine(), resolved, carried })
     if (!rows.length) return
     // OBSERVE THE DELTA, NOT THE ARRIVAL (#2027). The gate is CONTENT — this signature — and nothing else. It
     // used to also demand that the store still hold the exact array we last published, which cannot converge:

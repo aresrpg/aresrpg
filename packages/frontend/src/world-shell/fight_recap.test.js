@@ -20,8 +20,12 @@ const razkin_win = () =>
     { id: 'seat-0', name: 'hero', team: 0, level: 12, is_player: true, dead: false, owner: ME },
     // `variant` is the mob's on-chain TEMPLATE id (project.js: variant = view.mobs[].template) — the id the
     // encyclopedia bestiary routes on. Players carry none.
-    { id: 'mob-0', name: 'Razkin', team: 1, level: 8, is_player: false, dead: true, variant: '0xTPL_RAZKIN' },
-    { id: 'mob-1', name: 'Razkin Alpha', team: 1, level: 10, is_player: false, dead: true, variant: '0xTPL_ALPHA' },
+    // `identity_resolved` is the identity book's verdict, snapshotted beside the label so a terminal card knows
+    // whether it is showing a real name or an id (#1993 WP3). These two resolved off the mob roster.
+    // prettier-ignore
+    { id: 'mob-0', name: 'Razkin', identity_resolved: true, team: 1, level: 8, is_player: false, dead: true, variant: '0xTPL_RAZKIN' },
+    // prettier-ignore
+    { id: 'mob-1', name: 'Razkin Alpha', identity_resolved: true, team: 1, level: 10, is_player: false, dead: true, variant: '0xTPL_ALPHA' },
   ])
 
 describe('fight_recap_payload — a WIN carries the defeated enemy team (D2)', () => {
@@ -30,10 +34,22 @@ describe('fight_recap_payload — a WIN carries the defeated enemy team (D2)', (
     expect(won).toBe(true)
     expect(summary.winner).toBe(0)
     expect(summary.participants.filter((p) => p.team === 1)).toEqual([
-      { id: 'mob-0', name: 'Razkin', team: 1, level: 8, is_player: false, alive: false, template_id: '0xTPL_RAZKIN' },
+      {
+        id: 'mob-0',
+        name: 'Razkin',
+        label: 'Razkin',
+        resolved: true,
+        team: 1,
+        level: 8,
+        is_player: false,
+        alive: false,
+        template_id: '0xTPL_RAZKIN',
+      },
       {
         id: 'mob-1',
         name: 'Razkin Alpha',
+        label: 'Razkin Alpha',
+        resolved: true,
         team: 1,
         level: 10,
         is_player: false,

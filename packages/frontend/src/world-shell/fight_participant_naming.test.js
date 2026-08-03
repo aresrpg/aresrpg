@@ -154,13 +154,21 @@ describe('#929 — turn-card names key off the CHARACTER, never the wallet addre
     expect(rows.some((row) => row.id === 'mob-0')).toBe(false) // mobs name off mob_names, never the roster
   })
 
-  test('every player fighter gets a row — the wallet-address fallback has no precondition left', () => {
+  // #1993 WP3 REPLACES the old assert here ("every player fighter gets a provisional row"). That row existed to
+  // starve the projection's wallet-address fallback of a precondition — but it did so by writing a PLACEHOLDER
+  // into the roster under a real name's field, so nothing downstream could tell resolved from unresolved. The
+  // fallback is now gone from the projection outright (the identity book has no address arm), so the roster
+  // carries only what was really resolved and the book renders the short id itself, labelled honestly.
+  test('an unresolved fighter gets NO roster row — a placeholder is not a resolution', () => {
     const fighters = new Map([
       ['a', { is_player: true, character_id: 'a' }],
       ['b', { is_player: true, character_id: 'b' }],
     ])
-    const rows = compose_fight_roster({ fighters })
-    expect(rows.map((row) => row.id).sort()).toEqual(['a', 'b'])
+    expect(compose_fight_roster({ fighters })).toEqual([])
+    // only genuinely resolved rows compose, and they still win per id
+    expect(compose_fight_roster({ fighters, resolved: [{ id: 'a', name: 'Aurelia' }] })).toEqual([
+      { id: 'a', name: 'Aurelia' },
+    ])
   })
 })
 
