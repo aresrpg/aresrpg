@@ -1,2 +1,3 @@
-d97cacf720534eb7fb89d3c949f3cfe77e08b837 train/train-81 refactor(hud): make MapDrawer's view math pure transforms
-a229771fd40ae378e50e828b72384026372de7df train/train-81 refactor(hud): delete the dock's orphaned exports and the state.craft slice
+cbb33a75c8b9bd711580f9dd842412923c891c79 train/train-82 chore(lint): tighten the warning cap to the measured floor
+a5ed812ebaa00087539a9b3b7ee322828f0483d7 train/train-82 refactor(frontend): rename the 49 custom hooks to `useX`, delete the rules-of-hooks carve-out
+65c2e94113196f7c755f99cd5a0d98e7f0f8625e train/train-82 fix(lint): L-N1 grants React's `useX` hook name, declaration-only
