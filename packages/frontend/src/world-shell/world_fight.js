@@ -32,7 +32,7 @@ import { push_event_toast } from '../game/core/toast.js'
 import { use_dungeon } from './dungeon_store.js'
 import { use_party } from './party_store.js'
 import { abandon_fight } from './dungeon_actions'
-import { offer_fight_resume } from './fight_resume_offer.js'
+import { consent_fight_resume } from './fight_resume_offer.js'
 import { fight_state_trace } from './fight_state_trace.js'
 import { poll_receipt_fight, receipt_entry_decision } from './world_fight_receipt.js'
 import { init_dungeon_fight } from './dungeon_fight_shim.js'
@@ -343,16 +343,18 @@ async function forfeit_resumed_fight(fight_id, character_id, door) {
  *  window liquidates via `force_start` and an expired TURN via `crank` BEFORE adoption, and a fight those doors
  *  resolved terminal routes back to the world with an honest toast instead of re-capturing the character.
  *
- *  THE DOOR (#1751/#1757): those liquidation transactions are real gas and a real move of the fight's lifecycle,
- *  and a boot used to send one per pass with no player action at all (measured five-for-five, and the mechanism
- *  that resolved a stranded seat as a DEFEAT nobody chose). So an entry onto a chain-live seat this client is not
- *  mounting now ASKS — rejoin or forfeit — and commits nothing until that answer arrives. A seat inside its
- *  deadline is unaffected: it needs no transaction, so it mounts straight away exactly as before.
+ *  THE CONSENT (#1751/#1757 → #2122): those liquidation transactions are real gas and a real move of the fight's
+ *  lifecycle, and a boot used to send one per pass with no player action at all (measured five-for-five, and the
+ *  mechanism that resolved a stranded seat as a DEFEAT nobody chose). A held fight now REJOINS AUTOMATICALLY —
+ *  the player who crashed mid-fight wants their fight, not a dialog — and `consent_fight_resume` is what keeps
+ *  that from being the old defect again: ONE autonomous attempt per fight id per session (the five-boot loop
+ *  cannot come back), never an autonomous 'forfeit', and the modal as the fallback every later pass parks on.
+ *  A seat inside its deadline is unaffected: it needs no transaction, so it mounts straight away exactly as before.
  *  @param {string} character_id
  *  @param {{ force_start_door?: Function, crank_door?: Function, forfeit_door?: Function,
  *    consent?: (ask: { fight_id: string, action: string, deadline: number }) => Promise<string> | string,
  *    is_current?: () => boolean }} [deps] unit seam only — `consent` lets a test that is measuring the
- *    LIQUIDATION mechanics answer the door directly instead of driving the dialog store */
+ *    LIQUIDATION mechanics answer directly instead of going through the auto/modal consent */
 // Complexity retained (#2069): resume is one ordered read/adopt/recovery boundary; at 31 there is no clean extraction that does more than move a branch.
 export async function resume_world_fight(character_id, deps = {}) {
   const is_current = deps.is_current ?? (() => true)
@@ -384,10 +386,11 @@ export async function resume_world_fight(character_id, deps = {}) {
   const { decision, reason, choice } = await ensure_resumable_fight(fight_id, {
     force_start_door: deps.force_start_door,
     crank_door: deps.crank_door,
-    // THE DOOR: asked before any transaction is composed, answered by the player (FightResumeOffer.jsx).
+    // THE CONSENT: asked before any transaction is composed — answered autonomously on this session's first
+    // pass at the fight, and by the player (FightResumeOffer.jsx) on every pass after it.
     consent:
       deps.consent ??
-      (({ action, deadline }) => offer_fight_resume({ fight_id, character_id, action, deadline_ms: deadline })),
+      (({ action, deadline }) => consent_fight_resume({ fight_id, character_id, action, deadline_ms: deadline })),
   })
   if (!is_current()) return
   if (decision === 'declined') {

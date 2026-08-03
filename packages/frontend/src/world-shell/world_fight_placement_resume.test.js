@@ -173,8 +173,9 @@ describe('#932 — a refresh during PLACEMENT re-enters the fight', () => {
     const errors = /** @type {string[]} */ ([])
     console.error = mock((...args) => void errors.push(args.join(' ')))
     try {
-      // #1751: the entry ASKS before it liquidates — this row measures the liquidation mechanics, so it answers the
-      // door itself; the door's own behaviour is proved in test/world-shell/world_fight_resume_offer.test.js.
+      // #1751/#2122: the entry consents before it liquidates — this row measures the liquidation mechanics, so it
+      // answers directly rather than depending on which way the consent lands (autonomous on a fight's first pass
+      // this session, the modal after that). The consent's own behaviour: test/world-shell/world_fight_resume_offer.test.js.
       await resume_world_fight(CHARACTER_ID, { force_start_door, consent: () => 'rejoin' })
       await settle_tick()
     } finally {
