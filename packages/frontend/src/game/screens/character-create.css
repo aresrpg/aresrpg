@@ -50,11 +50,32 @@
   max-width: 100%;
   max-height: 100%;
 }
+/* #871 — HIT-TEST SCOPE. This variant is a NOTICE, not a veil. It mounts as a sibling of `.gw-hud` inside
+   GameWorldHost's z-index:12 wrapper, whose whole discipline is `pointer-events: none` with each HUD panel
+   opting back in (`.gw-hud > *`) — so the base rule's full-frame `pointer-events: auto` above turned the
+   entire world frame into a click sink: `elementsFromPoint` at any HUD control returned this div with the
+   control one layer beneath, and the frame-wide opaque gradient it used to paint was the other half of the
+   same lie (a HUD the player could neither see nor click). The frame now keeps only its layout job (centring
+   the card) and gives up both painting and hit-testing; the card below is the one thing that does either —
+   what is visible is what is clickable. The base (create) variant KEEPS `pointer-events: auto`: the
+   confirmed-empty creator owns the whole slot and paints its own `.cc__veil` over it, so there is nothing
+   behind it to reach. */
 .world-character-create--error {
   display: grid;
   place-items: center;
   padding: 24px;
-  background: radial-gradient(ellipse 120% 95% at 50% 36%, #1e1e2e 0%, #141420 46%, #0a0a0f 100%);
+  pointer-events: none;
+}
+/* the bounded notice card — companion glass over the live world, same surface language as `.cc__panel`
+   (colour literals, not the --cc-* vars: this element is not inside a `.cc` scope, so they would not resolve). */
+.world-character-create--error > * {
+  pointer-events: auto;
+  padding: 18px 24px;
+  background: linear-gradient(160deg, rgba(26, 26, 38, 0.72), rgba(18, 18, 26, 0.68));
+  backdrop-filter: blur(10px);
+  border: 1px solid #1e1e2e;
+  border-top: 2px solid #c8963c;
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.45);
 }
 /* The screen background is the COMPANION body gradient (index.css `body`) — the same surface the
    shop/encyclopedia render over (no black/flat-dark anywhere). The create overlay
