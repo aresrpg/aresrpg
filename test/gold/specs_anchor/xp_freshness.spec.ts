@@ -27,11 +27,11 @@ async function plate_text(page: Page) {
 }
 
 async function character_row_text(page: Page) {
-  await page.locator('[data-launcher="characters"]').click()
+  await page.locator('[data-nav="characters"]').click()
   const row = page.locator('.chr-row.is-active')
   await expect(row).toBeVisible()
   const text = `${await row.locator('.chr-row__lvl').innerText()}|${await row.locator('.chr-row__xp').innerText()}`
-  await page.locator('[data-launcher="characters"]').click()
+  await page.locator('[data-nav="game-world"]').click()
   return text
 }
 
