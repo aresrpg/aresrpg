@@ -90,6 +90,7 @@ export const reduce_tick_state = (state, msg, next_core, now) => {
         wave: state.wave,
         deadline_ms: state.turn_deadline_ms,
         turn_ms: state.view?.turn_ms,
+        chain_offset_ms: state.chain_offset_ms,
       },
       now
     )

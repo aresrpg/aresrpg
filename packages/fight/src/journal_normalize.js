@@ -100,7 +100,18 @@ export const normalize_journal_page = (page, { fight_id } = {}) => {
       source: 'journal',
     })
   )
-  return { fight_id: fid, source: 'journal', head: u64_string(page?.journal_head), events }
+  // THE CHAIN CLOCK (#2099) — the read layer stamps the live page with the indexer's latest checkpoint
+  // timestamp. Carried through as data (never decoded, never re-stamped): the store folds it against the
+  // message's own arrival instant into the one per-fight clock offset. Absent (an old server, or an
+  // `immutable` past page whose cached timestamp would be a lie) ⇒ null ⇒ no observation, no correction.
+  const chain_now = Number(page?.chain_now_ms)
+  return {
+    fight_id: fid,
+    source: 'journal',
+    head: u64_string(page?.journal_head),
+    events,
+    chain_now_ms: chain_now > 0 ? chain_now : null,
+  }
 }
 
 /** The further of two u64 heads (either may be absent — an unknown head never lowers a known one). */

@@ -6,6 +6,7 @@
 // already-ingested core atom and returns the next legacy-shaped presentation state to the store's one write door.
 
 import { enrich_actions, sorted_tail } from './core_fold.js'
+import { fold_chain_offset } from './draft_budget.js'
 import { merge_entries, paced_wave_turns, presented_state, recompute } from './fold.js'
 import { actor_from_key } from './inputs.js'
 import { claim_predictions, retain_budget_predictions, update_claimed_budget } from './store_prediction.js'
@@ -109,6 +110,10 @@ export const reduce_chain_input = (state, msg, next_core, now) => {
     {
       ...state,
       core: next_core,
+      // THE CHAIN CLOCK (#2099) — an OBSERVED PAIR, folded through this door like every other chain fact: the
+      // page's `chain_now_ms` (the indexer's latest checkpoint timestamp) against this message's own arrival
+      // instant. Absent on every other chain source (a receipt/poll/p2p carries no server clock) ⇒ unchanged.
+      chain_offset_ms: fold_chain_offset(state.chain_offset_ms, msg.batch?.chain_now_ms, now),
       commit_due: false,
       receipt_seq: msg.type === 'receipt' ? state.receipt_seq + 1 : state.receipt_seq,
       staged: msg.type === 'receipt' && ended_my_turn ? [] : state.staged,

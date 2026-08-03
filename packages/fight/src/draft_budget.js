@@ -32,6 +32,32 @@ export function turn_handover_at(deadline, turn_ms) {
   return Number(deadline) > 0 && Number(turn_ms) > 0 ? Number(deadline) - Number(turn_ms) : 0
 }
 
+/** THE CHAIN-CLOCK OFFSET (#2099) — `chain_now ≈ Date.now() + offset`, folded from OBSERVED PAIRS.
+ *
+ *  The handover instant above is a CHAIN timestamp; the client compared it to a raw `Date.now()`, so a skewed
+ *  client lost exactly its skew from every turn behind a bare Waiting state. The pair is `(chain_now_ms, arrival)`:
+ *  the read layer stamps a live journal page with the indexer's latest checkpoint timestamp, the store folds it
+ *  against that message's own arrival instant.
+ *
+ *  ROLLING MAX, and the direction is the whole safety argument: a sample is
+ *  `offset − (indexer_lag + network_latency)`, and BOTH error terms are non-negative, so every sample is a LOWER
+ *  bound on the true offset. The max picks the freshest/lowest-latency observation and converges from BELOW —
+ *  the estimate can only ever be too SMALL, i.e. the handover can only ever fire LATE, never early. That is what
+ *  keeps #1808 honest: over-correcting would hand a turn over while the chain is still resolving mobs.
+ *
+ *  `null` = nothing observed yet (an old server omits the field, an `immutable` cached page carries none) ⇒
+ *  callers read it as 0 ⇒ today's exact behaviour. Precision is bounded by the checkpoint cadence (~250ms) plus
+ *  transport, which is well inside the ±1s a 30s+ turn needs.
+ *  @param {number|null} offset the fight's offset so far @param {any} chain_now_ms @param {number} arrival_ms
+ *  @returns {number|null} */
+export function fold_chain_offset(offset, chain_now_ms, arrival_ms) {
+  const chain = Number(chain_now_ms)
+  const arrival = Number(arrival_ms)
+  if (!(chain > 0) || !Number.isFinite(arrival)) return offset ?? null
+  const sample = chain - arrival
+  return offset == null ? sample : Math.max(offset, sample)
+}
+
 /** THE CHAIN'S OWN earliest legal end-turn instant — the single home for `actions.move::assert_min_turn`
  *  (`now + turn_ms >= turn_deadline_ms + MIN_TURN_MS`) read as an absolute ms: the handover above plus the
  *  anti-instant-pass floor. Never re-anchor it to receipt/presentation time. 0 when the dial or the deadline

@@ -129,14 +129,21 @@ export const GHOST_STALE_MS = 15_000
  * skip: the paced replay is only the client's GUESS at the chain's resolution window and can drain far ahead of
  * it, so the turn was granted and then held back by a countdown nobody could act on. `recompute` folds this;
  * the store's clock tick asks it to know when a time-ONLY transition must re-fold and hand the turn over.
+ *
+ * THE CLOCK FRAME (#2099) — `turn_handover_at` is a CHAIN instant and `now` is the client's own wall clock, so
+ * this comparison is only honest in ONE frame. `chain_offset_ms` (folded from observed chain reads,
+ * draft_budget `fold_chain_offset`) moves `now` into chain time; without it a skewed client silently lost its
+ * skew from every turn behind a bare Waiting state. This is the SOLE consumer of the offset — the min-turn
+ * floor and the submit gate still read raw local time (they measure a duration the player already lived, and
+ * the chain's own `assert_min_turn` belt covers them).
  * @param {{ active: string | null, my_key: string | null, wave?: any[], deadline_ms?: number | null,
- *   turn_ms?: number | null }} turn @param {number} now
+ *   turn_ms?: number | null, chain_offset_ms?: number | null }} turn @param {number} now
  */
-export const turn_is_playable = ({ active, my_key, wave, deadline_ms, turn_ms }, now) =>
+export const turn_is_playable = ({ active, my_key, wave, deadline_ms, turn_ms, chain_offset_ms }, now) =>
   active != null &&
   active === my_key &&
   !(wave ?? []).some((t) => !t.is_local) &&
-  now >= turn_handover_at(deadline_ms, turn_ms)
+  now + (chain_offset_ms ?? 0) >= turn_handover_at(deadline_ms, turn_ms)
 
 /** Re-fold the committed state from the snapshot base + the sorted tail, and reconcile the turn-floor anchor.
  *  `now` stamps the floor the instant MY turn opens; only the false→true edge re-stamps. */
@@ -177,7 +184,14 @@ export const recompute = (draft, now) => {
   // first click of a fresh turn); my OWN casts are LOCAL waves (is_local) → they never trip it.
   const presenting = (draft.wave ?? []).some((t) => !t.is_local)
   const playable = turn_is_playable(
-    { active: committed.active, my_key, wave: draft.wave, deadline_ms: turn_deadline_ms, turn_ms: draft.view?.turn_ms },
+    {
+      active: committed.active,
+      my_key,
+      wave: draft.wave,
+      deadline_ms: turn_deadline_ms,
+      turn_ms: draft.view?.turn_ms,
+      chain_offset_ms: draft.chain_offset_ms,
+    },
     now
   )
   // MY SEAT-TURN COUNTER (cast.move `seat_turn` twin, the cooldown gate's clock): bumped EXACTLY on the PLAYABLE

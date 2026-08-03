@@ -129,6 +129,10 @@ export const empty_fight = () => ({
   error: null,
   my_key: null,
   turn_started_at: null,
+  // THE CHAIN-CLOCK OFFSET (#2099) — `chain_now ≈ Date.now() + this`, folded from observed (chain_now_ms,
+  // arrival) pairs the chain reads carry (draft_budget `fold_chain_offset`). Per FIGHT: `init` clears it with
+  // the rest of this state. null = nothing observed yet ⇒ no correction.
+  chain_offset_ms: null,
   // THE TURN-HANDOVER FACT (#1808) — folded, never a UI-side flag: my turn is genuinely playable (chain seat,
   // nothing replaying, the chain's mob-resolution budget spent). Every turn surface mounts on this.
   turn_playable: false,
