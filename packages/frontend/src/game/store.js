@@ -126,8 +126,9 @@ export function useFightVisibleMount() {
 
 /**
  * React hook: the canonical CONTROLS record — the core's commit flight, the draft count, the END-TURN 3-state,
- * and `min_turn_ready_at` (the min-turn floor as an ABSOLUTE INSTANT; the caller does the `now` subtraction so
- * the view stays pure).
+ * `min_turn_ready_at` (the min-turn floor as an ABSOLUTE INSTANT; the caller does the `now` subtraction so the
+ * view stays pure), and `action_slot` — #1224's one slot derivation, so the §7 seeded previews price their roll
+ * on a record instead of subscribing to a raw-core selector.
  * @returns {ReturnType<typeof fight_visible_view>['controls']}
  */
 export function useFightVisibleControls() {
