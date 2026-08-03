@@ -67,11 +67,33 @@ const stranded_fight = (turn_deadline_ms) => ({
   },
 })
 
+/** The same Fight object after its overdue turn was forfeited and the fight resolved TERMINAL (fight.move DEFEAT
+ *  = 3) — nothing a session can mount, an outcome to recover. */
+const settled_fight = () => ({ object: { version: 8, json: { ...stranded_fight(0).object.json, status: 3 } } })
+
+/** A Fight object read: PLACEMENT, window closed — the zombie nothing can start (#932's shape). The one live
+ *  status whose autonomous attempt can end in NO mounted session, which is what hands the fight to the modal. */
+const held_placement = (placement_deadline_ms) => ({
+  object: {
+    version: 7,
+    json: {
+      id: FIGHT_ID,
+      world: WORLD_ID,
+      status: 0, // fight.move PLACEMENT
+      placement_deadline_ms: String(placement_deadline_ms),
+      turn_deadline_ms: '0',
+      participants: [],
+      mobs: [],
+      queue: [],
+    },
+  },
+})
+
 /** /v1 lists the character's live seat (the serving node's projection — how the candidate reaches the door). */
-const serve_live_seat = () => {
+const serve_live_seat = (status = 'active') => {
   globalThis.fetch = mock(async (input) => {
     const body = new URL(String(input)).pathname.endsWith('/fights')
-      ? { fights: [{ fight_id: FIGHT_ID, world: WORLD_ID, status: 'active' }] }
+      ? { fights: [{ fight_id: FIGHT_ID, world: WORLD_ID, status }] }
       : { characters: [] }
     return new Response(JSON.stringify(body), { status: 200, headers: { 'content-type': 'application/json' } })
   })
@@ -85,6 +107,22 @@ const until_offer = async () => {
 }
 const trace_rows = () => /** @type {any[]} */ (globalThis.window?.__ARES_FIGHT_TRACE ?? [])
 const traced = (event) => trace_rows().filter((row) => row.event === event)
+/** Park until the entry ANSWERS its own consent question, whichever way it answers it (auto or modal) — so a run
+ *  under either contract reaches its assertions instead of timing out on the one it does not implement. */
+const until_consent = async () => {
+  for (let i = 0; i < 400 && !traced('fight_resume_auto').length && !traced('fight_resume_offer').length; i += 1)
+    await settle_tick(10)
+}
+/** Capture the by-law-loud refusal (#932) of a pass that is SETUP rather than the row's subject. */
+const without_console_error = async (run) => {
+  const real_console_error = console.error
+  console.error = mock(() => {})
+  try {
+    return await run()
+  } finally {
+    console.error = real_console_error
+  }
+}
 
 beforeEach(() => {
   reset_auth_mock({ address: OWNER })
@@ -226,5 +264,91 @@ describe('#1751 — the entry offers a choice before anything commits', () => {
     expect(traced('fight_resume_offer')).toHaveLength(0)
     expect(crank_door).not.toHaveBeenCalled()
     expect(use_dungeon.getState().fight_id).toBe(FIGHT_ID)
+  })
+})
+
+// ── #2122 · THE HELD FIGHT COMES BACK BY ITSELF ────────────────────────────────────────────────────────────────
+// Owner ruling: a player who crashed mid-fight wants their fight, not a dialog. The modal above stops gating the
+// happy path — a boot onto a chain-held seat REJOINS AUTONOMOUSLY. What is NOT readmitted is #1751's defect
+// class: the five-boots-five-transactions loop is capped at ONE autonomous attempt per fight id per session, and
+// no automatic path may ever answer 'forfeit' (the DEFEAT nobody chose is unreachable from here). The modal
+// survives as the FAILURE FALLBACK — a fight whose one attempt mounted nothing hands the player the door back.
+describe('#2122 — a held fight rejoins itself, exactly once', () => {
+  test('RED-FIRST: the boot answers its own consent — zero offers, one auto trace, one door call, mounted', async () => {
+    const crank_door = mock(async () => {
+      chain_read = async () => stranded_fight(Date.now() + HOUR_MS) // the crank advanced the turn
+      return { digest: '0xcrank' }
+    })
+
+    const entry = resume_world_fight(CHARACTER_ID, { crank_door })
+    await until_consent()
+
+    // Pre-#2122: the entry parked on the modal here and NOTHING happened until a human answered it.
+    expect(traced('fight_resume_offer')).toHaveLength(0)
+    expect(fight_resume_offer_store.get()).toBe(null)
+    expect(traced('fight_resume_auto')).toHaveLength(1)
+    expect(traced('fight_resume_auto')[0]).toMatchObject({
+      fight_id: FIGHT_ID,
+      character_id: CHARACTER_ID,
+      action: 'crank',
+      deadline_ms: expect.any(Number),
+    })
+
+    await entry
+    await settle_tick()
+
+    expect(crank_door).toHaveBeenCalledTimes(1) // ONE autonomous transaction, and it is the rejoin's own
+    expect(use_dungeon.getState().fight_id).toBe(FIGHT_ID)
+    expect(use_dungeon.getState().fight_fresh).toBe(false) // resumed — the entry cinematic never replays
+  })
+
+  test('RED-FIRST: the burn cap — a second pass at the same fight parks on the modal, spending nothing', async () => {
+    serve_live_seat('placement')
+    chain_read = async () => held_placement(Date.now() - HOUR_MS) // a window the force-start below cannot start
+    const force_start_door = mock(async () => {
+      throw new Error('pre-flight refused (test)')
+    })
+
+    const first = resume_world_fight(CHARACTER_ID, { force_start_door })
+    await until_consent()
+    expect(traced('fight_resume_auto')).toHaveLength(1) // pre-#2122: 0 — the modal parked instead
+    await without_console_error(() => first)
+
+    expect(force_start_door).toHaveBeenCalledTimes(1)
+    expect(use_dungeon.getState().fight_id).toBe(null) // the attempt ended in NO mounted session
+
+    const second = resume_world_fight(CHARACTER_ID, { force_start_door })
+    const offer = await until_offer()
+
+    // The cap: this fight spent its one autonomous attempt, so the player holds the door from here.
+    expect(offer).toMatchObject({ fight_id: FIGHT_ID, character_id: CHARACTER_ID, action: 'force_start' })
+    expect(traced('fight_resume_auto')).toHaveLength(1) // never a second autonomous answer
+    expect(force_start_door).toHaveBeenCalledTimes(1) // and nothing composed while the question stands
+
+    choose_fight_resume('later')
+    await without_console_error(() => second)
+
+    expect(force_start_door).toHaveBeenCalledTimes(1)
+  })
+
+  test('the autonomous answer is only ever REJOIN — no automatic path abandons a seat', async () => {
+    const forfeit_door = mock(async () => ({ digest: '0xabandon' }))
+    const crank_door = mock(async () => {
+      chain_read = async () => settled_fight() // the forfeited turn resolved the fight on chain
+      return { digest: '0xcrank' }
+    })
+    const recover = mock(() => {})
+    use_dungeon.setState({ _recover_dead_fight_reference: recover })
+
+    await resume_world_fight(CHARACTER_ID, { crank_door, forfeit_door })
+    await settle_tick()
+
+    // #1751's defect was a seat resolving as a DEFEAT nobody chose. The machine may spend ONE rejoin (capped
+    // above); it may never choose the seat's DEATH — `actions::abandon` stays a player-only door.
+    expect(forfeit_door).not.toHaveBeenCalled()
+    expect(crank_door).toHaveBeenCalledTimes(1)
+    expect(traced('fight_resume_choice')).toHaveLength(0) // nothing answered 'forfeit' — nothing was asked
+    expect(recover).toHaveBeenCalledTimes(1) // terminal on chain ⇒ routed out honestly, never re-captured
+    expect(recover.mock.calls[0][0]).toMatchObject({ character_id: CHARACTER_ID, state: 'settled' })
   })
 })
