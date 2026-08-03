@@ -18,35 +18,35 @@
 // behind (an escrow that does not contain me yet, as it is between a join landing and the mirror's write) — and
 // asserts the machine still sees my seat. Against the escrow scan it fails with phase ROAM / unmet no_my_seat.
 //
-// Only `dungeon_store.js` is mocked (its module graph reaches browser-bound auth in this no-jsdom harness), and
-// only to pin the stale mirror. The canonical doors are the REAL ones — a mock of `game/store.js` would leak
-// across the shared test process and truncate its export surface for every file loaded after this one.
+// THE REAL STORES, reached through the harness's two standing seams. The browser-shaped host surface is what the
+// world-shell graph needs at module load. The `use_dungeon` mock is the sibling suites' `static_hook` idiom and
+// exists for one reason: under `renderToStaticMarkup` zustand v5's own hook serves `getInitialState`, so a
+// component would read an EMPTY dungeon whatever the store holds. It keeps the store object itself — every other
+// export, `setState`/`getState`/`subscribe` included — and only makes the hook call read LIVE state, because
+// `mock.module` is global to the shared bun process and a narrower stub follows every file loaded after this one
+// (measured: a partial stub stripped `setState` from under the mirror subscriber and reddened four suites).
 import { afterAll, expect, mock, test } from 'bun:test'
 import { renderToStaticMarkup } from 'react-dom/server'
-import { board_view, DUNGEON_BOARD_ORIGIN, fight_visible_view } from '@aresrpg/fight/project'
+import { board_view, fight_visible_view } from '@aresrpg/fight/project'
 import { fight_store } from '@aresrpg/fight/store'
 
-import { reset_fight_core, seed_fight_core } from '../../../../../src/test_helpers/fight_core_harness.js'
+import { install_browser_globals } from '../../../../../src/test_helpers/browser_globals.js'
 
-const FIGHT = '0xf1'
-const ME = '0xme'
+const restore_globals = install_browser_globals()
 
-// ① the board BEFORE my join landed — one other seat, no row for me. This is what the mirror still holds.
-seed_fight_core({ fight_id: FIGHT, my: ME, seats: [{ character: '0xother' }], placement: true })
-const STALE_MIRROR = board_view(fight_store.getState())
+const { seed_fight_core, reset_fight_core } = await import('../../../../../src/test_helpers/fight_core_harness.js')
+const real_dungeon_store = await import('../../../../../src/world-shell/dungeon_store.js')
+const { use_dungeon } = real_dungeon_store
 
-// ② the core moves on: the placement board now seats me. The mirror is deliberately NOT re-published — the skew
-//    window this test is about. (`STALE_MIRROR.id === FIGHT`, so the machine still pairs the two surfaces.)
-seed_fight_core({ fight_id: FIGHT, my: ME, seats: [{ character: ME }], placement: true })
-
-// The façade's FULL export surface (`use_dungeon` + `DUNGEON_BOARD_ORIGIN`) — a module mock is global to the
-// shared bun process, so a partial one would break every file loaded after this one.
 mock.module('../../../../../src/world-shell/dungeon_store.js', () => ({
-  use_dungeon: (selector = (s) => s) => selector({ dungeon: STALE_MIRROR }),
-  DUNGEON_BOARD_ORIGIN,
+  ...real_dungeon_store,
+  use_dungeon: Object.assign((selector = (s) => s) => selector(use_dungeon.getState()), use_dungeon),
 }))
 
 const { useFightPhase } = await import('../../../../../src/game/screens/hud/world/use_fight_phase.js')
+
+const FIGHT = '0xf1'
+const ME = '0xme'
 
 /** Render the hook and hand back its verdict — the phase machine reached exactly as a mounted surface reaches it. */
 function phase_of() {
@@ -59,10 +59,22 @@ function phase_of() {
   return seen
 }
 
-afterAll(() => reset_fight_core())
+afterAll(() => {
+  reset_fight_core()
+  restore_globals()
+})
 
 test('my seat answers from the identity book, not from a mirror the core has outrun', () => {
-  expect(STALE_MIRROR.escrow.some((row) => (row.character ?? row.character_id) === ME)).toBe(false)
+  // the board BEFORE my join landed — one other seat, no row for me. This is what the mirror still holds.
+  seed_fight_core({ fight_id: FIGHT, my: ME, seats: [{ character: '0xother' }], placement: true })
+  const stale_mirror = board_view(fight_store.getState())
+  expect(stale_mirror.escrow.some((row) => (row.character ?? row.character_id) === ME)).toBe(false)
+
+  // the core moves on: the placement board now seats me. The mirror is then pinned BACK to the pre-join board —
+  // the skew window this test is about, and the last write, so no later publish overwrites it.
+  // (`stale_mirror.id === FIGHT`, so the phase machine still pairs the two surfaces.)
+  seed_fight_core({ fight_id: FIGHT, my: ME, seats: [{ character: ME }], placement: true })
+  use_dungeon.setState({ dungeon: stale_mirror })
   expect(fight_visible_view(fight_store.getState()).mount.viewer.my_entity_id).toBe(ME)
 
   const result = phase_of()
