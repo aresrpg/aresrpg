@@ -77,7 +77,7 @@ describe('DungeonBoard auto-commit edge — an idle expired turn is NEVER a no-o
   // (B) THE FIX, source-contract (red at HEAD): auto_submit_ref's body must carry no draft-length gate — it
   //     flushes the live draft (empty or not) through the SAME door on_end_turn uses, unconditionally.
   test('(B) auto_submit_ref has no zero-draft no-op — it always calls flush_commit', async () => {
-    const src = await Bun.file(new URL('./DungeonBoard.jsx', import.meta.url)).text()
+    const src = await Bun.file(new URL('./DungeonBoardCommit.jsx', import.meta.url)).text()
     const start = src.indexOf('auto_submit_ref.current = () => {')
     const end = src.indexOf('useEffect(', start)
     expect(start).toBeGreaterThan(-1)

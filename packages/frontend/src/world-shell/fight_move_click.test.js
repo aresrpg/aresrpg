@@ -12,7 +12,7 @@ import { move_plan_dungeon } from '../fight-engine/overlay_intents.js'
 
 describe('#933 — DungeonBoard routes legal clicks through the shared move plan', () => {
   test('the plan is proven before staging and feeds both the path preview and MP remainder', async () => {
-    const source = await Bun.file(new URL('../game/screens/hud/world/DungeonBoard.jsx', import.meta.url)).text()
+    const source = await Bun.file(new URL('../game/screens/hud/world/DungeonBoardInput.jsx', import.meta.url)).text()
     const walk_start = source.indexOf('const optimistic_walk =')
     const walk_end = source.indexOf('const optimistic_cast =', walk_start)
     const click_start = source.indexOf('const on_cell_click =')

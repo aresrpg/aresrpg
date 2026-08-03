@@ -62,7 +62,7 @@ describe('② self-click never rolls back a drafted walk', () => {
   //     pop. The `cell === last_step ⇒ pop_move_step` rollback branch is gone; a self-click falls through to an
   //     inert no-op (reachable excludes the anchor cell), so a drafted action can never be cancelled by self-click.
   test('(B) on_cell_click has no cell===last_step ⇒ pop_move_step rollback branch', async () => {
-    const src = await Bun.file(new URL('./DungeonBoard.jsx', import.meta.url)).text()
+    const src = await Bun.file(new URL('./DungeonBoardInput.jsx', import.meta.url)).text()
     const start = src.indexOf('const on_cell_click = (cell, cast_only) =>')
     const end = src.indexOf('// Relay: a click / spell-drop on the rich 3D board', start)
     expect(start).toBeGreaterThan(-1)

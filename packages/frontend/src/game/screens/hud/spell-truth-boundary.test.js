@@ -6,7 +6,7 @@ import { readFileSync } from 'node:fs'
 const source = (relative_path) => readFileSync(new URL(relative_path, import.meta.url), 'utf8')
 
 test('DungeonBoard own-cast path dispatches one composite predicted batch with no legacy fanout', () => {
-  const board = source('./world/DungeonBoard.jsx')
+  const board = source('./world/DungeonBoardInput.jsx')
   const start = board.indexOf('const optimistic_cast')
   const end = board.indexOf('\n  const ', start + 1)
   const cast_path = board.slice(start, end)

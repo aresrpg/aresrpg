@@ -195,14 +195,17 @@ describe('trap draft paint — click-time fold + rollback semantics (the fold my
     // @aresrpg/fight test/tackle_move_gate.test.js (next_move_tackle → exact forfeit). This row pins the React
     // WIRING of the FORFEIT half only; the walk half — #239's toll, where a bitten move still walks the
     // affordable prefix — is owned by dungeon_board_tackle_reach_gate.test.js, its one home.
-    const source = await Bun.file(new URL('../game/screens/hud/world/DungeonBoard.jsx', import.meta.url)).text()
+    const source = await Bun.file(new URL('../game/screens/hud/world/DungeonBoardInput.jsx', import.meta.url)).text()
     expect(source).toContain('const bite = next_move_tackle(fight_store.getState())')
     expect(source).toContain('synthetic_tackled_events') // predict_tackle rides the hit-anim + forfeit beat
     expect(source).toMatch(/intent: \{ kind: 'Tackled'/) // …folding the SAME action the receipt folds
   })
 
   test('CONTRACT: DungeonBoard has one trap ledger and rolls back only the flush result', async () => {
-    const source = await Bun.file(new URL('../game/screens/hud/world/DungeonBoard.jsx', import.meta.url)).text()
+    const source = await Promise.all([
+      Bun.file(new URL('../game/screens/hud/world/DungeonBoardInput.jsx', import.meta.url)).text(),
+      Bun.file(new URL('../game/screens/hud/world/DungeonBoardCommit.jsx', import.meta.url)).text(),
+    ]).then((parts) => parts.join('\n'))
     // The draft click folds the trap optimistically (at cast, not at commit) through the fight reducer.
     expect(source).toContain('place_traps: prediction.placed_traps ?? []')
     // A dropped trap draft is collected for rollback at flush.

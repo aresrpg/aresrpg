@@ -83,10 +83,12 @@ const boot = () => {
   return store
 }
 
-const BOARD_SOURCE = readFileSync(
-  fileURLToPath(new URL('../../../../../src/game/screens/hud/world/DungeonBoard.jsx', import.meta.url)),
-  'utf8'
-)
+const BOARD_SOURCE = [
+  '../../../../../src/game/screens/hud/world/DungeonBoardState.jsx',
+  '../../../../../src/game/screens/hud/world/DungeonBoardInput.jsx',
+]
+  .map((path) => readFileSync(fileURLToPath(new URL(path, import.meta.url)), 'utf8'))
+  .join('\n')
 
 describe('#1743 — the click affordance and the paint price the same tackle toll', () => {
   test('CORE: the tolled walk budget is a projection, not a UI derivation', () => {

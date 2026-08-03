@@ -98,7 +98,7 @@ describe('DungeonBoard optimistic_walk — the walk from is the drafted step, ne
   // (B) THE FIX, source-contract: the click's shared move plan anchors on `draft_caster_cell` (the staged prefix
   //     evolved through the sim twin) BEFORE append/stage, and NEVER on the held `me_slice.cell`.
   test('(B) the move plan anchors on the ordered draft cell before staging', async () => {
-    const src = await Bun.file(new URL('./DungeonBoard.jsx', import.meta.url)).text()
+    const src = await Bun.file(new URL('./DungeonBoardInput.jsx', import.meta.url)).text()
     const start = src.indexOf('const on_cell_click =')
     const end = src.indexOf('// Relay:', start)
     expect(start).toBeGreaterThan(-1)

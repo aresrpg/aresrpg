@@ -208,7 +208,7 @@ describe('#1001 — no wallet state can starve the sim seat of its level', () =>
   // So the composition `board_gate` mirrors is pinned here: BOTH level-gated surfaces read the one door.
   test('both level-gated fight surfaces resolve their seat through the ONE door', async () => {
     const read = async (path) => await Bun.file(new URL(path, import.meta.url)).text()
-    const board = await read('../game/screens/hud/world/DungeonBoard.jsx')
+    const board = await read('../game/screens/hud/world/DungeonBoardState.jsx')
     const bar = await read('../game/screens/hud/SpellBar.jsx')
     for (const source of [board, bar]) {
       expect(source).toContain('world-shell/seat_character.js')

@@ -176,7 +176,7 @@ describe('trap home collapse — the fold (engine_view.my_traps) is the ONE clie
   })
 
   test('CONTRACT: the CAST-LEGALITY seam reads the fold, never trap_overlay', async () => {
-    const src = await Bun.file(new URL('../game/screens/hud/world/DungeonBoard.jsx', import.meta.url)).text()
+    const src = await Bun.file(new URL('../game/screens/hud/world/DungeonBoardState.jsx', import.meta.url)).text()
     expect(src).not.toContain('trap_overlay')
     expect(src).toContain('fight.my_traps')
   })

@@ -14,7 +14,11 @@ import { describe, expect, test } from 'bun:test'
 
 describe('DungeonBoard flush — each cast validated against the evolved sequence, not the optimistic occupancy', () => {
   test('RED-FIRST #398: flush composes and evolves the one ordered staged stream, including moves', async () => {
-    const src = await Bun.file(new URL('./DungeonBoard.jsx', import.meta.url)).text()
+    const src = await Promise.all([
+      Bun.file(new URL('./DungeonBoardCommit.jsx', import.meta.url)).text(),
+      Bun.file(new URL('./DungeonBoardInput.jsx', import.meta.url)).text(),
+      Bun.file(new URL('./DungeonBoardState.jsx', import.meta.url)).text(),
+    ]).then((parts) => parts.join('\n'))
     const start = src.indexOf('const flush_commit = async')
     const end = src.indexOf('auto_submit_ref.current =', start)
     expect(start).toBeGreaterThan(-1)
@@ -44,7 +48,7 @@ describe('DungeonBoard flush — each cast validated against the evolved sequenc
   })
 
   test('flush_commit sources per-cast occupancy from evolve_flush_casts (committed base + prior displacements)', async () => {
-    const src = await Bun.file(new URL('./DungeonBoard.jsx', import.meta.url)).text()
+    const src = await Bun.file(new URL('./DungeonBoardCommit.jsx', import.meta.url)).text()
     const start = src.indexOf('const flush_commit = async')
     const end = src.indexOf('auto_submit_ref.current =', start)
     expect(start).toBeGreaterThan(-1)
@@ -64,7 +68,7 @@ describe('DungeonBoard flush — each cast validated against the evolved sequenc
   })
 
   test('#398: a cast after a trap-killed move is dropped before it can revert the PTB', async () => {
-    const src = await Bun.file(new URL('./DungeonBoard.jsx', import.meta.url)).text()
+    const src = await Bun.file(new URL('./DungeonBoardCommit.jsx', import.meta.url)).text()
     const start = src.indexOf('const flush_commit = async')
     const end = src.indexOf('auto_submit_ref.current =', start)
     const body = src.slice(start, end)
@@ -78,7 +82,7 @@ describe('DungeonBoard flush — each cast validated against the evolved sequenc
 
 describe('DungeonBoard auto-pass toast policy', () => {
   test('the lost-turn edge keeps its trace but emits no toast', async () => {
-    const src = await Bun.file(new URL('./DungeonBoard.jsx', import.meta.url)).text()
+    const src = await Bun.file(new URL('./DungeonBoardCommit.jsx', import.meta.url)).text()
     const start = src.indexOf('subscribe_turn_lost(fight_store')
     const end = src.indexOf('// The pick decision', start)
     const body = src.slice(start, end)
@@ -94,7 +98,7 @@ describe('DungeonBoard auto-pass toast policy', () => {
 // same un-driveable-component rationale as the describe above (source-contract, no browser/jsdom).
 describe('DungeonBoard flush — a drafted cast auto-retargets onto its moved target (txs.retarget_cast wiring)', () => {
   test('flush_commit resolves the target fighter through the EYE-STATE occupancy, calls retarget_cast, and ships the retargeted cell', async () => {
-    const src = await Bun.file(new URL('./DungeonBoard.jsx', import.meta.url)).text()
+    const src = await Bun.file(new URL('./DungeonBoardCommit.jsx', import.meta.url)).text()
     const start = src.indexOf('const flush_commit = async')
     const end = src.indexOf('auto_submit_ref.current =', start)
     const body = src.slice(start, end)
@@ -127,7 +131,7 @@ describe('DungeonBoard flush — a drafted cast auto-retargets onto its moved ta
   // legacy settlement derivation has no reader in this file at all. Behavior is pinned in
   // @aresrpg/fight/test/truth_owner.test.js on a state where the two folds provably disagree.
   test('#1027: every committed read in the board goes through the core-backed door, never the legacy fold', async () => {
-    const src = await Bun.file(new URL('./DungeonBoard.jsx', import.meta.url)).text()
+    const src = await Bun.file(new URL('./DungeonBoardCommit.jsx', import.meta.url)).text()
     expect(src).not.toMatch(/committed_state/)
     expect(src).toMatch(/target_committed_cell = eye_target[\s\S]{0,40}committed_truth\(fight_store\.getState\(\)\)/)
   })
@@ -144,7 +148,7 @@ describe('DungeonBoard flush — a drafted cast auto-retargets onto its moved ta
 // same un-driveable-component rationale as the describe blocks above.
 describe('DungeonBoard flush — the footprint anchor evolves PER CAST, and ground-targeted casts never target-revalidate (#321)', () => {
   test('flush_commit seeds evolve_flush_casts at the sequence anchor and reads its per-cast caster_cell as EVERY cast’s footprint origin', async () => {
-    const src = await Bun.file(new URL('./DungeonBoard.jsx', import.meta.url)).text()
+    const src = await Bun.file(new URL('./DungeonBoardCommit.jsx', import.meta.url)).text()
     const start = src.indexOf('const flush_commit = async')
     const end = src.indexOf('auto_submit_ref.current =', start)
     const body = src.slice(start, end)
@@ -164,7 +168,7 @@ describe('DungeonBoard flush — the footprint anchor evolves PER CAST, and grou
   })
 
   test('a free_cell (ground-targeted) cast never resolves eye_target — cells do not retarget or drop on account of who now stands there', async () => {
-    const src = await Bun.file(new URL('./DungeonBoard.jsx', import.meta.url)).text()
+    const src = await Bun.file(new URL('./DungeonBoardCommit.jsx', import.meta.url)).text()
     const start = src.indexOf('const flush_commit = async')
     const end = src.indexOf('auto_submit_ref.current =', start)
     const body = src.slice(start, end)
@@ -174,7 +178,7 @@ describe('DungeonBoard flush — the footprint anchor evolves PER CAST, and grou
   })
 
   test('only the successful local commit-drop event can emit the named out-of-reach toast', async () => {
-    const src = await Bun.file(new URL('./DungeonBoard.jsx', import.meta.url)).text()
+    const src = await Bun.file(new URL('./DungeonBoardCommit.jsx', import.meta.url)).text()
     const start = src.indexOf('const flush_commit = async')
     const end = src.indexOf('auto_submit_ref.current =', start)
     const body = src.slice(start, end)
@@ -202,7 +206,7 @@ describe('DungeonBoard flush — the footprint anchor evolves PER CAST, and grou
 
 describe('DungeonBoard fight toast policy', () => {
   test('turn completion stays silent and prediction reconciliation logs without a toast', async () => {
-    const src = await Bun.file(new URL('./DungeonBoard.jsx', import.meta.url)).text()
+    const src = await Bun.file(new URL('./DungeonBoardCommit.jsx', import.meta.url)).text()
     const flush_start = src.indexOf('const flush_commit = async')
     const flush_end = src.indexOf('auto_submit_ref.current =', flush_start)
     const flush_body = src.slice(flush_start, flush_end)

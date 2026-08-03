@@ -41,7 +41,7 @@ describe('① a per-target-capped cell is refused by name, not silently', () => 
   // (B) THE FIX, source-contract (red at HEAD): the armed board click resolves a spent cell through the ONE
   //     per-target home and surfaces the existing chain-abort copy instead of a mute disarm.
   test('(B) the armed click path names the per-target refusal', async () => {
-    const src = await Bun.file(new URL('./DungeonBoard.jsx', import.meta.url)).text()
+    const src = await Bun.file(new URL('./DungeonBoardInput.jsx', import.meta.url)).text()
     const start = src.indexOf('const on_cell_click = (cell, cast_only) =>')
     const end = src.indexOf('// Relay: a click / spell-drop on the rich 3D board', start)
     expect(start).toBeGreaterThan(-1)

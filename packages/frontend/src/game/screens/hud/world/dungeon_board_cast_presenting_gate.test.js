@@ -90,7 +90,7 @@ describe('DungeonBoard reachable — gates on the SAME cast_presenting fact the 
   //     both reference `cast_presenting` off the `fight` projection — the move-click affordance can't fire while
   //     the SAME fact that hides the zone is true.
   test('(B) reachable guards on fight?.cast_presenting (early-return AND the dep array)', async () => {
-    const src = await Bun.file(new URL('./DungeonBoard.jsx', import.meta.url)).text()
+    const src = await Bun.file(new URL('./DungeonBoardState.jsx', import.meta.url)).text()
     const start = src.indexOf('const reachable = useMemo(')
     const end = src.indexOf('const caster_cell =', start)
     expect(start).toBeGreaterThan(-1)

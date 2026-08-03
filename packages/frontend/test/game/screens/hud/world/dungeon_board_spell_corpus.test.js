@@ -13,7 +13,7 @@ import { set_spell_corpus_for_test, subscribe_spell_corpus } from '../../../../.
 import { resolve_class_spells } from '../../../../../src/game/screens/hud/fight-spells.js'
 
 const dungeon_board_source = readFileSync(
-  new URL('../../../../../src/game/screens/hud/world/DungeonBoard.jsx', import.meta.url),
+  new URL('../../../../../src/game/screens/hud/world/DungeonBoardState.jsx', import.meta.url),
   'utf8'
 )
 

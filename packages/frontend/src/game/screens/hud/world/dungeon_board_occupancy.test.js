@@ -32,7 +32,7 @@ const manhattan = (a, b) => {
   return Math.abs(ax - bx) + Math.abs(ay - by)
 }
 
-const src_promise = Bun.file(new URL('./DungeonBoard.jsx', import.meta.url)).text()
+const src_promise = Bun.file(new URL('./DungeonBoardState.jsx', import.meta.url)).text()
 
 // Extracts the verbatim source between two markers and compiles it as a real function body.
 // `strip_start`: true when start_marker is a WRAPPER to discard (e.g. `useMemo(() => {`, whose inner body is the
