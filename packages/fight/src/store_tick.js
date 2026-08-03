@@ -38,6 +38,9 @@ export const reduce_tick_state = (state, msg, next_core, now) => {
     deadline_ms: deadline,
     latch: commit_latch,
     turn_key,
+    // #2118 — the same chain-clock correction the min-turn floor and the deadline hatch already take. Without it
+    // this fork answered a CHAIN deadline on the RAW client clock while its two siblings answered in chain time.
+    chain_offset_ms: state.chain_offset_ms,
   })
 
   const deadline_due = deadline_fresh && now >= auto_commit_fire_at(deadline, state.view?.turn_ms)

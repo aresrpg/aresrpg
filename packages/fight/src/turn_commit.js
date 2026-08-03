@@ -100,12 +100,24 @@ export function auto_commit_blocked(latch, turn_key) {
 
 /** Pure auto-flush switchboard used by the board and its deterministic failure trace. A ZERO-draft turn
  *  still fires — a turn commits in any case, to trigger mob actions — stage_to_batch
- *  ships an empty batch as one bare act_pass, so the idle commit is what hands the mobs their wave. */
-export function auto_commit_decision({ enabled, busy, now_ms, deadline_ms, latch, turn_key }) {
+ *  ships an empty batch as one bare act_pass, so the idle commit is what hands the mobs their wave.
+ *
+ *  ONE FRAME (#2118). `deadline_ms` is a CHAIN instant and `now_ms` is this client's wall clock, so the
+ *  retry/missed fork below is the THIRD comparison over that deadline — and it was the last one still asking it
+ *  in the wrong frame. The floor (`min_turn_ready_at`) and the escape hatch (`submit_wait_ms`) already carry
+ *  `chain_offset_ms`; this one now reads the SAME offset, RAW, with no margin added on either side.
+ *
+ *  THE DIRECTION IS THE RULING. The estimator converges from BELOW (`offset_hat ≤ offset`), so the residual
+ *  leans RETRY — and retry is the RECOVERABLE error: a doomed retry costs one wasted sponsored attempt (capped,
+ *  and the chain's own ETurnTooFast floor already guards an early send). A premature `missed` forfeits a turn
+ *  the chain would still have accepted: player-visible and irrecoverable. An absent observation stays `null` and
+ *  changes nothing — a clock nobody measured is never invented into a correction. */
+export function auto_commit_decision({ enabled, busy, now_ms, deadline_ms, latch, turn_key, chain_offset_ms = null }) {
   if (!enabled) return 'disabled'
   if (auto_commit_blocked(latch, turn_key)) return 'latched'
   if (!busy) return 'fire'
-  return Number(now_ms) < Number(deadline_ms) - 1500 ? 'retry' : 'missed'
+  const chain_now = Number(now_ms) + (Number(chain_offset_ms) || 0)
+  return chain_now < Number(deadline_ms) - 1500 ? 'retry' : 'missed'
 }
 
 /**
