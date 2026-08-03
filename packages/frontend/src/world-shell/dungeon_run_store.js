@@ -69,6 +69,7 @@ import { set_zone_music, stop_zone_music } from '../game/core/audio/ambient_musi
 import { game_log } from '../core/log.js'
 
 import { install_fight_trace_tee } from './fight_trace_tee.js'
+import { install_fight_clock } from './fight_core_clock.js'
 import { bind_fight_stream } from './fight_stream_link.js'
 import {
   as_one_toast,
@@ -1843,6 +1844,11 @@ use_dungeon.subscribe(publish_dungeon_session)
 // envelope (V2 build step 1). Gated OFF in ordinary play; zero behavior change (the original input still
 // runs). Installed here — the ONE place the app wires the fight-store singleton — before any dispatch.
 install_fight_trace_tee(fight_store)
+
+// ── THE FIGHT REDUCER'S CLOCK (#1993): the turn handover, the deadline auto-commit and the wave watchdog are
+// time-driven CORE transitions, and their 4/s tick used to come from a `useEffect` in the turn-order card.
+// Armed here, beside the tee, off the store's own bound-fight lifetime — no component can freeze it.
+install_fight_clock(fight_store)
 
 // ── THE ONE PROJECTION MIRROR: the core's board view → the legacy `dungeon` field every consumer reads. This is
 // the ONE sanctioned set() of fight-derived data — adopt-whole, zero logic. No dedupe/floor/turn decision lives

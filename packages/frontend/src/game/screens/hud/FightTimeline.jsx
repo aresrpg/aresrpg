@@ -15,7 +15,6 @@
 import { useEffect, useRef } from 'react'
 
 import { play_fight_sfx } from '../../core/audio/sfx.js'
-import { fight_store } from '@aresrpg/fight/store'
 import { useFightView } from '../../store.js'
 import { COMMIT_BUFFER_MS, effective_deadline } from '@aresrpg/fight/draft_budget'
 import { Tooltip } from './Tooltip.jsx'
@@ -31,18 +30,11 @@ const ACTIVE_HIGHLIGHT_VARIANT = 'a'
 export function FightTimeline() {
   const fight = useFightView() // synchronous core view (S2 mirror kill)
   const deadline = fight?.turn_deadline_ms ?? 0
-  // Time is a reducer INPUT: one 4/s clock folds auto-commit against the current deadline and also notifies the
-  // projection subscribers that repaint this countdown. Draft count already lives in the reducer-owned staged
-  // queue; busy + executed-failure feedback re-enters the same door from the transaction edge.
-  useEffect(() => {
-    if (deadline <= 0) return
-    const tick = () => {
-      fight_store.getState().input({ type: 'tick' }, Date.now())
-    }
-    tick()
-    const timer = window.setInterval(tick, 250)
-    return () => clearInterval(timer)
-  }, [deadline])
+  // Time is a reducer INPUT, and this card is a READER of it. The 4/s tick that folds the turn handover, the
+  // auto-commit and the wave watchdog — and, incidentally, repaints this countdown by notifying the projection
+  // subscribers — used to be a `useEffect` right here. Core time-driven transitions cannot depend on one
+  // presentational component staying mounted, so the clock moved to the fight's own edge
+  // (`world-shell/fight_core_clock.js`, armed for the bound fight's lifetime). #1993 WP2b.
 
   // Turn-timer window: the bar must diminish from the START of the turn to 0 — not sit static full
   // for the first N seconds then drop. The turn's TOTAL length is unknown here (dungeon = 90s, a duel could
