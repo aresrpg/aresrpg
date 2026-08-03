@@ -148,13 +148,12 @@
             "ap": 12,
             "ap_max": 12,
             "committed": 50,
-            "committed_dead": false,
-            "dead": false,
             "display": 50,
+            "display_alive": true,
             "max": 50,
             "mp": 3,
             "mp_max": 3,
-            "predicted": 50
+            "presented": 50
           }
         },
         "mob-0": {
@@ -202,13 +201,12 @@
             "ap": 6,
             "ap_max": 6,
             "committed": 20,
-            "committed_dead": false,
-            "dead": false,
             "display": 20,
+            "display_alive": true,
             "max": 20,
             "mp": 3,
             "mp_max": 3,
-            "predicted": 20
+            "presented": 20
           }
         }
       },
@@ -223,7 +221,9 @@
         "sim_active": false,
         "viewer": {
           "address": "0xa11ce",
-          "controlled_entity_ids": ["0xchar_a"],
+          "controlled_entity_ids": [
+            "0xchar_a"
+          ],
           "my_entity_id": "0xchar_a",
           "my_key": "p0",
           "spectator": false
@@ -271,7 +271,10 @@
         "input_armed": true,
         "is_my_turn": true,
         "my_turn_no": 1,
-        "order": ["0xchar_a", "mob-0"],
+        "order": [
+          "0xchar_a",
+          "mob-0"
+        ],
         "phase": "active",
         "placement": false,
         "placement_cells": {
@@ -351,13 +354,12 @@
             "ap": 12,
             "ap_max": 12,
             "committed": 50,
-            "committed_dead": false,
-            "dead": false,
             "display": 50,
+            "display_alive": true,
             "max": 50,
             "mp": 3,
             "mp_max": 3,
-            "predicted": 50
+            "presented": 50
           }
         },
         "mob-0": {
@@ -405,13 +407,12 @@
             "ap": 6,
             "ap_max": 6,
             "committed": 20,
-            "committed_dead": false,
-            "dead": false,
             "display": 20,
+            "display_alive": true,
             "max": 20,
             "mp": 3,
             "mp_max": 3,
-            "predicted": 20
+            "presented": 20
           }
         }
       },
@@ -426,7 +427,9 @@
         "sim_active": false,
         "viewer": {
           "address": "0xa11ce",
-          "controlled_entity_ids": ["0xchar_a"],
+          "controlled_entity_ids": [
+            "0xchar_a"
+          ],
           "my_entity_id": "0xchar_a",
           "my_key": "p0",
           "spectator": false
@@ -474,7 +477,10 @@
         "input_armed": true,
         "is_my_turn": true,
         "my_turn_no": 1,
-        "order": ["0xchar_a", "mob-0"],
+        "order": [
+          "0xchar_a",
+          "mob-0"
+        ],
         "phase": "active",
         "placement": false,
         "placement_cells": {
@@ -554,13 +560,12 @@
             "ap": 7,
             "ap_max": 12,
             "committed": 50,
-            "committed_dead": false,
-            "dead": false,
             "display": 50,
+            "display_alive": true,
             "max": 50,
             "mp": 3,
             "mp_max": 3,
-            "predicted": 50
+            "presented": 50
           }
         },
         "mob-0": {
@@ -608,13 +613,12 @@
             "ap": 6,
             "ap_max": 6,
             "committed": 20,
-            "committed_dead": false,
-            "dead": false,
             "display": 20,
+            "display_alive": true,
             "max": 20,
             "mp": 3,
             "mp_max": 3,
-            "predicted": 12
+            "presented": 12
           }
         }
       },
@@ -629,7 +633,9 @@
         "sim_active": false,
         "viewer": {
           "address": "0xa11ce",
-          "controlled_entity_ids": ["0xchar_a"],
+          "controlled_entity_ids": [
+            "0xchar_a"
+          ],
           "my_entity_id": "0xchar_a",
           "my_key": "p0",
           "spectator": false
@@ -677,7 +683,10 @@
         "input_armed": true,
         "is_my_turn": true,
         "my_turn_no": 1,
-        "order": ["0xchar_a", "mob-0"],
+        "order": [
+          "0xchar_a",
+          "mob-0"
+        ],
         "phase": "active",
         "placement": false,
         "placement_cells": {
@@ -757,13 +766,12 @@
             "ap": 7,
             "ap_max": 12,
             "committed": 44,
-            "committed_dead": false,
-            "dead": false,
             "display": 50,
+            "display_alive": true,
             "max": 50,
             "mp": 3,
             "mp_max": 3,
-            "predicted": 50
+            "presented": 50
           }
         },
         "mob-0": {
@@ -811,13 +819,12 @@
             "ap": 6,
             "ap_max": 6,
             "committed": 20,
-            "committed_dead": false,
-            "dead": false,
             "display": 12,
+            "display_alive": true,
             "max": 20,
             "mp": 3,
             "mp_max": 3,
-            "predicted": 12
+            "presented": 12
           }
         }
       },
@@ -832,7 +839,9 @@
         "sim_active": false,
         "viewer": {
           "address": "0xa11ce",
-          "controlled_entity_ids": ["0xchar_a"],
+          "controlled_entity_ids": [
+            "0xchar_a"
+          ],
           "my_entity_id": "0xchar_a",
           "my_key": "p0",
           "spectator": false
@@ -880,7 +889,10 @@
         "input_armed": false,
         "is_my_turn": true,
         "my_turn_no": 1,
-        "order": ["0xchar_a", "mob-0"],
+        "order": [
+          "0xchar_a",
+          "mob-0"
+        ],
         "phase": "active",
         "placement": false,
         "placement_cells": {
@@ -960,13 +972,12 @@
             "ap": 7,
             "ap_max": 12,
             "committed": 44,
-            "committed_dead": false,
-            "dead": false,
             "display": 44,
+            "display_alive": true,
             "max": 50,
             "mp": 3,
             "mp_max": 3,
-            "predicted": 44
+            "presented": 44
           }
         },
         "mob-0": {
@@ -1014,13 +1025,12 @@
             "ap": 6,
             "ap_max": 6,
             "committed": 20,
-            "committed_dead": false,
-            "dead": false,
             "display": 20,
+            "display_alive": true,
             "max": 20,
             "mp": 3,
             "mp_max": 3,
-            "predicted": 12
+            "presented": 12
           }
         }
       },
@@ -1035,7 +1045,9 @@
         "sim_active": false,
         "viewer": {
           "address": "0xa11ce",
-          "controlled_entity_ids": ["0xchar_a"],
+          "controlled_entity_ids": [
+            "0xchar_a"
+          ],
           "my_entity_id": "0xchar_a",
           "my_key": "p0",
           "spectator": false
@@ -1083,7 +1095,10 @@
         "input_armed": true,
         "is_my_turn": true,
         "my_turn_no": 2,
-        "order": ["0xchar_a", "mob-0"],
+        "order": [
+          "0xchar_a",
+          "mob-0"
+        ],
         "phase": "active",
         "placement": false,
         "placement_cells": {
@@ -1163,13 +1178,12 @@
             "ap": 12,
             "ap_max": 12,
             "committed": 44,
-            "committed_dead": false,
-            "dead": false,
             "display": 44,
+            "display_alive": true,
             "max": 50,
             "mp": 3,
             "mp_max": 3,
-            "predicted": 44
+            "presented": 44
           }
         },
         "mob-0": {
@@ -1217,13 +1231,12 @@
             "ap": 6,
             "ap_max": 6,
             "committed": 12,
-            "committed_dead": false,
-            "dead": false,
             "display": 12,
+            "display_alive": true,
             "max": 20,
             "mp": 3,
             "mp_max": 3,
-            "predicted": 12
+            "presented": 12
           }
         }
       },
@@ -1238,7 +1251,9 @@
         "sim_active": false,
         "viewer": {
           "address": "0xa11ce",
-          "controlled_entity_ids": ["0xchar_a"],
+          "controlled_entity_ids": [
+            "0xchar_a"
+          ],
           "my_entity_id": "0xchar_a",
           "my_key": "p0",
           "spectator": false
@@ -1286,7 +1301,10 @@
         "input_armed": true,
         "is_my_turn": true,
         "my_turn_no": 2,
-        "order": ["0xchar_a", "mob-0"],
+        "order": [
+          "0xchar_a",
+          "mob-0"
+        ],
         "phase": "active",
         "placement": false,
         "placement_cells": {

@@ -245,12 +245,16 @@ describe('#1993 train 0 — every field is AT CURRENT PARITY with the fragment t
       expect(row.identity.team).toBe(fighter.team)
       expect(row.identity.level).toBe(fighter.level)
       expect(row.cells.display_xy).toEqual(fighter.cell)
+      // #1993 WP7 — the legacy row names are DERIVATIONS of the vitals record now, so this parity check is
+      // also the proof that one fold answers both spellings. `presented` is the presentation fold (the old
+      // `health`), `display` is the one number a bar renders (the old `presented_health`), and liveness is
+      // two facts — committed and rendered — instead of the three booleans the row used to publish.
       expect(row.vitals.committed).toBe(fighter.committed_health)
-      expect(row.vitals.predicted).toBe(fighter.health)
+      expect(row.vitals.presented).toBe(fighter.health)
       expect(row.vitals.display).toBe(fighter.presented_health)
       expect(row.vitals.max).toBe(fighter.health_max)
       expect(row.vitals.alive).toBe(fighter.committed_alive)
-      expect(row.vitals.dead).toBe(fighter.dead)
+      expect(row.vitals.display_alive).toBe(!fighter.dead)
       expect(row.statuses.rows).toEqual(fighter.effects)
       expect(row.statuses.invisible).toBe(!!fighter.invisible)
     }

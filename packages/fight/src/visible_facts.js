@@ -141,8 +141,9 @@ const entity_statuses = (fighter) => {
 }
 
 /**
- * ENTITIES — the id-keyed rows: identity · cells · vitals · statuses. Built from the `engine_view` fighter rows
- * (their derivation is the one home and stays there), regrouped so a consumer names the fact it wants instead of
+ * ENTITIES — the id-keyed rows: identity · cells · vitals · statuses. Built from the `engine_view` fighter rows,
+ * whose health/liveness fields are themselves derivations of `vitals_record.js` (#1993 WP7) — so this record and
+ * the legacy row names are one fold read twice, never two. A consumer names the fact it wants instead of
  * choosing between `health`, `presented_health` and `committed_health` at every call site.
  * @param {any} s the fight store state @param {any} engine the engine view, or null before a board is adopted
  * @param {Map<string, string>} keys entity id → thin-fold key (built by the projections' own key constructors)
@@ -181,19 +182,23 @@ export const visible_entities = (s, engine, keys, book = {}) => {
         hue: fighter.hue ?? null,
       },
       cells: entity_cells(s, key, snapshot_cell_of(view, key), fighter.cell),
-      // VITALS with explicit semantics: `committed` = chain truth · `predicted` = the optimistic/effective fold
-      // (engine_view's `health`) · `display` = THE number a live surface renders — the paced presented fold
-      // during a wave, the settled committed value at rest (engine_view's `presented_health`). One display HP,
-      // named once. `dead` is RENDERED liveness (the killing beat's ack holds it); `alive`/`committed_dead` are
-      // committed truth, which is what targeting and legality read.
+      // VITALS — the record `vitals_record.js` folds (#1993 WP7); its header states the semantics in full.
+      //   · `committed` — CHAIN TRUTH; every gameplay, legality and log question answers from here.
+      //   · `presented` — the presentation fold (this client's prediction included). It is the INPUT `display`
+      //     is derived from and what the pacing tests read; never a third answer.
+      //   · `display`   — THE number a bar renders. ONE display HP for every live surface, named once.
+      // LIVENESS IS DERIVED, never a parallel boolean: `alive` is committed truth (what targeting reads),
+      // `display_alive` is the rendered one (the killing beat's ack holds it). A reader that means "dead"
+      // negates the one it means — that negation is not a fact of its own and is no longer published as one.
+      // AP/MP ride here as the seat's live budget, forwarded from the row that owns their fold; the budget
+      // family is not this WP's (the HP audit rows are), so their derivation is untouched.
       vitals: {
         committed: fighter.committed_health ?? null,
-        predicted: fighter.health ?? null,
+        presented: fighter.health ?? null,
         display: fighter.presented_health ?? null,
         max: fighter.health_max ?? null,
         alive: !!fighter.committed_alive,
-        committed_dead: !!fighter.committed_dead,
-        dead: !!fighter.dead,
+        display_alive: !fighter.dead,
         ap: fighter.ap ?? null,
         ap_max: fighter.ap_max ?? null,
         mp: fighter.mp ?? null,

@@ -9,6 +9,7 @@ import { claimed_budget_state, committed_truth, display_state, presented_state }
 import { STATUS_ACTIVE, STATUS_FAILED, STATUS_PLACEMENT, STATUS_ROOM_CLEARED, STATUS_WON } from './board_state.js'
 import { fight_fingerprint } from './fingerprint.js'
 import { trap_render_prims, trap_visible_to } from './fight_render_prims.js'
+import { entity_vitals } from './vitals_record.js'
 import {
   deep_freeze,
   input_armed,
@@ -157,6 +158,10 @@ export const board_view = (s) => {
     // instead of correlating an aggregate claimed delta against spell templates.
     // Cell/HP remain strictly canonical. Never use the presented values below — those already fold the draft's
     // ap_cost/mp_left intents, so budgeting against them counts every queued action TWICE (gate9 P1).
+    const f = p.fighters?.[seat_key(seat)]
+    // THE VITALS RECORD (#1993 WP7) — health and liveness are folded ONCE, in vitals_record.js, and this
+    // legacy-shaped board projection reads that fold. It used to re-derive both beside `engine_view`'s copy.
+    const v = entity_vitals(row, cf, f)
     const committed = {
       ap: budget_ap,
       mp: budget_mp,
@@ -164,10 +169,9 @@ export const board_view = (s) => {
       claimed_mp: positive_delta(budget_mp, canonical_mp),
       pending_mp: drafted_mp_grant(s.log, seat),
       cell: cf?.cell ?? row.cell,
-      hp: cf?.hp ?? row.hp,
-      alive: cf?.hp != null ? cf.alive : row.alive,
+      hp: v.committed,
+      alive: v.alive,
     }
-    const f = p.fighters?.[seat_key(seat)]
     if (!f) return { ...row, committed }
     return {
       ...row,
@@ -175,8 +179,8 @@ export const board_view = (s) => {
       // The rendered cell is the DISPLAY fold — my own walk holds at its pre-move cell until the walk beat
       // presents (never jumps ahead of the run); every other fact stays the effective/presented value.
       cell: d.fighters?.[seat_key(seat)]?.cell ?? f.cell ?? row.cell,
-      hp: f.hp ?? row.hp,
-      alive: f.hp != null ? f.alive : row.alive,
+      hp: v.presented,
+      alive: v.presented_alive,
       ready: f.ready ?? row.ready,
       // TURN-START BUDGET: the fold's predicted begin_turn refill wins over the stale pre-refill snapshot; row.ap/mp
       // is the authoritative fallback (a post-refill read prunes the overlay → f.ap/mp go null → the snapshot shows).
@@ -186,15 +190,12 @@ export const board_view = (s) => {
   })
   const mobs = (view.mobs ?? []).map((row, idx) => {
     const cf = c.fighters?.[mob_key(idx)]
-    const committed = {
-      cell: cf?.cell ?? row.cell,
-      hp: cf?.hp ?? row.hp,
-      alive: cf?.hp != null ? cf.alive : row.alive,
-    }
     const f = p.fighters?.[mob_key(idx)]
+    const v = entity_vitals(row, cf, f) // the ONE health/liveness fold (#1993 WP7)
+    const committed = { cell: cf?.cell ?? row.cell, hp: v.committed, alive: v.alive }
     if (!f) return { ...row, committed }
     const cell = d.fighters?.[mob_key(idx)]?.cell ?? f.cell ?? row.cell // DISPLAY cell (walk-hold); rest presented
-    return { ...row, committed, cell, hp: f.hp ?? row.hp, alive: f.hp != null ? f.alive : row.alive }
+    return { ...row, committed, cell, hp: v.presented, alive: v.presented_alive }
   })
   return {
     ...view,
@@ -233,9 +234,16 @@ export const engine_view = (s, { roster = s.ctx?.roster ?? [] } = {}) => {
   const c = committed_truth(s)
   const death_hold = death_presenting_ids(s) // liveness-only mask: dead presents at the killing turn's ack
   // LEG P — while a peer/mob replay drains, the HP NUMBER must hold with the beat: the turn card only updates
-  // once the vfx ends. `presented_health` = the paced presented fold during a wave, the settled committed value
-  // when nothing presents. `health` stays the effective/predicted fold; the timeline card reads presented_health.
+  // once the vfx ends. THE VITALS RECORD (#1993 WP7) owns that fold now, once, for every reader: the legacy
+  // field names below are pure DERIVATIONS of `vitals_record.js` and no longer a second derivation beside it.
   const wave_presenting = presenting(s)
+  /** This fighter's vitals record — every health and liveness field on the row below is read off it. */
+  const vitals_of = (key, snapshot, fold, committed_fold, entity_id) =>
+    entity_vitals(snapshot, committed_fold, fold, {
+      presenting: wave_presenting,
+      death_held: death_hold.has(entity_id),
+      optimistic_dead: !!s.busy && s.optimistic_dead?.[key] != null,
+    })
   // LEG Q — every active fighter status (was invisibility-only) as the effect-badge array: raw chain ints, one home
   // (the fold's per-fighter `statuses`); `invisible` stays derived from a kind-27 row. Badges read this via engine_view.
   const effects_of = (fighter) =>
@@ -264,6 +272,7 @@ export const engine_view = (s, { roster = s.ctx?.roster ?? [] } = {}) => {
     const f = p.fighters?.[seat_key(seat)] ?? {}
     const cf = c.fighters?.[seat_key(seat)] ?? {}
     const identity = book[entity_id]
+    const v = vitals_of(seat_key(seat), row, f, cf, entity_id)
     if (f.ready ?? row.ready) ready.add(entity_id)
     map.set(entity_id, {
       id: entity_id,
@@ -277,12 +286,12 @@ export const engine_view = (s, { roster = s.ctx?.roster ?? [] } = {}) => {
       // DISPLAY cell — my own walk holds at its pre-move cell until the walk beat presents (the rig follows
       // the run, never teleports to the target ahead of it); health/ap/mp stay the effective/presented fold.
       cell: decode_xy(d.fighters?.[seat_key(seat)]?.cell ?? f.cell ?? row.cell),
-      health: f.hp ?? row.hp,
-      presented_health: wave_presenting ? (f.hp ?? row.hp) : (cf.hp ?? row.hp),
-      committed_health: cf.hp ?? row.hp,
-      committed_alive: cf.hp != null ? cf.alive : row.alive,
-      committed_dead: !(cf.hp != null ? cf.alive : row.alive),
-      health_max: row.max_hp,
+      health: v.presented,
+      presented_health: v.display,
+      committed_health: v.committed,
+      committed_alive: v.alive,
+      committed_dead: !v.alive,
+      health_max: v.max,
       effects: effects_of(f),
       base_range: row.base_range ?? 0,
       // THE SEAT'S COMPOSED BUILD (#1077) — the ONE object the predict path reads its inputs from: the locked
@@ -302,9 +311,7 @@ export const engine_view = (s, { roster = s.ctx?.roster ?? [] } = {}) => {
       mp_max: row.base_mp,
       level: identity.level,
       is_player: true,
-      dead:
-        !death_hold.has(entity_id) &&
-        ((s.busy && s.optimistic_dead?.[seat_key(seat)] != null) || (f.hp != null ? !f.alive : !row.alive)),
+      dead: !v.display_alive,
       class_id: identity.class_id,
       sex: identity.sex,
       male: identity.male,
@@ -321,6 +328,7 @@ export const engine_view = (s, { roster = s.ctx?.roster ?? [] } = {}) => {
     // never the shared group template, #1865). The renderer uses `identity_resolved` to keep the honest id text
     // on its built-in capsule without requesting the fake hy__missing GLB.
     const identity = book[entity_id]
+    const v = vitals_of(mob_key(i), m, f, cf, entity_id)
     map.set(entity_id, {
       id: entity_id,
       variant: identity.template,
@@ -328,12 +336,12 @@ export const engine_view = (s, { roster = s.ctx?.roster ?? [] } = {}) => {
       identity_resolved: identity.resolved,
       team: identity.team,
       cell: decode_xy(d.fighters?.[mob_key(i)]?.cell ?? f.cell ?? m.cell), // DISPLAY cell (walk-hold)
-      health: f.hp ?? m.hp,
-      presented_health: wave_presenting ? (f.hp ?? m.hp) : (cf.hp ?? m.hp),
-      committed_health: cf.hp ?? m.hp,
-      committed_alive: cf.hp != null ? cf.alive : m.alive,
-      committed_dead: !(cf.hp != null ? cf.alive : m.alive),
-      health_max: m.max_hp,
+      health: v.presented,
+      presented_health: v.display,
+      committed_health: v.committed,
+      committed_alive: v.alive,
+      committed_dead: !v.alive,
+      health_max: v.max,
       effects: effects_of(f),
       base_range: m.base_range ?? 0,
       // the TARGET's locked block — its resistances are an input to my own predicted damage (#1077)
@@ -344,9 +352,7 @@ export const engine_view = (s, { roster = s.ctx?.roster ?? [] } = {}) => {
       mp_max: m.base_mp ?? 0,
       level: identity.level,
       is_player: false,
-      dead:
-        !death_hold.has(entity_id) &&
-        ((s.busy && s.optimistic_dead?.[mob_key(i)] != null) || (f.hp != null ? !f.alive : !m.alive)),
+      dead: !v.display_alive,
       element: identity.element,
       invisible: !!f.invisible,
     })
