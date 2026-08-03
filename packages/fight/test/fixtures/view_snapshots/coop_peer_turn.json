@@ -137,7 +137,12 @@
             "team": 0,
             "template": null
           },
-          "statuses": [],
+          "statuses": {
+            "invisible": false,
+            "range_bonus": 0,
+            "rows": [],
+            "stance_only": false
+          },
           "vitals": {
             "alive": true,
             "ap": 12,
@@ -186,7 +191,12 @@
             "team": 0,
             "template": null
           },
-          "statuses": [],
+          "statuses": {
+            "invisible": false,
+            "range_bonus": 0,
+            "rows": [],
+            "stance_only": false
+          },
           "vitals": {
             "alive": true,
             "ap": 12,
@@ -235,7 +245,12 @@
             "team": 1,
             "template": "0xmob_t"
           },
-          "statuses": [],
+          "statuses": {
+            "invisible": false,
+            "range_bonus": 0,
+            "rows": [],
+            "stance_only": false
+          },
           "vitals": {
             "alive": true,
             "ap": 6,
@@ -379,7 +394,12 @@
             "team": 0,
             "template": null
           },
-          "statuses": [],
+          "statuses": {
+            "invisible": false,
+            "range_bonus": 0,
+            "rows": [],
+            "stance_only": false
+          },
           "vitals": {
             "alive": true,
             "ap": 12,
@@ -428,7 +448,12 @@
             "team": 0,
             "template": null
           },
-          "statuses": [],
+          "statuses": {
+            "invisible": false,
+            "range_bonus": 0,
+            "rows": [],
+            "stance_only": false
+          },
           "vitals": {
             "alive": true,
             "ap": 12,
@@ -477,7 +502,12 @@
             "team": 1,
             "template": "0xmob_t"
           },
-          "statuses": [],
+          "statuses": {
+            "invisible": false,
+            "range_bonus": 0,
+            "rows": [],
+            "stance_only": false
+          },
           "vitals": {
             "alive": true,
             "ap": 6,
@@ -621,7 +651,12 @@
             "team": 0,
             "template": null
           },
-          "statuses": [],
+          "statuses": {
+            "invisible": false,
+            "range_bonus": 0,
+            "rows": [],
+            "stance_only": false
+          },
           "vitals": {
             "alive": true,
             "ap": 12,
@@ -670,7 +705,12 @@
             "team": 0,
             "template": null
           },
-          "statuses": [],
+          "statuses": {
+            "invisible": false,
+            "range_bonus": 0,
+            "rows": [],
+            "stance_only": false
+          },
           "vitals": {
             "alive": true,
             "ap": 12,
@@ -719,7 +759,12 @@
             "team": 1,
             "template": "0xmob_t"
           },
-          "statuses": [],
+          "statuses": {
+            "invisible": false,
+            "range_bonus": 0,
+            "rows": [],
+            "stance_only": false
+          },
           "vitals": {
             "alive": true,
             "ap": 6,
