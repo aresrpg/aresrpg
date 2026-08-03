@@ -148,13 +148,17 @@ describe('fight turn controls — one phase source for the button and silent aut
 
     const armed = render_button()
     expect(armed.props.disabled).toBe(false)
-    armed.props.onClick() // the actual button handler; no receipt/turn event has landed
+    armed.props.on_click() // the actual button handler; no receipt/turn event has landed
 
     const pressed = render_button()
     expect(mine.active_entity_id).toBe(ME) // chain turn has not advanced
     expect(fight_turn_control_phase(mine, busy)).toBe('committing')
     expect(pressed.props.disabled).toBe(true)
-    expect(renderToStaticMarkup(pressed)).toContain('disabled=""')
+    // #2141 — the refusal is `aria-disabled`, never the native attribute: a native `disabled` swapped onto a
+    // control between a press's mousedown and its mouseup makes the platform drop the queued click in silence,
+    // which is exactly what this 1Hz-re-rendering bar does. Still visibly and semantically refused.
+    expect(renderToStaticMarkup(pressed)).toContain('aria-disabled="true"')
+    expect(renderToStaticMarkup(pressed)).not.toContain('disabled=""')
   })
 
   test('the map-resolved phase is the only countdown gate', () => {
@@ -237,7 +241,7 @@ describe('fight turn controls — one phase source for the button and silent aut
     )
     expect(clicks).toBe(0)
     expect(advanced).toContain('hud-fightctl__end')
-    expect(advanced).toContain('disabled=""')
+    expect(advanced).toContain('aria-disabled="true"') // #2141: the refusal, never the click-eating attribute
     expect(advanced).toContain('Waiting for Aster')
     expect(advanced).not.toContain('dgb-commit-cue')
     expect(advanced).not.toContain('AUTO')

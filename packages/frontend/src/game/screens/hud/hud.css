@@ -561,10 +561,16 @@
     opacity var(--dur-2) var(--ease),
     border-color var(--dur-2) var(--ease);
 }
-.hud-fightctl .hud-fightctl__btn:hover:not(:disabled) {
+.hud-fightctl .hud-fightctl__btn:hover:not(:disabled):not([aria-disabled='true']) {
   transform: translateY(-2px);
 }
-.hud-fightctl .hud-fightctl__btn:disabled {
+/* #2141 — a fight-bar control is refused via `aria-disabled`, NEVER the native attribute: this bar re-renders
+ * on its own 1Hz clock, and a native `disabled` swapped on between a press's mousedown and its mouseup makes
+ * the platform drop the queued click in silence (FightBarButton.jsx carries the mechanism and the semantics).
+ * The refusal must therefore LOOK identical here — same fade, same cursor — or the fix would trade a dead
+ * click for a lying button. */
+.hud-fightctl .hud-fightctl__btn:disabled,
+.hud-fightctl .hud-fightctl__btn[aria-disabled='true'] {
   opacity: 0.4;
   cursor: not-allowed;
 }
@@ -577,8 +583,8 @@
   box-shadow: 0 8px 22px var(--accent-glow);
 }
 /* gold hover-glow on the primary CTA (house DNA) — the subordinate Abandon ghost keeps its amber hover */
-.hud-fightctl .hud-fightctl__end:hover:not(:disabled),
-.hud-fightctl .hud-fightctl__ready:hover:not(:disabled) {
+.hud-fightctl .hud-fightctl__end:hover:not(:disabled):not([aria-disabled='true']),
+.hud-fightctl .hud-fightctl__ready:hover:not(:disabled):not([aria-disabled='true']) {
   box-shadow:
     0 10px 26px var(--accent-glow),
     0 0 20px rgba(200, 150, 60, 0.35);

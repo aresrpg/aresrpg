@@ -2,6 +2,7 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 // DungeonBoard's READY / END TURN / exit chrome. Split out of DungeonBoard.jsx (issue #2069);
 // the render section is unchanged.
+import { FightBarButton } from '../FightBarButton.jsx'
 import { FightControls } from '../FightControls.jsx'
 import { ConfirmDialog } from './ConfirmDialog.jsx'
 import { is_active as phase_is_active, is_placement as phase_is_placement } from '../../../../fight-engine/phase.js'
@@ -66,14 +67,15 @@ export function DungeonBoardControls({
               hidden there. It stays through PLACEMENT (pre-combat) as a graceful, non-death exit before the fight begins. */}
           {run_pass_id != null && !phase_is_active(phase) && (
             <div className="hud-fightctl">
-              <button
-                type="button"
+              {/* #2141: the same press-at-press-time rule as every control inside FightControls — this door
+                  sits on the SAME 1Hz-re-rendering bar and derives from the SAME `busy`. */}
+              <FightBarButton
                 className="hud-fightctl__btn hud-fightctl__abandon"
-                onClick={on_leave_dungeon}
+                on_click={on_leave_dungeon}
                 disabled={busy}
               >
                 {t('dungeons.leave_cta')}
-              </button>
+              </FightBarButton>
             </div>
           )}
         </div>

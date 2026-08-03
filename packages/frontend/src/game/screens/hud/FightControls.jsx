@@ -27,6 +27,7 @@ import { fight_store } from '@aresrpg/fight/store'
 import { useFightView, useFightVisibleControls } from '../../store.js'
 import { auto_commit_fire_at } from '@aresrpg/fight/draft_budget'
 import { ConfirmDialog } from './world/ConfirmDialog.jsx'
+import { FightBarButton } from './FightBarButton.jsx'
 import { FightBugReportModal } from './FightBugReportModal.jsx'
 import { capture_fight_bug_report, fight_bug_report_issue_url } from './fight_bug_report.js'
 
@@ -80,21 +81,22 @@ export function turn_commit_countdown_s(turn_phase, has_draft, deadline_ms, now_
 }
 
 /** Hook-free action seam: the real button used below and by the click fixture.
+ * #2141 — through FightBarButton like every other control on this bar: `phase` flips to 'committing' the
+ * moment `busy` does, which is exactly the mid-gesture swap that used to eat the press.
  * @param {{ phase: 'hidden' | 'waiting' | 'armed' | 'committing', disabled?: boolean, on_end_turn: () => void,
  *   end_label: string, disabled_label?: string | null, title?: string }} props
  */
 export function FightEndTurnButton({ phase, disabled = false, on_end_turn, end_label, disabled_label, title }) {
   if (phase === 'hidden') return null
   return (
-    <button
-      type="button"
+    <FightBarButton
       className="hud-fightctl__btn hud-fightctl__end"
-      onClick={on_end_turn}
+      on_click={on_end_turn}
       disabled={disabled || phase !== 'armed'}
       title={title}
     >
       {disabled_label ?? end_label}
-    </button>
+    </FightBarButton>
   )
 }
 
@@ -317,12 +319,12 @@ export function FightControls({
       <>
         <div className="hud-fightctl">
           <span className="hud-fightctl__watching">{t('fights.spectating')}</span>
-          <button type="button" className="hud-fightctl__btn hud-fightctl__abandon" onClick={on_leave_spectate}>
+          <FightBarButton className="hud-fightctl__btn hud-fightctl__abandon" on_click={on_leave_spectate}>
             {leave_spectate_label ?? t('fights.leave_spectate')}
-          </button>
-          <button type="button" className="hud-fightctl__btn hud-fightctl__report" onClick={on_bug_report}>
+          </FightBarButton>
+          <FightBarButton className="hud-fightctl__btn hud-fightctl__report" on_click={on_bug_report}>
             {t('fight.bug_report')}
-          </button>
+          </FightBarButton>
         </div>
         {bug_report_modal}
       </>
@@ -346,25 +348,23 @@ export function FightControls({
             <span className="hud-fightctl__stalled" role="status" aria-live="polite">
               {t('fight.turn_stalled', { name: stalled_name })}
             </span>
-            <button
-              type="button"
+            <FightBarButton
               className="hud-fightctl__btn hud-fightctl__force-pass"
-              onClick={on_force_pass}
+              on_click={on_force_pass}
               disabled={force_passing}
             >
               {t('fight.force_pass')}
-            </button>
+            </FightBarButton>
           </>
         )}
         {placement ? (
-          <button
-            type="button"
+          <FightBarButton
             className={`hud-fightctl__btn hud-fightctl__ready${i_am_ready ? ' is-ready' : ''}`}
-            onClick={on_ready ?? default_ready}
+            on_click={on_ready ?? default_ready}
             disabled={(ready_disabled ?? false) || i_am_ready}
           >
             {i_am_ready ? (waiting_label ?? 'Waiting…') : (ready_label ?? 'Ready')}
-          </button>
+          </FightBarButton>
         ) : (
           <FightEndTurnButton
             phase={turn_phase}
@@ -378,18 +378,17 @@ export function FightControls({
           />
         )}
         {show_abandon && (
-          <button
-            type="button"
+          <FightBarButton
             className="hud-fightctl__btn hud-fightctl__abandon"
-            onClick={() => set_confirm_open(true)}
+            on_click={() => set_confirm_open(true)}
             disabled={abandon_disabled}
           >
             {abandon_button_label}
-          </button>
+          </FightBarButton>
         )}
-        <button type="button" className="hud-fightctl__btn hud-fightctl__report" onClick={on_bug_report}>
+        <FightBarButton className="hud-fightctl__btn hud-fightctl__report" on_click={on_bug_report}>
           {t('fight.bug_report')}
-        </button>
+        </FightBarButton>
       </div>
       <ConfirmDialog
         open={confirm_open}
