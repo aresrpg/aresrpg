@@ -20,7 +20,7 @@
 // SFX (EXISTING corpus only — curated selection): burst → play_fight_sfx('crit'); reveal → play_discovery_sfx()
 // (the reward-beat sparkle). Best-effort (try/catch); no new assets.
 
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Loader2 } from 'lucide-react'
 
@@ -55,8 +55,35 @@ const now = () => (typeof performance !== 'undefined' ? performance.now() : Date
 const best_effort = (fn) => {
   try {
     fn()
-  } catch {
-    /* audio is best-effort */
+  } catch (error) {
+    game_log('lootbox-audio', 'best-effort SFX failed (the visual reveal continues)', error)
+  }
+}
+
+/**
+ * The non-visual reveal lifecycle must be synchronously readable by timers and transaction continuations without
+ * scheduling a render. Keep that shared state behind one stable cell and publish a fresh snapshot for every
+ * transition: callers can never mutate a snapshot (or its timer list) in place.
+ * @typedef {{ alive:boolean, anim_done:boolean, opened:boolean,
+ *   pet:{slug:string,name:string,claim_id:string,rolled_template:string}|null, revealed:boolean,
+ *   timers:any[] }} RevealRuntime
+ * @returns {{ read:()=>RevealRuntime, patch:(changes:Partial<RevealRuntime>)=>void }}
+ */
+const create_reveal_runtime = () => {
+  /** @type {RevealRuntime} */
+  let snapshot = {
+    alive: true,
+    anim_done: false,
+    opened: false,
+    pet: null,
+    revealed: false,
+    timers: [],
+  }
+  return {
+    read: () => snapshot,
+    patch: (changes) => {
+      snapshot = { ...snapshot, ...changes }
+    },
   }
 }
 
@@ -182,37 +209,35 @@ export function BoxReveal({ box, on_close, on_retry_blocked, on_retry_allowed })
   )
   const [collect_latched, set_collect_latched] = useState(false)
   const [pending_escape_ready, set_pending_escape_ready] = useState(false)
-  const opened = useRef(false) // StrictMode double-mount guard — open_box must fire exactly ONCE (it burns gas)
-  const timers = useRef(/** @type {any[]} */ ([]))
-  const revealed = useRef(false) // the reveal SFX fires once (a skip must not double it)
-  const alive = useRef(true)
-  const anim_done = useRef(false) // reveal gate half 1: the celebration ran (or was skipped / reduced-motion)
-  const pet_ref = useRef(/** @type {{slug:string,name:string,claim_id:string,rolled_template:string}|null} */ (null)) // half 2: the truth arrived
+  // Synchronous transaction/timer truth. The runtime cell stays stable across renders + StrictMode effect replay;
+  // each transition replaces its immutable snapshot instead of mutating React refs or a shared timer array.
+  const [runtime] = useState(create_reveal_runtime)
 
   const clear_timers = useCallback(() => {
-    timers.current.forEach(clearTimeout)
-    timers.current = []
-  }, [])
+    runtime.read().timers.forEach(clearTimeout)
+    runtime.patch({ timers: [] })
+  }, [runtime])
 
   const to_reveal = () => {
     clear_timers()
-    if (!revealed.current) {
-      revealed.current = true
+    if (!runtime.read().revealed) {
+      runtime.patch({ revealed: true })
       best_effort(play_discovery_sfx)
     }
-    if (alive.current) set_phase('reveal')
+    if (runtime.read().alive) set_phase('reveal')
   }
 
   // The reveal fires only when BOTH the animation finished (or was skipped) AND the rolled pet resolved. When the
   // animation ends first, we show an honest RESOLVING shimmer (UX-A) instead of freezing on the burst tail — the
   // pure decision lives in the util leaf so it is testable.
   const maybe_reveal = () => {
-    const next = reveal_after_celebration(anim_done.current, !!pet_ref.current)
+    const { alive, anim_done, pet: resolved_pet } = runtime.read()
+    const next = reveal_after_celebration(anim_done, !!resolved_pet)
     if (next === 'reveal') to_reveal()
-    else if (next === 'resolving' && alive.current) set_phase('resolving')
+    else if (next === 'resolving' && alive) set_phase('resolving')
   }
   const skip = () => {
-    anim_done.current = true
+    runtime.patch({ anim_done: true })
     maybe_reveal()
   }
 
@@ -224,7 +249,7 @@ export function BoxReveal({ box, on_close, on_retry_blocked, on_retry_allowed })
    */
   const run_collect = async ({ claim_id, rolled_template, name }) => {
     if (!begin_claim(claim_id)) return // already flying (or already collected) on some surface
-    if (alive.current) {
+    if (runtime.read().alive) {
       set_collect_status('collecting')
       set_collect_latched(false)
     }
@@ -233,15 +258,15 @@ export function BoxReveal({ box, on_close, on_retry_blocked, on_retry_allowed })
       end_claim(claim_id, {})
       // #265: claim_pet already painted the pet through the inventory reducer door — this is the eventual-
       // consistency reconcile (mirrors #39's predict+reconcile), never the only path the pet arrives by.
-      load_roster().catch(() => {})
+      load_roster().catch((error) => game_log('lootbox', 'post-claim roster reconcile failed', error))
       use_toast.getState().add(i18n.t('lootbox.collected', { name }), 'info')
-      if (alive.current) set_collect_status('collected')
+      if (runtime.read().alive) set_collect_status('collected')
     } catch (e) {
       // An executed/uncertain claim may have burned gas → latch against AUTO refire; the card keeps the
       // one-click MANUAL retry (human decision). A positively identified dry-run refusal stays free to retry.
       end_claim(claim_id, { error: e })
       use_toast.getState().add(humanize_tx_error(e), 'error')
-      if (alive.current) {
+      if (runtime.read().alive) {
         set_collect_status('failed')
         set_collect_latched(should_block_tx_retry(e))
       }
@@ -250,19 +275,19 @@ export function BoxReveal({ box, on_close, on_retry_blocked, on_retry_allowed })
 
   // OPEN the box exactly once; only its confirm starts the roll (INVARIANT: no fake roll before the tx lands).
   useEffect(() => {
-    alive.current = true
+    runtime.patch({ alive: true })
     const cleanup = () => {
-      alive.current = false
+      runtime.patch({ alive: false })
       clear_timers()
     }
     // React StrictMode replays this effect: re-arm nothing here on replay, never the gas-burning open.
-    if (opened.current) return cleanup
-    opened.current = true
+    if (runtime.read().opened) return cleanup
+    runtime.patch({ opened: true })
     // Latch at submission start, not only in catch: an ordinary drawer/navigation unmount must not expose a second
     // open while this promise may still execute. Release paths: the positively identified zero-gas refusal below,
     // or the guard's self-clear once a FRESH roster read proves the box survived a settled failure.
     on_retry_blocked?.(box.id)
-    ;(async () => {
+    void (async () => {
       const t0 = now()
       try {
         const { rolled_template, claim_id } = await open_box({
@@ -274,31 +299,29 @@ export function BoxReveal({ box, on_close, on_retry_blocked, on_retry_allowed })
         // removes the consumed box and lets the self-clear predicate see ground truth.
         // A burned box can never reappear in a chain read — purge its receipt-proven floor row through the door.
         if (note_open_settled(box.id)) remove_bag_items([box.id])
-        load_roster().catch(() => {})
+        load_roster().catch((error) => game_log('lootbox', 'post-open roster reconcile failed', error))
         if (!rolled_template || !claim_id) throw new Error('open_box returned no rolled pet') // honest, no silent no-op
         // RECEIPT PROVEN — leave 'pending' NOW (this disarms the 45s force-close guard, UX-B) and start the
         // celebration; the resolve + auto-claim run inside it (D2).
-        if (alive.current) {
+        if (runtime.read().alive) {
           const reduced_motion =
             typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
           if (reduced_motion) {
-            anim_done.current = true
+            runtime.patch({ anim_done: true })
             set_phase('resolving') // no animation — leave pending and wait honestly for the pet read
           } else {
             set_phase('charging')
-            timers.current.push(
-              setTimeout(() => {
-                if (!alive.current) return
-                set_phase('burst')
-                best_effort(() => play_fight_sfx('crit'))
-                timers.current.push(
-                  setTimeout(() => {
-                    anim_done.current = true
-                    maybe_reveal()
-                  }, BURST_MS)
-                )
-              }, CHARGING_MS)
-            )
+            const charge_timer = setTimeout(() => {
+              if (!runtime.read().alive) return
+              set_phase('burst')
+              best_effort(() => play_fight_sfx('crit'))
+              const burst_timer = setTimeout(() => {
+                runtime.patch({ anim_done: true })
+                maybe_reveal()
+              }, BURST_MS)
+              runtime.patch({ timers: [...runtime.read().timers, burst_timer] })
+            }, CHARGING_MS)
+            runtime.patch({ timers: [...runtime.read().timers, charge_timer] })
           }
         }
         const t1 = now()
@@ -317,16 +340,16 @@ export function BoxReveal({ box, on_close, on_retry_blocked, on_retry_allowed })
           claim_id,
           rolled_template,
         }
-        pet_ref.current = resolved
-        if (alive.current) set_pet({ slug: resolved.slug, name: resolved.name })
-        run_collect(resolved) // AUTO-CLAIM at opening (D3) — its own outcome handling, never awaited by the show
+        runtime.patch({ pet: resolved })
+        if (runtime.read().alive) set_pet({ slug: resolved.slug, name: resolved.name })
+        void run_collect(resolved) // AUTO-CLAIM at opening (D3) — its own outcome handling, never awaited by the show
         maybe_reveal()
       } catch (e) {
         // open_box failed (pre-flight or executed) → ONE humanized toast, close. NEVER auto-retry (TX-RETRY law).
         note_open_settled(box.id, { error: e })
-        load_roster().catch(() => {}) // fresh-read input: a failed open leaves the box sealed — prove it, self-clear
-        if (!alive.current) return
-        alive.current = false
+        load_roster().catch((error) => game_log('lootbox', 'failed-open roster proof refresh failed', error))
+        if (!runtime.read().alive) return
+        runtime.patch({ alive: false })
         clear_timers()
         use_toast.getState().add(humanize_tx_error(e), 'error')
         if (!should_block_tx_retry(e)) on_retry_allowed?.(box.id)
@@ -345,11 +368,11 @@ export function BoxReveal({ box, on_close, on_retry_blocked, on_retry_allowed })
   useEffect(() => {
     if (!open_timeout_armed(phase)) return
     const escape_timer = setTimeout(() => {
-      if (alive.current) set_pending_escape_ready(true)
+      if (runtime.read().alive) set_pending_escape_ready(true)
     }, PENDING_ESCAPE_MS)
     const timeout_timer = setTimeout(() => {
-      if (!alive.current) return
-      alive.current = false
+      if (!runtime.read().alive) return
+      runtime.patch({ alive: false })
       clear_timers()
       use_toast.getState().add(humanize_tx_error(new Error(i18n.t('lootbox.open_timeout'))), 'error')
       on_retry_blocked?.(box.id)
@@ -368,7 +391,7 @@ export function BoxReveal({ box, on_close, on_retry_blocked, on_retry_allowed })
   const dismiss = useCallback(() => {
     if (!can_dismiss_reveal(phase, pending_escape_ready)) return
     if (phase === 'pending') {
-      alive.current = false
+      runtime.patch({ alive: false })
       clear_timers()
       // The submitted promise may still execute after this overlay closes. Latch the box before exposing the bag
       // again so an Escape/reopen sequence cannot submit a second gas-burning open.
@@ -386,7 +409,8 @@ export function BoxReveal({ box, on_close, on_retry_blocked, on_retry_allowed })
 
   /** MANUAL retry only (the auto path already ran) — begin_claim arbitrates double-clicks and cross-surface races. */
   const on_collect = () => {
-    if (pet_ref.current && collect_status === 'failed') run_collect(pet_ref.current)
+    const { pet: resolved_pet } = runtime.read()
+    if (resolved_pet && collect_status === 'failed') void run_collect(resolved_pet)
   }
 
   return (
