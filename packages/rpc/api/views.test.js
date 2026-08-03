@@ -1509,6 +1509,26 @@ describe('fight event journal (#216)', () => {
     expect(data).toEqual({ fight: JEMPTY, events: [], journal_head: 0 })
     expect(cache).toBe('no-store')
   })
+
+  // #2099 — THE CHAIN CLOCK. The client compares its own `Date.now()` to CHAIN timestamps (the turn deadline)
+  // to decide when a turn is genuinely playable, and had no skew model: a skewed clock lost exactly its delta
+  // from every turn. This is the only chain-clock reading a fight read can carry.
+  test('a LIVE page carries the indexer’s checkpoint clock; an immutable one never does', async () => {
+    // No checkpoint ingested yet ⇒ the field is simply absent (the `toEqual` above already pins that shape).
+    expect((await handle_fight_events(JF1, P({ from: '3', limit: '10' }))).data.chain_now_ms).toBeUndefined()
+
+    await setj('rpc:checkpoint:latest', { sequence_number: 900, epoch: 7, timestamp_ms: 1_700_000_000_000 })
+
+    const live = await handle_fight_events(JF1, P({ from: '3', limit: '10' }))
+    expect(live.cache).toBe('no-store')
+    expect(live.data.chain_now_ms).toBe(1_700_000_000_000)
+
+    // An immutable page is cached FOREVER — stamping it with a clock would serve a lie tomorrow, so it must not
+    // carry one however fresh the checkpoint is.
+    const past = await handle_fight_events(JF1, P({ from: '0', limit: '2' }))
+    expect(past.cache).toBe('public, max-age=31536000, immutable')
+    expect(past.data.chain_now_ms).toBeUndefined()
+  })
 })
 
 describe('protector trigger', () => {

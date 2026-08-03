@@ -1203,7 +1203,25 @@ export async function handle_fight_events(fight_id, params) {
 
   const immutable = from + limit <= head // the whole window is in the past → permanent
   const cache = immutable ? 'public, max-age=31536000, immutable' : 'no-store'
-  return { status: 200, cache, data: { fight: fight_id, events, journal_head: head } }
+  // THE CHAIN CLOCK (#2099) — the client compares `Date.now()` to CHAIN timestamps (the turn deadline), and had
+  // no skew model at all: a skewed clock silently lost its delta from every turn. This is the only chain-clock
+  // reading a fight read can carry — the same `rpc:checkpoint:latest` timestamp `handle_status` reports lag off.
+  // Paired with the client's arrival instant it yields `chain_now ≈ Date.now() + offset`. Attached ONLY to the
+  // LIVE (`no-store`) page: an `immutable` page is cached forever, and a cached timestamp is a lie by tomorrow.
+  // Indexer lag + network latency only ever make this reading OLDER than true chain time, so the client's
+  // rolling-max estimator converges from below and can never hand a turn over early (#1808 stays honest).
+  const latest = immutable ? null : await get_json(LATEST_CHECKPOINT_KEY)
+  const chain_now_ms = Number(latest?.timestamp_ms)
+  return {
+    status: 200,
+    cache,
+    data: {
+      fight: fight_id,
+      events,
+      journal_head: head,
+      ...(chain_now_ms > 0 ? { chain_now_ms } : {}),
+    },
+  }
 }
 
 // --- protector trigger (§17.22 resource-protector ambush signal) --------------
