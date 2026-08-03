@@ -1,2 +1,3 @@
-f185dfd23 → Refs #2136 — fix(fight): a seat that already died is not a seat to resume
-3ef579c6b → Fixes #2136 — test(fight): seal the corpse-seat exit — D48 death stays an exit across boots
+a60ddfcb7 → Fixes #2139 — fix(dungeon): a room fight you died in is not a fight to resume
+a97edf777 → Fixes #2141 — fix(fight): press the fight bar at press time, not mid-gesture
+348fadce9 → Refs #2141 — fix(fight): the plane-side exit presses at press time too
