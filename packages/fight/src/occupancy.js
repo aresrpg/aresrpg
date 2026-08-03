@@ -35,6 +35,29 @@ export const visible_occupant_cells = (fighters) => {
 }
 
 /**
+ * The cells every LIVING body holds, BY CHAIN TRUTH — the client twin of `dungeon.move`'s `los_obstacles()`:
+ * obstacles ∪ living bodies is what the contract charges a cast's line of sight against, and a corpse blocks
+ * nothing. Unlike `visible_occupant_cells` above this does NOT hide an invisible body: invisibility withholds a
+ * TARGET, it does not open a line — the chain sees the body either way, and pretending otherwise would paint a
+ * castable cell the contract refuses.
+ *
+ * COMMITTED, never displayed (#1993 WP5, finding row `voxel_fight_adapter.js:1724`): LOS used to read the
+ * mirrored board's cells, which hold an in-flight walk at its PRE-move position, while occupancy beside it read
+ * the projection — two answers to "who is standing where" inside one paint. This reads the canonical entity
+ * rows' committed cell, which is exactly what the chain resolves against.
+ * @param {Record<string, {cells?: {committed?: number|null}, vitals?: {alive?: boolean}}>} entities
+ *   `fight_visible_view.entities`
+ * @returns {number[]} encoded cells, deduped
+ */
+export const living_body_cells = (entities) => [
+  ...new Set(
+    Object.values(entities ?? {})
+      .filter((row) => row?.vitals?.alive && row?.cells?.committed != null)
+      .map((row) => Number(row.cells.committed))
+  ),
+]
+
+/**
  * Fold occupant rows into the cell-keyed index, living-wins and order-independent.
  * @param {Iterable<{cell: number|null|undefined, kind: 'player'|'mob', idx: number, alive: boolean}>} occupants
  * @returns {Map<number, {kind: 'player'|'mob', idx: number, alive: boolean}>}

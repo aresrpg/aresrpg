@@ -23,7 +23,7 @@ import {
   committed_mob_hp,
   committed_truth,
   fight_view,
-  mob_entity_id,
+  fight_visible_view,
   mob_entity_index,
   next_move_tackle,
 } from '@aresrpg/fight/project'
@@ -333,11 +333,18 @@ export function useDungeonBoardState() {
       actions: evolution_actions_of(staged_turn_paths(fight_store).draft_actions, my_spells, me?.weapon),
       resolve_ref,
     })
-    for (const [idx, m] of dungeon.mobs.entries()) {
+    // #1993 WP5 — the vacated CELL comes from the canonical entity row, not the mirrored board. `dungeon.mobs[]`
+    // is the legacy board projection, whose cell is the DISPLAY cell: it holds an in-flight walk at its pre-move
+    // position, so pairing it with committed HP opened (or kept blocked) a cell the chain had already moved past.
+    // Cell and HP now answer from the same committed truth.
+    const entities = fight_visible_view(fight_store.getState()).entities
+    for (const [id, row] of Object.entries(entities)) {
+      const idx = mob_entity_index(id)
+      if (idx == null) continue
       const committed_hp = committed_mob_hp(fight_store.getState(), idx)
-      if (!(committed_hp > 0)) continue
+      if (!(committed_hp > 0) || row.cells.committed == null) continue
       // this turn's casts already kill it → its cell opens for the move
-      if ((predicted.get(mob_entity_id(idx)) ?? committed_hp) <= 0) vacated.add(m.cell)
+      if ((predicted.get(id) ?? committed_hp) <= 0) vacated.add(row.cells.committed)
     }
     return vacated
   }, [cast_path, dungeon, entity_id, my_spells, me?.weapon])

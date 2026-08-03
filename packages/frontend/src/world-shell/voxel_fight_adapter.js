@@ -29,7 +29,7 @@ import { fight_store } from '@aresrpg/fight/store'
 import { GRID_CELLS } from '@aresrpg/fight/los'
 import { fight_cast_beat_effects } from '@aresrpg/fight/present'
 import { cast_resolution, empty_cast_resolution } from '@aresrpg/fight/cast_record'
-import { visible_occupant_cells } from '@aresrpg/fight/occupancy'
+import { living_body_cells, visible_occupant_cells } from '@aresrpg/fight/occupancy'
 import { range_bonus_of } from '@aresrpg/fight/statuses'
 import { weapon_spell_template } from '@aresrpg/fight/predict_cast'
 
@@ -314,14 +314,27 @@ export function create_voxel_fight_adapter(
   let observed_turn_actor_id = /** @type {string | null | undefined} */ (undefined)
   /** The ids currently upserted, so a despawn (a killed/removed fighter) removes its avatar. */
   const entity_ids = new Set()
+  // ── ANIMATION CURSORS — DECLINED MIGRATION, fenced (#1993 WP5, finding row `voxel_fight_adapter.js:1502`) ──
+  // `walking`, `placed_cell` and `replay_owned` (below) are NOT a second home for fighter position and they are
+  // deliberately kept. They answer a question the projection cannot: WHERE THIS RIG CURRENTLY IS ON SCREEN and
+  // WHO OWNS ITS MOTION — facts that live in the renderer's own clock (a lerp between two cells, a paced replay
+  // that has not played yet) and are meaningless the moment the board is torn down. The projection answers
+  // where the fighter IS; these answer where its mesh is standing while it catches up.
+  //
+  // THE FENCE, and it is the whole verdict: none of them may ever answer a GAMEPLAY, LOG or OCCUPANCY question.
+  // Legality, LOS, body-blocking, vacancy, targeting and every log line read the canonical entity rows
+  // (`fight_visible_view.entities[id].cells.committed`); these three are read ONLY by `entity_fold_action` and
+  // the walk/upsert branch it drives — i.e. by code whose sole output is a mesh position. A read of one of them
+  // that feeds a decision is the #1859 disease returning under a new name.
   /** Ids with a walk animation IN FLIGHT (handed to entity_move, not yet arrived). While an id is here,
    *  sync_entities must NOT re-place it — the engine's entity_upsert snaps the avatar to its logical cell
    *  (place_avatar), which would teleport a walking body mid-lerp (the exact guard fight-overlay's
    *  reconcile_sprites keeps: "snap to the authoritative cell UNLESS a walk is driving this sprite"). */
   const walking = new Set()
-  /** The board CELL the adapter last committed each rig to (upsert snap OR a fold-walk start). The fold's
-   *  position-reconcile safety net diffs a mob's fresh chain cell against this: a drift with NO replay-beat
-   *  owning the id (the fold moved it but a beat didn't) SMOOTH-WALKS it there instead of teleport-snapping. */
+  /** The board CELL the adapter last committed each rig to (upsert snap OR a fold-walk start) — an ANIMATION
+   *  CURSOR, never a position claim. The fold's position-reconcile safety net diffs a mob's fresh chain cell
+   *  against this: a drift with NO replay-beat owning the id (the fold moved it but a beat didn't) SMOOTH-WALKS
+   *  it there instead of teleport-snapping. */
   const placed_cell = /** @type {Map<string, { x: number, y: number }>} */ (new Map())
   /** Mob ids whose DESPAWN is in progress (death beat fired → poof scheduled). Guarantees ONE death beat + ONE
    *  removal per corpse across BOTH triggers (a cast-kill's play_cast beat and the fold's trap/DoT detection),
@@ -969,7 +982,8 @@ export function create_voxel_fight_adapter(
   // every non-local turn ~3s), `walking` is still empty, so sync_entities re-upserted the mob at its final cell
   // (the TELEPORT); the late replay then visibly lerped it from/back over the path (the SLIDE-BACK). The replay
   // pipeline is the ONE cell authority for a mob from the moment its move is bound until its turn finishes:
-  // `replay_owned` spans bind→queue→walk, and sync_entities skips those ids.
+  // `replay_owned` spans bind→queue→walk, and sync_entities skips those ids. The THIRD animation cursor — same
+  // fence as `walking`/`placed_cell` above: it says who owns a MESH, never where a fighter is.
   const replay_owned = /** @type {Set<string>} */ (new Set())
 
   render_queue = create_fight_render_queue({
@@ -1747,9 +1761,14 @@ export function create_voxel_fight_adapter(
           const grid = dungeon_grid_of(dungeon)
           // D284 twin of dungeon.move los_obstacles(): the cast wash clears LOS through obstacles ∪ living bodies
           // (players + mobs), so the dark/light-blue split matches the chain. Endpoints self-excluded by losBlocks.
-          const los = [...(dungeon.obstacles ?? [])]
-          for (const p of dungeon.escrow ?? []) if (p.alive) los.push(p.cell)
-          for (const m of dungeon.mobs ?? []) if (m.alive) los.push(m.cell)
+          // Bodies come from the CANONICAL entity rows' committed cell (#1993 WP5): this list used to walk the
+          // mirrored board (`dungeon.escrow` / `dungeon.mobs`), whose cells hold an in-flight walk at its
+          // PRE-move position, while `occupant_cells` two lines below already read the projection — one paint,
+          // two answers to "who is standing where". Obstacles stay terrain, which no entity owns.
+          const los = [
+            ...(dungeon.obstacles ?? []),
+            ...living_body_cells(project.fight_visible_view(fight_store.getState()).entities),
+          ]
           const flags = seed_cast_flags_of(wash_armed, active)
           // 1.29 no-stack: a trap-PLACING spell greys MY live trap cells (the chain aborts cast/107 there).
           if (flags.places_trap) flags.trap_cells = fight.my_traps ?? []

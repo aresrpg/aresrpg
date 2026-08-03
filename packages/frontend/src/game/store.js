@@ -6,7 +6,7 @@
 
 import { useSyncExternalStore } from 'react'
 
-import { fight_view } from '@aresrpg/fight/project'
+import { fight_view, fight_visible_view } from '@aresrpg/fight/project'
 import { fight_store } from '@aresrpg/fight/store'
 
 import { context } from './core/game.js'
@@ -51,6 +51,22 @@ export { context } from './core/game.js'
  */
 export function useFightView() {
   return useSyncExternalStore(fight_store.subscribe, fight_view, fight_view)
+}
+
+/** The canonical ENTITY ROWS of `fight_visible_view` — identity · cells · vitals · statuses, id-keyed (#1993).
+ *  Referentially stable by construction: the view is memoized on the fight state's identity, so this returns the
+ *  same frozen object until the store publishes a new state — exactly what useSyncExternalStore requires. */
+const fight_visible_entities = () => fight_visible_view(fight_store.getState()).entities
+
+/**
+ * React hook: subscribe a component to the canonical fight-visible ENTITY rows. A board position, a vitals
+ * number or an identity label answers from HERE — never from a mirrored slice beside it, and never from the
+ * legacy projection's presentation-shaped fields (#1993 WP5: `cells.committed` is the gameplay answer,
+ * `cells.display_xy` is where the rig is drawn).
+ * @returns {ReturnType<typeof fight_visible_view>['entities']}
+ */
+export function useFightVisibleEntities() {
+  return useSyncExternalStore(fight_store.subscribe, fight_visible_entities, fight_visible_entities)
 }
 
 /**

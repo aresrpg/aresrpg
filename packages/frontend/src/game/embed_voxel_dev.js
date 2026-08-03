@@ -7,7 +7,8 @@
 // Tree-shaken from prod (the caller is inside `if (import.meta.env.DEV)`).
 
 import { context } from './store.js'
-import { fight_view } from '@aresrpg/fight/project'
+import { fight_view, fight_visible_view } from '@aresrpg/fight/project'
+import { fight_store } from '@aresrpg/fight/store'
 import { HIT_FLASH_TINT } from '../world-shell/voxel_fight_adapter.js'
 import { game_log } from '../core/log.js'
 import { scan_for_claimable_group } from './dev/world_fight_scan.js'
@@ -234,13 +235,17 @@ export function install_dev_rig({
   // ── [W6] FIGHT-FEEL PREVIEW HOOKS — trigger each new W6 beat SYNTHETICALLY on the mounted board (design/
   //    owner A/B, zero fight setup or gas). Each pokes the SAME board API the adapter's play_cast/play_move
   //    fire, so a preview is frame-faithful. Default target = the first living MOB on the board. ──
+  // #1993 WP5 — the dev hooks ask the SAME canonical entity lookup every other surface asks. They used to reach
+  // straight into `fight_view().fighters` for a cell, outside the adapter contract, which made a preview
+  // reproducible only against the legacy projection's presentation shape. `cells.display_xy` is the right fact
+  // here on purpose: these hooks position a MESH (a float, a ripple, a shove), they decide nothing.
+  const visible_entities = () => fight_visible_view(fight_store.getState()).entities
   const first_fighter_id = () => {
-    const fs = fight_view()?.fighters
-    if (!fs) return 'mob-0'
-    const live = [...fs.values()].filter((f) => !f.dead)
-    return (live.find((f) => String(f.id).startsWith('mob-')) ?? live[0])?.id ?? 'mob-0'
+    const rows = Object.values(visible_entities())
+    const live = rows.filter((row) => !row.vitals.dead)
+    return (live.find((row) => String(row.id).startsWith('mob-')) ?? live[0])?.id ?? 'mob-0'
   }
-  const cell_of = (/** @type {string} */ id) => fight_view()?.fighters?.get(id)?.cell
+  const cell_of = (/** @type {string} */ id) => visible_entities()[id]?.cells.display_xy ?? null
 
   // __ARES_DEV_HITFLASH(id?) — a brief struck-body colorize (the exact HIT_FLASH_TINT the adapter fires).
   w.__ARES_DEV_HITFLASH = (/** @type {string=} */ id) => {

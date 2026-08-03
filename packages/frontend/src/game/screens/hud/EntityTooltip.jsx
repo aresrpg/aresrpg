@@ -25,7 +25,7 @@ import { useTranslation } from 'react-i18next'
 import { decode, manhattan } from '@aresrpg/fight/los'
 
 import './entity-tooltip.css'
-import { useGameState, useFightView } from '../../store.js'
+import { useGameState, useFightView, useFightVisibleEntities } from '../../store.js'
 import { spell_state_name_resolver } from '../../data/spell-text.js'
 import { useSpellCorpus } from '../../data/use_spell_corpus.js'
 import { useTweenedHp } from './use_tweened_hp.js'
@@ -114,6 +114,7 @@ export function EntityTooltip() {
     [spell_corpus, locale]
   )
   const fight = useFightView() // synchronous core view (S2 mirror kill); hover stays a game-core slice
+  const entities = useFightVisibleEntities() // the canonical entity rows — board positions answer from here
   const hover = useGameState((s) => s.fight_hover)
   // live predict_cast for the armed spell on this target — the SINGLE resolved outcome (crit or not is a
   // seed-deterministic fact, decided upstream), its is_crit flag, and the spell's secondary effect rows.
@@ -135,8 +136,18 @@ export function EntityTooltip() {
   const outcome = active
     ? predicted_target_outcome(prediction, target_ref, fighter.health)
     : (last_vm.current?.outcome ?? EMPTY_OUTCOME)
+  // #1993 WP5 — SCREEN COORDINATES STAY LOCAL, BOARD POSITIONS ARE CANONICAL. `hover.x/y` (viewport pixels,
+  // published by the roam layer) are this component's own fact and stay where they are; the two BOARD cells this
+  // preview reasons about — the target's and the caster's — come from the canonical entity rows' COMMITTED cell,
+  // the same truth the prediction that produced `displaced_to` resolved against. They used to be the projection's
+  // DISPLAY cells, which hold an in-flight walk at its pre-move position: mid-walk the push/pull verdict was
+  // computed from where a body was standing a beat ago.
   const displacement = active
-    ? displacement_of(fighter.cell, outcome.displaced_to, fight?.fighters?.get(fight?.my_entity_id)?.cell)
+    ? displacement_of(
+        entities[hover.entity_id]?.cells.committed_xy,
+        outcome.displaced_to,
+        entities[fight?.my_entity_id]?.cells.committed_xy
+      )
     : (last_vm.current?.displacement ?? null)
   const vm = active
     ? {
