@@ -11,7 +11,7 @@
 // `weapon_shape_tests.move` asserts, and the actual sets come out of the production template path.
 import { describe, expect, test } from 'bun:test'
 import { GRID_W } from '@aresrpg/sim/combat_grid'
-import { get_aoe_cells } from '@aresrpg/sim/spell_targeting'
+import { get_aoe_cells, is_in_range } from '@aresrpg/sim/spell_targeting'
 
 import fixture from '../../sim/test/fixtures/weapon_shapes.json' with { type: 'json' }
 import { weapon_spell_template } from '../src/predict_cast.js'
@@ -46,6 +46,9 @@ const strike_cells = (weapon) => {
   return sorted(get_aoe_cells(effect, ANCHOR, CASTER).map(encode))
 }
 
+/** The normalized strike level a category resolves — the band, the flags and the effects in one object. */
+const level_of = (category) => weapon_spell_template(weapon_of(category)).levels[0]
+
 describe('#387 zone kinds — engine truth, one geometry engine', () => {
   for (const row of fixture.zones)
     test(`${row.zone} resolves ${row.cells.length} cell(s) through the spell zone engine`, () => {
@@ -71,7 +74,6 @@ describe('#387 weapon strike shapes — the ruled zone per FINE category', () =>
   })
 
   test('the ranged BAND rides the category — min/max and modifiability, not a zone change', () => {
-    const level_of = (category) => weapon_spell_template(weapon_of(category)).levels[0]
     const bow = fixture.categories.find((row) => row.category === 'bow')
     // The band CEILING is the weapon's own reach (6 on every row of this matrix) — the category contributes the
     // floor and the flags, never a second home for a number the chain already carries.
@@ -80,6 +82,29 @@ describe('#387 weapon strike shapes — the ruled zone per FINE category', () =>
     expect(level_of('wand').modifiable_range).toBe(false)
     // A melee category keeps the weapon's own reach — the band is a ranged-category fact only.
     expect(level_of('sword').range).toEqual([1, 6])
+  })
+
+  // #387 leg ① — THE BAND FLOOR. A bow used to strike point-blank: the floor was the melee 1 for every category,
+  // so the only thing a ranged band said was "no further than". The ruling gives bow and wand a floor of 2 (the
+  // donor's own 1.29 data), and the refusal rides the SAME `is_in_range` door the ceiling already rides.
+  test('the ruled floors are per-category, not a ranged blanket', () => {
+    const floor_of = (category) => fixture.categories.find((row) => row.category === category).range_min
+    expect([floor_of('bow'), floor_of('wand'), floor_of('spellbook')]).toEqual([2, 2, 1])
+    expect(level_of('wand').range).toEqual([2, 6])
+  })
+
+  test('a ranged strike INSIDE the minimum is refused; at the minimum and beyond it is legal', () => {
+    const at = (dx) => ({ x: CASTER.x + dx, y: CASTER.y })
+    // Point-blank: inside the bow's and the wand's floor, still legal for a melee category.
+    expect(is_in_range(level_of('bow'), CASTER, at(1))).toBe(false)
+    expect(is_in_range(level_of('wand'), CASTER, at(1))).toBe(false)
+    expect(is_in_range(level_of('sword'), CASTER, at(1))).toBe(true)
+    // At the floor and inside the ceiling: legal for all three.
+    expect(is_in_range(level_of('bow'), CASTER, at(2))).toBe(true)
+    expect(is_in_range(level_of('wand'), CASTER, at(2))).toBe(true)
+    // The ceiling is untouched by the floor ruling — 6 is the weapon's own reach, 7 is out.
+    expect(is_in_range(level_of('bow'), CASTER, at(6))).toBe(true)
+    expect(is_in_range(level_of('bow'), CASTER, at(7))).toBe(false)
   })
 
   test('a spellbook strike is LINE-only; a sword strike is not', () => {

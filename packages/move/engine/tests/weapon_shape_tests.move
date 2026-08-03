@@ -196,13 +196,14 @@ fun an_unknown_category_stays_a_single_cell() {
 /// spellbook must be aimed along a straight line.
 fun the_range_band_rides_the_category() {
   let (_, _, bow_min, bow_mod, bow_line) = participant::weapon_zone_of(&b"bow".to_string());
-  let (_, _, _, wand_mod, _) = participant::weapon_zone_of(&b"wand".to_string());
-  let (_, _, _, book_mod, book_line) = participant::weapon_zone_of(&b"spellbook".to_string());
+  let (_, _, wand_min, wand_mod, _) = participant::weapon_zone_of(&b"wand".to_string());
+  let (_, _, book_min, book_mod, book_line) = participant::weapon_zone_of(&b"spellbook".to_string());
   let bow = participant::weapon_line_of(option::some(b"bow".to_string()), false);
   let book = participant::weapon_line_of(option::some(b"spellbook".to_string()), false);
-  assert!(bow_min == 1 && bow_mod && !bow_line, 0);
-  assert!(!wand_mod, 1);
-  assert!(!book_mod && book_line, 2);
+  assert!(bow_min == 2 && bow_mod && !bow_line, 0); // §387 leg ① — the ruled 1.29 floor, not the melee 1
+  assert!(wand_min == 2 && !wand_mod, 1); // the wand carries the SAME floor, and no stat ever moves its band
+  assert!(book_min == 1 && !book_mod && book_line, 2); // the spellbook keeps the melee floor — the floor is a
+  // per-category ruling, not a "ranged" blanket, so a category that did not move proves the others moved.
   let bow_reach = participant::weapon_line_reach(&bow);
   let book_reach = participant::weapon_line_reach(&book);
   assert!(bow_reach == 6 && book_reach == 5, bow_reach * 100 + book_reach);
@@ -210,6 +211,34 @@ fun the_range_band_rides_the_category() {
   assert!(combat_grid::same_line(CASTER, ANCHOR), 3);
   assert!(combat_grid::same_line(CASTER, CASTER + 20), 4);
   assert!(!combat_grid::same_line(CASTER, ANCHOR + 20), 5);
+}
+
+#[test]
+#[expected_failure(abort_code = cast::EIllegalCast)]
+/// §387 leg ① — the BAND FLOOR, driven: a BOW refuses a mob standing point-blank (distance 1, inside the ruled
+/// minimum 2). The same `d >= range_min` door the ceiling already rides — a floor of 1 lets this swing land.
+fun a_bow_cannot_strike_inside_its_minimum_range() {
+  let mut sc = ts::begin(OWNER);
+  let (mut fight, ver) = fight_with(&mut sc, b"bow", 1);
+  place(&mut fight, vector[ANCHOR]); // (6,5) — adjacent to the archer: in reach, INSIDE the minimum
+  cast::weapon_strike(&mut fight, 0, ANCHOR);
+  ts::return_shared(fight);
+  ts::return_shared(ver);
+  sc.end();
+}
+
+#[test]
+/// The positive control on the same board: AT the minimum the bow strikes normally. Without this, the refusal
+/// above would also pass on a bow that could not strike at all.
+fun a_bow_strikes_at_its_minimum_range() {
+  let mut sc = ts::begin(OWNER);
+  let (mut fight, ver) = fight_with(&mut sc, b"bow", 1);
+  place(&mut fight, vector[BEYOND]); // (7,5) — distance 2, the floor itself
+  cast::weapon_strike(&mut fight, 0, BEYOND);
+  assert!(hp(&fight, 0) < MOB_HP, 0);
+  ts::return_shared(fight);
+  ts::return_shared(ver);
+  sc.end();
 }
 
 #[test]

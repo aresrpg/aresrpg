@@ -155,7 +155,15 @@ const WZ_SIZE: vector<u64> = vector[0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 0,
 // The RANGE BAND facts. The band CEILING is the weapon's own `reach` (one home — never restated here); the
 // category contributes the FLOOR, whether the caster's range stat extends it (bow), and whether the aimed cell
 // must sit on a straight line from the attacker (spellbook).
-const WZ_RANGE_MIN: vector<u64> = vector[1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1];
+// §387 — the FLOOR is a per-category ruling, not a "ranged" blanket: a bow and a wand refuse point-blank (the
+// donor's own 1.29 data — 98% of that corpus carries min 2), a spellbook does not. It is authored HERE, on the
+// category zone row, and nowhere else: per-ITEM min-range would re-open the settled category-owned-reach law.
+const WZ_RANGE_MIN: vector<u64> = vector[
+  1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+  2, // bow
+  2, // wand
+  1, // spellbook
+];
 const WZ_RANGE_MOD: vector<bool> = vector[
   false, false, false, false, false, false, false, false, false, false, false, false, false, false,
   true, // bow

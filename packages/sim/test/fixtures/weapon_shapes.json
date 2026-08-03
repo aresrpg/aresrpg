@@ -15,7 +15,11 @@
     "                 kind; the engine speaks the (area_shape, area_size) pair the spell zone engine already",
     "                 uses. This layer is code-owned and fully asserted on both twins.",
     "  `categories` — the BUILT-IN DEFAULT assignment (the owner's #387 final ruling), which published catalog",
-    "                 data overrides per template. Assignments are content, not engine — see weapon_shapes.js."
+    "                 data overrides per template. Assignments are content, not engine — see weapon_shapes.js.",
+    "",
+    "#387 leg 1 (design word 2026-08-04): the ranged BAND FLOOR is a per-category ruling authored on the zone",
+    "row — bow 2, wand 2, spellbook 1 (the donor corpus: n=529, 98% min-2). The two `range_min` rows below moved",
+    "1 -> 2 with that ruling; every other row of this file is untouched."
   ],
   "caster": 105,
   "anchor": 106,
@@ -64,13 +68,13 @@
     {
       "category": "bow",
       "zone": "single",
-      "range_min": 1,
+      "range_min": 2,
       "range_modifiable": true
     },
     {
       "category": "wand",
       "zone": "single",
-      "range_min": 1,
+      "range_min": 2,
       "range_modifiable": false
     },
     {

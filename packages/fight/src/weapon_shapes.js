@@ -120,8 +120,10 @@ export const CATEGORY_STRIKES = {
   hammer: { zone: 'podium_4' },
   // RANGED — a single aimed cell at a band. The bow's band grows with the caster's range stat; the wand's does
   // not; the spellbook's is fixed AND must be aimed along a straight line.
-  bow: { zone: 'single', range_min: 1, range_modifiable: true },
-  wand: { zone: 'single', range_min: 1, range_modifiable: false },
+  // The FLOOR is a per-category ruling, not a "ranged" blanket: the bow and the wand refuse point-blank (the
+  // donor's own 1.29 data — 98% of that corpus carries min 2), the spellbook keeps the melee floor.
+  bow: { zone: 'single', range_min: 2, range_modifiable: true },
+  wand: { zone: 'single', range_min: 2, range_modifiable: false },
   spellbook: { zone: 'single', range_min: 1, line_only: true },
 }
 
