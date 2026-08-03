@@ -149,7 +149,7 @@ describe('#1993 train 0 — fight_visible_view owns all six fight-visible facts'
     expect(view.entities['mob-0'].cells.display_xy).toEqual({ x: 5, y: 2 })
     expect(view.entities['mob-0'].vitals.committed).toBe(20) // the folded Hit, not the stale snapshot's 40
     expect(view.entities['mob-0'].vitals.max).toBe(40)
-    expect(Array.isArray(view.entities[ME].statuses)).toBe(true)
+    expect(Array.isArray(view.entities[ME].statuses.rows)).toBe(true)
   })
 })
 
@@ -251,7 +251,8 @@ describe('#1993 train 0 — every field is AT CURRENT PARITY with the fragment t
       expect(row.vitals.max).toBe(fighter.health_max)
       expect(row.vitals.alive).toBe(fighter.committed_alive)
       expect(row.vitals.dead).toBe(fighter.dead)
-      expect(row.statuses).toEqual(fighter.effects)
+      expect(row.statuses.rows).toEqual(fighter.effects)
+      expect(row.statuses.invisible).toBe(!!fighter.invisible)
     }
   })
 

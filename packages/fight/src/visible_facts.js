@@ -12,7 +12,9 @@
 // explicitly named. No reconciliation is introduced here — fold-first family migrations are later trains.
 
 import { STATUS_FAILED, STATUS_ROOM_CLEARED, STATUS_WON } from './board_state.js'
+import { INVISIBILITY_STATUS_KIND } from './fight_status_snapshot.js'
 import { decode as decode_xy } from './los.js'
+import { range_bonus_of } from './statuses.js'
 import { commit_fact, empty_result } from './result_record.js'
 import { project_hud } from './core_project.js'
 import { committed_truth, display_state, min_turn_ready_at, presented_state } from './store.js'
@@ -103,6 +105,42 @@ const snapshot_cell_of = (view, key) => {
 }
 
 /**
+ * ONE ENTITY'S ACTIVE-STATUS PROJECTION (#1993 WP6, finding row `project_views.js:241`) — the fold's per-fighter
+ * status home, and EVERY consequence that home implies, resolved HERE instead of by each surface that needs one.
+ *
+ * The rows were already one home; the CONSEQUENCES were not. The turn card and the hover card read the rows, the
+ * board and the overlay each called `range_bonus_of` over them, the rig veil read a boolean beside them, and the
+ * prediction re-derived its own sim effects — four surfaces re-answering one collection, which is how an effect
+ * could paint in one place and not another (#1872's family). A consumer now names the consequence it wants.
+ *
+ * `invisible` IS THE FOLD'S ANSWER, NOT A RE-DERIVATION. The fold re-derives it from the surviving rows at every
+ * door that writes one (`append_status_row` · `age_statuses` · `reveal_fighter`), so reading the rows here would
+ * be a second derivation of the same fact — and a WRONG one, because `StanceChanged` can still set the flag with
+ * no row behind it (the chain's stance event carries no duration to mint one from). That case is not silently
+ * absorbed: `stance_only` NAMES it, the same way `visible_result.conflicts` names a winner disagreement instead
+ * of consuming it. A veil with no row is the last live second-representation in this family, and it is now
+ * measurable rather than merely suspected.
+ * @param {any} fighter one `engine_view` fighter row
+ */
+const entity_statuses = (fighter) => {
+  // The ACTIVE rows — the fold's per-fighter `statuses`, raw chain ints (engine_view's `effects`). Presence IS
+  // activity (#2000, D42): the fold already dropped every spent row at its bearer's turn start, so this needs no
+  // duration predicate of its own and must not invent one.
+  const rows = fighter?.effects ?? []
+  const invisible = !!fighter?.invisible
+  return {
+    rows,
+    invisible,
+    /** the veil is lit with no row to justify it — an unbacked stance, kept visible rather than absorbed */
+    stance_only: invisible && !rows.some((row) => Number(row?.kind) === INVISIBILITY_STATUS_KIND),
+    /** the fighter's LIVE RANGE STAT — the immutable fight-start base (gear included) plus the active signed
+     *  range rows, folded exactly once (`statuses.range_bonus_of`, its one home). A modifiable-range spell adds
+     *  this to its authored reach; a fixed-range one ignores it. */
+    range_bonus: range_bonus_of(fighter),
+  }
+}
+
+/**
  * ENTITIES — the id-keyed rows: identity · cells · vitals · statuses. Built from the `engine_view` fighter rows
  * (their derivation is the one home and stays there), regrouped so a consumer names the fact it wants instead of
  * choosing between `health`, `presented_health` and `committed_health` at every call site.
@@ -161,9 +199,7 @@ export const visible_entities = (s, engine, keys, book = {}) => {
         mp: fighter.mp ?? null,
         mp_max: fighter.mp_max ?? null,
       },
-      // The ACTIVE status rows — the fold's per-fighter `statuses`, raw chain ints. Every effect consequence
-      // (invisibility, timed range, badges) derives from THIS collection, never from a parallel boolean.
-      statuses: fighter.effects ?? [],
+      statuses: entity_statuses(fighter),
     }
   }
   return entities
