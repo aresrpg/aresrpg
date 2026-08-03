@@ -9,17 +9,12 @@
 
 import { chain_to_world, DEFAULT_ZONE_SIZE } from '@aresrpg/sdk/coords'
 
-// SPEC §6 "close enough shows press G" — the ONE ENGAGE distance: arms the [G] gather prompt on a resource AND
-// gates the [R] claim LEGALITY on a mob group. Mobs measure with `engage_d2` — the nearer of the group's two
-// legitimate positions (its derivation anchor and the renderer's terrain-resolved home); see that function.
+// SPEC §6 "close enough shows press G" — the ONE CLIENT ENGAGE distance: arms the [G] gather prompt, arms the
+// overworld/cave [R] ATTACK pill, and gates overworld claim_intent. The Move claim door exposes no client-readable
+// radius: it authenticates travel from the character checkpoint to the derived anchor, not live player distance.
+// This is therefore the single client honesty ring, not a guessed copy of a chain constant. Overworld mobs measure
+// it with `engage_d2` — the nearer of the chain-derived anchor and the renderer's terrain-resolved home.
 export const PROXIMITY_M = 6
-// [R] ATTACK-PROMPT VISIBILITY — the attack button should show at 3-4 blocks from the group, for
-// convenience — the prompt ARMS on this WIDER ring, measured from the NEAREST group member (the mobs you
-// actually see) rather than the invisible centroid. 10 blocks from the nearest member is ~3-4 blocks beyond the
-// 6-block engage ring, so the prompt appears before you're in claim range; engaging still requires closing to
-// PROXIMITY_M of an engage origin (a press in the visible-but-far band gets the honest "get closer"). Splitting the
-// two rings is the whole feature: VISIBILITY widened, LEGALITY unchanged.
-export const ATTACK_VISIBLE_M = 10
 // GATHER HYSTERESIS (client rider): K adjacent chain cells sit ~1 block apart — hold the armed target unless
 // a different one is nearer by more than this many real blocks.
 export const GATHER_HYSTERESIS_M = 0.75
@@ -175,14 +170,10 @@ export const blank_world = () => ({
   player: null,
   /** @type {string|null} the armed [G] target (flat row key) — hysteresis memory */
   gather_target_key: null,
-  /** @type {string|null} the armed [R] target (flat row key) — nearest group VISIBLE within ATTACK_VISIBLE_M */
+  /** @type {string|null} the armed [R] target (flat row key) — nearest group claimable within PROXIMITY_M */
   attack_target_key: null,
-  /** @type {boolean} is the armed [R] target also within the ENGAGE ring (claimable → gold), or only visible? */
+  /** @type {boolean} compatibility presentation flag; an armed target is always inside the claim ring. */
   attack_engageable: false,
-  /** @type {Map<string, {x:number,z:number}[]>} per-mob-group member positions (world space) — a TYPED INPUT the
-   * renderer feeds for its PLACED groups; the nearest-member basis of the [R] visibility ring. A group with none
-   * fed falls back to its anchor (an unplaced group is always far, where anchor ≈ group — never mis-armed). */
-  members: new Map(),
   /** @type {Map<string, {x:number,z:number}>} stable terrain-resolved mob-group homes reported by the renderer;
    * claimability uses this same placement fact and falls back to the row anchor until a group is placed. */
   group_homes: new Map(),
@@ -230,31 +221,16 @@ export const clear_pending = (state, subject) => {
 
 // ── the [G]/[R] retargeting fold (the two relocated renderer decisions) ──────────────────────────────────────
 
-/** Squared distance to a group's NEAREST fed member, or to the row anchor when the renderer has fed none (an
- *  unplaced group — always far, where anchor ≈ group). This is the [R] VISIBILITY basis. */
-const nearest_member_d2 = (members, row, p) => {
-  if (!members || members.length === 0) return (row.x - p.x) ** 2 + (row.z - p.z) ** 2
-  let best = Infinity
-  for (const m of members) {
-    const d2 = (m.x - p.x) ** 2 + (m.z - p.z) ** 2
-    if (d2 < best) best = d2
-  }
-  return best
-}
-
 /** One pass over the rows: nearest in-range resource + mob, and whether the armed [G] target is still live.
- *  The mob VISIBILITY ring is the wider ATTACK_VISIBLE_M measured from the nearest MEMBER; its ENGAGE
- *  distance (`engage_d2`) rides along so retarget can flag whether that armed target is also in engage range. */
+ *  Mob targeting reads the exact same engage distance and PROXIMITY_M ring as claim_intent. */
 const scan_targets = (state, p) => {
-  const range2 = PROXIMITY_M * PROXIMITY_M // resource gather ring from its anchor; mob ENGAGE from `engage_d2`
-  const visible2 = ATTACK_VISIBLE_M * ATTACK_VISIBLE_M // the wider mob PROMPT ring, from the nearest member
+  const range2 = PROXIMITY_M * PROXIMITY_M // resource gather ring from its anchor; mob claim ring from `engage_d2`
   const hit = {
     nearest_res: null,
     nearest_res_d2: range2,
     armed_d2: null,
     nearest_mob: null,
-    nearest_mob_d2: visible2,
-    nearest_mob_engage_d2: 0,
+    nearest_mob_d2: Infinity,
   }
   for (const [zk, zone] of state.zones)
     for (const [rk, row] of zone.rows) {
@@ -267,21 +243,18 @@ const scan_targets = (state, p) => {
           hit.nearest_res = key
         }
       } else if (!state.pending.has(`claim:${key}`)) {
-        const member_d2 = nearest_member_d2(state.members.get(key), row, p)
-        if (member_d2 < hit.nearest_mob_d2) {
-          hit.nearest_mob_d2 = member_d2
+        const mob_d2 = engage_d2(state, key, row, p)
+        if (mob_d2 <= range2 && mob_d2 < hit.nearest_mob_d2) {
+          hit.nearest_mob_d2 = mob_d2
           hit.nearest_mob = key
-          hit.nearest_mob_engage_d2 = engage_d2(state, key, row, p)
         }
       }
     }
   return hit
 }
 
-/** Recompute the [G]/[R] targets off the player position + row/member positions (the fold half of the render
- *  contract). Emits BOTH [R] flags: `attack_target_key` (VISIBLE — arms the prompt) and `attack_engageable`
- *  (that target is within the ENGAGE ring of either engage origin → gold; else it shows un-gold and a press
- *  gets "get closer", now with the direction). */
+/** Recompute the [G]/[R] targets off the player position + row/home positions (the fold half of the render
+ *  contract). `attack_target_key` only arms inside the same engage ring claim_intent accepts. */
 export const retarget = (state) => {
   const p = state.player
   if (!p)
@@ -297,7 +270,7 @@ export const retarget = (state) => {
     margin_m: GATHER_HYSTERESIS_M,
   })
   const attack_target_key = hit.nearest_mob
-  const attack_engageable = attack_target_key != null && hit.nearest_mob_engage_d2 <= PROXIMITY_M * PROXIMITY_M
+  const attack_engageable = attack_target_key != null
   if (
     gather_target_key === state.gather_target_key &&
     attack_target_key === state.attack_target_key &&

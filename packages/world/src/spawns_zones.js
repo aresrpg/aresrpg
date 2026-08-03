@@ -124,17 +124,15 @@ const fold_zone_searched = (state, input, now) => {
     row_proven: rerolled ? new Map() : (prev?.row_proven ?? new Map()),
   })
   const tombstones = rerolled ? new Map(state.tombstones) : state.tombstones
-  const members = rerolled ? new Map(state.members) : state.members
   const group_homes = rerolled ? new Map(state.group_homes) : state.group_homes
   if (rerolled) {
     for (const key of tombstones.keys()) if (key.startsWith(`${zk}:`)) tombstones.delete(key)
-    for (const key of members.keys()) if (key.startsWith(`${zk}:`)) members.delete(key)
     for (const key of group_homes.keys()) if (key.startsWith(`${zk}:`)) group_homes.delete(key)
   }
   const x = Number(input.x)
   const z = Number(input.z)
   const checkpoint = Number.isFinite(x) && Number.isFinite(z) ? { x, z } : state.checkpoint
-  const reconciled = { ...state, zones, tombstones, members, group_homes, checkpoint, hunt_zone: { zx, zy } }
+  const reconciled = { ...state, zones, tombstones, group_homes, checkpoint, hunt_zone: { zx, zy } }
   const next = clear_pending(rerolled ? retarget(reconciled) : reconciled, `search:${zx}:${zy}`)
   return with_beats(next, now, [
     { kind: 'reveal_chime' },
@@ -254,32 +252,25 @@ const fold_player_pos = (state, input) => {
   return retarget({ ...state, player: { x, z } })
 }
 
-// A PLACED mob group's stable geometry (world space): `home` is the exact terrain-resolved seat used for engage
-// legality; member positions feed the wider [R] visibility ring. The renderer clears both with an empty list on
-// teardown; the core never reaches out for either fact. Re-arms the [R] target off the new geometry.
+// A PLACED mob group's stable geometry (world space): `home` is the exact terrain-resolved seat used by BOTH the
+// [R] prompt and claim legality. The renderer's member list signals placement/teardown, but individual roaming
+// members never widen the claim ring. The core never reaches out for either fact.
 const fold_member_positions = (state, input) => {
   const { key } = input
   if (!key) return state
   const list = Array.isArray(input.members) ? input.members : []
   if (list.length === 0) {
-    if (!state.members.has(key) && !state.group_homes.has(key)) return state
-    const members = new Map(state.members)
+    if (!state.group_homes.has(key)) return state
     const group_homes = new Map(state.group_homes)
-    members.delete(key)
     group_homes.delete(key)
-    return retarget({ ...state, members, group_homes })
+    return retarget({ ...state, group_homes })
   }
-  const members = new Map(state.members)
-  members.set(
-    key,
-    list.map((m) => ({ x: Number(m.x), z: Number(m.z) }))
-  )
   const home_x = Number(input.home?.x)
   const home_z = Number(input.home?.z)
-  if (!Number.isFinite(home_x) || !Number.isFinite(home_z)) return retarget({ ...state, members })
+  if (!Number.isFinite(home_x) || !Number.isFinite(home_z)) return state
   const group_homes = new Map(state.group_homes)
   group_homes.set(key, { x: home_x, z: home_z })
-  return retarget({ ...state, members, group_homes })
+  return retarget({ ...state, group_homes })
 }
 
 // ── the door ─────────────────────────────────────────────────────────────────────────────────────────────────

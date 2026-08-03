@@ -421,13 +421,10 @@ describe('claim — pending hides, receipt removes + tombstones + hands off to t
   })
 })
 
-// ─── ATTACK-PROMPT VISIBILITY vs ENGAGE LEGALITY — the attack button shows at 3-4 blocks from the
-// group, for convenience — the [R] prompt ARMS on a WIDER ring (ATTACK_VISIBLE_M, measured from the NEAREST fed
-// member, not the invisible centroid), while the claim door's LEGALITY uses the 6-block ring around the stable
-// renderer-resolved group HOME. The renderer feeds both facts as a TYPED INPUT (never a reach-out read); with
-// none fed the row anchor is the fallback (an unplaced group is always far, where anchor ≈ group). Reducer outputs
-// BOTH flags.
-describe('attack visibility widens to the nearest member; engage legality uses the rendered group home', () => {
+// ─── ATTACK-PROMPT + ENGAGE LEGALITY — one PROXIMITY_M ring and one engage_d2 predicate drive both.
+// The renderer feeds the stable group home as a TYPED INPUT (never a reach-out read); without one, the chain-
+// derived row anchor is the fallback. Individual roaming members cannot widen the pill beyond claim range.
+describe('attack prompt and claim share one engage ring', () => {
   const placed = (now = 1_000) => {
     const ctx = boot(now)
     ctx.input({
@@ -436,7 +433,7 @@ describe('attack visibility widens to the nearest member; engage legality uses t
       zones: [{ zx: 5, zy: 5, discovered_at_ms: 9 }],
       cells: [{ zx: 5, zy: 5, rows: [mob('7', 520, 540)] }], // anchor world (20, 40)
     })
-    // the renderer feeds the placed group's member positions (world space); nearest member 2 blocks toward +x
+    // the renderer feeds the stable home plus roaming member positions (world space)
     ctx.input({
       type: 'member_positions',
       key: '5:5:mob:7',
@@ -449,28 +446,30 @@ describe('attack visibility widens to the nearest member; engage legality uses t
     })
     return ctx
   }
-  it('a player 3.5 blocks BEYOND the 6-block engage ring is VISIBLE but not ENGAGEABLE', () => {
+  it('a player beyond the claim ring never gets an ATTACK target even when a member is inside the old wider ring (#766)', () => {
     const { input, state } = placed()
     input({ type: 'player_pos', x: 29.5, z: 40 }) // anchor_dist 9.5 (= 6 + 3.5); nearest member 7.5 away (≤ 10)
-    expect(state().attack_target_key).toBe('5:5:mob:7') // the [R] prompt ARMS on the wider ring
-    expect(state().attack_engageable).toBe(false) // …but the claim door still refuses — anchor 9.5 > 6
+    expect(state().attack_target_key).toBe(null) // the pill must not read ATTACK where the claim refuses
+    expect(state().attack_engageable).toBe(false)
     input({ type: 'claim_intent', key: '5:5:mob:7' })
     expect(state().tx_request).toBe(null) // LEGALITY unchanged — a far press never fires a doomed tx
     expect(state().pending.size).toBe(0)
   })
-  it('far beyond BOTH rings arms nothing', () => {
+  it('far beyond the shared ring arms nothing', () => {
     const { input, state } = placed()
-    input({ type: 'player_pos', x: 35, z: 40 }) // nearest member 13 away (> 10)
+    input({ type: 'player_pos', x: 35, z: 40 })
     expect(state().attack_target_key).toBe(null)
     expect(state().attack_engageable).toBe(false)
   })
-  it('inside the engage ring is VISIBLE and ENGAGEABLE (the gold state)', () => {
+  it('inside the engage ring is armed and accepted by claim_intent', () => {
     const { input, state } = placed()
     input({ type: 'player_pos', x: 24, z: 40 }) // anchor_dist 4 (≤ 6); nearest member 2 away
     expect(state().attack_target_key).toBe('5:5:mob:7')
     expect(state().attack_engageable).toBe(true)
+    input({ type: 'claim_intent', key: '5:5:mob:7' })
+    expect(state().tx_request).toMatchObject({ kind: 'claim', payload: { spawn_id: '7' } })
   })
-  it('with NO members fed the anchor is the sole basis (an unplaced far group is never mis-armed)', () => {
+  it('with no rendered home the chain-derived anchor is the sole basis', () => {
     const ctx = boot()
     ctx.input({
       type: 'zones_rows_snapshot',
@@ -478,13 +477,14 @@ describe('attack visibility widens to the nearest member; engage legality uses t
       zones: [{ zx: 5, zy: 5, discovered_at_ms: 9 }],
       cells: [{ zx: 5, zy: 5, rows: [mob('7', 520, 540)] }],
     })
-    ctx.input({ type: 'player_pos', x: 29, z: 40 }) // anchor_dist 9 (≤ 10) → visible off the anchor, not engageable
-    expect(ctx.state().attack_target_key).toBe('5:5:mob:7')
-    expect(ctx.state().attack_engageable).toBe(false)
-    ctx.input({ type: 'player_pos', x: 31, z: 40 }) // anchor_dist 11 (> 10) → not visible
+    ctx.input({ type: 'player_pos', x: 29, z: 40 }) // anchor_dist 9 (> 6) → no prompt and no claim
     expect(ctx.state().attack_target_key).toBe(null)
+    expect(ctx.state().attack_engageable).toBe(false)
+    ctx.input({ type: 'player_pos', x: 26, z: 40 }) // the exact 6m boundary is claimable and arms
+    expect(ctx.state().attack_target_key).toBe('5:5:mob:7')
+    expect(ctx.state().attack_engageable).toBe(true)
   })
-  it('member_positions is a pure typed input — clearing it reverts to the anchor basis', () => {
+  it('the rendered home is a pure typed input; clearing it reverts to the anchor basis', () => {
     const ctx = boot()
     ctx.input({
       type: 'zones_rows_snapshot',
@@ -495,13 +495,13 @@ describe('attack visibility widens to the nearest member; engage legality uses t
     ctx.input({
       type: 'member_positions',
       key: '5:5:mob:7',
-      home: { x: 20, z: 40 },
+      home: { x: 26, z: 40 },
       members: [{ x: 24, z: 40 }],
-    }) // member 4 blocks toward +x
-    ctx.input({ type: 'player_pos', x: 32, z: 40 }) // anchor_dist 12 (> 10) but nearest member 8 away (≤ 10)
-    expect(ctx.state().attack_target_key).toBe('5:5:mob:7') // VISIBLE off the nearest member
+    })
+    ctx.input({ type: 'player_pos', x: 31, z: 40 }) // 5m from home, 11m from anchor
+    expect(ctx.state().attack_target_key).toBe('5:5:mob:7')
     ctx.input({ type: 'member_positions', key: '5:5:mob:7', members: [] }) // renderer tore the group down
-    expect(ctx.state().attack_target_key).toBe(null) // anchor 12 > 10 → no longer visible off the anchor
+    expect(ctx.state().attack_target_key).toBe(null) // anchor 11 > 6
   })
   // #1318 — the mirror of #367: the ring used to measure ONLY from the rendered home, so a player standing on
   // the DERIVED ANCHOR (what the chain authenticates, what the compass pips point at) got "get closer" with no
@@ -535,7 +535,7 @@ describe('attack visibility widens to the nearest member; engage legality uses t
       zones: [{ zx: 5, zy: 5, discovered_at_ms: 9 }],
       cells: [{ zx: 5, zy: 5, rows: [mob('7', 520, 540)] }], // anchor world (20, 40)
     })
-    ctx.input({ type: 'player_pos', x: 8, z: 40 }) // 12m due WEST of the anchor — out of both rings
+    ctx.input({ type: 'player_pos', x: 8, z: 40 }) // 12m due WEST of the anchor — outside the ring
     expect(ctx.state().attack_engageable).toBe(false)
     expect(engage_offset(ctx.state(), '5:5:mob:7')).toEqual({ dx: 12, dz: 0, distance: 12 })
     // once the renderer places the pack nearer than the anchor, the hint follows the pack

@@ -18,7 +18,7 @@
 // truth via mob_names/mob_levels, name fallback 'Mob'), with the resurrected dungeons.click_to_fight hint
 // shown once the player is inside engage range, and a pointer cursor whenever the aim rests on a mob (the
 // target must read clickable). Each mob is still its OWN 3D rig with its OWN click discs.
-// A click on any mob inside ENGAGE_RANGE_M dispatches action/dungeon_engage {user:true} — the EXACT wire
+// A click on any mob inside the shared PROXIMITY_M ring dispatches action/dungeon_engage {user:true} — the EXACT wire
 // the old roam cluster used, so the tx-provenance law + the leader-only start_when_ready flow are
 // UNTOUCHED. The dimension despawns the group the instant the fight goes ACTIVE → plates + rigs drop;
 // ROOM_CLEARED publishes the NEXT room's roster → the pack re-appears. Mirrors remote_players.js
@@ -31,6 +31,7 @@
 import { AnimationMixer, Raycaster, Vector2, Vector3 } from 'three'
 
 import { create_mob_model } from '@aresrpg/engine3/player'
+import { PROXIMITY_M } from '@aresrpg/world/spawns_reconcile'
 
 import i18n from '../i18n'
 import { use_prompt_stack } from '../world-shell/prompt_stack.js'
@@ -39,7 +40,6 @@ import { get_mob_model } from './data/mobs.js'
 import { context } from './store.js'
 import { game_log } from '../core/log.js'
 
-const ENGAGE_RANGE_M = 10 // "approach/click" — a click from across the room never starts the fight
 const MOB_CLICK_PX = 90 // hit disc around each mob's projected plate point
 const RING_BASE = 1.3 // ring radius = RING_BASE + 0.22·n (clamped) — snug pack on the flat combat floor
 
@@ -240,7 +240,7 @@ export function create_cave_mobs({ engine, canvas = null, anchor, face_toward, g
 
   const in_engage_range = () => {
     const p = get_player_pos()
-    return Math.hypot(Number(p[0]) - anchor[0], Number(p[2]) - anchor[2]) <= ENGAGE_RANGE_M
+    return Math.hypot(Number(p[0]) - anchor[0], Number(p[2]) - anchor[2]) <= PROXIMITY_M
   }
 
   // D2 — the [R] ENGAGE prompt (dungeon mobs get the SAME press-R popup as the open world). Mirrors
@@ -379,7 +379,7 @@ export function create_cave_mobs({ engine, canvas = null, anchor, face_toward, g
           hit = true
     if (!hit) return
     if (!in_engage_range())
-      return game_log('cave-mobs', `mob clicked out of range — walk closer (≤${ENGAGE_RANGE_M}m) (D224)`)
+      return game_log('cave-mobs', `mob clicked out of range — walk closer (≤${PROXIMITY_M}m) (D224)`)
     game_log('cave-mobs', 'pack clicked → action/dungeon_engage (leader starts, members watch the flip) (D224)')
     context.dispatch('action/dungeon_engage', { user: true })
   }

@@ -422,9 +422,9 @@ export function create_world_spawns({ engine, canvas = null, get_player_pos }) {
     )
   }
 
-  // Feed the spawns core the exact terrain-resolved group HOME used by the renderer plus its stable member
-  // anchors. The home backs ENGAGE legality; members back the wider [R] visibility ring. An empty e.members
-  // (teardown) clears both, reverting an unplaced group to its row-anchor fallback.
+  // Feed the spawns core the exact terrain-resolved group HOME used by the renderer. The member list signals
+  // placement versus teardown; roaming member positions never widen the shared prompt/claim ring. An empty list
+  // clears the home and reverts an unplaced group to its row-anchor fallback.
   const feed_group_geometry = (/** @type {any} */ e) =>
     spawns_input({
       type: 'member_positions',
@@ -599,9 +599,8 @@ export function create_world_spawns({ engine, canvas = null, get_player_pos }) {
   }
 
   // register/clear the [R] ATTACK prompt in the shared PromptStack (same F/G/E language) for `e`, moving the card
-  // highlight with it. The core now arms on the WIDER visibility ring (ATTACK_VISIBLE_M from the nearest member —
-  // design ruling 2026-07-18), so an armed group is not always claimable: `engageable` (the core's ENGAGE-ring flag) drives
-  // GOLD when claimable, the default border when only VISIBLE (a press there gets engage()'s honest "get closer").
+  // highlight with it. The core arms only inside the same PROXIMITY_M ring claim_intent accepts; `engageable` is
+  // retained in the adapter contract and drives the gold treatment.
   // Idempotent per (target, engageable). The PromptStack renderer owns the key + click.
   const set_attack_target = (/** @type {any} */ e, /** @type {boolean} */ engageable = false) => {
     // #861 — ONE gate, read here for PRESENTATION and again inside engage() as the last line of defense, so the
@@ -1108,8 +1107,8 @@ export function create_world_spawns({ engine, canvas = null, get_player_pos }) {
       release_gather()
     }
 
-    // arm/clear the [R] ATTACK prompt + card highlight off the core's WIDER visibility ring; `attack_engageable`
-    // decides gold-vs-visible (PromptStack owns key+click). The core owns both flags — this only routes them.
+    // arm/clear the [R] ATTACK prompt + card highlight off the core's claim ring. The core owns both flags; this
+    // only routes them to PromptStack's key/click treatment.
     const attack_armed =
       !in_cave && !engaging && !world_fight && core.attack_target_key
         ? (entries.get(core.attack_target_key) ?? null)
