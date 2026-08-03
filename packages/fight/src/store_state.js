@@ -43,15 +43,25 @@ export const MIN_ACTION_MS = 5000
  * the local arm normally rules and the two agree — the chain arm stays as the belt against a fold that has not
  * re-run under a freshly widened deadline: never submit before BOTH clocks allow, because an early guess aborts
  * ETurnTooFast and costs the player a turn they legitimately spent 3+ seconds on. Null off my playable turn.
+ *
+ * ONE FRAME (#2113) — the two arms were `Math.max`'d across DIFFERENT clocks: `turn_started_at` is a LOCAL
+ * instant, `chain_min_turn_at` a CHAIN one, so a skewed client mixed frames and the max picked the wrong arm.
+ * The chain arm is carried into local time (`chain − offset`) and the result is a LOCAL instant, which is what
+ * every consumer compares against its own `Date.now()`. The estimator converges from BELOW (`offset_hat ≤
+ * offset`), so `chain − offset_hat` lands LATE — and late is the SAFE side here: submitting early means the tx
+ * EXECUTES, aborts ETurnTooFast, and burns gas that the burn law forbids retrying, while waiting longer
+ * pre-sign costs nothing at all. The deadline hatch below is what stops that late bias from eating a turn.
  * @param {any} state @returns {number | null}
  */
 export const min_turn_ready_at = (state) => {
   if (state.turn_started_at == null) return null
   const { active } = committed_truth(state)
   if (active == null || active !== state.my_key) return null
+  const chain_floor = chain_min_turn_at(state.turn_deadline_ms, state.view?.turn_ms)
   return Math.max(
     state.turn_started_at + PLAYER_TURN_FLOOR_MS,
-    chain_min_turn_at(state.turn_deadline_ms, state.view?.turn_ms)
+    // 0 is the starved read's honest refusal to fabricate a floor — never shift it into a real instant.
+    chain_floor > 0 ? chain_floor - (state.chain_offset_ms ?? 0) : chain_floor
   )
 }
 
@@ -62,11 +72,21 @@ export const min_turn_ready_at = (state) => {
  * losing it to the timer is strictly worse than an ETurnTooFast refusal, and the chain grants the late press
  * its own grace. Waiting this out PRE-SIGN costs zero gas and leaves no digest, which is the whole point: an
  * executed abort is never auto-retried (the burn law), so the turn must simply never be submitted early.
+ *
+ * THE HATCH ERRS THE OTHER WAY (#2113). `turn_deadline_ms` is a CHAIN instant and `now` is local, so the escape
+ * hatch needed the offset too — but NOT the same bias as the floor above. The floor may safely open late (worst
+ * case: a wasted pre-sign wait). The hatch may NOT: it exists precisely to beat the deadline, and opening it
+ * late is how a turn gets FORFEITED — which this function's own ranking calls strictly worse than an
+ * ETurnTooFast refusal. Since `offset_hat ≤ offset`, correcting it symmetrically would push the hatch later,
+ * the one direction it must never move. So it takes the MORE URGENT of the two frames: `max(0, offset)` shifts
+ * the hatch EARLIER when the chain is ahead of this client, and leaves it exactly where it is otherwise — a
+ * lower-bound estimate can never be trusted to grant extra time it may not have.
  * @param {any} state @param {number} [now] @returns {number}
  */
 export const submit_wait_ms = (state, now = Date.now()) => {
   const deadline = Number(state.turn_deadline_ms ?? 0)
-  if (deadline > 0 && deadline - now <= PLAYER_TURN_FLOOR_MS) return 0
+  const chain_ahead_ms = Math.max(0, state.chain_offset_ms ?? 0)
+  if (deadline > 0 && deadline - now - chain_ahead_ms <= PLAYER_TURN_FLOOR_MS) return 0
   const ready_at = min_turn_ready_at(state)
   return ready_at == null ? 0 : Math.max(0, ready_at - now)
 }
