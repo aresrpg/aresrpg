@@ -19,6 +19,7 @@
 
 import { experience_to_level } from '@aresrpg/sdk/experience'
 import { points_for_level_range } from '@aresrpg/sdk/progression'
+import { commit_fact, commit_loot, empty_result } from '@aresrpg/fight/result_record'
 
 import { game_log } from '../../../core/log.js'
 import { reconcile_fight_character } from '../../../roster/fight_character_refresh.js'
@@ -46,17 +47,14 @@ import { push_event_toast } from '../toast.js'
  * @property {number} level             the character's level after the fight
  * @property {number} levels_gained     levels gained this fight (0 if no level-up)
  * @property {number} points_gained     characteristic points gained (= available_points delta)
- * @property {FightLoot[]} loot         items gained this fight (empty until the event floor or the items delta lands)
+ * @property {FightLoot[]} loot         items gained this fight — the MONOTONIC record's rows (@aresrpg/fight/
+ *                                       result_record): they only ever add or gain fields, never shrink
  * @property {number|null} loot_units   loot units the ResultOpened event rolled (null until settlement lands);
- *                                       the card renders THIS many skeleton tiles until `loot` hydrates.
- * @property {boolean} [loot_resolved]  internal reconciliation flag (leg②, never read by the card): true once
- *                                       `loot` rode the FightResult OBJECT READ's real `rolled` declaration —
- *                                       false/absent while it is still the event-floor placeholder
- *                                       (dungeon_settlement.js's floor_loot). Gates the fold below so a stale/
- *                                       duplicate floor dispatch can never regress an already-resolved list.
+ *                                       the card renders THIS many skeleton tiles until `loot` hydrates. A
+ *                                       SEPARATE fact from `loot` on purpose — a loading count is not a drop.
+ * @property {any[]} conflicts          transports that contradicted a committed fact, retained as DATA
+ * @property {Record<string,string>} provenance which home first answered each committed fact
  * @property {string} [result_id] exact FightResult object currently bound to this card
- * @property {boolean} [loot_instances_resolved] true once ItemMinted rows replaced the aggregate declaration;
- *   later template-only/object-read rows can never regress those exact owned ids
  */
 
 /**
@@ -105,19 +103,20 @@ const fold = (result, type, payload) => {
       // open (or re-open) in the pending state — the reward tx is being signed/submitted. xp/level render a
       // SKELETON (not a literal 0/loot) until the chain delta resolves — avoids flashing "0xp" before
       // the correct xp lands; show a loading skeleton instead of 0. loot_units is unknown until settlement lands.
+      // A FRESH record every open: monotonicity is scoped to ONE fight's lifetime, so the card's own open is
+      // where the ratchet resets. Nothing else may reset it.
       return {
+        ...empty_result(),
         status: 'pending',
         xp: 0,
         level: payload.level,
         levels_gained: 0,
         points_gained: 0,
-        loot: [],
-        loot_units: null,
       }
     case 'action/fight_result/bind':
       if (!result || !payload.result_id || (result.result_id && result.result_id !== payload.result_id)) return result
       if (result.result_id === payload.result_id) return result
-      return { ...result, result_id: payload.result_id, loot_instances_resolved: false }
+      return { ...result, result_id: payload.result_id }
     case 'action/fight_result/resolve':
       // the settlement receipt landed (finish_result's ResultOpened dispatch — the ONE resolver, 07-18 law) —
       // fill in xp / level-up. Tolerate a resolve with no open modal (e.g. a receipt landing outside the
@@ -127,43 +126,44 @@ const fold = (result, type, payload) => {
       // preserves whichever resolve carried the real count (order-independent).
       if (!result) return result
       if (payload.result_id && payload.result_id !== result.result_id) return result
-      return {
-        ...result,
-        result_id: payload.result_id ?? result.result_id,
-        status: 'resolved',
-        xp: payload.xp,
-        level: payload.level,
-        levels_gained: payload.levels_gained,
-        points_gained: payload.points_gained,
-        loot_units: payload.loot_units ?? result.loot_units,
-      }
-    case 'action/fight_result/loot':
-      // the settlement receipt's loot landed (finish_result's FightResult `rolled` dispatch — the ONE loot
-      // producer, per the receipt-first law). Independent of resolve (xp), so it may arrive before or after it;
-      // merge onto whatever the slice currently holds. Ignore if closed.
-      // RECONCILE INSIDE THE REDUCE (recap-truth lane leg②, CLIENT-INDEPENDENCE LAW §3): dungeon_settlement.js
-      // may dispatch three versions per fight — an event-floor placeholder, the aggregate object read, then
-      // exact ItemMinted instance rows. SAME-VERSION DISCARD: once `loot_resolved` is true, a later resolved:false dispatch
-      // (a stale/duplicate floor) is a no-op — richer data never regresses. RICHER ADOPT: anything else
-      // (first-ever arrival, or a resolved:true dispatch) always adopts.
+      // xp/level/levels_gained/points_gained are written straight: `resolve_reward` fires ONCE per settlement
+      // (the object-read fallback is gated on the receipt having carried no event), and the roster's own XP
+      // floor in @aresrpg/inventory already refuses a lagging /v1 read. `loot_units` is the fact two different
+      // resolves CAN both carry, so it goes through the record's guard — order-independent, and a disagreeing
+      // count is recorded rather than picked.
+      return commit_fact(
+        {
+          ...result,
+          result_id: payload.result_id ?? result.result_id,
+          status: 'resolved',
+          xp: payload.xp,
+          level: payload.level,
+          levels_gained: payload.levels_gained,
+          points_gained: payload.points_gained,
+        },
+        'loot_units',
+        payload.loot_units,
+        'receipt'
+      )
+    case 'action/fight_result/loot_units':
+      // The rolled COUNT, on its own door — the skeleton the card renders while the drops hydrate. Its own fact,
+      // never a row in `loot` (finding row 68), and monotonic like everything else: a second, disagreeing count
+      // never repaints the card, it lands on `conflicts`.
       if (!result) return result
       if (payload.result_id && payload.result_id !== result.result_id) return result
-      if (result.loot_instances_resolved && !payload.instances) return result
-      if (result.loot_resolved && !payload.resolved) return result
-      // ADOPT-DON'T-BLANK (#1867). An EMPTY declaration arriving over rows this card already holds is
-      // ABSENCE, never proof that nothing dropped: the settlement receipt certified those items and the
-      // display read behind it is a catch-up read. `mint_all_and_burn` DRAINS `rolled` one entry per
-      // `mint_rolled` (results.move), so the object read at the tail of settlement legitimately observes a
-      // shorter — or empty — declaration than the receipt that opened this card, and adopting it wholesale
-      // is what made a looted item appear, vanish, and come back when the richer instance rows landed.
-      // Certified loot leaves this slice on `close` and nowhere else.
-      if (!(payload.loot ?? []).length && (result.loot ?? []).length) return result
-      return {
-        ...result,
-        loot: payload.loot,
-        loot_resolved: !!payload.resolved,
-        loot_instances_resolved: result.loot_instances_resolved || !!payload.instances,
-      }
+      return commit_fact(result, 'loot_units', payload.loot_units, 'receipt')
+    case 'action/fight_result/loot':
+      // THE MONOTONIC LOOT COMMIT (#1993 WP4). settlement fans this dispatch out over transports that finish in
+      // no fixed order — the aggregate FightResult declaration and the exact ItemMinted rows — and each one is
+      // evidence about the rows it NAMES, never about the rest. `commit_loot` (@aresrpg/fight/result_record) is
+      // the one home of that law: rows add, rows gain fields, exact enumeration retires its own aggregate, and a
+      // contradiction lands on `conflicts` instead of repainting the card. It replaced three hand-rolled
+      // precedence flags here (`loot_resolved`, `loot_instances_resolved`, and the adopt-don't-blank empty
+      // check) — the same rule, stated once, per row rather than per dispatch. #1867 is the bug that made all
+      // three necessary and none of them sufficient: a re-read carrying FEWER rows still un-looted the player.
+      if (!result) return result
+      if (payload.result_id && payload.result_id !== result.result_id) return result
+      return commit_loot(result, payload.loot, payload.instances ? 'minted' : 'object_read')
     case 'action/fight_result/close':
       return null
     default:

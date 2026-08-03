@@ -192,42 +192,37 @@ describe('finish_result FightResult read retry — a transient miss self-heals, 
   })
 })
 
-/** Mirror of dungeon_settlement.js's floor_loot — the ONE event-floor placeholder entry (leg②). */
-const floor_loot_mirror = (units) => (units > 0 ? [{ item_type: '', name: '', amount: units }] : [])
-
 /**
- * Mirror of finish_result's LOOT-ITEM dispatch sequence (dungeon_settlement.js, recap-truth lane leg②): the
- * ResultOpened event names ONLY a total unit count (results.move's `total_units` — no per-template identity;
- * that lives solely in the FightResult object's `rolled` declaration). So the FIRST dispatch is a receipt-FLOOR
- * placeholder (resolved:false) the INSTANT loot_units is known — never an indefinite pulsing skeleton while
- * the slow object read (the ONLY source of per-template identity, already internally retried — see
- * read_result_with_retry above) is still in flight or has permanently failed. If/when that read lands, its
- * OWN `rolled` declaration dispatches SECOND (resolved:true) — richer, reconciling BEHIND the floor. A
- * permanently failing read (`read_result` resolves null) simply never fires the second dispatch: the floor
- * stands, unwiped. player_experience.test.js pins the REDUCER half of this contract (same-version
- * discard/richer adopt); this mirror pins the DISPATCH SEQUENCE half.
+ * Mirror of finish_result's LOOT dispatch sequence (dungeon_settlement.js). The ResultOpened event names ONLY a
+ * total unit COUNT (results.move's `total_units` — no per-template identity; that lives solely in the
+ * FightResult object's `rolled` declaration), so the count rides its OWN dispatch the instant it is known and
+ * the card renders that many skeleton tiles. #1993 WP4 deleted the old placeholder ROW this used to push into
+ * the loot list first: an identity-less entry is not a drop, and the canonical loot fact holds only certified
+ * drops. If/when the slow object read lands, its `rolled` declaration dispatches the real rows; a permanently
+ * failing read simply never fires it, and the skeletons stand. player_experience.test.js pins the REDUCER half
+ * of this contract (monotonic accumulation); this mirror pins the DISPATCH SEQUENCE half.
  * @param {{ loot_units: number | null }} args event-carried field
  * @param {() => Promise<{ rolled: { item_template: string, qty: number }[] } | null>} read_result the
  *   (already internally-retried) FightResult read — null means every retry inside it was exhausted
  * @param {Map<string, any>} [template_map]
- * @returns {Promise<Array<{ loot: any[], resolved: boolean }>>} every action/fight_result/loot payload, IN ORDER
+ * @returns {Promise<Array<any>>} every dispatched payload, IN ORDER
  */
 async function finish_result_loot_dispatch({ loot_units }, read_result, template_map = new Map()) {
   const dispatched = []
   const rolled_units = Number(loot_units ?? 0)
-  if (rolled_units > 0) dispatched.push({ loot: floor_loot_mirror(rolled_units), resolved: false })
+  if (rolled_units > 0) dispatched.push({ loot_units: rolled_units })
   const result = await read_result()
   if (result) dispatched.push({ loot: loot_from_rolled(result.rolled ?? [], template_map), resolved: true })
   return dispatched
 }
 
-describe('finish_result loot-item dispatch — the event floor renders INSTANTLY, the slow read reconciles behind (leg②)', () => {
-  it('RED-FIRST: loot_units known, the slow read NEVER resolves (null forever) → the floor tile is the ONLY dispatch, and it STANDS (never an indefinite skeleton)', async () => {
+describe('finish_result loot dispatch — the rolled COUNT fires instantly, the slow read brings the drops', () => {
+  it('loot_units known, the slow read NEVER resolves (null forever) → the COUNT is the only dispatch, and the skeletons stand', async () => {
     const dispatched = await finish_result_loot_dispatch({ loot_units: 3 }, async () => null)
-    expect(dispatched).toEqual([{ loot: [{ item_type: '', name: '', amount: 3 }], resolved: false }])
+    expect(dispatched).toEqual([{ loot_units: 3 }])
   })
 
-  it('loot_units known, the slow read LANDS richer (real templates) → the floor fires first, the real resolved list adopts SECOND — no regression', async () => {
+  it('loot_units known, the slow read LANDS the real templates → count first, certified rows second', async () => {
     const template_map = new Map([['0xA', { item_type: 'razkin_hide', name: 'Razkin Hide' }]])
     const dispatched = await finish_result_loot_dispatch(
       { loot_units: 2 },
@@ -235,7 +230,7 @@ describe('finish_result loot-item dispatch — the event floor renders INSTANTLY
       template_map
     )
     expect(dispatched).toEqual([
-      { loot: [{ item_type: '', name: '', amount: 2 }], resolved: false }, // the instant floor
+      { loot_units: 2 }, // the instant skeleton count
       {
         loot: [
           {
@@ -247,16 +242,16 @@ describe('finish_result loot-item dispatch — the event floor renders INSTANTLY
           },
         ],
         resolved: true,
-      }, // reconciled behind
+      }, // the certified drops behind it
     ])
   })
 
-  it('loot_units is 0 (a genuine no-drop win): NO floor tile — nothing to show honestly, only the landed-empty real dispatch', async () => {
+  it('loot_units is 0 (a genuine no-drop win): no count dispatch — only the landed-empty real dispatch', async () => {
     const dispatched = await finish_result_loot_dispatch({ loot_units: 0 }, async () => ({ rolled: [] }))
     expect(dispatched).toEqual([{ loot: [], resolved: true }])
   })
 
-  it('loot_units unknown (receipt-parse miss, null): no premature floor — the object read alone resolves it once it lands', async () => {
+  it('loot_units unknown (receipt-parse miss, null): no premature count — the object read alone resolves it once it lands', async () => {
     const dispatched = await finish_result_loot_dispatch(
       { loot_units: null },
       async () => ({ rolled: [{ item_template: '0xA', qty: 1 }] }),
@@ -278,7 +273,7 @@ describe('finish_result loot-item dispatch — the event floor renders INSTANTLY
     ])
   })
 
-  it('loot_units unknown AND the read also never resolves: honestly nothing dispatches (no data anywhere — never a fabricated floor)', async () => {
+  it('loot_units unknown AND the read also never resolves: honestly nothing dispatches (no data anywhere)', async () => {
     const dispatched = await finish_result_loot_dispatch({ loot_units: null }, async () => null)
     expect(dispatched).toEqual([])
   })

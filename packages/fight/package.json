@@ -1,7 +1,7 @@
 {
   "name": "@aresrpg/fight",
   "version": "0.0.0",
-  "description": "AresRPG headless fight core — ONE state atom behind ONE input door: chain-log fold + settlement fold + presentation fold. Outputs projections and the first-class BEAT STREAM ({kind, at, duration, payload} rows) the renderer plays verbatim. Node-clean: zero DOM/React/three imports.",
+  "description": "AresRPG headless fight core \u2014 ONE state atom behind ONE input door: chain-log fold + settlement fold + presentation fold. Outputs projections and the first-class BEAT STREAM ({kind, at, duration, payload} rows) the renderer plays verbatim. Node-clean: zero DOM/React/three imports.",
   "type": "module",
   "private": true,
   "scripts": {
@@ -88,6 +88,9 @@
     },
     "./journal_normalize": {
       "import": "./src/journal_normalize.js"
+    },
+    "./result_record": {
+      "import": "./src/result_record.js"
     }
   },
   "author": "AresRPG's Team",

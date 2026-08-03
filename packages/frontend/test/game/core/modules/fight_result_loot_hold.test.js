@@ -14,7 +14,14 @@
 //
 // THE LAW this pins: an empty declaration over rows the card already holds is ABSENCE, not proof that nothing
 // dropped. Certified loot leaves the slice on `close` and nowhere else — reads ADOPT forward, never blank
-// backward. Richer data still wins: an instance-resolved dispatch always replaces a floor.
+// backward. Richer data still wins: exact instance rows retire the aggregate they enumerate.
+//
+// #1993 WP4 GENERALIZED IT. The three ad-hoc precedence flags this file was written against (`loot_resolved`,
+// `loot_instances_resolved`, the adopt-don't-blank empty check) are gone, and so is the identity-less FLOOR row
+// — the skeleton count lives on its own fact (`loot_units`) where it cannot pretend to be a drop. One law now
+// covers every arrival: `commit_loot` (@aresrpg/fight/result_record) accumulates row-wise, so a transport is
+// evidence only about the rows it NAMES. Every case below still holds; the shrink case the old wholesale-adopt
+// could not catch (a SHORTER but non-empty read) is pinned in test/game/loot_result_monotonic.test.js.
 
 import { describe, expect, test } from 'bun:test'
 
@@ -36,46 +43,49 @@ const carded = (loot, over = {}) => ({
     points_gained: 0,
     loot,
     loot_units: 1,
-    loot_resolved: false,
-    loot_instances_resolved: false,
+    kind: null,
+    winner: null,
+    run: null,
+    provenance: {},
+    conflicts: [],
     ...over,
   },
 })
 
-const floor = [{ item_type: '', name: '', amount: 1 }]
+/** The aggregate declaration the receipt opened the card with — one row per TEMPLATE, no owned object yet. */
+const declared = [{ template_id: '0xtpl', item_type: 'ring_of_x', name: 'Ring of X', amount: 1 }]
 const minted = [{ item_id: '0xitem', template_id: '0xtpl', item_type: 'ring_of_x', name: 'Ring of X', amount: 1 }]
 
 describe('#1867 the loot tiles never blank between the receipt and reconciliation', () => {
   test('RED: a drained display read cannot clear the tiles the receipt certified', () => {
     // ③ arriving first, off a FightResult whose `rolled` the mint already drained.
-    const after = reduce(carded(floor), 'action/fight_result/loot', { result_id: RESULT, loot: [], resolved: true })
-    expect(after.fight_result.loot).toEqual(floor)
-    expect(after.fight_result.loot_resolved, 'and it never claims the empty read as the resolved truth').toBe(false)
+    const after = reduce(carded(declared), 'action/fight_result/loot', { result_id: RESULT, loot: [], resolved: true })
+    expect(after.fight_result.loot).toEqual(declared)
+    expect(after.fight_result.conflicts, 'an absence is not a disagreement either — nothing to report').toEqual([])
   })
 
   test('the same empty read cannot clear REAL instance rows either', () => {
-    const held = carded(minted, { loot_resolved: true, loot_instances_resolved: true })
     expect(
-      reduce(held, 'action/fight_result/loot', { result_id: RESULT, loot: [], resolved: true }).fight_result.loot
+      reduce(carded(minted), 'action/fight_result/loot', { result_id: RESULT, loot: [], resolved: true }).fight_result
+        .loot
     ).toEqual(minted)
   })
 
-  test('GREEN: richer rows still replace the floor — the hold is not a freeze', () => {
-    const after = reduce(carded(floor), 'action/fight_result/loot', {
+  test('GREEN: exact instance rows retire the aggregate they enumerate — the hold is not a freeze', () => {
+    const after = reduce(carded(declared), 'action/fight_result/loot', {
       result_id: RESULT,
       loot: minted,
       resolved: true,
       instances: true,
     })
+    // ONE row, not two: the owned object and the template declaration are the same drop at two resolutions.
     expect(after.fight_result.loot).toEqual(minted)
-    expect(after.fight_result.loot_instances_resolved).toBe(true)
   })
 
   test('a genuinely empty result still renders empty — the hold needs something to hold', () => {
-    // No floor (a 0-unit victory): nothing certified yet, so an empty declaration is the honest reading.
+    // Nothing certified yet, so an empty declaration leaves an empty list. It is not a claim, just no evidence.
     const after = reduce(carded([]), 'action/fight_result/loot', { result_id: RESULT, loot: [], resolved: true })
     expect(after.fight_result.loot).toEqual([])
-    expect(after.fight_result.loot_resolved).toBe(true)
   })
 
   test('a dispatch for a DIFFERENT result never reaches this card', () => {

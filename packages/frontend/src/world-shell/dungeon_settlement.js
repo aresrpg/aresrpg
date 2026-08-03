@@ -65,11 +65,6 @@ async function read_result_with_retry(read_once, sleep = (ms) => new Promise((r)
   return null
 }
 
-/** SPOILS FLOOR (leg②): ResultOpened names only a total unit COUNT, no per-template identity (that lives
- *  solely in the FightResult `rolled` read below) — the ONE entry the card can honestly render the instant the
- *  event lands. Mirrors loot_from_rolled's D53 degrade shape — resolve_loot_tile.js already renders the letter fallback. */
-const floor_loot = (units) => (units > 0 ? [{ item_type: '', name: '', amount: units }] : [])
-
 /** AUTO-FIRE NOTICE (#684 — "it's spamming me with tx"): every background claim/settle names itself BEFORE its
  *  tx builds. ONE shared copy fired at each auto-fire site (the boot sweep's two leaves + the entry-refusal
  *  recovery) — a silent wallet tx with zero UI reads as malware to a player. Best-effort: fires once per
@@ -418,14 +413,13 @@ async function finish_result(
   }
   resolve_reward(xp, rolled_units, character)
 
-  // Render loot IMMEDIATELY off loot_units (leg②); resolved:false so the reducer never lets this regress an
-  // already-landed richer dispatch (the object read below reconciles BEHIND it, unwiped on a read failure).
-  if (rolled_units > 0)
-    context.dispatch('action/fight_result/loot', {
-      result_id,
-      loot: floor_loot(rolled_units),
-      resolved: false,
-    })
+  // NO SPOILS FLOOR (#1993 WP4). This used to dispatch one identity-less placeholder row so the card had
+  // something to render the instant ResultOpened landed — a second, poorer home for the same fact `loot_units`
+  // already carries, and the one row the canonical loot list could never reason about monotonically. The COUNT
+  // is client-knowable right here, so it commits on its OWN door rather than riding the xp resolve (a
+  // receipt-parse miss defers that by a whole object read, and the skeletons must not wait for it). The card
+  // sizes its loot placeholders from this fact and from nothing else; a loading count is not a drop.
+  if (rolled_units > 0) context.dispatch('action/fight_result/loot_units', { result_id, loot_units: rolled_units })
 
   // FIX 3 (07-13 — NO refetch): the correlated ResultMinted event carries `final_hp` — apply it straight
   // into the roster's HP block, zero extra RPC. Event-sourced fast path; the object-read below is the fallback

@@ -56,8 +56,15 @@ describe('W2 — rescue-path dispatch opens fight_result PENDING', () => {
       level: 4,
       levels_gained: 0,
       points_gained: 0,
+      // the record's own empty shape (@aresrpg/fight/result_record) — every terminal fact unknown, nothing
+      // committed, nothing in dispute. `loot_units` null means the card shows no skeletons yet.
+      kind: null,
+      winner: null,
+      run: null,
       loot: [],
-      loot_units: null, // unknown until settlement lands (the card shows no loot skeletons yet)
+      loot_units: null,
+      provenance: {},
+      conflicts: [],
     })
   })
 
@@ -302,25 +309,36 @@ describe('loot_from_rolled — the FightResult receipt maps to the card lines, X
   })
 })
 
-// ── SPOILS FLOOR RECONCILIATION (recap-truth lane leg②, CLIENT-INDEPENDENCE LAW §3 "reconcile INSIDE the
-// reducer"): dungeon_settlement.js's finish_result may dispatch action/fight_result/loot three times per fight —
-// event-floor placeholder, aggregate FightResult declaration, then exact ItemMinted instance rows.
-// dungeon_settlement.test.js pins the first two dispatches; the exact receipt tests below pin the third;
-// this pins the REDUCER half — the fold must never let a stale/duplicate floor regress already-resolved loot.
-describe('action/fight_result/loot reconciliation — the event floor never regresses an already-resolved receipt (leg②)', () => {
+// ── THE MONOTONIC LOOT COMMIT (#1993 WP4, superseding the leg② floor-reconciliation rules). finish_result
+// dispatches action/fight_result/loot for each transport that finishes — the aggregate FightResult declaration
+// and the exact ItemMinted rows — plus a separate action/fight_result/loot_units for the skeleton COUNT, which
+// is no longer smuggled through the loot list as a placeholder row. commit_loot (@aresrpg/fight/result_record)
+// is the one home of the law these tests pin: rows add, rows gain fields, exact enumeration retires its own
+// aggregate, and nothing a transport says can make the player's certified haul smaller.
+describe('action/fight_result/loot — the monotonic commit (#1993 WP4)', () => {
   const mod = player_experience()
   const fold = (slice, type, payload) => mod.reduce({ fight_result: slice }, { type, payload }).fight_result
 
-  it('RED-FIRST: a floor (resolved:false) dispatch alone renders SOMETHING — never stuck on the open-time empty []', () => {
+  it('the ROLLED COUNT rides its own door — the loot list never holds an identity-less placeholder', () => {
     let slice = fold(null, 'action/fight_result/open', { level: 4 })
     expect(slice.loot).toEqual([]) // the true "neither landed" state — no fabricated tile
-    slice = fold(slice, 'action/fight_result/loot', { loot: [{ item_type: '', name: '', amount: 3 }], resolved: false })
-    expect(slice.loot).toEqual([{ item_type: '', name: '', amount: 3 }]) // a tile, the instant the event lands
+    slice = fold(slice, 'action/fight_result/loot_units', { loot_units: 3 })
+    expect(slice.loot_units).toBe(3) // 3 skeleton tiles, the instant the event lands
+    expect(slice.loot).toEqual([]) // and still no row claiming to be a drop
   })
 
-  it('richer (resolved:true) ADOPTS over an existing floor — the slow read reconciling behind', () => {
+  it('a second, disagreeing rolled count never repaints the card — it lands on `conflicts`', () => {
+    let slice = fold(null, 'action/fight_result/open', { level: 4 })
+    slice = fold(slice, 'action/fight_result/loot_units', { loot_units: 3 })
+    slice = fold(slice, 'action/fight_result/loot_units', { loot_units: 1 })
+    expect(slice.loot_units).toBe(3)
+    expect(slice.conflicts).toEqual([{ key: 'loot_units', held: 3, offered: 1, source: 'receipt' }])
+  })
+
+  it('an identity-less row is not a drop — it can never enter the canonical list', () => {
     let slice = fold(null, 'action/fight_result/open', { level: 4 })
     slice = fold(slice, 'action/fight_result/loot', { loot: [{ item_type: '', name: '', amount: 3 }], resolved: false })
+    expect(slice.loot).toEqual([])
     slice = fold(slice, 'action/fight_result/loot', {
       loot: [{ item_type: 'razkin_hide', name: 'Razkin Hide', amount: 3 }],
       resolved: true,
@@ -328,28 +346,24 @@ describe('action/fight_result/loot reconciliation — the event floor never regr
     expect(slice.loot).toEqual([{ item_type: 'razkin_hide', name: 'Razkin Hide', amount: 3 }])
   })
 
-  it('SAME-VERSION DISCARD: a stale/duplicate floor arriving AFTER the real dispatch never regresses it', () => {
+  it('a permanent read failure leaves the certified rows exactly as they were', () => {
     let slice = fold(null, 'action/fight_result/open', { level: 4 })
     slice = fold(slice, 'action/fight_result/loot', {
       loot: [{ item_type: 'razkin_hide', name: 'Razkin Hide', amount: 3 }],
       resolved: true,
     })
-    slice = fold(slice, 'action/fight_result/loot', { loot: [{ item_type: '', name: '', amount: 3 }], resolved: false })
-    expect(slice.loot).toEqual([{ item_type: 'razkin_hide', name: 'Razkin Hide', amount: 3 }]) // unchanged — discarded
-  })
-
-  it('a permanent read failure never wipes the floor: no second dispatch ever arrives, the floor stands', () => {
-    let slice = fold(null, 'action/fight_result/open', { level: 4 })
-    slice = fold(slice, 'action/fight_result/loot', { loot: [{ item_type: '', name: '', amount: 1 }], resolved: false })
     // (no further dispatch — the slow read exhausted its retries and gave up; nothing else ever fires)
-    expect(slice.loot).toEqual([{ item_type: '', name: '', amount: 1 }])
+    expect(slice.loot).toEqual([{ item_type: 'razkin_hide', name: 'Razkin Hide', amount: 3 }])
   })
 
-  it('two resolved:true dispatches back-to-back (rare, but never a false discard): the SECOND still adopts', () => {
+  it('two dispatches naming DIFFERENT drops both stand — an offer is evidence only about the rows it names', () => {
     let slice = fold(null, 'action/fight_result/open', { level: 4 })
     slice = fold(slice, 'action/fight_result/loot', { loot: [{ item_type: 'a', name: 'A', amount: 1 }], resolved: true })
     slice = fold(slice, 'action/fight_result/loot', { loot: [{ item_type: 'b', name: 'B', amount: 1 }], resolved: true })
-    expect(slice.loot).toEqual([{ item_type: 'b', name: 'B', amount: 1 }])
+    expect(slice.loot).toEqual([
+      { item_type: 'a', name: 'A', amount: 1 },
+      { item_type: 'b', name: 'B', amount: 1 },
+    ])
   })
 
   it('receipt-created instances stay distinct and permanently beat aggregate/template-only rows', () => {
