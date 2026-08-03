@@ -95,7 +95,14 @@ export const cast_resolution = (cast, following = [], cell_of = () => null) => {
   // Every claim this cast makes, in beat order: the cast beat's OWN status rows first (a self-buff resolves on
   // the caster with no sibling beat behind it), then the siblings up to the next action.
   const claims = [
-    ...(cast.payload?.effects ?? []).map(() => ({ kind: 'status', entity_id: caster_id, cell: null })),
+    // A status row the cast beat carries names its own subject when it has one — a debuff lands on its victim,
+    // a self-buff on the caster. Attributing every one of them to the caster would splash a status cast at the
+    // wrong body, which is the same fabricated-position class this record exists to end.
+    ...(cast.payload?.effects ?? []).map((effect) => ({
+      kind: 'status',
+      entity_id: effect?.target_id ?? caster_id,
+      cell: null,
+    })),
     ...(next_action < 0 ? siblings : siblings.slice(0, next_action))
       .filter(beat_resolved)
       .map((spec) => ({ kind: spec.kind, entity_id: beat_target_id(spec), cell: beat_cell(spec) })),

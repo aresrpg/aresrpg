@@ -30,6 +30,17 @@ describe('landed — the one verdict', () => {
     expect(record).toMatchObject({ landed: true, target_ids: ['p0'], target_cells: [{ x: 4, y: 8 }] })
   })
 
+  test('a status row the cast carries names ITS subject — a debuff is not the caster’s cell', () => {
+    const cells = { p0: { x: 4, y: 8 }, m1: { x: 9, y: 8 } }
+    const record = cast_resolution(
+      cast({ effects: [{ status: 'POISON', target_id: 'm1' }] }),
+      [],
+      (id) => cells[id] ?? null
+    )
+
+    expect(record).toMatchObject({ target_ids: ['m1'], target_cells: [{ x: 9, y: 8 }] })
+  })
+
   test('an absorbed 0-damage hit still CONNECTED — a body was there', () => {
     const record = cast_resolution(cast(), [beat('damage', { target_id: 'm1', damage: 0 })], () => ({ x: 9, y: 8 }))
 
