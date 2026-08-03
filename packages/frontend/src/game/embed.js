@@ -98,8 +98,10 @@ export async function select_active_character(bound_character_id) {
   // NO AUTO-RESUME (S-53): the old boot path auto-called resume_dungeon whenever a roster entry carried an
   // `in_dungeon`/`dungeon_id` tag. That tag came from find_dungeon_characters reading a DEAD old-lineage
   // DungeonRegistry, so a fresh boot teleported the player straight into a stale fight (the blocking
-  // bug). A live dungeon/fight is now an OFFERED resume affordance (the picker / NPC / switcher), NEVER an
-  // auto-navigate — so this boot path only selects + embodies the character.
+  // bug). A live DUNGEON is now an OFFERED resume affordance (the picker / NPC / switcher), NEVER an
+  // auto-navigate — so this boot path only selects + embodies the character. A live FIGHT is the opposite and
+  // always was a separate path: D48 rules fight presence BINARY, so the world bind's own
+  // `resume_world_fight` rejoins a held seat with no affordance at all.
   return hydrate_appearance(chosen)
 }
 

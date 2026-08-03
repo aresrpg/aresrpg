@@ -246,16 +246,19 @@ const chain_reason = ({ readable, decoded }) => {
  * Each door fires at most ONCE per pass — the tx-retry burn law; a raced janitor may already have advanced it.
  * The verdict carries its REASON: the caller refuses OUT LOUD or not at all (#932).
  *
- * CONSENT (#1751/#1757). The door below spends the player's gas and moves their fight's lifecycle, so an ENTRY
- * caller may hand in a `consent` gate: it is asked BEFORE the transaction is composed, and anything but 'rejoin'
- * returns `declined` with the choice, having sent NOTHING. Omitting it keeps the silent-janitor behavior verbatim
+ * CONSENT (#1751/#1757 → D48). The door below spends the player's gas and moves their fight's lifecycle, so an
+ * ENTRY caller may hand in a `consent` gate: it is asked BEFORE the transaction is composed, and anything but
+ * 'rejoin' returns `declined` with the choice, having sent NOTHING. The world entry's gate now always answers
+ * 'rejoin' (fight_resume_auto.js — presence is binary), so `declined` is a seam-only verdict from here; the gate
+ * stays because it is also where that autonomous send is TRACED, before it exists. Omitting it keeps the
+ * silent-janitor behavior verbatim
  * — which is what the in-fight probes above (and the #677 placement sweep, a response to the player's own press)
  * still want: there the player is present, watching their own fight run.
  * @param {string} fight_id
  * @param {{ force_start_door?: (fight_id: string, silent: boolean) => Promise<any>,
  *           crank_door?: (fight_id: string, silent: boolean, deadline: number) => Promise<any>,
  *           consent?: (ask: { fight_id: string, action: 'force_start'|'crank', deadline: number })
- *             => Promise<string> }} [doors]
+ *             => Promise<string> | string }} [doors]
  * @returns {Promise<{ decision: 'enter'|'gone'|'skip'|'declined', reason: string,
  *   action: 'force_start'|'crank'|null, choice?: string }>}
  */

@@ -199,7 +199,6 @@
     "retry": "Réessayer",
     "in_dungeon": "En donjon",
     "your_character": "Votre personnage",
-    "resume_fight": "Reprendre le combat",
     "result_title": "Ce que vous avez trouvé",
     "result_close": "Fermer",
     "result_empty": "Cette expédition n'a rien rapporté — équipez un outil pour récolter des ressources.",
@@ -2764,12 +2763,7 @@
     "board_place_failed": "Impossible de placer le plateau de combat — recharge la page.",
     "expired_fight_cleared": "Ce combat était déjà résolu — votre personnage est libre.",
     "mount_failed_title": "Impossible d'ouvrir le plateau de combat",
-    "mount_failed_message": "Le combat garde votre place — vous le rejoindrez automatiquement à votre prochaine entrée.",
-    "resume_offer_title": "Un combat retient encore votre personnage",
-    "resume_offer_message": "Ce combat n’avance plus tout seul. Le rejoindre relance son horloge et coûte une transaction ; abandonner quitte le combat et libère votre personnage.",
-    "resume_offer_rejoin": "Rejoindre le combat",
-    "resume_offer_forfeit": "Abandonner",
-    "resume_offer_later": "Pas maintenant"
+    "mount_failed_message": "Le combat garde votre place — vous le rejoindrez automatiquement à votre prochaine entrée."
   },
   "jobs": {
     "category": {

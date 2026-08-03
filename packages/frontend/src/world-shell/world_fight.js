@@ -31,8 +31,7 @@ import { push_event_toast } from '../game/core/toast.js'
 
 import { use_dungeon } from './dungeon_store.js'
 import { use_party } from './party_store.js'
-import { abandon_fight } from './dungeon_actions'
-import { consent_fight_resume } from './fight_resume_offer.js'
+import { consent_fight_resume } from './fight_resume_auto.js'
 import { fight_state_trace } from './fight_state_trace.js'
 import { poll_receipt_fight, receipt_entry_decision } from './world_fight_receipt.js'
 import { init_dungeon_fight } from './dungeon_fight_shim.js'
@@ -343,46 +342,26 @@ export function spectate_world_fight({ fight_id, world_id = null, public_fight =
   return true
 }
 
-/**
- * THE FORFEIT half of the resume door (#1751): the player chose to leave the seat behind. `actions::abandon` is the
- * same door the mounted board's forfeit button presses — a death inside the fight, so ordinary settlement still
- * runs. A tx that does NOT land leaves the seat exactly as it was and says so: the character reference is only
- * recovered on a real digest, never on hope (a silent recovery would strand the outcome).
- * @param {string} fight_id @param {string} character_id
- * @param {(fight_id: string, character_id: string, silent: boolean) => Promise<any>} door
- * @returns {Promise<boolean>} did the seat actually get abandoned?
- */
-async function forfeit_resumed_fight(fight_id, character_id, door) {
-  try {
-    await door(fight_id, character_id, true)
-    fight_state_trace('fight_resume_forfeited', { fight_id, character_id })
-    return true
-  } catch (error) {
-    console.error(`[world-fight] forfeit of ${fight_id} did not land — the seat is untouched`, error)
-    game_log('world-fight', 'resume forfeit failed — seat untouched', { fight_id })
-    return false
-  }
-}
-
 /** RESUME after a reload: discover the candidate, then validate it is still live BEFORE entry (absent/terminal
  *  stays in-world; a transient read holds for a later boot pass). EVERY candidate then passes the chain-truth
  *  presentability gate (fight-liquidation.js — the REJOIN-SPAWN root, widened by #882): an expired placement
  *  window liquidates via `force_start` and an expired TURN via `crank` BEFORE adoption, and a fight those doors
  *  resolved terminal routes back to the world with an honest toast instead of re-capturing the character.
  *
- *  THE CONSENT (#1751/#1757 → #2122): those liquidation transactions are real gas and a real move of the fight's
- *  lifecycle, and a boot used to send one per pass with no player action at all (measured five-for-five, and the
- *  mechanism that resolved a stranded seat as a DEFEAT nobody chose). A held fight now REJOINS AUTOMATICALLY —
- *  the player who crashed mid-fight wants their fight, not a dialog — and `consent_fight_resume` is what keeps
- *  that from being the old defect again: ONE autonomous attempt per fight id per session (the five-boot loop
- *  cannot come back), never an autonomous 'forfeit', and the modal as the fallback every later pass parks on.
- *  A seat inside its deadline is unaffected: it needs no transaction, so it mounts straight away exactly as before.
+ *  THE CONSENT (#1751/#1757 → #2122 → D48): those liquidation transactions are real gas and a real move of the
+ *  fight's lifecycle, and a boot used to send one per pass with no player action at all (measured five-for-five,
+ *  and the mechanism that resolved a stranded seat as a DEFEAT nobody chose). Under D48 fight presence is BINARY
+ *  — a refresh auto-resumes; death and surrender are the only exits — so `consent_fight_resume` answers 'rejoin'
+ *  on EVERY candidacy and never parks a question in the overworld. What keeps that from being the old defect is
+ *  no longer a counter: it is that this path can only ever answer 'rejoin' (never an autonomous forfeit), and
+ *  that a candidacy is a deliberate re-entry which spends at most one transaction — the cadence is stated in
+ *  full in fight_resume_auto.js. A seat inside its deadline is unaffected: it needs no transaction at all, so it
+ *  mounts straight away exactly as before.
  *  @param {string} character_id
- *  @param {{ force_start_door?: Function, crank_door?: Function, forfeit_door?: Function,
+ *  @param {{ force_start_door?: Function, crank_door?: Function,
  *    consent?: (ask: { fight_id: string, action: string, deadline: number }) => Promise<string> | string,
  *    is_current?: () => boolean }} [deps] unit seam only — `consent` lets a test that is measuring the
- *    LIQUIDATION mechanics answer directly instead of going through the auto/modal consent */
-// Complexity retained (#2069): resume is one ordered read/adopt/recovery boundary; at 31 there is no clean extraction that does more than move a branch.
+ *    LIQUIDATION mechanics answer directly instead of going through the autonomous consent */
 export async function resume_world_fight(character_id, deps = {}) {
   const is_current = deps.is_current ?? (() => true)
   if (!character_id || !is_current() || session_busy()) return
@@ -410,24 +389,17 @@ export async function resume_world_fight(character_id, deps = {}) {
   // ONE chain-truth gate for both live statuses (#882): expired placement → force_start, expired turn → crank,
   // and whatever the chain reports AFTER that door decides. `gone` = the door resolved it terminal (or it was
   // destroyed): route out honestly — the character is freed and its outcome recovered, never re-captured.
-  const { decision, reason, choice } = await ensure_resumable_fight(fight_id, {
+  const { decision, reason } = await ensure_resumable_fight(fight_id, {
     force_start_door: deps.force_start_door,
     crank_door: deps.crank_door,
-    // THE CONSENT: asked before any transaction is composed — answered autonomously on this session's first
-    // pass at the fight, and by the player (FightResumeOffer.jsx) on every pass after it.
+    // THE CONSENT: traced before any transaction is composed, and answered autonomously on EVERY candidacy
+    // (D48). Nothing here asks the player anything — a `declined` verdict is reachable only from an injected
+    // test seam, and falls through to the loud refusal below like any other non-entry.
     consent:
       deps.consent ??
       (({ action, deadline }) => consent_fight_resume({ fight_id, character_id, action, deadline_ms: deadline })),
   })
   if (!is_current()) return
-  if (decision === 'declined') {
-    // The player answered, so nothing was sent. 'later' leaves the seat exactly as it is (the next boot asks
-    // again); 'forfeit' spends ONE abandon and, only if it landed, frees the character + recovers its outcome.
-    if (choice !== 'forfeit') return
-    const abandoned = await forfeit_resumed_fight(fight_id, character_id, deps.forfeit_door ?? abandon_fight)
-    if (!abandoned || !is_current()) return
-    return getState()._recover_dead_fight_reference({ character_id, state: 'settled' })
-  }
   if (decision === 'gone') {
     // The recovery below is a FULL local teardown (reset_local) aimed at THIS stale candidate's reference. A
     // session that opened while the door read is not it — tearing it down unmounts a live board the player is

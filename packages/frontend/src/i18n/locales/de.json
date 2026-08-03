@@ -199,7 +199,6 @@
     "retry": "Erneut versuchen",
     "in_dungeon": "Im Verlies",
     "your_character": "Dein Charakter",
-    "resume_fight": "Kampf fortsetzen",
     "result_title": "Was du gefunden hast",
     "result_close": "Schließen",
     "result_empty": "Dieser Lauf brachte nichts ein — rüste ein Werkzeug aus, um Ressourcen zu sammeln.",
@@ -2764,12 +2763,7 @@
     "board_place_failed": "Spielfeld konnte nicht platziert werden — bitte neu laden.",
     "expired_fight_cleared": "Dieser Kampf war bereits aufgelöst — dein Charakter ist frei.",
     "mount_failed_title": "Spielfeld konnte nicht geöffnet werden",
-    "mount_failed_message": "Der Kampf hält deinen Platz — beim nächsten Einstieg trittst du automatisch wieder bei.",
-    "resume_offer_title": "Ein Kampf hält deinen Charakter noch fest",
-    "resume_offer_message": "Dieser Kampf läuft von allein nicht weiter. Wiedereinstieg startet seine Uhr neu und kostet eine Transaktion; Aufgeben verlässt den Kampf und befreit deinen Charakter.",
-    "resume_offer_rejoin": "Kampf wieder betreten",
-    "resume_offer_forfeit": "Aufgeben",
-    "resume_offer_later": "Jetzt nicht"
+    "mount_failed_message": "Der Kampf hält deinen Platz — beim nächsten Einstieg trittst du automatisch wieder bei."
   },
   "jobs": {
     "category": {

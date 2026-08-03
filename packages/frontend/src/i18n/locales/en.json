@@ -209,7 +209,6 @@
     "retry": "Retry",
     "in_dungeon": "In dungeon",
     "your_character": "Your character",
-    "resume_fight": "Resume fight",
     "roster_load_error": "Could not load your characters.",
     "tx_create_character_pending": "Minting {{name}}…",
     "tx_create_character_success": "{{name}} is ready",
@@ -2764,12 +2763,7 @@
     "board_place_failed": "Couldn't place the fight board — please reload.",
     "expired_fight_cleared": "That fight was already resolved — your character is free.",
     "mount_failed_title": "Couldn't open the fight board",
-    "mount_failed_message": "The fight is holding your seat — you'll rejoin it automatically on your next entry.",
-    "resume_offer_title": "A fight is still holding your character",
-    "resume_offer_message": "This fight stopped advancing on its own. Rejoining restarts its clock and costs one transaction; forfeiting leaves the fight and frees your character.",
-    "resume_offer_rejoin": "Rejoin the fight",
-    "resume_offer_forfeit": "Forfeit",
-    "resume_offer_later": "Not now"
+    "mount_failed_message": "The fight is holding your seat — you'll rejoin it automatically on your next entry."
   },
   "jobs": {
     "category": {
