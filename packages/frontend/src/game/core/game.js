@@ -268,16 +268,6 @@ export const INITIAL_STATE = {
   job_level_up: null,
 
   /**
-  /**
-   * The OFF-CHAIN resource inventory (Wave CRAFT, #39 settle parked), owned by core/modules/craft.js: a
-   * map of items.json id -> owned count, mirrored from the server's `res:<id>` ledger (the SAME ledger
-   * gathering accrues into + crafting consumes/produces). The SERVER is authoritative — it pushes a full
-   * `resourceInventory` snapshot on connect/select + after every craft; gather deltas are folded
-   * client-side from `gatherDone` between snapshots. The JobsDrawer reads it for the ingredient have/need
-   * gate. NEVER in localStorage (game data comes from the server; localStorage = preferences only).
-   * @type {Record<string, number>}
-   */
-  resources: {},
 
   /**
    * The live gather state (Wave GATHER), owned by core/modules/resource_nodes.js. The SERVER is the sole

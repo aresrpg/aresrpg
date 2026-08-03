@@ -13,7 +13,6 @@ import resource_nodes from './resource_nodes.js'
 import fight from './fight.js'
 import player_experience from './player_experience.js'
 import job_progression from './job_progression.js'
-import craft from './craft.js'
 import quests from './quests.js'
 
 /** @type {import('../game.js').Module[]} */
@@ -27,6 +26,5 @@ export const MODULES = [
   fight,
   player_experience,
   job_progression,
-  craft,
   quests,
 ]

@@ -226,8 +226,8 @@ export function JobsDrawer() {
   // Owned units per template slug from the ON-CHAIN bag (s.sui.items — the single chain-truth home the
   // inventory + quest ladder already read; item_type IS the seed slug, amount is the stack size). Drives the
   // ingredient GREEN/ORANGE rows + the craft affordability gate, so the client gate matches EXACTLY what the
-  // craft tx can burn. Replaces the retired WS off-chain `resources` ledger (core/modules/craft.js), which no
-  // longer fills without the backend — an on-chain-only ingredient is now honestly counted, not shown missing.
+  // craft tx can burn. This replaced a retired WS off-chain `resources` ledger that stopped filling when the
+  // backend was retired; that module has since been deleted, so the chain bag is the only ingredient source.
   const bag_items = useGameState((s) => s.sui.items)
   const owned = useMemo(() => {
     /** @type {Record<string, number>} */
