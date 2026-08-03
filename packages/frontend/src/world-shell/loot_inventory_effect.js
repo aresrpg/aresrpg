@@ -44,6 +44,11 @@ export async function reduce_minted_receipt(
   owner_address,
   { load_templates, reducer_door, current_address }
 ) {
+  // #1993 WP4 — SIBLING PROJECTIONS, NOT A CROSS-JOIN. The same mint receipt feeds the BAG here and the result
+  // record's loot rows in dungeon_settlement.js. That is two projections of one receipt, each landing through
+  // its own reducer door, which is the canonical shape: what the audit row warned against is a surface JOINING
+  // them at render time, and no surface does any more — the victory card stopped reading `sui.items` entirely
+  // (loot-tile-resolve.js). Neither door reads the other's state, so neither can repaint it.
   const input = settled_loot_input(settlement, await load_templates())
   if (owner_address && current_address() === owner_address && input.rows.length)
     reducer_door.dispatch('action/inventory/loot', { rows: input.rows })

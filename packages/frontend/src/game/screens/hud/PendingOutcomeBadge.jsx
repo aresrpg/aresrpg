@@ -39,6 +39,12 @@ export function PendingOutcomeBadge({ character_id }) {
   const [tick, set_tick] = useState(0)
   useEffect(() => subscribe_attempts(() => set_tick((n) => n + 1)), [])
 
+  // DECLINED MIGRATION (#1993 WP4). The canonical proposal is one pending-outcome projection keyed by character
+  // with this badge as a pure reader. It is the right shape and it is NOT the result record's: every source this
+  // reconciles (`/v1/fights`, `/v1/pending-outcomes`, the attempt registry) describes results belonging to fights
+  // this session never held — a character that fought yesterday on another device. The record is scoped to ONE
+  // fight's lifetime by construction, so widening it to answer for absent fights would break the very scoping
+  // that makes its monotonicity meaningful. This surface needs its own projection, not this one.
   useEffect(() => {
     if (!character_id || !address) return undefined
     let live = true

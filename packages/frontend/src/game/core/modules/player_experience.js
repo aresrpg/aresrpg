@@ -207,6 +207,13 @@ export default function player_experience({ refresh_character = reconcile_fight_
       // A player WIN (our team) opens the modal immediately in the pending state — the settle+open tx is
       // being signed/submitted; the xp/level resolve from ITS receipt (finish_result's ResultOpened dispatch).
       // winner is the local team number (0 = player team) resolved in fight.js.
+      // DECLINED MIGRATION (#1993 WP4). The canonical proposal is to open this card off the result projection
+      // rather than off a winner number on an event. It cannot be done from here: the projection lives in the
+      // fight store, and this card must outlive that store's teardown — reading it at open would bind a slice
+      // whose source is about to be destroyed to the very thing that destroys it. `claim` already reads the
+      // canonical record and emits THIS event from it (dungeon_run_store.js), so the event IS the record's
+      // verdict crossing the lifetime boundary — one hop, in one direction, which is the shape the two-store
+      // notification cycle (#1740) is banned for lacking.
       events.on('action/fight/ended', ({ winner }) => {
         if (winner !== 0) return
         const character = active_character()

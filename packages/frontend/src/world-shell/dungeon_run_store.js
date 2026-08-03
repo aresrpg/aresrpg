@@ -1673,7 +1673,11 @@ export const use_dungeon = create((set, get) => ({
   /** TERMINAL claim (WON/FAILED): confirmed outcome → killing-wave drain → card + teardown → background settle. */
   async claim({ immediate = false, winner: forced_winner = null, settle = true } = {}) {
     const { fight_id, busy, dungeon } = get()
-    const chain_winner = project.outcome_winner(fight_store.getState())
+    // THE CANONICAL RESULT (#1993 WP4) — read through `fight_visible_view.result`, the one projection that owns
+    // the terminal facts, instead of calling the `outcome_winner` selector beside it. Same value (the record
+    // commits chain-terminal truth first and the client-knowable inference only in its absence — the precedence
+    // this call site used to depend on, now named), plus the `kind` this claim is about to fan out as an event.
+    const chain_winner = project.fight_visible_view(fight_store.getState()).result.winner
     const winner = forced_winner ?? chain_winner
     const invalid_outcome = winner == null || (chain_winner != null && winner !== chain_winner)
     if ((!immediate && busy) || !fight_id || get()._claiming || invalid_outcome) {

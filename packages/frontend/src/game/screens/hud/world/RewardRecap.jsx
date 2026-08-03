@@ -17,6 +17,12 @@ const RECAP_MS = 7000 // how long the non-gating recap lingers before auto-dismi
 /** @returns {import('react').ReactElement | null} */
 export function RewardRecap() {
   const { t } = useTranslation()
+  // DECLINED MIGRATION (#1993 WP4). `room_recap` is a second presentation home for a room-clear result, and the
+  // record already carries `kind: 'room_clear'`. What it does NOT carry is this card's content: `room_recap` is
+  // set by finish_result for a NON-terminal room, on a path that never opens a `fight_result` slice at all, so
+  // pointing this hook at the record would render an empty card. Unifying them means one card component serving
+  // two lifetimes (a live between-rooms toast and a persistent terminal modal) — a UI merge, not a projection
+  // one, and it belongs in the train that gives the record a room-clear open door.
   const recap = use_dungeon((s) => s.room_recap)
   // D153 C14: the recap IS the non-terminal card — mounting it advances the machine VICTORY_RESOLVED→CARD_SHOWN.
   useEffect(() => {

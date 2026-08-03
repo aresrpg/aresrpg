@@ -34,6 +34,12 @@ export function FightSummary({ slug_by_name = {} }) {
   const net_mist = use_fight_cost((s) => s.net_mist)
 
   // the card shows only on a real defeat (the win celebration is FightResult's). Gate the sound + render on it.
+  // DECLINED MIGRATION (#1993 WP4). The canonical proposal is one result discriminated union
+  // (`victory|defeat|room_clear`) both cards branch on, and the record now carries exactly that `kind`. This
+  // card cannot read it yet for a structural reason: only a WIN opens a `fight_result` slice, so on the path
+  // this component exists to serve the record is null and its `kind` would be too. The union becomes readable
+  // here the moment the defeat path opens a record of its own — which is the same door RewardRecap needs, and
+  // the two should land together rather than half here.
   const is_defeat = !!recap && !recap.won && !fight_result
 
   // DEFEAT sound cue (design mood: somber descending toll) — fire once as the card appears, reset when gone.

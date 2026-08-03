@@ -248,6 +248,12 @@ export function derive_phase(dungeon, fight, my_seat) {
     // the frozen board in a distinct card-less terminal until the observer store drains the wave and resets.
     if (fight?.spectator)
       return { phase: PHASE.TERMINAL, unmet: [], outcome: null, desired: PHASE.TERMINAL, observing: true }
+    // DECLINED MIGRATION (#1993 WP4). This is `fight_visible_view.result.kind` spelled a second time, and the
+    // record already answers it — but this machine's whole job is to reconcile the CHAIN's dungeon status with
+    // the fight slice when either lags, and the record is built from the fight state alone. Reading `kind` here
+    // would drop the `status === STATUS_WON` arm, i.e. exactly the forward-lag steer this ladder exists for. The
+    // honest cure is folding the dungeon status into the record's evidence — a fold-first change to a store this
+    // work package does not own, so it stays the phase family's, not a drive-by here.
     const outcome = status === STATUS_WON || fight?.winner === 0 ? 'victory' : 'defeat'
     const unmet = terminal_unmet(dungeon, fight, my_seat)
     if (unmet.length === 0) return { phase: PHASE.TERMINAL, unmet: [], outcome, desired: PHASE.TERMINAL }
