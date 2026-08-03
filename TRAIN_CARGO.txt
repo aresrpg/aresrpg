@@ -1,2 +1,2 @@
-a0b1eeb34882e9529d3e7925f5a603f3e03b549c train/train-85 fix(frontend): no promise floats without a stated reason
-f6f456a29ca80b6d4895b538e94c2a9684efbe43 train/train-85 fix(hud): BoxReveal drops its mutation and swallowed-failure debt
+053bb10744c607b23019d3a03e65d9d35ad933ad train/train-88 chore(deps-dev): bump lint-staged from 16.4.0 to 17.2.0
+1c2d1ab110c159f3e34508ce54f6ed982396f308 train/train-88 chore(deps-dev): bump globals from 16.5.0 to 17.8.0
