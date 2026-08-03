@@ -45,11 +45,7 @@ const { modules, dependencies, digest: build_digest } = JSON.parse(cli_result)
 
 const ticket = tx.moveCall({
   target: '0x2::package::authorize_upgrade',
-  arguments: [
-    tx.object(UPGRADE_CAP),
-    tx.pure.u8(UpgradePolicy.COMPATIBLE),
-    tx.pure.vector('u8', build_digest),
-  ],
+  arguments: [tx.object(UPGRADE_CAP), tx.pure.u8(UpgradePolicy.COMPATIBLE), tx.pure.vector('u8', build_digest)],
 })
 
 const receipt = tx.upgrade({
@@ -103,32 +99,23 @@ if (result.effects?.status?.status !== 'success') {
 }
 
 // New package id = the 'published' objectChange (robust vs effects.created[0] ordering).
-const published = (result.objectChanges ?? []).find(
-  (c) => c.type === 'published'
-)
-const package_id =
-  published?.packageId ?? result.effects?.created?.[0]?.reference?.objectId
+const published = (result.objectChanges ?? []).find((c) => c.type === 'published')
+const package_id = published?.packageId ?? result.effects?.created?.[0]?.reference?.objectId
 
 // Step 3: the DungeonRegistry created by init-on-upgrade (Sui runs init for brand-new modules on
 // upgrade). If it's absent, init-on-upgrade did NOT fire → HOLD the backfill/instance steps + flag cto.
 const registry = (result.objectChanges ?? []).find(
-  (c) =>
-    c.type === 'created' &&
-    (c.objectType ?? '').includes('dungeon_registry::DungeonRegistry')
+  (c) => c.type === 'created' && (c.objectType ?? '').includes('dungeon_registry::DungeonRegistry')
 )
 
 console.log('package upgraded:', result.digest)
 console.log('new package id:', package_id)
 console.log(
   'DungeonRegistry (init-on-upgrade):',
-  registry
-    ? registry.objectId
-    : '⚠️ NOT CREATED — init did not run on upgrade; HOLD steps 4-5, flag cto'
+  registry ? registry.objectId : '⚠️ NOT CREATED — init did not run on upgrade; HOLD steps 4-5, flag cto'
 )
 console.log('all created objects:')
-for (const c of (result.objectChanges ?? []).filter(
-  (c) => c.type === 'created'
-))
+for (const c of (result.objectChanges ?? []).filter((c) => c.type === 'created'))
   console.log('  ', c.objectId, c.objectType)
 console.log('==================== [ x ] ====================')
 
@@ -140,10 +127,7 @@ const version_tx = new Transaction()
 
 version_tx.moveCall({
   target: `${package_id}::version::admin_update`,
-  arguments: [
-    version_tx.object(process.env.VERSION),
-    version_tx.object(process.env.ADMIN_CAP),
-  ],
+  arguments: [version_tx.object(process.env.VERSION), version_tx.object(process.env.ADMIN_CAP)],
 })
 
 const migrate_result = await sui_client.signAndExecuteTransaction({

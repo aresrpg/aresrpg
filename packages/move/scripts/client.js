@@ -1,10 +1,11 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
+import { readFileSync } from 'node:fs'
+import { homedir } from 'node:os'
+
 import { Ed25519Keypair } from '@mysten/sui/keypairs/ed25519'
 import { SuiGrpcClient } from '@mysten/sui/grpc'
 import { decodeSuiPrivateKey } from '@mysten/sui/cryptography'
-import { readFileSync } from 'node:fs'
-import { homedir } from 'node:os'
 
 const { PRIVATE_KEY, NETWORK = 'testnet', SUI_GRPC_URL } = process.env
 
@@ -23,9 +24,7 @@ function load_signer() {
     .match(/^active_address:\s*"?(0x[0-9a-fA-F]+)"?/m)?.[1]
     ?.toLowerCase()
   if (!active_address) {
-    throw new Error(
-      `No active_address in ${config_dir}/client.yaml — run \`sui client\` or set PRIVATE_KEY`
-    )
+    throw new Error(`No active_address in ${config_dir}/client.yaml — run \`sui client\` or set PRIVATE_KEY`)
   }
 
   // sui.keystore = JSON array of base64 blobs; each is [flag byte][32-byte secret]. flag 0x00 = Ed25519.

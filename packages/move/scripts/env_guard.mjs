@@ -18,20 +18,14 @@ import { homedir } from 'node:os'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-const config_dir = () =>
-  process.env.SUI_CONFIG_DIR || `${homedir()}/.sui/sui_config`
+const config_dir = () => process.env.SUI_CONFIG_DIR || `${homedir()}/.sui/sui_config`
 
 // The active env is `sui client active-env`, persisted as `active_env:` in client.yaml — read the file
 // directly (mirrors ceremony_lib.mjs:155 getSigner), so SUI_CONFIG_DIR is honored with no subprocess.
 export function read_active_env() {
   const yaml_path = `${config_dir()}/client.yaml`
-  const active = fs
-    .readFileSync(yaml_path, 'utf8')
-    .match(/^active_env:\s*"?([\w-]+)"?/m)?.[1]
-  if (!active)
-    throw new Error(
-      `no active_env in ${yaml_path} — run \`sui client\` to initialise the CLI`
-    )
+  const active = fs.readFileSync(yaml_path, 'utf8').match(/^active_env:\s*"?([\w-]+)"?/m)?.[1]
+  if (!active) throw new Error(`no active_env in ${yaml_path} — run \`sui client\` to initialise the CLI`)
   return active
 }
 
@@ -54,16 +48,10 @@ export function assert_env(expected, { read = read_active_env } = {}) {
 // THE SWITCH-BACK LAW (standing, every env-scoping script): scope the active-env to `expected` for the
 // duration of fn, then ALWAYS restore the found env — on success AND on throw (finally). No switch when
 // already on `expected` (nothing was moved → nothing to restore).
-export async function with_env(
-  expected,
-  fn,
-  { read = read_active_env, switch_to = switch_env } = {}
-) {
+export async function with_env(expected, fn, { read = read_active_env, switch_to = switch_env } = {}) {
   const found = read()
   if (found === expected) return await fn()
-  console.log(
-    `[env_guard] active-env ${found} → ${expected} (will restore ${found} on exit)`
-  )
+  console.log(`[env_guard] active-env ${found} → ${expected} (will restore ${found} on exit)`)
   switch_to(expected)
   try {
     return await fn()
@@ -154,11 +142,7 @@ const GIT_ENV_STRIPPED = [
 function git_env() {
   const env = { ...process.env }
   for (const key of Object.keys(env))
-    if (
-      GIT_ENV_STRIPPED.includes(key) ||
-      /^GIT_CONFIG_(KEY|VALUE|PARAMETERS)/.test(key)
-    )
-      delete env[key]
+    if (GIT_ENV_STRIPPED.includes(key) || /^GIT_CONFIG_(KEY|VALUE|PARAMETERS)/.test(key)) delete env[key]
   // Config files are ALSO instructions (url.*.insteadOf rewrites the remote out from under us).
   env.GIT_CONFIG_NOSYSTEM = '1'
   env.GIT_CONFIG_GLOBAL = '/dev/null'
@@ -210,8 +194,7 @@ export function assert_trunk_ancestry({ root, ...io } = {}) {
   const repo = () => (resolved ??= resolve_verified_root())
   const {
     read_head = () => git(repo(), ['rev-parse', 'HEAD']),
-    read_edge = () =>
-      git(repo(), ['ls-remote', EDGE_REMOTE, 'refs/heads/edge']).split(/\s+/)[0],
+    read_edge = () => git(repo(), ['ls-remote', EDGE_REMOTE, 'refs/heads/edge']).split(/\s+/)[0],
     is_ancestor = (head, edge) => {
       git(repo(), ['fetch', '--quiet', EDGE_REMOTE, 'edge'])
       try {
@@ -267,8 +250,7 @@ export function clean_tree_verdict(status_lines) {
 
 // Pure. → { ok } | { ok: false, reason }. `resolved` is the realpath; `tree` the compiled tree.
 export function path_inside_tree_verdict(resolved, tree = MOVE_TREE) {
-  if (resolved === tree || resolved.startsWith(tree + path.sep))
-    return { ok: true, reason: `inside ${tree}` }
+  if (resolved === tree || resolved.startsWith(tree + path.sep)) return { ok: true, reason: `inside ${tree}` }
   return {
     ok: false,
     reason: `${resolved} is outside ${tree} — the verified tree cannot vouch for it`,
@@ -282,21 +264,12 @@ export function assert_publishable_tree({ paths = [], root, ...io } = {}) {
   const verified = root ?? resolve_verified_root()
   const {
     ancestry = () => assert_trunk_ancestry({ root: verified }),
-    read_status = () =>
-      git(verified, [
-        'status',
-        '--porcelain',
-        '--untracked-files=all',
-        '--',
-        MOVE_SCOPE,
-      ]),
+    read_status = () => git(verified, ['status', '--porcelain', '--untracked-files=all', '--', MOVE_SCOPE]),
     read_tracked = () => git(verified, ['ls-files', '--', MOVE_SCOPE]),
     resolve_path = (p) => fs.realpathSync(path.resolve(p)),
   } = io
 
-  console.log(
-    `[env_guard] verified repository ${verified} · compiled tree ${MOVE_TREE}`
-  )
+  console.log(`[env_guard] verified repository ${verified} · compiled tree ${MOVE_TREE}`)
   ancestry()
 
   // POSITIVE CONTROL FIRST (#1567): prove the scope is THERE before reading its cleanliness.
@@ -316,19 +289,13 @@ export function assert_publishable_tree({ paths = [], root, ...io } = {}) {
     throw new Error(
       `PUBLISH TREE REFUSED (#1305): ${tree.reason}. Ancestry proves a commit; this proves the BYTES. Commit or remove them, then publish from a tree that matches trunk.`
     )
-  console.log(
-    `[env_guard] publish tree clean — ${tree.reason} (${tracked.length} tracked file(s))`
-  )
+  console.log(`[env_guard] publish tree clean — ${tree.reason} (${tracked.length} tracked file(s))`)
 
   for (const candidate of paths) {
     const verdict = path_inside_tree_verdict(resolve_path(candidate))
-    if (!verdict.ok)
-      throw new Error(`PUBLISH PATH REFUSED (#1305): ${verdict.reason}`)
+    if (!verdict.ok) throw new Error(`PUBLISH PATH REFUSED (#1305): ${verdict.reason}`)
   }
-  if (paths.length)
-    console.log(
-      `[env_guard] ${paths.length} publish path(s) inside the compiled tree`
-    )
+  if (paths.length) console.log(`[env_guard] ${paths.length} publish path(s) inside the compiled tree`)
   if (MOVE_TREE !== scope)
     console.log(
       `[env_guard] compiled tree is a DERIVED COPY of ${scope} — the verified repository vouches for its SOURCE`

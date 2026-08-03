@@ -3,11 +3,7 @@
 // RESEED DRIVER (`ares sync` embryo). Default is DRY_RUN; only LIVE=1 can reach signing. Reads are gRPC through
 // ./client.js, object ids come only from out/seed_manifest.json, and call targets are ceremony latest ?? origin.
 
-import {
-  readFileSync as read_file_sync,
-  readdirSync as read_dir_sync,
-  writeFileSync as write_file_sync,
-} from 'node:fs'
+import { readFileSync as read_file_sync, readdirSync as read_dir_sync, writeFileSync as write_file_sync } from 'node:fs'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath as file_url_to_path } from 'node:url'
 
@@ -49,36 +45,23 @@ function load_repo_inputs() {
     seed_manifest: read_json(join(output_dir, 'seed_manifest.json')),
     seeds: {
       spells: json_files(join(seed_dir, 'spells')).flat(),
-      items: directories.flatMap((directory) =>
-        read_json(join(seed_dir, directory, 'items.json'))
-      ),
-      mobs: directories.flatMap((directory) =>
-        read_json(join(seed_dir, directory, 'mobs.json'))
-      ),
-      worlds: directories.map((directory) =>
-        read_json(join(seed_dir, directory, 'world.json'))
-      ),
+      items: directories.flatMap((directory) => read_json(join(seed_dir, directory, 'items.json'))),
+      mobs: directories.flatMap((directory) => read_json(join(seed_dir, directory, 'mobs.json'))),
+      worlds: directories.map((directory) => read_json(join(seed_dir, directory, 'world.json'))),
     },
   }
 }
 
 function selected_legs_from(environment) {
   const value = environment.LEG ?? 'all'
-  const selected =
-    value === 'all' ? ['spells', 'items', 'worlds'] : value.split(',')
-  const invalid = selected.filter(
-    (leg) => !['spells', 'items', 'worlds'].includes(leg)
-  )
-  if (invalid.length)
-    throw new Error(
-      `LEG must be spells, items, worlds, or all (got ${invalid.join(',')})`
-    )
+  const selected = value === 'all' ? ['spells', 'items', 'worlds'] : value.split(',')
+  const invalid = selected.filter((leg) => !['spells', 'items', 'worlds'].includes(leg))
+  if (invalid.length) throw new Error(`LEG must be spells, items, worlds, or all (got ${invalid.join(',')})`)
   return [...new Set(selected)]
 }
 
 function load_inputs(environment) {
-  if (!environment.FIXTURE_PATH)
-    return { ...load_repo_inputs(), fixture: false }
+  if (!environment.FIXTURE_PATH) return { ...load_repo_inputs(), fixture: false }
   const fixture = read_json(resolve(environment.FIXTURE_PATH))
   return {
     manifest: fixture.manifest,
@@ -94,14 +77,7 @@ function require_package(entry, name) {
   return call_package(entry)
 }
 
-function build_plan({
-  mode,
-  selected_legs,
-  manifest,
-  seed_manifest,
-  seeds,
-  chain_state,
-}) {
+function build_plan({ mode, selected_legs, manifest, seed_manifest, seeds, chain_state }) {
   const foundation_target = require_package(manifest.foundation, 'foundation')
   const spells_target = require_package(manifest.spells, 'spells')
   const aresrpg_target = require_package(manifest.aresrpg, 'aresrpg')
@@ -139,18 +115,13 @@ function build_plan({
 }
 
 function print_plan(plan, plan_path) {
-  console.log(
-    `=== RESEED PLAN · mode=${plan.mode} · legs=${plan.selected_legs.join(',')} ===`
-  )
-  console.log(
-    `fixed gas ceiling: ${plan.fixed_gas_budget_mist} MIST (0.05 SUI) per tx`
-  )
+  console.log(`=== RESEED PLAN · mode=${plan.mode} · legs=${plan.selected_legs.join(',')} ===`)
+  console.log(`fixed gas ceiling: ${plan.fixed_gas_budget_mist} MIST (0.05 SUI) per tx`)
   for (const [leg_name, leg] of Object.entries(plan.legs)) {
     console.log(
       `\n[${leg_name}] rows drifted=${leg.rows_drifted}/${leg.seed_rows} · calls=${leg.call_count} · txs=${leg.tx_count}`
     )
-    if (leg.levels_drifted != null)
-      console.log(`  levels drifted=${leg.levels_drifted}`)
+    if (leg.levels_drifted != null) console.log(`  levels drifted=${leg.levels_drifted}`)
     if (leg.totals)
       console.log(
         `  table delta: resources -${leg.totals.resources.removed}/+${leg.totals.resources.added} · ` +
@@ -163,9 +134,7 @@ function print_plan(plan, plan_path) {
       const report = role_drift_report(leg)
       console.log(`  ${report.line}`)
       for (const role of leg.role_projection_drift)
-        console.log(
-          `    ${report.row_prefix} ${role.mob}: ${role.manifest_role} -> ${role.seed_role}`
-        )
+        console.log(`    ${report.row_prefix} ${role.mob}: ${role.manifest_role} -> ${role.seed_role}`)
     }
     for (const blocker of leg.blockers) console.log(`  BLOCKER ${blocker}`)
     for (const transaction of leg.transactions) {
@@ -183,9 +152,7 @@ function all_transactions(plan) {
 }
 
 function all_blockers(plan) {
-  return Object.entries(plan.legs).flatMap(([leg, value]) =>
-    value.blockers.map((blocker) => `${leg}: ${blocker}`)
-  )
+  return Object.entries(plan.legs).flatMap(([leg, value]) => value.blockers.map((blocker) => `${leg}: ${blocker}`))
 }
 
 function live_context(manifest) {
@@ -203,8 +170,7 @@ async function main() {
   const mode = resolve_mode(process.env)
   const selected_legs = selected_legs_from(process.env)
   const inputs = load_inputs(process.env)
-  if (inputs.fixture && mode.live)
-    throw new Error('LIVE=1 is forbidden with FIXTURE_PATH')
+  if (inputs.fixture && mode.live) throw new Error('LIVE=1 is forbidden with FIXTURE_PATH')
 
   let client_module = null
   let live_module = null
@@ -228,21 +194,14 @@ async function main() {
     seeds: inputs.seeds,
     chain_state: inputs.chain_state,
   })
-  const plan_path = resolve(
-    process.env.PLAN_PATH ?? join(output_dir, 'reseed_plan.json')
-  )
+  const plan_path = resolve(process.env.PLAN_PATH ?? join(output_dir, 'reseed_plan.json'))
   write_file_sync(plan_path, `${JSON.stringify(plan, null, 2)}\n`)
   print_plan(plan, plan_path)
 
   const blockers = all_blockers(plan)
-  if (blockers.length)
-    throw new Error(
-      `plan has ${blockers.length} blocker(s); refusing every chain write`
-    )
+  if (blockers.length) throw new Error(`plan has ${blockers.length} blocker(s); refusing every chain write`)
   if (mode.dry_run) {
-    console.log(
-      '\nDRY_RUN=1 (default) — chain writes disabled; 0 transactions signed'
-    )
+    console.log('\nDRY_RUN=1 (default) — chain writes disabled; 0 transactions signed')
     return
   }
 
@@ -258,20 +217,15 @@ async function main() {
         transaction_plan,
         context,
       })
-      console.log(
-        `EXECUTED ${transaction_plan.label} status=${receipt.status} digest=${receipt.digest ?? '(missing)'}`
-      )
+      console.log(`EXECUTED ${transaction_plan.label} status=${receipt.status} digest=${receipt.digest ?? '(missing)'}`)
       return receipt
     },
   })
-  console.log(
-    `\nLIVE COMPLETE — ${result.executed} transaction(s); rerun DRY_RUN to prove zero drift`
-  )
+  console.log(`\nLIVE COMPLETE — ${result.executed} transaction(s); rerun DRY_RUN to prove zero drift`)
 }
 
 main().catch((error) => {
   console.error(`\nRESEED STOPPED: ${error.message}`)
-  if (error.digest)
-    console.error(`failure latch digest=${error.digest} — NEVER auto-retry`)
+  if (error.digest) console.error(`failure latch digest=${error.digest} — NEVER auto-retry`)
   process.exitCode = 1
 })

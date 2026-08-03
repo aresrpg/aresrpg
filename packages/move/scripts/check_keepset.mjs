@@ -30,20 +30,47 @@ const DUNG = path.join(MOVE, 'dungeon', 'sources')
 
 // Legacy-monolith modules the SDK still targets (S-18 retargets them) — not this merge's surface.
 const LEGACY_MODULES = new Set([
-  'api', 'auth', 'header', 'staking', 'template_sale', 'character_health', 'character_inventory',
-  'character_spells', 'character_stats', 'character_jobs', 'dungeon_claim', 'dungeon_turn', 'dungeon_cast',
-  'dungeon_grid', 'dungeon_mob', 'dungeon_registry', 'dungeon_template', 'spell_registry', 'emission',
-  'derived', 'combat_gear', 'item_api', 'item_sale', 'item_feed', 'consumable', 'template',
+  'api',
+  'auth',
+  'header',
+  'staking',
+  'template_sale',
+  'character_health',
+  'character_inventory',
+  'character_spells',
+  'character_stats',
+  'character_jobs',
+  'dungeon_claim',
+  'dungeon_turn',
+  'dungeon_cast',
+  'dungeon_grid',
+  'dungeon_mob',
+  'dungeon_registry',
+  'dungeon_template',
+  'spell_registry',
+  'emission',
+  'derived',
+  'combat_gear',
+  'item_api',
+  'item_sale',
+  'item_feed',
+  'consumable',
+  'template',
 ])
 // Legacy-monolith target strings whose MODULE NAMES collide with merged modules (the SDK drives the OLD
 // monolith package at a different address for these — S-18 retargets them; they are NOT this merge's surface).
 const LEGACY_FNS = new Set([
-  'admin::issue_mint_cap', 'creation::create_character', 'version::admin_freeze', 'version::admin_update',
-  'world::add_admin', 'protected_policy::mint_and_share_aresrpg_policy',
+  'admin::issue_mint_cap',
+  'creation::create_character',
+  'version::admin_freeze',
+  'version::admin_update',
+  'world::add_admin',
+  'protected_policy::mint_and_share_aresrpg_policy',
   // dungeon::{create,burn}_dungeon_registered were REMOVED by the S-46 split (API is now
   // activate→next_fight→settle_run); no consumer targets them, dropped here with the pre-mainnet republish purge.
   'dungeon::join_dungeon',
-  'dungeon::join_dungeon_with_key', 'dungeon::whitelist_add',
+  'dungeon::join_dungeon_with_key',
+  'dungeon::whitelist_add',
   // S-46 final split: settlement moved engine-side under a new module name — the SDK's results::settle target
   // is S-18's retarget (settlement::settle_and_destroy is the provided surface).
   'results::settle_and_destroy',
@@ -54,18 +81,34 @@ const LEGACY_FNS = new Set([
 // but ceremony_lib.mjs's idempotence-guard doc-comments now CITE `0x2::dynamic_field::add`'s abort code
 // (EFieldAlreadyExists) in prose — the blind text grep below can't tell a doc-comment from a real consumed
 // target, and this IS a real Sui framework module (never ours to provide), so it joins EXTERNAL wholesale.
-const EXTERNAL = new Set(['kiosk', 'personal_kiosk', 'transfer', 'option', 'kiosk_lock_rule', 'royalty_rule', 'personal_kiosk_rule', 'amount_rule', 'marketplace_royalty', 'dynamic_field'])
+const EXTERNAL = new Set([
+  'kiosk',
+  'personal_kiosk',
+  'transfer',
+  'option',
+  'kiosk_lock_rule',
+  'royalty_rule',
+  'personal_kiosk_rule',
+  'amount_rule',
+  'marketplace_royalty',
+  'dynamic_field',
+])
 
 const grep = (pattern, dir) => {
-  try { return execSync(`grep -rhoE "${pattern}" ${dir}`, { encoding: 'utf8' }).split('\n').filter(Boolean) } catch { return [] }
+  try {
+    return execSync(`grep -rhoE "${pattern}" ${dir}`, { encoding: 'utf8' }).split('\n').filter(Boolean)
+  } catch {
+    return []
+  }
 }
 
 // 1) Consumed targets: `::module::fn` strings in SDK builders + move scripts (this file excluded).
 const consumed = new Set()
 for (const line of [
-  ...grep("::[a-z_]+::[a-z_]+\\`", SDK),
-  ...grep("::[a-z_]+::[a-z_]+\\`", __dir).filter(() => true),
-].filter((l) => !l.includes('module::fn'))) { // (self-doc line excluded)
+  ...grep('::[a-z_]+::[a-z_]+\\`', SDK),
+  ...grep('::[a-z_]+::[a-z_]+\\`', __dir).filter(() => true),
+].filter((l) => !l.includes('module::fn'))) {
+  // (self-doc line excluded)
   const m = line.match(/::([a-z_]+)::([a-z_]+)`?$/)
   if (!m) continue
   const [, mod, fn] = m

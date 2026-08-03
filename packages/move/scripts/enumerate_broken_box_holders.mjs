@@ -30,8 +30,7 @@ const BOX_SLUGS = ['pet_lootbox', 'pet_ocean_lootbox', 'pet_arisen_lootbox']
 const broken = Object.fromEntries(
   BOX_SLUGS.map((slug) => {
     const id = BOX_APPROVALS[slug]?.old_template_id
-    if (!/^0x[0-9a-f]{64}$/i.test(id ?? ''))
-      throw new Error(`BOX_APPROVALS has no pinned old template id for ${slug}`)
+    if (!/^0x[0-9a-f]{64}$/i.test(id ?? '')) throw new Error(`BOX_APPROVALS has no pinned old template id for ${slug}`)
     return [id, slug]
   })
 )
@@ -50,35 +49,22 @@ async function json_get(key, path = '$') {
 // Fail FAST with a clear NEEDS-LEAD message rather than hanging when REDIS_URL isn't the indexer store.
 async function assert_reachable() {
   const timeout = new Promise((_, reject) =>
-    setTimeout(
-      () => reject(new Error(`no PONG from ${REDIS_URL} within 8s`)),
-      8000
-    )
+    setTimeout(() => reject(new Error(`no PONG from ${REDIS_URL} within 8s`)), 8000)
   )
   const pong = await Promise.race([redis.send('PING', []), timeout])
   if (pong !== 'PONG' && pong !== 'pong' && pong !== true)
-    throw new Error(
-      `${REDIS_URL} did not answer PING (got ${JSON.stringify(pong)})`
-    )
+    throw new Error(`${REDIS_URL} did not answer PING (got ${JSON.stringify(pong)})`)
 }
 
 async function main() {
   await assert_reachable()
-  console.log(
-    `scanning ${REDIS_URL} for holders of ${BOX_SLUGS.length} broken box templates…`
-  )
+  console.log(`scanning ${REDIS_URL} for holders of ${BOX_SLUGS.length} broken box templates…`)
   const kiosk_owner = new Map() // kiosk_id → owner (memoised)
   const rows = []
   let cursor = '0'
   let scanned = 0
   do {
-    const [next, keys] = await redis.send('SCAN', [
-      cursor,
-      'MATCH',
-      'rpc:item:*',
-      'COUNT',
-      '500',
-    ])
+    const [next, keys] = await redis.send('SCAN', [cursor, 'MATCH', 'rpc:item:*', 'COUNT', '500'])
     cursor = next
     for (const key of keys ?? []) {
       scanned += 1
@@ -88,10 +74,7 @@ async function main() {
       const kiosk_id = doc.kiosk_id ?? null
       if (kiosk_id) {
         if (!kiosk_owner.has(kiosk_id))
-          kiosk_owner.set(
-            kiosk_id,
-            (await json_get(`rpc:kiosk:${kiosk_id}`))?.owner ?? null
-          )
+          kiosk_owner.set(kiosk_id, (await json_get(`rpc:kiosk:${kiosk_id}`))?.owner ?? null)
         owner = kiosk_owner.get(kiosk_id)
       }
       rows.push({
@@ -121,11 +104,8 @@ async function main() {
       2
     )
   )
-  console.log(
-    `scanned ${scanned} item docs · ${rows.length} broken-box holdings`
-  )
-  for (const slug of BOX_SLUGS)
-    console.log(`  ${slug}: ${by_slug[slug]} holding(s)`)
+  console.log(`scanned ${scanned} item docs · ${rows.length} broken-box holdings`)
+  for (const slug of BOX_SLUGS) console.log(`  ${slug}: ${by_slug[slug]} holding(s)`)
   console.log(`wrote ${out_path}`)
   const unresolved = rows.filter((row) => !row.owner)
   if (unresolved.length)
@@ -137,8 +117,6 @@ async function main() {
 
 main().catch((error) => {
   console.error(`\nHOLDER ENUMERATION FAILED: ${error.message}`)
-  console.error(
-    'If this is a connection error, the sandbox cannot reach the indexer Redis — this is a NEEDS-LEAD run.'
-  )
+  console.error('If this is a connection error, the sandbox cannot reach the indexer Redis — this is a NEEDS-LEAD run.')
   process.exitCode = 1
 })

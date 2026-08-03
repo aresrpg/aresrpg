@@ -27,21 +27,10 @@ const effectRange = (e) => {
 }
 
 export const mobEffect = (tx, foundationPackage, e) => {
-  const element =
-    typeof e.element === 'string'
-      ? (EL_ID[e.element] ?? 255)
-      : (e.element ?? 255)
+  const element = typeof e.element === 'string' ? (EL_ID[e.element] ?? 255) : (e.element ?? 255)
   const [rawMin, rawMax] = effectRange(e)
-  const encodedMin = encode_effect_value(
-    e.kind,
-    rawMin,
-    e.flags ?? 0
-  )
-  const encodedMax = encode_effect_value(
-    e.kind,
-    rawMax,
-    encodedMin.flags
-  )
+  const encodedMin = encode_effect_value(e.kind, rawMin, e.flags ?? 0)
+  const encodedMax = encode_effect_value(e.kind, rawMax, encodedMin.flags)
   return tx.moveCall({
     target: `${foundationPackage}::spell_effect::new_effect_ranged`,
     arguments: [
@@ -51,9 +40,7 @@ export const mobEffect = (tx, foundationPackage, e) => {
       tx.pure.u64(Math.max(encodedMin.value, encodedMax.value)),
       tx.pure.u8(e.area_shape ?? 0),
       tx.pure.u64(e.area_size ?? 0),
-      tx.pure.u8(
-        e.target_filter ?? (MOB_OFFENSIVE.has(e.kind) ? 1 : 0)
-      ),
+      tx.pure.u8(e.target_filter ?? (MOB_OFFENSIVE.has(e.kind) ? 1 : 0)),
       tx.pure.u8(e.chance ?? 100),
       tx.pure.u8(e.turns ?? 0),
       tx.pure.u8(e.stat ?? 0),

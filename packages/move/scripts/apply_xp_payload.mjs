@@ -63,8 +63,17 @@ export const READ_PAGE = 50
 // new_stats; nothing buffs a template), so set_stats via new_stats preserves them. A NON-ZERO one on chain would
 // be silently lost → we refuse (read_failed) rather than zero it.
 export const STAT_APPENDED = [
-  'percent_damage', 'physical_damage', 'wisdom', 'flat_resist', 'neutral_resistance',
-  'ap_dodge', 'mp_dodge', 'heal', 'ap_bonus', 'mp_bonus', 'vitality',
+  'percent_damage',
+  'physical_damage',
+  'wisdom',
+  'flat_resist',
+  'neutral_resistance',
+  'ap_dodge',
+  'mp_dodge',
+  'heal',
+  'ap_bonus',
+  'mp_bonus',
+  'vitality',
 ]
 
 const is_id = (value) => /^0x[0-9a-f]{64}$/i.test(value ?? '')
@@ -97,11 +106,17 @@ export function desired_state_by_key(mob_rows) {
   const duplicates = []
   for (const row of mob_rows ?? []) {
     const key = row?.key ?? null
-    if (!key) { invalid.push({ key, why: 'row missing key' }); continue }
+    if (!key) {
+      invalid.push({ key, why: 'row missing key' })
+      continue
+    }
     let state
     try {
       const xp_reward = to_u64(row.xp)
-      if (xp_reward <= 0) { invalid.push({ key, why: 'xp must be > 0 (no linear-20 fallback)' }); continue }
+      if (xp_reward <= 0) {
+        invalid.push({ key, why: 'xp must be > 0 (no linear-20 fallback)' })
+        continue
+      }
       state = {
         base_hp: to_u64(row.hp ?? 30),
         ap: to_u64(row.ap ?? 6),
@@ -109,7 +124,10 @@ export function desired_state_by_key(mob_rows) {
         stats: seed_stats_to_centered(row.stats),
         xp_reward,
       }
-    } catch (error) { invalid.push({ key, why: error.message }); continue }
+    } catch (error) {
+      invalid.push({ key, why: error.message })
+      continue
+    }
     if (key in desired) {
       if (JSON.stringify(desired[key]) !== JSON.stringify(state))
         duplicates.push({ key, kept: desired[key], ignored: state })
@@ -140,15 +158,16 @@ export function read_template_state(template_json) {
       stats,
       xp_reward: to_u64(fields.xp_reward),
     }
-  } catch { return null }
+  } catch {
+    return null
+  }
 }
 
 /** The changed FIELDS between a chain state and a desired state — [] when byte-identical. `stats` counts as one
  * field (the whole block is re-sent atomically); a stats diff also records which elements moved (for the report). */
 export function state_field_diff(current, desired) {
   const fields = []
-  for (const field of ['base_hp', 'ap', 'mp', 'xp_reward'])
-    if (current[field] !== desired[field]) fields.push(field)
+  for (const field of ['base_hp', 'ap', 'mp', 'xp_reward']) if (current[field] !== desired[field]) fields.push(field)
   const stat_changes = STAT_FIELDS.filter((f) => current.stats[f] !== desired.stats[f])
   if (stat_changes.length) fields.push('stats')
   return { fields, stat_changes }
@@ -169,20 +188,35 @@ export function diff_mob_state({ manifest_mobs, desired_by_key, chain_by_id, lim
   const missing_seed = []
   for (const key of keys) {
     const id = manifest_mobs[key]?.id
-    if (!is_id(id)) { read_failed.push({ key, id: id ?? null, why: 'invalid manifest id' }); continue }
+    if (!is_id(id)) {
+      read_failed.push({ key, id: id ?? null, why: 'invalid manifest id' })
+      continue
+    }
     const current = chain_by_id?.[id]
-    if (current == null) { read_failed.push({ key, id, why: 'template state unreadable on chain' }); continue }
+    if (current == null) {
+      read_failed.push({ key, id, why: 'template state unreadable on chain' })
+      continue
+    }
     const desired = desired_by_key?.[key]
-    if (!desired) { missing_seed.push({ key, id }); continue }
+    if (!desired) {
+      missing_seed.push({ key, id })
+      continue
+    }
     const { fields, stat_changes } = state_field_diff(current, desired)
-    if (!fields.length) { unchanged.push({ key, id }); continue }
+    if (!fields.length) {
+      unchanged.push({ key, id })
+      continue
+    }
     const from = {}
     const to = {}
     for (const field of fields) {
       if (field === 'stats') {
         from.stats = Object.fromEntries(stat_changes.map((f) => [f, current.stats[f]]))
         to.stats = Object.fromEntries(stat_changes.map((f) => [f, desired.stats[f]]))
-      } else { from[field] = current[field]; to[field] = desired[field] }
+      } else {
+        from[field] = current[field]
+        to[field] = desired[field]
+      }
     }
     changed.push({ key, id, fields, stat_changes, from, to, desired })
   }
@@ -271,7 +305,9 @@ export function deployment_from_release(release_config, network) {
 /** Every seed/mainnet/<world>/mobs.json flattened in sorted-world order (dedup is first-wins in desired_state). */
 export function load_mob_rows(seed_dir) {
   const rows = []
-  for (const dir of read_dir(seed_dir).filter((name) => /^\d\d_/.test(name)).sort()) {
+  for (const dir of read_dir(seed_dir)
+    .filter((name) => /^\d\d_/.test(name))
+    .sort()) {
     const mobs_path = join(seed_dir, dir, 'mobs.json')
     if (exists(mobs_path)) rows.push(...read_json(mobs_path))
   }
@@ -322,7 +358,7 @@ function sample_line(row) {
   const parts = row.fields.map((field) =>
     field === 'stats'
       ? row.stat_changes.map((f) => `${f} ${row.from.stats[f]}→${row.to.stats[f]}`).join(' ')
-      : `${field} ${row.from[field]}→${row.to[field]}`,
+      : `${field} ${row.from[field]}→${row.to[field]}`
   )
   return `  ${row.key} [${row.id.slice(0, 10)}…] ${parts.join(' · ')}`
 }
@@ -335,7 +371,10 @@ async function main() {
   const { desired, invalid, duplicates } = desired_state_by_key(load_mob_rows(join(repo_dir, 'seed', 'mainnet')))
   const deployment = deployment_from_release(release, network)
 
-  const ids = Object.keys(manifest_mobs).sort().map((key) => manifest_mobs[key]?.id).filter(is_id)
+  const ids = Object.keys(manifest_mobs)
+    .sort()
+    .map((key) => manifest_mobs[key]?.id)
+    .filter(is_id)
   const client = get_client(network)
   const chain_by_id = await fetch_chain_state(client, ids)
   const limit = process.env.LIMIT ? Number(process.env.LIMIT) : null
@@ -352,14 +391,16 @@ async function main() {
   console.log(
     `census: ${diff.total} manifest mobs · ${diff.changed.length} changed · ${diff.unchanged.length} unchanged · ` +
       `${diff.read_failed.length} read_failed · ${diff.missing_seed.length} missing_seed · ` +
-      `${invalid.length} invalid_seed · ${duplicates.length} dup_seed`,
+      `${invalid.length} invalid_seed · ${duplicates.length} dup_seed`
   )
   console.log(
-    `fields (mobs differing per field): xp=${hist.xp_reward} hp=${hist.base_hp} ap=${hist.ap} mp=${hist.mp} stats=${hist.stats}`,
+    `fields (mobs differing per field): xp=${hist.xp_reward} hp=${hist.base_hp} ap=${hist.ap} mp=${hist.mp} stats=${hist.stats}`
   )
-  console.log(`coverage-report: ruled=${coverage.ruled_count} planned=${coverage.planned_count} covered=${coverage.covered_pct}%`)
   console.log(
-    `resistance-cap: ≤${MAX_RESIST_MAGNITUDE} decentered magnitude (spell::apply_resistance) · outliers=${outliers.length}`,
+    `coverage-report: ruled=${coverage.ruled_count} planned=${coverage.planned_count} covered=${coverage.covered_pct}%`
+  )
+  console.log(
+    `resistance-cap: ≤${MAX_RESIST_MAGNITUDE} decentered magnitude (spell::apply_resistance) · outliers=${outliers.length}`
   )
   console.log(`batches: ${batches.length} (≤${MAX_CALLS_PER_PTB}/PTB) · fixed gas=${GAS_BUDGET_MIST} MIST/PTB`)
   console.log('samples (old→new):')
@@ -369,26 +410,33 @@ async function main() {
   if (!coverage.ok)
     throw new Error(
       `COVERAGE GAP — ${coverage.uncovered.length} ruled row(s) not planned: ${coverage.uncovered.slice(0, 20).join(', ')}` +
-        (coverage.ruled_count > 0 && coverage.planned_count === 0 ? ' (ZERO planned against nonzero ruled)' : ''),
+        (coverage.ruled_count > 0 && coverage.planned_count === 0 ? ' (ZERO planned against nonzero ruled)' : '')
     )
   if (outliers.length) {
     console.error(
-      `\nNEEDS-RULING — ${outliers.length} restored resistance(s) exceed the ${MAX_RESIST_MAGNITUDE}% cap (spell::apply_resistance):`,
+      `\nNEEDS-RULING — ${outliers.length} restored resistance(s) exceed the ${MAX_RESIST_MAGNITUDE}% cap (spell::apply_resistance):`
     )
-    for (const o of outliers) console.error(`  ${o.key} [${o.id.slice(0, 10)}…] ${o.field} magnitude=${o.magnitude} > ${o.cap}`)
+    for (const o of outliers)
+      console.error(`  ${o.key} [${o.id.slice(0, 10)}…] ${o.field} magnitude=${o.magnitude} > ${o.cap}`)
     throw new Error(
-      `${outliers.length} over-cap resistance(s) — refusing to apply an out-of-SPEC value (fix the seed to ≤${MAX_RESIST_MAGNITUDE} or rule it). NEVER silently applied.`,
+      `${outliers.length} over-cap resistance(s) — refusing to apply an out-of-SPEC value (fix the seed to ≤${MAX_RESIST_MAGNITUDE} or rule it). NEVER silently applied.`
     )
   }
   const blockers = [...diff.read_failed, ...diff.missing_seed, ...invalid, ...duplicates]
   if (blockers.length)
     throw new Error(
       `INTEGRITY BLOCKERS — ${diff.read_failed.length} read_failed, ${diff.missing_seed.length} missing_seed, ` +
-        `${invalid.length} invalid_seed, ${duplicates.length} dup_seed. First: ${JSON.stringify(blockers.slice(0, 5))}`,
+        `${invalid.length} invalid_seed, ${duplicates.length} dup_seed. First: ${JSON.stringify(blockers.slice(0, 5))}`
     )
 
-  if (!batches.length) { console.log('=== ALREADY CONVERGED (0 changes) ==='); return }
-  if (!mode.live) { console.log('=== DRY-RUN COMPLETE (nothing signed) ==='); return }
+  if (!batches.length) {
+    console.log('=== ALREADY CONVERGED (0 changes) ===')
+    return
+  }
+  if (!mode.live) {
+    console.log('=== DRY-RUN COMPLETE (nothing signed) ===')
+    return
+  }
 
   const { getSigner } = await import('./ceremony_lib.mjs')
   const { run } = await import('./ceremony_lib.mjs')

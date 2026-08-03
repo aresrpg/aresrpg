@@ -4,7 +4,8 @@
 // not a port probe: GameConfig.enabled + every package Version.enabled + the seed objects readable.
 import { IDS, seed, ceremony, fields, getObj, balanceMist, ADDR, logline } from './_qa.mjs'
 
-const check = (name, cond, detail = '') => logline(`${cond ? 'LIVE ' : 'DEAD '} ${name}${detail ? ' :: ' + detail : ''}`)
+const check = (name, cond, detail = '') =>
+  logline(`${cond ? 'LIVE ' : 'DEAD '} ${name}${detail ? ' :: ' + detail : ''}`)
 
 logline(`\n===== S-30 HEALTHZ @ ${new Date().toISOString()} =====`)
 logline(`signer=${ADDR}`)
@@ -13,7 +14,11 @@ logline(`balance=${(bal / 1e9).toFixed(4)} SUI (${bal} mist)`)
 
 // GameConfig.enabled — the global master switch
 const gc = await fields(IDS.gameConfig)
-check('GameConfig.enabled', gc?.enabled === true, `enabled=${gc?.enabled} team_size=${gc?.team_size_bound} placement_ms=${gc?.placement_ms} turn_ms=${gc?.turn_duration_ms} listing_gate=${gc?.listing_level_gate} koli_gate=${gc?.pvp_level_gate} loot_mult=${gc?.loot_multiplier}`)
+check(
+  'GameConfig.enabled',
+  gc?.enabled === true,
+  `enabled=${gc?.enabled} team_size=${gc?.team_size_bound} placement_ms=${gc?.placement_ms} turn_ms=${gc?.turn_duration_ms} listing_gate=${gc?.listing_level_gate} koli_gate=${gc?.pvp_level_gate} loot_mult=${gc?.loot_multiplier}`
+)
 
 // Every package Version.enabled
 for (const [name, vid] of [
@@ -32,11 +37,17 @@ for (const [name, vid] of [
 
 // Creation gate — price / paused / senshi whitelisted
 const cr = await fields(IDS.creation)
-logline(`Creation.price=${cr?.price} (${Number(cr?.price) / 1e9} SUI) paused=${cr?.paused} free_enabled=${cr?.free_enabled} sponsor=${JSON.stringify(cr?.sponsor)}`)
+logline(
+  `Creation.price=${cr?.price} (${Number(cr?.price) / 1e9} SUI) paused=${cr?.paused} free_enabled=${cr?.free_enabled} sponsor=${JSON.stringify(cr?.sponsor)}`
+)
 
 // Seed objects readable
 const world = await fields(seed.world.id)
-check('World', !!world, `biome=${world?.biome} seed=${world?.seed} req_lvl=${world?.required_level} zone_size=${world?.zone_size} spawn=(${world?.spawn_zone_x},${world?.spawn_zone_z}) bounds=(${world?.bounds_x},${world?.bounds_z}) dungeon_key=${JSON.stringify(world?.dungeon_key_template)}`)
+check(
+  'World',
+  !!world,
+  `biome=${world?.biome} seed=${world?.seed} req_lvl=${world?.required_level} zone_size=${world?.zone_size} spawn=(${world?.spawn_zone_x},${world?.spawn_zone_z}) bounds=(${world?.bounds_x},${world?.bounds_z}) dungeon_key=${JSON.stringify(world?.dungeon_key_template)}`
+)
 const healer = await getObj(seed.mobs.healer.id)
 check('Mob[healer]', !!healer?.data, `type=${healer?.data?.type?.split('::').slice(-1)[0]}`)
 const heal = await getObj(seed.items.heal_potion)

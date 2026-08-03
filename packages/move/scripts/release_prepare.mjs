@@ -23,15 +23,7 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { execSync } from 'node:child_process'
 
-import {
-  buildPackage,
-  publishOrder,
-  PKG_DEPS,
-  CHAIN_IDS,
-  getNetwork,
-  MOVE_DIR,
-  OUT,
-} from './ceremony_lib.mjs'
+import { buildPackage, publishOrder, PKG_DEPS, CHAIN_IDS, getNetwork, MOVE_DIR, OUT } from './ceremony_lib.mjs'
 import { move_sources_hash } from './move_sources_hash.mjs'
 
 const __dir = path.dirname(fileURLToPath(import.meta.url))
@@ -117,7 +109,17 @@ function count_json_rows(file) {
 }
 function seed_plan() {
   if (!fs.existsSync(SEED_DIR))
-    return { source: 'seed/mainnet', present: false, biomes: 0, items: 0, resources: 0, mobs: 0, recipes: 0, worlds: 0, total: 0 }
+    return {
+      source: 'seed/mainnet',
+      present: false,
+      biomes: 0,
+      items: 0,
+      resources: 0,
+      mobs: 0,
+      recipes: 0,
+      worlds: 0,
+      total: 0,
+    }
   const biomes = fs.readdirSync(SEED_DIR).filter((d) => {
     try {
       return fs.statSync(path.join(SEED_DIR, d)).isDirectory()
@@ -140,7 +142,14 @@ function seed_plan() {
     if (fs.existsSync(path.join(b, 'world.json'))) acc.worlds += 1
   }
   const total = acc.items + acc.resources + acc.mobs + acc.recipes + acc.worlds
-  return { source: 'seed/mainnet', present: true, biomes: biomes.length, ...acc, total, seededBy: 'node scripts/seed_full_corpus.mjs' }
+  return {
+    source: 'seed/mainnet',
+    present: true,
+    biomes: biomes.length,
+    ...acc,
+    total,
+    seededBy: 'node scripts/seed_full_corpus.mjs',
+  }
 }
 
 // ── build ─────────────────────────────────────────────────────────────────────────────────────────────────
@@ -201,9 +210,11 @@ function main() {
 
   const totalKB = Object.values(packages).reduce((n, p) => n + p.byteSize, 0) / 1024
   console.log(`\n  policy steps: ${POLICY_STEPS.length} · enable steps: ${ENABLE_STEPS.length}`)
-  console.log(`  seed plan: ${manifest.seedPlan.total} objects across ${manifest.seedPlan.biomes} biomes ` +
-    `(${manifest.seedPlan.items} items · ${manifest.seedPlan.resources} resources · ${manifest.seedPlan.mobs} mobs · ` +
-    `${manifest.seedPlan.recipes} recipes · ${manifest.seedPlan.worlds} worlds)`)
+  console.log(
+    `  seed plan: ${manifest.seedPlan.total} objects across ${manifest.seedPlan.biomes} biomes ` +
+      `(${manifest.seedPlan.items} items · ${manifest.seedPlan.resources} resources · ${manifest.seedPlan.mobs} mobs · ` +
+      `${manifest.seedPlan.recipes} recipes · ${manifest.seedPlan.worlds} worlds)`
+  )
   console.log(`  total bytecode: ${totalKB.toFixed(1)} KB`)
   console.log(`  move-sources hash: ${moveSourcesHash.slice(0, 16)}… (staleness anchor)`)
   console.log(`\n=== manifest → ${MANIFEST_OUT} ===\n`)

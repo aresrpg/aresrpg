@@ -5,14 +5,10 @@
 // hand-typed 64-hex ids in source.
 import { expect, test } from 'bun:test'
 
-import {
-  compare_release_pins,
-  format_pin_rows,
-  RELEASE_PACKAGE_SET,
-} from './check_release_pins.mjs'
+import { compare_release_pins, format_pin_rows, RELEASE_PACKAGE_SET } from './check_release_pins.mjs'
 import { PKG_DEPS, TICKET_ORDER } from './publish_packages.mjs'
 
-const id = h => '0x' + h.padEnd(64, '0')
+const id = (h) => '0x' + h.padEnd(64, '0')
 
 test('the release gate, dependency graph, and ceremony order share one publish set', () => {
   expect(RELEASE_PACKAGE_SET).toEqual(TICKET_ORDER)
@@ -42,9 +38,6 @@ test('an unreadable cap is UNKNOWN, never a silent pass', () => {
 })
 
 test('an unstamped pin never matches a live cap package', () => {
-  const rows = compare_release_pins(
-    { dungeon: { latest: '', upgrade_cap: id('ca3') } },
-    { [id('ca3')]: id('d1') },
-  )
+  const rows = compare_release_pins({ dungeon: { latest: '', upgrade_cap: id('ca3') } }, { [id('ca3')]: id('d1') })
   expect(rows).toEqual([{ name: 'dungeon', pinned: '', chain: id('d1'), status: 'drift' }])
 })

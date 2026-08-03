@@ -18,29 +18,19 @@ const STAT_SOURCES = [
 ]
 
 export const MOB_STAT_FIELDS = STAT_SOURCES.map(([field]) => field)
-export const MOB_RESISTANCE_FIELDS = STAT_SOURCES.filter(
-  ([, , centered]) => centered
-).map(([field]) => field)
+export const MOB_RESISTANCE_FIELDS = STAT_SOURCES.filter(([, , centered]) => centered).map(([field]) => field)
 
-const first_authored = (stats, keys) =>
-  keys.map((key) => stats[key]).find((value) => value != null) ?? 0
+const first_authored = (stats, keys) => keys.map((key) => stats[key]).find((value) => value != null) ?? 0
 
 const normalize_field = (stats, resistance_bias, [field, keys, centered]) => {
   const authored = Number(first_authored(stats, keys))
   const value = authored + (centered ? resistance_bias : 0)
-  if (centered && value < 0)
-    throw new Error(
-      `${field} seed ${authored} underflows the ${resistance_bias} centering`
-    )
+  if (centered && value < 0) throw new Error(`${field} seed ${authored} underflows the ${resistance_bias} centering`)
   return [field, value]
 }
 
 export const normalize_seed_mob_stats = (stats, resistance_bias) =>
-  Object.fromEntries(
-    STAT_SOURCES.map((source) =>
-      normalize_field(stats ?? {}, resistance_bias, source)
-    )
-  )
+  Object.fromEntries(STAT_SOURCES.map((source) => normalize_field(stats ?? {}, resistance_bias, source)))
 
 export const seed_mob_stat_values = (stats, resistance_bias) => {
   const normalized = normalize_seed_mob_stats(stats, resistance_bias)

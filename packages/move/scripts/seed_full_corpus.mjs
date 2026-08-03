@@ -26,6 +26,7 @@ import { Transaction } from '@mysten/sui/transactions'
 
 import { ITEM_STAT_SHIFT as SHIFT } from '../../sim/src/equipment_stats.js'
 import { world_seed } from '../../sdk/src/world_seed.js'
+
 import { keypair, sui_client } from './client.js'
 import { canonical_map, canonical_rows, mob_level_of } from './corpus_canon.mjs'
 import {
@@ -40,12 +41,7 @@ import {
   getReceipt,
   runPreflightedBatches,
 } from './ceremony_lib.mjs'
-import {
-  sui_to_sale_mist,
-  resolve_required_job,
-  damage_lines,
-  pack_qty_for_job,
-} from './seed_economy.mjs'
+import { sui_to_sale_mist, resolve_required_job, damage_lines, pack_qty_for_job } from './seed_economy.mjs'
 import { seed_mob_stat_values } from './seed_mob_stats.mjs'
 import { encode_effect_value } from './spell_wire.mjs'
 import { mobEffect } from './mob_effect.mjs'
@@ -63,22 +59,11 @@ const __dir = path.dirname(fileURLToPath(import.meta.url))
 const holds_corpus = (dir) =>
   fs.existsSync(dir) &&
   fs.statSync(dir).isDirectory() &&
-  fs
-    .readdirSync(dir)
-    .some((d) => /^\d/.test(d) && fs.statSync(path.join(dir, d)).isDirectory())
+  fs.readdirSync(dir).some((d) => /^\d/.test(d) && fs.statSync(path.join(dir, d)).isDirectory())
 export const seed_dir_candidates = () =>
   [
     process.env.ARES_SEED_DIR,
-    path.resolve(
-      __dir,
-      '..',
-      '..',
-      '..',
-      '..',
-      'aresrpg-seed',
-      'seed',
-      'mainnet'
-    ),
+    path.resolve(__dir, '..', '..', '..', '..', 'aresrpg-seed', 'seed', 'mainnet'),
     path.resolve(__dir, '..', '..', '..', 'seed', 'mainnet'),
   ].filter(Boolean)
 export const pick_corpus_dir = (candidates) => {
@@ -93,9 +78,7 @@ export const pick_corpus_dir = (candidates) => {
 export const resolve_seed_dir = () => pick_corpus_dir(seed_dir_candidates())
 let seed_dir_memo = null
 const seed_dir = () => (seed_dir_memo ??= resolve_seed_dir())
-const MANIFEST = JSON.parse(
-  fs.readFileSync(path.join(__dir, 'out', 'ceremony_manifest.json'), 'utf8')
-)
+const MANIFEST = JSON.parse(fs.readFileSync(path.join(__dir, 'out', 'ceremony_manifest.json'), 'utf8'))
 const OUT_PATH = path.join(__dir, 'out', 'seed_manifest.json')
 const CEIL = 1 // refuse any tx whose derived budget exceeds 1 SUI (money law)
 
@@ -164,8 +147,7 @@ const OUT = {
   _stamp: LINEAGE_STAMP,
   _corpus: 'seed/mainnet',
   _seededAt: new Date().toISOString(),
-  _note:
-    'FULL authored-corpus seed for localnet/gate parity (DECISIONS 07-11). Not an autonomous mainnet seed.',
+  _note: 'FULL authored-corpus seed for localnet/gate parity (DECISIONS 07-11). Not an autonomous mainnet seed.',
   categories: [],
   classes: [],
   items: {},
@@ -221,9 +203,7 @@ function account(label, r) {
 }
 async function exec(label, build) {
   if (OUT.digests?.[label]) {
-    console.log(
-      `  [${label}] SKIP (already: ${OUT.digests[label].slice(0, 8)}…)`
-    )
+    console.log(`  [${label}] SKIP (already: ${OUT.digests[label].slice(0, 8)}…)`)
     return { r: null, skipped: true }
   }
   const tx = new Transaction()
@@ -233,18 +213,14 @@ async function exec(label, build) {
   return { r }
 }
 const createdId = (r, suffix) =>
-  (r.objectChanges || []).find(
-    (c) => c.type === 'created' && (c.objectType || '').endsWith(suffix)
-  )?.objectId
+  (r.objectChanges || []).find((c) => c.type === 'created' && (c.objectType || '').endsWith(suffix))?.objectId
 
 // ONE probe knob; the clearing SIZE differs per phase (command density per row shape — probeBatchSize doc).
 // `execBatch`: ceiling scaled to the batch, NO skip-if-digest (resume safety is ROW-level / a chain read —
 // immune to batch-size drift). `richest` probes the densest rows so the size holds for every real batch. ──
 const BATCH_PROBE = { start: 50, cap: 100, step: 10, ceilingSuiPerItem: 0.03 }
 const richest = (rows, n) =>
-  [...rows]
-    .sort((a, b) => JSON.stringify(b).length - JSON.stringify(a).length)
-    .slice(0, Math.min(n, rows.length))
+  [...rows].sort((a, b) => JSON.stringify(b).length - JSON.stringify(a).length).slice(0, Math.min(n, rows.length))
 async function execBatch(label, n, build, track = true) {
   const tx = new Transaction()
   build(tx)
@@ -274,8 +250,7 @@ const countInputs = (rows, buildInto) => {
 }
 const fitByInputs = (rows, buildInto) => {
   let n = rows.length
-  while (n > 1 && countInputs(rows.slice(0, n), buildInto) > INPUT_CAP)
-    n = Math.max(1, Math.floor(n * 0.8))
+  while (n > 1 && countInputs(rows.slice(0, n), buildInto) > INPUT_CAP) n = Math.max(1, Math.floor(n * 0.8))
   return n
 }
 // REFUSE-THEN-MINT PHASE GUARD: the initial richest-row probe chooses a target size; this second pass simulates
@@ -306,9 +281,7 @@ const preflightExactBatch = (rows, buildInto, opts = BATCH_PROBE) =>
 async function backfillPending(prefix, createdOf, claim) {
   for (const [label, digest] of Object.entries(OUT.pendingDigests)) {
     if (!label.startsWith(prefix)) continue
-    console.log(
-      `  [${label}] BACKFILL executed-but-unresolved digest ${digest.slice(0, 8)}…`
-    )
+    console.log(`  [${label}] BACKFILL executed-but-unresolved digest ${digest.slice(0, 8)}…`)
     const txb = await getReceipt(sui_client, digest)
     claim(await createdOf(txb))
     delete OUT.pendingDigests[label]
@@ -391,23 +364,16 @@ const mob_xp_required = (m) => {
 const dmgLine = (tx, from, to, type, element) =>
   tx.moveCall({
     target: `${CITEMS}::item_damages::new`,
-    arguments: [
-      tx.pure.u16(from),
-      tx.pure.u16(to),
-      tx.pure.string(type),
-      tx.pure.string(element),
-    ],
+    arguments: [tx.pure.u16(from), tx.pure.u16(to), tx.pure.string(type), tx.pure.string(element)],
   })
 function elements(tx) {
   const cache = new Map()
   return (name) => {
-    if (!cache.has(name))
-      cache.set(name, tx.moveCall({ target: `${CFND}::spell::${name}` }))
+    if (!cache.has(name)) cache.set(name, tx.moveCall({ target: `${CFND}::spell::${name}` }))
     return cache.get(name)
   }
 }
-const fxVec = (tx, effects) =>
-  tx.makeMoveVec({ type: T.effect, elements: effects })
+const fxVec = (tx, effects) => tx.makeMoveVec({ type: T.effect, elements: effects })
 // PURE INPUT MEMO — the SDK allocates a FRESH PTB input per `tx.pure` call, so the corpus's repeated
 // constants (element 255, chance 100, the zero/255 defaults, the two empty u16 vectors) each burned an
 // input: the spell phase's own richest-3 probe batch measured 2070 inputs against the protocol's 2048
@@ -474,42 +440,29 @@ export const spellLevel = (tx, o, fx, crit) =>
       fxVec(tx, crit),
     ],
   })
-const levelVec = (tx, levels) =>
-  tx.makeMoveVec({ type: T.level, elements: levels })
+const levelVec = (tx, levels) => tx.makeMoveVec({ type: T.level, elements: levels })
 // foundation spell::new_stats fields in canonical order; resistances are centered.
 const mobStats = (tx, s) =>
   tx.moveCall({
     target: `${CFND}::spell::new_stats`,
-    arguments: seed_mob_stat_values(s, SHIFT).map((value) =>
-      tx.pure.u64(value)
-    ),
+    arguments: seed_mob_stat_values(s, SHIFT).map((value) => tx.pure.u64(value)),
   })
 const lootEntry = (tx, itemId, chance, min, max) =>
   tx.moveCall({
     target: `${CFIGHT}::mob::new_loot_entry`,
-    arguments: [
-      tx.pure.id(itemId),
-      tx.pure.u16(chance),
-      tx.pure.u16(min),
-      tx.pure.u16(max),
-    ],
+    arguments: [tx.pure.id(itemId), tx.pure.u16(chance), tx.pure.u16(min), tx.pure.u16(max)],
   })
-const lootVec = (tx, entries) =>
-  tx.makeMoveVec({ type: T.loot, elements: entries })
+const lootVec = (tx, entries) => tx.makeMoveVec({ type: T.loot, elements: entries })
 
 // ── corpus shape → builder-input adapters ─────────────────────────────────────────────────────
-const elMove = (name) =>
-  name === 'neutral' || name === 'none' || !name ? 'el_none' : `el_${name}`
-const bp = (rate) =>
-  Math.min(10000, Math.max(0, Math.round((rate ?? 0) * 10000))) // float prob 0..1 → basis points
+const elMove = (name) => (name === 'neutral' || name === 'none' || !name ? 'el_none' : `el_${name}`)
+const bp = (rate) => Math.min(10000, Math.max(0, Math.round((rate ?? 0) * 10000))) // float prob 0..1 → basis points
 export function loadCorpus() {
   const corpus_dir = seed_dir()
   const readJson = (p) => JSON.parse(fs.readFileSync(p, 'utf8'))
   const biomes = fs
     .readdirSync(corpus_dir)
-    .filter(
-      (d) => /^\d/.test(d) && fs.statSync(path.join(corpus_dir, d)).isDirectory()
-    )
+    .filter((d) => /^\d/.test(d) && fs.statSync(path.join(corpus_dir, d)).isDirectory())
     .sort()
   const items = [],
     resources = [],
@@ -521,8 +474,7 @@ export function loadCorpus() {
   const topShop = path.join(corpus_dir, 'shop.json')
   if (fs.existsSync(topShop)) {
     const cat = readJson(topShop)
-    for (const s of [...(cat.cosmetics || []), ...(cat.pets || [])])
-      shop.push(s)
+    for (const s of [...(cat.cosmetics || []), ...(cat.pets || [])]) shop.push(s)
   }
   for (const b of biomes) {
     const f = (n) => path.join(corpus_dir, b, n)
@@ -551,8 +503,7 @@ export function loadCorpus() {
   // lowercase bytes with zero case-folding (uppercase on-chain ⇒ gathering dead / stackables never mint /
   // gear never equips) ⇒ lowercase at THIS mint boundary. Offline validators .toUpperCase() — green either way.
   for (const row of [...items, ...resources, ...shop])
-    if (typeof row?.category === 'string')
-      row.category = row.category.toLowerCase()
+    if (typeof row?.category === 'string') row.category = row.category.toLowerCase()
   return { biomes, items, resources, mobs, recipes, worlds, shop, petBoxes }
 }
 
@@ -574,9 +525,7 @@ export async function seed_full_corpus() {
   for (const id of [...new Set(Object.values(CAP))]) {
     const { object } = await sui_client.getObject({ objectId: id })
     if (object?.owner?.AddressOwner !== ME)
-      throw new Error(
-        `PREFLIGHT: AdminCap ${id} not owned by signer (${JSON.stringify(object?.owner)})`
-      )
+      throw new Error(`PREFLIGHT: AdminCap ${id} not owned by signer (${JSON.stringify(object?.owner)})`)
   }
   console.log('preflight OK — AdminCap owned by signer\n')
 
@@ -591,13 +540,8 @@ export async function seed_full_corpus() {
       ...C.shop.map((s) => s.category),
     ]),
   ]
-  const catPlan = planFixedKeyAdds(
-    cats,
-    await existingTableKeys(sui_client, SH.catalog, 'categories')
-  )
-  console.log(
-    `  categories: ${catPlan.existingCount} existing skipped, ${catPlan.missing.length} adding`
-  )
+  const catPlan = planFixedKeyAdds(cats, await existingTableKeys(sui_client, SH.catalog, 'categories'))
+  console.log(`  categories: ${catPlan.existingCount} existing skipped, ${catPlan.missing.length} adding`)
   if (!catPlan.skip)
     await execBatch(
       'categories',
@@ -606,12 +550,7 @@ export async function seed_full_corpus() {
         for (const c of catPlan.missing)
           tx.moveCall({
             target: `${CITEMS}::admin::add_category`,
-            arguments: [
-              tx.object(CAP.items),
-              tx.object(SH.catalog),
-              tx.pure.string(c),
-              tx.object(VER.items),
-            ],
+            arguments: [tx.object(CAP.items), tx.object(SH.catalog), tx.pure.string(c), tx.object(VER.items)],
           })
       },
       false
@@ -625,18 +564,12 @@ export async function seed_full_corpus() {
   //    via chunked multiGetObjects, HARD-matched (resolveBatch halts on mismatch). Shop rows mint here too. ──
   const buildItemCreate = (tx, it) => {
     const has = it.stats && it.stats.min && it.stats.max
-    const smin = has
-      ? optSome(tx, T.istats, statsBlock(tx, it.stats.min))
-      : optNone(tx, T.istats)
-    const smax = has
-      ? optSome(tx, T.istats, statsBlock(tx, it.stats.max))
-      : optNone(tx, T.istats)
+    const smin = has ? optSome(tx, T.istats, statsBlock(tx, it.stats.min)) : optNone(tx, T.istats)
+    const smax = has ? optSome(tx, T.istats, statsBlock(tx, it.stats.max)) : optNone(tx, T.istats)
     // dmg: single line OBJECT or ARRAY (gear law 1/2/3/4 lines by level) — one normalizer decides.
     const dmg = tx.makeMoveVec({
       type: T.idmg,
-      elements: damage_lines(it.dmg).map((d) =>
-        dmgLine(tx, d.from, d.to, d.type, d.element)
-      ),
+      elements: damage_lines(it.dmg).map((d) => dmgLine(tx, d.from, d.to, d.type, d.element)),
     })
     // Consumable effect → the frozen §17.15 vocabulary (consumable_effect.move KIND_HEAL/STAT_RESET/SPELL_RESET/
     // BAG_OPEN/GACHA_ROLL). Precedence mirrors seed_testnet.mjs's proven item() builder: gacha BOX (amount 0 —
@@ -679,32 +612,13 @@ export async function seed_full_corpus() {
     })
   }
   const itemRowKey = (it) =>
-    JSON.stringify([
-      it.name,
-      it.description ?? '',
-      it.itemType,
-      it.category,
-      String(it.level ?? 1),
-    ])
-  const itemContentKey = (f) =>
-    JSON.stringify([
-      f.name,
-      f.description,
-      f.item_type,
-      f.category,
-      String(f.level),
-    ])
+    JSON.stringify([it.name, it.description ?? '', it.itemType, it.category, String(it.level ?? 1)])
+  const itemContentKey = (f) => JSON.stringify([f.name, f.description, f.item_type, f.category, String(f.level)])
   const itemCreatedOf = async (r) => {
     const ids = (r.objectChanges || [])
-      .filter(
-        (c) =>
-          c.type === 'created' &&
-          (c.objectType || '').endsWith('::item::ItemTemplate')
-      )
+      .filter((c) => c.type === 'created' && (c.objectType || '').endsWith('::item::ItemTemplate'))
       .map((c) => c.objectId)
-    const objs = ids.length
-      ? await multiGetObjectsChunked(sui_client, ids, { showContent: true })
-      : []
+    const objs = ids.length ? await multiGetObjectsChunked(sui_client, ids, { showContent: true }) : []
     return objs.map((o) => ({
       id: o.data.objectId,
       key: itemContentKey(o.data.content.fields),
@@ -750,15 +664,8 @@ export async function seed_full_corpus() {
       (batch) => preflightExactBatch(batch, buildItemsInto),
       async (batch, offset) => {
         const label = `items:${offset}`
-        const r = await execBatch(label, batch.length, (tx) =>
-          buildItemsInto(tx, batch)
-        )
-        for (const { row, id } of resolveBatch(
-          batch,
-          itemRowKey,
-          await itemCreatedOf(r)
-        ))
-          OUT.items[row.slug] = id
+        const r = await execBatch(label, batch.length, (tx) => buildItemsInto(tx, batch))
+        for (const { row, id } of resolveBatch(batch, itemRowKey, await itemCreatedOf(r))) OUT.items[row.slug] = id
         delete OUT.pendingDigests[label]
         persist()
       }
@@ -767,13 +674,8 @@ export async function seed_full_corpus() {
 
   // ── PHASE 3 · creation gate — whitelist the CORE class floor (bot slice creates a senshi). IDEMPOTENT
   //    like PHASE 1: `Creation.classes` is the identical Table.add abort class. ──
-  const classPlan = planFixedKeyAdds(
-    CORE_CLASSES,
-    await existingTableKeys(sui_client, SH.creation, 'classes')
-  )
-  console.log(
-    `  classes: ${classPlan.existingCount} existing skipped, ${classPlan.missing.length} adding`
-  )
+  const classPlan = planFixedKeyAdds(CORE_CLASSES, await existingTableKeys(sui_client, SH.creation, 'classes'))
+  console.log(`  classes: ${classPlan.existingCount} existing skipped, ${classPlan.missing.length} adding`)
   if (!classPlan.skip)
     await execBatch(
       'add_classes',
@@ -782,12 +684,7 @@ export async function seed_full_corpus() {
         for (const c of classPlan.missing)
           tx.moveCall({
             target: `${CGIFT}::creation::add_class`,
-            arguments: [
-              tx.object(CAP.items),
-              tx.object(SH.creation),
-              tx.pure.string(c),
-              tx.object(VER.items),
-            ],
+            arguments: [tx.object(CAP.items), tx.object(SH.creation), tx.pure.string(c), tx.object(VER.items)],
           })
       },
       false
@@ -818,9 +715,7 @@ export async function seed_full_corpus() {
       const craft_xp = rc.craft_xp ?? rc.craftXp
       if (required_job == null || craft_xp == null) {
         const miss = [
-          required_job == null
-            ? `required_job(job=${JSON.stringify(rc.job ?? rc.required_job)})`
-            : null,
+          required_job == null ? `required_job(job=${JSON.stringify(rc.job ?? rc.required_job)})` : null,
           craft_xp == null ? 'craft_xp' : null,
         ]
           .filter(Boolean)
@@ -900,12 +795,8 @@ export async function seed_full_corpus() {
                 rmax: 4,
                 los: true,
                 crit: 50,
-                effects: [
-                  { kind: 0, element: m.element, base: 6 + (m.minLevel ?? 1) },
-                ],
-                crit_effects: [
-                  { kind: 0, element: m.element, base: 11 + (m.minLevel ?? 1) },
-                ],
+                effects: [{ kind: 0, element: m.element, base: 6 + (m.minLevel ?? 1) }],
+                crit_effects: [{ kind: 0, element: m.element, base: 11 + (m.minLevel ?? 1) }],
               },
             ]
       ).slice(0, 5) // MAX_SPELLS = 5 (mob_template.move §17.21, #1406)
@@ -949,15 +840,7 @@ export async function seed_full_corpus() {
           spells,
           lootVec(
             tx,
-            loot.map((l) =>
-              lootEntry(
-                tx,
-                OUT.items[l.item],
-                bp(l.chance),
-                l.min ?? 1,
-                l.max ?? 1
-              )
-            )
+            loot.map((l) => lootEntry(tx, OUT.items[l.item], bp(l.chance), l.min ?? 1, l.max ?? 1))
           ),
           tx.pure.u64(mob_xp_required(m)),
         ],
@@ -986,15 +869,9 @@ export async function seed_full_corpus() {
     ])
   const mobCreatedOf = async (r) => {
     const ids = (r.objectChanges || [])
-      .filter(
-        (c) =>
-          c.type === 'created' &&
-          (c.objectType || '').endsWith('::mob_template::MobTemplate')
-      )
+      .filter((c) => c.type === 'created' && (c.objectType || '').endsWith('::mob_template::MobTemplate'))
       .map((c) => c.objectId)
-    const objs = ids.length
-      ? await multiGetObjectsChunked(sui_client, ids, { showContent: true })
-      : []
+    const objs = ids.length ? await multiGetObjectsChunked(sui_client, ids, { showContent: true }) : []
     return objs.map((o) => ({
       id: o.data.objectId,
       key: mobContentKey(o.data.content.fields),
@@ -1037,9 +914,7 @@ export async function seed_full_corpus() {
       (batch) => preflightExactBatch(batch, buildMobsInto),
       async (batch, offset) => {
         const label = `mobs:${offset}`
-        const r = await execBatch(label, batch.length, (tx) =>
-          buildMobsInto(tx, batch)
-        )
+        const r = await execBatch(label, batch.length, (tx) => buildMobsInto(tx, batch))
         resolveBatch(batch, mobRowKey, await mobCreatedOf(r)).forEach(landMob)
         delete OUT.pendingDigests[label]
         persist()
@@ -1063,9 +938,7 @@ export async function seed_full_corpus() {
         ],
       })
     })
-    const WID = wr
-      ? createdId(wr, '::world::World')
-      : OUT.worlds.find((w) => w.wid === W.id)?.id
+    const WID = wr ? createdId(wr, '::world::World') : OUT.worlds.find((w) => w.wid === W.id)?.id
     if (!WID) {
       OUT.skipped.push({
         kind: 'world',
@@ -1078,8 +951,7 @@ export async function seed_full_corpus() {
       .map((room) => room.map((k) => OUT.mobs[k]?.id).filter(Boolean))
       .filter((room) => room.length)
     await exec(`${label}:author`, (tx) => {
-      const g = (fn, args) =>
-        tx.moveCall({ target: `${CGAME}::world::${fn}`, arguments: args })
+      const g = (fn, args) => tx.moveCall({ target: `${CGAME}::world::${fn}`, arguments: args })
       const d = W.density ?? DENSITY // dense-from-minute-one; per-world override via world.json W.density
       g('set_density', [
         tx.object(CAP.game),
@@ -1091,12 +963,7 @@ export async function seed_full_corpus() {
         tx.object(VER.game),
       ])
       if (Array.isArray(W.band) && W.band[0])
-        g('set_required_level', [
-          tx.object(CAP.game),
-          tx.object(WID),
-          tx.pure.u16(W.band[0]),
-          tx.object(VER.game),
-        ])
+        g('set_required_level', [tx.object(CAP.game), tx.object(WID), tx.pure.u16(W.band[0]), tx.object(VER.game)])
       // NODE CHARGES (07-12 tuning: "spawn packs of 10-20 wheat, less herbs, less ores"): min/max qty from
       // pack_qty_for_job's band (farmer 10-20 / herbalist 4-8 / miner 2-4); authored min/max overrides
       // per-row. Yield AMOUNT per gather stays the job-level roll, untouched.
@@ -1185,12 +1052,7 @@ export async function seed_full_corpus() {
           tx.object(VER.game),
         ])
       for (const room of rooms)
-        g('add_dungeon_room', [
-          tx.object(CAP.game),
-          tx.object(WID),
-          tx.pure.vector('id', room),
-          tx.object(VER.game),
-        ])
+        g('add_dungeon_room', [tx.object(CAP.game), tx.object(WID), tx.pure.vector('id', room), tx.object(VER.game)])
     })
     const resourcePacks = (W.resources || []).map((res) => {
       const pack = pack_qty_for_job(res.job ?? 0, res.min_qty, res.max_qty)
@@ -1215,8 +1077,7 @@ export async function seed_full_corpus() {
     // resume guard (2026-07-13): a skip-resume run used to push a DUPLICATE entry per world (40-row manifest
     // → the frontend projection would otherwise expose the world twice); one entry per wid, ever.
     if (!OUT.worlds.find((w) => w.wid === W.id)) OUT.worlds.push(entry)
-    if (!OUT.world)
-      OUT.world = { id: WID, biome: W.biome, seed: world_seed(W.id) } // primary world (up_gold adminDials + bot slice)
+    if (!OUT.world) OUT.world = { id: WID, biome: W.biome, seed: world_seed(W.id) } // primary world (up_gold adminDials + bot slice)
     persist()
   }
 
@@ -1252,10 +1113,7 @@ export async function seed_full_corpus() {
     const batch = sales.slice(i, i + CHUNK)
     await exec(`shop:${i}`, (tx) => {
       for (const s of batch) {
-        const supply =
-          s.supply != null
-            ? optSome(tx, 'u64', tx.pure.u64(s.supply))
-            : optNone(tx, 'u64')
+        const supply = s.supply != null ? optSome(tx, 'u64', tx.pure.u64(s.supply)) : optNone(tx, 'u64')
         tx.moveCall({
           target: `${CITEMS}::shop::create_sale`,
           arguments: [
@@ -1401,15 +1259,9 @@ export async function seed_full_corpus() {
 
   const allSpells = []
   for (const file of spellFiles)
-    for (const sp of JSON.parse(
-      fs.readFileSync(path.join(spellsDir, file), 'utf8')
-    ))
-      allSpells.push(sp)
+    for (const sp of JSON.parse(fs.readFileSync(path.join(spellsDir, file), 'utf8'))) allSpells.push(sp)
   const seenSpellKeys = new Set() // corpus-dupe dedupe — a dup (class,unlock,id) would abort the derived claim
-  const spellRows = allSpells.filter(
-    (sp) =>
-      !seenSpellKeys.has(spellRowKey(sp)) && seenSpellKeys.add(spellRowKey(sp))
-  )
+  const spellRows = allSpells.filter((sp) => !seenSpellKeys.has(spellRowKey(sp)) && seenSpellKeys.add(spellRowKey(sp)))
   await backfillPending('spells:', spellCreatedOf, (created) =>
     claimCreated(
       spellRows.filter((sp) => !OUT.spells[spellRowKey(sp)]),
@@ -1444,9 +1296,7 @@ export async function seed_full_corpus() {
       (batch) => preflightExactBatch(batch, buildSpellsInto, spellProbe),
       async (batch, offset) => {
         const label = `spells:${offset}`
-        const r = await execBatch(label, batch.length, (tx) =>
-          buildSpellsInto(tx, batch)
-        )
+        const r = await execBatch(label, batch.length, (tx) => buildSpellsInto(tx, batch))
         resolveBatch(batch, spellRowKey, spellCreatedOf(r)).forEach(landSpell)
         delete OUT.pendingDigests[label]
         persist()
@@ -1460,12 +1310,8 @@ export async function seed_full_corpus() {
     `items:${Object.keys(OUT.items).length} mobs:${Object.keys(OUT.mobs).length} spells:${Object.keys(OUT.spells).length} recipes:${OUT.recipes.length} shop:${OUT.shop.length} worlds:${OUT.worlds.length} categories:${OUT.categories.length}`
   )
   if (OUT.skipped.length)
-    console.log(
-      `SKIPPED (shape drift) x${OUT.skipped.length}: ${JSON.stringify(OUT.skipped.slice(0, 20))}`
-    )
-  console.log(
-    `gas: ${OUT.gas.totalSui.toFixed(4)} SUI (${gasMist} MIST) · manifest → ${OUT_PATH}`
-  )
+    console.log(`SKIPPED (shape drift) x${OUT.skipped.length}: ${JSON.stringify(OUT.skipped.slice(0, 20))}`)
+  console.log(`gas: ${OUT.gas.totalSui.toFixed(4)} SUI (${gasMist} MIST) · manifest → ${OUT_PATH}`)
   return OUT
 }
 
@@ -1492,9 +1338,7 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   seed_full_corpus().catch((e) => {
     persist()
     console.error(`\nFULL CORPUS SEED STOPPED: ${e.message}`)
-    console.error(
-      `partial manifest persisted → ${OUT_PATH} (digests: ${Object.keys(OUT.digests).length})`
-    )
+    console.error(`partial manifest persisted → ${OUT_PATH} (digests: ${Object.keys(OUT.digests).length})`)
     process.exit(1)
   })
 }

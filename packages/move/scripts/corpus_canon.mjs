@@ -13,13 +13,13 @@
 /** Duplicate keys resolve FIRST-WINS. @template {{ key: string }} T @param {T[]} rows @returns {T[]} */
 export function canonical_rows(rows) {
   const seen = new Set()
-  return (rows ?? []).filter(row => !seen.has(row.key) && seen.add(row.key))
+  return (rows ?? []).filter((row) => !seen.has(row.key) && seen.add(row.key))
 }
 
 /** `key → value_of(canonical row)` — the projection every consumer of a corpus row must read. */
 export function canonical_map(rows, value_of) {
-  return new Map(canonical_rows(rows).map(row => [row.key, value_of(row)]))
+  return new Map(canonical_rows(rows).map((row) => [row.key, value_of(row)]))
 }
 
 /** The authored eligibility ceiling of a mob row, with the same fallback chain fresh authoring uses. */
-export const mob_level_of = mob => mob.maxLevel ?? mob.minLevel ?? 1
+export const mob_level_of = (mob) => mob.maxLevel ?? mob.minLevel ?? 1

@@ -17,17 +17,10 @@ const PUBLISH_PACKAGES = [
   { name: 'dungeon', dependencies: ['aresrpg', 'engine'] },
 ]
 
-export const TICKET_ORDER = Object.freeze(
-  PUBLISH_PACKAGES.map(({ name }) => name)
-)
+export const TICKET_ORDER = Object.freeze(PUBLISH_PACKAGES.map(({ name }) => name))
 
 export const PKG_DEPS = Object.freeze(
-  Object.fromEntries(
-    PUBLISH_PACKAGES.map(({ name, dependencies }) => [
-      name,
-      Object.freeze(dependencies),
-    ])
-  )
+  Object.fromEntries(PUBLISH_PACKAGES.map(({ name, dependencies }) => [name, Object.freeze(dependencies)]))
 )
 
 export const RELEASE_PACKAGE_SET = TICKET_ORDER

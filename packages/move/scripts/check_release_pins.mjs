@@ -48,26 +48,19 @@ const RELEASE_PATH = 'packages/sdk/src/deployment/release.json'
  * Pure. → [] when `packages` is exactly the expected set with a usable row each; otherwise one
  * complaint per missing, unexpected, empty, or duplicate-cap row.
  */
-export function release_set_violations(
-  packages,
-  expected = RELEASE_PACKAGE_SET
-) {
+export function release_set_violations(packages, expected = RELEASE_PACKAGE_SET) {
   const rows = Object.entries(packages ?? {})
   const names = rows.map(([name]) => name)
   const out = []
-  for (const name of expected)
-    if (!names.includes(name)) out.push(`missing package row: ${name}`)
-  for (const name of names)
-    if (!expected.includes(name)) out.push(`unexpected package row: ${name}`)
+  for (const name of expected) if (!names.includes(name)) out.push(`missing package row: ${name}`)
+  for (const name of names) if (!expected.includes(name)) out.push(`unexpected package row: ${name}`)
   for (const [name, row] of rows) {
     if (!row?.latest) out.push(`${name}: no pinned \`latest\``)
-    if (!row?.upgrade_cap)
-      out.push(`${name}: no \`upgrade_cap\` to check it against`)
+    if (!row?.upgrade_cap) out.push(`${name}: no \`upgrade_cap\` to check it against`)
   }
   const caps = rows.map(([, row]) => row?.upgrade_cap).filter(Boolean)
   for (const cap of new Set(caps))
-    if (caps.filter((c) => c === cap).length > 1)
-      out.push(`upgrade_cap ${cap} is claimed by more than one package`)
+    if (caps.filter((c) => c === cap).length > 1) out.push(`upgrade_cap ${cap} is claimed by more than one package`)
   return out
 }
 
@@ -96,22 +89,16 @@ async function read_cap_packages(client, cap_ids) {
   return Object.fromEntries(
     cap_ids.map((cap_id, index) => {
       const object = objects?.[index]
-      return [
-        cap_id,
-        object instanceof Error ? null : (object?.json?.package ?? null),
-      ]
+      return [cap_id, object instanceof Error ? null : (object?.json?.package ?? null)]
     })
   )
 }
 
 async function main(network = 'testnet') {
   const { SuiGrpcClient } = await import('@mysten/sui/grpc')
-  const release = JSON.parse(
-    fs.readFileSync(path.join(repo, RELEASE_PATH), 'utf8')
-  )
+  const release = JSON.parse(fs.readFileSync(path.join(repo, RELEASE_PATH), 'utf8'))
   const packages = release?.networks?.[network]?.packages
-  if (!packages)
-    throw new Error(`${RELEASE_PATH} has no networks.${network}.packages`)
+  if (!packages) throw new Error(`${RELEASE_PATH} has no networks.${network}.packages`)
 
   // The set assert runs BEFORE any chain read: a deleted row cannot be checked against the chain,
   // so absence has to be caught by shape, not by the loop that walks what is present (#1305 review).
@@ -127,8 +114,7 @@ async function main(network = 'testnet') {
 
   const client = new SuiGrpcClient({
     network,
-    baseUrl:
-      process.env.SUI_GRPC_URL || `https://fullnode.${network}.sui.io:443`,
+    baseUrl: process.env.SUI_GRPC_URL || `https://fullnode.${network}.sui.io:443`,
   })
   const cap_ids = [
     ...new Set(
@@ -137,21 +123,14 @@ async function main(network = 'testnet') {
         .filter(Boolean)
     ),
   ]
-  const rows = compare_release_pins(
-    packages,
-    await read_cap_packages(client, cap_ids)
-  )
+  const rows = compare_release_pins(packages, await read_cap_packages(client, cap_ids))
 
-  console.log(
-    `== AresRPG release-pin chain gate (${network}: UpgradeCap.package vs ${RELEASE_PATH} latest, #770) ==`
-  )
+  console.log(`== AresRPG release-pin chain gate (${network}: UpgradeCap.package vs ${RELEASE_PATH} latest, #770) ==`)
   for (const line of format_pin_rows(rows)) console.log(`  ${line}`)
 
   const broken = rows.filter((row) => row.status !== 'ok')
   if (!broken.length) {
-    console.log(
-      `RELEASE PIN GATE PASSED. every ${network} package pins the chain's newest version.`
-    )
+    console.log(`RELEASE PIN GATE PASSED. every ${network} package pins the chain's newest version.`)
     return 0
   }
   console.log(
@@ -166,9 +145,7 @@ async function main(network = 'testnet') {
 if (process.argv[1] && path.resolve(process.argv[1]) === script_path) {
   const index = process.argv.indexOf('--network')
   try {
-    process.exitCode = await main(
-      index === -1 ? 'testnet' : process.argv[index + 1]
-    )
+    process.exitCode = await main(index === -1 ? 'testnet' : process.argv[index + 1])
   } catch (error) {
     console.error(`release-pin gate: ${error.message}`)
     process.exitCode = 2

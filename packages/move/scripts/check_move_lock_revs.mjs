@@ -82,8 +82,7 @@ function strip_comment(line) {
   return line
 }
 
-const inline_value = (inline, key) =>
-  inline?.match(new RegExp(`${key}\\s*=\\s*"([^"]*)"`))?.[1] ?? null
+const inline_value = (inline, key) => inline?.match(new RegExp(`${key}\\s*=\\s*"([^"]*)"`))?.[1] ?? null
 
 // → [{ env, name, framework, rev }] for framework entries only (git sources under the sui repo).
 export function parse_lock_framework_revs(content) {
@@ -120,8 +119,7 @@ export function parse_manifest(content) {
   const environments = []
   const git_deps = {}
   for (const table of parse_toml_tables(content)) {
-    if (table.header === 'environments')
-      environments.push(...Object.keys(table.keys))
+    if (table.header === 'environments') environments.push(...Object.keys(table.keys))
     const dep = table.header?.match(/^dependencies\.(.+)$/)
     if (dep && table.keys.git) git_deps[dep[1]] = unquote(table.keys.rev)
   }
@@ -135,9 +133,7 @@ const unquote = (v) => (v ?? '').replace(/^"|"$/g, '')
 // re-pinning the manifests — the drift that produced the dual — fails this gate instead of a
 // ceremony.
 export function expected_cli_commit(checks_yml) {
-  return (
-    checks_yml.match(/SUI_VERSION:\s*sui\s+\S+-([0-9a-f]{8,})/)?.[1] ?? null
-  )
+  return checks_yml.match(/SUI_VERSION:\s*sui\s+\S+-([0-9a-f]{8,})/)?.[1] ?? null
 }
 
 // Pure. → one violation row per (env, framework) that resolves to more than one rev.
@@ -165,38 +161,26 @@ export function dual_rev_violations(rows) {
 // single revisions, and by any arbitrary rev at all; each of those is a violation here.
 export function matrix_violations({ manifest, rows, pins, expected_commit }) {
   const out = []
-  const declared = manifest.environments.length
-    ? manifest.environments
-    : Object.keys(pins)
-  const manifest_framework =
-    manifest.git_deps.Sui ?? manifest.git_deps.MoveStdlib
+  const declared = manifest.environments.length ? manifest.environments : Object.keys(pins)
+  const manifest_framework = manifest.git_deps.Sui ?? manifest.git_deps.MoveStdlib
 
-  if (
-    manifest_framework &&
-    expected_commit &&
-    !manifest_framework.startsWith(expected_commit)
-  )
+  if (manifest_framework && expected_commit && !manifest_framework.startsWith(expected_commit))
     out.push(
       `manifest pins the framework at ${manifest_framework.slice(0, 12)} but CI installs ${expected_commit} — re-pin every manifest when the CLI moves`
     )
 
   for (const [dep, rev] of Object.entries(manifest.git_deps))
-    if (!/^[0-9a-f]{40}$/.test(rev ?? ''))
-      out.push(`[dependencies.${dep}] rev = "${rev}" is not a pin`)
+    if (!/^[0-9a-f]{40}$/.test(rev ?? '')) out.push(`[dependencies.${dep}] rev = "${rev}" is not a pin`)
 
   for (const env of declared) {
     const env_pins = pins[env]
     if (!env_pins) {
-      out.push(
-        `environment "${env}" is declared but has no pinned entries in the lock`
-      )
+      out.push(`environment "${env}" is declared but has no pinned entries in the lock`)
       continue
     }
     for (const framework of ['Sui', 'MoveStdlib']) {
       const wanted = manifest.git_deps[framework]
-      const found = rows.filter(
-        (r) => r.env === env && r.framework === FRAMEWORK_NAMES[framework]
-      )
+      const found = rows.filter((r) => r.env === env && r.framework === FRAMEWORK_NAMES[framework])
       if (!found.length) {
         out.push(`${env}: no ${framework} entry in the lock`)
         continue
@@ -209,14 +193,9 @@ export function matrix_violations({ manifest, rows, pins, expected_commit }) {
     for (const [dep, rev] of Object.entries(manifest.git_deps)) {
       if (dep === 'Sui' || dep === 'MoveStdlib') continue
       const found = env_pins[dep]
-      if (!found)
-        out.push(
-          `${env}: manifest depends on ${dep} but the lock pins no such entry`
-        )
+      if (!found) out.push(`${env}: manifest depends on ${dep} but the lock pins no such entry`)
       else if (found !== rev)
-        out.push(
-          `${env}/${dep}: lock pins ${found.slice(0, 8)} but the manifest pins ${rev.slice(0, 8)}`
-        )
+        out.push(`${env}/${dep}: lock pins ${found.slice(0, 8)} but the manifest pins ${rev.slice(0, 8)}`)
     }
   }
   return out
@@ -245,10 +224,7 @@ function move_files(root, filename) {
 
 export function main(root) {
   const failures = []
-  const checks_yml_path = path.resolve(
-    root,
-    '../../.github/workflows/checks.yml'
-  )
+  const checks_yml_path = path.resolve(root, '../../.github/workflows/checks.yml')
   const expected_commit = fs.existsSync(checks_yml_path)
     ? expected_cli_commit(fs.readFileSync(checks_yml_path, 'utf8'))
     : null
@@ -271,9 +247,7 @@ export function main(root) {
     const manifest = parse_manifest(fs.readFileSync(manifest_path, 'utf8'))
 
     for (const violation of dual_rev_violations(rows)) {
-      const detail = violation.revs
-        .map(({ rev, names }) => `${rev.slice(0, 8)} (${names.join(', ')})`)
-        .join(' vs ')
+      const detail = violation.revs.map(({ rev, names }) => `${rev.slice(0, 8)} (${names.join(', ')})`).join(' vs ')
       failures.push(`${label}  ${violation.key}: ${detail}`)
     }
     for (const row of matrix_violations({
@@ -302,14 +276,9 @@ export function main(root) {
   return 1
 }
 
-if (
-  process.argv[1] &&
-  path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)
-) {
+if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   const index = process.argv.indexOf('--root')
   const root =
-    index === -1
-      ? path.resolve(fileURLToPath(import.meta.url), '../..')
-      : path.resolve(process.argv[index + 1])
+    index === -1 ? path.resolve(fileURLToPath(import.meta.url), '../..') : path.resolve(process.argv[index + 1])
   process.exitCode = main(root)
 }

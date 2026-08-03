@@ -9,10 +9,7 @@ import { fromBase64 as from_base64 } from '@mysten/sui/utils'
 import { normalize_mob_template } from '../../frontend/src/chain/read_templates.js'
 import { STAT_BIAS } from '../../frontend/src/chain/stat_bias.js'
 
-import {
-  normalize_seed_mob_stats,
-  seed_mob_stat_values,
-} from './seed_mob_stats.mjs'
+import { normalize_seed_mob_stats, seed_mob_stat_values } from './seed_mob_stats.mjs'
 
 const PACKAGE_ID = `0x${'1'.padStart(64, '0')}`
 const MOB_ID = `0x${'2'.padStart(64, '0')}`
@@ -21,9 +18,7 @@ const chain_stats_from_seed = (seed_stats) => {
   const tx = new Transaction()
   tx.moveCall({
     target: `${PACKAGE_ID}::spell::new_stats`,
-    arguments: seed_mob_stat_values(seed_stats, STAT_BIAS).map((value) =>
-      tx.pure.u64(value)
-    ),
+    arguments: seed_mob_stat_values(seed_stats, STAT_BIAS).map((value) => tx.pure.u64(value)),
   })
   const values = tx
     .getData()

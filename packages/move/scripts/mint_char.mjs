@@ -13,20 +13,11 @@ import { decodeSuiPrivateKey } from '@mysten/sui/cryptography'
 
 import { getClient, normalizeReceipt } from './ceremony_lib.mjs'
 
-const {
-  ARESRPG_PACKAGE_ID: PKG,
-  ARES_ROOT: ROOT,
-  CHARACTER_POLICY: POLICY,
-  VERSION,
-} = process.env
+const { ARESRPG_PACKAGE_ID: PKG, ARES_ROOT: ROOT, CHARACTER_POLICY: POLICY, VERSION } = process.env
 if (!PKG || !ROOT || !POLICY || !VERSION)
-  throw new Error(
-    'need ARESRPG_PACKAGE_ID, ARES_ROOT, CHARACTER_POLICY, VERSION'
-  )
+  throw new Error('need ARESRPG_PACKAGE_ID, ARES_ROOT, CHARACTER_POLICY, VERSION')
 // Dry-run sender (any funded testnet address); override via SENDER=. Not used in EXECUTE mode (derived from the key).
-const SENDER =
-  process.env.SENDER ||
-  '0x7920d7587a619112d13fe01027a591254dfd6770bb77441c8ad9b9780db6b2c5'
+const SENDER = process.env.SENDER || '0x7920d7587a619112d13fe01027a591254dfd6770bb77441c8ad9b9780db6b2c5'
 // char params: WINR / senshi / male / colors #ffffff,#d9af57,#8b6539 → u32 RGB
 const NAME = 'WINR',
   CLASSE = 'senshi',
@@ -103,10 +94,6 @@ if (process.env.DRY_RUN === '1') {
   console.log('MINT status:', r.effects?.status?.status, '| digest:', r.digest)
   console.log(
     'Character locked in personal kiosk:',
-    (r.objectChanges || []).some((c) =>
-      /::character::Character/.test(c.objectType || '')
-    )
-      ? 'YES ✓'
-      : '(check kiosk)'
+    (r.objectChanges || []).some((c) => /::character::Character/.test(c.objectType || '')) ? 'YES ✓' : '(check kiosk)'
   )
 }

@@ -30,14 +30,7 @@ import os from 'node:os'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-import {
-  MOVE_DIR,
-  MANIFEST_PATH,
-  PKG_DEPS,
-  parsePublishedToml,
-  getNetwork,
-  getClient,
-} from './ceremony_lib.mjs'
+import { MOVE_DIR, MANIFEST_PATH, PKG_DEPS, parsePublishedToml, getNetwork, getClient } from './ceremony_lib.mjs'
 import { assert_env } from './env_guard.mjs'
 
 // EVERY publishable package, both modes (#1243): the old four-package default silently omitted
@@ -45,10 +38,7 @@ import { assert_env } from './env_guard.mjs'
 // release.json. A package the gate never checks is a ceremony wedge by construction, so the default
 // is the publish set itself and stays that way as packages are added.
 const DEFAULT_PACKAGES = Object.keys(PKG_DEPS)
-const RELEASE_PATH = path.resolve(
-  MOVE_DIR,
-  '../sdk/src/deployment/release.json'
-)
+const RELEASE_PATH = path.resolve(MOVE_DIR, '../sdk/src/deployment/release.json')
 
 // object_size ceiling the chain enforces on a published/upgraded Move package (protocol parameter
 // `max_object_size`, protocol version 130). Publish/upgrade creates a MovePackage object; exceeding
@@ -140,15 +130,8 @@ export function ci_context(env = process.env) {
 // Fail-closed on every context this does not recognise: an unrecognised CI event carrying the marker
 // is refused rather than trusted, because the one thing that must never happen is the window opening
 // on a master-bound run.
-export function republish_window_verdict({
-  marker_present,
-  ci,
-  event,
-  base_ref,
-  ref_name,
-}) {
-  if (!marker_present)
-    return { mode: 'compat', reason: 'no REPUBLISH_WINDOW marker' }
+export function republish_window_verdict({ marker_present, ci, event, base_ref, ref_name }) {
+  if (!marker_present) return { mode: 'compat', reason: 'no REPUBLISH_WINDOW marker' }
   // A CONTRADICTORY context is refused before the local-run branch (#1305 review): "not CI" used to
   // rest on GITHUB_ACTIONS alone, so unsetting one variable while still supplying pull_request/master
   // facts downgraded a master-bound run to a permissive local one. If any GitHub context fact is
@@ -167,8 +150,7 @@ export function republish_window_verdict({
   if (event === 'pull_request' && !base_ref)
     return {
       mode: 'refused',
-      reason:
-        'REPUBLISH_WINDOW marker on a pull_request with no base ref — refusing rather than guessing',
+      reason: 'REPUBLISH_WINDOW marker on a pull_request with no base ref — refusing rather than guessing',
     }
   if (event === 'pull_request')
     return base_ref === 'edge'
@@ -278,12 +260,8 @@ function measurePackageSize(pkgPath, buildRoot) {
   let moduleMapOverhead = 1 // module_map VecMap entry-count ULEB128 prefix
   let typeOriginBytes = 1 // type_origin_table Vec entry-count ULEB128 prefix
 
-  for (const file of fs
-    .readdirSync(srcDir)
-    .filter((f) => f.endsWith('.move'))) {
-    const content = stripLineComments(
-      fs.readFileSync(path.join(srcDir, file), 'utf8')
-    )
+  for (const file of fs.readdirSync(srcDir).filter((f) => f.endsWith('.move'))) {
+    const content = stripLineComments(fs.readFileSync(path.join(srcDir, file), 'utf8'))
     const modMatch = content.match(/^module\s+[a-zA-Z0-9_]+::([a-zA-Z0-9_]+)/m)
     if (!modMatch) continue
     const [, modName] = modMatch
@@ -292,18 +270,11 @@ function measurePackageSize(pkgPath, buildRoot) {
 
     const mvBytes = fs.statSync(mvPath).size
     ownBytes += mvBytes
-    moduleMapOverhead +=
-      uleb128Len(modName.length) + modName.length + uleb128Len(mvBytes)
+    moduleMapOverhead += uleb128Len(modName.length) + modName.length + uleb128Len(mvBytes)
 
-    for (const [, typeName] of content.matchAll(
-      /\b(?:public\s+)?(?:struct|enum)\s+([A-Za-z_][A-Za-z0-9_]*)/g
-    ))
+    for (const [, typeName] of content.matchAll(/\b(?:public\s+)?(?:struct|enum)\s+([A-Za-z_][A-Za-z0-9_]*)/g))
       typeOriginBytes +=
-        uleb128Len(modName.length) +
-        modName.length +
-        uleb128Len(typeName.length) +
-        typeName.length +
-        OBJECT_ID_BYTES
+        uleb128Len(modName.length) + modName.length + uleb128Len(typeName.length) + typeName.length + OBJECT_ID_BYTES
   }
 
   // Every transitively-linked dependency package shows up as its own subdirectory under
@@ -311,9 +282,7 @@ function measurePackageSize(pkgPath, buildRoot) {
   // that directory listing is exact, no "INCLUDING DEPENDENCY" stdout/stderr parsing needed.
   const depsDir = path.join(bcDir, 'dependencies')
   const depCount = fs.existsSync(depsDir)
-    ? fs
-        .readdirSync(depsDir, { withFileTypes: true })
-        .filter((d) => d.isDirectory()).length
+    ? fs.readdirSync(depsDir, { withFileTypes: true }).filter((d) => d.isDirectory()).length
     : 0
   const linkageBytes = 1 + depCount * LINKAGE_ENTRY_BYTES
 
@@ -324,26 +293,15 @@ function measurePackageSize(pkgPath, buildRoot) {
 // → { ok, status: 'ok' | 'over-budget' | 'over-ceiling', ceiling_headroom, budget_headroom, line }
 // The ceiling is checked FIRST and reported as its own status: a package over the chain ceiling is
 // unshippable, not merely over policy, and the two must never read the same in a log.
-export function size_verdict({
-  name,
-  size,
-  budget = null,
-  ceiling = MAX_OBJECT_SIZE,
-}) {
+export function size_verdict({ name, size, budget = null, ceiling = MAX_OBJECT_SIZE }) {
   const ceiling_headroom = ceiling - size
   const budget_headroom = budget == null ? null : budget - size
   const margin = (n) => (n < 0 ? `${-n} OVER` : `${n} under`)
   const budget_part =
-    budget == null
-      ? '  budget none (chain ceiling only)'
-      : `  budget ${budget} (${margin(budget_headroom)})`
+    budget == null ? '  budget none (chain ceiling only)' : `  budget ${budget} (${margin(budget_headroom)})`
   const line = `${name} SIZE ${size} / ${ceiling} (${margin(ceiling_headroom)})${budget_part}`
   const status =
-    ceiling_headroom < 0
-      ? 'over-ceiling'
-      : budget_headroom != null && budget_headroom < 0
-        ? 'over-budget'
-        : 'ok'
+    ceiling_headroom < 0 ? 'over-ceiling' : budget_headroom != null && budget_headroom < 0 ? 'over-budget' : 'ok'
   return {
     ok: status === 'ok',
     status,
@@ -434,13 +392,8 @@ master-bound run, so the window can never be promoted to production.`
 // Swap `[published.<net>]`'s published-at for `addr` — string surgery, not a re-parse/re-serialize, so
 // the revert writes the ORIGINAL bytes back untouched (comments, formatting, everything).
 function withPublishedAt(content, net, addr) {
-  const re = new RegExp(
-    `(\\[published\\.${net}\\][\\s\\S]*?published-at\\s*=\\s*)"[^"]*"`
-  )
-  if (!re.test(content))
-    throw new Error(
-      `Published.toml has no [published.${net}] published-at to patch`
-    )
+  const re = new RegExp(`(\\[published\\.${net}\\][\\s\\S]*?published-at\\s*=\\s*)"[^"]*"`)
+  if (!re.test(content)) throw new Error(`Published.toml has no [published.${net}] published-at to patch`)
   return content.replace(re, `$1"${addr}"`)
 }
 
@@ -448,9 +401,7 @@ function withPublishedAt(content, net, addr) {
 // Both streams get concatenated before this runs so a toolchain change never silently blinds the gate.
 function parseCompatErrors(output) {
   const counts = new Map()
-  for (const [, code, reason] of output.matchAll(
-    /error\[Compatibility (E\d{5})\]: ([^\n]+)/g
-  )) {
+  for (const [, code, reason] of output.matchAll(/error\[Compatibility (E\d{5})\]: ([^\n]+)/g)) {
     const key = `${code} ${reason.trim()}`
     counts.set(key, (counts.get(key) ?? 0) + 1)
   }
@@ -473,12 +424,8 @@ function execResult(run, args) {
 
 function isWarningEscalation(output) {
   return (
-    (/warnings? (?:are|were)(?: being)? (?:treated as )?errors?/i.test(
-      output
-    ) ||
-      /error\[E09\d{3}\]/i.test(output)) &&
-    (/warning(?:\[|:)/i.test(output) ||
-      /This warning can be suppressed/i.test(output))
+    (/warnings? (?:are|were)(?: being)? (?:treated as )?errors?/i.test(output) || /error\[E09\d{3}\]/i.test(output)) &&
+    (/warning(?:\[|:)/i.test(output) || /This warning can be suppressed/i.test(output))
   )
 }
 
@@ -491,19 +438,9 @@ export function run_compatibility_probe(args, run = execFileSync) {
   let errors = parseCompatErrors(result.output)
   let warning_failure = null
 
-  if (
-    result.exit_code !== 0 &&
-    errors.size === 0 &&
-    isWarningEscalation(result.output)
-  ) {
-    warning_failure = `exit ${result.exit_code} — ${result.output
-      .trim()
-      .split('\n')
-      .slice(-5)
-      .join(' | ')}`
-    const retry_args = args
-      .filter((arg) => arg !== '--warnings-are-errors')
-      .concat('--silence-warnings')
+  if (result.exit_code !== 0 && errors.size === 0 && isWarningEscalation(result.output)) {
+    warning_failure = `exit ${result.exit_code} — ${result.output.trim().split('\n').slice(-5).join(' | ')}`
+    const retry_args = args.filter((arg) => arg !== '--warnings-are-errors').concat('--silence-warnings')
     result = execResult(run, retry_args)
     errors = parseCompatErrors(result.output)
   }
@@ -520,20 +457,12 @@ async function resolveGroundTruth(client, name, entry) {
     })
     const cap = objects?.[0]
     if (cap instanceof Error) throw cap
-    if (cap?.json?.package)
-      return { target: cap.json.package, source: 'upgrade-cap' }
-    console.warn(
-      `${name}: UpgradeCap content not decoded by the node — falling back to manifest`
-    )
+    if (cap?.json?.package) return { target: cap.json.package, source: 'upgrade-cap' }
+    console.warn(`${name}: UpgradeCap content not decoded by the node — falling back to manifest`)
   } catch (e) {
-    console.warn(
-      `${name}: UpgradeCap read failed (${e?.message ?? e}) — falling back to manifest`
-    )
+    console.warn(`${name}: UpgradeCap read failed (${e?.message ?? e}) — falling back to manifest`)
   }
-  if (!manifestPkg)
-    throw new Error(
-      `${name}: no on-chain cap.package and no manifest pkg/latest — refusing to guess`
-    )
+  if (!manifestPkg) throw new Error(`${name}: no on-chain cap.package and no manifest pkg/latest — refusing to guess`)
   return { target: manifestPkg, source: 'manifest' }
 }
 
@@ -545,16 +474,13 @@ async function checkPackage(client, release, network, name) {
       status: 'error',
       detail: `no "${name}" entry in ${MANIFEST_PATH}`,
     }
-  if (!entry.upgradeCap)
-    return { name, status: 'error', detail: 'manifest entry has no upgradeCap' }
+  if (!entry.upgradeCap) return { name, status: 'error', detail: 'manifest entry has no upgradeCap' }
 
   const { target, source } = await resolveGroundTruth(client, name, entry)
 
   const releasePkg = release?.networks?.[network]?.packages?.[name]?.latest
   if (releasePkg && releasePkg !== target)
-    console.warn(
-      `${name}: release.json .latest (${releasePkg}) disagrees with ${source} (${target}) — using ${source}`
-    )
+    console.warn(`${name}: release.json .latest (${releasePkg}) disagrees with ${source} (${target}) — using ${source}`)
 
   const pkgPath = path.join(MOVE_DIR, name)
   const pubFile = path.join(pkgPath, 'Published.toml')
@@ -562,21 +488,18 @@ async function checkPackage(client, release, network, name) {
   const prior = parsePublishedToml(original, network)
   const needsPatch = prior?.publishedAt !== target
 
-  if (needsPatch)
-    fs.writeFileSync(pubFile, withPublishedAt(original, network, target))
+  if (needsPatch) fs.writeFileSync(pubFile, withPublishedAt(original, network, target))
 
   let probe
   try {
-    probe = run_compatibility_probe(
-      [
-        'client',
-        'upgrade',
-        '--serialize-unsigned-transaction',
-        '--upgrade-capability',
-        entry.upgradeCap,
-        pkgPath,
-      ]
-    )
+    probe = run_compatibility_probe([
+      'client',
+      'upgrade',
+      '--serialize-unsigned-transaction',
+      '--upgrade-capability',
+      entry.upgradeCap,
+      pkgPath,
+    ])
   } catch (e) {
     return {
       name,
@@ -599,8 +522,7 @@ async function checkPackage(client, release, network, name) {
   } catch {
     size = null // the compat leg below already reports why this package does not compile
   } finally {
-    if (size_build_root)
-      fs.rmSync(size_build_root, { recursive: true, force: true })
+    if (size_build_root) fs.rmSync(size_build_root, { recursive: true, force: true })
   }
 
   if (errors.size > 0)
@@ -633,10 +555,7 @@ async function checkPackage(client, release, network, name) {
 
 function assert_known_packages(packages) {
   for (const name of packages)
-    if (!(name in PKG_DEPS))
-      throw new Error(
-        `unknown package "${name}" — one of: ${Object.keys(PKG_DEPS).join(', ')}`
-      )
+    if (!(name in PKG_DEPS)) throw new Error(`unknown package "${name}" — one of: ${Object.keys(PKG_DEPS).join(', ')}`)
 }
 
 async function main() {
@@ -656,17 +575,13 @@ async function main() {
     console.error('════════════════════════════════════════════════════════')
     console.error('  REPUBLISH WINDOW REFUSED — this run is master-bound.')
     console.error(`  ${verdict.reason}`)
-    console.error(
-      '  Delete packages/move/REPUBLISH_WINDOW to close the window; the compat teeth return with it.'
-    )
+    console.error('  Delete packages/move/REPUBLISH_WINDOW to close the window; the compat teeth return with it.')
     console.error('════════════════════════════════════════════════════════')
     return 1
   }
 
   if (args.includes('--mode-check')) {
-    console.log(
-      `preflight mode: ${verdict.mode.toUpperCase()} — ${verdict.reason}`
-    )
+    console.log(`preflight mode: ${verdict.mode.toUpperCase()} — ${verdict.reason}`)
     return 0
   }
 
@@ -683,22 +598,14 @@ async function main() {
     assert_known_packages(packages)
     console.log('════════════════════════════════════════════════════════')
     if (marker_present) {
-      console.log(
-        '  REPUBLISH MODE — compat assertions SUSPENDED, size assertions BINDING.'
-      )
+      console.log('  REPUBLISH MODE — compat assertions SUSPENDED, size assertions BINDING.')
       console.log(`  marker: ${REPUBLISH_MARKER_PATH}`)
-      for (const line of fs
-        .readFileSync(REPUBLISH_MARKER_PATH, 'utf8')
-        .trim()
-        .split('\n'))
-        console.log(`  > ${line}`)
+      for (const line of fs.readFileSync(REPUBLISH_MARKER_PATH, 'utf8').trim().split('\n')) console.log(`  > ${line}`)
       console.log(
         `  every package still fails over ${MAX_OBJECT_SIZE} bytes; delete the marker to restore the compat leg.`
       )
     } else {
-      console.log(
-        '  SIZE-ONLY PREFLIGHT — the PR-time half of the ceremony gate.'
-      )
+      console.log('  SIZE-ONLY PREFLIGHT — the PR-time half of the ceremony gate.')
       console.log(
         `  chain ceiling ${MAX_OBJECT_SIZE} bytes (max_object_size); per-package budgets fail EARLIER, on purpose.`
       )
@@ -713,18 +620,14 @@ async function main() {
   const packages = requested.length ? requested : DEFAULT_PACKAGES
   assert_known_packages(packages)
 
-  const release = fs.existsSync(RELEASE_PATH)
-    ? JSON.parse(fs.readFileSync(RELEASE_PATH, 'utf8'))
-    : null
+  const release = fs.existsSync(RELEASE_PATH) ? JSON.parse(fs.readFileSync(RELEASE_PATH, 'utf8')) : null
   const client = getClient(network)
 
   let any_failed = false
   for (const name of packages) {
     const result = await checkPackage(client, release, network, name)
     if (result.status === 'compatible') {
-      console.log(
-        `${name} COMPATIBLE  (target ${result.target}, from ${result.source})`
-      )
+      console.log(`${name} COMPATIBLE  (target ${result.target}, from ${result.source})`)
     } else if (result.status === 'incompatible') {
       any_failed = true
       const detail = [...result.errors].map(([k, n]) => `${n}x${k}`).join('  ')
@@ -757,10 +660,7 @@ async function main() {
 
 // Guarded so the pure republish-window verdict can be imported and unit-tested without the CLI half
 // (which needs a fullnode, an identity and a live upgrade cap) ever running.
-if (
-  process.argv[1] &&
-  path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)
-)
+if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url))
   try {
     process.exitCode = await main()
   } catch (e) {

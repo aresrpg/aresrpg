@@ -38,12 +38,7 @@
     "cloak",
     "title"
   ],
-  "classes": [
-    "senshi",
-    "yajin",
-    "tomoda",
-    "shugo"
-  ],
+  "classes": ["senshi", "yajin", "tomoda", "shugo"],
   "items": {
     "relic_razmo": "0x9b8bfac64bf9840fadb0f63c2764de350510c46ab286d8fe6df54f5e4814bfc5",
     "bag_wheat": "0x828b92294aa43bfdcc91765d68fb0a79de2228fea2637e21e193da508d0cb28f",

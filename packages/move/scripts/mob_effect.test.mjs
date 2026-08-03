@@ -33,9 +33,7 @@ const captureEffect = (row) => {
 describe('mobEffect — authored corpus bands survive the phase-5 wire builder', () => {
   test('Alley Bunny Kick keeps both damageMin and damageMax endpoints', () => {
     const effect = captureEffect(bandedMobEffect)
-    expect(effect.target).toBe(
-      '0xfoundation::spell_effect::new_effect_ranged'
-    )
+    expect(effect.target).toBe('0xfoundation::spell_effect::new_effect_ranged')
     expect(effect.arguments.slice(2, 4)).toEqual([1, 3])
     expect(effect.arguments).toHaveLength(12)
   })

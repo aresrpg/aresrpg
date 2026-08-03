@@ -9,11 +9,11 @@
 //
 // Unlike every other test beside seed_full_corpus.mjs, this one drives the module through a REAL import —
 // that is the whole point of the row: a text read cannot tell a live module from a corpse.
-import { test, expect, afterAll } from 'bun:test'
 import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
 
+import { test, expect, afterAll } from 'bun:test'
 import { Ed25519Keypair } from '@mysten/sui/keypairs/ed25519'
 
 const here = import.meta.dir
@@ -55,10 +55,7 @@ const load_seeder = () => import('./seed_full_corpus.mjs')
 const write_corpus = (rows) => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'ares-corpus-'))
   fs.mkdirSync(path.join(dir, '01_test_biome'), { recursive: true })
-  fs.writeFileSync(
-    path.join(dir, '01_test_biome', 'items.json'),
-    JSON.stringify(rows)
-  )
+  fs.writeFileSync(path.join(dir, '01_test_biome', 'items.json'), JSON.stringify(rows))
   return dir
 }
 
@@ -92,9 +89,7 @@ test('ARES_SEED_DIR is the first candidate; the defaults are the sibling seed ch
   process.env.ARES_SEED_DIR = override // restore for the tests below
   expect(defaults.length).toBe(2)
   // sibling checkout (the seed repo's own ARES_MOVE_DIR idiom, pointed the other way), then the merged layout
-  expect(defaults[0].endsWith(path.join('aresrpg-seed', 'seed', 'mainnet'))).toBe(
-    true
-  )
+  expect(defaults[0].endsWith(path.join('aresrpg-seed', 'seed', 'mainnet'))).toBe(true)
   expect(defaults[1]).toBe(path.resolve(here, '..', '..', '..', 'seed', 'mainnet'))
 })
 
@@ -116,9 +111,7 @@ test('a candidate qualifies only when it HOLDS numbered biome directories', asyn
 
 test('loadCorpus() reads the ARES_SEED_DIR corpus at CALL time (the republish-blocking door)', async () => {
   const { loadCorpus } = await load_seeder()
-  process.env.ARES_SEED_DIR = write_corpus([
-    { slug: 'test_bread', category: 'CONSUMABLE', heal: 10 },
-  ])
+  process.env.ARES_SEED_DIR = write_corpus([{ slug: 'test_bread', category: 'CONSUMABLE', heal: 10 }])
   const corpus = loadCorpus()
   expect(corpus.biomes).toEqual(['01_test_biome'])
   expect(corpus.items.map((i) => i.slug)).toEqual(['test_bread'])

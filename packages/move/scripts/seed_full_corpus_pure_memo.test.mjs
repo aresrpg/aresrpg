@@ -129,13 +129,10 @@ const built = (rows) => {
 const count_inputs = (rows) => built(rows).inputs.length
 
 /** The bytes an input actually carries — the only thing the chain ever sees. */
-const input_bytes = (data, index) => [
-  ...Buffer.from(data.inputs[index].Pure.bytes, 'base64'),
-]
+const input_bytes = (data, index) => [...Buffer.from(data.inputs[index].Pure.bytes, 'base64')]
 /** Resolve a command argument through the input table to its wire bytes. */
 const argument_bytes = (data, command_index, argument_index) => {
-  const argument =
-    data.commands[command_index].MoveCall.arguments[argument_index]
+  const argument = data.commands[command_index].MoveCall.arguments[argument_index]
   expect(argument.$kind).toBe('Input')
   return input_bytes(data, argument.Input)
 }
@@ -186,22 +183,8 @@ describe('PHASE 8 spells — repeated pure inputs must not blow the 2048 PTB inp
       const u8 = (v) => [v]
       const u64 = (v) => [v, 0, 0, 0, 0, 0, 0, 0]
       // new_effect(kind, element, value, area_shape, area_size, target_filter, chance, turns, stat, flags, phase)
-      const expected = [
-        u8(7),
-        u8(3),
-        u64(12),
-        u8(1),
-        u64(5),
-        u8(2),
-        u8(55),
-        u8(3),
-        u8(9),
-        u8(0),
-        u8(0),
-      ]
-      expected.forEach((bytes, i) =>
-        expect(argument_bytes(data, 0, i)).toEqual(bytes)
-      )
+      const expected = [u8(7), u8(3), u64(12), u8(1), u64(5), u8(2), u8(55), u8(3), u8(9), u8(0), u8(0)]
+      expected.forEach((bytes, i) => expect(argument_bytes(data, 0, i)).toEqual(bytes))
       // …and the equal-valued pair really did share ONE input (the collapse under test, not a coincidence).
       const args = data.commands[0].MoveCall.arguments
       expect(args[1].Input).toBe(args[7].Input)

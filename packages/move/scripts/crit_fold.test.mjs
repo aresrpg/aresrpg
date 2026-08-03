@@ -124,7 +124,12 @@ describe('verify_folded — the REAL gates own the pins, the envelope, and the d
   test('a NON-crit corpus issue never false-reds this receipt (isolation: only critical is checked)', () => {
     // a pet-shaped row with an out-of-envelope NON-crit stat + a legal critical must stay GREEN here
     const { folded } = fold_corpus([
-      item({ slug: 'noncrit_probe', category: 'AMULET', level: 199, stats: { min: {}, max: { air_resistance: 999, critical_chance: 2 } } }),
+      item({
+        slug: 'noncrit_probe',
+        category: 'AMULET',
+        level: 199,
+        stats: { min: {}, max: { air_resistance: 999, critical_chance: 2 } },
+      }),
     ])
     expect(verify_folded(folded).ok).toBe(true)
   })

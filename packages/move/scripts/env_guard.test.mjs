@@ -2,12 +2,13 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 // Coverage for THE ASSERT-ENV GATE + SWITCH-BACK LAW (env_guard.mjs). Pure/injected for the primitives;
 // one subprocess proves a WIRED script (ceremony_upgrade) refuses under a mocked MAINNET active-env.
-import { describe, test, expect } from 'bun:test'
 import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
 import { execFileSync } from 'node:child_process'
 import { fileURLToPath } from 'node:url'
+
+import { describe, test, expect } from 'bun:test'
 import { Ed25519Keypair } from '@mysten/sui/keypairs/ed25519'
 
 import {
@@ -28,8 +29,7 @@ const __dir = path.dirname(fileURLToPath(import.meta.url))
 // catch an empty scan are proven against the real command, never a stubbed reader.
 const fixture_repo = ({ move_files = ['aresrpg/Move.toml'] } = {}) => {
   const dir = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'envguard-repo-')))
-  const run = (...args) =>
-    execFileSync('git', ['-C', dir, ...args], { encoding: 'utf8', stdio: 'pipe' })
+  const run = (...args) => execFileSync('git', ['-C', dir, ...args], { encoding: 'utf8', stdio: 'pipe' })
   run('init', '--quiet', '--initial-branch=main')
   run('config', 'user.email', 'gate@aresrpg.test')
   run('config', 'user.name', 'gate')
@@ -46,10 +46,7 @@ const fixture_repo = ({ move_files = ['aresrpg/Move.toml'] } = {}) => {
 
 const fixture_config = (active_env) => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'envguard-'))
-  fs.writeFileSync(
-    path.join(dir, 'client.yaml'),
-    `active_env: ${active_env}\nactive_address: "0xabc"\n`
-  )
+  fs.writeFileSync(path.join(dir, 'client.yaml'), `active_env: ${active_env}\nactive_address: "0xabc"\n`)
   return dir
 }
 
@@ -138,9 +135,7 @@ describe('WIRED: ceremony_upgrade refuses under a mocked MAINNET active-env', ()
     }
     expect(err).toBeDefined()
     expect(err.status).not.toBe(0)
-    expect(`${err.stdout || ''}${err.stderr || ''}`).toMatch(
-      /ENV GUARD REFUSED.*requires "testnet"/s
-    )
+    expect(`${err.stdout || ''}${err.stderr || ''}`).toMatch(/ENV GUARD REFUSED.*requires "testnet"/s)
   })
 })
 
@@ -158,25 +153,18 @@ describe('trunk ancestry (#1298) — the wrong-TREE door', () => {
   })
 
   test('a HEAD trunk never absorbed is REFUSED — the #1298 ceremony', () => {
-    expect(() => assert_trunk_ancestry(io(sha('a'), sha('b'), false))).toThrow(
-      /TRUNK ANCESTRY REFUSED/
-    )
+    expect(() => assert_trunk_ancestry(io(sha('a'), sha('b'), false))).toThrow(/TRUNK ANCESTRY REFUSED/)
   })
 
   test('an unreadable HEAD or edge refuses too — never a silent pass', () => {
-    expect(() => assert_trunk_ancestry(io('', sha('b'), true))).toThrow(
-      /could not read HEAD/
-    )
-    expect(() => assert_trunk_ancestry(io(sha('a'), '', true))).toThrow(
-      /could not read/
-    )
+    expect(() => assert_trunk_ancestry(io('', sha('b'), true))).toThrow(/could not read HEAD/)
+    expect(() => assert_trunk_ancestry(io(sha('a'), '', true))).toThrow(/could not read/)
   })
 })
 
 describe('tree integrity (#1305) — the wrong-BYTES door', () => {
   const clean = () => ''
-  const dirty = () =>
-    ' M packages/move/aresrpg/sources/world.move\n?? packages/move/aresrpg/sources/injected.move'
+  const dirty = () => ' M packages/move/aresrpg/sources/world.move\n?? packages/move/aresrpg/sources/injected.move'
 
   const tracked = () => 'packages/move/aresrpg/Move.toml'
   const move_tree = path.resolve(__dir, '..')
@@ -233,9 +221,7 @@ describe('tree integrity (#1305) — the wrong-BYTES door', () => {
 
   test('clean_tree_verdict ignores blank lines, counts real ones', () => {
     expect(clean_tree_verdict(['', '   ', '']).ok).toBe(true)
-    expect(clean_tree_verdict([' M a.move', '?? b.move']).reason).toContain(
-      '2 uncommitted'
-    )
+    expect(clean_tree_verdict([' M a.move', '?? b.move']).reason).toContain('2 uncommitted')
   })
 
   test('path_inside_tree_verdict accepts the compiled tree and its children only', () => {
@@ -253,13 +239,8 @@ describe('missing scope (#1567) — an empty scan is NOT a clean tree', () => {
   test('a repository with no packages/move FAILS, naming the scope', () => {
     const repo = fixture_repo({ move_files: [] }) // a real repo, real `git status` — just no Move scope
     try {
-      expect(() =>
-        assert_publishable_tree({ ancestry: () => {}, root: repo, paths: [] })
-      ).toThrow(
-        new RegExp(
-          `PUBLISH SCOPE REFUSED \\(#1567\\).*${path.join(repo, 'packages/move')}.*no git-tracked file`,
-          's'
-        )
+      expect(() => assert_publishable_tree({ ancestry: () => {}, root: repo, paths: [] })).toThrow(
+        new RegExp(`PUBLISH SCOPE REFUSED \\(#1567\\).*${path.join(repo, 'packages/move')}.*no git-tracked file`, 's')
       )
     } finally {
       fs.rmSync(repo, { recursive: true, force: true })
@@ -269,9 +250,7 @@ describe('missing scope (#1567) — an empty scan is NOT a clean tree', () => {
   test('the same repository WITH a tracked Move scope passes the control', () => {
     const repo = fixture_repo()
     try {
-      expect(() =>
-        assert_publishable_tree({ ancestry: () => {}, root: repo, paths: [] })
-      ).not.toThrow()
+      expect(() => assert_publishable_tree({ ancestry: () => {}, root: repo, paths: [] })).not.toThrow()
     } finally {
       fs.rmSync(repo, { recursive: true, force: true })
     }
@@ -301,9 +280,9 @@ describe('verified root (#1566) — a root that is only INSIDE a repository is r
   })
 
   test('a path that does not exist is REFUSED', () => {
-    expect(() =>
-      resolve_verified_root({ supplied: path.join(os.tmpdir(), 'no-such-root-42') })
-    ).toThrow(/PUBLISH ROOT REFUSED \(#1566\)/)
+    expect(() => resolve_verified_root({ supplied: path.join(os.tmpdir(), 'no-such-root-42') })).toThrow(
+      /PUBLISH ROOT REFUSED \(#1566\)/
+    )
   })
 
   // The gold localnet rig, end to end and offline: a COPY of this guard under <tmp>/.build/move/scripts
@@ -320,9 +299,9 @@ describe('verified root (#1566) — a root that is only INSIDE a repository is r
     try {
       // Unnamed: the copy derives `<tmp>/.build` — inside a repository, but not its root.
       delete process.env[VERIFIED_ROOT_ENV]
-      expect(() =>
-        copied.assert_publishable_tree({ ancestry: () => {}, paths: [] })
-      ).toThrow(/PUBLISH ROOT REFUSED \(#1566\)/)
+      expect(() => copied.assert_publishable_tree({ ancestry: () => {}, paths: [] })).toThrow(
+        /PUBLISH ROOT REFUSED \(#1566\)/
+      )
 
       // Named: every check runs, against a real repository — and the copy's own packages pass.
       process.env[VERIFIED_ROOT_ENV] = repo
@@ -335,9 +314,7 @@ describe('verified root (#1566) — a root that is only INSIDE a repository is r
 
       // Told where to look, never what to skip: a dirty Move scope in that repository still refuses.
       fs.writeFileSync(path.join(repo, 'packages/move/aresrpg/Move.toml'), '# edited\n')
-      expect(() =>
-        copied.assert_publishable_tree({ ancestry: () => {}, paths: [] })
-      ).toThrow(/PUBLISH TREE REFUSED/)
+      expect(() => copied.assert_publishable_tree({ ancestry: () => {}, paths: [] })).toThrow(/PUBLISH TREE REFUSED/)
     } finally {
       if (previous === undefined) delete process.env[VERIFIED_ROOT_ENV]
       else process.env[VERIFIED_ROOT_ENV] = previous

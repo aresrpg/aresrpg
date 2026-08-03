@@ -33,7 +33,9 @@ const repo_dir = resolve(script_dir, '..', '..', '..')
 const id = (n) => `0x${String(n).padStart(64, '0')}`
 
 const load_corpus = () => {
-  const dirs = read_dir(join(repo_dir, 'seed', 'mainnet')).filter((name) => /^\d\d_/.test(name)).sort()
+  const dirs = read_dir(join(repo_dir, 'seed', 'mainnet'))
+    .filter((name) => /^\d\d_/.test(name))
+    .sort()
   return dirs.flatMap((dir) => {
     const p = join(repo_dir, 'seed', 'mainnet', dir, 'mobs.json')
     return exists(p) ? JSON.parse(read_file(p, 'utf8')) : []
@@ -63,7 +65,14 @@ test('raw_chance_bp is UNCLAMPED so the rate gate can see an out-of-range author
 // ── seed_loot_entry: slug resolution + REFUSAL on an unminted slug ──────────────────────────────────
 test('seed_loot_entry resolves a slug→id and builds the u16 tuple', () => {
   const e = seed_loot_entry({ item: 'fleece', chance: 0.5, min: 1, max: 3 }, { fleece: id(7) })
-  expect(e).toMatchObject({ item_template: id(7), chance_bp: 5000, min_qty: 1, max_qty: 3, slug: 'fleece', chance: 0.5 })
+  expect(e).toMatchObject({
+    item_template: id(7),
+    chance_bp: 5000,
+    min_qty: 1,
+    max_qty: 3,
+    slug: 'fleece',
+    chance: 0.5,
+  })
 })
 
 test('seed_loot_entry THROWS with .unresolved on an unminted slug (never a silent skip)', () => {
@@ -96,8 +105,16 @@ test('desired_loot_by_key builds the per-mob vector, slices to MAX_LOOT, first-w
 
 test('desired_loot_by_key buckets a mob with an unminted loot slug as unresolved (whole mob, no partial)', () => {
   const { desired, unresolved } = desired_loot_by_key(
-    [{ key: 'gob', loot: [{ item: 'real', chance: 0.5 }, { item: 'phantom', chance: 0.1 }] }],
-    { real: id(1) },
+    [
+      {
+        key: 'gob',
+        loot: [
+          { item: 'real', chance: 0.5 },
+          { item: 'phantom', chance: 0.1 },
+        ],
+      },
+    ],
+    { real: id(1) }
   )
   expect(desired.gob).toBeUndefined() // never a partial desired — the whole mob refuses
   expect(unresolved).toEqual([{ key: 'gob', slug: 'phantom' }])
@@ -110,7 +127,9 @@ test('read_template_loot reads the flat gRPC loot vector', () => {
 })
 
 test('read_template_loot honors the .fields nesting fallback', () => {
-  const json = { fields: { loot: { fields: [{ fields: { item_template: id(3), chance_bp: 300, min_qty: 1, max_qty: 1 } }] } } }
+  const json = {
+    fields: { loot: { fields: [{ fields: { item_template: id(3), chance_bp: 300, min_qty: 1, max_qty: 1 } }] } },
+  }
   expect(read_template_loot(json)).toEqual([{ item_template: id(3), chance_bp: 300, min_qty: 1, max_qty: 1 }])
 })
 
@@ -134,7 +153,12 @@ test('diff_mob_loot: a chance_bp change lands in `changed`', () => {
 
 test('diff_mob_loot: a NEW entry (the fill class — chain shorter than seed) lands in `changed`', () => {
   const manifest_mobs = { wooling: { id: id(1) } }
-  const desired_by_key = { wooling: [entry({ item_template: id(1) }), entry({ item_template: id(2), chance_bp: 5000, chance: 0.5, slug: 'fleece' })] }
+  const desired_by_key = {
+    wooling: [
+      entry({ item_template: id(1) }),
+      entry({ item_template: id(2), chance_bp: 5000, chance: 0.5, slug: 'fleece' }),
+    ],
+  }
   const chain_by_id = { [id(1)]: [{ item_template: id(1), chance_bp: 5000, min_qty: 1, max_qty: 3 }] } // fleece absent on chain
   const out = diff_mob_loot({ manifest_mobs, desired_by_key, chain_by_id })
   expect(out.changed).toHaveLength(1)
@@ -150,7 +174,12 @@ test('diff_mob_loot is idempotent — chain == desired ⇒ 0 changed', () => {
 })
 
 test('diff_mob_loot buckets unreadable chain (read_failed), and splits missing_seed vs unresolved', () => {
-  const manifest_mobs = { unreadable: { id: id(1) }, orphan: { id: id(2) }, phantom_loot: { id: id(3) }, bad_id: { id: '0xnope' } }
+  const manifest_mobs = {
+    unreadable: { id: id(1) },
+    orphan: { id: id(2) },
+    phantom_loot: { id: id(3) },
+    bad_id: { id: '0xnope' },
+  }
   const out = diff_mob_loot({
     manifest_mobs,
     desired_by_key: {}, // none built
@@ -170,9 +199,19 @@ test('loot_entries_equal is position-wise and length-sensitive', () => {
 
 test('describe_loot_change narrates NEW / rate-move / removed by slug', () => {
   const slug_by_id = { [id(1)]: 'crude_branch', [id(2)]: 'wooling_fleece', [id(3)]: 'stale' }
-  const current = [{ item_template: id(1), chance_bp: 3500, min_qty: 1, max_qty: 2 }, { item_template: id(3), chance_bp: 100, min_qty: 1, max_qty: 1 }]
-  const desired = [entry({ item_template: id(1), chance_bp: 7200, min_qty: 1, max_qty: 2 }), entry({ item_template: id(2), chance_bp: 5000 })]
-  expect(describe_loot_change(current, desired, slug_by_id)).toEqual(['crude_branch 3500→7200', 'wooling_fleece +NEW@5000', 'stale -removed'])
+  const current = [
+    { item_template: id(1), chance_bp: 3500, min_qty: 1, max_qty: 2 },
+    { item_template: id(3), chance_bp: 100, min_qty: 1, max_qty: 1 },
+  ]
+  const desired = [
+    entry({ item_template: id(1), chance_bp: 7200, min_qty: 1, max_qty: 2 }),
+    entry({ item_template: id(2), chance_bp: 5000 }),
+  ]
+  expect(describe_loot_change(current, desired, slug_by_id)).toEqual([
+    'crude_branch 3500→7200',
+    'wooling_fleece +NEW@5000',
+    'stale -removed',
+  ])
 })
 
 // ── batching ──────────────────────────────────────────────────────────────────────────────────────
@@ -185,7 +224,11 @@ test('build_batches chunks at ≤MAX_MOBS_PER_PTB', () => {
 
 // ── THE COVERAGE TOOTH ─────────────────────────────────────────────────────────────────────────────
 test('coverage_check passes when every ruled row is planned', () => {
-  expect(coverage_check({ ruled: ['a', 'b'], planned: ['a', 'b'] })).toMatchObject({ ok: true, covered_pct: 100, uncovered: [] })
+  expect(coverage_check({ ruled: ['a', 'b'], planned: ['a', 'b'] })).toMatchObject({
+    ok: true,
+    covered_pct: 100,
+    uncovered: [],
+  })
 })
 
 test('coverage_check REFUSES a dropped ruled row and zero-planned-against-nonzero-ruled', () => {
@@ -205,12 +248,16 @@ test('loot_rate_outliers FLAGS a >100% (raw>10000) rate, a 0% rate, and min>max'
 })
 
 test('loot_rate_outliers PASSES a clean entry (rate at the cap, min≤max)', () => {
-  expect(loot_rate_outliers([{ key: 'ok', id: id(1), desired: [entry({ chance: 1, min_qty: 1, max_qty: 3 })] }])).toEqual([])
+  expect(
+    loot_rate_outliers([{ key: 'ok', id: id(1), desired: [entry({ chance: 1, min_qty: 1, max_qty: 3 })] }])
+  ).toEqual([])
 })
 
 // ── SPOT-AGREEMENT (seat rider ②) ────────────────────────────────────────────────────────────────────
 test('loot_spot_agreement re-derives bp from the raw chance and agrees on a faithful mapping', () => {
-  const changed = [{ key: 'wooling', id: id(1), desired: [entry({ slug: 'wooling_fleece', chance: 0.5, chance_bp: 5000 })] }]
+  const changed = [
+    { key: 'wooling', id: id(1), desired: [entry({ slug: 'wooling_fleece', chance: 0.5, chance_bp: 5000 })] },
+  ]
   const rows = loot_spot_agreement(changed, ['wooling'])
   expect(rows).toHaveLength(1)
   expect(rows[0]).toMatchObject({ slug: 'wooling_fleece', chance: 0.5, planned_bp: 5000, expect_bp: 5000, agree: true })

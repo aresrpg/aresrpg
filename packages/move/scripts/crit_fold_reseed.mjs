@@ -25,8 +25,7 @@ const script_dir = dirname(fileURLToPath(import.meta.url))
 const repo_root = resolve(script_dir, '..', '..', '..')
 const seed_mainnet = join(repo_root, 'seed', 'mainnet')
 
-const git = (args) =>
-  execFileSync('git', args, { cwd: repo_root, encoding: 'utf8', maxBuffer: 128 * 1024 * 1024 })
+const git = (args) => execFileSync('git', args, { cwd: repo_root, encoding: 'utf8', maxBuffer: 128 * 1024 * 1024 })
 
 const world_directories = () =>
   readdirSync(seed_mainnet, { withFileTypes: true })
@@ -41,8 +40,7 @@ const detect_pre_fold_ref = () => {
   return `${commit}^`
 }
 
-const rows_with_world = (json, world) =>
-  JSON.parse(json).map((row) => ({ ...row, world: row.world ?? world }))
+const rows_with_world = (json, world) => JSON.parse(json).map((row) => ({ ...row, world: row.world ?? world }))
 
 const load_pre_fold_rows = (ref) => {
   const rows = []
@@ -96,7 +94,9 @@ const main = () => {
   const drift = verify_drift(deltas, current_by_slug)
 
   console.log(`=== CRIT-FOLD RESEED AUDIT (DRY_RUN) · pre-fold ref=${ref} ===`)
-  console.log(`pre-fold rows=${pre_fold.length} · current rows=${current.length} · affected (carry 11/12)=${deltas.length}`)
+  console.log(
+    `pre-fold rows=${pre_fold.length} · current rows=${current.length} · affected (carry 11/12)=${deltas.length}`
+  )
   print_delta_table(deltas)
 
   console.log('\n=== LAW (item_stat_law 19-pin allowlist + band envelope · strict_key_schema dead-key ban) ===')

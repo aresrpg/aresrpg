@@ -24,8 +24,7 @@ async function get_objects_json(client, object_ids) {
     })
     objects.forEach((object, page_index) => {
       const requested_id = page_ids[page_index]
-      objects_by_id[requested_id] =
-        object instanceof Error ? null : (object?.json ?? null)
+      objects_by_id[requested_id] = object instanceof Error ? null : (object?.json ?? null)
     })
   }
   return objects_by_id
@@ -35,8 +34,7 @@ function required_spell_ids(seed_rows, seed_manifest) {
   return seed_rows.map((row) => {
     const key = spell_row_key(row)
     const object_id = seed_manifest.spells?.[key]?.id
-    if (!object_id)
-      throw new Error(`spell ${key}: no object id in seed_manifest.spells`)
+    if (!object_id) throw new Error(`spell ${key}: no object id in seed_manifest.spells`)
     return object_id
   })
 }
@@ -46,19 +44,15 @@ function required_item_ids(seed_rows, seed_manifest) {
     .filter((row) => row?.stats?.min && row?.stats?.max)
     .map((row) => {
       const object_id = seed_manifest.items?.[row.slug]
-      if (!object_id)
-        throw new Error(`item ${row.slug}: no object id in seed_manifest.items`)
+      if (!object_id) throw new Error(`item ${row.slug}: no object id in seed_manifest.items`)
       return object_id
     })
 }
 
 function required_world_ids(seed_rows, seed_manifest) {
   return seed_rows.map((world) => {
-    const object_id = seed_manifest.worlds?.find(
-      (entry) => entry.wid === world.id
-    )?.id
-    if (!object_id)
-      throw new Error(`world ${world.id}: no object id in seed_manifest.worlds`)
+    const object_id = seed_manifest.worlds?.find((entry) => entry.wid === world.id)?.id
+    if (!object_id) throw new Error(`world ${world.id}: no object id in seed_manifest.worlds`)
     return object_id
   })
 }
@@ -72,20 +66,12 @@ async function fetch_item_state(client, object_ids, type_package) {
     field_requests.push({
       template_id: object_id,
       field: 'stats_min',
-      field_id: derive_dynamic_field_id(
-        object_id,
-        min_key_type,
-        empty_struct_key
-      ),
+      field_id: derive_dynamic_field_id(object_id, min_key_type, empty_struct_key),
     })
     field_requests.push({
       template_id: object_id,
       field: 'stats_max',
-      field_id: derive_dynamic_field_id(
-        object_id,
-        max_key_type,
-        empty_struct_key
-      ),
+      field_id: derive_dynamic_field_id(object_id, max_key_type, empty_struct_key),
     })
   }
   const fields = await get_objects_json(
@@ -103,8 +89,7 @@ async function fetch_item_state(client, object_ids, type_package) {
     ])
   )
   for (const request of field_requests)
-    state[request.template_id][request.field] =
-      fields[request.field_id]?.value ?? null
+    state[request.template_id][request.field] = fields[request.field_id]?.value ?? null
   return state
 }
 
@@ -125,7 +110,10 @@ export async function fetch_world_state(client, object_ids) {
       field_id: derive_dynamic_field_id(
         versioned_id,
         'u64',
-        bcs.u64().serialize(Number(inner.version ?? 0)).toBytes()
+        bcs
+          .u64()
+          .serialize(Number(inner.version ?? 0))
+          .toBytes()
       ),
     })
   }
@@ -147,13 +135,7 @@ export async function fetch_world_state(client, object_ids) {
   return state
 }
 
-export async function fetch_chain_state({
-  client,
-  selected_legs,
-  seeds,
-  seed_manifest,
-  manifest,
-}) {
+export async function fetch_chain_state({ client, selected_legs, seeds, seed_manifest, manifest }) {
   const chain_state = { spells: {}, items: {}, worlds: {} }
   if (selected_legs.includes('spells')) {
     const object_ids = required_spell_ids(seeds.spells, seed_manifest)
@@ -161,11 +143,7 @@ export async function fetch_chain_state({
   }
   if (selected_legs.includes('items')) {
     const object_ids = required_item_ids(seeds.items, seed_manifest)
-    chain_state.items = await fetch_item_state(
-      client,
-      object_ids,
-      manifest.aresrpg.pkg
-    )
+    chain_state.items = await fetch_item_state(client, object_ids, manifest.aresrpg.pkg)
   }
   if (selected_legs.includes('worlds')) {
     const object_ids = required_world_ids(seeds.worlds, seed_manifest)
@@ -200,8 +178,7 @@ function build_spell_call(transaction, call, context) {
     transaction.pure.u8(call.level),
   ]
   let payload_arguments
-  if (call.function === 'set_level_ap_cost')
-    payload_arguments = [transaction.pure.u64(call.payload.ap_cost)]
+  if (call.function === 'set_level_ap_cost') payload_arguments = [transaction.pure.u64(call.payload.ap_cost)]
   else if (call.function === 'set_level_range')
     payload_arguments = [
       transaction.pure.u64(call.payload.range_min),
@@ -221,9 +198,7 @@ function build_spell_call(transaction, call, context) {
       transaction.pure.bool(call.payload.line_of_sight),
     ]
   else if (call.function === 'set_level_effects') {
-    const effects = call.payload.effects.map((effect) =>
-      build_effect(transaction, effect, context.foundation_target)
-    )
+    const effects = call.payload.effects.map((effect) => build_effect(transaction, effect, context.foundation_target))
     const critical = call.payload.crit_effects.map((effect) =>
       build_effect(transaction, effect, context.foundation_target)
     )
@@ -250,10 +225,10 @@ function build_spell_call(transaction, call, context) {
 function build_item_call(transaction, call, context) {
   // The door takes two ItemStatistics values now (#1291) instead of 34 loose u16s, so the stat block is built
   // in-PTB by the same `item_stats::new` constructor the Move tests use and threaded in as a result.
-  const stat_block = values =>
+  const stat_block = (values) =>
     transaction.moveCall({
       target: `${call.target}::item_stats::new`,
-      arguments: values.map(value => transaction.pure.u16(value)),
+      arguments: values.map((value) => transaction.pure.u16(value)),
     })
   transaction.moveCall({
     target: `${call.target}::admin::set_template_stats`,
@@ -268,10 +243,7 @@ function build_item_call(transaction, call, context) {
 }
 
 function build_world_call(transaction, call, context) {
-  const common = [
-    transaction.object(context.aresrpg_admin),
-    transaction.object(call.object_id),
-  ]
+  const common = [transaction.object(context.aresrpg_admin), transaction.object(call.object_id)]
   let payload_arguments = []
   if (call.function === 'add_resource_entry')
     payload_arguments = [
@@ -294,21 +266,12 @@ function build_world_call(transaction, call, context) {
   // `clear_tables` wipes the level vector and the boss mask alongside the tables, so the planner re-emits both
   // after the rows exist. Both take (cap, world, ..payload.., version) — the same shape the adders use.
   else if (call.function === 'set_mob_level')
-    payload_arguments = [
-      transaction.pure.id(call.payload.template_id),
-      transaction.pure.u16(call.payload.level),
-    ]
-  else if (call.function === 'set_boss_mask')
-    payload_arguments = [transaction.pure.vector('u16', call.payload.rows)]
-  else if (call.function !== 'clear_tables')
-    throw new Error(`unknown world authoring call ${call.function}`)
+    payload_arguments = [transaction.pure.id(call.payload.template_id), transaction.pure.u16(call.payload.level)]
+  else if (call.function === 'set_boss_mask') payload_arguments = [transaction.pure.vector('u16', call.payload.rows)]
+  else if (call.function !== 'clear_tables') throw new Error(`unknown world authoring call ${call.function}`)
   transaction.moveCall({
     target: `${call.target}::world::${call.function}`,
-    arguments: [
-      ...common,
-      ...payload_arguments,
-      transaction.object(context.aresrpg_version),
-    ],
+    arguments: [...common, ...payload_arguments, transaction.object(context.aresrpg_version)],
   })
 }
 
@@ -324,12 +287,7 @@ export function build_transaction(transaction_plan, context) {
   return transaction
 }
 
-export async function execute_live_transaction({
-  client,
-  signer,
-  transaction_plan,
-  context,
-}) {
+export async function execute_live_transaction({ client, signer, transaction_plan, context }) {
   const transaction = build_transaction(transaction_plan, context)
   const raw = await client.signAndExecuteTransaction({
     signer,
@@ -337,8 +295,7 @@ export async function execute_live_transaction({
     include: { effects: true, objectTypes: true, events: true },
   })
   const receipt = normalize_receipt(raw)
-  if (receipt.digest)
-    await client.waitForTransaction({ digest: receipt.digest })
+  if (receipt.digest) await client.waitForTransaction({ digest: receipt.digest })
   return {
     digest: receipt.digest,
     status: receipt.effects.status.status,

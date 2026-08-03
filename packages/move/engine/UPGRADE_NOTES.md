@@ -8,23 +8,25 @@ live fight survive the upgrade.
 ## What changed
 
 ### 1. Minimum turn duration (instant-pass bot guard)
+
 `turn_ms` was a max-timeout only, so a bot could pass its turn in 0 ms. `actions::act_pass` now asserts the turn
 has lasted at least **`MIN_TURN_MS = 3_000`** before the pass commits — a player takes a minimum of 3s to
 play their turn, enforced contract-side.
 
 - Turn START is derived, not stored: `turn_started = turn_deadline_ms − turn_ms` (`resolve_from` stamps
   `deadline = start + turn_ms` at every turn start). The check is written `now + turn_ms >= turn_deadline_ms +
-  MIN_TURN_MS` so it can never underflow.
-- **MOB waves + the crank are exempt by construction, not by a flag.** Mob turns resolve *inside*
+MIN_TURN_MS` so it can never underflow.
+- **MOB waves + the crank are exempt by construction, not by a flag.** Mob turns resolve _inside_
   `turns::resolve_from` and never route through a pass; the permissionless overdue `crank` gates on the OPPOSITE
   end (`now >= turn_deadline_ms`). The gate lives in `act_pass` alone, so neither is ever throttled.
 - `turn_ms` is config-clamped to `[5_000, 300_000]` (default 45_000), so the `[MIN_TURN_MS, turn_ms]` play window
   is always non-empty.
 
 ### 2. Cast limits (cooldown / casts_per_turn / casts_per_target) — display made honest
+
 `spell_template` stored per-level `casts_per_turn / casts_per_target / cooldown_turns` (+ getters) and the HUD
 displayed them, but the engine enforced **nothing** cross-turn: the old `resolve_player_cast` check compared the
-level's `casts_per_turn` against the *shared* per-turn action counter (`participant::casts_this_turn`, which weapon
+level's `casts_per_turn` against the _shared_ per-turn action counter (`participant::casts_this_turn`, which weapon
 strikes also increment and which resets every turn) — so cooldowns and per-target caps were unenforced and
 per-turn was conflated. Owner repro: cast a cooldown-4 invisibility **every** turn.
 
@@ -50,11 +52,11 @@ All new state lives as dynamic fields on the `Fight` UID (`fight::uid`/`uid_mut`
 the fight's life — seats are append-only, never reused). Per-turn counters reset **lazily** by comparing a record's
 `last_turn` to the caster's current turn (no turn-start sweep).
 
-| Key (`cast.move`)                    | Value                                          | Purpose                          |
-| ------------------------------------ | ---------------------------------------------- | -------------------------------- |
-| `SeatTurnKey { seat }`               | `u64`                                          | caster's OWN turn counter (clock)|
-| `CastKey { seat, spell }`            | `CastRecord { last_turn, casts_this_turn }`    | cooldown + casts_per_turn        |
-| `TargetKey { seat, spell, cell }`    | `TargetRecord { last_turn, casts }`            | casts_per_target                 |
+| Key (`cast.move`)                 | Value                                       | Purpose                           |
+| --------------------------------- | ------------------------------------------- | --------------------------------- |
+| `SeatTurnKey { seat }`            | `u64`                                       | caster's OWN turn counter (clock) |
+| `CastKey { seat, spell }`         | `CastRecord { last_turn, casts_this_turn }` | cooldown + casts_per_turn         |
+| `TargetKey { seat, spell, cell }` | `TargetRecord { last_turn, casts }`         | casts_per_target                  |
 
 The clock (`SeatTurnKey`) is bumped once per PLAYER turn-start in `turns::resolve_from` (`cast::note_seat_turn`).
 Each living seat takes exactly one turn per round, so it numerically equals @aresrpg/sim's per-round `turn_number`
@@ -64,16 +66,17 @@ abort** (verified: `sui::object::delete` performs no DF-emptiness check); they a
 
 ## Abort codes (new)
 
-| Module                    | Code | Constant           | Meaning                                                     |
-| ------------------------- | ---- | ------------------ | ---------------------------------------------------------- |
-| `aresrpg_fight::actions`  | 108  | `ETurnTooFast`     | pass before `MIN_TURN_MS` elapsed                          |
-| `aresrpg_fight::cast`     | 105  | `ESpellOnCooldown` | last cast of this spell still inside its cooldown window   |
-| `aresrpg_fight::cast`     | 106  | `ECastsPerTarget`  | already hit this target cell `casts_per_target` times      |
+| Module                   | Code | Constant           | Meaning                                                  |
+| ------------------------ | ---- | ------------------ | -------------------------------------------------------- |
+| `aresrpg_fight::actions` | 108  | `ETurnTooFast`     | pass before `MIN_TURN_MS` elapsed                        |
+| `aresrpg_fight::cast`    | 105  | `ESpellOnCooldown` | last cast of this spell still inside its cooldown window |
+| `aresrpg_fight::cast`    | 106  | `ECastsPerTarget`  | already hit this target cell `casts_per_target` times    |
 
 `aresrpg_fight::cast` code **103 `ECastsPerTurn`** is reused (now the proper per-spell cap; formerly the buggy
 shared-counter check).
 
 ### ⚠ Frontend humanization gap (out of scope per constraints — REPORT, do not fix here)
+
 `packages/frontend/src/game/core/abort_copy.js` has **no `cast` module arm** (only a legacy `dungeon_cast` arm),
 and its `actions` arm lacks code 108. So `ESpellOnCooldown`/`ECastsPerTarget`/`ECastsPerTurn`/`ETurnTooFast` will
 fall through to the generic "failed on-chain" toast until a `cast` arm (101–106) and `actions.108` are added. Copy

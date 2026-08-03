@@ -34,7 +34,7 @@ function batch_tx(batch) {
 }
 
 console.log(
-  `signer ${keypair.toSuiAddress()} | ${live ? 'LIVE' : 'DRY-RUN ONLY'} | worlds=${mob_distance_payload.world_count} calls=${mob_distance_payload.call_count}`,
+  `signer ${keypair.toSuiAddress()} | ${live ? 'LIVE' : 'DRY-RUN ONLY'} | worlds=${mob_distance_payload.world_count} calls=${mob_distance_payload.call_count}`
 )
 for (const batch of mob_distance_payload.batches) {
   if (live)
@@ -42,20 +42,8 @@ for (const batch of mob_distance_payload.batches) {
       ceilingSui: ceiling_sui,
     })
   else {
-    const budget = await derive_budget(
-      sui_client,
-      keypair,
-      batch_tx(batch),
-      batch.label,
-      ceiling_sui,
-    )
-    console.log(
-      `  [${batch.label}] calls=${batch.calls.length} dry-run OK, derived budget=${budget} MIST`,
-    )
+    const budget = await derive_budget(sui_client, keypair, batch_tx(batch), batch.label, ceiling_sui)
+    console.log(`  [${batch.label}] calls=${batch.calls.length} dry-run OK, derived budget=${budget} MIST`)
   }
 }
-console.log(
-  live
-    ? '=== MOB DISTANCE PAYLOAD APPLIED ==='
-    : '=== DRY-RUN COMPLETE (nothing executed) ===',
-)
+console.log(live ? '=== MOB DISTANCE PAYLOAD APPLIED ===' : '=== DRY-RUN COMPLETE (nothing executed) ===')

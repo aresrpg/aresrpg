@@ -10,8 +10,8 @@
     "upgrade:testnet": "NETWORK=testnet node -r dotenv/config ./scripts/upgrade.js",
     "upgrade:mainnet": "NETWORK=mainnet node -r dotenv/config ./scripts/upgrade.js",
     "release:prepare": "node ./scripts/release_prepare.mjs",
-    "lint": "eslint . && prettier . --check",
-    "format": "prettier . --write && eslint . --fix",
+    "lint": "eslint . && prettier . --check --config ../../.prettierrc",
+    "format": "prettier . --write --config ../../.prettierrc && eslint . --fix",
     "freeze": "./scripts/emergency/freeze.sh",
     "status": "./scripts/emergency/status.sh"
   },

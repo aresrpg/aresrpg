@@ -36,8 +36,7 @@ export const JOB_IDS = [
  *  @param {number|string|null|undefined} job @returns {number|null} */
 export function resolve_required_job(job) {
   if (job == null) return null
-  if (typeof job === 'number')
-    return Number.isInteger(job) && job >= 0 && job < JOB_IDS.length ? job : null
+  if (typeof job === 'number') return Number.isInteger(job) && job >= 0 && job < JOB_IDS.length ? job : null
   const idx = JOB_IDS.indexOf(String(job))
   return idx >= 0 ? idx : null
 }
@@ -52,7 +51,7 @@ export function resolve_required_job(job) {
 export function damage_lines(dmg) {
   if (dmg == null) return []
   const arr = Array.isArray(dmg) ? dmg : [dmg]
-  return arr.map(d => ({ from: d.from, to: d.to, type: d.type || 'weapon', element: d.element || 'neutral' }))
+  return arr.map((d) => ({ from: d.from, to: d.to, type: d.type || 'weapon', element: d.element || 'neutral' }))
 }
 
 // Shop prices are authored in WHOLE SUI (shop.json `_meta.tiers`); the chain's shop::create_sale takes per-item MIST.
@@ -71,7 +70,7 @@ export function sui_to_sale_mist(price_sui) {
   const mist = BigInt(sui) * SUI_TO_MIST
   if (mist < MIN_SALE_MIST || mist > MAX_SALE_MIST)
     throw new Error(
-      `[seed] shop sale price ${sui} SUI (${mist} MIST) is out of the coherent range [0.01, 10,000,000] SUI — refuse (money-path).`,
+      `[seed] shop sale price ${sui} SUI (${mist} MIST) is out of the coherent range [0.01, 10,000,000] SUI — refuse (money-path).`
     )
   return mist
 }

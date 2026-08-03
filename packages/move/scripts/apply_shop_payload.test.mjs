@@ -6,35 +6,19 @@ import { fileURLToPath as file_url_to_path } from 'node:url'
 
 import { expect, test } from 'bun:test'
 
-import {
-  build_shop_plan,
-  reauthor_targets,
-  resolve_mode,
-  shop_template_ids,
-} from './apply_shop_payload.mjs'
+import { build_shop_plan, reauthor_targets, resolve_mode, shop_template_ids } from './apply_shop_payload.mjs'
 
 const script_dir = dirname(file_url_to_path(import.meta.url))
 const repo_dir = resolve(script_dir, '..', '..', '..')
-const shop_seed = JSON.parse(
-  read_file_sync(join(repo_dir, 'seed', 'mainnet', 'shop.json'), 'utf8')
-)
+const shop_seed = JSON.parse(read_file_sync(join(repo_dir, 'seed', 'mainnet', 'shop.json'), 'utf8'))
 const seed_rows = shop_seed.cosmetics
 const seed_by_slug = new Map(seed_rows.map((row) => [row.slug, row]))
 const seed_manifest = JSON.parse(
-  read_file_sync(
-    join(repo_dir, 'packages', 'move', 'scripts', 'out', 'seed_manifest.json'),
-    'utf8'
-  )
+  read_file_sync(join(repo_dir, 'packages', 'move', 'scripts', 'out', 'seed_manifest.json'), 'utf8')
 )
 
 const targets = {
-  delists: [
-    'cape_lorito_air',
-    'cape_lorito_earth',
-    'cape_lorito_fire',
-    'cape_lorito_water',
-    'corbac_helmet',
-  ],
+  delists: ['cape_lorito_air', 'cape_lorito_earth', 'cape_lorito_fire', 'cape_lorito_water', 'corbac_helmet'],
   renames: [
     'cape_lorito_agility',
     'cape_lorito_chance',
@@ -54,12 +38,7 @@ const targets = {
 // post-2026-07-17 maps momaku/enka_muru to the CORRECTED generation.
 const template_ids = {
   ...shop_template_ids(seed_manifest),
-  ...Object.fromEntries(
-    Object.entries(reauthor_targets).map(([slug, { old_template_id }]) => [
-      slug,
-      old_template_id,
-    ])
-  ),
+  ...Object.fromEntries(Object.entries(reauthor_targets).map(([slug, { old_template_id }]) => [slug, old_template_id])),
 }
 
 const sale_id = (index) => `0x${String(index + 1).padStart(64, '0')}`
@@ -86,9 +65,7 @@ function live_row({ slug, template_id, index, minted = 0, seed_row }) {
 }
 
 const live_rows = [
-  ...targets.delists.map((slug, index) =>
-    live_row({ slug, template_id: template_ids[slug], index })
-  ),
+  ...targets.delists.map((slug, index) => live_row({ slug, template_id: template_ids[slug], index })),
   ...targets.renames.map((slug, index) =>
     live_row({
       slug,
@@ -110,40 +87,20 @@ const live_rows = [
 
 test('real shop seed and live fixture resolve only the 14 approved operations', () => {
   expect(live_rows).toHaveLength(14)
-  expect(Object.keys(shop_template_ids(seed_manifest)).sort()).toEqual(
-    [...targets.delists, ...targets.renames].sort()
-  )
-  expect(Object.keys(reauthor_targets)).toEqual(
-    targets.reauthors.map(([slug]) => slug)
-  )
+  expect(Object.keys(shop_template_ids(seed_manifest)).sort()).toEqual([...targets.delists, ...targets.renames].sort())
+  expect(Object.keys(reauthor_targets)).toEqual(targets.reauthors.map(([slug]) => slug))
 
   const plan = build_shop_plan({ live_rows, seed_rows, seed_manifest })
 
-  expect(Object.keys(plan).sort()).toEqual([
-    'delists',
-    'manifest_receipt',
-    'reauthors',
-    'renames',
-  ])
+  expect(Object.keys(plan).sort()).toEqual(['delists', 'manifest_receipt', 'reauthors', 'renames'])
   expect(plan.manifest_receipt).toEqual([]) // no corrected sale live in this fixture — rows exist post-mint
   expect(plan.delists.map(({ slug }) => slug)).toEqual(targets.delists)
   expect(plan.renames.map(({ slug }) => slug)).toEqual(targets.renames)
-  expect(plan.reauthors.map(({ slug }) => slug)).toEqual(
-    targets.reauthors.map(([slug]) => slug)
-  )
-  expect(plan.reauthors.map(({ fresh_supply }) => fresh_supply)).toEqual([
-    53, 187, 300,
-  ])
+  expect(plan.reauthors.map(({ slug }) => slug)).toEqual(targets.reauthors.map(([slug]) => slug))
+  expect(plan.reauthors.map(({ fresh_supply }) => fresh_supply)).toEqual([53, 187, 300])
+  expect(plan.delists.every(({ steps }) => steps.join(':') === 'set_paused:burn_sale')).toBe(true)
   expect(
-    plan.delists.every(
-      ({ steps }) => steps.join(':') === 'set_paused:burn_sale'
-    )
-  ).toBe(true)
-  expect(
-    plan.reauthors.every(
-      ({ steps }) =>
-        steps.join(':') === 'set_paused:burn_sale:create_template:create_sale'
-    )
+    plan.reauthors.every(({ steps }) => steps.join(':') === 'set_paused:burn_sale:create_template:create_sale')
   ).toBe(true)
   expect(plan.renames.map(({ slug, to }) => [slug, to])).toEqual(
     targets.renames.map((slug) => {
@@ -151,9 +108,7 @@ test('real shop seed and live fixture resolve only the 14 approved operations', 
       return [slug, { name, description }]
     })
   )
-  expect(
-    plan.delists.length + plan.renames.length + plan.reauthors.length
-  ).toBe(14)
+  expect(plan.delists.length + plan.renames.length + plan.reauthors.length).toBe(14)
 })
 
 test('a rerun over corrected text and replacement cloak sales is a zero-op plan', () => {

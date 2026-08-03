@@ -9,7 +9,7 @@
 ///    plan that never emits `set_mob_level` silently erases every authored level.
 import { describe, expect, test } from 'bun:test'
 
-import { build_world_leg } from './reseed_world_plan.mjs'
+import { build_world_leg, role_drift_report } from './reseed_world_plan.mjs'
 
 const TARGET = '0xcafe'
 const WID = 'w1'
@@ -77,7 +77,7 @@ const wrapped_world = {
   },
 }
 
-const plan = chain_state =>
+const plan = (chain_state) =>
   build_world_leg({
     seed_rows,
     mob_rows,
@@ -100,7 +100,7 @@ describe('reseed world plan — wrapped World + authored levels', () => {
     drifted.fields.inner.fields.value.fields.mob_levels = [30, 7]
     const { transactions } = plan({ [OBJ]: drifted })
     expect(transactions.length).toBe(1)
-    const fns = transactions[0].calls.map(call => call.function)
+    const fns = transactions[0].calls.map((call) => call.function)
     expect(fns).toContain('set_mob_level')
   })
 
@@ -108,15 +108,11 @@ describe('reseed world plan — wrapped World + authored levels', () => {
     const { transactions } = plan({
       [OBJ]: { fields: { id: OBJ, inner: { fields: { value: { fields: {} } } } } },
     })
-    const fns = transactions[0].calls.map(call => call.function)
+    const fns = transactions[0].calls.map((call) => call.function)
     // clear_tables wipes the mask too, so it has to come back — and only after the rows it indexes
     expect(fns).toContain('set_boss_mask')
-    expect(fns.lastIndexOf('add_mob_entry')).toBeLessThan(
-      fns.indexOf('set_boss_mask'),
-    )
-    const mask = transactions[0].calls.find(
-      call => call.function === 'set_boss_mask',
-    )
+    expect(fns.lastIndexOf('add_mob_entry')).toBeLessThan(fns.indexOf('set_boss_mask'))
+    const mask = transactions[0].calls.find((call) => call.function === 'set_boss_mask')
     expect(mask.payload.rows).toEqual([1]) // mob_b is the boss row
   })
 
@@ -126,8 +122,8 @@ describe('reseed world plan — wrapped World + authored levels', () => {
       [OBJ]: { fields: { id: OBJ, inner: { fields: { value: { fields: {} } } } } },
     })
     expect(transactions.length).toBe(1)
-    const calls = transactions[0].calls
-    const level_calls = calls.filter(call => call.function === 'set_mob_level')
+    const [{ calls }] = transactions
+    const level_calls = calls.filter((call) => call.function === 'set_mob_level')
     expect(level_calls.length).toBe(2) // one per authored mob row
     // and the accounting must count them — an uncounted call overflows the PTB command budget
     expect(transactions[0].call_count).toBe(calls.length)
@@ -145,9 +141,7 @@ describe('duplicate mob keys canonicalize first-wins, matching fresh authoring',
     worlds: [{ wid: WID, id: OBJ }],
     mobs: { dup: { id: DUP, role: 'normal' } },
   }
-  const dup_seed_rows = [
-    { id: WID, resources: [], mobGroups: [{ mob: 'dup', rate: 0.01 }], dungeonRooms: [] },
-  ]
+  const dup_seed_rows = [{ id: WID, resources: [], mobGroups: [{ mob: 'dup', rate: 0.01 }], dungeonRooms: [] }]
   // the SAME key twice — the first row is the canonical one for both level and role
   const dup_mob_rows = [
     { key: 'dup', role: 'boss', maxLevel: 30 },
@@ -166,23 +160,17 @@ describe('duplicate mob keys canonicalize first-wins, matching fresh authoring',
     })
 
   test('the level comes from the FIRST row, not the last', () => {
-    const level_call = leg().transactions[0].calls.find(
-      call => call.function === 'set_mob_level',
-    )
+    const level_call = leg().transactions[0].calls.find((call) => call.function === 'set_mob_level')
     expect(level_call.payload.level).toBe(30)
   })
 
   test('the role comes from the FIRST row, so the boss mask holds the row', () => {
-    const mask_call = leg().transactions[0].calls.find(
-      call => call.function === 'set_boss_mask',
-    )
+    const mask_call = leg().transactions[0].calls.find((call) => call.function === 'set_boss_mask')
     expect(mask_call?.payload.rows).toEqual([0])
   })
 })
 
 // ── the operator message must describe what the plan EMITS ──────────────────────────────────────────────────
-import { role_drift_report } from './reseed_world_plan.mjs'
-
 /// Role used to be pure projection metadata, so the driver hardcoded "projection-only differences; no chain
 /// calls". Role now drives the boss mask, and a normal↔boss change queues a `set_boss_mask` — a chain call. The
 /// line has to be derived from the leg, or the operator is told the opposite of what is about to run.
@@ -209,9 +197,7 @@ describe('role drift reporting derives from the emitted calls', () => {
 
   test('a leg that queues a boss mask reports it as a fact', () => {
     const leg = build_world_leg({
-      seed_rows: [
-        { id: WID, resources: [], mobGroups: [{ mob: 'b' }], dungeonRooms: [] },
-      ],
+      seed_rows: [{ id: WID, resources: [], mobGroups: [{ mob: 'b' }], dungeonRooms: [] }],
       mob_rows: [{ key: 'b', role: 'boss', maxLevel: 5 }],
       seed_manifest: { worlds: [{ wid: WID, id: OBJ }], mobs: { b: { id: MOB_A, role: 'boss' } } },
       chain_state: {

@@ -8,12 +8,7 @@
 
 import { describe, expect, test } from 'bun:test'
 
-import {
-  diff_mob_xp,
-  read_template_xp,
-  seed_xp_by_key,
-  unminted_seed_keys,
-} from './mob_xp_reauthor_plan.mjs'
+import { diff_mob_xp, read_template_xp, seed_xp_by_key, unminted_seed_keys } from './mob_xp_reauthor_plan.mjs'
 
 const id = (char) => `0x${String(char).repeat(64).slice(0, 64)}`
 
@@ -32,10 +27,7 @@ describe('diff_mob_xp — the shared changed-set both paths consume', () => {
     const plan = diff_mob_xp({ manifest_mobs, seed_xp, chain_xp })
     expect(plan.changed).toEqual([{ key: 'alpha', id: id('a'), from: 2, to: 5 }])
     expect(plan.unchanged).toEqual([{ key: 'bravo', id: id('b'), xp: 10 }])
-    expect(plan.read_failed.map((row) => row.key).sort()).toEqual([
-      'charlie',
-      'delta',
-    ])
+    expect(plan.read_failed.map((row) => row.key).sort()).toEqual(['charlie', 'delta'])
     expect(plan.missing_seed.map((row) => row.key)).toEqual(['echo'])
     expect(plan.total).toBe(5)
   })
@@ -53,11 +45,7 @@ describe('diff_mob_xp — the shared changed-set both paths consume', () => {
       chain_xp: healed,
     })
     expect(plan.changed).toEqual([])
-    expect(plan.unchanged.map((row) => row.key)).toEqual([
-      'alpha',
-      'bravo',
-      'charlie',
-    ])
+    expect(plan.unchanged.map((row) => row.key)).toEqual(['alpha', 'bravo', 'charlie'])
   })
 
   test('--limit trims the SORTED manifest key set deterministically (canary batch)', () => {
@@ -99,8 +87,6 @@ describe('read_template_xp — xp_reward off a mob-template gRPC json', () => {
 
 describe('unminted_seed_keys — seed mobs with no minted template (info only)', () => {
   test('lists seed keys absent from the manifest', () => {
-    expect(unminted_seed_keys({ a: { id: id('a') } }, { a: 5, z: 3 })).toEqual([
-      'z',
-    ])
+    expect(unminted_seed_keys({ a: { id: id('a') } }, { a: 5, z: 3 })).toEqual(['z'])
   })
 })

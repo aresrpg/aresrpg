@@ -9,9 +9,12 @@ import { readFileSync } from 'node:fs'
 import { expect, test } from 'bun:test'
 
 const read_json = (relative_path) => JSON.parse(readFileSync(new URL(relative_path, import.meta.url), 'utf8'))
-const sales = read_json('./fixtures/live_shop_sales.json').sales
-const items = read_json('../../frontend/src/rpc/fixtures/encyclopedia.json').items
-const name_key = (name) => String(name ?? '').trim().toLowerCase()
+const { sales } = read_json('./fixtures/live_shop_sales.json')
+const { items } = read_json('../../frontend/src/rpc/fixtures/encyclopedia.json')
+const name_key = (name) =>
+  String(name ?? '')
+    .trim()
+    .toLowerCase()
 
 test('captured shop rows converge with the served item view by stable name, not receipt template id', () => {
   const live_ids = new Set(items.map((item) => item.template_id))
@@ -23,10 +26,7 @@ test('captured shop rows converge with the served item view by stable name, not 
 })
 
 test('the frontend shop fence reads current /v1 items and has no seed-receipt resolver', () => {
-  const source = readFileSync(
-    new URL('../../frontend/src/chain/read_shop_sales.js', import.meta.url),
-    'utf8'
-  )
+  const source = readFileSync(new URL('../../frontend/src/chain/read_shop_sales.js', import.meta.url), 'utf8')
   expect(source).toContain("get_encyclopedia('items')")
   expect(source).not.toContain('seed_manifest')
   expect(source).not.toContain('is_living_item')

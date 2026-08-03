@@ -2,7 +2,6 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 // Pure world-table planning for reseed_driver.mjs. Kept separate so every driver file stays below 600 LoC.
 
-
 import { canonical_map, mob_level_of } from './corpus_canon.mjs'
 
 const fields_of = (value) => value?.fields ?? value ?? {}
@@ -12,25 +11,18 @@ const id_string = (value) => {
   if (typeof value === 'string') return value
   return String(value?.id ?? value?.bytes ?? value ?? '')
 }
-const rate_bp = (rate) =>
-  Math.min(10_000, Math.max(0, Math.round(as_number(rate) * 10_000)))
+const rate_bp = (rate) => Math.min(10_000, Math.max(0, Math.round(as_number(rate) * 10_000)))
 
 const resource_pack = (row) => {
-  if (row.min_qty != null && row.max_qty != null)
-    return { min: row.min_qty, max: row.max_qty }
-  return (
-    { 0: { min: 10, max: 20 }, 1: { min: 4, max: 8 }, 2: { min: 2, max: 4 } }[
-      row.job
-    ] ?? { min: 1, max: 1 }
-  )
+  if (row.min_qty != null && row.max_qty != null) return { min: row.min_qty, max: row.max_qty }
+  return { 0: { min: 10, max: 20 }, 1: { min: 4, max: 8 }, 2: { min: 2, max: 4 } }[row.job] ?? { min: 1, max: 1 }
 }
 
 function resolve_world_rows(world, seed_manifest, mob_level_by_key, mob_role_by_key) {
   const blockers = []
   const resources = (world.resources ?? []).map((row) => {
     const template_id = seed_manifest.items?.[row.slug]
-    if (!template_id)
-      blockers.push(`world ${world.id}: resource ${row.slug} has no item id`)
+    if (!template_id) blockers.push(`world ${world.id}: resource ${row.slug} has no item id`)
     const pack = resource_pack(row)
     return {
       template_id,
@@ -43,8 +35,7 @@ function resolve_world_rows(world, seed_manifest, mob_level_by_key, mob_role_by_
   })
   const mobs = (world.mobGroups ?? []).map((row) => {
     const template_id = seed_manifest.mobs?.[row.mob]?.id
-    if (!template_id)
-      blockers.push(`world ${world.id}: mob ${row.mob} has no template id`)
+    if (!template_id) blockers.push(`world ${world.id}: mob ${row.mob} has no template id`)
     return {
       template_id,
       rate_bp: rate_bp(row.rate),
@@ -55,10 +46,7 @@ function resolve_world_rows(world, seed_manifest, mob_level_by_key, mob_role_by_
   const dungeon_rooms = (world.dungeonRooms ?? []).map((room, room_index) =>
     room.map((mob_key) => {
       const template_id = seed_manifest.mobs?.[mob_key]?.id
-      if (!template_id)
-        blockers.push(
-          `world ${world.id}: room ${room_index + 1} mob ${mob_key} has no template id`
-        )
+      if (!template_id) blockers.push(`world ${world.id}: room ${room_index + 1} mob ${mob_key} has no template id`)
       return template_id
     })
   )
@@ -67,8 +55,7 @@ function resolve_world_rows(world, seed_manifest, mob_level_by_key, mob_role_by_
   // the template's authored ceiling — the same projection `seed_full_corpus` writes at fresh authoring.
   const mob_levels = (world.mobGroups ?? []).map((row) => {
     const authored = mob_level_by_key.get(row.mob)
-    if (authored === undefined)
-      blockers.push(`world ${world.id}: mob ${row.mob} has no authored level`)
+    if (authored === undefined) blockers.push(`world ${world.id}: mob ${row.mob} has no authored level`)
     return as_number(authored ?? 1)
   })
   // THE BOSS MASK (#1110): row indexes whose authored role is `boss`. `clear_tables` wipes it alongside the
@@ -220,13 +207,7 @@ export function role_drift_report(leg) {
   }
 }
 
-export function build_world_leg({
-  seed_rows,
-  mob_rows,
-  seed_manifest,
-  chain_state,
-  target,
-}) {
+export function build_world_leg({ seed_rows, mob_rows, seed_manifest, chain_state, target }) {
   const blockers = []
   const transactions = []
   const row_deltas = []
@@ -237,9 +218,7 @@ export function build_world_leg({
   const mob_role_by_key = canonical_map(mob_rows, (mob) => mob.role)
 
   for (const world of seed_rows) {
-    const world_entry = seed_manifest.worlds?.find(
-      (entry) => entry.wid === world.id
-    )
+    const world_entry = seed_manifest.worlds?.find((entry) => entry.wid === world.id)
     if (!world_entry?.id) {
       blockers.push(`world ${world.id}: no object id in seed_manifest.worlds`)
       continue
@@ -303,16 +282,10 @@ export function build_world_leg({
     seed_rows: seed_rows.length,
     rows_drifted: transactions.length,
     boss_mask_calls: transactions.reduce(
-      (sum, transaction) =>
-        sum +
-        transaction.calls.filter((call) => call.function === 'set_boss_mask')
-          .length,
+      (sum, transaction) => sum + transaction.calls.filter((call) => call.function === 'set_boss_mask').length,
       0
     ),
-    call_count: transactions.reduce(
-      (sum, transaction) => sum + transaction.call_count,
-      0
-    ),
+    call_count: transactions.reduce((sum, transaction) => sum + transaction.call_count, 0),
     tx_count: transactions.length,
     row_deltas,
     totals,

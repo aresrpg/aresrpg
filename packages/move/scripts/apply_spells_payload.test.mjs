@@ -183,9 +183,16 @@ test('read_template_spells decodes a chain kit into the SAME canonical shape the
 })
 
 test('a kit that differs by ONE encoded field is NOT equal (the readback never rounds off a drift)', () => {
-  const chain = read_template_spells({ spells: [chain_level({ effects: [{ ...chain_level().effects[0], value: '32809' }] })] })
+  const chain = read_template_spells({
+    spells: [chain_level({ effects: [{ ...chain_level().effects[0], value: '32809' }] })],
+  })
   const intended = encode_kit([
-    { ap_cost: 3, range_min: 1, range_max: 4, effects: [{ kind: K_ALTER_STAT, stat: STAT_RAW_DAMAGE, value: 42, turns: 3 }] },
+    {
+      ap_cost: 3,
+      range_min: 1,
+      range_max: 4,
+      effects: [{ kind: K_ALTER_STAT, stat: STAT_RAW_DAMAGE, value: 42, turns: 3 }],
+    },
   ])
   expect(kits_equal(chain, intended)).toBe(false)
 })
@@ -203,7 +210,14 @@ test('set_spells_command_count counts the REAL PTB commands a kit expands to', (
   // per level: one new_effect per effect + one per crit effect + 2 makeMoveVec + 1 new_spell_level
   // per mob : + 1 makeMoveVec(levels) + 1 set_spells
   const kit = encode_kit([
-    { ap_cost: 3, effects: [{ kind: K_DAMAGE, value: 1 }, { kind: K_DAMAGE, value: 2 }], crit_effects: [{ kind: K_DAMAGE, value: 3 }] },
+    {
+      ap_cost: 3,
+      effects: [
+        { kind: K_DAMAGE, value: 1 },
+        { kind: K_DAMAGE, value: 2 },
+      ],
+      crit_effects: [{ kind: K_DAMAGE, value: 3 }],
+    },
     { ap_cost: 4, effects: [{ kind: K_DAMAGE, value: 1 }], crit_effects: [] },
   ])
   expect(set_spells_command_count(kit)).toBe(2 + (2 + 1 + 3) + (1 + 0 + 3)) // 14
@@ -212,7 +226,11 @@ test('set_spells_command_count counts the REAL PTB commands a kit expands to', (
 
 test('build_batches packs mobs under the COMMAND budget, never over it', () => {
   const kit_of = (effects) => encode_kit([{ ap_cost: 3, effects: Array(effects).fill({ kind: K_DAMAGE, value: 1 }) }])
-  const changed = Array.from({ length: 40 }, (_, index) => ({ key: `mob_${index}`, id: id(index + 1), desired: kit_of(10) }))
+  const changed = Array.from({ length: 40 }, (_, index) => ({
+    key: `mob_${index}`,
+    id: id(index + 1),
+    desired: kit_of(10),
+  }))
   const batches = build_batches(changed)
   const cost = (batch) => batch.calls.reduce((sum, call) => sum + set_spells_command_count(call.desired), 0)
   for (const batch of batches) expect(cost(batch)).toBeLessThanOrEqual(MAX_COMMANDS_PER_PTB)
@@ -232,9 +250,7 @@ test('build_batches honors the hard per-PTB mob cap even for tiny kits', () => {
 })
 
 test('a SINGLE kit richer than the whole budget is a REFUSAL — never a silently over-cap PTB', () => {
-  const fat = encode_kit([
-    { ap_cost: 3, effects: Array(MAX_COMMANDS_PER_PTB).fill({ kind: K_DAMAGE, value: 1 }) },
-  ])
+  const fat = encode_kit([{ ap_cost: 3, effects: Array(MAX_COMMANDS_PER_PTB).fill({ kind: K_DAMAGE, value: 1 }) }])
   expect(() => build_batches([{ key: 'fat', id: id(1), desired: fat }])).toThrow(/budget|commands/i)
 })
 
@@ -245,8 +261,10 @@ const manifest = { wooling: { id: id(11) }, razkin: { id: id(12) } }
 
 test('desired_kits resolves a mob KEY through the seed manifest and encodes its kit', () => {
   const { desired, invalid, unresolved } = desired_kits(
-    payload({ wooling: { spells: [{ ap_cost: 3, effects: [{ kind: K_ALTER_STAT, stat: STAT_RAW_DAMAGE, value: 42 }] }] } }),
-    manifest,
+    payload({
+      wooling: { spells: [{ ap_cost: 3, effects: [{ kind: K_ALTER_STAT, stat: STAT_RAW_DAMAGE, value: 42 }] }] },
+    }),
+    manifest
   )
   expect(invalid).toEqual([])
   expect(unresolved).toEqual([])
@@ -266,7 +284,7 @@ test('an unresolvable key is UNRESOLVED and an unencodable kit is INVALID — ne
       nobody: { spells: [] },
       wooling: { spells: [{ ap_cost: 3, effects: [{ kind: K_DAMAGE, value: -1 }] }] },
     }),
-    manifest,
+    manifest
   )
   expect(out.unresolved).toEqual([{ key: 'nobody' }])
   expect(out.invalid).toHaveLength(1)
@@ -283,7 +301,9 @@ test('a payload with no kits object is a REFUSAL (an empty ceremony is an author
 test('diff_mob_spells buckets changed / unchanged / read_failed', () => {
   const kit = encode_kit([{ ap_cost: 3, effects: [{ kind: K_DAMAGE, value: 12 }] }])
   const chain_kit = read_template_spells({
-    spells: [chain_level({ effects: [{ ...chain_level().effects[0], kind: '0', value: '12', stat: '0', turns: '0' }] })],
+    spells: [
+      chain_level({ effects: [{ ...chain_level().effects[0], kind: '0', value: '12', stat: '0', turns: '0' }] }),
+    ],
   })
   const desired = {
     same: { id: id(1), kit: chain_kit },

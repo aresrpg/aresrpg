@@ -283,7 +283,7 @@ export function kits_equal(current, desired) {
 export function set_spells_command_count(kit) {
   const levels = (kit ?? []).reduce(
     (sum, level) => sum + level.effects.length + level.crit_effects.length + 3, // + 2 makeMoveVec + new_spell_level
-    0,
+    0
   )
   return levels + 2 // + makeMoveVec(levels) + set_spells
 }
@@ -329,7 +329,9 @@ export function build_batches(changed, budget = MAX_COMMANDS_PER_PTB, max_mobs =
   for (const { key, id, desired } of changed ?? []) {
     const call_cost = set_spells_command_count(desired)
     if (call_cost > budget)
-      throw new Error(`${key} expands to ${call_cost} commands — over the ${budget}-command PTB budget (split the kit or raise the budget)`)
+      throw new Error(
+        `${key} expands to ${call_cost} commands — over the ${budget}-command PTB budget (split the kit or raise the budget)`
+      )
     if (!open || cost + call_cost > budget || open.calls.length >= max_mobs) {
       open = { label: `mob_spells:${batches.length + 1}`, calls: [] }
       cost = 0
@@ -422,7 +424,7 @@ function set_spells_command(tx, deployment, call) {
             tx.pure.u8(effect.flags),
             tx.pure.u8(effect.phase),
           ],
-        }),
+        })
       ),
     })
   const levels = call.desired.map((level) =>
@@ -447,9 +449,12 @@ function set_spells_command(tx, deployment, call) {
         effect_vec(level.effects),
         effect_vec(level.crit_effects),
       ],
-    }),
+    })
   )
-  const kit = tx.makeMoveVec({ type: `${deployment.foundation_type_package}::spell_effect::SpellLevel`, elements: levels })
+  const kit = tx.makeMoveVec({
+    type: `${deployment.foundation_type_package}::spell_effect::SpellLevel`,
+    elements: levels,
+  })
   tx.moveCall({
     target: `${deployment.call_package}::mob_template::set_spells`,
     arguments: [tx.object(deployment.admin), tx.object(deployment.version), tx.object(call.id), kit],
@@ -472,7 +477,10 @@ function sample_line(row) {
 /** The readback oracle: re-read every planned template and assert its kit is byte-identical to the intended one.
  * Returns the rows that did NOT converge (empty = the fixed point a second DRY run also reads as 0 changed). */
 async function readback_drift(client, planned_rows) {
-  const chain = await fetch_chain_spells(client, planned_rows.map((row) => row.id))
+  const chain = await fetch_chain_spells(
+    client,
+    planned_rows.map((row) => row.id)
+  )
   return planned_rows.filter((row) => !kits_equal(chain[row.id] ?? null, row.desired))
 }
 
@@ -480,7 +488,8 @@ async function main() {
   const mode = resolve_mode(process.env)
   const network = process.env.NETWORK ?? 'testnet'
   const payload_path = process.env.SPELLS_PAYLOAD
-  if (!payload_path) throw new Error('SPELLS_PAYLOAD=<path to the authored kit payload> is required (this driver carries no content)')
+  if (!payload_path)
+    throw new Error('SPELLS_PAYLOAD=<path to the authored kit payload> is required (this driver carries no content)')
   const payload = read_json(resolve(payload_path))
   if (payload.network && payload.network !== network)
     throw new Error(`payload targets network ${payload.network} but NETWORK=${network} — refusing`)
@@ -489,7 +498,9 @@ async function main() {
   const { desired, invalid, unresolved } = desired_kits(payload, manifest_mobs)
   const deployment = deployment_from_release(release, network)
 
-  const ids = Object.keys(desired).sort().map((key) => desired[key].id)
+  const ids = Object.keys(desired)
+    .sort()
+    .map((key) => desired[key].id)
   const client = get_client(network)
   const chain_by_id = await fetch_chain_spells(client, ids)
   const limit = process.env.LIMIT ? Number(process.env.LIMIT) : null
@@ -502,15 +513,25 @@ async function main() {
 
   console.log(`=== MOB SPELL PAYLOAD | ${mode.live ? 'LIVE' : 'DRY-RUN'} | network=${network} ===`)
   console.log(`payload=${resolve(payload_path)}${payload.note ? ` · note: ${payload.note}` : ''}`)
-  console.log(`package=${deployment.call_package} foundation=${deployment.foundation_package} types=${deployment.foundation_type_package}`)
+  console.log(
+    `package=${deployment.call_package} foundation=${deployment.foundation_package} types=${deployment.foundation_type_package}`
+  )
   console.log(
     `census: ${diff.total} payload kits · ${diff.changed.length} changed · ${diff.unchanged.length} unchanged · ` +
-      `${diff.read_failed.length} read_failed · ${unresolved.length} unresolved · ${invalid.length} invalid`,
+      `${diff.read_failed.length} read_failed · ${unresolved.length} unresolved · ${invalid.length} invalid`
   )
-  console.log(`encoding: signed kinds (alter_stat/alter_resist) centered via the ONE dialect home · FLAG_NEGATIVE derived from the sign`)
-  console.log(`batches: ${batches.length} (≤${MAX_COMMANDS_PER_PTB} cmds, ≤${MAX_MOBS_PER_PTB} mobs/PTB) · ${commands} commands total · fixed gas=${GAS_BUDGET_MIST} MIST/PTB`)
-  console.log(`coverage-report: ruled=${coverage.ruled_count} planned=${coverage.planned_count} covered=${coverage.covered_pct}%`)
-  console.log(`readback: ${diff.unchanged.length}/${diff.total} kits already byte-identical to the intended encoding (0 changed = the fixed point)`)
+  console.log(
+    `encoding: signed kinds (alter_stat/alter_resist) centered via the ONE dialect home · FLAG_NEGATIVE derived from the sign`
+  )
+  console.log(
+    `batches: ${batches.length} (≤${MAX_COMMANDS_PER_PTB} cmds, ≤${MAX_MOBS_PER_PTB} mobs/PTB) · ${commands} commands total · fixed gas=${GAS_BUDGET_MIST} MIST/PTB`
+  )
+  console.log(
+    `coverage-report: ruled=${coverage.ruled_count} planned=${coverage.planned_count} covered=${coverage.covered_pct}%`
+  )
+  console.log(
+    `readback: ${diff.unchanged.length}/${diff.total} kits already byte-identical to the intended encoding (0 changed = the fixed point)`
+  )
   console.log('samples (kit shape, old→new):')
   for (const row of diff.changed.slice(0, 5)) console.log(sample_line(row))
 
@@ -518,13 +539,13 @@ async function main() {
   if (!coverage.ok)
     throw new Error(
       `COVERAGE GAP — ${coverage.uncovered.length} ruled row(s) not planned: ${coverage.uncovered.slice(0, 20).join(', ')}` +
-        (coverage.ruled_count > 0 && coverage.planned_count === 0 ? ' (ZERO planned against nonzero ruled)' : ''),
+        (coverage.ruled_count > 0 && coverage.planned_count === 0 ? ' (ZERO planned against nonzero ruled)' : '')
     )
   const blockers = [...diff.read_failed, ...unresolved, ...invalid]
   if (blockers.length)
     throw new Error(
       `INTEGRITY BLOCKERS — ${diff.read_failed.length} read_failed, ${unresolved.length} unresolved, ` +
-        `${invalid.length} invalid. First: ${JSON.stringify(blockers.slice(0, 5))}`,
+        `${invalid.length} invalid. First: ${JSON.stringify(blockers.slice(0, 5))}`
     )
 
   if (!batches.length) {
@@ -546,10 +567,16 @@ async function main() {
   }
 
   // THE READBACK GATE — the applied kits are re-read and compared to the intended encoding, in this same run.
-  const drift = await readback_drift(client, batches.flatMap((batch) => batch.calls))
+  const drift = await readback_drift(
+    client,
+    batches.flatMap((batch) => batch.calls)
+  )
   if (drift.length)
     throw new Error(
-      `READBACK DRIFT — ${drift.length} template(s) do not carry the intended kit after apply: ${drift.map((row) => row.key).slice(0, 10).join(', ')}`,
+      `READBACK DRIFT — ${drift.length} template(s) do not carry the intended kit after apply: ${drift
+        .map((row) => row.key)
+        .slice(0, 10)
+        .join(', ')}`
     )
   console.log(`readback: ${planned.length}/${planned.length} applied kits byte-identical to the intended encoding`)
   console.log('=== MOB SPELL PAYLOAD APPLIED ===')

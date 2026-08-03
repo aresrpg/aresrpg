@@ -25,20 +25,17 @@ import { fileURLToPath } from 'node:url'
 import { Transaction } from '@mysten/sui/transactions'
 
 import { ITEM_STAT_SHIFT as SHIFT } from '../../sim/src/equipment_stats.js'
+
 import { keypair, sui_client } from './client.js'
 import { run, netGas } from './ceremony_lib.mjs'
 import { damage_lines, pack_qty_for_job } from './seed_economy.mjs'
 
 const __dir = path.dirname(fileURLToPath(import.meta.url))
-const MANIFEST = JSON.parse(
-  fs.readFileSync(path.join(__dir, 'out', 'ceremony_manifest.json'), 'utf8')
-)
+const MANIFEST = JSON.parse(fs.readFileSync(path.join(__dir, 'out', 'ceremony_manifest.json'), 'utf8'))
 const OUT_PATH = path.join(__dir, 'out', 'seed_manifest.json')
 // S-21 single-source content (SPEC §12.8 / §7 pipeline): ALL content lives in seed_content.json,
 // validated pre-mint by packages/validation (`bunx aresrpg-validate seed packages/move/scripts/seed_content.json`).
-const SEED = JSON.parse(
-  fs.readFileSync(path.join(__dir, 'seed_content.json'), 'utf8')
-)
+const SEED = JSON.parse(fs.readFileSync(path.join(__dir, 'seed_content.json'), 'utf8'))
 const CEIL = 1 // refuse any tx whose derived budget exceeds 1 SUI (task law)
 
 // ── Live lineage (retargeted ids) ─────────────────────────────────────────────
@@ -128,14 +125,9 @@ if (fs.existsSync(OUT_PATH)) {
   }
   if (prev && prev._stamp === LINEAGE_STAMP) Object.assign(OUT, prev)
   else if (prev) {
-    const archived = OUT_PATH.replace(
-      /\.json$/,
-      `.stale-${new Date().toISOString().replace(/[:.]/g, '-')}.json`
-    )
+    const archived = OUT_PATH.replace(/\.json$/, `.stale-${new Date().toISOString().replace(/[:.]/g, '-')}.json`)
     fs.renameSync(OUT_PATH, archived)
-    console.log(
-      `  [resume] manifest stamp ≠ current lineage → archived ${path.basename(archived)}; starting FRESH`
-    )
+    console.log(`  [resume] manifest stamp ≠ current lineage → archived ${path.basename(archived)}; starting FRESH`)
   }
 }
 const persist = () => fs.writeFileSync(OUT_PATH, JSON.stringify(OUT, null, 2))
@@ -151,9 +143,7 @@ const TRANSIENT =
 let gasMist = 0
 async function exec(label, build, tries = 5) {
   if (OUT.digests?.[label]) {
-    console.log(
-      `  [${label}] SKIP (already seeded: ${OUT.digests[label].slice(0, 8)}…)`
-    )
+    console.log(`  [${label}] SKIP (already seeded: ${OUT.digests[label].slice(0, 8)}…)`)
     return { r: null, skipped: true }
   }
   for (let attempt = 1; ; attempt++) {
@@ -180,9 +170,7 @@ async function exec(label, build, tries = 5) {
   }
 }
 const createdId = (r, suffix) =>
-  (r.objectChanges || []).find(
-    (c) => c.type === 'created' && (c.objectType || '').endsWith(suffix)
-  )?.objectId
+  (r.objectChanges || []).find((c) => c.type === 'created' && (c.objectType || '').endsWith(suffix))?.objectId
 
 // ── PTB builders ──────────────────────────────────────────────────────────────
 const optSome = (tx, tag, v) =>
@@ -226,20 +214,14 @@ const statsBlock = (tx, ov = {}) =>
 const dmgLine = (tx, from, to, type, element) =>
   tx.moveCall({
     target: `${ITEMS}::item_damages::new`,
-    arguments: [
-      tx.pure.u16(from),
-      tx.pure.u16(to),
-      tx.pure.string(type),
-      tx.pure.string(element),
-    ],
+    arguments: [tx.pure.u16(from), tx.pure.u16(to), tx.pure.string(type), tx.pure.string(element)],
   })
 
 // Per-tx memoized foundation element getters (zero magic numbers for spell-effect elements).
 function elements(tx) {
   const cache = new Map()
   const el = (name) => {
-    if (!cache.has(name))
-      cache.set(name, tx.moveCall({ target: `${FND}::spell::${name}` }))
+    if (!cache.has(name)) cache.set(name, tx.moveCall({ target: `${FND}::spell::${name}` }))
     return cache.get(name)
   }
   return el
@@ -254,8 +236,7 @@ const healFx = (tx, base) =>
     target: `${FND}::spell_effect::heal`,
     arguments: [tx.pure.u64(base)],
   })
-const fxVec = (tx, effects) =>
-  tx.makeMoveVec({ type: T.effect, elements: effects })
+const fxVec = (tx, effects) => tx.makeMoveVec({ type: T.effect, elements: effects })
 // new_spell_level(min_cl,ap,rmin,rmax,mod,line,los,free,cpt,cpta,cd,crit_rate,ends,req[],forb[],fx[],crit_fx[])
 const spellLevel = (tx, o, fx, crit) =>
   tx.moveCall({
@@ -280,38 +261,21 @@ const spellLevel = (tx, o, fx, crit) =>
       fxVec(tx, crit),
     ],
   })
-const levelVec = (tx, levels) =>
-  tx.makeMoveVec({ type: T.level, elements: levels })
+const levelVec = (tx, levels) => tx.makeMoveVec({ type: T.level, elements: levels })
 // spell::new_stats(str,int,chance,agility,raw,crit,range,fireRes,waterRes,earthRes,airRes) — resistances centered
 const mobStats = (tx, s) =>
   tx.moveCall({
     target: `${FND}::spell::new_stats`,
-    arguments: [
-      s.str,
-      s.int,
-      s.chance,
-      s.agility,
-      s.raw,
-      s.crit,
-      s.range,
-      SHIFT,
-      SHIFT,
-      SHIFT,
-      SHIFT,
-    ].map((v) => tx.pure.u64(v || 0)),
+    arguments: [s.str, s.int, s.chance, s.agility, s.raw, s.crit, s.range, SHIFT, SHIFT, SHIFT, SHIFT].map((v) =>
+      tx.pure.u64(v || 0)
+    ),
   })
 const lootEntry = (tx, itemId, chance, min, max) =>
   tx.moveCall({
     target: `${FIGHT}::mob::new_loot_entry`,
-    arguments: [
-      tx.pure.id(itemId),
-      tx.pure.u16(chance),
-      tx.pure.u16(min),
-      tx.pure.u16(max),
-    ],
+    arguments: [tx.pure.id(itemId), tx.pure.u16(chance), tx.pure.u16(min), tx.pure.u16(max)],
   })
-const lootVec = (tx, entries) =>
-  tx.makeMoveVec({ type: T.loot, elements: entries })
+const lootVec = (tx, entries) => tx.makeMoveVec({ type: T.loot, elements: entries })
 
 // ── Content mappers (ALL content lives in seed_content.json — the single source of truth) ──
 const CLASS = SEED.class
@@ -348,16 +312,12 @@ async function main() {
     return
   }
 
-  console.log(
-    `\n=== SEED TESTNET · network=${MANIFEST._network} · signer=${ME} ===`
-  )
+  console.log(`\n=== SEED TESTNET · network=${MANIFEST._network} · signer=${ME} ===`)
   // Preflight: the 4 super AdminCaps must be owned by the signer (else every authoring tx aborts unverified).
   for (const [k, id] of Object.entries(CAP)) {
     const { object } = await sui_client.getObject({ objectId: id })
     if (object?.owner?.AddressOwner !== ME)
-      throw new Error(
-        `PREFLIGHT: ${k} AdminCap ${id} not owned by signer (${JSON.stringify(object?.owner)})`
-      )
+      throw new Error(`PREFLIGHT: ${k} AdminCap ${id} not owned by signer (${JSON.stringify(object?.owner)})`)
   }
   console.log('preflight OK — 4 AdminCaps owned by signer\n')
 
@@ -367,12 +327,7 @@ async function main() {
     for (const c of cats)
       tx.moveCall({
         target: `${ITEMS}::admin::add_category`,
-        arguments: [
-          tx.object(CAP.items),
-          tx.object(SH.catalog),
-          tx.pure.string(c),
-          tx.object(VER.items),
-        ],
+        arguments: [tx.object(CAP.items), tx.object(SH.catalog), tx.pure.string(c), tx.object(VER.items)],
       })
     return () => {}
   })
@@ -401,18 +356,12 @@ async function main() {
   // ── PHASE 3 · item templates (one per tx → unambiguous created-id capture) ──
   const item = async (slug, name, itemType, category, opts = {}) => {
     const { r } = await exec(`item:${slug}`, (tx) => {
-      const smin = opts.stats
-        ? optSome(tx, T.istats, statsBlock(tx, opts.stats.min))
-        : optNone(tx, T.istats)
-      const smax = opts.stats
-        ? optSome(tx, T.istats, statsBlock(tx, opts.stats.max))
-        : optNone(tx, T.istats)
+      const smin = opts.stats ? optSome(tx, T.istats, statsBlock(tx, opts.stats.min)) : optNone(tx, T.istats)
+      const smax = opts.stats ? optSome(tx, T.istats, statsBlock(tx, opts.stats.max)) : optNone(tx, T.istats)
       // dmg accepts a single line OBJECT or a multi-line ARRAY via the shared normalizer (one home).
       const dmg = tx.makeMoveVec({
         type: T.idmg,
-        elements: damage_lines(opts.dmg).map((d) =>
-          dmgLine(tx, d.from, d.to, d.type, d.element)
-        ),
+        elements: damage_lines(opts.dmg).map((d) => dmgLine(tx, d.from, d.to, d.type, d.element)),
       })
       // consumable effect: a gacha BOX (KIND_GACHA_ROLL, amount 0 — the pool is the loot table) or a HEAL (amount).
       const eff = opts.gacha
@@ -435,10 +384,7 @@ async function main() {
               T.ceff,
               tx.moveCall({
                 target: `${ITEMS}::consumable_effect::new`,
-                arguments: [
-                  tx.moveCall({ target: `${ITEMS}::consumable_effect::heal` }),
-                  tx.pure.u64(opts.heal),
-                ],
+                arguments: [tx.moveCall({ target: `${ITEMS}::consumable_effect::heal` }), tx.pure.u64(opts.heal)],
               })
             )
           : optNone(tx, T.ceff)
@@ -466,8 +412,7 @@ async function main() {
     })
     if (!r) return
     const id = createdId(r, '::item::ItemTemplate')
-    if (!id)
-      throw new Error(`item ${slug}: no ItemTemplate created in ${r.digest}`)
+    if (!id) throw new Error(`item ${slug}: no ItemTemplate created in ${r.digest}`)
     OUT.items[slug] = id
     persist()
     return id
@@ -494,12 +439,7 @@ async function main() {
     for (const c of WHITELIST)
       tx.moveCall({
         target: `${GIFTING}::creation::add_class`,
-        arguments: [
-          tx.object(CAP.items),
-          tx.object(SH.creation),
-          tx.pure.string(c),
-          tx.object(VER.items),
-        ],
+        arguments: [tx.object(CAP.items), tx.object(SH.creation), tx.pure.string(c), tx.object(VER.items)],
       })
     return () => {}
   })
@@ -511,15 +451,7 @@ async function main() {
   // create_recipe(cap, version, input_templates, input_quantities, output_template, output_quantity, required_job,
   // craft_xp) — the `required_job: u8` + `craft_xp: u64` riders (crafting.move:120) land after output_quantity.
   // seed_content.json omits them (minimal QA seed) → job 0 (matches iron_ore's job:0) + 50 xp; matches full_corpus.
-  const recipe = async (
-    label,
-    inputs,
-    qtys,
-    output,
-    outQty,
-    requiredJob = 0,
-    craftXp = 50
-  ) => {
+  const recipe = async (label, inputs, qtys, output, outQty, requiredJob = 0, craftXp = 50) => {
     const { r } = await exec(`recipe:${label}`, (tx) => {
       tx.moveCall({
         target: `${GAME}::crafting::create_recipe`,
@@ -666,12 +598,7 @@ async function main() {
       const levels = s.dmgRows.map((base, i) => {
         const min_cl = gates[i]
         if (s.kind === 'heal')
-          return spellLevel(
-            tx,
-            { min_cl, ap: 4, rmin: 0, rmax: 4, los: true, crit: 0 },
-            [healFx(tx, base)],
-            []
-          )
+          return spellLevel(tx, { min_cl, ap: 4, rmin: 0, rmax: 4, los: true, crit: 0 }, [healFx(tx, base)], [])
         return spellLevel(
           tx,
           { min_cl, ap: 4, rmin: 1, rmax: 4, los: true, crit: 50 },
@@ -767,10 +694,7 @@ async function main() {
             (sl.crit_effects || []).map((e) => buildEffect(tx, el, e))
           )
         ),
-      loot: (tx) =>
-        m.loot.map((l) =>
-          lootEntry(tx, OUT.items[l.item], l.chance, l.min, l.max)
-        ),
+      loot: (tx) => m.loot.map((l) => lootEntry(tx, OUT.items[l.item], l.chance, l.min, l.max)),
     })
 
   // ── PHASE 10 · world (create + author: resources + mob groups + key + the base dungeon roster) ──
@@ -778,12 +702,7 @@ async function main() {
   const { r: wr } = await exec('world:create', (tx) => {
     tx.moveCall({
       target: `${GAME}::world::create_world`,
-      arguments: [
-        tx.object(CAP.game),
-        tx.object(VER.game),
-        tx.pure.u64(W.seed),
-        tx.pure.string(W.biome),
-      ],
+      arguments: [tx.object(CAP.game), tx.object(VER.game), tx.pure.u64(W.seed), tx.pure.string(W.biome)],
     })
     return () => {}
   })
@@ -818,8 +737,7 @@ async function main() {
   const roomIds = (room) => room.map((k) => OUT.mobs[k].id)
 
   await exec('world:author', (tx) => {
-    const g = (fn, args) =>
-      tx.moveCall({ target: `${GAME}::world::${fn}`, arguments: args })
+    const g = (fn, args) => tx.moveCall({ target: `${GAME}::world::${fn}`, arguments: args })
     const d = W.density ?? DENSITY // dense-from-minute-one; seed_content.json world may override via density
     g('set_density', [
       tx.object(CAP.game),
@@ -850,9 +768,7 @@ async function main() {
       // live add_resource_entry is a publish-time reject). Resolve the minted mob's id STRING — OUT.mobs[key]
       // is { id, name, ... } and the raw object crashes pure.option('id') (seed_full_corpus.test.mjs).
       // Fresh worlds carry no stale pins → fired only when authored + minted.
-      const protector = res.protector
-        ? (OUT.mobs?.[res.protector]?.id ?? null)
-        : null
+      const protector = res.protector ? (OUT.mobs?.[res.protector]?.id ?? null) : null
       if (protector)
         g('set_resource_protector', [
           tx.object(CAP.game),
@@ -910,19 +826,11 @@ async function main() {
       for (const room of healerRooms)
         tx.moveCall({
           target: `${GAME}::world::add_dungeon_room`,
-          arguments: [
-            tx.object(CAP.game),
-            tx.object(WORLD),
-            tx.pure.vector('id', roomIds(room)),
-            tx.object(VER.game),
-          ],
+          arguments: [tx.object(CAP.game), tx.object(WORLD), tx.pure.vector('id', roomIds(room)), tx.object(VER.game)],
         })
       return () => {}
     })
-    OUT.world.dungeonRooms = [
-      ...OUT.world.dungeonRooms,
-      ...healerRooms.map(roomIds),
-    ]
+    OUT.world.dungeonRooms = [...OUT.world.dungeonRooms, ...healerRooms.map(roomIds)]
     persist()
   }
 
@@ -938,8 +846,6 @@ async function main() {
 main().catch((e) => {
   persist()
   console.error(`\nSEED STOPPED: ${e.message}`)
-  console.error(
-    `partial manifest persisted → ${OUT_PATH} (digests: ${Object.keys(OUT.digests).length})`
-  )
+  console.error(`partial manifest persisted → ${OUT_PATH} (digests: ${Object.keys(OUT.digests).length})`)
   process.exit(1)
 })

@@ -86,7 +86,11 @@ export function to_chance_bp(chance) {
 export function seed_loot_entry(row, items_map) {
   const slug = row?.item ?? null
   const id = slug == null ? null : items_map?.[slug]
-  if (!is_id(id)) { const e = new Error(`unminted loot item '${slug}'`); e.unresolved = slug; throw e }
+  if (!is_id(id)) {
+    const e = new Error(`unminted loot item '${slug}'`)
+    e.unresolved = slug
+    throw e
+  }
   return {
     item_template: lc_id(id),
     chance_bp: to_chance_bp(row.chance),
@@ -108,7 +112,10 @@ export function desired_loot_by_key(mob_rows, items_map) {
   const duplicates = []
   for (const row of mob_rows ?? []) {
     const key = row?.key ?? null
-    if (!key) { invalid.push({ key, why: 'row missing key' }); continue }
+    if (!key) {
+      invalid.push({ key, why: 'row missing key' })
+      continue
+    }
     let entries
     try {
       entries = (row.loot ?? []).slice(0, MAX_LOOT).map((l) => seed_loot_entry(l, items_map))
@@ -147,7 +154,9 @@ export function read_template_loot(template_json) {
         max_qty: to_u16(f.max_qty, 'max_qty'),
       }
     })
-  } catch { return null }
+  } catch {
+    return null
+  }
 }
 
 /** Whether two loot vectors are byte-identical: same length AND each position's {id, bp, min, max} equal. Loot is
@@ -156,8 +165,12 @@ export function loot_entries_equal(current, desired) {
   if (current.length !== desired.length) return false
   return current.every((c, index) => {
     const d = desired[index]
-    return c.item_template === d.item_template && c.chance_bp === d.chance_bp &&
-      c.min_qty === d.min_qty && c.max_qty === d.max_qty
+    return (
+      c.item_template === d.item_template &&
+      c.chance_bp === d.chance_bp &&
+      c.min_qty === d.min_qty &&
+      c.max_qty === d.max_qty
+    )
   })
 }
 
@@ -185,7 +198,13 @@ export function describe_loot_change(current, desired, slug_by_id) {
  *   missing_seed manifest key absent from the seed (and NOT an unresolved-slug key)         (LIVE blocker)
  *   unresolved   manifest key whose seed loot references an unminted item                   (LIVE blocker)
  * Keys taken SORTED off the manifest so `limit` (a canary) trims deterministically. */
-export function diff_mob_loot({ manifest_mobs, desired_by_key, chain_by_id, unresolved_keys = new Set(), limit = null }) {
+export function diff_mob_loot({
+  manifest_mobs,
+  desired_by_key,
+  chain_by_id,
+  unresolved_keys = new Set(),
+  limit = null,
+}) {
   const all_keys = Object.keys(manifest_mobs ?? {}).sort()
   const keys = limit == null ? all_keys : all_keys.slice(0, Math.max(0, limit))
   const changed = []
@@ -195,16 +214,25 @@ export function diff_mob_loot({ manifest_mobs, desired_by_key, chain_by_id, unre
   const unresolved = []
   for (const key of keys) {
     const id = manifest_mobs[key]?.id
-    if (!is_id(id)) { read_failed.push({ key, id: id ?? null, why: 'invalid manifest id' }); continue }
+    if (!is_id(id)) {
+      read_failed.push({ key, id: id ?? null, why: 'invalid manifest id' })
+      continue
+    }
     const current = chain_by_id?.[id]
-    if (current == null) { read_failed.push({ key, id, why: 'loot vector unreadable on chain' }); continue }
+    if (current == null) {
+      read_failed.push({ key, id, why: 'loot vector unreadable on chain' })
+      continue
+    }
     const desired = desired_by_key?.[key]
     if (!desired) {
       if (unresolved_keys.has(key)) unresolved.push({ key, id })
       else missing_seed.push({ key, id })
       continue
     }
-    if (loot_entries_equal(current, desired)) { unchanged.push({ key, id }); continue }
+    if (loot_entries_equal(current, desired)) {
+      unchanged.push({ key, id })
+      continue
+    }
     changed.push({ key, id, desired, current, from_count: current.length, to_count: desired.length })
   }
   return { total: keys.length, changed, unchanged, read_failed, missing_seed, unresolved }
@@ -249,9 +277,19 @@ export function loot_rate_outliers(changed) {
     for (const entry of row.desired) {
       const raw_bp = raw_chance_bp(entry.chance)
       if (!(raw_bp > 0 && raw_bp <= MAX_CHANCE_BP))
-        outliers.push({ key: row.key, id: row.id, slug: entry.slug, why: `chance_bp ${raw_bp} out of (0, ${MAX_CHANCE_BP}]` })
+        outliers.push({
+          key: row.key,
+          id: row.id,
+          slug: entry.slug,
+          why: `chance_bp ${raw_bp} out of (0, ${MAX_CHANCE_BP}]`,
+        })
       else if (!(entry.min_qty >= 1 && entry.min_qty <= entry.max_qty))
-        outliers.push({ key: row.key, id: row.id, slug: entry.slug, why: `qty ${entry.min_qty}-${entry.max_qty} (need 1 ≤ min ≤ max)` })
+        outliers.push({
+          key: row.key,
+          id: row.id,
+          slug: entry.slug,
+          why: `qty ${entry.min_qty}-${entry.max_qty} (need 1 ≤ min ≤ max)`,
+        })
     }
   return outliers
 }
@@ -317,7 +355,9 @@ export function deployment_from_release(release_config, network) {
 /** Every seed/mainnet/<world>/mobs.json flattened in sorted-world order (dedup is first-wins in desired_loot). */
 export function load_mob_rows(seed_dir) {
   const rows = []
-  for (const dir of read_dir(seed_dir).filter((name) => /^\d\d_/.test(name)).sort()) {
+  for (const dir of read_dir(seed_dir)
+    .filter((name) => /^\d\d_/.test(name))
+    .sort()) {
     const mobs_path = join(seed_dir, dir, 'mobs.json')
     if (exists(mobs_path)) rows.push(...read_json(mobs_path))
   }
@@ -349,7 +389,7 @@ function set_loot_command(tx, deployment, call) {
         tx.pure.u16(entry.min_qty),
         tx.pure.u16(entry.max_qty),
       ],
-    }),
+    })
   )
   const loot_vec = tx.makeMoveVec({ type: `${deployment.fight_type_package}::mob::MobLootEntry`, elements })
   tx.moveCall({
@@ -365,8 +405,10 @@ export function batch_tx(deployment, batch) {
 }
 
 function sample_line(row, slug_by_id) {
-  return `  ${row.key} [${row.id.slice(0, 10)}…] ${row.from_count}→${row.to_count} entries · ` +
+  return (
+    `  ${row.key} [${row.id.slice(0, 10)}…] ${row.from_count}→${row.to_count} entries · ` +
     describe_loot_change(row.current, row.desired, slug_by_id).join(' · ')
+  )
 }
 
 function print_spot_table(rows) {
@@ -375,7 +417,7 @@ function print_spot_table(rows) {
   for (const r of rows)
     console.log(
       `  ${r.key.padEnd(18)} ${String(r.slug).padEnd(21)} ${String(r.chance).padEnd(9)} ` +
-        `${String(r.planned_bp).padEnd(7)} ${`${r.min_qty}-${r.max_qty}`.padEnd(8)} ${r.agree ? '✓' : '✗ MISMATCH'}`,
+        `${String(r.planned_bp).padEnd(7)} ${`${r.min_qty}-${r.max_qty}`.padEnd(8)} ${r.agree ? '✓' : '✗ MISMATCH'}`
     )
 }
 
@@ -386,10 +428,16 @@ async function main() {
   const manifest_mobs = seed_manifest.mobs ?? {}
   const items_map = seed_manifest.items ?? {}
   const slug_by_id = Object.fromEntries(Object.entries(items_map).map(([slug, id]) => [lc_id(id), slug]))
-  const { desired, unresolved, invalid, duplicates } = desired_loot_by_key(load_mob_rows(join(repo_dir, 'seed', 'mainnet')), items_map)
+  const { desired, unresolved, invalid, duplicates } = desired_loot_by_key(
+    load_mob_rows(join(repo_dir, 'seed', 'mainnet')),
+    items_map
+  )
   const deployment = deployment_from_release(release, network)
 
-  const ids = Object.keys(manifest_mobs).sort().map((key) => manifest_mobs[key]?.id).filter(is_id)
+  const ids = Object.keys(manifest_mobs)
+    .sort()
+    .map((key) => manifest_mobs[key]?.id)
+    .filter(is_id)
   const client = get_client(network)
   const chain_by_id = await fetch_chain_loot(client, ids)
   const limit = process.env.LIMIT ? Number(process.env.LIMIT) : null
@@ -408,14 +456,18 @@ async function main() {
   const spot_keys = [...new Set(['wooling', ...changed_keys])].filter((key) => changed_keys.includes(key)).slice(0, 5)
 
   console.log(`=== MOB LOOT PAYLOAD | ${mode.live ? 'LIVE' : 'DRY-RUN'} | network=${network} ===`)
-  console.log(`package=${deployment.call_package} fight=${deployment.fight_package} loot-type=${deployment.fight_type_package}::mob::MobLootEntry`)
+  console.log(
+    `package=${deployment.call_package} fight=${deployment.fight_package} loot-type=${deployment.fight_type_package}::mob::MobLootEntry`
+  )
   console.log(
     `census: ${diff.total} manifest mobs · ${diff.changed.length} changed · ${diff.unchanged.length} unchanged · ` +
       `${diff.read_failed.length} read_failed · ${diff.missing_seed.length} missing_seed · ${diff.unresolved.length} unresolved · ` +
-      `${invalid.length} invalid_seed · ${duplicates.length} dup_seed`,
+      `${invalid.length} invalid_seed · ${duplicates.length} dup_seed`
   )
   console.log(`entries: ${seed_rows} seed loot rows (resolved, ≤16/mob) · ${chain_rows} on-chain rows`)
-  console.log(`coverage-report: ruled=${coverage.ruled_count} planned=${coverage.planned_count} covered=${coverage.covered_pct}%`)
+  console.log(
+    `coverage-report: ruled=${coverage.ruled_count} planned=${coverage.planned_count} covered=${coverage.covered_pct}%`
+  )
   console.log(`rate-gate: 0<bp≤${MAX_CHANCE_BP}, 1≤min≤max · outliers=${outliers.length}`)
   console.log(`batches: ${batches.length} (≤${MAX_MOBS_PER_PTB} mobs/PTB) · fixed gas=${GAS_BUDGET_MIST} MIST/PTB`)
   console.log('samples (loot changes, old→new):')
@@ -426,26 +478,36 @@ async function main() {
   if (!coverage.ok)
     throw new Error(
       `COVERAGE GAP — ${coverage.uncovered.length} ruled row(s) not planned: ${coverage.uncovered.slice(0, 20).join(', ')}` +
-        (coverage.ruled_count > 0 && coverage.planned_count === 0 ? ' (ZERO planned against nonzero ruled)' : ''),
+        (coverage.ruled_count > 0 && coverage.planned_count === 0 ? ' (ZERO planned against nonzero ruled)' : '')
     )
   if (outliers.length) {
     console.error(`\nNEEDS-RULING — ${outliers.length} planned loot entr(ies) violate the rate/qty law:`)
     for (const o of outliers) console.error(`  ${o.key} [${o.id.slice(0, 10)}…] ${o.slug}: ${o.why}`)
-    throw new Error(`${outliers.length} out-of-spec loot rate/qty — refusing (fix the seed or rule it). NEVER silently applied.`)
+    throw new Error(
+      `${outliers.length} out-of-spec loot rate/qty — refusing (fix the seed or rule it). NEVER silently applied.`
+    )
   }
   const spot_mismatch = loot_spot_agreement(diff.changed, spot_keys).filter((r) => !r.agree)
   if (spot_mismatch.length)
-    throw new Error(`SPOT-AGREEMENT FAILED — ${spot_mismatch.length} sampled row(s) disagree with the seed mapping: ${JSON.stringify(spot_mismatch.slice(0, 5))}`)
+    throw new Error(
+      `SPOT-AGREEMENT FAILED — ${spot_mismatch.length} sampled row(s) disagree with the seed mapping: ${JSON.stringify(spot_mismatch.slice(0, 5))}`
+    )
   const blockers = [...diff.read_failed, ...diff.missing_seed, ...diff.unresolved, ...invalid, ...duplicates]
   if (blockers.length)
     throw new Error(
       `INTEGRITY BLOCKERS — ${diff.read_failed.length} read_failed, ${diff.missing_seed.length} missing_seed, ` +
         `${diff.unresolved.length} unresolved, ${invalid.length} invalid_seed, ${duplicates.length} dup_seed. ` +
-        `First: ${JSON.stringify(blockers.slice(0, 5))}`,
+        `First: ${JSON.stringify(blockers.slice(0, 5))}`
     )
 
-  if (!batches.length) { console.log('=== ALREADY CONVERGED (0 changes) ==='); return }
-  if (!mode.live) { console.log('=== DRY-RUN COMPLETE (nothing signed) ==='); return }
+  if (!batches.length) {
+    console.log('=== ALREADY CONVERGED (0 changes) ===')
+    return
+  }
+  if (!mode.live) {
+    console.log('=== DRY-RUN COMPLETE (nothing signed) ===')
+    return
+  }
 
   const { getSigner, run } = await import('./ceremony_lib.mjs')
   const signer = getSigner()

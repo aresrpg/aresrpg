@@ -5,11 +5,11 @@
 //   • crafting::create_recipe arity (required_job: u8 + craft_xp: u64 must be sourced, never invented).
 // Pure — no chain. Also asserts the REAL seed/mainnet/shop.json converts fully in range.
 
-import { describe, test, expect } from 'bun:test'
 import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
+import { describe, test, expect } from 'bun:test'
 import { Transaction } from '@mysten/sui/transactions'
 
 import {
@@ -26,8 +26,7 @@ import {
 const __dir = path.dirname(fileURLToPath(import.meta.url))
 const REPO = path.join(__dir, '..', '..', '..')
 /** A well-formed 32-byte object id from an arbitrary tag (mirrors the SDK fixtures' `id`). */
-const oid = tag =>
-  `0x${Buffer.from(String(tag)).toString('hex').padEnd(64, '0').slice(0, 64)}`
+const oid = (tag) => `0x${Buffer.from(String(tag)).toString('hex').padEnd(64, '0').slice(0, 64)}`
 
 describe('sui_to_sale_mist — SUI→MIST (×1e9 BigInt-exact) with a coherent-range refuse', () => {
   test('the two cited rows: pepe_royal (1500 SUI) and the cheapest (5 SUI)', () => {
@@ -117,7 +116,9 @@ describe('pack_qty_for_job / RESOURCE_PACK_QTY — resource NODE-CHARGE pack siz
   })
   test('the REAL seed/mainnet/**/world.json resource rows resolve to an in-band pack (no world.json authors an override today)', () => {
     const mainnetDir = path.join(REPO, 'seed', 'mainnet')
-    const biomes = fs.readdirSync(mainnetDir).filter((d) => /^\d/.test(d) && fs.statSync(path.join(mainnetDir, d)).isDirectory())
+    const biomes = fs
+      .readdirSync(mainnetDir)
+      .filter((d) => /^\d/.test(d) && fs.statSync(path.join(mainnetDir, d)).isDirectory())
     expect(biomes.length).toBeGreaterThan(0)
     let checked = 0
     for (const b of biomes) {
@@ -137,7 +138,16 @@ describe('pack_qty_for_job / RESOURCE_PACK_QTY — resource NODE-CHARGE pack siz
 
 describe('create_recipe compose — the CURRENT 8-arg Move shape (adds required_job + craft_xp)', () => {
   test('a row with a resolvable job + craft_xp composes crafting::create_recipe with 8 args', () => {
-    const rc = { inputs: [{ slug: 'a', qty: 1 }, { slug: 'b', qty: 2 }], output: 'out', outQty: 1, job: 'jeweler', craft_xp: 120 }
+    const rc = {
+      inputs: [
+        { slug: 'a', qty: 1 },
+        { slug: 'b', qty: 2 },
+      ],
+      output: 'out',
+      outQty: 1,
+      job: 'jeweler',
+      craft_xp: 120,
+    }
     const required_job = resolve_required_job(rc.required_job ?? rc.job)
     const craft_xp = rc.craft_xp ?? rc.craftXp
     expect(required_job).toBe(11)
@@ -150,15 +160,21 @@ describe('create_recipe compose — the CURRENT 8-arg Move shape (adds required_
       arguments: [
         tx.object(oid('cap')),
         tx.object(oid('ver')),
-        tx.pure.vector('id', rc.inputs.map(x => oid(x.slug))),
-        tx.pure.vector('u64', rc.inputs.map(x => x.qty)),
+        tx.pure.vector(
+          'id',
+          rc.inputs.map((x) => oid(x.slug))
+        ),
+        tx.pure.vector(
+          'u64',
+          rc.inputs.map((x) => x.qty)
+        ),
         tx.pure.id(oid(rc.output)),
         tx.pure.u64(rc.outQty ?? 1),
         tx.pure.u8(required_job),
         tx.pure.u64(craft_xp),
       ],
     })
-    const call = tx.getData().commands.find(c => c.$kind === 'MoveCall')
+    const call = tx.getData().commands.find((c) => c.$kind === 'MoveCall')
     expect(call.MoveCall.function).toBe('create_recipe')
     expect(call.MoveCall.arguments.length).toBe(8)
   })
@@ -167,11 +183,11 @@ describe('create_recipe compose — the CURRENT 8-arg Move shape (adds required_
 describe('damage_lines — object|array normalization + the seeders mint N lines from one home', () => {
   const IDMG = `${oid('items')}::item_damages`
   // mirror the seeders' dmg-vec compose: makeMoveVec of one item_damages::new per normalized line.
-  const compose_dmg = dmg => {
+  const compose_dmg = (dmg) => {
     const tx = new Transaction()
     tx.makeMoveVec({
       type: `${IDMG}::ItemDamages`,
-      elements: damage_lines(dmg).map(d =>
+      elements: damage_lines(dmg).map((d) =>
         tx.moveCall({
           target: `${IDMG}::new`,
           arguments: [tx.pure.u16(d.from), tx.pure.u16(d.to), tx.pure.string(d.type), tx.pure.string(d.element)],
@@ -180,8 +196,8 @@ describe('damage_lines — object|array normalization + the seeders mint N lines
     })
     return tx
   }
-  const dmg_new_calls = tx =>
-    tx.getData().commands.filter(c => c.$kind === 'MoveCall' && c.MoveCall.function === 'new').length
+  const dmg_new_calls = (tx) =>
+    tx.getData().commands.filter((c) => c.$kind === 'MoveCall' && c.MoveCall.function === 'new').length
 
   test('a single object → one defaulted line (type/element fallbacks mirror the seeders)', () => {
     expect(damage_lines({ from: 20, to: 40, type: 'weapon', element: 'fire' })).toEqual([

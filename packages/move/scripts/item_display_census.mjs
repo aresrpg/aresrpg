@@ -54,7 +54,7 @@ export function interpolate_display(display_fields, object_json) {
   const out = {}
   for (const [key, template] of Object.entries(display_fields ?? {}))
     out[key] = String(template).replace(/\{(\w+)\}/g, (whole, field) =>
-      object_json?.[field] != null ? String(object_json[field]) : whole,
+      object_json?.[field] != null ? String(object_json[field]) : whole
     )
   return out
 }
@@ -66,8 +66,7 @@ export function interpolate_display(display_fields, object_json) {
 export function classify_image_url(url) {
   const value = String(url ?? '')
   const unresolved = /\{\w+\}/.test(value)
-  if (value.startsWith('/'))
-    return { url: value, kind: 'relative', explorer_ok: false, unresolved, host: null }
+  if (value.startsWith('/')) return { url: value, kind: 'relative', explorer_ok: false, unresolved, host: null }
   try {
     const { host } = new URL(value)
     return { url: value, kind: 'absolute', explorer_ok: !unresolved, unresolved, host }
@@ -153,7 +152,10 @@ export function template_seed_convergence({ expected_name_by_slug, template_name
   const missing = []
   for (const [slug, expected] of Object.entries(expected_name_by_slug ?? {})) {
     const actual = template_name_by_slug?.[slug]
-    if (actual == null) { missing.push({ slug, why: 'item_type unreadable' }); continue }
+    if (actual == null) {
+      missing.push({ slug, why: 'item_type unreadable' })
+      continue
+    }
     if (actual === expected) converged.push({ slug, name: actual })
     else diverged.push({ slug, expected, actual })
   }
@@ -185,7 +187,7 @@ async function enumerate_type(endpoint, type) {
     const data = await gql(
       endpoint,
       `query($t:String!,$c:String){ objects(first:50,after:$c,filter:{type:$t}){ pageInfo{ hasNextPage endCursor } nodes{ asMoveObject{ contents{ json } } } } }`,
-      { t: type, c: cursor },
+      { t: type, c: cursor }
     )
     const page = data?.objects
     if (!page) break
@@ -200,7 +202,7 @@ async function read_display_fields(endpoint, display_id) {
   const data = await gql(
     endpoint,
     `query($a:SuiAddress!){ object(address:$a){ version asMoveObject{ contents{ json } } } }`,
-    { a: display_id },
+    { a: display_id }
   )
   const object = data?.object
   const out = {}
@@ -266,17 +268,17 @@ async function main() {
   console.log(`origin=${dep.origin}`)
   console.log(
     `templates read: ${templates.length}/${all_templates.length}${limit ? ` (LIMIT ${limit})` : ''} · ` +
-      `root-visible Item objects: ${objects.length} (kiosk-locked items are DOFs — not counted; lower bound)`,
+      `root-visible Item objects: ${objects.length} (kiosk-locked items are DOFs — not counted; lower bound)`
   )
   console.log(
     `\nA. NAME divergence (object.name vs its template's CURRENT name):\n` +
-      `   stale=${names.stale.length} · consistent=${names.consistent.length} · orphan=${names.orphan.length}`,
+      `   stale=${names.stale.length} · consistent=${names.consistent.length} · orphan=${names.orphan.length}`
   )
   for (const row of names.stale.slice(0, 5))
     console.log(`     ${row.id.slice(0, 12)} [${row.item_type}] obj="${row.object_name}"  tmpl="${row.template_name}"`)
   console.log(
     `\n   template-side convergence (cosmetic authored names): ` +
-      `converged=${convergence.converged.length} diverged=${convergence.diverged.length} missing=${convergence.missing.length}`,
+      `converged=${convergence.converged.length} diverged=${convergence.diverged.length} missing=${convergence.missing.length}`
   )
   for (const row of convergence.diverged.slice(0, 5))
     console.log(`     DIVERGED ${row.slug} ${row.id.slice(0, 10)} chain="${row.actual}" seed="${row.expected}"`)
@@ -284,20 +286,25 @@ async function main() {
   console.log(
     `\nB. ICON / image_url:\n` +
       `   Display<Item> v${display_item?.version} image_url template: ${display_item?.fields?.image_url}\n` +
-      `   Display<ItemTemplate> v${display_template?.version} image_url template: ${display_template?.fields?.image_url}`,
+      `   Display<ItemTemplate> v${display_template?.version} image_url template: ${display_template?.fields?.image_url}`
   )
   if (image_state)
     console.log(
-      `   resolved sample → ${image_state.url}  [${image_state.kind}; explorer_ok=${image_state.explorer_ok}]`,
+      `   resolved sample → ${image_state.url}  [${image_state.kind}; explorer_ok=${image_state.explorer_ok}]`
     )
   console.log(
     `   SLOT-WORD classes (item_type shared by >1 template → Display can NEVER emit a per-variant icon): ` +
-      `${collisions.shared_types} types cover ${collisions.shared_templates} templates`,
+      `${collisions.shared_types} types cover ${collisions.shared_templates} templates`
   )
   console.log(
-    `     ${Object.entries(collisions.shared).map(([it, ids]) => `${it}×${ids.length}`).slice(0, 12).join('  ')}`,
+    `     ${Object.entries(collisions.shared)
+      .map(([it, ids]) => `${it}×${ids.length}`)
+      .slice(0, 12)
+      .join('  ')}`
   )
-  console.log(`   UNIQUE-item_type templates (Display-fixable via the seed repo's swap ceremony): ${collisions.unique_count}`)
+  console.log(
+    `   UNIQUE-item_type templates (Display-fixable via the seed repo's swap ceremony): ${collisions.unique_count}`
+  )
 
   console.log(
     `\n=== WALLS (why the tooling cannot APPLY either leg — a manual decision is required) ===\n` +
@@ -311,7 +318,7 @@ async function main() {
       `     the ${collisions.unique_count} UNIQUE-item_type templates (and only if art is staged under those exact names);\n` +
       `     it is structurally incapable for the category classes. A real fix = a per-item on-chain icon slug\n` +
       `     (struct change, impossible post-publish) or a re-mint with item_type=slug — both owner-gated.\n` +
-      `=== CENSUS COMPLETE (nothing written, nothing signed) ===`,
+      `=== CENSUS COMPLETE (nothing written, nothing signed) ===`
   )
 
   // Machine-readable diagnosis for the seat / any future LIVE remediation (READ-ONLY artifact — the census
@@ -324,7 +331,8 @@ async function main() {
     template_identity: 'live ItemTemplate.item_type (enumerated by current Move type)',
     templates_read: templates.length,
     root_visible_objects: objects.length,
-    kiosk_locked_caveat: 'kiosk-locked items are dynamic-object-fields, not returned by a root type filter — the object census is a lower bound',
+    kiosk_locked_caveat:
+      'kiosk-locked items are dynamic-object-fields, not returned by a root type filter — the object census is a lower bound',
     name_divergence: names,
     template_convergence: convergence,
     image_url: {
@@ -343,4 +351,8 @@ async function main() {
 }
 
 const is_main = process.argv[1] && resolve(process.argv[1]) === file_url_to_path(import.meta.url)
-if (is_main) main().catch((error) => { console.error(`\nCENSUS STOPPED: ${error.message}`); process.exitCode = 1 })
+if (is_main)
+  main().catch((error) => {
+    console.error(`\nCENSUS STOPPED: ${error.message}`)
+    process.exitCode = 1
+  })

@@ -4,8 +4,9 @@
 // (seed/mainnet/*.json), which this repo does not contain, so it cannot run here. This gate is pure — two
 // source files and a regex — and must run everywhere, because the thing it guards is a publish-time cliff.
 
-import { describe, expect, test } from 'bun:test'
 import fs from 'node:fs'
+
+import { describe, expect, test } from 'bun:test'
 
 // The 07-30 shrink demoted 51 `public fun` whose only callers were Move tests. Its caller census read Move
 // sources and JS `target:` literals — and structurally could not see a target built by INTERPOLATED FUNCTION
@@ -17,16 +18,13 @@ import fs from 'node:fs'
 // PUBLIC Move door. A future shrink that demotes one of them turns red here instead of at the ceremony.
 describe('consumable-effect doors composed by interpolated name', () => {
   const seeder = fs.readFileSync(new URL('./seed_full_corpus.mjs', import.meta.url), 'utf8')
-  const source = fs.readFileSync(
-    new URL('../aresrpg/sources/consumable_effect.move', import.meta.url),
-    'utf8'
-  )
+  const source = fs.readFileSync(new URL('../aresrpg/sources/consumable_effect.move', import.meta.url), 'utf8')
 
   // Every name the interpolation can hold: the two literal returns plus every CJSON_KIND value.
   const names = (() => {
-    const literals = [...seeder.matchAll(/return \{ fn: '([a-z_]+)'/g)].map(m => m[1])
-    const block = seeder.match(/const CJSON_KIND = \{([\s\S]*?)\n\}/)[1]
-    const mapped = [...block.matchAll(/:\s*'([a-z_]+)'/g)].map(m => m[1])
+    const literals = [...seeder.matchAll(/return \{ fn: '([a-z_]+)'/g)].map((m) => m[1])
+    const [, block] = seeder.match(/const CJSON_KIND = \{([\s\S]*?)\n\}/)
+    const mapped = [...block.matchAll(/:\s*'([a-z_]+)'/g)].map((m) => m[1])
     return [...new Set([...literals, ...mapped])].sort()
   })()
 

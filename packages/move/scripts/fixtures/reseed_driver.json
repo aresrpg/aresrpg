@@ -98,9 +98,7 @@
     "worlds": [
       {
         "id": "01_fixture",
-        "resources": [
-          { "slug": "fixture_wheat", "rate": 0.9, "job": 0, "tier": 1 }
-        ],
+        "resources": [{ "slug": "fixture_wheat", "rate": 0.9, "job": 0, "tier": 1 }],
         "mobGroups": [{ "mob": "fixture_rat", "rate": 0.8 }],
         "dungeonRooms": [["fixture_rat"]]
       }

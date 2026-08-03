@@ -106,8 +106,7 @@ function resolve_legs() {
     ]
   }
   // PACKAGE_ID is a single-package verification aid; it cannot mean anything across a set.
-  if (PACKAGE_ID)
-    throw new Error('PACKAGE_ID is meaningless in batch mode — drop it')
+  if (PACKAGE_ID) throw new Error('PACKAGE_ID is meaningless in batch mode — drop it')
   const { order } = publishOrder()
   const requested =
     packages_arg.trim() === 'all'
@@ -117,18 +116,14 @@ function resolve_legs() {
           .map((s) => s.trim())
           .filter(Boolean)
   for (const name of requested)
-    if (!order.includes(name))
-      throw new Error(
-        `unknown package "${name}" — one of: ${order.join(', ')}`
-      )
+    if (!order.includes(name)) throw new Error(`unknown package "${name}" — one of: ${order.join(', ')}`)
   // Always publish in dependency order regardless of the order the caller listed them: a dependent built
   // before its dependency's Published.toml is bumped would silently link the OLD lineage.
   const ordered = order.filter((p) => requested.includes(p))
   const manifest = read_manifest()
   return ordered.map((name) => {
     const cap = manifest[name]?.upgradeCap
-    if (!cap)
-      throw new Error(`manifest ${MANIFEST_PATH} has no "${name}".upgradeCap`)
+    if (!cap) throw new Error(`manifest ${MANIFEST_PATH} has no "${name}".upgradeCap`)
     return {
       name,
       pkgPath: path.join(MOVE_DIR, name),
@@ -154,14 +149,11 @@ export const DEFAULT_LEG_GAS_BUDGET = 1_000_000_000n
 export const GAS_HEADROOM_NUM = 6n
 export const GAS_HEADROOM_DEN = 5n
 
-export const leg_gas_budget = (env = process.env) =>
-  BigInt(env.UPGRADE_GAS_BUDGET ?? DEFAULT_LEG_GAS_BUDGET)
+export const leg_gas_budget = (env = process.env) => BigInt(env.UPGRADE_GAS_BUDGET ?? DEFAULT_LEG_GAS_BUDGET)
 
-export const batch_gas_budget = (leg_count, env = process.env) =>
-  leg_gas_budget(env) * BigInt(leg_count)
+export const batch_gas_budget = (leg_count, env = process.env) => leg_gas_budget(env) * BigInt(leg_count)
 
-export const required_gas_coin = (budget) =>
-  (BigInt(budget) * GAS_HEADROOM_NUM) / GAS_HEADROOM_DEN
+export const required_gas_coin = (budget) => (BigInt(budget) * GAS_HEADROOM_NUM) / GAS_HEADROOM_DEN
 
 /** Pure verdict over a coin set. `largest` is the ONLY figure that decides; `total` is reported to make
  *  the trap legible in the log, never to pass the gate. */
@@ -170,10 +162,7 @@ export function gas_preflight_verdict({ coins, budget }) {
     coinObjectId: c.coinObjectId,
     balance: BigInt(c.balance),
   }))
-  const largest = held.reduce(
-    (best, c) => (best && best.balance >= c.balance ? best : c),
-    null
-  )
+  const largest = held.reduce((best, c) => (best && best.balance >= c.balance ? best : c), null)
   return {
     ok: !!largest && largest.balance >= required_gas_coin(budget),
     required: required_gas_coin(budget),
@@ -211,8 +200,7 @@ export function gas_refusal_report({ signer, verdict }) {
 // incident happen — so a gate built on them would report the comfortable answer. Fail-closed on an
 // unconfigured endpoint rather than guessing one.
 const GAS_RPC_URL =
-  process.env.RPC_URL ??
-  (NETWORK === 'testnet' ? 'https://sui-testnet-rpc.publicnode.com' : undefined)
+  process.env.RPC_URL ?? (NETWORK === 'testnet' ? 'https://sui-testnet-rpc.publicnode.com' : undefined)
 
 async function raw_get_sui_coins(owner) {
   if (!GAS_RPC_URL)
@@ -233,14 +221,11 @@ async function raw_get_sui_coins(owner) {
         params: [owner, '0x2::sui::SUI', cursor, 50],
       }),
     }).then((r) => r.json())
-    if (res.error)
-      throw new Error(`suix_getCoins (${GAS_RPC_URL}): ${JSON.stringify(res.error)}`)
+    if (res.error) throw new Error(`suix_getCoins (${GAS_RPC_URL}): ${JSON.stringify(res.error)}`)
     // A page that decodes to nothing is a BROKEN READ, never an empty wallet: coercing it to zero coins
     // would make the gate refuse for the wrong reason (or, on the total, reassure for one).
     if (!Array.isArray(res.result?.data))
-      throw new Error(
-        `suix_getCoins (${GAS_RPC_URL}) returned no coin page: ${JSON.stringify(res).slice(0, 200)}`
-      )
+      throw new Error(`suix_getCoins (${GAS_RPC_URL}) returned no coin page: ${JSON.stringify(res).slice(0, 200)}`)
     out.push(...res.result.data)
     cursor = res.result.hasNextPage ? res.result.nextCursor : null
   } while (cursor)
@@ -269,17 +254,10 @@ async function assert_gas_preflight(legs) {
 // ── #2038 JOURNAL: a digest that exists is gas already burned. It hits stdout and DISK the instant the tx
 //    executes, before any finality wait, so a crashed/timed-out wait can never lose it. Cleared on
 //    resolution; a surviving file means a previous run executed something it never recorded. ──
-const PENDING_PATH = path.join(
-  path.dirname(MANIFEST_PATH),
-  'ceremony_upgrade_pending.json'
-)
-const read_pending = () =>
-  fs.existsSync(PENDING_PATH)
-    ? JSON.parse(fs.readFileSync(PENDING_PATH, 'utf8'))
-    : {}
+const PENDING_PATH = path.join(path.dirname(MANIFEST_PATH), 'ceremony_upgrade_pending.json')
+const read_pending = () => (fs.existsSync(PENDING_PATH) ? JSON.parse(fs.readFileSync(PENDING_PATH, 'utf8')) : {})
 const write_pending = (o) => {
-  if (Object.keys(o).length)
-    fs.writeFileSync(PENDING_PATH, JSON.stringify(o, null, 2) + '\n')
+  if (Object.keys(o).length) fs.writeFileSync(PENDING_PATH, JSON.stringify(o, null, 2) + '\n')
   else if (fs.existsSync(PENDING_PATH)) fs.unlinkSync(PENDING_PATH)
 }
 const journal_pending = (name, digest) => {
@@ -326,18 +304,12 @@ async function upgrade_one(leg) {
     if (cap instanceof Error) throw cap
     capPackage = cap?.json?.package
     if (!capPackage)
-      console.warn(
-        '⚠ UpgradeCap content not decoded by the node — falling back to Published.toml published-at'
-      )
+      console.warn('⚠ UpgradeCap content not decoded by the node — falling back to Published.toml published-at')
   } catch (e) {
-    console.warn(
-      `⚠ UpgradeCap read failed (${e?.message ?? e}) — falling back to Published.toml published-at`
-    )
+    console.warn(`⚠ UpgradeCap read failed (${e?.message ?? e}) — falling back to Published.toml published-at`)
   }
   const pubFile = path.resolve(pkgPath, 'Published.toml')
-  const prior = fs.existsSync(pubFile)
-    ? parsePublishedToml(fs.readFileSync(pubFile, 'utf8'), NETWORK)
-    : null
+  const prior = fs.existsSync(pubFile) ? parsePublishedToml(fs.readFileSync(pubFile, 'utf8'), NETWORK) : null
   const { target, source, stalePublishedToml } = resolveUpgradeTarget({
     capPackage,
     publishedAt: prior?.publishedAt,
@@ -348,9 +320,7 @@ async function upgrade_one(leg) {
       `⚠ Published.toml published-at (${prior?.publishedAt}) is STALE vs on-chain cap.package — the post-upgrade bump reconciles it.`
     )
 
-  console.log(
-    `==================== [ UPGRADING ${name} (ceremony) ] ====================`
-  )
+  console.log(`==================== [ UPGRADING ${name} (ceremony) ] ====================`)
   console.log('network:', NETWORK)
   console.log('signer:', keypair.getPublicKey().toSuiAddress())
   console.log('package (upgrade target):', target, `— derived from ${source}`)
@@ -359,24 +329,15 @@ async function upgrade_one(leg) {
   // Build only — read-only on the ambient config (active-env == NETWORK, now assert_env-enforced above);
   // Published.toml (reconciled to the LIVE lineage, including any bump this same run already wrote for a
   // dependency) supplies the dependency linkage addresses.
-  const build_out = execSync(
-    `sui move build --dump-bytecode-as-base64 --path ${pkgPath}`,
-    { encoding: 'utf-8' }
-  )
-  const json_line = build_out
-    .split('\n')
-    .find((l) => l.trimStart().startsWith('{'))
+  const build_out = execSync(`sui move build --dump-bytecode-as-base64 --path ${pkgPath}`, { encoding: 'utf-8' })
+  const json_line = build_out.split('\n').find((l) => l.trimStart().startsWith('{'))
   const { modules, dependencies, digest: build_digest } = JSON.parse(json_line)
   console.log('modules:', modules.length, '| deps:', dependencies)
 
   const tx = new Transaction()
   const ticket = tx.moveCall({
     target: '0x2::package::authorize_upgrade',
-    arguments: [
-      tx.object(upgradeCap),
-      tx.pure.u8(UpgradePolicy.COMPATIBLE),
-      tx.pure.vector('u8', build_digest),
-    ],
+    arguments: [tx.object(upgradeCap), tx.pure.u8(UpgradePolicy.COMPATIBLE), tx.pure.vector('u8', build_digest)],
   })
   const receipt = tx.upgrade({
     modules,
@@ -416,9 +377,7 @@ async function upgrade_one(leg) {
   try {
     await sui_client.waitForTransaction({ digest: result.digest })
   } catch (e) {
-    console.warn(
-      `⚠ finality wait failed for ${result.digest} (${e?.message ?? e}) — POLLING BY DIGEST, not resending`
-    )
+    console.warn(`⚠ finality wait failed for ${result.digest} (${e?.message ?? e}) — POLLING BY DIGEST, not resending`)
     result = await receipt_by_digest(result.digest)
   }
 
@@ -429,37 +388,22 @@ async function upgrade_one(leg) {
     process.exit(1)
   }
 
-  const published = (result.objectChanges ?? []).find(
-    (c) => c.type === 'published'
-  )
+  const published = (result.objectChanges ?? []).find((c) => c.type === 'published')
   const gas = result.effects.gasUsed
-  const net =
-    BigInt(gas.computationCost) +
-    BigInt(gas.storageCost) -
-    BigInt(gas.storageRebate)
+  const net = BigInt(gas.computationCost) + BigInt(gas.storageCost) - BigInt(gas.storageRebate)
   console.log('UPGRADE_OK')
   console.log('digest:', result.digest)
   console.log('new package id:', published?.packageId)
   console.log('gas net (MIST):', net.toString(), `(${Number(net) / 1e9} SUI)`)
-  for (const c of (result.objectChanges ?? []).filter(
-    (c) => c.type === 'created'
-  ))
+  for (const c of (result.objectChanges ?? []).filter((c) => c.type === 'created'))
     console.log('created:', c.objectId, c.objectType)
 
   // ── Post-success lineage bookkeeping (delta 4). The upgrade EXECUTED — a failure below is a RECORDING
   //    failure only: fix the files by hand, NEVER re-fire the upgrade (tx-retry burn law). Published.toml
   //    is written HERE and not deferred: it is the dependency-linkage input the next leg's build reads. ──
   try {
-    if (!published?.packageId)
-      throw new Error('no `published` objectChange in the receipt')
-    fs.writeFileSync(
-      pubFile,
-      bumpPublishedToml(
-        fs.readFileSync(pubFile, 'utf8'),
-        NETWORK,
-        published.packageId
-      )
-    )
+    if (!published?.packageId) throw new Error('no `published` objectChange in the receipt')
+    fs.writeFileSync(pubFile, bumpPublishedToml(fs.readFileSync(pubFile, 'utf8'), NETWORK, published.packageId))
     console.log(
       `Published.toml: published-at → ${published.packageId} (version ${prior?.version} → ${(prior?.version ?? 0) + 1})`
     )
@@ -502,9 +446,7 @@ async function main() {
   const stale_pending = read_pending()
   if (Object.keys(stale_pending).length) {
     console.error(
-      `REFUSING — a previous run executed upgrade(s) it never recorded:\n${Object.entries(
-        stale_pending
-      )
+      `REFUSING — a previous run executed upgrade(s) it never recorded:\n${Object.entries(stale_pending)
         .map(([n, d]) => `  ${n} → digest ${d}`)
         .join('\n')}`
     )
@@ -529,10 +471,7 @@ async function main() {
   try {
     const manifest = read_manifest()
     for (const { name, packageId } of done) {
-      if (!manifest[name])
-        throw new Error(
-          `manifest ${MANIFEST_PATH} has no "${name}" package entry`
-        )
+      if (!manifest[name]) throw new Error(`manifest ${MANIFEST_PATH} has no "${name}" package entry`)
       manifest[name].latest = packageId
       // ZoneGroupRootKey first ships in this aresrpg upgrade. Preserve its defining package forever;
       // later upgrades only move the call target and must never rewrite the type identity.
@@ -541,9 +480,7 @@ async function main() {
           ...(manifest._type_origins ?? {}),
           zone_group_root: packageId,
         }
-      console.log(
-        `manifest: ${name}.latest → ${packageId} (release writer reads this)`
-      )
+      console.log(`manifest: ${name}.latest → ${packageId} (release writer reads this)`)
     }
     fs.writeFileSync(MANIFEST_PATH, JSON.stringify(manifest, null, 2) + '\n')
     // AUTO-STAMP, ONCE, LAST: atomically replace the one deployment config, fail-fast.
@@ -558,8 +495,7 @@ async function main() {
     console.error(
       `CRITICAL — ${done.length} upgrade(s) SUCCEEDED on-chain but manifest/stamp FAILED: ${e?.message ?? e}`
     )
-    for (const { name, digest, packageId } of done)
-      console.error(`  ${name} digest ${digest} → ${packageId}`)
+    for (const { name, digest, packageId } of done) console.error(`  ${name} digest ${digest} → ${packageId}`)
     console.error(
       'Record them BY HAND (manifest `<pkg>.latest`, then re-run stamp_all) before any dependent build/release write. NEVER re-fire an upgrade.'
     )
@@ -580,8 +516,4 @@ async function main() {
   console.log('==================== [ x ] ====================')
 }
 
-if (
-  process.argv[1] &&
-  path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)
-)
-  await main()
+if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) await main()

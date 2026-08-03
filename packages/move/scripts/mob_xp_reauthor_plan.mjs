@@ -123,8 +123,7 @@ export async function fetch_chain_xp(client, ids, page_size = 50) {
       include: { json: true },
     })
     objects.forEach((object, page_index) => {
-      xp[page[page_index]] =
-        object instanceof Error ? null : read_template_xp(object?.json ?? null)
+      xp[page[page_index]] = object instanceof Error ? null : read_template_xp(object?.json ?? null)
     })
   }
   return xp

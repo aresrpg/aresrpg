@@ -17,8 +17,7 @@ const here = path.dirname(file_url_to_path(import.meta.url))
 const repo = path.resolve(here, '../../..')
 const default_manifest = path.join(here, 'out', 'ceremony_manifest.json')
 const default_target =
-  process.env.STAMP_ALL_TARGET ??
-  path.join(repo, 'packages', 'sdk', 'src', 'deployment', 'release.json')
+  process.env.STAMP_ALL_TARGET ?? path.join(repo, 'packages', 'sdk', 'src', 'deployment', 'release.json')
 const default_treasury_source = path.join(repo, 'packages', 'move', 'aresrpg', 'Move.toml')
 // The republish-window marker, spelled out rather than imported: this script is copied ALONE into gold's
 // isolated Move tree and must keep running standalone (the isolation test below execs the bare copy), so it
@@ -64,9 +63,7 @@ const validate_id_map = (value, label) => {
   for (const [key, id] of Object.entries(value)) optional_id(id, `${label}.${key}`)
 }
 const require_coin_type = (value, label) => {
-  const match = /^(0x[0-9a-fA-F]{1,64})::[A-Za-z_][A-Za-z0-9_]*::[A-Za-z_][A-Za-z0-9_]*$/.exec(
-    value ?? ''
-  )
+  const match = /^(0x[0-9a-fA-F]{1,64})::[A-Za-z_][A-Za-z0-9_]*::[A-Za-z_][A-Za-z0-9_]*$/.exec(value ?? '')
   if (!match) throw new Error(`release config: ${label} is not a Sui coin type`)
   require_id(match[1], label)
 }
@@ -135,31 +132,19 @@ function shared_row_list(ids, versions, label, expected) {
 
 function shared_rows(manifest) {
   return {
-    SPELLS_VERSION: shared_row(
-      manifest.spells.version,
-      manifest.spells.shared_versions?.Version,
-      'SPELLS_VERSION'
-    ),
+    SPELLS_VERSION: shared_row(manifest.spells.version, manifest.spells.shared_versions?.Version, 'SPELLS_VERSION'),
     SPELL_REGISTRY: shared_row(
       manifest.spells.shared?.SpellRegistry,
       manifest.spells.shared_versions?.SpellRegistry,
       'SPELL_REGISTRY'
     ),
-    SOCIAL_VERSION: shared_row(
-      manifest.social.version,
-      manifest.social.shared_versions?.Version,
-      'SOCIAL_VERSION'
-    ),
+    SOCIAL_VERSION: shared_row(manifest.social.version, manifest.social.shared_versions?.Version, 'SOCIAL_VERSION'),
     SOCIAL_FRIEND_REGISTRY: shared_row(
       manifest.social.shared?.FriendRegistry,
       manifest.social.shared_versions?.FriendRegistry,
       'SOCIAL_FRIEND_REGISTRY'
     ),
-    ENGINE_VERSION: shared_row(
-      manifest.engine.version,
-      manifest.engine.shared_versions?.Version,
-      'ENGINE_VERSION'
-    ),
+    ENGINE_VERSION: shared_row(manifest.engine.version, manifest.engine.shared_versions?.Version, 'ENGINE_VERSION'),
     FIGHT_REGISTRY_SHARDS: shared_row_list(
       manifest.engine.shared?.FightRegistryShards,
       manifest.engine.shared_versions?.FightRegistryShards,
@@ -172,21 +157,13 @@ function shared_rows(manifest) {
       'FIGHT_LATCH_SHARDS',
       FIGHT_SHARD_COUNT
     ),
-    VERSION: shared_row(
-      manifest.aresrpg.version,
-      manifest.aresrpg.shared_versions?.Version,
-      'VERSION'
-    ),
+    VERSION: shared_row(manifest.aresrpg.version, manifest.aresrpg.shared_versions?.Version, 'VERSION'),
     GAME_CONFIG: shared_row(
       manifest.aresrpg.shared?.GameConfig,
       manifest.aresrpg.shared_versions?.GameConfig,
       'GAME_CONFIG'
     ),
-    CATALOG: shared_row(
-      manifest.aresrpg.shared?.Catalog,
-      manifest.aresrpg.shared_versions?.Catalog,
-      'CATALOG'
-    ),
+    CATALOG: shared_row(manifest.aresrpg.shared?.Catalog, manifest.aresrpg.shared_versions?.Catalog, 'CATALOG'),
     SCRIBE_CONFIG: shared_row(
       manifest.aresrpg.shared?.ScribeConfig,
       manifest.aresrpg.shared_versions?.ScribeConfig,
@@ -197,11 +174,7 @@ function shared_rows(manifest) {
       manifest.aresrpg.shared_versions?.PetFeedConfig,
       'PET_FEED_CONFIG'
     ),
-    CREATION: shared_row(
-      manifest.gifting.shared?.Creation,
-      manifest.gifting.shared_versions?.Creation,
-      'CREATION'
-    ),
+    CREATION: shared_row(manifest.gifting.shared?.Creation, manifest.gifting.shared_versions?.Creation, 'CREATION'),
     POOL_REGISTRY: shared_row(
       manifest.gifting.shared?.PoolRegistry,
       manifest.gifting.shared_versions?.PoolRegistry,
@@ -223,10 +196,7 @@ function shared_rows(manifest) {
 function policy_row(policy, label) {
   return {
     id: require_id(policy?.policy, `${label}.policy`),
-    initial_shared_version: require_version(
-      policy?.initial_shared_version,
-      `${label}.initial_shared_version`
-    ),
+    initial_shared_version: require_version(policy?.initial_shared_version, `${label}.initial_shared_version`),
     cap: optional_id(policy?.cap, `${label}.cap`),
   }
 }
@@ -234,10 +204,7 @@ function policy_row(policy, label) {
 /** Convert a ceremony receipt into one network row while preserving non-ceremony external metadata. */
 export function release_network_from_manifest(manifest, previous = {}, republish = false) {
   const packages = Object.fromEntries(
-    package_names.map((name) => [
-      name,
-      package_row(manifest[name], name, previous.packages?.[name], republish),
-    ])
+    package_names.map((name) => [name, package_row(manifest[name], name, previous.packages?.[name], republish)])
   )
   return {
     chain_id: manifest._chain_id ?? previous.chain_id ?? '',
@@ -354,18 +321,12 @@ function validate_network(row, network, required) {
   ;(required ? require_id : optional_id)(row.actors?.owner, `${network}.actors.owner`)
   ;(required ? require_id : optional_id)(row.actors?.treasury, `${network}.actors.treasury`)
   optional_id(row.system?.random?.id, `${network}.system.random.id`)
-  optional_version(
-    row.system?.random?.initial_shared_version,
-    `${network}.system.random.initial_shared_version`
-  )
+  optional_version(row.system?.random?.initial_shared_version, `${network}.system.random.initial_shared_version`)
   if (!Array.isArray(row.system?.sponsor_framework_packages ?? []))
     throw new Error(`release config: ${network}.system.sponsor_framework_packages is not an array`)
   for (const [index, id] of (row.system?.sponsor_framework_packages ?? []).entries())
     require_id(id, `${network}.system.sponsor_framework_packages.${index}`)
-  optional_id(
-    row.system?.personal_kiosk_rule_package,
-    `${network}.system.personal_kiosk_rule_package`
-  )
+  optional_id(row.system?.personal_kiosk_rule_package, `${network}.system.personal_kiosk_rule_package`)
   const royalty = row.constants?.item_royalty_min_mist ?? ''
   if (royalty && !/^\d+$/.test(String(royalty)))
     throw new Error(`release config: ${network}.constants.item_royalty_min_mist is invalid`)
@@ -374,8 +335,7 @@ function validate_network(row, network, required) {
 export function validate_release(release, network) {
   if (release?.schema !== 1 || !release?.networks?.[network])
     throw new Error(`release config: missing schema=1 networks.${network}`)
-  for (const [name, row] of Object.entries(release.networks))
-    validate_network(row, name, name === network)
+  for (const [name, row] of Object.entries(release.networks)) validate_network(row, name, name === network)
   return release
 }
 
@@ -383,12 +343,7 @@ export function validate_release(release, network) {
 export function write_release_atomic(
   target_path,
   release,
-  {
-    write_file = write_file_sync,
-    read_file = read_file_sync,
-    rename_file = rename_sync,
-    remove_file = rm_sync,
-  } = {}
+  { write_file = write_file_sync, read_file = read_file_sync, rename_file = rename_sync, remove_file = rm_sync } = {}
 ) {
   const source = `${JSON.stringify(release, null, 2)}\n`
   const temp_path = path.join(
@@ -423,9 +378,7 @@ export function k8s_values_expectations(row, network) {
   const emitters = names.filter((name) => name !== 'foundation')
   const origins = (list) => list.map((name) => packages[name].origin)
   const latests = (list) =>
-    list
-      .filter((name) => packages[name].latest !== packages[name].origin)
-      .map((name) => packages[name].latest)
+    list.filter((name) => packages[name].latest !== packages[name].origin).map((name) => packages[name].latest)
   // Retired-but-sponsorable versions live ONLY in the sponsor scope (drain window), never the
   // indexer's event set — an upgraded-away package emits no new events.
   const previouses = (list) => list.flatMap((name) => packages[name].previous ?? [])
@@ -454,11 +407,7 @@ export function k8s_values_expectations(row, network) {
 }
 
 /** stamp_release's tail step: print the block for the network the ceremony just stamped. */
-export function print_k8s_values_expectations(
-  release,
-  network,
-  log = console.log
-) {
+export function print_k8s_values_expectations(release, network, log = console.log) {
   log(k8s_values_expectations(release.networks[network], network))
 }
 
@@ -497,9 +446,9 @@ export function stamp_release({
   if (JSON.stringify(disk) !== JSON.stringify(release))
     throw new Error('release config: post-rename verification mismatch')
   console.log(
-    `stamp_all → ${path.relative(repo, target_path)} (${manifest._network}, ${Object.keys(
-      disk.networks[manifest._network].packages
-    ).length} packages, atomic rename verified)`
+    `stamp_all → ${path.relative(repo, target_path)} (${manifest._network}, ${
+      Object.keys(disk.networks[manifest._network].packages).length
+    } packages, atomic rename verified)`
   )
   print_k8s_values_expectations(disk, manifest._network)
   return disk

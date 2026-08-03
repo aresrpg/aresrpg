@@ -25,8 +25,7 @@ function batch_tx(batch) {
     if (call.target.endsWith('::admin::set_template_stats')) {
       // #1291: the door takes two ItemStatistics values, built in-PTB by the same constructor Move uses
       const stats_pkg = call.target.replace('::admin::set_template_stats', '::item_stats::new')
-      const stat_block = values =>
-        tx.moveCall({ target: stats_pkg, arguments: values.map(v => tx.pure.u16(v)) })
+      const stat_block = (values) => tx.moveCall({ target: stats_pkg, arguments: values.map((v) => tx.pure.u16(v)) })
       tx.moveCall({
         target: call.target,
         arguments: [
@@ -53,34 +52,17 @@ function batch_tx(batch) {
   return tx
 }
 
-console.log(
-  `signer ${keypair.toSuiAddress()} | ${LIVE ? 'LIVE' : 'DRY-RUN ONLY'}`
-)
+console.log(`signer ${keypair.toSuiAddress()} | ${LIVE ? 'LIVE' : 'DRY-RUN ONLY'}`)
 
-const batches = [
-  ...pet_feed_payload.pet_template_stats.batches,
-  ...pet_feed_payload.pet_foods.batches,
-]
+const batches = [...pet_feed_payload.pet_template_stats.batches, ...pet_feed_payload.pet_foods.batches]
 for (const batch of batches) {
   if (LIVE) {
     await run(sui_client, keypair, batch.label, batch_tx(batch), {
       ceilingSui: CEILING_SUI,
     })
   } else {
-    const budget = await deriveBudget(
-      sui_client,
-      keypair,
-      batch_tx(batch),
-      batch.label,
-      CEILING_SUI
-    )
-    console.log(
-      `  [${batch.label}] calls=${batch.calls.length} dry-run OK, derived budget=${budget} MIST`
-    )
+    const budget = await deriveBudget(sui_client, keypair, batch_tx(batch), batch.label, CEILING_SUI)
+    console.log(`  [${batch.label}] calls=${batch.calls.length} dry-run OK, derived budget=${budget} MIST`)
   }
 }
-console.log(
-  LIVE
-    ? '=== PET PAYLOAD APPLIED ==='
-    : '=== DRY-RUN COMPLETE (nothing executed) ==='
-)
+console.log(LIVE ? '=== PET PAYLOAD APPLIED ===' : '=== DRY-RUN COMPLETE (nothing executed) ===')

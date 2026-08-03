@@ -27,33 +27,18 @@ import { fileURLToPath } from 'node:url'
 import { Transaction } from '@mysten/sui/transactions'
 
 import { keypair, sui_client } from './client.js'
-import {
-  run,
-  netGas,
-  probeBatchSize,
-  resolveBatch,
-  claimCreated,
-  getReceipt,
-} from './ceremony_lib.mjs'
+import { run, netGas, probeBatchSize, resolveBatch, claimCreated, getReceipt } from './ceremony_lib.mjs'
 import { encode_effect_value } from './spell_wire.mjs'
 
 const __dir = path.dirname(fileURLToPath(import.meta.url))
 const REPO = path.resolve(__dir, '..', '..', '..')
 const SPELLS_DIR = path.join(REPO, 'seed', 'mainnet', 'spells')
-const MANIFEST = JSON.parse(
-  fs.readFileSync(path.join(__dir, 'out', 'ceremony_manifest.json'), 'utf8')
-)
+const MANIFEST = JSON.parse(fs.readFileSync(path.join(__dir, 'out', 'ceremony_manifest.json'), 'utf8'))
 const OUT_PATH = path.join(__dir, 'out', 'seed_manifest.json')
 
 const FND = MANIFEST.foundation.pkg
 const SPELLS = MANIFEST.spells.pkg
-const LINEAGE_STAMP = [
-  FND,
-  MANIFEST.items.pkg,
-  SPELLS,
-  MANIFEST.game.pkg,
-  MANIFEST.fight.pkg,
-].join(',')
+const LINEAGE_STAMP = [FND, MANIFEST.items.pkg, SPELLS, MANIFEST.game.pkg, MANIFEST.fight.pkg].join(',')
 const CAP = MANIFEST.spells.admin
 const VER = MANIFEST.spells.version
 const REG = MANIFEST.spells.shared.SpellRegistry
@@ -65,10 +50,7 @@ const SPELL_P = 9
 const BATCH_PROBE = { start: 30, cap: 40, step: 5, ceilingSuiPerItem: 0.03 }
 
 // ── manifest (SHARED with seed_full_corpus — same stamp guard, same shape) ─────────────────────
-if (!fs.existsSync(OUT_PATH))
-  throw new Error(
-    `no ${OUT_PATH} — the spells phase extends an existing lineage manifest`
-  )
+if (!fs.existsSync(OUT_PATH)) throw new Error(`no ${OUT_PATH} — the spells phase extends an existing lineage manifest`)
 const OUT = JSON.parse(fs.readFileSync(OUT_PATH, 'utf8'))
 if (OUT._stamp !== LINEAGE_STAMP)
   throw new Error(
@@ -121,8 +103,7 @@ const effectFx = (tx, e) => {
     ],
   })
 }
-const fxVec = (tx, effects) =>
-  tx.makeMoveVec({ type: T_EFFECT, elements: effects })
+const fxVec = (tx, effects) => tx.makeMoveVec({ type: T_EFFECT, elements: effects })
 const spellLevel = (tx, o, fx, crit) =>
   tx.moveCall({
     target: `${FND}::spell_effect::new_spell_level`,
@@ -213,15 +194,11 @@ async function main() {
     `\n=== SEED SPELLS PHASE · network=${MANIFEST._network} · grpc=${process.env.SUI_GRPC_URL || '(default)'} · signer=${ME} ===`
   )
   if (OUT._signer && OUT._signer !== ME)
-    throw new Error(
-      `manifest signer ${OUT._signer} ≠ current signer ${ME} — refusing`
-    )
+    throw new Error(`manifest signer ${OUT._signer} ≠ current signer ${ME} — refusing`)
 
   const { object: cap } = await sui_client.getObject({ objectId: CAP })
   if (cap?.owner?.AddressOwner !== ME)
-    throw new Error(
-      `PREFLIGHT: spells AdminCap ${CAP} not owned by signer (${JSON.stringify(cap?.owner)})`
-    )
+    throw new Error(`PREFLIGHT: spells AdminCap ${CAP} not owned by signer (${JSON.stringify(cap?.owner)})`)
   console.log('preflight OK — spells AdminCap owned by signer')
 
   const allSpells = []
@@ -229,14 +206,9 @@ async function main() {
     .readdirSync(SPELLS_DIR)
     .filter((x) => x.endsWith('.json'))
     .sort())
-    for (const sp of JSON.parse(
-      fs.readFileSync(path.join(SPELLS_DIR, f), 'utf8')
-    ))
-      allSpells.push(sp)
+    for (const sp of JSON.parse(fs.readFileSync(path.join(SPELLS_DIR, f), 'utf8'))) allSpells.push(sp)
   const seen = new Set()
-  const spellRows = allSpells.filter(
-    (sp) => !seen.has(spellRowKey(sp)) && seen.add(spellRowKey(sp))
-  )
+  const spellRows = allSpells.filter((sp) => !seen.has(spellRowKey(sp)) && seen.add(spellRowKey(sp)))
   console.log(
     `corpus: ${spellRows.length} spells · already landed: ${spellRows.filter((sp) => OUT.spells[spellRowKey(sp)]).length}`
   )
@@ -244,9 +216,7 @@ async function main() {
   // BACKFILL: an executed-but-unresolved batch digest (crash between execute and land) — resolve, land, clear.
   for (const [label, digest] of Object.entries(OUT.pendingDigests)) {
     if (!label.startsWith('spells:')) continue
-    console.log(
-      `  [${label}] BACKFILL executed-but-unresolved digest ${digest.slice(0, 8)}…`
-    )
+    console.log(`  [${label}] BACKFILL executed-but-unresolved digest ${digest.slice(0, 8)}…`)
     const txb = await getReceipt(sui_client, digest)
     claimCreated(
       spellRows.filter((sp) => !OUT.spells[spellRowKey(sp)]),
@@ -292,9 +262,7 @@ async function main() {
     // with a previous run's labels (a pending-relative index did — false SKIP on the 07-13 resume).
     const label = `spells:kit:${spellRowKey(batch[0])}`
     if (OUT.digests[label]) {
-      console.log(
-        `  [${label}] SKIP (already: ${OUT.digests[label].slice(0, 8)}…)`
-      )
+      console.log(`  [${label}] SKIP (already: ${OUT.digests[label].slice(0, 8)}…)`)
       continue
     }
     const tx = new Transaction()
@@ -312,9 +280,7 @@ async function main() {
     delete OUT.pendingDigests[label]
     persist()
   }
-  console.log(
-    `\nphase gas: ${(gasMist / 1e9).toFixed(4)} SUI (${gasMist} MIST)`
-  )
+  console.log(`\nphase gas: ${(gasMist / 1e9).toFixed(4)} SUI (${gasMist} MIST)`)
   return summary()
 }
 

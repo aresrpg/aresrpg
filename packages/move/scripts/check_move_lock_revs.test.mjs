@@ -26,8 +26,7 @@ deps = {}
 
 test('a lock with one rev per framework is clean', () => {
   const rows = parse_lock_framework_revs(
-    framework('Sui', rev_a, 'sui-framework') +
-      framework('MoveStdlib', rev_a, 'move-stdlib')
+    framework('Sui', rev_a, 'sui-framework') + framework('MoveStdlib', rev_a, 'move-stdlib')
   )
   expect(rows).toHaveLength(2)
   expect(dual_rev_violations(rows)).toEqual([])
@@ -35,8 +34,7 @@ test('a lock with one rev per framework is clean', () => {
 
 test('the Sui/Sui_1 pair a transitive edge produces is a violation, named per entry', () => {
   const rows = parse_lock_framework_revs(
-    framework('Sui', rev_a, 'sui-framework') +
-      framework('Sui_1', rev_b, 'sui-framework')
+    framework('Sui', rev_a, 'sui-framework') + framework('Sui_1', rev_b, 'sui-framework')
   )
   const [violation] = dual_rev_violations(rows)
   expect(violation.key).toBe('testnet/sui-framework')
@@ -54,9 +52,7 @@ test('environments are judged independently — testnet duals do not hide behind
 source = { git = "https://github.com/MystenLabs/sui.git", subdir = "crates/sui-framework/packages/sui-framework", rev = "${rev_a}" }
 deps = {}
 `
-  expect(
-    dual_rev_violations(parse_lock_framework_revs(lock)).map((v) => v.key)
-  ).toEqual(['testnet/sui-framework'])
+  expect(dual_rev_violations(parse_lock_framework_revs(lock)).map((v) => v.key)).toEqual(['testnet/sui-framework'])
 })
 
 test('local and root entries carry no rev and are skipped by shape', () => {
@@ -88,9 +84,7 @@ override = true
 [addresses]
 treasury = "0x0"
 `
-  expect(floating_rev_violations(manifest)).toEqual([
-    { dep: 'Kiosk', rev: 'testnet' },
-  ])
+  expect(floating_rev_violations(manifest)).toEqual([{ dep: 'Kiosk', rev: 'testnet' }])
 })
 
 test('a local dependency is not a git dependency, whatever follows it', () => {
@@ -145,17 +139,14 @@ const verdict = (lock) => {
     }),
   ]
 }
-const ALIGNED =
-  env_block('testnet', CLI, CLI, KIOSK) + env_block('mainnet', CLI, CLI, KIOSK)
+const ALIGNED = env_block('testnet', CLI, CLI, KIOSK) + env_block('mainnet', CLI, CLI, KIOSK)
 
 test('the aligned matrix passes — the gate is satisfiable', () => {
   expect(verdict(ALIGNED)).toEqual([])
 })
 
 test('an INDENTED dual table is caught — the line parser read past it', () => {
-  const lock =
-    ALIGNED +
-    `  [pinned.testnet.Sui_1]\n  ${framework_src('sui-framework', 'b'.repeat(40))}\n`
+  const lock = ALIGNED + `  [pinned.testnet.Sui_1]\n  ${framework_src('sui-framework', 'b'.repeat(40))}\n`
   expect(verdict(lock)[0]).toContain('dual')
 })
 
@@ -166,33 +157,22 @@ test('an empty or environment-missing lock is a violation, not a pass', () => {
 
 test('the two frameworks must agree with each other AND with the manifest', () => {
   expect(
-    verdict(
-      env_block('testnet', CLI, 'c'.repeat(40), KIOSK) +
-        env_block('mainnet', CLI, CLI, KIOSK)
-    )[0]
+    verdict(env_block('testnet', CLI, 'c'.repeat(40), KIOSK) + env_block('mainnet', CLI, CLI, KIOSK))[0]
   ).toContain('MoveStdlib')
   const arbitrary = 'd'.repeat(40)
   expect(
-    verdict(
-      env_block('testnet', arbitrary, arbitrary, KIOSK) +
-        env_block('mainnet', arbitrary, arbitrary, KIOSK)
-    )[0]
+    verdict(env_block('testnet', arbitrary, arbitrary, KIOSK) + env_block('mainnet', arbitrary, arbitrary, KIOSK))[0]
   ).toContain('manifest pins')
 })
 
 test('a non-framework git dependency must match its manifest pin too', () => {
-  expect(
-    verdict(
-      env_block('testnet', CLI, CLI, 'e'.repeat(40)) +
-        env_block('mainnet', CLI, CLI, KIOSK)
-    )[0]
-  ).toContain('Kiosk')
+  expect(verdict(env_block('testnet', CLI, CLI, 'e'.repeat(40)) + env_block('mainnet', CLI, CLI, KIOSK))[0]).toContain(
+    'Kiosk'
+  )
 })
 
 test("the toolchain commit comes from CI's own sui pin", () => {
-  expect(
-    expected_cli_commit('          SUI_VERSION: sui 1.76.0-6effb4523834\n')
-  ).toBe('6effb4523834')
+  expect(expected_cli_commit('          SUI_VERSION: sui 1.76.0-6effb4523834\n')).toBe('6effb4523834')
   expect(expected_cli_commit('nothing here')).toBe(null)
 })
 

@@ -11,27 +11,16 @@ import { fileURLToPath } from 'node:url'
 
 import { describe, expect, test } from 'bun:test'
 
-import {
-  BOX_APPROVALS,
-  box_slugs,
-  build_box_plan,
-  reauthor_box_tx,
-} from './box_reauthor.mjs'
+import { BOX_APPROVALS, box_slugs, build_box_plan, reauthor_box_tx } from './box_reauthor.mjs'
 
 const script_dir = dirname(fileURLToPath(import.meta.url))
 const repo_dir = resolve(script_dir, '..', '..', '..')
-const pet_boxes = JSON.parse(
-  readFileSync(join(repo_dir, 'seed', 'mainnet', 'pet_boxes.json'), 'utf8')
-)
-const seed_manifest = JSON.parse(
-  readFileSync(join(script_dir, 'out', 'seed_manifest.json'), 'utf8')
-)
+const pet_boxes = JSON.parse(readFileSync(join(repo_dir, 'seed', 'mainnet', 'pet_boxes.json'), 'utf8'))
+const seed_manifest = JSON.parse(readFileSync(join(script_dir, 'out', 'seed_manifest.json'), 'utf8'))
 const box_rows = pet_boxes.boxes
 // The incident's old (broken) template ids are PINNED in BOX_APPROVALS — the manifest is the
 // ceremony's output receipt (post-2026-07-17 it maps these slugs to the CORRECTED generation).
-const template_ids = Object.fromEntries(
-  box_slugs.map((slug) => [slug, BOX_APPROVALS[slug].old_template_id])
-)
+const template_ids = Object.fromEntries(box_slugs.map((slug) => [slug, BOX_APPROVALS[slug].old_template_id]))
 
 const sale_id = (index) => `0x${String(index + 1).padStart(64, '0')}`
 const clone = (value) => JSON.parse(JSON.stringify(value))
@@ -78,26 +67,18 @@ const call_list = (tx) =>
 
 describe('build_box_plan — the 3 broken pet boxes', () => {
   test('reauthors all 3 with the full pause→burn→create→sale→loot_table step set + correct fresh supply', () => {
-    const live_rows = box_slugs.map((slug, index) =>
-      broken_sale({ slug, index, minted: index * 7 })
-    )
+    const live_rows = box_slugs.map((slug, index) => broken_sale({ slug, index, minted: index * 7 }))
     const plan = build_box_plan({ live_rows, box_rows, seed_manifest })
     expect(plan.reauthor_boxes.map((op) => op.slug)).toEqual(box_slugs)
     expect(plan.manifest_receipt).toEqual([]) // no corrected sale live yet — receipt rows only exist post-mint
     for (const [i, op] of plan.reauthor_boxes.entries()) {
-      expect(op.steps.join(':')).toBe(
-        'set_paused:burn_sale:create_template:create_sale:set_loot_table'
-      )
+      expect(op.steps.join(':')).toBe('set_paused:burn_sale:create_template:create_sale:set_loot_table')
       expect(op.create_fresh).toBe(true)
       expect(op.fresh_supply).toBe(BOX_APPROVALS[op.slug].supply - i * 7)
       // pool resolves every pet slug to its seeded template id.
       const seed_pool = box_rows.find((row) => row.slug === op.slug).pool
-      expect(op.pool.map((p) => p.weight)).toEqual(
-        seed_pool.map((p) => p.weight)
-      )
-      expect(op.pool.map((p) => p.template_id)).toEqual(
-        seed_pool.map((p) => seed_manifest.items[p.pet])
-      )
+      expect(op.pool.map((p) => p.weight)).toEqual(seed_pool.map((p) => p.weight))
+      expect(op.pool.map((p) => p.template_id)).toEqual(seed_pool.map((p) => seed_manifest.items[p.pet]))
       expect(op.fresh_template.category).toBe('consumable')
     }
   })
@@ -125,9 +106,7 @@ describe('build_box_plan — the 3 broken pet boxes', () => {
         },
       }
     })
-    expect(
-      build_box_plan({ live_rows: corrected, box_rows, seed_manifest })
-    ).toEqual({
+    expect(build_box_plan({ live_rows: corrected, box_rows, seed_manifest })).toEqual({
       reauthor_boxes: [],
       // the receipt law: converged corrected sales still surface their live template ids so the
       // ceremony can heal a stale seed-manifest receipt in the same run (manifest_writeback.mjs).
@@ -142,37 +121,27 @@ describe('build_box_plan — the 3 broken pet boxes', () => {
     const drifted = clone(box_rows)
     drifted.find((row) => row.slug === 'pet_lootbox').price_sui = 5
     const live_rows = [broken_sale({ slug: 'pet_lootbox', index: 0 })]
-    expect(() =>
-      build_box_plan({ live_rows, box_rows: drifted, seed_manifest })
-    ).toThrow(/drifted from owner approval/)
+    expect(() => build_box_plan({ live_rows, box_rows: drifted, seed_manifest })).toThrow(/drifted from owner approval/)
   })
 
   test('a seed row without gacha:true is refused (reauthor must never recreate the broken box)', () => {
     const no_gacha = clone(box_rows)
     delete no_gacha.find((row) => row.slug === 'pet_lootbox').gacha
     const live_rows = [broken_sale({ slug: 'pet_lootbox', index: 0 })]
-    expect(() =>
-      build_box_plan({ live_rows, box_rows: no_gacha, seed_manifest })
-    ).toThrow(/lacks gacha:true/)
+    expect(() => build_box_plan({ live_rows, box_rows: no_gacha, seed_manifest })).toThrow(/lacks gacha:true/)
   })
 
   test('a pool pet absent from the manifest throws (never author a half-broken table)', () => {
     const manifest = clone(seed_manifest)
-    delete manifest.items[
-      box_rows.find((row) => row.slug === 'pet_lootbox').pool[0].pet
-    ]
+    delete manifest.items[box_rows.find((row) => row.slug === 'pet_lootbox').pool[0].pet]
     const live_rows = [broken_sale({ slug: 'pet_lootbox', index: 0 })]
-    expect(() =>
-      build_box_plan({ live_rows, box_rows, seed_manifest: manifest })
-    ).toThrow(/pool pet/)
+    expect(() => build_box_plan({ live_rows, box_rows, seed_manifest: manifest })).toThrow(/pool pet/)
   })
 })
 
 describe('reauthor_box_tx — the atomic fix PTB', () => {
   test('composes pause, burn, the gacha effect, create_template, create_sale, then admin_set_loot_table (in order)', () => {
-    const live_rows = box_slugs.map((slug, index) =>
-      broken_sale({ slug, index, minted: 4 })
-    )
+    const live_rows = box_slugs.map((slug, index) => broken_sale({ slug, index, minted: 4 }))
     const op = build_box_plan({
       live_rows,
       box_rows,
@@ -207,9 +176,6 @@ describe('reauthor_box_tx — the atomic fix PTB', () => {
       old_paused: false,
       create_fresh: false,
     }
-    expect(call_list(reauthor_box_tx(op, deployment))).toEqual([
-      'shop::set_paused',
-      'shop::burn_sale',
-    ])
+    expect(call_list(reauthor_box_tx(op, deployment))).toEqual(['shop::set_paused', 'shop::burn_sale'])
   })
 })

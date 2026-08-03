@@ -49,13 +49,9 @@ export function resolve_mode(environment) {
   const live_value = environment.LIVE
   const dry_value = environment.DRY_RUN
   if (live_value && live_value !== '1')
-    throw new Error(
-      `LIVE must be exactly 1 when set (got ${JSON.stringify(live_value)})`
-    )
-  if (live_value === '1' && dry_value === '1')
-    throw new Error('LIVE=1 conflicts with DRY_RUN=1')
-  if (live_value !== '1' && dry_value === '0')
-    throw new Error('DRY_RUN=0 requires explicit LIVE=1')
+    throw new Error(`LIVE must be exactly 1 when set (got ${JSON.stringify(live_value)})`)
+  if (live_value === '1' && dry_value === '1') throw new Error('LIVE=1 conflicts with DRY_RUN=1')
+  if (live_value !== '1' && dry_value === '0') throw new Error('DRY_RUN=0 requires explicit LIVE=1')
   return { live: live_value === '1', dry_run: live_value !== '1' }
 }
 
@@ -147,9 +143,7 @@ function batch_calls(leg, calls) {
   let weight = 0
   for (const call of calls) {
     if (call.command_weight > max_ptb_commands)
-      throw new Error(
-        `${call.summary}: ${call.command_weight} PTB commands exceeds ${max_ptb_commands}`
-      )
+      throw new Error(`${call.summary}: ${call.command_weight} PTB commands exceeds ${max_ptb_commands}`)
     if (pending.length && weight + call.command_weight > max_ptb_commands) {
       transactions.push({
         leg,
@@ -186,12 +180,7 @@ function spell_call(base, function_name, payload, command_weight = 1) {
   }
 }
 
-export function build_spell_leg({
-  seed_rows,
-  seed_manifest,
-  chain_state,
-  targets,
-}) {
+export function build_spell_leg({ seed_rows, seed_manifest, chain_state, targets }) {
   const calls = []
   const blockers = []
   let rows_drifted = 0
@@ -215,16 +204,8 @@ export function build_spell_leg({
       blockers.push(`spell ${row_key}: object ${object_id} unreadable`)
       continue
     }
-    const identity = [
-      String(chain.class),
-      as_number(chain.unlock_level),
-      String(chain.name),
-    ]
-    const expected_identity = [
-      String(row.classType),
-      as_number(row.unlock),
-      String(row.id),
-    ]
+    const identity = [String(chain.class), as_number(chain.unlock_level), String(chain.name)]
+    const expected_identity = [String(row.classType), as_number(row.unlock), String(row.id)]
     if (!same(identity, expected_identity)) {
       blockers.push(
         `spell ${row_key}: object identity ${JSON.stringify(identity)} != ${JSON.stringify(expected_identity)}`
@@ -255,17 +236,12 @@ export function build_spell_leg({
         object_id,
         level,
       }
-      const unsupported = unsupported_spell_fields.filter(
-        (field) => !same(desired[field], current[field])
-      )
-      if (unsupported.length)
-        row_unsupported.push(`L${level} ${unsupported.join(',')}`)
+      const unsupported = unsupported_spell_fields.filter((field) => !same(desired[field], current[field]))
+      if (unsupported.length) row_unsupported.push(`L${level} ${unsupported.join(',')}`)
 
       const level_calls = []
       if (desired.ap_cost !== current.ap_cost)
-        level_calls.push(
-          spell_call(base, 'set_level_ap_cost', { ap_cost: desired.ap_cost })
-        )
+        level_calls.push(spell_call(base, 'set_level_ap_cost', { ap_cost: desired.ap_cost }))
       if (
         !same(
           [desired.range_min, desired.range_max, desired.modifiable_range],
@@ -281,18 +257,8 @@ export function build_spell_leg({
         )
       if (
         !same(
-          [
-            desired.casts_per_turn,
-            desired.casts_per_target,
-            desired.cooldown_turns,
-            desired.crit_rate,
-          ],
-          [
-            current.casts_per_turn,
-            current.casts_per_target,
-            current.cooldown_turns,
-            current.crit_rate,
-          ]
+          [desired.casts_per_turn, desired.casts_per_target, desired.cooldown_turns, desired.crit_rate],
+          [current.casts_per_turn, current.casts_per_target, current.cooldown_turns, current.crit_rate]
         )
       )
         level_calls.push(
@@ -303,26 +269,15 @@ export function build_spell_leg({
             crit_rate: desired.crit_rate,
           })
         )
-      if (
-        !same(
-          [desired.min_char_level, desired.line_of_sight],
-          [current.min_char_level, current.line_of_sight]
-        )
-      )
+      if (!same([desired.min_char_level, desired.line_of_sight], [current.min_char_level, current.line_of_sight]))
         level_calls.push(
           spell_call(base, 'set_level_targeting', {
             min_char_level: desired.min_char_level,
             line_of_sight: desired.line_of_sight,
           })
         )
-      if (
-        !same(
-          [desired.effects, desired.crit_effects],
-          [current.effects, current.crit_effects]
-        )
-      ) {
-        const effect_commands =
-          desired.effects.length + desired.crit_effects.length + 3
+      if (!same([desired.effects, desired.crit_effects], [current.effects, current.crit_effects])) {
+        const effect_commands = desired.effects.length + desired.crit_effects.length + 3
         level_calls.push(
           spell_call(
             base,
@@ -342,10 +297,7 @@ export function build_spell_leg({
       row_calls.push(...level_calls)
     })
     if (row_has_drift) rows_drifted += 1
-    if (row_unsupported.length)
-      blockers.push(
-        `spell ${row_key}: no additive setter for ${row_unsupported.join('; ')}`
-      )
+    if (row_unsupported.length) blockers.push(`spell ${row_key}: no additive setter for ${row_unsupported.join('; ')}`)
     else calls.push(...row_calls)
   }
 
@@ -376,19 +328,12 @@ function chain_stats(stats) {
   return stat_fields.map((field) => as_number(value[field]))
 }
 
-export function build_item_leg({
-  seed_rows,
-  seed_manifest,
-  chain_state,
-  target,
-}) {
+export function build_item_leg({ seed_rows, seed_manifest, chain_state, target }) {
   const calls = []
   const blockers = []
   let rows_drifted = 0
   const seen = new Set()
-  const authored_rows = seed_rows.filter(
-    (row) => row?.stats?.min && row?.stats?.max
-  )
+  const authored_rows = seed_rows.filter((row) => row?.stats?.min && row?.stats?.max)
 
   for (const row of authored_rows) {
     if (seen.has(row.slug)) {
@@ -407,9 +352,7 @@ export function build_item_leg({
       continue
     }
     if ((current.stats_min == null) !== (current.stats_max == null)) {
-      blockers.push(
-        `item ${row.slug}: only one of StatsMinKey/StatsMaxKey exists`
-      )
+      blockers.push(`item ${row.slug}: only one of StatsMinKey/StatsMaxKey exists`)
       continue
     }
     try {
@@ -447,16 +390,12 @@ export function build_item_leg({
   }
 }
 
-export async function execute_transactions(
-  transactions,
-  { live, execute_transaction }
-) {
+export async function execute_transactions(transactions, { live, execute_transaction }) {
   if (!live) return { executed: 0, failure_latch: null }
   let executed = 0
   let failure_latch = null
   for (const transaction of transactions) {
-    if (failure_latch)
-      throw new Error(`failure latch already set at ${failure_latch}`)
+    if (failure_latch) throw new Error(`failure latch already set at ${failure_latch}`)
     let result
     try {
       result = await execute_transaction(transaction)

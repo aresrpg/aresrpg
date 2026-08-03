@@ -26,9 +26,7 @@ const {
 
 const owner = keypair.getPublicKey().toSuiAddress()
 if (EXPECT_SIGNER && owner.toLowerCase() !== EXPECT_SIGNER.toLowerCase())
-  throw new Error(
-    `SIGNER GUARD: active key is ${owner} but EXPECT_SIGNER=${EXPECT_SIGNER} — refusing to sign`
-  )
+  throw new Error(`SIGNER GUARD: active key is ${owner} but EXPECT_SIGNER=${EXPECT_SIGNER} — refusing to sign`)
 
 const client = new SuiJsonRpcClient({ url: RPC_URL })
 
@@ -102,14 +100,10 @@ const [primary, ...rest] = coins
 const build = () => {
   const tx = new Transaction()
   tx.setSender(owner)
-  tx.setGasPayment([
-    { objectId: primary.coinObjectId, version: primary.version, digest: primary.digest },
-  ])
+  tx.setGasPayment([{ objectId: primary.coinObjectId, version: primary.version, digest: primary.digest }])
   tx.mergeCoins(
     tx.gas,
-    rest.map((c) =>
-      tx.objectRef({ objectId: c.coinObjectId, version: c.version, digest: c.digest })
-    )
+    rest.map((c) => tx.objectRef({ objectId: c.coinObjectId, version: c.version, digest: c.digest }))
   )
   return tx
 }
@@ -120,16 +114,12 @@ dry_tx.setGasBudget(10_000_000n)
 const dry = await client.dryRunTransactionBlock({
   transactionBlock: await dry_tx.build({ client }),
 })
-if (dry.effects.status.status !== 'success')
-  throw new Error(`dryRun failed: ${JSON.stringify(dry.effects.status)}`)
+if (dry.effects.status.status !== 'success') throw new Error(`dryRun failed: ${JSON.stringify(dry.effects.status)}`)
 const g = dry.effects.gasUsed
-const used =
-  BigInt(g.computationCost) + BigInt(g.storageCost) - BigInt(g.storageRebate)
+const used = BigInt(g.computationCost) + BigInt(g.storageCost) - BigInt(g.storageRebate)
 let budget = (used * 3n) / 2n
 if (budget < 5_000_000n) budget = 5_000_000n
-console.log(
-  `dryRun=success gasNet=${Number(used) / 1e9} SUI budget(x1.5)=${Number(budget) / 1e9} SUI`
-)
+console.log(`dryRun=success gasNet=${Number(used) / 1e9} SUI budget(x1.5)=${Number(budget) / 1e9} SUI`)
 
 const tx = build()
 tx.setGasBudget(budget)
@@ -140,9 +130,7 @@ const r = await client.signAndExecuteTransaction({
 })
 await client.waitForTransaction({ digest: r.digest })
 if (r.effects?.status?.status !== 'success') {
-  console.error(
-    `CONSOLIDATION_FAILED_EXECUTED digest=${r.digest} status=${JSON.stringify(r.effects?.status)}`
-  )
+  console.error(`CONSOLIDATION_FAILED_EXECUTED digest=${r.digest} status=${JSON.stringify(r.effects?.status)}`)
   console.error('BURN LAW: a digest exists — do NOT retry. Report exact chain state.')
   process.exit(1)
 }

@@ -2,13 +2,7 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 import { describe, expect, test } from 'bun:test'
 
-import {
-  build_item_leg,
-  build_spell_leg,
-  execute_transactions,
-  resolve_mode,
-  stat_fields,
-} from './reseed_plan.mjs'
+import { build_item_leg, build_spell_leg, execute_transactions, resolve_mode, stat_fields } from './reseed_plan.mjs'
 import { build_world_leg } from './reseed_world_plan.mjs'
 
 const spell_id = '0x100'
@@ -89,19 +83,13 @@ const spell_inputs = (seed_overrides = {}, chain_overrides = {}) => {
     id: 'test_spell',
     classType: 'senshi',
     unlock: 1,
-    levels: [
-      seed_level(seed_overrides),
-      ...Array.from({ length: 5 }, () => seed_level()),
-    ],
+    levels: [seed_level(seed_overrides), ...Array.from({ length: 5 }, () => seed_level())],
   }
   const chain = {
     class: 'senshi',
     unlock_level: 1,
     name: 'test_spell',
-    levels: [
-      chain_level(chain_overrides),
-      ...Array.from({ length: 5 }, () => chain_level()),
-    ],
+    levels: [chain_level(chain_overrides), ...Array.from({ length: 5 }, () => chain_level())],
   }
   return {
     seed_rows: [row],
@@ -128,21 +116,13 @@ describe('spell diff -> published setter calls', () => {
     expect(leg.blockers).toEqual([])
     expect(leg.rows_drifted).toBe(1)
     expect(leg.levels_drifted).toBe(1)
-    expect(
-      leg.transactions
-        .flatMap((transaction) => transaction.calls)
-        .map((call) => call.function)
-    ).toEqual([
+    expect(leg.transactions.flatMap((transaction) => transaction.calls).map((call) => call.function)).toEqual([
       'set_level_ap_cost',
       'set_level_range',
       'set_level_limits',
       'set_level_effects',
     ])
-    expect(
-      leg.transactions.every(
-        (transaction) => transaction.ptb_command_count <= 30
-      )
-    ).toBe(true)
+    expect(leg.transactions.every((transaction) => transaction.ptb_command_count <= 30)).toBe(true)
   })
 
   test('a matching spell emits no calls', () => {
@@ -153,12 +133,7 @@ describe('spell diff -> published setter calls', () => {
   })
 
   test('unsupported spell-level drift blocks the whole spell instead of partial tuning', () => {
-    const leg = build_spell_leg(
-      spell_inputs(
-        { ap_cost: 4, min_char_level: 2, line_of_sight: false },
-        {}
-      )
-    )
+    const leg = build_spell_leg(spell_inputs({ ap_cost: 4, min_char_level: 2, line_of_sight: false }, {}))
     expect(leg.rows_drifted).toBe(1)
     expect(leg.call_count).toBe(0)
     expect(leg.blockers.join('\n')).toContain('min_char_level')
@@ -167,9 +142,7 @@ describe('spell diff -> published setter calls', () => {
 })
 
 const centered = (overrides) =>
-  Object.fromEntries(
-    stat_fields.map((field) => [field, 32_768 + (overrides[field] ?? 0)])
-  )
+  Object.fromEntries(stat_fields.map((field) => [field, 32_768 + (overrides[field] ?? 0)]))
 const item_inputs = (seed_stats, chain_min, chain_max) => ({
   seed_rows: [{ slug: 'test_blade', category: 'SWORD', stats: seed_stats }],
   seed_manifest: { items: { test_blade: item_id } },
@@ -189,9 +162,7 @@ describe('item stat diff -> additive set_template_stats', () => {
       min: { vitality: 1, critical: 2 },
       max: { vitality: 5, critical: 3 },
     }
-    const leg = build_item_leg(
-      item_inputs(seed_stats, centered({}), centered({}))
-    )
+    const leg = build_item_leg(item_inputs(seed_stats, centered({}), centered({})))
     expect(leg.blockers).toEqual([])
     expect(leg.rows_drifted).toBe(1)
     expect(leg.call_count).toBe(1)
@@ -210,13 +181,7 @@ describe('item stat diff -> additive set_template_stats', () => {
 
   test('a matching item emits no calls', () => {
     const seed_stats = { min: { vitality: 1 }, max: { vitality: 5 } }
-    const leg = build_item_leg(
-      item_inputs(
-        seed_stats,
-        centered({ vitality: 1 }),
-        centered({ vitality: 5 })
-      )
-    )
+    const leg = build_item_leg(item_inputs(seed_stats, centered({ vitality: 1 }), centered({ vitality: 5 })))
     expect(leg.rows_drifted).toBe(0)
     expect(leg.transactions).toEqual([])
   })
@@ -276,9 +241,7 @@ test('changed world is one atomic clear + complete ordered re-author PTB; role s
     'add_dungeon_room',
   ])
   expect(leg.totals.mob_groups).toEqual({ removed: 1, added: 0 })
-  expect(leg.role_projection_drift).toEqual([
-    { mob: 'rat', manifest_role: 'archi', seed_role: 'trash' },
-  ])
+  expect(leg.role_projection_drift).toEqual([{ mob: 'rat', manifest_role: 'archi', seed_role: 'trash' }])
 
   const matching = build_world_leg({
     seed_rows: [world],
@@ -319,20 +282,17 @@ describe('DRY_RUN gate and executed-failure latch', () => {
     const attempted = []
     let error
     try {
-      await execute_transactions(
-        [{ label: 'first' }, { label: 'must-not-run' }],
-        {
-          live: true,
-          execute_transaction: async (transaction) => {
-            attempted.push(transaction.label)
-            return {
-              status: 'failure',
-              digest: '0xdeadbeef',
-              error: 'MoveAbort',
-            }
-          },
-        }
-      )
+      await execute_transactions([{ label: 'first' }, { label: 'must-not-run' }], {
+        live: true,
+        execute_transaction: async (transaction) => {
+          attempted.push(transaction.label)
+          return {
+            status: 'failure',
+            digest: '0xdeadbeef',
+            error: 'MoveAbort',
+          }
+        },
+      })
     } catch (caught) {
       error = caught
     }

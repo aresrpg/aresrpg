@@ -21,7 +21,9 @@ test('the compile-input file set spans all 7 packages (sources/**.move + Move.to
     expect(files.some((f) => f.includes(`/${pkg}/`))).toBe(true)
   // never a publish-state file (Published.toml / Move.lock / build/) — those change on publish, not on source edit
   expect(files.every((f) => f.endsWith('.move') || f.endsWith('Move.toml'))).toBe(true)
-  expect(files.some((f) => f.includes('Published.toml') || f.includes('Move.lock') || f.includes('/build/'))).toBe(false)
+  expect(files.some((f) => f.includes('Published.toml') || f.includes('Move.lock') || f.includes('/build/'))).toBe(
+    false
+  )
 })
 
 test('the file list is sorted (deterministic fold order)', () => {

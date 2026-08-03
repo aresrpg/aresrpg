@@ -22,14 +22,10 @@ const is_id = (value) => /^0x[0-9a-f]{64}$/i.test(value ?? '')
  * Throws on 0 or >1 — a guessed template id would corrupt the manifest receipt silently. */
 export function created_template_id(receipt) {
   const created = (receipt?.objectChanges ?? []).filter(
-    (change) =>
-      change.type === 'created' &&
-      String(change.objectType ?? '').endsWith('::item::ItemTemplate')
+    (change) => change.type === 'created' && String(change.objectType ?? '').endsWith('::item::ItemTemplate')
   )
   if (created.length !== 1)
-    throw new Error(
-      `expected exactly 1 created ItemTemplate in tx ${receipt?.digest}, found ${created.length}`
-    )
+    throw new Error(`expected exactly 1 created ItemTemplate in tx ${receipt?.digest}, found ${created.length}`)
   return created[0].objectId
 }
 
@@ -45,10 +41,7 @@ export function writeback_rows({ manifest_receipt = [], minted = [] }) {
   ]
   const seen = new Set()
   for (const { slug } of rows) {
-    if (seen.has(slug))
-      throw new Error(
-        `manifest write-back resolved two template ids for ${slug}; refusing to guess`
-      )
+    if (seen.has(slug)) throw new Error(`manifest write-back resolved two template ids for ${slug}; refusing to guess`)
     seen.add(slug)
   }
   return rows
@@ -58,42 +51,27 @@ export function writeback_rows({ manifest_receipt = [], minted = [] }) {
  * (the receipt may only REFRESH rows the seed actually created); identical rows drop out. */
 export function compute_manifest_writeback(seed_manifest, rows) {
   const items = seed_manifest?.items
-  if (!items || typeof items !== 'object' || Array.isArray(items))
-    throw new Error('seed manifest has no items map')
+  if (!items || typeof items !== 'object' || Array.isArray(items)) throw new Error('seed manifest has no items map')
   const changes = []
   for (const { slug, template_id } of rows) {
-    if (!is_id(template_id))
-      throw new Error(
-        `write-back for ${slug}: invalid template id ${template_id}`
-      )
+    if (!is_id(template_id)) throw new Error(`write-back for ${slug}: invalid template id ${template_id}`)
     if (!is_id(items[slug]))
-      throw new Error(
-        `write-back for ${slug}: slug has no manifest item row — the receipt only refreshes seeded rows`
-      )
-    if (items[slug] !== template_id)
-      changes.push({ slug, from: items[slug], to: template_id })
+      throw new Error(`write-back for ${slug}: slug has no manifest item row — the receipt only refreshes seeded rows`)
+    if (items[slug] !== template_id) changes.push({ slug, from: items[slug], to: template_id })
   }
   return changes
 }
 
 /** The ceremony's receipt maintenance. LIVE: rewrites the manifest byte-stable with the seeder's own
  * serializer (2-space JSON, no trailing newline — verified round-trip). DRY_RUN: reports only. */
-export function apply_manifest_writeback({
-  manifest_path,
-  seed_manifest,
-  rows,
-  live,
-  log = console.log,
-}) {
+export function apply_manifest_writeback({ manifest_path, seed_manifest, rows, live, log = console.log }) {
   const changes = compute_manifest_writeback(seed_manifest, rows)
   if (!changes.length) {
     log('  manifest receipt: fresh (0 rows to write)')
     return changes
   }
   for (const { slug, from, to } of changes)
-    log(
-      `  manifest receipt: ${slug} ${from} -> ${to}${live ? '' : ' (pending, DRY_RUN)'}`
-    )
+    log(`  manifest receipt: ${slug} ${from} -> ${to}${live ? '' : ' (pending, DRY_RUN)'}`)
   if (!live) return changes
   const next = { ...seed_manifest, items: { ...seed_manifest.items } }
   for (const { slug, to } of changes) next.items[slug] = to

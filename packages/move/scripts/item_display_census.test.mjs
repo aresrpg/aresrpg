@@ -107,9 +107,7 @@ test('template_seed_convergence — a diverged template (rename never landed) is
 })
 
 test('template_seed_convergence follows stable item_type identity across a republish', () => {
-  const current_templates = [
-    { id: id(42), item_type: 'cape_lorito_air', name: 'Lorito Cloak (Opal)' },
-  ]
+  const current_templates = [{ id: id(42), item_type: 'cape_lorito_air', name: 'Lorito Cloak (Opal)' }]
   const result = template_seed_convergence({
     expected_name_by_slug: { cape_lorito_air: 'Lorito Cloak (Opal)' },
     template_name_by_slug: index_by_item_type(current_templates),

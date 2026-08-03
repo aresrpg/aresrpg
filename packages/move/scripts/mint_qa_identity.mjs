@@ -10,9 +10,10 @@
 //
 // Funding source: the ACTIVE CLI keystore address (server-aresrpg — the testnet ops wallet).
 // The printed suiprivkey is a DISPOSABLE testnet QA credential — never a prod key, never reused.
+import fs from 'node:fs'
+
 import { Ed25519Keypair } from '@mysten/sui/keypairs/ed25519'
 import { Transaction } from '@mysten/sui/transactions'
-import fs from 'node:fs'
 
 // Relative import: packages/move/scripts is not an npm workspace member of the SDK — same pattern
 // as this directory's other cross-package reads.
@@ -41,7 +42,7 @@ const sdk = await SDK({ network: 'testnet' })
 const onboard = await run(sui_client, qa, 'qa-onboard-kiosk', sdk.onboard_kiosk_ptb(), { ceilingSui: 0.1 })
 const created = (needle) =>
   (onboard.objectChanges ?? []).find(
-    (change) => change.type === 'created' && String(change.objectType ?? '').includes(needle),
+    (change) => change.type === 'created' && String(change.objectType ?? '').includes(needle)
   )?.objectId
 const kiosk_id = created('0x2::kiosk::Kiosk')
 const personal_kiosk_cap_id = created('::personal_kiosk::PersonalKioskCap')

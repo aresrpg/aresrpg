@@ -19,12 +19,7 @@ import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 import { resolve_mode } from './reseed_plan.mjs'
-import {
-  diff_mob_xp,
-  fetch_chain_xp,
-  seed_xp_by_key,
-  unminted_seed_keys,
-} from './mob_xp_reauthor_plan.mjs'
+import { diff_mob_xp, fetch_chain_xp, seed_xp_by_key, unminted_seed_keys } from './mob_xp_reauthor_plan.mjs'
 
 const script_dir = dirname(fileURLToPath(import.meta.url))
 const repo_dir = resolve(script_dir, '..', '..', '..')
@@ -74,12 +69,9 @@ function load_manifest(network) {
     throw new Error(`seed_manifest.json missing/unreadable at ${manifest_path}: ${error.message}`)
   }
   const mobs = manifest.mobs ?? {}
-  if (!Object.keys(mobs).length)
-    throw new Error('seed_manifest.json carries zero mobs — nothing to diff')
+  if (!Object.keys(mobs).length) throw new Error('seed_manifest.json carries zero mobs — nothing to diff')
   if (manifest._network && manifest._network !== network)
-    throw new Error(
-      `manifest network ${manifest._network} ≠ NETWORK ${network} — refusing cross-network reads`
-    )
+    throw new Error(`manifest network ${manifest._network} ≠ NETWORK ${network} — refusing cross-network reads`)
   // NOTE the manifest PREDATING the retuned seed is EXPECTED here (chain=old xp, seed=new xp); the real freshness
   // gate is per-id read success below (a stale id → xp unreadable → read_failed → LIVE blocker), not mtime.
   return mobs
@@ -96,19 +88,17 @@ function print_report({ plan, strategy, mode, limit, seed, unminted }) {
       `seed_invalid=${seed.invalid.length} · seed_dupes=${seed.duplicates.length} · unminted_seed=${unminted.length}`
   )
   console.log('\nsamples (old chain xp → new seed xp):')
-  for (const row of plan.changed.slice(0, 5))
-    console.log(`  ${row.key}  ${row.from} → ${row.to}   (${row.id})`)
+  for (const row of plan.changed.slice(0, 5)) console.log(`  ${row.key}  ${row.from} → ${row.to}   (${row.id})`)
   if (!plan.changed.length) console.log('  (none — chain xp already matches the retuned seed)')
   for (const row of plan.read_failed) console.log(`  READ_FAILED ${row.key} (${row.id}): ${row.why}`)
   for (const row of plan.missing_seed) console.log(`  MISSING_SEED ${row.key} (${row.id})`)
   for (const row of seed.invalid) console.log(`  SEED_INVALID ${row.key}: ${row.why}`)
-  for (const row of seed.duplicates)
-    console.log(`  SEED_DUPE ${row.key}: kept ${row.kept}, ignored ${row.ignored}`)
+  for (const row of seed.duplicates) console.log(`  SEED_DUPE ${row.key}: kept ${row.kept}, ignored ${row.ignored}`)
 }
 
 async function main() {
   const argv = process.argv.slice(2)
-  const env = process.env
+  const { env } = process
   const mode = resolve_mode(env) // reuses the reseed LIVE/DRY latch (LIVE=1 vs DRY_RUN default)
   const strategy = selected_strategy(argv, env)
   const limit = limit_from(argv, env)
@@ -119,9 +109,7 @@ async function main() {
 
   const sorted_keys = Object.keys(manifest_mobs).sort()
   const scoped_keys = limit == null ? sorted_keys : sorted_keys.slice(0, limit)
-  const ids = scoped_keys
-    .map((key) => manifest_mobs[key]?.id)
-    .filter((id) => /^0x[0-9a-f]{64}$/i.test(id))
+  const ids = scoped_keys.map((key) => manifest_mobs[key]?.id).filter((id) => /^0x[0-9a-f]{64}$/i.test(id))
 
   const { sui_client } = await import('./client.js')
   const chain_xp = await fetch_chain_xp(sui_client, ids)
@@ -150,8 +138,7 @@ async function main() {
   }
 
   // The one gate BOTH strategies honor: never fire LIVE with reads you couldn't fully trust.
-  const live_blockers =
-    plan.read_failed.length + plan.missing_seed.length + seed.invalid.length
+  const live_blockers = plan.read_failed.length + plan.missing_seed.length + seed.invalid.length
 
   if (strategy === 'remint') {
     console.log(
@@ -160,9 +147,7 @@ async function main() {
         '  an in-place mutation, so ids never change and no world-table repoint is needed. This lane ships the\n' +
         `  diff/read truth above; the setter apply script consumes plan.changed (${plan.changed.length} rows).`
     )
-    const would_be_batches = Math.ceil(
-      (plan.changed.length * commands_per_remint) / max_ptb_commands
-    )
+    const would_be_batches = Math.ceil((plan.changed.length * commands_per_remint) / max_ptb_commands)
     console.log(
       `  (were a remint ever built: ${plan.changed.length} × ${commands_per_remint} cmds ⇒ ` +
         `${would_be_batches} PTB batch(es) at ≤${max_ptb_commands} cmds — plus a manifest writeback + world repoint.)`

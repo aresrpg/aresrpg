@@ -29,15 +29,8 @@ const push = (ref_name) => ({
 })
 
 test('no marker keeps the compat teeth, in every context', () => {
-  for (const context of [
-    pr('edge'),
-    pr('master'),
-    push('edge'),
-    push('master'),
-  ])
-    expect(
-      republish_window_verdict({ ...context, marker_present: false }).mode
-    ).toBe('compat')
+  for (const context of [pr('edge'), pr('master'), push('edge'), push('master')])
+    expect(republish_window_verdict({ ...context, marker_present: false }).mode).toBe('compat')
 })
 
 test('the marker opens size-only mode on edge and on PRs into edge', () => {
@@ -114,9 +107,7 @@ test('a partial GitHub context is REFUSED — unsetting one variable is not a lo
       base_ref: 'master',
     }).mode
   ).toBe('refused')
-  expect(republish_window_verdict({ ...base, ref_name: 'master' }).mode).toBe(
-    'refused'
-  )
+  expect(republish_window_verdict({ ...base, ref_name: 'master' }).mode).toBe('refused')
   expect(republish_window_verdict(base).mode).toBe('size-only')
 })
 
@@ -168,24 +159,19 @@ test('over the CHAIN CEILING is its own status, never merely over policy', () =>
 
 test('a package with no budget row is still held to the chain ceiling', () => {
   expect(size_verdict({ name: 'foundation', size: 40_000 }).status).toBe('ok')
-  expect(size_verdict({ name: 'foundation', size: 102_401 }).status).toBe(
-    'over-ceiling'
-  )
+  expect(size_verdict({ name: 'foundation', size: 102_401 }).status).toBe('over-ceiling')
 })
 
 // #1847's exact death: the first upgrade build exits before compatibility verification because a
 // warning was escalated. The probe must rerun with warnings deflected, materialise the compatibility
 // list whether it is empty or not, AND preserve the warning death as its own blocking result.
 test('a warning-escalation death cannot hide either compatibility verdict', () => {
-  const warning_death = Object.assign(
-    new Error('warnings are errors'),
-    {
-      status: 1,
-      stdout: '',
-      stderr:
-        "error[E09008]: unused function\nThis warning can be suppressed with '#[allow(unused_function)]'\nFailed to build Move modules: Compilation error.",
-    }
-  )
+  const warning_death = Object.assign(new Error('warnings are errors'), {
+    status: 1,
+    stdout: '',
+    stderr:
+      "error[E09008]: unused function\nThis warning can be suppressed with '#[allow(unused_function)]'\nFailed to build Move modules: Compilation error.",
+  })
   const fixtures = [
     {
       retry: Object.assign(new Error('incompatible'), {
@@ -207,10 +193,7 @@ test('a warning-escalation death cannot hide either compatibility verdict', () =
       if (result instanceof Error) throw result
       return result
     }
-    const result = run_compatibility_probe(
-      ['client', 'upgrade', '--warnings-are-errors', 'fixture'],
-      run
-    )
+    const result = run_compatibility_probe(['client', 'upgrade', '--warnings-are-errors', 'fixture'], run)
 
     expect(calls).toHaveLength(2)
     expect(calls[1]).toContain('--silence-warnings')

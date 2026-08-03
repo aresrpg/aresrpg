@@ -27,41 +27,32 @@ const sui_to_mist = 1_000_000_000n
 // here — NOT resolved from seed_manifest.json: the manifest is the ceremony's OUTPUT receipt (the living
 // generation, maintained by manifest_writeback.mjs), so reading it as "the old id" would burn the corrected
 // sale on every rerun the moment the receipt is fresh.
-export const box_slugs = [
-  'pet_lootbox',
-  'pet_ocean_lootbox',
-  'pet_arisen_lootbox',
-]
+export const box_slugs = ['pet_lootbox', 'pet_ocean_lootbox', 'pet_arisen_lootbox']
 export const BOX_APPROVALS = {
   pet_lootbox: {
     price_sui: 25,
     supply: 10000,
-    old_template_id:
-      '0x4815b02049c3bedbe8399397b49f23eb5712cda4371c8b9058c1ff57950c7f1b',
+    old_template_id: '0x4815b02049c3bedbe8399397b49f23eb5712cda4371c8b9058c1ff57950c7f1b',
   },
   pet_ocean_lootbox: {
     price_sui: 60,
     supply: 5000,
-    old_template_id:
-      '0x0cc38bf9b977cd71aa1daa5fc98557cfcb0b3774e39ea0106e0ac213b5a71758',
+    old_template_id: '0x0cc38bf9b977cd71aa1daa5fc98557cfcb0b3774e39ea0106e0ac213b5a71758',
   },
   pet_arisen_lootbox: {
     price_sui: 200,
     supply: 1000,
-    old_template_id:
-      '0x5e5e0890c4e560a4b7b2ab0cce269194d9e2ab2354c2cdc06a2414c15721aed5',
+    old_template_id: '0x5e5e0890c4e560a4b7b2ab0cce269194d9e2ab2354c2cdc06a2414c15721aed5',
   },
 }
 
 function require_id(value, label) {
-  if (!/^0x[0-9a-f]{64}$/i.test(value ?? ''))
-    throw new Error(`${label}: expected a 0x-64 id, got ${value}`)
+  if (!/^0x[0-9a-f]{64}$/i.test(value ?? '')) throw new Error(`${label}: expected a 0x-64 id, got ${value}`)
   return value
 }
 
 function box_index(box_rows) {
-  if (!Array.isArray(box_rows))
-    throw new Error('pet_boxes.json boxes must be an array')
+  if (!Array.isArray(box_rows)) throw new Error('pet_boxes.json boxes must be an array')
   const by_slug = new Map()
   for (const row of box_rows) {
     if (!row?.slug) throw new Error('a pet_boxes.json box row is missing slug')
@@ -78,14 +69,9 @@ function resolve_pool(box_row, seed_manifest, slug) {
   const pool = (box_row.pool || []).map((entry) => {
     if (!entry?.pet) throw new Error(`${slug}: a pool entry is missing pet`)
     if (!Number.isSafeInteger(entry.weight) || entry.weight < 0)
-      throw new Error(
-        `${slug}: pool ${entry.pet} has invalid weight ${entry.weight}`
-      )
+      throw new Error(`${slug}: pool ${entry.pet} has invalid weight ${entry.weight}`)
     return {
-      template_id: require_id(
-        items[entry.pet],
-        `${slug} pool pet ${entry.pet}`
-      ),
+      template_id: require_id(items[entry.pet], `${slug} pool pet ${entry.pet}`),
       weight: entry.weight,
     }
   })
@@ -120,32 +106,23 @@ function sale_for_template(live_rows, template_id, label) {
 }
 
 function require_sale_shape(sale, label) {
-  if (typeof sale.sale_id !== 'string' || !sale.sale_id)
-    throw new Error(`${label}: live row has no sale_id`)
+  if (typeof sale.sale_id !== 'string' || !sale.sale_id) throw new Error(`${label}: live row has no sale_id`)
   if (!Number.isSafeInteger(sale.minted) || sale.minted < 0)
     throw new Error(`${label}: live row has invalid minted=${sale.minted}`)
-  if (typeof sale.paused !== 'boolean')
-    throw new Error(`${label}: live row has invalid paused=${sale.paused}`)
+  if (typeof sale.paused !== 'boolean') throw new Error(`${label}: live row has invalid paused=${sale.paused}`)
   return sale
 }
 
 function validate_box_seed(box_row, slug) {
   const approval = BOX_APPROVALS[slug]
-  if (
-    box_row.price_sui !== approval.price_sui ||
-    box_row.supply !== approval.supply
-  )
+  if (box_row.price_sui !== approval.price_sui || box_row.supply !== approval.supply)
     throw new Error(
       `${slug}: corrected seed price/supply drifted from owner approval (${approval.price_sui} SUI × ${approval.supply})`
     )
   if (box_row.itemType !== slug || box_category(box_row) !== 'consumable')
-    throw new Error(
-      `${slug}: corrected seed must author the consumable box (itemType=${slug}, category=consumable)`
-    )
+    throw new Error(`${slug}: corrected seed must author the consumable box (itemType=${slug}, category=consumable)`)
   if (!box_row.gacha)
-    throw new Error(
-      `${slug}: seed row lacks gacha:true — reauthoring it would recreate the un-openable box`
-    )
+    throw new Error(`${slug}: seed row lacks gacha:true — reauthoring it would recreate the un-openable box`)
 }
 
 /** Pure chain-vs-seed diff for the 3 pet boxes. `live_rows` are /v1/shop rows enriched with their
@@ -154,15 +131,11 @@ function validate_box_seed(box_row, slug) {
  * `reauthor_boxes` (rerun-idempotent) but still land in `manifest_receipt`: the LIVE corrected
  * slug→template-id rows the ceremony writes back into seed_manifest.json (manifest_writeback.mjs). */
 export function build_box_plan({ live_rows, box_rows, seed_manifest }) {
-  if (!Array.isArray(live_rows))
-    throw new Error('live shop rows must be an array')
+  if (!Array.isArray(live_rows)) throw new Error('live shop rows must be an array')
   const by_slug = box_index(box_rows)
   const plan = { reauthor_boxes: [], manifest_receipt: [] }
   for (const slug of box_slugs) {
-    const old_template_id = require_id(
-      BOX_APPROVALS[slug].old_template_id,
-      `box ${slug} pinned old template id`
-    )
+    const old_template_id = require_id(BOX_APPROVALS[slug].old_template_id, `box ${slug} pinned old template id`)
     const box_row = by_slug.get(slug)
     if (!box_row) throw new Error(`pet_boxes.json is missing box ${slug}`)
     validate_box_seed(box_row, slug)
@@ -170,22 +143,16 @@ export function build_box_plan({ live_rows, box_rows, seed_manifest }) {
     const old_sale = sale_for_template(live_rows, old_template_id, slug)
     if (old_sale) require_sale_shape(old_sale, slug)
     const desired = live_rows.filter(
-      (row) =>
-        row.template_id !== old_template_id &&
-        box_template_matches(row.template, box_row)
+      (row) => row.template_id !== old_template_id && box_template_matches(row.template, box_row)
     )
     if (desired.length > 1)
-      throw new Error(
-        `${slug}: ${desired.length} corrected box sales already exist; refusing to guess canonical`
-      )
+      throw new Error(`${slug}: ${desired.length} corrected box sales already exist; refusing to guess canonical`)
     const desired_sale = desired.at(0) ?? null
     const price_mist = String(BigInt(box_row.price_sui) * sui_to_mist)
     if (desired_sale) {
       require_sale_shape(desired_sale, slug)
       if (String(desired_sale.price_mist) !== price_mist)
-        throw new Error(
-          `${slug}: corrected sale price ${desired_sale.price_mist} ≠ expected ${price_mist}`
-        )
+        throw new Error(`${slug}: corrected sale price ${desired_sale.price_mist} ≠ expected ${price_mist}`)
       plan.manifest_receipt.push({
         slug,
         template_id: desired_sale.template_id,
@@ -193,14 +160,9 @@ export function build_box_plan({ live_rows, box_rows, seed_manifest }) {
       if (!old_sale) continue // fully converged — corrected sale live, old sale already burned
     }
     if (!old_sale)
-      throw new Error(
-        `${slug}: neither old sale nor corrected sale is visible; refusing to invent old minted`
-      )
+      throw new Error(`${slug}: neither old sale nor corrected sale is visible; refusing to invent old minted`)
     const fresh_supply = box_row.supply - old_sale.minted
-    if (fresh_supply < 0)
-      throw new Error(
-        `${slug}: old minted ${old_sale.minted} exceeds seed cap ${box_row.supply}`
-      )
+    if (fresh_supply < 0) throw new Error(`${slug}: old minted ${old_sale.minted} exceeds seed cap ${box_row.supply}`)
     plan.reauthor_boxes.push({
       slug,
       old_template_id,
@@ -222,9 +184,7 @@ export function build_box_plan({ live_rows, box_rows, seed_manifest }) {
       steps: [
         ...(old_sale.paused ? [] : ['set_paused']),
         'burn_sale',
-        ...(desired_sale
-          ? []
-          : ['create_template', 'create_sale', 'set_loot_table']),
+        ...(desired_sale ? [] : ['create_template', 'create_sale', 'set_loot_table']),
       ],
     })
   }
@@ -244,12 +204,7 @@ function move_option(tx, type, value) {
 function sale_admin_call(tx, function_name, sale_id, deployment, extra = []) {
   tx.moveCall({
     target: `${deployment.call_package}::shop::${function_name}`,
-    arguments: [
-      tx.object(deployment.admin),
-      tx.object(sale_id),
-      ...extra,
-      tx.object(deployment.version),
-    ],
+    arguments: [tx.object(deployment.admin), tx.object(sale_id), ...extra, tx.object(deployment.version)],
   })
 }
 
@@ -259,10 +214,7 @@ function sale_admin_call(tx, function_name, sale_id, deployment, extra = []) {
 // admin_set_loot_table — no read-back, one atomic tx (so idempotency is a single "does the corrected sale exist").
 export function reauthor_box_tx(operation, deployment) {
   const tx = new Transaction()
-  if (!operation.old_paused)
-    sale_admin_call(tx, 'set_paused', operation.old_sale_id, deployment, [
-      tx.pure.bool(true),
-    ])
+  if (!operation.old_paused) sale_admin_call(tx, 'set_paused', operation.old_sale_id, deployment, [tx.pure.bool(true)])
   sale_admin_call(tx, 'burn_sale', operation.old_sale_id, deployment)
   if (!operation.create_fresh) return tx
   const stats_type = `${deployment.origin_package}::item_stats::ItemStatistics`

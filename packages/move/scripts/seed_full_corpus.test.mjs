@@ -15,15 +15,16 @@
 // Mirrors seed_economy.test.js: builds a REAL @mysten/sui Transaction and replicates the EXACT compose against
 // faithful mock OUT shapes, proving the object shape throws and the id-string shape composes.
 
-import { describe, test, expect } from 'bun:test'
-import { Transaction } from '@mysten/sui/transactions'
 import fs from 'node:fs'
 import path from 'node:path'
 import os from 'node:os'
 
+import { Transaction } from '@mysten/sui/transactions'
+import { describe, test, expect } from 'bun:test'
+
 /** A well-formed 32-byte object id from an arbitrary tag (mirrors the SDK fixtures' `id`; same helper as seed_economy.test.js). */
-const oid = tag => `0x${Buffer.from(String(tag)).toString('hex').padEnd(64, '0').slice(0, 64)}`
-const bp = rate => Math.min(10000, Math.max(0, Math.round((rate ?? 0) * 10000))) // mirrors seed_full_corpus bp()
+const oid = (tag) => `0x${Buffer.from(String(tag)).toString('hex').padEnd(64, '0').slice(0, 64)}`
+const bp = (rate) => Math.min(10000, Math.max(0, Math.round((rate ?? 0) * 10000))) // mirrors seed_full_corpus bp()
 
 // Faithful mock of the accumulating manifest shapes at PHASE 6 (worlds author AFTER PHASE 2 items + PHASE 5 mobs):
 //   OUT.items[slug] = <id string>   (seed_full_corpus.mjs:234)
@@ -47,8 +48,14 @@ const compose_resource_entry = (protectorValue) => {
   tx.moveCall({
     target: `${GAME}::world::add_resource_entry`,
     arguments: [
-      tx.object(CAP.game), tx.object(WID), tx.pure.id(OUT.items.wheat),
-      tx.pure.u16(bp(0.5)), tx.pure.u16(1), tx.pure.u16(1), tx.pure.u8(2), tx.pure.u8(1),
+      tx.object(CAP.game),
+      tx.object(WID),
+      tx.pure.id(OUT.items.wheat),
+      tx.pure.u16(bp(0.5)),
+      tx.pure.u16(1),
+      tx.pure.u16(1),
+      tx.pure.u8(2),
+      tx.pure.u8(1),
       tx.object(VER.game),
     ],
   })
@@ -56,8 +63,11 @@ const compose_resource_entry = (protectorValue) => {
     tx.moveCall({
       target: `${GAME}::world::set_resource_protector`,
       arguments: [
-        tx.object(CAP.game), tx.object(WID), tx.pure.id(OUT.items.wheat),
-        tx.pure.option('id', protectorValue), tx.object(VER.game),
+        tx.object(CAP.game),
+        tx.object(WID),
+        tx.pure.id(OUT.items.wheat),
+        tx.pure.option('id', protectorValue),
+        tx.object(VER.game),
       ],
     })
   return tx
@@ -74,16 +84,16 @@ describe('PHASE 6 world author — protector Option<ID> threading via the Protec
     const protector = OUT.mobs.protector_wheat?.id ?? null // the fixed resolution
     expect(typeof protector).toBe('string')
     const tx = compose_resource_entry(protector) // must NOT throw
-    const calls = tx.getData().commands.filter(c => c.$kind === 'MoveCall')
-    expect(calls.map(c => c.MoveCall.function)).toEqual(['add_resource_entry', 'set_resource_protector'])
+    const calls = tx.getData().commands.filter((c) => c.$kind === 'MoveCall')
+    expect(calls.map((c) => c.MoveCall.function)).toEqual(['add_resource_entry', 'set_resource_protector'])
     expect(calls[0].MoveCall.arguments.length).toBe(9) // the FROZEN live signature — a 10th arg is the compat reject
     expect(calls[1].MoveCall.arguments.length).toBe(5)
   })
 
   test('absent protector → NO setter call at all (fresh worlds carry no stale pins; unset = no DF)', () => {
     const tx = compose_resource_entry(null) // must NOT throw
-    const calls = tx.getData().commands.filter(c => c.$kind === 'MoveCall')
-    expect(calls.map(c => c.MoveCall.function)).toEqual(['add_resource_entry'])
+    const calls = tx.getData().commands.filter((c) => c.$kind === 'MoveCall')
+    expect(calls.map((c) => c.MoveCall.function)).toEqual(['add_resource_entry'])
     expect(calls[0].MoveCall.arguments.length).toBe(9)
   })
 })
@@ -94,15 +104,21 @@ describe('protector resolution + honesty (never a silent drop of an authored dia
     let protector = null
     if (res.protector) {
       protector = mobs[res.protector]?.id ?? null
-      if (!protector) skipped.push({ kind: 'protector', slug: `${wid}/${res.slug}`, why: `unminted protector mob '${res.protector}'` })
+      if (!protector)
+        skipped.push({
+          kind: 'protector',
+          slug: `${wid}/${res.slug}`,
+          why: `unminted protector mob '${res.protector}'`,
+        })
     }
     return protector
   }
 
   test('an authored protector that MINTED resolves to its id string (Some)', () => {
     const skipped = []
-    expect(resolve(OUT.mobs, skipped, '01_first_shore', { slug: 'wheat', protector: 'protector_wheat' }))
-      .toBe(OUT.mobs.protector_wheat.id)
+    expect(resolve(OUT.mobs, skipped, '01_first_shore', { slug: 'wheat', protector: 'protector_wheat' })).toBe(
+      OUT.mobs.protector_wheat.id
+    )
     expect(skipped.length).toBe(0)
   })
 
@@ -115,7 +131,9 @@ describe('protector resolution + honesty (never a silent drop of an authored dia
   test('an authored-but-UNMINTED protector is dialed None AND counted (loud, never silent)', () => {
     const skipped = []
     expect(resolve(OUT.mobs, skipped, '01_first_shore', { slug: 'diamond', protector: 'protector_phantom' })).toBeNull()
-    expect(skipped).toEqual([{ kind: 'protector', slug: '01_first_shore/diamond', why: "unminted protector mob 'protector_phantom'" }])
+    expect(skipped).toEqual([
+      { kind: 'protector', slug: '01_first_shore/diamond', why: "unminted protector mob 'protector_phantom'" },
+    ])
   })
 })
 
@@ -149,12 +167,9 @@ describe('PHASE 6 world author — distance-difficulty MobLevelKey projection', 
 
   test('every roster row authors its weighted entry and maxLevel eligibility in the same PTB', () => {
     const tx = compose_mob_entry({ minLevel: 6, maxLevel: 12 })
-    const calls = tx.getData().commands.filter(c => c.$kind === 'MoveCall')
-    expect(calls.map(c => c.MoveCall.function)).toEqual([
-      'add_mob_entry',
-      'set_mob_level',
-    ])
-    expect(calls.map(c => c.MoveCall.arguments.length)).toEqual([7, 5])
+    const calls = tx.getData().commands.filter((c) => c.$kind === 'MoveCall')
+    expect(calls.map((c) => c.MoveCall.function)).toEqual(['add_mob_entry', 'set_mob_level'])
+    expect(calls.map((c) => c.MoveCall.arguments.length)).toEqual([7, 5])
   })
 
   test('a point-band mob projects its authored level without inventing a curve value', () => {
@@ -175,13 +190,22 @@ describe('lineage-guarded resume (archive-on-mismatch) — the 07-12 stale-manif
   const resume = (outDir, outPath, currentStamp, freshOut) => {
     if (fs.existsSync(outPath)) {
       let prev = null
-      try { prev = JSON.parse(fs.readFileSync(outPath, 'utf8')) } catch {}
+      try {
+        prev = JSON.parse(fs.readFileSync(outPath, 'utf8'))
+      } catch {
+        // A malformed persisted manifest is treated as absent; the fresh output remains authoritative.
+      }
       if (prev && prev._stamp === currentStamp) Object.assign(freshOut, prev)
       else if (prev) {
         const archiveDir = path.join(outDir, 'archive')
         fs.mkdirSync(archiveDir, { recursive: true })
-        const stampHead = String(prev._stamp || 'unknown').replace(/^0x/, '').slice(0, 10)
-        const archived = path.join(archiveDir, `seed_manifest_${stampHead}_${new Date().toISOString().replace(/[:.]/g, '-')}.json`)
+        const stampHead = String(prev._stamp || 'unknown')
+          .replace(/^0x/, '')
+          .slice(0, 10)
+        const archived = path.join(
+          archiveDir,
+          `seed_manifest_${stampHead}_${new Date().toISOString().replace(/[:.]/g, '-')}.json`
+        )
         fs.renameSync(outPath, archived)
         return { archived: true, archivedPath: archived }
       }
@@ -193,7 +217,10 @@ describe('lineage-guarded resume (archive-on-mismatch) — the 07-12 stale-manif
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'seed-resume-match-'))
     const outPath = path.join(dir, 'seed_manifest.json')
     const stamp = '0xFOUNDATION,0xITEMS,0xSPELLS,0xGAME,0xFIGHT'
-    fs.writeFileSync(outPath, JSON.stringify({ _stamp: stamp, items: { wheat: '0xWHEAT_ID' }, digests: { categories: '0xdigest1' } }))
+    fs.writeFileSync(
+      outPath,
+      JSON.stringify({ _stamp: stamp, items: { wheat: '0xWHEAT_ID' }, digests: { categories: '0xdigest1' } })
+    )
     const freshOut = { _stamp: stamp, items: {}, digests: {} }
     const result = resume(dir, outPath, stamp, freshOut)
     expect(result.archived).toBe(false)
@@ -207,7 +234,10 @@ describe('lineage-guarded resume (archive-on-mismatch) — the 07-12 stale-manif
     const deadStamp = '0xDEAD_FOUNDATION,0xDEAD_ITEMS,0xDEAD_SPELLS,0xDEAD_GAME,0xDEAD_FIGHT'
     const currentStamp = '0xFRESH_FOUNDATION,0xFRESH_ITEMS,0xFRESH_SPELLS,0xFRESH_GAME,0xFRESH_FIGHT'
     // the exact 07-12 failure mode: categories recorded as done against a package that no longer exists
-    fs.writeFileSync(outPath, JSON.stringify({ _stamp: deadStamp, categories: ['helmet', 'sword'], digests: { categories: '0xdead_digest' } }))
+    fs.writeFileSync(
+      outPath,
+      JSON.stringify({ _stamp: deadStamp, categories: ['helmet', 'sword'], digests: { categories: '0xdead_digest' } })
+    )
     const freshOut = { _stamp: currentStamp, categories: [], digests: {} }
     const result = resume(dir, outPath, currentStamp, freshOut)
     expect(result.archived).toBe(true)
@@ -247,17 +277,13 @@ describe('lineage-guarded resume (archive-on-mismatch) — the 07-12 stale-manif
 //    SDK and proves every box authors the gacha effect. Pure — no chain, no seeder import (import-time side
 //    effects). RED before the seed fix (boxes lack `gacha` → optNone → no gacha_roll call), GREEN after.
 const REPO_DIR = path.resolve(import.meta.dir, '..', '..', '..')
-const PET_BOXES = JSON.parse(
-  fs.readFileSync(path.join(REPO_DIR, 'seed', 'mainnet', 'pet_boxes.json'), 'utf8')
-)
+const PET_BOXES = JSON.parse(fs.readFileSync(path.join(REPO_DIR, 'seed', 'mainnet', 'pet_boxes.json'), 'utf8'))
 const BOX_SLUGS = ['pet_lootbox', 'pet_ocean_lootbox', 'pet_arisen_lootbox']
 const IPKG = oid('pkg:items') // stands in for both the origin (type) and call (target) package in the compose
 
 // Byte-for-byte mirror of seed_full_corpus.mjs optSome/optNone (lines 265-275) + buildItemCreate's `eff` (565-579).
-const opt_some = (tx, tag, v) =>
-  tx.moveCall({ target: '0x1::option::some', typeArguments: [tag], arguments: [v] })
-const opt_none = (tx, tag) =>
-  tx.moveCall({ target: '0x1::option::none', typeArguments: [tag], arguments: [] })
+const opt_some = (tx, tag, v) => tx.moveCall({ target: '0x1::option::some', typeArguments: [tag], arguments: [v] })
+const opt_none = (tx, tag) => tx.moveCall({ target: '0x1::option::none', typeArguments: [tag], arguments: [] })
 const compose_effect = (tx, row) =>
   row.gacha
     ? opt_some(
@@ -265,31 +291,28 @@ const compose_effect = (tx, row) =>
         `${IPKG}::consumable_effect::ConsumableEffect`,
         tx.moveCall({
           target: `${IPKG}::consumable_effect::new`,
-          arguments: [
-            tx.moveCall({ target: `${IPKG}::consumable_effect::gacha_roll` }),
-            tx.pure.u64(0),
-          ],
+          arguments: [tx.moveCall({ target: `${IPKG}::consumable_effect::gacha_roll` }), tx.pure.u64(0)],
         })
       )
     : opt_none(tx, `${IPKG}::consumable_effect::ConsumableEffect`)
-const effect_calls = row => {
+const effect_calls = (row) => {
   const tx = new Transaction()
   compose_effect(tx, row)
   return tx
     .getData()
-    .commands.filter(c => c.$kind === 'MoveCall')
-    .map(c => `${c.MoveCall.module}::${c.MoveCall.function}`)
+    .commands.filter((c) => c.$kind === 'MoveCall')
+    .map((c) => `${c.MoveCall.module}::${c.MoveCall.function}`)
 }
 
 describe('LB3 — pet loot-boxes seed WITH the gacha effect (un-openable-box regression)', () => {
   test('pet_boxes.json declares exactly the 3 known boxes', () => {
     expect(Array.isArray(PET_BOXES.boxes)).toBe(true)
-    expect(PET_BOXES.boxes.map(b => b.slug)).toEqual(BOX_SLUGS)
+    expect(PET_BOXES.boxes.map((b) => b.slug)).toEqual(BOX_SLUGS)
   })
 
   for (const slug of BOX_SLUGS) {
     test(`${slug} authors KIND_GACHA_ROLL (else on-chain open aborts ENotBox=103)`, () => {
-      const row = PET_BOXES.boxes.find(b => b.slug === slug)
+      const row = PET_BOXES.boxes.find((b) => b.slug === slug)
       expect(row).toBeTruthy()
       // THE FIX — the row must carry gacha:true so buildItemCreate attaches the effect (not optNone).
       expect(row.gacha).toBe(true)
@@ -338,23 +361,18 @@ const compose_item_effect = (row) => {
         `${IPKG}::consumable_effect::ConsumableEffect`,
         tx.moveCall({
           target: `${IPKG}::consumable_effect::new`,
-          arguments: [
-            tx.moveCall({ target: `${IPKG}::consumable_effect::${ceff.fn}` }),
-            tx.pure.u64(ceff.amount),
-          ],
+          arguments: [tx.moveCall({ target: `${IPKG}::consumable_effect::${ceff.fn}` }), tx.pure.u64(ceff.amount)],
         })
       )
     : opt_none(tx, `${IPKG}::consumable_effect::ConsumableEffect`)
   return tx
     .getData()
-    .commands.filter(c => c.$kind === 'MoveCall')
-    .map(c => `${c.MoveCall.module}::${c.MoveCall.function}`)
+    .commands.filter((c) => c.$kind === 'MoveCall')
+    .map((c) => `${c.MoveCall.module}::${c.MoveCall.function}`)
 }
 const itemRow = (relPath, slug) => {
-  const rows = JSON.parse(
-    fs.readFileSync(path.join(REPO_DIR, 'seed', 'mainnet', relPath), 'utf8')
-  )
-  const row = rows.find(r => r.slug === slug)
+  const rows = JSON.parse(fs.readFileSync(path.join(REPO_DIR, 'seed', 'mainnet', relPath), 'utf8'))
+  const row = rows.find((r) => r.slug === slug)
   if (!row) throw new Error(`fixture row '${slug}' not found in seed/mainnet/${relPath}`)
   return row
 }
@@ -363,15 +381,11 @@ describe('THE FIX — heal-carrying bread / gacha box / effectless resource reso
   test('heal-carrying bread (choir_hymnbread, heal=5200) → HEAL(5200)', () => {
     const row = itemRow('17_obsidian_choir/items.json', 'choir_hymnbread')
     expect(row.heal).toBe(5200)
-    expect(compose_item_effect(row)).toEqual([
-      'consumable_effect::heal',
-      'consumable_effect::new',
-      'option::some',
-    ])
+    expect(compose_item_effect(row)).toEqual(['consumable_effect::heal', 'consumable_effect::new', 'option::some'])
   })
 
   test('gacha box (pet_lootbox) → GACHA_ROLL(0)', () => {
-    const row = PET_BOXES.boxes.find(b => b.slug === 'pet_lootbox')
+    const row = PET_BOXES.boxes.find((b) => b.slug === 'pet_lootbox')
     expect(compose_item_effect(row)).toEqual([
       'consumable_effect::gacha_roll',
       'consumable_effect::new',
@@ -386,7 +400,7 @@ describe('THE FIX — heal-carrying bread / gacha box / effectless resource reso
 })
 
 describe('THE FIX — consumableJson richer authoring maps onto the frozen §17.15 vocabulary', () => {
-  test('LIFE_REGEN (healing_potion) → HEAL(amount); duration dropped, matches read_templates.js\'s reverse mapping', () => {
+  test("LIFE_REGEN (healing_potion) → HEAL(amount); duration dropped, matches read_templates.js's reverse mapping", () => {
     const row = itemRow('02_verdant_hollow/items.json', 'healing_potion')
     expect(JSON.parse(row.consumableJson)).toEqual({ type: 'LIFE_REGEN', amount: 40, duration: 6 })
     expect(resolveConsumableEffect(row)).toEqual({ fn: 'heal', amount: 40 })
@@ -425,7 +439,7 @@ describe('corpus sanity — seed/mainnet/*/items.json CONSUMABLEs', () => {
     const biomeDir = path.join(REPO_DIR, 'seed', 'mainnet')
     const biomes = fs
       .readdirSync(biomeDir)
-      .filter(d => /^\d/.test(d) && fs.statSync(path.join(biomeDir, d)).isDirectory())
+      .filter((d) => /^\d/.test(d) && fs.statSync(path.join(biomeDir, d)).isDirectory())
     let authored = 0
     let ruledExceptions = 0
     for (const b of biomes) {

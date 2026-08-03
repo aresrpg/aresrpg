@@ -34,14 +34,7 @@ describe('runPreflightedBatches — refuse every batch before the phase mints an
       async (batch, offset) => order.push(`probe:${offset}:${batch.join('')}`),
       async (batch, offset) => order.push(`mint:${offset}:${batch.join('')}`)
     )
-    expect(order).toEqual([
-      'probe:0:ab',
-      'probe:2:cd',
-      'probe:4:e',
-      'mint:0:ab',
-      'mint:2:cd',
-      'mint:4:e',
-    ])
+    expect(order).toEqual(['probe:0:ab', 'probe:2:cd', 'probe:4:e', 'mint:0:ab', 'mint:2:cd', 'mint:4:e'])
   })
 
   test('a later-batch refusal executes zero mints for the phase', async () => {
@@ -130,9 +123,7 @@ describe('resolveBatch — order-INDEPENDENT batch resolution (never an objectCh
   test('a row with zero matching candidates HALTS (throws) — never guesses a mapping', () => {
     const rows = [{ slug: 'ghost', k: 'nowhere' }]
     const created = [{ id: '0x1', key: 'somewhere-else' }]
-    expect(() => resolveBatch(rows, (r) => r.k, created)).toThrow(
-      /no created id matches row key/
-    )
+    expect(() => resolveBatch(rows, (r) => r.k, created)).toThrow(/no created id matches row key/)
   })
 
   test('a leftover unclaimed created id (count mismatch) HALTS — never silently drops an on-chain object', () => {
@@ -141,9 +132,7 @@ describe('resolveBatch — order-INDEPENDENT batch resolution (never an objectCh
       { id: '0x1', key: 'a' },
       { id: '0x2', key: 'a' },
     ] // 2 created, 1 row
-    expect(() => resolveBatch(rows, (r) => r.k, created)).toThrow(
-      /unclaimed after matching/
-    )
+    expect(() => resolveBatch(rows, (r) => r.k, created)).toThrow(/unclaimed after matching/)
   })
 
   test('event-based resolution shape (spells): (class, unlock_level, name) triple needs no content read', () => {
@@ -168,12 +157,8 @@ describe('resolveBatch — order-INDEPENDENT batch resolution (never an objectCh
       { id: '0xSPELL1', key: 'senshi:1:senshi_ember_strike' },
     ]
     const resolved = resolveBatch(rows, keyOfRow, created)
-    expect(resolved.find((x) => x.row.id === 'senshi_ember_strike').id).toBe(
-      '0xSPELL1'
-    )
-    expect(resolved.find((x) => x.row.id === 'senshi_earthen_cleave').id).toBe(
-      '0xSPELL2'
-    )
+    expect(resolved.find((x) => x.row.id === 'senshi_ember_strike').id).toBe('0xSPELL1')
+    expect(resolved.find((x) => x.row.id === 'senshi_earthen_cleave').id).toBe('0xSPELL2')
   })
 })
 
@@ -192,10 +177,7 @@ describe('planFixedKeyAdds — add only the missing keys; all-exist skips the tx
 
   test('ALL keys already on-chain → skip=true (no tx is built at all)', () => {
     const wanted = ['senshi', 'yajin']
-    const plan = planFixedKeyAdds(
-      wanted,
-      new Set(['senshi', 'yajin', 'tomoda'])
-    )
+    const plan = planFixedKeyAdds(wanted, new Set(['senshi', 'yajin', 'tomoda']))
     expect(plan.missing).toEqual([])
     expect(plan.skip).toBe(true)
   })
@@ -229,19 +211,13 @@ describe('existingTableKeys — Table<String,bool> DF walk (mocked gRPC client: 
       { dynamicFields: [dfName('rune')], hasNextPage: true, cursor: '0x1' },
       { dynamicFields: [dfName('helmet')], hasNextPage: false, cursor: null },
     ]
-    const keys = await existingTableKeys(
-      client_with(pages),
-      '0xCATALOG',
-      'categories'
-    )
+    const keys = await existingTableKeys(client_with(pages), '0xCATALOG', 'categories')
     expect([...keys].sort()).toEqual(['helmet', 'rune'])
   })
 
   test('an unresolvable table THROWS (never returns an empty set that would green-light the blind re-add)', async () => {
     const bad = { getObject: async () => ({ object: { json: {} } }) }
-    await expect(
-      existingTableKeys(bad, '0xCATALOG', 'categories')
-    ).rejects.toThrow(/refusing a blind add/)
+    await expect(existingTableKeys(bad, '0xCATALOG', 'categories')).rejects.toThrow(/refusing a blind add/)
   })
 })
 
@@ -292,9 +268,7 @@ describe('claimCreated — backfill resolution (created ids from a re-fetched di
   })
 
   test('an unmatched created id THROWS — an on-chain object is never silently dropped', () => {
-    expect(() =>
-      claimCreated(rows, keyOf, [{ id: '0xZ', key: 'Phantom Blade' }])
-    ).toThrow(/matches no unclaimed row/)
+    expect(() => claimCreated(rows, keyOf, [{ id: '0xZ', key: 'Phantom Blade' }])).toThrow(/matches no unclaimed row/)
   })
 })
 
@@ -378,25 +352,18 @@ describe('normalizeReceipt — Core result → jsonRpc-ish { digest, effects, ob
     expect(netGas(r.effects.gasUsed)).toBe(2500) // 1000 + 2000 − 500
 
     // createdId-style filter (seed_full_corpus): first created object whose type ends with a suffix.
-    const item = r.objectChanges.find(
-      (c) =>
-        c.type === 'created' && c.objectType.endsWith('::item::ItemTemplate')
-    )
+    const item = r.objectChanges.find((c) => c.type === 'created' && c.objectType.endsWith('::item::ItemTemplate'))
     expect(item.objectId).toBe('0xITEM')
     expect(item.version).toBe('3')
 
     // classify-style (ceremony): the PackageWrite → published, and a shared created object → mapped snake owner.
-    expect(r.objectChanges.find((c) => c.type === 'published').packageId).toBe(
-      '0xPKG'
-    )
+    expect(r.objectChanges.find((c) => c.type === 'published').packageId).toBe('0xPKG')
     const cfg = r.objectChanges.find((c) => c.objectId === '0xCFG')
     expect('Shared' in cfg.owner).toBe(true) // isShared() sees it
     expect(cfg.owner.Shared.initial_shared_version).toBe('7') // camel→snake mapped for classify
 
     // mutated is carried (type !== 'created', skipped by createdId/classify but present for version reads).
-    expect(r.objectChanges.find((c) => c.objectId === '0xMUT').type).toBe(
-      'mutated'
-    )
+    expect(r.objectChanges.find((c) => c.objectId === '0xMUT').type).toBe('mutated')
 
     // events re-keyed to { type, parsedJson } (spellCreatedOf reads e.type / e.parsedJson).
     expect(r.events).toEqual([
@@ -438,8 +405,7 @@ describe('normalizeReceipt — Core result → jsonRpc-ish { digest, effects, ob
 // build` died AccountAddressParseError. normalizeReceipt now canonicalizes every address to the short form.
 describe('normalizeReceipt — PADDED gRPC type strings → classify/capturePolicy/seeder matchers resolve', () => {
   const PAD = '0x' + '0'.repeat(63) // + last hex char → a padded framework address
-  const USER =
-    '0x0a544113d593fc233921ecd7d0ec4fb8d4abedc7100c33188041a4aed1038cb5' // leading-zero user pkg
+  const USER = '0x0a544113d593fc233921ecd7d0ec4fb8d4abedc7100c33188041a4aed1038cb5' // leading-zero user pkg
   const paddedReceipt = {
     $kind: 'Transaction',
     Transaction: {
@@ -462,15 +428,13 @@ describe('normalizeReceipt — PADDED gRPC type strings → classify/capturePoli
             outputState: 'PackageWrite',
             idOperation: 'None',
           },
-          ...['0xCAP', '0xPUB', '0xDISP', '0xTPL', '0xVER', '0xADM'].map(
-            (objectId) => ({
-              objectId,
-              idOperation: 'Created',
-              outputState: 'ObjectWrite',
-              outputVersion: '2',
-              outputOwner: { $kind: 'AddressOwner', AddressOwner: '0xME' },
-            })
-          ),
+          ...['0xCAP', '0xPUB', '0xDISP', '0xTPL', '0xVER', '0xADM'].map((objectId) => ({
+            objectId,
+            idOperation: 'Created',
+            outputState: 'ObjectWrite',
+            outputVersion: '2',
+            outputOwner: { $kind: 'AddressOwner', AddressOwner: '0xME' },
+          })),
           {
             objectId: '0xPOL',
             idOperation: 'Created',
@@ -508,9 +472,7 @@ describe('normalizeReceipt — PADDED gRPC type strings → classify/capturePoli
     const r = normalizeReceipt(paddedReceipt)
     // capturePolicy's exact expression (ceremony.mjs createdChange): SHORT-form includes.
     const policy = r.objectChanges.find(
-      (c) =>
-        c.type === 'created' &&
-        (c.objectType || '').includes('0x2::transfer_policy::TransferPolicy<')
+      (c) => c.type === 'created' && (c.objectType || '').includes('0x2::transfer_policy::TransferPolicy<')
     )
     expect(policy.objectId).toBe('0xPOL')
     expect(policy.owner.Shared.initial_shared_version).toBe('9')
@@ -521,15 +483,11 @@ describe('normalizeReceipt — PADDED gRPC type strings → classify/capturePoli
     )
     // the reseed's created-object resolution (seed_full_corpus itemCreatedOf / createdId): endsWith — hits.
     const tpl = r.objectChanges.find(
-      (c) =>
-        c.type === 'created' &&
-        (c.objectType || '').endsWith('::item::ItemTemplate')
+      (c) => c.type === 'created' && (c.objectType || '').endsWith('::item::ItemTemplate')
     )
     expect(tpl.objectId).toBe('0xTPL')
     // spellCreatedOf's event matcher (seed_spells_phase): endsWith on the normalized event type — hits.
-    expect(r.events[0].type.endsWith('::spell_template::SpellMinted')).toBe(
-      true
-    )
+    expect(r.events[0].type.endsWith('::spell_template::SpellMinted')).toBe(true)
   })
 })
 
@@ -537,12 +495,9 @@ describe('normalizeReceipt — PADDED gRPC type strings → classify/capturePoli
 //    would have aborted ON-CHAIN with PackageIDDoesNotMatch after one prior upgrade advanced cap.package).
 //    These lock the pre-flight guard + the Published.toml lineage bookkeeping ceremony_upgrade.mjs now does. ──
 
-const ORIGIN =
-  '0x627b503041cb74ae1315c8c784a2f040db9e7739026ad2622e25c22672374999'
-const LATEST =
-  '0xd5157a9bd0bd1c00483f27d945851b28c7d6bc10aba4cb75e22016c02894d7d1'
-const NEWEST =
-  '0xaaaa000000000000000000000000000000000000000000000000000000001111'
+const ORIGIN = '0x627b503041cb74ae1315c8c784a2f040db9e7739026ad2622e25c22672374999'
+const LATEST = '0xd5157a9bd0bd1c00483f27d945851b28c7d6bc10aba4cb75e22016c02894d7d1'
+const NEWEST = '0xaaaa000000000000000000000000000000000000000000000000000000001111'
 const TOML = `# Generated by Move
 [published.testnet]
 chain-id = "4c78adac"
@@ -603,9 +558,7 @@ describe('parsePublishedToml / bumpPublishedToml — the lineage record the NEXT
     expect(p.publishedAt).toBe(LATEST)
     expect(p.originalId).toBe(ORIGIN)
     expect(p.version).toBe(2)
-    expect(p.upgradeCap).toBe(
-      '0xecbce15177c226cb8fd73dbd6b5ebc2383b6dcc8f97c20008eafc469f78900bb'
-    )
+    expect(p.upgradeCap).toBe('0xecbce15177c226cb8fd73dbd6b5ebc2383b6dcc8f97c20008eafc469f78900bb')
   })
 
   test('parse returns null for an absent network section (fresh package)', () => {
@@ -623,8 +576,6 @@ describe('parsePublishedToml / bumpPublishedToml — the lineage record the NEXT
   })
 
   test('bump on a missing section HALTS (writes nothing)', () => {
-    expect(() => bumpPublishedToml(TOML, 'mainnet', NEWEST)).toThrow(
-      /no \[published\.mainnet\] section/
-    )
+    expect(() => bumpPublishedToml(TOML, 'mainnet', NEWEST)).toThrow(/no \[published\.mainnet\] section/)
   })
 })

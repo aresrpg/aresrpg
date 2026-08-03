@@ -62,7 +62,11 @@ test('seed_stats_to_centered reads BOTH resistance schemas and centers them (the
   // snake_case (minority) resolves to the same field
   expect(seed_stats_to_centered({ fire_resistance: 15 }).fire_resistance).toBe(RES_SHIFT + 15)
   // attribute aliases
-  expect(seed_stats_to_centered({ int: 7, raw: 3, crit: 5 })).toMatchObject({ intelligence: 7, raw_damage: 3, critical_hit: 5 })
+  expect(seed_stats_to_centered({ int: 7, raw: 3, crit: 5 })).toMatchObject({
+    intelligence: 7,
+    raw_damage: 3,
+    critical_hit: 5,
+  })
 })
 
 test('seed_stats_to_centered refuses a resistance that underflows the centering', () => {
@@ -167,11 +171,7 @@ test('coverage_check REFUSES zero-planned against nonzero-ruled (374-rows-vanish
 })
 
 test('field_histogram splits the two-set headline (xp vs stats)', () => {
-  const changed = [
-    { fields: ['xp_reward'] },
-    { fields: ['stats'] },
-    { fields: ['xp_reward', 'stats'] },
-  ]
+  const changed = [{ fields: ['xp_reward'] }, { fields: ['stats'] }, { fields: ['xp_reward', 'stats'] }]
   expect(field_histogram(changed)).toMatchObject({ xp_reward: 2, stats: 2, base_hp: 0 })
 })
 
@@ -221,9 +221,7 @@ test('deployment_from_release throws on a missing network', () => {
 
 // ── real corpus guard ─────────────────────────────────────────────────────────────────────────────
 test.skipIf(!corpus_present)('the real mob corpus derives a valid xp>0 desired-tuple for every seeded key', () => {
-  const seed_manifest = JSON.parse(
-    read_file(join(script_dir, 'out', 'seed_manifest.json'), 'utf8'),
-  )
+  const seed_manifest = JSON.parse(read_file(join(script_dir, 'out', 'seed_manifest.json'), 'utf8'))
   const { desired, invalid } = desired_state_by_key(corpus_rows())
   expect(invalid).toEqual([]) // every authored mob has xp>0 (mob_xp_derive ran)
   // every minted manifest mob resolves to a desired tuple (no missing_seed against the live corpus)

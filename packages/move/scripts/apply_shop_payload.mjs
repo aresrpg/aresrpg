@@ -16,10 +16,7 @@ import release from '../../sdk/src/deployment/release.json' with { type: 'json' 
 
 import { box_slugs, build_box_plan, reauthor_box_tx } from './box_reauthor.mjs'
 import { deriveBudget as derive_budget, run } from './ceremony_lib.mjs'
-import {
-  apply_manifest_writeback,
-  writeback_rows,
-} from './manifest_writeback.mjs'
+import { apply_manifest_writeback, writeback_rows } from './manifest_writeback.mjs'
 import { fetch_live_rows } from './shop_live_rows.mjs'
 
 const script_dir = dirname(file_url_to_path(import.meta.url))
@@ -28,13 +25,7 @@ const ceiling_sui = 0.3
 const sui_to_mist = 1_000_000_000n
 const read_json = (file_path) => JSON.parse(read_file_sync(file_path, 'utf8'))
 
-const delist_slugs = [
-  'cape_lorito_air',
-  'cape_lorito_earth',
-  'cape_lorito_fire',
-  'cape_lorito_water',
-  'corbac_helmet',
-]
+const delist_slugs = ['cape_lorito_air', 'cape_lorito_earth', 'cape_lorito_fire', 'cape_lorito_water', 'corbac_helmet']
 const rename_slugs = [
   'cape_lorito_agility',
   'cape_lorito_chance',
@@ -57,14 +48,12 @@ export const reauthor_targets = {
   momaku: {
     approved_price_sui: 560,
     approved_supply: 56,
-    old_template_id:
-      '0xfa660930e9c302c18cddd2fa127e7d10f152a77bc004ba9ee4bb0038b2d17eee',
+    old_template_id: '0xfa660930e9c302c18cddd2fa127e7d10f152a77bc004ba9ee4bb0038b2d17eee',
   },
   enka_muru: {
     approved_price_sui: 165,
     approved_supply: 194,
-    old_template_id:
-      '0x01c037f602a3ea19e6844c06565ae47f7b0bf482d8118c4969e823dee6c43d36',
+    old_template_id: '0x01c037f602a3ea19e6844c06565ae47f7b0bf482d8118c4969e823dee6c43d36',
   },
   // MO HOOD hat→cloak (content review): category is immutable in place (admin.move —
   // "a stats/category change is a re-author, not a rename"), so the hat-authored template is burned
@@ -72,8 +61,7 @@ export const reauthor_targets = {
   capuche_mo: {
     approved_price_sui: 40,
     approved_supply: 300,
-    old_template_id:
-      '0xa749315c300c79ad95429cb146d7b540ee3a05309d2b18ed4038c1d00db3ce29',
+    old_template_id: '0xa749315c300c79ad95429cb146d7b540ee3a05309d2b18ed4038c1d00db3ce29',
   },
 }
 // delists + renames still operate ON the manifest's live rows (their ids never change);
@@ -81,25 +69,21 @@ export const reauthor_targets = {
 const target_slugs = delist_slugs.concat(rename_slugs)
 export function shop_template_ids(seed_manifest) {
   const items = seed_manifest?.items
-  if (!items || typeof items !== 'object' || Array.isArray(items))
-    throw new Error('seed manifest has no items map')
+  if (!items || typeof items !== 'object' || Array.isArray(items)) throw new Error('seed manifest has no items map')
   return Object.fromEntries(
     target_slugs.map((slug) => {
       const template_id = items[slug]
-      if (!/^0x[0-9a-f]{64}$/i.test(template_id ?? ''))
-        throw new Error(`seed manifest has invalid item id for ${slug}`)
+      if (!/^0x[0-9a-f]{64}$/i.test(template_id ?? '')) throw new Error(`seed manifest has invalid item id for ${slug}`)
       return [slug, template_id]
     })
   )
 }
 function seed_index(seed_rows) {
-  if (!Array.isArray(seed_rows))
-    throw new Error('shop seed rows must be an array')
+  if (!Array.isArray(seed_rows)) throw new Error('shop seed rows must be an array')
   const by_slug = new Map()
   for (const row of seed_rows) {
     if (!row?.slug) throw new Error('shop seed row is missing slug')
-    if (by_slug.has(row.slug))
-      throw new Error(`duplicate shop seed slug ${row.slug}`)
+    if (by_slug.has(row.slug)) throw new Error(`duplicate shop seed slug ${row.slug}`)
     by_slug.set(row.slug, row)
   }
   return by_slug
@@ -120,21 +104,15 @@ function sale_for_template(live_rows, template_id, label) {
   return matches.at(0) ?? null
 }
 function require_sale_shape(sale, label) {
-  if (typeof sale.sale_id !== 'string' || !sale.sale_id)
-    throw new Error(`${label}: live row has no sale_id`)
+  if (typeof sale.sale_id !== 'string' || !sale.sale_id) throw new Error(`${label}: live row has no sale_id`)
   if (!Number.isSafeInteger(sale.minted) || sale.minted < 0)
     throw new Error(`${label}: live row has invalid minted=${sale.minted}`)
-  if (typeof sale.paused !== 'boolean')
-    throw new Error(`${label}: live row has invalid paused=${sale.paused}`)
+  if (typeof sale.paused !== 'boolean') throw new Error(`${label}: live row has invalid paused=${sale.paused}`)
   return sale
 }
 function require_template(sale, label) {
   const template = sale?.template
-  if (
-    !template ||
-    typeof template.name !== 'string' ||
-    typeof template.description !== 'string'
-  )
+  if (!template || typeof template.name !== 'string' || typeof template.description !== 'string')
     throw new Error(
       `${label}: /v1/encyclopedia has not resolved name/description for ${sale?.template_id}; refusing a blind rename`
     )
@@ -155,10 +133,7 @@ function template_matches_seed(template, seed_row) {
   )
 }
 function validate_reauthor_seed(seed_row, slug, target) {
-  if (
-    seed_row.price_sui !== target.approved_price_sui ||
-    seed_row.supply !== target.approved_supply
-  )
+  if (seed_row.price_sui !== target.approved_price_sui || seed_row.supply !== target.approved_supply)
     throw new Error(
       `${slug}: corrected seed price/supply drifted from owner approval (${target.approved_price_sui} SUI × ${target.approved_supply})`
     )
@@ -172,17 +147,13 @@ function validate_reauthor_seed(seed_row, slug, target) {
  * — the LIVE slug→template-id rows the ceremony writes back into
  * seed_manifest.json in the same run (manifest_writeback.mjs receipt law). */
 export function build_shop_plan({ live_rows, seed_rows, seed_manifest }) {
-  if (!Array.isArray(live_rows))
-    throw new Error('live shop rows must be an array')
+  if (!Array.isArray(live_rows)) throw new Error('live shop rows must be an array')
   const by_slug = seed_index(seed_rows)
   const template_ids = shop_template_ids(seed_manifest)
   const plan = { delists: [], renames: [], reauthors: [], manifest_receipt: [] }
   for (const slug of delist_slugs) {
     const template_id = template_ids[slug]
-    if (by_slug.has(slug))
-      throw new Error(
-        `${slug}: corrected seed still contains an approved duplicate`
-      )
+    if (by_slug.has(slug)) throw new Error(`${slug}: corrected seed still contains an approved duplicate`)
     const sale = sale_for_template(live_rows, template_id, slug)
     if (!sale) continue
     require_sale_shape(sale, slug)
@@ -200,15 +171,10 @@ export function build_shop_plan({ live_rows, seed_rows, seed_manifest }) {
     const template_id = template_ids[slug]
     const seed_row = required_seed_row(by_slug, slug)
     const sale = sale_for_template(live_rows, template_id, slug)
-    if (!sale)
-      throw new Error(`${slug}: approved live sale/template is missing`)
+    if (!sale) throw new Error(`${slug}: approved live sale/template is missing`)
     require_sale_shape(sale, slug)
     const template = require_template(sale, slug)
-    if (
-      template.name === seed_row.name &&
-      template.description === seed_row.description
-    )
-      continue
+    if (template.name === seed_row.name && template.description === seed_row.description) continue
     plan.renames.push({
       slug,
       template_id,
@@ -229,9 +195,7 @@ export function build_shop_plan({ live_rows, seed_rows, seed_manifest }) {
     const old_sale = sale_for_template(live_rows, old_template_id, slug)
     if (old_sale) require_sale_shape(old_sale, slug)
     const desired_sales = live_rows.filter(
-      (row) =>
-        row.template_id !== old_template_id &&
-        template_matches_seed(row.template, seed_row)
+      (row) => row.template_id !== old_template_id && template_matches_seed(row.template, seed_row)
     )
     if (desired_sales.length > 1)
       throw new Error(
@@ -245,16 +209,11 @@ export function build_shop_plan({ live_rows, seed_rows, seed_manifest }) {
         throw new Error(
           `${slug}: corrected sale price is ${desired_sale.price_mist}, expected ${price_mist}; repricing is outside this payload`
         )
-      if (
-        !Number.isSafeInteger(desired_sale.supply_remaining) ||
-        desired_sale.supply_remaining < 0
-      )
+      if (!Number.isSafeInteger(desired_sale.supply_remaining) || desired_sale.supply_remaining < 0)
         throw new Error(`${slug}: corrected sale must have a finite supply`)
       const corrected_cap = desired_sale.minted + desired_sale.supply_remaining
       if (corrected_cap > seed_row.supply)
-        throw new Error(
-          `${slug}: corrected sale cap ${corrected_cap} exceeds seed cap ${seed_row.supply}`
-        )
+        throw new Error(`${slug}: corrected sale cap ${corrected_cap} exceeds seed cap ${seed_row.supply}`)
       plan.manifest_receipt.push({
         slug,
         template_id: desired_sale.template_id,
@@ -262,14 +221,9 @@ export function build_shop_plan({ live_rows, seed_rows, seed_manifest }) {
       if (!old_sale) continue
     }
     if (!old_sale)
-      throw new Error(
-        `${slug}: neither old sale nor corrected sale is visible; refusing to invent old minted`
-      )
+      throw new Error(`${slug}: neither old sale nor corrected sale is visible; refusing to invent old minted`)
     const fresh_supply = seed_row.supply - old_sale.minted
-    if (fresh_supply < 0)
-      throw new Error(
-        `${slug}: old minted ${old_sale.minted} exceeds seed cap ${seed_row.supply}`
-      )
+    if (fresh_supply < 0) throw new Error(`${slug}: old minted ${old_sale.minted} exceeds seed cap ${seed_row.supply}`)
     plan.reauthors.push({
       slug,
       old_template_id,
@@ -298,14 +252,11 @@ export function build_shop_plan({ live_rows, seed_rows, seed_manifest }) {
   return plan
 }
 export function resolve_mode(environment) {
-  if (environment.LIVE != null && environment.LIVE !== '1')
-    throw new Error('LIVE must be exactly 1 when set')
+  if (environment.LIVE != null && environment.LIVE !== '1') throw new Error('LIVE must be exactly 1 when set')
   const dry_run = environment.DRY_RUN
-  if (dry_run != null && !['0', '1'].includes(dry_run))
-    throw new Error('DRY_RUN must be 0 or 1 when set')
+  if (dry_run != null && !['0', '1'].includes(dry_run)) throw new Error('DRY_RUN must be 0 or 1 when set')
   const live = environment.LIVE === '1'
-  if (live && dry_run === '1')
-    throw new Error('LIVE=1 conflicts with DRY_RUN=1')
+  if (live && dry_run === '1') throw new Error('LIVE=1 conflicts with DRY_RUN=1')
   if (!live && dry_run === '0') throw new Error('DRY_RUN=0 requires LIVE=1')
   return { live, dry_run: !live }
 }
@@ -313,18 +264,10 @@ export function build_historical_renames(template_by_id, template_ids) {
   const operations = []
   for (const [slug, name] of historical_rename_targets) {
     const template = template_by_id.get(template_ids[slug])
-    if (!template)
-      throw new Error(
-        `${slug}: historical template ${template_ids[slug]} is missing`
-      )
+    if (!template) throw new Error(`${slug}: historical template ${template_ids[slug]} is missing`)
     if (template.name === name) continue
-    if (
-      typeof template.name !== 'string' ||
-      typeof template.description !== 'string'
-    )
-      throw new Error(
-        `${slug}: historical template lacks name/description; refusing a blind rename`
-      )
+    if (typeof template.name !== 'string' || typeof template.description !== 'string')
+      throw new Error(`${slug}: historical template lacks name/description; refusing a blind rename`)
     operations.push({
       slug,
       template_id: template.template_id,
@@ -339,15 +282,11 @@ async function existing_sale_rows(live_rows, client) {
   const { objects } = await client.getObjects({
     objectIds: live_rows.map(({ sale_id }) => sale_id),
   })
-  if (objects.length !== live_rows.length)
-    throw new Error('sale object preflight returned the wrong row count')
+  if (objects.length !== live_rows.length) throw new Error('sale object preflight returned the wrong row count')
   return live_rows.filter((row, index) => {
     const object = objects[index]
     if (!(object instanceof Error)) {
-      if (object.objectId !== row.sale_id)
-        throw new Error(
-          `sale object preflight order mismatch at ${row.sale_id}`
-        )
+      if (object.objectId !== row.sale_id) throw new Error(`sale object preflight order mismatch at ${row.sale_id}`)
       return true
     }
     if (!/not found|deleted|does not exist|not exist/i.test(object.message))
@@ -369,20 +308,12 @@ function move_option(tx, type, value) {
 function sale_admin_call(tx, function_name, sale_id, deployment, extra = []) {
   tx.moveCall({
     target: `${deployment.call_package}::shop::${function_name}`,
-    arguments: [
-      tx.object(deployment.admin),
-      tx.object(sale_id),
-      ...extra,
-      tx.object(deployment.version),
-    ],
+    arguments: [tx.object(deployment.admin), tx.object(sale_id), ...extra, tx.object(deployment.version)],
   })
 }
 function delist_tx(operation, deployment) {
   const tx = new Transaction()
-  if (!operation.paused)
-    sale_admin_call(tx, 'set_paused', operation.sale_id, deployment, [
-      tx.pure.bool(true),
-    ])
+  if (!operation.paused) sale_admin_call(tx, 'set_paused', operation.sale_id, deployment, [tx.pure.bool(true)])
   sale_admin_call(tx, 'burn_sale', operation.sale_id, deployment)
   return tx
 }
@@ -406,10 +337,7 @@ function rename_tx(operation, deployment) {
 // shared template ID; shop.move:96-121 consumes that ID to create its Sale.
 function reauthor_tx(operation, deployment) {
   const tx = new Transaction()
-  if (!operation.old_paused)
-    sale_admin_call(tx, 'set_paused', operation.old_sale_id, deployment, [
-      tx.pure.bool(true),
-    ])
+  if (!operation.old_paused) sale_admin_call(tx, 'set_paused', operation.old_sale_id, deployment, [tx.pure.bool(true)])
   sale_admin_call(tx, 'burn_sale', operation.old_sale_id, deployment)
   if (!operation.create_fresh) return tx
   const stats_type = `${deployment.origin_package}::item_stats::ItemStatistics`
@@ -461,9 +389,7 @@ function deployment_from_release(release_config, environment) {
   }
   for (const [field, value] of Object.entries(deployment))
     if (!/^0x[0-9a-f]{64}$/i.test(value ?? ''))
-      throw new Error(
-        `release.json has invalid deployment id for ${field} (network=${network})`
-      )
+      throw new Error(`release.json has invalid deployment id for ${field} (network=${network})`)
   return { ...deployment, network }
 }
 // `op` rides along so the LIVE loop can harvest each create_fresh receipt for the
@@ -493,38 +419,28 @@ function transactions_from_plan(plan, deployment) {
   ]
 }
 function print_plan(plan, mode, deployment) {
-  console.log(
-    `=== SHOP CONTENT PLAN | ${mode.live ? 'LIVE' : 'DRY_RUN=1'} | network=${deployment.network} ===`
-  )
+  console.log(`=== SHOP CONTENT PLAN | ${mode.live ? 'LIVE' : 'DRY_RUN=1'} | network=${deployment.network} ===`)
   console.log(
     `package=${deployment.call_package} admin=${deployment.admin} version=${deployment.version} catalog=${deployment.catalog}`
   )
   console.log(JSON.stringify(plan, null, 2))
   for (const [name, targets] of [
     ['delists', delist_slugs],
-    [
-      'renames',
-      rename_slugs.concat(historical_rename_targets.map(([slug]) => slug)),
-    ],
+    ['renames', rename_slugs.concat(historical_rename_targets.map(([slug]) => slug))],
     ['reauthors', Object.keys(reauthor_targets)],
     ['reauthor_boxes', box_slugs],
   ]) {
     const planned = new Set((plan[name] ?? []).map(({ slug }) => slug))
-    for (const slug of targets)
-      if (!planned.has(slug)) console.log(`  SKIP ${name}:${slug} (converged)`)
+    for (const slug of targets) if (!planned.has(slug)) console.log(`  SKIP ${name}:${slug} (converged)`)
   }
 }
 async function main() {
   const mode = resolve_mode(process.env)
   if (process.env.PRIVATE_KEY)
-    throw new Error(
-      'PRIVATE_KEY is forbidden for this payload; use the active CLI keystore (server-aresrpg)'
-    )
+    throw new Error('PRIVATE_KEY is forbidden for this payload; use the active CLI keystore (server-aresrpg)')
   const seed_manifest = read_json(join(script_dir, 'out', 'seed_manifest.json'))
   const seed = read_json(join(repo_dir, 'seed', 'mainnet', 'shop.json'))
-  const pet_boxes = read_json(
-    join(repo_dir, 'seed', 'mainnet', 'pet_boxes.json')
-  )
+  const pet_boxes = read_json(join(repo_dir, 'seed', 'mainnet', 'pet_boxes.json'))
   const deployment = deployment_from_release(release, process.env)
   const { sale_rows: api_rows, template_by_id } = await fetch_live_rows()
   // Required /v1 resolution first; this gRPC object-existence check is only a
@@ -543,28 +459,16 @@ async function main() {
   })
   const plan = {
     ...shop_plan,
-    renames: [
-      ...shop_plan.renames,
-      ...build_historical_renames(
-        template_by_id,
-        shop_template_ids(seed_manifest)
-      ),
-    ],
+    renames: [...shop_plan.renames, ...build_historical_renames(template_by_id, shop_template_ids(seed_manifest))],
     reauthor_boxes: box_plan.reauthor_boxes,
-    manifest_receipt: [
-      ...shop_plan.manifest_receipt,
-      ...box_plan.manifest_receipt,
-    ],
+    manifest_receipt: [...shop_plan.manifest_receipt, ...box_plan.manifest_receipt],
   }
   print_plan(plan, mode, deployment)
   const transactions = transactions_from_plan(plan, deployment)
   const minted = []
-  if (!transactions.length)
-    console.log('=== SHOP CONTENT ALREADY CONVERGED (0 transactions) ===')
+  if (!transactions.length) console.log('=== SHOP CONTENT ALREADY CONVERGED (0 transactions) ===')
   else {
-    console.log(
-      `signer ${keypair.getPublicKey().toSuiAddress()} (active CLI keystore)`
-    )
+    console.log(`signer ${keypair.getPublicKey().toSuiAddress()} (active CLI keystore)`)
 
     // Every call in this payload is simulatable (none consumes &Random), so every
     // tx uses deriveBudget's dryRun x1.5 path. The 0.3-SUI ceiling is enforced
@@ -576,13 +480,7 @@ async function main() {
         })
         if (op?.create_fresh) minted.push({ slug: op.slug, receipt })
       } else {
-        const budget = await derive_budget(
-          sui_client,
-          keypair,
-          tx,
-          label,
-          ceiling_sui
-        )
+        const budget = await derive_budget(sui_client, keypair, tx, label, ceiling_sui)
         console.log(`  [${label}] dry-run OK, derived budget=${budget} MIST`)
       }
     }
@@ -597,16 +495,10 @@ async function main() {
     live: mode.live,
   })
   if (transactions.length)
-    console.log(
-      mode.live
-        ? '=== SHOP CONTENT PAYLOAD APPLIED ==='
-        : '=== DRY-RUN COMPLETE (0 transactions signed) ==='
-    )
+    console.log(mode.live ? '=== SHOP CONTENT PAYLOAD APPLIED ===' : '=== DRY-RUN COMPLETE (0 transactions signed) ===')
 }
 
-const is_main =
-  process.argv[1] &&
-  resolve(process.argv[1]) === file_url_to_path(import.meta.url)
+const is_main = process.argv[1] && resolve(process.argv[1]) === file_url_to_path(import.meta.url)
 if (is_main)
   main().catch((error) => {
     console.error(`\nSHOP CONTENT PAYLOAD STOPPED: ${error.message}`)

@@ -54,9 +54,7 @@ export const CHAIN_IDS = { testnet: '4c78adac', mainnet: '35834a8a' }
 // personal_kiosk rule `add`s may target. getRulePackageId instead returns the Kiosk ORIGINAL published id; a rule
 // `add` against that ORIGINAL aborts InvalidLinkage — the policy's type resolves through aresrpg's linkageTable,
 // which binds the LINKED (compiled-against) dep id, not the original — so the linked dep id is the truth.
-const FRAMEWORK_IDS = new Set(
-  ['0x1', '0x2', '0x3', '0x5', '0xb', '0xdee9'].map(norm)
-)
+const FRAMEWORK_IDS = new Set(['0x1', '0x2', '0x3', '0x5', '0xb', '0xdee9'].map(norm))
 
 // ── The package dependency graph (S-46 final split + the 2026-07-11/12 size splits: foundation = math libs;
 //    spells/social standalone; engine (aresrpg_fight) = the generic branded combat engine; aresrpg = THE core
@@ -86,8 +84,7 @@ export function publishOrder() {
       indeg[p]++
     }
   const order = []
-  const ready = () =>
-    TICKET_ORDER.filter((p) => indeg[p] === 0 && !order.includes(p))
+  const ready = () => TICKET_ORDER.filter((p) => indeg[p] === 0 && !order.includes(p))
   while (order.length < TICKET_ORDER.length) {
     const [next] = ready() // TICKET_ORDER preference among all currently-unblocked packages
     if (!next) throw new Error('publishOrder: dependency cycle among packages')
@@ -100,9 +97,7 @@ export function publishOrder() {
     const deps = PKG_DEPS[p]
     for (const d of deps)
       if (TICKET_ORDER.indexOf(d) > TICKET_ORDER.indexOf(p))
-        corrections.push(
-          `${d} moved before ${p} (${p} depends on ${d}; ticket listed ${d} later)`
-        )
+        corrections.push(`${d} moved before ${p} (${p} depends on ${d}; ticket listed ${d} later)`)
   }
   return { order, corrections: [...new Set(corrections)] }
 }
@@ -110,16 +105,13 @@ export function publishOrder() {
 // ── Lazy signer / client (dry-run never calls these, so a missing PRIVATE_KEY never throws in dry-run) ──
 export function getNetwork() {
   const n = process.env.NETWORK || 'testnet'
-  if (!CHAIN_IDS[n])
-    throw new Error(`unsupported NETWORK '${n}' (testnet|mainnet)`)
+  if (!CHAIN_IDS[n]) throw new Error(`unsupported NETWORK '${n}' (testnet|mainnet)`)
   return n
 }
 export function getClient(network = getNetwork()) {
   const baseUrl =
     process.env.SUI_GRPC_URL ||
-    (network === 'mainnet'
-      ? 'https://fullnode.mainnet.sui.io:443'
-      : 'https://fullnode.testnet.sui.io:443')
+    (network === 'mainnet' ? 'https://fullnode.mainnet.sui.io:443' : 'https://fullnode.testnet.sui.io:443')
   return new SuiGrpcClient({ network, baseUrl })
 }
 // Keyless by default (never export the raw key) — logic mirrors client.js's
@@ -131,34 +123,24 @@ export function getClient(network = getNetwork()) {
 // to find the right entry.
 export function getSigner() {
   if (process.env.PRIVATE_KEY)
-    return Ed25519Keypair.fromSecretKey(
-      decodeSuiPrivateKey(process.env.PRIVATE_KEY).secretKey
-    )
+    return Ed25519Keypair.fromSecretKey(decodeSuiPrivateKey(process.env.PRIVATE_KEY).secretKey)
 
-  const config_dir =
-    process.env.SUI_CONFIG_DIR || `${homedir()}/.sui/sui_config`
+  const config_dir = process.env.SUI_CONFIG_DIR || `${homedir()}/.sui/sui_config`
 
   const active_address = fs
     .readFileSync(`${config_dir}/client.yaml`, 'utf8')
     .match(/^active_address:\s*"?(0x[0-9a-fA-F]+)"?/m)?.[1]
     ?.toLowerCase()
   if (!active_address)
-    throw new Error(
-      `No active_address in ${config_dir}/client.yaml — run \`sui client\` or set PRIVATE_KEY`
-    )
+    throw new Error(`No active_address in ${config_dir}/client.yaml — run \`sui client\` or set PRIVATE_KEY`)
 
   // sui.keystore = JSON array of base64 blobs; each is [flag byte][32-byte secret]. flag 0x00 = Ed25519.
-  const keystore = JSON.parse(
-    fs.readFileSync(`${config_dir}/sui.keystore`, 'utf8')
-  )
+  const keystore = JSON.parse(fs.readFileSync(`${config_dir}/sui.keystore`, 'utf8'))
   for (const entry of keystore) {
     const blob = Buffer.from(entry, 'base64')
     if (blob.length !== 33 || blob[0] !== 0x00) continue // Ed25519 only
-    const candidate = Ed25519Keypair.fromSecretKey(
-      Uint8Array.from(blob.subarray(1))
-    )
-    if (candidate.getPublicKey().toSuiAddress() === active_address)
-      return candidate
+    const candidate = Ed25519Keypair.fromSecretKey(Uint8Array.from(blob.subarray(1)))
+    if (candidate.getPublicKey().toSuiAddress() === active_address) return candidate
   }
 
   throw new Error(
@@ -168,8 +150,7 @@ export function getSigner() {
   )
 }
 
-export const netGas = (g) =>
-  Number(g.computationCost) + Number(g.storageCost) - Number(g.storageRebate)
+export const netGas = (g) => Number(g.computationCost) + Number(g.storageCost) - Number(g.storageRebate)
 
 // gRPC renders type-string addresses ADDRESS-PADDED (`0x0000…0002::package::UpgradeCap`); jsonRpc rendered them
 // SHORT (`0x2::…`). Every address-sensitive consumer literal (classify's UpgradeCap `===` / Publisher / Display
@@ -177,8 +158,7 @@ export const netGas = (g) =>
 // an unnormalized padded type MISSES them all (upgradeCap=null → Published.toml stamps "null" → every downstream
 // `sui move build` dies AccountAddressParseError). Canonicalize every 0x-address inside a type string, struct
 // type args included. Suffix matchers (`endsWith('::item::ItemTemplate')`) are form-agnostic either way.
-const shortType = (t) =>
-  t ? String(t).replace(/0x0*([0-9a-fA-F]+)/g, '0x$1') : t
+const shortType = (t) => (t ? String(t).replace(/0x0*([0-9a-fA-F]+)/g, '0x$1') : t)
 
 // Map a gRPC Core ObjectOwner ({ $kind:'Shared', Shared:{ initialSharedVersion } } / { AddressOwner } / …) to the
 // jsonRpc-ish owner shape classify() reads (`isShared(o) => 'Shared' in o`, `o.Shared.initial_shared_version`).
@@ -187,12 +167,10 @@ function mapOwner(o) {
   if (o.$kind === 'Shared' || o.Shared)
     return {
       Shared: {
-        initial_shared_version:
-          o.Shared?.initialSharedVersion ?? o.Shared?.initial_shared_version,
+        initial_shared_version: o.Shared?.initialSharedVersion ?? o.Shared?.initial_shared_version,
       },
     }
-  if (o.$kind === 'AddressOwner' || typeof o.AddressOwner === 'string')
-    return { AddressOwner: o.AddressOwner }
+  if (o.$kind === 'AddressOwner' || typeof o.AddressOwner === 'string') return { AddressOwner: o.AddressOwner }
   return o
 }
 
@@ -296,15 +274,8 @@ export async function deriveBudget(client, signer, tx, label, ceilingSui = 5) {
  * money-path wiring/enable PTBs; `derive:false` lets the SDK auto-estimate (mirrors publish.js — a publish
  * dryRun can hit the JSON-RPC command limits, so the proven publish path never sets an explicit budget).
  */
-export async function run(
-  client,
-  signer,
-  label,
-  tx,
-  { derive = true, ceilingSui = 5 } = {}
-) {
-  if (derive)
-    tx.setGasBudget(await deriveBudget(client, signer, tx, label, ceilingSui))
+export async function run(client, signer, label, tx, { derive = true, ceilingSui = 5 } = {}) {
+  if (derive) tx.setGasBudget(await deriveBudget(client, signer, tx, label, ceilingSui))
   // gRPC Core: `include` selects the receipt fields; normalizeReceipt re-projects to the jsonRpc-ish shape every
   // consumer (classify / createdId / resolveBatch) parses. Gas payment is resolved natively (address-balance).
   const raw = await client.signAndExecuteTransaction({
@@ -315,9 +286,7 @@ export async function run(
   const r = normalizeReceipt(raw)
   await client.waitForTransaction({ digest: r.digest })
   const s = r.effects.status.status
-  console.log(
-    `  [${label}] ${s} digest=${r.digest} gasNET=${netGas(r.effects.gasUsed)}`
-  )
+  console.log(`  [${label}] ${s} digest=${r.digest} gasNET=${netGas(r.effects.gasUsed)}`)
   if (s !== 'success')
     throw new Error(
       `${label} FAILED (executed) — NOT retrying (gas already burned): ${JSON.stringify(r.effects.status)}`
@@ -349,14 +318,10 @@ export async function run(
 function probeSimulationError(raw) {
   const abort = raw?.MoveAbort ?? raw?.moveAbort ?? null
   const rawCode = abort?.abortCode ?? raw?.code
-  const code =
-    rawCode == null || Number.isNaN(Number(rawCode)) ? rawCode : Number(rawCode)
+  const code = rawCode == null || Number.isNaN(Number(rawCode)) ? rawCode : Number(rawCode)
   const module = abort?.location?.module ?? raw?.module
   const message =
-    raw?.message ??
-    (module && code != null
-      ? `${module}::${code}`
-      : 'Simulation failed without an error message')
+    raw?.message ?? (module && code != null ? `${module}::${code}` : 'Simulation failed without an error message')
   const error = new Error(message, { cause: raw })
   error.name = 'ProbeSimulationError'
   if (module) error.module = module
@@ -364,13 +329,7 @@ function probeSimulationError(raw) {
   return error
 }
 
-export async function probeBatchSize(
-  client,
-  sender,
-  rows,
-  buildBatch,
-  opts = {}
-) {
+export async function probeBatchSize(client, sender, rows, buildBatch, opts = {}) {
   const { start = 50, cap = 100, step = 10, ceilingSuiPerItem = 0.03 } = opts
   let lastSimulationFailure = null
   const tryN = async (n) => {
@@ -383,30 +342,18 @@ export async function probeBatchSize(
         include: { effects: true },
       })
     } catch (probe_error) {
-      if (process.env.PROBE_DEBUG)
-        console.error(
-          '[probe-debug] build/sim threw:',
-          probe_error?.message ?? probe_error
-        )
+      if (process.env.PROBE_DEBUG) console.error('[probe-debug] build/sim threw:', probe_error?.message ?? probe_error)
       lastSimulationFailure = probe_error
       return null
     } // build-time reject (e.g. "maximum commands in a programmable transaction is 1024")
-    if (
-      sim.$kind !== 'Transaction' ||
-      sim.Transaction.effects.status.success === false
-    ) {
+    if (sim.$kind !== 'Transaction' || sim.Transaction.effects.status.success === false) {
       if (process.env.PROBE_DEBUG)
         console.error(
           '[probe-debug] sim status:',
-          JSON.stringify(sim?.Transaction?.effects?.status ?? sim?.$kind).slice(
-            0,
-            400
-          )
+          JSON.stringify(sim?.Transaction?.effects?.status ?? sim?.$kind).slice(0, 400)
         )
       lastSimulationFailure =
-        sim?.FailedTransaction?.effects?.status?.error ??
-        sim?.Transaction?.effects?.status?.error ??
-        sim
+        sim?.FailedTransaction?.effects?.status?.error ?? sim?.Transaction?.effects?.status?.error ?? sim
       return null
     }
     lastSimulationFailure = null
@@ -443,9 +390,7 @@ export async function probeBatchSize(
   if (floor) return { ...floor, probed: true }
   throw lastSimulationFailure
     ? probeSimulationError(lastSimulationFailure)
-    : new Error(
-        'probeBatchSize: even a single row fails to clear simulate — refusing to guess a size'
-      )
+    : new Error('probeBatchSize: even a single row fails to clear simulate — refusing to guess a size')
 }
 
 /**
@@ -455,26 +400,16 @@ export async function probeBatchSize(
  * `fitBatch(candidate)` returns the usable prefix length (for example, after a local PTB input-cap check).
  * `preflight` and `execute` receive `(batch, offset)`; offsets remain stable for manifest/digest labels.
  */
-export async function runPreflightedBatches(
-  rows,
-  maxBatchSize,
-  fitBatch,
-  preflight,
-  execute
-) {
+export async function runPreflightedBatches(rows, maxBatchSize, fitBatch, preflight, execute) {
   if (!Number.isInteger(maxBatchSize) || maxBatchSize < 1)
-    throw new Error(
-      `runPreflightedBatches: invalid max batch size ${maxBatchSize}`
-    )
+    throw new Error(`runPreflightedBatches: invalid max batch size ${maxBatchSize}`)
 
   const batches = []
   for (let offset = 0; offset < rows.length;) {
     const candidate = rows.slice(offset, offset + maxBatchSize)
     const fit = fitBatch(candidate)
     if (!Number.isInteger(fit) || fit < 1 || fit > candidate.length)
-      throw new Error(
-        `runPreflightedBatches: fitBatch returned ${fit} for ${candidate.length} candidate rows`
-      )
+      throw new Error(`runPreflightedBatches: fitBatch returned ${fit} for ${candidate.length} candidate rows`)
     const batch = candidate.slice(0, fit)
     batches.push({ batch, offset })
     offset += batch.length
@@ -522,9 +457,7 @@ export function claimCreated(rows, keyOfRow, created) {
   return created.map((c) => {
     const q = buckets.get(c.key)
     if (!q?.length)
-      throw new Error(
-        `claimCreated: created id ${c.id} (key ${c.key}) matches no unclaimed row — refusing to guess`
-      )
+      throw new Error(`claimCreated: created id ${c.id} (key ${c.key}) matches no unclaimed row — refusing to guess`)
     return { row: q.shift(), id: c.id }
   })
 }
@@ -561,16 +494,13 @@ export async function existingTableKeys(client, sharedId, field) {
   const t = object?.json?.[field]
   const tableId = typeof t?.id === 'string' ? t.id : t?.id?.id
   if (!tableId)
-    throw new Error(
-      `existingTableKeys: cannot resolve Table '${field}' on ${sharedId} — refusing a blind add`
-    )
+    throw new Error(`existingTableKeys: cannot resolve Table '${field}' on ${sharedId} — refusing a blind add`)
   const keys = new Set()
   let cursor = null
   do {
     const page = await client.listDynamicFields({ parentId: tableId, cursor })
     // gRPC DF name = { type, bcs } (bcs = the BCS-encoded key); a Table<String,bool> key is a bare String.
-    for (const d of page.dynamicFields || [])
-      keys.add(bcs.string().parse(d.name.bcs))
+    for (const d of page.dynamicFields || []) keys.add(bcs.string().parse(d.name.bcs))
     cursor = page.hasNextPage ? page.cursor : null
   } while (cursor)
   return keys
@@ -596,10 +526,7 @@ export function resolveBatch(rows, keyOfRow, created) {
   const resolved = rows.map((row) => {
     const k = keyOfRow(row)
     const bucket = buckets.get(k)
-    if (!bucket || !bucket.length)
-      throw new Error(
-        `resolveBatch: no created id matches row key ${JSON.stringify(k)}`
-      )
+    if (!bucket || !bucket.length) throw new Error(`resolveBatch: no created id matches row key ${JSON.stringify(k)}`)
     return { row, id: bucket.shift() }
   })
   const leftover = [...buckets.values()].reduce((sum, b) => sum + b.length, 0)
@@ -612,13 +539,11 @@ export function resolveBatch(rows, keyOfRow, created) {
 
 // ── Build one package → { modules, dependencies, digest } (mirrors publish.js / ceremony_upgrade.mjs) ──
 export function buildPackage(pkgName) {
-  const out = execSync(
-    `sui move build --dump-bytecode-as-base64 --path ${path.join(MOVE_DIR, pkgName)}`,
-    { encoding: 'utf-8' }
-  )
+  const out = execSync(`sui move build --dump-bytecode-as-base64 --path ${path.join(MOVE_DIR, pkgName)}`, {
+    encoding: 'utf-8',
+  })
   const line = out.split('\n').find((l) => l.trimStart().startsWith('{'))
-  if (!line)
-    throw new Error(`buildPackage(${pkgName}): no JSON in build output`)
+  if (!line) throw new Error(`buildPackage(${pkgName}): no JSON in build output`)
   return JSON.parse(line)
 }
 
@@ -637,15 +562,9 @@ export function clearPublished(pkgName, net) {
 }
 
 /** Write the fresh `[published.<net>]` block after an SDK publish (create file if absent). */
-export function writePublished(
-  pkgName,
-  net,
-  { publishedAt, originalId, upgradeCap }
-) {
+export function writePublished(pkgName, net, { publishedAt, originalId, upgradeCap }) {
   const f = pubPath(pkgName)
-  const base = fs.existsSync(f)
-    ? stripSection(fs.readFileSync(f, 'utf8'), `[published.${net}]`)
-    : PUB_HEADER
+  const base = fs.existsSync(f) ? stripSection(fs.readFileSync(f, 'utf8'), `[published.${net}]`) : PUB_HEADER
   const block =
     `\n[published.${net}]\n` +
     `chain-id = "${CHAIN_IDS[net]}"\n` +
@@ -707,8 +626,7 @@ function publishedSection(content, net) {
 export function parsePublishedToml(content, net) {
   const section = publishedSection(content, net)
   if (!section) return null
-  const field = (key) =>
-    section.body.match(new RegExp(`^${key}\\s*=\\s*"([^"]*)"`, 'm'))?.[1]
+  const field = (key) => section.body.match(new RegExp(`^${key}\\s*=\\s*"([^"]*)"`, 'm'))?.[1]
   const version = section.body.match(/^version\s*=\s*(\d+)/m)?.[1]
   return {
     publishedAt: field('published-at'),
@@ -724,8 +642,7 @@ export function parsePublishedToml(content, net) {
  * origin-id bug this section exists to kill). Throws (writes nothing) when the section/fields are missing. */
 export function bumpPublishedToml(content, net, newPublishedAt) {
   const section = publishedSection(content, net)
-  if (!section)
-    throw new Error(`bumpPublishedToml: no [published.${net}] section`)
+  if (!section) throw new Error(`bumpPublishedToml: no [published.${net}] section`)
   const { lines, start, end } = section
   let sawAt = false
   let sawVersion = false
@@ -738,10 +655,7 @@ export function bumpPublishedToml(content, net, newPublishedAt) {
       sawVersion = true
     }
   }
-  if (!sawAt || !sawVersion)
-    throw new Error(
-      `bumpPublishedToml: [published.${net}] lacks published-at/version fields`
-    )
+  if (!sawAt || !sawVersion) throw new Error(`bumpPublishedToml: [published.${net}] lacks published-at/version fields`)
   return lines.join('\n')
 }
 
@@ -807,11 +721,7 @@ export function classify(pkgName, result, M) {
     // (skips the per-tx client.getObject resolve). Owned objects (caps/publishers/displays) never enter.
     // String() because JSON-RPC shapes waver between number and string — the stamped file always holds strings.
     if (isShared(c.owner))
-      collect_shared(
-        e.shared_versions,
-        simpleStruct(t),
-        String(c.owner.Shared.initial_shared_version)
-      )
+      collect_shared(e.shared_versions, simpleStruct(t), String(c.owner.Shared.initial_shared_version))
     if (t.endsWith('::version::Version')) e.version = id
     else if (t.endsWith('::admin::AdminCap'))
       e.admin = id // the one super AdminCap minted at init
@@ -890,8 +800,7 @@ export async function resolvePublishers(client, M) {
     })
     M.aresrpg.publishers[object.json.module_name] = pid
   }
-  for (const mod of ['item', 'character'])
-    if (!M.aresrpg.publishers[mod]) throw new Error(`missing ${mod} Publisher`)
+  for (const mod of ['item', 'character']) if (!M.aresrpg.publishers[mod]) throw new Error(`missing ${mod} Publisher`)
 }
 
 /** RULES_PKG = the single non-framework, non-sibling id in aresrpg's publish dependencies (the linked
@@ -904,9 +813,7 @@ export function resolveRulesPkg(M) {
     norm(M.social.pkg),
     norm(M.engine.pkg),
   ])
-  const cands = (M.aresrpg.dependencies || []).filter(
-    (d) => !excluded.has(norm(d))
-  )
+  const cands = (M.aresrpg.dependencies || []).filter((d) => !excluded.has(norm(d)))
   if (cands.length !== 1)
     throw new Error(
       `resolveRulesPkg: expected exactly 1 non-framework/non-foundation aresrpg dep (the kiosk lineage), found ${cands.length}: ${JSON.stringify(cands)}`
@@ -960,7 +867,6 @@ export function norm(id) {
 /** Option field truthiness for assertion reads: None renders as null / {vec:[]}, Some as an object/{vec:[x]}. */
 export function isSome(field) {
   if (field == null) return false
-  if (typeof field === 'object' && Array.isArray(field.vec))
-    return field.vec.length > 0
+  if (typeof field === 'object' && Array.isArray(field.vec)) return field.vec.length > 0
   return true
 }

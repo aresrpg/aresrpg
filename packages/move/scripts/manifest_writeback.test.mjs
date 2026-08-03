@@ -27,10 +27,7 @@ const manifest_path = join(script_dir, 'out', 'seed_manifest.json')
 const manifest_raw = readFileSync(manifest_path, 'utf8')
 const seed_manifest = JSON.parse(manifest_raw)
 const pet_boxes = JSON.parse(
-  readFileSync(
-    join(script_dir, '..', '..', '..', 'seed', 'mainnet', 'pet_boxes.json'),
-    'utf8'
-  )
+  readFileSync(join(script_dir, '..', '..', '..', 'seed', 'mainnet', 'pet_boxes.json'), 'utf8')
 )
 
 const id_of = (fill) => `0x${String(fill).repeat(64).slice(0, 64)}`
@@ -110,28 +107,18 @@ describe('writeback_rows — plan-time rows + mocked mint receipts', () => {
 describe('compute_manifest_writeback — pure receipt diff against the REAL manifest', () => {
   test('an already-fresh row drops out; a stale row yields its old→new change', () => {
     const current = seed_manifest.items.pet_lootbox
-    expect(
-      compute_manifest_writeback(seed_manifest, [
-        { slug: 'pet_lootbox', template_id: current },
-      ])
-    ).toEqual([])
-    expect(
-      compute_manifest_writeback(seed_manifest, [
-        { slug: 'pet_lootbox', template_id: id_of(6) },
-      ])
-    ).toEqual([{ slug: 'pet_lootbox', from: current, to: id_of(6) }])
+    expect(compute_manifest_writeback(seed_manifest, [{ slug: 'pet_lootbox', template_id: current }])).toEqual([])
+    expect(compute_manifest_writeback(seed_manifest, [{ slug: 'pet_lootbox', template_id: id_of(6) }])).toEqual([
+      { slug: 'pet_lootbox', from: current, to: id_of(6) },
+    ])
   })
   test('unknown slugs and malformed ids throw (the receipt only refreshes seeded rows)', () => {
     expect(() =>
-      compute_manifest_writeback(seed_manifest, [
-        { slug: 'not_a_seeded_item', template_id: id_of(6) },
-      ])
+      compute_manifest_writeback(seed_manifest, [{ slug: 'not_a_seeded_item', template_id: id_of(6) }])
     ).toThrow(/no manifest item row/)
-    expect(() =>
-      compute_manifest_writeback(seed_manifest, [
-        { slug: 'pet_lootbox', template_id: '0xdead' },
-      ])
-    ).toThrow(/invalid template id/)
+    expect(() => compute_manifest_writeback(seed_manifest, [{ slug: 'pet_lootbox', template_id: '0xdead' }])).toThrow(
+      /invalid template id/
+    )
   })
 })
 
@@ -198,8 +185,7 @@ describe('receipt law end-to-end (no chain): the 2026-07-16 incident and its rer
   test('INCIDENT repro: fresh sales + stale receipt → write-back computes exactly the old→new rows', () => {
     const fresh = (slug, index) => id_of(index + 2)
     const stale_manifest = JSON.parse(manifest_raw)
-    for (const slug of box_slugs)
-      stale_manifest.items[slug] = BOX_APPROVALS[slug].old_template_id // the pre-fix stale receipt
+    for (const slug of box_slugs) stale_manifest.items[slug] = BOX_APPROVALS[slug].old_template_id // the pre-fix stale receipt
     const plan = build_box_plan({
       live_rows: corrected_live_rows(fresh),
       box_rows,
@@ -207,10 +193,7 @@ describe('receipt law end-to-end (no chain): the 2026-07-16 incident and its rer
     })
     expect(plan.reauthor_boxes).toEqual([]) // old sales burned — nothing to execute…
     expect(
-      compute_manifest_writeback(
-        stale_manifest,
-        writeback_rows({ manifest_receipt: plan.manifest_receipt })
-      )
+      compute_manifest_writeback(stale_manifest, writeback_rows({ manifest_receipt: plan.manifest_receipt }))
     ).toEqual(
       box_slugs.map((slug, index) => ({
         slug,
@@ -229,10 +212,7 @@ describe('receipt law end-to-end (no chain): the 2026-07-16 incident and its rer
     })
     expect(plan.reauthor_boxes).toEqual([]) // ZERO burn/mint ops — the corrected sales stay live
     expect(
-      compute_manifest_writeback(
-        seed_manifest,
-        writeback_rows({ manifest_receipt: plan.manifest_receipt })
-      )
+      compute_manifest_writeback(seed_manifest, writeback_rows({ manifest_receipt: plan.manifest_receipt }))
     ).toEqual([]) // and the receipt is recognized as already fresh
   })
 })

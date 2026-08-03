@@ -5,11 +5,7 @@
 // the on-chain kiosk-apps lineage binds for that network (wrong id ⇒ InvalidLinkage / dead royalties).
 // These constants are the same source KioskClient.getRulePackageId reads; resolving them needs no chain client.
 //   bun run packages/move/scripts/resolve_rules.mjs [testnet|mainnet]
-import {
-  KIOSK_LOCK_RULE_ADDRESS,
-  PERSONAL_KIOSK_RULE_ADDRESS,
-  ROYALTY_RULE_ADDRESS,
-} from '@mysten/kiosk'
+import { KIOSK_LOCK_RULE_ADDRESS, PERSONAL_KIOSK_RULE_ADDRESS, ROYALTY_RULE_ADDRESS } from '@mysten/kiosk'
 
 const net = process.argv[2] || 'testnet'
 console.log(

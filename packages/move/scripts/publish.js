@@ -30,9 +30,7 @@ const build_out = await with_env(NETWORK, () =>
     encoding: 'utf-8',
   })
 )
-const cli_result = build_out
-  .split('\n')
-  .find((l) => l.trimStart().startsWith('{'))
+const cli_result = build_out.split('\n').find((l) => l.trimStart().startsWith('{'))
 
 const { modules, dependencies } = JSON.parse(cli_result)
 

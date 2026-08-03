@@ -52,9 +52,7 @@ import { assert_publishable_tree, with_env } from './env_guard.mjs'
 // ════════════════════════════════════════════════════════════════════════════════════════════════════════
 const o = (tx, id) => tx.object(id)
 const createdChange = (r, needle) =>
-  (r.objectChanges || []).find(
-    (c) => c.type === 'created' && (c.objectType || '').includes(needle)
-  )
+  (r.objectChanges || []).find((c) => c.type === 'created' && (c.objectType || '').includes(needle))
 const createdId = (r, needle) => createdChange(r, needle)?.objectId
 // Fold a marketplace-policy PTB's created shared TransferPolicy + kept TransferPolicyCap into the manifest.
 // S-51a: the policy's initial_shared_version rides along — TransferPolicies are shared in THIS wiring PTB
@@ -74,14 +72,7 @@ const WIRING = [
     name: 'W1 · character marketplace policy + rules',
     desc: 'create_character_policy → royalty(1000bp,min>0)+kiosk_lock+personal_kiosk (RULES_PKG) + character_listing_rule::add → share policy, keep cap',
     build(tx, M) {
-      policyPTB(
-        tx,
-        M,
-        'character',
-        `${M.aresrpg.pkg}::character::Character`,
-        M.aresrpg.publishers.character,
-        true
-      )
+      policyPTB(tx, M, 'character', `${M.aresrpg.pkg}::character::Character`, M.aresrpg.publishers.character, true)
     },
     capture: (r, M) => capturePolicy(r, M, 'character'),
   },
@@ -89,14 +80,7 @@ const WIRING = [
     name: 'W2 · item marketplace policy + rules',
     desc: 'create_item_policy → royalty(1000bp,min>0)+kiosk_lock+personal_kiosk (RULES_PKG) + item::add_listing_rule (ghost-stack gate) → share policy, keep cap',
     build(tx, M) {
-      policyPTB(
-        tx,
-        M,
-        'item',
-        `${M.aresrpg.pkg}::item::Item`,
-        M.aresrpg.publishers.item,
-        true
-      )
+      policyPTB(tx, M, 'item', `${M.aresrpg.pkg}::item::Item`, M.aresrpg.publishers.item, true)
     },
     capture: (r, M) => capturePolicy(r, M, 'item'),
   },
@@ -144,11 +128,7 @@ const WIRING = [
       tx.moveCall({
         target: `${M.aresrpg.pkg}::config::set_forge_brand`,
         typeArguments: [`${M.forgemagie.pkg}::forgemagie::Forge`],
-        arguments: [
-          o(tx, M.aresrpg.admin),
-          o(tx, M.aresrpg.shared.GameConfig),
-          o(tx, M.aresrpg.version),
-        ],
+        arguments: [o(tx, M.aresrpg.admin), o(tx, M.aresrpg.shared.GameConfig), o(tx, M.aresrpg.version)],
       })
       tx.moveCall({
         target: `${M.forgemagie.pkg}::forgemagie::create_board`,
@@ -157,10 +137,7 @@ const WIRING = [
     },
     capture(r, M) {
       classify('forgemagie', r, M)
-      if (
-        !M.forgemagie.shared?.CrushBoard ||
-        !M.forgemagie.shared_versions?.CrushBoard
-      )
+      if (!M.forgemagie.shared?.CrushBoard || !M.forgemagie.shared_versions?.CrushBoard)
         throw new Error('W5: create_board receipt has no shared CrushBoard id/version')
     },
   },
@@ -169,8 +146,7 @@ const WIRING = [
 /** Shared marketplace-policy PTB body (item + character); `listing` adds the per-kind listing rule
  *  (character → character_listing_rule level gate; item → item::add_listing_rule zero-amount/ghost gate). */
 function policyPTB(tx, M, kind, type, publisher, listing) {
-  const fn =
-    kind === 'character' ? 'create_character_policy' : 'create_item_policy'
+  const fn = kind === 'character' ? 'create_character_policy' : 'create_item_policy'
   const [pol, cap] = tx.moveCall({
     target: `${M.aresrpg.pkg}::${kind}::${fn}`,
     arguments: [o(tx, publisher), o(tx, M.aresrpg.version)],
@@ -196,9 +172,7 @@ function policyPTB(tx, M, kind, type, publisher, listing) {
       // ghost-stack gate, folded into `item` at the republish restructure — its module went away, the door did
       // not). Both are non-generic type-specific fns (no typeArguments).
       target:
-        kind === 'item'
-          ? `${M.aresrpg.pkg}::item::add_listing_rule`
-          : `${M.aresrpg.pkg}::${kind}_listing_rule::add`,
+        kind === 'item' ? `${M.aresrpg.pkg}::item::add_listing_rule` : `${M.aresrpg.pkg}::${kind}_listing_rule::add`,
       arguments: [pol, cap],
     })
   if (kind === 'item')
@@ -229,11 +203,7 @@ function enablePTB(tx, M, pkg) {
   if (pkg === 'aresrpg') {
     tx.moveCall({
       target: `${M.aresrpg.pkg}::config::set_enabled`,
-      arguments: [
-        o(tx, M.aresrpg.admin),
-        o(tx, M.aresrpg.shared.GameConfig),
-        tx.pure.bool(true),
-      ],
+      arguments: [o(tx, M.aresrpg.admin), o(tx, M.aresrpg.shared.GameConfig), tx.pure.bool(true)],
     })
     // 2026-07-13 gifting/dungeon size-split: pin the two sibling witnesses so their brand-gated core doors open
     // post-publish (gift/airdrop/loot_box/consume/pool/creation mint+heal+character-mint; dungeon's two fight
@@ -263,16 +233,10 @@ const ASSERTIONS = [
 ]
 async function runAssertions(client, M) {
   const results = []
-  const content = async (id) =>
-    (await client.getObject({ objectId: id, include: { json: true } })).object
-      .json
+  const content = async (id) => (await client.getObject({ objectId: id, include: { json: true } })).object.json
   // A1 — policies exist + shared
   {
-    const ok = !!(
-      M.policies?.character?.policy &&
-      M.policies?.item?.policy &&
-      M.policies?.extract?.policy
-    )
+    const ok = !!(M.policies?.character?.policy && M.policies?.item?.policy && M.policies?.extract?.policy)
     results.push({
       label: 'A1 policies (character + item + extract) captured',
       pass: ok,
@@ -330,28 +294,20 @@ function printPlan() {
   const net = getNetwork()
   const M = syntheticManifest()
   const { order, corrections } = publishOrder()
-  console.log(
-    '\n========================= [ CEREMONY PLAN — DRY RUN · zero chain calls ] ========================='
-  )
+  console.log('\n========================= [ CEREMONY PLAN — DRY RUN · zero chain calls ] =========================')
   console.log(
     `network=${net}   (RULES_PKG resolved at runtime from items' linked kiosk dep; shown here as ${M._rules})`
   )
 
-  console.log(
-    '\n────────── [ 1 · PUBLISH CHAIN (dependency / topological order) ] ──────────'
-  )
+  console.log('\n────────── [ 1 · PUBLISH CHAIN (dependency / topological order) ] ──────────')
   order.forEach((p, i) => console.log(`  ${String(i + 1).padStart(2)}. ${p}`))
   if (corrections.length) {
     console.log('  ⚠ TICKET-ORDER CORRECTIONS (topological):')
     for (const c of corrections) console.log(`     - ${c}`)
   }
-  console.log(
-    '  (foundation ships no shared objects/Version — publish only; aresrpg ships DARK.)'
-  )
+  console.log('  (foundation ships no shared objects/Version — publish only; aresrpg ships DARK.)')
 
-  console.log(
-    '\n────────── [ 2 · WIRING PTBs (composed; executed only outside --dry-run) ] ──────────'
-  )
+  console.log('\n────────── [ 2 · WIRING PTBs (composed; executed only outside --dry-run) ] ──────────')
   for (const w of WIRING) {
     const only = w.network ? `  [${w.network} only]` : ''
     console.log(`\n  ${w.name}${only}`)
@@ -359,9 +315,7 @@ function printPlan() {
     for (const t of recordTargets(w.build, M)) console.log(`      → ${t}`)
   }
 
-  console.log(
-    '\n────────── [ 3 · POST-WIRING ASSERTIONS (RPC reads) ] ──────────'
-  )
+  console.log('\n────────── [ 3 · POST-WIRING ASSERTIONS (RPC reads) ] ──────────')
   for (const a of ASSERTIONS) console.log(`  ✓ ${a}`)
 
   console.log(
@@ -369,22 +323,17 @@ function printPlan() {
   )
   for (const p of VERSIONED) {
     console.log(`  ${p}:`)
-    for (const t of recordTargets((tx, m) => enablePTB(tx, m, p), M))
-      console.log(`      → ${t}`)
+    for (const t of recordTargets((tx, m) => enablePTB(tx, m, p), M)) console.log(`      → ${t}`)
   }
   if (net === 'mainnet')
-    console.log(
-      '  (mainnet --enable guards: refuse to enable while free_enabled && Creation.sponsor == none)'
-    )
+    console.log('  (mainnet --enable guards: refuse to enable while free_enabled && Creation.sponsor == none)')
 
   console.log('\n────────── [ 5 · MANIFEST ] ──────────')
   console.log(`  execute mode writes ${MANIFEST_PATH}`)
   console.log(
     '    per package: { package_id, upgrade_cap, admin, version, shared{registries/configs/gates}, publishers, displays } + policies'
   )
-  console.log(
-    '\n========================= [ END PLAN — nothing executed ] =========================\n'
-  )
+  console.log('\n========================= [ END PLAN — nothing executed ] =========================\n')
 }
 
 // ════════════════════════════════════════════════════════════════════════════════════════════════════════
@@ -417,10 +366,7 @@ async function runCeremony({ net, client, signer, me }) {
   if (skip.length) {
     const prev = JSON.parse(fs.readFileSync(MANIFEST_PATH, 'utf8'))
     for (const pkg of skip) {
-      if (!prev[pkg]?.pkg)
-        throw new Error(
-          `--skip ${pkg}: no manifest entry from a previous run — cannot resume`
-        )
+      if (!prev[pkg]?.pkg) throw new Error(`--skip ${pkg}: no manifest entry from a previous run — cannot resume`)
       M[pkg] = prev[pkg]
       console.log(`  (skip ${pkg} — live at ${prev[pkg].pkg})`)
     }
@@ -466,9 +412,7 @@ async function runCeremony({ net, client, signer, me }) {
     }
     if (w.name.startsWith('W4')) {
       if (!M._station)
-        throw new Error(
-          'mainnet: --station / SPONSOR_STATION required for set_sponsor (CEREMONY LAW #1)'
-        )
+        throw new Error('mainnet: --station / SPONSOR_STATION required for set_sponsor (CEREMONY LAW #1)')
     }
     const tx = new Transaction()
     w.build(tx, M)
@@ -483,10 +427,7 @@ async function runCeremony({ net, client, signer, me }) {
     console.log(`  ${a.pass ? 'PASS' : 'FAIL'} ${a.label} — ${a.detail}`)
     allPass &&= a.pass
   }
-  if (!allPass)
-    throw new Error(
-      'CEREMONY ASSERTIONS FAILED — see above (packages published + wired; DO NOT --enable)'
-    )
+  if (!allPass) throw new Error('CEREMONY ASSERTIONS FAILED — see above (packages published + wired; DO NOT --enable)')
 
   fs.writeFileSync(MANIFEST_PATH, JSON.stringify(M, null, 2) + '\n')
   // The publisher owns deployment config generation. stamp_all validates the complete
@@ -495,9 +436,7 @@ async function runCeremony({ net, client, signer, me }) {
     cwd: new URL('.', import.meta.url),
     stdio: 'inherit',
   })
-  console.log(
-    `\n=== CEREMONY COMPLETE · manifest=${MANIFEST_PATH} · packages DARK until --enable ===`
-  )
+  console.log(`\n=== CEREMONY COMPLETE · manifest=${MANIFEST_PATH} · packages DARK until --enable ===`)
 }
 
 // ════════════════════════════════════════════════════════════════════════════════════════════════════════
@@ -507,8 +446,7 @@ async function doEnable() {
   const net = getNetwork()
   const client = getClient(net)
   const signer = getSigner()
-  if (!fs.existsSync(MANIFEST_PATH))
-    throw new Error(`no manifest at ${MANIFEST_PATH} — run the ceremony first`)
+  if (!fs.existsSync(MANIFEST_PATH)) throw new Error(`no manifest at ${MANIFEST_PATH} — run the ceremony first`)
   const M = JSON.parse(fs.readFileSync(MANIFEST_PATH, 'utf8'))
   M._signer = signer.getPublicKey().toSuiAddress()
   // switch-back law (see runCeremony): scope to `net`, restore the found active-env on exit.
@@ -547,9 +485,7 @@ async function main() {
     const eq = argv.find((x) => x.startsWith(n + '='))
     if (eq) return eq.slice(n.length + 1)
     const i = argv.indexOf(n)
-    return i >= 0 && argv[i + 1] && !argv[i + 1].startsWith('-')
-      ? argv[i + 1]
-      : null
+    return i >= 0 && argv[i + 1] && !argv[i + 1].startsWith('-') ? argv[i + 1] : null
   }
   const network = val('--network')
   if (network) process.env.NETWORK = network
