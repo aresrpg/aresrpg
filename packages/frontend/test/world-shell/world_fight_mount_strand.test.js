@@ -13,7 +13,7 @@
 // chain seat (the optimistic pending board) stays quiet, a re-entry on an already-mounted board never cries
 // wolf, and the whole strand closes — surfaced failure, then the SAME fight rejoining itself on the next pass.
 //
-// Harness idiom mirrors world_fight_resume_offer.test.js: /v1 through the fetch mock, the chain read through the
+// Harness idiom mirrors world_fight_resume_auto.test.js: /v1 through the fetch mock, the chain read through the
 // expedition SDK mock, the chain WRITES through injected doors (nothing signs in a unit test).
 
 import { afterAll, afterEach, beforeEach, describe, expect, mock, test } from 'bun:test'
@@ -45,7 +45,6 @@ const { _reset_rpc_client_for_test } = await import('../../src/rpc/client')
 const { use_dungeon } = await import('../../src/world-shell/dungeon_store.js')
 const { enter_world_fight, rekey_world_fight, resume_world_fight } =
   await import('../../src/world-shell/world_fight.js')
-const { reset_fight_resume_offer } = await import('../../src/world-shell/fight_resume_offer.js')
 const { dismiss_event_toast, event_toast_store } = await import('../../src/game/core/toast.js')
 const { _reset_log_for_test, get_log_buffer } = await import('../../src/core/log.js')
 const en = await Bun.file(new URL('../../src/i18n/locales/en.json', import.meta.url)).json()
@@ -97,7 +96,6 @@ beforeEach(() => {
   get_object.mockClear()
   _reset_rpc_client_for_test()
   _reset_log_for_test()
-  reset_fight_resume_offer()
   serve_live_seat()
   for (const toast of toasts()) dismiss_event_toast(toast.id)
   console_error = mock(() => {})
@@ -118,7 +116,6 @@ afterEach(() => {
   globalThis.fetch = real_fetch
   _reset_rpc_client_for_test()
   _reset_log_for_test()
-  reset_fight_resume_offer()
   reset_expedition_sdk_mock()
   reset_auth_mock()
 })
@@ -215,7 +212,7 @@ describe('#2125 — the mount refusal that strands a chain seat announces itself
     await resume_world_fight(CHARACTER_ID, { crank_door })
     await settle_tick()
 
-    // #2122's autonomous answer — no dialog, one transaction, and it is the player's own rejoin.
+    // The autonomous answer (#2122 → D48) — no dialog, one transaction, and it is the player's own rejoin.
     expect(traced('fight_resume_auto')).toHaveLength(1)
     expect(traced('fight_resume_auto')[0]).toMatchObject({ fight_id: FIGHT_ID, character_id: CHARACTER_ID })
     expect(traced('fight_resume_offer')).toHaveLength(0)

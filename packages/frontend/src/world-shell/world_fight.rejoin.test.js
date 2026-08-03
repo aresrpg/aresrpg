@@ -139,9 +139,9 @@ describe('boot resume vs a zombie world fight (REJOIN-SPAWN)', () => {
       throw new Error('pre-flight refused (test)')
     })
 
-    // #1751/#2122: the entry consents before it liquidates — this row measures the liquidation mechanics, so it
-    // answers directly rather than depending on which way the consent lands (autonomous on a fight's first pass
-    // this session, the modal after that). The consent's own behaviour: test/world-shell/world_fight_resume_offer.test.js.
+    // #1751/#2122/D48: the entry consents before it liquidates — this row measures the liquidation mechanics, so
+    // it answers directly rather than through the entry's own gate (which, under D48, always answers 'rejoin').
+    // The consent's own behaviour: test/world-shell/world_fight_resume_auto.test.js.
     await resume_world_fight(CHARACTER_ID, { force_start_door, consent: () => 'rejoin' })
     await settle_tick()
 
@@ -168,9 +168,9 @@ describe('boot resume vs a zombie world fight (REJOIN-SPAWN)', () => {
       return { digest: '0xforcestart' }
     })
 
-    // #1751/#2122: the entry consents before it liquidates — this row measures the liquidation mechanics, so it
-    // answers directly rather than depending on which way the consent lands (autonomous on a fight's first pass
-    // this session, the modal after that). The consent's own behaviour: test/world-shell/world_fight_resume_offer.test.js.
+    // #1751/#2122/D48: the entry consents before it liquidates — this row measures the liquidation mechanics, so
+    // it answers directly rather than through the entry's own gate (which, under D48, always answers 'rejoin').
+    // The consent's own behaviour: test/world-shell/world_fight_resume_auto.test.js.
     await resume_world_fight(CHARACTER_ID, { force_start_door, consent: () => 'rejoin' })
 
     expect(force_start_door).toHaveBeenCalledTimes(1)
@@ -350,9 +350,9 @@ describe('boot resume vs an EXPIRED-turn zombie (#882)', () => {
       return { digest: '0xcrank' }
     })
 
-    // #1751/#2122: the entry consents before it liquidates — this row measures the liquidation mechanics, so it
-    // answers directly rather than depending on which way the consent lands (autonomous on a fight's first pass
-    // this session, the modal after that). The consent's own behaviour: test/world-shell/world_fight_resume_offer.test.js.
+    // #1751/#2122/D48: the entry consents before it liquidates — this row measures the liquidation mechanics, so
+    // it answers directly rather than through the entry's own gate (which, under D48, always answers 'rejoin').
+    // The consent's own behaviour: test/world-shell/world_fight_resume_auto.test.js.
     await resume_world_fight(CHARACTER_ID, { crank_door, consent: () => 'rejoin' })
     await settle_tick()
 
@@ -374,9 +374,9 @@ describe('boot resume vs an EXPIRED-turn zombie (#882)', () => {
       throw new Error('executed abort (test)')
     })
 
-    // #1751/#2122: the entry consents before it liquidates — this row measures the liquidation mechanics, so it
-    // answers directly rather than depending on which way the consent lands (autonomous on a fight's first pass
-    // this session, the modal after that). The consent's own behaviour: test/world-shell/world_fight_resume_offer.test.js.
+    // #1751/#2122/D48: the entry consents before it liquidates — this row measures the liquidation mechanics, so
+    // it answers directly rather than through the entry's own gate (which, under D48, always answers 'rejoin').
+    // The consent's own behaviour: test/world-shell/world_fight_resume_auto.test.js.
     await resume_world_fight(CHARACTER_ID, { crank_door, consent: () => 'rejoin' })
 
     expect(crank_door).toHaveBeenCalledTimes(1) // ONE attempt — the tx-retry burn law, never a loop
