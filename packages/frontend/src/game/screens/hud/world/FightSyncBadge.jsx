@@ -1,10 +1,9 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-/** An ACTIVE fight has no actionable turn until its actor resolves to a fighter row. */
-export function fight_actor_unresolved(fight) {
-  const actor_id = fight?.active_entity_id
-  return actor_id == null || !fight?.fighters?.has?.(actor_id)
-}
+// `fight_actor_unresolved` used to live here — DELETED (#1993 carve-out). "An ACTIVE fight has no actionable turn
+// until its actor resolves to a fighter row" is `fight_visible_view(state).sync.actor_unresolved`, derived off the
+// same active id and the same fighter rows; this file kept a second spelling of it beside the chip that renders
+// its verdict. The chip stays store-free and presentational; the verdict answers from the projection.
 
 /** Presentational fight-sync/resolving chip kept store-free so its render contract unit-tests headlessly. */
 export function FightSyncBadge({ label, resolving = false }) {

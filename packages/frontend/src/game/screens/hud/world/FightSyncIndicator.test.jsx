@@ -16,10 +16,10 @@ test('fight receipt sync indicator is a small live status, not an interactive de
 })
 
 test('an absent or unknown active actor is a resolving state, never an interactive turn', () => {
-  const fighters = new Map([['hero', { id: 'hero' }]])
-  expect(fight_sync_badge.fight_actor_unresolved?.({ active_entity_id: null, fighters })).toBe(true)
-  expect(fight_sync_badge.fight_actor_unresolved?.({ active_entity_id: 'missing', fighters })).toBe(true)
-  expect(fight_sync_badge.fight_actor_unresolved?.({ active_entity_id: 'hero', fighters })).toBe(false)
+  // #1993 carve-out — the VERDICT moved to its one home (`fight_visible_view(state).sync.actor_unresolved`,
+  // pinned verbatim against a real fight state in packages/fight/test/fight_visible_view.test.js). This module
+  // no longer answers it, so what it owes is the chip's render contract for the answer it is handed.
+  expect(fight_sync_badge.fight_actor_unresolved).toBeUndefined()
 
   const html = renderToStaticMarkup(<FightSyncBadge label="Waiting..." resolving />)
   expect(html).toContain('data-fight-resolving="true"')
