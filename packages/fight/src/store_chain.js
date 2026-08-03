@@ -159,7 +159,13 @@ export const reduce_snapshot_input = (state, msg, next_core, now) => {
       my_key: ctx.spectator === true ? null : (next_core.my_seat ?? state.my_key),
       commit_due: false,
       wave: [],
-      wave_seq: state.presented_seq,
+      // `wave_seq` is an IDENTITY allocator, never a count of what is pending — it does NOT rewind here (#2124).
+      // The renderer's drain (world-shell/voxel_fight_adapter.js) skips `turn.seq <= last_enqueued_seq`, a
+      // monotonic high-water mark that exists so a seq it has already played can never play twice; rewinding the
+      // allocator minted the NEXT batch's turns on seqs it had already consumed, and a whole peer turn — cast
+      // beat, combat-log line and vfx alike — was dropped in silence while the fold stayed correct (an observing
+      // seat watched its partner cast nothing at all). Emptying `wave` above is the entire supersession: nothing
+      // reads `wave_seq` against `presented_seq` — `presenting` reads the wave itself (project_state.js).
       last_action_ms: Math.max(state.last_action_ms, Number(view?.last_action_ms ?? 0)),
     },
     now

@@ -1,0 +1,213 @@
+{
+  "captured": "2026-08-03 coop drive \u2014 fight 0x34b7cd97\u20267d6f7, live testnet, two seats (issue #2124)",
+  "source": "GET /v1/fights/{fight}/events \u2014 the same rows /v1/stream/fight/{fight} writes per frame",
+  "fight": "0x34b7cd97319e0adaf221defa9ae993577a7423206696120acea9f81dcc67d6f7",
+  "observer": "0x69dd22918cd44c6f5f49203494dbb78f748accc301bbd2d6e0f49302aa6853b6",
+  "peer": "0x915b2ecc6ceec1912673c09370e7e663f1feaf0b805e3eaca5bb505ae3f48737",
+  "note": "seq 73-79 a mob turn the observer presented \u00b7 seq 80-84 the peer's Vanish cast, lost whole on the live observer \u00b7 seq 85-89 the peer's next turn",
+  "events": [
+    {
+      "seq": 73,
+      "kind": "TurnEnded",
+      "data": {
+        "fight": "0x34b7cd97319e0adaf221defa9ae993577a7423206696120acea9f81dcc67d6f7",
+        "is_mob": false,
+        "idx": "1"
+      },
+      "digest": "GZiVN7hRkdpK6p1gjkRyB6HEbWJdXkdEFRbqA4DnzjQg",
+      "version": "964090809"
+    },
+    {
+      "seq": 74,
+      "kind": "Hit",
+      "data": {
+        "fight": "0x34b7cd97319e0adaf221defa9ae993577a7423206696120acea9f81dcc67d6f7",
+        "victim_is_mob": false,
+        "victim_idx": "0",
+        "amount": "9",
+        "remaining_hp": "0"
+      },
+      "digest": "GZiVN7hRkdpK6p1gjkRyB6HEbWJdXkdEFRbqA4DnzjQg",
+      "version": "964090809"
+    },
+    {
+      "seq": 75,
+      "kind": "Cast",
+      "data": {
+        "fight": "0x34b7cd97319e0adaf221defa9ae993577a7423206696120acea9f81dcc67d6f7",
+        "caster_is_mob": true,
+        "caster_idx": "1",
+        "target_cell": "45"
+      },
+      "digest": "GZiVN7hRkdpK6p1gjkRyB6HEbWJdXkdEFRbqA4DnzjQg",
+      "version": "964090809"
+    },
+    {
+      "seq": 76,
+      "kind": "MobMoved",
+      "data": {
+        "fight": "0x34b7cd97319e0adaf221defa9ae993577a7423206696120acea9f81dcc67d6f7",
+        "idx": "0",
+        "to_cell": "26"
+      },
+      "digest": "GZiVN7hRkdpK6p1gjkRyB6HEbWJdXkdEFRbqA4DnzjQg",
+      "version": "964090809"
+    },
+    {
+      "seq": 77,
+      "kind": "Hit",
+      "data": {
+        "fight": "0x34b7cd97319e0adaf221defa9ae993577a7423206696120acea9f81dcc67d6f7",
+        "victim_is_mob": false,
+        "victim_idx": "1",
+        "amount": "16",
+        "remaining_hp": "28"
+      },
+      "digest": "GZiVN7hRkdpK6p1gjkRyB6HEbWJdXkdEFRbqA4DnzjQg",
+      "version": "964090809"
+    },
+    {
+      "seq": 78,
+      "kind": "Cast",
+      "data": {
+        "fight": "0x34b7cd97319e0adaf221defa9ae993577a7423206696120acea9f81dcc67d6f7",
+        "caster_is_mob": true,
+        "caster_idx": "0",
+        "target_cell": "27"
+      },
+      "digest": "GZiVN7hRkdpK6p1gjkRyB6HEbWJdXkdEFRbqA4DnzjQg",
+      "version": "964090809"
+    },
+    {
+      "seq": 79,
+      "kind": "TurnStarted",
+      "data": {
+        "fight": "0x34b7cd97319e0adaf221defa9ae993577a7423206696120acea9f81dcc67d6f7",
+        "is_mob": false,
+        "idx": "1",
+        "deadline_ms": "1785749924284",
+        "turn_entropy": "3348542890",
+        "turn_ordinal": "17"
+      },
+      "digest": "GZiVN7hRkdpK6p1gjkRyB6HEbWJdXkdEFRbqA4DnzjQg",
+      "version": "964090809"
+    },
+    {
+      "seq": 80,
+      "kind": "Cast",
+      "data": {
+        "fight": "0x34b7cd97319e0adaf221defa9ae993577a7423206696120acea9f81dcc67d6f7",
+        "caster_is_mob": false,
+        "caster_idx": "1",
+        "target_cell": "27"
+      },
+      "digest": "DaDuQZqypXf2C4UMgQVdhabLyxGd923Bf9qWAtRfH3QC",
+      "version": "964091521"
+    },
+    {
+      "seq": 81,
+      "kind": "TurnEnded",
+      "data": {
+        "fight": "0x34b7cd97319e0adaf221defa9ae993577a7423206696120acea9f81dcc67d6f7",
+        "is_mob": false,
+        "idx": "1"
+      },
+      "digest": "DaDuQZqypXf2C4UMgQVdhabLyxGd923Bf9qWAtRfH3QC",
+      "version": "964091521"
+    },
+    {
+      "seq": 82,
+      "kind": "MobMoved",
+      "data": {
+        "fight": "0x34b7cd97319e0adaf221defa9ae993577a7423206696120acea9f81dcc67d6f7",
+        "idx": "1",
+        "to_cell": "66"
+      },
+      "digest": "DaDuQZqypXf2C4UMgQVdhabLyxGd923Bf9qWAtRfH3QC",
+      "version": "964091521"
+    },
+    {
+      "seq": 83,
+      "kind": "MobMoved",
+      "data": {
+        "fight": "0x34b7cd97319e0adaf221defa9ae993577a7423206696120acea9f81dcc67d6f7",
+        "idx": "0",
+        "to_cell": "46"
+      },
+      "digest": "DaDuQZqypXf2C4UMgQVdhabLyxGd923Bf9qWAtRfH3QC",
+      "version": "964091521"
+    },
+    {
+      "seq": 84,
+      "kind": "TurnStarted",
+      "data": {
+        "fight": "0x34b7cd97319e0adaf221defa9ae993577a7423206696120acea9f81dcc67d6f7",
+        "is_mob": false,
+        "idx": "1",
+        "deadline_ms": "1785749971903",
+        "turn_entropy": "3820753096",
+        "turn_ordinal": "18"
+      },
+      "digest": "DaDuQZqypXf2C4UMgQVdhabLyxGd923Bf9qWAtRfH3QC",
+      "version": "964091521"
+    },
+    {
+      "seq": 85,
+      "kind": "Moved",
+      "data": {
+        "fight": "0x34b7cd97319e0adaf221defa9ae993577a7423206696120acea9f81dcc67d6f7",
+        "character": "0x915b2ecc6ceec1912673c09370e7e663f1feaf0b805e3eaca5bb505ae3f48737",
+        "to_cell": "26"
+      },
+      "digest": "2RSMbZooQuz7C3SLhosQ7ca9doP4BywHLCdiLp3Wa1uz",
+      "version": "964091817"
+    },
+    {
+      "seq": 86,
+      "kind": "TurnEnded",
+      "data": {
+        "fight": "0x34b7cd97319e0adaf221defa9ae993577a7423206696120acea9f81dcc67d6f7",
+        "is_mob": false,
+        "idx": "1"
+      },
+      "digest": "2RSMbZooQuz7C3SLhosQ7ca9doP4BywHLCdiLp3Wa1uz",
+      "version": "964091817"
+    },
+    {
+      "seq": 87,
+      "kind": "MobMoved",
+      "data": {
+        "fight": "0x34b7cd97319e0adaf221defa9ae993577a7423206696120acea9f81dcc67d6f7",
+        "idx": "1",
+        "to_cell": "126"
+      },
+      "digest": "2RSMbZooQuz7C3SLhosQ7ca9doP4BywHLCdiLp3Wa1uz",
+      "version": "964091817"
+    },
+    {
+      "seq": 88,
+      "kind": "MobMoved",
+      "data": {
+        "fight": "0x34b7cd97319e0adaf221defa9ae993577a7423206696120acea9f81dcc67d6f7",
+        "idx": "0",
+        "to_cell": "106"
+      },
+      "digest": "2RSMbZooQuz7C3SLhosQ7ca9doP4BywHLCdiLp3Wa1uz",
+      "version": "964091817"
+    },
+    {
+      "seq": 89,
+      "kind": "TurnStarted",
+      "data": {
+        "fight": "0x34b7cd97319e0adaf221defa9ae993577a7423206696120acea9f81dcc67d6f7",
+        "is_mob": false,
+        "idx": "1",
+        "deadline_ms": "1785749991493",
+        "turn_entropy": "1244884888",
+        "turn_ordinal": "19"
+      },
+      "digest": "2RSMbZooQuz7C3SLhosQ7ca9doP4BywHLCdiLp3Wa1uz",
+      "version": "964091817"
+    }
+  ]
+}
