@@ -24,8 +24,7 @@ import { use_dungeon } from '../../../world-shell/dungeon_store.js'
 import { should_auto_end_turn, should_report_stall, turn_overdue_ms } from '../../../world-shell/fight_expiry_gate.js'
 import { use_dungeon_turn } from '../dungeon-turn.js'
 import { fight_store } from '@aresrpg/fight/store'
-import { useFight, useFightView } from '../../store.js'
-import { min_turn_left } from '@aresrpg/fight/project'
+import { useFightView, useFightVisibleControls } from '../../store.js'
 import { auto_commit_fire_at } from '@aresrpg/fight/draft_budget'
 import { ConfirmDialog } from './world/ConfirmDialog.jsx'
 import { FightBugReportModal } from './FightBugReportModal.jsx'
@@ -167,10 +166,13 @@ export function FightControls({
   // The single force-pass submission's own flight, read from the store that owns it (never a local ref — the
   // latch is a reducer fact, so every mount of this bar agrees about it).
   const force_passing = use_dungeon((s) => s._force_passing)
-  // THE CORE FLOOR (@aresrpg/fight store PLAYER_TURN_FLOOR_MS): min_turn_left reads the core's raw
-  // `turn_started_at` — a field the projected view (`fight`, above) doesn't carry — so this subscribes to
-  // the raw core state via the React binding (game/store.js useFight; the core store itself is vanilla).
-  const fight_state = useFight()
+  // THE CORE FLOOR (@aresrpg/fight store PLAYER_TURN_FLOOR_MS) — #1993 carve-out: this used to subscribe to the
+  // WHOLE raw core state (`useFight()`) because the legacy projection carries no `turn_started_at`. The canonical
+  // record does: `controls.min_turn_ready_at` is that floor as an ABSOLUTE INSTANT, folded once
+  // (store_state.js `min_turn_ready_at`, the same function `min_turn_left` calls). The `now` subtraction is the
+  // caller's by design — a `now` reading inside the view would make it impure and its memoized value a lie — so
+  // this surface does the one line `min_turn_left` did and reads no raw state at all.
+  const { min_turn_ready_at } = useFightVisibleControls()
 
   // S-80 FORFEIT confirm — in-app modal (never a native dialog, standing rule), owned HERE so every mount
   // gets it for free. Confirming runs `on_abandon` (default: the store's `abandon_fight`).
@@ -187,7 +189,7 @@ export function FightControls({
   // The chain stays the real gate; this only spares the honest-toast abort.
   const turn_phase = fight_turn_control_phase(fight, busy)
   const [now_ms, set_now_ms] = useState(() => Date.now())
-  const min_turn_left_ms = min_turn_left(fight_state, now_ms)
+  const min_turn_left_ms = min_turn_ready_at == null ? 0 : Math.max(0, min_turn_ready_at - now_ms)
   const min_turn_gating = min_turn_left_ms > 0
   const placement = placement_override != null ? placement_override : !!fight?.placement && fight?.winner === -1
   const has_placement_deadline = placement_deadline_ms > 0
