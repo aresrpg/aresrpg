@@ -34,6 +34,12 @@ const MOB_HP: u64 = 1000; // survives every swing, so "took damage" stays a read
 
 /// A fight seating a creator wielding `family`, with `mobs` punching bags — the REAL create door.
 fun fight_with(sc: &mut Scenario, family: vector<u8>, mobs: u16): (Fight, Version) {
+  fight_with_range(sc, family, mobs, 0)
+}
+
+/// `fight_with`, plus a caster RANGE stat — the dial the ruled table says extends a bow's band and must NOT
+/// extend anything else's.
+fun fight_with_range(sc: &mut Scenario, family: vector<u8>, mobs: u16, range_stat: u64): (Fight, Version) {
   stand_up(sc);
   sc.next_tx(OWNER);
   let (mut registry, mut latch) = tsregs_for(sc, object::id_from_address(WORLD), object::id_from_address(CHAR));
@@ -41,9 +47,14 @@ fun fight_with(sc: &mut Scenario, family: vector<u8>, mobs: u16): (Fight, Versio
   let spec = bag_spec(MOB_HP);
   let clock = mk_clock(sc, 1000);
   let weapon = participant::weapon_line_of(option::some(family.to_string()), false);
+  let seat = if (range_stat == 0) combatant_weapon(CHAR, 100, weapon) else participant::new_combatant(
+    object::id_from_address(CHAR), b"senshi".to_string(), 1,
+    spell::new_stats(0, 0, 0, 0, 0, 0, range_stat, 0, 0, 0, 0),
+    100, 100, 6, 3, weapon, sui::vec_map::empty(),
+  );
   fight::create_for_testing(
     &mut registry, &mut latch, object::id_from_address(WORLD), 1, 12345, 100, 200, 0, true, option::none(),
-    &spec, mobs, combatant_weapon(CHAR, 100, weapon), &ver, &clock, sc.ctx(),
+    &spec, mobs, seat, &ver, &clock, sc.ctx(),
   );
   sui::clock::destroy_for_testing(clock);
   ts::return_shared(latch);
@@ -55,7 +66,12 @@ fun fight_with(sc: &mut Scenario, family: vector<u8>, mobs: u16): (Fight, Versio
 
 /// Stand the seat at `CASTER` with a full AP bar and park mob `i` on `cells[i]`.
 fun place(fight: &mut Fight, cells: vector<u64>) {
-  participant::set_cell(fight::participants_mut(fight).borrow_mut(0), CASTER);
+  place_from(fight, CASTER, cells)
+}
+
+/// `place`, with the attacker standing on an arbitrary cell — the rotation matrix moves BOTH ends.
+fun place_from(fight: &mut Fight, caster: u64, cells: vector<u64>) {
+  participant::set_cell(fight::participants_mut(fight).borrow_mut(0), caster);
   participant::begin_turn(fight::participants_mut(fight).borrow_mut(0), 0, 0, 0, 0);
   let mut i = 0;
   while (i < cells.length()) {
@@ -68,6 +84,26 @@ fun hp(fight: &Fight, idx: u64): u64 { mob::hp(fight::mobs(fight).borrow(idx)) }
 
 /// A stat line carrying nothing but `range` — the only stat a weapon BAND can read.
 fun range_stats(range: u64): spell::Stats { spell::new_stats(0, 0, 0, 0, 0, 0, range, 0, 0, 0, 0) }
+
+/// Every mob's HP, in seat order — the before/after snapshot the rotation matrix diffs.
+fun hp_all(fight: &Fight, n: u64): vector<u64> {
+  let mut out = vector[];
+  let mut i = 0;
+  while (i < n) { out.push_back(hp(fight, i)); i = i + 1; };
+  out
+}
+
+/// Exact SET equality (no duplicates on either side): same length AND every wanted cell present. The length
+/// half is the "and NOTHING outside" assertion — an extra cell fails just as loudly as a missing one.
+fun same_set(got: &vector<u64>, want: &vector<u64>): bool {
+  if (got.length() != want.length()) return false;
+  let mut i = 0;
+  while (i < want.length()) {
+    if (!got.contains(&want[i])) return false;
+    i = i + 1;
+  };
+  true
+}
 
 // ╔══════════ [ the ZONE KINDS — the same geometry engine, the fixture's cell sets ] ══════════ ]
 
@@ -329,6 +365,376 @@ fun a_spellbook_cannot_strike_off_the_line() {
   let (mut fight, ver) = fight_with(&mut sc, b"spellbook", 1);
   place(&mut fight, vector[ANCHOR + 20]); // (6,6) — diagonal from (5,5): in reach, off the line
   cast::weapon_strike(&mut fight, 0, ANCHOR + 20);
+  ts::return_shared(fight);
+  ts::return_shared(ver);
+  sc.end();
+}
+
+// ╔══════════ [ §387 — THE ROTATION MATRIX: every zone kind, every facing, nothing outside ] ══════════ ]
+//
+// A directional zone is drawn around the attacker→target AXIS, so the single-facing coverage above proves
+// nothing about the other three facings. These vectors are `packages/sim/test/fixtures/weapon_shape_facings.json`
+// verbatim (Move cannot read JSON; the sim twin asserts the same file directly in
+// `packages/sim/test/weapon_shapes.test.js`). They were derived from the RULED GEOMETRY, not read out of either
+// implementation — so agreeing with them is evidence, not a tautology.
+//
+// Six conditions: the four cardinals, the DIAGONAL aim (|dx| ties |dy| — both twins must break the tie to the x
+// axis), and a target on the board's LAST COLUMN (the forward step and the inline second cell fall off the grid
+// and must be DROPPED, never wrapped to x=0 nineteen columns away).
+const FACING_CASTER: vector<u64> = vector[105, 105, 105, 105, 105, 118];
+const FACING_ANCHOR: vector<u64> = vector[106, 104, 125, 85, 126, 119];
+const F_SINGLE: vector<vector<u64>> = vector[
+  vector[106], vector[104], vector[125], vector[85], vector[126], vector[119],
+];
+const F_LINE_INLINE_2: vector<vector<u64>> = vector[
+  vector[106, 107], vector[104, 103], vector[125, 145], vector[85, 65], vector[126, 127], vector[119],
+];
+const F_LINE_PERP_3: vector<vector<u64>> = vector[
+  vector[106, 126, 86], vector[104, 124, 84], vector[125, 126, 124], vector[85, 86, 84],
+  vector[126, 146, 106], vector[119, 139, 99],
+];
+const F_CROSS_1: vector<vector<u64>> = vector[
+  vector[86, 105, 106, 107, 126], vector[84, 103, 104, 105, 124], vector[105, 124, 125, 126, 145],
+  vector[65, 84, 85, 86, 105], vector[106, 125, 126, 127, 146], vector[99, 118, 119, 139],
+];
+const F_PODIUM_4: vector<vector<u64>> = vector[
+  vector[106, 126, 86, 107], vector[104, 124, 84, 103], vector[125, 126, 124, 145],
+  vector[85, 86, 84, 65], vector[126, 146, 106, 127], vector[119, 139, 99],
+];
+
+#[test]
+/// EVERY zone kind in EVERY facing draws exactly its ruled cells — 30 exact-set assertions over the one zone
+/// engine both twins share. A resolver that ignored the axis, or wrapped at the wall, fails here.
+fun every_zone_kind_draws_its_cells_in_every_facing() {
+  let (casters, anchors) = (FACING_CASTER, FACING_ANCHOR);
+  let (singles, inlines, perps, crosses, podiums) = (F_SINGLE, F_LINE_INLINE_2, F_LINE_PERP_3, F_CROSS_1, F_PODIUM_4);
+  let mut f = 0;
+  while (f < casters.length()) {
+    let (caster, anchor) = (casters[f], anchors[f]);
+    assert!(same_set(&combat_grid::zone_cells(spell_effect::shape_point(), 0, anchor, caster), &singles[f]), f * 10 + 0);
+    assert!(same_set(&combat_grid::zone_cells(spell_effect::shape_line(), 1, anchor, caster), &inlines[f]), f * 10 + 1);
+    assert!(same_set(&combat_grid::zone_cells(spell_effect::shape_tbar(), 1, anchor, caster), &perps[f]), f * 10 + 2);
+    assert!(same_set(&combat_grid::zone_cells(spell_effect::shape_cross(), 1, anchor, caster), &crosses[f]), f * 10 + 3);
+    assert!(same_set(&combat_grid::zone_cells(spell_effect::shape_podium(), 1, anchor, caster), &podiums[f]), f * 10 + 4);
+    f = f + 1;
+  };
+}
+
+#[test]
+/// The rotation has TEETH: each directional kind draws a DIFFERENT cell set in each of the four cardinals.
+/// Without this, the matrix above would still pass on a resolver that returned one fixed pattern everywhere.
+fun the_directional_kinds_genuinely_rotate() {
+  let (casters, anchors) = (FACING_CASTER, FACING_ANCHOR);
+  let shapes = vector[spell_effect::shape_line(), spell_effect::shape_tbar(), spell_effect::shape_podium()];
+  let mut s = 0;
+  while (s < shapes.length()) {
+    let mut drawn = vector[];
+    let mut f = 0;
+    while (f < 4) { // the four cardinals only — the tie/wall rows are separate conditions
+      let cells = combat_grid::zone_cells(shapes[s], 1, anchors[f], casters[f]);
+      assert!(!drawn.contains(&cells), s * 10 + f);
+      drawn.push_back(cells);
+      f = f + 1;
+    };
+    s = s + 1;
+  };
+}
+
+#[test]
+/// The DIAGONAL tie and the WALL clamp, named. caster 105 (5,5) aiming 126 (6,6) has |dx| == |dy|: x wins, so
+/// the podium's forward step is 127 and the bar runs on y. A y-tie would put 146 forward and 125/127 on the bar.
+fun a_diagonal_aim_breaks_to_x_and_a_wall_aim_clips() {
+  let podium_tie = combat_grid::zone_cells(spell_effect::shape_podium(), 1, 126, 105);
+  assert!(same_set(&podium_tie, &vector[126, 146, 106, 127]), 0);
+  // 119 = (19,5), the last column: the forward step and the inline second cell are off-grid and get DROPPED.
+  let inline_wall = combat_grid::zone_cells(spell_effect::shape_line(), 1, 119, 118);
+  let podium_wall = combat_grid::zone_cells(spell_effect::shape_podium(), 1, 119, 118);
+  assert!(inline_wall == vector[119], 1);
+  assert!(same_set(&podium_wall, &vector[119, 139, 99]), 2);
+  // …and nothing wrapped to the far side of the board (x == 0 ⇒ cell % 20 == 0).
+  let mut i = 0;
+  while (i < podium_wall.length()) { assert!(podium_wall[i] % 20 != 0, 3); i = i + 1; };
+}
+
+// ╔══════════ [ §387 — the ruled table, row for row against the fixture ] ══════════ ]
+//
+// The fixture's `categories` block, transcribed. This is the anti-DRIFT gate between the two tables the twin
+// unavoidably carries (`participant::WZ_*` on chain, `CATEGORY_STRIKES` in JS): both are asserted against THIS
+// one spec, so they cannot drift apart without one of the two twins going red.
+const RULED_CATEGORIES: vector<vector<u8>> = vector[
+  b"sword", b"dagger", b"daggers", b"shovel", b"axe", b"pickaxe",
+  b"club", b"longsword",
+  b"scythe", b"staff", b"spear",
+  b"battleaxe", b"mace", b"hammer",
+  b"bow", b"wand", b"spellbook",
+];
+const RULED_SHAPE: vector<u8> = vector[0, 0, 0, 0, 0, 0, 3, 3, 4, 4, 4, 8, 8, 8, 0, 0, 0];
+const RULED_SIZE: vector<u64> = vector[0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0];
+// bow 2 · wand 2 · spellbook 1 — the ruled ranged FLOOR (#387 leg ①), transcribed from the same
+// `weapon_shapes.json` rows; every melee category keeps the floor 1.
+const RULED_RANGE_MIN: vector<u64> = vector[1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 1];
+const RULED_RANGE_MOD: vector<bool> = vector[
+  false, false, false, false, false, false, false, false, false, false, false, false, false, false,
+  true, false, false, // bow · wand · spellbook
+];
+const RULED_LINE_ONLY: vector<bool> = vector[
+  false, false, false, false, false, false, false, false, false, false, false, false, false, false,
+  false, false, true, // spellbook alone
+];
+/// The ruled CELL COUNT per category — the owner's table read as "how many cells does one swing touch".
+const RULED_CELLS: vector<u64> = vector[1, 1, 1, 1, 1, 1, 2, 2, 3, 3, 3, 4, 4, 4, 1, 1, 1];
+
+#[test]
+/// Every enumerated category resolves its ruled zone AND its ruled range band — 85 assertions, the whole table.
+fun every_ruled_category_resolves_its_fixture_row() {
+  let cats = RULED_CATEGORIES;
+  let (shapes, sizes, mins, mods, lines) = (RULED_SHAPE, RULED_SIZE, RULED_RANGE_MIN, RULED_RANGE_MOD, RULED_LINE_ONLY);
+  let mut i = 0;
+  while (i < cats.length()) {
+    let (shape, size, rmin, rmod, lonly) = participant::weapon_zone_of(&cats[i].to_string());
+    assert!(shape == shapes[i], i * 10 + 0);
+    assert!(size == sizes[i], i * 10 + 1);
+    assert!(rmin == mins[i], i * 10 + 2);
+    assert!(rmod == mods[i], i * 10 + 3);
+    assert!(lonly == lines[i], i * 10 + 4);
+    i = i + 1;
+  };
+}
+
+#[test]
+/// The table read as the OWNER ruled it: 1-CELL · 2-INLINE · 3-FRONT-ARC · PODIUM-4 · ranged-single. One
+/// assertion per category, in every facing — the cell COUNT a swing touches, never wider, never narrower.
+fun every_ruled_category_touches_its_ruled_cell_count() {
+  let (cats, counts) = (RULED_CATEGORIES, RULED_CELLS);
+  let (casters, anchors) = (FACING_CASTER, FACING_ANCHOR);
+  let mut i = 0;
+  while (i < cats.length()) {
+    let (shape, size, _, _, _) = participant::weapon_zone_of(&cats[i].to_string());
+    let mut f = 0;
+    while (f < 5) { // the wall-clamped row is the deliberate exception: off-grid cells are dropped
+      assert!(combat_grid::zone_cells(shape, size, anchors[f], casters[f]).length() == counts[i], i * 10 + f);
+      f = f + 1;
+    };
+    i = i + 1;
+  };
+}
+
+// ╔══════════ [ §387 — DRIVEN rotation: the real strike door, every facing, nothing outside ] ══════════ ]
+//
+// The tests above assert GEOMETRY. These assert the STRIKE: mobs are parked on the zone AND on two off-zone
+// control cells adjacent to it, the real `cast::weapon_strike` swings, and the control mobs must come out
+// untouched in every facing. Mob 0..k-1 hold the zone; the last two are always the controls.
+const DRIVEN_ANCHOR: vector<u64> = vector[106, 104, 125, 85];
+/// Two cells per facing that sit OUTSIDE every ruled zone at that facing (both adjacent to one — a sharp control).
+const DRIVEN_OFF_A: vector<u64> = vector[146, 144, 127, 87];
+const DRIVEN_OFF_B: vector<u64> = vector[108, 102, 165, 45];
+
+/// Drive `family`'s strike at each cardinal facing with mobs on `zone_cells[f]` + the two controls, and assert
+/// exactly the zone mobs took damage. `zone` is indexed by facing; the controls are seats `n`/`n+1`.
+fun drive_rotation(sc: &mut Scenario, family: vector<u8>, zone: vector<vector<u64>>) {
+  let n = zone[0].length();
+  let (mut fight, ver) = fight_with(sc, family, ((n + 2) as u16));
+  let (anchors, off_a, off_b) = (DRIVEN_ANCHOR, DRIVEN_OFF_A, DRIVEN_OFF_B);
+  let mut f = 0;
+  while (f < anchors.length()) {
+    let mut cells = zone[f];
+    cells.push_back(off_a[f]);
+    cells.push_back(off_b[f]);
+    place_from(&mut fight, CASTER, cells);
+    let before = hp_all(&fight, n + 2);
+    cast::weapon_strike(&mut fight, 0, anchors[f]);
+    let after = hp_all(&fight, n + 2);
+    let mut m = 0;
+    while (m < n) { assert!(after[m] < before[m], f * 100 + m); m = m + 1; }; // every zone cell struck
+    assert!(after[n] == before[n], f * 100 + 90); // …and NOTHING outside it
+    assert!(after[n + 1] == before[n + 1], f * 100 + 91);
+    f = f + 1;
+  };
+  ts::return_shared(fight);
+  ts::return_shared(ver);
+}
+
+#[test]
+/// 3-FRONT-ARC, driven: a STAFF sweeps its three cells in every facing and never the two adjacent controls.
+fun a_staff_sweeps_its_front_arc_in_every_facing() {
+  let mut sc = ts::begin(OWNER);
+  drive_rotation(&mut sc, b"staff", vector[
+    vector[106, 126, 86], vector[104, 124, 84], vector[125, 126, 124], vector[85, 86, 84],
+  ]);
+  sc.end();
+}
+
+#[test]
+/// PODIUM-4, driven (#1870 — battleaxe is podium): four cells in every facing, the forward stem included.
+fun a_battleaxe_strikes_its_podium_in_every_facing() {
+  let mut sc = ts::begin(OWNER);
+  drive_rotation(&mut sc, b"battleaxe", vector[
+    vector[106, 126, 86, 107], vector[104, 124, 84, 103], vector[125, 126, 124, 145], vector[85, 86, 84, 65],
+  ]);
+  sc.end();
+}
+
+#[test]
+/// PODIUM-4, driven on a SECOND category — the shape rides the ruling, not one family's row.
+fun a_mace_strikes_its_podium_in_every_facing() {
+  let mut sc = ts::begin(OWNER);
+  drive_rotation(&mut sc, b"mace", vector[
+    vector[106, 126, 86, 107], vector[104, 124, 84, 103], vector[125, 126, 124, 145], vector[85, 86, 84, 65],
+  ]);
+  sc.end();
+}
+
+#[test]
+/// 2-INLINE, driven: a CLUB thrusts through the target in every facing, never across it.
+fun a_club_thrusts_inline_in_every_facing() {
+  let mut sc = ts::begin(OWNER);
+  drive_rotation(&mut sc, b"club", vector[
+    vector[106, 107], vector[104, 103], vector[125, 145], vector[85, 65],
+  ]);
+  sc.end();
+}
+
+#[test]
+/// 2-INLINE on a second category — LONGSWORD, the ruling's other 2-cell weapon.
+fun a_longsword_thrusts_inline_in_every_facing() {
+  let mut sc = ts::begin(OWNER);
+  drive_rotation(&mut sc, b"longsword", vector[
+    vector[106, 107], vector[104, 103], vector[125, 145], vector[85, 65],
+  ]);
+  sc.end();
+}
+
+#[test]
+/// 1-CELL, driven: a SWORD touches the aimed cell alone in every facing — the negative half of the whole
+/// matrix. Passing this while the arc tests also pass is what proves the resolver reads the CATEGORY.
+fun a_sword_touches_one_cell_in_every_facing() {
+  let mut sc = ts::begin(OWNER);
+  drive_rotation(&mut sc, b"sword", vector[vector[106], vector[104], vector[125], vector[85]]);
+  sc.end();
+}
+
+#[test]
+/// 1-CELL on a second category — DAGGERS, and the arc/podium cells around it stay untouched. Same board the
+/// staff and battleaxe tests sweep, so a resolver that widened every weapon cannot pass both.
+fun daggers_leave_the_arc_and_the_stem_untouched_in_every_facing() {
+  let mut sc = ts::begin(OWNER);
+  let (mut fight, ver) = fight_with(&mut sc, b"daggers", 4);
+  let anchors = DRIVEN_ANCHOR;
+  let podium = vector[
+    vector[106, 126, 86, 107], vector[104, 124, 84, 103], vector[125, 126, 124, 145], vector[85, 86, 84, 65],
+  ];
+  let mut f = 0;
+  while (f < anchors.length()) {
+    place_from(&mut fight, CASTER, podium[f]);
+    let before = hp_all(&fight, 4);
+    cast::weapon_strike(&mut fight, 0, anchors[f]);
+    let after = hp_all(&fight, 4);
+    assert!(after[0] < before[0], f * 100); // the aimed cell alone
+    let mut m = 1;
+    while (m < 4) { assert!(after[m] == before[m], f * 100 + m); m = m + 1; };
+    f = f + 1;
+  };
+  ts::return_shared(fight);
+  ts::return_shared(ver);
+  sc.end();
+}
+
+// ╔══════════ [ §387 — the RANGED band, driven: the refusals the table rules ] ══════════ ]
+
+#[test]
+/// A melee strike BEYOND the weapon's own reach refuses. A sword reaches 1; the mob stands at 2.
+#[expected_failure(abort_code = cast::EIllegalCast)]
+fun a_strike_beyond_the_bands_ceiling_refuses() {
+  let mut sc = ts::begin(OWNER);
+  let (mut fight, ver) = fight_with(&mut sc, b"sword", 1);
+  place(&mut fight, vector[107]); // (7,5) — two cells east of the attacker
+  cast::weapon_strike(&mut fight, 0, 107);
+  ts::return_shared(fight);
+  ts::return_shared(ver);
+  sc.end();
+}
+
+#[test]
+/// The band's FLOOR refuses too: the ruled minimum is 1, so a strike at distance 0 — the attacker's own cell —
+/// is illegal even with a living mob standing there.
+#[expected_failure(abort_code = cast::EIllegalCast)]
+fun a_strike_below_the_bands_floor_refuses() {
+  let mut sc = ts::begin(OWNER);
+  let (mut fight, ver) = fight_with(&mut sc, b"bow", 1);
+  place(&mut fight, vector[CASTER]);
+  cast::weapon_strike(&mut fight, 0, CASTER);
+  ts::return_shared(fight);
+  ts::return_shared(ver);
+  sc.end();
+}
+
+#[test]
+/// The BOW's band is MODIFIABLE: reach 6 plus a range stat of 2 lands a strike at distance 8, which the same
+/// bow without the stat cannot reach (proven by the refusal test below).
+fun a_bow_with_the_range_stat_strikes_past_its_own_reach() {
+  let mut sc = ts::begin(OWNER);
+  let (mut fight, ver) = fight_with_range(&mut sc, b"bow", 1, 2);
+  place(&mut fight, vector[CASTER + 8]); // (13,5) — eight cells east, reach 6 + range 2
+  cast::weapon_strike(&mut fight, 0, CASTER + 8);
+  assert!(hp(&fight, 0) < MOB_HP, 0);
+  ts::return_shared(fight);
+  ts::return_shared(ver);
+  sc.end();
+}
+
+#[test]
+/// …and the extension is FINITE: one cell past `reach + range` still refuses.
+#[expected_failure(abort_code = cast::EIllegalCast)]
+fun a_bows_extended_band_still_has_a_ceiling() {
+  let mut sc = ts::begin(OWNER);
+  let (mut fight, ver) = fight_with_range(&mut sc, b"bow", 1, 2);
+  place(&mut fight, vector[CASTER + 9]);
+  cast::weapon_strike(&mut fight, 0, CASTER + 9);
+  ts::return_shared(fight);
+  ts::return_shared(ver);
+  sc.end();
+}
+
+#[test]
+/// NON-MODIFIABILITY, driven — the ruled property of the wand and the spellbook. A spellbook reaches 5; a
+/// range stat of 3 does NOT buy it a sixth cell. (The wand carries the identical `range_modifiable == false`
+/// row — asserted in `every_ruled_category_resolves_its_fixture_row` — but no engine damage line yet, so the
+/// mechanic is driven here on the category that has one.)
+#[expected_failure(abort_code = cast::EIllegalCast)]
+fun the_range_stat_never_extends_a_non_modifiable_band() {
+  let mut sc = ts::begin(OWNER);
+  let (mut fight, ver) = fight_with_range(&mut sc, b"spellbook", 1, 3);
+  place(&mut fight, vector[CASTER + 6]); // one past the spellbook's fixed reach of 5
+  cast::weapon_strike(&mut fight, 0, CASTER + 6);
+  ts::return_shared(fight);
+  ts::return_shared(ver);
+  sc.end();
+}
+
+#[test]
+/// The same seat, INSIDE the fixed band, lands — so the refusal above is the band and not a broken fixture.
+fun a_spellbook_strikes_on_the_line_inside_its_fixed_band() {
+  let mut sc = ts::begin(OWNER);
+  let (mut fight, ver) = fight_with_range(&mut sc, b"spellbook", 1, 3);
+  place(&mut fight, vector[CASTER + 5]); // (10,5) — straight east, exactly the fixed reach
+  cast::weapon_strike(&mut fight, 0, CASTER + 5);
+  assert!(hp(&fight, 0) < MOB_HP, 0);
+  ts::return_shared(fight);
+  ts::return_shared(ver);
+  sc.end();
+}
+
+#[test]
+/// A ranged strike is still a SINGLE cell: a bow firing across the board leaves the cells around its target
+/// untouched. Range is a BAND, never a wider zone — the half of the ruling a "ranged ⇒ AoE" reading would miss.
+fun a_ranged_strike_stays_one_cell_at_the_far_end_of_its_band() {
+  let mut sc = ts::begin(OWNER);
+  let (mut fight, ver) = fight_with(&mut sc, b"bow", 3);
+  place(&mut fight, vector[CASTER + 6, CASTER + 7, CASTER + 26]); // target, one beyond, one on the perpendicular
+  cast::weapon_strike(&mut fight, 0, CASTER + 6);
+  assert!(hp(&fight, 0) < MOB_HP, 0);
+  assert!(hp(&fight, 1) == MOB_HP, 1);
+  assert!(hp(&fight, 2) == MOB_HP, 2);
   ts::return_shared(fight);
   ts::return_shared(ver);
   sc.end();
