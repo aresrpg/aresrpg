@@ -13,22 +13,46 @@
 /**
  * Is this the ledger's per-object "no such object" ANSWER (the call succeeded), rather than a failed call?
  *
+ * SDK SOURCE — @mysten/sui 2.20.1's `client/errors.ts` gives `ObjectError` a structured `code` field;
+ * `graphql/core.ts` emits `notFound`, while `jsonRpc/core.ts` converts the ledger's `notExists` / `deleted`
+ * answers into that class. `client/core.ts::getObject` then throws that per-object result unchanged. Those
+ * stable codes are the PRIMARY classifier; no translated or rewritten message can change their meaning.
+ *
  * WIRE PROVENANCE — probed live against `https://fullnode.testnet.sui.io:443` on 2026-08-03 through the exact
- * `grpc_client.core.getObject({ include:{json:true} })` transport this module rides:
- *   · absent id (`0xde…de`) → a PLAIN `Error`, no rpc `code`, message `Object 0xde…de not found` — the
- *     per-object `google.rpc.Status.message` that `client/core.ts::getObject` re-throws out of the
- *     `batchGetObjects` result set. The call itself SUCCEEDED; this is the ledger stating absence.
+ * gRPC `core.getObject({ include:{json:true} })` transport this module rides. gRPC 2.20.1 still reduces the
+ * per-object `google.rpc.Status` to a PLAIN `Error`, with no `code` / `status` and message
+ * `Object 0xde…de not found`. That legacy English shape remains a SECONDARY, id-bound compatibility arm only.
  *   · unreachable host → `RpcError` with `code: 'INTERNAL'` ("Unable to connect…") — the call FAILED.
  * Nothing else is recognised: an unclassified error is a failure and fails SHUT (it throws), because guessing
  * absence is precisely the bug this seam exists to kill.
  */
-const is_object_absent_answer = (error, object_id) =>
-  error instanceof Error &&
-  // an RpcError carries the grpc status code; a per-object ledger answer carries none
-  /** @type {any} */ (error).code == null &&
-  typeof error.message === 'string' &&
-  error.message.includes(object_id) &&
-  error.message.toLowerCase().includes('not found')
+const ABSENT_OBJECT_ERROR_CODES = new Set(['notFound', 'notExists', 'deleted'])
+
+const is_object_absent_answer = (error, object_id) => {
+  if (error == null || typeof error !== 'object') return false
+  const shaped = /** @type {{ name?: unknown, message?: unknown, code?: unknown, status?: unknown }} */ (
+    error
+  )
+  // An SDK Error always has both fields (inherited fields still count). A partial serialized lookalike is not
+  // positive evidence and must fail shut.
+  if (
+    typeof shaped.name !== 'string' ||
+    shaped.name.length === 0 ||
+    typeof shaped.message !== 'string' ||
+    shaped.message.length === 0
+  )
+    return false
+
+  // PRIMARY: @mysten/sui's ObjectError discriminator. Transport codes are uppercase grpc statuses and cannot
+  // enter this set; a present status or unknown structured verdict also blocks the legacy message arm.
+  if (shaped.status != null) return false
+  if (typeof shaped.code === 'string') return ABSENT_OBJECT_ERROR_CODES.has(shaped.code)
+  if (shaped.code != null) return false
+
+  // SECONDARY: gRPC 2.20.1 discards the per-object Status structure. Bind the English phrase to the requested id
+  // so an unrelated "not found" diagnostic cannot manufacture absence.
+  return shaped.message.includes(object_id) && shaped.message.toLowerCase().includes('not found')
+}
 
 /**
  * getObject → flattened json (`include:{json:true}`).
@@ -39,7 +63,7 @@ const is_object_absent_answer = (error, object_id) =>
  * @param {string} object_id
  */
 export async function get_object_json(grpc_client, object_id) {
-  const { object } = await grpc_client.core
+  const response = await grpc_client.core
     .getObject({ objectId: object_id, include: { json: true } })
     .catch((/** @type {any} */ error) => {
       if (is_object_absent_answer(error, object_id)) return { object: null }
@@ -47,7 +71,15 @@ export async function get_object_json(grpc_client, object_id) {
         cause: error,
       })
     })
-  if (object == null) return null // the ledger positively answered "nothing at this id"
+  if (
+    response == null ||
+    typeof response !== 'object' ||
+    !Object.hasOwn(response, 'object') ||
+    response.object === undefined
+  )
+    throw new Error(`[read/_object] object ${object_id} read answered without an object field`)
+  const { object } = response
+  if (object === null) return null // the ledger positively answered "nothing at this id"
   if (object.json == null)
     throw new Error(
       `[read/_object] object ${object_id} exists but answered without a json payload`,

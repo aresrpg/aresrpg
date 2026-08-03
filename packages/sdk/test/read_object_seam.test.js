@@ -25,13 +25,29 @@ import { get_world } from '../src/game.js'
 import { get_zone_state } from '../src/sui/read/zone_spawns.js'
 
 import { IDS, id } from './_onchain_fixtures.js'
+import captured_grpc_absence from './fixtures/get_object_absence_error.json' with { type: 'json' }
 
 const WORLD_ID = id('seam:world')
 const VERSIONED_ID = id('seam:versioned')
 
-/** The captured ABSENCE answer: the call succeeded, the ledger says this id holds nothing. */
-const absent_error = object_id =>
-  new Error(`Object ${object_id} not found`)
+// #2100 CAPTURED-SHAPE FIXTURE — this is the literal serialized JSON from the live probe documented in the
+// fixture's `_provenance`; base64 only keeps captured chain evidence out of the shipped-ID census. The decoded
+// POJO is thrown AS-IS here, never fed through @mysten/sui's ObjectError constructor (the model this seam
+// validates). This pins the unstructured gRPC compatibility arm instead of regenerating its English sentence.
+const captured_absence_error = JSON.parse(
+  Buffer.from(captured_grpc_absence.error_json_base64, 'base64').toString('utf8'),
+)
+const CAPTURED_ABSENT_ID = Buffer.from(
+  captured_grpc_absence._provenance.request_object_id_base64,
+  'base64',
+).toString('utf8')
+
+/** A structured @mysten/sui ObjectError-shaped absence whose message deliberately contains no English marker. */
+const absent_error = () => ({
+  name: 'Error',
+  message: 'Objet absent du registre',
+  code: 'notFound',
+})
 
 /** The captured TRANSPORT failure: the call itself never landed. */
 const transport_error = () =>
@@ -76,9 +92,37 @@ describe('#2054 · the seam surfaces FAILURE (the direction that was lying)', ()
     await expect(get_object_json(grpc_client, WORLD_ID)).rejects.toThrow(/is unreadable/)
   })
 
+  it('fails SHUT when a structured non-absence code happens to carry the old English substring', async () => {
+    const error = Object.assign(new Error(`Object ${WORLD_ID} not found`), { code: 'INTERNAL' })
+    await expect(get_object_json(chain_that(() => error), WORLD_ID)).rejects.toThrow(/is unreadable/)
+  })
+
+  it('fails SHUT on conflicting structured code/status evidence', async () => {
+    const error = { name: 'Error', message: 'Objet absent', code: 'notFound', status: 'INTERNAL' }
+    await expect(get_object_json(chain_that(() => error), WORLD_ID)).rejects.toThrow(/is unreadable/)
+  })
+
+  it('fails SHUT on partial error shapes with a missing or empty required field', async () => {
+    await expect(
+      get_object_json(chain_that(() => ({ name: 'Error', code: 'notFound' })), WORLD_ID),
+    ).rejects.toThrow(/is unreadable/)
+    await expect(
+      get_object_json(chain_that(() => ({ name: 'Error', message: '', code: 'notFound' })), WORLD_ID),
+    ).rejects.toThrow(/is unreadable/)
+  })
+
   it('rejects when the object exists but answers without the json payload the read asked for', async () => {
     const grpc_client = { core: { getObject: async () => ({ object: { version: '7' } }) } }
     await expect(get_object_json(grpc_client, WORLD_ID)).rejects.toThrow(/without a json payload/)
+  })
+
+  it('rejects a missing/undefined object field instead of silently inventing absence', async () => {
+    await expect(
+      get_object_json({ core: { getObject: async () => ({}) } }, WORLD_ID),
+    ).rejects.toThrow(/without an object field/)
+    await expect(
+      get_object_json({ core: { getObject: async () => ({ object: undefined }) } }, WORLD_ID),
+    ).rejects.toThrow(/without an object field/)
   })
 
   it('a failed world read no longer reads as "this world has no payload" (read_world_inner / get_world)', async () => {
@@ -96,8 +140,19 @@ describe('#2054 · the seam surfaces FAILURE (the direction that was lying)', ()
 })
 
 describe('#2054 · ABSENCE still reads as absence (the direction that must not regress)', () => {
-  it('returns null for the ledger\'s own "not found" answer', async () => {
+  it('#2100: classifies the SDK ObjectError code before message wording', async () => {
     expect(await get_object_json(chain_that(absent_error), WORLD_ID)).toBeNull()
+  })
+
+  it.each(['notExists', 'deleted'])('classifies the SDK ObjectError %s absence code', async code => {
+    const error = { name: 'Error', message: 'Message sans marqueur anglais', code }
+    expect(await get_object_json(chain_that(() => error), WORLD_ID)).toBeNull()
+  })
+
+  it('#2100: keeps the captured plain-gRPC English shape as secondary compatibility only', async () => {
+    expect(
+      await get_object_json(chain_that(() => captured_absence_error), CAPTURED_ABSENT_ID),
+    ).toBeNull()
   })
 
   it('returns null when the transport resolves with no object at all (the mocked-chain convention)', async () => {
