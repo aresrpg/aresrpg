@@ -137,6 +137,31 @@ pub struct FreeEnabledSet {
     pub enabled: bool,
 }
 
+/// The on-wire shell of `sui::table::Table`: dynamic-field contents are separate objects, while
+/// the parent carries only the table UID and its current entry count.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CreationClassesTable {
+    pub id: ObjectID,
+    pub size: u64,
+}
+
+/// `aresrpg_gifting::creation::Creation` object contents. This is the creation gate's birth-state
+/// truth (#2123): `init` writes price/pause/free/sponsor without emitting their administrative
+/// events, so the event-only projection leaves all four absent until an admin touches each dial.
+///
+/// Field order mirrors `packages/move/gifting/sources/creation.move` byte-for-byte. The class
+/// whitelist entries are dynamic fields and therefore absent from this body; `classes` decodes
+/// only the `Table` shell so the following `free_enabled` and `sponsor` fields stay aligned.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CreationObject {
+    pub id: ObjectID,
+    pub paused: bool,
+    pub price: u64,
+    pub classes: CreationClassesTable,
+    pub free_enabled: bool,
+    pub sponsor: Option<SuiAddress>,
+}
+
 // ── aresrpg_items::character ─────────────────────────────────────────────────
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

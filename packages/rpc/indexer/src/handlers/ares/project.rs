@@ -272,7 +272,9 @@ pub(super) fn k_lastsale(template: &str) -> String {
 // `pub(super)` so the sibling `snapshot` module's GameConfig object arm writes the class rows to
 // the SAME doc `ClassRowSet` projects into (one home for the key — #1886).
 pub(super) const K_CONFIG: &str = "rpc:config";
-const K_CREATION: &str = "rpc:creation";
+// `pub(super)` so the sibling `snapshot` module's Creation object arm writes the birth-state dials
+// to the SAME doc the administrative creation events project into (#2123).
+pub(super) const K_CREATION: &str = "rpc:creation";
 fn k_kolizeum(id: &str) -> String {
     format!("rpc:kolizeum:{id}")
 }

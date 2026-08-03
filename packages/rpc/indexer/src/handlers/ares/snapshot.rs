@@ -43,7 +43,7 @@ use tracing::{debug, warn};
 
 use super::decode::decode_bcs;
 use super::model::{
-    BoardCreated, CharacterObject, Crushed, EquippedItemField, FightOutcomeObject,
+    BoardCreated, CharacterObject, CreationObject, Crushed, EquippedItemField, FightOutcomeObject,
     GameConfigObject, ItemDamagesField, ItemObject, ItemStatsField, ItemTemplateObject, JobXpField,
     KioskItemListed, PersonalKioskCapObject, PetBoxClaimObject, PoolBuy, PoolSell,
     ProgressionField, RecipeObject, RecipelessSet, SaleBought, ZoneField, ZoneGroupRootField,
@@ -51,7 +51,7 @@ use super::model::{
 use super::project::{
     self, char_init, del, k_character, k_item, k_lastsale, k_result, k_results, k_template,
     k_world, k_zone, k_zones, mpath, sadd, set, set_nx, srem, zadd, zrem, zrem_rank_keep_newest,
-    RedisWrite, K_CONFIG, K_TEMPLATES, K_WORLDS,
+    RedisWrite, K_CONFIG, K_CREATION, K_TEMPLATES, K_WORLDS,
 };
 use super::xp_curve::level_from_xp;
 use crate::store::RedisStore;
@@ -218,6 +218,11 @@ const RECIPE_TYPE: &str = "Recipe";
 /// package as `character`/`item`, so no new allowlist entry — matched by (module, name).
 const CONFIG_MODULE: &str = "config";
 const GAME_CONFIG_TYPE: &str = "GameConfig";
+/// `aresrpg_gifting::creation::Creation` — the shared character-mint gate. Its initial
+/// price/pause/free/sponsor values are born silently in `init`; the four matching events fire only
+/// on later admin writes, so object snapshots close the birth-state gap (#2123).
+const CREATION_MODULE: &str = "creation";
+const CREATION_TYPE: &str = "Creation";
 /// The engine's soulbound settled outcome (`aresrpg_fight::settlement::FightOutcome`) —
 /// created (address-owned) at settle, DELETED at `results::open`. The pending-outcomes
 /// projection mirrors both edges from checkpoint object create/delete.
@@ -1498,6 +1503,36 @@ pub fn map_game_config_object(contents: &[u8]) -> Option<Vec<RedisWrite>> {
     Some(writes)
 }
 
+/// Snapshot the `aresrpg_gifting::creation::Creation` gate's scalar state into the SAME
+/// `rpc:creation` doc its admin events own. These values are created by `init` without events, so
+/// `/v1/config` otherwise serves nulls until every setter has happened at least once (#2123).
+/// Latest-wins absolute sets converge with the event arm in either pipeline order. `price_mist`
+/// remains a decimal string under the 2^53 money law; `None` sponsor is an explicit JSON null.
+/// The table's entries are dynamic-field objects, not present in this body, so this arm deliberately
+/// leaves `$.classes` untouched.
+pub fn map_creation_object(contents: &[u8]) -> Option<Vec<RedisWrite>> {
+    let creation: CreationObject = decode_bcs("object", "Creation", contents)?;
+    Some(vec![
+        set_nx(
+            K_CREATION.into(),
+            "$",
+            json!({ "classes": {}, "starters": {} }),
+        ),
+        set(
+            K_CREATION.into(),
+            "$.price_mist",
+            json!(creation.price.to_string()),
+        ),
+        set(K_CREATION.into(), "$.paused", json!(creation.paused)),
+        set(K_CREATION.into(), "$.free", json!(creation.free_enabled)),
+        set(
+            K_CREATION.into(),
+            "$.sponsor",
+            json!(creation.sponsor.map(|address| address.to_string())),
+        ),
+    ])
+}
+
 /// Snapshot one `aresrpg::crafting::Recipe` object into its encyclopedia doc `rpc:recipe:{id}`
 /// (+ the `idx:recipes` index the `/v1/encyclopedia` recipes view reads). The doc carries the
 /// EXACT on-chain values (ingredient template ids + quantities, output template + quantity,
@@ -2486,6 +2521,7 @@ impl Processor for AresSnapshotHandler {
                     }
                     (CRAFTING_MODULE, RECIPE_TYPE) => map_recipe_object(&id, mv.contents()),
                     (CONFIG_MODULE, GAME_CONFIG_TYPE) => map_game_config_object(mv.contents()),
+                    (CREATION_MODULE, CREATION_TYPE) => map_creation_object(mv.contents()),
                     (SETTLEMENT_MODULE, FIGHT_OUTCOME_TYPE) => {
                         map_fight_outcome_object(&id, mv.contents(), obj.owner(), ts_ms)
                     }

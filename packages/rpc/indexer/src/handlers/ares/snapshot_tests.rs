@@ -3328,3 +3328,92 @@ async fn game_config_checkpoint_output_projects_the_class_rows() {
         "class 2 (IKARI) must carry the chain's 120 base HP"
     );
 }
+
+// ── creation::Creation birth state (#2123) ──────────────────────────────────
+/// RUNTIME PROVENANCE: the LIVE testnet `Creation` shared object
+/// `0x4b21dc3fb40bd6cea2f6f8b570aceb7b5aced4abf9e3481ede68843f16ac88af`, type
+/// `0x959a65f7db070a31bcc88881d3b59fa79ac9f2b504c1714319d65448f503475a::creation::Creation`,
+/// version 963105141, prevTx `AKv9vGpSGEEt1DnPXZgkUY1hZfYma8JuCvCREUC1dg5U` — captured
+/// 2026-08-03 with `sui_getObject` `showBcs` (83 bytes). Whole-object wire, NOT re-encoded from
+/// this crate's own model: these bytes carry the gate's real birth state.
+const REAL_CREATION_OBJECT_BCS_HEX: &str =
+    "4b21dc3fb40bd6cea2f6f8b570aceb7b5aced4abf9e3481ede68843f16ac88af0000e40b5402000000fb73496fbca2ef160a4c28948ee1c027c4fa4a46841c7931d9e07717ef78dda704000000000000000100";
+
+#[test]
+fn creation_object_bcs_decodes_the_real_onchain_wire() {
+    let bytes = hex::decode(REAL_CREATION_OBJECT_BCS_HEX).unwrap();
+    assert_eq!(bytes.len(), 83);
+    let decoded: CreationObject =
+        bcs::from_bytes(&bytes).expect("real Creation object bytes must decode");
+    assert_eq!(
+        decoded.id.to_canonical_string(true),
+        "0x4b21dc3fb40bd6cea2f6f8b570aceb7b5aced4abf9e3481ede68843f16ac88af"
+    );
+    assert!(!decoded.paused);
+    assert_eq!(decoded.price, 10_000_000_000);
+    assert_eq!(decoded.classes.size, 4);
+    assert_eq!(
+        decoded.classes.id.to_canonical_string(true),
+        "0xfb73496fbca2ef160a4c28948ee1c027c4fa4a46841c7931d9e07717ef78dda7"
+    );
+    assert!(decoded.free_enabled);
+    assert_eq!(decoded.sponsor, None);
+}
+
+#[test]
+fn creation_object_projects_every_scalar_into_the_creation_doc() {
+    let bytes = hex::decode(REAL_CREATION_OBJECT_BCS_HEX).unwrap();
+    let writes = map_creation_object(&bytes).expect("must project");
+    assert_eq!(writes.len(), 5);
+    assert_eq!(
+        writes[0],
+        set_nx(
+            "rpc:creation".into(),
+            "$",
+            serde_json::json!({ "classes": {}, "starters": {} })
+        )
+    );
+    assert_eq!(set_json(&writes, "$.price_mist"), Some("\"10000000000\""));
+    assert_eq!(set_json(&writes, "$.paused"), Some("false"));
+    assert_eq!(set_json(&writes, "$.free"), Some("true"));
+    assert_eq!(set_json(&writes, "$.sponsor"), Some("null"));
+    assert!(map_creation_object(&[0x00, 0x01]).is_none());
+}
+
+#[tokio::test]
+async fn creation_checkpoint_output_projects_live_birth_state() {
+    const CREATION_IDX: u64 = 0xc2123;
+    let mut builder = TestCheckpointBuilder::new(2_123)
+        .start_transaction(1)
+        .create_owned_object(CREATION_IDX)
+        .finish_transaction();
+    let mut checkpoint = builder.build_checkpoint();
+    let creation_id = TestCheckpointBuilder::derive_object_id(CREATION_IDX);
+    let version = checkpoint
+        .object_set
+        .iter()
+        .find(|object| object.id() == creation_id)
+        .unwrap()
+        .version();
+    // Rebind only the captured UID to the harness output id; every projected byte remains the
+    // real chain capture. The checkpoint arm must be reached, not merely a direct decoder.
+    let mut body = hex::decode(REAL_CREATION_OBJECT_BCS_HEX).unwrap();
+    body[..32].copy_from_slice(&creation_id.into_bytes());
+    checkpoint.object_set.insert(checkpoint_fixture_object(
+        "0x959a65f7db070a31bcc88881d3b59fa79ac9f2b504c1714319d65448f503475a::creation::Creation",
+        version,
+        body,
+        Owner::Shared {
+            initial_shared_version: version,
+        },
+    ));
+
+    let writes = AresSnapshotHandler::from_parts(None, None)
+        .process(&Arc::new(checkpoint))
+        .await
+        .unwrap();
+    assert_eq!(set_json(&writes, "$.price_mist"), Some("\"10000000000\""));
+    assert_eq!(set_json(&writes, "$.paused"), Some("false"));
+    assert_eq!(set_json(&writes, "$.free"), Some("true"));
+    assert_eq!(set_json(&writes, "$.sponsor"), Some("null"));
+}
