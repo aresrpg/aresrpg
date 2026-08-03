@@ -40,6 +40,17 @@ import {
 
 const close = () => context.dispatch('action/fights_modal', null)
 
+/**
+ * What an EMPTY fight list means — two truths that must never render as each other (#2062, the third instance of
+ * the absent≡failed class #2054/#2057 closed one hop down each). Only the FRIENDS filter is gated on the friend
+ * roster, so only it can be emptied by a dead read: with the filter on and the roster unknown, "no fights in
+ * range" is a claim we have no basis for, and the panel says the roster is unavailable instead. Filter off, or
+ * rows still standing, and the ordinary line is the honest one.
+ * @param {boolean} friends_only @param {boolean} friends_error @returns {string} the i18n key the empty slot prints
+ */
+export const fights_empty_key = (friends_only, friends_error) =>
+  friends_only && friends_error ? 'presence.roster_unavailable' : 'fights.none_in_range'
+
 /** Resolve the character ids owned by a set of wallet ADDRESSES (fight participants are char ids; friends/party
  *  are addresses) — one /v1/characters?owner read per address, best-effort, LRU-cached. Empty set on no input. */
 async function resolve_char_ids(addresses) {
@@ -77,6 +88,7 @@ export function FightsModal() {
   const [friends_only, set_friends_only] = useState(false)
   const [group_only, set_group_only] = useState(false)
   const [friend_char_ids, set_friend_char_ids] = useState(() => new Set())
+  const [friends_error, set_friends_error] = useState(false)
   const [busy_id, set_busy_id] = useState(/** @type {string | null} */ (null))
   const [hovered_id, set_hovered_id] = useState(/** @type {string | null} */ (null))
   const [character_docs, set_character_docs] = useState(() => new Map())
@@ -90,11 +102,18 @@ export function FightsModal() {
   useEffect(() => {
     if (!open) return
     let alive = true
-    // Both best-effort readers reduce request failures to empty results, so this detached effect cannot reject.
+    // The roster read's rejection is caught into `null` below and the char-id resolver is best-effort, so this
+    // detached effect cannot reject.
     void (async () => {
-      const [friends] = await Promise.all([read_friend_list(address).catch(() => ({ friends: [] }))])
-      const fset = await resolve_char_ids(friends?.friends ?? [])
+      // ABSENT vs FAILED (#2062): the seam returns `{ list_id: null, friends: [] }` for a roster that genuinely
+      // does not exist and THROWS when the read failed — `null` here is the failure. A failed read leaves the
+      // last known friend ids standing (stale beats invented) and raises the flag the empty slot reads.
+      const friends = await read_friend_list(address).catch(() => null)
       if (!alive) return
+      if (!friends) return set_friends_error(true)
+      const fset = await resolve_char_ids(friends.friends)
+      if (!alive) return
+      set_friends_error(false)
       set_friend_char_ids(fset)
     })()
     return () => {
@@ -254,7 +273,7 @@ export function FightsModal() {
         <div className="gw-dg__body">
           {rows.length === 0 ? (
             <div className="gw-dg__empty">
-              <span className="gw-dg__empty-h">{t('fights.none_in_range')}</span>
+              <span className="gw-dg__empty-h">{t(fights_empty_key(friends_only, friends_error))}</span>
             </div>
           ) : (
             <div className="gw-ft__layout">
