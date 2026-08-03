@@ -1,26 +1,5 @@
 {
-  "arch-fight-visible-source-bypass": {
-    "packages/frontend/src/components/CharacterSwitcher.tsx": 4,
-    "packages/frontend/src/game/screens/hud/DeckCluster.jsx": 6,
-    "packages/frontend/src/game/screens/hud/EntityTooltip.jsx": 1,
-    "packages/frontend/src/game/screens/hud/FightControls.jsx": 4,
-    "packages/frontend/src/game/screens/hud/FightReport.jsx": 4,
-    "packages/frontend/src/game/screens/hud/FightResult.jsx": 4,
-    "packages/frontend/src/game/screens/hud/FightSummary.jsx": 4,
-    "packages/frontend/src/game/screens/hud/PendingOutcomeBadge.jsx": 2,
-    "packages/frontend/src/game/screens/hud/SpellBar.jsx": 6,
-    "packages/frontend/src/game/screens/hud/use_target_prediction.js": 3,
-    "packages/frontend/src/game/screens/hud/world/DungeonBoard.jsx": 11,
-    "packages/frontend/src/game/screens/hud/world/DungeonLeaveButton.jsx": 10,
-    "packages/frontend/src/game/screens/hud/world/FightSyncIndicator.jsx": 3,
-    "packages/frontend/src/game/screens/hud/world/GameWorldHud.jsx": 5,
-    "packages/frontend/src/game/screens/hud/world/PartyFrame.jsx": 14,
-    "packages/frontend/src/game/screens/hud/world/RewardRecap.jsx": 2,
-    "packages/frontend/src/game/screens/hud/world/SelfPlate.jsx": 3,
-    "packages/frontend/src/game/screens/hud/world/WorldChat.jsx": 2
-  },
   "arch-coop-visible-source-bypass": {
-    "packages/frontend/src/GameWorldHost.tsx": 2,
     "packages/frontend/src/components/CharacterSwitcher.tsx": 8,
     "packages/frontend/src/game/remote_players.js": 3,
     "packages/frontend/src/game/screens/hud/Minimap.jsx": 2,
@@ -29,9 +8,29 @@
     "packages/frontend/src/game/screens/hud/world/OnlinePlayers.jsx": 2,
     "packages/frontend/src/game/screens/hud/world/PartyFrame.jsx": 14,
     "packages/frontend/src/game/screens/hud/world/PlayerActionMenu.jsx": 8,
-    "packages/frontend/src/game/screens/hud/world/WorldChat.jsx": 4
+    "packages/frontend/src/game/screens/hud/world/WorldChat.jsx": 4,
+    "packages/frontend/src/GameWorldHost.tsx": 2
   },
   "arch-fight-effect-free": {
     "packages/fight/src/txs.js": 4
+  },
+  "arch-fight-visible-source-bypass": {
+    "packages/frontend/src/components/CharacterSwitcher.tsx": 4,
+    "packages/frontend/src/game/screens/hud/DeckCluster.jsx": 6,
+    "packages/frontend/src/game/screens/hud/EntityTooltip.jsx": 1,
+    "packages/frontend/src/game/screens/hud/FightControls.jsx": 4,
+    "packages/frontend/src/game/screens/hud/FightReport.jsx": 4,
+    "packages/frontend/src/game/screens/hud/FightResult.jsx": 3,
+    "packages/frontend/src/game/screens/hud/FightSummary.jsx": 3,
+    "packages/frontend/src/game/screens/hud/PendingOutcomeBadge.jsx": 2,
+    "packages/frontend/src/game/screens/hud/SpellBar.jsx": 6,
+    "packages/frontend/src/game/screens/hud/use_target_prediction.js": 3,
+    "packages/frontend/src/game/screens/hud/world/DungeonLeaveButton.jsx": 10,
+    "packages/frontend/src/game/screens/hud/world/FightSyncIndicator.jsx": 3,
+    "packages/frontend/src/game/screens/hud/world/GameWorldHud.jsx": 5,
+    "packages/frontend/src/game/screens/hud/world/PartyFrame.jsx": 14,
+    "packages/frontend/src/game/screens/hud/world/RewardRecap.jsx": 2,
+    "packages/frontend/src/game/screens/hud/world/SelfPlate.jsx": 3,
+    "packages/frontend/src/game/screens/hud/world/WorldChat.jsx": 2
   }
 }
