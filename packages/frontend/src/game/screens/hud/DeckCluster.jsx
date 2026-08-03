@@ -32,7 +32,7 @@ import { useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Sword } from 'lucide-react'
 
-import { useFight, useFightView } from '../../store.js'
+import { useFight, useFightView, useFightVisibleTurn } from '../../store.js'
 import { use_dungeon } from '../../../world-shell/dungeon_store.js'
 import { character_cast_clock, use_dungeon_turn } from '../dungeon-turn.js'
 import { arm_spell, hover_spell, spell_card, spell_element, WEAPON_ATTACK_ID } from '../../core/modules/fight.js'
@@ -168,22 +168,21 @@ export function DeckCluster() {
   // world_seed/spawn_id, this turn's deadline, my seat — and the slot off the fight store's own ordered journal
   // (#1224), where every drafted cast/strike already rides as an intent, so the glow LIVE-ADVANCES as the player
   // queues actions AND follows a turn the chain has already restarted. null off-turn / pre-read → no glows.
-  const world_seed = use_dungeon((s) => s.dungeon?.world_seed ?? null)
-  const spawn_id = use_dungeon((s) => s.dungeon?.spawn_id ?? null)
-  const chain_turn_entropy = use_dungeon((s) => s.dungeon?.turn_entropy ?? null)
-  const chain_turn_ordinal = use_dungeon((s) => s.dungeon?.turn_ordinal ?? null)
+  //
+  // THE SEED HAS ONE HOME (#1993 carve-out): the decoded Fight, `s.view` — stated as law by the core's own
+  // previews ("read off the VIEW only", project.js:186/254, because `s.turn_ordinal` is a DIFFERENT fact under
+  // the same name, the fold's anchor token). These four fields used to be selected off `use_dungeon`'s `dungeon`
+  // instead, which is not a second transport at all: `dungeon` has exactly ONE non-null writer,
+  // `fight_store.subscribe((s) => use_dungeon.setState({ dungeon: board_view(s) }))` (dungeon_run_store.js:1872),
+  // so this was the same `s.view` reached through a store-to-store mirror that lags it by one notification.
+  // `turn.seed` is that tuple named once, and reading it here is strictly fresher than the mirror was.
+  const { seed } = useFightVisibleTurn()
   const slot = useFight(my_action_slot)
   // The ONE composed §7 tuple: `next_slot_crit` rolls its crit stream and `weapon_next_hit` its damage stream,
   // so the socket's glow and the number in its tooltip can never disagree about which slot they describe.
   // The slot comes from `my_action_slot` (#1224's one home) — `crit_clock_of` reads `slot`, so a raw
   // cast_path length here would be silently dropped and seed the wrong roll.
-  const seed_clock = my_turn
-    ? crit_clock_of({
-        fight: { world_seed, spawn_id, turn_entropy: chain_turn_entropy, turn_ordinal: chain_turn_ordinal },
-        seat_row: my_row,
-        slot,
-      })
-    : null
+  const seed_clock = my_turn ? crit_clock_of({ fight: seed, seat_row: my_row, slot }) : null
   const crit = next_slot_crit(seed_clock)
   const weapon_glow = !!crit && socket_glows(crit.crit_roll, my_weapon?.crit_rate ?? 0)
 
