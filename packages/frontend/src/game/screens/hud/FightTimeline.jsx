@@ -48,17 +48,19 @@ export function FightTimeline() {
   // for the first N seconds then drop. The turn's TOTAL length is unknown here (dungeon = 90s, a duel could
   // differ), so capture it the FIRST time we see each deadline (≈ turn start) and fill = remaining / total.
   // Ref-during-render, guarded by a deadline change, is idempotent (no extra render).
-  // Same my-turn gate TurnBanner.jsx uses for the 'turn' chime — the 5s tick is part of the SAME
-  // silence-zone contract (§3.2) so it must agree on whose turn counts as "mine" (never a spectator,
-  // never mid-placement, never after the fight resolves, and — design ruling 2026-07-12 — never while the mob cascade
-  // is still presenting: the chain hands the turn back to me before the paced replay drains, so !presenting
-  // keeps the warn cue + active/timer following the PRESENTATION clock, matching DungeonBoard's my_turn).
+  // The SAME my-turn gate TurnBanner.jsx uses for the 'turn' chime — the 5s warn tick is part of the SAME
+  // silence-zone contract (§3.2), so the two must agree on whose turn counts as "mine" (never a spectator,
+  // never mid-placement, never after the fight resolves, and never while the turn is not yet genuinely mine).
+  // `fight.playable` IS that fact (#1808): chain seat ⋀ nothing replaying locally ⋀ the chain's own
+  // mob-resolution budget spent. This line used to read `!fight.presenting` — the PRE-#1808 boundary, which
+  // agreed with TurnBanner only until the banner migrated, and armed the buffered countdown during the window
+  // where the local replay had drained but the chain had not yet handed the turn over (#1993 WP2b).
   const my_turn =
     !!fight &&
     !fight.placement &&
     fight.winner === -1 &&
     !fight.spectator &&
-    !fight.presenting &&
+    fight.playable &&
     fight.active_entity_id != null &&
     fight.active_entity_id === fight.my_entity_id
 
