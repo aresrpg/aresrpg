@@ -1,2 +1,1 @@
-053bb10744c607b23019d3a03e65d9d35ad933ad train/train-88 chore(deps-dev): bump lint-staged from 16.4.0 to 17.2.0
-1c2d1ab110c159f3e34508ce54f6ed982396f308 train/train-88 chore(deps-dev): bump globals from 16.5.0 to 17.8.0
+d6b7ca74fe73ba78eee46f3d4fff0a999ff8226b train/train-89 chore(deps): bump bcs from 0.1.6 to 0.2.1 in /packages/rpc/indexer
