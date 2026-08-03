@@ -18,12 +18,12 @@
 // behind (an escrow that does not contain me yet, as it is between a join landing and the mirror's write) — and
 // asserts the machine still sees my seat. Against the escrow scan it fails with phase ROAM / unmet no_my_seat.
 //
-// The two store doors are mocked to the SAME projections the real ones call (`game/store.js` is a browser-bound
-// module in this no-jsdom harness — the established idiom in DungeonBoard.mount.test.jsx); the seat derivation
-// under test is the hook's own, untouched.
+// Only `dungeon_store.js` is mocked (its module graph reaches browser-bound auth in this no-jsdom harness), and
+// only to pin the stale mirror. The canonical doors are the REAL ones — a mock of `game/store.js` would leak
+// across the shared test process and truncate its export surface for every file loaded after this one.
 import { afterAll, expect, mock, test } from 'bun:test'
 import { renderToStaticMarkup } from 'react-dom/server'
-import { board_view, fight_view, fight_visible_view } from '@aresrpg/fight/project'
+import { board_view, DUNGEON_BOARD_ORIGIN, fight_visible_view } from '@aresrpg/fight/project'
 import { fight_store } from '@aresrpg/fight/store'
 
 import { reset_fight_core, seed_fight_core } from '../../../../../src/test_helpers/fight_core_harness.js'
@@ -39,13 +39,11 @@ const STALE_MIRROR = board_view(fight_store.getState())
 //    window this test is about. (`STALE_MIRROR.id === FIGHT`, so the machine still pairs the two surfaces.)
 seed_fight_core({ fight_id: FIGHT, my: ME, seats: [{ character: ME }], placement: true })
 
+// The façade's FULL export surface (`use_dungeon` + `DUNGEON_BOARD_ORIGIN`) — a module mock is global to the
+// shared bun process, so a partial one would break every file loaded after this one.
 mock.module('../../../../../src/world-shell/dungeon_store.js', () => ({
   use_dungeon: (selector = (s) => s) => selector({ dungeon: STALE_MIRROR }),
-}))
-mock.module('../../../../../src/game/store.js', () => ({
-  useFightView: () => fight_view(),
-  useFightVisibleEntities: () => fight_visible_view(fight_store.getState()).entities,
-  useFightVisibleMount: () => fight_visible_view(fight_store.getState()).mount,
+  DUNGEON_BOARD_ORIGIN,
 }))
 
 const { useFightPhase } = await import('../../../../../src/game/screens/hud/world/use_fight_phase.js')
