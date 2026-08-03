@@ -1,4 +1,7 @@
-28c8a62b1 → Refs #2126 — fix(board): read close refs from landed commit trailers
-90a016976 → Refs #2121 — feat(probe): instrument production presence relay
-0eec5aa04 → Fixes #871 — fix(frontend): scope the roster-error overlay's hit area to its own card
-2f7b2d5e9 → Fixes #2125 — fix(fight): a failed client mount announces the seat it strands
+1aea4fad5 → Refs #2124 — fix(fight): the wave seq is an identity, so an adopted read never replays it
+19cf72ff0 → Fixes #2124 — fix(fight): a snapshot settles a row's state, never its beats
+406b8dcd9 → Fixes #2118, Refs #1993 — fix(fight): answer the in-flight commit verdict in chain time
+74e9a6606 → Refs #1993 — feat(fight): project one active-status collection per entity
+c2f0b1a3d → Refs #1993 — chore(fight): regold the sealed view snapshots for the statuses shape
+b0e1e5f73 → Refs #1993 — refactor(frontend): read effect consequences from the status projection
+fd301b421 → Refs #1993 — docs(fight): state the two transport-door verdicts in code
