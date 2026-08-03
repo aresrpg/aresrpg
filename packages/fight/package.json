@@ -91,6 +91,9 @@
     },
     "./result_record": {
       "import": "./src/result_record.js"
+    },
+    "./cast_record": {
+      "import": "./src/cast_record.js"
     }
   },
   "author": "AresRPG's Team",

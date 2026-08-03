@@ -6,47 +6,18 @@
 // like a landed one: the same context line, the same charge/resolve/impact package (thwack + shake + flash), AP
 // gone, and nothing anywhere saying "nothing was there".
 //
-// Two halves, both proved here:
-//   · `cast_whiffed` (voxel_fight_folds) — the PURE verdict the adapter gates its impact package on. It is judged
-//     over the SOURCE TURN's beat list on purpose: a queued cast renders `split_render`, so its own beat carries
-//     only status rows and every victim rides a SEPARATE damage/heal/displacement beat behind it. Reading the cast
-//     beat alone would call every ordinary hit a whiff — the trap this row exists to keep shut.
-//   · `emit_cast_whiff_line` (game/core/modules/fight.js — the ONE log-composition home) — its OWN copy, in all
-//     six locales, never a hit's line.
+// This file owns the LOG half: `emit_cast_whiff_line` (game/core/modules/fight.js — the ONE log-composition
+// home) — its OWN copy, in all six locales, never a hit's line.
+//
+// The VERDICT half moved (#1993 WP5): the whiff is no longer a classifier of its own but the negative of the
+// cast-resolution record's `landed`, whose law lives in `packages/fight/test/cast_record.test.js` and whose
+// #1859 seal (the two homes that used to disagree) lives in `cast_landing_one_home.test.js`.
 
 import { describe, expect, test } from 'bun:test'
 
 import { emit_cast_whiff_line } from '../../src/game/core/modules/fight.js'
-import { cast_whiffed } from '../../src/world-shell/voxel_fight_folds.js'
 
 const LOCALES = ['en', 'fr', 'de', 'es', 'ja', 'uk']
-
-describe('cast_whiffed — nothing resolved', () => {
-  test('an AoE on a vacant centre (nothing follows the cast beat) is a whiff', () => {
-    expect(cast_whiffed({ following: [{ kind: 'arrival' }], own_effects: [] })).toBe(true)
-  })
-
-  test('a bare cast with no beats behind it at all is a whiff', () => {
-    expect(cast_whiffed()).toBe(true)
-  })
-
-  test('THE SPLIT-RENDER TRAP: an ordinary hit carries its victim on a SEPARATE damage beat — never a whiff', () => {
-    expect(cast_whiffed({ following: [{ kind: 'damage' }], own_effects: [] })).toBe(false)
-  })
-
-  test('a heal, a push, a teleport and a trap placement each resolve the cast', () => {
-    for (const kind of ['heal', 'displacement', 'teleport_arrival', 'trap_place', 'trap_trigger', 'status'])
-      expect(cast_whiffed({ following: [{ kind }], own_effects: [] })).toBe(false)
-  })
-
-  test('a self-buff resolves on its OWN status row (no sibling beat needed)', () => {
-    expect(cast_whiffed({ following: [], own_effects: [{ status: 'INVISIBILITY' }] })).toBe(false)
-  })
-
-  test('the scan stops at the NEXT cast — a later cast’s victims are not this cast’s', () => {
-    expect(cast_whiffed({ following: [{ kind: 'cast' }, { kind: 'damage' }], own_effects: [] })).toBe(true)
-  })
-})
 
 describe('emit_cast_whiff_line — the whiff speaks its own line', () => {
   const fighters = new Map([['p0', { id: 'p0', name: 'Alice' }]])
@@ -97,7 +68,7 @@ describe('emit_cast_whiff_line — the whiff speaks its own line', () => {
     expect(copy).toContain('{{spell}}')
   })
 
-  // #1859 — THE LINE MAY ONLY CLAIM WHAT THE VERDICT PROVES. `cast_whiffed` is a RESOLUTION verdict: nobody hit,
+  // #1859 — THE LINE MAY ONLY CLAIM WHAT THE VERDICT PROVES. the whiff is a RESOLUTION verdict: nobody hit,
   // nothing placed, nothing moved. It reads no cell and knows no occupancy, so "struck empty ground" asserted a
   // position fact nothing in this path establishes — and a live session watched a mob cast visibly AT the player
   // and read back that it hit the dirt. The copy is re-scoped to the resolution; the canonical cast-resolution

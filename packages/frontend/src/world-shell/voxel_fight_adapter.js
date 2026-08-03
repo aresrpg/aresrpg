@@ -28,6 +28,7 @@ import * as project from '@aresrpg/fight/project'
 import { fight_store } from '@aresrpg/fight/store'
 import { GRID_CELLS } from '@aresrpg/fight/los'
 import { fight_cast_beat_effects } from '@aresrpg/fight/present'
+import { cast_resolution, empty_cast_resolution } from '@aresrpg/fight/cast_record'
 import { visible_occupant_cells } from '@aresrpg/fight/occupancy'
 import { range_bonus_of } from '@aresrpg/fight/statuses'
 import { weapon_spell_template } from '@aresrpg/fight/predict_cast'
@@ -112,7 +113,6 @@ import {
   reachable_hover_path,
   wash_armed_spell,
   cast_face_target,
-  cast_whiffed,
   seed_range_of,
   seed_cast_flags_of,
   spell_footprint,
@@ -670,11 +670,13 @@ export function create_voxel_fight_adapter(
     // can't resolve (a healer MOB's cast — mob ids aren't in fight-spells.json); everything else reads its
     // on-chain row via element_of_spell (which owns the seed-side heal-kind branch).
     const effects = packet.effects ?? []
-    // #1741 (a) — THE WHIFF. This cast resolved nothing (an AoE over a vacant centre, a free_cell aim nothing was
-    // standing on): the verdict was bound at `bind_render_turn`, the only place that sees the cast's sibling
-    // damage/displacement beats. Its own log line fires HERE, right after the context line, and the delivery lands
-    // SILENT (the impact package is skipped) — a whiff must never read as a hit.
-    const whiffed = packet.whiffed === true
+    // #1741 (a) / #1859 — THE LANDING, asked ONCE. The cast-resolution record was derived at `bind_render_turn`
+    // (the only place that sees the cast's sibling damage/displacement beats) and travels on the packet; the log
+    // line below and the impact package further down are two READERS of it, never two classifiers. A cast that
+    // resolved nothing (an AoE over a vacant centre, a free_cell aim nothing was standing on, a fully dodged
+    // drain) speaks its own line here and lands SILENT — a whiff must never read as a hit.
+    const resolution = packet.resolution ?? empty_cast_resolution()
+    const whiffed = !resolution.landed
     if (whiffed)
       emit_cast_whiff_line(read_board_fight_state, game_context.dispatch, {
         entity_id: packet.entity_id,
@@ -705,6 +707,10 @@ export function create_voxel_fight_adapter(
     if (is_mob(packet.entity_id) && element !== 'weapon' && (!packet.fight_audio_id || !charge_sfx_key))
       play_element_sfx(element, 'cast')
 
+    // Can an ARC be drawn at all — a scene, a caster body, and an aim to fly at. This is a RENDERER CAPABILITY
+    // check and nothing more (#1859): it once doubled as the landing authorization, which is how the aim cell
+    // came to stand in for the cells a cast actually resolved on. Whether the cast LANDED, and where, is the
+    // record's answer alone — the arc travels either way, so the player always sees where they aimed.
     const render_delivery = !!(engine && board_frame && caster?.cell && packet.target)
     // beats_from_packet always leads with the caster's ATTACK swing; the rest are the struck targets' HIT beats.
     const [caster_beat, ...victim_beats] = beats_from_packet(packet)
@@ -884,21 +890,12 @@ export function create_voxel_fight_adapter(
         // identical to any other impact despite the dedicated desaturate grade + death VFX burst below.
         if (crit) play_sfx('crit')
         if (killed) play_sfx('death')
-        // [W6 #2] AoE ripple + the AoE grade read: the struck cells = the target cell + every struck fighter's
-        // cell (a single-cell seed spell reads as one clean pop; AoE splashes AND washes the screen edges).
-        const fstate = read_board_fight()
-        const hit_cells = /** @type {{x:number,y:number}[]} */ ([])
-        const seen = new Set()
-        const add_cell = (/** @type {any} */ c) => {
-          if (!c) return
-          const k = `${c.x},${c.y}`
-          if (!seen.has(k)) {
-            seen.add(k)
-            hit_cells.push({ x: c.x, y: c.y })
-          }
-        }
-        add_cell(packet.target)
-        for (const ef of effects) add_cell(fstate?.fighters?.get(ef?.target_id)?.cell)
+        // [W6 #2] AoE ripple + the AoE grade read — the struck cells are THE RECORD's (#1859). They used to be
+        // the aim cell plus a LIVE fighter read taken here, at impact: a third answer to "where did this cast
+        // land", hundreds of milliseconds after the two that already disagreed, and one that splashed the aim
+        // cell even when nothing was standing on it (inflating the ≥3-cell AoE threshold with a cell nothing
+        // happened on). The record resolved them once, at bind, from the canonical entity lookup.
+        const hit_cells = resolution.target_cells
         if (hit_cells.length) board.ripple?.(hit_cells, { origin: packet.target ?? hit_cells[0], speed: RIPPLE_SPEED })
         // [2026-07-11] the AoE WASH layer — a splash spell (≥3 struck cells, the SAME threshold the element-wash
         // screen grade below already uses) finally sounds bigger, not just looks bigger.
@@ -914,7 +911,8 @@ export function create_voxel_fight_adapter(
         const grade = killed ? 'desaturate' : hit_cells.length >= 3 ? 'element-wash' : feel.grade
         trigger_fight_flash({ color: flash.flash, intensity: (killed ? 0.5 : 0.3) * mag * (crit ? 1.25 : 1), grade })
         // [S-23] the death burst rides the SAME impact clock as the kill it visualises (contact_s=0 — this
-        // frame), layered over the element impact at the victim's cell.
+        // frame), layered over the element impact where the ARC landed (`to_world` is the aim, not a victim
+        // position — the record owns victim cells and this burst deliberately makes no claim about them).
         if (killed) {
           const death = burst_vfx({
             engine,
@@ -997,9 +995,16 @@ export function create_voxel_fight_adapter(
       }
       if (spec.kind === 'cast') {
         payload.effects = fight_cast_beat_effects(payload.source_event)
-        // #1741 (a): the WHIFF verdict is bound HERE, where the whole source turn is visible — a split-rendered
-        // cast beat cannot see its own victims (they ride the damage/displacement beats behind it).
-        payload.whiffed = cast_whiffed({ following: specs.slice(index + 1), own_effects: payload.effects })
+        // #1993 WP5 — THE CAST-RESOLUTION RECORD, derived HERE, where the whole source turn is visible (a
+        // split-rendered cast beat cannot see its own victims — they ride the damage/displacement beats behind
+        // it) and ONCE, so the log line and the impact package read one answer instead of classifying the same
+        // landing twice (#1859). The canonical entity lookup is asked at BIND time, from the projection, for the
+        // victims whose own beat carries no cell.
+        payload.resolution = cast_resolution(
+          { ...spec, payload },
+          specs.slice(index + 1),
+          (id) => read_board_fight()?.fighters?.get(id)?.cell ?? null
+        )
       }
       if (spec.kind === 'trap_trigger' && payload.damage == null) {
         const damage = specs

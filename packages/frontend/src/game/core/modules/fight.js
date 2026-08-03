@@ -298,7 +298,7 @@ export const emit_cast_context_line = (get_state, dispatch, { entity_id, spell_i
  * empty-cell semantics still can: an AoE on a vacant centre, a trap nothing walked into. Those used to read
  * byte-identical to a landed hit — same context line, same impact package, AP gone, nothing saying "there was
  * nobody there". This line says it, in plain words with no damage number to celebrate; the adapter pairs it with a
- * SILENT landing (no impact beat) on the same `cast_whiffed` verdict. @param {() => any} get_state
+ * SILENT landing (no impact beat) on the same cast-resolution record (`@aresrpg/fight/cast_record`). @param {() => any} get_state
  * @param {(type: string, payload: any) => void} dispatch @param {{ entity_id: string, spell_id: string }} cast
  */
 export const emit_cast_whiff_line = (get_state, dispatch, { entity_id, spell_id }) => {

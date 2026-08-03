@@ -486,41 +486,11 @@ export function seed_cast_flags_of(armed_spell_id, seat = null) {
   }
 }
 
-/** The beat kinds that ARE a cast resolving on something: a body took damage or healing, an entity was moved or
- *  teleported, a trap/glyph was placed, one triggered, or a status/drain landed. Everything else (`arrival`,
- *  `tackled`, another `cast`) is not this cast's payload. */
-const CAST_RESOLUTION_KINDS = new Set([
-  'damage',
-  'heal',
-  'displacement',
-  'teleport_arrival',
-  'trap_place',
-  'trap_trigger',
-  'status',
-])
-
-/**
- * #1741 (a) — DID THIS CAST RESOLVE NOTHING? A whiff: nobody hit, nothing placed, nothing moved. Judged over the
- * SOURCE TURN's beat list, because that is where the answer lives: a queued cast renders `split_render`, so its
- * own beat carries only the status rows (`fight_cast_beat_effects`) and every victim rides a SEPARATE damage/heal/
- * displacement beat behind it — reading the cast beat alone would call every ordinary hit a whiff. `following` is
- * the specs after this cast; the scan stops at the next `cast`, which owns everything past itself (the same
- * attribution `bind_render_turn`'s `active_cast` uses).
- *
- * A whiff must never be presented as a hit: the adapter emits its OWN log line and skips the impact package
- * (thwack/shake/flash/ripple) on this verdict. A trap PLACEMENT emits `trap_place`, a teleport a displacement, a
- * self-buff its own status row — none of them is a whiff. Pure.
- * @param {{ following?: { kind?: string }[], own_effects?: any[] }} beat
- * @returns {boolean}
- */
-export function cast_whiffed({ following = [], own_effects = [] } = {}) {
-  if ((own_effects ?? []).length > 0) return false
-  for (const spec of following ?? []) {
-    if (spec?.kind === 'cast') break
-    if (CAST_RESOLUTION_KINDS.has(String(spec?.kind))) return false
-  }
-  return true
-}
+// #1993 WP5 — `cast_whiffed` is DELETED. It was a second landing classifier beside the renderer's own
+// authorization (#1859): a kind-only scan that could not see a payload (a fully dodged drain still emits a
+// `status` beat) and stopped only at the next `cast` (so a walk's trap detonation counted as the cast in front
+// of it). The one home is `@aresrpg/fight/cast_record` — `cast_resolution`, derived once at bind and read by
+// both the log line and the impact package.
 
 /**
  * The FULL board footprint an armed spell paints while hovering a target cell — the UNION of every base
