@@ -325,8 +325,15 @@ export const emit_cast_whiff_line = (get_state, dispatch, { entity_id, spell_id 
  * (SHIELD/STUN/POISON/TRAP/GLYPH — no health change, no drain) emits nothing (covered by the cast line). Split
  * out of emit_cast_log so the voxel adapter fires each line AT its victim's flinch/floater beat (real-time).
  * Every name segment carries `ref: <fighter id>` — a mob whose identity hasn't resolved yet (dungeon_store
- * `_resolve_mob_identities` in flight) emits the literal 'Mob' placeholder here, but the renderer re-resolves
- * `ref` against the LIVE fighters map every render, so the line heals the moment the async resolve lands.
+ * `_resolve_mob_identities` in flight) emits its own TEMPLATE ID here (never the literal 'Mob', and never
+ * another creature's name — #1993 WP3's identity book has no such arm), but the renderer re-resolves `ref`
+ * against the LIVE fighters map every render, so the line heals the moment the async resolve lands.
+ *
+ * DECLINED-WITH-WHY (#1993 WP3, audit row fight.js:277): `|| log_unknown_fighter` below is NOT an identity
+ * fallback. `fighters.get(id)?.name` is the book's label and is never empty for a seated fighter, so this arm
+ * fires only when the id has NO ROW AT ALL — the fight torn down under a late beat, or a ref from a previous
+ * session. That is a different fact (an absent ENTITY, not an unresolved identity) and it needs its own honest
+ * copy; the identity book cannot answer for a fighter it was never given.
  * @param {() => any} get_state @param {(type: string, payload: any) => void} dispatch
  * @param {{ entity_id: string, effect: any, is_critical: boolean }} arg
  */

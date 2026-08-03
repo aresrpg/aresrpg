@@ -36,6 +36,9 @@ export const fight_report_enemy_rows = (roster, my_team) =>
       hp_pct: participant.alive ? 100 : 0,
       template_id: participant.template_id ?? null,
     }))
+// NOTE (#1993 WP3): enemy rows carry no `label`/`resolved` because they need none — `apply_resolved_names`
+// touches PLAYER rows only (`resolvable_row_ids`), and a mob's `name` is already the identity book's applied
+// label, which for an unresolved mob IS its template id. Nothing downstream re-decides it.
 
 /**
  * YOUR PARTY rows + the local player's team — the ONE home both end-fight cards project through (victory and
@@ -83,6 +86,11 @@ export function fight_report_party_rows({ roster, me_id, me_name, my_level, my_c
         // the local row is named off the character that HELD THE SEAT; every other row's name is re-resolved by
         // FightReport itself off the ONE character-name home (fight_report_names.js) — this is just its input.
         name: (mine ? me_name : null) || participant.name || fallback_name,
+        // FORWARD the identity book's verdict (#1993 WP3). `apply_resolved_names` downstream decides between the
+        // carried label and the row's id off THIS flag; dropping it here would make every row look unresolved and
+        // re-open the substitute-minting this WP deleted.
+        label: participant.label,
+        resolved: participant.resolved,
         level: mine ? my_level : participant.level,
         is_me: mine,
         is_player: participant.is_player ?? true, // a party row is always a player; roster rows carry it explicitly

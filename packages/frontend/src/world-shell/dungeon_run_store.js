@@ -982,6 +982,12 @@ export const use_dungeon = create((set, get) => ({
    * `templates` is whichever species this fight actually seats: the PER-MEMBER ids when the rehydration read
    * recovered them (#1865 — a mixed pack is several species and the shared `group_template` names only the
    * primary), else the group template alone. One resolver, one map, whichever door supplied the ids.
+   *
+   * #1993 WP3 — WHY THE GROUP-TEMPLATE ARM IS SAFE TO KEEP HERE. `mob_names` is a TEMPLATE-ID → NAME map, not a
+   * roster: the identity book looks a mob up by that mob's OWN template id and never by the group's. So resolving
+   * the group template can only name the mobs that genuinely ARE that species; a mixed pack's other members find
+   * no entry and stay unresolved, rendering their own template id. The lossy rename this row reported lived in
+   * the PROJECTION's name precedence, and that arm is deleted — absence can no longer borrow a name.
    * @param {any} sdk @param {any} fight a decoded Fight
    * @param {{ is_current?: () => boolean, templates?: string[] }} opts
    */

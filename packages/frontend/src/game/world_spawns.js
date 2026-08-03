@@ -746,6 +746,12 @@ export function create_world_spawns({ engine, canvas = null, get_player_pos }) {
     // every template lookup below is the settled world cache that gated placement. Stamp each row with the
     // fold's stable fighter id ONCE here; the fight receives that id-keyed book through its init input — no
     // second roster derivation, template decode or positional name lookup.
+    //
+    // THIS IS THE BOOK'S FEEDER (#1993 WP3). `ctx.mob_roster` is the only carried mob-identity source the
+    // roster identity book accepts, and it is keyed by exactly the id the book keys on, so a row that lands
+    // here reaches every fight surface unchanged. A row whose template the world could not name arrives with
+    // `name: null` on purpose: the book keeps it unresolved and renders its template id, which is why the
+    // shared group template is not consulted anywhere downstream (#1865 — that is what renamed mixed packs).
     const mob_roster = (e.roster ?? [e.row.template_id]).map((/** @type {string} */ template_id, index) => {
       const tpl = resolve_template(template_id)
       return {

@@ -124,7 +124,16 @@ const is_male_fighter = (fighter) => !(fighter.male === false || fighter.sex ===
 export function glb_variant_of(fighter) {
   if (fighter.is_player)
     return character_model_urls(fighter.class_id, is_male_fighter(fighter), { fallback: PLACEHOLDER_RIG_CLASS }).body
+  // The identity book's honest verdict (#1993 WP3): an unresolved mob renders the built-in capsule rather than
+  // requesting a GLB for a species nobody has named. `variant` is now guaranteed to be that mob's OWN template id.
   if (fighter.identity_resolved === false) return undefined
+  // DECLINED-WITH-WHY (#1993 WP3, audit row voxel_fight_folds.js:124). `name` here looks like a second identity
+  // home but is not one: `get_mob_model` keys the ASSET CATALOG by template id first and by appearance name only
+  // as a catalog key for rows the corpus publishes under a name rather than an id. That is a content-catalog
+  // keying question owned by the seed corpus, not an identity choice made at this consumer — the identity is
+  // already decided (one book, one row) before either key is tried, and dropping the name key here would blank
+  // every legitimately name-keyed rig. The real close-out is the corpus keying every row by template id; until
+  // then this arm is load-bearing and stays.
   return get_mob_model({ variant: fighter.variant, name: fighter.name }).url
 }
 
