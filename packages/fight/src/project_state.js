@@ -44,10 +44,22 @@ export const turn_playable = (state) => state.turn_playable === true
 export const deadline_ms = (state) => state.turn_deadline_ms ?? null
 
 /** An active turn whose current fold did not observe a positive chain deadline. The retained numeric clock is
- *  display-only in this state: auto-submit is fail-closed, and the app-global sync chip surfaces the starvation. */
-export const deadline_starved = (state) =>
-  state.active != null && state.phase === 'active' && (state.winner ?? -1) === -1 && state.turn_deadline_fresh !== true
+ *  display-only in this state: auto-submit is fail-closed, and the app-global sync chip surfaces the starvation.
+ *  Read off the COMMITTED record (#1993 WP2b), never the store root: the root is the CLAIMED fold, and my own
+ *  `end_turn` intent normalizes to a `TurnEnded` whose arm sets `{ active: null, turn_deadline_fresh: false }`.
+ *  Reading that made this diagnostic about the CHAIN's clock go dark the instant I pressed END TURN — and light
+ *  up again if the commit was refused. A local prediction may end my turn; it may not answer for the chain. */
+export const deadline_starved = (state) => {
+  const c = committed_truth(state)
+  return c.active != null && c.phase === 'active' && (c.winner ?? -1) === -1 && c.turn_deadline_fresh !== true
+}
 
+/** DECLINED MIGRATION (#1993 WP2b) — `winner`/`phase` read the CLAIMED fold on purpose, and it is correct here:
+ *  the only fold arms that write either are `Victory` and `Defeat`, and NO intent normalizes to one
+ *  (`normalize_intent` emits TurnEnded/Cast/Moved; its passthrough arm is fed Placed/Hit/Tackled). So no
+ *  prediction can move these two, and the claimed value IS committed truth — swapping the read would change the
+ *  fold MACHINE (store root → core inbox) for no behaviour, which is a drive-by, not a migration. The invariant
+ *  is pinned in test/optimistic_end_turn_predicates.test.js — a future intent kind that CAN move them reds there. */
 export const winner = (state) => state.winner ?? -1
 
 export const phase = (state) => state.phase ?? 'active'
