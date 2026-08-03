@@ -30,6 +30,7 @@ const SEEN_KEY = 'ares_tutorial_seen_v2'
 function already_seen() {
   try {
     return localStorage.getItem(SEEN_KEY) != null
+    // eslint-disable-next-line no-silent-failures/no-swallowed-failure -- unavailable preference storage explicitly means the retired tour has no persisted seen flag
   } catch {
     return false
   }
@@ -38,6 +39,7 @@ function already_seen() {
 function mark_seen() {
   try {
     localStorage.setItem(SEEN_KEY, '1')
+    // eslint-disable-next-line no-silent-failures/no-swallowed-failure -- unavailable or full preference storage explicitly leaves this best-effort dismissal unpersisted
   } catch {
     // ignore unavailable / full storage — the tour just won't persist its dismissal across reloads
   }

@@ -140,6 +140,7 @@ export function ItemIcon({ item, alt = '', hd = false, className, glyph, categor
   let candidates = []
   try {
     candidates = (hd ? [item_icon_url(item, { hd: true }), item_icon_url(item)] : [item_icon_url(item)]).filter(Boolean)
+    // eslint-disable-next-line no-silent-failures/no-swallowed-failure -- a non-template object id has no icon URL; the category glyph is its explicit absent-art branch
   } catch {
     // A lost template join supplied a Sui object id. The resolver refuses it; render the placeholder below.
   }

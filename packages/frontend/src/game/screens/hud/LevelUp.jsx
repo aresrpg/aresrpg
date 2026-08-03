@@ -25,6 +25,7 @@ import { resolve_class_spells } from './fight-spells.js'
 import { newly_unlocked } from './spell-unlock-select.js'
 import { worlds_unlocked_between } from './level_unlocks.js'
 import { load_world_catalog } from '../../../world-shell/world_catalog.js'
+import { game_log } from '../../../core/log.js'
 import './result.css'
 import './levelup-radiant.css'
 
@@ -103,7 +104,10 @@ export function LevelUp({ on_allocate }) {
     if (!visible) return undefined
     let alive = true
     load_world_catalog()
-      .catch(() => [])
+      .catch((error) => {
+        game_log('level-up', 'world unlock catalog read failed', error)
+        return []
+      })
       .then(worlds => {
         if (alive) set_world_gates(worlds)
       })

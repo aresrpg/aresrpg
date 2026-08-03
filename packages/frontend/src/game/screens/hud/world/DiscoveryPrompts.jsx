@@ -66,7 +66,10 @@ async function wait_zone_reconciled(world_id, zone, prior_at) {
   if (!zone) return
   for (let i = 0; i < 5; i += 1) {
     await new Promise((resolve) => setTimeout(resolve, 2500))
-    const data = await get_zones(world_id).catch(() => null)
+    const data = await get_zones(world_id).catch((error) => {
+      game_log('discovery', 'searched-zone reconciliation read failed', error)
+      return null
+    })
     const row = data?.zones?.find((z) => z.zx === zone.zx && z.zy === zone.zy)
     if (row && row.discovered !== false && (row.discovered_at_ms ?? null) !== prior_at) return
   }

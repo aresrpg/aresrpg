@@ -68,7 +68,8 @@ export function pet_effective_stats(pet) {
         .map(([key, value]) => [key, finite_number(value)])
         .filter(([, value]) => value != null && value !== 0)
     )
-  } catch {
+  } catch (error) {
+    console.warn('[pet-power] effective stats payload could not be decoded', error)
     return null
   }
 }

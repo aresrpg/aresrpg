@@ -22,6 +22,7 @@ import { get_fights } from '../../../rpc/client'
 import { use_dungeon } from '../../../world-shell/dungeon_store.js'
 import { find_pending_outcome } from '../../../world-shell/dungeon_settlement.js'
 import { attempt_state, subscribe_attempts } from '../../../world-shell/pending_outcomes.js'
+import { game_log } from '../../../core/log.js'
 
 /**
  * @param {{ character_id: string }} props
@@ -47,7 +48,8 @@ export function PendingOutcomeBadge({ character_id }) {
       let fights = []
       try {
         fights = (await get_fights({ character: character_id })) ?? []
-      } catch {
+      } catch (error) {
+        game_log('pending-outcome', 'fight status read failed', { character_id, error })
         /* read hiccup → fall through to the pending-outcomes read (never claim a state we could not confirm) */
       }
       if (!live) return
@@ -57,7 +59,8 @@ export function PendingOutcomeBadge({ character_id }) {
       let row = null
       try {
         row = await find_pending_outcome(address, character_id)
-      } catch {
+      } catch (error) {
+        game_log('pending-outcome', 'pending outcome projection read failed', { character_id, error })
         /* projection hiccup → no pill; the next signal re-checks */
       }
       if (!live) return

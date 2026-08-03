@@ -32,7 +32,10 @@ export function CpuOverlay() {
     const attach_p2p_probe = async () => {
       if (disposed || p2p_loading || p2p_removers.length) return
       p2p_loading = true
-      const { context } = await import('../../../core/game.js').catch(() => ({ context: null }))
+      const { context } = await import('../../../core/game.js').catch((error) => {
+        console.warn('[cpu-overlay] p2p probe could not load the game context', error)
+        return { context: null }
+      })
       if (!context) {
         p2p_loading = false
         return

@@ -13,6 +13,7 @@ import { PetFoodHoverRow } from '../../../pages/encyclopedia/pet_food_section'
 import { load_roster } from '../../../roster/load_roster.js'
 import { use_toast } from '../../../toast'
 import { feed_pet } from '../../../world-shell/feed_actions.js'
+import { game_log } from '../../../core/log.js'
 import { ItemCard } from './ItemCard.jsx'
 import { ItemIcon } from './ItemIcon.jsx'
 
@@ -106,7 +107,12 @@ export function PetFeedModal({ pet, foods = [], food_slugs = [], pet_max_stats, 
         success: t('pet.fed'),
         error: t('pet.feed_failed'),
       })
-      .then(() => load_roster().catch(() => {}))
+      .then(() =>
+        load_roster().catch((error) => {
+          game_log('pet-feed', 'post-feed roster refresh failed', error)
+        })
+      )
+      // eslint-disable-next-line no-silent-failures/no-swallowed-failure -- toast.promise already surfaced the feed failure; this terminal handler only prevents an unhandled rejection
       .catch(() => {})
     onClose()
   }

@@ -87,7 +87,7 @@ export type ItemCorpus = {
 
 /** The live corpus, subscribed. One shared app-lifetime read (the client caches `encyclopedia:all`), so a
  *  consumer rides the same fetch the encyclopedia already made. */
-export function use_item_corpus(): ItemCorpus {
+export function useItemCorpus(): ItemCorpus {
   const { data, loading, error } = useRpcView((signal) => get_encyclopedia(undefined, signal), { deps: [] })
   const items = useMemo(() => item_corpus_from_v1(data?.items), [data])
   const by_id = useMemo(() => new Map(items.map((item) => [item.id, item])), [items])

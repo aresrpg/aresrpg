@@ -98,7 +98,7 @@ export function LoadoutSection({ character }: Readonly<{ character: SimCharacter
  */
 export function useSlotPickerContent(slot: string): { items: PickerItem[]; empty_label?: string } {
   const { t } = useTranslation()
-  const { items: corpus, loading, error } = item_corpus.use_item_corpus()
+  const { items: corpus, loading, error } = item_corpus.useItemCorpus()
   const options = useMemo(() => items_for_slot(slot, corpus), [slot, corpus])
 
   const items: PickerItem[] = useMemo(

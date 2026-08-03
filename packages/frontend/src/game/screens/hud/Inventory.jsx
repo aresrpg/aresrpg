@@ -135,7 +135,10 @@ export function Inventory() {
     ]
     const rolled_stat_reads = equipped_item_ids.map((item_id) =>
       resolve_rolled_stats(item_id)
-        .catch(() => null)
+        .catch((error) => {
+          game_log('inventory', 'equipped item rolled-stat read failed', { item_id, error })
+          return null
+        })
         .then((rolled_stats) => [item_id, rolled_stats])
     )
     void Promise.all(rolled_stat_reads).then((rolled_stat_entries) => {
@@ -173,7 +176,8 @@ export function Inventory() {
         { address, character_id: character.id },
         { is_current: () => use_auth.getState().address === address }
       )
-    } catch {
+    } catch (error) {
+      game_log('inventory', 'equip retry reconcile failed', { character_id: character.id, error })
       return
     }
     allow_equip_retry(character.id)
@@ -277,7 +281,8 @@ export function Inventory() {
     let current_items
     try {
       current_items = address ? await get_owner_items(address) : null
-    } catch {
+    } catch (error) {
+      game_log('inventory', 'equip preflight owner-items read failed', error)
       current_items = null
     }
     if (!current_items) {

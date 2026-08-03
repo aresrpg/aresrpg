@@ -107,6 +107,7 @@ export function WorldSwitcher() {
           success: i18n.t('world_switcher.joined', { world: world.label }),
         })
       view.refetch()
+      // eslint-disable-next-line no-silent-failures/no-swallowed-failure -- toast.promise owns the executed failure; this branch deliberately performs no refetch after rejection
     } catch {
       /* surfaced by the toast lifecycle — an executed failure is never auto-refired (tx-retry law) */
     }

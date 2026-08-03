@@ -8,6 +8,7 @@ import { resolve_rolled_stats } from '../../../chain/rolled_stats.js'
 import { useOnchainItemTooltip } from '../../../components/entity_display'
 import { is_template_removed } from '../../../components/orphan_item'
 import { PetFoodHoverRow } from '../../../pages/encyclopedia/pet_food_section'
+import { game_log } from '../../../core/log.js'
 import {
   live_pet_food_slugs,
   pet_max_stats_by_live_template,
@@ -63,7 +64,10 @@ export function useInventoryTemplates(items, slugs) {
     paint_item_tooltip(event, item, rolled_stats_by_id[item.id] ?? null)
     if (!item.id) return
     void resolve_rolled_stats(item.id)
-      .catch(() => null)
+      .catch((error) => {
+        game_log('inventory', 'hovered item rolled-stat read failed', { item_id: item.id, error })
+        return null
+      })
       .then((rolled_stats) => {
         set_rolled_stats_by_id((current) => ({ ...current, [item.id]: rolled_stats }))
         if (active_hover_id_ref.current === item.id)
