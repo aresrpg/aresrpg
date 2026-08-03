@@ -159,7 +159,7 @@ describe('#443 — a WALLET (non-zkLogin) session pays for its FIRST character t
   })
 
   test('the characters-drawer create host and its price-badge gates account for a wallet session too', () => {
-    const src = read_fixture('./hud/CharactersDrawer.jsx')
+    const src = `${read_fixture('./hud/CharacterCreateHost.jsx')}\n${read_fixture('./hud/CharactersDrawer.jsx')}`
     expect(src).toContain('const zklogin_session = is_zklogin_session()')
     expect(src).toContain('const paid = is_paid_create({ character_count, claimed_free, zklogin_session })')
     expect(src).toContain(

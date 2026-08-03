@@ -203,7 +203,7 @@ describe('shared mobile-mode render branches', () => {
   })
 
   test('the characters roster row is lean — design ruling 2026-07-18: avatar + name + level/class, no HP/AP/MP chips', () => {
-    const drawer = read_fixture('./CharactersDrawer.jsx')
+    const drawer = `${read_fixture('./CharactersDrawer.jsx')}\n${read_fixture('./CharacterRosterEntry.jsx')}`
     const drawer_css = read_fixture('./characters-drawer.css')
     // The HP/AP/MP vitals chips (and their now-dead SDK computation) are GONE from the roster — that data
     // lives in the STATS detail tab, its single home. They took half the 390px landscape screen.

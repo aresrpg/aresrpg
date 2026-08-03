@@ -108,11 +108,11 @@ describe('characters-page create — embedded frame, never the fullscreen overla
     // `position: fixed; inset: 0; z-index: 1000` modal the onboarding flow deliberately does NOT use for its
     // own bounded host (see '.cc.cc--inline' above). The page variant must route to 'inline' like onboarding
     // does; the narrow in-world drawer keeps 'overlay' (no room to embed the 1040px panel there).
-    const drawer = read_fixture('./hud/CharactersDrawer.jsx')
-    expect(drawer).toContain(
+    const create_host = read_fixture('./hud/CharacterCreateHost.jsx')
+    expect(create_host).toContain(
       'function CreateHost({ character_count, claimed_free, price_sui, on_close, variant }) {'
     )
-    expect(drawer).toContain("placement: variant === 'page' ? 'inline' : 'overlay',")
+    expect(create_host).toContain("placement: variant === 'page' ? 'inline' : 'overlay',")
   })
 
   test('the create-host CSS carries no dead selector (a leftover ghost of a prior un-merged sibling)', () => {

@@ -9,31 +9,23 @@
 // source of truth — chain-direct, no server), persists last-played (a preference), and tells the world
 // shell to re-key the roam cosmetics. Reference: the aresrpg companion characters page (CharacterDetail
 // card layout; Bank dropped) + the legacy create flow — restyled to the house Frosted Obsidian.
+//
+// The create host, narrow drawer row, and page roster entry live in focused sibling files (issue #2069).
+// This file remains the composition root: shared state, mutations, and the page/drawer branches.
 
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-
-import { xp_progress } from '@aresrpg/sdk/experience'
 
 import { use_auth, is_zklogin_session } from '../../../auth'
 import { useGameState, context } from '../../store.js'
-import { get_class } from '../../data/classes.js'
-import { color_to_hue } from '../../data/color.js'
-import { CharacterPortrait } from './CharacterPortrait.jsx'
-import { PendingOutcomeBadge } from './PendingOutcomeBadge.jsx'
-import {
-  character_create,
-  read_allowed_classes,
-  is_paid_create,
-  ADDITIONAL_CHARACTER_PRICE_SUI,
-} from '../character-create.js'
-import { get_sui_balance } from '../../core/wallet.js'
+import { is_paid_create, ADDITIONAL_CHARACTER_PRICE_SUI } from '../character-create.js'
 import { logout } from '../../core/wallet.js'
 import { set_pref_zklogin } from '../../core/draft.js'
-import { ExplorerLink } from '../../../components/explorer_link.jsx'
-import { Tooltip } from './Tooltip.jsx'
 import { switch_active_character } from './character_switch.js'
 import { report_error } from '../../../core/report.js'
+import { CreateHost } from './CharacterCreateHost.jsx'
+import { CharacterDrawerRow } from './CharacterDrawerRow.jsx'
+import { RosterEntry } from './CharacterRosterEntry.jsx'
 // The detail-strip tab bodies REUSE the already-built, store-sourced drawers (no reimplementation):
 // EQUIPMENT = the canon-04 Loadout (paper-doll + bag + on-chain drag-drop), STATS = the characteristics
 // sheet, JOBS = the jobs/craft drawer. All self-source from `selected_character_id`, so selecting a
@@ -47,13 +39,11 @@ import { Spellbook } from './Spellbook.jsx'
 // via the `character_id` prop (the minimal seam; ScribePage does its own kiosk-scoped SDK read off it).
 import { ScribePage } from '../../../pages/scribe'
 import { CreateBrokeCard } from './CreateBrokeCard.jsx'
-import { use_expedition } from '../../../roster/store'
 // BACKLOG 18 — chain-direct character DELETE: allowed once everything is unequipped, even the
 // free starter. The action composes the SDK's one-call in-kiosk burn door; the guards live ON-CHAIN and the
 // receipt folds through the sui_reduce pipeline (tombstoned). The confirm card names the character and uses
 // the same explicit irrecoverability acknowledgement as the item-send review.
 import { CharacterDeleteConfirm } from './CharacterDeleteConfirm.jsx'
-import { CharacterDeleteAction } from './CharacterDeleteAction.jsx'
 import { delete_character_onchain } from '../character-delete.js'
 import { delete_block_reason } from '../character-delete.gate.js'
 import { use_toast } from '../../../toast'
@@ -71,189 +61,8 @@ const NETWORK = import.meta.env.VITE_NETWORK || 'testnet'
 // affordance; the real first-char create lived in CharacterMenu. Now this path mints.)
 const ADDITIONAL_CREATE_WIRED = true
 
-// Presentation hex (#rrggbb) → on-chain u32 (character_new packs color_1/2/3 as u32), mirroring ExpeditionCreate /
-// CharacterMenu so every create surface sends the identical value.
-const color_to_number = (/** @type {string} */ hex) => parseInt(String(hex).replace(/^#/, ''), 16)
-
 import './characters-drawer.css'
 import { game_log } from '../../../core/log.js'
-
-/**
- * The inline create flow — mounts the proven vanilla character_create() inside a React host so the
- * drawer reuses it verbatim (same paid-mint hint and on-chain mint PTB). On a
- * successful mint the suiEvent → sui_data refetch repaints the roster; we close back to the list.
- * The three picked colors (Skin/Armor/Trim = on-chain color_1/2/3) flow straight to the mint PTB.
- * `variant` decides the shared creator's FRAME — the create-character page from the characters
- * page must not be a second fullscreen sibling: the wide companion `page`
- * embeds it inline, bounded to `.chr-create-host` (the same `.cc.cc--inline` mechanism the onboarding
- * world-slot host already proves — character-create.placement.test.jsx); the narrow in-world `drawer`
- * keeps the centered overlay modal (no room there to embed the 1040px panel).
- * @param {{ character_count: number, claimed_free: boolean, price_sui: number, on_close: () => void, variant: 'drawer' | 'page' }} props
- */
-function CreateHost({ character_count, claimed_free, price_sui, on_close, variant }) {
-  const host = useRef(/** @type {HTMLDivElement | null} */ (null))
-  useEffect(() => {
-    const mount = host.current
-    if (!mount) return undefined
-    // The shared PAID discriminator (single home in character-create.js) drives the balance hint and the
-    // free-vs-paid PTB route below, the same rule the creator's price button renders from.
-    // #443: folds in the wallet-session case (money law #73 — a connected wallet never rides the
-    // sponsor), so a wallet's FIRST character here correctly routes to create_character_paid too.
-    const zklogin_session = is_zklogin_session()
-    const paid = is_paid_create({ character_count, claimed_free, zklogin_session })
-    /** @type {ReturnType<typeof character_create> | undefined} */ let handle
-    let destroyed = false
-    // S-84: gate the class grid on the LIVE on-chain Creation whitelist (un-whitelisted → disabled "coming soon";
-    // a read hiccup → undefined → all selectable, and the mint-time abort 103 still reads "This class is coming soon").
-    void read_allowed_classes().then((allowed_classes) => {
-      if (destroyed) return
-      handle = character_create({
-        character_count,
-        claimed_free,
-        zklogin_session,
-        price_sui,
-        allowed_classes,
-        placement: variant === 'page' ? 'inline' : 'overlay',
-        get_balance_sui: get_sui_balance,
-        // D9 LAW — the CLICK-INSTANT prediction: ghost the new character into the engine roster the moment
-        // the mint is submitted (the drawer row + downstream consumers see it immediately); the confirmed
-        // mint's load_roster REPLACES the roster wholesale (ghost self-heals away), a failure rolls it back.
-        on_submit_start: ({ name, class_id, colors: [c1, c2, c3] }) => {
-          // M5: the ghost is a receipt_patch delta — the reducer replaces any prior ghost + appends this one
-          // against the LATEST roster (no read-modify-write racing a background load_roster snapshot).
-          context.dispatch('action/sui_data', {
-            kind: 'receipt_patch',
-            op: 'set_ghost',
-            ghost: {
-              id: `ghost:${name}`,
-              name,
-              classe: class_id,
-              color_1: c1,
-              color_2: c2,
-              color_3: c3,
-              level: 1,
-              ghost: true,
-            },
-          })
-        },
-        on_submit_fail: () => {
-          context.dispatch('action/sui_data', { kind: 'receipt_patch', op: 'clear_ghosts' })
-        },
-        on_created: async ({ name, class_id, male, color_1, color_2, color_3 }) => {
-          // ROUTE BY THE SHARED PREDICATE: the second character for zklogin is still 10 sui — swap free
-          // for 10 sui and write it on the button too. FIRST character (paid=false) → the
-          // proven FREE zkLogin mint (create_character → create_character_free_ptb, sponsor/self-pay
-          // money-routed) — the drawer previously sent even a fresh roster-0 account to the PAID builder,
-          // charging 10 SUI for the character its own button promised free. ADDITIONAL character
-          // (paid=true) → create_character_paid: the SDK's create_character_paid_ptb at the LIVE gate
-          // price, SELF-PAY through the S-54 tx choke (dry-run refuse → zero gas on an insufficient
-          // wallet), roster repainted by its load_roster. Same predicate as the creator's price button, so
-          // the label and the submitted PTB can never disagree. THROWS on failure → surfaced inline by
-          // character_create's submit(). On success, close back to the repainted list.
-          const draft = {
-            name,
-            classe: class_id,
-            male: male ?? true,
-            color_1: color_to_number(color_1),
-            color_2: color_to_number(color_2),
-            color_3: color_to_number(color_3),
-          }
-          const { create_character, create_character_paid } = use_expedition.getState()
-          await (paid ? create_character_paid(draft) : create_character(draft))
-          on_close()
-        },
-        on_cancel: on_close,
-      })
-      mount.appendChild(handle.root)
-    })
-    return () => {
-      destroyed = true
-      handle?.destroy()
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- mounts the imperative character_create() widget exactly once; character_count/claimed_free/price_sui/variant/on_close are its initial config, captured at open, and the create flow doesn't react to roster changes mid-flow
-  }, [])
-  return <div className="chr-create-host" ref={host} />
-}
-
-/**
- * One character row — portrait + identity + level + xp bar + switch/active + delete. The delete is BLOCKED
- * (disabled + explained) when `delete_block` is a reason string: never delete the character you
- * are playing, never delete one with equipped items.
- * @param {{
- *   character: any, active: boolean, busy: boolean, delete_block: string | null,
- *   on_switch: () => void, on_delete: () => void
- * }} props
- */
-function CharacterRow({ character, active, busy, delete_block, on_switch, on_delete }) {
-  const { t } = useTranslation()
-  const cls = get_class(character.classe ?? character.class_id)
-  const { level, into: xp_into, span: xp_span, pct } = xp_progress(character.experience)
-  const percent = Math.round(pct)
-  const hue = color_to_hue(character.color_1 ?? 0)
-  return (
-    <div
-      className={`chr-row${active ? ' is-active' : ''}`}
-      style={/** @type {import('react').CSSProperties} */ ({ '--hue': `${hue}` })}
-    >
-      <div className="chr-row__art">
-        <CharacterPortrait sprites={cls?.sprites ?? '/sprites/senshi'} hue={hue} size={58} />
-      </div>
-      <div className="chr-row__body">
-        <div className="chr-row__head">
-          <span className="chr-row__name">{character.name}</span>
-          <span className="chr-row__lvl hud-num">Lv {level}</span>
-        </div>
-        <div className="chr-row__class">{cls?.name ?? character.classe}</div>
-        <div className="chr-bar">
-          <div className="chr-bar__fill" style={{ width: `${percent}%` }} />
-        </div>
-        <div className="chr-row__xp hud-num">
-          {xp_into.toLocaleString()} / {xp_span.toLocaleString()} xp
-        </div>
-        {/* D39: character's on-chain object on the block explorer (Character id is stable even when escrowed). */}
-        <ExplorerLink object_id={character.id} className="mt-1" />
-        {/* P0 anti-brick: an unopened terminal fight (forfeit/partial-settle) shows the OPEN recovery CTA here. */}
-        <PendingOutcomeBadge character_id={character.id} />
-      </div>
-      <div className="chr-row__actions">
-        {character.exploring ? (
-          // status 2 = DEAD run — escrowed but over; needs a withdraw to recover → distinct red "Fallen"
-          // badge. 0/1 (ACTIVE/RETURNING — alive, out on a run) keep the cyan "Exploring" marker.
-          character.status === 2 ? (
-            <span className="chr-row__fallen">Fallen · recover</span>
-          ) : (
-            <span className="chr-row__exploring">Exploring</span>
-          )
-        ) : null}
-        {/* T58: MANAGEMENT-only — no "Playing" badge, no Play/deploy/enter button here (the roster + play
-            live in the Exploration tab; duplicating caused double-launch thrash). Only the informational
-            exploring/Fallen status + delete remain. */}
-        <Tooltip text={delete_block ?? t('characters.delete.title', 'Delete character')}>
-          <button
-            type="button"
-            className="chr-row__del"
-            aria-label={delete_block ?? t('characters.delete.title', 'Delete character')}
-            disabled={busy || delete_block != null}
-            onClick={on_delete}
-          >
-            <svg
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              aria-hidden="true"
-            >
-              <path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m2 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6" />
-            </svg>
-          </button>
-        </Tooltip>
-      </div>
-      {delete_block && <div className="chr-row__del-note">{delete_block}</div>}
-    </div>
-  )
-}
 
 // The detail-strip tab order (T58, management-only): EQUIPMENT, STATS, SPELLS, JOBS, RUNEFORGE. (INVENTORY
 // is folded into EQUIPMENT — the built Loadout is paper-doll + bag in one surface. FIGHTS tab removed —
@@ -266,85 +75,6 @@ const DETAIL_TABS = /** @type {const} */ ([
   ['jobs', 'Jobs'],
   ['runeforge', 'Runeforge'],
 ])
-
-/**
- * One roster entry for the page master-detail list (T58 — MANAGEMENT-only): mini-portrait + identity.
- * Clicking the row previews the character in the detail panel so you can MANAGE it
- * (equipment / stats / jobs / craft). Play + deploy are NOT here — that roster lives in the Exploration
- * tab; duplicating it caused double-launch thrash. The exploring/Fallen badges stay as INFORMATIONAL
- * status (a character escrowed on an expedition is out of the kiosk). Active = the previewed/selected
- * character (gold tint).
- * BACKLOG 18: the ACTIVE (selected) row carries the delete affordance inline — management lives HERE
- * (delete characters from the characters tab), disabled with the honest reason while blocked.
- * Design ruling (2026-07-18): the roster row is avatar + name + level/class ONLY — the HP/AP/MP chips are GONE
- * (they took half the landscape screen; that data lives in the detail pane's STATS tab, its one home).
- * @param {{ character: any, active: boolean, busy: boolean, delete_block: string | null, on_preview: () => void, on_delete: () => void }} props
- */
-function RosterEntry({ character, active, busy, delete_block, on_preview, on_delete }) {
-  const cls = get_class(character.classe ?? character.class_id)
-  const { level } = xp_progress(character.experience)
-  const hue = color_to_hue(character.color_1 ?? 0)
-  const class_name = (cls?.name ?? character.classe ?? '').toUpperCase()
-  // The roster is a list of COMPACT one-line cards: art | name + level·class | status/delete. Clicking a
-  // card previews it in the detail panel; the active card only gains an inline delete icon (no second row).
-  return (
-    <div
-      className={`chrx-row${active ? ' is-active' : ''}`}
-      style={/** @type {import('react').CSSProperties} */ ({ '--hue': `${hue}` })}
-    >
-      <div className="chrx-row__main" onClick={on_preview}>
-        <div className="chrx-row__art">
-          <CharacterPortrait sprites={cls?.sprites ?? '/sprites/senshi'} hue={hue} size={30} />
-        </div>
-        <div className="chrx-row__id">
-          <span className="chrx-row__name">{character.name}</span>
-          <span className="chrx-row__sub hud-num">
-            Lv {level} <span className="chrx-row__dot">·</span> <span className="chrx-row__cls">{class_name}</span>
-          </span>
-        </div>
-        {/* Right column: informational status (the Exploration tab owns run actions) + the active row's
-            inline delete. 2 = DEAD on-chain status → red "Fallen" (needs a withdraw); 0/1 keep cyan
-            "Exploring". Kept on one tight line so the row never grows a second row. */}
-        <div className="chrx-row__aside">
-          {character.exploring &&
-            (character.status === 2 ? (
-              <div className="chrx-fallen" aria-label="Fallen">
-                <svg
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="1.8"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  aria-hidden="true"
-                >
-                  <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
-                  <line x1="12" x2="12" y1="9" y2="13" />
-                  <line x1="12" x2="12.01" y1="17" y2="17" />
-                </svg>
-                Fallen
-              </div>
-            ) : (
-              <div className="chrx-exploring" aria-label="Exploring">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
-                  <circle cx="12" cy="12" r="9" />
-                  <path d="m16 8-2 6-6 2 2-6 6-2z" />
-                </svg>
-                Exploring{character.journey_len ? ` · ${character.opened}/${character.journey_len}` : ''}
-              </div>
-            ))}
-          {/* BACKLOG 18 — delete lives on the active row; stopPropagation so its click never previews. */}
-          {active && (
-            <CharacterDeleteAction block_reason={delete_block} busy={busy} on_delete={on_delete} />
-          )}
-        </div>
-      </div>
-      {/* P0 anti-brick: sibling of the clickable main (its own click never triggers preview) — the OPEN
-          recovery CTA for a character stranded with an unopened terminal fight. Renders null when clean. */}
-      <PendingOutcomeBadge character_id={character.id} />
-    </div>
-  )
-}
 
 /**
  * The characters drawer body. Self-sources the roster from the engine store (the on-chain read-model)
@@ -696,7 +426,7 @@ export function CharactersDrawer({ on_switch, variant = 'drawer' }) {
       ) : (
         <div className="chr-list">
           {roster.map((character) => (
-            <CharacterRow
+            <CharacterDrawerRow
               key={character.id}
               character={character}
               active={character.id === selected_id}
