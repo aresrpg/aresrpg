@@ -1,13 +1,2 @@
-b1e5fb1e8 → Refs #1993 — feat(fight-hud): one React door per canonical fight-visible record
-e387ad427 → Refs #1993 — fix(deck): read the turn seed off its one home, not the dungeon mirror
-7683e7759 → Refs #1993 — fix(fight-hud): the unresolved-actor verdict answers from the projection
-db4a19598 → Refs #1993 — refactor(fight-controls): the min-turn floor comes from the controls record
-a3e00c219 → Refs #1993 — fix(phase): my seat answers from the identity book, not a stale mirror
-c7747091d → Refs #1993 — chore(arch): ratchet the fight-visible bypass floor down to 69
-878ebf483 → Refs #1993 — fix(test): stop the seat-home mock leaking across the shared test process
-82e1afb07 → Refs #1993 — docs(fight-hud): record the two non-migrating carve-out reads in code
-57cd00077 → Refs #1993 — fix(test): seat-home RED drives the real stores, not a truncated stub
-3353ebb49 → Refs #1993 — fix(gates): keep the carve-out prose out of the store-writer scan
-e765f47a4 → Refs #1993 — feat(fight): the CONTROLS record carries the next action slot
-81833d5ce → Refs #1993 — test(frontend): drive all six fight-visible doors over the real store
-134e9a677 → Refs #1993 — refactor(hud): the §7 slot comes off the controls record, not the raw core
+f185dfd23 → Refs #2136 — fix(fight): a seat that already died is not a seat to resume
+3ef579c6b → Fixes #2136 — test(fight): seal the corpse-seat exit — D48 death stays an exit across boots
