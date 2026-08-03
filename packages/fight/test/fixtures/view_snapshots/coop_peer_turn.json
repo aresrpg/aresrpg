@@ -106,12 +106,16 @@
         "0xchar_a": {
           "cells": {
             "committed": 21,
-            "display": 21,
-            "presented": 21,
-            "xy": {
+            "committed_xy": {
               "x": 1,
               "y": 1
-            }
+            },
+            "display": 21,
+            "display_xy": {
+              "x": 1,
+              "y": 1
+            },
+            "presented": 21
           },
           "id": "0xchar_a",
           "identity": {
@@ -151,12 +155,16 @@
         "0xchar_b": {
           "cells": {
             "committed": 22,
-            "display": 22,
-            "presented": 22,
-            "xy": {
+            "committed_xy": {
               "x": 2,
               "y": 1
-            }
+            },
+            "display": 22,
+            "display_xy": {
+              "x": 2,
+              "y": 1
+            },
+            "presented": 22
           },
           "id": "0xchar_b",
           "identity": {
@@ -196,12 +204,16 @@
         "mob-0": {
           "cells": {
             "committed": 45,
-            "display": 45,
-            "presented": 45,
-            "xy": {
+            "committed_xy": {
               "x": 5,
               "y": 2
-            }
+            },
+            "display": 45,
+            "display_xy": {
+              "x": 5,
+              "y": 2
+            },
+            "presented": 45
           },
           "id": "mob-0",
           "identity": {
@@ -336,12 +348,16 @@
         "0xchar_a": {
           "cells": {
             "committed": 21,
-            "display": 21,
-            "presented": 21,
-            "xy": {
+            "committed_xy": {
               "x": 1,
               "y": 1
-            }
+            },
+            "display": 21,
+            "display_xy": {
+              "x": 1,
+              "y": 1
+            },
+            "presented": 21
           },
           "id": "0xchar_a",
           "identity": {
@@ -381,12 +397,16 @@
         "0xchar_b": {
           "cells": {
             "committed": 42,
-            "display": 42,
-            "presented": 42,
-            "xy": {
+            "committed_xy": {
               "x": 2,
               "y": 2
-            }
+            },
+            "display": 42,
+            "display_xy": {
+              "x": 2,
+              "y": 2
+            },
+            "presented": 42
           },
           "id": "0xchar_b",
           "identity": {
@@ -426,12 +446,16 @@
         "mob-0": {
           "cells": {
             "committed": 45,
-            "display": 45,
-            "presented": 45,
-            "xy": {
+            "committed_xy": {
               "x": 5,
               "y": 2
-            }
+            },
+            "display": 45,
+            "display_xy": {
+              "x": 5,
+              "y": 2
+            },
+            "presented": 45
           },
           "id": "mob-0",
           "identity": {
@@ -566,12 +590,16 @@
         "0xchar_a": {
           "cells": {
             "committed": 21,
-            "display": 21,
-            "presented": 21,
-            "xy": {
+            "committed_xy": {
               "x": 1,
               "y": 1
-            }
+            },
+            "display": 21,
+            "display_xy": {
+              "x": 1,
+              "y": 1
+            },
+            "presented": 21
           },
           "id": "0xchar_a",
           "identity": {
@@ -611,12 +639,16 @@
         "0xchar_b": {
           "cells": {
             "committed": 42,
-            "display": 42,
-            "presented": 42,
-            "xy": {
+            "committed_xy": {
               "x": 2,
               "y": 2
-            }
+            },
+            "display": 42,
+            "display_xy": {
+              "x": 2,
+              "y": 2
+            },
+            "presented": 42
           },
           "id": "0xchar_b",
           "identity": {
@@ -656,12 +688,16 @@
         "mob-0": {
           "cells": {
             "committed": 45,
-            "display": 45,
-            "presented": 45,
-            "xy": {
+            "committed_xy": {
               "x": 5,
               "y": 2
-            }
+            },
+            "display": 45,
+            "display_xy": {
+              "x": 5,
+              "y": 2
+            },
+            "presented": 45
           },
           "id": "mob-0",
           "identity": {

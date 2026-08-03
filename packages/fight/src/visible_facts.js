@@ -12,6 +12,7 @@
 // explicitly named. No reconciliation is introduced here — fold-first family migrations are later trains.
 
 import { STATUS_FAILED, STATUS_ROOM_CLEARED, STATUS_WON } from './board_state.js'
+import { decode as decode_xy } from './los.js'
 import { commit_fact, empty_result } from './result_record.js'
 import { project_hud } from './core_project.js'
 import { committed_truth, display_state, min_turn_ready_at, presented_state } from './store.js'
@@ -67,14 +68,31 @@ export const deep_freeze = (value) => {
  *  object ids do not. The same classifier the world shell already asks before treating a session as its own. */
 const session_scope = (fight_id) => (fight_id == null ? null : String(fight_id).startsWith('sim:') ? 'sim' : 'world')
 
-/** One entity's CELLS, explicitly named. `committed` is chain truth; `presented` is the paced fold; `display` is
- *  what the rig stands on — an in-flight walk HOLDS at its pre-move cell until the walk beat presents
- *  (SNAP-THEN-RUN), which is why the three are distinct facts and not three spellings of one. `xy` is the
- *  decoded render cell `engine_view` publishes (placement ghosts included, exactly as today). */
-const entity_cells = (s, key, snapshot_cell, xy) => {
+/**
+ * One entity's POSITION — TWO facts, each named once and offered in both encodings (#1993 WP5, finding row
+ * `project_views.js:175`: board positions used to be selected as committed, presented, display or the raw
+ * snapshot cell depending on which projection a surface happened to reach for).
+ *
+ *   · COMMITTED — chain truth. Every gameplay, log and occupancy question answers from here: legality, LOS,
+ *     body-blocking, vacancy, "where did this cast land". It is the only cell that is ever an ANSWER.
+ *   · DISPLAY — where the body is SHOWN this frame. An in-flight walk HOLDS at its pre-move cell until the walk
+ *     beat presents (SNAP-THEN-RUN) and a placement ghost overlays a peer's uncommitted pick, so this cell is
+ *     deliberately allowed to lie about the board. It positions pixels; it never decides anything.
+ *
+ * `presented` — the paced fold cell — is neither: it is the INPUT display is derived from, kept named so the
+ * pacing tests can see the step, and never a third answer. Encodings are two spellings of ONE fact, derived
+ * here rather than by each consumer: `_xy` is the decoded `{x,y}`, the bare name is the encoded cell index.
+ */
+const entity_cells = (s, key, snapshot_cell, display_xy) => {
   const committed = committed_truth(s).fighters?.[key]?.cell ?? snapshot_cell ?? null
   const presented = presented_state(s).fighters?.[key]?.cell ?? snapshot_cell ?? null
-  return { committed, presented, display: display_state(s).fighters?.[key]?.cell ?? presented, xy: xy ?? null }
+  return {
+    committed,
+    committed_xy: committed == null ? null : decode_xy(committed),
+    presented,
+    display: display_state(s).fighters?.[key]?.cell ?? presented,
+    display_xy: display_xy ?? null,
+  }
 }
 
 /** The snapshot row's own cell — the fallback every fold read already takes when no folded row exists yet. */

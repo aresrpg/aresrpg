@@ -135,10 +135,18 @@ describe('#1993 train 0 — fight_visible_view owns all six fight-visible facts'
       expect(Object.keys(row).sort()).toEqual(['cells', 'id', 'identity', 'statuses', 'vitals'])
     expect(view.entities[ME].identity.is_player).toBe(true)
     expect(view.entities['mob-0'].identity.is_player).toBe(false)
-    // committed / presented / display are DISTINCT named facts, not three spellings of one read.
-    expect(Object.keys(view.entities['mob-0'].cells).sort()).toEqual(['committed', 'display', 'presented', 'xy'])
+    // TWO position facts, each in both encodings (#1993 WP5): COMMITTED answers every gameplay/log/occupancy
+    // question, DISPLAY positions the rig. `presented` is display's input, never a third answer.
+    expect(Object.keys(view.entities['mob-0'].cells).sort()).toEqual([
+      'committed',
+      'committed_xy',
+      'display',
+      'display_xy',
+      'presented',
+    ])
     expect(view.entities['mob-0'].cells.committed).toBe(45)
-    expect(view.entities['mob-0'].cells.xy).toEqual({ x: 5, y: 2 })
+    expect(view.entities['mob-0'].cells.committed_xy).toEqual({ x: 5, y: 2 })
+    expect(view.entities['mob-0'].cells.display_xy).toEqual({ x: 5, y: 2 })
     expect(view.entities['mob-0'].vitals.committed).toBe(20) // the folded Hit, not the stale snapshot's 40
     expect(view.entities['mob-0'].vitals.max).toBe(40)
     expect(Array.isArray(view.entities[ME].statuses)).toBe(true)
@@ -236,7 +244,7 @@ describe('#1993 train 0 — every field is AT CURRENT PARITY with the fragment t
       expect(row.identity.display_id).not.toBe(null)
       expect(row.identity.team).toBe(fighter.team)
       expect(row.identity.level).toBe(fighter.level)
-      expect(row.cells.xy).toEqual(fighter.cell)
+      expect(row.cells.display_xy).toEqual(fighter.cell)
       expect(row.vitals.committed).toBe(fighter.committed_health)
       expect(row.vitals.predicted).toBe(fighter.health)
       expect(row.vitals.display).toBe(fighter.presented_health)
