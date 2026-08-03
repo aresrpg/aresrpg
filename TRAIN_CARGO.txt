@@ -1,7 +1,4 @@
-1aea4fad5 → Refs #2124 — fix(fight): the wave seq is an identity, so an adopted read never replays it
-19cf72ff0 → Fixes #2124 — fix(fight): a snapshot settles a row's state, never its beats
-406b8dcd9 → Fixes #2118, Refs #1993 — fix(fight): answer the in-flight commit verdict in chain time
-74e9a6606 → Refs #1993 — feat(fight): project one active-status collection per entity
-c2f0b1a3d → Refs #1993 — chore(fight): regold the sealed view snapshots for the statuses shape
-b0e1e5f73 → Refs #1993 — refactor(frontend): read effect consequences from the status projection
-fd301b421 → Refs #1993 — docs(fight): state the two transport-door verdicts in code
+dfc04d1fd → Refs #1993 — feat(fight): the entity vitals record — one fold, three named numbers
+c612c44d7 → Refs #1993 — test(frontend): RED — one entity, two HP numbers, and a fabricated bar
+76a122eae → Refs #1993 — refactor(hud): every HP surface reads the vitals record or says why not
+a23e991d8 → Refs #1993 — style(fight): prettier the regolded view snapshots
