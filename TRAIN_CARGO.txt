@@ -1,10 +1,4 @@
-29441185f → Refs #1886 — fix(rpc): snapshot GameConfig's class rows, not just their tuning events
-bdaf6abac → Refs #2123 — fix(rpc): snapshot Creation birth state
-88fc48845 → Refs #1886, #2123 — chore(gates): sanction the rpc snapshot fixtures' captured ids
-3feda6405 → Refs #1993 — test(frontend): RED — a cast that landed nothing reads as a hit (#1859)
-12500a8f0 → Refs #1993 — feat(fight): the cast-resolution record — one landing, read twice
-71db98771 → Refs #1993 — refactor(fight): two position facts in the entity rows, each named once
-b229e81b5 → Refs #1993 — refactor(hud): board positions answer from the canonical entity rows
-a90907345 → Refs #1993 — fix(fight): a carried status row splashes its own subject, not the caster
-2ffe38c0a → Refs #2122 — test(fight): pin the held fight rejoining itself, capped at one attempt
-600885d4b → Fixes #2122 — feat(fight): a held fight rejoins itself, once per session
+28c8a62b1 → Refs #2126 — fix(board): read close refs from landed commit trailers
+90a016976 → Refs #2121 — feat(probe): instrument production presence relay
+0eec5aa04 → Fixes #871 — fix(frontend): scope the roster-error overlay's hit area to its own card
+2f7b2d5e9 → Fixes #2125 — fix(fight): a failed client mount announces the seat it strands
