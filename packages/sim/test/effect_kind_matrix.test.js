@@ -281,11 +281,6 @@ const matrix = [
     on: ['ranged'],
     eff: { target_filter: ZONE, element: 255 },
     target: 'self',
-    // INERT TODAY (#1039) — the normalizer carries no arm for kind 18, so it mints UNSUPPORTED and folds
-    // nothing. This row read green only because the retired card system discarded the cast card, which counted
-    // as a "state change" (#1012). Implementing the kind turns this red: move the row back, do not relax it.
-    // `inert_effect_kinds.test.js` pins the SET this flag belongs to, derived from the normalizer itself.
-    unsupported: true,
   },
   {
     kind: SE.K_PLACE_TRAP,

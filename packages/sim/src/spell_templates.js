@@ -46,6 +46,7 @@ import {
   K_REVEAL,
   K_REMOVE_POINTS,
   K_REMOVE_STATE,
+  K_RESET_POSITIONS,
   K_STANCE,
   K_STEAL_POINTS,
   K_STEAL_STAT,
@@ -69,7 +70,7 @@ import { ITEM_STAT_SHIFT as SIGNED_SHIFT } from './equipment_stats.js'
  * One spell effect, sim-internal (UPPERCASE). A faithful subset of the donor union (spells/types.ts:162).
  * Only the MVP-supported effects carry handlers in fight_spells.js; the rest are inert (flagged TODO).
  * @typedef {object} SpellEffect
- * @property {'DAMAGE'|'PERCENT_LIFE_DAMAGE'|'HEAL'|'STEAL'|'SHIELD'|'POOL_SHIELD'|'STUN'|'POISON'|'TELEPORT'|'PUSH'|'PULL'|'GEOMETRIC_PUSH'|'SWAP_POSITIONS'|'CARRY'|'THROW'|'PLACE_TRAP'|'GLYPH'|'ADD'|'REMOVE'|'SUMMON'|'INVISIBILITY'|'REVEAL'|'APPLY_STATE'|'REMOVE_STATE'|'REFLECT_DAMAGE'|'DISPEL'|'RETURN_SPELL'|'CRITICAL_FAILURE'|'DAMAGE_TO_HEAL'|'FORCED_DEATH'|'TIMED_PAYLOAD'|'NAMED_DAMAGE_STACK'|'STANCE'|'REACTIVE_PUNISHMENT'|'EROSION'|'DAMAGE_REDIRECT'|'UNSUPPORTED'} type
+ * @property {'DAMAGE'|'PERCENT_LIFE_DAMAGE'|'HEAL'|'STEAL'|'SHIELD'|'POOL_SHIELD'|'STUN'|'POISON'|'TELEPORT'|'PUSH'|'PULL'|'GEOMETRIC_PUSH'|'SWAP_POSITIONS'|'CARRY'|'THROW'|'RESET_POSITIONS'|'PLACE_TRAP'|'GLYPH'|'ADD'|'REMOVE'|'SUMMON'|'INVISIBILITY'|'REVEAL'|'APPLY_STATE'|'REMOVE_STATE'|'REFLECT_DAMAGE'|'DISPEL'|'RETURN_SPELL'|'CRITICAL_FAILURE'|'DAMAGE_TO_HEAL'|'FORCED_DEATH'|'TIMED_PAYLOAD'|'NAMED_DAMAGE_STACK'|'STANCE'|'REACTIVE_PUNISHMENT'|'EROSION'|'DAMAGE_REDIRECT'|'UNSUPPORTED'} type
  * @property {number} [kind]
  * @property {number} [value]
  * @property {number} [min]
@@ -478,6 +479,11 @@ const normalize_effect = (e, fallback_area, spell_id = '?') => {
       // arm: `spell_board::clear_fighter_state` drops exactly the target's k_apply_state rows carrying that id,
       // leaving every unrelated row (stun, buffs, DoT) untouched — a cleanse of ONE named state, not a dispel.
       return { ...base, type: 'REMOVE_STATE' }
+    if (numeric_kind === K_RESET_POSITIONS)
+      // Preserve the named reset row (spell_effect.move:47) instead of degrading it to UNSUPPORTED. The chain's
+      // cast.move:1577 `is_unimplemented` arm makes its current no-position-carrier refusal explicit; the sim
+      // mirrors that named no-op while keeping kind 18 observable at the normalization boundary (#1039).
+      return { ...base, type: 'RESET_POSITIONS' }
     if (numeric_kind === K_REFLECT_DAMAGE)
       // A FLAT damage-reflect (spell_effect.move:57 "reflect a flat amount of received damage; value = flat"):
       // a TIMED defensive row on the protected fighter (target_filter 4 = NOT_ENEMY → self/ally). Mirrors the

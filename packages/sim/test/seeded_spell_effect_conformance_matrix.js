@@ -208,18 +208,11 @@ export const matrix_rows = [
   ),
   effect_row(
     spell_effect.K_RESET_POSITIONS,
-    {
-      fighters: {
-        [CASTER_ID]: { cell: CASTER_CELL },
-        [ENEMY_ID]: { cell: ENEMY_CELL },
-      },
-    },
+    {},
     {
       target: 'self',
       setup: 'reset_positions',
       effect: { element: 255, target_filter: spell_effect.TF_NONE },
-      skip_reason:
-        'conformance bug #1039: K_RESET_POSITIONS normalizes to UNSUPPORTED and leaves displaced fighters in place',
     },
   ),
   effect_row(

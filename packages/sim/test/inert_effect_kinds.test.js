@@ -3,10 +3,9 @@
 //
 // THE INERT-KIND SENTINEL — the effect vocabulary the sim declares but cannot fold (#1039).
 //
-// `K_RESET_POSITIONS` (18) is declared on both sides of the twin — `spell_effect.js` exports it and
-// `spell_effect.move:44` mints the same number — and neither side has an arm for it: the normalizer degrades it
-// to `UNSUPPORTED`, so a spell authored with it folds NOTHING. (`K_REMOVE_STATE` (23) left this set when both
-// twins gained their clear-the-named-state arm.)
+// Every declared kind now has a named normalizer arm. K_RESET_POSITIONS (18) remains a deliberate no-position-
+// carrier refusal on both twins (cast.move:1577), but it survives normalization as RESET_POSITIONS instead of
+// being mislabeled UNSUPPORTED. K_REMOVE_STATE (23) left this set when both twins gained their named-state arm.
 //
 // That fact already has two consumers, each of which TRUSTS it rather than checking it:
 //   • `effect_kind_matrix.test.js` flags its row `unsupported: true` and asserts it folds nothing;
@@ -76,12 +75,10 @@ const folds = kind => {
 
 const INERT = ALL_KINDS.filter(kind => !folds(kind))
 
-describe('the inert effect kinds are exactly the two the board knows about', () => {
-  test('the normalizer degrades K_RESET_POSITIONS, and nothing else, to UNSUPPORTED', () => {
-    expect(INERT.map(kind_name)).toEqual(['K_RESET_POSITIONS'])
-    // wiring the last arm makes this list empty — flip `unsupported: true` in effect_kind_matrix.test.js and
-    // drop the matching `skip_reason` in seeded_spell_effect_conformance_matrix.js in the SAME commit (#1039)
-    expect(ALL_KINDS.length - INERT.length).toBe(40)
+describe('the inert effect kinds are exactly the ones the board knows about', () => {
+  test('every declared kind survives the normalizer as a named row', () => {
+    expect(INERT.map(kind_name)).toEqual([])
+    expect(ALL_KINDS.length - INERT.length).toBe(41)
   })
 
   test('the seeded conformance matrix quarantines exactly the inert kinds — no more, no fewer', () => {

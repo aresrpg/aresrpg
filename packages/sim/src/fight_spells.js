@@ -480,6 +480,11 @@ export const apply_spell_effect = (
     const cleared = clear_fighter_state(state, target_id, effect.value ?? 0)
     return { state: cleared, effects: [{ target_id, status: 'REMOVE_STATE' }] }
   }
+  if (effect.type === 'RESET_POSITIONS') {
+    // Named refusal, matching cast.move:1577: neither fight state carries the start-of-turn cells needed to
+    // relocate fighters. Keep the authored kind observable without inventing positions or mutating the board.
+    return { state, effects: [{ target_id, status: 'RESET_POSITIONS' }] }
+  }
   if (effect.type === 'REFLECT_DAMAGE') {
     // A FLAT damage-reflect (spell_effect.move:57, value = flat) — a TIMED defensive row on the protected fighter
     // carrying the flat amount + duration; it no-ops on tick and decays like a STUN (process_turn_effects). Mirrors
