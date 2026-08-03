@@ -135,18 +135,8 @@
     "eslint-config-prettier": "10.1.8",
     "eslint-plugin-import": "2.32.0",
     "globals": "^17.8.0",
-    "lint-staged": "17.2.0",
     "prettier": "3.9.5",
     "typescript": "5.9.3",
     "typescript-eslint": "^8.64.0"
-  },
-  "lint-staged": {
-    "*.js": [
-      "bun x prettier --write",
-      "bun x eslint --fix"
-    ],
-    "*.json": "bun x prettier --write",
-    "*.md": "bun x prettier --write",
-    "*.yml": "bun x prettier --write"
   }
 }
