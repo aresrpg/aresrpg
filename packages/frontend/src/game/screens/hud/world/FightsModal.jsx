@@ -90,7 +90,8 @@ export function FightsModal() {
   useEffect(() => {
     if (!open) return
     let alive = true
-    ;(async () => {
+    // Both best-effort readers reduce request failures to empty results, so this detached effect cannot reject.
+    void (async () => {
       const [friends] = await Promise.all([read_friend_list(address).catch(() => ({ friends: [] }))])
       const fset = await resolve_char_ids(friends?.friends ?? [])
       if (!alive) return

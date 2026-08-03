@@ -94,7 +94,8 @@ export function PartyFrame() {
       const character_id = member.character
       if (member_cache.has(character_id)) continue
       member_cache.set(character_id, null)
-      resolve_member(character_id).then((row) => {
+      // resolve_member catches and logs read failures, so this detached cache fill cannot reject.
+      void resolve_member(character_id).then((row) => {
         if (cancelled) return
         member_cache.set(character_id, row)
         force_tick((tick) => tick + 1)

@@ -98,7 +98,8 @@ export function OnlinePlayers() {
     set_pending_remove({ address: addr, name })
   }
   const confirm_remove = () => {
-    if (list_id && pending_remove) remove_friend_flow(list_id, pending_remove.address)
+    // The friend-action door catches transaction failures and owns their humanized toast.
+    if (list_id && pending_remove) void remove_friend_flow(list_id, pending_remove.address)
     set_pending_remove(null)
   }
 

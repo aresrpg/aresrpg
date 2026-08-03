@@ -22,7 +22,8 @@ export function useInventoryTemplates(items, slugs) {
   const [template_id_map, set_template_id_map] = useState(() => new Map())
   useEffect(() => {
     let alive = true
-    Promise.all([get_template_by_item_type_map(), get_template_map()]).then(([by_type, by_id]) => {
+    // Both template readers reduce fetch failures to empty maps, so this detached effect always settles safely.
+    void Promise.all([get_template_by_item_type_map(), get_template_map()]).then(([by_type, by_id]) => {
       if (!alive) return
       set_template_map(by_type)
       set_template_id_map(by_id)

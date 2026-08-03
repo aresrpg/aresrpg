@@ -123,7 +123,8 @@ export function DungeonBoard() {
   // applies the batch AND advances the turn — dungeon_turn.move allows zero actions). Reads the LIVE draft.
   const on_end_turn = () => {
     const { draft_actions } = staged_turn_paths(fight_store)
-    flush_commit(draft_actions)
+    // The commit_turn store door catches submission failures and owns their player feedback.
+    void flush_commit(draft_actions)
   }
 
   // LEAVE DUNGEON (the RUN door, dungeon::abandon): open the in-app confirm modal (never a native dialog). The

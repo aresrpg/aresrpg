@@ -22,7 +22,8 @@ export function CommissionArtisanView() {
   const [pending_id, set_pending_id] = useState(/** @type {string | null} */ (null))
   useEffect(() => {
     let alive = true
-    list_commissions().then(({ as_artisan }) => {
+    // The in-memory commission reader only awaits a timer and cannot reject, so this mount effect is safe to detach.
+    void list_commissions().then(({ as_artisan }) => {
       if (!alive) return
       set_requests(as_artisan)
       set_loading(false)

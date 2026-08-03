@@ -148,7 +148,8 @@ export function create_radio(
   // that re-armed forever would fight the player on every click for the rest of the session.
   const on_gesture = () => {
     dismiss_gesture_retry()
-    if (!paused_by_user) play()
+    // play owns autoplay/media rejection handling through gesture retry or fail_track.
+    if (!paused_by_user) void play()
   }
   const dismiss_gesture_retry = () => {
     if (!armed) return
@@ -172,7 +173,8 @@ export function create_radio(
     cursor = next
     player.src = tracks[next].src
     announce()
-    if (!paused_by_user && !fight_paused) play() // the boundary is exactly where the stream must NOT stall
+    // play owns autoplay/media rejection handling through gesture retry or fail_track.
+    if (!paused_by_user && !fight_paused) void play() // the boundary is exactly where the stream must NOT stall
   }
   const fail_track = (failed_cursor, error) => {
     if (dead_indices.has(failed_cursor)) return
@@ -200,7 +202,8 @@ export function create_radio(
   player.addEventListener('pause', on_pause)
   player.addEventListener('error', on_media_error)
   announce()
-  if (!fight_paused) play() // a fight already live when the widget mounts never gets its opening beat
+  // play owns autoplay/media rejection handling through gesture retry or fail_track.
+  if (!fight_paused) void play() // a fight already live when the widget mounts never gets its opening beat
 
   return {
     toggle: () => {
@@ -221,7 +224,8 @@ export function create_radio(
         dismiss_gesture_retry() // a fight starting mid-retry must not let a later gesture resume it anyway
         if (!player.paused) player.pause()
       } else if (!paused_by_user) {
-        play()
+        // play owns autoplay/media rejection handling through gesture retry or fail_track.
+        void play()
       }
     },
     dispose: () => {

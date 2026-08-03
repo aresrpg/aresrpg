@@ -68,7 +68,8 @@ export function HackRadioPlayer() {
   useEffect(() => {
     if (!hack) return undefined
     let disposed = false
-    load_radio_tracks().then((result) => {
+    // The loader converts every manifest failure into visible error state, so this detached effect cannot reject.
+    void load_radio_tracks().then((result) => {
       if (disposed) return
       set_tracks(result.tracks)
       set_failed(result.error)

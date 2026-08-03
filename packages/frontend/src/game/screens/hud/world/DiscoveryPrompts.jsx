@@ -113,7 +113,8 @@ export function DiscoveryPrompts() {
   useEffect(() => {
     if (!world_id) return undefined
     let dead = false
-    zone_world_doc(world_id).then((doc) => {
+    // zone_world_doc reduces read failures to retryable null results, so this detached effect settles safely.
+    void zone_world_doc(world_id).then((doc) => {
       if (dead) return
       set_world_doc(doc)
       spawns_input({ type: 'world_doc', doc }) // the core folds the same doc facts (idempotent)

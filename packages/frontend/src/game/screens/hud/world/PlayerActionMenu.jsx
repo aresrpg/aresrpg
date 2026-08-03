@@ -81,7 +81,8 @@ export function PlayerActionMenu() {
 
   const on_add = () => {
     close()
-    if (can_act) add_friend_flow(my_address, address)
+    // The friend-action door catches lookup/transaction failures and owns their humanized toast.
+    if (can_act) void add_friend_flow(my_address, address)
   }
   const on_invite = async () => {
     close()

@@ -102,7 +102,8 @@ export function CompassStrip({ mobile = false } = {}) {
   useEffect(() => {
     if (!world_id || synth_on) return
     let dead = false
-    zone_world_doc(world_id).then((doc) => {
+    // zone_world_doc reduces read failures to retryable null results, so this detached effect settles safely.
+    void zone_world_doc(world_id).then((doc) => {
       if (!dead) set_world_doc(doc)
     })
     return () => {

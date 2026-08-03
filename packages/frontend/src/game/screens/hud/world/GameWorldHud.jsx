@@ -33,6 +33,7 @@ import '../mobile-fight-hud.css'
 import { useFight, useGameState } from '../../../store.js'
 import { select_hack_presentation } from '../../../core/world_presentation.js'
 import { event_toast_store } from '../../../core/toast.js'
+import { game_log } from '../../../core/log.js'
 import { WorldChat } from './WorldChat.jsx'
 import { PartyFrame } from './PartyFrame.jsx'
 import { SelfPlate } from './SelfPlate.jsx'
@@ -163,32 +164,42 @@ export function GameWorldHud() {
     // path's dev hooks are window.__voxel_engine/__voxel_board in embed_voxel.js).
     // DEV cast hook (window.__ARES_DEV_CAST) — drives the REAL commit_turn cast path headlessly so qa can land
     // a spell (unblocks D16 AP/MP refill, D19 mob replay, the live float). Same DEV gate + tree-shake as above.
-    import('../../../dev/dev_cast.js').then((m) => {
-      if (!cleared) m.register_dev_cast()
-    })
+    import('../../../dev/dev_cast.js')
+      .then((m) => {
+        if (!cleared) m.register_dev_cast()
+      })
+      .catch((error) => game_log('world-hud', 'DEV cast hook failed to register', error))
     // P0-sweep diagnostic hooks (__ARES_DEV_MOVE / __ARES_DEV_STATE) — live-instance access for the
     // headless drive (a Playwright-side /src import resolves a DEAD second Vite module instance; window
     // hooks close over the real stores). Same DEV gate + tree-shake.
-    import('../../../dev/dev_probe.js').then((m) => {
-      if (!cleared) m.register_dev_probe()
-    })
+    import('../../../dev/dev_probe.js')
+      .then((m) => {
+        if (!cleared) m.register_dev_probe()
+      })
+      .catch((error) => game_log('world-hud', 'DEV probe hooks failed to register', error))
     // Synthetic terminal-fight harness (__ARES_DEV_SYNTH_FIGHT/KILL) — the death-sequence gate's pixels rig
     // (revives the D139-dead force-board coverage on the voxel pipeline). Same DEV gate + tree-shake.
-    import('../../../dev/dev_synth_fight.js').then((m) => {
-      if (!cleared) m.register_dev_synth_fight()
-    })
+    import('../../../dev/dev_synth_fight.js')
+      .then((m) => {
+        if (!cleared) m.register_dev_synth_fight()
+      })
+      .catch((error) => game_log('world-hud', 'DEV synthetic fight hooks failed to register', error))
     // #1100 — the scripted fight bot's doors (__ARES_DEV_READ full-state read / __ARES_DEV_TURN batched
     // player turn). Same DEV gate + tree-shake; the simulator registers the identical pair, so ONE bot
     // drives both surfaces.
-    import('../../../dev/dev_bot_seam.js').then((m) => {
-      if (!cleared) m.register_dev_bot_seam()
-    })
+    import('../../../dev/dev_bot_seam.js')
+      .then((m) => {
+        if (!cleared) m.register_dev_bot_seam()
+      })
+      .catch((error) => game_log('world-hud', 'DEV bot seam failed to register', error))
     // #1100 coop — the second seat's door (__ARES_DEV_WORLD_JOIN). WORLD-ONLY BY CONSTRUCTION: it imports the
     // chain entry, so it may never live in the seam module the simulator also registers (zero-drift's one
     // world-only row). Same DEV gate + tree-shake.
-    import('../../../dev/dev_world_entry.js').then((m) => {
-      if (!cleared) m.register_dev_world_entry()
-    })
+    import('../../../dev/dev_world_entry.js')
+      .then((m) => {
+        if (!cleared) m.register_dev_world_entry()
+      })
+      .catch((error) => game_log('world-hud', 'DEV world-entry hook failed to register', error))
     return () => {
       cleared = true
     }
