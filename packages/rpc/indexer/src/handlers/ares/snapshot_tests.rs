@@ -3208,3 +3208,123 @@ fn remove_pet_box_claim_drops_the_claims_map_entry() {
         vec![del(k_pet_claims(&owner), &mpath("$.claims", claim_id))]
     );
 }
+
+// ── config::GameConfig class rows (#1886) ────────────────────────────────────
+/// RUNTIME PROVENANCE: the LIVE testnet `GameConfig` shared object
+/// `0xbde6c41a894fa411c1c8ebf97886ab0f19f368c53d87946bde8e06b5f080e03d` (post-republish lineage,
+/// type `0x2c41f093…eb26::config::GameConfig`), version 251, prevTx
+/// `F4WK1D8KB6uLuB2RA9ze6p94Ng4YKso2ZdXypznYLtUy` — captured 2026-08-03 with
+/// `sui client object <id> --bcs --json` (681 bytes). Whole-object wire, NOT re-encoded from this
+/// crate's own model: the class rows below are the chain's, so a field-order drift in `GameConfig`
+/// (a new dial inserted before `classes`) fails HERE instead of silently mis-reading offsets.
+const REAL_GAME_CONFIG_OBJECT_BCS_HEX: &str = "bde6c41a894fa411c1c8ebf97886ab0f19f368c53d87946bde8e06b5f080e03d0164000000000000006400000000000000c800000000000000c8af00000000000060ea000000000000070000000000000032000000000000006400000000000000102700000000000060ea0000000000000a000000000000001e000000000000000600000000000000ffff0153306537313032333130636439353963343735633832323061346231666239326339333664326239383635313462616437373536386363353732383465376662373a3a666f7267656d616769653a3a466f7267650152393539613635663764623037306133316263633838383831643362353966613739616339663262353034633137313433313964363534343866353033343735613a3a67696674696e673a3a47696674696e670152666635343536663861613338643238663464303734613837393635643133616266346630353739616464643266313938323939633937313462323232373235353a3a64756e67656f6e3a3a44756e67656f6e0c4600000000000000060000000000000003000000000000002d00000000000000060000000000000003000000000000007800000000000000060000000000000003000000000000003700000000000000060000000000000003000000000000002d00000000000000060000000000000003000000000000003200000000000000060000000000000003000000000000001e00000000000000060000000000000003000000000000003200000000000000060000000000000003000000000000004100000000000000060000000000000003000000000000001e0000000000000006000000000000000300000000000000370000000000000006000000000000000300000000000000320000000000000006000000000000000300000000000000";
+
+#[test]
+fn game_config_object_bcs_decodes_the_real_onchain_wire() {
+    let bytes = hex::decode(REAL_GAME_CONFIG_OBJECT_BCS_HEX).unwrap();
+    assert_eq!(bytes.len(), 681);
+    let decoded: GameConfigObject =
+        bcs::from_bytes(&bytes).expect("real GameConfig object bytes must decode");
+    // The 12 §17.31 rows, in class-id order (config.move `y86()`): base HP per class, 6 AP / 3 MP.
+    assert_eq!(decoded.classes.len(), 12);
+    assert_eq!(
+        decoded
+            .classes
+            .iter()
+            .map(|r| r.base_hp)
+            .collect::<Vec<_>>(),
+        vec![70, 45, 120, 55, 45, 50, 30, 50, 65, 30, 55, 50]
+    );
+    assert!(decoded
+        .classes
+        .iter()
+        .all(|r| r.base_ap == 6 && r.base_mp == 3));
+}
+
+#[test]
+fn game_config_object_projects_every_class_row_into_the_config_doc() {
+    // THE #1886 DEFECT: `rpc:config.classes` is fed ONLY by `config::ClassRowSet`, which fires ONLY
+    // from the three admin setters — the 12 rows are BORN in `init` (event-less), so `/v1/config`
+    // served `classes:{}` on a lineage nobody had tuned. The object snapshot is the missing arm.
+    let bytes = hex::decode(REAL_GAME_CONFIG_OBJECT_BCS_HEX).unwrap();
+    let writes = map_game_config_object(&bytes).expect("must project");
+    // Doc init stays NX (the event arm owns `enabled`/`dials`), then one row per class id.
+    assert_eq!(writes.len(), 1 + 12);
+    assert_eq!(
+        writes[0],
+        set_nx(
+            "rpc:config".into(),
+            "$",
+            serde_json::json!({ "dials": {}, "classes": {} })
+        )
+    );
+    assert_eq!(
+        writes[1],
+        set(
+            "rpc:config".into(),
+            &mpath("$.classes", "0"),
+            serde_json::json!({ "base_hp": 70u64, "base_ap": 6u64, "base_mp": 3u64 })
+        )
+    );
+    assert_eq!(
+        writes[3],
+        set(
+            "rpc:config".into(),
+            &mpath("$.classes", "2"),
+            serde_json::json!({ "base_hp": 120u64, "base_ap": 6u64, "base_mp": 3u64 })
+        )
+    );
+    // Garbage bytes → safe None (never panics the batch).
+    assert!(map_game_config_object(&[0x00, 0x01]).is_none());
+}
+
+#[tokio::test]
+async fn game_config_checkpoint_output_projects_the_class_rows() {
+    // The wiring half of #1886: the arm must be REACHED from the checkpoint dispatch, not just
+    // callable. A `GameConfig` re-output (any admin write, or the publish tx that shares it)
+    // carries the full class vector, so the mirror re-anchors on the next touch of the object.
+    const CONFIG_IDX: u64 = 0xc0f1;
+    let mut builder = TestCheckpointBuilder::new(1_886)
+        .start_transaction(1)
+        .create_owned_object(CONFIG_IDX)
+        .finish_transaction();
+    let mut checkpoint = builder.build_checkpoint();
+    let config_id = TestCheckpointBuilder::derive_object_id(CONFIG_IDX);
+    let version = checkpoint
+        .object_set
+        .iter()
+        .find(|object| object.id() == config_id)
+        .unwrap()
+        .version();
+    // The CAPTURED wire, with ONLY its leading 32-byte UID rebound to the harness-derived id (a
+    // checkpoint output object is matched by id) — every byte the projection reads, class vector
+    // included, is the chain's own.
+    let mut body = hex::decode(REAL_GAME_CONFIG_OBJECT_BCS_HEX).unwrap();
+    body[..32].copy_from_slice(&config_id.into_bytes());
+    checkpoint.object_set.insert(checkpoint_fixture_object(
+        &format!("{NARROW_EFFECT_ARESRPG_ORIGIN}::config::GameConfig"),
+        version,
+        body,
+        Owner::Shared {
+            initial_shared_version: version,
+        },
+    ));
+
+    let writes = AresSnapshotHandler::from_parts(None, None)
+        .process(&Arc::new(checkpoint))
+        .await
+        .unwrap();
+    let rows: Vec<_> = writes
+        .iter()
+        .filter(|w| matches!(w, RedisWrite::Set { key, path, nx, .. } if key == "rpc:config" && path.starts_with("$.classes") && !nx))
+        .collect();
+    assert_eq!(rows.len(), 12, "every class row must reach the config doc");
+    assert!(
+        writes.iter().any(|w| matches!(
+            w,
+            RedisWrite::Set { key, path, json, nx: false }
+                if key == "rpc:config" && *path == mpath("$.classes", "2") && json.contains("\"base_hp\":120")
+        )),
+        "class 2 (IKARI) must carry the chain's 120 base HP"
+    );
+}

@@ -1176,3 +1176,47 @@ pub struct RecipelessSet {
     pub gear_template: ObjectID,
     pub recipe_less: bool,
 }
+
+/// One `aresrpg::config::ClassRow` (three `u64` = 24 bytes): a class's base combat constants.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ClassRow {
+    pub base_hp: u64,
+    pub base_ap: u64,
+    pub base_mp: u64,
+}
+
+/// `aresrpg::config::GameConfig` object contents — snapshotted for the `classes` vector ALONE
+/// (#1886). The rows are BORN in `config.move`'s `init` (`y86()`), which emits nothing, and
+/// `ClassRowSet` fires only from the three admin setters — so an event-only projection serves
+/// `classes:{}` on any lineage nobody has re-tuned. The object is the only place the birth state
+/// exists. The scalar dials stay EVENT-projected on purpose (an unset dial must remain ABSENT,
+/// never a stale zero — the `/v1/config` contract its consumers read defensively).
+///
+/// Field order mirrors the Move struct byte-for-byte; `classes` is last, so every field before it
+/// must be walked. `Option<TypeName>` encodes exactly like `Option<String>` (a single-field struct
+/// is its field in BCS), which is why the three brand pins are typed as strings here — they are
+/// consumed, never projected. Pinned against the LIVE testnet object in `snapshot_tests.rs`, so a
+/// new dial inserted before `classes` fails that test instead of silently shifting offsets.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct GameConfigObject {
+    pub id: ObjectID,
+    pub enabled: bool,
+    pub xp_multiplier: u64,
+    pub loot_multiplier: u64,
+    pub max_reachable_level: u64,
+    pub turn_duration_ms: u64,
+    pub placement_ms: u64,
+    pub claim_window_epochs: u64,
+    pub archimob_bp: u64,
+    pub aging_bp_per_hour: u64,
+    pub aging_cap_bp: u64,
+    pub reclaim_cooldown_ms: u64,
+    pub pvp_level_gate: u64,
+    pub listing_level_gate: u64,
+    pub team_size_bound: u64,
+    pub domain_enabled: u16,
+    pub forge_brand: Option<String>,
+    pub gifting_brand: Option<String>,
+    pub dungeon_brand: Option<String>,
+    pub classes: Vec<ClassRow>,
+}

@@ -44,14 +44,14 @@ use tracing::{debug, warn};
 use super::decode::decode_bcs;
 use super::model::{
     BoardCreated, CharacterObject, Crushed, EquippedItemField, FightOutcomeObject,
-    ItemDamagesField, ItemObject, ItemStatsField, ItemTemplateObject, JobXpField, KioskItemListed,
-    PersonalKioskCapObject, PetBoxClaimObject, PoolBuy, PoolSell, ProgressionField, RecipeObject,
-    RecipelessSet, SaleBought, ZoneField, ZoneGroupRootField,
+    GameConfigObject, ItemDamagesField, ItemObject, ItemStatsField, ItemTemplateObject, JobXpField,
+    KioskItemListed, PersonalKioskCapObject, PetBoxClaimObject, PoolBuy, PoolSell,
+    ProgressionField, RecipeObject, RecipelessSet, SaleBought, ZoneField, ZoneGroupRootField,
 };
 use super::project::{
     self, char_init, del, k_character, k_item, k_lastsale, k_result, k_results, k_template,
     k_world, k_zone, k_zones, mpath, sadd, set, set_nx, srem, zadd, zrem, zrem_rank_keep_newest,
-    RedisWrite, K_TEMPLATES, K_WORLDS,
+    RedisWrite, K_CONFIG, K_TEMPLATES, K_WORLDS,
 };
 use super::xp_curve::level_from_xp;
 use crate::store::RedisStore;
@@ -212,6 +212,12 @@ fn read_mob_canonical_ids(path: &Path) -> Result<MobCanonicalCensus> {
 /// object (`RecipeRetired`), which the delete sweep below reaps.
 const CRAFTING_MODULE: &str = "crafting";
 const RECIPE_TYPE: &str = "Recipe";
+/// `aresrpg::config::GameConfig` — the shared game object. Snapshotted for its `classes` vector
+/// alone (#1886): the 12 rows are created by `init` and only ever RE-announced by `ClassRowSet`,
+/// so an event-only mirror serves `classes:{}` until an admin tunes one. Same core `aresrpg`
+/// package as `character`/`item`, so no new allowlist entry — matched by (module, name).
+const CONFIG_MODULE: &str = "config";
+const GAME_CONFIG_TYPE: &str = "GameConfig";
 /// The engine's soulbound settled outcome (`aresrpg_fight::settlement::FightOutcome`) —
 /// created (address-owned) at settle, DELETED at `results::open`. The pending-outcomes
 /// projection mirrors both edges from checkpoint object create/delete.
@@ -1467,6 +1473,31 @@ fn world_doc_writes(id: &str, seed: u64, biome: &str, required_level: u16) -> Ve
     ]
 }
 
+/// Snapshot the `aresrpg::config::GameConfig` object's per-class combat rows into the SAME
+/// `rpc:config` doc `config::ClassRowSet` projects into (`$.classes["<class id>"]`), so
+/// `/v1/config` serves the chain's rows from the object's BIRTH instead of only after an admin
+/// has tuned one (#1886 — the projection was event-only over state `init` creates silently).
+/// Row-wise (never a whole-`$.classes` overwrite) so the event arm and this arm are the same
+/// write for the same truth in either order — a tuning tx re-outputs the object AND emits
+/// `ClassRowSet`, and both land on the identical value. `None` = the bytes did not decode as a
+/// GameConfig (never fails the batch); the id is not carried — `rpc:config` is a singleton doc.
+pub fn map_game_config_object(contents: &[u8]) -> Option<Vec<RedisWrite>> {
+    let config: GameConfigObject = decode_bcs("object", "GameConfig", contents)?;
+    let mut writes = vec![set_nx(
+        K_CONFIG.into(),
+        "$",
+        json!({ "dials": {}, "classes": {} }),
+    )];
+    writes.extend(config.classes.iter().enumerate().map(|(class_id, row)| {
+        set(
+            K_CONFIG.into(),
+            &mpath("$.classes", &class_id.to_string()),
+            json!({ "base_hp": row.base_hp, "base_ap": row.base_ap, "base_mp": row.base_mp }),
+        )
+    }));
+    Some(writes)
+}
+
 /// Snapshot one `aresrpg::crafting::Recipe` object into its encyclopedia doc `rpc:recipe:{id}`
 /// (+ the `idx:recipes` index the `/v1/encyclopedia` recipes view reads). The doc carries the
 /// EXACT on-chain values (ingredient template ids + quantities, output template + quantity,
@@ -2454,6 +2485,7 @@ impl Processor for AresSnapshotHandler {
                         super::party::map_party_object(&id, mv.contents())
                     }
                     (CRAFTING_MODULE, RECIPE_TYPE) => map_recipe_object(&id, mv.contents()),
+                    (CONFIG_MODULE, GAME_CONFIG_TYPE) => map_game_config_object(mv.contents()),
                     (SETTLEMENT_MODULE, FIGHT_OUTCOME_TYPE) => {
                         map_fight_outcome_object(&id, mv.contents(), obj.owner(), ts_ms)
                     }
