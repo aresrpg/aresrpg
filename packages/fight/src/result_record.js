@@ -12,11 +12,17 @@
 // only rule that survives both, and accumulation needs memory. So this is a fold, and the record it produces is
 // the one thing consumers read.
 //
-// TWO LIFETIMES, ONE RECORD TYPE. The live half (kind/winner/run) is folded by the fight core and served at
-// `fight_visible_view.result`; the full record, loot included, is folded by the game store's `fight_result`
-// slice, because the terminal card MUST outlive the fight teardown that destroys the core's state (game.js:245
-// — the same reason `fight_summary` is a separate persistent slice). The slice COMMITS the view's facts; it
-// never re-derives them. One direction, always: view → slice, evidence → slice, never slice → view.
+// TWO LIFETIMES, ONE RECORD TYPE. The full record — loot included — is folded by the game store's
+// `fight_result` slice, because the terminal card MUST outlive the fight teardown that destroys the core's
+// state (game.js:245 — the same reason `fight_summary` is a separate persistent slice), and because the
+// settlement evidence only arrives after that teardown. `fight_visible_view.result` serves the LIVE half in
+// the same shape and vocabulary, built per-projection from the fight state it can see. One direction, always:
+// view → slice, evidence → slice, never slice → view.
+//
+// STATED SCOPE. The ratchet below is real wherever the record ACCUMULATES — which today is the slice, where
+// the loot transports land. The live view is a pure projection with no memory, so its half of the record is
+// monotonic within one commit and no further; giving it an across-time latch means folding the terminal
+// evidence in the core that owns the committed board, which `visible_facts.js` records as its own train.
 
 /** A fact is UNKNOWN when it is null/undefined, or an empty collection. Absence is not an answer. */
 const unknown = (value) => value == null || (Array.isArray(value) && value.length === 0)
@@ -46,6 +52,14 @@ export const empty_result = () => ({
   conflicts: [],
 })
 
+/** Structural equality for the scalars and small plain objects the record holds. */
+const same_value = (a, b) => {
+  if (a === b) return true
+  if (a === null || b === null || typeof a !== 'object' || typeof b !== 'object') return false
+  const keys = Object.keys(a)
+  return keys.length === Object.keys(b).length && keys.every((k) => same_value(a[k], b[k]))
+}
+
 /**
  * THE MONOTONICITY GUARD — the one law this module exists to state.
  *
@@ -72,18 +86,10 @@ export const commit_fact = (record, key, offered, source) => {
   return { ...record, conflicts: [...record.conflicts, { key, held, offered, source }] } // ④
 }
 
-/** Structural equality for the scalars and small plain objects the record holds. */
-const same_value = (a, b) => {
-  if (a === b) return true
-  if (a === null || b === null || typeof a !== 'object' || typeof b !== 'object') return false
-  const keys = Object.keys(a)
-  return keys.length === Object.keys(b).length && keys.every((k) => same_value(a[k], b[k]))
-}
-
 /** A drop's IDENTITY for accumulation: the exact owned object when one exists, else the exact template, else the
  *  on-chain class. Never the display name — two transports spell the same drop's name differently, and that is
  *  precisely the kind of disagreement this record must survive rather than fork on. */
-export const loot_key = (row) => String(row?.item_id ?? row?.template_id ?? row?.item_type ?? '')
+const loot_key = (row) => String(row?.item_id ?? row?.template_id ?? row?.item_type ?? '')
 
 /** The templates this record already knows one owned object for. See `commit_loot`'s supersession rule. */
 const enumerated_templates = (rows) =>
@@ -144,7 +150,3 @@ export const commit_loot = (record, offered, source) => {
     conflicts: conflicts.length ? [...record.conflicts, ...conflicts] : record.conflicts,
   }
 }
-
-/** The terminal-status vocabulary the chain speaks, mapped once into the record's own union. */
-export const result_kind_of = ({ won = false, room_clear = false, defeat = false } = {}) =>
-  defeat ? 'defeat' : room_clear ? 'room_clear' : won ? 'victory' : null
