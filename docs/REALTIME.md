@@ -34,6 +34,11 @@ browser ⇄ browser (WebRTC via trystero) — signaling: wss://relay.aresrpg.wor
 - **Infrastructure:** one self-hosted stateless signaling relay (message-passer, persistence
   off, multi-region) + coturn for NAT traversal. Neither is authoritative; neither stores
   anything; the server NEVER receives a client state write.
+
+> The relay origin hop must remain HTTP/1.1 end-to-end.
+> Any tunnel or ingress change must re-run `scripts/relay_probe.mjs` before shipping.
+> Ship only after its MQTT CONNECT → CONNACK proof passes.
+
 - **History, so it never re-litigates:** public third-party relays rate-limited us and stalled
   fights (2026-07-27). The cure was self-hosted relays and getting fights OFF p2p — not
   removing p2p. A client→server courier existed for one day (07-28) and was retired as a
