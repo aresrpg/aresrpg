@@ -1,2 +1,5 @@
-4232432a8 → Refs #2122 — fix(fight): presence is binary — auto-resume retries per candidacy, no modal
-b437386da → Refs #1737 — test(fight): seal the binary-presence invariant — retry trace + reachable states
+d78cc137d → Fixes #2130 — fix(fight): resolve stance beat fighter identity
+a4d4ae09f → Fixes #2031 — test(twin): instrument roll distribution (#2031)
+479ae3672 → Refs #387 — fix(fight): ranged strikes refuse point-blank — the ruled category floor
+ad2af700c → Refs #387 — feat(fight): wand/hammer/scythe/shovel/pickaxe stop fighting bare-handed
+69c3de6ed → Refs #387 Refs #1870 — test(sim,move): the weapon-shape matrix — every category, every facing
