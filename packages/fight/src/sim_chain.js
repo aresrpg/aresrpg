@@ -348,6 +348,12 @@ const active_turn_context = (
 // whose slot was computed before the previous step's action counter advanced.
 const CLOCKED_COMMANDS = new Set(['cast', 'move'])
 
+// A turn-start tick belongs to the turn being OPENED, not the actor whose end-turn command opened it. Move has
+// already advanced the fight ordinal when `tick_turn_start` derives `fight::turn_seed(fight, fid)`, so hand the
+// reducer that same incoming ordinal. A mob landing ignores this previewable clock; if a player lands, the
+// reducer re-seats it onto that fighter. `ai_turn` closes with the same end-turn door inside the reducer.
+const TURN_ADVANCING_COMMANDS = new Set(['end_turn', 'ai_turn'])
+
 /** A capsule command must be JSON-safe while preserving every u64-ish clock byte exactly. A player MOVE carries
  *  it too (#1207): its tackle escape draws off the clock, so a replay stripped of it re-rolls a different
  *  contest and decides a different fight. */
@@ -370,7 +376,9 @@ const recorded_command = (chain, command, turn_context) => {
 const fold_command = (chain, command, actions = chain.actions ?? {}) => {
   const turn_context = CLOCKED_COMMANDS.has(command.type)
     ? active_turn_context(chain, chain.sim_state, actions)
-    : chain.ctx.turn_context
+    : TURN_ADVANCING_COMMANDS.has(command.type)
+      ? active_turn_context(chain, chain.sim_state, actions, Number(chain.ctx.turn_context.turn_ordinal) + 1)
+      : chain.ctx.turn_context
   const { state, events } = reduce(chain.sim_state, command, { ...chain.ctx, turn_context })
   // Production stamps fresh entropy only when `turns::resolve_from` lands on a PLAYER; mobs resolve inside the
   // crank wave. Count those landings directly instead of borrowing sim `turn_number`, which counts rounds and
