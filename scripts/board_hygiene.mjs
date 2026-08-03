@@ -288,13 +288,34 @@ export function decide_stale(issue, timeline, now_ms) {
 // A pull request that passes on this arm alone therefore drains NOTHING on landing; the gate says so
 // out loud in its message rather than letting a green check imply a close that will not happen.
 // Precedence is deliberate: the parser first, so the arm that actually closes is the one reported.
-export const link_candidates = (pull_request, commits, repository) =>
-  parse_close_refs(
-    [...(commits ?? []).map((commit) => commit?.commit?.message), pull_request?.title, pull_request?.body]
-      .filter(Boolean)
-      .join('\n'),
-    repository
+// One parser over the two close sources: the reviewed PR body and the commits that will land. Keep
+// the source attribution beside each number so the landing comment can say exactly why it closed a
+// row. Titles are deliberately absent: neither landing pass treats them as close instructions.
+export function close_source_matches(pull_request, commits, repository) {
+  const body_refs = parse_close_refs(pull_request?.body, repository)
+  const commit_refs = (commits ?? []).flatMap((commit) =>
+    parse_close_refs(commit?.commit?.message, repository).map((number) => ({
+      number,
+      sha: String(commit?.sha ?? ''),
+    }))
   )
+  const numbers = [...new Set([...body_refs, ...commit_refs.map(({ number }) => number)])].toSorted(
+    (left, right) => left - right
+  )
+  return new Map(
+    numbers.map((number) => [
+      number,
+      {
+        body: body_refs.includes(number),
+        commits: [...new Set(commit_refs.filter((match) => match.number === number).map(({ sha }) => sha))],
+      },
+    ])
+  )
+}
+
+export const link_candidates = (pull_request, commits, repository) => [
+  ...close_source_matches(pull_request, commits, repository).keys(),
+]
 
 export function decide_link_gate(pull_request, commits, repository, options = {}) {
   const { registered_total = 0, closable_refs = null, rejected_refs = [] } = options
@@ -343,11 +364,20 @@ export function decide_ref_gate(pull_request, commits, comments) {
 // Comment bodies — one home per sentence the board will read.
 // ---------------------------------------------------------------------------
 
+const landing_source_line = (evidence) => {
+  const commits = evidence?.sources?.commits ?? []
+  const commit_text = commits.map((sha) => `commit \`${sha.slice(0, 12)}\``).join(', ')
+  if (evidence?.sources?.body && commits.length > 0) return `Matched close sources: body and ${commit_text}.`
+  if (evidence?.sources?.body) return 'Matched close source: body.'
+  return `Matched close source: ${commit_text}.`
+}
+
 export const landing_comment = (evidence) =>
   [
     evidence.pr_number
       ? `Closed by #${Number(evidence.pr_number)} (landed \`${evidence.sha.slice(0, 12)}\` on \`edge\`).`
       : `Closed by commit \`${evidence.sha.slice(0, 12)}\` (landed on \`edge\`).`,
+    landing_source_line(evidence),
     '',
     "This repo lands by fast-forward push, where GitHub's own close-keywords are inert (#845) — so this",
     'is the mechanical sweep that closes the row instead. Reopen with evidence if it is still real.',
@@ -556,14 +586,27 @@ async function ensure_stale_label(config) {
 // Pass 1 + 2 — close on landing (push event), and its daily replay.
 // ---------------------------------------------------------------------------
 
-// One row can be referenced by several commits of one landing; the FIRST evidence wins so the comment
-// cites the commit that actually carried the fix.
-const merge_evidence = (found, number, evidence) => (found.has(number) ? found : new Map(found).set(number, evidence))
+// One row can be referenced by several sources in one landing. Keep the first landing identity, but
+// union every source so the evidence comment reports body, each matching commit, or both.
+const merge_evidence = (found, number, evidence) => {
+  const previous = found.get(number)
+  if (!previous) return new Map(found).set(number, evidence)
+  return new Map(found).set(number, {
+    ...previous,
+    pr_number: previous.pr_number ?? evidence.pr_number,
+    sources: {
+      body: previous.sources.body || evidence.sources.body,
+      commits: [...new Set([...previous.sources.commits, ...evidence.sources.commits])],
+    },
+  })
+}
+
+const sorted_evidence = (found) => new Map([...found.entries()].toSorted(([left], [right]) => left - right))
 
 // Pure half of the push pass. The compare endpoint resolves every commit in before..after; GitHub's
-// associated-pulls endpoint supplies the PR bodies. Bodies are the close contract contributors edit
-// and review, so commit messages, PR titles, unrelated-base PRs, and quoted transcript refs do not
-// become mutation instructions here.
+// associated-pulls endpoint supplies the PR bodies. The range's own commit messages and the bodies
+// of PRs proven landed are the two close sources; titles, unrelated-base PRs, and quoted transcript
+// refs do not become mutation instructions here.
 //
 // THE LANDED TEST IS THE HEAD, NOT SET-MEMBERSHIP OF THE RANGE (#1885). Stacking is the normal shape
 // here — a train queues behind another so several ride one CI cycle — and a stacked branch CONTAINS
@@ -577,27 +620,40 @@ export function extract_landed_references(compare, associated_pulls, repository)
   const commits = Array.isArray(compare?.commits) ? compare.commits : []
   const pulls_by_sha = is_record(associated_pulls) ? associated_pulls : {}
   const landed_shas = new Set(commits.map((commit) => String(commit?.sha ?? '').toLowerCase()))
-  return commits.reduce((found, commit) => {
+  const found = commits.reduce((accumulated, commit) => {
     const sha = String(commit?.sha ?? '')
     if (!is_full_sha(sha)) throw new Error('compare payload contains a commit without a full SHA')
     const pulls = pulls_by_sha[sha]
     if (!Array.isArray(pulls)) throw new Error(`associated pull payload missing for ${sha}`)
-    return pulls
+    const landed_pulls = pulls
       .filter((pull) => pull?.base?.ref === 'edge')
       .filter((pull) => landed_shas.has(String(pull?.head?.sha ?? '').toLowerCase()))
-      .reduce(
-        (from_pulls, pull) =>
-          parse_close_refs(pull?.body, repository).reduce(
-            (from_refs, number) =>
-              merge_evidence(from_refs, number, {
-                sha,
-                pr_number: Number.isSafeInteger(Number(pull?.number)) ? Number(pull.number) : null,
-              }),
-            from_pulls
-          ),
-        found
+    const from_bodies = landed_pulls.reduce((from_pulls, pull) => {
+      const pr_number = Number(pull?.number)
+      return [...close_source_matches(pull, [], repository).entries()].reduce(
+        (from_refs, [number, sources]) =>
+          merge_evidence(from_refs, number, {
+            sha,
+            pr_number: Number.isSafeInteger(pr_number) ? pr_number : null,
+            sources,
+          }),
+        from_pulls
       )
+    }, accumulated)
+    const exact_head = landed_pulls.find((pull) => String(pull?.head?.sha ?? '').toLowerCase() === sha.toLowerCase())
+    const owner = exact_head ?? (landed_pulls.length === 1 ? landed_pulls[0] : null)
+    const pr_number = Number(owner?.number)
+    return [...close_source_matches(null, [commit], repository).entries()].reduce(
+      (from_refs, [number, sources]) =>
+        merge_evidence(from_refs, number, {
+          sha,
+          pr_number: Number.isSafeInteger(pr_number) ? pr_number : null,
+          sources,
+        }),
+      from_bodies
+    )
   }, new Map())
+  return sorted_evidence(found)
 }
 
 async function pushed_landings(config) {
@@ -619,20 +675,24 @@ async function merged_pull_landings(config) {
     api_url(config, '/pulls', { state: 'closed', base: 'edge', sort: 'updated', direction: 'desc', per_page: '100' }),
     (pull) => Date.parse(pull?.updated_at ?? '') < cutoff
   )
-  return pulls
-    .filter((pull) => pull?.merged_at && Date.parse(pull.merged_at) >= cutoff)
-    .reduce(
-      (found, pull) =>
-        parse_close_refs([pull?.title, pull?.body].filter(Boolean).join('\n'), config.repository).reduce(
-          (accumulated, number) =>
-            merge_evidence(accumulated, number, {
-              sha: String(pull?.merge_commit_sha ?? ''),
-              pr_number: Number(pull?.number),
-            }),
-          found
-        ),
-      new Map()
+  const merged = pulls.filter((pull) => pull?.merged_at && Date.parse(pull.merged_at) >= cutoff)
+  let found = new Map()
+  for (const pull of merged) {
+    const commits = await collect_pages(
+      config,
+      api_url(config, `/pulls/${Number(pull?.number)}/commits`, { per_page: '100' })
     )
+    const matches = close_source_matches(pull, commits, config.repository)
+    found = [...matches.entries()].reduce((accumulated, [number, sources]) => {
+      const source_sha = sources.body ? pull?.merge_commit_sha : sources.commits[0]
+      return merge_evidence(accumulated, number, {
+        sha: String(source_sha ?? pull?.merge_commit_sha ?? ''),
+        pr_number: Number(pull?.number),
+        sources,
+      })
+    }, found)
+  }
+  return sorted_evidence(found)
 }
 
 async function sweep_landings(config, landings) {

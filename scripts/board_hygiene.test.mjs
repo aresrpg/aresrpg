@@ -11,6 +11,7 @@ import {
   EXEMPT_LABELS,
   NO_ISSUE_LABEL,
   STALE_WARNING_LABEL,
+  close_source_matches,
   decide_landing,
   decide_link_gate,
   decide_ref_gate,
@@ -18,6 +19,7 @@ import {
   decide_stale,
   extract_landed_references,
   is_conventional_subject,
+  landing_comment,
   landing_marker,
   last_human_activity,
   link_candidates,
@@ -41,6 +43,7 @@ const merged_pulls = read_fixture('merged_pulls.json')
 const open_issues = read_fixture('open_issues.json')
 const push_landing = read_fixture('push_landing.json')
 const push_landing_stacked = read_fixture('push_landing_stacked.json')
+const commit_close_sources = read_fixture('commit_close_sources.json')
 
 const DAY_MS = 86_400_000
 const now_ms = Date.parse('2026-07-27T12:00:00Z')
@@ -290,7 +293,7 @@ describe('a push fixture resolves the exact landing range and associated PR bodi
     })
   })
 
-  it('extracts close refs only from edge PR bodies associated with commits in that range', () => {
+  it('unions edge PR bodies with commit trailers from the exact landed range', () => {
     expect([
       ...extract_landed_references(push_landing.compare, push_landing.associated_pulls, REPOSITORY).entries(),
     ]).toEqual([
@@ -299,6 +302,7 @@ describe('a push fixture resolves the exact landing range and associated PR bodi
         {
           sha: '2222222222222222222222222222222222222222',
           pr_number: 1570,
+          sources: { body: true, commits: [] },
         },
       ],
       [
@@ -306,6 +310,7 @@ describe('a push fixture resolves the exact landing range and associated PR bodi
         {
           sha: '2222222222222222222222222222222222222222',
           pr_number: 1570,
+          sources: { body: true, commits: [] },
         },
       ],
       [
@@ -313,9 +318,54 @@ describe('a push fixture resolves the exact landing range and associated PR bodi
         {
           sha: '3333333333333333333333333333333333333333',
           pr_number: 1571,
+          sources: { body: true, commits: [] },
+        },
+      ],
+      [
+        7000,
+        {
+          sha: '2222222222222222222222222222222222222222',
+          pr_number: 1570,
+          sources: {
+            body: false,
+            commits: ['2222222222222222222222222222222222222222'],
+          },
         },
       ],
     ])
+  })
+})
+
+describe('commit trailers are first-class landing close sources (#2126)', () => {
+  it('unions valid commit trailers with a PR body whose closes table contains only bare refs', () => {
+    const { compare, associated_pulls } = commit_close_sources
+    const [{ sha }] = compare.commits
+    const [pull] = associated_pulls[sha]
+    expect(parse_close_refs(pull.body, REPOSITORY)).toEqual([])
+    const landed = extract_landed_references(compare, associated_pulls, REPOSITORY)
+    expect([...landed.keys()]).toEqual([2101, 2102])
+    expect(landed.get(2101)).toEqual({
+      sha: '2222222222222222222222222222222222222222',
+      pr_number: 2125,
+      sources: {
+        body: false,
+        commits: ['2222222222222222222222222222222222222222'],
+      },
+    })
+    expect(landed.has(2199)).toBe(false)
+  })
+
+  it('reports body, commit SHA, or both on the evidence line', () => {
+    const sha = '2222222222222222222222222222222222222222'
+    expect(landing_comment({ sha, pr_number: 2125, sources: { body: true, commits: [] } })).toContain(
+      'Matched close source: body.'
+    )
+    expect(landing_comment({ sha, pr_number: 2125, sources: { body: false, commits: [sha] } })).toContain(
+      'Matched close source: commit `222222222222`.'
+    )
+    expect(landing_comment({ sha, pr_number: 2125, sources: { body: true, commits: [sha] } })).toContain(
+      'Matched close sources: body and commit `222222222222`.'
+    )
   })
 })
 
@@ -342,6 +392,7 @@ describe('a stacked pull request drains nothing until its own head lands (#1885)
     expect(landed.get(972)).toEqual({
       sha: 'd18614db08621b3cf0e70c1f4c1100284df5aa01',
       pr_number: 1881,
+      sources: { body: true, commits: [] },
     })
   })
 })
@@ -428,6 +479,7 @@ describe('run_landing drives a landing sweep end to end', () => {
         return json_response({})
       }
       if (pathname === '/repos/aresrpg/aresrpg/pulls') return json_response(merged_pulls)
+      if (pathname === '/repos/aresrpg/aresrpg/pulls/1187/commits') return json_response([])
       const issue_match = /^\/repos\/aresrpg\/aresrpg\/issues\/(\d+)$/.exec(pathname)
       if (issue_match) return json_response(open_issues[issue_match[1]])
       if (/\/issues\/998\/comments$/.test(pathname))
@@ -464,6 +516,7 @@ describe('run_landing drives a landing sweep end to end', () => {
       'PATCH /repos/aresrpg/aresrpg/issues/965',
     ])
     expect(sent[0].body.body).toContain('Closed by #1187')
+    expect(sent[0].body.body).toContain('Matched close source: body.')
     expect(sent[0].body.body).toContain(landing_marker({ pr_number: 1187 }))
     expect(sent[1].body).toEqual({ state: 'closed', state_reason: 'completed' })
   })
@@ -473,6 +526,44 @@ describe('run_landing drives a landing sweep end to end', () => {
     const summary = await run_landing(config_for(fetch_fn, { dry_run: true }))
     expect(summary).toEqual({ closed: 1, skipped: 2 })
     expect(sent).toEqual([])
+  })
+
+  it('the backstop fetches merged-PR commits and closes a trailer-only row', async () => {
+    const { compare, associated_pulls } = commit_close_sources
+    const [{ sha }] = compare.commits
+    const [fixture_pull] = associated_pulls[sha]
+    const pull = {
+      ...fixture_pull,
+      merged_at: new Date(now_ms - DAY_MS).toISOString(),
+      updated_at: new Date(now_ms - DAY_MS).toISOString(),
+      merge_commit_sha: compare.commits[0].sha,
+    }
+    const sent = []
+    const json_response = (data) => ({
+      ok: true,
+      status: 200,
+      headers: { get: () => null },
+      json: async () => data,
+      text: async () => JSON.stringify(data),
+    })
+    const fetch_fn = async (url, options = {}) => {
+      const { pathname } = new URL(url)
+      const method = options.method ?? 'GET'
+      if (method !== 'GET') {
+        sent.push({ method, pathname, body: JSON.parse(options.body) })
+        return json_response({})
+      }
+      if (pathname === '/repos/aresrpg/aresrpg/pulls') return json_response([pull])
+      if (pathname === '/repos/aresrpg/aresrpg/pulls/2125/commits') return json_response(compare.commits)
+      if (/\/issues\/(?:2101|2102)$/.test(pathname))
+        return json_response({ state: 'open', title: 'a trailer-owned row' })
+      if (/\/issues\/(?:2101|2102)\/comments$/.test(pathname)) return json_response([])
+      throw new Error(`unexpected GET ${pathname}`)
+    }
+    const summary = await run_landing(config_for(fetch_fn))
+    expect(summary).toEqual({ closed: 2, skipped: 0 })
+    expect(sent.filter(({ method }) => method === 'PATCH')).toHaveLength(2)
+    expect(sent[0].body.body).toContain('Matched close source: commit `222222222222`.')
   })
 })
 
@@ -515,12 +606,25 @@ describe('the link gate — the blocking half of the close chain', () => {
   })
 
   it('passes on a close-keyword that only a commit message carries', () => {
-    const commits = [{ commit: { message: 'fix(sim): a thing\n\nCloses #1234' } }]
+    const commits = [
+      { sha: 'abcdefabcdefabcdefabcdefabcdefabcdefabcd', commit: { message: 'fix(sim): a thing\n\nCloses #1234' } },
+    ]
     expect(decide_link_gate(linked('no row here'), commits, REPOSITORY)).toEqual({
       ok: true,
       refs: [1234],
       via: 'close-ref',
     })
+  })
+
+  it('rejects close-keywords pasted inside a commit quoted block', () => {
+    const commits = [
+      {
+        sha: 'abcdefabcdefabcdefabcdefabcdefabcdefabcd',
+        commit: { message: 'docs: preserve a transcript\n\n```\nCloses #1234\n```\n\n`Fixes #1235`' },
+      },
+    ]
+    expect(close_source_matches(linked('no row here'), commits, REPOSITORY).size).toBe(0)
+    expect(decide_link_gate(linked('no row here'), commits, REPOSITORY)).toMatchObject({ ok: false, via: 'none' })
   })
 
   it('passes a deliberately unlinkable pull request carrying the no-issue label', () => {
@@ -618,10 +722,19 @@ describe('the link gate — the blocking half of the close chain', () => {
 
   it('reads the same sources the landing sweep reads, so gate-green means the row actually drains', () => {
     const body = 'Fixes #77'
-    const commits = [{ commit: { message: 'fix(x): y\n\nCloses #88' } }]
+    const commits = [
+      { sha: 'abcdefabcdefabcdefabcdefabcdefabcdefabcd', commit: { message: 'fix(x): y\n\nCloses #88' } },
+    ]
     const gate = decide_link_gate({ title: 'fix(x): y', body, labels: [] }, commits, REPOSITORY)
-    const swept = parse_close_refs([commits[0].commit.message, 'fix(x): y', body].join('\n'), REPOSITORY)
+    const swept = [...close_source_matches({ body }, commits, REPOSITORY).keys()]
     expect(gate.refs).toEqual(swept)
+  })
+
+  it('does not treat a PR title as a third close source', () => {
+    expect(decide_link_gate({ title: 'fix(x): Fixes #77', body: '', labels: [] }, [], REPOSITORY)).toMatchObject({
+      ok: false,
+      via: 'none',
+    })
   })
 })
 
@@ -673,6 +786,17 @@ describe('run_link_gate drives the blocking gate end to end', () => {
   it('reports ok for a linked pull request', async () => {
     const { summary } = await drive({ title: 'fix(a): b', body: 'Fixes #1495', labels: [] }, [])
     expect(summary).toMatchObject({ ok: true, refs: [1495] })
+  })
+
+  it('reports ok when only a HEAD-branch commit trailer closes the row', async () => {
+    const commits = [
+      {
+        sha: 'abcdefabcdefabcdefabcdefabcdefabcdefabcd',
+        commit: { message: 'fix(a): b\n\nFixes #1495' },
+      },
+    ]
+    const { summary } = await drive({ title: 'fix(a): b', body: 'Part of #1536', labels: [] }, commits)
+    expect(summary).toEqual({ ok: true, refs: [1495], via: 'close-ref' })
   })
 
   it('reports NOT ok for a pull request that closes nothing — the run must fail', async () => {
