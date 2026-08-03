@@ -1548,9 +1548,14 @@ export function create_voxel_fight_adapter(
     // vanish entirely — that hide is a targeting rabbit hole (BOARDED), so an enemy stays opaque here, never newly
     // revealed by this veil. Fired ONCE per transition via hazed_ids (set_invisibility is idempotent; the effect-
     // only upsert is a SEPARATE call — board_entities' visual_effect branch returns before the position path).
+    // #1993 WP6 — the veil is a CONSEQUENCE of the active-status projection, read from it
+    // (`entities[id].statuses.invisible`) rather than from a boolean this adapter picks up beside the rows. One
+    // collection decides the badge, the timed range and the haze; `hazed_ids` below stays what it always was —
+    // a transition latch so the idempotent upsert fires once, never a second answer to "is this body hidden".
+    const statuses_of = project.fight_visible_view(fight_store.getState()).entities
     const my_team = fight.my_entity_id ? fight.fighters.get(fight.my_entity_id)?.team : 0
     for (const f of fight.fighters.values()) {
-      const veiled = !!f.invisible && !f.dead && f.team === my_team
+      const veiled = !!statuses_of[f.id]?.statuses.invisible && !f.dead && f.team === my_team
       if (veiled === hazed_ids.has(f.id)) continue
       board.entity_upsert({ id: f.id, visual_effect: { kind: 'invisibility', active: veiled } })
       if (veiled) hazed_ids.add(f.id)

@@ -15,7 +15,7 @@
 import { useEffect, useRef } from 'react'
 
 import { play_fight_sfx } from '../../core/audio/sfx.js'
-import { useFightView } from '../../store.js'
+import { useFightView, useFightVisibleEntities } from '../../store.js'
 import { COMMIT_BUFFER_MS, effective_deadline } from '@aresrpg/fight/draft_budget'
 import { Tooltip } from './Tooltip.jsx'
 import { EffectBadges } from './EffectBadges.jsx'
@@ -29,6 +29,10 @@ const ACTIVE_HIGHLIGHT_VARIANT = 'a'
 
 export function FightTimeline() {
   const fight = useFightView() // synchronous core view (S2 mirror kill)
+  // #1993 WP6 — the ACTIVE-STATUS PROJECTION, id-keyed. The card used to read the fighter row's own `effects`
+  // array; the badge, the board's timed range and the rig veil now all answer from this one collection, which is
+  // what stops the turn card and a snapshot-held effect disagreeing at the end-turn boundary (#1872).
+  const entities = useFightVisibleEntities()
   const deadline = fight?.turn_deadline_ms ?? 0
   // Time is a reducer INPUT, and this card is a READER of it. The 4/s tick that folds the turn handover, the
   // auto-commit and the wave watchdog — and, incidentally, repaints this countdown by notifying the projection
@@ -183,10 +187,10 @@ export function FightTimeline() {
                   <span className="hud-turn__hp-num hud-num">{hp}</span>
                 </div>
               </Tooltip>
-              {/* PRESENTED ACTIVE EFFECTS — f.effects is engine_view's per-fighter status projection
-                  (project.js `effects_of`, LEG Q). Own + enemy + peer all get the same localized rows, shared
-                  verbatim with the board-hover card; no store write or client-side duration clock. */}
-              <EffectBadges effects={f.effects} />
+              {/* PRESENTED ACTIVE EFFECTS — the canonical entity row's status rows (#1993 WP6). Own + enemy +
+                  peer all get the same localized rows, shared verbatim with the board-hover card; no store write
+                  and no client-side duration clock — expiry is the fold's call, made by removing the row. */}
+              <EffectBadges effects={entities[f.id]?.statuses.rows} />
               {active && !fight.presenting && remaining_s != null && (
                 <div className="hud-turn__timer">
                   <div

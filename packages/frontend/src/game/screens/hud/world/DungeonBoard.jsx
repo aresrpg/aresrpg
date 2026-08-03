@@ -77,7 +77,6 @@ import {
   evolve_caster_cell,
   evolve_draft_health,
 } from '@aresrpg/fight/predict_cast'
-import { range_bonus_of } from '@aresrpg/fight/statuses'
 import { cast_range_set_dungeon, move_plan_dungeon } from '../../../../fight-engine/overlay_intents.js' // D139: cast_range_set_dungeon = THE cast-legality home (P1 self-cast)
 import { character_cast_clock, use_dungeon_turn } from '../../dungeon-turn.js'
 import { encode, decode, manhattan, lineOfSight, bfsReachable } from '@aresrpg/fight/los'

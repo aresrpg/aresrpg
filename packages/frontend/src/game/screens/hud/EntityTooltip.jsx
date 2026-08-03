@@ -156,9 +156,10 @@ export function EntityTooltip() {
         displacement,
         is_crit,
         effects,
-        // fighter.effects = engine_view's PRESENTED persistent-status projection (the same source the shared
-        // ActiveEffectRows renderer reads on the turn card) — distinct from `effects` above, the armed-spell preview.
-        status_effects: fighter.effects,
+        // #1993 WP6 — the canonical entity row's ACTIVE-STATUS rows, verbatim: the SAME frozen collection the
+        // turn card's badges render, so the hover card and the timeline cannot disagree about what is on a
+        // fighter. Distinct from `effects` above, which is the armed-spell PREVIEW, not an active status.
+        status_effects: entities[hover.entity_id]?.statuses.rows ?? [],
         key: hover.entity_id,
       }
     : null

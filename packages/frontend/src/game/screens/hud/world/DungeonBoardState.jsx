@@ -32,7 +32,6 @@ import {
   evolve_caster_cell,
   evolve_draft_health,
 } from '@aresrpg/fight/predict_cast'
-import { range_bonus_of } from '@aresrpg/fight/statuses'
 import { cast_range_set_dungeon } from '../../../../fight-engine/overlay_intents.js' // D139: cast_range_set_dungeon = THE cast-legality home (P1 self-cast)
 import { character_cast_clock, use_dungeon_turn } from '../../dungeon-turn.js'
 import { encode, decode, manhattan, lineOfSight, bfsReachable } from '@aresrpg/fight/los'
@@ -470,10 +469,14 @@ export function useDungeonBoardState() {
       return footprint
     }
     const out = new Set()
+    // #1993 WP6 — the caster's live range is the ACTIVE-STATUS PROJECTION's own answer
+    // (`entities[id].statuses.range_bonus`), not a per-surface fold of the same rows. The board's target set, the
+    // overlay's footprint and the turn card's badge all hang off ONE collection now, so a timed range row cannot
+    // widen one of them and not the others (#1872's family).
     const effective_range_max =
       cast_params.range_max +
       (fight?.armed_spell_id !== WEAPON_ATTACK_ID && active_level?.modifiable_range
-        ? range_bonus_of(active_fighter)
+        ? (fight_visible_view(fight_store.getState()).entities[entity_id]?.statuses.range_bonus ?? 0)
         : 0)
     for (const [cell, o] of occupied) {
       if (o.kind !== 'mob' || !o.alive) continue
