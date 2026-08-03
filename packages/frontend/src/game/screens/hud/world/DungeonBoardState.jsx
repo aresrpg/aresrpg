@@ -181,11 +181,13 @@ export function useDungeonBoardState() {
   const entity_id = fight?.my_entity_id ?? null
   const me = dungeon?.escrow.find((p) => (p.character ?? p.character_id) === entity_id) ?? null
   const active_fighter = fight?.fighters.get(entity_id) ?? null
-  // PRESENTATION GATE (regression: a player could act while mobs were still animating their turns): the
-  // mob-wave crank hands active_entity_id back to me the instant the paced replay STARTS, so a chain-only
-  // my_turn read would re-arm End Turn + the hotbar mid-cascade. `fight.presenting` (set by voxel_fight_adapter
-  // while the mob beats drain) holds the RE-ARM until the turn is PLAYABLE — chain truth ⋀ presentation done.
-  const my_turn = !!fight && fight.active_entity_id === entity_id && fight.winner === -1 && !fight.presenting
+  // THE ARMING DOOR, READ (#1993 WP2b — was a third home of it): `fight.input_armed` is the core's own
+  // `turn_playable ⋀ !is_over`, and `turn_playable` (#1808) is chain seat ⋀ nothing replaying locally ⋀ the
+  // chain's mob-resolution budget SPENT. The old spelling here (`active_entity_id === me ⋀ !presenting`) was the
+  // PRE-#1808 boundary: it armed the affordance the instant the local paced replay drained, which can run far
+  // ahead of the chain window the same turn's deadline was widened by — so every gate below (reachable,
+  // castable, the board chrome) offered a turn the chain had not handed over yet.
+  const my_turn = fight?.input_armed === true
 
   // THE SEAT'S RANK (#1077) — a spell's range, AP cost, cooldown, per-turn caps and effects are all PER-LEVEL
   // facts, and the level this seat casts at rides its escrow row's composed build (`spell_levels`). `level_row`

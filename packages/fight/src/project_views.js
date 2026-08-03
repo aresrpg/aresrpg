@@ -12,6 +12,7 @@ import { fight_fingerprint } from './fingerprint.js'
 import { trap_render_prims, trap_visible_to } from './fight_render_prims.js'
 import {
   deep_freeze,
+  input_armed,
   visible_controls,
   visible_entities,
   visible_mount,
@@ -512,6 +513,13 @@ export const engine_view = (s, { roster = s.ctx?.roster ?? [] } = {}) => {
     // mount on THIS single projected fact; `presenting` alone let the client outrun the chain and grant a turn
     // it then had to hold back.
     playable: turn_playable(s),
+    // THE ARMING DOOR, PROJECTED (#1993 WP2b) — `turn_playable ⋀ !is_over`, off the ONE predicate
+    // (`visible_facts.input_armed`, the same home `fight_visible_view.turn.input_armed` calls). DungeonBoard
+    // used to spell this conjunction itself off the PRE-#1808 boundary (`active_entity_id === me ⋀ !presenting`),
+    // which armed the whole affordance while the chain was still spending the mob budget its own deadline was
+    // widened by. Edge `busy` stays the consumer's to AND in — the run store's single-flight is wider than the
+    // core's (engage/place/settle) and remains an edge input until its family migrates.
+    input_armed: input_armed(s),
     // MP-ZONE MISCLICK GUARD — projected so DungeonBoard's click gate (`reachable`) reads the SAME
     // fact move_wash suppresses on, never a second UI-side flag (see cast_presenting's doc above).
     cast_presenting: cast_presenting(s),
