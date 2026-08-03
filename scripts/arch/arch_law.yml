@@ -35,6 +35,13 @@ rules:
   # day one: semgrep_verdict rejects any per-file increase, and the families (#1993 WP2-7) retire
   # their rows as they migrate onto `fight_visible_view`. Never regenerate this floor to absorb a
   # new bypass — that is the debt this gate exists to stop.
+  #
+  # FLOOR TODAY — 67 findings over 17 files (#1993 THE DOORS). The view publishes six records and only
+  # `entities` had a React binding, which is why consumers kept reading sources; `useFightVisible*` is one
+  # door per record and is deliberately ABSENT from the pattern set below — reading a RECORD is the cure,
+  # not the disease. Two waves burned this down from 75: the carve-out wave took it to 69 (DeckCluster's
+  # seed tuple, the min-turn floor, the actor verdict, the seat home), then `controls.action_slot` gave the
+  # §7 slot a record and DeckCluster 2→1 + use_target_prediction 3→2 came off the raw-core selector.
   - id: arch-fight-visible-source-bypass
     languages: [js, ts]
     severity: ERROR

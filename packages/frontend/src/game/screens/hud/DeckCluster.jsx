@@ -32,14 +32,13 @@ import { useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Sword } from 'lucide-react'
 
-import { useFight, useFightView, useFightVisibleTurn } from '../../store.js'
+import { useFightVisibleControls, useFightVisibleTurn, useFightView } from '../../store.js'
 import { use_dungeon } from '../../../world-shell/dungeon_store.js'
 import { character_cast_clock, use_dungeon_turn } from '../dungeon-turn.js'
 import { arm_spell, hover_spell, spell_card, spell_element, WEAPON_ATTACK_ID } from '../../core/modules/fight.js'
 import { fight_spell, seat_spell_row } from './fight-spells.js'
 import { cooldown_display, cap_of } from '@aresrpg/fight/draft_budget'
 import { crit_clock_of } from '@aresrpg/fight/predict_cast'
-import { my_action_slot } from '@aresrpg/fight/project'
 import { element_color } from './element-colors.js'
 import { spell_category } from './spell-category.js'
 import { Tooltip } from './Tooltip.jsx'
@@ -176,8 +175,11 @@ export function DeckCluster() {
   // the fight-store subscription that publishes `board_view(s)` into it (dungeon_run_store.js:1872), so this
   // was the same `s.view` reached through a store-to-store mirror that lags it by one notification.
   // `turn.seed` is that tuple named once, and reading it here is strictly fresher than the mirror was.
+  // THE SLOT FOLLOWS IT ONTO A RECORD: `controls.action_slot` is #1224's one derivation published as a
+  // fight-visible fact, so the clock's two halves are selected from ONE document instead of a record and a
+  // raw-core selector this surface had to import and subscribe with itself.
   const { seed } = useFightVisibleTurn()
-  const slot = useFight(my_action_slot)
+  const { action_slot: slot } = useFightVisibleControls()
   // The ONE composed §7 tuple: `next_slot_crit` rolls its crit stream and `weapon_next_hit` its damage stream,
   // so the socket's glow and the number in its tooltip can never disagree about which slot they describe.
   // The slot comes from `my_action_slot` (#1224's one home) — `crit_clock_of` reads `slot`, so a raw

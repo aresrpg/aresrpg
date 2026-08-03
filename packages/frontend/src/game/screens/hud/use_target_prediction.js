@@ -8,9 +8,7 @@
 
 import { useMemo } from 'react'
 
-import { my_action_slot } from '@aresrpg/fight/project'
-
-import { useFight, useFightView, useGameState } from '../../store.js'
+import { useFightVisibleControls, useFightView, useGameState } from '../../store.js'
 import { use_dungeon } from '../../../world-shell/dungeon_store.js'
 import { compute_target_prediction, prediction_memo_key } from './target_prediction_core.js'
 
@@ -37,8 +35,10 @@ export const useTargetPrediction = () => {
   // rather than remove one — the whole read migrates when those two facts get records, or not at all.
   const dungeon = use_dungeon((state) => state.dungeon)
   // The slot, not a proxy for it: a scalar off the ONE derivation, so the memo re-runs on exactly the folds
-  // that change this preview (a drafted cast, a landed receipt, my turn restarting) and on no other.
-  const slot = useFight(my_action_slot)
+  // that change this preview (a drafted cast, a landed receipt, my turn restarting) and on no other. Read
+  // through the CONTROLS record (#1993) — the same `my_action_slot` value, reached as a fight-visible fact
+  // instead of a raw-core selector this surface had to import and subscribe with itself.
+  const slot = useFightVisibleControls().action_slot
 
   const args = { fight, hover, dungeon, slot }
   // ONE derivation, ONE key: the memo key comes from the same module as the derivation and is built from the same
