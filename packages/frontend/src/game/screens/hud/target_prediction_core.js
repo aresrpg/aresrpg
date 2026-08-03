@@ -97,9 +97,9 @@ export const resolve_dungeon_ref = (dungeon, fighter_id) => {
  * affordable). CRIT-DISPLAY GATE: armed_spell_id survives turns and spent AP by design (store.js clears it ONLY
  * on an actual Cast — a re-arm-free convenience for next turn), so without this gate a spell armed-but-never-fired
  * keeps forecasting against whatever you're hovering — including mid the opponent's turn, or the instant your OWN
- * last action (a different cast, a move) spends the AP this one needed. Mirrors the identical two facts
- * @aresrpg/fight/project.turn_input_armed + the adapter's wash_armed_spell already gate the board's OWN
- * targeting-range wash on — never a heuristic, the same pipeline.
+ * last action (a different cast, a move) spends the AP this one needed. Reads the SAME arming fact
+ * (`input_armed`) the adapter's wash_armed_spell gates the board's OWN targeting-range wash on — never a
+ * heuristic, never a second spelling of it, the same pipeline.
  * @param {{ fight: any, hover: any, dungeon: any, slot?: number|null }} args  `slot` = the pending cast's chain
  *   slot from its ONE home (`project.my_action_slot` — #1224), so the tooltip advances with the draft exactly
  *   like the glow, follows a turn the chain already restarted, and never prices off a second count.
@@ -113,9 +113,15 @@ export const compute_target_prediction = ({ fight, hover, dungeon, slot = null }
   const target_ref = resolve_dungeon_ref(dungeon, hovered_id)
   if (!armed || !caster_id || !dungeon || !target?.cell || !target_ref) return EMPTY_PREDICTION
 
-  // CASTABLE-NOW GATE, part 1 (turn ownership): a forecast is only legitimate while it's actually your move.
-  const my_turn = fight.active_entity_id === caster_id && (fight.winner ?? -1) === -1 && !fight.presenting
-  if (!my_turn) return EMPTY_PREDICTION
+  // CASTABLE-NOW GATE, part 1 (turn ownership): a forecast is only legitimate while it's actually your move —
+  // and this card is an AFFORDANCE, not a readout ("this cast kills it" is what a player acts on), so it must go
+  // dark exactly when the board's own targeting wash does. `fight.input_armed` IS that boundary (#1808/#1993):
+  // `turn_playable ⋀ !is_over` — chain seat ⋀ nothing replaying ⋀ the chain's mob-resolution budget spent. This
+  // used to spell `active_entity_id === caster ⋀ winner === -1 ⋀ !presenting` — the PRE-#1808 boundary, a fourth
+  // home of it, which forecasts a kill through the handover window while the range wash is already dark.
+  // (The `busy` and `cast_presenting` halves of `wash_armed_spell` stay out: this module has never received the
+  // run store's flight flag, and both belong to families that migrate on their own trains.)
+  if (fight.input_armed !== true) return EMPTY_PREDICTION
 
   const me = dungeon.escrow?.find((p) => (p.character ?? p.character_id) === caster_id) ?? null
   const { template, spell_level, crit_rate, effects, ap_cost } = resolve_armed_spell(armed, me)
