@@ -261,8 +261,35 @@ const sanctioned_fixture_prefixes = [
   // runtime. Exact file, not a directory: the model-derived fixtures beside it keep facing the gate.
   'packages/sim/test/fixtures/aoe_splash_target_filter.json',
 ]
+
+// Exact file + exact id — the same captured-with-provenance exemption as the prefixes above, at the only
+// granularity a MIXED file allows. A file listed above leaves the census entirely; that is safe only for a
+// pure capture. `snapshot_tests.rs` is both: dozens of hand-typed synthetic mock ids, already carried as
+// debt in the baseline above, PLUS a few whole-object wire captures the decode-tests law requires pinned.
+// Registering it as a prefix would delete its baselined rows from the census and blind the whole suite to
+// this gate forever — strictly wider than the hole the gate exists to close. Registering the captured ids
+// individually leaves every other id in the file, and every future one, facing the census. Ids are keyed by
+// the same fingerprint the baseline uses: a gate that scans every tracked file must never hand-type a live
+// id into its own source. Add a row here only when the capture's provenance is recorded in the fixture's
+// own header, and never a whole file.
+const sanctioned_fixture_ids = {
+  // packages/rpc/indexer/src/handlers/ares/snapshot_tests.rs — two LIVE-object BCS captures, decoded by the
+  // indexer's real model so a chain-side field-order drift fails here instead of silently mis-reading
+  // offsets. Every id is an evidence pin inside those captured bytes, never shipped configuration: nothing
+  // resolves one at runtime, and re-encoding the wire with this crate's own model would prove nothing.
+  //   #1886 — GameConfig 0xbde6…e03d, version 251, prevTx F4WK1D8KB6uLuB2RA9ze6p94Ng4YKso2ZdXypznYLtUy.
+  //   #2123 — Creation 0x4b21…88af, version 963105141, prevTx AKv9vGpSGEEt1DnPXZgkUY1hZfYma8JuCvCREUC1dg5U,
+  //           plus the `classes` Table id and the creation package address carried in that same capture.
+  'packages/rpc/indexer/src/handlers/ares/snapshot_tests.rs': new Set([
+    'BvUKCEE72p9XJF7kVZf_Jm', // #1886 GameConfig object id
+    'oUytw7-y8w3038METH9GLd', // #2123 Creation object id
+    '-Bj9S3eyruLyuUeUU4hOcX', // #2123 creation package address (the captured object's type tag)
+    'Ppvwc8pL0TLRJtpopAp2kR', // #2123 the Creation's `classes` Table id, read out of the captured bytes
+  ]),
+}
 const slash_path = (value) => value.split(path.sep).join('/')
 const id_fingerprint = (id) => create_hash('sha256').update(id).digest('base64url').slice(0, 22)
+const is_sanctioned_fixture_id = ({ file, id }) => sanctioned_fixture_ids[file]?.has(id_fingerprint(id)) === true
 const is_scannable_file = (relative_path) =>
   !relative_path.startsWith('docs/') &&
   !relative_path.startsWith(captured_replay_prefix) &&
@@ -312,7 +339,7 @@ function file_hits(root, relative_path) {
   if (!stat.isFile()) return []
   const source_buffer = fs.readFileSync(absolute_path)
   if (source_buffer.includes(0)) return []
-  return source_hits(relative_path, source_buffer.toString('utf8'))
+  return source_hits(relative_path, source_buffer.toString('utf8')).filter((hit) => !is_sanctioned_fixture_id(hit))
 }
 
 function classify_hits(hits, strict) {
