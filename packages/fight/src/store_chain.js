@@ -19,9 +19,12 @@ import { committed_health, COURTESY_EVENT_BASE, observer_ctx } from './store_sta
  * state-write door.
  */
 export const reduce_chain_input = (state, msg, next_core, now) => {
-  const read = next_core.last_read ?? { actions: [], changed: [] }
+  const read = next_core.last_read ?? { actions: [], changed: [], owed: [] }
   const actions = enrich_actions(next_core.inbox, read.actions ?? [])
   const changed = enrich_actions(next_core.inbox, read.changed ?? [])
+  // PRESENTATION-OWED rows (#2124) — settled for the fold, unpaid for the eye. They are enriched through the same
+  // door as `changed` so their beats are byte-identical to the ones the un-raced ordering produces.
+  const owed = enrich_actions(next_core.inbox, read.owed ?? [])
   const my_actor = actor_from_key(state.my_key)
   const ended_my_turn =
     !!my_actor &&
@@ -91,14 +94,22 @@ export const reduce_chain_input = (state, msg, next_core, now) => {
   // and under which chain version and entry window — is decided in ONE home off the ROWS (fold.paced_wave_turns),
   // never off this envelope: a journal batch names no chain version, and an observing seat is fed nothing else.
   // Poll/p2p stay out: a poll is a wholesale re-read of settled truth and p2p is unverified courtesy.
-  const new_turns =
-    msg.type === 'receipt' || msg.type === 'journal'
-      ? paced_wave_turns(state, changed, {
-          trap_cells: msg.trap_cells ?? [],
-          fighter_health: committed_health(state),
-        })
-      : []
-  const wave = [...state.wave, ...new_turns]
+  const pace_opts = { trap_cells: msg.trap_cells ?? [], fighter_health: committed_health(state) }
+  const paces = msg.type === 'receipt' || msg.type === 'journal'
+  // The OWED segment paces first — its rows are older, and it can never share a version with the admitted ones, so
+  // the two are two batches by construction. The second call paces off the seq the first allocated: `wave_seq` is
+  // an IDENTITY allocator read straight off the draft, and two calls against one draft mint colliding seqs, which
+  // the renderer's monotonic drain then swallows whole (the #2124 drop-point-A class, already paid for once).
+  // `fold_inert` is the whole difference between the two segments: an owed turn PLAYS and holds nothing — the
+  // adopted base already contains its rows, so masking, death holds and the turn gate all skip it (present.js
+  // `holds_the_fold`). Without that mark a raced beat would spend the player's turn clock replaying the board.
+  const owed_turns = paces
+    ? paced_wave_turns(state, owed, pace_opts).map((turn) => ({ ...turn, fold_inert: true }))
+    : []
+  const new_turns = paces
+    ? paced_wave_turns(owed_turns.length ? { ...state, wave_seq: owed_turns.at(-1).seq } : state, changed, pace_opts)
+    : []
+  const wave = [...state.wave, ...owed_turns, ...new_turns]
   const seq_head = Number(next_core.inbox.seq_head)
   const delivered_seq = Number(next_core.inbox.delivered_seq)
   const journal_gap =

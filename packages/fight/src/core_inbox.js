@@ -60,6 +60,9 @@ export const truth_frontier = (inbox) => {
 /** The truth watermark VERSION — the higher of the highest admitted log version and the adopted snapshot base. */
 export const truth_version = (inbox) => truth_frontier(inbox).version
 
+/** The highest version among a set of rows, floored at `from`. */
+const top_version = (from, rows) => rows.reduce((hi, row) => Math.max(hi, Number(row.version)), from)
+
 /** The semantic content of an action, stripped of provenance/order/closure fields, for the dedupe/conflict hash.
  *  Two deliveries of the SAME event (same kind + fields) at one coordinate hash equal → idempotent; a different
  *  hash at the same coordinate is a real conflict. `resolve_seat` (a closure) and the order/source fields never
@@ -250,13 +253,25 @@ const same_log = (a, b) => {
  * @param {import('./core_state.js').InboxState} inbox
  * @param {Array<Record<string, any>>} actions pure-data actions (batch_to_actions / journal_to_actions)
  * @param {number} now
- * @returns {{ inbox: import('./core_state.js').InboxState, failures: any[], effects: any[] }}
+ * @returns {{ inbox: import('./core_state.js').InboxState, failures: any[], effects: any[],
+ *   owed: Array<Record<string, any>> }} `owed` are PRESENTATION-ONLY rows — never in the log, never folded
  */
 export const admit_events = (inbox, actions, now) => {
   // The adopted snapshot is an inclusive fold cursor. Rows at or behind it are already represented by the base and
   // are discarded at admission; retaining them would make the inbox depend on whether an old page arrived before
   // or after re-adoption even though the canonical board was equal.
   const ahead = actions.filter((action) => Number(action.version) > inbox.base_version)
+  // ADOPTION MAY NOT CONSUME UNDELIVERED PRESENTATION (#2124, ruled 2026-08-03). The fold cursor above stays THE
+  // LAW for state — but presentation is not state: beats are built FROM these rows, and a snapshot carries the
+  // resulting board without them. When the object read wins the race to a commit's own version, the fold cursor
+  // is already at V when V's rows land, so the rows die at this door and the peer's whole turn plays to nobody
+  // (state right, screen silent). A row below the fold cursor is therefore still OWED its beats while its version
+  // is above the PRESENTATION cursor — routed to presentation-only intake, and never into the log, so the fold
+  // can never double-apply what the base already contains. The two cursors are independent by construction: that
+  // is what makes the race unlosable rather than merely narrower.
+  const owed = actions.filter(
+    (action) => Number(action.version) <= inbox.base_version && Number(action.version) > inbox.presented_version
+  )
   const placed = rederive_journal(inbox.log, ahead)
   let { log } = placed
   const failures = []
@@ -283,7 +298,12 @@ export const admit_events = (inbox, actions, now) => {
     }
     log = { ...log, [key]: action }
   }
-  return { inbox: same_log(log, inbox.log) ? inbox : { ...inbox, log }, failures, effects }
+  // Every row this door hands onward — admitted or presentation-only — has now had its beats offered, so the
+  // presentation cursor rises past it. That is what makes the routing above idempotent: a re-delivered page (an
+  // SSE replay, a walker re-drive) is at or below the cursor and owes nothing a second time.
+  const presented_version = top_version(top_version(inbox.presented_version, ahead), owed)
+  const unchanged = same_log(log, inbox.log) && presented_version === inbox.presented_version
+  return { inbox: unchanged ? inbox : { ...inbox, log, presented_version }, failures, effects, owed }
 }
 
 /**
@@ -387,10 +407,22 @@ export const adopt_snapshot = (inbox, rows, version, ctx = {}) => {
     return refuse('behind')
   }
 
+  // THE PRESENTATION CURSOR (#2124). Adoption settles the FOLD up to V, but it settles the EYE only up to what the
+  // eye already had: a BOOTSTRAP has watched nothing, so its whole history is settled here (a walker re-drive from
+  // seq 0 must never replay ancient turns as live beats), while an ADVANCE from a live base leaves every version
+  // above that prior base still OWING its beats — exactly the band the purge below would otherwise consume in
+  // silence. Monotone, so a re-adoption can never re-open a version the eye has already been shown.
+  // The purge below needs no lift of its own: admission hands every row it keeps to presentation in the same
+  // breath, so the log never holds a row above this cursor — the band that owes beats is exactly the band whose
+  // rows have not arrived yet, and `admit_events` catches those when they do.
+  const presented_version = Math.max(inbox.presented_version, has_base ? inbox.base_version : object_version)
   const log = Object.fromEntries(
     Object.entries(inbox.log).filter(([, action]) => Number(action.version) > object_version)
   )
-  return { inbox: { ...inbox, log, base_view, base_version: object_version }, refusal: null }
+  return {
+    inbox: { ...inbox, log, base_view, base_version: object_version, presented_version },
+    refusal: null,
+  }
 }
 
 /**

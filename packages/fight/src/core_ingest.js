@@ -73,7 +73,10 @@ const admit_verified = (state, actions, version, source, how, now) => {
     (action) => inbox.log[`${action.version}:${action.event_idx}`] !== before[`${action.version}:${action.event_idx}`]
   )
   return with_failures(
-    { ...state, inbox, ledger, last_read: { source, version, actions: observed, changed } },
+    // `owed` (#2124) is the PRESENTATION-ONLY channel: rows the adopted base already reflects whose beats were
+    // never delivered. It rides beside `changed` and never inside it — the pacing home refuses a batch spanning
+    // several versions (a catch-up is not live play), and an owed row is by definition older than an admitted one.
+    { ...state, inbox, ledger, last_read: { source, version, actions: observed, changed, owed: admitted.owed } },
     admitted.failures,
     admitted.effects
   )

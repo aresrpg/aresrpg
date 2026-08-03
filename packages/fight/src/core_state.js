@@ -22,6 +22,9 @@
  * @property {Record<string, Action>} courtesy UNVERIFIED courtesy (p2p) rows — never advance the frontier alone
  * @property {any} base_view the adopted snapshot's rich board view (SNAPSHOT+TAIL base) — null until first read
  * @property {number} base_version the object version of `base_view` (the fold floor)
+ * @property {number} presented_version the PRESENTATION floor — the highest version whose rows have been handed to
+ *   the beat pipeline. Independent of `base_version` on purpose (#2124): state is snapshot-truth, beats are
+ *   journal-truth, so a row can be settled for the fold and still owe its beats. See core_inbox.js.
  * @property {number} seq_head the highest journal `head` seq observed (chain-index provenance; see wire.js)
  * @property {number} delivered_seq the highest journal seq whose BODY actually arrived (head ≫ this = a gap finding)
  *
@@ -57,6 +60,7 @@ export const empty_inbox = () => ({
   courtesy: {},
   base_view: null,
   base_version: -1,
+  presented_version: -1,
   seq_head: -1,
   delivered_seq: -1,
 })

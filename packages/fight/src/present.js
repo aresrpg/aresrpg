@@ -41,11 +41,18 @@ const rescale = (beats, total_ms, start_at) => {
   return { beats: out, end_at: at }
 }
 
+/** Does this wave turn still HOLD the board, or does it only decorate it? A `fold_inert` turn (#2124) is
+ *  PRESENTATION-OWED: the adopted snapshot already contains every row it explains, so it can neither mask an
+ *  entry (there is no log row left to mask — the same reason `wave_masked_fold` refuses to rewind below its own
+ *  base), nor hold a death, nor spend my turn clock gating me on a beat about state the board already shows.
+ *  It plays, and that is all it does. Every "is the wave still holding something" question reads this. */
+export const holds_the_fold = (turn) => turn?.fold_inert !== true
+
 /** A wave turn whose entry WINDOW must mask the committed fold until it presents: every non-local
  *  (receipt-paced) turn, plus MY OWN windowed displacement leg — is_local for the input law (my leg never
  *  disarms me), yet its `Displaced` entries must not fold ahead of the slide (§7b: never an insta-jump).
  *  Local INTENT turns carry no window and never mask (prediction paints first). */
-export const masks_entries = (turn) => !turn.is_local || turn.from_idx != null
+export const masks_entries = (turn) => holds_the_fold(turn) && (!turn.is_local || turn.from_idx != null)
 
 /**
  * Pace a log segment for playback. Reuses `produce_receipt_render_turns` (grouping + beat build) and only

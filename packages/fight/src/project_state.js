@@ -3,6 +3,7 @@
 // fight/project_state.js — small, pure selectors over fight state.
 
 import { GRID_W } from './los.js'
+import { holds_the_fold } from './present.js'
 import { STATUS_FAILED, STATUS_ROOM_CLEARED, STATUS_WON } from './board_state.js'
 import { committed_truth, min_turn_ready_at } from './store.js'
 
@@ -122,8 +123,9 @@ export const settlement_request = (state, { include_consumed = false } = {}) => 
 
 /** Presentation is still draining when unacked NON-LOCAL wave turns remain — the derived `presenting` flag
  *  (never a stored latch). My OWN local beats never gate me: only a mob/peer replay disarms input — the
- *  per-cast input disease must not come back through this door. */
-export const presenting = (state) => (state.wave ?? []).some((t) => !t.is_local)
+ *  per-cast input disease must not come back through this door. A presentation-owed turn does not gate either
+ *  (`holds_the_fold`, #2124): the board already shows what it is replaying. */
+export const presenting = (state) => (state.wave ?? []).some((t) => !t.is_local && holds_the_fold(t))
 
 /** ANY wave still draining — LOCAL death/displacement legs included, unlike `presenting` (nonlocal-only, the
  *  input-arming lane). The TERMINAL collapse drain condition (register #42): a fight that ends on MY OWN kill

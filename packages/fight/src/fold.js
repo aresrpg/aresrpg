@@ -22,7 +22,7 @@ import { GRID_W } from './los.js'
 import { base_from_view } from './fold_base.js'
 import { turn_handover_at } from './draft_budget.js'
 import { blocks_a_walk } from './fight_render_prims.js'
-import { masks_entries, pace_segment } from './present.js'
+import { holds_the_fold, masks_entries, pace_segment } from './present.js'
 import { adopt_chain_traps, fold_trap_ledger } from './trap_ledger.js'
 import {
   claim_version,
@@ -142,7 +142,7 @@ export const GHOST_STALE_MS = 15_000
 export const turn_is_playable = ({ active, my_key, wave, deadline_ms, turn_ms, chain_offset_ms }, now) =>
   active != null &&
   active === my_key &&
-  !(wave ?? []).some((t) => !t.is_local) &&
+  !(wave ?? []).some((t) => !t.is_local && holds_the_fold(t)) &&
   now + (chain_offset_ms ?? 0) >= turn_handover_at(deadline_ms, turn_ms)
 
 /** Re-fold the committed state from the snapshot base + the sorted tail, and reconcile the turn-floor anchor.
@@ -182,7 +182,7 @@ export const recompute = (draft, now) => {
   // (`turn_is_playable` above) — cleared while a wave presents / the chain is still resolving mobs / off-turn,
   // re-stamped the instant the turn is genuinely mine. The SAME gate disarms a stale spell (else it casts on the
   // first click of a fresh turn); my OWN casts are LOCAL waves (is_local) → they never trip it.
-  const presenting = (draft.wave ?? []).some((t) => !t.is_local)
+  const presenting = (draft.wave ?? []).some((t) => !t.is_local && holds_the_fold(t))
   const playable = turn_is_playable(
     {
       active: committed.active,
@@ -335,7 +335,7 @@ export const claimed_budget_state = (s) => {
  *  "its death is presenting RIGHT NOW", distinct from an already-presented death. */
 export const death_presenting_keys = (wave) => {
   const keys = new Set()
-  for (const t of wave ?? [])
+  for (const t of (wave ?? []).filter(holds_the_fold))
     for (const b of t.beats ?? []) {
       const e = b.kind === 'damage' && b.payload?.killed ? b.payload?.source_event : null
       if (e && e.victim_idx != null) keys.add(`${e.victim_is_mob ? 'm' : 'p'}${Number(e.victim_idx)}`)
