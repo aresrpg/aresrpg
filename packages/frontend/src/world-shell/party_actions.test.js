@@ -294,7 +294,7 @@ test('an executed-failed silent create is signed once, never refired, and its fa
 })
 
 // ── #328: every party toast shows the character NAME the caller already resolved — never a raw id/address
-// slice. short_id() is the LAST-RESORT fallback only, unreachable once a caller supplies a name. ──
+// slice. short_fighter_id() is the LAST-RESORT fallback only, unreachable once a caller supplies a name. ──
 
 test('invite_to_party threads the caller-supplied name into its toast label — never the raw id', async () => {
   toast_promise.mockClear()
@@ -312,7 +312,7 @@ test('invite_to_party falls back to the truncated id ONLY when no name is suppli
   await invite_to_party('0xparty', '0xleader', id, '0xinvited-owner')
 
   const [, options] = toast_promise.mock.calls.at(-1)
-  expect(options.success).toBe(i18n.t('party.action_invite', { name: `${id.slice(0, 6)}…${id.slice(-4)}` }))
+  expect(options.success).toBe(i18n.t('party.action_invite', { name: `${id.slice(0, 7)}…${id.slice(-5)}` }))
 })
 
 test('kick_from_party threads the caller-supplied target name into its toast label — never the raw id', async () => {
@@ -338,7 +338,7 @@ test("owned-alt joins thread each alt's given name into its toast label — neve
   expect(options.success).not.toContain('0xalt-a')
 })
 
-test('an owned-alt join with no given name falls back to the truncated id (last resort)', async () => {
+test('an owned-alt join with no given name keeps an already-short id intact (last resort)', async () => {
   toast_promise.mockClear()
   const id = '0xalt-noname'
   await join_owned_alts_to_party({
@@ -348,5 +348,5 @@ test('an owned-alt join with no given name falls back to the truncated id (last 
   })
 
   const [, options] = toast_promise.mock.calls.at(-1)
-  expect(options.success).toBe(i18n.t('party.action_invite', { name: `${id.slice(0, 6)}…${id.slice(-4)}` }))
+  expect(options.success).toBe(i18n.t('party.action_invite', { name: id }))
 })

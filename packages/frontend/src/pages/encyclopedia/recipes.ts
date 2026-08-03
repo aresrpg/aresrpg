@@ -14,6 +14,7 @@
 //      static seed catalog (never minted on-chain) can NEVER surface, so "if it's in the encyclopedia,
 //      players are 100% sure it's in game".
 import type { RpcEncyclopediaItem, RpcRecipe } from '../../rpc/views'
+import { short_fighter_id } from '../../world-shell/character_name_resolve.js'
 
 /** The on-chain recipe whose OUTPUT is `template_id`, or null (honest "no recipe"). */
 export function recipe_for_output(recipes: RpcRecipe[] | undefined, template_id: string): RpcRecipe | null {
@@ -34,9 +35,6 @@ export function recipes_consuming(
     })
     .filter((row): row is { recipe: RpcRecipe; quantity: number } => row !== null)
 }
-
-/** Display fallback for a template id that is not (yet) a live encyclopedia item. */
-export const short_id = (id: string) => `${id.slice(0, 6)}…${id.slice(-4)}`
 
 /** One line of a recipe's BILL OF MATERIALS, joined to the live item projection. */
 export interface CraftIngredientRow {
@@ -117,7 +115,7 @@ export function craft_recipes_for_job(
             id: item?.item_type ?? null,
             template_id: input.template_id,
             qty: input.quantity,
-            name: item?.name ?? short_id(input.template_id),
+            name: item?.name ?? short_fighter_id(input.template_id),
             level: item?.level ?? 0,
           }
         }),

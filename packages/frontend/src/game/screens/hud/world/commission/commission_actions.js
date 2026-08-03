@@ -23,6 +23,8 @@
 //   recipe_id: string, recipe_name: string, recipe_icon: string, recipe_category: string, recipe_quality: string,
 // }} Commission
 
+import { short_fighter_id } from '../../../../../world-shell/character_name_resolve.js'
+
 /** SUI is 9-decimal (MIST). The payment is authored in SUI and stored on-chain as MIST. */
 export const SUI_DECIMALS = 9
 const MIST_PER_SUI = 10 ** SUI_DECIMALS
@@ -38,9 +40,6 @@ export const MIN_PAYMENT_SUI = 0.1
 export const MIN_PAYMENT_MIST = to_mist(MIN_PAYMENT_SUI) // 100_000_000 — mirrors commission::MIN_PAYMENT_MIST
 /** True iff the SUI-authored payment clears the 0.1 SUI floor. @param {number|string} sui @returns {boolean} */
 export const meets_min_payment = sui => to_mist(sui) >= MIN_PAYMENT_MIST
-
-/** Short 0x… address for a name fallback when a friend's character name hasn't indexed. */
-const short = (/** @type {string} */ a) => (a ? `${a.slice(0, 6)}…${a.slice(-4)}` : '')
 
 /** @type {{ as_artisan: Commission[], as_customer: Commission[] }} — the /v1/commissions live shape. */
 const MOCK_COMMISSIONS = {
@@ -93,7 +92,7 @@ const beat = (/** @type {number} */ ms = 220) => new Promise(res => setTimeout(r
 export function artisans_from_rows(rows) {
   return (rows ?? []).map((row) => ({
     address: row.address,
-    name: row.name || short(row.address),
+    name: row.name || short_fighter_id(row.address),
     jobs: row.jobs ?? {},
   }))
 }

@@ -19,8 +19,9 @@ import { JOBS } from '@aresrpg/sdk/jobs'
 import { SectionDivider } from '../../components/entity_display'
 import { useTemplateT } from '../../i18n/template_t'
 import type { RpcRecipe } from '../../rpc/views'
+import { short_fighter_id } from '../../world-shell/character_name_resolve.js'
 
-import { recipe_for_output, recipes_consuming, short_id } from './recipes'
+import { recipe_for_output, recipes_consuming } from './recipes'
 
 interface RecipeRow {
   id: string
@@ -104,8 +105,8 @@ function RecipeSections({
   const item_by_template_id = useMemo(() => new Map((items ?? []).map((item: any) => [item.id, item])), [items])
   const resolve = (template_id: string): { name: string; target_id: string | null } => {
     const it = item_by_template_id.get(template_id)
-    if (!it) return { name: short_id(template_id), target_id: null }
-    return { name: tt(it, 'name') || short_id(template_id), target_id: it.id }
+    if (!it) return { name: short_fighter_id(template_id), target_id: null }
+    return { name: tt(it, 'name') || short_fighter_id(template_id), target_id: it.id }
   }
 
   const selected_template_id: string = selected_item?.id || ''

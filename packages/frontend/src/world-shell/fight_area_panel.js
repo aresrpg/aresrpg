@@ -1,10 +1,8 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-// short_fighter_id moved to character_name_resolve.js (07-19 "ONE HOME" — the same fallback the live
-// fight-HUD roster now shares). Re-exported so existing importers of this module are untouched.
+// short_fighter_id lives in character_name_resolve.js (07-19 "ONE HOME" — the same fallback the live
+// fight-HUD roster now shares). Import it directly so this panel cannot become a second public formatting door.
 import { short_fighter_id } from './character_name_resolve.js'
-
-export { short_fighter_id }
 
 /**
  * Detail model for the big two-column hover card. Player identity comes from id-keyed Character docs. The

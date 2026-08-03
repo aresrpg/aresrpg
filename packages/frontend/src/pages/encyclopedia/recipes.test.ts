@@ -14,14 +14,9 @@
 import { describe, test, expect } from 'bun:test'
 
 import type { RpcEncyclopediaItem, RpcRecipe } from '../../rpc/views'
+import { short_fighter_id } from '../../world-shell/character_name_resolve.js'
 
-import {
-  craft_affordability_of,
-  craft_recipes_for_job,
-  recipe_for_output,
-  recipes_consuming,
-  short_id,
-} from './recipes'
+import { craft_affordability_of, craft_recipes_for_job, recipe_for_output, recipes_consuming } from './recipes'
 
 // The live-localnet jeweler recipe (snapshot_tests.rs REAL_RECIPE_BCS_HEX → the /v1 row shape): two
 // 1-quantity ingredients → 1 output, job 11 (jeweler), knowledge level 1, 23 craft xp.
@@ -105,10 +100,10 @@ describe('recipes_consuming — the reverse index (INGREDIENT OF)', () => {
   })
 })
 
-describe('short_id — the honest not-yet-snapshotted fallback', () => {
+describe('short_fighter_id — the canonical honest not-yet-snapshotted fallback', () => {
   test('renders a short id, never a fabricated name', () => {
     const id = '0x' + 'ab'.repeat(32)
-    expect(short_id(id)).toBe(`${id.slice(0, 6)}…${id.slice(-4)}`)
+    expect(short_fighter_id(id)).toBe(`${id.slice(0, 7)}…${id.slice(-5)}`)
   })
 })
 
@@ -316,7 +311,7 @@ describe('craft_recipes_for_job — the in-game drawer source (issue #765)', () 
     expect(rows[0].ingredients).toHaveLength(4)
     expect(rows[0].ingredients[0].id).toBe('diadem_lattice_crown')
     expect(rows[0].ingredients[1].id).toBeNull()
-    expect(rows[0].ingredients[1].name).toBe(short_id(LIVE_ARMORSMITH_RECIPE.inputs[1].template_id))
+    expect(rows[0].ingredients[1].name).toBe(short_fighter_id(LIVE_ARMORSMITH_RECIPE.inputs[1].template_id))
   })
 })
 

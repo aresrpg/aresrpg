@@ -2,7 +2,7 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 // THE ONE shaping home for character display names and fight-roster composition. `/v1` consumers share the
 // batched resolver; the live fight adopter supplies its full normalized custody/display rows to this composition
-// so names and appearance cannot diverge. Every unresolved surface uses the same short-id fallback.
+// so names and appearance cannot diverge. Every unresolved identity surface uses the same short-id fallback.
 
 import { short_display_id } from '@aresrpg/fight/project'
 

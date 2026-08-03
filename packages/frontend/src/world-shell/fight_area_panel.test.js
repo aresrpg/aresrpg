@@ -3,7 +3,8 @@
 import { describe, expect, it } from 'bun:test'
 import { section_fight_rows } from '@aresrpg/world/nearby_fights'
 
-import { fight_hover_teams, short_fighter_id, viewer_has_fighter } from './fight_area_panel.js'
+import { short_fighter_id } from './character_name_resolve.js'
+import { fight_hover_teams, viewer_has_fighter } from './fight_area_panel.js'
 
 describe('fight-area Option A model', () => {
   it('keeps simultaneous sections in D749 order: GROUP FIGHTS, then PUBLIC', () => {

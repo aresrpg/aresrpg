@@ -25,11 +25,10 @@ import { tx_error, parse_move_abort } from '../game/core/abort_copy.js'
 import { game_log } from '../core/log.js'
 import { report_error } from '../core/report.js'
 
+import { short_fighter_id } from './character_name_resolve.js'
 import { kiosk_for_character } from './kiosk_resolve.js'
 
 const CTX = { network: DEMO_NETWORK }
-
-const short_id = (/** @type {string} */ id) => `${id.slice(0, 6)}…${id.slice(-4)}`
 
 async function sign(/** @type {any} */ tx, /** @type {string} */ label, { silent = false } = {}) {
   const { address, wallet_name } = use_auth.getState()
@@ -94,7 +93,7 @@ export async function create_party(/** @type {string} */ leader_character_id, { 
 
 /** The exact leader character records an invitation for one exact character + expected owner. `invited_name`
  *  is the display name the CALLER already has in hand (a friend row, a party member, a nameplate/chat click —
- *  #328: every one of those already carries a resolved name) — short_id() is the last-resort fallback only,
+ *  #328: every one of those already carries a resolved name) — short_fighter_id() is the last-resort fallback only,
  *  for the rare caller that genuinely doesn't have one yet. */
 export async function invite_to_party(
   /** @type {string} */ party_id,
@@ -112,7 +111,7 @@ export async function invite_to_party(
     invited_character_id,
     invited_owner,
   })
-  return sign(tx, i18n.t('party.action_invite', { name: invited_name || short_id(invited_character_id) }))
+  return sign(tx, i18n.t('party.action_invite', { name: invited_name || short_fighter_id(invited_character_id) }))
 }
 
 // EAlreadyInvited self-heal ("Auto follow" repro investigation): party.move's `invite` asserts
@@ -131,7 +130,7 @@ const E_ALREADY_INVITED = 203 // aresrpg_social::party::EAlreadyInvited
  * Add distinct same-wallet alts through one sequential invite+accept PTB each. The leader proof is resolved once;
  * every invited character still supplies its own exact kiosk proof, and the first refusal stops the sequence.
  * `invited_names` (id → name) is the caller's own roster, which already carries names for every OWNED
- * character (#328) — short_id() is the last-resort fallback only.
+ * character (#328) — short_fighter_id() is the last-resort fallback only.
  */
 export async function join_owned_alts_to_party({
   party_id,
@@ -152,7 +151,7 @@ export async function join_owned_alts_to_party({
     )
       continue
     const invited_proof = await character_proof(invited_character_id)
-    const invited_name = invited_names[invited_character_id] || short_id(invited_character_id)
+    const invited_name = invited_names[invited_character_id] || short_fighter_id(invited_character_id)
     const tx = party_invite_accept_own_ptb(CTX)({
       party_id,
       leader_kiosk_id: leader_proof.kiosk_id,
@@ -169,6 +168,7 @@ export async function join_owned_alts_to_party({
     } catch (error) {
       const abort = parse_move_abort(error)
       if (abort?.module === PARTY_MODULE && abort.code === E_ALREADY_INVITED) {
+        // This correlation-only log deliberately keeps a longer raw prefix; it is not a user-facing id label.
         game_log(
           'party',
           `${invited_character_id.slice(0, 10)} already had a pending invite — accepting it instead of re-inviting`
@@ -215,7 +215,7 @@ export async function decline_party_invite(/** @type {string} */ party_id, /** @
 }
 
 /** The exact leader character removes one exact accepted character. `target_name` is the caller's already-
- *  resolved name (#328); short_id() is the last-resort fallback only. */
+ *  resolved name (#328); short_fighter_id() is the last-resort fallback only. */
 export async function kick_from_party(
   /** @type {string} */ party_id,
   /** @type {string} */ leader_character_id,
@@ -230,7 +230,7 @@ export async function kick_from_party(
     leader_character_id,
     target_character_id,
   })
-  return sign(tx, i18n.t('party.action_kick', { name: target_name || short_id(target_character_id) }))
+  return sign(tx, i18n.t('party.action_kick', { name: target_name || short_fighter_id(target_character_id) }))
 }
 
 /** Leave by exact character; a multi-member leader transfers leadership to the oldest survivor on-chain. */
