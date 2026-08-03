@@ -56,6 +56,18 @@ fun every_family_swings_its_own_line() {
 }
 
 #[test]
+/// §387 leg ② — `weapon_family_lines_387.json`, the five categories that carried a strike ZONE but no attack
+/// LINE and therefore resolved BARE-HANDED. Same `check` contract, second fixture file; the two files'
+/// concatenation is the family vocabulary (the JS twin pins that ordering, Move cannot read either file).
+fun the_five_zone_only_categories_swing_their_own_lines() {
+  check(b"wand", 1, 11, 16, 20, 4, 2, 12, 17);
+  check(b"hammer", 2, 21, 31, 22, 5, 1, 23, 34);
+  check(b"scythe", 3, 19, 28, 20, 4, 1, 20, 30);
+  check(b"shovel", 2, 14, 21, 20, 4, 1, 15, 23);
+  check(b"pickaxe", 0, 16, 24, 25, 4, 1, 17, 26);
+}
+
+#[test]
 /// The fixture's `unarmed` row: no family, a gathering tool and a junk slug all fight bare-handed, and bare
 /// hands never carry affinity.
 fun everything_else_fights_bare_handed() {

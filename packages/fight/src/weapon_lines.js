@@ -12,8 +12,9 @@
 // against — `packages/fight/test/weapon_family_lines.test.js` reads this module, and
 // `packages/move/engine/tests/weapon_line_table_tests.move` reads the Move table, off the one file.
 
-/** The 11 class-weapon families (`equipment.move` WEAPON_FAMILIES ≡ `participant.move` WL_FAMILIES, same order).
- *  A weapon-slot item whose category is NOT one of these is a gathering tool: it fights bare-handed. */
+/** The weapon families (`participant.move` WL_FAMILIES, same order — the first 11 are also `equipment.move`
+ *  WEAPON_FAMILIES, the equippable class weapons). A weapon-slot item whose category is NOT one of these is a
+ *  gathering tool: it fights bare-handed. */
 export const WEAPON_FAMILIES = [
   'longsword',
   'daggers',
@@ -26,15 +27,21 @@ export const WEAPON_FAMILIES = [
   'mace',
   'club',
   'sword',
+  // #387 — the five that carried a strike zone but no line, so they fought bare-handed.
+  'wand',
+  'hammer',
+  'scythe',
+  'shovel',
+  'pickaxe',
 ]
 
 // Index-aligned with WEAPON_FAMILIES, verbatim from participant.move's WL_* tables.
-const WL_ELEMENT = [2, 3, 2, 2, 0, 1, 3, 0, 2, 2, 2] // 0 fire · 1 water · 2 earth · 3 air
-const WL_DAMAGE = [18, 10, 22, 14, 12, 10, 15, 20, 17, 16, 15]
-const WL_CRIT_DAMAGE = [27, 16, 33, 21, 18, 15, 22, 30, 25, 24, 22]
-const WL_CRIT_RATE = [20, 10, 25, 20, 20, 20, 20, 22, 20, 18, 18] // 1-in-X
-const WL_AP_COST = [4, 3, 5, 4, 4, 3, 4, 5, 4, 4, 3]
-const WL_REACH = [1, 1, 1, 2, 3, 5, 6, 1, 1, 1, 1] // Manhattan
+const WL_ELEMENT = [2, 3, 2, 2, 0, 1, 3, 0, 2, 2, 2, 1, 2, 3, 2, 0] // 0 fire · 1 water · 2 earth · 3 air
+const WL_DAMAGE = [18, 10, 22, 14, 12, 10, 15, 20, 17, 16, 15, 11, 21, 19, 14, 16]
+const WL_CRIT_DAMAGE = [27, 16, 33, 21, 18, 15, 22, 30, 25, 24, 22, 16, 31, 28, 21, 24]
+const WL_CRIT_RATE = [20, 10, 25, 20, 20, 20, 20, 22, 20, 18, 18, 20, 22, 20, 20, 25] // 1-in-X
+const WL_AP_COST = [4, 3, 5, 4, 4, 3, 4, 5, 4, 4, 3, 4, 5, 4, 4, 4]
+const WL_REACH = [1, 1, 1, 2, 3, 5, 6, 1, 1, 1, 1, 2, 1, 1, 1, 1] // Manhattan
 
 /** Bare hands (`participant.move unarmed_line`): earth, low fixed damage, cheap swings, melee reach. A family
  *  line is FIXED (max == min), so both maxima mirror their floors — the #577 roller has nothing to roll. */

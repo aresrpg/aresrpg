@@ -117,17 +117,22 @@ public fun wl_crit_damage_max(w: &WeaponLine): u64 { w.crit_damage_max } // #577
 // ── the §17.27 v1 per-family attack lines (parallel CONST tables, index-aligned with WL_FAMILIES). A CONST by
 // the same shape-freeze ruling as equipment's CLASS_FAMILIES: reach/AP-cost are MECHANICS, not dials. The damage
 // numbers are the DECLARED v1 tuning band (§17.17) — the S-02 seal owns rebalancing (package upgrade, or a
-// migration to per-item damage lines if itemization demands it). Slugs mirror `equipment::WEAPON_FAMILIES`.
+// migration to per-item damage lines if itemization demands it). The first 11 slugs mirror
+// `equipment::WEAPON_FAMILIES`; the §387 five below have a strike zone and a line here, and are not equippable
+// on the game side yet — that door is `equipment::WEAPON_FAMILIES`, whose package sits at its size budget.
 const WL_FAMILIES: vector<vector<u8>> = vector[
   b"longsword", b"daggers", b"battleaxe", b"spear", b"staff",
   b"spellbook", b"bow", b"axe", b"mace", b"club", b"sword",
+  // §387 — the five categories that carried a strike ZONE but no attack LINE, so they fought BARE-HANDED: the
+  // zone was right and the damage was the unarmed fallback. Donor-anchored ruling (design word 2026-08-04).
+  b"wand", b"hammer", b"scythe", b"shovel", b"pickaxe",
 ];
-const WL_ELEMENT: vector<u8> = vector[2, 3, 2, 2, 0, 1, 3, 0, 2, 2, 2]; // spell::el_* ids: 0 fire · 1 water · 2 earth · 3 air
-const WL_DAMAGE: vector<u64> = vector[18, 10, 22, 14, 12, 10, 15, 20, 17, 16, 15];
-const WL_CRIT_DAMAGE: vector<u64> = vector[27, 16, 33, 21, 18, 15, 22, 30, 25, 24, 22];
-const WL_CRIT_RATE: vector<u64> = vector[20, 10, 25, 20, 20, 20, 20, 22, 20, 18, 18]; // 1-in-X
-const WL_AP_COST: vector<u64> = vector[4, 3, 5, 4, 4, 3, 4, 5, 4, 4, 3];
-const WL_REACH: vector<u64> = vector[1, 1, 1, 2, 3, 5, 6, 1, 1, 1, 1]; // Manhattan
+const WL_ELEMENT: vector<u8> = vector[2, 3, 2, 2, 0, 1, 3, 0, 2, 2, 2, 1, 2, 3, 2, 0]; // spell::el_* ids: 0 fire · 1 water · 2 earth · 3 air
+const WL_DAMAGE: vector<u64> = vector[18, 10, 22, 14, 12, 10, 15, 20, 17, 16, 15, 11, 21, 19, 14, 16];
+const WL_CRIT_DAMAGE: vector<u64> = vector[27, 16, 33, 21, 18, 15, 22, 30, 25, 24, 22, 16, 31, 28, 21, 24];
+const WL_CRIT_RATE: vector<u64> = vector[20, 10, 25, 20, 20, 20, 20, 22, 20, 18, 18, 20, 22, 20, 20, 25]; // 1-in-X
+const WL_AP_COST: vector<u64> = vector[4, 3, 5, 4, 4, 3, 4, 5, 4, 4, 3, 4, 5, 4, 4, 4];
+const WL_REACH: vector<u64> = vector[1, 1, 1, 2, 3, 5, 6, 1, 1, 1, 1, 2, 1, 1, 1, 1]; // Manhattan
 
 // ╔══════ [ §387 — THE WEAPON ZONE TABLE: which cells one strike touches, keyed by FINE category ] ══════ ]
 //

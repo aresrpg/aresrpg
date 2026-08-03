@@ -1,0 +1,148 @@
+{
+  "_doc": [
+    "#387 leg 2 — THE FIVE MISSING FAMILY LINES, the parity fixture's second file.",
+    "",
+    "wand / hammer / scythe / shovel / pickaxe carried a §387 ZONE row (which cells their strike touches) but no",
+    "§17.27 attack LINE, so a seat holding one resolved BARE HANDS: the zone was correct and the damage was the",
+    "unarmed 4-earth fallback. These are the rows that stop that. Values are the content house's donor-anchored",
+    "ruling (design word 2026-08-04): wand = the weak non-modifiable ranged line; hammer sits between mace and",
+    "battleaxe; scythe air; shovel earth; pickaxe fire with the tool-clumsy 1-in-25 crit.",
+    "",
+    "WHY A SECOND FILE and not five more rows in weapon_family_lines.json: that file is settled evidence — the",
+    "adjudication gate treats an existing fixture's mutation as a claim needing a second pair of eyes, while new",
+    "evidence stands on its own. The two files are pinned as ONE vocabulary by the readers: the concatenation, in",
+    "order, IS `WEAPON_FAMILIES` / `WL_FAMILIES`, and no slug may appear in both.",
+    "",
+    "Readers: packages/fight/test/weapon_family_lines.test.js (the JS twin, @aresrpg/fight/weapon_lines) and",
+    "packages/move/engine/tests/weapon_line_table_tests.move (the chain twin, participant::weapon_line_of).",
+    "",
+    "Row shape, element ids, crit_rate and affinity are weapon_family_lines.json's — see its `_doc`."
+  ],
+  "families": [
+    {
+      "family": "wand",
+      "line": {
+        "element": 1,
+        "damage": 11,
+        "damage_max": 11,
+        "crit_damage": 16,
+        "crit_damage_max": 16,
+        "crit_rate": 20,
+        "ap_cost": 4,
+        "reach": 2,
+        "category": "wand"
+      },
+      "affinity_line": {
+        "element": 1,
+        "damage": 12,
+        "damage_max": 12,
+        "crit_damage": 17,
+        "crit_damage_max": 17,
+        "crit_rate": 20,
+        "ap_cost": 4,
+        "reach": 2,
+        "category": "wand"
+      }
+    },
+    {
+      "family": "hammer",
+      "line": {
+        "element": 2,
+        "damage": 21,
+        "damage_max": 21,
+        "crit_damage": 31,
+        "crit_damage_max": 31,
+        "crit_rate": 22,
+        "ap_cost": 5,
+        "reach": 1,
+        "category": "hammer"
+      },
+      "affinity_line": {
+        "element": 2,
+        "damage": 23,
+        "damage_max": 23,
+        "crit_damage": 34,
+        "crit_damage_max": 34,
+        "crit_rate": 22,
+        "ap_cost": 5,
+        "reach": 1,
+        "category": "hammer"
+      }
+    },
+    {
+      "family": "scythe",
+      "line": {
+        "element": 3,
+        "damage": 19,
+        "damage_max": 19,
+        "crit_damage": 28,
+        "crit_damage_max": 28,
+        "crit_rate": 20,
+        "ap_cost": 4,
+        "reach": 1,
+        "category": "scythe"
+      },
+      "affinity_line": {
+        "element": 3,
+        "damage": 20,
+        "damage_max": 20,
+        "crit_damage": 30,
+        "crit_damage_max": 30,
+        "crit_rate": 20,
+        "ap_cost": 4,
+        "reach": 1,
+        "category": "scythe"
+      }
+    },
+    {
+      "family": "shovel",
+      "line": {
+        "element": 2,
+        "damage": 14,
+        "damage_max": 14,
+        "crit_damage": 21,
+        "crit_damage_max": 21,
+        "crit_rate": 20,
+        "ap_cost": 4,
+        "reach": 1,
+        "category": "shovel"
+      },
+      "affinity_line": {
+        "element": 2,
+        "damage": 15,
+        "damage_max": 15,
+        "crit_damage": 23,
+        "crit_damage_max": 23,
+        "crit_rate": 20,
+        "ap_cost": 4,
+        "reach": 1,
+        "category": "shovel"
+      }
+    },
+    {
+      "family": "pickaxe",
+      "line": {
+        "element": 0,
+        "damage": 16,
+        "damage_max": 16,
+        "crit_damage": 24,
+        "crit_damage_max": 24,
+        "crit_rate": 25,
+        "ap_cost": 4,
+        "reach": 1,
+        "category": "pickaxe"
+      },
+      "affinity_line": {
+        "element": 0,
+        "damage": 17,
+        "damage_max": 17,
+        "crit_damage": 26,
+        "crit_damage_max": 26,
+        "crit_rate": 25,
+        "ap_cost": 4,
+        "reach": 1,
+        "category": "pickaxe"
+      }
+    }
+  ]
+}

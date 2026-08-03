@@ -14,7 +14,7 @@ module aresrpg_fight::weapon_shape_tests;
 
 use aresrpg_fight::{cast, fight::{Self, Fight}, mob, participant, version::Version};
 use aresrpg_fight::fight_scaffold::{bag_spec, combatant_weapon, mk_clock, stand_up, tsregs_for};
-use aresrpg_foundation::{combat_grid, spell_effect};
+use aresrpg_foundation::{combat_grid, spell, spell_effect};
 use sui::test_scenario::{Self as ts, Scenario};
 
 const OWNER: address = @0xA;
@@ -28,6 +28,7 @@ const BEYOND: u64 = 107;
 const ARC_A: u64 = 126;
 const ARC_B: u64 = 86;
 const OFF_ZONE: u64 = 146; // (6,7) — two cells down the perpendicular: in NO ruled weapon zone.
+const FAR: u64 = 112; // (12,5) — distance 7 on the strike axis: past a bow's own reach, inside its EXTENDED band.
 
 const MOB_HP: u64 = 1000; // survives every swing, so "took damage" stays a readable HP delta
 
@@ -64,6 +65,9 @@ fun place(fight: &mut Fight, cells: vector<u64>) {
 }
 
 fun hp(fight: &Fight, idx: u64): u64 { mob::hp(fight::mobs(fight).borrow(idx)) }
+
+/// A stat line carrying nothing but `range` — the only stat a weapon BAND can read.
+fun range_stats(range: u64): spell::Stats { spell::new_stats(0, 0, 0, 0, 0, 0, range, 0, 0, 0, 0) }
 
 // ╔══════════ [ the ZONE KINDS — the same geometry engine, the fixture's cell sets ] ══════════ ]
 
@@ -235,6 +239,82 @@ fun a_bow_strikes_at_its_minimum_range() {
   let (mut fight, ver) = fight_with(&mut sc, b"bow", 1);
   place(&mut fight, vector[BEYOND]); // (7,5) — distance 2, the floor itself
   cast::weapon_strike(&mut fight, 0, BEYOND);
+  assert!(hp(&fight, 0) < MOB_HP, 0);
+  ts::return_shared(fight);
+  ts::return_shared(ver);
+  sc.end();
+}
+
+// ╔══════════ [ §387 leg ② — the five zone-only categories, now DRIVEN through the real door ] ══════════ ]
+
+#[test]
+/// A HAMMER strikes its PODIUM. Until it carried an attack line it resolved BARE HANDS — and bare hands are
+/// `single`, so the zone table's hammer row was inert on every real board. This is that row, driven.
+fun a_hammer_strikes_its_podium_instead_of_fighting_bare_handed() {
+  let mut sc = ts::begin(OWNER);
+  let (mut fight, ver) = fight_with(&mut sc, b"hammer", 4);
+  place(&mut fight, vector[ANCHOR, ARC_A, ARC_B, BEYOND]);
+  cast::weapon_strike(&mut fight, 0, ANCHOR);
+  assert!(hp(&fight, 0) < MOB_HP, 0);
+  assert!(hp(&fight, 1) < MOB_HP, 1);
+  assert!(hp(&fight, 2) < MOB_HP, 2);
+  assert!(hp(&fight, 3) < MOB_HP, 3);
+  ts::return_shared(fight);
+  ts::return_shared(ver);
+  sc.end();
+}
+
+#[test]
+/// The WAND's own band, driven — the assert that used to stand in on the spellbook. Its reach is 2 and its
+/// floor is 2, so its one legal distance is exactly 2: bare hands (reach 1) cannot make this swing land.
+fun a_wand_strikes_at_its_own_band() {
+  let mut sc = ts::begin(OWNER);
+  let (mut fight, ver) = fight_with(&mut sc, b"wand", 1);
+  place(&mut fight, vector[BEYOND]); // (7,5) — distance 2: the wand's floor AND its ceiling
+  cast::weapon_strike(&mut fight, 0, BEYOND);
+  assert!(hp(&fight, 0) < MOB_HP, 0);
+  ts::return_shared(fight);
+  ts::return_shared(ver);
+  sc.end();
+}
+
+#[test]
+#[expected_failure(abort_code = cast::EIllegalCast)]
+/// …and the wand refuses point-blank exactly as the bow does — the floor is the category's, not the bow's.
+fun a_wand_cannot_strike_inside_its_minimum_range() {
+  let mut sc = ts::begin(OWNER);
+  let (mut fight, ver) = fight_with(&mut sc, b"wand", 1);
+  place(&mut fight, vector[ANCHOR]); // (6,5) — distance 1, inside the ruled minimum 2
+  cast::weapon_strike(&mut fight, 0, ANCHOR);
+  ts::return_shared(fight);
+  ts::return_shared(ver);
+  sc.end();
+}
+
+#[test]
+#[expected_failure(abort_code = cast::EIllegalCast)]
+/// NON-MODIFIABILITY, driven on the wand itself: a caster carrying +3 range still cannot strike past the
+/// wand's own reach of 2. Its positive control is the pair below — the same stat on a bow reaches distance 7.
+fun a_wand_band_never_grows_with_the_range_stat() {
+  let mut sc = ts::begin(OWNER);
+  let (mut fight, ver) = fight_with(&mut sc, b"wand", 1);
+  place(&mut fight, vector[FAR]); // (12,5) — distance 7: inside a bow's extended band, outside the wand's
+  participant::set_stats_for_testing(fight::participants_mut(&mut fight).borrow_mut(0), range_stats(3));
+  cast::weapon_strike(&mut fight, 0, FAR);
+  ts::return_shared(fight);
+  ts::return_shared(ver);
+  sc.end();
+}
+
+#[test]
+/// The contrast that makes the refusal above mean something: the BOW's band IS modifiable, so the same +3
+/// range stat carries the same swing to the same cell.
+fun a_bow_band_grows_with_the_range_stat() {
+  let mut sc = ts::begin(OWNER);
+  let (mut fight, ver) = fight_with(&mut sc, b"bow", 1);
+  place(&mut fight, vector[FAR]); // distance 7 — one past the bow's own reach of 6
+  participant::set_stats_for_testing(fight::participants_mut(&mut fight).borrow_mut(0), range_stats(3));
+  cast::weapon_strike(&mut fight, 0, FAR);
   assert!(hp(&fight, 0) < MOB_HP, 0);
   ts::return_shared(fight);
   ts::return_shared(ver);
