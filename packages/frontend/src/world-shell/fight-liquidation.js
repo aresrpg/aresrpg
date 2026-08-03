@@ -31,7 +31,7 @@ import { crank as tx_crank, force_start as tx_force_start } from './dungeon_acti
 import { is_gone_error, read_object } from './run_reads.js'
 import { turn_liquidatable } from './fight_expiry_gate.js'
 import { error_executed_digest } from './tx_digest_error.js'
-import { CHAIN_STATUS_ACTIVE, CHAIN_STATUS_PLACEMENT } from './fight_chain_status.js'
+import { CHAIN_STATUS_ACTIVE, CHAIN_STATUS_PLACEMENT, seat_is_dead } from './fight_chain_status.js'
 
 // TWO NAMESPACES LIVE IN THIS FILE, and they disagree on placement (#932) — so NEITHER is spelled here, both
 // are imported from their one home. The janitor probes below are fed an ADAPTED BOARD VIEW (dungeon_store.refresh
@@ -200,21 +200,10 @@ export function reset_liquidation() {
 // ACTIVE→`crank`. What the chain reports AFTER that door decides adoption; a fight the door resolved terminal
 // is `gone` (route out + recover the outcome), never a board to mount.
 
-/**
- * PURE — is THIS character's seat in a chain-decoded Fight already a corpse? (#2136.) `hp` rides the raw
- * participant passthrough (`decode_fight` keeps `json.participants` verbatim), so it arrives as a gRPC string —
- * hence the Number() coercion. An ABSENT seat is deliberately NOT dead: a torn/incomplete participants read must
- * degrade to today's behaviour, never fabricate a death that locks a live player out of their own fight.
- * @param {{ participants?: any[] } | null} decoded
- * @param {string | null | undefined} character_id
- */
-export function seat_is_dead(decoded, character_id) {
-  if (!decoded || !character_id) return false
-  const seat = (decoded.participants ?? []).find(
-    (/** @type {any} */ p) => String(p?.character ?? '') === String(character_id)
-  )
-  return !!seat && Number(seat.hp ?? 0) <= 0
-}
+// #2139 — the corpse predicate MOVED to the zero-dep leaf (fight_chain_status.js) the moment a second reader
+// needed it: the dungeon resume gate (fight_liveness.js) is a pure read module and may not import this janitor,
+// which composes chain writes. Re-exported here so this file stays the world-boot gate's single import surface.
+export { seat_is_dead }
 
 /**
  * PURE — presentability of a CHAIN-read fight for a boot resume (statuses per fight_chain_status.js, NOT the

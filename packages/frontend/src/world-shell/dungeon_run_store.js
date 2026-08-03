@@ -833,7 +833,11 @@ export const use_dungeon = create((set, get) => ({
       // ghost board otherwise). A transport failure throws to the retryable resume path; only absent/terminal
       // truth clears locally and starts the pending-outcome recovery.
       if (pass.fight) {
-        const liveness = await read_fight_liveness(sdk, pass.fight)
+        // #2139 — the seat is NAMED here, and only here: this is a re-entry, so "is the fight live" is not the
+        // whole question — "am I still alive in it" is the other half. A co-op room fight this character already
+        // died in reads 'left' and takes the same recovery branch as a dead reference: the RunPass keeps latching
+        // it until settlement, but nothing re-mounts a board with no turn and no second forfeit.
+        const liveness = await read_fight_liveness(sdk, pass.fight, character_id)
         if (cancelled()) return cancelled_outcome()
         if (liveness.state !== 'live') {
           get()._recover_dead_fight_reference({ character_id, state: liveness.state })
