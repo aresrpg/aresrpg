@@ -1016,7 +1016,10 @@ export const use_dungeon = create((set, get) => ({
               tpl ? { name: tpl.name || 'Mob', min_level: tpl.min_level || 1, element: tpl.element ?? 255 } : null
             )
           )
-          .catch(() => _mob_tmpl_cache.set(id, null))
+          .catch((error) => {
+            game_log('dungeon', 'mob template read failed — retaining the id fallback', { id, error })
+            return _mob_tmpl_cache.set(id, null)
+          })
           .finally(() => _mob_tmpl_pending.delete(id))
       )
     ).then(() => {

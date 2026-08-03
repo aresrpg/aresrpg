@@ -98,7 +98,10 @@ export async function attempt_sponsor_fallback({
 
   // FRESH balance gate — the sponsor's exact `>` boundary. A failed read = unknown ⇒ never sponsor blind
   // (the sponsor re-checks server-side anyway; this client gate spares it a doomed round-trip).
-  const balance_mist = await fetch_balance_mist().catch(() => null)
+  const balance_mist = await fetch_balance_mist().catch((balance_error) => {
+    game_log('tx', 'sponsor fallback balance read failed — retaining the self-pay failure', balance_error)
+    return null
+  })
   if (balance_mist == null || balance_mist > SELF_PAY_THRESHOLD_MIST) throw error
 
   // ONE sponsored attempt — sequential, never parallel with the (already failed) self-pay, never repeated.

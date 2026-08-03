@@ -539,7 +539,9 @@ export async function station_reserve({ gas_budget, reserve_duration_secs }) {
     throw new Error(`sponsor-station-down: reserve_gas unreachable (${error?.message ?? error}) — refusing`)
   }
   if (!response.ok) throw new Error(`sponsor-station-error: reserve_gas HTTP ${response.status} — refusing`)
-  const body = await response.json().catch(() => ({}))
+  const body = await response.json().catch((error) => {
+    throw new Error('sponsor-station-error: reserve_gas returned unreadable JSON — refusing', { cause: error })
+  })
   if (body?.error || !body?.result)
     throw new Error(`sponsor-reserve-failed: ${body?.error ?? 'no reservation returned'} — refusing`)
   const { sponsor_address, reservation_id, gas_coins } = body.result
@@ -568,7 +570,9 @@ async function station_execute({ reservation_id, tx_bytes, user_sig }) {
     throw new Error(`sponsor-station-down: execute_tx unreachable (${error?.message ?? error}) — refusing`)
   }
   if (!response.ok) throw new Error(`sponsor-station-error: execute_tx HTTP ${response.status} — refusing`)
-  const body = await response.json().catch(() => ({}))
+  const body = await response.json().catch((error) => {
+    throw new Error('sponsor-station-error: execute_tx returned unreadable JSON — refusing', { cause: error })
+  })
   // TWO HOMES, ONE MEANING (money-critical): a station honouring `options` nests effects under
   // `tx_block_response`; one that ignores them keeps the flat `effects` field. Read BOTH — effects present in
   // EITHER place means the transaction EXECUTED (gas burned, never retried). Reading only the flat field would

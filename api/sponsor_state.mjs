@@ -226,7 +226,8 @@ export async function take_reservation(reservation_id) {
   if (!raw) return null
   try {
     return JSON.parse(raw)
-  } catch {
+  } catch (error) {
+    console.warn(`sponsor reservation ${String(reservation_id)} held unreadable JSON`, error)
     return null
   }
 }

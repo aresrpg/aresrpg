@@ -103,6 +103,13 @@ describe('station_reserve — the reserve_gas wire (happy + fail-closed)', () =>
     expect(S.station_reserve({ gas_budget: 1, reserve_duration_secs: 60 })).rejects.toThrow(/sponsor-reserve-failed/)
   })
 
+  test('station returns unreadable JSON ⇒ fail-closed with the wire failure named', async () => {
+    _next_response = { ok: true, status: 200, json: async () => Promise.reject(new Error('truncated body')) }
+    expect(S.station_reserve({ gas_budget: 1, reserve_duration_secs: 60 })).rejects.toThrow(
+      /reserve_gas returned unreadable JSON/
+    )
+  })
+
   test('malformed result (missing coins) ⇒ fail-closed', async () => {
     _next_response = mock_response({ result: { sponsor_address: '0x1', reservation_id: 1, gas_coins: [] } })
     expect(S.station_reserve({ gas_budget: 1, reserve_duration_secs: 60 })).rejects.toThrow(/malformed reservation/)
@@ -266,6 +273,15 @@ describe('executeSponsored — once-only, exact-charge booking from the returned
     )
     // nothing booked: the whole cap is still available
     expect(await S.addr_daily_spent(sender)).toBe(0n)
+  })
+
+  test('an unreadable execute response stays outcome-unknown and is never coerced into a pre-execution rejection', async () => {
+    const sender = '0x' + 'e5'.repeat(32)
+    const { txBytes } = await seed(sender)
+    _next_response = { ok: true, status: 200, json: async () => Promise.reject(new Error('truncated body')) }
+    await expect(S.executeSponsored({ reservationId: 101, txBytes, userSig: 's' })).rejects.toThrow(
+      /execute_tx returned unreadable JSON/
+    )
   })
 })
 

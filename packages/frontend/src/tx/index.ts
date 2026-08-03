@@ -216,7 +216,10 @@ async function client_resolved_route(
   resolve_balance_mist: () => Promise<bigint | null>
 ): Promise<ReturnType<typeof decide_sponsor_route>> {
   if (initial.route !== 'sponsored-first' || initial.reason === 'fresh-balance<=threshold') return initial
-  const resolved_mist = await resolve_balance_mist().catch(() => null)
+  const resolved_mist = await resolve_balance_mist().catch((error) => {
+    game_log('tx', 'sponsor route balance refresh failed — retaining the initial route', error)
+    return null
+  })
   if (resolved_mist == null) return initial
   const rerouted = decide_sponsor_route({
     ...route_input,
@@ -662,7 +665,10 @@ async function sponsor_fetch(url: string, body: unknown, post_submit = false): P
     }
   }
   if (post_submit && response.status >= 500) throw sponsor_outcome_unknown_error()
-  const response_body = await response.text().catch(() => '')
+  const response_body = await response.text().catch((error) => {
+    game_log('tx', 'sponsor refusal body was unreadable — retaining the HTTP refusal', error)
+    return ''
+  })
   const { detail, reason, chain_error } = decode_sponsor_error(response_body)
   throw map_sponsor_error(detail, response.status, reason, chain_error)
 }
