@@ -1,10 +1,5 @@
-e116b4e08 → Fixes #1994 — fix(sim): ignore generated replay capsules (#1994)
-34c2c3c79 → Fixes #1039 — fix(sim): preserve reset-positions kind (#1039)
-e0c38f584 → Fixes #1660 — test(twin): instrument Stoneward damage reduction (#1660)
-9fee51b4e → Fixes #766 — fix(world): keep attack pill inside claim ring (#766)
-1dc4aff09 → Fixes #1734 — fix(party): gate dungeon auto-enter on arrival (#1734)
-38d5d0304 → Fixes #2062 — fix(frontend): distinguish failed fight friend reads
-acc8494d2 → Fixes #1788 — test(frontend): fence env mock export parity
-41719af30 → Fixes #2100 — fix(sdk): absence classified by structure, English demoted to secondary
-577a8e374 → Fixes #2011 — fix(promote): use the latest verdict per check name (Fixes #2011)
-d16df01a3 → Fixes #1182 — fix(move): make package lint share the root style truth (Fixes #1182)
+486efce00 → Refs #1851 — test(fight): pin incoming DoT tick ordinals
+1f2fc2322 → Refs #1851 — fix(fight): clock DoT ticks from the incoming turn
+47abc04d6 → Refs #1851 — docs(move): describe per-tick DoT draws
+f54e50545 → Refs #1851 — style(fight): satisfy DoT parity fixture lint
+e7f581a7e → Refs #1756 — fix(errors): surface mechanical fallback failures
