@@ -40,7 +40,7 @@ const STATUS_ACTIVE = 1 // live fire-time guard for the reducer-derived commit e
 /**
  * Install the commit-edge subscriptions and return the shared manual/background turn flusher.
  */
-export function use_dungeon_board_commit(state, t) {
+export function useDungeonBoardCommit(state, t) {
   const {
     auto_submit_ref,
     entity_id,

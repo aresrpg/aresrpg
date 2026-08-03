@@ -20,7 +20,7 @@ import { fight_spell_template, seat_spell_level } from '../fight-spells.js'
 /**
  * Install the rich-board click relay and fold each legal pick optimistically.
  */
-export function use_dungeon_board_input(state, t) {
+export function useDungeonBoardInput(state, t) {
   const {
     fight,
     entity_id,

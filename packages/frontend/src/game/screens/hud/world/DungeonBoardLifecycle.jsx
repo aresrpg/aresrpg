@@ -9,7 +9,7 @@ import { fight_store } from '@aresrpg/fight/store'
 /**
  * Keep the fight hand/draft clocks synchronized and fire terminal claims.
  */
-export function use_dungeon_board_lifecycle(state) {
+export function useDungeonBoardLifecycle(state) {
   const {
     clear_picks,
     fight,
