@@ -58,6 +58,13 @@ const stream_url = (base_url, fight_id, cursor) => {
  * ONE SSE frame → `{ message, whole }`: the journal-door message plus whether the frame already carried a WHOLE
  * batch. A PAGE is whole (the walker's own wire — nothing fragmented it, so it never enters the coalescing
  * window); a single #1382 row is a fragment. Null when the frame carries no foldable journal row.
+ *
+ * #1993 WP6 — MIGRATION DECLINED, and this is the why. The audit read SSE and REST as two independent feeds of
+ * status application/turn-end events. They are one: a whole PAGE passes through byte-identical (re-normalizing
+ * would re-key rows the walker already keyed) and a single row goes through `normalize_journal_page` — the SAME
+ * normalizer the REST walker calls — so both arrive as the identical idempotent reducer actions and the fold
+ * cannot tell the two deliveries apart. That is already the proposed canonical shape; the disagreement the audit
+ * feared is pinned red-first in `packages/fight/test/status_projection_one_collection.test.js`.
  * @param {{ data?: string, lastEventId?: string }} event
  * @param {string} fight_id
  */

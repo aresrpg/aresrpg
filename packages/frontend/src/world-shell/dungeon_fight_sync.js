@@ -122,6 +122,13 @@ export function sync_dungeon_fight({
   // The board list is a VERSIONED fact: the fold adopts its rows into the one trap ledger and needs the read's
   // own version to tell a stale list still naming a detonated trap (the ghost) from a genuine re-arm (#1858).
   const chain_traps_version = read ? Number(read.version) : 0
+  // #1993 WP6 — MIGRATION DECLINED, and this is the why. The audit read these rows as "authoritative status state
+  // injected by every snapshot"; they are not. They ride the `snapshot` message like every other decoded field,
+  // and the reducer is what does anything with them: `fold_base.base_state_from_view` groups them per fighter as
+  // the BASE the journal actions then replay onto, under the versioned merge that is the only writer of snapshot
+  // state. So the rows are already reducer-owned and this read is already reconciliation INPUT — moving it would
+  // buy a second door, not a single home. Its two-transport agreement is pinned by
+  // `packages/fight/test/status_projection_one_collection.test.js`.
   if (fight && read) fight.invisibility_statuses = read_fighter_statuses(read.json)
   if (fight) fight.weapon_lines = weapon_lines
   fight_store.getState().input({
