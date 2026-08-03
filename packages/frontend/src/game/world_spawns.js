@@ -66,6 +66,7 @@ import {
   enter_pending_world_fight,
   enter_world_fight,
   rekey_world_fight,
+  report_fight_mount_failure,
   resume_world_fight,
 } from '../world-shell/world_fight.js'
 import { use_prompt_stack } from '../world-shell/prompt_stack.js'
@@ -838,8 +839,13 @@ export function create_world_spawns({ engine, canvas = null, get_player_pos }) {
           world_group: group ?? null,
           mob_roster,
         })
-      // A receipt that minted NO fight id is a create that did not happen: the pending session dies with it.
-      else abandon_pending_world_fight(pending_id)
+      // A receipt with NO fight id is a create this client cannot NAME — and it is a create that EXECUTED (a
+      // failed one threw). The seat may well be held on chain while nothing here can mount it, so the pending
+      // session dies AND the strand is announced (#2125); the resume entry rejoins whatever is actually held.
+      else {
+        abandon_pending_world_fight(pending_id)
+        report_fight_mount_failure({ fight_id: null, character_id, reason: 'no_fight_id' })
+      }
       // THE CLAIM RECEIPT through the door: removes the row (tombstoned against the lagging poll), advances
       // checkpoint+hunt_zone to the group, emits the fight_entry handoff. The re-poll stays for freshness.
       void publish_claim_checkpoint_receipt(character_id, world_id, e.key, fight_id ?? null, e.row)

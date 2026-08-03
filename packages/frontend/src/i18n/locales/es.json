@@ -2763,6 +2763,8 @@
     "a_dungeon": "la mazmorra",
     "board_place_failed": "No se pudo colocar el tablero de combate — recarga la página.",
     "expired_fight_cleared": "Ese combate ya estaba resuelto — tu personaje está libre.",
+    "mount_failed_title": "No se pudo abrir el tablero de combate",
+    "mount_failed_message": "El combate mantiene tu puesto — volverás a entrar automáticamente la próxima vez.",
     "resume_offer_title": "Un combate sigue reteniendo a tu personaje",
     "resume_offer_message": "Este combate dejó de avanzar por su cuenta. Volver a entrar reinicia su reloj y cuesta una transacción; rendirse abandona el combate y libera a tu personaje.",
     "resume_offer_rejoin": "Volver al combate",

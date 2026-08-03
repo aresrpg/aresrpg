@@ -2763,6 +2763,8 @@
     "a_dungeon": "ダンジョン",
     "board_place_failed": "戦闘盤面を配置できませんでした — 再読み込みしてください。",
     "expired_fight_cleared": "その戦闘はすでに終了していました — キャラクターは解放されています。",
+    "mount_failed_title": "戦闘盤面を開けませんでした",
+    "mount_failed_message": "戦闘があなたの席を保持しています — 次に入場したとき自動的に復帰します。",
     "resume_offer_title": "戦闘がまだキャラクターを拘束しています",
     "resume_offer_message": "この戦闘は自力で進行しなくなりました。復帰すると時計が再開し、トランザクションが1件必要です。放棄すると戦闘を離れ、キャラクターが解放されます。",
     "resume_offer_rejoin": "戦闘に復帰する",

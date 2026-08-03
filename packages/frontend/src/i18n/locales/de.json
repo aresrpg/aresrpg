@@ -2763,6 +2763,8 @@
     "a_dungeon": "dem Dungeon",
     "board_place_failed": "Spielfeld konnte nicht platziert werden — bitte neu laden.",
     "expired_fight_cleared": "Dieser Kampf war bereits aufgelöst — dein Charakter ist frei.",
+    "mount_failed_title": "Spielfeld konnte nicht geöffnet werden",
+    "mount_failed_message": "Der Kampf hält deinen Platz — beim nächsten Einstieg trittst du automatisch wieder bei.",
     "resume_offer_title": "Ein Kampf hält deinen Charakter noch fest",
     "resume_offer_message": "Dieser Kampf läuft von allein nicht weiter. Wiedereinstieg startet seine Uhr neu und kostet eine Transaktion; Aufgeben verlässt den Kampf und befreit deinen Charakter.",
     "resume_offer_rejoin": "Kampf wieder betreten",

@@ -111,17 +111,43 @@ export function enter_world_fight({
   world_group = null,
   mob_roster = [],
 }) {
-  if (!mount_world_fight({ fight_id, world_id, character_id, resumed, world_group, mob_roster })) return
+  const decision = mount_world_fight({ fight_id, world_id, character_id, resumed, world_group, mob_roster })
+  // 'same' is not a failure and must never toast: this receipt is enriching the board already mounted for this
+  // exact fight. Every OTHER refusal here is the strand — the id it carries is a real on-chain seat (#2125).
+  if (decision === 'same') return
+  if (decision !== 'enter') return report_fight_mount_failure({ fight_id, character_id, reason: decision })
   activate_world_fight({ fight_id, resumed, is_public })
+}
+
+/**
+ * THE STRAND, SAID OUT LOUD (#2125). A create/join that LANDED seats the character in a fight on chain; a mount
+ * that then refuses leaves the player standing in the overworld holding a seat they cannot see. Measured
+ * 2026-08-03: the engage press executed `fight::create`, the board never mounted, and not one surface said so.
+ * The copy names both halves — what happened, and that the seat is HELD and rejoins itself on the next entry
+ * (the resume entry below answers its own consent, #2122). Toast for the player, console + ring-buffer line for
+ * the bug report: the same idiom the resume refusal uses.
+ * @param {{ fight_id: string | null, character_id?: string | null, reason: string }} args
+ */
+export function report_fight_mount_failure({ fight_id, character_id = null, reason }) {
+  console.error(`[world-fight] mount failed — fight ${fight_id ?? '(unnamed)'} holds a seat nothing rendered:`, reason)
+  game_log('world-fight', 'mount failed — seat held on chain', { fight_id, character_id, reason })
+  push_event_toast({
+    state: 'error',
+    title: i18n.t('fights.mount_failed_title'),
+    message: i18n.t('fights.mount_failed_message'),
+  })
 }
 
 /**
  * MOUNT — the ONE render home. Publishes the session into the shared store and OPENS it in the core; a
  * `predicted` record additionally folds through the core's ONE snapshot door, so a pending board and a chain
- * board reach the renderer down the identical path (there is no second surface to keep in sync). Returns false
- * when the entry decision refused (invalid / same id / another session live).
+ * board reach the renderer down the identical path (there is no second surface to keep in sync). Returns the
+ * entry decision: 'enter' once the session is published, or the refusal ('invalid' / 'same id' / 'busy')
+ * untouched. A refusal is deliberately NOT surfaced here — only the caller knows whether a real on-chain seat
+ * is riding on this mount (an optimistic pending board is not one), and a surface without that fact cries wolf.
  * @param {{fight_id:string, world_id?:string|null, character_id:string, resumed?:boolean,
  *   world_group?:any, mob_roster?:any[], predicted?:any}} args
+ * @returns {'enter'|'invalid'|'same'|'busy'}
  */
 function mount_world_fight({
   fight_id,
@@ -140,11 +166,7 @@ function mount_world_fight({
     character_id,
   })
   fight_state_trace('fight_create_adopt', { fight_id, character_id, resumed, decision })
-  if (decision === 'invalid' || decision === 'same') return false // same receipt id enriches the existing mount
-  if (decision === 'busy') {
-    game_log('world-fight', 'enter refused — a session is already live', { have: store.fight_id })
-    return false
-  }
+  if (decision !== 'enter') return decision // 'same' enriches the existing mount; the rest is the caller's to tell
   const { address } = use_auth.getState()
   use_dungeon.setState({
     fight_id,
@@ -173,7 +195,7 @@ function mount_world_fight({
   if (predicted)
     fight_store.getState().input({ type: 'snapshot', fight: predicted, fight_id: predicted.id, version: 0 })
   fight_state_trace('fight_create_published', { fight_id, character_id, resumed, fight_syncing: !resumed })
-  return true
+  return 'enter'
 }
 
 /**
@@ -232,6 +254,8 @@ export function enter_pending_world_fight({
     game_log('world-fight', 'no predicted board for this engage — mounting at finality', { world_id, anchor_x })
     return null
   }
+  // SILENT ON PURPOSE, and the one refusal on this path that stays so: nothing is on chain yet, so a refused
+  // pending board strands nobody — the caller falls back to the receipt-time mount, which IS the loud one.
   const mounted = mount_world_fight({
     fight_id: pending_id,
     world_id,
@@ -240,7 +264,7 @@ export function enter_pending_world_fight({
     mob_roster,
     predicted,
   })
-  if (!mounted) return null
+  if (mounted !== 'enter') return null
   fight_state_trace('fight_pending_mounted', { pending_id, world_id, character_id })
   return pending_id
 }
@@ -258,6 +282,9 @@ export function enter_pending_world_fight({
 export function rekey_world_fight(pending_id, fight_id, { is_public = false, world_group = null } = {}) {
   if (!pending_id || !fight_id || getState().fight_id !== pending_id) {
     fight_state_trace('fight_pending_rekey_stale', { pending_id, fight_id, have: getState().fight_id })
+    // The create LANDED — `fight_id` names a minted Fight — and this session is no longer the one that ordered
+    // it. Nothing will render that board, so it is the same strand as a refused entry, and it says so (#2125).
+    if (fight_id) report_fight_mount_failure({ fight_id, reason: 'rekey_stale' })
     return false
   }
   use_dungeon.setState({ fight_id, dungeon_id: fight_id, world_group })
