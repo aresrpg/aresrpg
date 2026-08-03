@@ -17,17 +17,17 @@
 
 import { useMemo, useState } from 'react'
 
-import { get_total_stat, STATISTICS } from '@aresrpg/sdk/stats'
 import { xp_progress } from '@aresrpg/sdk/experience'
 
-import { projected_hp, character_max_hp } from '../../../chain/read_character.js'
+import { projected_hp } from '../../../chain/read_character.js'
 import { use_expedition, STATUS_ACTIVE } from '../../../roster/store'
 import { seat_character } from '../../../world-shell/seat_character.js'
 import { use_dungeon } from '../../../world-shell/dungeon_store.js'
-import { useFightView, useGameState } from '../../store.js'
+import { useFightView, useFightVisibleEntities, useGameState } from '../../store.js'
 import { DeckCluster } from './DeckCluster.jsx'
 import { socket_columns } from './deck-socket-grid.js'
 import { get_saved_hp_display, save_hp_display } from './hp_display_pref.js'
+import { self_vitals_pct, self_vitals_view_model } from './self_vitals_view_model.js'
 import { useTweenedHp } from './use_tweened_hp.js'
 
 // ── fight Vitals — the optE gem box (S-25) ───────────────────────────────────────────────────────
@@ -51,33 +51,42 @@ const feather_mask = (/** @type {number} */ pct) => {
 // Complexity retained (#2069): hook order and the compact vitals render matrix form one component boundary; extraction would add props without a domain seam.
 function Vitals() {
   const fight = useFightView() // synchronous core view (S2 mirror kill)
+  const entities = useFightVisibleEntities() // the canonical entity rows — vitals answer from here (#1993 WP7)
   const character = useGameState((s) =>
     s.sui.characters.find((c) => c.id === (fight?.my_entity_id ?? s.selected_character_id))
   )
-  const me = fight && fight.my_entity_id ? fight.fighters.get(fight.my_entity_id) : null
+  const me = fight?.my_entity_id ? (entities[fight.my_entity_id] ?? null) : null
   // #42 backend-off: there is no engine fight during exploration — the player's real HP is the ACTIVE
   // Expedition's on-chain carried_hp / max_hp (chain-direct store), so this canonical bar agrees with
   // ExpeditionHud. A live board fight (`me`, e.g. the leave-replay) still wins.
   const expedition = use_expedition((s) => s.expedition)
   const run = !me && expedition?.status === STATUS_ACTIVE ? expedition : null
 
-  const health =
-    me?.health ?? run?.carried_hp ?? (character?._type ? projected_hp(character, Date.now()) : (character?.health ?? 0))
-  const max_health = me ? me.health_max : run ? run.max_hp : character?._type ? character_max_hp(character) : 0
-  const hp_pct = max_health > 0 ? Math.round(Math.max(0, Math.min(100, (health / max_health) * 100))) : 0
+  // #1993 WP7 — MOUNT SCOPE AND VITALS AS ONE ATOMIC PROJECTION. The four-rung ladder this gem used to spell
+  // itself (fight hp ?? carried hp ?? projected /v1 hp ?? character.health), paired term by term with its own
+  // max, now lives in one home; the fight rung reads the vitals record's DISPLAY value, so this gem and the
+  // turn card can no longer render two different numbers for the same fighter in one frame.
+  const vitals = self_vitals_view_model({
+    fighter: me,
+    expedition: run,
+    character,
+    projected_health: character?._type ? projected_hp(character, Date.now()) : null,
+  })
+  const { health, max_health, ap, mp } = vitals
+  const hp_pct = Math.round(self_vitals_pct(vitals))
   // HP TWEEN (life updates were too fast on the hud and the nameplate) — the SAME animation home
   // the board nameplate uses: ease the DISPLAYED number at the house pace (the gem fill already CSS-transitions).
   // Keyed on the subject so switching character/fight snaps. Aria-label keeps the TRUE hp (accessibility = truth).
   const shown_hp = useTweenedHp(health, fight?.my_entity_id ?? character?.id ?? 'self')
-  const shown_pct = max_health > 0 ? Math.round(Math.max(0, Math.min(100, (shown_hp / max_health) * 100))) : 0
-  const ap = me ? me.ap : character ? get_total_stat(character, STATISTICS.ACTION) : 0
-  const mp = me ? me.mp : character ? get_total_stat(character, STATISTICS.MOVEMENT) : 0
+  const shown_pct = Math.round(self_vitals_pct({ health: shown_hp, max_health }))
   // The resource GEMS DRAIN to their fill level (HP the hero; AP/MP the per-turn budget so a
   // queued strike visibly spends AP). The bright faceted hex is vertically cropped to its
   // percent via a FEATHERED mask (~12% soft band at the fill line), with a dimmed/desaturated ghost hex behind
   // for the spent portion. Crop is INLINE-only — the gem's shape/gradient stay in hud.css (reused, not forked).
-  const ap_pct = me ? (me.ap_max > 0 ? Math.round(clamp_pct((ap / me.ap_max) * 100)) : 0) : 100
-  const mp_pct = me ? (me.mp_max > 0 ? Math.round(clamp_pct((mp / me.mp_max) * 100)) : 0) : 100
+  // Out of a fight there are no per-turn pools to drain, so the resource gems sit full (the view-model reports
+  // a null max for those scopes); in a fight both terms come from the same entity row.
+  const ap_pct = vitals.ap_max == null ? 100 : vitals.ap_max > 0 ? Math.round(clamp_pct((ap / vitals.ap_max) * 100)) : 0
+  const mp_pct = vitals.mp_max == null ? 100 : vitals.mp_max > 0 ? Math.round(clamp_pct((mp / vitals.mp_max) * 100)) : 0
   const reduce_motion = useMemo(
     () => (typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) || false,
     []

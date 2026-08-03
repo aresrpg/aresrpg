@@ -15,6 +15,11 @@
  * @param {{
  *   fighters: Map<string, { id: string, name: string, team: number, level: number, is_player: boolean,
  *     dead: boolean, owner?: string, variant?: string | null }> | null | undefined,
+ *   vitals?: Record<string, { vitals?: { committed?: number|null, max?: number|null } }> | null,
+ *     // #1993 WP7 — the canonical entity rows (`fight_visible_view.entities`), captured with the roster. The
+ *     // terminal cards carry EXACT final vitals from here; without them a card states liveness and draws no
+ *     // HP bar at all, rather than converting `alive` into a fabricated 100/0 percentage.
+
  *   my_addr: string | null,
  *   my_entity_id?: string | null, // THE SEAT THIS SESSION HELD (engine_view.my_entity_id), captured with the
  *     roster while the fight slice is still live. null = this session held no seat (spectator, or a card opened
@@ -34,11 +39,13 @@
  * }} args
  * @returns {{ summary: { winner: number, me_id: string | null, participants: Array<{ id: string, name: string,
  *   label: string, resolved: boolean, team: number,
- *   level: number, is_player: boolean, template_id: string | null, alive: boolean }>, duration_ms: number, duration_partial: boolean,
+ *   level: number, is_player: boolean, template_id: string | null, alive: boolean,
+ *   final_hp: number | null, max_hp: number | null }>, duration_ms: number, duration_partial: boolean,
  *   xp: number, loot: never[], cause: null }, won: boolean }}
  */
 export function fight_recap_payload({
   fighters,
+  vitals = null,
   my_addr,
   my_entity_id = null,
   winner,
@@ -71,6 +78,11 @@ export function fight_recap_payload({
         // (the pre-split behavior, kept verbatim); on a WIN liveness is the core's own truth — beaten enemies
         // read dead → the card's DEFEATED rows, and a fallen-but-carried ally honestly stays a dead row.
         alive: !won && f.is_player && f.owner === my_addr ? false : !f.dead,
+        // #1993 WP7 — THE EXACT FINAL VITALS, chain-committed, snapshotted with the roster. `null` is an honest
+        // "this card has no HP to draw" (a synthesized row, or a recap taken without the entity rows); it is
+        // never rounded up into a full bar. The card decides what to render from the pair, not from liveness.
+        final_hp: vitals?.[f.id]?.vitals?.committed ?? null,
+        max_hp: vitals?.[f.id]?.vitals?.max ?? null,
       })),
       duration_ms,
       duration_partial,

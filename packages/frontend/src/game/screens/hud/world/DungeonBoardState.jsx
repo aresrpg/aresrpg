@@ -20,7 +20,6 @@ import { use_dungeon } from '../../../../world-shell/dungeon_store.js'
 import { staged_turn_paths } from '@aresrpg/fight/txs'
 import { fight_store } from '@aresrpg/fight/store'
 import {
-  committed_mob_hp,
   committed_truth,
   fight_view,
   fight_visible_view,
@@ -336,11 +335,18 @@ export function useDungeonBoardState() {
     // is the legacy board projection, whose cell is the DISPLAY cell: it holds an in-flight walk at its pre-move
     // position, so pairing it with committed HP opened (or kept blocked) a cell the chain had already moved past.
     // Cell and HP now answer from the same committed truth.
+    // #1993 WP7 — CELL AND HP ARE ONE READ OF ONE ROW. The committed HP used to come from `committed_mob_hp`,
+    // a second door into the same committed fold, while the cell came from the entity row: two reads of two
+    // projections taken at two instants to answer one question ("is this body still here"). Both now come off
+    // the canonical vitals/cells record for the same entity.
+    // DECLINED IN THIS TRAIN — publishing the PREDICTED occupancy itself on `fight_visible_view`. The
+    // prediction is a fold over the DRAFT (`evolve_draft_health` replays a caller-supplied action sequence
+    // through the sim), not a fact of the store's state, and the view is pure over the committed/presented
+    // folds by construction. Hoisting it would put the sim inside the projection to serve one consumer.
     const entities = fight_visible_view(fight_store.getState()).entities
     for (const [id, row] of Object.entries(entities)) {
-      const idx = mob_entity_index(id)
-      if (idx == null) continue
-      const committed_hp = committed_mob_hp(fight_store.getState(), idx)
+      if (mob_entity_index(id) == null) continue
+      const committed_hp = row.vitals.committed
       if (!(committed_hp > 0) || row.cells.committed == null) continue
       // this turn's casts already kill it → its cell opens for the move
       if ((predicted.get(id) ?? committed_hp) <= 0) vacated.add(row.cells.committed)

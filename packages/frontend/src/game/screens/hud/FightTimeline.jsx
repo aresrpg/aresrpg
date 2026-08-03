@@ -32,7 +32,7 @@ export function FightTimeline() {
   // #1993 WP6 — the ACTIVE-STATUS PROJECTION, id-keyed. The card used to read the fighter row's own `effects`
   // array; the badge, the board's timed range and the rig veil now all answer from this one collection, which is
   // what stops the turn card and a snapshot-held effect disagreeing at the end-turn boundary (#1872).
-  const entities = useFightVisibleEntities()
+  const entities = useFightVisibleEntities() // the canonical entity rows — the card's HP answers from here
   const deadline = fight?.turn_deadline_ms ?? 0
   // Time is a reducer INPUT, and this card is a READER of it. The 4/s tick that folds the turn handover, the
   // auto-commit and the wave watchdog — and, incidentally, repaints this countdown by notifying the projection
@@ -145,12 +145,15 @@ export function FightTimeline() {
         // over. My own card can never light up over a still-playing mob beat, and the acting mob finally can.
         const shown_active_id = fight.presenting ? fight.presenting_entity_id : fight.active_entity_id
         const active = f.id === shown_active_id && fight.winner === -1
-        // LEG P (packages/fight project.js engine_view): `presented_health` holds the last COMMITTED value while
-        // a wave presents (never jumps ahead of the beat) and, once idle, holds committed truth over my own
-        // not-yet-confirmed optimistic prediction (`health`) — the timeline card is the "safe" chain-anchored
-        // read; `?? f.health` is only the pre-merge fallback for a fixture/build that hasn't picked up the getter.
-        const hp = f.presented_health ?? f.health
-        const hp_pct = f.health_max > 0 ? Math.max(0, Math.min(100, (hp / f.health_max) * 100)) : 0
+        // #1993 WP7 — THE canonical vitals record: `display` is the one number a live surface renders (the paced
+        // presented fold while a wave drains, committed truth at rest, so this card never jumps ahead of the beat
+        // and never paints my own unconfirmed prediction). The card used to pick that meaning out of three
+        // similarly-named projection fields; it now names the fact. A row the projection has not published yet
+        // (a turn_order id with no entity row) renders no bar rather than a fabricated one.
+        const vitals = entities[f.id]?.vitals ?? null
+        const hp = vitals?.display ?? null
+        const hp_max = vitals?.max ?? 0
+        const hp_pct = hp != null && hp_max > 0 ? Math.max(0, Math.min(100, (hp / hp_max) * 100)) : 0
         return (
           <div
             key={`${f.id}-${i}`}
@@ -181,10 +184,10 @@ export function FightTimeline() {
                 <span className="hud-turn__name">{f.name}</span>
                 <span className="hud-turn__lvl hud-num">Lv {f.level}</span>
               </div>
-              <Tooltip text={`${hp} / ${f.health_max} HP`}>
+              <Tooltip text={`${hp ?? '—'} / ${hp_max} HP`}>
                 <div className="hud-turn__hp">
                   <div className="hud-turn__hp-fill" style={{ width: `${hp_pct}%` }} />
-                  <span className="hud-turn__hp-num hud-num">{hp}</span>
+                  <span className="hud-turn__hp-num hud-num">{hp ?? '—'}</span>
                 </div>
               </Tooltip>
               {/* PRESENTED ACTIVE EFFECTS — the canonical entity row's status rows (#1993 WP6). Own + enemy +

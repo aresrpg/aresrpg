@@ -15,6 +15,14 @@ const ME = '0xME'
 /** The engine_view fighters Map shape (project.js): players team 0, mobs team 1. */
 const fighters = (rows) => new Map(rows.map((f) => [f.id, f]))
 
+// #1993 WP7 — the canonical entity rows captured beside the roster. The recap carries each seat's EXACT final
+// HP from here; a recap taken WITHOUT them states liveness and draws no bar (the `null` arms pinned below).
+const razkin_vitals = {
+  'seat-0': { vitals: { committed: 31, max: 50 } },
+  'mob-0': { vitals: { committed: 0, max: 40 } },
+  'mob-1': { vitals: { committed: 0, max: 80 } },
+}
+
 const razkin_win = () =>
   fighters([
     { id: 'seat-0', name: 'hero', team: 0, level: 12, is_player: true, dead: false, owner: ME },
@@ -43,6 +51,8 @@ describe('fight_recap_payload — a WIN carries the defeated enemy team (D2)', (
         level: 8,
         is_player: false,
         alive: false,
+        final_hp: null,
+        max_hp: null,
         template_id: '0xTPL_RAZKIN',
       },
       {
@@ -54,6 +64,8 @@ describe('fight_recap_payload — a WIN carries the defeated enemy team (D2)', (
         level: 10,
         is_player: false,
         alive: false,
+        final_hp: null,
+        max_hp: null,
         template_id: '0xTPL_ALPHA',
       },
     ])
@@ -77,7 +89,7 @@ describe('fight_recap_payload — a WIN carries the defeated enemy team (D2)', (
         level: 8,
         is_player: false,
         alive: false,
-        hp_pct: 0,
+        hp_pct: null,
         template_id: '0xTPL_RAZKIN',
       },
       {
@@ -86,10 +98,23 @@ describe('fight_recap_payload — a WIN carries the defeated enemy team (D2)', (
         level: 10,
         is_player: false,
         alive: false,
-        hp_pct: 0,
+        hp_pct: null,
         template_id: '0xTPL_ALPHA',
       },
     ])
+  })
+
+  // #1993 WP7 — the exact-vitals arm of the same projection. The `null` rows above are the no-vitals control:
+  // together they pin that a bar is drawn from real final HP or not at all, and never fabricated from liveness.
+  it('with the entity rows captured, the cards carry EXACT final vitals', () => {
+    const { summary } = fight_recap_payload({
+      fighters: razkin_win(),
+      vitals: razkin_vitals,
+      my_addr: ME,
+      winner: 0,
+    })
+    expect(summary.participants.find((p) => p.id === 'seat-0')).toMatchObject({ final_hp: 31, max_hp: 50 })
+    expect(fight_report_enemy_rows(summary.participants, 0).map((row) => row.hp_pct)).toEqual([0, 0])
   })
 
   it('on a WIN the local player keeps the core liveness — alive when alive, honestly dead when carried', () => {

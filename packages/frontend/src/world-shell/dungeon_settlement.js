@@ -424,6 +424,14 @@ async function finish_result(
   // FIX 3 (07-13 — NO refetch): the correlated ResultMinted event carries `final_hp` — apply it straight
   // into the roster's HP block, zero extra RPC. Event-sourced fast path; the object-read below is the fallback
   // when the receipt lacks that event (same on-chain HP scale as character_max_hp — projected_hp reads it honestly).
+  //
+  // #1993 WP7 — ALREADY ONE HOME, re-verified at this tip. The audit row asked for a single receipt-floored
+  // character-vitals reducer that a later `/v1` roster refresh reconciles against rather than republishes over.
+  // It exists and both halves are sealed: `apply_fight_receipt_to_roster` (inventory/fight_receipt_roster.js) is
+  // the ONE door every post-fight HP write goes through — this fast path, the object-read fallback below, and
+  // the defeat patches in dungeon_run_store all dispatch INTO it — and `keep_settled_hp` (inventory/reduce.js)
+  // refuses any snapshot carrying an anchor older than the one held, so a lagging indexer projection cannot
+  // restore pre-fight HP (#1485/#1643, pinned by reduce_hp_anchor + reduce_hp_previsional). Nothing to migrate.
   if (final_hp != null && character) apply_fight_receipt(character, { final_hp })
 
   if (result_id) {

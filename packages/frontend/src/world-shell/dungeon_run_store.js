@@ -258,6 +258,9 @@ function open_fight_recap(get, winner, xp = 0) {
     'action/fight_summary/open',
     fight_recap_payload({
       fighters: fight_view()?.fighters, // synchronous core view (S2 mirror kill)
+      // #1993 WP7 — the canonical entity rows, captured in the SAME breath as the roster so the terminal cards
+      // carry each seat's exact final HP instead of re-deriving a bar from liveness.
+      vitals: project.fight_visible_view(fight_store.getState()).entities,
       my_addr: use_auth.getState().address,
       // #1661 — the seat identity, snapshotted from the SAME live view as the roster. The cards project the
       // local row off this, so a post-fight character switch can never fabricate a party member.

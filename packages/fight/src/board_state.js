@@ -293,6 +293,11 @@ export function board_state_from_fight({
   // (`fight.move WeaponLinesKey`), so the read layer carries them alongside the object rather than inside it —
   // the same shape `invisibility_statuses` already rides on. Absent ⇒ every seat falls back to its family line.
   const weapon_lines = fight.weapon_lines ?? {}
+  // #1993 WP7 — THIS SNAPSHOT IS ONE TRANSPORT, NOT AN ANSWER. `hp`/`max_hp`/`alive` decoded here are the chain
+  // object read's word on a fighter's life; journal/receipt hits and this client's own predictions are the other
+  // transports, and they can move HP between two reads of this one. Nothing downstream compares them itself:
+  // they all enter the fold and `vitals_record.js` folds them into ONE entity vitals record with named
+  // committed/presented/display fields. The decoder stays a decoder — it publishes evidence, never a verdict.
   const escrow = (fight.participants ?? []).map((/** @type {any} */ p, /** @type {number} */ seat) => {
     // THE SEAT'S COMPOSED BUILD (#1077) — ONE object per fact, carried end to end so no surface has to invent a
     // subset. `stats` is the LIVE block (participant.move re-derives it per alter: base + the timed rows);

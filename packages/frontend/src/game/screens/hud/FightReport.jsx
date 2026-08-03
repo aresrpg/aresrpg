@@ -9,7 +9,8 @@
 // outcome + inline receipt — NO claim/mint/burn buttons, just CONTINUE.
 //
 // Pure view: every value rides props (party/enemies/spoils/t), resolved by FightResult/FightSummary.
-// hp_pct is binary (100 alive / 0 fallen) — the summary roster carries no partial HP. React only renders.
+// hp_pct is the recap's EXACT final HP fraction, or null when no vitals were captured (#1993 WP7 — it used to
+// be a binary 100/0 fabricated from liveness). React only renders.
 // The ONE local exception is the loot receipt: the tiles resolve the SAME chain-direct item template map
 // (get_template_by_item_type_map) + tt inventory/findables use, so a hover shows the shared ItemDetailView.
 //
@@ -142,7 +143,7 @@ function LootSkelTile() {
  * "not visible to you" (never its own line anymore), or the local player's real xp/loot receipt, which alone
  * still earns a tight second line (see .fe-row__spoils in result.css). The row stays the single direct child
  * of .fe-rows (the entrance stagger keys off `.fe-rows .fe-row:nth-child`).
- * @param {{ f: { id: string, name: string, level: number, is_me?: boolean, is_player?: boolean, alive: boolean, hp_pct: number, class_name?: string | null, template_id?: string | null }, is_enemy: boolean, settled_dead?: boolean, spoils_slot?: import('react').ReactNode | null, t: (k: string) => string }} props
+ * @param {{ f: { id: string, name: string, level: number, is_me?: boolean, is_player?: boolean, alive: boolean, hp_pct: number | null, class_name?: string | null, template_id?: string | null }, is_enemy: boolean, settled_dead?: boolean, spoils_slot?: import('react').ReactNode | null, t: (k: string) => string }} props
  */
 function Row({ f, is_enemy, settled_dead = false, spoils_slot = null, t }) {
   const alive = f.alive && !settled_dead
@@ -169,9 +170,17 @@ function Row({ f, is_enemy, settled_dead = false, spoils_slot = null, t }) {
           {f.class_name ? `${f.class_name} · ` : ''}Lv {f.level}
         </span>
       </div>
-      <div className="fe-hp" aria-hidden="true">
-        <span className="fe-hp__fill" style={{ width: `${alive ? f.hp_pct : 0}%` }} />
-      </div>
+      {/* #1993 WP7 — the bar draws the recap's EXACT final HP, or it does not draw. `hp_pct == null` means no
+          vitals were captured for this row (a synthesized seat, or a pre-WP7 recap); the row still states
+          liveness through its glyph and label, which is what the reader actually needs. A fallen row reads
+          empty whatever its last HP was. */}
+      {f.hp_pct == null ? (
+        <div className="fe-hp fe-hp--unknown" aria-hidden="true" />
+      ) : (
+        <div className="fe-hp" aria-hidden="true">
+          <span className="fe-hp__fill" style={{ width: `${alive ? f.hp_pct : 0}%` }} />
+        </div>
+      )}
       <div className={`fe-state fe-state--${state}`} aria-label={label}>
         <span className="fe-state__glyph" aria-hidden="true">
           {alive ? '●' : is_enemy ? '✕' : '✝'}
@@ -245,8 +254,8 @@ function RowSpoils({ mine, spoils, template_map, slug_by_template_id, tt, pendin
  * The end-of-fight card (dark dramatic shell + shared party/enemy rows + inline receipt).
  * @param {{
  *   verdict: 'Victory' | 'Defeat',
- *   party: Array<{ id: string, name: string, level: number, is_me?: boolean, is_player?: boolean, alive: boolean, hp_pct: number, class_name?: string | null }>,
- *   enemies: Array<{ id: string, name: string, level: number, is_player?: boolean, alive: boolean, hp_pct: number, template_id?: string | null }>,
+ *   party: Array<{ id: string, name: string, level: number, is_me?: boolean, is_player?: boolean, alive: boolean, hp_pct: number | null, class_name?: string | null }>,
+ *   enemies: Array<{ id: string, name: string, level: number, is_player?: boolean, alive: boolean, hp_pct: number | null, template_id?: string | null }>,
  *   spoils: { xp: number, tokens: number, loot: Array<{ item_id?: string, template_id?: string, item_type: string, icon_slug?: string, name: string, amount: number }> } | null,
  *   slug_by_name?: Readonly<Record<string, string>>,
  *   cost: { sui: string, is_refund: boolean } | null,

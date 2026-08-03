@@ -69,11 +69,16 @@ const EXIT_MS = 160 // hold the frozen snapshot this long so the CSS fade-out (0
  * Build the tooltip view-model (screen position + display fields) for the hovered fighter. Extracted so
  * the render can freeze the LAST value during the fade-out. Pure — reads only its args + the DOM layout.
  * The name + hp head line; the caller layers the armed-spell preview + the hp tween on top.
- * @param {any} hover @param {any} fighter
+ * @param {any} hover @param {any} fighter @param {number} display_health the vitals record's display HP
  * @returns {{ style: { left: number, top: number }, team: number, name: string, health: number }}
  */
-function build_vm(hover, fighter) {
-  const { name, health, team } = fighter
+function build_vm(hover, fighter, display_health) {
+  const { name, team } = fighter
+  // #1993 WP7 — the head HP is the canonical entity row's DISPLAY value, handed in by the caller. It used to be
+  // the projection's optimistic `health`, so this card and the turn card rendered two different numbers for the
+  // same fighter in one frame — and the armed-spell preview then subtracted its swing from the already-
+  // decremented one, showing the hit twice.
+  const health = display_health
 
   // Anchor the card AT the hovered fighter. `hover.x`/`hover.y` are VIEWPORT pixels — D60: the roam layer
   // projects the fighter's WORLD head to screen (camera + zoom aware), so they pin just above the model
@@ -121,7 +126,12 @@ export function EntityTooltip() {
   const { prediction, is_crit, effects, target_ref } = useTargetPrediction()
 
   const fighter = fight && hover ? fight.fighters.get(hover.entity_id) : null
-  const active = !!fighter && !fighter.dead
+  // The canonical row for the hovered fighter — vitals, liveness and board cells answer from the SAME record
+  // (#1993 WP7). `display_alive` is RENDERED liveness: the card stays up through a killing beat until it lands,
+  // exactly like the body it is anchored to.
+  const hovered = hover ? (entities[hover.entity_id] ?? null) : null
+  const display_health = hovered?.vitals?.display ?? null
+  const active = !!fighter && !!hovered?.vitals?.display_alive
 
   // Delayed unmount so the card can FADE OUT: while a fighter is hovered we render live; when the hover
   // leaves we keep the last snapshot mounted (with the `--out` class) for EXIT_MS, then unmount for real.
@@ -133,8 +143,10 @@ export function EntityTooltip() {
   // (−N red / +N green; a deterministic crit paints that figure bold-orange), plus a KILLS line, the spell's
   // effect rows, and a push/pull line — all from the prediction's actions (the ONE damage home) + the spell row,
   // never an authored range, never a probability. Frozen with the last snapshot through the fade-out.
+  // The preview's swing is computed against the number the card SHOWS, so "−N" always reads as the transition
+  // the player is looking at rather than a second, differently-anchored one.
   const outcome = active
-    ? predicted_target_outcome(prediction, target_ref, fighter.health)
+    ? predicted_target_outcome(prediction, target_ref, display_health ?? 0)
     : (last_vm.current?.outcome ?? EMPTY_OUTCOME)
   // #1993 WP5 — SCREEN COORDINATES STAY LOCAL, BOARD POSITIONS ARE CANONICAL. `hover.x/y` (viewport pixels,
   // published by the roam layer) are this component's own fact and stay where they are; the two BOARD cells this
@@ -144,14 +156,14 @@ export function EntityTooltip() {
   // computed from where a body was standing a beat ago.
   const displacement = active
     ? displacement_of(
-        entities[hover.entity_id]?.cells.committed_xy,
+        hovered?.cells.committed_xy,
         outcome.displaced_to,
         entities[fight?.my_entity_id]?.cells.committed_xy
       )
     : (last_vm.current?.displacement ?? null)
   const vm = active
     ? {
-        ...build_vm(hover, fighter),
+        ...build_vm(hover, fighter, display_health ?? 0),
         outcome,
         displacement,
         is_crit,

@@ -13,11 +13,11 @@
 import './game-world-hud.css'
 import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { character_max_hp } from '../../../../chain/read_character.js'
 import { experience_to_level, xp_progress } from '@aresrpg/sdk/experience'
 
 import { useProjectedHp } from '../../../../hooks/use_projected_hp.js'
-import { useFight, useGameState } from '../../../store.js'
+import { useFight, useFightVisibleEntities, useGameState } from '../../../store.js'
+import { self_vitals_pct, self_vitals_view_model } from '../self_vitals_view_model.js'
 import { use_expedition, STATUS_ACTIVE } from '../../../../roster/store'
 import { world_fight_view } from '../../../../world-shell/fight_session_scope.js'
 
@@ -69,7 +69,10 @@ function useOneshot(signal) {
 export function SelfPlate() {
   const { t } = useTranslation()
   const fight = useFight(world_fight_view)
-  const me = fight && fight.my_entity_id ? fight.fighters.get(fight.my_entity_id) : null
+  // #1993 WP7 — the canonical entity row, reached through the WORLD-scoped view so a sim session still shows
+  // nothing here: `fight` is null outside this shell's scope, so `me` is too.
+  const entities = useFightVisibleEntities()
+  const me = fight?.my_entity_id ? (entities[fight.my_entity_id] ?? null) : null
   const character = useGameState((state) => selected_character(state, fight?.my_entity_id ?? null))
   useGameState((state) => character_hp_revision(state, fight?.my_entity_id ?? null))
   const expedition = use_expedition((s) => s.expedition)
@@ -82,9 +85,12 @@ export function SelfPlate() {
   // max (character_max_hp) pairs with current_hp's own scale — see read_character.js re: not get_max_health.
   const projection_live = !me && !run && Boolean(character?._type)
   const projected_health = useProjectedHp(character, projection_live)
-  const health = me?.health ?? run?.carried_hp ?? projected_health ?? character?.health ?? 0
-  const max_health = me ? me.health_max : run ? run.max_hp : character?._type ? character_max_hp(character) : 0
-  const hp_pct = max_health > 0 ? Math.max(0, Math.min(100, (health / max_health) * 100)) : 0
+  // #1993 WP7 — ONE home for the self-vitals ladder. This plate used to spell the same four rungs the HP gem
+  // does, pairing each with its own max; both now read the same atomic projection, so "the two bars never
+  // disagree" is enforced by construction rather than by the header comment above asking for it.
+  const vitals = self_vitals_view_model({ fighter: me, expedition: run, character, projected_health })
+  const { health, max_health } = vitals
+  const hp_pct = self_vitals_pct(vitals)
   // XP bar — the SDK's SSOT progress-within-level helper (the single home for the level/xp-bar math the HUD
   // used to compute in four places — reuse it, don't re-derive). `into`/`span` are the current/needed
   // XP numbers shown beside the bar (same shape Stats.jsx renders); `pct` drives the fill width.

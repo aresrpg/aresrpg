@@ -4,6 +4,21 @@
 // may grow its own field list and silently drop the mob template identity that powers the bestiary link.
 
 /**
+ * THE TERMINAL BAR (#1993 WP7, audit row `fight_report_roster.js:27`). A card's HP bar is the recap's EXACT
+ * final vitals or it is nothing at all. Converting `alive` into a binary 100/0 percentage stated a number the
+ * fight never produced: a party member who limped out of the last room on 7 of 40 hp was drawn at full health.
+ * `null` means "no vitals were captured for this row" — the card renders liveness alone, never a filled bar.
+ * @param {{ final_hp?: number|null, max_hp?: number|null }} participant
+ * @returns {number | null}
+ */
+const final_hp_pct = ({ final_hp = null, max_hp = null }) => {
+  const hp = Number(final_hp)
+  const max = Number(max_hp)
+  if (final_hp == null || max_hp == null || !Number.isFinite(hp) || !(max > 0)) return null
+  return Math.max(0, Math.min(100, (hp / max) * 100))
+}
+
+/**
  * @param {Array<{
  *   id: string,
  *   name: string,
@@ -11,6 +26,8 @@
  *   level: number,
  *   is_player: boolean,
  *   alive: boolean,
+ *   final_hp?: number | null,
+ *   max_hp?: number | null,
  *   template_id?: string | null,
  * }>} roster
  * @param {number} my_team
@@ -20,7 +37,7 @@
  *   level: number,
  *   is_player: boolean,
  *   alive: boolean,
- *   hp_pct: number,
+ *   hp_pct: number | null,
  *   template_id: string | null,
  * }>}
  */
@@ -33,7 +50,7 @@ export const fight_report_enemy_rows = (roster, my_team) =>
       level: participant.level,
       is_player: participant.is_player,
       alive: participant.alive,
-      hp_pct: participant.alive ? 100 : 0,
+      hp_pct: final_hp_pct(participant),
       template_id: participant.template_id ?? null,
     }))
 // NOTE (#1993 WP3): enemy rows carry no `label`/`resolved` because they need none — `apply_resolved_names`
@@ -55,7 +72,8 @@ export const fight_report_enemy_rows = (roster, my_team) =>
  *     was the whole bug: the card read client identity state where it owed the player participation truth.
  *
  * @param {{
- *   roster: Array<{ id: string, name?: string, team: number, level?: number, is_player?: boolean, alive?: boolean }>,
+ *   roster: Array<{ id: string, name?: string, team: number, level?: number, is_player?: boolean, alive?: boolean,
+ *     final_hp?: number | null, max_hp?: number | null }>,
  *   me_id: string | null,
  *   me_name: string | null,
  *   my_level: number,
@@ -64,7 +82,7 @@ export const fight_report_enemy_rows = (roster, my_team) =>
  *   fallback_name: string,
  * }} args
  * @returns {{ my_team: number, party_rows: Array<{ id: string, name: string, level: number, is_me: boolean,
- *   is_player: boolean, alive: boolean, hp_pct: number, class_name: string | null }> }}
+ *   is_player: boolean, alive: boolean, hp_pct: number | null, class_name: string | null }> }}
  */
 export function fight_report_party_rows({ roster, me_id, me_name, my_level, my_class, self_alive, fallback_name }) {
   const is_local = (participant) => me_id != null && participant.id === me_id
@@ -95,7 +113,9 @@ export function fight_report_party_rows({ roster, me_id, me_name, my_level, my_c
         is_me: mine,
         is_player: participant.is_player ?? true, // a party row is always a player; roster rows carry it explicitly
         alive: participant.alive,
-        hp_pct: participant.alive ? 100 : 0,
+        // The synthesized local row carries no vitals by construction (it exists precisely because the roster
+        // lost the seat), so it reads null and draws no bar — the honest answer, not a full one.
+        hp_pct: final_hp_pct(participant),
         class_name: mine ? my_class : null,
       }
     }),

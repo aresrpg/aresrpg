@@ -19,7 +19,8 @@ import './game-tab.css'
 import './game/screens/hud/hud.css'
 import './game/screens/hud/world/game-world-hud.css'
 import './i18n'
-import { useFightView } from './game/store.js'
+import { useFightView, useFightVisibleEntities } from './game/store.js'
+import { self_vitals_pct, self_vitals_view_model } from './game/screens/hud/self_vitals_view_model.js'
 import { DeckCluster } from './game/screens/hud/DeckCluster.jsx'
 import { fight_spells_data, resolve_class_spells } from './game/screens/hud/fight-spells.js'
 
@@ -36,16 +37,19 @@ const POOL = [
 
 /** Byte-identical clone of GameWorldHud.jsx's private Vitals (fight branch) — same `.hud-vbox` markup so the
  * real optE CSS applies unchanged: the 2× HP gem (percent, or click-toggled current/max fraction) + stacked
- * AP/MP gems. Seeded from the fight. `?frac=1` forces the fraction state open for screenshotting either. */
+ * AP/MP gems. Seeded from the fight. `?frac=1` forces the fraction state open for screenshotting either.
+ * #1993 WP7 — the NUMBERS are the production ones: this harness reimplemented the percent/fraction derivation
+ * over the projection, so a screenshot could show a state the shipped gem never renders. Only the markup is a
+ * clone now; the view-model is `self_vitals_view_model`, the same call SpellBar's gem makes. */
 function VitalsPreview() {
   const params = new URLSearchParams(window.location.search)
   const fight = useFightView() // synchronous core view (S2 mirror kill — the dead WS bus never fed the copy)
-  const me = fight && fight.my_entity_id ? fight.fighters.get(fight.my_entity_id) : null
-  const health = me?.health ?? 0
-  const max_health = me?.health_max ?? 1
-  const hp_pct = max_health > 0 ? Math.round(Math.max(0, Math.min(100, (health / max_health) * 100))) : 0
-  const ap = me?.ap ?? 0
-  const mp = me?.mp ?? 0
+  const entities = useFightVisibleEntities()
+  const me = fight?.my_entity_id ? (entities[fight.my_entity_id] ?? null) : null
+  const vitals = self_vitals_view_model({ fighter: me })
+  const { health, ap, mp } = vitals
+  const max_health = vitals.max_health || 1
+  const hp_pct = Math.round(self_vitals_pct(vitals))
   const [show_fraction, set_show_fraction] = useState(params.get('frac') === '1')
   return (
     <div className="hud-vbox">

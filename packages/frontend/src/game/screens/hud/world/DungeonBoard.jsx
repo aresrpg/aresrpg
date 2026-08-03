@@ -53,7 +53,6 @@ import {
 } from '@aresrpg/fight/txs'
 import { fight_store } from '@aresrpg/fight/store'
 import {
-  committed_mob_hp,
   committed_truth,
   fight_view,
   mob_entity_id,

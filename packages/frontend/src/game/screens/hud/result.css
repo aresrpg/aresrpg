@@ -617,6 +617,13 @@
   border: 1px solid rgba(255, 255, 255, 0.08);
   overflow: hidden;
 }
+/* #1993 WP7 — no vitals captured for this row: the track holds the grid column but states nothing. A dashed,
+   unfilled rail reads as "unknown", where an empty solid track would read as "zero HP". */
+.fe-hp--unknown {
+  background: none;
+  border-style: dashed;
+  border-color: rgba(255, 255, 255, 0.06);
+}
 .fe-hp__fill {
   display: block;
   height: 100%;

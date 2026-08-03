@@ -520,6 +520,10 @@ export const apply_action = (state, action) => {
       return action.damaging ? reveal_fighter(spent, key) : spent
     }
     case 'Hit': {
+      // #1993 WP7 — A HIT IS A REDUCER INPUT, and that is all it is. It writes this fold's own hp/alive for the
+      // victim; it does not answer "what HP does a surface show". That question has one home — `vitals_record.js`
+      // — which folds this fold, the committed one and the adopted snapshot into one named record. The audit
+      // row's own ask was to keep this arm exactly where it is and expose HP only through the canonical vitals.
       const key = fighter_key({ is_mob: action.victim_is_mob, idx: action.victim_idx, resolve_seat: rs })
       return patch_fighter(state, key, {
         hp: action.remaining_hp,

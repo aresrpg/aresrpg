@@ -11,7 +11,7 @@ import { projected_hp, character_max_hp } from '../../../../chain/read_character
 import { v1_character_to_party_row } from '../../../../chain/read_staking.js'
 
 import './game-world-hud.css'
-import { context, useGameState } from '../../../store.js'
+import { context, useFightVisibleEntities, useGameState } from '../../../store.js'
 import { project_party_view } from '@aresrpg/party/reduce'
 
 import { use_party } from '../../../../world-shell/party_store.js'
@@ -33,6 +33,21 @@ const hp_pct = (health, max_health) => {
   if (typeof health !== 'number' || typeof max_health !== 'number' || max_health <= 0) return 100
   return Math.max(0, Math.min(100, (health / max_health) * 100))
 }
+
+/**
+ * THE BOUNDARY (#1993 WP7, audit row `PartyFrame.jsx:55`). A member SEATED IN THE LIVE FIGHT reads the fight's
+ * canonical entity vitals — the same `display` number their turn card and their own HP gem render. The cached
+ * `/v1` projection is the fallback for a member who is NOT in this fight: it is an indexer read taken before the
+ * fight and cannot see a single hit landed inside it, so using it for a seated member showed a full bar beside a
+ * teammate on 3 hp. Outside the fight it is the only truth there is, and it stays.
+ * @param {any} seat the canonical entity row for this character, or null/undefined when not seated here
+ * @param {{ health: number | null, max_health: number | null } | null | undefined} cached the `/v1` row
+ * @returns {{ health: number | null, max_health: number | null }}
+ */
+const member_vitals = (seat, cached) =>
+  seat?.vitals
+    ? { health: seat.vitals.display ?? null, max_health: seat.vitals.max ?? null }
+    : { health: cached?.health ?? null, max_health: cached?.max_health ?? null }
 
 const transit_time = (remaining_ms) => {
   const seconds = Math.max(0, Math.ceil(Number(remaining_ms ?? 0) / 1000))
@@ -85,6 +100,9 @@ export function PartyFrame() {
   const my_char_name = useGameState(
     (state) => state.sui?.characters?.find((character) => character.id === state.selected_character_id)?.name
   )
+
+  // The canonical fight entity rows — a member seated in THIS fight answers from here (see member_vitals).
+  const fight_entities = useFightVisibleEntities()
 
   const [, force_tick] = useState(0)
   useEffect(() => {
@@ -211,6 +229,8 @@ export function PartyFrame() {
         {visible_members.map((member) => {
           const character_id = member.character
           const row = member_cache.get(character_id)
+          // A player's fight entity id IS their character id, so a seated member is a direct lookup.
+          const vitals = member_vitals(fight_entities[character_id], row)
           const is_leader = character_id === leader_character
           const transit = follow.followers[character_id] ?? null
           const arriving = transit?.status === 'joining' || transit?.status === 'in_transit'
@@ -248,9 +268,12 @@ export function PartyFrame() {
                   ) : null}
                 </span>
               </div>
-              {row?.health != null && row?.max_health != null && (
+              {vitals.health != null && vitals.max_health != null && (
                 <div className="gw-party__bar">
-                  <span className="gw-party__bar-fill" style={{ width: `${hp_pct(row.health, row.max_health)}%` }} />
+                  <span
+                    className="gw-party__bar-fill"
+                    style={{ width: `${hp_pct(vitals.health, vitals.max_health)}%` }}
+                  />
                 </div>
               )}
               {/* the status idiom: ARRIVING timer → with_you (in the grid above) → blocked. A `resolving`

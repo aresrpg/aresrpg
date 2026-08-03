@@ -72,7 +72,9 @@ test('#1661 the local row is named off the SEAT, never off a stale roster name',
     name: 'ARES',
     is_me: true,
     alive: false,
-    hp_pct: 0,
+    // #1993 WP7 — this roster row carries no final vitals, so the card draws NO bar. It used to be given a
+    // fabricated 0% purely because the row read `alive: false`.
+    hp_pct: null,
     class_name: 'Senshi',
   })
 })
@@ -108,5 +110,20 @@ test('the victory card projects the same way — the winning seat, alive', () =>
   })
 
   expect(party_rows).toHaveLength(1)
-  expect(party_rows[0]).toMatchObject({ id: ARES, is_me: true, alive: true, hp_pct: 100, level: 13 })
+  // #1993 WP7 — no captured vitals ⇒ no bar (it used to be a fabricated full one off `alive: true`).
+  expect(party_rows[0]).toMatchObject({ id: ARES, is_me: true, alive: true, hp_pct: null, level: 13 })
+})
+
+test('#1993 WP7 — a seat that ended on real HP is drawn at that exact fraction', () => {
+  const { party_rows } = fight_report_party_rows({
+    roster: [{ id: ARES, name: 'ARES', team: 0, level: 13, is_player: true, alive: true, final_hp: 9, max_hp: 60 }],
+    me_id: ARES,
+    me_name: 'ARES',
+    my_level: 13,
+    my_class: 'Senshi',
+    self_alive: true,
+    fallback_name: 'You',
+  })
+
+  expect(party_rows[0].hp_pct).toBe(15)
 })
