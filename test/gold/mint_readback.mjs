@@ -39,11 +39,10 @@ import {
   spell_row_key,
 } from '../../packages/move/scripts/reseed_plan.mjs'
 
-import { P, log } from './lib_gold.mjs'
+import { P, log, seed_corpus_dir } from './lib_gold.mjs'
 
 const GOLD = path.dirname(fileURLToPath(import.meta.url))
 const BASELINE_PATH = path.join(GOLD, 'mint_readback_baseline.json')
-const SPELLS_DIR = path.join(P.REPO, 'seed', 'mainnet', 'spells')
 const SEED_MANIFEST_PATH = path.join(P.BUILD, 'scripts', 'out', 'seed_manifest.json')
 const REPORT_JSON = path.join(P.OUT, 'mint_readback_report.json')
 const REPORT_MD = path.join(P.OUT, 'mint_readback_report.md')
@@ -68,7 +67,8 @@ const EFFECT_FIELDS = [
 
 const read_json = (file) => JSON.parse(fs.readFileSync(file, 'utf8'))
 
-export function load_seed_spells(dir = SPELLS_DIR) {
+/** @param {string} [dir] the corpus's `spells` directory; defaults to the resolved corpus root's. */
+export function load_seed_spells(dir = path.join(seed_corpus_dir(), 'spells')) {
   return fs
     .readdirSync(dir)
     .filter((f) => f.endsWith('.json'))

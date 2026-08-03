@@ -78,6 +78,42 @@ export const P = {
   SPONSOR_RELEASE: process.env.GOLD_SPONSOR_RELEASE ?? path.join(GOLD, `.gold${SUFFIX}-sponsor-release.json`),
   OUT: path.join(GOLD, 'out'),
 }
+// ── CORPUS DIRECTORY (#2035, hoisted #2074) — the ONE home for "where is the authored corpus" ─────────────
+// The authored corpus lives in the PRIVATE seed repo post-split, so any gold module reading it must resolve it
+// the way the seeder does: `ARES_SEED_DIR` overrides, the sibling checkout is the default, and the merged copy
+// (<root>/seed/mainnet) stays a candidate so an assembled tree resolves with no env. Hardcoding the merged path
+// made parity ENOENT on exactly the layout the seeder was taught to support — and mint_readback's spell rows
+// were the SECOND site hardcoding it, which is what earned this its own function.
+//
+// The seeder's own resolver is deliberately NOT imported: its graph resolves a SIGNER at import
+// (packages/move/scripts/client.js), and reaching into the private pipeline from the public repo's tests would
+// break the content boundary — the import only resolves on a dev box with both checkouts, never in the gold
+// rig's compose context. rig_integrity.test.mjs's DRIFT GATE pins the two ladders equal instead, running only
+// where both repos exist: the duplication is policed, never trusted.
+//
+// A candidate HOLDS the corpus when it carries numbered biome directories — exactly what corpus_counts walks.
+const holds_corpus = (dir) =>
+  fs.existsSync(dir) &&
+  fs.statSync(dir).isDirectory() &&
+  fs.readdirSync(dir).some((d) => /^\d/.test(d) && fs.statSync(path.join(dir, d)).isDirectory())
+export const seed_dir_candidates = () =>
+  [
+    process.env.ARES_SEED_DIR,
+    path.resolve(REPO, '..', 'aresrpg-seed', 'seed', 'mainnet'),
+    path.join(REPO, 'seed', 'mainnet'),
+  ].filter(Boolean)
+export const pick_corpus_dir = (candidates) => {
+  const found = candidates.find(holds_corpus)
+  if (!found)
+    throw new Error(
+      `gold: no authored corpus found — set ARES_SEED_DIR to the seed repo's seed/mainnet directory. ` +
+        `Tried: ${candidates.join(', ') || '(none)'}`
+    )
+  return found
+}
+/** The authored corpus root — resolved at the CALL that reads it, never at module scope (`P` is eager; #1302). */
+export const seed_corpus_dir = () => pick_corpus_dir(seed_dir_candidates())
+
 export const RPC = gold_isolation.endpoints.rpc
 export const FAUCET = gold_isolation.endpoints.faucet
 export const API = gold_isolation.endpoints.api

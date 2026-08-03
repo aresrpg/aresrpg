@@ -13,7 +13,7 @@
 //   active  (default) — the content the current-lineage seeder (seed_testnet.mjs → seed_content.json) actually
 //                       mints. A healthy boot PASSES (positive proof): every seeded template reaches /v1.
 //   mainnet           — the FULL authored corpus, resolved through `ARES_SEED_DIR` exactly like the seeder
-//                       (see the candidate ladder below). The law's target. Against today's minimal
+//                       (lib_gold's candidate ladder). The law's target. Against today's minimal
 //                       seeder this correctly FAILS (the honest partial-seed detection) — the gate that flips
 //                       green the moment a full-corpus seeder for the current lineage lands.
 //   <file>            — an explicit corpus-manifest JSON (used for the deliberate-break negative proof).
@@ -24,6 +24,8 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
+import { seed_corpus_dir } from './lib_gold.mjs'
+
 const HERE = path.dirname(fileURLToPath(import.meta.url))
 const REPO = path.resolve(HERE, '..', '..')
 const KINDS = ['items', 'mobs', 'worlds']
@@ -31,35 +33,10 @@ const KINDS = ['items', 'mobs', 'worlds']
 const readJson = (p) => JSON.parse(fs.readFileSync(p, 'utf8'))
 const len = (v) => (Array.isArray(v) ? v.length : 0)
 
-// CORPUS DIRECTORY (#2035) — the authored corpus lives in the PRIVATE seed repo post-split, so this gate must
-// resolve it the way the seeder it is asserting against does: `ARES_SEED_DIR` overrides, the sibling checkout is
-// the default, and the merged copy (<root>/seed/mainnet) stays a candidate so an assembled tree resolves with no
-// env. Hardcoding the merged path made the gate ENOENT on exactly the layout the seeder was taught to support.
-// The seeder's own resolver is NOT importable here: its graph resolves a SIGNER at import (scripts/client.js),
-// and this module is a signer-free counter with a standalone CLI. parity.test.mjs's DRIFT GATE pins the two
-// ladders equal instead — the duplication is policed, never trusted.
-// A candidate HOLDS the corpus when it carries numbered biome directories — exactly what corpus_counts walks.
-const holds_corpus = (dir) =>
-  fs.existsSync(dir) &&
-  fs.statSync(dir).isDirectory() &&
-  fs.readdirSync(dir).some((d) => /^\d/.test(d) && fs.statSync(path.join(dir, d)).isDirectory())
-export const seed_dir_candidates = () =>
-  [
-    process.env.ARES_SEED_DIR,
-    path.resolve(REPO, '..', 'aresrpg-seed', 'seed', 'mainnet'),
-    path.join(REPO, 'seed', 'mainnet'),
-  ].filter(Boolean)
-export const pick_corpus_dir = (candidates) => {
-  const found = candidates.find(holds_corpus)
-  if (!found)
-    throw new Error(
-      `parity: no authored corpus found — set ARES_SEED_DIR to the seed repo's seed/mainnet directory. ` +
-        `Tried: ${candidates.join(', ') || '(none)'}`
-    )
-  return found
-}
-/** The ONE home for this module's corpus path — resolved at the CALL that reads it, never at module scope. */
-export const resolve_seed_dir = () => pick_corpus_dir(seed_dir_candidates())
+// CORPUS DIRECTORY (#2035) — the candidate ladder moved to lib_gold when mint_readback became its second caller
+// (#2074); it is re-exported here because this module's public surface (and the drift gate that pins the ladder
+// to the seeder's) is what the rest of the suite already imports.
+export { pick_corpus_dir, seed_dir_candidates } from './lib_gold.mjs'
 
 /** Count a corpus <biome> directory's item/mob/world contribution. */
 function mainnet_biome_counts(dir) {
@@ -85,7 +62,7 @@ export function corpus_counts(source = 'active') {
     }
   }
   if (source === 'mainnet') {
-    const root = resolve_seed_dir()
+    const root = seed_corpus_dir()
     const biomes = fs.readdirSync(root).filter((d) => /^\d/.test(d) && fs.statSync(path.join(root, d)).isDirectory())
     const counts = { items: 0, mobs: 0, worlds: 0 }
     for (const b of biomes) {
