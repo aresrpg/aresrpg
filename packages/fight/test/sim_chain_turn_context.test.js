@@ -119,15 +119,15 @@ describe('create_sim_chain turn clock', () => {
       templates_raw: VENOM,
     })
 
-    chain = submit_commands(chain, [{ type: 'cast', entity_id: 'p0', spell_id: 'venom', target: player.cell }]).chain
+    ;({ chain } = submit_commands(chain, [{ type: 'cast', entity_id: 'p0', spell_id: 'venom', target: player.cell }]))
 
     const actual = []
     const expected = []
     const ordinals = []
     for (let tick = 0; tick < 3; tick++) {
-      chain = submit_commands(chain, [{ type: 'end_turn', entity_id: 'p0' }]).chain
+      ;({ chain } = submit_commands(chain, [{ type: 'end_turn', entity_id: 'p0' }]))
       const before = health_of(chain, 'p0')
-      chain = submit_commands(chain, [{ type: 'end_turn', entity_id: 'm0' }]).chain
+      ;({ chain } = submit_commands(chain, [{ type: 'end_turn', entity_id: 'm0' }]))
       const incoming = chain.ctx.turn_context
       ordinals.push(incoming.turn_ordinal)
       actual.push(before - health_of(chain, 'p0'))
