@@ -173,8 +173,8 @@ export function DeckCluster() {
   // previews ("read off the VIEW only", project.js:186/254, because `s.turn_ordinal` is a DIFFERENT fact under
   // the same name, the fold's anchor token). These four fields used to be selected off `use_dungeon`'s `dungeon`
   // instead, which is not a second transport at all: `dungeon` has exactly ONE non-null writer,
-  // `fight_store.subscribe((s) => use_dungeon.setState({ dungeon: board_view(s) }))` (dungeon_run_store.js:1872),
-  // so this was the same `s.view` reached through a store-to-store mirror that lags it by one notification.
+  // the fight-store subscription that publishes `board_view(s)` into it (dungeon_run_store.js:1872), so this
+  // was the same `s.view` reached through a store-to-store mirror that lags it by one notification.
   // `turn.seed` is that tuple named once, and reading it here is strictly fresher than the mirror was.
   const { seed } = useFightVisibleTurn()
   const slot = useFight(my_action_slot)

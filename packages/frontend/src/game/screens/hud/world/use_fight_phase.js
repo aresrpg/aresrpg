@@ -22,8 +22,8 @@ import { derive_phase } from '../../../../fight-engine/phase.js'
  * `fight_visible_view.entities`). It used to be re-resolved HERE, by scanning `dungeon.escrow` for the row whose
  * character matched my entity id — the identity book's own rule, spelled a second time at a consumer, which is
  * the #1865 class this epic exists to close. It is the same escrow either way: `use_dungeon`'s `dungeon` has
- * exactly ONE non-null writer, `fight_store.subscribe((s) => use_dungeon.setState({ dungeon: board_view(s) }))`
- * (dungeon_run_store.js), so the scan reached the fight store's own `view.escrow` through a store-to-store
+ * exactly ONE non-null writer — the fight-store subscription that publishes `board_view(s)` into it
+ * (dungeon_run_store.js) — so the scan reached the fight store's own `view.escrow` through a store-to-store
  * mirror — the very lag the line below refuses for the fight slice. `identity.seat` is the escrow index the book
  * assigned (null for a mob, and 0 is a real seat — hence the `!= null` gate, never truthiness).
  *
