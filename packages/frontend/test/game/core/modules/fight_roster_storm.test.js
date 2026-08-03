@@ -72,14 +72,18 @@ describe('#2027 the roster adopter converges through the real fight-store pump',
     }
 
     expect(thrown).toBeNull()
-    // convergence, not merely survival: one roster reaches the door, and it is the composed book
+    // convergence, not merely survival: one roster reaches the door, and it carries the resolved rows
     expect(publishes).toHaveLength(1)
+    // #1993 WP3 — the roster carries only what RESOLVED. BOB's doc never resolved (`resolve_characters` returns
+    // an empty Map), so he has no row here: a placeholder row under a name field is what the identity book
+    // deleted. His display is unaffected — the book names an unresolved seat by its own short id, which is the
+    // exact string the placeholder row used to carry.
     expect(
       store
         .getState()
         .ctx.roster.map((row) => row.id)
         .sort()
-    ).toEqual([ALICE, BOB].sort())
+    ).toEqual([ALICE])
   })
 
   test('a content-equal roster re-arriving through the door is not republished', () => {

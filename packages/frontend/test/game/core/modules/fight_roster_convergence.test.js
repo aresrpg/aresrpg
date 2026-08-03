@@ -43,7 +43,10 @@ describe('#1740 fight roster adoption converges inside a store notification', ()
     // One outer input is enough — the peer's fighter is in the view, so the first publish is a queued one.
     expect(() => store.getState().input({ type: 'ctx', ctx: {} }, 1_000)).not.toThrow()
 
-    // And the fixed point is the real roster, not an empty surrender.
-    expect((store.getState().ctx?.roster ?? []).map((row) => row.id).sort()).toEqual([ALICE, BOB].sort())
+    // And the fixed point is the real roster, not an empty surrender. #1993 WP3 — "real" now means RESOLVED:
+    // BOB's doc never came back (`resolve_characters` returns an empty Map), so he gets no row rather than a
+    // placeholder wearing a name field. The identity book names his seat by its own short id, so nothing he
+    // renders changed; what changed is that the roster no longer claims to have resolved him.
+    expect((store.getState().ctx?.roster ?? []).map((row) => row.id).sort()).toEqual([ALICE])
   })
 })
