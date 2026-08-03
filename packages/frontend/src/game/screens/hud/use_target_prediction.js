@@ -28,6 +28,13 @@ export { compute_target_prediction, resolve_dungeon_ref } from './target_predict
 export const useTargetPrediction = () => {
   const fight = useFightView()
   const hover = useGameState((state) => state.fight_hover)
+  // BLOCKED ON A NAMED GAP (#1993 carve-out). `dungeon` is `board_view` of the fight store, mirrored into
+  // `use_dungeon` — so this is a fight-store read taken the long way round, and it should answer from the
+  // canonical view. It cannot yet: the core below needs TWO facts the view does not publish — the entity id →
+  // fold key map (`resolve_dungeon_ref`; `fold_keys_by_entity` stays internal to the projection) and MY raw
+  // escrow participant row with its chain stats and `casts_this_turn` (`crit_clock_of`'s `seat_row`; the
+  // identity book carries identity, not the seat's build). Splitting only the seed tuple out would ADD a home
+  // rather than remove one — the whole read migrates when those two facts get records, or not at all.
   const dungeon = use_dungeon((state) => state.dungeon)
   // The slot, not a proxy for it: a scalar off the ONE derivation, so the memo re-runs on exactly the folds
   // that change this preview (a drafted cast, a landed receipt, my turn restarting) and on no other.

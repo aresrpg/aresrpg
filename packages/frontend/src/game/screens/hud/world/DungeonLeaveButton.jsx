@@ -32,6 +32,11 @@ export function DungeonLeaveButton() {
   const in_session = use_dungeon(s => s.in_session)
   const fight_id = use_dungeon(s => s.fight_id)
   const run_pass_id = use_dungeon(s => s.run_pass_id)
+  // DECLINED (#1993 carve-out): this IS `fight_visible_view.turn.status` — the same `projected_status(s)`,
+  // reached through `use_dungeon`'s mirror of the fight store. It stays put on purpose. Every other read in this
+  // hook is a genuine run-session fact (latches, flight flags, the abandon doors), so migrating this one scalar
+  // would subscribe a dungeon-session control to the fight projection — a re-render on every fight publish to
+  // remove one mirror hop. It migrates for free when the surrounding session facts get their own record.
   const status = use_dungeon(s => s.dungeon?.status)
   const busy = use_dungeon(s => s.busy)
   const spectating = use_dungeon(s => s.spectating)
