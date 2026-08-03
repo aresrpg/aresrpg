@@ -37,6 +37,34 @@ export const BEAT = {
   ground_drop: 1.2, // chest→feet drop, so a ground-anchored burst erupts from the target's feet
 }
 
+// ── 3D PRESET ASSIGNMENT — the impact/impact_big layers play a SHARED hit/explosion library preset (not
+// element-coloured), so a per-element `tint` recolours them (tint_emitter keeps white-hot cores white). The
+// charge/bolt/remnant/burst layers name an already-element-coloured preset inline below (no tint). The
+// shake/flash/SFX package is UNCHANGED — it keys off the beat, not the art. ──
+const hex_rgb = (/** @type {number} */ h) =>
+  /** @type {[number,number,number]} */ ([((h >> 16) & 255) / 255, ((h >> 8) & 255) / 255, (h & 255) / 255])
+/** element → { impact: Hit-pack preset, impact_big?: Explosion-pack preset, tint: hex } */
+// Tints saturated to the PACK's authored element colours (paler previews read washed out): fire =
+// FlameFX orange-red · water = ElementalMagicFX cyan (impact_03 light_color) · air = ElectricFX white-cyan
+// LIGHTNING (was a violet that fought its own cyan windup — now consistent) · neutral = BattleFX arcane violet ·
+// heal = Paladin holy gold. tint_emitter keeps the white-hot light bloom white; only the coloured body takes it.
+const IMPACT_3D = {
+  fire: { impact: 'impact_05', impact_big: 'ground_explosion_01', tint: 0xff6a3d },
+  water: { impact: 'impact_03', impact_big: 'ground_explosion_00', tint: 0x55d8ff },
+  // AIR now plays the DEDICATED ElectricFX impact pack (Wave B) instead of the shared impact_07/nuke: a cyan
+  // lightning discharge on a normal hit, a different pack index on the heavy hit. NOTE (verified): the 6
+  // air_impact_pack_* are COLOUR/type variants (lightning ×4 + plasma ×2), NOT size tiers — [3] is a colour
+  // pick per the coordinator's adjudication, not a "bigger" one; a future pass may prefer keeping a huge explosion
+  // for the heavy-hit read (a one-line swap of impact_big). Both take air's cyan tint below.
+  air: { impact: AIR_IMPACT_PRESETS[0], impact_big: AIR_IMPACT_PRESETS[3] ?? AIR_IMPACT_PRESETS[0], tint: 0x8fd8ff },
+  neutral: { impact: 'impact_07', tint: 0xa762ff }, // neutral has no impact_big row
+  heal: { impact: 'impact_01', impact_big: 'big_impact_01', tint: 0xffd070 }, // a gentle gold bloom, not a violent blast
+}
+const impact_preset = (/** @type {keyof typeof IMPACT_3D} */ element, /** @type {'impact'|'impact_big'} */ layer) => {
+  const row = IMPACT_3D[element]
+  return { preset: row[layer], tint: hex_rgb(row.tint) }
+}
+
 // ── FULL-BEAT (PROJECTILE-CLASS) ELEMENTS — the 5-LAYER CAST (attack anim, a cell-shake, a sky-drop delivery,
 // the impact explosion, and a lingering colored mana remnant). ONE cast composes up to FIVE optional layers on
 // the master beat clock, all data-driven
@@ -64,8 +92,8 @@ export const CAST_VFX = {
     windup: { preset_3d: { preset: 'charge_fire' }, m: 3.4, anchor: 'chest' },
     delivery: 'skyfall', // a meteor DROPS onto the target from the sky
     orb: { preset_3d: { preset: 'bolt_fire' }, m: 1.9 },
-    impact: { m: 4.6, anchor: 'ground' }, // a punchy red hit-pack burst (impact_05)
-    impact_big: { m: 6.0, anchor: 'ground' }, // heavy hit → a ground explosion
+    impact: { preset_3d: impact_preset('fire', 'impact'), m: 4.6, anchor: 'ground' }, // impact_05
+    impact_big: { preset_3d: impact_preset('fire', 'impact_big'), m: 6.0, anchor: 'ground' },
     remnant: { preset_3d: { preset: 'remnant_fire' }, m: 2.6, duration_s: 2.4 },
   },
   water: {
@@ -73,8 +101,8 @@ export const CAST_VFX = {
     windup: { preset_3d: { preset: 'charge_water' }, m: 2.6, anchor: 'ground' },
     delivery: 'skyfall', // an ice shard falls from the sky onto the target
     orb: { preset_3d: { preset: 'bolt_water' }, m: 1.5 },
-    impact: { m: 4.0, anchor: 'ground' },
-    impact_big: { m: 5.5, anchor: 'ground' },
+    impact: { preset_3d: impact_preset('water', 'impact'), m: 4.0, anchor: 'ground' },
+    impact_big: { preset_3d: impact_preset('water', 'impact_big'), m: 5.5, anchor: 'ground' },
     remnant: { preset_3d: { preset: 'remnant_water' }, m: 2.8, duration_s: 2.6 },
   },
   air: {
@@ -82,8 +110,8 @@ export const CAST_VFX = {
     windup: { preset_3d: { preset: 'charge_air' }, m: 2.6, anchor: 'chest' },
     delivery: 'skyfall', // the spell falls from the sky: the comet DROPS onto the target from BEAT.sky_h up
     orb: { preset_3d: { preset: 'bolt_air' }, m: 1.7 },
-    impact: { m: 4.0, anchor: 'ground' },
-    impact_big: { m: 5.5, anchor: 'ground' }, // skyfall comet → a huge celestial detonation (nuke explosion)
+    impact: { preset_3d: impact_preset('air', 'impact'), m: 4.0, anchor: 'ground' },
+    impact_big: { preset_3d: impact_preset('air', 'impact_big'), m: 5.5, anchor: 'ground' },
     remnant: { preset_3d: { preset: 'remnant_air' }, m: 2.8, duration_s: 2.6 },
   },
   neutral: {
@@ -91,7 +119,7 @@ export const CAST_VFX = {
     windup: { preset_3d: { preset: 'charge_neutral' }, m: 2.4, anchor: 'ground' },
     delivery: 'skyfall', // a chaos bolt drops from the sky onto the target
     orb: { preset_3d: { preset: 'bolt_neutral' }, m: 1.4 },
-    impact: { m: 3.8, anchor: 'chest' },
+    impact: { preset_3d: impact_preset('neutral', 'impact'), m: 3.8, anchor: 'chest' },
     // neutral has no impact_big row (a physical/unknown hit never swaps to the big explosion)
     remnant: { preset_3d: { preset: 'remnant_neutral' }, m: 2.6, duration_s: 2.2 },
   },
@@ -100,8 +128,8 @@ export const CAST_VFX = {
     windup: { preset_3d: { preset: 'charge_heal' }, m: 2.2, anchor: 'ground' },
     delivery: 'skyfall', // holy light descends from the sky onto the target
     orb: { preset_3d: { preset: 'bolt_heal' }, m: 1.4 },
-    impact: { m: 3.6, anchor: 'ground' },
-    impact_big: { m: 4.8, anchor: 'ground' }, // heavy-heal bloom: a big gentle gold burst
+    impact: { preset_3d: impact_preset('heal', 'impact'), m: 3.6, anchor: 'ground' },
+    impact_big: { preset_3d: impact_preset('heal', 'impact_big'), m: 4.8, anchor: 'ground' },
     remnant: { preset_3d: { preset: 'remnant_heal' }, m: 2.6, duration_s: 2.0 },
   },
 }
@@ -229,35 +257,6 @@ export function prewarm_specs(elements) {
   //    already covers the first visible frame.
   for (const name of all_variant_names()) add({ preset: name })
   return [...out.values()]
-}
-
-// ── 3D PRESET ASSIGNMENT — the impact/impact_big layers play a SHARED hit/explosion library preset (not
-// element-coloured), so a per-element `tint` recolours them (tint_emitter keeps white-hot cores white). The
-// charge/bolt/remnant/burst layers name an already-element-coloured preset inline above (no tint). The
-// shake/flash/SFX package is UNCHANGED — it keys off the beat, not the art. ──
-const hex_rgb = (/** @type {number} */ h) =>
-  /** @type {[number,number,number]} */ ([((h >> 16) & 255) / 255, ((h >> 8) & 255) / 255, (h & 255) / 255])
-/** element → { impact: Hit-pack preset, impact_big?: Explosion-pack preset, tint: hex } */
-// Tints saturated to the PACK's authored element colours (paler previews read washed out): fire =
-// FlameFX orange-red · water = ElementalMagicFX cyan (impact_03 light_color) · air = ElectricFX white-cyan
-// LIGHTNING (was a violet that fought its own cyan windup — now consistent) · neutral = BattleFX arcane violet ·
-// heal = Paladin holy gold. tint_emitter keeps the white-hot light bloom white; only the coloured body takes it.
-const IMPACT_3D = {
-  fire: { impact: 'impact_05', impact_big: 'ground_explosion_01', tint: 0xff6a3d },
-  water: { impact: 'impact_03', impact_big: 'ground_explosion_00', tint: 0x55d8ff },
-  // AIR now plays the DEDICATED ElectricFX impact pack (Wave B) instead of the shared impact_07/nuke: a cyan
-  // lightning discharge on a normal hit, a different pack index on the heavy hit. NOTE (verified): the 6
-  // air_impact_pack_* are COLOUR/type variants (lightning ×4 + plasma ×2), NOT size tiers — [3] is a colour
-  // pick per the coordinator's adjudication, not a "bigger" one; a future pass may prefer keeping a huge explosion
-  // for the heavy-hit read (a one-line swap of impact_big). Both take air's cyan tint below.
-  air: { impact: AIR_IMPACT_PRESETS[0], impact_big: AIR_IMPACT_PRESETS[3] ?? AIR_IMPACT_PRESETS[0], tint: 0x8fd8ff },
-  neutral: { impact: 'impact_07', tint: 0xa762ff }, // neutral has no impact_big row
-  heal: { impact: 'impact_01', impact_big: 'big_impact_01', tint: 0xffd070 }, // a gentle gold bloom, not a violent blast
-}
-for (const [el, m] of Object.entries(IMPACT_3D)) {
-  const prof = CAST_VFX[el]
-  if (prof?.impact) prof.impact.preset_3d = { preset: m.impact, tint: hex_rgb(m.tint) }
-  if (prof?.impact_big && m.impact_big) prof.impact_big.preset_3d = { preset: m.impact_big, tint: hex_rgb(m.tint) }
 }
 
 // ── IMPACT FEEL — the on-land presentation package the adapter fires (voxel_fight_adapter.impact_package):

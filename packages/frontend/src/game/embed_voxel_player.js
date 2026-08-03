@@ -180,7 +180,7 @@ export function create_player({
   // (hold-LMB pointer-lock rotate + wheel dolly — the demo's exact feel; my hand-rolled drag-yaw follow-cam
   // is DELETED with its D178/D187 +π basis). Keys just mutate state; the frame loop feeds the controller
   // every frame with the RIG's azimuth as the movement basis (walk_mode.js:87 verbatim — yaw RAW, no +π).
-  const keys = { forward: 0, strafe: 0, jump: false, walk: false }
+  let keys = { forward: 0, strafe: 0, jump: false, walk: false }
   const cam = create_shoulder_camera({ yaw: initial_yaw })
   cam.attach(canvas)
   // AUTO-RUN (map-click steer-to-target + auto-interact): the big-map lane emits `map/auto_run` on a marker
@@ -218,16 +218,14 @@ export function create_player({
   // ctl.tick re-applies gravity, so the body settles to the ground on its own. Double-tap SPACE toggles it.
   const FLY_SPEED = 12 // m/s creative flight (Minecraft-ish); space = up, shift = down, WASD = camera-relative
   let fly = false
-  const fly_pos = [0, 0, 0]
+  let fly_pos = [0, 0, 0]
   let last_space_ms = 0 // double-tap SPACE window detector
   const set_fly = (on) => {
     if (!!on === fly) return
     fly = !!on
     if (fly) {
       const p = ctl.get_transform().position // snapshot the launch point so integration is drift-free
-      fly_pos[0] = p[0]
-      fly_pos[1] = p[1]
-      fly_pos[2] = p[2]
+      fly_pos = [p[0], p[1], p[2]]
     }
   }
   const toggle_cinematic = () => {
@@ -353,7 +351,7 @@ export function create_player({
     // preventDefault() here kills that (harmless on WASD — they have no browser default to suppress).
     const move = resolve_movement_key(e.code)
     if (move) {
-      keys[move.axis] = down ? move.sign : 0
+      keys = { ...keys, [move.axis]: down ? move.sign : 0 }
       e.preventDefault()
       return
     }
@@ -367,7 +365,7 @@ export function create_player({
         if (down && !e.repeat) toggle_mount()
         break
       case 'Space':
-        keys.jump = down
+        keys = { ...keys, jump: down }
         // TR-1 v2 — double-tap SPACE toggles creative fly while cinematic is ON (Minecraft convention).
         if (down && !e.repeat && cinematic) {
           const now = performance.now()
@@ -378,7 +376,7 @@ export function create_player({
         break
       case 'ShiftLeft':
       case 'ShiftRight':
-        keys.walk = down
+        keys = { ...keys, walk: down }
         break
       case 'Escape':
         // AUTO-RUN cancel (the player always wins). No preventDefault — other Esc handlers (modals) still run.
@@ -412,7 +410,7 @@ export function create_player({
   // later, same seam); spawn a one-shot dust burst at the feet and drive it to self-dispose. REUSE — the exact
   // PRESETS + create_vfx_preset one-shot runtime the fight bursts use (fight_sword.js idiom), no new machinery.
   /** @type {{ handle: any, age: number }[]} */
-  const puffs = []
+  let puffs = []
   const spawn_dust_puff = (/** @type {number} */ x, /** @type {number} */ y, /** @type {number} */ z) => {
     const preset = PRESETS.dust_puff
     if (!preset) return
@@ -420,26 +418,26 @@ export function create_player({
     try {
       engine.add_to_scene(handle.object3d)
       handle.age.value = 0.001 // nudge past birth so the first frame submits (world_fixture_group idiom)
-      puffs.push({ handle, age: 0 })
+      puffs = [...puffs, { handle, age: 0 }]
     } catch {
       handle.dispose() // pre-boot / no scene — never leak
     }
   }
   const tick_dust_puffs = (/** @type {number} */ dt) => {
-    for (let i = puffs.length - 1; i >= 0; i -= 1) {
-      const p = puffs[i]
-      p.age += dt
-      p.handle.age.value = p.age
-      if (p.age >= p.handle.duration) {
+    puffs = puffs.reduceRight((next, puff) => {
+      const age = puff.age + dt
+      puff.handle.age.value = age
+      if (age >= puff.handle.duration) {
         try {
-          engine.remove_from_scene(p.handle.object3d)
+          engine.remove_from_scene(puff.handle.object3d)
         } catch {
           /* already gone */
         }
-        p.handle.dispose()
-        puffs.splice(i, 1)
+        puff.handle.dispose()
+        return next
       }
-    }
+      return [{ ...puff, age }, ...next]
+    }, [])
   }
 
   // D195: feed the controller EVERY frame — the rig's azimuth is the movement basis and it changes
@@ -521,9 +519,11 @@ export function create_player({
       const f = inert ? 0 : keys.forward
       const s = inert ? 0 : keys.strafe
       const up = inert ? 0 : (keys.jump ? 1 : 0) - (keys.walk ? 1 : 0)
-      fly_pos[0] += (f * -Math.sin(yaw) + s * Math.cos(yaw)) * FLY_SPEED * dt
-      fly_pos[1] += up * FLY_SPEED * dt
-      fly_pos[2] += (f * -Math.cos(yaw) - s * Math.sin(yaw)) * FLY_SPEED * dt
+      fly_pos = [
+        fly_pos[0] + (f * -Math.sin(yaw) + s * Math.cos(yaw)) * FLY_SPEED * dt,
+        fly_pos[1] + up * FLY_SPEED * dt,
+        fly_pos[2] + (f * -Math.cos(yaw) - s * Math.sin(yaw)) * FLY_SPEED * dt,
+      ]
       ctl.teleport([fly_pos[0], fly_pos[1], fly_pos[2]])
     } else {
       if (fly) set_fly(false) // cinematic dropped or a fight began → reground (the tick below re-applies gravity)
@@ -846,7 +846,7 @@ export function create_player({
       }
       p.handle.dispose() // double-jump puffs in flight at teardown — free their geo/materials
     }
-    puffs.length = 0
+    puffs = []
   }
 
   // GHOST-PLATE FIX: the host's set_frame_paused already cancels this session's own rAF (which drives frame2

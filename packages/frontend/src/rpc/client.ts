@@ -102,8 +102,8 @@ function content_get<T>(resource: string, load: () => Promise<T>): Promise<T> {
 }
 
 type RateLimitWave = {
-  retry_tail: Promise<void>
-  toast_shown: boolean
+  read: () => { retry_tail: Promise<void>; toast_shown: boolean }
+  patch: (changes: Partial<{ retry_tail: Promise<void>; toast_shown: boolean }>) => void
 }
 
 let rate_limit_wave: RateLimitWave | null = null
@@ -168,17 +168,23 @@ function block_rate_limited_requests(delay_ms: number): void {
 }
 
 function new_rate_limit_wave(): RateLimitWave {
-  const wave = {
+  let snapshot = {
     retry_tail: Promise.resolve(),
     toast_shown: false,
+  }
+  const wave = {
+    read: () => snapshot,
+    patch: (changes: Partial<typeof snapshot>) => {
+      snapshot = { ...snapshot, ...changes }
+    },
   }
   rate_limit_wave = wave
   return wave
 }
 
 async function show_rate_limit_failure(wave: RateLimitWave): Promise<void> {
-  if (wave.toast_shown) return
-  wave.toast_shown = true
+  if (wave.read().toast_shown) return
+  wave.patch({ toast_shown: true })
   // Keep the base RPC path independent of the toast/reporting bundle; load it only for the terminal retry
   // failure. `rpc.unavailable` already exists in all six locales and `info` makes this a soft, non-alarm toast.
   try {
@@ -230,7 +236,7 @@ async function retry_rate_limited(url: string, delay_ms: number): Promise<unknow
   block_rate_limited_requests(delay_ms)
   // Every distinct URL joins one promise tail and keeps its own Retry-After deadline; a later 429 extends the
   // shared floor for every queued retry. Attempts issue sequentially; identical URLs share `in_flight`.
-  const attempt = wave.retry_tail.then(async () => {
+  const attempt = wave.read().retry_tail.then(async () => {
     const remaining_ms = Math.max(retry_not_before, rate_limit_blocked_until) - Date.now()
     if (remaining_ms > 0) await wait(remaining_ms)
     return fetch_json_once(url)
@@ -239,9 +245,9 @@ async function retry_rate_limited(url: string, delay_ms: number): Promise<unknow
     () => undefined,
     () => undefined
   )
-  wave.retry_tail = queue_end
+  wave.patch({ retry_tail: queue_end })
   void queue_end.finally(() => {
-    if (rate_limit_wave === wave && wave.retry_tail === queue_end) rate_limit_wave = null
+    if (rate_limit_wave === wave && wave.read().retry_tail === queue_end) rate_limit_wave = null
   })
 
   try {
@@ -282,7 +288,7 @@ async function rate_limit_seconds(res: Response): Promise<number | null> {
 async function wait_for_rate_limit_gate(): Promise<void> {
   while (true) {
     const wave = rate_limit_wave
-    if (wave) await wave.retry_tail
+    if (wave) await wave.read().retry_tail
     const remaining_ms = rate_limit_blocked_until - Date.now()
     if (remaining_ms > 0) await wait(remaining_ms)
     if (rate_limit_wave == null && rate_limit_blocked_until <= Date.now()) return

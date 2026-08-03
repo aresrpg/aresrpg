@@ -56,7 +56,7 @@ export function create_fast_travel_pilot({
   can_fly = () => true,
 }) {
   let mounted = false
-  const fly_pos = [0, 0, 0]
+  let fly_pos = [0, 0, 0]
   // v2 (#370): the pilot's OWN flight heading — null means "not flying" and snaps (no ease) on the first frame
   // of a new flight, so a stale heading from a PREVIOUS flight never bleeds into this one.
   let fly_yaw = null
@@ -81,9 +81,7 @@ export function create_fast_travel_pilot({
         return
       }
       const p = get_pos() // snapshot the launch point so the integration is drift-free (like set_fly)
-      fly_pos[0] = Number(p[0])
-      fly_pos[1] = Number(p[1])
-      fly_pos[2] = Number(p[2])
+      fly_pos = [Number(p[0]), Number(p[1]), Number(p[2])]
       mount_dragon()
       mounted = true
     }
@@ -96,9 +94,7 @@ export function create_fast_travel_pilot({
     }
     const ground_y = sample_ground(fly_pos[0], fly_pos[2])
     const stepped = flight_step({ pos: fly_pos, target: { x: flight.x, z: flight.z }, ground_y, dt })
-    fly_pos[0] = stepped.pos[0]
-    fly_pos[1] = stepped.pos[1]
-    fly_pos[2] = stepped.pos[2]
+    fly_pos = [...stepped.pos]
     fly_yaw = fly_yaw == null ? stepped.yaw : ease_yaw(fly_yaw, stepped.yaw, dt)
     teleport([fly_pos[0], fly_pos[1], fly_pos[2]])
     if (state.phase === 'flying') {

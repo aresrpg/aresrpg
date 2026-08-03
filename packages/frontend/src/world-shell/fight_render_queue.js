@@ -31,9 +31,6 @@ const snapshot_events = (events) => {
       at: event.at,
       duration: event.duration,
       render: event.render,
-      state: 'queued',
-      counted: false,
-      cancel_wait: null,
     }
   })
 }
@@ -70,6 +67,9 @@ export function create_fight_render_queue({
   let outstanding = 0
   const live_slots = new Set()
   const idle_waiters = new Set()
+  const slot_states = new Map()
+  const state_of = (slot) => slot_states.get(slot) ?? { state: 'queued', cancel_wait: null }
+  const patch_slot = (slot, changes) => slot_states.set(slot, { ...state_of(slot), ...changes })
 
   const announce = () => {
     // Presentation observers must not be able to wedge a queue whose renders were already accepted.
@@ -84,18 +84,17 @@ export function create_fight_render_queue({
   }
 
   const settle_slot = (slot, should_announce = true) => {
-    if (!slot.counted) return
-    slot.counted = false
-    if (slot.state !== 'cancelled') slot.state = 'settled'
+    if (!live_slots.has(slot)) return
     live_slots.delete(slot)
     outstanding--
     if (should_announce) announce()
   }
 
   const cancel_slot = (slot, should_announce = true) => {
-    if (slot.state === 'running' || slot.state === 'settled' || slot.state === 'cancelled') return false
-    slot.state = 'cancelled'
-    const wake = slot.cancel_wait
+    const snapshot = state_of(slot)
+    if (snapshot.state === 'running' || snapshot.state === 'settled' || snapshot.state === 'cancelled') return false
+    patch_slot(slot, { state: 'cancelled' })
+    const wake = snapshot.cancel_wait
     settle_slot(slot, should_announce)
     if (wake) wake()
     return true
@@ -106,7 +105,7 @@ export function create_fight_render_queue({
     const cancelled = new Promise((resolve) => {
       cancel_wait = () => resolve(false)
     })
-    slot.cancel_wait = cancel_wait
+    patch_slot(slot, { cancel_wait })
     const due = (async () => {
       await sleep(wait_ms)
       return true
@@ -114,19 +113,22 @@ export function create_fight_render_queue({
     try {
       return await Promise.race([due, cancelled])
     } finally {
-      if (slot.cancel_wait === cancel_wait) slot.cancel_wait = null
+      if (state_of(slot).cancel_wait === cancel_wait) patch_slot(slot, { cancel_wait: null })
     }
   }
 
   const run_event = async (slot, turn_started_at) => {
-    if (slot.state === 'cancelled') return
-    slot.state = 'waiting'
+    if (state_of(slot).state === 'cancelled') {
+      slot_states.delete(slot)
+      return
+    }
+    patch_slot(slot, { state: 'waiting' })
     try {
       const wait_ms = turn_started_at + slot.at - now()
       if (wait_ms > 0 && !(await wait_until_due(slot, wait_ms))) return
-      if (slot.state === 'cancelled') return
+      if (state_of(slot).state === 'cancelled') return
 
-      slot.state = 'running'
+      patch_slot(slot, { state: 'running' })
       const event_started_at = now()
       let render_error
       try {
@@ -140,6 +142,7 @@ export function create_fight_render_queue({
       if (render_error) throw render_error
     } finally {
       settle_slot(slot)
+      slot_states.delete(slot)
     }
   }
 
@@ -162,7 +165,7 @@ export function create_fight_render_queue({
       // leave an earlier render partially enqueued.
       const turn = { source_turn, events: snapshot_events(events) }
       for (const slot of turn.events) {
-        slot.counted = true
+        slot_states.set(slot, { state: 'queued', cancel_wait: null })
         live_slots.add(slot)
       }
       outstanding += turn.events.length

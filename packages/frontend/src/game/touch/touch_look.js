@@ -86,16 +86,14 @@ export function create_touch_look(canvas) {
     if (pointers.size >= 2) {
       // PINCH: accumulate the raw px change in finger spread; the frame loop converts to dolly meters + sign
       // (spread-apart = zoom in). Update BOTH tracked points, then re-measure from the new positions.
-      prev.x = x
-      prev.y = y
+      pointers.set(e.pointerId, { x, y })
       const dist = two_finger_dist()
       if (Number.isFinite(pinch_prev)) add_pinch(dist - pinch_prev)
       pinch_prev = dist
     } else {
       // LOOK: raw px drag delta since this pointer's last position → the rig's rotate accumulator.
       add_look(x - prev.x, y - prev.y)
-      prev.x = x
-      prev.y = y
+      pointers.set(e.pointerId, { x, y })
     }
     e.preventDefault()
   }

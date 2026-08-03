@@ -24,7 +24,17 @@ export interface LoadAssetManifestOptions {
   background?: boolean
 }
 
-const state: { status: AssetManifestStatus; version: number } = { status: 'pending', version: 0 }
+const create_manifest_state = () => {
+  let snapshot: { status: AssetManifestStatus; version: number } = { status: 'pending', version: 0 }
+  return {
+    read: () => snapshot,
+    patch: (changes: Partial<typeof snapshot>) => {
+      snapshot = { ...snapshot, ...changes }
+    },
+  }
+}
+
+const state = create_manifest_state()
 const listeners = new Set<() => void>()
 
 function notify() {
@@ -41,17 +51,16 @@ export function subscribe(listener: () => void): () => void {
 
 /** The version bumps every time the manifest (re)configures the resolver — a late recovery included. */
 export function get_asset_manifest_version(): number {
-  return state.version
+  return state.read().version
 }
 
 export function asset_manifest_status(): AssetManifestStatus {
-  return state.status
+  return state.read().status
 }
 
 function apply_manifest(manifest: unknown): void {
   configure_assets(manifest as Parameters<typeof configure_assets>[0])
-  state.status = 'ready'
-  state.version += 1
+  state.patch({ status: 'ready', version: state.read().version + 1 })
   notify()
 }
 
@@ -93,7 +102,7 @@ function start_background_retry(
   background_running = true
   let attempt = 0
   const tick = async () => {
-    if (state.status === 'ready' || (await try_fetch(fetch_impl, url))) {
+    if (state.read().status === 'ready' || (await try_fetch(fetch_impl, url))) {
       background_running = false
       return
     }
@@ -125,15 +134,14 @@ export async function load_asset_manifest(options: LoadAssetManifestOptions = {}
     if (i < attempts - 1) await sleep(delay_ms * 2 ** i)
   }
 
-  state.status = 'retryable'
+  state.patch({ status: 'retryable' })
   if (background) start_background_retry(fetch_impl, url, delay_ms, schedule)
   return false
 }
 
 /** Test isolation for this module-lifetime state; production callers never re-load within one app load. */
 export function reset_asset_manifest_for_test(): void {
-  state.status = 'pending'
-  state.version = 0
+  state.patch({ status: 'pending', version: 0 })
   background_running = false
   listeners.clear()
 }

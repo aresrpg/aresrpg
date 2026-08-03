@@ -364,19 +364,20 @@ export function placement_strips({ my_band = [], other_band = [], accepts_click 
  */
 export function create_impact_queue() {
   /** @type {{ t: number, fire: () => void }[]} */
-  const pending = []
+  let pending = []
   return {
     schedule(delay, fire) {
-      pending.push({ t: delay, fire })
+      pending = [...pending, { t: delay, fire }]
     },
     drain(edt) {
       // Count each beat down; fire + remove the due ones. Iterate a snapshot-safe reverse splice, but preserve
       // FIFO firing order among same-frame-due beats (oldest scheduled fires first) — matched by the two-pass:
       // decrement all, then fire the due ones front-to-back.
-      for (const p of pending) p.t -= edt
+      pending = pending.map((p) => ({ ...p, t: p.t - edt }))
       for (let i = 0; i < pending.length;) {
         if (pending[i].t <= 0) {
-          const [p] = pending.splice(i, 1)
+          const p = pending[i]
+          pending = [...pending.slice(0, i), ...pending.slice(i + 1)]
           p.fire()
         } else i++
       }
@@ -385,12 +386,13 @@ export function create_impact_queue() {
       // D131: the current animation COMPLETES INSTANTLY — fire every held beat now, oldest-first, so the
       // HP-beat law holds (release order preserved) but with zero remaining lag before the new action plays.
       while (pending.length) {
-        const [p] = pending.splice(0, 1)
+        const [p, ...rest] = pending
+        pending = rest
         p.fire()
       }
     },
     clear() {
-      pending.length = 0
+      pending = []
     },
     size() {
       return pending.length
@@ -449,17 +451,17 @@ export function create_pace_queue({
   /** The slots that have NOT started executing yet (each carries a `cancelled` flag). clear() marks them all
    *  cancelled so their bodies skip; a slot removes itself the instant it starts (so an IN-FLIGHT slot is never
    *  cancelled — it settles). This is the precise "drop the backlog, keep the running one" teardown semantics. */
-  const pending = /** @type {{ cancelled: boolean }[]} */ ([])
+  let pending = /** @type {object[]} */ ([])
+  const cancelled = new Set()
   return {
     run(task) {
       outstanding++
-      const slot = { cancelled: false }
-      pending.push(slot)
+      const slot = {}
+      pending = [...pending, slot]
       const started = tail.then(async () => {
         // this slot is now the RUNNING one — leave the pending set (so a clear() from here on can't cancel it).
-        const i = pending.indexOf(slot)
-        if (i !== -1) pending.splice(i, 1)
-        if (slot.cancelled) return // clear() dropped this backlog slot before it ran — skip the body.
+        pending = pending.filter((candidate) => candidate !== slot)
+        if (cancelled.delete(slot)) return // clear() dropped this backlog slot before it ran — skip the body.
         const t0 = now()
         try {
           await task()
@@ -481,8 +483,8 @@ export function create_pace_queue({
     },
     clear() {
       // cancel every NOT-yet-started slot (the running one already left `pending`, so it finishes untouched).
-      for (const slot of pending) slot.cancelled = true
-      pending.length = 0
+      for (const slot of pending) cancelled.add(slot)
+      pending = []
     },
   }
 }

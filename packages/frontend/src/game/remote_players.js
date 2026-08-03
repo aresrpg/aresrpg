@@ -83,9 +83,7 @@ export function create_remote_players(engine, world_canvas = null) {
   let last_t = performance.now()
   let anim_ticks = 0 // D218 — DEV telemetry (ticked rigs per window)
   let frame_count = 0
-  const fallback_rect = { left: 0, top: 0, width: 0, height: 0 }
   const fallback_position = { x: 0, z: 0 }
-  const identity_scratch = { classe: 'senshi', male: true, declared: false }
   const projected_plate = { left: 0, top: 0 }
 
   // D206-visibility (other players were hard to see — the rig RENDERS but at the diorama's ~53 m iso
@@ -102,10 +100,7 @@ export function create_remote_players(engine, world_canvas = null) {
   const identity_of = (/** @type {string} */ _id, /** @type {any} */ entry) => {
     const classe = character_rig_of(entry.classe, PLACEHOLDER_RIG_CLASS)
     const male = entry.male !== false
-    identity_scratch.classe = classe
-    identity_scratch.male = male
-    identity_scratch.declared = !!entry.classe
-    return identity_scratch
+    return { classe, male, declared: !!entry.classe }
   }
 
   const spawn_rig = (/** @type {string} */ id, /** @type {any} */ entry) => {
@@ -324,11 +319,8 @@ export function create_remote_players(engine, world_canvas = null) {
     if (rigs.size) void peer_cache.refresh(rigs.keys())
     const plate_canvas = rigs.size ? (world_canvas ?? document.querySelector('canvas')) : null
     let plate_rect = plate_canvas?.getBoundingClientRect() ?? null
-    if (!plate_rect && rigs.size) {
-      fallback_rect.width = window.innerWidth
-      fallback_rect.height = window.innerHeight
-      plate_rect = fallback_rect
-    }
+    if (!plate_rect && rigs.size)
+      plate_rect = { left: 0, top: 0, width: window.innerWidth, height: window.innerHeight }
     for (const [id, r] of rigs) {
       const entry = render_row_of(state, id)
       if (!entry) continue

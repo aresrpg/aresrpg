@@ -78,13 +78,17 @@ export function map_stats(stats: Stats | undefined): Stats {
 }
 
 // ── crafting / gathering cross-refs (recipes.json + the gather resource tables) ────────────────
-const GATHER_JSON_BY_ITEM: Record<string, string> = {}
-for (const [job, resources] of Object.entries(GATHER_RESOURCES))
-  for (const resource of resources)
-    GATHER_JSON_BY_ITEM[resource.id] = JSON.stringify({
-      jobType: job.toUpperCase(),
-      tier: resource.tier,
-    })
+const GATHER_JSON_BY_ITEM: Record<string, string> = Object.fromEntries(
+  Object.entries(GATHER_RESOURCES).flatMap(([job, resources]) =>
+    resources.map((resource) => [
+      resource.id,
+      JSON.stringify({
+        jobType: job.toUpperCase(),
+        tier: resource.tier,
+      }),
+    ])
+  )
+)
 
 function recipe_json_for(item: RawItem): string | undefined {
   const recipe = RECIPES[item.id]

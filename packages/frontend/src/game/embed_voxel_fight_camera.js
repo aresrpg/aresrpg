@@ -279,8 +279,8 @@ export function create_fight_camera({ engine, canvas, board_cell_m, mobile = fal
     if (!fight_cam || !point) return
     const dx = e.clientX - point.x
     const dy = e.clientY - point.y
-    point.x = e.clientX
-    point.y = e.clientY
+    const moved = { ...point, x: e.clientX, y: e.clientY }
+    mobile_pointers.set(e.pointerId, moved)
     if (mobile_pointers.size > 1) {
       const next = pinch_pair()
       if (next && mobile_pinch) {
@@ -290,7 +290,7 @@ export function create_fight_camera({ engine, canvas, board_cell_m, mobile = fal
         mobile_pinch = next
       }
       for (const id of mobile_pointers.keys()) mobile_blocked.add(id)
-    } else if (Math.hypot(point.x - point.start_x, point.y - point.start_y) > MOBILE_DRAG_PX) {
+    } else if (Math.hypot(moved.x - moved.start_x, moved.y - moved.start_y) > MOBILE_DRAG_PX) {
       mobile_blocked.add(e.pointerId)
       pan_by_pixels(dx, dy)
     } else return
@@ -306,10 +306,10 @@ export function create_fight_camera({ engine, canvas, board_cell_m, mobile = fal
     mobile_pointers.delete(e.pointerId)
     mobile_blocked.delete(e.pointerId)
     mobile_pinch = null
-    const remaining = [...mobile_pointers.values()][0]
+    const remaining = [...mobile_pointers.entries()][0]
     if (remaining) {
-      remaining.start_x = remaining.x
-      remaining.start_y = remaining.y
+      const [remaining_id, point] = remaining
+      mobile_pointers.set(remaining_id, { ...point, start_x: point.x, start_y: point.y })
     }
     try {
       canvas.releasePointerCapture(e.pointerId)

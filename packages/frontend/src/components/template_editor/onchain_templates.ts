@@ -15,29 +15,34 @@ import { game_log } from '../../core/log.js'
 // admin tab AND the mob-editor loot picker both need the 'item' list at once) so opening the loot picker
 // doesn't re-run a full event replay the tab just did.
 type OnChainTemplateKind = 'mob' | 'item'
-const onchain_cache: Record<OnChainTemplateKind, any[] | undefined> = { mob: undefined, item: undefined }
-const onchain_inflight: Record<OnChainTemplateKind, Promise<any[]> | null> = { mob: null, item: null }
-const onchain_listeners: Record<OnChainTemplateKind, Set<() => void>> = { mob: new Set(), item: new Set() }
+const onchain_cache = new Map<OnChainTemplateKind, any[]>()
+const onchain_inflight = new Map<OnChainTemplateKind, Promise<any[]>>()
+const onchain_listeners = new Map<OnChainTemplateKind, Set<() => void>>([
+  ['mob', new Set()],
+  ['item', new Set()],
+])
 
 function load_onchain_templates(kind: OnChainTemplateKind, force = false): Promise<any[]> {
-  if (!force && onchain_inflight[kind]) return onchain_inflight[kind]!
-  if (!force && onchain_cache[kind]) return Promise.resolve(onchain_cache[kind]!)
+  const inflight = onchain_inflight.get(kind)
+  const cached = onchain_cache.get(kind)
+  if (!force && inflight) return inflight
+  if (!force && cached) return Promise.resolve(cached)
   const fetcher = kind === 'mob' ? get_mob_templates : get_item_templates
   const promise = (async () => {
     try {
       const { graphql_client } = await get_sdk()
       const rows = await fetcher(graphql_client, aresrpg_id(DEMO_NETWORK, 'PACKAGE_ID'))
-      onchain_cache[kind] = rows
-      onchain_inflight[kind] = null
-      onchain_listeners[kind].forEach((cb) => cb())
+      onchain_cache.set(kind, rows)
+      onchain_inflight.delete(kind)
+      onchain_listeners.get(kind)?.forEach((cb) => cb())
       return rows
     } catch (err) {
-      onchain_inflight[kind] = null
+      onchain_inflight.delete(kind)
       game_log('templates', `on-chain ${kind} template read failed:`, err)
-      return onchain_cache[kind] ?? []
+      return onchain_cache.get(kind) ?? []
     }
   })()
-  onchain_inflight[kind] = promise
+  onchain_inflight.set(kind, promise)
   return promise
 }
 
@@ -53,13 +58,13 @@ export function useOnchainTemplates(
   const [, force_render] = useState(0)
   useEffect(() => {
     const cb = () => force_render((n) => n + 1)
-    onchain_listeners[kind].add(cb)
+    onchain_listeners.get(kind)?.add(cb)
     load_onchain_templates(kind)
     return () => {
-      onchain_listeners[kind].delete(cb)
+      onchain_listeners.get(kind)?.delete(cb)
     }
   }, [kind])
-  const rows = onchain_cache[kind]
+  const rows = onchain_cache.get(kind)
   const data = opts?.orphans === 'exclude' && rows ? rows.filter((r) => !r?._orphan) : rows
   return {
     data,

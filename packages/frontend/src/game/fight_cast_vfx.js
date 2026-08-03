@@ -72,7 +72,7 @@ export function prewarm_fight_vfx(engine, elements) {
   if (!engine?.add_to_scene) return () => {}
   const specs = prewarm_specs(elements)
   /** @type {{ object3d: import('three').Object3D, dispose: () => void }[]} */
-  const handles = []
+  let handles = []
   let done = false
   let raf = 0
   let timer = /** @type {ReturnType<typeof setTimeout> | undefined} */ (undefined)
@@ -99,13 +99,16 @@ export function prewarm_fight_vfx(engine, elements) {
       sprite.position.set(PREWARM_POS[0], PREWARM_POS[1], PREWARM_POS[2])
       sprite.frustumCulled = false // culled = no draw submitted = NO compile — same law as the preset mounts
       engine.add_to_scene(sprite)
-      handles.push({
-        object3d: sprite,
-        dispose() {
-          texture.dispose()
-          material.dispose()
+      handles = [
+        ...handles,
+        {
+          object3d: sprite,
+          dispose() {
+            texture.dispose()
+            material.dispose()
+          },
         },
-      })
+      ]
     } catch {
       /* canvas unavailable — skip the float prewarm, never block the preset warmup */
     }
@@ -122,7 +125,7 @@ export function prewarm_fight_vfx(engine, elements) {
       try {
         engine.add_to_scene(handle.object3d)
         handle.age.value = 0.001 // nudge past birth so the emitters actually submit their draw (⇒ pipeline compile)
-        handles.push(handle)
+        handles = [...handles, handle]
       } catch {
         handle.dispose() // pre-boot / no scene — never leak the throwaway
       }
@@ -142,7 +145,7 @@ export function prewarm_fight_vfx(engine, elements) {
       }
       h.dispose()
     }
-    handles.length = 0
+    handles = []
   }
   raf = requestAnimationFrame(mount_batch)
   return () => {
@@ -299,16 +302,16 @@ export function cast_vfx({ engine, from, to, element, magnitude = 1, spell, on_i
    * @property {number} [life] explicit window (s); absent ⇒ the preset's own duration (a static burst)
    * @property {((k:number)=>void)} [step] per-frame origin driver (the moving projectile only)
    * @property {(() => void) | null} [on_end] fired once when the window ends (the orb chains impact + remnant)
-   * @property {Vector3} [prev] previous origin (finite-diff travel velocity for the trail) @property {number} [prevT]
    */
   /** @type {Live3[]} */
-  const live = []
+  let live = []
 
   // Preset handles awaiting a DEFERRED dispose — freed a frame after leaving the scene (rAF-phase invariant).
-  const pending_dispose = /** @type {{ dispose: () => void }[]} */ ([])
+  let pending_dispose = /** @type {{ dispose: () => void }[]} */ ([])
   const flush_pending = () => {
-    for (const h of pending_dispose) h.dispose()
-    pending_dispose.length = 0
+    const ready = pending_dispose
+    pending_dispose = []
+    for (const h of ready) h.dispose()
   }
   const retire = (/** @type {Live3} */ s) => {
     try {
@@ -316,7 +319,7 @@ export function cast_vfx({ engine, from, to, element, magnitude = 1, spell, on_i
     } catch {
       /* already gone */
     }
-    pending_dispose.push(s.preset3d)
+    pending_dispose = [...pending_dispose, s.preset3d]
   }
 
   const prof = CAST_VFX[asset_element(element)]
@@ -352,7 +355,7 @@ export function cast_vfx({ engine, from, to, element, magnitude = 1, spell, on_i
     /** @type {number} */ life
   ) => {
     const handle = spawn_preset_3d(engine, row.preset_3d, at, { magnitude, m: row.m, ground })
-    if (handle) live.push({ preset3d: handle, t0: performance.now(), life, on_end: null })
+    if (handle) live = [...live, { preset3d: handle, t0: performance.now(), life, on_end: null }]
   }
 
   const spawn_windup = () => spawn_static(prof.windup, from, prof.windup.anchor === 'ground', BEAT.flare_s)
@@ -394,30 +397,35 @@ export function cast_vfx({ engine, from, to, element, magnitude = 1, spell, on_i
       spawn_variant_layer()
       return
     }
-    live.push({
-      preset3d: handle,
-      t0: performance.now(),
-      life: BEAT.travel_s,
-      step: (k) => {
-        // SKY-FALL drops onto the target (this cast's cone birth + bow, `chaos`); ARC lobs caster→target — both
-        // land on `to` at k=1 (the impact clock).
-        const p =
-          delivery === 'skyfall' ? traj_skyfall(to, k, BEAT.sky_h, _pv, chaos) : traj_arc(from, to, k, BEAT.arc_h, _pv)
-        handle.origin.value.set(p.x, p.y, p.z)
+    live = [
+      ...live,
+      {
+        preset3d: handle,
+        t0: performance.now(),
+        life: BEAT.travel_s,
+        step: (k) => {
+          // SKY-FALL drops onto the target (this cast's cone birth + bow, `chaos`); ARC lobs caster→target — both
+          // land on `to` at k=1 (the impact clock).
+          const p =
+            delivery === 'skyfall'
+              ? traj_skyfall(to, k, BEAT.sky_h, _pv, chaos)
+              : traj_arc(from, to, k, BEAT.arc_h, _pv)
+          handle.origin.value.set(p.x, p.y, p.z)
+        },
+        on_end: () => {
+          on_impact?.() // the adapter fires the target SFX + shake + flash on this exact frame
+          spawn_impact()
+          spawn_remnant() // the remnant spawns ON the impact frame and lingers past the whole beat
+          spawn_variant_layer() // a zone/strike variant lands on its OWN layer (no-op for orb-class / unmapped)
+        },
       },
-      on_end: () => {
-        on_impact?.() // the adapter fires the target SFX + shake + flash on this exact frame
-        spawn_impact()
-        spawn_remnant() // the remnant spawns ON the impact frame and lingers past the whole beat
-        spawn_variant_layer() // a zone/strike variant lands on its OWN layer (no-op for orb-class / unmapped)
-      },
-    })
+    ]
   }
 
   const spawn_impact = () => {
     const row = resolve_impact(prof, magnitude) // heavy hits swap to the bigger explosion
     const handle = spawn_preset_3d(engine, row.preset_3d, to, { magnitude, m: row.m, ground: row.anchor === 'ground' })
-    if (handle) live.push({ preset3d: handle, t0: performance.now(), on_end: null })
+    if (handle) live = [...live, { preset3d: handle, t0: performance.now(), on_end: null }]
   }
 
   // REMNANT (a colored mana remnant lingers after cast): an element residue LOOP on the TARGET cell, ground-
@@ -428,7 +436,10 @@ export function cast_vfx({ engine, from, to, element, magnitude = 1, spell, on_i
     const { m, duration_s } = prof.remnant
     const handle = spawn_preset_3d(engine, prof.remnant.preset_3d, to, { magnitude, m, ground: true })
     if (handle)
-      live.push({ preset3d: handle, t0: performance.now(), life: remnant_life(duration_s, reduced), on_end: null })
+      live = [
+        ...live,
+        { preset3d: handle, t0: performance.now(), life: remnant_life(duration_s, reduced), on_end: null },
+      ]
   }
 
   // [b_spell] DELIVERY-LAYER VARIANT (zone/strike): the routed variant mounts on the TARGET cell at the impact beat,
@@ -442,8 +453,10 @@ export function cast_vfx({ engine, from, to, element, magnitude = 1, spell, on_i
     const m = zone ? prof.remnant?.m ?? prof.orb.m : resolve_impact(prof, magnitude).m
     const life = zone ? remnant_life(prof.remnant?.duration_s ?? BEAT.impact_s, reduced) : BEAT.impact_s
     const handle = spawn_preset_3d(engine, variant_spec, to, { magnitude, m, ground: true })
-    if (handle) live.push({ preset3d: handle, t0: performance.now(), life, on_end: null })
+    if (handle) live = [...live, { preset3d: handle, t0: performance.now(), life, on_end: null }]
   }
+
+  const travel_history = new Map()
 
   const frame = (/** @type {number} */ now) => {
     probe?.tick(now)
@@ -457,18 +470,23 @@ export function cast_vfx({ engine, from, to, element, magnitude = 1, spell, on_i
         s.step(k) // drive the moving origin along the trajectory
         // finite-diff travel velocity → the trail emitters shed a world-static wake (moving-emitter primitive).
         const o = s.preset3d.origin.value
-        if (s.prev) {
-          const dts = Math.max(1e-3, elapsed - (s.prevT ?? 0))
-          s.preset3d.travel.value.set((o.x - s.prev.x) / dts, (o.y - s.prev.y) / dts, (o.z - s.prev.z) / dts)
-        } else s.prev = new Vector3()
-        s.prev.copy(o)
-        s.prevT = elapsed
+        const previous = travel_history.get(s)
+        if (previous) {
+          const dts = Math.max(1e-3, elapsed - previous.at)
+          s.preset3d.travel.value.set(
+            (o.x - previous.position.x) / dts,
+            (o.y - previous.position.y) / dts,
+            (o.z - previous.position.z) / dts
+          )
+        }
+        travel_history.set(s, { position: new Vector3(o.x, o.y, o.z), at: elapsed })
       }
       s.preset3d.age.value = elapsed // drives every particle (and wraps a LOOP preset)
       if (elapsed >= life) {
         const end = s.on_end
         retire(s) // remove from the scene now; dispose on the next tick
-        live.splice(i, 1)
+        live = [...live.slice(0, i), ...live.slice(i + 1)]
+        travel_history.delete(s)
         end?.() // chain the next beat AFTER the finished one is retired (may push a fresh handle into live)
       }
     }
@@ -495,7 +513,8 @@ export function cast_vfx({ engine, from, to, element, magnitude = 1, spell, on_i
       if (raf) cancelAnimationFrame(raf)
       raf = 0
       for (const s of live) retire(s) // remove every live handle from the scene (+ queue its dispose)
-      live.length = 0
+      live = []
+      travel_history.clear()
       flush_pending() // teardown: the board is going away — free the queued handles now
     },
   }
@@ -542,10 +561,11 @@ export function burst_vfx({ engine, at, element, magnitude = 1, spell, preset_ro
   let disposed = false
   /** @type {any} */
   let handle = null
-  const pending_dispose = /** @type {{ dispose: () => void }[]} */ ([])
+  let pending_dispose = /** @type {{ dispose: () => void }[]} */ ([])
   const flush_pending = () => {
-    for (const h of pending_dispose) h.dispose()
-    pending_dispose.length = 0
+    const ready = pending_dispose
+    pending_dispose = []
+    for (const h of ready) h.dispose()
   }
   const retire = () => {
     if (!handle) return
@@ -554,7 +574,7 @@ export function burst_vfx({ engine, at, element, magnitude = 1, spell, preset_ro
     } catch {
       /* already gone */
     }
-    pending_dispose.push(handle)
+    pending_dispose = [...pending_dispose, handle]
     handle = null
   }
 
