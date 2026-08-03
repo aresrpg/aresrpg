@@ -61,10 +61,10 @@ const wire = (index: number, over: Partial<RpcEncyclopediaItem> = {}): RpcEncycl
 })
 
 /** The two states a mounted surface can be in, both built through the REAL projection. */
-const cold: item_corpus.ItemCorpus = { items: [], by_id: new Map(), loading: true }
+const cold: item_corpus.ItemCorpus = { items: [], by_id: new Map(), loading: true, error: null }
 const landed = (rows: RpcEncyclopediaItem[]): item_corpus.ItemCorpus => {
   const items = item_corpus.item_corpus_from_v1(rows)
-  return { items, by_id: new Map(items.map((item) => [item.id, item])), loading: false }
+  return { items, by_id: new Map(items.map((item) => [item.id, item])), loading: false, error: null }
 }
 
 const render_against = (state: item_corpus.ItemCorpus, node: React.ReactElement): string => {

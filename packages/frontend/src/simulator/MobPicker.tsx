@@ -49,9 +49,9 @@ export const useMobIndex = (): Map<string, CorpusMob> => {
  * (no jsdom/happy-dom — see PetFeedModal.test.jsx) cannot resolve; the component below is a pass-through
  * shell over it, so driving this hook drives the picker.
  *
- * `empty_label`: absence is NOT emptiness (cache law). Until a load settles the list says LOADING — the
- * old picker rendered "NO RESULTS FOUND · 0/0" forever, because nothing ever loaded the corpus and a
- * `useMemo(..., [])` over module state could not have noticed if something had.
+ * `empty_label`: absence is NOT emptiness (cache law). Until a load settles the list says LOADING; if it
+ * settles through the loader's degraded `inert` input, it says UNAVAILABLE. Only a ready corpus may fall
+ * through to the modal's genuine NO RESULTS line.
  */
 export function useMobPickerContent(): { roster: CorpusMob[]; items: PickerItem[]; empty_label?: string } {
   const { t } = useTranslation()
@@ -74,7 +74,9 @@ export function useMobPickerContent(): { roster: CorpusMob[]; items: PickerItem[
     [roster, t]
   )
 
-  return { roster, items, empty_label: status === 'loading' ? t('simulator.mob_roster_loading') : undefined }
+  const empty_label =
+    status === 'loading' ? t('simulator.mob_roster_loading') : status === 'inert' ? t('rpc.unavailable') : undefined
+  return { roster, items, empty_label }
 }
 
 export function MobPicker({

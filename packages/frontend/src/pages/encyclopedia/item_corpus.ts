@@ -18,7 +18,7 @@ import { useMemo } from 'react'
 
 import { item_damages_from_v1, item_stats_from_v1 } from '../../chain/read_findables.js'
 import { ITEM_STAT_KEY_MAP } from '../../chain/read_templates.js'
-import { get_encyclopedia } from '../../rpc/client'
+import { get_encyclopedia, type RpcError } from '../../rpc/client'
 import { useRpcView } from '../../rpc/use_view'
 import type { RpcEncyclopediaItem } from '../../rpc/views'
 
@@ -80,13 +80,16 @@ export type ItemCorpus = {
   /** true only before the first /v1 answer lands. Consumers must SAY this rather than render an empty list:
    *  absence is not emptiness (cache law), and the two are indistinguishable once drawn. */
   loading: boolean
+  /** The first or latest /v1 read failed. Kept as DATA from useRpcView so an empty consumer can render
+   *  degraded instead of asserting that the live game genuinely publishes zero items. */
+  error: RpcError | null
 }
 
 /** The live corpus, subscribed. One shared app-lifetime read (the client caches `encyclopedia:all`), so a
  *  consumer rides the same fetch the encyclopedia already made. */
-export function useItemCorpus(): ItemCorpus {
-  const { data, loading } = useRpcView((signal) => get_encyclopedia(undefined, signal), { deps: [] })
+export function use_item_corpus(): ItemCorpus {
+  const { data, loading, error } = useRpcView((signal) => get_encyclopedia(undefined, signal), { deps: [] })
   const items = useMemo(() => item_corpus_from_v1(data?.items), [data])
   const by_id = useMemo(() => new Map(items.map((item) => [item.id, item])), [items])
-  return { items, by_id, loading }
+  return { items, by_id, loading, error }
 }

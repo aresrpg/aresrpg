@@ -12,13 +12,14 @@
 // one. The projection those states are built from is the REAL one (`item_corpus_from_v1`), never hand-built
 // rows, so a change to the wire decode surfaces here too.
 
-import { describe, expect, test, spyOn } from 'bun:test'
+import { afterEach, describe, expect, mock, test, spyOn } from 'bun:test'
 import { renderToStaticMarkup } from 'react-dom/server'
 import i18next from 'i18next'
 import { I18nextProvider } from 'react-i18next'
 
 import en from '../i18n/locales/en.json'
 import encyclopedia_fixture from '../rpc/fixtures/encyclopedia.json'
+import { _reset_rpc_client_for_test, get_encyclopedia, RpcError } from '../rpc/client'
 import type { RpcEncyclopediaItem } from '../rpc/views'
 import * as item_corpus from '../pages/encyclopedia/item_corpus'
 
@@ -50,11 +51,37 @@ const wire = (index: number, category: string): RpcEncyclopediaItem => ({
 
 const MIXED = [wire(0, 'helmet'), wire(1, 'boots'), wire(2, 'longsword'), wire(3, 'ring')]
 
-/** The two states a mounted picker can be in, built through the REAL projection. */
-const cold: item_corpus.ItemCorpus = { items: [], by_id: new Map(), loading: true }
+/** Mounted-picker states, built through the REAL projection and the real typed /v1 failure. */
+const cold: item_corpus.ItemCorpus = { items: [], by_id: new Map(), loading: true, error: null }
 const landed = (rows: RpcEncyclopediaItem[]): item_corpus.ItemCorpus => {
   const items = item_corpus.item_corpus_from_v1(rows)
-  return { items, by_id: new Map(items.map((item) => [item.id, item])), loading: false }
+  return { items, by_id: new Map(items.map((item) => [item.id, item])), loading: false, error: null }
+}
+
+/** Drive the picker's real /v1 corpus source to a 404, preserving the client's typed failure as data. */
+const corpus_404 = async (): Promise<item_corpus.ItemCorpus> => {
+  _reset_rpc_client_for_test()
+  const previous_fetch = globalThis.fetch
+  const fetch_mock = mock(async (input: RequestInfo | URL, init?: RequestInit) =>
+    new URL(String(input)).pathname === '/v1/encyclopedia'
+      ? new Response(null, { status: 404 })
+      : previous_fetch(input, init)
+  )
+  globalThis.fetch = fetch_mock as unknown as typeof fetch
+  const error = await get_encyclopedia()
+    .then(
+      () => null,
+      (reason: unknown) => reason
+    )
+    .finally(() => {
+      globalThis.fetch = previous_fetch
+    })
+  expect(
+    fetch_mock.mock.calls.filter(([input]) => new URL(String(input)).pathname === '/v1/encyclopedia')
+  ).toHaveLength(1)
+  expect(error).toBeInstanceOf(RpcError)
+  expect((error as RpcError).status).toBe(404)
+  return { items: [], by_id: new Map(), loading: false, error: error as RpcError }
 }
 
 /** Prints exactly what the picker hands its modal — the empty line, then one row per offered item. */
@@ -62,7 +89,7 @@ function PickerContent({ slot }: Readonly<{ slot: string }>) {
   const { items, empty_label } = useSlotPickerContent(slot)
   return (
     <div>
-      <span id="empty">{empty_label ?? ''}</span>
+      <span id="empty">{items.length === 0 ? (empty_label ?? en.search_picker.no_results) : ''}</span>
       <span id="count">{items.length}</span>
       {items.map((item) => (
         <span key={item.id}>{item.label}</span>
@@ -86,10 +113,21 @@ const render_against = (state: item_corpus.ItemCorpus, slot: string): string => 
 
 const count_of = (html: string): number => Number(html.match(/<span id="count">(\d+)<\/span>/)?.[1] ?? -1)
 
+afterEach(() => {
+  _reset_rpc_client_for_test()
+})
+
 describe('a gear picker over a corpus that has not landed yet', () => {
   test('reads as LOADING — never the "no results" lie about what the game contains', () => {
     const html = render_against(cold, 'helmet')
     expect(html).toContain(en.simulator.item_corpus_loading)
+    expect(count_of(html)).toBe(0)
+    expect(html).not.toContain(en.search_picker.no_results)
+  })
+
+  test('a mocked 404 reads as UNAVAILABLE — never the "no results" lie', async () => {
+    const html = render_against(await corpus_404(), 'helmet')
+    expect(html).toContain(en.rpc.unavailable)
     expect(count_of(html)).toBe(0)
     expect(html).not.toContain(en.search_picker.no_results)
   })

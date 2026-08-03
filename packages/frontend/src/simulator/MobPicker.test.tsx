@@ -18,6 +18,7 @@
 // world_corpus_loader.test.ts; together they cover mounted-picker → store → corpus landing.
 
 import { afterEach, describe, expect, spyOn, test } from 'bun:test'
+import { configure_assets, reset_assets_for_test } from '@aresrpg/sdk/jobs'
 import { renderToStaticMarkup } from 'react-dom/server'
 import i18next from 'i18next'
 import { I18nextProvider } from 'react-i18next'
@@ -43,12 +44,39 @@ const corpus_state = (blob?: WorldCorpusBlob) => {
   return store.getState()
 }
 
+/** Drive the real versioned world-corpus fetch to the production failure shape: the object URL exists, but 404s. */
+const corpus_404_state = async () => {
+  configure_assets({
+    aggregator: 'https://assets.invalid',
+    classes: { world_corpus: { published: true } },
+  })
+  const previous_fetch = globalThis.fetch
+  const fetch_spy = spyOn(globalThis, 'fetch').mockImplementation(async (input, init) =>
+    String(input).endsWith('/world_corpus.missing.json')
+      ? new Response(null, { status: 404 })
+      : previous_fetch(input, init)
+  )
+  // spyOn may re-acquire a process-global spy from an earlier file in the full frontend run.
+  fetch_spy.mockClear()
+  const error_spy = spyOn(console, 'error').mockImplementation(() => {})
+  try {
+    await world_corpus.load_world_corpus(Promise.resolve('missing'))
+    expect(fetch_spy.mock.calls.map(([url]) => String(url))).toEqual([
+      'https://assets.invalid/data/world_corpus.missing.json',
+    ])
+    return store.getState()
+  } finally {
+    fetch_spy.mockRestore()
+    error_spy.mockRestore()
+  }
+}
+
 /** Prints exactly what the picker hands its modal — the empty line, then one row per listed mob. */
 function PickerContent() {
   const { items, empty_label } = useMobPickerContent()
   return (
     <div>
-      <span id="empty">{empty_label ?? ''}</span>
+      <span id="empty">{items.length === 0 ? (empty_label ?? en.search_picker.no_results) : ''}</span>
       <span id="count">{items.length}</span>
       {items.map((item) => (
         <span key={item.id}>{item.label}</span>
@@ -75,7 +103,10 @@ const render_against = (state: ReturnType<typeof corpus_state>): string => {
 
 const count_of = (html: string): number => Number(html.match(/<span id="count">(\d+)<\/span>/)?.[1] ?? -1)
 
-afterEach(() => world_corpus.set_world_corpus_for_test())
+afterEach(() => {
+  world_corpus.set_world_corpus_for_test()
+  reset_assets_for_test()
+})
 
 describe('the simulator mob picker population', () => {
   test('an unloaded corpus reads as LOADING — never the "no results" lie', () => {
@@ -83,6 +114,13 @@ describe('the simulator mob picker population', () => {
     expect(html).toContain(en.simulator.mob_roster_loading)
     expect(count_of(html)).toBe(0)
     // the modal's default empty line is what the picker showed forever — suppressed while the blob is coming
+    expect(html).not.toContain(en.search_picker.no_results)
+  })
+
+  test('a mocked 404 reads as UNAVAILABLE — never the "no results" lie', async () => {
+    const html = render_against(await corpus_404_state())
+    expect(html).toContain(en.rpc.unavailable)
+    expect(count_of(html)).toBe(0)
     expect(html).not.toContain(en.search_picker.no_results)
   })
 

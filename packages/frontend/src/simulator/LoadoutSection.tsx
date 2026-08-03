@@ -93,12 +93,12 @@ export function LoadoutSection({ character }: Readonly<{ character: SimCharacter
  * offers weapons and the pet slot offers pets, with no second eligibility rule here.
  *
  * `empty_label`: absence is NOT emptiness (cache law). While the corpus is still in flight the list says
- * LOADING; "NO RESULTS FOUND" over a cold corpus tells the player this slot has no gear in the game, which
- * is exactly the lie every one of these 20 pickers told while they read the empty bundled catalog.
+ * LOADING; if the /v1 read failed it says UNAVAILABLE. Only a successful corpus read may fall through to
+ * "NO RESULTS FOUND" for a slot the game genuinely has no gear for.
  */
 export function useSlotPickerContent(slot: string): { items: PickerItem[]; empty_label?: string } {
   const { t } = useTranslation()
-  const { items: corpus, loading } = item_corpus.useItemCorpus()
+  const { items: corpus, loading, error } = item_corpus.use_item_corpus()
   const options = useMemo(() => items_for_slot(slot, corpus), [slot, corpus])
 
   const items: PickerItem[] = useMemo(
@@ -117,7 +117,10 @@ export function useSlotPickerContent(slot: string): { items: PickerItem[]; empty
     [options, t]
   )
 
-  return { items, empty_label: loading ? t('simulator.item_corpus_loading') : undefined }
+  return {
+    items,
+    empty_label: error ? t('rpc.unavailable') : loading ? t('simulator.item_corpus_loading') : undefined,
+  }
 }
 
 /**
