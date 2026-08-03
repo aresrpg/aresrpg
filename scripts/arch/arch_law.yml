@@ -15,6 +15,26 @@
 #   · `(...) => ...` (ellipsis body) matches expression bodies ONLY — never use it as an arrow body.
 #   · `async function $F(...) { ... }` DOES respect the modifier on declarations.
 rules:
+  # ── #1993 · every fight-visible fact has ONE source: the canonical projection ──────────────────
+  # The projection audit (2026-08-02) found all six fight-visible facts — turn/phase, roster
+  # identity, loot/outcome, position/cast landing, active effects, HP — with more than one
+  # independent source-home across 734 files; #1740/#1865/#1867/#1859/#1872 are instances of that
+  # one disease. This rule is the epic's METER, not its cure: it freezes the census so each family
+  # can only pay its rows DOWN.
+  #
+  # SCOPE — the include set is the audited fight-visible mount tree: 24 consumer surfaces (18
+  # currently dirty, 6 clean and held at floor 0, so a first bypass in them is an instant red).
+  # Deliberately NOT consumers, hence absent: `world/use_fight_phase.js` and `game/store.js` ARE
+  # the projection boundary, and `useFight(world_fight_view)` is the one sanctioned read (the
+  # `pattern-not` arm) — every other listed hook/API call is a source read that must instead become
+  # a fact on the canonical view.
+  #
+  # BASELINE PROVENANCE — 88 findings over 18 files, measured MAX-OF-3 per #2016
+  # (scripts/arch/scan_stability.mjs; a single-pass floor is refused at the door) with semgrep
+  # 1.170.0, re-measured at tip f18f6dad0 and stable across all 3 runs. Ratchet is SHRINK-ONLY from
+  # day one: semgrep_verdict rejects any per-file increase, and the families (#1993 WP2-7) retire
+  # their rows as they migrate onto `fight_visible_view`. Never regenerate this floor to absorb a
+  # new bypass — that is the debt this gate exists to stop.
   - id: arch-fight-visible-source-bypass
     languages: [js, ts]
     severity: ERROR
