@@ -20,6 +20,7 @@ import { useTranslation } from 'react-i18next'
 
 import { use_dungeon } from '../../../../world-shell/dungeon_store.js'
 import { fight_scope_sim, fight_session_in_scope } from '../../../../world-shell/fight_session_scope.js'
+import { FightBarButton } from '../FightBarButton.jsx'
 import { ConfirmDialog } from './ConfirmDialog.jsx'
 import { useFightPhase } from './use_fight_phase.js'
 import { should_mount_board, should_show_result } from '../../../../fight-engine/phase.js'
@@ -82,9 +83,9 @@ export function DungeonLeaveButton() {
     return (
       <div className="hud-leave-persistent">
         <div className="hud-fightctl">
-          <button type="button" className="hud-fightctl__btn hud-fightctl__abandon" onClick={reset_local}>
+          <FightBarButton className="hud-fightctl__btn hud-fightctl__abandon" on_click={reset_local}>
             {t('fights.leave_spectate')}
-          </button>
+          </FightBarButton>
         </div>
       </div>
     )
@@ -127,14 +128,17 @@ export function DungeonLeaveButton() {
         {/* CANON: the chrome is scoped `.hud-fightctl .hud-fightctl__btn` — the wrapper IS part of the
             component; without it the same classes render as bare text (a prior regression class). */}
         <div className="hud-fightctl">
-          <button
-            type="button"
+          {/* #2141: the plane-side twin of the fight bar's exit, on the same chrome and the same `busy` — so it
+              presses by the same rule. The old `!busy &&` in the handler was the same bug one layer down: it
+              re-read `busy` at CLICK time, so a press made on an enabled button died anyway when a chain write
+              started mid-gesture. FightBarButton decides at pointerdown; the handler must not re-decide. */}
+          <FightBarButton
             className="hud-fightctl__btn hud-fightctl__abandon"
-            onClick={() => !busy && set_confirm(true)}
+            on_click={() => set_confirm(true)}
             disabled={busy}
           >
             {cta}
-          </button>
+          </FightBarButton>
         </div>
       </div>
       <ConfirmDialog

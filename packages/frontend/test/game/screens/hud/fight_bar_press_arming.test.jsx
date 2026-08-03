@@ -43,6 +43,7 @@ globalThis.Audio ??= /** @type {any} */ (
 
 const { FightControls } = await import('../../../../src/game/screens/hud/FightControls.jsx')
 const { DungeonBoardControls } = await import('../../../../src/game/screens/hud/world/DungeonBoardControls.jsx')
+const { DungeonLeaveButton } = await import('../../../../src/game/screens/hud/world/DungeonLeaveButton.jsx')
 const { seed_fight_core, reset_fight_core } = await import('../../../../src/test_helpers/fight_core_harness.js')
 const { use_dungeon } = await import('../../../../src/world-shell/dungeon_store.js')
 const { PHASE } = await import('../../../../src/fight-engine/phase.js')
@@ -117,18 +118,20 @@ const capture = (render_component) => {
  * DOM actually receives, so `props.disabled` below means the native attribute and nothing else. A hook-free
  * wrapper component is expanded by calling it, the same seam idiom the rest of the HUD suite uses.
  */
-const find_control = (node, class_name) => {
+const find_control = (node, class_name, override = null) => {
   if (node == null || typeof node !== 'object') return null
   if (Array.isArray(node)) {
     for (const child of node) {
-      const hit = find_control(child, class_name)
+      const hit = find_control(child, class_name, override)
       if (hit) return hit
     }
     return null
   }
   if (typeof node.props?.className === 'string' && node.props.className.includes(class_name))
-    return typeof node.type === 'function' ? node.type(node.props) : node
-  return find_control(node.props?.children ?? null, class_name)
+    // `override` swaps the wrapper's own props before it renders — how a control whose action is internal
+    // (a local `set_confirm`) gets an observable one without changing production code.
+    return typeof node.type === 'function' ? node.type({ ...node.props, ...(override ?? {}) }) : node
+  return find_control(node.props?.children ?? null, class_name, override)
 }
 
 /**
@@ -168,6 +171,22 @@ beforeEach(() => {
   use_dungeon.setState({ busy: false })
   seed_fight_core({ my: ME, placement: true, active: ME })
 })
+
+/**
+ * Drive a store-BACKED control in this DOM-free harness. A component that takes no props (DungeonLeaveButton)
+ * reads every fact through `use_dungeon(selector)`, and zustand v5 serves a SERVER render the INITIAL state, not
+ * the live one (`zustand/esm/react.mjs:9` — `selector(api.getInitialState())`); `setState` therefore cannot be
+ * seen from `renderToStaticMarkup`, and `use_dungeon.getInitialState` cannot be swapped either, because
+ * `Object.assign(useBoundStore, api)` copied it — the hook closes over the api, not over this handle. The one
+ * real lever is the initial-state OBJECT itself, which the api holds by reference. Returns its own restore.
+ */
+const drive_store = (patch) => {
+  const initial = use_dungeon.getInitialState()
+  const before = Object.fromEntries(Object.keys(patch).map((key) => [key, initial[key]]))
+  Object.assign(initial, patch)
+  use_dungeon.setState(patch) // keep the live state honest too — nothing should depend on them disagreeing
+  return () => Object.assign(initial, before)
+}
 
 afterEach(() => {
   use_dungeon.setState({ busy: false })
@@ -266,6 +285,50 @@ describe('#2141 · the fight bar presses on what the player SAW', () => {
     const at_release = leave_control(true)
     expect(drive_click(at_press, at_release, node)).toBe('delivered')
     expect(leaves).toBe(1)
+  })
+
+  // The PLANE-side twin of the same exit (DungeonLeaveButton): same `.hud-fightctl` chrome, same `busy`, and
+  // it carried the bug TWICE — a native `disabled` AND a `!busy &&` re-read inside its own handler, which
+  // refused a press the player made while the control was enabled. One rule, decided at pointerdown.
+  test('CLASS · the plane-side exit (DungeonLeaveButton) presses on the same rule, in both directions', () => {
+    reset_fight_core() // no live fight ⇒ the phase machine parks at ROAM, where this fallback exit mounts
+    let opened = 0
+    // A live escrowed run on the plane: latched, not spectating, no board mounted ⇒ this fallback exit shows.
+    const restore = drive_store({
+      busy: false,
+      in_session: true,
+      spectating: false,
+      fight_id: null,
+      run_pass_id: '0xrun',
+      dungeon: { id: '0xd', status: 0 },
+    })
+    const plane_control = (busy) => {
+      drive_store({ busy })
+      return find_control(
+        capture(() => DungeonLeaveButton()),
+        'hud-fightctl__abandon',
+        {
+          on_click: () => {
+            opened += 1
+          },
+        }
+      )
+    }
+
+    try {
+      // ① pressed while ENABLED, released after the chain write started: the exit still opens.
+      const node = {}
+      expect(plane_control(false), 'the plane exit is mounted and pressable').not.toBeNull()
+      expect(drive_click(plane_control(false), plane_control(true), node)).toBe('delivered')
+      expect(opened, 'a press the player made on an enabled control is honoured').toBe(1)
+
+      // ② pressed while REFUSED, released after busy cleared: the click is delivered (nothing eats it any
+      //    more) and the handler still refuses it — decided at pointerdown, not at release.
+      expect(drive_click(plane_control(true), plane_control(false), {})).toBe('delivered')
+      expect(opened, 'what the player saw disabled at press never fires, however busy flips after').toBe(1)
+    } finally {
+      restore()
+    }
   })
 })
 
