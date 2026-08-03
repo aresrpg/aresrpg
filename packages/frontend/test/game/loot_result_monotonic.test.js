@@ -121,34 +121,20 @@ describe('#1867 arm B — the live bag is not a source of loot identity', () => 
   const tt = (tmpl, field) => tmpl?.[field] ?? ''
   const t = (key) => key
 
-  test('a `/v1` bag repaint after the card is visible cannot change the committed tile', () => {
-    // BEFORE: the bag holds the freshly minted instance — the join resolves off it.
-    const before = resolve_loot_tile(
-      entry(),
-      [{ id: '0xitem_blade', item_type: 'blade', name: 'Rusted Blade' }],
-      template_map(),
-      tt,
-      t
-    )
-    // AFTER: `load_roster()` at the tail of finish_result repaints `sui.items`; the merge sweep folded this
-    // singleton into a stack under a NEW object id, so the row the tile joined on is simply gone (D245's
-    // mid-fight transient does the same thing from the other direction).
-    const after = resolve_loot_tile(
-      entry(),
-      [{ id: '0xitem_stack', item_type: 'blade', name: 'Rusted Blade' }],
-      template_map(),
-      tt,
-      t
-    )
-
-    // The player is looking at ONE drop. Two bag snapshots must not be two different tiles.
-    expect(after).toEqual(before)
+  test('the tile has no bag-shaped door left to repaint through', () => {
+    // `load_roster()` fires at the tail of finish_result and repaints `sui.items` seconds after the card is
+    // already on screen — the merge sweep re-mints this singleton into a stack under a NEW object id, and a
+    // D245 transient empties the bag outright. Neither can reach the tile any more: the resolver's inputs are
+    // the certified receipt row and the immutable catalog, and it accepts nothing else.
+    expect(resolve_loot_tile.length).toBeLessThanOrEqual(5) // (entry, template_map, tt, t, slug_by_template_id)
+    const tile = resolve_loot_tile(entry(), template_map(), tt, t)
+    expect(tile).toEqual(resolve_loot_tile(entry(), template_map(), tt, t))
   })
 
-  test('an exact committed tile is returned verbatim — the bag is never consulted for identity', () => {
-    const empty_bag = resolve_loot_tile(entry(), [], template_map(), tt, t)
-    expect(empty_bag.name).toBe('Rusted Blade')
-    expect(empty_bag.item_id).toBe('0xitem_blade')
-    expect(empty_bag.resolved).toBe(true)
+  test('an exact committed tile resolves off the receipt + the catalog alone', () => {
+    const tile = resolve_loot_tile(entry(), template_map(), tt, t)
+    expect(tile.name).toBe('Rusted Blade')
+    expect(tile.item_id).toBe('0xitem_blade')
+    expect(tile.resolved).toBe(true)
   })
 })

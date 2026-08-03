@@ -20,7 +20,6 @@ const base = {
   party: [{ id: 'me', name: 'Hero', level: 12, is_me: true, alive: true, hp_pct: 100 }],
   enemies: [],
   spoils: { xp: 50, tokens: 0, loot: [] },
-  items: [],
   t,
   on_close: () => {},
 }
@@ -203,7 +202,7 @@ describe('FightReport — the defeated enemy team block (v30 regression pin)', (
 describe('FightReport — the loot D53 letter-tile fallback (an orphaned drop, missing everywhere)', () => {
   test('no bag match AND no template row → the bold letter tile, never <ItemIcon>, never a bare box', () => {
     const spoils = { xp: 10, tokens: 0, loot: [{ item_type: 'qa_ghost_blade_01', name: 'QA Ghost Blade', amount: 1 }] }
-    const html = renderToStaticMarkup(<FightReport {...base} spoils={spoils} items={[]} cost={null} />)
+    const html = renderToStaticMarkup(<FightReport {...base} spoils={spoils} cost={null} />)
     expect(html).toContain('fe-tile__letter')
     expect(html).toContain('>Q<') // initial() of the entry's own name
     expect(html).not.toContain('item-icon') // the ItemIcon branch did NOT also mount
@@ -212,18 +211,21 @@ describe('FightReport — the loot D53 letter-tile fallback (an orphaned drop, m
 
   test("genuinely bare drop (no name, no item_type match) → the '?' last resort, still a real tile", () => {
     const spoils = { xp: 10, tokens: 0, loot: [{ item_type: undefined, name: undefined, amount: 1 }] }
-    const html = renderToStaticMarkup(<FightReport {...base} spoils={spoils} items={[]} cost={null} />)
+    const html = renderToStaticMarkup(<FightReport {...base} spoils={spoils} cost={null} />)
     expect(html).toContain('fe-tile__letter')
     expect(html).toContain('>?<')
     expect(html).toContain('aria-label="?"')
   })
 
-  test('a bag match still resolves the ORIGINAL <ItemIcon> branch (no regression on a real, indexed drop)', () => {
-    const items = [{ item_type: 'rusty_blade', name: 'Rusty Blade', category: 'sword', quality: 'common' }]
+  // #1993 WP4 — a live bag row is no longer evidence about a settled drop (it is #1867's second source), so
+  // under a static render, with the catalog not yet hydrated, EVERY drop is honestly unresolved and takes the
+  // letter branch. The icon-KEY contracts that used to ride this render now sit on `resolve_loot_tile` with a
+  // real catalog injected (loot-tile-resolve.test.js) — the one home of that decision.
+  test('a drop the catalog has not answered for yet takes the letter branch, named and hoverable', () => {
     const spoils = { xp: 10, tokens: 0, loot: [{ item_type: 'rusty_blade', name: 'Rusty Blade', amount: 1 }] }
-    const html = renderToStaticMarkup(<FightReport {...base} spoils={spoils} items={items} cost={null} />)
-    expect(html).toContain('item-icon')
-    expect(html).not.toContain('fe-tile__letter')
+    const html = renderToStaticMarkup(<FightReport {...base} spoils={spoils} cost={null} />)
+    expect(html).toContain('fe-tile__letter')
+    expect(html).toContain('aria-label="Rusty Blade"')
   })
 })
 
@@ -252,43 +254,11 @@ describe('FightReport — loot tile icon resolution routes through the SAME shar
     expect(html).not.toContain('/assets/items/resource.png')
   })
 
-  test('a published RESOURCE renders its exact manifest art, never the generic resource package', () => {
-    const template_id = `0x${'e13d'.repeat(16)}` // synthetic runtime id — a source literal trips the chain-id gate
-    // Chain-truth shape (live /v1): `item_type` is the authored art slug; 'resource' is the CATEGORY.
-    const items = [{ template_id, item_type: 'obsidian_core', name: 'Obsidian Core', item_category: 'resource' }]
-    const spoils = {
-      xp: 10,
-      tokens: 0,
-      loot: [{ template_id, item_type: 'obsidian_core', name: 'Obsidian Core', amount: 2 }],
-    }
-    const html = renderToStaticMarkup(<FightReport {...base} spoils={spoils} items={items} cost={null} />)
-    expect(html).toContain('/assets/items/obsidian_core.png')
-    expect(html).not.toContain('/assets/items/resource.png')
-  })
-
-  test("a cosmetic drop resolves its icon via inventory_item_icon's cosmetic alias, not the raw on-chain slot word", () => {
-    // items[] carries the bag match (template_map is unreachable here — FightReport hydrates it via an
-    // internal useEffect that never fires under renderToStaticMarkup) so `resolved` is true and the
-    // <ItemIcon> branch mounts; the icon KEY under test is entry.item_type/name either way.
-    const items = [{ item_type: 'hat', name: 'Fuwa Hood (White)', item_category: 'cosmetic_helmet' }]
-    const spoils = {
-      xp: 10,
-      tokens: 0,
-      loot: [{ item_type: 'hat', name: 'Fuwa Hood (White)', amount: 3 }],
-    }
-    const html = renderToStaticMarkup(<FightReport {...base} spoils={spoils} items={items} cost={null} />)
-    // the shared resolver's alias (proven live: HTTP 200)
-    expect(html).toContain('/assets/items/coiffe_fuwa-white.png')
-    // the raw item_type bypass this bug shipped (proven live: HTTP 404 — the placeholder-box trigger)
-    expect(html).not.toContain('/assets/items/hat.png')
-  })
-
-  test('an ordinary (non-cosmetic) drop is UNCHANGED — item_type still wins when no alias/slug exists', () => {
-    const items = [{ item_type: 'rusty_blade', name: 'Rusty Blade', item_category: 'sword' }]
-    const spoils = { xp: 10, tokens: 0, loot: [{ item_type: 'rusty_blade', name: 'Rusty Blade', amount: 1 }] }
-    const html = renderToStaticMarkup(<FightReport {...base} spoils={spoils} items={items} cost={null} />)
-    expect(html).toContain('/assets/items/rusty_blade.png')
-  })
+  // The three icon-KEY contracts that lived here (published RESOURCE art, the cosmetic alias, and the ordinary
+  // item_type passthrough) moved to loot-tile-resolve.test.js with #1993 WP4. They were asserted through a
+  // static render that could only reach `resolved: true` by feeding a live BAG row — the very second source
+  // this work package deleted. They now run against `resolve_loot_tile` with a real catalog injected, which is
+  // where the decision has always actually lived; what remains here is the CARD's own branch (letter vs icon).
 })
 
 // ── VICTORY-CARD OVERHAUL: show the duration time of the fight and player names, not address; a party
@@ -358,18 +328,17 @@ describe('FightReport — per-player spoils rows (xp and items PER PLAYER ROW, s
     { id: 'ally-1', name: 'Ally', level: 9, is_me: false, is_player: true, alive: true, hp_pct: 100 },
   ]
   const spoils = { xp: 50, tokens: 0, loot: [{ item_type: 'rusty_blade', name: 'Rusty Blade', amount: 1 }] }
-  const items = [{ item_type: 'rusty_blade', name: 'Rusty Blade', category: 'sword', quality: 'common' }]
 
   test("the local player's row carries the REAL receipt: xp + a resolved item icon, exactly once", () => {
-    const html = renderToStaticMarkup(<FightReport {...base} party={party} spoils={spoils} items={items} cost={null} />)
+    const html = renderToStaticMarkup(<FightReport {...base} party={party} spoils={spoils} cost={null} />)
     expect(html).toContain('+50')
     expect(html).toContain('Rusty Blade')
-    expect(html).toContain('item-icon')
+    expect(html).toContain('fe-tile') // the drop renders a real, named tile on MY row
     expect(html.split('fe-gain').length - 1).toBe(1) // exactly ONE row carries real numbers
   })
 
   test("a teammate's row is HONEST about the chain not splitting rewards per player — never fabricated, never silent", () => {
-    const html = renderToStaticMarkup(<FightReport {...base} party={party} spoils={spoils} items={items} cost={null} />)
+    const html = renderToStaticMarkup(<FightReport {...base} party={party} spoils={spoils} cost={null} />)
     expect(html).toContain('fight_end.spoils_hidden')
   })
 
@@ -392,7 +361,6 @@ describe('FightReport — RED-FIRST fixture: a 2-player settle result (victory-c
     ],
     enemies: [],
     spoils: { xp: 42, tokens: 0, loot: [{ item_type: 'rusty_blade', name: 'Rusty Blade', amount: 1 }] },
-    items: [{ item_type: 'rusty_blade', name: 'Rusty Blade', category: 'sword', quality: 'common' }],
     duration_ms: 154000, // 2:34 — settle-minus-start timestamp delta
     cost: null,
     t,
@@ -404,7 +372,7 @@ describe('FightReport — RED-FIRST fixture: a 2-player settle result (victory-c
     expect(html).not.toContain('0xDEE0…AD38') // the address slice never survives
     expect(html).toContain('Hero')
     expect(html).toContain('+42')
-    expect(html).toContain('item-icon') // the resolved icon ref — not the null grey square
+    expect(html).toContain('aria-label="Rusty Blade"') // a real, named tile — not the null grey square
     expect(html).toContain('2:34') // duration from the fixture's timestamp delta
     expect(html).toContain('fight_end.spoils_hidden') // the teammate's un-split reward, reported honestly
   })

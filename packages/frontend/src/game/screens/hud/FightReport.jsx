@@ -8,7 +8,7 @@
 // producers, which guarantee the self row). Fight-end auto-settles same-tx (#33): this card only DISPLAYS the
 // outcome + inline receipt — NO claim/mint/burn buttons, just CONTINUE.
 //
-// Pure view: every value rides props (party/enemies/spoils/items/t), resolved by FightResult/FightSummary.
+// Pure view: every value rides props (party/enemies/spoils/t), resolved by FightResult/FightSummary.
 // hp_pct is binary (100 alive / 0 fallen) — the summary roster carries no partial HP. React only renders.
 // The ONE local exception is the loot receipt: the tiles resolve the SAME chain-direct item template map
 // (get_template_by_item_type_map) + tt inventory/findables use, so a hover shows the shared ItemDetailView.
@@ -83,10 +83,10 @@ function Skel({ w = '3.5em' }) {
  * orphaned drop (missing from BOTH the bag snapshot and the encyclopedia — e.g. a QA test mob's ad hoc loot
  * template) renders the D53 bold-letter fallback instead of <ItemIcon> — a loot slot must never read as an
  * empty un-hoverable box.
- * @param {{ entry: { item_id?: string, template_id?: string, item_type: string, icon_slug?: string, name: string, amount: number }, items: any[], template_map: Map<string, any>, slug_by_template_id: Record<string, string>, tt: ReturnType<typeof useTemplateT>, t: (key: string, opts?: any) => string }} props
+ * @param {{ entry: { item_id?: string, template_id?: string, item_type: string, icon_slug?: string, name: string, amount: number }, template_map: Map<string, any>, slug_by_template_id: Record<string, string>, tt: ReturnType<typeof useTemplateT>, t: (key: string, opts?: any) => string }} props
  */
-function LootTile({ entry, items, template_map, slug_by_template_id, tt, t }) {
-  const base_tile = resolve_loot_tile(entry, items, template_map, tt, t, slug_by_template_id)
+function LootTile({ entry, template_map, slug_by_template_id, tt, t }) {
+  const base_tile = resolve_loot_tile(entry, template_map, tt, t, slug_by_template_id)
   const item_id = base_tile.item_id
   const [rolled_state, set_rolled_state] = useState({ item_id: null, rolled_stats: null })
   useEffect(() => {
@@ -106,7 +106,7 @@ function LootTile({ entry, items, template_map, slug_by_template_id, tt, t }) {
   }, [item_id])
   const rolled_stats = rolled_state.item_id === item_id ? rolled_state.rolled_stats : null
   const resolved_tile = rolled_stats
-    ? resolve_loot_tile(entry, items, template_map, tt, t, slug_by_template_id, rolled_stats)
+    ? resolve_loot_tile(entry, template_map, tt, t, slug_by_template_id, rolled_stats)
     : base_tile
   const { resolved, name, category, icon, detail } = resolved_tile
   return (
@@ -190,9 +190,9 @@ function Row({ f, is_enemy, settled_dead = false, spoils_slot = null, t }) {
  * teammate's honest "not visible to you" used to be its own italic text LINE (roughly doubling that row's
  * height across a whole roster) — it is now a single dim glyph living in the row's own trailing cell, with
  * the full sentence carried on `aria-label` instead of always-visible text.
- * @param {{ mine: boolean, spoils: { xp: number, tokens: number, loot: Array<{ item_id?: string, template_id?: string, item_type: string, icon_slug?: string, name: string, amount: number }> }, items: any[], template_map: Map<string, any>, slug_by_template_id: Record<string, string>, tt: ReturnType<typeof useTemplateT>, pending: boolean, loot_units: number | null, t: (key: string, opts?: any) => string }} props
+ * @param {{ mine: boolean, spoils: { xp: number, tokens: number, loot: Array<{ item_id?: string, template_id?: string, item_type: string, icon_slug?: string, name: string, amount: number }> }, template_map: Map<string, any>, slug_by_template_id: Record<string, string>, tt: ReturnType<typeof useTemplateT>, pending: boolean, loot_units: number | null, t: (key: string, opts?: any) => string }} props
  */
-function RowSpoils({ mine, spoils, items, template_map, slug_by_template_id, tt, pending, loot_units, t }) {
+function RowSpoils({ mine, spoils, template_map, slug_by_template_id, tt, pending, loot_units, t }) {
   if (!mine)
     return (
       <div className="fe-row__spoils fe-row__spoils--hidden" aria-label={t('fight_end.spoils_hidden')}>
@@ -223,7 +223,6 @@ function RowSpoils({ mine, spoils, items, template_map, slug_by_template_id, tt,
             <LootTile
               key={e.item_id ?? e.template_id ?? e.item_type ?? i}
               entry={e}
-              items={items}
               template_map={template_map}
               slug_by_template_id={slug_by_template_id}
               tt={tt}
@@ -249,7 +248,6 @@ function RowSpoils({ mine, spoils, items, template_map, slug_by_template_id, tt,
  *   party: Array<{ id: string, name: string, level: number, is_me?: boolean, is_player?: boolean, alive: boolean, hp_pct: number, class_name?: string | null }>,
  *   enemies: Array<{ id: string, name: string, level: number, is_player?: boolean, alive: boolean, hp_pct: number, template_id?: string | null }>,
  *   spoils: { xp: number, tokens: number, loot: Array<{ item_id?: string, template_id?: string, item_type: string, icon_slug?: string, name: string, amount: number }> } | null,
- *   items: any[],
  *   slug_by_name?: Readonly<Record<string, string>>,
  *   cost: { sui: string, is_refund: boolean } | null,
  *   pending?: boolean,      // true while the xp/level is still resolving on-chain → render a skeleton, not a 0
@@ -283,7 +281,6 @@ export function FightReport({
   party,
   enemies,
   spoils,
-  items,
   slug_by_name = {},
   cost,
   cause = null,
@@ -403,7 +400,6 @@ export function FightReport({
                     <RowSpoils
                       mine={!!f.is_me}
                       spoils={spoils}
-                      items={items}
                       template_map={template_map}
                       slug_by_template_id={slug_by_template_id}
                       tt={tt}

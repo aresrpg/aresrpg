@@ -7,9 +7,16 @@
 // never does). Mirrors the deck-key-arm.js / deck-crit-glow.js split next door: DeckCluster keeps pure
 // decision logic in a co-located helper so it tests independently of the component tree.
 //
-// `resolved` names the three honest data sources that can back a drop: the player's live bag snapshot,
-// the exact ItemTemplate row, or an injected live template-id → render-slug join. Neither present means the
-// drop is a genuine orphan — the caller then renders the D53 bold-letter fallback instead of <ItemIcon>.
+// `resolved` names the two honest data sources that can back a drop: the exact ItemTemplate row, or an injected
+// live template-id → render-slug join. Neither present means the drop is a genuine orphan — the caller then
+// renders the D53 bold-letter fallback instead of <ItemIcon>.
+//
+// THE LIVE BAG IS NOT ONE OF THEM (#1867, #1993 WP4). This used to join each drop against `state.sui.items` for
+// its name, category and stats — and `load_roster()` fires at the tail of `finish_result`, so the `/v1` snapshot
+// that lands seconds AFTER the card is already on screen repainted tiles the player was looking at (a stack
+// merge re-mints the object id; a D245 transient empties the bag outright). A settled drop's identity is what
+// the receipt certified and what the catalog says that template is — both immutable for the card's lifetime.
+// The corpus translates labels here; it never selects identity, and a moving snapshot never selects anything.
 
 import { to_item_view } from './item-view.js'
 import { inventory_item_icon } from './inventory-equip.js'
@@ -27,15 +34,6 @@ const item_type_label = (item_type) =>
     .trim()
 
 const template_id_of = (item) => String(item?.template_id ?? item?.template ?? '')
-
-const raw_item_of = (entry, items, template_id) => {
-  if (entry.item_id) return items.find((item) => item.id === entry.item_id) ?? null
-  const matching_items = template_id
-    ? items.filter((item) => template_id_of(item) === template_id)
-    : items.filter((item) => item.item_type === entry.item_type)
-  // Aggregate/legacy rows may still borrow same-template presentation metadata, but never its object id/stats.
-  return matching_items[matching_items.length - 1] ?? null
-}
 
 const stable_name_key = (name) =>
   String(name ?? '')
@@ -57,18 +55,17 @@ const template_of = (entry, template_map, template_id) => {
   return template_map.get(entry.item_type) ?? null
 }
 
-const loot_name_of = (entry, raw, template) =>
-  [template?.name, raw?.name, entry.name, item_type_label(entry.item_type)].find(Boolean) ?? '?'
+const loot_name_of = (entry, template) =>
+  [template?.name, entry.name, item_type_label(entry.item_type)].find(Boolean) ?? '?'
 
-const category_of = (raw, view, template) => (raw ? view?.category : (template?.category ?? view?.category))
+const category_of = (view, template) => template?.category ?? view?.category
 
-const icon_of = ({ entry, raw, template, name, category, published_slug }) => {
+const icon_of = ({ entry, template, name, category, published_slug }) => {
   const candidate = inventory_item_icon({
-    ...(raw ?? {}),
     ...(template ?? {}),
     name,
     item_type: entry.item_type,
-    slug: published_slug ?? template?.slug ?? template?.item_type ?? raw?.slug,
+    slug: published_slug ?? template?.slug ?? template?.item_type,
   })
   // Generic item classes do not name an asset. With no published slug or authored cosmetic/icon alias,
   // start on ItemIcon's semantic category glyph instead of requesting a known-bad /items/resource.png.
@@ -81,31 +78,27 @@ const icon_of = ({ entry, raw, template, name, category, published_slug }) => {
  */
 
 /**
- * Resolve one loot entry against the player's bag + the encyclopedia template map into everything LootTile
- * needs to render: whether it's genuinely backed by data, the best available name, the category (for
- * ItemIcon's own glyph fallback), and the tooltip's detail props.
+ * Resolve one loot entry against the encyclopedia template map into everything LootTile needs to render:
+ * whether it's genuinely backed by data, the best available name, the category (for ItemIcon's own glyph
+ * fallback), and the tooltip's detail props. Every input is IMMUTABLE for the card's lifetime — the certified
+ * receipt row, the catalog, the published slug map — so the same drop resolves to the same tile every render.
  * @param {LootEntry} entry
- * @param {any[]} items live bag snapshot (state.sui.items), used for exact instance enrichment
  * @param {Map<string, any>} template_map exact template id → chain template row, plus legacy item_type keys
  * @param {((tmpl: any, field: 'name' | 'description') => string) | undefined} tt useTemplateT() resolver
  * @param {(key: string, opts?: any) => string} t
  * @param {Record<string, string>} [slug_by_template_id] live ItemTemplate id → authored render slug
  * @param {Record<string, number> | null} [rolled_stats] exact owned instance's centered-u16 StatsKey block
  */
-export function resolve_loot_tile(entry, items, template_map, tt, t, slug_by_template_id = {}, rolled_stats = null) {
+export function resolve_loot_tile(entry, template_map, tt, t, slug_by_template_id = {}, rolled_stats = null) {
   const template_id = template_id_of(entry)
-  // An item_type such as "resource" is a class, not identity. Once the receipt carries an exact template,
-  // never join it to an arbitrary sibling merely because both rows share that class.
-  const raw = raw_item_of(entry, items, template_id)
-  const view = to_item_view(raw ?? { item_type: entry.item_type, name: entry.name, amount: entry.amount })
+  const view = to_item_view({ item_type: entry.item_type, name: entry.name, amount: entry.amount })
   const tmpl = template_of(entry, template_map, template_id)
   const published_slug = template_id ? slug_by_template_id[template_id] : undefined
-  const resolved = [raw, tmpl, published_slug].some(Boolean)
-  const name = loot_name_of(entry, raw, tmpl)
-  const category = category_of(raw, view, tmpl)
+  const resolved = [tmpl, published_slug].some(Boolean)
+  const name = loot_name_of(entry, tmpl)
+  const category = category_of(view, tmpl)
   const icon = icon_of({
     entry,
-    raw,
     template: tmpl,
     name,
     category,

@@ -41,7 +41,6 @@ export function FightResult({ slug_by_name = {} }) {
   const reward = useGameState((s) => s.fight_result)
   const recap = useGameState((s) => s.fight_summary)
   const characters = useGameState((s) => s.sui.characters)
-  const items = useGameState((s) => s.sui.items)
   const net_mist = use_fight_cost((s) => s.net_mist)
 
   // VICTORY sound cue (design mood: warm ascending swell) — fire once as the card appears, reset on close.
@@ -88,7 +87,6 @@ export function FightResult({ slug_by_name = {} }) {
       party={party_rows}
       enemies={enemy_rows}
       spoils={spoils}
-      items={items}
       slug_by_name={slug_by_name}
       cost={format_fight_cost(net_mist)}
       pending={reward.status === 'pending'} /* xp/level still resolving on-chain → skeleton, never a literal +0 */

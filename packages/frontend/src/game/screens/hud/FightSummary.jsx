@@ -31,7 +31,6 @@ export function FightSummary({ slug_by_name = {} }) {
   const recap = useGameState((s) => s.fight_summary)
   const fight_result = useGameState((s) => s.fight_result)
   const characters = useGameState((s) => s.sui.characters)
-  const items = useGameState((s) => s.sui.items)
   const net_mist = use_fight_cost((s) => s.net_mist)
 
   // the card shows only on a real defeat (the win celebration is FightResult's). Gate the sound + render on it.
@@ -84,7 +83,6 @@ export function FightSummary({ slug_by_name = {} }) {
       party={party_rows}
       enemies={enemy_rows}
       spoils={null}
-      items={items}
       slug_by_name={slug_by_name}
       cost={format_fight_cost(net_mist)}
       cause={cause}
