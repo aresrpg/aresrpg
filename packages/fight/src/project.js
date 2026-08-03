@@ -26,7 +26,7 @@ export {
   // rule (`name ?? display_id`) and the one short-id shape. Every consumer reaches identity through here.
   identity_book,
   identity_label,
-  short_id,
+  short_display_id,
   // THE END-TURN PRESS LAW moved next to the projections it gates (#1993 train 0 — `fight_visible_view.turn`
   // calls the one home instead of re-deriving it). Re-exported verbatim: every importer reads them from here.
   input_armed,

@@ -15,7 +15,7 @@
 // turn-clock pressure, that can UPGRADE an id to a real name the live fight never got to see. When it resolves
 // nothing, the carried label stands — this module invents no string of its own.
 
-import { short_id } from '@aresrpg/fight/project'
+import { short_display_id } from '@aresrpg/fight/project'
 
 /**
  * Row ids worth a batched character-doc lookup: PLAYER rows (never a mob/content row — its name is real game
@@ -37,7 +37,7 @@ export function resolvable_row_ids(rows) {
  * decided it: a resolved row keeps its authored label, an unresolved one shows its id. No substitute is invented
  * here and no string is second-guessed — a name that survived the book is a real name.
  *
- * `short_id(row.id)` is not a second truncation: a player fighter's entity id IS its character id
+ * `short_display_id(row.id)` is not a second truncation: a player fighter's entity id IS its character id
  * (`participant_entity_id`), so this is the same `display_id` the book computed, re-derived from the id the row
  * already carries rather than snapshotted twice. It also scrubs a PRE-#1993 persisted summary, whose rows have no
  * `resolved` field and may still carry the old owner-address slice baked upstream — unresolved by default.
@@ -50,7 +50,7 @@ export function apply_resolved_names(rows, character_docs) {
   return (rows ?? []).map((row) => {
     if (!row?.is_player || row.is_me) return row
     const resolved_name = character_docs.get(row.id)?.name
-    const carried = row.resolved ? (row.label ?? row.name) : short_id(row.id)
+    const carried = row.resolved ? (row.label ?? row.name) : short_display_id(row.id)
     return { ...row, name: resolved_name || carried }
   })
 }

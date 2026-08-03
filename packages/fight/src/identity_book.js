@@ -31,7 +31,7 @@ import { mob_entity_id, participant_character_id, participant_entity_id } from '
  * truncate differently (they did: 7…5 here against a 6…4 address slice in the projection).
  * @param {unknown} id @returns {string}
  */
-export const short_id = (id) => {
+export const short_display_id = (id) => {
   const value = String(id ?? '')
   return value.length <= 14 ? value : `${value.slice(0, 7)}…${value.slice(-5)}`
 }
@@ -93,7 +93,7 @@ const player_identity = (row, seat, roster_by_id) => {
   const character_id = participant_character_id(row)
   const character = character_id ? roster_by_id.get(character_id) : undefined
   const name = authored_name(row?.name) ?? authored_name(character?.name)
-  const display_id = short_id(character_id ?? entity_id)
+  const display_id = short_display_id(character_id ?? entity_id)
   const male = character_male(character) ?? character_male(row)
   return {
     id: entity_id,
@@ -149,7 +149,8 @@ const mob_identity = (mob, index, mob_roster_by_id, mob_names) => {
  */
 export const identity_book = (view, ctx = {}) => {
   const roster_by_id = new Map()
-  for (const character of ctx?.roster ?? []) if (character?.id != null) roster_by_id.set(String(character.id), character)
+  for (const character of ctx?.roster ?? [])
+    if (character?.id != null) roster_by_id.set(String(character.id), character)
   const mob_roster_by_id = new Map()
   for (const identity of ctx?.mob_roster ?? [])
     if (identity?.id != null) mob_roster_by_id.set(String(identity.id), identity)

@@ -20,8 +20,7 @@
 // book, both consumers render the ONE honest unresolved treatment — the id, from a single home.
 
 import { describe, expect, test } from 'bun:test'
-
-import { fight_visible_view, identity_book, identity_label, short_id } from '@aresrpg/fight/project'
+import { fight_visible_view, identity_book, identity_label, short_display_id } from '@aresrpg/fight/project'
 import { create_fight_store } from '@aresrpg/fight/store'
 
 import { apply_resolved_names } from '../../src/game/screens/hud/fight_report_names.js'
@@ -101,24 +100,24 @@ describe('#1993 WP3 · #1865 — one unresolvable id, ONE identity across every 
     const OLD_CARD_SUBSTITUTE = `${UNRESOLVED_CHARACTER.slice(0, 7)}…${UNRESOLVED_CHARACTER.slice(-5)}`
     expect(OLD_LIVE_SUBSTITUTE).not.toBe(OLD_CARD_SUBSTITUTE) // the disagreement, verbatim
 
-    expect(live.label).toBe(card.name) // ← RED before the book: `0xdee0…ad38` vs `0xc0ffee1…f00d1`
-    expect(live.label).toBe(short_id(UNRESOLVED_CHARACTER))
+    expect(live.label).toBe(card.name) // ← RED before the book: `0xdee0…ad38` vs `0xc0ffe…f00d1`
+    expect(live.label).toBe(short_display_id(UNRESOLVED_CHARACTER))
     expect(live.label).not.toBe(OLD_LIVE_SUBSTITUTE)
     expect(live.label.includes(OWNER.slice(-4))).toBe(false) // no address survives anywhere as identity
   })
 
   test('absence stays an id: an unresolved row carries name null, never a substitute string', () => {
-    const identity = fight_visible_view(unresolved_state()).entities[UNRESOLVED_CHARACTER].identity
+    const { identity } = fight_visible_view(unresolved_state()).entities[UNRESOLVED_CHARACTER]
     expect(identity.name).toBe(null) // the authored name is genuinely absent — the view says so
     expect(identity.resolved).toBe(false)
-    expect(identity.display_id).toBe(short_id(UNRESOLVED_CHARACTER))
+    expect(identity.display_id).toBe(short_display_id(UNRESOLVED_CHARACTER))
     expect(identity.label).toBe(identity.display_id) // the one label rule, applied once
   })
 
   test('a resolved name wins and marks the row resolved', () => {
     const state = unresolved_state()
     const named = { ...state, ctx: { ...state.ctx, roster: [{ id: UNRESOLVED_CHARACTER, name: 'Aurelia' }] } }
-    const identity = fight_visible_view(named).entities[UNRESOLVED_CHARACTER].identity
+    const { identity } = fight_visible_view(named).entities[UNRESOLVED_CHARACTER]
     expect(identity.name).toBe('Aurelia')
     expect(identity.resolved).toBe(true)
     expect(identity.label).toBe('Aurelia')
@@ -129,7 +128,7 @@ describe('#1993 WP3 · #1865 — one unresolvable id, ONE identity across every 
     // mob whose own species never resolved renders its own template id rather than borrowing the primary's name.
     const state = unresolved_state()
     const mixed = { ...state, view: { ...state.view, mob_names: { '0xother_species': 'Direwolf' } } }
-    const identity = fight_visible_view(mixed).entities['mob-0'].identity
+    const { identity } = fight_visible_view(mixed).entities['mob-0']
     expect(identity.name).toBe(null)
     expect(identity.label).toBe('0xmob_t') // its own template id
     expect(identity.label).not.toBe('Direwolf')

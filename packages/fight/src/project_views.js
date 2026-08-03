@@ -36,7 +36,7 @@ export { input_armed, turn_input_armed } from './visible_facts.js'
 // THE ROSTER IDENTITY BOOK (#1993 WP3) — identity is resolved once, in identity_book.js, and this projection is
 // one of its readers rather than a second resolver. Re-exported so a consumer reaches the book and the one label
 // rule through the same door it already imports the projections from.
-export { identity_book, identity_label, short_id } from './identity_book.js'
+export { identity_book, identity_label, short_display_id } from './identity_book.js'
 
 /** Fighters whose killing damage beat is unacked. This masks rendered liveness only; targeting remains committed. */
 const death_presenting_ids = (s) => {

@@ -4,7 +4,7 @@
 // batched resolver; the live fight adopter supplies its full normalized custody/display rows to this composition
 // so names and appearance cannot diverge. Every unresolved surface uses the same short-id fallback.
 
-import { short_id } from '@aresrpg/fight/project'
+import { short_display_id } from '@aresrpg/fight/project'
 
 import { get_characters } from '../rpc/client'
 
@@ -12,7 +12,7 @@ import { get_characters } from '../rpc/client'
  *  honest display when a real name genuinely can't be resolved (never invent one). The SHAPE now lives with the
  *  roster identity book (#1993 WP3), which renders it as an unresolved row's `display_id`; this is the same
  *  function under the name the world-shell surfaces already import, never a second truncation. */
-export const short_fighter_id = short_id
+export const short_fighter_id = short_display_id
 
 /**
  * Resolve a batch of character ids to their `/v1/characters` docs in ONE read. Empty/no ids → an empty Map,
