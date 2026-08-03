@@ -412,7 +412,14 @@ export function produce_receipt_render_turns(
         is_mob: !!event.caster_is_mob,
         idx: Number(event.caster_idx),
       })
-      const cast = resolve_cast?.(event) ?? {}
+      // The frozen Cast omits identity; its immediately-following envelope close names the SpellTemplate object.
+      const resolved = decoded_events[cursor + 1]
+      const same_cast =
+        resolved?.kind === 'ActionResolved' &&
+        !!resolved.caster_is_mob === !!event.caster_is_mob &&
+        Number(resolved.caster_idx) === Number(event.caster_idx) &&
+        Number(resolved.target_cell) === Number(event.target_cell)
+      const cast = resolve_cast?.(event, same_cast ? resolved : null) ?? {}
       for (const status of cast.statuses ?? [])
         append_to(turn, status.status === 'TRAP' ? 'trap_place' : 'status', 0, {
           ...status,

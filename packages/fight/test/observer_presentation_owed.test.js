@@ -33,6 +33,8 @@
 import { describe, expect, test } from 'bun:test'
 import { hash_state } from '@aresrpg/sim/evolve'
 
+import { journal_to_actions } from '../src/core_inbox.js'
+import { paced_wave_turns } from '../src/fold.js'
 import { presenting } from '../src/project_state.js'
 import { create_fight_store } from '../src/store.js'
 import { committed_truth } from '../src/store_state.js'
@@ -251,4 +253,62 @@ describe('#2124 — an object read that wins the race must not eat the beats it 
     // the walks explain, and the beats say so anyway.
     expect(turn_of(raced, 'mob-0').beats[0].payload.path).toEqual([{ x: 6, y: 2 }])
   })
+})
+
+describe('#2144 — observer casts retain the journal action identity', () => {
+  const identities = [
+    { caster_idx: 0, observer_idx: 1, spell_id: `0x${'a'.repeat(64)}` },
+    { caster_idx: 1, observer_idx: 0, spell_id: `0x${'b'.repeat(64)}` },
+  ]
+
+  for (const { caster_idx, observer_idx, spell_id } of identities)
+    test(`seat ${observer_idx} observing seat ${caster_idx} receives the resolved spell id`, () => {
+      const version = 2
+      const caster = `peer-${caster_idx}`
+      const observer = `peer-${observer_idx}`
+      const event = (seq, kind, data) => ({
+        seq: String(seq),
+        kind,
+        data: { fight: FIGHT, caster_is_mob: false, caster_idx: String(caster_idx), ...data },
+        digest: 'captured-cast',
+        version: String(version),
+      })
+      // Captured journal order: the action envelope opens, its effects resolve, the legacy Cast anchors the
+      // presentation, and ActionResolved closes it with the SpellTemplate object id the Cast itself omits.
+      const actions = journal_to_actions({
+        events: [
+          event(40, 'ActionStarted', { turn_ordinal: '1', action_ordinal: '0', target_cell: '45' }),
+          event(41, 'ActionEffect', { turn_ordinal: '1', action_ordinal: '0', effect_ordinal: '0', effect: {} }),
+          event(42, 'Hit', { victim_is_mob: true, victim_idx: '0', amount: '8', remaining_hp: '12' }),
+          event(43, 'Cast', { target_cell: '45' }),
+          event(44, 'ActionResolved', {
+            turn_ordinal: '1',
+            action_ordinal: '0',
+            target_cell: '45',
+            action_kind: 0,
+            spell: spell_id,
+          }),
+        ],
+      })
+      const draft = {
+        fight_id: FIGHT,
+        ctx: { my_entity_id: observer, beat_ctx: { grid_width: 20 } },
+        view: { escrow: [{ character: 'peer-0' }, { character: 'peer-1' }] },
+        my_key: `p${observer_idx}`,
+        fighters: {
+          p0: { cell: 21, hp: 50, alive: true },
+          p1: { cell: 22, hp: 50, alive: true },
+          m0: { cell: 45, hp: 20, alive: true },
+        },
+        wave: [],
+        wave_seq: 0,
+      }
+
+      expect(actions.find((row) => row.kind === 'ActionResolved')?.spell).toBe(spell_id)
+      const turn = paced_wave_turns(draft, actions, { fighter_health: () => 20 }).find(
+        (candidate) => candidate.source_id === caster
+      )
+      expect(turn?.is_local).toBe(false)
+      expect(turn?.beats.find((beat) => beat.kind === 'cast')?.payload.spell_id).toBe(spell_id)
+    })
 })

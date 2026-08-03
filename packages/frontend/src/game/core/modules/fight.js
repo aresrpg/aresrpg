@@ -161,6 +161,8 @@ const COSMETIC_SPELL_NAMES = /** @type {const} */ ({
 
 /** A spell's PLAYER-FACING display name — never a raw slug. @param {string} spell_id @returns {string} */
 function spell_display_name(spell_id) {
+  const chain = fight_spell(spell_id)
+  if (chain) return chain_spell_name(chain)
   const template = spell_templates().get(spell_id)
   if (template?.name) return template.name
   const cosmetic = COSMETIC_SPELL_NAMES[/** @type {keyof typeof COSMETIC_SPELL_NAMES} */ (spell_id)]

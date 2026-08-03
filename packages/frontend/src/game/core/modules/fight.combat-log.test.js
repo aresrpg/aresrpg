@@ -24,7 +24,15 @@ import {
 } from '@aresrpg/fight/sim_chain'
 import * as SE from '@aresrpg/sim/spell_effect'
 
-import { emit_cast_log, emit_deaths, emit_death_line, emit_drain_lines, emit_trap_line } from './fight.js'
+import { set_spell_corpus_for_test } from '../../data/spell_corpus.js'
+import {
+  emit_cast_context_line,
+  emit_cast_log,
+  emit_deaths,
+  emit_death_line,
+  emit_drain_lines,
+  emit_trap_line,
+} from './fight.js'
 import { resolve_segment_text } from '../../screens/hud/world/combat_log_names.js'
 
 /** A fake dispatch that records every action, plus a lookup by id_prefix (combat_log_line's `id` is
@@ -142,6 +150,33 @@ const sim_drain_outcome = ({ seed, requested, caster_wisdom, target_dodge }) => 
 }
 
 describe('emit_cast_log — combat-log composer attaches a live ref to every name segment', () => {
+  it('#2144 formats ActionResolved object ids as their true spell names in both observer directions', () => {
+    const spells = [
+      { id: 'senshi_warcleave', object_id: `0x${'a'.repeat(64)}`, name: 'Warcleave', classType: 'senshi' },
+      { id: 'yajin_death_mark', object_id: `0x${'b'.repeat(64)}`, name: 'Death Mark', classType: 'yajin' },
+    ].map((spell) => ({ ...spell, unlock: 1, role: 'damage', element: 'earth', levels: [] }))
+    set_spell_corpus_for_test(spells)
+    try {
+      const fighters = new Map([
+        ['peer-0', { name: 'Caster 0' }],
+        ['peer-1', { name: 'Caster 1' }],
+      ])
+      const { actions, dispatch } = recorder()
+      for (const [index, spell] of spells.entries())
+        emit_cast_context_line(() => ({ fight: { fighters } }), dispatch, {
+          entity_id: `peer-${index}`,
+          spell_id: spell.object_id,
+        })
+
+      expect(actions.map((action) => action.payload.message)).toEqual([
+        'Caster 0 cast Warcleave',
+        'Caster 1 cast Death Mark',
+      ])
+    } finally {
+      set_spell_corpus_for_test()
+    }
+  })
+
   it('a hit on a mob whose identity has NOT resolved yet: text is the "Mob" placeholder, ref is the real fighter id', () => {
     const fighters = new Map([
       ['p1', { name: 'Aldric' }],

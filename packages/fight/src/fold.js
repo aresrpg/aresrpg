@@ -394,8 +394,8 @@ export const display_state = (s) => wave_masked_fold(s, true)
  *  Runs on the PRE-receipt draft, so every resolver reads the state the eye currently sees:
  *   · resolve_fighter_id — seat → the REAL entity id (character id / 'mob-N'), never a 'player-N' default
  *   · fighter_cells      — an entity's pre-receipt cell (real move paths instead of single-cell teleports)
- *   · resolve_cast       — the chain Cast carries NO spell id, so the presentation constants are the spec
- *     (old fight_bridge.js:885): 'mob_attack_dungeon' for a mob, 'dungeon_strike' for a seat
+ *   · resolve_cast       — the frozen Cast carries no spell id; its ActionResolved envelope names a player's
+ *     SpellTemplate object, while legacy rows and mobs retain their presentation constants
  *  Locality is decided by SEAT (R1): my segments never enter the paced wave, whatever id string they produced.
  *  Each turn carries its raw-receipt event-index window [from_idx, until_idx] — the presented fold
  *  (presented_state) hides exactly the entries inside a still-unacked window.
@@ -451,7 +451,9 @@ const wave_turns_of = (draft, raw_events, version, trap_cells = [], base_seq = 0
       return id && cell ? [[String(id), cell]] : []
     })
   )
-  const resolve_cast = (event) => ({ spell_id: event.caster_is_mob ? 'mob_attack_dungeon' : 'dungeon_strike' })
+  const resolve_cast = (event, resolved) => ({
+    spell_id: event.caster_is_mob ? 'mob_attack_dungeon' : (resolved?.spell ?? 'dungeon_strike'),
+  })
   // R1 — locality by SEAT: a turn is LOCAL iff its author is my seat (character match, or a non-mob idx equal
   // to my seat index). Produced id strings never decide locality again.
   const is_local = (turn) => {
