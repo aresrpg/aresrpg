@@ -1,3 +1,1 @@
-f4180f7a154a19ee6be53f2c7f3d50d35a690ab7 train/train-86 docs(gates): state the fight-visible gate's scope and baseline provenance
-9ef8ddc92ea7011083355c7e137e417e381a8f8e train/train-86 fix(frontend): no failure is swallowed without a stated reason
-b7cb5b52b34480dd0c9d900bf2717e96b24151e3 train/train-86 fix(pickers): a corpus fetch failure is not an empty game
+784aac98645730df6c2721d2137f441fa3645d5e train/train-87 fix(frontend): shared-state mutations become transforms
