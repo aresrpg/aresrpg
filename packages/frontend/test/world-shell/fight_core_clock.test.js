@@ -13,8 +13,8 @@
 // this drives the real thing with a fake clock and NO component in the tree at all.
 
 import { beforeEach, describe, expect, test } from 'bun:test'
-
 import { create_fight_store } from '@aresrpg/fight/store'
+
 import { install_fight_clock, FIGHT_CLOCK_MS } from '../../src/world-shell/fight_core_clock.js'
 
 const ME = '0xme'
@@ -157,10 +157,8 @@ describe('#1993 — the handover has a core owner, not a component', () => {
   })
 
   test('the timeline no longer owns the core clock', async () => {
-    const source = await Bun.file(
-      new URL('../../src/game/screens/hud/FightTimeline.jsx', import.meta.url)
-    ).text()
+    const source = await Bun.file(new URL('../../src/game/screens/hud/FightTimeline.jsx', import.meta.url)).text()
     expect(source, 'a presentational card must not drive the fight reducer’s clock').not.toContain('setInterval')
-    expect(source, "…nor feed the door at all — it is a reader").not.toContain("type: 'tick'")
+    expect(source, '…nor feed the door at all — it is a reader').not.toContain("type: 'tick'")
   })
 })

@@ -80,7 +80,10 @@ describe('#1993 — the board arms on the ONE handover fact', () => {
     const now = Date.now()
     seed_fight_core({ my: ME, active: ME, turn_ms: 0, turn_deadline_ms: now + TURN_MS })
     fight_store.getState().input({ type: 'receipt', receipt: { events: CASCADE }, version: 6 }, now)
-    expect(fight_store.getState().wave.some((t) => !t.is_local), 'a non-local wave is draining').toBe(true)
+    expect(
+      fight_store.getState().wave.some((t) => !t.is_local),
+      'a non-local wave is draining'
+    ).toBe(true)
     expect(fight_store.getState().turn_playable).toBe(false)
     expect(drive_board().my_turn).toBe(false)
   })

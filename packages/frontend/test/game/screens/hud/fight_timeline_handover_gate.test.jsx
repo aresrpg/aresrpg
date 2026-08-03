@@ -15,11 +15,11 @@
 import { afterAll, afterEach, describe, expect, test } from 'bun:test'
 import { createElement } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
+import { COMMIT_BUFFER_MS } from '@aresrpg/fight/draft_budget'
+import { fight_store } from '@aresrpg/fight/store'
 
 import { FightTimeline } from '../../../../src/game/screens/hud/FightTimeline.jsx'
 import { seed_fight_core, reset_fight_core } from '../../../../src/test_helpers/fight_core_harness.js'
-import { COMMIT_BUFFER_MS } from '@aresrpg/fight/draft_budget'
-import { fight_store } from '@aresrpg/fight/store'
 
 const ME = '0xme'
 const TURN_MS = 45_000
