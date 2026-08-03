@@ -330,3 +330,89 @@ describe('auto_settle_terminal_fights mirror — LEAF-2 stranded-fight auto-reco
     expect(events).toEqual([]) // neither the notice nor the tx — an honest silence, not a lying toast
   })
 })
+
+describe('#2146 — honest marked-entry failure + live settle discharge', () => {
+  it('keeps the captured fight::111 refusal as reducer data when the corrective open loses transport', async () => {
+    const { run_fight_entry, run_fight_entry_result } = await import('../game/fight_engage.js')
+    const { humanize_abort } = await import('../game/core/abort_copy.js')
+    const { default: i18n } = await import('../i18n')
+    const move_abort = {
+      $kind: 'MoveAbort',
+      MoveAbort: {
+        abortCode: 111,
+        location: { package: '0xe25d', module: 'fight', function: 'y116' },
+      },
+    }
+    // Captured live shape: the transport wrapper says only "Failed to fetch", while its cause retains the
+    // simulation's structured MoveAbort. The whole value must reach the one decoder; `.message` alone lies.
+    const captured = new Error('Failed to fetch', { cause: move_abort })
+    captured.name = 'SimulationError'
+
+    const result = await run_fight_entry_result({
+      submit: async () => {
+        throw captured
+      },
+      recover_refusal: async () => {
+        throw new TypeError('Failed to fetch')
+      },
+    })
+
+    expect(result).toMatchObject({ status: 'failed', refusal: captured })
+    expect(humanize_abort(result.refusal)).toBe(i18n.t('errors.fight_unclaimed_result'))
+    expect(humanize_abort(result.refusal)).not.toBe('Failed to fetch')
+
+    const surfaced = await run_fight_entry({
+      submit: async () => {
+        throw captured
+      },
+      recover_refusal: async () => {
+        throw new TypeError('Failed to fetch')
+      },
+    }).catch((error) => error)
+    expect(humanize_abort(surfaced)).toBe(i18n.t('errors.fight_unclaimed_result'))
+  })
+
+  it('a Settled row arriving mid-world invokes the same pending-open effect boot uses, without another boot', async () => {
+    const {
+      initial_pending_outcome_flow,
+      reduce_pending_outcome_flow,
+      run_pending_outcome_effect,
+      settlement_arrival_input,
+    } = await import('./pending_outcomes.js')
+    const message = {
+      type: 'journal',
+      fight_id: 'fight-1',
+      batch: { events: [{ seq: '9', kind: 'Settled', data: { fight: 'fight-1' } }] },
+    }
+    const live_input = settlement_arrival_input(message, 'fight-1')
+    const live = reduce_pending_outcome_flow(initial_pending_outcome_flow(), live_input)
+    const boot = reduce_pending_outcome_flow(initial_pending_outcome_flow(), {
+      type: 'pending_outcome_detected',
+      source: 'boot',
+    })
+    const opens = []
+    let invalidations = 0
+
+    const completion = await run_pending_outcome_effect(live.effect, {
+      address: '0xowner',
+      invalidate: () => {
+        invalidations += 1
+      },
+      open_pending: async (address, options) => {
+        opens.push({ address, options })
+      },
+    })
+    const finished = reduce_pending_outcome_flow(live.state, completion)
+
+    expect(live_input).toEqual({
+      type: 'pending_outcome_detected',
+      source: 'settlement',
+      fight_id: 'fight-1',
+    })
+    expect(live.effect.type).toBe('open_pending_outcomes')
+    expect(boot.effect.type).toBe(live.effect.type) // one door: boot and live arrival request the same effect
+    expect(opens).toEqual([{ address: '0xowner', options: { announce: true } }])
+    expect(invalidations).toBe(1) // the boot memo predates this newly minted outcome
+    expect(finished.state.inflight).toBeNull()
+  })
+})

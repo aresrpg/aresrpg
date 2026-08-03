@@ -316,6 +316,91 @@ export async function settle_halt_notice(find_row) {
   return row?.outcome_id ? { claim: 'pending_result', row } : { claim: 'settle_failed', row: null }
 }
 
+// ── PENDING-OUTCOME SIGNAL REDUCER (#2146) ───────────────────────────────────
+// Boot and a live fight's later Settled/Swept row both request the SAME effect. The store owns the state and
+// hands async completion back through this reducer as data; this leaf only describes the transition/effect.
+
+/** @returns {{next_token:number,inflight:number|null,queued_fresh:boolean,last_error:unknown|null}} */
+export const initial_pending_outcome_flow = () => ({
+  next_token: 0,
+  inflight: null,
+  queued_fresh: false,
+  last_error: null,
+})
+
+const open_effect = (state, fresh) => {
+  const token = state.next_token + 1
+  return {
+    state: { ...state, next_token: token, inflight: token, queued_fresh: false, last_error: null },
+    effect: { type: 'open_pending_outcomes', token, fresh, announce: fresh },
+  }
+}
+
+/**
+ * One reducer door for pending-outcome detection. A settlement signal queues one fresh pass behind a boot pass
+ * already in flight; repeated boot arrivals add no information and are coalesced.
+ * @param {ReturnType<typeof initial_pending_outcome_flow>} value @param {any} input
+ * @returns {{state:ReturnType<typeof initial_pending_outcome_flow>,effect:any|null}}
+ */
+export function reduce_pending_outcome_flow(value, input) {
+  const state = value ?? initial_pending_outcome_flow()
+  if (input?.type === 'pending_outcome_detected') {
+    const fresh = input.source === 'settlement'
+    if (state.inflight != null)
+      return {
+        state: { ...state, queued_fresh: state.queued_fresh || fresh },
+        effect: null,
+      }
+    return open_effect(state, fresh)
+  }
+  if (input?.type === 'pending_outcome_open_finished') {
+    if (input.token !== state.inflight) return { state, effect: null }
+    if (state.queued_fresh) return open_effect({ ...state, inflight: null, last_error: input.error ?? null }, true)
+    return {
+      state: { ...state, inflight: null, queued_fresh: false, last_error: input.error ?? null },
+      effect: null,
+    }
+  }
+  return { state, effect: null }
+}
+
+/**
+ * Recognize the indexed fight journal's settlement milestone and turn it into the reducer input above. Settled
+ * and Swept both destroy the Fight and mint each seat's unopened outcome. Other journal rows are not signals.
+ * @param {any} message @param {string} watched_fight_id
+ * @returns {{type:'pending_outcome_detected',source:'settlement',fight_id:string}|null}
+ */
+export function settlement_arrival_input(message, watched_fight_id) {
+  if (message?.type !== 'journal' || !watched_fight_id || String(message.fight_id ?? '') !== String(watched_fight_id))
+    return null
+  const settled = (message.batch?.events ?? []).some((event) => event?.kind === 'Settled' || event?.kind === 'Swept')
+  return settled ? { type: 'pending_outcome_detected', source: 'settlement', fight_id: watched_fight_id } : null
+}
+
+/**
+ * Execute one reducer-described scan/open effect and return completion as reducer DATA. A live settlement drops
+ * the boot-era projection memo first; boot uses the memo normally. No failure escapes into the store.
+ * @param {{type:string,token:number,fresh:boolean,announce:boolean}|null} effect
+ * @param {{address:string|null|undefined,invalidate:()=>void,
+ *   open_pending:(address:string,options:{announce:boolean})=>Promise<any>}} deps
+ */
+export async function run_pending_outcome_effect(effect, { address, invalidate, open_pending }) {
+  if (effect?.type !== 'open_pending_outcomes')
+    return { type: 'pending_outcome_open_finished', token: effect?.token ?? null, error: null }
+  try {
+    if (effect.fresh) invalidate()
+  } catch (error) {
+    return { type: 'pending_outcome_open_finished', token: effect.token, error }
+  }
+  const outcome = address
+    ? await open_pending(address, { announce: effect.announce }).then(
+        () => ({ error: null }),
+        (error) => ({ error })
+      )
+    : { error: null }
+  return { type: 'pending_outcome_open_finished', token: effect.token, error: outcome.error }
+}
+
 /** @param {string} outcome_id @returns {'inflight' | 'latched' | 'opened' | null} */
 export function attempt_state(outcome_id) {
   return attempts.get(outcome_id)?.state ?? null

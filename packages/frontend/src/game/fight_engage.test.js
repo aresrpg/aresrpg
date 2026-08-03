@@ -222,7 +222,7 @@ test('an unfinished result is detected, opened through the shared action, then t
   expect(attempt_state(row.outcome_id)).toBe('opened')
 })
 
-test('an executed failed open surfaces identically across two engages and never auto-refires', async () => {
+test('an executed failed open keeps the marked-entry cure across two engages and never auto-refires', async () => {
   const marker_refusal = tx_error(
     { MoveAbort: { abortCode: 111, location: { module: 'fight' } } },
     { preflight: true }
@@ -251,7 +251,7 @@ test('an executed failed open surfaces identically across two engages and never 
         },
         recover_refusal,
       })
-    ).rejects.toBe(executed_open)
+    ).rejects.toBe(marker_refusal)
 
   expect(engages).toBe(2)
   expect(opens).toBe(1)

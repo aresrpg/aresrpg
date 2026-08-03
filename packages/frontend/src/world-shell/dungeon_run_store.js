@@ -53,7 +53,7 @@ import { paginate_fight_journal } from '../rpc/fight_journal.js'
 import { T62_WORLDS, DEMO_NETWORK } from '../chain/deployment'
 import { display_mob_name } from '../content/mob_name_overrides'
 import { push_event_toast } from '../game/core/toast.js'
-import { run_fight_entry } from '../game/fight_engage.js'
+import { fight_entry_failure, run_fight_entry_result } from '../game/fight_engage.js'
 import i18n from '../i18n'
 import { load_roster } from '../roster/load_roster'
 import {
@@ -98,7 +98,14 @@ import {
   auto_open_pending_outcomes,
 } from './dungeon_settlement.js'
 import { apply_fight_receipt } from './store_patch.js'
-import { should_boot_open } from './pending_outcomes.js'
+import {
+  initial_pending_outcome_flow,
+  invalidate_pending_outcomes,
+  reduce_pending_outcome_flow,
+  run_pending_outcome_effect,
+  settlement_arrival_input,
+  should_boot_open,
+} from './pending_outcomes.js'
 import { maybe_liquidate, reset_liquidation } from './fight-liquidation.js'
 import { receipt_read_miss_decision, should_hold_receipt_fight } from './world_fight_receipt.js'
 import { error_executed_digest } from './tx_digest_error.js'
@@ -402,6 +409,10 @@ export const use_dungeon = create((set, get) => ({
   _poll_timer: null,
   /** @type {ReturnType<typeof bind_fight_stream> | null} the live fight's SSE link (#1384) */
   _fight_stream: null,
+  /** @type {string | null} a forfeited co-op fight whose Settled/Swept row still owes this seat an open */
+  _settlement_watch_id: null,
+  /** Boot and live settlement detections share this reducer-owned open flight. */
+  _pending_outcome_flow: initial_pending_outcome_flow(),
 
   /**
    * ENTER (§9): burn ONE dungeon key → a bound RunPass at room 1. SOLO and co-op both enter here (each member
@@ -544,6 +555,26 @@ export const use_dungeon = create((set, get) => ({
   },
 
   /**
+   * Pending-outcome detection's ONE reducer door. Boot and a watched fight's live settlement both enter here;
+   * the async scan/open completion returns as another input, never as a thrown store control path.
+   * Injectable effects keep the reducer edge directly drivable without loading chain/auth machinery in tests.
+   * @param {any} input
+   * @param {{address?:string|null,invalidate?:()=>void,
+   *   open_pending?:(address:string,options:{announce:boolean})=>Promise<any>}} [effects]
+   */
+  pending_outcome_input(input, effects = {}) {
+    const transition = reduce_pending_outcome_flow(get()._pending_outcome_flow, input)
+    set({ _pending_outcome_flow: transition.state })
+    if (!transition.effect) return Promise.resolve(transition.state)
+    return run_pending_outcome_effect(transition.effect, {
+      address: effects.address ?? use_auth.getState().address,
+      invalidate: effects.invalidate ?? invalidate_pending_outcomes,
+      open_pending:
+        effects.open_pending ?? ((address, options) => auto_open_pending_outcomes(use_dungeon, address, options)),
+    }).then((completion) => get().pending_outcome_input(completion, effects))
+  },
+
+  /**
    * The single-flight ACQUIRE door for the background settlement chain: claims `_settling` only when free and
    * returns whether THIS call won the slot. The pending-outcome flight queue (pending_outcomes.js) re-enters
    * here on every release — an async result routed through the store's action door, never a laundered external
@@ -648,7 +679,7 @@ export const use_dungeon = create((set, get) => ({
       const room = run?.room ?? 1
       const roster = rooms[room - 1] ?? []
       if (!roster.length) throw new Error(`Room ${room} has no roster`)
-      const { fight_id: minted } = await run_fight_entry({
+      const entry = await run_fight_entry_result({
         submit: () => {
           // A code-111 repair can advance this same RunPass while opening the prior result. Re-compose the one
           // authorized retry from refreshed store truth instead of replaying the stale room/template arguments.
@@ -669,6 +700,20 @@ export const use_dungeon = create((set, get) => ({
           recover_refusal ??
           ((error) => recover_fight_entry_refusal(use_dungeon, character_id, error, { live_run_pass_id: run_pass_id })),
       })
+      if (entry.status === 'failed') {
+        // The corrective open may itself lose transport. The original structured fight::111 refusal is still the
+        // actionable fact: pass the WHOLE value to the one decoder and point at the same outcome-open cure, never
+        // replace it with the open attempt's generic "Failed to fetch". This expected failure stays reducer data.
+        const failure = fight_entry_failure(entry)
+        game_log('dungeon', 'start_when_ready refused', failure)
+        set({ error: humanize_abort(failure) })
+        await get()
+          .refresh()
+          .catch(() => {})
+        set({ busy: false })
+        return
+      }
+      const { fight_id: minted } = entry.receipt ?? {}
       if (!minted) throw new Error('next_fight did not return a Fight id')
       // FRESH — the engage click minted it. `fight_syncing: true` is the RECEIPT-HOLD flag (world_fight_receipt):
       // a just-minted room fight can miss the serving node's read-after-write, and without this flag
@@ -705,7 +750,7 @@ export const use_dungeon = create((set, get) => ({
       await get().refresh()
     } catch (error) {
       game_log('dungeon', 'start_when_ready failed', error)
-      set({ error: humanize_abort(error?.message ?? String(error)) })
+      set({ error: humanize_abort(error) })
       await get()
         .refresh()
         .catch(() => {})
@@ -1338,11 +1383,18 @@ export const use_dungeon = create((set, get) => ({
     set({ _poll_timer: timer })
   },
 
-  _stop_polling() {
+  _stop_polling({ settlement_watch_id = null } = {}) {
     const timer = get()._poll_timer
     if (timer) clearInterval(timer)
+    if (settlement_watch_id) {
+      // A dead co-op seat has left the board, but its existing SSE link still carries the later Settled/Swept
+      // row. Retain that event wire only; the cadence poll is stopped and no second store/timer is created.
+      set({ _poll_timer: null, _settlement_watch_id: settlement_watch_id })
+      get()._ensure_fight_stream(settlement_watch_id)
+      return
+    }
     get()._ensure_fight_stream(null)
-    set({ _poll_timer: null })
+    set({ _poll_timer: null, _settlement_watch_id: null })
   },
 
   /** Page the journal from THE one resume cursor into the ONE fold door. Both transports call exactly this. */
@@ -1370,13 +1422,24 @@ export const use_dungeon = create((set, get) => ({
       return null
     }
     const owns = () => get().fight_id === fight_id
+    const watches_settlement = () => get()._settlement_watch_id === fight_id
     const walk = () => get()._walk_fight_journal(fight_id, owns)
     const next = bind_fight_stream({
       fight_id,
       catch_up: walk,
       // The frame re-enters as an INPUT through the same door the pager uses — no callback writes a store.
       input: (message, now) => {
-        if (owns()) fight_store.getState().input(message, now)
+        const owns_live_fight = owns()
+        const pending_input = watches_settlement() ? settlement_arrival_input(message, fight_id) : null
+        if (pending_input) {
+          // End the event-only watch before opening. The live row then walks the exact reducer/effect door boot
+          // uses; its fresh flag invalidates the boot-era projection memo before the scan.
+          get()._stop_polling()
+          void get()
+            .pending_outcome_input(pending_input)
+            .catch((error) => game_log('dungeon', 'settlement-arrival outcome flow crashed:', error))
+        }
+        if (owns_live_fight) fight_store.getState().input(message, now)
       },
       // The #1381 belt: one direct read before the deadline the fight is actually running against, so a silent
       // wire can never cost the window it is about to end — the TURN clock while a turn runs, the PLACEMENT
@@ -1696,7 +1759,9 @@ export const use_dungeon = create((set, get) => ({
     }
     set({ _claiming: true }) // single-flight: forfeit's abandon_fight AND the board terminal-effect both call claim()
     note_victory(dungeon?.id ?? fight_id, dungeon?.room_index ?? 0, 'terminal') // machine → VICTORY_RESOLVED at once
-    get()._stop_polling()
+    // A co-op forfeit is locally terminal before the fight is terminal. Keep its EXISTING event stream (not the
+    // cadence poll) until Settled/Swept mints this seat's outcome; that row drives the shared pending-open door.
+    get()._stop_polling({ settlement_watch_id: settle ? null : fight_id })
     // SNAPSHOT the chain ids + the defeat xp pool BEFORE the presentation nulls the session (the background chain
     // still needs them). character_id rides along: results::open kiosk-borrows it, so the open leg derives ITS kiosk.
     const chain_ids = {
@@ -1908,9 +1973,10 @@ use_dungeon.subscribe((state) => {
 // never mounts the roster/badge). Refusal-time recovery belongs to the awaited engage/join reducer door; no
 // abort callback may race it or let the original entry die before the open receipt lands. ─────────────────────
 const _kick_pending_open = () => {
-  const { address } = use_auth.getState()
-  if (!address) return
-  void auto_open_pending_outcomes(use_dungeon, address).catch(() => {})
+  void use_dungeon
+    .getState()
+    .pending_outcome_input({ type: 'pending_outcome_detected', source: 'boot' })
+    .catch((error) => game_log('dungeon', 'pending-outcome boot flow crashed:', error))
 }
 if (should_boot_open(use_auth.getState().address)) _kick_pending_open() // module loads post-auth (restore)
 use_auth.subscribe((s) => {
