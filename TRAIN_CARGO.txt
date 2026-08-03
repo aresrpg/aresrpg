@@ -1,2 +1,3 @@
-f16fc839df280affe3aee5a9d29b6aee608435b4 train/train-83 docs: the sponsor two-call contract, derived from the landed halves
-aadff88f41db5294e4219f1dff936f16baba1862 train/train-83 refactor(gold): one home for the authored-corpus candidate ladder
+34cdc29dbbcd672c96e589bbac5184503e54b69d train/train-84 refactor(hud): the split's new hooks take React's useX name
+cc0558f8cdb4f2960495cfafad6a9c5599288e30 train/train-84 refactor(hud): split DungeonBoard along its section seams
+27fc3bdb02d79f68c65913c6199365d534e9c959 train/train-84 refactor(hud): split CharactersDrawer along its section seams
