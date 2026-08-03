@@ -244,6 +244,7 @@ async function client_resolved_route(
  * @param sponsor_fallback TEST seam: the fallback's two effects (fresh balance read + the sponsor
  *   door), injected so the routing matrix unit-tests with plain fakes. Production callers omit it.
  */
+// Complexity retained (#2069): execution is one transaction boundary whose ordered refusal, signing, and receipt paths share cleanup; there is no isolated phase to extract.
 export async function execute_tx({
   wallet,
   address,

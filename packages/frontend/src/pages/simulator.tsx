@@ -337,7 +337,7 @@ export function SimulatorPage() {
           key={editing}
           character={editing_character}
           on_close={() => set_editing(null)}
-          on_created={(id) => set_editing(id)}
+          on_created={set_editing}
         />
       )}
       {/* The production fight surface. It self-gates on the fight core's own phase machine; the page gate

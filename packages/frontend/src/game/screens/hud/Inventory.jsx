@@ -265,6 +265,7 @@ export function Inventory() {
     dispatch_stage(equip_stage_action(item, undefined, slugs, template_id_map))
   }
 
+  // Complexity retained (#2069): acceptance is one ordered transaction lifecycle with shared pending/error cleanup; splitting it risks divergent finally paths.
   const on_accept = async () => {
     if (committing) return
     if (equip_lock) {

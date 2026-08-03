@@ -265,6 +265,7 @@ export const seed_effect_parts = (t, fx, { locale = 'en', resolve_state_name } =
   return { ...core_parts(t, fx, state), meta: meta_of(t, fx), felt: state?.felt || null }
 }
 
+// Complexity retained (#2069): this is one exhaustive effect-token formatter; extracting cases would scatter the ordering and punctuation contract.
 const core_parts = (t, fx, state) => {
   switch (fx.kind) {
     case 'DAMAGE':

@@ -55,7 +55,7 @@ export const MOB_MP_MAX = 5
  * Move's `(h * PRIME) & MASK32` exactly.
  * @param {ArrayLike<number>} bytes @returns {number} uint32
  */
-export function hashSeed(bytes) {
+function hash_seed(bytes) {
   let h = FNV_OFFSET
   for (let i = 0; i < bytes.length; i++) {
     h = (h ^ (bytes[i] & 0xff)) >>> 0
@@ -63,17 +63,19 @@ export function hashSeed(bytes) {
   }
   return h >>> 0
 }
+export { hash_seed as hashSeed }
 
 /**
  * Decode a Sui object id (`0x…` hex) into its 32 bytes and fold to the uint32 `dungeon_hash`.
  * @param {string} id @returns {number} uint32
  */
-export function dungeonHashFromId(id) {
+function dungeon_hash_from_id(id) {
   const hex = (id.startsWith('0x') ? id.slice(2) : id).padStart(64, '0')
   const bytes = new Uint8Array(32)
   for (let i = 0; i < 32; i++) bytes[i] = parseInt(hex.slice(i * 2, i * 2 + 2), 16)
-  return hashSeed(bytes)
+  return hash_seed(bytes)
 }
+export { dungeon_hash_from_id as dungeonHashFromId }
 
 // ── SHAPE GEOMETRY (byte-identical twin of combat_grid's mask builders) ──────────────────────────────────────
 // A shape_mask is a Uint-ish array of MASK_WORDS numbers (each a 32-or-53-bit-safe chunk of 64 bits is NOT safe in
@@ -83,26 +85,26 @@ export function dungeonHashFromId(id) {
 // encoded cells (the render/BFS only need membership); `maskWords` produces the Move-identical u64 word vector.
 
 /** A fresh empty mask (Set of encoded on-cells). */
-function emptyMask() {
+function empty_mask() {
   return new Set()
 }
 
 /** Fill row `y` cells x∈[lo,hi) into the mask (the convexity primitive). `hi` clamped to GRID_W. */
-function fillRow(mask, y, lo, hi) {
+function fill_row(mask, y, lo, hi) {
   const end = Math.min(hi, GRID_W)
   for (let x = lo; x < end; x++) mask.add(encode(x, y))
 }
 
 /** RECT(w,h): the full [0,w)×[0,h) rectangle. */
-function rectMask(w, h) {
-  const m = emptyMask()
-  for (let y = 0; y < h; y++) fillRow(m, y, 0, w)
+function rect_mask(w, h) {
+  const m = empty_mask()
+  for (let y = 0; y < h; y++) fill_row(m, y, 0, w)
   return m
 }
 
 /** ELLIPSE(w,h): filled axis-aligned ellipse — cell IN iff (2Δx)²·h² + (2Δy)²·w² ≤ (w·h)². Per-row single run. */
-function ellipseMask(w, h) {
-  const m = emptyMask()
+function ellipse_mask(w, h) {
+  const m = empty_mask()
   const cx2 = w - 1
   const cy2 = h - 1
   const rhs = w * h * (w * h)
@@ -118,15 +120,15 @@ function ellipseMask(w, h) {
         if (x + 1 > hi) hi = x + 1
       }
     }
-    if (lo < hi) fillRow(m, y, lo, hi)
+    if (lo < hi) fill_row(m, y, lo, hi)
   }
   return m
 }
 
 /** ROUNDED(w,h,r): RECT with quarter-arc corners of radius r trimmed. Per-row single run. r=0 → RECT. */
-function roundedMask(w, h, r) {
-  if (r === 0) return rectMask(w, h)
-  const m = emptyMask()
+function rounded_mask(w, h, r) {
+  if (r === 0) return rect_mask(w, h)
+  const m = empty_mask()
   const arc = (r - 1) * (r - 1)
   for (let y = 0; y < h; y++) {
     const in_band = y < r || y >= h - r
@@ -139,14 +141,14 @@ function roundedMask(w, h, r) {
         else break
       }
     }
-    fillRow(m, y, cut, w - cut)
+    fill_row(m, y, cut, w - cut)
   }
   return m
 }
 
 /** Cells cut from ONE horizontal end of row `y` by a quarter-arc corner of radius `r` (top band vs bottom band).
  * Integer-only; mirrors combat_grid::corner_cut. Contiguous prefix ⇒ the row stays one run. */
-function cornerCut(r, y, h, top) {
+function corner_cut(r, y, h, top) {
   if (r === 0) return 0
   const in_band = top ? y < r : y >= h - r
   if (!in_band) return 0
@@ -164,26 +166,26 @@ function cornerCut(r, y, h, top) {
 /** BLOB(w,h,rTl,rTr,rBl,rBr): rounded rect with FOUR independent corner radii (asymmetric/organic). Per row the
  * left inset = max(top-left cut, bottom-left cut), right inset = max(top-right, bottom-right) → single run per
  * row AND column (orthogonally convex). Byte-identical twin of combat_grid::blob_mask. */
-function blobMask(w, h, rTl, rTr, rBl, rBr) {
-  const m = emptyMask()
+function blob_mask(w, h, r_tl, r_tr, r_bl, r_br) {
+  const m = empty_mask()
   for (let y = 0; y < h; y++) {
-    const tl = cornerCut(rTl, y, h, true)
-    const tr = cornerCut(rTr, y, h, true)
-    const bl = cornerCut(rBl, y, h, false)
-    const br = cornerCut(rBr, y, h, false)
+    const tl = corner_cut(r_tl, y, h, true)
+    const tr = corner_cut(r_tr, y, h, true)
+    const bl = corner_cut(r_bl, y, h, false)
+    const br = corner_cut(r_br, y, h, false)
     const left = tl > bl ? tl : bl
     const right = tr > br ? tr : br
-    fillRow(m, y, left, w - right)
+    fill_row(m, y, left, w - right)
   }
   return m
 }
 
 /** CROSS(w,h): horizontal bar rows [ry0,ry1) full-width ∪ vertical bar cols [cx0,cx1) full-height. Single run/row. */
-function crossMask(w, h, ry0, ry1, cx0, cx1) {
-  const m = emptyMask()
+function cross_mask(w, h, ry0, ry1, cx0, cx1) {
+  const m = empty_mask()
   for (let y = 0; y < h; y++) {
-    if (y >= ry0 && y < ry1) fillRow(m, y, 0, w)
-    else fillRow(m, y, cx0, cx1)
+    if (y >= ry0 && y < ry1) fill_row(m, y, 0, w)
+    else fill_row(m, y, cx0, cx1)
   }
   return m
 }
@@ -196,7 +198,7 @@ const min2 = (a, b) => (a < b ? a : b)
  * no already-`blocked` cell within Chebyshev-1. Byte-identical to combat_grid::blocker_placeable.
  * @param {Set<number>} mask @param {Set<number>} blocked @param {number} cand @returns {boolean}
  */
-function blockerPlaceable(mask, blocked, cand) {
+function blocker_placeable(mask, blocked, cand) {
   if (!mask.has(cand)) return false
   const { x, y } = decode(cand)
   if (x === 0 || y === 0 || x + 1 >= GRID_W || y + 1 >= GRID_H) return false
@@ -210,10 +212,10 @@ function blockerPlaceable(mask, blocked, cand) {
 }
 
 /** The candidate enumeration the blocker probe walks (row-major on-mask cells whose 8-ring is on-mask). */
-function placeableCandidates(mask) {
+function placeable_candidates(mask) {
   const out = []
   const empty = new Set()
-  for (let c = 0; c < GRID_CELLS; c++) if (blockerPlaceable(mask, empty, c)) out.push(c)
+  for (let c = 0; c < GRID_CELLS; c++) if (blocker_placeable(mask, empty, c)) out.push(c)
   return out
 }
 
@@ -223,60 +225,60 @@ function placeableCandidates(mask) {
  * The playable mask for `shape_code` + params drawn from the rng cursor. Returns { mask, next_state }.
  * @param {number} s @param {number} shape_code @param {number} width @param {number} height
  */
-function buildShape(s, shape_code, width, height) {
+function build_shape(s, shape_code, width, height) {
   const draw = (fn, ...args) => {
     const r = fn(s, ...args)
     s = r.state
     return r.value
   }
-  if (shape_code === SHAPE_RECT) return { mask: rectMask(width, height), state: s }
-  if (shape_code === SHAPE_ELLIPSE) return { mask: ellipseMask(width, height), state: s }
+  if (shape_code === SHAPE_RECT) return { mask: rect_mask(width, height), state: s }
+  if (shape_code === SHAPE_ELLIPSE) return { mask: ellipse_mask(width, height), state: s }
   if (shape_code === SHAPE_ROUNDED) {
     const cap = (min2(width, height) / 3) | 0
     const r = draw(rng_range, 1, cap)
-    return { mask: roundedMask(width, height, r), state: s }
+    return { mask: rounded_mask(width, height, r), state: s }
   }
   if (shape_code === SHAPE_CROSS) {
     const bar_h = draw(rng_range, 3, height)
     const bar_w = draw(rng_range, 3, width)
     const ry0 = ((height - bar_h) / 2) | 0
     const cx0 = ((width - bar_w) / 2) | 0
-    return { mask: crossMask(width, height, ry0, ry0 + bar_h, cx0, cx0 + bar_w), state: s }
+    return { mask: cross_mask(width, height, ry0, ry0 + bar_h, cx0, cx0 + bar_w), state: s }
   }
   // BLOB: rounded rect with FOUR independent corner radii (asymmetric/organic). cap = min(w,h)/3 (same as rounded);
   // FOUR draws IN ORDER (tl,tr,bl,br) — mirrors Move build_shape's blob branch byte-for-byte.
   const cap = (min2(width, height) / 3) | 0
-  const rTl = draw(rng_range, 1, cap)
-  const rTr = draw(rng_range, 1, cap)
-  const rBl = draw(rng_range, 1, cap)
-  const rBr = draw(rng_range, 1, cap)
-  return { mask: blobMask(width, height, rTl, rTr, rBl, rBr), state: s }
+  const r_tl = draw(rng_range, 1, cap)
+  const r_tr = draw(rng_range, 1, cap)
+  const r_bl = draw(rng_range, 1, cap)
+  const r_br = draw(rng_range, 1, cap)
+  return { mask: blob_mask(width, height, r_tl, r_tr, r_bl, r_br), state: s }
 }
 
 /** The on-mask unblocked cells (row-major) — the start-cell pool. */
-function openCells(mask, blocked) {
+function open_cells(mask, blocked) {
   const out = []
   for (let c = 0; c < GRID_CELLS; c++) if (mask.has(c) && !blocked.has(c)) out.push(c)
   return out
 }
 
 /** Pick `count` start cells from `pool` at the near (from_top) or far end, disjoint from `used`. */
-function pickStarts(pool, count, from_top, used) {
+function pick_starts(pool, count, from_top, used) {
   const out = []
-  const usedSet = new Set(used)
+  const used_set = new Set(used)
   const n = pool.length
   for (let k = 0; k < n && out.length < count; k++) {
     const idx = from_top ? k : n - 1 - k
     const cell = pool[idx]
-    if (!usedSet.has(cell) && !out.includes(cell)) out.push(cell)
+    if (!used_set.has(cell) && !out.includes(cell)) out.push(cell)
   }
   return out
 }
 
 /** Serialize an on-cell Set to the Move-identical MASK_WORDS×u64 word vector (as JS numbers via BigInt). */
-export function maskWords(maskSet) {
+function mask_words(mask_set) {
   const words = new Array(MASK_WORDS).fill(0n)
-  for (const c of maskSet) {
+  for (const c of mask_set) {
     const w = (c / 64) | 0
     words[w] |= 1n << BigInt(c % 64)
   }
@@ -284,6 +286,7 @@ export function maskWords(maskSet) {
   // JS safe int, so we return BigInt values; the parity-capture script stringifies them for the Move literals.
   return words
 }
+export { mask_words as maskWords }
 
 /**
  * Deterministically generate a D75 fight board from `(dungeon_hash, room_idx)`. PURE. Byte-identical to Move
@@ -291,9 +294,9 @@ export function maskWords(maskSet) {
  * @param {number} dungeonHash uint32 @param {number} roomIdx
  * @returns {{ width, height, shape_mask: Set<number>, obstacles: number[], holes: number[], start_cells_a: number[], start_cells_b: number[] }}
  */
-export function generateGrid(dungeonHash, roomIdx) {
-  const mixed = Math.imul((roomIdx + 1) >>> 0, ROOM_MIX) >>> 0
-  let s = rng_seed((((dungeonHash & MASK32) >>> 0) ^ mixed) >>> 0)
+function generate_grid(dungeon_hash, room_idx) {
+  const mixed = Math.imul((room_idx + 1) >>> 0, ROOM_MIX) >>> 0
+  let s = rng_seed((((dungeon_hash & MASK32) >>> 0) ^ mixed) >>> 0)
   const draw = (fn, ...args) => {
     const r = fn(s, ...args)
     s = r.state
@@ -309,38 +312,39 @@ export function generateGrid(dungeonHash, roomIdx) {
   // the index maps through the vocab. Order fixed — mirrors Move dungeon_grid::generate byte-for-byte.
   const VOCAB = [SHAPE_BLOB, SHAPE_ROUNDED, SHAPE_ELLIPSE, SHAPE_CROSS]
   const shape_code = VOCAB[draw(rng_int, N_SHAPES)]
-  const shaped = buildShape(s, shape_code, width, height)
+  const shaped = build_shape(s, shape_code, width, height)
   s = shaped.state
   const mask = shaped.mask
 
   // 3. blockers — obstacles first, then holes (see the obstacles → king-isolated from them too)
-  const candidates = placeableCandidates(mask)
+  const candidates = placeable_candidates(mask)
   const obs_count = draw(rng_range, OBS_MIN, OBS_MAX)
-  const obsSet = new Set()
+  const obs_set = new Set()
   s = place_blockers(s, candidates, obs_count, cand => {
-    if (obsSet.has(cand) || !blockerPlaceable(mask, obsSet, cand)) return false
-    obsSet.add(cand)
+    if (obs_set.has(cand) || !blocker_placeable(mask, obs_set, cand)) return false
+    obs_set.add(cand)
     return true
   })
-  const obstacles = [...obsSet]
+  const obstacles = [...obs_set]
 
   const hole_count = draw(rng_range, HOLE_MIN, HOLE_MAX)
-  const holesBuf = new Set(obsSet) // seed with obstacles so holes stay king-isolated from them…
+  const holes_buf = new Set(obs_set) // seed with obstacles so holes stay king-isolated from them…
   s = place_blockers(s, candidates, hole_count, cand => {
-    if (holesBuf.has(cand) || !blockerPlaceable(mask, holesBuf, cand)) return false
-    holesBuf.add(cand)
+    if (holes_buf.has(cand) || !blocker_placeable(mask, holes_buf, cand)) return false
+    holes_buf.add(cand)
     return true
   })
-  const holes = [...holesBuf].filter(c => !obsSet.has(c)) // …then split holes back out (order-preserving)
+  const holes = [...holes_buf].filter(c => !obs_set.has(c)) // …then split holes back out (order-preserving)
 
   // 4. start cells — 6/side, on-mask, unblocked, opposite bands
   const blocked = new Set([...obstacles, ...holes])
-  const pool = openCells(mask, blocked)
-  const start_cells_a = pickStarts(pool, MAX_SEATS, true, [])
-  const start_cells_b = pickStarts(pool, MAX_SEATS, false, start_cells_a)
+  const pool = open_cells(mask, blocked)
+  const start_cells_a = pick_starts(pool, MAX_SEATS, true, [])
+  const start_cells_b = pick_starts(pool, MAX_SEATS, false, start_cells_a)
 
   return { width, height, shape_mask: mask, obstacles, holes, start_cells_a, start_cells_b }
 }
+export { generate_grid as generateGrid }
 
 // ── FIGHT-BOARD FROM ANCHOR (the ENGINE Fight's board — world_seed + spawn anchor) ───────────────────────────
 // A world/dungeon engine Fight stores its board as a `shape_mask` u64 BITSET (combat_grid: 1 bit/cell, 6 words).
@@ -364,7 +368,7 @@ export function generateGrid(dungeonHash, roomIdx) {
  *  @param {number|bigint|null|undefined} world_seed @param {number} anchor_x @param {number} anchor_z */
 export function board_shape_from_anchor(world_seed, anchor_x, anchor_z) {
   if (world_seed == null) return null
-  return generateGrid(board_seed_from_anchor(world_seed, anchor_x, anchor_z), 0)
+  return generate_grid(board_seed_from_anchor(world_seed, anchor_x, anchor_z), 0)
 }
 
 // ── LIVE-BOARD GLUE (reads the STORED layout from a live dungeon; falls back to generateGrid ONLY for a train-3
@@ -429,7 +433,7 @@ export function dungeon_grid_of(dungeon) {
 function legacy_rect_grid(dungeon) {
   const width = dungeon.grid_width
   const height = dungeon.grid_height
-  const mask = rectMask(width, height)
+  const mask = rect_mask(width, height)
   let start_cells_a = dungeon.start_cells_a ?? []
   const start_cells_b = dungeon.start_cells_b ?? []
   if (!start_cells_a.length && !start_cells_b.length) {
@@ -461,7 +465,7 @@ function legacy_rect_grid(dungeon) {
  * the mask is a wall (the room SHAPE), replacing the old out-of-bounds rectangle logic.
  * @param {{ shape_mask: Set<number>, obstacles: number[], holes: number[] }} grid @returns {Set<number>}
  */
-export function wallCells({ shape_mask, obstacles, holes }) {
+function wall_cells({ shape_mask, obstacles, holes }) {
   const mask = shape_mask instanceof Set ? shape_mask : new Set(shape_mask)
   const walls = new Set()
   for (let c = 0; c < GRID_CELLS; c++) if (!mask.has(c)) walls.add(c)
@@ -469,6 +473,7 @@ export function wallCells({ shape_mask, obstacles, holes }) {
   for (const c of holes) walls.add(c)
   return walls
 }
+export { wall_cells as wallCells }
 
 /**
  * The contract's LEGAL PLAYER PLACEMENT set: the STORED start cells (both team bands, on-mask + unblocked by
@@ -504,7 +509,7 @@ export function placement_cells_of(dungeon) {
  * @param {any} dungeon @param {string} exclude_id @param {Set<number>|null} [also_vacated] @returns {Set<number>}
  */
 export function dungeon_blocked_cells(dungeon, exclude_id, also_vacated = null) {
-  const blocked = new Set(wallCells(dungeon_grid_of(dungeon)))
+  const blocked = new Set(wall_cells(dungeon_grid_of(dungeon)))
   for (const p of dungeon.escrow) {
     const participant_id = p.character ?? p.character_id ?? p.addr
     if (p.alive && participant_id !== exclude_id) blocked.add(p.cell)
@@ -528,4 +533,11 @@ export function legal_move_path(dungeon, exclude_id, from_enc, to_enc) {
 }
 
 // export the pure builders + placer for the parity test (dungeon-grid.test.js mirrors combat_grid).
-export { rectMask, ellipseMask, roundedMask, crossMask, blobMask, blockerPlaceable }
+export {
+  rect_mask as rectMask,
+  ellipse_mask as ellipseMask,
+  rounded_mask as roundedMask,
+  cross_mask as crossMask,
+  blob_mask as blobMask,
+  blocker_placeable as blockerPlaceable,
+}

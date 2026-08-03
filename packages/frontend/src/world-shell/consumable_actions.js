@@ -77,7 +77,7 @@ const batcher = create_consume_batcher({
   flush: use_consumable,
   // The optimistic delta is REDUCER state: the batcher reports, the reducer owns. A module-scoped ledger here
   // outlived `action/sui_logout` and masked the next account's stacks with this one's in-flight clicks.
-  on_pending: (potion_id, units) => pending_use_delta(potion_id, units),
+  on_pending: pending_use_delta,
   on_drain: (potion_id, units) => pending_use_delta(potion_id, -units),
   on_settled: ({ timing }) => {
     mark_ui_updated(timing)

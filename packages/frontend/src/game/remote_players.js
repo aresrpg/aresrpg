@@ -267,6 +267,7 @@ export function create_remote_players(engine, world_canvas = null) {
     return `overworld out of range (${d}m > ${OVERWORLD_RANGE_M}m)`
   }
 
+  // Complexity retained (#2069): remote interpolation is one coherent frame snapshot across all rigs; extraction would split ordering over shared scene state.
   const frame_body = (/** @type {number} */ now) => {
     raf = requestAnimationFrame(frame)
     frame_count += 1

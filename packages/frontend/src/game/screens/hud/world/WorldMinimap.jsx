@@ -26,6 +26,7 @@ const HALF = (GRID - 1) / 2
  * @param {{ x: number, y: number }[]} mobs world-cell anchors of the visible groups
  * @returns {void}
  */
+/* eslint-disable no-param-reassign, fp-law/no-mutating-methods -- CanvasRenderingContext2D is an imperative platform boundary owned for this paint call; its drawing API has no immutable equivalent. */
 const draw = (ctx, cx, cy, seed, mobs) => {
   const cell_px = PIXELS / GRID
   ctx.clearRect(0, 0, PIXELS, PIXELS)
@@ -69,6 +70,7 @@ const draw = (ctx, cx, cy, seed, mobs) => {
   ctx.fill()
   ctx.stroke()
 }
+/* eslint-enable no-param-reassign, fp-law/no-mutating-methods */
 
 /** @returns {import('react').ReactElement} */
 export function WorldMinimap() {

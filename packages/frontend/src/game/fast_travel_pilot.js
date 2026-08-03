@@ -113,7 +113,7 @@ export function create_fast_travel_pilot({
     /** v2 (#370): the pilot's own smoothed flight heading (radians) — the caller poses the mount rig with THIS
      *  while flying, never the controller's frozen facing_yaw. 0 when no flight has stepped yet. */
     yaw: () => fly_yaw ?? 0,
-    cancel: () => drop(),
-    dispose: () => drop(),
+    cancel: drop,
+    dispose: drop,
   }
 }

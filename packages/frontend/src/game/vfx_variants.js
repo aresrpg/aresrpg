@@ -66,6 +66,7 @@ export function all_variant_names() {
  * The per-spell VFX variant preset name, or null to keep the element's default CAST_VFX beat. PURE + deterministic
  * (hash-driven), so the same spell always reads the same. @param {{ id?:string, classType?:string, element?:string,
  * role?:string }} spell @returns {string|null} */
+// Complexity retained (#2069): this is one exhaustive spell-variant decision table; splitting it would scatter the precedence contract without an independent seam.
 export function variant_for(spell) {
   if (!spell || !spell.id) return null
   const { id, element: el, role, classType: cls } = spell

@@ -443,6 +443,7 @@ export function create_player({
   // D195: feed the controller EVERY frame — the rig's azimuth is the movement basis and it changes
   // while orbiting mid-walk (event-time pushes would go stale); the D154 + D161 inert gate rides the
   // same write (one gate, one home). `physics_live` (D188) gates the tick until the spawn ground is real.
+  // Complexity retained (#2069): movement feed is one ordered physics transaction over closure-owned rig state; extraction would expose partial-frame state.
   const feed = (/** @type {number} */ dt, /** @type {boolean} */ physics_live) => {
     const inert = text_focused() || !is_ready() || is_fight() // D230 — no walking mid-fight
     // M-04 TOUCH — one place owns the gate + the camera apply (single home). The scheme ARMS on coarse-pointer
@@ -573,6 +574,7 @@ export function create_player({
   // Second per-frame pass (after the host reads the transform + runs the floor net): broadcast our pose,
   // pose the avatar/mount/plate + aura, then drive the WALK camera (a fight hands the camera to
   // embed_voxel_fight_camera.js — here we only hide the walk body).
+  // Complexity retained (#2069): the player frame is an order-sensitive engine boundary; helpers would only pass the same mutable scene state between phases.
   const frame2 = (/** @type {any} */ t, /** @type {number} */ dt) => {
     frame_n += 1
     // DOUBLE-JUMP puff: fire one at the feet the frame the controller reports an air-jump, then advance + retire

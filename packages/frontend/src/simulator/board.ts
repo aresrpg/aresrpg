@@ -60,7 +60,7 @@ export const anchor_of = (seed: number, nonce: number): SimAnchor => {
   return { x: x.value, z: z.value }
 }
 
-const cells_of = (encoded: readonly number[]): SimCell[] => encoded.map((cell) => decode(cell))
+const cells_of = (encoded: readonly number[]): SimCell[] => encoded.map(decode)
 
 /** Derive the full board layout for `(seed, nonce)` — the chain's own generator, decoded for the renderer. */
 const derive_board = (seed: number, nonce: number): SimBoard => {

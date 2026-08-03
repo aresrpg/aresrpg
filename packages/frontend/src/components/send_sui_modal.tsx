@@ -120,7 +120,7 @@ export function SendSuiModal({ on_close }: { on_close: () => void }) {
     await confirm_send()
   }
 
-  const reset_to_idle = () => clear_send()
+  const reset_to_idle = clear_send
 
   // ── IDLE: input form ──
   if (!send) {
@@ -206,6 +206,7 @@ export function SendSuiModal({ on_close }: { on_close: () => void }) {
 
 // ─── IDLE form ────────────────────────────────────────────────────────────
 
+// Complexity retained (#2069): hook order and the send-form state machine share one submit lifecycle; extraction would divide validation and cleanup ownership.
 function SendForm({ self_address, on_close }: { self_address: string | null; on_close: () => void }) {
   const { t } = useTranslation()
   const [recipient_raw, set_recipient_raw] = useState('')

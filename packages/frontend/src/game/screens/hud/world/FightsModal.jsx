@@ -209,7 +209,7 @@ export function FightsModal() {
       })
     }
     void as_one_toast(t('fights.action_join_fight'), run)
-      .then(() => close())
+      .then(close)
       .finally(() => set_busy_id(null))
   }
 

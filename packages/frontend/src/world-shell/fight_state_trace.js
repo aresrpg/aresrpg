@@ -43,9 +43,7 @@ export function fight_state_trace(event, details = {}) {
   const row = fight_trace_row(++trace_sequence, Date.now(), event, details)
   const target = /** @type {any} */ (window)
   const rows = Array.isArray(target.__ARES_FIGHT_TRACE) ? target.__ARES_FIGHT_TRACE : []
-  rows.push(row)
-  if (rows.length > TRACE_LIMIT) rows.splice(0, rows.length - TRACE_LIMIT)
-  target.__ARES_FIGHT_TRACE = rows
+  target.__ARES_FIGHT_TRACE = [...rows, row].slice(-TRACE_LIMIT)
   console.info('[fight-state]', row)
   return row
 }

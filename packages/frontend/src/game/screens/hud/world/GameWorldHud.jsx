@@ -105,6 +105,7 @@ import { should_mount_board } from '../../../../fight-engine/phase.js'
 import { world_fight_view } from '../../../../world-shell/fight_session_scope.js'
 
 /** @returns {import('react').ReactElement} */
+// Complexity retained (#2069): hook order and the world-HUD render boundary are coupled; extraction would invent prop plumbing without isolating domain logic.
 export function GameWorldHud() {
   // The first-session Tutorial mounts only with a PLAYABLE roster — when the roster is confirmed-empty,
   // GameWorldHost's world-slot creator owns the canvas region; before the roster is fetched, neither shows.

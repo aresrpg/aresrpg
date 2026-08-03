@@ -244,7 +244,7 @@ const fit_placements = (
   ) as SimPlacements
 
 /** The board the CURRENT (seed, nonce) derives — the legality oracle every cell-bearing arm reads. */
-const board_now = (seed: number, anchor_nonce: number): SimBoard => board_of(seed, anchor_nonce)
+const board_now = board_of
 
 /**
  * Re-fit the picks/placements to the state's OWN board — the board arms' counterpart to `refit`'s budgets.

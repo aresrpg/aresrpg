@@ -1012,6 +1012,7 @@ export function create_voxel_fight_adapter(
           )
         if (damage) payload.damage = damage.payload.damage
       }
+      // Complexity retained (#2069): render is one ordered adapter transaction over closure-owned presentation state; extraction would expose partial render state.
       const render = async () => {
         probe_push('beats', {
           kind: spec.kind,
@@ -1396,6 +1397,7 @@ export function create_voxel_fight_adapter(
    *  snap (upsert), smooth-walk a drifted mob the beats didn't move (walk), despawn a mid-fight mob corpse once
    *  (despawn), or leave a walk/replay/dying id alone (skip); then remove any fighter that left the fight entirely.
    *  @param {any} fight @param {any} dungeon the live view (legal_move_path source for the fold-walk) */
+  // Complexity retained (#2069): entity sync reconciles one authoritative snapshot across shared rigs; splitting phases would permit half-synced presentation.
   const sync_entities = (fight, dungeon, { fresh = false } = {}) => {
     // RE-PROJECT-ON-SEAT (a mob once rendered off-board while the others were on it, and a refresh re-seated
     // the whole board): a FRESH build tore the engine's entities controller down and stood up an EMPTY one at the
@@ -1587,6 +1589,7 @@ export function create_voxel_fight_adapter(
    * Paint phase-appropriate candidates, then project exactly one BASE paint per cell. Glyph/trap channels are
    * the sanctioned overlays and remain independent. Memoized so a reconcile storm does not repaint unchanged.
    */
+  // Complexity retained (#2069): paint applies one reducer result in event order; extraction would divide the ordering contract across presentation helpers.
   const paint = (result, fight, dungeon) => {
     // Observe BEFORE the paint memo: two paced turns can change only the presentation actor while every wash input
     // stays identical. The visible actor is the HUD's own presentation clock (presenting actor while replay drains,
@@ -1860,6 +1863,7 @@ export function create_voxel_fight_adapter(
   //    next hover event repaints — hover is a per-frame-ish stream from the board picker). ──
   const off_hover = board.on(
     'cell_hover',
+    // Complexity retained (#2069): this local cell predicate is the exhaustive range legality check; extracting it would require threading the same closure context.
     /** @type {any} */ (cell) => {
       const fight = read_board_fight()
       const { dungeon } = use_dungeon.getState()
@@ -2171,7 +2175,7 @@ function paint_key(result, fight, dungeon, replaying, busy) {
 
 /** Subscribe to engine STATE_UPDATED (the fight slice's push channel). @param {typeof context} game_context @param {() => void} cb */
 function subscribe_state(game_context, cb) {
-  const handler = () => cb()
+  const handler = cb
   game_context.events.on('STATE_UPDATED', handler)
   return () => game_context.events.off('STATE_UPDATED', handler)
 }

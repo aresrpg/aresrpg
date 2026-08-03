@@ -92,8 +92,7 @@ function format_args(/** @type {unknown[]} */ args) {
  */
 export function game_log(namespace, ...args) {
   const entry = { t: Date.now(), ns: String(namespace), message: format_args(args) }
-  ring.push(entry)
-  if (ring.length > RING_CAP) ring = ring.slice(ring.length - RING_CAP)
+  ring = [...ring, entry].slice(-RING_CAP)
   if (breadcrumb_sink) {
     try {
       breadcrumb_sink(entry)

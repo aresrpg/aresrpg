@@ -218,6 +218,7 @@ export async function run_tx_random(
 }
 
 /** The shared pipeline behind both doors — sign+execute via `submit`, wait, normalize, throw on failure. */
+// Complexity retained (#2069): run owns one ordered transaction/error-decode lifecycle; extraction would split the receipt and retry classification contract.
 async function run(klass, tx, include, signer, submit, { on_executed } = {}) {
   const auth = use_auth.getState()
   const address = signer?.address ?? auth.address

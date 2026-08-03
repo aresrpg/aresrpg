@@ -267,6 +267,7 @@ export function create_cave_mobs({ engine, canvas = null, anchor, face_toward, g
     else clear_prompt('attack')
   }
 
+  // Complexity retained (#2069): mob animation is one order-sensitive frame transaction over shared rig state; helper extraction would only shuttle mutable locals.
   const frame = (/** @type {number} */ now) => {
     raf = requestAnimationFrame(frame)
     const dt = Math.min(0.1, (now - last_t) / 1000)

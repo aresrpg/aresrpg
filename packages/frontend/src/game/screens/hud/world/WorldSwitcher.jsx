@@ -62,7 +62,7 @@ export function WorldSwitcher() {
   // derivation never pre-locks off an unknown, and it must never pre-UNLOCK off one either. The poll costs
   // nothing once resolved (the catalog memoizes its answer) and self-heals a failed first read, which
   // memoizes nothing.
-  const catalog = useRpcView((signal) => load_world_catalog(signal), { deps: [] })
+  const catalog = useRpcView(load_world_catalog, { deps: [] })
   const worlds = catalog.data ?? []
   const required_level_by_world = new Map(worlds.map((world) => [world.id, world.required_level]))
 

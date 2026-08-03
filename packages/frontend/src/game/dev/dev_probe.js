@@ -73,6 +73,7 @@ async function dev_move(cell) {
  * window.__ARES_DEV_STATE() — one honest snapshot of the LIVE stores (the drive's cross-instance-safe
  * read): dungeon status/room/busy/phase/error + the fight-end machine + my fighter vitals.
  */
+// Complexity retained (#2069): the probe intentionally captures one coherent diagnostic snapshot; extraction would fragment its shared observation point.
 function dev_state() {
   const d = use_dungeon.getState()
   const fight = fight_view()

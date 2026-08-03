@@ -137,6 +137,7 @@ export { should_reuse_pending_session }
 export const owns_ambient_music = (spectate, follow, bound_world) => !spectate && !follow && !!bound_world
 
 /** Build the full session: engine (fixed world) + blur-boot + avatar/controller + board + adapter. */
+// Complexity retained (#2069): session construction wires one owned resource lifetime; there is no clean seam that does not split setup from its paired teardown.
 function create_session(
   /** @type {string | undefined} */ tier, // undefined ⇒ engine device-detection (detect_starting_tier, engine.js:507)
   /** @type {any} */ character,
@@ -215,7 +216,7 @@ function create_session(
   const owns_music = owns_ambient_music(spectate, follow, bound_world)
   if (owns_music) defer_music_loads()
   const region_follower = owns_music
-    ? create_region_follower({ arm: (key) => set_zone_music(key) })
+    ? create_region_follower({ arm: set_zone_music })
     : null
   const region_base_biome = (bound_world ? read_world_biome(bound_world) : null) ?? 'arctic'
   const engine = spectate
@@ -665,6 +666,7 @@ function create_session(
   let gate_timed_out = false // D188-recovery — a failsafe drop re-snaps once real ground lands
   let under_map_settled = false // D188 refresh rescue — latches once the body has rested on real ground; gameplay owns Y after
   let gate_wait_logged = false
+  // Complexity retained (#2069): the frame phases share one ordered scene snapshot; extraction would pass mutable engine state across artificial helper boundaries.
   const frame_body = (/** @type {number} */ now) => {
     raf = requestAnimationFrame(frame)
     const dt = Math.min(0.1, (now - last_t) / 1000)
@@ -1110,6 +1112,7 @@ export function reboot_voxel_session_tier(tier) {
  * @param {{ tier?: string, spectate?: boolean, follow?: boolean }} [opts]
  * @returns {{ set_paused: (paused: boolean) => void, destroy: () => void }}
  */
+// Complexity retained (#2069): mount and disposal are one resource boundary; the function is one branch over supported scene modes with no independent lifecycle seam.
 export function mount_voxel_scene(host, character = null, { tier, spectate = false, follow = false } = {}) {
   // follow-cam avatar/camera variants stay engine-side concerns (create_session drives them via `character`
   // already); `follow` ALSO threads into create_session below to gate this session's OWN zone-music

@@ -50,6 +50,7 @@ const cast_row = (hand_id, castable) => (hand_id && fight_spell(hand_id)) || cas
  *   target_hp_before?: number, target_hp_after?: number, target_killed?: boolean,
  * }>}
  */
+// Complexity retained (#2069): the dev cast follows one ordered validation/submit/report lifecycle; splitting it would duplicate boundary cleanup.
 async function dev_cast(spell_idx, target_cell) {
   const store = use_dungeon.getState()
   const { dungeon, busy } = store

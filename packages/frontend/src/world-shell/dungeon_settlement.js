@@ -364,6 +364,7 @@ async function land_outcome(
  *   ResultOpened event (opened_result_of — the ONE parse home) so the card renders event truth even when the
  *   follow-up object read degrades.
  */
+// Complexity retained (#2069): settlement is one receipt-grade transaction lifecycle with shared recovery state; extraction would split ordered proof handling.
 async function finish_result(
   store,
   {

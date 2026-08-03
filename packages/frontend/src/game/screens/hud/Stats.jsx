@@ -121,7 +121,7 @@ export function stage_allocation(alloc, key, delta, available_points) {
   return next === current ? alloc : { ...alloc, [key]: next }
 }
 
-export const reset_allocation = () => empty_allocation()
+export const reset_allocation = empty_allocation
 
 /** SDK builder is already shipped; bind only the frontend's selected network. */
 const build_raise_stat = raise_stat_ptb({ network: DEMO_NETWORK })
@@ -174,7 +174,7 @@ export function stat_doc_caught_up(doc, expected) {
 }
 
 /** Exact signed equipment-only contribution. Pending allocation lives outside `character`. */
-export const equipment_bonus = (character, key) => get_equipment_stat(character, key)
+export const equipment_bonus = get_equipment_stat
 
 /** Render the ruled `base (+equipment)` split; zero equipment contributes no visual noise. */
 export function characteristic_value({ base, bonus, pending }) {

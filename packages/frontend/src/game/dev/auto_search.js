@@ -259,6 +259,7 @@ const fresh_run = { phase: 'idle', target: null, skipped: [], found: null, leg_a
  * input changes nothing.
  * @param {AutoSearchState} state @param {any} input @param {number} now @returns {AutoSearchState}
  */
+// Complexity retained (#2069): this is the exhaustive reducer door for the auto-search state machine; splitting transitions would divide ownership of its invariants.
 export function reduce_auto_search(state, input, now) {
   switch (input.type) {
     // THE SPEND GATE — enabling only ever raises the fee disclosure; `fee_confirm` is the one door to armed.

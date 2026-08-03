@@ -353,6 +353,7 @@ async function forfeit_resumed_fight(fight_id, character_id, door) {
  *    consent?: (ask: { fight_id: string, action: string, deadline: number }) => Promise<string> | string,
  *    is_current?: () => boolean }} [deps] unit seam only — `consent` lets a test that is measuring the
  *    LIQUIDATION mechanics answer the door directly instead of driving the dialog store */
+// Complexity retained (#2069): resume is one ordered read/adopt/recovery boundary; at 31 there is no clean extraction that does more than move a branch.
 export async function resume_world_fight(character_id, deps = {}) {
   const is_current = deps.is_current ?? (() => true)
   if (!character_id || !is_current() || session_busy()) return

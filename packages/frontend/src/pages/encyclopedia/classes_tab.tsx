@@ -123,6 +123,7 @@ function StatChip({
   )
 }
 
+// Complexity retained (#2069): this is one read-only spell-detail render matrix; extraction would add props without isolating an independent domain decision.
 function SpellDetail({ spell, seat = null }: { spell: any; seat?: any }) {
   const { t, i18n } = useTranslation()
   const tt = useTemplateT()

@@ -47,8 +47,8 @@ export function create_sky_dragon({ engine, center, variant }) {
   const filename = VARIANTS[key] ?? VARIANTS.void
   const url = model_asset_url('mob', filename)
   if (!url) return { dispose() {} }
-  const [cx, cyBase, cz] = center
-  const cy = cyBase + ALTITUDE
+  const [cx, cy_base, cz] = center
+  const cy = cy_base + ALTITUDE
 
   const pivot = new Group() // position + heading
   pivot.name = 'sky_dragon'

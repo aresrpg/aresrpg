@@ -55,7 +55,7 @@ export const set_pref_zklogin = v =>
 /** @returns {Promise<boolean>} */
 export const get_pref_zklogin = () =>
   idb('readonly', s => s.get(PREF_KEY))
-    .then(v => Boolean(v))
+    .then(Boolean)
     .catch(() => false)
 
 // Last-played character — a PREFERENCE (which of your own on-chain characters to auto-enter the world

@@ -48,6 +48,7 @@ const feather_mask = (/** @type {number} */ pct) => {
 }
 
 /** @returns {import('react').ReactElement} */
+// Complexity retained (#2069): hook order and the compact vitals render matrix form one component boundary; extraction would add props without a domain seam.
 function Vitals() {
   const fight = useFightView() // synchronous core view (S2 mirror kill)
   const character = useGameState((s) =>

@@ -259,6 +259,7 @@ export function is_slot_valid(slot, item) {
  * `doc` is the wallet's `/v1/owner-items` row for the same item id (equip keeps items kiosk-locked, §11,
  * so the doc exists) — the identity fallback that keeps name/icon painting while the chain template map
  * is still cold/failed (the generic-glyph cosmetic still renders). */
+// Complexity retained (#2069): this is one boundary normalization pass over mutually dependent item fallbacks; splitting it would duplicate precedence rules.
 function projected_item(row, template_map, template_id_map, doc) {
   if (!row) return null
   const template_id = row.template_id ?? row.template ?? null

@@ -4,7 +4,7 @@ import { useSyncExternalStore } from 'react'
 
 import { is_mobile, on_mobile_change } from '../../core/mobile_mode.js'
 
-const subscribe_mobile = (listener) => on_mobile_change(listener)
+const subscribe_mobile = on_mobile_change
 const server_mobile = () => false
 const PORTRAIT_QUERY = '(orientation: portrait)'
 

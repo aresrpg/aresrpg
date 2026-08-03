@@ -142,8 +142,8 @@ export function TouchControlsLayer() {
   return (
     <TouchControls
       on_move={(v) => set_move(v.forward, v.strafe)}
-      on_jump={(down) => set_jump(down)}
-      on_mount_toggle={() => set_mount_toggle()}
+      on_jump={set_jump}
+      on_mount_toggle={set_mount_toggle}
     />
   )
 }

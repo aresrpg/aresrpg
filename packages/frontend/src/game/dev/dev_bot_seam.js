@@ -271,6 +271,7 @@ function dev_read() {
  * @param {Array<{ kind: number, cell: { x: number, y: number }, spell_id?: string }>} actions
  * @returns {Array<object>} one row per cast action, in plan order
  */
+// Complexity retained (#2069): this dev seam banks one exhaustive action batch against shared prediction state; there is no independent branch boundary to extract.
 const bank_predictions = (actions) => {
   const dungeon = use_dungeon.getState().dungeon
   const view = fight_view()

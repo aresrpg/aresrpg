@@ -297,7 +297,7 @@ export function FightReport({
   const won = verdict !== 'Defeat'
   // REPORT BUG — the result action downloads the replay capsule, then opens a prefilled GitHub issue whose
   // body tells the player to attach that file. It remains visible while unavailable so absence is never silent.
-  const trace_available = useMemo(() => has_dumpable_trace(), [])
+  const trace_available = useMemo(has_dumpable_trace, [])
   const on_report_bug = () => {
     const trace = current_fight_trace()
     report_fight_bug({

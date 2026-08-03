@@ -95,5 +95,5 @@ function get_job_progress_from_table(xp: number) {
   return { level, current_xp, needed_xp, percent }
 }
 
-export const get_job_level = (xp: number) => get_job_level_from_table(xp)
-export const get_job_progress = (xp: number) => get_job_progress_from_table(xp)
+export const get_job_level = get_job_level_from_table
+export const get_job_progress = get_job_progress_from_table

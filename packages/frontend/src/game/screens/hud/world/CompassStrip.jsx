@@ -85,6 +85,7 @@ const resource_name = (job, tier) => {
  * @param {{ mobile?: boolean }} props
  * @returns {import('react').ReactElement | null}
  */
+// eslint-disable-next-line complexity -- Hook order, strip projection, and the render tree form one React boundary; there is no clean extraction seam without inventing prop plumbing.
 export function CompassStrip({ mobile = false } = {}) {
   const { t } = useTranslation()
   const pose = useGameState((s) => s.player_pose)
@@ -159,6 +160,7 @@ export function CompassStrip({ mobile = false } = {}) {
   useEffect(() => {
     if (!reroll) return
     set_now(Date.now())
+    // eslint-disable-next-line one-pipeline/no-settimeout-in-stores -- This is a component-local render tick: it writes React state only, never the imported Zustand stores or domain truth.
     const timer = setInterval(() => set_now(Date.now()), 1000)
     return () => clearInterval(timer)
   }, [reroll])

@@ -192,7 +192,7 @@ export function create_radio(
       else fail_track(playing_cursor, error)
     }
   }
-  const on_ended = () => advance()
+  const on_ended = advance
   const on_play = () => on_playing?.(true)
   const on_pause = () => on_playing?.(false)
   const on_media_error = (error) => fail_track(cursor, error)

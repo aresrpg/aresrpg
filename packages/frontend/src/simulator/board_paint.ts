@@ -99,8 +99,8 @@ export const setup_scene_of = (
   const mobs = Object.entries(setup.mob_picks).map(([cell, pick]) => ({ cell: Number(cell), pick }))
 
   return {
-    start_a: board.start_cells_a.map((cell) => decode(cell)),
-    start_b: board.start_cells_b.map((cell) => decode(cell)),
+    start_a: board.start_cells_a.map(decode),
+    start_b: board.start_cells_b.map(decode),
     ally_seats: placed.map(({ cell }) => decode(cell)),
     enemy_seats: mobs.map(({ cell }) => decode(cell)),
     fighters: [

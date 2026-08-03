@@ -188,6 +188,7 @@ export function on_board(cell) {
  *   Defaults preserve the pre-flag behavior.
  * @returns {CellSet}
  */
+// Complexity retained (#2069): this is one exhaustive range-rule fold over shared geometry; splitting flags into helpers would duplicate precedence and traversal state.
 export function cast_range_set_dungeon(range, caster, grid, obstacles, flags = {}) {
   const {
     los = true,
@@ -333,7 +334,7 @@ export function placement_cells_by_team(fight) {
  * @returns {{ pickable: number[], locked: number[] }}
  */
 export function placement_strips({ my_band = [], other_band = [], accepts_click = () => false, occupied = [] }) {
-  const pickable = my_band.filter((cell) => accepts_click(cell))
+  const pickable = my_band.filter(accepts_click)
   const locked = my_band.filter((cell) => !pickable.includes(cell))
   const taken = new Set(occupied)
   if (other_band.some((cell) => taken.has(cell))) for (const cell of other_band) locked.push(cell)

@@ -34,6 +34,7 @@ import {
 // §17.30 — characters list on the market from level 30 (enforced on-chain at purchase; mirrored here).
 const CHARACTER_LIST_MIN_LEVEL = 30
 
+// Complexity retained (#2069): hook order and the sell-form state matrix form one component boundary; extraction would add prop plumbing without isolating a domain operation.
 export function SellPanel() {
   const { t } = useTranslation()
   const tt = useTemplateT()
