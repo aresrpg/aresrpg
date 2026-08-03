@@ -1,4 +1,2 @@
-dfc04d1fd → Refs #1993 — feat(fight): the entity vitals record — one fold, three named numbers
-c612c44d7 → Refs #1993 — test(frontend): RED — one entity, two HP numbers, and a fabricated bar
-76a122eae → Refs #1993 — refactor(hud): every HP surface reads the vitals record or says why not
-a23e991d8 → Refs #1993 — style(fight): prettier the regolded view snapshots
+4232432a8 → Refs #2122 — fix(fight): presence is binary — auto-resume retries per candidacy, no modal
+b437386da → Refs #1737 — test(fight): seal the binary-presence invariant — retry trace + reachable states
