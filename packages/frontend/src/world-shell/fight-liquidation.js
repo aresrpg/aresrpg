@@ -201,23 +201,50 @@ export function reset_liquidation() {
 // is `gone` (route out + recover the outcome), never a board to mount.
 
 /**
+ * PURE — is THIS character's seat in a chain-decoded Fight already a corpse? (#2136.) `hp` rides the raw
+ * participant passthrough (`decode_fight` keeps `json.participants` verbatim), so it arrives as a gRPC string —
+ * hence the Number() coercion. An ABSENT seat is deliberately NOT dead: a torn/incomplete participants read must
+ * degrade to today's behaviour, never fabricate a death that locks a live player out of their own fight.
+ * @param {{ participants?: any[] } | null} decoded
+ * @param {string | null | undefined} character_id
+ */
+export function seat_is_dead(decoded, character_id) {
+  if (!decoded || !character_id) return false
+  const seat = (decoded.participants ?? []).find(
+    (/** @type {any} */ p) => String(p?.character ?? '') === String(character_id)
+  )
+  return !!seat && Number(seat.hp ?? 0) <= 0
+}
+
+/**
  * PURE — presentability of a CHAIN-read fight for a boot resume (statuses per fight_chain_status.js, NOT the
  * board-view scalars the janitor probes above are fed).
  * `enter` = presentable now (ACTIVE inside its turn deadline, or PLACEMENT inside its window — a genuine
  * mid-fight/mid-placement refresh) · `force_start`/`crank` = live but expired, needs THAT permissionless heal
- * first · `skip` = never adopt (terminal/unknown/unreadable — the pending-outcome recovery/receipt flows own
- * any marker discharge).
- * @param {{ status?: number, placement_deadline_ms?: bigint|number|null,
+ * first · `left` = MY seat is dead in a still-live fight (see below) · `skip` = never adopt (terminal/unknown/
+ * unreadable — the pending-outcome recovery/receipt flows own any marker discharge).
+ * @param {{ status?: number, participants?: any[], placement_deadline_ms?: bigint|number|null,
  *           turn_deadline_ms?: bigint|number|null } | null} decoded
  * @param {number} now
- * @returns {'enter'|'force_start'|'crank'|'skip'}
+ * @param {string | null} [character_id] MY seat — omitted keeps the pre-#2136 status-only verdict
+ * @returns {'enter'|'force_start'|'crank'|'left'|'skip'}
  */
-export function resume_decision(decoded, now) {
+export function resume_decision(decoded, now, character_id = null) {
   if (!decoded) return 'skip' // unreadable fight — never adopt on hope; a later boot pass retries
   // A status-less decode is a TORN read (#1277): `Number(null)` is 0 = PLACEMENT, so coercing it would resume a
   // player into a fabricated placement window. Unknown is already a `skip` in this vocabulary.
   const status = fight_status_of(decoded)
   if (status == null) return 'skip'
+  // ── #2136 · DEATH IS AN EXIT, AND IT STAYS ONE ──────────────────────────────────────────────────────────
+  // A SOLO abandon ends the fight, so the object is settled+destroyed and no candidate survives to be resumed.
+  // A CO-OP one does not: the fight lives on for the teammates still in it, and `/v1/fights?character=` keeps
+  // listing it because a dead participant is still a participant. This gate used to read status + deadlines
+  // ALONE, so every subsequent boot re-adopted the corpse seat — and on that board BOTH D48 exits abort: there
+  // is no turn to play, and `actions::abandon` refuses a second death (engine actions.move EAlreadyDead/106).
+  // That is the wedge #2136 measured. A dead seat is therefore never presentable and never worth a janitor tx:
+  // it owes a settlement, not a re-entry. Checked BEFORE the deadline branches so a corpse never buys a crank.
+  const live = status === CHAIN_STATUS_ACTIVE || status === CHAIN_STATUS_PLACEMENT
+  if (live && seat_is_dead(decoded, character_id)) return 'left'
   if (status === CHAIN_STATUS_ACTIVE) return turn_liquidatable(decoded, now) ? 'crank' : 'enter'
   if (status !== CHAIN_STATUS_PLACEMENT) return 'skip' // terminal/unknown — nothing a live session can present
   const deadline = Number(decoded.placement_deadline_ms ?? 0)
@@ -254,16 +281,20 @@ const chain_reason = ({ readable, decoded }) => {
  * silent-janitor behavior verbatim
  * — which is what the in-fight probes above (and the #677 placement sweep, a response to the player's own press)
  * still want: there the player is present, watching their own fight run.
+ * LEFT (#2136): `character_id` names the seat being resumed, so a fight this character already DIED in reads
+ * `left` — nothing to mount and, decisively, nothing to crank: the corpse gate runs before the door, so a
+ * forfeited co-op seat stops buying one janitor transaction per boot.
  * @param {string} fight_id
- * @param {{ force_start_door?: (fight_id: string, silent: boolean) => Promise<any>,
+ * @param {{ character_id?: string|null,
+ *           force_start_door?: (fight_id: string, silent: boolean) => Promise<any>,
  *           crank_door?: (fight_id: string, silent: boolean, deadline: number) => Promise<any>,
  *           consent?: (ask: { fight_id: string, action: 'force_start'|'crank', deadline: number })
  *             => Promise<string> | string }} [doors]
- * @returns {Promise<{ decision: 'enter'|'gone'|'skip'|'declined', reason: string,
+ * @returns {Promise<{ decision: 'enter'|'gone'|'left'|'skip'|'declined', reason: string,
  *   action: 'force_start'|'crank'|null, choice?: string }>}
  */
 export async function ensure_resumable_fight(fight_id, doors = {}) {
-  const { force_start_door = tx_force_start, crank_door = tx_crank, consent = null } = doors
+  const { character_id = null, force_start_door = tx_force_start, crank_door = tx_crank, consent = null } = doors
   // A TRANSPORT failure is not news about the fight: it holds for a later boot pass (`unreadable`), never a
   // "your fight was cleared" claim. Only a definitive gone-error or a decoded terminal status is that claim.
   const read_decoded = async () => {
@@ -277,14 +308,22 @@ export async function ensure_resumable_fight(fight_id, doors = {}) {
     }
   }
   const verdict = ({ readable, decoded }) => {
-    const decision = resume_decision(decoded, Date.now())
+    const decision = resume_decision(decoded, Date.now(), character_id)
     // `skip` off a READABLE chain = terminal or destroyed: route out and recover the outcome. Off an unreadable
     // one it is exactly what it says — we do not know; hold.
     return decision === 'skip' && !readable ? 'unreadable' : decision
   }
+  /** #2136 — the corpse verdict, said the same way on both sides of the door (a crank resolves mob turns, so a
+   *  seat alive at the first read can be dead at the second). @param {{readable:boolean,decoded:any}} read */
+  const left = (read, action = null) => ({
+    decision: /** @type {const} */ ('left'),
+    reason: `${chain_reason(read)} — this character's seat is dead; the fight is owed a settlement, not a re-entry`,
+    action,
+  })
   const first = await read_decoded()
   const decision = verdict(first)
   if (decision === 'enter') return { decision: 'enter', reason: chain_reason(first), action: null }
+  if (decision === 'left') return left(first)
   // terminal/absent on chain — nothing to mount, an outcome to recover
   if (decision === 'skip') return { decision: 'gone', reason: chain_reason(first), action: null }
   if (decision === 'unreadable') return { decision: 'skip', reason: chain_reason(first), action: null }
@@ -318,6 +357,8 @@ export async function ensure_resumable_fight(fight_id, doors = {}) {
   const read = await read_decoded()
   const after = verdict(read)
   if (after === 'enter') return { decision: 'enter', reason: chain_reason(read), action: decision }
+  // the crank resolved the mob turns it unblocked and one of them killed this seat — the same exit, post-door
+  if (after === 'left') return left(read, decision)
   // the door resolved it terminal (or it vanished) — route out, never mount
   if (after === 'skip') return { decision: 'gone', reason: chain_reason(read), action: decision }
   // Still expired after its one door: an ACTIVE board is still PRESENTABLE and holds the working exit (forfeit),
@@ -358,7 +399,10 @@ export async function sweep_expired_character_placement(character_id, doors = {}
   const fight_id = placement?.fight_id ?? placement?.fight ?? null
   if (!fight_id) return { state: 'not_found', fight_id: null, reason: 'no placement fight was projected' }
 
-  const result = await ensure_resumable_fight(fight_id, { force_start_door: doors.force_start_door })
+  // #2136: the seat is named, so a placement fight this character already abandoned reads `left` (action null)
+  // and falls through to `not_expired` — the original busy refusal is preserved and no force_start is bought
+  // for a corpse. Only a LIVING seat's expired window is worth the permissionless door.
+  const result = await ensure_resumable_fight(fight_id, { character_id, force_start_door: doors.force_start_door })
   if (result.action !== 'force_start') return { state: 'not_expired', fight_id, reason: result.reason }
   const state = result.decision === 'enter' ? 'started' : result.decision === 'gone' ? 'finished' : 'refused'
   return { state, fight_id, reason: result.reason }

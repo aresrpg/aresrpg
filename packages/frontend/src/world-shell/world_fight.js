@@ -390,6 +390,9 @@ export async function resume_world_fight(character_id, deps = {}) {
   // and whatever the chain reports AFTER that door decides. `gone` = the door resolved it terminal (or it was
   // destroyed): route out honestly — the character is freed and its outcome recovered, never re-captured.
   const { decision, reason } = await ensure_resumable_fight(fight_id, {
+    // #2136 — WHOSE seat is being resumed. Without it the gate reads status + deadlines alone and cannot tell a
+    // live seat from a corpse, so a co-op fight this character already forfeited was re-adopted every boot.
+    character_id,
     force_start_door: deps.force_start_door,
     crank_door: deps.crank_door,
     // THE CONSENT: traced before any transaction is composed, and answered autonomously on EVERY candidacy
@@ -408,6 +411,16 @@ export async function resume_world_fight(character_id, deps = {}) {
     fight_state_trace('fight_resume_expired_gone', { fight_id, character_id, reason })
     push_event_toast({ state: 'info', title: i18n.t('fights.expired_fight_cleared') })
     return getState()._recover_dead_fight_reference({ character_id, state: 'settled' })
+  }
+  if (decision === 'left') {
+    // #2136 — NOT a strand, so not the loud refusal below: this character DIED in this fight (a forfeit, or a
+    // co-op death), and D48 makes death an exit. The fight stays live for the teammates still in it and /v1 keeps
+    // listing it, but there is nothing here to mount — re-entering would seat the player on a board with no legal
+    // move and no second forfeit (the engine refuses a repeat death, actions.move EAlreadyDead/106). The pending
+    // FightOutcome is recovered by the settlement surfaces when the fight itself ends; this pass stays in-world.
+    fight_state_trace('fight_resume_seat_dead', { fight_id, character_id, reason })
+    game_log('world-fight', 'resume skipped — this seat already left the fight', { fight_id, character_id, reason })
+    return
   }
   if (decision !== 'enter') {
     // NEVER a silent return (#932): the serving node says this character has a LIVE fight, so declining to
