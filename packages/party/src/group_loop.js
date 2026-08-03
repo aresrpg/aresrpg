@@ -740,13 +740,13 @@ function reduce_dungeon(state, input) {
       const { world_id, assignments } = input
       if (!world_id) return still(state)
       const requested_before = state.dungeon?.world_id === world_id ? state.dungeon.requested : []
-      // #540/#495 — same membership-is-not-consent hole as fight_started: an owned alt used to auto-enter
-      // every dungeon assignment regardless of consent. Gate to the per-character armed set (dungeons need no
-      // world adjacency, so the follower set — not aligned_alts — is the honest team roster here).
-      const owned = new Set(state.follow.enabled ? state.follow.follower_character_ids : [])
+      // #540/#495/#1734 — same membership-is-not-consent hole as fight_started: an owned alt used to auto-enter
+      // every dungeon assignment while its travel was still unresolved. Reuse the fight door's arrival EVENT;
+      // an alt that never reaches `with_you` falls out without any presence/offline branch.
+      const arrived = new Set(state.follow.enabled ? arrived_alts(state).map((member) => member.character) : [])
       const rows = (Array.isArray(assignments) ? assignments : []).filter(
         (assignment) =>
-          owned.has(assignment?.character_id) &&
+          arrived.has(assignment?.character_id) &&
           !requested_before.includes(assignment.character_id) &&
           !is_blocked(state, assignment.character_id, 'dungeon')
       )

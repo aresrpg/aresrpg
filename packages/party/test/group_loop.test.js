@@ -357,8 +357,17 @@ test('turn_started focuses OWNED seats only, once per change, and only while a f
 })
 
 // ── dungeon sequencing ────────────────────────────────────────────────────────────────────────────────────────────
-test('dungeon_entered sequences enter_dungeon once per owned group member with an assignment (leader excluded)', () => {
-  const state = armed()
+test('dungeon_entered never auto-enters a member that has not arrived beside the leader (#1734)', () => {
+  const { state } = following(ALT_1)
+  expect(state.follow.follower_character_ids).toEqual([ALT_1]) // membership holds
+  expect(state.follow.followers[ALT_1].status).toBe('resolving') // arrival does not
+  const assignment = { character_id: ALT_1, key_item_id: '0xk1', key_kiosk_id: '0xkk1', key_kiosk_cap_id: '0xkc1' }
+  const { outputs } = reduce_group(state, { kind: 'dungeon_entered', world_id: WORLD, assignments: [assignment] })
+  expect(outputs.enter_dungeon).toEqual([])
+})
+
+test('dungeon_entered sequences enter_dungeon once per arrived owned alt with an assignment (leader excluded)', () => {
+  const state = arrived(ALT_1, ALT_2)
   const assignments = [
     { character_id: LEADER, key_item_id: '0xk0', key_kiosk_id: '0xkk0', key_kiosk_cap_id: '0xkc0' },
     { character_id: ALT_1, key_item_id: '0xk1', key_kiosk_id: '0xkk1', key_kiosk_cap_id: '0xkc1' },
