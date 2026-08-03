@@ -17,6 +17,7 @@ import { decode as decode_xy } from './los.js'
 import { range_bonus_of } from './statuses.js'
 import { commit_fact, empty_result } from './result_record.js'
 import { project_hud } from './core_project.js'
+import { next_action_slot } from './turn_action_slot.js'
 import { committed_truth, display_state, min_turn_ready_at, presented_state } from './store.js'
 import {
   cast_presenting,
@@ -372,13 +373,31 @@ const turn_control_phase = (engine, active_entity_id, entities, busy, playable) 
   return turn_input_armed(true, busy, false) ? 'armed' : 'committing'
 }
 
-/** CONTROLS — the min-turn floor, tx flight, the draft, and the END-TURN control's phase. */
+/** The chain slot my NEXT action folds with (actions.move: `participant::casts_this_turn` at its execution),
+ *  read off the live fold: the snapshot row as base, the ordered post-view tail as the correction. Receipt and
+ *  intent casts both precede the NEXT appended action; weapon strikes are Casts in this log too. THE read every
+ *  seeded preview shares — the move wash's tackle contest, the §7 crit clock, the socket glow (#1224) — so a
+ *  preview and the roll it previews can never price different slots. A scalar by design. Null when there is no
+ *  seat to price. `ahead` counts actions of a PLANNED batch that exist in no journal yet (the bot's bank).
+ *  Lives HERE (moved out of project.js, which re-exports it verbatim) because the CONTROLS record carries it:
+ *  a React surface reads `controls.action_slot` through the view's door, never a raw-core selector.
+ *  @param {any} s the fight store state @param {{ ahead?: number }} [opts] */
+export const my_action_slot = (s, { ahead = 0 } = {}) => {
+  const seat = Number(String(s?.my_key ?? '').slice(1))
+  const row = Number.isInteger(seat) ? s?.view?.escrow?.[seat] : null
+  return row ? next_action_slot({ base: row.casts_this_turn, events: s.log, seat, ahead }) : null
+}
+
+/** CONTROLS — the min-turn floor, tx flight, the draft, the next action slot, and the END-TURN control's phase. */
 export const visible_controls = (s, engine, active_entity_id, entities) => ({
   // The CORE's own commit-flight flag. The run store's `busy` is wider (engage/place/settle) and remains an
   // edge input the consumer ANDs in — the same split `input_armed` already documents.
   busy: !!s?.busy,
   commit_due: commit_due(s),
   draft_count: s?.staged?.length ?? 0,
+  // THE NEXT ACTION SLOT (#1224's one home) — the §7 seeded previews (socket glow, target prediction) price
+  // their roll on this scalar, so they read it from the record rather than subscribing to a raw-core selector.
+  action_slot: my_action_slot(s),
   // THE min-turn floor as an ABSOLUTE INSTANT, never a remaining-ms (a `now` reading would make this view impure
   // and its memoized value a lie). `min_turn_left(state, now)` is that subtraction, unchanged.
   min_turn_ready_at: min_turn_ready_at(s),

@@ -4,6 +4,7 @@
     "input": "init",
     "view": {
       "controls": {
+        "action_slot": null,
         "busy": false,
         "commit_due": false,
         "draft_count": 0,
@@ -95,6 +96,7 @@
     "input": "snapshot",
     "view": {
       "controls": {
+        "action_slot": 0,
         "busy": false,
         "commit_due": false,
         "draft_count": 0,
@@ -349,6 +351,7 @@
     "input": "snapshot",
     "view": {
       "controls": {
+        "action_slot": 0,
         "busy": false,
         "commit_due": false,
         "draft_count": 0,
@@ -603,6 +606,7 @@
     "input": "presented",
     "view": {
       "controls": {
+        "action_slot": 0,
         "busy": false,
         "commit_due": false,
         "draft_count": 0,

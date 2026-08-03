@@ -11,7 +11,7 @@ import { GRID_W, GRID_H, decode as decode_xy, encode as encode_xy } from './los.
 import { presented_reachable_cells } from './movement_candidates.js'
 import { committed_truth, fight_store, presented_state } from './store.js'
 import { cast_presenting } from './project_state.js'
-import { engine_view, entity_id_of_key, input_armed, project_board_cells } from './project_views.js'
+import { engine_view, entity_id_of_key, input_armed, my_action_slot, project_board_cells } from './project_views.js'
 import { next_action_slot } from './turn_action_slot.js'
 
 export * from './project_state.js'
@@ -30,6 +30,10 @@ export {
   // THE END-TURN PRESS LAW moved next to the projections it gates (#1993 train 0 — `fight_visible_view.turn`
   // calls the one home instead of re-deriving it). Re-exported verbatim: every importer reads them from here.
   input_armed,
+  // THE NEXT ACTION SLOT (#1993 doors) moved beside the record it now IS — `fight_visible_view.controls
+  // .action_slot` — so a React surface reads the slot through a door instead of a raw-core selector. Still the
+  // ONE derivation (#1224); re-exported verbatim for the non-React callers (the dev bot's `ahead` bank).
+  my_action_slot,
   turn_input_armed,
 } from './project_views.js'
 export { read_fight_traps } from './trap_ledger.js'
@@ -91,20 +95,6 @@ const tackle_lockers = (s, me, my_team) => {
       lockers.push(Number(s.view.escrow?.[idx]?.agility ?? 0))
   }
   return lockers
-}
-
-/** The chain slot my NEXT action folds with (actions.move: `participant::casts_this_turn` at its execution),
- *  read off the live fold: the snapshot row as base, the ordered post-view tail as the correction. Receipt and
- *  intent casts both precede the NEXT appended action; weapon strikes are Casts in this log too. THE read every
- *  seeded preview shares — the move wash's tackle contest, the §7 crit clock, the socket glow (#1224) — so a
- *  preview and the roll it previews can never price different slots. A scalar by design: React surfaces
- *  subscribe to it directly instead of to the journal it derives from. Null when there is no seat to price.
- *  `ahead` counts actions of a PLANNED batch that exist in no journal yet (the bot's bank).
- *  @param {any} s the fight store state @param {{ ahead?: number }} [opts] */
-export const my_action_slot = (s, { ahead = 0 } = {}) => {
-  const seat = Number(String(s?.my_key ?? '').slice(1))
-  const row = Number.isInteger(seat) ? s?.view?.escrow?.[seat] : null
-  return row ? next_action_slot({ base: row.casts_this_turn, events: s.log, seat, ahead }) : null
 }
 
 const my_next_move_slot = (s, seat, row) => next_action_slot({ base: row.casts_this_turn, events: s.log, seat })

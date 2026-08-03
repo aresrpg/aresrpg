@@ -4,6 +4,7 @@
     "input": "init",
     "view": {
       "controls": {
+        "action_slot": null,
         "busy": false,
         "commit_due": false,
         "draft_count": 0,
@@ -95,6 +96,7 @@
     "input": "snapshot",
     "view": {
       "controls": {
+        "action_slot": 0,
         "busy": false,
         "commit_due": false,
         "draft_count": 0,
@@ -296,6 +298,7 @@
     "input": "receipt",
     "view": {
       "controls": {
+        "action_slot": 0,
         "busy": false,
         "commit_due": false,
         "draft_count": 0,
@@ -497,6 +500,7 @@
     "input": "predicted",
     "view": {
       "controls": {
+        "action_slot": 1,
         "busy": false,
         "commit_due": false,
         "draft_count": 0,
@@ -698,6 +702,7 @@
     "input": "receipt",
     "view": {
       "controls": {
+        "action_slot": 1,
         "busy": false,
         "commit_due": false,
         "draft_count": 0,
@@ -899,6 +904,7 @@
     "input": "presented",
     "view": {
       "controls": {
+        "action_slot": 1,
         "busy": false,
         "commit_due": false,
         "draft_count": 0,
@@ -1100,6 +1106,7 @@
     "input": "receipt",
     "view": {
       "controls": {
+        "action_slot": 1,
         "busy": false,
         "commit_due": false,
         "draft_count": 0,

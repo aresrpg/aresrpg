@@ -13,6 +13,7 @@ import { entity_vitals } from './vitals_record.js'
 import {
   deep_freeze,
   input_armed,
+  my_action_slot,
   visible_controls,
   visible_entities,
   visible_mount,
@@ -33,7 +34,9 @@ import {
 
 // The END-TURN PRESS LAW moved next to the projections it gates (#1993 train 0 — the view's `turn.input_armed`
 // and control-phase verdict call the one home). Re-exported verbatim: every importer reads them from here.
-export { input_armed, turn_input_armed } from './visible_facts.js'
+// `my_action_slot` rides the same re-export: it moved beside the CONTROLS record that now carries it (#1224's
+// one derivation, unchanged), and project.js re-exports this name so every existing importer is untouched.
+export { input_armed, my_action_slot, turn_input_armed } from './visible_facts.js'
 // THE ROSTER IDENTITY BOOK (#1993 WP3) — identity is resolved once, in identity_book.js, and this projection is
 // one of its readers rather than a second resolver. Re-exported so a consumer reaches the book and the one label
 // rule through the same door it already imports the projections from.
