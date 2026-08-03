@@ -1,3 +1,2 @@
-cbb33a75c8b9bd711580f9dd842412923c891c79 train/train-82 chore(lint): tighten the warning cap to the measured floor
-a5ed812ebaa00087539a9b3b7ee322828f0483d7 train/train-82 refactor(frontend): rename the 49 custom hooks to `useX`, delete the rules-of-hooks carve-out
-65c2e94113196f7c755f99cd5a0d98e7f0f8625e train/train-82 fix(lint): L-N1 grants React's `useX` hook name, declaration-only
+f16fc839df280affe3aee5a9d29b6aee608435b4 train/train-83 docs: the sponsor two-call contract, derived from the landed halves
+aadff88f41db5294e4219f1dff936f16baba1862 train/train-83 refactor(gold): one home for the authored-corpus candidate ladder
