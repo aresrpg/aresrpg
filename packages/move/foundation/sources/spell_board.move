@@ -88,8 +88,8 @@ public fun place_glyph(
 }
 
 /// Apply a generic poison/DoT to a fighter — stores the per-tick `Effect` (its `turns` = duration), ticking at the
-/// START of the victim's turn. Value is snapshot at cast (the fixed base is frozen — ideal for the
-/// predict-then-reconcile model, §C).
+/// START of the victim's turn. The authored value band is stored verbatim; each tick draws from that band in
+/// `cast::apply_board_batch_from`, so the tick magnitude is not frozen at cast.
 public fun apply_dot(board: &mut BoardState, fighter: u64, source: u64, dot_effect: Effect) {
   board.statuses.push_back(FighterStatus {
     fighter, kind: spell_effect::k_apply_dot(), remaining_turns: dot_effect.turns(), effect: dot_effect, source,
