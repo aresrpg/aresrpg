@@ -13,7 +13,7 @@
 // The guard's PURPOSE (never N concurrent kiosk walks) is preserved: a burst coalesces into exactly ONE
 // follow-up pass, whose reads start after every request in that burst.
 
-import { afterEach, beforeEach, describe, expect, spyOn, test } from 'bun:test'
+import { afterAll, afterEach, beforeEach, describe, expect, spyOn, test } from 'bun:test'
 
 import { reset_auth_mock } from '../../src/test_helpers/auth_mock.js'
 import { reset_expedition_sdk_mock, set_expedition_sdk_mock } from '../../src/test_helpers/expedition_sdk_mock.js'
@@ -24,7 +24,38 @@ const rpc_client = await import('../../src/rpc/client')
 const read_staking = await import('../../src/chain/read_staking.js')
 const auto_merge = await import('../../src/world-shell/auto_merge_stacks.js')
 const dungeon_session = await import('../../src/world-shell/dungeon_session.js')
+const { context } = await import('../../src/game/core/game.js')
+const { default: sui_session } = await import('../../src/game/core/modules/sui_session.js')
 const { load_roster } = await import('../../src/roster/load_roster.js')
+
+// Own door onto the ambient engine handle, folded through the ENGINE'S OWN sui_session reducer. bun's
+// `mock.module` is process-global AND irreversible, so in a whole-suite run that handle can arrive stubbed by
+// a component suite that replaced `game/store.js` — and a stubbed handle turns every `load_roster` dispatch
+// into a TypeError, measuring another file's mock ordering instead of this one's read count. Restored after.
+const engine_reduce = sui_session().reduce
+const empty_state = () => ({
+  sui: {
+    items: [],
+    characters: [],
+    settled_item_floor: {},
+    minted_character_floor: {},
+    pending_uses: {},
+    xp_floor: {},
+    deleted_ids: {},
+    loaded: false,
+    load_error: null,
+  },
+})
+let engine_state = empty_state()
+const ambient = { dispatch: context.dispatch, get_state: context.get_state }
+context.dispatch = (type, payload) => {
+  engine_state = engine_reduce(engine_state, { type, payload }) ?? engine_state
+}
+context.get_state = () => engine_state
+afterAll(() => {
+  context.dispatch = ambient.dispatch
+  context.get_state = ambient.get_state
+})
 
 const settle = () => new Promise((resolve) => setTimeout(resolve, 0))
 
@@ -35,6 +66,7 @@ let spies = []
 
 beforeEach(() => {
   reads = 0
+  engine_state = empty_state()
   reset_auth_mock({ address: '0xowner', wallet_name: 'zklogin' })
   set_expedition_sdk_mock(async () => fake_sdk)
   spies = [

@@ -13,7 +13,7 @@
 // captured craft receipt in `test/fixtures/craft_receipt_failed_roll.json` pins; `amount` is the decimal
 // STRING the u64 field arrives as, exactly as that capture shows.
 
-import { afterEach, beforeEach, describe, expect, spyOn, test } from 'bun:test'
+import { afterAll, afterEach, beforeEach, describe, expect, spyOn, test } from 'bun:test'
 
 import { reset_auth_mock } from '../../src/test_helpers/auth_mock.js'
 import { reset_expedition_sdk_mock, set_expedition_sdk_mock } from '../../src/test_helpers/expedition_sdk_mock.js'
@@ -50,15 +50,40 @@ const kiosk_resolve = await import('../../src/world-shell/kiosk_resolve.js')
 const tx_seam = await import('../../src/world-shell/tx.js')
 const roster = await import('../../src/roster/load_roster.js')
 const { context } = await import('../../src/game/core/game.js')
+const { default: sui_session } = await import('../../src/game/core/modules/sui_session.js')
 const { crush_item } = await import('../../src/world-shell/crush_actions.js')
 
-const bag_ids = () => context.get_state().sui.items.map((row) => row.id)
-const settle = () => new Promise((resolve) => setTimeout(resolve, 0))
+// Own door onto the ambient engine handle, folded through the ENGINE'S OWN sui_session reducer — see the craft
+// twin (craft_loot_read_your_write.test.js) for why the ambient handle cannot be trusted in a whole-suite run.
+const engine_reduce = sui_session().reduce
+const empty_state = () => ({
+  sui: {
+    items: [],
+    characters: [],
+    settled_item_floor: {},
+    minted_character_floor: {},
+    pending_uses: {},
+    xp_floor: {},
+    deleted_ids: {},
+  },
+})
+let engine_state = empty_state()
+const ambient = { dispatch: context.dispatch, get_state: context.get_state }
+context.dispatch = (type, payload) => {
+  engine_state = engine_reduce(engine_state, { type, payload }) ?? engine_state
+}
+context.get_state = () => engine_state
+afterAll(() => {
+  context.dispatch = ambient.dispatch
+  context.get_state = ambient.get_state
+})
+
+const bag_ids = () => engine_state.sui.items.map((row) => row.id)
 
 let spies = []
 
 beforeEach(() => {
-  context.dispatch('action/sui_logout')
+  engine_state = empty_state()
   reset_auth_mock({ address: OWNER, wallet_name: 'zklogin' })
   set_expedition_sdk_mock(async () => fake_sdk)
   spies = [
@@ -73,22 +98,20 @@ beforeEach(() => {
   ]
 })
 
-afterEach(async () => {
+afterEach(() => {
   for (const test_spy of [...spies].reverse()) test_spy.mockRestore()
   spies = []
   reset_expedition_sdk_mock()
   reset_auth_mock()
-  await settle()
-  context.dispatch('action/sui_logout')
+  engine_state = empty_state()
 })
 
 describe('#2178 — the crush reads its own write', () => {
   test('the executed crush receipt paints the minted rune stack with NO poll tick', async () => {
     await crush_item({ item, character_id: '0xcharacter' })
-    await settle()
 
     expect(bag_ids()).toContain(RUNE_ITEM)
-    expect(context.get_state().sui.items.find((row) => row.id === RUNE_ITEM)).toMatchObject({
+    expect(engine_state.sui.items.find((row) => row.id === RUNE_ITEM)).toMatchObject({
       template_id: RUNE_TEMPLATE,
       name: 'Rune of Strength',
       item_category: 'resource',
@@ -103,15 +126,13 @@ describe('#2178 — the crush reads its own write', () => {
   // the snapshot rather than stacking a second copy of the row the receipt already painted.
   test('a later authoritative snapshot carrying the same runes does not duplicate them', async () => {
     await crush_item({ item, character_id: '0xcharacter' })
-    await settle()
 
     context.dispatch('action/sui_data', {
       kind: 'snapshot',
       items: [{ id: RUNE_ITEM, template_id: RUNE_TEMPLATE, item_type: 'rune_strength_1', amount: 3 }],
     })
-    await settle()
 
     expect(bag_ids().filter((id) => id === RUNE_ITEM)).toHaveLength(1)
-    expect(context.get_state().sui.settled_item_floor[RUNE_ITEM]).toBeUndefined()
+    expect(engine_state.sui.settled_item_floor[RUNE_ITEM]).toBeUndefined()
   })
 })
