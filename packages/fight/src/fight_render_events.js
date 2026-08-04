@@ -16,6 +16,7 @@ import {
   move_cell_ms,
   move_mp_spent,
   path_between,
+  price_hit,
   reconstructed_path,
   armed_at,
   placements_by_anchor,
@@ -154,8 +155,8 @@ export function produce_receipt_render_turns(
       .map(([id, cell]) => [String(id), cell])
   )
 
-  // Chain Hit.amount is raw authored damage while remaining_hp is saturated. Price every confirmed floater from
-  // the victim's pre-receipt HP, then carry remaining_hp forward for later hits in this same receipt.
+  // Price every confirmed floater through the ONE pricing home (`price_hit` — it owns the saturation rule and
+  // its why), reading the victim's pre-receipt HP, then carry remaining_hp forward for later hits in this receipt.
   for (const event of decoded_events.filter((candidate) => candidate.kind === 'Hit')) {
     const target_id = fighter_id_from(event, 'victim', resolve_fighter_id)
     let hp_before = remaining_health.get(target_id)
@@ -168,23 +169,7 @@ export function produce_receipt_render_turns(
     }
     const remaining_hp = Number(event.remaining_hp)
     const raw_amount = Math.max(0, Number(event.amount) || 0)
-    const healing = hp_before != null && Number.isFinite(remaining_hp) && remaining_hp > hp_before
-    // SATURATION IS THE ONLY REASON TO CLAMP (#2151). `Hit.amount` is the raw AUTHORED damage and differs from
-    // the HP actually removed in exactly one case: it overshot the life that was there to take. The journal
-    // states that case itself — `remaining_hp > 0` is the victim SURVIVING, which is proof nothing saturated, so
-    // the raw amount IS the amount and no HP oracle may lower it. Consulting one regardless is what let a client's
-    // own reading corrupt a committed fact: on the PRESENTATION-OWED lane (#2124) the adopted snapshot already
-    // contains the row's damage, so the oracle answers the victim's POST-hit HP and `min(10, 5)` rendered 5 for a
-    // hit the journal recorded as 10 — the acting seat, whose oracle really is pre-receipt, printed 10 (#2145 §5).
-    const saturated = !Number.isFinite(remaining_hp) || remaining_hp <= 0
-    hit_outcomes.set(event.event_index, {
-      kind: healing ? 'heal' : 'damage',
-      amount: healing
-        ? Math.min(raw_amount, remaining_hp - hp_before)
-        : saturated && hp_before != null
-          ? Math.min(raw_amount, hp_before)
-          : raw_amount,
-    })
+    hit_outcomes.set(event.event_index, price_hit(event, hp_before ?? null))
     if (Number.isFinite(remaining_hp)) remaining_health.set(target_id, Math.max(0, remaining_hp))
     else if (hp_before != null) remaining_health.set(target_id, Math.max(0, hp_before - raw_amount))
   }

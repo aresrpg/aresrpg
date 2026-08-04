@@ -176,6 +176,10 @@ export function reconcile_predictions(
         predicted: refused ? null : claim.delta,
         ...(refused ? { refusal: claim.refusal } : {}),
         applied: row.delta,
+        // The adopted ROW itself — the only thing that can correct the history the prediction already wrote
+        // (#2151). A `remaining_hp` delta says the prediction was wrong; it does not say what to print instead.
+        // The presentation adapter prices this and drops it; nothing durable keeps a raw action row.
+        applied_action: action,
         version: Number(action.version ?? version),
         at,
         shown: false,

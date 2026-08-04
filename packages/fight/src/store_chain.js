@@ -7,7 +7,8 @@
 
 import { enrich_actions, sorted_tail } from './core_fold.js'
 import { fold_chain_offset } from './draft_budget.js'
-import { merge_entries, paced_wave_turns, presented_state, recompute } from './fold.js'
+import { price_hit } from './fight_render_prims.js'
+import { fold_key_entity_id, merge_entries, paced_wave_turns, presented_state, recompute } from './fold.js'
 import { actor_from_key } from './inputs.js'
 import { claim_predictions, retain_budget_predictions, update_claimed_budget } from './store_prediction.js'
 import { committed_health, COURTESY_EVENT_BASE, observer_ctx } from './store_state.js'
@@ -18,6 +19,29 @@ import { committed_health, COURTESY_EVENT_BASE, observer_ctx } from './store_sta
  * Prediction claims come from the pure prediction transition module; this adapter still owns no decoder or
  * state-write door.
  */
+/**
+ * THE CORRECTION AN ADOPTED DIVERGENCE CARRIES (#2151). My own turn is painted at the click and its
+ * AUTHORITATIVE rows never become a wave turn (`wave_turns_of` filters them out — replaying them would double
+ * every floater), so when the chain disagrees, nothing downstream could re-reach the history the prediction
+ * wrote: the combat log kept the predicted number forever. The divergence answers that here — a REPLACEMENT
+ * instruction (who, what kind, how much), never a second beat.
+ *
+ * It is priced through the SAME home and the SAME pre-receipt committed oracle the wave pricer uses
+ * (`price_hit` + `committed_health`), which is what makes the corrected line and a peer's own line the same
+ * number by construction rather than by coincidence. Non-Hit divergences carry no correction: a wrong
+ * destination or a wrong drain has no optimistic amount in the history to replace.
+ */
+const divergence_correction = (state, divergence) => {
+  const { applied_action: action, ...rest } = divergence ?? {}
+  if (!divergence) return divergence
+  if (action?.kind !== 'Hit') return rest
+  const key = `${action.victim_is_mob ? 'm' : 'p'}${Number(action.victim_idx)}`
+  const target_id = fold_key_entity_id(state.view?.escrow ?? [], key)
+  if (!target_id) return rest
+  const { kind, amount } = price_hit(action, committed_health(state)(target_id))
+  return { ...rest, correction: { target_id, kind, amount } }
+}
+
 export const reduce_chain_input = (state, msg, next_core, now) => {
   const read = next_core.last_read ?? { actions: [], changed: [], owed: [] }
   const actions = enrich_actions(next_core.inbox, read.actions ?? [])
@@ -128,7 +152,7 @@ export const reduce_chain_input = (state, msg, next_core, now) => {
       commit_due: false,
       receipt_seq: msg.type === 'receipt' ? state.receipt_seq + 1 : state.receipt_seq,
       staged: msg.type === 'receipt' && ended_my_turn ? [] : state.staged,
-      divergence: reconcile?.divergence ?? state.divergence,
+      divergence: reconcile?.divergence ? divergence_correction(state, reconcile.divergence) : state.divergence,
       entries: merge_entries(intents, canonical),
       claimed_budget,
       budget_predictions,

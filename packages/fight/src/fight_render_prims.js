@@ -223,3 +223,30 @@ export const move_duration = (path) => Math.max(1, path.length) * move_cell_ms(p
 // cardinal at 1 MP/cell — so the step count IS the MP cost. The ONE home both lanes derive the green
 // MP-spent floater from, keeping the predicted + receipt move beats twin-identical (chain Moved carries no cost).
 export const move_mp_spent = (path) => (Array.isArray(path) ? path.length : 0)
+
+/**
+ * THE ONE PRICING HOME for a confirmed hit (#2151). Chain `Hit.amount` is the RAW AUTHORED damage; the HP it
+ * actually removed differs in exactly one case — it overshot the life that was there to take. The journal states
+ * that case itself: `remaining_hp > 0` is the victim SURVIVING, which is proof nothing saturated, so the raw
+ * amount IS the amount and no HP reading may lower it.
+ *
+ * Consulting one regardless is what let a client's own state corrupt a committed fact: on the presentation-OWED
+ * lane (#2124) the adopted snapshot already contains the row's damage, so the pre-receipt oracle answers the
+ * victim's POST-hit HP and `min(10, 5)` rendered 5 for a hit the journal recorded as 10 — while the acting seat,
+ * whose oracle really is pre-receipt, rendered 10 (#2145 §5: two clients, one committed fact, two numbers).
+ *
+ * `hp_before` is the victim's PRE-receipt committed HP, or null when unknown — an unknown one now only costs
+ * precision on a kill, never correctness on a survivor.
+ * @param {{ amount?: any, remaining_hp?: any }} event the journal's own Hit row
+ * @param {number | null} [hp_before]
+ * @returns {{ kind: 'damage' | 'heal', amount: number }}
+ */
+export const price_hit = (event, hp_before = null) => {
+  const remaining_hp = Number(event?.remaining_hp)
+  const raw_amount = Math.max(0, Number(event?.amount) || 0)
+  const known = hp_before != null && Number.isFinite(Number(hp_before)) ? Number(hp_before) : null
+  if (known != null && Number.isFinite(remaining_hp) && remaining_hp > known)
+    return { kind: 'heal', amount: Math.min(raw_amount, remaining_hp - known) }
+  const saturated = !Number.isFinite(remaining_hp) || remaining_hp <= 0
+  return { kind: 'damage', amount: saturated && known != null ? Math.min(raw_amount, known) : raw_amount }
+}
