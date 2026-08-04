@@ -1274,6 +1274,8 @@
     "anchor": "ANCHOR",
     "reroll_board": "REROLL BOARD",
     "board_hint": "Click a blue cell to place a character · a red cell to pick a mob · an occupied cell to empty it",
+    "board_unavailable": "3D BOARD UNAVAILABLE",
+    "board_unavailable_hint": "This device has no working WebGL context, so the board cannot be drawn. Enable hardware acceleration or try another browser to place fighters — every other panel on this page still works.",
     "no_mobs": "NO MOBS — CLICK A RED CELL",
     "pick_mob": "PICK A MOB",
     "mob_band": "LV {{min}}–{{max}}",

@@ -17,12 +17,17 @@
 //
 // The engine is loaded LAZILY (dynamic import in the mount effect): it is by far the heaviest module in the
 // app, and a page that has never opened this pane should not pay for it — nor should a bun test that renders
-// the page shell (the tactical facade pulls a GLB the public repo does not ship).
+// the page shell (the tactical facade pulls a GLB the public repo does not ship). The mount AND the handle it
+// returns go through `mount_board_viewport`, so nothing this pane asks of the renderer can reject: /simulator
+// is a public route, and a visitor with no usable WebGL context gets the degraded board instead of a page
+// error and a dead rectangle (#2205).
 
 import { useEffect, useMemo, useRef, useState, type RefObject } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Dices } from 'lucide-react'
+import { Dices, MonitorOff } from 'lucide-react'
 import { encode } from '@aresrpg/fight/los'
+
+import { report_error } from '../core/report.js'
 
 import { board_of, type SimBoard } from './board'
 import { cell_intent_of, setup_scene_of } from './board_paint'
@@ -55,11 +60,14 @@ export function BoardPaneView({
   board,
   setup,
   canvas_ref,
+  gl_degraded = false,
   on_reroll,
 }: Readonly<{
   board: SimBoard
   setup: boolean
   canvas_ref?: RefObject<HTMLCanvasElement | null>
+  /** #2205 — this device has no usable WebGL context, so the 3D board never came up */
+  gl_degraded?: boolean
   on_reroll: () => void
 }>) {
   const { t } = useTranslation()
@@ -86,12 +94,88 @@ export function BoardPaneView({
       </div>
 
       <div className="relative flex-1 min-h-[220px]" style={{ border: HAIRLINE, background: '#0c0c14' }}>
-        <canvas ref={canvas_ref} className="absolute inset-0 w-full h-full block" />
+        <canvas
+          ref={canvas_ref}
+          className="absolute inset-0 w-full h-full block"
+          style={{ visibility: gl_degraded ? 'hidden' : 'visible' }}
+        />
+        {/* #2205 — the honest face of a dead GL context. Never a blank hole: the region says WHAT failed and
+            WHY the board is gone, while the read-out above it and every panel beside it keep working. */}
+        {gl_degraded && (
+          <div
+            data-board-unavailable
+            className="absolute inset-0 flex flex-col items-center justify-center gap-2 px-6 text-center"
+          >
+            <MonitorOff size={18} style={{ color: GOLD }} />
+            <span className={micro} style={{ color: GOLD }}>
+              {t('simulator.board_unavailable')}
+            </span>
+            <p className="text-[11px] leading-relaxed text-muted max-w-[42ch]">
+              {t('simulator.board_unavailable_hint')}
+            </p>
+          </div>
+        )}
       </div>
 
-      <p className={`${micro} text-muted`}>{t(setup ? 'simulator.board_hint' : 'simulator.board_hint_fight')}</p>
+      {/* The gesture hint is a LIE with no board under it — the same reason the creator hides "drag to
+          rotate" on a degraded pedestal (#2198). The notice above already says what this device can do. */}
+      {!gl_degraded && (
+        <p className={`${micro} text-muted`}>{t(setup ? 'simulator.board_hint' : 'simulator.board_hint_fight')}</p>
+      )}
     </div>
   )
+}
+
+type MountedViewport = { handle: ViewportHandle; unsubscribe: () => void }
+
+/**
+ * THE PANE'S WHOLE RELATIONSHIP WITH THE RENDERER (#2205) — wrapped so that nothing the pane does with it
+ * can reject. Every one of those calls is a bare `void promise` in an effect, so an unguarded failure is an
+ * unhandled rejection and a permanently dead pane on the public /simulator route.
+ *
+ * They are ONE failure, not three, which is why they share one guard: the device has no usable WebGL
+ * context (`getContext` answers null — acceleration off, a blocklisted driver). Measured in a real browser
+ * with the context nulled: the engine SURVIVES construction (it reports its own boot failure and hands back
+ * a renderer-less shell), so the first throw actually lands in `show()` → `board.build()` →
+ * `engine.add_to_scene`, one paint later. Guarding only the constructor would have caught nothing.
+ *
+ * `on_dead` fires AT MOST ONCE, whichever call failed first: the caller runs flat from then on, and the
+ * mechanical cause is reported once — a GPU-less visitor losing the board must never cost them the page.
+ */
+export async function mount_board_viewport({
+  canvas,
+  on_cell,
+  on_dead,
+  load = () => import('./mount.js'),
+}: {
+  canvas: HTMLCanvasElement
+  on_cell: (cell: { x: number; y: number } | null) => void
+  on_dead: () => void
+  load?: () => Promise<{ create_board_viewport: (args: { canvas: HTMLCanvasElement }) => unknown }>
+}): Promise<MountedViewport | null> {
+  let dead = false
+  const die = (error: unknown) => {
+    if (dead) return
+    dead = true
+    report_error(error, { area: 'simulator', action: 'board_viewport' })
+    on_dead()
+  }
+  try {
+    const raw = (await load()).create_board_viewport({ canvas }) as ViewportHandle
+    return {
+      unsubscribe: raw.on_cell_click(on_cell),
+      // The same handle with its two async verbs made unrejectable — the caller keeps calling them exactly
+      // as before, and a renderer that dies mid-paint degrades the pane instead of the page.
+      handle: {
+        ...raw,
+        show: (board, scene) => raw.show(board, scene).catch(die),
+        arm_fight: () => raw.arm_fight().catch(die),
+      },
+    }
+  } catch (error) {
+    die(error)
+    return null
+  }
 }
 
 export function SimulatorBoardPane() {
@@ -101,6 +185,8 @@ export function SimulatorBoardPane() {
   // viewport and the board would only appear on the next change (measured: nothing until a reroll). As a
   // dependency of the show effect below, the very existence of the viewport re-triggers the paint.
   const [viewport, set_viewport] = useState<ViewportHandle | null>(null)
+  /** #2205 — the renderer died (at mount, or at any paint since): show the honest board, keep the page */
+  const [gl_degraded, set_gl_degraded] = useState(false)
   const [mob_cell, set_mob_cell] = useState<number | null>(null)
   /** the ally cell being seated, with the pointer position its picker opens at */
   const [ally_pick, set_ally_pick] = useState<{ cell: number; x: number; y: number } | null>(null)
@@ -135,18 +221,16 @@ export function SimulatorBoardPane() {
   // ONE mount per page visit; the engine is disposed on unmount (never the world session's singleton).
   useEffect(() => {
     let live = true
-    let handle: ViewportHandle | null = null
-    let unsubscribe: (() => void) | null = null
+    let mounted: MountedViewport | null = null
     const canvas = canvas_ref.current
     if (!canvas) return undefined
     const track = (event: PointerEvent) => {
       pointer.current = { x: event.clientX, y: event.clientY }
     }
     canvas.addEventListener('pointerdown', track)
-    void import('./mount.js').then(({ create_board_viewport }) => {
-      if (!live) return
-      handle = create_board_viewport({ canvas }) as ViewportHandle
-      unsubscribe = handle.on_cell_click((cell) => {
+    void mount_board_viewport({
+      canvas,
+      on_cell: (cell) => {
         // A click that hit no cell (the void around the board) — the engine reports the miss so a dapp can
         // deselect on it; this page has nothing to deselect, so it is simply not an interaction.
         if (!cell) return
@@ -160,35 +244,48 @@ export function SimulatorBoardPane() {
         if (intent.type === 'mob_cell') set_mob_cell(intent.cell)
         else if (intent.type === 'ally_cell') set_ally_pick({ cell: intent.cell, ...pointer.current })
         else input({ type: 'character_unplaced', cell: intent.cell })
-      })
-      set_viewport(handle)
+      },
+      // The pane degrades DELIBERATELY the first time the renderer fails, whenever that is: the board
+      // region says so and everything else on the page keeps working. Never a silent black rectangle.
+      on_dead: () => set_gl_degraded(true),
+    }).then((result) => {
+      if (!live) {
+        result?.unsubscribe()
+        result?.handle.destroy()
+        return
+      }
+      mounted = result
+      if (result) set_viewport(result.handle)
     })
     return () => {
       live = false
       canvas.removeEventListener('pointerdown', track)
-      unsubscribe?.()
-      handle?.destroy()
+      mounted?.unsubscribe()
+      mounted?.handle.destroy()
       set_viewport(null)
+      set_gl_degraded(false)
     }
   }, [input])
 
   // Every board/scene change re-shows — and so does the viewport's own arrival. The mount re-bakes the
   // geometry only when the BOARD itself changed; anything else is a repaint. In the FIGHT phase the world's
   // adapter owns this same board handle, so the setup painter stands down entirely (one writer, always).
+  // A dead renderer STANDS DOWN (#2205): once the pane has degraded there is nothing to paint on, and every
+  // further reroll would only re-throw against the same broken engine.
   useEffect(() => {
-    if (phase !== 'setup') return
+    if (phase !== 'setup' || gl_degraded) return
     void viewport?.show(board, scene)
-  }, [viewport, board, scene, phase])
+  }, [viewport, board, scene, phase, gl_degraded])
 
   // THE CUTOVER. The fight phase is rendered by the world's own `voxel_fight_adapter` over this very engine
   // and board — the same builder, rigs, washes, walk/cast beats and click relay a live dungeon fight uses.
   // Nothing about combat is re-implemented here; the page only says WHEN the fight owns the board.
   useEffect(() => {
-    if (!viewport) return undefined
+    if (!viewport || gl_degraded) return undefined
     if (phase !== 'fight') return undefined
     void viewport.arm_fight()
     return () => viewport.disarm_fight()
-  }, [viewport, phase])
+  }, [viewport, phase, gl_degraded])
 
   return (
     <>
@@ -196,6 +293,7 @@ export function SimulatorBoardPane() {
         board={board}
         setup={phase === 'setup'}
         canvas_ref={canvas_ref}
+        gl_degraded={gl_degraded}
         on_reroll={() => input({ type: 'board_rerolled' })}
       />
       {ally_pick && (

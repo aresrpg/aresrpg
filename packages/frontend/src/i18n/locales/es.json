@@ -1274,6 +1274,8 @@
     "anchor": "ANCLA",
     "reroll_board": "REGENERAR TABLERO",
     "board_hint": "Haz clic en una casilla azul para colocar un personaje · en una roja para elegir un monstruo · en una ocupada para vaciarla",
+    "board_unavailable": "TABLERO 3D NO DISPONIBLE",
+    "board_unavailable_hint": "Este dispositivo no tiene un contexto WebGL funcional, así que el tablero no puede dibujarse. Activa la aceleración por hardware o prueba con otro navegador para colocar combatientes: el resto de paneles de esta página siguen funcionando.",
     "no_mobs": "SIN MONSTRUOS — HAZ CLIC EN UNA CASILLA ROJA",
     "pick_mob": "ELEGIR MONSTRUO",
     "mob_band": "NV {{min}}–{{max}}",
