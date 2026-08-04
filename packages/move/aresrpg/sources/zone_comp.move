@@ -155,21 +155,28 @@ public(package) fun y72(world: &World, zx: u32, zy: u32, seed: u64, team_bound: 
 }
 
 /// Derive the zone's FULL resource-cell list from `seed` — table snapshot → the pure `zone_gen` kernel (gather
-/// entries grow contiguous FIELDS; every cell is one-harvest/one-bit). Returns PARALLEL `(spawn_ids,
-/// template_ids, xs, zs, jobs, tiers)` in stream order — the index IS the zone res-bitmap's bit index.
-public(package) fun derive_res(world: &World, zx: u32, zy: u32, seed: u64): (vector<u64>, vector<ID>, vector<u32>, vector<u32>, vector<u8>, vector<u8>) {
-  y149(world, zx, zy, seed, false)
+/// entries grow contiguous FIELDS; every cell is one-harvest/one-bit). `grid` picks the LATTICE anchor kernel
+/// (`zone_gen::derive_resources_grid`) over the unspaced stream roll — the choice is the zone's stored
+/// commitment's, never a caller's preference (`zones::derive_res` is the one gate). Returns PARALLEL
+/// `(spawn_ids, template_ids, xs, zs, jobs, tiers)` in stream order — the index IS the res-bitmap's bit index.
+public(package) fun derive_res(world: &World, zx: u32, zy: u32, seed: u64, grid: bool): (vector<u64>, vector<ID>, vector<u32>, vector<u32>, vector<u8>, vector<u8>) {
+  y149(world, zx, zy, seed, grid, true)
 }
 
 // name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the #1315 landing
-/// LATTICE variant — identical table snapshot, `zone_gen::derive_resources_grid` for anchor placement.
-public(package) fun y73(world: &World, zx: u32, zy: u32, seed: u64): (vector<u64>, vector<ID>, vector<u32>, vector<u32>, vector<u8>, vector<u8>) {
-  y149(world, zx, zy, seed, true)
+/// COUNT-ONLY door (#2195) — how many resource cells the LATTICE roll lands, and nothing else. A fresh
+/// `search_zone` reports exactly that number in `ZoneSearched` and reads no column, so it must not pay for the
+/// per-cell template/job/tier decoration `derive_res` owes its readers. Same rolls, same one home.
+public(package) fun y74(world: &World, zx: u32, zy: u32, seed: u64): u64 {
+  let (sids, _t, _x, _z, _j, _r) = y149(world, zx, zy, seed, true, false);
+  sids.length()
 }
 
 // name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the #1315 landing
-/// The ONE table-snapshot pipeline both resource variants share — `grid` picks only the anchor kernel.
-fun y149(world: &World, zx: u32, zy: u32, seed: u64, grid: bool): (vector<u64>, vector<ID>, vector<u32>, vector<u32>, vector<u8>, vector<u8>) {
+/// The ONE table-snapshot pipeline both resource variants share — `grid` picks only the anchor kernel. PRIVATE
+/// because `decorate` shapes the RETURN: `false` skips the per-cell table lookups and hands back EMPTY
+/// `tpls`/`jobs`/`tiers`, which only `y74` (a count) may ask for — no caller outside this module ever sees it.
+fun y149(world: &World, zx: u32, zy: u32, seed: u64, grid: bool, decorate: bool): (vector<u64>, vector<ID>, vector<u32>, vector<u32>, vector<u8>, vector<u8>) {
   let zsize = world::zone_size(world);
   let bx = world::bounds_x(world);
   let bz = world::bounds_z(world);
@@ -203,7 +210,7 @@ fun y149(world: &World, zx: u32, zy: u32, seed: u64, grid: bool): (vector<u64>, 
   let mut tpls = vector<ID>[];
   let mut jobs = vector<u8>[];
   let mut tiers = vector<u8>[];
-  let m = idxs.length();
+  let m = if (decorate) idxs.length() else 0;
   let mut j = 0;
   while (j < m) {
     let e = &res_tab[idxs[j]];

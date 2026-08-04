@@ -97,7 +97,7 @@ const MAX_OBJECT_SIZE = 102_400
 // (`::consumable_effect::${ceff.fn}`). A demoted door there is a whole-PTB abort at the next ceremony, so the
 // bytes are not optional. `seed_full_corpus_doors.test.mjs` is the class gate that stops the next census
 // missing the same shape.
-const SIZE_BUDGETS = { aresrpg: 99_347 }
+const SIZE_BUDGETS = { aresrpg: 99_304 }
 
 // ── The republish window ────────────────────────────────────────────────────────────────────────
 // A REPUBLISH is not an upgrade: it mints a fresh package lineage, so the compatibility verifier's

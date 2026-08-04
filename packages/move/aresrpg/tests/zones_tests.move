@@ -490,7 +490,7 @@ fun zone_comp_pipeline_matches_js_derive_zone() {
   assert!(msids[2] == 8618570982553016694 && mxs[2] == 250239 && mzs[2] == 250329 && msizes[2] == 2 && mgseeds[2] == 3880767024);
   assert_eq!(mtpls[0], object::id_from_address(@0xB0B)); // the world's one mob row
 
-  let (rsids, rtpls, rxs, rzs, rjobs, _rtiers) = zone_comp::derive_res(&w, 488, 488, 9876543210);
+  let (rsids, rtpls, rxs, rzs, rjobs, _rtiers) = zone_comp::derive_res(&w, 488, 488, 9876543210, false);
   assert_eq!(rsids.length(), 2);
   assert!(rsids[0] == 10736692352345019500 && rxs[0] == 250175 && rzs[0] == 250326 && rjobs[0] == 0);
   assert!(rsids[1] == 4596960998799914108 && rxs[1] == 250267 && rzs[1] == 250287);
