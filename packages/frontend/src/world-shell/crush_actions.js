@@ -4,7 +4,8 @@
 // funneled through the terminal-&Random door (world-shell/tx.js `run_tx_random` — keep-budget class, the shop
 // buy idiom). ONE user action: right-click → confirm → `forgemagie::crush` destroys the gear, rolls the yield
 // AND kiosk-locks the minted rune stacks in the same call (35 fixed template slots, distinct-padding law) —
-// no receipt, no resume machine, nothing to claim afterwards.
+// no resume machine, nothing to claim afterwards. The minted stacks enter the bag from the crush's OWN
+// receipt through the shared inventory reducer door (#2178 — read-your-write, D51); load_roster() reconciles.
 //
 // PRE-FLIGHT GUARDS (zero-gas honest refusals, thrown as translated Errors the modal's toast surfaces):
 //   • template resolution (item_type slug → the template OBJECT id off the /v1 template map — the slug is an
@@ -35,11 +36,15 @@ import i18n from '../i18n'
 import { get_sdk } from '../chain/sdk'
 import { DEMO_NETWORK } from '../chain/deployment'
 import { get_template_by_item_type_map, get_template_map } from '../chain/read_findables.js'
+import { context } from '../game/core/game.js'
 import { load_roster } from '../roster/load_roster.js'
 import { get_taux_rows } from '../rpc/client'
 
 import { kiosk_for_character } from './kiosk_resolve.js'
 import { resolve_crush_template } from './crush_resolve.js'
+// #2178 (D51, 5th instance): a crush IS a mint receipt — fold it through the SAME inventory reducer door the
+// fight-settle, pet-claim and craft paths use, instead of waiting on this module's own load_roster round-trip.
+import { reduce_minted_receipt } from './loot_inventory_effect.js'
 import { run_tx_random } from './tx.js'
 
 const CTX = { network: DEMO_NETWORK }
@@ -166,7 +171,16 @@ export async function crush_item({ item, character_id }) {
     // gas: builder-pinned from MEASURED_CRUSH_GAS_MIST (loud-refuse until the rehearsal stamps it) — money law.
   })
   const out = await run_tx_random('crush', tx)
-  // Refresh the shared store so the destroyed gear + minted rune stacks repaint everywhere (equip's post-tx pattern).
+  // READ-YOUR-WRITE (#2178): the receipt already proves the minted rune stacks — one `item::ItemMinted` per
+  // stack (forgemagie.move:165; item.move:275 the emit), naming each exact object id, template and unit count.
+  // They enter as an INPUT through the ONE inventory door, so the yield is in the bag at the transaction and
+  // not at the round-trip. `address` is the PRE-tx identity snapshot (the fight-settle door's race guard).
+  await reduce_minted_receipt(
+    { receipt: out?.result, kiosk_id: handle.kiosk_id, kiosk_cap_id: handle.personal_kiosk_cap_id },
+    address,
+    { load_templates: get_template_map, reducer_door: context, current_address: () => use_auth.getState().address }
+  )
+  // Reconciliation: the destroyed gear leaves the bag off chain truth (equip's post-tx pattern).
   load_roster().catch(() => {})
   return out
 }
