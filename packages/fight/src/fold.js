@@ -16,7 +16,7 @@
 // which is why nothing here derives committed state at all, and why `core_fold.js` may import this file's base.
 
 import { mob_entity_id, mob_entity_index, participant_entity_id } from './fight_control.js'
-import { apply_action, seat_resolver } from './inputs.js'
+import { apply_action, fighter_key, seat_resolver } from './inputs.js'
 import * as settle_input from './inputs.js'
 import { STATUS_PLACEMENT } from './board_state.js'
 import { GRID_W } from './los.js'
@@ -344,6 +344,20 @@ export const death_presenting_keys = (wave) => {
   return keys
 }
 
+/** The entry window an open turn bracket (turn_bracket.js) masks while the wire finishes delivering it — the
+ *  same `{version, from_idx, until_idx}` shape a wave turn carries, so the mask below reads one vocabulary. */
+const hold_window = (hold, my_key) => {
+  const rows = hold?.rows ?? []
+  if (rows.length < 2) return []
+  // MY OWN turn never masks — prediction paints it first, exactly the law `masks_entries` applies to a local
+  // wave turn. The bracket's opening `TurnStarted` names whose turn it is, so the same question is asked here.
+  const [open] = rows
+  if (my_key != null && fighter_key({ is_mob: open.is_mob, idx: open.idx }) === String(my_key)) return []
+  const idxs = rows.map((row) => Number(row.event_idx)).filter(Number.isFinite)
+  if (!idxs.length) return []
+  return [{ version: Number(open.version), from_idx: Math.min(...idxs), until_idx: Math.max(...idxs) }]
+}
+
 /** The wave-masked fold behind BOTH projections below: base view + tail with every still-unacked window's
  *  entries removed; my own segments and every acked turn's events show instantly — hold-at-last-shown with
  *  per-turn reveal (the D115 guarantee, rebuilt on the log). Never folds from empty: if the adopted view ever
@@ -351,7 +365,12 @@ export const death_presenting_keys = (wave) => {
  *  unreachable), committed truth shows — an early reveal over a rollback, never a regression.
  *  `hold_intents` is the ONE axis the two projections differ on (see presented_state / display_state). */
 const wave_masked_fold = (s, hold_intents) => {
-  const pending = (s.wave ?? []).filter(masks_entries) // non-local turns + MY windowed displacement/walk legs
+  // #2209 — a turn bracket still in delivery masks exactly as the wave turn it is about to become: its rows are
+  // already admitted, so without this the board would snap the mob onto its landing cell and then walk it there
+  // from behind (the §7b insta-jump), for as long as the wire takes to finish the turn. A bracket that carries
+  // only its opening `TurnStarted` masks NOTHING — that row moves nobody, and holding it back would delay the
+  // handover the turn gate reads (the tail every receipt leaves open).
+  const pending = [...hold_window(s.wave_hold, s.my_key), ...(s.wave ?? []).filter(masks_entries)]
   if (!pending.length) return s
   const windowed = pending.filter((t) => t.from_idx != null)
   const base_version = adopted_base_version(s)

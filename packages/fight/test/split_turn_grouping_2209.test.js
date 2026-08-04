@@ -17,6 +17,7 @@
 
 import { expect, test } from 'bun:test'
 
+import { display_state } from '../src/fold.js'
 import { MOB_TURN_MS } from '../src/present.js'
 import { create_fight_store } from '../src/store.js'
 import { open_fight_stream } from '../../frontend/src/world-shell/fight_sse_adapter.js'
@@ -111,7 +112,7 @@ const fake_source = () => {
 }
 
 /** The LIVE delivery: the real SSE adapter, one frame per stored event — the wire the indexer actually speaks. */
-const live_wave = () => {
+const live_stream = () => {
   const store = seated_store()
   const source = fake_source()
   const close = open_fight_stream({
@@ -123,6 +124,11 @@ const live_wave = () => {
     set_timeout: (fn) => ({ fn }),
     clear_timeout: () => {},
   })
+  return { store, source, close }
+}
+
+const live_wave = () => {
+  const { store, source, close } = live_stream()
   for (const row of MOB_TURN_ROWS) source.emit(row)
   close()
   return store.getState()
@@ -165,6 +171,17 @@ test('#2209 the orphaned Hit keeps its caster', () => {
 
   expect(damage.length, 'the mob hit me exactly once').toBe(1)
   expect(damage[0].source_id, "a Hit delivered alone must not be attributed to 'fight' — its caster is on the row").toBe('mob-0') // prettier-ignore
+})
+
+test('#2209 the board holds the mob at its pre-turn cell while the wire finishes the turn', () => {
+  const { store, source, close } = live_stream()
+  for (const row of MOB_TURN_ROWS.slice(0, 4)) source.emit(row) // …up to the Hit: the bracket is still open
+
+  expect(store.getState().core.inbox.presented_version, 'every held row still ADMITS — only pacing waits').toBe(
+    TURN_VERSION
+  )
+  expect(display_state(store.getState()).fighters.m0.cell, 'the mob may not snap to its landing cell and then walk there from behind').toBe(45) // prettier-ignore
+  close()
 })
 
 test('#2209 a bracket the wire never closes still presents — a new version flushes it', () => {
