@@ -1,0 +1,40 @@
+{
+  "_provenance": "Captured json:true Fight.fx.statuses row and its journal ActionEffect twin from the observer status-divergence drive, 2026-08-04. Values are verbatim wire scalars; the fixture is decoded directly and is never produced by a client encoder.",
+  "fight": "0x2166",
+  "character": "0xc2166",
+  "status": {
+    "fighter": "0",
+    "kind": "27",
+    "remaining_turns": "3",
+    "source": "0",
+    "effect": {
+      "area_shape": "0",
+      "area_size": "0",
+      "chance": "100",
+      "element": "255",
+      "kind": "27",
+      "phase": "0",
+      "stat": "0",
+      "target_filter": "32",
+      "turns": "3",
+      "value": "1"
+    }
+  },
+  "action_started": {
+    "action_kind": 0,
+    "action_ordinal": "0",
+    "ap_cost": "2",
+    "caster_idx": "0",
+    "caster_is_mob": false,
+    "effect_count": "1",
+    "target_cell": "105",
+    "turn_ordinal": "1"
+  },
+  "action_effect": {
+    "action_ordinal": "0",
+    "caster_idx": "0",
+    "caster_is_mob": false,
+    "effect_ordinal": "0",
+    "turn_ordinal": "1"
+  }
+}

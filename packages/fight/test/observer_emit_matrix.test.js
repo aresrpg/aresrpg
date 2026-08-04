@@ -4,6 +4,10 @@ import { describe, expect, test } from 'bun:test'
 
 import { OBSERVER_ACTION_KINDS, OBSERVER_AUDIENCES, OBSERVER_EMIT_MATRIX } from './fixtures/observer_emit_matrix.js'
 
+// A shared cell stays marked with every issue that designed it, while a landed lane promotes the cell's assertion
+// from skip to live. The self status cell still carries Lane B's #2176 work; the enemy cell is #2166 alone.
+const LANDED_CELLS = new Set(['status_only_cast:enemy'])
+
 const designed_expectation = (action_kind, audience) => {
   if (action_kind === 'damage_heal')
     return { presentation: 'beat', visibility: 'public', matrix_red: false, issues: [] }
@@ -85,7 +89,8 @@ describe('observer emit matrix — shared action-kind × audience contract', () 
       expect(row.expectation).toEqual(designed_expectation(row.action_kind, row.audience))
     }
 
-    if (row.expectation.matrix_red) test.skip(`MATRIX_RED: ${title}`, assert_cell)
+    if (row.expectation.matrix_red && !LANDED_CELLS.has(`${row.action_kind}:${row.audience}`))
+      test.skip(`MATRIX_RED: ${title}`, assert_cell)
     else test(title, assert_cell)
   }
 })

@@ -16,7 +16,8 @@ import { get_aoe_cells } from '@aresrpg/sim/spell_targeting'
 import * as FX from '@aresrpg/sim/spell_effect'
 
 import { fight_status_of } from './board_state.js'
-import { INVISIBILITY_STATUS_KIND, MOB_FIGHTER_ID_BASE, decode_status_value } from './fight_status_snapshot.js'
+import { INVISIBILITY_STATUS_KIND, MOB_FIGHTER_ID_BASE } from './fight_status_snapshot.js'
+import { decode_status_row } from './core_wire.js'
 import { decode, encode } from './los.js'
 import { is_status_kind } from './statuses.js'
 
@@ -234,12 +235,14 @@ const self_status_from_effect = (state, action) => {
   const key = fighter_key({ is_mob: action.caster_is_mob, idx: action.caster_idx })
   const caster = state.fighters[key]
   const effect = fields_of(action.effect)
-  const kind = Number(effect.kind)
+  const source = (action.caster_is_mob ? MOB_FIGHTER_ID_BASE : 0) + Number(action.caster_idx)
+  const status = decode_status_row(effect, { remaining_turns: effect.turns, source })
+  const kind = status?.kind
   const target_filter = Number(effect.target_filter) || 0
   const hits_caster =
     (target_filter & FX.TF_ONLY_CASTER) === FX.TF_ONLY_CASTER ||
     ((target_filter & FX.TF_NOT_SELF) === 0 && (target_filter & FX.TF_NOT_TEAM) === 0)
-  const remaining_turns = Number(effect.turns) || 0
+  const remaining_turns = status?.remaining_turns ?? 0
   if (
     !context ||
     caster?.cell == null ||
@@ -251,21 +254,7 @@ const self_status_from_effect = (state, action) => {
     DERIVED_STATUS_KINDS.has(kind)
   )
     return null
-  return {
-    key,
-    status: {
-      kind,
-      remaining_turns,
-      element: effect.element == null ? null : Number(effect.element),
-      value: effect.value == null ? null : decode_status_value(kind, Number(effect.value)),
-      stat: effect.stat == null ? null : Number(effect.stat),
-      chance: effect.chance == null ? null : Number(effect.chance),
-      // A self-landing row's SOURCE is the caster — the chain's own `fid_of(caster_side, caster_idx)`
-      // (cast.move) restated, so the one projection states attribution from this door too.
-      source: (action.caster_is_mob ? MOB_FIGHTER_ID_BASE : 0) + Number(action.caster_idx),
-      flags: effect.flags == null ? null : Number(effect.flags),
-    },
-  }
+  return { key, status }
 }
 
 const patch_fighter = (state, key, delta) => {

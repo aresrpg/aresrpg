@@ -8,6 +8,49 @@
 // PURE, node-clean, NO THROW: a shape it cannot read is returned as DATA (never an exception), so `ingest` stays
 // total. Decode-once-at-the-seam is the FP-constitution boundary rule — the fold downstream sees only clean data.
 
+import { ITEM_STAT_SHIFT as SIGNED_SHIFT } from '@aresrpg/sim/equipment_stats'
+import { K_ALTER_RESIST, K_ALTER_STAT } from '@aresrpg/sim/spell_effect'
+
+const STATUS_SIGNED_KINDS = new Set([K_ALTER_STAT, K_ALTER_RESIST])
+const status_fields = (value) => value?.fields ?? value ?? {}
+const status_number = (value) => (value == null || value === '' ? null : Number(value))
+
+/** Does this status kind ride its value centered on the wire? */
+export const is_signed_status_kind = (kind) => STATUS_SIGNED_KINDS.has(Number(kind))
+
+/** Decode the centered u64 used by signed status kinds; every other value passes through. */
+export const decode_status_value = (kind, value) =>
+  value == null || !is_signed_status_kind(kind) ? value : value - SIGNED_SHIFT
+
+/**
+ * ONE status-wire normalizer for both authoritative transports. A Fight object wraps the effect under
+ * `FighterStatus.effect` and carries the live counter/source beside it; an ActionEffect journal row carries the
+ * same Effect fields flat and supplies those two values from its envelope. Both leave this door speaking exactly
+ * the fold's status-row dialect. Total: an unreadable kind/counter returns null.
+ * @param {unknown} raw
+ * @param {{ remaining_turns?:unknown, source?:unknown }} [overrides]
+ * @returns {{ kind:number, remaining_turns:number, element:number|null, value:number|null, stat:number|null,
+ *   chance:number|null, source:number|null, flags?:number|null } | null}
+ */
+export const decode_status_row = (raw, overrides = {}) => {
+  const row = status_fields(raw)
+  const effect = status_fields(row.effect ?? row)
+  const kind = Number(row.kind ?? effect.kind)
+  const remaining_turns = Number(overrides.remaining_turns ?? row.remaining_turns ?? effect.turns ?? 0)
+  if (!Number.isFinite(kind) || !Number.isFinite(remaining_turns)) return null
+  const flags = status_number(effect.flags)
+  return {
+    kind,
+    remaining_turns,
+    element: status_number(effect.element),
+    value: decode_status_value(kind, status_number(effect.value)),
+    stat: status_number(effect.stat),
+    chance: status_number(effect.chance),
+    source: status_number(overrides.source ?? row.source),
+    ...(flags != null ? { flags } : {}),
+  }
+}
+
 /**
  * revive_wire — recursively un-wrap the capsule export's BigInt envelope `{ "$bigint": "123" }` back to the native
  * Sui-JSON u64 STRING shape (`"123"`) the chain decoders already consume (`board_state_from_fight` reads u64 fields

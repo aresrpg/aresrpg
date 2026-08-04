@@ -5,30 +5,13 @@
 // chain duration without widening the SDK surface owned by another lane.
 
 import { ITEM_STAT_SHIFT as SIGNED_SHIFT } from '@aresrpg/sim/equipment_stats'
-import { K_ALTER_RESIST, K_ALTER_STAT } from '@aresrpg/sim/spell_effect'
 
 import { mob_entity_id } from './fight_control.js'
+import { decode_status_row, is_signed_status_kind } from './core_wire.js'
 
 export { K_INVISIBILITY as INVISIBILITY_STATUS_KIND } from '@aresrpg/sim/spell_effect'
+export { decode_status_value, is_signed_status_kind } from './core_wire.js'
 export const MOB_FIGHTER_ID_BASE = 1000
-
-// ── THE SIGNED-EFFECT WIRE DECODE (issue #886) ────────────────────────────────────────────────────────
-// Alter-stat (9) and alter-resist (11) author both signs, so their u64 value is centered at SIGNED_SHIFT and
-// FLAG_NEGATIVE is derived only. Live 2026-07-26 bytes pin +25 → 32793 and −17 → 32751. Both ingress doors
-// (snapshot and receipt action, #983) decode here; downstream reads signed deltas, while other kinds keep their
-// plain magnitude.
-const SIGNED_KINDS = new Set([K_ALTER_STAT, K_ALTER_RESIST]) // spell_effect.move
-
-/** Does this status kind ride its value CENTERED on the wire? The one membership test for the encoding. */
-export const is_signed_status_kind = (kind) => SIGNED_KINDS.has(Number(kind))
-
-/**
- * A status row's chain `value` → the real signed delta. Signed kinds strip the 32768 centering; every other
- * kind (and an absent value) passes through verbatim.
- * @param {number} kind @param {number | null} value @returns {number | null}
- */
-export const decode_status_value = (kind, value) =>
-  value == null || !is_signed_status_kind(kind) ? value : value - SIGNED_SHIFT
 
 /**
  * The exact inverse — a real signed delta → the u64 the chain rides it as. Two callers, both minting rows the
@@ -42,7 +25,6 @@ export const encode_status_value = (kind, delta) =>
   delta == null || !is_signed_status_kind(kind) ? delta : delta + SIGNED_SHIFT
 
 const fields_of = (value) => value?.fields ?? value ?? {}
-const num = (value) => (value == null || value === '' ? null : Number(value))
 
 /**
  * THE ONE READER of a status row's OWNER (#1444). A `FighterStatus.fighter` is a chain u64 — a seat index, or
@@ -84,31 +66,12 @@ export function read_fighter_statuses(json) {
   const out = []
   for (const raw of rows) {
     const row = fields_of(raw)
-    // A json:true read carries the Move wrapper under `effect`; an already-decoded Fight snapshot flattens the
-    // same effect fields onto the FighterStatus row. Both are one chain fact, so normalize the wrapper shape
-    // here and let every downstream consumer share the existing status -> sim -> effective_stats fold.
-    const effect = fields_of(row.effect ?? row)
     const fighter = read_fighter_fid(row.fighter)
-    const kind = Number(row.kind ?? effect.kind)
+    const status = decode_status_row(row)
     // #2000 (D42) — A DECODE DOOR NEVER DROPS A ROW THE CHAIN SAYS EXISTS. The counter is the bearer's turns
-    // STILL TO COME, so a 0 is a row on its LAST covered turn: on chain it is live, it ticks, it moves stats, and
-    // `spell_board::decrement_fighter_statuses` removes it only at the START of the bearer's next turn. The
-    // superseded `> 0` gate here made a poll landing inside that window DELETE the row — badge, buff and haze
-    // gone a full turn early. Liveness is the chain's call and it already made it by emitting the row; this door
-    // only refuses what it cannot STATE (no owner, no kind, no number).
-    const remaining_turns = Number(row.remaining_turns ?? effect.turns ?? 0)
-    if (fighter != null && Number.isFinite(kind) && Number.isFinite(remaining_turns))
-      out.push({
-        fighter,
-        kind,
-        remaining_turns,
-        element: num(effect.element),
-        value: decode_status_value(kind, num(effect.value)),
-        stat: num(effect.stat),
-        chance: num(effect.chance),
-        source: num(row.source),
-        ...(num(effect.flags) != null ? { flags: num(effect.flags) } : {}),
-      })
+    // STILL TO COME, so a 0 is a row on its LAST covered turn. Liveness is the chain's call; this object consumer
+    // only refuses what the shared wire normalizer cannot state, plus an absent owner.
+    if (fighter != null && status) out.push({ fighter, ...status })
   }
   return out
 }
