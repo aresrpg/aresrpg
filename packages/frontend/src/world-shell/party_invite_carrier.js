@@ -13,6 +13,7 @@ import { push_event_toast } from '../game/core/toast.js'
 import { humanize_abort } from '../game/core/abort_copy.js'
 
 import { resolve_character_name } from './character_name_resolve.js'
+import { error_executed_digest } from './tx_digest_error.js'
 
 // `party_id:character_id` of every invitation this client has ANSWERED — refused with a signed decline, or (#2159)
 // accepted, whose card dies at the click while the transaction executes behind it. Either answer removes the
@@ -28,8 +29,10 @@ export function latch_answered_invite(party_id, character_id) {
   answered.add(key(party_id, character_id))
 }
 
-/** The answer did not stick — an accept transaction that EXECUTED and failed. The question is open again, so the
- *  poll must be allowed to carry it back (#2159); the edge resurfaces it immediately through the same door. */
+/** The answer did not stick — a transaction REFUSED before execution (no digest: pre-flight, wallet refusal,
+ *  network). Nothing was spent and the question is open again, so the poll must be allowed to carry it back
+ *  (#2159); the edge resurfaces it immediately through the same door. An EXECUTED failure is NOT this case
+ *  (#2211): its gas is already burned, so its answer stays latched. */
 export function release_answered_invite(party_id, character_id) {
   answered.delete(key(party_id, character_id))
 }
@@ -99,9 +102,10 @@ export async function fold_pending_invite(invites, basis_character_id, edge) {
  * ANSWER the card on screen — accept or decline, one body (#2159, owner ruling): THE CARD DIES AT THE CLICK. The
  * answer enters the reducer first, the question is gone, and the signed transaction executes behind it; the
  * click is latched here so a poll tick landing mid-flight cannot resurrect it. The ONLY honest exception is a
- * transaction that actually FAILED — then the question was never answered, so it comes back through the very
- * door above with the reason said out loud. Per the tx-retry burn law nothing here re-fires it: an executed
- * failure already burned its gas, and the player answers again or does not.
+ * transaction that NEVER EXECUTED (#2211) — no digest, no gas, so the question was truly never answered and it
+ * comes back through the very door above with the reason said out loud. An executed failure carries a digest:
+ * its gas is burned, the tx-retry burn law bars re-firing it, and this surface must not manufacture a manual
+ * retry either — the card stays dead and the failure is terminal.
  *
  * This lives beside `fold_pending_invite` because it is the other half of ONE lifecycle — the module that
  * decides which invitation is honest to SHOW is the module that owns what happens when it is answered.
@@ -127,10 +131,18 @@ export async function answer_pending_invite(invite, edge, { sign, label, adopt }
     if (adopt) edge.adopt_party(party_id, invited_character_id)
   } catch (error) {
     game_log('party', `${label} failed`, error)
-    release_answered_invite(party_id, invited_character_id)
-    edge.dispatch({ kind: 'event', event: 'invite', party_id, invited_character_id, from_name })
-    edge.tx_phase({ error: humanize_abort(error) })
-    push_event_toast({ state: 'error', title: i18n.t('party.answer_failed_title'), message: humanize_abort(error) })
+    // THE BURN FENCE (#2211). A digest is proof the transaction EXECUTED: the gas is spent whatever the chain
+    // then decided about it, and the tx-retry burn law forbids re-firing that intent. Bringing the card back
+    // would BE that retry, wearing the player's finger — so an executed failure keeps its answer latched, the
+    // card stays dead, and the reason is terminal copy with no affordance behind it. Only a refusal that never
+    // executed leaves the question genuinely open, and that alone re-enters through the inbound door.
+    const reason = humanize_abort(error)
+    if (!error_executed_digest(error)) {
+      release_answered_invite(party_id, invited_character_id)
+      edge.dispatch({ kind: 'event', event: 'invite', party_id, invited_character_id, from_name })
+    }
+    edge.tx_phase({ error: reason })
+    push_event_toast({ state: 'error', title: i18n.t('party.answer_failed_title'), message: reason })
   }
   edge.tx_phase({ busy: false })
 }
