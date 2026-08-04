@@ -1,3 +1,5 @@
-70d15eb90 → Refs #2198 — fix(create): degrade the character preview when WebGL is dead
-b76498647 → Refs #2198 — test(create): scope the unhandled-rejection listener to its own file
-8d78648a5 → Refs #2195 — perf(zones): search_zone counts resource cells instead of building them
+c7073e3ac → Refs #2182 — fix(frontend): the class roster is derived, so all twelve classes render
+da0f52b50 → Refs #2182 — refactor(frontend): the switcher rows are presentational, in their own file
+dae5c5af5 → Refs #2182 — style(frontend): wrap the class-derivation call sites to the 120-col rule
+2fc6fe520 → Refs #2182 — fix(frontend): widen the translator contract and order the new imports
+011cb37cf → Refs #2182 — fix(frontend): one home per exported row, and the class roster stops being sim-only
