@@ -45,7 +45,6 @@
 
 import { decode, encode } from '@aresrpg/fight/los'
 import { board_view, fight_view, min_turn_left, mob_entity_id, my_action_slot, my_placement_zone } from '@aresrpg/fight/project'
-import { participant_entity_id } from '@aresrpg/fight/fight_control'
 import { committed_truth, fight_store } from '@aresrpg/fight/store'
 import { crit_clock_of, predict_cast } from '@aresrpg/fight/predict_cast'
 import { slot_damage_roll, turn_seed } from '@aresrpg/sim/turn_seed'
@@ -73,10 +72,8 @@ const committed_by_id = () => {
   const board = board_view(fight_store.getState())
   const map = new Map()
   if (!board) return map
-  for (const row of board.escrow ?? []) {
-    const id = participant_entity_id(row)
-    if (id) map.set(id, row.committed ?? null)
-  }
+  // The row NAMES ITSELF (#2210): identity is resolved once, in the projection — never re-matched here.
+  for (const row of board.escrow ?? []) if (row.id) map.set(row.id, row.committed ?? null)
   ;(board.mobs ?? []).forEach((row, index) => map.set(mob_entity_id(index), row.committed ?? null))
   return map
 }
@@ -191,11 +188,12 @@ const spell_rows = (seat, class_id, char_level) =>
 const dev_result_fold = () => {
   const state = fight_store.getState()
   // The roster that NAMES the seats: the adopted view while it lives, else the core's own adopted base — the fold
-  // survives the view. Projected to the ONE field `entity_id_of_key` reads, so a terminal read stays plain JSON.
+  // survives the view. Carried as the two RAW identity fields so `result_fold_read`'s own `entity_id_of_key`
+  // resolves them (#2210: one resolver, and an addr-keyed seat survives the trip), plain JSON either way.
   const roster = state.view?.escrow ?? state.core?.inbox?.base_view?.escrow ?? []
   return {
     board: committed_truth(state),
-    escrow: roster.map((row) => ({ character: participant_entity_id(row) })),
+    escrow: roster.map((row) => ({ character: row.character ?? null, addr: row.addr ?? null })),
     my_key: state.my_key ?? null,
   }
 }

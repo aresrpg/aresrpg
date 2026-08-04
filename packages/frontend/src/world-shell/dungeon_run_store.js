@@ -107,7 +107,7 @@ import {
   should_boot_open,
 } from './pending_outcomes.js'
 import { maybe_liquidate, reset_liquidation } from './fight-liquidation.js'
-import { my_seat_present, receipt_read_miss_decision, should_hold_receipt_fight } from './world_fight_receipt.js'
+import { receipt_read_miss_decision, should_hold_receipt_fight } from './world_fight_receipt.js'
 import { error_executed_digest } from './tx_digest_error.js'
 import { fight_state_trace } from './fight_state_trace.js'
 import { publish_dungeon_session } from './dungeon_session.js'
@@ -1313,8 +1313,9 @@ export const use_dungeon = create((set, get) => ({
       // #2154 — the receipt hold ends when MY SEAT is in the read, not when the document merely reads. Clearing
       // it on any readable board ended the receipt walk ('cancelled') on the very read that lacked the joiner,
       // handing their own seat to the next 4s tick. Never RAISED here: this only delays the clear, so a session
-      // that legitimately holds no seat (spectator, adopted co-op board) is untouched.
-      set({ error: null, fight_syncing: get().fight_syncing && !my_seat_present(view, get().character_id) })
+      // that legitimately holds no seat (spectator, adopted co-op board) is untouched. #2210 — the fact is READ
+      // off the projection, never re-derived: the local matcher this replaces missed an addr-keyed seat entirely.
+      set({ error: null, fight_syncing: get().fight_syncing && !view.my_seat_present })
       const { spectating } = get()
       if (view.status === STATUS_ACTIVE && !spectating) {
         // The abandon→defeat decision reads this latch; an observer never earns it.

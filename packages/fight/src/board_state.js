@@ -14,7 +14,7 @@ import { chain_to_world, DEFAULT_WORLD_OFFSET } from '@aresrpg/sdk/coords'
 
 import { GRID_CELLS, encode } from './los.js'
 import { status_snapshot_entities } from './fight_status_snapshot.js'
-import { participant_entity_id } from './fight_control.js'
+import { participant_entity_id } from './participant_identity.js'
 import { SHAPE_NO_OVERRIDE } from './weapon_shapes.js'
 // The §17.27 unarmed line has ONE home (`weapon_lines.js` — the participant.move `unarmed_line` twin); this
 // decoder only falls back onto it.

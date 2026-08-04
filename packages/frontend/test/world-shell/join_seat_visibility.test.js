@@ -7,17 +7,26 @@
 // The two doors that had to move together are both driven here — the walk's exit predicate AND the store's
 // `fight_syncing` receipt-hold chip. Fixing only the predicate would have swapped a premature 'hydrated' for a
 // premature 'cancelled' and changed nothing a player can see, which is why both are asserted in one file.
+//
+// #2210 moved the PREDICATE, never this intent: "my seat is in the read" is derived once by the board
+// projection (`board_view.my_seat_present` — pinned in packages/fight/test/seat_presence_one_home.test.js) and
+// this walk reads it. The boards below therefore carry the fact the projection publishes, which is exactly what
+// `use_dungeon`'s `dungeon` holds in production.
 
 import { describe, expect, test } from 'bun:test'
 
-import { my_seat_present, poll_receipt_fight } from '../../src/world-shell/world_fight_receipt.js'
+import { poll_receipt_fight } from '../../src/world-shell/world_fight_receipt.js'
 
 const FIGHT = '0xfight'
 const ME = '0xme'
 const SOMEONE_ELSE = '0xcreator'
 
-/** The board view the projector publishes into `use_dungeon`'s `dungeon` — only the roster matters here. */
-const board = (...character_ids) => ({ id: FIGHT, escrow: character_ids.map((character) => ({ character })) })
+/** The board view the projector publishes into `use_dungeon`'s `dungeon`, for a client seated as ME. */
+const board = (...character_ids) => ({
+  id: FIGHT,
+  escrow: character_ids.map((character) => ({ character, id: character })),
+  my_seat_present: character_ids.includes(ME),
+})
 
 /**
  * A store double with the exact two facts the walk reads, plus the ONE behaviour the real store has that made
@@ -35,21 +44,15 @@ const store_double = (reads) => {
       index += 1
       state.dungeon = view
       // The production clear, verbatim in shape: never RAISED, and released only once my seat is in the read.
-      state.fight_syncing = state.fight_syncing && !my_seat_present(view, state.character_id)
+      state.fight_syncing = state.fight_syncing && !view.my_seat_present
     },
   }
 }
 
-describe('#2154 — the post-join predicate is "my seat is present in the read"', () => {
+describe('#2154 — the post-join predicate is "my seat is in the read"', () => {
   test('RED: a readable board without my seat is not convergence', () => {
-    // The exact read that logs `my_entity_missing_from_fighters`: the document is there, the joiner is not.
-    expect(my_seat_present(board(SOMEONE_ELSE), ME)).toBe(false)
-    expect(my_seat_present(board(SOMEONE_ELSE, ME), ME)).toBe(true)
-  })
-
-  test('a session holding no seat of its own (spectator) converges on any readable board', () => {
-    expect(my_seat_present(board(SOMEONE_ELSE), null)).toBe(true)
-    expect(my_seat_present(null, null)).toBe(false)
+    expect(board(SOMEONE_ELSE).my_seat_present).toBe(false)
+    expect(board(SOMEONE_ELSE, ME).my_seat_present).toBe(true)
   })
 
   test('keeps reading past the pre-join read and hydrates on the read that contains me — no poll wait', async () => {
@@ -58,7 +61,6 @@ describe('#2154 — the post-join predicate is "my seat is present in the read"'
     const slept = []
     const outcome = await poll_receipt_fight({
       fight_id: FIGHT,
-      character_id: ME,
       get_state: store.get_state,
       refresh: store.refresh,
       sleep: async (ms) => void slept.push(ms),
@@ -75,7 +77,6 @@ describe('#2154 — the post-join predicate is "my seat is present in the read"'
     const slept = []
     const outcome = await poll_receipt_fight({
       fight_id: FIGHT,
-      character_id: ME,
       get_state: store.get_state,
       refresh: store.refresh,
       sleep: async (ms) => void slept.push(ms),
@@ -85,11 +86,23 @@ describe('#2154 — the post-join predicate is "my seat is present in the read"'
     expect(slept).toEqual([])
   })
 
+  test('a session holding no seat of its own converges on any readable board', async () => {
+    // The projection answers `true` for a seatless session (spectator) — the walk simply reads that.
+    const store = store_double([{ ...board(SOMEONE_ELSE), my_seat_present: true }])
+    const outcome = await poll_receipt_fight({
+      fight_id: FIGHT,
+      get_state: store.get_state,
+      refresh: store.refresh,
+      sleep: async () => {},
+    })
+    expect(outcome).toBe('hydrated')
+    expect(store.reads_performed()).toBe(1)
+  })
+
   test('still stops when the session is replaced under it (never an unbounded walk)', async () => {
     const store = store_double([board(SOMEONE_ELSE)])
     const outcome = await poll_receipt_fight({
       fight_id: FIGHT,
-      character_id: ME,
       get_state: store.get_state,
       refresh: async () => {
         await store.refresh()
@@ -106,7 +119,6 @@ describe('#2154 — the post-join predicate is "my seat is present in the read"'
     let clock = 0
     const outcome = await poll_receipt_fight({
       fight_id: FIGHT,
-      character_id: ME,
       get_state: store.get_state,
       refresh: store.refresh,
       sleep: async (ms) => void (clock += ms),

@@ -4,7 +4,8 @@
 
 import { GRID_W, GRID_H, decode as decode_xy } from './los.js'
 import { identity_book } from './identity_book.js'
-import { mob_entity_id, participant_entity_id } from './fight_control.js'
+import { mob_entity_id } from './fight_control.js'
+import { participant_entity_id } from './participant_identity.js'
 import { claimed_budget_state, committed_truth, display_state, presented_state } from './store.js'
 import { STATUS_ACTIVE, STATUS_FAILED, STATUS_PLACEMENT, STATUS_ROOM_CLEARED, STATUS_WON } from './board_state.js'
 import { fight_fingerprint } from './fingerprint.js'
@@ -143,6 +144,7 @@ const projected_status = (s) => {
 export const board_view = (s) => {
   const { view } = s
   if (!view) return null
+  const ctx = s.ctx ?? {}
   const p = presented_state(s)
   const d = display_state(s) // DISPLAY cell only — holds an in-flight walk at its pre-move cell (SNAP-THEN-RUN)
   const c = committed_truth(s)
@@ -165,6 +167,8 @@ export const board_view = (s) => {
     // THE VITALS RECORD (#1993 WP7) — health and liveness are folded ONCE, in vitals_record.js, and this
     // legacy-shaped board projection reads that fold. It used to re-derive both beside `engine_view`'s copy.
     const v = entity_vitals(row, cf, f)
+    // The row NAMES ITSELF (#2210): the one identity predicate, resolved here so no consumer re-derives it.
+    const id = participant_entity_id(row)
     const committed = {
       ap: budget_ap,
       mp: budget_mp,
@@ -175,9 +179,10 @@ export const board_view = (s) => {
       hp: v.committed,
       alive: v.alive,
     }
-    if (!f) return { ...row, committed }
+    if (!f) return { ...row, id, committed }
     return {
       ...row,
+      id,
       committed,
       // The rendered cell is the DISPLAY fold — my own walk holds at its pre-move cell until the walk beat
       // presents (never jumps ahead of the run); every other fact stays the effective/presented value.
@@ -200,10 +205,18 @@ export const board_view = (s) => {
     const cell = d.fighters?.[mob_key(idx)]?.cell ?? f.cell ?? row.cell // DISPLAY cell (walk-hold); rest presented
     return { ...row, committed, cell, hp: v.presented, alive: v.presented_alive }
   })
+  // THE CONVERGENCE FACT (#2154), one home (#2210): does THIS read contain my seat? Matched on the row's own
+  // `id` — a seat is addr-keyed until its character row lands, and the character-only matcher this replaces read
+  // "absent" for a seat that plainly is, hanging the joiner's `fight_syncing` chip forever. The seat I am waiting
+  // for is the one my ctx CLAIMS, never one read off the board: resolving it through the view would answer "no
+  // seat to wait for" on exactly the read that lacks it. A session holding none — a spectator — waits for nothing.
+  const my_seat_id = ctx.spectator === true ? null : (ctx.my_entity_id ?? null)
+  const my_seat_present = my_seat_id == null || escrow.some((row) => row.id === String(my_seat_id))
   return {
     ...view,
     escrow,
     mobs,
+    my_seat_present,
     status: projected_status(s), // committed fold decides terminal truth (never hangs on presentation)
     chain_terminal: chain_terminal_status(s),
     // The dialog OPEN gate (shape ②): client-knowable, receipt-proven fight-over — the terminal effect fires

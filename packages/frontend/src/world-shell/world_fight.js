@@ -212,10 +212,8 @@ function activate_world_fight({ fight_id, resumed = false, is_public = false }) 
   // immediate read, and which now holds until MY SEAT is in it instead of exiting on the first readable
   // document. The walk is started BEFORE the party auto-form for the same reason: the read is the latency path.
   if (resumed) return void getState().refresh()
-  const { character_id } = getState() // the seat the walk below is converging on (the mount just wrote it)
   void poll_receipt_fight({
     fight_id,
-    character_id,
     get_state: getState,
     refresh: () => getState().refresh(),
   }).then((outcome) => {
