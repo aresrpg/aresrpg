@@ -35,7 +35,7 @@ import { use_toast } from '../toast'
 import { game_log } from '../core/log.js'
 import { report_error } from '../core/report.js'
 
-import { CharacterRow, FollowerRow } from './CharacterSwitcherRow'
+import { FollowerRow, SwitcherRow } from './CharacterSwitcherRow'
 
 /** A character is escrowed in a dungeon (in_dungeon flag from load_roster.js) → "IN DUNGEON", else "IN LOBBY". */
 function group_of(character: any): 'dungeon' | 'lobby' {
@@ -205,7 +205,7 @@ function CharacterGroup({
       <div className="chsw-group__label">{label}</div>
       {characters.map((character) => (
         <div key={character.id}>
-          <CharacterRow
+          <SwitcherRow
             character={character}
             active={character.id === active_character_id}
             switching={character.id === switching_character_id}
