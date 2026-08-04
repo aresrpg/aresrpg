@@ -1,7 +1,4 @@
-91f60817c → Refs #2202 — fix(smoke): prod-smoke rows become honest for a GPU-less runner
-646702760 → Refs #2202 — docs(ci): record the runner-class law in the edge-smoke header
-711c99dd0 → Refs #2201 — test(fight): law 6 reds on divergence, not on a busy box
-aaf3f59af → Refs #2201 — test(sim): the sim law-6 twin loses the same 5s cliff
-90963b351 → Refs #2201 — style(fight): array destructuring in the law-6 red proofs
-52008108c → Refs #2207 — fix(move): scribe drops the four aliases it never used
-2f1e39f24 → Refs #2207 — fix(move): the preflight reports the diagnostic, not the build chatter
+655654e40 → Refs #2183 — fix(gates): the L-L1 ceiling must follow the tree down
+fbc95f124 → Refs #2183 — fix(relocate-tests): bare `.` / `..` specifiers move with the file
+3115b50ed → Refs #2183 — refactor(engine): relocate every in-src test into packages/engine/test
+d01531e45 → Refs #2183 — docs(hack-mode): point the spec's prove line at the relocated test
