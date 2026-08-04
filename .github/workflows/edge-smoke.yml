@@ -39,6 +39,8 @@ jobs:
           node-version: 22
       - name: prod presence-relay — MQTT CONNECT to CONNACK
         run: node scripts/relay_probe.mjs
+      - name: prod served corpus — pointer to verified blob bytes
+        run: node scripts/corpus_probe.mjs
       - name: restore the newest promote-queue schedule heartbeat
         if: github.event_name == 'schedule'
         uses: actions/cache/restore@5a3ec84eff668545956fd18022155c47e93e2684 # v4.2.3

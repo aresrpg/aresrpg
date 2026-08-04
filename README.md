@@ -20,6 +20,10 @@ Move twin, SDK, test rig, the keyless `/v1` read layer, and the transaction spon
 content (items, mobs, spells, worlds) is published on-chain and served via the asset CDN — it
 is not part of this repository.
 
+> Any corpus-publish or asset-CDN change must re-run `scripts/corpus_probe.mjs` before shipping.
+> Ship only after its live pointer → blob reachability, byte-size, SHA-256 and nonempty-row proof passes;
+> a missing claim or empty scan is a failure, never a zero.
+
 ## Install / run / test
 
 ```bash

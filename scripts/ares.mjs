@@ -153,6 +153,7 @@ export const unit_test_files = [
   'packages/sim/test/spawn_draw_rate.test.js',
   'test/scripts/check-doc-file-references.test.mjs',
   'test/scripts/arch-gates-missing-tools.test.mjs',
+  'test/scripts/corpus_probe.test.mjs', // #2133 — served pointer + blob size/SHA/row proof for the prod corpus probe
   'test/scripts/relay_probe.test.mjs', // #2121 — MQTT CONNECT bytes + strict CONNACK parser for the prod relay probe
   'scripts/check-chain-ids.test.mjs',
   'packages/move/scripts/crit_fold.test.mjs',
