@@ -16,6 +16,8 @@ export const ENV_MOCK = Object.freeze({
   TURN_CRED: '',
   SENTRY_DSN: '',
   NETWORK: 'testnet',
+  DEPLOY_ENV: '', // a test build has no deploy target — the same state as a local build
+
   UNSAFE_DEV_GAS_MIST: null,
 })
 
