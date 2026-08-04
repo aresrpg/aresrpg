@@ -38,6 +38,8 @@ export function presence_character(character_id) {
     classe: peer?.chain?.classe ?? peer?.classe ?? null,
     male: peer?.chain?.male ?? peer?.male ?? null,
     color_1: peer?.chain?.color_1 ?? peer?.color_1 ?? 0,
+    color_2: peer?.chain?.color_2 ?? peer?.color_2 ?? 0,
+    color_3: peer?.chain?.color_3 ?? peer?.color_3 ?? 0,
   }
 }
 
@@ -82,7 +84,14 @@ subscribe_identity_requests(presence_store, ({ ids }) => {
           type: 'peer_identity',
           id,
           record: record
-            ? { name: record.name, classe: record.classe, male: record.male, color_1: record.color_1 }
+            ? {
+                name: record.name,
+                classe: record.classe,
+                male: record.male,
+                color_1: record.color_1,
+                color_2: record.color_2,
+                color_3: record.color_3,
+              }
             : null,
         })
       )

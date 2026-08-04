@@ -69,7 +69,7 @@ export const CHAT_MAX_LENGTH = 280 // one broadcast chat line's ceiling, in code
  *   party_id: string|null, dungeon_id: string|null,
  *   mounted: boolean, mount_glb: string|null, veteran: boolean,
  *   classe: string|null, male: boolean|null, name: string|null,
- *   chain: { name?:string, classe?:string, male?:boolean, color_1?:number }|null,
+ *   chain: { name?:string, classe?:string, male?:boolean, color_1?:number, color_2?:number, color_3?:number }|null,
  *   last_seen: number,
  * }} PeerEntry
  */
@@ -394,6 +394,8 @@ export function visible_players(state) {
       classe: p.chain?.classe ?? p.classe ?? null,
       male: p.chain?.male ?? p.male ?? null,
       color_1: p.chain?.color_1 ?? p.color_1 ?? 0,
+      color_2: p.chain?.color_2 ?? p.color_2 ?? 0,
+      color_3: p.chain?.color_3 ?? p.color_3 ?? 0,
       position: p.position,
       target_yaw: p.target_yaw,
     })

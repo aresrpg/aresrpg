@@ -58,6 +58,9 @@ export default function presence() {
           existing.male = row.male ?? existing.male ?? true
           existing.sprites = get_class(classe)?.sprites ?? FALLBACK_SPRITES
           existing.hue = color_to_hue(row.color_1 ?? 0)
+          existing.color_1 = row.color_1 ?? 0
+          existing.color_2 = row.color_2 ?? 0
+          existing.color_3 = row.color_3 ?? 0
           existing.observed_at = row.observed_at
         } else {
           // SPAWN: seed position = target (the scene starts its lerp from here).
@@ -68,6 +71,9 @@ export default function presence() {
             male: row.male ?? true,
             sprites: get_class(classe)?.sprites ?? FALLBACK_SPRITES,
             hue: color_to_hue(row.color_1 ?? 0),
+            color_1: row.color_1 ?? 0,
+            color_2: row.color_2 ?? 0,
+            color_3: row.color_3 ?? 0,
             position: row.position,
             target_position: row.position,
             target_yaw: row.target_yaw,

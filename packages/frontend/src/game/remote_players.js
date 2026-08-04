@@ -31,6 +31,7 @@ import { context } from './store.js'
 import { render_rows, render_row_of } from './core/render_rows.js'
 import { game_log } from '../core/log.js'
 import { instrument_cpu_callback } from './cpu_span.js'
+import { presence_colors } from './presence_colors.js'
 
 const LERP_LAMBDA = 8 // position ease (matches the roam feel — arrive fast, never snap)
 const SPEED_EPS = 0.3 // m/s under which the rig idles
@@ -112,14 +113,11 @@ export function create_remote_players(engine, world_canvas = null) {
       )
     // ONE home for the rig rule — the same door the roam avatar, the fight board and the simulator read.
     const urls = character_model_urls(classe, male)
-    const colors = entry
+    const colors = presence_colors(entry)
     const avatar = create_character_avatar({
       glb_url: urls.body, // asset-host-first, bundled /sprites fallback (character_model_urls)
       hair_url: urls.hair,
-      colors:
-        colors && (colors.color_1 || colors.color_2 || colors.color_3)
-          ? [colors.color_1, colors.color_2, colors.color_3]
-          : undefined,
+      colors: colors ?? undefined,
     })
     const p = entry.position ?? { x: 150, z: 150 }
     const chip = document.createElement('div')
@@ -171,6 +169,7 @@ export function create_remote_players(engine, world_canvas = null) {
       gy: FALLBACK_Y,
       yaw: 0,
       cell_key: '',
+      color_key: colors?.join(':') ?? '',
     })
     game_log('remote', `rig spawned for ${id.slice(0, 10)} (${classe}) at [${p.x}, ${p.z}]`) // loud-pipeline law
   }
@@ -344,13 +343,13 @@ export function create_remote_players(engine, world_canvas = null) {
           engine.add_to_scene(r.avatar.object3d)
           if (r.avatar.object3d.parent) game_log('remote', `rig in scene: ${id.slice(0, 10)} (D206)`)
         }
-        // Chain-backed colors land asynchronously on the presence entry. Apply once (set_colors queues pre-ready).
-        if (!r.colored) {
-          const colors = entry
-          if (colors && (colors.color_1 || colors.color_2 || colors.color_3)) {
-            r.avatar.set_colors?.([colors.color_1, colors.color_2, colors.color_3])
-            r.colored = true
-          }
+        // Chain-backed colors land asynchronously on the presence entry. Apply on a PALETTE delta;
+        // set_colors queues pre-ready, and a late chain resolution can replace the self-declared wire palette.
+        const colors = presence_colors(entry)
+        const color_key = colors?.join(':') ?? ''
+        if (colors && color_key !== r.color_key) {
+          r.avatar.set_colors?.(colors)
+          r.color_key = color_key
         }
         // #613 — a with_you follower is a FREE-RUN companion: it steers ITSELF toward the leader anchor through
         // the SAME pet_follow core the pet companions use (dead zone + catch-up + roam + snap-when-genuinely-far),
