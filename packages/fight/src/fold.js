@@ -8,7 +8,8 @@
 // · recompute — snapshot base + sorted authoritative tail → committed state + the derived PROVIDER token.
 // · presented_state / display_state — the PRESENTATION projections (the eye's pacing floor) the consumers read.
 // · paced_wave_turns — the ONE pacing decision: an accepted batch's non-local events → wave turns (window in
-//   seq space), keyed on the chain version the ROWS carry, transport-blind.
+//   seq space), keyed on the chain version the ROWS carry, transport-blind. WHICH rows have arrived in full and
+//   may pace yet is its leaf, `turn_bracket.js` (#2209).
 //
 // COMMITTED TRUTH IS NOT HERE (#1027). The committed board is the HEADLESS CORE's, projected by `project_board`
 // and read through the store's ONE door (`store.committed_truth`). This module owns the PRESENTATION folds only —
