@@ -3,8 +3,10 @@
 // #438 — ONE cross-module User Timing trace for a fresh [R] pack engage. The trace follows the exact
 // Transaction + minted Fight id, so unrelated party/join transactions and resumed/co-op boards cannot finish it.
 
-import { timing_clear, timing_duration, timing_mark, timing_measure } from './user_timing.js'
 import { game_log } from './log.js'
+// The User Timing primitives have ONE home (latency_trace.js) — this recorder owns only WHICH stages a fresh
+// engage has and how they bind to a Transaction + minted fight id.
+import { perf_clear, perf_latest_duration, perf_mark, perf_measure } from './latency_trace.js'
 
 export const ENGAGE_MARK_NAMES = Object.freeze({
   marker_interaction: 'fight-engage:marker-interaction',
@@ -38,16 +40,16 @@ const measure_names = Object.values(ENGAGE_MEASURE_NAMES)
 /** @type {{ source: string, transaction: object | null, fight_id: string | null, adopted: boolean } | null} */
 let active_trace = null
 
-const mark = timing_mark
-const measure = timing_measure
-const latest_duration = timing_duration
+const mark = perf_mark
+const measure = perf_measure
+const latest_duration = perf_latest_duration
 
 const is_active_transaction = (transaction) =>
   !!active_trace && !!transaction && active_trace.transaction === transaction
 
 /** The accepted marker interaction: clear only this trace's old entries, then start a fresh measurement. */
 export function start_engage_timing(source = 'unknown') {
-  timing_clear(mark_names, measure_names)
+  perf_clear(mark_names, measure_names)
   active_trace = { source, transaction: null, fight_id: null, adopted: false }
   mark(ENGAGE_MARK_NAMES.marker_interaction)
 }

@@ -18,6 +18,7 @@ import { use_dungeon } from '../../../../world-shell/dungeon_store.js'
 import { join_world_fight, as_one_toast } from '../../../../world-shell/dungeon_actions.js'
 import { enter_world_fight, spectate_world_fight } from '../../../../world-shell/world_fight.js'
 import { enter_after_world_join_receipt } from '../../../../world-shell/world_fight_receipt.js'
+import { start_join_timing } from '../../../../core/join_timing.js'
 import { recover_fight_entry_refusal } from '../../../../world-shell/dungeon_settlement.js'
 import { read_friend_list } from '../../../../world-shell/friends_reads.js'
 import { get_characters } from '../../../../rpc/client'
@@ -211,6 +212,8 @@ export function FightsModal() {
       // The join receipt is already proof that this character is seated. Enter immediately from that boundary;
       // the old flow only closed the modal, so the one-shot boot resume had already passed and a party member
       // stayed in the world until refresh. Full-board hydration uses the same receipt-backed sync as the creator.
+      // #2154 — the press is stage one of the join trace; it closes when MY SEAT is actually in a read.
+      start_join_timing(marker.id)
       return enter_after_world_join_receipt({
         execute: () =>
           run_fight_entry({

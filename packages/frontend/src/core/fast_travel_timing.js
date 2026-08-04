@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 // #2158 — ONE cross-module User Timing trace for a fast travel, in the engage_timing idiom (shared plumbing:
-// user_timing.js). It answers the only question D51 asks of this interaction: between the click and the moment
+// latency_trace.js). It answers the only question D51 asks of this interaction: between the click and the moment
 // the dragon leaves the ground, WHICH leg holds the player.
 //
 // The trace follows the TRAVELER (the character the player is driving), so a follower's silent catch-up flight —
@@ -12,7 +12,7 @@
 // `model_wait` is the leg the preload exists to keep at zero: the dragon GLB is warmed at world-HUD boot, so a
 // click that still has to fetch it is a measurable regression, not an invisible one.
 
-import { timing_clear, timing_duration, timing_mark, timing_measure } from './user_timing.js'
+import { perf_clear, perf_latest_duration, perf_mark, perf_measure } from './latency_trace.js'
 import { game_log } from './log.js'
 
 export const FT_MARK_NAMES = Object.freeze({
@@ -45,44 +45,44 @@ const is_traced = (traveler_id) => !!traveler_id && active_trace?.traveler_id ==
 /** The accepted travel click: clear this trace's old entries, then start a fresh measurement. */
 export function start_fast_travel_timing(traveler_id) {
   if (!traveler_id) return
-  timing_clear(mark_names, measure_names)
+  perf_clear(mark_names, measure_names)
   active_trace = { traveler_id, foreign: false }
-  timing_mark(FT_MARK_NAMES.begin)
+  perf_mark(FT_MARK_NAMES.begin)
 }
 
 /** The /v1 route facts (target doc + my doc + the world gate) are in hand — close the read leg. */
 export function mark_ft_route_resolved(traveler_id) {
   if (!is_traced(traveler_id)) return
-  timing_mark(FT_MARK_NAMES.route_resolved)
-  timing_measure(FT_MEASURE_NAMES.route_read, FT_MARK_NAMES.begin, FT_MARK_NAMES.route_resolved)
+  perf_mark(FT_MARK_NAMES.route_resolved)
+  perf_measure(FT_MEASURE_NAMES.route_read, FT_MARK_NAMES.begin, FT_MARK_NAMES.route_resolved)
 }
 
 /** The dragon GLB is fetched+parsed in the warm cache — close the model leg (zero when preloaded). */
 export function mark_ft_model_ready(traveler_id) {
   if (!is_traced(traveler_id)) return
-  timing_mark(FT_MARK_NAMES.model_ready)
-  timing_measure(FT_MEASURE_NAMES.model_wait, FT_MARK_NAMES.route_resolved, FT_MARK_NAMES.model_ready)
+  perf_mark(FT_MARK_NAMES.model_ready)
+  perf_measure(FT_MEASURE_NAMES.model_wait, FT_MARK_NAMES.route_resolved, FT_MARK_NAMES.model_ready)
 }
 
 /** Foreign world: the join transaction left the client. */
 export function mark_ft_join_started(traveler_id) {
   if (!is_traced(traveler_id)) return
   active_trace = { ...active_trace, foreign: true }
-  timing_mark(FT_MARK_NAMES.join_started)
+  perf_mark(FT_MARK_NAMES.join_started)
 }
 
 /** Foreign world: the join executed — close the tx leg. */
 export function mark_ft_world_joined(traveler_id) {
   if (!is_traced(traveler_id)) return
-  timing_mark(FT_MARK_NAMES.world_joined)
-  timing_measure(FT_MEASURE_NAMES.world_join, FT_MARK_NAMES.join_started, FT_MARK_NAMES.world_joined)
+  perf_mark(FT_MARK_NAMES.world_joined)
+  perf_measure(FT_MEASURE_NAMES.world_join, FT_MARK_NAMES.join_started, FT_MARK_NAMES.world_joined)
 }
 
 /** Foreign world: the destination session booted — close the swap leg. */
 export function mark_ft_boot_ready(traveler_id) {
   if (!is_traced(traveler_id)) return
-  timing_mark(FT_MARK_NAMES.boot_ready)
-  timing_measure(FT_MEASURE_NAMES.world_boot, FT_MARK_NAMES.world_joined, FT_MARK_NAMES.boot_ready)
+  perf_mark(FT_MARK_NAMES.boot_ready)
+  perf_measure(FT_MEASURE_NAMES.world_boot, FT_MARK_NAMES.world_joined, FT_MARK_NAMES.boot_ready)
 }
 
 /**
@@ -92,16 +92,16 @@ export function mark_ft_boot_ready(traveler_id) {
 export function finish_fast_travel_timing(traveler_id) {
   if (!is_traced(traveler_id)) return null
   const { foreign } = active_trace
-  timing_mark(FT_MARK_NAMES.flight_start)
-  timing_measure(
+  perf_mark(FT_MARK_NAMES.flight_start)
+  perf_measure(
     FT_MEASURE_NAMES.takeoff,
     foreign ? FT_MARK_NAMES.boot_ready : FT_MARK_NAMES.model_ready,
     FT_MARK_NAMES.flight_start
   )
-  timing_measure(FT_MEASURE_NAMES.total, FT_MARK_NAMES.begin, FT_MARK_NAMES.flight_start)
+  perf_measure(FT_MEASURE_NAMES.total, FT_MARK_NAMES.begin, FT_MARK_NAMES.flight_start)
 
   const durations = Object.fromEntries(
-    Object.entries(FT_MEASURE_NAMES).map(([leg, name]) => [leg, timing_duration(name)])
+    Object.entries(FT_MEASURE_NAMES).map(([leg, name]) => [leg, perf_latest_duration(name)])
   )
   active_trace = null
 
