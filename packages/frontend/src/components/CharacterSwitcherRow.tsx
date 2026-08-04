@@ -32,7 +32,11 @@ export function FollowerRow({ character, on_kick }: { character: any; on_kick: (
   return (
     <div className="chsw-rowwrap chsw-child">
       <div className="chsw-row chsw-row--following" title={character.name}>
-        <span className="chsw-row__glyph" aria-label={class_label ?? undefined} style={{ '--hue': hue } as React.CSSProperties}>
+        <span
+          className="chsw-row__glyph"
+          aria-label={class_label ?? undefined}
+          style={{ '--hue': hue } as React.CSSProperties}
+        >
           {initial}
         </span>
         <span className="chsw-row__name">{character.name}</span>
@@ -79,7 +83,11 @@ export function CharacterRow({
       aria-busy={switching}
       title={character.name}
     >
-      <span className="chsw-row__glyph" aria-label={class_label ?? undefined} style={{ '--hue': hue } as React.CSSProperties}>
+      <span
+        className="chsw-row__glyph"
+        aria-label={class_label ?? undefined}
+        style={{ '--hue': hue } as React.CSSProperties}
+      >
         {initial}
       </span>
       <span className="chsw-row__name">{character.name}</span>

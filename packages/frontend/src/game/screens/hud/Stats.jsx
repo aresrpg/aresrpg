@@ -363,7 +363,9 @@ export function Stats() {
             <span className="stats__hero-name">{character.name}</span>
             <span className="stats__hero-lvl hud-num">{t('stats.level', { level })}</span>
           </div>
-          <div className="stats__hero-class">{class_title(t, character.classe ?? character.class_id) ?? t('stats.adventurer')}</div>
+          <div className="stats__hero-class">
+            {class_title(t, character.classe ?? character.class_id) ?? t('stats.adventurer')}
+          </div>
           <div className="stats__hero-xp-head">
             <span className="stats__hero-xp-label">{t('common.experience')}</span>
             <span className="stats__hero-xp-value hud-num">

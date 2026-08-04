@@ -118,7 +118,8 @@ export function Spellbook({ on_open, embedded = false }) {
           <div>
             <div className="sb__name">{character.name}</div>
             <div className="sb__sub">
-              {class_title(t, character.classe ?? character.class_id) ?? t('stats.adventurer')} · {t('spells.level', { level: book.level })}
+              {class_title(t, character.classe ?? character.class_id) ?? t('stats.adventurer')} ·{' '}
+              {t('spells.level', { level: book.level })}
             </div>
           </div>
         </div>
