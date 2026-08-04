@@ -35,7 +35,7 @@ Facts in this registry are consumed by import or derivation only. Re-declaring a
 | Stored chain fight status               | `packages/move/engine/sources/fight.move:19` — stored chain status.                                                                 |
 | Mob fighter-ID base                     | `packages/move/engine/sources/retro_effects.move:465` — existing reusable chain decoder closest to the effect board.                |
 | Minimum turn duration                   | `packages/move/engine/sources/actions.move:33` — enforced chain guard.                                                              |
-| Default turn duration                   | `packages/move/aresrpg/sources/config.move:96` — default chain config.                                                              |
+| Default turn duration                   | `packages/move/aresrpg/sources/config.move:100` — default chain config.                                                             |
 | `buy_many` item limit                   | `packages/move/aresrpg/sources/shop.move:63`, `:382` — enforced limit plus public getter.                                           |
 | Active Sui network                      | `packages/frontend/src/chain/deployment.ts:6`, `:26` — chain client/deployment selector.                                            |
 | Explorer transaction network            | `packages/frontend/src/chain/deployment.ts:26` — selected network.                                                                  |

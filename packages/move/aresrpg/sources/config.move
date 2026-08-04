@@ -65,11 +65,15 @@ const DOMAIN_ALL: u16 = 0xFFFF; // ships all-on; `enabled` stays the master dark
 // Only the DEFAULTS below are spec-pinned (§17.20/.26/.31); these BANDS are anti-footgun rails around them,
 // admin-tunable within. Multipliers are stored in HUNDREDTHS of 1× (100 = 1.00×, 400 = 4.00× — §17.20 1×–4×).
 const MULT_MIN: u64 = 100; // 1.00×
-// The admin can crank up a x1000 xp and loot boost — for the bot test suite on test networks.
-// The unit is HUNDREDTHS of 1× (100 = 1.00×), so x1000 = 100_000 (NOT 10_000, which is only x100). Overflow-safe:
-// `progression_math::xp_add_capped` does `delta * mult / 100` then caps to xp_for_level, and any realistic fight
-// delta × 100_000 stays far under u64. Body-only constant bump — clamp/AdminCap/events unchanged, upgrade-compatible.
-const MULT_MAX: u64 = 100_000; // 1000.00× (test-network boost ceiling)
+// #2184 — the ceiling is the WALL, and the wall is the SPEC: §17.20 defines the economy multipliers as 1×–4×,
+// so the band ends at 4.00× (400 hundredths). It stood at 100_000 (1000×) as a test-network bot boost: legal on
+// testnet, kaiju blast radius the moment mainnet publishes off the same source — a compromised or fat-fingered
+// AdminCap could mint a 1000× economy. There is no chain-conditional constant in Move (one source, one value for
+// every network), so the ceiling ships at the MAINNET ratchet and testnet inherits it. A separate testnet ceiling,
+// if ever ratified (SPEC amendment #8, #2188), is a one-constant ceremony act — never a runtime branch.
+// Overflow-safe: `progression_math::xp_add_capped` does `delta * mult / 100` then caps to xp_for_level.
+// Body-only constant tightening — clamp/AdminCap/signatures/events unchanged, upgrade-compatible.
+const MULT_MAX: u64 = 400; // 4.00× (§17.20)
 const LEVEL_MIN: u64 = 1; // a level gate / cap is never 0
 const LEVEL_MAX: u64 = 200; // the character curve ceiling (§17.20 max reachable ≤ 200)
 const TURN_MS_MIN: u64 = 5_000; // 5s — a turn shorter than this is unplayable
@@ -122,8 +126,8 @@ public struct GameConfig has key {
   id: UID,
   enabled: bool, // GLOBAL game freeze (distinct from per-package version.enabled)
   // §17.20 — economy clamps
-  xp_multiplier: u64, // hundredths of 1× (100..100_000 → 1×..1000×)
-  loot_multiplier: u64, // hundredths of 1× (100..100_000 → 1×..1000×)
+  xp_multiplier: u64, // hundredths of 1× (100..400 → 1×..4×)
+  loot_multiplier: u64, // hundredths of 1× (100..400 → 1×..4×)
   max_reachable_level: u64, // 1..200 — xp earned AT the cap is DISCARDED by progression, never banked
   // §17.26 — engine dials
   turn_duration_ms: u64,

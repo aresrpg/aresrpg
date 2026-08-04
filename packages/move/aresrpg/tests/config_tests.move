@@ -118,22 +118,27 @@ fun setter_in_band_updates_while_dark() {
 }
 
 #[test]
-/// The admin can crank xp/loot to x1000 (bot test suite). Setting EXACTLY the max (100_000
-/// hundredths = 1000×) succeeds unclamped, and any value above it pins to the ceiling — for BOTH multipliers.
-fun xp_loot_multiplier_reaches_x1000_and_clamps_above() {
+/// #2184 — the §17.20 ceiling is the WALL a compromised AdminCap cannot climb. Setting EXACTLY the max
+/// (400 hundredths = 4.00×) succeeds unclamped; ONE above it (401) already pins to the ceiling, and so does
+/// the old 1000× boost value — for BOTH multipliers. Both boundary directions, both dials.
+fun xp_loot_multiplier_reaches_x4_and_clamps_above() {
   let mut sc = begin();
   let cap = sc.take_from_sender<AdminCap>();
   let mut cfg = sc.take_shared<GameConfig>();
   let ver = sc.take_shared<Version>();
 
-  config::set_xp_multiplier(&cap, &mut cfg, 100_000, &ver, sc.ctx()); // exactly x1000
-  assert_eq!(cfg.xp_multiplier(), 100_000);
-  config::set_loot_multiplier(&cap, &mut cfg, 100_000, &ver, sc.ctx());
-  assert_eq!(cfg.loot_multiplier(), 100_000);
-  config::set_xp_multiplier(&cap, &mut cfg, 100_001, &ver, sc.ctx()); // one above → clamps to the ceiling
-  assert_eq!(cfg.xp_multiplier(), 100_000);
+  config::set_xp_multiplier(&cap, &mut cfg, 400, &ver, sc.ctx()); // exactly x4 — the spec ceiling
+  assert_eq!(cfg.xp_multiplier(), 400);
+  config::set_loot_multiplier(&cap, &mut cfg, 400, &ver, sc.ctx());
+  assert_eq!(cfg.loot_multiplier(), 400);
+  config::set_xp_multiplier(&cap, &mut cfg, 401, &ver, sc.ctx()); // one above → clamps to the ceiling
+  assert_eq!(cfg.xp_multiplier(), 400);
+  config::set_loot_multiplier(&cap, &mut cfg, 401, &ver, sc.ctx());
+  assert_eq!(cfg.loot_multiplier(), 400);
+  config::set_xp_multiplier(&cap, &mut cfg, 100_000, &ver, sc.ctx()); // the retired x1000 boost → pinned
+  assert_eq!(cfg.xp_multiplier(), 400);
   config::set_loot_multiplier(&cap, &mut cfg, 9_999_999, &ver, sc.ctx());
-  assert_eq!(cfg.loot_multiplier(), 100_000);
+  assert_eq!(cfg.loot_multiplier(), 400);
 
   ts::return_shared(ver);
   ts::return_shared(cfg);
@@ -150,13 +155,13 @@ fun scalar_dials_clamp_both_edges() {
   let mut cfg = sc.take_shared<GameConfig>();
   let ver = sc.take_shared<Version>();
 
-  // multipliers: band 100..100_000 (1×..1000× — testnet-only boost, 2026-07-11)
+  // multipliers: band 100..400 (1×..4× — §17.20, #2184)
   config::set_xp_multiplier(&cap, &mut cfg, 500_000, &ver, sc.ctx());
-  assert_eq!(cfg.xp_multiplier(), 100_000); // over-range pins to the x1000 ceiling
+  assert_eq!(cfg.xp_multiplier(), 400); // over-range pins to the x4 ceiling
   config::set_xp_multiplier(&cap, &mut cfg, 1, &ver, sc.ctx());
   assert_eq!(cfg.xp_multiplier(), 100);
   config::set_loot_multiplier(&cap, &mut cfg, 999_999, &ver, sc.ctx());
-  assert_eq!(cfg.loot_multiplier(), 100_000);
+  assert_eq!(cfg.loot_multiplier(), 400);
   // max level: band 1..200
   config::set_max_reachable_level(&cap, &mut cfg, 9_999, &ver, sc.ctx());
   assert_eq!(cfg.max_reachable_level(), 200);

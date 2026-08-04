@@ -97,7 +97,13 @@ const MAX_OBJECT_SIZE = 102_400
 // (`::consumable_effect::${ceff.fn}`). A demoted door there is a whole-PTB abort at the next ceremony, so the
 // bytes are not optional. `seed_full_corpus_doors.test.mjs` is the class gate that stops the next census
 // missing the same shape.
-const SIZE_BUDGETS = { aresrpg: 99_304 }
+// 2026-08-05 (#2184): 99_304 → 99_314. +10 bytes, ONE constant-pool entry. `config::MULT_MAX` dropped from
+// 100_000 (1000×) to 400 (4.00× — the §17.20 economy band), bounding what a compromised or fat-fingered
+// AdminCap can do to the xp/loot economy. The old value cost ZERO bytes because it DEDUPED against
+// `AGING_CAP_MAX = 100_000`; 400 is unique in this module, so it needs its own 8-byte u64 entry plus 2 bytes
+// of framing (measured: pinning MULT_MAX to 10_000 — already in the pool via `BP_MAX` — reproduces 99_304
+// exactly). Ten bytes for a 250× smaller admin blast radius on the money path.
+const SIZE_BUDGETS = { aresrpg: 99_314 }
 
 // ── The republish window ────────────────────────────────────────────────────────────────────────
 // A REPUBLISH is not an upgrade: it mints a fresh package lineage, so the compatibility verifier's
