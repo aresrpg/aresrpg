@@ -1,7 +1,13 @@
-8ede2ea44 → Refs #2166 — fix(fight): share status wire decode across doors
-ac2955110 → Refs #2162 — fix(fight): admit live rows before presentation
-9b9859c42 → Refs #2163 — test(fight): seal status-only observer casts
-f465b209f → Refs #2164 — fix(fight): retire each triggered trap sprite
-8b056c99e → Refs #2161 — fix(frontend): keep invisible self overlays visible
-29996bed8 → Refs #2176,#2179 — fix(hud): derive total effect badges
-273501c71 → Refs #2161,#2163,#2164,#2176 — test(fight): activate observer cell matrix
+ebc156496 → Refs #2192 — fix(report): a blind deployment says so, and previews stop passing as production
+ab0677081 → Refs #2192 — feat(sponsor): the zkLogin proving rejection reports its own facts, redacted
+d7ac5f212 → Refs #2192 — fix(auth): a dead zkLogin session refuses instead of firing a blocked popup
+07c92b57b → Refs #2192 — style(test): prettier + array destructuring on the #2192 suites
+04b01280b → Refs #2192 — test(env): the mock surface carries DEPLOY_ENV
+3749ee67a → Refs #2158 — feat(fast-travel): trace the click→flight legs
+e467300f4 → Refs #2158 — test(fast-travel): RED — a tx-free hop's route read takes 3240ms
+67c1c88c5 → Refs #2158 — perf(fast-travel): a travel click is an interaction, not a poll
+2cfd92982 → Refs #2158 — fix(rpc): an interactive claim starts its queued read now
+3d60fe073 → Refs #2158 — test(fast-travel): seal the mark names and the click's read count
+bc83550a5 → Refs #2199 — fix(assets): the flight dragon rides its published key, in one home
+55bc20315 → Refs #2154 — fix(fight): the post-join predicate is "my seat is in the read"
+47863c9d0 → Refs #2159 — fix(party): the invite card dies at the click, not at the receipt
