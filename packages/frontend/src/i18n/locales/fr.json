@@ -1273,6 +1273,8 @@
     "anchor": "ANCRE",
     "reroll_board": "REGÉNÉRER LE PLATEAU",
     "board_hint": "Cliquez une case bleue pour placer un personnage · une case rouge pour choisir un monstre · une case occupée pour la vider",
+    "board_unavailable": "PLATEAU 3D INDISPONIBLE",
+    "board_unavailable_hint": "Cet appareil n'a pas de contexte WebGL fonctionnel : le plateau ne peut pas être affiché. Activez l'accélération matérielle ou essayez un autre navigateur pour placer des combattants — tous les autres panneaux de cette page fonctionnent toujours.",
     "no_mobs": "AUCUN MONSTRE — CLIQUEZ UNE CASE ROUGE",
     "pick_mob": "CHOISIR UN MONSTRE",
     "mob_band": "NIV {{min}}–{{max}}",

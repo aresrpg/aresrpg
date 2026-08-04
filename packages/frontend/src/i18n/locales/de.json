@@ -1273,6 +1273,8 @@
     "anchor": "ANKER",
     "reroll_board": "SPIELFELD NEU WÜRFELN",
     "board_hint": "Blaues Feld anklicken, um eine Figur zu setzen · rotes Feld für einen Gegner · besetztes Feld, um es zu leeren",
+    "board_unavailable": "3D-BRETT NICHT VERFÜGBAR",
+    "board_unavailable_hint": "Dieses Gerät hat keinen funktionierenden WebGL-Kontext, daher kann das Brett nicht gezeichnet werden. Aktiviere die Hardwarebeschleunigung oder nutze einen anderen Browser, um Kämpfer zu platzieren — alle anderen Bereiche dieser Seite funktionieren weiterhin.",
     "no_mobs": "KEINE GEGNER — ROTES FELD ANKLICKEN",
     "pick_mob": "GEGNER WÄHLEN",
     "mob_band": "STUFE {{min}}–{{max}}",
