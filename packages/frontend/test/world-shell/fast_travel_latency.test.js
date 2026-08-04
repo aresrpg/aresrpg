@@ -20,6 +20,7 @@ import { _reset_for_test as reset_world_catalog, load_world_catalog } from '../.
 import { read_route_facts } from '../../src/world-shell/fast_travel_target.js'
 import { create_mount_glb_cache } from '../../src/game/mount_glb_cache.js'
 import {
+  FT_MARK_NAMES,
   FT_MEASURE_NAMES,
   finish_fast_travel_timing,
   mark_ft_model_ready,
@@ -166,10 +167,17 @@ afterEach(() => {
 describe('#2158 — the click→flight read plan under D51', () => {
   test('a same-world travel click resolves its route inside the warm bar', async () => {
     await stage_live_world()
+    const before = requests.length
     const { value, elapsed_ms } = await measure(click_fast_travel)
 
     expect(value.ok).toBe(true)
     expect(value.facts.world_id).toBe(WORLD)
+    // Exactly the three documents a route needs, each read once — the target's, the traveler's, the world gate.
+    // (Background polls due in the same window are counted out: they would have run with or without the click.)
+    const during = requests.slice(before)
+    expect(during.filter((url) => url.includes(`ids=${TARGET}`)).length).toBe(1)
+    expect(during.filter((url) => url.includes(`ids=${ME}`)).length).toBe(1)
+    expect(during.filter((url) => url.includes('/v1/encyclopedia')).length).toBe(1)
     // The dominant leg is the read plan's SHAPE: serialized /v1 reads queue behind the background poll FIFO,
     // each one paying its own WORLD_POLL_STAGGER_MS slot (measured RED: 3240ms). Parallel + interactive, the
     // whole plan costs exactly ONE round trip — the clock is virtual, so this number is exact, not a range.
@@ -237,6 +245,14 @@ describe('#2158 — the warm dragon costs the click nothing', () => {
     expect(Object.keys(durations)).toEqual(Object.keys(FT_MEASURE_NAMES))
     expect(durations.model_wait).toBeLessThan(5)
     expect(durations.total).not.toBeNull()
+    // The four marks the row asks for are on the timeline, under their published names.
+    for (const name of [
+      FT_MARK_NAMES.begin,
+      FT_MARK_NAMES.route_resolved,
+      FT_MARK_NAMES.model_ready,
+      FT_MARK_NAMES.flight_start,
+    ])
+      expect(performance.getEntriesByName(name, 'mark').length).toBeGreaterThan(0)
   })
 
   test('a follower catching up can neither start nor finish the player s trace', async () => {
