@@ -1,4 +1,3 @@
-563b952f9 → Refs #2178 — fix(craft): the crafted output enters the bag from its own receipt
-e2702708f → Refs #2178 — fix(crush): the rune yield enters the bag from its own receipt
-211475798 → Refs #2178 — fix(roster): a mid-load repaint request is served, not dropped
-172ead1c3 → Refs #2178 — test(loot): make the #2178 proofs order-independent
+5212678e8 → Refs #2209 — fix(fight): one mob turn is one presentation slot, whatever the wire did
+bd1a42017 → Refs #2209 — fix(fight): a turn still in delivery masks its own rows
+4eef94fc5 → Refs #2209 — fix(fight): a catch-up delivery holds nothing either
