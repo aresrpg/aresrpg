@@ -108,7 +108,10 @@ describe('zone_derive ↔ zone_gen member-list parity (format 3)', () => {
     expect(commitment_format(new Uint8Array(32))).toBe(1)
     expect(commitment_format([2, ...new Array(32).fill(0)])).toBe(2)
     expect(commitment_format([3, ...new Array(32).fill(0)])).toBe(3)
-    expect(commitment_format([4, ...new Array(32).fill(0)])).toBe(0)
+    // 4 = the member TREE (#2194) — the same stream as 3, committed per group. 5 stands in for "a format this
+    // build cannot derive", which stays 0: an unknown commitment is never guessed at.
+    expect(commitment_format([4, ...new Array(32).fill(0)])).toBe(4)
+    expect(commitment_format([5, ...new Array(32).fill(0)])).toBe(0)
     expect(commitment_format(null)).toBe(1) // an absent root is a pre-commitment zone = legacy
   })
 })

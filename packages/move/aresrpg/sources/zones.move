@@ -24,7 +24,7 @@ const EBadDrainInput: u64 = 109; // drain_zones: the zx / zy coordinate lists ha
 const EBadGroupProof: u64 = 110; // claim: supplied facts/index/proof do not authenticate against the searched-zone root
 const EGroupNotConsumed: u64 = 111; // release: the group is already live in the world — nothing to put back
 const EMemberZone: u64 = 112; // claim: this zone derives MEMBER LISTS (format 3) — claim it through the member doors
-const ENotMemberZone: u64 = 113; // member claim: this zone predates member lists — claim it through the original doors
+const ENotMemberZone: u64 = 113; // member claim: this zone predates member lists (or the PROOF door was used on a zone with no per-group tree) — claim it through the matching door
 
 // ╔════════════════ [ Types ] ════════════════════════════════════════════════ ]
 
@@ -79,6 +79,23 @@ public struct GroupTicket {
 public struct GroupClaimProof has drop {
   index: u64,
   template: ID,
+  x: u32,
+  z: u32,
+  group_size: u16,
+  group_seed: u64,
+  proof: vector<u8>,
+}
+
+/// The FORMAT-4 twin of `GroupClaimProof` (#2194) — the member-list facts a claimant asserts about ONE group,
+/// authenticated against the zone's stored MERKLE root by a single O(log n) path instead of a whole-zone
+/// re-derivation. `members` is the SEATING roster (already truncated to `group_size` by the committer) and
+/// `progress` the zone's §4 difficulty — both inside the leaf, so the pack composition and the level window a
+/// fight is built at are the commitment's word, never the caller's. Private fields, same as its twin.
+public struct MemberClaimProof has drop {
+  index: u64,
+  template: ID,
+  members: vector<ID>,
+  progress: u64,
   x: u32,
   z: u32,
   group_size: u16,
@@ -281,11 +298,12 @@ fun y152(
     character_link::y2(character, wid, world::y70(x, z, now, pet), version);
   };
 
-  // THE ZONE'S OWN DERIVATION — a fresh search rolls FORMAT 3 (#1110/#1111): member lists, equal spawn (no
-  // level-gated membership) and lattice placement. It is derived HERE with the very kernel the commitment written
+  // THE ZONE'S OWN DERIVATION — a fresh search rolls FORMAT 4 (#2194): the format-3 composition (member lists,
+  // equal spawn, lattice placement) committed as a per-group MERKLE TREE, so claiming one group costs one
+  // inclusion path instead of re-deriving the zone. It is derived HERE with the very kernel the commitment written
   // below names, so the zone can only ever be replayed the way it was written. Zones searched before this door
   // keep replaying their own stored format, forever.
-  let (msids, mt, mmembers, mx, mz, ms, mg, _progress) =
+  let (msids, mt, mmembers, mx, mz, ms, mg, progress) =
     zone_comp::y72(world, zx, zy, seed, config.team_size_bound());
   // the resource stream's SIZE is all this door reports (`ZoneSearched.resource_nodes`, the res-bitmap's bit
   // width) — the count-only roll skips the per-cell template/job/tier columns nothing here reads (#2195)
@@ -302,7 +320,7 @@ fun y152(
   } else {
     df::add(wuid, key, Zone { discovered_at_ms: now, seed, mob_bitmap: vector[], res_bitmap: vector[] });
   };
-  let group_root = zone_gen::mob_group_commitment_members(wid, zx, zy, seed, now, &msids, &mt, &mmembers, &mx, &mz, &ms, &mg);
+  let group_root = zone_gen::mob_group_member_root(wid, zx, zy, seed, now, progress, &msids, &mt, &mmembers, &mx, &mz, &ms, &mg);
   let root_key = ZoneGroupRootKey { zx, zy };
   if (df::exists(wuid, root_key)) {
     let stored: &mut ZoneGroupCommitment = df::borrow_mut(wuid, root_key);
@@ -377,9 +395,11 @@ public fun claim_mob_group_in_zone_with_proof(
 /// additionally carries the committed ROSTER and the zone's difficulty `progress`, which is what lets
 /// `fight::open_group` build a pack of several species without trusting anything the caller says.
 ///
-/// NO PROOF VARIANT: a format-3 zone commits its WHOLE derived set (roster included), so authenticating means
-/// re-deriving it — the derivation IS the proof, exactly as it is for format 2. There is nothing a Merkle path
-/// would save.
+/// This is the DERIVE door: a format-3 zone commits its whole derived set as one flat hash, so the only way to
+/// authenticate one group under it is to re-derive the zone — which the gas audit measured at ~45% of a
+/// play-hour's gas (#2194). Format 4 commits the same set as a TREE and is claimed through
+/// `claim_mob_group_in_zone_members_with_proof`; this door still accepts a format-4 zone as the fallback the
+/// client keeps when it cannot compose a witness, so a proof-side failure is never an unplayable group.
 public fun claim_mob_group_members(
   world: &mut World,
   kiosk: &mut Kiosk,
@@ -390,7 +410,7 @@ public fun claim_mob_group_members(
   version: &Version,
   clock: &Clock,
 ): MemberGroupTicket {
-  y153(world, kiosk, pkcap, character_id, option::none(), spawn_id, config, version, clock)
+  y153(world, kiosk, pkcap, character_id, option::none(), spawn_id, option::none(), config, version, clock)
 }
 
 /// GLOBAL-SEARCH member claim — the format-3 twin of `claim_mob_group_in_zone`.
@@ -406,7 +426,21 @@ public fun claim_mob_group_in_zone_members(
   version: &Version,
   clock: &Clock,
 ): MemberGroupTicket {
-  y153(world, kiosk, pkcap, character_id, option::some(ZoneKey { zx, zy }), spawn_id, config, version, clock)
+  y153(world, kiosk, pkcap, character_id, option::some(ZoneKey { zx, zy }), spawn_id, option::none(), config, version, clock)
+}
+
+/// PROOF-TAKING member claim (format 4, #2194) — the cheap door. The caller names the searched zone and brings
+/// the group's committed facts plus one Merkle path; the chain authenticates that path against the zone's stored
+/// root and never derives the zone at all. ONE door (not the occupied/global pair the derive path carries):
+/// composing a witness already requires reading the zone doc, so the coordinates are always in hand, and the
+/// reachability law is unchanged either way — `verify_travel` gates the walk from the checkpoint to the group.
+public fun claim_mob_group_in_zone_members_with_proof(
+  world: &mut World, kiosk: &mut Kiosk, pkcap: &PersonalKioskCap, character_id: ID, zx: u32, zy: u32,
+  index: u64, spawn_id: u64, template: ID, members: vector<ID>, progress: u64, x: u32, z: u32,
+  group_size: u16, group_seed: u64, proof: vector<u8>, config: &GameConfig, version: &Version, clock: &Clock,
+): MemberGroupTicket {
+  let p = MemberClaimProof { index, template, members, progress, x, z, group_size, group_seed, proof };
+  y153(world, kiosk, pkcap, character_id, option::some(ZoneKey { zx, zy }), spawn_id, option::some(p), config, version, clock)
 }
 
 // name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the #1315 landing
@@ -419,12 +453,13 @@ fun y153(
   character_id: ID,
   zone: Option<ZoneKey>,
   spawn_id: u64,
+  member_proof: Option<MemberClaimProof>,
   config: &GameConfig,
   version: &Version,
   clock: &Clock,
 ): MemberGroupTicket {
   let (wid, template, members, progress, x, z, group_size, spawned_at_ms, group_seed) =
-    y157(world, kiosk, pkcap, character_id, zone, spawn_id, option::none(), true, config, version, clock);
+    y157(world, kiosk, pkcap, character_id, zone, spawn_id, option::none(), member_proof, true, config, version, clock);
   MemberGroupTicket {
     world: wid, character: character_id, spawn_id, template, members, progress,
     x, z, group_size, spawned_at_ms, group_seed,
@@ -489,7 +524,7 @@ fun y156(
   clock: &Clock,
 ): GroupTicket {
   let (wid, template, _members, _progress, x, z, group_size, spawned_at_ms, group_seed) =
-    y157(world, kiosk, pkcap, character_id, zone, spawn_id, claim_proof, false, config, version, clock);
+    y157(world, kiosk, pkcap, character_id, zone, spawn_id, claim_proof, option::none(), false, config, version, clock);
   GroupTicket { world: wid, character: character_id, spawn_id, template, x, z, group_size, spawned_at_ms, group_seed }
 }
 
@@ -509,6 +544,7 @@ fun y157(
   zone: Option<ZoneKey>,
   spawn_id: u64,
   claim_proof: Option<GroupClaimProof>,
+  member_proof: Option<MemberClaimProof>,
   members: bool,
   config: &GameConfig,
   version: &Version,
@@ -541,12 +577,21 @@ fun y157(
   // divergence the commitment exists to prevent. A pre-member zone has no roster to commit, so a member claim
   // over it would have to invent one. Each door refuses the other's zones; both refusals live here.
   let format = y162(world, zx, zy);
-  if (members) assert!(format == 3, ENotMemberZone) else assert!(format != 3, EMemberZone);
+  // 3 (whole-set) and 4 (per-group TREE) are both MEMBER-LIST formats — they derive the same packs and differ
+  // only in what a claim has to do to authenticate one. Both refuse the single-spec doors; the PROOF door needs
+  // a per-group leaf, which only 4 commits.
+  if (members) assert!(format >= 3, ENotMemberZone) else assert!(format < 3, EMemberZone);
 
-  // Authenticate the LIVE group: the member-list stream, or original derivation / the adjacent search-time commitment.
-  let (template_id, roster, progress, mx, mz, group_size, spawned_at_ms, group_seed, index) = if (members) {
+  // Authenticate the LIVE group: one member-tree PATH (never deriving the zone), the member-list stream, or the
+  // original derivation / the adjacent search-time commitment.
+  let (template_id, roster, progress, mx, mz, group_size, spawned_at_ms, group_seed, index) = if (member_proof.is_some()) {
+    assert!(format == 4, ENotMemberZone);
+    y167(world, zx, zy, spawn_id, member_proof.destroy_some())
+  } else if (members) {
+    member_proof.destroy_none();
     y154(world, zx, zy, spawn_id, config.team_size_bound(), true)
   } else {
+    member_proof.destroy_none();
     let (t, x, z, gs, sa, g, ix) = y158(world, zx, zy, spawn_id, claim_proof, config.team_size_bound());
     (t, vector<ID>[], 0, x, z, gs, sa, g, ix)
   };
@@ -593,6 +638,26 @@ fun y158(
   (template, x, z, group_size, zone.discovered_at_ms, group_seed, index)
 }
 
+
+// name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the #1315 landing
+/// FORMAT-4 authentication (#2194) — the whole point of the format. Verify ONE inclusion path against the zone's
+/// stored member-tree root; the zone is never derived, so the claim's compute is a leaf hash plus ≤6 node hashes
+/// instead of the full composition pipeline. Every fact returned came out of the leaf the root just
+/// authenticated, so nothing below this line is the caller's word. Shape-identical return to `y154`.
+fun y167(world: &World, zx: u32, zy: u32, spawn_id: u64, p: MemberClaimProof): (ID, vector<ID>, u64, u32, u32, u16, u64, u64, u64) {
+  let MemberClaimProof { index, template, members, progress, x, z, group_size, group_seed, proof } = p;
+  let uid = world::uid(world);
+  let key = ZoneKey { zx, zy };
+  assert!(df::exists(uid, key), ESpawnNotFound);
+  let zone: &Zone = df::borrow(uid, key);
+  let stored: &ZoneGroupCommitment = df::borrow(uid, ZoneGroupRootKey { zx, zy });
+  assert!(zone_gen::mob_group_member_root_matches(
+    &stored.root, stored.count, object::id(world), zx, zy, zone.seed, zone.discovered_at_ms, progress, index,
+    spawn_id, template, members, x, z, group_size, group_seed, &proof,
+  ), EBadGroupProof);
+  assert!(!y164(&zone.mob_bitmap, index), ESpawnNotFound); // consumed = gone (no double-fight of one group)
+  (template, members, progress, x, z, group_size, zone.discovered_at_ms, group_seed, index)
+}
 
 // name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the #1315 landing
 /// Set the consumed bit of derived mob group `index` in zone `(zx,zy)` — the write that replaced the row removal.
@@ -760,7 +825,7 @@ public fun resource_remaining(world: &World, zx: u32, zy: u32, i: u64): u16 {
 /// through this door, so a zone can never be read with a derivation other than the one it was written with.
 public(package) fun derive_mobs(world: &World, zx: u32, zy: u32, seed: u64, team_bound: u64): (vector<u64>, vector<ID>, vector<u32>, vector<u32>, vector<u16>, vector<u64>) {
   let format = y162(world, zx, zy);
-  if (format == 3) { // 3 = member lists — project them away; ids, positions and sizes are what this door promises
+  if (format >= 3) { // 3/4 = member lists — project them away; ids, positions and sizes are what this door promises
     let (sids, tpls, _members, xs, zs, sizes, gseeds, _progress) = zone_comp::y72(world, zx, zy, seed, team_bound);
     (sids, tpls, xs, zs, sizes, gseeds)
   } else if (format == 2) { // 2 = zone_gen lattice commitment
@@ -851,6 +916,26 @@ public fun set_merkle_root_commitment_for_testing(world: &mut World, zx: u32, zy
 }
 
 #[test_only]
+/// Overwrite the zone's stored commitment with a FORMAT-3 (whole-set member list) one — what a search wrote
+/// before #2194 moved fresh searches to the member TREE. The suites that pin the derive-door behaviour of an
+/// in-flight format-3 zone stand their zones up through this.
+public fun set_member_set_commitment_for_testing(world: &mut World, zx: u32, zy: u32, team_bound: u64) {
+  let seed = zone_seed(world, zx, zy);
+  let now = zone_discovered_at(world, zx, zy);
+  let wid = object::id(world);
+  let (sids, tpls, members, xs, zs, sizes, gseeds, _p) = zone_comp::y72(world, zx, zy, seed, team_bound);
+  let root = zone_gen::mob_group_commitment_members(wid, zx, zy, seed, now, &sids, &tpls, &members, &xs, &zs, &sizes, &gseeds);
+  write_commitment_for_testing(world, zx, zy, root, sids.length());
+}
+
+#[test_only]
+/// The zone's FULL member-list derivation plus its §4 `progress` — exactly what a client rebuilds locally to
+/// compose a format-4 witness. Tests build the very proof the claim door verifies out of this.
+public fun member_stream_for_testing(world: &World, zx: u32, zy: u32, team_bound: u64): (vector<u64>, vector<ID>, vector<vector<ID>>, vector<u32>, vector<u32>, vector<u16>, vector<u64>, u64) {
+  zone_comp::y72(world, zx, zy, zone_seed(world, zx, zy), team_bound)
+}
+
+#[test_only]
 fun write_commitment_for_testing(world: &mut World, zx: u32, zy: u32, root: vector<u8>, count: u64) {
   let wuid = world::uid_mut(world);
   let key = ZoneGroupRootKey { zx, zy };
@@ -882,6 +967,24 @@ public fun remove_group_commitment_for_testing(world: &mut World, zx: u32, zy: u
     let ZoneGroupCommitment { root: _, count: _ } = df::remove(uid, key);
   };
 }
+
+#[test_only]
+/// The zone's stored commitment BYTES and the group count they cover — what `/v1` serves a client so it can
+/// rebuild the tree and take one path.
+public fun group_commitment_root_for_testing(world: &World, zx: u32, zy: u32): vector<u8> {
+  let stored: &ZoneGroupCommitment = df::borrow(world::uid(world), ZoneGroupRootKey { zx, zy });
+  stored.root
+}
+
+#[test_only]
+public fun group_commitment_count_for_testing(world: &World, zx: u32, zy: u32): u64 {
+  let stored: &ZoneGroupCommitment = df::borrow(world::uid(world), ZoneGroupRootKey { zx, zy });
+  stored.count
+}
+
+#[test_only]
+/// The format byte the zone's own stored commitment reports — the router every deriver dispatches on.
+public fun group_commitment_format_for_testing(world: &World, zx: u32, zy: u32): u8 { y162(world, zx, zy) }
 
 #[test_only]
 public fun group_commitment_exists_for_testing(world: &World, zx: u32, zy: u32): bool {
