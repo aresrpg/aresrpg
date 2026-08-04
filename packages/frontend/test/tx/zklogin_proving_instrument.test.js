@@ -9,6 +9,7 @@
 import { describe, expect, it, mock, beforeEach, afterEach } from 'bun:test'
 
 import { execute_sponsored_tx } from '../../src/tx/index.ts'
+import i18n from '../../src/i18n'
 
 import { ADDR, CHAIN, SPONSOR_URL, make_tx, make_wallet } from './sponsor_door_harness.js'
 
@@ -89,6 +90,16 @@ describe('the zkLogin proving instrument (#2192)', () => {
     const failure = await run(wallet_that_cannot_prove(leaky_enoki_rejection())).catch((error) => error)
     expect(failure.message).not.toContain(JWT)
     expect(failure.__ares_reported).toBe(true) // the toast layer's own report_error no-ops on it
+  })
+
+  // The sign wrapper refuses a dead Enoki session rather than letting it open a blocked OAuth popup; the
+  // sponsored door must carry that fact to the player, not bury it under "re-sign and retry".
+  it('a dead session reaches the player as sign in again, not as retry', async () => {
+    const expired = Object.assign(new Error('zkLogin session expired'), { code: 'zklogin_session_expired' })
+    const failure = await run(wallet_that_cannot_prove(expired)).catch((error) => error)
+    expect(failure.message).toBe(i18n.t('errors.zklogin_session_expired'))
+    expect(failure.message).not.toBe(i18n.t('errors.sponsor_zklogin'))
+    expect(fetch_spy).not.toHaveBeenCalled()
   })
 
   it('a player who closes the popup is still not an error — the benign class stays dropped', async () => {

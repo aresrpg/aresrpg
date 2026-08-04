@@ -76,15 +76,56 @@ export const create_zklogin_zkp_with_retry = async <Materials, Proof>({
   throw proof_unavailable(second.error)
 }
 
+// ── the expired-session gate (#2192) ─────────────────────────────────────────
+// Enoki's signer recovers a dead session by RE-RUNNING THE OAUTH FLOW: `#getKeypair` opens a popup whenever
+// `!session?.jwt || Date.now() > session.expiresAt` (wallet.mjs). Inside a sign call that popup has no user
+// activation behind it — the browser blocks it and the sign rejects with `Failed to open popup`, which is a
+// class already sitting in our error store. It is unfixable at the sign: a popup needs a click, and by then
+// the player has committed to a transaction. So the wrapper asks the SAME question Enoki asks, one step
+// earlier, and refuses as data — pre-network, pre-build, zero gas — with copy that names the actual remedy.
+//
+// The app can be fully "signed in" while this is true: the connected address lives in Enoki's zkLogin STATE
+// store, which outlives the session store the signer reads.
+type ZkLoginSessionShape = { jwt?: unknown; expiresAt?: unknown } | null | undefined
+
+/** Enoki's own gate, as a predicate: will the next sign have to re-authenticate? PURE. */
+export const zklogin_session_unusable = (session: ZkLoginSessionShape, now_ms: number): boolean => {
+  if (session == null || typeof session !== 'object') return true
+  if (typeof session.jwt !== 'string' || !session.jwt) return true
+  return typeof session.expiresAt === 'number' && now_ms > session.expiresAt
+}
+
+export const zklogin_session_expired_error = (): Error & { code: 'zklogin_session_expired' } =>
+  Object.assign(new Error('zkLogin session expired'), { code: 'zklogin_session_expired' as const })
+
+/** Does this rejection mean the player must sign in again (rather than retry)? PURE. */
+export const is_zklogin_session_expired = (error: unknown): boolean =>
+  (error as { code?: unknown } | null)?.code === 'zklogin_session_expired'
+
 const network_from = (args: readonly unknown[]): string | undefined => {
   const chain = (args[0] as { chain?: unknown } | undefined)?.chain
   return typeof chain === 'string' ? chain.split(':')[1] : undefined
 }
 
+/** Read the session without ever failing the sign for the READ: an unreadable session is not a verdict. */
+const session_or_unknown = async (
+  get_session: EnokiSessionFeature | undefined,
+  args: readonly unknown[]
+): Promise<ZkLoginSessionShape | 'unknown'> => {
+  if (!get_session?.getSession) return 'unknown'
+  try {
+    return (await get_session.getSession({ network: network_from(args) })) as ZkLoginSessionShape
+  } catch {
+    return 'unknown'
+  }
+}
+
 const proof_safe_method =
   (method: AsyncMethod, call_site: ProofCallSite, get_session: EnokiSessionFeature | undefined): AsyncMethod =>
-  (...args) =>
-    create_zklogin_zkp_with_retry({
+  async (...args) => {
+    const session = await session_or_unknown(get_session, args)
+    if (session !== 'unknown' && zklogin_session_unusable(session, Date.now())) throw zklogin_session_expired_error()
+    return create_zklogin_zkp_with_retry({
       call_site,
       initial_materials: args,
       create_proof: (materials) => method(...materials),
@@ -97,8 +138,9 @@ const proof_safe_method =
       log_400_response: (response_body) =>
         game_log('auth', 'Enoki zkLogin proof request rejected (400):', response_body),
     })
+  }
 
-const with_proof_retry = (wallet: WalletStandard): WalletStandard => ({
+export const with_proof_retry = (wallet: WalletStandard): WalletStandard => ({
   get version() {
     return wallet.version
   },
