@@ -6,8 +6,9 @@
 // personal kiosk (kiosk-lock constitution — nothing reaches a raw address), all atomic. Mirrors
 // consumable_actions / crush_actions:
 // same get_sdk() instance, same self-pay run_tx choke (dryRun-guarded, budget = sim ×1.5, 0.1-SUI ceiling,
-// NEVER auto-retried — an executed abort surfaces and stops), then load_roster() repaints the bag off chain
-// truth (which flips the onboarding quest-ladder 'craft' step the moment the output lands).
+// NEVER auto-retried — an executed abort surfaces and stops). The minted output enters the bag from the
+// craft's OWN receipt through the shared inventory reducer door (#2178 — read-your-write, D51); load_roster()
+// then RECONCILES (the burned ingredients, the job XP, and the onboarding quest-ladder 'craft' step).
 //
 // RECIPE IDENTITY (issue #765): the caller hands us a LIVE recipe row — `pages/encyclopedia/recipes.ts`'s
 // CraftRecipeRow, projected from `/v1/encyclopedia`, the object-snapshot of the on-chain `crafting::Recipe`
@@ -28,11 +29,16 @@
 import { use_auth } from '../auth'
 import i18n from '../i18n'
 import { get_sdk } from '../chain/sdk'
+import { get_template_map } from '../chain/read_findables.js'
+import { context } from '../game/core/game.js'
 import { load_roster } from '../roster/load_roster.js'
 
 import { select_ingredients } from './craft_select.js'
 import { craft_outcome } from './craft_outcome.js'
 import { kiosk_for_character } from './kiosk_resolve.js'
+// #2178 (D51, 5th instance): a craft IS a mint receipt — fold it through the SAME inventory reducer door the
+// fight-settle and pet-claim paths use, instead of waiting on this module's own load_roster round-trip.
+import { reduce_minted_receipt } from './loot_inventory_effect.js'
 import { run_tx } from './tx.js'
 
 /**
@@ -86,6 +92,17 @@ export async function craft_item({ recipe, items, character_id }) {
   })
 
   const { result } = await run_tx('craft', tx) // dryRun-guarded self-pay; throws humanized on an on-chain abort
-  load_roster().catch(() => {}) // repaint the bag off chain truth → the crafted output appears → quest 'craft' flips
+  // READ-YOUR-WRITE (#2178): the receipt already proves the minted output — `item::ItemMinted` names its exact
+  // object id, template and amount (item.move:243, reached through crafting::y19 → character_link::y10). It
+  // enters as an INPUT through the ONE inventory door, so the output is in the bag at the transaction, not at
+  // the round-trip. A FAILED roll mints nothing, carries no ItemMinted, and is a no-op here by construction.
+  // `address` is the PRE-tx identity snapshot (the fight-settle door's race guard): a wallet switch mid-flight
+  // must never paint the new owner's bag with what THIS signer minted.
+  await reduce_minted_receipt(
+    { receipt: result, kiosk_id: handle.kiosk_id, kiosk_cap_id: handle.personal_kiosk_cap_id },
+    address,
+    { load_templates: get_template_map, reducer_door: context, current_address: () => use_auth.getState().address }
+  )
+  load_roster().catch(() => {}) // reconciliation: the burned ingredients + job XP repaint off chain truth
   return craft_outcome(result)
 }
