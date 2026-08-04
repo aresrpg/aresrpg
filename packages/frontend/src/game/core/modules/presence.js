@@ -30,12 +30,11 @@
 
 import { visible_players } from '@aresrpg/world/presence'
 
-import { get_class } from '../../data/classes.js'
+import { PLACEHOLDER_SPRITES, class_sprite_base } from '../../data/classes.js'
 import { color_to_hue } from '../../data/color.js'
 import { presence_store } from '../../../world-shell/presence_adapter.js'
 
 const FALLBACK_CLASS = 'senshi'
-const FALLBACK_SPRITES = '/sprites/senshi'
 
 /** @type {import('../game.js').Module} */
 export default function presence() {
@@ -56,7 +55,7 @@ export default function presence() {
           existing.name = row.name
           existing.classe = classe
           existing.male = row.male ?? existing.male ?? true
-          existing.sprites = get_class(classe)?.sprites ?? FALLBACK_SPRITES
+          existing.sprites = class_sprite_base(classe) ?? PLACEHOLDER_SPRITES
           existing.hue = color_to_hue(row.color_1 ?? 0)
           existing.color_1 = row.color_1 ?? 0
           existing.color_2 = row.color_2 ?? 0
@@ -69,7 +68,7 @@ export default function presence() {
             name: row.name,
             classe,
             male: row.male ?? true,
-            sprites: get_class(classe)?.sprites ?? FALLBACK_SPRITES,
+            sprites: class_sprite_base(classe) ?? PLACEHOLDER_SPRITES,
             hue: color_to_hue(row.color_1 ?? 0),
             color_1: row.color_1 ?? 0,
             color_2: row.color_2 ?? 0,

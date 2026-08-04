@@ -16,7 +16,7 @@ import { mark_ui_updated } from '../../../world-shell/tx.js'
 import { reconcile_equip_state } from '../../../world-shell/equip_state_refresh.js'
 import { remove_bag_items, add_bag_items, apply_worn_receipt } from '../../../world-shell/store_patch.js'
 import { use_toast } from '../../../toast'
-import { get_class } from '../../data/classes.js'
+import { PLACEHOLDER_SPRITES, class_sprite_base, class_title } from '../../data/classes.js'
 import { color_to_hue } from '../../data/color.js'
 import { resolve_rolled_stats } from '../../../chain/rolled_stats.js'
 import { CharacterPortrait } from './CharacterPortrait.jsx'
@@ -185,7 +185,6 @@ export function Inventory() {
     use_toast.getState().add(t('errors.tx_retry_cleared'), 'info')
   }
 
-  const cls = get_class(character.classe ?? character.class_id)
   const hue = color_to_hue(character.color_1 ?? 0)
   const { level } = xp_progress(character.experience)
 
@@ -481,14 +480,14 @@ export function Inventory() {
       <div className="inv__side">
         <div className="inv__chip">
           <CharacterPortrait
-            sprites={cls?.sprites ?? '/sprites/senshi'}
+            sprites={class_sprite_base(character.classe ?? character.class_id) ?? PLACEHOLDER_SPRITES}
             hue={hue}
             size={44}
             className="inv__chip-port"
           />
           <div className="inv__chip-id">
             <span className="inv__chip-name">{character.name}</span>
-            <span className="inv__chip-class">{cls?.title ?? character.classe ?? 'Adventurer'}</span>
+            <span className="inv__chip-class">{class_title(t, character.classe ?? character.class_id) ?? t('stats.adventurer')}</span>
           </div>
           <span className="inv__chip-lvl hud-num">Lv {level}</span>
         </div>

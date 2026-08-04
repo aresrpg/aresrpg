@@ -2,9 +2,11 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 // The Characters page's master-detail roster entry. Split out of CharactersDrawer.jsx (issue #2069);
 // the component is unchanged.
+import { useTranslation } from 'react-i18next'
+
 import { xp_progress } from '@aresrpg/sdk/experience'
 
-import { get_class } from '../../data/classes.js'
+import { PLACEHOLDER_SPRITES, class_display, class_sprite_base } from '../../data/classes.js'
 import { color_to_hue } from '../../data/color.js'
 import { CharacterPortrait } from './CharacterPortrait.jsx'
 import { PendingOutcomeBadge } from './PendingOutcomeBadge.jsx'
@@ -24,10 +26,10 @@ import { CharacterDeleteAction } from './CharacterDeleteAction.jsx'
  * @param {{ character: any, active: boolean, busy: boolean, delete_block: string | null, on_preview: () => void, on_delete: () => void }} props
  */
 export function RosterEntry({ character, active, busy, delete_block, on_preview, on_delete }) {
-  const cls = get_class(character.classe ?? character.class_id)
+  const { t } = useTranslation()
   const { level } = xp_progress(character.experience)
   const hue = color_to_hue(character.color_1 ?? 0)
-  const class_name = (cls?.name ?? character.classe ?? '').toUpperCase()
+  const class_name = (class_display(t, character.classe ?? character.class_id) ?? character.classe ?? '').toUpperCase()
   // The roster is a list of COMPACT one-line cards: art | name + level·class | status/delete. Clicking a
   // card previews it in the detail panel; the active card only gains an inline delete icon (no second row).
   return (
@@ -37,7 +39,7 @@ export function RosterEntry({ character, active, busy, delete_block, on_preview,
     >
       <div className="chrx-row__main" onClick={on_preview}>
         <div className="chrx-row__art">
-          <CharacterPortrait sprites={cls?.sprites ?? '/sprites/senshi'} hue={hue} size={30} />
+          <CharacterPortrait sprites={class_sprite_base(character.classe ?? character.class_id) ?? PLACEHOLDER_SPRITES} hue={hue} size={30} />
         </div>
         <div className="chrx-row__id">
           <span className="chrx-row__name">{character.name}</span>

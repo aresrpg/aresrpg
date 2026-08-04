@@ -22,7 +22,7 @@ import { use_toast } from '../../../toast'
 
 import { useGameState } from '../../store.js'
 import { humanize_tx_error } from '../../core/abort_copy.js'
-import { get_class } from '../../data/classes.js'
+import { PLACEHOLDER_SPRITES, class_sprite_base, class_title } from '../../data/classes.js'
 import { color_to_hue } from '../../data/color.js'
 import { CharacterPortrait } from './CharacterPortrait.jsx'
 import { Tooltip } from './Tooltip.jsx'
@@ -202,26 +202,6 @@ export function allocation_stepper({ kind, disabled, on_click, label }) {
 export const visible_secondary_stats = (character) =>
   get_secondary_stats(character).filter(({ key }) => SECONDARY_KEYS.has(key))
 
-const CLASS_TITLES = {
-  senshi: (t) => t('simulator.classes.SENSHI.title'),
-  yogen: (t) => t('simulator.classes.YOGEN.title'),
-  yajin: (t) => t('simulator.classes.YAJIN.title'),
-  ikari: (t) => t('simulator.classes.IKARI.title'),
-  mori: (t) => t('simulator.classes.MORI.title'),
-  tokei: (t) => t('simulator.classes.TOKEI.title'),
-  shugo: (t) => t('simulator.classes.SHUGO.title'),
-  rojin: (t) => t('simulator.classes.ROJIN.title'),
-  shusen: (t) => t('simulator.classes.SHUSEN.title'),
-  tomoda: (t) => t('simulator.classes.TOMODA.title'),
-  asobi: (t) => t('simulator.classes.ASOBI.title'),
-  iyashi: (t) => t('simulator.classes.IYASHI.title'),
-}
-
-const class_title = (t, class_id) => {
-  const title = CLASS_TITLES[String(class_id ?? '').toLowerCase()]
-  return title ? title(t) : t('stats.adventurer')
-}
-
 /** House-system actions, exported for DOM-less disabled-state proofs. */
 export function AllocationActions({ t, has_pending, can_confirm, on_reset, on_confirm }) {
   const { tx_pending } = useAllocationSession()
@@ -302,7 +282,6 @@ export function Stats() {
     return <div className="hud-panel-empty">{t('stats.no_character')}</div>
   }
 
-  const cls = get_class(character.classe ?? character.class_id)
   const hue = color_to_hue(character.color_1 ?? 0)
 
   const { level, into, span, pct } = xp_progress(character.experience)
@@ -374,7 +353,7 @@ export function Stats() {
       {/* hero header — portrait + identity + class + experience */}
       <div className="stats__hero">
         <CharacterPortrait
-          sprites={cls?.sprites ?? '/sprites/senshi'}
+          sprites={class_sprite_base(character.classe ?? character.class_id) ?? PLACEHOLDER_SPRITES}
           hue={hue}
           size={64}
           className="stats__hero-portrait"
@@ -384,7 +363,7 @@ export function Stats() {
             <span className="stats__hero-name">{character.name}</span>
             <span className="stats__hero-lvl hud-num">{t('stats.level', { level })}</span>
           </div>
-          <div className="stats__hero-class">{class_title(t, character.classe ?? character.class_id)}</div>
+          <div className="stats__hero-class">{class_title(t, character.classe ?? character.class_id) ?? t('stats.adventurer')}</div>
           <div className="stats__hero-xp-head">
             <span className="stats__hero-xp-label">{t('common.experience')}</span>
             <span className="stats__hero-xp-value hud-num">

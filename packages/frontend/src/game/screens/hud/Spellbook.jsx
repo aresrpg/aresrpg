@@ -29,7 +29,7 @@ import { xp_progress } from '@aresrpg/sdk/experience'
 import { spell_points_for_level } from '@aresrpg/sdk/progression'
 
 import { useGameState } from '../../store.js'
-import { get_class } from '../../data/classes.js'
+import { class_title } from '../../data/classes.js'
 import { useSpellCorpus } from '../../data/use_spell_corpus.js'
 import { resolve_spell_description } from '../../data/spell-text.js'
 import { upgrade_spell } from '../../../world-shell/spell_actions.js'
@@ -96,7 +96,6 @@ export function Spellbook({ on_open, embedded = false }) {
       </div>
     )
 
-  const cls = get_class(character.classe ?? character.class_id)
   // Coverage audit (read all spell effects for all levels): a LOCKED row (class unlock not yet reached) is
   // still SELECTABLE for reading — aspirational browsing is the point, the grimoire is a reference for every
   // class spell, not just the ones already usable. The unlocked-first fallback only kicks in when nothing has
@@ -119,7 +118,7 @@ export function Spellbook({ on_open, embedded = false }) {
           <div>
             <div className="sb__name">{character.name}</div>
             <div className="sb__sub">
-              {cls?.title ?? character.classe} · {t('spells.level', { level: book.level })}
+              {class_title(t, character.classe ?? character.class_id) ?? t('stats.adventurer')} · {t('spells.level', { level: book.level })}
             </div>
           </div>
         </div>

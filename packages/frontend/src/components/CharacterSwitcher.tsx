@@ -13,8 +13,7 @@
 import { useSyncExternalStore } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useStore } from 'zustand'
-import { Compass } from 'lucide-react'
-import { experience_to_level } from '@aresrpg/sdk/experience'
+import { CharacterRow, FollowerRow } from './CharacterSwitcherRow'
 import {
   CHARACTER_SWITCH_IN_PROGRESS,
   CHARACTER_SWITCH_SESSION_CHANGED,
@@ -32,8 +31,6 @@ import { use_dungeon } from '../world-shell/dungeon_store.js'
 import { rebind_world_character } from '../world-shell/session_gate.js'
 import { rebind_fight_session } from '../world-shell/character_fight_rebind.js'
 import { resume_world_fight } from '../world-shell/world_fight.js'
-import { get_class } from '../game/data/classes.js'
-import { color_to_hue } from '../game/data/color.js'
 import { set_last_character } from '../game/core/draft.js'
 import { use_toast } from '../toast'
 import { game_log } from '../core/log.js'
@@ -230,93 +227,6 @@ function CharacterGroup({
       ))}
     </div>
   )
-}
-
-/** A folded follower row — indented under the leader, NOT a switch target while following; the × unfollows it,
- *  restoring a normal switchable row. Mirrors the CharacterRow identity chips (glyph + name + level). */
-function FollowerRow({ character, on_kick }: { character: any; on_kick: (character_id: string) => void }) {
-  const { t } = useTranslation()
-  const cls = get_class(character.classe ?? character.class_id)
-  const level = experience_to_level(character.experience ?? 0)
-  const hue = color_to_hue(character.color_1 ?? 0)
-  const initial = (cls?.name ?? character.classe ?? '?').charAt(0).toUpperCase()
-  return (
-    <div className="chsw-rowwrap chsw-child">
-      <div className="chsw-row chsw-row--following" title={character.name}>
-        <span className="chsw-row__glyph" style={{ '--hue': hue } as React.CSSProperties}>
-          {initial}
-        </span>
-        <span className="chsw-row__name">{character.name}</span>
-        <span className="chsw-row__lvl">Lv {level}</span>
-      </div>
-      <button
-        type="button"
-        className="chsw-row__abandon"
-        onClick={() => on_kick(character.id)}
-        title={t('characters.stop_following')}
-        aria-label={t('characters.stop_following')}
-      >
-        ×
-      </button>
-    </div>
-  )
-}
-
-function CharacterRow({
-  character,
-  active,
-  switching,
-  dot,
-  exploring,
-  status_label,
-  on_click,
-}: {
-  character: any
-  active: boolean
-  switching: boolean
-  dot: boolean
-  exploring: boolean
-  status_label?: string | null
-  on_click: () => void
-}) {
-  const { t } = useTranslation()
-  const cls = get_class(character.classe ?? character.class_id)
-  const level = experience_to_level(character.experience ?? 0)
-  const hue = color_to_hue(character.color_1 ?? 0)
-  const initial = (cls?.name ?? character.classe ?? '?').charAt(0).toUpperCase()
-
-  const row = (
-    <button
-      type="button"
-      className={`chsw-row${active ? ' is-active' : ''}${switching ? ' is-switching' : ''}${exploring ? ' is-exploring' : ''}`}
-      onClick={on_click}
-      aria-busy={switching}
-      title={character.name}
-    >
-      <span className="chsw-row__glyph" style={{ '--hue': hue } as React.CSSProperties}>
-        {initial}
-      </span>
-      <span className="chsw-row__name">{character.name}</span>
-      {/* EXPLORING badge (staked/idle-farming, load_roster's `exploring` flag) — distinct from a plain lobby
-          row so the player never mistakes a staked char for one that's free to embody/enter a dungeon with. */}
-      {exploring && (
-        <Compass
-          className="chsw-row__exploring"
-          aria-label={t('characters.switcher_exploring')}
-          title={t('characters.switcher_exploring')}
-        />
-      )}
-      {/* live dungeon status (IN DUNGEON rows only) — surfaces a stuck/terminal run so it never looks startable. */}
-      {status_label && <span className="chsw-row__status">{status_label}</span>}
-      <span className="chsw-row__lvl">Lv {level}</span>
-      {dot && <span className="chsw-row__dot" aria-hidden="true" />}
-    </button>
-  )
-
-  // The per-row ✕ abandon is REMOVED — unrequested scope + a native title tooltip + a single-exit-law
-  // violation (abandon lives ONLY in the bottom-right card). The row itself (resume click + status chip) is the
-  // requested surface, nothing more.
-  return row
 }
 
 function SkeletonRows() {

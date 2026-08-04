@@ -12,7 +12,7 @@
 // the Iyashi you are building is a lie about the very thing the surface exists to show (the same policy
 // board_paint.ts states for the 3D rigs).
 
-import { get_class } from '../game/data/classes.js'
+import { class_display, class_sprite_base } from '../game/data/classes.js'
 import { CharacterPortrait } from '../game/screens/hud/CharacterPortrait.jsx'
 
 import type { SimCharacter } from './reducer'
@@ -21,12 +21,9 @@ const GOLD = '#c8963c'
 const HAIRLINE = '1px solid rgba(255,255,255,0.06)'
 const micro = 'text-[9px] tracking-[0.22em] uppercase'
 
-/** The class' sprite base, or null when this class ships none (⇒ the initial cell, never a stand-in body). */
-export const class_sprites = (class_id: string): string | null =>
-  (get_class(String(class_id ?? '').toLowerCase()) as { sprites?: string } | undefined)?.sprites ?? null
-
 export function CharacterFace({ character, size = 34 }: Readonly<{ character: SimCharacter; size?: number }>) {
-  const sprites = class_sprites(character.class_id)
+  // SUBSTITUTES NOTHING on purpose: this page seats all twelve, so an unsprited class gets its initial cell.
+  const sprites = class_sprite_base(character.class_id)
   return (
     <span
       className="shrink-0 grid place-items-center overflow-hidden"
@@ -67,7 +64,7 @@ export function CharacterRow({
           {character.name}
         </span>
         <span className={`${micro} text-muted truncate`}>
-          {t(`simulator.classes.${character.class_id.toUpperCase()}.display`, { defaultValue: character.class_id })}
+          {class_display(t, character.class_id) ?? character.class_id}
         </span>
         <span className={micro} style={{ color: GOLD, opacity: 0.7 }}>
           {t('simulator.level')} {character.level}

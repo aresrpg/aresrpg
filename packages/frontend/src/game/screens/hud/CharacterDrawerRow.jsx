@@ -6,7 +6,7 @@ import { useTranslation } from 'react-i18next'
 
 import { xp_progress } from '@aresrpg/sdk/experience'
 
-import { get_class } from '../../data/classes.js'
+import { PLACEHOLDER_SPRITES, class_display, class_sprite_base } from '../../data/classes.js'
 import { color_to_hue } from '../../data/color.js'
 import { CharacterPortrait } from './CharacterPortrait.jsx'
 import { PendingOutcomeBadge } from './PendingOutcomeBadge.jsx'
@@ -24,7 +24,7 @@ import { Tooltip } from './Tooltip.jsx'
  */
 export function CharacterDrawerRow({ character, active, busy, delete_block, on_switch, on_delete }) {
   const { t } = useTranslation()
-  const cls = get_class(character.classe ?? character.class_id)
+
   const { level, into: xp_into, span: xp_span, pct } = xp_progress(character.experience)
   const percent = Math.round(pct)
   const hue = color_to_hue(character.color_1 ?? 0)
@@ -34,14 +34,14 @@ export function CharacterDrawerRow({ character, active, busy, delete_block, on_s
       style={/** @type {import('react').CSSProperties} */ ({ '--hue': `${hue}` })}
     >
       <div className="chr-row__art">
-        <CharacterPortrait sprites={cls?.sprites ?? '/sprites/senshi'} hue={hue} size={58} />
+        <CharacterPortrait sprites={class_sprite_base(character.classe ?? character.class_id) ?? PLACEHOLDER_SPRITES} hue={hue} size={58} />
       </div>
       <div className="chr-row__body">
         <div className="chr-row__head">
           <span className="chr-row__name">{character.name}</span>
           <span className="chr-row__lvl hud-num">Lv {level}</span>
         </div>
-        <div className="chr-row__class">{cls?.name ?? character.classe}</div>
+        <div className="chr-row__class">{class_display(t, character.classe ?? character.class_id) ?? character.classe}</div>
         <div className="chr-bar">
           <div className="chr-bar__fill" style={{ width: `${percent}%` }} />
         </div>

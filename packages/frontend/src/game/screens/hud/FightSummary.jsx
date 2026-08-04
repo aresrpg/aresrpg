@@ -16,7 +16,7 @@ import { useTranslation } from 'react-i18next'
 import { experience_to_level } from '@aresrpg/sdk/experience'
 
 import { useGameState, context } from '../../store.js'
-import { get_class } from '../../data/classes.js'
+import { class_display } from '../../data/classes.js'
 import { play_fight_sfx } from '../../core/audio/sfx.js'
 import { use_fight_cost, format_fight_cost } from '../../../world-shell/fight_gas_ledger.js'
 import { FightReport } from './FightReport.jsx'
@@ -60,7 +60,7 @@ export function FightSummary({ slug_by_name = {} }) {
   // persistent slice and which used to render an uninvolved alt as a fallen party member.
   const seat_id = summary.me_id ?? null
   const me = characters.find((c) => c.id === seat_id) ?? null
-  const my_class = get_class(me?.classe ?? me?.class_id ?? '')?.name ?? null
+  const my_class = class_display(t, me?.classe ?? me?.class_id)
   const my_level = experience_to_level(me?.experience ?? 0)
 
   const roster = summary.participants ?? []
