@@ -329,6 +329,7 @@
       "male": "Male",
       "female": "Female",
       "female_unavailable": "Female model temporarily unavailable for this class",
+      "preview_unavailable": "3D preview unavailable on this device",
       "casting_ap": "Casting uses AP",
       "casting_limits": "Cooldowns & cast limits",
       "create_paid": "Create · {{price}} SUI →",

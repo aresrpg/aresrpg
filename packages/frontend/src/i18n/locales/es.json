@@ -329,6 +329,7 @@
       "male": "Hombre",
       "female": "Mujer",
       "female_unavailable": "Modelo femenino no disponible temporalmente para esta clase",
+      "preview_unavailable": "Vista previa 3D no disponible en este dispositivo",
       "casting_ap": "Los hechizos usan PA",
       "casting_limits": "Recargas y límites de lanzamiento",
       "create_paid": "Crear · {{price}} SUI →",

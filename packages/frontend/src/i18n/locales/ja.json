@@ -329,6 +329,7 @@
       "male": "男性",
       "female": "女性",
       "female_unavailable": "このクラスの女性モデルは一時的にご利用いただけません",
+      "preview_unavailable": "このデバイスでは3Dプレビューを利用できません",
       "casting_ap": "詠唱にはAPを使用",
       "casting_limits": "クールダウン・使用回数制限",
       "create_paid": "作成 · {{price}} SUI →",

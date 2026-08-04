@@ -20,6 +20,8 @@ import {
   SRGBColorSpace,
 } from 'three'
 
+import { report_error } from '../../core/report.js'
+
 import { load_character_model } from './character-glb.js'
 
 const add_lights = (scene) => {
@@ -38,18 +40,45 @@ const add_lights = (scene) => {
 const BASE_YAW = -0.5 // slight 3/4 turn (matches the mockup)
 
 /**
+ * #2198 — the handle a pedestal returns when this device has NO usable WebGL context (acceleration
+ * disabled, blocklisted driver: `getContext` answers null, or throws, and three rethrows out of the
+ * constructor). Every method is a harmless no-op and `set_class` resolves false, so the creator
+ * renders its static class portrait and stays fully completable — a GPU-less player must never lose
+ * the front door to a preview. `degraded` is what the creator reads to pick that portrait.
+ */
+const flat_pedestal = () => ({
+  degraded: true,
+  async set_class() {
+    return false
+  },
+  set_colors() {},
+  destroy() {},
+})
+
+/**
  * Mount a pedestal scene into `canvas`. Async model loads are owned here; selecting a class with no
  * local GLB resolves `false` from `set_class` so the host can show the "model soon" placeholder.
+ * NEVER throws: a dead WebGL context comes back as the degraded handle above (reported once).
  *
  * @param {HTMLCanvasElement} canvas
  * @returns {{
+ *   degraded: boolean,
  *   set_class: (class_id: string, opts?: { male?: boolean }) => Promise<boolean>,
  *   set_colors: (colors: [string, string, string]) => void,
  *   destroy: () => void,
  * }}
  */
 export function character_pedestal(canvas) {
-  const renderer = new WebGLRenderer({ canvas, antialias: true, alpha: true })
+  let renderer
+  try {
+    renderer = new WebGLRenderer({ canvas, antialias: true, alpha: true })
+  } catch (error) {
+    // The context is the ONLY thing that can fail this early, and it is fatal to the 3D preview
+    // alone — never to creation. Report the mechanical cause once (the cohort size is the point:
+    // Sentry ARESRPG-APP-3G), then hand back the flat handle.
+    report_error(error, { area: 'create', action: 'pedestal_webgl_context' })
+    return flat_pedestal()
+  }
   renderer.outputColorSpace = SRGBColorSpace
   renderer.toneMapping = ACESFilmicToneMapping
   renderer.toneMappingExposure = 1.15
@@ -138,6 +167,7 @@ export function character_pedestal(canvas) {
   raf = requestAnimationFrame(tick)
 
   return {
+    degraded: false,
     async set_class(class_id, { male = true } = {}) {
       // D212: gender rides the same load path (male/female rigs per CHARACTER_MODELS) — the creator's
       // picker re-calls this on toggle; apply_colors() below re-paints the fresh clone.
@@ -197,6 +227,8 @@ export async function render_character_thumbnail(class_id, px = 128, colors = ['
   const canvas = document.createElement('canvas')
   canvas.width = px
   canvas.height = px
+  // No guard on this construction (#2198): the ONE caller only reaches it after its pedestal got a
+  // live context — a device with no WebGL takes the flat path and never asks for a thumbnail.
   const renderer = new WebGLRenderer({
     canvas,
     antialias: true,
