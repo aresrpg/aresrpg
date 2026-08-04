@@ -232,8 +232,7 @@ function hermetic_build(pkgPath) {
     return out_dir
   } catch (e) {
     fs.rmSync(out_dir, { recursive: true, force: true })
-    const output = `${e.stdout ?? ''}${e.stderr ?? ''}`.trim()
-    throw new Error(output.split('\n').slice(-5).join(' | '))
+    throw new Error(significant_tail(`${e.stdout ?? ''}${e.stderr ?? ''}`))
   }
 }
 
@@ -408,6 +407,28 @@ function parseCompatErrors(output) {
   return counts
 }
 
+// Build PROGRESS chatter — the dependency listing and framework notes Sui writes to stderr while it
+// compiles. Sui writes real DIAGNOSTICS to stdout, and this gate concatenates stdout then stderr, so
+// the chatter structurally TRAILS the message: a blind tail of the combined output reports the noise
+// and drops the verdict, every single time. Measured on edge 2026-08-05 (#2207): a probe that died on
+// `Cannot find gas coin for signer address ...` was reported as
+// "exit 1 — INCLUDING DEPENDENCY Sui | ... | BUILDING aresrpg", and the same masking swallows a
+// warning escalation's own evidence — the exact thing #1847 added warning_failure to preserve.
+const BUILD_CHATTER =
+  /^(INCLUDING DEPENDENCY|BUILDING\b|UPDATING GIT DEPENDENCY|FETCHING\b|Downloading\b|Skipping dependency verification|\[NOTE\]|\[Note\])/
+
+// Pure. The last `n` MEANINGFUL lines of a CLI run, so a report always carries the reason. Falls back
+// to the raw tail when a run is nothing but chatter — filtering an output down to silence would trade
+// one masked verdict for another.
+export function significant_tail(output, n = 5) {
+  const lines = String(output ?? '')
+    .split('\n')
+    .map((line) => line.trim())
+    .filter(Boolean)
+  const meaningful = lines.filter((line) => !BUILD_CHATTER.test(line))
+  return (meaningful.length ? meaningful : lines).slice(-n).join(' | ')
+}
+
 function execResult(run, args) {
   try {
     return {
@@ -439,7 +460,7 @@ export function run_compatibility_probe(args, run = execFileSync) {
   let warning_failure = null
 
   if (result.exit_code !== 0 && errors.size === 0 && isWarningEscalation(result.output)) {
-    warning_failure = `exit ${result.exit_code} — ${result.output.trim().split('\n').slice(-5).join(' | ')}`
+    warning_failure = `exit ${result.exit_code} — ${significant_tail(result.output)}`
     const retry_args = args.filter((arg) => arg !== '--warnings-are-errors').concat('--silence-warnings')
     result = execResult(run, retry_args)
     errors = parseCompatErrors(result.output)
@@ -539,7 +560,7 @@ async function checkPackage(client, release, network, name) {
     return {
       name,
       status: 'error',
-      detail: `exit ${exitCode} — ${output.trim().split('\n').slice(-5).join(' | ')}`,
+      detail: `exit ${exitCode} — ${significant_tail(output)}`,
       size,
       warning_failure,
     }
