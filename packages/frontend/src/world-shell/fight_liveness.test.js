@@ -285,7 +285,26 @@ describe('fresh create adoption', () => {
             anchor_x: 0,
             anchor_z: 0,
             status: 0,
-            participants: [],
+            // #2154 — a `fight::create` SEATS its creator, so the object this read models carries that seat. The
+            // receipt hold (`fight_syncing`) now releases on "MY SEAT is in the read", and an empty roster here
+            // modelled a fight that cannot exist on chain.
+            participants: [
+              {
+                owner: '0xowner',
+                character: CHARACTER_ID,
+                class: 'senshi',
+                team: 0,
+                hp: 40,
+                max_hp: 40,
+                ap: 6,
+                mp: 3,
+                base_ap: 6,
+                base_mp: 3,
+                cell: 21,
+                ready: false,
+                casts_this_turn: 0,
+              },
+            ],
             mobs: [],
             board: {
               width: 7,

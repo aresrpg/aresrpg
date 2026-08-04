@@ -26,6 +26,7 @@ import { new_pending_fight_id } from '@aresrpg/sdk/pending_fight_id'
 import { use_auth } from '../auth'
 import { get_fights } from '../rpc/client'
 import { game_log } from '../core/log.js'
+import { finish_join_timing } from '../core/join_timing.js'
 import i18n from '../i18n'
 import { push_event_toast } from '../game/core/toast.js'
 
@@ -205,17 +206,22 @@ function mount_world_fight({
  */
 function activate_world_fight({ fight_id, resumed = false, is_public = false }) {
   getState()._start_polling()
+  // THE FIRST READ IS NEVER THE FIRST TICK (#2154). `_start_polling` only ARMS the 4s heartbeat, so an entry
+  // that waits for it pays a full interval to see the seat its own transaction already proved. A resume reads
+  // once, here. A fresh create/join reads through the receipt walk below — whose first attempt is that same
+  // immediate read, and which now holds until MY SEAT is in it instead of exiting on the first readable
+  // document. The walk is started BEFORE the party auto-form for the same reason: the read is the latency path.
   if (resumed) return void getState().refresh()
-  // Auto-form the owned party at engagement; the GROUP LOOP (group_wiring → @aresrpg/party group_loop)
-  // watches this fight's placement window and seats every aligned owned member exactly once — the join
-  // decision left this file (one home: the reducer; the per-member tx stays owned_team_actions). A PUBLIC
-  // fight carries no party id (anyone may join), so forming one here is a discarded on-chain create tx — skip it.
-  if (!is_public)
-    void use_party
-      .getState()
-      .ensure_owned_party()
-      .catch((error) => game_log('world-fight', 'owned party auto-form stopped', error))
-  void poll_receipt_fight({ fight_id, get_state: getState, refresh: () => getState().refresh() }).then((outcome) => {
+  const { character_id } = getState() // the seat the walk below is converging on (the mount just wrote it)
+  void poll_receipt_fight({
+    fight_id,
+    character_id,
+    get_state: getState,
+    refresh: () => getState().refresh(),
+  }).then((outcome) => {
+    // MY SEAT IS ON THE BOARD — the only moment a joiner can actually see themselves, and the close of the
+    // join trace (a create/resume/spectate entry owns no trace, so this is a no-op for them).
+    if (outcome === 'hydrated') return void finish_join_timing(fight_id)
     // The tight backoff loop gave up at its wait ceiling — never a silent stop: the slower 4s heartbeat
     // (_start_polling, already running) keeps converging a fight that is merely SLOW. What ends here is the
     // receipt's benefit of the doubt over an object the node reports DELETED (#529): past this ceiling a gone
@@ -225,6 +231,15 @@ function activate_world_fight({ fight_id, resumed = false, is_public = false }) 
     game_log('world-fight', 'receipt poll hit its wait ceiling — a GONE read now collapses honestly', { fight_id })
     use_dungeon.setState({ fight_receipt_expired_id: fight_id })
   })
+  // Auto-form the owned party at engagement; the GROUP LOOP (group_wiring → @aresrpg/party group_loop)
+  // watches this fight's placement window and seats every aligned owned member exactly once — the join
+  // decision left this file (one home: the reducer; the per-member tx stays owned_team_actions). A PUBLIC
+  // fight carries no party id (anyone may join), so forming one here is a discarded on-chain create tx — skip it.
+  if (!is_public)
+    void use_party
+      .getState()
+      .ensure_owned_party()
+      .catch((error) => game_log('world-fight', 'owned party auto-form stopped', error))
 }
 
 // ╔════════════════ [ #1609 — the pending session: mount at submit, re-key at finality ] ══════════ ]

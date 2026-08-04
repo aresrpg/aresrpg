@@ -4,6 +4,17 @@
 // full object may still be temporarily unreadable from the serving node. Keep that receipt-owned id mounted and
 // retry the existing full-board reader forever with capped exponential backoff. Cancellation is state-driven: a
 // different session replacing the id (or an explicit teardown clearing `fight_syncing`) stops the loop.
+//
+// #2154 — WHAT "converged" MEANS. It used to mean "the Fight document read", which is not the fact the actor is
+// waiting for: a join's read-after-write legitimately serves the PRE-JOIN version, whose roster does not contain
+// the joiner (the read that logs `my_entity_missing_from_fighters`). The walk exited successfully on that very
+// read and left the joiner's own seat to the next 4s store heartbeat — measured 4.141/4.179/4.145s, a timer.
+// Convergence is now "MY SEAT is in the read" (`my_seat_present`), the one predicate both this walk and the
+// store's receipt-hold chip read.
+
+import { participant_character_id } from '@aresrpg/fight/fight_control'
+
+import { mark_join_receipt } from '../core/join_timing.js'
 
 const sync_min_delay_ms = 250
 const sync_max_delay_ms = 8000
@@ -62,9 +73,22 @@ export function receipt_read_miss_decision({ state, fight_id, definitively_gone 
   return state?.fight_fresh && !expired ? 'retry' : 'drop'
 }
 
+/**
+ * THE CONVERGENCE FACT (#2154): this read contains MY SEAT. A session with no character of its own — a
+ * spectator — has no seat to wait for, so for it any readable board IS the whole truth. Pure; the ONE home
+ * both the receipt walk below and the store's `fight_syncing` chip read.
+ * @param {any} board the projected board view (`use_dungeon` state's `dungeon`)
+ * @param {string|null|undefined} character_id my seated character, or null when I hold no seat
+ */
+export function my_seat_present(board, character_id) {
+  if (!board) return false
+  if (!character_id) return true
+  return (board.escrow ?? []).some((row) => participant_character_id(row) === String(character_id))
+}
+
 /** @returns {'pending'|'hydrated'|'cancelled'} */
-function receipt_sync_state(state, fight_id) {
-  if (state?.dungeon?.id === fight_id) return 'hydrated'
+function receipt_sync_state(state, fight_id, character_id) {
+  if (state?.dungeon?.id === fight_id && my_seat_present(state.dungeon, character_id)) return 'hydrated'
   return should_hold_receipt_fight(state, fight_id) ? 'pending' : 'cancelled'
 }
 
@@ -77,11 +101,14 @@ const sleep_ms = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
  * that keeps converging, so giving up here is never a refresh-only dead end. Reader errors are another lag
  * sample, not a reason to discard an executed receipt.
  *
- * @param {{ fight_id:string, get_state:()=>any, refresh:()=>Promise<any>, sleep?:(ms:number)=>Promise<any>, now?:()=>number, max_wait_ms?:number }} args
+ * `character_id` is the seat this walk is converging on (#2154) — null only for a session that holds none.
+ * @param {{ fight_id:string, character_id?:string|null, get_state:()=>any, refresh:()=>Promise<any>,
+ *   sleep?:(ms:number)=>Promise<any>, now?:()=>number, max_wait_ms?:number }} args
  * @returns {Promise<'hydrated'|'cancelled'|'timed_out'>}
  */
 export async function poll_receipt_fight({
   fight_id,
+  character_id = null,
   get_state,
   refresh,
   sleep = sleep_ms,
@@ -90,27 +117,35 @@ export async function poll_receipt_fight({
 }) {
   let attempt = 0
   const deadline = now() + max_wait_ms
-  while (receipt_sync_state(get_state(), fight_id) === 'pending') {
+  while (receipt_sync_state(get_state(), fight_id, character_id) === 'pending') {
     if (now() >= deadline) return 'timed_out'
     try {
       await refresh()
     } catch {
       // The store reader normally contains its own error surface. An injected/transport throw still must retry.
     }
-    const state = receipt_sync_state(get_state(), fight_id)
+    const state = receipt_sync_state(get_state(), fight_id, character_id)
     if (state !== 'pending') return state
     await sleep(fight_sync_delay_ms(attempt))
     attempt += 1
   }
-  return receipt_sync_state(get_state(), fight_id) === 'hydrated' ? 'hydrated' : 'cancelled'
+  return receipt_sync_state(get_state(), fight_id, character_id) === 'hydrated' ? 'hydrated' : 'cancelled'
 }
 
 /**
  * Execute a world-fight join, then enter from that very receipt boundary. A rejection never enters; a resolved
  * receipt enters before the caller closes its modal, so party members do not wait for a later discovery poll.
  */
-export async function enter_after_world_join_receipt({ execute, enter, fight_id, world_id = null, character_id }) {
+export async function enter_after_world_join_receipt({
+  execute,
+  enter,
+  fight_id,
+  world_id = null,
+  character_id,
+  on_receipt = mark_join_receipt,
+}) {
   const receipt = await execute()
+  on_receipt(fight_id) // #2154 — everything after this stage is read latency, and it is now measured, not asserted
   enter({ fight_id, world_id, character_id })
   return receipt
 }
