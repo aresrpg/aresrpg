@@ -20,6 +20,9 @@ let active_character_id = invited.id
 let roster = [invited]
 let projected_party = null
 let projected_invites = []
+// The pending read's failure mode is DATA, not a second spy: re-spying `get_party_invites` and restoring it
+// handed the REAL network reader back to every later test (they then saw no invites and passed vacuously).
+let invite_read_error = null
 
 reset_auth_mock({ address: '0xinvitee-wallet' })
 const [{ context }, read_party, lobby_room, core_toast, { use_dungeon }, party_actions, character_name_resolve] =
@@ -41,6 +44,7 @@ const spies = [
   spyOn(read_party, 'get_party').mockImplementation(async () => projected_party),
   spyOn(read_party, 'get_party_invites').mockImplementation(async (character_id) => {
     invite_reads.push(character_id)
+    if (invite_read_error) throw invite_read_error
     return projected_invites
   }),
   spyOn(lobby_room, 'set_room_party').mockImplementation(() => {}),
@@ -77,6 +81,7 @@ beforeEach(() => {
   roster = [invited]
   projected_party = null
   projected_invites = []
+  invite_read_error = null
   use_toast.setState({ toasts: [] })
 })
 
@@ -172,12 +177,65 @@ test('a read failure on the pending dimension never costs the party snapshot', a
     leader_character: LEADER,
     members: [{ character: invited.id, owner: '0xinvitee-wallet', order: 0 }],
   }
-  const failing = spyOn(read_party, 'get_party_invites').mockImplementation(async () => {
-    throw new Error('rpc down')
-  })
+  invite_read_error = new Error('rpc down')
   await use_party.getState().refresh()
   expect(use_party.getState().party_id).toBe(PARTY)
-  failing.mockRestore()
+})
+
+// #2211 — THE BURN FENCE. The accept leg's catch used to resurrect the card for ANY throw. An accept that
+// EXECUTED and failed carries a digest (proof gas was spent: `attach_executed_digest(error, digest)` at
+// world-shell/tx.js:341 is the one stamp site every tx class rides), so resurrecting it hands the player a
+// manual retry on a burned intent — the tx-retry burn law wearing a finger. The fixture is stamped with the
+// PRODUCTION stamper, never a hand-rolled `{ digest }` literal, so it is exactly what `error_executed_digest`
+// (tx_digest_error.js:35) reads in the field.
+const { attach_executed_digest } = await import('../../src/world-shell/tx_digest_error.js')
+const { humanize_abort } = await import('../../src/game/core/abort_copy.js')
+
+const failing_accept = (error) =>
+  spyOn(party_actions, 'accept_party_invite').mockImplementation(async () => {
+    throw error
+  })
+
+test('an accept that EXECUTED and failed leaves the card dead — no second click, no second gas burn (#2211)', async () => {
+  projected_invites = [{ party: PARTY, leader_character: LEADER }]
+  await use_party.getState().refresh()
+  expect(use_party.getState().incoming_invite).not.toBe(null)
+
+  // The shape tx.js throws once the transaction was submitted and the chain rejected it: gas is gone.
+  const burned = attach_executed_digest(
+    new Error("abort code: 105, in '0xa11ce::party::accept_invite'"),
+    'B4m8vYhVPD5BVp1apg2XfCFeMiEJY5aerMiEkNvSCyB2'
+  )
+  const accept_spy = failing_accept(burned)
+  await use_party.getState().accept_invite()
+  accept_spy.mockRestore()
+
+  // Dead at the click and STAYING dead: the failure is terminal copy, not a retry affordance.
+  expect(use_party.getState().incoming_invite).toBe(null)
+  expect(use_party.getState().error).toBe(humanize_abort(burned))
+
+  // And the still-pending chain row (the accept changed nothing) must not carry it back on the next tick.
+  await use_party.getState().refresh()
+  expect(use_party.getState().incoming_invite).toBe(null)
+})
+
+test('an accept REFUSED before execution still resurrects the card — the honest exception (#2159 guard)', async () => {
+  projected_invites = [{ party: PARTY, leader_character: LEADER }]
+  await use_party.getState().refresh()
+  expect(use_party.getState().incoming_invite).not.toBe(null)
+
+  // No digest: nothing was submitted, zero gas, the question is genuinely still open.
+  const refused = new Error('Rejected from user')
+  const accept_spy = failing_accept(refused)
+  await use_party.getState().accept_invite()
+  accept_spy.mockRestore()
+
+  expect(use_party.getState().incoming_invite).toEqual({
+    party_id: PARTY,
+    invited_character_id: invited.id,
+    from_name: 'Leader',
+  })
+  expect(use_party.getState().error).toBe(humanize_abort(refused))
 })
 
 test('a refusal held by one character is not drained by another character poll tick', async () => {
