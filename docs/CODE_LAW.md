@@ -178,16 +178,17 @@ WARN where the census found mass — a cleaned domain gets promoted, never the r
   `packages/fight/test/**` so a relocation cannot shrink coverage; `scripts/ares.mjs`
   `unit_test_files` points the party/inventory rows at their `test/` dirs and the fight/world
   core legs run `bun test` from the package root. `scripts/relocate-tests.mjs` is the one codemod
-  that performs a migration (`git mv` + resolved-path specifier rewrite; 9 self-test probes gate
-  every run, `--self-test` refuses to touch the tree if they fail). **No gate rejects a new
-  in-src test today** — mechanization is the named debt below, not a claim already true.
+  that performs a migration (`git mv` + resolved-path specifier rewrite; 10 self-test probes gate
+  every run, `--self-test` refuses to touch the tree if they fail). Mechanized since #1795 by
+  `scripts/check-test-location.mjs` in root `lint`: the exact-path baseline IS the tree's in-src
+  set, so a file with no row and a row with no file are both red, and `MAX_IN_SRC_TESTS` — the
+  ceiling's one home — only ever shrinks.
 
   **Migration state, measured at `edge`** (tracked `*.test.*`/`*.spec.*`): COMPLETE — `fight` 122,
-  `sim` 60, `sdk` 42, `world` 10, `party` 6, `inventory` 5, all with zero in `src/`. PENDING —
-  `engine` 142 in `src/` and `frontend` 444 in `src/`, none relocated. That is 586 files, the
-  majority of the corpus, on the losing side of the law until their lanes run; a contributor
-  adding a test there today follows local precedent and violates this line, which is why the debt
-  is written here rather than pretended away. Out of scope, deliberately: `packages/frontend/e2e`
+  `sim` 60, `sdk` 42, `world` 10, `party` 6, `inventory` 5, `engine` 143 (relocated whole under
+  #2183), all with zero in `src/`. PENDING — `frontend` 515 in `src/`, the last package on the
+  losing side of the law until its lanes run; the debt is written here rather than pretended away,
+  and the gate now keeps it from growing. Out of scope, deliberately: `packages/frontend/e2e`
   (35 Playwright specs) and `packages/engine/bench` (5) are their own genres, and `packages/rpc`
   has no `src/` tree at all (its JS lives in `api/` and `gas-pool/`, 16 colocated tests).
 
