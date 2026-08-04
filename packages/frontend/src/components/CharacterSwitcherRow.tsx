@@ -14,7 +14,7 @@ import { color_to_hue } from '../game/data/color.js'
 
 /** The identity chips BOTH rows show. The glyph is the class' INITIAL, so the localized class name rides
  *  aria-label too — otherwise the row just says "I" and nothing tells an Ikari from an Iyashi. */
-const row_identity = (t: (key: string, params?: object) => string, character: any) => {
+const row_identity = (t: (key: string, params?: any) => string, character: any) => {
   const class_label = class_display(t, character.classe ?? character.class_id) ?? character.classe ?? null
   return {
     level: experience_to_level(character.experience ?? 0),

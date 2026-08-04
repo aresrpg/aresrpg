@@ -18,6 +18,7 @@
 
 import { readdirSync, statSync } from 'node:fs'
 import path from 'node:path'
+
 import { describe, expect, test } from 'bun:test'
 import { renderToStaticMarkup } from 'react-dom/server'
 import i18next from 'i18next'

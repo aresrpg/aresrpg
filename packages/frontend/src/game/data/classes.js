@@ -16,7 +16,9 @@ import classes_json from '@aresrpg/sdk/classes' with { type: 'json' }
 
 /**
  * @typedef {{ id: string, name: string, title: string, sprites: string | null }} ClassIdentity
- * @typedef {(key: string, params?: object) => string} Translate
+ * The caller's translator, injected so this file stays pure. `params` is deliberately loose: both i18next's
+ * own TFunction and the narrower `(key, params?: object)` contract the presentational rows declare must pass.
+ * @typedef {(key: string, params?: any) => string} Translate
  */
 
 const ROSTER = /** @type {Record<string, { name: string, title: string }>} */ (/** @type {unknown} */ (classes_json))
