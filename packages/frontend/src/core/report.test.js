@@ -12,6 +12,8 @@ import {
   init_reporting,
   report_error,
   is_reporting_live,
+  report_environment,
+  unarmed_notice,
 } from './report.js'
 import { game_log, _reset_log_for_test } from './log.js'
 
@@ -67,6 +69,31 @@ describe('before_send drop list', () => {
 
   it('before_send returns null for a dropped class', () => {
     expect(before_send({}, { originalException: new Error('User rejected the request') })).toBeNull()
+  })
+})
+
+// #2192 — the two-day blindness. `edge.aresrpg.world` is a Vercel PREVIEW deployment; the DSN env var is
+// scoped to the PRODUCTION environment, so that build shipped `SENTRY_DSN === ''` and init hard no-op'd. The
+// player's console printed `[ares-error]`, Sentry received nothing, and nothing anywhere said so.
+describe('deploy-target awareness (#2192)', () => {
+  it('an unarmed DEPLOYED build announces its blindness, naming the target', () => {
+    const notice = unarmed_notice('', 'preview')
+    expect(notice).toContain('UNARMED')
+    expect(notice).toContain('preview')
+    expect(notice).toContain('VITE_SENTRY_DSN')
+  })
+
+  it('a local build (no deploy target) and any armed build stay silent', () => {
+    expect(unarmed_notice('', '')).toBeNull() // local dev — never phoning home is the intended state
+    expect(unarmed_notice('https://public@ingest.example/1', 'preview')).toBeNull()
+    expect(unarmed_notice('https://public@ingest.example/1', 'production')).toBeNull()
+  })
+
+  it('production keeps the bare chain environment; every other target is suffixed', () => {
+    expect(report_environment('testnet', 'production')).toBe('testnet')
+    expect(report_environment('testnet', '')).toBe('testnet') // local/unknown — unchanged, no new bucket
+    expect(report_environment('testnet', 'preview')).toBe('testnet-preview')
+    expect(report_environment('mainnet', 'preview')).toBe('mainnet-preview')
   })
 })
 

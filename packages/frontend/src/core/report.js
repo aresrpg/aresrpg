@@ -13,15 +13,17 @@
 //  scope; the only default we DROP is GlobalHandlers, because we wire window.onerror /
 //  unhandledrejection through report_error ourselves (one choke, no double-capture).
 //
-//  Init is a hard NO-OP without a DSN (dev/local by default), so nothing ever phones home unasked.
-//  When live: environment = VITE_NETWORK, release = the git sha, user = the short wallet address
+//  Init is a hard NO-OP without a DSN (dev/local by default), so nothing ever phones home unasked — but a
+//  DEPLOYED build with no DSN says so out loud (unarmed_notice, #2192): silent blindness is the outage that
+//  hides every other one. When live: environment = the chain + the deploy target (report_environment — a
+//  preview never lands in the production stream), release = the git sha, user = the short wallet address
 //  (pseudonymous on-chain data — never email/Google). Every game_log entry becomes a Sentry
 //  breadcrumb, so the last ~50 game events ride along with each reported error — that is the pairing.
 
 import * as Sentry from '@sentry/react'
 
 import { parse_move_abort } from '../game/core/abort_copy.js'
-import { SENTRY_DSN, NETWORK } from '../env'
+import { SENTRY_DSN, NETWORK, DEPLOY_ENV } from '../env'
 
 import { set_breadcrumb_sink, get_log_buffer } from './log.js'
 
@@ -97,6 +99,33 @@ export function before_send(/** @type {any} */ event, /** @type {any} */ hint) {
   return event
 }
 
+// ── deploy target (#2192) ────────────────────────────────────────────────────
+/**
+ * The Sentry `environment` for a build: the chain it talks to, plus the deploy target whenever that target is
+ * not production. Production stays the bare chain name (`testnet`), so existing streams/alerts are untouched;
+ * a preview deployment reports as `testnet-preview` and can never be mistaken for a player on the real build.
+ * PURE.
+ * @param {string} network the chain (env NETWORK)
+ * @param {string} deploy_env the Vercel deploy target (env DEPLOY_ENV) — '' when built locally
+ */
+export function report_environment(network, deploy_env) {
+  return !deploy_env || deploy_env === 'production' ? network : `${network}-${deploy_env}`
+}
+
+/**
+ * The one line a DEPLOYED build prints when it ships WITHOUT a DSN — or null when there is nothing to say.
+ * A local build has no target and is meant to be silent; a deployed one that cannot report is a monitoring
+ * outage, and #2192 proved it is an invisible one: `edge.aresrpg.world` (a Vercel preview, where the
+ * production-scoped DSN variable does not exist) ran blind for two days while its players' consoles printed
+ * `[ares-error]` normally. No silent failures — the reporter included. PURE.
+ * @param {string} dsn the resolved DSN ('' when absent)
+ * @param {string} deploy_env the Vercel deploy target ('' when built locally)
+ */
+export function unarmed_notice(dsn, deploy_env) {
+  if (dsn || !deploy_env) return null
+  return `[ares-report] UNARMED on this deployment (VERCEL_ENV=${deploy_env}) — VITE_SENTRY_DSN was unset at build time, so errors stay in this console and reach nobody. Grant the DSN to this deploy target.`
+}
+
 // ── init ─────────────────────────────────────────────────────────────────────
 /**
  * Initialise Sentry — a hard NO-OP without a DSN. Production call site: `init_reporting()` in main.tsx.
@@ -106,13 +135,19 @@ export function before_send(/** @type {any} */ event, /** @type {any} */ hint) {
  */
 export function init_reporting(config = {}) {
   const dsn = config.dsn ?? SENTRY_DSN
-  if (!dsn) return false // no DSN ⇒ never init (dev/local default) — nothing phones home
+  if (!dsn) {
+    // no DSN ⇒ never init (dev/local default) — nothing phones home. But a DEPLOYED build saying nothing is
+    // how #2192 stayed invisible: this console line is the one artifact that convicts a blind deployment.
+    const notice = unarmed_notice(dsn, DEPLOY_ENV)
+    if (notice) console.warn(notice)
+    return false
+  }
   // DEV never phones home even with a DSN in .env (ad-blockers spam the console with blocked
   // envelopes, and local errors are noise in the project). Explicit config (tests) bypasses.
   if (!config.dsn && import.meta.env.DEV) return false
   Sentry.init({
     dsn,
-    environment: config.environment ?? NETWORK,
+    environment: config.environment ?? report_environment(NETWORK, DEPLOY_ENV),
     release: config.release ?? RELEASE,
     // ERRORS-ONLY: browserTracing + Replay are opt-in integrations we deliberately never add. We only
     // DROP GlobalHandlers (we wire window.onerror / unhandledrejection → report_error ourselves).
