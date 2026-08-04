@@ -84,7 +84,10 @@ export function read_fighter_statuses(json) {
   const out = []
   for (const raw of rows) {
     const row = fields_of(raw)
-    const effect = fields_of(row.effect)
+    // A json:true read carries the Move wrapper under `effect`; an already-decoded Fight snapshot flattens the
+    // same effect fields onto the FighterStatus row. Both are one chain fact, so normalize the wrapper shape
+    // here and let every downstream consumer share the existing status -> sim -> effective_stats fold.
+    const effect = fields_of(row.effect ?? row)
     const fighter = read_fighter_fid(row.fighter)
     const kind = Number(row.kind ?? effect.kind)
     // #2000 (D42) — A DECODE DOOR NEVER DROPS A ROW THE CHAIN SAYS EXISTS. The counter is the bearer's turns
