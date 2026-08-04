@@ -134,9 +134,10 @@ async function stage_live_world() {
     ])
   )
   now += 60_000 // the polls' next tick — nothing of this warm-up is left in the client's 3s cache
-  void rpc_get('/v1/zones', { world: WORLD, x: 1, z: 0 })
-  void rpc_get('/v1/parties', { address: '0xowner' })
-  void rpc_get('/v1/fights', { world: WORLD })
+  const backgrounded = (promise) => void promise.catch(() => undefined) // the teardown reset rejects the leftovers
+  backgrounded(rpc_get('/v1/zones', { world: WORLD, x: 1, z: 0 }))
+  backgrounded(rpc_get('/v1/parties', { address: '0xowner' }))
+  backgrounded(rpc_get('/v1/fights', { world: WORLD }))
 }
 
 const click_fast_travel = () =>
@@ -170,7 +171,9 @@ describe('#2158 — the click→flight read plan under D51', () => {
     expect(value.ok).toBe(true)
     expect(value.facts.world_id).toBe(WORLD)
     // The dominant leg is the read plan's SHAPE: serialized /v1 reads queue behind the background poll FIFO,
-    // each one paying its own WORLD_POLL_STAGGER_MS slot. Parallel + interactive, the whole plan is one RTT.
+    // each one paying its own WORLD_POLL_STAGGER_MS slot (measured RED: 3240ms). Parallel + interactive, the
+    // whole plan costs exactly ONE round trip — the clock is virtual, so this number is exact, not a range.
+    expect(elapsed_ms).toBe(RTT_MS)
     expect(elapsed_ms).toBeLessThanOrEqual(WARM_BUDGET_MS)
     expect(elapsed_ms).toBeLessThan(D51_BUDGET_MS)
     expect(elapsed_ms).toBeLessThan(WORLD_POLL_STAGGER_MS)
