@@ -1,3 +1,5 @@
-adb025c7c → Refs #2210 — fix(fight): one home for "is my seat in the fight read"
-3afbb7f34 → Refs #2205 — fix(simulator): degrade the board pane when the GL context is dead
-a0bc48a9b → Refs #2205 — fix(simulator): move the board harness inside the simulator tree
+4be2718b6 → Refs #2151 — fix(fight): a surviving victim's hit is priced by the journal, not the client
+b0d76979e → Refs #2151 — fix(fight): an adopted divergence carries the correction its history needs
+318ddcb66 → Refs #2151 — fix(fight): the adopted amount rewrites the log line the click predicted
+9ca34df91 → Refs #2151 — style(fight): prettier the #2151 pricing fixture
+f8e67c030 → Refs #2211 — fix(party): an executed accept failure leaves the invite card dead
