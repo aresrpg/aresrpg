@@ -25,7 +25,7 @@ import i18next from 'i18next'
 import { I18nextProvider } from 'react-i18next'
 
 import sdk_classes from '../../../../sdk/src/classes.json'
-import { CharacterRow as SwitcherRow } from '../../../src/components/CharacterSwitcherRow'
+import { SwitcherRow } from '../../../src/components/CharacterSwitcherRow'
 import { CharacterRow as SimulatorRow } from '../../../src/simulator/CharacterRow'
 import {
   PLACEHOLDER_SPRITES,

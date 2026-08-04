@@ -25,7 +25,7 @@ const row_identity = (t: (key: string, params?: any) => string, character: any) 
 }
 
 /** A folded follower row — indented under the leader, NOT a switch target while following; the × unfollows it,
- *  restoring a normal switchable row. Mirrors the CharacterRow identity chips (glyph + name + level). */
+ *  restoring a normal switchable row. Mirrors the SwitcherRow identity chips (glyph + name + level). */
 export function FollowerRow({ character, on_kick }: { character: any; on_kick: (character_id: string) => void }) {
   const { t } = useTranslation()
   const { level, hue, class_label, initial } = row_identity(t, character)
@@ -55,7 +55,7 @@ export function FollowerRow({ character, on_kick }: { character: any; on_kick: (
   )
 }
 
-export function CharacterRow({
+export function SwitcherRow({
   character,
   active,
   switching,

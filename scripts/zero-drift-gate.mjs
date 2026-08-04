@@ -113,7 +113,6 @@ const SIM_ONLY = [
   ['packages/sim/src/mob_stats.js', 'MOCK-MATH'],
   ['packages/sim/src/recorder.js', 'MOCK-MATH'],
   ['packages/sim/src/world.js', 'MOCK-MATH'],
-  ['packages/sdk/src/classes.json', 'MOCK-MATH'],
 
   ['packages/frontend/src/simulator/board.ts', 'SETUP'],
   ['packages/frontend/src/simulator/content.js', 'SETUP'],
