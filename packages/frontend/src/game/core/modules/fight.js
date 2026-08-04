@@ -256,7 +256,7 @@ const segment_template = (resolved, tokens, fallback_cls = 'clog-verb') => {
  * fix, not drift).
  * @param {string} id_prefix @param {LogSegment[]} segments
  */
-const combat_log_line = (id_prefix, segments) => ({
+const combat_log_line = (id_prefix, segments, extra = {}) => ({
   id: `${id_prefix}-${++combat_log_seq}`,
   message: segments.map((s) => s.text).join(''),
   segments,
@@ -265,6 +265,9 @@ const combat_log_line = (id_prefix, segments) => ({
   channel: CHANNEL.combat,
   target: '',
   from_me: false,
+  // `extra` spreads LAST on purpose: it carries the `combat` identity a correction addresses a line by, and an
+  // explicit `id` that makes the result a REPLACEMENT of an existing row rather than a new one (#2151).
+  ...extra,
 })
 
 /**
@@ -337,9 +340,11 @@ export const emit_cast_whiff_line = (get_state, dispatch, { entity_id, spell_id 
  * session. That is a different fact (an absent ENTITY, not an unresolved identity) and it needs its own honest
  * copy; the identity book cannot answer for a fighter it was never given.
  * @param {() => any} get_state @param {(type: string, payload: any) => void} dispatch
- * @param {{ entity_id: string, effect: any, is_critical: boolean }} arg
+ * `line_id` REPLACES an existing row instead of writing a new one — the door an adopted authoritative amount
+ * corrects its own optimistic line through (#2151); the `combat` stamp below is how that row is found again.
+ * @param {{ entity_id: string, effect: any, is_critical: boolean, line_id?: string | null }} arg
  */
-export const emit_effect_line = (get_state, dispatch, { entity_id, effect, is_critical }) => {
+export const emit_effect_line = (get_state, dispatch, { entity_id, effect, is_critical, line_id = null }) => {
   const fighters = get_state().fight?.fighters
   if (!fighters) return
   const unknown = i18n.t('world_chat.log_unknown_fighter')
@@ -347,6 +352,13 @@ export const emit_effect_line = (get_state, dispatch, { entity_id, effect, is_cr
   const target = fighters.get(effect.target_id)?.name || unknown
   const heal = effect.heal ?? 0
   const damage = effect.damage ?? 0
+  // WHO this line is about, carried as data. A predicted line can be superseded by chain truth, and a corrector
+  // has only the divergence's (caster, victim) to address it by — reading the rendered text back would be a
+  // second, lying source. Same reason `ref` rides the name segments: identity belongs on the row, not in prose.
+  const identity = {
+    combat: { caster_id: entity_id, target_id: effect.target_id, is_critical: !!is_critical },
+    ...(line_id ? { id: line_id } : {}),
+  }
   if (heal > 0) {
     const amount = `+${heal}`
     dispatch(
@@ -357,7 +369,8 @@ export const emit_effect_line = (get_state, dispatch, { entity_id, effect, is_cr
           { value: caster, cls: 'clog-name', ref: entity_id },
           { value: target, cls: 'clog-target', ref: effect.target_id },
           { value: amount, cls: 'clog-num clog-num--heal' },
-        ])
+        ]),
+        identity
       )
     )
   } else if (damage > 0) {
@@ -370,10 +383,16 @@ export const emit_effect_line = (get_state, dispatch, { entity_id, effect, is_cr
     ])
     dispatch(
       'action/chat_message',
-      combat_log_line(is_critical ? 'crit' : 'hit', [
-        ...(is_critical ? [{ text: `${i18n.t('world_chat.log_crit_prefix')} `, cls: 'clog-num clog-num--crit' }] : []),
-        ...base,
-      ])
+      combat_log_line(
+        is_critical ? 'crit' : 'hit',
+        [
+          ...(is_critical
+            ? [{ text: `${i18n.t('world_chat.log_crit_prefix')} `, cls: 'clog-num clog-num--crit' }]
+            : []),
+          ...base,
+        ],
+        identity
+      )
     )
     // AP/MP REMOVAL debuffs (colour-grammar). No wire effect carries `ap_loss`/`mp_loss` — the drain's own
     // `Drain` event does, so emit_drain_lines (below) feeds the LANDED share through this exact branch. One

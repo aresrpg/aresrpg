@@ -6,6 +6,8 @@ import { useEffect } from 'react'
 
 import { push_event_toast } from '../../../core/toast.js'
 import { WEAPON_ATTACK_ID, WEAPON_ATTACK_RANGE } from '../../../core/modules/fight.js'
+import { emit_hit_correction } from '../../../core/modules/fight_log_correction.js'
+import { context } from '../../../store.js'
 import { use_dungeon } from '../../../../world-shell/dungeon_store.js'
 import {
   compose_staged_turn,
@@ -32,6 +34,11 @@ import { game_log } from '../../../../core/log.js'
 import { fight_state_trace } from '../../../../world-shell/fight_state_trace.js'
 import { emit_local_cast_drop_toast } from './cast_drop_toast.js'
 import { evolution_actions_of } from './DungeonBoardState.jsx'
+
+// The two facts a history correction reads, both LIVE (#2151): the chat rows it may address, and the fighters
+// map its names resolve through — the same pair every combat-log emitter is handed, assembled here because this
+// module holds the divergence edge rather than the render adapter's own scoped reader.
+const correction_state = () => ({ ...context.get_state(), fight: fight_view() })
 
 // Dungeon.status machine (dungeon.move). ROOM_CLEARED is handled in dungeon_store (board unmounts → plane).
 const STATUS_ACTIVE = 1 // live fire-time guard for the reducer-derived commit edge
@@ -380,6 +387,17 @@ export function useDungeonBoardCommit(state, t) {
       subscribe_divergence(fight_store, {
         on_divergence: (divergence) => {
           game_log('board', 'fight prediction diverged; authoritative action adopted', divergence)
+          // ADOPTION CORRECTS THE HISTORY IT SUPERSEDED (#2151). Everything else in the client already
+          // reconciled — the fold, the HP bar, the board — while the combat log kept the number the click
+          // predicted, because my own authoritative rows never become a wave turn to re-emit from. The store
+          // priced the correction; spending it here rewrites that one line in place, at the same subscriber
+          // that owns the divergence's one existing log family (it consumes the edge — there is only ever one).
+          // Read live, never off this effect's `[]` closure: the corrector must address the line the CURRENT
+          // seat wrote, and a remount that changed characters would otherwise correct someone else's history.
+          emit_hit_correction(correction_state, context.dispatch, {
+            entity_id: fight_store.getState().ctx?.my_entity_id,
+            correction: divergence.correction,
+          })
         },
       }),
     []

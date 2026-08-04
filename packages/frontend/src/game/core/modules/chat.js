@@ -31,6 +31,15 @@ export default function chat() {
     /** @param {import('../game.js').State} state @param {import('../game.js').Action} action */
     reduce(state, { type, payload }) {
       if (type !== 'action/chat_message') return state
+      // THE CORRECTION DOOR (#2151) — a line dispatched under an id already in history REWRITES that row in
+      // place. History is append-only for everything that is new (every producer mints a fresh id, so this
+      // costs them nothing), but a client-side line derived from a PREDICTION can turn out wrong: my own cast
+      // writes its combat-log line at the click, and when the chain adopts a different amount the log must say
+      // so where it already spoke, not append a second number for the player to reconcile by eye. Admitting the
+      // correction as a REPLACEMENT is also what keeps it from being a re-play — one row, one id, one truth.
+      const at = state.message_history.findIndex((row) => row.id === payload.id)
+      if (at >= 0)
+        return { ...state, message_history: state.message_history.map((row, i) => (i === at ? payload : row)) }
       const next = [...state.message_history, payload].slice(-MAX_MESSAGES)
       return { ...state, message_history: next }
     },
