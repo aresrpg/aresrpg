@@ -10,12 +10,12 @@
 // so with mob stats 0 the stat/raw bonuses are 0 and the dealt damage == the spell's base_effect range ==
 // the donor mob's authored melee_damage. No double-count, no invented numbers.
 //
-// SHAPE: the spells.json template shape (nested under a `mobs` pseudo-class), so it folds into the sim's
+// SHAPE: the authored nested-by-class template shape (under a `mobs` pseudo-class), so it folds into the sim's
 // `normalize_spell_templates` verbatim — NO sim change.
 //
 // WIRING (combat track — fight modules are their lane):
 //   1) merge into the global template map (player_fight.js):
-//        normalize_spell_templates({ ...spells_json, mobs: mob_attack_spells() })
+//        normalize_spell_templates({ ...authored_spells, mobs: mob_attack_spells() })
 //   2) at fight assembly (fight_assemble.js / mob_to_fight_entity), where the wire Entity.variant = the mob
 //      TEMPLATE id (carried since the c062 roster), give each mob FightEntity the attack:
 //        const sid = mob_attack_spell_id(entity.variant)
@@ -54,7 +54,7 @@ const DEFAULT_ELEMENT = 'earth'
 export const mob_attack_spell_id = mob_id => `mob_attack_${mob_id}`
 
 /**
- * One spells.json-shaped level for a mob's basic attack, from its authored melee_damage + element.
+ * One authored-dialect level for a mob's basic attack, from its authored melee_damage + element.
  * @param {{ melee_damage?: { element?: string, min?: number, max?: number }, element?: string, stats?: { critical?: number } }} mob
  * @returns {Record<string, unknown>}
  */
@@ -91,8 +91,8 @@ const attack_level = mob => {
 }
 
 /**
- * Every mob's basic-attack spell, as a spells.json-shaped block keyed by `mob_attack_<id>` — fold it under a
- * `mobs` pseudo-class into `normalize_spell_templates({ ...spells_json, mobs: mob_attack_spells() })` so the
+ * Every mob's basic-attack spell, as an authored-dialect block keyed by `mob_attack_<id>` — fold it under a
+ * `mobs` pseudo-class into `normalize_spell_templates({ ...authored_spells, mobs: mob_attack_spells() })` so the
  * sim resolves a mob's deck spell id like any other. One template per mob id (cheap; ~386). The combat track
  * points each mob FightEntity's deck/hand/spell_levels at its `mob_attack_<id>`.
  * @returns {Record<string, { name: string, description: string, levels: Record<string, unknown>[] }>}

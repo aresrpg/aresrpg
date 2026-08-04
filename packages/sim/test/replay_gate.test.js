@@ -61,7 +61,7 @@ const flat_arena_json = (width = 21) => ({
   spawns_b: [{ x: 7, y: 5 }],
 })
 
-// The real yajin trap shape (packages/sdk/src/spells.json lineage), raw — normalized at replay.
+// The real yajin trap shape (authored-dialect lineage), raw — normalized at replay.
 const trap_templates_raw = {
   yajin: {
     trap: {
@@ -98,7 +98,7 @@ const trap_templates_raw = {
   },
 }
 
-// Trap + a guaranteed push (real raw shape: `distance`, sdk spells.json lineage; chance 100 for a
+// Trap + a guaranteed push (real raw shape: `distance`, authored-dialect lineage; chance 100 for a
 // deterministic scenario — the corpus wants certain outcomes, content wants dice).
 const push_trap_templates_raw = {
   yajin: {
@@ -213,7 +213,7 @@ const five_spell_mob_templates_raw = {
   ),
 }
 
-// A life-steal drain BOTH sides carry (raw `steal` shape, sdk spells.json lineage; min===max so the damage is
+// A life-steal drain BOTH sides carry (raw `steal` shape, authored-dialect lineage; min===max so the damage is
 // deterministic and the steal-back is exactly half of a known number).
 const drain_templates_raw = {
   yajin: {

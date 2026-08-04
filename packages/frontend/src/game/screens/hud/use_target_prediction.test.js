@@ -51,7 +51,7 @@ const outcome_of = ({ fight, hover, dungeon, mob_hp }) => {
 afterEach(() => reset_fight_core())
 
 // MISSING-ARTIFACT (#117): warcleave is part of the full on-chain seed corpus (seed/mainnet/spells), absent
-// by design in this public repo — sdk/spells.json's hand-authored senshi set has no 'warcleave' entry, so
+// by design in this public repo — no spell corpus ships in the tree, so
 // the fight core cannot resolve its real base/crit damage or crit_rate here. See test_helpers/spells_fixture.js.
 describe('compute_target_prediction — the live hover card', () => {
   test.skipIf(!SPELLS_SEED_AVAILABLE)('RED-at-cell-bug → GREEN: a hovered mob with Warcleave armed shows the EXACT non-crit damage', () => {
