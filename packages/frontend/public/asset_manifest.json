@@ -19,7 +19,7 @@
   },
   "sequences": {
     "fast_travel": [
-      { "url_class": "mob", "filename": "ln.glb" },
+      { "url_class": "mob", "filename": "dragon-fire.glb" },
       { "url_class": "mob", "filename": "dragon-frost.glb" },
       { "url_class": "mob", "filename": "dragon-void.glb" }
     ]

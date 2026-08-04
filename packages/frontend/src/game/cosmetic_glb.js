@@ -76,14 +76,15 @@ export function pick_mount_clips(clips, { flight = false } = {}) {
 }
 
 // Authored scale, forward axis and flight gait are MODEL metadata, never shared-controller corrections. The
-// live fast-travel dragon (`ln`) is authored at one third of its ruled presentation size and faces local +Z
-// while flight heading advances toward -Z. A future model with different axes/units adds one row here; neither
-// attach path changes. The older preview skins retain their existing flight/facing metadata.
+// dragons are authored at their natural units and face local +Z while flight heading advances toward -Z, so
+// their whole presentation size comes from the MOUNT_TABLE row above — which is the one the dedicated dragon
+// size check gates. A future model with different axes/units adds one row here; neither attach path changes.
+// (#2199 deleted an `ln` row: a codename skin that storage never served, and the only mount config that
+// carried its own 3× scale outside that gate.)
 /** @typedef {{ scale:number, facing:number, flight:boolean }} MountModelConfig */
 const DEFAULT_MOUNT_MODEL_CONFIG = Object.freeze({ scale: 1, facing: 0, flight: false })
 /** @type {Readonly<Record<string, Readonly<MountModelConfig>>>} */
 export const MOUNT_MODEL_CONFIG = Object.freeze({
-  ln: Object.freeze({ scale: 3, facing: Math.PI, flight: true }),
   'dragon-fire': Object.freeze({ scale: 1, facing: Math.PI, flight: true }),
   'dragon-frost': Object.freeze({ scale: 1, facing: Math.PI, flight: true }),
   'dragon-void': Object.freeze({ scale: 1, facing: Math.PI, flight: true }),

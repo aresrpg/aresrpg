@@ -25,6 +25,7 @@ import {
 import { fast_travel_dragon_file } from './fast_travel_assets.js'
 import { create_mount_glb_cache } from './mount_glb_cache.js'
 import { game_log } from '../core/log.js'
+import { report_error } from '../core/report.js'
 import { canonical_model_source_url, model_asset_url } from './model_asset_url.js'
 
 const SEAT_LIFT = 0.8 // fraction of the mount's height the rider sits at (bbox top of the back ≈ ×0.8)
@@ -57,6 +58,7 @@ export function preload_mount_glb(glb_url) {
     .then(() => true)
     .catch((error) => {
       game_log('mount', `GLB preload failed (${source_url}):`, error)
+      report_error(error, { area: 'mount', action: 'glb_preload' }) // the caller refuses the travel; we still owe the cause
       return false
     })
 }
@@ -139,7 +141,13 @@ export function create_mount_rig({ engine, glb_url }) {
       rig = { root, mixer, idle, move, h: render_h, ground_off, tops, move_w: 0 }
       engine.add_to_scene(root)
     })
-    .catch((/** @type {any} */ error) => game_log('mount', `GLB load failed (${source_url ?? 'rejected'}):`, error))
+    .catch((/** @type {any} */ error) => {
+      // A mount that never arrives is INVISIBLE: the rider keeps riding, seat_height stays 0, and game_log is a
+      // silent ring buffer unless debug is on. That is how a 404'd dragon key (#2199) rode unreported. The
+      // breadcrumb stays for the in-game console; the report is what makes the gap reach us.
+      game_log('mount', `GLB load failed (${source_url ?? 'rejected'}):`, error)
+      report_error(error, { area: 'mount', action: 'glb_load' })
+    })
 
   return {
     /** The rig is loaded + in-scene. */
