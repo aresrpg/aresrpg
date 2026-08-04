@@ -53,21 +53,46 @@ const required_level_lookup = (map, world_id) => {
   return map[world_id] ?? null
 }
 
+/** Address-only fallback: prefer a wallet character currently in a world, else the first. */
+const primary_of = (chars) => (chars ?? []).find((c) => c && c.world) ?? (chars ?? [])[0] ?? null
+
 /**
- * The async resolution edge — reads the two /v1 docs + the worlds gate + the live peer pos, then folds through
- * `resolve_route`. Effects (the reads, the presence lookup) are injected so this stays testable and single-homed.
- * @param {{ target_character_id:string, my_character_id:string|null, deps:{
- *   read_character:(id:string)=>Promise<any>, read_worlds:()=>Promise<{world_id:string,required_level?:number}[]>,
- *   catalog_ids:Set<string>, peer_pos_of?:(id:string)=>({x:number,z:number}|null) } }} args
+ * THE READ PLAN — every /v1 document a travel click needs, folded through the pure `resolve_route`. It lives in
+ * ONE home because the plan IS the latency (#2158): the shape of these reads is what the player waits on, so it
+ * has to be readable — and drivable — in one place. Effects (the reads, the presence lookup) are injected.
+ * @param {{ target:{character_id?:string|null, address?:string|null, live?:boolean, x?:number, z?:number},
+ *   traveler_id:string|null, deps:{
+ *     read_characters:(q:{id?:string,owner?:string})=>Promise<any[]>,
+ *     read_worlds:()=>Promise<{id:string,required_level?:number}[]>,
+ *     peer_pos_of?:(id:string)=>({x:number,z:number}|null) } }} args
+ * @returns {Promise<{ ok:true, cid:string|null, facts:any } | { ok:false, cid:string|null, reason:string }>}
  */
-export async function resolve_fast_travel_target({ target_character_id, my_character_id, deps }) {
-  const { read_character, read_worlds, catalog_ids, peer_pos_of } = deps
-  const [target_doc, my_doc, worlds] = await Promise.all([
-    read_character(target_character_id),
-    my_character_id ? read_character(my_character_id) : Promise.resolve(null),
-    read_worlds(),
-  ])
-  const required_level_by_world = new Map((worlds ?? []).map((w) => [w.world_id, Number(w.required_level ?? 1)]))
-  const live_pos = peer_pos_of?.(target_character_id) ?? null
-  return resolve_route({ target_doc, my_doc, required_level_by_world, catalog_ids, live_pos })
+export async function read_route_facts({ target, traveler_id, deps }) {
+  const { read_characters, read_worlds, peer_pos_of } = deps
+  // A friend begin carries the exact live character id, never an owner guess. Its p2p cell refines position only;
+  // world + cross-world anchor still come together from this /v1 document (the routing law).
+  const target_doc = target.character_id
+    ? ((await read_characters({ id: target.character_id }))[0] ?? null)
+    : target.address
+      ? primary_of(await read_characters({ owner: target.address }))
+      : null
+  const my_doc = traveler_id ? ((await read_characters({ id: traveler_id }))[0] ?? null) : null
+  // Both world facts come from ONE live home (world_catalog.js): the census a route is checked against and the
+  // gate it is refused on. Reading the census off the build-time receipt while the gate came from /v1 is exactly
+  // the split #1510 filed — a throw here reaches the caller's catch, never a silent refusal.
+  const worlds = await read_worlds()
+  const cid = target_doc?.id ?? target.character_id ?? null
+  const out = resolve_route({
+    target_doc,
+    my_doc,
+    required_level_by_world: new Map(worlds.map((w) => [w.id, w.required_level])),
+    catalog_ids: new Set(worlds.map((w) => w.id)),
+    live_pos:
+      target.live && Number.isFinite(target.x) && Number.isFinite(target.z)
+        ? { x: Number(target.x), z: Number(target.z) }
+        : cid
+          ? (peer_pos_of?.(cid) ?? null)
+          : null,
+  })
+  return { ...out, cid }
 }
