@@ -2,6 +2,12 @@
 # © 2026 Sceat — All rights reserved. See LICENSE.
 name: edge smoke
 
+# STANDING LESSON (#2202): blocking instruments never land in a job that cannot pass on its runner class.
+# This job's fight row demanded a real WebGPU adapter on GPU-less runners — impossible by construction, never
+# green in 500+ runs — and the relay / served-corpus / promote-heartbeat probes below were buried in that
+# permanent red. A watchdog that always barks is a dead watchdog: every row here must be satisfiable on
+# ubuntu-latest as it really is (no GPU), or it does not belong in this job at all.
+
 on:
   pull_request:
     paths:
