@@ -63,9 +63,9 @@ describe('the zkLogin proving instrument (#2192)', () => {
   it('reports the proving rejection as its own machine-readable event, before the toast erases it', async () => {
     await expect(run(wallet_that_cannot_prove(leaky_enoki_rejection()))).rejects.toThrow()
 
-    const events = ares_errors()
-    expect(events.length).toBeGreaterThan(0)
-    const [, error, , , context] = events[0]
+    const [first_event] = ares_errors()
+    expect(first_event).toBeDefined()
+    const [, error, , , context] = first_event
     expect(error.name).toBe('ZkLoginProvingError')
     expect(context.area).toBe('sponsor')
     expect(context.action).toBe('zklogin-proving')
@@ -78,7 +78,8 @@ describe('the zkLogin proving instrument (#2192)', () => {
   it('never lets the id_token or proof material into the reported payload', async () => {
     await expect(run(wallet_that_cannot_prove(leaky_enoki_rejection()))).rejects.toThrow()
 
-    const [, error, , , context] = ares_errors()[0]
+    const [first_event] = ares_errors()
+    const [, error, , , context] = first_event
     const payload = JSON.stringify({ message: error.message, name: error.name, context })
     expect(payload).not.toContain('eyJ')
     expect(payload).not.toContain(JWT.split('.')[2])
