@@ -1,4 +1,3 @@
-655654e40 → Refs #2183 — fix(gates): the L-L1 ceiling must follow the tree down
-fbc95f124 → Refs #2183 — fix(relocate-tests): bare `.` / `..` specifiers move with the file
-3115b50ed → Refs #2183 — refactor(engine): relocate every in-src test into packages/engine/test
-d01531e45 → Refs #2183 — docs(hack-mode): point the spec's prove line at the relocated test
+adb025c7c → Refs #2210 — fix(fight): one home for "is my seat in the fight read"
+3afbb7f34 → Refs #2205 — fix(simulator): degrade the board pane when the GL context is dead
+a0bc48a9b → Refs #2205 — fix(simulator): move the board harness inside the simulator tree
