@@ -1788,6 +1788,7 @@
     "invite_awaiting_toast": "{{name}}の応答を待っています…",
     "cancel_invite_cta": "招待を取り消す",
     "invite_cancel_notice": "通知を閉じました — 招待はオンチェーンで保留のままです。",
+    "answer_failed_title": "返答が完了しませんでした",
     "tx_pending": "{{label}}…",
     "action_create": "パーティを作成中",
     "action_invite": "{{name}} をパーティに招待中",

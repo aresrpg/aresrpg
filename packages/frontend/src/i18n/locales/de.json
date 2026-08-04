@@ -1788,6 +1788,7 @@
     "invite_awaiting_toast": "Warte auf Antwort von {{name}}…",
     "cancel_invite_cta": "Einladung abbrechen",
     "invite_cancel_notice": "Erinnerung geschlossen — die Einladung bleibt on-chain bestehen.",
+    "answer_failed_title": "Deine Antwort ging nicht durch",
     "tx_pending": "{{label}}…",
     "action_create": "Gruppe wird erstellt",
     "action_invite": "{{name}} wird in die Gruppe eingeladen",

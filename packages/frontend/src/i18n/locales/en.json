@@ -1788,6 +1788,7 @@
     "invite_awaiting_toast": "Waiting for {{name}} to respond…",
     "cancel_invite_cta": "Cancel invite",
     "invite_cancel_notice": "Reminder dismissed — the invite is still pending on-chain.",
+    "answer_failed_title": "Your answer did not go through",
     "tx_pending": "{{label}}…",
     "action_create": "Creating party",
     "action_invite": "Inviting {{name}} to party",

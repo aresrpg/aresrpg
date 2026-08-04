@@ -1788,6 +1788,7 @@
     "invite_awaiting_toast": "Очікування відповіді від {{name}}…",
     "cancel_invite_cta": "Скасувати запрошення",
     "invite_cancel_notice": "Нагадування закрито — запрошення залишається активним ончейн.",
+    "answer_failed_title": "Твоя відповідь не пройшла",
     "tx_pending": "{{label}}…",
     "action_create": "Створення групи",
     "action_invite": "Запрошення {{name}} до групи",

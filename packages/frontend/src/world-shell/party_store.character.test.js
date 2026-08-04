@@ -74,6 +74,9 @@ const spies = [
 
 const { use_party, wire_party_reads } = await import('./party_store.js')
 
+/** Drain a fire-and-forget reconciling read — the shape every "the receipt already told us" path now uses. */
+const flush_reconcile = () => new Promise((resolve) => setTimeout(resolve, 0))
+
 afterAll(() => {
   use_party.getState()._stop_polling()
   for (const spy of spies) spy.mockRestore()
@@ -142,6 +145,9 @@ test('accept signs for invited_character_id, then reads the selected-character p
     incoming_invite: { party_id: party.id, invited_character_id: selected.id, from_name: 'Leader' },
   })
   await use_party.getState().accept_invite()
+  // #2159 — the reconciling read is FIRED, not awaited (the accept receipt already bound the id), so this test
+  // drains it explicitly instead of the accept holding the tx-phase lock across a /v1 round trip for the player.
+  await flush_reconcile()
 
   expect(action_calls).toEqual([['accept', party.id, selected.id]])
   expect(read_calls).toEqual([selected.id])
@@ -442,7 +448,8 @@ test('the departed latch drains once a fresh snapshot drops the player, and a ge
   expect(use_party.getState()._departed).toBe(null)
 
   projected_party = party // a genuine re-join must not be blocked by the drained latch
-  await use_party.getState().adopt_party_id(party.id, selected.id)
+  use_party.getState().adopt_party_id(party.id, selected.id)
+  await flush_reconcile() // the adopt binds from the receipt; its /v1 read only reconciles behind it (#2159)
   expect(use_party.getState().party_id).toBe(party.id)
   expect(use_party.getState().party).toEqual(party)
   use_party.getState()._stop_polling()

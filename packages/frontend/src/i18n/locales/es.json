@@ -1788,6 +1788,7 @@
     "invite_awaiting_toast": "Esperando la respuesta de {{name}}…",
     "cancel_invite_cta": "Cancelar invitación",
     "invite_cancel_notice": "Recordatorio cerrado — la invitación sigue pendiente on-chain.",
+    "answer_failed_title": "Tu respuesta no se registró",
     "tx_pending": "{{label}}…",
     "action_create": "Creando grupo",
     "action_invite": "Invitando a {{name}} al grupo",
