@@ -13,7 +13,6 @@
 import { useSyncExternalStore } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useStore } from 'zustand'
-import { CharacterRow, FollowerRow } from './CharacterSwitcherRow'
 import {
   CHARACTER_SWITCH_IN_PROGRESS,
   CHARACTER_SWITCH_SESSION_CHANGED,
@@ -35,6 +34,8 @@ import { set_last_character } from '../game/core/draft.js'
 import { use_toast } from '../toast'
 import { game_log } from '../core/log.js'
 import { report_error } from '../core/report.js'
+
+import { CharacterRow, FollowerRow } from './CharacterSwitcherRow'
 
 /** A character is escrowed in a dungeon (in_dungeon flag from load_roster.js) → "IN DUNGEON", else "IN LOBBY". */
 function group_of(character: any): 'dungeon' | 'lobby' {
