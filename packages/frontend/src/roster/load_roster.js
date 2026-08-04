@@ -86,22 +86,23 @@ const bounded = (promise, label, fallback, ms = 10000) =>
     return fallback
   })
 
-// Concurrency guard: a re-trigger (navigation re-fires the GameWorldHost effect, or a rapid tx sequence)
-// while a load is in flight is dropped — the in-flight load dispatches the up-to-date roster when it lands.
-let loading = false
+// Concurrency guard: only ONE pass walks the chain at a time (a navigation re-fire or a rapid tx sequence must
+// never launch N kiosk walks). A request arriving MID-LOAD is coalesced into one follow-up pass, never dropped
+// — see `load_roster` below for why dropping it lost the repaint outright.
+// ONE record, REPLACED on every transition (never mutated): `loading` = a pass is walking the chain,
+// `repaint_requested` = someone asked for a fresh one while it was.
+let flight = { loading: false, repaint_requested: false }
 
 /**
- * Fetch the roster's IDENTITY from `/v1/characters?owner=` (never a chain walk), then enrich it (full
- * stats, item bag, creation price) via bounded chain-direct reads, and merge the result onto the engine
+ * ONE pass: fetch the roster's IDENTITY from `/v1/characters?owner=` (never a chain walk), then enrich it
+ * (full stats, item bag, creation price) via bounded chain-direct reads, and merge the result onto the engine
  * store (`action/sui_data`) so CharactersDrawer/CharacterSwitcher/the companion page render it. Auto-selects
- * the first character when none is selected. Idempotent and safe to call repeatedly (boot + every entry to
- * a roster surface + after every gameplay tx).
+ * the first character when none is selected. Never throws.
  * @returns {Promise<void>}
  */
-export async function load_roster() {
+async function load_roster_once() {
   const { address } = use_auth.getState()
-  if (!address || loading) return
-  loading = true
+  if (!address) return
   try {
     // (1) ROSTER IDENTITY — /v1 ONLY. One atomic call: either it resolves the definitive owner-scoped list,
     // or it throws — no partial/ambiguous state to reconcile (unlike the old N-branch kiosk walk). A failure
@@ -241,7 +242,36 @@ export async function load_roster() {
     // existing roster stays on screen (a transient re-scan hiccup must not blow it away).
     if (!context.get_state().sui.loaded)
       context.dispatch('action/sui_data', { load_error: 'Could not load your characters. Retry.' })
+  }
+}
+
+/**
+ * THE repaint door — idempotent and safe to call repeatedly (boot + every entry to a roster surface + after
+ * every gameplay tx). It is also the inventory's ONLY reconciliation channel: nothing polls, so a request
+ * this door swallows is a repaint nobody ever asks for again.
+ *
+ * DROPPED INVALIDATION (#2178 ②): a request arriving while a pass is in flight used to return silently, on
+ * the theory that the running pass would carry it. It cannot — that pass's chain reads STARTED BEFORE this
+ * caller's write landed, so its snapshot is by construction blind to it, and the stale bag then survived
+ * until a manual page refresh. The request is honoured by ONE follow-up pass instead: the guard still holds
+ * (a burst never becomes N concurrent kiosk walks), and the follow-up's reads start after every request that
+ * asked for it.
+ * @returns {Promise<void>}
+ */
+export async function load_roster() {
+  if (!use_auth.getState().address) return
+  if (flight.loading) {
+    flight = { ...flight, repaint_requested: true }
+    return
+  }
+  flight = { loading: true, repaint_requested: false }
+  try {
+    do {
+      // Cleared BEFORE the pass: anything arriving during it is asking for the NEXT one, not this one.
+      flight = { ...flight, repaint_requested: false }
+      await load_roster_once()
+    } while (flight.repaint_requested)
   } finally {
-    loading = false
+    flight = { loading: false, repaint_requested: false }
   }
 }
