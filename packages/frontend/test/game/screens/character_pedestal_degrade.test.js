@@ -11,7 +11,7 @@
 // `character_pedestal()` against a context factory that fails the two ways a real browser fails it
 // (returns null / throws) and pins the contract — no escape, a FLAT handle whose methods are
 // harmless no-ops, and exactly ONE report_error carrying the mechanical cause.
-import { afterEach, describe, expect, spyOn, test } from 'bun:test'
+import { afterAll, afterEach, beforeAll, describe, expect, spyOn, test } from 'bun:test'
 
 import * as report from '../../../src/core/report.js'
 import { character_pedestal } from '../../../src/game/screens/character-pedestal.js'
@@ -46,7 +46,10 @@ const settle = () => new Promise((resolve) => setTimeout(resolve, 0))
 
 let unhandled = []
 const track_unhandled = (reason) => unhandled.push(reason)
-process.on('unhandledRejection', track_unhandled)
+// Scoped to THIS file: a listener left installed would swallow every other suite's unhandled
+// rejections in the shared runner process — a lying-green machine.
+beforeAll(() => process.on('unhandledRejection', track_unhandled))
+afterAll(() => process.off('unhandledRejection', track_unhandled))
 
 afterEach(() => {
   unhandled = []
