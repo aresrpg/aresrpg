@@ -3,6 +3,7 @@
 // #438 — ONE cross-module User Timing trace for a fresh [R] pack engage. The trace follows the exact
 // Transaction + minted Fight id, so unrelated party/join transactions and resumed/co-op boards cannot finish it.
 
+import { timing_clear, timing_duration, timing_mark, timing_measure } from './user_timing.js'
 import { game_log } from './log.js'
 
 export const ENGAGE_MARK_NAMES = Object.freeze({
@@ -37,50 +38,16 @@ const measure_names = Object.values(ENGAGE_MEASURE_NAMES)
 /** @type {{ source: string, transaction: object | null, fight_id: string | null, adopted: boolean } | null} */
 let active_trace = null
 
-const timing_api = () =>
-  typeof performance !== 'undefined' &&
-  typeof performance.mark === 'function' &&
-  typeof performance.measure === 'function'
-    ? performance
-    : null
-
-const mark = (name) => {
-  try {
-    timing_api()?.mark(name)
-  } catch {
-    // User Timing instrumentation must never alter the engage path.
-  }
-}
-
-const measure = (name, start, end) => {
-  try {
-    timing_api()?.measure(name, start, end)
-  } catch {
-    // A missing/superseded mark leaves this phase absent; the action still proceeds unchanged.
-  }
-}
-
-const latest_duration = (name) => {
-  try {
-    const entries = timing_api()?.getEntriesByName(name, 'measure') ?? []
-    return entries[entries.length - 1]?.duration ?? null
-  } catch {
-    return null
-  }
-}
+const mark = timing_mark
+const measure = timing_measure
+const latest_duration = timing_duration
 
 const is_active_transaction = (transaction) =>
   !!active_trace && !!transaction && active_trace.transaction === transaction
 
 /** The accepted marker interaction: clear only this trace's old entries, then start a fresh measurement. */
 export function start_engage_timing(source = 'unknown') {
-  const timing = timing_api()
-  try {
-    for (const name of mark_names) timing?.clearMarks(name)
-    for (const name of measure_names) timing?.clearMeasures(name)
-  } catch {
-    // A partial User Timing implementation still cannot block the interaction.
-  }
+  timing_clear(mark_names, measure_names)
   active_trace = { source, transaction: null, fight_id: null, adopted: false }
   mark(ENGAGE_MARK_NAMES.marker_interaction)
 }
