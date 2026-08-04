@@ -176,7 +176,6 @@ const INERT_STATUSES = new Set([
   'STAT_BUFF',
   'STAT_DEBUFF',
   'STUN',
-  'SUMMON',
   'TIMED_PAYLOAD',
   'TRAP',
 ])
@@ -543,7 +542,7 @@ const encode_event = (event, ctx) => {
       // Abandoned row carries the death, exactly as `inputs.js` folds it (hp 0 + alive false).
       // `inputs.js` keys that fold `is_mob:false` because "a forfeit is always a player". That is now an
       // INVARIANT rather than an assumption: `reduce.js` `handle_abandon` refuses every non-seat abandon
-      // (the ENotParticipant twin — a mob and a summon hold no seat), so this event can only ever name a
+      // (the ENotParticipant twin — a mob holds no seat), so this event can only ever name a
       // player. A team1 forfeit is a PvP shape this PvM encoder cannot express, so it is LOUD rather than a
       // row silently pointing at the wrong fighter.
       const { is_mob, idx } = side_of(post_state, event.entity_id)
@@ -601,9 +600,10 @@ export const encode_sim_step = ({
   turn_context = null,
 }) => {
   if (post_state.team0.length !== pre_state.team0.length || post_state.team1.length !== pre_state.team1.length)
-    // A SUMMON grew a team. Participant/mob indices are POSITIONAL in the snapshot and the chain has no event
-    // admitting a new fighter mid-fight, so this cannot be encoded — only reported. Loud by law.
-    throw new Error('sim_chain: roster changed mid-step (summon) — no chain row can express it')
+    // The roster grew mid-step. Participant/mob indices are POSITIONAL in the snapshot and the chain has no
+    // event admitting a new fighter mid-fight, so this cannot be encoded — only reported. Loud by law, and the
+    // standing class gate against any sim capability the chain's event vocabulary cannot express (#2186).
+    throw new Error('sim_chain: roster changed mid-step — no chain row can express it')
 
   const counters = { ...actions }
   const ctx = {

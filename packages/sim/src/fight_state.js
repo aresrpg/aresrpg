@@ -24,7 +24,6 @@
  * @property {number} [intelligence]
  * @property {number} [chance]
  * @property {number} [agility]
- * @property {number} [summons]   max simultaneous summons (base 1 + equipment); read by the per-caster summon cap
  * @property {number} [critical_hit]
  * @property {number} [range]
  * @property {number} [percent_damage]
@@ -67,7 +66,7 @@
  *   Absent (or ≤ `value`) is the fixed case. NEVER collapsed to a draw at apply time.
  * @property {boolean} [dot]        this DAMAGE row is a K_APPLY_DOT status, not tick bookkeeping — the badge
  *   discriminant (statuses.status_kind_of) AND the chain's tick-batch membership (`spell_board::tick_start`)
- * @property {keyof Stats | 'ap' | 'mp' | 'summons' | 'max_hp'} [stat]   buff/debuff target; max_hp is punishment vitality bookkeeping
+ * @property {keyof Stats | 'ap' | 'mp' | 'max_hp'} [stat]   buff/debuff target; max_hp is punishment vitality bookkeeping
  * @property {number} [chance]      damage-to-heal branch chance
  * @property {number} [heal_multiplier]
  * @property {number} [trigger_turns]
@@ -120,8 +119,6 @@
  * @property {number} ap_used        AP spent this turn (drives PER_AP effects)
  * @property {number} mp_used        MP spent this turn (drives PER_MP effects)
  * @property {boolean} is_player
- * @property {boolean} [is_summon]   true for an AI minion spawned mid-fight by a SUMMON effect (fight_summon.js)
- * @property {string} [owner_id]    for a summon: the caster id that owns it (drives the per-caster summon cap)
  * @property {string} template_id
  * @property {string} [variant]      mob art key (the model/sprite id); passthrough data, no engine logic
  * @property {number} level
@@ -295,7 +292,7 @@ export const next_id = state => ({
  * are owned by the existing per-turn plumbing (`expire_turn_effects` decrements turns_remaining + drops the
  * expired); this only READS the live modifiers. Pure, integer.
  * @param {FightEntity} entity
- * @param {keyof Stats | 'ap' | 'mp' | 'summons' | 'max_hp'} key
+ * @param {keyof Stats | 'ap' | 'mp' | 'max_hp'} key
  * @returns {number}
  */
 export const stat_modifier = (entity, key) =>
@@ -310,7 +307,7 @@ export const stat_modifier = (entity, key) =>
  * EFFECTIVE combat stats = the frozen base snapshot + every active stat modifier (buffs +, debuffs -). The
  * base stays IMMUTABLE (the snapshot contract: "the sim only READS these"); modifiers live as effects and are
  * folded here on read, so a buff is actually FELT by every roll/decision (damage / heal / crit / range /
- * tackle / hazard) that reads stats. ap/mp pools + 'summons' are NOT Stats keys (see effective_ap_max etc.).
+ * tackle / hazard) that reads stats. The ap/mp pools are NOT Stats keys (see effective_ap_max etc.).
  * Returns the base object UNCHANGED when there is no stat modifier (a no-op for un-buffed fighters -> existing
  * fights stay byte-identical).
  * @param {FightEntity} entity
@@ -323,7 +320,6 @@ export const effective_stats = entity => {
       eff.stat !== undefined &&
       eff.stat !== 'ap' &&
       eff.stat !== 'mp' &&
-      eff.stat !== 'summons' &&
       eff.stat !== 'max_hp',
   )
   if (mods.length === 0) return entity.stats

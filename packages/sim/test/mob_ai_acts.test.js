@@ -58,7 +58,7 @@ const player = (id, cell) => ({
   spell_levels: {},
   ap_reserve: 0,
 })
-// A mob armed with the basic melee strike (range [1,1], cost 3) — exactly what fight_summon gives a mob.
+// A mob armed with the basic melee strike (range [1,1], cost 3) — the generic MOB_ATTACK every mob carries.
 const mob = (id, cell) => ({
   id,
   name: id,

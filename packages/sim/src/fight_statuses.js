@@ -103,8 +103,7 @@ const fighter_resolving = effect =>
   effect.kind !== K_PLACE_GLYPH &&
   effect.type !== 'TELEPORT' &&
   effect.type !== 'PLACE_TRAP' &&
-  effect.type !== 'GLYPH' &&
-  effect.type !== 'SUMMON'
+  effect.type !== 'GLYPH'
 
 /** Match Move's selected-list directness rule. */
 export const is_direct_effect_list = effects => {

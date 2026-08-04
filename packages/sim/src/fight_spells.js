@@ -26,7 +26,6 @@ import {
   zone_edge_distance,
 } from './fight_displacement.js'
 import { check_traps, place_trap, place_glyph } from './fight_traps.js'
-import { summon_entity } from './fight_summon.js'
 import {
   apply_shields,
   calculate_final_damage,
@@ -884,20 +883,6 @@ export const process_spell_cast = (
           ...acc,
           state: placed,
           effects: [...acc.effects, { target_id: caster_id, status: 'GLYPH' }],
-        }
-      }
-      if (effect.type === 'SUMMON') {
-        const summoned = summon_entity(
-          acc.state,
-          caster,
-          target,
-          terrain_walkable,
-          effect.summon ?? '',
-        )
-        return {
-          ...acc,
-          state: summoned.state,
-          effects: [...acc.effects, ...summoned.effects],
         }
       }
       const targets =
