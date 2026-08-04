@@ -118,13 +118,18 @@ const committed_entries_of = ({ authoritative_tail, base, view }) => {
       .filter(([, fighter]) => blocks_a_walk(fighter))
       .map(([key, fighter]) => [key, fighter.cell])
   )
+  // Chain receipts emit a walk's Hit rows BEFORE its destination-only Moved/MobMoved row. A lethal final Hit
+  // therefore proves the mover dead before this renderer has reconstructed the route that led through its traps.
+  // Keep the mover's start cell long enough to rebuild ITS pending walk, while excluding every proven-dead body
+  // from OTHER movers' masks. Once that pending walk is consumed, the corpse owns no cell here either.
+  const dead_fighters = new Set()
   const committed_entries = []
 
   authoritative_tail.forEach((entry, at) => {
     // A body killed EARLIER in this same tail frees its cell for a LATER mover: the chain rebuilds its wall mask
     // per mover (`move_blocked_cells` at each `walk` call), so a mid-receipt corpse blocks nothing after it falls.
     if (entry.kind === 'Hit' && Number(entry.remaining_hp) <= 0) {
-      cell_at.delete(`${entry.victim_is_mob ? 'm' : 'p'}${Number(entry.victim_idx)}`)
+      dead_fighters.add(`${entry.victim_is_mob ? 'm' : 'p'}${Number(entry.victim_idx)}`)
       return
     }
     if (!['Moved', 'MobMoved', 'Displaced'].includes(entry.kind) || entry.to_cell == null) return
@@ -137,7 +142,7 @@ const committed_entries_of = ({ authoritative_tail, base, view }) => {
     const from = cell_at.get(key)
     const version = Number(entry.version)
     const occupied_cells = [...cell_at.entries()]
-      .filter(([other, cell]) => other !== key && cell != null)
+      .filter(([other, cell]) => other !== key && !dead_fighters.has(other) && cell != null)
       .map(([, cell]) => decoded_cell(cell, GRID_W))
     const entered =
       entry.kind === 'Displaced' || from == null
@@ -149,7 +154,8 @@ const committed_entries_of = ({ authoritative_tail, base, view }) => {
 
     for (const [step, cell] of (entered.length > 0 ? entered : [to]).entries())
       committed_entries.push({ cell, version, at, step })
-    cell_at.set(key, to)
+    if (dead_fighters.has(key)) cell_at.delete(key)
+    else cell_at.set(key, to)
   })
 
   return committed_entries
