@@ -13,6 +13,9 @@
 //   · MEMBER LISTS (format 3, #1110/#1111) — lattice placement, plus a per-group ROSTER: a pack holds several
 //     species, the pick table is no longer distance-gated, and `progress` rides the rows so the engine can draw
 //     each member's level from a window that slides up its own authored band.
+//   · MEMBER TREE (format 4, #2194) — the SAME derivation as format 3; only the zone's COMMITMENT changed, from
+//     one flat hash over the whole set to a Merkle tree over per-group leaves, so a claim proves ONE group with
+//     an inclusion path instead of making the chain re-derive the zone. Nothing about the stream moves.
 // WHICH one a zone uses is not a version flag we choose: the chain reads the leading byte of that zone's
 // stored commitment root and dispatches (`zones::derive_mobs`), so this module reads the same byte off the
 // zone doc. Getting it wrong derives a world the chain never committed — every spawn_id becomes fiction and
@@ -37,6 +40,7 @@ const SPACING_D2 = MIN_SPAWN_SPACING * MIN_SPAWN_SPACING // squared compare (= 4
 const POS_ATTEMPTS = 64 // rejection cap; on exhaustion accept the last roll (a zone too small to fit the spacing)
 const FORMAT_LATTICE = 2 // the commitment-format byte that selects LATTICE placement (zone_gen.move)
 const FORMAT_MEMBERS = 3 // MEMBER-LIST placement (#1110): lattice + a per-group roster of template indexes
+const FORMAT_MEMBER_TREE = 4 // MEMBER-LIST placement committed as a MERKLE TREE (#2194) — same stream as 3
 const MAX_MEMBERS = 16 // hard rail on a derived roster — zone_gen.move MAX_MEMBERS
 
 /** prng-state twin of `zone_gen::p_roll_u64` — SKIP the draw when `lo >= hi` (point/malformed band). */
@@ -142,7 +146,13 @@ const p_pick_grid_pos = (state, pool, i, cols, ox, oz) => {
  * (`zone_gen::derive_resources`) — resource fields may sit anywhere, only mob groups owe each other distance.
  */
 const placer = (format, spaced, ox, oz, zsize, bx, bz) => {
-  if (format === FORMAT_LATTICE) {
+  // `>= FORMAT_LATTICE` is the CHAIN's own rule, stated verbatim: `zones::derive_res` passes
+  // `group_commitment_format(...) >= 2` as its `grid` flag, because every format from 2 up is a lattice zone —
+  // 3 changed what a group HOLDS and 4 changed how the set is COMMITTED, neither changed where anything sits.
+  // Testing `=== FORMAT_LATTICE` here derived format-3 zones' RESOURCE cells off the legacy unspaced sampler
+  // while the chain placed them on the lattice (#2194 lane finding): different positions, different draw counts,
+  // therefore different spawn ids on every currently-searched zone.
+  if (format >= FORMAT_LATTICE) {
     const { cols, pool } = grid_cell_pool(ox, oz, zsize, bx, bz)
     return {
       capacity: pool.length,
@@ -170,7 +180,8 @@ const placer = (format, spaced, ox, oz, zsize, bx, bz) => {
 /**
  * The derivation a zone's stored commitment selects — twin of `zone_gen::mob_group_commitment_format`. A bare
  * 32-byte digest is format 1 (legacy); a 33-byte `0x02 ‖ digest` is format 2 (lattice); anything else is 0. An
- * ABSENT root reads as 1, exactly as `zones::group_commitment_format` reports a missing commitment field.
+ * ABSENT root reads as 1, exactly as `zones::group_commitment_format` reports a missing commitment field. A
+ * 33-byte `0x04 ‖ digest` is format 4 — the member TREE (#2194), whose stream is format 3's exactly.
  * @param {number[] | Uint8Array | null | undefined} root
  * @returns {number}
  */
@@ -179,6 +190,7 @@ export const commitment_format = root => {
   if (root.length === 32) return 1
   if (root.length === 33 && root[0] === FORMAT_LATTICE) return FORMAT_LATTICE
   if (root.length === 33 && root[0] === FORMAT_MEMBERS) return FORMAT_MEMBERS
+  if (root.length === 33 && root[0] === FORMAT_MEMBER_TREE) return FORMAT_MEMBER_TREE
   return 0
 }
 
@@ -638,7 +650,7 @@ export function derive_zone({ zone, zx, zy, world, team_bound = 6 }) {
   // the authored rate ALONE — distance stopped deciding WHICH species a zone admits and started deciding how hard
   // they are. Applying that to a format-1/2 zone would re-derive it into fiction (a different weight total picks
   // a different row from the same roll), which is why the branch is on the zone's own committed byte.
-  const members_zone = format === FORMAT_MEMBERS
+  const members_zone = format >= FORMAT_MEMBERS
   const weights = mobs.map((m, i) =>
     members_zone || levels[i] <= lvl_cap ? Number(m.rate_bp) : 0,
   )

@@ -48,6 +48,12 @@ const GROUP_FORMAT_LATTICE: u8 = 2;
 /// plus a per-group MEMBER LIST so one group can hold several species (#1110). Formats 1/2 keep deriving through
 /// their own untouched functions — an in-flight zone always replays the format its own stored commitment names.
 const GROUP_FORMAT_MEMBERS: u8 = 3;
+/// A 33-byte `0x04 ‖ merkle_root` is the MEMBER-LIST TREE commitment (format 4, #2194): the SAME derivation
+/// format 3 runs (lattice placement, member lists), committed as a MERKLE TREE over per-group leaves instead of
+/// one flat hash over the whole set. That single change is what lets a claim authenticate ONE group with an
+/// O(log n) inclusion path — format 2/3 forced the claim door to re-derive the entire zone, which the gas audit
+/// measured as ~45% of a play-hour's gas.
+const GROUP_FORMAT_MEMBER_TREE: u8 = 4;
 /// Hard rail on a group's derived member roster. The roll `[min_group, max_group]` is storage-clamped to 64
 /// (`world::GROUP_MAX`), but the LIVE engine bound is 6 (`GameConfig.team_size_bound`); drawing a member per
 /// rolled unit past any sane bound is pure waste, so the roster tops out here and the consumer spawns
@@ -522,6 +528,7 @@ public fun mob_group_commitment_format(bytes: &vector<u8>): u8 {
   if (bytes.length() == GROUP_HASH_BYTES) GROUP_FORMAT_LEGACY
   else if (bytes.length() == GROUP_HASH_BYTES + 1 && bytes[0] == GROUP_FORMAT_LATTICE) GROUP_FORMAT_LATTICE
   else if (bytes.length() == GROUP_HASH_BYTES + 1 && bytes[0] == GROUP_FORMAT_MEMBERS) GROUP_FORMAT_MEMBERS
+  else if (bytes.length() == GROUP_HASH_BYTES + 1 && bytes[0] == GROUP_FORMAT_MEMBER_TREE) GROUP_FORMAT_MEMBER_TREE
   else 0
 }
 
@@ -643,18 +650,11 @@ fun mob_group_proof_depth(mut count: u64): u64 {
   depth
 }
 
-/// Verify one flattened proof against a root borrowed by `zones`; index bits determine sibling ordering.
-public fun mob_group_root_matches(
-  root: &vector<u8>, count: u64, world: ID, zx: u32, zy: u32, zone_seed: u64,
-  discovered_at_ms: u64, index: u64, spawn_id: u64, template: ID, x: u32, z: u32,
-  group_size: u16, group_seed: u64, proof: &vector<u8>,
-): bool {
-  if (count == 0 || count > MAX_GROUPS || index >= count) return false;
-  let depth = mob_group_proof_depth(count);
-  if (proof.length() != depth * GROUP_HASH_BYTES) return false;
-  let mut digest = mob_group_leaf_hash(
-    world, zx, zy, zone_seed, discovered_at_ms, index, spawn_id, template, x, z, group_size, group_seed,
-  );
+/// Fold one flattened sibling path over `leaf` — the ONE home for how a proof climbs a mob-group tree, shared by
+/// every format that carries a path (`index` bits decide sibling ordering at each level). A path whose length is
+/// not a whole number of `depth` hashes never reaches here: the callers refuse it.
+fun fold_mob_group_proof(leaf: vector<u8>, index: u64, depth: u64, proof: &vector<u8>): vector<u8> {
+  let mut digest = leaf;
   let mut cursor = index;
   let mut level = 0;
   while (level < depth) {
@@ -669,18 +669,29 @@ public fun mob_group_root_matches(
     cursor = cursor / 2;
     level = level + 1;
   };
-  digest == *root
+  digest
 }
 
-#[test_only]
-public fun mob_group_proof_for_testing(
-  world: ID, zx: u32, zy: u32, zone_seed: u64, discovered_at_ms: u64,
-  spawn_ids: &vector<u64>, templates: &vector<ID>, xs: &vector<u32>, zs: &vector<u32>,
-  sizes: &vector<u16>, group_seeds: &vector<u64>, mut index: u64,
-): vector<u8> {
-  let mut nodes = mob_group_leaves(
-    world, zx, zy, zone_seed, discovered_at_ms, spawn_ids, templates, xs, zs, sizes, group_seeds,
+/// Verify one flattened proof against a root borrowed by `zones`; index bits determine sibling ordering.
+public fun mob_group_root_matches(
+  root: &vector<u8>, count: u64, world: ID, zx: u32, zy: u32, zone_seed: u64,
+  discovered_at_ms: u64, index: u64, spawn_id: u64, template: ID, x: u32, z: u32,
+  group_size: u16, group_seed: u64, proof: &vector<u8>,
+): bool {
+  if (count == 0 || count > MAX_GROUPS || index >= count) return false;
+  let depth = mob_group_proof_depth(count);
+  if (proof.length() != depth * GROUP_HASH_BYTES) return false;
+  let leaf = mob_group_leaf_hash(
+    world, zx, zy, zone_seed, discovered_at_ms, index, spawn_id, template, x, z, group_size, group_seed,
   );
+  fold_mob_group_proof(leaf, index, depth, proof) == *root
+}
+
+/// The sibling path for `index` out of an already-built leaf level — the producer half of `fold_mob_group_proof`,
+/// shared by both tree formats' test builders. Real proofs are produced CLIENT-side (`@aresrpg/sdk`'s
+/// `fight_proof.js`); the chain only ever verifies, so this stays test-only on purpose.
+#[test_only]
+fun mob_group_path(mut nodes: vector<vector<u8>>, mut index: u64): vector<u8> {
   assert!(index < nodes.length(), EBadGroupCommitmentInput);
   let mut proof = vector[];
   while (nodes.length() > 1) {
@@ -691,6 +702,138 @@ public fun mob_group_proof_for_testing(
     index = index / 2;
   };
   proof
+}
+
+#[test_only]
+public fun mob_group_proof_for_testing(
+  world: ID, zx: u32, zy: u32, zone_seed: u64, discovered_at_ms: u64,
+  spawn_ids: &vector<u64>, templates: &vector<ID>, xs: &vector<u32>, zs: &vector<u32>,
+  sizes: &vector<u16>, group_seeds: &vector<u64>, index: u64,
+): vector<u8> {
+  mob_group_path(
+    mob_group_leaves(world, zx, zy, zone_seed, discovered_at_ms, spawn_ids, templates, xs, zs, sizes, group_seeds),
+    index,
+  )
+}
+
+// ╔════════════════ [ Format-4 (member-list MERKLE) commitments — #2194 ] ════ ]
+
+/// ONE LEAF of a member-list tree (format 4): the format-3 group row plus its stream `index` and the zone
+/// context, so a single leaf + an O(log n) path authenticates one group with the zone never re-derived. The
+/// `members` roster is the SEATING list — the derived roster already truncated to `group_size` — which is
+/// exactly what the ticket hands the fight, so nothing downstream has to re-clamp what the root already binds.
+public struct MobGroupMemberLeaf has copy, drop {
+  world: ID,
+  zx: u32,
+  zy: u32,
+  zone_seed: u64,
+  discovered_at_ms: u64,
+  progress: u64,
+  index: u64,
+  spawn_id: u64,
+  template: ID,
+  members: vector<ID>,
+  x: u32,
+  z: u32,
+  group_size: u16,
+  group_seed: u64,
+}
+
+fun mob_group_member_leaf_hash(
+  world: ID, zx: u32, zy: u32, zone_seed: u64, discovered_at_ms: u64, progress: u64, index: u64,
+  spawn_id: u64, template: ID, members: vector<ID>, x: u32, z: u32, group_size: u16, group_seed: u64,
+): vector<u8> {
+  let leaf = MobGroupMemberLeaf {
+    world, zx, zy, zone_seed, discovered_at_ms, progress, index, spawn_id, template, members, x, z, group_size,
+    group_seed,
+  };
+  let mut bytes = b"aresrpg.zone-group.member-leaf";
+  bytes.append(bcs::to_bytes(&leaf));
+  hash::blake2b256(&bytes)
+}
+
+/// The tree's leaf level. `member_templates[i]` arrives at the RAW derived length (the kernel's stream law) and
+/// is truncated HERE to `sizes[i]` — the one place the seating clamp lives, so writer and verifier cannot drift.
+fun mob_group_member_leaves(
+  world: ID, zx: u32, zy: u32, zone_seed: u64, discovered_at_ms: u64, progress: u64,
+  spawn_ids: &vector<u64>, templates: &vector<ID>, member_templates: &vector<vector<ID>>,
+  xs: &vector<u32>, zs: &vector<u32>, sizes: &vector<u16>, group_seeds: &vector<u64>,
+): vector<vector<u8>> {
+  let count = spawn_ids.length();
+  assert!(count <= MAX_GROUPS && templates.length() == count && member_templates.length() == count &&
+    xs.length() == count && zs.length() == count && sizes.length() == count && group_seeds.length() == count,
+    EBadGroupCommitmentInput);
+  let mut out = vector[];
+  let mut i = 0;
+  while (i < count) {
+    let mut roster = member_templates[i];
+    while (roster.length() > (sizes[i] as u64)) { roster.pop_back(); };
+    out.push_back(mob_group_member_leaf_hash(
+      world, zx, zy, zone_seed, discovered_at_ms, progress, i, spawn_ids[i], templates[i], roster, xs[i], zs[i],
+      sizes[i], group_seeds[i],
+    ));
+    i = i + 1;
+  };
+  out
+}
+
+/// Commit a member-list zone as a MERKLE TREE: `0x04 ‖ root(leaves)`. Same derived set as format 3 — only the
+/// commitment's SHAPE differs, which is the whole point: a per-group leaf can be proven, a whole-set hash can
+/// only be re-derived.
+public fun mob_group_member_root(
+  world: ID, zx: u32, zy: u32, zone_seed: u64, discovered_at_ms: u64, progress: u64,
+  spawn_ids: &vector<u64>, templates: &vector<ID>, member_templates: &vector<vector<ID>>,
+  xs: &vector<u32>, zs: &vector<u32>, sizes: &vector<u16>, group_seeds: &vector<u64>,
+): vector<u8> {
+  let mut nodes = mob_group_member_leaves(
+    world, zx, zy, zone_seed, discovered_at_ms, progress, spawn_ids, templates, member_templates, xs, zs, sizes,
+    group_seeds,
+  );
+  let digest = if (nodes.is_empty()) hash::blake2b256(&b"aresrpg.zone-group.empty")
+    else {
+      while (nodes.length() > 1) nodes = next_mob_group_level(&nodes);
+      nodes.pop_back()
+    };
+  let mut out = vector[GROUP_FORMAT_MEMBER_TREE];
+  out.append(digest);
+  out
+}
+
+/// `true` iff `root` is a format-4 commitment AND `proof` authenticates this group at `index` under it. Every
+/// refusal is a `false`, never an abort: the caller (`zones`) owns the error code the player sees. A commitment
+/// of any other format returns `false` rather than falling back — the caller picks its verifier by format.
+public fun mob_group_member_root_matches(
+  root: &vector<u8>, count: u64, world: ID, zx: u32, zy: u32, zone_seed: u64,
+  discovered_at_ms: u64, progress: u64, index: u64, spawn_id: u64, template: ID, members: vector<ID>, x: u32,
+  z: u32, group_size: u16, group_seed: u64, proof: &vector<u8>,
+): bool {
+  if (mob_group_commitment_format(root) != GROUP_FORMAT_MEMBER_TREE) return false;
+  if (count == 0 || count > MAX_GROUPS || index >= count) return false;
+  if (members.length() > MAX_MEMBERS) return false;
+  let depth = mob_group_proof_depth(count);
+  if (proof.length() != depth * GROUP_HASH_BYTES) return false;
+  let leaf = mob_group_member_leaf_hash(
+    world, zx, zy, zone_seed, discovered_at_ms, progress, index, spawn_id, template, members, x, z, group_size,
+    group_seed,
+  );
+  let mut out = vector[GROUP_FORMAT_MEMBER_TREE];
+  out.append(fold_mob_group_proof(leaf, index, depth, proof));
+  out == *root
+}
+
+#[test_only]
+public fun mob_group_member_proof_for_testing(
+  world: ID, zx: u32, zy: u32, zone_seed: u64, discovered_at_ms: u64, progress: u64,
+  spawn_ids: &vector<u64>, templates: &vector<ID>, member_templates: &vector<vector<ID>>,
+  xs: &vector<u32>, zs: &vector<u32>, sizes: &vector<u16>, group_seeds: &vector<u64>, index: u64,
+): vector<u8> {
+  mob_group_path(
+    mob_group_member_leaves(
+      world, zx, zy, zone_seed, discovered_at_ms, progress, spawn_ids, templates, member_templates, xs, zs, sizes,
+      group_seeds,
+    ),
+    index,
+  )
 }
 
 // ╔════════════════ [ Resource-cell derivation (one-harvest / one-bit) ] ═══════ ]
