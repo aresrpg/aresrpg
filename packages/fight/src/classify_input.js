@@ -173,6 +173,8 @@ export const classify_input = (msg = {}) => {
         beats: msg.beats,
         place_traps: msg.place_traps,
         place_glyphs: msg.place_glyphs,
+        expected: msg.expected,
+        refusal: msg.refusal,
       })
     case 'rollback':
       return player_commit({ commit_kind: 'rollback', intent_id: msg.intent_id, predicts: msg.predicts })

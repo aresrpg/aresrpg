@@ -6,6 +6,8 @@
 // by identity — matched to the receipt's own claim — never by a blanket version purge:
 //   · a canonical action whose claim matches a pending prediction RETIRES it: byte/outcome-match ⇒ silent (it
 //     was merely early); a differing outcome on the SAME claim ⇒ ONE forward correction (the divergence toast).
+//     A refused/absent expected prediction uses that same correction shape with `predicted:null` and
+//     `refusal:<reason|'absent'>`; the subscriber keeps the one existing divergence log family.
 //   · a canonical action with NO pending claim (an UNRELATED receipt) touches nothing — the prediction lives on.
 //   · a receipt that ENDED MY TURN closes the window: any prediction it never claimed has missed its receipt and
 //     resolves as mispredicted — one silent forward correction to committed truth.
@@ -97,6 +99,7 @@ export function reconcile_predictions(
         intent_id: entry.intent_id ?? null,
         version: Number(entry.version),
         target_cell: entry.kind === 'Cast' ? entry.target_cell : null,
+        refusal: entry.prediction_refusal ?? entry.refusal ?? null,
         entry,
       },
     ])
@@ -123,7 +126,8 @@ export function reconcile_predictions(
     const [claim, ...rest] = queue // FIFO: the head is the next ordinal for this claim key (no mutation, L-I1)
     queues.set(row.action, rest)
     retire.add(claim.key)
-    const outcome_match = JSON.stringify(claim.delta) === JSON.stringify(row.delta)
+    const refused = claim.refusal != null
+    const outcome_match = !refused && JSON.stringify(claim.delta) === JSON.stringify(row.delta)
     if (claim.intent_id != null) {
       settled_ids.add(claim.intent_id)
       if (action.kind === 'Cast') {
@@ -169,7 +173,8 @@ export function reconcile_predictions(
       divergence = {
         kind: 'action',
         action: row.action,
-        predicted: claim.delta,
+        predicted: refused ? null : claim.delta,
+        ...(refused ? { refusal: claim.refusal } : {}),
         applied: row.delta,
         version: Number(action.version ?? version),
         at,

@@ -108,15 +108,37 @@ export const claim_predictions = (state, authoritative, now) => {
       seen.add(key)
     }
   }
+  // A staged local cast is the proof that this receipt action EXPECTED a prediction. If prediction produced no
+  // entry at all, append an inert claim marker after all real predictions: its authoritative Cast match emits the
+  // same divergence record with `refusal:'absent'`. Other seats and mob cranks have different claim identities,
+  // so they never consume this local marker. An explicit refusal already has a real entry and therefore wins FIFO.
+  const my_actor = actor_from_key(state.my_key)
+  const expected = my_actor
+    ? (state.staged ?? [])
+        .filter((action) => action.kind === 1 || action.kind === 2)
+        .map((action, index) => ({
+          ...normalize_intent(
+            { kind: 'cast', target_cell: action.target },
+            {
+              version: Math.max(1, state.applied_version + 1),
+              event_idx: state.intent_seq + index,
+              actor: my_actor,
+              resolve_seat: state.ctx?.resolve_seat ?? seat_resolver(state.view),
+            }
+          ),
+          prediction_refusal: 'absent',
+        }))
+    : []
+  if (!pending.length && !expected.length) return null
   pending.sort((a, b) => Number(a.version) - Number(b.version) || Number(a.event_idx) - Number(b.event_idx))
-  if (!pending.length || !authoritative?.length) return null
+  pending.push(...expected)
+  if (!authoritative?.length) return null
   const oldest = Math.min(...pending.map((entry) => Number(entry.version)))
   const actions = authoritative.filter((action) => Number(action.version) >= oldest)
   if (!actions.length) return null
   const ceiling = Math.max(...actions.map((action) => Number(action.version)))
   const eligible = pending.filter((entry) => Number(entry.version) <= ceiling)
   if (!eligible.length) return null
-  const my_actor = actor_from_key(state.my_key)
   const ended_my_turn =
     !!my_actor &&
     actions.some(
@@ -200,7 +222,9 @@ export const reduce_predicted = (state, msg, now) => {
   const actor = actor_from_key(state.my_key)
   const resolve_seat = msg.resolve_seat ?? state.ctx?.resolve_seat ?? seat_resolver(state.view)
   let projected = presented_state(state)
-  const actions = (msg.actions ?? []).map((raw, index) => {
+  const supplied = msg.actions ?? []
+  const refused = supplied.length === 0 && msg.expected != null && msg.refusal != null
+  const actions = (refused ? [msg.expected] : supplied).map((raw, index) => {
     const action = normalize_intent(raw, {
       version: raw.version ?? base_version,
       event_idx: raw.event_idx ?? state.intent_seq + index,
@@ -208,6 +232,7 @@ export const reduce_predicted = (state, msg, now) => {
       resolve_seat,
     })
     let tagged = msg.intent_id != null ? { ...action, intent_id: msg.intent_id } : action
+    if (refused) tagged = { ...tagged, prediction_refusal: msg.refusal }
     if (tagged.kind === 'Cast' && tagged.target_cell != null) {
       const caster = actor_key(tagged.caster_is_mob, tagged.caster_idx)
       const caster_cell = projected.fighters?.[caster]?.cell

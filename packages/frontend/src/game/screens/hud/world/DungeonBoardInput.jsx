@@ -99,20 +99,31 @@ export function useDungeonBoardInput(state, t) {
       critical_clock: crit_clock_of({ fight: dungeon, seat_row: me, slot: my_action_slot(core) }),
       resolve_ref,
     })
-    if (!prediction?.actions.length) return
+    const refused = !prediction?.actions.length
+    // REFUSAL IS RECONCILIATION DATA (#2152): the staged cast proves this local action expected prediction.
+    // Preserve the sim's reason as an inert Cast claim so an authoritative Cast can use the SAME divergence
+    // log family with `predicted:null`; it paints nothing and another seat's differently-keyed Cast cannot claim it.
     core.input({
       type: 'predicted',
       intent_id: `cast:${fight.fight_id}:${core.intent_seq}`,
       basis_version: core.applied_version + 1,
-      actions: prediction.actions,
-      beats: prediction.beats,
-      // ④+⑦b: fold any trap THIS cast places into the store's durable my_traps (the ONE client trap home) so a
-      // same-turn push force-stops on it AND render + cast-legality read the same projection.
-      place_traps: prediction.placed_traps ?? [],
-      // fold any glyph THIS cast places into the store's durable my_glyphs (single home — the render reads the
-      // engine_view projection directly, no overlay module) so the orange zone shows this frame and expires with it.
-      place_glyphs: prediction.placed_glyphs ?? [],
+      actions: prediction?.actions ?? [],
+      ...(refused
+        ? {
+            expected: { kind: 'cast', target_cell: mob_cell },
+            refusal: prediction?.result?.error ?? true,
+          }
+        : {
+            beats: prediction.beats,
+            // ④+⑦b: fold any trap THIS cast places into the store's durable my_traps (the ONE client trap home) so a
+            // same-turn push force-stops on it AND render + cast-legality read the same projection.
+            place_traps: prediction.placed_traps ?? [],
+            // fold any glyph THIS cast places into the store's durable my_glyphs (single home — the render reads the
+            // engine_view projection directly, no overlay module) so the orange zone shows this frame and expires with it.
+            place_glyphs: prediction.placed_glyphs ?? [],
+          }),
     })
+    if (refused) return
   }
 
   // THE TOLL'S FORFEIT (#239): when next_move_tackle says my next move fails its escape, the pools are bitten

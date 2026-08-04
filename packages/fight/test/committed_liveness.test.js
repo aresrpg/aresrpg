@@ -4,6 +4,7 @@ import { describe, expect, test } from 'bun:test'
 
 import { active_store, ev, ME, T0 } from '../harness/fixtures.js'
 import { board_view, engine_view } from '../src/project.js'
+import { subscribe_divergence } from '../src/txs.js'
 
 describe('committed-floored action liveness', () => {
   test('a predicted-dead mob stays alive for action gates while rendering the predicted death', () => {
@@ -56,5 +57,81 @@ describe('per-action receipt divergence', () => {
       applied: { remaining_hp: 7 },
       shown: false,
     })
+  })
+
+  const cast_receipt = (store, { caster_idx = 0, target_cell = 45 } = {}) =>
+    store.getState().input(
+      {
+        type: 'receipt',
+        version: 3,
+        receipt: { events: [ev('Cast', { caster_is_mob: false, caster_idx, target_cell })] },
+      },
+      T0 + 2_000
+    )
+
+  const collect_divergence_lines = (store) => {
+    const lines = []
+    const stop = subscribe_divergence(store, { on_divergence: (line) => lines.push(line) })
+    return { lines, stop }
+  }
+
+  test('an explicitly refused local prediction emits the divergence line with its refusal marker', () => {
+    const store = active_store()
+    store.getState().input({ type: 'stage', intent: { kind: 1, target: 45 } })
+    store.getState().input({
+      type: 'predicted',
+      intent_id: 'cast:refused',
+      actions: [],
+      expected: { kind: 'cast', target_cell: 45 },
+      refusal: 'SIM_CAST_REJECTED',
+    })
+    const { lines, stop } = collect_divergence_lines(store)
+
+    cast_receipt(store)
+    stop()
+
+    expect(lines).toHaveLength(1)
+    expect(lines[0]).toMatchObject({
+      kind: 'action',
+      action: 'Cast:p0:45',
+      predicted: null,
+      refusal: 'SIM_CAST_REJECTED',
+      applied: {},
+      shown: false,
+    })
+  })
+
+  test('a matching local prediction emits no divergence line', () => {
+    const store = active_store()
+    store.getState().input({ type: 'stage', intent: { kind: 1, target: 45 } })
+    store.getState().input({
+      type: 'predicted',
+      intent_id: 'cast:matched',
+      actions: [{ kind: 'Cast', caster_is_mob: false, caster_idx: 0, target_cell: 45 }],
+    })
+    const { lines, stop } = collect_divergence_lines(store)
+
+    cast_receipt(store)
+    stop()
+
+    expect(lines).toEqual([])
+  })
+
+  test("another seat's authoritative action emits no divergence line", () => {
+    const store = active_store()
+    store.getState().input({ type: 'stage', intent: { kind: 1, target: 45 } })
+    store.getState().input({
+      type: 'predicted',
+      intent_id: 'cast:local-refusal',
+      actions: [],
+      expected: { kind: 'cast', target_cell: 45 },
+      refusal: 'SIM_CAST_REJECTED',
+    })
+    const { lines, stop } = collect_divergence_lines(store)
+
+    cast_receipt(store, { caster_idx: 1 })
+    stop()
+
+    expect(lines).toEqual([])
   })
 })

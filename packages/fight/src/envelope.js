@@ -79,6 +79,8 @@ export const player_commit = ({
   cells,
   draft_ids,
   predicts,
+  expected,
+  refusal,
 } = {}) =>
   tagged('player_commit', {
     commit_kind,
@@ -94,6 +96,8 @@ export const player_commit = ({
     cells,
     draft_ids,
     predicts,
+    expected,
+    refusal,
   })
 
 /** A clock tick — the ONLY time source. The reading is the envelope's `observed_at_ms`; this payload
