@@ -21,7 +21,11 @@ export default defineConfig({
   reporter: [['list']],
   use: {
     baseURL: PROD_ORIGIN,
-    headless: false, // the tactical board is WebGPU-only; first-turn activation needs a real GPU adapter
+    // HEADED, but never for a GPU: a GitHub runner has none (#2202 — the old "needs a real WebGPU adapter"
+    // justification made this suite impossible on its own runner class). The suite drives the game's WEBGL
+    // COMPATIBILITY FLOOR on purpose (see force_webgl_floor in the spec); headed under xvfb stays because it
+    // is the real compositor/input path a player has, which headless deliberately shortcuts.
+    headless: false,
     serviceWorkers: 'block', // post-deploy means the fresh network build, never a stale cached shell
     trace: 'retain-on-failure',
     video: 'retain-on-failure',

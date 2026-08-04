@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
+import { asset_url, configure_assets } from '@aresrpg/sdk/jobs'
 import { decodeSuiPrivateKey } from '@mysten/sui/cryptography'
 import { SuiGrpcClient } from '@mysten/sui/grpc'
 import { Ed25519Keypair } from '@mysten/sui/keypairs/ed25519'
@@ -23,7 +24,7 @@ const SUI_GRPC_URL = process.env.SUI_GRPC_URL ?? 'https://fullnode.testnet.sui.i
 
 type live_asset_manifest = {
   aggregator?: string
-  classes?: { item?: { quilts?: Array<{ id?: string; first?: string }> } }
+  sequences?: Record<string, Array<{ url_class?: string; filename?: string }> | undefined>
 }
 
 // Every guard, verdict and ledger decision below lives in signing_ledger.ts and is driven through all of
@@ -152,7 +153,32 @@ async function install_dev_wallet(page: Page) {
   return signer
 }
 
+// ENG-20 RUNNER HONESTY (#2202). A GitHub runner has NO GPU, so every row that waited on a real WebGPU
+// adapter was impossible by construction. This suite therefore drives the game's WEBGL COMPATIBILITY FLOOR
+// deliberately — the exact path a player whose browser ships no WebGPU implementation gets — through the
+// PRODUCT's own selection seam, never a test-only hack: pick_renderer_backend
+// (packages/engine/src/core/quality/backend.js) picks 'webgl' SYNCHRONOUSLY when `navigator.gpu` is nullish,
+// so shadowing it before boot forks the deployed bundle straight into render/webgl_fallback.js with no
+// failed-adapter detour. `ares_debug` turns the app's OWN boot verdict (core/log.js prints game_log lines
+// under it) into a console line, so "we really ran on the floor" is a fact the page states, never an
+// assumption this file makes. Returns the collected verdict lines for the row to assert on.
+async function force_webgl_floor(page: Page) {
+  const verdicts: string[] = []
+  page.on('console', (message) => {
+    const text = message.text()
+    if (/webgl floor active|WebGL heightmap fallback|initialized on 'webgl|\[webgl-fallback\]/i.test(text))
+      verdicts.push(text)
+  })
+  await page.addInitScript(() => {
+    // An OWN property shadows the Navigator.prototype accessor — always writable, never a strict-mode throw.
+    Object.defineProperty(navigator, 'gpu', { value: undefined, configurable: true })
+    localStorage.setItem('ares_debug', '1')
+  })
+  return () => [...verdicts]
+}
+
 async function enter_live_world(page: Page) {
+  const floor_verdicts = await force_webgl_floor(page)
   const signer = await install_dev_wallet(page)
   const response = await page.goto('/', { waitUntil: 'domcontentloaded' })
   expect(response?.status(), 'the deployed root must answer 200').toBe(200)
@@ -178,7 +204,7 @@ async function enter_live_world(page: Page) {
       `enter_live_world: neither [data-testid="game-world-viewport"] nor .gw-hud became visible within 180s.\n--- page snapshot ---\n${snapshot}`
     )
   })
-  return signer
+  return { signer, floor_verdicts }
 }
 
 const attack_prompt = (page: Page) =>
@@ -207,13 +233,23 @@ test('PROD-SMOKE b · VITE_DEV_KEY session reaches the world', async ({ page }) 
   await expect(page.locator('.gw-chat__input')).toBeVisible({ timeout: 180_000 })
 })
 
-test('PROD-SMOKE c · fight engagement reaches an actionable first turn', async ({ page }) => {
-  const signer = await enter_live_world(page)
-  const has_webgpu = await page.evaluate(async () => {
-    const { gpu } = navigator as Navigator & { gpu?: { requestAdapter: () => Promise<unknown | null> } }
-    return !!gpu && (await gpu.requestAdapter()) != null
-  })
-  expect(has_webgpu, 'the headed prod-smoke browser needs a real WebGPU adapter').toBe(true)
+test('PROD-SMOKE c · fight engagement reaches an actionable first turn on the WebGL floor', async ({ page }) => {
+  const { signer, floor_verdicts } = await enter_live_world(page)
+  // #2202 — this row used to demand a real WebGPU adapter on a GPU-less runner: an impossible red that never
+  // passed once in 500+ runs and buried this job's relay/corpus/heartbeat probes with it. It now drives the
+  // COMPATIBILITY FLOOR on purpose, which is also the low-end cohort's standing driven gate. The tactical
+  // BOARD is an engine no-op down there (webgl_fallback.js warns and stubs it); what this row asserts is the
+  // fight MACHINE reaching an actionable turn, and that is DOM truth — FightControls mounts off the fight
+  // phase (DungeonBoardControls.jsx), never off the rendered board.
+  const gpu = await page.evaluate(() => (navigator as Navigator & { gpu?: unknown }).gpu ?? null)
+  expect(gpu, 'the floor drive must reach the deployed page — navigator.gpu must be nullish before boot').toBeNull()
+  // The page's own verdict, not ours: an empty list means the bundle booted some OTHER backend and this row
+  // would be measuring something it did not name. Loud, never silent.
+  expect(
+    floor_verdicts(),
+    'the deployed engine must state its WebGL-floor boot (game_log "[voxel] webgl floor active …" / a [webgl-fallback] stub warn)'
+  ).not.toEqual([])
+  console.log(`PROD-SMOKE c · renderer floor verdict · ${floor_verdicts().join(' | ')}`)
 
   const controls = page.locator('.hud-fightctl')
   const engage = attack_prompt(page).first()
@@ -261,18 +297,33 @@ test('PROD-SMOKE c · fight engagement reaches an actionable first turn', async 
   })
 })
 
-test('PROD-SMOKE d · live-manifest icon sample answers 200', async ({ request }) => {
+// #2202 — the row asserted "at least one item quilt sample" against a shape that no longer exists: the quilt
+// (and the retired blob store it was keyed by, whose codename this repo's asset-codename gate now forbids in
+// text) DIED in 8e77502a0 `fix(frontend): mob icons resolve through the asset host …`, so `classes.item.quilts`
+// is permanently absent and the row was a permanent red measuring a dead schema. Every icon resolves through
+// the asset host now. The live manifest's ACTUAL contract is the mapping law in @aresrpg/sdk/jobs: an `aggregator`
+// plus per-class `published` flags turn the refs the manifest SEALS into asset-host URLs. This row now feeds
+// the LIVE manifest to the PRODUCT's own resolver (never a re-implementation of the URL shapes — one home)
+// and demands the resulting bytes exist. `asset_url` returning null IS the unpublished-class failure, so the
+// published gate is derived here, never restated. #2199's class of bug — a sealed ref naming a key the bucket
+// never held — is exactly what this probes against the deployed origin.
+test('PROD-SMOKE d · the live manifest resolves its sealed refs to bytes that answer 200', async ({ request }) => {
   const manifest_response = await request.get(`${PROD_ORIGIN}/asset_manifest.json`, { timeout: 60_000 })
   expect(manifest_response.status()).toBe(200)
   const manifest = (await manifest_response.json()) as live_asset_manifest
   if (typeof manifest.aggregator !== 'string') throw new Error('the live asset manifest has no aggregator')
-  const samples = (manifest.classes?.item?.quilts ?? [])
-    .filter((entry): entry is { id: string; first: string } => !!entry.id && !!entry.first)
-    .slice(0, 3)
-  expect(samples.length, 'the live manifest must expose at least one item quilt sample').toBeGreaterThan(0)
-  for (const sample of samples) {
-    const url = `${manifest.aggregator.replace(/\/+$/, '')}/v1/blobs/by-quilt-id/${sample.id}/${encodeURIComponent(sample.first)}`
-    await asset_response(request, url)
+  configure_assets(manifest)
+  const refs = Object.values(manifest.sequences ?? {})
+    .flatMap((sequence) => sequence ?? [])
+    .filter((ref): ref is { url_class: string; filename: string } => !!ref.url_class && !!ref.filename)
+  expect(refs.length, 'the live manifest must seal at least one asset ref for the client to preload').toBeGreaterThan(0)
+  for (const { url_class, filename } of refs) {
+    const url = asset_url(url_class, filename)
+    expect(
+      url,
+      `${url_class}/${filename} is sealed in the live manifest but its class resolves to nothing`
+    ).not.toBeNull()
+    await asset_response(request, url as string)
   }
 })
 
