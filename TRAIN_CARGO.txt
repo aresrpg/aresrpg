@@ -1,4 +1,7 @@
-2d0359ced → Refs #2189 — fix(frontend): configure live travel dragon transform
-accaef4b8 → Refs #2189 — fix(presence): share the local avatar feet anchor
-0a806b088 → Refs #2189 — fix(presence): carry avatar colors into remote rigs
-fa9bd2c95 → Refs #2162,#2166,#2163,#2164,#2161,#2176 — test(fight): observer emit-matrix fixture — the shared contract
+8ede2ea44 → Refs #2166 — fix(fight): share status wire decode across doors
+ac2955110 → Refs #2162 — fix(fight): admit live rows before presentation
+9b9859c42 → Refs #2163 — test(fight): seal status-only observer casts
+f465b209f → Refs #2164 — fix(fight): retire each triggered trap sprite
+8b056c99e → Refs #2161 — fix(frontend): keep invisible self overlays visible
+29996bed8 → Refs #2176,#2179 — fix(hud): derive total effect badges
+273501c71 → Refs #2161,#2163,#2164,#2176 — test(fight): activate observer cell matrix
