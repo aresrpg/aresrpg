@@ -39,7 +39,11 @@ export function RosterEntry({ character, active, busy, delete_block, on_preview,
     >
       <div className="chrx-row__main" onClick={on_preview}>
         <div className="chrx-row__art">
-          <CharacterPortrait sprites={class_sprite_base(character.classe ?? character.class_id) ?? PLACEHOLDER_SPRITES} hue={hue} size={30} />
+          <CharacterPortrait
+            sprites={class_sprite_base(character.classe ?? character.class_id) ?? PLACEHOLDER_SPRITES}
+            hue={hue}
+            size={30}
+          />
         </div>
         <div className="chrx-row__id">
           <span className="chrx-row__name">{character.name}</span>

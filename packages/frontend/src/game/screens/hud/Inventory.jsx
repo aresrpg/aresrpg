@@ -487,7 +487,9 @@ export function Inventory() {
           />
           <div className="inv__chip-id">
             <span className="inv__chip-name">{character.name}</span>
-            <span className="inv__chip-class">{class_title(t, character.classe ?? character.class_id) ?? t('stats.adventurer')}</span>
+            <span className="inv__chip-class">
+              {class_title(t, character.classe ?? character.class_id) ?? t('stats.adventurer')}
+            </span>
           </div>
           <span className="inv__chip-lvl hud-num">Lv {level}</span>
         </div>
