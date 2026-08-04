@@ -265,8 +265,8 @@ const combat_log_line = (id_prefix, segments, extra = {}) => ({
   channel: CHANNEL.combat,
   target: '',
   from_me: false,
-  // `extra` spreads LAST on purpose: it carries the `combat` identity a correction addresses a line by, and an
-  // explicit `id` that makes the result a REPLACEMENT of an existing row rather than a new one (#2151).
+  // `extra` spreads LAST on purpose: it carries the `combat` identity a correction addresses a line by, and the
+  // `replaces` instruction that makes the result a REPLACEMENT of an existing row rather than a new one (#2151).
   ...extra,
 })
 
@@ -340,8 +340,9 @@ export const emit_cast_whiff_line = (get_state, dispatch, { entity_id, spell_id 
  * session. That is a different fact (an absent ENTITY, not an unresolved identity) and it needs its own honest
  * copy; the identity book cannot answer for a fighter it was never given.
  * @param {() => any} get_state @param {(type: string, payload: any) => void} dispatch
- * `line_id` REPLACES an existing row instead of writing a new one — the door an adopted authoritative amount
- * corrects its own optimistic line through (#2151); the `combat` stamp below is how that row is found again.
+ * `line_id` names the row this line REPLACES instead of writing a new one (dispatched as `replaces`, the chat
+ * reducer's one explicit replacement contract — #2218) — the door an adopted authoritative amount corrects its
+ * own optimistic line through (#2151); the `combat` stamp below is how that row is found again.
  * @param {{ entity_id: string, effect: any, is_critical: boolean, line_id?: string | null }} arg
  */
 export const emit_effect_line = (get_state, dispatch, { entity_id, effect, is_critical, line_id = null }) => {
@@ -357,7 +358,7 @@ export const emit_effect_line = (get_state, dispatch, { entity_id, effect, is_cr
   // second, lying source. Same reason `ref` rides the name segments: identity belongs on the row, not in prose.
   const identity = {
     combat: { caster_id: entity_id, target_id: effect.target_id, is_critical: !!is_critical },
-    ...(line_id ? { id: line_id } : {}),
+    ...(line_id ? { replaces: line_id } : {}),
   }
   if (heal > 0) {
     const amount = `+${heal}`
