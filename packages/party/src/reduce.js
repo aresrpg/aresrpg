@@ -25,6 +25,13 @@
 
 export const MAX_MEMBERS = 6
 export const POLL_MS = 4000
+// #2086 — the reconciliation cadence once a PUSHED channel is carrying this character's scope
+// (packages/rpc/indexer/src/stream/party.rs). Every projection change now arrives within about half a second, so
+// the read's only remaining jobs are draining `INVITE_PENDING_TTL_MS` (nothing changes on chain when a question
+// is simply ignored, so no frame can ever report it) and healing a stream that went quiet without saying so.
+// Thirty seconds is a tenth of that TTL — invisible against a three-minute window — and cuts steady-state party
+// read traffic by 7.5x. `POLL_MS` above stays the cadence whenever the wire is NOT carrying.
+export const PUSHED_RECONCILE_MS = 30_000
 export const DEPART_LATCH_MS = POLL_MS * 3
 // An outgoing invite nobody ever answers (declines aren't a chain event — see header) would otherwise show a
 // "loading" toast forever; 3 minutes is a generous real-human-decision window, drained by the existing poll tick.

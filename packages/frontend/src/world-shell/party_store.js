@@ -11,7 +11,7 @@
 
 import { useStore } from 'zustand'
 import { create_party_store } from '@aresrpg/party/store'
-import { is_bound_member, has_character, party_invite_verdict, POLL_MS } from '@aresrpg/party/reduce'
+import { is_bound_member, has_character, party_invite_verdict } from '@aresrpg/party/reduce'
 
 import i18n from '../i18n'
 import { context } from '../game/store.js'
@@ -41,6 +41,7 @@ import {
   read_pending_invites,
   reset_answered_invites,
 } from './party_invite_carrier.js'
+import { start_party_carriers } from './party_stream_link.js'
 import { select_owned_party_join_ids } from './team_entry.js'
 import { error_executed_digest } from './tx_digest_error.js'
 import { resolve_character_docs, resolve_character_name, short_fighter_id } from './character_name_resolve.js'
@@ -88,7 +89,7 @@ const { store: party_store, dispatch: fold_party } = create_party_store({
   busy: false,
   /** @type {string | null} */
   error: null,
-  /** @type {ReturnType<typeof setInterval> | null} */
+  /** @type {(() => void) | null} the running carriers' stop handle (#2086 — push + reconciliation, one door) */
   _poll_timer: null,
   /** @type {Map<string, number>} party_id:invited_character_id → the live use_toast id (edge-only; the reducer
    *  itself only ever sees the domain pair, never a toast id — CLIENT-INDEPENDENCE law). */
@@ -489,15 +490,16 @@ party_store.setState({
     get()._dispatch({ kind: 'event', event: 'clear_dungeon' })
   },
 
+  /** #2086 — TWO CARRIERS, ONE DOOR: the pushed party scope (SSE) and the reconciliation clock both land on
+   *  `refresh()`, the read this store always had. The transport moved; nothing about the reducer door did. */
   _start_polling() {
     get()._stop_polling()
-    const timer = setInterval(() => get().refresh(), POLL_MS)
-    party_store.setState({ _poll_timer: timer })
+    const stop = start_party_carriers({ character_id: selected_character_id, refresh: () => get().refresh() })
+    party_store.setState({ _poll_timer: stop })
   },
 
   _stop_polling() {
-    const timer = get()._poll_timer
-    if (timer) clearInterval(timer)
+    get()._poll_timer?.()
     party_store.setState({ _poll_timer: null })
   },
 
