@@ -24,10 +24,10 @@ describe('fast-travel assets in the built manifest', () => {
 
   test('the production and preview variants select only sealed assets', () => {
     expect(['fire', 'frost', 'void', 'unknown'].map(fast_travel_dragon_file)).toEqual([
-      'dragon-fire.glb',
+      'ln.glb',
       'dragon-frost.glb',
       'dragon-void.glb',
-      'dragon-fire.glb',
+      'ln.glb',
     ])
   })
 })

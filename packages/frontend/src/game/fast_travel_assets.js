@@ -2,7 +2,7 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
 const dragon_files = Object.freeze({
-  fire: 'dragon-fire.glb',
+  fire: 'ln.glb',
   frost: 'dragon-frost.glb',
   void: 'dragon-void.glb',
 })

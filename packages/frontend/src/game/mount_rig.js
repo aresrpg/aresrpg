@@ -15,7 +15,13 @@ import { clone as clone_skinned } from 'three/examples/jsm/utils/SkeletonUtils.j
 
 import { apply_avatar_material, load_glb_checked } from '@aresrpg/engine3/player'
 
-import { mount_is_flight, mount_model_yaw, mount_target_height, pick_mount_clips } from './cosmetic_glb.js'
+import {
+  mount_is_flight,
+  mount_model_scale,
+  mount_model_yaw,
+  mount_target_height,
+  pick_mount_clips,
+} from './cosmetic_glb.js'
 import { fast_travel_dragon_file } from './fast_travel_assets.js'
 import { create_mount_glb_cache } from './mount_glb_cache.js'
 import { game_log } from '../core/log.js'
@@ -92,7 +98,8 @@ export function create_mount_rig({ engine, glb_url }) {
       const bbox = new Box3().setFromObject(root)
       const model_h = bbox.max.y - bbox.min.y || 1
       const target_h = mount_target_height(source_url)
-      const s = target_h / model_h
+      const s = mount_model_scale(source_url, target_h / model_h)
+      const render_h = model_h * s
       root.scale.setScalar(s)
       // GROUND the model (the character_avatar feet-at-origin law the old rig skipped): the bind bbox floor
       // sits AT the caller's ground y, so a model authored above/below its origin never floats or sinks.
@@ -129,7 +136,7 @@ export function create_mount_rig({ engine, glb_url }) {
       root.traverse((/** @type {any} */ o) => {
         if (o.isBone && !o.parent?.isBone) tops.push({ o, y: o.position.y })
       })
-      rig = { root, mixer, idle, move, h: target_h, ground_off, tops, move_w: 0 }
+      rig = { root, mixer, idle, move, h: render_h, ground_off, tops, move_w: 0 }
       engine.add_to_scene(root)
     })
     .catch((/** @type {any} */ error) => game_log('mount', `GLB load failed (${source_url ?? 'rejected'}):`, error))

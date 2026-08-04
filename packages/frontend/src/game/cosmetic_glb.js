@@ -75,20 +75,19 @@ export function pick_mount_clips(clips, { flight = false } = {}) {
   return { idle, move: move && move !== idle ? move : null }
 }
 
-// FLIGHT MOUNTS — ridden ONLY in the air (the fast-travel dragons: the pilot spawns one at takeoff and
-// disposes it on touchdown, so every frame of their rig's life is airborne). The one thing this changes is
-// the animation loop mount_rig.js picks: a flight mount prefers its fly/flap/wing clip over a walk/run gait,
-// where a ground mount keeps preferring the gait. Keyed by the same file stem as MOUNT_TABLE.
-const FLIGHT_MOUNTS = new Set(['dragon-fire', 'dragon-frost', 'dragon-void'])
-
-// Authored model forward axes are model metadata, not a controller-wide correction. The current travel
-// dragons face local +Z while flight heading advances toward -Z, so their root needs a half turn. Keeping
-// each stem explicit lets a replacement model declare a different axis without changing every mount.
-const MOUNT_YAW_OFFSETS = {
-  'dragon-fire': Math.PI,
-  'dragon-frost': Math.PI,
-  'dragon-void': Math.PI,
-}
+// Authored scale, forward axis and flight gait are MODEL metadata, never shared-controller corrections. The
+// live fast-travel dragon (`ln`) is authored at one third of its ruled presentation size and faces local +Z
+// while flight heading advances toward -Z. A future model with different axes/units adds one row here; neither
+// attach path changes. The older preview skins retain their existing flight/facing metadata.
+/** @typedef {{ scale:number, facing:number, flight:boolean }} MountModelConfig */
+const DEFAULT_MOUNT_MODEL_CONFIG = Object.freeze({ scale: 1, facing: 0, flight: false })
+/** @type {Readonly<Record<string, Readonly<MountModelConfig>>>} */
+export const MOUNT_MODEL_CONFIG = Object.freeze({
+  ln: Object.freeze({ scale: 3, facing: Math.PI, flight: true }),
+  'dragon-fire': Object.freeze({ scale: 1, facing: Math.PI, flight: true }),
+  'dragon-frost': Object.freeze({ scale: 1, facing: Math.PI, flight: true }),
+  'dragon-void': Object.freeze({ scale: 1, facing: Math.PI, flight: true }),
+})
 
 /** The MOUNT_TABLE key a mount GLB URL resolves to — its file stem, lowercased (`.../pet/corbac.glb` and
  *  `<asset-host>/models/cosmetics/corbac.glb?v=2` both resolve 'corbac'). @param {string|null|undefined} glb_url */
@@ -99,6 +98,12 @@ export const mount_stem = (glb_url) =>
     .pop()
     ?.replace(/\.glb$/i, '')
     .toLowerCase() ?? ''
+
+/** Per-model attach transform metadata. Unknown mounts preserve the shared rig transform.
+ * @param {string | null | undefined} glb_url @returns {Readonly<MountModelConfig>} */
+export function mount_model_config(glb_url) {
+  return MOUNT_MODEL_CONFIG[mount_stem(glb_url)] ?? DEFAULT_MOUNT_MODEL_CONFIG
+}
 
 /**
  * Target world height (blocks) for a mount GLB — keyed by the URL's file stem; unknown stems fall back to
@@ -114,7 +119,13 @@ export function mount_target_height(glb_url) {
  * glb_url @returns {boolean}
  */
 export function mount_is_flight(glb_url) {
-  return FLIGHT_MOUNTS.has(mount_stem(glb_url))
+  return mount_model_config(glb_url).flight
+}
+
+/** Apply the authored model's scale multiplier to the shared bbox-normalised rig scale.
+ * @param {string | null | undefined} glb_url @param {number} normalized_scale @returns {number} */
+export function mount_model_scale(glb_url, normalized_scale) {
+  return normalized_scale * mount_model_config(glb_url).scale
 }
 
 /**
@@ -123,7 +134,7 @@ export function mount_is_flight(glb_url) {
  * @param {string | null | undefined} glb_url @param {number} heading @returns {number}
  */
 export function mount_model_yaw(glb_url, heading) {
-  return heading + (MOUNT_YAW_OFFSETS[mount_stem(glb_url)] ?? 0)
+  return heading + mount_model_config(glb_url).facing
 }
 
 /**
