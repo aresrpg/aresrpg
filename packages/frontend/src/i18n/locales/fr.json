@@ -329,6 +329,7 @@
       "male": "Homme",
       "female": "Femme",
       "female_unavailable": "Modèle féminin temporairement indisponible pour cette classe",
+      "preview_unavailable": "Aperçu 3D indisponible sur cet appareil",
       "casting_ap": "Les sorts utilisent les PA",
       "casting_limits": "Relances et limites de lancer",
       "create_paid": "Créer · {{price}} SUI →",

@@ -156,6 +156,17 @@ export const transition_colors = ({ kind, class_id, current }) =>
   kind === 'sex' ? /** @type {[string,string,string]} */ ([...current]) : default_colors_for(class_id)
 
 /**
+ * What the creator's preview stage shows — the ONE home of the tri-state (#2198). A dead WebGL
+ * context outranks the model load: `portrait` is the static class card (the authored class colour +
+ * name the picker already uses for GLB-less classes), never the "model soon" placeholder, which
+ * would promise a 3D model that this device can never render.
+ * @param {{ gl_degraded: boolean, model_loaded: boolean }} args
+ * @returns {'model' | 'portrait' | 'soon'}
+ */
+export const stage_mode = ({ gl_degraded, model_loaded }) =>
+  gl_degraded ? 'portrait' : model_loaded ? 'model' : 'soon'
+
+/**
  * Build the create-character screen.
  * @param {object} opts
  * @param {(c: { name: string, class_id: string, color_1: string, color_2: string, color_3: string }) => void | Promise<void>} opts.on_created
@@ -245,8 +256,10 @@ export function character_create(opts) {
         <div class="cc__hero">
           <div class="cc__stage">
             <canvas class="cc__canvas" data-canvas></canvas>
+            <div class="cc__portrait" data-portrait hidden><span class="cc__portrait-mark" data-portrait-mark></span></div>
             <div class="cc__soon" data-soon hidden>model soon</div>
-            <div class="cc__rot">↺ drag to rotate</div>
+            <div class="cc__rot" data-rot>↺ drag to rotate</div>
+            <div class="cc__flatnote" data-flatnote hidden>${i18n.t('characters.create.preview_unavailable')}</div>
           </div>
           <div class="cc__meta">
             <h2 data-hname></h2>
@@ -281,7 +294,11 @@ export function character_create(opts) {
 
   const q = (s) => /** @type {HTMLElement} */ (root.querySelector(s))
   const canvas = /** @type {HTMLCanvasElement} */ (q('[data-canvas]'))
+  const portrait = q('[data-portrait]')
+  const portrait_mark = q('[data-portrait-mark]')
   const soon = q('[data-soon]')
+  const rot_hint = q('[data-rot]')
+  const flat_note = q('[data-flatnote]')
   const grid = q('[data-grid]')
   const swrow = q('[data-swrow]')
   const hname = q('[data-hname]')
@@ -295,7 +312,14 @@ export function character_create(opts) {
   cancel_btn.textContent = cancel_label
   if (show_new_era_notice) q('[data-era]').hidden = false
 
+  // #2198 — never throws; on a device with no usable WebGL context (acceleration off, blocklisted
+  // driver) it comes back DEGRADED and the whole screen runs FLAT: a static class portrait instead
+  // of the 3D pedestal, colour squares instead of the GLB grid thumbnails (they need the very same
+  // context), and every control — name, colours, Create — untouched. The front door never depends
+  // on a GPU.
   const pedestal = character_pedestal(canvas)
+  const flat = pedestal.degraded
+  flat_note.hidden = !flat
 
   // ---- class meta + pedestal ------------------------------------------------
   const render_meta = () => {
@@ -307,13 +331,27 @@ export function character_create(opts) {
       `<span class="cc__tag">${i18n.t('characters.create.casting_limits')}</span>`
   }
 
+  // Show exactly ONE of the three stage faces (stage_mode is the tri-state's single home). The
+  // portrait is the class's authored colour + mark — the same treatment the picker gives a class
+  // with no GLB, and the roster's own class swatch (characters_panel.tsx).
+  const apply_stage = (/** @type {ReturnType<typeof stage_mode>} */ mode) => {
+    canvas.style.visibility = mode === 'model' ? 'visible' : 'hidden'
+    soon.hidden = mode !== 'soon'
+    portrait.hidden = mode !== 'portrait'
+    rot_hint.hidden = mode !== 'model' // "drag to rotate" is a lie with no pedestal under it
+    if (mode !== 'portrait') return
+    const c = CLASSES[selected]
+    portrait.style.setProperty('--cc-portrait', c.color)
+    portrait_mark.textContent = c.name.slice(0, 2).toUpperCase()
+  }
+
   // Re-rig the pedestal for the CURRENT selection + gender. Colors are re-APPLIED (never re-derived) — the
   // one shared tail both the class switch and the sex toggle end on, so the toggle can't wipe the picks.
+  // A degraded pedestal no-ops both calls and resolves `false`, so this tail needs no GPU branch.
   const rig_pedestal = async () => {
     pedestal.set_colors(colors)
     const loaded = await pedestal.set_class(CLASSES[selected].id, { male })
-    soon.hidden = loaded
-    canvas.style.visibility = loaded ? 'visible' : 'hidden'
+    apply_stage(stage_mode({ gl_degraded: flat, model_loaded: loaded }))
   }
 
   // Forces male + re-locks the gender row whenever the CURRENT class has no working female rig
@@ -375,7 +413,9 @@ export function character_create(opts) {
     const allowed = is_allowed(c.id)
     const cell = document.createElement('div')
     cell.className = 'cc__cls' + (i === initial ? ' is-sel' : '') + (allowed ? '' : ' is-soon')
-    const has_glb = has_character_model(c.id)
+    // A GLB thumbnail needs the same WebGL context the pedestal just failed to get — flat devices
+    // take the authored colour square instead (an empty thumb box would be the blank hole).
+    const has_glb = has_character_model(c.id) && !flat
     cell.innerHTML =
       (has_glb
         ? `<div class="cc__thumb" data-thumb="${c.id}"></div>`
@@ -388,8 +428,10 @@ export function character_create(opts) {
   })
 
   // GLB grid thumbnails (senshi/yajin) — rendered once, off a throwaway context, then cached as img.
-  for (const c of CLASSES)
-    if (has_character_model(c.id))
+  // Skipped entirely when flat: the throwaway context would fail exactly as the pedestal's did.
+  if (!flat)
+    for (const c of CLASSES)
+      if (has_character_model(c.id))
       void render_character_thumbnail(c.id, 128, default_colors_for(c.id))
         .then((url) => {
           if (!url) return

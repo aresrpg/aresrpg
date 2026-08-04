@@ -231,6 +231,46 @@
   opacity: 0.6;
   pointer-events: none;
 }
+/* #2198 — the GPU-less stage: a static class plate (authored class colour, same swatch language as
+   the picker's GLB-less cells and the roster's class portrait) instead of the 3D pedestal. */
+.cc__portrait {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+}
+.cc__portrait-mark {
+  display: grid;
+  place-items: center;
+  width: 108px;
+  height: 108px;
+  font-size: 30px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--cc-portrait, var(--cc-gold-light));
+  border: 1px solid color-mix(in srgb, var(--cc-portrait, #888) 40%, transparent);
+  background: color-mix(in srgb, var(--cc-portrait, #888) 13%, transparent);
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.85);
+}
+.cc__flatnote {
+  position: absolute;
+  bottom: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  max-width: 88%;
+  text-align: center;
+  font-size: 9px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--cc-muted);
+  padding: 4px 9px;
+  background: rgba(10, 11, 16, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 4px;
+  pointer-events: none;
+}
 /* readable over the lit pedestal: brighter ink + a tinted dark backdrop pill. */
 .cc__rot {
   position: absolute;
