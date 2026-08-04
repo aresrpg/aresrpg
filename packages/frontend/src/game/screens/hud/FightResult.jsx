@@ -18,7 +18,7 @@ import { useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import { useGameState, context } from '../../store.js'
-import { get_class } from '../../data/classes.js'
+import { class_display } from '../../data/classes.js'
 import { play_fight_sfx } from '../../core/audio/sfx.js'
 import { use_fight_cost, format_fight_cost } from '../../../world-shell/fight_gas_ledger.js'
 import { FightReport } from './FightReport.jsx'
@@ -62,7 +62,7 @@ export function FightResult({ slug_by_name = {} }) {
   // A win always has a seat, so this is the defeat card's fix riding the ONE shared projection, not a second rule.
   const seat_id = recap?.summary?.me_id ?? null
   const me = characters.find((c) => c.id === seat_id) ?? null
-  const my_class = get_class(me?.classe ?? me?.class_id ?? '')?.name ?? null
+  const my_class = class_display(t, me?.classe ?? me?.class_id)
 
   const roster = recap?.summary?.participants ?? []
   // YOUR PARTY — every member, the seat that won ALWAYS present (synthesized if the roster raced/omitted it).
