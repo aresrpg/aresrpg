@@ -397,6 +397,33 @@ describe('SUMMON is authorable by no served spell', () => {
     expect(opcodes.filter(name => name.includes('SUMMON'))).toEqual([])
   })
 
+  // The vocabulary check above reads names; this one DRIVES the decoder: one chain-dialect row per opcode
+  // through the ONE normalizer every served spell passes, and not one of them can fold to a SUMMON.
+  test('no chain opcode decodes to a SUMMON effect', () => {
+    const opcodes = Object.entries(SPELL_EFFECT).filter(([name]) =>
+      name.startsWith('K_'),
+    )
+    const decoded = normalize_spell_templates(
+      opcodes.map(([name, kind]) => ({
+        id: `probe_${name}`,
+        levels: [
+          {
+            ap_cost: 3,
+            effects: [{ kind, value: 5, target_filter: 0, flags: 0, chance: 100 }],
+            crit_effects: [],
+          },
+        ],
+      })),
+    )
+    // the normalizer also seeds MOB_ATTACK_TEMPLATE, so probe by id rather than by map size
+    const probes = opcodes.map(([name]) => decoded.get(`probe_${name}`))
+    expect(probes.filter(Boolean)).toHaveLength(opcodes.length) // every opcode actually decoded
+    const types = probes.flatMap(template =>
+      template.levels[0].base_effects.map(effect => effect.type),
+    )
+    expect(types.filter(type => type === 'SUMMON')).toEqual([])
+  })
+
   // MISSING-ARTIFACT (settled #96): seed/mainnet/spells is content-pipeline output, absent by design here.
   test.skipIf(!SPELLS_CORPUS_AVAILABLE)(
     'no spell in the served corpus authors a summon',
