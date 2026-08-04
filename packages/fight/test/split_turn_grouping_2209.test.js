@@ -211,6 +211,34 @@ test('#2209 a bracket the wire never closes still presents — a new version flu
   expect(wave[0].beats.map((beat) => beat.kind)).toEqual(['turn_start', 'move', 'arrival', 'cast', 'damage'])
 })
 
+test('#2209 a multi-version catch-up still paces nothing, and holds nothing either', () => {
+  const store = seated_store()
+  // A walker gap page spanning two versions, ending inside an open bracket — settled minutes, not live play.
+  store.getState().input(
+    {
+      type: 'journal',
+      fight_id: FIGHT,
+      batch: {
+        fight_id: FIGHT,
+        source: 'journal',
+        head: '15',
+        events: [
+          ...MOB_TURN_ROWS,
+          { ...MOB_TURN_ROWS[0], seq: '15', version: String(TURN_VERSION + 1) },
+          { ...MOB_TURN_ROWS[1], seq: '16', version: String(TURN_VERSION + 1) },
+        ],
+      },
+    },
+    T0 + 500
+  )
+
+  expect(store.getState().wave, 'replaying settled minutes as 3s slots is not presentation').toEqual([])
+  expect(store.getState().wave_hold, 'nor may a fragment of it wait around to be replayed later').toBe(null)
+  expect(store.getState().core.inbox.presented_version, 'the rows still ADMIT — only pacing declines').toBe(
+    TURN_VERSION + 1
+  )
+})
+
 test('#2209 both deliveries of one turn converge: five live frames ≡ one journal page', () => {
   const live = live_wave()
   const page = page_wave()
