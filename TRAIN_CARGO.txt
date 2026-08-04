@@ -1,3 +1,1 @@
-5212678e8 → Refs #2209 — fix(fight): one mob turn is one presentation slot, whatever the wire did
-bd1a42017 → Refs #2209 — fix(fight): a turn still in delivery masks its own rows
-4eef94fc5 → Refs #2209 — fix(fight): a catch-up delivery holds nothing either
+d6e186af4 → Refs #2186 — refactor(sim): delete summoning — the sim resolved a kind the chain cannot encode
