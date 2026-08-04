@@ -399,7 +399,7 @@ is_column_resident, ground_at, tick, dispose }`; demo boots it under `?hack=1`.
 - **Accept**: demo at `?hack=1` shows grid + retrowave sun, zero terrain; unit tests pin the
   oracle (`sample_block(0,137,0)` solid, `(0,138,0)` air, `is_column_resident` true, ground_at 137) and that `create_engine({presentation:'hackgrid'})` spawns **no** workers; default path
   byte-identical (no option ⇒ today's boot).
-- **Prove**: `cd packages/engine && bun test src/render/hack_grid.test.js`,
+- **Prove**: `bun test packages/engine/test/render/hack_grid.test.js`,
   root `bun run lint` + `bun run typecheck`; one demo screenshot via the engine playwright rig.
 
 ### Slice B — the setting, arming, live apply, i18n
