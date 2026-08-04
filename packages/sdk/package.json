@@ -74,7 +74,6 @@
       "types": "./types/mob_spells.d.ts",
       "import": "./src/mob_spells.js"
     },
-    "./spells": "./src/spells.json",
     "./items-data": "./src/items.json",
     "./classes": "./src/classes.json",
     "./mobs": "./src/mobs.json",

@@ -10,7 +10,12 @@ import {
 import { find_entity, get_current_turn_entity } from '../src/fight_state.js'
 import { apply_damage } from '../src/fight_actions.js'
 import { summon_entity } from '../src/fight_summon.js'
-import real_spells from '../../sdk/src/spells.json'
+import * as SPELL_EFFECT from '../src/spell_effect.js'
+
+import {
+  CORPUS,
+  SPELLS_CORPUS_AVAILABLE,
+} from './spell_effect_conformance_matrix.js'
 
 // ── Fixtures ─────────────────────────────────────────────────────────────────
 const flat_arena = (width = 11) => ({
@@ -375,47 +380,36 @@ describe('per-caster summon cap', () => {
   })
 })
 
-// ── Real content ────────────────────────────────────────────────────────────
-describe('real spells.json SUMMON spawns minions', () => {
-  const real = normalize_spell_templates({
-    yajin: { arise: real_spells.yajin.arise },
-    rojin: { dummy: real_spells.rojin.dummy },
+// ── The SUMMON tombstone (#2220) ─────────────────────────────────────────────
+// This file used to drive two REAL spells — yajin `arise` and rojin `dummy` — out of the generated
+// `packages/sdk/src/spells.json`. That artifact was a SECOND spell-truth home beside the served corpus blob,
+// and those spells were part of exactly how it had diverged: 7 of its 78 spells author a SUMMON effect, which
+// the chain taxonomy EXCLUDES BY CONSTRUCTION (packages/move/foundation/sources/spell_effect.move — "SUMMONING
+// is EXCLUDED"). Nothing summon-shaped ever reached chain or serving, so those casts could only ever have
+// resolved against the deleted file. Everything above still proves the sim's summon mechanic on synthetic
+// templates; these two arms prove no SERVED spell can reach it.
+describe('SUMMON is authorable by no served spell', () => {
+  test('the chain effect vocabulary carries no SUMMON opcode', () => {
+    const opcodes = Object.keys(SPELL_EFFECT).filter(name =>
+      name.startsWith('K_'),
+    )
+    expect(opcodes.length).toBeGreaterThan(20) // the vocabulary was actually read
+    expect(opcodes.filter(name => name.includes('SUMMON'))).toEqual([])
   })
-  const real_fight = deck => {
-    const arena = flat_arena()
-    const ctx = { spell_templates: real, arena }
-    const state = create_fight_state({
-      fight_id: 'f',
-      arena_seed: 11,
-      arena_radius: arena.radius,
-      arena,
-      team0: [
-        make_player(
-          'p0',
-          { x: 4, y: 5 },
-          {
-            deck,
-            spell_levels: Object.fromEntries(deck.map(s => [s, 1])),
-          },
+
+  // MISSING-ARTIFACT (settled #96): seed/mainnet/spells is content-pipeline output, absent by design here.
+  test.skipIf(!SPELLS_CORPUS_AVAILABLE)(
+    'no spell in the served corpus authors a summon',
+    () => {
+      expect(CORPUS.length).toBeGreaterThan(0)
+      const summoning = CORPUS.filter(spell =>
+        (spell.levels ?? []).some(level =>
+          [...(level.effects ?? []), ...(level.crit_effects ?? [])].some(
+            effect => /summon/i.test(JSON.stringify(effect)),
+          ),
         ),
-      ],
-      team1: [make_mob('m0', { x: 8, y: 5 })],
-    })
-    return { state: reduce(state, { type: 'start' }, ctx).state, ctx }
-  }
-
-  test('yajin/arise summons "igris"', () => {
-    const { state, ctx } = real_fight(['arise'])
-    const r = cast(state, ctx, 'p0', 'arise', { x: 4, y: 5 })
-    expect(summon_of(r.state)?.variant).toBe('igris')
-  })
-
-  test('rojin/dummy summons a generic (no variant) minion', () => {
-    const { state, ctx } = real_fight(['dummy'])
-    const r = cast(state, ctx, 'p0', 'dummy', { x: 4, y: 5 })
-    const s = summon_of(r.state)
-    expect(s).toBeDefined()
-    expect(s.variant).toBeUndefined()
-    expect(s.name).toBe('Summon')
-  })
+      ).map(spell => spell.id)
+      expect(summoning).toEqual([])
+    },
+  )
 })
