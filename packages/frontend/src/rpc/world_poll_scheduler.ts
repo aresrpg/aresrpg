@@ -102,10 +102,19 @@ export function create_world_poll_scheduler({
     queue = [job, ...queue.filter((candidate) => candidate !== job)]
   }
 
+  /** Pull a queued job out of the FIFO and run it now, then re-arm the ticker for whatever is left behind it. */
+  const start_now = (job: Readonly<PollJob>) => {
+    queue = queue.filter((candidate) => candidate !== job)
+    if (timer != null) clear_timeout(timer)
+    timer = null
+    start(job)
+    arm()
+  }
+
   const schedule = <T>(key: string, run: () => Promise<T>, priority = false): Promise<T> => {
     const existing = pending.get(key)
     if (existing) {
-      if (priority) promote(key)
+      if (priority && queue.includes(existing)) start_now(existing)
       return existing.promise as Promise<T>
     }
 
@@ -130,7 +139,12 @@ export function create_world_poll_scheduler({
     started_kinds.add(kind)
     const job: PollJob<T> = { key, run, promise, resolve, reject, generation, bypass_stagger }
     pending.set(key, job as PollJob)
-    if (bypass_stagger && !is_paused()) start(job as PollJob)
+    // PRIORITY IS THE INTERACTION (#2158). The stagger exists so a RECURRING wave — the 3x3 zone neighborhood
+    // re-read every tick — cannot burst or eat the per-IP minute bucket. A priority read is the opposite animal:
+    // a one-shot the player is standing still for (a travel click's route, a post-tx reconcile). Making it wait
+    // its turn behind background polls put seconds on a tx-free interaction, so it starts now and the background
+    // ticker re-arms behind it. Human click rate bounds it; the 429 wave still gates it (is_paused).
+    if ((bypass_stagger || priority) && !is_paused()) start(job as PollJob)
     else {
       queue = priority ? [job as PollJob, ...queue] : [...queue, job as PollJob]
       arm(bypass_stagger ? PAUSED_RECHECK_MS : undefined)

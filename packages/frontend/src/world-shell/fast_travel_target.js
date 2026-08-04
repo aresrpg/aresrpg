@@ -53,6 +53,9 @@ const required_level_lookup = (map, world_id) => {
   return map[world_id] ?? null
 }
 
+/** A travel click is an interaction, not a poll — `get_characters`' freshness flag, named at the call site. */
+const INTERACTIVE = true
+
 /** Address-only fallback: prefer a wallet character currently in a world, else the first. */
 const primary_of = (chars) => (chars ?? []).find((c) => c && c.world) ?? (chars ?? [])[0] ?? null
 
@@ -69,18 +72,26 @@ const primary_of = (chars) => (chars ?? []).find((c) => c && c.world) ?? (chars 
  */
 export async function read_route_facts({ target, traveler_id, deps }) {
   const { read_characters, read_worlds, peer_pos_of } = deps
+  // NOTHING HERE FEEDS ANYTHING ELSE HERE, so nothing waits (#2158): the target's document, the traveler's own,
+  // and the world gate are three independent facts, and read in series they cost three round trips plus three
+  // background-poll stagger slots — seconds, on a hop that spends no gas. INTERACTIVE (the `true`) tells the
+  // client this is a click, not a poll: it skips the read cache for chain truth and jumps the poll ticker.
   // A friend begin carries the exact live character id, never an owner guess. Its p2p cell refines position only;
   // world + cross-world anchor still come together from this /v1 document (the routing law).
-  const target_doc = target.character_id
-    ? ((await read_characters({ id: target.character_id }))[0] ?? null)
-    : target.address
-      ? primary_of(await read_characters({ owner: target.address }))
-      : null
-  const my_doc = traveler_id ? ((await read_characters({ id: traveler_id }))[0] ?? null) : null
-  // Both world facts come from ONE live home (world_catalog.js): the census a route is checked against and the
+  // The world facts come from ONE live home (world_catalog.js): the census a route is checked against and the
   // gate it is refused on. Reading the census off the build-time receipt while the gate came from /v1 is exactly
   // the split #1510 filed — a throw here reaches the caller's catch, never a silent refusal.
-  const worlds = await read_worlds()
+  const [target_doc, my_doc, worlds] = await Promise.all([
+    target.character_id
+      ? read_characters({ id: target.character_id }, undefined, INTERACTIVE).then((docs) => docs[0] ?? null)
+      : target.address
+        ? read_characters({ owner: target.address }, undefined, INTERACTIVE).then(primary_of)
+        : Promise.resolve(null),
+    traveler_id
+      ? read_characters({ id: traveler_id }, undefined, INTERACTIVE).then((docs) => docs[0] ?? null)
+      : Promise.resolve(null),
+    read_worlds(),
+  ])
   const cid = target_doc?.id ?? target.character_id ?? null
   const out = resolve_route({
     target_doc,
