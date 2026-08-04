@@ -17,7 +17,7 @@
 // the struct declares them (`amount: u64` arrives as a decimal string, exactly like the captured
 // `ItemBurned.amount`).
 
-import { afterEach, beforeEach, describe, expect, spyOn, test } from 'bun:test'
+import { afterAll, afterEach, beforeEach, describe, expect, spyOn, test } from 'bun:test'
 
 import { reset_auth_mock } from '../../src/test_helpers/auth_mock.js'
 import { reset_expedition_sdk_mock, set_expedition_sdk_mock } from '../../src/test_helpers/expedition_sdk_mock.js'
@@ -80,17 +80,48 @@ const tx_seam = await import('../../src/world-shell/tx.js')
 const roster = await import('../../src/roster/load_roster.js')
 const findables = await import('../../src/chain/read_findables.js')
 const { context } = await import('../../src/game/core/game.js')
+const { default: sui_session } = await import('../../src/game/core/modules/sui_session.js')
 const { craft_item } = await import('../../src/world-shell/craft_actions.js')
 
-const bag_ids = () => context.get_state().sui.items.map((item) => item.id)
-const settle = () => new Promise((resolve) => setTimeout(resolve, 0))
+// THE ENGINE DOOR, ORDER-INDEPENDENTLY. `craft_item` dispatches into the ambient `context` handle, and in a
+// whole-suite run that handle can arrive STUBBED: bun's `mock.module` is process-global AND irreversible, and
+// several component suites replace `game/store.js` with a partial context (the hazard documented in
+// test_helpers/expedition_sdk_mock.js and repaired the same way in world-shell/discovery_reconcile_read_lag.
+// test.js:27-31). So this file drives its own door onto that handle, folding through the ENGINE'S OWN
+// `sui_session` reducer — the merge law under test is the real one, never a second copy — and restores the
+// originals afterwards. The engine's `action/inventory/loot` wiring is sealed separately by
+// src/world-shell/lootbox_claim_inventory.test.js and src/world-shell/owned_dungeon_settlement.test.js.
+const engine_reduce = sui_session().reduce
+const empty_state = () => ({
+  sui: {
+    items: [],
+    characters: [],
+    settled_item_floor: {},
+    minted_character_floor: {},
+    pending_uses: {},
+    xp_floor: {},
+    deleted_ids: {},
+  },
+})
+let engine_state = empty_state()
+const ambient = { dispatch: context.dispatch, get_state: context.get_state }
+context.dispatch = (type, payload) => {
+  engine_state = engine_reduce(engine_state, { type, payload }) ?? engine_state
+}
+context.get_state = () => engine_state
+afterAll(() => {
+  context.dispatch = ambient.dispatch
+  context.get_state = ambient.get_state
+})
+
+const bag_ids = () => engine_state.sui.items.map((item) => item.id)
 const craft = () => craft_item({ recipe, items: bag, character_id: '0xcharacter' })
 
 let spies = []
 let submit
 
 beforeEach(() => {
-  context.dispatch('action/sui_logout') // the one door that empties the bag AND its receipt floor
+  engine_state = empty_state()
   reset_auth_mock({ address: OWNER, wallet_name: 'zklogin' })
   set_expedition_sdk_mock(async () => fake_sdk)
   submit = spyOn(tx_seam, 'run_tx').mockResolvedValue({ result: crafted_receipt })
@@ -103,22 +134,20 @@ beforeEach(() => {
   ]
 })
 
-afterEach(async () => {
+afterEach(() => {
   for (const test_spy of [...spies].reverse()) test_spy.mockRestore()
   spies = []
   reset_expedition_sdk_mock()
   reset_auth_mock()
-  await settle()
-  context.dispatch('action/sui_logout')
+  engine_state = empty_state()
 })
 
 describe('#2178 — the craft reads its own write', () => {
   test('the executed craft receipt paints the minted output with NO poll tick', async () => {
     await expect(craft()).resolves.toEqual({ outcome: 'success', quantity: 1 })
-    await settle()
 
     expect(bag_ids()).toContain(OUTPUT_ITEM)
-    expect(context.get_state().sui.items.find((item) => item.id === OUTPUT_ITEM)).toMatchObject({
+    expect(engine_state.sui.items.find((item) => item.id === OUTPUT_ITEM)).toMatchObject({
       template_id: OUTPUT_TEMPLATE,
       name: 'Iron Sword',
       item_category: 'weapon',
@@ -132,7 +161,6 @@ describe('#2178 — the craft reads its own write', () => {
   // authority back to the snapshot — it never stacks a second copy of the row the receipt already painted.
   test('a later authoritative snapshot carrying the same loot does not duplicate it', async () => {
     await craft()
-    await settle()
 
     context.dispatch('action/sui_data', {
       kind: 'snapshot',
@@ -141,10 +169,9 @@ describe('#2178 — the craft reads its own write', () => {
         { id: OUTPUT_ITEM, template_id: OUTPUT_TEMPLATE, item_type: 'iron_sword', amount: 1, item_category: 'weapon' },
       ],
     })
-    await settle()
 
     expect(bag_ids().filter((id) => id === OUTPUT_ITEM)).toHaveLength(1)
-    expect(context.get_state().sui.settled_item_floor[OUTPUT_ITEM]).toBeUndefined() // presence drains the floor
+    expect(engine_state.sui.settled_item_floor[OUTPUT_ITEM]).toBeUndefined() // presence drains the floor
   })
 
   // A failed roll burns the ingredients and mints NOTHING. The captured receipt carries no ItemMinted, so the
@@ -153,9 +180,8 @@ describe('#2178 — the craft reads its own write', () => {
     submit.mockResolvedValue({ result: captured_failed_roll })
 
     await expect(craft()).resolves.toEqual({ outcome: 'failure', quantity: 0 })
-    await settle()
 
     expect(bag_ids()).toEqual([])
-    expect(context.get_state().sui.settled_item_floor).toEqual({})
+    expect(engine_state.sui.settled_item_floor).toEqual({})
   })
 })
