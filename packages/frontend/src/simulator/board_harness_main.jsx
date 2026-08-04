@@ -8,14 +8,18 @@
 //
 // Same reason the create screen has `character-create-harness.html`: the pane's degrade must be driven in a
 // real browser with a real dead WebGL context, and the wall is not part of what is being proven.
-import './boot_shim'
-
-import './index.css'
-import './i18n'
+//
+// It lives INSIDE simulator/ on purpose (`simulator-no-reverse-leak`): the simulator consumes shared homes,
+// it never becomes one, so nothing outside this tree may import it — its own dev harness included. The boot
+// shim and the stylesheet are therefore loaded by simulator-board-harness.html instead of imported here:
+// `src/boot_shim` and `src/index.css` are outside the tree's allowlist (`simulator-consumes-shared-only`),
+// and an HTML entry is not a module in the cruised graph, so neither fence is laundered.
 import { createRoot } from 'react-dom/client'
 
-import { SimulatorBoardPane } from './simulator/BoardPane'
-import { boot_simulator } from './simulator/store'
+import '../i18n'
+
+import { SimulatorBoardPane } from './BoardPane'
+import { boot_simulator } from './store'
 
 // The pane is `flex-1 min-h-0` — it needs a sized flex column to live in, exactly as pages/simulator.tsx
 // gives it. The stage is the only thing this harness adds.

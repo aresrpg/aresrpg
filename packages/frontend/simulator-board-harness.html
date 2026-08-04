@@ -29,6 +29,14 @@
           },
         }
     </script>
-    <script type="module" src="/src/simulator_board_harness_main.jsx"></script>
+    <!-- The boot shim and the app stylesheet load HERE, not from the entry module: the entry lives inside
+         simulator/, whose import allowlist (`simulator-consumes-shared-only`) does not include them, and
+         whose reverse fence (`simulator-no-reverse-leak`) forbids an outside module importing it. Module
+         scripts evaluate in document order, so the shim still runs before the harness graph. -->
+    <script type="module">
+      import '/src/boot_shim'
+      import '/src/index.css'
+    </script>
+    <script type="module" src="/src/simulator/board_harness_main.jsx"></script>
   </body>
 </html>
