@@ -18,13 +18,33 @@
 
 import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
+import { STATUS_KINDS } from '@aresrpg/fight/statuses'
+import { K_STEAL_STAT } from '@aresrpg/sim/spell_effect'
 
 import './effect-badges.css'
 import { spell_state_name_resolver } from '../../data/spell-text.js'
 import { useSpellCorpus } from '../../data/use_spell_corpus.js'
 import { EffectLine } from './EffectLine.jsx'
+import { EFFECT_KIND_NAMES } from './fight-spells-core.js'
 import { project_spell_effect } from './fight-spells.js'
 import { seed_effect_line, seed_effect_parts } from './seed-effect-line.js'
+
+const BADGE_EFFECT_KINDS = new Set([...STATUS_KINDS, K_STEAL_STAT])
+
+/** Every published effect discriminant has an explicit badge disposition; the complement is deliberate, never
+ *  a silent renderer fall-through. Stat steal is admitted even when a captured row carries kind 10 directly —
+ *  the chain may also project its two committed ALTER_STAT halves, which remain badge-bearing through kind 9. */
+export const EFFECT_BADGE_KIND_CENSUS = Object.freeze(
+  Object.fromEntries(
+    Object.keys(EFFECT_KIND_NAMES).map((kind) => [
+      Number(kind),
+      BADGE_EFFECT_KINDS.has(Number(kind)) ? 'badge' : 'display-less-by-design',
+    ])
+  )
+)
+
+/** The committed `fight_visible_view.entities[id].statuses` → badge rows. No timer, copy, decrement or fallback. */
+export const committed_badge_rows = (statuses) => statuses?.rows ?? []
 
 /**
  * One raw per-fighter status row → its visible row model. Pure — no JSX, so projection-to-render tests can pin

@@ -10,7 +10,7 @@ import { encode_status_value, is_signed_status_kind } from '@aresrpg/fight/fight
 
 import { build_spell_state_registry, resolve_spell_state_row } from '../../data/spell-text.js'
 
-const kind_names = {
+export const EFFECT_KIND_NAMES = Object.freeze({
   0: 'DAMAGE',
   1: 'PERCENT_LIFE',
   2: 'LIFE_STEAL',
@@ -54,7 +54,7 @@ const kind_names = {
   38: 'EROSION',
   39: 'DAMAGE_REDIRECT',
   40: 'POOL_SHIELD',
-}
+})
 const element_names = { 0: 'fire', 1: 'water', 2: 'earth', 3: 'air', 255: 'neutral' }
 const shape_names = { 0: 'POINT', 1: 'CIRCLE', 2: 'CROSS', 3: 'LINE', 4: 'TBAR', 5: 'RING', 6: 'ALLMAP', 7: 'CONE' }
 
@@ -71,7 +71,7 @@ export const project_spell_effect = (effect, state_registry = null) => {
   return {
     ...effect,
     kind_id: effect.kind,
-    kind: kind_names[effect.kind] ?? String(effect.kind),
+    kind: EFFECT_KIND_NAMES[effect.kind] ?? String(effect.kind),
     ...(effect.element != null
       ? { element_id: effect.element, element: element_names[effect.element] ?? String(effect.element) }
       : {}),

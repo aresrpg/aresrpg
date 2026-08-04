@@ -18,7 +18,7 @@ import { play_fight_sfx } from '../../core/audio/sfx.js'
 import { useFightView, useFightVisibleEntities } from '../../store.js'
 import { COMMIT_BUFFER_MS, effective_deadline } from '@aresrpg/fight/draft_budget'
 import { Tooltip } from './Tooltip.jsx'
-import { EffectBadges } from './EffectBadges.jsx'
+import { committed_badge_rows, EffectBadges } from './EffectBadges.jsx'
 import { focus_seat } from './seat_follow.js'
 import { game_log } from '../../../core/log.js'
 
@@ -193,7 +193,7 @@ export function FightTimeline() {
               {/* PRESENTED ACTIVE EFFECTS — the canonical entity row's status rows (#1993 WP6). Own + enemy +
                   peer all get the same localized rows, shared verbatim with the board-hover card; no store write
                   and no client-side duration clock — expiry is the fold's call, made by removing the row. */}
-              <EffectBadges effects={entities[f.id]?.statuses.rows} />
+              <EffectBadges effects={committed_badge_rows(entities[f.id]?.statuses)} />
               {active && !fight.presenting && remaining_s != null && (
                 <div className="hud-turn__timer">
                   <div
