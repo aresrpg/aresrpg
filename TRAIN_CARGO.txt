@@ -1,3 +1,2 @@
-0d03f1531 → Refs #2147 — fix(rpc): retire abandoned fight participants
-db797d797 → Refs #2146 — fix(frontend): discharge pending fight outcomes
-c3988d657 → Refs #2144 — fix(fight): resolve observer cast spell identity through the journal
+285fe4e7d → Refs #2148 — ci: measure promote-queue heartbeat
+9e0bdb163 → Refs #2133 — feat(probe): instrument served corpus
