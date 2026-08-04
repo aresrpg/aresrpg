@@ -12,6 +12,7 @@
 // The fight camera is a SEPARATE writer (embed_voxel_fight_camera.js); `is_fight()` is how this stands down.
 
 import {
+  avatar_feet_y,
   create_character_avatar,
   create_shoulder_camera,
   create_title_aura,
@@ -577,9 +578,10 @@ export function create_player({
   // Complexity retained (#2069): the player frame is an order-sensitive engine boundary; helpers would only pass the same mutable scene state between phases.
   const frame2 = (/** @type {any} */ t, /** @type {number} */ dt) => {
     frame_n += 1
+    const feet_y = avatar_feet_y(t)
     // DOUBLE-JUMP puff: fire one at the feet the frame the controller reports an air-jump, then advance + retire
     // any live puffs. BEFORE the fight early-return below so a puff mid-flight when a fight starts still finishes.
-    if (t.air_jumped) spawn_dust_puff(t.position[0], t.visual_y, t.position[2])
+    if (t.air_jumped) spawn_dust_puff(t.position[0], feet_y, t.position[2])
     tick_dust_puffs(dt)
     if (frame_n % 10 === 0) {
       // D188(b)/D199 relocation — position + CAMERA yaw (rig azimuth, the compass heading basis) + fps
@@ -601,7 +603,7 @@ export function create_player({
       if (character?.id) {
         const bx = Math.floor(t.position[0])
         const bz = Math.floor(t.position[2])
-        const by = Math.floor(t.position[1])
+        const by = Math.floor(feet_y)
         // S-57 QA fix (the dead [F] root): the voxel scene never published the avatar's cell into the engine
         // store — modules/player.js's `action/player_cell` fold had ZERO dispatchers, so DiscoveryPrompts /
         // MapDrawer / fight.js all read a forever-null position. Publish {x, y:z} BLOCK coords on ACTUAL
@@ -620,7 +622,9 @@ export function create_player({
           last_bcast_y = by
           last_bcast_yaw = t.facing_yaw
           const heading = Math.round(t.facing_yaw * 100) / 100
-          publish_room_position(character.id, bx, bz, by, heading)
+          // Presence carries the exact SAME step-smoothed feet anchor used by the local mesh below. Sending the
+          // floored physics y made remote rigs discard the local render offset and visibly sink during steps.
+          publish_room_position(character.id, bx, bz, feet_y, heading)
         }
       }
     }
@@ -649,13 +653,13 @@ export function create_player({
           // it — never called mid-flight) — the reported sideways/backwards dragon. ft_pilot tracks its own
           // heading from the flight path itself (fast_travel_pilot.js); use it in place of the frozen transform.
           const dragon_yaw = ft_is_flying() ? ft_pilot.yaw() : t.facing_yaw
-          mount_ctl.update(t.position[0], t.visual_y, t.position[2], dragon_yaw, mount_is_moving(t.speed, ft_is_flying()), dt)
+          mount_ctl.update(t.position[0], feet_y, t.position[2], dragon_yaw, mount_is_moving(t.speed, ft_is_flying()), dt)
           seat = mount_ctl.seat_height
         }
-        avatar.object3d.position.set(t.position[0], t.visual_y + seat, t.position[2])
+        avatar.object3d.position.set(t.position[0], feet_y + seat, t.position[2])
         if (own_hidden)
           my_plate?.update(0, -9999, 0) // off-screen (the fight branch's own pattern)
-        else my_plate?.update(t.position[0], t.visual_y + seat + (avatar.eye_height ?? 1.6) + 0.6, t.position[2]) // D227
+        else my_plate?.update(t.position[0], feet_y + seat + (avatar.eye_height ?? 1.6) + 0.6, t.position[2]) // D227
         // update() crossfades the anim state machine AND faces the heading — the engine convention is yaw
         // RAW (rotation.y = facing_yaw; the +π variant was the documented owner bug in character_avatar.js).
         // Riding plays the looped SIT clip (avatar-side IDLE fallback for the SIT-less rigs), never the
@@ -695,7 +699,7 @@ export function create_player({
             pet_glb_url = desired_pet.glb_url
           }
           pet_ctl.set_visible(!own_hidden)
-          pet_ctl.update(t.position[0], t.visual_y, t.position[2], dt) // #593 — independent dead-zone follow, not welded
+          pet_ctl.update(t.position[0], feet_y, t.position[2], dt) // #593 — independent dead-zone follow, not welded
         } else if (pet_ctl) {
           pet_ctl.dispose()
           pet_ctl = null
@@ -746,7 +750,7 @@ export function create_player({
         const show = aura_active && !is_fight()
         aura.set_active(show)
         if (show) {
-          aura.object3d.position.set(t.position[0], t.visual_y, t.position[2])
+          aura.object3d.position.set(t.position[0], feet_y, t.position[2])
           aura.update(engine.get_camera?.())
         }
       } catch (error) {
@@ -780,7 +784,7 @@ export function create_player({
     // branch never runs mid-fight — the board has its own play_fight_sfx('move') cue). Ambient water
     // audio was removed (noisy for nothing) — footsteps (incl. the wading class) are unaffected.
     tick_environment_audio(
-      { x: t.position[0], y: t.visual_y, z: t.position[2], on_ground: t.on_ground, block_id_at: env.block_id_at },
+      { x: t.position[0], y: feet_y, z: t.position[2], on_ground: t.on_ground, block_id_at: env.block_id_at },
       dt
     )
     // D195 — the ENGINE's shoulder rig owns the walk camera (the demo's exact feel: spring-damped follow,
@@ -788,7 +792,7 @@ export function create_player({
     // set_camera_* path the demo's motion blur rides). My D178-era hand follow-cam + its +π basis are
     // DELETED. The spectate diorama pan above legitimately stays app-driven (the designed standdown use).
     const pose = cam.update({
-      feet: [t.position[0], t.visual_y, t.position[2]],
+      feet: [t.position[0], feet_y, t.position[2]],
       eye_height: avatar?.eye_height ?? 1.6,
       speed: t.speed,
       solid_at: env.solid_at,

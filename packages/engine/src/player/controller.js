@@ -178,6 +178,11 @@ export function create_controller_state(spawn, yaw = 0) {
   }
 }
 
+/** The render-space feet anchor for an avatar transform. Step smoothing lives in `visual_y`; physics
+ * `position[1]` may already have stepped to the next block and must not become a second render anchor.
+ * @param {{ visual_y:number }} transform @returns {number} */
+export const avatar_feet_y = (transform) => transform.visual_y
+
 /**
  * World-space horizontal move direction from camera-relative input + yaw. forward = the camera's
  * flattened look direction (−Z rotated by yaw, matching fly_camera/demo's `[sin(yaw)·-1, 0, cos(yaw)·-1]`);
