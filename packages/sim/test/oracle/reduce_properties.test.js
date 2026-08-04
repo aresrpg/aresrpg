@@ -38,6 +38,8 @@ const SEEDS = Array.from(
 )
 const STREAM_LENGTH = 150
 const DETERMINISM_SEED = 0x6d2b79f5
+/** Wall-clock headroom for the determinism law — see the #2201 note above its per-seed tests. */
+const DETERMINISM_TIMEOUT_MS = 30_000
 
 process.stdout.write(
   `\n[sim:twin-fuzzer] mode=${NIGHTLY ? 'nightly' : 'standing'} seeds=${SEED_COUNT} commands=${STREAM_LENGTH}\n`,
@@ -199,23 +201,33 @@ describe('law 6 — the same seed is the same fight, twice', () => {
     ).toEqual(dump_capsule(first.recorder, fight_id_of(DETERMINISM_SEED)))
   })
 
-  test('generation and folding are both pure functions of the seed', () => {
-    for (const run of RUNS) {
-      expect(
-        generate_stream({ seed: run.seed, length: STREAM_LENGTH }),
-      ).toEqual(run.commands)
-      const again = fold_stream({ seed: run.seed, commands: run.commands })
-      expect(digest(again.state)).toBe(digest(run.folded.state))
-      expect(again.state).toEqual(run.folded.state)
-      expect(
-        JSON.stringify(dump_capsule(again.recorder, fight_id_of(run.seed))),
-      ).toBe(
-        JSON.stringify(
-          dump_capsule(run.folded.recorder, fight_id_of(run.seed)),
-        ),
-      )
-    }
-  })
+  // ISSUE #2201 (flake fix, sibling of the fight half): this law was ONE test carrying all 32
+  // re-generations and re-folds, and it failed on loaded boxes as `this test timed out after
+  // 5000ms` (bun's default) — 6040ms, 8510ms and 26978ms of elapsed wall clock, never once a byte
+  // diff. A determinism law is the one law that must be load-INDEPENDENT, so the cliff goes: per
+  // SEED (the idiom laws 1-5/8/9 in this file already use — it names the diverging stream for
+  // free), under an explicit 30s budget, the same headroom the #85 fixes took. In NIGHTLY mode
+  // SEED_COUNT is 512, so the old single test was 16x past the cliff by construction.
+  for (const run of RUNS)
+    test(
+      `stream ${hex(run.seed)} regenerates and refolds to the same bytes`,
+      () => {
+        expect(
+          generate_stream({ seed: run.seed, length: STREAM_LENGTH }),
+        ).toEqual(run.commands)
+        const again = fold_stream({ seed: run.seed, commands: run.commands })
+        expect(digest(again.state)).toBe(digest(run.folded.state))
+        expect(again.state).toEqual(run.folded.state)
+        expect(
+          JSON.stringify(dump_capsule(again.recorder, fight_id_of(run.seed))),
+        ).toBe(
+          JSON.stringify(
+            dump_capsule(run.folded.recorder, fight_id_of(run.seed)),
+          ),
+        )
+      },
+      DETERMINISM_TIMEOUT_MS,
+    )
 
   test('a different seed is a different fight', () => {
     const digests = new Set(RUNS.map(run => digest(run.folded.state)))
