@@ -33,7 +33,7 @@ import {
 } from '../../src/sim_chain.js'
 import { build_roster, next_command, TEMPLATES_RAW } from '../../../sim/test/oracle/generator.js'
 
-import { capsule_roundtrip_violations, fold_equality_violations } from './laws.js'
+import { byte_identity_violations, capsule_roundtrip_violations, fold_equality_violations } from './laws.js'
 import QUARANTINE from './quarantine.json'
 
 /** 24 seeded fights, each driven to a conclusion or 60 batches — the board derivation is the
@@ -198,18 +198,95 @@ describe('law 7 is awake — a corrupted receipt cannot pass the fold', () => {
 
 // ── Law 6 — determinism ─────────────────────────────────────────────────────────────────────────
 
+/** The four byte-identical sections of one seed's two drives, as `[second_drive, first_drive]` pairs. */
+const identity_sections = (again, run) => ({
+  batches: [again.batches, run.batches],
+  snapshot: [again.snapshot, run.snapshot],
+  sim_state: [again.chain.sim_state, run.chain.sim_state],
+  capsule: [capsule_of(again.chain), capsule_of(run.chain)],
+})
+
+// ISSUE #2201 (flake fix): this law was ONE test carrying all 24 re-drives, and it failed five
+// recorded times on loaded boxes — every one of them `this test timed out after 5000ms` (bun's
+// default), never a byte diff: 6000ms, 5602ms, 7046ms, 16063ms, 26665ms of elapsed wall clock with
+// zero assertion output. A determinism law whose verdict is a wall clock is a liar in both
+// directions, so the cliff goes two ways. (1) Per SEED, so one budget covers one re-drive instead of
+// 24 — the same idiom laws 7-9 above already use, and it names the diverging fight for free.
+// (2) An explicit 30s timeout, the headroom the #85 sibling fixes took: measured ~36ms per seed on
+// an idle core, ~1.03s per seed under 12 busy-loop spinners + background QoS (24.8s for all 24,
+// which is exactly the 18.6s-26.7s the old single test kept posting). The drives are
+// SYNCHRONOUS, so bun cannot interrupt one mid-flight and no comparison here ever saw a partial
+// capture — but a partial pair is now refused under its own name rather than diffed (laws.js).
+// Not one byte of the law below changed; it only reports better.
+const DETERMINISM_TIMEOUT_MS = 30_000
+
 describe('law 6 — the same seed is the same fight, twice', () => {
-  test('receipts, snapshots and capsule dumps are byte-identical across two drives', () => {
-    for (const { seed, run } of RUNS) {
-      const again = drive(seed)
-      expect(JSON.stringify(again.batches)).toBe(JSON.stringify(run.batches))
-      expect(digest(again.chain.sim_state)).toBe(digest(run.chain.sim_state))
-      expect(JSON.stringify(capsule_of(again.chain))).toBe(JSON.stringify(capsule_of(run.chain)))
-    }
-  })
+  for (const { seed, run } of RUNS)
+    test(
+      `fight ${hex(seed)} re-drives byte-identically: receipts, snapshot, state and capsule`,
+      () => {
+        expect(byte_identity_violations(identity_sections(drive(seed), run)).map((hit) => hit.message)).toEqual([])
+      },
+      DETERMINISM_TIMEOUT_MS
+    )
 
   test('a different seed is a different fight', () => {
     expect(new Set(RUNS.map(({ run }) => digest(run.chain.sim_state))).size).toBe(RUNS.length)
+  })
+})
+
+// RED-FIRST PROOF (#2201): the verdict earns its line count only if it DISCRIMINATES the two
+// readings of a law-6 red — a partial capture (the harness) and a leaked byte (the twin) — from the
+// log alone, with no rerun. Both are simulated against a real driven fight.
+describe('law 6 is awake — the verdict names the section, the path and the shape', () => {
+  const { run } = RUNS[0]
+
+  test('a complete pair says nothing', () => {
+    expect(byte_identity_violations(identity_sections(run, run))).toEqual([])
+  })
+
+  test('RED — a TRUNCATED drive aborts under its own name, never as a byte diff', () => {
+    const partial = run.batches.slice(0, 3)
+    const [hit, ...rest] = byte_identity_violations({ batches: [partial, run.batches] })
+    expect(rest).toEqual([])
+    expect(hit.message).toContain(`TRUNCATED DRIVE at batches: 3 rows vs ${run.batches.length} rows`)
+    // THE OLD HARNESS, on the same input: an anonymous blob mismatch — no section, no shape,
+    // nothing the next occurrence can be triaged with.
+    expect(JSON.stringify(partial)).not.toBe(JSON.stringify(run.batches))
+    expect(JSON.stringify(partial)).not.toContain('TRUNCATED')
+  })
+
+  test('RED — a truncated CAPSULE frame list is named to the capsule, not to the batches', () => {
+    const capsule = capsule_of(run.chain)
+    const partial = { ...capsule, commands: capsule.commands.slice(0, 2) }
+    const [hit, ...rest] = byte_identity_violations({ capsule: [partial, capsule] })
+    expect(rest).toEqual([])
+    expect(hit.message).toContain(`TRUNCATED DRIVE at capsule.commands: 2 rows vs ${capsule.commands.length} rows`)
+  })
+
+  test('RED — a VALUE divergence names the exact path and prints the bytes', () => {
+    const leaked = run.batches.map((batch, index) => (index === 2 ? { ...batch, version: batch.version + 1 } : batch))
+    const [hit, ...rest] = byte_identity_violations({ batches: [leaked, run.batches] })
+    expect(rest).toEqual([])
+    expect(hit.message).toContain(
+      `VALUE DIVERGENCE at batches[2].version: ${run.batches[2].version + 1} vs ${run.batches[2].version}`
+    )
+  })
+
+  test('RED — a leak deep inside a receipt row is named down to the field', () => {
+    const index = run.batches.findIndex((batch) => batch.receipt.events.length > 0)
+    const row = run.batches[index].receipt.events[0]
+    const key = Object.keys(row.parsedJson)[0]
+    const events = [
+      { ...row, parsedJson: { ...row.parsedJson, [key]: `${row.parsedJson[key]}-leaked` } },
+      ...run.batches[index].receipt.events.slice(1),
+    ]
+    const leaked = run.batches.map((batch, i) =>
+      i === index ? { ...batch, receipt: { ...batch.receipt, events } } : batch
+    )
+    const [hit, ...rest] = byte_identity_violations({ batches: [leaked, run.batches] })
+    expect(rest).toEqual([])
+    expect(hit.message).toContain(`VALUE DIVERGENCE at batches[${index}].receipt.events[0].parsedJson.${key}:`)
   })
 })
 
