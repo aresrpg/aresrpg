@@ -432,7 +432,7 @@ describe('loudness — the mock never drops a fact', () => {
     ).toThrow(/unmapped effect status/)
   })
 
-  test('a summon (a roster that grew mid-step) throws — no chain row can express it', () => {
+  test('a roster that grew mid-step throws — no chain row can express it', () => {
     const grown = { ...chain.sim_state, team1: [...chain.sim_state.team1, chain.sim_state.team1[0]] }
     expect(() => encode_sim_step(step({ post_state: grown }))).toThrow(/roster changed mid-step/)
   })

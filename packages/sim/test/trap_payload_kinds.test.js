@@ -148,11 +148,11 @@ describe('trap payload · the sink resolves the kinds the chain resolves (#954)'
     const original = console.error
     console.error = (...args) => errors.push(args.join(' '))
     try {
-      step_on(staged([{ type: 'SUMMON', summon: 'nope' }]), 'mob_0')
+      step_on(staged([{ type: 'A_BRAND_NEW_MECHANIC' }]), 'mob_0')
     } finally {
       console.error = original
     }
     expect(errors.length).toBeGreaterThan(0)
-    expect(errors.join(' ')).toContain('SUMMON')
+    expect(errors.join(' ')).toContain('A_BRAND_NEW_MECHANIC')
   })
 })

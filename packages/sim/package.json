@@ -130,10 +130,6 @@
       "types": "./types/fight_traps.d.ts",
       "import": "./src/fight_traps.js"
     },
-    "./fight_summon": {
-      "types": "./types/fight_summon.d.ts",
-      "import": "./src/fight_summon.js"
-    },
     "./fight_spells": {
       "types": "./types/fight_spells.d.ts",
       "import": "./src/fight_spells.js"

@@ -1,5 +1,9 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
+import { readFileSync } from 'node:fs'
+import { dirname, join } from 'node:path'
+import { fileURLToPath } from 'node:url'
+
 import { describe, test, expect } from 'bun:test'
 
 import { el_fire, el_earth } from '../src/spell.js'
@@ -51,6 +55,7 @@ import {
   PHASE_START,
   PHASE_END,
 } from '../src/spell_effect.js'
+import * as SE from '../src/spell_effect.js'
 
 // PARITY FIXTURES — copied VERBATIM from spell_effect.move's own tests. Each test cites its Move source by name.
 
@@ -241,5 +246,40 @@ describe('spell effect envelope — parity with spell_effect.move', () => {
     ).toBe(false)
     // stat-id bump (F8): a STAT_HEAL(11) buff is legal
     expect(is_legal(alter_stat(STAT_HEAL, 20, false, true, 3))).toBe(true)
+  })
+})
+
+// ── THE TWIN SEAL (#2186) ────────────────────────────────────────────────────────────────────────────
+// The class gate behind the summoning deletion: the sim's effect vocabulary may never EXCEED the chain's.
+// A sim-only kind is client prediction resolving an outcome the chain can never produce — the exact divergence
+// summoning was (153 LoC of resolution against a Move enumeration that excludes it by name). Both tables are
+// read from source, so the discriminants are compared as DATA, never restated in a comment that can drift.
+const MOVE_KINDS = Object.fromEntries(
+  [
+    ...readFileSync(
+      join(
+        dirname(fileURLToPath(import.meta.url)),
+        '../../move/foundation/sources/spell_effect.move',
+      ),
+      'utf8',
+    ).matchAll(/^const (K_[A-Z0-9_]+): u8 = (\d+);/gm),
+  ].map(([, name, value]) => [name, Number(value)]),
+)
+
+const SIM_KINDS = Object.fromEntries(
+  Object.entries(SE).filter(
+    ([name, value]) => name.startsWith('K_') && typeof value === 'number',
+  ),
+)
+
+describe('effect-kind twin seal — the sim never declares a kind the chain cannot encode', () => {
+  test('the Move enumeration is actually read (positive control: 41 kinds, K_POOL_SHIELD = 40)', () => {
+    expect(Object.keys(MOVE_KINDS)).toHaveLength(41)
+    expect(MOVE_KINDS['K_POOL_SHIELD']).toBe(40)
+    expect(MOVE_KINDS['K_SUMMON']).toBeUndefined()
+  })
+
+  test('every sim kind exists on chain with the SAME discriminant, and vice versa', () => {
+    expect(SIM_KINDS).toEqual(MOVE_KINDS)
   })
 })

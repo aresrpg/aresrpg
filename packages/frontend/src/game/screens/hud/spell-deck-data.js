@@ -122,8 +122,6 @@ const effect_text = e => {
       return value ? `Shield ${value}` : 'Shield'
     case 'GLYPH':
       return 'Places a glyph'
-    case 'SUMMON':
-      return 'Summons an ally'
     default:
       return titleize(e.raw_type ?? e.type)
   }

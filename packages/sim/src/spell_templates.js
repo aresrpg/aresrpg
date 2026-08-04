@@ -70,7 +70,7 @@ import { ITEM_STAT_SHIFT as SIGNED_SHIFT } from './equipment_stats.js'
  * One spell effect, sim-internal (UPPERCASE). A faithful subset of the donor union (spells/types.ts:162).
  * Only the MVP-supported effects carry handlers in fight_spells.js; the rest are inert (flagged TODO).
  * @typedef {object} SpellEffect
- * @property {'DAMAGE'|'PERCENT_LIFE_DAMAGE'|'HEAL'|'STEAL'|'SHIELD'|'POOL_SHIELD'|'STUN'|'POISON'|'TELEPORT'|'PUSH'|'PULL'|'GEOMETRIC_PUSH'|'SWAP_POSITIONS'|'CARRY'|'THROW'|'RESET_POSITIONS'|'PLACE_TRAP'|'GLYPH'|'ADD'|'REMOVE'|'SUMMON'|'INVISIBILITY'|'REVEAL'|'APPLY_STATE'|'REMOVE_STATE'|'REFLECT_DAMAGE'|'DISPEL'|'RETURN_SPELL'|'CRITICAL_FAILURE'|'DAMAGE_TO_HEAL'|'FORCED_DEATH'|'TIMED_PAYLOAD'|'NAMED_DAMAGE_STACK'|'STANCE'|'REACTIVE_PUNISHMENT'|'EROSION'|'DAMAGE_REDIRECT'|'UNSUPPORTED'} type
+ * @property {'DAMAGE'|'PERCENT_LIFE_DAMAGE'|'HEAL'|'STEAL'|'SHIELD'|'POOL_SHIELD'|'STUN'|'POISON'|'TELEPORT'|'PUSH'|'PULL'|'GEOMETRIC_PUSH'|'SWAP_POSITIONS'|'CARRY'|'THROW'|'RESET_POSITIONS'|'PLACE_TRAP'|'GLYPH'|'ADD'|'REMOVE'|'INVISIBILITY'|'REVEAL'|'APPLY_STATE'|'REMOVE_STATE'|'REFLECT_DAMAGE'|'DISPEL'|'RETURN_SPELL'|'CRITICAL_FAILURE'|'DAMAGE_TO_HEAL'|'FORCED_DEATH'|'TIMED_PAYLOAD'|'NAMED_DAMAGE_STACK'|'STANCE'|'REACTIVE_PUNISHMENT'|'EROSION'|'DAMAGE_REDIRECT'|'UNSUPPORTED'} type
  * @property {number} [kind]
  * @property {number} [value]
  * @property {number} [min]
@@ -91,8 +91,7 @@ import { ITEM_STAT_SHIFT as SIGNED_SHIFT } from './equipment_stats.js'
  * @property {'CIRCLE'|'SQUARE'|'LINE'} [area_type]
  * @property {SpellEffect[]} [payload]
  * @property {keyof import('./fight_state.js').Stats | 'life'} [steal]
- * @property {keyof import('./fight_state.js').Stats | 'ap' | 'mp' | 'summons' | 'max_hp'} [stat]   ADD/REMOVE target stat (AresRPG `statistic`, mapped)
- * @property {string} [summon]   SUMMON minion id (AresRPG `summon`; '' = a generic summon)
+ * @property {keyof import('./fight_state.js').Stats | 'ap' | 'mp' | 'max_hp'} [stat]   ADD/REMOVE target stat (AresRPG `statistic`, mapped)
  * @property {'enemy'|'ally'|'self'|'cell'|'any'|'trap'} [target]
  * @property {string} [raw_type]   the original lowercase AresRPG type (for UNSUPPORTED diagnostics)
  */
@@ -223,9 +222,8 @@ const AREA_TYPE_MAP = {
 
 /**
  * AresRPG `statistic` (ADD/REMOVE) -> the sim stat/pool key the modifier targets. `damage` maps to
- * `raw_damage` (a flat damage bonus). `ap`/`mp` are the resource pools (effective_ap_max / effective_mp_max);
- * a `summons` modifier raises/lowers the per-caster summon cap (consumed by fight_summon.js `summon_cap`).
- * @type {Record<string, keyof import('./fight_state.js').Stats | 'ap' | 'mp' | 'summons' | 'max_hp'>}
+ * `raw_damage` (a flat damage bonus). `ap`/`mp` are the resource pools (effective_ap_max / effective_mp_max).
+ * @type {Record<string, keyof import('./fight_state.js').Stats | 'ap' | 'mp' | 'max_hp'>}
  */
 const STATISTIC_MAP = {
   raw_damage: 'raw_damage',
@@ -244,7 +242,6 @@ const STATISTIC_MAP = {
   critical_hit: 'critical_hit',
   ap: 'ap',
   mp: 'mp',
-  summons: 'summons',
 }
 
 const STAT_ID_MAP = {
@@ -320,7 +317,7 @@ const unsupported = (base, spell_id, kind) => {
 /**
  * Normalize one AresRPG effect into the sim's UPPERCASE SpellEffect.
  * Handlers exist for: damage, heal, steal, stun, poison, teleport, push, pull, glyph, trap (placement),
- * add/remove (stat + ap/mp buff/debuff), summon, invisibility, and reveal. A lowercase authored kind without
+ * add/remove (stat + ap/mp buff/debuff), invisibility, and reveal. A lowercase authored kind without
  * a handler is a decode error; known numeric kinds may use the explicit UNSUPPORTED parity terminal above.
  * @param {Record<string, unknown>} e  raw AresRPG effect
  * @returns {SpellEffect}
@@ -554,9 +551,16 @@ const normalize_effect = (e, fallback_area, spell_id = '?') => {
       return { ...base, type: 'PULL' }
     case 'glyph':
       return { ...base, type: 'GLYPH' }
+    // TWIN REFUSAL (#2186). Summoning is EXCLUDED from the chain's effect vocabulary — spell_effect.move
+    // enumerates 41 kinds and none of them admits a fighter mid-fight, and the chain has no event that could
+    // encode a grown roster (sim_chain_events.js `encode_sim_step`). A sim that RESOLVED it would predict an
+    // outcome the chain can never produce, so the door refuses: loud, folds nothing. The legacy SDK corpus
+    // still authors `summon` rows for a killed mechanic, which is why this is a named refusal, not a throw.
     case 'summon':
-      // Spawn an AI minion onto the caster's team (fight_summon.js); `summon` is the art/variant id.
-      return { ...base, type: 'SUMMON', summon: String(e['summon'] ?? '') }
+      console.error(
+        `[sim] spell '${spell_id}': 'summon' is excluded from the chain effect vocabulary — it folds NOTHING`,
+      )
+      return { ...base, type: 'UNSUPPORTED' }
     case 'add':
       // Stat / ap / mp BUFF for `turns` (rolled [min,max] on `stat`); ticked + expired by process_turn_effects.
       return { ...base, type: 'ADD' }
