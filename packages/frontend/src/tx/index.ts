@@ -18,6 +18,7 @@ import { SPONSOR_URL } from '../env'
 import { read_sui_balance_mist } from '../auth/sui_balance'
 import { is_zklogin_wallet } from '../auth/zklogin_wallet'
 import { enoki_error_facts, zklogin_proving_error } from '../auth/enoki_error_facts'
+import { is_zklogin_session_expired } from '../auth/zklogin_proof_retry'
 import { report_error, mark_reported } from '../core/report.js'
 import { use_settings } from '../stores/settings'
 import {
@@ -735,6 +736,10 @@ export async function execute_sponsored_tx({
       // then stamp the player-facing wrap as reported so the outer toast catch does not file it a second time.
       const facts = enoki_error_facts(error)
       report_error(zklogin_proving_error(facts), { area: 'sponsor', action: 'zklogin-proving', ...facts })
+      // A session Enoki can no longer sign with is NOT "re-sign and retry" — retrying re-enters the same dead
+      // session forever. It already has honest copy (the seed-read classification's `session_unavailable`);
+      // this is the same fact reaching the player from the second door that can discover it.
+      if (is_zklogin_session_expired(error)) throw mark_reported(new Error(i18n.t('errors.zklogin_session_expired')))
       throw mark_reported(new Error(i18n.t('errors.sponsor_zklogin')))
     }
   }
