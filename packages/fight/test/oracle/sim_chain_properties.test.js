@@ -239,7 +239,7 @@ describe('law 6 — the same seed is the same fight, twice', () => {
 // readings of a law-6 red — a partial capture (the harness) and a leaked byte (the twin) — from the
 // log alone, with no rerun. Both are simulated against a real driven fight.
 describe('law 6 is awake — the verdict names the section, the path and the shape', () => {
-  const { run } = RUNS[0]
+  const [{ run }] = RUNS
 
   test('a complete pair says nothing', () => {
     expect(byte_identity_violations(identity_sections(run, run))).toEqual([])
@@ -275,8 +275,8 @@ describe('law 6 is awake — the verdict names the section, the path and the sha
 
   test('RED — a leak deep inside a receipt row is named down to the field', () => {
     const index = run.batches.findIndex((batch) => batch.receipt.events.length > 0)
-    const row = run.batches[index].receipt.events[0]
-    const key = Object.keys(row.parsedJson)[0]
+    const [row] = run.batches[index].receipt.events
+    const [key] = Object.keys(row.parsedJson)
     const events = [
       { ...row, parsedJson: { ...row.parsedJson, [key]: `${row.parsedJson[key]}-leaked` } },
       ...run.batches[index].receipt.events.slice(1),
