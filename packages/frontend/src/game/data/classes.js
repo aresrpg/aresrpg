@@ -19,10 +19,7 @@ import classes_json from '@aresrpg/sdk/classes' with { type: 'json' }
  * @typedef {(key: string, params?: object) => string} Translate
  */
 
-/** @type {Record<string, { name: string, title: string }>} */
-const ROSTER = /** @type {Record<string, { name: string, title: string }>} */ (
-  /** @type {unknown} */ (classes_json)
-)
+const ROSTER = /** @type {Record<string, { name: string, title: string }>} */ (/** @type {unknown} */ (classes_json))
 
 // The classes shipping the reused Koshi2D 2D directional pixel sprites under public/sprites/<id>/:
 // `idle/<dir>.png` (8 compass directions) + `walk/<dir>/frame_000..005.png` (the 3 west-facing directions
@@ -40,10 +37,8 @@ const class_key = (class_id) => String(class_id ?? '').toLowerCase()
 
 /** The class' OWN sprite base, or null when it ships no art yet (the caller decides: placeholder or initial).
  *  @param {unknown} class_id @returns {string | null} */
-export const class_sprite_base = (class_id) => {
-  const id = class_key(class_id)
-  return SPRITED_CLASSES.has(id) ? `/sprites/${id}` : null
-}
+export const class_sprite_base = (class_id) =>
+  SPRITED_CLASSES.has(class_key(class_id)) ? `/sprites/${class_key(class_id)}` : null
 
 /** The chain's `classe` field → its identity row, or null when the id names no class.
  *  @param {unknown} id @returns {ClassIdentity | null} */
@@ -52,6 +47,9 @@ export const get_class = (id) => {
   const row = ROSTER[class_id]
   return row ? { id: class_id, name: row.name, title: row.title, sprites: class_sprite_base(class_id) } : null
 }
+
+// The i18n maps are keyed by the UPPERCASED id, and the SDK identity rides as the defaultValue so a locale
+// gap degrades to English rather than to a raw key on screen.
 
 /** The class' localized display name ("Senshi"), or null when the id names no class.
  *  @param {Translate} t @param {unknown} class_id @returns {string | null} */

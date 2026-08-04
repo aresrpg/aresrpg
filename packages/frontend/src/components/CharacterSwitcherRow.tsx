@@ -12,16 +12,23 @@ import { experience_to_level } from '@aresrpg/sdk/experience'
 import { class_display } from '../game/data/classes.js'
 import { color_to_hue } from '../game/data/color.js'
 
+/** The identity chips BOTH rows show. The glyph is the class' INITIAL, so the localized class name rides
+ *  aria-label too — otherwise the row just says "I" and nothing tells an Ikari from an Iyashi. */
+const row_identity = (t: (key: string, params?: object) => string, character: any) => {
+  const class_label = class_display(t, character.classe ?? character.class_id) ?? character.classe ?? null
+  return {
+    level: experience_to_level(character.experience ?? 0),
+    hue: color_to_hue(character.color_1 ?? 0),
+    class_label,
+    initial: (class_label ?? '?').charAt(0).toUpperCase(),
+  }
+}
+
 /** A folded follower row — indented under the leader, NOT a switch target while following; the × unfollows it,
  *  restoring a normal switchable row. Mirrors the CharacterRow identity chips (glyph + name + level). */
 export function FollowerRow({ character, on_kick }: { character: any; on_kick: (character_id: string) => void }) {
   const { t } = useTranslation()
-  const level = experience_to_level(character.experience ?? 0)
-  const hue = color_to_hue(character.color_1 ?? 0)
-  // The glyph is the class' INITIAL, so the localized class name rides aria-label — otherwise the row says
-  // "I" and a screen reader cannot tell an Ikari from an Iyashi.
-  const class_label = class_display(t, character.classe ?? character.class_id) ?? character.classe ?? null
-  const initial = (class_label ?? '?').charAt(0).toUpperCase()
+  const { level, hue, class_label, initial } = row_identity(t, character)
   return (
     <div className="chsw-rowwrap chsw-child">
       <div className="chsw-row chsw-row--following" title={character.name}>
@@ -62,12 +69,7 @@ export function CharacterRow({
   on_click: () => void
 }) {
   const { t } = useTranslation()
-  const level = experience_to_level(character.experience ?? 0)
-  const hue = color_to_hue(character.color_1 ?? 0)
-  // The glyph is the class' INITIAL, so the localized class name rides aria-label — otherwise the row says
-  // "I" and a screen reader cannot tell an Ikari from an Iyashi.
-  const class_label = class_display(t, character.classe ?? character.class_id) ?? character.classe ?? null
-  const initial = (class_label ?? '?').charAt(0).toUpperCase()
+  const { level, hue, class_label, initial } = row_identity(t, character)
 
   const row = (
     <button
