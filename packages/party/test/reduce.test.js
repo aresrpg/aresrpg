@@ -144,6 +144,23 @@ test('intent/decline clears the incoming invite (membership untouched)', () => {
   expect(state.incoming_invite).toBe(null)
 })
 
+test('intent/answer_invite clears only the ANSWERING character card, and grants no membership (#2159)', () => {
+  const start = {
+    ...empty_party_state(),
+    incoming_invite: { party_id: party.id, invited_character_id: '0xinvited', from_name: 'L' },
+  }
+  const answered = reduce(start, { kind: 'intent', action: 'answer_invite', character_id: '0xinvited' })
+  expect(answered.state.incoming_invite).toBe(null)
+  // The card dying is NOT joining: only the signed accept's receipt may ever bind a party.
+  expect(answered.state.party_id).toBe(null)
+  expect(answered.state.party).toBe(null)
+  expect(answered.outputs.publish).toBe(false)
+
+  // Somebody else's answer cannot dismiss my card.
+  const other = reduce(start, { kind: 'intent', action: 'answer_invite', character_id: '0xsomeone-else' })
+  expect(other.state.incoming_invite).toEqual(start.incoming_invite)
+})
+
 test('intent/elect_leader optimistically predicts the leadership hand-off; a no-op when invalid', () => {
   const { state, outputs } = reduce(bound(), { kind: 'intent', action: 'elect_leader', character_id: '0xinvited' })
   expect(state.party.leader_character).toBe('0xinvited')

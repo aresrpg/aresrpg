@@ -1788,6 +1788,7 @@
     "invite_awaiting_toast": "En attente de la réponse de {{name}}…",
     "cancel_invite_cta": "Annuler l'invitation",
     "invite_cancel_notice": "Rappel fermé — l'invitation reste en attente on-chain.",
+    "answer_failed_title": "Ta réponse n'est pas passée",
     "tx_pending": "{{label}}…",
     "action_create": "Création du groupe",
     "action_invite": "Invitation de {{name}} au groupe",

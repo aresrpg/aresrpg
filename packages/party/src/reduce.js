@@ -8,7 +8,8 @@
 //
 // INPUTS   { intent(pre-tx guard/clear) | receipt_patch(own signed tx effects) | snapshot(/v1 read) | event(p2p) }
 // ACTIONS  create · join · leave · kick · invite · accept · decline · elect_leader  (+ disband/switch_basis riders,
-//          invite_sent/cancel_invite for the OUTGOING pending-invite toast lifecycle below)
+//          invite_sent/cancel_invite for the OUTGOING pending-invite toast lifecycle below, answer_invite for the
+//          #2159 click-time dismissal of an incoming card)
 // MERGE    basis fence (a read for A never binds after selection moves to B) · positive latch (_awaiting: our own
 //          create/accept may beat the projector — hold the id) · negative latch (_departed: a just-left/kicked
 //          character is refused re-adoption by a stale snapshot until it drops them or the deadline drains, M4) ·
@@ -235,6 +236,18 @@ function reduce_intent(state, input) {
       return state.incoming_invite
         ? { state: { ...state, incoming_invite: null }, outputs: no_outputs() }
         : still(state)
+    case 'answer_invite': {
+      // #2159 (owner ruling) — THE CARD DIES AT THE CLICK. An invitation is a question, and the moment its
+      // owner answers it there is nothing left to ask: the accept/decline transaction executes BEHIND this
+      // input, it does not gate it. Membership itself is untouched here — only the signed accept's receipt
+      // (`receipt_patch action:'accept'`) may ever adopt a party id. A transaction that ultimately FAILS puts
+      // the question back through the ordinary inbound door (`event:'invite'`), so nothing is latched here and
+      // this stays one honest clear rather than a second home for a pending answer.
+      const { character_id } = input
+      return state.incoming_invite?.invited_character_id === character_id
+        ? { state: { ...state, incoming_invite: null }, outputs: no_outputs() }
+        : still(state)
+    }
     case 'invite_sent': {
       // The leader's own invite tx just executed — arm the OUTGOING pending toast (see header). Re-sending to the
       // same character refreshes its deadline instead of stacking a second entry (the edge also guards this).

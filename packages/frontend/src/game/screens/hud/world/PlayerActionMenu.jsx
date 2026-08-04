@@ -21,6 +21,7 @@ import { useGameState } from '../../../store.js'
 import { ft_dispatch } from '../../../../world-shell/fast_travel_store.js'
 import { dispatch_fast_travel } from '../../../../world-shell/fast_travel_intent.js'
 import { ft_dragon_glb_url, preload_mount_glb } from '../../../mount_rig.js'
+import { start_invite_timing } from '../../../../core/invite_timing.js'
 
 import { use_player_menu } from './player_menu_store.js'
 
@@ -87,6 +88,9 @@ export function PlayerActionMenu() {
   const on_invite = async () => {
     close()
     if (!can_invite || party_busy) return
+    // #2159 — the press is stage one of the invite trace; it closes when the inviter's UI says "invited". The
+    // cold-start create below is deliberately INSIDE the span: a first invite really does pay two transactions.
+    start_invite_timing(target.id)
     // Cold start: no party yet → create a BARE one first, then invite, so a single click works (mirrors the old
     // panel). #329: create() (not create_bare()) used to sit here and unconditionally swept every one of MY
     // OWN owned alt characters into the party as real, accepted on-chain members — inviting one specific other

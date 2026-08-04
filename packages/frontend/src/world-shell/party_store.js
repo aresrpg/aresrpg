@@ -22,6 +22,7 @@ import { publish_room_state, set_room_party } from '../p2p/lobby-room.js'
 import { push_event_toast } from '../game/core/toast.js'
 import { humanize_abort } from '../game/core/abort_copy.js'
 import { game_log } from '../core/log.js'
+import { cancel_invite_timing, finish_invite_timing, mark_invite_executed } from '../core/invite_timing.js'
 
 import { read_dungeon_session, subscribe_dungeon_session } from './dungeon_session.js'
 import {
@@ -35,10 +36,10 @@ import {
   disband_party as tx_disband_party,
 } from './party_actions'
 import {
+  answer_pending_invite,
   fold_pending_invite,
-  latch_declined_invite,
   read_pending_invites,
-  reset_declined_invites,
+  reset_answered_invites,
 } from './party_invite_carrier.js'
 import { select_owned_party_join_ids } from './team_entry.js'
 import { error_executed_digest } from './tx_digest_error.js'
@@ -188,7 +189,7 @@ party_store.setState({
           on_joined: (joined_character_id) =>
             get()._dispatch({ kind: 'receipt_patch', action: 'join', character_id: joined_character_id, address }),
         })
-      } else await get().refresh()
+      } else void get().refresh() // the create receipt already bound the id — this read only reconciles (#2159)
     } catch (error) {
       const blocked_character_id = error?.owned_character_id
       if (blocked_character_id && error_executed_digest(error))
@@ -222,7 +223,10 @@ party_store.setState({
         on_joined: (joined_character_id) =>
           get()._dispatch({ kind: 'receipt_patch', action: 'join', character_id: joined_character_id, address }),
       })
-      await get().refresh()
+      // Each join's receipt already entered the reducer above, so this read is reconciliation — fired, never
+      // awaited (#2159). Awaiting it held the tx-phase lock (and the whole party UI) across a /v1 round trip
+      // for a fact this client already had: a poll-wait on our own write.
+      void get().refresh()
       return true
     } catch (error) {
       const blocked_character_id = error?.owned_character_id
@@ -306,6 +310,10 @@ party_store.setState({
     try {
       const resolved_name = invited_name || (await resolve_character_name(invited_character_id))
       await invite_to_party(party_id, leader_character_id, invited_character_id, invited_owner, resolved_name)
+      // #2159 — the TRANSACTION RESULT is what the inviter's UI reflects: this input arms the pending-invite
+      // card the moment the effects are certified, and the next /v1 read only ever reconciles it. Nothing on
+      // this path waits for the read layer to reflect our own write.
+      mark_invite_executed(invited_character_id)
       get()._dispatch({
         kind: 'intent',
         action: 'invite_sent',
@@ -314,8 +322,10 @@ party_store.setState({
         invited_name: resolved_name,
         now: Date.now(),
       })
+      finish_invite_timing(invited_character_id)
     } catch (error) {
       game_log('party', 'invite failed', error)
+      cancel_invite_timing()
       get()._tx_phase({ error: humanize_abort(error) })
     }
     get()._tx_phase({ busy: false })
@@ -330,46 +340,34 @@ party_store.setState({
     use_toast.getState().add(i18n.t('party.invite_cancel_notice'), 'info')
   },
 
-  /** Accept is the invited character's own signed party transaction. */
-  async accept_invite() {
-    const invite = get().incoming_invite
-    if (!invite || get().busy) return
-    if (selected_character_id() !== invite.invited_character_id) {
-      get()._dispatch({ kind: 'intent', action: 'decline', character_id: selected_character_id() })
-      return
+  /** The edge doors the carrier's answer leg drives — the store owns identity and the reducer door, nothing else. */
+  _answer_edge() {
+    return {
+      selected_character_id,
+      dispatch: (input) => get()._dispatch(input),
+      tx_phase: (patch) => get()._tx_phase(patch),
+      adopt_party: (party_id, character_id) => get().adopt_party_id(party_id, character_id),
     }
-    get()._tx_phase({ busy: true, error: null })
-    try {
-      await accept_party_invite(invite.party_id, invite.invited_character_id)
-      game_log('party', `invite accepted for ${invite.invited_character_id.slice(0, 10)}`)
-      await get().adopt_party_id(invite.party_id, invite.invited_character_id)
-    } catch (error) {
-      game_log('party', 'accept failed', error)
-      get()._tx_phase({ error: humanize_abort(error) })
-    }
-    get()._tx_phase({ busy: false })
+  },
+
+  /** Accept is the invited character's own signed party transaction; the card is gone before it is composed. */
+  accept_invite() {
+    if (get().busy) return
+    return answer_pending_invite(get().incoming_invite, get()._answer_edge(), {
+      sign: accept_party_invite,
+      label: 'accepted',
+      adopt: true,
+    })
   },
 
   /** Decline is also signed by the exact pending character; it removes intent without creating membership. */
-  async decline_invite() {
-    const invite = get().incoming_invite
-    if (!invite || get().busy) return
-    if (selected_character_id() !== invite.invited_character_id) {
-      get()._dispatch({ kind: 'intent', action: 'decline', character_id: selected_character_id() })
-      return
-    }
-    get()._tx_phase({ busy: true, error: null })
-    try {
-      await decline_party_invite(invite.party_id, invite.invited_character_id)
-      // Latch the refusal until the authoritative read agrees — see party_invite_carrier.js.
-      latch_declined_invite(invite.party_id, invite.invited_character_id)
-      get()._dispatch({ kind: 'intent', action: 'decline', character_id: invite.invited_character_id })
-      game_log('party', `invite declined for ${invite.invited_character_id.slice(0, 10)}`)
-    } catch (error) {
-      game_log('party', 'decline failed', error)
-      get()._tx_phase({ error: humanize_abort(error) })
-    }
-    get()._tx_phase({ busy: false })
+  decline_invite() {
+    if (get().busy) return
+    return answer_pending_invite(get().incoming_invite, get()._answer_edge(), {
+      sign: decline_party_invite,
+      label: 'declined',
+      adopt: false,
+    })
   },
 
   /** Leader-only removal of one exact accepted character. */
@@ -474,11 +472,13 @@ party_store.setState({
     })
   },
 
-  /** Adopt the id only after this exact character's accept transaction succeeds. */
-  async adopt_party_id(party_id, character_id) {
+  /** Adopt the id only after this exact character's accept transaction succeeds. The reconciling read is fired,
+   *  never awaited (#2159): the receipt already told this client everything, so holding the tx-phase lock across
+   *  a /v1 round trip is a poll-wait on our own write. */
+  adopt_party_id(party_id, character_id) {
     get()._dispatch({ kind: 'receipt_patch', action: 'accept', party_id, character_id })
     get()._start_polling()
-    await get().refresh()
+    void get().refresh()
   },
 
   set_incoming_dungeon(dungeon_id, template_id) {
@@ -515,7 +515,7 @@ party_store.setState({
   reset_local() {
     get()._stop_polling()
     set_room_party(null)
-    reset_declined_invites()
+    reset_answered_invites()
     // Drop any toast still tracked for the OLD session — an uncleared entry would leak a "waiting…" toast that
     // nothing left in this store can ever resolve (no matching pending_invites row survives the reset below).
     const ids = get()._pending_invite_toast_ids
