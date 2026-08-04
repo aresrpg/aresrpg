@@ -5,6 +5,9 @@ import { PublicKey } from '@mysten/sui/cryptography'
 import { fromHex } from '@mysten/sui/utils'
 
 const LEAF_DOMAIN = new TextEncoder().encode('aresrpg.zone-group.leaf')
+const MEMBER_LEAF_DOMAIN = new TextEncoder().encode(
+  'aresrpg.zone-group.member-leaf',
+)
 const NODE_DOMAIN = new TextEncoder().encode('aresrpg.zone-group.node')
 const SET_DOMAIN = new TextEncoder().encode('aresrpg.zone-group.commitment')
 const MAX_GROUPS = 64
@@ -19,6 +22,10 @@ const FORMAT_SET = 2 // `0x02 ‖ blake2b256(domain ‖ 0x02 ‖ bcs(MobGroupSet
 // discipline with a per-group ROSTER inside the preimage, so the commitment binds WHO is in the pack. Same
 // no-tree, empty-proof claim shape as format 2.
 const FORMAT_MEMBERS = 3
+// `0x04 ‖ merkle_root(member leaves)` — the MEMBER TREE (#2194). Same derived stream as format 3; the
+// commitment became a tree, so a claim carries an O(log n) sibling path and the chain never derives the zone.
+const FORMAT_MEMBER_TREE = 4
+const MAX_MEMBERS = 16
 
 // ID is a one-address-field Move struct, so its BCS bytes are exactly the address bytes.
 const mob_group_leaf_bcs = bcs.struct('MobGroupLeaf', {
@@ -76,6 +83,27 @@ const mob_group_member_set_bcs = bcs.struct('MobGroupMemberSet', {
   groups: bcs.vector(mob_group_with_members_bcs),
 })
 
+// The FORMAT-4 leaf (`zone_gen::MobGroupMemberLeaf`): the format-3 group row plus the zone context, the zone's
+// §4 `progress` and the group's stream `index`, so ONE leaf authenticates ONE group. `members` is the SEATING
+// roster — the derived roster already truncated to `group_size`, which is what the chain commits and what the
+// fight seats.
+const mob_group_member_leaf_bcs = bcs.struct('MobGroupMemberLeaf', {
+  world: bcs.Address,
+  zx: bcs.u32(),
+  zy: bcs.u32(),
+  zone_seed: bcs.u64(),
+  discovered_at_ms: bcs.u64(),
+  progress: bcs.u64(),
+  index: bcs.u64(),
+  spawn_id: bcs.u64(),
+  template: bcs.Address,
+  members: bcs.vector(bcs.Address),
+  x: bcs.u32(),
+  z: bcs.u32(),
+  group_size: bcs.u16(),
+  group_seed: bcs.u64(),
+})
+
 const concat_bytes = (...parts) => {
   const out = new Uint8Array(
     parts.reduce((length, part) => length + part.length, 0),
@@ -120,14 +148,14 @@ const normalized_id = (value, label) => {
 }
 
 const COMMITMENT_SHAPE =
-  'group_root must be a 32-byte legacy root, or a 33-byte `0x02 ‖ digest` set / `0x03 ‖ digest` member commitment'
+  'group_root must be a 32-byte legacy root, or a 33-byte `0x02 ‖ digest` set / `0x03 ‖ digest` member / `0x04 ‖ root` member-tree commitment'
 
 /**
  * Decode a stored `ZoneGroupCommitment.root` into the derivation it selects — the client twin of
  * `zone_gen::mob_group_commitment_format`. Anything else is a typed failure: an unknown commitment shape is a
  * chain/client version skew, never a witness to guess at.
  * @param {number[]|Uint8Array} value
- * @returns {{ format:1|2|3, digest:Uint8Array }}
+ * @returns {{ format:1|2|3|4, digest:Uint8Array }}
  */
 const normalized_commitment = value => {
   if (!Array.isArray(value) && !(value instanceof Uint8Array))
@@ -144,6 +172,8 @@ const normalized_commitment = value => {
     return { format: FORMAT_SET, digest: out.subarray(1) }
   if (out.length === HASH_BYTES + 1 && out[0] === FORMAT_MEMBERS)
     return { format: FORMAT_MEMBERS, digest: out.subarray(1) }
+  if (out.length === HASH_BYTES + 1 && out[0] === FORMAT_MEMBER_TREE)
+    return { format: FORMAT_MEMBER_TREE, digest: out.subarray(1) }
   throw new Error(`[fight-proof] ${COMMITMENT_SHAPE}`)
 }
 
@@ -310,6 +340,62 @@ export function mob_group_member_set_bytes({
     .toBytes()
 }
 
+/**
+ * Serialize the exact `zone_gen::MobGroupMemberLeaf` BCS layout — the FORMAT-4 leaf preimage's payload.
+ * Exported as a parity/audit seam beside {@link mob_group_leaf_bytes}.
+ * @param {{ world_id:string, zx:number, zy:number, zone_seed:string|number|bigint,
+ *   discovered_at_ms:string|number|bigint, progress:string|number|bigint, index:number,
+ *   spawn_id:string|number|bigint, template_id:string, member_template_ids:string[], x:number, z:number,
+ *   group_size:number, group_seed:string|number|bigint }} leaf
+ * @returns {Uint8Array}
+ */
+export function mob_group_member_leaf_bytes({
+  world_id,
+  zx,
+  zy,
+  zone_seed,
+  discovered_at_ms,
+  progress,
+  index,
+  spawn_id,
+  template_id,
+  member_template_ids,
+  x,
+  z,
+  group_size,
+  group_seed,
+}) {
+  const roster = member_template_ids ?? []
+  if (roster.length > MAX_MEMBERS)
+    throw new Error(
+      `[fight-proof] member_template_ids exceeds the kernel roster rail (${MAX_MEMBERS})`,
+    )
+  return mob_group_member_leaf_bcs
+    .serialize({
+      world: normalized_id(world_id, 'world_id'),
+      zx: normalized_number(zx, 32, 'zx'),
+      zy: normalized_number(zy, 32, 'zy'),
+      zone_seed: normalized_unsigned(zone_seed, 64, 'zone_seed'),
+      discovered_at_ms: normalized_unsigned(
+        discovered_at_ms,
+        64,
+        'discovered_at_ms',
+      ),
+      progress: normalized_unsigned(progress, 64, 'progress'),
+      index: normalized_unsigned(index, 64, 'index'),
+      spawn_id: normalized_unsigned(spawn_id, 64, 'spawn_id'),
+      template: normalized_id(template_id, 'template_id'),
+      members: roster.map((id, slot) =>
+        normalized_id(id, `member_template_ids[${slot}]`),
+      ),
+      x: normalized_number(x, 32, 'x'),
+      z: normalized_number(z, 32, 'z'),
+      group_size: normalized_number(group_size, 16, 'group_size'),
+      group_seed: normalized_unsigned(group_seed, 64, 'group_seed'),
+    })
+    .toBytes()
+}
+
 // The FORMAT-2 digest: ONE hash over the whole set, domain-separated and format-tagged exactly as
 // `zone_gen::mob_group_commitment` builds it before prefixing the tag byte.
 const set_digest = (context, groups) =>
@@ -337,6 +423,18 @@ const leaf_hash = (context, group) =>
     concat_bytes(
       LEAF_DOMAIN,
       mob_group_leaf_bytes({
+        ...context,
+        ...group,
+        group_size: group.size,
+      }),
+    ),
+  )
+
+const member_leaf_hash = (context, group) =>
+  blake2b_256(
+    concat_bytes(
+      MEMBER_LEAF_DOMAIN,
+      mob_group_member_leaf_bytes({
         ...context,
         ...group,
         group_size: group.size,
@@ -392,8 +490,9 @@ const proof_root = (leaf, proof, target_index) => {
  * A complete authenticated mob-group witness accepted by `create_fight_ptb`.
  * @typedef {object} MobGroupProof
  * @property {number} index
- * @property {{ spawn_id:string, template_id:string, x:number, z:number,
- *   group_size:number, group_seed:string }} facts
+ * @property {{ spawn_id:string, template_id:string, x:number, z:number, group_size:number, group_seed:string,
+ *   member_template_ids?:string[], progress?:number }} facts  the roster and progress ride only on a format-4
+ *   witness — they are what its leaf binds, and what the member claim door takes
  * @property {number[]} proof flattened 32-byte sibling hashes — EMPTY on a format-2 (lattice) or format-3
  *   (member-list) zone, whose commitment is a whole-set hash the chain re-derives rather than a tree
  */
@@ -402,6 +501,9 @@ const proof_root = (leaf, proof, target_index) => {
  * The witness bytes the claim door accepts for THIS commitment shape, or `null` when the locally rebuilt stream
  * does not reproduce the stored commitment (fail shut — the caller keeps the derivation door).
  *
+ * FORMAT 4 (member tree, `0x04 ‖ root`): a real Merkle tree over per-group leaves — the ONLY format whose proof
+ * saves the chain the whole derivation. The leaf binds the roster and the zone's `progress`, so a claimant can
+ * neither swap in a softer species nor dial the level window down.
  * FORMAT 3 (member list, `0x03 ‖ digest`): the format-2 shape over a preimage that also carries each group's
  * member roster — same whole-set hash, same EMPTY proof vector, and reproducing it here proves our stream
  * agrees with the chain about WHO is in the pack, not just how many.
@@ -413,6 +515,17 @@ const proof_root = (leaf, proof, target_index) => {
  * @returns {number[]|null}
  */
 const commitment_proof = (commitment, context, groups, target_index) => {
+  if (commitment.format === FORMAT_MEMBER_TREE) {
+    const leaves = groups.map(group => member_leaf_hash(context, group))
+    if (!bytes_equal(root_of(leaves), commitment.digest)) return null
+    const proof = proof_of(leaves, target_index)
+    return bytes_equal(
+      proof_root(leaves[target_index], proof, target_index),
+      commitment.digest,
+    )
+      ? proof
+      : null
+  }
   if (commitment.format === FORMAT_MEMBERS)
     return bytes_equal(member_set_digest(context, groups), commitment.digest)
       ? []
@@ -457,6 +570,7 @@ export function compose_mob_group_proof(input) {
       group_count,
       groups,
       index,
+      progress = 0,
     } = input ?? {}
     if (
       !Array.isArray(groups) ||
@@ -467,7 +581,7 @@ export function compose_mob_group_proof(input) {
     const count = normalized_number(group_count, 64, 'group_count')
     const target_index = normalized_number(index, 64, 'index')
     if (count !== groups.length || target_index >= count) return null
-    const context = { world_id, zx, zy, zone_seed, discovered_at_ms }
+    const context = { world_id, zx, zy, zone_seed, discovered_at_ms, progress }
     const normalized_groups = groups.map((group, position) => {
       if (
         normalized_number(group?.index, 64, `groups[${position}].index`) !==
@@ -519,6 +633,13 @@ export function compose_mob_group_proof(input) {
         z: group.z,
         group_size: group.size,
         group_seed: group.group_seed,
+        // format 4 alone commits them per group, and its claim door is the only one that takes them
+        ...(commitment.format === FORMAT_MEMBER_TREE
+          ? {
+              member_template_ids: group.member_template_ids,
+              progress: normalized_number(progress, 64, 'progress'),
+            }
+          : {}),
       },
       proof,
     }
@@ -629,6 +750,10 @@ export function mob_group_witness({
         z: row.z,
         size: row.size,
         group_seed: row.group_seed,
+        // the SEATING roster the member commitments bind — dropping it here is what made every member-zone
+        // witness fail shut against its own chain digest
+        member_template_ids: row.members ?? [],
+        progress: row.progress ?? 0,
       }))
     const matches =
       spawn_id != null
@@ -653,6 +778,8 @@ export function mob_group_witness({
       group_count: zone.group_count,
       groups,
       index: target.index,
+      // zone-level, so every derived row carries the same value; an empty stream never reaches here
+      progress: groups[0]?.progress ?? 0,
     })
   } catch {
     return null
