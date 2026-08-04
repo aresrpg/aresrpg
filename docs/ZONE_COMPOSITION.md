@@ -60,6 +60,53 @@ so on the final unconsumed cell the PRNG state does not advance for the selectio
 always draws desynchronises the whole remaining stream. Resource cells share the same lattice, one
 anchor per entry (a grown gather field spends one anchor, not one per cell).
 
+## Format 3 — the member-list whole-set commitment
+
+```
+root = 0x03 ‖ blake2b256("aresrpg.zone-group.commitment" ‖ 0x03 ‖ bcs(MobGroupMemberSet))
+MobGroupWithMembers { spawn_id, template, members, x, z, group_size, group_seed }
+```
+
+Format 2's whole-set discipline with a per-group ROSTER inside the preimage, so the commitment binds
+WHO is in the pack and not merely how many (#1110/#1111). Placement, draw layout and resource cells
+are format 2's exactly. Because it is still ONE hash over the whole set, it inherits format 2's
+authentication cost: the claim door re-derives the entire zone. Member zones are claimed through
+`claim_mob_group[_in_zone]_members`, which take no proof at all.
+
+## Format 4 — the member-list MERKLE TREE
+
+```
+root = 0x04 ‖ merkle_root(leaves)
+leaf = blake2b256("aresrpg.zone-group.member-leaf" ‖ bcs(MobGroupMemberLeaf))
+MobGroupMemberLeaf { world, zx, zy, zone_seed, discovered_at_ms, progress, index,
+                     spawn_id, template, members, x, z, group_size, group_seed }
+```
+
+**The same derived stream as format 3; only the commitment's shape changed** — from one flat hash to
+a tree over per-group leaves — which is the whole point: a claim proves ONE group with an O(log n)
+inclusion path and the chain never derives the zone. That derivation is what the gas audit measured
+as ~45% of a play-hour's gas (#2194).
+
+The leaf carries two facts formats 1/2 leaves do not: the zone's §4 `progress` (the level window the
+pack is built at) and the SEATING roster — the derived roster already truncated to `group_size`, so
+the ticket needs no post-verification clamp and the client's own `derive_zone` row is the committed
+value verbatim. Neither the pack's composition nor its difficulty is ever the claimant's word.
+
+Measured on a production-density zone (48 groups — the seeders' pinned `DENSITY` floor — over a
+64-row mob table), Move-VM gas units, `packages/move/scripts/gas_probe_zone_claim.mjs`:
+
+| leg                              | format 3 | format 4 |           |
+| -------------------------------- | -------- | -------- | --------- |
+| claim door, whole leg            | 73,542   | 12,717   | 5.78×     |
+| the mechanism (derive vs verify) | 71,041   | 10,323   | 6.88×     |
+| search-side commitment build     | —        | +10,930  | once/zone |
+
+Break-even lands inside the first fight in a zone (0.18 claims).
+
+Claimed through `claim_mob_group_in_zone_members_with_proof` — ONE door, always naming its zone,
+because composing a witness already requires reading the zone doc. The witness-free member doors
+still serve a format-4 zone, so a client that cannot compose a proof degrades instead of breaking.
+
 ## One rule, five consumers — where the byte is read
 
 The dispatch is written once per runtime and nowhere else. Any new reader of a zone's groups goes
@@ -67,10 +114,10 @@ through one of these doors; none of them may re-implement the test.
 
 | Home                                             | Function                                                                 | Role                                                                                                                                                                                      |
 | ------------------------------------------------ | ------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `packages/move/foundation/sources/zone_gen.move` | `mob_group_commitment_format`                                            | the byte reader (1 / 2 / 0), plus `mob_group_commitment` and `mob_group_commitment_matches` for format 2                                                                                  |
+| `packages/move/foundation/sources/zone_gen.move` | `mob_group_commitment_format`                                            | the byte reader (1 / 2 / 3 / 4 / 0), plus each format's own builder and verifier — `mob_group_root_matches` (1), `mob_group_commitment*` (2/3), `mob_group_member_root*` (4)              |
 | `packages/move/aresrpg/sources/zones.move`       | `group_commitment_format`                                                | reads the stored DF; a MISSING commitment reports 1. Feeds `derive_mobs` / `derive_res` — the only in-package doors to a zone's groups and cells — and the `resolve_mob_group` claim door |
 | `packages/sim/src/zone_derive.js`                | `commitment_format`                                                      | the client derivation twin, byte-for-byte with `zone_gen`                                                                                                                                 |
-| `packages/sdk/src/fight_proof.js`                | `normalized_commitment` → `compose_mob_group_proof`                      | the witness producer: Merkle path for format 1, empty vector for format 2, typed failure on an unknown shape                                                                              |
+| `packages/sdk/src/fight_proof.js`                | `normalized_commitment` → `compose_mob_group_proof`                      | the witness producer: Merkle path for formats 1 and 4, empty vector for 2/3, typed failure on an unknown shape                                                                            |
 | `packages/rpc`                                   | `map_group_root_field` (indexer) → `/v1/zones?world=&zone=` `group_root` | serves the byte; a composer that drops it silently derives the legacy world                                                                                                               |
 
 ## Consequences a reader must not miss
@@ -79,8 +126,13 @@ through one of these doors; none of them may re-implement the test.
   lattice zone the proof door buys the commitment check, not the compute saving — the chain
   re-derives the full stream either way. The diet's numbers have not been re-measured per format;
   quoting them for a format-2 zone is wrong (#837).
-- **Zones discovered by the current package are format 2.** Format 1 is the pre-lattice history that
-  must keep resolving forever, not a path anything new lands on.
+- **Zones discovered by the current package are format 4.** Formats 1-3 are history that must keep
+  resolving forever, not paths anything new lands on. Landing format 4 on chain is a CEREMONY act,
+  not a source act — the source is the reviewed artifact.
+- **Every format from 2 up is a LATTICE zone.** `zones::derive_res` states it as
+  `group_commitment_format(...) >= 2`; a mirror that tests `== 2` places a member zone's resource
+  cells with the legacy sampler and disagrees with the chain on every cell (fixed in the JS mirror
+  by #2194).
 - **A read path that forwards the seed but drops the commitment root cannot dispatch** even when
   both derivations are implemented. The root travels with the zone state, always.
 
