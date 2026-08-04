@@ -190,7 +190,8 @@ export const commitment_format = root => {
   if (root.length === 32) return 1
   if (root.length === 33 && root[0] === FORMAT_LATTICE) return FORMAT_LATTICE
   if (root.length === 33 && root[0] === FORMAT_MEMBERS) return FORMAT_MEMBERS
-  if (root.length === 33 && root[0] === FORMAT_MEMBER_TREE) return FORMAT_MEMBER_TREE
+  if (root.length === 33 && root[0] === FORMAT_MEMBER_TREE)
+    return FORMAT_MEMBER_TREE
   return 0
 }
 

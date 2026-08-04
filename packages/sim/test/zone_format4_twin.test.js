@@ -50,12 +50,16 @@ describe('format 4 mirrors format 3 row for row', () => {
   })
 
   test('the RESOURCE stream is byte-identical', () => {
-    expect(kind(at_format(4), 'resource')).toEqual(kind(at_format(3), 'resource'))
+    expect(kind(at_format(4), 'resource')).toEqual(
+      kind(at_format(3), 'resource'),
+    )
   })
 })
 
 describe('a format-4 zone is a lattice zone', () => {
   test('its resource cells sit exactly where a format-2 zone’s do', () => {
-    expect(kind(at_format(4), 'resource')).toEqual(kind(at_format(2), 'resource'))
+    expect(kind(at_format(4), 'resource')).toEqual(
+      kind(at_format(2), 'resource'),
+    )
   })
 })
