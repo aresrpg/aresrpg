@@ -17,6 +17,8 @@ import { gas_guard_decision, sim_gas, GAS_CEILING_SUI, GAS_CEILING_MIST } from '
 import { SPONSOR_URL } from '../env'
 import { read_sui_balance_mist } from '../auth/sui_balance'
 import { is_zklogin_wallet } from '../auth/zklogin_wallet'
+import { enoki_error_facts, zklogin_proving_error } from '../auth/enoki_error_facts'
+import { report_error, mark_reported } from '../core/report.js'
 import { use_settings } from '../stores/settings'
 import {
   mark_engage_execution_finished,
@@ -727,7 +729,13 @@ export async function execute_sponsored_tx({
       })
     } catch (error) {
       game_log('sponsor', 'zkLogin personal-message sign failed (pre-POST, zero gas):', error)
-      throw new Error(i18n.t('errors.sponsor_zklogin'))
+      // #2192 INSTRUMENT: the line below erases the only witness this class has — the raw rejection becomes
+      // localized copy, and localized copy is what the error store used to receive. Report the machine facts
+      // FIRST (redacted: an auth rejection echoes id_tokens and proofs, and an error store is a third party),
+      // then stamp the player-facing wrap as reported so the outer toast catch does not file it a second time.
+      const facts = enoki_error_facts(error)
+      report_error(zklogin_proving_error(facts), { area: 'sponsor', action: 'zklogin-proving', ...facts })
+      throw mark_reported(new Error(i18n.t('errors.sponsor_zklogin')))
     }
   }
   // #1663 PREPARE LEG, CONCURRENT: the kind-only bytes and the challenge signature are INDEPENDENT — the

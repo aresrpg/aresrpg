@@ -70,6 +70,26 @@ describe('before_send drop list', () => {
   it('before_send returns null for a dropped class', () => {
     expect(before_send({}, { originalException: new Error('User rejected the request') })).toBeNull()
   })
+
+  // THE CLASS GATE (#2192): no catch block anywhere can put a live id_token in an outbound event, including the
+  // linked `cause` exceptions Sentry walks in by itself — the last hop scrubs, so future call sites cannot regress.
+  it('before_send scrubs JWTs out of every exception value and the message', () => {
+    const jwt = 'eyJhbGciOiJSUzI1NiJ9.eyJzdWIiOiIxMTIyMzM0NDU1NjY3Nzg4In0.QUJDREVGR0hJSktMTU5PUFFSU1RVVg'
+    const event = {
+      message: `login failed for ${jwt}`,
+      exception: {
+        values: [
+          { type: 'Error', value: `zkLogin proof unavailable` },
+          { type: 'EnokiClientError', value: `proof request rejected for id_token ${jwt}` },
+        ],
+      },
+    }
+    const sent = before_send(event, { originalException: new Error('zkLogin proof unavailable') })
+    expect(JSON.stringify(sent)).not.toContain('eyJ')
+    expect(sent.exception.values[1].value).toBe('proof request rejected for id_token [jwt]')
+    expect(sent.message).toBe('login failed for [jwt]')
+    expect(sent.exception.values[0].value).toBe('zkLogin proof unavailable') // untouched text stays intact
+  })
 })
 
 // #2192 — the two-day blindness. `edge.aresrpg.world` is a Vercel PREVIEW deployment; the DSN env var is
