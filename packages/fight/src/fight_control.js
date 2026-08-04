@@ -10,14 +10,10 @@
 
 import { participant_character_id } from './participant_identity.js'
 
-/** Stable render/input identity of a mob fighter at its chain index. @param {number|string} idx */
-export const mob_entity_id = (idx) => `mob-${Number(idx)}`
-
-/** The exact inverse of `mob_entity_id`, or null when the value is not a mob entity id. */
-export const mob_entity_index = (entity_id) => {
-  const match = /^mob-(\d+)$/.exec(String(entity_id))
-  return match ? Number(match[1]) : null
-}
+// The mob-id vocabulary moved beside the roster identity it is the other half of (#2219: the one fold-key
+// resolver lives there and cannot import a module that imports it). Re-exported here because this is the
+// CONSUMER-facing path — the arch gate keeps consumer surfaces out of participant_identity.js itself.
+export { mob_entity_id, mob_entity_index } from './participant_identity.js'
 
 /**
  * Chain-derived character ids this wallet may control, in fight seat/group order.

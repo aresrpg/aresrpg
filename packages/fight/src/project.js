@@ -11,7 +11,8 @@ import { GRID_W, GRID_H, decode as decode_xy, encode as encode_xy } from './los.
 import { presented_reachable_cells } from './movement_candidates.js'
 import { committed_truth, fight_store, presented_state } from './store.js'
 import { cast_presenting } from './project_state.js'
-import { engine_view, entity_id_of_key, input_armed, my_action_slot, project_board_cells } from './project_views.js'
+import { entity_id_of_fold_key } from './participant_identity.js'
+import { engine_view, input_armed, my_action_slot, project_board_cells } from './project_views.js'
 import { next_action_slot } from './turn_action_slot.js'
 
 export * from './project_state.js'
@@ -20,7 +21,6 @@ export {
   board_view,
   committed_mob_hp,
   engine_view,
-  entity_id_of_key,
   fight_visible_view,
   // THE ROSTER IDENTITY BOOK (#1993 WP3) — the one id-keyed home for fight-visible identity, plus the one label
   // rule (`name ?? display_id`) and the one short-id shape. Every consumer reaches identity through here.
@@ -283,7 +283,8 @@ export const placement_click = (s, cell) => {
   const on_zone = my_placement_zone(view).some((c) => c.x === cell.x && c.y === cell.y)
   if (!on_zone) return 'deny'
   for (const [key, fighter] of Object.entries(committed_truth(s).fighters ?? {})) {
-    if (fighter.alive === false || entity_id_of_key(s.view, key) === me.id || fighter.cell == null) continue
+    if (fighter.alive === false || entity_id_of_fold_key(s.view?.escrow, key) === me.id || fighter.cell == null)
+      continue
     const occupied = decode_xy(fighter.cell)
     if (occupied.x === cell.x && occupied.y === cell.y) return 'deny'
   }

@@ -8,8 +8,9 @@
 import { enrich_actions, sorted_tail } from './core_fold.js'
 import { fold_chain_offset } from './draft_budget.js'
 import { price_hit } from './fight_render_prims.js'
-import { fold_key_entity_id, merge_entries, paced_wave_turns, presented_state, recompute } from './fold.js'
+import { merge_entries, paced_wave_turns, presented_state, recompute } from './fold.js'
 import { actor_from_key } from './inputs.js'
+import { entity_id_of_fold_key } from './participant_identity.js'
 import { claim_predictions, retain_budget_predictions, update_claimed_budget } from './store_prediction.js'
 import { committed_health, COURTESY_EVENT_BASE, observer_ctx } from './store_state.js'
 
@@ -36,7 +37,12 @@ const divergence_correction = (state, divergence) => {
   if (!divergence) return divergence
   if (action?.kind !== 'Hit') return rest
   const key = `${action.victim_is_mob ? 'm' : 'p'}${Number(action.victim_idx)}`
-  const target_id = fold_key_entity_id(state.view?.escrow ?? [], key)
+  const target_id = entity_id_of_fold_key(state.view?.escrow, key)
+  // A victim the roster cannot name carries NO correction (#2219). The resolver answers null instead of the
+  // synthetic `player-<idx>` it used to, so this arm — which was always here — actually fires: a correction
+  // addressed to an id no entity carries is not a correction, it is a rewrite that silently never lands. The
+  // divergence itself still travels (the adoption is logged and the fold reconciles); only the history
+  // instruction is withheld, exactly as it is for every non-Hit divergence above.
   if (!target_id) return rest
   const { kind, amount } = price_hit(action, committed_health(state)(target_id))
   return { ...rest, correction: { target_id, kind, amount } }

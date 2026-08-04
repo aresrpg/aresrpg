@@ -15,7 +15,7 @@
 // which is why nothing here derives committed state at all, and why `core_fold.js` may import this file's base.
 
 import { mob_entity_id, mob_entity_index } from './fight_control.js'
-import { participant_entity_id } from './participant_identity.js'
+import { entity_id_of_fold_key, participant_entity_id } from './participant_identity.js'
 import { apply_action, seat_resolver } from './inputs.js'
 import * as settle_input from './inputs.js'
 import { STATUS_PLACEMENT } from './board_state.js'
@@ -307,24 +307,14 @@ export const recompute = (draft, now) => {
 
 /** entity id (a character id, or `mob-N`) → its fold key `p{seat}` / `m{idx}` against an adopted view's escrow;
  *  null when the roster does not carry it. The ONE home for that mapping — the presentation resolvers below and
- *  the store's committed health oracle both read it, so a renamed seat can never mean two different fighters. */
+ *  the store's committed health oracle both read it, so a renamed seat can never mean two different fighters.
+ *  (Its INVERSE is `entity_id_of_fold_key`, homed with the identity predicates it joins through — #2219.) */
 export const entity_fold_key = (escrow, source_id) => {
   const id = String(source_id)
   const mob_idx = mob_entity_index(id)
   if (mob_idx != null) return `m${mob_idx}`
   const seat = (escrow ?? []).findIndex((p) => participant_entity_id(p) === id)
   return seat >= 0 ? `p${seat}` : null
-}
-
-/** The INVERSE of `entity_fold_key` — a fold key ('m0' / 'p1') back to the entity id every presentation surface
- *  speaks. One home, so the wave producer and the divergence corrector (#2151) can never disagree about WHO was
- *  hit; `wave_turns_of` reads it too, where this used to be an inline closure. */
-export const fold_key_entity_id = (escrow, key) => {
-  const id = String(key ?? '')
-  const idx = Number(id.slice(1))
-  if (id.startsWith('m')) return mob_entity_id(idx)
-  if (!id.startsWith('p') || !Number.isFinite(idx)) return null
-  return participant_entity_id((escrow ?? [])[idx] ?? {}) ?? `player-${idx}`
 }
 
 /** Snapshot base + authoritative tail PLUS accepted chain-silent point grants — the BUDGET anchor, a presentation
@@ -448,7 +438,7 @@ const wave_turns_of = (draft, raw_events, version, trap_cells = [], base_seq = 0
     const key = entity_fold_key(escrow, source_id)
     return key ? cell_of(key) : null
   }
-  const fighter_id_of_key = (key) => fold_key_entity_id(escrow, key)
+  const fighter_id_of_key = (key) => entity_id_of_fold_key(escrow, key)
   const fighter_positions = new Map(
     Object.entries(draft.fighters ?? {}).flatMap(([key, fighter]) => {
       // Same body mask as the fold's trap ledger — ONE home (`blocks_a_walk`), the chain's `add_living_bodies`.

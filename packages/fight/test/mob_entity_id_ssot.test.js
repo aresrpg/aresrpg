@@ -9,7 +9,10 @@ import { describe, expect, it } from 'bun:test'
 import { mob_entity_id, mob_entity_index } from '../src/project.js'
 
 const REPO_ROOT = fileURLToPath(new URL('../../..', import.meta.url))
-const DOOR = join(REPO_ROOT, 'packages/fight/src/fight_control.js')
+// The convention door moved to participant_identity.js (#2219): the one fold-key resolver answers both halves of
+// the key space and cannot import a module that imports it, so the mob-id vocabulary joined the roster identity
+// it belongs to. fight_control.js re-exports it — that is still the CONSUMER-facing path.
+const DOOR = join(REPO_ROOT, 'packages/fight/src/participant_identity.js')
 const SOURCE_ROOTS = [join(REPO_ROOT, 'packages/fight/src'), join(REPO_ROOT, 'packages/frontend/src')]
 const HAND_WRITTEN_MOB_ID = /`mob-\$\{|['"]mob-['"]\s*\+/
 
