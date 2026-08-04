@@ -26,6 +26,7 @@ import { parse_move_abort } from '../game/core/abort_copy.js'
 import { SENTRY_DSN, NETWORK, DEPLOY_ENV } from '../env'
 
 import { set_breadcrumb_sink, get_log_buffer } from './log.js'
+import { redact_jwt } from './redact'
 
 // The git sha, injected by vite `define` (see vite.config.ts __GIT_SHA__ — git rev-parse, falling back to
 // pkg.version). `typeof` guards the non-Vite (bun test / node script) context where the define is absent.
@@ -90,13 +91,29 @@ export function move_abort_fingerprint(/** @type {unknown} */ original, /** @typ
   return ab ? [`${ab.package ?? 'aresrpg'}::${ab.module}::${ab.code}`] : null
 }
 
-/** Sentry `beforeSend` — drop benign classes, fingerprint MoveAborts. Returns null to drop. PURE. */
+/**
+ * Scrub JSON Web Tokens out of every message an event carries — its own, and each linked `cause` exception the
+ * SDK walked into it. THE CLASS GATE (#2192): auth rejections echo id_tokens back at us, and any catch block
+ * that reports one raw would ship a live credential to a third party. Making it a property of the last hop
+ * means no future call site can reintroduce the leak. Mutates the outbound event in place (Sentry hands us a
+ * fresh one per capture — this is construction, not shared state).
+ * @param {any} event
+ */
+function scrub_event_tokens(event) {
+  for (const value of event?.exception?.values ?? [])
+    if (typeof value?.value === 'string') value.value = redact_jwt(value.value)
+  if (typeof event?.message === 'string') event.message = redact_jwt(event.message)
+  if (typeof event?.message?.formatted === 'string') event.message.formatted = redact_jwt(event.message.formatted)
+  return event
+}
+
+/** Sentry `beforeSend` — drop benign classes, scrub tokens, fingerprint MoveAborts. Returns null to drop. */
 export function before_send(/** @type {any} */ event, /** @type {any} */ hint) {
   const original = hint?.originalException
   if (should_drop(original, event)) return null
   const fp = move_abort_fingerprint(original, event)
   if (fp) event.fingerprint = fp
-  return event
+  return scrub_event_tokens(event)
 }
 
 // ── deploy target (#2192) ────────────────────────────────────────────────────
@@ -183,6 +200,26 @@ function short_addr(/** @type {string} */ address) {
 }
 
 /**
+ * Stamp an error as ALREADY REPORTED, so the chokes it passes through on its way out no-op on it. The stamp is
+ * how one error stays one event; a caller that reports a precise machine cause and then rethrows humanized copy
+ * (the zkLogin proving instrument, #2192) stamps the copy so the outer toast catch does not report it twice.
+ * Returns the same value, so it reads as `throw mark_reported(new Error(copy))`.
+ * @template T
+ * @param {T} err
+ * @returns {T}
+ */
+export function mark_reported(err) {
+  if (err != null && typeof err === 'object') {
+    try {
+      Object.defineProperty(err, '__ares_reported', { value: true })
+    } catch {
+      /* frozen error object — nothing to stamp, it will report again */
+    }
+  }
+  return err
+}
+
+/**
  * THE single place an error becomes locally visible and, when armed, a Sentry event. The player-facing side
  * (a humanized toast via abort_copy) is the CALLER's job.
  * @param {unknown} err the RAW machine error (never the humanized copy — we want the real cause here)
@@ -197,11 +234,7 @@ export function report_error(err, context = {}) {
   // (thrown strings) can't be stamped — they rely on Sentry's own dedupe integration instead.
   if (err != null && typeof err === 'object') {
     if (/** @type {any} */ (err).__ares_reported) return
-    try {
-      Object.defineProperty(err, '__ares_reported', { value: true })
-    } catch {
-      /* frozen error object — report anyway */
-    }
+    mark_reported(err)
   }
   const root_cause = (() => {
     let current = err
