@@ -28,7 +28,7 @@ const out = execFileSync(
   // the filter goes BEFORE -s: `--statistics` takes an OPTIONAL value, so a trailing filter is swallowed as a
   // format name and the whole suite runs instead
   ['move', 'test', '--path', 'packages/move/aresrpg', 'zone_claim_gas_probe', '-s'],
-  { encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 },
+  { encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 }
 )
 
 // the statistics table's rows are `│ <fully qualified test> │ <seconds> │ <gas used> │`
@@ -37,14 +37,14 @@ for (const line of out.split('\n')) {
   const row = line.match(/zone_claim_gas_probe_tests::(\w+)\s*│[^│]*│\s*(\d+)\s*│/)
   if (row) gas.set(row[1], Number(row[2]))
 }
-const missing = Object.keys(PROBES).filter(name => !gas.has(name))
+const missing = Object.keys(PROBES).filter((name) => !gas.has(name))
 if (missing.length)
   throw new Error(
-    `[gas-probe] the statistics table is missing ${missing.join(', ')} — the probe module or the -s output shape changed, and a partial table would print a plausible lie`,
+    `[gas-probe] the statistics table is missing ${missing.join(', ')} — the probe module or the -s output shape changed, and a partial table would print a plausible lie`
   )
 
 const base = gas.get('probe_0_baseline')
-const cost = name => gas.get(name) - base
+const cost = (name) => gas.get(name) - base
 console.log('\nZONE CLAIM GAS PROBE (#2194) — Move-VM gas units, baseline subtracted\n')
 for (const [name, label] of Object.entries(PROBES))
   console.log(`  ${label.padEnd(58)} ${name === 'probe_0_baseline' ? '(reference)' : cost(name).toLocaleString()}`)
@@ -52,6 +52,8 @@ for (const [name, label] of Object.entries(PROBES))
 const before = cost('probe_1_derive_claim')
 const after = cost('probe_2_proof_claim')
 const search = cost('probe_6_format_4_tree') - cost('probe_5_format_3_commitment')
-console.log(`\n  CLAIM     ${before.toLocaleString()} → ${after.toLocaleString()} units  (${(before / after).toFixed(2)}×, −${(((before - after) / before) * 100).toFixed(1)}%)`)
+console.log(
+  `\n  CLAIM     ${before.toLocaleString()} → ${after.toLocaleString()} units  (${(before / after).toFixed(2)}×, −${(((before - after) / before) * 100).toFixed(1)}%)`
+)
 console.log(`  SEARCH    +${search.toLocaleString()} units once per zone`)
 console.log(`  BREAK-EVEN after ${(search / (before - after)).toFixed(2)} claims\n`)
