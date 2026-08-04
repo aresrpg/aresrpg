@@ -65,7 +65,11 @@ const FORMS = [
   { name: 'new-URL-template', re: /\bnew\s+URL\s*\(\s*`(?<spec>[^`$]*)/g },
 ]
 
-const RELATIVE_LITERAL = /(['"`])(?<spec>\.\.?\/[^'"`\n]*)\1/g
+// `./x`, `../x`, and the bare directory refs `.` / `..` — all resolve against the file's own
+// directory, so all of them move when the file moves.
+const RELATIVE_SPECIFIER = /^\.\.?(?:\/|$)/
+const DIRECTORY_SPECIFIER = /^\.\.?$|\/$/
+const RELATIVE_LITERAL = /(['"`])(?<spec>\.\.?(?:\/[^'"`\n]*)?)\1/g
 
 const at_end = (hit) => hit.at + hit.length
 
@@ -85,7 +89,7 @@ export const rewrite_specifiers = ({ text, from, to, move_map = new Map() }) => 
       const { spec } = match.groups
       const at = match.index + match[0].lastIndexOf(spec)
       covered.add(at)
-      if (!spec.startsWith('./') && !spec.startsWith('../')) continue
+      if (!RELATIVE_SPECIFIER.test(spec)) continue
       // a template head keeps its trailing segment (the interpolated basename) out of resolution
       const is_head = name === 'new-URL-template'
       const cut = is_head ? spec.lastIndexOf('/') + 1 : spec.length
@@ -95,7 +99,10 @@ export const rewrite_specifiers = ({ text, from, to, move_map = new Map() }) => 
       const target = path.resolve(from_dir, dir_part)
       const moved = move_map.get(target) ?? target
       const rebased = as_relative(to_dir, moved)
-      const next = is_head ? `${rebased.endsWith('/') ? rebased : `${rebased}/`}${tail}` : rebased
+      // `.`, `..` and any trailing-slash specifier name a DIRECTORY: `new URL('.', …)` resolves
+      // with the slash, so dropping it would silently re-point the URL at the parent's sibling.
+      const with_slash = rebased.endsWith('/') ? rebased : `${rebased}/`
+      const next = is_head ? `${with_slash}${tail}` : DIRECTORY_SPECIFIER.test(spec) ? with_slash : rebased
       if (next !== spec) handled.push({ name, at, length: spec.length, spec, next })
     }
 
@@ -139,6 +146,14 @@ const SELF_TEST = [
     from: '/r/packages/p/src/a.test.js',
     to: '/r/packages/p/test/a.test.js',
     expect: "const d = new URL('./fixtures/capsules', import.meta.url)\n",
+  },
+  {
+    name: "bare directory refs '.' and '..' rebase and KEEP their trailing slash",
+    text: "const here = new URL('.', import.meta.url)\nconst up = new URL('..', import.meta.url)\n",
+    from: '/r/packages/p/src/gen/a.test.js',
+    to: '/r/packages/p/test/gen/a.test.js',
+    expect:
+      "const here = new URL('../../src/gen/', import.meta.url)\nconst up = new URL('../../src/', import.meta.url)\n",
   },
   {
     name: 'template head rebases, interpolation preserved',
