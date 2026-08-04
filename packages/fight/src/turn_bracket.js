@@ -47,7 +47,12 @@ export const split_open_turn = (rows) => {
  */
 export const hold_open_turn = (hold, changed, draft) => {
   if (!changed.length) return { segments: [], hold }
-  const carried = hold && Number(hold.rows[0]?.version) === Number(changed[0].version) ? hold : null
+  const version = Number(changed[0].version)
+  // A delivery spanning SEVERAL versions is a CATCH-UP, never live play (fold.js `paced_wave_turns`), and a
+  // catch-up folds without pacing. Nothing of it is held either — holding a fragment of settled minutes only to
+  // pace it as a 3s slot when the next row lands is the replay this door has always refused.
+  if (!changed.every((row) => Number(row.version) === version)) return { segments: hold ? [hold] : [], hold: null }
+  const carried = hold && Number(hold.rows[0]?.version) === version ? hold : null
   const stale = hold && !carried ? [hold] : [] // a new version proves the old bracket can never grow: flush it
   const anchor = carried ? carried.anchor : { ...draft, wave_hold: null }
   const { pace, hold: open } = split_open_turn(carried ? [...carried.rows, ...changed] : changed)
