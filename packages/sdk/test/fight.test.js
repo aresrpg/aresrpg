@@ -234,6 +234,78 @@ describe('create_member_fight_ptb — the mixed-pack door (#1110)', () => {
       create_member_fight_ptb(undeployed)({ ...A, member_template_ids: roster }),
     ).toThrow()
   })
+
+  // ── the format-4 witness door (#2194) ──────────────────────────────────────
+  // A format-4 witness is recognisable by what only its leaf binds: the seating roster and the zone's progress.
+  // `compose_mob_group_proof` returns them for format 4 alone, so no deployment pin gates this door — the
+  // zone's own commitment byte already proves the searching package shipped it.
+  const witness = (over = {}) => ({
+    index: 2,
+    facts: {
+      spawn_id: A.spawn_id,
+      template_id: id('mt0'),
+      x: 41,
+      z: 51,
+      group_size: 3,
+      group_seed: '61',
+      member_template_ids: roster,
+      progress: 613,
+      ...over.facts,
+    },
+    proof: over.proof ?? new Array(2 * 32).fill(7),
+  })
+
+  test('a format-4 witness takes the PROOF door — the chain verifies one path, never the zone', () => {
+    const tx = create_member_fight_ptb(ctx)({
+      ...A,
+      zx: 7,
+      zy: 9,
+      member_template_ids: roster,
+      group_proof: witness(),
+    })
+    expect(targets(tx)[0]).toBe(
+      'zones::claim_mob_group_in_zone_members_with_proof',
+    )
+    // the pack is still built member by member from the SAME roster the leaf bound
+    expect(
+      targets(tx).filter(t => t === 'fight::add_member'),
+    ).toHaveLength(roster.length)
+  })
+
+  test('a witness with no roster/progress is not a format-4 one — the derive door stands', () => {
+    const legacy = witness()
+    delete legacy.facts.member_template_ids
+    const tx = create_member_fight_ptb(ctx)({
+      ...A,
+      zx: 7,
+      zy: 9,
+      member_template_ids: roster,
+      group_proof: legacy,
+    })
+    expect(targets(tx)[0]).toBe('zones::claim_mob_group_in_zone_members')
+  })
+
+  test('a witness without zx/zy refuses — the proof door names its zone', () => {
+    expect(() =>
+      create_member_fight_ptb(ctx)({
+        ...A,
+        member_template_ids: roster,
+        group_proof: witness(),
+      }),
+    ).toThrow(/zx and zy/)
+  })
+
+  test('a roster the leaf did not bind refuses to compose', () => {
+    expect(() =>
+      create_member_fight_ptb(ctx)({
+        ...A,
+        zx: 7,
+        zy: 9,
+        member_template_ids: [id('mt1'), id('mt1'), id('mt1')],
+        group_proof: witness(),
+      }),
+    ).toThrow(/member_template_ids/)
+  })
 })
 
 // ── offline "random is LAST" oracle (Random-PTB compliance) ──────────────────

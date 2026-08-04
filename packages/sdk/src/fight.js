@@ -296,7 +296,39 @@ export function create_fight_ptb(context) {
 }
 
 /**
- * CREATE a Fight over a LIVE MEMBER-LIST (format-3) world group — the mixed-pack door (#1110/#1111). Formats 1/2
+ * The MEMBER-TREE (format-4) witness, validated for the member claim door. `null` in, `null` out — a caller with
+ * no witness (or one composed against a format-1/2/3 zone, which `compose_mob_group_proof` returns without a
+ * roster) keeps the derive door. The zone's OWN commitment byte is the capability probe here: only the package
+ * that ships this door can have written a format-4 commitment, so no deployment pin gates it.
+ * @param {MobGroupProof|null} group_proof
+ * @param {string|number|bigint} spawn_id
+ * @param {string[]} member_template_ids
+ */
+function validated_member_proof(group_proof, spawn_id, member_template_ids) {
+  if (group_proof == null) return null
+  const roster = group_proof.facts?.member_template_ids
+  if (roster == null || group_proof.facts?.progress == null) return null
+  const committed = validated_group_proof(group_proof, spawn_id)
+  // The roster the PTB feeds `add_member` must be the roster the leaf binds, or the claim authenticates one pack
+  // and the build seats another — the chain would abort, but late and unreadably.
+  if (
+    roster.length !== member_template_ids.length ||
+    roster.some((id, slot) => id !== member_template_ids[slot])
+  )
+    throw new Error(
+      '[fight] group_proof facts.member_template_ids must equal member_template_ids, in order',
+    )
+  return {
+    ...committed,
+    members: roster,
+    progress: Number(
+      normalized_unsigned(group_proof.facts.progress, 64, 'group_proof progress'),
+    ),
+  }
+}
+
+/**
+ * CREATE a Fight over a LIVE MEMBER-LIST (format-3 or format-4) world group — the mixed-pack door (#1110/#1111). Formats 1/2
  * keep using `create_fight_ptb` above; the two are not interchangeable and the chain enforces it (a format-3 zone
  * refuses the original claim door and vice versa), so pick by the zone's own commitment byte — `@aresrpg/sim`'s
  * `derive_zone` hands you `members` on exactly the rows that need this door.
@@ -323,6 +355,7 @@ export function create_member_fight_ptb(context) {
     zx = null,
     zy = null,
     member_template_ids,
+    group_proof = /** @type {MobGroupProof|null} */ (null),
     is_public = true,
     party_id = null,
     tx = new Transaction(),
@@ -332,7 +365,14 @@ export function create_member_fight_ptb(context) {
       throw new Error(
         '[fight] create_member_fight_ptb needs the zone-derived member roster',
       )
+    const committed = validated_member_proof(
+      group_proof,
+      spawn_id,
+      member_template_ids,
+    )
     const in_zone = zx != null && zy != null
+    if (committed && !in_zone)
+      throw new Error('[fight] group_proof requires zx and zy together')
 
     const config = shared_object_arg(
       tx,
@@ -354,17 +394,34 @@ export function create_member_fight_ptb(context) {
     const kiosk = as_object_arg(tx, kiosk_id)
     const pkcap = as_object_arg(tx, personal_kiosk_cap_id)
 
-    // (1) claim the live member group → MemberGroupTicket (hot potato). No proof variant exists: a format-3
-    // commitment covers the whole derived set, so re-derivation IS the proof (identical to format 2).
+    // (1) claim the live member group → MemberGroupTicket (hot potato). WITH a format-4 witness the chain
+    // verifies ONE inclusion path (#2194: 5.8× less compute on this leg); without one it re-derives the zone,
+    // which is all a format-3 commitment can be authenticated against — and the fallback a witness-less client
+    // keeps on a format-4 zone too.
     const [ticket] = tx.moveCall({
-      target: `${a.LATEST_PACKAGE_ID}::zones::${in_zone ? 'claim_mob_group_in_zone_members' : 'claim_mob_group_members'}`,
+      target: committed
+        ? `${a.LATEST_PACKAGE_ID}::zones::claim_mob_group_in_zone_members_with_proof`
+        : `${a.LATEST_PACKAGE_ID}::zones::${in_zone ? 'claim_mob_group_in_zone_members' : 'claim_mob_group_members'}`,
       arguments: [
         world, // world: &mut World
         kiosk, // kiosk: &mut Kiosk
         pkcap, // pkcap: &PersonalKioskCap
         tx.pure.id(character_id), // character_id: ID
         ...(in_zone ? [tx.pure.u32(Number(zx)), tx.pure.u32(Number(zy))] : []),
-        tx.pure.u64(BigInt(spawn_id)), // spawn_id: u64
+        ...(committed
+          ? [
+              tx.pure.u64(committed.index), // index: u64
+              tx.pure.u64(committed.facts.spawn_id), // spawn_id: u64
+              tx.pure.id(committed.facts.template_id), // template: ID (the PRIMARY)
+              tx.pure.vector('id', committed.members), // members: vector<ID> (the seating roster)
+              tx.pure.u64(committed.progress), // progress: u64
+              tx.pure.u32(committed.facts.x), // x: u32
+              tx.pure.u32(committed.facts.z), // z: u32
+              tx.pure.u16(committed.facts.group_size), // group_size: u16
+              tx.pure.u64(committed.facts.group_seed), // group_seed: u64
+              tx.pure.vector('u8', committed.proof), // proof: vector<u8>
+            ]
+          : [tx.pure.u64(BigInt(spawn_id))]), // spawn_id: u64
         config, // config: &GameConfig
         version, // version: &Version
         tx.object.clock(), // clock: &Clock (0x6)

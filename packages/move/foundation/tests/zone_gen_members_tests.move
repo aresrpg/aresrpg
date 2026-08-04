@@ -12,6 +12,8 @@ module aresrpg_foundation::zone_gen_members_tests;
 
 use aresrpg_foundation::zone_gen;
 
+/// An arbitrary but PINNED §4 progress — the format-4 leaf binds it, so a wrong one must not authenticate.
+const PROGRESS: u64 = 613;
 const SEED: u64 = 16076161905812157559;
 const OX: u32 = 249344;
 const OZ: u32 = 249344;
@@ -218,6 +220,80 @@ fun the_member_stream_matches_the_js_mirror() {
   while (i < sizes.length()) { assert!(sizes[i] == 4, 6); i = i + 1; };
   // and the FIRST group's id is the format-2 id at the same index — the primary draw kept its stream position
   assert!(ids[0] == 3786384621367390285, 7);
+}
+
+#[test]
+/// THE FORMAT-4 TREE (#2194) — the same derived stream as format 3, committed per group so ONE inclusion path
+/// authenticates one pack and the chain never re-derives the zone. Pinned on BOTH sides of the language
+/// boundary: `packages/sdk/test/fight_proof_member_tree.test.js` names these same 33 root bytes and this same
+/// 128-byte path over the same stream. The leaf binds the roster AND the zone's §4 `progress`, so neither the
+/// pack's composition nor the level window it is built at is ever the claimant's word.
+fun the_member_tree_proves_one_group_without_the_zone() {
+  let (weights, member_weights, min_group, max_group) = tables();
+  let (ids, idxs, members, xs, zs, sizes, gseeds) = zone_gen::derive_mob_groups_members(
+    SEED, 8, 16, &weights, &member_weights, &min_group, &max_group, SIZE_BOUND, OX, OZ, ZSIZE, BX, BZ,
+  );
+  let world = object::id_from_address(@0xbe3f);
+  let rows = vector<ID>[
+    object::id_from_address(@0x01), object::id_from_address(@0x02), object::id_from_address(@0x03),
+    object::id_from_address(@0x04), object::id_from_address(@0x05),
+  ];
+  let mut templates = vector<ID>[];
+  let mut member_templates = vector<vector<ID>>[];
+  let mut i = 0;
+  while (i < ids.length()) {
+    templates.push_back(rows[idxs[i]]);
+    let mut mt = vector<ID>[];
+    let mut j = 0;
+    while (j < members[i].length()) { mt.push_back(rows[members[i][j] as u64]); j = j + 1; };
+    member_templates.push_back(mt);
+    i = i + 1;
+  };
+  let root = zone_gen::mob_group_member_root(
+    world, 487, 487, SEED, 1784980009967, PROGRESS, &ids, &templates, &member_templates, &xs, &zs, &sizes, &gseeds,
+  );
+  assert!(root == x"045f45b05f1c2c39b05a521e67edd816b953bd28f6006cc6969a88bba87ab0ef15", 0);
+  assert!(zone_gen::mob_group_commitment_format(&root) == 4, 1);
+
+  let proof = zone_gen::mob_group_member_proof_for_testing(
+    world, 487, 487, SEED, 1784980009967, PROGRESS, &ids, &templates, &member_templates, &xs, &zs, &sizes,
+    &gseeds, 0,
+  );
+  assert!(proof == x"2363f31e53651f2a7615011ff6bfee5f24fca9907fec6bd77b901cdfa167ffda7d56bc6f9d7fa809831086aae5063191b4d54489f54214bddb0324cd7b5fe0ad3ba5f1affcbd4930f0c221682132603cbcef917128ec55d97234a4d587e3ae5002d11e199e560fce3175e16a11b8cddff33a942a15ad94c396f35fa167e63986", 2);
+  let count = ids.length();
+  assert!(zone_gen::mob_group_member_root_matches(
+    &root, count, world, 487, 487, SEED, 1784980009967, PROGRESS, 0, ids[0], templates[0],
+    member_templates[0], xs[0], zs[0], sizes[0], gseeds[0], &proof,
+  ), 3);
+
+  // SAD PATHS FIRST — every fact the leaf binds must be un-substitutable.
+  let softer = if (member_templates[0][1] == rows[0]) rows[1] else rows[0];
+  let mut swapped = member_templates[0];
+  *swapped.borrow_mut(1) = softer;
+  assert!(!zone_gen::mob_group_member_root_matches(
+    &root, count, world, 487, 487, SEED, 1784980009967, PROGRESS, 0, ids[0], templates[0], swapped,
+    xs[0], zs[0], sizes[0], gseeds[0], &proof,
+  ), 4);
+  assert!(!zone_gen::mob_group_member_root_matches( // a dialled-down difficulty window
+    &root, count, world, 487, 487, SEED, 1784980009967, PROGRESS - 1, 0, ids[0], templates[0],
+    member_templates[0], xs[0], zs[0], sizes[0], gseeds[0], &proof,
+  ), 5);
+  assert!(!zone_gen::mob_group_member_root_matches( // one group's path never authenticates another index
+    &root, count, world, 487, 487, SEED, 1784980009967, PROGRESS, 1, ids[1], templates[1],
+    member_templates[1], xs[1], zs[1], sizes[1], gseeds[1], &proof,
+  ), 6);
+  assert!(!zone_gen::mob_group_member_root_matches( // a path of the wrong LENGTH is refused before a hash
+    &root, count, world, 487, 487, SEED, 1784980009967, PROGRESS, 0, ids[0], templates[0],
+    member_templates[0], xs[0], zs[0], sizes[0], gseeds[0], &vector<u8>[],
+  ), 7);
+  // AND THE DISPATCH NEVER CROSSES FORMATS: a format-3 commitment is not a format-4 root.
+  let set_commitment = zone_gen::mob_group_commitment_members(
+    world, 487, 487, SEED, 1784980009967, &ids, &templates, &member_templates, &xs, &zs, &sizes, &gseeds,
+  );
+  assert!(!zone_gen::mob_group_member_root_matches(
+    &set_commitment, count, world, 487, 487, SEED, 1784980009967, PROGRESS, 0, ids[0], templates[0],
+    member_templates[0], xs[0], zs[0], sizes[0], gseeds[0], &proof,
+  ), 8);
 }
 
 #[test]
