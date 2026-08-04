@@ -23,6 +23,11 @@ import {
   reminder_title,
   run_deadman,
 } from './loop_deadman.mjs'
+import {
+  HEARTBEAT_STALE_AFTER_MS,
+  decide_promote_queue_heartbeat,
+  heartbeat_verdict_line,
+} from './promote_queue_heartbeat.mjs'
 
 const REPOSITORY = 'aresrpg/aresrpg'
 const HOUR_MS = 3_600_000
@@ -133,6 +138,27 @@ describe('the staleness verdict', () => {
     const decision = decide_loop(architecture_audit, null, Date.parse('2026-07-31T00:00:00Z'))
     expect(decision.state).toBe('missing')
     expect(decision.age_hours).toBe(null)
+  })
+})
+
+describe('the promote-queue schedule heartbeat', () => {
+  const heartbeat_at = Date.parse('2026-08-04T22:43:03Z')
+  const decide_at_age = (age_ms) => decide_promote_queue_heartbeat('2026-08-04T22:43:03Z\n', heartbeat_at + age_ms)
+
+  it('stays fresh through exactly three 10-minute schedule intervals', () => {
+    expect(decide_at_age(HEARTBEAT_STALE_AFTER_MS).state).toBe('fresh')
+  })
+
+  it('reds immediately after the >30-minute staleness bar with the scheduler-specific reason', () => {
+    const decision = decide_at_age(HEARTBEAT_STALE_AFTER_MS + 1)
+    expect(decision.state).toBe('stale')
+    expect(heartbeat_verdict_line(decision)).toContain('GitHub stopped scheduling promote-queue')
+    expect(heartbeat_verdict_line(decision)).toContain('>30 min')
+  })
+
+  it('fails closed when the cache is missing or its timestamp cannot be parsed', () => {
+    expect(decide_promote_queue_heartbeat('', heartbeat_at).state).toBe('missing')
+    expect(decide_promote_queue_heartbeat('not-a-timestamp', heartbeat_at).state).toBe('invalid')
   })
 })
 

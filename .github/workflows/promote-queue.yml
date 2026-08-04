@@ -89,6 +89,15 @@ jobs:
     env:
       GH_TOKEN: ${{ github.token }}
     steps:
+      - name: write this schedule run's queue heartbeat
+        if: github.event_name == 'schedule'
+        run: date -u +'%Y-%m-%dT%H:%M:%SZ' > "$RUNNER_TEMP/promote-queue-heartbeat"
+      - name: publish the queue heartbeat
+        if: github.event_name == 'schedule'
+        uses: actions/cache/save@5a3ec84eff668545956fd18022155c47e93e2684 # v4.2.3
+        with:
+          path: ${{ runner.temp }}/promote-queue-heartbeat
+          key: promote-queue-heartbeat-${{ github.run_id }}-${{ github.run_attempt }}
       - name: forge-canary — this engine must be UNABLE to mint a commit status (#1573)
         # The runtime half of the split's tooth: attempt a no-op `forge-canary` status mint with
         # THIS job's own token. Refusal is the pass. If the mint ever succeeds, statuses:write came
