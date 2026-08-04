@@ -85,9 +85,11 @@ test('the sdk exposes no door onto a bundled spell corpus', () => {
 // Breadth is the point (~2.6k files read), so this arm buys the I/O time it needs rather than flaking under a
 // loaded machine's default 5s.
 test(
-  'no file in packages/ or api/ ingests a bundled spell corpus',
+  'no file in packages/, api/ or scripts/ ingests a bundled spell corpus',
   () => {
-    const files = [...code_files(path.join(repo_root, 'packages')), ...code_files(path.join(repo_root, 'api'))]
+    // scripts/ is in scope on purpose: a regenerated corpus would be born there, and the extinct
+    // `scripts/seed-content.js` is exactly how the deleted artifact came to exist.
+    const files = ['packages', 'api', 'scripts'].flatMap(directory => code_files(path.join(repo_root, directory)))
     expect(files.length).toBeGreaterThan(2000) // the sweep ran over the real tree, not an empty one
 
     const offenders = files
