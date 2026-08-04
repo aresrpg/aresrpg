@@ -24,7 +24,7 @@
 mod decode;
 mod journal;
 mod model;
-mod party;
+pub(super) mod party;
 mod project;
 mod snapshot;
 mod xp_curve;

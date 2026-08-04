@@ -137,8 +137,14 @@ pub(super) fn remove_party_invites(party: &str) -> Vec<RedisWrite> {
 pub(super) fn party_key(party: &str) -> String {
     format!("rpc:party:{party}")
 }
-pub(super) fn character_party_key(character: &str) -> String {
+pub(crate) fn character_party_key(character: &str) -> String {
     format!("rpc:char_party:{character}")
+}
+/// The reverse index [`LUA_PENDING`] maintains. The script derives the same name inline
+/// because a Lua body cannot call Rust; this is the ONE home every Rust reader uses, and
+/// the two are pinned together by [`tests::the_pending_script_indexes_the_key_rust_reads`].
+pub(crate) fn character_invites_key(character: &str) -> String {
+    format!("rpc:idx:char_invites:{character}")
 }
 pub(super) fn party_invites_key(party: &str) -> String {
     format!("rpc:party_invites:{party}")
@@ -537,6 +543,18 @@ mod tests {
         assert_eq!(
             map_party_object(&oid(0x99).to_canonical_string(true), &body),
             None
+        );
+    }
+
+    /// The reverse-index name lives in two languages by necessity (the Lua script cannot call
+    /// Rust). #2086 gave it a Rust reader — the party SSE leg — so the two spellings are pinned
+    /// against each other here rather than left to drift silently into an empty stream.
+    #[test]
+    fn the_pending_script_indexes_the_key_rust_reads() {
+        let prefix = character_invites_key("");
+        assert!(
+            LUA_PENDING.contains(&format!("'{prefix}' .. character")),
+            "LUA_PENDING must build exactly {prefix}<character>"
         );
     }
 
