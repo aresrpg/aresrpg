@@ -553,9 +553,11 @@ const commitment_proof = (commitment, context, groups, target_index) => {
  * @param {{ world_id:string, zx:number, zy:number, zone_seed:string|number|bigint,
  *   discovered_at_ms:string|number|bigint, group_root:number[]|Uint8Array, group_count:number,
  *   groups:Array<{ index:number, spawn_id:string|number|bigint, template_id:string, x:number, z:number,
- *     size:number, group_seed:string|number|bigint, member_template_ids?:string[] }>, index:number }} input
- *   `member_template_ids` is the group's per-member roster — REQUIRED on a format-3 (member-list) zone, whose
- *   commitment covers it, and ignored by the format-1/2 digests.
+ *     size:number, group_seed:string|number|bigint, member_template_ids?:string[] }>, index:number,
+ *   progress?:number|string|bigint }} input
+ *   `member_template_ids` is the group's per-member roster and `progress` the zone's §4 difficulty — REQUIRED on
+ *   a format-3 (member-list) or format-4 (member-tree) zone, whose commitments cover them, and ignored by the
+ *   format-1/2 digests.
  * @returns {MobGroupProof|null}
  */
 export function compose_mob_group_proof(input) {
@@ -692,7 +694,7 @@ const bit_consumed = (bitmap, index) =>
  *     res_bitmap:number[], group_root?:number[]|Uint8Array|null }, zx:number, zy:number, world:object,
  *     team_bound:number }) =>
  *     Array<{ kind:string, index:number, spawn_id:string, template_id:string, x:number, z:number,
- *       size:number, group_seed:string }>,
+ *       size:number, group_seed:string, members?:string[], progress?:number }>,
  *   index?:number|string|bigint|null, spawn_id?:number|string|bigint|null,
  *   mob_template_id?:string|null }} input
  * @returns {MobGroupProof|null}
