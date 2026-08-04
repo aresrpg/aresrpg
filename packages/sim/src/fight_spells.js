@@ -64,6 +64,7 @@ import {
   row_flags,
   SHAPE_POINT,
   TF_NONE,
+  TF_ONLY_CASTER,
 } from './spell_effect.js'
 import {
   apply_retro_effect,
@@ -902,24 +903,26 @@ export const process_spell_cast = (
       const targets =
         effect.type === 'TELEPORT'
           ? [caster_id]
-          : [...acc.state.team0, ...acc.state.team1]
-              .filter(
-                entity =>
-                  entity.health > 0 &&
-                  aoe_cells.some(
-                    cell =>
-                      cell.x === entity.cell.x && cell.y === entity.cell.y,
-                  ) &&
-                  effect_hits(
-                    effect.type === 'GEOMETRIC_PUSH'
-                      ? TF_NONE
-                      : (effect.target_filter ?? 0),
-                    entity.id === caster_id,
-                    team_of(acc.state, entity.id) ===
-                      team_of(acc.state, caster_id),
-                  ),
-              )
-              .map(entity => entity.id)
+          : ((effect.target_filter ?? 0) & TF_ONLY_CASTER) === TF_ONLY_CASTER
+            ? [caster_id]
+            : [...acc.state.team0, ...acc.state.team1]
+                .filter(
+                  entity =>
+                    entity.health > 0 &&
+                    aoe_cells.some(
+                      cell =>
+                        cell.x === entity.cell.x && cell.y === entity.cell.y,
+                    ) &&
+                    effect_hits(
+                      effect.type === 'GEOMETRIC_PUSH'
+                        ? TF_NONE
+                        : (effect.target_filter ?? 0),
+                      entity.id === caster_id,
+                      team_of(acc.state, entity.id) ===
+                        team_of(acc.state, caster_id),
+                    ),
+                )
+                .map(entity => entity.id)
       const inner = targets.reduce(
         (inner_acc, target_id) => {
           const res = apply_spell_effect(

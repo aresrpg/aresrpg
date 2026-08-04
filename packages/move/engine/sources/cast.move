@@ -1123,11 +1123,31 @@ fun apply_effect(
     return false
   };
 
-  let element = effect.element();
-  let zone = combat_grid::zone_cells(effect.area_shape(), effect.area_size(), target_cell, caster_cell);
   // Effect 783's geometric kind is intentionally blind to caster ownership or team: every living fighter in the frozen effect
   // zone is repelled. Existing kinds retain their authored target filter.
   let tf = if (kind == spell_effect::k_geometric_push()) spell_effect::tf_none() else effect.target_filter();
+  let only_caster = spell_effect::tf_only_caster();
+  if (tf & only_caster == only_caster) {
+    if (!effect_proc(
+      effect, rng, fight_events::random_domain_effect_chance(), effect_ordinal, random_domains,
+      random_effect_ordinals, random_rolls, random_bounds,
+    )) return false;
+    let target_bonus = if (bonus_target.is_some()
+      && *bonus_target.borrow() == fid_of(caster_side, caster_idx)) damage_bonus else 0;
+    if (caster_side == PLAYER_SIDE) return apply_to_player(
+      fight, caster_side, caster_idx, caster_idx, caster_cell, caster_stats, caster_level, caster_hp, caster_max_hp,
+      effect.element(), effect, target_bonus, damage_roll, effect_ordinal, rng, random_domains,
+      random_effect_ordinals, random_rolls, random_bounds,
+    );
+    return apply_to_mob(
+      fight, caster_side, caster_idx, caster_idx, caster_cell, caster_stats, caster_level, caster_hp, caster_max_hp,
+      effect.element(), effect, target_bonus, damage_roll, effect_ordinal, rng, random_domains,
+      random_effect_ordinals, random_rolls, random_bounds,
+    )
+  };
+
+  let element = effect.element();
+  let zone = combat_grid::zone_cells(effect.area_shape(), effect.area_size(), target_cell, caster_cell);
 
   // PLAYERS in zone: ally = SAME PARTICIPANT TEAM as a player caster (F-08 — PvM seats all sit on team 0, so
   // this degenerates to the old side check; kolizeum seats two player teams and the filter must split them).
