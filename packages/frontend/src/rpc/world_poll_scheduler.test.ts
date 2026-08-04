@@ -122,6 +122,34 @@ describe('world poll scheduler', () => {
     expect(clock.max_live_timers()).toBe(1)
   })
 
+  test('#2158 — an interactive claim runs its read NOW, not at the next stagger tick', async () => {
+    const clock = fake_clock()
+    const scheduler = create_world_poll_scheduler({
+      now: clock.now,
+      set_timeout: clock.set_timeout,
+      clear_timeout: clock.clear_timeout,
+      is_paused: () => false,
+    })
+    const starts: Array<{ key: string; at: number }> = []
+    const run = (key: string) => async () => {
+      starts.push({ key, at: clock.now() })
+      return key
+    }
+
+    const cold = scheduler.schedule('https://rpc.test/v1/characters?ids=a', run('cold'))
+    const queued = scheduler.schedule('https://rpc.test/v1/characters?ids=b', run('background'))
+    await clock.advance_to(0)
+    // The player clicks: one read joins the queued background poll, the other is brand new. Neither may wait.
+    const joined = scheduler.schedule('https://rpc.test/v1/characters?ids=b', run('must-not-run'), true)
+    const clicked = scheduler.schedule('https://rpc.test/v1/characters?ids=c', run('clicked'), true)
+    await clock.advance_to(WORLD_POLL_STAGGER_MS * 2)
+    await Promise.all([cold, queued, joined, clicked])
+
+    expect(joined).toBe(queued)
+    expect(starts.map(({ key }) => key)).toEqual(['cold', 'background', 'clicked'])
+    expect(starts.map(({ at }) => at)).toEqual([0, 0, 0]) // the whole click costs one round trip, not three slots
+  })
+
   test('caps a worst-case world wave at 80/min, leaving 40 requests of the shared server budget', async () => {
     const clock = fake_clock()
     const scheduler = create_world_poll_scheduler({

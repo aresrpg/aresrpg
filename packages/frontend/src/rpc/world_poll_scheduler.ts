@@ -96,14 +96,11 @@ export function create_world_poll_scheduler({
     arm()
   }
 
+  /** An interaction claimed a job that is still only QUEUED: pull it out of the FIFO, run it now, and re-arm
+   *  the ticker for whatever was behind it. A job already running is simply awaited — it is as early as it gets. */
   const promote = (key: string) => {
     const job = pending.get(key)
     if (!job || !queue.includes(job)) return
-    queue = [job, ...queue.filter((candidate) => candidate !== job)]
-  }
-
-  /** Pull a queued job out of the FIFO and run it now, then re-arm the ticker for whatever is left behind it. */
-  const start_now = (job: Readonly<PollJob>) => {
     queue = queue.filter((candidate) => candidate !== job)
     if (timer != null) clear_timeout(timer)
     timer = null
@@ -114,7 +111,7 @@ export function create_world_poll_scheduler({
   const schedule = <T>(key: string, run: () => Promise<T>, priority = false): Promise<T> => {
     const existing = pending.get(key)
     if (existing) {
-      if (priority && queue.includes(existing)) start_now(existing)
+      if (priority) promote(key)
       return existing.promise as Promise<T>
     }
 

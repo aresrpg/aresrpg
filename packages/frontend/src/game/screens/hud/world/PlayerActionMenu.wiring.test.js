@@ -84,7 +84,8 @@ describe('friend-list fast travel (#327)', () => {
   it('warms at picker intent and both flight producers wait for that resolved cache entry', () => {
     expect(source).toContain('void preload_mount_glb(ft_dragon_glb_url())')
     expect(effects_source).toContain('const dragon_ready = preload_mount_glb(ft_dragon_glb_url())')
-    expect(effects_source).toContain('out.ok && !(await dragon_ready)')
+    expect(effects_source).toContain('const dragon = await dragon_ready')
+    expect(effects_source).toContain("if (!dragon) return dispatch({ traveler_id, type: 'refused'")
     expect(group_source).toContain('await preload_mount_glb(ft_dragon_glb_url())')
   })
 })
