@@ -31,7 +31,13 @@ const cast = () => ({
 
 const hit = (amount, remaining_hp, victim_idx = '1') => ({
   type: '0xENGINE::fight_events::Hit',
-  parsedJson: { fight: FIGHT, victim_is_mob: true, victim_idx, amount: String(amount), remaining_hp: String(remaining_hp) },
+  parsedJson: {
+    fight: FIGHT,
+    victim_is_mob: true,
+    victim_idx,
+    amount: String(amount),
+    remaining_hp: String(remaining_hp),
+  },
 })
 
 const resolve_fighter_id = ({ is_mob, idx, character }) => character ?? `${is_mob ? 'm' : 'p'}${idx}`
