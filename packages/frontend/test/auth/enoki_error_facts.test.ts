@@ -63,7 +63,9 @@ describe('enoki_error_facts', () => {
       detail: 'Bad Request',
     })
     expect(error.name).toBe('ZkLoginProvingError')
-    expect(error.message).toBe('zkLogin proving rejected — EnokiClientError 400 [zklogin_max_epoch_expired]: Bad Request')
+    expect(error.message).toBe(
+      'zkLogin proving rejected — EnokiClientError 400 [zklogin_max_epoch_expired]: Bad Request'
+    )
     // a `cause` would be walked by Sentry's linked-errors integration — straight past every scrub above
     expect(error.cause).toBeUndefined()
   })

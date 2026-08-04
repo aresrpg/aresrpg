@@ -62,8 +62,9 @@ const wrapped_wallet = (session: unknown, sign: ReturnType<typeof mock>, throws 
   } as never)
 
 const sign_with = (wallet: ReturnType<typeof with_proof_retry>) =>
-  (wallet.features['sui:signPersonalMessage'] as { signPersonalMessage: (...a: never[]) => Promise<unknown> })
-    .signPersonalMessage({ account: { address: '0xabc' }, message: new Uint8Array(), chain: 'sui:testnet' } as never)
+  (
+    wallet.features['sui:signPersonalMessage'] as { signPersonalMessage: (...a: never[]) => Promise<unknown> }
+  ).signPersonalMessage({ account: { address: '0xabc' }, message: new Uint8Array(), chain: 'sui:testnet' } as never)
 
 describe('the sign door refuses a dead session instead of triggering a blocked popup', () => {
   it('refuses BEFORE the wallet is ever called — nothing is signed, nothing is built', async () => {
