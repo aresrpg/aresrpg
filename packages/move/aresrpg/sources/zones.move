@@ -287,7 +287,9 @@ fun y152(
   // keep replaying their own stored format, forever.
   let (msids, mt, mmembers, mx, mz, ms, mg, _progress) =
     zone_comp::y72(world, zx, zy, seed, config.team_size_bound());
-  let (rsids, _rt, _rx, _rz, _rj, _rr) = zone_comp::y73(world, zx, zy, seed);
+  // the resource stream's SIZE is all this door reports (`ZoneSearched.resource_nodes`, the res-bitmap's bit
+  // width) — the count-only roll skips the per-cell template/job/tier columns nothing here reads (#2195)
+  let res_cells = zone_comp::y74(world, zx, zy, seed);
 
   // ── write: create-or-RE-ROLL the zone DF (new seed, bitmaps reset — the top-up's derivation-model successor) ──
   let wuid = world::uid_mut(world);
@@ -311,7 +313,7 @@ fun y152(
   };
   y161(wuid, zx, zy); // the re-roll renames every spawn — the old rounds name nothing
 
-  event::emit(ZoneSearched { world: wid, zx, zy, at_ms: now, mob_groups: msids.length(), resource_nodes: rsids.length() });
+  event::emit(ZoneSearched { world: wid, zx, zy, at_ms: now, mob_groups: msids.length(), resource_nodes: res_cells });
 }
 
 // ╔════════════════ [ CLAIM MOB GROUP (fight-entry seam — travel-verify, checkpoint, consume the bit) ] ═ ]
@@ -719,6 +721,10 @@ public fun drain_zones(cap: &AdminCap, world: &mut World, zxs: vector<u32>, zys:
 // seed+bitmaps, which IS the cost invariant. Derivations that never read a group SIZE pass team_bound = 1: the
 // size clamp draws nothing, so ids/positions/templates are identical for ANY bound (kernel stream law).
 
+/// What the search door REPORTED — the field `/v1` subtracts the res-bitmap popcount from to serve live counts.
+#[test_only]
+public fun searched_resource_nodes(e: &ZoneSearched): u64 { e.resource_nodes }
+
 #[test_only]
 public fun zone_exists(world: &World, zx: u32, zy: u32): bool {
   df::exists(world::uid(world), ZoneKey { zx, zy })
@@ -767,13 +773,9 @@ public(package) fun derive_mobs(world: &World, zx: u32, zy: u32, seed: u64, team
 /// The resource twin of `derive_mobs` — the SAME commitment byte selects both streams, so a zone's mobs and its
 /// resource cells are always derived by one algorithm.
 public(package) fun derive_res(world: &World, zx: u32, zy: u32, seed: u64): (vector<u64>, vector<ID>, vector<u32>, vector<u32>, vector<u8>, vector<u8>) {
-  let format = y162(world, zx, zy);
-  // Formats 2 AND 3 are both LATTICE zones — the member list changed what a group HOLDS, never where anything sits.
-  if (format == 2 || format == 3) {
-    zone_comp::y73(world, zx, zy, seed)
-  } else {
-    zone_comp::derive_res(world, zx, zy, seed)
-  }
+  // Formats 2 AND 3 are both LATTICE zones — the member list changed what a group HOLDS, never where anything
+  // sits; 0 (unreadable commitment) and 1 (none) are the legacy stream, so `>= 2` IS "lattice" over y162's range.
+  zone_comp::derive_res(world, zx, zy, seed, y162(world, zx, zy) >= 2)
 }
 
 // name shortened 2026-07-27: aresrpg at Sui object-size ceiling (republish restructure); see the #1315 landing

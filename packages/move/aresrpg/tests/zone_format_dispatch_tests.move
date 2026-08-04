@@ -9,7 +9,7 @@ module aresrpg::zone_format_dispatch_tests;
 
 use aresrpg::{character_link, config::GameConfig, test_world, version::Version, world::{Self, World}, zone_comp, zones, zones_view};
 use kiosk::personal_kiosk::{Self, PersonalKioskCap};
-use sui::{clock, kiosk::Kiosk, test_scenario::{Self as ts, Scenario}};
+use sui::{clock, event, kiosk::Kiosk, test_scenario::{Self as ts, Scenario}};
 
 const TEAM_BOUND: u64 = 6;
 
@@ -31,7 +31,9 @@ fun do_join(sc: &mut Scenario, cid: ID, now: u64) {
   ts::return_shared(ver);
 }
 
-fun do_search(sc: &mut Scenario, cid: ID, x: u32, z: u32, now: u64) {
+/// Searches, and returns what the door REPORTED — `ZoneSearched.resource_nodes`, read inside the search's own
+/// transaction (the event buffer is per-tx).
+fun do_search(sc: &mut Scenario, cid: ID, x: u32, z: u32, now: u64): u64 {
   sc.next_tx(test_world::owner());
   let mut w = sc.take_shared<World>();
   let mut k = sc.take_shared<Kiosk>();
@@ -41,16 +43,20 @@ fun do_search(sc: &mut Scenario, cid: ID, x: u32, z: u32, now: u64) {
   let mut clk = clock::create_for_testing(sc.ctx());
   clk.set_for_testing(now);
   zones::search_for_testing(&mut w, &mut k, &pkcap, cid, x, z, &cfg, &ver, &clk);
+  let searched = event::events_by_type<zones::ZoneSearched>();
+  assert!(searched.length() == 1, 99);
+  let reported = zones::searched_resource_nodes(&searched[0]);
   clk.destroy_for_testing();
   ts::return_shared(w);
   ts::return_shared(k);
   sc.return_to_sender(pkcap);
   ts::return_shared(cfg);
   ts::return_shared(ver);
+  reported
 }
 
-/// Boot a world, join, and search the occupied zone. Returns its key.
-fun searched_zone(sc: &mut Scenario): (u32, u32) {
+/// Boot a world, join, and search the occupied zone. Returns its key and the search's REPORTED node count.
+fun searched_zone(sc: &mut Scenario): (u32, u32, u64) {
   test_world::boot(sc);
   let tid = test_world::make_resource_template(sc);
   let wid = test_world::make_world(sc, tid, 0, 1);
@@ -63,12 +69,33 @@ fun searched_zone(sc: &mut Scenario): (u32, u32) {
   ts::return_shared(k);
   sc.return_to_sender(pkcap);
   let (px, pz) = (world::x(&cp), world::z(&cp));
-  do_search(sc, cid, px, pz, 2000);
+  let reported = do_search(sc, cid, px, pz, 2000);
   sc.next_tx(test_world::owner());
   let w = sc.take_shared<World>();
   let (zx, zy) = world::zone_of(&w, px, pz);
   ts::return_shared(w);
-  (zx, zy)
+  (zx, zy, reported)
+}
+
+#[test]
+/// #2195 — THE COUNT THE DOOR REPORTS IS THE COUNT THE ZONE HAS. `search_zone` reads no resource column, so it
+/// pays for a count-only roll (`zone_comp::y74`) instead of the decorated derivation; the whole risk of that
+/// substitution is the two silently disagreeing, and `ZoneSearched.resource_nodes` is not a cosmetic number —
+/// `/v1/zones` serves LIVE counts as this total minus the res-bitmap popcount, so a wrong total is a wrong map
+/// for the zone's whole life. Asserted against the SAME dispatch door the gather seam and `zones_view` read
+/// their cells through.
+fun the_search_event_reports_the_derived_resource_cell_count() {
+  let mut sc = ts::begin(test_world::owner());
+  let (zx, zy, reported) = searched_zone(&mut sc);
+  sc.next_tx(test_world::owner());
+  let w = sc.take_shared<World>();
+  let seed = zones::zone_seed(&w, zx, zy);
+  let (cells, _t, _x, _z, _j, _r) = zones::derive_res(&w, zx, zy, seed);
+  // positive control: an empty derivation would make any reported count trivially "right"
+  assert!(cells.length() > 0, 1);
+  assert!(reported == cells.length(), 0);
+  ts::return_shared(w);
+  sc.end();
 }
 
 #[test]
@@ -77,7 +104,7 @@ fun searched_zone(sc: &mut Scenario): (u32, u32) {
 /// the dispatcher's whole contract and cannot pass by the two derivations happening to agree.
 fun the_commitment_byte_selects_the_mob_derivation() {
   let mut sc = ts::begin(test_world::owner());
-  let (zx, zy) = searched_zone(&mut sc);
+  let (zx, zy, _reported) = searched_zone(&mut sc);
   sc.next_tx(test_world::owner());
   let mut w = sc.take_shared<World>();
   let seed = zones::zone_seed(&w, zx, zy);
@@ -109,23 +136,23 @@ fun the_commitment_byte_selects_the_mob_derivation() {
 /// the legacy sampler, or the two would name different cells for one res-bitmap index (the gather door's key).
 fun the_commitment_byte_selects_the_resource_derivation() {
   let mut sc = ts::begin(test_world::owner());
-  let (zx, zy) = searched_zone(&mut sc);
+  let (zx, zy, _reported) = searched_zone(&mut sc);
   sc.next_tx(test_world::owner());
   let mut w = sc.take_shared<World>();
   let seed = zones::zone_seed(&w, zx, zy);
 
   // A member-list zone is a LATTICE zone: format 3 changed what a group HOLDS, never where anything sits.
-  let (mem_ids, _tm, mem_x, mem_z, _jm, _rm) = zone_comp::y73(&w, zx, zy, seed);
+  let (mem_ids, _tm, mem_x, mem_z, _jm, _rm) = zone_comp::derive_res(&w, zx, zy, seed, true);
   let (got3, _t5, got3_x, got3_z, _j5, _r5) = zones::derive_res(&w, zx, zy, seed);
   assert!(got3 == mem_ids && got3_x == mem_x && got3_z == mem_z, 2);
 
   zones::remove_group_commitment_for_testing(&mut w, zx, zy);
-  let (want_ids, _t, want_x, want_z, _j, _r) = zone_comp::derive_res(&w, zx, zy, seed);
+  let (want_ids, _t, want_x, want_z, _j, _r) = zone_comp::derive_res(&w, zx, zy, seed, false);
   let (got_ids, _t2, got_x, got_z, _j2, _r2) = zones::derive_res(&w, zx, zy, seed);
   assert!(got_ids == want_ids && got_x == want_x && got_z == want_z, 0);
 
   zones::set_lattice_commitment_for_testing(&mut w, zx, zy, TEAM_BOUND);
-  let (grid_ids, _t3, grid_x, grid_z, _j3, _r3) = zone_comp::y73(&w, zx, zy, seed);
+  let (grid_ids, _t3, grid_x, grid_z, _j3, _r3) = zone_comp::derive_res(&w, zx, zy, seed, true);
   let (now_ids, _t4, now_x, now_z, _j4, _r4) = zones::derive_res(&w, zx, zy, seed);
   assert!(now_ids == grid_ids && now_x == grid_x && now_z == grid_z, 1);
 
@@ -140,7 +167,7 @@ fun the_commitment_byte_selects_the_resource_derivation() {
 /// `zone_gen_grid_tests` was captured through.)
 fun the_view_getters_follow_the_commitment_byte() {
   let mut sc = ts::begin(test_world::owner());
-  let (zx, zy) = searched_zone(&mut sc);
+  let (zx, zy, _reported) = searched_zone(&mut sc);
   sc.next_tx(test_world::owner());
   let mut w = sc.take_shared<World>();
   let seed = zones::zone_seed(&w, zx, zy);

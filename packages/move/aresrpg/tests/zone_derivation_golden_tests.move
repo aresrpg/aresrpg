@@ -158,11 +158,7 @@ fun sweep_res(w: &World, grid: bool): u64 {
   while (a < zs.length()) {
     let mut b = 0;
     while (b < ss.length()) {
-      let (sids, tpls, xs, zzs, jobs, tiers) = if (grid) {
-        zone_comp::y73(w, zs[a], zs[a], ss[b])
-      } else {
-        zone_comp::derive_res(w, zs[a], zs[a], ss[b])
-      };
+      let (sids, tpls, xs, zzs, jobs, tiers) = zone_comp::derive_res(w, zs[a], zs[a], ss[b], grid);
       acc = fold_u64s(acc, &sids);
       acc = fold_ids(acc, &tpls);
       acc = fold_u32s(acc, &xs);
