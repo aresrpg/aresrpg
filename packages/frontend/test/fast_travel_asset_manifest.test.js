@@ -24,10 +24,19 @@ describe('fast-travel assets in the built manifest', () => {
 
   test('the production and preview variants select only sealed assets', () => {
     expect(['fire', 'frost', 'void', 'unknown'].map(fast_travel_dragon_file)).toEqual([
-      'ln.glb',
+      'dragon-fire.glb',
       'dragon-frost.glb',
       'dragon-void.glb',
-      'ln.glb',
+      'dragon-fire.glb',
     ])
+  })
+
+  // ROW #2199 — the ridden dragon 404'd because the code asked for an internal codename (`ln.glb`) the bucket
+  // never held. The key the flight mount resolves is pinned here, and the shape gate below is the CLASS fix: a
+  // codename cannot ship in a public URL, whatever it is called next time.
+  test('the flight mount resolves the published dragon-fire key, and no ref is a codename', () => {
+    configure_assets(manifest)
+    expect(asset_url('mob', fast_travel_dragon_file())).toBe(`${manifest.aggregator}/models/mobs/dragon-fire.glb`)
+    for (const { filename } of fast_travel_asset_refs) expect(filename).toMatch(/^dragon-(fire|frost|void)\.glb$/)
   })
 })

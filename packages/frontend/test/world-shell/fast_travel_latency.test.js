@@ -208,7 +208,7 @@ describe('#2158 — the click→flight read plan under D51', () => {
 
 describe('#2158 — the warm dragon costs the click nothing', () => {
   const GLB_LOAD_MS = 900 // a cold fetch+parse of the ~1.15MB dragon
-  const URL_KEY = 'https://cdn.test/mob/ln.glb'
+  const URL_KEY = 'https://cdn.test/mob/dragon-fire.glb'
 
   const staged_cache = () => {
     let loads = 0

@@ -18,13 +18,10 @@ import { clone as clone_skinned } from 'three/examples/jsm/utils/SkeletonUtils.j
 
 import { apply_avatar_material, load_glb_checked } from '@aresrpg/engine3/player'
 import { game_log } from '../core/log.js'
+import { dragon_glb_file } from './fast_travel_assets.js'
 import { model_asset_url } from './model_asset_url.js'
 
-const VARIANTS = /** @type {Record<string, string>} */ ({
-  void: 'dragon-void.glb',
-  frost: 'dragon-frost.glb',
-  fire: 'dragon-fire.glb',
-})
+const AMBIENT_DEFAULT = 'void' // the sky dragon soars void by default; the ridden mount's own default is fire
 const TARGET_SPAN = 12 // world blocks — the dragon's longest dimension after normalisation (big, cinematic)
 const RADIUS = 140 // circle radius (blocks) around the spawn — sweeps the whole sky above the zone
 const ALTITUDE = 112 // metres ABOVE the circle centre — peaks sit ≈195 m, so this clears them for a sky vista
@@ -44,7 +41,7 @@ export function create_sky_dragon({ engine, center, variant }) {
   const key = String(
     variant ?? new URLSearchParams(typeof location !== 'undefined' ? location.search : '').get('dragon') ?? ''
   ).toLowerCase()
-  const filename = VARIANTS[key] ?? VARIANTS.void
+  const filename = dragon_glb_file(key) ?? dragon_glb_file(AMBIENT_DEFAULT)
   const url = model_asset_url('mob', filename)
   if (!url) return { dispose() {} }
   const [cx, cy_base, cz] = center
