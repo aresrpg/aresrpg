@@ -78,6 +78,15 @@ export const TURN_CRED = env.VITE_TURN_CRED || ''
 export const SENTRY_DSN = env.VITE_SENTRY_DSN || ''
 export const NETWORK = env.VITE_NETWORK || 'testnet'
 
+// The DEPLOY TARGET this bundle was built for — Vercel's own `VERCEL_ENV` ('production' | 'preview'), exposed
+// to the build as a system variable; empty in a local build. It exists here for ONE reason (#2192): the DSN
+// above is a Vercel env var scoped to the PRODUCTION environment, so every preview build — including the public
+// soak host `edge.aresrpg.world`, which players actually play on — ships with an empty DSN and reports nothing.
+// Two days of player errors were console-only and nobody could tell, because an unarmed reporter looked exactly
+// like a quiet one. Knowing the target lets report.js SAY it is unarmed, and keeps a preview's events out of
+// the production stream once the DSN is granted to previews too.
+export const DEPLOY_ENV = env.VITE_VERCEL_ENV || ''
+
 // UNSAFE, TESTNET-ONLY override for the un-simulatable `aresrpg_items::shop::buy` gas budget (per-item MIST).
 // A `&Random` buy CANNOT be dry-run, so the SDK REFUSES to derive a budget until the real per-item cost is
 // measured + stamped at the publish rehearsal (MEASURED_BUY_GAS_MIST). Setting this lets a PRE-measurement
