@@ -1,5 +1,4 @@
-4be2718b6 → Refs #2151 — fix(fight): a surviving victim's hit is priced by the journal, not the client
-b0d76979e → Refs #2151 — fix(fight): an adopted divergence carries the correction its history needs
-318ddcb66 → Refs #2151 — fix(fight): the adopted amount rewrites the log line the click predicted
-9ca34df91 → Refs #2151 — style(fight): prettier the #2151 pricing fixture
-f8e67c030 → Refs #2211 — fix(party): an executed accept failure leaves the invite card dead
+563b952f9 → Refs #2178 — fix(craft): the crafted output enters the bag from its own receipt
+e2702708f → Refs #2178 — fix(crush): the rune yield enters the bag from its own receipt
+211475798 → Refs #2178 — fix(roster): a mid-load repaint request is served, not dropped
+172ead1c3 → Refs #2178 — test(loot): make the #2178 proofs order-independent
