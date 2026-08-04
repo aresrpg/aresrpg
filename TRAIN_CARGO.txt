@@ -1,2 +1,3 @@
-285fe4e7d → Refs #2148 — ci: measure promote-queue heartbeat
-9e0bdb163 → Refs #2133 — feat(probe): instrument served corpus
+04cd3865b → Refs #2145 — fix(fight): predict casts with live caster stats
+67b341a0f → Refs #2153 — fix(move,sim): caster-targeted effects bypass zone pass
+7605d01cb → Refs #2152 — fix(fight): surface refused prediction divergence
