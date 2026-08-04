@@ -10,6 +10,7 @@ import {
   ci_context,
   republish_window_verdict,
   run_compatibility_probe,
+  significant_tail,
   size_verdict,
 } from './ceremony_preflight_compat.mjs'
 
@@ -200,4 +201,61 @@ test('a warning-escalation death cannot hide either compatibility verdict', () =
     expect([...result.errors.keys()]).toEqual(fixture.expected)
     expect(result.warning_failure).toContain('This warning can be suppressed')
   }
+})
+
+// #2207, measured on edge against the pinned CLI (sui 1.76.0-6effb4523834): Sui writes DIAGNOSTICS to
+// stdout and BUILD PROGRESS to stderr, and the probe concatenates the two in that order — so the real
+// message is always followed by chatter, and a blind `.slice(-5)` reports the chatter. The live run
+// died on `Cannot find gas coin for signer address ...` and the gate printed
+// "exit 1 — INCLUDING DEPENDENCY Sui | ... | BUILDING aresrpg": a verdict masked by noise.
+const BUILD_NOISE = [
+  '[NOTE] Dependencies on Sui, MoveStdlib, Bridge, DeepBook, and SuiSystem are automatically added',
+  '[Note]: Dependency sources are no longer verified automatically during publication and upgrade.',
+  'INCLUDING DEPENDENCY Kiosk',
+  'INCLUDING DEPENDENCY MoveStdlib',
+  'INCLUDING DEPENDENCY Sui',
+  'INCLUDING DEPENDENCY aresrpg_fight',
+  'INCLUDING DEPENDENCY aresrpg_foundation',
+  'INCLUDING DEPENDENCY aresrpg_spells',
+  'BUILDING aresrpg',
+].join('\n')
+
+test('build chatter never masks the diagnostic it trails', () => {
+  const gas_death =
+    'Cannot find gas coin for signer address 0x087aa862 with amount sufficient for the required gas budget'
+  const tail = significant_tail(`${gas_death}\n${BUILD_NOISE}`)
+
+  expect(tail).toContain('Cannot find gas coin')
+  expect(tail).not.toContain('INCLUDING DEPENDENCY')
+  expect(tail).not.toContain('BUILDING aresrpg')
+})
+
+// Chatter-only output still has to say SOMETHING — a tail that filters itself empty would trade one
+// silent verdict for another.
+test('an all-chatter output still reports its raw tail rather than nothing', () => {
+  expect(significant_tail(BUILD_NOISE)).toContain('BUILDING aresrpg')
+})
+
+// The #1847 fixture put the warning on stderr with an EMPTY stdout, so its tail happened to land on
+// the warning. Production is the other way round: the warning is a stdout diagnostic and the build
+// notes trail it. Under that ordering the warning's own evidence must still survive into the report.
+test('a warning escalation keeps its evidence under production stream ordering', () => {
+  const warning_death = Object.assign(new Error('warnings are errors'), {
+    status: 1,
+    stdout:
+      "error[E09008]: unused function\nThis warning can be suppressed with '#[allow(unused_function)]'\nFailed to build Move modules: Compilation error.\n",
+    stderr: `${BUILD_NOISE}\n`,
+  })
+  const calls = []
+  const run = (file, args) => {
+    calls.push([file, ...args])
+    if (calls.length === 1) throw warning_death
+    return 'AAECAwQ='
+  }
+
+  const result = run_compatibility_probe(['client', 'upgrade', 'fixture'], run)
+
+  expect(calls).toHaveLength(2)
+  expect(result.warning_failure).toContain('This warning can be suppressed')
+  expect(result.warning_failure).not.toContain('INCLUDING DEPENDENCY')
 })
