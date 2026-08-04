@@ -23,6 +23,7 @@ import { manhattan } from '@aresrpg/sim/combat_grid'
 import { get_reachable_cells } from '@aresrpg/sim/pathfind'
 import { get_targetable_cells } from '@aresrpg/sim/spell_targeting'
 import { encode, decode, GRID_W, GRID_H, bfsReachable, bfsPath, lineOfSight } from '@aresrpg/fight/los'
+import { visible_occupant_cells } from '@aresrpg/fight/occupancy'
 import { range_bonus_of } from '@aresrpg/fight/statuses'
 
 // ── DEATH / TRAP BEAT TIMING (resolution pacing, owner L/N) — the constants that time the SEEN death + the
@@ -58,6 +59,23 @@ export const CELL_PAINT_PRIORITY = Object.freeze([
   'los_blocked',
   'target',
 ])
+
+/**
+ * Viewer-scoped occupancy for tactical paint. Invisibility withholds a body from OTHER observers, but the local
+ * fighter's own cell remains visible to its range/target overlays. The generic occupancy projection cannot know
+ * the observer, so this is the one overlay-specific refinement and every paint/click reader shares it.
+ * @param {Map<string, {id?:string, cell?:Cell|null, dead?:boolean, invisible?:boolean}> | Iterable<any>} fighters
+ * @param {string|null|undefined} observer_id
+ * @returns {CellSet}
+ */
+export const observer_visible_occupant_cells = (fighters, observer_id) => {
+  const cells = visible_occupant_cells(fighters)
+  if (observer_id == null) return cells
+  const rows = fighters instanceof Map ? fighters.values() : (fighters ?? [])
+  const self = [...rows].find((fighter) => String(fighter?.id) === String(observer_id))
+  if (self?.cell != null && !self.dead) cells.add(encode(self.cell.x, self.cell.y))
+  return cells
+}
 
 /**
  * Resolve mutually-exclusive base-paint semantics into renderer-neutral per-cell facts.

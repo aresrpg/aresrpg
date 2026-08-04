@@ -15,7 +15,11 @@
 import { describe, expect, test } from 'bun:test'
 import { visible_occupant_cells } from '@aresrpg/fight/occupancy'
 
-import { cast_range_set_dungeon, encode } from '../../src/fight-engine/overlay_intents.js'
+import {
+  cast_range_set_dungeon,
+  encode,
+  observer_visible_occupant_cells,
+} from '../../src/fight-engine/overlay_intents.js'
 import { cast_requires_occupant } from '../../src/game/screens/hud/fight-spells-core.js'
 
 const grid = { width: 10, height: 10 }
@@ -80,6 +84,17 @@ describe('#1741 rider 2 — the withhold never leaks an invisible occupant', () 
 
     expect(sorted(with_hidden)).toEqual(sorted(without_hidden))
     expect(with_hidden.has(encode(5, 3))).toBe(false)
+  })
+})
+
+describe('#2161 — invisibility hides a fighter from others, never from its own overlay', () => {
+  const self = fighter('self', 5, 5, { invisible: true })
+  const hidden_other = fighter('other', 5, 3, { invisible: true })
+
+  test('the observer-aware paint set keeps invisible self and withholds an invisible other', () => {
+    const cells = observer_visible_occupant_cells(new Map([self, hidden_other]), 'self')
+
+    expect(sorted(cells)).toEqual([encode(5, 5)])
   })
 })
 

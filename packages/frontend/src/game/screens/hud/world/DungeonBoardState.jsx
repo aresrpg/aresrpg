@@ -31,10 +31,13 @@ import {
   evolve_caster_cell,
   evolve_draft_health,
 } from '@aresrpg/fight/predict_cast'
-import { cast_range_set_dungeon } from '../../../../fight-engine/overlay_intents.js' // D139: cast_range_set_dungeon = THE cast-legality home (P1 self-cast)
+import {
+  cast_range_set_dungeon,
+  observer_visible_occupant_cells,
+} from '../../../../fight-engine/overlay_intents.js' // D139: cast_range_set_dungeon = THE cast-legality home (P1 self-cast)
 import { character_cast_clock, use_dungeon_turn } from '../../dungeon-turn.js'
 import { encode, decode, manhattan, lineOfSight, bfsReachable } from '@aresrpg/fight/los'
-import { occupancy_of, visible_occupant_cells } from '@aresrpg/fight/occupancy'
+import { occupancy_of } from '@aresrpg/fight/occupancy'
 import { dungeon_grid_of } from '../../dungeon-grid.js'
 import { presentation_blocked_cells } from '../../../../world-shell/fight_board_blockers.js'
 import { on_cooldown, cooldown_left, target_cap_reached, cap_of } from '@aresrpg/fight/draft_budget'
@@ -455,11 +458,12 @@ export function useDungeonBoardState() {
           linear: lvl?.linear === true,
           modifiable_range: lvl?.modifiable_range === true,
           trap_cells: my_trap_cells,
-          // #1741 — a zero-area single-target DAMAGE spell may only aim where something VISIBLE stands (the 1.29
-          // rule, free_cell's withhold inverted). The occupancy read is the PROJECTION's (visible_occupant_cells:
-          // living, non-invisible), never chain truth — refusing a cast on a secretly-held cell would reveal the
-          // invisible entity, so an invisibly-held cell is withheld exactly like an empty one.
-          occupant_cells: cast_requires_occupant(lvl) ? visible_occupant_cells(fight?.fighters) : null,
+          // #1741/#2161 — a zero-area single-target DAMAGE spell may only aim where something VISIBLE stands.
+          // The observer-aware overlay projection withholds invisible OTHERS exactly like empty cells (no leak),
+          // while retaining the local fighter's own invisible cell — invisibility never hides self from self.
+          occupant_cells: cast_requires_occupant(lvl)
+            ? observer_visible_occupant_cells(fight?.fighters, fight?.my_entity_id)
+            : null,
         }
       )
       // #1210: a cell THIS turn's drafted casts already vacate (`optimistic_vacated`, fed to the move masks two

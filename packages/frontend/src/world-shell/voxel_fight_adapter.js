@@ -29,7 +29,7 @@ import { fight_store } from '@aresrpg/fight/store'
 import { GRID_CELLS } from '@aresrpg/fight/los'
 import { fight_cast_beat_effects } from '@aresrpg/fight/present'
 import { cast_resolution, empty_cast_resolution } from '@aresrpg/fight/cast_record'
-import { living_body_cells, visible_occupant_cells } from '@aresrpg/fight/occupancy'
+import { living_body_cells } from '@aresrpg/fight/occupancy'
 import { range_bonus_of } from '@aresrpg/fight/statuses'
 import { weapon_spell_template } from '@aresrpg/fight/predict_cast'
 
@@ -47,6 +47,7 @@ import {
   CAST_TRAVEL_S,
   CAST_SAFETY_MS,
   CELL_PAINT_PRIORITY,
+  observer_visible_occupant_cells,
   resolve_cell_paints,
 } from '../fight-engine/overlay_intents.js'
 import {
@@ -1679,7 +1680,7 @@ export function create_voxel_fight_adapter(
           my_band: by_team[mine ?? 0] ?? [],
           other_band: by_team[mine === 0 ? 1 : 0] ?? [],
           accepts_click: (cell) => project.placement_click(placement_state, decode_cell(cell)) === 'pick',
-          occupied: visible_occupant_cells(fight.fighters),
+          occupied: observer_visible_occupant_cells(fight.fighters, fight.my_entity_id),
         })
         if (pickable.length) lit.placement = pickable
         if (locked.length) lit.placement_locked = locked
@@ -1779,7 +1780,8 @@ export function create_voxel_fight_adapter(
           if (flags.places_trap) flags.trap_cells = fight.my_traps ?? []
           // #1741: a single-target damage spell washes ONLY the cells holding a VISIBLE occupant — the same
           // withhold the click gate applies (one derivation), off the projection's own visibility.
-          if (flags.requires_occupant) flags.occupant_cells = visible_occupant_cells(fight.fighters)
+          if (flags.requires_occupant)
+            flags.occupant_cells = observer_visible_occupant_cells(fight.fighters, fight.my_entity_id)
           const castable = cast_range_set_dungeon(range, active, grid, los, flags)
           const in_range = manhattan_range_cells(range, active, grid, flags) // every cell within the spell's reach
           // free_cell (traps/glyphs): a mob/obstacle cell is NOT a valid target — and shouldn't read as merely
@@ -1963,7 +1965,8 @@ export function create_voxel_fight_adapter(
         // 1.29 no-stack (the wash's hover twin): MY live trap cells are never a castable hover for a trap spell.
         if (flags2.places_trap) flags2.trap_cells = fight.my_traps ?? []
         // #1741 (the wash's hover twin): no telegraph over a cell a single-target damage spell cannot aim at.
-        if (flags2.requires_occupant) flags2.occupant_cells = visible_occupant_cells(fight.fighters)
+        if (flags2.requires_occupant)
+          flags2.occupant_cells = observer_visible_occupant_cells(fight.fighters, fight.my_entity_id)
         const castable2 = cast_range_set_dungeon(hover_range, active, grid2, los2, flags2)
         // The weapon sentinel has no seed row → spell_footprint falls back to the single [cell] (a melee strike).
         if (castable2.has(to_enc)) foot_cells = spell_footprint(fight.armed_spell_id, cell, active.cell, active)
