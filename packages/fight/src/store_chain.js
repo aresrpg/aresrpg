@@ -9,6 +9,7 @@ import { enrich_actions, sorted_tail } from './core_fold.js'
 import { fold_chain_offset } from './draft_budget.js'
 import { price_hit } from './fight_render_prims.js'
 import { fold_key_entity_id, merge_entries, paced_wave_turns, presented_state, recompute } from './fold.js'
+import { hold_open_turn } from './turn_bracket.js'
 import { actor_from_key } from './inputs.js'
 import { claim_predictions, retain_budget_predictions, update_claimed_budget } from './store_prediction.js'
 import { committed_health, COURTESY_EVENT_BASE, observer_ctx } from './store_state.js'
@@ -130,9 +131,26 @@ export const reduce_chain_input = (state, msg, next_core, now) => {
   const owed_turns = paces
     ? paced_wave_turns(state, owed, pace_opts).map((turn) => ({ ...turn, fold_inert: true }))
     : []
-  const new_turns = paces
-    ? paced_wave_turns(owed_turns.length ? { ...state, wave_seq: owed_turns.at(-1).seq } : state, changed, pace_opts)
-    : []
+  // #2209 — the wire fragments one chain batch into one frame per row, so the rows of ONE turn arrive as several
+  // deliveries. `hold_open_turn` is the ONE home that decides which of them may pace yet: a bracket still open
+  // holds its rows (already admitted, already folded) against the board they began on, and paces as a single
+  // batch the moment its closing row lands. Each segment paces off the seq the previous one allocated —
+  // `wave_seq` is an IDENTITY allocator read straight off the draft, and colliding seqs are swallowed whole by
+  // the renderer's monotonic drain (the #2124 drop class).
+  const { segments, hold } = paces ? hold_open_turn(state.wave_hold, changed, state) : { segments: [], hold: state.wave_hold } // prettier-ignore
+  let minted_seq = owed_turns.length ? owed_turns.at(-1).seq : state.wave_seq
+  const new_turns = segments.flatMap((segment) => {
+    // Re-enriched at PACE time against the now-complete tail: a held row was enriched when it was the only row
+    // its delivery carried, and every adjacency derivation (the `damaging` reveal mark) was blind inside that
+    // window. Enrichment is idempotent, so the un-held rows pass through byte-identical.
+    const turns = paced_wave_turns(
+      { ...segment.anchor, wave_seq: minted_seq },
+      enrich_actions(next_core.inbox, segment.rows),
+      { trap_cells: msg.trap_cells ?? [], fighter_health: committed_health(segment.anchor) }
+    )
+    if (turns.length) minted_seq = turns.at(-1).seq
+    return turns
+  })
   const wave = [...state.wave, ...owed_turns, ...new_turns]
   const seq_head = Number(next_core.inbox.seq_head)
   const delivered_seq = Number(next_core.inbox.delivered_seq)
@@ -160,6 +178,7 @@ export const reduce_chain_input = (state, msg, next_core, now) => {
       journal_gap,
       protocol_fault,
       wave,
+      wave_hold: hold,
       wave_seq: wave.length ? wave[wave.length - 1].seq : state.wave_seq,
     },
     now
@@ -194,6 +213,9 @@ export const reduce_snapshot_input = (state, msg, next_core, now) => {
       my_key: ctx.spectator === true ? null : (next_core.my_seat ?? state.my_key),
       commit_due: false,
       wave: [],
+      // An adopted base already contains every row an open bracket was holding, so the bracket dies with the
+      // wave it would have joined — its anchor names a board this seat no longer shows.
+      wave_hold: null,
       // `wave_seq` is an IDENTITY allocator, never a count of what is pending — it does NOT rewind here (#2124).
       // The renderer's drain (world-shell/voxel_fight_adapter.js) skips `turn.seq <= last_enqueued_seq`, a
       // monotonic high-water mark that exists so a seq it has already played can never play twice; rewinding the

@@ -120,6 +120,9 @@ export const empty_fight = () => ({
   ctx: {},
   sim: null,
   wave: [],
+  // #2209 — the turn bracket the wire has not finished delivering yet: `{ anchor, rows }`, admitted and folded,
+  // waiting only for its closing row before it paces as ONE slot (fold.js `hold_open_turn`).
+  wave_hold: null,
   // Renderer/prediction accumulators. They are never an alternate canonical chain fold.
   my_traps: [],
   my_glyphs: [],

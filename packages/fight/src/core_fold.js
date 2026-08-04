@@ -66,9 +66,20 @@ const damaging_casts = (actions) => {
     // Authentic receipts emit effects before Cast. The forward arm retains unwrapped legacy/mock batches;
     // ActionStarted/ActionResolved boundaries keep the following action's effects from leaking backward.
     if (segment_damages_other(actions, index - 1, -1, caster) || segment_damages_other(actions, index + 1, 1, caster))
-      marked.add(index)
+      marked.add(coord_of(action))
   })
   return marked
+}
+
+const coord_of = (action) => `${action.version}:${action.event_idx}`
+const in_order = (rows) => [...rows].sort((a, b) => a.version - b.version || a.event_idx - b.event_idx)
+
+/** The ordered admitted tail, plus any passed row the tail does not carry (the #2124 presentation-OWED rows live
+ *  below the base version and never enter the log). ONE stream for every derivation over adjacency. */
+const ordered_context = (inbox, actions) => {
+  const tail = Object.values(inbox.log).filter((action) => Number(action.version) > inbox.base_version)
+  const known = new Set(tail.map(coord_of))
+  return in_order([...tail, ...actions.filter((action) => !known.has(coord_of(action)))])
 }
 
 /** The sorted authoritative tail: every admitted log action above the snapshot base, in coordinate order, with the
@@ -80,9 +91,12 @@ const damaging_casts = (actions) => {
 export const enrich_actions = (inbox, actions) => {
   const resolve_seat = inbox_resolver(inbox)
   const budget_of = base_budget(inbox.base_view)
-  const damaging = damaging_casts(actions)
-  const enrich = (action, index) => {
-    const marked = damaging.has(index) ? { ...action, damaging: true, resolve_seat } : { ...action, resolve_seat }
+  // #2209 — over the whole ordered tail, NEVER over the delivery window. The live wire hands this door one row
+  // per frame, so a Cast whose Hit rides the next frame has no adjacency inside its own window: derived from the
+  // window, an invisible caster's damaging cast would fail to reveal it on the stream and reveal it on the page.
+  const damaging = damaging_casts(ordered_context(inbox, actions))
+  const enrich = (action) => {
+    const marked = damaging.has(coord_of(action)) ? { ...action, damaging: true, resolve_seat } : { ...action, resolve_seat } // prettier-ignore
     if (action.kind !== 'TurnStarted' || action.is_mob || action.ap != null) return marked
     const budget = budget_of(Number(action.idx))
     return budget ? { ...marked, ap: budget.ap, mp: budget.mp } : marked
