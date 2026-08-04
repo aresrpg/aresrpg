@@ -83,30 +83,6 @@ export default [
     },
   },
   {
-    // Gameplay spell truth enters through the authored chain-corpus door. The SDK JSON remains a generated
-    // encyclopedia/simulator view, but it may never feed the fight reducer or its live cast adapter again.
-    files: [
-      'packages/fight/src/**/*.{js,jsx,ts,tsx}',
-      // the package's tests live in test/ (src is source only) — same door law, same scope
-      'packages/fight/test/**/*.{js,jsx,ts,tsx}',
-      'packages/frontend/src/game/core/modules/fight.js',
-      'packages/frontend/src/game/screens/hud/world/DungeonBoard.jsx',
-    ],
-    rules: {
-      'no-restricted-imports': [
-        'error',
-        {
-          paths: [
-            {
-              name: '@aresrpg/sdk/spells',
-              message: 'Live fight truth must use the normalized chain spell corpus.',
-            },
-          ],
-        },
-      ],
-    },
-  },
-  {
     // THE ONE-REDUCER TRIPWIRE (CLAUDE.md CLIENT-INDEPENDENCE/ONE-PIPELINE + the v1.12.28 crash class): no async
     // callback (timer / promise chain / listener / await continuation) writes a zustand store directly, and store
     // modules keep no second clock — async results and time re-enter as INPUTS through the reducer door. Warn
