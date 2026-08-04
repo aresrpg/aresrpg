@@ -3,8 +3,10 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 //
 // L-L1 — tests live in test/; src/ is source only. Engine and frontend carry measured debt,
-// pinned one exact path per row below. The list may only shrink as scripts/relocate-tests.mjs
-// moves that debt; a fresh *.test.* / *.spec.* under any src/ is red.
+// pinned one exact path per row in scripts/arch/in_src_tests.baseline.txt. The baseline is the
+// tree, exactly: a fresh *.test.* / *.spec.* under any src/ is red, and a row whose file is gone
+// is red too, so scripts/relocate-tests.mjs and the baseline move in the same commit. MAX_IN_SRC_TESTS
+// below is the ceiling's ONE home — the only number that can let the debt grow, and it only shrinks.
 
 import fs from 'node:fs'
 import os from 'node:os'
@@ -14,7 +16,7 @@ import { fileURLToPath as file_url_to_path } from 'node:url'
 const script_path = file_url_to_path(import.meta.url)
 const repo_root = path.resolve(path.dirname(script_path), '..')
 const baseline_path = path.join(repo_root, 'scripts/arch/in_src_tests.baseline.txt')
-const EXPECTED_BASELINE_ROWS = 659
+const MAX_IN_SRC_TESTS = 658
 const ignored_directories = new Set(['.git', '.agents', '.codex', 'build', 'dist', 'node_modules', 'target'])
 const test_file = /\.(?:test|spec)\.[^/]+$/
 
@@ -44,11 +46,11 @@ const baseline_rows = (source) =>
     .map((line) => line.trim())
     .filter((line) => line && !line.startsWith('#'))
 
-export const evaluate_test_location = (current, baseline, expected_baseline_rows = EXPECTED_BASELINE_ROWS) => {
+export const evaluate_test_location = (current, baseline, ceiling = MAX_IN_SRC_TESTS) => {
   const current_set = new Set(current)
   const baseline_set = new Set(baseline)
   return {
-    baseline_growth: Math.max(0, baseline.length - expected_baseline_rows),
+    baseline_growth: Math.max(0, baseline.length - ceiling),
     duplicate_baseline: baseline.filter((file, index) => baseline.indexOf(file) !== index),
     new_tests: current.filter((file) => !baseline_set.has(file)),
     retired_tests: baseline.filter((file) => !current_set.has(file)),
@@ -67,6 +69,13 @@ const failure_lines = (verdict) => {
     failures.push('new test file(s) under src/:')
     failures.push(...verdict.new_tests.map((file) => `  ${file}`))
     failures.push('move them with scripts/relocate-tests.mjs')
+  }
+  if (verdict.retired_tests.length) {
+    failures.push('baseline row(s) whose file is gone — the ceiling must follow the tree down:')
+    failures.push(...verdict.retired_tests.map((file) => `  ${file}`))
+    failures.push(
+      'drop them from scripts/arch/in_src_tests.baseline.txt in the same commit, and lower MAX_IN_SRC_TESTS to match'
+    )
   }
   return failures
 }
@@ -101,8 +110,18 @@ const prove_baseline_refuses_growth = (current, baseline) => {
   console.log(`L-L1 proof ratchet: ${baseline.length + 1}-row synthetic baseline rejected above ${baseline.length}`)
 }
 
+const prove_retired_row_refused = () => {
+  const relocated = 'packages/control/src/gone.test.js'
+  const verdict = evaluate_test_location([], [relocated], 1)
+  const output = failure_lines(verdict).join('\n')
+  if (verdict.retired_tests.length !== 1 || !output.includes(relocated) || !output.includes('MAX_IN_SRC_TESTS'))
+    throw new Error('a baseline row with no file on disk did not trip the follow-the-tree-down tooth')
+  console.log('L-L1 proof stale: a baseline row whose file is gone rejected; ceiling must follow')
+}
+
 try {
   prove_synthetic_red()
+  prove_retired_row_refused()
   const baseline = baseline_rows(fs.readFileSync(baseline_path, 'utf8'))
   const current = in_src_tests(repo_root)
   const verdict = evaluate_test_location(current, baseline)

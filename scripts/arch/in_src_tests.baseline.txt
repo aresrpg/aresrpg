@@ -1,6 +1,7 @@
 # L-L1 in-src test debt baseline — one exact repo-relative path per row.
-# Historical law census: 586 rows. Current edge census: 659 rows (engine 143, frontend 516).
-# This file may only shrink as scripts/relocate-tests.mjs moves tests into sibling test/ trees.
+# This file IS the tree's in-src test set, exactly: a file with no row is red, a row with no file
+# is red. It only shrinks, as scripts/relocate-tests.mjs moves tests into sibling test/ trees.
+# The ceiling has one home — MAX_IN_SRC_TESTS in scripts/check-test-location.mjs; no count here.
 
 packages/engine/src/binding/board_anchor.test.js
 packages/engine/src/binding/cosmetics.test.js
@@ -590,7 +591,6 @@ packages/frontend/src/world-shell/fight_liquidation_burn_law.test.js
 packages/frontend/src/world-shell/fight_live_transition.test.js
 packages/frontend/src/world-shell/fight_liveness.test.js
 packages/frontend/src/world-shell/fight_move_click.test.js
-packages/frontend/src/world-shell/fight_participant_names.test.js
 packages/frontend/src/world-shell/fight_participant_naming.test.js
 packages/frontend/src/world-shell/fight_raised_spells.test.js
 packages/frontend/src/world-shell/fight_recap.test.js
