@@ -4,7 +4,8 @@
 // Viewer-free divergence fingerprint. This hashes only canonical fold facts, never local identity, prediction,
 // pacing, or renderer state. Every viewer of one fight therefore publishes the same digest for the same frontier.
 
-import { mob_entity_id, participant_entity_id } from './fight_control.js'
+import { mob_entity_id } from './fight_control.js'
+import { participant_entity_id } from './participant_identity.js'
 import { project_board } from './core_project.js'
 
 const stable_value = (value) => {

@@ -14,7 +14,8 @@
 // and read through the store's ONE door (`store.committed_truth`). This module owns the PRESENTATION folds only —
 // which is why nothing here derives committed state at all, and why `core_fold.js` may import this file's base.
 
-import { mob_entity_id, mob_entity_index, participant_entity_id } from './fight_control.js'
+import { mob_entity_id, mob_entity_index } from './fight_control.js'
+import { participant_entity_id } from './participant_identity.js'
 import { apply_action, seat_resolver } from './inputs.js'
 import * as settle_input from './inputs.js'
 import { STATUS_PLACEMENT } from './board_state.js'

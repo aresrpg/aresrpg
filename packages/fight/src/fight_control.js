@@ -3,17 +3,12 @@
 // Character-level control selectors for on-chain fights. A participant's character id is the
 // entity identity; its owner address is authorization metadata. Keeping those two facts separate
 // prevents multiple characters owned by one wallet from collapsing into one renderer/input row.
+//
+// The two roster-row IDENTITY predicates moved to participant_identity.js (#2210): they are the core's join
+// vocabulary — the fold, the projections and the identity book all match seats through them — while everything
+// below is a CONTROL selector a consumer surface legitimately calls. Read that file's header for the gate.
 
-/** @param {any} participant @returns {string | null} */
-export function participant_character_id(participant) {
-  const id = participant?.character ?? participant?.character_id
-  return id ? String(id) : null
-}
-
-/** @param {any} participant @returns {string | null} */
-export function participant_entity_id(participant) {
-  return participant_character_id(participant) ?? (participant?.addr ? String(participant.addr) : null)
-}
+import { participant_character_id } from './participant_identity.js'
 
 /** Stable render/input identity of a mob fighter at its chain index. @param {number|string} idx */
 export const mob_entity_id = (idx) => `mob-${Number(idx)}`

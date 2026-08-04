@@ -209,6 +209,26 @@ module.exports = {
       to: { path: '^packages/inventory/src/fight_receipt_roster\\.js$' },
     },
     {
+      name: 'fight-identity-single-surface',
+      comment:
+        'Issue #2210 (SSOT — floor class): "is my seat in the fight read" grew THREE homes and they already ' +
+        'disagreed. world_fight_receipt.my_seat_present matched roster rows on `participant_character_id` (NO ' +
+        'addr fallback) while every fold/projection home matches on `participant_entity_id` (addr fallback), so ' +
+        'a seat keyed by address matched in one and missed in the other — and that wrong-false holds the ' +
+        'joiner’s `fight_syncing` chip FOREVER (the #2154 symptom inverted). participant_identity.js is the ' +
+        'fight core’s join vocabulary — the fold, the projections and the identity book all decide "which ' +
+        'fighter is this row" through it — so it is core-only by construction. The derived seat FACTS are ' +
+        'published instead: each `board_view` escrow row carries its own `id`, `board_view.my_seat_present` ' +
+        'answers the convergence question, and `engine_view` publishes my_entity_id / controlled_entity_ids. A ' +
+        'surface importing these predicates to match seats itself is a fourth home being born; read the ' +
+        'projected fact, or move the derivation into the core beside the others. Deliberately NOT a pin on ' +
+        'fight_control.js, whose remaining exports (mob_entity_id, transaction_character_id, the control ' +
+        'selectors) are consumer-facing vocabulary that resolves no roster row against an identity.',
+      severity: 'error',
+      from: { path: '^packages/(frontend|party|inventory|world)/src/' },
+      to: { path: '^packages/fight/src/participant_identity\\.js$' },
+    },
+    {
       name: 'no-circular',
       comment:
         'L-C1 (composition is associative only on a DAG): no module-level import cycles inside ' +

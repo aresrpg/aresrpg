@@ -8,13 +8,13 @@ import {
   controlled_character_ids,
   mob_entity_id,
   mob_entity_index,
-  participant_entity_id,
   selected_controlled_character_id,
   set_character_cast_key,
   should_auto_select_active,
   take_character_cast_key,
   transaction_character_id,
 } from '../src/fight_control.js'
+import { participant_entity_id } from '../src/participant_identity.js'
 
 const ME = '0xme'
 const OTHER = '0xother'

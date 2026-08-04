@@ -2,7 +2,8 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 // Pure snapshot-base helpers shared by the presentation fold and the headless core fold.
 
-import { mob_entity_index, participant_entity_id } from './fight_control.js'
+import { mob_entity_index } from './fight_control.js'
+import { participant_entity_id } from './participant_identity.js'
 import { empty_state } from './inputs.js'
 import { STATUS_ACTIVE, STATUS_FAILED, STATUS_WON } from './board_state.js'
 import { INVISIBILITY_STATUS_KIND } from './fight_status_snapshot.js'

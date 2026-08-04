@@ -23,7 +23,8 @@
 
 import { experience_to_level } from '@aresrpg/sdk/experience'
 
-import { mob_entity_id, participant_character_id, participant_entity_id } from './fight_control.js'
+import { mob_entity_id } from './fight_control.js'
+import { participant_character_id, participant_entity_id } from './participant_identity.js'
 
 /**
  * The SHORT ID form of an on-chain object id — the only honest display when a real name genuinely cannot be

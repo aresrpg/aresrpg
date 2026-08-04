@@ -10,7 +10,7 @@ import { fileURLToPath } from 'node:url'
 
 import { describe, expect, test } from 'bun:test'
 
-import { participant_entity_id } from '../src/fight_control.js'
+import { participant_entity_id } from '../src/participant_identity.js'
 import { empty_core_state, fight_fingerprint, ingest } from '../src/core.js'
 
 // The recorded cooperative capsule, addressed by its CAPTURE STAMP: the fight id its filename carries is

@@ -52,7 +52,8 @@ describe('receipt-first world fight convergence', () => {
         reads += 1
         if (reads === 2) throw new Error('temporary serving-node miss')
         if (reads === 10) {
-          state.dungeon = { id: 'fight-1' }
+          // The projection's own convergence fact — this session holds no seat, so any readable board is truth.
+          state.dungeon = { id: 'fight-1', my_seat_present: true }
           state.fight_syncing = false
         }
       },
@@ -81,7 +82,7 @@ describe('receipt-first world fight convergence', () => {
         // Safety terminator FAR past any reasonable ceiling — proves the loop is bounded by TIME, not by
         // eventually being handed a hydration side effect. Never reached once the ceiling is respected.
         if (reads > 50) {
-          state.dungeon = { id: 'fight-1' }
+          state.dungeon = { id: 'fight-1', my_seat_present: true }
           state.fight_syncing = false
         }
       },
