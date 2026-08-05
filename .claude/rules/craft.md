@@ -12,6 +12,14 @@
   module, a pattern already in the tree. But a dependency is a marriage — prefer 50 vendored
   lines over a 50k-line package for one function.
 - One-line premortem, always: "this fails if ___". Mitigate the top answer before starting.
+- THE MAP RULE (2026-08-05): before creating ANY new function, constant, table, or store,
+  search the generated repo map's concept index and docs/REGISTRY.md for an existing home —
+  duplicating a concept is instant failure; anything conceptually used twice gets its own
+  module and is imported. A NEW fact home is legal only with its REGISTRY.md row added in the
+  same commit (the registry fence enforces this mechanically).
+- DESIGN-BEFORE-BUILD (2026-08-05): work that creates a genuinely new surface gets a design
+  pass FIRST — one planning mind places every new fact home before builders fan out. Fixing
+  inside an existing home needs no ceremony; creating homes without placement is the violation.
 
 ## While coding
 - Immutable by default; effects at the edges; the core is pure transforms over plain data.
