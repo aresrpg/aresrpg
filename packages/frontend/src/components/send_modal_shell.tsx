@@ -13,10 +13,6 @@ export function truncate_digest(digest: string): string {
   return digest.length <= 16 ? digest : `${digest.slice(0, 10)}...${digest.slice(-6)}`
 }
 
-export function format_sui_exact(mist: bigint): string {
-  return (Number(mist) / 1e9).toString()
-}
-
 export function DigestLink({ digest }: { digest: string }) {
   const { t } = useTranslation()
   const [copied, set_copied] = useState(false)
