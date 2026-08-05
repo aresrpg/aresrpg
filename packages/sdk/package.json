@@ -137,8 +137,8 @@
     "eslint-config-prettier": "10.1.8",
     "eslint-plugin-import": "2.32.0",
     "globals": "^17.8.0",
-    "prettier": "3.9.5",
+    "prettier": "3.9.6",
     "typescript": "5.9.3",
-    "typescript-eslint": "^8.64.0"
+    "typescript-eslint": "^8.65.0"
   }
 }
