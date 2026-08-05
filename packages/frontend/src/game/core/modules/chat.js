@@ -31,17 +31,24 @@ export default function chat() {
     /** @param {import('../game.js').State} state @param {import('../game.js').Action} action */
     reduce(state, { type, payload }) {
       if (type !== 'action/chat_message') return state
-      // THE CORRECTION DOOR (#2151) — a line dispatched under an id already in history REWRITES that row in
-      // place. History is append-only for everything that is new (every producer mints a fresh id, so this
-      // costs them nothing), but a client-side line derived from a PREDICTION can turn out wrong: my own cast
-      // writes its combat-log line at the click, and when the chain adopts a different amount the log must say
-      // so where it already spoke, not append a second number for the player to reconcile by eye. Admitting the
-      // correction as a REPLACEMENT is also what keeps it from being a re-play — one row, one id, one truth.
-      const at = state.message_history.findIndex((row) => row.id === payload.id)
-      if (at >= 0)
-        return { ...state, message_history: state.message_history.map((row, i) => (i === at ? payload : row)) }
-      const next = [...state.message_history, payload].slice(-MAX_MESSAGES)
-      return { ...state, message_history: next }
+      // THE CORRECTION DOOR (#2151), made an EXPLICIT CONTRACT (#2218) — a dispatch rewrites an existing row only
+      // when it says `replaces: <that row's id>`. It must be said out loud because `id` is the SPEAKER's identity,
+      // not the message's: every line one character sends carries the same id, so inferring replacement from an
+      // id collision silently ate each speaker's previous line. The correction earns its door — my own cast writes
+      // its combat-log line at the click, and when the chain adopts a different amount the log must say so where it
+      // already spoke, not append a second number for the player to reconcile by eye; being a REPLACEMENT is also
+      // what keeps it from being a re-play. `replaces` is the instruction, spent here and never stored on the row.
+      const { replaces = null, ...row } = payload
+      if (replaces == null)
+        return { ...state, message_history: [...state.message_history, payload].slice(-MAX_MESSAGES) }
+      const at = state.message_history.findIndex((line) => line.id === replaces)
+      // A replacement addressing a row that is gone (scrolled past MAX_MESSAGES, or a fight torn down) writes
+      // NOTHING: a bare corrected number with no cast above it reads as a hit that never happened.
+      if (at < 0) return state
+      return {
+        ...state,
+        message_history: state.message_history.map((line, i) => (i === at ? { ...row, id: replaces } : line)),
+      }
     },
     /** @param {import('../game.js').Context} context */
     observe({ get_state, dispatch }) {
