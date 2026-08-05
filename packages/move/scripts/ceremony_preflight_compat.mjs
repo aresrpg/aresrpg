@@ -107,7 +107,13 @@ const MAX_OBJECT_SIZE = 102_400
 // fat-fingered AdminCap can do to the xp/loot economy. The old value cost ZERO bytes because it DEDUPED
 // against `AGING_CAP_MAX = 100_000`; 400 is unique in this module, so it needs its own 8-byte u64 entry
 // plus 2 bytes of framing. Ten bytes for a 250× smaller admin blast radius on the money path.
-const SIZE_BUDGETS = { aresrpg: 100_000 }
+//
+// PIN (train-28, 2026-08-05): the two adjudications above are INDEPENDENT and both landed, so neither
+// branch's number was ever the truth — the assembled tree is. Measured on the train tip with
+// `ceremony_preflight_compat.mjs aresrpg --size-only`: 100010 bytes, 2390 under the chain ceiling.
+// That is exactly the format-4 raise (99_304 → 100_000, #2194) plus the MULT_MAX constant-pool
+// entry (+10, #2184). The budget is the measurement, not either lane's forecast of it.
+const SIZE_BUDGETS = { aresrpg: 100_010 }
 
 // ── The republish window ────────────────────────────────────────────────────────────────────────
 // A REPUBLISH is not an upgrade: it mints a fresh package lineage, so the compatibility verifier's
