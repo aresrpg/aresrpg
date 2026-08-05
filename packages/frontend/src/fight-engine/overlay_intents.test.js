@@ -235,11 +235,22 @@ describe('cast_range_set_dungeon — D113 range + integer LOS (mirrors DungeonBo
   it('trap_cells (1.29 no-stack): a cell anchoring MY live trap is never a legal trap target', () => {
     const caster = { cell: c(5, 5) }
     const my_trap = encode(6, 5) // my live trap 1 east — the chain aborts a second trap here (ECellAlreadyTrapped)
-    const trap = cast_range_set_dungeon([1, 4], caster, grid, [], {
-      free_cell: true,
-      los: false,
-      trap_cells: [my_trap],
-    })
+    const trap = cast_range_set_dungeon(
+      {
+        range: [1, 4],
+        modifiable_range: false,
+        linear: false,
+        line_of_sight: false,
+        free_cell: true,
+        effects: [{ kind: 'PLACE_TRAP' }],
+      },
+      caster,
+      grid,
+      [],
+      {
+        trap_cells: [my_trap],
+      }
+    )
     expect(trap.has(my_trap)).toBe(false) // greyed — one trap per cell
     expect(trap.has(encode(4, 5))).toBe(true) // an untrapped free cell stays a legal target
     // WITHOUT trap_cells (a non-placing spell, or no live traps) the same cell stays aimable — the drop is
@@ -247,7 +258,20 @@ describe('cast_range_set_dungeon — D113 range + integer LOS (mirrors DungeonBo
     expect(cast_range_set_dungeon([1, 4], caster, grid, [], { free_cell: true, los: false }).has(my_trap)).toBe(true)
     // a Set or array is accepted as-is (the consumers pass engine_view.my_traps — an encoded-cell array — directly)
     expect(
-      cast_range_set_dungeon([1, 4], caster, grid, [], { los: false, trap_cells: new Set([my_trap]) }).has(my_trap)
+      cast_range_set_dungeon(
+        {
+          range: [1, 4],
+          modifiable_range: false,
+          linear: false,
+          line_of_sight: false,
+          free_cell: true,
+          effects: [{ kind: 'PLACE_TRAP' }],
+        },
+        caster,
+        grid,
+        [],
+        { trap_cells: new Set([my_trap]) }
+      ).has(my_trap)
     ).toBe(false)
   })
 

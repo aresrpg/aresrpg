@@ -88,7 +88,7 @@ export const is_linear = (caster, target) => {
  * `effects` instead of `base_effects`.
  * @param {import('./spell_templates.js').SpellLevel | { effects?: Array<{type?:string, kind?:string}> }} spell
  */
-const places_trap = spell =>
+export const places_trap = spell =>
   ('base_effects' in spell ? spell.base_effects : (spell.effects ?? [])).some(
     effect => effect.type === 'PLACE_TRAP' || effect.kind === 'PLACE_TRAP',
   )

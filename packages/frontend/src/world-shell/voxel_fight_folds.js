@@ -14,7 +14,7 @@ import { voids_from_shape_mask } from '@aresrpg/fight/board_state'
 import { engine_view } from '@aresrpg/fight/project'
 // Spell hits keep their cast direction through get_aoe_cells; persistent trap/glyph markers have no direction
 // and use board_zone_cells, the ONE placed-zone home. The hover fold below only unions and dedupes those answers.
-import { board_zone_cells, get_aoe_cells } from '@aresrpg/sim/spell_targeting'
+import { board_zone_cells, get_aoe_cells, places_trap } from '@aresrpg/sim/spell_targeting'
 import { weapon_spell_template } from '@aresrpg/fight/predict_cast'
 import { WEAPON_ATTACK_ID } from '@aresrpg/fight/weapon'
 
@@ -464,17 +464,18 @@ export function seed_range_of(armed_spell_id, seat = null) {
  * Unresolved spell → the safe defaults (LOS on, no line, any occupancy, no placement). Pure.
  * @param {string} armed_spell_id
  * @param {{ spell_levels?: Record<string, number> } | null} [seat] the caster's composed build (its rank)
- * @returns {{ los: boolean, linear: boolean, free_cell: boolean, modifiable_range: boolean,
+ * @returns {{ spell: object|null, los: boolean, linear: boolean, free_cell: boolean, modifiable_range: boolean,
  *   places_trap: boolean, casts_per_target: number|undefined }}
  */
 export function seed_cast_flags_of(armed_spell_id, seat = null) {
   const lvl = seat_spell_row(seat, fight_spell(armed_spell_id))
   return {
+    spell: lvl ?? null,
     los: lvl?.line_of_sight !== false,
     linear: lvl?.linear === true,
     free_cell: lvl?.free_cell === true,
     modifiable_range: lvl?.modifiable_range === true,
-    places_trap: (lvl?.effects ?? []).some((e) => e?.kind === 'PLACE_TRAP'),
+    places_trap: places_trap(lvl ?? {}),
     casts_per_target: lvl?.casts_per_target,
   }
 }

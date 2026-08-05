@@ -23,6 +23,7 @@ import {
   get_aoe_cells,
   can_target,
   effect_hits,
+  places_trap,
 } from './spell_targeting.js'
 import {
   check_cast_limits,
@@ -230,11 +231,8 @@ const validate_cast = (state, caster_id, spell, level, target, context) => {
     )
   )
     return { valid: false, error: 'FORBIDDEN_STATE_PRESENT' }
-  const places_trap = spell_level.base_effects.some(
-    e => e.type === 'PLACE_TRAP',
-  )
   const trap_anchor_occupied =
-    places_trap &&
+    places_trap(spell_level) &&
     (context.is_trapped?.(target) ||
       state.traps.some(
         t => t.anchor && t.anchor.x === target.x && t.anchor.y === target.y,

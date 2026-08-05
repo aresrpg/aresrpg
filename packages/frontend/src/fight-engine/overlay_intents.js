@@ -21,7 +21,7 @@
 import { cell_key } from '@aresrpg/sim/cell'
 import { manhattan } from '@aresrpg/sim/combat_grid'
 import { get_reachable_cells } from '@aresrpg/sim/pathfind'
-import { can_target, get_targetable_cells } from '@aresrpg/sim/spell_targeting'
+import { can_target, get_targetable_cells, places_trap } from '@aresrpg/sim/spell_targeting'
 import { encode, decode, GRID_W, GRID_H, bfsReachable, bfsPath } from '@aresrpg/fight/los'
 import { visible_occupant_cells } from '@aresrpg/fight/occupancy'
 import { range_bonus_of } from '@aresrpg/fight/statuses'
@@ -180,7 +180,8 @@ export function on_board(cell) {
  * Legacy dungeon-set shape adapter. Cast legality lives in `can_target`; this function only projects its dark
  * verdict array to the encoded Set consumed by click, commit, and hover callers.
  *
- * @param {[number, number] | null | undefined} range   the seed [rmin, rmax]
+ * @param {import('@aresrpg/sim').SpellLevel | [number, number] | null | undefined} spell   the real spell level;
+ *   a bare range remains the honest non-spell fallback for unresolved/weapon callers
  * @param {{ cell: Cell }} caster
  * @param {{ width: number, height: number, shape_mask?: Set<number> | number[] }} grid  the room shape (dungeon_grid_of)
  * @param {number[]} obstacles                           LOS-blocking cells — the los_obstacles twin set: static
@@ -189,7 +190,7 @@ export function on_board(cell) {
  *   trap_cells?: Iterable<number>, target_cap_reached?: (cell:number)=>boolean }} [flags]
  * @returns {CellSet}
  */
-export function cast_range_set_dungeon(range, caster, grid, obstacles, flags = {}) {
+export function cast_range_set_dungeon(spell, caster, grid, obstacles, flags = {}) {
   const {
     los = true,
     linear = false,
@@ -198,19 +199,28 @@ export function cast_range_set_dungeon(range, caster, grid, obstacles, flags = {
     trap_cells = null,
     target_cap_reached = null,
   } = flags
-  const level = {
-    range: range ?? [0, 0],
-    modifiable_range,
-    linear,
-    line_of_sight: los,
-    free_cell,
-    base_effects: trap_cells == null ? [] : [{ type: 'PLACE_TRAP' }],
-  }
+  const level = Array.isArray(spell)
+    ? {
+        range: spell,
+        modifiable_range,
+        linear,
+        line_of_sight: los,
+        free_cell,
+        effects: [],
+      }
+    : (spell ?? {
+        range: [0, 0],
+        modifiable_range,
+        linear,
+        line_of_sight: los,
+        free_cell,
+        effects: [],
+      })
   return new Set(
     spell_target_paints(level, caster, grid, {
       terrain_cells: obstacles,
-      occupant_cells: free_cell ? obstacles : [],
-      trap_cells,
+      occupant_cells: level.free_cell ? obstacles : [],
+      trap_cells: places_trap(level) ? trap_cells : [],
       target_cap_reached,
     }).in_range
   )

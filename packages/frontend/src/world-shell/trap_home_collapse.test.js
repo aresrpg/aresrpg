@@ -125,7 +125,20 @@ describe('trap home collapse — the fold (engine_view.my_traps) is the ONE clie
     const caster = { cell: { x: 5, y: 5 } }
     const range = [1, 6]
     // Reading the FOLD: the trapped cell is dropped from the legal set — the local refusal that stops the bad cast.
-    const from_fold = cast_range_set_dungeon(range, caster, grid, [], { los: false, trap_cells: armed })
+    const from_fold = cast_range_set_dungeon(
+      {
+        range,
+        modifiable_range: false,
+        linear: false,
+        line_of_sight: false,
+        free_cell: true,
+        effects: [{ kind: 'PLACE_TRAP' }],
+      },
+      caster,
+      grid,
+      [],
+      { trap_cells: armed }
+    )
     expect(from_fold.has(TRAP)).toBe(false)
     // Reading an EMPTY source (the retired overlay's divergent state — invisible-armed) would LEAK the illegal cast.
     const from_empty = cast_range_set_dungeon(range, caster, grid, [], { los: false, trap_cells: [] })

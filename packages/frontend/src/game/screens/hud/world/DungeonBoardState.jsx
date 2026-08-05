@@ -23,6 +23,7 @@ import {
 } from '@aresrpg/fight/project'
 import { weapon_spell_template, evolve_caster_cell, evolve_draft_health } from '@aresrpg/fight/predict_cast'
 import { cast_range_set_dungeon } from '../../../../fight-engine/overlay_intents.js'
+import { places_trap } from '@aresrpg/sim/spell_targeting'
 import { character_cast_clock, use_dungeon_turn } from '../../dungeon-turn.js'
 import { encode, decode, bfsReachable } from '@aresrpg/fight/los'
 import { occupancy_of } from '@aresrpg/fight/occupancy'
@@ -429,10 +430,9 @@ export function useDungeonBoardState() {
       // MY live trap — the chain aborts it (cast::ECellAlreadyTrapped), so the gate greys it here from the fold's
       // engine_view.my_traps (the ONE client trap home — the sim door reads the SAME projection, so legality and
       // prediction never diverge; an ENEMY's invisible trap stays unknowable and surfaces as the honest abort toast).
-      const my_trap_cells =
-        (lvl?.effects ?? []).some((e) => e.kind === 'PLACE_TRAP') && fight?.fight_id ? fight.my_traps : undefined
+      const my_trap_cells = places_trap(lvl ?? {}) && fight?.fight_id ? fight.my_traps : undefined
       const footprint = cast_range_set_dungeon(
-        [cast_params.range_min, cast_params.range_max],
+        lvl ?? [cast_params.range_min, cast_params.range_max],
         { ...active_fighter, cell: decode(caster_cell) },
         dungeon_grid_of(dungeon),
         los_blockers,

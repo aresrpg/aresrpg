@@ -96,13 +96,7 @@ describe('#2246 — dark paint and click consume one cast-legality verdict', () 
       ...paint_context,
     })
     const dark = as_set(paints, 'in_range')
-    const click = cast_range_set_dungeon(spell.range, caster, grid, [], {
-      los: spell.line_of_sight,
-      linear: spell.linear,
-      free_cell: spell.free_cell,
-      modifiable_range: spell.modifiable_range,
-      ...click_flags,
-    })
+    const click = cast_range_set_dungeon(spell, caster, grid, [], click_flags)
 
     expect(dark.has(target)).toBe(expected)
     expect(click.has(target)).toBe(expected)
@@ -162,10 +156,7 @@ describe('#2246 — dark paint and click consume one cast-legality verdict', () 
       trap_cells,
       target_cap_reached,
     })
-    const click = cast_range_set_dungeon(spell.range, caster, grid, [], {
-      los: true,
-      linear: true,
-      free_cell: true,
+    const click = cast_range_set_dungeon(spell, caster, grid, [], {
       trap_cells,
       target_cap_reached,
     })

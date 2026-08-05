@@ -33,6 +33,7 @@ import { living_body_cells } from '@aresrpg/fight/occupancy'
 import { range_bonus_of } from '@aresrpg/fight/statuses'
 import { weapon_spell_template } from '@aresrpg/fight/predict_cast'
 import { target_cap_reached } from '@aresrpg/fight/draft_budget'
+import { places_trap } from '@aresrpg/sim/spell_targeting'
 
 import {
   move_reachable_set,
@@ -1775,9 +1776,7 @@ export function create_voxel_fight_adapter(
           const paints = spell_target_paints(level, active, grid, {
             terrain_cells: dungeon.obstacles ?? [],
             occupant_cells: living_body_cells(project.fight_visible_view(fight_store.getState()).entities),
-            trap_cells: (level.base_effects ?? []).some((effect) => effect.type === 'PLACE_TRAP')
-              ? (fight.my_traps ?? [])
-              : [],
+            trap_cells: places_trap(level) ? (fight.my_traps ?? []) : [],
             target_cap_reached: (cell) =>
               wash_armed === WEAPON_ATTACK_ID
                 ? false
@@ -1974,7 +1973,7 @@ export function create_voxel_fight_adapter(
                 target,
                 flags2.casts_per_target
               )
-        const castable2 = cast_range_set_dungeon(hover_range, active, grid2, los2, flags2)
+        const castable2 = cast_range_set_dungeon(flags2.spell ?? hover_range, active, grid2, los2, flags2)
         // The weapon sentinel has no seed row → spell_footprint falls back to the single [cell] (a melee strike).
         // #2175 — the SAME castability verdict that earns the red footprint arms the zone forecast: the cards the
         // tooltip layer derives can never appear over a cell the board paints as un-castable. Published by the

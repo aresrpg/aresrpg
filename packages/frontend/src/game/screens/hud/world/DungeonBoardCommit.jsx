@@ -26,6 +26,7 @@ import {
   strike_flush_illegal,
 } from '@aresrpg/fight/turn_commit'
 import { evolve_flush_casts } from '@aresrpg/fight/predict_cast'
+import { places_trap } from '@aresrpg/sim/spell_targeting'
 import { decode } from '@aresrpg/fight/los'
 import { cast_range_set_dungeon } from '../../../../fight-engine/overlay_intents.js'
 import { target_cap_reached } from '@aresrpg/fight/draft_budget'
@@ -188,7 +189,7 @@ export function useDungeonBoardCommit(state, t) {
             local_commit_cast_drop({ actor_id: entity_id, spell_name: spell_display_name, reason }),
           ]
           // a dropped trap draft never reaches the chain — its click-time optimistic marker rolls back below.
-          if ((level_row(drafted_spell)?.effects ?? []).some((e) => e.kind === 'PLACE_TRAP'))
+          if (places_trap(level_row(drafted_spell) ?? {}))
             trap_dropped = [...trap_dropped, entry.cell]
         }
         // A prior ordered move may have crossed a lethal known trap. The contract commits that death, but any
@@ -235,7 +236,7 @@ export function useDungeonBoardCommit(state, t) {
           // The DRAFTED spell (pinned at pick) judges the cast — a disarm/re-arm can't use the wrong spell's flags.
           const lvl = level_row(drafted_spell)
           const range = lvl?.range ?? [cast_params.range_min, cast_params.range_max]
-          const places_trap = (lvl?.effects ?? []).some((e) => e.kind === 'PLACE_TRAP')
+          const places_trap_at_level = places_trap(lvl ?? {})
           // SELF-ONLY BUFF (#321/#323): rmax 0 (invisibility/vanish — the spellbook 'self' marker) targets the
           // caster's OWN tile. It can never move out of reach of itself, so it NEVER re-validates (the twin of the
           // trap rule, cells don't move) — commit it on the caster's CURRENT cell (`cast_anchor`, this cast's own
@@ -244,7 +245,7 @@ export function useDungeonBoardCommit(state, t) {
           // cast then reverts" report.
           const self_cast = (range?.[1] ?? 0) === 0
           const footprint = cast_range_set_dungeon(
-            range,
+            lvl ?? range,
             { ...active_fighter, cell: decode(cast_anchor) },
             dungeon_grid_of(dungeon),
             los,
@@ -255,7 +256,7 @@ export function useDungeonBoardCommit(state, t) {
               modifiable_range: lvl?.modifiable_range === true,
               // The optimistic ledger already contains THIS draft's marker. Remove its own anchor from the known
               // pre-cast facts; any earlier duplicate was refused by the same predicate at click time.
-              trap_cells: places_trap ? (fight?.my_traps ?? []).filter((cell) => cell !== entry.cell) : null,
+              trap_cells: places_trap_at_level ? (fight?.my_traps ?? []).filter((cell) => cell !== entry.cell) : null,
               target_cap_reached: cell =>
                 target_cap_reached(
                   cast_queue.slice(0, cast_i),
@@ -302,7 +303,7 @@ export function useDungeonBoardCommit(state, t) {
             spell_key: drafted_spell.name_key, // VFX handoff — the bridge's confirm replay routes element VFX by it
           }
           // A PLACE_TRAP effect ⇒ this cast lays a trap on `target_cell` — remember it to mark once committed.
-          if ((level_row(drafted_spell)?.effects ?? []).some((e) => e.kind === 'PLACE_TRAP'))
+          if (places_trap(level_row(drafted_spell) ?? {}))
             trap_placed.push(target_cell)
         } else
           game_log('board', 'flush_commit: cast drafted but no on-chain spell id resolved — skipped', {
