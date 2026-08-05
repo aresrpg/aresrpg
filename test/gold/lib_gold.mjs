@@ -5,7 +5,7 @@
 // lane — vendor, never edit; the HEAVY lifting stays packages/move/scripts VERBATIM, same as the
 // original). LOCALNET ONLY — throwaway runtime keys, faucet-funded, discarded on teardown.
 // Topology + laws: docs/GOLD_STANDARD_SUITE.md.
-import { execSync } from 'node:child_process'
+import { execFileSync, execSync } from 'node:child_process'
 import { createHash } from 'node:crypto'
 import fs from 'node:fs'
 import path from 'node:path'
@@ -134,7 +134,17 @@ export const gold_move_packages = [
 export const kiosk_packages = ['social', 'aresrpg', 'kolizeum', 'forgemagie', 'gifting', 'dungeon']
 
 export const log = (m) => console.log(`[gold] ${m}`)
+// TWO RUNNERS, ONE LAW (#2149 / CodeQL alert #697). `sh` executes a CONSTANT command string under
+// /bin/sh — its two surviving callers genuinely need shell features (a pipe, a `~` glob) and interpolate
+// NOTHING. Every command carrying a variable goes through `run`: an argv array the shell never parses,
+// so a COMPOSE_PROJECT_NAME (or a path, or a throwaway key) holding `;` is a bad argument rather than a
+// second command. The class gate in shell_injection.test.mjs reds the moment an `sh` string interpolates.
 const sh = (cmd, opts = {}) => execSync(cmd, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], ...opts })
+const run = (cmd, args, opts = {}) =>
+  execFileSync(cmd, args, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], ...opts })
+/** The isolated CLI config, as an ENV OVERLAY — the `SUI_CONFIG_DIR='…' sui …` prefix idiom, without a shell. */
+const cli_env = () => ({ ...process.env, SUI_CONFIG_DIR: P.SUICFG })
+const compose_args = (...args) => ['compose', '-f', P.COMPOSE, '-p', P.PROJECT, ...args]
 const sponsor_compose_env = (sponsor_dev_key) => {
   if (typeof sponsor_dev_key !== 'string' || !sponsor_dev_key)
     throw new Error('gold compose requires a throwaway sponsor key')
@@ -156,8 +166,17 @@ const sponsor_compose_env = (sponsor_dev_key) => {
 // its repository from that copy's path and read every git fact from `test/gold` (#1566/#1567). Name the
 // checkout the copy came from instead: nothing is skipped, ancestry and the clean-tree control run
 // against a real repository. An operator whose lane is not on trunk yet supplies another checkout.
-export const script_env = (privkey) =>
-  `SUI_CONFIG_DIR='${P.SUICFG}' NETWORK=testnet SUI_RPC='${RPC}' SUI_GRPC_URL='${RPC}' PRIVATE_KEY='${privkey}' PUBLISH_GUARD_REPO_ROOT='${process.env.PUBLISH_GUARD_REPO_ROOT ?? P.REPO}'`
+//
+// An ENV OVERLAY, not a shell prefix (#2149): the throwaway key used to be pasted into command TEXT,
+// where a quote inside it would have ended the string and started a command. It is a value now.
+export const script_env = (privkey) => ({
+  SUI_CONFIG_DIR: P.SUICFG,
+  NETWORK: 'testnet',
+  SUI_RPC: RPC,
+  SUI_GRPC_URL: RPC,
+  PRIVATE_KEY: privkey,
+  PUBLISH_GUARD_REPO_ROOT: process.env.PUBLISH_GUARD_REPO_ROOT ?? P.REPO,
+})
 
 // ── deps: symlink node_modules so the Playwright config/specs resolve @playwright/test (the
 //    bun-isolated-install trap the bots' deps.js documents; @mysten/* resolves via deps_gold's
@@ -171,7 +190,7 @@ export function ensureDeps() {
 // ── docker stack lifecycle (own compose project — never the gate lane's or the rpc stack) ──
 export function bootStack(sponsor_dev_key) {
   try {
-    execSync(`docker compose -f '${P.COMPOSE}' -p ${P.PROJECT} down -v --remove-orphans`, {
+    run('docker', compose_args('down', '-v', '--remove-orphans'), {
       stdio: 'ignore',
       env: sponsor_compose_env(sponsor_dev_key),
     })
@@ -179,7 +198,7 @@ export function bootStack(sponsor_dev_key) {
     /* first boot */
   }
   log('booting gold stack (localnet + chk + redis + indexer + api)…')
-  execSync(`docker compose -f '${P.COMPOSE}' -p ${P.PROJECT} up -d --build`, {
+  run('docker', compose_args('up', '-d', '--build'), {
     stdio: 'inherit',
     env: sponsor_compose_env(sponsor_dev_key),
   })
@@ -190,13 +209,13 @@ export function teardownStack() {
   // profile flag pulls them into the down set. It also forces compose to parse the sponsor services, whose
   // `GAS_POOL_KEYPAIR: ${SPONSOR_DEV_KEY:?…}` interpolation demands the var — so we feed the SAME benign inline
   // placeholder (never a runtime secret in a teardown), var-independent: teardown must run with no real key present.
-  execSync(`docker compose -f '${P.COMPOSE}' -p ${P.PROJECT} --profile sponsor down -v --remove-orphans`, {
+  run('docker', compose_args('--profile', 'sponsor', 'down', '-v', '--remove-orphans'), {
     stdio: 'inherit',
     env: sponsor_compose_env('gold-teardown-config-only-not-a-key'),
   })
   // Assert the leak is actually gone: ZERO containers (any state) survive for this compose project. A silent
   // survivor wedges the next boot on a bound port — surface it loud, here, the moment it happens.
-  const survivors = sh(`docker ps -aq --filter label=com.docker.compose.project=${P.PROJECT}`).trim()
+  const survivors = run('docker', ['ps', '-aq', '--filter', `label=com.docker.compose.project=${P.PROJECT}`]).trim()
   if (survivors)
     throw new Error(
       `gold teardown left ${survivors.split('\n').length} container(s) for project ${P.PROJECT}: ${survivors.replace(/\n/g, ' ')}`
@@ -210,11 +229,11 @@ export function boot_sponsor(sponsor_dev_key) {
   // exist" for its own fresh id, right after this step — proven by redis, which has no `build:` key, staying
   // "Running" in the same invocation while localnet got "Built"+"Recreated"). Build the named images first,
   // THEN start them WITHOUT --build so localnet's already-built, already-healthy container is left alone.
-  execSync(`docker compose -f '${P.COMPOSE}' -p ${P.PROJECT} --profile sponsor build gas-pool sponsor`, {
+  run('docker', compose_args('--profile', 'sponsor', 'build', 'gas-pool', 'sponsor'), {
     stdio: 'inherit',
     env: sponsor_compose_env(sponsor_dev_key),
   })
-  execSync(`docker compose -f '${P.COMPOSE}' -p ${P.PROJECT} --profile sponsor up -d gas-pool sponsor`, {
+  run('docker', compose_args('--profile', 'sponsor', 'up', '-d', 'gas-pool', 'sponsor'), {
     stdio: 'inherit',
     env: sponsor_compose_env(sponsor_dev_key),
   })
@@ -314,27 +333,27 @@ export async function genKeypairs(n) {
 export function prepIsolatedConfig() {
   fs.rmSync(P.SUICFG, { recursive: true, force: true })
   fs.mkdirSync(P.SUICFG, { recursive: true })
-  sh(`yes | SUI_CONFIG_DIR='${P.SUICFG}' sui client -y envs`, { stdio: 'ignore' })
+  sh('yes | sui client -y envs', { stdio: 'ignore', env: cli_env() }) // the pipe is the shell's only job here
   const yaml = path.join(P.SUICFG, 'client.yaml')
   let s = fs.readFileSync(yaml, 'utf8')
   s = s.replace(/(alias: testnet[\s\S]*?rpc: ")[^"]*(")/, `$1${RPC}$2`)
   fs.writeFileSync(yaml, s)
-  sh(`SUI_CONFIG_DIR='${P.SUICFG}' sui client switch --env testnet`, { stdio: 'ignore' })
+  run('sui', ['client', 'switch', '--env', 'testnet'], { stdio: 'ignore', env: cli_env() })
 }
 export function importSigner({ privkey, address }) {
-  sh(`SUI_CONFIG_DIR='${P.SUICFG}' sui keytool import '${privkey}' ed25519`, { stdio: 'ignore' })
-  sh(`SUI_CONFIG_DIR='${P.SUICFG}' sui client switch --address '${address}'`, { stdio: 'ignore' })
+  run('sui', ['keytool', 'import', privkey, 'ed25519'], { stdio: 'ignore', env: cli_env() })
+  run('sui', ['client', 'switch', '--address', address], { stdio: 'ignore', env: cli_env() })
 }
 
 // ── throwaway copy of packages/move (never touch committed Published.toml / manifests) ────────
 export function prepMoveCopy() {
   fs.rmSync(P.BUILD, { recursive: true, force: true }) // wipe ONLY gold's own .build/move
   fs.mkdirSync(P.BUILD, { recursive: true })
-  const ex = `--exclude 'build/' --exclude 'node_modules/' --exclude 'out/'`
+  const ex = ['--exclude', 'build/', '--exclude', 'node_modules/', '--exclude', 'out/']
   // Keep this literal array in lockstep with ceremony_lib.mjs TICKET_ORDER without importing its live client.
-  const package_sources = gold_move_packages.map((name) => `'${MOVE}/'${name}`).join(' ')
-  sh(`rsync -a ${ex} ${package_sources} '${P.BUILD}/'`)
-  sh(`rsync -a ${ex} '${MOVE}/scripts' '${P.BUILD}/'`)
+  const package_sources = gold_move_packages.map((name) => path.join(MOVE, name))
+  run('rsync', ['-a', ...ex, ...package_sources, `${P.BUILD}/`])
+  run('rsync', ['-a', ...ex, path.join(MOVE, 'scripts'), `${P.BUILD}/`])
   for (const f of ['Move.toml', 'Move.lock', 'Published.toml'])
     if (fs.existsSync(path.join(MOVE, f))) fs.copyFileSync(path.join(MOVE, f), path.join(P.BUILD, f))
   fs.symlinkSync(MOVE_NM, path.join(P.BUILD, 'node_modules'))
@@ -392,7 +411,8 @@ export function publishKiosk() {
   if (!cache) throw new Error('Kiosk git cache not found in ~/.move — run a testnet build once to populate it')
   const kdir = path.join(P.BUILD, 'kiosk')
   fs.rmSync(kdir, { recursive: true, force: true })
-  sh(`cp -r '${cache}' '${kdir}' && chmod -R u+w '${kdir}'`)
+  run('cp', ['-r', cache, kdir]) // `&&` was the shell's only job: execFileSync throws on a non-zero copy
+  run('chmod', ['-R', 'u+w', kdir])
   fs.rmSync(path.join(kdir, 'Move.lock'), { force: true })
   fs.rmSync(path.join(kdir, 'Published.toml'), { force: true })
   const ktoml = path.join(kdir, 'Move.toml')
@@ -401,10 +421,12 @@ export function publishKiosk() {
   t = t.replace(/kiosk\s*=\s*"0x[0-9a-fA-F]+"/, 'kiosk = "0x0"')
   t = t.replace(/rev\s*=\s*"[^"]+"/g, `rev = "${FRAMEWORK_REV}"`)
   fs.writeFileSync(ktoml, t)
-  const out = sh(
-    `cd '${kdir}' && SUI_CONFIG_DIR='${P.SUICFG}' sui client publish --skip-dependency-verification --json`,
-    { maxBuffer: 64 * 1024 * 1024 }
-  )
+  // `cd … &&` was the shell's only job — it is the `cwd` option, and the env prefix is `env`.
+  const out = run('sui', ['client', 'publish', '--skip-dependency-verification', '--json'], {
+    cwd: kdir,
+    env: cli_env(),
+    maxBuffer: 64 * 1024 * 1024,
+  })
   const r = JSON.parse(out)
   const kid = (r.objectChanges || []).find((c) => c.type === 'published')?.packageId
   if (r.effects?.status?.status !== 'success' || !kid)
@@ -436,20 +458,21 @@ export function publishKiosk() {
 }
 
 // ── drive the reused publish/seed scripts (VERBATIM tooling, isolated config, gold RPC) ───────
-export function runCeremony(privkey) {
-  sh(`cd '${P.BUILD}/scripts' && ${script_env(privkey)} node ceremony.mjs`, {
+const script_run = (args, privkey, opts = {}) =>
+  run('node', args, {
+    cwd: path.join(P.BUILD, 'scripts'),
+    env: { ...process.env, ...script_env(privkey) },
     stdio: 'inherit',
-    maxBuffer: 64 * 1024 * 1024,
+    ...opts,
   })
+export function runCeremony(privkey) {
+  script_run(['ceremony.mjs'], privkey, { maxBuffer: 64 * 1024 * 1024 })
 }
 export function runEnable(privkey) {
-  sh(`cd '${P.BUILD}/scripts' && ${script_env(privkey)} node ceremony.mjs --enable`, { stdio: 'inherit' })
+  script_run(['ceremony.mjs', '--enable'], privkey)
 }
 export function runSeed(privkey) {
-  sh(`cd '${P.BUILD}/scripts' && ${script_env(privkey)} node seed_testnet.mjs`, {
-    stdio: 'inherit',
-    maxBuffer: 64 * 1024 * 1024,
-  })
+  script_run(['seed_testnet.mjs'], privkey, { maxBuffer: 64 * 1024 * 1024 })
 }
 export function readManifests() {
   const cer = JSON.parse(fs.readFileSync(path.join(P.BUILD, 'scripts', 'out', 'ceremony_manifest.json'), 'utf8'))

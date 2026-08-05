@@ -27,7 +27,7 @@
 //
 // Wired into `ares test anchor` (scripts/ares.mjs) as an anchor-class row; the pure diff is proven by
 // mint_readback.test.mjs (the RED-FIRST fixture for the value/kind + novel-elementless red paths).
-import { execSync } from 'node:child_process'
+import { execFileSync } from 'node:child_process'
 import fs from 'node:fs'
 import { createRequire } from 'node:module'
 import path from 'node:path'
@@ -286,7 +286,7 @@ async function ensure_rig() {
     log(`no ${P.DEPLOY} — booting the gold rig FOREGROUND (full corpus mint; ~5–10 min)`)
   }
   // FOREGROUND, generous budget. A non-zero up_gold exit throws here → the row FAILS loud, never skips green.
-  execSync(`node ${path.join(GOLD, 'up_gold.mjs')}`, { cwd: P.REPO, stdio: 'inherit', timeout: 20 * 60_000 })
+  execFileSync('node', [path.join(GOLD, 'up_gold.mjs')], { cwd: P.REPO, stdio: 'inherit', timeout: 20 * 60_000 })
   if (!fs.existsSync(P.DEPLOY)) throw new Error(`gold boot finished but ${P.DEPLOY} is absent — cannot read back`)
   const manifest = read_json(P.DEPLOY)
   if (!(await rig_answers(manifest.rpc)))

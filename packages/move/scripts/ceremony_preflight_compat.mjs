@@ -24,7 +24,7 @@
 //
 // REPUBLISH MODE: while packages/move/REPUBLISH_WINDOW exists this gate runs SIZE-ONLY — see
 // republish_window_verdict below for the mode's rules and its master-bound refusal.
-import { execFileSync, execSync } from 'node:child_process'
+import { execFileSync } from 'node:child_process'
 import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
@@ -225,7 +225,9 @@ function stripLineComments(src) {
 function hermetic_build(pkgPath) {
   const out_dir = fs.mkdtempSync(path.join(os.tmpdir(), 'ares-pkg-size-'))
   try {
-    execSync(`sui move build --path ${pkgPath} --install-dir ${out_dir}`, {
+    // argv array, never a shell string (#2149): `out_dir` is rooted at os.tmpdir() — i.e. TMPDIR, an
+    // operator env value — and `pkgPath` at this file's own location. Neither is ever shell source now.
+    execFileSync('sui', ['move', 'build', '--path', pkgPath, '--install-dir', out_dir], {
       encoding: 'utf-8',
       stdio: 'pipe',
     })
