@@ -409,7 +409,9 @@ describe('SUMMON is authorable by no served spell', () => {
         levels: [
           {
             ap_cost: 3,
-            effects: [{ kind, value: 5, target_filter: 0, flags: 0, chance: 100 }],
+            effects: [
+              { kind, value: 5, target_filter: 0, flags: 0, chance: 100 },
+            ],
             crit_effects: [],
           },
         ],
