@@ -34,6 +34,7 @@ import { clone as clone_skinned } from 'three/examples/jsm/utils/SkeletonUtils.j
 import { apply_avatar_material, load_glb_checked } from '@aresrpg/engine3/player'
 
 import { game_log } from '../core/log.js'
+import { mob_model_fallback_url } from './data/mobs.js'
 import { canonical_model_source_url } from './model_asset_url.js'
 import { step_pet_follow, empty_pet_motion } from './pet_follow.js'
 import { hover_target_y, is_fish_pet, select_companion_clip } from './pet_hover.js'
@@ -47,7 +48,7 @@ const _cache = new Map()
 const load_glb = (/** @type {string} */ url) => {
   let p = _cache.get(url)
   if (!p) {
-    p = load_glb_checked(url)
+    p = load_glb_checked(url, { fallback_url: mob_model_fallback_url() })
     _cache.set(url, p)
   }
   return p

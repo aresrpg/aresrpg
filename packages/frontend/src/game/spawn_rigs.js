@@ -49,7 +49,7 @@ import { GATHER_JOB_KEYS, gather_resource_for } from '@aresrpg/sdk/jobs'
 
 import { advance_member_wander, feet_of, make_rng } from './ambient_placement.js'
 import { pick_mount_clips } from './cosmetic_glb.js'
-import { get_mob_model } from './data/mobs.js'
+import { get_mob_model, mob_model_fallback_url } from './data/mobs.js'
 import { game_log } from '../core/log.js'
 
 // [reference-faithful-mob-sizes 2026-07-13] sizes now follow the reference-corpus scale — this KILLED the blanket
@@ -126,7 +126,7 @@ export function create_rig_layer({ engine, sample, resolve_template, is_disposed
     // committed template, never the group's primary. place() gated placement on every one of them settling.
     const tpl = resolve_template(mem.template_id)
     const { url } = get_mob_model({ variant: mem.template_id, name: tpl?.name })
-    create_mob_model(url, { label: tpl?.name ?? mem.template_id })
+    create_mob_model(url, { fallback_url: mob_model_fallback_url(), label: tpl?.name ?? mem.template_id })
       .then((/** @type {any} */ { root, clips, measured, dispose }) => {
         // Orphan guard (P0 leak fix 2026-07-11): a member torn down MID-LOAD (rig still null ⇒ teardown had
         // nothing to remove) whose entry then RE-PLACES flips e.placed back to true — a bare `!e.placed` check

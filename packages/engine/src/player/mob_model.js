@@ -65,13 +65,9 @@ export function is_glb_content_type(value) {
   )
 }
 
-/**
- * Fetch a GLB, reject non-model responses before parsing, then hand verified bytes to the shared DRACO loader.
- * This catches the SPA rewrite failure mode (`text/html` with status 200) at the network boundary.
- * @param {string} url
- * @param {{ fetch_impl?: typeof fetch, loader?: GLTFLoader }} [opts]
- */
-export async function load_glb_checked(url, { fetch_impl = globalThis.fetch, loader = get_loader() } = {}) {
+/** Fetch and parse one exact GLB URL after validating the response at the network boundary.
+ * @param {string} url @param {typeof fetch} fetch_impl @param {GLTFLoader} loader */
+async function load_glb_source(url, fetch_impl, loader) {
   if (typeof url !== 'string' || !url) throw new TypeError('GLB URL is unavailable')
   const response = await fetch_impl(url)
   if (!response.ok) throw new Error(`GLB request failed (${response.status}) for ${url}`)
@@ -82,6 +78,37 @@ export async function load_glb_checked(url, { fetch_impl = globalThis.fetch, loa
   const document_base = typeof document !== 'undefined' ? document.baseURI : 'http://localhost/'
   const response_url = new URL(response.url || url, document_base)
   return loader.parseAsync(bytes, new URL('.', response_url).href)
+}
+
+/**
+ * Fetch a GLB, reject non-model responses before parsing, then hand verified bytes to the shared DRACO loader.
+ * This catches the SPA rewrite failure mode (`text/html` with status 200) at the network boundary. Mob callers
+ * supply the catalog-resolved `fallback_url`; any request/response/parse failure then reports a tagged error and
+ * loads that visible fallback through the exact same checked path. The engine never constructs either URL.
+ * @param {string} url
+ * @param {{ fetch_impl?: typeof fetch, loader?: GLTFLoader, fallback_url?: string | null }} [opts]
+ */
+export async function load_glb_checked(
+  url,
+  { fetch_impl = globalThis.fetch, loader = get_loader(), fallback_url = null } = {}
+) {
+  try {
+    return await load_glb_source(url, fetch_impl, loader)
+  } catch (primary_error) {
+    if (typeof fallback_url !== 'string' || !fallback_url || fallback_url === url) throw primary_error
+    console.error(
+      `[mob-model-fallback] failed to load "${url}"; rendering catalog fallback "${fallback_url}"`,
+      primary_error
+    )
+    try {
+      return await load_glb_source(fallback_url, fetch_impl, loader)
+    } catch (fallback_error) {
+      throw new AggregateError(
+        [primary_error, fallback_error],
+        `Mob GLB and catalog fallback both failed (${url} -> ${fallback_url})`
+      )
+    }
+  }
 }
 
 /**
@@ -207,12 +234,16 @@ function clone_instance_materials(root) {
   return owned
 }
 
-/** Load the immutable, page-cached GLTF source. @param {string} url */
-async function load_mob_source(url) {
+/** Load the immutable, page-cached GLTF source. Failed work is evicted so a repaired publication can retry.
+ * @param {string} url @param {string | null} fallback_url */
+async function load_mob_source(url, fallback_url) {
   let p = _glb_cache.get(url)
   if (!p) {
-    p = load_glb_checked(url)
+    p = load_glb_checked(url, { fallback_url })
     _glb_cache.set(url, p)
+    void p.catch(() => {
+      if (_glb_cache.get(url) === p) _glb_cache.delete(url)
+    })
   }
   return p
 }
@@ -249,11 +280,11 @@ function create_mob_model_from_gltf(gltf, { label = null } = {}) {
  * THE single mob-model factory: one cached DRACO/GLTF loader, one SkeletonUtils instance path, one fixed
  * material/shadow/sampler policy. Both overworld and fight-board consumers call this function directly.
  * @param {string} url a served GLB URL (get_mob_model().url)
- * @param {{ label?: string | null }} [opts]
+ * @param {{ label?: string | null, fallback_url?: string | null }} [opts]
  * @returns {Promise<ReturnType<typeof create_mob_model_from_gltf>>}
  */
-export async function create_mob_model(url, { label = url } = {}) {
-  const model = create_mob_model_from_gltf(await load_mob_source(url), { label })
+export async function create_mob_model(url, { label = url, fallback_url = null } = {}) {
+  const model = create_mob_model_from_gltf(await load_mob_source(url, fallback_url), { label })
   // [C1] warm this rig class's pipelines (dedupe by URL — clones share material feature-sets, so the
   // first instance's warm covers every later clone). The root is still detached here; consumers mount
   // it only after this resolve, when every first-use pipeline is a cache hit.

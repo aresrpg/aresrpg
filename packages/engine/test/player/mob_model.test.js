@@ -9,10 +9,10 @@
 // measured GLB height × HYTALE_BLOCKS_PER_GLB_UNIT (0.5: the shipped GLBs are 2× world blocks, calibrated on
 // the player-sized humanoids — skeleton/zombie rigs measure 3.6-3.8 GLB units and must stand ~1.8-1.9 blocks
 // beside the 2.0 player) — then clamped into [MOB_MIN_H=0.35, MOB_MAX_H=3.2] with a one-line warn.
-import { describe, expect, spyOn, test } from 'bun:test'
+import { describe, expect, mock, spyOn, test } from 'bun:test'
 import { Box3, BoxGeometry, Group, Mesh, MeshStandardMaterial, NearestFilter, Texture, Vector3 } from 'three'
 
-import { prepare_mob_render } from '../../src/player/mob_model.js'
+import { load_glb_checked, prepare_mob_render } from '../../src/player/mob_model.js'
 
 /** A synthetic rig: one box mesh `height` blocks tall (bbox centred on origin) under a Group root, with a
  *  mapped MeshStandardMaterial (metalness 1 so the gold-kill has something to zero) — the minimum
@@ -27,6 +27,42 @@ function make_rig(height, metalness = 1) {
 }
 
 const measured_height = (/** @type {Group} */ root) => new Box3().setFromObject(root).getSize(new Vector3()).y
+
+describe('mob GLB failure gate', () => {
+  test('a mocked 404 loads the catalog fallback and reports the failed mob URL loudly', async () => {
+    const primary_url = 'https://assets.example/models/mobs/ln.glb'
+    const fallback_url = 'https://assets.example/models/mobs/hy__missing.glb'
+    const fallback_model = { scene: { name: 'magenta-missing-model' } }
+    const parseAsync = mock(async () => fallback_model)
+    const fetch_impl = mock(async (/** @type {RequestInfo | URL} */ input) => {
+      const url = String(input)
+      if (url === primary_url) return new Response(null, { status: 404 })
+      if (url === fallback_url)
+        return new Response(new Uint8Array([0x67, 0x6c, 0x54, 0x46]), {
+          status: 200,
+          headers: { 'content-type': 'model/gltf-binary' },
+        })
+      throw new Error(`unexpected URL: ${url}`)
+    })
+    const error = spyOn(console, 'error').mockImplementation(() => {})
+    try {
+      await expect(
+        load_glb_checked(primary_url, {
+          fallback_url,
+          fetch_impl: /** @type {typeof fetch} */ (fetch_impl),
+          loader: /** @type {any} */ ({ parseAsync }),
+        })
+      ).resolves.toBe(fallback_model)
+      expect(fetch_impl.mock.calls.map(([url]) => String(url))).toEqual([primary_url, fallback_url])
+      expect(error).toHaveBeenCalledTimes(1)
+      expect(String(error.mock.calls[0]?.[0])).toContain('[mob-model-fallback]')
+      expect(String(error.mock.calls[0]?.[0])).toContain(primary_url)
+      expect(String(error.mock.calls[0]?.[0])).toContain(fallback_url)
+    } finally {
+      error.mockRestore()
+    }
+  })
+})
 
 describe('prepare_mob_render — the one-mob-sdk render policy', () => {
   test('PLAYER path — target_height given: height-normalises (divides out the rig intrinsic height, never a raw multiply)', () => {

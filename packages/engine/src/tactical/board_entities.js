@@ -355,7 +355,10 @@ export function create_board_entities(
           // [board-player-scale] design ruling 2026-07-12: seat the FIGHT player in the mob band (BOARD_PLAYER_HEIGHT)
           // instead of the roam CHARACTER_HEIGHT default, so it's not a giant next to the enemies.
           scale: spec.kind === 'player' ? BOARD_PLAYER_HEIGHT : undefined,
-          mob_model_factory: spec.kind === 'mob' ? create_mob_model : null,
+          mob_model_factory:
+            spec.kind === 'mob'
+              ? (url, opts) => create_mob_model(url, { ...opts, fallback_url: spec.mob_fallback_url })
+              : null,
         })
         engine.add_to_scene(avatar.object3d)
         // [S4] MODEL MISS — no glb url resolved for this fighter (an unpublished class/mob model, a catalog

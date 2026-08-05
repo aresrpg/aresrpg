@@ -12,8 +12,8 @@ describe('model_asset_url — geometry never falls back to the SPA origin', () =
   test('an unpublished class logs once and returns null, never a relative URL', () => {
     const error = spyOn(console, 'error').mockImplementation(() => {})
     try {
-      expect(model_asset_url('mob', 'unpublished.glb', () => null)).toBeNull()
-      expect(model_asset_url('mob', 'unpublished.glb', () => null)).toBeNull()
+      expect(model_asset_url('fixture', 'unpublished.glb', () => null)).toBeNull()
+      expect(model_asset_url('fixture', 'unpublished.glb', () => null)).toBeNull()
       expect(error).toHaveBeenCalledTimes(1)
       expect(String(error.mock.calls[0]?.[0])).toContain('unpublished or unresolvable')
     } finally {
@@ -22,14 +22,14 @@ describe('model_asset_url — geometry never falls back to the SPA origin', () =
   })
 
   test('a published class passes through its absolute asset-host URL', () => {
-    const url = model_asset_url('mob', 'hy_rat.glb', () => 'https://assets.example/models/mobs/hy_rat.glb')
-    expect(url).toBe('https://assets.example/models/mobs/hy_rat.glb')
+    const url = model_asset_url('fixture', 'unit.glb', () => 'https://assets.example/models/fixture/unit.glb')
+    expect(url).toBe('https://assets.example/models/fixture/unit.glb')
   })
 
   test('a resolver that returns a relative URL is treated as unresolvable', () => {
     const error = spyOn(console, 'error').mockImplementation(() => {})
     try {
-      expect(model_asset_url('mob', 'hy_rat.glb', () => '/models/mobs/hy_rat.glb')).toBeNull()
+      expect(model_asset_url('fixture', 'unit.glb', () => '/models/fixture/unit.glb')).toBeNull()
       expect(error).toHaveBeenCalledTimes(1)
     } finally {
       error.mockRestore()

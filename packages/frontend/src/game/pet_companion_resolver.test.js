@@ -13,11 +13,12 @@ import { afterEach, describe, expect, test } from 'bun:test'
 import { configure_assets } from '@aresrpg/sdk/jobs'
 
 import { get_log_buffer, _reset_log_for_test } from '../core/log.js'
+import { resolve_mob_visual_url } from './data/mobs.js'
 import { set_pet_catalog_for_test } from './data/pet_catalog.js'
 import { set_catalog_for_test as set_mob_catalog_for_test } from './data/mob_catalog.js'
 import { resolve_pet_companion, resolve_pet_model_url } from './pet_companion_resolver.js'
 
-const mob_url = (glb) => `https://fake-assets/models/mobs/${glb}.glb`
+const mob_url = (glb) => resolve_mob_visual_url(new Map(), glb)
 
 configure_assets({ aggregator: 'https://fake-assets', classes: { mob: { published: true } } })
 

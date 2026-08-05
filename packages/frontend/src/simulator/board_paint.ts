@@ -19,7 +19,7 @@
 import { decode } from '@aresrpg/fight/los'
 
 import { character_model_urls } from '../game/screens/character-glb.js'
-import { get_mob_model } from '../game/data/mobs.js'
+import { get_mob_model, mob_model_fallback_url } from '../game/data/mobs.js'
 
 import type { SimBoard, SimCell } from './board'
 import type { SimCharacter, SimMobPicks, SimPlacements } from './reducer'
@@ -120,6 +120,7 @@ export const setup_scene_of = (
         cell: decode(cell),
         glb_variant:
           get_mob_model({ variant: pick.template_id, name: setup.mob_name_of(pick.template_id) }).url ?? undefined,
+        mob_fallback_url: mob_model_fallback_url() ?? undefined,
       })),
     ],
   }

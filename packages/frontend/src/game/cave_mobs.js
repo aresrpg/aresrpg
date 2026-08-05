@@ -36,7 +36,7 @@ import { PROXIMITY_M } from '@aresrpg/world/spawns_reconcile'
 import i18n from '../i18n'
 import { use_prompt_stack } from '../world-shell/prompt_stack.js'
 
-import { get_mob_model } from './data/mobs.js'
+import { get_mob_model, mob_model_fallback_url } from './data/mobs.js'
 import { context } from './store.js'
 import { game_log } from '../core/log.js'
 
@@ -142,7 +142,7 @@ export function create_cave_mobs({ engine, canvas = null, anchor, face_toward, g
       dispose: null,
     }
     rigs.set(e.id, rig)
-    create_mob_model(url, { label: e.name })
+    create_mob_model(url, { fallback_url: mob_model_fallback_url(), label: e.name })
       .then((/** @type {any} */ { root, clips, measured, dispose: dispose_model }) => {
         if (disposed || !rigs.has(e.id)) {
           dispose_model()

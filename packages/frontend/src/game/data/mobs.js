@@ -19,8 +19,10 @@ import { mob_icon_url, asset_url } from '@aresrpg/sdk/jobs'
 
 import { catalog_name_of } from '../../content/mob_name_overrides'
 import { seed_manifest } from '../../content/seed_manifest'
+import { fast_travel_asset_refs } from '../fast_travel_assets.js'
 import { model_asset_url } from '../model_asset_url.js'
 import { get_catalog } from './mob_catalog.js'
+import { get_pet_catalog } from './pet_catalog.js'
 
 /** The single display predicate for authored archi-tier MobTemplates. */
 export const is_archi_tier = (/** @type {string | null | undefined} */ tier) => tier?.toLowerCase() === 'archi'
@@ -30,20 +32,68 @@ export const is_archi_tier = (/** @type {string | null | undefined} */ tier) => 
 // mob and its fight-board twin parse different GLB bytes.
 /** @type {Map<string, string>} */
 const resolved_mob_urls = new Map()
+const FALLBACK_MODEL_FILE = 'hy__missing.glb'
+
+/** @param {string} glb */
+const mob_model_filename = (glb) => (glb.endsWith('.glb') ? glb : `${glb}.glb`)
+
 export const resolve_mob_visual_url = (
   /** @type {Map<string, string>} */ cache,
   /** @type {string} */ glb,
   /** @type {(url_class:string, filename:string) => string | null} */ resolve_asset = asset_url
 ) => {
-  let url = cache.get(glb)
+  const filename = mob_model_filename(glb)
+  let url = cache.get(filename)
   if (!url) {
-    url = model_asset_url('mob', `${glb}.glb`, resolve_asset)
-    if (url) cache.set(glb, url)
+    url = model_asset_url('mob', filename, resolve_asset)
+    if (url) cache.set(filename, url)
   }
   return url ?? null
 }
-const mob_visual_url = (/** @type {string} */ glb) => resolve_mob_visual_url(resolved_mob_urls, glb)
-const missing_url = () => mob_visual_url('hy__missing')
+
+let allowed_mob_catalog = /** @type {Record<string, {glb?: string | null}> | null} */ (null)
+let allowed_pet_catalog = /** @type {Record<string, {glb?: string | null}> | null} */ (null)
+let allowed_mob_files = /** @type {Set<string>} */ (new Set())
+const rejected_mob_files = new Set()
+
+/** Rebuild only when a late catalog load (or a test seam) swaps either catalog object. */
+function catalog_mob_files() {
+  const mob_catalog = get_catalog()
+  const pet_catalog = get_pet_catalog()
+  if (mob_catalog !== allowed_mob_catalog || pet_catalog !== allowed_pet_catalog) {
+    // A catalog object replacement is a new publication snapshot. Preserve page-lifetime pinning while the
+    // snapshot is stable, but never let URLs from an older snapshot/test configuration leak into the new one.
+    resolved_mob_urls.clear()
+    allowed_mob_catalog = mob_catalog
+    allowed_pet_catalog = pet_catalog
+    allowed_mob_files = new Set([
+      FALLBACK_MODEL_FILE,
+      ...fast_travel_asset_refs.filter(({ url_class }) => url_class === 'mob').map(({ filename }) => filename),
+      ...Object.values(mob_catalog).flatMap(({ glb }) => (glb ? [mob_model_filename(glb)] : [])),
+      ...Object.values(pet_catalog).flatMap(({ glb }) => (glb ? [mob_model_filename(glb)] : [])),
+    ])
+  }
+  return allowed_mob_files
+}
+
+/** The ONE production constructor for a catalog mob-model URL. Accepts a catalog GLB stem or filename so
+ * manifest-sealed models (the travel dragons) and mob/pet catalog rows share the identical construction path.
+ * An unlisted key can never become a speculative network request: it reports once and resolves the explicit
+ * magenta fallback instead. */
+export const mob_model_url = (/** @type {string} */ glb) => {
+  const filename = mob_model_filename(glb)
+  if (catalog_mob_files().has(filename)) return resolve_mob_visual_url(resolved_mob_urls, filename)
+  if (!rejected_mob_files.has(filename)) {
+    rejected_mob_files.add(filename)
+    console.error(
+      `[mob-model-catalog] refused unlisted mob GLB "${filename}"; rendering catalog fallback "${FALLBACK_MODEL_FILE}"`
+    )
+  }
+  return resolve_mob_visual_url(resolved_mob_urls, FALLBACK_MODEL_FILE)
+}
+
+/** The visible magenta fallback, resolved by the same catalog constructor as every primary mob model. */
+export const mob_model_fallback_url = () => mob_model_url(FALLBACK_MODEL_FILE)
 
 /** Normalize a mob display NAME into a mob_catalog key: lowercase, every run of non-alnum chars
  * collapsed to one underscore, edges trimmed. Matches the legacy dataset's own id convention (verified against
@@ -115,7 +165,7 @@ export function get_mob_model(mob) {
   // Asset-host only: an unpublished `mob` class returns null and the caller keeps its honest placeholder state.
   if (glb)
     return {
-      url: mob_visual_url(glb),
+      url: mob_model_url(glb),
       variant: null,
       size,
     }
@@ -129,7 +179,7 @@ export function get_mob_model(mob) {
       `[mob-model] NO REFERENCE-CORPUS MODEL for appearance="${gap}" (mob name="${mob.name ?? ''}" variant="${mob.variant ?? ''}") — rendering the debug cube. Extract its reference-corpus source or fix its appearance in mob_models.json.`
     )
   }
-  return { url: missing_url(), variant: null, size }
+  return { url: mob_model_fallback_url(), variant: null, size }
 }
 
 /**

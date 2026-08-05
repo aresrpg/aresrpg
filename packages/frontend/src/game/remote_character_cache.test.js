@@ -13,6 +13,7 @@ import { configure_assets } from '@aresrpg/sdk/jobs'
 import '../test_helpers/env_mock.js'
 
 import { _reset_log_for_test, get_log_buffer } from '../core/log.js'
+import { resolve_mob_visual_url } from './data/mobs.js'
 import { set_catalog_for_test as set_mob_catalog_for_test } from './data/mob_catalog.js'
 import { set_pet_catalog_for_test } from './data/pet_catalog.js'
 
@@ -31,8 +32,11 @@ const TEMPLATES = new Map([
 // mob class config for pet_of — SAME registration pet_companion_resolver.test.js already makes (merge-only,
 // process-shared per jobs.js's reset_assets_for_test doc — the identical values keep this idempotent
 // regardless of bun test's file load order).
-configure_assets({ aggregator: 'https://fake-assets', classes: { mob: { published: true }, cosmetic: { published: true } } })
-const mob_url = (glb) => `https://fake-assets/models/mobs/${glb}.glb`
+configure_assets({
+  aggregator: 'https://fake-assets',
+  classes: { mob: { published: true }, cosmetic: { published: true } },
+})
+const mob_url = (glb) => resolve_mob_visual_url(new Map(), glb)
 
 // A captured/real `/v1/characters` row shape (views.js handle_characters): `worn` is keyed by CATEGORY, each
 // slot {item_id, template_id, category} — NOT the engine's {head,back}/{url,variant} shape. resolve_worn_cosmetics
@@ -182,7 +186,7 @@ describe('create_remote_character_cache — peer worn cosmetics resolve from /v1
   })
 })
 
-describe('create_remote_character_cache — pet_of resolves a peer\'s equipped pet from the SAME /v1 doc (#553)', () => {
+describe("create_remote_character_cache — pet_of resolves a peer's equipped pet from the SAME /v1 doc (#553)", () => {
   const PET_ROW = (id, slug) => ({
     id,
     pet_equipped: true,

@@ -18,8 +18,8 @@ import { clone as clone_skinned } from 'three/examples/jsm/utils/SkeletonUtils.j
 
 import { apply_avatar_material, load_glb_checked } from '@aresrpg/engine3/player'
 import { game_log } from '../core/log.js'
+import { mob_model_fallback_url, mob_model_url } from './data/mobs.js'
 import { dragon_glb_file } from './fast_travel_assets.js'
-import { model_asset_url } from './model_asset_url.js'
 
 const AMBIENT_DEFAULT = 'void' // the sky dragon soars void by default; the ridden mount's own default is fire
 const TARGET_SPAN = 12 // world blocks — the dragon's longest dimension after normalisation (big, cinematic)
@@ -42,7 +42,7 @@ export function create_sky_dragon({ engine, center, variant }) {
     variant ?? new URLSearchParams(typeof location !== 'undefined' ? location.search : '').get('dragon') ?? ''
   ).toLowerCase()
   const filename = dragon_glb_file(key) ?? dragon_glb_file(AMBIENT_DEFAULT)
-  const url = model_asset_url('mob', filename)
+  const url = mob_model_url(filename)
   if (!url) return { dispose() {} }
   const [cx, cy_base, cz] = center
   const cy = cy_base + ALTITUDE
@@ -60,7 +60,7 @@ export function create_sky_dragon({ engine, center, variant }) {
   let last_t = performance.now()
   let theta = 0
 
-  load_glb_checked(url)
+  load_glb_checked(url, { fallback_url: mob_model_fallback_url() })
     .then((gltf) => {
       if (disposed) return
       const root = clone_skinned(gltf.scene)

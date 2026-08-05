@@ -22,17 +22,20 @@ import {
   mount_target_height,
   pick_mount_clips,
 } from './cosmetic_glb.js'
+import { mob_model_fallback_url, mob_model_url } from './data/mobs.js'
 import { fast_travel_dragon_file } from './fast_travel_assets.js'
 import { create_mount_glb_cache } from './mount_glb_cache.js'
 import { game_log } from '../core/log.js'
 import { report_error } from '../core/report.js'
-import { canonical_model_source_url, model_asset_url } from './model_asset_url.js'
+import { canonical_model_source_url } from './model_asset_url.js'
 
 const SEAT_LIFT = 0.8 // fraction of the mount's height the rider sits at (bbox top of the back ≈ ×0.8)
 const BLEND_RATE = 8 // idle↔move weight ease (per-second lambda)
 
 /** Fetch+parse each unique mount GLB once; failed work is evicted, resolved render data stays page-cached. */
-const glb_cache = create_mount_glb_cache((/** @type {string} */ url) => load_glb_checked(url))
+const glb_cache = create_mount_glb_cache((/** @type {string} */ url) =>
+  load_glb_checked(url, { fallback_url: mob_model_fallback_url() })
+)
 
 /** The mount GLB refusal rule (non-CDN URLs rejected) — ONE home, shared by create_mount_rig and the
  *  #175 preload below so a preload always warms the EXACT cache key the real mount will ask for.
@@ -44,7 +47,7 @@ const resolve_source_url = (glb_url) => canonical_model_source_url(glb_url, { al
 export function ft_dragon_glb_url() {
   const pick = import.meta.env.DEV ? new URLSearchParams(location.search).get('ftdragon') : null
   const file = fast_travel_dragon_file(pick)
-  return model_asset_url('mob', file)
+  return mob_model_url(file)
 }
 
 /** PRELOAD-ON-INTENT: fetch+parse the SAME canonical key spawn will consume, and resolve only once that render

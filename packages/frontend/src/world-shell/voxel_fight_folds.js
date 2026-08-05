@@ -20,7 +20,7 @@ import { weapon_spell_template } from '@aresrpg/fight/predict_cast'
 import { WEAPON_ATTACK_ID } from '@aresrpg/fight/weapon'
 
 import { dungeon_grid_of } from '../game/screens/dungeon-grid.js'
-import { get_mob_model } from '../game/data/mobs.js'
+import { get_mob_model, mob_model_fallback_url } from '../game/data/mobs.js'
 import { PLACEHOLDER_RIG_CLASS, character_model_urls } from '../game/screens/character-glb.js'
 import {
   cast_requires_occupant,
@@ -174,6 +174,7 @@ export function entity_spec_from_fighter(fighter) {
     id: fighter.id,
     kind: fighter.is_player ? 'player' : 'mob',
     glb_variant: glb_variant_of(fighter),
+    mob_fallback_url: !fighter.is_player && fighter.identity_resolved !== false ? mob_model_fallback_url() : undefined,
     hair_url: hair_variant_of(fighter),
     colors: fighter.colors ?? null,
     cell: { x: fighter.cell.x, y: fighter.cell.y },
