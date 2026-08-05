@@ -29,6 +29,7 @@ import {
   mark_engage_wallet_signed,
 } from '../core/engage_timing.js'
 import { game_log } from '../core/log.js'
+import { observe_server_date, server_clock_offset_ms, server_now } from '../core/server_clock'
 import { sponsored_execute_result } from '../chain/receipt'
 import { attach_executed_digest } from '../world-shell/tx_digest_error.js'
 
@@ -523,6 +524,18 @@ function refused_for(refusal: string, reason: string | null, detail: string, leg
   return true
 }
 
+// #2263 — where "the clock is off" starts being the honest explanation. An unsynced laptop is routinely tens of
+// seconds out and that is not worth a word to the player; the sponsor's window is 5 minutes, so warning from 2
+// names the cause while the player can still be told BEFORE the drift refuses them outright.
+const CLOCK_SKEW_COPY_THRESHOLD_MS = 2 * 60_000
+
+/** Whole minutes this device's clock is off by, or null when it is un-measured or within ordinary drift. */
+function skewed_clock_minutes(): number | null {
+  const offset = server_clock_offset_ms()
+  if (offset == null || Math.abs(offset) < CLOCK_SKEW_COPY_THRESHOLD_MS) return null
+  return Math.round(Math.abs(offset) / 60_000)
+}
+
 // THE single sponsor error humanizer (docs/SPONSOR_TWO_CALL_CONTRACT.md §"Error decoder keys") — maps the
 // station sponsor's `error` string prefix / HTTP status to ONE decoder key via the shared choke. Every throw
 // path here is PRE-execution (reserve refuses before any gas; an execute 400 is a station pre-exec rejection /
@@ -589,7 +602,14 @@ function map_sponsor_error(
   // RATE-LIMITED — per-IP 429 or the per-address 400 'rate-limited'. Transient throttle; nothing charged.
   if (status === 429 || /rate[-\s]?limit/i.test(detail)) return new Error(i18n.t('errors.sponsor_rate_limited'))
   // zkLogin challenge rejected (not an Enoki identity / stale challenge) — honest auth error, re-sign a fresh one.
-  if (/zklogin-/i.test(detail)) return new Error(i18n.t('errors.sponsor_zklogin'))
+  // THE CLOCK ARM FIRST (#2263): when we have MEASURED the device against the server and it is minutes out,
+  // "sign in again and retry" is a lie — re-signing mints another timestamp from the same wrong clock. Only a
+  // measured offset selects this copy, so a genuine signature failure is never mislabelled as a clock problem.
+  if (/zklogin-/i.test(detail)) {
+    const minutes = skewed_clock_minutes()
+    if (minutes != null) return new Error(i18n.t('errors.sponsor_clock_skew', { minutes }))
+    return new Error(i18n.t('errors.sponsor_zklogin'))
+  }
   // PTB outside the aresrpg allowlist — honest "not sponsorable" (should never fire for an SDK-composed PTB).
   if (/sponsor-scope/i.test(detail)) return new Error(i18n.t('errors.sponsor_scope'))
   // sim failed / would-fail tx — can't be priced; never guess a budget past the ceiling.
@@ -659,6 +679,11 @@ async function sponsor_fetch(url: string, body: unknown, post_submit = false): P
     if (post_submit) throw sponsor_outcome_unknown_error()
     throw new Error(i18n.t('errors.sponsor_unreachable'))
   }
+  // THE CLOCK MEASUREMENT (#2263), on every answer including the refusals. A POST is never served from a cache,
+  // so this response's `Date` is the sponsor's clock as of a moment ago — the one deadline-setting clock the
+  // challenge above must be stamped against. Reading it here means a refused player's very next attempt is
+  // already corrected, and costs no round-trip.
+  observe_server_date(response.headers?.get?.('date'))
   if (response.ok) {
     try {
       return await response.json()
@@ -712,7 +737,11 @@ export async function execute_sponsored_tx({
   // Resolved BEFORE the build so an unsupported wallet still refuses without building anything.
   const pm = wallet.features['sui:signPersonalMessage'] as SignPersonalMessageFeature | undefined
   if (!pm?.signPersonalMessage) throw new Error('Wallet does not support signPersonalMessage')
-  const challenge = `aresrpg-sponsor:${address}:${Date.now()}`
+  // SERVER TIME, NOT DEVICE TIME (#2263). The sponsor refuses this stamp outside a 5-minute window, so on a
+  // device whose clock is off by more than that, every sponsored transaction was refused forever — a state no
+  // in-game action could escape. `server_now()` is device time plus the offset measured off the sponsor's own
+  // responses, and falls back to raw device time when nothing has been measured yet.
+  const challenge = `aresrpg-sponsor:${address}:${server_now()}`
   // FIRST SIGN of a fresh zkLogin session — Enoki generates the zkLogin proof LAZILY on the first sign
   // (wallet.mjs createZkLoginZkp), so a brand-new / second Google account reaching create signs for the very
   // first time RIGHT HERE, before the sponsor POST. If Enoki's proving fails (a not-yet-ready or second-session

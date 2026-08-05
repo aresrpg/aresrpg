@@ -49,6 +49,11 @@ export function to_response(desc, req, extra_headers = {}) {
     headers.set('access-control-allow-origin', origin)
     headers.set('vary', 'origin')
   }
+  // #2263 — `Date` is not a CORS-safelisted response header, so a cross-origin browser cannot read it unless
+  // this says so. The client measures its own clock drift off `/v1/status` (the shortest-lived route we serve)
+  // to stamp sponsor challenges the sponsor will accept; without this the measurement is silently unavailable
+  // to every deployed origin. It exposes a timestamp the response already sends, and nothing else.
+  headers.set('access-control-expose-headers', 'date')
 
   // Conditional GET for cacheable 200s: content-hash ETag, 304 on match.
   if (status === 200 && req?.method === 'GET') {

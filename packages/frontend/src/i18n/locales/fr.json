@@ -2432,6 +2432,7 @@
     "sponsor_scope": "Cette transaction ne peut pas être sponsorisée — elle nécessite ton propre gas.",
     "sponsor_unpriceable": "Impossible d'estimer le gas de cette transaction — rien n'a été envoyé. Réessaie.",
     "sponsor_zklogin": "Impossible de vérifier ta connexion pour le sponsoring. Reconnecte-toi et réessaie.",
+    "sponsor_clock_skew": "L'horloge de ton appareil est décalée d'environ {{minutes}} minutes, le sponsoring la refuse donc. Active la date et l'heure automatiques dans tes réglages système, puis réessaie.",
     "sponsor_over_ceiling": "Cette action demande trop de gas pour être sponsorisée — il te faudra tes propres SUI.",
     "sponsor_reserve_failed": "Impossible de réserver du gas sponsorisé pour l'instant. Recharge pour payer toi-même, ou réessaie dans un instant.",
     "sponsor_retry": "Cette transaction sponsorisée n'a pas abouti — rien n'a été débité. Réessaie.",

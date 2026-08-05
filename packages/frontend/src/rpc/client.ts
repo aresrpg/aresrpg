@@ -13,6 +13,7 @@
 // indexer, so a testnet republish never touches this file (env.ts RPC_URL is the only deployment seam).
 
 import { RPC_URL } from '../env'
+import { observe_server_date } from '../core/server_clock'
 
 import { create_world_poll_scheduler } from './world_poll_scheduler'
 import type {
@@ -58,6 +59,8 @@ export class RpcError extends Error {
 }
 
 const DEFAULT_TIMEOUT_MS = 8000
+/** The one route whose `Date` header is fresh enough to measure this device's clock against (see below). */
+const CLOCK_SOURCE_PATH = '/v1/status'
 
 type Params = Record<string, string | number | boolean | null | undefined>
 
@@ -317,6 +320,12 @@ async function fetch_json_once(url: string): Promise<unknown> {
   } finally {
     clearTimeout(timeout)
   }
+
+  // #2263 — the BOOT clock reading. `/v1/status` fires in the boot burst and every poll tick, and it is the
+  // only route here whose staleness is bounded tightly enough to read a clock off (`max-age=2`, api/views.js
+  // handle_status). Every other route may sit in an edge cache for minutes and would replay a `Date` that
+  // moves the offset backward — refusing a player whose clock is fine. Do not widen this to `rpc_get`.
+  if (new URL(url).pathname === CLOCK_SOURCE_PATH) observe_server_date(res.headers.get('date'))
 
   if (res.status === 429)
     throw new RpcError('RPC_RATE_LIMITED', 429, undefined, (await rate_limit_seconds(res)) ?? undefined)

@@ -2432,6 +2432,7 @@
     "sponsor_scope": "Esta transacción no se puede patrocinar — necesita tu propio gas.",
     "sponsor_unpriceable": "No se pudo calcular el gas de esta transacción — no se envió nada. Inténtalo de nuevo.",
     "sponsor_zklogin": "No se pudo verificar tu inicio de sesión para el patrocinio. Vuelve a iniciar sesión e inténtalo de nuevo.",
+    "sponsor_clock_skew": "El reloj de tu dispositivo va desfasado unos {{minutes}} minutos, por eso el patrocinio lo rechaza. Activa la fecha y hora automáticas en los ajustes del sistema y vuelve a intentarlo.",
     "sponsor_over_ceiling": "Esta acción necesita demasiado gas para patrocinarse — necesitarás tus propios SUI.",
     "sponsor_reserve_failed": "No se pudo reservar gas patrocinado ahora mismo. Recarga para pagarlo tú, o inténtalo de nuevo en un momento.",
     "sponsor_retry": "Esa transacción patrocinada no se completó — no se cobró nada. Inténtalo de nuevo.",

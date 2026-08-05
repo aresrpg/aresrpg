@@ -2432,6 +2432,7 @@
     "sponsor_scope": "Diese Transaktion kann nicht gesponsert werden — sie benötigt dein eigenes Gas.",
     "sponsor_unpriceable": "Das Gas dieser Transaktion konnte nicht berechnet werden — nichts wurde gesendet. Versuche es erneut.",
     "sponsor_zklogin": "Deine Anmeldung für das Sponsoring konnte nicht bestätigt werden. Bitte melde dich erneut an und versuche es noch einmal.",
+    "sponsor_clock_skew": "Die Uhr deines Geräts geht rund {{minutes}} Minuten falsch, deshalb lehnt das Sponsoring sie ab. Aktiviere Datum und Uhrzeit automatisch in den Systemeinstellungen und versuch es erneut.",
     "sponsor_over_ceiling": "Diese Aktion braucht zu viel Gas, um gesponsert zu werden — du benötigst dafür eigene SUI.",
     "sponsor_reserve_failed": "Gesponsertes Gas konnte gerade nicht reserviert werden. Lade auf, um selbst zu zahlen, oder versuch es gleich noch einmal.",
     "sponsor_retry": "Diese gesponserte Transaktion ist nicht durchgegangen — es wurde nichts berechnet. Bitte versuch es noch einmal.",

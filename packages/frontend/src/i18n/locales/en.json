@@ -2432,6 +2432,7 @@
     "sponsor_scope": "This transaction can't be sponsored — it needs your own gas.",
     "sponsor_unpriceable": "Couldn't price this transaction's gas — nothing was sent. Try again.",
     "sponsor_zklogin": "Couldn't verify your sign-in for sponsorship. Please sign in again and retry.",
+    "sponsor_clock_skew": "Your device clock is about {{minutes}} minutes off, so sponsorship keeps rejecting it. Turn on automatic date & time in your system settings, then try again.",
     "sponsor_over_ceiling": "This action needs too much gas to sponsor — you'll need your own SUI for it.",
     "sponsor_reserve_failed": "Couldn't reserve sponsored gas right now. Top up to pay it yourself, or try again in a moment.",
     "sponsor_retry": "That sponsored transaction didn't go through — nothing was charged. Please try again.",
