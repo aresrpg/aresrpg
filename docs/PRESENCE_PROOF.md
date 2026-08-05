@@ -30,28 +30,16 @@ announces `ICE is STUN-only` at join). It remains the right proof for the day TU
 
 ## Evidence — the discharge basis
 
-Because reachability could not be demonstrated, the gate is discharged the other way: by removing the
-failure mode it was guarding against. The risk it protected against was a client that _believes_ it is
-connected while carrying nothing — a green chip over an empty world, silently covered for by the
-server-side path underneath. That path is now gone, so the transport is made to report itself honestly
-instead:
-
-**THE HONEST-DEGRADED GUARANTEE.** `link_status` never reads `connected` over zero open peer channels.
-`getPeers()` exposes only OPEN RTC data channels; a relay socket by itself introduces peers and carries
-no position, no chat and no presence. So the health check derives `connected` from peer channels alone,
-and once the fresh-room grace has passed, a link with none of them reads `degraded` — whatever the
-reason (alone in the world, a symmetric NAT with no TURN to relay through, a channel that froze). The
-chip renders the atom, so an unreachable client now reads as unreachable rather than as an empty world.
+Connection health and remote population are separate facts. `link_status` derives from the transport:
+an OPEN RTC data channel remains usable if signaling drops, while an established MQTT relay session can
+discover the first or next peer. Zero remote peers is a valid empty room, not proof of failure; treating it
+as failure stranded every refreshed client on `degraded` even after MQTT connected. Only zero usable peer
+channels _and_ zero relay sessions spends the reconnect budget and can ultimately report `failed`.
 
 - Home: `packages/frontend/src/p2p/lobby-room.js`, `_health_check`.
-- Pinned by `packages/frontend/test/p2p/lobby-room.test.js`: "never claims connected over zero peer
-  channels", "holds its judgement inside the fresh-room grace", "recovers to connected the moment a
-  channel opens, and degrades again when it closes".
-- Red-first: forcing the derivation back to a constant `connected` reddens exactly those assertions and
-  nothing else; reverting restores 29/29 green.
-- The same change deletes `unreachable_peers`, the heuristic that previously tried to tell "alone" from
-  "unreachable" in order to justify a green chip. Under the guarantee above that distinction no longer
-  changes what is shown, so the concept is gone rather than kept as decoration.
+- Pinned by `packages/frontend/test/p2p/lobby-room.test.js`: "reload with a healthy broker clears connecting
+  when the MQTT connect resolves", "a late MQTT CONNACK clears the failure state on the next health
+  observation", and "does not mistake the last peer leaving for relay failure".
 
 Contract items 1–3 are pinned headlessly against the real transport module — peer appearance, position
 delivery, and the `PEER_EXPIRY_MS` lapse driven through the core's own `tick` — in

@@ -14,6 +14,12 @@ export const trystero_room_configs = []
 export const trystero_relay_socket = { readyState: 1, url: 'ws://relay.test/mqtt' }
 export const trystero_relay_calls = { pause: 0, resume: 0 }
 
+/** Resolve the MQTT client's connect attempt (the CONNACK-backed promise in the real Trystero strategy).
+ *  `getRelaySockets()` exposes its backing WebSocket, so OPEN is the production adapter's session truth. */
+export const resolve_trystero_relay_connect = () => {
+  trystero_relay_socket.readyState = 1
+}
+
 export function reset_trystero_mock() {
   trystero_actions.clear()
   trystero_sent.length = 0

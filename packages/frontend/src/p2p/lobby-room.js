@@ -317,16 +317,10 @@ function _retire_failed_room(reason) {
   Promise.resolve(failed_room?.leave()).catch(() => {})
 }
 
-/** LINK HEALTH — an active RTCDataChannel is the primary truth: relay loss during a live direct session must
- *  never tear down the game channel. With no direct peer, the relay sockets are the signaling lifeline.
- *
- *  THE HONEST-DEGRADED LAW: `connected` means peer traffic can actually flow, and that takes an OPEN data
- *  channel — `getPeers()` exposes only those. A relay socket by itself introduces peers and then carries
- *  nothing: no position, no chat, no presence. So a link with ZERO peer channels never claims connected. Once
- *  the fresh-room grace has passed it says `degraded`, whatever the reason (nobody here, a symmetric NAT with
- *  no TURN to relay through, a half-open channel) — the chip renders the atom, so an empty world can never
- *  read green. A status that overstates the link is the #1641 lie with a UI, and this is the one place that
- *  could tell it. */
+/** LINK HEALTH — connection truth has two live forms: an OPEN RTCDataChannel can keep carrying presence after
+ *  the signaling relay drops, while an OPEN relay session can discover the first/next peer when no direct
+ *  channel exists. Zero remote peers is population truth, not connection failure: mapping an established MQTT
+ *  session to `degraded` made the banner latch on every healthy empty room after refresh (#2157). */
 function _health_check() {
   const peer_count = direct_peer_count()
   const relay_count = connected_relays()
@@ -336,11 +330,8 @@ function _health_check() {
       clearTimeout(rejoin_timer)
       rejoin_timer = null
     }
-    // Inside the grace a fresh socket is still shaking hands — judge nothing yet, and never downgrade a status
-    // the handshake is about to earn.
-    if (peer_count === 0 && Date.now() < link_grace_until) return
-    const status = peer_count > 0 ? 'connected' : 'degraded'
-    if (presence_store.getState().link_status !== status) set_link(status)
+    // One truth, no latch: the next observed successful relay session clears connecting/reconnecting/degraded.
+    if (presence_store.getState().link_status !== 'connected') set_link('connected')
     return
   }
   if (Date.now() < link_grace_until || rejoin_timer || rejoin_in_flight) return

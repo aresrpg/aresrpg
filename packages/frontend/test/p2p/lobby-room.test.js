@@ -21,6 +21,7 @@ import { reset_expedition_sdk_mock, set_expedition_sdk_mock } from '../../src/te
 import {
   deliver,
   reset_trystero_mock,
+  resolve_trystero_relay_connect,
   trystero_actions,
   trystero_relay_calls,
   trystero_relay_socket,
@@ -310,16 +311,30 @@ describe('sad paths — an outage is stated, never silently idled', () => {
     expect(state().link_status).toBe('connecting')
   })
 
-  // THE HONEST-DEGRADED LAW (the courier retirement's discharge basis, docs/PRESENCE_PROOF.md). A relay
-  // socket introduces peers and then carries nothing — no position, no chat, no presence — so a link with
-  // zero OPEN data channels may never claim `connected`. This is what makes an empty world legible instead
-  // of green, and it is the property that had to hold before the server-side presence path could be deleted:
-  // with no second transport left to quietly cover for it, the chip IS the report.
-  it('never claims connected over zero peer channels — an empty room reads degraded, not green', () => {
+  it('reload with a healthy broker clears connecting when the MQTT connect resolves', () => {
+    leave_room()
+    reset_trystero_mock()
+    capture_timers()
+    trystero_relay_socket.readyState = 0 // a refreshed document starts while MQTT awaits CONNACK
+    join_room(WORLD, ME, { x: 0, y: 0 })
+    expect(state().link_status).toBe('connecting')
+
+    resolve_trystero_relay_connect()
     setSystemTime(new Date(Date.now() + GRACE_MS + 1))
     poll()
     expect(live_room().getPeers()).toEqual({})
-    expect(state().link_status).toBe('degraded')
+    expect(state().link_status).toBe('connected')
+  })
+
+  it('a late MQTT CONNACK clears the failure state on the next health observation', () => {
+    trystero_relay_socket.readyState = 3
+    setSystemTime(new Date(Date.now() + GRACE_MS + 1))
+    poll()
+    expect(state().link_status).toBe('reconnecting')
+
+    resolve_trystero_relay_connect()
+    poll()
+    expect(state().link_status).toBe('connected')
   })
 
   it('holds its judgement inside the fresh-room grace rather than flashing degraded mid-handshake', () => {
@@ -328,15 +343,15 @@ describe('sad paths — an outage is stated, never silently idled', () => {
     expect(state().link_status).not.toBe('degraded')
   })
 
-  it('recovers to connected the moment a channel opens, and degrades again when it closes', () => {
+  it('does not mistake the last peer leaving for relay failure', () => {
     setSystemTime(new Date(Date.now() + GRACE_MS + 1))
     poll()
-    expect(state().link_status).toBe('degraded')
+    expect(state().link_status).toBe('connected')
     live_room().connectPeer('peer-socket-9')
     expect(state().link_status).toBe('connected')
     live_room().disconnectPeer('peer-socket-9')
     poll()
-    expect(state().link_status).toBe('degraded')
+    expect(state().link_status).toBe('connected')
   })
 
   it('says DOWN loudly when our relay is unreachable — and gives up with a REASON, not a forever spinner', async () => {
