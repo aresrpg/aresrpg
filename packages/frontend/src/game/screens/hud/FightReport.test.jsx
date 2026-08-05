@@ -322,62 +322,6 @@ describe('FightReport — fight duration micro-label (timeline span, total mm:ss
   })
 })
 
-describe('FightReport — per-player spoils rows (xp and items PER PLAYER ROW, so everyone can see what everyone rolled)', () => {
-  const party = [
-    { id: 'me', name: 'Hero', level: 12, is_me: true, is_player: true, alive: true, hp_pct: 100 },
-    { id: 'ally-1', name: 'Ally', level: 9, is_me: false, is_player: true, alive: true, hp_pct: 100 },
-  ]
-  const spoils = { xp: 50, tokens: 0, loot: [{ item_type: 'rusty_blade', name: 'Rusty Blade', amount: 1 }] }
-
-  test("the local player's row carries the REAL receipt: xp + a resolved item icon, exactly once", () => {
-    const html = renderToStaticMarkup(<FightReport {...base} party={party} spoils={spoils} cost={null} />)
-    expect(html).toContain('+50')
-    expect(html).toContain('Rusty Blade')
-    expect(html).toContain('fe-tile') // the drop renders a real, named tile on MY row
-    expect(html.split('fe-gain').length - 1).toBe(1) // exactly ONE row carries real numbers
-  })
-
-  test("a teammate's row is HONEST about the chain not splitting rewards per player — never fabricated, never silent", () => {
-    const html = renderToStaticMarkup(<FightReport {...base} party={party} spoils={spoils} cost={null} />)
-    expect(html).toContain('fight_end.spoils_hidden')
-  })
-
-  test('a defeat card (spoils=null) still shows the single dashed NO SPOILS plate — no per-row placeholders', () => {
-    const html = renderToStaticMarkup(
-      <FightReport {...base} party={party} spoils={null} verdict="Defeat" cost={null} />
-    )
-    expect(html).toContain('fe-nospoils')
-    expect(html).not.toContain('fight_end.spoils_hidden')
-  })
-})
-
-describe('FightReport — RED-FIRST fixture: a 2-player settle result (victory-card overhaul brief)', () => {
-  const long_id = '0xdee0fa5d_ally_character_fixture_id' // long+fake — never a real 64-hex chain id
-  const fixture = {
-    verdict: 'Victory',
-    party: [
-      { id: 'me', name: 'Hero', level: 12, is_me: true, is_player: true, alive: true, hp_pct: 100 },
-      { id: long_id, name: '0xDEE0…AD38', level: 9, is_me: false, is_player: true, alive: true, hp_pct: 100 },
-    ],
-    enemies: [],
-    spoils: { xp: 42, tokens: 0, loot: [{ item_type: 'rusty_blade', name: 'Rusty Blade', amount: 1 }] },
-    duration_ms: 154000, // 2:34 — settle-minus-start timestamp delta
-    cost: null,
-    t,
-    on_close: () => {},
-  }
-
-  test('names resolve (not addresses), xp/icon render on my row, duration renders, teammate row stays honest', () => {
-    const html = renderToStaticMarkup(<FightReport {...fixture} />)
-    expect(html).not.toContain('0xDEE0…AD38') // the address slice never survives
-    expect(html).toContain('Hero')
-    expect(html).toContain('+42')
-    expect(html).toContain('aria-label="Rusty Blade"') // a real, named tile — not the null grey square
-    expect(html).toContain('2:34') // duration from the fixture's timestamp delta
-    expect(html).toContain('fight_end.spoils_hidden') // the teammate's un-split reward, reported honestly
-  })
-})
-
 // REPORT BUG row — the row reads the REAL app fight_store's trace
 // instance (the exact door FightReport itself reads at mount via has_dumpable_trace), so this exercises the
 // actual wiring, not a stub. ALWAYS rendered now — never a SURPRISE affordance: has_dumpable_trace() gates the
@@ -480,19 +424,6 @@ describe('FightReport — participant-row model (#342: compact single-line rows)
     expect(html).toContain('fe-state__glyph')
     expect(html).toContain('●') // the alive glyph
     expect(html).toContain('aria-label="fight_end.alive"') // the word survives for hover/screen-reader access
-  })
-
-  test('a teammate\'s "not visible to you" is a dim ICON (aria-label) — never its own visible text line', () => {
-    const party = [
-      { id: 'me', name: 'Hero', level: 12, is_me: true, is_player: true, alive: true, hp_pct: 100 },
-      { id: 'ally', name: 'Ally', level: 9, is_me: false, is_player: true, alive: true, hp_pct: 100 },
-    ]
-    const html = renderToStaticMarkup(
-      <FightReport {...base} party={party} spoils={{ xp: 10, tokens: 0, loot: [] }} cost={null} />
-    )
-    expect(html).toContain('aria-label="fight_end.spoils_hidden"') // the accessible name — never visible text
-    expect(html).not.toContain('>fight_end.spoils_hidden<') // the old italic filler TEXT line is gone
-    expect(html).toContain('fe-row__spoils--hidden')
   })
 
   test('a roster of 4 or fewer stays single-column (1v1/duo never over-compressed into a grid)', () => {

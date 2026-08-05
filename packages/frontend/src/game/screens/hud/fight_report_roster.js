@@ -29,6 +29,7 @@ const final_hp_pct = ({ final_hp = null, max_hp = null }) => {
  *   final_hp?: number | null,
  *   max_hp?: number | null,
  *   template_id?: string | null,
+ *   spoils?: { xp: number, tokens: number, loot: any[], pending?: boolean, loot_units?: number | null } | null,
  * }>} roster
  * @param {number} my_team
  * @returns {Array<{
@@ -73,7 +74,8 @@ export const fight_report_enemy_rows = (roster, my_team) =>
  *
  * @param {{
  *   roster: Array<{ id: string, name?: string, team: number, level?: number, is_player?: boolean, alive?: boolean,
- *     final_hp?: number | null, max_hp?: number | null }>,
+ *     final_hp?: number | null, max_hp?: number | null,
+ *     spoils?: { xp: number, tokens: number, loot: any[], pending?: boolean, loot_units?: number | null } | null }>,
  *   me_id: string | null,
  *   me_name: string | null,
  *   my_level: number,
@@ -91,7 +93,14 @@ export function fight_report_party_rows({ roster, me_id, me_name, my_level, my_c
   // Synthesize the local row for a KNOWN seat the roster lost, or to rescue a roster that raced away empty —
   // never to pad a populated roster with a seat we cannot source.
   const needs_self = !seated.some(is_local) && (me_id != null || seated.length === 0)
-  const self_row = { id: me_id ?? 'me', name: me_name ?? fallback_name, team: my_team, level: my_level, is_player: true, alive: self_alive }
+  const self_row = {
+    id: me_id ?? 'me',
+    name: me_name ?? fallback_name,
+    team: my_team,
+    level: my_level,
+    is_player: true,
+    alive: self_alive,
+  }
   const party = needs_self ? [self_row, ...seated] : seated
   return {
     my_team,
@@ -117,6 +126,9 @@ export function fight_report_party_rows({ roster, me_id, me_name, my_level, my_c
         // lost the seat), so it reads null and draws no bar — the honest answer, not a full one.
         hp_pct: final_hp_pct(participant),
         class_name: mine ? my_class : null,
+        // Settlement owns reward distribution per participant. Preserve its row verbatim; viewer identity is
+        // presentation-only and must never become a data filter in FightReport.
+        ...(participant.spoils ? { spoils: participant.spoils } : {}),
       }
     }),
   }

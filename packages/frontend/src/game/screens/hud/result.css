@@ -653,23 +653,12 @@
   line-height: 1;
 }
 
-/* ── PER-ROW spoils receipt — xp and items PER PLAYER ROW, so everyone can see what everyone rolled.
-   #342: a teammate's honest "not visible to you" is now a compact dim glyph living in the row's own
-   trailing grid cell (never its own line — the exact "italic filler line" complaint this ticket fixes); the
-   local player's row alone carries real content (xp + loot) and alone still earns a tight second line
-   below, same as before just tightened (see the :not() override right after). ── */
+/* ── PER-ROW settlement receipt — every participant's XP and items stay visible in the shared table. ── */
 .fe-row__spoils {
-  grid-column: 5;
+  grid-column: 1 / -1;
   display: flex;
   align-items: center;
-  justify-self: end;
-  color: var(--fg-faint, #6b7280);
-  opacity: 0.55;
-}
-.fe-row__spoils:not(.fe-row__spoils--hidden) {
-  grid-column: 1 / -1;
   justify-self: stretch;
-  opacity: 1;
   gap: 10px;
   flex-wrap: wrap;
   margin-top: 6px;
@@ -1034,9 +1023,8 @@ html.ares-mobile-hud .fe-row__meta {
 html.ares-mobile-hud .fe-hp {
   height: 5px;
 }
-/* the local player's real receipt strip adds height to their one row — keep it tight so a full roster still
-   fits the capped mobile card height above (rows already overflowed the viewport once at this width). */
-html.ares-mobile-hud .fe-row__spoils:not(.fe-row__spoils--hidden) {
+/* Keep every participant's receipt strip tight so a full roster still fits the capped mobile card height. */
+html.ares-mobile-hud .fe-row__spoils {
   gap: 8px;
   margin-top: 5px;
   padding-top: 5px;

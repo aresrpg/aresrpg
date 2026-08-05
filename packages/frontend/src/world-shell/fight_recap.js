@@ -14,7 +14,8 @@
 /**
  * @param {{
  *   fighters: Map<string, { id: string, name: string, team: number, level: number, is_player: boolean,
- *     dead: boolean, owner?: string, variant?: string | null }> | null | undefined,
+ *     dead: boolean, owner?: string, variant?: string | null,
+ *     spoils?: { xp: number, tokens: number, loot: any[], pending?: boolean, loot_units?: number | null } | null }> | null | undefined,
  *   vitals?: Record<string, { vitals?: { committed?: number|null, max?: number|null } }> | null,
  *     // #1993 WP7 — the canonical entity rows (`fight_visible_view.entities`), captured with the roster. The
  *     // terminal cards carry EXACT final vitals from here; without them a card states liveness and draws no
@@ -40,7 +41,8 @@
  * @returns {{ summary: { winner: number, me_id: string | null, participants: Array<{ id: string, name: string,
  *   label: string, resolved: boolean, team: number,
  *   level: number, is_player: boolean, template_id: string | null, alive: boolean,
- *   final_hp: number | null, max_hp: number | null }>, duration_ms: number, duration_partial: boolean,
+ *   final_hp: number | null, max_hp: number | null,
+ *   spoils: { xp: number, tokens: number, loot: any[], pending?: boolean, loot_units?: number | null } | null }>, duration_ms: number, duration_partial: boolean,
  *   xp: number, loot: never[], cause: null }, won: boolean }}
  */
 export function fight_recap_payload({
@@ -83,6 +85,9 @@ export function fight_recap_payload({
         // never rounded up into a full bar. The card decides what to render from the pair, not from liveness.
         final_hp: vitals?.[f.id]?.vitals?.committed ?? null,
         max_hp: vitals?.[f.id]?.vitals?.max ?? null,
+        // The decoded settlement distributes rewards per seat. Snapshot the row with the terminal roster so
+        // every viewer gets the same comparison table after the live fight state tears down.
+        ...(f.spoils ? { spoils: f.spoils } : {}),
       })),
       duration_ms,
       duration_partial,

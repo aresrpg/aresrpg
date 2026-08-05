@@ -22,15 +22,10 @@
 //
 // DURATION renders the recorded recap timeline span as total mm:ss, including the valid zero-length case.
 //
-// SPOILS render PER PARTY ROW: everyone must see xp and items per player row, so everyone can see what
-// everyone rolled. The local player's row carries the real receipt (xp + loot tiles, unchanged data). Every
-// OTHER member's row states honestly what the chain does NOT split — `/v1/fight-results` indexes results
-// per-OWNER only (packages/rpc/api/views.js handle_fight_results, `?owner=` — no cross-owner `?fight=` query),
-// so this client has no read path to a teammate's own xp_share/loot. Their row says so; it never fabricates a
-// number or renders a second silent empty box.
+// SPOILS render PER PARTY ROW: settlement already projects each participant's chain-resolved XP and drops, so
+// the terminal card preserves that shared table. Viewer identity changes styling only; it never filters rows.
 
 import { useEffect, useMemo, useState } from 'react'
-import { EyeOff } from 'lucide-react'
 
 import { ItemIcon } from './ItemIcon.jsx'
 import { Tooltip } from './Tooltip.jsx'
@@ -139,10 +134,9 @@ function LootSkelTile() {
  * fallen ally → red DEAD ✝ (bar emptied, row dimmed); a beaten enemy → red DEFEATED (bar emptied, dimmed).
  * The self row carries the [YOU] chip + a subtle accent frame. Status is a GLYPH only (●/✕/✝) — the full
  * word rides `aria-label` for screen-reader access, freeing the width the 2-column roster grid needs.
- * `spoils_slot`, when given, is the row's 5th grid cell — a compact dim icon for a teammate's honest
- * "not visible to you" (never its own line anymore), or the local player's real xp/loot receipt, which alone
- * still earns a tight second line (see .fe-row__spoils in result.css). The row stays the single direct child
- * of .fe-rows (the entrance stagger keys off `.fe-rows .fe-row:nth-child`).
+ * `spoils_slot`, when given, is the participant's own XP/loot receipt on a tight second line (see
+ * .fe-row__spoils in result.css). The row stays the single direct child of .fe-rows (the entrance stagger keys
+ * off `.fe-rows .fe-row:nth-child`).
  * @param {{ f: { id: string, name: string, level: number, is_me?: boolean, is_player?: boolean, alive: boolean, hp_pct: number | null, class_name?: string | null, template_id?: string | null }, is_enemy: boolean, settled_dead?: boolean, spoils_slot?: import('react').ReactNode | null, t: (k: string) => string }} props
  */
 function Row({ f, is_enemy, settled_dead = false, spoils_slot = null, t }) {
@@ -192,22 +186,10 @@ function Row({ f, is_enemy, settled_dead = false, spoils_slot = null, t }) {
 }
 
 /**
- * ONE party member's spoils strip (xp and items PER PLAYER ROW). `mine` is the only row this client
- * can back with a real receipt (the local wallet's own settle/open — see FightReport.jsx header note); every
- * other row states honestly that the chain doesn't split rewards per player, instead of faking a number or
- * silently rendering nothing (the exact "empty grey square" complaint this ticket also fixes). #342: a
- * teammate's honest "not visible to you" used to be its own italic text LINE (roughly doubling that row's
- * height across a whole roster) — it is now a single dim glyph living in the row's own trailing cell, with
- * the full sentence carried on `aria-label` instead of always-visible text.
- * @param {{ mine: boolean, spoils: { xp: number, tokens: number, loot: Array<{ item_id?: string, template_id?: string, item_type: string, icon_slug?: string, name: string, amount: number }> }, template_map: Map<string, any>, slug_by_template_id: Record<string, string>, tt: ReturnType<typeof useTemplateT>, pending: boolean, loot_units: number | null, t: (key: string, opts?: any) => string }} props
+ * ONE party member's settlement spoils (xp and items PER PLAYER ROW).
+ * @param {{ spoils: { xp: number, tokens: number, loot: Array<{ item_id?: string, template_id?: string, item_type: string, icon_slug?: string, name: string, amount: number }> }, template_map: Map<string, any>, slug_by_template_id: Record<string, string>, tt: ReturnType<typeof useTemplateT>, pending: boolean, loot_units: number | null, t: (key: string, opts?: any) => string }} props
  */
-function RowSpoils({ mine, spoils, template_map, slug_by_template_id, tt, pending, loot_units, t }) {
-  if (!mine)
-    return (
-      <div className="fe-row__spoils fe-row__spoils--hidden" aria-label={t('fight_end.spoils_hidden')}>
-        <EyeOff size={12} aria-hidden="true" />
-      </div>
-    )
+function RowSpoils({ spoils, template_map, slug_by_template_id, tt, pending, loot_units, t }) {
   return (
     <div className="fe-row__spoils">
       <span className="fe-gain hud-num">
@@ -254,7 +236,7 @@ function RowSpoils({ mine, spoils, template_map, slug_by_template_id, tt, pendin
  * The end-of-fight card (dark dramatic shell + shared party/enemy rows + inline receipt).
  * @param {{
  *   verdict: 'Victory' | 'Defeat',
- *   party: Array<{ id: string, name: string, level: number, is_me?: boolean, is_player?: boolean, alive: boolean, hp_pct: number | null, class_name?: string | null }>,
+ *   party: Array<{ id: string, name: string, level: number, is_me?: boolean, is_player?: boolean, alive: boolean, hp_pct: number | null, class_name?: string | null, spoils?: { xp: number, tokens: number, loot: Array<{ item_id?: string, template_id?: string, item_type: string, icon_slug?: string, name: string, amount: number }>, pending?: boolean, loot_units?: number | null } | null }>,
  *   enemies: Array<{ id: string, name: string, level: number, is_player?: boolean, alive: boolean, hp_pct: number | null, template_id?: string | null }>,
  *   spoils: { xp: number, tokens: number, loot: Array<{ item_id?: string, template_id?: string, item_type: string, icon_slug?: string, name: string, amount: number }> } | null,
  *   slug_by_name?: Readonly<Record<string, string>>,
@@ -316,8 +298,16 @@ export function FightReport({
   // with the canonical chain ItemTemplate reader (including decoded stat DFs). A defeat has no tiles to read.
   const tt = useTemplateT()
   const [template_map, set_template_map] = useState(/** @type {Map<string, any>} */ (() => new Map()))
-  const has_spoils = !!spoils
-  const loot_template_ids_key = [...new Set((spoils?.loot ?? []).map((entry) => entry.template_id).filter(Boolean))]
+  const has_spoils = !!spoils || party.some((fighter) => fighter.spoils)
+  const loot_template_ids_key = [
+    ...new Set(
+      party
+        .flatMap((fighter) => fighter.spoils?.loot ?? [])
+        .concat(spoils?.loot ?? [])
+        .map((entry) => entry.template_id)
+        .filter(Boolean)
+    ),
+  ]
     .sort()
     .join(',')
   useEffect(() => {
@@ -398,28 +388,32 @@ export function FightReport({
           {/* #342: a roster over ~4 flows into a two-column grid so a 6v6 (12 rows total) fits the card
               without scrolling at 1080p; a 1v1/duo stays single-column so it never reads over-compressed. */}
           <div className={`fe-rows${named_party.length > 4 ? ' fe-rows--grid' : ''}`}>
-            {named_party.map((f) => (
-              <Row
-                key={f.id}
-                f={f}
-                is_enemy={false}
-                t={t}
-                spoils_slot={
-                  spoils && (
-                    <RowSpoils
-                      mine={!!f.is_me}
-                      spoils={spoils}
-                      template_map={template_map}
-                      slug_by_template_id={slug_by_template_id}
-                      tt={tt}
-                      pending={pending}
-                      loot_units={loot_units}
-                      t={t}
-                    />
-                  )
-                }
-              />
-            ))}
+            {named_party.map((f) => {
+              // The decoded settlement row is authoritative. `spoils` is the pre-shared-table local receipt
+              // compatibility arm and may only fill the viewer's own row; it never hides or overwrites a peer.
+              const row_spoils = f.spoils ?? (f.is_me ? spoils : null)
+              return (
+                <Row
+                  key={f.id}
+                  f={f}
+                  is_enemy={false}
+                  t={t}
+                  spoils_slot={
+                    row_spoils && (
+                      <RowSpoils
+                        spoils={row_spoils}
+                        template_map={template_map}
+                        slug_by_template_id={slug_by_template_id}
+                        tt={tt}
+                        pending={f.spoils?.pending ?? (f.is_me && pending)}
+                        loot_units={f.spoils?.loot_units ?? (f.is_me ? loot_units : null)}
+                        t={t}
+                      />
+                    )
+                  }
+                />
+              )
+            })}
           </div>
         </div>
 
@@ -437,9 +431,8 @@ export function FightReport({
           </div>
         )}
 
-        {/* the receipt now rides INSIDE each party row (RowSpoils above) — a defeat (spoils=null) keeps the
-            single dashed plate; a win renders no aggregate strip anymore (xp/items render PER PLAYER ROW). */}
-        {!spoils && <div className="fe-nospoils">{t('fight_end.no_spoils')}</div>}
+        {/* Receipts ride INSIDE participant rows. A defeat has neither aggregate nor per-row spoils. */}
+        {!has_spoils && <div className="fe-nospoils">{t('fight_end.no_spoils')}</div>}
 
         {cost && (
           <div className={`fe-cost${!pending && cost.is_refund ? ' fe-cost--refund' : ''}`}>
