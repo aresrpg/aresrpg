@@ -1,6 +1,2 @@
-fe9133547 → Refs #1368 — fix(sim): export the trap predicate — one home, no fabricated payloads
-f624ed8eb → Fixes #2261 — fix(party): a 404 retires the party stream instead of being retried forever
-a286a9b8d → Fixes #2260 — fix(frontend): the hack radio observes state deltas, never mounts
-1ac9a0cb1 → Fixes #2263 — fix(tx): stamp sponsor challenges with server time, not the device clock
-1d8623830 → Fixes #2263 — feat(sponsor): one structured line per refusal, and expose the clock it judges by
-01d813b41 → Refs #1368 — docs(loops): the audit cursor derivation survives current gh
+d3abd0d49 → Refs #1368 — fix(world): one normalizer for the chain-anchor bag
+b486b5e18 → Refs #1368 — fix(world-shell): one predicate decides position persistence
