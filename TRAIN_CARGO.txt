@@ -1,4 +1,2 @@
-436325f7a → Refs #2174 — test(fight): #2174 RED fixture — joiner origin-reset repro (red by design, lane-parked)
-8fe7ab3eb → Refs #2174 — test(fight): #2174 fixture rides the test tree
-da90df51b → Fixes #2174 — fix(world): stamp a return anchor when a fight takes the body out of the world
-fd9abbbd6 → Fixes #2255 — fix(frontend): the remaining silent send legs answer honestly
+d100bf560 → Fixes #2175 — fix(fight): AoE aiming forecasts every entity the zone covers
+5bef9603e → Refs #1368 — docs(loops): the audit checkbox home is epic #1368
