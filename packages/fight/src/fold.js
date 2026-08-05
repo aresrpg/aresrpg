@@ -17,7 +17,7 @@
 
 import { mob_entity_id, mob_entity_index } from './fight_control.js'
 import { entity_id_of_fold_key, participant_entity_id } from './participant_identity.js'
-import { apply_action, fighter_key, seat_resolver } from './inputs.js'
+import { apply_action, seat_resolver } from './inputs.js'
 import * as settle_input from './inputs.js'
 import { STATUS_PLACEMENT } from './board_state.js'
 import { GRID_W } from './los.js'
@@ -346,15 +346,34 @@ export const death_presenting_keys = (wave) => {
   return keys
 }
 
+/** R1 · THE ONE LOCALITY DERIVATION — "is this turn MINE", in SEAT space. A source is local iff it names my
+ *  character, or is a non-mob seat equal to mine; my seat comes from my stamped key, or — production opens every
+ *  session with `my_key: null` (world-shell/dungeon_fight_shim.js) — from `ctx.my_entity_id` against the adopted
+ *  roster. Produced id strings never decide locality, and neither does the key string alone (#2228): EVERY reader
+ *  of this fact calls here (the paced wave's `is_local`, the turn bracket's hold window), so a seat can never be
+ *  local to one and foreign to the other. @param {any} s
+ *  @returns {(src: { character?: any, is_mob?: boolean, idx?: any } | null) => boolean} */
+const local_source = (s) => {
+  const my_entity = s.ctx?.my_entity_id ?? null
+  const my_seat = settle_input.actor_from_key(s.my_key)?.idx ?? seat_resolver(s.view)(my_entity)
+  return (src) => {
+    if (!src) return false
+    if (src.character != null) return my_entity != null && String(src.character) === String(my_entity)
+    return !src.is_mob && my_seat != null && Number(src.idx) === Number(my_seat)
+  }
+}
+
 /** The entry window an open turn bracket (turn_bracket.js) masks while the wire finishes delivering it — the
  *  same `{version, from_idx, until_idx}` shape a wave turn carries, so the mask below reads one vocabulary. */
-const hold_window = (hold, my_key) => {
-  const rows = hold?.rows ?? []
+const hold_window = (s) => {
+  const rows = s.wave_hold?.rows ?? []
   if (rows.length < 2) return []
   // MY OWN turn never masks — prediction paints it first, exactly the law `masks_entries` applies to a local
-  // wave turn. The bracket's opening `TurnStarted` names whose turn it is, so the same question is asked here.
+  // wave turn. The bracket's opening `TurnStarted` names whose turn it is, so the same question is asked here —
+  // through R1 (`local_source`), never a second derivation: #2228, a key-space compare with no seat resolver
+  // masked the local player's OWN turn whenever his key was not stamped yet (production inits it null).
   const [open] = rows
-  if (my_key != null && fighter_key({ is_mob: open.is_mob, idx: open.idx }) === String(my_key)) return []
+  if (local_source(s)(open)) return []
   const idxs = rows.map((row) => Number(row.event_idx)).filter(Number.isFinite)
   if (!idxs.length) return []
   return [{ version: Number(open.version), from_idx: Math.min(...idxs), until_idx: Math.max(...idxs) }]
@@ -372,7 +391,7 @@ const wave_masked_fold = (s, hold_intents) => {
   // from behind (the §7b insta-jump), for as long as the wire takes to finish the turn. A bracket that carries
   // only its opening `TurnStarted` masks NOTHING — that row moves nobody, and holding it back would delay the
   // handover the turn gate reads (the tail every receipt leaves open).
-  const pending = [...hold_window(s.wave_hold, s.my_key), ...(s.wave ?? []).filter(masks_entries)]
+  const pending = [...hold_window(s), ...(s.wave ?? []).filter(masks_entries)]
   if (!pending.length) return s
   const windowed = pending.filter((t) => t.from_idx != null)
   const base_version = adopted_base_version(s)
@@ -428,7 +447,6 @@ const wave_turns_of = (draft, raw_events, version, trap_cells = [], base_seq = 0
   if (!Array.isArray(raw_events) || !raw_events.length || !ctx.beat_ctx) return []
   const my_entity = ctx.my_entity_id ?? null
   const escrow = draft.view?.escrow ?? []
-  const my_seat = settle_input.actor_from_key(draft.my_key)?.idx ?? seat_resolver(draft.view)(my_entity)
   const grid_w = Number(ctx.beat_ctx.grid_width) || GRID_W
   // Trap OWNERSHIP is a property of the LEDGER ROW, not of the visible set. Since the public board folds into
   // the same ledger, `trap_cells` names every trap this viewer can SEE — including an ally's — and reading
@@ -471,14 +489,10 @@ const wave_turns_of = (draft, raw_events, version, trap_cells = [], base_seq = 0
   const resolve_cast = (event, resolved) => ({
     spell_id: event.caster_is_mob ? 'mob_attack_dungeon' : (resolved?.spell ?? 'dungeon_strike'),
   })
-  // R1 — locality by SEAT: a turn is LOCAL iff its author is my seat (character match, or a non-mob idx equal
-  // to my seat index). Produced id strings never decide locality again.
-  const is_local = (turn) => {
-    const src = turn.source ?? null
-    if (!src) return false
-    if (src.character != null) return my_entity != null && String(src.character) === String(my_entity)
-    return !src.is_mob && my_seat != null && Number(src.idx) === Number(my_seat)
-  }
+  // R1 — locality by SEAT, read from its ONE home above (`local_source`); a paced turn carries its author as
+  // `turn.source`, the same shape the bracket's opening row speaks.
+  const source_is_local = local_source(draft)
+  const is_local = (turn) => source_is_local(turn.source ?? null)
   const { turns } = pace_segment(
     raw_events,
     {
