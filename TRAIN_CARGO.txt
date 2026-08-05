@@ -1,2 +1,5 @@
-d100bf560 → Fixes #2175 — fix(fight): AoE aiming forecasts every entity the zone covers
-5bef9603e → Refs #1368 — docs(loops): the audit checkbox home is epic #1368
+9e25aab52 → Refs #1368 — fix(frontend): one home for the character type string
+f7a27b334 → Refs #1368 — fix(frontend): one home for the SUI decimal parse
+f0d482251 → part of #2231 — feat(sdk): the client twin of the chain travel-budget law
+600517b10 → Fixes #2231 — fix(world): boot agreement is the chain travel budget, not a flat radius
+6f66e8e30 → Fixes #2235 — fix(frontend): honest recovery door when the browser has graphics acceleration off
