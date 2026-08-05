@@ -55,7 +55,65 @@ const is_object_absent_answer = (error, object_id) => {
 }
 
 /**
- * getObject → flattened json (`include:{json:true}`).
+ * The ledger's PER-OBJECT error → `null` (it answered "absent") or a throw (the read failed). The one home of
+ * that decision; `getObject` throws this value and `getObjects` returns it in place, so both doors ask here.
+ */
+function object_error_json(error, object_id) {
+  if (is_object_absent_answer(error, object_id)) return null
+  throw new Error(`[read/_object] object ${object_id} is unreadable`, { cause: error })
+}
+
+/** A PRESENT `getObjects` entry → its flattened json. `null` is the ledger's positive "nothing at this id". */
+function object_payload_json(object, object_id) {
+  if (object === null) return null
+  if (object.json == null)
+    throw new Error(
+      `[read/_object] object ${object_id} exists but answered without a json payload`,
+    )
+  return object.json
+}
+
+/**
+ * getObjects → flattened json PER ID, in the caller's order (`include:{json:true}`). THE batched door: `getObject`
+ * is defined in @mysten/sui as `getObjects({objectIds:[id]})`, so N singular reads are N `BatchGetObjects` round
+ * trips for a request the ledger will answer in ONE (#2155 — 21 of an engage compose's 26 chain round trips were
+ * one caller reading 21 dynamic fields whose ids it had already derived LOCALLY). Ids beyond 50 are chunked by
+ * the SDK itself, sequentially.
+ * @returns {Promise<any[]>} each id's json, or `null` where the object genuinely does not exist.
+ * @throws when the READ fails — transport, an unclassified ledger error, or an object that answers without the
+ *   json payload the read asked for. Decode errors surface ONCE, here, at the transport boundary.
+ * @param {any} grpc_client the SDK's SuiGrpcClient (has `.core.getObjects`)
+ * @param {string[]} object_ids
+ */
+export async function get_objects_json(grpc_client, object_ids) {
+  if (!object_ids.length) return []
+  const response = await grpc_client.core
+    .getObjects({ objectIds: object_ids, include: { json: true } })
+    .catch((/** @type {any} */ error) => {
+      // A rejected CALL is a transport failure — it says nothing about any single id, so it can never be read
+      // as absence (the #2054 law). Per-object answers ride the `objects` array, never this path.
+      throw new Error(`[read/_object] batch read of ${object_ids.length} objects failed`, { cause: error })
+    })
+  const objects = response?.objects
+  if (!Array.isArray(objects) || objects.length !== object_ids.length)
+    throw new Error(
+      `[read/_object] batch read of ${object_ids.length} objects answered with ${
+        Array.isArray(objects) ? objects.length : 'no'
+      } results`,
+    )
+  return objects.map((entry, index) =>
+    // @mysten/sui's grpc core reduces a per-object `google.rpc.Status` to an Error VALUE in this array; anything
+    // else is the object itself (or `null` for a positively-absent id).
+    entry instanceof Error
+      ? object_error_json(entry, object_ids[index])
+      : object_payload_json(entry ?? null, object_ids[index])
+  )
+}
+
+/**
+ * getObject → flattened json (`include:{json:true}`). Rides the SINGULAR transport (`core.getObject`, which
+ * THROWS the per-object answer) and shares the absence law above with the batched door — one classifier, two
+ * transports, no second copy of the rule.
  * @returns {Promise<any>} the object's json, or `null` when the object genuinely does not exist.
  * @throws when the READ fails — transport, an unclassified ledger error, or an object that answers without the
  *   json payload the read asked for. Decode errors surface ONCE, here, at the transport boundary.
@@ -65,12 +123,7 @@ const is_object_absent_answer = (error, object_id) => {
 export async function get_object_json(grpc_client, object_id) {
   const response = await grpc_client.core
     .getObject({ objectId: object_id, include: { json: true } })
-    .catch((/** @type {any} */ error) => {
-      if (is_object_absent_answer(error, object_id)) return { object: null }
-      throw new Error(`[read/_object] object ${object_id} is unreadable`, {
-        cause: error,
-      })
-    })
+    .catch((/** @type {any} */ error) => ({ object: object_error_json(error, object_id) }))
   if (
     response == null ||
     typeof response !== 'object' ||
@@ -78,13 +131,7 @@ export async function get_object_json(grpc_client, object_id) {
     response.object === undefined
   )
     throw new Error(`[read/_object] object ${object_id} read answered without an object field`)
-  const { object } = response
-  if (object === null) return null // the ledger positively answered "nothing at this id"
-  if (object.json == null)
-    throw new Error(
-      `[read/_object] object ${object_id} exists but answered without a json payload`,
-    )
-  return object.json
+  return object_payload_json(response.object, object_id)
 }
 
 /** Normalize a Move `Option<T>` json (`{vec:[]}` / `{vec:[x]}` / `[x]` / bare / null) to `value | null`. */

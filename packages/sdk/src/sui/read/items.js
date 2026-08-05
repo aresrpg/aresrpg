@@ -5,7 +5,7 @@ import { deriveObjectID, deriveDynamicFieldID } from '@mysten/sui/utils'
 
 import { aresrpg_deployment } from '../../deployment/aresrpg.js'
 
-import { get_object_json, option_value } from './_object.js'
+import { get_object_json, get_objects_json, option_value } from './_object.js'
 
 // ITEM READS for the merged `aresrpg` package — zero-backend chain reads via the house gRPC Core client (object json + dynamic
 // fields), mirroring the Move getters. No devInspect: every read is an object/DF fetch, and the derived-object
@@ -344,19 +344,37 @@ function ns_key_bytes(namespace, key_bytes) {
  * @param {import("../../../types.js").Context} context
  */
 export function read_namespaced_field(context) {
+  const read_many = read_namespaced_fields(context)
+  return async (field) => (await read_many([field]))[0]
+}
+
+/**
+ * Read MANY first-party namespaced dynamic fields in ONE round trip, results in the caller's order.
+ *
+ * Every field id here is derived LOCALLY (`deriveDynamicFieldID` — pure math over parent + key), so a caller
+ * that wants N fields already knows all N ids before it speaks to the chain; issuing them as N singular reads
+ * is N `BatchGetObjects` calls for a question the ledger answers in one (#2155: the engage compose spent 21 of
+ * its 26 chain round trips reading one character's 21 spell fields). Fields may span different parents and key
+ * types — the batch is over IDS, nothing else. Same contract per element as the singular door: `null` is
+ * genuine absence, a failed read throws.
+ * @param {import("../../../types.js").Context} context
+ */
+export function read_namespaced_fields(context) {
   const { grpc_client, network } = context
-  return async ({
-    object_id,
-    namespace,
-    key_type,
-    key_bytes = EMPTY_STRUCT_KEY,
-  }) => {
+  return async (
+    /** @type {{object_id:string, namespace:number, key_type:string, key_bytes?:Uint8Array}[]} */ fields,
+  ) => {
+    if (!fields.length) return []
     const dep = aresrpg_deployment(network, context.ids?.aresrpg)
-    return get_df_value_json(
-      grpc_client,
-      object_id,
-      `${dep.PACKAGE_ID}::extension::NsKey<${key_type}>`,
-      ns_key_bytes(namespace, key_bytes),
+    const field_ids = fields.map(
+      ({ object_id, namespace, key_type, key_bytes = EMPTY_STRUCT_KEY }) =>
+        deriveDynamicFieldID(
+          object_id,
+          `${dep.PACKAGE_ID}::extension::NsKey<${key_type}>`,
+          ns_key_bytes(namespace, key_bytes),
+        ),
     )
+    const values = await get_objects_json(grpc_client, field_ids)
+    return values.map(json => json?.value ?? null)
   }
 }
