@@ -1,16 +1,17 @@
 {
   "schema": 1,
-  "generated_at": "2026-08-02T16:36:01.803Z",
+  "generated_at": "2026-08-05T07:42:15.851Z",
   "networks": {
     "testnet": {
       "chain_id": "",
-      "source_hash": "7280d131c39f2103481a5a57580c7b58402d5f871c11579ff62af91850976a43",
+      "source_hash": "7dd1e534b6aabcd118c9679fe5c8dfb21145071389d020aa77d9f5f146e03451",
       "packages": {
         "foundation": {
           "origin": "0xa778be3fc6fe58eedddd34605a973b682d637b36d0e5f794e07717d5bbd90099",
-          "latest": "0x4f26bcf2e0dd13899cae462c5404c64125dbc510d6df4a6e3c2dbd5a5a9bb8c9",
+          "latest": "0x7586770da6e351c926f195e54b97a7fa6dd0355ca1ad642a5ab2de9621415885",
           "previous": [
-            "0x0aced5e34c383511c31c8049dbc6db2fac98e1f0d1b5a75951fa8c4bc0c3ef2f"
+            "0x0aced5e34c383511c31c8049dbc6db2fac98e1f0d1b5a75951fa8c4bc0c3ef2f",
+            "0x4f26bcf2e0dd13899cae462c5404c64125dbc510d6df4a6e3c2dbd5a5a9bb8c9"
           ],
           "upgrade_cap": "0x08f841cd457be6c780b074df1e14b0396ea4aaab9c7555decfc378673bfb2dd2",
           "admin": "",
@@ -56,9 +57,10 @@
         },
         "aresrpg": {
           "origin": "0x2c41f09398414a1c51b0ccbd63057aef1e8e1aeedd3313b2852554dba596eb26",
-          "latest": "0xe4c72332c01d52c9566bfce1921c11ad7de3889bd4738297f66fba2faf42a7ac",
+          "latest": "0x1a561cc40081420e928d5226c14ba06fbb20322a363e8ad0bf5907b5c3f7c6dd",
           "previous": [
-            "0x2096d6a9c9ac1d6869ae0d35c054fe6fde987db9cc9b569f862ac171b3c273cb"
+            "0x2096d6a9c9ac1d6869ae0d35c054fe6fde987db9cc9b569f862ac171b3c273cb",
+            "0xe4c72332c01d52c9566bfce1921c11ad7de3889bd4738297f66fba2faf42a7ac"
           ],
           "upgrade_cap": "0x2a61ff5fb056145e77537b96fbd8782a109418a796f77079dc98885939981f60",
           "admin": "0x913476b9e05b4584c9ca0cd09ceb572e74db7754b03dd51a53a514f2f51d9cc2",
