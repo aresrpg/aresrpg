@@ -19,6 +19,7 @@ import { join_world_fight, as_one_toast } from '../../../../world-shell/dungeon_
 import { enter_world_fight, spectate_world_fight } from '../../../../world-shell/world_fight.js'
 import { enter_after_world_join_receipt } from '../../../../world-shell/world_fight_receipt.js'
 import { start_join_timing } from '../../../../core/join_timing.js'
+import { report_error } from '../../../../core/report.js'
 import { recover_fight_entry_refusal } from '../../../../world-shell/dungeon_settlement.js'
 import { read_friend_list } from '../../../../world-shell/friends_reads.js'
 import { get_characters } from '../../../../rpc/client'
@@ -61,7 +62,10 @@ async function resolve_char_ids(addresses) {
     unique.map((owner) =>
       get_characters({ owner })
         .then((cs) => cs.map((c) => c.id))
-        .catch(() => [])
+        .catch((error) => {
+          report_error(error, { area: 'fights-modal', action: 'friend_character_resolve', owner })
+          return []
+        })
     )
   )
   return new Set(lists.flat())
@@ -109,7 +113,10 @@ export function FightsModal() {
       // ABSENT vs FAILED (#2062): the seam returns `{ list_id: null, friends: [] }` for a roster that genuinely
       // does not exist and THROWS when the read failed — `null` here is the failure. A failed read leaves the
       // last known friend ids standing (stale beats invented) and raises the flag the empty slot reads.
-      const friends = await read_friend_list(address).catch(() => null)
+      const friends = await read_friend_list(address).catch((error) => {
+        report_error(error, { area: 'fights-modal', action: 'friend_roster_read' })
+        return null
+      })
       if (!alive) return
       if (!friends) return set_friends_error(true)
       const fset = await resolve_char_ids(friends.friends)
@@ -186,10 +193,16 @@ export function FightsModal() {
             .then((tpl) => {
               if (alive && tpl?.name) use_dungeon.getState().note_group_identity(id, tpl.name, tpl.min_level, tpl.element)
             })
-            .catch(() => null)
+            .catch((error) => {
+              report_error(error, { area: 'fights-modal', action: 'mob_template_read', group_template: id })
+              return null
+            })
         )
       )
-    })().catch(() => null) // get_sdk() unreadable → the names just stay the honest "Enemies #N" fallback
+    })().catch((error) => {
+      report_error(error, { area: 'fights-modal', action: 'mob_template_sdk' })
+      return null
+    }) // get_sdk() unreadable → the names just stay the honest "Enemies #N" fallback
     return () => {
       alive = false
     }
