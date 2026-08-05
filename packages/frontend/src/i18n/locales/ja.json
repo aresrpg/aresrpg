@@ -2654,6 +2654,7 @@
     "no_suins_handle": "「{{name}}」というSuiNSハンドルはありません",
     "name_lookup_failed": "そのプレイヤー名を検索できませんでした。もう一度お試しください。",
     "cannot_add_self": "自分自身は追加できません",
+    "list_not_readable_yet": "フレンドリストは作成されましたが、ネットワークがまだ公開していません。少し待ってからもう一度「追加」を押してください — 二つ目が作られることはありません。",
     "already_friend": "すでにフレンドです",
     "remove_confirm": "{{addr}} をリストから削除しますか？",
     "pending_create": "フレンドを追加中…",

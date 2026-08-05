@@ -2654,6 +2654,7 @@
     "no_suins_handle": "No SuiNS handle {{name}}",
     "name_lookup_failed": "Couldn't look up that player name. Try again.",
     "cannot_add_self": "You can't add yourself",
+    "list_not_readable_yet": "Your friend list was created, but the network has not published it yet. Press Add again in a moment — it will not create a second one.",
     "already_friend": "Already your friend",
     "remove_confirm": "Remove {{addr}} from your roster?",
     "pending_create": "Adding friend…",

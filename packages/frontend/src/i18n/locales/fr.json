@@ -2654,6 +2654,7 @@
     "no_suins_handle": "Aucun identifiant SuiNS {{name}}",
     "name_lookup_failed": "Impossible de rechercher ce nom de joueur. Réessaie.",
     "cannot_add_self": "Tu ne peux pas t'ajouter toi-même",
+    "list_not_readable_yet": "Ta liste d’amis a été créée, mais le réseau ne l’a pas encore publiée. Réappuie sur Ajouter dans un instant — aucune seconde liste ne sera créée.",
     "already_friend": "Déjà ton ami",
     "remove_confirm": "Retirer {{addr}} de ta liste ?",
     "pending_create": "Ajout de l'ami…",

@@ -2654,6 +2654,7 @@
     "no_suins_handle": "Kein SuiNS-Name {{name}}",
     "name_lookup_failed": "Dieser Spielername konnte nicht gesucht werden. Versuche es erneut.",
     "cannot_add_self": "Du kannst dich nicht selbst hinzufügen",
+    "list_not_readable_yet": "Deine Freundesliste wurde erstellt, aber das Netzwerk hat sie noch nicht veröffentlicht. Drücke gleich noch einmal auf Hinzufügen — es wird keine zweite erstellt.",
     "already_friend": "Bereits dein Freund",
     "remove_confirm": "{{addr}} von deiner Liste entfernen?",
     "pending_create": "Füge Freund hinzu…",

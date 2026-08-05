@@ -58,8 +58,15 @@ const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
 
 /**
  * Wait until the fullnode can resolve a just-created FriendList before building the add transaction. The SDK
- * create door cannot compose the follow-up: Move returns unit and transfers the list instead of returning it.
- * Reuse the house exponential backoff, but bound this user gesture so a degraded read cannot wait forever.
+ * create door cannot compose the follow-up: Move returns unit and transfers the list instead of returning it
+ * (composing create+add in one PTB needs an ADDITIVE Move entry — #1759, chain-side and out of this seam's reach).
+ * Bound the wait so a degraded read cannot hold a user gesture forever.
+ *
+ * The verdict flows back as DATA (#1759): this used to THROW into `add_friend_address_flow`'s bare
+ * `catch {}` — the arm that assumes a humanizing toast already spoke — so the FIRST-EVER add created the list,
+ * burned its gas, and then went completely silent: no roster row, no error, nothing to retry against. The
+ * player's next attempt "worked" only because the list existed by then.
+ * @returns {Promise<boolean>} true once the list is readable; false when the bounded wait ran out.
  */
 export async function await_friend_list_indexed(
   friend_list_id,
@@ -68,10 +75,14 @@ export async function await_friend_list_indexed(
   const { grpc_client } = await get_sdk_fn()
   const read_list = get_friend_list({ grpc_client })
   for (let attempt = 1; attempt <= attempts; attempt += 1) {
-    if (await read_list(friend_list_id)) return
+    // `get_friend_list` THROWS on an unreadable object — correct for a roster read (#2054: never paint an empty
+    // roster over a dead transport), and fatal here: an object the fullnode has not published yet is the exact
+    // state this loop exists to outlast, so the very first "Object not found" used to escape the loop after ONE
+    // attempt and take the whole gesture down with it. In a PROBE, unreadable IS the answer — never an error.
+    if (await read_list(friend_list_id).catch(() => null)) return true
     if (attempt < attempts) await sleep_fn(backoff_delay_ms(attempt))
   }
-  throw new Error('Friend list creation succeeded, but the list is not readable yet')
+  return false
 }
 
 const _is_addr = (/** @type {string} */ a) => /^0x[0-9a-f]{64}$/.test(a)
@@ -121,8 +132,11 @@ async function add_friend_address_flow(my_address, target, toast) {
       })
       lid = created_friend_list_id(result)
       if (lid) {
+        // Recorded BEFORE the wait: the list exists on chain and its gas is spent, so the reducer must own it
+        // whatever the read layer does next — that is what makes the honest retry below a plain add.
         friends_input({ type: 'friend_list_created', address: my_address, list_id: lid })
-        await await_friend_list_indexed(lid)
+        if (!(await await_friend_list_indexed(lid)))
+          return void toast.add(i18n.t('friends.list_not_readable_yet'), 'error')
       }
     }
     if (!lid) return
