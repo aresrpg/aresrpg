@@ -10,7 +10,7 @@
 // display path. A leaf on purpose: both the store and its test consume the SAME derivation (one home).
 
 import { normalizeStructTag } from '@mysten/sui/utils'
-import { aresrpg_id } from '@aresrpg/sdk/deployment/aresrpg'
+import { aresrpg_id, character_type } from '@aresrpg/sdk/deployment/aresrpg'
 
 import { DEMO_NETWORK } from './deployment'
 
@@ -22,7 +22,7 @@ export const ARESRPG_PACKAGE_ID = aresrpg_id(DEMO_NETWORK, 'PACKAGE_ID')
 
 /** The fully-qualified, normalised `Character` type for a package id ('' when the id is unset). */
 export const character_type_id = (pkg: string = ARESRPG_PACKAGE_ID): string =>
-  pkg ? normalizeStructTag(`${pkg}::character::Character`) : ''
+  pkg ? normalizeStructTag(character_type({ PACKAGE_ID: pkg } as Parameters<typeof character_type>[0])) : ''
 
 const CHARACTER_TYPE = character_type_id()
 
