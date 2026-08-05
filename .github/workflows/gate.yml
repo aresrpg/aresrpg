@@ -194,8 +194,11 @@ jobs:
       # item_listing_rule module (its door moved into `item`) and the ceremony kept calling the dead target —
       # a fresh publish would have aborted at the item-policy step. This drift guard is the check that catches
       # that class, and it had never run in a gate: packages/move has no "test" script, so nothing invoked it.
-      - name: ceremony target drift — release_prepare.test.mjs
-        run: bun test packages/move/scripts/release_prepare.test.mjs --test-name-pattern 'DRIFT GUARD'
+      # #2229: the name-pattern filter made this LYING-GREEN — only the drift-guard test ran, so the manifest
+      # publish order sat red on edge for three weeks (7 packages serialized for a 9-package graph) while this
+      # step stayed green. The whole file runs now, plus the package-graph tooth that pins the graph to disk.
+      - name: ceremony manifest + target drift — release_prepare / publish_packages
+        run: bun test packages/move/scripts/release_prepare.test.mjs packages/move/scripts/publish_packages.test.mjs
   bundle-gate:
     # Issue #737: scripts/assert_clean_bundle.mjs only ran inside Vercel's own build (postbuild),
     # so a commit that tripped it landed green here in CI while every deployment silently
