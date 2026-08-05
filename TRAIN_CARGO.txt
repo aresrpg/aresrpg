@@ -1,4 +1,2 @@
-815684b44 → Fixes #2177 — fix(sim): a placed trap covers the board zone, not the cast zone
-a5195bef7 → Fixes #2167 — fix(fight-end): render shared participant loot table
-f9deca65b → Fixes #2165 — fix(frontend): two-tier spell targeting — dark castable derived from the sim predicate
-5154513f9 → Fixes #2170 — fix(frontend): bind world nametags to the world view
+c3eac413d → Fixes #2227 — fix(fight): open the format-4 witness door in the client
+0a9ec7f6d → Fixes #2180 — fix(frontend): restore auto-search world frame
