@@ -21,7 +21,7 @@
 import { cell_key } from '@aresrpg/sim/cell'
 import { manhattan } from '@aresrpg/sim/combat_grid'
 import { get_reachable_cells } from '@aresrpg/sim/pathfind'
-import { get_targetable_cells } from '@aresrpg/sim/spell_targeting'
+import { can_target, get_targetable_cells } from '@aresrpg/sim/spell_targeting'
 import { encode, decode, GRID_W, GRID_H, bfsReachable, bfsPath, lineOfSight } from '@aresrpg/fight/los'
 import { visible_occupant_cells } from '@aresrpg/fight/occupancy'
 import { range_bonus_of } from '@aresrpg/fight/statuses'
@@ -285,6 +285,49 @@ export function manhattan_range_cells(range, caster, grid, flags = {}) {
     }
   }
   return out
+}
+
+/**
+ * #2165 — the two cast-targeting paints. The light set is the informational reach wash (the familiar
+ * distance-1-through-maximum band, including cells below a category's authored minimum). The dark set is not
+ * derived here: every candidate is handed to the sim's own `can_target` predicate, which owns the minimum,
+ * modifiable maximum, line-only, LoS, and free-cell verdicts used by cast prediction/resolution.
+ *
+ * The returned keys are renderer semantics already understood by `resolve_cell_paints`: `los_blocked` maps to
+ * the engine's LIGHT-BLUE channel (the historical channel name now covers every in-range-but-invalid reason),
+ * while `in_range` maps to DARK BLUE. The sets are deliberately disjoint, so one cell can never receive two
+ * blue blobs even before the priority resolver applies hover-red.
+ *
+ * @param {import('@aresrpg/sim').SpellLevel} level normalized sim level (weapon attacks use weapon_spell_template)
+ * @param {{ cell: Cell }} caster
+ * @param {{ width: number, height: number, shape_mask?: Set<number> | number[] }} grid
+ * @param {{ terrain_cells?: Iterable<number>, occupant_cells?: Iterable<number> }} [context]
+ * @returns {{ in_range: number[], los_blocked: number[] }} dark-valid and light-range-only encoded cells
+ */
+export function spell_target_paints(level, caster, grid, context = {}) {
+  if (!level || !caster || !grid) return { in_range: [], los_blocked: [] }
+  const terrain = new Set(context.terrain_cells ?? [])
+  const occupied = new Set(context.occupant_cells ?? [])
+  const targeting_context = {
+    blocks_los: (cell) => terrain.has(encode(cell.x, cell.y)),
+    is_occupied: (cell) => occupied.has(encode(cell.x, cell.y)),
+  }
+  const [minimum, maximum] = level.range ?? [0, 0]
+  // Preserve the existing visible reach grammar: ordinary casts start one cell away, while true self-casts
+  // include the caster. A larger sim-owned minimum (a bow/wand floor) remains visible in light blue.
+  const visual_minimum = minimum === 0 ? 0 : 1
+  const visible_range = manhattan_range_cells([visual_minimum, maximum], caster, grid, {
+    modifiable_range: level.modifiable_range,
+  })
+  const range_bonus = range_bonus_of(caster)
+  const verdicts = [...visible_range].map((encoded) => {
+    const target = decode(encoded)
+    return { encoded, valid: can_target(level, caster.cell, target, targeting_context, range_bonus) }
+  })
+  return {
+    in_range: verdicts.filter(({ valid }) => valid).map(({ encoded }) => encoded),
+    los_blocked: verdicts.filter(({ valid }) => !valid).map(({ encoded }) => encoded),
+  }
 }
 
 /**

@@ -37,7 +37,7 @@ import {
   move_reachable_set,
   move_path_dungeon,
   cast_range_set_dungeon,
-  manhattan_range_cells,
+  spell_target_paints,
   placement_cells_by_team,
   placement_strips,
   placement_active,
@@ -72,7 +72,7 @@ import {
   ALL_CAST_ELEMENTS,
   resolve_cast_element,
 } from '../game/vfx_map.js'
-import { fight_spell } from '../game/screens/hud/fight-spells.js'
+import { fight_spell, seat_spell_level } from '../game/screens/hud/fight-spells.js'
 import { push_event_toast, trigger_fight_flash } from '../game/core/toast.js'
 import { WORLD_BOARD_UNPLACEABLE } from '../game/world_board_seat.js'
 import { use_dungeon_turn } from '../game/screens/dungeon-turn.js'
@@ -1748,8 +1748,10 @@ export function create_voxel_fight_adapter(
         const wash = project.move_wash(fight_store.getState(), { busy, targeting: !!wash_armed })
         if (wash.reach.length) lit.movement = wash.reach
         if (wash.tackle_lost.length) lit.movement_blocked = wash.tackle_lost
-        // CAST RANGE — D241 SPLIT: 'target' (DARK BLUE) = in-range + LOS-clear (castable); 'los_blocked' (LIGHT BLUE) =
-        // in-range minus castable. Anchored at the active player's cell.
+        // CAST RANGE — #2165 SPLIT: 'target' (DARK BLUE) = the SIM predicate says the cell is castable;
+        // 'los_blocked' (LIGHT BLUE, historical engine name) = informational reach minus that valid set.
+        // Anchored at the active player's cell. The adapter supplies facts only; `spell_target_paints` calls
+        // @aresrpg/sim's own can_target verdict for every candidate and owns the disjoint split.
         // Weapon slot: the sentinel has no seed row — its ring is [1, reach] off the active seat's on-chain
         // Weapon (the SAME reach DungeonBoard's cast_params prices the strike from), so the wash and the click-gate
         // agree cell-for-cell; falls back to the melee floor before the escrow read lands. A real spell reads its
@@ -1757,40 +1759,24 @@ export function create_voxel_fight_adapter(
         // #387 — the band's FLOOR is a category fact too (and the bow's ceiling grows with the range stat), so
         // the wash reads the same band helper the hover ring and the strike itself resolve from — one home for
         // "how far does this weapon reach", never a second reading of `reach`.
-        const range =
+        const spell = wash_armed === WEAPON_ATTACK_ID ? null : fight_spell(wash_armed)
+        const level =
           wash_armed === WEAPON_ATTACK_ID
-            ? weapon_band_of(escrow_row?.weapon)
-            : wash_armed
-              ? seed_range_of(wash_armed, active)
-              : null
-        if (range) {
+            ? weapon_spell_template(
+                escrow_row?.weapon ?? { reach: WEAPON_ATTACK_RANGE[1], ap_cost: WEAPON_ATTACK_AP, lines: [] }
+              )?.levels?.[0]
+            : spell?.template?.levels?.[seat_spell_level(active, spell) - 1]
+        if (level) {
           const grid = dungeon_grid_of(dungeon)
-          // D284 twin of dungeon.move los_obstacles(): the cast wash clears LOS through obstacles ∪ living bodies
-          // (players + mobs), so the dark/light-blue split matches the chain. Endpoints self-excluded by losBlocks.
-          // Bodies come from the CANONICAL entity rows' committed cell (#1993 WP5): this list used to walk the
-          // mirrored board (`dungeon.escrow` / `dungeon.mobs`), whose cells hold an in-flight walk at its
-          // PRE-move position, while `occupant_cells` two lines below already read the projection — one paint,
-          // two answers to "who is standing where". Obstacles stay terrain, which no entity owns.
-          const los = [
-            ...(dungeon.obstacles ?? []),
-            ...living_body_cells(project.fight_visible_view(fight_store.getState()).entities),
-          ]
-          const flags = seed_cast_flags_of(wash_armed, active)
-          // 1.29 no-stack: a trap-PLACING spell greys MY live trap cells (the chain aborts cast/107 there).
-          if (flags.places_trap) flags.trap_cells = fight.my_traps ?? []
-          // #1741: a single-target damage spell washes ONLY the cells holding a VISIBLE occupant — the same
-          // withhold the click gate applies (one derivation), off the projection's own visibility.
-          if (flags.requires_occupant)
-            flags.occupant_cells = observer_visible_occupant_cells(fight.fighters, fight.my_entity_id)
-          const castable = cast_range_set_dungeon(range, active, grid, los, flags)
-          const in_range = manhattan_range_cells(range, active, grid, flags) // every cell within the spell's reach
-          // free_cell (traps/glyphs): a mob/obstacle cell is NOT a valid target — and shouldn't read as merely
-          // "LOS-blocked" light-blue either. Drop the whole blocker set (obstacles ∪ bodies = `los`) from the
-          // light-blue wash so a trap ONLY ever lights FREE cells (not targetable on a mob).
-          const free_blocked = flags.free_cell ? new Set(los) : null
-          const blocked_cells = [...in_range].filter((c) => !castable.has(c) && !(free_blocked && free_blocked.has(c))) // in-reach, LOS says no
-          if (castable.size) lit.in_range = [...castable]
-          if (blocked_cells.length) lit.los_blocked = blocked_cells
+          // Terrain and living occupancy stay separate inputs because that is the TargetingContext shape the sim
+          // predicate owns. Bodies come from the canonical committed entity projection (#1993 WP5), never the
+          // mirrored board's presentation cells.
+          const paints = spell_target_paints(level, active, grid, {
+            terrain_cells: dungeon.obstacles ?? [],
+            occupant_cells: living_body_cells(project.fight_visible_view(fight_store.getState()).entities),
+          })
+          if (paints.in_range.length) lit.in_range = paints.in_range
+          if (paints.los_blocked.length) lit.los_blocked = paints.los_blocked
         }
       }
     }
