@@ -4,9 +4,10 @@
 // read failure offers retry, zero characters mounts the inline creator, and the first optimistic roster
 // insert swaps the slot straight back to the resident world. Meta tabs return `inactive`, never redirect.
 
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 import i18n from '../../../../i18n'
+import { probe_gl_context } from '../../../../core/gl_support.js'
 import { useGameState } from '../../../store.js'
 import {
   character_create,
@@ -18,11 +19,18 @@ import {
 const color_to_number = (/** @type {string} */ hex) => parseInt(String(hex).replace(/^#/, ''), 16)
 
 /**
- * @param {{ pathname: string, loaded: boolean, load_error: unknown, character_count: number }} state
- * @returns {'inactive' | 'loading' | 'error' | 'create' | 'world'}
+ * @param {{ pathname: string, loaded: boolean, load_error: unknown, character_count: number,
+ *   gl_supported?: boolean }} state  `gl_supported` is the DETECTED browser capability (core/gl_support.js),
+ *   entering this reducer as an input like every other fact here. Defaults true — absence of the probe is
+ *   never a reason to accuse a working browser.
+ * @returns {'inactive' | 'loading' | 'error' | 'create' | 'world' | 'no_gpu'}
  */
-export function world_slot_content({ pathname, loaded, load_error, character_count }) {
+export function world_slot_content({ pathname, loaded, load_error, character_count, gl_supported = true }) {
   if (pathname !== '/') return 'inactive'
+  // #2235 — outranks every other face on this slot: with no WebGL context NOTHING here can be drawn, so
+  // the creator's canvas, its class thumbnails and the world behind it are all equally dead. Showing the
+  // creator anyway is what made this a "broken screen" instead of an answerable problem.
+  if (!gl_supported) return 'no_gpu'
   if (character_count > 0) return 'world'
   if (load_error) return 'error'
   return loaded ? 'create' : 'loading'
@@ -95,10 +103,45 @@ export function InlineCharacterCreateHost({ price_sui = ADDITIONAL_CHARACTER_PRI
 }
 
 /**
- * Pure render seam for placement tests; production passes the roster-derived mode below.
- * @param {{ mode: ReturnType<typeof world_slot_content>, on_retry?: () => void, price_sui?: number }} props
+ * #2235 — THE RECOVERY DOOR for a browser with graphics acceleration turned off. Plain DOM by
+ * construction (it has to work exactly when nothing can be rendered), and honest on all three counts a
+ * stuck player needs: what happened, that it is a browser setting rather than their machine, and the two
+ * clicks that fix it. `Retry` re-runs the probe — the player flips the setting, relaunches, comes back.
+ *
+ * It wears the roster-error face's EXACT classes on purpose: that is the world slot's one bounded-notice
+ * treatment (gold-topped companion glass) and it already carries #871's proven hit-test contract — a
+ * `pointer-events: none` frame whose card alone is clickable. A second copy of that surface language, or
+ * a second selector for it, would be a second home for one fact.
+ * @param {{ on_retry: () => void }} props
  */
-export function WorldCharacterCreateSurface({ mode, on_retry = () => {}, price_sui }) {
+export function GpuDisabledDoor({ on_retry }) {
+  return (
+    <div className="world-character-create world-character-create--error" data-world-slot="gpu-disabled">
+      <div className="flex flex-col items-center gap-3 text-center max-w-[52ch]">
+        <span className="text-gold text-[11px] tracking-[0.2em] uppercase">{i18n.t('world.gpu_disabled_title')}</span>
+        <p className="text-muted text-[12px] leading-relaxed">{i18n.t('world.gpu_disabled_body')}</p>
+        <p className="text-muted text-[12px] leading-relaxed">{i18n.t('world.gpu_disabled_chrome')}</p>
+        <p className="text-muted text-[11px] leading-relaxed">{i18n.t('world.gpu_disabled_other')}</p>
+        <button
+          type="button"
+          data-gpu-retry
+          className="btn-outline px-4 py-1.5 text-[10px] tracking-[0.2em] uppercase"
+          onClick={on_retry}
+        >
+          {i18n.t('world.retry')}
+        </button>
+      </div>
+    </div>
+  )
+}
+
+/**
+ * Pure render seam for placement tests; production passes the roster-derived mode below.
+ * @param {{ mode: ReturnType<typeof world_slot_content>, on_retry?: () => void, on_gl_retry?: () => void,
+ *   price_sui?: number }} props
+ */
+export function WorldCharacterCreateSurface({ mode, on_retry = () => {}, on_gl_retry = () => {}, price_sui }) {
+  if (mode === 'no_gpu') return <GpuDisabledDoor on_retry={on_gl_retry} />
   if (mode === 'create') return <InlineCharacterCreateHost price_sui={price_sui} />
   if (mode !== 'error') return null
   return (
@@ -128,9 +171,20 @@ export function WorldCharacterCreate({ pathname }) {
   // source CharactersDrawer's paid flow reads. Falls back to the display constant while still loading;
   // the mint itself always re-reads the authoritative price, never this display value.
   const price_sui = useGameState((state) => state.sui.character_price_sui) ?? ADDITIONAL_CHARACTER_PRICE_SUI
-  const mode = world_slot_content({ pathname, loaded, load_error, character_count })
+  // #2235 — probed ONCE per mount (lazy initializer), never memoized module-side: the door's retry re-asks
+  // after the player enables acceleration and relaunches, and this state is what the slot renders from.
+  const [gl_supported, set_gl_supported] = useState(probe_gl_context)
+  const mode = world_slot_content({ pathname, loaded, load_error, character_count, gl_supported })
   const retry_roster = () =>
     void import('../../../../roster/load_roster').then(({ load_roster }) => load_roster())
+  const retry_gl = () => set_gl_supported(probe_gl_context())
 
-  return <WorldCharacterCreateSurface mode={mode} on_retry={retry_roster} price_sui={price_sui} />
+  return (
+    <WorldCharacterCreateSurface
+      mode={mode}
+      on_retry={retry_roster}
+      on_gl_retry={retry_gl}
+      price_sui={price_sui}
+    />
+  )
 }

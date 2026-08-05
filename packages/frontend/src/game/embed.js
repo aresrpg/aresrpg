@@ -13,6 +13,7 @@
 import { context } from './core/game.js'
 import { get_last_character } from './core/draft.js'
 import { game_log } from '../core/log.js'
+import { probe_gl_context } from '../core/gl_support.js'
 import { report_error } from '../core/report.js'
 import { merge_character_enrichment } from '../chain/fight_character_reconcile.js'
 
@@ -157,6 +158,15 @@ export function mount_scene(host, character = null, { spectate = false, follow =
   let real = null
   let destroyed = false
   let paused = false
+  // #2235 — a browser with graphics acceleration OFF cannot give the engine a context at all. Booting it
+  // anyway is what produced the reported screen: a black canvas, a stream of uncaught context rejections,
+  // a "refresh to try again" toast that refreshing cannot fix, and the WebGL-floor compat notice implying
+  // a fallback that is not running either. The world slot's recovery door (WorldCharacterCreate.jsx) is
+  // what the player sees instead; this hands back the same inert handle the pre-chunk proxy already is.
+  if (!probe_gl_context()) {
+    game_log('game-world', 'no webgl context (browser graphics acceleration disabled) — scene not booted')
+    return { set_paused: () => {}, destroy: () => {} }
+  }
   void import('./embed_voxel.js')
     .then(({ mount_voxel_scene }) => {
       if (destroyed) return
