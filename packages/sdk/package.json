@@ -46,6 +46,10 @@
       "types": "./types/coords.d.ts",
       "import": "./src/coords.js"
     },
+    "./travel": {
+      "types": "./types/travel.d.ts",
+      "import": "./src/travel.js"
+    },
     "./pending_fight_id": {
       "types": "./types/pending_fight_id.d.ts",
       "import": "./src/pending_fight_id.js"
