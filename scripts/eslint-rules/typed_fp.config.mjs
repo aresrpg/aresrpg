@@ -115,11 +115,7 @@ export default [
     // (gold rig, frontend e2e + dev plugins). The JS surfaces (api, rpc, frontend src) stay WARN:
     // their 0s ride weaker inference, and a later JSDoc improvement surfacing latent hits must not
     // redden someone else's lane — promote per the burn-down protocol instead.
-    files: [
-      'test/gold/**/*.ts',
-      'packages/frontend/e2e/**/*.ts',
-      'packages/frontend/dev/**/*.ts',
-    ],
+    files: ['test/gold/**/*.ts', 'packages/frontend/e2e/**/*.ts', 'packages/frontend/dev/**/*.ts'],
     rules: {
       '@typescript-eslint/no-floating-promises': ['error', { ignoreVoid: true }],
       '@typescript-eslint/no-misused-promises': ['error', { checksVoidReturn: { attributes: false } }],
