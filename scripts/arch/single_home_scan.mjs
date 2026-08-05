@@ -10,6 +10,10 @@
 //                       (exported or not — a laundered local re-declaration is the same dual home).
 //   registry-anchor   — a registry row whose `path:line` no longer declares anything: the registry
 //                       itself drifted, so every rule derived from that row silently stopped.
+//   registry-surface  — a module that is not the home re-exports a registry fact, so the fact has a
+//                       second importable name (issue #2222).
+//   registry-importer — a consumer binds a registry fact from a specifier that does not resolve to
+//                       its home: the fact reached it around the home (issue #2222).
 //   store-writers     — one Zustand store field written by two or more modules.
 //
 // Reads are the only effect and they live in read_sources; everything below it is a transform over
@@ -170,6 +174,154 @@ export const registry_findings = (rows, sources, index) => {
   )
 }
 
+// ── the generated fence: registry-surface / registry-importer (issue #2222) ─────────────────────
+// registry-fact above catches a fact RE-DECLARED off-home. These two catch the other half of the
+// same law — the fact reaching a consumer through any module BUT its home:
+//
+//   registry-surface   a module that is not the home re-exports the fact (`export { X } from`,
+//                      `export { X as Y } from`, `export * from '<home>'`). A re-export declares
+//                      nothing, so every name-based scanner in this repo was blind to it; an
+//                      ALIASED one is worse still, because downstream the fact travels under a name
+//                      the registry never heard of. Measured on the census tree: exactly that
+//                      shape existed (`K_INVISIBILITY as INVISIBILITY_STATUS_KIND`).
+//   registry-importer  a consumer binds the fact's name from a specifier that does not resolve to
+//                      the home — the "second consumer bypassing the one home" this fence exists for.
+//
+// The fence is DERIVED, never authored: one rule per registry row whose anchor is an importable JS
+// module. Rows anchored on Move sources (chain law) or on a rotten line generate nothing and are
+// reported as unfenceable, so the gate never claims coverage it does not have.
+const JS_FILE = /\.(?:js|jsx|mjs|cjs|ts|tsx)$/
+// A specifier reaches a file through the same candidate ladder bundlers use. Resolution is closed
+// over the KNOWN source set: an unresolvable specifier is not silently trusted, it is a finding.
+const CANDIDATE_SUFFIX = ['', '.js', '.jsx', '.mjs', '.cjs', '.ts', '.tsx', '/index.js', '/index.ts', '/index.jsx']
+const IMPORT_FROM = /(?:^|[\s;}])import\s+([^;'"]+?)\s+from\s*['"]([^'"]+)['"]/g
+const REEXPORT_FROM = /(?:^|[\s;}])export\s+(\*(?:\s+as\s+[A-Za-z_$][\w$]*)?|\{[^}]*\})\s*from\s*['"]([^'"]+)['"]/g
+
+// `{ a, b as c }` → the imported name and the local/exported one. A default or namespace clause
+// binds no registry name, so it contributes nothing.
+const named_bindings = (clause) => {
+  const braces = /\{([^}]*)\}/.exec(clause)
+  if (!braces) return []
+  return braces[1]
+    .split(',')
+    .map((part) => part.trim())
+    .filter(Boolean)
+    .map((part) => {
+      const [outer, inner] = part.split(/\s+as\s+/).map((token) => token.trim())
+      return { imported: outer.replace(/^type\s+/, ''), local: inner ?? outer.replace(/^type\s+/, '') }
+    })
+}
+
+// Workspace packages are reached by NAME (`@aresrpg/sim/spell_effect`), so the map is built from
+// each package's own `exports` — the same table the runtime resolves through, never a guess.
+export const read_workspace_exports = (root) => {
+  const packages_dir = path.join(root, 'packages')
+  if (!fs.existsSync(packages_dir)) return new Map()
+  const subpaths = new Map()
+  for (const entry of fs.readdirSync(packages_dir, { withFileTypes: true })) {
+    if (!entry.isDirectory()) continue
+    const manifest_path = path.join(packages_dir, entry.name, 'package.json')
+    if (!fs.existsSync(manifest_path)) continue
+    const manifest = JSON.parse(fs.readFileSync(manifest_path, 'utf8'))
+    if (!manifest.name) continue
+    for (const [subpath, target] of Object.entries(manifest.exports ?? {})) {
+      const file = typeof target === 'string' ? target : (target?.import ?? target?.default)
+      if (typeof file !== 'string') continue
+      const specifier = subpath === '.' ? manifest.name : `${manifest.name}/${subpath.replace(/^\.\//, '')}`
+      subpaths.set(specifier, path.posix.join('packages', entry.name, file.replace(/^\.\//, '')))
+    }
+  }
+  return subpaths
+}
+
+export const resolve_specifier = (from_file, specifier, known, workspace) => {
+  if (specifier.startsWith('.')) {
+    const base = path.posix.join(path.posix.dirname(from_file), specifier)
+    // A `.js` specifier in a TypeScript package names the emitted twin of a `.ts` source.
+    const stems = [base, base.replace(/\.js$/, '')]
+    for (const stem of stems) for (const suffix of CANDIDATE_SUFFIX) if (known.has(stem + suffix)) return stem + suffix
+    return null
+  }
+  return workspace.get(specifier) ?? null
+}
+
+export const fences_of = (rows, sources_by_path) => {
+  const fenced = []
+  const unfenceable = []
+  for (const row of rows)
+    for (const anchor of row.anchors) {
+      const home = `${anchor.path}:${anchor.line}`
+      if (!JS_FILE.test(anchor.path)) {
+        unfenceable.push({ fact: row.fact, home, reason: 'not an importable JS module (chain source or prose fact)' })
+        continue
+      }
+      const symbol = declared_at(sources_by_path, anchor)
+      if (!symbol) {
+        unfenceable.push({ fact: row.fact, home, reason: 'anchor declares nothing — see the registry-anchor lane' })
+        continue
+      }
+      fenced.push({ fact: row.fact, home, path: anchor.path, symbol })
+    }
+  return { fenced, unfenceable }
+}
+
+export const fence_findings = (fenced, sources, workspace) => {
+  const known = new Set(sources.map((source) => source.path))
+  const homes = new Map()
+  for (const fence of fenced) homes.set(fence.symbol, fence)
+  const findings = []
+  for (const { path: file, text } of sources) {
+    for (const match of text.matchAll(REEXPORT_FROM)) {
+      const [, clause, specifier] = match
+      const target = resolve_specifier(file, specifier, known, workspace)
+      if (clause.startsWith('*')) {
+        // A star re-export republishes EVERY fact the home owns, under the barrel's specifier.
+        for (const fence of fenced)
+          if (fence.path === target && file !== fence.path)
+            findings.push({
+              lane: 'registry-surface',
+              label: `${fence.symbol} (${fence.fact})`,
+              path: file,
+              line: line_of(text, match.index),
+              detail: `star re-export of ${fence.path} — a second importable surface; canonical home is ${fence.home}`,
+            })
+        continue
+      }
+      for (const { imported, local } of named_bindings(clause)) {
+        const fence = homes.get(imported) ?? homes.get(local)
+        if (!fence || file === fence.path) continue
+        findings.push({
+          lane: 'registry-surface',
+          label: `${fence.symbol} (${fence.fact})`,
+          path: file,
+          line: line_of(text, match.index),
+          detail:
+            imported === local
+              ? `re-exported from ${specifier} — a second importable surface; canonical home is ${fence.home}`
+              : `re-exported as \`${local}\` from ${specifier} — the fact travels under a name the registry never named; canonical home is ${fence.home}`,
+        })
+      }
+    }
+    for (const match of text.matchAll(IMPORT_FROM)) {
+      const [, clause, specifier] = match
+      for (const { imported } of named_bindings(clause)) {
+        const fence = homes.get(imported)
+        if (!fence || file === fence.path) continue
+        const target = resolve_specifier(file, specifier, known, workspace)
+        if (target === fence.path) continue
+        findings.push({
+          lane: 'registry-importer',
+          label: `${fence.symbol} (${fence.fact})`,
+          path: file,
+          line: line_of(text, match.index),
+          detail: `bound from ${specifier} (${target ?? 'unresolved'}) — the one home is ${fence.home}`,
+        })
+      }
+    }
+  }
+  return findings
+}
+
 // ── lane: store-writers ─────────────────────────────────────────────────────────────────────────
 // A store field written from two modules has two writers for one fact — the shape behind #1034 and
 // #1687. Only fields with two or more writing modules are findings: a new single-writer field is
@@ -276,10 +428,10 @@ export const store_writes = (sources) => {
 }
 
 // ── the scan ────────────────────────────────────────────────────────────────────────────────────
-export const scan = ({ root, scan_dirs, registry_path }) => {
-  const sources = read_sources(root, scan_dirs)
-  if (sources.length === 0) throw new Error(`single-home scan read 0 files under ${root} (${scan_dirs.join(', ')})`)
-  const registry_file = path.join(root, registry_path)
+// Every guard the registry itself must pass before ANY verdict is derived from it. Fail-closed by
+// construction: a registry the parser cannot fully read produces no green, it produces a throw.
+export const read_registry = (root, registry_path) => {
+  const registry_file = path.resolve(root, registry_path)
   if (!fs.existsSync(registry_file)) throw new Error(`single-home scan found no registry at ${registry_file}`)
   const rows = registry_rows(fs.readFileSync(registry_file, 'utf8'))
   if (rows.length === 0) throw new Error(`single-home scan parsed 0 rows out of ${registry_file}`)
@@ -292,10 +444,45 @@ export const scan = ({ root, scan_dirs, registry_path }) => {
         .map((row) => row.fact)
         .join(', ')}`
     )
+  // A row pointing at a file that no longer exists is registry staleness, not a measurable finding:
+  // no symbol can be derived from it, so its fence would silently vanish. Surface it loudly (#2222).
+  const missing = rows.flatMap((row) =>
+    row.anchors
+      .filter((anchor) => !fs.existsSync(path.join(root, anchor.path)))
+      .map((anchor) => `${row.fact} → ${anchor.path}`)
+  )
+  if (missing.length > 0)
+    throw new Error(
+      `${registry_file}: ${missing.length} row anchor(s) name a file that does not exist — ${missing.join(', ')}`
+    )
+  return rows
+}
+
+// The fence alone, reading only the anchor files: what the gate's positive control asserts against,
+// and the coverage report. Same pure `fences_of` the full scan uses, so the two cannot drift.
+export const derive_fences = ({ root, registry_path }) => {
+  const rows = read_registry(root, registry_path)
+  const anchor_paths = [...new Set(rows.flatMap((row) => row.anchors.map((anchor) => anchor.path)))]
+  const sources_by_path = new Map(anchor_paths.map((file) => [file, fs.readFileSync(path.join(root, file), 'utf8')]))
+  return fences_of(rows, sources_by_path)
+}
+
+export const scan = ({ root, scan_dirs, registry_path }) => {
+  const sources = read_sources(root, scan_dirs)
+  if (sources.length === 0) throw new Error(`single-home scan read 0 files under ${root} (${scan_dirs.join(', ')})`)
+  const rows = read_registry(root, registry_path)
   const index = index_of(sources)
+  const { fenced, unfenceable } = fences_of(rows, new Map(sources.map((source) => [source.path, source.text])))
   return {
     files: sources.length,
     rows: rows.length,
-    findings: [...duplicate_exports(index), ...registry_findings(rows, sources, index), ...store_writes(sources)],
+    fenced: fenced.length,
+    unfenceable: unfenceable.length,
+    findings: [
+      ...duplicate_exports(index),
+      ...registry_findings(rows, sources, index),
+      ...fence_findings(fenced, sources, read_workspace_exports(root)),
+      ...store_writes(sources),
+    ],
   }
 }
