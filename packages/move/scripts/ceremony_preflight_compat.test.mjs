@@ -8,10 +8,15 @@ import { expect, test } from 'bun:test'
 
 import {
   ci_context,
+  classify_warnings,
+  fatal_warnings,
+  is_gas_boundary,
+  is_unknown_filter_chatter,
   republish_window_verdict,
   run_compatibility_probe,
   significant_tail,
   size_verdict,
+  strip_ansi,
 } from './ceremony_preflight_compat.mjs'
 
 const pr = (base_ref) => ({
@@ -258,4 +263,67 @@ test('a warning escalation keeps its evidence under production stream ordering',
   expect(calls).toHaveLength(2)
   expect(result.warning_failure).toContain('This warning can be suppressed')
   expect(result.warning_failure).not.toContain('INCLUDING DEPENDENCY')
+})
+
+// ── The two measured host terminals (#2194, sui 1.76.0-6effb4523834, 2026-08-05) ───────────────────
+// Captured from a live aresrpg probe: the CLI COLORIZES, so escapes land BETWEEN `]` and `:` in every
+// diagnostic header — 96 of them in one run. A parser anchored on `]: ` reads colorized output as
+// EMPTY, which is why these fixtures keep their escapes instead of arriving pre-stripped.
+const ESC = '\u001b['
+const COLORIZED_W09001 =
+  `${ESC}0m${ESC}1m${ESC}38;5;11mwarning[W09001]${ESC}0m${ESC}1m: unused alias${ESC}0m\n` +
+  '   │ use sui::{dynamic_field as df, event};\n' +
+  "   = This warning can be suppressed with '#[allow(unused_use)]'\n"
+const UNKNOWN_FILTER =
+  'warning[W10007]: issue with attribute value\n' +
+  '   ┌─ sources/shop.move:234:14\n' +
+  '234 │ #[allow(lint(self_transfer))]\n' +
+  "   │              ^^^^^^^^^^^^^ Unknown diagnostic filter 'lint(self_transfer)'\n"
+const GAS_DEATH =
+  'Cannot find gas coin for signer address 0x087aa862 with amount sufficient for the required gas budget 468118340.'
+
+test('a colorized diagnostic header is still parsed — the gate never reads colour as silence', () => {
+  // The blindness this pins: anchored on `]: `, RAW colorized output matches nothing at all.
+  expect(COLORIZED_W09001.match(/warning\[(W\d{5})\]: /)).toBeNull()
+  expect(strip_ansi(COLORIZED_W09001)).toContain('warning[W09001]: unused alias')
+  expect(classify_warnings(COLORIZED_W09001)).toEqual([{ code: 'W09001', title: 'unused alias', forgiven: false }])
+})
+
+test('W10007 unknown-filter is forgiven; every other warning class stays fatal', () => {
+  expect(is_unknown_filter_chatter(UNKNOWN_FILTER)).toBe(true)
+  expect(fatal_warnings(UNKNOWN_FILTER)).toEqual([])
+
+  // Forgiveness is per-BLOCK: a W09001 riding alongside the pair is still fatal. This is the live
+  // negative control — forgiving the chatter must never forgive its neighbour.
+  const both = `${UNKNOWN_FILTER}\n${COLORIZED_W09001}`
+  expect(is_unknown_filter_chatter(both)).toBe(false)
+  expect(fatal_warnings(both).map((w) => w.code)).toEqual(['W09001'])
+})
+
+test('a W10007 that is NOT an unknown filter stays fatal — the carve-out is not a code pass', () => {
+  const other_w10007 = 'warning[W10007]: issue with attribute value\n   │ something else entirely\n'
+  expect(fatal_warnings(other_w10007).map((w) => w.code)).toEqual(['W10007'])
+  expect(is_unknown_filter_chatter(other_w10007)).toBe(false)
+})
+
+test('the gas boundary is recognised through colour, and only for its own error class', () => {
+  expect(is_gas_boundary(`${ESC}0m${GAS_DEATH}${ESC}0m`)).toBe(true)
+  expect(is_gas_boundary('Failed to build Move modules: Compilation error.')).toBe(false)
+})
+
+test('an output with no warnings at all is not chatter — absence is never a carve-out', () => {
+  expect(is_unknown_filter_chatter(GAS_DEATH)).toBe(false)
+  expect(classify_warnings('')).toEqual([])
+})
+
+test('the probe strips colour at the capture seam, so E-codes survive a colorizing CLI', () => {
+  const colorized_incompat = Object.assign(new Error('incompatible'), {
+    status: 1,
+    stdout: `${ESC}0m${ESC}1merror[Compatibility E01001]${ESC}0m${ESC}1m: a public function is missing${ESC}0m`,
+    stderr: '',
+  })
+  const result = run_compatibility_probe(['client', 'upgrade', 'fixture'], () => {
+    throw colorized_incompat
+  })
+  expect([...result.errors.keys()]).toEqual(['E01001 a public function is missing'])
 })

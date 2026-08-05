@@ -447,16 +447,25 @@ export function significant_tail(output, n = 5) {
   return (meaningful.length ? meaningful : lines).slice(-n).join(' | ')
 }
 
+// The CLI COLORIZES its diagnostics, and the escapes land BETWEEN `]` and `:` in every
+// `warning[W#####]:` / `error[Compatibility E#####]:` header — so a parser anchored on `]: ` matches
+// NOTHING against raw output. Measured 2026-08-05 (#2194): 96 escapes in one aresrpg probe. Decoded once,
+// here at the capture seam, so every parser downstream reads plain text and no future one can inherit
+// the blindness. This is what kept the E01001-class detector from ever firing on a colorizing host.
+// eslint-disable-next-line no-control-regex -- an ANSI SGR escape IS a control sequence; matching it is the point
+const ANSI_SGR = /\x1b\[[0-9;]*m/g
+export const strip_ansi = (text) => String(text ?? '').replace(ANSI_SGR, '')
+
 function execResult(run, args) {
   try {
     return {
       exit_code: 0,
-      output: String(run('sui', args, { encoding: 'utf-8' }) ?? ''),
+      output: strip_ansi(run('sui', args, { encoding: 'utf-8' })),
     }
   } catch (e) {
     return {
       exit_code: e.status ?? 1,
-      output: `${e.stdout ?? ''}${e.stderr ?? ''}`,
+      output: strip_ansi(`${e.stdout ?? ''}${e.stderr ?? ''}`),
     }
   }
 }
@@ -468,6 +477,42 @@ function isWarningEscalation(output) {
   )
 }
 
+// Every compiler warning in an output, each tagged with whether this gate forgives it. Pure. A warning is
+// forgiven ONLY when it is W10007 whose own block says `Unknown diagnostic filter` — measured 2026-08-05, the
+// `#[allow(lint(...))]` filter names ARE registered under `sui move build`/`--lint` (0 W10007 there, so the
+// attributes are load-bearing) and only the upgrade-mode compiler rev lacks them. Blocks are sliced header to
+// header so the forgiveness can never spread from one warning to its neighbour.
+export function classify_warnings(output) {
+  const text = strip_ansi(output)
+  const headers = [...text.matchAll(/warning\[(W\d{5})\]: ([^\n]*)/g)]
+  return headers.map((header, i) => {
+    const block = text.slice(header.index, headers[i + 1]?.index ?? text.length)
+    return {
+      code: header[1],
+      title: header[2].trim(),
+      forgiven: header[1] === 'W10007' && /Unknown diagnostic filter/.test(block),
+    }
+  })
+}
+
+// HOST TERMINAL 1 — the output carries warnings and every last one is the forgiven class.
+export function is_unknown_filter_chatter(output) {
+  const warnings = classify_warnings(output)
+  return warnings.length > 0 && warnings.every((w) => w.forgiven)
+}
+
+// The gate enforces the warning policy ITSELF instead of trusting the CLI to die on one: measured 2026-08-05,
+// `sui client upgrade` prints W09001 and walks on to the gas stop, so a death-only policy forgives it silently.
+export function fatal_warnings(output) {
+  return classify_warnings(output).filter((w) => !w.forgiven)
+}
+
+// HOST TERMINAL 2 — the keyless-host boundary. A read-only preflight box holds no gas coin, so the CLI stops
+// the instant it needs one, which is AFTER the compile and the compatibility verifier have both had their say.
+export function is_gas_boundary(output) {
+  return /Cannot find gas coin for signer address/.test(strip_ansi(output))
+}
+
 // A compiler-warning escalation exits BEFORE Sui's compatibility verifier runs. Retry that exact
 // read-only probe with the warnings deflected so the E01001/E01002 list still materialises, but keep
 // the first death as a separate blocking result — reaching the verdict must never launder a warning
@@ -476,15 +521,19 @@ export function run_compatibility_probe(args, run = execFileSync) {
   let result = execResult(run, args)
   let errors = parseCompatErrors(result.output)
   let warning_failure = null
+  let filter_chatter = null
 
-  if (result.exit_code !== 0 && errors.size === 0 && isWarningEscalation(result.output)) {
-    warning_failure = `exit ${result.exit_code} — ${significant_tail(result.output)}`
+  const chatter_only = is_unknown_filter_chatter(result.output)
+  if (result.exit_code !== 0 && errors.size === 0 && (isWarningEscalation(result.output) || chatter_only)) {
+    // Same recovery either way; only the VERDICT differs — chatter is reported, an escalation stays fatal.
+    if (chatter_only) filter_chatter = significant_tail(result.output)
+    else warning_failure = `exit ${result.exit_code} — ${significant_tail(result.output)}`
     const retry_args = args.filter((arg) => arg !== '--warnings-are-errors').concat('--silence-warnings')
     result = execResult(run, retry_args)
     errors = parseCompatErrors(result.output)
   }
 
-  return { ...result, errors, warning_failure }
+  return { ...result, errors, warning_failure, filter_chatter }
 }
 
 async function resolveGroundTruth(client, name, entry) {
@@ -548,7 +597,7 @@ async function checkPackage(client, release, network, name) {
   } finally {
     if (needsPatch) fs.writeFileSync(pubFile, original)
   }
-  const { output, exit_code: exitCode, errors, warning_failure } = probe
+  const { output, exit_code: exitCode, errors, warning_failure, filter_chatter } = probe
 
   // The size row costs its own compile ON PURPOSE, rather than reading whatever the CLI call left in
   // build/: the compat verdict is the CLI's, the size verdict is this gate's, and a shared build
@@ -573,6 +622,33 @@ async function checkPackage(client, release, network, name) {
       source,
       size,
       warning_failure,
+      filter_chatter,
+    }
+  // The warning policy, enforced on the OUTPUT rather than on the CLI's choice to die. Runs ahead of the gas
+  // boundary on purpose: the gas stop is reached WITH these warnings in hand, so checking it first would
+  // forgive every one of them.
+  const fatal = fatal_warnings(output)
+  if (fatal.length > 0)
+    return {
+      name,
+      status: 'error',
+      detail: `warning policy FAILS — ${fatal.map((w) => `${w.code} ${w.title}`).join(' · ')}`,
+      size,
+      warning_failure,
+      filter_chatter,
+    }
+  // The compile and the compatibility verifier both cleared and the run died only where THIS box has no gas:
+  // there is nothing further a preflight could learn here, so the boundary is a pass. Guarded on zero fatal
+  // diagnostics — a gas death carrying a warning escalation is still a failure, never laundered green.
+  if (exitCode !== 0 && !warning_failure && errors.size === 0 && is_gas_boundary(output))
+    return {
+      name,
+      status: 'gas-boundary',
+      target,
+      source,
+      size,
+      warning_failure,
+      filter_chatter,
     }
   if (exitCode !== 0)
     return {
@@ -581,6 +657,7 @@ async function checkPackage(client, release, network, name) {
       detail: `exit ${exitCode} — ${significant_tail(output)}`,
       size,
       warning_failure,
+      filter_chatter,
     }
   return {
     name,
@@ -589,6 +666,7 @@ async function checkPackage(client, release, network, name) {
     source,
     size,
     warning_failure,
+    filter_chatter,
   }
 }
 
@@ -667,6 +745,10 @@ async function main() {
     const result = await checkPackage(client, release, network, name)
     if (result.status === 'compatible') {
       console.log(`${name} COMPATIBLE  (target ${result.target}, from ${result.source})`)
+    } else if (result.status === 'gas-boundary') {
+      console.log(
+        `${name} COMPAT: clean to the gas boundary (compile+compat verified; E01001-class detector proven 2026-08-05)  (target ${result.target}, from ${result.source})`
+      )
     } else if (result.status === 'incompatible') {
       any_failed = true
       const detail = [...result.errors].map(([k, n]) => `${n}x${k}`).join('  ')
@@ -681,6 +763,11 @@ async function main() {
       console.log(
         `${name} WARNING-ESCALATION  ${result.warning_failure} — compatibility verdict above was recovered with --silence-warnings; warning policy still FAILS.`
       )
+    }
+
+    // Reported, never fatal — the one warning class this host's upgrade-mode compiler cannot resolve.
+    if (result.filter_chatter) {
+      console.log(`${name} FILTER-CHATTER (non-fatal)  ${result.filter_chatter}`)
     }
 
     if (result.size != null) {
