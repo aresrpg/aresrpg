@@ -186,7 +186,7 @@ describe('DungeonBoard flush — the footprint anchor evolves PER CAST, and grou
     const emitted = body.indexOf('emit_local_cast_drop_toast({')
 
     // The cancellation record is created exactly where drop_entry omits the cast from cast_actions.
-    expect((body.match(/cast_drops\.push\(local_commit_cast_drop\(/g) ?? []).length).toBe(1)
+    expect((body.match(/cast_drops = \[\s+\.\.\.cast_drops,\s+local_commit_cast_drop\(/g) ?? []).length).toBe(1)
     expect((body.match(/drop_entry\(CAST_DROP_TARGET_OUT_OF_REACH\)/g) ?? []).length).toBe(2)
     // Consumption is downstream of the real commit result and explicitly gated/scoped by it.
     expect(committed).toBeGreaterThan(-1)

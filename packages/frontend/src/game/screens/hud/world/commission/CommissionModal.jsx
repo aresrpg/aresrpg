@@ -49,7 +49,7 @@ export function CommissionModal() {
     const w = /** @type {any} */ (window)
     w.__ARES_DEV_OPEN_COMMISSIONS = () => context.dispatch('action/commissions_modal', true)
     return () => {
-      delete w.__ARES_DEV_OPEN_COMMISSIONS
+      Reflect.deleteProperty(w, '__ARES_DEV_OPEN_COMMISSIONS')
     }
   }, [])
 

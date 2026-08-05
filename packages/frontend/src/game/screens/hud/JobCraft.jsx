@@ -194,16 +194,19 @@ export function CraftControls({ recipe, job, level, owned }) {
  * }} props
  */
 export function RecipeGrid({ recipes, loading, level, on_select, selected_id = null }) {
-  const { unlocked, locked } = useMemo(() => {
-    /** @type {typeof recipes} */
-    const u = []
-    /** @type {typeof recipes} */
-    const l = []
-    // Grouped by the CHAIN's gate (required_level), so what reads "Unlocked" is exactly what
-    // `crafting::craft` will accept — not the output item's level, which gates nothing.
-    for (const r of recipes) (level >= r.required_level ? u : l).push(r)
-    return { unlocked: u, locked: l }
-  }, [recipes, level])
+  const { unlocked, locked } = useMemo(
+    () =>
+      recipes.reduce(
+        (groups, recipe) => {
+          // Grouped by the CHAIN's gate (required_level), so what reads "Unlocked" is exactly what
+          // `crafting::craft` will accept — not the output item's level, which gates nothing.
+          const group = level >= recipe.required_level ? 'unlocked' : 'locked'
+          return { ...groups, [group]: [...groups[group], recipe] }
+        },
+        /** @type {{ unlocked: typeof recipes, locked: typeof recipes }} */ ({ unlocked: [], locked: [] })
+      ),
+    [recipes, level]
+  )
 
   // Loading is NOT emptiness — the honest-empty copy would read as "this job has no recipes" while the
   // projection is still in flight (no-silent-staleness law, useRpcView).

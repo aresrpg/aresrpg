@@ -209,7 +209,7 @@ describe('trap draft paint — click-time fold + rollback semantics (the fold my
     // The draft click folds the trap optimistically (at cast, not at commit) through the fight reducer.
     expect(source).toContain('place_traps: prediction.placed_traps ?? []')
     // A dropped trap draft is collected for rollback at flush.
-    expect(source).toContain('trap_dropped.push(entry.cell)')
+    expect(source).toContain('trap_dropped = [...trap_dropped, entry.cell]')
     // A failed commit rolls every drafted cell back through that same fold.
     expect(source).toContain("input({ type: 'drop_traps', cells: store_dropped })")
     // There is no component-local trap writer and no end-turn trap clear.

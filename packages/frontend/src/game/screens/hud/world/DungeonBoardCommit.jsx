@@ -133,12 +133,12 @@ export function useDungeonBoardCommit(state, t) {
     // click-time marker — trap paint at cast, design ruling 2026-07-17 — must roll back). The keyless read layer drops
     // Fight.fx, so the client mirrors its own placed traps; markers live until sprung / fight end.
     const trap_placed = []
-    const trap_dropped = []
+    let trap_dropped = []
     let dropped = 0
     // Only this local commit-removal edge creates cast-drop events. Re-validation, evolved fighters, canonical
     // ingress, claim retirement, peers, and mobs return domain/state results but cannot request UI; the successful
     // commit consumes these records below.
-    const cast_drops = []
+    let cast_drops = []
     if (me && dungeon && committed_caster_cell != null)
       for (const [cast_i, entry] of (cast_queue ?? []).entries()) {
         const is_weapon = entry.spell_key === WEAPON_ATTACK_ID
@@ -183,10 +183,13 @@ export function useDungeonBoardCommit(state, t) {
             background,
           })
           dropped += 1
-          cast_drops.push(local_commit_cast_drop({ actor_id: entity_id, spell_name: spell_display_name, reason }))
+          cast_drops = [
+            ...cast_drops,
+            local_commit_cast_drop({ actor_id: entity_id, spell_name: spell_display_name, reason }),
+          ]
           // a dropped trap draft never reaches the chain — its click-time optimistic marker rolls back below.
           if ((level_row(drafted_spell)?.effects ?? []).some((e) => e.kind === 'PLACE_TRAP'))
-            trap_dropped.push(entry.cell)
+            trap_dropped = [...trap_dropped, entry.cell]
         }
         // A prior ordered move may have crossed a lethal known trap. The contract commits that death, but any
         // following act_cast would fail begin_living_action and revert the PTB, so omit the now-impossible suffix cast.
