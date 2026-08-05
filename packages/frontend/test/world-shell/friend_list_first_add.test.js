@@ -70,7 +70,7 @@ describe('#1759 — a friend list the network has not published yet is SAID, nev
     const verdict = await await_friend_list_indexed(LIST_ID, {
       attempts: 3,
       get_sdk_fn: sdk_reading_on(0),
-      sleep_fn: ms => {
+      sleep_fn: (ms) => {
         slept.push(ms)
         return Promise.resolve()
       },
@@ -85,7 +85,7 @@ describe('#1759 — a friend list the network has not published yet is SAID, nev
     const verdict = await await_friend_list_indexed(LIST_ID, {
       attempts: 4,
       get_sdk_fn: sdk_reading_on(1, read),
-      sleep_fn: ms => {
+      sleep_fn: (ms) => {
         slept.push(ms)
         return Promise.resolve()
       },

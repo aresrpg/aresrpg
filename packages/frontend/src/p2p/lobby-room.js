@@ -453,12 +453,10 @@ export function set_room_party(party_id) {
  *  silent no-op — same data verdict as `publish_room_chat`. @returns {Promise<boolean>} */
 export function publish_room_party_chat(character_id, name, message, channel, target = '') {
   if (!party_room_id || !party_chat_action) return Promise.resolve(false)
-  return party_chat_action
-    .send({ party_id: party_room_id, id: character_id, name, message, channel, target })
-    .then(
-      () => true,
-      () => false
-    )
+  return party_chat_action.send({ party_id: party_room_id, id: character_id, name, message, channel, target }).then(
+    () => true,
+    () => false
+  )
 }
 
 /**
