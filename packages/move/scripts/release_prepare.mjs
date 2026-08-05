@@ -215,7 +215,13 @@ function main() {
   fs.writeFileSync(MANIFEST_OUT, JSON.stringify(manifest, null, 2))
   // a copy under scripts/out for CLI reference / diffing (same home as ceremony_manifest.json)
   fs.mkdirSync(OUT, { recursive: true })
-  fs.writeFileSync(path.join(OUT, 'release_manifest.json'), JSON.stringify(manifest, null, 2))
+  const out_copy = path.join(OUT, 'release_manifest.json')
+  fs.writeFileSync(out_copy, JSON.stringify(manifest, null, 2))
+  // Both copies sit inside `bun run lint`'s prettier check (MANIFEST_OUT is committed; the out copy is a
+  // working-tree artifact the move package's own check still walks), and raw JSON.stringify disagrees with
+  // prettier on the trailing newline and the digest byte-array fill. Formatting here makes the artifact
+  // gate-clean by construction — the alternative is a hand-run `prettier --write` someone has to remember.
+  execSync(`bunx prettier --write ${MANIFEST_OUT} ${out_copy}`, { cwd: REPO_ROOT, stdio: 'ignore' })
 
   const totalKB = Object.values(packages).reduce((n, p) => n + p.byteSize, 0) / 1024
   console.log(`\n  policy steps: ${POLICY_STEPS.length} · enable steps: ${ENABLE_STEPS.length}`)
