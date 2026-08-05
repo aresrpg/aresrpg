@@ -2,8 +2,9 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 import { describe, expect, test } from 'bun:test'
 
+import { K_INVISIBILITY } from '@aresrpg/sim/spell_effect'
+
 import {
-  INVISIBILITY_STATUS_KIND,
   new_invisibility_statuses,
   read_fighter_statuses,
   status_snapshot_entities,
@@ -15,7 +16,7 @@ describe('authoritative fight status snapshot', () => {
       read_fighter_statuses({
         fx: {
           statuses: [
-            { fighter: '0', kind: String(INVISIBILITY_STATUS_KIND), remaining_turns: '2', effect: {} },
+            { fighter: '0', kind: String(K_INVISIBILITY), remaining_turns: '2', effect: {} },
             { fighter: '1001', kind: 4, remaining_turns: 3, effect: { element: 2, value: 5 } }, // non-27 now KEPT
             { fields: { fighter: '1', remaining_turns: '1', effect: { fields: { kind: 27 } } } },
             { fighter: '2', kind: 27, remaining_turns: 0, effect: {} }, // #2000: LAST covered turn → still read

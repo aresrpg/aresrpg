@@ -8,9 +8,11 @@
 
 import { describe, expect, test } from 'bun:test'
 
+import { K_INVISIBILITY } from '@aresrpg/sim/spell_effect'
+
 import { create_fight_store } from '../src/store.js'
 import { engine_view } from '../src/project.js'
-import { read_fighter_statuses, INVISIBILITY_STATUS_KIND } from '../src/fight_status_snapshot.js'
+import { read_fighter_statuses } from '../src/fight_status_snapshot.js'
 
 const FIGHT = '0xf1'
 const CHAR = '0xc1'
@@ -98,7 +100,7 @@ describe('LEG Q — every fighter status rides engine_view.effects (was invisibi
     const statuses = read_fighter_statuses({
       fx: {
         statuses: [
-          { fighter: 0, kind: INVISIBILITY_STATUS_KIND, remaining_turns: 2, effect: {} },
+          { fighter: 0, kind: K_INVISIBILITY, remaining_turns: 2, effect: {} },
           // K_ALTER_STAT (e.g. MP): the chain mints signed kinds CENTERED at 32768 (#886), so a +5 buff rides
           // the wire as 32773 and the wire door hands the fighter row the decoded +5.
           { fighter: 0, kind: 9, remaining_turns: 3, effect: { stat: 1, value: 32773 } },
@@ -111,7 +113,7 @@ describe('LEG Q — every fighter status rides engine_view.effects (was invisibi
       f.effects.map((e) => e.kind).sort((a, b) => a - b),
       'both status kinds surface'
     ).toEqual([9, 27])
-    const inv = f.effects.find((e) => e.kind === INVISIBILITY_STATUS_KIND)
+    const inv = f.effects.find((e) => e.kind === K_INVISIBILITY)
     const alter = f.effects.find((e) => e.kind === 9)
     expect(inv.remaining_turns, 'invisibility duration carried').toBe(2)
     expect(alter.remaining_turns, 'alter duration carried').toBe(3)
