@@ -22,7 +22,7 @@ module aresrpg::character_link;
 use sui::{event};
 use sui::dynamic_field as df;
 
-use aresrpg::{character::{Self, Character}, world::Checkpoint, config::{Self, GameConfig}, extension, extract::{Self, ItemExtractPolicy}, item::{Self, Item, ItemTemplate}, progression, version::Version, character_link};
+use aresrpg::{character::{Self, Character}, world::Checkpoint, config::{Self, GameConfig}, extension, extract::{Self, ItemExtractPolicy}, item::{Self, Item, ItemTemplate}, progression, version::Version};
 use aresrpg_foundation::character_xp;
 use kiosk::personal_kiosk::{Self, PersonalKioskCap};
 use std::string::String;

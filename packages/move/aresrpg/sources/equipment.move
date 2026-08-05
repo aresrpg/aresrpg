@@ -30,7 +30,7 @@ module aresrpg::equipment;
 
 use aresrpg_foundation::spell::{Self, Stats};
 use aresrpg::{character_link, config, equipment_stats, progression, version::Version};
-use aresrpg::{character::Character, extension, extract::{Self, EquipPledge}, item::{Self, Item, ItemTemplate, LockPledge}, item_stats::{Self, ItemStatistics}, item_damages::{Self, ItemDamages}, scribe::ScribeConfig};
+use aresrpg::{character::Character, extension, extract::{Self, EquipPledge}, item::{Self, Item, ItemTemplate, LockPledge}, item_stats::{Self, ItemStatistics}, item_damages::{Self, ItemDamages}};
 use kiosk::personal_kiosk::{Self, PersonalKioskCap};
 use std::string::String;
 use sui::kiosk::Kiosk;

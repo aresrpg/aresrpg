@@ -50,7 +50,7 @@ use aresrpg::{character::Character, character_link, config::{Self, GameConfig}, 
 use aresrpg_foundation::job_xp;
 use kiosk::personal_kiosk::{Self, PersonalKioskCap};
 use sui::{
-  balance::{Self, Balance},
+  balance::Balance,
   coin::{Self, Coin},
   event,
   kiosk::Kiosk,
