@@ -25,4 +25,7 @@ mod ares;
 mod checkpoint;
 
 pub use ares::{AresHandler, AresSnapshotHandler};
+// The projection owns its own key names; a READER of that projection (the party SSE leg,
+// #2086) borrows them from here rather than re-spelling them at the far end of the crate.
+pub(crate) use ares::party::{character_invites_key, character_party_key};
 pub use checkpoint::CheckpointHandler;

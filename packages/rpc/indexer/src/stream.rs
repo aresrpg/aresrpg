@@ -9,7 +9,13 @@
 //! Redis-to-Redis transport. Fight SSE is a second consumer of the journal
 //! produced by the existing `ares` decode; it never BCS-decodes chain events.
 //!
-//! A second route once shared this chassis: `GET /v1/stream/presence/{world_id}`
+//! A second leg shares this chassis: `GET /v1/stream/party/{character_id}` (#2086,
+//! `stream/party.rs`) pushes one character's social scope so party membership and
+//! pending invitations stop riding a client-side four-second poll. It reuses the
+//! response chassis, the id parsing and the CORS layer below, and differs in one
+//! deliberate way documented there: it is a LEVEL channel with no cursor.
+//!
+//! A third route once shared this chassis: `GET /v1/stream/presence/{world_id}`
 //! mirrored an ephemeral presence registry and the poses and chat lines written
 //! by the client→server courier. That courier was retired as a violation of the
 //! no-client-writes law and deleted with its service, SDK and browser edge
@@ -41,6 +47,8 @@ use tokio::time::{interval, MissedTickBehavior};
 use tokio_stream::wrappers::ReceiverStream;
 use tokio_stream::StreamExt as _;
 use tracing::warn;
+
+mod party;
 
 const FIGHT_POLL_INTERVAL: Duration = Duration::from_millis(250);
 const KEEPALIVE_INTERVAL: Duration = Duration::from_secs(20);
@@ -182,6 +190,7 @@ pub(crate) fn router(redis_url: &str) -> Result<Router> {
     let redis = redis::Client::open(redis_url).context("opening SSE Redis client")?;
     Ok(Router::new()
         .route("/v1/stream/fight/{fight_id}", get(fight_stream))
+        .route("/v1/stream/party/{character_id}", get(party::party_stream))
         .with_state(StreamState { redis })
         .layer(middleware::map_response(public_read_cors)))
 }
@@ -468,6 +477,25 @@ mod tests {
             status_line(&format!("/v1/stream/fight/{world}")).await,
             "HTTP/1.1 200 OK",
             "the fight journal stream is untouched by that retirement"
+        );
+    }
+
+    /// #2086 — the party scope is a leg OF this chassis, not a service beside it: it answers on
+    /// the same listener, under the same `/v1/stream` prefix, and rejects a non-object-id key
+    /// through the same parser the fight route uses.
+    #[tokio::test]
+    async fn the_party_scope_route_is_mounted_beside_the_fight_route() {
+        let character = fixture_id("2");
+
+        assert_eq!(
+            status_line(&format!("/v1/stream/party/{character}")).await,
+            "HTTP/1.1 200 OK",
+            "party membership and invites must have a pushed channel (#2086)"
+        );
+        assert_eq!(
+            status_line("/v1/stream/party/not-an-object-id").await,
+            "HTTP/1.1 400 Bad Request",
+            "the path segment IS the subscription scope — an unparseable one is refused"
         );
     }
 
