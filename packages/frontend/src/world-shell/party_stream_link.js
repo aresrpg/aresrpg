@@ -38,8 +38,7 @@ import { RPC_URL } from '../env'
 // whole pre-deploy 404 window lives on this ladder, and the poll is unaffected by it.
 const MAX_SKIPPED_TICKS = 15
 
-const stream_url = (base_url, character_id) =>
-  `${base_url}/v1/stream/party/${encodeURIComponent(character_id)}`
+const stream_url = (base_url, character_id) => `${base_url}/v1/stream/party/${encodeURIComponent(character_id)}`
 
 /**
  * Open ONE party scope stream. Transport only: every frame becomes a single `on_change()` call. Returns the
