@@ -1,1 +1,7 @@
-d6e186af4 → Refs #2186 — refactor(sim): delete summoning — the sim resolved a kind the chain cannot encode
+ea00d0221 → Refs #2194 — chore(move): the aresrpg byte budget rises to 100000 — the format-4 spend, maintainer-approved
+98874e21f → Refs #2194 — feat(move,sim): commitment format 4 — a zone claim proves one group, never re-derives
+6316c594c → Refs #2194 — test(move): the zone-claim gas probe measures the format-4 trade
+08d362dbf → Refs #2194 — feat(sdk): compose the format-4 witness and take the cheap member claim door
+6ed4e9afa → Refs #2194 — docs(zones): the commitment-format home learns formats 3 and 4
+9201c4ee8 → Refs #2194 — style(move): format the gas probe to the move package prettier config
+fb9f5d20f → Refs #2194 — style(sim): format the format-4 mirror to the sim package prettier config
