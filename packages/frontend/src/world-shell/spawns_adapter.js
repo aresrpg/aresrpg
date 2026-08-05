@@ -8,9 +8,9 @@
 
 import { useStore } from 'zustand'
 import { create_spawns_store } from '@aresrpg/world/spawns_zones'
-import { AGREE_RADIUS_M } from '@aresrpg/world/checkpoint'
+import { positions_agree } from '@aresrpg/world/checkpoint'
 
-import { read_dungeon_session } from './dungeon_session.js'
+import { read_dungeon_session, subscribe_dungeon_session } from './dungeon_session.js'
 import { use_world_binding } from './session_gate.js'
 
 /** THE one spawns/zones atom for the app (the package factory owns its shape + door). */
@@ -39,6 +39,8 @@ export function spawns_input(input, now) {
     last_noted_position_owner = null
     position_chain_anchor = null
     position_chain_anchor_owner = null
+    return_anchor_owner = null
+    last_committed_snapshot = null
     restore_generation += 1
   } else {
     const { character_id } = use_world_binding.getState()
@@ -91,6 +93,7 @@ const max_age_ms = 30 * 60 * 1_000
  *   z:number,
  *   saved_at:number,
  *   chain_anchor:ChainAnchor,
+ *   return_anchor?:boolean,
  * }} PositionSnapshot
  */
 
@@ -112,8 +115,11 @@ const same_chain_observation = (a, b) =>
 
 /**
  * PURE restore guard. A row is usable only for the exact identity, while fresh, and while the chain still
- * reports the SAME committed anchor captured by the writer. The final radius check rejects corrupt or
- * implausible free-walk deltas even when the anchor metadata itself matches.
+ * reports the SAME committed anchor captured by the writer. The final agreement check rejects corrupt or
+ * implausible free-walk deltas even when the anchor metadata itself matches — unless the row is a RETURN
+ * ANCHOR (#2174), the pose a fight session took the body out of: the fight door writes no checkpoint, so that
+ * disagreement is EXPLAINED and the row still resumes. Every other guard (identity, freshness, and above all
+ * the chain-anchor match that drops the row the instant chain truth moves) applies unchanged.
  * @param {PositionSnapshot | null | undefined} snapshot
  * @param {{character_id:string,world_id:string,chain_anchor:ChainAnchor|null,now:number}} current
  */
@@ -122,9 +128,7 @@ export function position_snapshot_is_current(snapshot, { character_id, world_id,
   if (!finite_position(snapshot) || !same_chain_anchor(snapshot.chain_anchor, chain_anchor)) return false
   const age = Number(now) - Number(snapshot.saved_at)
   if (!Number.isFinite(age) || age < 0 || age > max_age_ms) return false
-  const dx = Number(snapshot.x) - Number(chain_anchor.x)
-  const dz = Number(snapshot.z) - Number(chain_anchor.z)
-  return dx * dx + dz * dz <= AGREE_RADIUS_M * AGREE_RADIUS_M
+  return snapshot.return_anchor === true || positions_agree(snapshot, chain_anchor)
 }
 
 /* eslint-disable functional/immutable-data --
@@ -196,6 +200,13 @@ let last_noted_position_owner = null
 let position_chain_anchor = null
 /** @type {string | null} */
 let position_chain_anchor_owner = null
+/** Identity whose persisted pose lineage is a fight RETURN ANCHOR (#2174) — armed at the fight door, held
+ *  across the return boot, and dropped the moment chain truth moves or the identity changes. */
+/** @type {string | null} */
+let return_anchor_owner = null
+/** The newest row this edge actually persisted — what the fight door re-stamps as the return anchor. */
+/** @type {PositionSnapshot | null} */
+let last_committed_snapshot = null
 let restore_generation = 0
 /** Serialize separate IndexedDB transactions so an older completion can never overwrite a newer pose. */
 let position_write_tail = Promise.resolve()
@@ -221,12 +232,27 @@ const adopt_position_chain_anchor = (character_id, world_id, chain_anchor) => {
     discard_pending_position()
     last_noted_position = null
     last_noted_position_owner = null
+    // Chain truth moved: the return-anchor explanation dies with the anchor it was stamped against.
+    return_anchor_owner = null
+    last_committed_snapshot = null
     restore_generation += 1
   }
   position_chain_anchor_owner = owner
   position_chain_anchor = normalized
   return position_chain_anchor
 }
+
+/** WRITE side: a persisted row records the lineage it belongs to, so the mark survives the reload. */
+const with_return_anchor_mark = (row, owner) => (return_anchor_owner === owner ? { ...row, return_anchor: true } : row)
+
+/**
+ * READ side: report the mark only when the pose DISAGREES with the chain anchor — that is the only case where
+ * the boot arbiter needs to know this row outranks the checkpoint. An agreeing pose already wins on its own.
+ */
+const with_return_anchor_override = (position, owner, chain_anchor) =>
+  return_anchor_owner === owner && !positions_agree(position, chain_anchor)
+    ? { ...position, return_anchor: true }
+    : position
 
 const read_position_chain_anchor = (character_id, world_id) =>
   position_chain_anchor_owner === position_key(character_id, world_id) && finite_position(position_chain_anchor)
@@ -243,10 +269,11 @@ const discard_pending_position = () => {
   clear_position_timer()
 }
 
-const position_phase_is_blocked = () => {
-  const phase = read_dungeon_session()
-  return phase.in_session || !!phase.run_pass_id || !!phase.dungeon_id || !!phase.fight_id
-}
+/** PURE: a session phase that took the body OUT of the free-walk world (a fight, a dungeon, a run pass). */
+const session_holds_the_body = (phase) =>
+  !!phase && (phase.in_session || !!phase.run_pass_id || !!phase.dungeon_id || !!phase.fight_id)
+
+const position_phase_is_blocked = () => session_holds_the_body(read_dungeon_session())
 
 /**
  * PURE eligibility gate shared by movement notes and explicit lifecycle flushes.
@@ -283,9 +310,41 @@ const commit_pending_position = (now = Date.now()) => {
     return position_write_tail
   const snapshot = { ...pending, saved_at: now }
   last_position_write.set(position_key(snapshot.character_id, snapshot.world_id), now)
+  last_committed_snapshot = snapshot
   position_write_tail = position_write_tail.then(() => save_position_snapshot(snapshot))
   return position_write_tail
 }
+
+/**
+ * THE RETURN ANCHOR (#2174) — the fight/dungeon door. A fight takes the body out of the world at a pose the
+ * chain may never record (`fight::join` takes no `&World`, so a teammate's checkpoint stays wherever it last
+ * was), and this same edge stops persisting for the whole session. Marking the row already on disk — never a
+ * new pose, so a note the door dropped stays dropped — explains that disagreement to the boot arbiter, which
+ * is how the teammate returns to where they fought instead of the stale checkpoint. Arming the lineage keeps
+ * the explanation alive across the return boot and the walking that follows it, until chain truth moves.
+ */
+const stamp_return_anchor = () => {
+  const row = last_committed_snapshot
+  if (!row) return position_write_tail
+  const owner = position_key(row.character_id, row.world_id)
+  if (
+    !current_binding_is(row.character_id, row.world_id) ||
+    !same_chain_anchor(row.chain_anchor, read_position_chain_anchor(row.character_id, row.world_id))
+  )
+    return position_write_tail
+  return_anchor_owner = owner
+  const stamped = { ...row, return_anchor: true }
+  last_committed_snapshot = stamped
+  position_write_tail = position_write_tail.then(() => save_position_snapshot(stamped))
+  return position_write_tail
+}
+
+// The session phase is already this edge's persistence gate; the ENTRY into one is also the moment the body
+// leaves the world, so it is where the return anchor is stamped. A subscription is an effect at the edge —
+// it writes IndexedDB only, never a store.
+subscribe_dungeon_session((phase, previous) => {
+  if (session_holds_the_body(phase) && !session_holds_the_body(previous)) void stamp_return_anchor()
+})
 
 /**
  * Note one eligible free-walk position. The input is reduced immediately; continuous movement writes at most
@@ -316,12 +375,15 @@ export function note_world_position({ character_id, world_id, x, z }, now = Date
   if (last_noted_position_owner === owner && same_position(last_noted_position, noted)) return position_write_tail
   last_noted_position_owner = owner
   last_noted_position = noted
-  pending_position = {
-    character_id,
-    world_id,
-    ...noted,
-    chain_anchor: { ...chain_anchor },
-  }
+  pending_position = with_return_anchor_mark(
+    {
+      character_id,
+      world_id,
+      ...noted,
+      chain_anchor: { ...chain_anchor },
+    },
+    owner
+  )
   const elapsed = now - (last_position_write.get(owner) ?? 0)
   if (elapsed >= write_interval_ms) return commit_pending_position(now)
   clear_position_timer()
@@ -358,6 +420,12 @@ export function invalidate_world_position(character_id, world_id) {
     position_chain_anchor = null
     position_chain_anchor_owner = null
   }
+  if (return_anchor_owner === owner) return_anchor_owner = null
+  if (
+    last_committed_snapshot &&
+    position_key(last_committed_snapshot.character_id, last_committed_snapshot.world_id) === owner
+  )
+    last_committed_snapshot = null
   restore_generation += 1
   position_write_tail = position_write_tail.then(() => delete_position_snapshot(owner))
   return position_write_tail
@@ -372,6 +440,10 @@ export function invalidate_world_position(character_id, world_id) {
  */
 export async function restore_world_position(character_id, world_id, chain_anchor, now = Date.now()) {
   if (!character_id || !world_id || !current_binding_is(character_id, world_id)) return null
+  // Never read past a write still in flight — the newest pose (a fight door's return anchor above all) must be
+  // on disk before the boot asks for it. Neither writer rejects, so this tail only ever settles.
+  await position_write_tail
+  if (!current_binding_is(character_id, world_id)) return null
   const generation = ++restore_generation
   player_position_owner = null
   const known_anchor = read_position_chain_anchor(character_id, world_id)
@@ -398,8 +470,16 @@ export async function restore_world_position(character_id, world_id, chain_ancho
   player_position_owner = position_key(character_id, world_id)
   last_noted_position_owner = player_position_owner
   last_noted_position = { x: Number(snapshot.x), z: Number(snapshot.z) }
+  last_committed_snapshot = snapshot
+  // A restored fight row re-arms the lineage: the walking that follows this boot is still explained by it.
+  if (snapshot.return_anchor === true) return_anchor_owner = player_position_owner
   const { player } = spawns_store.getState()
-  return player ? { x: player.x, z: player.z } : null
+  if (!player) return null
+  return with_return_anchor_override(
+    { x: player.x, z: player.z },
+    player_position_owner,
+    read_position_chain_anchor(character_id, world_id)
+  )
 }
 
 /** The current reducer-edge chain anchor for this exact character+world, including its staleness revision. */
@@ -420,7 +500,12 @@ export function read_world_position(character_id, world_id) {
     return null
   const state = spawns_store.getState()
   const { player } = state
-  return state.world_id === world_id && finite_position(player) ? { x: player.x, z: player.z } : null
+  if (state.world_id !== world_id || !finite_position(player)) return null
+  return with_return_anchor_override(
+    { x: player.x, z: player.z },
+    position_key(character_id, world_id),
+    read_position_chain_anchor(character_id, world_id)
+  )
 }
 
 /** Test-only: clear cadence/session memory while deliberately retaining IndexedDB (the reload simulation). */
@@ -432,6 +517,8 @@ export function _reset_position_persistence_for_test() {
   last_noted_position_owner = null
   position_chain_anchor = null
   position_chain_anchor_owner = null
+  return_anchor_owner = null
+  last_committed_snapshot = null
   restore_generation += 1
   position_write_tail = Promise.resolve()
 }
@@ -450,6 +537,8 @@ use_world_binding.subscribe((state, prev) => {
     last_noted_position_owner = null
     position_chain_anchor = null
     position_chain_anchor_owner = null
+    return_anchor_owner = null
+    last_committed_snapshot = null
     restore_generation += 1
     if (
       pending_position &&
