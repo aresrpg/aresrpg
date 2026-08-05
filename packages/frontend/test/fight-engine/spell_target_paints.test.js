@@ -60,6 +60,17 @@ describe('#2165 — spell targeting paints range light blue and sim-valid cells 
     expect(as_set(paints, 'los_blocked').has(empty)).toBe(false)
   })
 
+  test('a linear spell paints diagonal reach light and orthogonal targets dark', () => {
+    const paints = spell_target_paints(level({ linear: true, line_of_sight: false }), { cell: cell(5, 5) }, grid, clear)
+    const diagonal = encode(6, 6)
+    const orthogonal = encode(8, 5)
+
+    expect(as_set(paints, 'los_blocked').has(diagonal)).toBe(true)
+    expect(as_set(paints, 'in_range').has(diagonal)).toBe(false)
+    expect(as_set(paints, 'in_range').has(orthogonal)).toBe(true)
+    expect(as_set(paints, 'los_blocked').has(orthogonal)).toBe(false)
+  })
+
   test('hover target red still replaces either blue with one resolved paint', () => {
     const target = encode(7, 5)
     const paints = spell_target_paints(level(), { cell: cell(5, 5) }, grid, clear)

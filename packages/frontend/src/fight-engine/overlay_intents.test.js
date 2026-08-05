@@ -331,6 +331,19 @@ describe('cast_range_set_world — sim targeting gate', () => {
     expect(got.has(encode(9, 5))).toBe(true) // distance 4 east
     expect(got.has(encode(5, 0))).toBe(false) // distance 5 north — out of range
   })
+  it('inherits orthogonal-only linear targeting from the sim predicate', () => {
+    const got = cast_range_set_world(
+      { ...level, linear: true },
+      { cell: c(5, 5) },
+      {
+        blocks_los: () => false,
+        is_occupied: () => false,
+      }
+    )
+    expect(got.has(encode(6, 6))).toBe(false) // in range, but diagonal
+    expect(got.has(encode(8, 5))).toBe(true) // same row
+    expect(got.has(encode(5, 2))).toBe(true) // same column
+  })
   it('empty when no level (dungeon seed spell → the dungeon path is used instead)', () => {
     expect(
       cast_range_set_world(null, { cell: c(1, 1) }, { blocks_los: () => false, is_occupied: () => false }).size

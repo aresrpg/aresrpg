@@ -9,6 +9,7 @@ import {
   can_target,
   effect_hits,
   get_aoe_cells,
+  is_linear,
 } from '../src/spell_targeting.js'
 import {
   SHAPE_ALLMAP,
@@ -36,6 +37,47 @@ const trap_level = {
 const damage_level = { ...trap_level, free_cell: false }
 
 const caster = { x: 5, y: 5 }
+
+const linear_parity_fixture = {
+  spell: { ...damage_level, range: [1, 8], linear: true },
+  context: { blocks_los: () => false, is_occupied: () => false },
+  diagonal: { x: 7, y: 7 },
+  orthogonal: [
+    { x: 8, y: 5 },
+    { x: 5, y: 2 },
+  ],
+}
+
+describe('is_linear — Move spell_target::can_cast_at parity', () => {
+  it('rejects a 45-degree diagonal where manhattan differs from cheby', () => {
+    expect(is_linear(caster, linear_parity_fixture.diagonal)).toBe(false)
+  })
+
+  it('rejects that diagonal end-to-end through a linear targeting predicate', () => {
+    expect(
+      can_target(
+        linear_parity_fixture.spell,
+        caster,
+        linear_parity_fixture.diagonal,
+        linear_parity_fixture.context,
+      ),
+    ).toBe(false)
+  })
+
+  it('keeps same-row and same-column targets castable', () => {
+    for (const target of linear_parity_fixture.orthogonal) {
+      expect(is_linear(caster, target)).toBe(true)
+      expect(
+        can_target(
+          linear_parity_fixture.spell,
+          caster,
+          target,
+          linear_parity_fixture.context,
+        ),
+      ).toBe(true)
+    }
+  })
+})
 
 describe('can_target — free_cell (trap) placement gate', () => {
   it('rejects a cell occupied by any entity (a mob body) — never trap a fighter', () => {

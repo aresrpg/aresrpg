@@ -67,15 +67,17 @@ export const is_in_range = (spell, caster, target, range_bonus = 0) => {
 }
 
 /**
- * Is the target on a straight (orthogonal or 45-degree) line from the caster? Donor targeting.ts:32.
+ * Is the target orthogonally aligned with the caster? Mirrors
+ * packages/move/foundation/sources/spell_target.move:40: manhattan === cheby, so only a shared row or column passes.
  * @param {import('./cell.js').Cell} caster
  * @param {import('./cell.js').Cell} target
  * @returns {boolean}
  */
 export const is_linear = (caster, target) => {
-  const dx = target.x - caster.x
-  const dy = target.y - caster.y
-  return dx === 0 || dy === 0 || Math.abs(dx) === Math.abs(dy)
+  const dx = Math.abs(target.x - caster.x)
+  const dy = Math.abs(target.y - caster.y)
+  const cheby = Math.max(dx, dy)
+  return manhattan(caster, target) === cheby
 }
 
 /**
