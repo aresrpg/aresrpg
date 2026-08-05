@@ -319,7 +319,9 @@ describe('Class-E source-to-surface convergence (#1754)', () => {
         return store.getState()
       },
       render: async (state) => state.checkpoint,
-      truth: { x: 20, z: 40 },
+      // the anchor bag (#2231): a receipt-shaped input carries no clock or budget, so the boot arbiter reads
+      // this checkpoint as unjudgeable and keeps the local pose rather than yanking it
+      truth: { x: 20, z: 40, time_ms: null, speed_budget: null, pet_equipped: false },
     })
   })
 

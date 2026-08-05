@@ -69,12 +69,19 @@ describe('W4 — the world journey: atomic membership → spawn → search → c
     expect(w.spawns.getState().world_id).toBe(WORLD)
 
     // ── SPAWN — a chain-direct checkpoint read resolves boot_spawn to {source:'checkpoint'} ──
-    w.sp({ type: 'checkpoint_resolved', world_id: WORLD, x: 520, z: 540, source: 'read' })
-    const spawn = boot_spawn(w.spawns.getState(), {
-      session: { x: 900, z: 900, y: 10 },
-      fallback: [0, 80, 0],
-      y_seed: 80,
+    w.sp({
+      type: 'checkpoint_resolved',
+      world_id: WORLD,
+      x: 520,
+      z: 540,
+      source: 'read',
+      world_position: { x: 20, z: 40, time_ms: 1_000, speed_budget: 1150 },
     })
+    const spawn = boot_spawn(
+      w.spawns.getState(),
+      { session: { x: 900, z: 900, y: 10 }, fallback: [0, 80, 0], y_seed: 80 },
+      11_000 // 10s of travel budget = 115 blocks — the ~1200-block restore is one the chain would refuse
+    )
     expect(spawn).toMatchObject({ source: 'checkpoint', position: [20, 80, 40] }) // chain wins over the far restore
 
     // ── SEARCH — intent emits search_tx + a progress beat; the receipt discovers the zone + reveal beats ──

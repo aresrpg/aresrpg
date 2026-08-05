@@ -18,7 +18,9 @@ const WORLD_B = '0xWORLD_B'
 const NOW = 1_800_000_000_000
 const OFFSET = 1_000
 const CHAIN_TIME = NOW - 60_000
-const anchor_at = (x, z, time_ms = CHAIN_TIME) => ({ x, z, time_ms })
+// The live worlds' dial (11.5 blocks/s ×100): 60s since the checkpoint buys 690 blocks of honest walking.
+const SPEED_BUDGET = 1150
+const anchor_at = (x, z, time_ms = CHAIN_TIME) => ({ x, z, time_ms, speed_budget: SPEED_BUDGET })
 
 // ── minimal IndexedDB double (same request/transaction shape as simulator/persistence.test.ts) ────────────────
 const create_fake_idb = () => {
@@ -93,7 +95,13 @@ const bind_with_anchor = (world_id, anchor, character_id = CHARACTER) => {
     world_position: anchor,
     source: 'read',
   })
-  expect(position_edge.spawns_store.getState().checkpoint).toEqual({ x: anchor.x, z: anchor.z })
+  expect(position_edge.spawns_store.getState().checkpoint).toEqual({
+    x: anchor.x,
+    z: anchor.z,
+    time_ms: anchor.time_ms ?? null,
+    speed_budget: anchor.speed_budget ?? null,
+    pet_equipped: false,
+  })
 }
 
 beforeEach(() => {
@@ -315,12 +323,14 @@ describe('world position IndexedDB edge', () => {
       z: receipt_anchor.z,
       found: null,
     })
-    expect(position_edge.spawns_store.getState().checkpoint).toEqual(receipt_anchor)
+    expect(position_edge.spawns_store.getState().checkpoint).toMatchObject(receipt_anchor)
 
     await expect(position_edge.restore_world_position(CHARACTER, WORLD_A, old_anchor, NOW + 1_000)).resolves.toBeNull()
     expect(position_edge.read_world_chain_anchor(CHARACTER, WORLD_A)).toEqual({
       ...receipt_anchor,
       time_ms: null,
+      speed_budget: null,
+      pet_equipped: false,
     })
     expect(position_edge.read_world_position(CHARACTER, WORLD_A)).toBeNull()
   })
@@ -382,16 +392,18 @@ describe('world position IndexedDB edge', () => {
       source: 'read',
     })
 
-    expect(position_edge.spawns_store.getState().checkpoint).toEqual({
+    expect(position_edge.spawns_store.getState().checkpoint).toMatchObject({
       x: current_anchor.x,
       z: current_anchor.z,
     })
   })
 
-  test('rejects snapshots that are expired or implausibly far from an unchanged chain anchor', async () => {
+  test('rejects snapshots that are expired or beyond the chain travel budget for an unchanged anchor', async () => {
     const anchor = anchor_at(0, 0)
     bind_with_anchor(WORLD_A, anchor)
-    await position_edge.note_world_position({ character_id: CHARACTER, world_id: WORLD_A, x: 600, z: 0 }, NOW)
+    // 5000 blocks in the 60s since the checkpoint — the chain would abort 121 from there, so the row dies.
+    // (600 blocks would NOT: 690 is honest walking in that minute — that is exactly the #2231 fix.)
+    await position_edge.note_world_position({ character_id: CHARACTER, world_id: WORLD_A, x: 5_000, z: 0 }, NOW)
     await position_edge.flush_world_position(NOW)
 
     position_edge.spawns_input({ type: 'world_bound', world_id: null })

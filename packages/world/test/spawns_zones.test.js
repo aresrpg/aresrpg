@@ -126,8 +126,20 @@ describe('boot facts — world binding, dims, checkpoint seeding', () => {
   it('a chain-direct checkpoint read seeds checkpoint (world space) AND hunt_zone (one unified fact)', () => {
     const { input, state } = boot()
     input({ type: 'checkpoint_resolved', world_id: WORLD, x: 520, z: 540, source: 'read' })
-    expect(state().checkpoint).toEqual({ x: 20, z: 40 })
+    expect(state().checkpoint).toEqual({ x: 20, z: 40, time_ms: null, speed_budget: null, pet_equipped: false })
     expect(state().hunt_zone).toEqual({ zx: 5, zy: 5 })
+  })
+  it('the seeded checkpoint carries the AGREEMENT DIALS the read observed (clock + budget + mount)', () => {
+    const { input, state } = boot()
+    input({
+      type: 'checkpoint_resolved',
+      world_id: WORLD,
+      x: 520,
+      z: 540,
+      source: 'read',
+      world_position: { x: 20, z: 40, time_ms: 5_000, speed_budget: 1150, pet_equipped: true },
+    })
+    expect(state().checkpoint).toEqual({ x: 20, z: 40, time_ms: 5_000, speed_budget: 1150, pet_equipped: true })
   })
   it('an indexed doc position SEEDS only when unknown — it never clobbers a live fact', () => {
     const { input, state } = boot()
@@ -153,11 +165,28 @@ describe('boot facts — world binding, dims, checkpoint seeding', () => {
   })
   it('boot_spawn projects the checkpoint through the resolve_boot_spawn arbiter (chain wins over a far session)', () => {
     const { input, state } = boot()
-    input({ type: 'checkpoint_resolved', world_id: WORLD, x: 520, z: 540, source: 'read' })
-    const far = boot_spawn(state(), { session: { x: 900, z: 900, y: 10 }, fallback: [0, 80, 0], y_seed: 80 })
+    input({
+      type: 'checkpoint_resolved',
+      world_id: WORLD,
+      x: 520,
+      z: 540,
+      source: 'read',
+      world_position: { x: 20, z: 40, time_ms: 1_000, speed_budget: 1150 },
+    })
+    // 10s of budget after the checkpoint = 115 blocks: the ~1200-block session pose is one the chain would
+    // refuse, so the arbiter takes chain truth; the fine-grained pose beside it resumes exactly.
+    const at = 11_000
+    const far = boot_spawn(state(), { session: { x: 900, z: 900, y: 10 }, fallback: [0, 80, 0], y_seed: 80 }, at)
     expect(far).toMatchObject({ source: 'checkpoint', position: [20, 80, 40] })
-    const near = boot_spawn(state(), { session: { x: 22, z: 41, y: 10, yaw: 1 }, fallback: [0, 80, 0], y_seed: 80 })
+    const near = boot_spawn(state(), { session: { x: 22, z: 41, y: 10, yaw: 1 }, fallback: [0, 80, 0], y_seed: 80 }, at)
     expect(near).toMatchObject({ source: 'session', position: [22, 10, 41] })
+    // #2231 — the SAME far pose is kept once the elapsed time makes the walk chain-legal (1380 blocks).
+    const walked = boot_spawn(
+      state(),
+      { session: { x: 900, z: 900, y: 10 }, fallback: [0, 80, 0], y_seed: 80 },
+      121_000
+    )
+    expect(walked).toMatchObject({ source: 'session', position: [900, 10, 900] })
   })
 })
 

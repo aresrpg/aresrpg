@@ -411,7 +411,15 @@ function create_session(
     // applies the distance guard again, so a local row can never outrank a disagreeing chain anchor.
     const checkpoint =
       world_id && (read_world_chain_anchor(character.id, world_id) ?? read_checkpoint_spawn(character.id, world_id))
-    const chosen = resolve_boot_spawn({ checkpoint, session, fallback: WORLD_SPAWN, y_seed: WORLD_SPAWN[1] })
+    // The restored row is the body's pose right NOW, so that is the instant the chain travel budget between it
+    // and the checkpoint is measured to (#2231) — a flat radius here yanked every long walker back on reload.
+    const chosen = resolve_boot_spawn({
+      checkpoint,
+      session,
+      fallback: WORLD_SPAWN,
+      y_seed: WORLD_SPAWN[1],
+      now: Date.now(),
+    })
     boot_spawn = chosen.position
     boot_yaw = chosen.yaw
     restored = chosen.source === 'session'

@@ -43,7 +43,10 @@ const CHAR = 'char-fresh-1'
 const WORLD = 'world-1'
 // checkpoint_to_world with a null doc: chain_to_world(v, 250_000) = v - 250_000
 const CHAIN_POS = { x: 100, z: 200 }
-const EXPECTED_WORLD_POS = { x: 100 - 250_000, z: 200 - 250_000, time_ms: null }
+// The agreement DIALS (#2231) ride on every anchor this edge produces; this suite runs with no World doc,
+// so the budget is unknown (null) and the boot arbiter treats such an anchor as unjudgeable.
+const DIALS = { speed_budget: null, pet_equipped: false }
+const EXPECTED_WORLD_POS = { x: 100 - 250_000, z: 200 - 250_000, time_ms: null, ...DIALS }
 
 let read_checkpoint
 let get_world
@@ -103,6 +106,7 @@ test('a chain-direct read that DOES confirm a checkpoint still adopts (chain tru
     x: confirmed.x - 250_000,
     z: confirmed.z - 250_000,
     time_ms: confirmed.time_ms,
+    ...DIALS,
   })
 
   // Once the receipt barrier is confirmed, a later canonical checkpoint is ordinary newer chain truth.
@@ -113,6 +117,24 @@ test('a chain-direct read that DOES confirm a checkpoint still adopts (chain tru
     x: moved.x - 250_000,
     z: moved.z - 250_000,
     time_ms: moved.time_ms,
+    ...DIALS,
+  })
+})
+
+// #2231 — the agreement rule is the CHAIN's travel budget, so the anchor must carry the two dials that rule
+// needs: the world's speed_budget (off the live World doc) and the checkpoint's own mount snapshot. Both are
+// read in the SAME pass as the position, so no consumer can ever pair a fresh anchor with a stale budget.
+test('an anchor carries the World doc speed budget and the checkpoint mount flag', async () => {
+  const confirmed = { x: 100, z: 200, time_ms: 1_700_000_000_000, pet_equipped: true }
+  read_checkpoint.mockResolvedValue(confirmed)
+  get_world.mockImplementation(() => async () => ({ bounds_x: 500_000, bounds_z: 500_000, speed_budget: 1150n }))
+  await resolve_checkpoint_spawn(CHAR, WORLD)
+  expect(read_checkpoint_spawn(CHAR, WORLD)).toEqual({
+    x: -249_900,
+    z: -249_800,
+    time_ms: confirmed.time_ms,
+    speed_budget: 1150,
+    pet_equipped: true,
   })
 })
 
@@ -126,7 +148,7 @@ test('a receipt barrier rejects a lagging non-null checkpoint read', async () =>
   read_checkpoint.mockResolvedValue({ x: 150, z: 250, time_ms: 1_500 })
   await confirm_checkpoint_spawn(CHAR, WORLD, { ...receipt_world, after_time_ms: prior.time_ms }, { retry_delays: [] })
 
-  expect(read_checkpoint_spawn(CHAR, WORLD)).toEqual({ ...receipt_world, time_ms: null })
+  expect(read_checkpoint_spawn(CHAR, WORLD)).toEqual({ ...receipt_world, time_ms: null, ...DIALS })
 })
 
 test('consecutive clockless receipts retain the last canonical revision floor', async () => {
@@ -142,13 +164,14 @@ test('consecutive clockless receipts retain the last canonical revision floor', 
   const second_world = { x: second_chain.x - 250_000, z: second_chain.z - 250_000 }
   read_checkpoint.mockResolvedValue(second_chain)
   await confirm_checkpoint_spawn(CHAR, WORLD, second_world, { retry_delays: [] })
-  expect(read_checkpoint_spawn(CHAR, WORLD)).toEqual({ ...second_world, time_ms: null })
+  expect(read_checkpoint_spawn(CHAR, WORLD)).toEqual({ ...second_world, time_ms: null, ...DIALS })
 
   read_checkpoint.mockResolvedValue({ ...second_chain, time_ms: prior.time_ms + 1 })
   await resolve_checkpoint_spawn(CHAR, WORLD)
   expect(read_checkpoint_spawn(CHAR, WORLD)).toEqual({
     ...second_world,
     time_ms: prior.time_ms + 1,
+    ...DIALS,
   })
 })
 
@@ -164,6 +187,7 @@ test('an older checkpoint revision cannot regress a newer accepted cache row', a
     x: newer.x - 250_000,
     z: newer.z - 250_000,
     time_ms: newer.time_ms,
+    ...DIALS,
   })
 })
 
@@ -185,7 +209,7 @@ test('an in-flight read that predates a receipt cannot publish after that receip
   release_stale(stale)
   await pending_read
 
-  expect(read_checkpoint_spawn(CHAR, WORLD)).toEqual(receipt)
+  expect(read_checkpoint_spawn(CHAR, WORLD)).toEqual({ ...receipt, ...DIALS })
 })
 
 test('the same raw checkpoint revision may correct a fallback world projection', async () => {
@@ -200,12 +224,14 @@ test('the same raw checkpoint revision may correct a fallback world projection',
     x: checkpoint.x - 250_000,
     z: checkpoint.z - 250_000,
     time_ms: checkpoint.time_ms,
+    ...DIALS,
   })
   await resolve_checkpoint_spawn(CHAR, WORLD)
   expect(read_checkpoint_spawn(CHAR, WORLD)).toEqual({
     x: checkpoint.x - 1_000,
     z: checkpoint.z - 2_000,
     time_ms: checkpoint.time_ms,
+    ...DIALS,
   })
 })
 

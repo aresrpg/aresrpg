@@ -7,8 +7,13 @@
 // position (zones.move:298/608 → character_link::y2) — so their next boot reads chain truth AT the fight.
 // The JOINER's `fight::join` (fight.move:185) takes no `&World`, no ticket, and writes no checkpoint, so their
 // chain anchor is still the world-join spawn (chain-space bounds/2 → signed world ORIGIN). The local free-walk
-// row that would otherwise carry them is then discarded by the AGREE_RADIUS_M=512 guard (946 blocks away), and
-// the boot arbiter falls back to the stale checkpoint: the teammate wakes up at the world origin.
+// row that would otherwise carry them is then discarded by the agreement guard (946 blocks away), and the boot
+// arbiter falls back to the stale checkpoint: the teammate wakes up at the world origin.
+//
+// #2231 CHANGED THE GUARD, NOT THIS LAW: agreement is now the chain's TIME budget, so an honest 946-block walk
+// is kept on its own once enough time has passed to cover it. The return anchor is what still carries the
+// teammate when it has NOT — the FRESH-ANCHOR case below pins exactly that, so #2174 cannot silently rot into
+// "the budget happened to allow it".
 
 import { afterAll, beforeEach, describe, expect, test } from 'bun:test'
 import { resolve_boot_spawn } from '@aresrpg/world/checkpoint'
@@ -21,6 +26,8 @@ const WORLD_A = '0xWORLD_A'
 const NOW = 1_800_000_000_000
 const OFFSET = 1_000
 const CHAIN_TIME = NOW - 600_000
+// The live worlds' dial (11.5 blocks/s ×100 — move/scripts/apply_speed_budget.mjs).
+const SPEED_BUDGET = 1150
 // The owner-reported coop fight coords (issue #2174): ~946 blocks from the world origin — past AGREE_RADIUS_M.
 const FIGHT = { x: 630, z: -706 }
 const ORIGIN = { x: 0, z: 0 }
@@ -86,7 +93,7 @@ const publish_chain_checkpoint = (world_position, time_ms = CHAIN_TIME) => {
     world_id: WORLD_A,
     x: OFFSET + world_position.x,
     z: OFFSET + world_position.z,
-    world_position: { ...world_position, time_ms },
+    world_position: { ...world_position, time_ms, speed_budget: SPEED_BUDGET },
     source: 'read',
   })
 }
@@ -107,9 +114,10 @@ const boot_session = () => {
  * boot arbiter where the body wakes up. `stamp_return_anchor` is the ONE difference between the two roles —
  * the engage door's chain checkpoint write that the join door has no equivalent for.
  */
-const play_a_coop_fight = async ({ stamp_return_anchor }) => {
+const play_a_coop_fight = async ({ stamp_return_anchor, checkpoint_age_ms = 600_000 }) => {
+  const join_time = NOW - checkpoint_age_ms
   boot_session()
-  publish_chain_checkpoint(ORIGIN) // world join rolled the spawn at the world centre → signed world origin
+  publish_chain_checkpoint(ORIGIN, join_time) // world join rolled the spawn at the world centre → world origin
 
   // walk out to the group and stand there (the ~5s IndexedDB cadence at the position edge)
   position_edge.note_world_position({ character_id: CHARACTER, world_id: WORLD_A, ...FIGHT }, NOW)
@@ -123,7 +131,9 @@ const play_a_coop_fight = async ({ stamp_return_anchor }) => {
   // the fight ended; the player comes back later (a reload, a character switch, a fresh mount)
   position_edge._reset_position_persistence_for_test()
   boot_session()
-  const chain_anchor = stamp_return_anchor ? { ...FIGHT, time_ms: NOW } : { ...ORIGIN, time_ms: CHAIN_TIME }
+  const chain_anchor = stamp_return_anchor
+    ? { ...FIGHT, time_ms: NOW, speed_budget: SPEED_BUDGET }
+    : { ...ORIGIN, time_ms: join_time, speed_budget: SPEED_BUDGET }
   publish_chain_checkpoint(stamp_return_anchor ? FIGHT : ORIGIN, chain_anchor.time_ms)
 
   const restored = await position_edge.restore_world_position(CHARACTER, WORLD_A, chain_anchor, NOW + 60_000)
@@ -133,6 +143,7 @@ const play_a_coop_fight = async ({ stamp_return_anchor }) => {
     session: restored,
     fallback: WORLD_SPAWN,
     y_seed: WORLD_SPAWN[1],
+    now: NOW + 60_000,
   })
   return { x: spawn.position[0], z: spawn.position[2], source: spawn.source }
 }
@@ -163,6 +174,14 @@ describe('#2174 — a coop fight returns BOTH roles to where they fought', () =>
   test('the JOINER resumes at the fight coords, not the world origin', async () => {
     const woke_at = await play_a_coop_fight({ stamp_return_anchor: false })
     expect({ x: woke_at.x, z: woke_at.z }).not.toEqual(ORIGIN)
+    expect({ x: woke_at.x, z: woke_at.z }).toEqual(FIGHT)
+  })
+
+  // THE ISOLATING CASE (#2231 interaction): a checkpoint written 20s ago buys 230 blocks — the chain would
+  // refuse the 946-block pose outright, so nothing but the fight door's return anchor can bring the teammate
+  // back. Without the stamp this is the yank; with it, the body resumes where it fought.
+  test('the JOINER still resumes when the walk is BEYOND the travel budget (the anchor, not the budget)', async () => {
+    const woke_at = await play_a_coop_fight({ stamp_return_anchor: false, checkpoint_age_ms: 20_000 })
     expect({ x: woke_at.x, z: woke_at.z }).toEqual(FIGHT)
   })
 })

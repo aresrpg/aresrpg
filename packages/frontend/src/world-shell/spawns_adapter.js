@@ -8,7 +8,7 @@
 
 import { useStore } from 'zustand'
 import { create_spawns_store } from '@aresrpg/world/spawns_zones'
-import { positions_agree } from '@aresrpg/world/checkpoint'
+import { pose_agrees } from '@aresrpg/world/checkpoint'
 
 import { read_dungeon_session, subscribe_dungeon_session } from './dungeon_session.js'
 import { use_world_binding } from './session_gate.js'
@@ -84,7 +84,8 @@ const movement_stop_ms = 750
 const max_age_ms = 30 * 60 * 1_000
 
 /** @typedef {{x:number,z:number}} WorldPosition */
-/** @typedef {{x:number,z:number,time_ms:number|null}} ChainAnchor */
+/** The chain anchor bag world_checkpoint.js produces: proven position + clock + the agreement dials (#2231). */
+/** @typedef {{x:number,z:number,time_ms:number|null,speed_budget?:number|null,pet_equipped?:boolean}} ChainAnchor */
 /**
  * @typedef {{
  *   character_id:string,
@@ -107,7 +108,17 @@ const chain_anchor_time = (anchor) => {
   return Number.isFinite(time_ms) && time_ms > 0 ? time_ms : null
 }
 const normalize_chain_anchor = (anchor) =>
-  finite_position(anchor) ? { x: Number(anchor.x), z: Number(anchor.z), time_ms: chain_anchor_time(anchor) } : null
+  finite_position(anchor)
+    ? {
+        x: Number(anchor.x),
+        z: Number(anchor.z),
+        time_ms: chain_anchor_time(anchor),
+        // The agreement dials ride WITH the anchor they judge against — never re-read separately, so no
+        // consumer can pair a fresh position with a stale budget (#2231).
+        speed_budget: Number(anchor.speed_budget) || null,
+        pet_equipped: anchor.pet_equipped === true,
+      }
+    : null
 const same_chain_anchor = (a, b) =>
   same_position(a, b) && chain_anchor_time(a) !== null && chain_anchor_time(a) === chain_anchor_time(b)
 const same_chain_observation = (a, b) =>
@@ -120,6 +131,10 @@ const same_chain_observation = (a, b) =>
  * ANCHOR (#2174), the pose a fight session took the body out of: the fight door writes no checkpoint, so that
  * disagreement is EXPLAINED and the row still resumes. Every other guard (identity, freshness, and above all
  * the chain-anchor match that drops the row the instant chain truth moves) applies unchanged.
+ *
+ * The row is judged at its OWN instant (`saved_at`, the moment it claims the body stood there), not at boot:
+ * that is the claim the chain's travel budget answers (#2231), and it is the strict reading — waiting longer
+ * before reloading can never launder a walk that was already impossible when it was written.
  * @param {PositionSnapshot | null | undefined} snapshot
  * @param {{character_id:string,world_id:string,chain_anchor:ChainAnchor|null,now:number}} current
  */
@@ -128,7 +143,7 @@ export function position_snapshot_is_current(snapshot, { character_id, world_id,
   if (!finite_position(snapshot) || !same_chain_anchor(snapshot.chain_anchor, chain_anchor)) return false
   const age = Number(now) - Number(snapshot.saved_at)
   if (!Number.isFinite(age) || age < 0 || age > max_age_ms) return false
-  return snapshot.return_anchor === true || positions_agree(snapshot, chain_anchor)
+  return snapshot.return_anchor === true || pose_agrees(snapshot, chain_anchor, Number(snapshot.saved_at))
 }
 
 /* eslint-disable functional/immutable-data --
@@ -248,9 +263,10 @@ const with_return_anchor_mark = (row, owner) => (return_anchor_owner === owner ?
 /**
  * READ side: report the mark only when the pose DISAGREES with the chain anchor — that is the only case where
  * the boot arbiter needs to know this row outranks the checkpoint. An agreeing pose already wins on its own.
+ * A LIVE body claims the position it holds right now, so `now` is the instant its travel budget is measured to.
  */
-const with_return_anchor_override = (position, owner, chain_anchor) =>
-  return_anchor_owner === owner && !positions_agree(position, chain_anchor)
+const with_return_anchor_override = (position, owner, chain_anchor, now = Date.now()) =>
+  return_anchor_owner === owner && !pose_agrees(position, chain_anchor, now)
     ? { ...position, return_anchor: true }
     : position
 
@@ -478,7 +494,8 @@ export async function restore_world_position(character_id, world_id, chain_ancho
   return with_return_anchor_override(
     { x: player.x, z: player.z },
     player_position_owner,
-    read_position_chain_anchor(character_id, world_id)
+    read_position_chain_anchor(character_id, world_id),
+    now
   )
 }
 

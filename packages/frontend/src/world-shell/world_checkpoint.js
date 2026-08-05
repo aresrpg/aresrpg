@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 // CHECKPOINT SPAWN — the frontend EDGE (D770a W2): the async chain read + the synchronous boot cache.
-// The pure half (checkpoint_to_world / resolve_boot_spawn / AGREE_RADIUS_M) lives in @aresrpg/world
+// The pure half (checkpoint_to_world / resolve_boot_spawn / pose_agrees) lives in @aresrpg/world
 // (packages/world/src/checkpoint.js) — one home for the boot-arbiter rule; this file owns exactly the
 // effects: the RPC read, the (character, world)-keyed cache create_session reads synchronously, and the
 // ferry that publishes every resolved checkpoint into the spawns core atom (checkpoint_resolved input).
@@ -19,7 +19,14 @@ import { invalidate_world_position, read_world_chain_anchor, spawns_input } from
 // GameWorldHost awaits `resolve_checkpoint_spawn` right before the resident mount; create_session reads the
 // cached world-position synchronously (`read_checkpoint_spawn`) when it chooses the boot spawn.
 
-/** @typedef {{x:number,z:number,time_ms:number|null}} CheckpointAnchor */
+/**
+ * The CHAIN ANCHOR bag: the proven position, the chain clock at that write, and the two dials the agreement
+ * rule needs to judge a local pose against it (#2231) — the world's `speed_budget` and the checkpoint half of
+ * the §17.2 mount rule. Budget and clock are read in the SAME breath as the position, so no consumer can race
+ * a half-known anchor; a receipt-built anchor carries neither and is unjudgeable by design (checkpoint.js).
+ * @typedef {{x:number,z:number,time_ms:number|null,speed_budget?:number|null,pet_equipped?:boolean}}
+ *   CheckpointAnchor
+ */
 /** @type {Map<string, CheckpointAnchor | {x:number,z:number} | null>} */
 const _cache = new Map()
 /**
@@ -45,12 +52,15 @@ const checkpoint_time = (position) => {
   const revision = Number(position?.time_ms)
   return Number.isFinite(revision) && revision > 0 ? revision : null
 }
-const with_checkpoint_time = (position, time_ms) => {
+const with_chain_facts = (position, { time_ms, doc, pet_equipped }) => {
   if (!position) return null
+  const speed_budget = Number(doc?.speed_budget)
   return {
     x: Number(position.x),
     z: Number(position.z),
     time_ms: checkpoint_time({ time_ms }),
+    speed_budget: Number.isFinite(speed_budget) && speed_budget > 0 ? speed_budget : null,
+    pet_equipped: pet_equipped === true,
   }
 }
 
@@ -133,8 +143,9 @@ export async function resolve_checkpoint_spawn(character_id, world_id) {
     const sdk = await get_sdk()
     const doc = await get_world({ grpc_client: sdk.grpc_client })(world_id).catch(() => null)
     if (!request_is_current(key, epoch, lifecycle)) return current_cache(key)
-    const world_pos = with_checkpoint_time(checkpoint_to_world(cp, doc), cp.time_ms)
-    const raw = with_checkpoint_time(cp, cp.time_ms)
+    const facts = { time_ms: cp.time_ms, doc, pet_equipped: cp.pet_equipped }
+    const world_pos = with_chain_facts(checkpoint_to_world(cp, doc), facts)
+    const raw = with_chain_facts(cp, facts)
     if (!canonical_read_is_current(key, world_pos, raw)) return current_cache(key)
     _cache.set(key, world_pos)
     _accepted_chain_rows.set(key, raw)
@@ -182,16 +193,26 @@ export async function confirm_checkpoint_spawn(character_id, world_id, proof, op
   const existing_barrier = _receipt_barriers.get(key)
   const floor = max_checkpoint_time(prior_revision, claimed_floor, existing_barrier?.after_time_ms)
 
+  if (
+    exact_revision !== null &&
+    ((floor !== null && exact_revision < floor) ||
+      (prior_revision !== null && exact_revision === prior_revision && !same_position(proof, prior)))
+  )
+    return prior
+
+  // The world's speed dial and the mount half survive a receipt: a receipt advances WHERE and WHEN the
+  // checkpoint is, never the world it belongs to. Carrying them keeps the anchor judgeable (#2231) instead of
+  // blinding the agreement rule until the next direct read lands.
+  const dials = {
+    speed_budget: Number(proof.speed_budget) || prior?.speed_budget || null,
+    pet_equipped: proof.pet_equipped ?? prior?.pet_equipped ?? false,
+  }
+
   if (exact_revision !== null) {
-    if (
-      (floor !== null && exact_revision < floor) ||
-      (prior_revision !== null && exact_revision === prior_revision && !same_position(proof, prior))
-    )
-      return prior
     bump_receipt_epoch(key)
     _receipt_barriers.delete(key)
     _accepted_chain_rows.delete(key)
-    const exact = { x, z, time_ms: exact_revision }
+    const exact = { x, z, time_ms: exact_revision, ...dials }
     _cache.set(key, exact)
     return exact
   }
@@ -199,7 +220,7 @@ export async function confirm_checkpoint_spawn(character_id, world_id, proof, op
   bump_receipt_epoch(key)
   _receipt_barriers.delete(key)
   _accepted_chain_rows.delete(key)
-  const receipt = { x, z, time_ms: null }
+  const receipt = { x, z, time_ms: null, ...dials }
   _cache.set(key, receipt)
   const chain_x = proof.chain_x == null ? null : Number(proof.chain_x)
   const chain_z = proof.chain_z == null ? null : Number(proof.chain_z)
@@ -263,7 +284,11 @@ export async function seed_checkpoint_spawn(character_id, world_id, chain_pos) {
   try {
     const sdk = await get_sdk()
     const doc = await get_world({ grpc_client: sdk.grpc_client })(world_id).catch(() => null)
-    const world_pos = with_checkpoint_time(checkpoint_to_world(chain_pos, doc), chain_pos.time_ms)
+    const world_pos = with_chain_facts(checkpoint_to_world(chain_pos, doc), {
+      time_ms: chain_pos.time_ms,
+      doc,
+      pet_equipped: chain_pos.pet_equipped,
+    })
     if (!world_pos) return null
     const prior_revision = checkpoint_time(current_cache(_key(character_id, world_id)))
     const confirmation = confirm_checkpoint_spawn(character_id, world_id, {

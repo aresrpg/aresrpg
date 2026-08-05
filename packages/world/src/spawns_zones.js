@@ -68,15 +68,25 @@ const fold_world_doc = (state, { doc }) => {
 
 // chain-space {x,z}. 'read' (chain-direct) is truth and applies; 'indexed' (/v1 doc position, laggy) only
 // SEEDS when this session holds no better fact — never clobbers a live receipt/read value.
+// The stored checkpoint is the whole CHAIN ANCHOR, not a bare point: the travel budget the boot arbiter
+// judges a local pose against (#2231) is `time_ms` + the world's `speed_budget` + the mount half, all read
+// off the chain in the same breath as the position (world-shell/world_checkpoint.js).
 const fold_checkpoint_resolved = (state, input) => {
   if (input.world_id && state.world_id && input.world_id !== state.world_id) return state
   if (!Number.isFinite(Number(input.x)) || !Number.isFinite(Number(input.z))) return state
   if (input.source === 'indexed' && (state.checkpoint || state.hunt_zone)) return state
   const cell = zone_of(Number(input.x), Number(input.z), state.zone_size)
+  const anchor = input.world_position ?? input
   const checkpoint =
     input.source === 'indexed'
       ? state.checkpoint // an indexed doc position seeds the hunt zone only (not a boot-grade position)
-      : { x: chain_to_world(Number(input.x), state.offset_x), z: chain_to_world(Number(input.z), state.offset_z) }
+      : {
+          x: chain_to_world(Number(input.x), state.offset_x),
+          z: chain_to_world(Number(input.z), state.offset_z),
+          time_ms: Number(anchor.time_ms) || null,
+          speed_budget: Number(anchor.speed_budget) || null,
+          pet_equipped: anchor.pet_equipped === true,
+        }
   return { ...state, checkpoint, hunt_zone: cell ? { zx: cell.zx, zy: cell.zy } : state.hunt_zone }
 }
 
@@ -552,7 +562,8 @@ export function affordance_rows(state, now) {
   return rows
 }
 
-/** The boot-spawn arbiter over the atom's checkpoint (chain truth wins — see checkpoint.js). */
-export function boot_spawn(state, { session, fallback, y_seed }) {
-  return resolve_boot_spawn({ checkpoint: state.checkpoint, session, fallback, y_seed })
+/** The boot-spawn arbiter over the atom's checkpoint (chain truth wins — see checkpoint.js). `now` is the
+ *  instant the session pose claims: the travel budget it is judged against is measured from there. */
+export function boot_spawn(state, { session, fallback, y_seed }, now) {
+  return resolve_boot_spawn({ checkpoint: state.checkpoint, session, fallback, y_seed, now })
 }

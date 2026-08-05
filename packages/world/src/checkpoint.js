@@ -13,12 +13,8 @@
 // space — exactly how the spawns core ingests the mob rows, so the player and their mobs share one space.
 // The async read + synchronous boot cache stay at the frontend edge (world-shell/world_checkpoint.js).
 
-import { world_offsets, chain_to_world, DEFAULT_ZONE_SIZE } from '@aresrpg/sdk/coords'
-
-// A session restore within this 2D radius (blocks) of the checkpoint is the SAME area — a fine-grained free
-// walk since the last position-proving tx — so it's kept for exact resume; farther = they DISAGREE and chain
-// wins. Defaults to one discovery-zone edge (the render neighbourhood streamed around the checkpoint).
-export const AGREE_RADIUS_M = DEFAULT_ZONE_SIZE
+import { world_offsets, chain_to_world } from '@aresrpg/sdk/coords'
+import { travel_ok } from '@aresrpg/sdk/travel'
 
 /**
  * PURE: chain checkpoint `{ x, z }` (unsigned block coords) + the World doc (its `bounds` → per-axis offset)
@@ -33,20 +29,50 @@ export function checkpoint_to_world(cp, world_doc) {
   return { x: chain_to_world(Number(cp.x), off.x), z: chain_to_world(Number(cp.z), off.z) }
 }
 
+/** The whole-block value a PTB would send for a world coordinate (`Math.floor` — discovery_actions.js). */
+const block_of = (v) => Math.floor(Number(v))
+
 /**
- * PURE: true when `a` and `b` are the SAME area — within `radius` blocks in the (x,z) plane. THE agreement
- * rule: the boot arbiter below and the persistence edge's restore guard both ask this one question, so a
- * local row and the chain anchor are compared by one law in one home.
- * @param {{ x: number, z: number } | null | undefined} a
- * @param {{ x: number, z: number } | null | undefined} b
- * @param {number} [radius]
+ * THE AGREEMENT RULE (#2231) — could the body legally stand at `pose` at instant `at_ms`, given the chain's
+ * proven checkpoint? The boot arbiter below and the persistence edge's restore guard both ask this one
+ * question, so a local row and the chain anchor are compared by one law in one home.
+ *
+ * The law is the CHAIN's, derived not restated: `@aresrpg/sdk/travel` is the twin of `world_math::travel_ok`,
+ * the exact predicate `world::verify_travel` gates every position-proving tx with. It is TIME-BUDGETED — the
+ * legal distance from the checkpoint grows with the elapsed time since it was written. The flat 512-block
+ * radius this replaced was a third rule: it yanked a long walker back to their last checkpoint on reload
+ * (their walk was chain-legal — hours of elapsed time — but past the radius) while accepting a 500-block
+ * teleport one second after a search (radius-legal, chain-illegal). Accepting exactly the chain's set is what
+ * keeps the rendered body somewhere its owner can still act from.
+ *
+ * `checkpoint` is the chain anchor bag: proven position + `time_ms` (the chain clock at the write) +
+ * `speed_budget` (the world's dial) + `pet_equipped` (the checkpoint half of the §17.2 mount rule).
+ *
+ * UNJUDGEABLE (no clock or no budget on the anchor — a receipt-built anchor, or a world-doc read that
+ * missed): the rule cannot be evaluated, and this answers TRUE, keeping the local pose. A wrong yank is
+ * silent, unexplained and unrecoverable for the player; a wrongly kept pose surfaces loudly as abort 121 with
+ * the existing one-click resync (world-shell/travel_recovery.js). The caller's own guards — identity, row
+ * freshness, and the chain-anchor match that drops the row the instant chain truth moves — still apply.
+ *
+ * @param {{ x: number, z: number } | null | undefined} pose
+ * @param {{
+ *   x: number, z: number, time_ms?: number | null, speed_budget?: number | null, pet_equipped?: boolean,
+ * } | null | undefined} checkpoint
+ * @param {number} at_ms the instant `pose` claims (a persisted row's write time; `now` for a live body)
  * @returns {boolean}
  */
-export function positions_agree(a, b, radius = AGREE_RADIUS_M) {
-  if (!a || !b) return false
-  const dx = Number(a.x) - Number(b.x)
-  const dz = Number(a.z) - Number(b.z)
-  return Number.isFinite(dx) && Number.isFinite(dz) && radius > 0 && dx * dx + dz * dz <= radius * radius
+export function pose_agrees(pose, checkpoint, at_ms) {
+  if (!pose || !checkpoint) return false
+  const px = block_of(pose.x)
+  const pz = block_of(pose.z)
+  const cx = block_of(checkpoint.x)
+  const cz = block_of(checkpoint.z)
+  if (![px, pz, cx, cz].every(Number.isFinite)) return false
+  const speed_budget = Number(checkpoint.speed_budget)
+  const from_ms = Number(checkpoint.time_ms)
+  const to_ms = Number(at_ms)
+  if (!(speed_budget > 0) || !(from_ms > 0) || !Number.isFinite(to_ms)) return true // unjudgeable — see above
+  return travel_ok(speed_budget, cx, cz, from_ms, px, pz, to_ms, checkpoint.pet_equipped === true)
 }
 
 /** PURE: one session row → its boot spawn (the checkpoint carries no height, so `y_seed` fills it in). */
@@ -63,8 +89,8 @@ const session_spawn = (session, y_seed) => ({
 /**
  * PURE boot-spawn priority — CHAIN CHECKPOINT is the source of truth:
  *   • session restore stamped as a RETURN ANCHOR → that restore (see below),
- *   • checkpoint present + session restore CLOSE (same area) → the session restore (exact fine-grained resume),
- *   • checkpoint present + session restore absent or FAR (they disagree) → the checkpoint,
+ *   • checkpoint present + session restore chain-LEGAL for the elapsed travel time → the session restore,
+ *   • checkpoint present + session restore absent or beyond the travel budget → the checkpoint,
  *   • no checkpoint (pre-first-join) → the session restore if any, else the WORLD_SPAWN fallback.
  * The checkpoint carries no height, so its spawn seeds `y_seed` (the WORLD_SPAWN y); the boot's D188 ground
  * scan + physics gate settle the body onto the real column exactly as they do for the default spawn.
@@ -77,18 +103,20 @@ const session_spawn = (session, y_seed) => ({
  * AFTER the checkpoint was written, so it resumes exactly. Chain truth still wins the moment it moves: a
  * checkpoint that advanced since drops the stamped row at the persistence edge, and this arbiter never sees it.
  * @param {{
- *   checkpoint: { x: number, z: number } | null,
+ *   checkpoint: {
+ *     x: number, z: number, time_ms?: number | null, speed_budget?: number | null, pet_equipped?: boolean,
+ *   } | null,
  *   session: { x: number, z: number, y?: number, yaw?: number, return_anchor?: boolean } | null,
  *   fallback: [number, number, number],
  *   y_seed: number,
- *   radius?: number,
+ *   now: number,
  * }} args
  * @returns {{ position: [number, number, number], yaw: number, source: 'checkpoint' | 'session' | 'fallback' }}
  */
-export function resolve_boot_spawn({ checkpoint, session, fallback, y_seed, radius = AGREE_RADIUS_M }) {
+export function resolve_boot_spawn({ checkpoint, session, fallback, y_seed, now }) {
   if (session?.return_anchor === true) return session_spawn(session, y_seed)
   if (checkpoint) {
-    if (positions_agree(session, checkpoint, radius)) return session_spawn(session, y_seed)
+    if (pose_agrees(session, checkpoint, now)) return session_spawn(session, y_seed)
     return { position: [checkpoint.x, y_seed, checkpoint.z], yaw: 0, source: 'checkpoint' }
   }
   if (session) return session_spawn(session, y_seed)
