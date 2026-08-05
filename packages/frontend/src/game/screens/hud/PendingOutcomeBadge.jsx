@@ -48,7 +48,7 @@ export function PendingOutcomeBadge({ character_id }) {
   useEffect(() => {
     if (!character_id || !address) return undefined
     let live = true
-    ;(async () => {
+    void (async () => {
       // ONE /v1 fights read serves both gates: a LIVE (placement/active) fight → no pill; a TERMINAL doc =
       // leaf 2 (settle never ran) → manual pill.
       let fights = []

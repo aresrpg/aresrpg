@@ -103,7 +103,7 @@ export function LevelUp({ on_allocate }) {
   useEffect(() => {
     if (!visible) return undefined
     let alive = true
-    load_world_catalog()
+    void load_world_catalog()
       .catch((error) => {
         game_log('level-up', 'world unlock catalog read failed', error)
         return []

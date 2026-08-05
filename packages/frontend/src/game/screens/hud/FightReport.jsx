@@ -38,6 +38,7 @@ import { EncyclopediaLink } from '../../../pages/encyclopedia/EncyclopediaLink'
 import { useTemplateT } from '../../../i18n/template_t'
 import { get_template_by_item_type_map, get_template_detail_map } from '../../../chain/read_findables.js'
 import { resolve_rolled_stats } from '../../../chain/rolled_stats.js'
+import { game_log } from '../../../core/log.js'
 import { resolve_character_docs } from '../../../world-shell/character_name_resolve.js'
 import { current_fight_trace, export_fight_trace, has_dumpable_trace } from './fight_trace_export.js'
 import { report_fight_bug } from './fight_bug_report.js'
@@ -314,12 +315,14 @@ export function FightReport({
     if (!has_spoils) return
     let alive = true
     const template_ids = loot_template_ids_key ? loot_template_ids_key.split(',') : []
-    Promise.all([get_template_by_item_type_map(), get_template_detail_map(template_ids)]).then(([by_type, by_id]) => {
-      if (!alive) return
-      const next = new Map(by_type)
-      for (const [id, row] of by_id) next.set(id, row)
-      set_template_map(next)
-    })
+    Promise.all([get_template_by_item_type_map(), get_template_detail_map(template_ids)])
+      .then(([by_type, by_id]) => {
+        if (!alive) return
+        const next = new Map(by_type)
+        for (const [id, row] of by_id) next.set(id, row)
+        set_template_map(next)
+      })
+      .catch((error) => game_log('fight-report', 'loot template read failed', error))
     return () => {
       alive = false
     }
