@@ -1,7 +1,30 @@
-ea00d0221 → Refs #2194 — chore(move): the aresrpg byte budget rises to 100000 — the format-4 spend, maintainer-approved
-98874e21f → Refs #2194 — feat(move,sim): commitment format 4 — a zone claim proves one group, never re-derives
-6316c594c → Refs #2194 — test(move): the zone-claim gas probe measures the format-4 trade
-08d362dbf → Refs #2194 — feat(sdk): compose the format-4 witness and take the cheap member claim door
-6ed4e9afa → Refs #2194 — docs(zones): the commitment-format home learns formats 3 and 4
-9201c4ee8 → Refs #2194 — style(move): format the gas probe to the move package prettier config
-fb9f5d20f → Refs #2194 — style(sim): format the format-4 mirror to the sim package prettier config
+e92f31b81 → no issue ref — docs(rules): the map rule and design-before-build graduate into the repo
+7b07d4e00 → Refs #2184 — fix(move): clamp MULT_MAX to the §17.20 4× ceiling
+392afda4f → Refs #2218 — fix(chat): replacement is an explicit `replaces` contract, not an id collision
+b096581ae → Refs #2219 — refactor(fight): one fold-key entity resolver, one unresolvable-seat answer
+18836c9d0 → Refs #2197 — fix(sponsor): the daily cap has one home — enforcement publishes, display derives
+bec0c02a6 → Refs #2197 — feat(gate): sponsor config cannot re-grow a second home
+0b08214e6 → Refs #2197 — fix(gate): the sponsor-config gate's own suite is reachable
+8fa86bbcd → Refs #2086 — feat(rpc): push one character's party scope over the SSE chassis
+c35ffa789 → Refs #2086 — feat(party): invites ride the pushed channel; the poll demotes to reconciliation
+98e5f39b0 → Refs #2086 — docs(rpc): list the party scope route beside the fight stream
+5952905b1 → Refs #2086 — style(party): prettier the carrier module
+657fbe89e → Refs #2184 — chore(move): pin the aresrpg byte budget to the measured 100_010
+3a8d9a4aa → Refs #2220 — refactor(sdk): delete the legacy spell corpus — the served blob is the one truth
+b0e3a2d7d → Refs #2220 — test(frontend): seal the served-corpus door against real captured bytes
+1eda69ace → Refs #2220 — chore(lint): retire the sdk-spells import restriction the class gate supersedes
+77a0865c3 → Refs #2220 — docs: stop naming a deleted artifact — the authored dialect has no file
+5e278d298 → Refs #2220 — test(sdk): sweep scripts/ too — a regenerated corpus would be born there
+ca1049451 → Refs #2220 — test(sim): drive the decoder for the summon tombstone, not just its names
+b84f4c27c → Refs #2220 — style(sim): format the tombstone with the sim package's own prettier config
+733491b42 → Refs #2222 — fix(fight): the invisibility kind travels under its registry name
+346ddf748 → Refs #2222 — feat(gates): docs/REGISTRY.md generates its own import fence
+012387328 → Refs #2222 — fix(gates): the fence reports the keyword's own line
+ebc0c3669 → Refs #2222 — docs(code-law): the dual-home gate now reports six lanes
+625325e77 → Refs #2222 — docs(gates): name the invocation that prints the derived fence
+ecdb676f8 → Refs #2222 — docs(gates): --fences in the verdict usage line
+4963359bd → Refs #2222 — feat(gates): the registry-fence control joins the gate-control census
+f5ddb1e51 → Refs #2222 — fix(gates): the fence control captures before it matches
+e37746671 → Refs #2222 — fix(gates): the fence sees the lazy door too
+485dbe519 → Refs #2222 — style(fight): import group without the blank line
+c38ce045d → Refs #2220 — style(sim): separate the relocated import groups in the spell-effect suite
