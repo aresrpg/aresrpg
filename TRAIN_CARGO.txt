@@ -1,4 +1,3 @@
-5dfdaf004 → Fixes #2171 — fix(frontend): invalidate the peer cache on a presence beat, not render it
-47c85995d → Refs #2069 — refactor(hud): snake-case spell row class binding
-2082178f5 → Refs #2069 — refactor(hud): encapsulate module-lifetime state
-9f29edb4a → Fixes #2233 — chore(gates): tighten the sim-constants baseline to the measured 18
+a24d19631 → Fixes #2242 — test(sim): one home for the format-4 witness vectors
+23b2ceba9 → Fixes #2251 — test(engine): give measured-heavy bakes honest timeouts
+69ff7caf2 → Fixes #2245 — perf(frontend): pre-warm the engage read at roster settle
