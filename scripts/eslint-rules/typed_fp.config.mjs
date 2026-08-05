@@ -12,11 +12,10 @@
 //   TT1 frontend src   — packages/frontend/tsconfig.json via projectService (allowJs: the .js game
 //                        tree rides the same program for free; tests are excluded THERE, so the
 //                        block must exclude them too or the parse fatals)
-//   TT2 validation     — packages/validation/tsconfig.json via projectService (src + test)
-//   TT3 out-of-project — /tsconfig.lint.json (gold rig, frontend e2e/dev, api sponsor, rpc api +
+//   TT2 out-of-project — /tsconfig.lint.json (gold rig, frontend e2e/dev, api sponsor, rpc api +
 //                        gas-pool): `files` globs here MUST mirror that tsconfig's `include`
-//   TT4 strong-typed clean surfaces — the promise family promoted to ERROR where measured 0
-//   TT5 tests          — typed mutation family off (choreography, mirrors fp_law T5); the promise
+//   TT3 strong-typed clean surfaces — the promise family promoted to ERROR where measured 0
+//   TT4 tests          — typed mutation family off (choreography, mirrors fp_law T5); the promise
 //                        family STAYS ON in tests: a missing await is a false-green generator
 //
 // NOT wired (verdicts, evidence in the lane report):
@@ -95,16 +94,7 @@ export default [
     rules: typed_rules,
   },
   {
-    // TT2 — validation: strictest-typed package, src + test both in-project.
-    files: ['packages/validation/**/*.ts'],
-    plugins: typed_plugins,
-    languageOptions: {
-      parserOptions: { projectService: true, tsconfigRootDir: REPO_ROOT },
-    },
-    rules: typed_rules,
-  },
-  {
-    // TT3 — surfaces no package tsconfig covers, typed via /tsconfig.lint.json. Globs mirror its
+    // TT2 — surfaces no package tsconfig covers, typed via /tsconfig.lint.json. Globs mirror its
     // `include` — extend both together or project-mode parsing fatals on the stray file.
     files: [
       'test/gold/**/*.ts',
@@ -121,13 +111,11 @@ export default [
     rules: typed_rules,
   },
   {
-    // TT4 — the promise family at ERROR where measured 0 on strong-typed .ts surfaces
-    // (validation incl. tests, gold rig, frontend e2e + dev plugins). The JS surfaces (api, rpc,
-    // frontend src) stay WARN: their 0s ride weaker inference, and a later JSDoc improvement
-    // surfacing latent hits must not redden someone else's lane — promote per the burn-down
-    // protocol instead.
+    // TT3 — the promise family at ERROR where measured 0 on strong-typed .ts surfaces
+    // (gold rig, frontend e2e + dev plugins). The JS surfaces (api, rpc, frontend src) stay WARN:
+    // their 0s ride weaker inference, and a later JSDoc improvement surfacing latent hits must not
+    // redden someone else's lane — promote per the burn-down protocol instead.
     files: [
-      'packages/validation/**/*.ts',
       'test/gold/**/*.ts',
       'packages/frontend/e2e/**/*.ts',
       'packages/frontend/dev/**/*.ts',
@@ -139,7 +127,7 @@ export default [
     },
   },
   {
-    // TT4b — fe-dev carve-out: no-misused-promises measured 2 there (vite dev plugins hand async
+    // TT3b — fe-dev carve-out: no-misused-promises measured 2 there (vite dev plugins hand async
     // handlers to void middleware hooks) — WARN burn-down; floating/await stay ERROR (measured 0).
     files: ['packages/frontend/dev/**/*.ts'],
     rules: {
@@ -147,7 +135,7 @@ export default [
     },
   },
   {
-    // TT5 — tests/benches choreograph state (mirrors fp_law T5): typed mutation family off.
+    // TT4 — tests/benches choreograph state (mirrors fp_law T5): typed mutation family off.
     // The promise family deliberately STAYS ON — an unawaited assertion is a false green.
     files: ['**/*.test.*', '**/*.spec.*', '**/e2e/**', '**/bench/**'],
     rules: {

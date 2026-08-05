@@ -661,7 +661,6 @@ test_reachability_hits() {
       "packages/frontend/e2e/", // legacy e2e suite driven by scripts/golden_path.sh, predates test/gold, not an ares test leg
       "packages/move/scripts/", // Move ceremony-script tests — packages/move has NO "test" script at all
       "packages/rpc/", // rpc-api + gas-pool — NOT a bun workspace member (bun pm ls: packages/rpc has no package.json)
-      "packages/simlab/", // no "test" script (dev/build only)
       "api/", // sponsor.mjs unit tests — api/ is not a workspace, no test script
       "scripts/oss/", // OSS copyright-header tests — no runner wires scripts/oss/** in
     ]
