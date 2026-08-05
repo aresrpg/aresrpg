@@ -160,6 +160,8 @@ export const unit_test_files = [
   'packages/move/scripts/spell_wire.test.mjs', // #1250 RED-FIRST parity fixture — the ONE new_effect signed-value dialect home
   'packages/move/scripts/apply_xp_payload.test.mjs', // the ceremony driver's LAW ④ cap gate + payload core — unwired until #1246, which is how MAX_RESIST_MAGNITUDE sat at the superseded 50 for days
   'packages/move/scripts/ceremony_upgrade.test.mjs', // the batch ceremony's gate hoist + digest journal — wired here on arrival, because a suite no runner names is a suite that never runs (#2013)
+  'packages/move/scripts/shell_injection.test.mjs', // #2149 — the ceremony tooling's argv law + the CLASS gate: no interpolated shell string in packages/move/scripts or test/gold
+  'test/gold/shell_injection.test.mjs', // #2149 — the same law on the rig: COMPOSE_PROJECT_NAME/the throwaway key are arguments, never command text
   // PROD-SMOKE SIGNING DECISIONS (#1723): the guard predicate, the execute verdict and the signing ledger
   // that is the suite's only oracle. The live rows exist solely in CI against testnet; every decision they
   // make is pure and rides here. `scripts/prod_smoke_registration.test.mjs` and `scripts/prod_asset_census.
