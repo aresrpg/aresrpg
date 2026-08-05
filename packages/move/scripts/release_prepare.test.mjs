@@ -3,8 +3,9 @@
 // RELEASE_PREPARE TEST — proves the release manifest the admin RELEASE page loads is a faithful serialization
 // of the real publish ceremony (the "manifest is the ceremony serialized for the browser" claim), so the page
 // can never silently advertise a step the ceremony doesn't actually run:
-//   1. the manifest's publish order === ceremony_lib.publishOrder() (same topological source both drive from)
-//   2. every package carries base64 bytecode + a byte size; the six-package shape holds; aresrpg is the core
+//   1. the manifest's publish order === ceremony_lib.publishOrder(), the same package SET, and every
+//      dependency edge respected — all derived from the graph, never a hand-listed count or pair (#2229)
+//   2. every package carries base64 bytecode + a byte size; aresrpg is the core
 //   3. DRIFT GUARD — every policy/enable target the page's step catalog shows appears (at module::fn level) in
 //      ceremony.mjs's OWN --dry-run output. If someone renames/removes a policy fn in the ceremony, this fails.
 import { readFileSync, existsSync } from 'node:fs'
@@ -14,7 +15,7 @@ import { execFileSync } from 'node:child_process'
 
 import { test, expect } from 'bun:test'
 
-import { publishOrder, TICKET_ORDER } from './ceremony_lib.mjs'
+import { publishOrder, TICKET_ORDER, PKG_DEPS } from './ceremony_lib.mjs'
 import { POLICY_STEPS, ENABLE_STEPS } from './release_prepare.mjs'
 
 const __dir = dirname(fileURLToPath(import.meta.url))
@@ -32,18 +33,23 @@ test('the ceremony is the only executable marketplace-policy composition', () =>
   expect(existsSync(join(__dir, 'setup_policies.js'))).toBe(false)
 })
 
-test('manifest publish order === ceremony topological order (all 7 packages, exact sequence)', () => {
+test('manifest publish order === ceremony topological order (every package, exact sequence)', () => {
   const m = JSON.parse(readFileSync(MANIFEST, 'utf8'))
   expect(m._kind).toBe('aresrpg-release-manifest')
   expect(m.publishOrder).toEqual(publishOrder().order)
-  expect(m.publishOrder.length).toBe(TICKET_ORDER.length)
-  expect(m.publishOrder.length).toBe(7) // the 07-11/12 splits: kolizeum + forgemagie are their own packages
-  // every sibling that must publish before the core is present + ordered before aresrpg
-  for (const dep of ['foundation', 'spells', 'social', 'engine'])
-    expect(m.publishOrder.indexOf(dep)).toBeLessThan(m.publishOrder.indexOf('aresrpg'))
-  // kolizeum + forgemagie depend on aresrpg → publish after it
-  for (const sib of ['kolizeum', 'forgemagie'])
-    expect(m.publishOrder.indexOf(sib)).toBeGreaterThan(m.publishOrder.indexOf('aresrpg'))
+  // The manifest's package SET is the graph's, entry for entry — in BOTH directions. #2229: the graph gained
+  // gifting + dungeon on 07-13 and this serialized artifact stayed at 7 packages for three weeks, so a ceremony
+  // walking the manifest would have skipped two packages outright. No literal count lives here: the graph is the
+  // one home for how many packages exist, and a count written twice is the drift it took to notice.
+  expect([...m.publishOrder].sort()).toEqual([...TICKET_ORDER].sort())
+  expect(Object.keys(m.packages).sort()).toEqual([...TICKET_ORDER].sort())
+  // Every dependency edge, derived from the graph — a package publishes only after everything it depends on.
+  // Hand-listed pairs went stale on every split; this cannot.
+  for (const [pkg, deps] of Object.entries(PKG_DEPS))
+    for (const dep of deps)
+      expect({ [`${dep} before ${pkg}`]: m.publishOrder.indexOf(dep) < m.publishOrder.indexOf(pkg) }).toEqual({
+        [`${dep} before ${pkg}`]: true,
+      })
 })
 
 test('every package carries base64 bytecode + a byte size; aresrpg is the biggest (the core) + under the cap', () => {
