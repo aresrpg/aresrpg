@@ -38,7 +38,9 @@ test('gold rig · publish copy and SDK ids mirror the current nine-package cerem
     'dungeon',
   ])
   expect(rig.kiosk_packages).toEqual(['social', 'aresrpg', 'kolizeum', 'forgemagie', 'gifting', 'dungeon'])
-  expect(rig.script_env('fixture-key')).toContain(`SUI_GRPC_URL='${rig.RPC}'`)
+  // An env OVERLAY since #2149 — the key is a value, never text inside a shell command.
+  expect(rig.script_env('fixture-key').SUI_GRPC_URL).toBe(rig.RPC)
+  expect(rig.script_env('fixture-key').PRIVATE_KEY).toBe('fixture-key')
 
   const row = (name: string) => ({
     pkg: `${name}_origin`,

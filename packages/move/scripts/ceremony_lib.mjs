@@ -14,7 +14,7 @@
 // JSON-RPC is dead (fullnode.testnet.sui.io JSON-RPC = 404); every read/dryRun/execute rides `SuiGrpcClient`
 // (mirrors packages/sdk/src/sui.js). Receipt shapes are re-projected to the jsonRpc-ish form consumers parse
 // (normalizeReceipt) so `classify`/`resolveBatch`/`createdId` stay byte-identical across the cutover.
-import { execSync } from 'node:child_process'
+import { execFileSync } from 'node:child_process'
 import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -537,15 +537,20 @@ export function resolveBatch(rows, keyOfRow, created) {
   return resolved
 }
 
-// ── Build one package → { modules, dependencies, digest } (mirrors publish.js / ceremony_upgrade.mjs) ──
-export function buildPackage(pkgName) {
-  const out = execSync(`sui move build --dump-bytecode-as-base64 --path ${path.join(MOVE_DIR, pkgName)}`, {
-    encoding: 'utf-8',
-  })
+// ── Build one package at an explicit path → { modules, dependencies, digest } ──────────────────────
+// THE ONE HOME for a ceremony's package build: ceremony_upgrade drives the same `sui move build` for a
+// caller-supplied path, and two copies of a command is two places to get its quoting wrong.
+//
+// argv array, never a shell string (#2149, CodeQL js/shell-command-injection-from-environment): the
+// path travels as ONE token no `/bin/sh` ever parses, so a directory carrying `;` is a path that does
+// not exist rather than a second command. `run` is injected for the argv-shape test, nothing else.
+export function build_package_at(pkgPath, run = execFileSync) {
+  const out = run('sui', ['move', 'build', '--dump-bytecode-as-base64', '--path', pkgPath], { encoding: 'utf-8' })
   const line = out.split('\n').find((l) => l.trimStart().startsWith('{'))
-  if (!line) throw new Error(`buildPackage(${pkgName}): no JSON in build output`)
+  if (!line) throw new Error(`build_package_at(${pkgPath}): no JSON in build output`)
   return JSON.parse(line)
 }
+export const buildPackage = (pkgName) => build_package_at(path.join(MOVE_DIR, pkgName))
 
 // ── Published.toml stamping (the publish-state file automated address management reads). SDK `tx.publish()`
 //    does NOT write it (only `sui client publish` does), so the ceremony stamps it AT RUNTIME between

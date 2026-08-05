@@ -66,6 +66,7 @@ import { NETWORK, keypair, sui_client } from './client.js'
 import {
   MANIFEST_PATH,
   MOVE_DIR,
+  build_package_at,
   normalizeReceipt,
   getReceipt,
   parsePublishedToml,
@@ -329,9 +330,8 @@ async function upgrade_one(leg) {
   // Build only — read-only on the ambient config (active-env == NETWORK, now assert_env-enforced above);
   // Published.toml (reconciled to the LIVE lineage, including any bump this same run already wrote for a
   // dependency) supplies the dependency linkage addresses.
-  const build_out = execSync(`sui move build --dump-bytecode-as-base64 --path ${pkgPath}`, { encoding: 'utf-8' })
-  const json_line = build_out.split('\n').find((l) => l.trimStart().startsWith('{'))
-  const { modules, dependencies, digest: build_digest } = JSON.parse(json_line)
+  // ceremony_lib owns the build command (#2149 collapsed the twin): one argv-array home, no shell.
+  const { modules, dependencies, digest: build_digest } = build_package_at(pkgPath)
   console.log('modules:', modules.length, '| deps:', dependencies)
 
   const tx = new Transaction()

@@ -8,7 +8,7 @@
 //   node scripts/check_keepset.mjs        # exit 0 = every consumed target exists + is PTB-callable
 import fs from 'node:fs'
 import path from 'node:path'
-import { execSync } from 'node:child_process'
+import { execFileSync } from 'node:child_process'
 import { fileURLToPath } from 'node:url'
 
 const __dir = path.dirname(fileURLToPath(import.meta.url))
@@ -94,9 +94,12 @@ const EXTERNAL = new Set([
   'dynamic_field',
 ])
 
+// argv array, never a shell string (#2149): `dir` is an absolute path this file derives, and pasted into
+// `sh -c` a directory carrying `;` would have run its tail as a second command. The patterns below lose
+// the backslash the old double-quoted shell string ate — `grep` now receives the byte-identical ERE.
 const grep = (pattern, dir) => {
   try {
-    return execSync(`grep -rhoE "${pattern}" ${dir}`, { encoding: 'utf8' }).split('\n').filter(Boolean)
+    return execFileSync('grep', ['-rhoE', pattern, dir], { encoding: 'utf8' }).split('\n').filter(Boolean)
   } catch {
     return []
   }
@@ -105,8 +108,8 @@ const grep = (pattern, dir) => {
 // 1) Consumed targets: `::module::fn` strings in SDK builders + move scripts (this file excluded).
 const consumed = new Set()
 for (const line of [
-  ...grep('::[a-z_]+::[a-z_]+\\`', SDK),
-  ...grep('::[a-z_]+::[a-z_]+\\`', __dir).filter(() => true),
+  ...grep('::[a-z_]+::[a-z_]+`', SDK),
+  ...grep('::[a-z_]+::[a-z_]+`', __dir).filter(() => true),
 ].filter((l) => !l.includes('module::fn'))) {
   // (self-doc line excluded)
   const m = line.match(/::([a-z_]+)::([a-z_]+)`?$/)

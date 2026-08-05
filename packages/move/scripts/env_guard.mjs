@@ -13,7 +13,7 @@
 // Env I/O is injectable (`read`/`switch_to`) so the primitives are testable with zero subprocess/CLI.
 
 import fs from 'node:fs'
-import { execFileSync, execSync } from 'node:child_process'
+import { execFileSync } from 'node:child_process'
 import { homedir } from 'node:os'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -29,8 +29,9 @@ export function read_active_env() {
   return active
 }
 
+// argv array, never a shell string (#2149) — `net` reaches here from NETWORK/the manifest.
 function switch_env(net) {
-  execSync(`sui client switch --env ${net}`, { stdio: 'inherit' })
+  execFileSync('sui', ['client', 'switch', '--env', net], { stdio: 'inherit' })
 }
 
 // REFUSE-on-mismatch. The thrown message IS the OPEN remediation instruction, so an uncaught refusal
