@@ -2934,6 +2934,7 @@
   "touch": {
     "jump": "Saltar",
     "mount": "Montura",
+    "dismount": "Desmontar",
     "menu": "Menú",
     "rotate_title": "Gira tu dispositivo",
     "rotate_detail": "AresRPG usa el modo horizontal para mantener el mundo visible."

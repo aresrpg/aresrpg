@@ -2934,6 +2934,7 @@
   "touch": {
     "jump": "Jump",
     "mount": "Mount",
+    "dismount": "Dismount",
     "menu": "Menu",
     "rotate_title": "Rotate your device",
     "rotate_detail": "AresRPG uses landscape mode to keep the world visible."

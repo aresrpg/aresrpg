@@ -2934,6 +2934,7 @@
   "touch": {
     "jump": "ジャンプ",
     "mount": "マウント",
+    "dismount": "降りる",
     "menu": "メニュー",
     "rotate_title": "端末を横向きにしてください",
     "rotate_detail": "世界を広く表示するため、AresRPGは横向きでプレイします。"

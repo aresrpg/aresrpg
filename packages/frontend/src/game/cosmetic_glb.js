@@ -414,19 +414,6 @@ export function resolve_mount(character, search) {
   return { available: false, glb_url: null, source: null }
 }
 
-/**
- * Should the "[X] Mount the pet" world hint be armed right now? Mirrors resolve_mount's own dev > equip >
- * pet precedence rather than re-deriving it (one home for that fact) — armed only when pressing the mount
- * key would actually target the PET specifically, riding isn't already engaged, and no fight is running
- * (mount_up's own guards; a hint for a dead click is worse than no hint — NpcPrompt's no-dead-click law).
- * Pure. @param {any} character @param {boolean} riding @param {boolean} in_fight @param {string} [search]
- * @returns {boolean}
- */
-export function pet_mount_hint_visible(character, riding, in_fight, search) {
-  if (riding || in_fight) return false
-  return resolve_mount(character, search).source === 'pet'
-}
-
 // DEV SCREENSHOT TOOL: `?avatar=<key>` swaps the LOCAL player's rendered body for a
 // preview rig — e.g. `primemachin`, the reserved full-body outfit (`models/equipment/primemachin.glb`,
 // docs/PET_SHOP_MAP.md §8.3 — "titles that swap the full body, later"; this flag previews that future

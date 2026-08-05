@@ -40,9 +40,9 @@ import {
   resolve_mount,
   resolve_worn_cosmetics,
   resolve_avatar_override,
-  pet_mount_hint_visible,
 } from './cosmetic_glb.js'
 import { create_mount_rig, ft_dragon_glb_url } from './mount_rig.js'
+import { MOUNT_PROMPT, mount_prompt_kind, mount_prompt_label_key } from './mount_prompt.js'
 import { create_pet_companion_rig, resolve_pet_companion } from './pet_companion.js'
 import { create_fast_travel_pilot } from './fast_travel_pilot.js'
 import { mount_is_moving } from './fast_travel_flight.js'
@@ -253,7 +253,8 @@ export function create_player({
   // the live character.pet/pet_equipped read, mirroring desired_worn's reconcile shape exactly.
   /** @type {ReturnType<typeof create_pet_companion_rig> | null} */ let pet_ctl = null
   /** @type {string | null} */ let pet_glb_url = null // last-spawned URL — recreate the rig only on a real change
-  let mount_hint_armed = false // #594 — the [X] "Mount the pet" world-hint registration, edge-triggered
+  /** @type {'mount_pet'|'mount'|'dismount'|null} */
+  let armed_mount_prompt = null // #2173 — the prompt stack is X's ONE owner; this tracks its live action
   const mount_up = () => {
     if (is_fight()) return // no mounting mid-fight (the board owns the body)
     const live = context.get_state().sui?.characters?.find((c) => c.id === character?.id) ?? null
@@ -359,11 +360,6 @@ export function create_player({
     switch (e.code) {
       case 'KeyC':
         if (down && !e.repeat) toggle_cinematic() // one-shot on press (ignore auto-repeat)
-        break
-      case 'KeyX':
-        // TR-97/#594 — mount ride toggle (roam only; guarded inside). X is AZERTY-safe (same physical
-        // key/glyph as QWERTY, like C/V above).
-        if (down && !e.repeat) toggle_mount()
         break
       case 'Space':
         keys = { ...keys, jump: down }
@@ -486,22 +482,25 @@ export function create_player({
     // (peers render MY pet themselves off their own /v1 read — remote_players.js, #553 — same TRANSPORT
     // RULING as worn cosmetics above; this path is untouched by that landing).
     desired_pet = resolve_pet_companion(live)
-    // MOUNT HINT (#594) — the "[X] Mount the pet" world pill: armed exactly when pressing the mount key
-    // would resolve to the PET (pet_mount_hint_visible mirrors resolve_mount's own dev > equip > pet
-    // precedence), cleared the instant riding starts, a fight begins, or the pet itself despawns. Edge-
-    // triggered register/clear — the SAME idiom world_fights_discovery.js's [V] pill uses.
-    const mountable = pet_mount_hint_visible(live, riding, is_fight())
-    if (mountable !== mount_hint_armed) {
-      mount_hint_armed = mountable
-      if (mountable)
+    // MOUNT DOOR (#2173) — PromptStack is the ONE desktop keydown owner. The former direct KeyX listener and
+    // this prompt both synchronously toggled, so one press mounted then immediately dismounted before frame2
+    // could paint. Keep the prompt alive across the state edge (mount → dismount); mount_prompt_kind reads the
+    // SAME resolve_mount verdict mount_up consumes and refuses fights/flight before an action is offered.
+    const next_mount_prompt = mount_prompt_kind({
+      riding,
+      in_fight: is_fight(),
+      blocked: ft_is_flying(),
+      target: resolve_mount(live),
+    })
+    if (next_mount_prompt !== armed_mount_prompt) {
+      armed_mount_prompt = next_mount_prompt
+      if (next_mount_prompt)
         use_prompt_stack.getState().register_prompt({
-          id: 'mount',
-          key: 'X',
-          label: i18n.t('world.mount_hint'),
-          priority: 50,
+          ...MOUNT_PROMPT,
+          label: i18n.t(mount_prompt_label_key(next_mount_prompt)),
           on_trigger: toggle_mount,
         })
-      else use_prompt_stack.getState().clear_prompt('mount')
+      else use_prompt_stack.getState().clear_prompt(MOUNT_PROMPT.id)
     }
     // FAST-TRAVEL flight — the dragon autopilot owns the transform while flying/landing (teleport per frame,
     // exactly like creative fly below). The store is a module singleton, so a PENDING intent survives the
@@ -842,7 +841,7 @@ export function create_player({
     }
     mount_ctl?.dispose() // TR-97 — the mount rig dies with the session (REMOVE-ONLY; cache owns the GLB)
     pet_ctl?.dispose() // companion rig dies with the session (REMOVE-ONLY; cache owns the GLB)
-    if (mount_hint_armed) use_prompt_stack.getState().clear_prompt('mount') // #594 — the [X] pill dies with the session
+    if (armed_mount_prompt) use_prompt_stack.getState().clear_prompt(MOUNT_PROMPT.id) // the X door dies with the session
     my_plate?.dispose() // D227 — the local plate dies with the session
     for (const p of puffs) {
       try {

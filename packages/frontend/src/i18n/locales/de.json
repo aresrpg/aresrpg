@@ -2934,6 +2934,7 @@
   "touch": {
     "jump": "Sprung",
     "mount": "Reittier",
+    "dismount": "Absteigen",
     "menu": "Menü",
     "rotate_title": "Gerät drehen",
     "rotate_detail": "AresRPG nutzt das Querformat, damit die Welt sichtbar bleibt."

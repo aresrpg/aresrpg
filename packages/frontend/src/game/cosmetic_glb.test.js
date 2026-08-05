@@ -43,7 +43,6 @@ const {
   cosmetic_glb_url,
   read_worn_templates,
   resolve_mount,
-  pet_mount_hint_visible,
   worn_dev_url,
   resolve_worn_cosmetics,
 } = await import('./cosmetic_glb.js')
@@ -231,39 +230,6 @@ describe('resolve_mount — pet fallback (#594: the pet is BOTH a companion AND 
 
   test('no mount, no pet -> still unavailable (regression guard on the pre-#594 behavior)', () => {
     expect(resolve_mount({ id: 'c1' }, '').available).toBe(false)
-  })
-})
-
-describe('pet_mount_hint_visible — the [X] world-hint arm condition (#594)', () => {
-  afterEach(() => {
-    set_pet_catalog_for_test()
-    set_mob_catalog_for_test()
-  })
-
-  const with_pet = { id: 'c1', pet_equipped: true, pet: { item_id: '0xa004', slug: 'pet_bouloute' } }
-
-  test('an active, resolvable pet while grounded and out of a fight -> visible', () => {
-    set_mob_catalog_for_test({ bouloute: { appearance: 'Lamb', glb: 'hy_lamb' } })
-    expect(pet_mount_hint_visible(with_pet, false, false, '')).toBe(true)
-  })
-
-  test('already riding -> hidden even with an active pet (no dead re-prompt mid-ride)', () => {
-    set_mob_catalog_for_test({ bouloute: { appearance: 'Lamb', glb: 'hy_lamb' } })
-    expect(pet_mount_hint_visible(with_pet, true, false, '')).toBe(false)
-  })
-
-  test('mid-fight -> hidden (mount_up refuses mid-fight; a hint there would be a dead click)', () => {
-    set_mob_catalog_for_test({ bouloute: { appearance: 'Lamb', glb: 'hy_lamb' } })
-    expect(pet_mount_hint_visible(with_pet, false, true, '')).toBe(false)
-  })
-
-  test('no active pet -> hidden', () => {
-    expect(pet_mount_hint_visible({ id: 'c1' }, false, false, '')).toBe(false)
-  })
-
-  test('a dedicated equipped mount with no pet -> hidden (this hint is pet-specific copy only)', () => {
-    const r = pet_mount_hint_visible({ id: 'c1', mount: { id: 'm1', template_id: 'mount_suicune' } }, false, false, '')
-    expect(r).toBe(false)
   })
 })
 
