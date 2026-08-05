@@ -94,7 +94,7 @@ the same machine cursor line required below.
 
 ## Output contract (GitHub artifacts, nothing else)
 - **FILING BAR:** file only evidence-backed P2+ rows; P3/cosmetic observations go into their epic's
-  checklist directly (epic #1367), never as new issues.
+  checklist directly (epic #1368), never as new issues.
 - One pass comment on the standing anchor row (#1357) — verdict per rubric item, `file:line`
   cites, severity-ordered, ending with exactly
   `architecture-audit-anchor: <AUDITED_HEAD's full 40-character SHA>`. This completed-pass
@@ -181,7 +181,7 @@ high-impact findings.
 
 *In this loop:* a dual-home is OBSERVABLE when the two homes already diverge in behavior, or
 when a cited edit to one silently leaves the other stale — a twin with identical behavior and no
-divergence path is a checkbox on epic #1367, not a row. FRESH means re-grepping both homes at
+divergence path is a checkbox on epic #1368, not a row. FRESH means re-grepping both homes at
 `AUDITED_HEAD` before filing, since the window's own landings routinely delete the second home.
 Self-cleaning sweeps the open `loop:architecture-audit` rows in the same pass that advances the
 anchor.
