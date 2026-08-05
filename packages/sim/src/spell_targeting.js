@@ -333,3 +333,36 @@ export const get_aoe_cells = (spell, target, caster) => {
       return [target]
   }
 }
+
+/** The zone shapes whose cell set depends on the CAST DIRECTION — the one thing a stored board zone has no room
+ *  for. `combat_grid::in_zone` (the chain's board-coverage predicate) has no `caster` parameter at all, so each
+ *  of these falls through its last line to the filled lozenge. */
+const DIRECTIONAL_SHAPES = new Set([
+  SHAPE_LINE,
+  SHAPE_TBAR,
+  SHAPE_PODIUM,
+  SHAPE_CONE,
+])
+
+/**
+ * The cells a PLACED trap/glyph covers (#2177). The chain never materializes a placement zone: `cast::place_effects`
+ * stores the anchor plus the raw `(area_shape, area_size)` (cast.move:1769) and re-asks coverage at TRIGGER time
+ * through `spell_board::trap_index_covering` → `combat_grid::in_zone` (combat_grid.move:707-718) — direction-free,
+ * so line/tbar/podium/cone are all the lozenge there. Reading the CAST zone instead gave a placed trap a
+ * caster-relative strip the chain never stored: the chain detonated on cells this twin did not predict.
+ * @param {import('./spell_templates.js').SpellEffect} effect
+ * @param {import('./cell.js').Cell} anchor  the cast target the trap/glyph is anchored on
+ * @returns {import('./cell.js').Cell[]}
+ */
+export const board_zone_cells = (effect, anchor) =>
+  get_aoe_cells(
+    'area_shape' in effect
+      ? DIRECTIONAL_SHAPES.has(effect.area_shape)
+        ? { ...effect, area_shape: SHAPE_CIRCLE }
+        : effect
+      : effect.area_type === 'LINE'
+        ? { ...effect, area_type: 'CIRCLE' }
+        : effect,
+    anchor,
+    undefined,
+  )

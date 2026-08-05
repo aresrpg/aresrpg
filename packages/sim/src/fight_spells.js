@@ -18,7 +18,12 @@ import {
   add_effect,
   consume_shields,
 } from './fight_actions.js'
-import { get_aoe_cells, can_target, effect_hits } from './spell_targeting.js'
+import {
+  board_zone_cells,
+  get_aoe_cells,
+  can_target,
+  effect_hits,
+} from './spell_targeting.js'
 import { check_cast_limits, record_cast } from './fight_cast_limits.js'
 import {
   handle_displacement,
@@ -852,11 +857,13 @@ export const process_spell_cast = (
         }
       }
       const aoe_cells = get_aoe_cells(effect, target, caster.cell)
+      // A PLACEMENT keeps no cast direction — the chain stores (anchor, shape, size) and re-asks `in_zone` when
+      // someone enters (#2177). Every other kind resolves NOW, off the cast zone above.
       if (effect.type === 'PLACE_TRAP') {
         const placed = place_trap(
           acc.state,
           caster_id,
-          aoe_cells,
+          board_zone_cells(effect, target),
           effect.payload ?? [],
           target,
         )
@@ -872,7 +879,7 @@ export const process_spell_cast = (
         const placed = place_glyph(
           acc.state,
           caster_id,
-          aoe_cells,
+          board_zone_cells(effect, target),
           effect.element,
           effect.min,
           effect.max,
