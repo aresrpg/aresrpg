@@ -221,6 +221,12 @@ The indexer also binds a topic-keyed SSE surface on `STREAM_BIND`
 - `GET /v1/stream/fight/{fight_id}` — stored journal replay followed by live
   local-Redis tip polling. `Last-Event-ID` is
   `<checkpoint_sequence>:<intra_checkpoint_event_index>`.
+- `GET /v1/stream/party/{character_id}` — one character's social scope
+  (`{ party, invites }`, the raw projection pointers) framed only when it
+  changes. A LEVEL channel, not a journal: no `id`, no `Last-Event-ID`, and a
+  reconnect resyncs on its first frame. It carries no shaped document — the
+  client answers a frame with `/v1/parties` + `/v1/party-invites`, which stay
+  the one home of those shapes.
 
 Every subscription opens with a `: ok` comment — the byte that makes a fronting proxy
 flush the response instead of holding an idle subscription as a hang — and re-sends a
