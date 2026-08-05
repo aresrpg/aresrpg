@@ -16,6 +16,7 @@ const expected_controls = [
   'chain-ids',
   'sim-constants',
   'entropy-before-validation',
+  'registry-fence',
 ]
 
 const definitions = [
@@ -63,6 +64,15 @@ const definitions = [
       '"$FIXTURE_ROOT/green"',
       '--expect',
     ],
+  },
+  // #2222: the registry fence is GENERATED, so the one thing that can rot silently is the parser
+  // that reads docs/REGISTRY.md — it would keep printing a green verdict over zero rules. The
+  // control plants a row in a copy of the registry and demands its rule appear, with the blind
+  // guard that the untouched registry does not already carry it.
+  {
+    id: 'registry-fence',
+    file: 'scripts/single-home-gate.sh',
+    markers: ['CONTROL_REGISTRY="$(mktemp)"', 'a planted registry row generated NO fence', '--fences'],
   },
 ]
 
