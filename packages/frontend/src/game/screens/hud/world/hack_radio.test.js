@@ -339,7 +339,7 @@ describe('the sequential engine', () => {
 })
 
 // FIGHT-MUSIC HANDOFF (owner ruling): a fight in hack mode plays the SAME world fight-music pool, so the
-// album must never sound over it. These pin set_fight_paused — the SAME element pauses/resumes, never a
+// album must never sound over it. These pin set_channel_held — the SAME element pauses/resumes, never a
 // rebuild, so the album keeps its place across every fight.
 describe('the fight-music handoff', () => {
   const tracks = [
@@ -349,13 +349,13 @@ describe('the fight-music handoff', () => {
 
   test('a fight already live when the widget mounts gets no opening beat at all', () => {
     let audio
-    const radio = create_radio(tracks, { fight_active: true, make_audio: (src) => (audio = fake_audio(src)) })
+    const radio = create_radio(tracks, { channel_held: true, make_audio: (src) => (audio = fake_audio(src)) })
     expect(audio.plays).toBe(0)
     expect(audio.paused).toBe(true)
     radio.dispose()
   })
 
-  test('set_fight_paused pauses the SAME element on the fight edge — no rebuild, cursor preserved', () => {
+  test('set_channel_held pauses the SAME element on the fight edge — no rebuild, cursor preserved', () => {
     const titles = []
     let audio
     const radio = create_radio(tracks, {
@@ -366,11 +366,11 @@ describe('the fight-music handoff', () => {
     audio.emit('ended') // move off track A so the "cursor preserved" claim is meaningful
     expect(audio.src).toBe('b.m4a')
 
-    radio.set_fight_paused(true)
+    radio.set_channel_held(true)
     expect(audio.paused).toBe(true)
     expect(audio.src).toBe('b.m4a') // still the SAME element/track — never torn down and rebuilt
 
-    radio.set_fight_paused(false)
+    radio.set_channel_held(false)
     expect(audio.paused).toBe(false)
     expect(audio.src).toBe('b.m4a') // resumed exactly where the fight found it, not restarted at track one
     expect(titles).toEqual(['A', 'B']) // no extra announce/restart round-trip
@@ -380,7 +380,7 @@ describe('the fight-music handoff', () => {
   test('the control refuses to resume the album while a fight owns the channel', () => {
     let audio
     const radio = create_radio(tracks, { make_audio: (src) => (audio = fake_audio(src)) })
-    radio.set_fight_paused(true)
+    radio.set_channel_held(true)
     expect(audio.paused).toBe(true)
     radio.toggle() // the player clicking play mid-fight must be a no-op
     expect(audio.paused).toBe(true)
@@ -394,9 +394,9 @@ describe('the fight-music handoff', () => {
     radio.toggle() // the player's own pause, before any fight
     expect(audio.paused).toBe(true)
 
-    radio.set_fight_paused(true)
+    radio.set_channel_held(true)
     expect(audio.paused).toBe(true)
-    radio.set_fight_paused(false) // fight ends — a manual pause outranks the fight edge
+    radio.set_channel_held(false) // fight ends — a manual pause outranks the fight edge
     expect(audio.paused).toBe(true) // still paused — only the button brings it back
     radio.dispose()
   })
@@ -404,7 +404,7 @@ describe('the fight-music handoff', () => {
   test('a track boundary reached while fight-paused does not resume the stream', () => {
     let audio
     const radio = create_radio(tracks, { make_audio: (src) => (audio = fake_audio(src)) })
-    radio.set_fight_paused(true)
+    radio.set_channel_held(true)
     expect(audio.paused).toBe(true)
     audio.emit('ended') // an ended event landing mid-fight must never restart playback
     expect(audio.paused).toBe(true)
@@ -412,15 +412,15 @@ describe('the fight-music handoff', () => {
     radio.dispose()
   })
 
-  test('set_fight_paused is idempotent — a repeated edge is a no-op, never a double pause/play', () => {
+  test('set_channel_held is idempotent — a repeated edge is a no-op, never a double pause/play', () => {
     let audio
     const radio = create_radio(tracks, { make_audio: (src) => (audio = fake_audio(src)) })
-    radio.set_fight_paused(true)
-    radio.set_fight_paused(true) // repeated true edge
+    radio.set_channel_held(true)
+    radio.set_channel_held(true) // repeated true edge
     expect(audio.paused).toBe(true)
-    radio.set_fight_paused(false)
+    radio.set_channel_held(false)
     expect(audio.plays).toBe(2) // the autostart + the ONE resume — a repeated false edge would double this
-    radio.set_fight_paused(false)
+    radio.set_channel_held(false)
     expect(audio.plays).toBe(2)
     radio.dispose()
   })

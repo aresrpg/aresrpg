@@ -14,6 +14,7 @@
 
 import { asset_url } from '@aresrpg/sdk/jobs'
 
+import { game_log } from '../../../../core/log.js'
 import { MUSIC_VOLUME, create_audio } from '../../../core/audio/audio_registry.js'
 
 /** The published asset class carrying the radio's manifest and its files. */
@@ -108,18 +109,19 @@ export const next_playable_index = (index, count, dead_indices) => {
  * The cursor and that intent are closure locals rather than component state on purpose: "which track is
  * loaded" already has a home in the element's own `src`, and the widget only ever needs the TITLE to render.
  *
- * FIGHT-MUSIC HANDOFF (owner ruling): a fight in hack mode plays the SAME fight-music pool as the real world
- * — the album never sounds over it. `fight_active` starts the engine already suppressed (no autoplay attempt)
- * when hack mode is entered mid-fight; `set_fight_paused` pauses/resumes the SAME element on every later fight
- * edge — never a rebuild, so the album never loses its place. Distinct from the user's own pause: a manual
- * pause held INTO a fight stays paused after it, and the toggle control itself refuses to resume the album
- * while a fight owns the channel (see `toggle` below) — the suppression is not just a default, it is enforced.
+ * THE CHANNEL HOLD: something else can own the music channel while this engine lives — a fight (which plays
+ * the SAME fight-music pool as the real world, owner ruling) or the session simply being off the hack grid.
+ * Both are ONE fact to this engine: `channel_held` starts it already suppressed (no autoplay attempt) and
+ * `set_channel_held` pauses/resumes the SAME element on every later edge — never a rebuild, so the album never
+ * loses its place across a fight or a session re-create (#2260). Distinct from the user's own pause: a manual
+ * pause held THROUGH a hold stays paused after it, and the toggle control itself refuses to resume the album
+ * while the channel is held (see `toggle` below) — the suppression is not just a default, it is enforced.
  *
  * @param {ReadonlyArray<{ src: string, title: string }>} tracks in manifest order
  * @param {{ on_track?: (title: string) => void, on_playing?: (playing: boolean) => void,
- *           on_error?: () => void, make_audio?: typeof create_audio, fight_active?: boolean,
+ *           on_error?: () => void, make_audio?: typeof create_audio, channel_held?: boolean,
  *           gesture_target?: Pick<Window, 'addEventListener' | 'removeEventListener'> | null }} [handlers]
- * @returns {{ toggle: () => void, dismiss_gesture_retry: () => void, set_fight_paused: (active: boolean) => void,
+ * @returns {{ toggle: () => void, dismiss_gesture_retry: () => void, set_channel_held: (held: boolean) => void,
  *             dispose: () => void } | null}
  */
 export function create_radio(
@@ -129,7 +131,7 @@ export function create_radio(
     on_playing,
     on_error,
     make_audio = create_audio,
-    fight_active = false,
+    channel_held = false,
     gesture_target = globalThis.window,
   } = {}
 ) {
@@ -140,7 +142,8 @@ export function create_radio(
   let cursor = 0
   let paused_by_user = false
   let armed = false
-  let fight_paused = fight_active // suppressed by the CURRENT fight — never the user's own intent
+  let disposed = false
+  let held = channel_held // something else owns the channel right now — never the user's own intent
   let dead_indices = new Set()
   const announce = () => on_track?.(tracks[cursor].title)
 
@@ -149,7 +152,7 @@ export function create_radio(
   const on_gesture = () => {
     dismiss_gesture_retry()
     // play owns autoplay/media rejection handling through gesture retry or fail_track.
-    if (!paused_by_user) void play()
+    if (!paused_by_user && !held) void play() // a gesture can never start the album while the channel is held
   }
   const dismiss_gesture_retry = () => {
     if (!armed) return
@@ -174,7 +177,7 @@ export function create_radio(
     player.src = tracks[next].src
     announce()
     // play owns autoplay/media rejection handling through gesture retry or fail_track.
-    if (!paused_by_user && !fight_paused) void play() // the boundary is exactly where the stream must NOT stall
+    if (!paused_by_user && !held) void play() // the boundary is exactly where the stream must NOT stall
   }
   const fail_track = (failed_cursor, error) => {
     if (dead_indices.has(failed_cursor)) return
@@ -188,6 +191,15 @@ export function create_radio(
     try {
       await player.play()
     } catch (error) {
+      // AN INTERRUPTED PLAY IS NOT A DEAD TRACK (#2260). `play()` settles only once playback really starts, so
+      // any pause landing while it is pending — our own dispose, the fight edge, the player's button — rejects
+      // it with AbortError. Treating that as a media failure is what buried a healthy track, advanced a torn-
+      // down element and printed `[hack-radio] skipping failed track … AbortError` on every canvas refresh.
+      // ONE breadcrumb through the house log home, no dead row, no retry.
+      if (disposed || error?.name === 'AbortError') {
+        game_log('hack-radio', 'play interrupted', tracks[playing_cursor]?.title ?? '')
+        return
+      }
       if (error?.name === 'NotAllowedError') arm_gesture_retry()
       else fail_track(playing_cursor, error)
     }
@@ -203,25 +215,25 @@ export function create_radio(
   player.addEventListener('error', on_media_error)
   announce()
   // play owns autoplay/media rejection handling through gesture retry or fail_track.
-  if (!fight_paused) void play() // a fight already live when the widget mounts never gets its opening beat
+  if (!held) void play() // a channel already held when the engine is built never gets its opening beat
 
   return {
     toggle: () => {
-      if (fight_paused) return undefined // the fight owns the channel — the control cannot resume the album
+      if (held) return undefined // something else owns the channel — the control cannot resume the album
       paused_by_user = !player.paused
       return paused_by_user ? player.pause() : play()
     },
     // The control's own pointerdown calls this so the window retry cannot start playback a beat before the
     // click that follows would pause it — the button always does exactly what it says.
     dismiss_gesture_retry,
-    // FIGHT EDGE (see the doc comment above `create_radio`): pause/resume the SAME element — never a rebuild,
-    // so the cursor and the loaded track survive every fight. Idempotent; a manual pause held into the fight
-    // stays paused once it ends (checked against `paused_by_user`, never overridden by the fight edge).
-    set_fight_paused: (active) => {
-      if (active === fight_paused) return
-      fight_paused = active
-      if (active) {
-        dismiss_gesture_retry() // a fight starting mid-retry must not let a later gesture resume it anyway
+    // THE HOLD EDGE (see the doc comment above `create_radio`): pause/resume the SAME element — never a
+    // rebuild, so the cursor and the loaded track survive every fight AND every session re-create. Idempotent;
+    // a manual pause held through it stays paused after it (checked against `paused_by_user`, never overridden).
+    set_channel_held: (next_held) => {
+      if (next_held === held) return
+      held = next_held
+      if (next_held) {
+        dismiss_gesture_retry() // a hold starting mid-retry must not let a later gesture resume it anyway
         if (!player.paused) player.pause()
       } else if (!paused_by_user) {
         // play owns autoplay/media rejection handling through gesture retry or fail_track.
@@ -230,6 +242,7 @@ export function create_radio(
     },
     dispose: () => {
       // Unwire BEFORE pausing: a teardown must not push one last state change into a widget that is going away.
+      disposed = true // the pause below interrupts any pending play() — its rejection is teardown, never a failure
       dismiss_gesture_retry()
       player.removeEventListener('ended', on_ended)
       player.removeEventListener('play', on_play)

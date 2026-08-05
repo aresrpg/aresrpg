@@ -71,7 +71,17 @@ describe('the hack-mode album radio', () => {
   test('the control cancels the pending autoplay retry on its own pointerdown, before its click toggles', () => {
     const source = readFileSync(new URL('./HackRadioPlayer.jsx', import.meta.url), 'utf8')
     expect(source).toContain('onPointerDown={on_pointer_down}')
-    expect(source).toContain('dismiss_gesture_retry()')
+    expect(source).toContain('radio_dismiss_gesture_retry()')
+  })
+
+  test('#2260 it OWNS no playback — the element, the manifest and the cursor all live in the latch', () => {
+    const source = readFileSync(new URL('./HackRadioPlayer.jsx', import.meta.url), 'utf8')
+    expect(source).not.toContain('create_radio') // no engine construction on a mount
+    expect(source).not.toContain('load_radio_tracks') // no manifest fetch on a mount
+    expect(source).toContain('useSyncExternalStore(subscribe_radio, radio_snapshot, radio_snapshot)')
+    // armed once, and with NO cleanup — an unmount must never stop the album
+    expect(source).toContain('arm_radio_latch()')
+    expect(source).toContain('}, [])')
   })
 
   test('it is TEXT ONLY — no player region, no iframe, no third-party embed survives', () => {
@@ -102,19 +112,21 @@ describe('the hack-mode album radio', () => {
   })
 
   test('the channel handoff stands the beds down OUT of a fight, and gives the channel straight back mid-fight', () => {
-    const source = readFileSync(new URL('./HackRadioPlayer.jsx', import.meta.url), 'utf8')
-    expect(source).toContain('if (!hack || fight_mode) return undefined')
-    expect(source).toContain('set_music_stream_owned(true)')
-    expect(source).toContain('set_music_stream_owned(false)')
-    expect(source).toContain('[hack, fight_mode]')
+    const latch = readFileSync(new URL('./hack_radio_latch.js', import.meta.url), 'utf8')
+    // ONE derived call off the OBSERVED slice — never a mount/unmount pair (the handoff used to flip on both)
+    expect(latch).toContain('set_music_stream_owned(!channel_held())')
+    // the widget cannot flip the channel at all any more — it does not even reach the music module
+    expect(readFileSync(new URL('./HackRadioPlayer.jsx', import.meta.url), 'utf8')).not.toContain(
+      "from '../../../core/audio/ambient_music.js'"
+    )
   })
 
   test('a fight pauses/resumes the SAME radio engine — never a rebuild that restarts the album at track one', () => {
-    const source = readFileSync(new URL('./HackRadioPlayer.jsx', import.meta.url), 'utf8')
-    // the engine effect is keyed on [hack, tracks] ONLY — a fight edge must never re-run create_radio
-    expect(source).toContain('}, [hack, tracks])')
-    expect(source).toContain('fight_active: fight_mode')
-    expect(source).toContain('radio_ref.current?.set_fight_paused(fight_mode)')
+    const latch = readFileSync(new URL('./hack_radio_latch.js', import.meta.url), 'utf8')
+    expect(latch).toContain('channel_held: channel_held()')
+    expect(latch).toContain('radio?.set_channel_held(channel_held())')
+    // the ONE construction door, behind the delta fold — a fight edge can never reach it
+    expect(latch).toContain('if (radio || tracks.length === 0) return')
   })
 
   test('the control disables during a fight — a click can never resume the album mid-fight', () => {
