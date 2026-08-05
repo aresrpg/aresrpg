@@ -1,11 +1,12 @@
 #!/usr/bin/env node
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-// Per-lane + per-key ratchet for scripts/single-home-gate.sh — same contract as
+// Per-lane + per-key ratchet for scripts/dual-home-gate.sh — same contract as
 // scripts/arch/sim_constants_verdict.mjs: findings at or below the floor are known debt, anything
 // above it is red, and only deletion moves the floor.
 import fs from 'node:fs'
 
+import { MIN_STABILITY_RUNS } from './scan_stability.mjs'
 import { derive_fences, scan } from './single_home_scan.mjs'
 
 const LANES = [
@@ -69,7 +70,8 @@ if (has('fences')) {
   process.exit(0)
 }
 
-const result = scan({ root, scan_dirs, registry_path })
+const scan_tree = () => scan({ root, scan_dirs, registry_path })
+const result = scan_tree()
 const actual = counts_of(result.findings)
 
 // Fixture self-test: exact counts, both directions. The red tree must produce EXACTLY the pinned
@@ -85,9 +87,8 @@ if (expect_path) {
       console.error(`    ${key}: found ${actual.get(key)?.count ?? 0}, expected ${expected.get(key) ?? 0}`)
     process.exit(1)
   }
-  console.log(
-    `  self-test ${expect_case}: ${actual.size} pinned finding key(s) over ${result.files} file(s) — exact match`
-  )
+  const total = [...actual.values()].reduce((sum, row) => sum + row.count, 0)
+  console.log(`  self-test ${expect_case}: ${total} finding(s), exactly as pinned over ${result.files} file(s)`)
   process.exit(0)
 }
 
@@ -99,6 +100,19 @@ if (!baseline_path) {
 }
 
 if (has('write')) {
+  const runs = [result]
+  while (runs.length < MIN_STABILITY_RUNS) runs.push(scan_tree())
+  const finding_sets = runs.map(({ findings }) => JSON.stringify(findings))
+  if (finding_sets.some((findings) => findings !== finding_sets[0])) {
+    console.error(
+      `  BASELINE WRITE REFUSED — scan findings changed across ${MIN_STABILITY_RUNS} runs ` +
+        `(${runs.map(({ findings }) => findings.length).join(', ')} finding(s)); a flaky gate has no floor.`
+    )
+    process.exit(1)
+  }
+  console.log(
+    `  scan stable across ${MIN_STABILITY_RUNS} runs (${result.findings.length} finding(s); byte-identical sets)`
+  )
   fs.writeFileSync(baseline_path, nest(actual))
   const total = [...actual.values()].reduce((sum, row) => sum + row.count, 0)
   console.log(
@@ -108,7 +122,7 @@ if (has('write')) {
 }
 
 if (!fs.existsSync(baseline_path)) {
-  console.error(`SINGLE-HOME GATE FAILED — baseline missing: ${baseline_path}`)
+  console.error(`DUAL-HOME GATE FAILED — baseline missing: ${baseline_path}`)
   process.exit(1)
 }
 
@@ -118,9 +132,7 @@ const regressions = keys.filter((key) => (actual.get(key)?.count ?? 0) > (floor.
 const improvements = keys.filter((key) => (actual.get(key)?.count ?? 0) < (floor.get(key) ?? 0))
 
 if (regressions.length > 0) {
-  console.error(
-    'SINGLE-HOME GATE FAILED — a fact grew a second home (docs/REGISTRY.md, CLAUDE.md "One home per fact"):'
-  )
+  console.error('DUAL-HOME GATE FAILED — a fact grew a second home (docs/REGISTRY.md, CLAUDE.md "One home per fact"):')
   for (const key of regressions) {
     const finding = actual.get(key)
     console.error(`  ${key}: ${finding?.count ?? 0} > baseline ${floor.get(key) ?? 0}`)
@@ -139,5 +151,5 @@ console.log(
 )
 if (improvements.length > 0) {
   console.log(`  ${improvements.length} key(s) improved — tighten only:`)
-  console.log('    bash scripts/single-home-gate.sh --write-baseline')
+  console.log('    bash scripts/dual-home-gate.sh --write-baseline')
 }

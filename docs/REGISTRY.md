@@ -1,6 +1,6 @@
 # Reuse registry
 
-Facts in this registry are consumed by import or derivation only, and this table is the MANIFEST the gate reads — there is no second file listing what is protected. `scripts/single-home-gate.sh` re-derives each protected symbol from the `path:line` anchors below and generates the fence at check time (issue #2222); the sim-constants ratchet (`scripts/arch/sim_protocol_constants.yml`) keeps enforcing the protocol-constants family by value alongside it. Four things red:
+Facts in this registry are consumed by import or derivation only, and this table is the MANIFEST the gate reads — there is no second file listing what is protected. `scripts/dual-home-gate.sh` re-derives each protected symbol from the `path:line` anchors below and generates the fence at check time (issue #2222); the sim-constants ratchet (`scripts/arch/sim_protocol_constants.yml`) keeps enforcing the protocol-constants family by value alongside it. Four things red:
 
 - **a second declaration** of a registry symbol, exported or laundered into a local (`registry-fact`);
 - **a second importable surface** — any module but the home re-exporting the fact, including under an alias, which is how a fact starts travelling under a name this table never named (`registry-surface`);

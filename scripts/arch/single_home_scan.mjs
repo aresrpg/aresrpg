@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-// The DUAL-HOME scanner — pure detection for scripts/single-home-gate.sh.
+// The DUAL-HOME scanner — pure detection for scripts/dual-home-gate.sh.
 //
 // One fact, one home (CLAUDE.md "One home per fact"). Six mechanical shapes of the violation,
 // each derived from repo bytes only — no heuristics, no similarity scoring:

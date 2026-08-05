@@ -219,6 +219,8 @@
     "XP_CURVE (Character XP curve and maximum level) · packages/frontend/src/experience.ts": 1
   },
   "registry-anchor": {},
+  "registry-surface": {},
+  "registry-importer": {},
   "store-writers": {
     "use_dungeon.character_id · packages/frontend/src/simulator/fight_shim.js": 1,
     "use_dungeon.character_id · packages/frontend/src/world-shell/world_fight.js": 1,

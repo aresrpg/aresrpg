@@ -1573,8 +1573,8 @@ fi
 # for protocol numbers, generalized to anything the tree itself declares twice — duplicate exports,
 # REGISTRY-owned facts declared off-home, rotten registry anchors, store fields with two writers.
 echo
-if ! bash scripts/single-home-gate.sh; then
-  red "SINGLE-HOME GATE FAILED."
+if ! bash scripts/dual-home-gate.sh; then
+  red "DUAL-HOME GATE FAILED."
   FAIL=1
 fi
 echo

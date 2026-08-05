@@ -71,7 +71,7 @@ const definitions = [
   // guard that the untouched registry does not already carry it.
   {
     id: 'registry-fence',
-    file: 'scripts/single-home-gate.sh',
+    file: 'scripts/dual-home-gate.sh',
     markers: ['CONTROL_REGISTRY="$(mktemp)"', 'a planted registry row generated NO fence', '--fences'],
   },
 ]

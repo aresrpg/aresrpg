@@ -212,7 +212,7 @@ scripts/codeql/aresrpg-fp-tests --additional-packs=scripts/codeql`. Run it at th
   only when the crate changed, ~1m50s); **Move has NO CodeQL extractor** — the contracts stay
   under the D321 grep gates. CLI note: CodeQL is licensed free for OSS/research; private
   automated CI use falls under GitHub Advanced Security terms — confirm licensing before CI wiring.
-- The dual-home gate (`scripts/single-home-gate.sh`, wired into `bun run lint` via
+- The dual-home gate (`scripts/dual-home-gate.sh`, wired into `bun run lint` via
   check-constraints, ~4s, repo bytes only — no analyzer binary, so it cannot flake): the class gate
   behind "one home per fact". It derives what to protect from the tree instead of a kill-list —
   every exported name, plus every `path:line` home named in `docs/REGISTRY.md` — and reports six

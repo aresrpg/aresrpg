@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 # © 2026 Sceat — All rights reserved. See LICENSE.
-# single-home-gate.sh — the DUAL-HOME class gate (CLAUDE.md "One home per fact", docs/REGISTRY.md).
+# dual-home-gate.sh — the DUAL-HOME class gate (CLAUDE.md "One home per fact", docs/REGISTRY.md).
+# Baselines only shrink: this gate enforces FROZEN.md rule 3 and never absorbs a new finding.
 #
 # The sim-constants gate (#1603) protects a HAND-LISTED family of protocol numbers. This one is its
 # generalization: it needs no kill-list, because it derives what to protect from the repo itself —
@@ -71,7 +72,7 @@ if [ "${1:-}" = "--negative-control" ]; then
   # bound from a module that is not its home, a store field written from two modules, and a registry
   # row whose anchor points at a line that declares nothing.
   cat >"$A" <<'PROBE'
-// Negative control — deleted by scripts/single-home-gate.sh --negative-control.
+// Negative control — deleted by scripts/dual-home-gate.sh --negative-control.
 import { STATUS_OPEN } from './project.js'
 
 export { STATUS_OPEN as NEGATIVE_CONTROL_STATUS } from './board_state.js'
@@ -81,7 +82,7 @@ export const arm_probe = (use_dungeon) =>
   use_dungeon.setState({ dungeon: { negative_control_status: 'armed', only_a: true } })
 PROBE
   cat >"$B" <<'PROBE'
-// Negative control — deleted by scripts/single-home-gate.sh --negative-control.
+// Negative control — deleted by scripts/dual-home-gate.sh --negative-control.
 export const negative_control_fact = 41
 const MIST_PER_SUI = 1_000_000_000n
 export const disarm_probe = (use_dungeon) =>
@@ -123,7 +124,7 @@ PROBE
   exit 0
 fi
 
-echo "== AresRPG single-home gate (one fact, one home — duplicate exports / registry facts + generated import fence / store writers) =="
+echo "== AresRPG dual-home gate (one fact, one home — duplicate exports / registry facts + generated import fence / store writers) =="
 if ! command -v node >/dev/null 2>&1; then
   echo "  FAIL: node not available — a machine without the scanner has no verdict"
   exit 1
