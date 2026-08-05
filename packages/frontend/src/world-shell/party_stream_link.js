@@ -20,7 +20,8 @@
 //
 // WHY THE POLL SURVIVES (three jobs the wire cannot do, mirroring fight_stream_link.js):
 //  · FALLBACK — a location may not serve `/v1/stream/*` yet (404) and a runtime may have no `EventSource` at all.
-//    Both are ordinary states here: the carriers report not-live and the four-second poll is untouched.
+//    Both are ordinary states here: the carriers report not-live and the four-second poll is untouched. A 404 is
+//    also FINAL (#2261) — it retires the wire for the session instead of being retried like a hiccup.
 //  · THE TTL DRAIN — an outgoing invite nobody ever answers expires on `INVITE_PENDING_TTL_MS`, checked for free
 //    on every poll-driven snapshot. Nothing changes in the projection when a question is simply ignored, so the
 //    push is silent by design and only the clock can drain it.
@@ -34,11 +35,44 @@ import { game_log } from '../core/log.js'
 import { RPC_URL } from '../env'
 
 // A dead endpoint must not double this client's request rate: a failed connect skips ticks on a doubling ladder,
-// from the next tick up to fifteen of them (a minute at the poll cadence — the fight link's own ceiling). The
-// whole pre-deploy 404 window lives on this ladder, and the poll is unaffected by it.
+// from the next tick up to fifteen of them (a minute at the poll cadence — the fight link's own ceiling). That
+// ladder covers the TRANSIENT classes only — a restarting location, a dropped connection, a timeout.
 const MAX_SKIPPED_TICKS = 15
 
+// #2261 — A 404/410 IS AN ANSWER, NOT A HICCUP. A location that does not serve this route (the SSE surface binds
+// its own port — `STREAM_BIND`, packages/rpc/README.md) will not start serving it because we asked again, so
+// retrying one is pure noise on the read layer: the owner's live session logged dozens of them a minute. A
+// definitive status RETIRES the wire for the session and the four-second poll — the fallback this module was
+// always written around — carries the party alone. The verdict is about the ROUTE, not about this character, so
+// it survives a re-key: nothing short of a reload re-arms it, and nothing re-arms it on a clock.
+const DEFINITIVE_STATUSES = Object.freeze([404, 410])
+
 const stream_url = (base_url, character_id) => `${base_url}/v1/stream/party/${encodeURIComponent(character_id)}`
+
+/**
+ * What does this location actually answer for this url? `EventSource` never says — the spec hands its consumer
+ * one bodiless `error` event whether the response was a 404, a 502 or a severed socket — so the classification
+ * costs exactly one HEAD-shaped read: `fetch` resolves as soon as the response head is in, and the body (a live
+ * SSE body never ends) is aborted immediately. Returns the status, or `null` when no response was reached at
+ * all — which is itself the answer "transient".
+ * @param {string} url
+ * @param {typeof fetch} [fetch_impl]
+ * @returns {Promise<number|null>}
+ */
+export async function probe_stream_status(url, fetch_impl = globalThis.fetch) {
+  const controller = new AbortController()
+  try {
+    const response = await fetch_impl(url, {
+      signal: controller.signal,
+      headers: { accept: 'text/event-stream' },
+    })
+    return typeof response?.status === 'number' ? response.status : null
+  } catch {
+    return null
+  } finally {
+    controller.abort()
+  }
+}
 
 /**
  * Open ONE party scope stream. Transport only: every frame becomes a single `on_change()` call. Returns the
@@ -114,13 +148,16 @@ export function open_party_stream({
  * closed and a new one opened for the new character, checked on every tick so no call site has to remember.
  * @param {{
  *   character_id: () => string|null, refresh: () => any, open?: typeof open_party_stream,
+ *   probe?: (url: string) => Promise<number|null>, base_url?: string,
  *   set_timeout?: (fn: () => any, delay: number) => any, clear_timeout?: (handle: any) => void,
- * }} options the remaining options (`event_source_factory`, `base_url`, …) pass straight to the stream.
+ * }} options the remaining options (`event_source_factory`, …) pass straight to the stream.
  */
 export function start_party_carriers({
   character_id,
   refresh,
   open = open_party_stream,
+  probe = probe_stream_status,
+  base_url = RPC_URL,
   set_timeout = (fn, delay) => setTimeout(fn, delay),
   clear_timeout = clearTimeout,
   ...stream
@@ -129,6 +166,9 @@ export function start_party_carriers({
   let live = false
   let attempt = 0
   let skip_ticks = 0
+  let retired = false
+  let classifying = false
+  let announced = /** @type {string|null} */ (null)
   let streamed = /** @type {string|null} */ (null)
   let close_stream = /** @type {(() => void) | null} */ (null)
   let timer = /** @type {any} */ (null)
@@ -142,9 +182,41 @@ export function start_party_carriers({
   /** A connect that did not stick costs the next `2^attempt` ticks, capped — never the poll, only the retry. */
   const back_off = () => {
     drop_stream()
-    streamed = null
     attempt += 1
     skip_ticks = Math.min(MAX_SKIPPED_TICKS, 2 ** (attempt - 1))
+  }
+
+  /**
+   * ONE line per distinct reason, not one per attempt (#2261): a dead endpoint used to narrate every retry into
+   * the breadcrumb ring, which is how the run-up to the NEXT reported error got flushed by its own noise. The
+   * text carries what actually happened — the status and the url — so it is diagnosable without a re-run.
+   */
+  const breadcrumb = (/** @type {string} */ text) => {
+    if (text === announced) return
+    announced = text
+    game_log('party', text)
+  }
+
+  /**
+   * Classify ONE terminal failure: definitive (the location answers 404/410 — the route is not there) or
+   * transient (anything else, including no response at all). Exactly one probe is in flight at a time, and none
+   * at all once the wire is retired.
+   */
+  const classify = async (/** @type {string} */ url, /** @type {string|null} */ reason) => {
+    if (classifying) return
+    classifying = true
+    const status = await probe(url)
+    classifying = false
+    if (closed) return
+    if (status != null && DEFINITIVE_STATUSES.includes(status)) {
+      retired = true
+      drop_stream()
+      breadcrumb(`party stream retired — ${url} answered ${status}; the party rides the poll for this session`)
+      return
+    }
+    breadcrumb(
+      `party stream dropped — ${reason ?? 'no reason given'} (${url} answered ${status ?? 'nothing'}); retrying, poll carrying`
+    )
   }
 
   const status_changed = (/** @type {string} */ status, /** @type {string|null} */ error) => {
@@ -153,29 +225,41 @@ export function start_party_carriers({
       live = true
       attempt = 0
       skip_ticks = 0
+      announced = null
       return
     }
     live = false
-    // `failed` is the transport's terminal status — a spent retry budget, and exactly what a 404 looks like. The
-    // ladder owns that whole window; until it reconnects, the four-second poll is the carrier again.
+    // `failed` is the transport's terminal status — the source is CLOSED and its retry budget spent. What it is
+    // NOT is a diagnosis: `EventSource` reports a missing route and a severed socket identically, so the class
+    // is asked of the location itself before the ladder is allowed to keep spending requests on it.
     if (status !== 'failed') return
-    game_log('party', `party stream dropped — reconciling on the poll (${error ?? 'no reason given'})`)
+    const url = stream_url(base_url, streamed ?? '')
     back_off()
+    void classify(url, error)
   }
 
   /** Open the stream for the selected character when there is none, or when selection moved. */
   const align = () => {
     if (closed) return
     const id = character_id()
-    if (close_stream && id === streamed) return
-    drop_stream()
-    // Selection moving is a re-key and must never wait out a dead endpoint's backoff: the new character has its
-    // own subscription to prove.
-    if (id !== streamed) skip_ticks = 0
-    streamed = id
-    if (!id || skip_ticks > 0) return
+    // Selection moving is a RE-KEY: the old subscription is dropped and the new character never waits out the
+    // old one's backoff — it has its own subscription to prove. Anything else leaves the ladder's state alone
+    // (clearing it here is what turned the backoff into a per-tick hot loop — #2261).
+    if (id !== streamed) {
+      drop_stream()
+      streamed = id
+      attempt = 0
+      skip_ticks = 0
+    }
+    if (close_stream || !id || retired || skip_ticks > 0) return
     try {
-      close_stream = open({ ...stream, character_id: id, on_change: () => refresh(), set_status: status_changed })
+      close_stream = open({
+        ...stream,
+        base_url,
+        character_id: id,
+        on_change: () => refresh(),
+        set_status: status_changed,
+      })
     } catch {
       // No `EventSource` in this runtime (or a constructor that refused the url): unavailability is DATA here —
       // the poll keeps carrying the party and the ladder keeps trying. Never a throw into the caller.
