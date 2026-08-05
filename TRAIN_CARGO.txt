@@ -1,5 +1,3 @@
-d43c7bf3b → Refs #2194 — fix(move): drop the unused df alias — the preflight warning policy reds on it
-3ab764e33 → Refs #2194 — fix(move): scope spell_book's spell_effect alias test-only — the preflight reds on it
-a485ee56b → Refs #2194 — fix(move): clear the five remaining unused aliases the ceremony preflight reds on
-41e219285 → Refs #2194 — fix(move): preflight encodes the two measured host terminals — W10007 chatter + gas-boundary-clean exit
-7e0076dd3 → Fixes #2228 — fix(fight): derive turn locality once — the bracket reads R1, not the key
+8f51625c3 → Fixes #2173 — fix(frontend): make the mount key a single action
+65510b96b → Fixes #2157 — fix(frontend): derive presence banner from relay truth
+5facbbf08 → Fixes #2236 — fix(models): gate mob URLs and load fallback
