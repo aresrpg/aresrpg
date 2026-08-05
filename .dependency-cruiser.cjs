@@ -4,6 +4,13 @@
 // Run via scripts/depcruise-gate.sh (ratchet: .dependency-cruiser-known-violations.json is empty after
 // issue #95's burn-down; --ignore-known therefore allows ZERO cycles and anything new is red).
 //
+// The `*-single-surface` / `*-single-home` rules below are MODULE-REACH fences: who may import a
+// module AT ALL. They are deliberately NOT migrated into docs/REGISTRY.md's generated fence (#2222),
+// which answers the other question — where a named FACT is allowed to come from, for every consumer.
+// Nothing is double-homed: a registry row protects a symbol (no second declaration, no second
+// importable surface, no binding from off-home), a rule here restricts a module's whole audience,
+// and neither can express the other. Add a fact home to the registry; add an audience limit here.
+//
 // Rule 1 generalizes `ares test fightcore` gate a (scripts/fight-core-gates.mjs): the hand-rolled
 // gate is a DENYLIST over regex-extracted import specifiers; this is the same law as a resolved
 // ALLOWLIST — the fight core may import itself, the named generic helpers (ground truth censused

@@ -11,6 +11,12 @@
     "registry-anchor": {
       "Rotten anchor · packages/alpha/src/protocol.js:3": 1
     },
+    "registry-surface": {
+      "K_TEST (Test protocol constant) · packages/beta/src/bypass.js": 1
+    },
+    "registry-importer": {
+      "K_TEST (Test protocol constant) · packages/beta/src/bypass.js": 1
+    },
     "store-writers": {
       "use_thing.dungeon · packages/gamma/src/writer_one.js": 1,
       "use_thing.dungeon · packages/gamma/src/writer_two.js": 1,

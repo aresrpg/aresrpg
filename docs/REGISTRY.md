@@ -1,6 +1,13 @@
 # Reuse registry
 
-Facts in this registry are consumed by import or derivation only. Re-declaring a registry fact outside its canonical home is a gate violation: `scripts/single-home-gate.sh` re-derives each protected symbol from the `path:line` anchors below and reds on any other declaration of it, exported or local, while the sim-constants ratchet (`scripts/arch/sim_protocol_constants.yml`) keeps enforcing the protocol-constants family by value. Each anchor must therefore point at the DECLARATION line of its fact — a row anchored on a comment or a blank line protects nothing, and the gate reports it as such.
+Facts in this registry are consumed by import or derivation only, and this table is the MANIFEST the gate reads — there is no second file listing what is protected. `scripts/single-home-gate.sh` re-derives each protected symbol from the `path:line` anchors below and generates the fence at check time (issue #2222); the sim-constants ratchet (`scripts/arch/sim_protocol_constants.yml`) keeps enforcing the protocol-constants family by value alongside it. Four things red:
+
+- **a second declaration** of a registry symbol, exported or laundered into a local (`registry-fact`);
+- **a second importable surface** — any module but the home re-exporting the fact, including under an alias, which is how a fact starts travelling under a name this table never named (`registry-surface`);
+- **a consumer binding the fact** from a specifier that does not resolve to its home (`registry-importer`);
+- **a rotten anchor** — a row whose `path:line` declares nothing, so every rule derived from it silently stopped (`registry-anchor`).
+
+Each anchor must therefore point at the DECLARATION line of its fact. The fence a row generates follows from its anchor and nothing else: an anchor in an importable JS/TS module gets the import rules above, while an anchor in a Move source (chain law, consumed across the twin by value rather than by import) generates none and is reported as unfenceable in the gate's fence report — the gate never claims coverage it does not have. A row naming a file that no longer exists throws: registry staleness is never a silent skip.
 
 | Fact domain                             | Canonical home                                                                                                                      |
 | --------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |

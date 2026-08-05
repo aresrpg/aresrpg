@@ -6,9 +6,16 @@
 // above it is red, and only deletion moves the floor.
 import fs from 'node:fs'
 
-import { scan } from './single_home_scan.mjs'
+import { derive_fences, scan } from './single_home_scan.mjs'
 
-const LANES = ['duplicate-export', 'registry-fact', 'registry-anchor', 'store-writers']
+const LANES = [
+  'duplicate-export',
+  'registry-fact',
+  'registry-anchor',
+  'registry-surface',
+  'registry-importer',
+  'store-writers',
+]
 
 const key_of = (finding) => `${finding.label} · ${finding.path}`
 
@@ -50,6 +57,17 @@ const registry_path = argument('registry', 'docs/REGISTRY.md')
 const baseline_path = argument('baseline', null)
 const expect_path = argument('expect', null)
 const expect_case = argument('case', null)
+
+// The generated fence, printed as rules (issue #2222). This is what the gate's positive control
+// asserts against: plant a row in a copy of the registry, and a rule for it must appear here.
+if (has('fences')) {
+  const { fenced, unfenceable } = derive_fences({ root, registry_path })
+  for (const fence of [...fenced].sort((left, right) => left.symbol.localeCompare(right.symbol)))
+    console.log(`fence · ${fence.symbol} · ${fence.home} · ${fence.fact}`)
+  for (const row of [...unfenceable].sort((left, right) => left.home.localeCompare(right.home)))
+    console.log(`unfenceable · ${row.home} · ${row.fact} · ${row.reason}`)
+  process.exit(0)
+}
 
 const result = scan({ root, scan_dirs, registry_path })
 const actual = counts_of(result.findings)
@@ -113,6 +131,9 @@ if (regressions.length > 0) {
 }
 
 const total = [...actual.values()].reduce((sum, row) => sum + row.count, 0)
+console.log(
+  `  registry fence: ${result.fenced} import-fenced home(s) generated from ${result.rows} registry rows, ${result.unfenceable} anchor(s) unfenceable (prose/chain — see the fence report)`
+)
 console.log(
   `  ratchet: ${total} finding(s) over ${result.files} files / ${result.rows} registry rows, none above the ${floor.size}-key baseline`
 )
