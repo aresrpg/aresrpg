@@ -83,7 +83,7 @@ export function SpellRow({
   right = null,
   tip = null,
 }) {
-  const className = `sb__row${dense ? ' sb__row--dense' : ''}${selected ? ' is-sel' : ''}${
+  const class_name = `sb__row${dense ? ' sb__row--dense' : ''}${selected ? ' is-sel' : ''}${
     locked ? ' is-locked' : ''
   }`
   const style = /** @type {import('react').CSSProperties} */ ({ '--el': row.color })
@@ -98,11 +98,11 @@ export function SpellRow({
     </>
   )
   const element = on_click ? (
-    <button type="button" onClick={on_click} className={className} style={style} data-spell-row={row.name_key}>
+    <button type="button" onClick={on_click} className={class_name} style={style} data-spell-row={row.name_key}>
       {body}
     </button>
   ) : (
-    <div className={className} style={style} data-spell-row={row.name_key}>
+    <div className={class_name} style={style} data-spell-row={row.name_key}>
       {body}
     </div>
   )
