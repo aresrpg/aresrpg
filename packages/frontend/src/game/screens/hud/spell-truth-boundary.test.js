@@ -18,11 +18,12 @@ test('DungeonBoard own-cast path dispatches one composite predicted batch with n
   expect(cast_path.match(/type:\s*['"]intent['"]/g) ?? []).toHaveLength(0)
 })
 
-test('live fight projection cannot import either legacy spell feed', () => {
+// The sdk's generated spell corpus is DELETED (#2220) and kept dead as a class by
+// packages/sdk/test/spell_truth_one_home.test.js — no bundled corpus, no package door, no ingesting file. What
+// stays this file's business is the OTHER legacy feed: the checked-in `spellbook-seed.json` fixture, which the
+// live fight projection must never read (it resolves through the served corpus blob alone).
+test('live fight projection cannot import the legacy spellbook seed', () => {
   const fight_module = source('../../core/modules/fight.js')
-  const eslint_config = source('../../../../../../eslint.config.js')
 
-  expect(fight_module).not.toContain('@aresrpg/sdk/spells')
   expect(fight_module).not.toContain('spellbook-seed.json')
-  expect(eslint_config).toContain("name: '@aresrpg/sdk/spells'")
 })
