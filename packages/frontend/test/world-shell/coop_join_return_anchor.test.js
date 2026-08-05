@@ -11,11 +11,10 @@
 // the boot arbiter falls back to the stale checkpoint: the teammate wakes up at the world origin.
 
 import { afterAll, beforeEach, describe, expect, test } from 'bun:test'
-
 import { resolve_boot_spawn } from '@aresrpg/world/checkpoint'
 
-import { publish_dungeon_session } from './dungeon_session.js'
-import { publish_world_binding, reset_world_binding } from './session_gate.js'
+import { publish_dungeon_session } from '../../src/world-shell/dungeon_session.js'
+import { publish_world_binding, reset_world_binding } from '../../src/world-shell/session_gate.js'
 
 const CHARACTER = '0xTEAMMATE'
 const WORLD_A = '0xWORLD_A'
@@ -77,7 +76,7 @@ const create_fake_idb = () => {
 }
 
 const real_indexeddb = globalThis.indexedDB
-const position_edge = await import('./spawns_adapter.js')
+const position_edge = await import('../../src/world-shell/spawns_adapter.js')
 
 /** Publish the character's CHAIN checkpoint for this world (signed world space) through the real reducer door. */
 const publish_chain_checkpoint = (world_position, time_ms = CHAIN_TIME) => {
@@ -124,13 +123,11 @@ const play_a_coop_fight = async ({ stamp_return_anchor }) => {
   // the fight ended; the player comes back later (a reload, a character switch, a fresh mount)
   position_edge._reset_position_persistence_for_test()
   boot_session()
-  const chain_anchor = stamp_return_anchor
-    ? { ...FIGHT, time_ms: NOW }
-    : { ...ORIGIN, time_ms: CHAIN_TIME }
+  const chain_anchor = stamp_return_anchor ? { ...FIGHT, time_ms: NOW } : { ...ORIGIN, time_ms: CHAIN_TIME }
   publish_chain_checkpoint(stamp_return_anchor ? FIGHT : ORIGIN, chain_anchor.time_ms)
 
   const restored = await position_edge.restore_world_position(CHARACTER, WORLD_A, chain_anchor, NOW + 60_000)
-  const checkpoint = position_edge.spawns_store.getState().checkpoint
+  const { checkpoint } = position_edge.spawns_store.getState()
   const spawn = resolve_boot_spawn({
     checkpoint,
     session: restored,
