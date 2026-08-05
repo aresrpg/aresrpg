@@ -12,7 +12,10 @@ import { describe, test, expect } from 'bun:test'
 import { PublicKey } from '@mysten/sui/cryptography'
 import { fromHex } from '@mysten/sui/utils'
 
-import fixture from '../../sim/test/fixtures/zone_members_format3_parity.json' with { type: 'json' }
+import {
+  member_tree_witness,
+  zone_members_parity as fixture,
+} from '../../sim/test/fixtures/zone_members_format4_witness.js'
 import {
   compose_mob_group_proof,
   mob_group_member_set_bytes,
@@ -23,29 +26,25 @@ import {
 const COMMITMENT_HEX =
   '034c4299490e05afa3514555d275f87ca677fb37821d5d52da30e4dcfb382a9823'
 
-const WORLD_ID =
-  '0xbe3f'
-const DISCOVERED_AT_MS = '1784980009967'
-// the five authored rows of the fixture's table, as the Move suite names them
-const ROWS = [1, 2, 3, 4, 5].map(n => `0x${n.toString(16).padStart(64, '0')}`)
-
 const blake2b_256 = bytes =>
   fromHex(PublicKey.prototype.toSuiAddress.call({ toSuiBytes: () => bytes }))
 
 const context = {
-  world_id: WORLD_ID,
-  zx: 487,
-  zy: 487,
-  zone_seed: fixture.inputs.seed,
-  discovered_at_ms: DISCOVERED_AT_MS,
+  world_id: member_tree_witness.world_id,
+  zx: member_tree_witness.zx,
+  zy: member_tree_witness.zy,
+  zone_seed: member_tree_witness.zone_seed,
+  discovered_at_ms: member_tree_witness.discovered_at_ms,
 }
 
 const groups = () =>
   fixture.groups.map((g, index) => ({
     index,
     spawn_id: g.spawn_id,
-    template_id: ROWS[g.template_idx],
-    member_template_ids: g.members.map(m => ROWS[m]),
+    template_id: member_tree_witness.templates[g.template_idx],
+    member_template_ids: g.members.map(
+      m => member_tree_witness.templates[m],
+    ),
     x: g.x,
     z: g.z,
     size: g.size,
@@ -75,7 +74,10 @@ describe('the member-list (format-3) commitment', () => {
       ...tampered[0],
       member_template_ids: [
         tampered[0].member_template_ids[0],
-        ROWS[4] === tampered[0].member_template_ids[1] ? ROWS[0] : ROWS[4],
+        member_tree_witness.templates[4] ===
+        tampered[0].member_template_ids[1]
+          ? member_tree_witness.templates[0]
+          : member_tree_witness.templates[4],
         ...tampered[0].member_template_ids.slice(2),
       ],
     }

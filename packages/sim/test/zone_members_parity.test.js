@@ -15,7 +15,7 @@ import {
   commitment_format,
 } from '../src/zone_derive.js'
 
-import fixture from './fixtures/zone_members_format3_parity.json'
+import { zone_members_parity as fixture } from './fixtures/zone_members_format4_witness.js'
 
 const derived = () =>
   derive_mob_groups_members({

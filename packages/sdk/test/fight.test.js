@@ -35,6 +35,7 @@ import {
   mob_group_leaf_bytes,
 } from '../src/fight.js'
 
+import { member_tree_witness } from '../../sim/test/fixtures/zone_members_format4_witness.js'
 import {
   EMPTY_IDS,
   IDS,
@@ -249,7 +250,7 @@ describe('create_member_fight_ptb — the mixed-pack door (#1110)', () => {
       group_size: 3,
       group_seed: '61',
       member_template_ids: roster,
-      progress: 613,
+      progress: member_tree_witness.progress,
       ...over.facts,
     },
     proof: over.proof ?? new Array(2 * 32).fill(7),

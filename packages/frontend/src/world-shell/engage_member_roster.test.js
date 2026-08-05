@@ -5,8 +5,8 @@
 // "has no `group_proof` parameter" and that composing a witness "would also be impossible" because the
 // commitment binds the RAW rolled roster while a `derive_zone` row carries the trimmed one. Both halves are
 // false: the SDK composer takes a witness (packages/sdk/src/fight.js `create_member_fight_ptb`), and
-// `derive_zone` trims the roster to `size` exactly as the commitment does — the member-tree witness composes,
-// byte-for-byte, against the Move-pinned vector below AND against live testnet zone 488:487.
+// `derive_zone` trims the roster to `size` exactly as the commitment does — the member-tree witness composes
+// byte-for-byte against the shared Move-pinned fixture.
 //
 // THE LAW THIS FILE PINS: the claim door is FORMAT-DISCRIMINATED off the SERVED root's leading byte — a
 // format-4 (member TREE) commitment composes the inclusion witness, a format-3 (member LIST) commitment keeps
@@ -19,9 +19,7 @@ import { afterAll, afterEach, beforeEach, describe, expect, spyOn, test } from '
 import * as sdk_fight from '@aresrpg/sdk/fight'
 import * as sdk_game from '@aresrpg/sdk/game'
 
-// ONE FIXTURE, FOUR CONSUMERS: the sim twin, the SDK witness pin (packages/sdk/test/fight_proof_member_tree.js),
-// `aresrpg_foundation::zone_gen_members_tests` (Move) and now the client door all assert the same stream.
-import parity from '../../../sim/test/fixtures/zone_members_format3_parity.json' with { type: 'json' }
+import { member_tree_rows, member_tree_witness } from '../../../sim/test/fixtures/zone_members_format4_witness.js'
 import { install_browser_globals } from '../test_helpers/browser_globals.js'
 import { reset_expedition_sdk_mock, set_expedition_sdk_mock } from '../test_helpers/expedition_sdk_mock.js'
 
@@ -125,50 +123,27 @@ describe('the engage action composes the door the ROSTER decides', () => {
   })
 })
 
-// ── THE MEMBER-TREE VECTOR — the same bytes `aresrpg_foundation::zone_gen_members_tests` and the SDK's
-// fight_proof_member_tree suite pin, so a client witness that reproduces them is one the chain accepts. ──
 const hex = (bytes) => Buffer.from(Uint8Array.from(bytes)).toString('hex')
-const ROOT_HEX = '045f45b05f1c2c39b05a521e67edd816b953bd28f6006cc6969a88bba87ab0ef15'
-const PROOF_HEX =
-  '2363f31e53651f2a7615011ff6bfee5f24fca9907fec6bd77b901cdfa167ffda7d56bc6f9d7fa809831086aae5063191' +
-  'b4d54489f54214bddb0324cd7b5fe0ad3ba5f1affcbd4930f0c221682132603cbcef917128ec55d97234a4d587e3ae500' +
-  '2d11e199e560fce3175e16a11b8cddff33a942a15ad94c396f35fa167e63986'
-const TREE_WORLD = '0xbe3f'
-const TREE_DISCOVERED_AT_MS = '1784980009967'
-const TREE_PROGRESS = 613 // the §4 difficulty the leaf binds — the Move suite pins this exact value
-const TREE_TEMPLATES = [1, 2, 3, 4, 5].map((n) => `0x${n.toString(16).padStart(64, '0')}`)
-const MEMBER_TREE_ROOT = Array.from(Buffer.from(ROOT_HEX, 'hex'))
+const MEMBER_TREE_ROOT = Array.from(Buffer.from(member_tree_witness.root_hex, 'hex'))
 // The SAME stream under the format-3 (member LIST) tag — a whole-set digest with no per-group leaf to prove.
 const MEMBER_LIST_ROOT = [3, ...MEMBER_TREE_ROOT.slice(1)]
 
-/** The parity stream in `derive_zone` ROW shape — what `rows_from_state` hands the door in production. */
-const tree_rows = () =>
-  parity.groups.map((group, index) => ({
-    kind: 'mob',
-    index,
-    spawn_id: group.spawn_id,
-    template_id: TREE_TEMPLATES[group.template_idx],
-    x: group.x,
-    z: group.z,
-    size: group.size,
-    group_seed: String(group.group_seed),
-    // the SEATING roster: `derive_zone` trims to `size`, exactly as the commitment preimage does
-    members: group.members.slice(0, group.size).map((slot) => TREE_TEMPLATES[slot]),
-    progress: TREE_PROGRESS,
-  }))
-
-const [TREE_TARGET] = tree_rows()
+const [TREE_TARGET] = member_tree_rows()
 const tree_door = (overrides = {}) =>
   world_group_door({
-    world_id: TREE_WORLD,
+    world_id: member_tree_witness.world_id,
     spawn_id: TREE_TARGET.spawn_id,
     mob_template_id: TREE_TARGET.template_id,
     member_template_ids: TREE_TARGET.members,
-    zx: 487,
-    zy: 487,
-    zone: { seed: parity.inputs.seed, discovered_at_ms: TREE_DISCOVERED_AT_MS, mob_bitmap: [] },
-    commitment: { count: parity.groups.length, root: MEMBER_TREE_ROOT },
-    groups: tree_rows(),
+    zx: member_tree_witness.zx,
+    zy: member_tree_witness.zy,
+    zone: {
+      seed: member_tree_witness.zone_seed,
+      discovered_at_ms: member_tree_witness.discovered_at_ms,
+      mob_bitmap: [],
+    },
+    commitment: { count: member_tree_rows().length, root: MEMBER_TREE_ROOT },
+    groups: member_tree_rows(),
     ...overrides,
   })
 
@@ -178,15 +153,15 @@ describe('the member claim door is FORMAT-DISCRIMINATED — the served root byte
     expect(door.door).toBe('proof')
     expect(door.index).toBe(0)
     // byte-identical to the Move-pinned path: 4 levels × 32B over an 11-group tree
-    expect(hex(door.proof.proof)).toBe(PROOF_HEX)
+    expect(hex(door.proof.proof)).toBe(member_tree_witness.proof_hex)
     // the leaf binds the roster and the zone's progress — the two facts only the member door takes
     expect(door.proof.facts.member_template_ids).toEqual(TREE_TARGET.members)
-    expect(door.proof.facts.progress).toBe(TREE_PROGRESS)
+    expect(door.proof.facts.progress).toBe(member_tree_witness.progress)
     expect(door.proof.facts.spawn_id).toBe(TREE_TARGET.spawn_id)
   })
 
   test('a format-3 (member LIST) zone keeps the derivation door — its digest covers the whole set, untouched', () => {
-    expect(tree_door({ commitment: { count: parity.groups.length, root: MEMBER_LIST_ROOT } })).toEqual({
+    expect(tree_door({ commitment: { count: member_tree_rows().length, root: MEMBER_LIST_ROOT } })).toEqual({
       door: 'derivation',
       reason: 'member_roster_door',
       index: 0,
@@ -195,7 +170,7 @@ describe('the member claim door is FORMAT-DISCRIMINATED — the served root byte
 
   test('a format-4 root the local stream cannot reproduce fails SHUT — never a quieter door', () => {
     const wrong_root = [4, ...Array(32).fill(0)]
-    expect(tree_door({ commitment: { count: parity.groups.length, root: wrong_root } })).toEqual({
+    expect(tree_door({ commitment: { count: member_tree_rows().length, root: wrong_root } })).toEqual({
       door: 'blocked',
       reason: 'commitment_mismatch',
     })
@@ -203,14 +178,20 @@ describe('the member claim door is FORMAT-DISCRIMINATED — the served root byte
 
   test('the pre-sign liveness refusals still bite on a format-4 row — a consumed group never composes', () => {
     expect(
-      tree_door({ zone: { seed: parity.inputs.seed, discovered_at_ms: TREE_DISCOVERED_AT_MS, mob_bitmap: [0b1] } })
+      tree_door({
+        zone: {
+          seed: member_tree_witness.zone_seed,
+          discovered_at_ms: member_tree_witness.discovered_at_ms,
+          mob_bitmap: [0b1],
+        },
+      })
     ).toEqual({ door: 'blocked', reason: 'consumed' })
     expect(tree_door({ spawn_id: '999' })).toEqual({ door: 'blocked', reason: 'stale_stream' })
   })
 
   test('a roster the fresh stream disagrees with is a STALE STREAM refusal, at either format', () => {
     // same length, one substituted member — exactly what a re-derived zone hands back after a reroll
-    const swapped = [TREE_TEMPLATES[1], ...TREE_TARGET.members.slice(1)]
+    const swapped = [member_tree_witness.templates[1], ...TREE_TARGET.members.slice(1)]
     expect(tree_door({ member_template_ids: swapped })).toEqual({ door: 'blocked', reason: 'stale_stream' })
     // a truncated roster is the same class of disagreement
     expect(tree_door({ member_template_ids: TREE_TARGET.members.slice(0, 1) })).toEqual({
@@ -229,8 +210,8 @@ describe('the member claim door is FORMAT-DISCRIMINATED — the served root byte
 // ── END TO END: the composed witness must actually REACH the member composer, or the door is theatre. ──
 describe('a format-4 engage hands the composed witness to the member claim door', () => {
   const zone_doc = {
-    seed: parity.inputs.seed,
-    discovered_at_ms: Number(TREE_DISCOVERED_AT_MS),
+    seed: member_tree_witness.zone_seed,
+    discovered_at_ms: Number(member_tree_witness.discovered_at_ms),
     mob_bitmap: [],
     res_bitmap: [],
   }
@@ -240,20 +221,20 @@ describe('a format-4 engage hands the composed witness to the member claim door'
       spyOn(sdk_game, 'get_zone_state').mockReturnValue(async () => zone_doc),
       spyOn(sdk_fight, 'get_zone_group_commitment').mockReturnValue(async () => ({
         root: MEMBER_TREE_ROOT,
-        count: parity.groups.length,
+        count: member_tree_rows().length,
       })),
-      spyOn(zone_rows, 'zone_world_doc').mockResolvedValue({ id: TREE_WORLD }),
-      spyOn(zone_rows, 'rows_from_state').mockReturnValue(tree_rows()),
+      spyOn(zone_rows, 'zone_world_doc').mockResolvedValue({ id: member_tree_witness.world_id }),
+      spyOn(zone_rows, 'rows_from_state').mockReturnValue(member_tree_rows()),
       spyOn(rpc_client, 'get_config').mockResolvedValue({ dials: { team_size_bound: 6 } })
     )
   })
 
   test('the witness rides into create_member_fight_ptb, roster and index intact', async () => {
     await create_world_fight({
-      world_id: TREE_WORLD,
+      world_id: member_tree_witness.world_id,
       spawn_id: TREE_TARGET.spawn_id,
-      zx: 487,
-      zy: 487,
+      zx: member_tree_witness.zx,
+      zy: member_tree_witness.zy,
       mob_template_id: TREE_TARGET.template_id,
       member_template_ids: TREE_TARGET.members,
       character_id: '0xchar',
@@ -261,7 +242,7 @@ describe('a format-4 engage hands the composed witness to the member claim door'
     expect(member).toHaveBeenCalledTimes(1)
     expect(mono).not.toHaveBeenCalled()
     expect(member_args?.group_proof).not.toBeNull()
-    expect(hex(member_args.group_proof.proof)).toBe(PROOF_HEX)
+    expect(hex(member_args.group_proof.proof)).toBe(member_tree_witness.proof_hex)
     expect(member_args.group_proof.facts.member_template_ids).toEqual(TREE_TARGET.members)
     expect(member_args?.member_template_ids).toEqual(TREE_TARGET.members)
   })
