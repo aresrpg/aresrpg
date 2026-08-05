@@ -35,9 +35,9 @@ With `edge` checked out, read and freeze the window exactly once at pass start:
 
 ```sh
 ANCHOR="$(
-  gh api --paginate --slurp \
-    'repos/aresrpg/aresrpg/issues/1357/comments?per_page=100' \
-    --jq '
+  gh api --paginate \
+    'repos/aresrpg/aresrpg/issues/1357/comments?per_page=100' |
+  jq -r -s '
       add
       | map(select(.body | test("(?m)^architecture-audit-anchor: [0-9a-f]{40}$")))
       | max_by(.created_at)
