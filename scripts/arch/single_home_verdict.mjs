@@ -93,7 +93,7 @@ if (expect_path) {
 
 if (!baseline_path) {
   console.error(
-    'usage: single_home_verdict.mjs [--root d] [--scan a,b] --baseline f [--write] | --expect f --case red|green'
+    'usage: single_home_verdict.mjs [--root d] [--scan a,b] --baseline f [--write] | --expect f --case red|green | --fences'
   )
   process.exit(2)
 }
