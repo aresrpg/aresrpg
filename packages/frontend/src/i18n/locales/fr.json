@@ -1416,9 +1416,16 @@
         "user_rejected": "La signature a été refusée dans votre portefeuille.",
         "recipient_required": "Destinataire requis",
         "suins_not_found": "Aucun nom SuiNS « {{name}} » n'a été trouvé.",
-        "reserve": "Gardez 0,2 SUI dans votre portefeuille pour les frais de gas."
+        "amount_positive": "Saisissez un montant supérieur à 0.",
+        "amount_invalid": "Ce montant n'est pas valide."
       },
-      "send_confirm": "Envoyer"
+      "send_confirm": "Envoyer",
+      "drain_hint": "MAX vide votre portefeuille — les frais réseau sont prélevés sur le transfert.",
+      "drain_warning": "Cette opération vide votre portefeuille. Les frais réseau sont prélevés sur le transfert lui-même : votre solde sera donc exactement 0 SUI.",
+      "drain_sending": "La totalité de votre solde",
+      "drain_fee_note": "prélevés sur le transfert",
+      "drain_remaining": "Restant dans votre portefeuille",
+      "success_drain_body": "Votre portefeuille est maintenant vide — tout est parti vers {{recipient}}."
     }
   },
   "sui_input": {

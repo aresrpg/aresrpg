@@ -9,6 +9,11 @@
 // State machine (`send.phase`): null (IDLE) → BUILDING → AWAITING_SIGNATURE → EXECUTING →
 //                               (SUCCESS | FAILED).
 //
+// TWO SEND SHAPES, one composer (`@aresrpg/sdk/sui-transfer`): a typed amount splits off the gas coin; MAX
+// (`drain`) transfers the gas coin ITSELF so the fee comes out of the transfer and the wallet lands on exact
+// zero. Both legs — the dry-run estimate and the signature — compose through the same call, so nothing can
+// drift between what the player is quoted and what they sign.
+//
 // NAME → ADDRESS resolution used the WS player-search (retired with the backend); there is no chain-direct
 // player-name lookup yet, so the name branch fails fast with RECIPIENT_NOT_FOUND. Address-mode sends are fully
 // live. When a live on-chain name registry exists, only the name branch below changes.
@@ -16,8 +21,9 @@
 import { create } from 'zustand'
 import { normalizeSuiAddress } from '@mysten/sui/utils'
 import { Transaction } from '@mysten/sui/transactions'
+import { sui_transfer_ptb } from '@aresrpg/sdk/sui-transfer'
 
-import { use_auth, sign_and_execute_transaction } from '../auth'
+import { use_auth, sign_and_execute_self_pay_transaction } from '../auth'
 import { get_sdk } from '../chain/sdk'
 import { sim_gas } from '../game/core/gas_guard.js'
 import { game_log } from '../core/log.js'
@@ -29,7 +35,13 @@ export const GAS_ESTIMATE_FALLBACK_MIST = 2_000_000n // ~0.002 SUI
 
 export interface SendState {
   phase: 'BUILDING' | 'AWAITING_SIGNATURE' | 'EXECUTING' | 'SUCCESS' | 'FAILED'
+  /**
+   * The typed amount. Under `drain` it is the wallet's balance at build time — a DISPLAY figure only: the
+   * drain PTB encodes no amount, and what actually lands is balance − the real fee.
+   */
   amount_mist: bigint
+  /** MAX: transfer the gas coin itself and land the sender on exact zero (see sui_transfer_ptb). */
+  drain: boolean
   resolved_address: string
   resolved_name: string | null
   tx_digest: string | null
@@ -59,97 +71,74 @@ async function estimate_gas_mist(tx: Transaction): Promise<bigint> {
 
 interface SuiSendStore {
   send: SendState | null
-  build: (payload: { address?: string; name?: string; amount_mist: bigint }) => Promise<void>
+  build: (payload: { address?: string; name?: string; amount_mist: bigint; drain?: boolean }) => Promise<void>
   confirm: () => Promise<void>
   clear: () => void
 }
+
+/**
+ * THE one place this store turns a send into a PTB — both the dry-run leg and the signing leg call it, so the
+ * transaction the player is quoted is byte-for-byte the transaction they sign. The shapes themselves live in
+ * the SDK (`@aresrpg/sdk/sui-transfer`); this store never hand-rolls coin plumbing.
+ */
+const compose = (sender: string, recipient: string, send: Pick<SendState, 'amount_mist' | 'drain'>): Transaction =>
+  sui_transfer_ptb({ sender, recipient, amount_mist: send.drain ? null : send.amount_mist })
 
 export const use_sui_send = create<SuiSendStore>((set, get) => ({
   send: null,
 
   build: async (payload) => {
     const set_send = (s: SendState | null) => set({ send: s })
+    const drain = payload.drain === true
+    const base = {
+      amount_mist: payload.amount_mist,
+      drain,
+      resolved_name: payload.name || null,
+      tx_digest: null,
+    }
 
     const { address: sender, wallet_name } = use_auth.getState()
     if (!sender || !wallet_name) {
-      set_send({
-        phase: 'FAILED',
-        amount_mist: payload.amount_mist,
-        resolved_address: '',
-        resolved_name: null,
-        tx_digest: null,
-        error: 'NOT_LINKED',
-      })
+      set_send({ ...base, phase: 'FAILED', resolved_name: null, resolved_address: '', error: 'NOT_LINKED' })
       return
     }
 
     const target_address = payload.address || ''
-    const resolved_name = payload.name || null
 
     // Send-by-name resolution used the WS player-search, retired with the backend. Without a chain-direct
     // name registry a name can't be resolved to an address, so fail fast — address-mode sends are unaffected.
-    if (!target_address && resolved_name) {
-      set_send({
-        phase: 'FAILED',
-        amount_mist: payload.amount_mist,
-        resolved_address: '',
-        resolved_name,
-        tx_digest: null,
-        error: 'RECIPIENT_NOT_FOUND',
-      })
+    if (!target_address && base.resolved_name) {
+      set_send({ ...base, phase: 'FAILED', resolved_address: '', error: 'RECIPIENT_NOT_FOUND' })
       return
     }
 
-    set_send({
-      phase: 'BUILDING',
-      amount_mist: payload.amount_mist,
-      resolved_address: target_address,
-      resolved_name,
-      tx_digest: null,
-      error: null,
-    })
+    set_send({ ...base, phase: 'BUILDING', resolved_address: target_address, error: null })
 
     try {
       const normalized = normalizeSuiAddress(target_address)
 
       if (normalized.toLowerCase() === sender.toLowerCase()) {
-        set_send({
-          phase: 'FAILED',
-          amount_mist: payload.amount_mist,
-          resolved_address: normalized,
-          resolved_name,
-          tx_digest: null,
-          error: 'SELF_SEND',
-        })
+        set_send({ ...base, phase: 'FAILED', resolved_address: normalized, error: 'SELF_SEND' })
         return
       }
-
-      const tx = new Transaction()
-      tx.setSender(sender)
-      const [coin] = tx.splitCoins(tx.gas, [tx.pure.u64(BigInt(payload.amount_mist))])
-      tx.transferObjects([coin], tx.pure.address(normalized))
 
       // Free dry-run for the DISPLAYED estimate only — the real signing budget is pinned independently by the
       // tx choke (src/tx/index.ts) when confirm() actually signs. Absorbed into the existing BUILDING spinner
       // phase, so no new UI state is needed.
-      const gas_estimate_mist = await estimate_gas_mist(tx)
+      const gas_estimate_mist = await estimate_gas_mist(compose(sender, normalized, base))
 
       set_send({
+        ...base,
         phase: 'AWAITING_SIGNATURE',
-        amount_mist: payload.amount_mist,
         resolved_address: normalized,
-        resolved_name,
-        tx_digest: null,
         error: null,
         gas_estimate_mist,
       })
     } catch (err: any) {
       set_send({
+        ...base,
         phase: 'FAILED',
-        amount_mist: payload.amount_mist,
         resolved_address: target_address,
-        resolved_name,
-        tx_digest: null,
         error: err?.message || 'BUILD_FAILED',
       })
     }
@@ -168,12 +157,14 @@ export const use_sui_send = create<SuiSendStore>((set, get) => ({
     set({ send: { ...send, phase: 'EXECUTING' } })
 
     try {
-      const tx = new Transaction()
-      tx.setSender(sender)
-      const [coin] = tx.splitCoins(tx.gas, [tx.pure.u64(BigInt(send.amount_mist))])
-      tx.transferObjects([coin], tx.pure.address(send.resolved_address))
-
-      const result = await sign_and_execute_transaction(wallet_name, sender, tx)
+      // MONEY LAW: a transfer moves value off `tx.gas`, so it takes the SELF-PAY door — sponsor gas must never
+      // fund a player's outgoing SUI, and under a DRAIN the gas coin IS the transferred object (a sponsored one
+      // would send the station's coin away). Same class as the marketplace/shop buys.
+      const result = await sign_and_execute_self_pay_transaction(
+        wallet_name,
+        sender,
+        compose(sender, send.resolved_address, send)
+      )
       set({ send: { ...send, phase: 'SUCCESS', tx_digest: result.digest } })
     } catch (err: any) {
       const msg = err?.message || 'TX_FAILED'

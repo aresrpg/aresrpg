@@ -23,6 +23,9 @@
     "./marketplace-pricing": {
       "import": "./src/sui/write/items_marketplace.js"
     },
+    "./sui-transfer": {
+      "import": "./src/sui/write/sui_transfer.js"
+    },
     "./deployment/items": {
       "types": "./types/deployment/items.d.ts",
       "import": "./src/deployment/items.js"

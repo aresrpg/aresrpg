@@ -1416,9 +1416,16 @@
         "user_rejected": "La firma fue rechazada en tu wallet.",
         "recipient_required": "Destinatario requerido",
         "suins_not_found": "No se encontró ningún nombre SuiNS «{{name}}».",
-        "reserve": "Guarda 0,2 SUI en tu billetera para el gas."
+        "amount_positive": "Introduce una cantidad mayor que 0.",
+        "amount_invalid": "Esa cantidad no es válida."
       },
-      "send_confirm": "Enviar"
+      "send_confirm": "Enviar",
+      "drain_hint": "MAX vacía tu wallet: la comisión de red sale de la propia transferencia.",
+      "drain_warning": "Esto vacía tu wallet. La comisión de red se paga desde la propia transferencia, así que tu saldo quedará exactamente en 0 SUI.",
+      "drain_sending": "Todo tu saldo",
+      "drain_fee_note": "descontada de la transferencia",
+      "drain_remaining": "Queda en tu wallet",
+      "success_drain_body": "Tu wallet está vacía — todo se envió a {{recipient}}."
     }
   },
   "sui_input": {

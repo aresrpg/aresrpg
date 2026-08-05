@@ -18,13 +18,14 @@ import { CheckCircle2, XCircle, Loader2, Copy, Check, ExternalLink, AtSign, Hash
 
 import { use_auth } from '../auth'
 import { rpc_get } from '../rpc/client'
-import { GAS_RESERVE_MIST, format_mist_to_sui } from '../utils/sui_mist'
+import { format_mist_to_sui, format_sui_exact } from '../utils/sui_mist'
 import { truncate_address } from '../utils/address'
 import { is_suins_name, resolve_suins_address } from '../utils/suins'
 import { use_sui_send, GAS_ESTIMATE_FALLBACK_MIST, type SendState } from '../stores/sui_send'
 
 import { AddFundsModal } from './add_funds_modal'
 import { SendModalShell as Shell, DigestLink } from './send_modal_shell'
+import { is_typable_amount, parse_send_amount } from './send_sui_amount'
 
 // ─── Regex + helpers ──────────────────────────────────────────────────────
 
@@ -84,12 +85,6 @@ function is_address_mode(value: string): boolean {
 
 function is_valid_full_address(value: string): boolean {
   return ADDRESS_FULL_RE.test(value)
-}
-
-// format_mist_to_sui's 2dp option floors a real ~0.001-0.002 SUI gas estimate to "0.00" — trim the 9dp
-// (full-precision) floor's trailing zeros instead so the actual dry-run number stays visible.
-function format_gas_sui(mist: bigint): string {
-  return format_mist_to_sui(mist, 9).replace(/0+$/, '').replace(/\.$/, '')
 }
 
 // ─── Main modal ───────────────────────────────────────────────────────────
@@ -222,6 +217,9 @@ function SendForm({ self_address, on_close }: { self_address: string | null; on_
   const [amount_str, set_amount_str] = useState('')
   const [amount_mist, set_amount_mist] = useState<bigint | null>(null)
   const [amount_err, set_amount_err] = useState<string | null>(null)
+  // MAX is not "the biggest amount" — it is a DIFFERENT transaction (transfer the gas coin itself), so it is
+  // its own state, cleared the moment the player types their own figure.
+  const [drain, set_drain] = useState(false)
 
   // Balance is the single auth-store figure; refetch FRESH on modal mount so MAX and
   // the amount validation reflect real funds the moment the send modal opens.
@@ -230,18 +228,24 @@ function SendForm({ self_address, on_close }: { self_address: string | null; on_
 
   const debounce_ref = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  // MAX reserves 0.2 SUI for on-chain gas (always keep 0.2 — shared GAS_RESERVE_MIST).
-  const max_sendable = balance_mist !== null && balance_mist > GAS_RESERVE_MIST ? balance_mist - GAS_RESERVE_MIST : 0n
-
+  // MAX = the WHOLE balance, no reserve withheld: the drain PTB pays the fee out of the very coin it sends,
+  // so the wallet lands on exact zero and there is nothing to keep back (#2243).
   const on_max = () => {
-    if (max_sendable <= 0n) return
-    // Floor to 2-decimal SUI precision (10M MIST granularity) to match SuiPriceInput validation.
-    const floored = (max_sendable / 10_000_000n) * 10_000_000n
-    // Round down to a multiple of 20 (fee invariant) — safe because 10M MIST is divisible by 20.
-    const sui_str = (Number(floored) / 1_000_000_000).toFixed(2)
-    set_amount_str(sui_str)
-    set_amount_mist(floored)
+    if (balance_mist === null || balance_mist <= 0n) return
+    set_amount_str(format_sui_exact(balance_mist))
+    set_amount_mist(balance_mist)
     set_amount_err(null)
+    set_drain(true)
+  }
+
+  const on_amount_change = (raw_input: string) => {
+    const raw = raw_input.replace(',', '.')
+    if (!is_typable_amount(raw)) return
+    set_drain(false)
+    set_amount_str(raw)
+    const { mist, error } = parse_send_amount(raw, balance_mist)
+    set_amount_mist(mist)
+    set_amount_err(error && t(`wallet.send.err.${error}`))
   }
 
   const address_mode = is_address_mode(recipient_raw)
@@ -335,10 +339,10 @@ function SendForm({ self_address, on_close }: { self_address: string | null; on_
     if (!can_submit || !amount_mist) return
     // When sending by name, use the resolved sui_address directly if available
     const payload = address_mode
-      ? { address: recipient_raw, amount_mist }
+      ? { address: recipient_raw, amount_mist, drain }
       : selected_address
-        ? { address: selected_address, name: recipient_raw, amount_mist }
-        : { name: recipient_raw, amount_mist }
+        ? { address: selected_address, name: recipient_raw, amount_mist, drain }
+        : { name: recipient_raw, amount_mist, drain }
     use_sui_send.getState().build(payload)
   }
 
@@ -463,7 +467,7 @@ function SendForm({ self_address, on_close }: { self_address: string | null; on_
             <button
               type="button"
               onClick={on_max}
-              disabled={max_sendable <= 0n}
+              disabled={balance_mist === null || balance_mist <= 0n}
               className="text-[9px] tracking-[0.2em] uppercase px-2 py-0.5 cursor-pointer disabled:cursor-not-allowed disabled:opacity-30"
               style={{
                 color: '#c8963c',
@@ -481,38 +485,15 @@ function SendForm({ self_address, on_close }: { self_address: string | null; on_
             inputMode="decimal"
             placeholder="0.00"
             value={amount_str}
-            onChange={(e) => {
-              const raw = e.target.value.replace(',', '.')
-              if (raw && !/^\d*\.?\d{0,2}$/.test(raw)) return
-              set_amount_str(raw)
-              if (!raw || raw === '.' || raw === '0.') {
-                set_amount_mist(0n)
-                set_amount_err(null)
-                return
-              }
-              try {
-                const parts = raw.split('.')
-                const whole = BigInt(parts[0] || '0') * 1_000_000_000n
-                const frac = parts[1] ? BigInt(parts[1].padEnd(9, '0').slice(0, 9)) : 0n
-                const mist = whole + frac
-                if (mist < 10_000_000n) {
-                  set_amount_mist(mist)
-                  set_amount_err('Minimum 0.01 SUI')
-                } else if (balance_mist !== null && mist > max_sendable) {
-                  // #51.4: always keep 0.2 SUI for gas — cap sendable at balance − reserve.
-                  set_amount_mist(mist)
-                  set_amount_err(t('wallet.send.err.reserve'))
-                } else {
-                  set_amount_mist(mist)
-                  set_amount_err(null)
-                }
-              } catch {
-                set_amount_err('Invalid amount')
-              }
-            }}
+            onChange={(e) => on_amount_change(e.target.value)}
             className="w-full bg-transparent border border-border/40 px-3 py-2 text-[13px] text-text font-mono tracking-wider focus:border-gold/60 focus:outline-none transition-colors"
           />
           {amount_err && <span className="text-red-400 text-[9px] tracking-[0.15em] uppercase">{amount_err}</span>}
+          {drain && !amount_err && (
+            <span className="text-[9px] tracking-[0.15em] uppercase" style={{ color: '#fbbf24' }}>
+              {t('wallet.send.drain_hint')}
+            </span>
+          )}
         </div>
       </div>
 
@@ -605,23 +586,58 @@ function AwaitingSignatureView({
 
       <div className="w-full h-px bg-border" />
 
-      {/* Breakdown */}
-      <PropRow
-        label={t('wallet.send.amount_label')}
-        value={<span className="text-gold font-semibold">{format_mist_to_sui(send.amount_mist, 2)} SUI</span>}
-      />
+      {/* Breakdown. A DRAIN has no "amount + gas = total" arithmetic: the fee is taken FROM the transfer, so
+          the honest figures are the whole balance leaving and what is left behind — exactly nothing. */}
+      {send.drain ? (
+        <>
+          <div
+            className="px-3 py-2 text-[10px] tracking-wide leading-relaxed"
+            style={{ border: '1px solid rgba(251,191,36,0.4)', background: 'rgba(251,191,36,0.06)', color: '#fbbf24' }}
+          >
+            {t('wallet.send.drain_warning')}
+          </div>
 
-      <PropRow
-        label={t('marketplace.purchase.gas_estimated')}
-        value={<span className="text-text/60 text-[10px]">~{format_gas_sui(gas_estimate_mist)} SUI</span>}
-      />
+          <PropRow
+            label={t('wallet.send.drain_sending')}
+            value={<span className="text-gold font-semibold">{format_sui_exact(send.amount_mist)} SUI</span>}
+          />
 
-      <div className="w-full h-px bg-border" />
+          <PropRow
+            label={t('marketplace.purchase.gas_estimated')}
+            value={
+              <span className="text-text/60 text-[10px]">
+                ~{format_sui_exact(gas_estimate_mist)} SUI · {t('wallet.send.drain_fee_note')}
+              </span>
+            }
+          />
 
-      <PropRow
-        label={t('purchase.total')}
-        value={<span className="text-gold font-semibold">~{format_mist_to_sui(total, 2)} SUI</span>}
-      />
+          <div className="w-full h-px bg-border" />
+
+          <PropRow
+            label={t('wallet.send.drain_remaining')}
+            value={<span className="text-gold font-semibold">0 SUI</span>}
+          />
+        </>
+      ) : (
+        <>
+          <PropRow
+            label={t('wallet.send.amount_label')}
+            value={<span className="text-gold font-semibold">{format_mist_to_sui(send.amount_mist, 2)} SUI</span>}
+          />
+
+          <PropRow
+            label={t('marketplace.purchase.gas_estimated')}
+            value={<span className="text-text/60 text-[10px]">~{format_sui_exact(gas_estimate_mist)} SUI</span>}
+          />
+
+          <div className="w-full h-px bg-border" />
+
+          <PropRow
+            label={t('purchase.total')}
+            value={<span className="text-gold font-semibold">~{format_mist_to_sui(total, 2)} SUI</span>}
+          />
+        </>
+      )}
 
       {/* CTAs */}
       <div className="flex gap-3 mt-4">
@@ -691,10 +707,16 @@ function SuccessView({
       </div>
 
       <div className="text-muted text-[10px] tracking-wide text-center leading-relaxed">
-        {t('wallet.send.success_body', {
-          amount: `${format_mist_to_sui(send.amount_mist, 2)} SUI`,
-          recipient: send.resolved_name || truncate_address(send.resolved_address),
-        })}
+        {send.drain
+          ? // A drain's exact figure is only known on-chain (balance − the REAL fee) — never quote the
+            // pre-fee number back as if it were what landed.
+            t('wallet.send.success_drain_body', {
+              recipient: send.resolved_name || truncate_address(send.resolved_address),
+            })
+          : t('wallet.send.success_body', {
+              amount: `${format_mist_to_sui(send.amount_mist, 2)} SUI`,
+              recipient: send.resolved_name || truncate_address(send.resolved_address),
+            })}
       </div>
 
       {send.tx_digest && <DigestLink digest={send.tx_digest} />}
