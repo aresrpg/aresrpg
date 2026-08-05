@@ -21,6 +21,8 @@ import { context } from '../game/core/game.js'
 import { use_auth } from '../auth'
 import { get_characters } from '../rpc/client'
 import { game_log } from '../core/log.js'
+import { get_sdk } from '../chain/sdk'
+import { get_personal_caps } from '../chain/kiosk_cap_cache.js'
 
 import { rpc_to_card } from './roster_projection.js'
 
@@ -29,6 +31,7 @@ export { rpc_to_card } from './roster_projection.js'
 // Single-flight guard (mirrors load_roster): a re-trigger while a fetch is in flight is dropped — the
 // in-flight fetch dispatches the up-to-date roster when it lands.
 let loading = false
+let kiosk_caps_pre_warmed = false
 
 /**
  * Boot the roster from the RPC indexer in ONE call, dispatch it onto the engine store, and auto-select the
@@ -53,6 +56,12 @@ export async function boot_roster() {
       loaded: true,
       load_error: null,
     })
+    if (!kiosk_caps_pre_warmed) {
+      kiosk_caps_pre_warmed = true
+      void get_sdk()
+        .then((sdk) => get_personal_caps(sdk, address))
+        .catch((error) => game_log('boot_roster', 'engage kiosk-cap pre-warm failed', error))
+    }
     if (!context.get_state().selected_character_id && characters[0]?.id)
       context.dispatch('action/select_character', characters[0].id)
   } catch (error) {

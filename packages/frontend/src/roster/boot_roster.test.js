@@ -1,14 +1,21 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-import { describe, expect, test } from 'bun:test'
+import { describe, expect, spyOn, test } from 'bun:test'
 import { get_total_stat } from '@aresrpg/sdk/stats'
 
 import { reset_auth_mock } from '../test_helpers/auth_mock.js'
+import { reset_expedition_sdk_mock, set_expedition_sdk_mock } from '../test_helpers/expedition_sdk_mock.js'
 import { character_max_hp } from '../chain/read_character.js'
 
 reset_auth_mock()
 
-const { rpc_to_card } = await import('./boot_roster.js')
+const rpc_client = await import('../rpc/client')
+const read_character = await import('../chain/read_character.js')
+const read_staking = await import('../chain/read_staking.js')
+const auto_merge = await import('../world-shell/auto_merge_stacks.js')
+const { invalidate } = await import('../chain/kiosk_cap_cache.js')
+const { context } = await import('../game/core/game.js')
+const { boot_roster, rpc_to_card } = await import('./boot_roster.js')
 
 describe('rpc_to_card equipment projection', () => {
   test('preserves nested equipment and worn for the Equipment tab', () => {
@@ -90,4 +97,72 @@ describe('rpc_to_card equipment projection', () => {
     expect(identity_lag.pet_equipped).toBe(true)
     expect('mount' in identity_lag).toBe(false)
   })
+})
+
+test('#2245 pre-warms the engage kiosk-cap read once, only after the first roster settles', async () => {
+  const address = '0x2245-prewarm'
+  const roster = [{ id: '0xcharacter', name: 'Senshi', class: 'senshi', experience: 0 }]
+  let release_roster
+  let settled = false
+  const client_read_settle_states = []
+  const get_owned_kiosks = async () => {
+    client_read_settle_states.push(settled)
+    return { kioskOwnerCaps: [] }
+  }
+  const sdk = {
+    kiosk_client: { getOwnedKiosks: get_owned_kiosks },
+    grpc_client: {},
+    get_creation_state: async () => null,
+  }
+  const ambient = { dispatch: context.dispatch, get_state: context.get_state }
+  const state = { sui: { loaded: false }, selected_character_id: null }
+  context.dispatch = (type) => {
+    if (type === 'action/sui_data') {
+      settled = true
+      state.sui.loaded = true
+    }
+  }
+  context.get_state = () => state
+  reset_auth_mock({ address })
+  set_expedition_sdk_mock(async () => sdk)
+  const reads = spyOn(rpc_client, 'get_characters').mockImplementation(
+    () =>
+      new Promise((resolve) => {
+        release_roster = () => resolve(roster)
+      })
+  )
+  const character = spyOn(read_character, 'read_character').mockResolvedValue(null)
+  const items = spyOn(read_staking, 'get_owned_items').mockResolvedValue([])
+  const custody = spyOn(read_staking, 'get_owned_items_from_kiosks').mockResolvedValue([])
+  const sweep = spyOn(auto_merge, 'sweep_duplicate_stacks').mockResolvedValue(undefined)
+
+  try {
+    const first_settle = boot_roster()
+    await Promise.resolve()
+    expect(client_read_settle_states).toEqual([])
+
+    release_roster()
+    await first_settle
+    await Promise.resolve()
+    expect(client_read_settle_states).toEqual([true])
+
+    reads.mockResolvedValue(roster)
+    settled = false
+    await boot_roster()
+    await Promise.resolve()
+    expect(settled).toBe(true)
+    expect(client_read_settle_states).toEqual([true])
+  } finally {
+    await new Promise((resolve) => setTimeout(resolve, 0))
+    sweep.mockRestore()
+    custody.mockRestore()
+    items.mockRestore()
+    character.mockRestore()
+    reads.mockRestore()
+    invalidate(address)
+    reset_expedition_sdk_mock()
+    reset_auth_mock()
+    context.dispatch = ambient.dispatch
+    context.get_state = ambient.get_state
+  }
 })
