@@ -72,37 +72,42 @@ const SECONDARY_TINT = /** @type {Record<string, string>} */ ({
 
 // The drawer remounts this tab on roster/tab changes. Keep the in-flight lock and receipt projections alive
 // across those remounts so a stale /v1 snapshot can never offer the same points twice.
-let allocation_session = { tx_pending: false, confirmed_characters: {} }
-const allocation_listeners = new Set()
-export const allocation_session_snapshot = () => allocation_session
-const subscribe_allocation_session = (listener) => {
-  allocation_listeners.add(listener)
-  return () => allocation_listeners.delete(listener)
-}
-const update_allocation_session = (update) => {
-  const next = update(allocation_session)
-  if (next === allocation_session) return
-  allocation_session = next
-  for (const listener of allocation_listeners) listener()
-}
+const allocation_session = (() => {
+  let snapshot = { tx_pending: false, confirmed_characters: {} }
+  const listeners = new Set()
+  return {
+    get: () => snapshot,
+    subscribe: (listener) => {
+      listeners.add(listener)
+      return () => listeners.delete(listener)
+    },
+    update: (update) => {
+      const next = update(snapshot)
+      if (next === snapshot) return
+      snapshot = next
+      for (const listener of listeners) listener()
+    },
+  }
+})()
+export const allocation_session_snapshot = allocation_session.get
 export const set_allocation_tx_pending = (tx_pending) =>
-  update_allocation_session((current) =>
+  allocation_session.update((current) =>
     current.tx_pending === tx_pending ? current : { ...current, tx_pending }
   )
 export const record_confirmed_character = (id, character) =>
-  update_allocation_session((current) => ({
+  allocation_session.update((current) => ({
     ...current,
     confirmed_characters: { ...current.confirmed_characters, [id]: character },
   }))
 export const clear_confirmed_character = (id, expected) =>
-  update_allocation_session((current) => {
+  allocation_session.update((current) => {
     if (current.confirmed_characters[id] !== expected) return current
     const confirmed_characters = { ...current.confirmed_characters }
     delete confirmed_characters[id]
     return { ...current, confirmed_characters }
   })
 const useAllocationSession = () =>
-  useSyncExternalStore(subscribe_allocation_session, allocation_session_snapshot, allocation_session_snapshot)
+  useSyncExternalStore(allocation_session.subscribe, allocation_session.get, allocation_session.get)
 
 export const empty_allocation = () => Object.fromEntries(PRIMARY_KEYS.map((key) => [key, 0]))
 

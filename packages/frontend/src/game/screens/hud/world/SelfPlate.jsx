@@ -47,7 +47,14 @@ const character_hp_revision = (state, my_entity_id) => {
 // The last XP fraction we saw, persisted at MODULE scope (there is exactly one SelfPlate). XP almost
 // always grows while the plate is UNMOUNTED (a fight awards it, then the plate remounts), so an in-mount
 // ref would never see the jump — this lets the gold pulse fire once on the post-gain remount too.
-let last_xp_pct = /** @type {number | null} */ (null)
+const xp_progress_grew = (() => {
+  let last_xp_pct = /** @type {number | null} */ (null)
+  return (next_xp_pct) => {
+    const grew = last_xp_pct != null && next_xp_pct > last_xp_pct
+    last_xp_pct = next_xp_pct
+    return grew
+  }
+})()
 
 /**
  * Fire a one-shot CSS-animation flag each time `signal` increments (retriggerable — the false→rAF→true
@@ -111,8 +118,7 @@ export function SelfPlate() {
   // common case (XP awarded during a fight → plate remounts wider) still blooms once.
   const [xp_signal, set_xp_signal] = useState(0)
   useEffect(() => {
-    if (last_xp_pct != null && xp_pct > last_xp_pct) set_xp_signal((n) => n + 1)
-    last_xp_pct = xp_pct
+    if (xp_progress_grew(xp_pct)) set_xp_signal((n) => n + 1)
   }, [xp_pct])
   const xp_pulsing = useOneshot(xp_signal)
 
