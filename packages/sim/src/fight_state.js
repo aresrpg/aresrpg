@@ -43,7 +43,7 @@
 
 /**
  * Element discriminant. Uppercase is the sim's internal canon (donor calculator.ts:16). The AresRPG
- * spells.json uses lowercase elements — `spell_templates.js` normalizes them on load.
+ * authored dialect uses lowercase elements — `spell_templates.js` normalizes them on load.
  * @typedef {'FIRE' | 'WATER' | 'EARTH' | 'AIR' | 'NONE'} Element
  */
 

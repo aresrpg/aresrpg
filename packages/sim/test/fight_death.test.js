@@ -25,7 +25,7 @@ const flat_arena = (width = 21) => ({
   spawns_b: [{ x: 7, y: 5 }],
 })
 
-// the REAL yajin 'trap' spell (packages/sdk/src/spells.json), normalized through the sim boundary: a
+// the REAL yajin 'trap' spell (authored dialect), normalized through the sim boundary: a
 // damage trap with a wide `area: 1 square` placed at `target: 'trap'` cells.
 const templates = normalize_spell_templates({
   yajin: {

@@ -3,7 +3,7 @@
 // AresRPG spell corpus -> sim SpellLevel/SpellEffect normalizer.
 //
 // The donor's spell logic is UPPERCASE-discriminant (DamageEffect.type === 'DAMAGE', area_type 'CIRCLE');
-// AresRPG's @aresrpg/sdk `spells.json` is nested-by-class, LOWERCASE-discriminant ('damage', 'circle'), with
+// AresRPG's authored dialect is nested-by-class, LOWERCASE-discriminant ('damage', 'circle'), with
 // a `target` field, a `statistic` field on steal, `critical_effects` (donor: `crit_effects`), and effect
 // types the donor lacks ('stun', 'poison', 'taunt', 'invulnerable', 'trap_modifier'). This module is the
 // single boundary that maps AresRPG JSON -> the sim's internal shape so every downstream algorithm stays on

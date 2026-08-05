@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 // Mob basic-attack spell DATA (c101: mobs need a castable attack). Proves the per-mob attack templates are
-// derived faithfully from mobs.json melee_damage and carry the spells.json template SHAPE the sim's
+// derived faithfully from mobs.json melee_damage and carry the authored template SHAPE the sim's
 // `normalize_spell_templates` consumes (cost / range / base_effects{type,min,max,element,target,chance}).
 // The @aresrpg/sdk -> @aresrpg/sim boundary is one-way (sdk has no sim dep), so the normalize round-trip is
 // covered on the consuming side; here we lock the DATA contract.
@@ -40,7 +40,7 @@ test.skipIf(!MOBS_CATALOG_AVAILABLE)('a mob attack carries its authored melee_da
   expect(lvl.range).toEqual([1, 1]) // melee, adjacent
   const dmg = damage_effect(mob_attack_spell_id('alley_bunny'))
   expect(dmg).toBeDefined()
-  expect(dmg.element).toBe('earth') // lowercase spells.json discriminant -> sim maps to EARTH
+  expect(dmg.element).toBe('earth') // lowercase authored discriminant -> sim maps to EARTH
   expect(dmg.min).toBe(1)
   expect(dmg.max).toBe(1)
   expect(dmg.target).toBe('cell')
