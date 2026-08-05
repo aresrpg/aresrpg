@@ -16,7 +16,7 @@
 //
 // What is LEFT is honest-only: parseable, strictly positive, and not more than the wallet actually holds.
 
-import { MIST_PER_SUI } from '../utils/sui_mist'
+import { parse_sui_decimal } from '../utils/sui_mist'
 
 /** i18n leaf under `wallet.send.err.*` — the error IS the translation key, so no mapping table can drift. */
 export type SendAmountError = 'amount_invalid' | 'amount_positive' | 'insufficient_balance'
@@ -30,7 +30,6 @@ export interface SendAmountVerdict {
 // What the field ACCEPTS as you type (digits, one dot, up to MIST precision). Rejecting the keystroke rather
 // than the value is what keeps a half-typed "1." from flashing an error.
 const TYPABLE_RE = /^\d*\.?\d{0,9}$/
-const PARSABLE_RE = /^\d*(\.\d{0,9})?$/
 
 export function is_typable_amount(raw: string): boolean {
   return TYPABLE_RE.test(raw)
@@ -43,10 +42,12 @@ export function is_typable_amount(raw: string): boolean {
 export function parse_send_amount(raw: string, balance_mist: bigint | null): SendAmountVerdict {
   const trimmed = raw.trim()
   if (!trimmed || trimmed === '.') return { mist: null, error: null }
-  if (!PARSABLE_RE.test(trimmed)) return { mist: null, error: 'amount_invalid' }
-
-  const [whole = '', frac = ''] = trimmed.split('.')
-  const mist = BigInt(whole || '0') * MIST_PER_SUI + BigInt(frac.padEnd(9, '0') || '0')
+  let mist: bigint
+  try {
+    mist = parse_sui_decimal(trimmed)
+  } catch {
+    return { mist: null, error: 'amount_invalid' }
+  }
 
   if (mist <= 0n) return { mist, error: 'amount_positive' }
   if (balance_mist !== null && mist > balance_mist) return { mist, error: 'insufficient_balance' }

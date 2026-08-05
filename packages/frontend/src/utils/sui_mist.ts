@@ -26,6 +26,19 @@ export const GAS_BUDGET_MIST = 50_000_000n
 
 // ═══ Parsers ═══
 
+// parse_sui_decimal(str) — decimal SUI with up to chain precision → MIST.
+// This owns decimal place-value conversion only; callers layer their own money policy (marketplace limits,
+// pledge limits, send balance) after parsing. Leading/trailing-dot forms remain valid because the send field
+// accepts them while typing; empty and bare-dot inputs carry no amount and are rejected.
+// Throws: Error('INVALID_FORMAT') on malformed input.
+export function parse_sui_decimal(str: string): bigint {
+  if (typeof str !== 'string' || !str || str === '.' || !/^\d*(\.\d{0,9})?$/.test(str))
+    throw new Error('INVALID_FORMAT')
+
+  const [whole = '', frac = ''] = str.split('.')
+  return BigInt(whole || '0') * MIST_PER_SUI + BigInt(frac.padEnd(9, '0') || '0')
+}
+
 // parse_mist_string(str) — strict MIST integer parser.
 // Accepts only a non-negative decimal integer string matching /^(0|[1-9][0-9]*)$/.
 // Rejects: hex ("0x100"), negative ("-1"), scientific ("1e9"), leading zeros ("007"),
@@ -46,11 +59,7 @@ export function parse_2_decimal_sui(str: string): bigint {
   if (typeof str !== 'string') throw new Error('INVALID_FORMAT')
   if (!/^\d+(\.\d{1,2})?$/.test(str)) throw new Error('INVALID_FORMAT')
 
-  const [int_part, frac_part = ''] = str.split('.')
-  const padded_frac = frac_part.padEnd(2, '0')
-  // cSUI (centiSUI) = integer number of 0.01 SUI units
-  const csui = BigInt(int_part + padded_frac)
-  const mist = csui * 10_000_000n // 1 cSUI = 10^7 MIST
+  const mist = parse_sui_decimal(str)
 
   assert_valid_net_price(mist)
   return mist
@@ -72,10 +81,7 @@ export function parse_pledge_sui(str: string): bigint {
   if (typeof str !== 'string') throw new Error('INVALID_FORMAT')
   if (!/^\d+(\.\d{1,2})?$/.test(str)) throw new Error('INVALID_FORMAT')
 
-  const [int_part, frac_part = ''] = str.split('.')
-  const padded_frac = frac_part.padEnd(2, '0')
-  const csui = BigInt(int_part + padded_frac)
-  const mist = csui * 10_000_000n
+  const mist = parse_sui_decimal(str)
 
   assert_valid_pledge(mist)
   return mist
