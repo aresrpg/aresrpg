@@ -1,2 +1,6 @@
-c3eac413d → Fixes #2227 — fix(fight): open the format-4 witness door in the client
-0a9ec7f6d → Fixes #2180 — fix(frontend): restore auto-search world frame
+195551252 → Refs #2155 — perf(engage): name the compose's legs — ptb-build was billing reads, not the composer
+85a6aa49f → Fixes #2155 — perf(sdk): batch namespaced dynamic-field reads — 26 chain round trips per engage, now 6
+7d09f52c5 → Refs #2069 — refactor(hud): drain no-swallowed-failure — 4 warnings
+d9357538d → Refs #2069 — refactor(hud): drain no-floating-promises — 3 warnings
+ae0102e9d → Refs #2069 — refactor(hud): drain no-mutating-methods — 4 warnings
+8c87cf6c1 → Fixes #2172 — fix(frontend): drive pet companion locomotion
