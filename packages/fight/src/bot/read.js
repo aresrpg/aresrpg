@@ -11,7 +11,7 @@
 import { effect_hits, can_target } from '@aresrpg/sim/spell_targeting'
 
 import { bfsPathCost, bfsReachable, decode, encode } from '../los.js'
-import { entity_id_of_key } from '../project_views.js'
+import { entity_id_of_fold_key } from '../participant_identity.js'
 
 /**
  * THE RESULT-FOLD READ (#2044) — the fight's committed truth AFTER its last enemy fell, in the same shape
@@ -24,7 +24,7 @@ import { entity_id_of_key } from '../project_views.js'
  *
  * HP, LIFE and CELL only, and that is the whole point: this is the settled outcome of the turn, never a live
  * board. The fold keys fighters `p<seat>` / `m<idx>`; the read speaks ENTITY ids, so seats are named through
- * `entity_id_of_key` — the ONE home for that mapping — and a seat the roster cannot name is dropped, never guessed.
+ * `entity_id_of_fold_key` — the ONE home for that mapping — and a seat the roster cannot name is dropped, never guessed.
  *
  * @param {{ board: any, escrow?: Array<any>, my_key?: string | null }} args the committed fold (`project_board`),
  *   the adopted roster that names its seats, and my own fold key — exactly what `dev_read().result_fold` ships
@@ -32,9 +32,8 @@ import { entity_id_of_key } from '../project_views.js'
  *   read would be the same lie in a new coat, and the caller must report a gap instead.
  */
 export const result_fold_read = ({ board, escrow = [], my_key = null }) => {
-  const roster = { escrow }
   const fighters = Object.entries(board?.fighters ?? {}).flatMap(([key, fighter]) => {
-    const id = entity_id_of_key(roster, key)
+    const id = entity_id_of_fold_key(escrow, key)
     if (!id) return []
     return [
       {
@@ -56,7 +55,7 @@ export const result_fold_read = ({ board, escrow = [], my_key = null }) => {
   return {
     ok: true,
     terminal: true,
-    my_id: my_key ? entity_id_of_key(roster, my_key) : null,
+    my_id: my_key ? entity_id_of_fold_key(escrow, my_key) : null,
     winner: board.winner ?? -1,
     turn_number: board.turn_ordinal ?? 0,
     fighters,

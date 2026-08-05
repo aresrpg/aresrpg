@@ -188,7 +188,7 @@ const spell_rows = (seat, class_id, char_level) =>
 const dev_result_fold = () => {
   const state = fight_store.getState()
   // The roster that NAMES the seats: the adopted view while it lives, else the core's own adopted base — the fold
-  // survives the view. Carried as the two RAW identity fields so `result_fold_read`'s own `entity_id_of_key`
+  // survives the view. Carried as the two RAW identity fields so `result_fold_read`'s own `entity_id_of_fold_key`
   // resolves them (#2210: one resolver, and an addr-keyed seat survives the trip), plain JSON either way.
   const roster = state.view?.escrow ?? state.core?.inbox?.base_view?.escrow ?? []
   return {

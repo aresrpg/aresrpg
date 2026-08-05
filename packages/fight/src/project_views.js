@@ -5,7 +5,7 @@
 import { GRID_W, GRID_H, decode as decode_xy } from './los.js'
 import { identity_book } from './identity_book.js'
 import { mob_entity_id } from './fight_control.js'
-import { participant_entity_id } from './participant_identity.js'
+import { entity_id_of_fold_key, participant_entity_id } from './participant_identity.js'
 import { claimed_budget_state, committed_truth, display_state, presented_state } from './store.js'
 import { STATUS_ACTIVE, STATUS_FAILED, STATUS_PLACEMENT, STATUS_ROOM_CLEARED, STATUS_WON } from './board_state.js'
 import { fight_fingerprint } from './fingerprint.js'
@@ -90,14 +90,6 @@ const drafted_mp_grant = (log, seat) =>
 
 /** A mob's authoritative HP: snapshot + peer/receipt tail, with this client's optimistic intents excluded. */
 export const committed_mob_hp = (state, idx) => committed_truth(state).fighters?.[mob_key(idx)]?.hp ?? null
-
-/** Entity id of a thin-fold key (`p0` → the seat's character id, `m2` → `mob-2`), resolved through the view. */
-export const entity_id_of_key = (view, key) => {
-  if (!key || !view) return null
-  if (key[0] === 'm') return mob_entity_id(key.slice(1))
-  const row = view.escrow?.[Number(key.slice(1))]
-  return row ? (participant_entity_id(row) ?? null) : null
-}
 
 /** The board terrain for the arena — canonical GRID, non-walkable = 1: obstacles ∪ holes ∪ OUT-OF-BOARD.
  *  Out-of-board = beyond the true grid dims OR outside the stored shape mask (a shaped board carves the
@@ -391,8 +383,8 @@ export const engine_view = (s, { roster = s.ctx?.roster ?? [] } = {}) => {
         .filter(Boolean)
   const my_entity_id = spectator
     ? null
-    : (entity_id_of_key(view, s.my_key) ?? ctx.my_entity_id ?? controlled_entity_ids[0] ?? null)
-  const active_entity_id = entity_id_of_key(view, c.active)
+    : (entity_id_of_fold_key(view?.escrow, s.my_key) ?? ctx.my_entity_id ?? controlled_entity_ids[0] ?? null)
+  const active_entity_id = entity_id_of_fold_key(view?.escrow, c.active)
   // ④+⑦b THE LIVE trap projection — ONE ledger (#1858). `s.my_traps` already holds the public board (adopted in
   // the fold) alongside this client's own placements, so paint, prediction and cast-legality are three reads of
   // one list rather than two homes racing: the sim door reads canonical lifecycle immediately, the render overlay
