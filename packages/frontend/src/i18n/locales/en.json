@@ -1417,8 +1417,15 @@
         "user_rejected": "Signature was rejected in your wallet.",
         "recipient_required": "Please enter a recipient before sending.",
         "suins_not_found": "No SuiNS name \"{{name}}\" was found.",
-        "reserve": "Keep 0.2 SUI in your wallet for gas."
-      }
+        "amount_positive": "Enter an amount greater than 0.",
+        "amount_invalid": "That isn't a valid amount."
+      },
+      "drain_hint": "MAX empties your wallet — the network fee comes out of the transfer.",
+      "drain_warning": "This empties your wallet. The network fee is paid from the transfer itself, so your balance will be exactly 0 SUI afterwards.",
+      "drain_sending": "Your entire balance",
+      "drain_fee_note": "taken from the transfer",
+      "drain_remaining": "Left in your wallet",
+      "success_drain_body": "Your wallet is now empty — everything went to {{recipient}}."
     }
   },
   "sui_input": {

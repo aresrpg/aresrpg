@@ -47,5 +47,6 @@ Each anchor must therefore point at the DECLARATION line of its fact. The fence 
 | Active Sui network                      | `packages/frontend/src/chain/deployment.ts:6`, `:26` — chain client/deployment selector.                                            |
 | Explorer transaction network            | `packages/frontend/src/chain/deployment.ts:26` — selected network.                                                                  |
 | MIST per SUI                            | `packages/frontend/src/utils/sui_mist.ts:16` — dedicated conversion utility.                                                        |
+| SUI transfer PTB shapes (send + drain)  | `packages/sdk/src/sui/write/sui_transfer.js:40` — the one composer both the dry-run and the signature use.                          |
 | Shop equipment-category taxonomy        | `packages/frontend/src/constants/item_categories.ts:3` — exported UI taxonomy.                                                      |
 | Client item-category vocabulary         | `packages/sdk/src/items.js:6` — exported client item-domain owner.                                                                  |

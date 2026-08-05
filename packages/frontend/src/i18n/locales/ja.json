@@ -1416,9 +1416,16 @@
         "user_rejected": "ウォレットで署名が拒否されました。",
         "recipient_required": "送信先が必要です",
         "suins_not_found": "SuiNS名「{{name}}」は見つかりませんでした。",
-        "reserve": "ガス代のためウォレットに0.2 SUIを残してください。"
+        "amount_positive": "0 より大きい金額を入力してください。",
+        "amount_invalid": "有効な金額ではありません。"
       },
-      "send_confirm": "送信"
+      "send_confirm": "送信",
+      "drain_hint": "MAX はウォレットを空にします。ネットワーク手数料は送金額から差し引かれます。",
+      "drain_warning": "これはウォレットを空にします。ネットワーク手数料は送金そのものから支払われるため、残高はちょうど 0 SUI になります。",
+      "drain_sending": "残高すべて",
+      "drain_fee_note": "送金額から差し引き",
+      "drain_remaining": "ウォレットに残る額",
+      "success_drain_body": "ウォレットは空になりました — すべて {{recipient}} に送金されました。"
     }
   },
   "sui_input": {

@@ -1416,9 +1416,16 @@
         "user_rejected": "Die Signatur wurde in deinem Wallet abgelehnt.",
         "recipient_required": "Empfänger erforderlich",
         "suins_not_found": "Kein SuiNS-Name „{{name}}” gefunden.",
-        "reserve": "Behalte 0,2 SUI im Wallet für Gasgebühren."
+        "amount_positive": "Gib einen Betrag größer als 0 ein.",
+        "amount_invalid": "Das ist kein gültiger Betrag."
       },
-      "send_confirm": "Senden"
+      "send_confirm": "Senden",
+      "drain_hint": "MAX leert dein Wallet — die Netzwerkgebühr wird vom Transfer abgezogen.",
+      "drain_warning": "Das leert dein Wallet. Die Netzwerkgebühr wird vom Transfer selbst bezahlt, dein Guthaben beträgt danach also genau 0 SUI.",
+      "drain_sending": "Dein gesamtes Guthaben",
+      "drain_fee_note": "vom Transfer abgezogen",
+      "drain_remaining": "Verbleibt im Wallet",
+      "success_drain_body": "Dein Wallet ist jetzt leer — alles ging an {{recipient}}."
     }
   },
   "sui_input": {
