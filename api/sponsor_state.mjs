@@ -122,6 +122,34 @@ function roll_daily_memory() {
 }
 export const addr_spent_key = (address) => `sponsor:spent:${utc_date()}:${address.toLowerCase()}`
 
+// ── THE CAP IS PUBLISHED, NEVER RE-DECLARED (#2197) ──────────────────────────────────────────────────────
+// `ADDR_DAILY_CAP_MIST` above is the ONE home for the per-address daily allowance: this process reads it from
+// its own env and ENFORCES it. The read-api's `/v1/sponsor/remaining` renders the same number for the player,
+// and used to get it from a SECOND env of its own — two homes kept equal by prose comments naming each other,
+// which is exactly the desync a deploy of one half without the other produces (a bar that shows an allowance
+// nobody is granted, or hides one they have). So the enforcing process PUBLISHES its cap into the same shared
+// store it already writes the spend counter to, and the display side DERIVES. One write at boot: the value
+// only ever changes when this process is redeployed with a different env, and that redeploy re-runs this.
+// No TTL — the last cap published is the cap that WOULD be enforced the moment the sponsor answers again, so
+// letting it lapse would only teach the display to lie in the other direction.
+export const ADDR_DAILY_CAP_KEY = 'sponsor:cap:addr_daily_mist'
+
+/**
+ * Publish this process's enforced per-address daily cap for the display side to read. Returns true when the
+ * shared store took it. A failure is LOUD and non-fatal: sponsorship enforcement does not depend on this
+ * write (the cap is enforced from env, in-process), and a store that cannot take a SET is already refusing
+ * every sponsored request through `shared_store_ready` — surfacing it twice as a boot crash would trade a
+ * degraded allowance bar for a dead sponsor.
+ */
+export async function publish_addr_daily_cap() {
+  const result = await redis_op((redis) => redis.send('SET', [ADDR_DAILY_CAP_KEY, String(ADDR_DAILY_CAP_MIST)]))
+  if (!result.ok)
+    console.warn(
+      `[sponsor] could not publish the daily cap to ${ADDR_DAILY_CAP_KEY} — /v1/sponsor/remaining will refuse rather than show a stale allowance`
+    )
+  return result.ok
+}
+
 // ── THE DAILY CAP — booked at RESERVE, settled at EXECUTE ────────────────────────────────────────────────
 // Reading the counter at reserve and writing it at execute leaves a window in which a reservation exists but is
 // not booked, and a pipelined burst fits N of them inside that window: every request reads the same pre-burst
