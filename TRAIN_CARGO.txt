@@ -1,6 +1,5 @@
-195551252 → Refs #2155 — perf(engage): name the compose's legs — ptb-build was billing reads, not the composer
-85a6aa49f → Fixes #2155 — perf(sdk): batch namespaced dynamic-field reads — 26 chain round trips per engage, now 6
-7d09f52c5 → Refs #2069 — refactor(hud): drain no-swallowed-failure — 4 warnings
-d9357538d → Refs #2069 — refactor(hud): drain no-floating-promises — 3 warnings
-ae0102e9d → Refs #2069 — refactor(hud): drain no-mutating-methods — 4 warnings
-8c87cf6c1 → Fixes #2172 — fix(frontend): drive pet companion locomotion
+690c69972 → Fixes #2247 — fix(sim): make linear targeting orthogonal-only
+287b32d41 → Fixes #2248 — fix(fight): derive the trap ledger through the placed-zone home
+2438cbe5d → Fixes #2246 — fix(sim): give cast-target legality one home
+f2a57f46b → part of #2243 — refactor(send): one exact-SUI formatter, in the money home
+648e2a973 → Fixes #2243 — feat(send): MAX empties the wallet to exact zero
