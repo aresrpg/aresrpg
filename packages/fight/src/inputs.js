@@ -16,7 +16,7 @@ import { get_aoe_cells } from '@aresrpg/sim/spell_targeting'
 import * as FX from '@aresrpg/sim/spell_effect'
 
 import { fight_status_of } from './board_state.js'
-import { INVISIBILITY_STATUS_KIND, MOB_FIGHTER_ID_BASE } from './fight_status_snapshot.js'
+import { MOB_FIGHTER_ID_BASE } from './fight_status_snapshot.js'
 import { decode_status_row } from './core_wire.js'
 import { decode, encode } from './los.js'
 import { is_status_kind } from './statuses.js'
@@ -269,7 +269,7 @@ const append_status_row = (state, key, status) => {
   const statuses = [...(base.fighters[key].statuses ?? []), status]
   return patch_fighter(base, key, {
     statuses,
-    invisible: statuses.some((row) => row.kind === INVISIBILITY_STATUS_KIND),
+    invisible: statuses.some((row) => row.kind === FX.K_INVISIBILITY),
   })
 }
 
@@ -317,7 +317,7 @@ const age_statuses = (state, key) => {
   })
   return patch_fighter(state, key, {
     statuses,
-    invisible: statuses.some((row) => row.kind === INVISIBILITY_STATUS_KIND),
+    invisible: statuses.some((row) => row.kind === FX.K_INVISIBILITY),
   })
 }
 
@@ -364,7 +364,7 @@ const patch_mp_delta = (state, key, delta, track = false) => {
 const reveal_fighter = (state, key) => {
   const f = ensure(state, key).fighters[key]
   const rows = f.statuses ?? []
-  const kept = rows.filter((row) => row.kind !== INVISIBILITY_STATUS_KIND)
+  const kept = rows.filter((row) => row.kind !== FX.K_INVISIBILITY)
   return patch_fighter(state, key, { invisible: false, ...(kept.length !== rows.length ? { statuses: kept } : {}) })
 }
 
@@ -543,7 +543,7 @@ export const apply_action = (state, action) => {
       // `invisible`, so the shapes never collide — accept both until predict_cast unifies through spell_effect.js
       // and the .jsx fan-out is deleted, so my-cast optimistic invisibility does not regress in the interim.
       const chain = action.stance != null
-      if (chain && Number(action.stance) !== INVISIBILITY_STATUS_KIND) return state
+      if (chain && Number(action.stance) !== FX.K_INVISIBILITY) return state
       const invisible = chain ? !!action.active : action.invisible
       if (invisible == null) return state
       const is_mob = chain ? action.fighter_is_mob : action.target_is_mob

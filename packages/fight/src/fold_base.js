@@ -2,11 +2,12 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 // Pure snapshot-base helpers shared by the presentation fold and the headless core fold.
 
+import { K_INVISIBILITY } from '@aresrpg/sim/spell_effect'
+
 import { mob_entity_index } from './fight_control.js'
 import { participant_entity_id } from './participant_identity.js'
 import { empty_state } from './inputs.js'
 import { STATUS_ACTIVE, STATUS_FAILED, STATUS_WON } from './board_state.js'
-import { INVISIBILITY_STATUS_KIND } from './fight_status_snapshot.js'
 
 // TURN-START BUDGET resolver (advisor pass-19): a seat index → its begin_turn refill {ap, mp} = the base pool from
 // the current view's escrow. The TurnStarted event omits ap/mp (fight_events.move:24), so core_fold enriches it
@@ -89,7 +90,7 @@ export const base_from_view = (view, fight_id) => {
     fighters[key] = {
       ...fighters[key],
       statuses: rows,
-      invisible: rows.some((row) => row.kind === INVISIBILITY_STATUS_KIND),
+      invisible: rows.some((row) => row.kind === K_INVISIBILITY),
     }
   const actor = view.status === STATUS_ACTIVE ? view.turn_queue?.[view.turn_ptr] : null
   const observed_deadline = Number(view.turn_deadline_ms ?? 0)

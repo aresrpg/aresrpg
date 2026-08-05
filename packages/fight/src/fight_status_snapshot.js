@@ -9,7 +9,6 @@ import { ITEM_STAT_SHIFT as SIGNED_SHIFT } from '@aresrpg/sim/equipment_stats'
 import { mob_entity_id } from './fight_control.js'
 import { decode_status_row, is_signed_status_kind } from './core_wire.js'
 
-export { K_INVISIBILITY as INVISIBILITY_STATUS_KIND } from '@aresrpg/sim/spell_effect'
 export { decode_status_value, is_signed_status_kind } from './core_wire.js'
 export const MOB_FIGHTER_ID_BASE = 1000
 

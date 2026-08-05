@@ -11,8 +11,9 @@
 // produces (`engine_view` rows, the `project_state` predicates, `project_hud`'s pacing posture), regrouped and
 // explicitly named. No reconciliation is introduced here — fold-first family migrations are later trains.
 
+import { K_INVISIBILITY } from '@aresrpg/sim/spell_effect'
+
 import { STATUS_FAILED, STATUS_ROOM_CLEARED, STATUS_WON } from './board_state.js'
-import { INVISIBILITY_STATUS_KIND } from './fight_status_snapshot.js'
 import { decode as decode_xy } from './los.js'
 import { range_bonus_of } from './statuses.js'
 import { commit_fact, empty_result } from './result_record.js'
@@ -133,7 +134,7 @@ const entity_statuses = (fighter) => {
     rows,
     invisible,
     /** the veil is lit with no row to justify it — an unbacked stance, kept visible rather than absorbed */
-    stance_only: invisible && !rows.some((row) => Number(row?.kind) === INVISIBILITY_STATUS_KIND),
+    stance_only: invisible && !rows.some((row) => Number(row?.kind) === K_INVISIBILITY),
     /** the fighter's LIVE RANGE STAT — the immutable fight-start base (gear included) plus the active signed
      *  range rows, folded exactly once (`statuses.range_bonus_of`, its one home). A modifiable-range spell adds
      *  this to its authored reach; a fixed-range one ignores it. */

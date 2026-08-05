@@ -11,9 +11,11 @@
 
 import { describe, expect, test } from 'bun:test'
 
+import { K_INVISIBILITY } from '@aresrpg/sim/spell_effect'
+
 import { create_fight_store } from '../src/store.js'
 import { engine_view } from '../src/project.js'
-import { read_fighter_statuses, INVISIBILITY_STATUS_KIND } from '../src/fight_status_snapshot.js'
+import { read_fighter_statuses } from '../src/fight_status_snapshot.js'
 
 const FIGHT = '0xf1'
 const CHAR = '0xc1'
@@ -21,7 +23,7 @@ const W = 20
 const enc = (x, y) => y * W + x
 
 const invisible_status = read_fighter_statuses({
-  fx: { statuses: [{ fighter: 0, kind: INVISIBILITY_STATUS_KIND, remaining_turns: 2, effect: {} }] },
+  fx: { statuses: [{ fighter: 0, kind: K_INVISIBILITY, remaining_turns: 2, effect: {} }] },
 })
 const fight = {
   id: FIGHT,
@@ -64,7 +66,7 @@ const boot = () => {
   return store
 }
 const me = (store) => engine_view(store.getState()).fighters.get(CHAR)
-const has_invis_badge = (fighter) => fighter.effects.some((e) => e.kind === INVISIBILITY_STATUS_KIND)
+const has_invis_badge = (fighter) => fighter.effects.some((e) => e.kind === K_INVISIBILITY)
 
 describe('#13 — a damaging cast reveals me THIS frame, clearing the flag AND the effect badge', () => {
   test('optimistic damaging cast strips invisibility from engine_view.invisible AND engine_view.effects', () => {
