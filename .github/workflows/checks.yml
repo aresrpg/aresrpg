@@ -251,7 +251,19 @@ jobs:
         # appears, so this list can never silently fall behind the tree again. Deliberately explicit,
         # never a glob: discovery would execute anything dropped into scripts/, widening CI's trust
         # surface instead of narrowing it.
-        run: bun test test/gold/specs_prod_smoke/signing_ledger_test.ts scripts/check-workflow-registry.test.mjs scripts/board_hygiene.test.mjs scripts/sentry_triage.test.mjs scripts/scan_stability.test.mjs scripts/check-fixture-adjudication.test.mjs scripts/check-loc-ledger-workflow.test.mjs scripts/check-move-field-limits.test.mjs scripts/loop_deadman.test.mjs scripts/gate_suite_coverage.test.mjs
+        run: bun test test/gold/specs_prod_smoke/signing_ledger_test.ts scripts/check-workflow-registry.test.mjs scripts/board_hygiene.test.mjs scripts/sentry_triage.test.mjs scripts/scan_stability.test.mjs scripts/check-fixture-adjudication.test.mjs scripts/check-loc-ledger-workflow.test.mjs scripts/check-move-field-limits.test.mjs scripts/loop_deadman.test.mjs scripts/check-sponsor-config-ssot.test.mjs scripts/gate_suite_coverage.test.mjs
+      # #2197 — the read-API's OFFLINE unit suites. `bun run test` walks packages/* (the bun workspace),
+      # and packages/rpc is not one, so every *.unit.test.js under packages/rpc/api ran in no gate at all:
+      # 50 assertions of coverage that had never executed, including the allowance endpoint the sponsor
+      # money path renders to players. They install their own deps (the read-API is its own image, self-
+      # contained by construction — nothing under packages/rpc/api imports outside it). The *.test.js
+      # siblings stay OUT: those need a seeded throwaway Redis and belong with the integration legs.
+      - name: install read-API deps (its own image, its own lockfile)
+        working-directory: packages/rpc/api
+        run: bun install --frozen-lockfile
+      - name: read-API offline unit suites — packages/rpc/api/*.unit.test.js
+        working-directory: packages/rpc/api
+        run: bun test ./*.unit.test.js
       - name: enforcement ladder — bun run lint
         run: bun run lint
 
