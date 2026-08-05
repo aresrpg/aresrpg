@@ -50,3 +50,4 @@ Each anchor must therefore point at the DECLARATION line of its fact. The fence 
 | SUI transfer PTB shapes (send + drain)  | `packages/sdk/src/sui/write/sui_transfer.js:40` — the one composer both the dry-run and the signature use.                          |
 | Shop equipment-category taxonomy        | `packages/frontend/src/constants/item_categories.ts:3` — exported UI taxonomy.                                                      |
 | Client item-category vocabulary         | `packages/sdk/src/items.js:6` — exported client item-domain owner.                                                                  |
+| Presence appearance revision            | `packages/frontend/src/world-shell/presence_appearance.js:50` — the one producer of the peer cache-invalidation signal (#2171).     |

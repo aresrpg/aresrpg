@@ -279,6 +279,119 @@ describe("create_remote_character_cache — pet_of resolves a peer's equipped pe
   })
 })
 
+// #2171 — the TTL is a FLOOR, not the latency. A peer's presence beat carries an appearance revision
+// (presence_appearance.js), and a revision the renderer has not applied yet reaches exactly ONE door here:
+// invalidate(). It marks the row due — it never writes a verdict, so the beat still cannot say what a peer
+// looks like (the transport ruling above is untouched; the /v1 read remains the only answer).
+describe('create_remote_character_cache — invalidate() makes one row due, and answers nothing', () => {
+  const PET_ROW = (id, slug) => ({
+    id,
+    pet_equipped: true,
+    pet: { item_id: '0xitem_pet', template_id: '0xtpl_pet', slug },
+  })
+
+  it('a marked row re-reads on the very next refresh, deep inside the TTL — the equip no longer waits it out', async () => {
+    set_mob_catalog_for_test({ bouloute: { appearance: 'Lamb', glb: 'hy_lamb' } })
+    let equipped = false
+    let hits = 0
+    const clock = 1_000 // FROZEN — nothing below can be riding the TTL
+    const cache = create_remote_character_cache({
+      fetch_characters: async ({ ids }) => {
+        hits += 1
+        return ids.map((id) => (equipped ? PET_ROW(id, 'pet_bouloute') : { id }))
+      },
+      now: () => clock,
+    })
+    await cache.refresh(['0xPEER'])
+    expect(hits).toBe(1)
+    await cache.refresh(['0xPEER'])
+    expect(hits).toBe(1) // still cached, as always
+
+    equipped = true
+    cache.invalidate('0xPEER')
+    await cache.refresh(['0xPEER'])
+    expect(hits).toBe(2)
+    expect(cache.pet_of('0xPEER')).toEqual({ spawn: true, glb_url: mob_url('hy_lamb'), key: 'pet_bouloute' })
+  })
+
+  it('STALE-WHILE-REVALIDATE — the last resolved verdict keeps rendering until the fresh read lands', async () => {
+    set_mob_catalog_for_test({ bouloute: { appearance: 'Lamb', glb: 'hy_lamb' } })
+    let resolve_fetch
+    let served = 0
+    const cache = create_remote_character_cache({
+      fetch_characters: ({ ids }) => {
+        served += 1
+        if (served === 1) return Promise.resolve(ids.map((id) => PET_ROW(id, 'pet_bouloute')))
+        return new Promise((resolve) => {
+          resolve_fetch = () => resolve(ids.map((id) => ({ id })))
+        })
+      },
+      templates: () => TEMPLATES,
+    })
+    await cache.refresh(['0xPEER'])
+    expect(cache.pet_of('0xPEER').spawn).toBe(true)
+
+    cache.invalidate('0xPEER')
+    const in_flight = cache.refresh(['0xPEER'])
+    // Mid-flight, the peer still renders what chain truth last said — an invalidation must never flash a peer
+    // bare (the "re-read me" signal is not a claim that anything is gone).
+    expect(cache.pet_of('0xPEER').spawn).toBe(true)
+    resolve_fetch()
+    await in_flight
+    expect(cache.pet_of('0xPEER')).toEqual({ spawn: false, glb_url: null, key: null })
+  })
+
+  it('a beat landing MID-FLIGHT is never swallowed by the older response — the next wave re-reads', async () => {
+    let served = 0
+    let resolve_fetch
+    const cache = create_remote_character_cache({
+      fetch_characters: ({ ids }) => {
+        served += 1
+        if (served === 1)
+          return new Promise((resolve) => {
+            resolve_fetch = () => resolve(ids.map((id) => ({ id })))
+          })
+        return Promise.resolve(ids.map((id) => ({ id })))
+      },
+    })
+    const first = cache.refresh(['0xPEER']) // a read that left BEFORE the peer changed anything
+    cache.invalidate('0xPEER') // …and the beat that lands while it is still out
+    await cache.refresh(['0xPEER']) // in-flight: this wave correctly does nothing yet
+    expect(served).toBe(1)
+    resolve_fetch()
+    await first
+    await cache.refresh(['0xPEER'])
+    expect(served).toBe(2) // the mark survived the stale response instead of being cleared by it
+  })
+
+  it('drop() forgets the mark too — a despawned peer never re-arms a read on a later re-sighting', async () => {
+    let hits = 0
+    const cache = create_remote_character_cache({ fetch_characters: async ({ ids }) => {
+      hits += 1
+      return ids.map((id) => ({ id }))
+    } })
+    await cache.refresh(['0xPEER'])
+    cache.invalidate('0xPEER')
+    cache.drop('0xPEER')
+    await cache.refresh(['0xPEER']) // the fresh re-sighting read (a dropped id is unseen, not dirty)
+    expect(hits).toBe(2)
+    await cache.refresh(['0xPEER'])
+    expect(hits).toBe(2) // and it is not still carrying a stale mark from before the drop
+  })
+
+  it('invalidating an unseen peer is harmless — it resolves exactly once, like any first sighting', async () => {
+    let hits = 0
+    const cache = create_remote_character_cache({ fetch_characters: async ({ ids }) => {
+      hits += 1
+      return ids.map((id) => ({ id }))
+    } })
+    cache.invalidate('0xGHOST')
+    await cache.refresh(['0xGHOST'])
+    await cache.refresh(['0xGHOST'])
+    expect(hits).toBe(1)
+  })
+})
+
 // TR-5 — the remote veteran aura used to ride the peer's SELF-DECLARED p2p `state` payload; with the p2p
 // transport gone it resolves where it always belonged: the equipped `title` slot of the SAME /v1 doc, through
 // the SAME gate the local player reads (cosmetic_glb.js's has_veteran_title — one home, two consumers). A peer

@@ -16,10 +16,15 @@
 // on the identical doc, so a second batched-fetch cache alongside this one would double the peer /v1 read load
 // for zero new information. Batched + cached: every stale/missing peer id across the current rig set resolves
 // in ONE /v1/characters?ids= read per refresh wave (never one fetch per peer per frame — remote_players.js's
-// frame loop runs at 60fps). TTL-bounded (~60s — an equip lands within the window); a peer with no cache row
-// yet always counts as stale, so a freshly-spawned rig resolves on its very next refresh call — no separate
-// "identity change" trigger needed. Never caches an absence permanently: a failed/pending id just stays stale
-// and retries the next call.
+// frame loop runs at 60fps). TTL-bounded (~60s — the FLOOR under every peer's freshness); a peer with no cache
+// row yet always counts as stale, so a freshly-spawned rig resolves on its very next refresh call. Never caches
+// an absence permanently: a failed/pending id just stays stale and retries the next call.
+//
+// #2171 — the TTL is the floor, not the latency: a peer's own presence beat carries an appearance REVISION
+// (presence_appearance.js), and a revision the renderer has not applied yet calls invalidate() below, which
+// makes that row due on the next refresh wave instead of up to a minute later. That signal is a bare number: it
+// can say "re-read me", and it can say nothing else — every rendered appearance fact still comes from the /v1
+// read here, so the transport ruling above is unchanged and a lying beat buys its sender exactly one refetch.
 
 import { resolve_character_docs } from '../world-shell/character_name_resolve.js'
 
@@ -47,6 +52,8 @@ export function create_remote_character_cache(deps = {}) {
   /** @type {Map<string, { worn: {head:any, back:any}, pet: {spawn:boolean, glb_url:string|null, key:string|null}, veteran: boolean, resolved_at: number }>} */
   const cache = new Map()
   const pending = new Set()
+  /** @type {Set<string>} ids whose cached row a presence beat has declared stale — see invalidate(). */
+  const dirty = new Set()
 
   /** The last-resolved worn set for a peer — synchronous, never blocks the frame loop. */
   const worn_of = (id) => cache.get(id)?.worn ?? BLANK_WORN
@@ -67,10 +74,17 @@ export function create_remote_character_cache(deps = {}) {
     const stale = []
     for (const id of ids) {
       const hit = cache.get(id)
-      if ((!hit || now() - hit.resolved_at > CHARACTER_TTL_MS) && !pending.has(id)) stale.push(id)
+      const due = !hit || dirty.has(id) || now() - hit.resolved_at > CHARACTER_TTL_MS
+      if (due && !pending.has(id)) stale.push(id)
     }
     if (!stale.length) return Promise.resolve()
-    for (const id of stale) pending.add(id)
+    // Clearing the mark HERE (not on completion) is what makes a mid-flight invalidation survive: this read
+    // only covers what was known stale when it left, so a beat that lands while it is in flight re-marks the
+    // id and the very next call re-reads it — never a change silently swallowed by an older response.
+    for (const id of stale) {
+      pending.add(id)
+      dirty.delete(id)
+    }
     return resolve_character_docs(stale, deps.fetch_characters)
       .then((docs) => {
         const at = now()
@@ -90,11 +104,24 @@ export function create_remote_character_cache(deps = {}) {
       })
   }
 
+  /**
+   * #2171 — mark one peer's row STALE so the next refresh() re-reads it, instead of waiting out the TTL. The
+   * caller's trigger is a presence beat whose appearance revision moved (presence_appearance.js): the beat says
+   * only THAT something changed, so this door is the only thing it can reach — the answer to WHAT changed still
+   * comes from the /v1 read below, exactly as #553 rules. Stale-while-revalidate on purpose: the last-resolved
+   * verdict keeps rendering until the fresh one lands, so an invalidation never flickers a peer bare.
+   * @param {string} id
+   */
+  const invalidate = (id) => {
+    dirty.add(id)
+  }
+
   /** Forget a despawned peer — bounds cache growth across a long session's stream of strangers. */
   const drop = (id) => {
     cache.delete(id)
     pending.delete(id)
+    dirty.delete(id)
   }
 
-  return { worn_of, pet_of, veteran_of, refresh, drop }
+  return { worn_of, pet_of, veteran_of, refresh, invalidate, drop }
 }

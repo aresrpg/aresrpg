@@ -25,6 +25,7 @@ import { game_log } from '../core/log.js'
 import { cancel_invite_timing, finish_invite_timing, mark_invite_executed } from '../core/invite_timing.js'
 
 import { read_dungeon_session, subscribe_dungeon_session } from './dungeon_session.js'
+import { appearance_rev, watch_appearance_changes } from './presence_appearance.js'
 import {
   create_party as tx_create_party,
   join_owned_alts_to_party,
@@ -568,6 +569,9 @@ party_store.setState({
       classe: character?.classe ?? null,
       male: character?.male ?? true,
       name: character?.name ?? null,
+      // #2171 — a bare CACHE-INVALIDATION signal (presence_appearance.js): "my chain row changed, re-read it".
+      // It names nothing, so it can never be rendered; peers still resolve worn/pet from /v1 (#553).
+      appearance_rev: appearance_rev(character),
     })
   },
 })
@@ -594,5 +598,13 @@ export function wire_party_reads() {
   // Instance scope is room presence, too: entry/exit republishes only on a real dungeon-id transition.
   subscribe_dungeon_session((session, previous) => {
     if (session.dungeon_id !== previous?.dungeon_id) use_party.getState()._publish_state()
+  })
+  // #2171 — an equip/unequip republishes presence too, so peers learn their cached /v1 row for me is stale
+  // within one beat instead of within a minute. The rule lives in presence_appearance.js; what peers receive
+  // is a bare revision, so the payload still carries no appearance fact of mine (#553).
+  watch_appearance_changes({
+    events: context.events,
+    character_of: selected_character,
+    publish: () => use_party.getState()._publish_state(),
   })
 }

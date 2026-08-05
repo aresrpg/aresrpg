@@ -60,6 +60,8 @@ export default function presence() {
           existing.color_1 = row.color_1 ?? 0
           existing.color_2 = row.color_2 ?? 0
           existing.color_3 = row.color_3 ?? 0
+          // #2171 — a cache-invalidation signal for the renderer's /v1 peer cache, never an appearance fact.
+          existing.appearance_rev = row.appearance_rev ?? 0
           existing.observed_at = row.observed_at
         } else {
           // SPAWN: seed position = target (the scene starts its lerp from here).
@@ -73,6 +75,7 @@ export default function presence() {
             color_1: row.color_1 ?? 0,
             color_2: row.color_2 ?? 0,
             color_3: row.color_3 ?? 0,
+            appearance_rev: row.appearance_rev ?? 0,
             position: row.position,
             target_position: row.position,
             target_yaw: row.target_yaw,

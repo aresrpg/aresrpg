@@ -68,6 +68,7 @@ export const CHAT_MAX_LENGTH = 280 // one broadcast chat line's ceiling, in code
  *   address: string, color_1: number, color_2: number, color_3: number,
  *   party_id: string|null, dungeon_id: string|null,
  *   mounted: boolean, mount_glb: string|null, veteran: boolean,
+ *   appearance_rev: number,
  *   classe: string|null, male: boolean|null, name: string|null,
  *   chain: { name?:string, classe?:string, male?:boolean, color_1?:number, color_2?:number, color_3?:number }|null,
  *   last_seen: number,
@@ -89,6 +90,7 @@ const blank_peer = (id) => ({
   mounted: false,
   mount_glb: null,
   veteran: false,
+  appearance_rev: 0,
   classe: null,
   male: null,
   name: null,
@@ -180,6 +182,10 @@ const fold_peer_state = (state, input, now) => {
     mounted: !!input.mounted,
     mount_glb: input.mount_glb ? String(input.mount_glb) : null,
     veteran: !!input.veteran,
+    // #2171 — a CACHE-INVALIDATION signal, not an appearance fact: a number whose CHANGE tells the renderer
+    // this peer's chain row is worth re-reading. Nothing here decides what a peer looks like, so a hostile
+    // value costs its sender one refetch and buys it nothing (#553's ruling is untouched).
+    appearance_rev: Number.isFinite(Number(input.appearance_rev)) ? Number(input.appearance_rev) : 0,
     classe: input.classe ? String(input.classe) : null,
     male: typeof input.male === 'boolean' ? input.male : null,
     name: input.name ? String(input.name) : null,
@@ -398,6 +404,9 @@ export function visible_players(state) {
       color_3: p.chain?.color_3 ?? p.color_3 ?? 0,
       position: p.position,
       target_yaw: p.target_yaw,
+      // #2171 — carried so the renderer can INVALIDATE its cached /v1 row for this peer when the number moves.
+      // It is never rendered: the appearance itself still comes from the chain read (#553).
+      appearance_rev: p.appearance_rev ?? 0,
     })
   return out
 }
