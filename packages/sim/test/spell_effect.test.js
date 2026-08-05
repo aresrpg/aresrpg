@@ -57,6 +57,7 @@ import {
 } from '../src/spell_effect.js'
 import * as SE from '../src/spell_effect.js'
 import { normalize_spell_templates } from '../src/spell_templates.js'
+
 import {
   CORPUS,
   SPELLS_CORPUS_AVAILABLE,
