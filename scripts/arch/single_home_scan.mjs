@@ -2,7 +2,7 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 // The DUAL-HOME scanner — pure detection for scripts/single-home-gate.sh.
 //
-// One fact, one home (CLAUDE.md "One home per fact"). Four mechanical shapes of the violation,
+// One fact, one home (CLAUDE.md "One home per fact"). Six mechanical shapes of the violation,
 // each derived from repo bytes only — no heuristics, no similarity scoring:
 //
 //   duplicate-export  — one exported name declared in two or more source files.
@@ -198,12 +198,16 @@ const JS_FILE = /\.(?:js|jsx|mjs|cjs|ts|tsx)$/
 // over the KNOWN source set: an unresolvable specifier is not silently trusted, it is a finding.
 const CANDIDATE_SUFFIX = ['', '.js', '.jsx', '.mjs', '.cjs', '.ts', '.tsx', '/index.js', '/index.ts', '/index.jsx']
 const IMPORT_FROM = /(?:^|[\s;}])import\s+([^;'"]+?)\s+from\s*['"]([^'"]+)['"]/g
-const REEXPORT_FROM = /(?:^|[\s;}])export\s+(\*(?:\s+as\s+[A-Za-z_$][\w$]*)?|\{[^}]*\})\s*from\s*['"]([^'"]+)['"]/g
+// `const { X } = await import('spec')` binds the fact exactly like a static import, and this repo
+// uses the form in real source (lazy auth/chain/engine seams), so a fence blind to it is a fence
+// with a documented door. The declarator is optional: `({ X } = await import(...))` binds too.
+const DYNAMIC_IMPORT = /\{([^{}]*)\}\s*=\s*await\s+import\(\s*['"]([^'"]+)['"]/g
+const REEXPORT_FROM = /(?:^|[\s;}])export\s+(\*(?:\s+as\s+[A-Za-z_$][\w$]*)?|\{[^{}]*\})\s*from\s*['"]([^'"]+)['"]/g
 
 // `{ a, b as c }` → the imported name and the local/exported one. A default or namespace clause
 // binds no registry name, so it contributes nothing.
 const named_bindings = (clause) => {
-  const braces = /\{([^}]*)\}/.exec(clause)
+  const braces = /\{([^{}]*)\}/.exec(clause)
   if (!braces) return []
   return braces[1]
     .split(',')
@@ -305,8 +309,11 @@ export const fence_findings = (fenced, sources, workspace) => {
         })
       }
     }
-    for (const match of text.matchAll(IMPORT_FROM)) {
-      const [, clause, specifier] = match
+    const bound = [
+      ...[...text.matchAll(IMPORT_FROM)].map((match) => ({ match, clause: match[1], specifier: match[2] })),
+      ...[...text.matchAll(DYNAMIC_IMPORT)].map((match) => ({ match, clause: `{${match[1]}}`, specifier: match[2] })),
+    ]
+    for (const { match, clause, specifier } of bound) {
       for (const { imported } of named_bindings(clause)) {
         const fence = homes.get(imported)
         if (!fence || file === fence.path) continue

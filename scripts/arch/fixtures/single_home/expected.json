@@ -15,7 +15,8 @@
       "K_TEST (Test protocol constant) · packages/beta/src/bypass.js": 1
     },
     "registry-importer": {
-      "K_TEST (Test protocol constant) · packages/beta/src/bypass.js": 1
+      "K_TEST (Test protocol constant) · packages/beta/src/bypass.js": 1,
+      "K_TEST (Test protocol constant) · packages/beta/src/dynamic_bypass.js": 1
     },
     "store-writers": {
       "use_thing.dungeon · packages/gamma/src/writer_one.js": 1,
