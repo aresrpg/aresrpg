@@ -1886,6 +1886,12 @@ export function create_voxel_fight_adapter(
   //    paints the exact BFS walk path on the 'path' channel — the same legal_move_path the commit charges,
   //    so the preview can never lie. Clears on leave/unreachable; a reconcile repaint clears it too (the
   //    next hover event repaints — hover is a per-frame-ish stream from the board picker). ──
+  /** #2175 — the ARMED AIM: the encoded board cell under the cursor while a spell is armed and that cell is
+   *  castable (null otherwise). A cast is aimed at a CELL on both twins, and an AoE's useful anchor is usually
+   *  EMPTY, so the forecast the tooltip layer derives is anchored on this, not on a body. Written by the
+   *  cell_hover stream below (the same handler that paints the red footprint — one aim, one source) and
+   *  published by the per-frame reprojection, so a pointermove costs one assignment, never a dispatch. */
+  let aim_cell = /** @type {number | null} */ (null)
   const off_hover = board.on(
     'cell_hover',
     // Complexity retained (#2069): this local cell predicate is the exhaustive range legality check; extracting it would require threading the same closure context.
@@ -1895,6 +1901,7 @@ export function create_voxel_fight_adapter(
       // 'path_blocked' is NOT cleared here anymore — it is the WASH's static tackle-lost band now
       // (mouse-independent; the per-hover red suffix is dead), owned by paint()'s authoritative pass.
       const clear_hover = () => {
+        aim_cell = null // #2175 — no legal aim ⇒ no zone forecast, exactly as no footprint paints
         update_base_paints({ movement_path: [], target: [] })
         board.clear_states('glyph_hover')
       }
@@ -1940,6 +1947,7 @@ export function create_voxel_fight_adapter(
       // 'glyph_hover' is its OWN transient channel, never the persistent 'glyph' paint() owns from
       // fight.my_glyphs (see hover_footprint_plan's docstring for the regression this split fixes).
       let foot_cells = /** @type {{x:number,y:number}[]} */ ([])
+      aim_cell = null // re-derived below; an unarmed or non-castable cursor cell is not an aim
       if (active && fight.armed_spell_id) {
         const grid2 = dungeon_grid_of(dungeon)
         // D284: LOS blockers = obstacles ∪ living bodies (twin of los_obstacles) so the hover AoE agrees with the wash.
@@ -1968,7 +1976,13 @@ export function create_voxel_fight_adapter(
               )
         const castable2 = cast_range_set_dungeon(hover_range, active, grid2, los2, flags2)
         // The weapon sentinel has no seed row → spell_footprint falls back to the single [cell] (a melee strike).
-        if (castable2.has(to_enc)) foot_cells = spell_footprint(fight.armed_spell_id, cell, active.cell, active)
+        // #2175 — the SAME castability verdict that earns the red footprint arms the zone forecast: the cards the
+        // tooltip layer derives can never appear over a cell the board paints as un-castable. Published by the
+        // per-frame reprojection (tick_hover), so a pointermove costs one assignment, not a dispatch.
+        if (castable2.has(to_enc)) {
+          foot_cells = spell_footprint(fight.armed_spell_id, cell, active.cell, active)
+          aim_cell = to_enc
+        }
       }
       const foot_plan = hover_footprint_plan(fight.armed_spell_id, foot_cells)
       const target_cells =
@@ -2013,41 +2027,53 @@ export function create_voxel_fight_adapter(
    *  needs; everything else (fighter/cell/camera) is re-read live so a walk or a camera move is never stale. */
   let hovered_id = /** @type {string | null} */ (null)
 
-  /** Re-projects the CURRENTLY-hovered fighter's head to viewport pixels off the LIVE camera/board_frame/cell
-   *  and re-dispatches fight_hover/set — or fight_hover/clear the instant the fighter is no longer valid
-   *  (despawned, removed from the slice, or the board itself tore down). Safe to call every frame: a no-op
-   *  dispatch when nothing changed is cheap, and EntityTooltip only re-renders on an actual value change. */
+  /** Re-projects every live fighter's head to viewport pixels off the LIVE camera/board_frame/cell and
+   *  re-dispatches fight_hover/set — or fight_hover/clear the instant there is nothing to anchor (no hovered
+   *  fighter AND no armed aim, the fighter despawned, or the board itself tore down). Safe to call every frame:
+   *  a no-op dispatch when nothing changed is cheap, and EntityTooltip only re-renders on an actual value change.
+   *  #2175 — the whole fighter set is projected, not just the hovered one: the zone preview cards pin to the
+   *  bodies the cast covers, and they are the SAME projection the single hovered card has always used. */
   const reproject_hover = () => {
-    const id = hovered_id
-    if (!id || !engine || !board_frame) return game_context.dispatch('action/fight_hover/clear', {})
-    const fight = read_board_fight()
-    const f = fight?.fighters?.get(id)
-    const cam = engine.get_camera?.()
-    if (!f?.cell || !cam) {
-      hovered_id = null // the hovered fighter is gone (despawned / fold removed it) — nothing left to track
-      return game_context.dispatch('action/fight_hover/clear', {})
-    }
+    const fight = hovered_id || aim_cell != null ? read_board_fight() : null
+    const cam = engine?.get_camera?.()
+    if (!fight || !board_frame || !cam) return game_context.dispatch('action/fight_hover/clear', {})
     const { x: ox, y: oy, z: oz } = board_frame.origin
-    // [faithful-mob-sizes 2026-07-13] anchor the tooltip at the fighter's MEASURED head height (the
-    // engine's entity_height_of feed + a small margin), never the old constant +2.0 — with mobs at intrinsic
-    // per-creature sizes a constant sat inside a tall boss and floated a body-length above a small critter.
-    // Pre-load (or on an old facade) the feed's CHARACTER_HEIGHT placeholder ≈ the old 2.0 — same behaviour.
-    const head_y = (board.entity_height_of?.(id) ?? 2.0) + 0.15
-    proj.set(ox + (f.cell.x + 0.5) * CELL_M, oy + head_y, oz + (f.cell.y + 0.5) * CELL_M).project(cam)
-    if (proj.z >= 1) {
-      hovered_id = null // behind the camera this frame — treat like any other invalid hover
-      return game_context.dispatch('action/fight_hover/clear', {})
-    }
     const rect = canvas?.getBoundingClientRect() ?? {
       left: 0,
       top: 0,
       width: window.innerWidth,
       height: window.innerHeight,
     }
+    /** One fighter's head → viewport pixels; null when it has no cell or sits behind the camera this frame. */
+    const project_head = (/** @type {any} */ f) => {
+      if (!f?.cell) return null
+      // [faithful-mob-sizes 2026-07-13] anchor the tooltip at the fighter's MEASURED head height (the
+      // engine's entity_height_of feed + a small margin), never the old constant +2.0 — with mobs at intrinsic
+      // per-creature sizes a constant sat inside a tall boss and floated a body-length above a small critter.
+      // Pre-load (or on an old facade) the feed's CHARACTER_HEIGHT placeholder ≈ the old 2.0 — same behaviour.
+      const head_y = (board.entity_height_of?.(f.id) ?? 2.0) + 0.15
+      proj.set(ox + (f.cell.x + 0.5) * CELL_M, oy + head_y, oz + (f.cell.y + 0.5) * CELL_M).project(cam)
+      if (proj.z >= 1) return null
+      return {
+        x: rect.left + ((proj.x + 1) / 2) * rect.width,
+        y: rect.top + ((1 - proj.y) / 2) * rect.height,
+      }
+    }
+    const anchors = /** @type {Record<string, {x:number,y:number}>} */ ({})
+    for (const f of fight.fighters?.values() ?? []) {
+      const at = project_head(f)
+      if (at) anchors[f.id] = at
+    }
+    const primary = hovered_id ? (anchors[hovered_id] ?? null) : null
+    // the hovered fighter is gone (despawned / fold removed it) or behind the camera — nothing left to track
+    if (hovered_id && !primary) hovered_id = null
+    if (!hovered_id && aim_cell == null) return game_context.dispatch('action/fight_hover/clear', {})
     game_context.dispatch('action/fight_hover/set', {
-      entity_id: id,
-      x: rect.left + ((proj.x + 1) / 2) * rect.width,
-      y: rect.top + ((1 - proj.y) / 2) * rect.height,
+      entity_id: hovered_id,
+      x: primary?.x ?? 0,
+      y: primary?.y ?? 0,
+      cell: aim_cell,
+      anchors,
     })
   }
 
@@ -2126,6 +2152,7 @@ export function create_voxel_fight_adapter(
       off_hover() // D236 — the hover-path stream dies with the adapter
       off_entity_hover() // D239 — the tooltip feed dies too
       hovered_id = null // no dangling tick_hover reproject after teardown
+      aim_cell = null // …and no dangling zone forecast either (#2175)
       game_context.dispatch('action/fight_hover/clear', {}) // no dangling tooltip after teardown
       off_state()
       off_picks()

@@ -622,15 +622,27 @@ const fold_summary = (slice, type, payload) => {
  * imperative roam layer publishes `set` on pointermove while a fighter sprite is under the cursor and
  * `clear` when it leaves, so React can show that fighter's name + HP. Never authoritative — the tooltip
  * resolves the actual fighter off the `fight` slice; this only carries the id + viewport cursor coords.
- * @param {{ entity_id: string, x: number, y: number } | null} slice
+ *
+ * #2175 — the slice also carries the AIM: `cell` is the encoded board cell under the cursor while a spell is
+ * armed (null otherwise), which is what an AoE forecast is anchored on — a body is not required, and the useful
+ * anchor is usually an empty cell. `anchors` is every live fighter's projected head in viewport pixels, so the
+ * per-entity zone previews pin to their own bodies through the SAME projection the single card already used;
+ * both are published by the one per-frame reprojection, never cached across a camera move.
+ * @param {{ entity_id: string|null, x: number, y: number, cell: number|null, anchors: Record<string, {x:number,y:number}> } | null} slice
  * @param {string} type
  * @param {any} payload
- * @returns {{ entity_id: string, x: number, y: number } | null}
+ * @returns {{ entity_id: string|null, x: number, y: number, cell: number|null, anchors: Record<string, {x:number,y:number}> } | null}
  */
 const fold_hover = (slice, type, payload) => {
   switch (type) {
     case 'action/fight_hover/set':
-      return { entity_id: payload.entity_id, x: payload.x, y: payload.y }
+      return {
+        entity_id: payload.entity_id ?? null,
+        x: payload.x,
+        y: payload.y,
+        cell: payload.cell ?? null,
+        anchors: payload.anchors ?? {},
+      }
     case 'action/fight_hover/clear':
       return null
     default:

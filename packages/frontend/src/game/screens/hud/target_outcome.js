@@ -48,3 +48,27 @@ export const predicted_target_outcome = (prediction, target_ref, current_hp) => 
   if (!target_ref) return EMPTY_OUTCOME
   return branch_outcome(prediction, target_ref, current_hp)
 }
+
+/**
+ * #2175 — WHICH entities this prediction actually touches, as the caller's own candidate rows filtered down.
+ * The INVERSE of `branch_outcome`'s per-target lookup, read off the SAME canonical action rows, so "has a
+ * preview" and "renders something" are one fact by construction: a candidate survives exactly when
+ * `predicted_target_outcome` would give it a number (a Hit) or a shove (a Displaced), and is dropped otherwise.
+ *
+ * This is the whole zone derivation. There is no zone geometry here and no damage math: `predict_cast` already
+ * ran the WHOLE cast through the sim once — its AoE resolution, its per-entity resists, its kills — and diffed
+ * every fighter into these actions. Asking the prediction who it touched is therefore the ONE home's own
+ * answer; recomputing the covered cell set in the UI would be a second zone resolver disagreeing with the
+ * chain the moment a shape, a resist or an obstacle changed.
+ * @param {{ actions?: any[] } | null} prediction
+ * @param {{ entity_id: string, target_ref: { is_mob: boolean, idx: number } | null }[]} candidates every live
+ *   fighter, already carrying its resolved fold ref — the caller owns identity, this owns coverage.
+ * @returns {{ entity_id: string, target_ref: { is_mob: boolean, idx: number } }[]}
+ */
+export const predicted_zone_targets = (prediction, candidates) =>
+  (candidates ?? []).filter(({ target_ref }) => {
+    if (!target_ref) return false
+    // current_hp is irrelevant to coverage — only `delta` reads it, and it is discarded here.
+    const { remaining_hp, displaced_to } = branch_outcome(prediction, target_ref, 0)
+    return remaining_hp != null || displaced_to != null
+  })

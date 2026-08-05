@@ -14,8 +14,15 @@ import { encode } from '@aresrpg/fight/los'
 
 import { fight_spell, seat_spell_level, seat_spell_row } from './fight-spells.js'
 import { next_slot_crit, socket_glows } from './deck-crit-glow.js'
+import { predicted_zone_targets } from './target_outcome.js'
 
-export const EMPTY_PREDICTION = Object.freeze({ prediction: null, is_crit: false, effects: [], target_ref: null })
+export const EMPTY_PREDICTION = Object.freeze({
+  prediction: null,
+  is_crit: false,
+  effects: [],
+  target_ref: null,
+  previews: Object.freeze([]),
+})
 
 // Effect kinds already shown by the head life-swing (immediate hp) or the push/pull line — excluded from the
 // itemised "effects the cast applies" list so a plain damage spell doesn't repeat its number as a ranged row
@@ -68,11 +75,21 @@ const resolve_armed_spell = (armed, me) => {
  * reads off it, so keying the object would re-run the sim per mouse pixel. The law both halves must satisfy is a
  * pure property this module's test asserts directly: two states with the SAME key derive the SAME prediction.
  * Compared element-wise with Object.is, exactly as React compares a deps array.
+ * #2175 adds the AIM CELL to the key for the same reason: an AoE is aimed at a cell, so sliding the cursor
+ * between two empty anchors changes the whole forecast while `entity_id` stays null. It is keyed as the ENCODED
+ * scalar the hover slice publishes (never a {x,y} object, which is re-created per pointermove and would re-run
+ * the sim per mouse pixel — the exact cost `entity_id` is read by id to avoid).
  * @param {{ fight: any, hover: any, dungeon: any, slot?: number|null }} args the SAME object handed to
  *   `compute_target_prediction` — one call site, one set of inputs, no second assembly.
  * @returns {any[]}
  */
-export const prediction_memo_key = ({ fight, hover, dungeon, slot = null }) => [fight, hover?.entity_id ?? null, dungeon, slot]
+export const prediction_memo_key = ({ fight, hover, dungeon, slot = null }) => [
+  fight,
+  hover?.entity_id ?? null,
+  hover?.cell ?? null,
+  dungeon,
+  slot,
+]
 
 /**
  * entity id → { is_mob, idx } against the live dungeon escrow — the SAME mapping DungeonBoard.resolve_ref uses (a
@@ -100,10 +117,14 @@ export const resolve_dungeon_ref = (dungeon, fighter_id) => {
  * last action (a different cast, a move) spends the AP this one needed. Reads the SAME arming fact
  * (`input_armed`) the adapter's wash_armed_spell gates the board's OWN targeting-range wash on — never a
  * heuristic, never a second spelling of it, the same pipeline.
+ * #2175 — the aim is a CELL, so this answers for a zone, not a body: `previews` carries one entry per entity the
+ * cast touches (the hovered one included), which is the whole forecast when the anchor cell is empty.
  * @param {{ fight: any, hover: any, dungeon: any, slot?: number|null }} args  `slot` = the pending cast's chain
  *   slot from its ONE home (`project.my_action_slot` — #1224), so the tooltip advances with the draft exactly
- *   like the glow, follows a turn the chain already restarted, and never prices off a second count.
- * @returns {{ prediction: any, is_crit: boolean, effects: any[], target_ref: { is_mob: boolean, idx: number } | null }}
+ *   like the glow, follows a turn the chain already restarted, and never prices off a second count. `hover`
+ *   carries the hovered `entity_id` (a body under the cursor) and/or the encoded aim `cell` (the armed anchor).
+ * @returns {{ prediction: any, is_crit: boolean, effects: any[], target_ref: { is_mob: boolean, idx: number } | null,
+ *   previews: { entity_id: string, target_ref: { is_mob: boolean, idx: number } }[] }}
  */
 export const compute_target_prediction = ({ fight, hover, dungeon, slot = null }) => {
   const armed = fight?.armed_spell_id ?? null
@@ -111,7 +132,17 @@ export const compute_target_prediction = ({ fight, hover, dungeon, slot = null }
   const hovered_id = hover?.entity_id ?? null
   const target = fight && hovered_id ? fight.fighters.get(hovered_id) : null
   const target_ref = resolve_dungeon_ref(dungeon, hovered_id)
-  if (!armed || !caster_id || !dungeon || !target?.cell || !target_ref) return EMPTY_PREDICTION
+  // #2175 — THE AIM IS A CELL, NOT A BODY. A cast is aimed at a cell on both twins (the chain takes an encoded
+  // target cell; an empty non-free cell is a legal whiff), and an AoE's useful anchor is usually EMPTY — so
+  // anchoring the forecast on the hovered ENTITY made the whole zone's damage invisible exactly when the player
+  // needed it. The anchor is the hovered fighter's cell when a body is under the cursor (unchanged for every
+  // single-target aim) and the hover slice's own encoded cell otherwise. engine_view fighter cells are DECODED
+  // {x,y} and predict_cast's target_cell is an ENCODED int, so the fighter branch encodes and the slice — which
+  // publishes the encoded cell the board picker already speaks — passes straight through.
+  const target_cell =
+    target?.cell ? encode(target.cell.x, target.cell.y) : hover?.cell != null ? Number(hover.cell) : null
+  if (!armed || !caster_id || !dungeon || target_cell == null || !Number.isFinite(target_cell))
+    return EMPTY_PREDICTION
 
   // CASTABLE-NOW GATE, part 1 (turn ownership): a forecast is only legitimate while it's actually your move —
   // and this card is an AFFORDANCE, not a readout ("this cast kills it" is what a player acts on), so it must go
@@ -144,9 +175,6 @@ export const compute_target_prediction = ({ fight, hover, dungeon, slot = null }
   const crit_slot = next_slot_crit(crit_clock)
   const is_crit = !!crit_slot && socket_glows(crit_slot.crit_roll, crit_rate)
 
-  // engine_view fighter cells are DECODED {x,y}; predict_cast's target_cell is an ENCODED int (it decode()s it),
-  // so encode here — passing the raw {x,y} decode()s to NaN → an off-board target → no Hit (the live-silence bug).
-  const target_cell = encode(target.cell.x, target.cell.y)
   // #577 — the SAME resolved turn-seed slot that decides crit also rolls this cast's DAMAGE, so the previewed
   // number is exactly what the chain lands (not the range). `critical` stays the explicit resolved boolean; the
   // clock feeds only the damage roll. Seed-less / off-turn ⇒ crit_clock_of already answered null ⇒ an in-range
@@ -155,10 +183,23 @@ export const compute_target_prediction = ({ fight, hover, dungeon, slot = null }
   // wall-clock deadline, and fed the damage roll a clock with no entropy at all (`?? 0` → a fake seed).
   const critical_clock = crit_clock
   // Run the ONE damage home ONCE, on the RESOLVED branch — the exact number the chain lands, never a base+crit pair.
+  const prediction = predict_cast({ view: fight, caster_id, spell: template, spell_level, target_cell, critical: is_crit, critical_clock, resolve_ref })
   return {
-    prediction: predict_cast({ view: fight, caster_id, spell: template, spell_level, target_cell, critical: is_crit, critical_clock, resolve_ref }),
+    prediction,
     is_crit,
     effects: effects.filter((fx) => !HEAD_OR_MOVE_KINDS.has(fx.kind)),
     target_ref,
+    // #2175 — the ZONE'S preview set: one entry per entity the cast above actually touches, so an AoE aimed at an
+    // empty anchor forecasts every body under it and a single-target aim yields exactly its one entry. The ONE run
+    // already resolved the zone (predict_cast → the sim → get_aoe_cells, the same geometry the chain settles),
+    // so this only ASKS it who it touched — `predicted_zone_targets` filters these candidates by the very actions
+    // `predicted_target_outcome` renders. No zone resolver and no damage formula lives on this surface.
+    previews: predicted_zone_targets(
+      prediction,
+      [...(fight.fighters?.values() ?? [])].map((fighter) => ({
+        entity_id: fighter.id,
+        target_ref: resolve_ref(fighter.id),
+      }))
+    ),
   }
 }

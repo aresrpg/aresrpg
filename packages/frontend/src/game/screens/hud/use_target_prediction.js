@@ -20,7 +20,8 @@ export { compute_target_prediction, resolve_dungeon_ref } from './target_predict
  * seed-deterministic fact), its is_crit flag, the target ref, and the spell's secondary effect rows. The core
  * prices the pending cast's crit SLOT off the fight store's own journal (#1224 — my drafted casts ride it as
  * intents), exactly like the DeckCluster socket glow. Memoized on `prediction_memo_key` — the core's OWN statement
- * of what this preview depends on, never a list re-assembled here.
+ * of what this preview depends on, never a list re-assembled here. #2175 — it also returns `previews`, one entry
+ * per entity the aimed cast covers, which is the entire forecast whenever the aimed cell is empty.
  * @returns {ReturnType<typeof compute_target_prediction>}
  */
 export const useTargetPrediction = () => {
