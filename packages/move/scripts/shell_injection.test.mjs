@@ -72,16 +72,20 @@ describe('ceremony_preflight_compat.hermetic_build — a poisoned TMPDIR is an i
     // exactly the operator-box shape (a TMPDIR someone set) rather than an impossible one.
     const poisoned_tmpdir = path.join(tmp, payload('probe_preflight'))
     fs.mkdirSync(poisoned_tmpdir, { recursive: true })
-    const run = spawnSync(process.execPath, [path.join(here, 'ceremony_preflight_compat.mjs'), 'foundation', '--size-only'], {
-      cwd: tmp, // the payload redirects RELATIVE — the probe lands here or nowhere
-      encoding: 'utf8',
-      timeout: 120_000,
-      env: {
-        ...process.env,
-        TMPDIR: poisoned_tmpdir,
-        PATH: `${stub_sui_bin(tmp)}:${process.env.PATH}`,
-      },
-    })
+    const run = spawnSync(
+      process.execPath,
+      [path.join(here, 'ceremony_preflight_compat.mjs'), 'foundation', '--size-only'],
+      {
+        cwd: tmp, // the payload redirects RELATIVE — the probe lands here or nowhere
+        encoding: 'utf8',
+        timeout: 120_000,
+        env: {
+          ...process.env,
+          TMPDIR: poisoned_tmpdir,
+          PATH: `${stub_sui_bin(tmp)}:${process.env.PATH}`,
+        },
+      }
+    )
     expect(run.error ?? null).toBe(null)
     expect(fs.existsSync(path.join(tmp, 'probe_preflight'))).toBe(false)
     fs.rmSync(tmp, { recursive: true, force: true })
@@ -162,12 +166,7 @@ describe('#2149 CLASS GATE — no interpolated shell string survives in the cere
 // stamp_all.mjs')` each — pinned by stamp_all.test.mjs — which the class gate above allows on purpose.)
 describe('#2149 — the converted modules dropped execSync entirely', () => {
   test('no execSync import remains in the four converted move scripts', () => {
-    for (const file of [
-      'ceremony_lib.mjs',
-      'ceremony_preflight_compat.mjs',
-      'check_keepset.mjs',
-      'env_guard.mjs',
-    ]) {
+    for (const file of ['ceremony_lib.mjs', 'ceremony_preflight_compat.mjs', 'check_keepset.mjs', 'env_guard.mjs']) {
       const source = fs.readFileSync(path.join(here, file), 'utf8')
       expect({ file, has: source.includes('execSync') }).toEqual({ file, has: false })
       expect({ file, has: source.includes('execFileSync') }).toEqual({ file, has: true })
