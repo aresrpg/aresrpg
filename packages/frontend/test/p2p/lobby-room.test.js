@@ -14,6 +14,7 @@
 import { afterEach, beforeEach, describe, expect, it, setSystemTime } from 'bun:test'
 import { PEER_EXPIRY_MS, PEER_HEARTBEAT_MS, REJOIN_MAX_ATTEMPTS } from '@aresrpg/world/presence'
 
+import { _reset_log_for_test, get_log_buffer } from '../../src/core/log.js'
 // A first sighting makes the presence edge REQUEST a chain identity. This suite is about the transport, so the
 // resolve answers offline — armed per-test because the helper's registration is process-wide (see its header).
 import '../../src/test_helpers/expedition_sdk_mock.js'
@@ -260,6 +261,36 @@ describe('freshness — the heartbeat is why a standing player stays visible', (
     // A hidden tab's timers are clamped to ~1/min by the browser, so a live-but-backgrounded peer sends on a
     // >60s gap. An expiry sized off the 7s cadence would evict it every time.
     expect(PEER_EXPIRY_MS).toBeGreaterThan(60_000)
+  })
+})
+
+describe('#2255 — rejected presence beats leave one rate-limited breadcrumb', () => {
+  it('a rejected position beat answers false and leaves a trace without spamming one per beat', async () => {
+    _reset_log_for_test()
+    trystero_actions.get('pos').send = () => Promise.reject(new Error('position channel rejected'))
+
+    expect(await publish_room_position(ME, 5, 6)).toBe(false)
+    expect(await publish_room_position(ME, 6, 7)).toBe(false)
+
+    const breadcrumbs = get_log_buffer().filter(
+      ({ ns, message }) => ns === 'p2p' && message.includes('position send failed')
+    )
+    expect(breadcrumbs).toHaveLength(1)
+    expect(breadcrumbs[0].message).toContain('position channel rejected')
+  })
+
+  it('a rejected state beat answers false and leaves a trace without spamming one per beat', async () => {
+    _reset_log_for_test()
+    trystero_actions.get('state').send = () => Promise.reject(new Error('state channel rejected'))
+
+    expect(await publish_room_state({ address: '0xme', color_1: 1, color_2: 2, color_3: 3 })).toBe(false)
+    expect(await publish_room_state({ address: '0xme', color_1: 4, color_2: 5, color_3: 6 })).toBe(false)
+
+    const breadcrumbs = get_log_buffer().filter(
+      ({ ns, message }) => ns === 'p2p' && message.includes('state send failed')
+    )
+    expect(breadcrumbs).toHaveLength(1)
+    expect(breadcrumbs[0].message).toContain('state channel rejected')
   })
 })
 

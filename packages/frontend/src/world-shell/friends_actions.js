@@ -15,6 +15,7 @@ import { submit_friend_target } from '@aresrpg/world/friend_target'
 
 import { DEMO_NETWORK } from '../chain/deployment'
 import { get_sdk } from '../chain/sdk'
+import { humanize_tx_error } from '../game/core/abort_copy.js'
 import { use_toast } from '../toast'
 import i18n from '../i18n'
 import { is_suins_name, resolve_suins_address } from '../utils/suins'
@@ -126,23 +127,31 @@ async function add_friend_address_flow(my_address, target, toast) {
   try {
     let lid = roster.list_id
     if (!lid) {
-      const { result } = await toast.promise(create_friend_list(), {
-        pending: i18n.t('friends.pending_create'),
-        success: i18n.t('friends.toast_create'),
-      })
-      lid = created_friend_list_id(result)
-      if (lid) {
-        // Recorded BEFORE the wait: the list exists on chain and its gas is spent, so the reducer must own it
-        // whatever the read layer does next — that is what makes the honest retry below a plain add.
-        friends_input({ type: 'friend_list_created', address: my_address, list_id: lid })
-        if (!(await await_friend_list_indexed(lid)))
-          return void toast.add(i18n.t('friends.list_not_readable_yet'), 'error')
+      let creation
+      try {
+        creation = await toast.promise(create_friend_list(), {
+          pending: i18n.t('friends.pending_create'),
+          success: i18n.t('friends.toast_create'),
+        })
+      } catch {
+        // The ONE leg that stays silent: toast.promise already surfaced its humanized transaction failure.
+        return
       }
+      lid = created_friend_list_id(creation.result)
+      // The gas is spent whatever the receipt carried, so a missing id is a READ gap the player can retry —
+      // never silence, and never an invitation to create a second list.
+      if (!lid) return void toast.add(i18n.t('friends.list_not_readable_yet'), 'error')
+      // Recorded BEFORE the wait: the list exists on chain and its gas is spent, so the reducer must own it
+      // whatever the read layer does next — that is what makes the honest retry below a plain add.
+      friends_input({ type: 'friend_list_created', address: my_address, list_id: lid })
+      if (!(await await_friend_list_indexed(lid)))
+        return void toast.add(i18n.t('friends.list_not_readable_yet'), 'error')
     }
-    if (!lid) return
     await submit_friend_add({ my_address, list_id: lid, friend: addr, toast })
-  } catch {
-    /* already surfaced by the humanizing toast */
+  } catch (error) {
+    // Below the create leg nothing has a toast of its own, so this is the last place that can name the failure
+    // honestly — a read that dies after the gas is spent must never look like nothing happened (#1815).
+    toast.add(humanize_tx_error(error), 'error')
   }
 }
 

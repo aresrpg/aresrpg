@@ -66,6 +66,7 @@ const rtc_config = (turn_server) => ({
 const LINK_HEALTH_POLL_MS = 3_000
 const LINK_GRACE_MS = 8_000 // fresh sockets connect async — never judge a link dead inside its own handshake
 const REJOIN_JITTER_MS = 1_000 // de-synchronize a whole world's tabs reconnecting off one relay blip
+const BEAT_FAILURE_BREADCRUMB_MS = 30_000
 
 let room = null
 let room_world = null
@@ -90,6 +91,36 @@ const direct_peer_count = () => Object.keys(room?.getPeers?.() ?? {}).length
 const connected_relays = () =>
   Object.values(getRelaySockets?.() ?? {}).filter((/** @type {any} */ socket) => socket?.readyState === 1).length
 
+/** @type {Map<string, { last_at: number, failures: number }>} */
+const beat_failure_breadcrumbs = new Map()
+
+/**
+ * Send one loss-tolerant presence beat and answer with DATA, never a throw. Rejections still leave a diagnostic
+ * breadcrumb, but the hot position/state paths share one rate limiter so an outage cannot fill the log ring.
+ * Suppressed failures are counted into the next breadcrumb for that leg instead of disappearing.
+ * @param {{ send: (payload: unknown, options?: unknown) => Promise<unknown> } | null} action
+ * @param {unknown} payload
+ * @param {unknown} options
+ * @param {'position'|'state'} leg
+ * @returns {Promise<boolean>}
+ */
+function _send_presence_beat(action, payload, options, leg) {
+  if (!action) return Promise.resolve(false)
+  return action.send(payload, options).then(
+    () => true,
+    (error) => {
+      const now = Date.now()
+      const previous = beat_failure_breadcrumbs.get(leg) ?? { last_at: Number.NEGATIVE_INFINITY, failures: 0 }
+      const failures = previous.failures + 1
+      if (now - previous.last_at >= BEAT_FAILURE_BREADCRUMB_MS) {
+        game_log('p2p', `${leg} send failed`, { failures }, error)
+        beat_failure_breadcrumbs.set(leg, { last_at: now, failures: 0 })
+      } else beat_failure_breadcrumbs.set(leg, { ...previous, failures })
+      return false
+    }
+  )
+}
+
 /** THE one link writer. Status is presence STATE, not a log line: the chat chip renders the atom, so a live
  *  room can never read as an idle one and a dead one can never read as connected (#1641). */
 const set_link = (status, error = null) => presence_input({ type: 'link', status, error })
@@ -98,8 +129,13 @@ const set_link = (status, error = null) => presence_input({ type: 'link', status
  *  publish_room_state, set_room_local_cosmetic, and the peer-join replay all route through here. */
 function _send_state(target) {
   const { character_id, my_state, my_cosmetic } = presence_store.getState()
-  if (!character_id || !my_state) return
-  state_action?.send({ id: character_id, ...my_state, ...my_cosmetic }, target ? { target } : undefined).catch(() => {})
+  if (!character_id || !my_state) return Promise.resolve(false)
+  return _send_presence_beat(
+    state_action,
+    { id: character_id, ...my_state, ...my_cosmetic },
+    target ? { target } : undefined,
+    'state'
+  )
 }
 
 /**
@@ -420,10 +456,10 @@ function _stop_watchdogs() {
 
 /** Broadcast our current cell — call ONLY on an actual cell change (the caller throttles). `h` is the WORLD
  *  height (feet y) and `yw` the facing in radians. The atom records it (the peer-join replay reads it back);
- *  the wire send is the effect. */
+ *  the wire send is the effect. @returns {Promise<boolean>} true only when the live action accepted the beat. */
 export function publish_room_position(character_id, x, y, h = 0, yw = 0) {
   presence_input({ type: 'my_cell', x, y, h, yw })
-  pos_action?.send({ id: character_id, x, y, h, yw }).catch(() => {})
+  return _send_presence_beat(pos_action, { id: character_id, x, y, h, yw }, undefined, 'position')
 }
 
 /**
@@ -470,7 +506,7 @@ export function publish_room_state(state) {
   // Seed the ATOM first — a publish that beats join_room (mount-order race) must SURVIVE to the join/upgrade
   // flush; the atom is the park, the flush reads it back.
   presence_input({ type: 'my_state', state })
-  _send_state()
+  return _send_state()
 }
 
 /**
@@ -481,7 +517,7 @@ export function publish_room_state(state) {
  */
 export function set_room_local_cosmetic(partial) {
   presence_input({ type: 'my_cosmetic', partial })
-  _send_state()
+  return _send_state()
 }
 
 /**
@@ -510,6 +546,7 @@ export function leave_room() {
   room_generation += 1
   room_world = null
   _clear_room_actions()
+  beat_failure_breadcrumbs.clear()
   peer_characters.clear()
   presence_input({ type: 'reset' })
 }
