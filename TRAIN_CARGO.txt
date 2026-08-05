@@ -1,7 +1,4 @@
-74173b13b → Fixes #2169 — test(engine): honest timeout for the ring_manager e2e upload
-25acc8a98 → Refs #1135 — fix(social): party refusals name the party gate, not "version (code 103)"
-1428b07ec → Fixes #1815 — fix(social): a chat line nobody received says so
-b6d5372df → Refs #1759 — fix(social): the first friend add stops failing in silence
-c75a1324c → no issue ref — style(social): prettier the chat publishers and the friend-add test
-eaf28dbdd → Fixes #2223 — feat(gates): dual-home scan joins the per-PR gate ladder
-79c05180f → Fixes #2254 — fix(ceremony): the wiring plan sets and verifies the party character-type pin
+436325f7a → Refs #2174 — test(fight): #2174 RED fixture — joiner origin-reset repro (red by design, lane-parked)
+8fe7ab3eb → Refs #2174 — test(fight): #2174 fixture rides the test tree
+da90df51b → Fixes #2174 — fix(world): stamp a return anchor when a fight takes the body out of the world
+fd9abbbd6 → Fixes #2255 — fix(frontend): the remaining silent send legs answer honestly
