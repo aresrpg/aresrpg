@@ -2,3 +2,7 @@ coverage/
 node_modules/
 dist/
 *.log
+# Ceremony output (ceremony_manifest.json / release_manifest.json / ceremony_upgrade_pending.json): machine-
+# written artifacts nobody reviews, absent from a fresh checkout, and formatted by the root check when they do
+# exist. Running the ceremony locally must not red the package's own lint.
+scripts/out/
