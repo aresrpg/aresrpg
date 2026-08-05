@@ -17,6 +17,27 @@ const issuer_allowlist = (csv) =>
   )
 
 /**
+ * How long ago a `<purpose>:<sender>:<epoch-ms>` challenge was stamped, in ms — negative when the stamp is in
+ * the future. `null` when the trailing field is not a well-formed epoch.
+ *
+ * ONE home for reading a challenge's clock (#2263): the freshness gate below and the refusal log in
+ * sponsor.mjs both derive from it, so "how old is this challenge" is never re-parsed into a second answer.
+ * @param {string | null | undefined} challenge
+ * @param {number} [now]
+ */
+export function challenge_age_ms(challenge, now = Date.now()) {
+  // EXACTLY three fields. Neither the purpose nor a Sui address contains a colon, so anything else is not this
+  // shape — and reading the LAST field of a longer string would quietly start accepting `<p>:<s>:<junk>:<ts>`,
+  // a challenge the freshness gate rejects today. The shape is the service's contract; this only reads it.
+  const fields = String(challenge ?? '').split(':')
+  if (fields.length !== 3) return null
+  const [, , encoded_ts] = fields
+  const timestamp = Number(encoded_ts)
+  if (!encoded_ts || !Number.isFinite(timestamp) || String(timestamp) !== encoded_ts) return null
+  return now - timestamp
+}
+
+/**
  * The half of the gate that costs NOTHING: challenge shape, sender binding, freshness, signature scheme and
  * issuer — every check decidable from the request alone, with no socket opened. Pure and synchronous, so it is
  * safe to run as a fast-fail before any network work is dispatched.
@@ -43,11 +64,9 @@ export function assert_zklogin_challenge_local({
   if (!challenge || !signature) throw new Error('zklogin-required: challenge + signature required')
   const prefix = `${purpose}:${sender}:`
   if (!challenge.startsWith(prefix)) throw new Error('zklogin-invalid: challenge does not match sender')
-  const encoded_ts = challenge.slice(prefix.length)
-  const timestamp = Number(encoded_ts)
-  if (!Number.isFinite(timestamp) || String(timestamp) !== encoded_ts)
-    throw new Error('zklogin-invalid: malformed challenge timestamp')
-  const age = now() - timestamp
+  // The prefix is already proven above, so the trailing field IS the timestamp — read it through the one home.
+  const age = challenge_age_ms(challenge, now())
+  if (age == null) throw new Error('zklogin-invalid: malformed challenge timestamp')
   if (age < 0 || age >= ttl_ms) throw new Error('zklogin-stale: challenge expired — retry')
 
   let parsed

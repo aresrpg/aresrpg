@@ -29,6 +29,8 @@ import { toBase64 } from '@mysten/sui/utils'
 
 import release from '../packages/sdk/src/deployment/release.json' with { type: 'json' }
 
+import { challenge_age_ms } from './zklogin_auth.mjs'
+
 // ── ENV POLARITY, STATED — identical to sponsor.reserve_gate.test.js, and for the same reasons ──
 // (in-memory counters need a store-less localnet process; the allowlist is stated because localnet has no
 // release.json entry, so the scope arm would otherwise swallow every verdict this file is about).
@@ -69,6 +71,9 @@ mock.module('@mysten/sui/grpc', () => ({
   },
 }))
 mock.module('./zklogin_auth.mjs', () => ({
+  // #2263 — the refusal log reads a challenge's AGE through this. The double neutralizes the GATE, never
+  // the clock reader, so the real parser is passed through rather than faked into a second answer.
+  challenge_age_ms,
   // The free pre-pass is a no-op here on purpose: every fixture below sends a well-formed challenge, so the
   // question this file asks is what happens to the two NETWORK legs. `sponsor.station.test.js` owns the other
   // half — that a request failing this pre-pass never reaches the network at all.

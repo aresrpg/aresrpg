@@ -10,7 +10,7 @@ import { SuiGrpcClient } from '@mysten/sui/grpc'
 import checked_in_release from '../packages/sdk/src/deployment/release.json' with { type: 'json' }
 
 import { init_reporting, report_error } from './report.js'
-import { assert_zklogin_challenge, assert_zklogin_challenge_local } from './zklogin_auth.mjs'
+import { assert_zklogin_challenge, assert_zklogin_challenge_local, challenge_age_ms } from './zklogin_auth.mjs'
 import {
   ADDR_DAILY_CAP_MIST,
   ADDR_RL_MAX,
@@ -64,6 +64,11 @@ export const CORS = {
   // GET is what `/`, `/stats` and the TURN mint already answer; a simple GET never preflights, so this line
   // was not a bug — it was a lie, and a header that describes this process must describe all of it.
   'access-control-allow-methods': 'GET,POST,OPTIONS',
+  // #2263 — `Date` is NOT a CORS-safelisted response header, so a browser on another origin cannot read it
+  // unless we say so here. It is the client's only measurement of THIS process's clock, and this process is
+  // the one that refuses a challenge for being outside its freshness window: without this line the client is
+  // asked to meet a deadline it has no way to read. The value is a timestamp the response already carried.
+  'access-control-expose-headers': 'date',
   'access-control-max-age': '86400',
 }
 const RESERVE_DURATION_SECS = Number(process.env.SPONSOR_RESERVE_DURATION_SECS || 60)
@@ -500,13 +505,30 @@ function roll_stats() {
     addresses: new Set(),
   })
 }
+/** 8 characters of an address: enough to correlate two log lines, never enough to identify a wallet. */
+const short_addr = (address) => (typeof address === 'string' && address ? address.slice(0, 8) : null)
+
 /**
- * Count one refusal under its own class — ONE home for how a refusal is counted, next to the one home for how a
- * refusal is built. `kind` is a key of `initial_refusals()`; every arm names its own, so the daily line and the
- * /stats surface stay a true census of why sponsorship was declined rather than a single "refused" number.
+ * Count one refusal under its own class AND describe it once — ONE home for how a refusal is counted, next to
+ * the one home for how a refusal is built. `kind` is a key of `initial_refusals()`; every arm names its own, so
+ * the daily line and the /stats surface stay a true census of why sponsorship was declined.
+ *
+ * #2263 — the counters alone could not diagnose an outage: a device clock ≥5 minutes off fails the challenge's
+ * freshness window on EVERY transaction, and in the logs that was indistinguishable from a bad signature or a
+ * wrong issuer. One structured line per refusal names the class and carries the two facts that separate them —
+ * a truncated address (which player, across two lines) and the challenge's AGE in seconds (which is clock skew,
+ * stated in the units the player would fix). Never the challenge bytes, never a signature, never a full address.
  */
-function count_refusal(kind) {
+function count_refusal(kind, { sender, challenge } = {}) {
   stats.refused[kind] += 1
+  const age_ms = challenge_age_ms(challenge)
+  console.warn(
+    `[sponsor] REFUSAL ${JSON.stringify({
+      reason: kind,
+      addr: short_addr(sender),
+      challenge_age_s: age_ms == null ? null : Math.round(age_ms / 1000),
+    })}`
+  )
 }
 
 export function sponsor_stats() {
@@ -652,7 +674,7 @@ export async function reserveSponsored({ txKindBytes, sender, challenge, signatu
   try {
     assert_sponsor_challenge_preconditions(sender, challenge, signature)
   } catch (error) {
-    count_refusal('zklogin')
+    count_refusal('zklogin', { sender, challenge })
     throw error
   }
   const [challenge_settled, balance_settled] = await Promise.allSettled([
@@ -660,7 +682,7 @@ export async function reserveSponsored({ txKindBytes, sender, challenge, signatu
     client.core.getBalance({ owner: sender }),
   ])
   if (challenge_settled.status === 'rejected') {
-    count_refusal('zklogin')
+    count_refusal('zklogin', { sender, challenge })
     throw challenge_settled.reason
   }
   // An unanswered balance RPC is not a verdict about this request — it propagates raw and uncounted, as it did
@@ -668,17 +690,17 @@ export async function reserveSponsored({ txKindBytes, sender, challenge, signatu
   if (balance_settled.status === 'rejected') throw balance_settled.reason
   const { balance } = balance_settled.value
   if (BigInt(balance.balance) > SELF_PAY_MIST) {
-    count_refusal('balance')
+    count_refusal('balance', { sender, challenge })
     throw sponsor_refusal(SELF_PAY_REASON, 'self-pay-required: balance exceeds 0.2 SUI — sign with your own gas')
   }
   try {
     assert_ptb_scope(txKindBytes)
   } catch (error) {
-    count_refusal('scope')
+    count_refusal('scope', { sender, challenge })
     throw error
   }
   if (await addr_rate_limited(sender)) {
-    count_refusal('rate')
+    count_refusal('rate', { sender, challenge })
     throw new Error('rate-limited: too many sponsorships for this address, retry later')
   }
   let simulation
@@ -693,7 +715,7 @@ export async function reserveSponsored({ txKindBytes, sender, challenge, signatu
     )
   } catch (error) {
     // INFRASTRUCTURE, not a verdict: the RPC threw or never answered, so the chain said nothing about this PTB.
-    count_refusal('sim_infra')
+    count_refusal('sim_infra', { sender, challenge })
     throw sponsor_refusal(
       SIMULATION_INFRASTRUCTURE_REASON,
       `sponsor-unpriceable: simulation failed (${error?.message ?? error}) — refusing`
@@ -705,14 +727,14 @@ export async function reserveSponsored({ txKindBytes, sender, challenge, signatu
   const verdict = classify_simulation(simulation)
   if (!verdict.ok) {
     if (verdict.reason === WOULD_ABORT_REASON) {
-      count_refusal('abort')
+      count_refusal('abort', { sender, challenge })
       throw sponsor_refusal(
         WOULD_ABORT_REASON,
         `${WOULD_ABORT_ERROR_PREFIX} ${verdict.chain_error}`,
         verdict.chain_error
       )
     }
-    count_refusal('sim_unreadable')
+    count_refusal('sim_unreadable', { sender, challenge })
     throw sponsor_refusal(SIMULATION_UNREADABLE_REASON, `sponsor-unpriceable: ${verdict.detail} — refusing`)
   }
   const gas_used = verdict.effects.gasUsed
@@ -720,7 +742,7 @@ export async function reserveSponsored({ txKindBytes, sender, challenge, signatu
   try {
     budget = derive_budget_mist(gas_used)
   } catch (error) {
-    count_refusal('ceiling')
+    count_refusal('ceiling', { sender, challenge })
     throw error
   }
   // THE DAILY CAP, BOOKED — not merely consulted. The budget about to be reserved is charged against the day
@@ -729,7 +751,7 @@ export async function reserveSponsored({ txKindBytes, sender, challenge, signatu
   // every path that ends the reservation early releases it, and an abandoned one is released at its expiry.
   const daily_hold = await addr_daily_hold(sender, budget)
   if (daily_hold == null) {
-    count_refusal('daily')
+    count_refusal('daily', { sender, challenge })
     throw sponsor_refusal(
       DAILY_CAP_REASON,
       'daily free gameplay limit reached — transactions now require your own gas until tomorrow'
@@ -740,7 +762,7 @@ export async function reserveSponsored({ txKindBytes, sender, challenge, signatu
     reservation = await station_reserve({ gas_budget: Number(budget), reserve_duration_secs: RESERVE_DURATION_SECS })
   } catch (error) {
     await release_daily_hold(daily_hold, sender) // no reservation exists ⇒ nothing is owed against the cap
-    count_refusal('station')
+    count_refusal('station', { sender, challenge })
     throw error
   }
   const { sponsor_address, reservation_id, gas_coins } = reservation
@@ -761,7 +783,7 @@ export async function reserveSponsored({ txKindBytes, sender, challenge, signatu
   })
   if (!stashed) {
     await release_daily_hold(daily_hold, sender)
-    count_refusal('store')
+    count_refusal('store', { sender, challenge })
     throw sponsor_refusal(SHARED_STORE_REASON, SHARED_STORE_ERROR)
   }
   stats.reserved += 1
@@ -792,7 +814,7 @@ export async function executeSponsored({ reservationId, txBytes, userSig }) {
     assert_tx_matches_reservation(txBytes, reservation)
   } catch (error) {
     await release_daily_hold(reservation.daily_hold, reservation.sender)
-    count_refusal('mismatch')
+    count_refusal('mismatch', { sender: reservation.sender })
     throw error
   }
   // Exactly one execute call: effects mean gas burned, so this path never auto-retries. A THROW here (station
@@ -805,7 +827,7 @@ export async function executeSponsored({ reservationId, txBytes, userSig }) {
   })
   if (!effects) {
     await release_daily_hold(reservation.daily_hold, reservation.sender)
-    count_refusal('execreject')
+    count_refusal('execreject', { sender: reservation.sender })
     throw new Error(`sponsor-exec-rejected: ${error ?? 'no effects'} — pre-execution rejection, no gas charged`)
   }
   const charge = real_charge_mist(effects.gasUsed)

@@ -18,6 +18,8 @@ import { toBase64 } from '@mysten/sui/utils'
 
 import release from '../packages/sdk/src/deployment/release.json' with { type: 'json' }
 
+import { challenge_age_ms } from './zklogin_auth.mjs'
+
 // ── ENV POLARITY, STATED (sponsor_state.mjs memoizes all three at module load) ──
 // The refusal arms below are driven against the in-memory counters, and an in-memory counter is a per-process
 // allowance — off localnet its absence refuses outright, which would make every arm below pass for the WRONG
@@ -52,6 +54,9 @@ mock.module('@mysten/sui/grpc', () => ({
   },
 }))
 mock.module('./zklogin_auth.mjs', () => ({
+  // #2263 — the refusal log reads a challenge's AGE through this. The double neutralizes the GATE, never
+  // the clock reader, so the real parser is passed through rather than faked into a second answer.
+  challenge_age_ms,
   assert_zklogin_challenge: async () => {},
   assert_zklogin_challenge_local: () => {},
 }))
