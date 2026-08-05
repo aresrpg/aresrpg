@@ -107,19 +107,28 @@ function count_json_rows(file) {
     return 0
   }
 }
+// The seed corpus lives in the PRIVATE content repo, so a checkout of THIS repo alone cannot measure it. A
+// zeroed plan would be a plausible lie — the manifest would advertise a 0-object release and the RELEASE page
+// would render an empty seed step — so the absent-corpus path carries the prior manifest's measurement forward
+// verbatim, stamped with the generation it was actually measured in, and REFUSES when there is no prior either.
+function carried_seed_plan() {
+  if (!fs.existsSync(MANIFEST_OUT))
+    throw new Error(
+      `release:prepare: ${SEED_DIR} is absent (the corpus lives in the private content repo) and there is no ` +
+        `prior ${MANIFEST_OUT} to carry its measurement from — refusing to write a fabricated 0-object seed plan`
+    )
+  const prior = JSON.parse(fs.readFileSync(MANIFEST_OUT, 'utf8'))
+  const plan = prior.seedPlan
+  if (!plan?.total)
+    throw new Error(
+      `release:prepare: ${SEED_DIR} is absent and the prior manifest carries no measured seed plan — ` +
+        `refusing to fabricate one; regenerate alongside a seed-repo checkout`
+    )
+  return { ...plan, carriedFrom: plan.carriedFrom ?? prior._generatedAt }
+}
+
 function seed_plan() {
-  if (!fs.existsSync(SEED_DIR))
-    return {
-      source: 'seed/mainnet',
-      present: false,
-      biomes: 0,
-      items: 0,
-      resources: 0,
-      mobs: 0,
-      recipes: 0,
-      worlds: 0,
-      total: 0,
-    }
+  if (!fs.existsSync(SEED_DIR)) return carried_seed_plan()
   const biomes = fs.readdirSync(SEED_DIR).filter((d) => {
     try {
       return fs.statSync(path.join(SEED_DIR, d)).isDirectory()
