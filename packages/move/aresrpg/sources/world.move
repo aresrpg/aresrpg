@@ -23,7 +23,7 @@ use aresrpg_foundation::world_math;
 
 use aresrpg::{admin::AdminCap, config, version::Version};
 use std::string::String;
-use sui::{dynamic_field as df, event, vec_map::{Self, VecMap}, versioned::{Self, Versioned}};
+use sui::{event, vec_map::{Self, VecMap}, versioned::{Self, Versioned}};
 
 // ╔════════════════ [ Errors ] ═══════════════════════════════════════════════ ]
 
