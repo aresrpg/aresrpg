@@ -14,8 +14,17 @@ import { fileURLToPath } from 'node:url'
 import { execFileSync } from 'node:child_process'
 
 import { test, expect } from 'bun:test'
+import { bcs } from '@mysten/sui/bcs'
+
+import { aresrpg_deployment, character_type } from '../../sdk/src/deployment/aresrpg.js'
 
 import { publishOrder, TICKET_ORDER, PKG_DEPS } from './ceremony_lib.mjs'
+import {
+  PARTY_CHARACTER_TYPE_TARGET,
+  PartyCharacterTypePinMismatchError,
+  PartyCharacterTypePinMissingError,
+  assert_party_character_type_pin,
+} from './party_character_type_pin.mjs'
 import { POLICY_STEPS, ENABLE_STEPS } from './release_prepare.mjs'
 
 const __dir = dirname(fileURLToPath(import.meta.url))
@@ -24,6 +33,17 @@ const MANIFEST = join(__dir, '../../../packages/frontend/public/release_manifest
 // module::fn (drop the package-id prefix — the ceremony's synthetic ids differ from the catalog's symbolic
 // `core::`/`rules::` labels, but the module + function are the load-bearing identity of the call).
 const mod_fn = (t) => t.split('::').slice(-2).join('::')
+
+function ceremony_targets() {
+  const out = execFileSync('node', [join(__dir, 'ceremony.mjs'), '--dry-run'], { encoding: 'utf8' })
+  return new Set(
+    out
+      .split('\n')
+      .map((l) => l.trim())
+      .filter((l) => l.startsWith('→'))
+      .map((l) => mod_fn(l.replace(/^→\s*/, '')))
+  )
+}
 
 test('manifest exists (run `bun run release:prepare` first)', () => {
   expect(existsSync(MANIFEST)).toBe(true)
@@ -75,20 +95,70 @@ test('manifest carries the move-sources staleness hash (64-hex sha256)', () => {
   expect(m.moveSourcesHash).toMatch(/^[0-9a-f]{64}$/)
 })
 
+test('social wiring plan pins Party to the deployment Character type', () => {
+  const targets = ceremony_targets()
+  const social = ENABLE_STEPS.find((step) => step.pkg === 'social')
+  expect(social?.targets.map(mod_fn)).toContain(PARTY_CHARACTER_TYPE_TARGET)
+  expect(targets).toContain(PARTY_CHARACTER_TYPE_TARGET)
+})
+
+const testnet_deployment = aresrpg_deployment('testnet')
+const pin_manifest = {
+  aresrpg: { pkg: testnet_deployment.PACKAGE_ID },
+  social: {
+    pkg: testnet_deployment.SOCIAL_PACKAGE_ID,
+    version: testnet_deployment.SOCIAL_VERSION,
+  },
+}
+const pin_key = {
+  type: `${pin_manifest.social.pkg}::version::PartyCharacterTypeKey`,
+  bcs: new Uint8Array(),
+}
+
+function pin_reader(value) {
+  return {
+    async listDynamicFields() {
+      return { dynamicFields: [{ name: pin_key }], hasNextPage: false, cursor: null }
+    },
+    async getDynamicField() {
+      return { dynamicField: { value: { bcs: value } } }
+    },
+  }
+}
+
+test('party-pin gate accepts only the deployment Character TypeName bytes', async () => {
+  const expected = character_type({ PACKAGE_ID: pin_manifest.aresrpg.pkg }).replace(/^0x/, '')
+  const pinned = await assert_party_character_type_pin(
+    pin_reader(bcs.string().serialize(expected).toBytes()),
+    pin_manifest
+  )
+  expect(pinned).toBe(character_type({ PACKAGE_ID: pin_manifest.aresrpg.pkg }))
+})
+
+test('party-pin gate throws a named error when the dynamic field is absent', async () => {
+  const reader = {
+    async listDynamicFields() {
+      return { dynamicFields: [], hasNextPage: false, cursor: null }
+    },
+  }
+  await expect(assert_party_character_type_pin(reader, pin_manifest)).rejects.toBeInstanceOf(
+    PartyCharacterTypePinMissingError
+  )
+})
+
+test('party-pin gate throws when the dynamic-field bytes name another type', async () => {
+  await expect(
+    assert_party_character_type_pin(pin_reader(bcs.string().serialize('u8').toBytes()), pin_manifest)
+  ).rejects.toBeInstanceOf(PartyCharacterTypePinMismatchError)
+})
+
 // Cold node spawn over the @mysten/sui ESM graph can stall under contention; the dry-run itself is ~0.13s.
 test('DRIFT GUARD — every catalog policy/enable target is a real ceremony PTB call (module::fn)', () => {
   // ceremony.mjs --dry-run prints every wiring/enable moveCall target as `→ pkg::module::fn` (zero chain calls,
   // no key needed). Parse them and prove the page's step catalog is a subset — no invented/drifted targets.
-  const out = execFileSync('node', [join(__dir, 'ceremony.mjs'), '--dry-run'], { encoding: 'utf8' })
-  const ceremony_targets = new Set(
-    out
-      .split('\n')
-      .map((l) => l.trim())
-      .filter((l) => l.startsWith('→'))
-      .map((l) => mod_fn(l.replace(/^→\s*/, '')))
-  )
-  expect(ceremony_targets.size).toBeGreaterThan(0)
+  const targets = ceremony_targets()
+  expect(targets.size).toBeGreaterThan(0)
   const catalog = [...POLICY_STEPS.flatMap((s) => s.targets), ...ENABLE_STEPS.flatMap((s) => s.targets)]
-  const missing = catalog.filter((t) => !ceremony_targets.has(mod_fn(t)))
+  const missing = catalog.filter((t) => !targets.has(mod_fn(t)))
   expect(missing).toEqual([])
 }, 30_000)

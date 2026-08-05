@@ -25,6 +25,7 @@ import { execFileSync, execSync } from 'node:child_process'
 
 import { buildPackage, publishOrder, PKG_DEPS, CHAIN_IDS, getNetwork, MOVE_DIR, OUT } from './ceremony_lib.mjs'
 import { move_sources_hash } from './move_sources_hash.mjs'
+import { PARTY_CHARACTER_TYPE_TARGET } from './party_character_type_pin.mjs'
 
 const __dir = path.dirname(fileURLToPath(import.meta.url))
 const REPO_ROOT = path.resolve(__dir, '../../..')
@@ -85,7 +86,10 @@ export const POLICY_STEPS = [
 // Enable = the SEPARATE final flip (ceremony.mjs VERSIONED + the GameConfig freeze). foundation has no Version.
 export const ENABLE_STEPS = [
   { pkg: 'spells', targets: ['spells::admin::admin_set_enabled'] },
-  { pkg: 'social', targets: ['social::admin::admin_set_enabled'] },
+  {
+    pkg: 'social',
+    targets: [`social::${PARTY_CHARACTER_TYPE_TARGET}`, 'social::admin::admin_set_enabled'],
+  },
   { pkg: 'engine', targets: ['engine::admin::admin_set_enabled'] },
   {
     pkg: 'aresrpg',

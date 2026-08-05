@@ -45,6 +45,11 @@ import {
   isSome,
 } from './ceremony_lib.mjs'
 import { assert_publishable_tree, with_env } from './env_guard.mjs'
+import {
+  PARTY_CHARACTER_TYPE_TARGET,
+  assert_party_character_type_pin,
+  party_character_type,
+} from './party_character_type_pin.mjs'
 
 // ════════════════════════════════════════════════════════════════════════════════════════════════════════
 // WIRING PTBs — S-46: only the POLICY layer + the mainnet sponsor fence. `(tx, M) => void` builders; real mode
@@ -141,6 +146,17 @@ const WIRING = [
         throw new Error('W5: create_board receipt has no shared CrushBoard id/version')
     },
   },
+  {
+    name: 'W6 · party character-type pin',
+    desc: 'bind social Party to the defining aresrpg Character type before the lineage can be enabled',
+    build(tx, M) {
+      tx.moveCall({
+        target: `${M.social.pkg}::${PARTY_CHARACTER_TYPE_TARGET}`,
+        typeArguments: [party_character_type(M)],
+        arguments: [o(tx, M.social.admin), o(tx, M.social.version)],
+      })
+    },
+  },
 ]
 
 /** Shared marketplace-policy PTB body (item + character); `listing` adds the per-kind listing rule
@@ -230,6 +246,7 @@ const ASSERTIONS = [
   'S-46 authority zero: NO ExtensionCap / CreatorCap / custody-registry types exist in the merged package — nothing to wire, nothing loose (the types are gone at compile time)',
   'Policies attached: character policy (royalty+lock+personal+listing) + item policy (royalty[min>0]+lock+personal+item::add_listing_rule ghost gate) shared; wrapped ItemExtractPolicy shared; both TransferPolicyCaps at the signer',
   'DARK: the ONE Version enabled=false + GameConfig.enabled=false (until --enable); domain kill-switch mask ships ALL-ON',
+  'Party character-type pin exists on the social Version and byte-equals the defining aresrpg Character type',
 ]
 async function runAssertions(client, M) {
   const results = []
@@ -271,6 +288,15 @@ async function runAssertions(client, M) {
         'A3 core objects accounted (admin/version/upgradeCap/GameConfig/FightRegistryShards/FightLatchShards/PoolRegistry)',
       pass,
       detail: `admin=${M.aresrpg.admin} version=${M.aresrpg.version}`,
+    })
+  }
+  // A4 — social Party is pinned to this lineage's defining Character type
+  {
+    const pinned = await assert_party_character_type_pin(client, M)
+    results.push({
+      label: 'A4 social Party character-type pin',
+      pass: true,
+      detail: pinned,
     })
   }
   return results
