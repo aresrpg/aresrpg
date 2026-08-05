@@ -82,10 +82,12 @@ describe('world fight proof attachment', () => {
     expect(blocked_at, 'an unprovable group refuses at the seam').toBeGreaterThan(-1)
     expect(compose_at, 'the refusal precedes compose').toBeGreaterThan(blocked_at)
     expect(sign_at, 'the refusal precedes submit').toBeGreaterThan(blocked_at)
-    // and the ONLY witness the PTB can receive is a composed one
+    // and the ONLY witness EITHER composer can receive is a door-resolved one — one binding, both call sites
+    // (#2227 opened the member door to the same witness; a second, hand-built witness would be a forged door)
     expect(dungeon_engage_actions_source).toContain(
-      "group_proof: group_door.door === 'proof' ? group_door.proof : null"
+      "const group_proof = group_door.door === 'proof' ? group_door.proof : null"
     )
+    expect(dungeon_engage_actions_source.match(/group_proof[,}]/g)?.length).toBe(2)
   })
 })
 
