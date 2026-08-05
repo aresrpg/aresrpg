@@ -19,7 +19,9 @@
 # importable JS module, derived at check time from docs/REGISTRY.md itself. The registry is the
 # manifest — there is no second file listing what is protected — and rows whose home is not an
 # importable module (Move sources, prose facts) generate nothing and are REPORTED as unfenceable, so
-# the gate never claims coverage it does not have.
+# the gate never claims coverage it does not have. Read the whole derived fence — every rule and
+# every unfenceable row — with:
+#   node scripts/arch/single_home_verdict.mjs --root . --registry docs/REGISTRY.md --fences
 #
 # What runs, in order:
 #   1. fence positive control — a synthetic row is planted in a COPY of the real registry and the
