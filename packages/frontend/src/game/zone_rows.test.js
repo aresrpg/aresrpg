@@ -2,7 +2,7 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 import { describe, expect, test } from 'bun:test'
 
-import { format3_group_commitment, rows_from_state, zone_state_resolvable } from './zone_rows.js'
+import { member_group_commitment, rows_from_state, zone_state_resolvable } from './zone_rows.js'
 
 // The PURE composer seam of the search-cost rework: zone {seed, bitmaps} + World doc → live spawn rows. The
 // vectors below are the SAME cross-language fixture both parity suites pin (zone_gen_tests.move
@@ -70,12 +70,16 @@ describe('zone_rows — the derived spawn-row composer', () => {
     expect(rows_from_state(state, 488, 488, world, 6).filter((r) => r.kind === 'mob')).toHaveLength(3)
   })
 
-  test('claim eligibility accepts only the authoritative format-3 /v1 commitment', () => {
-    const root = [3, ...Array(32).fill(7)]
-    expect(format3_group_commitment({ group_root: root, group_count: 3 })).toBe(root)
-    expect(format3_group_commitment({ group_root: Array(32).fill(7), group_count: 3 })).toBeNull()
-    expect(format3_group_commitment({ group_root: [2, ...Array(32).fill(7)], group_count: 3 })).toBeNull()
-    expect(format3_group_commitment({ group_root: root, group_count: null })).toBeNull()
+  test('claim eligibility accepts the MEMBER-FAMILY /v1 commitments — list AND tree (#2227)', () => {
+    const list_root = [3, ...Array(32).fill(7)]
+    const tree_root = [4, ...Array(32).fill(7)] // format 4 commits the SAME stream; it is not "uncommitted"
+    expect(member_group_commitment({ group_root: list_root, group_count: 3 })).toBe(list_root)
+    expect(member_group_commitment({ group_root: tree_root, group_count: 3 })).toBe(tree_root)
+    // pre-member commitments and malformed roots still refuse: their claim polarity is the one the chain rejects
+    expect(member_group_commitment({ group_root: Array(32).fill(7), group_count: 3 })).toBeNull()
+    expect(member_group_commitment({ group_root: [2, ...Array(32).fill(7)], group_count: 3 })).toBeNull()
+    expect(member_group_commitment({ group_root: [9, ...Array(32).fill(7)], group_count: 3 })).toBeNull()
+    expect(member_group_commitment({ group_root: list_root, group_count: null })).toBeNull()
   })
 
   test('spawn spacing law holds through the composer (pairwise >= 20 blocks)', () => {

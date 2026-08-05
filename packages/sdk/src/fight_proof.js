@@ -177,6 +177,23 @@ const normalized_commitment = value => {
   throw new Error(`[fight-proof] ${COMMITMENT_SHAPE}`)
 }
 
+/**
+ * Whether a SERVED `group_root` is a format-4 member TREE — the only commitment shape with a per-group leaf,
+ * hence the only one whose claim door takes an inclusion witness. The door predicate lives HERE, beside the
+ * composer that implements it, so a gate and its witness can never disagree about the same bytes. Nothing
+ * else gates this door: no flag, no setting, no deployment pin — only the package that ships the door can have
+ * written a format-4 root, so the zone's own byte IS the capability probe. A format-1/2/3 root, an absent one
+ * or an unknown shape all answer false and keep the whole-zone derivation door.
+ * @param {number[]|Uint8Array|null|undefined} group_root
+ */
+export const is_member_tree_commitment = group_root => {
+  try {
+    return normalized_commitment(group_root).format === FORMAT_MEMBER_TREE
+  } catch {
+    return false
+  }
+}
+
 const bytes_equal = (left, right) =>
   left.length === right.length &&
   left.every((byte, index) => byte === right[index])
@@ -553,11 +570,13 @@ const commitment_proof = (commitment, context, groups, target_index) => {
  * @param {{ world_id:string, zx:number, zy:number, zone_seed:string|number|bigint,
  *   discovered_at_ms:string|number|bigint, group_root:number[]|Uint8Array, group_count:number,
  *   groups:Array<{ index:number, spawn_id:string|number|bigint, template_id:string, x:number, z:number,
- *     size:number, group_seed:string|number|bigint, member_template_ids?:string[] }>, index:number,
+ *     size:number, group_seed:string|number|bigint, member_template_ids?:string[],
+ *     progress?:number|string|bigint }>, index:number,
  *   progress?:number|string|bigint }} input
  *   `member_template_ids` is the group's per-member roster and `progress` the zone's §4 difficulty — REQUIRED on
  *   a format-3 (member-list) or format-4 (member-tree) zone, whose commitments cover them, and ignored by the
- *   format-1/2 digests.
+ *   format-1/2 digests. `progress` is zone-level: pass it at the top or let it read off the rows (which is where
+ *   {@link proof_group_of} puts it).
  * @returns {MobGroupProof|null}
  */
 export function compose_mob_group_proof(input) {
@@ -572,7 +591,7 @@ export function compose_mob_group_proof(input) {
       group_count,
       groups,
       index,
-      progress = 0,
+      progress,
     } = input ?? {}
     if (
       !Array.isArray(groups) ||
@@ -583,7 +602,18 @@ export function compose_mob_group_proof(input) {
     const count = normalized_number(group_count, 64, 'group_count')
     const target_index = normalized_number(index, 64, 'index')
     if (count !== groups.length || target_index >= count) return null
-    const context = { world_id, zx, zy, zone_seed, discovered_at_ms, progress }
+    // Progress is ZONE-level, so a stream built by {@link proof_group_of} already carries it on every row; an
+    // explicit input still wins (the frozen vectors name it directly). Absent on both ⇒ the format-1/2 zones
+    // whose digests never read it.
+    const zone_progress = progress ?? groups[0]?.progress ?? 0
+    const context = {
+      world_id,
+      zx,
+      zy,
+      zone_seed,
+      discovered_at_ms,
+      progress: zone_progress,
+    }
     const normalized_groups = groups.map((group, position) => {
       if (
         normalized_number(group?.index, 64, `groups[${position}].index`) !==
@@ -639,7 +669,7 @@ export function compose_mob_group_proof(input) {
         ...(commitment.format === FORMAT_MEMBER_TREE
           ? {
               member_template_ids: group.member_template_ids,
-              progress: normalized_number(progress, 64, 'progress'),
+              progress: normalized_number(zone_progress, 64, 'progress'),
             }
           : {}),
       },
@@ -661,6 +691,29 @@ const same_unsigned = (left, right) => {
 /** A consumed derivation index on the SERVED live bitmap (bit i of byte i>>3) can never be claimed. */
 const bit_consumed = (bitmap, index) =>
   ((Number(bitmap?.[index >> 3] ?? 0) >> (index & 7)) & 1) !== 0
+
+/**
+ * THE one translation of a `@aresrpg/sim` `derive_zone` mob ROW into a {@link compose_mob_group_proof} group.
+ * The two shapes disagree on exactly two names — the sim calls the seating roster `members` and carries the
+ * zone's `progress` per row — and a caller that re-spells that mapping locally is one reroll away from
+ * composing witnesses the chain rejects. Every witness producer goes through here: {@link mob_group_witness}
+ * for callers that let it derive, and clients that already hold their own derived stream.
+ * @param {{ index:number, spawn_id:string, template_id:string, x:number, z:number, size:number,
+ *   group_seed:string, members?:string[], progress?:number }} row
+ */
+export const proof_group_of = row => ({
+  index: row.index,
+  spawn_id: row.spawn_id,
+  template_id: row.template_id,
+  x: row.x,
+  z: row.z,
+  size: row.size,
+  group_seed: row.group_seed,
+  // the SEATING roster the member commitments bind — dropping it here is what made every member-zone
+  // witness fail shut against its own chain digest
+  member_template_ids: row.members ?? [],
+  progress: row.progress ?? 0,
+})
 
 /**
  * PRODUCE a verified {@link MobGroupProof} for `create_fight_ptb` from the `/v1`-served ingredients — the
@@ -744,19 +797,7 @@ export function mob_group_witness({
       team_bound,
     })
       .filter(row => row.kind === 'mob')
-      .map(row => ({
-        index: row.index,
-        spawn_id: row.spawn_id,
-        template_id: row.template_id,
-        x: row.x,
-        z: row.z,
-        size: row.size,
-        group_seed: row.group_seed,
-        // the SEATING roster the member commitments bind — dropping it here is what made every member-zone
-        // witness fail shut against its own chain digest
-        member_template_ids: row.members ?? [],
-        progress: row.progress ?? 0,
-      }))
+      .map(proof_group_of)
     const matches =
       spawn_id != null
         ? groups.filter(group => same_unsigned(group.spawn_id, spawn_id))
@@ -780,8 +821,6 @@ export function mob_group_witness({
       group_count: zone.group_count,
       groups,
       index: target.index,
-      // zone-level, so every derived row carries the same value; an empty stream never reaches here
-      progress: groups[0]?.progress ?? 0,
     })
   } catch {
     return null

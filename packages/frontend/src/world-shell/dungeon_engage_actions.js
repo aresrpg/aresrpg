@@ -15,6 +15,8 @@ import {
   create_fight_ptb,
   create_member_fight_ptb,
   compose_mob_group_proof,
+  proof_group_of,
+  is_member_tree_commitment,
   get_zone_group_commitment,
   mint_rolled_ptb,
   burn_result_ptb,
@@ -66,7 +68,7 @@ const same_object_id = (left, right) => {
  * - `proof`: the witness `zones::*_with_proof` accepts, locally replayed against the chain commitment.
  * - `derivation`: the proofless door is the LEGAL one here — an occupied-zone claim (no zx/zy), an unstamped
  *   deployment (create_fight_ptb ignores witnesses by law there), a zone searched before commitments existed,
- *   or a FORMAT-3 member-roster group, whose claim door takes no witness at all (see below).
+ *   or a FORMAT-3 member-roster group, whose flat whole-set digest has no per-group leaf to prove (see below).
  * - `blocked`: we could not prove what we are about to claim. That is a refusal, never a quieter door.
  * A resolved door also NAMES the row it is about to claim (`index`): that number is the group's identity for
  * `fight::release_group`, so a lost fight can give the group back (#609). The occupied-zone door names no row,
@@ -102,7 +104,7 @@ export function world_group_door({
   if (matches.length !== 1) return { door: 'blocked', reason: 'stale_stream' }
   const [target] = matches
   if (!same_object_id(target.template_id, mob_template_id)) return { door: 'blocked', reason: 'stale_stream' }
-  // FORMAT 3 — the ROSTER gets the same cross-check the primary template already gets: the freshly derived stream
+  // MEMBER ZONES — the ROSTER gets the same cross-check the primary template already gets: the freshly derived stream
   // must agree, member for member and in order, with the roster we are about to feed `add_member`. A disagreement
   // (a rerolled zone, a stale render) means we are naming a pack that no longer exists — a refusal, not a door.
   const roster = Array.isArray(member_template_ids) ? member_template_ids : []
@@ -118,11 +120,11 @@ export function world_group_door({
   // refusing here is the same outcome the claim door would abort with (108), minus the burned gas.
   const consumed = ((Number(zone.mob_bitmap?.[index >> 3] ?? 0) >> (index & 7)) & 1) !== 0
   if (consumed) return { door: 'blocked', reason: 'consumed' }
-  // The member claim door takes NO witness: a format-3 commitment covers the whole derived set, so the chain's own
-  // re-derivation IS the proof (`create_member_fight_ptb` has no `group_proof` parameter). Composing one here would
-  // also be impossible — the commitment preimage carries the RAW rolled roster while a `derive_zone` row carries the
-  // team-bound-TRIMMED one — so the digest could never reproduce and every format-3 engage would refuse.
-  if (roster.length) return { door: 'derivation', reason: 'member_roster_door', index }
+  // FORMAT DISCRIMINATION (#2227) — the served root's own leading byte is the whole decision: only a format-4
+  // member TREE has a per-group leaf to prove inclusion against, so a format-3 member LIST (a whole-set digest
+  // the chain can only re-derive) keeps the derivation door.
+  if (roster.length && !is_member_tree_commitment(commitment.root))
+    return { door: 'derivation', reason: 'member_roster_door', index }
   const proof = compose_mob_group_proof({
     world_id,
     zx,
@@ -131,7 +133,7 @@ export function world_group_door({
     discovered_at_ms: zone.discovered_at_ms,
     group_root: commitment.root,
     group_count: commitment.count,
-    groups,
+    groups: groups.map(proof_group_of),
     index,
   })
   if (!proof) return { door: 'blocked', reason: 'commitment_mismatch' }
@@ -260,13 +262,12 @@ export async function create_world_fight({
     is_public,
     party_id,
   }
+  // BOTH composers take the witness the door resolved; each ignores one it cannot use (the member door only
+  // acts on a format-4 witness, which is the only kind carrying a roster). `null` = the derivation door.
+  const group_proof = group_door.door === 'proof' ? group_door.proof : null
   const tx = member_template_ids.length
-    ? create_member_fight_ptb(ctx_of(sdk))({ ...entry, member_template_ids })
-    : create_fight_ptb(ctx_of(sdk))({
-        ...entry,
-        group_proof: group_door.door === 'proof' ? group_door.proof : null,
-        mob_template_id,
-      })
+    ? create_member_fight_ptb(ctx_of(sdk))({ ...entry, member_template_ids, group_proof })
+    : create_fight_ptb(ctx_of(sdk))({ ...entry, group_proof, mob_template_id })
   // #609 — the claimed group's IDENTITY, carried out of the claim so a LOST fight can give it back at
   // settlement (`fight::release_group`). Only a VICTORY consumes a group; a defeat that forgets which group it
   // took drains the world's mob population by one, permanently. Known only where the door named a row.

@@ -14,7 +14,7 @@
 // `team_size_bound` config dial — cached here (config-grade data; a world's tables change only at
 // admin-authoring time, and a TTL re-search re-rolls the zone anyway).
 
-import { derive_zone } from '@aresrpg/sim/zone_derive'
+import { commitment_format, derive_zone } from '@aresrpg/sim/zone_derive'
 import { get_world, get_zone_state } from '@aresrpg/sdk/game'
 
 import { DEMO_NETWORK } from '../chain/deployment'
@@ -112,18 +112,24 @@ async function compose(/** @type {string} */ world_id, /** @type {number} */ zx,
  */
 export const zone_state_resolvable = (zone) => Array.isArray(zone?.mob_bitmap) && Array.isArray(zone?.res_bitmap)
 
+// The first MEMBER-family commitment byte. Format 4 (the member TREE, #2194) commits the SAME derived stream
+// as a Merkle tree rather than a flat digest, so every format from here up derives identically — the chain's
+// own `>=` idiom, mirrored by `zone_derive`'s placer.
+const FIRST_MEMBER_FORMAT = 3
+
 /**
- * The authoritative format-3 ZoneGroupCommitment projected by `/v1` from the sibling commitment DF.
- * A missing/malformed value is not permission to fall back to the legacy derivation: doing so would expose
- * claim rows whose member-zone polarity the chain rejects.
+ * The authoritative MEMBER-FAMILY ZoneGroupCommitment projected by `/v1` from the sibling commitment DF —
+ * format 3 (member LIST) or format 4 (member TREE). A missing/malformed value is not permission to fall back
+ * to the legacy derivation: doing so would expose claim rows whose member-zone polarity the chain rejects.
+ * #2227 — pinning this to the byte `3` alone made a format-4 zone read as UNCOMMITTED, so the first
+ * member-tree zone on testnet rendered zero mob rows and no player could reach its claim door at all.
  * @param {{ group_root?: number[] | null, group_count?: number | null } | null | undefined} zone
  * @returns {number[] | null}
  */
-export const format3_group_commitment = (zone) => {
+export const member_group_commitment = (zone) => {
   const root = zone?.group_root
   return Array.isArray(root) &&
-    root.length === 33 &&
-    root[0] === 3 &&
+    commitment_format(root) >= FIRST_MEMBER_FORMAT &&
     Number.isInteger(zone?.group_count) &&
     Number(zone?.group_count) >= 0
     ? root
@@ -132,7 +138,7 @@ export const format3_group_commitment = (zone) => {
 
 /**
  * Zone rows via the /v1 read layer (the steady-state poll path). The v1 zone doc carries the raw
- * Zone DF state plus the sibling format-3 ZoneGroupCommitment.
+ * Zone DF state plus the sibling member-family ZoneGroupCommitment.
  * `null` = undiscovered, OR a doc whose liveness is unresolvable (see `zone_state_resolvable`) — both mean
  * "no derivable truth this poll", which the caller already handles by leaving the zone's rows alone rather
  * than deriving a set it cannot trust.
@@ -149,10 +155,10 @@ export async function zone_rows_v1(world_id, zx, zy, { signal = undefined, fresh
     )
     return null
   }
-  const group_commitment = format3_group_commitment(zone)
+  const group_commitment = member_group_commitment(zone)
   if (!group_commitment) {
     console.warn(
-      `[zone-rows] zone ${zx}:${zy} has no authoritative format-3 group commitment; ` +
+      `[zone-rows] zone ${zx}:${zy} has no authoritative member-family group commitment; ` +
         'keeping the last known rows instead of deriving legacy claim eligibility'
     )
     return null
