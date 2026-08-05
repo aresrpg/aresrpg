@@ -21,7 +21,6 @@
     "packages/frontend/src/game/screens/hud/seed-effect-line.js": 1
   },
   "sim-protocol-spell-effect-kind": {
-    "packages/frontend/src/game/screens/hud/fight-spells-core.js": 1,
     "packages/frontend/src/pages/encyclopedia/mob_spells.ts": 1
   },
   "sim-protocol-stat-id": {
