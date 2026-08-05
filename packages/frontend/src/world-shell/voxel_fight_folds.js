@@ -12,10 +12,9 @@
 import { decode as decode_cell } from '@aresrpg/fight/los'
 import { voids_from_shape_mask } from '@aresrpg/fight/board_state'
 import { engine_view } from '@aresrpg/fight/project'
-// get_aoe_cells is the ONE shape home the sim + chain use to enumerate a spell's affected cells (spell_targeting.js:
-// CIRCLE/CROSS/RING/LINE/TBAR/CONE). The hover footprint below REUSES it verbatim so the telegraph can never
-// diverge from what the reducer actually hits — never a second shape implementation.
-import { get_aoe_cells } from '@aresrpg/sim/spell_targeting'
+// Spell hits keep their cast direction through get_aoe_cells; persistent trap/glyph markers have no direction
+// and use board_zone_cells, the ONE placed-zone home. The hover fold below only unions and dedupes those answers.
+import { board_zone_cells, get_aoe_cells } from '@aresrpg/sim/spell_targeting'
 import { weapon_spell_template } from '@aresrpg/fight/predict_cast'
 import { WEAPON_ATTACK_ID } from '@aresrpg/fight/weapon'
 
@@ -495,15 +494,19 @@ export function seed_cast_flags_of(armed_spell_id, seat = null) {
 
 /**
  * The FULL board footprint an armed spell paints while hovering a target cell — the UNION of every base
- * effect's zone, each enumerated by the SAME `get_aoe_cells` the sim/chain reducer uses (one shape home:
- * a cross-1 effect yields its 5-cell plus, a circle-2 its disc, a glyph its whole placement zone). Pure.
+ * effect's zone. Instant effects use the cast-zone home; trap/glyph markers use `board_zone_cells`, the SAME
+ * direction-free placed-zone home as the reducer and public-board decoder. This fold only unions/dedupes. Pure.
  * @param {import('@aresrpg/sim').SpellEffect[]} effects the level's normalized base effects
  * @param {{ x: number, y: number }} target hovered cell (anchors every shape)
  * @param {{ x: number, y: number }} caster caster cell (orients LINE/CONE/TBAR)
  * @returns {{ x: number, y: number }[]} deduped cells; `[target]` when the union is empty (POINT-only spell)
  */
 export function footprint_of_effects(effects, target, caster) {
-  const union = (effects ?? []).flatMap((effect) => get_aoe_cells(effect, target, caster))
+  const union = (effects ?? []).flatMap((effect) =>
+    effect.type === 'PLACE_TRAP' || effect.type === 'GLYPH'
+      ? board_zone_cells(effect, target)
+      : get_aoe_cells(effect, target, caster)
+  )
   // dedupe by cell key (a Map keyed on `x,y` collapses overlaps between effects); empty ⇒ the target cell.
   const deduped = [...new Map(union.map((c) => [`${c.x},${c.y}`, { x: c.x, y: c.y }])).values()]
   return deduped.length ? deduped : [{ x: target.x, y: target.y }]

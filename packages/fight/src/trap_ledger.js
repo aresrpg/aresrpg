@@ -3,7 +3,7 @@
 // fight/trap_ledger.js — pure canonical retirement + presentation of the local trap ledger.
 
 import { K_PLACE_TRAP } from '@aresrpg/sim/spell_effect'
-import { get_aoe_cells } from '@aresrpg/sim/spell_targeting'
+import { board_zone_cells } from '@aresrpg/sim/spell_targeting'
 
 import {
   armed_at,
@@ -32,7 +32,7 @@ export function read_fight_traps(json) {
     const anchor = Number(row.cell)
     const owner_team = Number(row.owner_team)
     if (Number(row.kind) !== K_PLACE_TRAP || !Number.isFinite(anchor) || !Number.isFinite(owner_team)) return []
-    const cells = get_aoe_cells(
+    const cells = board_zone_cells(
       { area_shape: Number(row.zone_shape) || 0, area_size: Number(row.zone_size) || 0 },
       decode(anchor)
     ).map((cell) => encode(cell.x, cell.y))

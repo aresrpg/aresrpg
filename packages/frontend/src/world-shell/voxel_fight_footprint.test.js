@@ -19,7 +19,7 @@ const SHAPE_CROSS = 2
 const SHAPE_LINE = 3
 const cell_set = (cells) => new Set(cells.map((c) => `${c.x},${c.y}`))
 
-describe('footprint_of_effects — the full hover zone (one shape home = get_aoe_cells)', () => {
+describe('footprint_of_effects — thin union over the cast/board zone homes', () => {
   const T = { x: 10, y: 9 } // central on the 20×19 combat grid — every zone below stays in-bounds
 
   it('a cross-1 effect paints the 5-cell plus, not a single cell (regression coverage)', () => {
@@ -56,6 +56,18 @@ describe('footprint_of_effects — the full hover zone (one shape home = get_aoe
         { x: 9, y: 9 },
       ])
     )
+  })
+
+  it('a LINE trap paints the direction-free board lozenge from the placed-zone home', () => {
+    const target = { x: 10, y: 9 }
+    const effect = { type: 'PLACE_TRAP', area_shape: SHAPE_LINE, area_size: 2 }
+    const from_left = footprint_of_effects([effect], target, { x: 8, y: 9 })
+    const from_above = footprint_of_effects([effect], target, { x: 10, y: 7 })
+
+    expect(from_left).toHaveLength(13)
+    expect(cell_set(from_left)).toEqual(cell_set(from_above))
+    expect(cell_set(from_left).has('8,9')).toBe(true)
+    expect(cell_set(from_left).has('10,7')).toBe(true)
   })
 
   it('unions every effect and dedupes overlaps', () => {
