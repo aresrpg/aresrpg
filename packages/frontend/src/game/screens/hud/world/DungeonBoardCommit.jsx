@@ -28,8 +28,8 @@ import {
 import { evolve_flush_casts } from '@aresrpg/fight/predict_cast'
 import { decode } from '@aresrpg/fight/los'
 import { cast_range_set_dungeon } from '../../../../fight-engine/overlay_intents.js'
+import { target_cap_reached } from '@aresrpg/fight/draft_budget'
 import { dungeon_grid_of } from '../../dungeon-grid.js'
-import { cast_requires_occupant } from '../fight-spells.js'
 import { game_log } from '../../../../core/log.js'
 import { fight_state_trace } from '../../../../world-shell/fight_state_trace.js'
 import { emit_local_cast_drop_toast } from './cast_drop_toast.js'
@@ -235,6 +235,7 @@ export function useDungeonBoardCommit(state, t) {
           // The DRAFTED spell (pinned at pick) judges the cast — a disarm/re-arm can't use the wrong spell's flags.
           const lvl = level_row(drafted_spell)
           const range = lvl?.range ?? [cast_params.range_min, cast_params.range_max]
+          const places_trap = (lvl?.effects ?? []).some((e) => e.kind === 'PLACE_TRAP')
           // SELF-ONLY BUFF (#321/#323): rmax 0 (invisibility/vanish — the spellbook 'self' marker) targets the
           // caster's OWN tile. It can never move out of reach of itself, so it NEVER re-validates (the twin of the
           // trap rule, cells don't move) — commit it on the caster's CURRENT cell (`cast_anchor`, this cast's own
@@ -250,7 +251,18 @@ export function useDungeonBoardCommit(state, t) {
             {
               los: lvl?.line_of_sight !== false,
               linear: lvl?.linear === true,
+              free_cell: lvl?.free_cell === true,
               modifiable_range: lvl?.modifiable_range === true,
+              // The optimistic ledger already contains THIS draft's marker. Remove its own anchor from the known
+              // pre-cast facts; any earlier duplicate was refused by the same predicate at click time.
+              trap_cells: places_trap ? (fight?.my_traps ?? []).filter((cell) => cell !== entry.cell) : null,
+              target_cap_reached: cell =>
+                target_cap_reached(
+                  cast_queue.slice(0, cast_i),
+                  entry.spell_key,
+                  cell,
+                  lvl?.casts_per_target
+                ),
             }
           )
           // #321 + #323: "the caster's own cell" for a self-cast drafted after a teleport/dash earlier in the SAME
@@ -272,12 +284,6 @@ export function useDungeonBoardCommit(state, t) {
             in_footprint: footprint.has(target_cell),
             is_weapon: false,
             self_cast,
-            free_cell: lvl?.free_cell === true,
-            // #1741's flush half: the click gate withheld the empty cell, so this only catches the body that died
-            // or walked off mid-draft — the same void cast, arriving late. Judged on the flush's own occupancy
-            // (chain-consistent), never the projected set: no refusal is rendered here, so nothing can leak.
-            requires_occupant: cast_requires_occupant(lvl),
-            occupied_alive: !!occ.get(target_cell)?.alive,
           })
         }
         if (illegal) {

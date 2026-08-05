@@ -24,7 +24,11 @@ import {
   can_target,
   effect_hits,
 } from './spell_targeting.js'
-import { check_cast_limits, record_cast } from './fight_cast_limits.js'
+import {
+  check_cast_limits,
+  check_spell_cast_limits,
+  record_cast,
+} from './fight_cast_limits.js'
 import {
   handle_displacement,
   get_direction,
@@ -226,16 +230,44 @@ const validate_cast = (state, caster_id, spell, level, target, context) => {
     )
   )
     return { valid: false, error: 'FORBIDDEN_STATE_PRESENT' }
-  const range_bonus = effective_stats(caster).range ?? 0
-  if (!can_target(spell_level, caster.cell, target, context, range_bonus))
-    return { valid: false, error: 'INVALID_TARGET' }
-  if (
-    spell_level.base_effects.some(e => e.type === 'PLACE_TRAP') &&
-    state.traps.some(
-      t => t.anchor && t.anchor.x === target.x && t.anchor.y === target.y,
-    )
+  const places_trap = spell_level.base_effects.some(
+    e => e.type === 'PLACE_TRAP',
   )
-    return { valid: false, error: 'CELL_TRAPPED' }
+  const trap_anchor_occupied =
+    places_trap &&
+    (context.is_trapped?.(target) ||
+      state.traps.some(
+        t => t.anchor && t.anchor.x === target.x && t.anchor.y === target.y,
+      ))
+  const target_capped =
+    check_cast_limits(state, caster_id, spell.id, spell_level, target).error ===
+    'CASTS_PER_TARGET'
+  const targeting_context = {
+    ...context,
+    is_trapped: cell =>
+      context.is_trapped?.(cell) ||
+      state.traps.some(
+        t => t.anchor && t.anchor.x === cell.x && t.anchor.y === cell.y,
+      ),
+    target_cap_reached: cell =>
+      context.target_cap_reached?.(cell) ||
+      check_cast_limits(state, caster_id, spell.id, spell_level, cell).error ===
+        'CASTS_PER_TARGET',
+  }
+  const range_bonus = effective_stats(caster).range ?? 0
+  if (
+    !can_target(
+      spell_level,
+      caster.cell,
+      target,
+      targeting_context,
+      range_bonus,
+    )
+  ) {
+    if (trap_anchor_occupied) return { valid: false, error: 'CELL_TRAPPED' }
+    if (target_capped) return { valid: false, error: 'CASTS_PER_TARGET' }
+    return { valid: false, error: 'INVALID_TARGET' }
+  }
   return { valid: true, spell_level, caster }
 }
 
@@ -759,13 +791,7 @@ export const process_spell_cast = (
       fumbled: false,
     }
   }
-  const limit = check_cast_limits(
-    state,
-    caster_id,
-    spell.id,
-    spell_level,
-    target,
-  )
+  const limit = check_spell_cast_limits(state, caster_id, spell.id, spell_level)
   if (!limit.valid) {
     return {
       success: false,

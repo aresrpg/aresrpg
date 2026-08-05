@@ -211,7 +211,7 @@ export function useDungeonBoardInput(state, t) {
       else if (armed !== WEAPON_ATTACK_ID && target_cap_reached(cast_path, armed_key, cell, cpt_target_authored))
         push_event_toast({ state: 'info', title: t('errors.cast_per_target_limit') })
       // #1215 THE SILENT DISARM NAMES ITSELF: every other refusal (not enough AP for another swing/cast, or the
-      // cell just has no legal target — out of range, LOS-blocked, no living occupant) used to disarm and say
+      // cell just has no legal target — out of range or LOS-blocked) used to disarm and say
       // nothing, so the player re-armed and clicked again with no idea why (sword-refusal trace: re-armed 3×,
       // disarmed 3×, no toast). The gate already knows which — reuse the SAME copy the chain's own abort already
       // ships (abort_copy.js 101/115, 102/114), never a bespoke string.

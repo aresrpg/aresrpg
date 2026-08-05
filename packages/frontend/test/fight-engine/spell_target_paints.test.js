@@ -6,7 +6,11 @@ import { describe, expect, test } from 'bun:test'
 import { encode } from '@aresrpg/fight/los'
 import { weapon_spell_template } from '@aresrpg/fight/predict_cast'
 
-import { resolve_cell_paints, spell_target_paints } from '../../src/fight-engine/overlay_intents.js'
+import {
+  cast_range_set_dungeon,
+  resolve_cell_paints,
+  spell_target_paints,
+} from '../../src/fight-engine/overlay_intents.js'
 
 const cell = (x, y) => ({ x, y })
 const grid = { width: 10, height: 10 }
@@ -78,5 +82,94 @@ describe('#2165 — spell targeting paints range light blue and sim-valid cells 
     expect(resolve_cell_paints({ ...paints, target: [target] }).filter((row) => row.cell === target)).toEqual([
       { cell: target, paint: 'target' },
     ])
+  })
+})
+
+describe('#2246 — dark paint and click consume one cast-legality verdict', () => {
+  const caster = { cell: cell(5, 5) }
+  const target = encode(6, 6)
+  const clear_target = encode(5, 7)
+
+  const agreement = ({ spell, paint_context = {}, click_flags = {}, expected }) => {
+    const paints = spell_target_paints(spell, caster, grid, {
+      ...clear,
+      ...paint_context,
+    })
+    const dark = as_set(paints, 'in_range')
+    const click = cast_range_set_dungeon(spell.range, caster, grid, [], {
+      los: spell.line_of_sight,
+      linear: spell.linear,
+      free_cell: spell.free_cell,
+      modifiable_range: spell.modifiable_range,
+      ...click_flags,
+    })
+
+    expect(dark.has(target)).toBe(expected)
+    expect(click.has(target)).toBe(expected)
+    expect(click).toEqual(dark)
+    expect(dark.has(clear_target)).toBe(true)
+    expect(click.has(clear_target)).toBe(true)
+  }
+
+  test('own live trap: the trapped anchor is light/refused and another free cell is dark/accepted', () => {
+    agreement({
+      spell: level({
+        line_of_sight: false,
+        free_cell: true,
+        base_effects: [{ type: 'PLACE_TRAP' }],
+      }),
+      paint_context: { trap_cells: [target] },
+      click_flags: { trap_cells: [target] },
+      expected: false,
+    })
+  })
+
+  test('empty non-free target: the chain-legal whiff is dark and click-accepted', () => {
+    agreement({
+      spell: level({ base_effects: [{ type: 'DAMAGE', area_type: 'CIRCLE', area_size: 0 }] }),
+      click_flags: { occupant_cells: [clear_target] },
+      expected: true,
+    })
+  })
+
+  test('per-target cap: the saturated cell is light/refused and another cell is dark/accepted', () => {
+    const target_cap_reached = (encoded) => encoded === target
+    agreement({
+      spell: level({ casts_per_target: 1 }),
+      paint_context: { target_cap_reached },
+      click_flags: { target_cap_reached },
+      expected: false,
+    })
+  })
+
+  test('line-launch: a diagonal cell is light/refused and an orthogonal cell is dark/accepted', () => {
+    agreement({
+      spell: level({ linear: true }),
+      expected: false,
+    })
+  })
+
+  test('property: paint and click sets are equal over the whole board under all composed rules', () => {
+    const spell = level({
+      linear: true,
+      free_cell: true,
+      base_effects: [{ type: 'PLACE_TRAP' }],
+    })
+    const trap_cells = [encode(5, 7)]
+    const target_cap_reached = (encoded) => encoded === encode(5, 8)
+    const paints = spell_target_paints(spell, caster, grid, {
+      ...clear,
+      trap_cells,
+      target_cap_reached,
+    })
+    const click = cast_range_set_dungeon(spell.range, caster, grid, [], {
+      los: true,
+      linear: true,
+      free_cell: true,
+      trap_cells,
+      target_cap_reached,
+    })
+
+    expect(click).toEqual(as_set(paints, 'in_range'))
   })
 })

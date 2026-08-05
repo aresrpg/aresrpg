@@ -26,10 +26,12 @@ import {
 } from './spell_effect.js'
 
 /**
- * Targeting context: how the grid blocks LoS and what cells are occupied. Donor targeting.ts:42.
+ * Targeting context: the board facts consumed by the single cast-legality predicate.
  * @typedef {object} TargetingContext
  * @property {(cell: import('./cell.js').Cell) => boolean} blocks_los
  * @property {(cell: import('./cell.js').Cell) => boolean} is_occupied
+ * @property {((cell: import('./cell.js').Cell) => boolean)} [is_trapped] true when a live trap already anchors here
+ * @property {((cell: import('./cell.js').Cell) => boolean)} [target_cap_reached] true when this spell/caster spent the cell's per-target allowance
  */
 
 /**
@@ -81,7 +83,20 @@ export const is_linear = (caster, target) => {
 }
 
 /**
- * Full targeting gate: range + linear + line-of-sight + free-cell. Donor targeting.ts:52.
+ * Whether the level's normal effect list places a trap. The resolver validates the normal list before its crit
+ * branch is selected today; keep the predicate on that same list while projected frontend levels expose it as
+ * `effects` instead of `base_effects`.
+ * @param {import('./spell_templates.js').SpellLevel | { effects?: Array<{type?:string, kind?:string}> }} spell
+ */
+const places_trap = spell =>
+  ('base_effects' in spell ? spell.base_effects : (spell.effects ?? [])).some(
+    effect => effect.type === 'PLACE_TRAP' || effect.kind === 'PLACE_TRAP',
+  )
+
+/**
+ * Full targeting gate: range + orthogonal line-launch + line-of-sight + free-cell + trap no-stack + per-target
+ * cap. Optional context facts default open so world/AI callers that cannot observe dungeon-only state retain their
+ * existing behavior; dungeon prediction/resolution and every paint/click caller provide the facts they own.
  * @param {import('./spell_templates.js').SpellLevel} spell
  * @param {import('./cell.js').Cell} caster
  * @param {import('./cell.js').Cell} target
@@ -105,6 +120,8 @@ export const can_target = (spell, caster, target, context, range_bonus = 0) => {
     (context.is_occupied(target) || context.blocks_los(target))
   )
     return false
+  if (places_trap(spell) && context.is_trapped?.(target)) return false
+  if (context.target_cap_reached?.(target)) return false
   return true
 }
 

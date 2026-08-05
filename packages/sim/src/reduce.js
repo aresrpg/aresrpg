@@ -162,6 +162,11 @@ const make_targeting_context = (state, arena, caster_id) => ({
     return !!occupant && occupant.id !== caster_id
   },
   is_occupied: cell => !!find_entity_at(state, cell),
+  is_trapped: cell =>
+    state.traps.some(
+      trap =>
+        trap.anchor && trap.anchor.x === cell.x && trap.anchor.y === cell.y,
+    ),
 })
 
 // ── Helpers ──────────────────────────────────────────────────────────────────

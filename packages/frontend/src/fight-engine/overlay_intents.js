@@ -22,7 +22,7 @@ import { cell_key } from '@aresrpg/sim/cell'
 import { manhattan } from '@aresrpg/sim/combat_grid'
 import { get_reachable_cells } from '@aresrpg/sim/pathfind'
 import { can_target, get_targetable_cells } from '@aresrpg/sim/spell_targeting'
-import { encode, decode, GRID_W, GRID_H, bfsReachable, bfsPath, lineOfSight } from '@aresrpg/fight/los'
+import { encode, decode, GRID_W, GRID_H, bfsReachable, bfsPath } from '@aresrpg/fight/los'
 import { visible_occupant_cells } from '@aresrpg/fight/occupancy'
 import { range_bonus_of } from '@aresrpg/fight/statuses'
 
@@ -177,10 +177,8 @@ export function on_board(cell) {
 // ── D113 / cast range: the CASTABLE cell set of an armed spell ────────────────────────────────────────────────
 
 /**
- * D113 DUNGEON cast-range WASH — every board cell within the seed range [rmin,rmax] (Manhattan, the contract
- * metric) that clears integer line-of-sight from the caster. MIRRORS DungeonBoard.jsx's `castable` gate
- * (manhattan ∈ [min,max] ∧ lineOfSight) but over the WHOLE room rect (not just mob cells) so the player SEES the
- * spell's footprint, not only the cells that happen to hold a mob. rmax 0 (a self-buff) → just the caster's cell.
+ * Legacy dungeon-set shape adapter. Cast legality lives in `can_target`; this function only projects its dark
+ * verdict array to the encoded Set consumed by click, commit, and hover callers.
  *
  * @param {[number, number] | null | undefined} range   the seed [rmin, rmax]
  * @param {{ cell: Cell }} caster
@@ -188,25 +186,9 @@ export function on_board(cell) {
  * @param {number[]} obstacles                           LOS-blocking cells — the los_obstacles twin set: static
  *   obstacles ∪ living-body cells (players + mobs). Endpoints self-excluded by losBlocks (caster/target inert).
  * @param {{ los?: boolean, linear?: boolean, free_cell?: boolean, modifiable_range?: boolean,
- *   trap_cells?: Iterable<number> }} [flags]  the
- *   seed row's legality flags (spell_target twin, P1 self-cast root): `los:false` = the spell ignores
- *   line-of-sight (sl_line_of_sight off — every in-range cell is aimable); `linear:true` = line-launch, caster &
- *   target must share a row or column (sl_line_launch); `free_cell:true` = traps/glyphs/teleport must land on a
- *   FREE, NON-BLOCKED cell — every cell in `obstacles` (the blocker union: static obstacles ∪ living bodies) is
- *   dropped from the set, so a trap can never target a mob or a wall ("I should not be able to target a
- *   mob with a trap"; the spell_target::can_cast_at + sim can_target twins). `trap_cells` = ENCODED cells the
- *   caster's OWN live traps anchor (engine_view.my_traps) — the caller passes it ONLY for a trap-PLACING spell
- *   (seed_cast_flags_of `places_trap`), and every such cell is dropped: the chain aborts a trap on a trapped
- *   cell (1.29 no-stack, cast::ECellAlreadyTrapped), so the wash/gate must grey it. Enemy invisible traps are
- *   unknowable client-side — those surface as the honest chain-abort toast instead. `occupant_cells` (#1741) =
- *   the VISIBLE-occupancy set (`@aresrpg/fight/occupancy` visible_occupant_cells) a zero-area single-target DAMAGE
- *   spell must aim INTO — free_cell's rule inverted, same mechanism: every cell OUTSIDE it is dropped, so an
- *   empty-cell whiff can no longer be drafted (the 1.29 reference client refuses it; invisible-hunting stays the
- *   AoE/trap game). `null`/absent ⇒ no occupancy requirement, which is every other spell's behavior unchanged.
- *   Defaults preserve the pre-flag behavior.
+ *   trap_cells?: Iterable<number>, target_cap_reached?: (cell:number)=>boolean }} [flags]
  * @returns {CellSet}
  */
-// Complexity retained (#2069): this is one exhaustive range-rule fold over shared geometry; splitting flags into helpers would duplicate precedence and traversal state.
 export function cast_range_set_dungeon(range, caster, grid, obstacles, flags = {}) {
   const {
     los = true,
@@ -214,55 +196,29 @@ export function cast_range_set_dungeon(range, caster, grid, obstacles, flags = {
     free_cell = false,
     modifiable_range = false,
     trap_cells = null,
-    occupant_cells = null,
+    target_cap_reached = null,
   } = flags
-  // free_cell: the blocker set the target may NOT be (obstacles ∪ bodies — the caller passes exactly that).
-  const blocked = free_cell ? new Set(obstacles ?? []) : null
-  // 1.29 no-stack: cells anchoring MY live traps are not legal trap targets (chain parity — see JSDoc above).
-  const trapped = trap_cells ? (trap_cells instanceof Set ? trap_cells : new Set(trap_cells)) : null
-  // #1741: the VISIBLE occupants a single-target damage spell must aim into (null ⇒ any cell, as before).
-  const occupants = occupant_cells ? (occupant_cells instanceof Set ? occupant_cells : new Set(occupant_cells)) : null
-  const out = new Set()
-  if (!caster || !grid) return out
-  const [rmin, authored_rmax] = range ?? [0, 0]
-  const rmax = authored_rmax + (modifiable_range ? range_bonus_of(caster) : 0)
-  const from = encode(caster.cell.x, caster.cell.y)
-  // D75-stride: the wash paints ONLY the room's real floor — the stored shape mask when the grid carries one
-  // (dungeon_grid_of always emits one: stored on train-4, a rect twin on legacy), never the enclosing rect, so
-  // a varied board's rim/void is never washed as castable ground.
-  const mask =
-    grid.shape_mask instanceof Set ? grid.shape_mask : grid.shape_mask?.length ? new Set(grid.shape_mask) : null
-  for (let y = 0; y < grid.height; y++) {
-    for (let x = 0; x < grid.width; x++) {
-      const enc = encode(x, y)
-      if (mask && !mask.has(enc)) continue // off-shape (void/rim) — not a board cell
-      // free_cell (traps/glyphs/teleport): never a blocked/occupied cell — a mob body or a wall is not a
-      // legal trap cell (the chain rejects it; the wash/hover/click must agree so the player can't target it).
-      if (blocked && blocked.has(enc)) continue
-      // trap-placing spell: never a cell already anchoring MY live trap (1.29 no-stack — the chain aborts it).
-      if (trapped && trapped.has(enc)) continue
-      // #1741 — SINGLE-TARGET DAMAGE NEEDS A VICTIM: a cell holding no VISIBLE occupant is not aimable, the exact
-      // inverse of the free_cell drop two lines up. Invisible occupants are absent from this set by construction
-      // (visible_occupant_cells), so a hidden body's cell withholds identically to an empty one — no leak.
-      if (occupants && !occupants.has(enc)) continue
-      const d = manhattan({ x, y }, caster.cell)
-      if (d < rmin || d > rmax) continue
-      // line-launch (spell_target twin): only orthogonally aligned cells are aimable.
-      if (linear && x !== caster.cell.x && y !== caster.cell.y) continue
-      // LOS mirrors `castable`: the caster's own cell is always visible to itself (d === 0). A no-LOS
-      // spell (seed line_of_sight:false) skips the sight check entirely — chain does the same.
-      if (los && d > 0 && !lineOfSight(from, enc, obstacles ?? [])) continue
-      out.add(enc)
-    }
+  const level = {
+    range: range ?? [0, 0],
+    modifiable_range,
+    linear,
+    line_of_sight: los,
+    free_cell,
+    base_effects: trap_cells == null ? [] : [{ type: 'PLACE_TRAP' }],
   }
-  return out
+  return new Set(
+    spell_target_paints(level, caster, grid, {
+      terrain_cells: obstacles,
+      occupant_cells: free_cell ? obstacles : [],
+      trap_cells,
+      target_cap_reached,
+    }).in_range
+  )
 }
 
 /**
  * D241 — every on-shape board cell within the seed's Manhattan range [rmin,rmax], WITHOUT the LOS filter.
- * The complement (this set minus cast_range_set_dungeon) = the in-range cells LOS blocks → the 'los_blocked'
- * (light-blue) wash the canon paints under a grabbed spell. Same loop as cast_range_set_dungeon minus
- * the lineOfSight check, so the two sets are guaranteed consistent (one home for the range/mask metric).
+ * The complement (this set minus `can_target`'s dark verdicts) is the informational light-blue wash.
  * @param {[number, number] | null | undefined} range the seed [rmin, rmax]
  * @param {{ cell: Cell }} caster
  * @param {{ width: number, height: number, shape_mask?: Set<number> | number[] }} grid
@@ -301,16 +257,20 @@ export function manhattan_range_cells(range, caster, grid, flags = {}) {
  * @param {import('@aresrpg/sim').SpellLevel} level normalized sim level (weapon attacks use weapon_spell_template)
  * @param {{ cell: Cell }} caster
  * @param {{ width: number, height: number, shape_mask?: Set<number> | number[] }} grid
- * @param {{ terrain_cells?: Iterable<number>, occupant_cells?: Iterable<number> }} [context]
+ * @param {{ terrain_cells?: Iterable<number>, occupant_cells?: Iterable<number>, trap_cells?: Iterable<number>,
+ *   target_cap_reached?: (cell:number)=>boolean }} [context]
  * @returns {{ in_range: number[], los_blocked: number[] }} dark-valid and light-range-only encoded cells
  */
 export function spell_target_paints(level, caster, grid, context = {}) {
   if (!level || !caster || !grid) return { in_range: [], los_blocked: [] }
   const terrain = new Set(context.terrain_cells ?? [])
   const occupied = new Set(context.occupant_cells ?? [])
+  const trapped = new Set(context.trap_cells ?? [])
   const targeting_context = {
     blocks_los: (cell) => terrain.has(encode(cell.x, cell.y)),
     is_occupied: (cell) => occupied.has(encode(cell.x, cell.y)),
+    is_trapped: (cell) => trapped.has(encode(cell.x, cell.y)),
+    target_cap_reached: (cell) => !!context.target_cap_reached?.(encode(cell.x, cell.y)),
   }
   const [minimum, maximum] = level.range ?? [0, 0]
   // Preserve the existing visible reach grammar: ordinary casts start one cell away, while true self-casts

@@ -58,13 +58,12 @@ describe('DungeonBoard flush — each cast validated against the evolved sequenc
     expect(body).toMatch(/evolve_flush_casts\(/)
     expect(body).toMatch(/committed:\s*committed_truth\(/)
     expect(body).toMatch(/evolved\[cast_i\]/)
-    // …and the per-cast evolved occupancy `occ` — NEVER the eye-state `occupied` — feeds strike LEGALITY
-    // (target_is_mob / committed_target_alive / occupied_alive), keyed on `target_cell` (LEG 0a: entry.cell unless
-    // txs.retarget_cast recomposed it against the target's moved committed cell — see the test below).
+    // …and the per-cast evolved occupancy `occ` — NEVER the eye-state `occupied` — feeds the blocker facts passed
+    // into the shared can_target-derived footprint. Weapon liveness still reads the same evolved index.
     expect(body).toMatch(/const tgt = occ\.get\(target_cell\)/)
-    expect(body).toMatch(/occupied_alive: !!occ\.get\(target_cell\)\?\.alive/)
+    expect(body).toMatch(/for \(const \[c, o\] of occ\)/)
+    expect(body).toMatch(/dungeon_grid_of\(dungeon\),\s*los,/)
     expect(body).not.toMatch(/target_is_mob:\s*occupied\.get/)
-    expect(body).not.toMatch(/occupied_alive:\s*!!occupied\.get/)
   })
 
   test('#398: a cast after a trap-killed move is dropped before it can revert the PTB', async () => {

@@ -21,12 +21,7 @@ import { WEAPON_ATTACK_ID } from '@aresrpg/fight/weapon'
 import { dungeon_grid_of } from '../game/screens/dungeon-grid.js'
 import { get_mob_model, mob_model_fallback_url } from '../game/data/mobs.js'
 import { PLACEHOLDER_RIG_CLASS, character_model_urls } from '../game/screens/character-glb.js'
-import {
-  cast_requires_occupant,
-  fight_spell,
-  seat_spell_level,
-  seat_spell_row,
-} from '../game/screens/hud/fight-spells.js'
+import { fight_spell, seat_spell_level, seat_spell_row } from '../game/screens/hud/fight-spells.js'
 
 // The voxel board floats above the streamed terrain at a fixed designated origin (the cave-gen picks this in the
 // real game path; here a flat pose WELL above the world_gen surface, mirroring the engine demo's ORIGIN so the
@@ -464,15 +459,13 @@ export function seed_range_of(armed_spell_id, seat = null) {
  * The legality flags for an armed spell — the spell_target twin inputs (P1 self-cast root). Read off the SAME
  * on-chain row seed_range_of resolves, so the wash, the hover-AoE and DungeonBoard's `castable` gate all share
  * one truth: `los` (line_of_sight gates aim), `linear` (line-launch: orthogonal only), `free_cell` (target must
- * be an EMPTY cell — traps), `places_trap` (the row carries a PLACE_TRAP effect — the caller then feeds the
- * caster's own live trap cells to cast_range_set_dungeon's `trap_cells` drop, the 1.29 no-stack wash/gate),
- * `requires_occupant` (#1741 — a zero-area single-target DAMAGE spell may only aim at a VISIBLE occupant; the
- * caller then feeds the projection's visible-occupancy set to `occupant_cells`, free_cell's rule inverted).
+ * be an EMPTY cell — traps), and `places_trap` (the row carries a PLACE_TRAP effect, so the caller supplies the
+ * caster's known live trap anchors). Per-target accounting rides as an authored input to `can_target`'s context.
  * Unresolved spell → the safe defaults (LOS on, no line, any occupancy, no placement). Pure.
  * @param {string} armed_spell_id
  * @param {{ spell_levels?: Record<string, number> } | null} [seat] the caster's composed build (its rank)
  * @returns {{ los: boolean, linear: boolean, free_cell: boolean, modifiable_range: boolean,
- *   places_trap: boolean, requires_occupant: boolean }}
+ *   places_trap: boolean, casts_per_target: number|undefined }}
  */
 export function seed_cast_flags_of(armed_spell_id, seat = null) {
   const lvl = seat_spell_row(seat, fight_spell(armed_spell_id))
@@ -482,7 +475,7 @@ export function seed_cast_flags_of(armed_spell_id, seat = null) {
     free_cell: lvl?.free_cell === true,
     modifiable_range: lvl?.modifiable_range === true,
     places_trap: (lvl?.effects ?? []).some((e) => e?.kind === 'PLACE_TRAP'),
-    requires_occupant: cast_requires_occupant(lvl),
+    casts_per_target: lvl?.casts_per_target,
   }
 }
 

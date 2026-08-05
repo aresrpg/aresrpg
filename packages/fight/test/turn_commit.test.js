@@ -174,17 +174,11 @@ describe('strike_flush_illegal — the weapon-kill drop that revived the corpse'
     ).toBe(true) // out of reach/LOS
   })
 
-  it('a SPELL is legal at any in-footprint cell (void casts) — only a free_cell trap drops an occupied-live cell', () => {
+  it('a SPELL is legal at any shared-predicate footprint cell, including an empty-cell whiff', () => {
     expect(strike_flush_illegal({ in_footprint: true, is_weapon: false })).toBe(false) // void cast — the player's right
     // a damage spell at an optimistically-dead mob stays LEGAL (why the spell kill always worked):
-    expect(strike_flush_illegal({ in_footprint: true, is_weapon: false, occupied_alive: false })).toBe(false)
-    // a free_cell (trap) spell may not land on a LIVING body:
-    expect(strike_flush_illegal({ in_footprint: true, is_weapon: false, free_cell: true, occupied_alive: true })).toBe(
-      true
-    )
-    expect(strike_flush_illegal({ in_footprint: true, is_weapon: false, free_cell: true, occupied_alive: false })).toBe(
-      false
-    )
+    expect(strike_flush_illegal({ in_footprint: true, is_weapon: false })).toBe(false)
+    // free-cell occupancy is already inside can_target's footprint; commit only consumes that verdict.
     expect(strike_flush_illegal({ in_footprint: false, is_weapon: false })).toBe(true)
   })
 

@@ -9,12 +9,7 @@ import { useGameState, useFightView } from '../../../store.js'
 import { useSpellCorpus } from '../../../data/use_spell_corpus.js'
 import { use_expedition, STATUS_ACTIVE as EXPEDITION_ACTIVE } from '../../../../roster/store'
 import { seat_character } from '../../../../world-shell/seat_character.js'
-import {
-  cast_requires_occupant,
-  fight_spell_template,
-  resolve_class_spells,
-  seat_spell_row,
-} from '../fight-spells.js'
+import { fight_spell_template, resolve_class_spells, seat_spell_row } from '../fight-spells.js'
 import { WEAPON_ATTACK_ID, WEAPON_ATTACK_RANGE, WEAPON_ATTACK_AP } from '../../../core/modules/fight.js'
 import { use_dungeon } from '../../../../world-shell/dungeon_store.js'
 import { staged_turn_paths } from '@aresrpg/fight/txs'
@@ -26,21 +21,14 @@ import {
   mob_entity_index,
   next_move_tackle,
 } from '@aresrpg/fight/project'
-import {
-  weapon_spell_template,
-  evolve_caster_cell,
-  evolve_draft_health,
-} from '@aresrpg/fight/predict_cast'
-import {
-  cast_range_set_dungeon,
-  observer_visible_occupant_cells,
-} from '../../../../fight-engine/overlay_intents.js' // D139: cast_range_set_dungeon = THE cast-legality home (P1 self-cast)
+import { weapon_spell_template, evolve_caster_cell, evolve_draft_health } from '@aresrpg/fight/predict_cast'
+import { cast_range_set_dungeon } from '../../../../fight-engine/overlay_intents.js'
 import { character_cast_clock, use_dungeon_turn } from '../../dungeon-turn.js'
-import { encode, decode, manhattan, lineOfSight, bfsReachable } from '@aresrpg/fight/los'
+import { encode, decode, bfsReachable } from '@aresrpg/fight/los'
 import { occupancy_of } from '@aresrpg/fight/occupancy'
 import { dungeon_grid_of } from '../../dungeon-grid.js'
 import { presentation_blocked_cells } from '../../../../world-shell/fight_board_blockers.js'
-import { on_cooldown, cooldown_left, target_cap_reached, cap_of } from '@aresrpg/fight/draft_budget'
+import { on_cooldown, cooldown_left, target_cap_reached } from '@aresrpg/fight/draft_budget'
 import { useFightPhase } from './use_fight_phase.js'
 import { is_placement as phase_is_placement } from '../../../../fight-engine/phase.js'
 
@@ -261,10 +249,8 @@ export function useDungeonBoardState() {
   const armed_on_cd = on_cooldown(last_cast_turn[armed_key], my_turn_no, armed_cooldown)
   const armed_cd_left = cooldown_left(last_cast_turn[armed_key], my_turn_no, armed_cooldown)
   const cpt_cap_eff = armed_cooldown > 0 ? 1 : cpt_cap
-  // The AUTHORED per-target cap rides raw so every read goes through the ONE verdict (`target_cap_reached`);
-  // `cpt_target_cap` stays the resolved number the footprint loop tests for the unlimited short-circuit.
+  // The authored per-target cap rides raw into `can_target`'s context callback.
   const cpt_target_authored = armed_id === WEAPON_ATTACK_ID ? Infinity : active_level?.casts_per_target
-  const cpt_target_cap = cap_of(cpt_target_authored)
 
   // D108/D109 (Decision-A: the chain-SEEDED cell IS a valid pick) — the encoded escrow cell (`me.cell`)
   // snapped into the contract's legal start set (placement_cells[0]) so READY's place_at never EBadStartCell.
@@ -429,12 +415,9 @@ export function useDungeonBoardState() {
     // vacated cell see-through after a drafted move. line_of_sight self-excludes both endpoints, so a body ON the
     // target stays hittable — players never click into an on-chain LOS abort.
     const los_blockers = [...obstacles]
-    for (const [c, o] of occupied) if (o.alive && c !== me.cell) los_blockers.push(c)
-    // P1 SELF-CAST (#55): an ARMED spell aims by the spell_target::can_cast_at twin —
-    // GEOMETRY + OCCUPANCY ONLY (self at rmin 0, allies and EMPTY cells are all legal aims; team is a
-    // per-effect concern and flush_commit already ships void casts). ONE legality home: the SAME
-    // cast_range_set_dungeon the adapter's dark-blue wash paints, fed the same seed flags — the gate and
-    // the wash can never drift (the old mob-only loop lit his own cell but ate the click). free_cell
+    for (const [c, o] of occupied) if (o.alive && c !== me.cell && !optimistic_vacated.has(c)) los_blockers.push(c)
+    // P1 SELF-CAST (#55): an ARMED spell aims by the sim's `can_target` predicate — self at rmin 0, allies and
+    // EMPTY cells are legal aims; team is a per-effect concern and flush_commit ships void casts. free_cell
     // (traps) drops occupied cells (the chain rejects them). UNARMED keeps the mob-only primary
     // quick-cast below so a plain board click still MOVES (widening it would turn every in-range ground
     // click into a cast). The WEAPON (S-12) is EXCLUDED from this spell-geometry branch — cast::weapon_strike
@@ -456,45 +439,34 @@ export function useDungeonBoardState() {
         {
           los: lvl?.line_of_sight !== false,
           linear: lvl?.linear === true,
+          free_cell: lvl?.free_cell === true,
           modifiable_range: lvl?.modifiable_range === true,
           trap_cells: my_trap_cells,
-          // #1741/#2161 — a zero-area single-target DAMAGE spell may only aim where something VISIBLE stands.
-          // The observer-aware overlay projection withholds invisible OTHERS exactly like empty cells (no leak),
-          // while retaining the local fighter's own invisible cell — invisibility never hides self from self.
-          occupant_cells: cast_requires_occupant(lvl)
-            ? observer_visible_occupant_cells(fight?.fighters, fight?.my_entity_id)
-            : null,
+          target_cap_reached: (cell) => target_cap_reached(cast_path, armed_key, cell, cpt_target_authored),
         }
       )
-      // #1210: a cell THIS turn's drafted casts already vacate (`optimistic_vacated`, fed to the move masks two
-      // screens above) must free the SAME trap footprint — one occupancy home, no second candidate-set home (that
-      // asymmetry was the bug: a fresh corpse blocked trap placement in the preview only, #1070's class).
-      if (lvl?.free_cell === true)
-        for (const c of [...footprint])
-          if (occupied.get(c)?.alive && !optimistic_vacated.has(c)) footprint.delete(c)
-      // FIX 4 casts_per_target: a cell already at its per-target cap this turn drops out (chain aborts ECastsPerTarget).
-      if (cpt_target_cap !== Infinity)
-        for (const c of [...footprint])
-          if (target_cap_reached(cast_path, armed_key, c, cpt_target_authored)) footprint.delete(c)
       return footprint
     }
+    const quick_level = fight?.armed_spell_id === WEAPON_ATTACK_ID ? null : active_level
+    const footprint = cast_range_set_dungeon(
+      [cast_params.range_min, cast_params.range_max],
+      { ...active_fighter, cell: decode(caster_cell) },
+      dungeon_grid_of(dungeon),
+      los_blockers,
+      {
+        los: true,
+        linear: quick_level?.linear === true,
+        modifiable_range: quick_level?.modifiable_range === true,
+        target_cap_reached:
+          fight?.armed_spell_id === WEAPON_ATTACK_ID
+            ? null
+            : (cell) => target_cap_reached(cast_path, armed_key, cell, cpt_target_authored),
+      }
+    )
     const out = new Set()
-    // #1993 WP6 — the caster's live range is the ACTIVE-STATUS PROJECTION's own answer
-    // (`entities[id].statuses.range_bonus`), not a per-surface fold of the same rows. The board's target set, the
-    // overlay's footprint and the turn card's badge all hang off ONE collection now, so a timed range row cannot
-    // widen one of them and not the others (#1872's family).
-    const effective_range_max =
-      cast_params.range_max +
-      (fight?.armed_spell_id !== WEAPON_ATTACK_ID && active_level?.modifiable_range
-        ? (fight_visible_view(fight_store.getState()).entities[entity_id]?.statuses.range_bonus ?? 0)
-        : 0)
     for (const [cell, o] of occupied) {
       if (o.kind !== 'mob' || !o.alive) continue
-      const d = manhattan(caster_cell, cell)
-      if (d < cast_params.range_min || d > effective_range_max) continue
-      if (!lineOfSight(caster_cell, cell, los_blockers)) continue
-      if (target_cap_reached(cast_path, armed_key, cell, cpt_target_authored)) continue // FIX 4 casts_per_target (per cell/turn)
-      out.add(cell)
+      if (footprint.has(cell)) out.add(cell)
     }
     return out
   }, [
@@ -504,7 +476,6 @@ export function useDungeonBoardState() {
     armed_queued,
     cpt_cap_eff,
     armed_on_cd,
-    cpt_target_cap,
     cpt_target_authored,
     armed_key,
     cast_path,

@@ -167,11 +167,9 @@ const approach_cells = (read, caster_cell, enemy) => {
 }
 
 /** Score a free-cell spell (trap / glyph) on one board cell. */
-const score_on_cell = (spell, read, cell) => {
+const score_on_cell = (spell, cell) => {
   const trap = spell.effects.find((e) => e.kind === 'PLACE_TRAP' || e.kind === 'PLACE_GLYPH')
   if (!trap) return null
-  // ONE TRAP PER CELL. The fold-backed read is the sole client ledger for board drafts and seam commits alike.
-  if ((read.my_traps ?? []).includes(cell_index(cell))) return null
   return {
     value: Math.max(1, Number(trap.base ?? 0)) * WEIGHTS.trap,
     fact: `trap:${cell_index(cell)}`,
@@ -217,10 +215,15 @@ const candidates = (read, me, from, ap, claimed, seed, history) => {
         .sort((a, b) => manhattan(a.cell_committed, from) - manhattan(b.cell_committed, from))
       if (!near) continue
       for (const cell of approach_cells(read, from, near)) {
-        const scored = score_on_cell(spell, read, cell)
+        const scored = score_on_cell(spell, cell)
         if (!scored || claimed.facts.has(scored.fact)) continue
-        if (target_cap_reached(claimed.cast_path, spell.name_key, cell_index(cell), spell.casts_per_target)) continue
-        if (!spell_reaches(read, spell, from, cell, me.id)) continue
+        if (
+          !spell_reaches(read, spell, from, cell, me.id, {
+            target_cap_reached: (target) =>
+              target_cap_reached(claimed.cast_path, spell.name_key, cell_index(target), spell.casts_per_target),
+          })
+        )
+          continue
         rows.push({ ...scored, spell, cell })
       }
       continue
@@ -232,9 +235,13 @@ const candidates = (read, me, from, ap, claimed, seed, history) => {
       const target_cell = target.id === me.id ? from : target.cell_committed
       const scored = score_on_fighter(spell, { ...me, cell_committed: from }, target)
       if (!scored || scored.value < WEIGHTS.floor || claimed.facts.has(scored.fact)) continue
-      if (target_cap_reached(claimed.cast_path, spell.name_key, cell_index(target_cell), spell.casts_per_target))
+      if (
+        !spell_reaches(read, spell, from, target_cell, me.id, {
+          target_cap_reached: (target) =>
+            target_cap_reached(claimed.cast_path, spell.name_key, cell_index(target), spell.casts_per_target),
+        })
+      )
         continue
-      if (!spell_reaches(read, spell, from, target_cell, me.id)) continue
       rows.push({ ...scored, spell, cell: target_cell })
     }
   }

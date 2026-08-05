@@ -24,6 +24,7 @@ import { find_path_4dir, get_reachable_cells } from './pathfind.js'
 import { find_entity, living_enemies, team_of } from './fight_state.js'
 import { is_invisible } from './fight_statuses.js'
 import { can_target } from './spell_targeting.js'
+import { check_cast_limits } from './fight_cast_limits.js'
 
 /**
  * A planned turn step (mirrors the donor FightAction union, ai/types.ts:33).
@@ -116,7 +117,20 @@ const best_castable_damage_spell = (
       drop(spell_id, 'not_a_damage_spell')
       continue
     }
-    if (!can_target(spell_level, from, target, context, range_bonus)) {
+    if (
+      !can_target(
+        spell_level,
+        from,
+        target,
+        {
+          ...context,
+          target_cap_reached: cell =>
+            check_cast_limits(state, entity.id, spell_id, spell_level, cell)
+              .error === 'CASTS_PER_TARGET',
+        },
+        range_bonus,
+      )
+    ) {
       drop(spell_id, 'cannot_target_from_here')
       continue
     }

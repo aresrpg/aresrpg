@@ -32,9 +32,14 @@ const trap_level = {
   linear: false,
   line_of_sight: false,
   free_cell: true,
+  base_effects: [{ type: 'PLACE_TRAP' }],
 }
 // The same geometry WITHOUT free_cell — a normal offensive spell.
-const damage_level = { ...trap_level, free_cell: false }
+const damage_level = {
+  ...trap_level,
+  free_cell: false,
+  base_effects: [{ type: 'DAMAGE' }],
+}
 
 const caster = { x: 5, y: 5 }
 
@@ -110,6 +115,35 @@ describe('can_target — free_cell (trap) placement gate', () => {
     const far = { x: 5, y: 12 } // distance 7 > rmax 4
     const ctx = { blocks_los: () => false, is_occupied: () => false }
     expect(can_target(trap_level, caster, far, ctx)).toBe(false)
+  })
+
+  it('rejects a known live trap anchor only for a trap-placing level', () => {
+    const target = { x: 6, y: 5 }
+    const ctx = {
+      blocks_los: () => false,
+      is_occupied: () => false,
+      is_trapped: c => c.x === target.x && c.y === target.y,
+    }
+    expect(can_target(trap_level, caster, target, ctx)).toBe(false)
+    expect(can_target(damage_level, caster, target, ctx)).toBe(true)
+  })
+
+  it('rejects a cell whose per-target allowance is spent', () => {
+    const target = { x: 6, y: 5 }
+    const ctx = {
+      blocks_los: () => false,
+      is_occupied: () => false,
+      target_cap_reached: c => c.x === target.x && c.y === target.y,
+    }
+    expect(can_target(damage_level, caster, target, ctx)).toBe(false)
+    expect(can_target(damage_level, caster, { x: 5, y: 6 }, ctx)).toBe(true)
+  })
+
+  it('line-launch is orthogonal only; a 45-degree diagonal is refused', () => {
+    const ctx = { blocks_los: () => false, is_occupied: () => false }
+    const line_level = { ...damage_level, linear: true }
+    expect(can_target(line_level, caster, { x: 6, y: 6 }, ctx)).toBe(false)
+    expect(can_target(line_level, caster, { x: 5, y: 7 }, ctx)).toBe(true)
   })
 })
 

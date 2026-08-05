@@ -57,13 +57,24 @@ const ME = enc(6, 0) // manhattan(ME, 26) = 1 — matches the trace's caster@6
 const STACK_CELL = 26
 const stacked_dungeon = (mob_order) => ({
   escrow: [{ cell: ME, committed: { alive: true }, alive: true }],
-  mobs: mob_order === 'alive_first' ? [{ cell: STACK_CELL, alive: true }, { cell: STACK_CELL, alive: false }]
-      : [{ cell: STACK_CELL, alive: false }, { cell: STACK_CELL, alive: true }],
+  mobs:
+    mob_order === 'alive_first'
+      ? [
+          { cell: STACK_CELL, alive: true },
+          { cell: STACK_CELL, alive: false },
+        ]
+      : [
+          { cell: STACK_CELL, alive: false },
+          { cell: STACK_CELL, alive: true },
+        ],
 })
 
 describe('#1214 — a corpse never shadows a living occupant sharing its cell', () => {
   test('① dead-after-alive (the trace order): the stacked cell resolves to the LIVING mob, weapon-castable', async () => {
-    const build_occupied = await extract('const occupied = useMemo(() => {', '}, [dungeon])', ['dungeon', 'occupancy_of'])
+    const build_occupied = await extract('const occupied = useMemo(() => {', '}, [dungeon])', [
+      'dungeon',
+      'occupancy_of',
+    ])
     const occupied = build_occupied(stacked_dungeon('alive_first'), occupancy_of)
     const stacked = occupied.get(STACK_CELL)
     expect(stacked).toEqual({ kind: 'mob', alive: true, idx: 0 }) // m1 (alive), never m2 (the corpse, idx 1)
@@ -84,18 +95,24 @@ describe('#1214 — a corpse never shadows a living occupant sharing its cell', 
   })
 
   test('② order-reversal control (alive-after-dead): stays green whichever mob is indexed last', async () => {
-    const build_occupied = await extract('const occupied = useMemo(() => {', '}, [dungeon])', ['dungeon', 'occupancy_of'])
+    const build_occupied = await extract('const occupied = useMemo(() => {', '}, [dungeon])', [
+      'dungeon',
+      'occupancy_of',
+    ])
     const occupied = build_occupied(stacked_dungeon('dead_first'), occupancy_of)
     // dead idx 0 first, alive idx 1 last — this order already "worked" by luck pre-fix; it must keep working post-fix.
     expect(occupied.get(STACK_CELL)).toEqual({ kind: 'mob', alive: true, idx: 1 })
   })
 
   test('③ LOS: a solo corpse between me and a live target never blocks sight; a corpse-shadowed live body still does', async () => {
-    const build_occupied = await extract('const occupied = useMemo(() => {', '}, [dungeon])', ['dungeon', 'occupancy_of'])
+    const build_occupied = await extract('const occupied = useMemo(() => {', '}, [dungeon])', [
+      'dungeon',
+      'occupancy_of',
+    ])
     const build_los_blockers = await extract(
       'const los_blockers = [...obstacles]',
       '// P1 SELF-CAST (#55)',
-      ['obstacles', 'occupied', 'me'],
+      ['obstacles', 'occupied', 'me', 'optimistic_vacated'],
       { strip_start: false, return_expr: 'los_blockers' }
     )
 
@@ -105,28 +122,44 @@ describe('#1214 — a corpse never shadows a living occupant sharing its cell', 
     const me = { cell: A }
 
     // a solo corpse at B (nothing else shares its cell) — corpses never body-block.
-    const solo_corpse = build_occupied({
-      escrow: [{ cell: A, alive: true }],
-      mobs: [{ cell: B, alive: false }, { cell: C, alive: true }],
-    }, occupancy_of)
-    const blockers_solo = build_los_blockers([], solo_corpse, me)
+    const solo_corpse = build_occupied(
+      {
+        escrow: [{ cell: A, alive: true }],
+        mobs: [
+          { cell: B, alive: false },
+          { cell: C, alive: true },
+        ],
+      },
+      occupancy_of
+    )
+    const blockers_solo = build_los_blockers([], solo_corpse, me, new Set())
     expect(blockers_solo.includes(B)).toBe(false)
     expect(lineOfSight(A, C, blockers_solo)).toBe(true) // target still lit + castable
 
     // the SAME cell B, but a living mob shares it with the corpse, corpse indexed LAST (the trace's own shadowing
     // order, idx-231: the walked-onto corpse is the higher index) — the living occupant the fixed map now
     // resolves at B must block sight to whatever stands behind it.
-    const shadowed = build_occupied({
-      escrow: [{ cell: A, alive: true }],
-      mobs: [{ cell: B, alive: true }, { cell: B, alive: false }, { cell: C, alive: true }],
-    }, occupancy_of)
-    const blockers_shadowed = build_los_blockers([], shadowed, me)
+    const shadowed = build_occupied(
+      {
+        escrow: [{ cell: A, alive: true }],
+        mobs: [
+          { cell: B, alive: true },
+          { cell: B, alive: false },
+          { cell: C, alive: true },
+        ],
+      },
+      occupancy_of
+    )
+    const blockers_shadowed = build_los_blockers([], shadowed, me, new Set())
     expect(blockers_shadowed.includes(B)).toBe(true)
     expect(lineOfSight(A, C, blockers_shadowed)).toBe(false)
   })
 
   test('④ the target readout (flush_commit / hover) resolves the LIVING mob, never the corpse sharing its cell', async () => {
-    const build_occupied = await extract('const occupied = useMemo(() => {', '}, [dungeon])', ['dungeon', 'occupancy_of'])
+    const build_occupied = await extract('const occupied = useMemo(() => {', '}, [dungeon])', [
+      'dungeon',
+      'occupancy_of',
+    ])
     const occupied = build_occupied(stacked_dungeon('alive_first'), occupancy_of)
     const tgt = occupied.get(STACK_CELL)
     // flush_commit's committed_target_alive / any hover panel reads THIS idx — it must be the living mob's (0),
@@ -137,28 +170,26 @@ describe('#1214 — a corpse never shadows a living occupant sharing its cell', 
 })
 
 describe('#1210 — the free_cell trap footprint reads the SAME optimistic_vacated the move masks already get', () => {
-  const build_filter = () =>
+  const build_los_blockers = () =>
     extract(
-      'if (lvl?.free_cell === true)',
-      '// FIX 4 casts_per_target',
-      ['lvl', 'footprint', 'occupied', 'optimistic_vacated'],
-      { strip_start: false }
+      'const los_blockers = [...obstacles]',
+      '// P1 SELF-CAST (#55)',
+      ['obstacles', 'occupied', 'me', 'optimistic_vacated'],
+      { strip_start: false, return_expr: 'los_blockers' }
     )
   const alive_occupied = (cell) => new Map([[cell, { kind: 'mob', alive: true, idx: 0 }]])
 
   test('⑤ a cell THIS turn already vacates (optimistic_vacated) is OFFERED for free_cell placement', async () => {
-    const filter = await build_filter()
-    const footprint = new Set([STACK_CELL])
+    const blockers = await build_los_blockers()
     // committed truth still says the mob is alive (my own drafted kill hasn't landed on chain yet) — the exact
     // window #1210's fold test (trap_on_corpse_cell.test.js) proves is BY DESIGN, compensated by optimistic_vacated.
-    filter({ free_cell: true }, footprint, alive_occupied(STACK_CELL), new Set([STACK_CELL]))
-    expect(footprint.has(STACK_CELL)).toBe(true)
+    const result = blockers([], alive_occupied(STACK_CELL), { cell: ME }, new Set([STACK_CELL]))
+    expect(result).not.toContain(STACK_CELL)
   })
 
-  test('⑥ control — a living mob\'s cell NOT vacated this turn stays refused for traps', async () => {
-    const filter = await build_filter()
-    const footprint = new Set([STACK_CELL])
-    filter({ free_cell: true }, footprint, alive_occupied(STACK_CELL), new Set()) // nothing vacated
-    expect(footprint.has(STACK_CELL)).toBe(false)
+  test("⑥ control — a living mob's cell NOT vacated this turn stays refused for traps", async () => {
+    const blockers = await build_los_blockers()
+    const result = blockers([], alive_occupied(STACK_CELL), { cell: ME }, new Set())
+    expect(result).toContain(STACK_CELL)
   })
 })

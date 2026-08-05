@@ -99,6 +99,7 @@ export { manhattan } from '@aresrpg/sim/combat_grid'
  */
 export const targeting_context = (read, { ignore_id = null, at = null } = {}) => {
   const blocked = new Set(blocked_cells(read))
+  const trapped = new Set(read.my_traps ?? [])
   const bodies = new Set(
     living(read)
       .filter((f) => f.id !== ignore_id)
@@ -109,6 +110,7 @@ export const targeting_context = (read, { ignore_id = null, at = null } = {}) =>
   return {
     blocks_los: (cell) => blocked.has(cell_index(cell)),
     is_occupied: (cell) => bodies.has(cell_index(cell)),
+    is_trapped: (cell) => trapped.has(cell_index(cell)),
   }
 }
 
@@ -135,9 +137,12 @@ export const path_cost = (read, from, to, mp, ignore_id) => {
   return cost > mp ? null : cost
 }
 
-/** Does `spell` legally reach `target_cell` from `from`? The SIM's own gate, verbatim. */
-export const spell_reaches = (read, spell, from, target_cell, ignore_id) =>
-  can_target(spell, from, target_cell, targeting_context(read, { ignore_id, at: from }))
+/** Does `spell` legally reach `target_cell` from `from`? The SIM's own gate, with caller-owned live facts composed. */
+export const spell_reaches = (read, spell, from, target_cell, ignore_id, context = {}) =>
+  can_target(spell, from, target_cell, {
+    ...targeting_context(read, { ignore_id, at: from }),
+    ...context,
+  })
 
 /** Which of `spell`'s effects actually land on a fighter of `same_team`-ness (Move's `effect_hits` twin). */
 export const landing_effects = (spell, { is_caster, same_team }) =>

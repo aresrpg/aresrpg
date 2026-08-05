@@ -32,6 +32,7 @@ import { cast_resolution, empty_cast_resolution } from '@aresrpg/fight/cast_reco
 import { living_body_cells } from '@aresrpg/fight/occupancy'
 import { range_bonus_of } from '@aresrpg/fight/statuses'
 import { weapon_spell_template } from '@aresrpg/fight/predict_cast'
+import { target_cap_reached } from '@aresrpg/fight/draft_budget'
 
 import {
   move_reachable_set,
@@ -1774,6 +1775,13 @@ export function create_voxel_fight_adapter(
           const paints = spell_target_paints(level, active, grid, {
             terrain_cells: dungeon.obstacles ?? [],
             occupant_cells: living_body_cells(project.fight_visible_view(fight_store.getState()).entities),
+            trap_cells: (level.base_effects ?? []).some((effect) => effect.type === 'PLACE_TRAP')
+              ? (fight.my_traps ?? [])
+              : [],
+            target_cap_reached: (cell) =>
+              wash_armed === WEAPON_ATTACK_ID
+                ? false
+                : target_cap_reached(use_dungeon_turn.getState().cast_path, wash_armed, cell, level.casts_per_target),
           })
           if (paints.in_range.length) lit.in_range = paints.in_range
           if (paints.los_blocked.length) lit.los_blocked = paints.los_blocked
@@ -1948,11 +1956,16 @@ export function create_voxel_fight_adapter(
             ? weapon_band_of(active.weapon)
             : seed_range_of(fight.armed_spell_id, active)
         const flags2 = seed_cast_flags_of(fight.armed_spell_id, active)
-        // 1.29 no-stack (the wash's hover twin): MY live trap cells are never a castable hover for a trap spell.
         if (flags2.places_trap) flags2.trap_cells = fight.my_traps ?? []
-        // #1741 (the wash's hover twin): no telegraph over a cell a single-target damage spell cannot aim at.
-        if (flags2.requires_occupant)
-          flags2.occupant_cells = observer_visible_occupant_cells(fight.fighters, fight.my_entity_id)
+        flags2.target_cap_reached = (target) =>
+          fight.armed_spell_id === WEAPON_ATTACK_ID
+            ? false
+            : target_cap_reached(
+                use_dungeon_turn.getState().cast_path,
+                fight.armed_spell_id,
+                target,
+                flags2.casts_per_target
+              )
         const castable2 = cast_range_set_dungeon(hover_range, active, grid2, los2, flags2)
         // The weapon sentinel has no seed row → spell_footprint falls back to the single [cell] (a melee strike).
         if (castable2.has(to_enc)) foot_cells = spell_footprint(fight.armed_spell_id, cell, active.cell, active)
