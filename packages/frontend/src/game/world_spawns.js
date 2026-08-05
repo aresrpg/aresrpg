@@ -43,7 +43,7 @@ import { engage_offset } from '@aresrpg/world/spawns_reconcile'
 import { group_engage_blocked } from '@aresrpg/world/nearby_fights'
 
 import i18n from '../i18n'
-import { cancel_engage_timing, start_engage_timing } from '../core/engage_timing.js'
+import { cancel_engage_timing, start_engage_timing, time_engage_leg } from '../core/engage_timing.js'
 import { game_log } from '../core/log.js'
 import { display_mob_name } from '../content/mob_name_overrides'
 import { report_error } from '../core/report.js'
@@ -769,7 +769,12 @@ export function create_world_spawns({ engine, canvas = null, get_player_pos, ove
             // A PUBLIC fight discards the party id (party_id stays null below), so pre-forming an owned party is a
             // wasted on-chain create tx — skip it entirely. Only a GROUP (private) fight seats the party FIRST.
             if (!request.payload.is_public) {
-              const owned_party_ready = await use_party.getState().ensure_owned_party()
+              // #2155 — this leg can run a WHOLE on-chain party-create tx (sign + execute + finality) and it
+              // sits INSIDE the marker→ptb-built span, so an unmeasured GROUP engage bills a nested transaction
+              // as "PTB compose". Named, so the bill can never blame the composer for it again.
+              const owned_party_ready = await time_engage_leg('party', () =>
+                use_party.getState().ensure_owned_party()
+              )
               if (!owned_party_ready) {
                 const reason = use_party.getState().error ?? i18n.t('errors.tx_failed')
                 throw new Error(reason)

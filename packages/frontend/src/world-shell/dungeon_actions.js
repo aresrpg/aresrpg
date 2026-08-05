@@ -72,7 +72,12 @@ import { chain_gas_from_receipt, invalidate_gas_coin, clear_gas_coin_cache } fro
 // pinned-fight act PTB resolves nothing (build-offline). One owner-read per fight; cleared at each boundary.
 import { ensure_fight_shared_ref, remember_fight_shared_version, clear_fight_ref_cache } from '../tx/fight_ref_cache.js'
 import { FINALITY_POLL_SCHEDULE, flush_leg, now } from '../tx/latency.js'
-import { mark_engage_ptb_built, mark_engage_receipt_ready, note_engage_fight_id } from '../core/engage_timing.js'
+import {
+  mark_engage_ptb_built,
+  mark_engage_receipt_ready,
+  note_engage_fight_id,
+  time_engage_leg,
+} from '../core/engage_timing.js'
 import { game_log } from '../core/log.js'
 
 // ── SDK per-domain builders (context-bound at call time — the kiosk_client rides the memoized SDK) ──────────
@@ -343,21 +348,24 @@ export async function activate_run({
 export async function next_room_fight({ world_id, run_pass_id, mob_template_id, character_id }) {
   const { address } = use_auth.getState()
   if (!address) throw new Error('Not connected')
-  const sdk = await get_sdk()
+  // #2155 — the SAME leg names the world door bills, so one trace explains both engage shapes.
+  const sdk = await time_engage_leg('sdk', () => get_sdk())
   const [handle, raised_spell_ids] = await Promise.all([
-    kiosk_for_character(sdk, address, character_id),
-    raised_spell_ids_for(character_id), // #1206
+    time_engage_leg('kiosk', () => kiosk_for_character(sdk, address, character_id)),
+    time_engage_leg('raised_spells', () => raised_spell_ids_for(character_id)), // #1206
   ])
   if (!handle) throw new Error('That character is not in your kiosk')
-  const tx = next_fight_ptb(ctx_of(sdk))({
-    world_id,
-    run_pass_id,
-    mob_template_id,
-    kiosk_id: handle.kiosk_id,
-    personal_kiosk_cap_id: handle.personal_kiosk_cap_id,
-    character_id,
-    raised_spell_ids,
-  })
+  const tx = time_engage_leg('ptb', () =>
+    next_fight_ptb(ctx_of(sdk))({
+      world_id,
+      run_pass_id,
+      mob_template_id,
+      kiosk_id: handle.kiosk_id,
+      personal_kiosk_cap_id: handle.personal_kiosk_cap_id,
+      character_id,
+      raised_spell_ids,
+    })
+  )
   mark_engage_ptb_built(tx)
   use_fight_cost.getState().reset() // FRESH fight entry — its own gas is the first line of the new total
   clear_budget_cache() // and drop any prior fight's cached act budgets (a new fight = new shapes)

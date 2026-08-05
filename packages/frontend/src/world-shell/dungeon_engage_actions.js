@@ -28,7 +28,7 @@ import { group_engage_blocked } from '@aresrpg/world/nearby_fights'
 import { use_auth } from '../auth'
 import { get_sdk } from '../chain/sdk'
 import { DEMO_NETWORK } from '../chain/deployment'
-import { mark_engage_ptb_built, note_engage_fight_id } from '../core/engage_timing.js'
+import { mark_engage_ptb_built, note_engage_fight_id, time_engage_leg } from '../core/engage_timing.js'
 import i18n from '../i18n'
 import { tx_error } from '../game/core/abort_copy.js'
 import { clear_budget_cache } from '../tx/budget_cache.js'
@@ -221,18 +221,20 @@ export async function create_world_fight({
 }) {
   const { address } = use_auth.getState()
   if (!address) throw new Error('Not connected')
-  const sdk = await get_sdk()
+  const sdk = await time_engage_leg('sdk', () => get_sdk())
   const [handle, group_door, live_fights, raised_spell_ids] = await Promise.all([
-    kiosk_for_character(sdk, address, character_id),
-    load_world_group_door({ sdk, world_id, spawn_id, mob_template_id, member_template_ids, zx, zy }),
+    time_engage_leg('kiosk', () => kiosk_for_character(sdk, address, character_id)),
+    time_engage_leg('group_door', () =>
+      load_world_group_door({ sdk, world_id, spawn_id, mob_template_id, member_template_ids, zx, zy })
+    ),
     // TOCTOU SHRINK (leg ③): the SAME /v1 fight truth the engage affordance gates on, read FRESH here (parallel
     // with the kiosk/proof reads — zero added latency) so the residual poll-lag window between the affordance's
     // 6s snapshot and this press collapses to one read. A claimed spawn shows a live fight here even when the
     // client's polled set was still stale (the exact regression TOCTOU SHRINK addresses).
-    get_fights({ world: world_id }).catch(() => null),
+    time_engage_leg('live_fights', () => get_fights({ world: world_id }).catch(() => null)),
     // #1206: the seat's LEARNED spell levels are snapshotted for EXACTLY the ids this PTB names — an unnamed
     // spell casts at the free baseline 1 whatever the character invested. Read in the same parallel leg.
-    raised_spell_ids_for(character_id),
+    time_engage_leg('raised_spells', () => raised_spell_ids_for(character_id)),
   ])
   // A CHARACTER-scoped refusal: this seat cannot claim ANY group anywhere until its character is back in the
   // kiosk, so the throw declares that scope itself (it never reaches the chain, so it carries no abort to
@@ -265,9 +267,11 @@ export async function create_world_fight({
   // BOTH composers take the witness the door resolved; each ignores one it cannot use (the member door only
   // acts on a format-4 witness, which is the only kind carrying a roster). `null` = the derivation door.
   const group_proof = group_door.door === 'proof' ? group_door.proof : null
-  const tx = member_template_ids.length
-    ? create_member_fight_ptb(ctx_of(sdk))({ ...entry, member_template_ids, group_proof })
-    : create_fight_ptb(ctx_of(sdk))({ ...entry, group_proof, mob_template_id })
+  const tx = time_engage_leg('ptb', () =>
+    member_template_ids.length
+      ? create_member_fight_ptb(ctx_of(sdk))({ ...entry, member_template_ids, group_proof })
+      : create_fight_ptb(ctx_of(sdk))({ ...entry, group_proof, mob_template_id })
+  )
   // #609 — the claimed group's IDENTITY, carried out of the claim so a LOST fight can give it back at
   // settlement (`fight::release_group`). Only a VICTORY consumes a group; a defeat that forgets which group it
   // took drains the world's mob population by one, permanently. Known only where the door named a row.
