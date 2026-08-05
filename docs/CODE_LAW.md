@@ -215,12 +215,17 @@ scripts/codeql/aresrpg-fp-tests --additional-packs=scripts/codeql`. Run it at th
 - The dual-home gate (`scripts/single-home-gate.sh`, wired into `bun run lint` via
   check-constraints, ~4s, repo bytes only — no analyzer binary, so it cannot flake): the class gate
   behind "one home per fact". It derives what to protect from the tree instead of a kill-list —
-  every exported name, plus every `path:line` home named in `docs/REGISTRY.md` — and reports four
+  every exported name, plus every `path:line` home named in `docs/REGISTRY.md` — and reports six
   lanes: `duplicate-export` (one exported name, two files), `registry-fact` (a registry-owned name
   declared off-home, exported or laundered into a function body), `registry-anchor` (a registry row
-  whose anchor no longer declares anything — the registry drifting off the code it governs), and
+  whose anchor no longer declares anything — the registry drifting off the code it governs),
+  `registry-surface` and `registry-importer` (the GENERATED import fence, issue #2222: one rule per
+  registry row whose anchor is an importable module — no second importable surface for the fact, no
+  consumer binding it from a specifier that misses its home; rows anchored on Move sources generate
+  nothing and are reported as unfenceable rather than counted as covered), and
   `store-writers` (one store field written by two modules). Self-tests red AND green on
-  `scripts/arch/fixtures/single_home` before it judges the tree, ratchets against
+  `scripts/arch/fixtures/single_home` before it judges the tree, proves the registry parser still
+  sees by planting a synthetic row in a copy of the registry, ratchets against
   `scripts/arch/single_home.baseline.json`, and carries its own negative control:
   `--negative-control` writes fresh dual homes into real packages, proves every lane reds, removes
   them, and proves the verdict reverses. Name-only detection cannot tell two facts that share a
