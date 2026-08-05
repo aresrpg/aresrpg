@@ -39,12 +39,13 @@ const OUT_TICKS = 4 // consecutive 1s ticks outside before the release fires (se
 
 /**
  * @param {{ engine: any, ctl: any, canvas?: HTMLElement | null, swap_sampler: (fn: ((x:number,y:number,z:number)=>number) | null) => void,
- *   set_home: (pos: [number, number, number] | null) => void }} args `set_home` re-targets the D188 floor
+ *   set_home: (pos: [number, number, number] | null) => void,
+ *   overlay_root: ReturnType<import('./world_overlay_root.js').create_world_overlay_root> }} args `set_home` re-targets the D188 floor
  *   net (a fall INSIDE the cave must return to the CAVE entry, never the overworld spawn — body/state
  *   divergence class, qa-caught). `canvas` = the WORLD canvas (D232 — plate projection rect).
  * @returns {{ dispose: () => void, get_board_anchor: () => { x: number, y: number, z: number } | null }}
  */
-export function create_cave_session({ engine, ctl, canvas = null, swap_sampler, set_home }) {
+export function create_cave_session({ engine, ctl, canvas = null, swap_sampler, set_home, overlay_root }) {
   /** @type {any} */ let cave = null
   /** @type {{ dispose: () => void } | null} */ let mobs = null
   /** @type {{ dispose: () => void } | null} */ let sword = null // D280 — the fight-start beacon (planted on engage)
@@ -150,6 +151,7 @@ export function create_cave_session({ engine, ctl, canvas = null, swap_sampler, 
         anchor: /** @type {[number,number,number]} */ ([...room.mob_spawn]),
         face_toward: /** @type {[number,number,number]} */ ([...room.player_spawn]),
         get_player_pos: () => ctl.get_transform().position,
+        overlay_root,
       })
       // D211-addendum (in-cave screenshot: the E "enter the dungeons" box leaked INSIDE the cave):
       // lobby affordances are lobby-state — suppress the NPC prompt for the whole cave stay.

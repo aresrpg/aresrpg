@@ -69,6 +69,7 @@ const text_focused = () => {
  *   engine: any, canvas: HTMLCanvasElement, character: any, ctl: any,
  *   env: { solid_at: (x:number,y:number,z:number)=>boolean, block_id_at: (x:number,y:number,z:number)=>number },
  *   world_id: string|null,
+ *   overlay_root: ReturnType<import('./world_overlay_root.js').create_world_overlay_root>,
  *   initial_yaw?: number, is_fight: () => boolean, is_ready: () => boolean, on_cinematic_change: (on: boolean) => void
  * }} deps
  */
@@ -79,6 +80,7 @@ export function create_player({
   ctl,
   env,
   world_id,
+  overlay_root,
   initial_yaw = 0, // session-position restore seeds the shoulder cam's look direction too (embed_voxel.js boot_yaw)
   is_fight,
   is_ready,
@@ -173,7 +175,7 @@ export function create_player({
     // D227 — the local plate (D206 chips were remote-only; legacy had the own-name overhead plate). Pass the
     // character ROW (not a frozen label): the plate tracks the live roster level itself, so a post-fight
     // level-up repaints "LV N" (a nametag stuck showing lvl 1 after REACHED LEVEL 2).
-    my_plate = create_local_nameplate({ engine, canvas, character }) // D232
+    my_plate = create_local_nameplate({ engine, canvas, character, overlay_root }) // D232/#2170
   }
 
   // ── input (mouse-or-keys law): WASD/arrows move, Space jump, Shift walk. ─────────────────────────────────
@@ -206,14 +208,8 @@ export function create_player({
   // NO on-screen indicator (it would appear in the recording) — a single 2s toast on toggle (one-toast
   // law) is the only tell. Roam only; the frozen tactical-board camera never routes through this rig.
   let cinematic = false
-  // GHOST-PLATE FIX (a screenshot showed the self nametag chip stuck on-screen over the Equipment/Encyclopedia
-  // pages) — `my_plate` is a document.body-appended DOM node whose visibility is only ever WRITTEN by
-  // update()/set_hidden(), which the session's frame loop stops calling the instant the route leaves the world
-  // (embed_voxel.js's set_frame_paused cancels its own rAF). It froze at its last "block" state instead of
-  // hiding, so it kept rendering over whatever page came next. Mirrors the SAME `set_hidden` toggle cinematic
-  // recording already uses on this exact chip — combined so either condition hides it.
-  let world_paused = false
-  const sync_plate_hidden = () => my_plate?.set_hidden(world_paused || cinematic)
+  // Route life belongs to world_overlay_root; this local visibility bit is cinematic-only.
+  const sync_plate_hidden = () => my_plate?.set_hidden(cinematic)
   // TR-1 v2 — app-side creative FLY (cinematic ONLY): freezes the walk physics and hard-places a
   // camera-relative velocity each frame via ctl.teleport (no engine-physics change). On exit the very next
   // ctl.tick re-applies gravity, so the body settles to the ground on its own. Double-tap SPACE toggles it.
@@ -854,14 +850,5 @@ export function create_player({
     puffs = []
   }
 
-  // GHOST-PLATE FIX: the host's set_frame_paused already cancels this session's own rAF (which drives frame2
-  // → my_plate.update()) in lockstep with remotes/world_spawns' own set_paused; this hooks the SAME call so
-  // the self plate is explicitly hidden rather than left frozen at its last on-screen state (see world_paused
-  // above). Un-pausing re-shows it unless cinematic recording is still independently hiding it.
-  const set_paused = (/** @type {boolean} */ paused) => {
-    world_paused = !!paused
-    sync_plate_hidden()
-  }
-
-  return { feed, frame2, get_cam, get_avatar, set_paused, dispose }
+  return { feed, frame2, get_cam, get_avatar, dispose }
 }

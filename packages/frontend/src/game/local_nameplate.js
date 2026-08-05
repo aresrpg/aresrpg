@@ -24,12 +24,17 @@ const plate_label = (character) => {
 }
 
 /**
- * @param {{ engine: any, canvas?: HTMLElement | null, character: any }} args character = the in-hand session
- *   roster row (its id keys the live-level subscription; name + experience seed the label); canvas = the WORLD
+ * @param {{
+ *   engine: any,
+ *   canvas?: HTMLElement | null,
+ *   character: any,
+ *   overlay_root: ReturnType<import('./world_overlay_root.js').create_world_overlay_root>
+ * }} args character = the in-hand session
+ *   roster row (its id keys the live-level lookup; name + experience seed the label); canvas = the WORLD
  *   canvas (D232 — a bare querySelector can grab the pedestal/drawer canvas and shift the plate off the head).
  * @returns {{ update: (x: number, y: number, z: number) => void, set_hidden: (h: boolean) => void, dispose: () => void }}
  */
-export function create_local_nameplate({ engine, canvas = null, character }) {
+export function create_local_nameplate({ engine, canvas = null, character, overlay_root }) {
   const chip = document.createElement('div')
   // NAMEPLATE HIERARCHY: player plates look different and more prominent than mob
   // ones — the SAME bolder treatment remote_players.js gives other players (bigger 12px/700-weight
@@ -44,27 +49,25 @@ export function create_local_nameplate({ engine, canvas = null, character }) {
     'transition:opacity .18s ease' // occlusion fade (behind geometry → OCCLUDED_OPACITY)
   let label = plate_label(character)
   chip.textContent = label
-  document.body.appendChild(chip)
+  overlay_root.append_nametag(chip)
   let hidden = false // TR-1 v2 — force-hidden while the cinematic camera records (clean footage)
   const projected = { left: 0, top: 0 }
 
-  // D227 LEVEL REFRESH (a nametag stuck showing lvl 1 after REACHED LEVEL 2) — the label was captured
-  // ONCE at avatar-mount and never moved again, so a post-fight level-up (the store's floored experience) never
-  // reached the plate. Subscribe to the live roster: repaint "LV N" the moment the reconciled experience lands.
-  // Cheap + guarded (writes the DOM only when the text actually changes); STATE_UPDATED is the right grain (not
-  // per-frame). The character passed in is a mount-time snapshot; the live row (by id) is the source of truth.
-  const on_state = (/** @type {any} */ state) => {
+  // D227 LEVEL REFRESH — projection already runs on the world view's session frame, so refresh the cheap label
+  // there too. This avoids a separate STATE_UPDATED subscription that could remain live after the route left.
+  const sync_label = () => {
+    const state = context.get_state()
     const live = state?.sui?.characters?.find((/** @type {any} */ c) => c.id === character?.id) ?? character
     const next = plate_label(live)
     if (next === label) return
     label = next
     chip.textContent = next
   }
-  context.events.on('STATE_UPDATED', on_state)
 
   return {
     /** Project the plate anchor (head + margin, world) → screen. Call once per frame from the embed loop. */
     update(x, y, z) {
+      sync_label()
       if (hidden) return // stays display:none (set by set_hidden) — no projection while recording
       const cam = engine.get_camera?.()
       if (!cam) return
@@ -93,7 +96,6 @@ export function create_local_nameplate({ engine, canvas = null, character }) {
       if (hidden) chip.style.display = 'none'
     },
     dispose() {
-      context.events.off('STATE_UPDATED', on_state) // stop tracking the live level with the session
       chip.remove()
     },
   }

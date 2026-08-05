@@ -22,7 +22,7 @@
 // the old roam cluster used, so the tx-provenance law + the leader-only start_when_ready flow are
 // UNTOUCHED. The dimension despawns the group the instant the fight goes ACTIVE → plates + rigs drop;
 // ROOM_CLEARED publishes the NEXT room's roster → the pack re-appears. Mirrors remote_players.js
-// (reconcile-the-Map, own rAF, projected DOM chips); GLBs load through the engine's shared DRACO-wired
+// (reconcile-the-Map, shared-overlay frame, projected DOM chips); GLBs load through the engine's shared DRACO-wired
 // loader (several creature GLBs are KHR_draco_mesh_compression-REQUIRED).
 //
 // The group's wire `position` is IGNORED on purpose (the dead plane's origin) — the cave anchors the
@@ -45,17 +45,17 @@ const RING_BASE = 1.3 // ring radius = RING_BASE + 0.22·n (clamped) — snug pa
 
 /**
  * @param {{ engine: any, canvas?: HTMLElement | null, anchor: [number, number, number],
- *   face_toward: [number, number, number], get_player_pos: () => ArrayLike<number> }} args `anchor` = the
+ *   face_toward: [number, number, number], get_player_pos: () => ArrayLike<number>,
+ *   overlay_root: ReturnType<import('./world_overlay_root.js').create_world_overlay_root> }} args `anchor` = the
  *   room's mob_spawn (feet, world); `face_toward` = player_spawn so the pack stares down the entrance;
  *   `canvas` = the WORLD canvas (D232 — the plate/raycast projection frame; querySelector can hit another).
  * @returns {{ dispose: () => void }}
  */
-export function create_cave_mobs({ engine, canvas = null, anchor, face_toward, get_player_pos }) {
+export function create_cave_mobs({ engine, canvas = null, anchor, face_toward, get_player_pos, overlay_root }) {
   /** @type {Map<string, any>} entity id → { root, mixer, size, x, y, z, sx, sy, bx, by, on, group_id } */
   const rigs = new Map()
   /** @type {Map<string, any>} group id → { chip, lines, hint, sig } — ONE tag per pack */
   const groups = new Map()
-  let raf = 0
   let last_t = performance.now()
   let disposed = false
   const proj = new Vector3()
@@ -81,13 +81,8 @@ export function create_cave_mobs({ engine, canvas = null, anchor, face_toward, g
     return raycaster.intersectObjects(roots, true).length > 0
   }
 
-  // one fixed layer for all plates. Z LAW (D227 pixel-caught): the SESSION canvas sits at z-11
-  // (GameWorldHost lifts it over the z-10 route spacer) — a z-7 layer renders UNDER the world and the
-  // plates are invisible in-session (they only ever showed in spectate's different stack). z-11 +
-  // body-appended = DOM-later paints OVER the canvas at equal z, still under every z-12 HUD panel.
-  const layer = document.createElement('div')
-  layer.style.cssText = 'position:fixed;inset:0;pointer-events:none;z-index:11'
-  document.body.appendChild(layer)
+  // The shared root owns z-order and route life for cave tags together with every other world overlay.
+  const layer = overlay_root.create_layer()
 
   // aim point: real cursor when free, screen centre under pointer lock (walk mode)
   let mouse_x = window.innerWidth / 2
@@ -208,7 +203,7 @@ export function create_cave_mobs({ engine, canvas = null, anchor, face_toward, g
     hint.style.cssText = 'color:#c8963c;font-size:9px;letter-spacing:.24em;display:none'
     hint.textContent = hint_text
     chip.append(lines, hint)
-    layer.appendChild(chip)
+    overlay_root.append_nametag(chip, layer)
     const gui = { chip, lines, hint, sig: '' }
     groups.set(group_id, gui)
     return gui
@@ -269,7 +264,6 @@ export function create_cave_mobs({ engine, canvas = null, anchor, face_toward, g
 
   // Complexity retained (#2069): mob animation is one order-sensitive frame transaction over shared rig state; helper extraction would only shuttle mutable locals.
   const frame = (/** @type {number} */ now) => {
-    raf = requestAnimationFrame(frame)
     const dt = Math.min(0.1, (now - last_t) / 1000)
     last_t = now
     const list = live_entity_list()
@@ -362,7 +356,7 @@ export function create_cave_mobs({ engine, canvas = null, anchor, face_toward, g
     const cursor_el = /** @type {HTMLElement | null} */ (canvas ?? document.querySelector('canvas'))
     if (cursor_el) cursor_el.style.cursor = hovering && !document.pointerLockElement ? 'pointer' : ''
   }
-  raf = requestAnimationFrame(frame)
+  const unsubscribe_frame = overlay_root.subscribe_frame(frame)
 
   // ── engage: a click on any mob (plate disc) inside range → the old roam wire. ─────────────────────────
   const try_engage = (/** @type {number} */ cx, /** @type {number} */ cy) => {
@@ -408,7 +402,7 @@ export function create_cave_mobs({ engine, canvas = null, anchor, face_toward, g
   return {
     dispose() {
       disposed = true
-      cancelAnimationFrame(raf)
+      unsubscribe_frame()
       set_engage_prompt(false) // D2 — the [R] prompt dies with the cave (the frame loop won't run again to clear it)
       window.removeEventListener('pointerdown', on_down, true)
       window.removeEventListener('pointerup', on_up, true)

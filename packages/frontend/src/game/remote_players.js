@@ -7,8 +7,8 @@
 // never inserted) as a real engine avatar
 // (class rig + hair + equipped pet companion + veteran-title aura), eases position → target_position (presence retargets, we
 // lerp — roam's contract), stands the body on the terrain via ground_surface_y (presence packets
-// carry CELLS, no y), derives yaw/anim from motion, and cleans up on despawn. Self-contained rAF;
-// dispose() tears everything down. NO game logic here.
+// carry CELLS, no y), derives yaw/anim from motion, and cleans up on despawn. The world-overlay root drives
+// its frame subscription; dispose() tears everything down. NO game logic here.
 
 import { create_character_avatar, create_title_aura, create_worn_cosmetics, ground_surface_y } from '@aresrpg/engine3/player'
 import { fight_store } from '@aresrpg/fight/store'
@@ -60,9 +60,10 @@ export const remote_rig_visible = (fight_active) => !fight_active
  * @param {any} engine the live engine facade (add_to_scene / remove_from_scene / sample_block)
  * @param {HTMLElement | null} [world_canvas] D232 — the WORLD canvas whose rect frames plate projection
  *   (a bare querySelector('canvas') can grab a DIFFERENT canvas — pedestal/drawer — and shift every plate).
+ * @param {ReturnType<import('./world_overlay_root.js').create_world_overlay_root>} overlay_root
  * @returns {{ dispose: () => void }}
  */
-export function create_remote_players(engine, world_canvas = null) {
+export function create_remote_players(engine, world_canvas = null, overlay_root) {
   const sample = (/** @type {number} */ x, /** @type {number} */ y, /** @type {number} */ z) =>
     engine.sample_block?.(x, y, z) ?? 0
   /** @type {Map<string, any>} id → { avatar, x, z, gy, yaw, cell_key } */
@@ -80,7 +81,6 @@ export function create_remote_players(engine, world_canvas = null) {
     })
     .catch((error) => game_log('worn', 'template identity join failed — remote worn GLBs stay unmounted', error))
   const peer_cache = create_remote_character_cache({ templates: () => worn_templates })
-  let raf = 0
   let last_t = performance.now()
   let anim_ticks = 0 // D218 — DEV telemetry (ticked rigs per window)
   let frame_count = 0
@@ -90,12 +90,8 @@ export function create_remote_players(engine, world_canvas = null) {
   // D206-visibility (other players were hard to see — the rig RENDERS but at the diorama's ~53 m iso
   // range a 2 m character is a speck): NAMEPLATES. A tiny house-style DOM chip per rig, world→screen
   // projected every frame off the engine camera — players are findable at ANY range, both modes.
-  // Z-STACK LAW: the SESSION canvas sits at z-11 (GameWorldHost) — z-7 rendered these plates UNDER the
-  // world in walk mode (spectate's stack differs, which is where D206 was validated). 11 + body-append
-  // = over the canvas (DOM order breaks the tie), under the z-12 HUD.
-  const chip_layer = document.createElement('div')
-  chip_layer.style.cssText = 'position:fixed;inset:0;pointer-events:none;z-index:11'
-  document.body.appendChild(chip_layer)
+  // Z-STACK LAW: the shared overlay root sits over the z-11 SESSION canvas and under the z-12 HUD.
+  const chip_layer = overlay_root.create_layer()
 
   // Identity comes from the normal chain read requested by the presence fold.
   const identity_of = (/** @type {string} */ _id, /** @type {any} */ entry) => {
@@ -151,7 +147,7 @@ export function create_remote_players(engine, world_canvas = null) {
         y: event.clientY,
       })
     })
-    chip_layer.appendChild(chip)
+    overlay_root.append_nametag(chip, chip_layer)
     // WORN COSMETICS (other players weren't seeing worn cosmetics) — the SAME rig create_worn_cosmetics
     // mounts on the LOCAL player's Head/cape bones (embed_voxel_player.js), keyed off the peer's /v1-resolved
     // worn set (peer_cache — see the reconcile call below).
@@ -268,7 +264,6 @@ export function create_remote_players(engine, world_canvas = null) {
 
   // Complexity retained (#2069): remote interpolation is one coherent frame snapshot across all rigs; extraction would split ordering over shared scene state.
   const frame_body = (/** @type {number} */ now) => {
-    raf = requestAnimationFrame(frame)
     frame_count += 1
     if (import.meta.env.DEV && frame_count % 300 === 0 && rigs.size)
       (game_log('remote', `D218 anim window: ${anim_ticks} ticks / ${rigs.size * 300} rig-frames`), (anim_ticks = 0))
@@ -502,7 +497,7 @@ export function create_remote_players(engine, world_canvas = null) {
     }
   }
   const frame = instrument_cpu_callback('scene', frame_body)
-  raf = requestAnimationFrame(frame)
+  const unsubscribe_frame = overlay_root.subscribe_frame(frame)
 
   if (import.meta.env.DEV)
     /** @type {any} */ (window).__voxel_remotes = () =>
@@ -521,20 +516,8 @@ export function create_remote_players(engine, world_canvas = null) {
     set_hidden(h) {
       chip_layer.style.display = h ? 'none' : ''
     },
-    // RENDER-PAUSE (pause the webgpu stuff off the game-world route): this rig's own rAF loop is
-    // independent of the engine's frame_loop, so engine.stop() alone never stopped remote-rig ticking/DOM-
-    // chip projection while browsing a meta page. Cancel/re-arm in lockstep (embed_voxel.js's set_paused).
-    set_paused(p) {
-      if (p) {
-        if (raf) cancelAnimationFrame(raf)
-        raf = 0
-      } else if (!raf) {
-        last_t = performance.now()
-        raf = requestAnimationFrame(frame)
-      }
-    },
     dispose() {
-      cancelAnimationFrame(raf)
+      unsubscribe_frame()
       for (const [id, r] of rigs) drop_rig(id, r)
       chip_layer.remove()
     },

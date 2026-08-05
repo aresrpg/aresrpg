@@ -66,6 +66,7 @@ import { play_fight_sfx } from './core/audio/sfx.js'
 import { create_player } from './embed_voxel_player.js'
 import { create_remote_players } from './remote_players.js'
 import { create_world_spawns } from './world_spawns.js'
+import { create_world_overlay_root } from './world_overlay_root.js'
 import { create_world_fights_discovery } from './world_fights_discovery.js'
 import { create_world_props } from './world_props.js'
 import { resolve_world_board_origin } from './world_board_seat.js'
@@ -162,6 +163,10 @@ function create_session(
   // nothing into a CSS-stretched void (pure black, isConnected=true, zero errors — the exact probe verdict;
   // every dark-app report dates from D158). Attach FIRST, create SECOND — the demo's own order.
   host.appendChild(container)
+  // #2170 — ONE DOM mount + update scheduler for the full world-anchored overlay family. The engine session
+  // stays resident across meta routes; this root is detached and its shared frame is stopped with the view.
+  const world_overlays = create_world_overlay_root()
+  world_overlays.set_active(true)
 
   // D210 — ONE world model (the fixed/streaming split is DELETED engine-side): the ring streams around
   // the camera, chunks generate as you move, and zone_origin/zone_size_m configure ONLY the border box
@@ -329,7 +334,7 @@ function create_session(
     // D206 (the spectate view must show other players too): the room was joined as a silent listener before
     // this session was created. Render every delivered presence entry as a live avatar; chat reaches the D207
     // read-only overlay through the same room.
-    const remotes = create_remote_players(engine, canvas) // D232 — plates project through THIS canvas's rect
+    const remotes = create_remote_players(engine, canvas, world_overlays) // D232/#2170
     // INTERACTION GATE: the backdrop is DISPLAY-ONLY until the visitor chose "watch the
     // live world" (use_spectate_gate.chosen) OR is logged in (use_auth.address — the S-57 confirmed-unbound
     // spectate is a logged-in state). Read live per drag; the auto-drift plays regardless (ambience, not input).
@@ -338,9 +343,10 @@ function create_session(
     const cleanup = () => {
       remotes.dispose()
       iso_cleanup()
+      world_overlays.dispose()
     }
     const set_frame_paused = (/** @type {boolean} */ paused) => {
-      remotes.set_paused?.(paused)
+      world_overlays.set_active(!paused)
       iso_cleanup.set_paused(paused)
     }
     return {
@@ -539,7 +545,7 @@ function create_session(
     // Pass the IN-HAND character — the store read races the mount (see _publish_state).
     use_party.getState()._publish_state(character)
   }
-  const remotes = create_remote_players(engine, canvas) // D232 — plates project through THIS canvas's rect
+  const remotes = create_remote_players(engine, canvas, world_overlays) // D232/#2170
   // WORLD SPAWNS — the CHAIN spawns of the current + adjacent discovered zones as interactable fixtures:
   // click a mob group → the claim+create world-fight PTB; stand near a resource → the [G] gather prompt.
   // Range-gated + dungeon-suspended; projects plates through THIS canvas's rect.
@@ -547,6 +553,7 @@ function create_session(
     engine,
     canvas,
     get_player_pos: () => ctl.get_transform().position,
+    overlay_root: world_overlays,
   })
   // NEARBY FIGHTS — the "See fights in the area" discovery loop: a sibling of world_spawns that
   // polls /v1/fights?world, folds OTHER players' fights within 50 blocks into state.visible_fights, and arms the
@@ -585,6 +592,7 @@ function create_session(
         engine,
         ctl,
         canvas, // D232 — cave_mobs projects plates through THIS canvas's rect (never a stray querySelector hit)
+        overlay_root: world_overlays,
         swap_sampler: (fn) => {
           cave_sample = fn
         },
@@ -640,6 +648,7 @@ function create_session(
     ctl,
     env,
     world_id: bound_world,
+    overlay_root: world_overlays,
     initial_yaw: boot_yaw, // session-position restore (or 0 for the WORLD_SPAWN default) — the shoulder cam seeds the same look direction
     is_fight: () => fight_camera.is_active(),
     // Keys/sticks may arm while loading, but feed() stays inert until the exact same `physics_live` bit that
@@ -804,12 +813,8 @@ function create_session(
 
   // RENDER-PAUSE (pause the webgpu stuff when navigating to other pages): engine.stop()/start()
   // (wired below via mount_voxel_scene's set_paused) only freezes the terrain/atmosphere render loop — THIS
-  // session's own loop (physics, camera, avatar pose, position broadcast) plus remotes/world_spawns each run
-  // an INDEPENDENT rAF, so all three kept ticking at full tilt regardless of route — the measured cost while
-  // browsing the encyclopedia (confirmed live: engine.get_stats().fps froze bit-identical while
-  // these loops' own rAFs kept firing). Cancel/re-arm all three in lockstep so a route-away truly stops every
-  // per-frame consumer; resume re-arms instantly with zero state loss (ctl/avatar/camera untouched — only
-  // each loop's wall-clock `last_t` is bumped so the first frame back doesn't see a multi-second dt).
+  // session's own loop runs beside the overlay family's ONE shared projection frame. Pause both roots in
+  // lockstep; the overlay root also leaves document.body synchronously, taking every entity tag with it.
   const set_frame_paused = (/** @type {boolean} */ paused) => {
     if (paused) {
       if (raf) cancelAnimationFrame(raf)
@@ -818,14 +823,8 @@ function create_session(
       last_t = performance.now()
       raf = requestAnimationFrame(frame)
     }
-    remotes.set_paused?.(paused)
-    world_spawns.set_paused?.(paused)
+    world_overlays.set_active(!paused)
     fight_camera.set_paused(paused) // release the hidden fight's global wheel capture before meta-page scroll
-    // GHOST-PLATE FIX (a screenshot showed the self nametag chip stuck on-screen over Equipment/Encyclopedia) —
-    // this session's own rAF drove the local plate's projection; cancelling it here froze the chip at its last
-    // visible state instead of hiding it (document.body-appended, so route content rendered under it). Hides/
-    // shows my_plate in lockstep with the same pause signal (embed_voxel_player.js:set_paused).
-    player.set_paused?.(paused)
   }
 
   // FIGHT-ENTRY CINEMATIC — off the earliest post-tx-success signal (use_dungeon.fight_id set),
@@ -964,6 +963,7 @@ function create_session(
     world_fights.dispose() // nearby-fights discovery poll + its [V] prompt die with the session
     world_props?.dispose() // FlameFX overworld ambience camps die with the session (absent in hack mode)
     cave_session?.dispose() // D211 — cave room + oracle swap die with the session
+    world_overlays.dispose() // #2170 — one root leaves after every family producer has unregistered
   }
 
   // `character` is stashed so a LIVE tier swap (reboot_voxel_session_tier) can re-create this session at a

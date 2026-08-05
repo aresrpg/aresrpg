@@ -120,15 +120,19 @@ const OCCLUDED_OPACITY = 0.2 // plate faded when terrain sits between it and the
 const CLICK_SLOP_PX = 6 // pointerdown→up drift under which a press counts as a CLICK not a drag (drag-click law)
 
 /**
- * @param {{ engine: any, canvas?: HTMLElement | null, get_player_pos: () => ArrayLike<number> }} args
+ * @param {{
+ *   engine: any,
+ *   canvas?: HTMLElement | null,
+ *   get_player_pos: () => ArrayLike<number>,
+ *   overlay_root: ReturnType<import('./world_overlay_root.js').create_world_overlay_root>
+ * }} args
  * @returns {{ set_hidden: (h: boolean) => void, dispose: () => void }}
  */
-export function create_world_spawns({ engine, canvas = null, get_player_pos }) {
+export function create_world_spawns({ engine, canvas = null, get_player_pos, overlay_root }) {
   const sample = (/** @type {number} */ x, /** @type {number} */ y, /** @type {number} */ z) =>
     engine.sample_block?.(x, y, z) ?? 0
   const raycaster = new Raycaster()
   const ndc = new Vector2()
-  let raf = 0
   let last_t = performance.now()
   let fight_veiled = false // in-fight visual veil (edge-detected in frame_body; see the block there)
   let last_telemetry = 0 // house telemetry throttle (rig/node/heap once per TELEMETRY_MS)
@@ -251,15 +255,11 @@ export function create_world_spawns({ engine, canvas = null, get_player_pos }) {
   // patch cell seats independently via the SAME sample() the mob rig layer above already uses).
   const gather = create_gather_layer({ engine, sample })
 
-  // one fixed overlay for every nameplate (the z law: z-11, body-appended, under the HUD, over the world).
-  const layer = document.createElement('div')
-  layer.style.cssText = 'position:fixed;inset:0;pointer-events:none;z-index:11'
-  document.body.appendChild(layer)
+  // One family grouping layer; the shared world-overlay root owns fixed positioning, z-order and route life.
+  const layer = overlay_root.create_layer()
   let cinematic_hidden = false
-  let world_paused = false
-  let resume_projection_pending = false
   const sync_layer_hidden = () => {
-    layer.style.display = cinematic_hidden || world_paused || resume_projection_pending ? 'none' : ''
+    layer.style.display = cinematic_hidden ? 'none' : ''
   }
 
   const canvas_rect = () => {
@@ -529,7 +529,7 @@ export function create_world_spawns({ engine, canvas = null, get_player_pos }) {
       `border:1px solid ${mob ? 'rgba(200,150,60,.5)' : 'rgba(74,158,255,.5)'};` +
       `text-shadow:0 0 6px ${mob ? 'rgba(200,150,60,.6)' : 'rgba(74,158,255,.6)'};` +
       'display:none;pointer-events:none;transition:opacity .18s ease,border-color .18s ease,box-shadow .18s ease'
-    layer.appendChild(chip)
+    overlay_root.append_nametag(chip, layer)
     e.chip = chip
     if (mob) render_mob_card(e)
     // Design ruling 2026-07-12: the plate shows the REAL resource name (from the @aresrpg/sdk/jobs roster — the item
@@ -1012,7 +1012,6 @@ export function create_world_spawns({ engine, canvas = null, get_player_pos }) {
 
   // ── per-frame: range-gate placement, roam + tick rigs, project plates, pulse crystals, arm the prompts ────────
   const frame_body = (/** @type {number} */ now) => {
-    raf = requestAnimationFrame(frame)
     const dt = Math.min(0.1, (now - last_t) / 1000)
     last_t = now
     const cam = engine.get_camera?.()
@@ -1141,12 +1140,6 @@ export function create_world_spawns({ engine, canvas = null, get_player_pos }) {
       last_heaptrace = now
       log_heaptrace()
     }
-    // Route return exposes the layer only after this frame refreshed every projected card. Because the layer
-    // is body-appended, showing it before the first frame would briefly revive the stale pre-route pixels.
-    if (resume_projection_pending) {
-      resume_projection_pending = false
-      sync_layer_hidden()
-    }
   }
 
   const frame = instrument_cpu_callback('scene', frame_body)
@@ -1168,7 +1161,7 @@ export function create_world_spawns({ engine, canvas = null, get_player_pos }) {
     e.chip.style.opacity = `${(occ * dfade).toFixed(3)}`
   }
 
-  raf = requestAnimationFrame(frame)
+  const unsubscribe_frame = overlay_root.subscribe_frame(frame)
   const unsubscribe_world_rows_request = subscribe_world_rows_request(spawns_store, request_zone_rows_read)
   request_zone_rows_read()
   const timer = setInterval(poll, POLL_MS)
@@ -1181,28 +1174,9 @@ export function create_world_spawns({ engine, canvas = null, get_player_pos }) {
       cinematic_hidden = !!h
       sync_layer_hidden()
     },
-    // RENDER-PAUSE (pauses the webgpu stuff off the game-world route): this loop's own rAF is
-    // independent of the engine's frame_loop, so engine.stop() alone never stopped spawn range-gating/DOM-
-    // plate projection while browsing a meta page. Cancel/re-arm in lockstep (embed_voxel.js's set_paused).
-    // The setInterval poll (chain reads) is left running — cheap, and a route-return should show fresh state.
-    set_paused(p) {
-      const next_paused = !!p
-      if (next_paused !== world_paused) {
-        world_paused = next_paused
-        resume_projection_pending = !world_paused
-      }
-      sync_layer_hidden()
-      if (world_paused) {
-        if (raf) cancelAnimationFrame(raf)
-        raf = 0
-      } else if (!raf) {
-        last_t = performance.now()
-        raf = requestAnimationFrame(frame)
-      }
-    },
     dispose() {
       disposed = true
-      cancelAnimationFrame(raf)
+      unsubscribe_frame()
       clearInterval(timer)
       unsubscribe_zones()
       unsubscribe_world_rows_request()

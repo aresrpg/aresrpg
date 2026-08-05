@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-// Route-away regression: the projected GROUP / LV / +XP mob card layer is appended to <body>, outside the
-// persistent world host. Pausing the world on a fullscreen meta route must hide that layer synchronously,
-// and returning to `/` must wait for one fresh projection frame before exposing it again.
+// Route-away regression: projected GROUP / LV / +XP mob cards join the shared world-overlay root. Pausing the
+// world on a fullscreen meta route must detach that root and stop its frame; returning to `/` restores both.
 
 import { readFileSync } from 'node:fs'
 
@@ -10,6 +9,7 @@ import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, mock, tes
 
 import { _reset_log_for_test, get_log_buffer } from '../core/log.js'
 import { SENSHI_MALE_GLB_AVAILABLE } from '../test_helpers/glb_fixture.js'
+import { create_world_overlay_root } from './world_overlay_root.js'
 
 const world_spawns_source = readFileSync(new URL('./world_spawns.js', import.meta.url), 'utf8')
 const dungeon_actions_source = readFileSync(new URL('../world-shell/dungeon_actions.js', import.meta.url), 'utf8')
@@ -41,17 +41,39 @@ const fake_target = () => {
   }
 }
 
-const fake_element = () => ({
-  style: {},
-  dataset: {},
-  childElementCount: 0,
-  append() {},
-  appendChild() {
-    this.childElementCount += 1
-  },
-  querySelector: () => null,
-  remove() {},
-})
+const fake_element = () => {
+  const element = {
+    style: {},
+    dataset: {},
+    children: [],
+    childElementCount: 0,
+    parentElement: null,
+    append(...children) {
+      for (const child of children) if (typeof child === 'object') this.appendChild(child)
+    },
+    appendChild(child) {
+      child.remove?.()
+      child.parentElement = this
+      this.children.push(child)
+      this.childElementCount = this.children.length
+      return child
+    },
+    querySelector: () => null,
+    remove() {
+      if (!this.parentElement) return
+      this.parentElement.children = this.parentElement.children.filter((child) => child !== this)
+      this.parentElement.childElementCount = this.parentElement.children.length
+      this.parentElement = null
+    },
+    setAttribute(name, value) {
+      if (name === 'style') this.style.cssText = value
+      else if (name === 'data-world-overlay-root') this.dataset.worldOverlayRoot = value
+      else if (name === 'data-world-overlay-layer') this.dataset.worldOverlayLayer = value
+      else if (name === 'data-world-nametag') this.dataset.worldNametag = value
+    },
+  }
+  return element
+}
 
 let create_world_spawns
 let layers
@@ -106,10 +128,16 @@ const install_world_globals = () => {
   }
   globalThis.window = window_
   globalThis.location = window_.location
+  const body = fake_element()
+  const append_to_body = body.appendChild.bind(body)
+  body.appendChild = (element) => {
+    layers.push(element)
+    return append_to_body(element)
+  }
   globalThis.document = {
     hidden: true,
     pointerLockElement: null,
-    body: { appendChild: (element) => layers.push(element) },
+    body,
     createElement: fake_element,
     querySelector: () => null,
     getElementsByTagName: () => [],
@@ -255,30 +283,34 @@ describe.skipIf(!SENSHI_MALE_GLB_AVAILABLE)('driven renderer behavior', () => {
   afterEach(restore_world_globals)
   afterAll(() => saved_globals.clear())
 
-  test('a non-world screen hides the body layer until a fresh world frame', () => {
+  test('a non-world screen detaches the shared root and stops its frame until route return', () => {
     const canvas = { ...fake_target(), getBoundingClientRect: () => ({ left: 0, top: 0, width: 1280, height: 720 }) }
+    const overlay_root = create_world_overlay_root()
+    overlay_root.set_active(true)
     const controls = create_world_spawns({
       engine: { sample_block: () => 0, get_camera: () => null },
       canvas,
       get_player_pos: () => [0, 0, 0],
+      overlay_root,
     })
-    const layer = layers.at(-1)
-    expect(layer).toBeDefined()
+    const root = layers.at(-1)
+    expect(root.parentElement).toBe(document.body)
+    expect(frames.size).toBe(1)
 
     const active_pathname = '/marketplace'
-    controls.set_paused(active_pathname !== '/')
-    expect(layer.style.display, 'the body-appended mob tooltip must hide off the world route').toBe('none')
+    overlay_root.set_active(active_pathname === '/')
+    expect(root.parentElement, 'the entire world overlay family must leave the document').toBeNull()
+    expect(frames.size, 'the family position updater must stop off-route').toBe(0)
 
     controls.set_hidden(false)
-    expect(layer.style.display, 'another visibility release cannot revive it on a meta page').toBe('none')
+    expect(root.parentElement, 'another visibility release cannot remount it on a meta page').toBeNull()
 
-    controls.set_paused(false)
-    expect(layer.style.display, 'route return waits for a fresh projection, never stale pixels').toBe('none')
-    const fresh_frame = [...frames.values()].at(-1)
-    fresh_frame(performance.now())
-    expect(layer.style.display).toBe('')
+    overlay_root.set_active(true)
+    expect(root.parentElement, 'route return restores the family through its one mount root').toBe(document.body)
+    expect(frames.size).toBe(1)
 
     controls.dispose()
+    overlay_root.dispose()
   })
 
   test('the once-a-minute telemetry line goes through the house debug gate, never a raw console line', () => {
@@ -291,16 +323,20 @@ describe.skipIf(!SENSHI_MALE_GLB_AVAILABLE)('driven renderer behavior', () => {
     const original_info = console.info
     console.info = info_spy
     const canvas = { ...fake_target(), getBoundingClientRect: () => ({ left: 0, top: 0, width: 1280, height: 720 }) }
+    const overlay_root = create_world_overlay_root()
+    overlay_root.set_active(true)
     const controls = create_world_spawns({
       engine: { sample_block: () => 0, get_camera: () => null },
       canvas,
       get_player_pos: () => [0, 0, 0],
+      overlay_root,
     })
     try {
       const first_frame = [...frames.values()].at(-1)
       first_frame(70000) // > TELEMETRY_MS (60000) on the very first frame — the throttle fires immediately
     } finally {
       controls.dispose()
+      overlay_root.dispose()
       console.info = original_info
     }
     // debug is off in this headless test env (no window/DEV/?debug=1/localStorage) — the house gate stays silent.
