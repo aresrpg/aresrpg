@@ -53,3 +53,4 @@ Each anchor must therefore point at the DECLARATION line of its fact. The fence 
 | Presence appearance revision            | `packages/frontend/src/world-shell/presence_appearance.js:50` — the one producer of the peer cache-invalidation signal (#2171).     |
 | Browser WebGL-capability probe          | `packages/frontend/src/core/gl_support.js:26` — the one answer to "can this browser draw 3D at all" (#2235).                        |
 | Server clock offset                     | `packages/frontend/src/core/server_clock.ts:23` — the one measurement of device-vs-server drift (#2263).                            |
+| Chain-anchor bag normalization          | `packages/world/src/checkpoint.js:45`, `:64` — the one reading of the #2231 anchor bag every door passes through.                   |

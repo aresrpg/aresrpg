@@ -8,7 +8,7 @@
 
 import { useStore } from 'zustand'
 import { create_spawns_store } from '@aresrpg/world/spawns_zones'
-import { pose_agrees } from '@aresrpg/world/checkpoint'
+import { anchor_time, normalize_chain_anchor, pose_agrees } from '@aresrpg/world/checkpoint'
 
 import { read_dungeon_session, subscribe_dungeon_session } from './dungeon_session.js'
 import { use_world_binding } from './session_gate.js'
@@ -84,8 +84,7 @@ const movement_stop_ms = 750
 const max_age_ms = 30 * 60 * 1_000
 
 /** @typedef {{x:number,z:number}} WorldPosition */
-/** The chain anchor bag world_checkpoint.js produces: proven position + clock + the agreement dials (#2231). */
-/** @typedef {{x:number,z:number,time_ms:number|null,speed_budget?:number|null,pet_equipped?:boolean}} ChainAnchor */
+/** @typedef {import('@aresrpg/world/checkpoint').ChainAnchor} ChainAnchor */
 /**
  * @typedef {{
  *   character_id:string,
@@ -103,26 +102,8 @@ const finite_position = (position) =>
   !!position && Number.isFinite(Number(position.x)) && Number.isFinite(Number(position.z))
 const same_position = (a, b) =>
   finite_position(a) && finite_position(b) && Number(a.x) === Number(b.x) && Number(a.z) === Number(b.z)
-const chain_anchor_time = (anchor) => {
-  const time_ms = Number(anchor?.time_ms)
-  return Number.isFinite(time_ms) && time_ms > 0 ? time_ms : null
-}
-const normalize_chain_anchor = (anchor) =>
-  finite_position(anchor)
-    ? {
-        x: Number(anchor.x),
-        z: Number(anchor.z),
-        time_ms: chain_anchor_time(anchor),
-        // The agreement dials ride WITH the anchor they judge against — never re-read separately, so no
-        // consumer can pair a fresh position with a stale budget (#2231).
-        speed_budget: Number(anchor.speed_budget) || null,
-        pet_equipped: anchor.pet_equipped === true,
-      }
-    : null
-const same_chain_anchor = (a, b) =>
-  same_position(a, b) && chain_anchor_time(a) !== null && chain_anchor_time(a) === chain_anchor_time(b)
-const same_chain_observation = (a, b) =>
-  same_position(a, b) && (chain_anchor_time(a) ?? null) === (chain_anchor_time(b) ?? null)
+const same_chain_anchor = (a, b) => same_position(a, b) && anchor_time(a) !== null && anchor_time(a) === anchor_time(b)
+const same_chain_observation = (a, b) => same_position(a, b) && anchor_time(a) === anchor_time(b)
 
 /**
  * PURE restore guard. A row is usable only for the exact identity, while fresh, and while the chain still
@@ -386,7 +367,7 @@ export function note_world_position({ character_id, world_id, x, z }, now = Date
   const chain_anchor = read_position_chain_anchor(character_id, world_id)
   // Reducer truth still advances while a receipt anchor awaits its canonical chain time. Persistence pauses
   // until a direct checkpoint read supplies that revision, so an A→B→A chain move cannot resurrect A.
-  if (!chain_anchor || chain_anchor_time(chain_anchor) === null) return position_write_tail
+  if (!chain_anchor || anchor_time(chain_anchor) === null) return position_write_tail
   const noted = { x: Number(x), z: Number(z) }
   if (last_noted_position_owner === owner && same_position(last_noted_position, noted)) return position_write_tail
   last_noted_position_owner = owner
@@ -467,7 +448,7 @@ export async function restore_world_position(character_id, world_id, chain_ancho
   // fallback replace a conflicting receipt-proven observation; ambiguity means the chain-side live fact wins.
   if (known_anchor && !same_chain_observation(known_anchor, chain_anchor)) return null
   const current_anchor = known_anchor ?? adopt_position_chain_anchor(character_id, world_id, chain_anchor)
-  if (!current_anchor || chain_anchor_time(current_anchor) === null) return null
+  if (!current_anchor || anchor_time(current_anchor) === null) return null
   const snapshot = await load_position_snapshot(position_key(character_id, world_id))
   const state = spawns_store.getState()
   if (

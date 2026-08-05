@@ -7,7 +7,7 @@
 // ferry that publishes every resolved checkpoint into the spawns core atom (checkpoint_resolved input).
 
 import { get_world } from '@aresrpg/sdk/game'
-import { checkpoint_to_world } from '@aresrpg/world/checkpoint'
+import { anchor_time, checkpoint_to_world, normalize_chain_anchor } from '@aresrpg/world/checkpoint'
 
 import { read_checkpoint } from '../chain/read_checkpoint.js'
 import { get_sdk } from '../chain/sdk'
@@ -20,14 +20,12 @@ import { invalidate_world_position, read_world_chain_anchor, spawns_input } from
 // cached world-position synchronously (`read_checkpoint_spawn`) when it chooses the boot spawn.
 
 /**
- * The CHAIN ANCHOR bag: the proven position, the chain clock at that write, and the two dials the agreement
- * rule needs to judge a local pose against it (#2231) — the world's `speed_budget` and the checkpoint half of
- * the §17.2 mount rule. Budget and clock are read in the SAME breath as the position, so no consumer can race
- * a half-known anchor; a receipt-built anchor carries neither and is unjudgeable by design (checkpoint.js).
- * @typedef {{x:number,z:number,time_ms:number|null,speed_budget?:number|null,pet_equipped?:boolean}}
- *   CheckpointAnchor
+ * The CHAIN ANCHOR bag (@aresrpg/world/checkpoint owns its shape and its ONE normalizer). This edge reads the
+ * budget and the clock in the SAME breath as the position, so no consumer can race a half-known anchor; a
+ * receipt-built anchor carries neither and is unjudgeable by design (checkpoint.js).
+ * @typedef {import('@aresrpg/world/checkpoint').ChainAnchor} ChainAnchor
  */
-/** @type {Map<string, CheckpointAnchor | {x:number,z:number} | null>} */
+/** @type {Map<string, ChainAnchor | {x:number,z:number} | null>} */
 const _cache = new Map()
 /**
  * A receipt without a checkpoint clock is a barrier, not a canonical persistence anchor. A direct read may
@@ -41,28 +39,16 @@ const _cache = new Map()
 const _receipt_barriers = new Map()
 /** @type {Map<string, number>} */
 const _receipt_epochs = new Map()
-/** @type {Map<string, CheckpointAnchor>} raw unsigned chain rows accepted from direct reads */
+/** @type {Map<string, ChainAnchor>} raw unsigned chain rows accepted from direct reads */
 const _accepted_chain_rows = new Map()
 const _key = (character_id, world_id) => `${character_id}:${world_id}`
 const finite_position = (position) =>
   !!position && Number.isFinite(Number(position.x)) && Number.isFinite(Number(position.z))
 const same_position = (a, b) =>
   finite_position(a) && finite_position(b) && Number(a.x) === Number(b.x) && Number(a.z) === Number(b.z)
-const checkpoint_time = (position) => {
-  const revision = Number(position?.time_ms)
-  return Number.isFinite(revision) && revision > 0 ? revision : null
-}
-const with_chain_facts = (position, { time_ms, doc, pet_equipped }) => {
-  if (!position) return null
-  const speed_budget = Number(doc?.speed_budget)
-  return {
-    x: Number(position.x),
-    z: Number(position.z),
-    time_ms: checkpoint_time({ time_ms }),
-    speed_budget: Number.isFinite(speed_budget) && speed_budget > 0 ? speed_budget : null,
-    pet_equipped: pet_equipped === true,
-  }
-}
+/** Pair a resolved position with the chain facts read in the same breath, through the ONE anchor normalizer. */
+const with_chain_facts = (position, { time_ms, doc, pet_equipped }) =>
+  normalize_chain_anchor({ ...position, time_ms, speed_budget: doc?.speed_budget, pet_equipped })
 
 /* eslint-disable functional/no-let -- request generations are confined to this async chain-read edge. */
 let receipt_token = 0
@@ -78,12 +64,12 @@ const bump_receipt_epoch = (key) => {
 const request_is_current = (key, epoch, lifecycle) => lifecycle === lifecycle_epoch && epoch === receipt_epoch(key)
 const current_cache = (key) => _cache.get(key) ?? null
 const max_checkpoint_time = (...values) => {
-  const revisions = values.map((time_ms) => checkpoint_time({ time_ms })).filter((time_ms) => time_ms !== null)
+  const revisions = values.map((time_ms) => anchor_time({ time_ms })).filter((time_ms) => time_ms !== null)
   return revisions.length ? Math.max(...revisions) : null
 }
 
 const canonical_read_is_current = (key, candidate, raw) => {
-  const revision = checkpoint_time(candidate)
+  const revision = anchor_time(candidate)
   if (!finite_position(candidate) || revision === null) return false
   const barrier = _receipt_barriers.get(key)
   if (barrier) {
@@ -97,14 +83,14 @@ const canonical_read_is_current = (key, candidate, raw) => {
     }
   }
   const current = current_cache(key)
-  const current_revision = checkpoint_time(current)
+  const current_revision = anchor_time(current)
   if (current_revision === null) return true
   if (revision < current_revision) return false
   const accepted_raw = _accepted_chain_rows.get(key)
   return (
     revision > current_revision ||
     same_position(candidate, current) ||
-    (checkpoint_time(accepted_raw) === revision && same_position(raw, accepted_raw))
+    (anchor_time(accepted_raw) === revision && same_position(raw, accepted_raw))
   )
 }
 
@@ -126,7 +112,7 @@ const default_sleep = (ms) =>
  * existing entry back to null. A signed read adopts only when its checkpoint revision is not below the
  * current receipt/canonical floor; equal revisions must agree on position.
  * @param {string} character_id @param {string} world_id
- * @returns {Promise<CheckpointAnchor | null>}
+ * @returns {Promise<ChainAnchor | null>}
  */
 export async function resolve_checkpoint_spawn(character_id, world_id) {
   if (!character_id || !world_id) return null
@@ -178,7 +164,7 @@ export async function resolve_checkpoint_spawn(character_id, world_id) {
  *   chain_x?:number|null,chain_z?:number|null
  * }} proof
  * @param {{retry_delays?:number[],sleep?:(ms:number)=>Promise<void>}} [options]
- * @returns {Promise<CheckpointAnchor | null>}
+ * @returns {Promise<ChainAnchor | null>}
  */
 export async function confirm_checkpoint_spawn(character_id, world_id, proof, options = {}) {
   if (!character_id || !world_id || !proof) return null
@@ -187,9 +173,9 @@ export async function confirm_checkpoint_spawn(character_id, world_id, proof, op
   if (!Number.isFinite(x) || !Number.isFinite(z)) return null
   const key = _key(character_id, world_id)
   const prior = current_cache(key)
-  const prior_revision = checkpoint_time(prior)
-  const exact_revision = checkpoint_time(proof)
-  const claimed_floor = checkpoint_time({ time_ms: proof.after_time_ms })
+  const prior_revision = anchor_time(prior)
+  const exact_revision = anchor_time(proof)
+  const claimed_floor = anchor_time({ time_ms: proof.after_time_ms })
   const existing_barrier = _receipt_barriers.get(key)
   const floor = max_checkpoint_time(prior_revision, claimed_floor, existing_barrier?.after_time_ms)
 
@@ -212,7 +198,7 @@ export async function confirm_checkpoint_spawn(character_id, world_id, proof, op
     bump_receipt_epoch(key)
     _receipt_barriers.delete(key)
     _accepted_chain_rows.delete(key)
-    const exact = { x, z, time_ms: exact_revision, ...dials }
+    const exact = normalize_chain_anchor({ x, z, time_ms: exact_revision, ...dials })
     _cache.set(key, exact)
     return exact
   }
@@ -220,7 +206,7 @@ export async function confirm_checkpoint_spawn(character_id, world_id, proof, op
   bump_receipt_epoch(key)
   _receipt_barriers.delete(key)
   _accepted_chain_rows.delete(key)
-  const receipt = { x, z, time_ms: null, ...dials }
+  const receipt = normalize_chain_anchor({ x, z, time_ms: null, ...dials })
   _cache.set(key, receipt)
   const chain_x = proof.chain_x == null ? null : Number(proof.chain_x)
   const chain_z = proof.chain_z == null ? null : Number(proof.chain_z)
@@ -276,7 +262,7 @@ export function publish_claim_checkpoint_receipt(character_id, world_id, key, fi
  * this edge converts it once, deletes the previous visit's local row, and starts receipt reconciliation.
  * @param {string} character_id @param {string} world_id
  * @param {{x:number,z:number,time_ms?:number|null,first_join?:boolean}} chain_pos UNSIGNED chain coords
- * @returns {Promise<CheckpointAnchor | null>}
+ * @returns {Promise<ChainAnchor | null>}
  */
 export async function seed_checkpoint_spawn(character_id, world_id, chain_pos) {
   if (!character_id || !world_id || !finite_position(chain_pos)) return null
@@ -290,7 +276,7 @@ export async function seed_checkpoint_spawn(character_id, world_id, chain_pos) {
       pet_equipped: chain_pos.pet_equipped,
     })
     if (!world_pos) return null
-    const prior_revision = checkpoint_time(current_cache(_key(character_id, world_id)))
+    const prior_revision = anchor_time(current_cache(_key(character_id, world_id)))
     const confirmation = confirm_checkpoint_spawn(character_id, world_id, {
       ...world_pos,
       after_time_ms: prior_revision,
@@ -319,7 +305,7 @@ export async function seed_checkpoint_spawn(character_id, world_id, chain_pos) {
  * The cached SIGNED world-space checkpoint `{ x, z }` for (character, world) — null when unresolved or absent.
  * The synchronous read create_session uses to seed the boot spawn.
  * @param {string} character_id @param {string} world_id
- * @returns {CheckpointAnchor | {x:number,z:number} | null}
+ * @returns {ChainAnchor | {x:number,z:number} | null}
  */
 export function read_checkpoint_spawn(character_id, world_id) {
   return _cache.get(_key(character_id, world_id)) ?? null

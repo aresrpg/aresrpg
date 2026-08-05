@@ -33,6 +33,48 @@ export function checkpoint_to_world(cp, world_doc) {
 const block_of = (v) => Math.floor(Number(v))
 
 /**
+ * THE CHAIN ANCHOR BAG (#2231) — the chain's proven checkpoint plus everything the agreement rule needs to
+ * judge a local pose against it: `time_ms` (the chain clock at that write), `speed_budget` (the world's dial)
+ * and `pet_equipped` (the checkpoint half of the §17.2 mount rule). The dials ride WITH the position they are
+ * judged against — read in the same breath, so no consumer can pair a fresh position with a stale budget.
+ * @typedef {{ x: number, z: number, time_ms: number|null, speed_budget?: number|null, pet_equipped?: boolean }}
+ *   ChainAnchor
+ */
+
+/** THE anchor clock: a chain revision, or null when the value cannot be one (absent, corrupt, non-finite). */
+export function anchor_time(anchor) {
+  const time_ms = Number(anchor?.time_ms)
+  return Number.isFinite(time_ms) && time_ms > 0 ? time_ms : null
+}
+
+/** THE anchor travel dial (blocks/sec ×100), or null when the value cannot be one. */
+const anchor_budget = (anchor) => {
+  const speed_budget = Number(anchor?.speed_budget)
+  return Number.isFinite(speed_budget) && speed_budget > 0 ? speed_budget : null
+}
+
+/**
+ * THE ONE normalizer for the anchor bag — every door that stores or forwards a chain anchor (the frontend
+ * read/receipt edge, the persistence edge, the spawns core's checkpoint fold) passes it through here, so the
+ * bag `pose_agrees` judges is the same bag whichever door produced it. A field that cannot carry its fact
+ * becomes null, which is what makes the anchor UNJUDGEABLE below — never a value the rule would act on.
+ * @param {Partial<ChainAnchor> | null | undefined} anchor
+ * @returns {ChainAnchor | null} null when the position itself is absent or non-finite
+ */
+export function normalize_chain_anchor(anchor) {
+  const x = Number(anchor?.x)
+  const z = Number(anchor?.z)
+  if (!Number.isFinite(x) || !Number.isFinite(z)) return null
+  return {
+    x,
+    z,
+    time_ms: anchor_time(anchor),
+    speed_budget: anchor_budget(anchor),
+    pet_equipped: anchor?.pet_equipped === true,
+  }
+}
+
+/**
  * THE AGREEMENT RULE (#2231) — could the body legally stand at `pose` at instant `at_ms`, given the chain's
  * proven checkpoint? The boot arbiter below and the persistence edge's restore guard both ask this one
  * question, so a local row and the chain anchor are compared by one law in one home.
@@ -55,9 +97,7 @@ const block_of = (v) => Math.floor(Number(v))
  * freshness, and the chain-anchor match that drops the row the instant chain truth moves — still apply.
  *
  * @param {{ x: number, z: number } | null | undefined} pose
- * @param {{
- *   x: number, z: number, time_ms?: number | null, speed_budget?: number | null, pet_equipped?: boolean,
- * } | null | undefined} checkpoint
+ * @param {Partial<ChainAnchor> | null | undefined} checkpoint
  * @param {number} at_ms the instant `pose` claims (a persisted row's write time; `now` for a live body)
  * @returns {boolean}
  */
@@ -68,10 +108,10 @@ export function pose_agrees(pose, checkpoint, at_ms) {
   const cx = block_of(checkpoint.x)
   const cz = block_of(checkpoint.z)
   if (![px, pz, cx, cz].every(Number.isFinite)) return false
-  const speed_budget = Number(checkpoint.speed_budget)
-  const from_ms = Number(checkpoint.time_ms)
+  const speed_budget = anchor_budget(checkpoint)
+  const from_ms = anchor_time(checkpoint)
   const to_ms = Number(at_ms)
-  if (!(speed_budget > 0) || !(from_ms > 0) || !Number.isFinite(to_ms)) return true // unjudgeable — see above
+  if (speed_budget === null || from_ms === null || !Number.isFinite(to_ms)) return true // unjudgeable — above
   return travel_ok(speed_budget, cx, cz, from_ms, px, pz, to_ms, checkpoint.pet_equipped === true)
 }
 
@@ -103,9 +143,7 @@ const session_spawn = (session, y_seed) => ({
  * AFTER the checkpoint was written, so it resumes exactly. Chain truth still wins the moment it moves: a
  * checkpoint that advanced since drops the stamped row at the persistence edge, and this arbiter never sees it.
  * @param {{
- *   checkpoint: {
- *     x: number, z: number, time_ms?: number | null, speed_budget?: number | null, pet_equipped?: boolean,
- *   } | null,
+ *   checkpoint: ChainAnchor | null,
  *   session: { x: number, z: number, y?: number, yaw?: number, return_anchor?: boolean } | null,
  *   fallback: [number, number, number],
  *   y_seed: number,

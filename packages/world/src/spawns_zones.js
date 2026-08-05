@@ -19,7 +19,7 @@ import { zone_of, zone_of_world, world_offsets, DEFAULT_ZONE_SIZE, chain_to_worl
 import { gather_resource_for } from '@aresrpg/sdk/jobs'
 
 import { OPENNESS_PUBLIC, OPENNESS_GROUP } from './openness.js'
-import { resolve_boot_spawn } from './checkpoint.js'
+import { resolve_boot_spawn, normalize_chain_anchor } from './checkpoint.js'
 import {
   PROXIMITY_M,
   SEARCH_PROGRESS_MS,
@@ -70,7 +70,8 @@ const fold_world_doc = (state, { doc }) => {
 // SEEDS when this session holds no better fact — never clobbers a live receipt/read value.
 // The stored checkpoint is the whole CHAIN ANCHOR, not a bare point: the travel budget the boot arbiter
 // judges a local pose against (#2231) is `time_ms` + the world's `speed_budget` + the mount half, all read
-// off the chain in the same breath as the position (world-shell/world_checkpoint.js).
+// off the chain in the same breath as the position (world-shell/world_checkpoint.js). This door only moves
+// the bag into world space — `normalize_chain_anchor` (checkpoint.js) is the one home for reading its fields.
 const fold_checkpoint_resolved = (state, input) => {
   if (input.world_id && state.world_id && input.world_id !== state.world_id) return state
   if (!Number.isFinite(Number(input.x)) || !Number.isFinite(Number(input.z))) return state
@@ -80,13 +81,11 @@ const fold_checkpoint_resolved = (state, input) => {
   const checkpoint =
     input.source === 'indexed'
       ? state.checkpoint // an indexed doc position seeds the hunt zone only (not a boot-grade position)
-      : {
+      : normalize_chain_anchor({
+          ...anchor,
           x: chain_to_world(Number(input.x), state.offset_x),
           z: chain_to_world(Number(input.z), state.offset_z),
-          time_ms: Number(anchor.time_ms) || null,
-          speed_budget: Number(anchor.speed_budget) || null,
-          pet_equipped: anchor.pet_equipped === true,
-        }
+        })
   return { ...state, checkpoint, hunt_zone: cell ? { zx: cell.zx, zy: cell.zy } : state.hunt_zone }
 }
 
