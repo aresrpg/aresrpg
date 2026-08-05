@@ -10,7 +10,6 @@
 // reveal must strip the ROW, not fork a second boolean channel. This locks: an optimistic damaging cast clears BOTH.
 
 import { describe, expect, test } from 'bun:test'
-
 import { K_INVISIBILITY } from '@aresrpg/sim/spell_effect'
 
 import { create_fight_store } from '../src/store.js'

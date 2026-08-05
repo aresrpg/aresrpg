@@ -7,7 +7,6 @@
 // derived. Both are pure getters on the ONE fold — no new state, no second boolean channel.
 
 import { describe, expect, test } from 'bun:test'
-
 import { K_INVISIBILITY } from '@aresrpg/sim/spell_effect'
 
 import { create_fight_store } from '../src/store.js'
