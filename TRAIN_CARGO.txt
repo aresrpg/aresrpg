@@ -1,3 +1,7 @@
-a24d19631 → Fixes #2242 — test(sim): one home for the format-4 witness vectors
-23b2ceba9 → Fixes #2251 — test(engine): give measured-heavy bakes honest timeouts
-69ff7caf2 → Fixes #2245 — perf(frontend): pre-warm the engage read at roster settle
+74173b13b → Fixes #2169 — test(engine): honest timeout for the ring_manager e2e upload
+25acc8a98 → Refs #1135 — fix(social): party refusals name the party gate, not "version (code 103)"
+1428b07ec → Fixes #1815 — fix(social): a chat line nobody received says so
+b6d5372df → Refs #1759 — fix(social): the first friend add stops failing in silence
+c75a1324c → no issue ref — style(social): prettier the chat publishers and the friend-add test
+eaf28dbdd → Fixes #2223 — feat(gates): dual-home scan joins the per-PR gate ladder
+79c05180f → Fixes #2254 — fix(ceremony): the wiring plan sets and verifies the party character-type pin
