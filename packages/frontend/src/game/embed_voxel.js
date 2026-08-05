@@ -471,6 +471,7 @@ function create_session(
       world_id,
       x: destination[0],
       z: destination[2],
+      ...world_phase(),
     })
     void flush_world_position()
     game_log('checkpoint', `resynced live body to proven position [${destination.join(', ')}]`)
@@ -626,19 +627,20 @@ function create_session(
     board_cell_m: BOARD_CELL_M,
     mobile: is_mobile(),
   })
-  // ONE eligibility predicate for BOTH cadence writes and explicit flushes (pagehide / quality re-boot).
-  // The complete run identity closes optimistic entry (`in_session`), between-room (`run_pass_id`), and
-  // pre-camera world-fight (`fight_id`) windows; cave_sample independently covers the cave transition.
-  const can_persist_position = () => {
+  // THE phase facts this session can prove, in the one gate's terms. The complete run identity closes
+  // optimistic entry (`in_session`), between-room (`run_pass_id`), and pre-camera world-fight (`fight_id`)
+  // windows; the fight camera and cave_sample are the two the world-shell edge cannot see, so they ride IN
+  // with every pose — the write door re-checks the same predicate over them (SSOT: one gate, one term list).
+  const world_phase = () => {
     const dungeon = use_dungeon.getState()
-    return can_persist_world_position({
-      character_id: character?.id ?? null,
-      world_id: bound_world,
+    return {
       in_fight: fight_camera.is_active() || !!dungeon.fight_id,
       in_dungeon: !!(dungeon.in_session || dungeon.run_pass_id || dungeon.dungeon || dungeon.dungeon_id),
       in_cave: !!cave_sample,
-    })
+    }
   }
+  const can_persist_position = () =>
+    can_persist_world_position({ character_id: character?.id ?? null, world_id: bound_world, ...world_phase() })
   const flush_position = () => {
     if (can_persist_position()) void flush_world_position()
   }
@@ -782,15 +784,16 @@ function create_session(
       )
     }
     player.frame2(t, dt) // broadcast our pose/cell + pose the avatar/mount/plate + aura, then the walk camera (a fight hides the body)
-    // LAST POSITION input — the world-shell adapter owns the ~5s IndexedDB cadence. The SAME predicate gates
-    // pagehide below, so a frozen world-fight controller and a cave/dungeon controller can never persist.
-    if (can_persist_position())
-      void note_world_position({
-        character_id: character.id,
-        world_id: bound_world,
-        x: t.position[0],
-        z: t.position[2],
-      })
+    // LAST POSITION input — the world-shell adapter owns the ~5s IndexedDB cadence AND the eligibility gate;
+    // the pose carries the phase, so a frozen world-fight controller and a cave/dungeon controller are refused
+    // at the write door itself (the same predicate `flush_position` pre-checks for pagehide below).
+    void note_world_position({
+      character_id: character?.id ?? null,
+      world_id: bound_world,
+      x: t.position[0],
+      z: t.position[2],
+      ...world_phase(),
+    })
     // PER-REGION ZONE MUSIC tick (region_music.js): time-gated internally (~2s), the engine region probe
     // runs only on accepted samples. Skipped while a cave owns the controller (cave-local coords would
     // sample the wrong overworld region — same guard as the position note above); a fight freezes ctl at

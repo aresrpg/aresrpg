@@ -257,6 +257,31 @@ describe('world position IndexedDB edge', () => {
     })
   })
 
+  // RED-FIRST (#1368 P2): the write door used to re-derive its own 4-term reading off the identity leaf, so a
+  // phase only the voxel session can see — the cave sampler, the fight camera before/after the run ids — went
+  // straight past it. One gate now judges every write, and the caller carries those terms in with the pose.
+  test('refuses a pose from a phase only the caller can see, though the identity leaf reads free-walk', async () => {
+    const anchor = anchor_at(100, 200)
+    for (const phase of [{ in_cave: true }, { in_fight: true }, { in_dungeon: true }]) {
+      publish_dungeon_session({}) // the leaf proves nothing: no run, no fight, no pass
+      position_edge._reset_position_persistence_for_test()
+      position_edge.spawns_input({ type: 'world_bound', world_id: null })
+      bind_with_anchor(WORLD_A, anchor)
+
+      await position_edge.note_world_position(
+        { character_id: CHARACTER, world_id: WORLD_A, x: 111, z: 222, ...phase },
+        NOW
+      )
+      // Cave-local coordinates must never reach the world reducer either — the door refuses before `player_pos`.
+      expect(position_edge.spawns_store.getState().player).toBeNull()
+
+      position_edge._reset_position_persistence_for_test()
+      position_edge.spawns_input({ type: 'world_bound', world_id: null })
+      bind_with_anchor(WORLD_A, anchor)
+      await expect(position_edge.restore_world_position(CHARACTER, WORLD_A, anchor, NOW + 1_000)).resolves.toBeNull()
+    }
+  })
+
   test('rejects a snapshot from the character’s previous world when the chain binding moved worlds', async () => {
     bind_with_anchor(WORLD_A, anchor_at(100, 200))
     await position_edge.note_world_position({ character_id: CHARACTER, world_id: WORLD_A, x: 120, z: 220 }, NOW)

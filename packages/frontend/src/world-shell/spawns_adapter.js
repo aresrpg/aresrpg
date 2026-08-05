@@ -266,30 +266,34 @@ const discard_pending_position = () => {
   clear_position_timer()
 }
 
-/** PURE: a session phase that took the body OUT of the free-walk world (a fight, a dungeon, a run pass). */
-const session_holds_the_body = (phase) =>
-  !!phase && (phase.in_session || !!phase.run_pass_id || !!phase.dungeon_id || !!phase.fight_id)
-
-const position_phase_is_blocked = () => session_holds_the_body(read_dungeon_session())
+/**
+ * THE term list — the phases that took the body OUT of the free-walk world. Every persistence guard on this
+ * edge derives from THIS, whether it can observe all three terms or only the ones its vantage proves.
+ * @typedef {{in_fight?:boolean, in_dungeon?:boolean, in_cave?:boolean}} WorldPhase
+ * @param {WorldPhase} phase
+ */
+const world_phase_holds_the_body = ({ in_fight = false, in_dungeon = false, in_cave = false }) =>
+  in_fight || in_dungeon || in_cave
 
 /**
- * PURE eligibility gate shared by movement notes and explicit lifecycle flushes.
- * @param {{
- *   character_id?:string|null,
- *   world_id?:string|null,
- *   in_fight?:boolean,
- *   in_dungeon?:boolean,
- *   in_cave?:boolean,
- * }} state
+ * The session-identity leaf's PROJECTION of those terms — a named subset of the one gate, never a second
+ * reading. The leaf proves the run/fight lifecycle; the cave sampler and the fight camera live in the voxel
+ * session and ride IN with the pose (a typed input, the seam this module already uses for cross-domain facts).
+ * @param {ReturnType<typeof read_dungeon_session>|null|undefined} phase
  */
-export function can_persist_world_position({
-  character_id,
-  world_id,
-  in_fight = false,
-  in_dungeon = false,
-  in_cave = false,
-}) {
-  return !!character_id && !!world_id && !in_fight && !in_dungeon && !in_cave
+const session_holds_the_body = (phase) =>
+  world_phase_holds_the_body({
+    in_dungeon: !!phase?.in_session || !!phase?.run_pass_id || !!phase?.dungeon_id,
+    in_fight: !!phase?.fight_id,
+  })
+
+/**
+ * PURE eligibility gate — THE one predicate that decides whether a pose may be persisted, for callers and for
+ * this module's own write door alike. Identity plus the one term list; nothing re-derives either half.
+ * @param {WorldPhase & {character_id?:string|null, world_id?:string|null}} state
+ */
+export function can_persist_world_position({ character_id, world_id, ...phase }) {
+  return !!character_id && !!world_id && !world_phase_holds_the_body(phase)
 }
 
 const commit_pending_position = (now = Date.now()) => {
@@ -297,7 +301,10 @@ const commit_pending_position = (now = Date.now()) => {
   const pending = pending_position
   pending_position = null
   if (!pending) return position_write_tail
-  if (position_phase_is_blocked()) return position_write_tail
+  // The debounce may land after the body left the world. The identity leaf is the only phase fact re-readable
+  // here — the caller's cave/camera terms were proven at note time, and a pose that was legal when noted stays
+  // legal to land (the fight door's own transition already stamped the row it wants).
+  if (session_holds_the_body(read_dungeon_session())) return position_write_tail
   const state = spawns_store.getState()
   if (
     !current_binding_is(pending.character_id, pending.world_id) ||
@@ -347,16 +354,19 @@ subscribe_dungeon_session((phase, previous) => {
  * Note one eligible free-walk position. The input is reduced immediately; continuous movement writes at most
  * once per five seconds, while a trailing debounce commits the final pose after movement stops. Explicit
  * lifecycle flushes commit the newest pending note sooner.
- * @param {{character_id:string,world_id:string,x:number,z:number}} position
+ *
+ * THE WRITE DOOR IS THE GATE: the caller carries in the phase facts only it can see (the fight camera, the
+ * cave sampler), the identity leaf supplies the run/fight lifecycle, and `can_persist_world_position` — the
+ * same predicate the caller may pre-check with — decides. No second reading guards this write.
+ * @param {WorldPhase & {character_id:string|null,world_id:string|null,x:number,z:number}} position
  * @param {number} [now]
  */
-export function note_world_position({ character_id, world_id, x, z }, now = Date.now()) {
+export function note_world_position({ character_id, world_id, x, z, in_fight, in_dungeon, in_cave }, now = Date.now()) {
   if (
-    !character_id ||
-    !world_id ||
     !finite_position({ x, z }) ||
     !current_binding_is(character_id, world_id) ||
-    position_phase_is_blocked()
+    session_holds_the_body(read_dungeon_session()) ||
+    !can_persist_world_position({ character_id, world_id, in_fight, in_dungeon, in_cave })
   )
     return position_write_tail
   const before = spawns_store.getState()
