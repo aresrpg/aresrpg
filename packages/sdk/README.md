@@ -68,7 +68,7 @@ import {
 
 ## Static data exports (JSON)
 
-`@aresrpg/sdk/spells`, `/items-data`, `/classes`, `/mobs`, `/mob-models`, `/mastery`, `/zones`, `/quests`,
+`@aresrpg/sdk/items-data`, `/classes`, `/mobs`, `/mob-models`, `/mastery`, `/zones`, `/quests`,
 `/settings`, `/shops`, `/npcs`, `/chests`, `/recipes`, `/missing-item-icons`.
 
 ## Development

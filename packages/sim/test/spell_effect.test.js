@@ -56,6 +56,10 @@ import {
   PHASE_END,
 } from '../src/spell_effect.js'
 import * as SE from '../src/spell_effect.js'
+import {
+  CORPUS,
+  SPELLS_CORPUS_AVAILABLE,
+} from './spell_effect_conformance_matrix.js'
 
 // PARITY FIXTURES — copied VERBATIM from spell_effect.move's own tests. Each test cites its Move source by name.
 
@@ -282,4 +286,36 @@ describe('effect-kind twin seal — the sim never declares a kind the chain cann
   test('every sim kind exists on chain with the SAME discriminant, and vice versa', () => {
     expect(SIM_KINDS).toEqual(MOVE_KINDS)
   })
+})
+
+// ── The SUMMON tombstone (#2220) ─────────────────────────────────────────────
+// The legacy generated corpus `packages/sdk/src/spells.json` was a SECOND spell-truth home beside the served
+// corpus blob, and SUMMON was exactly how it had diverged: 7 of its 78 spells author a SUMMON effect, which
+// the chain taxonomy EXCLUDES BY CONSTRUCTION (packages/move/foundation/sources/spell_effect.move — "SUMMONING
+// is EXCLUDED"). Nothing summon-shaped ever reached chain or serving. The sim-side resolution is gone too
+// (#2186 deleted fight_summon.js — the sim resolved a kind the chain cannot encode), so these arms are all
+// that remains of the concern, and they belong with the vocabulary seal above: what the vocabulary IS, and
+// what happens at its boundary, is ONE fact home.
+describe('SUMMON is authorable by no served spell', () => {
+  test('the chain effect vocabulary carries no SUMMON opcode', () => {
+    const opcodes = Object.keys(SE).filter(name => name.startsWith('K_'))
+    expect(opcodes.length).toBeGreaterThan(20) // the vocabulary was actually read
+    expect(opcodes.filter(name => name.includes('SUMMON'))).toEqual([])
+  })
+
+  // MISSING-ARTIFACT (settled #96): seed/mainnet/spells is content-pipeline output, absent by design here.
+  test.skipIf(!SPELLS_CORPUS_AVAILABLE)(
+    'no spell in the served corpus authors a summon',
+    () => {
+      expect(CORPUS.length).toBeGreaterThan(0)
+      const summoning = CORPUS.filter(spell =>
+        (spell.levels ?? []).some(level =>
+          [...(level.effects ?? []), ...(level.crit_effects ?? [])].some(
+            effect => /summon/i.test(JSON.stringify(effect)),
+          ),
+        ),
+      ).map(spell => spell.id)
+      expect(summoning).toEqual([])
+    },
+  )
 })

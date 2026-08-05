@@ -5,8 +5,6 @@ import { describe, test, expect } from 'bun:test'
 import { reduce, create_fight_state } from '../src/reduce.js'
 import { normalize_spell_templates } from '../src/spell_templates.js'
 import { find_entity, effective_stats } from '../src/fight_state.js'
-// The real shipped content — proves the actual 12-class kits map onto functional ADD/REMOVE handlers.
-import real_spells from '../../sdk/src/spells.json'
 
 // ── Fixtures ─────────────────────────────────────────────────────────────────
 // A flat all-walkable arena; a duel (both is_player) so turns are driven purely by end_turn (no AI noise).
@@ -392,82 +390,9 @@ describe('determinism with buffs/debuffs', () => {
   })
 })
 
-// ── REAL content (the shipped spells.json) ──────────────────────────────────────
-describe('real spells.json ADD/REMOVE map to functional handlers', () => {
-  const real = normalize_spell_templates({
-    senshi: {
-      power: real_spells.senshi.power,
-      rage: real_spells.senshi.rage,
-    },
-    tomoda: { tomoda_rage: real_spells.tomoda.tomoda_rage },
-    tokei: { obscuring_clouds: real_spells.tokei.obscuring_clouds },
-  })
-  const real_duel = deck => {
-    const arena = flat_arena()
-    const ctx = { spell_templates: real, arena }
-    const mk = (id, cell) => ({
-      ...make_player(id, cell),
-      deck,
-      spell_levels: Object.fromEntries(deck.map(s => [s, 1])),
-    })
-    const state = create_fight_state({
-      fight_id: 'f',
-      arena_seed: 7,
-      arena_radius: arena.radius,
-      arena,
-      team0: [mk('p0', { x: 4, y: 5 })],
-      team1: [mk('p1', { x: 6, y: 5 })],
-    })
-    return { state: reduce(state, { type: 'start' }, ctx).state, ctx }
-  }
-
-  test('senshi/power applies a raw_damage STAT_BUFF', () => {
-    const { state, ctx } = real_duel(['power'])
-    const r = cast(state, ctx, 'p0', 'power', { x: 4, y: 5 })
-    const buff = find_entity(r.state, 'p0').effects.find(
-      e => e.type === 'STAT_BUFF',
-    )
-    expect(buff?.stat).toBe('raw_damage')
-  })
-
-  test('senshi/rage maps the `damage` statistic onto a raw_damage buff', () => {
-    const { state, ctx } = real_duel(['rage'])
-    const r = cast(state, ctx, 'p0', 'rage', { x: 4, y: 5 })
-    const buff = find_entity(r.state, 'p0').effects.find(
-      e => e.type === 'STAT_BUFF',
-    )
-    expect(buff?.stat).toBe('raw_damage')
-  })
-
-  // Regression: senshi AND tomoda both have a "Rage" spell. The flat normalize Map keys by short id,
-  // so before disambiguation tomoda's `rage` silently OVERWROTE senshi's. They must now resolve as
-  // two DISTINCT templates (senshi -> `rage`, tomoda -> `tomoda_rage`).
-  test('senshi rage and tomoda rage resolve as distinct templates (no short-id collision)', () => {
-    const senshi_rage = real.get('rage')
-    const tomoda_rage = real.get('tomoda_rage')
-    expect(senshi_rage?.id).toBe('rage')
-    expect(tomoda_rage?.id).toBe('tomoda_rage')
-    // distinct objects with distinct content (senshi's buff is keyed on `damage`, tomoda's is raw_damage)
-    expect(senshi_rage).not.toBe(tomoda_rage)
-    expect(senshi_rage?.description).not.toBe(tomoda_rage?.description)
-  })
-
-  test('tomoda/tomoda_rage applies a raw_damage STAT_BUFF', () => {
-    const { state, ctx } = real_duel(['tomoda_rage'])
-    const r = cast(state, ctx, 'p0', 'tomoda_rage', { x: 4, y: 5 })
-    const buff = find_entity(r.state, 'p0').effects.find(
-      e => e.type === 'STAT_BUFF',
-    )
-    expect(buff?.stat).toBe('raw_damage')
-  })
-
-  test('tokei/obscuring_clouds applies mp AND ap STAT_DEBUFFs to enemies', () => {
-    const { state, ctx } = real_duel(['obscuring_clouds'])
-    const r = cast(state, ctx, 'p0', 'obscuring_clouds', { x: 6, y: 5 })
-    const debuffs = find_entity(r.state, 'p1').effects.filter(
-      e => e.type === 'STAT_DEBUFF',
-    )
-    const stats = debuffs.map(d => d.stat).sort()
-    expect(stats).toEqual(['ap', 'mp'])
-  })
-})
+// ── The authored-dialect tombstone (#2220) ──────────────────────────────────
+// A `real spells.json ADD/REMOVE map to functional handlers` suite used to live here, driving four spells out
+// of the generated `packages/sdk/src/spells.json`. That artifact was a SECOND spell-truth home beside the
+// served corpus blob and is deleted: real-content coverage now runs against the ONE truth — the published
+// rows — through `spell_effect_conformance_matrix.js` (every effect of every served spell, postcondition-
+// asserted), while every ADD/REMOVE branch above stays proven on synthetic templates, unconditionally.
