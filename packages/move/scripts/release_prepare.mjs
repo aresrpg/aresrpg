@@ -21,7 +21,7 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { execSync } from 'node:child_process'
+import { execFileSync, execSync } from 'node:child_process'
 
 import { buildPackage, publishOrder, PKG_DEPS, CHAIN_IDS, getNetwork, MOVE_DIR, OUT } from './ceremony_lib.mjs'
 import { move_sources_hash } from './move_sources_hash.mjs'
@@ -221,7 +221,7 @@ function main() {
   // working-tree artifact the move package's own check still walks), and raw JSON.stringify disagrees with
   // prettier on the trailing newline and the digest byte-array fill. Formatting here makes the artifact
   // gate-clean by construction — the alternative is a hand-run `prettier --write` someone has to remember.
-  execSync(`bunx prettier --write ${MANIFEST_OUT} ${out_copy}`, { cwd: REPO_ROOT, stdio: 'ignore' })
+  execFileSync('bunx', ['prettier', '--write', MANIFEST_OUT, out_copy], { cwd: REPO_ROOT, stdio: 'ignore' })
 
   const totalKB = Object.values(packages).reduce((n, p) => n + p.byteSize, 0) / 1024
   console.log(`\n  policy steps: ${POLICY_STEPS.length} · enable steps: ${ENABLE_STEPS.length}`)
