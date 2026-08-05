@@ -15,8 +15,14 @@
 /// gains its 6-level array + the allocation, per D25.
 module aresrpg_foundation::spell_book;
 
-use aresrpg_foundation::spell_effect::{Self, SpellLevel};
+use aresrpg_foundation::spell_effect::SpellLevel;
 use sui::vec_map::{Self, VecMap};
+
+// The module alias is a TEST-ONLY need: only the `#[test_only]` fixture builders below call
+// `spell_effect::` doors. A plain `use` reads as unused in the release build the ceremony
+// probe compiles, which is exactly the warning that blocked it.
+#[test_only]
+use aresrpg_foundation::spell_effect;
 
 const MAX_LEVEL: u8 = 6; // exact 1.29: every spell has 6 levels
 
