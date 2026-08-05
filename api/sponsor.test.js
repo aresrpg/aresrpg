@@ -79,6 +79,45 @@ describe('rate-limit windows — Redis-shared fixed-window (INCR + EXPIRE)', () 
   })
 })
 
+// #2197 — the WRITE half of the one-home cap. The read-api's /v1/sponsor/remaining renders the allowance a
+// player sees; it used to declare the number a second time from an env of its own, so a half-deploy showed a
+// figure nobody enforced. Now this process — the one that ENFORCES the cap — publishes it into the same store
+// it already writes the spend counter to. The stand-in "second instance" below reads it exactly as the read-api
+// does, which is the whole contract: same store, same key, the enforced value verbatim.
+describe('#2197 — the enforcing process publishes its per-address daily cap for the display side', () => {
+  test('publish writes the ENFORCED constant, verbatim, under the shared key', async () => {
+    expect(await S.publish_addr_daily_cap()).toBe(true)
+    const published = await other.send('GET', [S.ADDR_DAILY_CAP_KEY])
+    expect(published).toBe(String(S.ADDR_DAILY_CAP_MIST))
+    // The value must survive as an exact MIST integer — the reader parses it with BigInt and refuses
+    // anything else, so a float/scientific rendering here would take the allowance bar dark.
+    expect(published).toMatch(/^\d+$/)
+    expect(BigInt(published)).toBe(S.ADDR_DAILY_CAP_MIST)
+  })
+
+  test('the published key is the one the read-api reads (shape pinned, not just "some key")', () => {
+    expect(S.ADDR_DAILY_CAP_KEY).toBe('sponsor:cap:addr_daily_mist')
+  })
+
+  test('publishing is idempotent — a redeploy overwrites, never accumulates a second opinion', async () => {
+    await S.publish_addr_daily_cap()
+    await S.publish_addr_daily_cap()
+    expect(await other.send('GET', [S.ADDR_DAILY_CAP_KEY])).toBe(String(S.ADDR_DAILY_CAP_MIST))
+  })
+
+  test('the cap key carries NO expiry — the last published cap is the cap that would be enforced', async () => {
+    await S.publish_addr_daily_cap()
+    expect(Number(await other.send('TTL', [S.ADDR_DAILY_CAP_KEY]))).toBe(-1) // -1 = key exists, no TTL
+  })
+
+  test('a cap published by "instance B" is the one a reader sees — no per-instance opinion', async () => {
+    await other.send('SET', [S.ADDR_DAILY_CAP_KEY, '5000000000'])
+    expect(await other.send('GET', [S.ADDR_DAILY_CAP_KEY])).toBe('5000000000')
+    await S.publish_addr_daily_cap() // this instance boots and states ITS enforced number
+    expect(await other.send('GET', [S.ADDR_DAILY_CAP_KEY])).toBe(String(S.ADDR_DAILY_CAP_MIST))
+  })
+})
+
 // ── F1 FIX: the daily cap now tracks REAL derived gas, not a flat estimate. This is the drain that let ~500
 //    storage-bomb txs "fill" the 1-SUI cap while burning ≫ that. Prove the accounting is real. ──
 describe('F1 — per-tx budget derived from REAL simulated gas (never a flat estimate)', () => {

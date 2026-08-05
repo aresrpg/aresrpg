@@ -151,8 +151,10 @@ export function render_config(env) {
       'SUI_FULLNODE_URL missing — the upstream gas-pool binary speaks JSON-RPC only, and no official Mysten JSON-RPC endpoint exists to default to; set it explicitly at deploy time (see #1421)'
     )
   const rpc_port = Number(env.GAS_POOL_PORT ?? 9527)
-  // 0.2 SUI/UTC-day global ceiling — the "can't be drained endlessly" number (same figure
-  // api/sponsor.mjs enforces as SPONSOR_DAILY_CAP_MIST). Env-raise deliberately at scale.
+  // 0.2 SUI/UTC-day global ceiling — the "can't be drained endlessly" number, and the ONLY
+  // service-wide one: api/sponsor.mjs enforces a PER-ADDRESS cap and nothing else, so this is
+  // where a global ceiling lives or does not exist (#2197 — the line here used to name a
+  // `SPONSOR_DAILY_CAP_MIST` no code has ever read). Env-raise deliberately at scale.
   const daily_cap = env.GAS_POOL_DAILY_CAP ?? '200000000'
   // 0.1 SUI per reserve_gas request — the app-wide per-tx gas ceiling (GAS_CEILING_SUI).
   const max_per_request = env.GAS_POOL_MAX_PER_REQUEST ?? '100000000'

@@ -36,8 +36,9 @@ services:
       # 1-SUI/day cap holds across instances AND /v1/sponsor/remaining can read it. Unreachable ⇒ the
       # sponsor fail-closes to its in-memory cap (never fail-open). Same redis the api/indexer use.
       REDIS_URL: redis://redis:6379
-      # The per-player daily allowance — MUST match the api service's value below (one .env home) so the
-      # remaining the client shows equals the cap the sponsor enforces. Default 1 SUI.
+      # THE per-player daily allowance — this service is its ONLY home (#2197). It enforces the cap and
+      # publishes the value to `sponsor:cap:addr_daily_mist` in the Redis above at boot; /v1/sponsor/remaining
+      # reads it from there, so raising the cap here needs no api redeploy and cannot desync. Default 1 SUI.
       SPONSOR_ADDR_DAILY_CAP_MIST: ${SPONSOR_ADDR_DAILY_CAP_MIST:-1000000000}
       # GAMEPLAY-RATE limits (2026-07-11, sponsored-FIRST routing live — every fight turn is a sponsored
       # tx for ≤0.2-SUI wallets): the old per-IP 5/10min demo default 429'd a player mid-dungeon after
@@ -45,8 +46,12 @@ services:
       # per-player 1 SUI/day + zkLogin gates, not these rate shapers. Global daily ceiling raised for
       # testnet play (0.2 SUI = ~100 tx/day would starve a single active player; sponsor wallet is
       # testnet-funded — revisit both before mainnet).
+      #
+      # There is NO service-wide daily ceiling knob here. `SPONSOR_DAILY_CAP_MIST` sat on this line
+      # declaring a 50-SUI/day global ceiling that no line of api/ has ever read (#2197 census) — a
+      # limit that exists only in deploy config is not a limit, it is a false sense of one. The drain
+      # bound that IS enforced is per-address: SPONSOR_ADDR_DAILY_CAP_MIST above, × the zkLogin gate.
       SPONSOR_RL_MAX: ${SPONSOR_RL_MAX:-240}
-      SPONSOR_DAILY_CAP_MIST: ${SPONSOR_DAILY_CAP_MIST:-50000000000}
     volumes:
       - ../..:/app:ro
     ports:
@@ -132,8 +137,8 @@ services:
       REDIS_URL: redis://redis:6379
       RATE_LIMIT_MAX: ${RATE_LIMIT_MAX:-120}
       RATE_LIMIT_WINDOW_SEC: ${RATE_LIMIT_WINDOW_SEC:-60}
-      # /v1/sponsor/remaining reports this as the allowance — MUST equal the sponsor service's cap above.
-      SPONSOR_ADDR_DAILY_CAP_MIST: ${SPONSOR_ADDR_DAILY_CAP_MIST:-1000000000}
+      # No sponsor cap env here by design (#2197): /v1/sponsor/remaining DERIVES the allowance from the
+      # value the sponsor service publishes into the Redis below. Re-adding it would recreate the desync.
       # D52 /v1/names: which chain's SuiNS registry to resolve against (must match the indexer's own
       # NETWORK — a mismatch would resolve names off the wrong chain) + the Redis cache TTL.
       NETWORK: ${NETWORK:-testnet}

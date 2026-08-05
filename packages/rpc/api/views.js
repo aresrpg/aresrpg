@@ -80,6 +80,13 @@ const K = {
   tauxIdx: 'rpc:idx:taux',
   tauxBracket: (b) => `rpc:taux:bracket:${b}`,
   tauxMeta: 'rpc:taux_meta',
+
+  // Sponsor money-counter keys — NOT indexer projections (no `rpc:` prefix): api/sponsor.mjs owns both
+  // and this api only reads them. Their shapes are pinned against the sponsor's own builders by
+  // scripts/check-sponsor-config-ssot.mjs, because the two processes ship as separate images and cannot
+  // import one module (#2197).
+  sponsorSpent: (day, addr) => `sponsor:spent:${day}:${addr.toLowerCase()}`,
+  sponsorAddrDailyCap: 'sponsor:cap:addr_daily_mist',
 }
 
 // CDN treatment for the data views: short shared cache + ETag (added in respond.js).
@@ -1551,32 +1558,49 @@ export async function handle_names(params, name_reads = name_reads_default) {
 // the READ side of a counter the SPONSOR owns: on each sponsored grant the sponsor does
 // `INCRBY sponsor:spent:{UTC-date}:{addr}` (EXPIREAT next UTC midnight) against the SAME Redis this
 // api reads — no indexer involvement, it's a shared money-counter, not chain-projected state.
-//   allowance_mist — the env cap the sponsor also reads (SPONSOR_ADDR_DAILY_CAP_MIST, default 1 SUI)
-//   spent_mist     — the shared counter (0 when unset / a fresh day / Redis briefly down)
+//   allowance_mist — the cap the sponsor PUBLISHED (see below); never declared here
+//   spent_mist     — the shared counter (0 when unset — a fresh day, not a failed read)
 //   remaining_mist — max(0, allowance − spent)
 //   resets_at      — next UTC midnight ISO (when the key expires and the allowance refreshes)
-// Display-only: this NEVER gates a tx (the sponsor fail-closes the real cap itself); a Redis blip
-// here just shows full allowance for a beat. MIST as strings (§14). `?address=` required.
-const SPONSOR_ADDR_DAILY_CAP_MIST = BigInt(process.env.SPONSOR_ADDR_DAILY_CAP_MIST || 1_000_000_000)
+// Display-only: this NEVER gates a tx (the sponsor fail-closes the real cap itself). What it must
+// never do is show a number nobody enforces. MIST as strings (§14). `?address=` required.
+//
+// #2197 — ONE HOME FOR THE CAP. This endpoint used to read its own `SPONSOR_ADDR_DAILY_CAP_MIST`
+// env, a second declaration of a number api/sponsor.mjs already owns, kept equal by comments in two
+// repos' worth of deploy config naming each other. Deploy one half and the bar lies about the other
+// half's allowance. Now the enforcing process writes its cap into the SAME Redis it already writes
+// the spend counter to, and this reads it — one home, no sync order, no redeploy of this service
+// when the cap changes. An unpublished cap REFUSES out loud rather than falling back to a literal:
+// a plausible allowance the sponsor never agreed to is precisely the lie the row was filed about.
+const CAP_UNAVAILABLE = (message) => ({
+  status: 503,
+  // never cache absence: the sponsor's next boot republishes, and a cached refusal would outlive it
+  headers: { 'cache-control': 'no-store' },
+  data: { error: 'sponsor_cap_unavailable', message },
+})
 function next_utc_midnight_iso() {
   const n = new Date()
   return new Date(Date.UTC(n.getUTCFullYear(), n.getUTCMonth(), n.getUTCDate() + 1)).toISOString()
 }
-export async function handle_sponsor_remaining(params) {
+const sponsor_reads_default = { get_str }
+export async function handle_sponsor_remaining(params, sponsor_reads = sponsor_reads_default) {
   const address = params.get('address')
   if (!address) return bad('provide ?address=<address>')
   if (!/^0x[0-9a-fA-F]{1,64}$/.test(address)) return bad('malformed address')
 
-  const day = new Date().toISOString().slice(0, 10)
-  let spent = 0n
-  try {
-    const raw = await get_str(`sponsor:spent:${day}:${address.toLowerCase()}`)
-    if (raw != null) spent = BigInt(raw)
-  } catch {
-    /* Redis down → 0 spent (display-only; the sponsor still fail-closes the actual cap). */
-  }
+  // Read the cap FIRST: a store that cannot answer this cannot answer the counter either, and a
+  // throw here surfaces as a reported 500 rather than a confidently wrong allowance.
+  const published_cap = await sponsor_reads.get_str(K.sponsorAddrDailyCap)
+  if (published_cap == null)
+    return CAP_UNAVAILABLE('the sponsor has not published its daily cap — no allowance can be reported')
+  if (!/^\d+$/.test(published_cap))
+    return CAP_UNAVAILABLE('the published sponsor daily cap is not a MIST integer — refusing to render it')
+  const cap = BigInt(published_cap)
 
-  const cap = SPONSOR_ADDR_DAILY_CAP_MIST
+  const day = new Date().toISOString().slice(0, 10)
+  const raw_spent = await sponsor_reads.get_str(K.sponsorSpent(day, address))
+  const spent = raw_spent == null ? 0n : BigInt(raw_spent)
+
   const remaining = spent >= cap ? 0n : cap - spent
   return ok({
     allowance_mist: cap.toString(),

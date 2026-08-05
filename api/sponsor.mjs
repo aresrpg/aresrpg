@@ -30,10 +30,12 @@ import {
   utc_date,
 } from './sponsor_state.mjs'
 export {
+  ADDR_DAILY_CAP_KEY,
   ADDR_DAILY_CAP_MIST,
   PER_TX_BUDGET_CEILING_MIST,
   SHARED_STORE_ERROR,
   SHARED_STORE_REASON,
+  publish_addr_daily_cap,
   shared_store_ready,
   addr_daily_hold,
   addr_daily_spent,
