@@ -30,7 +30,7 @@
 /// stack agree (S-11b items amendment; the old "ONE NFT + amount in the event only" seam is resolved).
 module aresrpg::gathering;
 
-use aresrpg::{character_link, config::{Self, GameConfig}, equipment, fight, mob_template::MobTemplate, version::Version, world::{Self, World}, zones};
+use aresrpg::{character_link, config::GameConfig, equipment, fight, mob_template::MobTemplate, version::Version, world::{Self, World}, zones};
 use aresrpg::item::{Item, ItemTemplate};
 use aresrpg_fight::{fight_latch::FightLatch, fight_registry::FightRegistry, version::Version as EngineVersion};
 use aresrpg_foundation::job_xp;

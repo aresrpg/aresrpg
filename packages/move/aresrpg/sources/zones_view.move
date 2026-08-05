@@ -10,7 +10,13 @@
 /// state, doors, and bit-side probes (`zone_seed`, `mob_group_live`, `resource_remaining`, bitmap byte lengths).
 module aresrpg::zones_view;
 
-use aresrpg::{config::GameConfig, world::World, zones};
+use aresrpg::{world::World, zones};
+
+// `GameConfig` is a TEST-ONLY need: `mob_group_size` is the one getter reading the config dial and
+// it is itself `#[test_only]`. A plain `use` reads as unused in the release build the ceremony
+// probe compiles, which is exactly the warning that blocked it.
+#[test_only]
+use aresrpg::config::GameConfig;
 
 /// Total DERIVED mob groups (the mob index bound).
 public fun mob_group_total(world: &World, zx: u32, zy: u32): u64 {
