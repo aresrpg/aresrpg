@@ -3056,7 +3056,7 @@
     "targets_mobs": "Mobs",
     "targets_gatherables": "Gatherables",
     "targets_both": "Both",
-    "range_label": "Distance from the world centre (blocks)",
+    "range_label": "Search distance from the world centre (blocks)",
     "range_from": "From",
     "range_to": "To",
     "mobs_label": "Wanted mobs",

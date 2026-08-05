@@ -3056,7 +3056,7 @@
     "targets_mobs": "Monstruos",
     "targets_gatherables": "Recursos",
     "targets_both": "Ambos",
-    "range_label": "Distancia desde el centro del mundo (bloques)",
+    "range_label": "Distancia de búsqueda desde el centro del mundo (bloques)",
     "range_from": "Desde",
     "range_to": "Hasta",
     "mobs_label": "Monstruos buscados",

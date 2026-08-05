@@ -3056,7 +3056,7 @@
     "targets_mobs": "モンスター",
     "targets_gatherables": "採集資源",
     "targets_both": "両方",
-    "range_label": "ワールド中心からの距離（ブロック）",
+    "range_label": "ワールド中心からの探索距離（ブロック）",
     "range_from": "最小",
     "range_to": "最大",
     "mobs_label": "対象モンスター",

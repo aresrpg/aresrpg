@@ -3056,7 +3056,7 @@
     "targets_mobs": "Monster",
     "targets_gatherables": "Rohstoffe",
     "targets_both": "Beides",
-    "range_label": "Entfernung vom Weltzentrum (Blöcke)",
+    "range_label": "Suchentfernung vom Weltzentrum (Blöcke)",
     "range_from": "Von",
     "range_to": "Bis",
     "mobs_label": "Gesuchte Monster",

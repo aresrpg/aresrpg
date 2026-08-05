@@ -149,6 +149,7 @@ function world_snapshot(zones_rows, now) {
     zone_size: spawns.zone_size,
     offset_x: spawns.offset_x,
     offset_z: spawns.offset_z,
+    world_frame_ready: spawns.world_frame_ready,
     fresh_keys,
     search_armed: !!use_prompt_stack.getState().prompts.search,
     markers: spawn_markers(spawns),

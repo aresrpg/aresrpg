@@ -3058,7 +3058,7 @@
     "targets_mobs": "Монстри",
     "targets_gatherables": "Ресурси",
     "targets_both": "Обидва",
-    "range_label": "Відстань від центру світу (блоки)",
+    "range_label": "Відстань пошуку від центру світу (блоки)",
     "range_from": "Від",
     "range_to": "До",
     "mobs_label": "Потрібні монстри",

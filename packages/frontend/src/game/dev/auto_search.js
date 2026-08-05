@@ -109,8 +109,10 @@ const distance = (ax, az, bx, bz) => Math.hypot(ax - bx, az - bz)
  * @returns {{ zx: number, zy: number, x: number, z: number } | null}
  */
 export function pick_zone(state, world) {
-  const { player, zone_size, offset_x, offset_z, fresh_keys } = world
-  if (!player || !Number.isFinite(zone_size) || zone_size <= 0) return null
+  const { player, zone_size, offset_x, offset_z, world_frame_ready, fresh_keys } = world
+  // A world bind resets the shared spawn frame before its World doc lands. Those reset zeros are placeholders,
+  // never a coordinate calibration; fail shut until the one world-doc fold marks the frame ready (#2180).
+  if (world_frame_ready === false || !player || !Number.isFinite(zone_size) || zone_size <= 0) return null
   const off_limits = new Set([...state.skipped, ...(fresh_keys ?? [])])
   const span = (offset, reach) => ({
     lo: Math.max(0, Math.floor((offset - reach) / zone_size)),
@@ -130,6 +132,18 @@ export function pick_zone(state, world) {
       if (!best || reach < best.reach) best = { zx, zy, x: cx, z: cz, reach }
     }
   }
+  if (best && import.meta.env?.DEV)
+    console.info('[auto-search/pick]', {
+      zx: best.zx,
+      zy: best.zy,
+      cx: best.x,
+      cz: best.z,
+      from_center: Math.hypot(best.x, best.z),
+      from_m: state.from_m,
+      to_m: state.to_m,
+      offset_x,
+      offset_z,
+    })
   return best ? { zx: best.zx, zy: best.zy, x: best.x, z: best.z } : null
 }
 

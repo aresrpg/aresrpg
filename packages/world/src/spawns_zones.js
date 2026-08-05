@@ -58,11 +58,12 @@ const fold_world_doc = (state, { doc }) => {
   const zone_size = Number(doc.zone_size ?? 0) || DEFAULT_ZONE_SIZE
   const zone_ttl_ms = Number(doc.zone_ttl_ms ?? 0) || null
   const same =
+    state.world_frame_ready &&
     state.zone_size === zone_size &&
     state.offset_x === off.x &&
     state.offset_z === off.z &&
     state.zone_ttl_ms === zone_ttl_ms
-  return same ? state : { ...state, zone_size, offset_x: off.x, offset_z: off.z, zone_ttl_ms }
+  return same ? state : { ...state, world_frame_ready: true, zone_size, offset_x: off.x, offset_z: off.z, zone_ttl_ms }
 }
 
 // chain-space {x,z}. 'read' (chain-direct) is truth and applies; 'indexed' (/v1 doc position, laggy) only

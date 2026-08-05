@@ -150,6 +150,9 @@ export const ingest_rows = (state, rows) => {
 
 export const blank_world = () => ({
   world_id: null,
+  // False until the current world's doc has supplied the zone grid and per-axis world-centre offsets. Consumers
+  // must not treat the reset zeros below as a calibrated frame (the #2180 auto-search contradiction).
+  world_frame_ready: false,
   zone_size: DEFAULT_ZONE_SIZE,
   offset_x: 0,
   offset_z: 0,

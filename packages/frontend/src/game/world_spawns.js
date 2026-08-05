@@ -74,6 +74,7 @@ import { use_prompt_stack } from '../world-shell/prompt_stack.js'
 import { cardinal_of } from './screens/hud/world/compass_math.js'
 import { engage_block, engage_block_copy_key } from './engage_gate.js'
 import { start_fight_engage } from './fight_engage.js'
+import { fold_current_world_frame } from './world_frame_ferry.js'
 import { push_event_toast } from './core/toast.js'
 import { context } from './core/game.js'
 import { fight_store } from '@aresrpg/fight/store'
@@ -139,7 +140,6 @@ export function create_world_spawns({ engine, canvas = null, get_player_pos, ove
   let last_heaptrace = 0 // [heaptrace] leak-hunt throttle (gated on ?heaptrace=1)
   const HEAPTRACE = typeof location !== 'undefined' && location.search.includes('heaptrace')
   let disposed = false
-  let dims_world = /** @type {string | null} */ (null) // world whose doc facts were fed into the spawns core
   let poll_seq = 0 // versioned-snapshot stamp (the core discards out-of-order polls)
   // Discovered-zone list — the ONE shared /v1/zones poll (rpc/zones_poll.js — #242), also read by CompassStrip
   // and DiscoveryPrompts, instead of this loop fetching it independently on its own 6s tick.
@@ -279,16 +279,6 @@ export function create_world_spawns({ engine, canvas = null, get_player_pos, ove
     /** @type {number} */ zy
   ) => zone_rows_v1(world_id, zx, zy) // rows DERIVE from the zone's stored seed (zone_rows.js — the one home)
 
-  // Resolve zone_size + the world↔chain offset (bounds/2) once per world, off the SHARED World-doc read
-  // (zone_rows.js home), and feed it into the spawns CORE — the one place chain coords become world space.
-  const ensure_world_dims = async (/** @type {string} */ world_id) => {
-    if (dims_world === world_id) return
-    const doc = await zone_world_doc(world_id)
-    if (current_world_id() !== world_id) return
-    spawns_input({ type: 'world_doc', doc })
-    if (doc) dims_world = world_id
-  }
-
   // SYNC the render residency from the CORE's row projection (D770a W2): the core owns WHICH rows exist
   // (receipt/poll reconcile, grace shields, tombstones); this map owns only their RENDER lifecycle (rigs,
   // chips, budget). A `pending` claim row hides its group — the optimistic fight-entry beat as data.
@@ -349,7 +339,11 @@ export function create_world_spawns({ engine, canvas = null, get_player_pos, ove
     }
     polling = true
     try {
-      await ensure_world_dims(world_id)
+      await fold_current_world_frame(world_id, {
+        current_world_id,
+        read_world_doc: zone_world_doc,
+        input: spawns_input,
+      })
       if (current_world_id() !== world_id) return
       // The token is the binding adapter's to issue: a beat that disagrees with it is REJECTED (the ferry
       // binds, the next beat proceeds) — never re-bound from here.

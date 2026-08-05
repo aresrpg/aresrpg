@@ -3056,7 +3056,7 @@
     "targets_mobs": "Monstres",
     "targets_gatherables": "Ressources",
     "targets_both": "Les deux",
-    "range_label": "Distance depuis le centre du monde (blocs)",
+    "range_label": "Distance de recherche depuis le centre du monde (blocs)",
     "range_from": "De",
     "range_to": "À",
     "mobs_label": "Monstres ciblés",
