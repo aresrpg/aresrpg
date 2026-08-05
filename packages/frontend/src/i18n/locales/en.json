@@ -2339,6 +2339,8 @@
     "party_wrong_kiosk_cap": "That character's ownership proof no longer matches your kiosk.",
     "party_character_not_owned": "That character is no longer in your personal kiosk.",
     "party_not_solo": "This party still has other members and cannot be disbanded.",
+    "party_service_unconfigured": "Party actions aren’t available on this world yet — the party service isn’t finished being set up.",
+    "party_character_lineage": "The party service doesn’t recognise this character’s lineage. Reload the game; if it keeps happening, the party service needs an update.",
     "craft_failed": "Couldn't craft — please try again.",
     "craft_no_recipe": "This recipe isn't available on-chain yet.",
     "craft_no_ingredients": "Your materials don't combine into the exact amount this recipe needs.",

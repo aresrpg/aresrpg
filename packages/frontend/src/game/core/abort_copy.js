@@ -386,9 +386,17 @@ const TABLE = {
     9: 'errors.item_listed_for_sale', // EItemIsListed — listed items cannot be mutably borrowed/taken
     11: 'errors.item_wrong_kiosk', // EItemNotFound — this kiosk does not hold the requested item
   },
+  // PACKAGE-LINEAGE + party-brand gates. 101/102 are the SAME shape in every package (core/engine/spells/social).
+  // 103/104 are `aresrpg_social::version::assert_party_character_type` — the FIRST statement of every party door
+  // (create/invite/accept/decline/kick/leave/disband), so a party refusal's MoveLocation names `version`, never
+  // `party` (#1135: the leader's invite read "Unhandled version error (code 103)" — raw module+code jargon on the
+  // one surface the no-jargon law exists for). 105 ECharacterTypeAlreadySet stays generic: the one-time brand pin
+  // is an admin door no player-signed tx can reach.
   version: {
     101: 'errors.world_version_changed', // EWrongVersion — client/shared object lineage is stale
     102: 'errors.contracts_paused', // ENotEnabled — package is dark/paused
+    103: 'errors.party_service_unconfigured', // ECharacterTypeNotSet — the party brand was never pinned on this deployment
+    104: 'errors.party_character_lineage', // EWrongCharacterType — this client's Character type isn't the pinned brand
   },
   config: {
     101: 'errors.game_paused', // ENotEnabled — global gameplay switch is off

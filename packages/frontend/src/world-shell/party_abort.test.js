@@ -67,3 +67,54 @@ describe('party aborts humanize (audit row 3 — party_store no longer shows raw
     )
   })
 })
+
+// #1135 — "party invite refused, unrecognized version rule". EVERY party door (create/invite/accept/decline/
+// kick/leave/disband) opens with `version::assert_party_character_type<Character>` BEFORE any party code runs,
+// so the abort's MoveLocation names the module `version`, not `party`. The decoder mapped only 101/102 there,
+// so the social package's own party-brand gates (103 ECharacterTypeNotSet / 104 EWrongCharacterType) fell to
+// `tx_refusal_reason_unmapped` — "Unhandled version error (code 103)" — the raw module+code jargon the owner
+// read back as an "unrecognized version rule". The refusal is honest copy now; the codes stay STRUCTURAL.
+const grpc_version_abort = (code) => ({
+  $kind: 'MoveAbort',
+  message: `MoveAbort in 0th command, abort code: ${code}, in '0xsocial::version::assert_party_character_type' (instruction 4)`,
+  command: 0,
+  MoveAbort: {
+    abortCode: String(code),
+    location: {
+      package: '0xsocial',
+      module: 'version',
+      function: 5,
+      instruction: 4,
+      functionName: 'assert_party_character_type',
+    },
+  },
+})
+
+describe('#1135 — the social party-brand gate aborts on module `version`, and must not leak module+code jargon', () => {
+  for (const [code, key] of [
+    [103, 'errors.party_service_unconfigured'], // ECharacterTypeNotSet — the brand pin was never written
+    [104, 'errors.party_character_lineage'], // EWrongCharacterType — the client's Character lineage isn't the pinned one
+  ]) {
+    test(`version abort ${code} → mapped party copy, never "Unhandled version error"`, () => {
+      const copy = humanize_abort(grpc_version_abort(code))
+      expect(copy).toBe(i18n.t(key))
+      expect(copy).not.toBe(key)
+      expect(copy).not.toContain('version')
+      expect(copy).not.toContain(String(code))
+    })
+  }
+
+  test('the PRE-FLIGHT refusal (the shape the invite actually takes) carries no module+code reason line', () => {
+    // A dry-run refusal is where the unmapped arm appends `Reason: Unhandled {{module}} error (code {{code}}).`
+    const thrown = tx_error(grpc_version_abort(103), { preflight: true })
+    expect(thrown.message).toBe(i18n.t('errors.party_service_unconfigured'))
+    expect(thrown.message).not.toContain('code 103')
+    expect(parse_move_abort(thrown)).toEqual({ module: 'version', code: 103, package: '0xsocial' })
+  })
+
+  test('the package-lineage gates keep their own copy — a party brand refusal is not "world updated"', () => {
+    // 101 EWrongVersion / 102 ENotEnabled stay exactly what they were (no copy was re-homed).
+    expect(humanize_abort(grpc_version_abort(101))).toBe(i18n.t('errors.world_version_changed'))
+    expect(humanize_abort(grpc_version_abort(102))).toBe(i18n.t('errors.contracts_paused'))
+  })
+})

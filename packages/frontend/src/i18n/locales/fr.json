@@ -2339,6 +2339,8 @@
     "party_wrong_kiosk_cap": "La preuve de propriété de ce personnage ne correspond plus à votre kiosque.",
     "party_character_not_owned": "Ce personnage n'est plus dans votre kiosque personnel.",
     "party_not_solo": "Ce groupe contient encore d'autres membres et ne peut pas être dissous.",
+    "party_service_unconfigured": "Les actions de groupe ne sont pas encore disponibles sur ce monde — le service de groupe n’est pas fini d’être configuré.",
+    "party_character_lineage": "Le service de groupe ne reconnaît pas la lignée de ce personnage. Recharge le jeu ; si ça persiste, le service de groupe doit être mis à jour.",
     "craft_failed": "Fabrication impossible — réessaie.",
     "craft_no_recipe": "Cette recette n'est pas encore disponible sur la blockchain.",
     "craft_no_ingredients": "Tes matériaux ne totalisent pas la quantité exacte requise par cette recette.",

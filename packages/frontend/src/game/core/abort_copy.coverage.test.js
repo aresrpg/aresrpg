@@ -66,7 +66,7 @@ const GENERIC_CODES = new Map([
   ['shop', new Set([108, 109, 110])], // 108=EStackableHasRanges, 109=EBadWindow, 110=ESaleNotPaused
   ['spell_book', new Set([201, 202])], // 201=EWrongLevelCount, 202=ELevelOutOfRange
   ['turns', new Set([102, 103, 104, 105, 106, 107, 108])], // 102=ENotYourCharacter, 103=ENotParticipant, 104=EBadStartCell, 105=ENotActive, 106=ENotYourTurn, 107=ENotYetExpired, 108=ESomeoneOverdue
-  ['version', new Set([103, 104, 105])], // 103=ECharacterTypeNotSet, 104=EWrongCharacterType, 105=ECharacterTypeAlreadySet
+  ['version', new Set([105])], // 105=ECharacterTypeAlreadySet — the one-time brand pin, an admin-only door (103/104 mapped by #1135)
   ['world', new Set([101, 102, 103, 104, 199])], // 101=EOutOfBounds, 102=EBadEntryIndex, 103=EBadRange, 104=EWorldNotEmpty, 199=EWrongInnerVersion
   ['zones', new Set([101, 102, 103, 105, 106, 107, 109, 111, 112, 113])], // 101=ELevelTooLow, 102=ENotInWorld, 103=ENoCheckpoint, 105=EZoneFresh, 106=EBadNode, 107=ENodeEmpty, 109=EBadDrainInput, 111=EGroupNotConsumed, 112=EMemberZone, 113=ENotMemberZone
 ])

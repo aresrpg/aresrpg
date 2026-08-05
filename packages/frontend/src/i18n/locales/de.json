@@ -2339,6 +2339,8 @@
     "party_wrong_kiosk_cap": "Der Besitznachweis dieses Charakters passt nicht mehr zu deinem Kiosk.",
     "party_character_not_owned": "Dieser Charakter befindet sich nicht mehr in deinem persönlichen Kiosk.",
     "party_not_solo": "Diese Gruppe hat noch weitere Mitglieder und kann nicht aufgelöst werden.",
+    "party_service_unconfigured": "Gruppenaktionen sind in dieser Welt noch nicht verfügbar — der Gruppendienst ist noch nicht fertig eingerichtet.",
+    "party_character_lineage": "Der Gruppendienst erkennt die Herkunft dieses Charakters nicht. Lade das Spiel neu; wenn es bestehen bleibt, muss der Gruppendienst aktualisiert werden.",
     "craft_failed": "Herstellung fehlgeschlagen – bitte erneut versuchen.",
     "craft_no_recipe": "Dieses Rezept ist noch nicht on-chain verfügbar.",
     "craft_no_ingredients": "Deine Materialien ergeben nicht die exakte Menge, die dieses Rezept benötigt.",

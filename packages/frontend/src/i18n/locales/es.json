@@ -2339,6 +2339,8 @@
     "party_wrong_kiosk_cap": "La prueba de propiedad de ese personaje ya no coincide con tu quiosco.",
     "party_character_not_owned": "Ese personaje ya no está en tu quiosco personal.",
     "party_not_solo": "Este grupo aún tiene otros miembros y no se puede disolver.",
+    "party_service_unconfigured": "Las acciones de grupo aún no están disponibles en este mundo — el servicio de grupo no ha terminado de configurarse.",
+    "party_character_lineage": "El servicio de grupo no reconoce el linaje de este personaje. Recarga el juego; si sigue ocurriendo, el servicio de grupo necesita una actualización.",
     "craft_failed": "No se pudo fabricar — inténtalo de nuevo.",
     "craft_no_recipe": "Esta receta aún no está disponible on-chain.",
     "craft_no_ingredients": "Tus materiales no suman la cantidad exacta que necesita esta receta.",

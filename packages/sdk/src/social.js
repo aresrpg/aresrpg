@@ -20,7 +20,11 @@
 
 import { Transaction } from '@mysten/sui/transactions'
 
-import { aresrpg_deployment, shared_object_arg } from './deployment/aresrpg.js'
+import {
+  aresrpg_deployment,
+  shared_object_arg,
+  character_type,
+} from './deployment/aresrpg.js'
 import { as_object_arg } from './sui/object_arg.js'
 
 export {
@@ -50,7 +54,9 @@ function social_ids(network, overrides) {
   return a
 }
 
-const character_type = a => `${a.PACKAGE_ID}::character::Character`
+// The Character type argument comes from the ONE deployment home (`character_type`) — the party brand pinned in
+// the social Version is `type_name::with_defining_ids`, i.e. the TYPE ORIGIN, and re-deriving that string here is
+// exactly how a call site drifts onto the upgrade target and trips `version::EWrongCharacterType` (#1135).
 
 // Party keys every membership action by Character ID and proves the acting character's current personal-kiosk
 // ownership on-chain. All calls target the standalone social package and pass its Version.
