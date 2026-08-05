@@ -49,3 +49,4 @@ Each anchor must therefore point at the DECLARATION line of its fact. The fence 
 | MIST per SUI                            | `packages/frontend/src/utils/sui_mist.ts:16` — dedicated conversion utility.                                                        |
 | Shop equipment-category taxonomy        | `packages/frontend/src/constants/item_categories.ts:3` — exported UI taxonomy.                                                      |
 | Client item-category vocabulary         | `packages/sdk/src/items.js:6` — exported client item-domain owner.                                                                  |
+| Presence appearance revision            | `packages/frontend/src/world-shell/presence_appearance.js:50` — the one producer of the peer cache-invalidation signal (#2171).     |

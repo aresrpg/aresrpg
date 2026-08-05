@@ -166,6 +166,9 @@ export function create_remote_players(engine, world_canvas = null, overlay_root)
       yaw: 0,
       cell_key: '',
       color_key: colors?.join(':') ?? '',
+      // #2171 — the appearance revision this rig has already asked /v1 about. A spawning rig has no cache row,
+      // so its very first refresh IS that read: seeding here keeps the invalidation for genuine CHANGES.
+      appearance_rev: entry.appearance_rev ?? 0,
     })
     game_log('remote', `rig spawned for ${id.slice(0, 10)} (${classe}) at [${p.x}, ${p.z}]`) // loud-pipeline law
   }
@@ -310,8 +313,20 @@ export function create_remote_players(engine, world_canvas = null, overlay_root)
     // TRANSPORT RULING — batch-refresh every currently-rigged peer's /v1 worn + pet resolution ONCE per frame
     // (cheap: a Map-timestamp scan; only fires network for ids that are missing/stale/not already in flight —
     // see remote_character_cache.js). A rig spawned THIS frame has no cache row yet, so it's picked up
-    // immediately (no separate "identity change" trigger needed); re-equips/unequips heal within the ~60s TTL.
-    if (rigs.size) void peer_cache.refresh(rigs.keys())
+    // immediately; re-equips/unequips no longer wait out the ~60s TTL, because of the line above the refresh:
+    // #2171 — a peer whose presence beat carries an appearance revision this rig has not applied yet has its
+    // CACHED ROW INVALIDATED, so the very next wave re-reads it. The revision is a bare number and is read
+    // NOWHERE else in this file: it decides WHEN to ask /v1, never WHAT to render (#553 — a peer cannot put an
+    // appearance on our screen by claiming one; the chain answers, or nothing does).
+    if (rigs.size) {
+      for (const [id, r] of rigs) {
+        const rev = render_row_of(state, id)?.appearance_rev ?? 0
+        if (rev === r.appearance_rev) continue
+        r.appearance_rev = rev
+        peer_cache.invalidate(id)
+      }
+      void peer_cache.refresh(rigs.keys())
+    }
     const plate_canvas = rigs.size ? (world_canvas ?? document.querySelector('canvas')) : null
     let plate_rect = plate_canvas?.getBoundingClientRect() ?? null
     if (!plate_rect && rigs.size)
