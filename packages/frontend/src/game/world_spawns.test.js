@@ -155,9 +155,10 @@ describe('world spawn mob-card layer route gate', () => {
   })
 
   test('prepares the owned party before a group fight snapshots its on-chain party gate', () => {
-    const prepare_at = world_spawns_source.indexOf(
-      'const owned_party_ready = await use_party.getState().ensure_owned_party()'
-    )
+    // The ORDERING is the invariant, not the call's formatting: #2155 wrapped this leg in the engage trace's
+    // `time_engage_leg('party', …)` (it can run a whole on-chain party create inside the marker→ptb-built span),
+    // so the needle is the CALL, never the assignment line that happened to hold it.
+    const prepare_at = world_spawns_source.indexOf('use_party.getState().ensure_owned_party()')
     const refuse_at = world_spawns_source.indexOf('if (!owned_party_ready)', prepare_at)
     const party_at = world_spawns_source.indexOf(
       'const party_id = is_public ? null : use_party.getState().party_id',
@@ -176,9 +177,7 @@ describe('world spawn mob-card layer route gate', () => {
     // is_public gating lives in world_fight_party_public.test.js (enter_world_fight). A PUBLIC fight discards the
     // party id at the party_id line, so pre-forming an owned party here is a wasted on-chain create tx.
     const guard_at = world_spawns_source.indexOf('if (!request.payload.is_public)')
-    const prepare_at = world_spawns_source.indexOf(
-      'const owned_party_ready = await use_party.getState().ensure_owned_party()'
-    )
+    const prepare_at = world_spawns_source.indexOf('use_party.getState().ensure_owned_party()')
     expect(guard_at).toBeGreaterThan(-1) // the guard exists
     expect(guard_at).toBeLessThan(prepare_at) // …and precedes (wraps) the ensure_owned_party call
   })
