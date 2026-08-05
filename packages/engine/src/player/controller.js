@@ -399,10 +399,14 @@ export function step_controller(state, input, env, dt) {
  * Chooses the animation state from the resolved body. Priority mirrors player-model.js: swimming →
  * SWIM; airborne rising → JUMP(_RUN); airborne falling far → FALL; grounded moving → RUN/WALK; else
  * IDLE. Exposed for direct unit-testing of the state machine.
+ * `ground_gait` lets a caller whose gait is already authored (for example a walking follower moving at
+ * catch-up speed) keep the SAME movement threshold/state derivation without being reclassified as a runner.
+ * The default remains speed-derived for the character controller.
  * @param {ControllerState} state
+ * @param {{ ground_gait?: 'auto' | 'walk' | 'run' }} [opts]
  * @returns {PlayerAnim}
  */
-export function classify_anim(state) {
+export function classify_anim(state, { ground_gait = 'auto' } = {}) {
   const moving = state.speed > 0.5
   if (state.in_water) return 'SWIM'
   if (!state.on_ground) {
@@ -414,7 +418,11 @@ export function classify_anim(state) {
     if (state.velocity[1] < -2 && state._fall_peak_y - state.position[1] > FALL_ANIM_THRESHOLD) return 'FALL'
     return moving ? 'JUMP_RUN' : 'JUMP' // brief apex/coast — hold the air pose rather than flicker
   }
-  if (moving) return state.speed > (WALK_SPEED + RUN_SPEED) / 2 ? 'RUN' : 'WALK'
+  if (moving) {
+    if (ground_gait === 'walk') return 'WALK'
+    if (ground_gait === 'run') return 'RUN'
+    return state.speed > (WALK_SPEED + RUN_SPEED) / 2 ? 'RUN' : 'WALK'
+  }
   return 'IDLE'
 }
 

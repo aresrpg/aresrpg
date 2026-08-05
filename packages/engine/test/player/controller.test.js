@@ -69,6 +69,14 @@ describe('classify_anim', () => {
     s.speed = 12
     expect(classify_anim(s)).toBe('RUN')
   })
+  it('an authored walking follower reuses the threshold but stays WALK at catch-up speed', () => {
+    const s = base()
+    s.on_ground = true
+    s.speed = 12
+    expect(classify_anim(s, { ground_gait: 'walk' })).toBe('WALK')
+    s.speed = 0
+    expect(classify_anim(s, { ground_gait: 'walk' })).toBe('IDLE')
+  })
   it('JUMP rising still vs JUMP_RUN rising while moving', () => {
     const s = base()
     s.on_ground = false

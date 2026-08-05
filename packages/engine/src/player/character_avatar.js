@@ -173,11 +173,13 @@ function find_bone(origin, name) {
  * @param {[string|number, string|number, string|number] | null} [opts.colors] [D193] the on-chain
  *   customization [color1, color2, color3]; applied once loaded (also settable via set_colors).
  * @param {boolean} [opts.cast_shadow] whether the avatar casts into the sun shadow map (default true).
- * @param {number | null} [opts.scale] explicit humanoid height override in world blocks. Fight players use
- *   BOARD_PLAYER_HEIGHT; factory-built mobs already carry their intrinsic scale and ignore this option.
+ * @param {number | null} [opts.scale] explicit height override in world blocks. Fight players use
+ *   BOARD_PLAYER_HEIGHT; factory-built mobs stay intrinsic when omitted, while a companion can deliberately
+ *   ask the same shared model/mixer wiring for a smaller presentation height.
  * @param {boolean} [opts.receive_shadow] player-body shadow receiving, default true. Mob callers use
  *   mob_model_factory, whose shared policy owns the mob shadow convention instead of this option.
- * @param {((url:string, opts?:{label?:string|null}) => Promise<{root:import('three').Object3D,
+ * @param {string | null} [opts.fallback_url] alternate model URL forwarded only to mob_model_factory.
+ * @param {((url:string, opts?:{label?:string|null,fallback_url?:string|null}) => Promise<{root:import('three').Object3D,
  *   clips:import('three').AnimationClip[], measured:{height:number,min_y:number}, dispose:()=>void}>) | null}
  *   [opts.mob_model_factory] board mobs inject the shared create_mob_model factory; players omit it and keep
  *   the character-only loader/recolour/hair path.
@@ -190,6 +192,7 @@ export function create_character_avatar({
   cast_shadow = true,
   scale = null,
   receive_shadow = true,
+  fallback_url = null,
   mob_model_factory = null,
 } = {}) {
   const root = new Group()
@@ -243,16 +246,19 @@ export function create_character_avatar({
     const model = mob_model?.root ?? gltf.scene
     // Board mobs arrive fully prepared by create_mob_model — the same cached clone/material factory the
     // overworld uses. Players alone take the character loader branch and prepare their humanoid body here.
-    // A factory mob already has intrinsic sizing and its fixed material/shadow policy. Character bodies still
-    // height-normalise here (explicit fight scale or CHARACTER_HEIGHT) before recolour/hair composition.
+    // A factory mob normally keeps intrinsic sizing and its fixed material/shadow policy. An explicitly scaled
+    // factory caller (the companion) and character bodies height-normalise here before their model is mounted.
+    const scale_factory_model = !!mob_model && scale != null && scale > 0
     const measured =
-      mob_model?.measured ??
-      prepare_mob_render(model, {
-        target_height: scale != null && scale > 0 ? scale : CHARACTER_HEIGHT,
-        cast_shadow,
-        receive_shadow,
-        label: glb_url,
-      })
+      mob_model && !scale_factory_model
+        ? mob_model.measured
+        : prepare_mob_render(model, {
+            target_height: scale != null && scale > 0 ? scale : CHARACTER_HEIGHT,
+            cast_shadow,
+            receive_shadow,
+            pixel_filter: !!mob_model,
+            label: glb_url,
+          })
     if (mob_model) dispose_loaded_model = mob_model.dispose
     // [C1 SLICED COMPILE] the player branch's first-of-GLB rig renders one epsilon-scaled warm frame
     // (engine warm queue) BEFORE mounting under `root` (already in the scene), so the avatar's first
@@ -395,9 +401,13 @@ export function create_character_avatar({
     }
   }
   const on_model_error = (/** @type {any} */ err) => console.warn('[character_avatar] GLB load failed:', glb_url, err)
-  if (mob_model_factory)
-    void mob_model_factory(glb_url, { label: glb_url }).then((model) => on_model_loaded(null, model), on_model_error)
-  else void load_glb_checked(glb_url).then(on_model_loaded, on_model_error)
+  if (mob_model_factory) {
+    const factory_opts = {
+      label: glb_url,
+      ...(fallback_url != null ? { fallback_url } : {}),
+    }
+    void mob_model_factory(glb_url, factory_opts).then((model) => on_model_loaded(null, model), on_model_error)
+  } else void load_glb_checked(glb_url).then(on_model_loaded, on_model_error)
 
   /**
    * Resolves a clip name for an anim state (exact-first, then substring) and crossfades to it.

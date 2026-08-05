@@ -22,7 +22,7 @@ import { make_block_env } from './block_solidity.js'
 import { eject_from_solid } from './collision.js'
 
 export { find_open_spawn, ground_surface_y, seat_surface_y, topmost_solid_id } from './spawn.js'
-export { CONTROLLER_CONSTANTS, avatar_feet_y } from './controller.js' // the ONE speed/physics + render-feet home
+export { CONTROLLER_CONSTANTS, avatar_feet_y, classify_anim } from './controller.js' // the ONE speed/physics + anim-state + render-feet home
 export { create_character_avatar, compose_pixels } from './character_avatar.js' // D193 — lit/grounded/recolored avatar (ONE home)
 // [one-mob-sdk 2026-07-13] the single mob-render home: DRACO loader + metalness gold-kill (D224/D242) + mob-only
 // pixel-art sampler/emissive-floor (S-82) + the cached clone factory + the height-normalise policy every mob path

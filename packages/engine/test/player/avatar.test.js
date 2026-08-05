@@ -56,6 +56,37 @@ async function load_fake_avatar(specs) {
   return { avatar, model }
 }
 
+describe.skipIf(!SENSHI_MALE_GLB_AVAILABLE)('character avatar mob factory options', () => {
+  test('forwards the catalog fallback URL to the injected model factory', async () => {
+    const calls = []
+    const avatar = create_character_avatar({
+      glb_url: 'https://assets.test/models/mobs/pet.glb',
+      fallback_url: 'https://assets.test/models/mobs/fallback.glb',
+      mob_model_factory: async (url, opts) => {
+        calls.push({ url, opts })
+        return {
+          root: new Group(),
+          clips: [],
+          measured: { height: 1, min_y: 0 },
+          dispose() {},
+        }
+      },
+    })
+    await Bun.sleep(0)
+
+    expect(calls).toEqual([
+      {
+        url: 'https://assets.test/models/mobs/pet.glb',
+        opts: {
+          label: 'https://assets.test/models/mobs/pet.glb',
+          fallback_url: 'https://assets.test/models/mobs/fallback.glb',
+        },
+      },
+    ])
+    avatar.dispose()
+  })
+})
+
 describe.skipIf(!SENSHI_MALE_GLB_AVAILABLE)('character avatar swim clip selection', () => {
   test('prefers a dedicated SWIM clip when the rig has one', async () => {
     const { avatar, model } = await load_fake_avatar([
