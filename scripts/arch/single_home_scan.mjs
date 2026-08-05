@@ -69,6 +69,9 @@ export const read_sources = (root, scan_dirs) =>
     .map((file) => ({ path: file, text: fs.readFileSync(path.join(root, file), 'utf8') }))
 
 const line_of = (text, offset) => text.slice(0, offset).split('\n').length
+// The import/re-export patterns open on the delimiter BEFORE the keyword, which is usually the
+// previous line's newline — report the keyword's own line, not the one above it.
+const keyword_at = (match) => match.index + Math.max(match[0].search(/\S/), 0)
 
 // Every binding in one file: name → first line. Exported bindings are tagged; a name that is both
 // exported and re-bound locally keeps the exported tag (the published home wins).
@@ -282,7 +285,7 @@ export const fence_findings = (fenced, sources, workspace) => {
               lane: 'registry-surface',
               label: `${fence.symbol} (${fence.fact})`,
               path: file,
-              line: line_of(text, match.index),
+              line: line_of(text, keyword_at(match)),
               detail: `star re-export of ${fence.path} — a second importable surface; canonical home is ${fence.home}`,
             })
         continue
@@ -294,7 +297,7 @@ export const fence_findings = (fenced, sources, workspace) => {
           lane: 'registry-surface',
           label: `${fence.symbol} (${fence.fact})`,
           path: file,
-          line: line_of(text, match.index),
+          line: line_of(text, keyword_at(match)),
           detail:
             imported === local
               ? `re-exported from ${specifier} — a second importable surface; canonical home is ${fence.home}`
@@ -313,7 +316,7 @@ export const fence_findings = (fenced, sources, workspace) => {
           lane: 'registry-importer',
           label: `${fence.symbol} (${fence.fact})`,
           path: file,
-          line: line_of(text, match.index),
+          line: line_of(text, keyword_at(match)),
           detail: `bound from ${specifier} (${target ?? 'unresolved'}) — the one home is ${fence.home}`,
         })
       }
