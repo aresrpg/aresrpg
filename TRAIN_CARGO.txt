@@ -1,5 +1,4 @@
-690c69972 → Fixes #2247 — fix(sim): make linear targeting orthogonal-only
-287b32d41 → Fixes #2248 — fix(fight): derive the trap ledger through the placed-zone home
-2438cbe5d → Fixes #2246 — fix(sim): give cast-target legality one home
-f2a57f46b → part of #2243 — refactor(send): one exact-SUI formatter, in the money home
-648e2a973 → Fixes #2243 — feat(send): MAX empties the wallet to exact zero
+5dfdaf004 → Fixes #2171 — fix(frontend): invalidate the peer cache on a presence beat, not render it
+47c85995d → Refs #2069 — refactor(hud): snake-case spell row class binding
+2082178f5 → Refs #2069 — refactor(hud): encapsulate module-lifetime state
+9f29edb4a → Fixes #2233 — chore(gates): tighten the sim-constants baseline to the measured 18
