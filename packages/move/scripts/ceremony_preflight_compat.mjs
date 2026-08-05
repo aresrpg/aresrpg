@@ -102,6 +102,11 @@ const MAX_OBJECT_SIZE = 102_400
 // reviewed commit" clause above exists for: the maintainer approved the spend on 2026-08-05, 2400 bytes of
 // chain ceiling remain, and the net deployed delta against the last ceremony is +653 once the landed −43
 // (8d78648a5, search_zone counting resource cells) is counted.
+// 2026-08-05 (#2184): +10 bytes on top of the raise above, ONE constant-pool entry. `config::MULT_MAX`
+// dropped from 100_000 (1000×) to 400 (4.00× — the §17.20 economy band), bounding what a compromised or
+// fat-fingered AdminCap can do to the xp/loot economy. The old value cost ZERO bytes because it DEDUPED
+// against `AGING_CAP_MAX = 100_000`; 400 is unique in this module, so it needs its own 8-byte u64 entry
+// plus 2 bytes of framing. Ten bytes for a 250× smaller admin blast radius on the money path.
 const SIZE_BUDGETS = { aresrpg: 100_000 }
 
 // ── The republish window ────────────────────────────────────────────────────────────────────────
