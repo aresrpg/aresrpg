@@ -426,9 +426,18 @@ export function publish_room_position(character_id, x, y, h = 0, yw = 0) {
   pos_action?.send({ id: character_id, x, y, h, yw }).catch(() => {})
 }
 
-/** Broadcast a chat line to every peer in the lobby room. */
+/**
+ * Broadcast a chat line to every peer in the lobby room. The verdict flows back as DATA (#1815): a line the
+ * transport never carried — no room, or a send the data channel rejected — must never be echoed as delivered,
+ * so the composition edge learns the truth instead of a swallowed `.catch(() => {})`. Never throws.
+ * @returns {Promise<boolean>} true only when a live transport accepted the line.
+ */
 export function publish_room_chat(character_id, name, message, channel, target = '') {
-  chat_action?.send({ id: character_id, name, message, channel, target }).catch(() => {})
+  if (!chat_action) return Promise.resolve(false)
+  return chat_action.send({ id: character_id, name, message, channel, target }).then(
+    () => true,
+    () => false
+  )
 }
 
 /**
@@ -440,10 +449,16 @@ export function set_room_party(party_id) {
   party_room_id = party_id ?? null
 }
 
-/** Broadcast a party-scoped line over the shared direct data channel — no-op while solo. */
+/** Broadcast a party-scoped line over the shared direct data channel. Solo (no party scope) is a REFUSAL, not a
+ *  silent no-op — same data verdict as `publish_room_chat`. @returns {Promise<boolean>} */
 export function publish_room_party_chat(character_id, name, message, channel, target = '') {
-  if (!party_room_id) return
-  party_chat_action?.send({ party_id: party_room_id, id: character_id, name, message, channel, target }).catch(() => {})
+  if (!party_room_id || !party_chat_action) return Promise.resolve(false)
+  return party_chat_action
+    .send({ party_id: party_room_id, id: character_id, name, message, channel, target })
+    .then(
+      () => true,
+      () => false
+    )
 }
 
 /**

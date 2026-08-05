@@ -1856,6 +1856,9 @@
     "step_counter": "はじめに · {{current}}/{{total}}"
   },
   "world_chat": {
+    "not_sent": "メッセージを送信できませんでした",
+    "not_sent_no_link": "ワールドチャンネルに接続していません — この発言は誰にも届いていません。",
+    "not_sent_no_party": "パーティーに所属していません — この発言は誰にも届いていません。",
     "tab_general": "全般",
     "tab_commerce": "商取引",
     "tab_group": "パーティー",

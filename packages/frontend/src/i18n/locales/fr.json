@@ -1856,6 +1856,9 @@
     "step_counter": "Prise en main · {{current}}/{{total}}"
   },
   "world_chat": {
+    "not_sent": "Message non envoyé",
+    "not_sent_no_link": "Tu n’es pas connecté au canal du monde — personne n’a reçu ce message.",
+    "not_sent_no_party": "Tu n’es pas dans un groupe — personne n’a reçu ce message.",
     "tab_general": "Général",
     "tab_commerce": "Commerce",
     "tab_group": "Groupe",

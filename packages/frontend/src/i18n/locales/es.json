@@ -1856,6 +1856,9 @@
     "step_counter": "Primeros pasos · {{current}}/{{total}}"
   },
   "world_chat": {
+    "not_sent": "Mensaje no enviado",
+    "not_sent_no_link": "No estás conectado al canal del mundo — nadie recibió ese mensaje.",
+    "not_sent_no_party": "No estás en un grupo — nadie recibió ese mensaje.",
     "tab_general": "General",
     "tab_commerce": "Comercio",
     "tab_group": "Grupo",

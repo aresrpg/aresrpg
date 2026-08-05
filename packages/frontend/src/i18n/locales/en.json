@@ -1856,6 +1856,9 @@
     "step_counter": "Getting started · {{current}}/{{total}}"
   },
   "world_chat": {
+    "not_sent": "Message not sent",
+    "not_sent_no_link": "You are not connected to the world channel — nobody received that line.",
+    "not_sent_no_party": "You are not in a party — nobody received that line.",
     "tab_general": "General",
     "tab_commerce": "Commerce",
     "tab_group": "Party",

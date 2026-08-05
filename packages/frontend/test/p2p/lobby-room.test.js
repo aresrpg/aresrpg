@@ -410,3 +410,33 @@ describe('sad paths — an outage is stated, never silently idled', () => {
     expect(state().link_status).toBe('connected')
   })
 })
+
+// #1815 — THE SEND'S OWN VERDICT. A line the transport never carried used to vanish into `.catch(() => {})`
+// while the composition edge echoed it as delivered, so the sender read their own words in an empty room. The
+// publishers now answer with DATA (never a throw), and chat_send.js turns a `false` into honest copy.
+describe('#1815 — a send that carried nobody answers false, never silence', () => {
+  it('refuses when there is no room at all — the line reached nobody and says so', async () => {
+    leave_room() // the beforeEach joined; tear it down so no action exists to carry the line
+    expect(await publish_room_chat(ME, 'Alice', 'anyone there?', 'CHAT_GENERAL')).toBe(false)
+    expect(sent('chat')).toHaveLength(0)
+  })
+
+  it('a joined room carries the line and answers true', async () => {
+    expect(await publish_room_chat(ME, 'Alice', 'hello world', 'CHAT_GENERAL')).toBe(true)
+    expect(sent('chat')).toHaveLength(1)
+    expect(sent('chat')[0].payload).toMatchObject({ id: ME, message: 'hello world' })
+  })
+
+  it('a PARTY line sent while solo is a refusal, not a silent no-op', async () => {
+    set_room_party(null)
+    expect(await publish_room_party_chat(ME, 'Alice', 'regroup', 'CHAT_GROUP')).toBe(false)
+    expect(sent('pchat')).toHaveLength(0)
+  })
+
+  it('a party line inside a party carries and answers true', async () => {
+    set_room_party(`0x${'d'.repeat(64)}`)
+    expect(await publish_room_party_chat(ME, 'Alice', 'regroup', 'CHAT_GROUP')).toBe(true)
+    expect(sent('pchat')).toHaveLength(1)
+    set_room_party(null)
+  })
+})
