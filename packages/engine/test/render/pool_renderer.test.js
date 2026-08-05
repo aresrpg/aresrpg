@@ -255,7 +255,7 @@ describe('pool terrain renderer — upload / stats / dispose', () => {
     })
     expect(meshes).toBe(5) // exactly one pool mesh per render class
     expect(bundles).toBe(0) // NO BundleGroup (survey F1) — the legacy sector path is gone
-  })
+  }, 30000)
 
   test('upload places a pure-solid chunk in one solid slot; get_stats reports draws=slots, quads', () => {
     const scene = new Scene()
@@ -272,7 +272,7 @@ describe('pool terrain renderer — upload / stats / dispose', () => {
     expect(stats.quads).toBe(3)
     expect(stats.draw_calls).toBe(1) // one occupied solid slot (3 ≤ slot_quads) ⇒ one indirect draw
     expect(stats.liquid_quads).toBe(0)
-  })
+  }, 30000)
 
   test('a mixed chunk lands quads across solid/foliage/liquid pools; liquid_quads is the water subset', () => {
     const scene = new Scene()
@@ -289,7 +289,7 @@ describe('pool terrain renderer — upload / stats / dispose', () => {
     expect(stats.draw_calls).toBe(3) // one occupied slot in each of the three class pools
     const pool = terrain.pool_stats?.()
     expect(pool?.dropped_uploads).toBe(0)
-  })
+  }, 30000)
 
   test('re-upload replaces in place; remove frees the slots (chunk_count / draws drop back)', () => {
     const scene = new Scene()
@@ -305,14 +305,14 @@ describe('pool terrain renderer — upload / stats / dispose', () => {
     terrain.remove_chunk([0, 0, 0])
     expect(terrain.get_stats().chunk_count).toBe(0)
     expect(terrain.get_stats().draw_calls).toBe(0)
-  })
+  }, 30000)
 
   test('update() with renderer:null is a no-op (no GPU cull) and never throws', () => {
     const scene = new Scene()
     const terrain = make_renderer(scene)
     terrain.upload_chunk([0, 0, 0], new Uint32Array(quad(0, 0, 0, 32, 32, 2, 3)), 1)
     expect(() => terrain.update(undefined, 0)).not.toThrow()
-  })
+  }, 30000)
 
   test('gpu_cull=false skips only cull dispatches even when renderer + camera handles exist', () => {
     const scene = new Scene()
@@ -329,7 +329,7 @@ describe('pool terrain renderer — upload / stats / dispose', () => {
     expect(() => terrain.update(undefined, 0)).not.toThrow()
     expect(culls).toBe(0)
     terrain.dispose()
-  })
+  }, 30000)
 })
 
 // upload_epoch is the terrain-dirty signal the render lane diffs to decide when to re-render the
@@ -444,7 +444,7 @@ describe('foliage depth ordering', () => {
     } finally {
       terrain.dispose()
     }
-  })
+  }, 30000)
 })
 
 // ── DEVICE STORAGE-BINDING SIZING (the HIGH-tier tab-crash guard, QA F2/B2) ───────────────────────

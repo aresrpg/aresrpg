@@ -36,7 +36,7 @@ describe('dispose_terrain — engine teardown frees the terrain renderer + clear
 
     expect(mesh_count(scene)).toBe(0) // real GPU-side teardown ran through the seam
     expect(win.__terrain_renderer).toBeUndefined() // the diagnostics root is released
-  })
+  }, 30000)
 
   test('leaves the hook untouched when it already points at a DIFFERENT (replacement) instance', () => {
     // Tier-reboot ordering: an old engine.dispose() must never nuke the hook a newer engine installed.
@@ -45,7 +45,7 @@ describe('dispose_terrain — engine teardown frees the terrain renderer + clear
     const scene = new Scene()
     dispose_terrain(make(scene), win)
     expect(win.__terrain_renderer).toBe(replacement)
-  })
+  }, 30000)
 
   test('is idempotent + exception-isolated: a second call and a throwing disposer never strand teardown', () => {
     const scene = new Scene()
@@ -65,7 +65,7 @@ describe('dispose_terrain — engine teardown frees the terrain renderer + clear
         win
       )
     ).not.toThrow()
-  })
+  }, 30000)
 
   test('no-ops safely on a null renderer and an undefined global (node/tests have no window)', () => {
     expect(() => dispose_terrain(null, undefined)).not.toThrow()

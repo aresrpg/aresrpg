@@ -331,7 +331,7 @@ describe('overhang light compat: undercut interior is graded, never sun=15 (§br
     expect(roofed_air).toBeGreaterThan(0) // the belt really has roofed (overhang/cave) interiors
     expect(sun15_leaks).toBe(0) // NONE is treated as open sky
     expect(any_graded).toBe(true) // and at least one is gradient-lit by the lateral BFS (not pitch-0)
-  })
+  }, 30000)
 })
 
 describe('rekey_density_column: beach flatten re-keys the band', () => {

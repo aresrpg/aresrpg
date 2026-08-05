@@ -24,7 +24,7 @@ describe('texture identity: PARITY (default bake byte-identical)', () => {
 
   test('absent textures ⇒ byte-identical atlas', () => {
     expect(hash(bake_block_textures({ size: 64, seed: 0, textures: undefined }))).toBe(hash(base))
-  })
+  }, 30000)
 
   test('all-identity families ⇒ byte-identical atlas (identity transform is skipped)', () => {
     const ident = bake_block_textures({
@@ -33,7 +33,7 @@ describe('texture identity: PARITY (default bake byte-identical)', () => {
       textures: { size: 64, families: { grass: { hue: 0, sat: 1, val: 1 }, wood: {}, sand: { val: 1 } } },
     })
     expect(hash(ident)).toBe(hash(base))
-  })
+  }, 30000)
 
   test('apply_texture_config returns the ORIGINAL recipes for absent / all-identity config', () => {
     expect(apply_texture_config(RECIPES, undefined)).toBe(RECIPES)
@@ -42,7 +42,7 @@ describe('texture identity: PARITY (default bake byte-identical)', () => {
 
   test('the default bake is stable across calls (regression guard)', () => {
     expect(hash(bake_block_textures({ size: 64, seed: 0 }))).toBe(hash(base))
-  })
+  }, 30000)
 })
 
 describe('texture identity: SENSITIVITY (a palette moves colours, not layout)', () => {

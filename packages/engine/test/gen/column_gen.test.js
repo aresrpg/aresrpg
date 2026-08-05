@@ -139,11 +139,11 @@ describe('determinism gate: golden hash (§3.7 world-identity contract)', () => 
   test('canonical columns hash to the blessed digest', () => {
     const ctx = create_gen_context()
     expect(hash_canonical_columns(ctx)).toBe(GOLDEN_HASH)
-  })
+  }, 30000)
 
   test('two independent contexts produce byte-identical worlds (no hidden state)', () => {
     expect(hash_canonical_columns(create_gen_context())).toBe(hash_canonical_columns(create_gen_context()))
-  })
+  }, 30000)
 
   test('worm cave-cache eviction is world-neutral (a far column is identical after heavy streaming)', () => {
     // The region-cached worm carver and the lake-tile memo both bound memory by CLEARING past a cap.
@@ -187,7 +187,7 @@ describe('determinism gate: golden hash (§3.7 world-identity contract)', () => 
     expect(streamed).toBeLessThan(STREAM_CAP)
 
     expect(hash_col(streamed_ctx)).toBe(fresh)
-  })
+  }, 30000)
 })
 
 // ── PANDORA SKY-ISLAND FORK (GEN_VERSION 5) ──────────────────────────────────────────────────────

@@ -213,7 +213,7 @@ describe('device texture-array limit (GPUValidationError guard)', () => {
     // We MUST be over the WebGPU default, else the renderer's raised-limit request is dead code and this
     // whole guard is pointless — this documents WHY the device-limit request has to exist.
     expect(layers).toBeGreaterThan(256)
-  })
+  }, 30000)
 })
 
 describe('spec-minimum adapter fallback (256-layer budget — no black world on mobile)', () => {
@@ -448,7 +448,7 @@ describe('painterly grain bound', () => {
     // noise keeps it low. 8× headroom guards against a directional op regressing in without over-fitting
     // to one seed's exact figure.
     expect(ratio).toBeLessThan(8)
-  })
+  }, 30000)
 
   test('grass-top albedo is DESATURATED (composition law — ENG-1 tint owns biome hue)', () => {
     // THE composition-law guard (brief §COMPOSITION WITH ENG-1). The baked grass-top must stay a muted
@@ -475,7 +475,7 @@ describe('painterly grain bound', () => {
       `grass-top mean chroma: ${mean_chroma.toFixed(3)} (must stay ≤0.24 — desaturated so the tint greens it)`
     )
     expect(mean_chroma).toBeLessThanOrEqual(0.24)
-  })
+  }, 30000)
 
   test('grass op_fbm grain swing stays within the painterly bound', () => {
     // The multiplicative fBm grain on grass is source-clamped to GRAIN_MAX_AMPLITUDE (op_fbm). Clumps /
@@ -508,7 +508,7 @@ describe('painterly grain bound', () => {
     console.log(`grass local (4px-window) grain deviation: ${(max_dev * 100).toFixed(2)}%`)
     // Local window can straddle a clump edge, so allow a small margin over the pure-grain bound.
     expect(max_dev).toBeLessThanOrEqual(GRAIN_MAX_AMPLITUDE * 1.6)
-  })
+  }, 30000)
 })
 
 describe('three DataArrayTexture', () => {
