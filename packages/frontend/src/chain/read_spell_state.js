@@ -36,21 +36,22 @@ const id_bytes = (id) =>
 export async function read_spell_state(character_id, spell_object_ids) {
   const sdk = await get_sdk()
   const pkg = aresrpg_id(DEMO_NETWORK, 'PACKAGE_ID')
-  const [spent, ...levels] = await Promise.all([
-    sdk.read_namespaced_field({
+  // ONE round trip for the whole kit (#2155). Every field id below is derived LOCALLY from (character, key), so
+  // the full set is known before the first byte goes out — and this read sits on the ENGAGE COMPOSE's hot path,
+  // where reading it one spell at a time was 21 of the compose's 26 chain round trips (profiled 2026-08-05).
+  const [spent, ...levels] = await sdk.read_namespaced_fields([
+    {
       object_id: character_id,
       namespace: ITEMS_NS.CHARACTER_WORLD,
       key_type: `${pkg}::character_link::SpellPointsSpentKey`,
       // {} key → the SDK default (EMPTY_STRUCT_KEY: the one-byte empty-struct BCS — proven live on 0x3fa7…5344)
-    }),
-    ...spell_object_ids.map((spell) =>
-      sdk.read_namespaced_field({
-        object_id: character_id,
-        namespace: ITEMS_NS.CHARACTER_WORLD,
-        key_type: `${pkg}::character_link::SpellLevelKey`,
-        key_bytes: id_bytes(spell),
-      })
-    ),
+    },
+    ...spell_object_ids.map((spell) => ({
+      object_id: character_id,
+      namespace: ITEMS_NS.CHARACTER_WORLD,
+      key_type: `${pkg}::character_link::SpellLevelKey`,
+      key_bytes: id_bytes(spell),
+    })),
   ])
   return {
     spent: Number(spent ?? 0), // u64 rides gRPC json as a string; spent points fit a JS number

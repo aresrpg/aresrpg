@@ -152,6 +152,7 @@ import {
   get_item_template,
   get_rolled_stats,
   read_namespaced_field,
+  read_namespaced_fields,
 } from './sui/read/items.js'
 
 // The first-party DF namespace ids (mirrors extension.move) — re-exported so read_namespaced_field callers
@@ -357,6 +358,8 @@ export async function SDK({ network = 'testnet' } = {}) {
     get_item_template: get_item_template(context),
     get_rolled_stats: get_rolled_stats(context),
     read_namespaced_field: read_namespaced_field(context),
+    // #2155 — N namespaced fields in ONE round trip (their ids are derived locally; N singular reads were N calls).
+    read_namespaced_fields: read_namespaced_fields(context),
 
     // S-57 — deployed S-46 FIGHT lifecycle (CORE create/join/settle-loot doors + ENGINE turn/action/settle doors).
     create_fight_ptb: create_fight_ptb(context),
