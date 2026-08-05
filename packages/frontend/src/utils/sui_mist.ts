@@ -136,6 +136,18 @@ export function assert_fee_math_holds(net_mist: bigint): void {
 
 // ═══ Formatters (display only) ═══
 
+// format_sui_exact(mist) — MIST → SUI string with EVERY significant digit, trailing zeros trimmed, nothing
+// rounded or floored away. For figures a floor would falsify: a dry-run gas estimate (which the 2dp formatter
+// shows as a flat "0.00"), an item royalty, and the MAX fill (flooring there strands the player's last MIST
+// and makes the wallet un-emptiable). BigInt-only — the previous home in send_modal_shell.tsx cast through
+// `Number(mist)/1e9`, which goes exponential ("1e-9") on a near-empty wallet and loses digits past 2^53 MIST.
+export function format_sui_exact(mist: bigint): string {
+  if (typeof mist !== 'bigint') throw new Error('INVALID_FORMAT')
+  const whole = mist / MIST_PER_SUI
+  const frac = (mist % MIST_PER_SUI).toString().padStart(9, '0').replace(/0+$/, '')
+  return frac ? `${whole}.${frac}` : `${whole}`
+}
+
 // format_mist_to_sui(mist, decimals?) — MIST → SUI string, ALWAYS FLOORS.
 // Defaults to 9 decimals (full MIST precision). For 2 decimals, precision below
 // 0.01 SUI is truncated. Never overstates the SUI amount shown to the buyer.

@@ -18,14 +18,14 @@ import {
   AlertTriangle,
 } from 'lucide-react'
 
-import { format_mist_to_sui } from '../utils/sui_mist'
+import { format_mist_to_sui, format_sui_exact } from '../utils/sui_mist'
 import { truncate_address } from '../utils/address'
 import { is_suins_name } from '../utils/suins'
 import { use_item_send, type SendItem, type ItemSendState } from '../stores/item_send'
 
 import { ItemImage } from './items'
 import { validate_item_send_dialog } from './item_send_validation'
-import { SendModalShell as Shell, DigestLink, format_sui_exact } from './send_modal_shell'
+import { SendModalShell as Shell, DigestLink } from './send_modal_shell'
 
 const address_full_re = /^0x[a-f0-9]{64}$/i
 
