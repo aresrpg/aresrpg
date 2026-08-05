@@ -142,7 +142,10 @@ fi
 trap 'rm -f "$CONTROL_REGISTRY"' EXIT
 cp docs/REGISTRY.md "$CONTROL_REGISTRY" || exit 1
 printf '| Fence positive control | `%s` — the gate fixture'"'"'s exported constant. |\n' "$CONTROL_ANCHOR" >>"$CONTROL_REGISTRY"
-if node "$VERDICT" --root . --registry docs/REGISTRY.md --fences | grep -q '^fence · K_TEST ·'; then
+# Both derivations are CAPTURED before they are matched: a `node ... | grep -q` would read a crashed
+# derivation as "pattern absent" and let a dead parser through the guard it is supposed to fail.
+tree_fences="$(node "$VERDICT" --root . --registry docs/REGISTRY.md --fences)" || exit 1
+if echo "$tree_fences" | grep -q '^fence · K_TEST ·'; then
   echo "  FAIL: the real registry already fences K_TEST — the fence control asserts nothing"
   exit 1
 fi
