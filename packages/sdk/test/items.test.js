@@ -38,7 +38,7 @@ const CREATION =
 const PACKAGE =
   '0x2222222222222222222222222222222222222222222222222222222222222222'
 
-describe('items_deployment — the loud unset gate (shim over the ONE merged home)', () => {
+describe('items_deployment — the loud unset gate (the last deployment shim: a public package export)', () => {
   test('testnet is STAMPED (post-ceremony); mainnet stays DARK until its ceremony', () => {
     expect(items_deployment_ready('testnet')).toBe(true)
     expect(items_deployment_ready('mainnet')).toBe(false)

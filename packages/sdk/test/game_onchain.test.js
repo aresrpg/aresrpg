@@ -3,9 +3,9 @@
 import { describe, test, expect } from 'bun:test'
 
 import {
-  game_deployment,
-  game_deployment_ready,
-} from '../src/deployment/game.js'
+  aresrpg_deployment,
+  aresrpg_deployment_ready,
+} from '../src/deployment/aresrpg.js'
 import {
   join_world_ptb,
   search_zone_ptb,
@@ -21,23 +21,23 @@ import {
   find_call,
 } from './_onchain_fixtures.js'
 
-describe('game_deployment — the loud unset gate (shim over the ONE merged home)', () => {
+describe('aresrpg_deployment — the loud unset gate (the ONE merged id home)', () => {
   test('testnet is STAMPED (post-ceremony); mainnet stays DARK until its ceremony', () => {
-    expect(game_deployment_ready('testnet')).toBe(true)
-    expect(game_deployment_ready('mainnet')).toBe(false)
-    expect(() => game_deployment('testnet')).not.toThrow()
-    expect(() => game_deployment('mainnet')).toThrow(/not deployed/)
-    expect(() => game_deployment('mainnet')).toThrow(/PACKAGE_ID/)
+    expect(aresrpg_deployment_ready('testnet')).toBe(true)
+    expect(aresrpg_deployment_ready('mainnet')).toBe(false)
+    expect(() => aresrpg_deployment('testnet')).not.toThrow()
+    expect(() => aresrpg_deployment('mainnet')).toThrow(/not deployed/)
+    expect(() => aresrpg_deployment('mainnet')).toThrow(/PACKAGE_ID/)
   })
   test('throws on an unknown network with the distinct message', () => {
-    expect(() => game_deployment('devnet')).toThrow(/no aresrpg ids/)
+    expect(() => aresrpg_deployment('devnet')).toThrow(/no aresrpg ids/)
   })
   test('resolves when full ids are injected (the override seam)', () => {
-    expect(game_deployment('testnet', IDS.aresrpg).GAME_CONFIG).toBe(
+    expect(aresrpg_deployment('testnet', IDS.aresrpg).GAME_CONFIG).toBe(
       IDS.aresrpg.GAME_CONFIG,
     )
     // a partial override over the EMPTY mainnet map still refuses (missing keys listed)
-    expect(() => game_deployment('mainnet', { PACKAGE_ID: id('x0') })).toThrow(
+    expect(() => aresrpg_deployment('mainnet', { PACKAGE_ID: id('x0') })).toThrow(
       /VERSION/,
     )
   })

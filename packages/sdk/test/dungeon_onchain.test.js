@@ -3,9 +3,9 @@
 import { describe, test, expect } from 'bun:test'
 
 import {
-  dungeon_deployment,
-  dungeon_deployment_ready,
-} from '../src/deployment/dungeon.js'
+  aresrpg_deployment,
+  aresrpg_deployment_ready,
+} from '../src/deployment/aresrpg.js'
 import { abandon_ptb } from '../src/sui/write/dungeon_run.js'
 import { get_run_pass } from '../src/sui/read/dungeon.js'
 
@@ -17,17 +17,17 @@ import {
   find_call,
 } from './_onchain_fixtures.js'
 
-describe('dungeon_deployment — the loud unset gate (shim over the ONE merged home)', () => {
+describe('aresrpg_deployment — the loud unset gate (the ONE merged id home)', () => {
   test('testnet is STAMPED (post-ceremony); mainnet stays DARK until its ceremony', () => {
-    expect(dungeon_deployment_ready('testnet')).toBe(true)
-    expect(dungeon_deployment_ready('mainnet')).toBe(false)
-    expect(() => dungeon_deployment('testnet')).not.toThrow()
-    expect(() => dungeon_deployment('mainnet')).toThrow(/not deployed/)
-    expect(() => dungeon_deployment('mainnet')).toThrow(/PACKAGE_ID/)
+    expect(aresrpg_deployment_ready('testnet')).toBe(true)
+    expect(aresrpg_deployment_ready('mainnet')).toBe(false)
+    expect(() => aresrpg_deployment('testnet')).not.toThrow()
+    expect(() => aresrpg_deployment('mainnet')).toThrow(/not deployed/)
+    expect(() => aresrpg_deployment('mainnet')).toThrow(/PACKAGE_ID/)
   })
   test('unknown network throws the distinct message; the override seam resolves', () => {
-    expect(() => dungeon_deployment('devnet')).toThrow(/no aresrpg ids/)
-    expect(dungeon_deployment('testnet', IDS.aresrpg).VERSION).toBe(
+    expect(() => aresrpg_deployment('devnet')).toThrow(/no aresrpg ids/)
+    expect(aresrpg_deployment('testnet', IDS.aresrpg).VERSION).toBe(
       IDS.aresrpg.VERSION,
     )
   })

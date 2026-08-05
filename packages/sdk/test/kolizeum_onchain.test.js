@@ -3,9 +3,9 @@
 import { describe, test, expect } from 'bun:test'
 
 import {
-  kolizeum_deployment,
-  kolizeum_deployment_ready,
-} from '../src/deployment/kolizeum.js'
+  aresrpg_deployment,
+  aresrpg_deployment_ready,
+} from '../src/deployment/aresrpg.js'
 import {
   create_public_ptb,
   create_friends_only_ptb,
@@ -25,17 +25,17 @@ import {
   find_call,
 } from './_onchain_fixtures.js'
 
-describe('kolizeum_deployment — the loud unset gate (shim over the ONE merged home)', () => {
+describe('aresrpg_deployment — the loud unset gate (the ONE merged id home)', () => {
   test('testnet is STAMPED (post-ceremony); mainnet stays DARK until its ceremony', () => {
-    expect(kolizeum_deployment_ready('testnet')).toBe(true)
-    expect(kolizeum_deployment_ready('mainnet')).toBe(false)
-    expect(() => kolizeum_deployment('testnet')).not.toThrow()
-    expect(() => kolizeum_deployment('mainnet')).toThrow(/not deployed/)
-    expect(() => kolizeum_deployment('mainnet')).toThrow(/PACKAGE_ID/)
+    expect(aresrpg_deployment_ready('testnet')).toBe(true)
+    expect(aresrpg_deployment_ready('mainnet')).toBe(false)
+    expect(() => aresrpg_deployment('testnet')).not.toThrow()
+    expect(() => aresrpg_deployment('mainnet')).toThrow(/not deployed/)
+    expect(() => aresrpg_deployment('mainnet')).toThrow(/PACKAGE_ID/)
   })
   test('unknown network throws the distinct message; the override seam resolves', () => {
-    expect(() => kolizeum_deployment('devnet')).toThrow(/no aresrpg ids/)
-    expect(kolizeum_deployment('testnet', IDS.aresrpg).VERSION).toBe(
+    expect(() => aresrpg_deployment('devnet')).toThrow(/no aresrpg ids/)
+    expect(aresrpg_deployment('testnet', IDS.aresrpg).VERSION).toBe(
       IDS.aresrpg.VERSION,
     )
   })
