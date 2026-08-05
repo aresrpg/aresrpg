@@ -97,7 +97,12 @@ const MAX_OBJECT_SIZE = 102_400
 // (`::consumable_effect::${ceff.fn}`). A demoted door there is a whole-PTB abort at the next ceremony, so the
 // bytes are not optional. `seed_full_corpus_doors.test.mjs` is the class gate that stops the next census
 // missing the same shape.
-const SIZE_BUDGETS = { aresrpg: 99_304 }
+// 2026-08-05 (#2194): 99_304 → 100_000. +696 bytes for commitment format 4 — a zone claim proves ONE
+// group instead of re-deriving the whole commitment. This is the raise the "bumps this line in the same
+// reviewed commit" clause above exists for: the maintainer approved the spend on 2026-08-05, 2400 bytes of
+// chain ceiling remain, and the net deployed delta against the last ceremony is +653 once the landed −43
+// (8d78648a5, search_zone counting resource cells) is counted.
+const SIZE_BUDGETS = { aresrpg: 100_000 }
 
 // ── The republish window ────────────────────────────────────────────────────────────────────────
 // A REPUBLISH is not an upgrade: it mints a fresh package lineage, so the compatibility verifier's
