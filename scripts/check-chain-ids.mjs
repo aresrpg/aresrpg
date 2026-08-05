@@ -22,9 +22,10 @@ const default_root = path.resolve(path.dirname(script_path), '..')
 const id_re = /0x[0-9a-f]{64}/g
 const ignored_segments = new Set(['.git', '.agents', '.codex', 'build', 'dist', 'node_modules', 'target'])
 // The #1728 audit observed 269 baseline occurrences. origin/edge commit de3ca08c then deliberately
-// retired one worn_render_path.test.js mock id; pin its reviewed 268-row successor so a matcher
-// that goes blind cannot report the resulting count drop as an improvement.
-const EXPECTED_BASELINE_ROWS = 268
+// retired one worn_render_path.test.js mock id (268); #2187 deleted the stale packages/move root
+// Move.toml, taking its 2 baselined ids with the file. Pin the reviewed successor so a matcher that
+// goes blind cannot report a count drop as an improvement.
+const EXPECTED_BASELINE_ROWS = 266
 
 // The V2 fight-replay corpus (commit d4ebe84c) — real historical chain traces converted by
 // scripts/convert_fight_traces.mjs into provenance-tagged capsules; every id inside is a
@@ -65,7 +66,6 @@ packages/frontend/src/rpc/fixtures/status.json
 packages/frontend/src/rpc/fixtures/taux.json
 packages/frontend/src/rpc/fixtures/zone_single.json
 packages/frontend/src/rpc/fixtures/zones.json
-packages/move/Published.toml
 packages/move/aresrpg/Published.toml
 packages/move/dungeon/Published.toml
 packages/move/engine/Published.toml
@@ -197,7 +197,6 @@ packages/frontend/src/game/worn_render_path.test.js	POpkB6Z7QwedxOoFayWY-D=1 b16
 packages/frontend/src/pages/encyclopedia/recipes.test.ts	3Hl0yoqwBSiOH9myknmaJo=2 O4rUo_ZptFE_7iZqB9Hu4B=1 XabwXqAfLUIMmxRqwNz2xj=1 ZXTYppw8UYTuvWcz-l_aBo=1
 packages/frontend/src/world-shell/equip_actions.test.js	l8sL2o7urtAf40JFeWysVx=1 Y3wZ61S6zw6V2qe_fBgR7N=1 hAc9Ks9Z7oNCEsDzX2nU_i=1
 packages/frontend/src/world-shell/pending_outcomes.test.js	N5aFzifDFbJx31Hkto3BCF=1 VQQqSbFb9D_xPE9jAm5yOp=1 XtSGlQVulX97xUrdkTGuAe=1 ekgxD8TdUMvdkff1DobEfj=1
-packages/move/Move.toml	7zQ9MEWAI2Yn_7h_zoZr3-=1 dvy6XX6oy7UlkvdwIKEBsX=1
 packages/move/aresrpg/Move.toml	gfRzOLD-_cQDZ7FzpF66U1=1
 packages/move/gifting/tests/creation_tests.move	7hMiZlw1g89bMb7M6s_Vnw=1
 packages/move/scripts/apply_shop_payload.mjs	NTiYnCcM5_x1Ea1shtRLDz=1 T-tpGcboIIMyQw9yz9Ku8I=1 yYsD62o35GA6lPkGFHEQxM=1

@@ -1641,7 +1641,7 @@ else
 fi
 
 # ── Move framework-rev gate (#1284) ─────────────────────────────────────────────────────────────
-# The rule packages/move/Move.toml carried as PROSE since the FeatureNotYetSupported incident: ONE
+# The rule packages/move/aresrpg/Move.toml carries as PROSE since the FeatureNotYetSupported incident: ONE
 # sui-framework + ONE move-stdlib rev per environment, and no floating git revs. It was broken anyway,
 # for a year, because nothing read the lock — the graduation trigger. Pure repo bytes: no chain, no
 # CLI, no network, so it costs nothing and cannot flake.

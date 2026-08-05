@@ -2,7 +2,7 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 // check_move_lock_revs.mjs — the framework-rev rule, mechanically (#1284).
 //
-// packages/move/Move.toml:14-24 has carried this rule as PROSE since the FeatureNotYetSupported
+// packages/move/aresrpg/Move.toml has carried this rule as PROSE since the FeatureNotYetSupported
 // incident: "Move.lock has ONE sui-framework + ONE move-stdlib rev (no duals). STANDING RULE: NO
 // floating revs — pins only." Both halves were broken anyway, undetected, because nothing read the
 // lock. A rule that lives in a comment is drift with a delay timer; this is its graduation.
@@ -27,7 +27,7 @@
 //   · A hand-collapsed lock under a divergent pin is cosmetic: the next `sui move build` re-expands
 //     it. The fix is real only when a second full build leaves every lock BYTE-IDENTICAL, which is
 //     the state this gate now protects.
-// Consequence, recorded in packages/move/Move.toml and in checks.yml's sui pin: CI's installed sui
+// Consequence, recorded in packages/move/aresrpg/Move.toml and in checks.yml's sui pin: CI's installed sui
 // and the ceremony operator's sui must be the same build, and re-pinning one means re-pinning every
 // manifest in the same commit. Both environments must be re-resolved when they do
 // (`sui move build` resolves only the ACTIVE one — `--build-env mainnet` for the other).
@@ -268,7 +268,7 @@ export function main(root) {
   console.log('MOVE LOCK REV GATE FAILED.')
   for (const line of failures) console.log(`  ${line}`)
   console.log(
-    '  A dual framework rev is the FeatureNotYetSupported condition (packages/move/Move.toml); a pin that diverges from the build CLI is how it gets back in.'
+    '  A dual framework rev is the FeatureNotYetSupported condition (packages/move/aresrpg/Move.toml); a pin that diverges from the build CLI is how it gets back in.'
   )
   console.log(
     '  Fix: pin every manifest to the CI toolchain commit, then rebuild BOTH environments (`sui move build` resolves only the active one; `--build-env mainnet` for the other).'
