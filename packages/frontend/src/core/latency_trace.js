@@ -14,6 +14,9 @@
 
 import { game_log } from './log.js'
 
+/** The shared monotonic clock for latency instruments (Date.now only when User Timing is unavailable). */
+export const timing_now = () => (typeof performance !== 'undefined' ? performance.now() : Date.now())
+
 const timing_api = () =>
   typeof performance !== 'undefined' &&
   typeof performance.mark === 'function' &&

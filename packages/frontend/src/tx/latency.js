@@ -6,6 +6,8 @@
 //  execute_tx (dry-run + wallet sign+submit) and the fight sign() choke (submit→effects wait).
 // ─────────────────────────────────────────────────────────────────────────────
 
+import { timing_now } from '../core/latency_trace.js'
+
 // FINALITY POLL DIET (lever 2) — @mysten/sui's CoreClient.waitForTransaction default pollSchedule is
 // [0, 300, 600, 1500, 3500] then +2000ms forever (CUMULATIVE ms offsets from submit; it returns at the first
 // poll AFTER the tx is final). Those gaps leave dead zones: a tx final at t≈700ms is not SEEN until 1500ms
@@ -18,8 +20,8 @@ export const FINALITY_POLL_SCHEDULE = [
   0, 250, 500, 750, 1000, 1250, 1500, 1750, 2000, 2250, 2500, 2750, 3000, 4000, 5000,
 ]
 
-/** Monotonic-ish high-res clock (perf.now in the browser; Date.now fallback under bun test). */
-export const now = () => (typeof performance !== 'undefined' ? performance.now() : Date.now())
+/** Monotonic-ish high-res clock — ONE home for it (core/latency_trace.js), where every instrument reads it. */
+export const now = timing_now
 
 // ?txtiming=1 (lever 3) — off by default; flip it to SEE where a turn's seconds go. Debug-console only.
 export const TX_TIMING_ON =

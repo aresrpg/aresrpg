@@ -28,6 +28,7 @@ import {
   mark_engage_simulation_finished,
   mark_engage_wallet_signed,
 } from '../core/engage_timing.js'
+import { note_create_sponsor_legs } from '../core/create_timing.js'
 import { game_log } from '../core/log.js'
 import { observe_server_date, server_clock_offset_ms, server_now } from '../core/server_clock'
 import { sponsored_execute_result } from '../chain/receipt'
@@ -835,7 +836,10 @@ export async function execute_sponsored_tx({
   const executed = await timed(() => sponsor_fetch(`${sponsor_url}/execute`, { reservationId, txBytes, userSig }, true))
   const { effects, digest } = executed.value
   mark_engage_execution_finished(transaction)
-  flush_sponsor_legs({
+  // ONE measurement of this door's legs, TWO readers: the `?txtiming=1` line below, and (#2262) whichever flow
+  // is billing this exact transaction end-to-end — a create's first four legs ARE these numbers, so they are
+  // handed over rather than measured a second time by a parallel set of marks.
+  const sponsor_legs = {
     build_ms: built.ms,
     zkp_sign_ms: signed.ms,
     prepare_ms,
@@ -843,7 +847,9 @@ export async function execute_sponsored_tx({
     wallet_sign_ms: wallet_signed.ms,
     execute_ms: executed.ms,
     total_ms: now() - sponsored_started,
-  })
+  }
+  flush_sponsor_legs(sponsor_legs)
+  note_create_sponsor_legs(transaction, sponsor_legs)
   const ok = effects?.status?.status === 'success'
   const receipt_digest = digest ?? effects?.transactionDigest ?? ''
   // #1862 ADOPTION ON THE CERTIFIED RECEIPT. The station waited for finality before answering, and (since the

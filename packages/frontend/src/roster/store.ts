@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 import { create } from 'zustand'
+import type { Transaction } from '@mysten/sui/transactions'
 
 export { STATUS_ACTIVE } from '@aresrpg/fight/board_state'
 
@@ -17,6 +18,7 @@ import { humanize_abort } from '../game/core/abort_copy.js'
 import { publish_world_binding } from '../world-shell/session_gate.js'
 import { seed_world_join_receipt } from '../world-shell/world_join_receipt.js'
 import { game_log } from '../core/log.js'
+import { cancel_create_timing, mark_create_receipt, start_create_timing } from '../core/create_timing.js'
 import { get_sdk, type ExpeditionSdk } from '../chain/sdk'
 import { normalize_receipt } from '../chain/receipt'
 import { execute_create_routed } from '../chain/money_route'
@@ -273,14 +275,16 @@ export const use_expedition = create<ExpeditionStore>((set, get) => ({
       // The creation PTB itself creates no half-state: mint, lock, and membership all commit or all revert.
       /** @type {any} the executed tx receipt — D93 receipt-ingest reads created objects from it */
       let receipt: any = null
-      // #1862 DoD instrument: where the receipt came from, hoisted out of the toast-wrapped promise so the one
-      // timing line below can name it. 'certified-effects' = the execute round-trip already carried the created
-      // objects; 'finality-wait' = it did not and the fallback read ran.
+      // #1862 DoD instrument: where the receipt came from, hoisted out of the toast-wrapped promise so the
+      // create's timing bill can name it (#2262). 'certified-effects' = the execute round-trip already carried
+      // the created objects; 'finality-wait' = it did not and the fallback read ran.
       let adoption: 'certified-effects' | 'finality-wait' = 'finality-wait'
+      // #2262: the sponsored transaction this create's per-leg bill is bound to (null on the self-pay route,
+      // which pays no sponsor legs and is therefore not billed).
+      let create_transaction: Transaction | null = null
       let create_kiosk: personal_kiosk_handle | null = null
       const initial_world_id = T62_WORLDS[0]?.id
       if (!initial_world_id) throw new Error('No seeded world is available for character creation')
-      const t0 = performance.now()
       await use_toast.getState().promise(
         (async () => {
           // P0: the zkLogin seed read + PTB build MUST live INSIDE the toast-wrapped promise.
@@ -321,7 +325,13 @@ export const use_expedition = create<ExpeditionStore>((set, get) => ({
               return BigInt(balance.balance)
             },
             run_self_pay: (t) => sign_and_execute_transaction(wallet_name, address, t),
-            run_sponsored: (t) => sponsor_and_execute_transaction(wallet_name, address, t),
+            run_sponsored: (t) => {
+              // #2262: the create's per-leg bill opens HERE — the first instant the sponsored route is chosen
+              // and the transaction it will run exists. Every later leg is bound to this exact object.
+              create_transaction = t
+              start_create_timing(t)
+              return sponsor_and_execute_transaction(wallet_name, address, t)
+            },
             on_mint_error: mint_error,
           })
           // #23 gRPC: waitForTransaction + normalize the receipt to the jsonRpc-ish { objectChanges } the D93
@@ -347,9 +357,6 @@ export const use_expedition = create<ExpeditionStore>((set, get) => ({
           success: i18n.t('world.tx_create_character_success', { name: draft.name }),
         }
       )
-      // #1862 DoD instrument: the SOURCE next to the number, so "create proceed-time is bounded by the execute
-      // round-trip" is readable off one line instead of inferred.
-      game_log('d93', 'create tx+wait', Math.round(performance.now() - t0), 'ms', { adoption })
       if (!mint_session_matches(address, use_auth.getState().address)) return
 
       // ── #1127 RECEIPT INPUT ── the settled Character/Kiosk ids + submitted appearance are projected by the
@@ -370,20 +377,26 @@ export const use_expedition = create<ExpeditionStore>((set, get) => ({
           kiosk_id: projection.kiosk_id,
           personal_kiosk_cap_id: projection.personal_kiosk_cap_id,
         })
-        game_log('d93', 'predicted spawn dispatched', Math.round(performance.now() - t0), 'ms')
+        // #2262 leg 5 — the certified effects became a receipt, a projection and a predicted character. Binds
+        // the created id (only its reads may close the bill) and carries #1862's `adoption`: the timing line
+        // this replaces existed to say WHICH door produced the receipt, and it still says it, next to the leg
+        // that door owns.
+        mark_create_receipt(create_transaction, String(predicted.id), adoption)
         // BACKGROUND reconcile (non-blocking): the reducer-owned receipt floor preserves the prediction through
-        // any lagging snapshot and self-drains when the authoritative row includes this exact object id.
+        // any lagging snapshot and self-drains when the authoritative row includes this exact object id. It
+        // carries the created id so the roster load can close the create's last two legs (read → paint).
         void (async () => {
           try {
-            await load_roster()
-            game_log('d93', 'reconcile complete', Math.round(performance.now() - t0), 'ms')
+            await load_roster({ created_character_id: String(predicted.id) })
           } catch (e) {
             game_log('d93', 'background reconcile failed (predicted record holds)', e)
           }
         })()
         return
       }
-      // receipt lacked the Character (unexpected) — fall back to the old blocking read-back path, loudly
+      // receipt lacked the Character (unexpected) — fall back to the old blocking read-back path, loudly. The
+      // create's bill never binds a character id, so it closes nothing and emits no line (#2262).
+      cancel_create_timing()
       game_log('d93', 'receipt had no created Character — falling back to blocking re-read')
       await get().load_character()
       const { kiosk_id, personal_kiosk_cap_id, character } = get()
@@ -393,6 +406,7 @@ export const use_expedition = create<ExpeditionStore>((set, get) => ({
       await load_roster().catch(() => {})
     } catch (e) {
       get().input({ type: 'character_mint/finished' })
+      cancel_create_timing() // a refused create bills nothing (#2262)
       // re-throw so character_create's submit() shows the error inline + re-enables the form
       throw e instanceof Error ? e : new Error(err_message(e))
     }

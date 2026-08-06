@@ -47,6 +47,7 @@ import { read_dungeon_session } from '../world-shell/dungeon_session.js'
 import { get_characters } from '../rpc/client'
 import { with_timeout } from '../utils/with_timeout'
 import { game_log } from '../core/log.js'
+import { create_timing_character_id, finish_create_timing, mark_create_indexer_visible } from '../core/create_timing.js'
 import { report_error } from '../core/report.js'
 import { get_sdk } from '../chain/sdk'
 import { DEMO_NETWORK } from '../chain/deployment'
@@ -94,15 +95,37 @@ const bounded = (promise, label, fallback, ms = 10000) =>
 let flight = { loading: false, repaint_requested: false }
 
 /**
+ * #2262: close the create's bill on the first reducer notification that carries the new character — the first
+ * instant React's useSyncExternalStore subscribers can paint it. One-shot: it detaches itself, records a
+ * duration, and returns nothing to the flow it observes.
+ * @param {string} character_id
+ */
+function observe_create_paint(character_id) {
+  if (create_timing_character_id() !== character_id) return false // no bill waiting on a paint — nothing to do
+  const on_state = (/** @type {any} */ state) => {
+    if (!state.sui.characters.some((/** @type {any} */ character) => character.id === character_id)) return
+    context.events.off('STATE_UPDATED', on_state)
+    finish_create_timing(character_id)
+  }
+  context.events.on('STATE_UPDATED', on_state)
+  return true
+}
+
+/**
  * ONE pass: fetch the roster's IDENTITY from `/v1/characters?owner=` (never a chain walk), then enrich it
  * (full stats, item bag, creation price) via bounded chain-direct reads, and merge the result onto the engine
  * store (`action/sui_data`) so CharactersDrawer/CharacterSwitcher/the companion page render it. Auto-selects
  * the first character when none is selected. Never throws.
+ * @param {{ created_character_id?: string }} [options] the character a just-finished create is reconciling —
+ *   present ONLY on the create's own background pass, and read by nothing but the #2262 timing observer.
  * @returns {Promise<void>}
  */
-async function load_roster_once() {
+async function load_roster_once(options = {}) {
   const { address } = use_auth.getState()
   if (!address) return
+  // #2262: ONE rule for the create's bill — this pass either hands it to the paint observer below, or closes it
+  // itself, however the pass ends (lagging read, failed read, a throw). Exactly one line per create, always.
+  let handed_to_paint = false
   try {
     // (1) ROSTER IDENTITY — /v1 ONLY. One atomic call: either it resolves the definitive owner-scoped list,
     // or it throws — no partial/ambiguous state to reconcile (unlike the old N-branch kiosk walk). A failure
@@ -118,6 +141,12 @@ async function load_roster_once() {
       return
     }
     const identity = rpc_chars.map(rpc_to_card)
+    // #2262 leg 6 — the read layer caught up: this is the first /v1 answer that CONTAINS the just-created
+    // character. A read that does not have it yet leaves the leg unmeasured (an honest `?`, never a zero) and
+    // the bill closes below without a paint leg, because this pass has nothing new to paint.
+    const created_visible =
+      !!options.created_character_id && identity.some(({ id }) => id === options.created_character_id)
+    if (created_visible) mark_create_indexer_visible(options.created_character_id)
 
     // (2) ENRICHMENT — full per-character stats + the loose item bag + the live creation price. Every branch
     // is a chain-direct read that CAN hang/fail; each is independently with_timeout-bounded so one slow
@@ -192,6 +221,12 @@ async function load_roster_once() {
     // through the consumable/bought pending ledgers (D307: mask in-flight consumes so the bag count never
     // bounces, and KEEP a just-bought row on omit until the indexer projects its id). Dispatch RAW `owned_items`
     // — the ledger merge is single-homed in @aresrpg/inventory (reduce.js) now, not pre-applied here.
+    // #2262 leg 7 — the create's bill closes on the first STATE_UPDATED that CARRIES the new character: the
+    // reduce loop consumes this dispatch asynchronously, so the instant a React subscriber can paint the
+    // reconciled roster is a notification, not this call returning. Observer-only and one-shot: it records a
+    // duration and detaches; nothing awaits it, so the reconcile runs byte-identically with or without a trace.
+    // Registered ONLY when the character is in the snapshot below, which is exactly what makes it fire.
+    if (created_visible) handed_to_paint = observe_create_paint(options.created_character_id)
     context.dispatch('action/sui_data', {
       kind: 'snapshot',
       characters,
@@ -242,6 +277,8 @@ async function load_roster_once() {
     // existing roster stays on screen (a transient re-scan hiccup must not blow it away).
     if (!context.get_state().sui.loaded)
       context.dispatch('action/sui_data', { load_error: 'Could not load your characters. Retry.' })
+  } finally {
+    if (options.created_character_id && !handed_to_paint) finish_create_timing(options.created_character_id)
   }
 }
 
@@ -256,12 +293,17 @@ async function load_roster_once() {
  * until a manual page refresh. The request is honoured by ONE follow-up pass instead: the guard still holds
  * (a burst never becomes N concurrent kiosk walks), and the follow-up's reads start after every request that
  * asked for it.
+ * @param {{ created_character_id?: string }} [options] see `load_roster_once` — the create's reconcile pass
+ *   names the character it just minted, for the #2262 timing observer and nothing else.
  * @returns {Promise<void>}
  */
-export async function load_roster() {
+export async function load_roster(options = {}) {
   if (!use_auth.getState().address) return
   if (flight.loading) {
     flight = { ...flight, repaint_requested: true }
+    // A create coalesced into a pass already in flight cannot measure its own read — that pass's reads started
+    // before the mint landed. Close the bill honestly here rather than leave it open forever (#2262).
+    if (options.created_character_id) finish_create_timing(options.created_character_id)
     return
   }
   flight = { loading: true, repaint_requested: false }
@@ -269,7 +311,7 @@ export async function load_roster() {
     do {
       // Cleared BEFORE the pass: anything arriving during it is asking for the NEXT one, not this one.
       flight = { ...flight, repaint_requested: false }
-      await load_roster_once()
+      await load_roster_once(options)
     } while (flight.repaint_requested)
   } finally {
     flight = { loading: false, repaint_requested: false }
