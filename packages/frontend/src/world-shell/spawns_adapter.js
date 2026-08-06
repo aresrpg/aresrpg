@@ -281,7 +281,7 @@ const world_phase_holds_the_body = ({ in_fight = false, in_dungeon = false, in_c
  * session and ride IN with the pose (a typed input, the seam this module already uses for cross-domain facts).
  * @param {ReturnType<typeof read_dungeon_session>|null|undefined} phase
  */
-const session_holds_the_body = (phase) =>
+export const session_holds_the_body = (phase) =>
   world_phase_holds_the_body({
     in_dungeon: !!phase?.in_session || !!phase?.run_pass_id || !!phase?.dungeon_id,
     in_fight: !!phase?.fight_id,

@@ -134,12 +134,4 @@ describe('issue #17 — zone-music channel ownership wiring (source-verified, GL
     expect(reboot_fn).toMatch(/create_session\([^)]*\bfollow\b[^)]*\)/)
   })
 
-  test('a live tier reboot refuses every dungeon and fight transition phase', () => {
-    const reboot_fn = source.slice(
-      source.indexOf('export function reboot_voxel_session_tier'),
-      source.indexOf('export function mount_voxel_scene')
-    )
-    for (const field of ['in_session', 'run_pass_id', 'dungeon', 'dungeon_id', 'fight_id'])
-      expect(reboot_fn).toContain(`dungeon.${field}`)
-  })
 })

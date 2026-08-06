@@ -36,6 +36,7 @@ import {
   note_world_position,
   read_world_chain_anchor,
   read_world_position,
+  session_holds_the_body,
 } from '../world-shell/spawns_adapter.js'
 import { should_reuse_pending_session } from './voxel_session_identity.js'
 import {
@@ -1099,8 +1100,7 @@ function ensure_dom_watchdog() {
 export function reboot_voxel_session_tier(tier) {
   if (!session || session.mode !== 'session' || !session.host) return { ok: false, reason: 'no_session' }
   const dungeon = use_dungeon.getState()
-  if (dungeon.in_session || dungeon.run_pass_id || dungeon.dungeon || dungeon.dungeon_id || dungeon.fight_id)
-    return { ok: false, reason: 'fight' }
+  if (session_holds_the_body(dungeon)) return { ok: false, reason: 'fight' }
   const { host, character, follow } = session
   // Commit the freshest pose NOW (the ~5s cadence + no in-place pagehide would else rewind the player), then
   // tear down (synchronous GPU release) and rebuild at the new tier on the SAME host — create_session
