@@ -161,6 +161,8 @@ export const blank_world = () => ({
   checkpoint: null,
   /** @type {{zx:number,zy:number}|null} the checkpoint's zone — the hunt zone */
   hunt_zone: null,
+  /** @type {any|null} a checkpoint input waiting for this world's coordinate frame */
+  deferred_checkpoint: null,
   /** @type {Map<string, ZoneEntry>} */
   zones: new Map(),
   /** @type {Map<string, number>} receipt-proven REMOVALS (claimed/depleted rows) → removed_at; a lagging

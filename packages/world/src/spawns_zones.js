@@ -75,6 +75,12 @@ const fold_world_doc = (state, { doc }) => {
 const fold_checkpoint_resolved = (state, input) => {
   if (input.world_id && state.world_id && input.world_id !== state.world_id) return state
   if (!Number.isFinite(Number(input.x)) || !Number.isFinite(Number(input.z))) return state
+  if (!state.world_frame_ready) {
+    // Preserve input ordering without guessing a frame: an indexed seed never supersedes an earlier row,
+    // while a direct/receipt row supersedes the deferred row just as it would after an immediate fold.
+    if (input.source === 'indexed' && state.deferred_checkpoint) return state
+    return { ...state, deferred_checkpoint: { ...input } }
+  }
   if (input.source === 'indexed' && (state.checkpoint || state.hunt_zone)) return state
   const cell = zone_of(Number(input.x), Number(input.z), state.zone_size)
   const anchor = input.world_position ?? input
@@ -300,8 +306,11 @@ export function reduce_spawns(state, input, now) {
       // a world change is a RESET input: zone facts never survive a rebind; the openness pref does.
       return world_id === state.world_id ? state : { ...state, ...blank_world(), world_id }
     }
-    case 'world_doc':
-      return fold_world_doc(state, input)
+    case 'world_doc': {
+      const framed = fold_world_doc(state, input)
+      if (!framed.world_frame_ready || !framed.deferred_checkpoint) return framed
+      return reduce_spawns({ ...framed, deferred_checkpoint: null }, framed.deferred_checkpoint, now)
+    }
     case 'checkpoint_resolved':
       return fold_checkpoint_resolved(state, input)
     case 'zones_rows_snapshot':

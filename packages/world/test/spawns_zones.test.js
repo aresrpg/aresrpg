@@ -123,6 +123,28 @@ describe('boot facts — world binding, dims, checkpoint seeding', () => {
       zone_ttl_ms: 60_000,
     })
   })
+  it('defers a checkpoint that arrives before its world frame, then folds it in the resolved frame', () => {
+    const store = create_spawns_store()
+    const input = (msg) => store.getState().input(msg)
+    input({ type: 'world_bound', world_id: WORLD })
+    input({
+      type: 'checkpoint_resolved',
+      world_id: WORLD,
+      x: 520,
+      z: 540,
+      source: 'read',
+      world_position: { x: 20, z: 40, time_ms: 5_000, speed_budget: 1150 },
+    })
+
+    expect(store.getState()).toMatchObject({ world_frame_ready: false, checkpoint: null, hunt_zone: null })
+
+    input({ type: 'world_doc', doc: DOC })
+    expect(store.getState()).toMatchObject({
+      world_frame_ready: true,
+      checkpoint: { x: 20, z: 40, time_ms: 5_000, speed_budget: 1150, pet_equipped: false },
+      hunt_zone: { zx: 5, zy: 5 },
+    })
+  })
   it('a chain-direct checkpoint read seeds checkpoint (world space) AND hunt_zone (one unified fact)', () => {
     const { input, state } = boot()
     input({ type: 'checkpoint_resolved', world_id: WORLD, x: 520, z: 540, source: 'read' })
