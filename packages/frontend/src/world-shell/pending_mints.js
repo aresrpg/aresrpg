@@ -31,6 +31,7 @@ import { game_log } from '../core/log.js'
 
 import { settled_loot_rows } from './loot_inventory.js'
 import { is_preflight_failure } from './pending_outcomes.js'
+import { net_gas_mist } from './spend_guard.js'
 
 /**
  * @typedef {{ read_result: (id: string) => Promise<any>, mint_and_burn: (id: string, templates: string[]) =>
@@ -76,7 +77,7 @@ const positive_delta = (/** @type {unknown} */ amount) => {
 
 /**
  * Pure receipt projection for recovery observability. ItemMinted is the exact object+quantity delta already used
- * by the inventory reducer; positive balanceChanges ride too if a future normalized receipt exposes them.
+ * by the inventory reducer; a positive net gas delta is derived from the normalized receipt's `gasUsed`.
  * `template_by_id` (the shared item catalog) resolves the display NAME — the one input the player-facing summary
  * needs; an absent/missing catalog degrades to the item_type slug, never to the object id.
  * @param {MintOutcome} outcome
@@ -86,6 +87,7 @@ const positive_delta = (/** @type {unknown} */ amount) => {
 export function mint_recovery_detail(outcome, template_by_id = new Map()) {
   const settlement = outcome?.verdict === 'minted' ? outcome.settlement : null
   const receipt = settlement?.receipt ?? {}
+  const gas_delta = -net_gas_mist(receipt?.gasUsed)
   const minted_objects = settled_loot_rows(settlement, template_by_id).map((row) => ({
     object_id: String(row.id),
     item_type: String(row.item_type),
@@ -104,12 +106,7 @@ export function mint_recovery_detail(outcome, template_by_id = new Map()) {
     result_id: String(outcome?.result_id ?? ''),
     digest: String(receipt?.digest ?? ''),
     object_deltas: minted_objects.length ? minted_objects : created_objects,
-    balance_deltas: (receipt?.balanceChanges ?? [])
-      .filter((/** @type {any} */ delta) => positive_delta(delta?.amount))
-      .map((/** @type {any} */ delta) => ({
-        coin_type: String(delta?.coinType ?? delta?.coin_type ?? ''),
-        amount: String(delta.amount),
-      })),
+    balance_deltas: gas_delta > 0n ? [{ coin_type: 'MIST', amount: String(gas_delta) }] : [],
   }
 }
 

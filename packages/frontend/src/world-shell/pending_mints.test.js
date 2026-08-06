@@ -11,6 +11,7 @@
 //     rows are skipped, and ONE summary toast is requested — never per-result spam.
 import { afterEach, describe, expect, it } from 'bun:test'
 
+import { normalize_receipt } from '../chain/receipt'
 import { get_log_buffer, _reset_log_for_test } from '../core/log.js'
 
 import {
@@ -265,21 +266,26 @@ describe('sweep_stranded_results (leg②) — recover opened-but-un-burned resul
 })
 
 describe('mint recovery instrumentation', () => {
-  it('projects the digest plus collected object/positive-balance deltas without changing the settlement', () => {
-    const settlement = {
-      receipt: {
-        digest: '0xdigest',
-        events: [
-          {
-            type: '0xares::item::ItemMinted',
-            parsedJson: { item: '0xitem', template: '0xtemplate', item_type: 'razkin_hide', amount: '2' },
+  it('projects the digest plus collected object/positive-gas delta from the normalized receipt shape', () => {
+    const receipt = {
+      digest: '0xdigest',
+      ...normalize_receipt({
+        Transaction: {
+          effects: {
+            gasUsed: { computationCost: '7', storageCost: '3', storageRebate: '35' },
+            changedObjects: [],
           },
-        ],
-        balanceChanges: [
-          { coinType: '0x2::sui::SUI', amount: '25' },
-          { coinType: '0x2::sui::SUI', amount: '-7' }, // gas/payment is not value collected
-        ],
-      },
+          events: [
+            {
+              eventType: '0xares::item::ItemMinted',
+              json: { item: '0xitem', template: '0xtemplate', item_type: 'razkin_hide', amount: '2' },
+            },
+          ],
+        },
+      }),
+    }
+    const settlement = {
+      receipt,
     }
     const detail = mint_recovery_detail({
       verdict: 'minted',
@@ -287,13 +293,14 @@ describe('mint recovery instrumentation', () => {
       settlement,
     })
 
+    expect(receipt).not.toHaveProperty('balanceChanges')
     expect(detail).toEqual({
       result_id: '0xresult',
       digest: '0xdigest',
       object_deltas: [{ object_id: '0xitem', item_type: 'razkin_hide', name: '', amount: 2 }],
-      balance_deltas: [{ coin_type: '0x2::sui::SUI', amount: '25' }],
+      balance_deltas: [{ coin_type: 'MIST', amount: '25' }],
     })
-    expect(mint_recovery_line(detail)).toBe('0xdigest → razkin_hide ×2 (0xitem), +25 0x2::sui::SUI')
+    expect(mint_recovery_line(detail)).toBe('0xdigest → razkin_hide ×2 (0xitem), +25 MIST')
     expect(settlement.receipt.events[0].parsedJson.amount).toBe('2') // projection is read-only
   })
 
