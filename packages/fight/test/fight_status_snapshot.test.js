@@ -1,13 +1,23 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
+import { readFileSync } from 'node:fs'
+
 import { describe, expect, test } from 'bun:test'
 import { K_INVISIBILITY } from '@aresrpg/sim/spell_effect'
 
 import {
+  MOB_FIGHTER_ID_BASE,
   new_invisibility_statuses,
   read_fighter_statuses,
   status_snapshot_entities,
 } from '../src/fight_status_snapshot.js'
+
+test('the mob fighter-id base stays pinned to the Move chain home', () => {
+  const retro_effects = readFileSync(new URL('../../move/engine/sources/retro_effects.move', import.meta.url), 'utf8')
+  const mob_fid_match = /const MOB_FID_BASE: u64 = ([0-9_]+);/.exec(retro_effects)
+  expect(mob_fid_match, 'retro_effects.move no longer declares MOB_FID_BASE').not.toBeNull()
+  expect(Number(mob_fid_match[1].replaceAll('_', ''))).toBe(MOB_FIGHTER_ID_BASE)
+})
 
 describe('authoritative fight status snapshot', () => {
   test('reads ALL live status rows from raw Fight.fx json — every kind, with effect ints', () => {
