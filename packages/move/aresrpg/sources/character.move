@@ -74,6 +74,9 @@ public struct Character has key, store {
   customization: Customization,
   experience: u64,
   created_at_ms: u64,
+  /// DEAD POSITION HOME: no production caller uses this legacy value. Position truth lives in the per-world
+  /// `CheckpointKey { world }` dynamic field owned by `character_link.move`. Keep this field only for public
+  /// compatibility, then retire it and the legacy anchor API together at the next breaking upgrade window.
   anchor: PositionAnchor,
 }
 
