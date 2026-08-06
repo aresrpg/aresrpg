@@ -10,10 +10,11 @@
 //
 // THIS proof drives the REAL production emitters through a faithful MIRROR of voxel_fight_adapter's beat loop
 // (play_cast_inner → play_victim_reaction, and play_move → play_trap_trigger) with a mock board whose entity_beat
-// resolves after a REAL async gap — the SAME modelling law voxel_fight_move_playback.test.js uses (a missing
-// await would reorder the stream; the pixels ride the live Playwright synth rig, combat_log_realtime.spec.ts). It
-// records a unified {beat | log} timeline with high-res timestamps and asserts the log entries INTERLEAVE with
-// the beats and are SPREAD across the replay window — never clustered at one instant the way the batch flush was.
+// resolves after an injected async clock tick — a missing await still reorders the stream, while runner load can
+// no longer stretch or compress the verdict. The pixels ride the live Playwright synth rig,
+// combat_log_realtime.spec.ts. This records a unified {beat | log} timeline with clock timestamps and asserts
+// the log entries INTERLEAVE with the beats and are SPREAD across the replay window — never clustered at one
+// instant the way the batch flush was.
 //
 // REAL code under proof: beats_from_packet + split_move_at_traps (voxel_fight_folds.js) build the exact beats the
 // adapter plays; emit_cast_context_line / emit_effect_line / emit_death_line / emit_trap_line (fight.js) are the
@@ -33,15 +34,24 @@ import {
 import { beats_from_packet, split_move_at_traps } from './voxel_fight_folds.js'
 
 const TICK_MS = 8
-const tick = () => new Promise((r) => setTimeout(r, TICK_MS)) // a real async gap — a missing await reorders it
+
+/** The beat timeline is test data: each async boundary advances exactly one tick, independent of wall load. */
+const make_clock = () => {
+  let now_ms = 0
+  return {
+    now: () => now_ms,
+    tick: async () => {
+      await Promise.resolve() // keep a real async boundary so a missing await still reorders the stream
+      now_ms += TICK_MS
+    },
+  }
+}
 
 /** A recording rig: beats stamp via the mock board, log lines stamp via the dispatch the REAL emit_* call. Every
  *  entry carries a high-res `t` (ms since fight-start) so the timeline proves ordering AND spread, not just order. */
-const make_rig = (fighters) => {
+const make_rig = (fighters, { now, tick }) => {
   const timeline = /** @type {{ kind: string, t: number, [k: string]: any }[]} */ ([])
-  const t0 = performance.now()
-  const at = () => performance.now() - t0
-  const mark = (kind, extra = {}) => timeline.push({ kind, t: at(), ...extra })
+  const mark = (kind, extra = {}) => timeline.push({ kind, t: now(), ...extra })
   const get_state = () => ({ fight: { fighters } })
   // the dispatch the production emitters call — each combat-log line lands here, timestamped, tagged by its id
   // prefix (combat_log_line stamps `${prefix}-${seq}`: 'cast-3' → 'cast', 'hit-4' → 'hit', 'trap-9' → 'trap', …).
@@ -65,7 +75,7 @@ const make_rig = (fighters) => {
     beat.duration_ms = TICK_MS * 2
     return beat
   }
-  return { timeline, get_state, dispatch, board_beat, mark }
+  return { timeline, get_state, dispatch, board_beat, mark, tick }
 }
 
 /** A CHARACTER-FOR-CHARACTER mirror of voxel_fight_adapter.play_cast_inner's log-emitting beat loop: the context
@@ -103,7 +113,7 @@ const play_cast_mirror = async (rig, packet) => {
 /** A mirror of voxel_fight_adapter.play_move's trap loop (real split_move_at_traps): walk → PAUSE at the trap
  *  cell (the flinch beat + emit_trap_line) → RESUME. */
 const play_move_mirror = async (rig, packet) => {
-  const { get_state, dispatch, board_beat, mark } = rig
+  const { get_state, dispatch, board_beat, mark, tick } = rig
   for (const step of split_move_at_traps(packet.path, packet.trap_hits)) {
     if (step.walk.length) {
       mark('walk', { cell: step.walk.at(-1) })
@@ -138,7 +148,7 @@ describe('combat log streams AT the beats, not as a post-cascade flush', () => {
       ['p1', { name: 'Aldric' }],
       ['mob-0', { name: 'Sewer Rat', dead: true }], // post-fold the fold already flipped it dead
     ])
-    const rig = make_rig(fighters)
+    const rig = make_rig(fighters, make_clock())
     await play_cast_mirror(rig, {
       entity_id: 'p1',
       spell_id: 'dungeon_strike',
@@ -165,11 +175,11 @@ describe('combat log streams AT the beats, not as a post-cascade flush', () => {
 
     // SPREAD — the lines are NOT clustered at one instant (the batch-flush signature). The death line lands at
     // least a full beat-gap after the cast line (swing + flinch + death beats separate them). Every line's
-    // timestamp is strictly inside (fight-start=0, terminal) — never dumped post-terminal.
+    // timestamp is inside [fight-start=0, terminal] — never dumped post-terminal.
     const t = (p) => logs(tl).find((l) => l.prefix === p).t
     expect(t('death') - t('cast')).toBeGreaterThanOrEqual(TICK_MS)
     for (const l of logs(tl)) {
-      expect(l.t).toBeGreaterThan(0)
+      expect(l.t).toBeGreaterThanOrEqual(0)
       expect(l.t).toBeLessThanOrEqual(terminal)
     }
     // artifact evidence for the report (diagnostic-only; the assertions above are the actual gate).
@@ -192,7 +202,7 @@ describe('combat log streams AT the beats, not as a post-cascade flush', () => {
         ['mob-1', { name: 'Cave Crab', dead: true }],
         ['p2', { name: 'Elena' }],
       ])
-      const rig = make_rig(fighters)
+      const rig = make_rig(fighters, make_clock())
       await play_cast_mirror(rig, {
         entity_id: 'p1',
         spell_id: 'dungeon_strike',
@@ -228,7 +238,7 @@ describe('combat log streams AT the beats, not as a post-cascade flush', () => {
         ['p1', { name: 'Aldric' }],
         ['mob-0', { name: 'Cave Crab' }],
       ])
-      const rig = make_rig(fighters)
+      const rig = make_rig(fighters, make_clock())
       await play_move_mirror(rig, {
         entity_id: 'mob-0',
         trap_owner_id: 'p1',
@@ -266,7 +276,7 @@ describe('combat log streams AT the beats, not as a post-cascade flush', () => {
         ['p1', { name: 'Aldric' }],
         ['mob-0', { name: 'Sewer Rat', dead: true }],
       ])
-      const rig = make_rig(fighters)
+      const rig = make_rig(fighters, make_clock())
       await play_cast_mirror(rig, {
         entity_id: 'p1',
         spell_id: 'dungeon_strike',
