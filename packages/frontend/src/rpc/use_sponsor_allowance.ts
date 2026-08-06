@@ -8,7 +8,10 @@
 // come back as bigint so callers never Number()-coerce a money value. Display-only — the sponsor itself
 // still fail-closes the real cap; a poll blip just shows the last-good value (useRpcView keeps it).
 
+import { useEffect } from 'react'
+
 import { use_auth, type AuthState } from '../auth'
+import { spend_guard_note_allowance } from '../world-shell/spend_guard.js'
 
 import { get_sponsor_remaining } from './client'
 import { create_shared_poll } from './shared_poll'
@@ -33,9 +36,23 @@ const POLL_MS = 15000
 // above was a claim the code never actually enforced). create_shared_poll makes it literally true.
 const sponsor_poll = create_shared_poll((address) => get_sponsor_remaining(address), POLL_MS)
 
-export function use_sponsor_allowance(): SponsorAllowance | null {
+// React's own hook-order rule (`react-hooks/rules-of-hooks`, ERROR since #2070) recognizes a custom hook by
+// its `useXxx` name — a LIBRARY convention, so camelCase is correct here (L-N1) and the snake_case name below
+// stays the public one every mount site already imports. Written this way the rule actually runs on this file
+// instead of silently skipping it, which is what matters the moment a hook gains an effect.
+function useSponsorAllowance(): SponsorAllowance | null {
   const address = use_auth((s: AuthState) => s.address)
   const { data, loading, stale } = sponsor_poll.useSharedPoll(address ?? null)
+
+  // The served cap re-entering the spend guard as an INPUT (#2270): the breaker's session ceiling is a share of
+  // the daily allowance the sponsor actually serves, so the ONE reader of that number hands it over instead of
+  // the guard restating a cap that already moved once. Keyed on the mist STRING, not the poll object, so a 15s
+  // tick that re-fetches the same allowance never re-runs this; null (logged out, first poll pending) keeps the
+  // conservative fallback. Placed above the early returns — a hook's effect is not conditional.
+  const served_allowance_mist = data?.allowance_mist ?? null
+  useEffect(() => {
+    spend_guard_note_allowance(served_allowance_mist === null ? null : BigInt(served_allowance_mist))
+  }, [served_allowance_mist])
 
   if (!address) return null
   if (!data) return { allowance_mist: 0n, spent_mist: 0n, remaining_mist: 0n, resets_at: null, loading, stale }
@@ -48,3 +65,5 @@ export function use_sponsor_allowance(): SponsorAllowance | null {
     stale,
   }
 }
+
+export const use_sponsor_allowance = useSponsorAllowance

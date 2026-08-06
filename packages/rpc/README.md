@@ -136,6 +136,7 @@ All env-driven; see [`.env.example`](./.env.example). Highlights:
 | Var                     | Default                              | Component |
 | ----------------------- | ------------------------------------ | --------- |
 | `REDIS_URL`             | `redis://redis:6379` (compose)       | all       |
+| `SPONSOR_REDIS_URL`     | — (falls back to `REDIS_URL`)        | api       |
 | `REMOTE_STORE_URL`      | `https://checkpoints.testnet.sui.io` | indexer   |
 | `STREAMING_URL`         | — (remote-store polling if unset)    | indexer   |
 | `NETWORK`               | `testnet`                            | indexer   |
@@ -150,6 +151,12 @@ that holds a key, and that key is a fresh, dedicated sponsor key — never a
 production key. Its upstream binary speaks JSON-RPC only — a transport no
 official endpoint still serves — so `SUI_FULLNODE_URL` has no default at all and
 the component refuses to boot until a deploy supplies one ([#1421](https://github.com/aresrpg/aresrpg/issues/1421)).
+
+`SPONSOR_REDIS_URL` scopes the sponsor-allowance reads (`/v1/sponsor/remaining`)
+to the store the sponsor's own enforcement writes, for deploys where that is not
+the indexer's Redis. Unset — the single-instance deploy — means the same
+instance: the same client, the same pipeline, no extra connection
+([#2270](https://github.com/aresrpg/aresrpg/issues/2270)).
 
 Redis itself carries **no authentication**. `docker-compose.yml` publishes it to
 `127.0.0.1` only by default, so it's reachable from the host but not the network.
