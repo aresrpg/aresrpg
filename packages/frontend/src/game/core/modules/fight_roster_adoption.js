@@ -11,12 +11,13 @@
 // appearance cache and every name lookup use). The architecture is reads-via-/v1; a fight is not an exception.
 //
 // This effect runs on EVERY fold, and the fight clock folds 4×/s for a whole fight, so what it declines to read
-// is as load-bearing as what it reads: an id that did not resolve waits out CHARACTER_READ_TTL_MS before it is
-// asked again.
+// is as load-bearing as what it reads: a `sim:` session reads NOTHING (the scoped resolver below), and an id
+// that did not resolve waits out CHARACTER_READ_TTL_MS before it is asked again.
 
 import { fight_view } from '@aresrpg/fight/project'
 import { fight_store } from '@aresrpg/fight/store'
 
+import { fight_scope_sim, fight_session_in_scope } from '../../../world-shell/fight_session_scope.js'
 import {
   CHARACTER_READ_TTL_MS,
   compose_fight_roster,
@@ -26,16 +27,25 @@ import {
 } from '../../../world-shell/character_name_resolve.js'
 
 /**
- * THE PRODUCTION RESOLVER — the `/v1` read.
+ * THE PRODUCTION RESOLVER — the `/v1` read, gated on the session's SCOPE. A `sim:` session
+ * (world-shell/fight_session_scope.js) resolves nothing at all: its fighters are simulator-local seats that
+ * exist in no Character object and in no index, so every read is a guaranteed miss — repeated 4×/s per seat,
+ * from a surface that has no chain behind it. The simulator's roster is seeded by its own shim, so a read here
+ * can only cost.
  *
- * The seam is the `/v1` FETCH — never the resolver: there is exactly one read door in this file and a test can
- * only prove which query left through it, not swap it for another one.
+ * The seams are the fight state and the `/v1` FETCH — never the resolver: there is exactly one read door in
+ * this file and a test can only prove which query left through it, not swap it for another one.
  * @param {string[]} ids
- * @param {{ fetch_characters?: (query:{ids:string[]})=>Promise<any[]> }} [seams]
+ * @param {{ get_fight_state?: ()=>any, fetch_characters?: (query:{ids:string[]})=>Promise<any[]> }} [seams]
  * @returns {Promise<Map<string, any>>}
  */
-export const resolve_roster_appearances = (ids, { fetch_characters } = {}) =>
-  resolve_character_docs(ids, fetch_characters)
+export const resolve_roster_appearances_in_scope = (
+  ids,
+  { get_fight_state = () => fight_store.getState(), fetch_characters } = {}
+) =>
+  fight_session_in_scope(get_fight_state(), fight_scope_sim)
+    ? Promise.resolve(new Map())
+    : resolve_character_docs(ids, fetch_characters)
 
 const fight_session_key = () => {
   const state = fight_store.getState()
@@ -84,7 +94,7 @@ export function create_fight_roster_adoption({
   get_carried = () => fight_store.getState().ctx?.roster ?? [],
   get_session_key = fight_session_key,
   publish = (rows) => fight_store.getState().input({ type: 'ctx', ctx: { roster: rows } }),
-  resolve_characters = resolve_roster_appearances,
+  resolve_characters = resolve_roster_appearances_in_scope,
   now = () => Date.now(),
 }) {
   let adoption = empty_adoption(Symbol('uninitialized'))

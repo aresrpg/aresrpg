@@ -3,7 +3,7 @@
 
 import { describe, expect, test } from 'bun:test'
 
-import { create_fight_roster_adoption, resolve_roster_appearances } from './fight_roster_adoption.js'
+import { create_fight_roster_adoption, resolve_roster_appearances_in_scope } from './fight_roster_adoption.js'
 
 const ALICE = '0xalice'
 const BOB = '0xbob'
@@ -25,9 +25,10 @@ const flush = async () => {
 }
 
 describe('fight roster appearance adoption', () => {
-  test('partner ids resolve through OUR /v1 door, never a fullnode client', async () => {
+  test('a chain fight resolves partner ids through OUR /v1 door, never a fullnode client', async () => {
     const queries = []
-    const appearances = await resolve_roster_appearances([BOB, BOB], {
+    const appearances = await resolve_roster_appearances_in_scope([BOB, BOB], {
+      get_fight_state: () => ({ fight_id: '0xchainfight' }),
       fetch_characters: async (query) => {
         queries.push(query)
         return [bob_doc]
