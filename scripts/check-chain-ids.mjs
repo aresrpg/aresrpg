@@ -285,6 +285,17 @@ const sanctioned_fixture_ids = {
     '-Bj9S3eyruLyuUeUU4hOcX', // #2123 creation package address (the captured object's type tag)
     'Ppvwc8pL0TLRJtpopAp2kR', // #2123 the Creation's `classes` Table id, read out of the captured bytes
   ]),
+  // packages/rpc/indexer/src/handlers/ares/journal_tests.rs — #1143's captured `ActionStarted`/`ActionEffect`
+  // wire (the row an observer never received). Same class as the snapshot captures above: the ids sit INSIDE
+  // BCS bodies harvested 2026-08-06 from testnet GraphQL, and each test asserts our decode against that same
+  // response's fullnode `parsedJson`. Nothing resolves them at runtime — they are the evidence the mirror is
+  // checked against, and re-encoding the wire with this crate's own model would prove nothing. Provenance
+  // (endpoint, package, transaction) is recorded beside the constants in the file's own header.
+  'packages/rpc/indexer/src/handlers/ares/journal_tests.rs': new Set([
+    'VWaLFd6fyqCkaMLmIWikNj', // engine origin package the captures were filtered by (in the harvest comment)
+    'n4_TL7vsC9Xw4Q4X9odDla', // the fight both envelope captures ride, read out of their captured bytes
+    'qGpnzpTDdYD64JSVCQCFze', // the fight of the ranged-Effect capture, read out of its captured bytes
+  ]),
 }
 const slash_path = (value) => value.split(path.sep).join('/')
 const id_fingerprint = (id) => create_hash('sha256').update(id).digest('base64url').slice(0, 22)
