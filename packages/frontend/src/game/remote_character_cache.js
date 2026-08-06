@@ -16,7 +16,8 @@
 // on the identical doc, so a second batched-fetch cache alongside this one would double the peer /v1 read load
 // for zero new information. Batched + cached: every stale/missing peer id across the current rig set resolves
 // in ONE /v1/characters?ids= read per refresh wave (never one fetch per peer per frame — remote_players.js's
-// frame loop runs at 60fps). TTL-bounded (~60s — the FLOOR under every peer's freshness); a peer with no cache
+// frame loop runs at 60fps). TTL-bounded by `CHARACTER_READ_TTL_MS` (character_name_resolve.js — the ONE window
+// every remote character read shares, positive and negative); a peer with no cache
 // row yet always counts as stale, so a freshly-spawned rig resolves on its very next refresh call. Never caches
 // an absence permanently: a failed/pending id just stays stale and retries the next call.
 //
@@ -26,15 +27,13 @@
 // can say "re-read me", and it can say nothing else — every rendered appearance fact still comes from the /v1
 // read here, so the transport ruling above is unchanged and a lying beat buys its sender exactly one refetch.
 
-import { resolve_character_docs } from '../world-shell/character_name_resolve.js'
+import { CHARACTER_READ_TTL_MS, resolve_character_docs } from '../world-shell/character_name_resolve.js'
 
 import { has_veteran_title, resolve_worn_cosmetics } from './cosmetic_glb.js'
 // pet_companion_resolver.js, never pet_companion.js — the resolver split carries NO @aresrpg/engine3 import
 // (issue #117), so this cache (and its test) stays runnable in every checkout, including the public one where
 // the private character GLB is absent.
 import { resolve_pet_companion } from './pet_companion_resolver.js'
-
-const CHARACTER_TTL_MS = 60_000
 
 const BLANK_WORN = { head: null, back: null }
 const NO_PET = { spawn: false, glb_url: null, key: null }
@@ -74,7 +73,7 @@ export function create_remote_character_cache(deps = {}) {
     const stale = []
     for (const id of ids) {
       const hit = cache.get(id)
-      const due = !hit || dirty.has(id) || now() - hit.resolved_at > CHARACTER_TTL_MS
+      const due = !hit || dirty.has(id) || now() - hit.resolved_at > CHARACTER_READ_TTL_MS
       if (due && !pending.has(id)) stale.push(id)
     }
     if (!stale.length) return Promise.resolve()

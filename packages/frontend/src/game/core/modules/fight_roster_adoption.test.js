@@ -3,19 +3,17 @@
 
 import { describe, expect, test } from 'bun:test'
 
-import { create_fight_roster_adoption, resolve_fight_roster_appearances } from './fight_roster_adoption.js'
+import { create_fight_roster_adoption, resolve_roster_appearances } from './fight_roster_adoption.js'
 
 const ALICE = '0xalice'
 const BOB = '0xbob'
-const bob_appearance = {
+/** A `/v1/characters` row, verbatim wire shape (packages/rpc/api/views.js): `class`, nested `colors`, `male`. */
+const bob_doc = {
   id: BOB,
   name: 'Mireth',
-  classe: 'senshi',
-  sex: 'female',
+  class: 'senshi',
   male: false,
-  color_1: 11,
-  color_2: 22,
-  color_3: 33,
+  colors: { color_1: 11, color_2: 22, color_3: 33 },
   level: 1,
   experience: 0,
 }
@@ -27,19 +25,20 @@ const flush = async () => {
 }
 
 describe('fight roster appearance adoption', () => {
-  test('partner ids use the same get_sdk → read_character appearance home as the owned avatar', async () => {
-    const grpc_client = {}
-    const calls = []
-    const appearances = await resolve_fight_roster_appearances([BOB, BOB], {
-      get_sdk: async () => ({ grpc_client }),
-      read_character: async (client, id) => {
-        calls.push({ client, id })
-        return bob_appearance
+  test('partner ids resolve through OUR /v1 door, never a fullnode client', async () => {
+    const queries = []
+    const appearances = await resolve_roster_appearances([BOB, BOB], {
+      fetch_characters: async (query) => {
+        queries.push(query)
+        return [bob_doc]
       },
     })
 
-    expect(calls).toEqual([{ client: grpc_client, id: BOB }])
-    expect(appearances.get(BOB)).toBe(bob_appearance)
+    // The only read that can leave this module is a `/v1/characters?ids=` query — ONE batch for the whole
+    // missing set (character_name_resolve.js's resolve_character_docs, which also dedupes the repeated id).
+    // The `get_sdk` → `read_character` fullnode route this test used to pin no longer exists here.
+    expect(queries).toEqual([{ ids: [BOB] }])
+    expect(appearances.get(BOB)).toBe(bob_doc)
   })
 
   test('an async partner appearance re-enters only through the roster publisher', async () => {
@@ -74,26 +73,26 @@ describe('fight roster appearance adoption', () => {
       experience: 123_456,
     })
 
-    resolve_read(new Map([[BOB, bob_appearance]]))
+    resolve_read(new Map([[BOB, bob_doc]]))
     await read
     await flush()
 
     expect(published).toHaveLength(2)
+    // The carried row's progression survives; identity/appearance arrive in the wire's own shape.
     expect(published[1].find((row) => row.id === BOB)).toMatchObject({
       id: BOB,
       name: 'Mireth',
       level: 42,
       experience: 123_456,
       male: false,
-      color_1: 11,
-      color_2: 22,
-      color_3: 33,
+      class: 'senshi',
+      colors: { color_1: 11, color_2: 22, color_3: 33 },
     })
   })
 
   test('a new fight re-reads the partner and rejects the prior fight response', async () => {
-    const old_appearance = { ...bob_appearance, color_1: 1 }
-    const new_appearance = { ...bob_appearance, color_1: 99 }
+    const old_doc = { ...bob_doc, colors: { color_1: 1, color_2: 22, color_3: 33 } }
+    const new_doc = { ...bob_doc, colors: { color_1: 99, color_2: 22, color_3: 33 } }
     const reads = []
     let session_key = 'fight-a:1'
     let carried = []
@@ -121,20 +120,21 @@ describe('fight roster appearance adoption', () => {
     ensure_roster()
     expect(reads).toHaveLength(2)
 
-    reads[1](new Map([[BOB, new_appearance]]))
+    reads[1](new Map([[BOB, new_doc]]))
     await flush()
-    reads[0](new Map([[BOB, old_appearance]]))
+    reads[0](new Map([[BOB, old_doc]]))
     await flush()
 
     expect(carried.find((row) => row.id === BOB)).toMatchObject({
       id: BOB,
-      color_1: new_appearance.color_1,
+      colors: new_doc.colors,
     })
   })
 
-  test('a rejected appearance read clears pending state so a later pass retries', async () => {
+  test('a rejected read is retried once its window passes, never on the next fold', async () => {
     let attempts = 0
     let carried = []
+    const clock = { ms: 5_000 }
     const ensure_roster = create_fight_roster_adoption({
       get_mine: () => [{ id: ALICE, name: 'Kaelen' }],
       get_fighters: () =>
@@ -151,19 +151,27 @@ describe('fight roster appearance adoption', () => {
         attempts += 1
         return attempts === 1
           ? Promise.reject(new Error('temporary read failure'))
-          : Promise.resolve(new Map([[BOB, bob_appearance]]))
+          : Promise.resolve(new Map([[BOB, bob_doc]]))
       },
+      now: () => clock.ms,
     })
 
     ensure_roster()
     await flush()
+    // The very next fold is 250ms later (the fight clock) — a failure that re-asks here is the #2200 storm.
+    clock.ms += 250
+    ensure_roster()
+    await flush()
+    expect(attempts).toBe(1)
+
+    clock.ms += 60_000
     ensure_roster()
     await flush()
 
     expect(attempts).toBe(2)
     expect(carried.find((row) => row.id === BOB)).toMatchObject({
       id: BOB,
-      color_1: bob_appearance.color_1,
+      colors: bob_doc.colors,
     })
   })
 })

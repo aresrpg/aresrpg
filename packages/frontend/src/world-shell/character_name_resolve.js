@@ -8,6 +8,12 @@ import { short_display_id } from '@aresrpg/fight/project'
 
 import { get_characters } from '../rpc/client'
 
+/** THE freshness window under every remote character read, positive AND negative. It is the FLOOR under a peer's
+ *  rendered identity (remote_character_cache.js re-reads a row older than this) and the RETRY FLOOR under one
+ *  that did not resolve (fight_roster_adoption.js). One home: a read that misses is remembered for exactly as
+ *  long as one that hits, so nothing polls a missing character faster than the game refreshes a present one. */
+export const CHARACTER_READ_TTL_MS = 60_000
+
 /** Short identity fallback for a Character id whose `/v1/characters?ids=` row is still unavailable — the ONLY
  *  honest display when a real name genuinely can't be resolved (never invent one). The SHAPE now lives with the
  *  roster identity book (#1993 WP3), which renders it as an unresolved row's `display_id`; this is the same
