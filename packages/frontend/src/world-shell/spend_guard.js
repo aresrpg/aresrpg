@@ -15,9 +15,10 @@
 //                 fresh intent.
 //   ② BACKOFF   — a PRE-EXECUTION refusal (no digest: RPC refusal, simulate failure, network) burned nothing, so
 //                 it stays retryable — on an exponential schedule with jitter, per intent, reset by a success.
-//   ③ BREAKER   — automated submissions accrue a session gas ledger; past AUTOMATED_SPEND_CEILING_MIST ALL
-//                 automated submissions freeze. The backstop for what ① cannot see: many DISTINCT intents each
-//                 burning once, or automation that keeps SUCCEEDING and still runs away.
+//   ③ BREAKER   — automated submissions accrue a session gas ledger; past the session ceiling (a share of the
+//                 daily allowance the sponsor SERVES, `automated_ceiling_mist`) ALL automated submissions
+//                 freeze. The backstop for what ① cannot see: many DISTINCT intents each burning once, or
+//                 automation that keeps SUCCEEDING and still runs away.
 //
 // PURE BY CONSTRUCTION. Everything above the "LEDGER DOOR" line is a transform over plain data — no i18n, no
 // toast, no store, no clock of its own (`now` and `jitter` are injected). The player-facing line is returned as
@@ -36,19 +37,36 @@ export const BACKOFF_CAP_MS = 60_000
 export const BACKOFF_JITTER_RATIO = 0.25
 
 /**
- * ③ THE SESSION CEILING ON AUTOMATED GAS — 0.05 SUI. Derivation, from this repo's own numbers (one home):
- *  · CEILING ANCHOR: the sponsor policy's per-address DAILY cap is 1 SUI (`ADDR_DAILY_CAP_MIST`,
- *    api/sponsor_state.mjs) — the house's own statement of what one address may reasonably burn in a DAY,
- *    across every act. Automated janitor work (crank, force_start, the deadline auto-commit) is a small subset
- *    of a single SESSION, so a twentieth of a day's whole allowance is already generous to it.
- *  · FLOOR ANCHOR: a gameplay PTB runs ~0.002–0.003 SUI (stores/sui_send.ts pins a plain transfer at
- *    ~0.001–0.002; a fight PTB is a little more), so 0.05 SUI is ~20 automated transactions in one session —
- *    more than any honest run of deadline expiries produces, and ~2× the 0.0213 SUI that #1262 burned before
- *    a human noticed.
+ * ③ THE SESSION CEILING'S SHAPE — a twentieth of ONE DAY's allowance. Automated janitor work (crank,
+ * force_start, the deadline auto-commit) is a small subset of a single SESSION, so a twentieth of what the
+ * house says an address may burn in a whole DAY is already generous to it. The FLOOR sanity-checks that:
+ * a gameplay PTB runs ~0.002–0.003 SUI (stores/sui_send.ts pins a plain transfer at ~0.001–0.002), so a
+ * 1-SUI day yields ~20 automated transactions in one session — more than any honest run of deadline
+ * expiries produces, and ~2× the 0.0213 SUI that #1262 burned before a human noticed.
  * It is deliberately NOT #1262's fix: gate ① stops that loop at the SECOND submission, long before any
  * threshold. This is the backstop for the runaway shape a per-intent circuit cannot see.
  */
-export const AUTOMATED_SPEND_CEILING_MIST = 50_000_000n
+export const AUTOMATED_SESSION_SHARE_DIVISOR = 20n
+
+/**
+ * ③ The ceiling used until an allowance has been SERVED (logged out, or before the first poll answers).
+ * A twentieth of the smallest daily cap the sponsor has ever published — under-shooting freezes automation
+ * EARLIER, the safe direction for a money guard.
+ */
+export const AUTOMATED_SPEND_CEILING_FALLBACK_MIST = 50_000_000n
+
+/**
+ * PURE ③ — the session ceiling for a KNOWN daily allowance. The allowance is the one the sponsor SERVES
+ * (`/v1/sponsor/remaining` → `allowance_mist`, itself the cap the sponsor published), never a number
+ * restated here: the cap moved from 1 to 5 SUI once already, and a ceiling derived from a comment about
+ * the old value silently kept guarding a day that no longer exists.
+ * @param {bigint|null|undefined} allowance_mist the served daily allowance, null until one is known
+ * @returns {bigint}
+ */
+export const automated_ceiling_mist = (allowance_mist) =>
+  typeof allowance_mist === 'bigint' && allowance_mist > 0n
+    ? allowance_mist / AUTOMATED_SESSION_SHARE_DIVISOR
+    : AUTOMATED_SPEND_CEILING_FALLBACK_MIST
 
 /**
  * Charged to the session ledger when the REAL number is unavailable — an executed failure hands us an error, not
@@ -61,10 +79,24 @@ export const ASSUMED_TX_GAS_MIST = 3_000_000n
 
 /** @typedef {{ circuits: Record<string, { digest: string }>,
  *              backoff: Record<string, { attempts: number, retry_at_ms: number }>,
- *              automated_spend_mist: bigint }} SpendLedger */
+ *              automated_spend_mist: bigint,
+ *              allowance_mist: bigint|null }} SpendLedger */
 
 /** @returns {SpendLedger} */
-export const empty_spend_ledger = () => ({ circuits: {}, backoff: {}, automated_spend_mist: 0n })
+export const empty_spend_ledger = () => ({
+  circuits: {},
+  backoff: {},
+  automated_spend_mist: 0n,
+  allowance_mist: null,
+})
+
+/**
+ * PURE ③ — the served daily allowance, as plain ledger data (the poll's result re-entering as an INPUT, not
+ * a callback writing a threshold). Same value in, same ledger out, so a 15s poll never churns state.
+ * @param {SpendLedger} ledger @param {bigint|null} allowance_mist @returns {SpendLedger}
+ */
+export const note_sponsor_allowance = (ledger, allowance_mist) =>
+  ledger.allowance_mist === allowance_mist ? ledger : { ...ledger, allowance_mist }
 
 const clamp01 = (/** @type {number} */ value) => (value < 0 ? 0 : value > 1 ? 1 : value)
 
@@ -80,8 +112,8 @@ export function backoff_delay_ms(attempts, jitter = 0) {
   return base + Math.floor(base * BACKOFF_JITTER_RATIO * clamp01(jitter))
 }
 
-/** PURE ③ — has automated spend reached the session ceiling? @param {SpendLedger} ledger */
-export const session_frozen = (ledger) => ledger.automated_spend_mist >= AUTOMATED_SPEND_CEILING_MIST
+/** PURE ③ — has automated spend reached the session ceiling the served allowance implies? @param {SpendLedger} ledger */
+export const session_frozen = (ledger) => ledger.automated_spend_mist >= automated_ceiling_mist(ledger.allowance_mist)
 
 /**
  * PURE — net MIST a receipt's `gasUsed` actually cost (computation + storage − rebate). The ONE home for that
@@ -156,6 +188,7 @@ const accrue = (/** @type {SpendLedger} */ ledger, /** @type {boolean} */ automa
  */
 export function note_executed_failure(ledger, { intent, digest, automated = false, gas_mist = ASSUMED_TX_GAS_MIST }) {
   return {
+    ...ledger,
     circuits: { ...ledger.circuits, [intent]: { digest } },
     backoff: without(ledger.backoff, intent),
     automated_spend_mist: accrue(ledger, automated, gas_mist),
@@ -213,6 +246,16 @@ export const spend_guard_state = () => ledger
 /** Session teardown / test isolation — a later session starts clean. */
 export function reset_spend_guard() {
   ledger = empty_spend_ledger()
+}
+
+/**
+ * The served daily allowance entering the ledger — called by the edge that already polls it
+ * (`use_sponsor_allowance`), so the breaker's ceiling tracks the cap the sponsor actually enforces instead
+ * of a comment about the cap it enforced once. Null (logged out, first poll pending) keeps the fallback.
+ * @param {bigint|null} allowance_mist
+ */
+export function spend_guard_note_allowance(allowance_mist) {
+  ledger = note_sponsor_allowance(ledger, allowance_mist)
 }
 
 if (typeof window !== 'undefined') /** @type {any} */ (window).__SPEND_GUARD = spend_guard_state

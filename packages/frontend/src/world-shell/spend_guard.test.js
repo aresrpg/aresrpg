@@ -12,7 +12,9 @@ import { beforeEach, describe, expect, it } from 'bun:test'
 import { attach_executed_digest } from './tx_digest_error.js'
 import {
   ASSUMED_TX_GAS_MIST,
-  AUTOMATED_SPEND_CEILING_MIST,
+  AUTOMATED_SESSION_SHARE_DIVISOR,
+  AUTOMATED_SPEND_CEILING_FALLBACK_MIST,
+  automated_ceiling_mist,
   BACKOFF_CAP_MS,
   backoff_delay_ms,
   classify_submission_error,
@@ -20,12 +22,14 @@ import {
   net_gas_mist,
   note_executed_failure,
   note_preflight_refusal,
+  note_sponsor_allowance,
   note_success,
   reset_spend_guard,
   session_frozen,
   settled_gas_mist,
   spend_decision,
   spend_guard_admit,
+  spend_guard_note_allowance,
   spend_guard_record_failure,
   spend_guard_record_success,
   spend_guard_state,
@@ -122,7 +126,7 @@ describe('③ session automated-spend breaker', () => {
     const spent = note_success(empty_spend_ledger(), {
       intent: INTENT,
       automated: true,
-      gas_mist: AUTOMATED_SPEND_CEILING_MIST,
+      gas_mist: AUTOMATED_SPEND_CEILING_FALLBACK_MIST,
     })
     expect(session_frozen(spent)).toBe(true)
     expect(spend_decision(spent, { intent: 'force_start:0xother', automated: true })).toMatchObject({
@@ -135,7 +139,7 @@ describe('③ session automated-spend breaker', () => {
     const spent = note_success(empty_spend_ledger(), {
       intent: INTENT,
       automated: true,
-      gas_mist: AUTOMATED_SPEND_CEILING_MIST,
+      gas_mist: AUTOMATED_SPEND_CEILING_FALLBACK_MIST,
     })
     expect(spend_decision(spent, { intent: INTENT, automated: false }).allow).toBe(true)
   })
@@ -185,7 +189,11 @@ describe('the ledger door — transitions surface once, as data', () => {
   })
 
   it('trips the breaker loudly, exactly once, and freezes what follows', () => {
-    const gas_used = { computationCost: String(AUTOMATED_SPEND_CEILING_MIST), storageCost: '0', storageRebate: '0' }
+    const gas_used = {
+      computationCost: String(AUTOMATED_SPEND_CEILING_FALLBACK_MIST),
+      storageCost: '0',
+      storageRebate: '0',
+    }
     expect(spend_guard_record_success({ gasUsed: gas_used }, automated)).toEqual({
       notice: { i18n_key: 'errors.spend_guard_session_frozen' },
     })
@@ -196,5 +204,63 @@ describe('the ledger door — transitions surface once, as data', () => {
     })
     // already frozen — the next landing does not shout again
     expect(spend_guard_record_success({ gasUsed: gas_used }, automated).notice).toBeNull()
+  })
+})
+
+// ── ③ THE CEILING IS DERIVED, NOT DECLARED ──────────────────────────────────────────────────────────────────
+// It used to be a literal 0.05 SUI justified by a comment reading "the sponsor's per-address DAILY cap is
+// 1 SUI". The cap has since moved to 5 SUI on the enforcing side, and the comment did not — so automation
+// froze at a twentieth of a day nobody runs any more. The ceiling now derives from the allowance the sponsor
+// SERVES (`/v1/sponsor/remaining` → allowance_mist); the literal survives only as the until-known fallback.
+describe('③ the session ceiling derives from the served allowance', () => {
+  const ledger_with = (allowance_mist, automated_spend_mist) => ({
+    ...empty_spend_ledger(),
+    allowance_mist,
+    automated_spend_mist,
+  })
+
+  it('RED — a 5 SUI served allowance does NOT freeze at the 1-SUI-era 0.05 ceiling', () => {
+    // 0.1 SUI burned against a served 5 SUI/day: a twentieth is 0.25 SUI, so automation keeps running.
+    expect(session_frozen(ledger_with(5_000_000_000n, 100_000_000n))).toBe(false)
+    // …and it still freezes, at the ceiling the SERVED allowance implies.
+    expect(session_frozen(ledger_with(5_000_000_000n, 250_000_000n))).toBe(true)
+  })
+
+  it('is a twentieth of the served allowance, whatever the sponsor publishes', () => {
+    expect(automated_ceiling_mist(5_000_000_000n)).toBe(5_000_000_000n / AUTOMATED_SESSION_SHARE_DIVISOR)
+    expect(automated_ceiling_mist(1_000_000_000n)).toBe(AUTOMATED_SPEND_CEILING_FALLBACK_MIST) // the 1-SUI day
+  })
+
+  it('falls back — never to zero, never to a guess — until an allowance has been served', () => {
+    for (const unknown of [null, undefined, 0n])
+      expect(automated_ceiling_mist(unknown)).toBe(AUTOMATED_SPEND_CEILING_FALLBACK_MIST)
+    expect(session_frozen(empty_spend_ledger())).toBe(false)
+    expect(session_frozen(ledger_with(null, AUTOMATED_SPEND_CEILING_FALLBACK_MIST))).toBe(true)
+  })
+
+  it('survives every reducer — a burned intent must not drop the allowance the ledger knows', () => {
+    const known = note_sponsor_allowance(empty_spend_ledger(), 5_000_000_000n)
+    expect(known.allowance_mist).toBe(5_000_000_000n)
+    expect(note_sponsor_allowance(known, 5_000_000_000n)).toBe(known) // same value, same object: no churn
+    const burned = note_executed_failure(known, { intent: INTENT, digest: '0xd', automated: true })
+    expect(burned.allowance_mist).toBe(5_000_000_000n)
+    expect(note_preflight_refusal(burned, { intent: INTENT, now: 0 }).allowance_mist).toBe(5_000_000_000n)
+    expect(note_success(burned, { intent: INTENT }).allowance_mist).toBe(5_000_000_000n)
+  })
+
+  it('the door lets the poll move the live ceiling', () => {
+    reset_spend_guard()
+    spend_guard_record_success(
+      { gasUsed: { computationCost: '100000000', storageCost: '0', storageRebate: '0' } },
+      automated
+    )
+    expect(session_frozen(spend_guard_state())).toBe(true) // 0.1 SUI burned, no allowance known yet
+
+    spend_guard_note_allowance(5_000_000_000n)
+    expect(session_frozen(spend_guard_state())).toBe(false) // the served allowance raises the ceiling to 0.25
+    expect(spend_guard_admit(automated).allow).toBe(true)
+
+    spend_guard_note_allowance(null) // logged out — back to the conservative fallback
+    expect(session_frozen(spend_guard_state())).toBe(true)
   })
 })
