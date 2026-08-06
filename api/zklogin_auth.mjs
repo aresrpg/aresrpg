@@ -6,6 +6,7 @@ import { parseSerializedSignature } from '@mysten/sui/cryptography'
 import { verifyPersonalMessageSignature } from '@mysten/sui/verify'
 
 const DEFAULT_ISSUERS = 'https://accounts.google.com,accounts.google.com'
+export const CHALLENGE_TTL_MS = Number(process.env.SPONSOR_CHALLENGE_TTL_MS || 5 * 60_000)
 
 /** @param {string | undefined} csv */
 const issuer_allowlist = (csv) =>
@@ -57,7 +58,7 @@ export function assert_zklogin_challenge_local({
   challenge,
   signature,
   purpose,
-  ttl_ms = 5 * 60_000,
+  ttl_ms = CHALLENGE_TTL_MS,
   now = Date.now,
   issuers = process.env.SPONSOR_ZKLOGIN_ISS,
 }) {

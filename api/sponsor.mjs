@@ -10,7 +10,12 @@ import { SuiGrpcClient } from '@mysten/sui/grpc'
 import checked_in_release from '../packages/sdk/src/deployment/release.json' with { type: 'json' }
 
 import { init_reporting, report_error } from './report.js'
-import { assert_zklogin_challenge, assert_zklogin_challenge_local, challenge_age_ms } from './zklogin_auth.mjs'
+import {
+  CHALLENGE_TTL_MS,
+  assert_zklogin_challenge,
+  assert_zklogin_challenge_local,
+  challenge_age_ms,
+} from './zklogin_auth.mjs'
 import {
   ADDR_DAILY_CAP_MIST,
   ADDR_RL_MAX,
@@ -72,7 +77,6 @@ export const CORS = {
   'access-control-max-age': '86400',
 }
 const RESERVE_DURATION_SECS = Number(process.env.SPONSOR_RESERVE_DURATION_SECS || 60)
-const CHALLENGE_TTL_MS = Number(process.env.SPONSOR_CHALLENGE_TTL_MS || 5 * 60_000)
 // A hung simulate must REFUSE, never park a sponsored request forever holding an inbound connection.
 const SIMULATE_TIMEOUT_MS = Number(process.env.SPONSOR_SIMULATE_TIMEOUT_MS || 15_000)
 // Request-size rails. The sponsor parses, authenticates and SIMULATES whatever arrives, so an unbounded body is

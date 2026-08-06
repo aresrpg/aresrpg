@@ -29,8 +29,6 @@ import { ADDR, CHAIN, SPONSOR_URL, calls_to, make_tx, make_wallet, refusal_body 
 const { execute_sponsored_tx } = await import('../../src/tx/index')
 const { _reset_server_clock_for_test } = await import('../../src/core/server_clock.ts')
 
-// The service's own window, restated here on purpose: this file's whole claim is "the stamp lands inside it".
-const CHALLENGE_TTL_MS = 5 * 60_000
 const DEVICE_SKEW_MS = 10 * 60_000 // the reported bug's magnitude — twice the window
 const SMALL_SKEW_MS = 45_000 // real-world drift; below the copy threshold
 
@@ -100,8 +98,8 @@ describe('#2263 the challenge is stamped against the SERVER clock', () => {
     // That refusal carried the server's `Date` — the offset is now known, and the retry must stamp for it.
     const second = await attempt({ skew_ms: DEVICE_SKEW_MS, respond: ok_reserve })
     const age_at_server = second.true_now - challenge_timestamp(second.spy)
-    expect(Math.abs(age_at_server)).toBeLessThan(CHALLENGE_TTL_MS)
-    // Not merely "inside the window": within a couple of seconds of the server's own clock.
+    // Within a couple of seconds of the server's own clock, and therefore inside its freshness window without
+    // mirroring that server-owned TTL into the client suite.
     expect(Math.abs(age_at_server)).toBeLessThan(2000)
   })
 
