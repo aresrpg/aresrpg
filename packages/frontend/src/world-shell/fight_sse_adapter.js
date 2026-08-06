@@ -39,7 +39,7 @@ import { RPC_URL } from '../env'
 // anchor, never a cadence: a stream gap must never cost the turn the deadline is about to end.
 const DEADLINE_LEAD_MS = 5_000
 
-const stream_url = (base_url, fight_id, cursor) => {
+export const fight_stream_url = (base_url, fight_id, cursor) => {
   const url = new URL(`${base_url}/v1/stream/fight/${encodeURIComponent(fight_id)}`)
   if (cursor != null && cursor !== '') url.searchParams.set('lastEventId', String(cursor))
   return url.toString()
@@ -110,7 +110,7 @@ export function open_fight_stream({
   set_timeout = (fn, delay) => setTimeout(fn, delay),
   clear_timeout = clearTimeout,
 }) {
-  const source = event_source_factory(stream_url(base_url, fight_id, cursor?.()))
+  const source = event_source_factory(fight_stream_url(base_url, fight_id, cursor?.()))
   let status = 'idle'
   let attempts = 0
   let unusable = 0

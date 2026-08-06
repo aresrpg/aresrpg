@@ -34,45 +34,16 @@ import { REJOIN_MAX_ATTEMPTS } from '@aresrpg/world/presence'
 import { game_log } from '../core/log.js'
 import { RPC_URL } from '../env'
 
+import { is_definitive_stream_status, probe_stream_status } from './stream_status.js'
+
+export { probe_stream_status } from './stream_status.js'
+
 // A dead endpoint must not double this client's request rate: a failed connect skips ticks on a doubling ladder,
 // from the next tick up to fifteen of them (a minute at the poll cadence — the fight link's own ceiling). That
 // ladder covers the TRANSIENT classes only — a restarting location, a dropped connection, a timeout.
 const MAX_SKIPPED_TICKS = 15
 
-// #2261 — A 404/410 IS AN ANSWER, NOT A HICCUP. A location that does not serve this route (the SSE surface binds
-// its own port — `STREAM_BIND`, packages/rpc/README.md) will not start serving it because we asked again, so
-// retrying one is pure noise on the read layer: the owner's live session logged dozens of them a minute. A
-// definitive status RETIRES the wire for the session and the four-second poll — the fallback this module was
-// always written around — carries the party alone. The verdict is about the ROUTE, not about this character, so
-// it survives a re-key: nothing short of a reload re-arms it, and nothing re-arms it on a clock.
-const DEFINITIVE_STATUSES = Object.freeze([404, 410])
-
 const stream_url = (base_url, character_id) => `${base_url}/v1/stream/party/${encodeURIComponent(character_id)}`
-
-/**
- * What does this location actually answer for this url? `EventSource` never says — the spec hands its consumer
- * one bodiless `error` event whether the response was a 404, a 502 or a severed socket — so the classification
- * costs exactly one HEAD-shaped read: `fetch` resolves as soon as the response head is in, and the body (a live
- * SSE body never ends) is aborted immediately. Returns the status, or `null` when no response was reached at
- * all — which is itself the answer "transient".
- * @param {string} url
- * @param {typeof fetch} [fetch_impl]
- * @returns {Promise<number|null>}
- */
-export async function probe_stream_status(url, fetch_impl = globalThis.fetch) {
-  const controller = new AbortController()
-  try {
-    const response = await fetch_impl(url, {
-      signal: controller.signal,
-      headers: { accept: 'text/event-stream' },
-    })
-    return typeof response?.status === 'number' ? response.status : null
-  } catch {
-    return null
-  } finally {
-    controller.abort()
-  }
-}
 
 /**
  * Open ONE party scope stream. Transport only: every frame becomes a single `on_change()` call. Returns the
@@ -208,7 +179,7 @@ export function start_party_carriers({
     const status = await probe(url)
     classifying = false
     if (closed) return
-    if (status != null && DEFINITIVE_STATUSES.includes(status)) {
+    if (is_definitive_stream_status(status)) {
       retired = true
       drop_stream()
       breadcrumb(`party stream retired — ${url} answered ${status}; the party rides the poll for this session`)
