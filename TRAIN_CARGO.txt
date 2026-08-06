@@ -1,2 +1,10 @@
-d3abd0d49 → Refs #1368 — fix(world): one normalizer for the chain-anchor bag
-b486b5e18 → Refs #1368 — fix(world-shell): one predicate decides position persistence
+38b0dcc0a → Refs #2227 — docs(adr): 004 — fight start proves membership
+866c0ba74 → Refs #1368 — fix(frontend): the renderer-rebuild guard derives from the one body predicate
+437555994 → Refs #1368 — fix(world): a checkpoint arriving before the frame is never mis-framed
+fcaed5fd5 → Refs #1368 — fix(fight): a definitive status retires the fight stream too
+995610d0b → Refs #1368 — fix(sponsor): one home for the challenge TTL
+d3c894664 → Refs #2260 — test(frontend): ambient engine state resets between suite files
+a0d33a815 → Fixes #1143 — fix(rpc): journal the action envelope so observers see status rows
+b8c06d102 → Refs #1143 — test(fight): RED repro for the coop status asymmetry
+0fa67f83f → Refs #1143 — test(fight): align the coop repro with the real journalled shape
+ff426f672 → Refs #1143 — chore(gates): sanction the #1143 captured-wire ids in journal_tests
