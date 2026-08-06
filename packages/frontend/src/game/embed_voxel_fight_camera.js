@@ -12,9 +12,11 @@
 // (its dolly flies out through the cave roof, and it lost the per-frame writer war anyway).
 
 /**
- * @param {{ engine: any, canvas: HTMLCanvasElement, board_cell_m: number, mobile?: boolean }} deps —
+ * @param {{ engine: any, canvas: HTMLCanvasElement, board_cell_m: number, mobile?: boolean,
+ *   now?: () => number }} deps —
  *   `board_cell_m` is the host's BOARD_CELL_M render stride (D231); the fight cam is orthographic + fixed-angle
- *   on every device (the default) — `mobile` only selects the touch-vs-mouse gesture wiring below.
+ *   on every device (the default) — `mobile` only selects the touch-vs-mouse gesture wiring below. `now` is the
+ *   monotonic render clock in milliseconds; tests inject it so pose sweeps never sample the wall.
  */
 import { game_log } from '../core/log.js'
 
@@ -35,7 +37,7 @@ export const idle_wobble = (/** @type {number} */ t) => {
   }
 }
 
-export function create_fight_camera({ engine, canvas, board_cell_m, mobile = false }) {
+export function create_fight_camera({ engine, canvas, board_cell_m, mobile = false, now = () => performance.now() }) {
   let fight_cam = false // D230 — true while the tactical board owns the camera (adapter's on_fight)
   let input_paused = false // route-hidden scenes retain fight state without retaining global input locks
   let fight_azimuth = Math.PI / 4 // D238 — orbit angle around the board (starts at the 45° corner)
@@ -168,15 +170,16 @@ export function create_fight_camera({ engine, canvas, board_cell_m, mobile = fal
   const pan_down = (/** @type {PointerEvent} */ e) => {
     if (!fight_cam || e.button !== 2) return
     e.preventDefault()
-    const now = performance.now()
+    const pressed_at = now()
     const is_dblclick =
-      now - last_rmb_t < PAN_DBLCLICK_MS && Math.hypot(e.clientX - last_rmb_x, e.clientY - last_rmb_y) < PAN_DBLCLICK_PX
+      pressed_at - last_rmb_t < PAN_DBLCLICK_MS &&
+      Math.hypot(e.clientX - last_rmb_x, e.clientY - last_rmb_y) < PAN_DBLCLICK_PX
     last_rmb_t = -Infinity // consume — a 3rd rapid click starts a fresh pair, never chains into a 2nd reset
     if (is_dblclick) {
       reset_pan_zoom() // double right-click — the reset click itself never arms a drag
       return
     }
-    last_rmb_t = now
+    last_rmb_t = pressed_at
     last_rmb_x = e.clientX
     last_rmb_y = e.clientY
     pan_drag = { x: e.clientX, y: e.clientY, id: e.pointerId }
@@ -499,7 +502,7 @@ export function create_fight_camera({ engine, canvas, board_cell_m, mobile = fal
     set_mobile_projection(Math.max(half_y, half_x / aspect) * 1.08 * (dist / base), aspect)
     const pose_dist = base // ortho zoom is frustum-only (the default, every device) — a moving eye is invisible under orthographic projection
     const horiz = pose_dist * Math.sin(polar)
-    const { x: wob_x, y: wob_y, z: wob_z } = idle_wobble(performance.now() / 1000)
+    const { x: wob_x, y: wob_y, z: wob_z } = idle_wobble(now() / 1000)
     // [fight-feel] IMPACT SHAKE — a decaying random jitter added to the eye + aim (additive on top of the pose,
     // never a restructure). Smooth-random via high-frequency sines seeded on the clock; linear decay × strength.
     let shx = 0
@@ -510,7 +513,7 @@ export function create_fight_camera({ engine, canvas, board_cell_m, mobile = fal
     if (shake_t > 0) {
       shake_t = Math.max(0, shake_t - dt)
       const env = (shake_t / SHAKE_DUR) * shake_amp // fade to 0 over the jolt window
-      const tt = performance.now() / 1000
+      const tt = now() / 1000
       shx = Math.sin(tt * 97.1) * SHAKE_POS * env
       shy = Math.sin(tt * 88.7 + 2.1) * SHAKE_POS * env
       shz = Math.cos(tt * 91.3 + 1.3) * SHAKE_POS * env

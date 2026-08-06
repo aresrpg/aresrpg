@@ -28,6 +28,17 @@ const FRAME = { origin: { x: 0, y: 0, z: 0 }, grid_w: GRID, grid_h: GRID }
 const CX = FRAME.origin.x + (GRID * CELL) / 2
 const CZ = FRAME.origin.z + (GRID * CELL) / 2
 
+/** Fixed render-time data: `step(dt)` advances the exact timeline sampled by the camera pose. */
+const fixed_timeline = () => {
+  let elapsed_ms = 0
+  return {
+    now: () => elapsed_ms,
+    step: (/** @type {number} */ dt) => {
+      elapsed_ms += dt * 1000
+    },
+  }
+}
+
 /** A minimal fake EventTarget — stores listeners so a test can DISPATCH synthetic gestures (pointer/wheel/
  *  contextmenu) exactly like a real canvas/window would deliver them, then read the result off `positions`
  *  (same black-box philosophy as the rest of this file: recover state from what apply() wrote, never reach
@@ -103,9 +114,10 @@ const az_from = (/** @type {number[]} */ p) => Math.atan2(p[0] - CX, p[2] - CZ)
 
 /** Drive `n` frames (integrate then apply) and return the azimuth after each. `board_frame` null ⇒ apply reads
  *  the synthetic prepare frame (the pre-build path); non-null ⇒ the real board (the settled path). */
-function run(cam, n, dt, board_frame, positions) {
+function run(cam, n, dt, board_frame, positions, step = () => {}) {
   const out = /** @type {number[]} */ ([])
   for (let i = 0; i < n; i++) {
+    step(dt)
     cam.integrate(dt)
     cam.apply(dt, () => board_frame)
     out.push(az_from(positions[positions.length - 1]))
@@ -148,16 +160,16 @@ describe('fight camera — fight-entry prepare→settle choreography', () => {
 
   it('SETTLE on board-ready: the azimuth eases the SHORT way back to the corner and locks', () => {
     const { engine, canvas, positions } = make_rig()
-    const cam = create_fight_camera({ engine, canvas, board_cell_m: CELL })
+    const timeline = fixed_timeline()
+    const cam = create_fight_camera({ engine, canvas, board_cell_m: CELL, now: timeline.now })
     cam.begin_prepare({ frame: FRAME, reduced: false })
-    run(cam, 90, 1 / 60, null, positions) // 1.5 s orbit — well past MIN_PREPARE (0.9 s)
+    run(cam, 90, 1 / 60, null, positions, timeline.step) // 1.5 s orbit — well past MIN_PREPARE (0.9 s)
     const before = az_from(positions.at(-1))
     expect(before).toBeGreaterThan(Math.PI / 4 + 0.3) // it really rotated away from the corner
     cam.set_active(true) // board ready → settle now (floor already elapsed)
-    const az = run(cam, 120, 1 / 60, FRAME, positions) // 2 s ease, now on the real board frame
-    // precision 1 (not 2) — the always-on idle wobble (±0.08 m at ~17 m radius ⇒ up to ~0.007 rad) can
-    // occasionally exceed a 0.005 tolerance depending on wall-clock phase; every other azimuth-lock
-    // assertion in this file already uses precision 1 for exactly this reason.
+    const az = run(cam, 120, 1 / 60, FRAME, positions, timeline.step) // 2 s ease on fixed dt samples
+    // The always-on idle wobble is part of the pose, but its phase is now deterministic timeline data rather
+    // than whichever wall-clock phase the runner happened to sample.
     expect(az.at(-1)).toBeCloseTo(Math.PI / 4, 1) // locked back at the canonical corner
     // eased the SHORT way: never overshoots past the corner (monotonic decrease toward it)
     for (let i = 1; i < az.length; i++) expect(az[i]).toBeLessThanOrEqual(az[i - 1] + 1e-6)
