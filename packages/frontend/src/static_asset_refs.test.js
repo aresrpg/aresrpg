@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 // STATIC ASSET REFERENCE SWEEP (#157) — the regression tooth for "the repo split carried code but
-// dropped binary chrome assets" (public/sfx/*, public/sprites/*). Walks every packages/frontend/src
+// dropped binary chrome assets" (public/sfx/*, public/sprites/*). Walks every shipped packages/frontend/src
 // and packages/engine/src source file for string literals that reference /sfx/... or /sprites/...
 // and asserts each one resolves under packages/frontend/public/ — so a future split/rename/prune
 // that drops a still-referenced asset fails CI instead of shipping a 404.
@@ -13,29 +13,17 @@
 // variants, mobs.js mob_visual_url/mob_icon_url) never matches: it builds its filename at runtime and can't be
 // statically resolved here. The audio registry's colocated test compares its complete SFX map to public/sfx/.
 
-import { existsSync, readdirSync, statSync } from 'node:fs'
+import { existsSync } from 'node:fs'
 import path from 'node:path'
 
 import { describe, expect, it } from 'bun:test'
+
+import { production_source_paths } from './test_helpers/production_source_paths.js'
 
 const THIS_DIR = path.dirname(new URL(import.meta.url).pathname)
 const FRONTEND_SRC = THIS_DIR
 const ENGINE_SRC = path.resolve(THIS_DIR, '../../engine/src')
 const PUBLIC_DIR = path.resolve(THIS_DIR, '../public')
-
-const SOURCE_EXTENSIONS = new Set(['.js', '.jsx', '.ts', '.tsx', '.mjs'])
-
-/** Recursively lists every source file under `dir` matching SOURCE_EXTENSIONS. */
-function walk_source_files(dir) {
-  const out = []
-  for (const name of readdirSync(dir)) {
-    const full = path.join(dir, name)
-    const info = statSync(full)
-    if (info.isDirectory()) out.push(...walk_source_files(full))
-    else if (SOURCE_EXTENSIONS.has(path.extname(name))) out.push(full)
-  }
-  return out
-}
 
 // A path-safe run: letters, digits, `_-./` — exactly what every real /sfx/ and /sprites/ filename
 // in this repo is built from. A `${...}` interpolation or comment prose (a bare `...` ellipsis,
@@ -62,7 +50,9 @@ function extract_asset_refs(contents) {
   return refs
 }
 
-const SOURCE_FILES = [...walk_source_files(FRONTEND_SRC), ...walk_source_files(ENGINE_SRC)]
+// Asset references in colocated tests cannot ship. Keeping those out bounds the sweep from 1,473 files to the
+// two production source surfaces while retaining the cross-package assertion that protects runtime assets.
+const SOURCE_FILES = [...production_source_paths(FRONTEND_SRC), ...production_source_paths(ENGINE_SRC)]
 const read_sources = () => Promise.all(SOURCE_FILES.map(async (file) => [file, await Bun.file(file).text()]))
 
 describe('static asset references resolve on disk (#157 regression tooth)', () => {
