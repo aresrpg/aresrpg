@@ -4,16 +4,19 @@
 //! [`super::journal_writes`]).
 //!
 //! ## RUNTIME PROVENANCE (the real captured wire)
-//! The `*_WIRE` byte arrays below are the EXACT BCS bodies of live testnet
-//! `aresrpg_fight::fight_events` events (engine origin package
-//! `0x599bda…3dafb`), captured from fight `0x7cdc59f2…ee928` via
-//! `suix_queryEvents{MoveEventModule{package, module:"fight_events"}}` and decoded from
-//! the response's base64 `bcs`. Each test asserts our decode reproduces the fullnode's
-//! own `parsedJson` field-for-field (value convention: u64→string, u32/u8→number,
-//! bool→bool, ID→`0x…` hex) — proving the model matches the REAL wire, not a self-encoded
-//! round trip (the code-law: a codec test that encodes with the model it decodes with
-//! proves nothing). `FightCreated`/`Hit`/`Displaced`/`Moved` cover every value type
-//! (2 ids, a >2^63 u64 `spawn_id`, u32 coords, a u8 mechanics `kind`, bools, plain u64s).
+//! Every `*_WIRE` byte array below is the EXACT BCS body of a LIVE testnet
+//! `aresrpg_fight::fight_events` event, and every expectation is that same response's own
+//! fullnode-rendered `parsedJson` — so each test proves the model matches the REAL wire, not a
+//! self-encoded round trip (the code-law: a codec test that encodes with the model it decodes
+//! with proves nothing). Value convention: u64→string, u32/u8→number, bool→bool, ID→`0x…` hex.
+//!
+//! The arrays come in THREE independently-dated capture sets, each stating its own engine
+//! package, endpoint, and fight/transaction beside its constants — a set is only as trustworthy
+//! as the origin it names, so none of them inherit this paragraph's word for it. The first set
+//! (`FightCreated`/`Hit`/`Displaced`/`Moved`, engine origin `0x599bda…3dafb`, fight
+//! `0x7cdc59f2…ee928`, harvested through the since-retired
+//! `suix_queryEvents{MoveEventModule{…}}`) covers every scalar value type: 2 ids, a >2^63 u64
+//! `spawn_id`, u32 coords, a u8 mechanics `kind`, bools, plain u64s.
 
 use super::*;
 
@@ -65,6 +68,55 @@ const TURNSTARTED_WIRE: &[u8] = &[
 ];
 const TURNSTARTED_FIGHT: &str =
     "0xaf7429843ed544cedd9ed0d0a08ac0cab5d26094563bfa197806c3c54cb38167";
+
+// ── the action envelope's leading pair (#1143) ────────────────────────────────────────────
+// A THIRD capture set, harvested 2026-08-06 off testnet GraphQL
+// (`https://graphql.testnet.sui.io/graphql`, `events(filter:{ type:
+// "0x5b20ac04d1caa5b0b10cb14923f12d12205b7454f2b8061b3fdd9f9188b733b4::fight_events::<name>" })`)
+// — the same official-endpoint harvest as the arrays above, over the CURRENT engine origin
+// package, since public JSON-RPC is retired. Each array is the response's base64 `contents.bcs`
+// decoded; each expectation below is the SAME response's `contents.json`, i.e. the fullnode's
+// own parsedJson, transcribed field-for-field. Both events ride fight
+// `0x01df0cca…bdf3`.
+const ENVELOPE_FIGHT: &str = "0x01df0cca7047c493ebc7c21e2e841aecab42fc73ba3c3e17bacd5d1973bfbdf3";
+
+// ActionStarted (82 bytes) — tx `GoXvjpwQxdS3ahQTPmH5JdeDxxQoD4pjecH3G5tBpikQ`. parsedJson:
+// caster_is_mob false, caster_idx "0", turn_ordinal "6", action_ordinal "1", action_kind 0
+// (u8 → number), target_cell "62", ap_cost "2", effect_count "2".
+const ACTIONSTARTED_WIRE: &[u8] = &[
+    1, 223, 12, 202, 112, 71, 196, 147, 235, 199, 194, 30, 46, 132, 26, 236, 171, 66, 252, 115,
+    186, 60, 62, 23, 186, 205, 93, 25, 115, 191, 189, 243, 0, 0, 0, 0, 0, 0, 0, 0, 0, 6, 0, 0, 0,
+    0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 62, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 2, 0,
+    0, 0, 0, 0, 0, 0,
+];
+
+// ActionEffect (98 bytes = 32 id + bool + 4 × u64 + a 33-byte inlined Effect) — tx
+// `7Mzp4taJ9MUrpmjh4v1ernjT6GrCaKHhqquaVjiK3r7h`. THE #1143 class itself: a 2-turn
+// TF_ONLY_CASTER (32) self-buff whose `value` is the 32768-CENTERED 32793 (= +25), the exact row
+// an observer never saw. parsedJson: caster_is_mob true, caster_idx "1", turn_ordinal "1",
+// action_ordinal "0", effect_ordinal "0", effect { kind 9, element 255, value/value_max "32793",
+// area_shape 0, area_size "0", target_filter 32, chance 100, turns 2, stat 8, flags 0, phase 0 }.
+const ACTIONEFFECT_SELF_BUFF_WIRE: &[u8] = &[
+    1, 223, 12, 202, 112, 71, 196, 147, 235, 199, 194, 30, 46, 132, 26, 236, 171, 66, 252, 115,
+    186, 60, 62, 23, 186, 205, 93, 25, 115, 191, 189, 243, 1, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 9, 255, 25, 128, 0, 0, 0, 0, 0, 0,
+    25, 128, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 32, 100, 2, 8, 0, 0,
+];
+
+// ActionEffect (98 bytes) — tx `2D9gVznzddUUWZhXqNq4VKmkAbYdG6F9ZSqVp2SKUMBD`, fight
+// `0xc0036b00…f573`. The RANGED half of the layout: `value` 6 ≠ `value_max` 11 (#577's second
+// u64), which a mirror that stopped at the pre-#577 25-byte Effect would silently mis-read.
+// parsedJson: caster_is_mob true, caster_idx "0", turn_ordinal "9", action_ordinal "0",
+// effect_ordinal "0", effect { kind 0, element 1, value "6", value_max "11", area_shape 0,
+// area_size "0", target_filter 1, chance 100, turns 0, stat 0, flags 0, phase 0 }.
+const ACTIONEFFECT_RANGED_WIRE: &[u8] = &[
+    192, 3, 107, 0, 178, 98, 252, 185, 98, 133, 78, 151, 250, 237, 57, 134, 166, 85, 31, 117, 188,
+    38, 63, 102, 196, 36, 114, 177, 238, 229, 245, 115, 1, 0, 0, 0, 0, 0, 0, 0, 0, 9, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 6, 0, 0, 0, 0, 0, 0, 0, 11, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 100, 0, 0, 0, 0,
+];
+const ACTIONEFFECT_RANGED_FIGHT: &str =
+    "0xc0036b00b262fcb962854e97faed3986a6551f75bc263f66c42472b1eee5f573";
 
 fn fight_oid() -> ObjectID {
     ObjectID::from_hex_literal(FIGHT).unwrap()
@@ -160,10 +212,88 @@ fn defeat_reads_its_single_id_as_the_fight() {
 }
 
 #[test]
-fn deferred_and_foreign_events_are_not_journalled() {
-    // The action-envelope triple (nested Effect/SpellLevel/WeaponLine — deferred as one unit).
+fn action_started_wire_carries_the_envelope_key_and_target_cell() {
+    let (oid, kind, data) =
+        decode_journal_event("fight_events", "ActionStarted", ACTIONSTARTED_WIRE).unwrap();
+    assert_eq!(oid, ObjectID::from_hex_literal(ENVELOPE_FIGHT).unwrap());
+    assert_eq!(kind, "ActionStarted");
+    // Field-for-field with the fullnode's parsedJson. `target_cell` is the whole reason this
+    // row cannot be dropped: it is the zone origin `self_status_from_effect` tests the caster
+    // against, and no other journalled event carries it for a non-`Cast` action boundary.
+    assert_eq!(
+        data,
+        json!({
+            "fight": ENVELOPE_FIGHT, "caster_is_mob": false, "caster_idx": "0",
+            "turn_ordinal": "6", "action_ordinal": "1",
+            "action_kind": 0, // u8 → NUMBER
+            "target_cell": "62", "ap_cost": "2", "effect_count": "2",
+        })
+    );
+}
+
+#[test]
+fn action_effect_wire_decodes_its_nested_effect_uncentered() {
+    let (oid, kind, data) =
+        decode_journal_event("fight_events", "ActionEffect", ACTIONEFFECT_SELF_BUFF_WIRE).unwrap();
+    assert_eq!(oid, ObjectID::from_hex_literal(ENVELOPE_FIGHT).unwrap());
+    assert_eq!(kind, "ActionEffect");
+    // The nested Effect is a plain OBJECT (the fullnode inlines a by-value struct in parsedJson),
+    // u64 as string / u8 as number like every other field — and `value` stays CENTERED at
+    // 32768+25: `core_wire.js::decode_status_value` is the one decoder for both status doors.
+    assert_eq!(
+        data,
+        json!({
+            "fight": ENVELOPE_FIGHT, "caster_is_mob": true, "caster_idx": "1",
+            "turn_ordinal": "1", "action_ordinal": "0", "effect_ordinal": "0",
+            "effect": {
+                "kind": 9, "element": 255,
+                "value": "32793", "value_max": "32793",
+                "area_shape": 0, "area_size": "0",
+                "target_filter": 32, "chance": 100, "turns": 2,
+                "stat": 8, "flags": 0, "phase": 0,
+            },
+        })
+    );
+}
+
+#[test]
+fn action_effect_wire_keeps_the_ranged_value_max_distinct() {
+    let (oid, kind, data) =
+        decode_journal_event("fight_events", "ActionEffect", ACTIONEFFECT_RANGED_WIRE).unwrap();
+    assert_eq!(
+        oid,
+        ObjectID::from_hex_literal(ACTIONEFFECT_RANGED_FIGHT).unwrap()
+    );
+    assert_eq!(kind, "ActionEffect");
+    assert_eq!(
+        data,
+        json!({
+            "fight": ACTIONEFFECT_RANGED_FIGHT, "caster_is_mob": true, "caster_idx": "0",
+            "turn_ordinal": "9", "action_ordinal": "0", "effect_ordinal": "0",
+            "effect": {
+                "kind": 0, "element": 1,
+                "value": "6", "value_max": "11", // the #577 range, both halves read
+                "area_shape": 0, "area_size": "0",
+                "target_filter": 1, "chance": 100, "turns": 0,
+                "stat": 0, "flags": 0, "phase": 0,
+            },
+        })
+    );
+}
+
+#[test]
+fn a_truncated_envelope_wire_is_dropped_loudly_not_half_decoded() {
+    // `decode_bcs` reports (ERROR + sentry_event) and yields None: a mirror that no longer
+    // matches its Move source must never produce a plausible partial row (#1579's class).
+    let short = &ACTIONEFFECT_SELF_BUFF_WIRE[..ACTIONEFFECT_SELF_BUFF_WIRE.len() - 1];
+    assert!(decode_journal_event("fight_events", "ActionEffect", short).is_none());
     assert!(decode_journal_event("fight_events", "ActionStarted", HIT_WIRE).is_none());
-    assert!(decode_journal_event("fight_events", "ActionEffect", HIT_WIRE).is_none());
+}
+
+#[test]
+fn deferred_and_foreign_events_are_not_journalled() {
+    // `ActionResolved` — the one envelope member still deferred (Option<SpellLevel> +
+    // vector<WeaponLine>; its client arm only frees a finished action's context entry).
     assert!(decode_journal_event("fight_events", "ActionResolved", HIT_WIRE).is_none());
     // Settlement artifacts (keyed by result → /v1/fight-results, not the fight timeline).
     assert!(decode_journal_event("fight_events", "ResultMinted", HIT_WIRE).is_none());

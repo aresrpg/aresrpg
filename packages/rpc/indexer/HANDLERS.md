@@ -667,15 +667,21 @@ end card after `settle_and_destroy`.
   receipts use (`sdk/fight_read.js::decode_fight_event`). **version** is the fight object's
   post-tx Sui version as a STRING (u64; `null` for a terminal that DELETED the object).
 
-**Journalled** (every FLAT `fight_events` struct): `FightCreated`, `FightJoined`, `Placed`,
-`Ready`, `TurnStarted`, `Moved`, `MobMoved`, `Displaced`, `Cast`, `CriticalFailure`,
+**Journalled**: `FightCreated`, `FightJoined`, `Placed`, `Ready`, `TurnStarted`, `Moved`,
+`MobMoved`, `Displaced`, `Cast`, `ActionStarted`, `ActionEffect`, `CriticalFailure`,
 `StanceChanged`, `Revealed`, `Hit`, `Drain`, `Tackled`, `TurnEnded`, `Abandoned`, `Victory`,
-`Defeat`, `Settled`, `Swept`. **Deferred from the journal** (return `None`): the action-envelope
-triple `ActionStarted`/`ActionEffect`/`ActionResolved` (`ActionEffect`/`ActionResolved` carry
-nested `Effect`/`SpellLevel`/`WeaponLine` vectors — the modelling liability the object snapshots
-avoid — and no client consumes them today; per the pipeline-v2 amendment they ENRICH beats, never
-trigger them, so they ride a later milestone as one unit), the settlement `Result*`/`LootMinted`
-artifacts (keyed by result → `/v1/fight-results`), and `CreatorCapIssued`.
+`Defeat`, `Settled`, `Swept`. The `ActionStarted`/`ActionEffect` pair joined in **#1143**: they
+are the observer's ONLY carrier for a timed status row (`fight/inputs.js::self_status_from_effect`
+mints it off the `ActionEffect` descriptor and the `target_cell` only `ActionStarted` carries),
+and the 4 s object poll cannot stand in — `core_inbox.js::adopt_snapshot` refuses any read at or
+behind the event frontier, so dropping them made a partner's buff **permanently** invisible to
+everyone but the actor. `ActionEffect` embeds ONE fixed-width `Effect` by value, mirrored in
+`model.rs` and gated by `move_mirror_parity.rs`. **Deferred from the journal** (return `None`):
+`ActionResolved` — alone in the envelope it carries `Option<SpellLevel>` + `vector<WeaponLine>`
+(nested `vector<Effect>`), the modelling liability the object snapshots avoid, for facts no fold
+reads; its only client arm frees a finished action's context entry, whose keys are per
+`(caster, turn, action)` and can never be re-hit. Also deferred: the settlement
+`Result*`/`LootMinted` artifacts (keyed by result → `/v1/fight-results`), and `CreatorCapIssued`.
 
 **Serve.** `GET /v1/fights/{id}/events?from={seq}&limit={n}` (a PATH param — the one dynamic
 route, dispatched in `server.js`) → `{ fight, events:[{ seq, kind, data, digest, version }], journal_head }`,
@@ -826,10 +832,11 @@ it lands with **object-snapshot indexing**; the events are named here so the gap
 - **Fight granular board/turn** — `Placed`/`Ready`/`Moved`/`MobMoved`/`Displaced`/`Cast`/`Hit`/
   `Drain`/`Tackled`/`Revealed`/`StanceChanged`/`CriticalFailure`/`TurnEnded`/`Abandoned` (+ the
   `FightCreated`/`FightJoined`/`TurnStarted`/`Victory`/`Defeat`/`Settled`/`Swept` anchors) are NO
-  LONGER deferred — they are the per-fight ORDERED JOURNAL (`/v1/fights/{id}/events`, above). Still
-  deferred: the action-envelope triple `ActionStarted`/`ActionEffect`/`ActionResolved` (nested
-  `Effect`/`SpellLevel`/`WeaponLine` — one unit for a later milestone) and `LootMinted` (the client
-  reads `results::rolled_qty` on-chain to build its per-template mint txs).
+  LONGER deferred — they are the per-fight ORDERED JOURNAL (`/v1/fights/{id}/events`, above), and
+  since #1143 the `ActionStarted`/`ActionEffect` pair rides with them. Still deferred:
+  `ActionResolved` (`Option<SpellLevel>` + `vector<WeaponLine>`, nested `vector<Effect>` — no fold
+  reads it) and `LootMinted` (the client reads `results::rolled_qty` on-chain to build its
+  per-template mint txs).
 - **Kolizeum** `Joined`/`Exited`/`OutcomeOpened` (the seat `FightOutcome` DELETE rides the
   `ares_snapshot` pipeline → `/v1/pending-outcomes`; the event carries no `outcome_id`/`owner` to
   key that view, and clearing `char_fight` would race a late `open`); **zone** `MobGroupClaimed`;

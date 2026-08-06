@@ -132,6 +132,8 @@ const MIRROR_GROUPS: &[&[Mirror]] = &[
         ("MobMoved", "MobMoved"),
         ("Displaced", "Displaced"),
         ("Cast", "Cast"),
+        ("ActionStarted", "ActionStarted"),
+        ("ActionEffect", "ActionEffect"),
         ("CriticalFailure", "CriticalFailure"),
         ("StanceChanged", "StanceChanged"),
         ("Revealed", "Revealed"),
@@ -163,6 +165,12 @@ const MIRROR_GROUPS: &[&[Mirror]] = &[
         ("BoardCreated", "BoardCreated"),
         ("Crushed", "Crushed"),
         ("RecipelessSet", "RecipelessSet"),
+    ),
+    // Not an event: the fixed-width value type `ActionEffect` embeds. BCS inlines it, so its
+    // layout is part of that event's wire and drifts the same way.
+    mirrors!(
+        "../../move/foundation/sources/spell_effect.move",
+        ("Effect", "Effect"),
     ),
     &[Mirror {
         move_source: "../../move/social/sources/party.move",
@@ -311,6 +319,13 @@ fn normalize_type(ty: &str) -> String {
     }
 }
 
+/// Move struct types a mirrored layout embeds BY VALUE, and the source that defines them. BCS
+/// inlines a nested struct, so its contribution is its own layout's minimum — parsed from the
+/// SAME Move source below, never a transcribed byte count (the one home for the layout stays
+/// the Move file; this table holds only the path to it).
+const NESTED_LAYOUTS: &[(&str, &str)] =
+    &[("Effect", "../../move/foundation/sources/spell_effect.move")];
+
 fn minimum_bcs_size(ty: &str) -> usize {
     match ty {
         "bool" | "u8" => 1,
@@ -322,8 +337,17 @@ fn minimum_bcs_size(ty: &str) -> usize {
         // Empty strings/vectors and None encode as a one-byte ULEB128/tag.
         "string" => 1,
         _ if ty.starts_with("option<") || ty.starts_with("vector<") => 1,
-        _ => panic!("BCS size rule missing for `{ty}`"),
+        _ => nested_minimum_bcs_size(ty),
     }
+}
+
+fn nested_minimum_bcs_size(ty: &str) -> usize {
+    let (_, move_source) = NESTED_LAYOUTS
+        .iter()
+        .find(|(name, _)| *name == ty)
+        .unwrap_or_else(|| panic!("BCS size rule missing for `{ty}`"));
+    let body = struct_body(&source(&manifest_path(move_source)), "public struct ", ty);
+    layout_minimum_bcs_size(&fields(&body, false))
 }
 
 fn layout_minimum_bcs_size(fields: &[Field]) -> usize {
@@ -342,7 +366,7 @@ fn move_event_mirrors_match_rust_fields_and_bcs_sizes() {
     let mut failures = String::new();
     let mirror_count = MIRROR_GROUPS.iter().map(|group| group.len()).sum::<usize>();
     assert_eq!(
-        mirror_count, 81,
+        mirror_count, 84,
         "update the reviewed mirror count when the registry changes"
     );
     for mirror in MIRROR_GROUPS.iter().flat_map(|group| group.iter()) {

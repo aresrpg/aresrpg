@@ -30,19 +30,33 @@
 //! the journal deliberately OUTLIVES `settle_and_destroy`'s doc delete (the post-mortem
 //! read a straggler needs for the end card — bug ⑤).
 //!
-//! ## Scope — the flat board/turn family; the action-envelope triple deferred
+//! ## Scope — the board/turn family plus the action envelope's leading pair
 //! Journalled: `FightCreated`/`FightJoined`/`Placed`/`Ready`/`TurnStarted`/`Moved`/
-//! `MobMoved`/`Displaced`/`Cast`/`CriticalFailure`/`StanceChanged`/`Revealed`/`Hit`/
-//! `Drain`/`Tackled`/`TurnEnded`/`Abandoned`/`Victory`/`Defeat`/`Settled`/`Swept` — every
-//! FLAT-scalar `fight_events` struct, decoded to its `parsedJson`-shaped fields (u64 as
+//! `MobMoved`/`Displaced`/`Cast`/`ActionStarted`/`ActionEffect`/`CriticalFailure`/
+//! `StanceChanged`/`Revealed`/`Hit`/`Drain`/`Tackled`/`TurnEnded`/`Abandoned`/`Victory`/
+//! `Defeat`/`Settled`/`Swept`, decoded to their `parsedJson`-shaped fields (u64 as
 //! string, u8/u16/u32 as number, bool as bool, `ID`/address as `0x…` hex — byte-shaped
 //! IDENTICALLY to the fullnode's `parsedJson`, so the client folds a journal page through
 //! the SAME decoder its own receipts use — `sdk/fight_read.js::decode_fight_event`).
-//! DEFERRED (returns `None`): the action-envelope triple `ActionStarted`/`ActionEffect`/
-//! `ActionResolved` (the latter two carry nested `Effect`/`SpellLevel`/`WeaponLine`
-//! vectors — the modelling liability `snapshot.rs` deliberately avoids — and NO client
-//! consumes them today; per the pipeline-v2 amendment they ENRICH beats, never trigger
-//! them, so they ride a later milestone as one unit), the settlement `Result*`/`LootMinted`
+//!
+//! ### Why the envelope pair is NOT optional (#1143)
+//! This module's header used to defer the whole `ActionStarted`/`ActionEffect`/`ActionResolved`
+//! triple "because NO client consumes them today". That premise died with #481:
+//! `fight/inputs.js::self_status_from_effect` mints a fighter's timed status row off the
+//! `ActionEffect` descriptor, using the `target_cell` only `ActionStarted` carries. An ACTOR
+//! gets both on its own tx receipt and paints instantly; every OTHER client's live ordered
+//! transport is this journal, and the object poll cannot stand in — `core_inbox.js::adopt_snapshot`
+//! refuses any read at or behind the event frontier, and the SSE tail always reaches a version
+//! first. Dropping the pair therefore made a partner's buff PERMANENTLY invisible to observers,
+//! not merely late. `packages/fight/test/coop_transport_status_parity.test.js` is that consumer
+//! contract, and it reads the journalled set out of THIS file's match arms.
+//!
+//! DEFERRED (returns `None`): `ActionResolved` — alone in the triple it carries
+//! `Option<SpellLevel>` + `vector<WeaponLine>` (nested `vector<Effect>`), the modelling
+//! liability `snapshot.rs` avoids, for facts no fold reads. Its only client arm frees the
+//! finished action's `action_contexts` entry; the keys are per `(caster, turn, action)` and
+//! can never be re-hit, so its absence costs an observer a handful of retained descriptors
+//! per fight and changes no outcome. Also deferred: the settlement `Result*`/`LootMinted`
 //! artifacts (keyed by result, projected to `/v1/fight-results`), and `CreatorCapIssued`.
 //!
 //! Pure decode/assemble (unit-tested offline against REAL captured testnet wire below);
@@ -70,6 +84,22 @@ const JOURNAL_TTL_SECS: i64 = 24 * 60 * 60;
 /// Canonical `0x…` hex for an id/address field (matches the fullnode's `parsedJson`).
 fn hex(id: ObjectID) -> String {
     id.to_canonical_string(true)
+}
+
+/// One authored `spell_effect::Effect` in the fullnode's own `parsedJson` shape — the nested
+/// object an `ActionEffect` carries verbatim. Values ride EXACTLY as chain state holds them:
+/// a signed kind stays 32768-CENTERED, because `fight/core_wire.js::decode_status_value` is the
+/// ONE decoder for both status doors (this wire and `Fight.fx`) and centering is what makes them
+/// one dialect (#983). Re-centering here would fork them.
+fn effect_json(effect: &Effect) -> Value {
+    json!({
+        "kind": effect.kind, "element": effect.element,
+        "value": effect.value.to_string(), "value_max": effect.value_max.to_string(),
+        "area_shape": effect.area_shape, "area_size": effect.area_size.to_string(),
+        "target_filter": effect.target_filter, "chance": effect.chance,
+        "turns": effect.turns, "stat": effect.stat,
+        "flags": effect.flags, "phase": effect.phase,
+    })
 }
 
 /// Decode one fight board/turn event into `(fight object id, event-kind, parsedJson-shaped
@@ -190,6 +220,38 @@ pub(super) fn decode_journal_event(
                 }),
             )
         }
+        "ActionStarted" => {
+            let e: ActionStarted = decode_bcs(module, name, contents)?;
+            (
+                e.fight,
+                "ActionStarted",
+                json!({
+                    "fight": hex(e.fight), "caster_is_mob": e.caster_is_mob,
+                    "caster_idx": e.caster_idx.to_string(),
+                    "turn_ordinal": e.turn_ordinal.to_string(),
+                    "action_ordinal": e.action_ordinal.to_string(),
+                    "action_kind": e.action_kind,
+                    "target_cell": e.target_cell.to_string(),
+                    "ap_cost": e.ap_cost.to_string(),
+                    "effect_count": e.effect_count.to_string(),
+                }),
+            )
+        }
+        "ActionEffect" => {
+            let e: ActionEffect = decode_bcs(module, name, contents)?;
+            (
+                e.fight,
+                "ActionEffect",
+                json!({
+                    "fight": hex(e.fight), "caster_is_mob": e.caster_is_mob,
+                    "caster_idx": e.caster_idx.to_string(),
+                    "turn_ordinal": e.turn_ordinal.to_string(),
+                    "action_ordinal": e.action_ordinal.to_string(),
+                    "effect_ordinal": e.effect_ordinal.to_string(),
+                    "effect": effect_json(&e.effect),
+                }),
+            )
+        }
         "CriticalFailure" => {
             let e: CriticalFailure = decode_bcs(module, name, contents)?;
             (
@@ -305,7 +367,7 @@ pub(super) fn decode_journal_event(
             let e: FightSwept = decode_bcs(module, name, contents)?;
             (e.fight, "Swept", json!({ "fight": hex(e.fight) }))
         }
-        // ActionStarted/ActionEffect/ActionResolved (deferred triple), ResultMinted/
+        // ActionResolved (the SpellLevel/WeaponLine carrier — see the header), ResultMinted/
         // ResultOpened/LootMinted/ResultBurned (result artifacts), CreatorCapIssued.
         _ => return None,
     })

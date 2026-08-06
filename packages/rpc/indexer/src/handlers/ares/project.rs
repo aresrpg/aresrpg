@@ -1365,8 +1365,9 @@ pub(super) fn map_with_context(
         // NB the fight granular board/turn events (Placed/Ready/Moved/Cast/Hit/TurnEnded/…)
         // are not projected to the fight DOC here, but they ARE captured — `mod.rs::process`
         // appends each to its per-fight ordered JOURNAL (`journal.rs`), the observer-replay
-        // transport (#216). `ActionStarted`/`ActionEffect`/`ActionResolved` + `LootMinted`
-        // stay deferred from the journal too (see `journal::decode_journal_event`).
+        // transport (#216) — `ActionStarted`/`ActionEffect` included since #1143.
+        // `ActionResolved` + `LootMinted` stay deferred from the journal too (see
+        // `journal::decode_journal_event`).
         _ => return None,
     })
 }

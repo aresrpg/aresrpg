@@ -592,12 +592,12 @@ pub struct ResultBurned {
 // board/turn family (see the deferred note); the journal now serves them as an ordered
 // event log WITHOUT re-deriving board state. Every struct's FIRST field is `fight: ID`
 // (the journal key) and mirrors `fight_events.move` field-for-field, in order (BCS is
-// positional). The action-envelope triple (`ActionStarted`/`ActionEffect`/
-// `ActionResolved`) is DEFERRED from the journal: `ActionEffect`/`ActionResolved` carry
-// nested `Effect`/`SpellLevel`/`WeaponLine` vectors (the modelling liability `snapshot.rs`
-// avoids), the client consumes none of the triple today (SDK `FIGHT_EVENT_NAMES`), and per
-// the pipeline-v2 amendment they ENRICH beats, never trigger them — so they ride a later
-// milestone as one unit. Only these flat scalar structs are journalled here.
+// positional). `ActionStarted`/`ActionEffect` join them (#1143): they are the OBSERVER's only
+// carrier for a timed status row, and `ActionEffect` embeds ONE fixed-width `Effect` by value —
+// a real mirror, not the `vector<SpellLevel>` walk `snapshot.rs` avoids. `ActionResolved` stays
+// deferred: it is the only member carrying `Option<SpellLevel>` + `vector<WeaponLine>` (nested
+// `vector<Effect>` inside), and nothing the client folds needs it — see `journal.rs`'s header
+// for the exact consequence of its absence.
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Placed {
@@ -625,6 +625,60 @@ pub struct Cast {
     pub caster_is_mob: bool,
     pub caster_idx: u64,
     pub target_cell: u64,
+}
+
+/// The leading boundary of one committed action — it alone carries the `target_cell` the
+/// following `ActionEffect` rows need to answer "was the caster inside this effect's zone?"
+/// (`fight/inputs.js::zone_hits_caster`). `(caster side/idx, turn_ordinal, action_ordinal)` is
+/// the stable key the client partitions the effect rows by.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ActionStarted {
+    pub fight: ObjectID,
+    pub caster_is_mob: bool,
+    pub caster_idx: u64,
+    pub turn_ordinal: u64,
+    pub action_ordinal: u64,
+    pub action_kind: u8,
+    pub target_cell: u64,
+    pub ap_cost: u64,
+    pub effect_count: u64,
+}
+
+/// `aresrpg_foundation::spell_effect::Effect` — one authored effect descriptor, embedded BY
+/// VALUE in [`ActionEffect`]. FIXED width (9 × u8 + 3 × u64), so BCS inlines it with no length
+/// prefix; the 25 → 33 byte widening (#577's `value_max`) is exactly the lineage split
+/// `snapshot.rs::effect_byte_width` tracks for the `vector<Effect>` walks that only SKIP these
+/// bytes. Here we decode them: a journalled `ActionEffect` is the observer's only carrier for a
+/// timed status row (#1143), and the row IS this struct.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Effect {
+    pub kind: u8,
+    pub element: u8,
+    pub value: u64,
+    pub value_max: u64,
+    pub area_shape: u8,
+    pub area_size: u64,
+    pub target_filter: u8,
+    pub chance: u8,
+    pub turns: u8,
+    pub stat: u8,
+    pub flags: u8,
+    pub phase: u8,
+}
+
+/// One authored top-level effect, emitted immediately before its resolution. THE status wire:
+/// `fight/inputs.js::self_status_from_effect` mints the caster's timed row off this event, and
+/// the object poll cannot substitute for it (`core_inbox.js::adopt_snapshot` refuses any read at
+/// or behind the event frontier) — so without this row an observer never sees a partner's buff.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ActionEffect {
+    pub fight: ObjectID,
+    pub caster_is_mob: bool,
+    pub caster_idx: u64,
+    pub turn_ordinal: u64,
+    pub action_ordinal: u64,
+    pub effect_ordinal: u64,
+    pub effect: Effect,
 }
 
 /// A spell/trap PUSH/PULL or caster TELEPORT — `kind` is the mechanics code (push/pull/
