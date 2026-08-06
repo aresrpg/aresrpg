@@ -47,6 +47,7 @@ const { DungeonLeaveButton } = await import('../../../../src/game/screens/hud/wo
 const { seed_fight_core, reset_fight_core } = await import('../../../../src/test_helpers/fight_core_harness.js')
 const { use_dungeon } = await import('../../../../src/world-shell/dungeon_store.js')
 const { PHASE } = await import('../../../../src/fight-engine/phase.js')
+const { reset_ambient_music_for_test } = await import('../../../../src/game/core/audio/ambient_music.js')
 
 const EN = i18next.createInstance()
 await EN.init({ lng: 'en', resources: { en: { translation: en } }, interpolation: { escapeValue: false } })
@@ -191,6 +192,10 @@ const drive_store = (patch) => {
 afterEach(() => {
   use_dungeon.setState({ busy: false })
   reset_fight_core()
+  // Seeding a fight drives core/modules/fight.js → ambient_music's set_combat, which SELF-ARMS a random zone
+  // and starts the engine on the stub Audio installed above (no `load()` — it is not an HTMLAudioElement). One
+  // bun run is one process: leaving that armed poisoned every later file's music state. Clean up our own arm.
+  reset_ambient_music_for_test()
 })
 
 describe('#2141 · the fight bar presses on what the player SAW', () => {

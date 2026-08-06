@@ -21,7 +21,7 @@
 // Headless by construction — an injected audio factory, an injected manifest loader and an injected state
 // source. No jsdom, no network, no `mock.module` (it is process-global in bun and three suites already own
 // that door).
-import { afterEach, beforeAll, describe, expect, spyOn, test } from 'bun:test'
+import { afterEach, beforeAll, beforeEach, describe, expect, spyOn, test } from 'bun:test'
 
 import { install_browser_globals } from '../../../../../src/test_helpers/browser_globals.js'
 
@@ -30,6 +30,7 @@ beforeAll(() => install_browser_globals({ with_document: true }))
 const { create_radio } = await import('../../../../../src/game/screens/hud/world/hack_radio.js')
 const { _reset_radio_latch_for_test, arm_radio_latch, radio_snapshot, subscribe_radio } =
   await import('../../../../../src/game/screens/hud/world/hack_radio_latch.js')
+const { reset_ambient_music_for_test } = await import('../../../../../src/game/core/audio/ambient_music.js')
 
 const TRACKS = [
   { src: 'a.m4a', title: 'A' },
@@ -93,7 +94,15 @@ function fake_source(initial) {
 /** Let the pending play()/manifest promises settle — a rejection is only observable after its microtask. */
 const settle = () => new Promise((resolve) => setTimeout(resolve, 0))
 
-afterEach(() => _reset_radio_latch_for_test())
+// The latch takes and hands back the MUSIC CHANNEL (set_music_stream_owned), so this suite drives ambient_music
+// too — and one bun run is ONE process where that module's state is shared by every file. Any earlier file that
+// left a zone armed and the engine started (a fight test's set_combat self-arm) would send the hand-back through
+// engine_start's REPOINT branch onto ITS stub elements. Cold state in, cold state out — order-independent.
+beforeEach(() => reset_ambient_music_for_test())
+afterEach(() => {
+  _reset_radio_latch_for_test()
+  reset_ambient_music_for_test()
+})
 
 describe('#2260 the engine, on teardown', () => {
   test('a dispose landing mid-play is NOT a dead track — no AbortError line, no ghost advance', async () => {
