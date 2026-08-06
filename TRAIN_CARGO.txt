@@ -1,10 +1,12 @@
-38b0dcc0a → Refs #2227 — docs(adr): 004 — fight start proves membership
-866c0ba74 → Refs #1368 — fix(frontend): the renderer-rebuild guard derives from the one body predicate
-437555994 → Refs #1368 — fix(world): a checkpoint arriving before the frame is never mis-framed
-fcaed5fd5 → Refs #1368 — fix(fight): a definitive status retires the fight stream too
-995610d0b → Refs #1368 — fix(sponsor): one home for the challenge TTL
-d3c894664 → Refs #2260 — test(frontend): ambient engine state resets between suite files
-a0d33a815 → Fixes #1143 — fix(rpc): journal the action envelope so observers see status rows
-b8c06d102 → Refs #1143 — test(fight): RED repro for the coop status asymmetry
-0fa67f83f → Refs #1143 — test(fight): align the coop repro with the real journalled shape
-ff426f672 → Refs #1143 — chore(gates): sanction the #1143 captured-wire ids in journal_tests
+ea8103340 → Fixes #2270 — fix(rpc): the sponsor allowance reads the enforcement's own store
+e7e3edb21 → Refs #2270 — test(rpc): the sponsor allowance oracle publishes the cap it asserts against
+4fdd721dd → Refs #2270 — fix(frontend): the automated-spend ceiling derives from the served allowance, not prose
+884594fbb → Refs #2270 — fix(frontend): the served allowance reaches the spend-guard ceiling
+da07b1833 → Refs #880 — test(fight): pin the mob fighter-id base to its chain home
+7ba311645 → Refs #880 — docs(move): Character.anchor is a dead home — the checkpoint field is the truth
+48dfb6a61 → Refs #880,#1191 — fix(frontend): the recovery toast reads the receipt shape the client produces
+acc0a0c1c → Refs #2262 — feat(create): bill the sponsored create per leg
+a164eeb4e → Refs #830,#827 — test(frontend): the fight-log beat consumes an injected clock, not the wall
+14a075da2 → Refs #830,#1074 — test(frontend): azimuth monotonicity sweeps a deterministic timeline
+4ad1c1d53 → Refs #830,#814 — test(frontend): presence-count scan gets its measured budget
+87359e50e → Refs #830,#906 — test(frontend): static-asset scan gets its measured budget
