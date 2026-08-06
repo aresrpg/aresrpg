@@ -12,7 +12,7 @@
 // truth. Money amounts (MIST) travel as strings to survive JSON's 2^53; counts,
 // coordinates and levels are numbers.
 
-import { get_json, get_str, mget_json, ping, smembers, zcard, zrange, zrangebyscore, zrevrange } from './redis.js'
+import { get_json, mget_json, ping, smembers, sponsor_reads, zcard, zrange, zrangebyscore, zrevrange } from './redis.js'
 import { resolve_names } from './suins.js'
 
 // Redis keys / index sets written by the indexer. Kept in sync BY CONTRACT with
@@ -1556,8 +1556,8 @@ export async function handle_names(params, name_reads = name_reads_default) {
 // Makes READABLE the per-zkLogin daily sponsor allowance that api/sponsor.mjs enforces, so the
 // client can render "X / 1 SUI free today" and warn before a fight it can't cover. This view is
 // the READ side of a counter the SPONSOR owns: on each sponsored grant the sponsor does
-// `INCRBY sponsor:spent:{UTC-date}:{addr}` (EXPIREAT next UTC midnight) against the SAME Redis this
-// api reads — no indexer involvement, it's a shared money-counter, not chain-projected state.
+// `INCRBY sponsor:spent:{UTC-date}:{addr}` (EXPIREAT next UTC midnight) against the Redis the SPONSOR
+// owns — no indexer involvement, it's a shared money-counter, not chain-projected state (#2270 below).
 //   allowance_mist — the cap the sponsor PUBLISHED (see below); never declared here
 //   spent_mist     — the shared counter (0 when unset — a fresh day, not a failed read)
 //   remaining_mist — max(0, allowance − spent)
@@ -1582,15 +1582,21 @@ function next_utc_midnight_iso() {
   const n = new Date()
   return new Date(Date.UTC(n.getUTCFullYear(), n.getUTCMonth(), n.getUTCDate() + 1)).toISOString()
 }
-const sponsor_reads_default = { get_str }
-export async function handle_sponsor_remaining(params, sponsor_reads = sponsor_reads_default) {
+//
+// #2270 — AND ONE STORE FOR IT. Those keys live wherever the SPONSOR writes them, which stopped
+// being this API's own Redis the day the indexer cache was flipped blue/green: the endpoint read
+// the fresh (sponsor-less) cache and 503'd for everyone. The reads therefore default to the
+// SPONSOR-scoped bundle (redis.js `sponsor_reads`, the same instance when unconfigured), not to
+// the indexer connection the rest of this file uses. The refusal below stays exactly as it is —
+// the scoped store is what makes it stop firing, not a reason to soften it.
+export async function handle_sponsor_remaining(params, reads = sponsor_reads) {
   const address = params.get('address')
   if (!address) return bad('provide ?address=<address>')
   if (!/^0x[0-9a-fA-F]{1,64}$/.test(address)) return bad('malformed address')
 
   // Read the cap FIRST: a store that cannot answer this cannot answer the counter either, and a
   // throw here surfaces as a reported 500 rather than a confidently wrong allowance.
-  const published_cap = await sponsor_reads.get_str(K.sponsorAddrDailyCap)
+  const published_cap = await reads.get_str(K.sponsorAddrDailyCap)
   if (published_cap == null)
     return CAP_UNAVAILABLE('the sponsor has not published its daily cap — no allowance can be reported')
   if (!/^\d+$/.test(published_cap))
@@ -1598,7 +1604,7 @@ export async function handle_sponsor_remaining(params, sponsor_reads = sponsor_r
   const cap = BigInt(published_cap)
 
   const day = new Date().toISOString().slice(0, 10)
-  const raw_spent = await sponsor_reads.get_str(K.sponsorSpent(day, address))
+  const raw_spent = await reads.get_str(K.sponsorSpent(day, address))
   const spent = raw_spent == null ? 0n : BigInt(raw_spent)
 
   const remaining = spent >= cap ? 0n : cap - spent
