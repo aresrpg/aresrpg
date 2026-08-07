@@ -394,9 +394,9 @@ describe('ring_manager', () => {
     expect(renderer.uploaded.size).toBeLessThan(150)
     expect(ring.resident_count()).toBe(150) // every generated chunk is store-resident
     expect(ring.queue_depth()).toBe(0)
-  }, 30000) // e2e gens 150 real DEFAULT chunks: measured ~2.5s isolated / up to ~7.4s under full-suite load
-  // (2026-07-07: accumulated FIVE-WORLDS gen stages — glacial crag/trough/cirque + schematic grounding).
-  // 10s headroom over the default 5s so a loaded runner doesn't false-red; per-chunk gen ≈ 3.9ms (not a regression).
+    // 150 real DEFAULT chunks: 2.32s idle / 23.85s under train load; frontend-loaded full-suite probes <30s.
+    // Cost includes the accumulated FIVE-WORLDS stages; per-chunk generation remains the asserted subject.
+  }, 60000)
 
   // ADAPTIVE MESH PACING (2026-07-03): the meshes/frame ceiling scales with the pending backlog. With a
   // small explicit ladder we prove: a deep ready-queue meshes MANY per update, and a per-frame count is
