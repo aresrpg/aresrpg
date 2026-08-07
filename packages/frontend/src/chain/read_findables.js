@@ -11,7 +11,6 @@
 import { get_encyclopedia } from '../rpc/client'
 
 import { get_sdk } from './sdk'
-import { is_aresrpg_item } from './item_lineage'
 import { normalize_item_template, decode_item_stat_ranges, decode_item_damages } from './read_templates.js'
 
 // normalize_item_template UPPERCASEs item_category, so RESOURCE/CONSUMABLE/RUNE are the stackable categories
@@ -184,70 +183,4 @@ export async function get_template_detail_map(template_ids) {
   } catch {
     return new Map()
   }
-}
-
-/**
- * Resolve a recall haul's freshly-minted `item_ids` into real per-drop templates for the RESULT CARD —
- * a minted `Item` carries only { name, item_category, item_type, level, amount, stackable } (item.move),
- * NOT its stats/Display, so we (1) batch-read the minted Items themselves for their `item_type` + `amount`,
- * then (2) resolve each `item_type` against the template map (by slug, since templates are keyed by object
- * id and Items carry only the slug). HONEST: an id that fails to resolve (RPC miss) is dropped rather than
- * shown with fabricated data.
- * @param {string[]} item_ids
- * @param {Map<string, any>} template_map keyed by object id (get_template_map's shape)
- * @returns {Promise<Array<any>>}
- */
-export async function resolve_recall_drops(item_ids, template_map) {
-  if (!item_ids?.length) return []
-  try {
-    const sdk = await get_sdk()
-    const minted = await get_owned_items_by_id(sdk.grpc_client, item_ids)
-    const by_type = new Map()
-    for (const tmpl of template_map?.values() ?? []) if (tmpl.item_type) by_type.set(tmpl.item_type, tmpl)
-    return minted.map((it) => {
-      const tmpl = by_type.get(it.item_type)
-      return {
-        id: it.id,
-        item_type: it.item_type,
-        name: tmpl?.name || it.name,
-        amount: it.amount,
-        level: it.level || tmpl?.level || 0,
-        statsJson: tmpl?.statsJson ?? '{}',
-        display: tmpl?.display ?? null,
-      }
-    })
-  } catch {
-    return []
-  }
-}
-
-/**
- * Batch-fetch specific Item object ids (the freshly-minted recall drops), same shape as get_owned_items.
- * LINEAGE-FILTERED (issue #524): `core.getObjects`' default read mask always returns each object's
- * normalised `type` (free — no extra RPC), so a dead-package id is dropped here rather than rendered with
- * a lost catalog join downstream. Exported for direct testing (the one-filter-home for this read).
- * @param {import("@mysten/sui/grpc").SuiGrpcClient} grpc_client
- * @param {string[]} ids
- */
-export async function get_owned_items_by_id(grpc_client, ids) {
-  const out = []
-  for (let i = 0; i < ids.length; i += 50) {
-    const chunk = ids.slice(i, i + 50)
-    // #23 gRPC: getObjects → { objects:[Object|Error] }; json:true flattens the Item's scalar fields.
-    const { objects } = await grpc_client.core.getObjects({ objectIds: chunk, include: { json: true } })
-    for (const o of objects ?? []) {
-      if (o instanceof Error) continue
-      if (!is_aresrpg_item(o.type)) continue // dead-lineage object — never enters the result (issue #524)
-      const f = o?.json
-      if (!f) continue
-      out.push({
-        id: o.objectId,
-        name: f.name ?? '',
-        item_type: f.item_type ?? '',
-        level: Number(f.level ?? 0),
-        amount: Number(f.amount ?? 1),
-      })
-    }
-  }
-  return out
 }
