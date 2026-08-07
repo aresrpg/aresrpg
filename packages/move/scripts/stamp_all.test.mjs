@@ -49,7 +49,6 @@ test.skipIf(!CEREMONY_MANIFEST_AVAILABLE)(
     const deployment_source = readFileSync(deployment_path, 'utf8')
     expect(deployment_source).toContain("from './release.json'")
     for (const [consumer, actor] of [
-      ['packages/frontend/src/chain/read_treasury.js', 'treasury'],
       // Admin surface extracted to the private apps/admin app (OSS split 2026-07-19); the admin-gate guard
       // follows the moved files — both still read the ceremony-stamped actor from the manifest, never a literal.
       ['apps/admin/src/admin-gate.js', 'owner'],

@@ -65,9 +65,6 @@ const ALLOWLIST = {
     'read_templates.test.js pins a real historical chain-shape bug (event-type/field-name mismatch, ' +
     '2026-07-14) against the LIVE network; deleting the reader would delete that regression coverage. Not ' +
     'browser-reachable today; flagged for the lead/owner to action (delete outright, or wire a real consumer).',
-  'chain/read_treasury.js':
-    'get_treasury_snapshot — CONFIRMED DEAD (zero callers; the admin SUI tab it was built for does not exist ' +
-    "in the current app — not in dist). Left in place per this lane's scope fence — flagged for the lead.",
 }
 
 function walk_js_files(dir) {

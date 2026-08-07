@@ -25,7 +25,6 @@ export const RAW_SOURCE_MODULES = Object.freeze([
   'packages/frontend/src/chain/read_spell_state.js',
   'packages/frontend/src/chain/read_staking.js',
   'packages/frontend/src/chain/read_templates.js',
-  'packages/frontend/src/chain/read_treasury.js',
   'packages/frontend/src/chain/sdk.ts',
   'packages/frontend/src/game/data/mob_catalog.js',
   'packages/frontend/src/game/data/pet_catalog.js',
