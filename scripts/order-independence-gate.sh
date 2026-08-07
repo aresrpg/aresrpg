@@ -17,6 +17,7 @@
 set -uo pipefail
 
 cd "$(dirname "$0")/.."
+ROOT="$PWD"
 FE=packages/frontend/src
 FAIL=0
 
@@ -70,6 +71,18 @@ run_combo "fight + presence atoms — consumers self-reset behind a warmed sessi
   "$FE/world-shell/dungeon_fight_weapon_lines.test.js" \
   "$FE/simulator/fight_open_hand.test.js" \
   "packages/frontend/test/p2p/lobby-room.test.js"
+
+# ⑬ react-i18next's module namespace. `spyOn(react_i18next, 'useTranslation')` mutates the PROCESS-GLOBAL
+# module record, and WorldTravelModal's stub returns `{ t }` with no `i18n` — so every file loaded after an
+# UNRESTORED spy dies on `i18n.resolvedLanguage` (classes_tab.tsx:130). Whether that happened depended purely
+# on readdir order (macOS green, CI 16 reds). Guards WorldTravelModal.test.jsx's afterAll mockRestore: drop it
+# and this pair reds instantly.
+# ABSOLUTE paths on purpose: bun honours ARG order only for absolute paths — relative args are treated as
+# filters over a directory scan, so the run order falls back to readdir (the exact nondeterminism this row
+# exists to pin). A relative-path version of this row passes even with the restore deleted.
+run_combo "react-i18next namespace spy — the travel modal restores what it replaced" \
+  "$ROOT/$FE/game/screens/hud/world/WorldTravelModal.test.jsx" \
+  "$ROOT/packages/frontend/test/tooltip-crit-rate.test.tsx"
 
 if [ "$FAIL" -ne 0 ]; then
   echo "ORDER-INDEPENDENCE GATE FAILED — a reintroduced module-global leak broke a cold-state fixture."
