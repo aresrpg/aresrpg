@@ -22,6 +22,7 @@ import { seed_manifest } from '../../content/seed_manifest'
 import { fast_travel_asset_refs } from '../fast_travel_assets.js'
 import { model_asset_url } from '../model_asset_url.js'
 import { get_catalog } from './mob_catalog.js'
+import { mob_icon_filename } from './mob_icon_name.js'
 import { get_pet_catalog } from './pet_catalog.js'
 
 /** The single display predicate for authored archi-tier MobTemplates. */
@@ -192,10 +193,10 @@ export function get_mob_model(mob) {
  * ruled-mapping rows (glb ≠ `hy_` + key — 755/770 of the published catalog, e.g. Broodfather →
  * hy_scarak_broodmother_model_default). The catalog entry still gates: no extracted GLB means no
  * rendered icon exists to ask for.
- * scripts/render_mob_icons.mjs renders the icons offline under GLB basenames (`{glb}.png` /
- * `{glb}_hd.png`); any publish preparation feeding this resolver must re-key or alias those renders to
- * the catalog filenames requested above. Mob icons use the SAME thumb/_hd two-tier system item_icon_url
- * uses (spells are single-size .webp — #884).
+ * scripts/render_mob_icons.mjs imports mob_icon_filename from mob_icon_name.js, renders each unique GLB once,
+ * and writes every catalog-key alias from that shared derivation. Its completeness tripwire checks both sizes
+ * before a publish can pass. Mob icons use the SAME thumb/_hd two-tier system item_icon_url uses (spells are
+ * single-size .webp — #884).
  * The MinIO asset host is the ONLY origin — no local/bundled fallback (#353: the pre-CDN local copy was
  * migration residue, gitignored and never shipped past a dev's own disk). No catalog match → null, NEVER
  * the GLB debug-cube swapped in as a 2D image (caller degrades to its own glyph, mirroring ItemImage's
@@ -209,5 +210,5 @@ export function get_mob_icon_url(mob, { hd = false } = {}) {
   const key =
     mob.variant != null && catalog[mob.variant] ? mob.variant : (mob_identity_key(mob.name) ?? '')
   if (!catalog[key]?.glb) return null
-  return mob_icon_url(`${key}${hd ? '_hd' : ''}.png`)
+  return mob_icon_url(mob_icon_filename(key, { hd }))
 }
