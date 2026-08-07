@@ -55,14 +55,17 @@ export function parse_mist_string(str: string): bigint {
 // Rejects: "0.001" (3dp), "-1", "1e2", "1,5" (caller must normalize commas upstream),
 //          "0.1.5", ".5" (missing integer), "1." (trailing dot), "0x10", "" and non-strings.
 // Throws: Error with message one of: INVALID_FORMAT | BELOW_MIN | ABOVE_MAX | NOT_DIVISIBLE_BY_20
-export function parse_2_decimal_sui(str: string): bigint {
+function parse_2_decimal_sui_with(str: string, validate: (mist: bigint) => void): bigint {
   if (typeof str !== 'string') throw new Error('INVALID_FORMAT')
   if (!/^\d+(\.\d{1,2})?$/.test(str)) throw new Error('INVALID_FORMAT')
 
   const mist = parse_sui_decimal(str)
-
-  assert_valid_net_price(mist)
+  validate(mist)
   return mist
+}
+
+export function parse_2_decimal_sui(str: string): bigint {
+  return parse_2_decimal_sui_with(str, assert_valid_net_price)
 }
 
 // parse_pledge_sui(str) — user-entered SUI pledge (kolizeum wager) with at most 2 decimals → MIST.
@@ -78,13 +81,7 @@ export function parse_2_decimal_sui(str: string): bigint {
 // Rejects: "0.001" (3dp), "-1", "1e2", ".5", "1.", above MAX_MIST, "" and non-strings.
 // Throws: Error with message one of: INVALID_FORMAT | ABOVE_MAX
 export function parse_pledge_sui(str: string): bigint {
-  if (typeof str !== 'string') throw new Error('INVALID_FORMAT')
-  if (!/^\d+(\.\d{1,2})?$/.test(str)) throw new Error('INVALID_FORMAT')
-
-  const mist = parse_sui_decimal(str)
-
-  assert_valid_pledge(mist)
-  return mist
+  return parse_2_decimal_sui_with(str, assert_valid_pledge)
 }
 
 // ═══ Validators ═══
