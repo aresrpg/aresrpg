@@ -16,6 +16,11 @@
 // standing in the circle, exactly as `spell_targeting.js:45-49` promises). What is broken is the DATA:
 // test 3 is RED and stays red until the content pipeline republishes Devastating Slam with an enemies-only
 // filter and this fixture is re-captured. It is the definition of done for the reopened row.
+//
+// The chain read in the fixture's provenance block closes the last gap: on-chain the row carries
+// target_filter 1, while the CDN blob carries 0 for ALL 1030 mob-spell effects. So the world fight path
+// (chain-fed) is correct and the simulator page (blob-fed) is not — the blob is a THIRD reader that the
+// #1809 sim+Move twin never covered.
 
 import { describe, expect, test } from 'bun:test'
 
