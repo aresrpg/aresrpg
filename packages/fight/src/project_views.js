@@ -37,7 +37,7 @@ import {
 // and control-phase verdict call the one home). Re-exported verbatim: every importer reads them from here.
 // `my_action_slot` rides the same re-export: it moved beside the CONTROLS record that now carries it (#1224's
 // one derivation, unchanged), and project.js re-exports this name so every existing importer is untouched.
-export { input_armed, my_action_slot, turn_input_armed } from './visible_facts.js'
+export { input_armed, my_action_slot, turn_control_phase, turn_input_armed } from './visible_facts.js'
 // THE ROSTER IDENTITY BOOK (#1993 WP3) — identity is resolved once, in identity_book.js, and this projection is
 // one of its readers rather than a second resolver. Re-exported so a consumer reaches the book and the one label
 // rule through the same door it already imports the projections from.
@@ -535,7 +535,7 @@ const build_visible_view = (s) => {
     result: visible_result(s, status),
     sync: visible_sync(s, active_entity_id, entities),
     mount: visible_mount(s, engine),
-    controls: visible_controls(s, engine, active_entity_id, entities),
+    controls: visible_controls(s, engine),
   }
 }
 

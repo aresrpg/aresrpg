@@ -361,16 +361,17 @@ export const visible_mount = (s, engine) => {
   }
 }
 
-/** One turn-control phase verdict — the actor resolved THROUGH the entity rows (an id without a row is a
+/** One turn-control phase verdict — the actor resolved THROUGH the fighter map (an id without a row is a
  *  transient/incoherent turn, never a playable one), exactly like the input gate. A chain seat the turn has NOT
  *  been handed over on yet is 'waiting', not 'armed' (#1808): the control the player is looking at says it is
- *  waiting rather than offering a turn it will then take back. */
-const turn_control_phase = (engine, active_entity_id, entities, busy, playable) => {
-  const me = engine?.my_entity_id ?? null
-  const active = active_entity_id ? entities[active_entity_id] : null
-  if (!engine || engine.spectator || engine.winner !== -1 || me == null || active == null) return 'hidden'
-  if (active.id !== me) return 'waiting'
-  if (!playable) return 'waiting'
+ *  waiting rather than offering a turn it will then take back.
+ *  @param {any | null} engine @param {boolean} busy @param {string | null | undefined} [entity_id]
+ *  @returns {'hidden' | 'waiting' | 'armed' | 'committing'} */
+export const turn_control_phase = (engine, busy, entity_id = engine?.my_entity_id) => {
+  const active = engine?.active_entity_id ? engine?.fighters?.get?.(engine.active_entity_id) : null
+  if (!engine || engine.spectator || engine.winner !== -1 || entity_id == null || active == null) return 'hidden'
+  if (active.id !== entity_id) return 'waiting'
+  if (!engine.playable) return 'waiting'
   return turn_input_armed(true, busy, false) ? 'armed' : 'committing'
 }
 
@@ -390,7 +391,7 @@ export const my_action_slot = (s, { ahead = 0 } = {}) => {
 }
 
 /** CONTROLS — the min-turn floor, tx flight, the draft, the next action slot, and the END-TURN control's phase. */
-export const visible_controls = (s, engine, active_entity_id, entities) => ({
+export const visible_controls = (s, engine) => ({
   // The CORE's own commit-flight flag. The run store's `busy` is wider (engage/place/settle) and remains an
   // edge input the consumer ANDs in — the same split `input_armed` already documents.
   busy: !!s?.busy,
@@ -404,7 +405,7 @@ export const visible_controls = (s, engine, active_entity_id, entities) => ({
   min_turn_ready_at: min_turn_ready_at(s),
   // The state-only half of `can_end_turn`: my turn, fight live. The floor above completes it at read time.
   end_turn_eligible: is_my_turn(s) && !is_over(s),
-  // The END-TURN control's 3-state, derived with the CORE busy (see `busy` above): 'hidden' when there is no
+  // The END-TURN control's 4-state, derived with the CORE busy (see `busy` above): 'hidden' when there is no
   // live actor, 'waiting' when the turn is someone else's OR not yet handed to me, else armed/committing.
-  phase: turn_control_phase(engine, active_entity_id, entities, !!s?.busy, turn_playable(s)),
+  phase: turn_control_phase(engine, !!s?.busy),
 })
