@@ -18,10 +18,17 @@ describe('asset resolver — configured-host default', () => {
     configure_assets({
       aggregator: CDN,
       classes: { item: { published: true }, music: { published: true } },
+      // #1233: presence is the manifest's answer, so a published class must carry the inventory it
+      // resolves against. `music` needs none — asset_url dispatches on class and extension alone and
+      // never asks the presence question.
+      files: { items: ['longsword.png'] },
     })
 
     expect(item_icon_url('longsword')).toBe(`${CDN}/items/longsword.png`)
     expect(asset_url('music', 'arctic.mp3')).toBe(`${CDN}/music/arctic.mp3`)
+    // The retired "published ⇒ mint blindly" expectation: art the manifest never listed resolves to
+    // nothing, rather than a URL nobody has verified serves.
+    expect(item_icon_url('never_published')).toBeNull()
   })
 
   test('runtime Display paths re-home onto the configured host — ANY absolute origin, not just a asset-host shape', () => {
