@@ -7,11 +7,12 @@
 // for a template-only entry (no valid on-chain id) so it never shows a dead link.
 import { useTranslation } from 'react-i18next'
 
-const NETWORK = import.meta.env.VITE_NETWORK || 'testnet'
+import { FRONTEND_NETWORK } from '../env'
+
 // SuiVision pattern: https://<network>.suivision.xyz/object/<id> (mainnet drops the subdomain →
 // suivision.xyz). Network-keyed off VITE_NETWORK so a mainnet flip needs no code fork — just
 // VITE_NETWORK=mainnet.
-const SUIVISION_HOST = NETWORK === 'mainnet' ? 'suivision.xyz' : `${NETWORK}.suivision.xyz`
+const SUIVISION_HOST = FRONTEND_NETWORK === 'mainnet' ? 'suivision.xyz' : `${FRONTEND_NETWORK}.suivision.xyz`
 
 /**
  * The explorer object URL for an on-chain object id, or null when there is none (template-only / invalid).

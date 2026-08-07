@@ -34,6 +34,7 @@ export {
   // .action_slot` — so a React surface reads the slot through a door instead of a raw-core selector. Still the
   // ONE derivation (#1224); re-exported verbatim for the non-React callers (the dev bot's `ahead` bank).
   my_action_slot,
+  turn_control_phase,
   turn_input_armed,
 } from './project_views.js'
 export { read_fight_traps } from './trap_ledger.js'

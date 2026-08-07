@@ -29,6 +29,8 @@
 
 import * as Sentry from '@sentry/node'
 
+import { SPONSOR_NETWORK } from './network.mjs'
+
 const RELEASE = process.env.RELEASE_SHA ?? 'dev'
 
 let live = false
@@ -49,7 +51,7 @@ export function init_reporting(config = {}) {
   if (!dsn) return false // no DSN ⇒ never init — nothing phones home
   Sentry.init({
     dsn,
-    environment: config.environment ?? process.env.VITE_NETWORK ?? 'testnet',
+    environment: config.environment ?? SPONSOR_NETWORK,
     release: config.release ?? RELEASE,
     tracesSampleRate: 0, // ERRORS-ONLY (docs/ERRORS.md) — never tracing, never profiling
     ...(config.transport ? { transport: config.transport } : {}),

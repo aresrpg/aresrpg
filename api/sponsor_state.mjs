@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 // Shared anti-drain counters and once-only reservation state for the station sponsor.
+import { SPONSOR_NETWORK } from './network.mjs'
+
 export const RL_WINDOW_MS = Number(process.env.SPONSOR_RL_WINDOW_MS || 600_000)
 const RL_MAX = Number(process.env.SPONSOR_RL_MAX || 30)
 export const ADDR_RL_MAX = Number(process.env.SPONSOR_ADDR_MAX || 60)
@@ -30,7 +32,7 @@ export const addr_rl_key = (address) => `sponsor:rl:addr:${rl_bucket()}:${String
 // Localnet is the sole exception, and it is derived from the SAME env truth the boot refusal above uses
 // (`assert_no_dev_bypass_with_station_credentials`) rather than a new switch: a throwaway chain on a single
 // process, a state no production configuration can reach.
-const SHARED_STORE_OPTIONAL = (process.env.VITE_NETWORK || 'testnet') === 'localnet'
+const SHARED_STORE_OPTIONAL = SPONSOR_NETWORK === 'localnet'
 export const SHARED_STORE_REASON = 'shared-store-unavailable'
 export const SHARED_STORE_ERROR =
   'sponsor-unavailable: the shared anti-drain store is unreachable, so per-player limits cannot be enforced — refusing to sponsor (fail-closed)'

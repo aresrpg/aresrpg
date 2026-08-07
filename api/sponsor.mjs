@@ -10,6 +10,7 @@ import { SuiGrpcClient } from '@mysten/sui/grpc'
 import checked_in_release from '../packages/sdk/src/deployment/release.json' with { type: 'json' }
 
 import { init_reporting, report_error } from './report.js'
+import { SPONSOR_NETWORK, network_from_env } from './network.mjs'
 import {
   CHALLENGE_TTL_MS,
   assert_zklogin_challenge,
@@ -55,12 +56,11 @@ export {
 
 init_reporting() // error reporting (report.js) — hard no-op without SENTRY_DSN
 
-const NETWORK = process.env.VITE_NETWORK || 'testnet'
 const release = process.env.SPONSOR_RELEASE_PATH
   ? JSON.parse(read_file(process.env.SPONSOR_RELEASE_PATH, 'utf8'))
   : checked_in_release
-const GRPC_URL = process.env.SPONSOR_GRPC_URL || `https://fullnode.${NETWORK}.sui.io:443`
-const client = new SuiGrpcClient({ network: NETWORK, baseUrl: GRPC_URL })
+const GRPC_URL = process.env.SPONSOR_GRPC_URL || `https://fullnode.${SPONSOR_NETWORK}.sui.io:443`
+const client = new SuiGrpcClient({ network: SPONSOR_NETWORK, baseUrl: GRPC_URL })
 // Exported because it is the ONE description of what this process lets a browser do — every route in this
 // service (the sponsor's own below, the TURN mint in server.mjs) answers with exactly these headers.
 export const CORS = {
@@ -96,7 +96,7 @@ const normalize_set = (csv) =>
       .map((value) => normalizeSuiAddress(value))
   )
 
-const network_release = release.networks[NETWORK]
+const network_release = release.networks[SPONSOR_NETWORK]
 const package_releases = Object.values(network_release?.packages ?? {})
 const release_package_ids = [
   ...package_releases.flatMap(({ origin, latest }) => [origin, latest]),
@@ -196,7 +196,7 @@ export const armed_dev_bypasses = (env = process.env) =>
 
 export function assert_no_dev_bypass_with_station_credentials(env = process.env) {
   if (!env.GAS_STATION_URL?.trim() || !env.GAS_STATION_AUTH?.trim()) return
-  const network = env.VITE_NETWORK || 'testnet'
+  const network = network_from_env(env)
   if (network === 'localnet') return
   const armed = armed_dev_bypasses(env)
   if (armed.length)
@@ -224,7 +224,7 @@ assert_no_dev_bypass_with_station_credentials()
 // request is refused rather than throttled against a value the caller picked. Localnet is the one deployment
 // where a process sits behind no edge and IS the whole deployment (the same carve-out sponsor_state.mjs takes
 // for its counters), so there the socket peer is the real client and stands as the identity.
-const LOCALNET = NETWORK === 'localnet'
+const LOCALNET = SPONSOR_NETWORK === 'localnet'
 const TRUSTED_IP_HEADER = (process.env.SPONSOR_TRUSTED_IP_HEADER || 'cf-connecting-ip').toLowerCase()
 export const UNTRUSTED_IDENTITY_REASON = 'untrusted-client-identity'
 export const UNTRUSTED_IDENTITY_ERROR =
@@ -937,7 +937,7 @@ export async function sponsor_fetch(request, server) {
 if (typeof Bun !== 'undefined' && import.meta.main) {
   const port = Number(process.env.SPONSOR_PORT || 9528)
   require_station_config()
-  console.log(`[sponsor] station-only net=${NETWORK} :${port}`)
+  console.log(`[sponsor] station-only net=${SPONSOR_NETWORK} :${port}`)
   Bun.serve({
     port,
     fetch: sponsor_fetch,

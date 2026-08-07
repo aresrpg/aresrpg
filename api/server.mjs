@@ -18,6 +18,7 @@ import {
 import { ADDR_DAILY_CAP_MIST, publish_addr_daily_cap } from './sponsor_state.mjs'
 import { TURN_UNCONFIGURED_ERROR, mint_turn_credentials } from './turn_credentials.mjs'
 import { report_error } from './report.js'
+import { SPONSOR_NETWORK } from './network.mjs'
 
 const TURN_ROUTES = ['/turn-credentials', '/api/turn-credentials']
 
@@ -57,14 +58,13 @@ export async function api_fetch(request, server) {
 }
 
 if (typeof Bun !== 'undefined' && import.meta.main) {
-  const network = process.env.VITE_NETWORK || 'testnet'
   const port = Number(process.env.SPONSOR_PORT || 9528)
   require_station_config()
   // #2197 — the enforced cap is published for the read-api's allowance bar BEFORE the first request, so the
   // number a player sees can only ever be the number this process enforces. Awaited: a boot that served
   // requests while the display had no cap to read would answer the very first allowance poll with a refusal.
   await publish_addr_daily_cap()
-  console.log(`[sponsor] station-only net=${network} :${port} addr-daily-cap=${ADDR_DAILY_CAP_MIST}`)
+  console.log(`[sponsor] station-only net=${SPONSOR_NETWORK} :${port} addr-daily-cap=${ADDR_DAILY_CAP_MIST}`)
   Bun.serve({
     port,
     fetch: api_fetch,

@@ -14,7 +14,7 @@ WORKDIR /app
 COPY api/package.json api/bun.lock ./
 RUN bun install --frozen-lockfile --production
 
-COPY api/sponsor.mjs api/sponsor_state.mjs api/zklogin_auth.mjs api/turn_credentials.mjs api/server.mjs api/report.js ./
+COPY api/network.mjs api/sponsor.mjs api/sponsor_state.mjs api/zklogin_auth.mjs api/turn_credentials.mjs api/server.mjs api/report.js ./
 # sponsor.mjs imports '../packages/sdk/src/deployment/release.json' — from /app that resolves here.
 COPY packages/sdk/src/deployment/release.json /packages/sdk/src/deployment/release.json
 

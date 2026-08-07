@@ -44,8 +44,8 @@ Each anchor must therefore point at the DECLARATION line of its fact. The fence 
 | Minimum turn duration                   | `packages/move/engine/sources/actions.move:33` — enforced chain guard.                                                              |
 | Default turn duration                   | `packages/move/aresrpg/sources/config.move:100` — default chain config.                                                             |
 | `buy_many` item limit                   | `packages/move/aresrpg/sources/shop.move:63`, `:382` — enforced limit plus public getter.                                           |
-| Active Sui network                      | `packages/frontend/src/chain/deployment.ts:6`, `:26` — chain client/deployment selector.                                            |
-| Explorer transaction network            | `packages/frontend/src/chain/deployment.ts:26` — selected network.                                                                  |
+| Active Sui network                      | `packages/frontend/src/env.ts:81` — chain client/deployment selector.                                                               |
+| Explorer transaction network            | `packages/frontend/src/env.ts:81` — selected network.                                                                               |
 | MIST per SUI                            | `packages/frontend/src/utils/sui_mist.ts:16` — dedicated conversion utility.                                                        |
 | SUI transfer PTB shapes (send + drain)  | `packages/sdk/src/sui/write/sui_transfer.js:40` — the one composer both the dry-run and the signature use.                          |
 | Shop equipment-category taxonomy        | `packages/frontend/src/constants/item_categories.ts:3` — exported UI taxonomy.                                                      |

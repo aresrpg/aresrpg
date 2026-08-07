@@ -156,7 +156,7 @@ describe('D256 punchy channel palette — deliberate saturation override', () =>
       'target',
       'los_blocked',
       'path',
-      'path_blocked',
+      'unavailable',
       'aoe',
     ])
       expect(CHANNELS[channel].order).toBe(CELL_LAYER_ORDER.base)
@@ -241,25 +241,25 @@ describe('D256 punchy channel palette — deliberate saturation override', () =>
     expect(b).toBeLessThan(0x50) // low blue
     expect(r).toBeLessThan(0xc0) // DARK red — deliberately not a bright red
   })
-  test('[#1659, superseding msg 3254] path_blocked is a NEUTRAL GREY — it is a range state, not a warning', () => {
+  test('[#1659, superseding msg 3254] unavailable is a NEUTRAL GREY — it is a state, not a warning', () => {
     // msg 3254 ruled this channel "red-ish" while it carried the per-hover "you hovered past your MP"
-    // overflow suffix. That suffix is dead (voxel_fight_adapter cell_hover), and the channel's only writer is
-    // now the wash's tackle-lost band — which the owner ruled GREY on 2026-07-29: a tackled seat still SEES
-    // its whole MP range, greyed rather than green. The full grey law lives in
-    // packages/engine/test/tactical/tackle_band_grey.test.js; this row keeps the palette's own guard that it
-    // is never mistaken for a strike red.
-    const pb = chan(CHANNELS.path_blocked.color)
+    // overflow suffix. That suffix is dead (voxel_fight_adapter cell_hover); today's writers are the wash's
+    // tackle-lost band and occupied placement cells, both visible-but-unavailable. The owner ruled the band
+    // GREY on 2026-07-29: a tackled seat still SEES its whole MP range, greyed rather than green. The full grey
+    // law lives in packages/engine/test/tactical/tackle_band_grey.test.js; this row keeps the palette's own
+    // guard that it is never mistaken for a strike red.
+    const pb = chan(CHANNELS.unavailable.color)
     const aoe = chan(CHANNELS.aoe.color)
     expect(Math.max(pb.r, pb.g, pb.b) - Math.min(pb.r, pb.g, pb.b)).toBeLessThanOrEqual(24) // grey
     expect(pb.g + pb.b).toBeGreaterThan(aoe.g + aoe.b) // desaturated vs the hard aoe red
-    expect(CHANNELS.path_blocked.color).not.toBe(CHANNELS.aoe.color)
+    expect(CHANNELS.unavailable.color).not.toBe(CHANNELS.aoe.color)
   })
   test('every channel opacity is punchy (≥0.5 — never wishy-washy, ref2)', () => {
-    // ONE exception (LATER than the D256 punchy pass): path_blocked is the tackle-lost
-    // warning band and must read "way softer to not feel it's a AoE blob" — its own softness ratchet row (M3
+    // ONE exception (LATER than the D256 punchy pass): unavailable is the tackle-lost / locked-cell
+    // information band and must read "way softer to not feel it's a AoE blob" — its own softness ratchet row (M3
     // describe below) pins it ≤0.45 instead. Every ACTION wash stays punchy.
     for (const [key, spec] of Object.entries(CHANNELS)) {
-      if (key === 'path_blocked') continue
+      if (key === 'unavailable') continue
       expect(spec.opacity, `${key} opacity`).toBeGreaterThanOrEqual(0.5)
     }
   })
@@ -951,8 +951,8 @@ describe('entity anchor — team param picks the matching TEAM_COLORS material (
   })
 })
 
-// ── M3 rider (2026-07-18): the cell-paint grammar's ONE home + the softer tackle red ──────────────────────────
-describe('M3 · paint grammar SSOT + tackle-red softness ratchet', () => {
+// ── M3 rider (2026-07-18): the cell-paint grammar's ONE home + unavailable softness ────────────────────────────
+describe('M3 · paint grammar SSOT + unavailable softness ratchet', () => {
   test('fade clocks resolve from the style SSOT (FADE_DEFAULTS + per-channel override) — one home', async () => {
     const { FADE_DEFAULTS, resolve_fade } = await import('../../src/tactical/board_highlight_style.js')
     expect(FADE_DEFAULTS.fade_in_s).toBe(0.15) // pinned default — tunable per channel
@@ -961,9 +961,9 @@ describe('M3 · paint grammar SSOT + tackle-red softness ratchet', () => {
     expect(resolve_fade({ fade_in_s: 0.4 })).toEqual({ fade_in_s: 0.4, fade_out_s: 0.25 })
   })
 
-  test('OWNER 1195 "way softer to not feel it\'s a AoE blob": path_blocked reads MATERIALLY quieter than the aoe strike red', async () => {
+  test('OWNER 1195 "way softer to not feel it\'s a AoE blob": unavailable reads MATERIALLY quieter than the aoe strike red', async () => {
     const { CHANNELS } = await import('../../src/tactical/board_highlight_style.js')
-    expect(CHANNELS.path_blocked.opacity).toBeLessThanOrEqual(0.45) // the softness ratchet (was 0.7)
-    expect(CHANNELS.path_blocked.opacity).toBeLessThan(CHANNELS.aoe.opacity / 2) // never within 2× of the strike red
+    expect(CHANNELS.unavailable.opacity).toBeLessThanOrEqual(0.45) // the softness ratchet (was 0.7)
+    expect(CHANNELS.unavailable.opacity).toBeLessThan(CHANNELS.aoe.opacity / 2) // never within 2× of the strike red
   })
 })

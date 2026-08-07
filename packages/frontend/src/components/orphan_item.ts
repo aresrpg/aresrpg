@@ -12,8 +12,8 @@
 // SAFETY (the load-vs-delete distinction — the one way this could go catastrophically wrong): the template
 // map is MEMOIZED and resolves to an EMPTY map on any read failure, so "slug absent" is ambiguous — it means
 // either "burned" or "the read hasn't landed / failed". We treat an item as removed ONLY when the map has
-// REAL entries (`size > 0`) yet lacks this slug: a populated map genuinely omits burned templates (their
-// objects fail to fetch, get_item_templates drops them), while a still-loading / errored-empty map flags
+// REAL entries (`size > 0`) yet lacks this slug: a populated projection genuinely omits burned templates,
+// while a still-loading / errored-empty map flags
 // NOTHING — a live item is never mislabelled "removed" during an outage. Pure + DOM-less (bun:test-able,
 // same split as forge_eligibility.ts).
 

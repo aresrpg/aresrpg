@@ -33,11 +33,11 @@ import { PEER_HEARTBEAT_MS, REJOIN_MAX_ATTEMPTS } from '@aresrpg/world/presence'
 import { game_log } from '../core/log.js'
 import { report_error } from '../core/report.js'
 import { presence_store, presence_input } from '../world-shell/presence_adapter.js'
-import { NETWORK, RELAY_URL, STUN_FALLBACK_URL, STUN_URL } from '../env'
+import { FRONTEND_NETWORK, RELAY_URL, STUN_FALLBACK_URL, STUN_URL } from '../env'
 
 import { TURN_ENABLED, turn_ice_server } from './turn_credentials.js'
 
-const APP_ID = `aresrpg-world-lobby-${NETWORK}`
+const APP_ID = `aresrpg-world-lobby-${FRONTEND_NETWORK}`
 // ONE relay, ours (env.ts RELAY_URL is its single home). trystero reads `relayConfig.urls` — passing the list
 // explicitly means the strategy's baked-in PUBLIC broker defaults are never dialled, which is the entire point.
 // No `redundancy`: @trystero-p2p/core's getRelays returns `relayConfig.urls` verbatim when present and consults

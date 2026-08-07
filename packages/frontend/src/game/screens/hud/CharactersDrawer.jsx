@@ -47,11 +47,10 @@ import { CharacterDeleteConfirm } from './CharacterDeleteConfirm.jsx'
 import { delete_character_onchain } from '../character-delete.js'
 import { delete_block_reason } from '../character-delete.gate.js'
 import { use_toast } from '../../../toast'
+import { FRONTEND_NETWORK } from '../../../env'
 
 // Which chain this build talks to (matching explorer_link.jsx / handshake.js) — drives the
 // unpublished-door delete gate: the pin map is per-network, so the gate must read the LIVE one.
-const NETWORK = import.meta.env.VITE_NETWORK || 'testnet'
-
 // Create — WIRED: the paid SDK entry create_character_paid_ptb
 // exists. The in-drawer affordance mounts the SAME proven creator (character_create) and ROUTES its submit by
 // the shared is_paid_create predicate: first character (count 0, free slot unclaimed) → the FREE
@@ -207,7 +206,7 @@ export function CharactersDrawer({ on_switch, variant = 'drawer' }) {
   // "next chain upgrade" reason), then the standing guards (exploring / playing / equipped). The fold
   // reads the live i18n instance; useTranslation already re-renders this component on language change.
   const delete_block_for = (/** @type {any} */ character, in_world = true) =>
-    delete_block_reason(character, { network: NETWORK, in_world, selected_id })
+    delete_block_reason(character, { network: FRONTEND_NETWORK, in_world, selected_id })
 
   // The character behind the open confirm card (id-keyed state survives roster repaints), shared by both
   // variant branches below. A vanished character (deleted elsewhere / snapshot) closes the card by rendering

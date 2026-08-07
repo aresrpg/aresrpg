@@ -24,6 +24,7 @@ import { use_dungeon } from '../../../world-shell/dungeon_store.js'
 import { should_auto_end_turn, should_report_stall, turn_overdue_ms } from '../../../world-shell/fight_expiry_gate.js'
 import { use_dungeon_turn } from '../dungeon-turn.js'
 import { fight_store } from '@aresrpg/fight/store'
+import { turn_control_phase as fight_turn_control_phase } from '@aresrpg/fight/project'
 import { useFightView, useFightVisibleControls } from '../../store.js'
 import { auto_commit_fire_at } from '@aresrpg/fight/draft_budget'
 import { ConfirmDialog } from './world/ConfirmDialog.jsx'
@@ -60,13 +61,7 @@ const default_force_pass = () => use_dungeon.getState().force_pass()
  * @param {string | null | undefined} [entity_id]
  * @returns {'hidden' | 'waiting' | 'armed' | 'committing'}
  */
-export function fight_turn_control_phase(fight, busy, entity_id = fight?.my_entity_id) {
-  const active = fight?.active_entity_id ? fight?.fighters?.get?.(fight.active_entity_id) : null
-  const live_actor = !!fight && !fight.spectator && fight.winner === -1 && entity_id != null && active != null
-  if (!live_actor) return 'hidden'
-  if (active.id !== entity_id || !fight.playable) return 'waiting'
-  return busy ? 'committing' : 'armed'
-}
+export { fight_turn_control_phase }
 
 /** The END TURN companion cue exists only in the same armed phase as the control itself. Pure.
  *  HONEST DEADLINE (#323): the cue counts to the moment the turn actually locks (`auto_commit_fire_at` =

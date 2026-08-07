@@ -39,8 +39,8 @@ and returns a `@mysten/sui` `Transaction` for the wallet to sign. Highlights:
   `act_move_ptb`, `act_weapon_ptb`, `act_cast_ptb`, `act_pass_ptb`, `settle_fight_ptb`, `mint_rolled_ptb`.
 - **Dungeon / kolizeum / game**: `activate_ptb`, `settle_run_ptb`, `kolizeum_create_public_ptb`,
   `raise_spell_level_ptb`, `feed_ptb`, `crush_ptb`, `join_world_ptb`, `gather_ptb`.
-- **Reads**: `get_user_kiosks`, `get_policies_profit`, `get_royalty_fee`, `get_world`, `get_expedition`,
-  `get_creation_state`, `is_name_taken`, `get_item_template`, `get_rolled_stats`, `get_sui_balance`.
+- **Reads**: `get_policies_profit`, `get_world`, `get_expedition`, `get_creation_state`, `get_item_template`,
+  `get_rolled_stats`.
 
 The same builders are also exported per-domain (`@aresrpg/sdk/fight`, `/dungeon`, `/kolizeum`, `/game`,
 `/items`, `/social`) for use without the full factory.

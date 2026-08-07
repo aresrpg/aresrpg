@@ -74,9 +74,11 @@ export const TURN_CRED = env.VITE_TURN_CRED || ''
 // Sentry error-reporting (errors-only scope — no tracing, no replay; see core/report.js). DSN present ⇒ the
 // reporter inits; ABSENT (the default for dev/local) ⇒ init is a hard no-op, so a bare boot never phones home.
 // NEVER commit the DSN value — it lives in the gitignored .env / .env.production; .env.example templates the
-// NAME only. NETWORK tags the Sentry `environment` (testnet | mainnet) so error streams split per chain.
+// NAME only. FRONTEND_NETWORK tags the Sentry `environment` (testnet | mainnet) so error streams split per chain.
 export const SENTRY_DSN = env.VITE_SENTRY_DSN || ''
-export const NETWORK = env.VITE_NETWORK || 'testnet'
+// The frontend deployable's one network parser. Every chain selector, explorer label and network-specific
+// gate imports this value rather than independently defaulting VITE_NETWORK.
+export const FRONTEND_NETWORK = (env.VITE_NETWORK || 'testnet').trim() as 'testnet' | 'mainnet' | 'localnet'
 
 // The DEPLOY TARGET this bundle was built for — Vercel's own `VERCEL_ENV` ('production' | 'preview'), exposed
 // to the build as a system variable; empty in a local build. It exists here for ONE reason (#2192): the DSN

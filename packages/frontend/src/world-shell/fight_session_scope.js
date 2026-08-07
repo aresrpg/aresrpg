@@ -6,15 +6,13 @@
 // in the singleton as its own.
 
 import { engine_view_of } from '@aresrpg/fight/project'
+import { fight_scope_of_id, fight_scope_sim, fight_scope_world } from '@aresrpg/fight/session_scope'
 
-export const fight_scope_world = 'world'
-export const fight_scope_sim = 'sim'
+export { fight_scope_sim, fight_scope_world }
 
 /** @param {any} fight_state @returns {'world' | 'sim' | null} */
 export const fight_scope_of = (fight_state) => {
-  const fight_id = fight_state?.fight_id
-  if (fight_id == null) return null
-  return String(fight_id).startsWith('sim:') ? fight_scope_sim : fight_scope_world
+  return fight_scope_of_id(fight_state?.fight_id)
 }
 
 /** Whether the singleton currently belongs to one mode, including its pre-view opening window. */

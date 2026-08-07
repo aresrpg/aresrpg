@@ -14,8 +14,8 @@ import { kolizeum_ids } from './sui/write/kolizeum_lobby.js'
 // KOLIZEUM — the public per-domain home for the sibling `aresrpg_kolizeum` package's wagered PvP (§7 / §17.9; a
 // REAL WIN's pot takes a 10% platform cut at settle (PLATFORM CUTS) — draw/cancel/exit
 // refund whole, uncut). The lobby money core (create / join / exit / cancel / sweep) lives in `sui/write/kolizeum_lobby.js`
-// and the live-lobby read in `sui/read/kolizeum.js`; this module RE-EXPORTS both (one public import per domain,
-// mirroring `fight.js`) and adds the fight bridge: `start` (K1 — the creator commits the lobby to a PvP `Fight`),
+// and this module re-exports those builders (one public import per domain, mirroring `fight.js`) and adds the
+// fight bridge: `start` (K1 — the creator commits the lobby to a PvP `Fight`),
 // `seat` (K1 — a member self-seats), `settle` (K2 — release the pot off a terminal `FightOutcome`), `open` (K2 — the
 // brand-asserted arena-outcome TERMINAL, consumed HERE not by core's PvM `results` door), and `settle_arena` (the
 // one-PTB composer: `settle_and_take → settle(&outcome) → open(outcome)`). None draw `&Random` (the PvP snapshots are
@@ -41,7 +41,6 @@ export {
   cancel_ptb,
   sweep_ptb,
 } from './sui/write/kolizeum_lobby.js'
-export { get_kolizeum, KOLIZEUM_STATUS } from './sui/read/kolizeum.js'
 
 /**
  * The context a kolizeum bridge builder needs: the network (drives lazy id resolution) + an optional `ids`

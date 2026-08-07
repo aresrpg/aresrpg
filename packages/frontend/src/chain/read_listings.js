@@ -19,12 +19,9 @@
 // the existing `rpc:listing:{id}` doc) so the picker excludes rows already on the market — no SDK, no kiosk
 // walk. Shared by the marketplace SELL tab + kolizeum (character picker only).
 //
-// TEMPLATE CATALOG (S-87 fix #2): the picker's category/level join used `read_findables.js`'s
-// `get_template_by_item_type_map`, which is ITSELF chain-direct (`get_item_templates` — a GraphQL
-// `ItemTemplateCreated` event-replay, #23) — a SECOND kiosk-adjacent violation the zero-fetch e2e proof
-// caught live (the SELL tab was the first caller in a fresh session, so nothing had warmed its module-level
-// memo yet). Fixed the same way BUY (S-86, `marketplace_chain.ts` `load()`) already resolves templates:
-// the keyless `/v1/encyclopedia?kind=items` view, which carries everything this picker needs
+// TEMPLATE CATALOG (S-87 fix #2): the picker's category/level join used a chain-direct event replay — a SECOND
+// kiosk-adjacent violation the zero-fetch e2e proof caught live. It now uses the same keyless
+// `/v1/encyclopedia?kind=items` view as BUY (S-86, `marketplace_chain.ts` `load()`), which carries everything it needs
 // (name/category/level by item_type slug — no pods/stats, which only the BUY item-detail renders).
 
 import { is_stackable_category } from '@aresrpg/sdk/items'

@@ -9,8 +9,6 @@ import {
   open_ptb,
   settle_arena_ptb,
   create_public_ptb,
-  get_kolizeum,
-  KOLIZEUM_STATUS,
 } from '../src/kolizeum.js'
 
 import { EMPTY_IDS, IDS, id, targets, find_call } from './_onchain_fixtures.js'
@@ -113,10 +111,8 @@ describe('kolizeum arena-outcome terminal — open + the one-PTB compose', () =>
   })
 })
 
-describe('kolizeum re-exports — lobby money core + read', () => {
-  test('create_public_ptb + get_kolizeum + KOLIZEUM_STATUS are re-exported', () => {
+describe('kolizeum re-exports — lobby money core', () => {
+  test('create_public_ptb is re-exported', () => {
     expect(typeof create_public_ptb).toBe('function')
-    expect(typeof get_kolizeum).toBe('function')
-    expect(KOLIZEUM_STATUS.OPEN).toBe(0)
   })
 })

@@ -12,6 +12,7 @@ import { reduce_sui_data } from '@aresrpg/inventory/reduce'
 
 import { observe_roster_bindings, session_gate_input } from '../../../world-shell/session_gate.js'
 import { is_app_managed_follower } from '../../../world-shell/follow_gate.js'
+import { INITIAL_SUI_STATE } from '../initial_sui_state.js'
 
 /** @type {import('../game.js').Module} */
 export default function sui_session() {
@@ -65,22 +66,9 @@ export default function sui_session() {
           return {
             ...state,
             selected_character_id: null,
-            sui: {
-              ...state.sui,
-              characters: [],
-              items: [],
-              settled_item_floor: {},
-              // Drop the in-flight consumable deltas — account A's unsettled clicks must never mask B's bag.
-              pending_uses: {},
-              // Drop receipt-proven Character rows — a mint from account A can never survive into account B.
-              minted_character_floor: {},
-              loaded: false,
-              load_error: null,
-              // Drop the receipt-proven XP floors — the next account's roster starts unbound.
-              xp_floor: {},
-              // Drop the delete tombstones too (BACKLOG 18) — same receipt-ledger class as the XP floor.
-              deleted_ids: {},
-            },
+            // Rebuild from the boot shape, never from account A's slice. This also drops reducer-owned ledger
+            // extensions such as xp_floor/deleted_ids that are intentionally absent before the first input.
+            sui: { ...INITIAL_SUI_STATE },
           }
         case 'action/select_character':
           // #509 — refuse embodying an app-managed auto-follower (by sidebar click OR programmatically). The ×

@@ -14,7 +14,9 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test'
 
 import { context } from '../game.js'
+import { INITIAL_SUI_STATE } from '../initial_sui_state.js'
 import { publish_world_binding, reset_world_binding, use_world_binding } from '../../../world-shell/session_gate.js'
+import sui_session from './sui_session.js'
 
 // Ids distinct from every other fixture in this suite (embed.test.js / character_selection.test.js /
 // follow_gate.test.js) so a stray leftover row in the shared binding book can never coincidentally satisfy
@@ -100,5 +102,35 @@ describe('sui_session observer — the roster card can never lower a fresher cha
     // must re-key to SECOND and read SECOND's own world out of the book, never stay on the first.
     await select_and_settle(SECOND_ID)
     expect(use_world_binding.getState().world).toBe(SECOND_WORLD)
+  })
+})
+
+describe('sui_session wallet teardown', () => {
+  test('resets the complete Sui slice from its one boot shape', () => {
+    const state = {
+      selected_character_id: '0xaccount-a-character',
+      sui: {
+        ...INITIAL_SUI_STATE,
+        loaded: true,
+        has_claimed_free_character: true,
+        character_price_sui: 10,
+        characters: [{ id: '0xaccount-a-character' }],
+        items_for_sale: [{ id: '0xaccount-a-listing' }],
+        balance: 42n,
+        tokens: [{ id: '0xaccount-a-token' }],
+        admin_caps: [{ id: '0xaccount-a-cap' }],
+        finished_crafts: [{ id: '0xaccount-a-craft' }],
+        recipes: [{ id: '0xaccount-a-recipe' }],
+        xp_floor: { '0xaccount-a-character': 99 },
+        deleted_ids: { '0xaccount-a-deleted': true },
+      },
+    }
+
+    const reset = sui_session().reduce(state, { type: 'action/sui_logout' })
+
+    expect(reset.selected_character_id).toBeNull()
+    expect(reset.sui).toEqual(INITIAL_SUI_STATE)
+    expect(Object.keys(reset.sui).sort()).toEqual(Object.keys(INITIAL_SUI_STATE).sort())
+    expect(reset.sui).not.toBe(INITIAL_SUI_STATE)
   })
 })

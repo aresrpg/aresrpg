@@ -5,7 +5,7 @@ import { deriveObjectID, deriveDynamicFieldID } from '@mysten/sui/utils'
 
 import { aresrpg_deployment } from '../../deployment/aresrpg.js'
 
-import { get_object_json, get_objects_json, option_value } from './_object.js'
+import { get_object_json, get_objects_json } from './_object.js'
 
 // ITEM READS for the merged `aresrpg` package — zero-backend chain reads via the house gRPC Core client (object json + dynamic
 // fields), mirroring the Move getters. No devInspect: every read is an object/DF fetch, and the derived-object
@@ -55,16 +55,6 @@ export const ITEM_STAT_FIELDS = Object.freeze([
 const string_bytes = value => bcs.string().serialize(value).toBytes()
 const address_bytes = value => bcs.Address.serialize(value).toBytes()
 
-/** Does the object at `object_id` exist on-chain? */
-async function object_exists(grpc_client, object_id) {
-  try {
-    const { object } = await grpc_client.core.getObject({ objectId: object_id })
-    return !!object
-  } catch {
-    return false
-  }
-}
-
 /** The V of a dynamic field `Field<K,V>` read as flattened json, or null if the field is ABSENT (a failed read
  *  throws — #2054). `key_bytes` is the BCS of the key value (an empty-struct key is ONE 0x00 byte —
  *  EMPTY_STRUCT_KEY, never zero bytes). */
@@ -72,11 +62,6 @@ async function get_df_value_json(grpc_client, parent_id, key_type, key_bytes) {
   const field_id = deriveDynamicFieldID(parent_id, key_type, key_bytes)
   const json = await get_object_json(grpc_client, field_id)
   return json?.value ?? null
-}
-
-const option_u64 = opt => {
-  const v = option_value(opt)
-  return v == null ? null : BigInt(v)
 }
 
 // ── decoders (json → typed) ─────────────────────────────────────────────────
@@ -199,59 +184,6 @@ export function get_creation_classes(context) {
       return classes
     } catch {
       return [] // read hiccup → caller allows all; a truly un-whitelisted pick still aborts honestly at mint
-    }
-  }
-}
-
-/** True if `raw_name` (case-insensitive) is already claimed (mirrors `is_name_taken`).
- *  @param {import("../../../types.js").Context} context */
-export function is_name_taken(context) {
-  const { grpc_client, network } = context
-  return async raw_name => {
-    const dep = aresrpg_deployment(network, context.ids?.aresrpg)
-    return object_exists(
-      grpc_client,
-      character_name_marker_id({ creation_id: dep.CREATION, raw_name }),
-    )
-  }
-}
-
-/** True if `owner` has already claimed its one free character (mirrors `is_free_claimed`).
- *  @param {import("../../../types.js").Context} context */
-export function is_free_claimed(context) {
-  const { grpc_client, network } = context
-  return async owner => {
-    const dep = aresrpg_deployment(network, context.ids?.aresrpg)
-    return object_exists(
-      grpc_client,
-      free_character_marker_id({
-        creation_id: dep.CREATION,
-        package_id: dep.PACKAGE_ID,
-        owner,
-      }),
-    )
-  }
-}
-
-// ── SHOP sale reads ──────────────────────────────────────────────────────────
-
-/** A `Sale` snapshot: price/supply/minted/window/paused + the template it sells. Null when ABSENT; a FAILED
- *  read throws (#2054).
- *  @param {import("../../../types.js").Context} context */
-export function get_sale(context) {
-  const { grpc_client } = context
-  return async sale_id => {
-    const json = await get_object_json(grpc_client, sale_id)
-    if (!json) return null // ABSENT sale
-    return {
-      id: json.id,
-      template: json.template,
-      price: BigInt(json.price ?? 0),
-      supply: option_u64(json.supply), // null = unlimited
-      minted: BigInt(json.minted ?? 0),
-      start_ms: option_u64(json.start_ms), // null = open
-      end_ms: option_u64(json.end_ms), // null = open
-      paused: Boolean(json.paused),
     }
   }
 }

@@ -23,7 +23,7 @@
 import * as Sentry from '@sentry/react'
 
 import { parse_move_abort } from '../game/core/abort_copy.js'
-import { SENTRY_DSN, NETWORK, DEPLOY_ENV } from '../env'
+import { SENTRY_DSN, FRONTEND_NETWORK, DEPLOY_ENV } from '../env'
 
 import { set_breadcrumb_sink, get_log_buffer } from './log.js'
 import { redact_jwt } from './redact'
@@ -122,7 +122,7 @@ export function before_send(/** @type {any} */ event, /** @type {any} */ hint) {
  * not production. Production stays the bare chain name (`testnet`), so existing streams/alerts are untouched;
  * a preview deployment reports as `testnet-preview` and can never be mistaken for a player on the real build.
  * PURE.
- * @param {string} network the chain (env NETWORK)
+ * @param {string} network the chain (env FRONTEND_NETWORK)
  * @param {string} deploy_env the Vercel deploy target (env DEPLOY_ENV) — '' when built locally
  */
 export function report_environment(network, deploy_env) {
@@ -164,7 +164,7 @@ export function init_reporting(config = {}) {
   if (!config.dsn && import.meta.env.DEV) return false
   Sentry.init({
     dsn,
-    environment: config.environment ?? report_environment(NETWORK, DEPLOY_ENV),
+    environment: config.environment ?? report_environment(FRONTEND_NETWORK, DEPLOY_ENV),
     release: config.release ?? RELEASE,
     // ERRORS-ONLY: browserTracing + Replay are opt-in integrations we deliberately never add. We only
     // DROP GlobalHandlers (we wire window.onerror / unhandledrejection → report_error ourselves).

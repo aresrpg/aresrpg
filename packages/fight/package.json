@@ -62,6 +62,9 @@
     "./fight_status_snapshot": {
       "import": "./src/fight_status_snapshot.js"
     },
+    "./session_scope": {
+      "import": "./src/session_scope.js"
+    },
     "./statuses": {
       "import": "./src/statuses.js"
     },

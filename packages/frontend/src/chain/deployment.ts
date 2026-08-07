@@ -2,10 +2,7 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 import { is_object_id } from '../content/object_id'
 import { seed_manifest } from '../content/seed_manifest'
-
-const selected_network = (
-  (import.meta as unknown as { env: Record<string, string> }).env?.VITE_NETWORK || 'testnet'
-).trim() as 'testnet' | 'mainnet' | 'localnet'
+import { FRONTEND_NETWORK } from '../env'
 
 // ─────────────────────────────────────────────────────────────────────────────────────────────────────────
 // FRONTEND DEPLOYMENT RESIDUE (S-61). The ONE id home is the SDK's `@aresrpg/sdk/deployment/aresrpg`
@@ -23,7 +20,7 @@ const selected_network = (
 // fork. Defaults to testnet (the live demo). 'localnet' is the L1 anchor (docs/GOLD_STANDARD_SUITE.md §11):
 // the SDK's deployment resolver reads the run's ids from the injected `globalThis.__ARES_LOCALNET_IDS` and the
 // gRPC endpoint from VITE_SUI_GRPC_URL — nothing is hardcoded here.
-export const DEMO_NETWORK = selected_network
+export const DEMO_NETWORK = FRONTEND_NETWORK
 
 // ───────────────────────────────────────────────────────────────────────────────────────────────────────
 // SEEDED-CONTENT constants (labels + seeded object ids — content enumeration, not deployment singletons).

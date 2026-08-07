@@ -4,7 +4,6 @@ import { KioskClient } from '@mysten/kiosk'
 import { SuiGraphQLClient } from '@mysten/sui/graphql'
 import { SuiGrpcClient } from '@mysten/sui/grpc'
 import { SuiJsonRpcClient } from '@mysten/sui/jsonRpc'
-import { LRUCache } from 'lru-cache'
 
 import release from './deployment/release.json' with { type: 'json' }
 import { aresrpg_id } from './deployment/aresrpg.js'
@@ -61,7 +60,6 @@ import {
   exit_ptb as kolizeum_exit_ptb,
   cancel_ptb as kolizeum_cancel_ptb,
   sweep_ptb as kolizeum_sweep_ptb,
-  get_kolizeum,
 } from './kolizeum.js'
 import {
   raise_spell_level_ptb,
@@ -72,9 +70,6 @@ import {
   search_zone_ptb,
   gather_ptb,
 } from './game.js'
-import { get_user_kiosks } from './sui/read/get_user_kiosks.js'
-import { get_royalty_fee } from './sui/read/get_royalty_fee.js'
-import { get_supported_tokens } from './sui/read/get_supported_tokens.js'
 import { get_expedition } from './sui/read/get_expedition.js'
 import { HSUI, SUPPORTED_TOKENS } from './sui/supported_tokens.js'
 import { ITEM_CATEGORY } from './items.js'
@@ -142,13 +137,9 @@ import {
   airdrop_close_ptb,
 } from './sui/write/airdrop.js'
 import { get_gift } from './sui/read/gift.js'
-import { get_airdrop } from './sui/read/airdrop.js'
 import {
   get_creation_state,
   get_creation_classes,
-  is_name_taken,
-  is_free_claimed,
-  get_sale,
   get_item_template,
   get_rolled_stats,
   read_namespaced_field,
@@ -165,10 +156,6 @@ export {
   plan_stack_folds,
   same_template_stack_ids,
 } from './sui/write/item_stacks.js'
-
-// keep fetched balances for 3s to avoid spamming the nodes
-/** @type {LRUCache<string, bigint>} */
-const balances_cache = new LRUCache({ max: 100, ttl: 3000 })
 
 /**
  * @param {Object} [options]
@@ -204,11 +191,9 @@ export async function SDK({ network = 'testnet' } = {}) {
         : 'https://fullnode.testnet.sui.io:443')
   const grpc_client = new SuiGrpcClient({ network, baseUrl: grpc_base })
 
-  // #23/D79 P2 — the GraphQL client covers the two lanes gRPC/Core can't: (1) the KioskClient, whose
-  // KioskCompatibleClient type accepts only a JSON-RPC or GraphQL client, never a gRPC one; (2) the event-replay
-  // reads (query_events.js) — GraphQL `events(filter:{type})` replaces the deleted JSON-RPC event query. It also
-  // implements the Core API + is a valid `Transaction.build({client})` target. Testnet URL per the installed
-  // @mysten/sui docs (docs/clients/graphql.md).
+  // #23/D79 P2 — the GraphQL client covers the KioskClient lane gRPC/Core can't: KioskCompatibleClient accepts
+  // only a JSON-RPC or GraphQL client, never a gRPC one. It also implements the Core API + is a valid
+  // `Transaction.build({client})` target. Testnet URL per the installed @mysten/sui docs (docs/clients/graphql.md).
   const graphql_client = new SuiGraphQLClient({
     network,
     url:
@@ -283,11 +268,6 @@ export async function SDK({ network = 'testnet' } = {}) {
     SUPPORTED_TOKENS: supported_tokens,
     HSUI: HSUI[token_network],
 
-    get_royalty_fee: get_royalty_fee(context),
-    get_supported_tokens: get_supported_tokens(context),
-
-    get_user_kiosks: get_user_kiosks(context),
-
     get_expedition: get_expedition(context),
 
     borrow_personal_kiosk_cap: borrow_personal_kiosk_cap(context),
@@ -343,18 +323,14 @@ export async function SDK({ network = 'testnet' } = {}) {
     gift_claim_ptb: gift_claim_ptb(context),
     gift_recall_ptb: gift_recall_ptb(context),
     get_gift: get_gift(context),
-    // airdrop — whitelist claim-mint (claim) + owner ceremony (create/add/remove/close) + pre-flight read.
+    // airdrop — whitelist claim-mint (claim) + owner ceremony (create/add/remove/close).
     airdrop_claim_ptb: airdrop_claim_ptb(context),
     airdrop_create_ptb: airdrop_create_ptb(context),
     airdrop_add_addresses_ptb: airdrop_add_addresses_ptb(context),
     airdrop_remove_addresses_ptb: airdrop_remove_addresses_ptb(context),
     airdrop_close_ptb: airdrop_close_ptb(context),
-    get_airdrop: get_airdrop(context),
     get_creation_state: get_creation_state(context),
     get_creation_classes: get_creation_classes(context),
-    is_name_taken: is_name_taken(context),
-    is_free_claimed: is_free_claimed(context),
-    get_sale: get_sale(context),
     get_item_template: get_item_template(context),
     get_rolled_stats: get_rolled_stats(context),
     read_namespaced_field: read_namespaced_field(context),
@@ -407,7 +383,6 @@ export async function SDK({ network = 'testnet' } = {}) {
     kolizeum_open_ptb: kolizeum_open_ptb(context),
     kolizeum_settle_arena_ptb: kolizeum_settle_arena_ptb(context),
     kolizeum_sweep_ptb: kolizeum_sweep_ptb(context),
-    get_kolizeum: get_kolizeum(context),
 
     // S-57 — deployed S-46 GAME progression + world flows (spell levels / pet feed / forgemagie crush+scribe;
     // join_world / search_zone / gather). The S-46 `get_world` read is via `@aresrpg/sdk/game`; the OLD staking
@@ -424,16 +399,5 @@ export async function SDK({ network = 'testnet' } = {}) {
     join_world_ptb: join_world_ptb(context),
     search_zone_ptb: search_zone_ptb(context),
     gather_ptb: gather_ptb(context),
-
-    /** @return {Promise<bigint>} balance */
-    async get_sui_balance(owner) {
-      if (!balances_cache.has(owner)) {
-        // #23 gRPC: core.getBalance returns { balance: { balance } } (was jsonRpc { totalBalance }).
-        const { balance } = await grpc_client.core.getBalance({ owner })
-        balances_cache.set(owner, BigInt(balance.balance))
-      }
-
-      return balances_cache.get(owner)
-    },
   }
 }
