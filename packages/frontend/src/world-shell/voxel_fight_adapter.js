@@ -31,7 +31,6 @@ import { fight_cast_beat_effects } from '@aresrpg/fight/present'
 import { cast_resolution, empty_cast_resolution } from '@aresrpg/fight/cast_record'
 import { living_body_cells } from '@aresrpg/fight/occupancy'
 import { range_bonus_of } from '@aresrpg/fight/statuses'
-import { weapon_spell_template } from '@aresrpg/fight/predict_cast'
 import { target_cap_reached } from '@aresrpg/fight/draft_budget'
 import { places_trap } from '@aresrpg/sim/spell_targeting'
 
@@ -82,7 +81,6 @@ import { init_fight_stream } from '../game/screens/fight-stream.js'
 import { use_auth } from '../auth'
 import {
   WEAPON_ATTACK_ID,
-  WEAPON_ATTACK_RANGE,
   WEAPON_ATTACK_AP,
   // COMBAT-LOG REALTIME: the log lines compose in fight.js (one home) but fire HERE, at each
   // beat, so they stream with the paced replay instead of dumping at packet-dispatch time.
@@ -119,6 +117,7 @@ import {
   seed_range_of,
   seed_cast_flags_of,
   spell_footprint,
+  weapon_cast_level,
   hover_footprint_plan,
   glyph_tick_flare_plan,
   my_seat_of,
@@ -200,12 +199,6 @@ function wait_cast_anim_done(beat, fire_ratio = 1.1) {
 // void) before the fight is treated as permanently unplaceable. Each attempt re-waits the seat's own bounded
 // stream-settle (~4s), so 3 gives terrain ~12s of streaming grace across refreshes before the honest give-up
 // (a latch + one toast). With the D230 forest-seat fix a refusal is now genuinely rare — this is the safety net.
-// #387 — the armed WEAPON strike's live band, in ONE place for both readers below (the cast wash and the hover
-// ring): the same `weapon_spell_template` the strike itself resolves from, so a bow's reach and a spellbook's
-// line can never be read two ways. `WEAPON_ATTACK_RANGE` stays the pre-read melee fallback until the escrow
-// weapon lands.
-const weapon_band_of = (weapon) => (weapon ? weapon_spell_template(weapon).levels[0].range : WEAPON_ATTACK_RANGE)
-
 const MAX_UNPLACEABLE_ATTEMPTS = 3
 
 // ── [p0-fight-init] ONE-SHOT DIAGNOSTIC LATCHES (first-fight-after-transition input-dead probe) ──────────────
@@ -1764,9 +1757,7 @@ export function create_voxel_fight_adapter(
         const spell = wash_armed === WEAPON_ATTACK_ID ? null : fight_spell(wash_armed)
         const level =
           wash_armed === WEAPON_ATTACK_ID
-            ? weapon_spell_template(
-                escrow_row?.weapon ?? { reach: WEAPON_ATTACK_RANGE[1], ap_cost: WEAPON_ATTACK_AP, lines: [] }
-              )?.levels?.[0]
+            ? weapon_cast_level(escrow_row?.weapon)
             : spell?.template?.levels?.[seat_spell_level(active, spell) - 1]
         if (level) {
           const grid = dungeon_grid_of(dungeon)
@@ -1953,16 +1944,13 @@ export function create_voxel_fight_adapter(
         const los2 = [...(dungeon.obstacles ?? [])]
         for (const p of dungeon.escrow ?? []) if (p.alive) los2.push(p.cell)
         for (const m of dungeon.mobs ?? []) if (m.alive) los2.push(m.cell)
-        // S-25 weapon slot: the sentinel has no seed range — use its S-12 melee ring so the hover strike-highlight
-        // works (and cast_range_set_dungeon never gets a null range).
-        // #387 — a weapon's band is a CATEGORY fact (a bow reaches, a sword does not), so the hover ring reads
-        // the seat's own live weapon through the same template the strike resolves from; `WEAPON_ATTACK_RANGE`
-        // stays the pre-read fallback for the split second before the escrow weapon lands.
-        const hover_range =
-          fight.armed_spell_id === WEAPON_ATTACK_ID
-            ? weapon_band_of(active.weapon)
-            : seed_range_of(fight.armed_spell_id, active)
-        const flags2 = seed_cast_flags_of(fight.armed_spell_id, active)
+        // #2280 — THE SEAT THE ARMED ACTION RESOLVES FROM. The projected fighter carries the composed build
+        // (spell_levels/base_stats) but NOT the seat's Weapon, so every weapon fact this hover needs — the
+        // band, the flags, the zone — has to come off the ESCROW row, exactly where the authoritative wash
+        // above reads it. Reading `active.weapon` (always undefined) is what starved the red.
+        const escrow_seat = dungeon.escrow?.find((p) => (p.character ?? p.character_id) === active.id)
+        const seat = escrow_seat?.weapon ? { ...active, weapon: escrow_seat.weapon } : active
+        const flags2 = seed_cast_flags_of(fight.armed_spell_id, seat)
         if (flags2.places_trap) flags2.trap_cells = fight.my_traps ?? []
         flags2.target_cap_reached = (target) =>
           fight.armed_spell_id === WEAPON_ATTACK_ID
@@ -1973,13 +1961,18 @@ export function create_voxel_fight_adapter(
                 target,
                 flags2.casts_per_target
               )
-        const castable2 = cast_range_set_dungeon(flags2.spell ?? hover_range, active, grid2, los2, flags2)
-        // The weapon sentinel has no seed row → spell_footprint falls back to the single [cell] (a melee strike).
+        // ONE targeting level for both paints: the WEAPON's is `weapon_cast_level`'s — the very level the blue
+        // wash above resolves — so the red footprint lights exactly the cells the wash already called castable.
+        const level2 =
+          fight.armed_spell_id === WEAPON_ATTACK_ID
+            ? weapon_cast_level(seat.weapon)
+            : (flags2.spell ?? seed_range_of(fight.armed_spell_id, seat))
+        const castable2 = cast_range_set_dungeon(level2, active, grid2, los2, flags2)
         // #2175 — the SAME castability verdict that earns the red footprint arms the zone forecast: the cards the
         // tooltip layer derives can never appear over a cell the board paints as un-castable. Published by the
         // per-frame reprojection (tick_hover), so a pointermove costs one assignment, not a dispatch.
         if (castable2.has(to_enc)) {
-          foot_cells = spell_footprint(fight.armed_spell_id, cell, active.cell, active)
+          foot_cells = spell_footprint(fight.armed_spell_id, cell, active.cell, seat)
           aim_cell = to_enc
         }
       }

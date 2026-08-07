@@ -16,7 +16,7 @@ import { engine_view } from '@aresrpg/fight/project'
 // and use board_zone_cells, the ONE placed-zone home. The hover fold below only unions and dedupes those answers.
 import { board_zone_cells, get_aoe_cells, places_trap } from '@aresrpg/sim/spell_targeting'
 import { weapon_spell_template } from '@aresrpg/fight/predict_cast'
-import { WEAPON_ATTACK_ID } from '@aresrpg/fight/weapon'
+import { WEAPON_ATTACK_AP, WEAPON_ATTACK_ID, WEAPON_ATTACK_RANGE } from '@aresrpg/fight/weapon'
 
 import { dungeon_grid_of } from '../game/screens/dungeon-grid.js'
 import { get_mob_model, mob_model_fallback_url } from '../game/data/mobs.js'
@@ -524,10 +524,29 @@ export function spell_footprint(armed_spell_id, target, caster, seat = null) {
   return footprint_of_effects(effects, target, caster)
 }
 
+/**
+ * THE ARMED WEAPON STRIKE'S TARGETING LEVEL — the ONE home every weapon-arming paint resolves from (#2280).
+ * The sentinel has no seed row, so its level is `weapon_spell_template`'s: the same template the strike is
+ * priced from, carrying the category's real band, its `modifiable_range`/`linear` flags and its zone. Both the
+ * authoritative cast-range wash (dark blue) and the hover footprint (red) read THIS, so they agree
+ * cell-for-cell by construction — the hover used to re-derive a bare `[min, max]` band of its own off a
+ * `weapon` field the projected fighter never carries, silently fell back to the pre-read melee line, and left
+ * every reaching weapon's hovered cell un-castable: blue painted, red never did. Pure.
+ * @param {any} weapon the seat's ESCROW weapon line (board_state.normalize_weapon); absent ⇒ the pre-read line
+ * @returns {any | null} a normalized sim SpellLevel
+ */
+export function weapon_cast_level(weapon) {
+  return weapon_spell_template(weapon ?? UNREAD_WEAPON_LINE)?.levels?.[0] ?? null
+}
+
+/** The pre-read weapon line: what the board prices a swing at for the split second before the escrow read
+ *  lands. The melee ring at zero AP — honest, never a fabricated reach. */
+const UNREAD_WEAPON_LINE = { reach: WEAPON_ATTACK_RANGE[1], ap_cost: WEAPON_ATTACK_AP, lines: [] }
+
 /** The armed WEAPON strike's normalized effects (its zone rides them), or null when a spell is armed. */
 function weapon_strike_effects(armed_spell_id, seat) {
   if (armed_spell_id !== WEAPON_ATTACK_ID || !seat?.weapon) return null
-  return weapon_spell_template(seat.weapon)?.levels?.[0]?.base_effects ?? []
+  return weapon_cast_level(seat.weapon)?.base_effects ?? []
 }
 
 /** A seed spell's effects at the seat's OWN rank — the AoE is a per-RANK fact (a zone widens with the level). */
