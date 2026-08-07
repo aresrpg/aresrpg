@@ -384,6 +384,20 @@ export function real_equipment_of(character, template_map, template_id_map, item
 }
 
 /**
+ * The equipped WEAPON item's own display name (#2279) — the label the fight bar, its tooltip and the combat
+ * log put on the weapon attack, because the attack IS the item. Derived from the SAME paper-doll projection
+ * the Inventory paints (`real_equipment_of` → `projected_item`'s one name chain), never a second join: a
+ * rename, a cold template map or a missing doc degrades identically on both surfaces. Nothing equipped, or a
+ * feed that has not landed yet ⇒ `''`, and the caller keeps its generic fallback.
+ * @param {any} character the /v1 character projection
+ * @param {any[]} [item_docs] the wallet's `/v1/owner-items` rows (equipped items stay kiosk-locked, so present)
+ * @returns {string}
+ */
+export function equipped_weapon_name(character, item_docs) {
+  return real_equipment_of(character, undefined, undefined, item_docs).weapon?.name ?? ''
+}
+
+/**
  * Return the first newly-equipped row whose fresh owner-items projection is listed or gone. Missing means it was
  * listed/sold/moved after staging; either result must refuse before Accept builds or optimistically patches.
  * @param {Record<string, any>} equipment

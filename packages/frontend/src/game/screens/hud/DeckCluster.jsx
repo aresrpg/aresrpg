@@ -51,6 +51,7 @@ import { SpellSocket } from './deck-spell-socket.jsx'
 import { SpellHoverTip } from './spell-hover-tip.jsx'
 import { socket_columns, socket_slots } from './deck-socket-grid.js'
 import { weapon_socket_projection } from './deck-weapon-socket.js'
+import { useEquippedWeaponName } from './use_equipped_weapon_name.js'
 
 // Seeded socket gems follow the selected level's actual-effect category. A legacy simulator-only card has no
 // projected spell row here, so it keeps the existing normalized element tint instead of guessing.
@@ -78,13 +79,15 @@ const is_typing = () => {
  * one-line "next hit" swaps to the crit damage (glow only on the socket itself, no badges/numbers).
  * `clock` is that same §7 tuple: it also rolls the strike's DAMAGE, so the "next hit" line is the exact number
  * the chain will settle rather than one end of a band (#1323).
- * @param {{ armed: boolean, enabled: boolean, weapon: any, glow: boolean, clock: any, keyCap: string | null,
- *   onPick: () => void, t: (k: string) => string }} props
+ * `item_name` is the equipped weapon's OWN name (#2279) — the attack IS the item, so the socket, its tooltip
+ * and its aria-label all read "Gobball Cutter", not a generic "Weapon Attack".
+ * @param {{ armed: boolean, enabled: boolean, weapon: any, item_name: string, glow: boolean, clock: any,
+ *   keyCap: string | null, onPick: () => void, t: (k: string) => string }} props
  */
-function WeaponSocket({ armed, enabled, weapon, glow, clock, keyCap, onPick, t }) {
+function WeaponSocket({ armed, enabled, weapon, item_name, glow, clock, keyCap, onPick, t }) {
   // Purely project the escrow line before handing it to the tooltip; deck-weapon-socket.test.js pins that an
   // equipped weapon cannot silently become the bare-hands signature (#1746).
-  const { name, facts } = weapon_socket_projection({ weapon, glow, clock, t })
+  const { name, facts } = weapon_socket_projection({ weapon, item_name, glow, clock, t })
   return (
     <Tooltip placement="top" content={<SpellSeedTip t={t} name={name} weapon={facts} />} className="tt-card--solid">
       <button
@@ -161,6 +164,11 @@ export function DeckCluster() {
   )
   const my_weapon = my_row?.weapon ?? null
   const weapon_affordable = my_turn && (my_weapon?.ap_cost ?? 0) <= ap
+  // #2279 — the equipped weapon's OWN name, for the FIGHTING character rather than whichever row the drawer
+  // last selected. Its one home is the paper doll's projection (useEquippedWeaponName), so a rename, a cold
+  // template map or an unread doc degrades identically here and on the doll; the generic label survives only
+  // while nothing is equipped.
+  const weapon_item_name = useEquippedWeaponName(fight?.my_entity_id)
 
   // §7 TURN-SEED CRIT PREVIEW (the socket glow): the NEXT action slot's crit roll, derived
   // byte-identically to the chain (deck-crit-glow.js → @aresrpg/sim) from PUBLIC state: the Fight's static
@@ -277,6 +285,7 @@ export function DeckCluster() {
             armed={armed === WEAPON_ATTACK_ID}
             enabled={weapon_affordable}
             weapon={my_weapon}
+            item_name={weapon_item_name}
             glow={weapon_glow}
             clock={seed_clock}
             keyCap={mobile ? null : '`'}

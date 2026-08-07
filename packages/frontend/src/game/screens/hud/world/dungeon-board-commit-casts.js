@@ -18,6 +18,9 @@ import { decode } from '@aresrpg/fight/los'
 import { cast_range_set_dungeon } from '../../../../fight-engine/overlay_intents.js'
 import { target_cap_reached } from '@aresrpg/fight/draft_budget'
 import { dungeon_grid_of } from '../../dungeon-grid.js'
+import { context } from '../../../store.js'
+import { is_bare_hands, weapon_action_name } from '../deck-weapon-socket.js'
+import { equipped_weapon_name } from '../inventory-equip.js'
 import { evolution_actions_of } from './DungeonBoardState.jsx'
 
 function cast_los(obstacles, occupied, caster_seat) {
@@ -142,13 +145,14 @@ function validate_cast_entry({
   fight,
   cast_queue,
   cast_params,
+  weapon_label,
 }) {
   const is_weapon = entry.spell_key === WEAPON_ATTACK_ID
   const drafted_spell = is_weapon ? null : (my_spells.find((spell) => spell.name_key === entry.spell_key) ?? null)
   const ground_targeted = !is_weapon && level_row(drafted_spell)?.free_cell === true
   const cast_anchor = evolved[cast_i]?.caster_cell ?? committed_caster_cell
   const spell_name = is_weapon
-    ? t('fight.weapon_attack')
+    ? weapon_label
     : t(`spells.spell_${entry.spell_key}`, { defaultValue: drafted_spell?.name ?? entry.spell_key })
   const current_occupied = evolved[cast_i]?.occupied ?? occupied
   const caster_alive = [...current_occupied.values()].find(
@@ -245,6 +249,19 @@ export function validate_commit_casts({
     .map((action) => ({ cell: action.target, spell_key: action.spell_key ?? null }))
   const committed_caster_cell = me?.committed?.cell ?? me?.cell ?? null
   const caster_seat = resolve_ref(entity_id)?.idx ?? -1
+  // #2279 — THE SWING'S NAME, resolved once for this flush: the attack IS the item, so a dropped strike
+  // names the weapon that would have swung. Exactly the label the bar's slot 0 wears (`weapon_action_name`
+  // over the paper doll's `equipped_weapon_name`), so the log and the socket cannot call one action by two
+  // names; bare hands and an unread equipment feed keep the generic strings.
+  const game_state = context.get_state()
+  const weapon_label = weapon_action_name(
+    equipped_weapon_name(
+      (game_state.sui?.characters ?? []).find((row) => row.id === entity_id) ?? null,
+      game_state.sui?.items
+    ),
+    is_bare_hands(me?.weapon),
+    t
+  )
   const evolved = evolve_flush_casts({
     view: fight_view(),
     committed: committed_truth(fight_store.getState()),
@@ -275,6 +292,7 @@ export function validate_commit_casts({
             fight,
             cast_queue,
             cast_params,
+            weapon_label,
           })
         )
       : cast_queue.map(empty)

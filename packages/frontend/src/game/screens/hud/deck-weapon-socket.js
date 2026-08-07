@@ -14,12 +14,26 @@ const weapon_element_name = (t, element) => t(`encyclopedia.element.${WEAPON_ELE
 export const is_bare_hands = (w) => !!w && w.element === 2 && w.damage === 4 && w.ap_cost === 3 && w.reach === 1
 
 /**
- * @param {{ weapon: any, glow: boolean, clock: any, t: (key: string, values?: any) => string }} args
+ * #2279 — THE ATTACK IS THE ITEM. The weapon action's label is the equipped item's OWN name whenever the
+ * equipment projection has one (`equipped_weapon_name`, the paper doll's own home), so the bar, the tooltip
+ * and the fight log all read the sword the player equipped instead of the generic "Weapon Attack". The
+ * generic strings stay the honest fallback for bare hands and for the split second before the item doc lands.
+ * @param {string | null | undefined} item_name the equipped weapon item's display name
+ * @param {boolean} bare_hands the unarmed signature
+ * @param {(key: string) => string} t
+ * @returns {string}
+ */
+export const weapon_action_name = (item_name, bare_hands, t) =>
+  item_name || t(bare_hands ? 'fight.weapon_bare' : 'fight.weapon_attack')
+
+/**
+ * @param {{ weapon: any, item_name?: string | null, glow: boolean, clock: any,
+ *   t: (key: string, values?: any) => string }} args
  * @returns {{ is_bare_hands: boolean, name: string, facts: true | Record<string, any> }}
  */
-export function weapon_socket_projection({ weapon, glow, clock, t }) {
+export function weapon_socket_projection({ weapon, item_name = null, glow, clock, t }) {
   const bare_hands = is_bare_hands(weapon)
-  const name = bare_hands ? t('fight.weapon_bare') : t('fight.weapon_attack')
+  const name = weapon_action_name(item_name, bare_hands, t)
   // The DAMAGE the tooltip states comes from the ONE strike derivation (@aresrpg/fight/weapon), not the family
   // `Weapon` fields: a seat with authored item lines strikes for Σ(lines), across the elements those lines
   // name, and printing the family line here was the socket's half of #1323. The band is the honest resting
