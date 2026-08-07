@@ -42,7 +42,13 @@ const create_mob_model = mock(async () => {
   throw new Error('the avatar mock must own the model boundary')
 })
 
+// SPREAD the real module: `mock.module` is PROCESS-global with no unmock, so a partial replacement makes the
+// real module unloadable for every file bun loads afterwards — listing five exports here left the rest of
+// @aresrpg/engine3/player missing and the #1993 board suite died on `topmost_solid_id`. Snapshot the namespace
+// BEFORE registering, since mock.module mutates the module record in place.
+const real_player = { ...(await import('@aresrpg/engine3/player')) }
 mock.module('@aresrpg/engine3/player', () => ({
+  ...real_player,
   // Current broken implementation imports these two and waits forever on the loader. The fixed path instead
   // calls create_character_avatar, which is the player/mob animation home mocked above.
   apply_avatar_material: () => {},

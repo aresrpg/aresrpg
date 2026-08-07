@@ -17,6 +17,7 @@
 set -uo pipefail
 
 cd "$(dirname "$0")/.."
+ROOT="$PWD"
 FE=packages/frontend/src
 FAIL=0
 
@@ -70,6 +71,46 @@ run_combo "fight + presence atoms — consumers self-reset behind a warmed sessi
   "$FE/world-shell/dungeon_fight_weapon_lines.test.js" \
   "$FE/simulator/fight_open_hand.test.js" \
   "packages/frontend/test/p2p/lobby-room.test.js"
+
+# ⑬ react-i18next's module namespace. `spyOn(react_i18next, 'useTranslation')` mutates the PROCESS-GLOBAL
+# module record, and WorldTravelModal's stub returns `{ t }` with no `i18n` — so every file loaded after an
+# UNRESTORED spy dies on `i18n.resolvedLanguage` (classes_tab.tsx:130). Whether that happened depended purely
+# on readdir order (macOS green, CI 16 reds). Guards WorldTravelModal.test.jsx's afterAll mockRestore: drop it
+# and this pair reds instantly.
+# ABSOLUTE paths on purpose: bun honours ARG order only for absolute paths — relative args are treated as
+# filters over a directory scan, so the run order falls back to readdir (the exact nondeterminism this row
+# exists to pin). A relative-path version of this row passes even with the restore deleted.
+run_combo "react-i18next namespace spy — the travel modal restores what it replaced" \
+  "$ROOT/$FE/game/screens/hud/world/WorldTravelModal.test.jsx" \
+  "$ROOT/packages/frontend/test/tooltip-crit-rate.test.tsx"
+
+# ⑭ The app-wide `use_dungeon` fight session. `create_fight_shim().start()` (src/simulator/fight_shim.js) sets
+# `fight_id` on the singleton and its `dispose()` never clears it — it tears down the fight CORE only. A simulator
+# suite that ran first therefore handed fight_entry a non-null prev_fight_id, so `entry_transition` read a fight
+# SWAP instead of a fresh create and no cinematic fired. Guards fight_entry.test.js's RESET-BEFORE-USE beforeEach
+# (the convention written in test_helpers/fight_core_harness.js); drop it and this pair reds instantly.
+run_combo "dungeon fight session — the entry cinematic resets before use, behind a warmed sim fight" \
+  "$ROOT/$FE/simulator/fight_terminal_gate.test.js" \
+  "$ROOT/$FE/game/fight_entry.test.js"
+
+# ⑮ Bun's `mock.module` registry again (⑩⑪'s class, two more modules). A PARTIAL replacement of game/store.js
+# (day_cycle, HackRadioPlayer) and of @aresrpg/engine3/player (pet_companion_locomotion) made those modules
+# unloadable for every file bun loaded afterwards — the #1993 board suite died on a missing `useFightVisibleMount`
+# and a missing `topmost_solid_id`, hundreds of files later. There is no unmock, so a permanent replacement must
+# (a) SPREAD a pre-registration SNAPSHOT of the real module so no export can go missing, and (b) stop lying once
+# its own file is done (the `owned` flag flips in afterAll and the override delegates to the real export). This
+# row runs all three poisoners ahead of the victim; drop either half of either rule and it reds.
+run_combo "mock.module partial replacement — game/store.js stays whole and honest for later files" \
+  "$ROOT/$FE/game/screens/hud/world/day_cycle.test.js" \
+  "$ROOT/$FE/game/screens/hud/world/HackRadioPlayer.test.jsx" \
+  "$ROOT/packages/frontend/test/game/screens/hud/world/dungeon_board_turn_arming.test.jsx"
+# The engine3/player half needs its own pair: pet_companion's partial replacement only bites once ANOTHER file
+# has pulled the real character_controller graph in (embed_voxel_dev is the first that does), which is why the
+# poisoner looked innocent one-on-one and reddened 145 files later.
+run_combo "mock.module partial replacement — @aresrpg/engine3/player keeps its full export surface" \
+  "$ROOT/packages/frontend/test/game/pet_companion_locomotion.test.js" \
+  "$ROOT/packages/frontend/test/game/embed_voxel_dev.world_fight_roster.test.js" \
+  "$ROOT/packages/frontend/test/game/screens/hud/world/dungeon_board_turn_arming.test.jsx"
 
 if [ "$FAIL" -ne 0 ]; then
   echo "ORDER-INDEPENDENCE GATE FAILED — a reintroduced module-global leak broke a cold-state fixture."

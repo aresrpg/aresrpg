@@ -9,7 +9,7 @@
 // This file closes it at the render layer via WorldTravelModalContent (the portal-free split — see its own
 // doc comment in WorldTravelModal.jsx; this repo's convention is renderToStaticMarkup with no jsdom/
 // happy-dom, which cannot resolve WorldTravelModal's own createPortal target).
-import { describe, expect, test } from 'bun:test'
+import { afterAll, describe, expect, test } from 'bun:test'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { MemoryRouter } from 'react-router-dom'
 import { spyOn } from 'bun:test'
@@ -18,11 +18,21 @@ import { reset_auth_mock } from '../../../../test_helpers/auth_mock.js'
 
 reset_auth_mock()
 const react_i18next = await import('react-i18next')
-spyOn(react_i18next, 'useTranslation').mockImplementation(() => ({
-  t: (key, arg) => (arg && typeof arg === 'object' && 'level' in arg ? `LV ${arg.level}+` : key),
-}))
+// `spyOn` on an imported module namespace mutates the PROCESS-GLOBAL module record — every file
+// loaded after this one sees the replacement. This stub returns `{ t }` alone, so an unrestored
+// spy makes every later `const { t, i18n } = useTranslation()` blow up on `i18n.resolvedLanguage`.
+// The restore below is the only thing keeping this file's blast radius inside this file.
+const spies = [
+  spyOn(react_i18next, 'useTranslation').mockImplementation(() => ({
+    t: (key, arg) => (arg && typeof arg === 'object' && 'level' in arg ? `LV ${arg.level}+` : key),
+  })),
+]
 
 const { WorldTravelModalContent } = await import('./WorldTravelModal.jsx')
+
+afterAll(() => {
+  for (const spy of spies) spy.mockRestore()
+})
 
 // A realistic 64-hex object id per card (the exact shape live /v1 + T62_WORLDS ids take), not a
 // hand-matched short fake — WorldTravelModalContent is a pure view, so this only proves the RENDER

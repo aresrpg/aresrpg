@@ -178,6 +178,7 @@ export const unit_test_files = [
   'scripts/eslint-rules/one_pipeline.test.mjs', // the ONE-REDUCER lint tripwire's own RuleTester suite
   'scripts/eslint-rules/fp_law.test.mjs', // the FP-LAW tripwires' RuleTester suite (docs/CODE_LAW.md)
   'scripts/eslint-rules/no_silent_failures.test.mjs', // the SILENT-FAILURE tripwire's RuleTester suite — two controls: specimen-shaped fixtures AND fresh novel shapes (a rule that only reds on history is a regression suite wearing a gate's name)
+  'scripts/eslint-rules/test_isolation.test.mjs', // the CROSS-FILE TEST-POISON tripwire's RuleTester suite — unrestored top-level namespace spies, the class that made the frontend suite's verdict depend on readdir order
   'packages/rpc/api/indexer_log_ship.test.mjs', // Rust indexer JSON-error -> Sentry sidecar decoder/fingerprint
   'scripts/sentry_triage.test.mjs', // hourly Sentry -> GitHub dedupe/material-growth loop pure core
   'scripts/board_hygiene.test.mjs', // #845's close chain: close-keyword parsing, the landing sweep's reopen guard, the stale clock's bot exclusion

@@ -4,13 +4,17 @@
 // into a world effect (#1106). Headless: the sfx module is spied so the AUDIBLE half of a find is observable
 // without a browser, and the command rows are hand-built exactly as the fold emits them.
 
-import { beforeEach, describe, expect, spyOn, test } from 'bun:test'
+import { afterAll, beforeEach, describe, expect, spyOn, test } from 'bun:test'
 
 import * as sfx from '../core/audio/sfx.js'
 
 const alarm = spyOn(sfx, 'play_fight_sfx').mockImplementation(() => {})
 
 const { perform } = await import('./auto_search_adapter.js')
+
+// `sfx` is a module NAMESPACE — this spy rewrites the process-global module record, so leaving it in
+// place would silence play_fight_sfx for every test file bun loads after this one.
+afterAll(() => alarm.mockRestore())
 
 const name_of = (id) => id
 

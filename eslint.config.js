@@ -11,6 +11,7 @@ import react_hooks from 'eslint-plugin-react-hooks'
 
 import one_pipeline from './scripts/eslint-rules/one_pipeline.mjs'
 import no_silent_failures from './scripts/eslint-rules/no_silent_failures.mjs'
+import test_isolation from './scripts/eslint-rules/test_isolation.mjs'
 import fp_law_layer from './scripts/eslint-rules/fp_law.config.mjs'
 import typed_fp_layer from './scripts/eslint-rules/typed_fp.config.mjs'
 
@@ -167,6 +168,17 @@ export default [
     rules: {
       'no-silent-failures/no-unchanged-input-guard': ['error', { baseline: unchanged_input_guard_baseline }],
     },
+  },
+  {
+    // THE CROSS-FILE TEST-POISON GATE (2026-08-07). `bun test` runs a package's whole suite in ONE process,
+    // so an unrestored top-level `spyOn(namespace, …)` rewrites that export for every file loaded AFTERWARDS —
+    // and "afterwards" is decided by readdir order, which differs per machine. WorldTravelModal.test.jsx's
+    // `react-i18next` spy made the same commit green on macOS and 16-red in CI. The written law already covered
+    // `mock.module`; this is the same hazard through the namespace door. Born clean (the one pre-existing
+    // violation, auto_search_adapter.test.js, is fixed in the same commit), so it arms at ERROR with no baseline.
+    files: ['**/*.test.{js,jsx,ts,tsx,mjs}', '**/*.spec.{js,jsx,ts,tsx,mjs}'],
+    plugins: { 'test-isolation': test_isolation },
+    rules: { 'test-isolation/no-unrestored-namespace-spy': 'error' },
   },
   // THE FP-LAW LAYER (docs/CODE_LAW.md) — naming/purity/immutability/composition tripwires.
   // Tiering + severity rationale live in the layer file; rules in scripts/eslint-rules/fp_law.mjs.
