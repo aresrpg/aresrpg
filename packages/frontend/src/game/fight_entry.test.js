@@ -12,7 +12,7 @@
 // Layers: entry_transition (pure verdict fold, every branch) + create_fight_entry over the REAL use_dungeon
 // singleton and the REAL shared bus (setState/emit-driven integration).
 
-import { afterAll, describe, expect, it } from 'bun:test'
+import { afterAll, beforeEach, describe, expect, it } from 'bun:test'
 
 import { install_browser_globals } from '../test_helpers/browser_globals.js'
 
@@ -57,6 +57,15 @@ describe.skipIf(!SENSHI_MALE_GLB_AVAILABLE)('entry_transition — the fresh-crea
 })
 
 describe.skipIf(!SENSHI_MALE_GLB_AVAILABLE)('create_fight_entry — the gate over the real store (integration)', () => {
+  // RESET-BEFORE-USE (test_helpers/fight_core_harness.js's convention, verbatim: "a file that forgets to clean
+  // up after itself still can't poison a well-behaved consumer"). `use_dungeon` is ONE module instance for the
+  // whole bun run, and `create_fight_shim().start()` leaves `fight_id` set on it — its `dispose()` tears the
+  // fight CORE down but never clears the store field its own `start()` wrote. Any simulator suite that ran first
+  // therefore handed us a non-null prev_fight_id, and `entry_transition` reads a fight SWAP (never a fresh
+  // create), so no cinematic fired. Whether that happened was decided by readdir order. Cleaning up in the
+  // `finally` below is not enough — only resetting BEFORE use makes file order irrelevant.
+  beforeEach(() => use_dungeon.setState({ fight_id: null, fight_fresh: false }))
+
   it('fresh create fires the cinematic; resume does not; fight-end releases', () => {
     const calls = /** @type {any[][]} */ ([])
     let active = false

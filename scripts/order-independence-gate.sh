@@ -84,6 +84,15 @@ run_combo "react-i18next namespace spy — the travel modal restores what it rep
   "$ROOT/$FE/game/screens/hud/world/WorldTravelModal.test.jsx" \
   "$ROOT/packages/frontend/test/tooltip-crit-rate.test.tsx"
 
+# ⑭ The app-wide `use_dungeon` fight session. `create_fight_shim().start()` (src/simulator/fight_shim.js) sets
+# `fight_id` on the singleton and its `dispose()` never clears it — it tears down the fight CORE only. A simulator
+# suite that ran first therefore handed fight_entry a non-null prev_fight_id, so `entry_transition` read a fight
+# SWAP instead of a fresh create and no cinematic fired. Guards fight_entry.test.js's RESET-BEFORE-USE beforeEach
+# (the convention written in test_helpers/fight_core_harness.js); drop it and this pair reds instantly.
+run_combo "dungeon fight session — the entry cinematic resets before use, behind a warmed sim fight" \
+  "$ROOT/$FE/simulator/fight_terminal_gate.test.js" \
+  "$ROOT/$FE/game/fight_entry.test.js"
+
 if [ "$FAIL" -ne 0 ]; then
   echo "ORDER-INDEPENDENCE GATE FAILED — a reintroduced module-global leak broke a cold-state fixture."
   exit 1
