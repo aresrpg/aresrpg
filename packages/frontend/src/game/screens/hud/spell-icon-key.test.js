@@ -11,7 +11,7 @@
 // Corroborated by the content house's own upload manifest: all 240 icons resident, every key in the id shape.
 
 import { afterEach, describe, expect, test } from 'bun:test'
-import { configure_assets, reset_assets_for_test, spell_icon_url } from '@aresrpg/sdk/jobs'
+import { configure_assets, item_icon_url, reset_assets_for_test, spell_icon_url } from '@aresrpg/sdk/jobs'
 
 import { spell_card } from '../../core/modules/fight.js'
 import { set_spell_corpus_for_test } from '../../data/spell_corpus.js'
@@ -55,6 +55,13 @@ describe('spell art resolves by the corpus id, not the display name key (#884)',
 // Shortened on purpose — the hardcoded-chain-id gate bans the full 0x+64-hex shape in source, and neither the
 // resolver nor the 404 it used to mint reads the length: `spells/<anything 0x>.webp` is the whole bug.
 const OBJECT_ID = '0xc4b8e1d6a3057c9e'
+
+test('spell_icon_url has the same case-insensitive object-id tripwire as item_icon_url (#1072)', () => {
+  const uppercase_prefix_object_id = `0X${'25'.repeat(32)}`
+
+  expect(() => item_icon_url(uppercase_prefix_object_id)).toThrow('object id')
+  expect(() => spell_icon_url(uppercase_prefix_object_id)).toThrow('object id')
+})
 
 afterEach(() => {
   set_spell_corpus_for_test()

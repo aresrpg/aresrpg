@@ -65,7 +65,11 @@ describe('#884 — spell icons resolve to the served .webp', () => {
   })
 
   test('items are untouched — item art is still .png, hd variant included', () => {
-    configure_assets({ aggregator: HOST, classes: { item: { published: true } } })
+    configure_assets({
+      aggregator: HOST,
+      classes: { item: { published: true } },
+      files: { items: ['longsword.png', 'longsword_hd.png'] },
+    })
     expect(item_icon_url('longsword')).toBe(`${HOST}/items/longsword.png`)
     expect(item_icon_url('longsword', { hd: true })).toBe(`${HOST}/items/longsword_hd.png`)
   })

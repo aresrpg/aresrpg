@@ -412,6 +412,14 @@ export function canonical_asset_url(url) {
 // home: env.ts ASSETS_URL.
 export const ASSET_BASE = '/assets'
 
+/** The shared wrong-key tripwire for authored item/spell icon identities. */
+function assert_authored_asset_key(key, resolver, required_identity) {
+  if (!/^0x/i.test(key)) return
+  const canonical_prefix = `0x${key.slice(2)}`
+  const id_kind = isValidSuiObjectId(canonical_prefix) ? 'a Sui object id' : 'a malformed Sui object id'
+  throw new TypeError(`${resolver} requires ${required_identity}, not ${id_kind}`)
+}
+
 /**
  * The URL for an item icon. The key is an authored TEMPLATE/ICON SLUG, never a Sui object id. A whole item
  * object may carry that identity as `slug`, `icon`, or a legacy slug-valued `id`; address-valued
@@ -432,10 +440,7 @@ export function item_icon_url(item, { hd = false, asset_class = 'item' } = {}) {
       ? item
       : (item?.slug ?? item?.icon ?? item?.id ?? null)
   if (!key) return null
-  if (/^0x[0-9a-f]+$/i.test(key))
-    throw new TypeError(
-      'item_icon_url requires a template slug, not a Sui object id',
-    )
+  assert_authored_asset_key(key, 'item_icon_url', 'a template slug')
   const name = `${key}${hd ? '_hd' : ''}.png`
   return asset_file_is_published(asset_class, name) ? asset_url(asset_class, name) : null
 }
@@ -491,14 +496,7 @@ export function mob_icon_url(filename) {
 export function spell_icon_url(spell) {
   const key = typeof spell === 'string' ? spell : (spell?.icon ?? null)
   if (!key) return null
-  if (key.startsWith('0x')) {
-    const id_kind = isValidSuiObjectId(key)
-      ? 'a Sui object id'
-      : 'a malformed Sui object id'
-    throw new TypeError(
-      `spell_icon_url requires an authored icon key, not ${id_kind}`,
-    )
-  }
+  assert_authored_asset_key(key, 'spell_icon_url', 'an authored icon key')
   const name = `${key}.webp`
   return asset_url('spell', name) ?? `${ASSET_BASE}/spells/${name}`
 }
