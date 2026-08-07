@@ -19,6 +19,7 @@ import { range_bonus_of } from './statuses.js'
 import { commit_fact, empty_result } from './result_record.js'
 import { project_hud } from './core_project.js'
 import { next_action_slot } from './turn_action_slot.js'
+import { fight_scope_of_id } from './session_scope.js'
 import { committed_truth, display_state, min_turn_ready_at, presented_state } from './store.js'
 import {
   cast_presenting,
@@ -67,10 +68,6 @@ export const deep_freeze = (value) => {
   }
   return value
 }
-
-/** Session scope of a fight id — simulator sessions live under the canonical `sim:` namespace, chain Fight
- *  object ids do not. The same classifier the world shell already asks before treating a session as its own. */
-const session_scope = (fight_id) => (fight_id == null ? null : String(fight_id).startsWith('sim:') ? 'sim' : 'world')
 
 /**
  * One entity's POSITION — TWO facts, each named once and offered in both encodings (#1993 WP5, finding row
@@ -342,7 +339,7 @@ export const visible_sync = (s, active_entity_id, entities) => {
 /** MOUNT — fight presence, session mode, and who the viewer is inside it. */
 export const visible_mount = (s, engine) => {
   const fight_id = s?.core?.fight_id ?? null
-  const scope = session_scope(fight_id)
+  const scope = fight_scope_of_id(fight_id)
   const adopted = s?.view != null
   return {
     fight_id,
