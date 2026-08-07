@@ -3,7 +3,7 @@
 import { describe, expect, test } from 'bun:test'
 import i18next from 'i18next'
 import { renderToStaticMarkup } from 'react-dom/server'
-import { I18nextProvider } from 'react-i18next'
+import { getI18n, I18nextProvider, useTranslation } from 'react-i18next'
 
 import { spell_hover_facts } from '../src/game/screens/hud/spell-hover-tip.jsx'
 import en from '../src/i18n/locales/en.json'
@@ -64,6 +64,37 @@ const encyclopedia_text = (crit_rate: number | null) =>
       </I18nextProvider>
     )
   )
+
+// TEMPORARY CI DIAGNOSTIC — never lands.
+function Probe({ label }: { label: string }) {
+  const ret: any = useTranslation()
+  console.log(
+    'ARES_PROBE',
+    JSON.stringify({
+      label,
+      keys: Object.keys(ret ?? {}),
+      i18n_type: typeof ret?.i18n,
+      ready: ret?.ready,
+      global_set: !!getI18n(),
+      ctx_is_local: ret?.i18n === i18n || ret?.i18n?.__original === i18n,
+      instance_lang: ret?.i18n?.language ?? null,
+      use_translation_src: String(useTranslation).slice(0, 80),
+    })
+  )
+  return null
+}
+
+describe('ARES CI PROBE', () => {
+  test('what useTranslation returns with and without the provider', () => {
+    renderToStaticMarkup(
+      <I18nextProvider i18n={i18n}>
+        <Probe label="inside-provider" />
+      </I18nextProvider>
+    )
+    renderToStaticMarkup(<Probe label="no-provider" />)
+    console.log('ARES_PROBE_MODULE', JSON.stringify({ global_set: !!getI18n(), local_lang: i18n.language }))
+  })
+})
 
 describe('#1051 critical tooltip clauses', () => {
   test.each([0, null])('suppresses impossible critical damage when crit_rate is %p', (crit_rate) => {
