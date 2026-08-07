@@ -373,50 +373,55 @@ function with_fight_shards(manifest) {
   return manifest
 }
 
-test.skipIf(!CEREMONY_MANIFEST_AVAILABLE)('Gold localnet ceremony creates and stamps a real CrushBoard', async () => {
-  const manifest = with_fight_shards(JSON.parse(readFileSync(ceremony_path, 'utf8')))
-  const previous = JSON.parse(readFileSync(release_path, 'utf8')).networks.testnet
-  delete manifest.forgemagie.shared.CrushBoard
-  delete manifest.forgemagie.shared_versions.CrushBoard
+// The real ceremony subprocess measured 795ms isolated green / 6027ms under load with identical output.
+test.skipIf(!CEREMONY_MANIFEST_AVAILABLE)(
+  'Gold localnet ceremony creates and stamps a real CrushBoard',
+  async () => {
+    const manifest = with_fight_shards(JSON.parse(readFileSync(ceremony_path, 'utf8')))
+    const previous = JSON.parse(readFileSync(release_path, 'utf8')).networks.testnet
+    delete manifest.forgemagie.shared.CrushBoard
+    delete manifest.forgemagie.shared_versions.CrushBoard
 
-  // Gold points the ceremony's `testnet` alias at its isolated local RPC. Model the
-  // fresh wiring receipt only when that exact ceremony plan creates the board.
-  const plan = execFileSync('node', [path.join(here, 'ceremony.mjs'), '--dry-run', '--network', 'testnet'], {
-    encoding: 'utf8',
-  })
-  if (plan.includes('forgemagie::forgemagie::create_board'))
-    classify(
-      'forgemagie',
-      {
-        objectChanges: [
-          {
-            type: 'created',
-            objectType: `${manifest.forgemagie.pkg}::forgemagie::CrushBoard`,
-            objectId: '0xcafe',
-            owner: { Shared: { initial_shared_version: '7' } },
-          },
-        ],
-      },
-      manifest
-    )
+    // Gold points the ceremony's `testnet` alias at its isolated local RPC. Model the
+    // fresh wiring receipt only when that exact ceremony plan creates the board.
+    const plan = execFileSync('node', [path.join(here, 'ceremony.mjs'), '--dry-run', '--network', 'testnet'], {
+      encoding: 'utf8',
+    })
+    if (plan.includes('forgemagie::forgemagie::create_board'))
+      classify(
+        'forgemagie',
+        {
+          objectChanges: [
+            {
+              type: 'created',
+              objectType: `${manifest.forgemagie.pkg}::forgemagie::CrushBoard`,
+              objectId: '0xcafe',
+              owner: { Shared: { initial_shared_version: '7' } },
+            },
+          ],
+        },
+        manifest
+      )
 
-  const stamp_all_url = pathToFileURL(path.join(here, 'stamp_all.mjs'))
-  stamp_all_url.searchParams.set('localnet-test', String(Date.now()))
-  const { release_network_from_manifest, validate_release } = await import(stamp_all_url.href)
-  let release
-  expect(() => {
-    release = {
-      schema: 1,
-      generated_at: '2026-07-16T00:00:00.000Z',
-      networks: { localnet: release_network_from_manifest(manifest, previous) },
-    }
-    validate_release(release, 'localnet')
-  }).not.toThrow()
-  expect(release.networks.localnet.shared.CRUSH_BOARD).toEqual({
-    id: '0xcafe',
-    initial_shared_version: '7',
-  })
-})
+    const stamp_all_url = pathToFileURL(path.join(here, 'stamp_all.mjs'))
+    stamp_all_url.searchParams.set('localnet-test', String(Date.now()))
+    const { release_network_from_manifest, validate_release } = await import(stamp_all_url.href)
+    let release
+    expect(() => {
+      release = {
+        schema: 1,
+        generated_at: '2026-07-16T00:00:00.000Z',
+        networks: { localnet: release_network_from_manifest(manifest, previous) },
+      }
+      validate_release(release, 'localnet')
+    }).not.toThrow()
+    expect(release.networks.localnet.shared.CRUSH_BOARD).toEqual({
+      id: '0xcafe',
+      initial_shared_version: '7',
+    })
+  },
+  30_000
+)
 
 test.skipIf(!CEREMONY_MANIFEST_AVAILABLE)('Gold keeps strict release stamping inside its isolated Move copy', () => {
   const scratch = realpathSync(mkdtempSync(path.join(tmpdir(), 'ares-gold-stamp-')))
