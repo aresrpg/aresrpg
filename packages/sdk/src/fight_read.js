@@ -303,28 +303,6 @@ export function decode_fight_result(json) {
 // `${ENGINE_PACKAGE_ID}::fight_events::${name}`. The three FightResult events (ResultOpened /
 // LootMinted / ResultBurned) are ALSO emitted from CORE `results` (`${PACKAGE_ID}::results::${name}`) when
 // `open`/`mint_rolled`/`burn_result` run — filter both homes if you index the core FightResult lifecycle.
-/** Every fight event struct name (engine `fight_events.move`) — the indexer type-filter set (see the note above). */
-export const FIGHT_EVENT_NAMES = [
-  'FightCreated',
-  'FightJoined',
-  'Placed',
-  'Ready',
-  'TurnStarted',
-  'Moved',
-  'Displaced',
-  'Cast',
-  'Hit',
-  'TurnEnded',
-  'Victory',
-  'Defeat',
-  'Settled',
-  'ResultMinted',
-  'ResultOpened',
-  'LootMinted',
-  'ResultBurned',
-  'Swept',
-]
-
 /** The fully-qualified event type string for a fight lifecycle event (indexer/gRPC/GraphQL filter). Pass the ENGINE
  *  package id — the `fight_events` module lives there post-split (the three FightResult events also exist under core
  *  `${PACKAGE_ID}::results::${name}`; build that string directly if you filter the core home). */

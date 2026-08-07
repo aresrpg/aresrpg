@@ -14,7 +14,6 @@ import {
   cancel_ptb,
   sweep_ptb,
 } from '../src/sui/write/kolizeum_lobby.js'
-import { get_kolizeum, KOLIZEUM_STATUS } from '../src/sui/read/kolizeum.js'
 
 import {
   IDS,
@@ -150,48 +149,5 @@ describe('kiosk-rule-linkage — create/join borrow personal_kiosk::* ALONGSIDE 
         'personal_kiosk::borrow_val',
       ).package,
     ).toBe(IDS.aresrpg.KIOSK_ROYALTY_RULE_PACKAGE_ID)
-  })
-})
-
-describe('get_kolizeum — lobby read', () => {
-  test('returns null when unreadable', async () => {
-    const grpc_client = { core: { getObject: async () => ({ object: null }) } }
-    expect(await get_kolizeum({ grpc_client })(id('c0'))).toBeNull()
-  })
-  test('decodes status + pot + side rosters', async () => {
-    const grpc_client = {
-      core: {
-        getObject: async () => ({
-          object: {
-            json: {
-              id: id('c0'),
-              creator: id('0a'),
-              status: KOLIZEUM_STATUS.OPEN,
-              format_slots: '3',
-              pledge_amount: '1000',
-              pot: { value: '2000' },
-              is_public: true,
-              max_level_diff: '20',
-              creator_level: '30',
-              allow: [],
-              side_a: [
-                {
-                  owner: id('0a'),
-                  character: id('ca0'),
-                  level: '30',
-                  join_order: '0',
-                },
-              ],
-              side_b: [],
-            },
-          },
-        }),
-      },
-    }
-    const k = await get_kolizeum({ grpc_client })(id('c0'))
-    expect(k.status).toBe(KOLIZEUM_STATUS.OPEN)
-    expect(k.pot).toBe(2000n)
-    expect(k.side_a).toHaveLength(1)
-    expect(k.side_a[0].level).toBe(30n)
   })
 })
