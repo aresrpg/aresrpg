@@ -1,2 +1,1 @@
 [test]
-preload = ["../../test/preload/glb_url_plugin.js"]

@@ -13,9 +13,6 @@ import { describe, expect, test } from 'bun:test'
 
 import { SENSHI_MALE_GLB_AVAILABLE } from '../../src/test_helpers/glb_fixture.js'
 
-// MISSING-ARTIFACT (#117): board_entities.js unconditionally imports create_character_avatar, which
-// static-imports the absent-by-design senshi_male.glb — see test_helpers/glb_fixture.js. Guarded dynamic
-// import; fit_float_font_px itself has no avatar dependency, but the module can't load without the asset.
 const { fit_float_font_px } = /** @type {typeof import('../../src/tactical/board_entities.js')} */ (
   SENSHI_MALE_GLB_AVAILABLE ? await import('../../src/tactical/board_entities.js') : {}
 )

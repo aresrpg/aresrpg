@@ -18,11 +18,6 @@ import {
 import { SENSHI_MALE_GLB_AVAILABLE } from '../../src/test_helpers/glb_fixture.js'
 import { apply_pixel_filter } from '../../src/player/mob_model.js' // [one-mob-sdk 2026-07-13] moved to the single mob-render home
 
-// MISSING-ARTIFACT (#117): character_avatar.js resolves the absent-by-design senshi_male.glb via a static
-// Vite `?url` import (test_helpers/glb_fixture.js) — the module cannot load without the file PRESENT on
-// disk, even though these tests mock the GLTF factory and never read its bytes. character_controller.js
-// re-exports the same file (D193 "ONE home"), so it is equally poisoned. apply_pixel_filter (below) lives
-// in mob_model.js, which is clean, and keeps running for real.
 const { compose_pixels, create_character_avatar } =
   /** @type {typeof import('../../src/player/character_avatar.js')} */ (
     SENSHI_MALE_GLB_AVAILABLE ? await import('../../src/player/character_avatar.js') : {}

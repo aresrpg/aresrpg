@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 // Character avatar (ENG-8) — loads the default AresRPG character GLB (DRACO-compressed, the SAME rig
-// the dapp ships: senshi_male, copied into engine/assets/characters) and drives its animation state
+// the dapp serves from its character-model corpus) and drives its animation state
 // machine from the controller's `anim` state with cross-fade transitions. Ports the clip-selection +
 // crossfade approach of packages/frontend player-model.js / character-glb.js (IDLE/WALK/RUN/JUMP/
 // JUMP_RUN/FALL clips, 0.2 s FADE, exact-name-first resolution so 'RUN' never matches 'JUMP_RUN'), but
@@ -12,19 +12,11 @@
 // bone and a metalness clamp (metalness=1 exports render BLACK without an envmap).] Scales the bind-pose to CHARACTER_HEIGHT from the
 // measured bounding box (no magic scale constant) and turns the model to face the controller heading.
 //
-// ASSET PATHS resolve via `new URL(..., import.meta.url)` — the SAME idiom engine.js uses for worker
-// URLs — so Vite emits the GLB + DRACO decoder as served assets in dev AND `vite build`. The default
-// GLB path is overridable via `opts.glb_url` (config-first) for a future character-select.
+// The default GLB path is overridable via `opts.glb_url` (config-first) for character selection.
 
 import { AnimationMixer, CanvasTexture, Color, Group, LoopOnce, LoopRepeat, SRGBColorSpace } from 'three'
 
 import { CHARACTER_HEIGHT } from '../config/world_config.js'
-// Default character GLB shipped with the engine (copied from the dapp's senshi_male rig). Imported
-// with Vite's `?url` so the bundler emits it as a served asset in dev AND `vite build` (a bare
-// `new URL(...import.meta.url)` to a file OUTSIDE a served root 404s under the dev server). Under
-// `bun test` / tsc this import is never executed (create_character_avatar is browser-only), and the
-// `?url` suffix resolves to the string path — harmless.
-import DEFAULT_GLB_URL from '../../assets/characters/senshi_male.glb?url'
 // [C1 SLICED COMPILE] the player-branch rig warms its pipelines through the engine's warm queue before
 // mounting (factory mobs arrive pre-warmed by create_mob_model; no registered queue ⇒ immediate resolve).
 import { warm_pipelines_once } from '../render/pipeline_warm_queue.js'
@@ -32,6 +24,9 @@ import { warm_pipelines_once } from '../render/pipeline_warm_queue.js'
 // [one-mob-sdk 2026-07-13] the shared mob-render primitives moved to mob_model.js (the single home); the avatar
 // builds its recolour/hair/beat rig ON them, so the dependency flows one way (this → mob_model), no cycle.
 import { apply_avatar_material, load_glb_checked, prepare_mob_render } from './mob_model.js'
+
+/** The default demo rig is a real file in the frontend's served character-model directory. */
+export const DEFAULT_CHARACTER_GLB_URL = '/models/characters/senshi_male.glb'
 
 /** Crossfade duration between animation states (player-model.js FADE = 0.2 s). */
 const FADE = 0.2
@@ -186,7 +181,7 @@ function find_bone(origin, name) {
  * @returns {CharacterAvatar}
  */
 export function create_character_avatar({
-  glb_url = DEFAULT_GLB_URL,
+  glb_url = DEFAULT_CHARACTER_GLB_URL,
   hair_url = undefined,
   colors = null,
   cast_shadow = true,

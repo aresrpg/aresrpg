@@ -30,9 +30,7 @@ const strip_dev_sourcemaps = {
 
 export default defineConfig({
   plugins: process.env.ARES_DEV_SOURCEMAPS ? [] : [strip_dev_sourcemaps],
-  // Treat GLBs as static assets (the ENG-8 character avatar loads its rig via `import url from
-  // '.../senshi_male.glb?url'`). Vite handles the explicit `?url` suffix, but listing the extension
-  // keeps any bare import an emitted asset too rather than a parse attempt.
+  // Treat authored GLBs imported by demo tooling as static assets rather than JavaScript.
   assetsInclude: ['**/*.glb'],
   server: {
     port: 5199,

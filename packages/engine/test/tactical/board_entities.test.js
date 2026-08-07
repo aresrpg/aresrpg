@@ -16,9 +16,6 @@ import { BackSide, Group } from 'three'
 import { SENSHI_MALE_GLB_AVAILABLE } from '../../src/test_helpers/glb_fixture.js'
 import { TEAM_COLORS } from '../../src/tactical/board_highlights.js'
 
-// MISSING-ARTIFACT (#117): board_entities.js unconditionally imports create_character_avatar, which
-// static-imports the absent-by-design senshi_male.glb — see test_helpers/glb_fixture.js. Guarded dynamic
-// import; every describe below exercises board_entities.js exports, so the whole file skips together.
 const {
   resolve_impact,
   IMPACT_FRAMES,

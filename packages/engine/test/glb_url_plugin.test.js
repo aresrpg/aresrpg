@@ -2,8 +2,8 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 import { expect, test } from 'bun:test'
 
-import default_avatar_url from '../assets/characters/senshi_male.glb?url'
+import { DEFAULT_CHARACTER_GLB_URL } from '../src/player/character_avatar.js'
 
-test('Bun resolves the absent default avatar GLB to the Vite CDN route', () => {
-  expect(default_avatar_url).toBe('/sprites/characters/senshi_male.glb')
+test('the demo avatar imports without a missing local GLB module', () => {
+  expect(DEFAULT_CHARACTER_GLB_URL).toBe('/models/characters/senshi_male.glb')
 })

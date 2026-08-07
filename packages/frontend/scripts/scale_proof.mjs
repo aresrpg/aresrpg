@@ -17,7 +17,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url))
 const FRONTEND = resolve(__dirname, '..')
 const THREE = resolve(FRONTEND, 'node_modules/three')
 const MOBS = resolve(FRONTEND, 'public/sprites/mobs/models')
-const CHAR = resolve(FRONTEND, '../engine/assets/characters/senshi_male.glb')
+const CHAR = resolve(FRONTEND, 'public/models/characters/senshi_male.glb')
 const CHARACTER_HEIGHT = 1.5
 
 // player + the size extremes from the retuned SPAWN_TABLE: lamb 1.3 (tallest), tortoise 1.0, bunny 0.72, mouse 0.44 (shortest)

@@ -9,10 +9,6 @@ import { test, expect, describe } from 'bun:test'
 
 import { SENSHI_MALE_GLB_AVAILABLE } from '../../src/test_helpers/glb_fixture.js'
 
-// MISSING-ARTIFACT (#117): character_controller.js unconditionally re-exports create_character_avatar
-// from character_avatar.js (D193 "ONE home"), which static-imports the absent-by-design senshi_male.glb —
-// see test_helpers/glb_fixture.js. Guarded dynamic import; none of this file's functions touch avatars,
-// but the module can't load without the asset.
 const { create_character_controller, find_open_spawn, ground_surface_y } = SENSHI_MALE_GLB_AVAILABLE
   ? await import('../../src/player/character_controller.js')
   : {}

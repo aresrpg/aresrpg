@@ -14,8 +14,6 @@ import { PerspectiveCamera, Group } from 'three'
 
 import { SENSHI_MALE_GLB_AVAILABLE } from '../../src/test_helpers/glb_fixture.js'
 
-// MISSING-ARTIFACT (#117): index.js imports board_entities.js, which unconditionally imports
-// create_character_avatar — a static import of the absent-by-design senshi_male.glb (test_helpers/glb_fixture.js).
 const { create_tactical_board } = SENSHI_MALE_GLB_AVAILABLE ? await import('../../src/tactical/index.js') : {}
 
 // rAF shim — the facade's build/tick paths poll on requestAnimationFrame (absent under bun test).

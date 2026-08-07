@@ -8,9 +8,6 @@ import { DoubleSide, LinearMipmapLinearFilter, NearestFilter, SRGBColorSpace } f
 import { create_mob_model as fight_mob_visual_factory } from '../../src/player/mob_model.js'
 import { SENSHI_MALE_GLB_AVAILABLE } from '../../src/test_helpers/glb_fixture.js'
 
-// MISSING-ARTIFACT (#117): `@aresrpg/engine3/player` resolves to character_controller.js, which
-// unconditionally re-exports create_character_avatar (D193 "ONE home"); board_entities.js imports it
-// directly too. Both static-import the absent-by-design senshi_male.glb — see test_helpers/glb_fixture.js.
 const { create_mob_model: world_mob_visual_factory } = /** @type {typeof import('@aresrpg/engine3/player')} */ (
   SENSHI_MALE_GLB_AVAILABLE ? await import('@aresrpg/engine3/player') : {}
 )

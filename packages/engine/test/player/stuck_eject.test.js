@@ -3,9 +3,8 @@
 // #12 — STUCK-IN-BLOCK AUTO-EJECT (the engine-side collision resolution). On spawn and on ANY position
 // adoption (sync / rollback / teleport), a capsule buried in solid voxels must be ejected to the nearest air
 // column — never left with the camera inside geometry. character_controller wires this into both its spawn
-// scan and teleport() (opts.eject default on), but the controller suite skips headless (its module statically
-// imports the absent-by-design senshi_male.glb). eject_from_solid is PURE math — no asset, no GPU — so its
-// contract is pinned DIRECTLY here, giving #12 real headless coverage where the facade tests cannot run.
+// scan and teleport() (opts.eject default on). eject_from_solid is PURE math — no asset, no GPU — so its
+// contract is pinned DIRECTLY here, giving #12 focused headless coverage.
 
 import { describe, expect, test } from 'bun:test'
 

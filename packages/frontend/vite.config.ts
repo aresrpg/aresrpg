@@ -54,19 +54,6 @@ function draco_assets_plugin(): import('vite').Plugin {
 // virtual catalog resolves to a LOUD empty fallback: the encyclopedia's slug/stat maps degrade
 // to their miss paths until the published-catalog artifact lands (the content-seam ticket
 // upgrades this resolver to read the committed artifact).
-// The engine's default avatar rig (a heritage-derived GLB) never ships in git — it serves from
-// the app's asset route at runtime (the CDN seam). This resolver maps the engine's ?url import
-// to that route; absent the asset, the avatar loader errors LOUDLY (the debug-cube class).
-const avatar_url_plugin = {
-  name: 'default-avatar-cdn-url',
-  resolveId(id: string) {
-    return id.endsWith('assets/characters/senshi_male.glb?url') ? '\0avatar-url' : undefined
-  },
-  load(id: string) {
-    return id === '\0avatar-url' ? "export default '/sprites/characters/senshi_male.glb'" : undefined
-  },
-}
-
 const catalog_fallback_plugin = {
   name: 'item-catalog-empty-fallback',
   resolveId(id: string) {
@@ -160,7 +147,6 @@ export default defineConfig({
     tailwindcss(),
     vfx_lab_dev_plugin(),
     catalog_fallback_plugin, // virtual:item_catalog — see the content-authoring note above
-    avatar_url_plugin, // default rig via the runtime asset route (heritage GLBs never in git)
     // The vendored game engine + @koshi/protocol's create_client use node
     // `stream` (PassThrough) + `events` (EventEmitter) + `buffer`; polyfill for the browser.
     nodePolyfills({ include: ['stream', 'events', 'buffer', 'process', 'util'] }),
