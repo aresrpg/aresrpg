@@ -65,7 +65,7 @@ const encyclopedia_text = (crit_rate: number | null) =>
     )
   )
 
-// TEMPORARY CI DIAGNOSTIC — never lands.
+// TEMPORARY CI DIAGNOSTIC — never lands. (retrigger 2)
 function Probe({ label }: { label: string }) {
   const ret: any = useTranslation()
   console.log(
