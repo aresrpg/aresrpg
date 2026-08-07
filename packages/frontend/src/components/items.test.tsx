@@ -26,7 +26,8 @@ import { ItemImage, ItemTooltipContent, onchain_template_to_detail_props } from 
 // (item/cosmetic undefined ⇒ asset_url returns null, falling through to the /assets local slug).
 configure_assets({
   aggregator: 'https://fake-assets',
-  classes: { item: undefined, cosmetic: undefined },
+  classes: { item: { published: true }, cosmetic: undefined },
+  files: { items: ['bag_quartz.png', 'bag_quartz_hd.png', 'wooden_sword.png', 'wooden_sword_hd.png'] },
 })
 
 const src_of = (el: React.ReactElement): string =>
@@ -34,39 +35,34 @@ const src_of = (el: React.ReactElement): string =>
 
 describe('ItemImage — Display re-homing guard + HD', () => {
   test('asset icons opt into cors so an img load cannot seed an opaque service-worker entry', () => {
-    const html = renderToStaticMarkup(<ItemImage id="tool_herbalist" category="sword" />)
+    const html = renderToStaticMarkup(<ItemImage id="bag_quartz" category="resource" />)
     expect(html).toContain('crossorigin="anonymous"')
   })
 
   test('a foreign-host Display url is RE-HOMED onto the configured asset host, never rendered raw (#650)', () => {
     const src = src_of(
-      <ItemImage
-        id="tool_herbalist"
-        image_url="https://legacy-cdn.example/items/tool_herbalist.png"
-        hd
-        category="sword"
-      />
+      <ItemImage id="bag_quartz" image_url="https://legacy-cdn.example/items/bag_quartz.png" hd category="sword" />
     )
     expect(src.startsWith('https://legacy-cdn.example')).toBe(false) // the foreign origin never survives
-    expect(src).toBe('https://fake-assets/items/tool_herbalist_hd.png') // re-homed, HD variant requested
+    expect(src).toBe('https://fake-assets/items/bag_quartz_hd.png') // manifest-proven HD variant requested
   })
 
   test('hd derives the _hd variant of a host-free (relative) Display url first', () => {
     const src = src_of(<ItemImage id="x" image_url="/assets/items/wooden_sword.png" hd category="sword" />)
-    expect(src).toBe('/assets/items/wooden_sword_hd.png')
+    expect(src).toBe('https://fake-assets/items/wooden_sword_hd.png')
   })
 
   test('a asset-host-shaped Display path is re-homed onto the configured CDN base', () => {
-    const raw = 'https://raw-origin.example/v1/blobs/by-quilt-id/Q/tool_herbalist.png'
-    const src = src_of(<ItemImage id="tool_herbalist" image_url={raw} category="sword" />)
-    expect(src).toBe('https://fake-assets/v1/blobs/by-quilt-id/Q/tool_herbalist.png')
+    const raw = 'https://raw-origin.example/v1/blobs/by-quilt-id/Q/bag_quartz.png'
+    const src = src_of(<ItemImage id="bag_quartz" image_url={raw} category="resource" />)
+    expect(src).toBe('https://fake-assets/items/bag_quartz.png')
   })
 
   test('non-hd (list/grid) keeps the BASE slug — the _hd request is detail-only', () => {
     const src = src_of(
-      <ItemImage id="tool_herbalist" image_url="https://legacy-cdn.example/items/tool_herbalist.png" category="sword" />
+      <ItemImage id="bag_quartz" image_url="https://legacy-cdn.example/items/bag_quartz.png" category="resource" />
     )
-    expect(src).toBe('https://fake-assets/items/tool_herbalist.png')
+    expect(src).toBe('https://fake-assets/items/bag_quartz.png')
   })
 
   test('a template object address is refused before <img> and renders the shared placeholder', () => {

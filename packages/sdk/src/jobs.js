@@ -261,8 +261,11 @@ export function recipe_ingredients(item_id) {
 // already live) — item_icon_url below MUST keep resolving that identical shape for the same key.
 const ASSETS_HOST_DEFAULT = 'https://assets.aresrpg.world'
 
-/** @type {{ aggregator: string, classes: Record<string, { published?: boolean } | undefined> }} */
+/** @typedef {{ published?: boolean }} AssetClassManifest */
+/** @type {{ aggregator: string, classes: Record<string, AssetClassManifest | undefined> }} */
 const assets_config = { aggregator: ASSETS_HOST_DEFAULT, classes: {} }
+/** @type {Map<string, ReadonlySet<string>>} family folder → positively published filenames */
+const asset_family_files = new Map()
 
 // Strip one trailing run of '/' in O(n). The obvious regex (/\/+$/) backtracks quadratically on
 // adversarial slash runs (js/polynomial-redos) — and the aggregator string is caller/manifest input.
@@ -310,12 +313,20 @@ const GEOMETRY_FOLDER = {
  * resolves through the asset host at all — an absent/unpublished class (today: `vanilla`, and any class
  * not yet migrated) returns null from asset_url so the caller falls back to its own host-free
  * ASSET_BASE copy. Merge-only (Object.assign onto `classes`) — see reset_assets_for_test.
- * @param {{ aggregator?: string | null, classes?: Record<string, { published?: boolean } | undefined> | null }} [manifest]
+ * @param {{ aggregator?: string | null, classes?: Record<string, AssetClassManifest | undefined> | null,
+ *   files?: Record<string, readonly string[] | undefined> | null }} [manifest]
  * @returns {void}
  */
-export function configure_assets({ aggregator, classes } = {}) {
+export function configure_assets({ aggregator, classes, files } = {}) {
   if (aggregator)
     assets_config.aggregator = strip_trailing_slashes(String(aggregator))
+  if (files) {
+    for (const [family, inventory] of Object.entries(files)) {
+      if (!Array.isArray(inventory) || inventory.some((file) => typeof file !== 'string'))
+        throw new TypeError(`asset manifest files."${family}" must be an array of strings`)
+      asset_family_files.set(family, new Set(inventory))
+    }
+  }
   if (classes) Object.assign(assets_config.classes, classes)
 }
 
@@ -331,6 +342,24 @@ export function configure_assets({ aggregator, classes } = {}) {
 export function reset_assets_for_test() {
   assets_config.aggregator = ASSETS_HOST_DEFAULT
   assets_config.classes = {}
+  asset_family_files.clear()
+}
+
+/**
+ * Ask the configured manifest whether one concrete file is published. A published class without a file
+ * inventory is unverifiable and therefore throws: treating a missing field as an empty or universal set would
+ * turn an instrument failure into either missing art or a blind request.
+ * @param {string} url_class
+ * @param {string} filename
+ * @returns {boolean}
+ */
+export function asset_file_is_published(url_class, filename) {
+  if (!assets_config.classes[url_class]?.published || !filename) return false
+  const family = ASSET_FAMILY[url_class] ?? url_class
+  const files = asset_family_files.get(family)
+  if (!files)
+    throw new TypeError(`asset manifest class "${url_class}" is published but files."${family}" is missing`)
+  return files.has(filename)
 }
 
 /**
@@ -388,11 +417,9 @@ export const ASSET_BASE = '/assets'
  * object may carry that identity as `slug`, `icon`, or a legacy slug-valued `id`; address-valued
  * ids throw so a lost template join cannot silently become `/assets/items/0x….png`. Returns null for an empty key.
  *
- * Resolves through the manifest-backed item class, else to the host-free relative /assets public path
- * (ASSET_BASE; the external CDN host was deleted). Both keep the `<id>` / `<id>_hd` naming; `{ hd: true }`
- * returns the high-res detail render. The client renders an `<img>` with `referrerPolicy="no-referrer"`,
- * falling back to a category glyph on error — so a genuinely missing icon shows the glyph until its art is
- * uploaded (an item added to the asset manifest, or a file dropped in public/assets/items/).
+ * Resolves only when the manifest-backed item class positively lists the concrete file. An absent file returns
+ * null so the caller renders its category glyph without issuing a request. Both sizes keep the
+ * `<id>` / `<id>_hd` naming; `{ hd: true }` returns null unless that high-res file is listed independently.
  *   asset host: ${aggregator}/items/${icon ?? id}[_hd].png  — chain mints resolve here identically (#650)
  *   relative:   /assets/items/${icon ?? id}[_hd].png
  * @param {string | { slug?: string | null, icon?: string | null, id?: string | null } | null | undefined} item
@@ -410,8 +437,30 @@ export function item_icon_url(item, { hd = false, asset_class = 'item' } = {}) {
       'item_icon_url requires a template slug, not a Sui object id',
     )
   const name = `${key}${hd ? '_hd' : ''}.png`
-  // Asset host (manifest) first — else the host-free relative /assets public path.
-  return asset_url(asset_class, name) ?? `${ASSET_BASE}/items/${name}`
+  return asset_file_is_published(asset_class, name) ? asset_url(asset_class, name) : null
+}
+
+/**
+ * Resolve an item Display URL through the same manifest file inventory as slug-built icons. Runtime Display
+ * data contributes only the authored filename; the configured manifest owns both presence and the canonical
+ * host/path. An absent base/HD file returns null without a request.
+ * @param {string | null | undefined} url
+ * @param {{ hd?: boolean }} [opts]
+ * @returns {string | null}
+ */
+export function item_display_icon_url(url, { hd = false } = {}) {
+  if (!url) return null
+  let filename
+  try {
+    filename = new URL(String(url), 'https://manifest.invalid').pathname.split('/').pop() ?? ''
+  } catch {
+    return null
+  }
+  if (!filename || !/\.png$/i.test(filename)) return null
+  const high_definition = hd && !/_hd\.png$/i.test(filename) ? filename.replace(/\.png$/i, '_hd.png') : filename
+  if (asset_file_is_published('item', high_definition)) return asset_url('item', high_definition)
+  if (high_definition !== filename && asset_file_is_published('item', filename)) return asset_url('item', filename)
+  return null
 }
 
 /**

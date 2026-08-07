@@ -27,6 +27,7 @@ const configure = () =>
   configure_assets({
     aggregator: AGGREGATOR,
     classes: { spell: { published: true }, item: { published: true } },
+    files: { items: ['aberrant_faceguard.png', 'aberrant_faceguard_hd.png'] },
   })
 
 /** Minimal hook dispatcher (same idiom as mob_image.test.tsx / shop_preview_handler.test.tsx) — useState

@@ -10,7 +10,7 @@ afterAll(() => reset_assets_for_test())
 // No mob_catalog seeding: since #1880 the portrait key comes from mob_slugs.json (the live population),
 // never from the published catalog blob — which was a 779-key historical union that gated nothing.
 test('mob icons resolve beside item icons on the asset host under mobs/', () => {
-  configure_assets({ classes: { item: { published: true } } })
+  configure_assets({ classes: { item: { published: true } }, files: { items: ['asset_host_control.png'] } })
 
   const item_url = item_icon_url('asset_host_control')
   if (!item_url) throw new Error('expected the item icon control URL')

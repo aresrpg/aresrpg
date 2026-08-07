@@ -41,7 +41,7 @@ const HISTORICAL_UNION = {
 }
 
 const asset_host = () => {
-  configure_assets({ classes: { item: { published: true } } })
+  configure_assets({ classes: { item: { published: true } }, files: { items: ['asset_host_control.png'] } })
   const control = item_icon_url('asset_host_control')
   if (!control) throw new Error('expected the item icon control URL — asset host not configured')
   return control.slice(0, -'/items/asset_host_control.png'.length)

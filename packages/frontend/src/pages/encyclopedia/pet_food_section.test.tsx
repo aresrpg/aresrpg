@@ -9,6 +9,7 @@ import { expect, test } from 'bun:test'
 import i18next from 'i18next'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { I18nextProvider } from 'react-i18next'
+import { configure_assets } from '@aresrpg/sdk/jobs'
 
 import en from '../../i18n/locales/en.json'
 
@@ -27,7 +28,11 @@ const ITEMS = [
   { id: '0xccc', slug: 'iron_sword', name: 'Iron Sword', level: 10, category: 'WEAPON' }, // not a food
 ]
 
+const publish_items = (filenames: string[]) =>
+  configure_assets({ classes: { item: { published: true } }, files: { items: filenames } })
+
 test('PetFoodSection renders one navigable tile per living food with the FOOD title and the diet note', () => {
+  publish_items(['barley_flour.png', 'tokek_paw.png'])
   const html = renderToStaticMarkup(
     <I18nextProvider i18n={EN_I18N}>
       <PetFoodSection items={ITEMS} food_slugs={['barley_flour', 'tokek_paw']} on_select_item={() => {}} />
@@ -54,6 +59,7 @@ test('PetFoodSection with no living food renders nothing (honest gap, never an e
 
 test('PetFoodHoverRow renders the count line plus a capped icon strip with the overflow badge', () => {
   const slugs = Array.from({ length: 11 }, (_, index) => `food_${index}`)
+  publish_items(slugs.slice(0, 8).map((slug) => `${slug}.png`))
   const html = renderToStaticMarkup(
     <I18nextProvider i18n={EN_I18N}>
       <PetFoodHoverRow food_slugs={slugs} />

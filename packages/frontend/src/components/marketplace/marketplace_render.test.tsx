@@ -4,6 +4,7 @@ import { describe, expect, test } from 'bun:test'
 import { renderToStaticMarkup } from 'react-dom/server'
 import i18next from 'i18next'
 import { I18nextProvider } from 'react-i18next'
+import { configure_assets } from '@aresrpg/sdk/jobs'
 
 import en from '../../i18n/locales/en.json'
 import { ItemDetailView } from '../item_detail_view'
@@ -35,6 +36,10 @@ const DETAIL = {
 }
 
 function render(node: React.ReactNode): string {
+  configure_assets({
+    classes: { item: { published: true }, cosmetic_icon: { published: true } },
+    files: { items: ['razmoket.png', 'cape_lorito-chance.png'] },
+  })
   return renderToStaticMarkup(<I18nextProvider i18n={test_i18n}>{node}</I18nextProvider>)
 }
 

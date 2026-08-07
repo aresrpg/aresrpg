@@ -4,6 +4,7 @@ import { describe, expect, mock, test } from 'bun:test'
 import { renderToStaticMarkup } from 'react-dom/server'
 import i18next from 'i18next'
 import { I18nextProvider } from 'react-i18next'
+import { configure_assets } from '@aresrpg/sdk/jobs'
 
 import en from '../../i18n/locales/en.json'
 
@@ -69,6 +70,10 @@ test_i18n.init({
 })
 
 function render_inventory(): string {
+  configure_assets({
+    classes: { item: { published: true } },
+    files: { items: listable.map((row) => `${slugs[row.name]}.png`) },
+  })
   return renderToStaticMarkup(
     <I18nextProvider i18n={test_i18n}>
       <InventoryPanel

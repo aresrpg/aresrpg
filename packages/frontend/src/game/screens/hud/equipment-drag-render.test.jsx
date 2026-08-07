@@ -2,6 +2,7 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, test } from 'bun:test'
+import { configure_assets } from '@aresrpg/sdk/jobs'
 
 import { EquipmentSlot } from './EquipmentSlot.jsx'
 import { equip_stage_action, real_equipment_of, stage_reducer } from './inventory-equip.js'
@@ -45,6 +46,10 @@ describe('drag-to-equip render', () => {
   })
 
   test('the dropped cloak paints authored art, never the generic cloak placeholder candidate', () => {
+    configure_assets({
+      classes: { cosmetic_icon: { published: true } },
+      files: { items: ['cape_lorito-chance.png'] },
+    })
     const html = renderToStaticMarkup(
       <EquipmentSlot
         slot="cloak"

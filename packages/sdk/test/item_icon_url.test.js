@@ -8,33 +8,33 @@
 
 import { afterEach, describe, expect, test } from 'bun:test'
 
-import { ASSET_BASE, configure_assets, item_icon_url, spell_icon_url } from '../src/jobs.js'
+import { ASSET_BASE, configure_assets, item_icon_url, reset_assets_for_test, spell_icon_url } from '../src/jobs.js'
 
-// Host-free origin-relative fallback (the external asset CDN host is DELETED). `item`
-// resolves here whenever its class isn't published — every item resolves to this /assets public path.
-const CDN = '/assets/items'
 const AGG = 'https://cdn.aresrpg.world'
+const publish_items = (...files) =>
+  configure_assets({ aggregator: AGG, classes: { item: { published: true } }, files: { items: files } })
 
 // Defensive reset BEFORE the first test too (not just afterEach): `bun test packages/sdk packages/frontend`
 // shares ONE process, and components/item_hover_tooltip.test.tsx loads the REAL public/asset_manifest.json
 // elsewhere in that run, which publishes `item` — this file's baseline is the unpublished CDN-fallback state
 // regardless of what ran before it (order-independence-gate.sh is the tooth for this exact class of leak).
-configure_assets({ aggregator: AGG, classes: { item: {}, cosmetic_icon: {} } })
+reset_assets_for_test()
 
 // Reset the module-global resolver config to the shipped default after every test (no leakage across tests).
 afterEach(() => {
-  configure_assets({ aggregator: AGG, classes: { item: {}, cosmetic_icon: {} } })
+  reset_assets_for_test()
 })
 
-describe('item_icon_url — CDN fallback (no class published)', () => {
-  test('string key → CDN url', () => {
-    expect(item_icon_url('longsword')).toBe(`${CDN}/longsword.png`)
+describe('item_icon_url — unpublished/absent art is honest-empty', () => {
+  test('an unpublished class returns null without minting a local request', () => {
+    expect(item_icon_url('longsword')).toBeNull()
   })
 
   test('item object resolves template slug fields before a legacy slug-valued id', () => {
-    expect(item_icon_url({ slug: 'walker_hat', id: '0xdead' })).toBe(`${CDN}/walker_hat.png`)
-    expect(item_icon_url({ icon: 'heal_potion', id: '0xdead' })).toBe(`${CDN}/heal_potion.png`)
-    expect(item_icon_url({ id: 'daggers' })).toBe(`${CDN}/daggers.png`)
+    publish_items('walker_hat.png', 'heal_potion.png', 'daggers.png')
+    expect(item_icon_url({ slug: 'walker_hat', id: '0xdead' })).toBe(`${AGG}/items/walker_hat.png`)
+    expect(item_icon_url({ icon: 'heal_potion', id: '0xdead' })).toBe(`${AGG}/items/heal_potion.png`)
+    expect(item_icon_url({ id: 'daggers' })).toBe(`${AGG}/items/daggers.png`)
   })
 
   test('a Sui object id can never become an icon filename', () => {
@@ -43,12 +43,17 @@ describe('item_icon_url — CDN fallback (no class published)', () => {
     expect(() => item_icon_url({ id: object_id })).toThrow('requires a template slug')
   })
 
-  test('hd variant appends _hd', () => {
-    expect(item_icon_url('bow', { hd: true })).toBe(`${CDN}/bow_hd.png`)
+  test('an unlisted hd variant returns null', () => {
+    publish_items('bow.png')
+    expect(item_icon_url('bow', { hd: true })).toBeNull()
   })
 
   test('an authored cosmetic identifier uses the cosmetic_icon class through the same resolver', () => {
-    configure_assets({ aggregator: AGG, classes: { cosmetic_icon: { published: true } } })
+    configure_assets({
+      aggregator: AGG,
+      classes: { cosmetic_icon: { published: true } },
+      files: { items: ['cape_lorito-agility.png'] },
+    })
     // cosmetic_icon shares the `items` family with `item` (#650 — a cosmetic's 2D icon IS an item icon;
     // only its AUTHORED slug differs from the chain's generic item_type).
     expect(item_icon_url('cape_lorito-agility', { asset_class: 'cosmetic_icon' })).toBe(
@@ -66,37 +71,41 @@ describe('item_icon_url — CDN fallback (no class published)', () => {
 
 describe('item_icon_url — the asset host (#650)', () => {
   test('a published item class switches to the asset-host shape', () => {
-    configure_assets({ aggregator: AGG, classes: { item: { published: true } } })
+    publish_items('longsword.png')
     expect(item_icon_url('longsword')).toBe(`${AGG}/items/longsword.png`)
   })
 
   test('hd keeps the _hd identifier under the asset host', () => {
-    configure_assets({ aggregator: AGG, classes: { item: { published: true } } })
+    publish_items('mace_hd.png')
     expect(item_icon_url('mace', { hd: true })).toBe(`${AGG}/items/mace_hd.png`)
   })
 
   test('the asset-host identifier matches the on-chain Item Display pattern items/<item_type>.png', () => {
     // item.move Display image_url = ${host}/items/{item_type}.png — app + wallet identical (#650).
-    configure_assets({ aggregator: AGG, classes: { item: { published: true } } })
+    publish_items('spellbook.png')
     const url = item_icon_url({ icon: 'spellbook' })
     expect(url.endsWith('/spellbook.png')).toBe(true)
     expect(url).toContain('/items/')
   })
 
   test('aggregator override strips a trailing slash', () => {
-    configure_assets({ aggregator: 'https://agg.example/', classes: { item: { published: true } } })
+    configure_assets({
+      aggregator: 'https://agg.example/',
+      classes: { item: { published: true } },
+      files: { items: ['axe.png'] },
+    })
     expect(item_icon_url('axe')).toBe('https://agg.example/items/axe.png')
   })
 
-  test('un-publishing the class (empty object) falls back to the CDN — progressive migration', () => {
-    configure_assets({ aggregator: AGG, classes: { item: { published: true } } })
+  test('un-publishing the class returns to honest-empty', () => {
+    publish_items('club.png')
     expect(item_icon_url('club')).toContain(AGG)
     configure_assets({ aggregator: AGG, classes: { item: {} } })
-    expect(item_icon_url('club')).toBe(`${CDN}/club.png`)
+    expect(item_icon_url('club')).toBeNull()
   })
 
   test('null key still short-circuits to null under a published class', () => {
-    configure_assets({ aggregator: AGG, classes: { item: { published: true } } })
+    publish_items()
     expect(item_icon_url(null)).toBeNull()
   })
 })
@@ -114,7 +123,7 @@ describe('aggregator trailing-slash strip — linear time (js/polynomial-redos)'
   })
 
   test('the strip keeps the old /\\/+$/ semantics — one trailing slash-run removed, nothing else', () => {
-    configure_assets({ classes: { item: { published: true } } })
+    configure_assets({ classes: { item: { published: true } }, files: { items: ['axe.png'] } })
     for (const input of [
       'https://agg.example/',
       'https://agg.example///',
@@ -139,13 +148,11 @@ describe('ASSET_BASE — host-free fallback (the external asset CDN host is DELE
     expect(ASSET_BASE.startsWith('http')).toBe(false)
   })
 
-  test('item AND spell fallback urls are host-free and derive from ASSET_BASE', () => {
-    // No class published here ⇒ both fall back to the relative base (item has no published class in prod
-    // until the manifest lands either).
+  test('spell fallback remains host-free while unpublished item art stays empty', () => {
     configure_assets({ classes: { item: {}, spell: {} } })
-    expect(item_icon_url('longsword')).toBe(`${ASSET_BASE}/items/longsword.png`)
+    expect(item_icon_url('longsword')).toBeNull()
     // Spells are .webp and single-size (#884) — the fallback keeps the family's own file shape.
     expect(spell_icon_url('ikari_haki')).toBe(`${ASSET_BASE}/spells/ikari_haki.webp`)
-    for (const u of [item_icon_url('x'), spell_icon_url('y')]) expect(u.startsWith('/assets/')).toBe(true)
+    expect(spell_icon_url('y').startsWith('/assets/')).toBe(true)
   })
 })

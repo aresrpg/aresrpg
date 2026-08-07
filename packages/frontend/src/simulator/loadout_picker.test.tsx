@@ -16,6 +16,7 @@ import { afterEach, describe, expect, mock, test, spyOn } from 'bun:test'
 import { renderToStaticMarkup } from 'react-dom/server'
 import i18next from 'i18next'
 import { I18nextProvider } from 'react-i18next'
+import { configure_assets } from '@aresrpg/sdk/jobs'
 
 import en from '../i18n/locales/en.json'
 import encyclopedia_fixture from '../rpc/fixtures/encyclopedia.json'
@@ -175,6 +176,7 @@ describe('the hover detail a row shows BEFORE the pick', () => {
   const [row] = item_corpus.item_corpus_from_v1([wire(0, 'helmet')])
 
   test('the projection is the published row at its MAX ROLL — art slug, no invented fields', () => {
+    configure_assets({ classes: { item: { published: true } }, files: { items: ['art_helmet_0.png'] } })
     const detail = picker_item_detail(row)
     expect(detail.name).toBe('Live helmet 0')
     expect(detail.level).toBe(10)

@@ -15,7 +15,7 @@ import { readFileSync } from 'node:fs'
 import { describe, expect, test } from 'bun:test'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { MemoryRouter } from 'react-router-dom'
-import { JOBS } from '@aresrpg/sdk/jobs'
+import { JOBS, configure_assets } from '@aresrpg/sdk/jobs'
 
 import { craft_recipes_for_job } from '../../../pages/encyclopedia/recipes'
 import { reset_auth_mock } from '../../../test_helpers/auth_mock.js'
@@ -148,8 +148,18 @@ describe('RecipeGrid — the served corpus renders rows (issue #765)', () => {
 describe('the recipe detail pane consumes the live item row (#799 follow-up)', () => {
   const OUTPUT_ROW = LIVE_ITEMS[0]
   const [row] = rows
-  const pane = (props) =>
-    renderToStaticMarkup(
+  const pane = (props) => {
+    configure_assets({
+      classes: { item: { published: true } },
+      files: {
+        items: [
+          `${OUTPUT_ROW.item_type}.png`,
+          `${OUTPUT_ROW.item_type}_hd.png`,
+          `${LIVE_ITEMS[1].item_type}.png`,
+        ],
+      },
+    })
+    return renderToStaticMarkup(
       <MemoryRouter>
         <JobItemDetail
           item={OUTPUT_ROW}
@@ -162,11 +172,11 @@ describe('the recipe detail pane consumes the live item row (#799 follow-up)', (
         />
       </MemoryRouter>
     )
+  }
 
   test('the HD icon resolves off the row’s chain art slug, never the object id', () => {
     // chain_icon_slug: the icon key of a /v1 row IS its item_type; ItemDetailImage asks for the _hd variant.
-    // The FILENAME is the assertion, never the origin — a sibling test file installs an asset manifest
-    // process-wide, and which host serves the art is not what this pins.
+    // The FILENAME is the assertion, never the origin; the fixture manifest positively publishes it.
     const html = pane()
     expect(html).toContain(`${OUTPUT_ROW.item_type}_hd.png`)
     // The bug itself: an icon keyed by the Sui object address, which is not an art identity and 404s.

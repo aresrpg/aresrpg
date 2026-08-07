@@ -8,10 +8,20 @@
 // the INITIAL candidate picked per `hd` is the right one; the hd→base→ladder→glyph LIFECYCLE (the shared
 // reducer + the driven component) is proven in image_retry.test.jsx.
 
-import { describe, expect, test } from 'bun:test'
+import { beforeEach, describe, expect, test } from 'bun:test'
 import { renderToStaticMarkup } from 'react-dom/server'
+import { configure_assets, reset_assets_for_test } from '@aresrpg/sdk/jobs'
 
 import { ItemIcon, category_glyph, item_fallback_glyph } from './ItemIcon.jsx'
+
+beforeEach(() => {
+  reset_assets_for_test()
+  configure_assets({
+    aggregator: 'https://assets.test',
+    classes: { item: { published: true } },
+    files: { items: ['coiffe_fuwa-white.png'] },
+  })
+})
 
 describe('ItemIcon — renders the right INITIAL candidate for hd vs. thumb', () => {
   test('asset icons opt into cors so an img load cannot seed an opaque service-worker entry', () => {
@@ -19,9 +29,10 @@ describe('ItemIcon — renders the right INITIAL candidate for hd vs. thumb', ()
     expect(html).toContain('crossorigin="anonymous"')
   })
 
-  test('hd requests the _hd variant first', () => {
+  test('hd skips an unlisted _hd variant and requests the manifest-proven base directly', () => {
     const html = renderToStaticMarkup(<ItemIcon item="coiffe_fuwa-white" hd alt="Fuwa Hood (White)" />)
-    expect(html).toContain('coiffe_fuwa-white_hd.png')
+    expect(html).toContain('coiffe_fuwa-white.png')
+    expect(html).not.toContain('coiffe_fuwa-white_hd.png')
   })
 
   test('a thumb request (default) never asks for _hd', () => {
