@@ -54,6 +54,7 @@ const death_presenting_ids = (s) => {
 
 const seat_key = (seat) => `p${seat}`
 const mob_key = (idx) => `m${idx}`
+const turn_deadline_fallback = (state, view) => state.turn_deadline_ms ?? view.turn_deadline_ms
 
 /** entity id → thin-fold key, built once per projection off the adopted board. Roster ORDER is presentation
  *  metadata and never a join key (#1608) — the seat index / mob index is. */
@@ -217,7 +218,7 @@ export const board_view = (s) => {
     settlement_request: settlement_request(s),
     // Local receipt evidence is published beside, never inside, the viewer-free committed fighter image.
     post_commit_budget: s.my_key ? (s.post_commit_budget?.[s.my_key] ?? null) : null,
-    turn_deadline_ms: s.turn_deadline_ms ?? view.turn_deadline_ms,
+    turn_deadline_ms: turn_deadline_fallback(s, view),
     // The CHAIN turn-seed inputs travel with the view, the same way the deadline does — every crit/tackle
     // preview surface composes its clock from this projection. Read off the VIEW only: `s.turn_ordinal` is a
     // different fact under the same name — the core fold's turn ANCHOR token (a string) — and seeding a
@@ -477,7 +478,7 @@ export const engine_view = (s, { roster = s.ctx?.roster ?? [] } = {}) => {
     placement_cells: placement
       ? { 0: (view.start_cells_a ?? []).map(decode_xy), 1: (view.start_cells_b ?? []).map(decode_xy) }
       : { 0: [], 1: [] },
-    turn_deadline_ms: s.turn_deadline_ms ?? view.turn_deadline_ms ?? 0,
+    turn_deadline_ms: turn_deadline_fallback(s, view) ?? 0,
     deadline_starved: deadline_starved(s),
     ready,
     armed_spell_id: s.armed_spell_id ?? null,
