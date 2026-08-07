@@ -295,18 +295,6 @@ const ASSET_FAMILY = {
   shop_render: 'shop',
 }
 
-// Where each class's .glb corpus actually LIVES on the asset host. `models/{family}` is the rule (mobs,
-// cosmetics); `character` is the one class whose rigs were uploaded mirroring the frontend's own public/
-// tree and never re-homed — so its bytes sit under `sprites/characters/`, not `models/characters/`.
-// This table records the host's truth; it is not a preference. Probed 2026-07-25 (P0: every world
-// character rendered as a floating nameplate over nothing): all 13 published rigs answer 206 under
-// `sprites/characters/` and 404 under `models/characters/` — see the frontend's character_glb_url.test.js
-// for the captured per-key provenance. Delete this row the day the corpus is re-uploaded under models/.
-/** @type {Record<string, string>} */
-const GEOMETRY_FOLDER = {
-  character: 'sprites/characters',
-}
-
 /**
  * Seed the app-wide asset resolver once at client boot from the published manifest
  * (packages/frontend/public/asset_manifest.json). `classes[url_class].published` gates whether that class
@@ -376,7 +364,7 @@ export function asset_url(url_class, filename) {
     return `${assets_config.aggregator}/data/${url_class}.json`
   const family = ASSET_FAMILY[url_class] ?? url_class
   return filename.endsWith('.glb')
-    ? `${assets_config.aggregator}/${GEOMETRY_FOLDER[url_class] ?? `models/${family}`}/${filename}`
+    ? `${assets_config.aggregator}/models/${family}/${filename}`
     : `${assets_config.aggregator}/${family}/${filename}`
 }
 

@@ -59,15 +59,10 @@ describe('the mapping law — geometry (.glb)', () => {
     expect(asset_url('cosmetic', 'vaporeon.glb')).toBe(`${HOST}/models/cosmetics/vaporeon.glb`)
   })
 
-  // The character corpus mirrors the frontend's public/ tree on the host and was never re-homed under
-  // models/. Probed 2026-07-25: `sprites/characters/senshi_male.glb` = 206, `models/characters/…` = 404
-  // (the P0 that left every world character as a floating nameplate). GEOMETRY_FOLDER records that truth.
-  test('character rigs resolve {host}/sprites/characters/{key}.glb — where the corpus actually is', () => {
+  test('character rigs follow the same {host}/models/{family}/{key}.glb law as every geometry class', () => {
     configure_assets({ aggregator: HOST, classes: { character: { published: true } } })
-    expect(asset_url('character', 'senshi_male.glb')).toBe(`${HOST}/sprites/characters/senshi_male.glb`)
-    expect(asset_url('character', 'yajin_female_hair.glb')).toBe(
-      `${HOST}/sprites/characters/yajin_female_hair.glb`
-    )
+    expect(asset_url('character', 'senshi_male.glb')).toBe(`${HOST}/models/characters/senshi_male.glb`)
+    expect(asset_url('character', 'yajin_female_hair.glb')).toBe(`${HOST}/models/characters/yajin_female_hair.glb`)
   })
 
   test('an unpublished geometry class returns null (caller falls back to the bundled copy)', () => {
