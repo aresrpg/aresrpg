@@ -4,9 +4,8 @@ import { afterEach, describe, expect, test } from 'bun:test'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { configure_assets, item_icon_url, reset_assets_for_test } from '@aresrpg/sdk/jobs'
 
-import { ItemIcon } from '../game/screens/hud/ItemIcon.jsx'
-
-import { ItemImage } from './item_image'
+import { ItemIcon } from '../../src/game/screens/hud/ItemIcon.jsx'
+import { ItemImage } from '../../src/components/item_image'
 
 const HOST = 'https://assets.test'
 

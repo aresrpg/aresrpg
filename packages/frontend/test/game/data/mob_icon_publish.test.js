@@ -1,16 +1,17 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-import { afterEach, expect, test } from 'bun:test'
 import { readFileSync } from 'node:fs'
+
+import { afterEach, expect, test } from 'bun:test'
 import { configure_assets } from '@aresrpg/sdk/jobs'
 
-import { set_catalog_for_test } from './mob_catalog.js'
+import { set_catalog_for_test } from '../../../src/game/data/mob_catalog.js'
 import {
   assert_mob_icon_publish_complete,
   mob_icon_filename,
   mob_icon_publish_plan,
-} from './mob_icon_name.js'
-import { get_mob_icon_url } from './mobs.js'
+} from '../../../src/game/data/mob_icon_name.js'
+import { get_mob_icon_url } from '../../../src/game/data/mobs.js'
 
 const renderer_source = readFileSync(new URL('../../../scripts/render_mob_icons.mjs', import.meta.url), 'utf8')
 
