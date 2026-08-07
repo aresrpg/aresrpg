@@ -1,26 +1,25 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-// #1747 (reopened 2026-08-06) — THE DISCRIMINATOR. Gobadoc still damages himself with his own AoE after two
-// rows closed the defect as fixed, so this file separates the three candidate culprits by driving the REAL
-// cast door with the REAL published data instead of an authored shape.
+// #1747 — THE DISCRIMINATOR, now the seal. Gobadoc damaged himself with his own AoE after two rows closed
+// the defect as fixed, so this file separated the three candidate culprits by driving the REAL cast door
+// with the REAL published data instead of an authored shape.
 //
-// The subject is `fixtures/published_devastating_slam.json` — the row captured verbatim off the live content
-// pointer (corpus 20260804a), NOT a hand-built spell. It reaches the reducer the way the simulator page
-// reaches it: the field mapping below is `mob_spell_level` from
-// `packages/frontend/src/simulator/content.js:206-215`, whose effect adapter (`chain_effect`, :201) spreads
-// the authored effect verbatim — so `target_filter` travels from the CDN blob into the reducer untouched and
-// the simulator introduces no second fold of its own.
+// The subject is `fixtures/published_devastating_slam.json` — the row captured verbatim off the published
+// content blob, NOT a hand-built spell. It reaches the reducer the way the simulator page reaches it: the
+// field mapping below is `mob_spell_level` from `packages/frontend/src/simulator/content.js:206-215`, whose
+// effect adapter (`chain_effect`, :201) spreads the authored effect verbatim — so `target_filter` travels
+// from the CDN blob into the reducer untouched and the simulator introduces no second fold of its own.
 //
-// VERDICT THIS FILE PINS: the sim core is innocent (test 1 — an enemies-only filter over the identical
-// geometry spares the caster) and the resolver is faithful (test 2 — fed `target_filter: 0` it hits everyone
-// standing in the circle, exactly as `spell_targeting.js:45-49` promises). What is broken is the DATA:
-// test 3 is RED and stays red until the content pipeline republishes Devastating Slam with an enemies-only
-// filter and this fixture is re-captured. It is the definition of done for the reopened row.
+// WHAT IT PINNED: neither the sim core nor the resolver was at fault. The DATA was — corpus 20260804a
+// published `target_filter: 0` (TF_NONE) for this row while the chain carried 1 (TF_NOT_TEAM), and the same
+// 0 covered ALL 1030 of that blob's mob-spell effects: the signature of an emitter that never wrote the
+// field, not of 1030 authoring decisions. The world fight path (chain-fed) was correct; the simulator page
+// (blob-fed) was not — the blob is a THIRD reader the #1809 sim+Move twin never covered.
 //
-// The chain read in the fixture's provenance block closes the last gap: on-chain the row carries
-// target_filter 1, while the CDN blob carries 0 for ALL 1030 mob-spell effects. So the world fight path
-// (chain-fed) is correct and the simulator page (blob-fed) is not — the blob is a THIRD reader that the
-// #1809 sim+Move twin never covered.
+// WHAT IT PINS NOW: corpus 20260806a republishes the field. The last test read the same fixture RED and
+// reads it green, and the product-truth test drives the published row unmodified — the caster is spared
+// because the DATA says so, not because a test overrode it. Re-capture the fixture on any republish and
+// this file re-measures the emitter for free.
 
 import { describe, expect, test } from 'bun:test'
 
@@ -28,7 +27,7 @@ import { normalize_chain_spell_corpus } from '../src/chain_spell_corpus.js'
 import { process_spell_cast } from '../src/fight_spells.js'
 import { find_entity } from '../src/fight_state.js'
 import { create_fight_state } from '../src/reduce.js'
-import { TF_NOT_TEAM } from '../src/spell_effect.js'
+import { TF_NONE, TF_NOT_TEAM } from '../src/spell_effect.js'
 import { get_aoe_cells } from '../src/spell_targeting.js'
 
 import { CAST_CTX, MATRIX_ARENA } from './spell_effect_conformance_matrix.js'
@@ -136,8 +135,8 @@ describe('#1747 — the published Devastating Slam against its own caster', () =
     expect(cells).toContain(FIXTURE.ally_cell)
   })
 
-  test('the SIM CORE is innocent — an enemies-only filter over this exact geometry spares the caster', () => {
-    const { before, result } = cast(template_of({ target_filter: TF_NOT_TEAM }))
+  test('THE PRODUCT TRUTH — the published row, unmodified, spares its own caster and ally', () => {
+    const { before, result } = cast(template_of())
     expect(find_entity(result.state, 'player').health).toBeLessThan(
       before.player,
     )
@@ -148,26 +147,27 @@ describe('#1747 — the published Devastating Slam against its own caster', () =
     expect(find_entity(result.state, 'ally').health).toBe(before.ally)
   })
 
-  test('the resolver is FAITHFUL — fed the published filter it hits everyone in the circle', () => {
-    const { before, result } = cast(template_of())
+  test('the resolver is FAITHFUL — fed TF_NONE it hits everyone in the circle', () => {
+    const { before, result } = cast(template_of({ target_filter: TF_NONE }))
     // Not a bug in this layer: `effect_hits(0, ...)` sets no exclusion bit, so an unfiltered zone is
-    // authored to hit its own caster. This test documents the mechanism the field report observed.
+    // authored to hit its own caster. This is the mechanism the field report observed, and it is exactly
+    // what the uncured blob fed the simulator page — kept as the control the product truth is measured against.
     expect(find_entity(result.state, 'player').health).toBeLessThan(
       before.player,
     )
     expect(
       find_entity(result.state, 'gobadoc').health,
-      'the caster bleeds — this IS the reported symptom, resolved faithfully',
+      'the caster bleeds — the reported symptom, resolved faithfully from a TF_NONE row',
     ).toBeLessThan(before.gobadoc)
     expect(find_entity(result.state, 'ally').health).toBeLessThan(before.ally)
   })
 
-  test('RED — the published row must carry an enemies-only target_filter', () => {
+  test('the published row carries an enemies-only target_filter', () => {
     const [effect] = FIXTURE.published_spell.effects
     expect(
       effect.target_filter,
       `corpus ${FIXTURE.corpus_version} publishes target_filter ${effect.target_filter} ` +
-        `(TF_NONE) for "${FIXTURE.published_spell.name}"; a boss melee zone must be TF_NOT_TEAM ` +
+        `for "${FIXTURE.published_spell.name}"; a boss melee zone must be TF_NOT_TEAM ` +
         `(${TF_NOT_TEAM}). Fix is content-side: republish, then re-capture the fixture.`,
     ).toBe(TF_NOT_TEAM)
   })
