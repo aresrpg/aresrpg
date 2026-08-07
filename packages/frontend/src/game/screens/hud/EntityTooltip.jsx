@@ -30,7 +30,7 @@ import { spell_state_name_resolver } from '../../data/spell-text.js'
 import { useSpellCorpus } from '../../data/use_spell_corpus.js'
 import { useTweenedHp } from './use_tweened_hp.js'
 import { useTargetPrediction } from './use_target_prediction.js'
-import { EMPTY_OUTCOME, predicted_target_outcome } from './target_outcome.js'
+import { predicted_target_outcome } from './target_outcome.js'
 import { TooltipCard } from './tooltip_card.jsx'
 
 // re-export so existing importers (and the unit test) keep resolving the derivation from here too.
@@ -124,126 +124,77 @@ function build_vm(anchor, fighter, display_health, layout) {
   return { style: anchor_style(anchor, layout), team, name, health: display_health }
 }
 
-export function EntityTooltip() {
-  const { t, i18n } = useTranslation()
-  const spell_corpus = useSpellCorpus()
-  const locale = i18n.resolvedLanguage || i18n.language || 'en'
-  const resolve_state_name = useMemo(
-    () => spell_state_name_resolver(spell_corpus, locale),
-    [spell_corpus, locale]
-  )
-  const fight = useFightView() // synchronous core view (S2 mirror kill); hover stays a game-core slice
-  const entities = useFightVisibleEntities() // the canonical entity rows — board positions answer from here
-  const hover = useGameState((s) => s.fight_hover)
-  // live predict_cast for the armed spell on this target — the SINGLE resolved outcome (crit or not is a
-  // seed-deterministic fact, decided upstream), its is_crit flag, and the spell's secondary effect rows.
-  const { prediction, is_crit, effects, target_ref, previews } = useTargetPrediction()
+function hovered_tooltip_vm({
+  active,
+  prediction,
+  target_ref,
+  display_health,
+  hovered,
+  entities,
+  fight,
+  layout,
+  fighter,
+  is_crit,
+  effects,
+  hover,
+}) {
+  if (!active) return null
+  const outcome = predicted_target_outcome(prediction, target_ref, display_health ?? 0)
+  return {
+    ...build_vm(hover, fighter, display_health ?? 0, layout),
+    outcome,
+    displacement: displacement_of(
+      hovered?.cells.committed_xy,
+      outcome.displaced_to,
+      entities[fight?.my_entity_id]?.cells.committed_xy
+    ),
+    is_crit,
+    effects,
+    // #1993 WP6 — the canonical entity row's ACTIVE-STATUS rows, verbatim: the SAME frozen collection the
+    // turn card's badges render, so the hover card and the timeline cannot disagree about what is on a
+    // fighter. Distinct from `effects` above, which is the armed-spell PREVIEW, not an active status.
+    status_effects: entities[hover.entity_id]?.statuses.rows ?? [],
+    key: hover.entity_id,
+  }
+}
 
-  const fighter = fight && hover ? fight.fighters.get(hover.entity_id) : null
-  // The canonical row for the hovered fighter — vitals, liveness and board cells answer from the SAME record
-  // (#1993 WP7). `display_alive` is RENDERED liveness: the card stays up through a killing beat until it lands,
-  // exactly like the body it is anchored to.
-  const hovered = hover ? (entities[hover.entity_id] ?? null) : null
-  const display_health = hovered?.vitals?.display ?? null
-  const active = !!fighter && !!hovered?.vitals?.display_alive
-
-  // Delayed unmount so the card can FADE OUT: while a fighter is hovered we render live; when the hover
-  // leaves we keep the last snapshot mounted (with the `--out` class) for EXIT_MS, then unmount for real.
-  const [mounted, set_mounted] = useState(false)
-  const [exiting, set_exiting] = useState(false)
-  const last_vm = useRef(/** @type {any} */ (null))
-
-  // TARGET PREVIEW: while a spell is armed, the head hp gains the EXACT resolved life-swing the cast lands
-  // (−N red / +N green; a deterministic crit paints that figure bold-orange), plus a KILLS line, the spell's
-  // effect rows, and a push/pull line — all from the prediction's actions (the ONE damage home) + the spell row,
-  // never an authored range, never a probability. Frozen with the last snapshot through the fade-out.
-  // The preview's swing is computed against the number the card SHOWS, so "−N" always reads as the transition
-  // the player is looking at rather than a second, differently-anchored one.
-  const outcome = active
-    ? predicted_target_outcome(prediction, target_ref, display_health ?? 0)
-    : (last_vm.current?.outcome ?? EMPTY_OUTCOME)
-  // #1993 WP5 — SCREEN COORDINATES STAY LOCAL, BOARD POSITIONS ARE CANONICAL. `hover.x/y` (viewport pixels,
-  // published by the roam layer) are this component's own fact and stay where they are; the two BOARD cells this
-  // preview reasons about — the target's and the caster's — come from the canonical entity rows' COMMITTED cell,
-  // the same truth the prediction that produced `displaced_to` resolved against. They used to be the projection's
-  // DISPLAY cells, which hold an in-flight walk at its pre-move position: mid-walk the push/pull verdict was
-  // computed from where a body was standing a beat ago.
-  const displacement = active
-    ? displacement_of(
-        hovered?.cells.committed_xy,
-        outcome.displaced_to,
-        entities[fight?.my_entity_id]?.cells.committed_xy
-      )
-    : (last_vm.current?.displacement ?? null)
-  const layout = active || (previews?.length ?? 0) > 0 ? read_layout() : null
-  const vm = active
-    ? {
-        ...build_vm(hover, fighter, display_health ?? 0, /** @type {any} */ (layout)),
-        outcome,
-        displacement,
-        is_crit,
-        effects,
-        // #1993 WP6 — the canonical entity row's ACTIVE-STATUS rows, verbatim: the SAME frozen collection the
-        // turn card's badges render, so the hover card and the timeline cannot disagree about what is on a
-        // fighter. Distinct from `effects` above, which is the armed-spell PREVIEW, not an active status.
-        status_effects: entities[hover.entity_id]?.statuses.rows ?? [],
-        key: hover.entity_id,
-      }
-    : null
-  if (vm) last_vm.current = vm
-
-  const view = vm ?? last_vm.current
-  // HP TWEEN (life updates were too fast on the hud and the nameplate) — ease the shown hp at
-  // the house pace, keyed on the fighter so a fresh hover snaps to ITS hp (never counts between two entities).
-  const shown_hp = useTweenedHp(view?.health ?? 0, view?.key)
-
-  useEffect(() => {
-    if (active) {
-      set_mounted(true)
-      set_exiting(false)
-      return
-    }
-    if (!mounted) return
-    set_exiting(true)
-    const id = setTimeout(() => {
-      set_mounted(false)
-      set_exiting(false)
-    }, EXIT_MS)
-    return () => clearTimeout(id)
-  }, [active, mounted])
-
-  // #2175 — THE ZONE'S OTHER BODIES. An AoE is aimed at a CELL, so the cast usually covers fighters nobody is
-  // hovering — and the anchor itself is usually empty, which used to mean no forecast at all. Every entity the
-  // prediction touches gets the SAME card the hovered one gets, pinned to its own projected head. The set comes
-  // straight from `previews` (the ONE prediction's own answer to "who did I touch"); this loop re-simulates
-  // nothing, resolves no zone, and reuses `predicted_target_outcome` verbatim for each body's numbers. The
-  // hovered fighter is excluded — its card above already renders, with the fade-out machinery this set does not
-  // need (a zone card appears and disappears with the aim, exactly like the red footprint under it).
-  const zone_cards = (previews ?? []).flatMap((row) => {
+function zone_tooltip_cards({ previews, hover, entities, fight, layout, prediction }) {
+  return (previews ?? []).flatMap((row) => {
     if (row.entity_id === hover?.entity_id) return []
     const entity = entities[row.entity_id]
     const anchor = hover?.anchors?.[row.entity_id]
     const body = fight?.fighters?.get(row.entity_id)
     if (!entity || !anchor || !body || !entity.vitals?.display_alive || !layout) return []
     const hp = entity.vitals?.display ?? 0
-    const zone_outcome = predicted_target_outcome(prediction, row.target_ref, hp)
+    const outcome = predicted_target_outcome(prediction, row.target_ref, hp)
     return [
       {
         ...build_vm(anchor, body, hp, layout),
         key: row.entity_id,
-        outcome: zone_outcome,
+        outcome,
         displacement: displacement_of(
           entity.cells.committed_xy,
-          zone_outcome.displaced_to,
+          outcome.displaced_to,
           entities[fight?.my_entity_id]?.cells.committed_xy
         ),
         status_effects: entity.statuses?.rows ?? [],
       },
     ]
   })
+}
 
-  if (!zone_cards.length && (!mounted || !view)) return null
-
+function TooltipCards({
+  mounted,
+  view,
+  exiting,
+  shown_hp,
+  zone_cards,
+  is_crit,
+  effects,
+  t,
+  locale,
+  resolve_state_name,
+}) {
   return (
     <>
       {mounted && view && (
@@ -282,5 +233,107 @@ export function EntityTooltip() {
         />
       ))}
     </>
+  )
+}
+
+export function EntityTooltip() {
+  const { t, i18n } = useTranslation()
+  const spell_corpus = useSpellCorpus()
+  const locale = i18n.resolvedLanguage || i18n.language || 'en'
+  const resolve_state_name = useMemo(() => spell_state_name_resolver(spell_corpus, locale), [spell_corpus, locale])
+  const fight = useFightView() // synchronous core view (S2 mirror kill); hover stays a game-core slice
+  const entities = useFightVisibleEntities() // the canonical entity rows — board positions answer from here
+  const hover = useGameState((s) => s.fight_hover)
+  // live predict_cast for the armed spell on this target — the SINGLE resolved outcome (crit or not is a
+  // seed-deterministic fact, decided upstream), its is_crit flag, and the spell's secondary effect rows.
+  const { prediction, is_crit, effects, target_ref, previews } = useTargetPrediction()
+
+  const fighter = fight && hover ? fight.fighters.get(hover.entity_id) : null
+  // The canonical row for the hovered fighter — vitals, liveness and board cells answer from the SAME record
+  // (#1993 WP7). `display_alive` is RENDERED liveness: the card stays up through a killing beat until it lands,
+  // exactly like the body it is anchored to.
+  const hovered = hover ? (entities[hover.entity_id] ?? null) : null
+  const display_health = hovered?.vitals?.display ?? null
+  const active = !!fighter && !!hovered?.vitals?.display_alive
+
+  // Delayed unmount so the card can FADE OUT: while a fighter is hovered we render live; when the hover
+  // leaves we keep the last snapshot mounted (with the `--out` class) for EXIT_MS, then unmount for real.
+  const [mounted, set_mounted] = useState(false)
+  const [exiting, set_exiting] = useState(false)
+  const last_vm = useRef(/** @type {any} */ (null))
+
+  // TARGET PREVIEW: while a spell is armed, the head hp gains the EXACT resolved life-swing the cast lands
+  // (−N red / +N green; a deterministic crit paints that figure bold-orange), plus a KILLS line, the spell's
+  // effect rows, and a push/pull line — all from the prediction's actions (the ONE damage home) + the spell row,
+  // never an authored range, never a probability. Frozen with the last snapshot through the fade-out.
+  // The preview's swing is computed against the number the card SHOWS, so "−N" always reads as the transition
+  // the player is looking at rather than a second, differently-anchored one.
+  // #1993 WP5 — SCREEN COORDINATES STAY LOCAL, BOARD POSITIONS ARE CANONICAL. `hover.x/y` (viewport pixels,
+  // published by the roam layer) are this component's own fact and stay where they are; the two BOARD cells this
+  // preview reasons about — the target's and the caster's — come from the canonical entity rows' COMMITTED cell,
+  // the same truth the prediction that produced `displaced_to` resolved against. They used to be the projection's
+  // DISPLAY cells, which hold an in-flight walk at its pre-move position: mid-walk the push/pull verdict was
+  // computed from where a body was standing a beat ago.
+  const layout = active || (previews?.length ?? 0) > 0 ? read_layout() : null
+  const vm = hovered_tooltip_vm({
+    active,
+    prediction,
+    target_ref,
+    display_health,
+    hovered,
+    entities,
+    fight,
+    layout,
+    fighter,
+    is_crit,
+    effects,
+    hover,
+  })
+  if (vm) last_vm.current = vm
+
+  const view = vm ?? last_vm.current
+  // HP TWEEN (life updates were too fast on the hud and the nameplate) — ease the shown hp at
+  // the house pace, keyed on the fighter so a fresh hover snaps to ITS hp (never counts between two entities).
+  const shown_hp = useTweenedHp(view?.health ?? 0, view?.key)
+
+  useEffect(() => {
+    if (active) {
+      set_mounted(true)
+      set_exiting(false)
+      return
+    }
+    if (!mounted) return
+    set_exiting(true)
+    const id = setTimeout(() => {
+      set_mounted(false)
+      set_exiting(false)
+    }, EXIT_MS)
+    return () => clearTimeout(id)
+  }, [active, mounted])
+
+  // #2175 — THE ZONE'S OTHER BODIES. An AoE is aimed at a CELL, so the cast usually covers fighters nobody is
+  // hovering — and the anchor itself is usually empty, which used to mean no forecast at all. Every entity the
+  // prediction touches gets the SAME card the hovered one gets, pinned to its own projected head. The set comes
+  // straight from `previews` (the ONE prediction's own answer to "who did I touch"); this loop re-simulates
+  // nothing, resolves no zone, and reuses `predicted_target_outcome` verbatim for each body's numbers. The
+  // hovered fighter is excluded — its card above already renders, with the fade-out machinery this set does not
+  // need (a zone card appears and disappears with the aim, exactly like the red footprint under it).
+  const zone_cards = zone_tooltip_cards({ previews, hover, entities, fight, layout, prediction })
+
+  if (!zone_cards.length && (!mounted || !view)) return null
+
+  return (
+    <TooltipCards
+      mounted={mounted}
+      view={view}
+      exiting={exiting}
+      shown_hp={shown_hp}
+      zone_cards={zone_cards}
+      is_crit={is_crit}
+      effects={effects}
+      t={t}
+      locale={locale}
+      resolve_state_name={resolve_state_name}
+    />
   )
 }

@@ -103,8 +103,24 @@ import { useFightPhase } from './use_fight_phase.js'
 import { should_mount_board } from '../../../../fight-engine/phase.js'
 import { world_fight_view } from '../../../../world-shell/fight_session_scope.js'
 
+function WorldSocialCluster({ mobile, fight_mode, has_character, hack_grid }) {
+  if (mobile) return null
+  return (
+    <div className="gw-social">
+      <PartyFrame />
+      {/* Openness of the NEXT fight you start (HUD toggle): PUBLIC (anyone joins) vs GROUP (your party).
+          Sits by the party frame — "group" IS your party. Pre-fight only (you set it before engaging). */}
+      {!fight_mode && has_character && <FightOpennessToggle />}
+      {!fight_mode && has_character && <OnlinePlayers />}
+      {!fight_mode && has_character && <WorldSwitcher />}
+      {/* AUTO-SEARCH (#1106) — directly under the world panel, on the hack grid only (the dev entry),
+          plus this cluster's own exploration/embodied gate. Unmounting halts the loop. */}
+      {hack_grid && !fight_mode && has_character && <AutoSearchPanel />}
+    </div>
+  )
+}
+
 /** @returns {import('react').ReactElement} */
-// Complexity retained (#2069): hook order and the world-HUD render boundary are coupled; extraction would invent prop plumbing without isolating domain logic.
 export function GameWorldHud() {
   // The first-session Tutorial mounts only with a PLAYABLE roster — when the roster is confirmed-empty,
   // GameWorldHost's world-slot creator owns the canvas region; before the roster is fetched, neither shows.
@@ -250,19 +266,12 @@ export function GameWorldHud() {
         {/* Social cluster (top-left, design canon): MY party + OTHER online players to invite, stacked.
             OnlinePlayers is the item-25 invite entry (dropped from Option B's sidebar, slot reused by #29);
             re-homed here — top-right is the reserved toast zone. Lobby + embodied-player only. */}
-        {!mobile && (
-          <div className="gw-social">
-            <PartyFrame />
-            {/* Openness of the NEXT fight you start (HUD toggle): PUBLIC (anyone joins) vs GROUP (your party).
-                Sits by the party frame — "group" IS your party. Pre-fight only (you set it before engaging). */}
-            {!fight_mode && has_character && <FightOpennessToggle />}
-            {!fight_mode && has_character && <OnlinePlayers />}
-            {!fight_mode && has_character && <WorldSwitcher />}
-            {/* AUTO-SEARCH (#1106) — directly under the world panel, on the hack grid only (the dev entry),
-                plus this cluster's own exploration/embodied gate. Unmounting halts the loop. */}
-            {hack_grid && !fight_mode && has_character && <AutoSearchPanel />}
-          </div>
-        )}
+        <WorldSocialCluster
+          mobile={mobile}
+          fight_mode={fight_mode}
+          has_character={has_character}
+          hack_grid={hack_grid}
+        />
         {/* S-67 — the shared player-action menu (chat name click / in-world nameplate click). Renders null
             until a seam sets a target; portals to <body>, so mounting it here just keeps it in the HUD tree. */}
         <PlayerActionMenu />

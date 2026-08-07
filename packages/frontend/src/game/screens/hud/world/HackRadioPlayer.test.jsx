@@ -71,7 +71,7 @@ describe('the hack-mode album radio', () => {
   test('the control cancels the pending autoplay retry on its own pointerdown, before its click toggles', () => {
     const source = readFileSync(new URL('./HackRadioPlayer.jsx', import.meta.url), 'utf8')
     expect(source).toContain('onPointerDown={on_pointer_down}')
-    expect(source).toContain('radio_dismiss_gesture_retry()')
+    expect(source).toContain('useCallback(radio_dismiss_gesture_retry, [])')
   })
 
   test('#2260 it OWNS no playback — the element, the manifest and the cursor all live in the latch', () => {

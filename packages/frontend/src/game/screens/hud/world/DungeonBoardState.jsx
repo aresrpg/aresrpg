@@ -22,16 +22,13 @@ import {
   next_move_tackle,
 } from '@aresrpg/fight/project'
 import { weapon_spell_template, evolve_caster_cell, evolve_draft_health } from '@aresrpg/fight/predict_cast'
-import { cast_range_set_dungeon } from '../../../../fight-engine/overlay_intents.js'
-import { places_trap } from '@aresrpg/sim/spell_targeting'
 import { character_cast_clock, use_dungeon_turn } from '../../dungeon-turn.js'
-import { encode, decode, bfsReachable } from '@aresrpg/fight/los'
+import { encode, bfsReachable } from '@aresrpg/fight/los'
 import { occupancy_of } from '@aresrpg/fight/occupancy'
-import { dungeon_grid_of } from '../../dungeon-grid.js'
 import { presentation_blocked_cells } from '../../../../world-shell/fight_board_blockers.js'
-import { on_cooldown, cooldown_left, target_cap_reached } from '@aresrpg/fight/draft_budget'
 import { useFightPhase } from './use_fight_phase.js'
 import { is_placement as phase_is_placement } from '../../../../fight-engine/phase.js'
+import { cast_budget_state, castable_cells } from './dungeon-board-castable.js'
 
 // FALLBACK cast economics (senshi fire_strike L1) — used only when the class/seed can't be resolved. The LIVE
 // values are read per-class from the seeded primary spell (D98 cast_params memo below): range/AP differ by class
@@ -64,6 +61,28 @@ export const evolution_actions_of = (draft_actions, spells, weapon) =>
       target: entry.target,
     }
   })
+
+function character_class_of(my_character, fight, controlled_character_id) {
+  return (
+    my_character?.classe ?? my_character?.class_id ?? fight?.fighters.get(controlled_character_id)?.class_id ?? null
+  )
+}
+
+function character_level_of(controlled_character_id, character_id, expedition_level, my_character) {
+  return controlled_character_id === character_id && expedition_level != null
+    ? expedition_level
+    : xp_progress(my_character?.experience ?? 0).level
+}
+
+function dungeon_seat_state(dungeon, fight) {
+  const entity_id = fight?.my_entity_id ?? null
+  return {
+    entity_id,
+    me: dungeon?.escrow.find((p) => (p.character ?? p.character_id) === entity_id) ?? null,
+    active_fighter: fight?.fighters.get(entity_id) ?? null,
+    my_turn: fight?.input_armed === true,
+  }
+}
 
 /**
  * All unconditional DungeonBoard store reads and derived targeting state.
@@ -132,18 +151,14 @@ export function useDungeonBoardState() {
     () => seat_character(characters, fight?.fighters, controlled_character_id),
     [characters, fight?.fighters, controlled_character_id]
   )
-  const my_class =
-    my_character?.classe ?? my_character?.class_id ?? fight?.fighters.get(controlled_character_id)?.class_id ?? null
+  const my_class = character_class_of(my_character, fight, controlled_character_id)
   // The character's LEVEL gates which class spells are UNLOCKED in the bar (the chain re-checks each spell's
   // min_char_level at cast). A live expedition's char_level wins (matches SpellBar's precedence), else the xp
   // curve — belt-and-suspenders for a non-expedition read.
   const expedition_level = use_expedition((s) =>
     s.expedition?.status === EXPEDITION_ACTIVE ? s.expedition.char_level : null
   )
-  const my_level =
-    controlled_character_id === character_id && expedition_level != null
-      ? expedition_level
-      : xp_progress(my_character?.experience ?? 0).level
+  const my_level = character_level_of(controlled_character_id, character_id, expedition_level, my_character)
   // The REAL on-chain spells this character can cast (unlock_level ≤ level), each carrying its SpellTemplate
   // object_id — the single source the bar renders and the cast stages. A class with no seed → [] (weapon+move).
   const my_spells = useMemo(() => resolve_class_spells(my_class, my_level), [my_class, my_level, spell_corpus])
@@ -168,17 +183,13 @@ export function useDungeonBoardState() {
   // My escrow seat + turn ownership — resolved BEFORE the cast/weapon params so the weapon strike prices its
   // reach/AP off the SAME on-chain Weapon the seat carries (participant.move). The fight-slice key is the
   // controlled character id; owner address remains authorization metadata.
-  const entity_id = fight?.my_entity_id ?? null
-  const me = dungeon?.escrow.find((p) => (p.character ?? p.character_id) === entity_id) ?? null
-  const active_fighter = fight?.fighters.get(entity_id) ?? null
+  const { entity_id, me, active_fighter, my_turn } = dungeon_seat_state(dungeon, fight)
   // THE ARMING DOOR, READ (#1993 WP2b — was a third home of it): `fight.input_armed` is the core's own
   // `turn_playable ⋀ !is_over`, and `turn_playable` (#1808) is chain seat ⋀ nothing replaying locally ⋀ the
   // chain's mob-resolution budget SPENT. The old spelling here (`active_entity_id === me ⋀ !presenting`) was the
   // PRE-#1808 boundary: it armed the affordance the instant the local paced replay drained, which can run far
   // ahead of the chain window the same turn's deadline was widened by — so every gate below (reachable,
   // castable, the board chrome) offered a turn the chain had not handed over yet.
-  const my_turn = fight?.input_armed === true
-
   // THE SEAT'S RANK (#1077) — a spell's range, AP cost, cooldown, per-turn caps and effects are all PER-LEVEL
   // facts, and the level this seat casts at rides its escrow row's composed build (`spell_levels`). `level_row`
   // is the ONE reader every gate below goes through, so the click gate, the wash and the prediction can never
@@ -212,16 +223,10 @@ export function useDungeonBoardState() {
   // with abort 104). `me.ap/mp` are the PRESENTED ordered-prefix values: every draft cost/grant/forfeit has already
   // folded exactly once. The committed values below are only the reconnect fallback when that projection is absent;
   // subtracting the legacy move/cast ledgers again would double-charge the same draft.
-  const my_ap = me?.committed?.ap ?? 0
-  const my_mp = me?.committed?.mp ?? 0
-  const my_pending_mp = me?.committed?.pending_mp ?? 0
-
   // The presented MP is the exact ordered draft prefix: earlier moves/tackle forfeits are spent and any cast grant
   // already drafted before the NEXT move is live (the claimed mid-turn grants ride the presented pool via
   // budget_claims — the ordered fold and the claims machinery converge here). The committed pool remains the
   // reconnect fallback.
-  const my_mp_eff = Math.max(0, me?.mp ?? my_mp)
-
   // ── CLIENT AP BUDGET (SPEC §17.27; regression: unlimited weapon-strike spam) — the chain lets a
   //    turn repeat weapon strikes / spells ONLY while AP lasts (each costs its own ap_cost; spells add a
   //    casts_per_turn cap, but every seeded spell today is 255 = UNLIMITED, so AP is the sole live limiter). The
@@ -229,16 +234,7 @@ export function useDungeonBoardState() {
   //    me.ap, and `castable` goes EMPTY (greyed sockets) once the budget can't afford another — so the optimistic
   //    beat can NEVER play for an unaffordable action, and the excess phantom beats that read as "mobs regaining
   //    health" (uncommitted casts folding back) are gone: every beat is now 1:1 with a committable action. ──
-  const CASTS_UNLIMITED = 255 // spell_bands::CASTS_UNLIMITED — a 255/0 cap means no per-turn limit
   // Like MP, presented AP has already folded every earlier cast and deterministic tackle forfeit in draft order.
-  const remaining_ap = Math.max(0, me?.ap ?? my_ap)
-  // casts_per_turn gate for the ARMED spell (the weapon has none). Count how many of it are already queued; at the
-  // cap no more are castable. cpt_cap === Infinity for a weapon or any unlimited (255/0) spell — AP alone limits.
-  const armed_id = fight?.armed_spell_id ?? null
-  const cpt = armed_id === WEAPON_ATTACK_ID ? Infinity : (active_level?.casts_per_turn ?? CASTS_UNLIMITED)
-  const cpt_cap = cpt === CASTS_UNLIMITED || cpt === 0 ? Infinity : cpt
-  const armed_key = armed_id === WEAPON_ATTACK_ID ? WEAPON_ATTACK_ID : (active_spell?.name_key ?? null)
-  const armed_queued = cast_path.reduce((n, e) => (e.spell_key === armed_key ? n + 1 : n), 0)
   // FIX 4 — the cast.move::enforce_and_record_cast gates the AP/casts_per_turn pair above does NOT model:
   //  • COOLDOWN (cross-turn): the armed spell is undraftable while `my_turn_no − last_cast_turn ≤ cooldown`.
   //  • casts_per_turn under a cooldown: a C>0 spell aborts a SAME-turn recast on-chain (t − last_turn = 0 ≯ C),
@@ -246,12 +242,16 @@ export function useDungeonBoardState() {
   //  • casts_per_target (per-cell): at the cap, that CELL drops from the castable footprint (other cells stay).
   // The weapon has none of these. `armed_key` is the primary's name_key even unarmed, so the unarmed quick-cast
   // is gated + recorded on the SAME key (no asymmetry).
-  const armed_cooldown = armed_id === WEAPON_ATTACK_ID ? 0 : (active_level?.cooldown ?? 0)
-  const armed_on_cd = on_cooldown(last_cast_turn[armed_key], my_turn_no, armed_cooldown)
-  const armed_cd_left = cooldown_left(last_cast_turn[armed_key], my_turn_no, armed_cooldown)
-  const cpt_cap_eff = armed_cooldown > 0 ? 1 : cpt_cap
-  // The authored per-target cap rides raw into `can_target`'s context callback.
-  const cpt_target_authored = armed_id === WEAPON_ATTACK_ID ? Infinity : active_level?.casts_per_target
+  const {
+    my_mp_eff,
+    remaining_ap,
+    armed_key,
+    armed_queued,
+    armed_on_cd,
+    armed_cd_left,
+    cpt_cap_eff,
+    cpt_target_authored,
+  } = cast_budget_state({ me, fight, cast_path, active_level, active_spell, last_cast_turn, my_turn_no })
 
   // D108/D109 (Decision-A: the chain-SEEDED cell IS a valid pick) — the encoded escrow cell (`me.cell`)
   // snapped into the contract's legal start set (placement_cells[0]) so READY's place_at never EBadStartCell.
@@ -401,22 +401,31 @@ export function useDungeonBoardState() {
     // the armed spell's casts_per_turn cap is reached — greyed sockets + no beat for an unaffordable action.
     // FIX 4: + the cross-turn COOLDOWN (armed_on_cd) and the cooldown-folded per-turn cap (cpt_cap_eff) join the
     // AP / casts_per_turn empties — an on-cooldown or already-once-cast (cd>0) spell lights NO castable cell.
-    if (
-      !me ||
-      !my_turn ||
-      remaining_ap < cast_params.ap_cost ||
-      armed_queued >= cpt_cap_eff ||
-      armed_on_cd ||
-      caster_cell == null
-    )
-      return new Set()
+    return castable_cells({
+      me,
+      my_turn,
+      remaining_ap,
+      cast_params,
+      armed_queued,
+      cpt_cap_eff,
+      armed_on_cd,
+      caster_cell,
+      obstacles,
+      occupied,
+      optimistic_vacated,
+      fight,
+      active_level,
+      active_fighter,
+      dungeon,
+      cast_path,
+      armed_key,
+      cpt_target_authored,
+    })
     // D284 twin of dungeon.move los_obstacles(): the sight-line clears through `obstacles ∪ living bodies`, not
     // bare obstacles — a mob standing BEHIND another fighter is not castable. The caster (me) is excluded: its
     // firing cell is caster_cell (self-excluded by losBlocks) and skipping its stale pre-move chain cell keeps the
     // vacated cell see-through after a drafted move. line_of_sight self-excludes both endpoints, so a body ON the
     // target stays hittable — players never click into an on-chain LOS abort.
-    const los_blockers = [...obstacles]
-    for (const [c, o] of occupied) if (o.alive && c !== me.cell && !optimistic_vacated.has(c)) los_blockers.push(c)
     // P1 SELF-CAST (#55): an ARMED spell aims by the sim's `can_target` predicate — self at rmin 0, allies and
     // EMPTY cells are legal aims; team is a per-effect concern and flush_commit ships void casts. free_cell
     // (traps) drops occupied cells (the chain rejects them). UNARMED keeps the mob-only primary
@@ -424,51 +433,6 @@ export function useDungeonBoardState() {
     // click into a cast). The WEAPON (S-12) is EXCLUDED from this spell-geometry branch — cast::weapon_strike
     // demands a LIVING enemy ON the target cell (never an empty aim), so it falls through to the mob-only loop
     // below, gated by the SAME weapon [1, reach] cast_params + LOS the chain checks.
-    if (fight?.armed_spell_id && fight.armed_spell_id !== WEAPON_ATTACK_ID) {
-      const lvl = active_level
-      // 1.29 TRAP-STACKING BAN: a trap-PLACING spell may not target a cell already anchoring
-      // MY live trap — the chain aborts it (cast::ECellAlreadyTrapped), so the gate greys it here from the fold's
-      // engine_view.my_traps (the ONE client trap home — the sim door reads the SAME projection, so legality and
-      // prediction never diverge; an ENEMY's invisible trap stays unknowable and surfaces as the honest abort toast).
-      const my_trap_cells = places_trap(lvl ?? {}) && fight?.fight_id ? fight.my_traps : undefined
-      const footprint = cast_range_set_dungeon(
-        lvl ?? [cast_params.range_min, cast_params.range_max],
-        { ...active_fighter, cell: decode(caster_cell) },
-        dungeon_grid_of(dungeon),
-        los_blockers,
-        {
-          los: lvl?.line_of_sight !== false,
-          linear: lvl?.linear === true,
-          free_cell: lvl?.free_cell === true,
-          modifiable_range: lvl?.modifiable_range === true,
-          trap_cells: my_trap_cells,
-          target_cap_reached: (cell) => target_cap_reached(cast_path, armed_key, cell, cpt_target_authored),
-        }
-      )
-      return footprint
-    }
-    const quick_level = fight?.armed_spell_id === WEAPON_ATTACK_ID ? null : active_level
-    const footprint = cast_range_set_dungeon(
-      [cast_params.range_min, cast_params.range_max],
-      { ...active_fighter, cell: decode(caster_cell) },
-      dungeon_grid_of(dungeon),
-      los_blockers,
-      {
-        los: true,
-        linear: quick_level?.linear === true,
-        modifiable_range: quick_level?.modifiable_range === true,
-        target_cap_reached:
-          fight?.armed_spell_id === WEAPON_ATTACK_ID
-            ? null
-            : (cell) => target_cap_reached(cast_path, armed_key, cell, cpt_target_authored),
-      }
-    )
-    const out = new Set()
-    for (const [cell, o] of occupied) {
-      if (o.kind !== 'mob' || !o.alive) continue
-      if (footprint.has(cell)) out.add(cell)
-    }
-    return out
   }, [
     me,
     my_turn,

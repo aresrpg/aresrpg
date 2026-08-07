@@ -11,7 +11,12 @@ import { projected_hp, character_max_hp } from '../../../chain/read_character.js
 import { display_rolled_stats, has_authored_stats } from '../../../chain/rolled_stats.js'
 import { safe_json_parse } from '../../../safe_json_parse'
 import { cosmetic_icon_of } from '../../cosmetic_icons.js'
-import { chain_icon_slug, group_by_stack_identity, is_cosmetic_item, item_type_equip_slot } from '../../item_classification'
+import {
+  chain_icon_slug,
+  group_by_stack_identity,
+  is_cosmetic_item,
+  item_type_equip_slot,
+} from '../../item_classification'
 import { equip_slot_accepts, equip_slot_kind_of } from './inventory_context_actions'
 
 // Combat head armour and cosmetic hats are distinct on-chain slots.
@@ -48,6 +53,44 @@ export const RING_SLOTS = ['left_ring', 'right_ring']
  *  cosmetic slots (they are 1:1). ONE home: the projector below, the worn-override merge, and the Accept
  *  path's worn receipt (Inventory.jsx) all read this list. */
 export const WORN_CATEGORIES = /** @type {readonly string[]} */ (['title', 'hat', 'cloak'])
+
+export function equipment_change_set(equipment, real_equipment, current_items) {
+  const current_by_id = new Map(current_items.map((item) => [item.id, item]))
+  /** @type {{ item_id: string, slot: string, item_type: string, item_template_id: string|null }[]} */
+  const to_equip = []
+  /** @type {{ item_id: string, slot: string }[]} */
+  const to_unequip = []
+  /** @type {any[]} */
+  const equipped_full = []
+  /** @type {any[]} */
+  const unequipped_full = []
+  for (const slot of EQUIPMENT_SLOTS) {
+    const next = equipment[slot]
+    const prev = real_equipment[slot]
+    if (next?.id === prev?.id) continue
+    if (next) {
+      // kiosk_id/kiosk_cap_id ride the SAME fresh preflight row as item_template_id — the /v1 owner-items
+      // truth of WHICH kiosk currently holds this item (get_owned_items threads it on every row). equip_actions
+      // resolves against it only when it names a kiosk other than the character's (S-57 sibling-kiosk law) —
+      // a pet bought before this wallet's kiosks converged otherwise hardwired the character's kiosk and
+      // aborted "This item belongs to a different kiosk."
+      to_equip.push({
+        item_id: next.id,
+        slot,
+        item_type: next.item_type,
+        item_template_id: current_by_id.get(next.id)?.template_id ?? null,
+        kiosk_id: current_by_id.get(next.id)?.kiosk_id ?? null,
+        kiosk_cap_id: current_by_id.get(next.id)?.kiosk_cap_id ?? null,
+      })
+      equipped_full.push(next)
+    }
+    if (prev) {
+      to_unequip.push({ item_id: prev.id, slot })
+      unequipped_full.push(prev)
+    }
+  }
+  return { to_equip, to_unequip, equipped_full, unequipped_full }
+}
 
 /** Resolve authored icon identity without ever falling back to an object id. `slug_by_name` is the generated
  * item-catalog join used by bag rows; cosmetic_icon_of consumes the authored cosmetic alias SSOT. */

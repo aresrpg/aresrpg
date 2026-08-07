@@ -12,24 +12,32 @@
 
 import { describe, expect, test } from 'bun:test'
 
+const flush_sources = async () => {
+  const [commit, casts] = await Promise.all([
+    Bun.file(new URL('./DungeonBoardCommit.jsx', import.meta.url)).text(),
+    Bun.file(new URL('./dungeon-board-commit-casts.js', import.meta.url)).text(),
+  ])
+  const start = commit.indexOf('const flush_commit = async')
+  const end = commit.indexOf('auto_submit_ref.current =', start)
+  expect(start).toBeGreaterThan(-1)
+  expect(end).toBeGreaterThan(start)
+  const commit_body = commit.slice(start, end)
+  return { commit, casts, commit_body, body: `${commit_body}\n${casts}` }
+}
+
 describe('DungeonBoard flush — each cast validated against the evolved sequence, not the optimistic occupancy', () => {
   test('RED-FIRST #398: flush composes and evolves the one ordered staged stream, including moves', async () => {
+    const { commit, casts, body } = await flush_sources()
     const src = await Promise.all([
-      Bun.file(new URL('./DungeonBoardCommit.jsx', import.meta.url)).text(),
       Bun.file(new URL('./DungeonBoardInput.jsx', import.meta.url)).text(),
       Bun.file(new URL('./DungeonBoardState.jsx', import.meta.url)).text(),
-    ]).then((parts) => parts.join('\n'))
-    const start = src.indexOf('const flush_commit = async')
-    const end = src.indexOf('auto_submit_ref.current =', start)
-    expect(start).toBeGreaterThan(-1)
-    expect(end).toBeGreaterThan(start)
-    const body = src.slice(start, end)
+    ]).then((parts) => [commit, casts, ...parts].join('\n'))
 
     // One composition seam owns the draft order. The same full action stream (move/cast interleaved) drives
     // validation, so a cast snapshot naturally observes every preceding move before that exact stream ships.
     expect(body).toMatch(/compose_staged_turn\(/)
     const evolve_start = body.indexOf('evolve_flush_casts({')
-    const evolve_end = body.indexOf('\n    })', evolve_start)
+    const evolve_end = body.indexOf('\n  })', evolve_start)
     expect(evolve_start).toBeGreaterThan(-1)
     expect(evolve_end).toBeGreaterThan(evolve_start)
     const evolve_call = body.slice(evolve_start, evolve_end)
@@ -48,34 +56,26 @@ describe('DungeonBoard flush — each cast validated against the evolved sequenc
   })
 
   test('flush_commit sources per-cast occupancy from evolve_flush_casts (committed base + prior displacements)', async () => {
-    const src = await Bun.file(new URL('./DungeonBoardCommit.jsx', import.meta.url)).text()
-    const start = src.indexOf('const flush_commit = async')
-    const end = src.indexOf('auto_submit_ref.current =', start)
-    expect(start).toBeGreaterThan(-1)
-    expect(end).toBeGreaterThan(start)
-    const body = src.slice(start, end)
+    const { body } = await flush_sources()
     // the flush evolves the COMMITTED chain state through the drafted casts (the sim door), keyed PER cast…
     expect(body).toMatch(/evolve_flush_casts\(/)
     expect(body).toMatch(/committed:\s*committed_truth\(/)
     expect(body).toMatch(/evolved\[cast_i\]/)
-    // …and the per-cast evolved occupancy `occ` — NEVER the eye-state `occupied` — feeds the blocker facts passed
+    // …and the per-cast evolved occupancy — NEVER the eye-state `occupied` — feeds the blocker facts passed
     // into the shared can_target-derived footprint. Weapon liveness still reads the same evolved index.
-    expect(body).toMatch(/const tgt = occ\.get\(target_cell\)/)
-    expect(body).toMatch(/for \(const \[c, o\] of occ\)/)
+    expect(body).toMatch(/const target = occupied\.get\(target_cell\)/)
+    expect(body).toMatch(/for \(const \[cell, occupant\] of occupied\)/)
     expect(body).toMatch(/dungeon_grid_of\(dungeon\),\s*los,/)
     expect(body).not.toMatch(/target_is_mob:\s*occupied\.get/)
   })
 
   test('#398: a cast after a trap-killed move is dropped before it can revert the PTB', async () => {
-    const src = await Bun.file(new URL('./DungeonBoardCommit.jsx', import.meta.url)).text()
-    const start = src.indexOf('const flush_commit = async')
-    const end = src.indexOf('auto_submit_ref.current =', start)
-    const body = src.slice(start, end)
+    const { body } = await flush_sources()
 
     // evolve_flush_casts marks the caster row dead at this cast's exact slot. The flush must consume that snapshot
     // before geometry/composition; shipping act_cast after act_move killed the actor aborts EActorDead on-chain.
-    expect(body).toMatch(/const caster_alive = \[\.\.\.occ\.values\(\)\]/)
-    expect(body).toMatch(/if \(caster_alive === false\) \{[\s\S]{0,180}drop_entry\([\s\S]{0,180}continue/)
+    expect(body).toMatch(/const caster_alive = \[\.\.\.current_occupied\.values\(\)\]/)
+    expect(body).toMatch(/if \(caster_alive === false\) return drop\(CAST_DROP_STALE_TARGET\)/)
   })
 })
 
@@ -97,10 +97,7 @@ describe('DungeonBoard auto-pass toast policy', () => {
 // same un-driveable-component rationale as the describe above (source-contract, no browser/jsdom).
 describe('DungeonBoard flush — a drafted cast auto-retargets onto its moved target (txs.retarget_cast wiring)', () => {
   test('flush_commit resolves the target fighter through the EYE-STATE occupancy, calls retarget_cast, and ships the retargeted cell', async () => {
-    const src = await Bun.file(new URL('./DungeonBoardCommit.jsx', import.meta.url)).text()
-    const start = src.indexOf('const flush_commit = async')
-    const end = src.indexOf('auto_submit_ref.current =', start)
-    const body = src.slice(start, end)
+    const { body } = await flush_sources()
     // identity resolution: the ONLY sanctioned `occupied.get(entry.cell)` call — the eye-state still remembers the
     // click-time cell once a fresher committed/evolved read has moved the fighter on, which is exactly why it (and
     // not `occ`) is the right source for "who did I click on". #321: gated by ground_targeted (a free_cell cast
@@ -115,9 +112,9 @@ describe('DungeonBoard flush — a drafted cast auto-retargets onto its moved ta
     expect(body).toMatch(/target_cell:\s*entry\.cell/)
     expect(body).toMatch(/committed_cell:\s*target_committed_cell/)
     expect(body).toMatch(/reaches:\s*\(cell\)\s*=>\s*footprint\.has\(cell\)/)
-    expect(body).toMatch(/target_cell = retargeted\.target/)
-    expect(body).toMatch(/kind: 2, target: target_cell/)
-    expect(body).toMatch(/kind: 1,\s*\n\s*target: target_cell/)
+    expect(body).toMatch(/const target_cell = retargeted\.target/)
+    expect(body).toMatch(/kind: 2, target: verdict\.target_cell/)
+    expect(body).toMatch(/kind: 1,\s*\n\s*target: verdict\.target_cell/)
     // An unreachable retarget reports only a domain drop. Toast policy is absent from this re-validation pass;
     // the actual local commit-removal event is the sole feedback input (locked below).
     expect(body).toMatch(/if \(retargeted\.dropped\)/)
@@ -130,7 +127,7 @@ describe('DungeonBoard flush — a drafted cast auto-retargets onto its moved ta
   // legacy settlement derivation has no reader in this file at all. Behavior is pinned in
   // @aresrpg/fight/test/truth_owner.test.js on a state where the two folds provably disagree.
   test('#1027: every committed read in the board goes through the core-backed door, never the legacy fold', async () => {
-    const src = await Bun.file(new URL('./DungeonBoardCommit.jsx', import.meta.url)).text()
+    const { body: src } = await flush_sources()
     expect(src).not.toMatch(/committed_state/)
     expect(src).toMatch(/target_committed_cell = eye_target[\s\S]{0,40}committed_truth\(fight_store\.getState\(\)\)/)
   })
@@ -147,13 +144,10 @@ describe('DungeonBoard flush — a drafted cast auto-retargets onto its moved ta
 // same un-driveable-component rationale as the describe blocks above.
 describe('DungeonBoard flush — the footprint anchor evolves PER CAST, and ground-targeted casts never target-revalidate (#321)', () => {
   test('flush_commit seeds evolve_flush_casts at the sequence anchor and reads its per-cast caster_cell as EVERY cast’s footprint origin', async () => {
-    const src = await Bun.file(new URL('./DungeonBoardCommit.jsx', import.meta.url)).text()
-    const start = src.indexOf('const flush_commit = async')
-    const end = src.indexOf('auto_submit_ref.current =', start)
-    const body = src.slice(start, end)
+    const { body } = await flush_sources()
     // evolve_flush_casts receives the whole ordered action sequence. It starts from committed truth internally,
     // then each drafted move/cast evolves the caster before the next cast snapshot.
-    expect(body).toMatch(/actions:\s*evolution_actions,/)
+    expect(body).toMatch(/actions:\s*evolution_actions_of\(/)
     expect(body).not.toMatch(/caster_seed_cell:/)
     // every cast reads ITS OWN evolved cell — never falls back to silently re-reading the raw pre-loop anchor
     // while some other cast in the SAME queue relocates the caster.
@@ -167,26 +161,20 @@ describe('DungeonBoard flush — the footprint anchor evolves PER CAST, and grou
   })
 
   test('a free_cell (ground-targeted) cast never resolves eye_target — cells do not retarget or drop on account of who now stands there', async () => {
-    const src = await Bun.file(new URL('./DungeonBoardCommit.jsx', import.meta.url)).text()
-    const start = src.indexOf('const flush_commit = async')
-    const end = src.indexOf('auto_submit_ref.current =', start)
-    const body = src.slice(start, end)
+    const { body } = await flush_sources()
     // `level_row` is the board's ONE seat-rank reader (#1077) — the drafted spell's flags come off the level the
     // seat actually casts at, never a hardcoded rank 1.
     expect(body).toMatch(/const ground_targeted = !is_weapon && level_row\(drafted_spell\)\?\.free_cell === true/)
   })
 
   test('only the successful local commit-drop event can emit the named out-of-reach toast', async () => {
-    const src = await Bun.file(new URL('./DungeonBoardCommit.jsx', import.meta.url)).text()
-    const start = src.indexOf('const flush_commit = async')
-    const end = src.indexOf('auto_submit_ref.current =', start)
-    const body = src.slice(start, end)
-    const committed = body.indexOf('const ok = await commit_turn(actions')
-    const emitted = body.indexOf('emit_local_cast_drop_toast({')
+    const { commit_body, body } = await flush_sources()
+    const committed = commit_body.indexOf('const ok = await commit_turn(actions')
+    const emitted = commit_body.indexOf('emit_local_cast_drop_toast({')
 
     // The cancellation record is created exactly where drop_entry omits the cast from cast_actions.
-    expect((body.match(/cast_drops = \[\s+\.\.\.cast_drops,\s+local_commit_cast_drop\(/g) ?? []).length).toBe(1)
-    expect((body.match(/drop_entry\(CAST_DROP_TARGET_OUT_OF_REACH\)/g) ?? []).length).toBe(2)
+    expect((body.match(/drop:\s*local_commit_cast_drop\(/g) ?? []).length).toBe(1)
+    expect((body.match(/drop_reason:\s*CAST_DROP_TARGET_OUT_OF_REACH/g) ?? []).length).toBe(2)
     // Consumption is downstream of the real commit result and explicitly gated/scoped by it.
     expect(committed).toBeGreaterThan(-1)
     expect(emitted).toBeGreaterThan(committed)

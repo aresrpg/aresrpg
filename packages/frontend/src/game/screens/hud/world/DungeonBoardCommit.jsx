@@ -5,36 +5,23 @@
 import { useEffect } from 'react'
 
 import { push_event_toast } from '../../../core/toast.js'
-import { WEAPON_ATTACK_ID, WEAPON_ATTACK_RANGE } from '../../../core/modules/fight.js'
 import { emit_hit_correction } from '../../../core/modules/fight_log_correction.js'
 import { context } from '../../../store.js'
 import { use_dungeon } from '../../../../world-shell/dungeon_store.js'
 import {
   compose_staged_turn,
-  retarget_cast,
   staged_turn_paths,
   subscribe_commit_due,
   subscribe_divergence,
   subscribe_turn_lost,
 } from '@aresrpg/fight/txs'
 import { fight_store } from '@aresrpg/fight/store'
-import { committed_mob_hp, committed_truth, fight_view } from '@aresrpg/fight/project'
-import {
-  CAST_DROP_STALE_TARGET,
-  CAST_DROP_TARGET_OUT_OF_REACH,
-  local_commit_cast_drop,
-  strike_flush_illegal,
-} from '@aresrpg/fight/turn_commit'
-import { evolve_flush_casts } from '@aresrpg/fight/predict_cast'
-import { places_trap } from '@aresrpg/sim/spell_targeting'
-import { decode } from '@aresrpg/fight/los'
-import { cast_range_set_dungeon } from '../../../../fight-engine/overlay_intents.js'
-import { target_cap_reached } from '@aresrpg/fight/draft_budget'
-import { dungeon_grid_of } from '../../dungeon-grid.js'
+import { fight_view } from '@aresrpg/fight/project'
+import { CAST_DROP_STALE_TARGET } from '@aresrpg/fight/turn_commit'
 import { game_log } from '../../../../core/log.js'
 import { fight_state_trace } from '../../../../world-shell/fight_state_trace.js'
 import { emit_local_cast_drop_toast } from './cast_drop_toast.js'
-import { evolution_actions_of } from './DungeonBoardState.jsx'
+import { validate_commit_casts } from './dungeon-board-commit-casts.js'
 
 // The two facts a history correction reads, both LIVE (#2151): the chat rows it may address, and the fighters
 // map its names resolve through — the same pair every combat-log emitter is handed, assembled here because this
@@ -104,212 +91,24 @@ export function useDungeonBoardCommit(state, t) {
     const move_actions = (draft_actions ?? [])
       .filter((action) => action.kind === 0)
       .map((action) => ({ kind: 0, target: action.target }))
-    const cast_queue = (draft_actions ?? [])
-      .filter((action) => action.kind === 1 || action.kind === 2)
-      .map((action) => ({ cell: action.target, spell_key: action.spell_key ?? null }))
-    // S-12 §17.27 STACKED CASTS: ship EVERY queued cast/weapon (the chain accepts N/turn, AP-limited on-chain). Each
-    // entry PINNED its own spell_key at draft time, so a disarm/re-arm between pick and flush can't swap what
-    // commits. Revalidate each against CURRENT state with the SAME twin the click gate paints (a co-op mob shift /
-    // an earlier action can invalidate a target between pick and flush). The reducer-owned staged array is the ONE
-    // order source for both this validation and the submitted PTB; rejected casts keep an empty slot during
-    // composition, so later survivors never slide ahead of an intervening move.
-    const committed_caster_cell = me?.committed?.cell ?? me?.cell ?? null
-    const caster_seat = resolve_ref(entity_id)?.idx ?? -1
-    // ⑭ EVOLVED-SEQUENCE VALIDATION (regression: placing a trap behind a mob then pushing it on — the turn
-    // committed without the spell, though everything was valid): every action reads LIVE evolved state, so a cast
-    // is judged against the committed base folded through every PRIOR drafted action. Casts evolve displacement /
-    // kills through the sim door; moves immediately relocate the caster before a following cast takes its snapshot.
-    // This is also the #321 per-cast caster anchor: an earlier teleport, ordinary move, or both determine the exact
-    // footprint origin the contract reads when this cast fires.
-    const evolution_actions = evolution_actions_of(draft_actions, my_spells, me?.weapon)
-    const evolved = evolve_flush_casts({
-      view: fight_view(),
-      committed: committed_truth(fight_store.getState()),
-      caster_id: entity_id,
-      actions: evolution_actions,
+    // S-12 §17.27 STACKED CASTS: the ordered validator keeps rejected casts in empty slots, so later survivors
+    // never slide ahead of an intervening move. It also returns the trap/drop records consumed below.
+    const { cast_actions, trap_placed, trap_dropped, dropped, cast_drops } = validate_commit_casts({
+      draft_actions,
+      my_spells,
+      me,
+      fight,
+      entity_id,
       resolve_ref,
+      occupied,
+      obstacles,
+      dungeon,
+      level_row,
+      cast_params,
+      active_fighter,
+      background,
+      t,
     })
-    const cast_actions = Array(cast_queue.length).fill(null)
-    // Trap cells committed THIS flush (survivors → chain truth) vs DROPPED trap drafts (their optimistic
-    // click-time marker — trap paint at cast, design ruling 2026-07-17 — must roll back). The keyless read layer drops
-    // Fight.fx, so the client mirrors its own placed traps; markers live until sprung / fight end.
-    const trap_placed = []
-    let trap_dropped = []
-    let dropped = 0
-    // Only this local commit-removal edge creates cast-drop events. Re-validation, evolved fighters, canonical
-    // ingress, claim retirement, peers, and mobs return domain/state results but cannot request UI; the successful
-    // commit consumes these records below.
-    let cast_drops = []
-    if (me && dungeon && committed_caster_cell != null)
-      for (const [cast_i, entry] of (cast_queue ?? []).entries()) {
-        const is_weapon = entry.spell_key === WEAPON_ATTACK_ID
-        const drafted_spell = is_weapon ? null : (my_spells.find((sp) => sp.name_key === entry.spell_key) ?? null)
-        // #321 GROUND-TARGET EXEMPTION: a free_cell spell (trap/glyph/teleport) targets the CELL itself, not a
-        // fighter standing on it — cells don't move, so it must never enter the fighter retarget/drop path below,
-        // whatever occupies that cell by flush time (a body walking onto a drafted trap cell must not un-draft it).
-        const ground_targeted = !is_weapon && level_row(drafted_spell)?.free_cell === true
-        // #321 PER-CAST ANCHOR: this cast's own footprint origin — the caster's cell evolved through casts
-        // 1..cast_i-1's OWN displacement effects (a drafted teleport/dash among them), never the sequence's
-        // static starting cell. That staleness was the drop-valid-stationary-targets class: an in-range target
-        // fell out of a footprint drawn from the caster's pre-relocation corner of the board.
-        const cast_anchor = evolved[cast_i]?.caster_cell ?? committed_caster_cell
-        const spell_display_name = is_weapon
-          ? t('fight.weapon_attack')
-          : t(`spells.spell_${entry.spell_key}`, { defaultValue: drafted_spell?.name ?? entry.spell_key })
-        // ⑭ the board the chain evolves to JUST BEFORE this cast fires; the eye-state occupancy is the fallback.
-        const occ = evolved[cast_i]?.occupied ?? occupied
-        const caster_alive = [...occ.values()].find(
-          (fighter) => fighter.kind === 'player' && fighter.idx === caster_seat
-        )?.alive
-        const los = [...obstacles]
-        for (const [c, o] of occ) if (o.alive && !(o.kind === 'player' && o.idx === caster_seat)) los.push(c)
-        // Resolve the drafted cast's target FIGHTER through the EYE-STATE occupancy (`occupied` — the last-rendered
-        // board; it still shows the click-time cell even once a fresher committed/evolved read has moved the
-        // fighter on, which is exactly what makes it useful here). No fighter found (a void cast, the ground
-        // itself, or a ground_targeted cast — #321, cells don't move) resolves a null committed_cell —
-        // txs.retarget_cast's own null branch composes the drafted cell unchanged, so none of those are touched by
-        // this lookup. Same p{seat}/m{idx} key format base_from_view writes (fold.js) — mob_key/seat_key aren't
-        // exported; `occupied`'s idx already matches that indexing.
-        const eye_target = ground_targeted ? null : occupied.get(entry.cell)
-        const target_committed_cell = eye_target
-          ? (committed_truth(fight_store.getState()).fighters?.[
-              `${eye_target.kind === 'mob' ? 'm' : 'p'}${eye_target.idx}`
-            ]?.cell ?? null)
-          : null
-        const drop_entry = (reason) => {
-          game_log('board', `flush_commit: staged strike dropped — ${reason}`, {
-            cell: entry.cell,
-            anchor: cast_anchor,
-            weapon: is_weapon,
-            background,
-          })
-          dropped += 1
-          cast_drops = [
-            ...cast_drops,
-            local_commit_cast_drop({ actor_id: entity_id, spell_name: spell_display_name, reason }),
-          ]
-          // a dropped trap draft never reaches the chain — its click-time optimistic marker rolls back below.
-          if (places_trap(level_row(drafted_spell) ?? {}))
-            trap_dropped = [...trap_dropped, entry.cell]
-        }
-        // A prior ordered move may have crossed a lethal known trap. The contract commits that death, but any
-        // following act_cast would fail begin_living_action and revert the PTB, so omit the now-impossible suffix cast.
-        if (caster_alive === false) {
-          drop_entry(CAST_DROP_STALE_TARGET)
-          continue
-        }
-        let illegal
-        let target_cell = entry.cell
-        if (is_weapon) {
-          // WEAPON: [1, reach] + LOS + a LIVING enemy on the cell — the exact cast::weapon_strike gate. reach off the
-          // seat's on-chain Weapon (independent of the current armed state — the draft is what commits).
-          const reach = me.weapon?.reach ?? WEAPON_ATTACK_RANGE[1]
-          const footprint = cast_range_set_dungeon(
-            [1, reach],
-            { cell: decode(cast_anchor) },
-            dungeon_grid_of(dungeon),
-            los,
-            { los: true, linear: false }
-          )
-          const retargeted = retarget_cast({
-            target_cell: entry.cell,
-            committed_cell: target_committed_cell,
-            reaches: (cell) => footprint.has(cell),
-          })
-          if (retargeted.dropped) {
-            drop_entry(CAST_DROP_TARGET_OUT_OF_REACH)
-            continue
-          }
-          target_cell = retargeted.target
-          const tgt = occ.get(target_cell)
-          // Liveness is CHAIN-COMMITTED (committed_mob_hp — my drafts EXCLUDED), never the optimistic `tgt.alive`:
-          // this swing's OWN kill already folded the mob dead, so gating on the optimistic corpse dropped a
-          // mob-killing strike "as if I did nothing" and the receipt then revived it (regression ①/⑧b). The
-          // chain's act_weapon validates against live on-chain hp BEFORE applying, so the finishing swing is legal.
-          illegal = strike_flush_illegal({
-            in_footprint: footprint.has(target_cell),
-            is_weapon: true,
-            target_is_mob: tgt?.kind === 'mob',
-            committed_target_alive: tgt?.kind === 'mob' && (committed_mob_hp(fight_store.getState(), tgt.idx) ?? 0) > 0,
-          })
-        } else {
-          // The DRAFTED spell (pinned at pick) judges the cast — a disarm/re-arm can't use the wrong spell's flags.
-          const lvl = level_row(drafted_spell)
-          const range = lvl?.range ?? [cast_params.range_min, cast_params.range_max]
-          const places_trap_at_level = places_trap(lvl ?? {})
-          // SELF-ONLY BUFF (#321/#323): rmax 0 (invisibility/vanish — the spellbook 'self' marker) targets the
-          // caster's OWN tile. It can never move out of reach of itself, so it NEVER re-validates (the twin of the
-          // trap rule, cells don't move) — commit it on the caster's CURRENT cell (`cast_anchor`, this cast's own
-          // per-cast-evolved cell — never dropped). A stale adoption that shifted the eye/committed cell used to
-          // false-drop it, reverting the buff AND the MP it granted — the "turn auto-ends right after a cast, the
-          // cast then reverts" report.
-          const self_cast = (range?.[1] ?? 0) === 0
-          const footprint = cast_range_set_dungeon(
-            lvl ?? range,
-            { ...active_fighter, cell: decode(cast_anchor) },
-            dungeon_grid_of(dungeon),
-            los,
-            {
-              los: lvl?.line_of_sight !== false,
-              linear: lvl?.linear === true,
-              free_cell: lvl?.free_cell === true,
-              modifiable_range: lvl?.modifiable_range === true,
-              // The optimistic ledger already contains THIS draft's marker. Remove its own anchor from the known
-              // pre-cast facts; any earlier duplicate was refused by the same predicate at click time.
-              trap_cells: places_trap_at_level ? (fight?.my_traps ?? []).filter((cell) => cell !== entry.cell) : null,
-              target_cap_reached: cell =>
-                target_cap_reached(
-                  cast_queue.slice(0, cast_i),
-                  entry.spell_key,
-                  cell,
-                  lvl?.casts_per_target
-                ),
-            }
-          )
-          // #321 + #323: "the caster's own cell" for a self-cast drafted after a teleport/dash earlier in the SAME
-          // sequence is that cast's per-cast EVOLVED cell, never the sequence's static starting anchor (the same
-          // staleness class #321 fixes for every other cast; a self-buff is no exception).
-          const retargeted = self_cast
-            ? { target: cast_anchor }
-            : retarget_cast({
-                target_cell: entry.cell,
-                committed_cell: target_committed_cell,
-                reaches: (cell) => footprint.has(cell),
-              })
-          if (retargeted.dropped) {
-            drop_entry(CAST_DROP_TARGET_OUT_OF_REACH)
-            continue
-          }
-          target_cell = retargeted.target
-          illegal = strike_flush_illegal({
-            in_footprint: footprint.has(target_cell),
-            is_weapon: false,
-            self_cast,
-          })
-        }
-        if (illegal) {
-          drop_entry(CAST_DROP_STALE_TARGET)
-          continue
-        }
-        // VOID CASTS ARE LEGAL (a cast at any legal-geometry cell is the player's right). Weapon → {kind:2}
-        // act_weapon; spell → {kind:1} act_cast staging the on-chain SpellTemplate id (a spell with no resolved id
-        // is skipped LOUDLY, never downgraded to a swing).
-        if (is_weapon) cast_actions[cast_i] = { kind: 2, target: target_cell, spell_key: WEAPON_ATTACK_ID }
-        else if (drafted_spell?.object_id) {
-          cast_actions[cast_i] = {
-            kind: 1,
-            target: target_cell,
-            spell_template_id: drafted_spell.object_id,
-            spell_key: drafted_spell.name_key, // VFX handoff — the bridge's confirm replay routes element VFX by it
-          }
-          // A PLACE_TRAP effect ⇒ this cast lays a trap on `target_cell` — remember it to mark once committed.
-          if (places_trap(level_row(drafted_spell) ?? {}))
-            trap_placed.push(target_cell)
-        } else
-          game_log('board', 'flush_commit: cast drafted but no on-chain spell id resolved — skipped', {
-            spell_key: entry.spell_key,
-          })
-      }
     // ROLLBACK LAW (regression: "mobs regain health"): predictions now retire through the ONE receipt ingress by
     // claim identity; the receipt's TurnEnded expires any local cast prediction the committed batch omitted. An
     // unrelated receipt never purges it, and object snapshots never re-adopt over the fold (M6 + M2b).

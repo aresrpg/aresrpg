@@ -40,7 +40,10 @@ describe('DungeonBoard — the next-action anchor evolves through the ordered dr
 
 describe('DungeonBoard — an M2b-claimed silent MP grant is spendable exactly once (#332)', () => {
   test('the click budget reads the presented ordered-prefix pool, never a second grant rule', async () => {
-    const src = await Bun.file(new URL('./DungeonBoardState.jsx', import.meta.url)).text()
+    const src = await Promise.all([
+      Bun.file(new URL('./DungeonBoardState.jsx', import.meta.url)).text(),
+      Bun.file(new URL('./dungeon-board-castable.js', import.meta.url)).text(),
+    ]).then((parts) => parts.join('\n'))
     // Ordered drafts + budget_claims converge: the presented pool already folds every claimed grant exactly
     // once, so the click budget reads it directly. The once-only behavior itself is asserted in the fight
     // package's grant/vanish suites; this contract locks the board to the ONE pool.

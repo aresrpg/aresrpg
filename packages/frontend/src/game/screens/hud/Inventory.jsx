@@ -26,6 +26,7 @@ import {
   WORN_CATEGORIES,
   can_consume,
   equip_lock_of,
+  equipment_change_set,
   equip_stage_action,
   equipped_totals,
   is_consumable,
@@ -62,6 +63,7 @@ const TABS = /** @type {const} */ ([
   ['consumables', 'inventory.tab_consumables'],
   ['resources', 'inventory.tab_resources'],
 ])
+
 /** @returns {import('react').JSX.Element} */
 export function Inventory() {
   const { t } = useTranslation()
@@ -264,7 +266,6 @@ export function Inventory() {
     dispatch_stage(equip_stage_action(item, undefined, slugs, template_id_map))
   }
 
-  // Complexity retained (#2069): acceptance is one ordered transaction lifecycle with shared pending/error cleanup; splitting it risks divergent finally paths.
   const on_accept = async () => {
     if (committing) return
     if (equip_lock) {
@@ -300,40 +301,11 @@ export function Inventory() {
       set_committing(false)
       return
     }
-    const current_by_id = new Map(current_items.map((item) => [item.id, item]))
-    /** @type {{ item_id: string, slot: string, item_type: string, item_template_id: string|null }[]} */
-    const to_equip = []
-    /** @type {{ item_id: string, slot: string }[]} */
-    const to_unequip = []
-    /** @type {any[]} */
-    const equipped_full = []
-    /** @type {any[]} */
-    const unequipped_full = []
-    for (const slot of EQUIPMENT_SLOTS) {
-      const next = equipment[slot]
-      const prev = real_equipment[slot]
-      if (next?.id === prev?.id) continue
-      if (next) {
-        // kiosk_id/kiosk_cap_id ride the SAME fresh preflight row as item_template_id — the /v1 owner-items
-        // truth of WHICH kiosk currently holds this item (get_owned_items threads it on every row). equip_actions
-        // resolves against it only when it names a kiosk other than the character's (S-57 sibling-kiosk law) —
-        // a pet bought before this wallet's kiosks converged otherwise hardwired the character's kiosk and
-        // aborted "This item belongs to a different kiosk."
-        to_equip.push({
-          item_id: next.id,
-          slot,
-          item_type: next.item_type,
-          item_template_id: current_by_id.get(next.id)?.template_id ?? null,
-          kiosk_id: current_by_id.get(next.id)?.kiosk_id ?? null,
-          kiosk_cap_id: current_by_id.get(next.id)?.kiosk_cap_id ?? null,
-        })
-        equipped_full.push(next)
-      }
-      if (prev) {
-        to_unequip.push({ item_id: prev.id, slot })
-        unequipped_full.push(prev)
-      }
-    }
+    const { to_equip, to_unequip, equipped_full, unequipped_full } = equipment_change_set(
+      equipment,
+      real_equipment,
+      current_items
+    )
     if (!to_equip.length && !to_unequip.length) {
       use_toast.getState().remove(pending_id)
       set_committing(false)

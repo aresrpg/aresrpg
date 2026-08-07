@@ -114,6 +114,6 @@ describe('#1993 — the board arms on the ONE handover fact', () => {
       new URL('../../../../../src/game/screens/hud/world/DungeonBoardState.jsx', import.meta.url)
     ).text()
     expect(source, 'the pre-#1808 boundary is gone from the board').not.toContain('!fight.presenting')
-    expect(source).toContain('const my_turn = fight?.input_armed === true')
+    expect(source).toContain('my_turn: fight?.input_armed === true')
   })
 })

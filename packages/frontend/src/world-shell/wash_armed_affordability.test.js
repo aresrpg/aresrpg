@@ -205,11 +205,12 @@ describe('trap draft paint — click-time fold + rollback semantics (the fold my
     const source = await Promise.all([
       Bun.file(new URL('../game/screens/hud/world/DungeonBoardInput.jsx', import.meta.url)).text(),
       Bun.file(new URL('../game/screens/hud/world/DungeonBoardCommit.jsx', import.meta.url)).text(),
+      Bun.file(new URL('../game/screens/hud/world/dungeon-board-commit-casts.js', import.meta.url)).text(),
     ]).then((parts) => parts.join('\n'))
     // The draft click folds the trap optimistically (at cast, not at commit) through the fight reducer.
     expect(source).toContain('place_traps: prediction.placed_traps ?? []')
     // A dropped trap draft is collected for rollback at flush.
-    expect(source).toContain('trap_dropped = [...trap_dropped, entry.cell]')
+    expect(source).toContain('trap_dropped: places_trap(level_row(drafted_spell) ?? {}) ? entry.cell : null')
     // A failed commit rolls every drafted cell back through that same fold.
     expect(source).toContain("input({ type: 'drop_traps', cells: store_dropped })")
     // There is no component-local trap writer and no end-turn trap clear.

@@ -33,23 +33,36 @@ const manhattan = (a, b) => {
 }
 
 const src_promise = Bun.file(new URL('./DungeonBoardState.jsx', import.meta.url)).text()
+const castable_src_promise = Bun.file(new URL('./dungeon-board-castable.js', import.meta.url)).text()
 
 // Extracts the verbatim source between two markers and compiles it as a real function body.
 // `strip_start`: true when start_marker is a WRAPPER to discard (e.g. `useMemo(() => {`, whose inner body is the
 // payload, already ending in its own `return`); false when start_marker is itself the first statement of the
 // payload (kept in the compiled body) — pass `return_expr` to append an explicit return for those (bare
 // statements have no completion value `new Function` can hand back).
-const extract = async (start_marker, end_marker, args, { strip_start = true, return_expr = null } = {}) => {
-  const src = await src_promise
+const extract = async (
+  start_marker,
+  end_marker,
+  args,
+  { strip_start = true, return_expr = null, source = src_promise } = {}
+) => {
+  const src = await source
   const start = src.indexOf(start_marker)
   const end = src.indexOf(end_marker, start + start_marker.length)
   expect(start, `start marker not found: ${start_marker}`).toBeGreaterThan(-1)
   expect(end, `end marker not found: ${end_marker}`).toBeGreaterThan(start)
   const body_start = strip_start ? start + start_marker.length : start
   const body = src.slice(body_start, end) + (return_expr ? `\nreturn ${return_expr}` : '')
-  // eslint-disable-next-line no-new-func -- executing the SHIPPED closure body verbatim, not test-authored logic
   return new Function(...args, body)
 }
+
+const extract_los_blockers = () =>
+  extract(
+    'function cast_los_blockers(obstacles, occupied, me_cell, optimistic_vacated) {',
+    '\n}',
+    ['obstacles', 'occupied', 'me_cell', 'optimistic_vacated'],
+    { source: castable_src_promise }
+  )
 
 // The exact trace-capsule fixture (FINDING_sword_refusal.md, idx 231/246/259): the player's weapon kill left a
 // corpse (m2) on cell 26; a fresh mob (m1) later walked onto it — same cell, dead occupant indexed LAST.
@@ -109,12 +122,7 @@ describe('#1214 — a corpse never shadows a living occupant sharing its cell', 
       'dungeon',
       'occupancy_of',
     ])
-    const build_los_blockers = await extract(
-      'const los_blockers = [...obstacles]',
-      '// P1 SELF-CAST (#55)',
-      ['obstacles', 'occupied', 'me', 'optimistic_vacated'],
-      { strip_start: false, return_expr: 'los_blockers' }
-    )
+    const build_los_blockers = await extract_los_blockers()
 
     const A = enc(5, 5)
     const B = enc(6, 5) // between A and C, straight line
@@ -132,7 +140,7 @@ describe('#1214 — a corpse never shadows a living occupant sharing its cell', 
       },
       occupancy_of
     )
-    const blockers_solo = build_los_blockers([], solo_corpse, me, new Set())
+    const blockers_solo = build_los_blockers([], solo_corpse, me.cell, new Set())
     expect(blockers_solo.includes(B)).toBe(false)
     expect(lineOfSight(A, C, blockers_solo)).toBe(true) // target still lit + castable
 
@@ -150,7 +158,7 @@ describe('#1214 — a corpse never shadows a living occupant sharing its cell', 
       },
       occupancy_of
     )
-    const blockers_shadowed = build_los_blockers([], shadowed, me, new Set())
+    const blockers_shadowed = build_los_blockers([], shadowed, me.cell, new Set())
     expect(blockers_shadowed.includes(B)).toBe(true)
     expect(lineOfSight(A, C, blockers_shadowed)).toBe(false)
   })
@@ -170,26 +178,20 @@ describe('#1214 — a corpse never shadows a living occupant sharing its cell', 
 })
 
 describe('#1210 — the free_cell trap footprint reads the SAME optimistic_vacated the move masks already get', () => {
-  const build_los_blockers = () =>
-    extract(
-      'const los_blockers = [...obstacles]',
-      '// P1 SELF-CAST (#55)',
-      ['obstacles', 'occupied', 'me', 'optimistic_vacated'],
-      { strip_start: false, return_expr: 'los_blockers' }
-    )
+  const build_los_blockers = extract_los_blockers
   const alive_occupied = (cell) => new Map([[cell, { kind: 'mob', alive: true, idx: 0 }]])
 
   test('⑤ a cell THIS turn already vacates (optimistic_vacated) is OFFERED for free_cell placement', async () => {
     const blockers = await build_los_blockers()
     // committed truth still says the mob is alive (my own drafted kill hasn't landed on chain yet) — the exact
     // window #1210's fold test (trap_on_corpse_cell.test.js) proves is BY DESIGN, compensated by optimistic_vacated.
-    const result = blockers([], alive_occupied(STACK_CELL), { cell: ME }, new Set([STACK_CELL]))
+    const result = blockers([], alive_occupied(STACK_CELL), ME, new Set([STACK_CELL]))
     expect(result).not.toContain(STACK_CELL)
   })
 
   test("⑥ control — a living mob's cell NOT vacated this turn stays refused for traps", async () => {
     const blockers = await build_los_blockers()
-    const result = blockers([], alive_occupied(STACK_CELL), { cell: ME }, new Set())
+    const result = blockers([], alive_occupied(STACK_CELL), ME, new Set())
     expect(result).toContain(STACK_CELL)
   })
 })

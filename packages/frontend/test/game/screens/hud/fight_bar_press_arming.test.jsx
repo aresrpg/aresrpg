@@ -132,6 +132,9 @@ const find_control = (node, class_name, override = null) => {
     // `override` swaps the wrapper's own props before it renders — how a control whose action is internal
     // (a local `set_confirm`) gets an observable one without changing production code.
     return typeof node.type === 'function' ? node.type({ ...node.props, ...(override ?? {}) }) : node
+  // Complexity extraction may add a hook-free presentational component between the hook owner and the host
+  // button. Expand that production seam exactly as this harness already expands FightBarButton above.
+  if (node.type?.name === 'ParticipantFightControls') return find_control(node.type(node.props), class_name, override)
   return find_control(node.props?.children ?? null, class_name, override)
 }
 
