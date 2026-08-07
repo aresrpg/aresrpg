@@ -12,10 +12,10 @@ import {
   placement_cells_of,
   maskWords,
   board_shape_from_anchor,
-  crossMask,
   dungeon_blocked_cells,
 } from './dungeon-grid.js'
 import { encode, bfsPathCost, bfsPath, GRID_W, GRID_CELLS } from '@aresrpg/fight/los'
+import { cross_mask, mask_get } from '@aresrpg/sim/combat_grid'
 // #1680 — the fold has ONE home; the client imports it exactly as dungeon-grid.js does.
 import { generate as generate_board, board_seed_from_anchor } from '@aresrpg/sim/board_gen'
 
@@ -237,7 +237,8 @@ describe('dungeon-grid / dungeon_grid_of — the LIVE-board glue (stored mask = 
 
   it('a CROSS mask renders correctly — the corners fall OFF the shape (VOID), the centre is floor', () => {
     // middle 3 rows full-width ∪ middle 3 cols full-height — a plus sign; the four corners are off-shape.
-    const mask = crossMask(9, 9, 3, 6, 3, 6)
+    const canonical_mask = cross_mask(9, 9, 3, 6, 3, 6)
+    const mask = new Set(Array.from({ length: GRID_CELLS }, (_, cell) => cell).filter(cell => mask_get(canonical_mask, cell)))
     const dungeon = { id: '0xCROSS', room_index: 0, grid_width: 9, grid_height: 9, shape_mask: mask, obstacles: [], holes: [], start_cells_a: [], start_cells_b: [] }
     const g = dungeon_grid_of(dungeon)
     expect([g.width, g.height]).toEqual([9, 9]) // the REAL dims, never the legacy 10×10 square

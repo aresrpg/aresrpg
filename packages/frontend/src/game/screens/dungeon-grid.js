@@ -18,6 +18,21 @@
 
 import { rng_seed, rng_int, rng_range } from '@aresrpg/sim/prng'
 import { board_seed_from_anchor, place_blockers } from '@aresrpg/sim/board_gen'
+import {
+  MASK_WORDS,
+  SHAPE_RECT,
+  SHAPE_ROUNDED,
+  SHAPE_ELLIPSE,
+  SHAPE_CROSS_BOARD as SHAPE_CROSS,
+  SHAPE_BLOB,
+  mask_get,
+  rect_mask,
+  ellipse_mask,
+  rounded_mask,
+  cross_mask,
+  blob_mask,
+  blocker_placeable,
+} from '@aresrpg/sim/combat_grid'
 
 import { GRID_W, GRID_H, GRID_CELLS, encode, decode, bfsPath } from '@aresrpg/fight/los'
 import { mob_entity_id } from '@aresrpg/fight/project'
@@ -33,17 +48,9 @@ const OBS_MAX = 6
 const HOLE_MIN = 1 // hole (impassable pit) count range
 const HOLE_MAX = 4
 const N_SHAPES = 4 // BLOB / ROUNDED / ELLIPSE / CROSS (RECT dropped D252)
-const MASK_WORDS = Math.ceil(GRID_CELLS / 64) // 6 — u64 words per shape_mask (mirrors combat_grid::MASK_WORDS)
 const FNV_OFFSET = 2166136261 // FNV-1a 32-bit offset basis
 const FNV_PRIME = 16777619 // FNV-1a 32-bit prime
 const ROOM_MIX = 0x9e3779b1 // golden-ratio odd constant — de-correlates consecutive room_idx before seeding
-
-// shape codes (mirror combat_grid::shape_*)
-const SHAPE_RECT = 0
-const SHAPE_ROUNDED = 1
-const SHAPE_ELLIPSE = 2
-const SHAPE_CROSS = 3
-const SHAPE_BLOB = 4
 
 // D126b — a dungeon mob's per-turn dash BUDGET CEILING, mirrored from dungeon_mob.move `MOB_MP_MAX = 5`
 // ("matches combat_mob"). The exact per-turn budget is a Random [1,MOB_MP_MAX] rolled when the mob acts, so the
@@ -77,145 +84,13 @@ function dungeon_hash_from_id(id) {
 }
 export { dungeon_hash_from_id as dungeonHashFromId }
 
-// ── SHAPE GEOMETRY (byte-identical twin of combat_grid's mask builders) ──────────────────────────────────────
-// A shape_mask is a Uint-ish array of MASK_WORDS numbers (each a 32-or-53-bit-safe chunk of 64 bits is NOT safe in
-// JS — but our cell indices are < 380, and we only ever compare masks as ARRAYS of the same word layout as Move).
-// To stay byte-identical to Move's u64 words WITHOUT BigInt in hot paths, we build the mask as a plain boolean-set
-// but SERIALIZE to the same 6×u64 word layout for the parity assert. Internally the twin uses a Set<number> of
-// encoded cells (the render/BFS only need membership); `maskWords` produces the Move-identical u64 word vector.
-
-/** A fresh empty mask (Set of encoded on-cells). */
-function empty_mask() {
-  return new Set()
-}
-
-/** Fill row `y` cells x∈[lo,hi) into the mask (the convexity primitive). `hi` clamped to GRID_W. */
-function fill_row(mask, y, lo, hi) {
-  const end = Math.min(hi, GRID_W)
-  for (let x = lo; x < end; x++) mask.add(encode(x, y))
-}
-
-/** RECT(w,h): the full [0,w)×[0,h) rectangle. */
-function rect_mask(w, h) {
-  const m = empty_mask()
-  for (let y = 0; y < h; y++) fill_row(m, y, 0, w)
-  return m
-}
-
-/** ELLIPSE(w,h): filled axis-aligned ellipse — cell IN iff (2Δx)²·h² + (2Δy)²·w² ≤ (w·h)². Per-row single run. */
-function ellipse_mask(w, h) {
-  const m = empty_mask()
-  const cx2 = w - 1
-  const cy2 = h - 1
-  const rhs = w * h * (w * h)
-  for (let y = 0; y < h; y++) {
-    const dy2 = Math.abs(2 * y - cy2)
-    const ty = dy2 * dy2 * (w * w)
-    let lo = w
-    let hi = 0
-    for (let x = 0; x < w; x++) {
-      const dx2 = Math.abs(2 * x - cx2)
-      if (dx2 * dx2 * (h * h) + ty <= rhs) {
-        if (x < lo) lo = x
-        if (x + 1 > hi) hi = x + 1
-      }
-    }
-    if (lo < hi) fill_row(m, y, lo, hi)
-  }
-  return m
-}
-
-/** ROUNDED(w,h,r): RECT with quarter-arc corners of radius r trimmed. Per-row single run. r=0 → RECT. */
-function rounded_mask(w, h, r) {
-  if (r === 0) return rect_mask(w, h)
-  const m = empty_mask()
-  const arc = (r - 1) * (r - 1)
-  for (let y = 0; y < h; y++) {
-    const in_band = y < r || y >= h - r
-    const dy = y < r ? r - 1 - y : y >= h - r ? y - (h - r) : 0
-    let cut = 0
-    if (in_band) {
-      for (let k = 0; k < r; k++) {
-        const dx = r - 1 - k
-        if (dx * dx + dy * dy > arc) cut = k + 1
-        else break
-      }
-    }
-    fill_row(m, y, cut, w - cut)
-  }
-  return m
-}
-
-/** Cells cut from ONE horizontal end of row `y` by a quarter-arc corner of radius `r` (top band vs bottom band).
- * Integer-only; mirrors combat_grid::corner_cut. Contiguous prefix ⇒ the row stays one run. */
-function corner_cut(r, y, h, top) {
-  if (r === 0) return 0
-  const in_band = top ? y < r : y >= h - r
-  if (!in_band) return 0
-  const dy = top ? r - 1 - y : y - (h - r)
-  const arc = (r - 1) * (r - 1)
-  let cut = 0
-  for (let k = 0; k < r; k++) {
-    const dx = r - 1 - k
-    if (dx * dx + dy * dy > arc) cut = k + 1
-    else break
-  }
-  return cut
-}
-
-/** BLOB(w,h,rTl,rTr,rBl,rBr): rounded rect with FOUR independent corner radii (asymmetric/organic). Per row the
- * left inset = max(top-left cut, bottom-left cut), right inset = max(top-right, bottom-right) → single run per
- * row AND column (orthogonally convex). Byte-identical twin of combat_grid::blob_mask. */
-function blob_mask(w, h, r_tl, r_tr, r_bl, r_br) {
-  const m = empty_mask()
-  for (let y = 0; y < h; y++) {
-    const tl = corner_cut(r_tl, y, h, true)
-    const tr = corner_cut(r_tr, y, h, true)
-    const bl = corner_cut(r_bl, y, h, false)
-    const br = corner_cut(r_br, y, h, false)
-    const left = tl > bl ? tl : bl
-    const right = tr > br ? tr : br
-    fill_row(m, y, left, w - right)
-  }
-  return m
-}
-
-/** CROSS(w,h): horizontal bar rows [ry0,ry1) full-width ∪ vertical bar cols [cx0,cx1) full-height. Single run/row. */
-function cross_mask(w, h, ry0, ry1, cx0, cx1) {
-  const m = empty_mask()
-  for (let y = 0; y < h; y++) {
-    if (y >= ry0 && y < ry1) fill_row(m, y, 0, w)
-    else fill_row(m, y, cx0, cx1)
-  }
-  return m
-}
-
 /** min(a,b). */
 const min2 = (a, b) => (a < b ? a : b)
-
-/**
- * KING-MOVE ISOLATION: may a blocker be placed at `cand`? On-mask, ≥1 inside the rim (whole 8-ring on-mask), and
- * no already-`blocked` cell within Chebyshev-1. Byte-identical to combat_grid::blocker_placeable.
- * @param {Set<number>} mask @param {Set<number>} blocked @param {number} cand @returns {boolean}
- */
-function blocker_placeable(mask, blocked, cand) {
-  if (!mask.has(cand)) return false
-  const { x, y } = decode(cand)
-  if (x === 0 || y === 0 || x + 1 >= GRID_W || y + 1 >= GRID_H) return false
-  for (let dy = 0; dy < 3; dy++)
-    for (let dx = 0; dx < 3; dx++) {
-      const ring = encode(x + dx - 1, y + dy - 1)
-      if (!mask.has(ring)) return false
-      if (ring !== cand && blocked.has(ring)) return false
-    }
-  return true
-}
 
 /** The candidate enumeration the blocker probe walks (row-major on-mask cells whose 8-ring is on-mask). */
 function placeable_candidates(mask) {
   const out = []
-  const empty = new Set()
-  for (let c = 0; c < GRID_CELLS; c++) if (blocker_placeable(mask, empty, c)) out.push(c)
+  for (let c = 0; c < GRID_CELLS; c++) if (blocker_placeable(mask, [], c)) out.push(c)
   return out
 }
 
@@ -258,8 +133,15 @@ function build_shape(s, shape_code, width, height) {
 /** The on-mask unblocked cells (row-major) — the start-cell pool. */
 function open_cells(mask, blocked) {
   const out = []
-  for (let c = 0; c < GRID_CELLS; c++) if (mask.has(c) && !blocked.has(c)) out.push(c)
+  for (let c = 0; c < GRID_CELLS; c++) if (mask_get(mask, c) && !blocked.has(c)) out.push(c)
   return out
+}
+
+/** Normalize the canonical u64-word mask for frontend Set consumers. */
+function mask_cells(mask) {
+  const cells = new Set()
+  for (let c = 0; c < GRID_CELLS; c++) if (mask_get(mask, c)) cells.add(c)
+  return cells
 }
 
 /** Pick `count` start cells from `pool` at the near (from_top) or far end, disjoint from `used`. */
@@ -321,7 +203,7 @@ function generate_grid(dungeon_hash, room_idx) {
   const obs_count = draw(rng_range, OBS_MIN, OBS_MAX)
   const obs_set = new Set()
   s = place_blockers(s, candidates, obs_count, cand => {
-    if (obs_set.has(cand) || !blocker_placeable(mask, obs_set, cand)) return false
+    if (obs_set.has(cand) || !blocker_placeable(mask, [...obs_set], cand)) return false
     obs_set.add(cand)
     return true
   })
@@ -330,7 +212,7 @@ function generate_grid(dungeon_hash, room_idx) {
   const hole_count = draw(rng_range, HOLE_MIN, HOLE_MAX)
   const holes_buf = new Set(obs_set) // seed with obstacles so holes stay king-isolated from them…
   s = place_blockers(s, candidates, hole_count, cand => {
-    if (holes_buf.has(cand) || !blocker_placeable(mask, holes_buf, cand)) return false
+    if (holes_buf.has(cand) || !blocker_placeable(mask, [...holes_buf], cand)) return false
     holes_buf.add(cand)
     return true
   })
@@ -342,7 +224,7 @@ function generate_grid(dungeon_hash, room_idx) {
   const start_cells_a = pick_starts(pool, MAX_SEATS, true, [])
   const start_cells_b = pick_starts(pool, MAX_SEATS, false, start_cells_a)
 
-  return { width, height, shape_mask: mask, obstacles, holes, start_cells_a, start_cells_b }
+  return { width, height, shape_mask: mask_cells(mask), obstacles, holes, start_cells_a, start_cells_b }
 }
 export { generate_grid as generateGrid }
 
@@ -433,7 +315,7 @@ export function dungeon_grid_of(dungeon) {
 function legacy_rect_grid(dungeon) {
   const width = dungeon.grid_width
   const height = dungeon.grid_height
-  const mask = rect_mask(width, height)
+  const mask = mask_cells(rect_mask(width, height))
   let start_cells_a = dungeon.start_cells_a ?? []
   const start_cells_b = dungeon.start_cells_b ?? []
   if (!start_cells_a.length && !start_cells_b.length) {
@@ -530,14 +412,4 @@ export function legal_move_path(dungeon, exclude_id, from_enc, to_enc) {
   if (from_enc === to_enc) return []
   const blocked = dungeon_blocked_cells(dungeon, exclude_id)
   return bfsPath(from_enc, to_enc, blocked, GRID_CELLS)
-}
-
-// export the pure builders + placer for the parity test (dungeon-grid.test.js mirrors combat_grid).
-export {
-  rect_mask as rectMask,
-  ellipse_mask as ellipseMask,
-  rounded_mask as roundedMask,
-  cross_mask as crossMask,
-  blob_mask as blobMask,
-  blocker_placeable as blockerPlaceable,
 }
