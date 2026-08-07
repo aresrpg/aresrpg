@@ -1,0 +1,60 @@
+{
+  "_doc": [
+    "#1747 (reopened 2026-08-06) — THE PUBLISHED Devastating Slam ROW, captured verbatim. This fixture is",
+    "EVIDENCE, not an authored shape: every field below is a byte-for-byte transcription of what the live",
+    "content pipeline serves, so a test reading it measures the product players actually run.",
+    "",
+    "PROVENANCE",
+    "  pointer  https://assets.aresrpg.world/data/corpus_version.json  ->  { version: '20260804a' }",
+    "  payload  https://assets.aresrpg.world/data/world_corpus.20260804a.json",
+    "  captured 2026-08-06 · 1068836 bytes · sha256",
+    "           29c548762860ba8a42cc9cfd32440beee3888637488b7f35fbfb77976ddb34a4",
+    "  path     ['06_pandora_reach'].mobs[11]  =  'Gobadoc the Gourmand' (boss, levels 23-38)",
+    "           .spells[0] = 'Devastating Slam'",
+    "",
+    "WHY IT EXISTS: the #1809 fixture (aoe_splash_target_filter.json) pins target_filter 1 (TF_NOT_TEAM),",
+    "hand-transcribed from a MobTemplate read on 2026-08-01. The corpus PUBLISHED ON 2026-08-04 carries",
+    "target_filter 0 (TF_NONE) for the same row. That divergence is the whole reopened defect: the sim",
+    "resolver is faithful, the data it is fed is not. Re-capture this file (pointer -> payload -> path) on",
+    "any republish; never edit a field by hand.",
+    "",
+    "GEOMETRY (cell = y*20 + x, GRID_W 20) — the reported cast: the boss aims at a player ONE cell away, so",
+    "its own radius-2 circle swallows its own cell. Shared with fixtures/aoe_splash_target_filter.json so the",
+    "two rows differ in exactly ONE variable: the filter.",
+    "  105 = the caster mob (5,5)   104 = its mob ally (4,5)   106 = the enemy player (6,5) = the aimed cell"
+  ],
+  "corpus_version": "20260804a",
+  "corpus_sha256": "29c548762860ba8a42cc9cfd32440beee3888637488b7f35fbfb77976ddb34a4",
+  "mob_name": "Gobadoc the Gourmand",
+  "published_spell": {
+    "name": "Devastating Slam",
+    "description_key": "mobspell.gobadoc.0",
+    "ap": 4,
+    "rmin": 1,
+    "rmax": 2,
+    "cd": 2,
+    "crit": 0,
+    "effects": [
+      {
+        "kind": 0,
+        "element": "fire",
+        "value": 36,
+        "value_max": 54,
+        "area_shape": 1,
+        "area_size": 2,
+        "target_filter": 0,
+        "chance": 100,
+        "turns": 0,
+        "stat": 0,
+        "flags": 0,
+        "phase": 0
+      }
+    ],
+    "crit_effects": []
+  },
+  "caster_cell": 105,
+  "ally_cell": 104,
+  "enemy_cell": 106,
+  "target_cell": 106,
+  "zone_cells": [66, 85, 86, 87, 104, 105, 106, 107, 108, 125, 126, 127, 146]
+}
