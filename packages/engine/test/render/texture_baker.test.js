@@ -512,6 +512,7 @@ describe('painterly grain bound', () => {
 })
 
 describe('three DataArrayTexture', () => {
+  // Real 357-layer atlas bake: measured 2.05s file-solo / 5.10s with the frontend suite loading the host.
   test('builds with correct dims, filters, colorspace, mips', () => {
     const res = atlas(5)
     const tex = build_data_array_texture(THREE, res)
@@ -531,10 +532,11 @@ describe('three DataArrayTexture', () => {
     // family + per-cell variants without a renderer plumbing change.
     expect(tex.userData.layer_of_name).toBe(res.layer_of_name)
     expect(tex.userData.variants_of_name).toBe(res.variants_of_name)
-  })
+  }, 30000)
 })
 
 describe('preview dump', () => {
+  // Real atlas bake + filesystem write: measured 2.47s file-solo / 16.24s under frontend-suite load.
   test('writes /tmp/baker_preview.rgba (named base layers side by side)', () => {
     const res = atlas(2024)
     // Named base layers so the new grass_side rim is eyeball-verifiable next to grass/dirt/stone.
@@ -559,7 +561,7 @@ describe('preview dump', () => {
     writeFileSync('/tmp/baker_preview.rgba', out)
     console.log(`baker_preview.rgba: ${width}x${height} RGBA (layers: ${names.join(', ')})`)
     expect(out.length).toBe(width * height * 4)
-  })
+  }, 30000)
 })
 
 // MULTI-CLUMP LEAF SILHOUETTE (fixes the "crossed planes" leaf-silhouette defect) —

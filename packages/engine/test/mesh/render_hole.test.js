@@ -165,7 +165,8 @@ test('seam invariant: DEFAULT-world p95 slots/col fits the render pool for ALL F
   const solid_avg = slots_per_col.solid.reduce((a, x) => a + x, 0) / slots_per_col.solid.length
   // Sanity: this locus IS the dense proc-tree forest the regression was measured on (guards an empty sample).
   expect(solid_avg).toBeGreaterThan(4)
-}, 120000)
+  // Real 81-column generation + 49-column five-class mesh survey: 74.24s idle / 141.89s train-loaded.
+}, 300000)
 
 // ── DROP-PATH FAIL-LOUD + RECOVERY (the deeper robustness root-fix, pool_renderer.js) ────────────────
 // The SEAM INVARIANT above keeps the pool sized so exhaustion never happens; THIS suite proves that even IF
@@ -214,6 +215,9 @@ describe('drop-path fail-loud: write_chunk→false is retried & recovered, never
       })
     )
 
+  // Each case builds a real five-class GPU pool + 357-layer atlas. Measured file-solo at 4.0-7.5s/case
+  // and with the frontend suite loading the host at 5.3-8.4s/case; the contract is recovery, not latency.
+
   test('overflow is dropped, re-enqueued (both chunks resident), then RECOVERED on the next frame drain', () => {
     /** @type {number[]} */
     const uploaded_bytes = []
@@ -239,7 +243,7 @@ describe('drop-path fail-loud: write_chunk→false is retried & recovered, never
     expect(stats.permanent_drops).toBe(0)
     expect(stats.draw_calls).toBe(1) // the recovered chunk now occupies the freed slot (renders — no hole)
     expect(uploaded_bytes).toEqual([8, 8]) // deferred recovery is attributed where the write succeeds
-  })
+  }, 30000)
 
   test('recovery carries remaining writes when its wall-clock slice is spent', () => {
     const pool_config = { ...TINY_POOL, solid: { slot_quads: 2048, max_slots: 3 } }
@@ -270,7 +274,7 @@ describe('drop-path fail-loud: write_chunk→false is retried & recovered, never
     expect(terrain.pool_stats?.().pending_retries).toBe(0)
     expect(uploaded_bytes).toHaveLength(6)
     terrain.dispose()
-  })
+  }, 30000)
 
   test('a fresh successful re-upload of the same key supersedes its pending retry', () => {
     const terrain = make()
@@ -281,7 +285,7 @@ describe('drop-path fail-loud: write_chunk→false is retried & recovered, never
     terrain.upload_chunk([1, 0, 0], solid_quad_buffer(), 1) // fresh upload succeeds → supersedes the pending retry
     expect(terrain.pool_stats().pending_retries).toBe(0)
     expect(terrain.get_stats().permanent_drops).toBe(0)
-  })
+  }, 30000)
 
   test('removing a stranded (never-rendered) key clears its pending retry — no ghost recovery', () => {
     const terrain = make()
@@ -292,7 +296,7 @@ describe('drop-path fail-loud: write_chunk→false is retried & recovered, never
     // its slot for [0,0,0] frees nothing for [1,0,0], and [1,0,0] must NOT resurrect from a stale pending entry
     expect(terrain.pool_stats().pending_retries).toBe(0)
     expect(terrain.get_stats().chunk_count).toBe(1) // only [0,0,0] remains
-  })
+  }, 30000)
 
   test('STORM CONTROL: permanent over-demand logs once per class + one undersized verdict, never thrashes', () => {
     // [2026-07-12 design lock] The first retry design logged per chunk per strand and flushed on every
@@ -333,5 +337,5 @@ describe('drop-path fail-loud: write_chunk→false is retried & recovered, never
     } finally {
       console.error = orig_error
     }
-  })
+  }, 30000)
 })

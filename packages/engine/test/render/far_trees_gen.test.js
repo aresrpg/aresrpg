@@ -149,13 +149,14 @@ describe('SEAM AGREEMENT — far impostor == near placement (§3.6, AMENDED heap
     }
   })
 
+  // Canonical cards perform the real procedural bake: measured 2.07s file-solo / 8.10s under frontend load.
   test('SIZE is the CANONICAL (species,age) card size (the same tree the atlas card bakes from)', () => {
     for (const t of far) {
       const s = canonical_impostor_schematic(t.layer)
       expect(t.w).toBe(Math.max(s.size[0], s.size[2]))
       expect(t.h).toBe(s.size[1])
     }
-  })
+  }, 30000)
 
   test('BASE_Y approximates the near grounded anchor within a few blocks (canonical-footprint grounding)', () => {
     // base_y reproduces grounded_placement (min surface over the base footprint − 1) with the CANONICAL
