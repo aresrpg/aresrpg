@@ -150,7 +150,7 @@ export function GameWorldHud() {
   // D157: re-apply the player's saved render-quality tier once the voxel engine handle is live (it boots
   // async, so apply_saved_tier polls briefly then gives up). No saved value → the engine's auto-governor
   // stays in charge. Runs once per world-HUD mount.
-  useEffect(() => apply_saved_tier(), [])
+  useEffect(apply_saved_tier, [])
 
   // DEV-ONLY fight-board harness (VfxLab analogue for the full fight HUD): registers
   // window.__ARES_DEV_FORCE_FIGHT_BOARD({state}) so design/qa can mount the rethemed fight chrome + board

@@ -73,8 +73,8 @@ export function HackRadioPlayer() {
 
   // The radio starts itself the moment it has tracks (hack_radio.js) — this control is the player's override,
   // and its pointerdown cancels any pending autoplay retry so the click that follows means what the label says.
-  const on_toggle = useCallback(() => radio_toggle(), [])
-  const on_pointer_down = useCallback(() => radio_dismiss_gesture_retry(), [])
+  const on_toggle = useCallback(radio_toggle, [])
+  const on_pointer_down = useCallback(radio_dismiss_gesture_retry, [])
 
   if (!hack) return null
 

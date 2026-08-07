@@ -40,7 +40,7 @@ export function QuestObjectiveCard() {
           {t('quests.eyebrow', { n: snapshot.index + 1, total: snapshot.total })}
         </span>
         <div className="quest-card__actions">
-          <button type="button" className="quest-card__skip" onClick={() => skip_current()}>
+          <button type="button" className="quest-card__skip" onClick={skip_current}>
             {t('quests.skip')}
           </button>
           <button

@@ -23,7 +23,7 @@ export function EquipMenu({ menu, on_close }) {
   // Outside-click / Escape dismiss — same idiom as CrushMenu.
   useEffect(() => {
     if (!menu) return undefined
-    const close = () => on_close()
+    const close = on_close
     const on_key = (/** @type {KeyboardEvent} */ e) => {
       if (e.key === 'Escape') on_close()
     }
