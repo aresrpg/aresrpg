@@ -93,6 +93,25 @@ run_combo "dungeon fight session — the entry cinematic resets before use, behi
   "$ROOT/$FE/simulator/fight_terminal_gate.test.js" \
   "$ROOT/$FE/game/fight_entry.test.js"
 
+# ⑮ Bun's `mock.module` registry again (⑩⑪'s class, two more modules). A PARTIAL replacement of game/store.js
+# (day_cycle, HackRadioPlayer) and of @aresrpg/engine3/player (pet_companion_locomotion) made those modules
+# unloadable for every file bun loaded afterwards — the #1993 board suite died on a missing `useFightVisibleMount`
+# and a missing `topmost_solid_id`, hundreds of files later. There is no unmock, so a permanent replacement must
+# (a) SPREAD a pre-registration SNAPSHOT of the real module so no export can go missing, and (b) stop lying once
+# its own file is done (the `owned` flag flips in afterAll and the override delegates to the real export). This
+# row runs all three poisoners ahead of the victim; drop either half of either rule and it reds.
+run_combo "mock.module partial replacement — game/store.js stays whole and honest for later files" \
+  "$ROOT/$FE/game/screens/hud/world/day_cycle.test.js" \
+  "$ROOT/$FE/game/screens/hud/world/HackRadioPlayer.test.jsx" \
+  "$ROOT/packages/frontend/test/game/screens/hud/world/dungeon_board_turn_arming.test.jsx"
+# The engine3/player half needs its own pair: pet_companion's partial replacement only bites once ANOTHER file
+# has pulled the real character_controller graph in (embed_voxel_dev is the first that does), which is why the
+# poisoner looked innocent one-on-one and reddened 145 files later.
+run_combo "mock.module partial replacement — @aresrpg/engine3/player keeps its full export surface" \
+  "$ROOT/packages/frontend/test/game/pet_companion_locomotion.test.js" \
+  "$ROOT/packages/frontend/test/game/embed_voxel_dev.world_fight_roster.test.js" \
+  "$ROOT/packages/frontend/test/game/screens/hud/world/dungeon_board_turn_arming.test.jsx"
+
 if [ "$FAIL" -ne 0 ]; then
   echo "ORDER-INDEPENDENCE GATE FAILED — a reintroduced module-global leak broke a cold-state fixture."
   exit 1

@@ -9,8 +9,11 @@
 // reducer's fold. The radio's own BEHAVIOUR — manifest → tracks, ended → advance, loop, failure → error row —
 // is headless by construction and lives in hack_radio.test.js.
 //
-// `mock.module` is PROCESS-global in bun and another suite already mocks game/store.js — so this file must
-// own its own store mock or it inherits that one's state shape and renders nothing.
+// `mock.module` is PROCESS-global in bun, has NO unmock, and another suite already mocks game/store.js — so this
+// file must own its own store mock or it inherits that one's state shape and renders nothing. Two rules keep a
+// permanent replacement honest: SPREAD the real module so no export can go missing (a partial one made store.js
+// unloadable for the #1993 board suite), and stop lying once this file is done — `owned` flips in afterAll and
+// `useGameState` delegates to the real hook for the rest of the process.
 // Assertions are on STRUCTURE, never on translated text: react-i18next's default instance is process-global
 // too. The strings are covered by the key/locale contract below plus the ×6 i18n coverage gate.
 import { readFileSync } from 'node:fs'
@@ -26,8 +29,18 @@ import { install_browser_globals } from '../../../../test_helpers/browser_global
 
 const restore_browser_globals = install_browser_globals({ with_document: true })
 let game_state = /** @type {any} */ ({ world_presentation: 'terrain', fight_mode: false })
+// SNAPSHOT, not a live namespace: `mock.module` mutates the module record IN PLACE, so a delegating override
+// that resolves its target lazily would call ITSELF forever. Capture before the mock exists.
+const real_exports = { ...(await import('../../../store.js')) }
+const real_use_game_state = real_exports.useGameState
+let owned = true
+afterAll(() => {
+  owned = false
+})
 mock.module('../../../store.js', () => ({
-  useGameState: (/** @type {(state: any) => any} */ selector) => selector(game_state),
+  ...real_exports,
+  useGameState: (/** @type {(state: any) => any} */ selector) =>
+    owned ? selector(game_state) : real_use_game_state(selector),
 }))
 
 const i18n = i18next.createInstance()
