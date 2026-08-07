@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 import { renderToStaticMarkup } from 'react-dom/server'
-import { describe, expect, test } from 'bun:test'
-import { configure_assets } from '@aresrpg/sdk/jobs'
+import { afterEach, describe, expect, test } from 'bun:test'
+import { configure_assets, reset_assets_for_test } from '@aresrpg/sdk/jobs'
 
 import { EquipmentSlot } from './EquipmentSlot.jsx'
 import { equip_stage_action, real_equipment_of, stage_reducer } from './inventory-equip.js'
@@ -26,6 +26,13 @@ const dropped_cloak = () =>
     { type: 'set_slot', slot: 'cloak', item: owner_cloak }
   ).equipment.cloak
 
+// The resolver seeds are module-global and configure_assets only ever MERGES, so a file that publishes a
+// class leaks it to every file loading later in the shared process. Reset after each test: this file
+// neither leaks its own publication forward nor leans on one arriving from behind.
+afterEach(() => {
+  reset_assets_for_test()
+})
+
 describe('drag-to-equip render', () => {
   test('the full owner row is staged with its authored, icon-resolvable key', () => {
     expect(dropped_cloak()).toMatchObject({
@@ -46,8 +53,10 @@ describe('drag-to-equip render', () => {
   })
 
   test('the dropped cloak paints authored art, never the generic cloak placeholder candidate', () => {
+    // ItemIcon resolves through item_icon_url's default `item` class, so `item` is the publication this
+    // render actually reads — naming any other class here would only pass on a leaked one.
     configure_assets({
-      classes: { cosmetic_icon: { published: true } },
+      classes: { item: { published: true } },
       files: { items: ['cape_lorito-chance.png'] },
     })
     const html = renderToStaticMarkup(
