@@ -4,12 +4,10 @@
 // the player still sees their ENTIRE MP range — cells render grey instead of green (unreachable-because-tackled),
 // not removed." The range is INFORMATION; the tackle is a STATE on it.
 //
-// The band's channel is `path_blocked`, and its name is now the only thing left of an older meaning: the
-// per-hover "you hovered past your MP" red suffix that used to share it is dead (voxel_fight_adapter's
-// cell_hover: "the soft-red beyond-MP suffix is DEAD ... the lost-range read is the WASH's static
-// 'path_blocked' band"). With `project.move_wash`'s tackle_lost as its ONLY writer, the channel is the
-// tackle band and nothing else — so the earlier red-dominant rulings (msg 3254, #1195) described a semantic
-// this channel no longer carries, and the 07-29 ruling governs it.
+// The band uses `unavailable`: the neutral grammar shared by visible information the player cannot act on
+// (the tackle-lost movement band and occupied placement cells). The per-hover "you hovered past your MP" red
+// suffix that used to share the old path_blocked name is dead, so the earlier red-dominant rulings (msg 3254,
+// #1195) described a semantic this channel no longer carries, and the 07-29 ruling governs it.
 
 import { describe, expect, test } from 'bun:test'
 
@@ -23,7 +21,7 @@ const chan = (color) => ({
 
 describe('#1659 — the tackle band is GREY, and it is a band (never a hidden range)', () => {
   test('the tackle-lost channel is neutral grey — no dominant hue', () => {
-    const { r, g, b } = chan(CHANNELS.path_blocked.color)
+    const { r, g, b } = chan(CHANNELS.unavailable.color)
     const spread = Math.max(r, g, b) - Math.min(r, g, b)
     // Grey = the three channels sit on top of each other. A generous 24/255 tolerance leaves room for the
     // house's cool cast without ever reading as a coloured wash.
@@ -34,7 +32,7 @@ describe('#1659 — the tackle band is GREY, and it is a band (never a hidden ra
   })
 
   test('grey is unmistakably NOT the green the walkable range paints', () => {
-    const grey = chan(CHANNELS.path_blocked.color)
+    const grey = chan(CHANNELS.unavailable.color)
     const green = chan(CHANNELS.mp_range.color)
     // The green wash is green-dominant by a wide margin; the tackle band must not be.
     expect(green.g - Math.max(green.r, green.b)).toBeGreaterThan(0x30)
@@ -43,9 +41,9 @@ describe('#1659 — the tackle band is GREY, and it is a band (never a hidden ra
 
   test('the band RENDERS — it is a visible state on the range, never a removal', () => {
     // Removal is the bug this row names. A zero/near-zero-opacity channel is removal by another route.
-    expect(CHANNELS.path_blocked.opacity).toBeGreaterThanOrEqual(0.3)
-    expect(CHANNELS.path_blocked.center_alpha ?? 1).toBeGreaterThan(0)
+    expect(CHANNELS.unavailable.opacity).toBeGreaterThanOrEqual(0.3)
+    expect(CHANNELS.unavailable.center_alpha ?? 1).toBeGreaterThan(0)
     // It sits on the base layer with the green range it splits — one paint blob per cell, same tier.
-    expect(CHANNELS.path_blocked.order).toBe(CHANNELS.mp_range.order)
+    expect(CHANNELS.unavailable.order).toBe(CHANNELS.mp_range.order)
   })
 })

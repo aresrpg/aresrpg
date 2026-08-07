@@ -190,7 +190,7 @@ describe.skipIf(!SENSHI_MALE_GLB_AVAILABLE)('#1866 — the placement strips pain
   })
 
   test('a taken start cell reads as unavailable, in the neutral grey grammar — never a second blue', () => {
-    expect(board.channel_of(ALLY_CELL)).toBe('path_blocked')
+    expect(board.channel_of(ALLY_CELL)).toBe('unavailable')
   })
 
   test('the other seats’ strip has no reader in a solo group fight — it paints nothing at all', () => {
@@ -208,7 +208,7 @@ describe.skipIf(!SENSHI_MALE_GLB_AVAILABLE)('#1866 — the placement strips pain
     })
 
     expect(await poll(() => board.channel_of(OTHER_BAND[0]) !== null)).toBe(true)
-    for (const cell of OTHER_BAND) expect(board.channel_of(cell)).toBe('path_blocked')
+    for (const cell of OTHER_BAND) expect(board.channel_of(cell)).toBe('unavailable')
     expect(board.cells_on('placement')).toEqual([MY_CELL, FREE_CELL])
   })
 })

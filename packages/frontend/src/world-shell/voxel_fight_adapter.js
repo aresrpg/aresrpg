@@ -1888,7 +1888,7 @@ export function create_voxel_fight_adapter(
     /** @type {any} */ (cell) => {
       const fight = read_board_fight()
       const { dungeon } = use_dungeon.getState()
-      // 'path_blocked' is NOT cleared here anymore — it is the WASH's static tackle-lost band now
+      // 'unavailable' is NOT cleared here anymore — it is the WASH's static tackle-lost band now
       // (mouse-independent; the per-hover red suffix is dead), owned by paint()'s authoritative pass.
       const clear_hover = () => {
         aim_cell = null // #2175 — no legal aim ⇒ no zone forecast, exactly as no footprint paints
@@ -1914,7 +1914,7 @@ export function create_voxel_fight_adapter(
       if (!fight.armed_spell_id) {
         // [msg 3254 → 07-17] REACH-CLIPPED HOVER, green half only: the prefix inside the wash's own reach keeps
         // the D236 dark-green 'path' (so the preview can never lie). The soft-red beyond-MP suffix is DEAD: the
-        // lost-range read is the WASH's static 'path_blocked' band (project.move_wash — mouse-independent,
+        // lost-range read is the WASH's static 'unavailable' band (project.move_wash — mouse-independent,
         // tackle-gated), never a per-hover paint.
         // #950 → #1042 — the reach test is the REDUCER'S, and it is a GATE ON THE HOVERED CELL, not a clip:
         // hovering a cell OUTSIDE `move_wash`'s reach (a tackled seat's bitten walk, or plain out-of-MP) paints
@@ -2178,12 +2178,12 @@ export function create_voxel_fight_adapter(
 const BASE_PAINT_CHANNEL = /** @type {const} */ ({
   placement: 'placement',
   // #1866 — a declared start cell this seat cannot pick. The neutral grey the tackle band already rules for
-  // "information you may not act on" (board_highlight_style's path_blocked), never a second clickable blue.
-  placement_locked: 'path_blocked',
+  // "information you may not act on" (board_highlight_style's unavailable), never a second clickable blue.
+  placement_locked: 'unavailable',
   ghost: 'ghost',
   hover_movement: 'range',
   movement: 'mp_range',
-  movement_blocked: 'path_blocked',
+  movement_blocked: 'unavailable',
   movement_path: 'path',
   in_range: 'target',
   los_blocked: 'los_blocked',
