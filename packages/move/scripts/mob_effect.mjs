@@ -2,9 +2,10 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 // Pure mob-effect PTB builder for seed_full_corpus.mjs. Kept free of client/manifest imports so the corpus wire
 // shape can be regression-tested offline without loading the chain-facing seed driver.
+import { EFFECT_PHASE_BY_KIND, PHASE_ON_ENTER } from '../../sim/src/spell_effect.js'
+
 import { encode_effect_value } from './spell_wire.mjs'
 
-const KIND_PHASE = { 20: 1, 21: 1 } // K_PLACE_GLYPH / K_APPLY_DOT → PHASE_START; all else PHASE_ON_ENTER
 const EL_ID = {
   fire: 0,
   water: 1,
@@ -45,7 +46,7 @@ export const mobEffect = (tx, foundationPackage, e) => {
       tx.pure.u8(e.turns ?? 0),
       tx.pure.u8(e.stat ?? 0),
       tx.pure.u8(encodedMin.flags),
-      tx.pure.u8(KIND_PHASE[e.kind] ?? 0),
+      tx.pure.u8(EFFECT_PHASE_BY_KIND[e.kind] ?? PHASE_ON_ENTER),
     ],
   })
 }

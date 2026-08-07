@@ -26,6 +26,8 @@ import { fileURLToPath } from 'node:url'
 
 import { Transaction } from '@mysten/sui/transactions'
 
+import { EFFECT_PHASE_BY_KIND, PHASE_ON_ENTER } from '../../sim/src/spell_effect.js'
+
 import { keypair, sui_client } from './client.js'
 import { run, netGas, probeBatchSize, resolveBatch, claimCreated, getReceipt } from './ceremony_lib.mjs'
 import { encode_effect_value } from './spell_wire.mjs'
@@ -81,7 +83,6 @@ function guard_network() {
 // ── PHASE 8 builders (verbatim from seed_full_corpus.mjs, spells slice only) ───────────────────
 const T_EFFECT = `${FND}::spell_effect::Effect`
 const T_LEVEL = `${FND}::spell_effect::SpellLevel`
-const KIND_PHASE = { 20: 1, 21: 1 }
 // value/flags ride spell_wire.mjs's encode_effect_value (#1250 — CENTERED for alter_stat/alter_resist,
 // magnitude passthrough otherwise) — the ONE home every new_effect PTB encoder shares.
 const effectFx = (tx, e) => {
@@ -99,7 +100,7 @@ const effectFx = (tx, e) => {
       tx.pure.u8(e.turns ?? 0),
       tx.pure.u8(e.stat ?? 0),
       tx.pure.u8(flags),
-      tx.pure.u8(KIND_PHASE[e.kind] ?? 0),
+      tx.pure.u8(EFFECT_PHASE_BY_KIND[e.kind] ?? PHASE_ON_ENTER),
     ],
   })
 }

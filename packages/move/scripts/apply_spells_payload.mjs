@@ -70,11 +70,12 @@ import release from '../../sdk/src/deployment/release.json' with { type: 'json' 
 import {
   FLAG_DISPELLABLE,
   FLAG_NEGATIVE,
+  EFFECT_PHASE_BY_KIND,
   K_ALTER_RESIST,
   K_ALTER_STAT,
   K_APPLY_DOT,
   K_DAMAGE,
-  K_PLACE_GLYPH,
+  PHASE_ON_ENTER,
 } from '../../sim/src/spell_effect.js'
 
 import { getClient as get_client } from './ceremony_lib.mjs'
@@ -98,9 +99,6 @@ export const MAX_U16 = 65535
 // gear ItemStatistics, mob resistances). Derived from the ONE dialect home, never from a local shift constant.
 export const SIGNED_DELTA_MIN = -encode_status_value(K_ALTER_STAT, 0)
 export const SIGNED_DELTA_MAX = MAX_U16 + SIGNED_DELTA_MIN
-// The seeder's KIND_PHASE table (seed_spells_phase.mjs) — a glyph/DoT ticks at PHASE_START unless authored.
-const KIND_PHASE = { [K_PLACE_GLYPH]: 1, [K_APPLY_DOT]: 1 }
-
 const is_id = (value) => /^0x[0-9a-f]{64}$/i.test(value ?? '')
 const lc_id = (value) => String(value ?? '').toLowerCase()
 
@@ -144,7 +142,7 @@ export function encode_effect(effect) {
     turns: to_int(effect?.turns ?? 0, 'turns', MAX_U8),
     stat: to_int(effect?.stat ?? 0, 'stat', MAX_U8),
     flags,
-    phase: to_int(effect?.phase ?? KIND_PHASE[kind] ?? 0, 'phase', MAX_U8),
+    phase: to_int(effect?.phase ?? EFFECT_PHASE_BY_KIND[kind] ?? PHASE_ON_ENTER, 'phase', MAX_U8),
   }
 }
 

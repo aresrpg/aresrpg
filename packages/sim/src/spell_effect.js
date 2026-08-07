@@ -118,6 +118,12 @@ export const PHASE_ON_ENTER = 0
 export const PHASE_START = 1
 export const PHASE_END = 2
 
+/** Default trigger phase for effect kinds whose wire rows do not author an override. */
+export const EFFECT_PHASE_BY_KIND = Object.freeze({
+  [K_PLACE_GLYPH]: PHASE_START,
+  [K_APPLY_DOT]: PHASE_START,
+})
+
 export const k_place_trap = () => K_PLACE_TRAP
 export const k_place_glyph = () => K_PLACE_GLYPH
 export const k_apply_dot = () => K_APPLY_DOT

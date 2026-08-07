@@ -25,6 +25,7 @@ import { fileURLToPath } from 'node:url'
 import { Transaction } from '@mysten/sui/transactions'
 
 import { ITEM_STAT_SHIFT as SHIFT } from '../../sim/src/equipment_stats.js'
+import { EFFECT_PHASE_BY_KIND, PHASE_ON_ENTER } from '../../sim/src/spell_effect.js'
 import { world_seed } from '../../sdk/src/world_seed.js'
 
 import { keypair, sui_client } from './client.js'
@@ -396,7 +397,6 @@ const pure = (tx, kind, ...args) => {
 // fine as data — balance C-6 FOLLOWUPS). element null→255; `value`/`flags` ride spell_wire.mjs's
 // `encode_effect_value` (#1250 — CENTERED for alter_stat/alter_resist, magnitude passthrough otherwise);
 // `phase` per kind (glyph/dot tick at turn START, else on-enter=0) — signature in foundation spell_effect.
-const KIND_PHASE = { 20: 1, 21: 1 } // K_PLACE_GLYPH / K_APPLY_DOT → PHASE_START; all else PHASE_ON_ENTER
 export const effectFx = (tx, e) => {
   const { value, flags } = encode_effect_value(e.kind, e.value ?? 0, e.flags ?? 0)
   return tx.moveCall({
@@ -412,7 +412,7 @@ export const effectFx = (tx, e) => {
       pure(tx, 'u8', e.turns ?? 0),
       pure(tx, 'u8', e.stat ?? 0),
       pure(tx, 'u8', flags),
-      pure(tx, 'u8', KIND_PHASE[e.kind] ?? 0),
+      pure(tx, 'u8', EFFECT_PHASE_BY_KIND[e.kind] ?? PHASE_ON_ENTER),
     ],
   })
 }
