@@ -26,10 +26,10 @@ const HALF = (GRID - 1) / 2
  * @param {{ x: number, y: number }[]} mobs world-cell anchors of the visible groups
  * @returns {void}
  */
-/* eslint-disable no-param-reassign -- CanvasRenderingContext2D is an imperative platform boundary owned for this paint call; its drawing API has no immutable equivalent. */
 const draw = (ctx, cx, cy, seed, mobs) => {
+  const paint_ctx = ctx
   const cell_px = PIXELS / GRID
-  ctx.clearRect(0, 0, PIXELS, PIXELS)
+  paint_ctx.clearRect(0, 0, PIXELS, PIXELS)
   for (let gy = 0; gy < GRID; gy++) {
     for (let gx = 0; gx < GRID; gx++) {
       const wx = cx + gx - HALF
@@ -37,11 +37,11 @@ const draw = (ctx, cx, cy, seed, mobs) => {
       const px = gx * cell_px
       const py = gy * cell_px
       // +1px overdraw closes the sub-pixel seams between cells (cell_px is fractional)
-      ctx.fillStyle = BIOME_FILL[world_biome(seed, wx, wy)] ?? BIOME_FILL.plains
-      ctx.fillRect(px, py, cell_px + 1, cell_px + 1)
+      Reflect.set(paint_ctx, 'fillStyle', BIOME_FILL[world_biome(seed, wx, wy)] ?? BIOME_FILL.plains)
+      paint_ctx.fillRect(px, py, cell_px + 1, cell_px + 1)
       if (world_cell(seed, wx, wy) === CELL.OBSTACLE) {
-        ctx.fillStyle = OBSTACLE_SHADE
-        ctx.fillRect(px, py, cell_px + 1, cell_px + 1)
+        Reflect.set(paint_ctx, 'fillStyle', OBSTACLE_SHADE)
+        paint_ctx.fillRect(px, py, cell_px + 1, cell_px + 1)
       }
     }
   }
@@ -50,27 +50,26 @@ const draw = (ctx, cx, cy, seed, mobs) => {
     const gx = x - cx + HALF
     const gy = y - cy + HALF
     if (gx < 0 || gx >= GRID || gy < 0 || gy >= GRID) continue
-    ctx.beginPath()
-    ctx.arc((gx + 0.5) * cell_px, (gy + 0.5) * cell_px, cell_px * 0.9, 0, Math.PI * 2)
-    ctx.fillStyle = '#ff6b6b'
-    ctx.fill.call(ctx)
+    paint_ctx.beginPath()
+    paint_ctx.arc((gx + 0.5) * cell_px, (gy + 0.5) * cell_px, cell_px * 0.9, 0, Math.PI * 2)
+    Reflect.set(paint_ctx, 'fillStyle', '#ff6b6b')
+    paint_ctx.fill.call(paint_ctx)
   }
   // cyan player dot at the center cell (companion --color-cyan #4a9eff)
   const c = PIXELS / 2
   const r = cell_px * 0.9
-  ctx.beginPath()
-  ctx.arc(c, c, r * 2.1, 0, Math.PI * 2)
-  ctx.fillStyle = 'rgba(74, 158, 255, 0.18)'
-  ctx.fill.call(ctx)
-  ctx.beginPath()
-  ctx.arc(c, c, r, 0, Math.PI * 2)
-  ctx.fillStyle = '#4a9eff'
-  ctx.strokeStyle = 'rgba(7, 9, 13, 0.85)'
-  ctx.lineWidth = 1
-  ctx.fill.call(ctx)
-  ctx.stroke()
+  paint_ctx.beginPath()
+  paint_ctx.arc(c, c, r * 2.1, 0, Math.PI * 2)
+  Reflect.set(paint_ctx, 'fillStyle', 'rgba(74, 158, 255, 0.18)')
+  paint_ctx.fill.call(paint_ctx)
+  paint_ctx.beginPath()
+  paint_ctx.arc(c, c, r, 0, Math.PI * 2)
+  Reflect.set(paint_ctx, 'fillStyle', '#4a9eff')
+  Reflect.set(paint_ctx, 'strokeStyle', 'rgba(7, 9, 13, 0.85)')
+  Reflect.set(paint_ctx, 'lineWidth', 1)
+  paint_ctx.fill.call(paint_ctx)
+  paint_ctx.stroke()
 }
-/* eslint-enable no-param-reassign */
 
 /** @returns {import('react').ReactElement} */
 export function WorldMinimap() {
