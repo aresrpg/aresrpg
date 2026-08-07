@@ -13,13 +13,12 @@ import { HistoryPanel } from '../components/marketplace/history_panel'
 import { InboxPanel } from '../components/marketplace/inbox_panel'
 import { MarketplaceFrameCorners, MarketplaceFrameOrnament } from '../components/marketplace/ornamental_frame'
 import { app_mobile_classes, useMobileMode } from '../game/screens/hud/mobile_layout.js'
+import { FRONTEND_NETWORK } from '../env'
 
 // The player-to-player kiosk marketplace — D750's full-viewport ornamental frame around the four existing modes:
 // BUY (category rail + template ledger + listing rows), SELL, HISTORY, and INBOX. The current full BUTTON switch
 // remains the house control: animated per-mode fill, reduced-motion support, and keyboard-driven ARIA
 // tabs. Shop (first-party TemplateSale) remains a separate page; marketplace writes ride the optimistic chain store.
-
-const NETWORK = ((import.meta as unknown as { env: Record<string, string> }).env?.VITE_NETWORK || 'testnet').trim()
 
 type Tab = 'BUY' | 'SELL' | 'HISTORY' | 'INBOX'
 const TAB_ORDER: Tab[] = ['BUY', 'SELL', 'HISTORY', 'INBOX']
@@ -170,7 +169,7 @@ export function MarketplacePage() {
                 className="w-1.5 h-1.5 rounded-full bg-emerald-400"
                 style={{ boxShadow: '0 0 6px rgba(52,211,153,0.55)' }}
               />
-              Sui &middot; {NETWORK}
+              Sui &middot; {FRONTEND_NETWORK}
             </span>
           </div>
           <MarketplaceFrameOrnament />

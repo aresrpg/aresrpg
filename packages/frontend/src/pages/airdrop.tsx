@@ -10,6 +10,7 @@ import { use_airdrops } from '../stores/airdrop'
 import type { RpcAirdrop } from '../rpc/views'
 import { ItemImage } from '../components/items'
 import { cosmetic_icon_of } from '../game/cosmetic_icons.js'
+import { FRONTEND_NETWORK } from '../env'
 
 import { AirdropShowcase } from './airdrop_showcase'
 
@@ -17,8 +18,6 @@ import { AirdropShowcase } from './airdrop_showcase'
 // reserved-item drops; each shows whether the CONNECTED identity (zkLogin address + optional external wallet) is
 // on that drop's whitelist, and a claim that mints ONE into the claimer's own kiosk (mint-lock, no royalty) and
 // removes the address. The whitelist CONTENT lands "way later" — so the honest empty state is the default.
-
-const NETWORK = ((import.meta as unknown as { env: Record<string, string> }).env?.VITE_NETWORK || 'testnet').trim()
 
 function AirdropCard({
   airdrop,
@@ -128,7 +127,7 @@ export function AirdropPage() {
             className="w-1.5 h-1.5 rounded-full bg-emerald-400"
             style={{ boxShadow: '0 0 6px rgba(52,211,153,0.55)' }}
           />
-          Sui &middot; {NETWORK}
+          Sui &middot; {FRONTEND_NETWORK}
         </span>
       </div>
 
