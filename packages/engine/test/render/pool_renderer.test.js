@@ -415,6 +415,7 @@ describe('dispose — full GPU teardown empties the resident set and clears the 
 // cannot paint over emergent blades (#675), and the silhouette still stands in the completed scene depth for
 // the post-composited clouds/fog (#454) — one pass now carries all three properties.
 describe('foliage depth ordering', () => {
+  // Real five-class renderer + atlas: measured 3.69s file-solo; both frontend-loaded probes stayed inside 30s.
   test('foliage writes depth (order-invariant grass) and draws before water', () => {
     const scene = new Scene()
     const terrain = make_renderer(scene)

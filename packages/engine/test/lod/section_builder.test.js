@@ -71,6 +71,7 @@ describe('determinism', () => {
     expect(Buffer.from(a.block.buffer)).toEqual(Buffer.from(b.block.buffer))
   })
 
+  // Two real generated sections measured 0.77s file-solo / 7.04s under full-suite train load.
   test('two independent world gen contexts on the same seed ⇒ identical section', () => {
     const ctx1 = create_gen_context('aresrpg')
     const ctx2 = create_gen_context('aresrpg')
@@ -85,7 +86,7 @@ describe('determinism', () => {
     if (a.sky_height && b.sky_height) {
       expect(Buffer.from(a.sky_height.buffer)).toEqual(Buffer.from(b.sky_height.buffer))
     }
-  })
+  }, 30000)
 })
 
 describe('2×2 → 1 golden (hand-computed L1 downsample)', () => {

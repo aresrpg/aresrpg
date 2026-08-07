@@ -328,6 +328,7 @@ describe('schematic trees appear in-world through the full generate_world_chunk 
   // not just the isolated stamper. Coords found by a forest-chunk scan. (The exhaustive "all 10 tree
   // families + ≥5 rock families spawn" world survey is the exit probe veg_b_report.json — too heavy
   // for the fast unit suite; family REACHABILITY is already proven above.)
+  // Real column generation + meshing: 5.13s file-solo; both frontend-loaded probes completed inside 5s.
   test('forest chunk columns emit >0 leaf quads over their surface stack', () => {
     /** @type {[number,number][]} known-forest chunk columns for the hardcoded seed */
     const forest_columns = [
@@ -342,7 +343,7 @@ describe('schematic trees appear in-world through the full generate_world_chunk 
       }
       expect(leaf).toBeGreaterThan(0)
     }
-  })
+  }, 30000)
 })
 
 // ══════════════════════════════════════════════════════════════════════════════════════════════
@@ -589,6 +590,7 @@ describe('PROCTREES C4: procedural trees are the DEFAULT (schematic tree stamps 
     expect(DEFAULT_WORLD_GEN_CONFIG.trees?.baked_variants).toBe(32)
   })
 
+  // Three real baked forest stacks: measured 4.96s file-solo / 6.21s under frontend-suite load.
   test('BAKED DEFAULT decorates deterministically and the stamped variant MESHES (trunk + canopy)', () => {
     // The shipping recipe (baked 32 + rotation): same forest stack twice ⇒ byte-identical; leaf AND log
     // quads both mesh (occupancy set — no bald/holey regression through the baked+rotated stamp path).
@@ -602,7 +604,7 @@ describe('PROCTREES C4: procedural trees are the DEFAULT (schematic tree stamps 
     // and the baked world differs from the LIVE-path world (the pick + rotation actually engaged)
     const live = decorate_forest_stack(PROCTREES_ON, -4, 0)
     expect(a.buf.equals(live.buf)).toBe(false)
-  })
+  }, 30000)
 
   test('the roster is COHERENT: every biome is real, every species exists, weights are positive ints', () => {
     const roster = DEFAULT_WORLD_GEN_CONFIG.tree_species ?? {}

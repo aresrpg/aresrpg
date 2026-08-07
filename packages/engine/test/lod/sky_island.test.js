@@ -81,6 +81,7 @@ describe('Pandora sky islands are reachable from column/density modules (region-
     expect(best.sky_block).toBeGreaterThan(0)
   })
 
+  // Real section construction measured 1.75s file-solo / 7.97s under full-suite train load.
   test('(2) section layer: a section over the archipelago carries a sky layer at cap altitude', () => {
     const ctx = create_gen_context('aresrpg')
     const sampler = create_world_column_sampler(ctx)
@@ -99,5 +100,5 @@ describe('Pandora sky islands are reachable from column/density modules (region-
     // hanging-mountain top — not a clipped root tip.
     const highest = Math.max(...Array.from(/** @type {Uint16Array} */ (section.sky_height)))
     expect(highest).toBeGreaterThan(SKY.low_y) // in the cap band (≥ low_y = 300)
-  })
+  }, 30000)
 })

@@ -90,6 +90,7 @@ describe('FIVE-WORLDS · STRATA BANDING (Riviera)', () => {
 })
 
 describe('FIVE-WORLDS · CANYON STAGE (Riviera, additive)', () => {
+  // Deterministic real-column sweep: measured 2.53s file-solo / 6.03s under frontend-suite load.
   test('enabling the additive canyon deepens the gated inland columns (column changes)', () => {
     const on = clone()
     // Width 0.25 > the baseline 0.17 ⇒ a strict superset of carved columns, so the additive carve is
@@ -101,7 +102,7 @@ describe('FIVE-WORLDS · CANYON STAGE (Riviera, additive)', () => {
       total += column_diff(base, generate_column(create_gen_context(on), cx, cz))
     }
     expect(total).toBeGreaterThan(0)
-  })
+  }, 30000)
 
   test('disabled canyon stage is byte-identical to DEFAULT (baseline canyon untouched)', () => {
     const base = generate_column(create_gen_context(DEFAULT_WORLD_GEN_CONFIG), -49, -49)
