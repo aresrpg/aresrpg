@@ -58,13 +58,6 @@ const ALLOWLIST = {
   // That premise expired: `/v1/encyclopedia?kind=recipes` serves the object-snapshotted Recipe set
   // (rpc:idx:recipes), so the craft path now takes the recipe id straight off the row the player clicked
   // and the batch fan-out is gone — one fewer browser call at the public fullnode.
-  'chain/read_templates.js':
-    'get_mob_templates/get_item_templates — CONFIRMED DEAD (zero live callers: onchain_templates.ts dropped ' +
-    'its only consumer, useOnchainTemplates, in this #304 lane; grep of dist/assets/*.js for the ' +
-    'MobTemplateCreated event-type literal finds nothing). Kept — not deleted — because ' +
-    'read_templates.test.js pins a real historical chain-shape bug (event-type/field-name mismatch, ' +
-    '2026-07-14) against the LIVE network; deleting the reader would delete that regression coverage. Not ' +
-    'browser-reachable today; flagged for the lead/owner to action (delete outright, or wire a real consumer).',
 }
 
 function walk_js_files(dir) {

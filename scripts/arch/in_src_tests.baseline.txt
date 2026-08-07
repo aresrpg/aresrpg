@@ -29,7 +29,6 @@ packages/frontend/src/chain/read_listings.test.js
 packages/frontend/src/chain/read_party.test.js
 packages/frontend/src/chain/read_shop_sales.test.js
 packages/frontend/src/chain/read_staking.test.js
-packages/frontend/src/chain/read_templates.test.js
 packages/frontend/src/chain/stat_bias.test.js
 packages/frontend/src/chain/write/collect_profits_tx.test.js
 packages/frontend/src/chain/write/item_send_execution.test.ts

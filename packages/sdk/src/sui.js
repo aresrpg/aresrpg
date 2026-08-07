@@ -191,11 +191,9 @@ export async function SDK({ network = 'testnet' } = {}) {
         : 'https://fullnode.testnet.sui.io:443')
   const grpc_client = new SuiGrpcClient({ network, baseUrl: grpc_base })
 
-  // #23/D79 P2 — the GraphQL client covers the two lanes gRPC/Core can't: (1) the KioskClient, whose
-  // KioskCompatibleClient type accepts only a JSON-RPC or GraphQL client, never a gRPC one; (2) the event-replay
-  // reads (query_events.js) — GraphQL `events(filter:{type})` replaces the deleted JSON-RPC event query. It also
-  // implements the Core API + is a valid `Transaction.build({client})` target. Testnet URL per the installed
-  // @mysten/sui docs (docs/clients/graphql.md).
+  // #23/D79 P2 — the GraphQL client covers the KioskClient lane gRPC/Core can't: KioskCompatibleClient accepts
+  // only a JSON-RPC or GraphQL client, never a gRPC one. It also implements the Core API + is a valid
+  // `Transaction.build({client})` target. Testnet URL per the installed @mysten/sui docs (docs/clients/graphql.md).
   const graphql_client = new SuiGraphQLClient({
     network,
     url:

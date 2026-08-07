@@ -21,9 +21,9 @@ import { WorldTab, type WorldRow } from './world_tab'
 
 // T8 (board ticket #8): the DUNGEONS tab was deleted — the seed has no dungeon content and the tab only ever
 // rendered an empty stub (content.ts's `templates.dungeon` was hardcoded `[]`), which is exactly the
-// "shows fake/empty data as a real feature" bug this pass removes. ITEMS/BESTIARY read real on-chain
-// templates directly inside items_tab.tsx/bestiary_tab.tsx (useOnchainTemplates) instead of the bundled
-// content.ts feed; JOBS' craftable-items list joined the same on-chain source — the
+// "shows fake/empty data as a real feature" bug this pass removes. ITEMS/BESTIARY read the indexed template
+// projections directly inside items_tab.tsx/bestiary_tab.tsx instead of the bundled content.ts feed;
+// JOBS' craftable-items list joined the same source — the
 // bundled seed snapshot was never generated past level 110, so recipes above it could never show — only
 // CLASSES/GAMEPLAY and JOBS' NPC-master lookup still use content.ts's static seeded data (intentionally
 // out of scope for this pass).

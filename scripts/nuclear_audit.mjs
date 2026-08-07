@@ -14,7 +14,6 @@ export const CLONE_LINE_THRESHOLD = 10
 
 export const RAW_SOURCE_MODULES = Object.freeze([
   'api/sponsor_state.mjs',
-  'packages/frontend/src/chain/query_events.js',
   'packages/frontend/src/chain/read_character.js',
   'packages/frontend/src/chain/read_checkpoint.js',
   'packages/frontend/src/chain/read_findables.js',
