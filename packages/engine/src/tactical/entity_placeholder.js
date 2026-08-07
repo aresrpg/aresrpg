@@ -8,11 +8,10 @@
 // a team-tinted CAPSULE standing exactly where the avatar would, at the avatar's own board height, so a
 // missing model reads as "we have no art for this one" instead of an invisible fighter.
 //
-// ONE HOME: board_entities mounts this on the single upsert branch that resolves no glb url, and every
-// consumer of the board (the game, the simulator, the demo) inherits it. Feet sit at the group origin — the
-// same contract the loaded avatar honours (model.position.y -= min_y) — so placement, walks and the entity
-// anchor need no special case for a placeholder body. The POLICY (who gets one, how tall, what tint) is the
-// pure `placeholder_body_of` below, so it is provable without the avatar loader's GLB.
+// ONE HOME: board_entities mounts this on the upsert branch that resolves no glb url; the roam avatar loader
+// reuses the same geometry after a real URL fails. Feet sit at the group origin — the same contract a loaded
+// avatar honours — so placement and movement need no placeholder special case. Fight POLICY (who gets one,
+// how tall, what tint) remains the pure `placeholder_body_of` below.
 
 import { CapsuleGeometry, Mesh, MeshStandardMaterial, Color } from 'three'
 

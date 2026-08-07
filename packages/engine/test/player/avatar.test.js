@@ -3,7 +3,7 @@
 // D193 — the CPU recolor compositor math, pinned against the legacy shader semantics
 // (customizable-texture.js fragment + blend state): alpha<0.5 discard, src.rgb·color srcAlpha-blend,
 // accumulator alpha untouched.
-import { describe, expect, test } from 'bun:test'
+import { describe, expect, spyOn, test } from 'bun:test'
 import {
   AnimationClip,
   Group,
@@ -79,6 +79,28 @@ describe.skipIf(!SENSHI_MALE_GLB_AVAILABLE)('character avatar mob factory option
       },
     ])
     avatar.dispose()
+  })
+})
+
+describe.skipIf(!SENSHI_MALE_GLB_AVAILABLE)('character avatar load failure', () => {
+  test('a missing roam rig leaves a loud visible body in the avatar root', async () => {
+    const warn = spyOn(console, 'warn').mockImplementation(() => {})
+    const avatar = create_character_avatar({
+      glb_url: '/models/characters/missing.glb',
+      character_model_loader: async () => {
+        throw new Error('404 rig')
+      },
+    })
+    try {
+      await Bun.sleep(0)
+      expect(warn).toHaveBeenCalled()
+      expect(avatar.ready).toBe(false)
+      expect(avatar.object3d.children).toHaveLength(1)
+      expect(avatar.object3d.children[0]?.name).toBe('avatar_load_failure')
+    } finally {
+      avatar.dispose()
+      warn.mockRestore()
+    }
   })
 })
 

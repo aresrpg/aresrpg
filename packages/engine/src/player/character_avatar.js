@@ -17,6 +17,7 @@
 import { AnimationMixer, CanvasTexture, Color, Group, LoopOnce, LoopRepeat, SRGBColorSpace } from 'three'
 
 import { CHARACTER_HEIGHT } from '../config/world_config.js'
+import { create_capsule_placeholder } from '../tactical/entity_placeholder.js'
 // [C1 SLICED COMPILE] the player-branch rig warms its pipelines through the engine's warm queue before
 // mounting (factory mobs arrive pre-warmed by create_mob_model; no registered queue ⇒ immediate resolve).
 import { warm_pipelines_once } from '../render/pipeline_warm_queue.js'
@@ -174,6 +175,8 @@ function find_bone(origin, name) {
  * @param {boolean} [opts.receive_shadow] player-body shadow receiving, default true. Mob callers use
  *   mob_model_factory, whose shared policy owns the mob shadow convention instead of this option.
  * @param {string | null} [opts.fallback_url] alternate model URL forwarded only to mob_model_factory.
+ * @param {typeof load_glb_checked} [opts.character_model_loader] direct character loader; injectable so the
+ *   missing-rig fallback is testable without a network request.
  * @param {((url:string, opts?:{label?:string|null,fallback_url?:string|null}) => Promise<{root:import('three').Object3D,
  *   clips:import('three').AnimationClip[], measured:{height:number,min_y:number}, dispose:()=>void}>) | null}
  *   [opts.mob_model_factory] board mobs inject the shared create_mob_model factory; players omit it and keep
@@ -189,6 +192,7 @@ export function create_character_avatar({
   receive_shadow = true,
   fallback_url = null,
   mob_model_factory = null,
+  character_model_loader = load_glb_checked,
 } = {}) {
   const root = new Group()
   root.name = 'player_avatar'
@@ -395,14 +399,26 @@ export function create_character_avatar({
       handle.tick = (dt) => mixer?.update(dt)
     }
   }
-  const on_model_error = (/** @type {any} */ err) => console.warn('[character_avatar] GLB load failed:', glb_url, err)
+  const on_model_error = (/** @type {any} */ err) => {
+    console.warn('[character_avatar] GLB load failed:', glb_url, err)
+    // Roam characters have no board-owned missing-model body. Leave a conspicuous capsule at their exact
+    // feet/height contract so a 404 is visible in-world as well as loud in logs. Factory mobs retain their
+    // catalog/board fallback policy and must not receive a second body here.
+    if (mob_model_factory || disposed || root.children.length) return
+    const placeholder = create_capsule_placeholder({
+      height: scale != null && scale > 0 ? scale : CHARACTER_HEIGHT,
+      color: 0xff2bd6,
+    })
+    placeholder.name = 'avatar_load_failure'
+    root.add(placeholder)
+  }
   if (mob_model_factory) {
     const factory_opts = {
       label: glb_url,
       ...(fallback_url != null ? { fallback_url } : {}),
     }
     void mob_model_factory(glb_url, factory_opts).then((model) => on_model_loaded(null, model), on_model_error)
-  } else void load_glb_checked(glb_url).then(on_model_loaded, on_model_error)
+  } else void character_model_loader(glb_url).then(on_model_loaded, on_model_error)
 
   /**
    * Resolves a clip name for an anim state (exact-first, then substring) and crossfades to it.
