@@ -10,14 +10,15 @@
 
 import { context } from '../../../store.js'
 import { select_hack_presentation } from '../../../core/world_presentation.js'
+import { CELESTIAL_CYCLE_MS as CYCLE_MS, DAY_FRAC } from '@aresrpg/engine3/celestial'
 
 /** Full cycle length (ms). SPEC §6.1 — 15 min day : 5 min night = a 20 min wall-clock cycle. */
-export const CYCLE_MS = 20 * 60 * 1000
+export { CYCLE_MS }
 /** Boot phase — the D177 daylight assert value, so a fresh page load always opens mid-morning (never a dark
  *  boot) and the sun visibly climbs → noon → dusk → night from there. */
 export const INITIAL_TOD = 0.28
-/** Fraction of the cycle the sun is above the horizon (mirror of sky_node.DAY_FRAC — the 3:1 day:night). */
-export const DAY_FRAC = 0.75
+/** Fraction of the cycle the sun is above the horizon (owned by the celestial-motion clock). */
+export { DAY_FRAC }
 /** HACK MODE (owner ruling): the cycle is disabled and pinned at a fixed noon-ish daytime — no new flag, this
  *  reads the SAME `world_presentation` fact every other hack surface already gates on (select_hack_presentation).
  *  Derived from DAY_FRAC/game_clock's own mapping (day span [0,DAY_FRAC) → 06:00-18:00), not a magic number:

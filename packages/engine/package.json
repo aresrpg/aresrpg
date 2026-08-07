@@ -12,7 +12,8 @@
     "./model": "./src/player/mob_model.js",
     "./cave": "./src/scene/cave_scene.js",
     "./vfx": "./src/render/vfx_presets.js",
-    "./gather": "./src/render/gather_synth.js"
+    "./gather": "./src/render/gather_synth.js",
+    "./celestial": "./src/render/sky/celestial_motion.js"
   },
   "scripts": {
     "dev": "vite --port 5199",
