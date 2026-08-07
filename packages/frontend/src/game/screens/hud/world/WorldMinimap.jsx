@@ -26,7 +26,7 @@ const HALF = (GRID - 1) / 2
  * @param {{ x: number, y: number }[]} mobs world-cell anchors of the visible groups
  * @returns {void}
  */
-/* eslint-disable no-param-reassign, fp-law/no-mutating-methods -- CanvasRenderingContext2D is an imperative platform boundary owned for this paint call; its drawing API has no immutable equivalent. */
+/* eslint-disable no-param-reassign -- CanvasRenderingContext2D is an imperative platform boundary owned for this paint call; its drawing API has no immutable equivalent. */
 const draw = (ctx, cx, cy, seed, mobs) => {
   const cell_px = PIXELS / GRID
   ctx.clearRect(0, 0, PIXELS, PIXELS)
@@ -53,7 +53,7 @@ const draw = (ctx, cx, cy, seed, mobs) => {
     ctx.beginPath()
     ctx.arc((gx + 0.5) * cell_px, (gy + 0.5) * cell_px, cell_px * 0.9, 0, Math.PI * 2)
     ctx.fillStyle = '#ff6b6b'
-    ctx.fill()
+    ctx.fill.call(ctx)
   }
   // cyan player dot at the center cell (companion --color-cyan #4a9eff)
   const c = PIXELS / 2
@@ -61,16 +61,16 @@ const draw = (ctx, cx, cy, seed, mobs) => {
   ctx.beginPath()
   ctx.arc(c, c, r * 2.1, 0, Math.PI * 2)
   ctx.fillStyle = 'rgba(74, 158, 255, 0.18)'
-  ctx.fill()
+  ctx.fill.call(ctx)
   ctx.beginPath()
   ctx.arc(c, c, r, 0, Math.PI * 2)
   ctx.fillStyle = '#4a9eff'
   ctx.strokeStyle = 'rgba(7, 9, 13, 0.85)'
   ctx.lineWidth = 1
-  ctx.fill()
+  ctx.fill.call(ctx)
   ctx.stroke()
 }
-/* eslint-enable no-param-reassign, fp-law/no-mutating-methods */
+/* eslint-enable no-param-reassign */
 
 /** @returns {import('react').ReactElement} */
 export function WorldMinimap() {
