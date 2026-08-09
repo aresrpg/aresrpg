@@ -6,6 +6,11 @@ whole game — client, engine, sim, Move sources, SDK, the keyless read layer, a
 sponsor. The only thing not here is content: the seed corpus (items, mobs, balance) lives in a
 private sibling repo and reaches the game through published chain state.
 
+**Read [DECISIONS.md](DECISIONS.md) first — it is this project's mental model.** It carries the
+owner's design patterns (with their motives) and the settled rulings. Before you design, name,
+or place anything, apply its patterns as your own; when a choice feels open, that file usually
+already decides it. New rulings and patterns land there the moment they are made — same commit.
+
 Load these before working — they are the operating rules of this codebase:
 
 @.claude/rules/craft.md
@@ -104,6 +109,9 @@ bun run dev            # Vite frontend (localhost:5173) against live testnet
 bun run test           # the one test truth — same command CI runs
 bun run lint           # eslint + prettier + constraint gates
 ```
+
+Move code: after EVERY edit under packages/move, run `sui move build --path packages/move` and
+`sui move test --path packages/move` — errors AND warnings must be clean before the change counts.
 
 ## Working with an AI assistant
 

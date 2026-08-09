@@ -1,0 +1,13 @@
+[package]
+name = "aresrpg"
+edition = "2024"
+license = "LicenseRef-AresRPG-Source-Available"
+authors = ["Sceat"]
+
+[dependencies]
+
+[addresses]
+# Fixed proceeds sink (one home, never a per-sale field).
+treasury = "0x37cf46b499f740e653644bd2f7a8ed97f248e8b3c69d5d12c97d7845a54c0cd8"
+
+# Package management: https://docs.sui.io/guides/developer/packages/move-package-management

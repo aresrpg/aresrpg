@@ -1,0 +1,24 @@
+build/
+.env
+.env.*
+node_modules/
+.DS_Store
+
+# Sui build artifacts
+target/
+.trace
+.coverage_map.mvcov
+
+# Test artifacts
+*.log
+coverage/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
