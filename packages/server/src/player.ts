@@ -1,0 +1,187 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
+// The per-connection harness (legacy player.js pattern): ONE state, ONE reducer door, observers.
+// REDUCERS ARE PURE — `(state, action) => state`, no context, no I/O: their only role is to fold
+// actions into state. After each fold the loop emits the action's type and STATE_UPDATED on the
+// context's local `events` emitter (the legacy loop verbatim); OBSERVERS wire listeners there and
+// own every effect: a packet that needs validation is caught on its action event, validated
+// (async allowed), and re-enters as an internal `action/*` dispatch; the reducer folds it; the
+// STATE DELTA is what observers act on. A packet that needs no validation may fold directly.
+// Teardown rides the abort `signal`. No callback ever writes state.
+
+import { EventEmitter } from 'node:events'
+
+import {
+  parse_client_packet,
+  type ClientPacket,
+  type ServerPacket,
+  type PresenceRow,
+  type VisibleSlot,
+} from '@aresrpg/protocol'
+
+import logger from './logger.ts'
+import { channels } from './protocol.ts'
+import type { Graph } from './graph.ts'
+import type { Pubsub } from './pubsub.ts'
+import player_load from './modules/player_load.ts'
+import player_info from './modules/player_info.ts'
+import player_events from './modules/player_events.ts'
+import player_world from './modules/player_world.ts'
+import player_chat from './modules/player_chat.ts'
+import player_fight from './modules/player_fight.ts'
+import player_party from './modules/player_party.ts'
+import player_market from './modules/player_market.ts'
+import player_trade from './modules/player_trade.ts'
+import player_kolizeum from './modules/player_kolizeum.ts'
+import player_admin from './modules/player_admin.ts'
+
+const log = logger(import.meta)
+
+/** The embodied presence — a PresenceRow pinned to the world it walks in. */
+export type Embodied = PresenceRow & { world: string }
+
+/** Actions the reducers fold: client packets + validated internal actions + lifecycle marks. */
+export type PlayerAction =
+  | ClientPacket
+  | {
+      type: 'action/embody'
+      character: Embodied
+      friends: ReadonlySet<string>
+      party: string | null
+      fight: string | null
+      at_ms: number
+    }
+  | { type: 'action/move'; x: number; y: number; z: number; at_ms: number }
+  /** the OWN character's visible-slot change (chain event folded back into presence truth) */
+  | { type: 'action/equip'; slot: VisibleSlot; item_type: string | null }
+  /** the ONE fight watch slot: own seat (auto via FighterJoined) or a validated spectate */
+  | { type: 'action/fight'; fight: string | null }
+  | { type: 'action/party'; party: string | null }
+  | { type: 'close' }
+
+export type PlayerState = {
+  /** the embodied presence — null until an embody VALIDATES (ownership proven at the read) */
+  character: Embodied | null
+  /** friend addresses — visibility-cap bypass, loaded with the embody */
+  friends: ReadonlySet<string>
+  /** when the last accepted move folded — the speed law's clock */
+  last_move_ms: number
+  /** the LIVE fight this connection streams — own seat or spectate, one slot */
+  fight: string | null
+  /** the embodied character's party */
+  party: string | null
+  /** the market category under observation (packet/market_observe folds it directly) */
+  market_category: string | null
+}
+
+export type PlayerContext = {
+  address: string
+  admin: boolean
+  graph: Graph
+  /** the redis mesh — cross-connection facts (indexer envelopes, presence channels) */
+  pubsub: Pubsub
+  /** the LOCAL loop emitter (legacy `events`): every folded action re-emits under its type,
+   *  every state change emits `STATE_UPDATED(state, previous)` — observers listen here */
+  events: EventEmitter
+  send: (packet: ServerPacket) => void
+  /** Kill the connection with a loud reason — the hacker door (speed, flood). */
+  drop: (reason: string) => void
+  channels: typeof channels
+  get_state: () => PlayerState
+  dispatch: (action: PlayerAction) => void
+  /** aborts when the connection closes — observers hang their teardown here (legacy signal) */
+  signal: AbortSignal
+}
+
+export type PlayerModule = {
+  name: string
+  reduce?: (state: PlayerState, action: PlayerAction) => PlayerState
+  observe?: (context: PlayerContext) => void
+}
+
+export type Player = {
+  dispatch: (action: PlayerAction) => void
+  on_message: (raw: string | Buffer) => void
+  on_close: () => void
+}
+
+const MODULES: PlayerModule[] = [
+  player_load,
+  player_info,
+  player_events,
+  player_world,
+  player_chat,
+  player_fight,
+  player_party,
+  player_market,
+  player_trade,
+  player_kolizeum,
+  player_admin,
+]
+
+const INITIAL_STATE = (): PlayerState => ({
+  character: null,
+  friends: new Set(),
+  last_move_ms: 0,
+  fight: null,
+  party: null,
+  market_category: null,
+})
+
+type PlayerWires = Pick<PlayerContext, 'address' | 'admin' | 'graph' | 'pubsub'> & {
+  ws: { send: (raw: string) => unknown; close: (code?: number, reason?: string) => unknown }
+}
+
+/** Mount one verified connection — returns the ws handler's whole surface. */
+export function create_player({ ws, address, admin, graph, pubsub }: PlayerWires): Player {
+  let state = INITIAL_STATE()
+  const send = (packet: ServerPacket) => void ws.send(JSON.stringify(packet))
+  const drop = (reason: string) => void ws.close(1008, reason)
+
+  const events = new EventEmitter()
+  events.setMaxListeners(0)
+  const controller = new AbortController()
+
+  const context: PlayerContext = {
+    address,
+    admin,
+    graph,
+    pubsub,
+    events,
+    send,
+    drop,
+    channels,
+    get_state: () => state,
+    signal: controller.signal,
+    dispatch: (action) => {
+      const previous = state
+      const next = MODULES.reduce(
+        (folded, module) => (module.reduce ? module.reduce(folded, action) : folded),
+        previous
+      )
+      state = next
+      events.emit(action.type, action)
+      // compare the FOLD's output, not the live state — a nested dispatch from an action
+      // listener already emitted its own delta; re-emitting here would double every effect
+      if (next !== previous) events.emit('STATE_UPDATED', next, previous)
+    },
+  }
+
+  for (const module of MODULES) module.observe?.(context)
+
+  return {
+    dispatch: (action) => context.dispatch(action),
+    on_message: (raw) => {
+      try {
+        context.dispatch(parse_client_packet(raw))
+      } catch (error) {
+        log.warn({ address, error: (error as Error).message }, 'packet refused')
+        send({ type: 'packet/error', reason: (error as Error).message })
+      }
+    },
+    on_close: () => {
+      context.dispatch({ type: 'close' })
+      controller.abort()
+    },
+  }
+}

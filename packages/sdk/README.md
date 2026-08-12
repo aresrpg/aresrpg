@@ -1,93 +1,53 @@
-<h1 align=center>@aresrpg/sdk</h1>
-<p align=center>
-  <a href="https://discord.gg/aresrpg">
-    <img src="https://img.shields.io/discord/265104803531587584.svg?logo=discord&style=for-the-badge" alt="Chat"/>
-  </a>
-</p>
-<h3 align=center>Shared JS SDK for AresRPG on Sui — PTB builders, chain reads, and pure game math</h3>
+# @aresrpg/sdk
 
-## What this is
+The game client's ONE write surface — a **generated projection of the Move contract**. Every
+public/entry function of `packages/move/sources/api.move` becomes one PTB builder in
+`src/doors.gen.js`; the generator (`bun run generate`) reads the Move source, so the SDK can
+never drift from the chain surface — a Move door change lands with its regenerated builder in
+the same commit, and the test suite is red otherwise (the regen-clean tooth).
 
-A vanilla-JS (JSDoc-typed) library over the on-chain AresRPG Move packages. It has **no backend**: it
-composes Programmable Transaction Blocks the wallet signs, reads chain state directly over gRPC/GraphQL,
-and ships the deterministic off-chain math (xp, stats, chunks, job/craft, pool quotes). Package ids resolve
-lazily from `src/deployment/aresrpg.js` — an un-stamped network never breaks construction, only a call
-against it refuses loudly.
+Write-only by design: reads flow through the indexer, content lives in `seed/`, deployment ids
+live in the repo-root `pins.json`. A missing pin throws at the door — never a guess.
 
-## Install
+## The zero-roundtrip law
 
-```bash
-bun add @aresrpg/sdk
-```
+Sui finality is sub-second — so must every transaction be. The SDK therefore builds every PTB
+from **pre-resolved inputs only**, with zero resolution RPCs between intent and submission:
 
-Peer deps: `@mysten/sui`, `@mysten/kiosk`. Requires `moduleResolution: "nodenext"`.
+- shared objects → `sharedObjectRef` (the initial shared version is STABLE — learned once,
+  valid forever; pins carry theirs in `pins.json`)
+- owned objects → exact `objectRef` (version + digest) from the **receipt-fed cache**
+- clock/random → the SDK's offline system helpers
+- gas → cached reference gas price + the signer's cached gas coin ref
 
-## The SDK factory — `@aresrpg/sdk/sui`
-
-```js
-import { SDK } from '@aresrpg/sdk/sui'
-
-const sdk = await SDK({ network: 'testnet' }) // opens gRPC/GraphQL/kiosk clients; build once + memoise
-```
-
-The returned object bundles context-bound **PTB builders** and **reads**. Each builder takes an args object
-and returns a `@mysten/sui` `Transaction` for the wallet to sign. Highlights:
-
-- **Characters / items**: `create_character_free_ptb`, `create_character_paid_ptb`, `onboard_kiosk_ptb`,
-  `equip_ptb`, `unequip_ptb`, `buy_ptb`, `buy_many_ptb`, `craft_ptb`, `consume_potion_ptb`.
-- **Fight lifecycle**: `create_fight_ptb`, `join_fight_ptb`, `place_ptb`, `force_start_ptb`, `crank_ptb`,
-  `act_move_ptb`, `act_weapon_ptb`, `act_cast_ptb`, `act_pass_ptb`, `settle_fight_ptb`, `mint_rolled_ptb`.
-- **Dungeon / kolizeum / game**: `activate_ptb`, `settle_run_ptb`, `kolizeum_create_public_ptb`,
-  `raise_spell_level_ptb`, `feed_ptb`, `crush_ptb`, `join_world_ptb`, `gather_ptb`.
-- **Reads**: `get_user_kiosks`, `get_policies_profit`, `get_royalty_fee`, `get_world`, `get_expedition`,
-  `get_creation_state`, `is_name_taken`, `get_item_template`, `get_rolled_stats`, `get_sui_balance`.
-
-The same builders are also exported per-domain (`@aresrpg/sdk/fight`, `/dungeon`, `/kolizeum`, `/game`,
-`/items`, `/social`) for use without the full factory.
-
-## Pure game math (no chain, deterministic — mirrors the Move contracts)
+An object id the cache does not know **throws** — the SDK never falls back to an RPC lookup
+inside a build. `sdk.hydrate([ids])` is the ONE sanctioned bootstrap roundtrip (seeds refs, the
+gas price, and the gas coin); after it, every `execute` receipt keeps the cache fresh — the
+loop sustains itself with zero reads.
 
 ```js
-import {
-  experience_to_level,
-  level_to_experience,
-} from '@aresrpg/sdk/experience'
-import {
-  get_total_stat,
-  get_max_health,
-  get_secondary_stats,
-} from '@aresrpg/sdk/stats'
-import { to_chunk_position, spiral_array } from '@aresrpg/sdk/chunk'
-import {
-  get_job,
-  job_level,
-  craft_recipes,
-  item_icon_url,
-} from '@aresrpg/sdk/jobs'
+import { SDK } from '@aresrpg/sdk'
+
+const sdk = SDK({ client, signer })
+await sdk.hydrate([kiosk, cap]) // once per session
+
+// one-shot — sub-second: build (0 RPC) → signAndExecute (1 RPC) → receipt
+const receipt = await sdk.call.raise_stat({ kiosk, cap, character_id, stat: 'strength', amount: 5 })
+
+// composed PTB (hot potatoes chain through returned results)
+const tx = sdk.tx()
+const build = sdk.doors.engage_fight(tx, { kiosk, cap, character_id, w: world, zx, zz, group_index: 0, access: 0 })
+sdk.doors.add_fight_mob(tx, { build, template })
+sdk.doors.launch_fight(tx, { build })
+await sdk.execute(tx)
 ```
 
-## Static data exports (JSON)
-
-`@aresrpg/sdk/items-data`, `/classes`, `/mobs`, `/mob-models`, `/mastery`, `/zones`, `/quests`,
-`/settings`, `/shops`, `/npcs`, `/chests`, `/recipes`, `/missing-item-icons`.
-
-## Development
-
-```bash
-bun test          # unit suite
-bun run lint      # eslint + prettier + typecheck
-bun run typecheck # tsc --build → emits types/*.d.ts (checkJs over the JSDoc)
-```
-
-**Pruning generated types:** `types/` is `tsc --build` output. `tsc` never deletes a `.d.ts` whose source
-was removed, so after **deleting** any `src/**` file, regenerate cleanly:
-
-```bash
-rm -rf types && bun run typecheck
-```
-
-Otherwise orphan declarations accumulate (and get tracked). Committed `types/*.d.ts` must match live sources.
-
-## License
-
-[MIT](https://choosealicense.com/licenses/mit/)
+- `sdk.execute(tx)` sets sender/gas offline, signs, executes (`showEffects + showObjectChanges +
+showEvents`), **throws on a failed status** (a digest exists = gas burned — never auto-retry),
+  absorbs the receipt into the cache, and returns the receipt for client prediction.
+- `sdk.with_kiosk(tx, kiosk_client, cap, (kiosk, kiosk_cap) => …)` — kiosk composition through
+  the official `@mysten/kiosk` `KioskTransaction` (`cap` from `getOwnedKiosks`, fetched once per
+  session): a personal cap is borrowed/returned automatically; doors take the bare
+  `&KioskOwnerCap` (the wrapper stays out of Move by ruling).
+- Doors marked **TERMINAL** take `&Random`: such a call must be the LAST command of its
+  transaction (the terminal-random law).

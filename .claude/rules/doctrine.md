@@ -43,9 +43,7 @@ Rules, skills, loops, and hooks are not alternatives; they are life stages of on
 
 1. **Rules** (`.claude/rules/`) carry the WHY — understanding, values, this page.
 2. **Skills** (`.claude/skills/`) carry the HOW — procedures invoked at the moment of need.
-3. **Loops** (`.claude/loops/`) carry the STANDING work — convergence and drift detection
-   that run without anyone remembering to run them.
-4. **Hooks / CI** carry the CANNOT — judgment-free mechanical enforcement. Every law that
+3. **Hooks / CI** carry the CANNOT — judgment-free mechanical enforcement. Every law that
    matters graduates here; a law that stays prose will eventually be broken under pressure.
 
 Enforcement that binds every contributor lives in CI (repo-native); personal-harness hooks

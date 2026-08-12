@@ -1,16 +1,15 @@
 {
-  "include": ["src/**/*", "types.d.ts"],
+  "//": "checkJs over the JSDoc-typed source — the same truth the IDE's tsserver reads.",
   "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
     "allowJs": true,
     "checkJs": true,
-    "target": "esnext",
-    "module": "NodeNext",
-    "moduleResolution": "NodeNext",
-    "allowSyntheticDefaultImports": true,
-    "declaration": true,
-    "emitDeclarationOnly": true,
-    "resolveJsonModule": true,
-    "outDir": "types",
-    "skipLibCheck": true
-  }
+    "noEmit": true,
+    "strict": false,
+    "skipLibCheck": true,
+    "resolveJsonModule": true
+  },
+  "include": ["src"]
 }

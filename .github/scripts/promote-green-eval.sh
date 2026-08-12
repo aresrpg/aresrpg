@@ -6,18 +6,17 @@
 # is unit-testable in isolation (issue #695). Sourced-only (no shebang on purpose — it is never
 # executed directly); the directive above tells shellcheck which dialect to lint it as.
 #
-# THE RACE IT CLOSES: promote-queue.yml triggers on `workflow_run: completed` for BOTH gate and
-# checks (.github/workflows/promote-queue.yml:35). gate.yml is fast; checks.yml's `smoke` job is
-# slow (Playwright + live network). When gate finishes first, the queue fires and calls
-# promote-land.sh WHILE checks.yml — and therefore `smoke` — may not have registered a check-run
-# on the SHA yet at all. The old assert only rejected check-runs that EXISTED and were non-green
+# THE RACE IT CLOSES: promote-queue.yml triggers on `workflow_run: completed` for gate. Some gate
+# jobs are slow (the playwright e2e leg — live network). When a fast leg finishes first, the queue
+# can fire and call promote-land.sh WHILE a slow job may not have registered a check-run on the
+# SHA yet at all. The old assert only rejected check-runs that EXISTED and were non-green
 # (`select(.conclusion != "success" and ...)`), so a required check that simply hadn't been
 # CREATED yet was invisible to it and read as clean — a still-red landing could fast-forward.
 #
 # THE FIX: select the latest check-run per NAME, then apply two independent gates; both must hold.
 #   1. EXISTING — no latest check-run may be non-green (a completed failure, or one still
 #      queued/in_progress, i.e. conclusion == null). An older attempt of that same named check is
-#      history, not a second verdict: `no-issue` legitimately re-fires checks.yml on one head.
+#      history, not a second verdict: a re-run legitimately re-fires CI on one head.
 #   2. REQUIRED — every name in REQUIRED_CHECKS must have a latest check-run on the SHA that is
 #      `status == completed` with a green conclusion. A name with ZERO matching check-runs (never
 #      registered) is MISSING and fails closed — this is the half that catches the original race.
@@ -32,7 +31,7 @@
 # without updating the array, so the newest required job was invisible to gate 2 above, reopening
 # the #695 race for exactly that job. A hand-kept list WILL drift every time a job is added or
 # renamed; derive_required_checks() below reads the set from the thing that actually creates the
-# check-runs — gate.yml + checks.yml themselves — so a new job or matrix leg auto-joins the bar
+# check-runs — gate.yml itself — so a new job or matrix leg auto-joins the bar
 # the next time this file is sourced. Removing a job still needs a real YAML edit; the bar only
 # grows by accident, never shrinks.
 #
@@ -90,12 +89,12 @@ derive_required_checks() {
   ' <<<"$docs"
 }
 
-# The real production set: gate.yml + checks.yml resolved relative to THIS file's own location
+# The real production set: gate.yml resolved relative to THIS file's own location
 # (BASH_SOURCE[0] of the currently-executing sourced file, not the caller's cwd) inside a subshell
 # so the path-resolution scratch var never leaks into the sourcing script's namespace.
 REQUIRED_CHECKS_JSON=$(
   dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-  derive_required_checks "${dir}/../workflows/gate.yml" "${dir}/../workflows/checks.yml"
+  derive_required_checks "${dir}/../workflows/gate.yml"
 )
 
 # evaluate_green <check_runs_json> [required_checks_json]
@@ -176,8 +175,8 @@ evaluate_green() {
 # test/fixtures/interior-red-163b3345.check-runs.json.
 #
 # THE RULE THIS IS NOT (#1852, parked by the operator): "every sha in origin/base..head carries a
-# completed green REQUIRED check-run". That rule refuses EVERY landing in this repo. gate.yml and
-# checks.yml trigger on `pull_request` plus `push` to edge/master, so CI produces check-runs for a
+# completed green REQUIRED check-run". That rule refuses EVERY landing in this repo. gate.yml
+# triggers on `pull_request` plus `push` to edge/master, so CI produces check-runs for a
 # branch's HEAD and for nothing else. Measured on train-39's real landing range: the three interior
 # commits carry 0, 0 and 0 check-runs; the head carries 49. Its unit test never caught that because
 # it fed the interior SYNTHETIC red verdicts and asserted not-green — correct for a real red, and

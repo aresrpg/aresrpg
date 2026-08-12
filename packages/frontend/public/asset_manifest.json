@@ -1,6 +1,6 @@
 {
   "network": "testnet",
-  "aggregator": "https://assets.aresrpg.world",
+  "aggregator": "",
   "files": {
     "items": [
       "aberrant_edge.png",
@@ -203,7 +203,6 @@
       "ashen_visor_hd.png",
       "ashraptor_fang_pendant.png",
       "ashraptor_fang_pendant_hd.png",
-      "asset_host_control.png",
       "backbone.png",
       "backbone_hd.png",
       "backswing.png",
@@ -3998,26 +3997,63 @@
     ]
   },
   "classes": {
-    "mob": { "published": true },
-    "mob_catalog": { "published": true },
-    "pet_catalog": { "published": true },
-    "character": { "published": true },
-    "cosmetic": { "published": true },
-    "cosmetic_icon": { "published": true },
-    "music": { "published": true },
-    "spell": { "published": true },
-    "spell_corpus": { "published": true },
-    "world_corpus": { "published": true },
-    "item": { "published": true },
-    "shop_render": { "published": true },
-    "hack_radio": { "published": true },
-    "airdrop": { "published": true }
+    "mob": {
+      "published": true
+    },
+    "mob_catalog": {
+      "published": true
+    },
+    "pet_catalog": {
+      "published": true
+    },
+    "character": {
+      "published": true
+    },
+    "cosmetic": {
+      "published": true
+    },
+    "cosmetic_icon": {
+      "published": true
+    },
+    "music": {
+      "published": true
+    },
+    "spell": {
+      "published": true
+    },
+    "spell_corpus": {
+      "published": true
+    },
+    "world_corpus": {
+      "published": true
+    },
+    "item": {
+      "published": true
+    },
+    "shop_render": {
+      "published": true
+    },
+    "hack_radio": {
+      "published": true
+    },
+    "airdrop": {
+      "published": true
+    }
   },
   "sequences": {
     "fast_travel": [
-      { "url_class": "mob", "filename": "dragon-fire.glb" },
-      { "url_class": "mob", "filename": "dragon-frost.glb" },
-      { "url_class": "mob", "filename": "dragon-void.glb" }
+      {
+        "url_class": "mob",
+        "filename": "dragon-fire.glb"
+      },
+      {
+        "url_class": "mob",
+        "filename": "dragon-frost.glb"
+      },
+      {
+        "url_class": "mob",
+        "filename": "dragon-void.glb"
+      }
     ]
   }
 }

@@ -11,6 +11,7 @@ import { nodePolyfills } from 'vite-plugin-node-polyfills'
 
 import { resolve_app_version } from './src/resolve_app_version.mjs'
 import { cdn_assets_runtime_cache } from './sw_cdn_assets_cache'
+import { admin_seed_api } from './admin_seed_api'
 
 // The engine owns the DRACO loading seam and its vendored decoder. Re-publish that one source tree at the
 // loader's stable `/draco/` URL instead of committing a second copy under the frontend's public directory.
@@ -43,6 +44,45 @@ function draco_assets_plugin(): import('vite').Plugin {
           type: 'asset',
           fileName: `draco/${asset_name}`,
           source: readFileSync(new URL(asset_name, draco_asset_directory)),
+        })
+      }
+    },
+  }
+}
+
+// The biome soundtracks live at the repo root's `music/` — the ONE tracked home (owner
+// 2026-08-12). The build republishes them at `/assets/music/<name>.mp3` (the audio_registry
+// URL) instead of committing a second copy under public/. `music/hack_radio/` is licensed
+// commercial material: gitignored, never emitted, never distributed.
+const music_directory = new URL('../../music/', import.meta.url)
+const music_asset_names = new Set(readdirSync(music_directory).filter((n) => n.endsWith('.mp3')))
+
+function music_assets_plugin(): import('vite').Plugin {
+  let command: 'build' | 'serve'
+  return {
+    name: 'repo-root-music-assets',
+    configResolved({ command: resolved_command }) {
+      command = resolved_command
+    },
+    configureServer(server) {
+      server.middlewares.use((req, res, next) => {
+        const match = new URL(req.url ?? '/', 'http://vite.local').pathname.match(/^\/assets\/music\/([^/]+)$/)
+        const asset_name = match?.[1]
+        if (!asset_name || !music_asset_names.has(asset_name)) return next()
+        res.setHeader('Content-Type', 'audio/mpeg')
+        res.setHeader('Cache-Control', 'no-cache')
+        res.end(readFileSync(new URL(asset_name, music_directory)))
+      })
+    },
+    buildStart() {
+      if (command !== 'build') return
+      for (const asset_name of [...music_asset_names].sort()) {
+        // Rollup exposes asset emission through the hook context bound as `this`.
+        // eslint-disable-next-line functional/no-this-expressions
+        this.emitFile({
+          type: 'asset',
+          fileName: `assets/music/${asset_name}`,
+          source: readFileSync(new URL(asset_name, music_directory)),
         })
       }
     },
@@ -142,7 +182,9 @@ export default defineConfig({
   resolve: { dedupe: ['three', 'three/webgpu'] },
   plugins: [
     ...(process.env.ARES_DEV_SOURCEMAPS ? [] : [strip_dev_sourcemaps()]),
+    admin_seed_api(),
     draco_assets_plugin(),
+    music_assets_plugin(),
     react(),
     tailwindcss(),
     vfx_lab_dev_plugin(),

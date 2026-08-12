@@ -8,9 +8,6 @@
 /packages/sim/      @Sceat
 # Workflows are the rails (the inviolable gate lives here).
 /.github/           @Sceat
-# The frozen-node constitution.
-/FROZEN.md          @Sceat
 # The identity class.
 /LICENSE            @Sceat
 /CLA.md             @Sceat
-/TRADEMARK.md       @Sceat

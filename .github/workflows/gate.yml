@@ -1,10 +1,7 @@
 # SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 # © 2026 Sceat — All rights reserved. See LICENSE.
 # The CI gate — every PR into edge/master passes it; master merges deploy (Vercel git integration).
-# Fork-safe by construction: no secrets in this workflow, ever (FROZEN.md rule 8).
-# The ladder only grows: today it runs the proven-green core (the deterministic fight-replay gate
-# + the root typecheck). The full constraint gates (check-constraints, semgrep/depcruise/CodeQL,
-# localnet suite) join as they are wired for CI — each addition is a PR like any other.
+# Fork-safe by construction: no secrets in this workflow, ever.
 name: gate
 on:
   pull_request:
@@ -16,7 +13,7 @@ permissions:
 jobs:
   gate:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - name: setup Bun
@@ -28,56 +25,83 @@ jobs:
         uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
       - name: install
         run: bun install --frozen-lockfile
-      - name: typecheck — bun run typecheck
+      - name: lint
+        run: bun run lint
+      - name: typecheck
         run: bun run typecheck
-      - name: fight-replay gate (deterministic capsules)
-        working-directory: packages/sim
-        run: bun test test/replay_gate.test.js
-      - name: order-independence gate (module-global test-flake class)
-        run: bun run test:order-independence
-  api_image_smoke:
+      - name: test
+        run: bun run test
+  tests_move:
+    # The on-chain game's own suite: both Move packages must build AND test clean.
+    name: tests (move)
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
-      - name: api image boot smoke
+      - name: install sui
+        run: brew install sui
+      - name: move-math — build + test
         run: |
-          set -euo pipefail
-          image_name=aresrpg-api-smoke
-          container_name=aresrpg-api-smoke
-          listen_line='[sponsor] station-only net=testnet :9528'
-          # Root context: the image bakes the canonical release.json in place, so there is no copy
-          # to stage and none to go stale (#2026). The root .dockerignore keeps this at ~0.5 MB.
-          docker build --tag "$image_name" --file api/Dockerfile .
-          trap 'docker rm --force "$container_name" >/dev/null 2>&1 || true' EXIT
-          docker run --detach --name "$container_name" \
-            --env GAS_STATION_URL=http://127.0.0.1:1 \
-            --env GAS_STATION_AUTH=ci-smoke \
-            "$image_name"
-          for attempt_number in {1..30}; do
-            container_logs=$(docker logs "$container_name" 2>&1)
-            container_running=$(docker inspect --format '{{.State.Running}}' "$container_name")
-            if grep -Fq "$listen_line" <<<"$container_logs"; then
-              printf '%s\n' "$container_logs"
-              test "$container_running" = true
-              exit 0
-            fi
-            if test "$container_running" != true; then
-              printf '%s\n' "$container_logs" >&2
-              exit 1
-            fi
-            sleep 1
-          done
-          printf 'api image did not reach its listen line after %s attempts\n' "$attempt_number" >&2
-          docker logs "$container_name" >&2
-          exit 1
+          sui move build --path packages/move-math
+          sui move test --path packages/move-math
+      - name: move — build + test
+        run: |
+          sui move build --path packages/move
+          sui move test --path packages/move
+  tests_indexer:
+    # The chain projectionist's suite + the Move↔indexer parity gates (packages/indexer/
+    # src/gates.rs): the layout snapshot and the event census read the COMPILED Move build,
+    # so both packages build first — a Move struct or event change reds HERE in the same
+    # commit it lands, instead of rotting the graph behind an advancing watermark.
+    name: tests (indexer)
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: install sui
+        run: brew install sui
+      - name: compile the Move packages (the parity gates' ground truth)
+        run: |
+          sui move build --path packages/move-math
+          sui move build --path packages/move
+      - name: cargo fmt --check
+        working-directory: packages/indexer
+        run: cargo fmt --check
+      - name: cargo clippy
+        working-directory: packages/indexer
+        run: cargo clippy --all-targets -- -D warnings
+      - name: cargo test (includes the Move-parity gates)
+        working-directory: packages/indexer
+        run: cargo test
+  tests_e2e:
+    # The playwright suite drives the REAL app (chain-direct against testnet) on its own vite
+    # server — the config's webServer boots it.
+    name: tests (e2e)
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: setup Bun
+        id: setup_bun
+        continue-on-error: true
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
+      - name: setup Bun (retry)
+        if: steps.setup_bun.outcome == 'failure'
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
+      - name: install
+        run: bun install --frozen-lockfile
+      - name: install chromium
+        working-directory: packages/frontend
+        run: bunx playwright install --with-deps chromium
+      - name: playwright e2e
+        working-directory: packages/frontend
+        env:
+          VITE_SPONSOR_URL: https://sponsor.aresrpg.world/api/sponsor
+        run: bun run test:e2e
   tests_api:
-    # Issue #683: the sponsor's unit suite (a MONEY path — scope/station/fail-closed families) ran
-    # in no CI workflow; api_image_smoke above only proves the image boots. Each file below is its
-    # own bun process on purpose — sponsor.mjs/sponsor_state.mjs memoize Redis + the PTB allowlist
-    # once at module load, the same module-global class scripts/order-independence-gate.sh guards
-    # elsewhere — so api/run_tests.sh (the package's own `test` script) runs them one process per
-    # file, never the combined single-process run the files' own headers forbid.
+    # The sponsor's unit suite (a MONEY path — scope/station/fail-closed families). Each file is
+    # its own bun process on purpose — sponsor.mjs/sponsor_state.mjs memoize Redis + the PTB
+    # allowlist at module load, so api/run_tests.sh runs them one process per file.
     name: tests (api)
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -96,114 +120,9 @@ jobs:
       - name: sponsor api unit suite — one bun process per file (module-load memoization)
         working-directory: api
         run: bun run test
-  release_pins:
-    # Issue #848 (one instance of the #858 class: a check's arming path disjoint from the check).
-    # check_release_pins.mjs — #770's remedy — was armed by its own header comment and nothing
-    # else. It lands HERE, unfiltered, rather than on a path filter or a schedule:
-    #   · #770 was chain drift with an UNTOUCHED repo (two upgrades executed, neither recording
-    #     landed), so no `packages/move/**` path filter could ever have seen it;
-    #   · `schedule:` fires only from the default branch — a scheduled leg authored on edge runs
-    #     zero times until it reaches master (#809, still open, is exactly that);
-    #   · gate.yml's pull_request/push triggers fire from the branch the file lives on, so this
-    #     executes on every PR and every landing, and the promotion PR into master — the one PR
-    #     allowed to move the pins — is gated by the same leg. promote-green-eval.sh derives its
-    #     required set from gate.yml's own jobs (#725), so this job joins the promotion bar with
-    #     no registry to remember.
-    # The fullnode is a HARD dependency, never a silent skip: exit 1 = the chain disagrees with
-    # the pins (deterministic — never retried), exit 2 = the chain could not be read (retried
-    # once, then RED). testnet only — mainnet's packages are unpublished (no upgrade_cap rows in
-    # release.json), so every mainnet row reads UNKNOWN; that leg joins when mainnet publishes.
-    #
-    # #1293 SHAPE FIX — the gate was right every time; its ARMING billed the red to the wrong diff.
-    # `verdict = f(tree_pin, chain_state(t))` and the `t` term belongs to nobody in the PR: one
-    # testnet publish turned four unrelated PRs red on frozen trees, then an unrelated stamp commit
-    # on the base healed them — a re-run-to-green pattern in its purest form. A drifted pin is a
-    # property of the REPOSITORY, not of whatever happened to be in flight.
-    # So the leg splits by trigger, without weakening anything:
-    #   · push (edge/master) — the repo-wide truth-assert, unchanged and unfiltered. This is where a
-    #     drift goes red: once, attributably, on the landing that owns the tree.
-    #   · pull_request — DIFF-SCOPED. A PR that touches the pin files asserts against the chain (it
-    #     owns those bytes; #770 is exactly that PR's failure mode). A PR that touches nothing of the
-    #     sort passes without reading the chain, because it cannot regress a pin it never edited.
-    # The job name is unchanged on purpose: promote-green-eval.sh derives the required set from this
-    # file's job names (#725), so the promotion bar keeps this row either way.
-    name: release-pin chain gate (testnet)
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
-        with:
-          # The diff-scope decision reads the PR's own base sha, so the base commit must be present.
-          fetch-depth: 0
-      - name: setup Bun
-        id: setup_bun
-        continue-on-error: true
-        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
-      - name: setup Bun (retry)
-        if: steps.setup_bun.outcome == 'failure'
-        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
-      - name: install
-        run: bun install --frozen-lockfile
-      - name: diff scope — does this PR touch the pins? (#1293)
-        id: scope
-        run: |
-          set -euo pipefail
-          if [ "${{ github.event_name }}" != 'pull_request' ]; then
-            echo "assert=true" >> "$GITHUB_OUTPUT"
-            echo "reason=push on ${{ github.ref_name }} — the repo-wide truth-assert runs here" >&2
-            exit 0
-          fi
-          # Scope = the pins THEMSELVES plus everything that decides the verdict about them
-          # (#1305 review): a PR that edits the gate or its checker must run the live assertion it
-          # is changing, or the change ships unexercised — as the PR that introduced this very
-          # scoping did.
-          changed=$(git diff --name-only ${{ github.event.pull_request.base.sha }} HEAD -- \
-            packages/sdk/src/deployment/release.json \
-            packages/move/scripts/out/ceremony_manifest.json \
-            packages/move/scripts/check_release_pins.mjs \
-            packages/move/scripts/ceremony_lib.mjs \
-            .github/workflows/gate.yml)
-          if [ -n "$changed" ]; then
-            echo "assert=true" >> "$GITHUB_OUTPUT"
-            printf 'this PR edits the pins:\n%s\n' "$changed" >&2
-          else
-            echo "assert=false" >> "$GITHUB_OUTPUT"
-          fi
-      - name: pins untouched — chain not read (the truth-assert lives on edge)
-        if: steps.scope.outputs.assert != 'true'
-        run: |
-          {
-            echo "### release-pin chain gate — diff-scoped pass (#1293)"
-            echo ""
-            echo "This PR edits neither \`packages/sdk/src/deployment/release.json\` nor the ceremony"
-            echo "manifest, so it cannot regress a pin. The repo-wide pins-vs-chain assert runs on every"
-            echo "push to \`edge\`/\`master\`, where a drift is attributable to the tree that owns it."
-          } >> "$GITHUB_STEP_SUMMARY"
-          echo "release-pin gate: diff-scoped — no pin files in this PR, chain not read."
-      - name: release pins vs chain — check_release_pins.mjs (#770)
-        if: steps.scope.outputs.assert == 'true'
-        run: |
-          run_pin_gate() { node packages/move/scripts/check_release_pins.mjs --network testnet; }
-          status=0
-          run_pin_gate || status=$?
-          test "$status" -eq 0 && exit 0
-          test "$status" -eq 2 || exit "$status"
-          echo "release-pin gate: fullnode unreadable (exit 2) — one retry, then this job is RED" >&2
-          run_pin_gate
-      # The ceremony's policy/enable call targets must name doors that still exist. #1315 deleted the
-      # item_listing_rule module (its door moved into `item`) and the ceremony kept calling the dead target —
-      # a fresh publish would have aborted at the item-policy step. This drift guard is the check that catches
-      # that class, and it had never run in a gate: packages/move has no "test" script, so nothing invoked it.
-      # #2229: the name-pattern filter made this LYING-GREEN — only the drift-guard test ran, so the manifest
-      # publish order sat red on edge for three weeks (7 packages serialized for a 9-package graph) while this
-      # step stayed green. The whole file runs now, plus the package-graph tooth that pins the graph to disk.
-      - name: ceremony manifest + target drift — release_prepare / publish_packages
-        run: bun test packages/move/scripts/release_prepare.test.mjs packages/move/scripts/publish_packages.test.mjs
   bundle-gate:
-    # Issue #737: scripts/assert_clean_bundle.mjs only ran inside Vercel's own build (postbuild),
-    # so a commit that tripped it landed green here in CI while every deployment silently
-    # ERRORed (an outage with zero READY deploys). This job reproduces Vercel's own buildCommand
-    # (packages/frontend/vercel.json) so a tripping commit fails CI and can never land.
+    # Reproduces Vercel's own buildCommand (#737) so a bundle-tripping commit fails HERE and can
+    # never land as a zero-READY-deploys outage.
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:

@@ -1,4 +1,0 @@
-{
-  "*.{js,ts}": ["bun x eslint --fix", "bun x prettier --write"],
-  "*.{json,md,yml}": ["bun x prettier --write"]
-}

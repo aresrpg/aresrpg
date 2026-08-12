@@ -55,7 +55,7 @@
 name: promote-queue
 on:
   workflow_run:
-    workflows: [gate, checks]
+    workflows: [gate]
     types: [completed]
   schedule:
     # Dead-man sweep for #1530 (see the header comment above). Every 10 minutes is tight enough
@@ -146,14 +146,14 @@ jobs:
         # "no such file" from inside a landing.
         run: |
           MISSING=
-          for F in .github/scripts/promote-land-dispatch.sh .github/workflows/board-hygiene.yml; do
+          for F in .github/scripts/promote-land.sh .github/scripts/promote-green-eval.sh; do
             [ -f "$F" ] || MISSING="$MISSING $F"
           done
           if [ -n "$MISSING" ]; then
             echo "::error::stale-engine: the landing checkout is missing$MISSING — this job's ref trails the branch the engine is developed on"
             exit 1
           fi
-          echo "engine checkout is current (dispatch helper + board sweep present)"
+          echo "engine checkout is current (landing engine + green-eval present)"
       - name: land eligible promote-requested PRs (oldest-first)
         if: steps.gate.outputs.count != '0'
         run: |

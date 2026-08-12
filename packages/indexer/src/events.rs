@@ -1,0 +1,353 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
+//! Event twins + the live-wire dispatch table.
+//!
+//! PURE: `(module, name, bcs bytes)` in → `(topic, json)` out. One macro row
+//! per Move event — the struct twin (BCS layout, field for field), its pub/sub
+//! topic, and its JSON shape all live on that one line, so an event cannot
+//! exist without a route and a route cannot drift from its layout.
+//!
+//! JSON convention (the fullnode's `parsedJson`, kept so clients reuse their
+//! receipt decoders): `ID`/`address` → `0x…` hex · u64 → STRING (2⁵³ law) ·
+//! u8/u16/u32 → number · bool → bool · vectors → arrays · Option → value|null.
+
+use serde::Deserialize;
+use serde_json::{json, Value};
+
+use crate::decode::{Addr, Id, RolledDrop};
+
+// ╔════════════════ [ JSON convention ] ══════════════════════════════════════ ]
+
+/// One JSON shape per wire type — the convention above, mechanically.
+pub trait ToJson {
+    fn to_json(&self) -> Value;
+}
+
+impl ToJson for Id {
+    fn to_json(&self) -> Value {
+        json!(self.hex())
+    }
+}
+impl ToJson for Addr {
+    fn to_json(&self) -> Value {
+        json!(self.hex())
+    }
+}
+impl ToJson for String {
+    fn to_json(&self) -> Value {
+        json!(self)
+    }
+}
+impl ToJson for bool {
+    fn to_json(&self) -> Value {
+        json!(self)
+    }
+}
+impl ToJson for u8 {
+    fn to_json(&self) -> Value {
+        json!(self)
+    }
+}
+impl ToJson for u16 {
+    fn to_json(&self) -> Value {
+        json!(self)
+    }
+}
+impl ToJson for u32 {
+    fn to_json(&self) -> Value {
+        json!(self)
+    }
+}
+impl ToJson for u64 {
+    fn to_json(&self) -> Value {
+        json!(self.to_string())
+    }
+}
+impl<T: ToJson> ToJson for Vec<T> {
+    fn to_json(&self) -> Value {
+        Value::Array(self.iter().map(ToJson::to_json).collect())
+    }
+}
+impl<T: ToJson> ToJson for Option<T> {
+    fn to_json(&self) -> Value {
+        self.as_ref().map_or(Value::Null, ToJson::to_json)
+    }
+}
+impl ToJson for RolledDrop {
+    fn to_json(&self) -> Value {
+        json!({ "item_type": self.item_type, "qty": self.qty })
+    }
+}
+
+// ╔════════════════ [ The table ] ════════════════════════════════════════════ ]
+
+/// One decoded event, routed: the pub/sub channel + the payload's `data`.
+#[derive(Debug, Clone, PartialEq)]
+pub struct Routed {
+    pub kind: &'static str,
+    pub topic: String,
+    pub data: Value,
+}
+
+macro_rules! events {
+    ($(
+        $module:ident :: $name:ident { $($field:ident : $ty:ty),+ $(,)? } => $topic:expr
+    ),+ $(,)?) => {
+        $(
+            #[derive(Debug, Deserialize)]
+            #[allow(non_snake_case, dead_code)]
+            pub struct $name { $(pub $field: $ty),+ }
+        )+
+
+        /// Every `(module, name)` the table routes — the census gate's anchor
+        /// (test-only: the gate is its one consumer).
+        #[cfg(test)]
+        pub const ROUTED: &[(&str, &str)] = &[
+            $( (stringify!($module), stringify!($name)) ),+
+        ];
+
+        /// Decode + route one game event by `(module, name)`. `None` = not a
+        /// game event we forward (never an error — foreign events are data).
+        pub fn route(module: &str, name: &str, bytes: &[u8]) -> anyhow::Result<Option<Routed>> {
+            Ok(match (module, name) {
+                $(
+                    (stringify!($module), stringify!($name)) => {
+                        let e: $name = crate::decode::from_bytes(bytes)?;
+                        #[allow(clippy::redundant_closure_call)]
+                        let topic: String = ($topic)(&e);
+                        Some(Routed {
+                            kind: stringify!($name),
+                            topic,
+                            data: json!({ $(stringify!($field): e.$field.to_json()),+ }),
+                        })
+                    }
+                )+
+                _ => None,
+            })
+        }
+    };
+}
+
+events! {
+    // ── character lifecycle + progression surface ──
+    character::CharacterCreated { character: Id, name: String, classe: String }
+        => |e: &CharacterCreated| format!("evt:character:{}", e.character.hex()),
+    equipment::ItemEquipped { character: Id, slot: String, item: Id }
+        => |e: &ItemEquipped| format!("evt:character:{}", e.character.hex()),
+    equipment::ItemUnequipped { character: Id, slot: String, item: Id }
+        => |e: &ItemUnequipped| format!("evt:character:{}", e.character.hex()),
+    world::WorldJoined { character: Id, world: String, x: u32, z: u32, first_join: bool }
+        => |e: &WorldJoined| format!("evt:character:{}", e.character.hex()),
+
+    // ── dungeons (a character's own run) ──
+    dungeon::DungeonEntered { character: Id, world: String, x: u32, z: u32 }
+        => |e: &DungeonEntered| format!("evt:character:{}", e.character.hex()),
+    dungeon::DungeonRoomCleared { character: Id, world: String, room: u64 }
+        => |e: &DungeonRoomCleared| format!("evt:character:{}", e.character.hex()),
+    dungeon::DungeonEnded { character: Id, world: String, room: u64, won: bool }
+        => |e: &DungeonEnded| format!("evt:character:{}", e.character.hex()),
+
+    // ── fights (object-state-first; these are the lifecycle beacons) ──
+    fight::FightCreated { fight: Id, world: String, x: u32, z: u32 }
+        => |e: &FightCreated| format!("evt:world:{}", e.world),
+    // routed to the JOINER's character channel — the realtime layer keys its
+    // per-character fight watch on it (nearby watchers already saw FightCreated)
+    fight::FighterJoined { fight: Id, character: Id, team: u8 }
+        => |e: &FighterJoined| format!("evt:character:{}", e.character.hex()),
+    fight::FightStarted { fight: Id, queue: Vec<u64> }
+        => |e: &FightStarted| format!("evt:fight:{}", e.fight.hex()),
+    fight::MobTurnPlayed { fight: Id, seat: u64, seed: u64 }
+        => |e: &MobTurnPlayed| format!("evt:fight:{}", e.fight.hex()),
+    fight::FightEnded { fight: Id, winner: Option<u8> }
+        => |e: &FightEnded| format!("evt:fight:{}", e.fight.hex()),
+    fight::DropsRolled { fight: Id, fighter: u64, drops: Vec<RolledDrop> }
+        => |e: &DropsRolled| format!("evt:fight:{}", e.fight.hex()),
+
+    // ── world surface (visible to everyone standing there) ──
+    zone::ZoneSearched { world: String, zx: u32, zz: u32, seed: u64, fresh: bool }
+        => |e: &ZoneSearched| format!("evt:world:{}", e.world),
+    gathering::ResourceGathered { world: String, gatherer: Addr, item_type: String, tier: u8, quantity: u64, job_xp_gained: u64, protector: bool }
+        => |e: &ResourceGathered| format!("evt:world:{}", e.world),
+    gathering::RareGathered { world: String, gatherer: Addr, item_type: String, rare_item_type: String }
+        => |e: &RareGathered| format!("evt:world:{}", e.world),
+
+    // ── social ──
+    party::PartyCreated { party: Id, character: Id }
+        => |e: &PartyCreated| format!("evt:party:{}", e.party.hex()),
+    // routed to the INVITED character's own channel — the invitee is not a
+    // member yet, so the party channel would never reach them
+    party::PartyInvited { party: Id, character: Id }
+        => |e: &PartyInvited| format!("evt:character:{}", e.character.hex()),
+    party::PartyJoined { party: Id, character: Id }
+        => |e: &PartyJoined| format!("evt:party:{}", e.party.hex()),
+    party::PartyLeft { party: Id, character: Id }
+        => |e: &PartyLeft| format!("evt:party:{}", e.party.hex()),
+    friends::FriendListCreated { list: Id, owner: Addr }
+        => |e: &FriendListCreated| format!("evt:social:{}", e.owner.hex()),
+    friends::FriendAdded { list: Id, who: Addr }
+        => |e: &FriendAdded| format!("evt:social:{}", e.who.hex()),
+    friends::FriendRemoved { list: Id, who: Addr }
+        => |e: &FriendRemoved| format!("evt:social:{}", e.who.hex()),
+
+    // ── trade (the p2p escrow — TradeCreated reaches BOTH parties: the route below
+    //    lands on the counterparty, publish.rs mirrors it to the creator) ──
+    trade::TradeCreated { trade: Id, a: Addr, b: Addr }
+        => |e: &TradeCreated| format!("evt:social:{}", e.b.hex()),
+    trade::TradeChanged { trade: Id, version: u64 }
+        => |e: &TradeChanged| format!("evt:trade:{}", e.trade.hex()),
+    trade::TradeAccepted { trade: Id, who: Addr }
+        => |e: &TradeAccepted| format!("evt:trade:{}", e.trade.hex()),
+    trade::TradeLocked { trade: Id }
+        => |e: &TradeLocked| format!("evt:trade:{}", e.trade.hex()),
+    trade::TradeDestroyed { trade: Id }
+        => |e: &TradeDestroyed| format!("evt:trade:{}", e.trade.hex()),
+
+    // ── kolizeum ──
+    kolizeum::KolizeumCreated { kolizeum: Id, fight: Id, pledge: u64, format: u64 }
+        => |_: &KolizeumCreated| "evt:kolizeum".to_string(),
+    kolizeum::KolizeumPaid { kolizeum: Id, winner: Addr, amount: u64 }
+        => |_: &KolizeumPaid| "evt:kolizeum".to_string(),
+
+    // ── economy ──
+    shop::SaleBought { sale: Id, buyer: Addr, quantity: u64, paid: u64 }
+        => |_: &SaleBought| "evt:economy".to_string(),
+    shop::AirdropCreated { airdrop: Id, template: Id, addresses: u64 }
+        => |_: &AirdropCreated| "evt:economy".to_string(),
+    shop::AirdropClaimed { airdrop: Id, claimer: Addr }
+        => |_: &AirdropClaimed| "evt:economy".to_string(),
+    shop::GiftcardMinted { giftcard: Id, template: Id, amount: u32 }
+        => |_: &GiftcardMinted| "evt:economy".to_string(),
+    shop::GiftcardRedeemed { giftcard: Id, redeemer: Addr }
+        => |_: &GiftcardRedeemed| "evt:economy".to_string(),
+    crafting::Crafted { recipe: Id, crafter: Addr, output_template: Id, output_quantity: u32, success: bool, job_xp_gained: u64 }
+        => |_: &Crafted| "evt:economy".to_string(),
+    forgemagie::RuneScribed { item: Id, stat: u8, tier: u8, outcome: u8, applied_value: u64, lost_stat: u8, lost_amount: u64, new_puits: u64, xp: u64 }
+        => |_: &RuneScribed| "evt:economy".to_string(),
+    forgemagie::GearCrushed { crusher: Addr, items: u64 }
+        => |_: &GearCrushed| "evt:economy".to_string(),
+    pet::PetFed { pet: Id, feeder: Addr, power: u64 }
+        => |_: &PetFed| "evt:economy".to_string(),
+
+    // ── loot boxes (grind-safe gacha, ruling 2026-08-11) ──
+    loot_box::LootBoxOpened { box_template: Id, rolled_template: Id, opener: Addr }
+        => |_: &LootBoxOpened| "evt:economy".to_string(),
+    loot_box::LootClaimed { box_template: Id, rolled_template: Id, opener: Addr }
+        => |_: &LootClaimed| "evt:economy".to_string(),
+
+    // ── content (ceremony-time, then silent forever) ──
+    item::TemplateCreated { template: Id, item_type: String }
+        => |_: &TemplateCreated| "evt:content".to_string(),
+    mob_template::MobTemplateCreated { template: Id, mob_type: String }
+        => |_: &MobTemplateCreated| "evt:content".to_string(),
+    spell_template::SpellCreated { template: Id, name: String, classe: String }
+        => |_: &SpellCreated| "evt:content".to_string(),
+    crafting::RecipeCreated { recipe: Id, output_template: Id, output_quantity: u32, input_count: u64, job: String, required_level: u64, craft_xp: u64 }
+        => |_: &RecipeCreated| "evt:content".to_string(),
+    loot_box::LootTableSet { box_template: Id, rows: u64, weight_sum: u64 }
+        => |_: &LootTableSet| "evt:content".to_string(),
+}
+
+// ╔════════════════ [ Native kiosk events (0x2 — sale analysis inputs) ] ═════ ]
+
+/// `0x2::kiosk::ItemListed<T>` / `ItemPurchased<T>` — the phantom `T` is NOT
+/// in the BCS body (the old contract's proven lesson), so one twin serves
+/// items and characters both. `ItemDelisted<T>` drops the price field.
+#[derive(Debug, Clone, Copy, Deserialize)]
+pub struct KioskItemListed {
+    pub kiosk: Id,
+    pub id: Id,
+    pub price: u64,
+}
+pub type KioskItemPurchased = KioskItemListed;
+
+#[derive(Debug, Clone, Copy, Deserialize)]
+pub struct KioskItemDelisted {
+    pub kiosk: Id,
+    pub id: Id,
+}
+
+// ╔════════════════ [ Tests ] ════════════════════════════════════════════════ ]
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn routes_a_character_event_with_hex_ids() {
+        #[derive(serde::Serialize)]
+        struct Wire {
+            character: [u8; 32],
+            name: String,
+            classe: String,
+        }
+        let bytes = bcs::to_bytes(&Wire {
+            character: [1; 32],
+            name: "aiden".into(),
+            classe: "sram".into(),
+        })
+        .unwrap();
+        let routed = route("character", "CharacterCreated", &bytes)
+            .unwrap()
+            .unwrap();
+        assert_eq!(routed.kind, "CharacterCreated");
+        assert_eq!(routed.topic, format!("evt:character:0x{}", "01".repeat(32)));
+        assert_eq!(routed.data["name"], "aiden");
+        assert_eq!(routed.data["character"], format!("0x{}", "01".repeat(32)));
+    }
+
+    #[test]
+    fn u64_serializes_as_string() {
+        #[derive(serde::Serialize)]
+        struct Wire {
+            sale: [u8; 32],
+            buyer: [u8; 32],
+            quantity: u64,
+            paid: u64,
+        }
+        let bytes = bcs::to_bytes(&Wire {
+            sale: [2; 32],
+            buyer: [3; 32],
+            quantity: 10,
+            paid: 15_000_000_000,
+        })
+        .unwrap();
+        let routed = route("shop", "SaleBought", &bytes).unwrap().unwrap();
+        assert_eq!(routed.topic, "evt:economy");
+        assert_eq!(routed.data["paid"], "15000000000");
+        assert_eq!(routed.data["quantity"], "10");
+    }
+
+    #[test]
+    fn option_winner_serializes_value_or_null() {
+        #[derive(serde::Serialize)]
+        struct Wire {
+            fight: [u8; 32],
+            winner: Option<u8>,
+        }
+        let with = bcs::to_bytes(&Wire {
+            fight: [4; 32],
+            winner: Some(1),
+        })
+        .unwrap();
+        let routed = route("fight", "FightEnded", &with).unwrap().unwrap();
+        assert_eq!(routed.data["winner"], 1);
+
+        let without = bcs::to_bytes(&Wire {
+            fight: [4; 32],
+            winner: None,
+        })
+        .unwrap();
+        let routed = route("fight", "FightEnded", &without).unwrap().unwrap();
+        assert!(routed.data["winner"].is_null());
+    }
+
+    #[test]
+    fn unknown_events_are_data_not_errors() {
+        assert!(route("evil", "Injected", &[1, 2, 3]).unwrap().is_none());
+    }
+
+    #[test]
+    fn wrong_bytes_for_a_known_event_error_loudly() {
+        assert!(route("character", "CharacterCreated", &[0xFF]).is_err());
+    }
+}

@@ -1,7 +1,0 @@
-node_modules
-.env
-types/tsconfig.tsbuildinfo
-
-# raw FalkorDB export snapshot (reproducible via scripts/seed-content.js; may
-# contain internal template data) — regenerate, never commit
-scripts/.raw-templates.json

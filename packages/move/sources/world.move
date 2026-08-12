@@ -6,7 +6,7 @@
 /// content settings (mobs, resources, dungeon key — designed later) and load only when read.
 module aresrpg::world;
 
-use aresrpg::character::Character;
+use aresrpg::{character::Character, equipment, progression};
 use std::string::String;
 use sui::{clock::Clock, dynamic_field as dfield, event};
 
@@ -30,11 +30,47 @@ const MAX_LINEAR: u64 = 1_000_000; // dwarfs any in-world distance; overflow gua
 
 // ╔════════════════ [ Types ] ════════════════════════════════════════════════ ]
 
-/// One shared object per world — the content settings home (mobs, resources, dungeon key;
-/// designed later). Identity and entry level are hardcoded law, never object state.
+/// One shared object per world — the content settings home. Filled by the seeding
+/// (SeedCap-gated doors, so the one seal closes world content too); after the seal no door can
+/// ever write again — immutability by door-absence. Identity and entry level stay hardcoded law.
 public struct World has key {
   id: UID,
   name: String,
+  mobs: vector<MobRow>,
+  resources: vector<ResourceRow>,
+  dungeon_key: Option<String>, // the key item's slug — a key burns to enter this world's dungeon
+  dungeon_rooms: vector<DungeonRoom>, // the room sequence; last room carries the boss (empty = no dungeon)
+}
+
+/// One dungeon room: the mobs seated when it is engaged (the last room's list carries the
+/// boss). `scalar` (0..100) maps each mob into its template's level band, like a zone member.
+public struct DungeonRoom has copy, drop, store {
+  mobs: vector<RoomMob>,
+}
+
+public struct RoomMob has copy, drop, store {
+  mob_type: String,
+  level_scalar: u8,
+}
+
+/// A mob family living in this world. Weight biases the zone's family draw; group SIZE and
+/// COMPOSITION are not authored — they roll from distance + the zone seed (ruling 2026-08-09),
+/// mixing families freely. Bosses never roam (dungeon rooms, always alone).
+public struct MobRow has copy, drop, store {
+  mob_type: String,
+  weight_bp: u16,
+}
+
+/// A gatherable resource: which item mints, which tool works it, its tier, the protector
+/// mob that may ambush (the 2% law lives in gathering), and the GOLDEN-GATHER rare variant
+/// (the 0.1% additive jackpot; empty = none). No rate — abundance grows with distance from
+/// the center (distance IS the rate).
+public struct ResourceRow has copy, drop, store {
+  item_type: String,
+  tool: String, // tool_farmer | tool_herbalist | tool_miner
+  tier: u8,
+  protector: String, // mob_type; empty = this resource never ambushes
+  rare_item_type: String, // the linked rare variant; empty = no jackpot draw
 }
 
 /// DF key on the character → the world it is in NOW (a `String` world name).
@@ -58,35 +94,157 @@ public struct WorldJoined has copy, drop { character: ID, world: String, x: u32,
 fun init(ctx: &mut TxContext) {
   let mut names = world_names();
   while (!names.is_empty()) {
-    transfer::share_object(World { id: object::new(ctx), name: names.pop_back() });
+    transfer::share_object(World {
+      id: object::new(ctx),
+      name: names.pop_back(),
+      mobs: vector[],
+      resources: vector[],
+      dungeon_key: option::none(),
+      dungeon_rooms: vector[],
+    });
   };
+}
+
+// ╔════════════════ [ Content authoring (seeding doors, sealed with the rest) ] ═══════ ]
+
+const EInvalidRate: u64 = 306; // authoring: a zero or >100% family weight
+const EInvalidTool: u64 = 308; // authoring: not one of the 3 tool slugs
+const ENoSuchResource: u64 = 309; // resource_row_of: this world does not spawn that resource
+const EEmptyRoom: u64 = 310; // new_dungeon_room: a room with no mobs is meaningless
+
+public fun new_mob_row(mob_type: String, weight_bp: u16): MobRow {
+  assert!(weight_bp > 0 && weight_bp <= 10000, EInvalidRate);
+  MobRow { mob_type, weight_bp }
+}
+
+public fun new_resource_row(
+  item_type: String,
+  tool: String,
+  tier: u8,
+  protector: String,
+  rare_item_type: String,
+): ResourceRow {
+  assert!(
+    tool == b"tool_farmer".to_string() || tool == b"tool_herbalist".to_string() || tool == b"tool_miner".to_string(),
+    EInvalidTool,
+  );
+  ResourceRow { item_type, tool, tier, protector, rare_item_type }
+}
+
+/// Overwrite-while-unsealed: the seeding may correct itself until the seal; then never again.
+public(package) fun set_mobs(world: &mut World, rows: vector<MobRow>) { world.mobs = rows; }
+
+public(package) fun set_resources(world: &mut World, rows: vector<ResourceRow>) { world.resources = rows; }
+
+public(package) fun set_dungeon_key(world: &mut World, item_type: String) {
+  world.dungeon_key = option::some(item_type);
+}
+
+public fun new_room_mob(mob_type: String, level_scalar: u8): RoomMob {
+  RoomMob { mob_type, level_scalar }
+}
+
+public fun new_dungeon_room(mobs: vector<RoomMob>): DungeonRoom {
+  assert!(!mobs.is_empty(), EEmptyRoom);
+  DungeonRoom { mobs }
+}
+
+public(package) fun set_dungeon_rooms(world: &mut World, rooms: vector<DungeonRoom>) {
+  world.dungeon_rooms = rooms;
+}
+
+/// Zone state rides the World's UID — the zone module is the only writer.
+public(package) fun uid(world: &World): &UID { &world.id }
+
+public(package) fun uid_mut(world: &mut World): &mut UID { &mut world.id }
+
+public fun world_center(): u32 { WORLD_CENTER }
+
+// ╔════════════════ [ Content reads ] ═════════════════════════════════════════ ]
+
+public fun name(world: &World): String { world.name }
+
+public fun mobs(world: &World): vector<MobRow> { world.mobs }
+
+public fun resources(world: &World): vector<ResourceRow> { world.resources }
+
+public fun dungeon_key(world: &World): Option<String> { world.dungeon_key }
+
+public fun dungeon_room_count(world: &World): u64 { world.dungeon_rooms.length() }
+
+/// The mobs of room `n` (1-based) — the dungeon seats these when the room is engaged.
+public fun dungeon_room_mobs(world: &World, room: u64): vector<RoomMob> {
+  world.dungeon_rooms[room - 1].mobs
+}
+
+public fun room_mob_type(m: &RoomMob): String { m.mob_type }
+
+public fun room_mob_scalar(m: &RoomMob): u8 { m.level_scalar }
+
+public fun mob_row_type(row: &MobRow): String { row.mob_type }
+
+public fun mob_row_weight_bp(row: &MobRow): u16 { row.weight_bp }
+
+public fun resource_row_type(row: &ResourceRow): String { row.item_type }
+
+public fun resource_row_tool(row: &ResourceRow): String { row.tool }
+
+public fun resource_row_tier(row: &ResourceRow): u8 { row.tier }
+
+public fun resource_row_protector(row: &ResourceRow): String { row.protector }
+
+public fun resource_row_rare(row: &ResourceRow): String { row.rare_item_type }
+
+/// The authored row for a resource type — gathering's gates read it. Aborts when the world
+/// does not spawn this resource (a derived pack always has its row; absence is a code bug).
+public fun resource_row_of(world: &World, item_type: String): ResourceRow {
+  let mut i = 0;
+  while (i < world.resources.length()) {
+    if (world.resources[i].item_type == item_type) return world.resources[i];
+    i = i + 1;
+  };
+  abort ENoSuchResource
 }
 
 // ╔════════════════ [ Travel ] ═══════════════════════════════════════════════ ]
 
-/// Join or switch — allowed anytime, the level requirement checks EVERY time. First visit
-/// spawns at the world center; a revisit restores that world's own checkpoint.
-public fun join_world(character: &mut Character, world: String, clock: &Clock) {
+/// The STAR GATE (ruling 2026-08-09): every world's portal stands at its center (client 0;0).
+/// Switching requires WALKING to the portal — the character proves travel to the center of its
+/// CURRENT world, then materializes at the DESTINATION portal. A fresh character (no world
+/// yet) joins free: there is no origin gate to walk to. The level requirement checks every
+/// time. Package-private: the public door is `api::join_world` (kiosk-borrowing).
+public(package) fun join_world(character: &mut Character, world: String, clock: &Clock) {
   assert!(character.level() >= entry_level(&world), ELevelTooLow);
+  progression::touch(character, clock);
 
   let character_id = character.id();
+  let now = clock.timestamp_ms();
+  let in_a_world = dfield::exists(character.uid_mut(), CurrentWorldKey {});
+  // Reaching the gate coord IS the whole proof — the speed check to the portal.
+  if (in_a_world) { prove_move(character, WORLD_CENTER, WORLD_CENTER, clock); };
+
   let uid = character.uid_mut();
-  if (dfield::exists(uid, CurrentWorldKey {})) {
+  if (in_a_world) {
     *dfield::borrow_mut(uid, CurrentWorldKey {}) = world;
   } else {
     dfield::add(uid, CurrentWorldKey {}, world);
   };
 
+  // Arrival = the destination portal. The pet flag RE-DERIVES from the live equipment —
+  // a stale flag from a past visit would be free speed (or stolen speed) forever.
+  let pet = equipment::pet_equipped(character);
+  let uid = character.uid_mut();
   let first_join = !dfield::exists(uid, CheckpointKey(world));
   if (first_join) {
-    dfield::add(
-      uid,
-      CheckpointKey(world),
-      Checkpoint { x: WORLD_CENTER, z: WORLD_CENTER, at_ms: clock.timestamp_ms(), pet: false },
-    );
+    dfield::add(uid, CheckpointKey(world), Checkpoint { x: WORLD_CENTER, z: WORLD_CENTER, at_ms: now, pet });
+  } else {
+    let cp: &mut Checkpoint = dfield::borrow_mut(uid, CheckpointKey(world));
+    cp.x = WORLD_CENTER;
+    cp.z = WORLD_CENTER;
+    cp.at_ms = now;
+    cp.pet = pet;
   };
-  let cp: &Checkpoint = dfield::borrow(uid, CheckpointKey(world));
-  event::emit(WorldJoined { character: character_id, world, x: cp.x, z: cp.z, first_join });
+  event::emit(WorldJoined { character: character_id, world, x: WORLD_CENTER, z: WORLD_CENTER, first_join });
 }
 
 /// Every future world interaction (fight, gather, …) calls this: proves the character could
@@ -94,23 +252,69 @@ public fun join_world(character: &mut Character, world: String, clock: &Clock) {
 /// position. Returns the current world name for the caller's own logic.
 public(package) fun prove_move(character: &mut Character, x: u32, z: u32, clock: &Clock): String {
   assert!(x < WORLD_SIZE && z < WORLD_SIZE, EOutOfBounds);
-  let uid = character.uid_mut();
-  assert!(dfield::exists(uid, CurrentWorldKey {}), ENotInWorld);
-  let world: String = *dfield::borrow(uid, CurrentWorldKey {});
-
-  let cp: &mut Checkpoint = dfield::borrow_mut(uid, CheckpointKey(world));
+  progression::touch(character, clock);
+  // The ×1.5 pet speed is a BOTH-END rule (audit 2026-08-10): a pet on the slot NOW earns
+  // the boost only over a leg that also STARTED with a pet — never retroactively over time
+  // banked before it was equipped. `cp.pet` is the start-point snapshot; this saves the
+  // live state as the next leg's start.
+  let pet_now = equipment::pet_equipped(character);
+  let (world, cp) = current_checkpoint_mut(character);
   let now = clock.timestamp_ms();
-  assert!(travel_ok(cp, x, z, now), ETravelTooFar);
+  assert!(travel_ok(cp, x, z, now, pet_now), ETravelTooFar);
   cp.x = x;
   cp.z = z;
   cp.at_ms = now;
+  cp.pet = pet_now;
   world
 }
 
+/// ROOT the character in place until `extra_ms` from now (the hytale gather-time law,
+/// owner 2026-08-10): a FUTURE-dated checkpoint makes `travel_ok` refuse every proof —
+/// no move, no next gather, no fight join — until the clock catches up. The gather duration
+/// rides the machinery that already exists instead of a new timer field.
+public(package) fun delay_checkpoint(character: &mut Character, extra_ms: u64, clock: &Clock) {
+  let (_, cp) = current_checkpoint_mut(character);
+  cp.at_ms = clock.timestamp_ms() + extra_ms;
+}
+
+/// Is the character ROOTED right now? A future-dated checkpoint (`at_ms > now`) means a
+/// gather-time root or a fired protector verdict is holding them — no action may fire until
+/// the clock catches up. Every out-of-fight action door that isn't itself a `prove_move`
+/// (consumables) must gate on this, or a recall potion would wipe the root.
+public(package) fun is_rooted(character: &Character, clock: &Clock): bool {
+  let uid = character.uid();
+  assert!(dfield::exists(uid, CurrentWorldKey {}), ENotInWorld);
+  let world: String = *dfield::borrow(uid, CurrentWorldKey {});
+  let cp: &Checkpoint = dfield::borrow(uid, CheckpointKey(world));
+  cp.at_ms > clock.timestamp_ms()
+}
+
+/// TELEPORT TO CENTER (the recall consumable): the checkpoint jumps to the world portal
+/// (client 0;0), exactly like a fresh arrival — the pet flag re-derives, the clock resets.
+public(package) fun teleport_center(character: &mut Character, clock: &Clock) {
+  let pet = equipment::pet_equipped(character);
+  let now = clock.timestamp_ms();
+  let (_, cp) = current_checkpoint_mut(character);
+  cp.x = WORLD_CENTER;
+  cp.z = WORLD_CENTER;
+  cp.at_ms = now;
+  cp.pet = pet;
+}
+
+/// The ONE door to the current world's checkpoint — every writer (`prove_move`,
+/// `delay_checkpoint`) reads and mutates through here; nobody re-derives the DF pair.
+fun current_checkpoint_mut(character: &mut Character): (String, &mut Checkpoint) {
+  let uid = character.uid_mut();
+  assert!(dfield::exists(uid, CurrentWorldKey {}), ENotInWorld);
+  let world: String = *dfield::borrow(uid, CurrentWorldKey {});
+  (world, dfield::borrow_mut(uid, CheckpointKey(world)))
+}
+
 /// Exact squared-distance compare (consensus path — no sqrt), saturating overflow guard.
-fun travel_ok(cp: &Checkpoint, to_x: u32, to_z: u32, now_ms: u64): bool {
+/// The ×1.5 boost needs a pet at BOTH ends: `cp.pet` (the leg's start) AND `pet_now`.
+fun travel_ok(cp: &Checkpoint, to_x: u32, to_z: u32, now_ms: u64, pet_now: bool): bool {
   if (now_ms < cp.at_ms) return false;
-  let eff = if (cp.pet) SPEED_BUDGET * PET_NUM / PET_DEN else SPEED_BUDGET;
+  let eff = if (cp.pet && pet_now) SPEED_BUDGET * PET_NUM / PET_DEN else SPEED_BUDGET;
   let budget = (now_ms - cp.at_ms) * eff / SPEED_SCALE; // blocks
   if (budget >= MAX_LINEAR) return true;
   let dx = abs_diff(to_x, cp.x);
@@ -123,6 +327,9 @@ fun abs_diff(a: u32, b: u32): u64 {
 }
 
 // ╔════════════════ [ The 20 worlds — hardcoded law ] ════════════════════════ ]
+
+/// Where every fresh character spawns.
+public fun first_world(): String { b"01_first_shore".to_string() }
 
 /// Entry level of a world — the single gate function. Aborts `EUnknownWorld` on any other name.
 public fun entry_level(world: &String): u16 {

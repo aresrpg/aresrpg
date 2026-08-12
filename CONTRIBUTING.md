@@ -96,7 +96,7 @@ previous tag's deployment — no revert commit, no re-promotion needed. Diff two
 
 ## The quality bar
 
-- `.claude/rules/craft.md` + `docs/CODE_LAW.md` are the operating rules — pure functions,
+- `.claude/rules/craft.md` + `.claude/rules/code-law.md` are the operating rules — pure functions,
   snake_case, no classes, immutability by default, effects at the edges.
 - **RED-FIRST**: a bug fix's first artifact is a failing test reproducing it; the PR carries
   both runs.

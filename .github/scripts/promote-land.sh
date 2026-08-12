@@ -49,8 +49,6 @@ OWNER_LOGIN=Sceat
 LABEL=promote-requested
 PR="${1:?PR number required}"
 REPO="${GITHUB_REPOSITORY:?GITHUB_REPOSITORY required}"
-# shellcheck source=.github/scripts/promote-land-dispatch.sh
-source "$(dirname "${BASH_SOURCE[0]}")/promote-land-dispatch.sh"
 
 # emit <result> — record the outcome for the caller (never let the $GITHUB_OUTPUT write trip
 # `set -e`: a plain `&&` returns non-zero when the guard is false and would abort the script).
@@ -105,11 +103,6 @@ FETCH_REFS=("refs/pull/${PR}/head:refs/promote/land-${PR}" "+refs/heads/${BASE}:
 if [ "$BASE" != edge ]; then FETCH_REFS+=("+refs/heads/edge:refs/remotes/origin/edge"); fi
 git fetch --quiet origin "${FETCH_REFS[@]}"
 HEAD_SHA=$(git rev-parse "refs/promote/land-${PR}")
-# edge as it stands BEFORE any push below — the base of the range the landing automations sweep.
-# Both fetch shapes above refresh origin/edge, and it is read HERE because `git push` updates the
-# remote-tracking ref, which would erase the before-state the sweep needs.
-EDGE_BEFORE=$(git rev-parse refs/remotes/origin/edge)
-
 # ── master-hop: the tip must be release-shaped (release-only-production law) ─────────────────
 if [ "$BASE" = master ]; then
   SUBJECT=$(git log -1 --pretty=%s "$HEAD_SHA")
@@ -130,9 +123,8 @@ fi
 
 # ── checks green? — every REQUIRED check-run present + green on this exact sha (issue #695) ──
 # The old assert only rejected check-runs that EXISTED and were non-green — a required check that
-# hadn't been CREATED yet at evaluation time (promote-queue.yml fires on EITHER gate or checks
-# completing; a slow checks.yml leg like `smoke`, Playwright + live network, can still be
-# unregistered on the sha when the faster gate.yml run fires the queue first) was invisible to it
+# hadn't been CREATED yet at evaluation time (a slow gate.yml leg like the playwright e2e job can
+# still be unregistered on the sha when a faster leg fires the queue first) was invisible to it
 # and read as clean — a still-red landing could fast-forward. evaluate_green() (sourced from
 # promote-green-eval.sh, unit-tested in test/promote-green-eval.test.sh) additionally requires
 # every name in REQUIRED_CHECKS to have a completed green check-run on $HEAD_SHA — missing/pending
@@ -200,11 +192,7 @@ fi
 # master's ruleset then enforces the stamp SERVER-SIDE on the push below: an unapproved sha
 # (a rebase makes a new one, carrying nothing) is refused by GitHub, not by this script.
 # Everything past this line is post-landing bookkeeping over a push that ALREADY HAPPENED and can
-# never be retried. A failed landing-automation dispatch is therefore recorded, never fatal here:
-# aborting mid-tail would strand the `promote-requested` label, re-land the same PR every CI cycle,
-# and make the /promote handler report a completed landing as a refusal. It is answered at the very
-# end with exit 4, which reddens the caller's run without lying about what happened.
-DISPATCH_FAILED=0
+# never be retried — failures in the tail are recorded, never fatal.
 if ! git push origin "$HEAD_SHA:$BASE"; then
   # git's rejection message for a missing required status is indistinguishable from any other
   # protected-branch refusal, so name the cause the master leg actually has: no `promoted` stamp.
@@ -217,9 +205,6 @@ if ! git push origin "$HEAD_SHA:$BASE"; then
   exit 1
 fi
 echo "landed PR #$PR onto $BASE ($HEAD_SHA)"
-if [ "$BASE" = edge ]; then
-  dispatch_edge_landing_automations "$EDGE_BEFORE" "$HEAD_SHA" || DISPATCH_FAILED=1
-fi
 
 # ── master-only post-landing tail (best-effort; the promotion already HAPPENED at the push) ──
 if [ "$BASE" = master ]; then
@@ -228,7 +213,6 @@ if [ "$BASE" = master ]; then
   if git merge-base --is-ancestor "refs/remotes/origin/edge" "$HEAD_SHA"; then
     if git push origin "$HEAD_SHA:edge"; then
       echo "edge aligned to master ($HEAD_SHA)"
-      dispatch_edge_landing_automations "$EDGE_BEFORE" "$HEAD_SHA" || DISPATCH_FAILED=1
     else
       echo "WARN: edge align push failed (non-fatal; master already landed)"
     fi
@@ -271,8 +255,4 @@ fi
 # ── landed: drop the label (bookkeeping) + report ───────────────────────────────────────────
 gh pr edit "$PR" --repo "$REPO" --remove-label "$LABEL" >/dev/null 2>&1 || true
 emit landed
-if [ "$DISPATCH_FAILED" = 1 ]; then
-  echo "::error::PR #$PR landed on $BASE ($HEAD_SHA) but a landing automation dispatch failed — the board sweep did not run; re-run it manually"
-  exit 4
-fi
 exit 0

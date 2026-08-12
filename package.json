@@ -7,36 +7,31 @@
     "packages/*"
   ],
   "scripts": {
-    "ares": "node scripts/ares.mjs",
+    "prepare": "git config core.hooksPath scripts/githooks",
     "dev:frontend": "cd packages/frontend && bun run dev",
     "dev": "bun run dev:frontend",
-    "lint": "NODE_OPTIONS=--max-old-space-size=6144 eslint . --max-warnings 3088 && bun scripts/check-lint-coverage.mjs && prettier . --check && bun scripts/check-doc-file-references.mjs && bun scripts/check-class-e-convergence.mjs && bun scripts/check-publisher-before-consumer.mjs && bun scripts/check-sponsor-config-ssot.mjs && bun scripts/check-gate-control-census.mjs && bash scripts/entropy-before-validation-gate.sh && bun scripts/check-singleton-order-convention.mjs && bun scripts/check-test-location.mjs && bun run --cwd packages/move lint && bun run --cwd packages/sim lint && bash scripts/check-constraints.sh",
-    "check:constraints": "bash scripts/check-constraints.sh",
-    "check:move-locks": "node packages/move/scripts/check_move_lock_revs.mjs",
-    "typecheck": "bun run --cwd packages/engine typecheck && bun run --cwd packages/sdk typecheck && bun run --cwd packages/sim typecheck && bun run --cwd packages/frontend typecheck",
+    "lint": "NODE_OPTIONS=--max-old-space-size=6144 eslint . --max-warnings 3088 && prettier . --check",
+    "typecheck": "bun run --cwd packages/engine typecheck && bun run --cwd packages/protocol typecheck && bun run --cwd packages/sdk typecheck && bun run --cwd packages/server typecheck && bun run --cwd packages/sim typecheck && bun run --cwd packages/frontend typecheck",
     "format": "prettier . --write && eslint . --fix",
-    "release:prepare": "bun run --cwd packages/move release:prepare",
-    "test": "bun run --filter '*' test",
-    "test:order-independence": "bash scripts/order-independence-gate.sh"
+    "test": "bun run --filter '*' test"
   },
   "devDependencies": {
-    "@eslint/js": "^9.39.5",
-    "@types/node": "^25.9.5",
-    "dependency-cruiser": "^18.1.0",
-    "eslint": "^9.39.5",
+    "@eslint/js": "^10.0.1",
+    "@types/node": "^26.2.0",
+    "eslint": "^10.8.1",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-functional": "^10.0.0",
-    "eslint-plugin-import": "^2.32.0",
+    "eslint-plugin-import-x": "^4.17.1",
     "eslint-plugin-react-hooks": "^7.1.1",
-    "globals": "^17.8.0",
-    "prettier": "^3.9.5",
+    "globals": "^17.10.0",
+    "prettier": "^3.9.6",
     "typescript": "^5.9.3",
-    "typescript-eslint": "^8.64.0"
+    "typescript-eslint": "^8.67.0"
   },
   "overrides": {
     "react": "19.2.7",
     "react-dom": "19.2.7",
-    "@mysten/sui": "2.20.1"
+    "@mysten/sui": "2.23.2"
   },
   "license": "SEE LICENSE IN LICENSE"
 }

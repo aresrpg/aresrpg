@@ -11,7 +11,7 @@
 // Tiers:
 //   T1 base      — every linted .js/.ts file: naming, no-classes, size/complexity ceilings, ratchets
 //   T2 product   — packages/** + api/**: the mutation family + module-load purity
-//   T3 loops     — api/** + packages/rpc/**: near-clean today, loop-free stays visible
+//   T3 loops     — api/**: near-clean today, loop-free stays visible
 //   T4 engine    — perf-sacred mutable core (Three.js scene graph, voxel hot paths): mutation family off
 //   T5 tests     — tests/benches/e2e choreograph state by design: mutation family + purity off
 //
@@ -80,7 +80,7 @@ export default [
   },
   {
     // T3 — loop-free where the repo already is (api: 7 hits, rpc: 17 at census)
-    files: ['api/**/*.{js,ts,mjs,cjs}', 'packages/rpc/**/*.{js,ts,mjs,cjs}'],
+    files: ['api/**/*.{js,ts,mjs,cjs}'],
     rules: {
       'functional/no-loop-statements': 'warn', // L-C4: fold, don't iterate — where honest
     },

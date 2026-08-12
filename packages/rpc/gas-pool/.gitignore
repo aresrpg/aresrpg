@@ -1,4 +1,0 @@
-# Never commit the rendered config (holds the sponsor secret) or any key material.
-config.local.yaml
-*.key
-.env

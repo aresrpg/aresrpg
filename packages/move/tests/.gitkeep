@@ -1,0 +1,2 @@
+// AresRPG Move tests — the Move convention home (sources/ carries only #[test_only] wrappers,
+// which must live in-module to reach private init functions). Test files land here.

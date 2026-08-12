@@ -1,8 +1,0 @@
-{
-  "version": 1,
-  "counts": {
-    "clones": 917,
-    "multi_importers": 20,
-    "repeated_literals": 806
-  }
-}

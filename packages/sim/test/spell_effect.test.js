@@ -265,7 +265,7 @@ const MOVE_KINDS = Object.fromEntries(
     ...readFileSync(
       join(
         dirname(fileURLToPath(import.meta.url)),
-        '../../move/foundation/sources/spell_effect.move',
+        '../../move-math/sources/spell_effect.move',
       ),
       'utf8',
     ).matchAll(/^const (K_[A-Z0-9_]+): u8 = (\d+);/gm),
@@ -293,7 +293,7 @@ describe('effect-kind twin seal — the sim never declares a kind the chain cann
 // ── The SUMMON tombstone (#2220) ─────────────────────────────────────────────
 // The legacy generated corpus `packages/sdk/src/spells.json` was a SECOND spell-truth home beside the served
 // corpus blob, and SUMMON was exactly how it had diverged: 7 of its 78 spells author a SUMMON effect, which
-// the chain taxonomy EXCLUDES BY CONSTRUCTION (packages/move/foundation/sources/spell_effect.move — "SUMMONING
+// the chain taxonomy EXCLUDES BY CONSTRUCTION (packages/move-math/sources/spell_effect.move — "SUMMONING
 // is EXCLUDED"). Nothing summon-shaped ever reached chain or serving. The sim-side resolution is gone too
 // (#2186 deleted fight_summon.js — the sim resolved a kind the chain cannot encode), so these arms are all
 // that remains of the concern, and they belong with the vocabulary seal above: what the vocabulary IS, and

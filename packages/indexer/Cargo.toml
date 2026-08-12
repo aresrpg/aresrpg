@@ -1,0 +1,58 @@
+[package]
+name = "aresrpg-indexer"
+version = "0.1.0"
+edition = "2021"
+license = "LicenseRef-AresRPG-Source-Available"
+description = "AresRPG chain projectionist — streams Sui checkpoints into FalkorDB (graph + sales history + live pub/sub)."
+
+[[bin]]
+name = "aresrpg-indexer"
+path = "src/main.rs"
+
+[dependencies]
+# --- Sui ingestion framework (Mysten) ---------------------------------------
+# Pinned to the current mainnet rev, matched to the locally installed sui CLI
+# (1.74.1-8fc60f1fa966). `default-features = false` drops the postgres stack;
+# checkpoint types come from the crate's `types` re-export so we can never
+# drift from the framework's sui-types version.
+sui-indexer-alt-framework = { git = "https://github.com/MystenLabs/sui.git", rev = "8fc60f1fa966e90398c93beb67ad4f42992889c7", default-features = false }
+
+# --- Boot derivation (already in the framework's tree — no new marriage) -----
+# One POST per boot against the official GraphQL endpoint: package lineage +
+# the publish checkpoint. rustls so no system openssl is required.
+reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }
+
+# --- Store -------------------------------------------------------------------
+# FalkorDB speaks RESP: GRAPH.QUERY / ZADD / PUBLISH are issued as raw commands
+# (redis::cmd) — no graph-client crate, we control every byte of Cypher.
+redis = { version = "0.28", features = ["tokio-comp"] }
+
+# --- Async runtime + framework trait glue ------------------------------------
+tokio = { version = "1", features = ["full"] }
+async-trait = "0.1"
+scoped-futures = "0.1"
+
+# --- Metrics (must match the framework's prometheus) --------------------------
+prometheus = "0.14"
+
+# --- Config / CLI / logging --------------------------------------------------
+clap = { version = "4", features = ["derive", "env"] }
+dotenvy = "0.15"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+# --- Serialization -----------------------------------------------------------
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+# Move BCS decoding. Two bcs versions resolve in-tree (sui-types locks 0.1.x):
+# safe HERE because BCS is a canonical wire format — same type, same bytes under
+# either version; this decoder only reads chain bytes into its own structs.
+bcs = "0.2"
+anyhow = "1"
+hex = "0.4"
+url = "2"
+
+[dev-dependencies]
+# The Move↔indexer parity gate (src/gates.rs) parses the compiled Move build —
+# the same pinned Sui rev as the framework, so no version can ever drift apart.
+move-binary-format = { git = "https://github.com/MystenLabs/sui.git", rev = "8fc60f1fa966e90398c93beb67ad4f42992889c7" }

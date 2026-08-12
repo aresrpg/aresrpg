@@ -1,0 +1,14 @@
+[package]
+name = "aresrpg_math"
+edition = "2024"
+license = "LicenseRef-AresRPG-Source-Available"
+authors = ["Sceat"]
+
+[addresses]
+aresrpg_math = "0x0"
+
+# The game's IMMUTABLE STATIC layer (owner 2026-08-10): pure functions and frozen law only —
+# curves, grids, formulas, tables, the deterministic prng, the spell algebra. No object owns
+# state here and no door mutates anything; the client twin mirrors this package byte for
+# byte. Extracted so the game package fits the 100KB ceiling with its security boundary
+# (every public(package) door) intact.

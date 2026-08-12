@@ -1,0 +1,8 @@
+#!/bin/sh
+# The ONE pre-commit gate: eslint + prettier over the staged files. Nothing else, ever.
+set -e
+staged=$(git diff --cached --name-only --diff-filter=ACMR)
+[ -z "$staged" ] && exit 0
+js=$(printf '%s\n' "$staged" | grep -E '\.(js|mjs|cjs|jsx|ts|tsx)$' || true)
+if [ -n "$js" ]; then printf '%s\n' "$js" | xargs bunx eslint; fi
+printf '%s\n' "$staged" | xargs bunx prettier --check --ignore-unknown

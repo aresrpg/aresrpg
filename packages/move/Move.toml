@@ -5,6 +5,12 @@ license = "LicenseRef-AresRPG-Source-Available"
 authors = ["Sceat"]
 
 [dependencies]
+# Personal kiosk + royalty/lock rules (the kiosk-lock constitution). MVR (@mysten/kiosk) once
+# the mvr resolver is installed; until then the corpus's verified pin.
+Kiosk = { git = "https://github.com/MystenLabs/apps.git", subdir = "kiosk", rev = "a1cd20107340bf8f6e6913ed20b9fafe92fe3d03" }
+# The immutable static layer (curves, grids, formulas, prng, spell algebra) — published
+# first, pinned at publish; pure functions only, the client twin mirrors it byte for byte.
+aresrpg_math = { local = "../move-math" }
 
 [addresses]
 # Fixed proceeds sink (one home, never a per-sale field).

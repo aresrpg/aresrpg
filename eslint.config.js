@@ -5,7 +5,7 @@ import fs from 'node:fs'
 import js from '@eslint/js'
 import globals from 'globals'
 import tseslint from 'typescript-eslint'
-import importPlugin from 'eslint-plugin-import'
+import importPlugin from 'eslint-plugin-import-x'
 import eslintConfigPrettier from 'eslint-config-prettier'
 import react_hooks from 'eslint-plugin-react-hooks'
 
@@ -27,9 +27,7 @@ export default [
       import: importPlugin,
     },
     settings: {
-      // The gold rig links its Playwright dependency here at boot. Keep it classified as external
-      // whether the link exists or not so import/order has one stable verdict.
-      'import/external-module-folders': ['node_modules', 'test/gold/node_modules'],
+      'import/external-module-folders': ['node_modules'],
     },
     languageOptions: {
       ecmaVersion: 'latest',
@@ -37,6 +35,9 @@ export default [
       parser: tseslint.parser,
       parserOptions: {
         requireConfigFile: false,
+        // Editors lint per-file from arbitrary cwds; without an explicit root the parser sees
+        // several candidate TSConfig roots (repo, packages/sdk, packages/move) and refuses.
+        tsconfigRootDir: import.meta.dirname,
       },
       globals: {
         ...globals.node,
@@ -44,6 +45,10 @@ export default [
       },
     },
     rules: {
+      // eslint 10's new recommended pair, landed warn-tier like every new law (burn-down, then
+      // promote — severities only ratchet up; census 2026-08-12: 43 pre-existing hits).
+      'no-useless-assignment': 'warn',
+      'preserve-caught-error': 'warn',
       '@typescript-eslint/naming-convention': 'off',
       camelcase: 'off',
       'no-var': 'error',
@@ -122,7 +127,7 @@ export default [
     },
   },
   {
-    // THE SILENT-FAILURE TRIPWIRE (docs/CODE_LAW.md L-D1; Agent Standard #3 "no silent failure, ever").
+    // THE SILENT-FAILURE TRIPWIRE (.claude/rules/code-law.md L-D1; Agent Standard #3 "no silent failure, ever").
     // The house law — instruments THROW, never coerce — pointed at PRODUCT code for the first time. A failure
     // handler that erases its failure (`.catch(() => null)`, `catch { return DEFAULT }`) leaves the break
     // recorded nowhere, and every caller downstream reads a coerced success. The board class census
@@ -147,9 +152,21 @@ export default [
     //     half of the law (a swallowed `page.screenshot(…).catch(() => undefined)` that lied about artifacts)
     //     wants its own tier with a probe-aware option — a follow-up, not this gate.
     files: ['packages/*/src/**/*.{js,jsx,ts,tsx}', 'api/**/*.{js,mjs}'],
-    ignores: ['**/*.test.*', '**/*.spec.*'],
+    ignores: ['**/*.test.*', '**/*.spec.*', 'packages/server/**'],
     plugins: { 'no-silent-failures': no_silent_failures },
     rules: { 'no-silent-failures/no-swallowed-failure': 'warn' },
+  },
+  {
+    // The server speaks through pino child loggers (log.warn/log.error) — same law, its sinks.
+    // Born-clean package: ERROR from day one, never a warn-tier burn-down.
+    files: ['packages/server/src/**/*.ts'],
+    plugins: { 'no-silent-failures': no_silent_failures },
+    rules: {
+      'no-silent-failures/no-swallowed-failure': [
+        'error',
+        { sinks: ['console.error', 'console.warn', 'log.error', 'log.warn', 'send'] },
+      ],
+    },
   },
   {
     // THE SILENT-REFUSAL RATCHET (#1689): a reducer/fold guard that returns its input unchanged without
@@ -168,10 +185,10 @@ export default [
       'no-silent-failures/no-unchanged-input-guard': ['error', { baseline: unchanged_input_guard_baseline }],
     },
   },
-  // THE FP-LAW LAYER (docs/CODE_LAW.md) — naming/purity/immutability/composition tripwires.
+  // THE FP-LAW LAYER (.claude/rules/code-law.md) — naming/purity/immutability/composition tripwires.
   // Tiering + severity rationale live in the layer file; rules in scripts/eslint-rules/fp_law.mjs.
   ...fp_law_layer,
-  // THE TYPED-FP TIER (docs/CODE_LAW.md, 2026-07-17) — type-aware strict-FP enforcement over every
+  // THE TYPED-FP TIER (.claude/rules/code-law.md, 2026-07-17) — type-aware strict-FP enforcement over every
   // surface a ts.Program covers: alias-blind mutation (functional/immutable-data), fire-and-forget
   // promises (L-P5), union exhaustiveness (L-D3), boundary immutability (L-I6). Surfaces, tiers and
   // the not-wired verdicts live in the layer file.
@@ -254,16 +271,9 @@ export default [
       '**/dist/*',
       'node_modules/*',
       '**/generated/*',
-      'test/gold/.build/**', // the gold rig's copied ceremony workspace — regenerated every localnet boot
-      'test/gold/out/**', // rig run outputs (playwright artifacts, rendered files)
-      // The arch gates' self-test corpus: deliberately-malformed snippets pinned to semgrep/scan
-      // behavior, not source. Linting them can only pressure someone into "fixing" a RED fixture,
-      // which is exactly the change that breaks the gate's self-test.
-      'scripts/arch/fixtures/**',
       'packages/sim/**',
-      'packages/sdk/**',
       'packages/move/**',
-      'packages/rpc/indexer/**',
+      'packages/indexer/**',
       '.claude/**',
       'public/draco/**',
       'packages/engine/public/draco/**',

@@ -1,8 +1,0 @@
-# Build context hygiene — api/Dockerfile does `COPY . .`; a local secret or dev
-# artifact must never bake into the image layer. Mirrors api/.gitignore.
-.env
-.env.*
-node_modules
-target
-*.log
-.DS_Store

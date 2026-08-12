@@ -2,12 +2,14 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 module aresrpg::character;
 
+use kiosk::personal_kiosk;
 use std::string::String;
 use sui::{
   coin::Coin,
   display_registry::{Self, DisplayRegistry},
   dynamic_field as dfield,
   event,
+  kiosk::Kiosk,
   package::{Self, Publisher},
   sui::SUI,
 };
@@ -15,6 +17,9 @@ use sui::{
 // ╔════════════════ [ Constants ] ════════════════════════════════════════════ ]
 
 const ENameTaken: u64 = 101;
+const ENoPoints: u64 = 106; // raise_stat: not enough available points
+const EUnknownStat: u64 = 107; // raise_stat: not one of the six characteristics
+const ENotPersonalKiosk: u64 = 108; // custody: a character must live in a PERSONAL kiosk
 const ENameInvalid: u64 = 102;
 const EInvalidClasse: u64 = 103;
 const EInvalidColor: u64 = 104;
@@ -22,6 +27,14 @@ const EWrongPayment: u64 = 105;
 
 const MAX_COLOR_VALUE: u32 = 16777215; // 0xFFFFFF
 const PRICE: u64 = 1_000_000_000; // 1 SUI, fixed — no free path, no sponsoring
+
+/// A character must be locked in a PERSONAL kiosk, so its `KioskOwnerCap` is itself soulbound and
+/// can't be sold or lent outside the royalty rule. The personal-kiosk TRANSFER rule gates trades
+/// only — never the mint or a fight/dungeon/kolizeum re-lock (audit 2026-08-11) — so every
+/// `kiosk.lock` of a Character calls this. `personal_kiosk` is a READ here, not the purged cap.
+public(package) fun assert_personal_custody(kiosk: &Kiosk) {
+  assert!(personal_kiosk::is_personal(kiosk), ENotPersonalKiosk);
+}
 
 // ╔════════════════ [ Macros ] ═══════════════════════════════════════════════ ]
 
@@ -41,6 +54,14 @@ public struct Character has key, store {
   color_1: u32,
   color_2: u32,
   color_3: u32,
+  // ── allocated characteristics (legacy shape): 5 points per level, spent 1:1 ──
+  vitality: u16,
+  wisdom: u16,
+  strength: u16,
+  intelligence: u16,
+  chance: u16,
+  agility: u16,
+  available_points: u16,
 }
 
 /// Shared root holding one `name → character ID` record per living character. Records are
@@ -63,8 +84,8 @@ fun init(otw: CHARACTER, ctx: &mut TxContext) {
 }
 
 /// Display V2 needs the shared `DisplayRegistry` (0xd), which init cannot take — runs once
-/// post-publish. Returns the cap; the ceremony transaction decides where it lives.
-public fun create_display(
+/// post-publish through `admin::create_character_display`. Returns the cap.
+public(package) fun new_display(
   registry: &mut DisplayRegistry,
   publisher: &mut Publisher,
   ctx: &mut TxContext,
@@ -76,7 +97,7 @@ public fun create_display(
     &mut d,
     &cap,
     b"image_url".to_string(),
-    b"https://assets.aresrpg.world/classe/{classe}_{sex}.jpg".to_string(),
+    b"https://aresrpg.world/classe/{classe}_{sex}.jpg".to_string(),
   );
   display_registry::set(
     &mut d,
@@ -93,9 +114,9 @@ public fun create_display(
 // ╔════════════════ [ Creation ] ═════════════════════════════════════════════ ]
 
 /// Mint for exactly 1 SUI. The name lands as a registry record (globally unique, freed again
-/// when the character is deleted). Returns the character — the caller's transaction decides
-/// where it goes.
-public fun create_character(
+/// when the character is deleted). Package-private: the ONE public mint door is
+/// `api::create_character`, which also joins the first world — a character is never world-less.
+public(package) fun create_character(
   registry: &mut NameRegistry,
   payment: Coin<SUI>,
   raw_name: String,
@@ -130,6 +151,13 @@ public fun create_character(
     color_1,
     color_2,
     color_3,
+    vitality: 0,
+    wisdom: 0,
+    strength: 0,
+    intelligence: 0,
+    chance: 0,
+    agility: 0,
+    available_points: 0,
   };
   dfield::add(&mut registry.id, name, character.id.to_inner());
   event::emit(CharacterCreated {
@@ -144,14 +172,65 @@ public fun create_character(
 
 public(package) fun id(self: &Character): ID { self.id.to_inner() }
 
+public(package) fun uid(self: &Character): &UID { &self.id }
+
+public fun name(self: &Character): String { self.name }
+
+public fun classe(self: &Character): String { self.classe }
+
+public fun vitality(self: &Character): u16 { self.vitality }
+
+public fun wisdom(self: &Character): u16 { self.wisdom }
+
+public fun strength(self: &Character): u16 { self.strength }
+
+public fun intelligence(self: &Character): u16 { self.intelligence }
+
+public fun chance(self: &Character): u16 { self.chance }
+
+public fun agility(self: &Character): u16 { self.agility }
+
+public fun available_points(self: &Character): u16 { self.available_points }
+
 public(package) fun uid_mut(self: &mut Character): &mut UID { &mut self.id }
 
 public(package) fun level(self: &Character): u16 { self.level }
 
-/// Add-only — experience can never decrease. The level syncs silently off the curve.
+/// Add-only — experience can never decrease. The level syncs silently off the curve; each
+/// level gained grants 5 stat points (legacy law).
 public(package) fun add_experience(self: &mut Character, experience: u64) {
   self.experience = self.experience + experience;
-  self.level = aresrpg::experience::level_from_xp(self.experience);
+  let new_level = aresrpg_math::experience::level_from_xp(self.experience);
+  if (new_level > self.level) {
+    self.available_points = self.available_points + (new_level - self.level) * 5;
+    self.level = new_level;
+  };
+}
+
+/// RESET STAT POINTS (the consumable): refund every allocated characteristic back into the
+/// pool and zero the six. Gear-folded stats are untouched — only the ALLOCATED points return.
+public(package) fun reset_stats(self: &mut Character) {
+  let refund = self.vitality + self.wisdom + self.strength + self.intelligence + self.chance + self.agility;
+  self.available_points = self.available_points + refund;
+  self.vitality = 0;
+  self.wisdom = 0;
+  self.strength = 0;
+  self.intelligence = 0;
+  self.chance = 0;
+  self.agility = 0;
+}
+
+/// Spend available points 1:1 into one of the six characteristics.
+public(package) fun raise_stat(self: &mut Character, stat: String, amount: u16) {
+  assert!(self.available_points >= amount, ENoPoints);
+  self.available_points = self.available_points - amount;
+  if (stat == b"vitality".to_string()) { self.vitality = self.vitality + amount }
+  else if (stat == b"wisdom".to_string()) { self.wisdom = self.wisdom + amount }
+  else if (stat == b"strength".to_string()) { self.strength = self.strength + amount }
+  else if (stat == b"intelligence".to_string()) { self.intelligence = self.intelligence + amount }
+  else if (stat == b"chance".to_string()) { self.chance = self.chance + amount }
+  else if (stat == b"agility".to_string()) { self.agility = self.agility + amount }
+  else abort EUnknownStat
 }
 
 /// Unpack primitive — the guarded delete door (no equipped items, legacy's EInventoryNotEmpty
@@ -164,22 +243,24 @@ public(package) fun destroy(registry: &mut NameRegistry, self: Character) {
 
 // ╔════════════════ [ Private ] ══════════════════════════════════════════════ ]
 
+/// The class law — one home; spell_template validates against it too.
+public(package) fun is_classe(classe: &String): bool {
+  *classe == b"shugo".to_string() ||
+  *classe == b"tomoda".to_string() ||
+  *classe == b"rojin".to_string() ||
+  *classe == b"yajin".to_string() ||
+  *classe == b"tokei".to_string() ||
+  *classe == b"asobi".to_string() ||
+  *classe == b"iyashi".to_string() ||
+  *classe == b"senshi".to_string() ||
+  *classe == b"yogan".to_string() ||
+  *classe == b"mori".to_string() ||
+  *classe == b"ikari".to_string() ||
+  *classe == b"shusen".to_string()
+}
+
 fun verify_classe(classe: String) {
-  assert!(
-    classe == b"shugo".to_string() ||
-    classe == b"tomoda".to_string() ||
-    classe == b"rojin".to_string() ||
-    classe == b"yajin".to_string() ||
-    classe == b"tokei".to_string() ||
-    classe == b"asobi".to_string() ||
-    classe == b"tsuba".to_string() ||
-    classe == b"senshi".to_string() ||
-    classe == b"yogan".to_string() ||
-    classe == b"mori".to_string() ||
-    classe == b"ikari".to_string() ||
-    classe == b"shusen".to_string(),
-    EInvalidClasse,
-  );
+  assert!(is_classe(&classe), EInvalidClasse);
 }
 
 fun contains_whitespace(name: &String): bool {

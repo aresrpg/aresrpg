@@ -1,0 +1,821 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
+//! The live wire + the money analysis — events → pub/sub, sales, market. PURE.
+//!
+//! Per transaction: route every game event to its channel (`events.rs` owns the
+//! table), then run the SALE ANALYSIS the graph never sees:
+//!
+//! * **The royalty discriminator (README law 7).** The ceremony installs the
+//!   royalty rule (10% + 0.01 SUI floor) on BOTH real policies, so every
+//!   genuine kiosk sale calls `royalty_rule::pay`; the game's internal extract
+//!   (equip / burn / fight custody) buys through the RULELESS protected policy
+//!   and never does. No `pay` call in the tx = plumbing: no row, no stamp, no
+//!   forwarded market event.
+//! * **Ours-only.** A purchased object always changes hands, so it is an
+//!   output of the same tx — a purchase whose id is no game Character/Item
+//!   output is another collection's trade: ignored entirely.
+//! * **Per-unit price (law 9).** The event price is the LOT price; the stamp
+//!   divides by the purchased stack's `amount`. Characters have no amount and
+//!   never stamp the market (kind-tagged in history instead).
+//! * **Exclusive sales are event-invisible (law 8).** `purchase_with_cap`
+//!   emits nothing — the sale is derived from the PurchaseCap DELETION plus
+//!   the kiosk `profits` delta in that tx. History rows for both parties,
+//!   NEVER a market stamp (an OTC price is not a market price).
+//!
+//! Sales rows are `{ckpt}:{tx}:{evt}|{json}` members (coordinate prefix =
+//! replay-idempotent) scored by `ts_ms`, one row per party, capped + idle-TTL
+//! at commit time (`pipeline.rs`).
+
+use serde_json::json;
+
+use crate::decode::{self, Addr, Id};
+use crate::events;
+use crate::graph::MarketStamp;
+use crate::ownership::{ObjView, SUI_FRAMEWORK};
+
+/// One `PUBLISH channel payload`.
+#[derive(Debug, Clone, PartialEq)]
+pub struct Publication {
+    pub channel: String,
+    pub payload: String,
+}
+
+/// One sales-history row for one address's zset.
+#[derive(Debug, Clone, PartialEq)]
+pub struct SalesRow {
+    pub address: Addr,
+    pub ts_ms: u64,
+    pub member: String,
+}
+
+/// One event as the analyzer sees it. `index` is the event's ordinal within
+/// the CHECKPOINT (the pub/sub gap/order coordinate).
+#[derive(Debug, Clone)]
+pub struct EventView<'a> {
+    pub package: &'a str,
+    pub module: &'a str,
+    pub name: &'a str,
+    /// Fully-qualified type parameters of the EVENT type (canonical) — the
+    /// phantom `T` of `kiosk::ItemListed<T>` lives HERE, not in the BCS body.
+    pub type_params: &'a [String],
+    pub bytes: &'a [u8],
+    pub index: u64,
+}
+
+/// One transaction as the analyzer sees it.
+#[derive(Debug, Clone)]
+pub struct TxView<'a> {
+    pub tx_index: u64,
+    pub sender: Addr,
+    /// Every MoveCall target, canonical `0xpkg::module::function`.
+    pub move_calls: &'a [String],
+    pub events: &'a [EventView<'a>],
+    /// This tx's INPUT (pre-state) and OUTPUT objects.
+    pub inputs: &'a [ObjView<'a>],
+    pub outputs: &'a [ObjView<'a>],
+}
+
+/// Everything one checkpoint's events produce.
+#[derive(Debug, Default, PartialEq)]
+pub struct Wire {
+    pub publications: Vec<Publication>,
+    pub sales: Vec<SalesRow>,
+    pub market: Vec<MarketStamp>,
+}
+
+pub fn analyze(ckpt: u64, ts_ms: u64, txs: &[TxView<'_>], game: &str) -> anyhow::Result<Wire> {
+    let mut wire = Wire::default();
+    for tx in txs {
+        route_game_events(&mut wire, ckpt, ts_ms, tx, game)?;
+        analyze_kiosk_market(&mut wire, ckpt, ts_ms, tx, game)?;
+
+        analyze_shop_sales(&mut wire, ckpt, ts_ms, tx, game)?;
+    }
+    Ok(wire)
+}
+
+fn envelope(
+    ckpt: u64,
+    tx: u64,
+    evt: u64,
+    ts_ms: u64,
+    kind: &str,
+    data: serde_json::Value,
+) -> String {
+    json!({
+        "ckpt": ckpt,
+        "tx": tx,
+        "evt": evt,
+        "ts_ms": ts_ms,
+        "type": kind,
+        "data": data,
+    })
+    .to_string()
+}
+
+// ╔════════════════ [ Game events → channels ] ═══════════════════════════════ ]
+
+fn route_game_events(
+    wire: &mut Wire,
+    ckpt: u64,
+    ts_ms: u64,
+    tx: &TxView<'_>,
+    game: &str,
+) -> anyhow::Result<()> {
+    for event in tx.events {
+        if event.package != game {
+            continue;
+        }
+        let Some(routed) = events::route(event.module, event.name, event.bytes)? else {
+            continue;
+        };
+        let payload = envelope(
+            ckpt,
+            tx.tx_index,
+            event.index,
+            ts_ms,
+            routed.kind,
+            routed.data.clone(),
+        );
+        // party membership MIRROR: joins/leaves route to the party channel for the
+        // members, but the AFFECTED character's own realtime connection watches only
+        // its character channel (it cannot watch a party it doesn't know it joined) —
+        // so the same envelope lands on both.
+        if routed.kind == "PartyJoined" || routed.kind == "PartyLeft" {
+            if let Some(character) = routed.data["character"].as_str() {
+                wire.publications.push(Publication {
+                    channel: format!("evt:character:{character}"),
+                    payload: payload.clone(),
+                });
+            }
+        }
+        // trade-birth MIRROR: the route lands on the counterparty's social channel;
+        // the CREATOR's connection must arm the same watch — same envelope, both doors.
+        if routed.kind == "TradeCreated" {
+            if let Some(creator) = routed.data["a"].as_str() {
+                wire.publications.push(Publication {
+                    channel: format!("evt:social:{creator}"),
+                    payload: payload.clone(),
+                });
+            }
+        }
+        wire.publications.push(Publication {
+            channel: routed.topic,
+            payload,
+        });
+    }
+    Ok(())
+}
+
+// ╔════════════════ [ Kiosk marketplace — the discriminator ] ════════════════ ]
+
+fn is_game_obj<'a>(outputs: &'a [ObjView<'a>], id: Id, game: &str) -> Option<&'a ObjView<'a>> {
+    outputs.iter().find(|o| {
+        o.id == id
+            && o.type_key.package == game
+            && (o.type_key.name == "Item" || o.type_key.name == "Character")
+    })
+}
+
+fn pays_royalty(tx: &TxView<'_>) -> bool {
+    tx.move_calls
+        .iter()
+        .any(|call| call.ends_with("::royalty_rule::pay"))
+}
+
+/// Is a kiosk event's phantom `T` one of OUR types? The event TYPE carries it
+/// (`ItemListed<T>`), so foreign collections' market noise filters here — the
+/// body cannot tell (the old contract's proven lesson), the type can.
+fn is_game_market_event(event: &EventView<'_>, game: &str) -> bool {
+    event.type_params.first().is_some_and(|t| {
+        t == &format!("{game}::item::Item") || t == &format!("{game}::character::Character")
+    })
+}
+
+/// Decode the co-present Kiosk, loudly — a type-matched `0x2::kiosk::Kiosk`
+/// failing decode is layout drift, never noise (no-silent-failures law).
+fn kiosk_view<'a>(views: &'a [ObjView<'a>], kiosk: Id) -> anyhow::Result<Option<decode::Kiosk>> {
+    let Some(o) = views.iter().find(|o| {
+        o.id == kiosk && o.type_key.package == SUI_FRAMEWORK && o.type_key.name == "Kiosk"
+    }) else {
+        return Ok(None);
+    };
+    decode::from_bytes::<decode::Kiosk>(o.bytes)
+        .map(Some)
+        .map_err(|e| {
+            anyhow::anyhow!(
+                "layout drift: kiosk::Kiosk {} failed decode: {e}",
+                kiosk.hex()
+            )
+        })
+}
+
+/// One realised sale → two history rows (+ a market stamp for public item
+/// sales). `kind` is `"item"` / `"character"`; `evt` disambiguates coordinates.
+#[allow(clippy::too_many_arguments)]
+fn push_sale(
+    wire: &mut Wire,
+    ckpt: u64,
+    ts_ms: u64,
+    tx: u64,
+    evt: u64,
+    sold: &ObjView<'_>,
+    price: u64,
+    seller: Option<Addr>,
+    buyer: Addr,
+    exclusive: bool,
+) -> anyhow::Result<()> {
+    // the KIND is the object's TYPE — an Item that fails decode is layout
+    // drift and errors the checkpoint, never a silent "character" fallback.
+    let item = if sold.type_key.name == "Item" {
+        Some(decode::from_bytes::<decode::Item>(sold.bytes).map_err(|e| {
+            anyhow::anyhow!(
+                "layout drift: item::Item {} failed decode: {e}",
+                sold.id.hex()
+            )
+        })?)
+    } else {
+        None
+    };
+    let (kind, item_type, amount) = match &item {
+        Some(i) => ("item", Some(i.item_type.clone()), i.amount.max(1) as u64),
+        None => ("character", None, 1),
+    };
+    let coordinate = format!("{ckpt}:{tx}:{evt}");
+    let base = json!({
+        "object": sold.id.hex(),
+        "kind": kind,
+        "item_type": item_type,
+        "amount": amount,
+        "price_mist": price.to_string(),
+        "exclusive": exclusive,
+        "ts_ms": ts_ms,
+    });
+    let mut row = |address: Addr, side: &str, counterparty: Option<Addr>| {
+        let mut data = base.clone();
+        data["side"] = json!(side);
+        data["counterparty"] = json!(counterparty.map(|a| a.hex()));
+        wire.sales.push(SalesRow {
+            address,
+            ts_ms,
+            member: format!("{coordinate}|{data}"),
+        });
+    };
+    row(buyer, "bought", seller);
+    if let Some(seller) = seller {
+        row(seller, "sold", Some(buyer));
+    }
+    // the market stamp: PUBLIC ITEM sales only, per-unit, never zero.
+    if !exclusive && price > 0 {
+        if let Some(i) = &item {
+            wire.market.push(MarketStamp {
+                item_type: i.item_type.clone(),
+                price_per_unit_mist: price / amount.max(1),
+                ts_ms,
+            });
+        }
+    }
+    Ok(())
+}
+
+fn analyze_kiosk_market(
+    wire: &mut Wire,
+    ckpt: u64,
+    ts_ms: u64,
+    tx: &TxView<'_>,
+    game: &str,
+) -> anyhow::Result<()> {
+    let royalty = pays_royalty(tx);
+    for event in tx.events {
+        if event.package != SUI_FRAMEWORK || event.module != "kiosk" {
+            continue;
+        }
+        match event.name {
+            "ItemPurchased" => {
+                // a foreign collection's trade — the phantom T names it (M4)
+                if !is_game_market_event(event, game) {
+                    continue;
+                }
+                let e = decode::from_bytes::<events::KioskItemPurchased>(event.bytes)
+                    .map_err(|err| anyhow::anyhow!("layout drift: kiosk::ItemPurchased: {err}"))?;
+                // THREE independent gates, all required (defense in depth):
+                //   price > 0 — the 0.01 SUI royalty floor makes a genuine
+                //     0-price sale impossible, and every protected-policy
+                //     extract is 0-price, so a spoofed `royalty_rule::pay` in
+                //     the same PTB can no longer launder plumbing into sales;
+                //   royalty present — our real policies always collect;
+                //   ours-output — the object changed hands in THIS tx.
+                if e.price == 0 || !royalty {
+                    continue;
+                }
+                let Some(sold) = is_game_obj(tx.outputs, e.id, game) else {
+                    continue;
+                };
+                let seller = match kiosk_view(tx.outputs, e.kiosk)? {
+                    Some(k) => Some(k.owner),
+                    None => kiosk_view(tx.inputs, e.kiosk)?.map(|k| k.owner),
+                };
+                push_sale(
+                    wire,
+                    ckpt,
+                    ts_ms,
+                    tx.tx_index,
+                    event.index,
+                    sold,
+                    e.price,
+                    seller,
+                    tx.sender,
+                    false,
+                )?;
+                wire.publications.push(Publication {
+                    channel: "evt:economy".into(),
+                    payload: envelope(
+                        ckpt,
+                        tx.tx_index,
+                        event.index,
+                        ts_ms,
+                        "MarketPurchased",
+                        json!({
+                            "kiosk": e.kiosk.hex(),
+                            "object": e.id.hex(),
+                            "price_mist": e.price.to_string(),
+                        }),
+                    ),
+                });
+            }
+            "ItemListed" | "ItemDelisted" => {
+                // foreign collections never reach the game channel (M4)
+                if !is_game_market_event(event, game) {
+                    continue;
+                }
+                // suppress the extract pair: ANY same-tx 0-price purchase of a
+                // game object marks the tx as plumbing — keyed on the price,
+                // never on the (spoofable) royalty call.
+                let plumbing = tx.events.iter().any(|other| {
+                    other.module == "kiosk"
+                        && other.name == "ItemPurchased"
+                        && decode::from_bytes::<events::KioskItemPurchased>(other.bytes)
+                            .map(|purchase| purchase.price == 0)
+                            .unwrap_or(false)
+                });
+                if plumbing {
+                    continue;
+                }
+                let (id, kiosk, price) = if event.name == "ItemListed" {
+                    let e = decode::from_bytes::<events::KioskItemListed>(event.bytes)
+                        .map_err(|err| anyhow::anyhow!("layout drift: kiosk::ItemListed: {err}"))?;
+                    (e.id, e.kiosk, Some(e.price))
+                } else {
+                    let e = decode::from_bytes::<events::KioskItemDelisted>(event.bytes).map_err(
+                        |err| anyhow::anyhow!("layout drift: kiosk::ItemDelisted: {err}"),
+                    )?;
+                    (e.id, e.kiosk, None)
+                };
+                let kind = if event.name == "ItemListed" {
+                    "MarketListed"
+                } else {
+                    "MarketDelisted"
+                };
+                wire.publications.push(Publication {
+                    channel: "evt:economy".into(),
+                    payload: envelope(
+                        ckpt,
+                        tx.tx_index,
+                        event.index,
+                        ts_ms,
+                        kind,
+                        json!({
+                            "kiosk": kiosk.hex(),
+                            "object": id.hex(),
+                            "price_mist": price.map(|p| p.to_string()),
+                        }),
+                    ),
+                });
+            }
+            _ => {}
+        }
+    }
+    Ok(())
+}
+
+
+
+// ╔════════════════ [ Shop — the primary market ] ════════════════════════════ ]
+
+fn analyze_shop_sales(
+    wire: &mut Wire,
+    ckpt: u64,
+    ts_ms: u64,
+    tx: &TxView<'_>,
+    game: &str,
+) -> anyhow::Result<()> {
+    for event in tx.events {
+        if event.package != game || event.module != "shop" || event.name != "SaleBought" {
+            continue;
+        }
+        let e: events::SaleBought = decode::from_bytes(event.bytes)?;
+        // the minted stack (or the stack it merged into) is an output of the
+        // same tx; the mutated Sale names the template that ties them.
+        let template = tx.outputs.iter().find_map(|o| {
+            (o.type_key.package == game && o.type_key.name == "Sale" && o.id == e.sale).then(
+                || {
+                    decode::from_bytes::<decode::Sale>(o.bytes)
+                        .ok()
+                        .map(|s| s.template)
+                },
+            )?
+        });
+        let bought = template.and_then(|template| {
+            tx.outputs.iter().find_map(|o| {
+                (o.type_key.package == game && o.type_key.name == "Item")
+                    .then(|| decode::from_bytes::<decode::Item>(o.bytes).ok())?
+                    .filter(|i| i.template == template)
+            })
+        });
+        let Some(item) = bought else {
+            continue;
+        };
+        let quantity = e.quantity.max(1);
+        let coordinate = format!("{ckpt}:{}:{}", tx.tx_index, event.index);
+        let data = json!({
+            "object": item.id.hex(),
+            "kind": "item",
+            "item_type": item.item_type,
+            "amount": quantity,
+            "price_mist": e.paid.to_string(),
+            "exclusive": false,
+            "side": "bought",
+            "counterparty": null,
+            "ts_ms": ts_ms,
+        });
+        wire.sales.push(SalesRow {
+            address: e.buyer,
+            ts_ms,
+            member: format!("{coordinate}|{data}"),
+        });
+        // zero never stamps the market (law 9) — a free promo sale is honest
+        // history but not a market price.
+        if e.paid > 0 {
+            wire.market.push(MarketStamp {
+                item_type: item.item_type,
+                price_per_unit_mist: e.paid / quantity,
+                ts_ms,
+            });
+        }
+    }
+    Ok(())
+}
+
+// ╔════════════════ [ Tests ] ════════════════════════════════════════════════ ]
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::ownership::{OwnerKind, TypeKey};
+
+    const GAME: &str = "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
+
+    fn game_item_param() -> Vec<String> {
+        vec![format!("{GAME}::item::Item")]
+    }
+
+    fn ty(package: &str, module: &str, name: &str) -> TypeKey {
+        TypeKey {
+            package: package.into(),
+            module: module.into(),
+            name: name.into(),
+            type_params: vec![],
+        }
+    }
+
+    fn item_bytes(id: u8, item_type: &str, amount: u32) -> Vec<u8> {
+        bcs::to_bytes(&crate::decode::Item {
+            id: Id([id; 32]),
+            template: Id([200; 32]),
+            name: "n".into(),
+            item_type: item_type.into(),
+            category: "resource".into(),
+            level: 1,
+            amount,
+        })
+        .unwrap()
+    }
+
+    fn kiosk_bytes(id: u8, owner: u8, profits: u64) -> Vec<u8> {
+        bcs::to_bytes(&crate::decode::Kiosk {
+            id: Id([id; 32]),
+            profits: crate::decode::Balance { value: profits },
+            owner: Addr([owner; 32]),
+            item_count: 1,
+            allow_extensions: false,
+        })
+        .unwrap()
+    }
+
+    fn purchased_bytes(kiosk: u8, id: u8, price: u64) -> Vec<u8> {
+        #[derive(serde::Serialize)]
+        struct Wire {
+            kiosk: [u8; 32],
+            id: [u8; 32],
+            price: u64,
+        }
+        bcs::to_bytes(&Wire {
+            kiosk: [kiosk; 32],
+            id: [id; 32],
+            price,
+        })
+        .unwrap()
+    }
+
+    #[test]
+    fn genuine_purchase_needs_royalty_and_our_output() {
+        let item_type = ty(GAME, "item", "Item");
+        let kiosk_type = ty(SUI_FRAMEWORK, "kiosk", "Kiosk");
+        let sold = item_bytes(5, "wooling_wool", 10);
+        let kiosk = kiosk_bytes(2, 9, 0);
+        let outputs = [
+            ObjView {
+                id: Id([5; 32]),
+                owner: OwnerKind::Object(Id([50; 32])),
+                type_key: &item_type,
+                bytes: &sold,
+            },
+            ObjView {
+                id: Id([2; 32]),
+                owner: OwnerKind::Shared,
+                type_key: &kiosk_type,
+                bytes: &kiosk,
+            },
+        ];
+        let purchase = purchased_bytes(2, 5, 1_000);
+        let phantom = game_item_param();
+        let events = [EventView {
+            package: SUI_FRAMEWORK,
+            module: "kiosk",
+            name: "ItemPurchased",
+            type_params: &phantom,
+            bytes: &purchase,
+            index: 0,
+        }];
+        let pay_call = format!("{SUI_FRAMEWORK}::royalty_rule::pay");
+
+        // WITH the royalty proof → two rows + a per-unit stamp (1000 / 10)
+        let tx = TxView {
+            tx_index: 1,
+            sender: Addr([7; 32]),
+            move_calls: std::slice::from_ref(&pay_call),
+            events: &events,
+            inputs: &[],
+            outputs: &outputs,
+        };
+        let wire = analyze(100, 1_000, std::slice::from_ref(&tx), GAME).unwrap();
+        assert_eq!(wire.sales.len(), 2);
+        assert!(wire.sales[0].member.starts_with("100:1:0|"));
+        assert_eq!(
+            wire.market,
+            vec![MarketStamp {
+                item_type: "wooling_wool".into(),
+                price_per_unit_mist: 100,
+                ts_ms: 1_000
+            }]
+        );
+
+        // WITHOUT it → plumbing: nothing at all
+        let plumbing = TxView {
+            move_calls: &[],
+            ..tx.clone()
+        };
+        let wire = analyze(100, 1_000, &[plumbing], GAME).unwrap();
+        assert!(wire.sales.is_empty() && wire.market.is_empty());
+    }
+
+    #[test]
+    fn foreign_collection_purchase_is_ignored() {
+        let purchase = purchased_bytes(2, 5, 1_000);
+        let phantom = game_item_param();
+        let events = [EventView {
+            package: SUI_FRAMEWORK,
+            module: "kiosk",
+            name: "ItemPurchased",
+            type_params: &phantom,
+            bytes: &purchase,
+            index: 0,
+        }];
+        let pay_call = format!("{SUI_FRAMEWORK}::royalty_rule::pay");
+        let tx = TxView {
+            tx_index: 1,
+            sender: Addr([7; 32]),
+            move_calls: std::slice::from_ref(&pay_call),
+            events: &events,
+            inputs: &[],
+            outputs: &[], // no game object changed hands
+        };
+        let wire = analyze(100, 1_000, &[tx], GAME).unwrap();
+        assert!(wire.sales.is_empty() && wire.market.is_empty());
+    }
+
+
+
+
+    #[test]
+    fn shop_sale_stamps_per_unit_and_rows_the_buyer() {
+        let sale_type = ty(GAME, "shop", "Sale");
+        let item_type = ty(GAME, "item", "Item");
+        let sale = bcs::to_bytes(&crate::decode::Sale {
+            id: Id([30; 32]),
+            template: Id([200; 32]),
+            price: 100,
+            supply: 90,
+        })
+        .unwrap();
+        let minted = item_bytes(5, "health_potion", 10);
+        let outputs = [
+            ObjView {
+                id: Id([30; 32]),
+                owner: OwnerKind::Shared,
+                type_key: &sale_type,
+                bytes: &sale,
+            },
+            ObjView {
+                id: Id([5; 32]),
+                owner: OwnerKind::Object(Id([50; 32])),
+                type_key: &item_type,
+                bytes: &minted,
+            },
+        ];
+        #[derive(serde::Serialize)]
+        struct Wire {
+            sale: [u8; 32],
+            buyer: [u8; 32],
+            quantity: u64,
+            paid: u64,
+        }
+        let bought = bcs::to_bytes(&Wire {
+            sale: [30; 32],
+            buyer: [7; 32],
+            quantity: 10,
+            paid: 1_000,
+        })
+        .unwrap();
+        let events = [EventView {
+            package: GAME,
+            module: "shop",
+            name: "SaleBought",
+            type_params: &[],
+            bytes: &bought,
+            index: 2,
+        }];
+        let tx = TxView {
+            tx_index: 0,
+            sender: Addr([7; 32]),
+            move_calls: &[],
+            events: &events,
+            inputs: &[],
+            outputs: &outputs,
+        };
+        let wire = analyze(55, 9_000, &[tx], GAME).unwrap();
+        // SaleBought is a game event too → 1 publication + 1 row + 1 stamp
+        assert_eq!(wire.publications.len(), 1);
+        assert_eq!(wire.sales.len(), 1);
+        assert!(wire.sales[0].member.starts_with("55:0:2|"));
+        assert_eq!(wire.market[0].price_per_unit_mist, 100);
+    }
+
+    #[test]
+    fn spoofed_royalty_cannot_launder_a_zero_price_extract() {
+        // attacker PTB: their own `royalty_rule::pay` + a game equip (which
+        // runs a 0-price list+purchase through the protected policy). The
+        // price gate must keep it out of sales regardless of the pay call.
+        let item_type = ty(GAME, "item", "Item");
+        let sold = item_bytes(5, "wooling_wool", 1);
+        let outputs = [ObjView {
+            id: Id([5; 32]),
+            owner: OwnerKind::Object(Id([50; 32])),
+            type_key: &item_type,
+            bytes: &sold,
+        }];
+        let purchase = purchased_bytes(2, 5, 0); // the extract's 0-price buy
+        let phantom = game_item_param();
+        let events = [EventView {
+            package: SUI_FRAMEWORK,
+            module: "kiosk",
+            name: "ItemPurchased",
+            type_params: &phantom,
+            bytes: &purchase,
+            index: 0,
+        }];
+        let spoofed_pay = format!("0x{}::royalty_rule::pay", "ee".repeat(32));
+        let tx = TxView {
+            tx_index: 1,
+            sender: Addr([7; 32]),
+            move_calls: std::slice::from_ref(&spoofed_pay),
+            events: &events,
+            inputs: &[],
+            outputs: &outputs,
+        };
+        let wire = analyze(100, 1_000, &[tx], GAME).unwrap();
+        assert!(wire.sales.is_empty() && wire.market.is_empty());
+        assert!(wire.publications.is_empty());
+    }
+
+    #[test]
+    fn foreign_phantom_type_never_reaches_the_game_channel() {
+        // another collection's kiosk listing — same module, same event name,
+        // but the event type's phantom T is not ours.
+        let listed = purchased_bytes(2, 5, 777);
+        let foreign = vec![format!("0x{}::nft::Nft", "dd".repeat(32))];
+        let events = [EventView {
+            package: SUI_FRAMEWORK,
+            module: "kiosk",
+            name: "ItemListed",
+            type_params: &foreign,
+            bytes: &listed,
+            index: 0,
+        }];
+        let tx = TxView {
+            tx_index: 0,
+            sender: Addr([7; 32]),
+            move_calls: &[],
+            events: &events,
+            inputs: &[],
+            outputs: &[],
+        };
+        let wire = analyze(1, 1, &[tx], GAME).unwrap();
+        assert!(wire.publications.is_empty());
+    }
+
+    #[test]
+    fn extract_pair_forwards_no_market_events() {
+        let listed = purchased_bytes(2, 5, 0);
+        let purchased = purchased_bytes(2, 5, 0);
+        let phantom = game_item_param();
+        let events = [
+            EventView {
+                package: SUI_FRAMEWORK,
+                module: "kiosk",
+                name: "ItemListed",
+                type_params: &phantom,
+                bytes: &listed,
+                index: 0,
+            },
+            EventView {
+                package: SUI_FRAMEWORK,
+                module: "kiosk",
+                name: "ItemPurchased",
+                type_params: &phantom,
+                bytes: &purchased,
+                index: 1,
+            },
+        ];
+        let tx = TxView {
+            tx_index: 0,
+            sender: Addr([7; 32]),
+            move_calls: &[], // the ruleless protected policy — no royalty call
+            events: &events,
+            inputs: &[],
+            outputs: &[],
+        };
+        let wire = analyze(1, 1, &[tx], GAME).unwrap();
+        assert!(wire.publications.is_empty());
+        assert!(wire.sales.is_empty());
+        assert!(wire.market.is_empty());
+    }
+
+
+    #[test]
+    fn trade_created_lands_on_both_parties_social_doors() {
+        #[derive(serde::Serialize)]
+        struct Wire {
+            trade: [u8; 32],
+            a: [u8; 32],
+            b: [u8; 32],
+        }
+        let bytes = bcs::to_bytes(&Wire {
+            trade: [1; 32],
+            a: [7; 32],
+            b: [9; 32],
+        })
+        .unwrap();
+        let events = [EventView {
+            package: GAME,
+            module: "trade",
+            name: "TradeCreated",
+            type_params: &[],
+            bytes: &bytes,
+            index: 0,
+        }];
+        let tx = TxView {
+            tx_index: 0,
+            sender: Addr([7; 32]),
+            move_calls: &[],
+            events: &events,
+            inputs: &[],
+            outputs: &[],
+        };
+        let wire = analyze(1, 1, &[tx], GAME).unwrap();
+        let channels: Vec<_> = wire.publications.iter().map(|p| p.channel.as_str()).collect();
+        assert!(channels.contains(&format!("evt:social:0x{}", "09".repeat(32)).as_str()));
+        assert!(channels.contains(&format!("evt:social:0x{}", "07".repeat(32)).as_str()));
+        assert_eq!(wire.publications.len(), 2);
+    }
+}

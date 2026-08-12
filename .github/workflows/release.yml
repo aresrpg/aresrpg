@@ -20,7 +20,7 @@
 # "Also: N bug fixes and stability improvements — full notes → <URL>" line. No infra/CI/pipeline
 # talk, ever — full structure + skeleton in CONTRIBUTING.md's AUDIENCE LAW.
 #
-# FROZEN rule 8: GITHUB_TOKEN only (plus the optional DISCORD_WEBHOOK for the announce).
+# GITHUB_TOKEN only (plus the optional DISCORD_WEBHOOK for the announce).
 name: release
 on:
   push:

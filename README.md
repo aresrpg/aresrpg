@@ -20,22 +20,18 @@ Move twin, SDK, test rig, the keyless `/v1` read layer, and the transaction spon
 content (items, mobs, spells, worlds) is published on-chain and served via the asset CDN — it
 is not part of this repository.
 
-> Any corpus-publish or asset-CDN change must re-run `scripts/corpus_probe.mjs` before shipping.
-> Ship only after its live pointer → blob reachability, byte-size, SHA-256 and nonempty-row proof passes;
-> a missing claim or empty scan is a failure, never a zero.
-
 ## Install / run / test
 
 ```bash
 bun install
 bun run dev            # frontend at localhost:5173
-bun run lint           # eslint + prettier + constraint gates
-ares test              # the sole test gate (gold | anchor | unit)
+bun run lint           # eslint + prettier
+bun run test           # every package's unit tests — same command CI runs
 ```
 
 ## Contributing
 
-Read `CLAUDE.md` (the house rules) and `/SPEC.md` (the game design truth) first. Contributions
+Read `CLAUDE.md` (the house rules) and `DECISIONS.md` (the design truth) first. Contributions
 build AresRPG — proposals that fight the spec argue the spec change first, as an issue. Need
 
 ## License — source-available, in plain words
