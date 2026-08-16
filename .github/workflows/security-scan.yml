@@ -77,7 +77,7 @@ jobs:
           # standard security queries this repo has never run. Widening to security-extended is a
           # later ratchet, taken once this baseline has been triaged rather than on day one.
       - name: analyze
-        uses: github/codeql-action/analyze@03e4368ac7daa2bd82b3e85262f3bf87ee112f57 # v3
+        uses: github/codeql-action/analyze@ff2f1c621b7f889edc0d3c761ac2e6a3f8cdb0dd # v3
         with:
           # Distinct from fp-codeql's `aresrpg-fp`, and distinct per language: categories are how
           # code scanning keeps concurrent analyses of one ref from replacing each other.
