@@ -1,111 +1,85 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-// simulator/MobModal.tsx — a mob seat's modal: WHICH mob and at WHAT level, and nothing else.
-//
-// A mob is not built, it is chosen: its spells are the authored kit minted into its MobTemplate, so they load
-// with the mob and are shown READ-ONLY — the player can see what the enemy brings without being offered an
-// allocation that has no chain counterpart.
-//
-// The GAME's own components, never lookalikes (the no-divergence law):
-//   · mob art     → EncyclopediaMobImage (the bestiary's mob image)
-//   · the roster  → MobPicker (this page's picker, over the shared SearchPickerModal)
-//   · the kit     → MobSpellsSection + mob_spell_views (the bestiary detail's spell section, hover cards included)
-//   · the dialog  → ModalFrame (components/modal_frame.tsx)
-//
-// Both doors into this modal — a red board cell and a right-panel seat — write the SAME `mob_picked` /
-// `mob_level_set` inputs against the SAME cell, so the two surfaces cannot drift apart.
+// A red cell's established editor: choose one authored mob, then choose a level inside its authored range.
 
-import { useState } from 'react'
-import { useTranslation } from 'react-i18next'
 import { Trash2 } from 'lucide-react'
+import { useState } from 'react'
 
-import { ModalFrame } from '../components/modal_frame'
-import { EncyclopediaMobImage } from '../pages/encyclopedia/mob_image'
-import { mob_spell_views } from '../pages/encyclopedia/mob_spells'
-import { MobSpellsSection } from '../pages/encyclopedia/mob_spells_section'
-import { mob_corpus_of, type CorpusMob } from '../pages/encyclopedia/world_corpus'
+import { ModalFrame } from '../components/ModalFrame.tsx'
+import { mob_icon } from '../content/assets.ts'
+import { encyclopedia_catalog } from '../content/catalog.ts'
+import { EntityIcon } from '../encyclopedia/components.tsx'
+import { encyclopedia_text } from '../encyclopedia/copy.ts'
+import { SpellCard } from '../encyclopedia/SpellCard.tsx'
+import type { AppCopy } from '../i18n/copy.ts'
+import { dispatch_app, useAppStore } from '../store.ts'
 
-import { build_mob } from './content.js'
-import { MobPicker, useMobIndex } from './MobPicker'
-import type { SimMobPick } from './reducer'
-import { use_simulator } from './store'
+import { MobPicker } from './MobPicker.tsx'
 
-const GOLD = '#c8963c'
-const micro = 'text-[9px] tracking-[0.22em] uppercase'
+const template = (source: string, values: Readonly<Record<string, string | number>>): string =>
+  Object.entries(values).reduce((text, [key, value]) => text.replaceAll(`{${key}}`, String(value)), source)
 
-/** The corpus row a stored pick refers to, or null when the corpus no longer publishes it. Subscribed: the
- *  corpus is fetched at boot (main.tsx `load_world_corpus`), so a seat mounted before it lands must be told
- *  when it does — an index frozen at first read would call every stored pick a vanished mob. */
-export const useMobOf = (template_id: string | undefined): CorpusMob | null =>
-  useMobIndex().get(template_id ?? '') ?? null
+export const MobModal = ({ cell, close, copy }: Readonly<{ cell: bigint; close: () => void; copy: AppCopy }>) => {
+  const placement = useAppStore(({ simulator }) => simulator.mob_placements[Number(cell)])
+  const [picking, set_picking] = useState(placement === undefined)
+  const [spell_index, set_spell_index] = useState(0)
+  const mob = placement
+    ? (encyclopedia_catalog.mobs.find(({ mob_type }) => mob_type === placement.mob_type) ?? null)
+    : null
+  const text = copy.simulator_page
 
-export function MobModal({
-  cell,
-  pick,
-  on_close,
-}: Readonly<{ cell: number; pick: SimMobPick | null; on_close: () => void }>) {
-  const { t } = useTranslation()
-  const input = use_simulator((state) => state.input)
-  const [picking, set_picking] = useState(pick === null)
-  const mob = useMobOf(pick?.template_id)
-
-  // A pick whose corpus row vanished is still a stored seat: say so instead of rendering an empty editor.
-  if (picking || !mob || !pick)
+  if (picking || !placement || !mob)
     return (
       <MobPicker
-        value={pick?.template_id}
-        on_close={pick ? () => set_picking(false) : on_close}
-        on_pick={(picked) => {
-          input({
-            type: 'mob_picked',
+        close={placement ? () => set_picking(false) : close}
+        copy={copy}
+        pick={(picked) => {
+          dispatch_app({
+            type: 'simulator/mob_placed',
             cell,
-            template_id: picked.id,
-            level: pick?.level ?? picked.minLevel,
-            min_level: picked.minLevel,
-            max_level: picked.maxLevel,
+            mob_type: picked.mob_type,
+            level: placement?.level ?? picked.level_min,
+            level_min: picked.level_min,
+            level_max: picked.level_max,
           })
+          set_spell_index(0)
           set_picking(false)
         }}
+        value={placement?.mob_type}
       />
     )
 
-  const built = build_mob(mob, pick.level)
-  const spells = mob_spell_views(mob_corpus_of(mob.name)?.spells)
-  const levels = Array.from({ length: mob.maxLevel - mob.minLevel + 1 }, (_, index) => mob.minLevel + index)
-
+  const selected_spell = mob.spells[Math.min(spell_index, mob.spells.length - 1)]
+  const levels = Array.from({ length: mob.level_max - mob.level_min + 1 }, (_, index) => mob.level_min + index)
   return (
-    <ModalFrame on_close={on_close} max_width="max-w-lg" label={mob.name}>
-      <div className="flex flex-col gap-4 px-6 py-6">
-        <div className="flex items-center gap-3">
-          <EncyclopediaMobImage mob={mob} className="w-12 h-12" style={{ imageRendering: 'pixelated' }} />
-          <div className="flex flex-col gap-1 flex-1 min-w-0">
-            <span className="text-[12px] tracking-[0.2em] uppercase truncate" style={{ color: GOLD }}>
-              {mob.name}
-            </span>
-            <span className={`${micro} text-muted`}>
-              {t('simulator.mob_band', { min: mob.minLevel, max: mob.maxLevel })}
-            </span>
+    <ModalFrame close={close} close_label={copy.wallet_close} label={mob.name} max_width="max-w-2xl">
+      <div className="flex flex-col gap-5 px-6 py-6">
+        <header className="flex items-center gap-3 pr-8">
+          <EntityIcon label={mob.name} size="size-12" src={mob_icon(mob.mob_type)} />
+          <div className="min-w-0 flex-1">
+            <h2 className="truncate text-[12px] tracking-[0.2em] text-[#c8963c] uppercase">{mob.name}</h2>
+            <p className="mt-1 text-[8px] tracking-[0.16em] text-[#6b7280] uppercase">
+              {template(text.level_range, { min: mob.level_min, max: mob.level_max })}
+            </p>
           </div>
-        </div>
-
-        <div className="w-full h-px bg-border" />
-
-        <div className="flex items-end gap-3">
-          <div className="flex flex-col gap-2">
-            <span className={`${micro} font-semibold text-muted`}>{t('simulator.level')}</span>
+        </header>
+        <div className="h-px bg-white/6" />
+        <div className="flex flex-wrap items-end gap-3">
+          <label className="text-[8px] tracking-[0.16em] text-[#6b7280] uppercase">
+            {template(text.level, { level: placement.level })}
             <select
-              className="template-input w-24 cursor-pointer"
-              aria-label={t('simulator.level')}
-              value={pick.level}
+              className="mt-2 block h-9 w-24 border border-white/10 bg-[#0a0a0f] px-2 text-[10px] text-[#e8e4dc]"
               onChange={(event) =>
-                input({
-                  type: 'mob_level_set',
+                dispatch_app({
+                  type: 'simulator/mob_placed',
                   cell,
+                  mob_type: mob.mob_type,
                   level: Number(event.target.value),
-                  min_level: mob.minLevel,
-                  max_level: mob.maxLevel,
+                  level_min: mob.level_min,
+                  level_max: mob.level_max,
                 })
               }
+              value={placement.level}
             >
               {levels.map((level) => (
                 <option key={level} value={level}>
@@ -113,43 +87,54 @@ export function MobModal({
                 </option>
               ))}
             </select>
-          </div>
+          </label>
           <button
+            className="h-9 cursor-pointer border border-white/10 px-3 text-[8px] tracking-[0.14em] text-[#a3a5ad] uppercase"
+            onClick={close}
             type="button"
-            className={`${micro} px-3 py-2 cursor-pointer text-muted hover:text-white`}
-            style={{ border: '1px solid rgba(255,255,255,0.06)' }}
-            onClick={() => set_picking(true)}
           >
-            {t('simulator.pick_mob')}
+            {text.pick_mob}
           </button>
           <button
-            type="button"
-            className={`${micro} flex items-center gap-1 px-3 py-2 cursor-pointer`}
-            style={{ border: '1px solid rgba(255,95,95,0.4)', color: '#ff5f5f' }}
+            className="flex h-9 cursor-pointer items-center gap-1 border border-[#ff5f5f]/40 px-3 text-[8px] tracking-[0.14em] text-[#ff7d7d] uppercase"
             onClick={() => {
-              input({ type: 'mob_unpicked', cell })
-              on_close()
+              dispatch_app({ type: 'simulator/mob_unplaced', cell })
+              close()
             }}
+            type="button"
           >
-            <Trash2 size={11} />
-            {t('simulator.remove_mob')}
+            <Trash2 size={11} /> {text.remove_mob}
           </button>
         </div>
-
-        {/* HP is the fight's own number for this level — the S2 seam is stated, never papered over. */}
-        <div className="flex items-center gap-3">
-          <span className={`${micro} text-muted`}>{t('simulator.mob_hp', { hp: built.hp })}</span>
-          {!built.combat_block_published && (
-            <span className={`${micro}`} style={{ color: '#ff9f43' }}>
-              {t('simulator.combat_block_unpublished')}
-            </span>
-          )}
-        </div>
-
-        <span className={`${micro} text-muted`} style={{ opacity: 0.6 }}>
-          {t('simulator.mob_spells_auto')}
-        </span>
-        <MobSpellsSection spells={spells} />
+        {mob.spells.length > 0 && (
+          <section className="grid min-h-0 grid-cols-[150px_minmax(0,1fr)] border border-white/8">
+            <div className="border-r border-white/8">
+              {mob.spells.map((spell, index) => (
+                <button
+                  className={`block w-full cursor-pointer border-l-2 px-3 py-2 text-left text-[8px] uppercase ${index === spell_index ? 'border-[#c8963c] bg-[#c8963c]/8 text-[#c8963c]' : 'border-transparent text-[#6b7280]'}`}
+                  key={`${spell.name}-${index}`}
+                  onClick={() => set_spell_index(index)}
+                  type="button"
+                >
+                  {spell.name}
+                </button>
+              ))}
+            </div>
+            <div className="min-w-0 p-4">
+              {selected_spell && (
+                <SpellCard
+                  spell={{
+                    classe: mob.mob_type,
+                    levels: selected_spell.levels,
+                    name: selected_spell.name,
+                    unlock_level: 1,
+                  }}
+                  text={encyclopedia_text(copy)}
+                />
+              )}
+            </div>
+          </section>
+        )}
       </div>
     </ModalFrame>
   )

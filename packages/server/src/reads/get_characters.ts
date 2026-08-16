@@ -11,7 +11,7 @@ import { type Graph, type Node } from '../graph.ts'
 /** The Character node carries DF-sourced props raw: `spells` as a JSON string, one flat
  *  `job_<slug>` per job. Shape them into the protocol row here — the one decode seam. */
 export const shape_character = (props: Record<string, unknown>) => {
-  const { spells, spell_points_spent, ...rest } = props
+  const { spells, available_spell_points, ...rest } = props
   const jobs = Object.fromEntries(
     Object.entries(rest)
       .filter(([key]) => key.startsWith('job_'))
@@ -21,7 +21,7 @@ export const shape_character = (props: Record<string, unknown>) => {
   return {
     ...plain,
     spells: typeof spells === 'string' ? (JSON.parse(spells) as Record<string, number>) : {},
-    spell_points_spent: Number(spell_points_spent ?? 0),
+    available_spell_points: Number(available_spell_points ?? 0),
     jobs,
   }
 }

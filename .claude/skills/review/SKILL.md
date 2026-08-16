@@ -1,40 +1,29 @@
 ---
 name: review
-description: Pre-PR self-review checklist — the same bar this repo's gates and review culture already apply, run over your working diff before `gh pr create`.
+description: Pre-PR self-review checklist — the same bar this repo's lint and review culture already apply, run over your working diff before `gh pr create`.
 ---
 
 # Pre-PR self-review
 
 Run this against the **working diff** (`git diff edge...HEAD`, or your branch vs. its merge
 base), not the whole tree. Advisory and opt-in: flag what you find, fix only what your ticket
-owns. A pre-existing finding outside your diff is FIXED IN SCOPE when it is trivial and inside
-your fence, an EPIC CHECKBOX when it is real, and DISCARDED when it sits in an `ACCEPTED_DEBT.md`
-class below the bar — never a drive-by edit (see the "Working with an AI assistant" section of
-`CLAUDE.md`).
+owns — never a drive-by edit.
 
 ## 1. Run the mechanical gate first
 
 ```bash
-bun run lint     # eslint + prettier + scripts/check-constraints.sh
+bun run lint     # eslint + prettier
 bun run test     # the one test truth — same command CI runs
 ```
 
 A red gate is a fact, not a judgment call — fix it before reading a single line by eye.
-`bun run lint` alone chains the full commit-tier ladder: chain-id declarations, the Move and
-app-side clean-name gates (no `V2`/`_old`/`legacy`/`deprecated` identifiers, ever — see D756 in
-`docs/CODE_LAW.md`), the test-reachability gate (every `*.test.*`/`*.spec.*` file must be
-reachable by an `ares test` selector), the SPDX header gate, the secret-leak gate (no
-`suiprivkey1` literal ever lands in a tracked file — keys live only in an untracked `.env`), the
-Move security-pattern gate, the i18n coverage gate, and the semgrep + dependency-cruiser arch
-gates. See `.claude/GATES.md` for the full ladder and what each red means before asking why
-something failed.
 
 ## 2. RED-FIRST, if this is a bug fix
 
 Does the diff carry a test that reproduces the bug for the *reported reason* (not just any red),
 landed before the fix? Both the red run and the green run belong in the PR description.
 
-## 3. The FP constitution (`docs/CODE_LAW.md`)
+## 3. The FP constitution (`.claude/rules/code-law.md`)
 
 - **Pure by default** — same input, same output, no observable side effect. New logic is a
   transform over plain data, not a stateful procedure.
@@ -43,8 +32,7 @@ landed before the fix? Both the red run and the green run belong in the PR descr
 - **Never mutate shared state** — no `.push`/`.sort`/`.splice`/`Object.assign`/`delete` on a
   value the function didn't just create; parameters are the caller's, return new values instead.
 - **One reducer per stateful domain, effects at the edges** — does any new code write to a store
-  from inside a callback, timer, or promise continuation, at any call depth? That's the class
-  CodeQL's deep tier exists to catch — don't rely on it to catch what a second look would.
+  from inside a callback, timer, or promise continuation, at any call depth?
 - **snake_case** for every binding you chose; camelCase only where a library or platform API
   chose the name for you.
 - **Sum types handled totally** — a new `switch` over a union covers every member or carries an
@@ -80,7 +68,8 @@ and that both sides of the twin moved in the same commit.
   but data (see `CLAUDE.md`).
 - `.claude/**`, `CLAUDE.md`, `.github/`, and anything else CODEOWNERS marks high-trust get read
   twice before touching.
-- Does every added file belong in a public repository permanently, or is it session material (analysis, session exhaust, private voice)? Session material never lands.
+- Does every added file belong in a public repository permanently, or is it session material
+  (analysis, session exhaust, private voice)? Session material never lands.
 
 ## 9. Before `gh pr create`
 
@@ -92,18 +81,7 @@ and that both sides of the twin moved in the same commit.
 
 ## The materiality valve (binding, every pass)
 
-**THE BAR:** a finding is reportable only if it is **player-felt** (crash, wrong outcome, visible
-wait, confusion, money), **floor/constitution** (money, keys, truth, SSOT, the one-reducer law,
-the deterministic twin — no threshold, ever), or **release-gate** (it blocks the current spine
-phase). The tests and the accepted-class list live in
-[`ACCEPTED_DEBT.md`](../../../ACCEPTED_DEBT.md), their one home — never copied here. A finding
-sitting in a class listed there is DISCARDED AT THE INSTRUMENT, unwritten, unless that specific
-finding crosses a floor test.
-
-**TOP-5-AND-DISCARD:** a pass reports its top 5 findings ranked by the bar and discards the tail
-UNWRITTEN — no parking lots, no "minor notes" appendix. An instrument that mints rows mechanically
-computes its plan over the whole population before the first write, caps it hard, and defaults to
-dry-run.
-
-Armed gates and ratchet baselines are EXEMPT — they mint no rows and only shrink. The checklist
-above is read in full either way; the bar governs what leaves the pass, not what it looks at.
+A finding is reportable only if it is **player-felt** (crash, wrong outcome, visible wait,
+confusion, money) or **floor/constitution** (money, keys, truth, SSOT, the one-reducer law, the
+deterministic twin — no threshold, ever). A pass reports its top 5 findings ranked by that bar
+and discards the tail UNWRITTEN — no parking lots, no "minor notes" appendix.

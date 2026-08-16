@@ -2,8 +2,8 @@
 
 AresRPG is a fully on-chain MMORPG: a 3D voxel world in the browser, a deterministic turn-based
 combat system, and a Sui Move backend where the chain itself is the game server. This repo is the
-whole game — client, engine, sim, Move sources, SDK, the keyless read layer, the transaction
-sponsor, and the content seed.
+whole game — client, engine, game server, protocol, Move sources, SDK, the keyless read layer,
+and the content seed.
 
 **Read [DECISIONS.md](DECISIONS.md) first — it is this project's mental model.** It carries the
 owner's design patterns (with their motives) and the settled rulings. Before you design, name,
@@ -20,37 +20,36 @@ Load these before working — they are the operating rules of this codebase:
 
 ```
 packages/
-├── engine/      # Three.js voxel engine (procedural worlds, LOD streaming)
-├── frontend/    # React 19, Tailwind v4, Enoki zkLogin, Zustand — a renderer of chain truth
-├── sim/         # deterministic combat reducer: reduce(state, command, ctx) → {state, events}
-├── move/        # Sui Move sources — the on-chain game (sim and move are a twin: same math)
-├── move-math/   # pure-math Move package the game package depends on
-├── fight/       # headless fight core (fold, transport, projection)
-├── sdk/         # composes PTBs over the Move package; deployment/ pins live ids
-├── indexer/     # keyless chain projectionist: Rust, checkpoints → FalkorDB (graph + pub/sub)
-└── inventory/ party/ world/  # pure reducer cores
-api/             # stateless sponsored-transaction service
+├── move/ move-math/  # the on-chain game (Sui Move) + its pure-math dependency
+├── indexer/          # Rust chain projectionist: checkpoints → FalkorDB (graph + pub/sub)
+├── server/           # the game server: push model, one reducer per player, Redis mesh
+├── protocol/         # the wire: client/server packets + per-store domain routing lists
+├── immutable/        # shared game constants (stats, xp curves, jobs, classes)
+├── fight/            # deterministic fight streaming core
+├── frontend/         # the app — React, Enoki zkLogin, Zustand; a renderer of chain truth
+├── engine/           # Three.js voxel engine (procedural worlds, LOD streaming)
+└── sdk/              # the one chain door: typed PTB composition + receipt projection
 seed/            # the game's content truth — one JSON per domain + its validator
 music/           # the biome soundtracks — the one tracked home (hack_radio/ is licensed, ignored)
 ```
 
 - **The chain is the source of truth.** Live game state is Sui objects; the client predicts,
-  renders, reconciles — never authoritative. Reads flow through the indexer's FalkorDB graph
-  (served by the central server; the old `/v1` read API is retired), every state change is an
-  SDK PTB.
-- **The deterministic twin.** Sim and Move produce identical outcomes — client prediction and
-  chain resolution are the same math. A change touching one touches both, same commit, with
-  parity fixtures (`packages/sim/test/fixtures/replay/`). The indexer is the LAYOUT twin of
-  the same law: its decode mirrors are pinned against the compiled Move bytecode by the
-  parity gates in `packages/indexer/src/gates.rs` — a struct or event change reds the
-  indexer's `cargo test` in the same commit.
+  renders, reconciles — never authoritative. Reads flow through the indexer's FalkorDB graph,
+  pushed by the server's websocket; every state change is an SDK PTB.
+- **The SDK owns ALL Sui plumbing.** The app never touches a `@mysten` library or reads a
+  receipt. A client folds from a receipt exactly what it CONTAINS and never invents
+  chain-initialized state. The server never re-sends what a receipt told the client and streams
+  only what it could not know. Logging in loads NOTHING — the app waits on the server link;
+  no chain maintenance ever rides a boot.
+- **The layout twin.** The indexer's decode mirrors are pinned against the compiled Move
+  bytecode by the parity gates in `packages/indexer/src/gates.rs` — a struct or event change
+  reds the indexer's `cargo test` in the same commit.
 - **One reducer per stateful domain.** Every async result re-enters as an input through the
-  reducer door; no callback ever writes a store. The fight timeline is recorded and replayable —
-  see `packages/sim/src/timeline.js` for the capsule format the whole correctness story rides on.
+  reducer door; no callback ever writes a store.
 - **One content home.** `seed/` holds the content truth — one file per domain, no version-stamped
-  twins, no frontend-side copies; the frontend consumes it through the build (a generated
-  artifact is derivation, a committed copy is a violation). Content reaches players only as
-  published chain state.
+  twins, no frontend-side copies, no deployment-pin manifests; the frontend consumes it through
+  the build (a generated artifact is derivation, a committed copy is a violation). Content
+  reaches players only as published chain state.
 
 ## Workflow — edge and master
 
@@ -103,8 +102,8 @@ bun run lint           # eslint + prettier
 
 CI (`gate.yml`) runs lint, typecheck, every package's unit tests, the Move build+test of both
 packages, the indexer's cargo suite + Move-parity gates (a Move struct/event change reds the
-indexer job in the same commit), the frontend playwright e2e suite, the api sponsor suite, the
-release-pin chain gate, and the Vercel-identical bundle build. Vercel deploys master via its git integration.
+indexer job in the same commit), the release-pin chain gate, and the Vercel-identical bundle
+build. Vercel deploys master via its git integration.
 
 Move code: after EVERY edit under packages/move or packages/move-math, run
 `sui move build --path <pkg>` and `sui move test --path <pkg>` — errors AND warnings must be

@@ -27,7 +27,7 @@ const EInvalidQty: u64 = 1206; // new_loot_entry: min_qty > max_qty or zero max
 public struct MobTemplate has key {
   id: UID,
   name: String,
-  mob_type: String, // the art/catalog slug — also the derivation key
+  mob_type: String, // the derivation key and exact seed model filename
   element: String,
   level_min: u8,
   level_max: u8,

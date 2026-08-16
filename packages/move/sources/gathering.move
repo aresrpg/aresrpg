@@ -127,9 +127,9 @@ public(package) fun gather(
     let chr: &mut Character = kiosk.borrow_mut(cap, character_id);
     let current = world::prove_move(chr, pack.pack_x(), pack.pack_z(), clock);
     assert!(current == w.name(), EWrongWorld);
-    assert!(equipment::tool_of(chr) == row.resource_row_tool(), ENoTool);
+    let job = row.resource_row_job();
+    assert!(equipment::tool_of(chr) == tool_of_job(job), ENoTool);
 
-    let job = row.resource_row_tool();
     let job_level = progression::job_level_of(chr, job);
     let required = job_xp::tier_to_level(row.resource_row_tier() as u64);
     assert!(job_level >= required, ETierLocked);
@@ -247,6 +247,15 @@ public(package) fun has_fired_verdict(chr: &Character): bool {
 // ╔════════════════ [ Internals ] ════════════════════════════════════════════ ]
 
 /// Overwrite-or-add the verdict DF — the same bytes land on both outcomes (the gas law).
+/// A gathering JOB's instrument (owner 2026-08-13): jobs are primary (FARMER / HERBALIST /
+/// MINER author the resource rows); the tool is derived equipment vocabulary — only these
+/// three jobs have tools, and this is the ONE place that knows which.
+fun tool_of_job(job: String): String {
+  if (job == b"FARMER".to_string()) return b"tool_farmer".to_string();
+  if (job == b"HERBALIST".to_string()) return b"tool_herbalist".to_string();
+  b"tool_miner".to_string()
+}
+
 fun write_verdict(chr: &mut Character, verdict: PendingAmbush) {
   let uid = chr.uid_mut();
   if (dfield::exists(uid, AmbushKey())) {

@@ -34,6 +34,8 @@ import player_market from './modules/player_market.ts'
 import player_trade from './modules/player_trade.ts'
 import player_kolizeum from './modules/player_kolizeum.ts'
 import player_admin from './modules/player_admin.ts'
+import player_requests from './modules/player_requests.ts'
+import { create_request_limiter, type RequestLimiter } from './request_limiter.ts'
 
 const log = logger(import.meta)
 
@@ -116,8 +118,20 @@ const MODULES: PlayerModule[] = [
   player_market,
   player_trade,
   player_kolizeum,
+  player_requests,
   player_admin,
 ]
+
+/** The packets whose handling reaches the graph — the ONE list the read gate matches on.
+ *  Modules never rate-limit themselves; the door does (owner 2026-08-16: one global gate,
+ *  loose enough — never per-module sprinkling). */
+const READ_PACKETS = new Set<string>([
+  'packet/embody',
+  'packet/spectate',
+  'packet/market_observe',
+  'packet/character_owner_request',
+  'packet/admin_request',
+])
 
 const INITIAL_STATE = (): PlayerState => ({
   character: null,
@@ -129,11 +143,21 @@ const INITIAL_STATE = (): PlayerState => ({
 })
 
 type PlayerWires = Pick<PlayerContext, 'address' | 'admin' | 'graph' | 'pubsub'> & {
+  request_limiter?: RequestLimiter
+  realtime_limiter?: RequestLimiter
   ws: { send: (raw: string) => unknown; close: (code?: number, reason?: string) => unknown }
 }
 
 /** Mount one verified connection — returns the ws handler's whole surface. */
-export function create_player({ ws, address, admin, graph, pubsub }: PlayerWires): Player {
+export function create_player({
+  ws,
+  address,
+  admin,
+  graph,
+  pubsub,
+  request_limiter = create_request_limiter(),
+  realtime_limiter = create_request_limiter({ capacity: 120, window_ms: 1_000 }),
+}: PlayerWires): Player {
   let state = INITIAL_STATE()
   const send = (packet: ServerPacket) => void ws.send(JSON.stringify(packet))
   const drop = (reason: string) => void ws.close(1008, reason)
@@ -172,8 +196,15 @@ export function create_player({ ws, address, admin, graph, pubsub }: PlayerWires
   return {
     dispatch: (action) => context.dispatch(action),
     on_message: (raw) => {
+      if (!realtime_limiter.take(address)) return drop('RATE_LIMIT')
       try {
-        context.dispatch(parse_client_packet(raw))
+        const packet = parse_client_packet(raw)
+        if (READ_PACKETS.has(packet.type) && !request_limiter.take(address)) {
+          const id = 'id' in packet && Number.isInteger(packet.id) ? { id: packet.id } : {}
+          send({ type: 'packet/error', ...id, reason: 'rate limited' })
+          return
+        }
+        context.dispatch(packet)
       } catch (error) {
         log.warn({ address, error: (error as Error).message }, 'packet refused')
         send({ type: 'packet/error', reason: (error as Error).message })

@@ -238,6 +238,7 @@ fn emit_object(
                 format!("v.chance = {}", c.chance),
                 format!("v.agility = {}", c.agility),
                 format!("v.available_points = {}", c.available_points),
+                format!("v.available_spell_points = {}", c.available_spell_points),
             ],
         );
         return Ok(());
@@ -355,6 +356,7 @@ fn emit_object(
             &[
                 format!("v.box_template = {}", q_id(&c.box_template)),
                 format!("v.rolled_template = {}", q_id(&c.rolled_template)),
+                format!("v.amount = {}", c.amount),
             ],
         );
         return Ok(());
@@ -509,24 +511,6 @@ fn emit_field(
             &parent,
             ckpt,
             &[format!("v.spells = {}", q_json(&book))],
-        );
-        return Ok(());
-    }
-    if key == game_key(game, "progression::SpellSpentKey") {
-        let Some(parent) = df_parent(o, outputs, game, "character", "Character") else {
-            return Ok(());
-        };
-        let f = decode::from_bytes::<Field<MarkerKey, u64>>(o.bytes)
-            .map_err(|e| drift(key, o.id, e))?;
-        merge_set(
-            cypher,
-            "Character",
-            &parent,
-            ckpt,
-            &[format!(
-                "v.spell_points_spent = {}",
-                q(&f.value.to_string())
-            )],
         );
         return Ok(());
     }
@@ -1076,16 +1060,13 @@ fn emit_friend_list(cypher: &mut Vec<String>, o: &ObjView<'_>) -> anyhow::Result
     let list = decode::from_bytes::<decode::FriendList>(o.bytes)
         .map_err(|e| drift("friends::FriendList", o.id, e))?;
     let owner = q(&list.owner.hex());
+    let friends = addr_array(&list.friends.contents);
     cypher.push(format!(
-        "MATCH (:User {{address: {owner}}})-[r:FRIEND]->() DELETE r"
+        "MERGE (u:User {{address: {owner}}}) \
+         WITH u OPTIONAL MATCH (u)-[r:FRIEND]->() DELETE r \
+         WITH DISTINCT u, {friends} AS friends UNWIND friends AS friend \
+         MERGE (f:User {{address: friend}}) CREATE (u)-[:FRIEND]->(f)"
     ));
-    for friend in &list.friends.contents {
-        cypher.push(format!(
-            "MERGE (u:User {{address: {owner}}}) MERGE (f:User {{address: {friend}}}) \
-             CREATE (u)-[:FRIEND]->(f)",
-            friend = q(&friend.hex()),
-        ));
-    }
     Ok(())
 }
 
@@ -1271,6 +1252,7 @@ mod tests {
             chance: 0,
             agility: 0,
             available_points: 5,
+            available_spell_points: 2,
         };
         let bytes = bcs::to_bytes(&chr).unwrap();
         let ty = t(GAME, "character", "Character", &[]);
@@ -1336,6 +1318,7 @@ mod tests {
             chance: 0,
             agility: 0,
             available_points: 0,
+            available_spell_points: 0,
         })
         .unwrap();
         let outputs = [
@@ -1458,7 +1441,9 @@ mod tests {
             bytes: &bytes,
         }];
         let cypher = project(&view(&outputs, &[], &[]), GAME).unwrap();
+        assert_eq!(cypher.len(), 1);
         assert!(cypher[0].contains("[r:FRIEND]->() DELETE r"));
-        assert!(cypher[1].contains("CREATE (u)-[:FRIEND]->(f)"));
+        assert!(cypher[0].contains("UNWIND friends AS friend"));
+        assert!(cypher[0].contains("CREATE (u)-[:FRIEND]->(f)"));
     }
 }

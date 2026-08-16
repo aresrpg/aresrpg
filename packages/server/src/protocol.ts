@@ -62,7 +62,10 @@ export type MeshFact =
 export type ChatFact = { address: string; character: string; text: string }
 
 /** What rides an `act:fight:` channel. */
-export type FightActionFact = { address: string; action: Record<string, unknown> }
+export type FightActionFact = {
+  address: string
+  action: import('@aresrpg/protocol').FightWireAction
+}
 
 // ╔════════════════ [ 2. The graph schema (indexer-written, read-only here) ] ═ ]
 

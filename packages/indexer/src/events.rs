@@ -130,8 +130,10 @@ macro_rules! events {
 
 events! {
     // ── character lifecycle + progression surface ──
-    character::CharacterCreated { character: Id, name: String, classe: String }
-        => |e: &CharacterCreated| format!("evt:character:{}", e.character.hex()),
+    // CharacterCreated routes to the OWNER's social channel: the receipt cannot carry the
+    // full row, so the server streams it — nobody can watch a brand-new character id yet.
+    character::CharacterCreated { character: Id, owner: Addr, name: String, classe: String }
+        => |e: &CharacterCreated| format!("evt:social:{}", e.owner.hex()),
     equipment::ItemEquipped { character: Id, slot: String, item: Id }
         => |e: &ItemEquipped| format!("evt:character:{}", e.character.hex()),
     equipment::ItemUnequipped { character: Id, slot: String, item: Id }
@@ -156,8 +158,8 @@ events! {
         => |e: &FighterJoined| format!("evt:character:{}", e.character.hex()),
     fight::FightStarted { fight: Id, queue: Vec<u64> }
         => |e: &FightStarted| format!("evt:fight:{}", e.fight.hex()),
-    fight::MobTurnPlayed { fight: Id, seat: u64, seed: u64 }
-        => |e: &MobTurnPlayed| format!("evt:fight:{}", e.fight.hex()),
+    fight::TurnSeedUsed { fight: Id, seat: u64, seed: u64 }
+        => |e: &TurnSeedUsed| format!("evt:fight:{}", e.fight.hex()),
     fight::FightEnded { fight: Id, winner: Option<u8> }
         => |e: &FightEnded| format!("evt:fight:{}", e.fight.hex()),
     fight::DropsRolled { fight: Id, fighter: u64, drops: Vec<RolledDrop> }
@@ -219,7 +221,7 @@ events! {
         => |_: &GiftcardMinted| "evt:economy".to_string(),
     shop::GiftcardRedeemed { giftcard: Id, redeemer: Addr }
         => |_: &GiftcardRedeemed| "evt:economy".to_string(),
-    crafting::Crafted { recipe: Id, crafter: Addr, output_template: Id, output_quantity: u32, success: bool, job_xp_gained: u64 }
+    crafting::Crafted { recipe: Id, crafter: Addr, output_template: Id, success: bool, job_xp_gained: u64 }
         => |_: &Crafted| "evt:economy".to_string(),
     forgemagie::RuneScribed { item: Id, stat: u8, tier: u8, outcome: u8, applied_value: u64, lost_stat: u8, lost_amount: u64, new_puits: u64, xp: u64 }
         => |_: &RuneScribed| "evt:economy".to_string(),
@@ -229,19 +231,19 @@ events! {
         => |_: &PetFed| "evt:economy".to_string(),
 
     // ── loot boxes (grind-safe gacha, ruling 2026-08-11) ──
-    loot_box::LootBoxOpened { box_template: Id, rolled_template: Id, opener: Addr }
+    loot_box::LootBoxOpened { box_template: Id, rolled_template: Id, amount: u32, opener: Addr }
         => |_: &LootBoxOpened| "evt:economy".to_string(),
-    loot_box::LootClaimed { box_template: Id, rolled_template: Id, opener: Addr }
+    loot_box::LootClaimed { box_template: Id, rolled_template: Id, amount: u32, opener: Addr }
         => |_: &LootClaimed| "evt:economy".to_string(),
 
-    // ── content (ceremony-time, then silent forever) ──
+    // ── content (seeding-time, then silent forever) ──
     item::TemplateCreated { template: Id, item_type: String }
         => |_: &TemplateCreated| "evt:content".to_string(),
     mob_template::MobTemplateCreated { template: Id, mob_type: String }
         => |_: &MobTemplateCreated| "evt:content".to_string(),
     spell_template::SpellCreated { template: Id, name: String, classe: String }
         => |_: &SpellCreated| "evt:content".to_string(),
-    crafting::RecipeCreated { recipe: Id, output_template: Id, output_quantity: u32, input_count: u64, job: String, required_level: u64, craft_xp: u64 }
+    crafting::RecipeCreated { recipe: Id, output_template: Id, input_count: u64, job: String, required_level: u64 }
         => |_: &RecipeCreated| "evt:content".to_string(),
     loot_box::LootTableSet { box_template: Id, rows: u64, weight_sum: u64 }
         => |_: &LootTableSet| "evt:content".to_string(),
@@ -277,11 +279,13 @@ mod tests {
         #[derive(serde::Serialize)]
         struct Wire {
             character: [u8; 32],
+            owner: [u8; 32],
             name: String,
             classe: String,
         }
         let bytes = bcs::to_bytes(&Wire {
             character: [1; 32],
+            owner: [7; 32],
             name: "aiden".into(),
             classe: "sram".into(),
         })
@@ -290,7 +294,7 @@ mod tests {
             .unwrap()
             .unwrap();
         assert_eq!(routed.kind, "CharacterCreated");
-        assert_eq!(routed.topic, format!("evt:character:0x{}", "01".repeat(32)));
+        assert_eq!(routed.topic, format!("evt:social:0x{}", "07".repeat(32)));
         assert_eq!(routed.data["name"], "aiden");
         assert_eq!(routed.data["character"], format!("0x{}", "01".repeat(32)));
     }

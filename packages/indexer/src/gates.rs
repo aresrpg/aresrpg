@@ -77,7 +77,6 @@ mod tests {
         // dynamic-field keys the dispatch matches on
         ("progression", "HpKey"),
         ("progression", "SpellBookKey"),
-        ("progression", "SpellSpentKey"),
         ("progression", "JobXpKey"),
         ("equipment", "EquipmentKey"),
         ("equipment", "FoldedKey"),

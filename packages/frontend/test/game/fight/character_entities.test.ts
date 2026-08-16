@@ -1,0 +1,62 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
+
+import { describe, expect, test } from 'bun:test'
+import { create_character_source, create_fight } from '@aresrpg/fight'
+
+import {
+  character_entity_sources,
+  fight_character_entity_sources,
+} from '../../../src/game/fight/character_entity_sources.ts'
+
+describe('fight character projection', () => {
+  test('projects placed simulator characters instead of silently dropping blue seats', () => {
+    const characters = Object.freeze([
+      Object.freeze({
+        id: 'sim_c1',
+        classe: 'senshi',
+        male: true,
+        colors: Object.freeze(['#112233', '#445566', '#778899'] as const),
+        loadout: Object.freeze({ hat: 'solomonk', cloak: 'cape_fuwa_black' }),
+      }),
+    ])
+    expect(character_entity_sources(characters, Object.freeze({ 42: 'sim_c1' }), 'a')).toEqual([
+      {
+        id: 'sim_c1',
+        classe: 'senshi',
+        male: true,
+        colors: ['#112233', '#445566', '#778899'],
+        loadout: { hat: 'solomonk', cloak: 'cape_fuwa_black' },
+        cell: 42,
+        side: 'a',
+      },
+    ])
+  })
+
+  test('projects every checkpoint player and falls back to senshi for missing appearance data', () => {
+    const source = create_character_source({ classe: 'yogan', level: 1n })
+    const checkpoint = create_fight({
+      mode: 'local',
+      setup: {
+        players: [
+          { character: 'known', owner: 'mine', team: 0n, hp: 55n, source },
+          { character: 'missing', owner: 'other', team: 1n, hp: 55n, source },
+        ],
+        mobs: [],
+      },
+    }).state()
+    const sources = fight_character_entity_sources(checkpoint, [
+      {
+        id: 'known',
+        classe: 'senshi',
+        male: false,
+        colors: ['#111111', '#222222', '#333333'],
+        loadout: {},
+      },
+    ])
+
+    expect(sources).toHaveLength(2)
+    expect(sources[0]).toMatchObject({ id: 'fight_character_0', classe: 'senshi', male: false, side: 'a' })
+    expect(sources[1]).toMatchObject({ id: 'fight_character_1', classe: 'yogan', male: true, side: 'b' })
+  })
+})

@@ -1,15 +1,13 @@
 {
-  "//": "checkJs over the JSDoc-typed source — the same truth the IDE's tsserver reads.",
   "compilerOptions": {
-    "target": "ES2022",
+    "target": "ES2023",
     "module": "ESNext",
     "moduleResolution": "bundler",
-    "allowJs": true,
-    "checkJs": true,
+    "allowImportingTsExtensions": true,
+    "resolveJsonModule": true,
     "noEmit": true,
-    "strict": false,
-    "skipLibCheck": true,
-    "resolveJsonModule": true
+    "strict": true,
+    "types": ["bun"]
   },
-  "include": ["src"]
+  "include": ["src", "test", "scripts"]
 }

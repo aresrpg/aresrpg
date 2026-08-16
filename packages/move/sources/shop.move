@@ -49,6 +49,8 @@ const ENotWhitelisted: u64 = 2405; // claim: the sender is not (or no longer) on
 
 /// Keys a sale's derived address by the item type it sells — the client derives it offline.
 public struct SaleKey(String) has copy, drop, store;
+public struct AirdropKey(String) has copy, drop, store;
+public struct GiftcardKey(String) has copy, drop, store;
 
 /// The seed-minted vending machine: one item type, one price, a finite supply. No
 /// admin door ever touches it again — `supply` is the only field that moves.
@@ -112,10 +114,11 @@ public(package) fun new_sale(
 /// The set-build aborts on any duplicate address: a list that could double-claim never
 /// reaches the chain.
 public(package) fun new_airdrop(
+  registry: &mut TemplateRegistry,
+  drop_id: String,
   template: ID,
   amount_each: u32,
   whitelist: vector<address>,
-  ctx: &mut TxContext,
 ) {
   assert!(amount_each >= 1 && !whitelist.is_empty(), EZeroQuantity);
   let mut set = vec_set::empty();
@@ -124,7 +127,12 @@ public(package) fun new_airdrop(
     set.insert(whitelist[i]); // aborts on a duplicate — VecSet law
     i = i + 1;
   };
-  let drop = Airdrop { id: object::new(ctx), template, amount_each, whitelist: set };
+  let drop = Airdrop {
+    id: derived_object::claim(item::registry_uid_mut(registry), AirdropKey(drop_id)),
+    template,
+    amount_each,
+    whitelist: set,
+  };
   event::emit(AirdropCreated {
     airdrop: drop.id.to_inner(),
     template,
@@ -135,9 +143,18 @@ public(package) fun new_airdrop(
 
 /// Mint a giftcard voucher and RETURN it — the seeding PTB routes it (held for later
 /// zksend links, direct sends); the object's `store` makes it portable anywhere.
-public(package) fun new_giftcard(template: ID, amount: u32, ctx: &mut TxContext): Giftcard {
+public(package) fun new_giftcard(
+  registry: &mut TemplateRegistry,
+  card_id: String,
+  template: ID,
+  amount: u32,
+): Giftcard {
   assert!(amount >= 1, EZeroQuantity);
-  let card = Giftcard { id: object::new(ctx), template, amount };
+  let card = Giftcard {
+    id: derived_object::claim(item::registry_uid_mut(registry), GiftcardKey(card_id)),
+    template,
+    amount,
+  };
   event::emit(GiftcardMinted { giftcard: card.id.to_inner(), template, amount });
   card
 }

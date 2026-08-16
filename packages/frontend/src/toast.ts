@@ -1,104 +1,60 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-import { create } from 'zustand'
 
-import { game_log } from './core/log.js'
-import { report_error } from './core/report.js'
-import { humanize_tx_error } from './game/core/abort_copy.js'
-import { decode_toast_error, toast_message } from './toast_error'
-
-// The fixed app-toast layer overlays the top-right minimap with a comfortable, safe-area-aware viewport inset.
-// It clips the transform-based entrance inside a viewport-bounded box, so an entering card can never grow page
-// overflow. Position and glass live here so app.tsx's Vite-only graph stays out of the contract tests.
 export const TOAST_CONTAINER_CLASS =
-  'fixed top-[max(1rem,var(--safe-top))] right-[max(1rem,var(--safe-right))] z-50 flex max-h-[calc(100dvh-max(1rem,var(--safe-top))-max(1rem,var(--safe-bottom)))] max-w-[min(24rem,calc(100vw-max(1rem,var(--safe-left))-max(1rem,var(--safe-right))))] flex-col items-end gap-2 overflow-hidden'
+  'fixed top-[max(1rem,var(--safe-top))] right-[max(1rem,var(--safe-right))] z-[300] flex max-h-[calc(100dvh-max(1rem,var(--safe-top))-max(1rem,var(--safe-bottom)))] max-w-[min(24rem,calc(100vw-max(1rem,var(--safe-left))-max(1rem,var(--safe-right))))] flex-col items-end gap-2 overflow-hidden'
 
 export const toast_glass_class =
   'flex flex-col gap-2 p-4 border border-white/10 bg-black/70 backdrop-blur-md rounded-[7px] animate-[slide-in_0.3s_ease-out]'
 
-export function resolve_message(error: unknown): string {
-  return decode_toast_error(error).message
-}
+export type ToastType = 'error' | 'info' | 'pending' | 'success'
 
-interface Toast {
-  id: number
+export type Toast = Readonly<{
+  id: string
   message: string
-  type: 'error' | 'info' | 'pending' | 'success'
-  action?: { label: string; onClick: () => void }
+  type: ToastType
+  action?: Readonly<{ label: string; onClick: () => void }>
   persistent?: boolean
-}
+}>
 
-interface ToastState {
-  toasts: Toast[]
-  /** `success` is the GREEN channel (app.tsx paints it emerald) — an outcome that actually landed. */
-  add: (message: unknown, type?: 'error' | 'info' | 'success') => void
-  add_persistent: (
-    message: string,
-    type: 'error' | 'info' | 'pending',
-    action?: { label: string; onClick: () => void }
-  ) => number
-  /** Drive a task through a loading toast. A lazy task starts only after the pending state is painted. */
-  promise: <T>(
-    task: Promise<T> | (() => Promise<T>),
-    messages: { pending: string; success?: string; error?: string }
-  ) => Promise<T>
-  remove: (id: number) => void
-}
+type ToastEvent = Readonly<{ type: 'show'; toast: Toast } | { type: 'remove'; id: string }>
+type Listener = (event: ToastEvent) => void
 
-let next_id = 0
+const listeners = new Set<Listener>()
+const emit = (event: ToastEvent): void => listeners.forEach((listener) => listener(event))
+const message_of = (message: unknown): string =>
+  typeof message === 'string' ? message : message instanceof Error ? message.message : 'Something went wrong'
 
-export const use_toast = create<ToastState>((set, get) => ({
-  toasts: [],
-  add: (input, type = 'error') => {
-    const id = next_id++
-    // ONE decode per input, at the boundary. The error channel maps raw provider failures to player copy
-    // (the no-jargon law); every OTHER channel still refuses a non-string shape (#2032) instead of letting
-    // `String(input)` render the `[object Object]` tag a player reported seeing in a live session.
-    const decoded = type === 'error' ? decode_toast_error(input) : toast_message(input)
-    if (decoded.diagnostic) report_error(input, { area: 'toast', action: 'add' })
-    set((s) => ({ toasts: [...s.toasts, { id, message: decoded.message, type }] }))
-    setTimeout(() => set((s) => ({ toasts: s.toasts.filter((t) => t.id !== id) })), 5000)
+const show = (toast: Toast): void => emit(Object.freeze({ type: 'show', toast }))
+const remove = (id: string): void => emit(Object.freeze({ type: 'remove', id }))
+
+export const toast = Object.freeze({
+  subscribe: (listener: Listener): (() => void) => {
+    listeners.add(listener)
+    return () => void listeners.delete(listener)
   },
-  add_persistent: (message, type, action) => {
-    const id = next_id++
-    set((s) => ({ toasts: [...s.toasts, { id, message, type, action, persistent: true }] }))
-    return id
+  remove,
+  add: (message: unknown, type: Exclude<ToastType, 'pending'> = 'error'): void => {
+    const id = crypto.randomUUID()
+    show(Object.freeze({ id, message: message_of(message), type }))
+    setTimeout(() => remove(id), 5_000)
   },
-  promise: async (task, messages) => {
-    const id = next_id++
-    set((s) => ({ toasts: [...s.toasts, { id, message: messages.pending, type: 'pending', persistent: true }] }))
-    try {
-      // A user-intent caller passes a thunk when preflight/compose work must not outrun its visible feedback.
-      // Invoke it synchronously after the state write: submit still starts before same-turn presentation.
-      const result = await (typeof task === 'function' ? task() : task)
-      // ONE toast per action, gamer lifecycle — "Doing thing…" → the SAME toast morphs to a
-      // brief CHECKMARK beat → auto-dismiss. Never a second stacked toast, never "confirmed" dev-speak.
-      // D57a still holds: success ABSENT = the UI transition is the feedback; the pending toast just resolves away.
-      if (messages.success) {
-        set((s) => ({
-          toasts: s.toasts.map((t) =>
-            t.id === id ? { ...t, type: 'success' as const, message: messages.success!, persistent: false } : t
-          ),
-        }))
-        setTimeout(() => set((s) => ({ toasts: s.toasts.filter((t) => t.id !== id) })), 1400)
-      } else {
-        set((s) => ({ toasts: s.toasts.filter((t) => t.id !== id) }))
-      }
-      return result
-    } catch (e) {
-      // a failure toast must NEVER swallow the raw error — the FULL abort (Move ModuleId/
-      // function/code lives on `.cause`) is reported to Sentry alongside every tx toast, app-wide. This is
-      // the SAFETY-NET report home for toast-driven flows that don't ride the run_tx choke (create character,
-      // sponsored joins); run_tx failures arriving here were already reported there (report_error dedupes
-      // per error object, so this can never double-send).
-      game_log('tx', 'failed:', e)
-      report_error(e, { area: 'toast', action: messages.pending })
-      set((s) => ({ toasts: s.toasts.filter((t) => t.id !== id) }))
-      // NO-JARGON LAW (a raw "Unable to perform gas selection…" blob once reached a fight-start
-      // toast through THIS line): the fallback routes through the ONE shared decoder, never the raw message.
-      get().add(messages.error ?? humanize_tx_error(e), 'error')
-      throw e
+  persistent: (message: string, type: Exclude<ToastType, 'success'>, action?: Toast['action']): (() => void) => {
+    const id = crypto.randomUUID()
+    show(Object.freeze({ id, message, type, action, persistent: true }))
+    return () => remove(id)
+  },
+  loading: (message: string) => {
+    const id = crypto.randomUUID()
+    show(Object.freeze({ id, message, type: 'pending', persistent: true }))
+    const finish = (next: unknown, type: 'error' | 'success'): void => {
+      show(Object.freeze({ id, message: message_of(next), type }))
+      setTimeout(() => remove(id), type === 'success' ? 1_400 : 5_000)
     }
+    return Object.freeze({
+      dismiss: () => remove(id),
+      error: (error: unknown) => finish(error, 'error'),
+      success: (success: string) => finish(success, 'success'),
+    })
   },
-  remove: (id) => set((s) => ({ toasts: s.toasts.filter((t) => t.id !== id) })),
-}))
+})

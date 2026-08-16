@@ -8,6 +8,7 @@
 module aresrpg::seed;
 
 use aresrpg::{
+  consumable,
   crafting::{Self, Recipe},
   item::{Self, Item, ItemTemplate, TemplateRegistry},
   loot_box::{Self, LootRegistry},
@@ -18,17 +19,25 @@ use aresrpg::{
 };
 use aresrpg_math::{item_damages::ItemDamages, item_stats::ItemStatistics, spell_effect::SpellLevel};
 use std::string::String;
-use sui::package::Publisher;
+use sui::{derived_object, package::Publisher};
 
 const ESealed: u64 = 401;
 const ENotPublisher: u64 = 402;
+const EIncompleteLootBox: u64 = 403;
 
 /// The seeding key — a HOT POTATO (no abilities): born from `begin_batch`, it cannot be
 /// stored, dropped, or transferred; the same transaction MUST end it with `destroy_seed_cap`.
 public struct SeedCap {}
 
+/// Deterministic receipts for the two seed operations whose results are writes to existing
+/// objects. They make seeding progress chain-observable like every derived content object.
+public struct WorldSeedKey(String) has copy, drop, store;
+public struct SealKey(String) has copy, drop, store;
+public struct WorldSeedMarker has key { id: UID }
+public struct SealMarker has key { id: UID }
+
 /// Open one seeding batch. Publisher-gated; aborts forever once sealed.
-public fun begin_batch(publisher: &Publisher, registry: &TemplateRegistry): SeedCap {
+public fun begin_batch(publisher: &Publisher, registry: &mut TemplateRegistry): SeedCap {
   assert!(publisher.from_package<Item>(), ENotPublisher);
   assert!(!item::is_sealed(registry), ESealed);
   SeedCap {}
@@ -57,13 +66,20 @@ public fun set_damages(template: &mut ItemTemplate, lines: vector<ItemDamages>) 
   item::set_template_damages(template, lines);
 }
 
-/// Author a consumable's effect (kind 0..3, power). Consumable-category templates only.
-public fun set_consumable(template: &mut ItemTemplate, kind: u8, power: u32) {
-  item::set_template_consumable(template, kind, power);
-}
+public fun set_consumable_heal(template: &mut ItemTemplate, amount: u32) { consumable::set_heal(template, amount); }
+public fun set_consumable_reset_stats(template: &mut ItemTemplate) { consumable::set_reset_stats(template); }
+public fun set_consumable_reset_spells(template: &mut ItemTemplate) { consumable::set_reset_spells(template); }
+public fun set_consumable_recall(template: &mut ItemTemplate) { consumable::set_recall(template); }
+public fun set_consumable_loot_box(template: &mut ItemTemplate) { consumable::set_loot_box(template); }
 
 /// Seal one template forever — the chain rejects every future write, from anyone.
 public fun freeze_item_template(template: ItemTemplate) {
+  assert!(!consumable::is_loot_box(&template), EIncompleteLootBox);
+  item::freeze_template(template);
+}
+
+public fun freeze_loot_box_template(template: ItemTemplate, loot_registry: &mut LootRegistry) {
+  assert!(consumable::is_loot_box(&template) && loot_box::has_valid_table(loot_registry, &template), EIncompleteLootBox);
   item::freeze_template(template);
 }
 
@@ -119,21 +135,18 @@ public fun freeze_spell(template: SpellTemplate) {
 
 /// Mint a recipe at its output-type-derived address — key-only like every template:
 /// `freeze_recipe` is its single exit; the seal closes this door with the rest.
-/// `required_level` derives from the slot count inside crafting — never authored.
+/// Knowledge and XP derive from the slot count inside crafting; success always mints one output.
 public fun new_recipe(
   _: &SeedCap,
   registry: &mut TemplateRegistry,
   output_type: String,
   output_template: ID,
-  output_quantity: u32,
   input_templates: vector<ID>,
   input_quantities: vector<u64>,
   job: String,
-  craft_xp: u64,
 ): Recipe {
   crafting::new_recipe(
-    registry, output_type, output_template, output_quantity, input_templates,
-    input_quantities, job, craft_xp,
+    registry, output_type, output_template, input_templates, input_quantities, job,
   )
 }
 
@@ -154,38 +167,58 @@ public fun new_sale(
   shop::new_sale(registry, item_type, template, price, supply);
 }
 
-/// Author a gacha box's weighted item pool (any item types). SeedCap-gated, so it's seeding-only
-/// and frozen once sealed — no live admin door.
-public fun set_loot_table(
+/// Add one loot-box reward. Object references prove both templates exist; the loot module checks
+/// box identity, positive quantity, and stackability before the box can be frozen.
+public fun add_loot_reward(
   _: &SeedCap,
   registry: &mut LootRegistry,
-  box_template: ID,
-  item_templates: vector<ID>,
-  weights: vector<u64>,
+  box_template: &ItemTemplate,
+  reward_template: &ItemTemplate,
+  weight: u64,
+  amount: u32,
 ) {
-  loot_box::set_loot_table(registry, box_template, item_templates, weights);
+  loot_box::add_loot_reward(registry, box_template, reward_template, weight, amount);
 }
 
 /// Open an airdrop over its snapshotted whitelist — supply introduction, so it seals with
 /// the seeding like every other mint door.
 public fun new_airdrop(
   _: &SeedCap,
-  template: ID,
+  registry: &mut TemplateRegistry,
+  drop_id: String,
+  template: &ItemTemplate,
   amount_each: u32,
   whitelist: vector<address>,
-  ctx: &mut TxContext,
 ) {
-  shop::new_airdrop(template, amount_each, whitelist, ctx);
+  shop::new_airdrop(registry, drop_id, item::template_id(template), amount_each, whitelist);
 }
 
 /// Mint a giftcard voucher (returned — the seeding PTB holds it for later zksend links).
-public fun new_giftcard(_: &SeedCap, template: ID, amount: u32, ctx: &mut TxContext): Giftcard {
-  shop::new_giftcard(template, amount, ctx)
+public fun new_giftcard(
+  _: &SeedCap,
+  registry: &mut TemplateRegistry,
+  card_id: String,
+  template: &ItemTemplate,
+  amount: u32,
+): Giftcard {
+  shop::new_giftcard(registry, card_id, item::template_id(template), amount)
 }
 
 /// Author a world's mob families (rows via `world::new_mob_row`). Overwrite legal until the seal.
 public fun set_world_mobs(_: &SeedCap, world: &mut World, rows: vector<MobRow>) {
   world::set_mobs(world, rows);
+}
+
+/// Author a world's biome map — one biome id per zone, derived from the terrain recipe by
+/// the engine's own sampler. The full map exceeds the pure-argument cap, so the seeding
+/// declares the window, then appends ≤16,384-byte cell slices — ALL IN ONE PTB (reads abort
+/// on a half-filled map). Overwrite legal until the seal: re-declaring the window restarts.
+public fun set_world_biome_window(_: &SeedCap, world: &mut World, zone_x0: u32, zone_z0: u32, side: u16) {
+  world::set_biome_map_window(world, zone_x0, zone_z0, side);
+}
+
+public fun append_world_biome_cells(_: &SeedCap, world: &mut World, cells: vector<u8>) {
+  world::append_biome_map_cells(world, cells);
 }
 
 /// Author a world's resources (rows via `world::new_resource_row`).
@@ -204,6 +237,13 @@ public fun set_world_dungeon_rooms(_: &SeedCap, world: &mut World, rooms: vector
   world::set_dungeon_rooms(world, rooms);
 }
 
+/// Commit the world's deterministic receipt in the same PTB as its content writes.
+public fun mark_world_seeded(_: &SeedCap, registry: &mut TemplateRegistry, world_name: String) {
+  transfer::freeze_object(WorldSeedMarker {
+    id: derived_object::claim(item::registry_uid_mut(registry), WorldSeedKey(world_name)),
+  });
+}
+
 /// End the batch — the hot potato's only exit.
 public fun destroy_seed_cap(cap: SeedCap) {
   let SeedCap {} = cap;
@@ -212,5 +252,8 @@ public fun destroy_seed_cap(cap: SeedCap) {
 /// The seeding's final command: after this, `begin_batch` aborts for eternity.
 public fun seal(publisher: &Publisher, registry: &mut TemplateRegistry) {
   assert!(publisher.from_package<Item>(), ENotPublisher);
+  transfer::freeze_object(SealMarker {
+    id: derived_object::claim(item::registry_uid_mut(registry), SealKey(b"sealed".to_string())),
+  });
   item::seal(registry);
 }

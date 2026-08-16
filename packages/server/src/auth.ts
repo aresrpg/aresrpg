@@ -20,7 +20,7 @@ export type LoginProof = { bytes: string; signature: string; address: string; uu
 
 /**
  * Verify one login: `bytes` is the base64 personal message (`aresrpg::<uuid>`), `signature`
- * its signature, `address` the claimed sender, `uuid` the fresh challenge this server issued.
+ * its signature, `address` the claimed sender, `uuid` the fresh per-socket challenge.
  * `false` is a refusal, never an exception — the door drops quietly.
  */
 export async function verify_login({ bytes, signature, address, uuid }: LoginProof): Promise<boolean> {

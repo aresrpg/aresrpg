@@ -2,9 +2,10 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 // THE LOAD SNAPSHOT (push model): once, at connection, the player receives everything that is
 // HIS — characters (with equipment), the flat inventory, friends, pending claims, giftcards,
-// and active listings. After this, his own transactions update him
-// through their receipts client-side; the server never echoes his own writes back. (The party
-// and any live fight are per-CHARACTER — they push at embody, through their modules.)
+// and active listings. After this, a receipt updates him with exactly what it CONTAINS;
+// the server never re-sends what a receipt told him, and streams only what it could not —
+// e.g. a created character's chain-initialized row (player_events). (The party and any live
+// fight are per-CHARACTER — they push at embody, through their modules.)
 
 import { get_characters } from '../reads/get_characters.ts'
 import { get_items } from '../reads/get_items.ts'

@@ -93,7 +93,7 @@ export default [
     // modules keep no second clock — async results and time re-enter as INPUTS through the reducer door. Warn
     // across frontend logic modules (existing hits are findings being burned down), ERROR on the fight core where
     // the law is law. Tests choreograph stores directly — exempt. .tsx joined the net with the typed tier
-    // (2026-07-17; census: 1 hit, components/sponsor_runout_modal.tsx); .jsx remains out — its 15 stale
+    // (2026-07-17; census: 1 hit); .jsx remains out — its 15 stale
     // `react-hooks/*` disable comments error on opt-in (F-1 janitor ticket).
     files: ['packages/frontend/src/**/*.{js,jsx,ts,tsx}'],
     ignores: ['**/*.test.*'],
@@ -214,7 +214,7 @@ export default [
         ...globals.node,
         ...globals.es2021,
         ...globals.worker,
-        Bun: 'readonly', // the test/script runtime global (bun:test suites, api/sponsor.mjs)
+        Bun: 'readonly', // the test/script runtime global
         __APP_VERSION__: 'readonly', // vite `define` build-time constants (packages/frontend/vite.config.ts:188)
         __GIT_SHA__: 'readonly',
       },
@@ -265,13 +265,12 @@ export default [
     },
   },
   {
-    // Vendored game source + migrated sim/sdk packages keep their own lint/format/typecheck
-    // pipelines (run inside each package); the indexer is Rust. Keep them out of the companion lint.
+    // Move and the Rust indexer keep their own language-specific gates.
     ignores: [
       '**/dist/*',
       'node_modules/*',
+      'deprecated/**',
       '**/generated/*',
-      'packages/sim/**',
       'packages/move/**',
       'packages/indexer/**',
       '.claude/**',

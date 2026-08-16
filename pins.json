@@ -1,23 +1,27 @@
 {
   "testnet": {
     "package": null,
+    "math_package": null,
     "version": { "id": null, "shared_version": null },
     "item_policy": { "id": null, "shared_version": null },
     "character_policy": { "id": null, "shared_version": null },
     "item_protected_policy": { "id": null, "shared_version": null },
     "character_protected_policy": { "id": null, "shared_version": null },
     "name_registry": { "id": null, "shared_version": null },
+    "template_registry": { "id": null, "shared_version": null },
     "loot_registry": { "id": null, "shared_version": null },
     "friend_registry": { "id": null, "shared_version": null }
   },
   "mainnet": {
     "package": null,
+    "math_package": null,
     "version": { "id": null, "shared_version": null },
     "item_policy": { "id": null, "shared_version": null },
     "character_policy": { "id": null, "shared_version": null },
     "item_protected_policy": { "id": null, "shared_version": null },
     "character_protected_policy": { "id": null, "shared_version": null },
     "name_registry": { "id": null, "shared_version": null },
+    "template_registry": { "id": null, "shared_version": null },
     "loot_registry": { "id": null, "shared_version": null },
     "friend_registry": { "id": null, "shared_version": null }
   }

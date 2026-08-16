@@ -97,7 +97,7 @@ touches a float. Every written node carries `ckpt` (the checkpoint that last wro
 | `:Sale` | `id`, `template`, `price` (string), `supply` | Sale object (supply is the only field that moves) |
 | `:Airdrop` | `id`, `template`, `amount_each`, `whitelist` (array) | Airdrop object (shrinks per claim; empty = fully claimed) |
 | `:Giftcard` | `id`, `template`, `amount` | Giftcard object |
-| `:BoxClaim` | `id`, `box_template`, `rolled_template` | loot_box::BoxClaim object (soulbound gacha claim; deleted at claim) |
+| `:BoxClaim` | `id`, `box_template`, `rolled_template`, `amount` | loot_box::BoxClaim object (soulbound loot claim; deleted at claim) |
 | `:CrushClaim` | `id`, `seed` (string), `revealed`, `owed` (51-int array \| null until revealed) | forgemagie::CrushClaim object (soulbound crush commitment) |
 | `:Zone` | `world` (the World OBJECT id — the stable key; `world_name` rides along from the co-present World), `zx`, `zz`, `seed` (string), `searched_at_ms`, `mob_taken` (string, u128), `res_taken` (array) | `Field<ZoneKey, Zone>` DF on the World UID (world id→name resolved from the 20 World objects at boot). Groups/packs/portal are NEVER stored — pure derivation, client-mirrored |
 | `:Market` | `item_type`, `last_sale_mist` (string), `last_sale_ms` | THE one event-derived write (no object carries a realised price) — latest-wins |

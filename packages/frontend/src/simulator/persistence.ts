@@ -1,216 +1,147 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-// simulator/persistence.ts — the simulator's IndexedDB EDGE (spec §6), the promise-wrapper shape
-// game/core/draft.js proved, on its OWN database.
-//
-// Persistence is an edge, never a source of truth: the boot read re-enters the page reducer as ONE
-// `hydrated` input (no async callback ever writes the store — the deep-tier one-reducer law), and every
-// stored row is re-normalized by the reducer, so a hand-edited database cannot inject an out-of-budget
-// build. Nothing here touches the chain: the simulator is local by constitution, and a fight's truth is
-// NEVER persisted (a reload lands back in setup with the roster intact, by design).
-//
-// Schema `aresrpg_simulator` v1 (spec §6): `roster` keyed by character id · `setup` under 'current' ·
-// `traces` (the last exports ring the L4 trace lane fills — declared at v1 so landing it needs no
-// version bump).
+// IndexedDB edge for the local simulator roster. Combat and board setup remain ephemeral.
 
-import {
-  type SimulatorInput,
-  type SimulatorState,
-  type SimCharacter,
-  type SimMobPick,
-  type SimMobPicks,
-  type SimPlacements,
-} from './reducer'
-import { push_trace_ring } from './trace_export.js'
+import type { SimulatorCharacter } from '../modules/simulator.ts'
 
 const DB_NAME = 'aresrpg_simulator'
 const DB_VERSION = 1
 const ROSTER_STORE = 'roster'
-const SETUP_STORE = 'setup'
-const TRACES_STORE = 'traces'
-const SETUP_KEY = 'current'
+const LEGACY_STORES = Object.freeze(['setup', 'traces'])
 
-/** The setup row. The BOARD is not stored — it is derived from `seed` + `anchor_nonce` (simulator/board.ts),
- *  so a reload can never hand back a layout that disagrees with its own seed. */
-export type PersistedSetup = {
-  seed: number
-  focus_id: string | null
-  anchor_nonce?: number
-  mob_picks?: Record<string, SimMobPick>
-  placements?: Record<string, string>
-}
-export type PersistedSimulator = { roster: readonly SimCharacter[]; setup: PersistedSetup | null }
+export type SimulatorRosterStorage = Readonly<{
+  load: () => Promise<readonly unknown[]>
+  save: (characters: readonly SimulatorCharacter[]) => Promise<void>
+}>
 
-/** Cell-keyed rows → the string-keyed shape IndexedDB stores (structured clone keeps numeric keys as strings). */
-const cell_rows = <T>(rows: Readonly<Record<number, T>>): Record<string, T> =>
-  Object.fromEntries(Object.entries(rows ?? {}))
+type PersistenceInstall = Readonly<{
+  storage: SimulatorRosterStorage
+  signal: AbortSignal
+  hydrate: (characters: readonly unknown[]) => void
+  read_characters: () => readonly SimulatorCharacter[]
+  on_characters_changed: (listener: () => void) => void
+  delay_ms?: number
+}>
 
-/** The page state as stored rows — the roster keyed by id, everything else under the single setup row. */
-export const to_persisted = (state: Readonly<SimulatorState>): PersistedSimulator => ({
-  roster: state.roster,
-  setup: {
-    seed: state.seed,
-    focus_id: state.focus_id,
-    anchor_nonce: state.anchor_nonce,
-    mob_picks: cell_rows(state.mob_picks as Record<number, SimMobPick>),
-    placements: cell_rows(state.placements as Record<number, string>),
-  },
-})
-
-/**
- * Stored rows → the ONE `hydrated` input. Junk (a non-object row, a row with no id) is dropped here, at
- * the seam; budgets and value ranges are the reducer's own normalization, decoded once.
- */
-export const hydrated_input = (persisted: Readonly<PersistedSimulator> | null): SimulatorInput => {
-  const rows = (persisted?.roster ?? []).filter(
-    (row): row is SimCharacter => typeof row === 'object' && row !== null && typeof row.id === 'string'
-  )
-  return {
-    type: 'hydrated',
-    roster: rows,
-    seed: Number(persisted?.setup?.seed ?? 0),
-    focus_id: typeof persisted?.setup?.focus_id === 'string' ? persisted.setup.focus_id : null,
-    anchor_nonce: Number(persisted?.setup?.anchor_nonce ?? 0),
-    // Cell legality is the reducer's own re-fit (it owns the board oracle) — decoded once, here, into shape.
-    mob_picks: (persisted?.setup?.mob_picks ?? {}) as SimMobPicks,
-    placements: (persisted?.setup?.placements ?? {}) as SimPlacements,
-  }
-}
-
-/* eslint-disable functional/immutable-data, no-param-reassign, functional/prefer-immutable-types --
-   the IndexedDB API IS handler assignment: `request.onsuccess = …` is the platform's only completion
-   channel, exactly as game/core/draft.js wires it. Everything above this line stays pure. */
-const open_db = (): Promise<IDBDatabase> =>
+/* eslint-disable functional/immutable-data -- IndexedDB handler assignment is the platform completion channel. */
+const open_database = (factory: IDBFactory): Promise<IDBDatabase> =>
   new Promise((resolve, reject) => {
-    const request = indexedDB.open(DB_NAME, DB_VERSION)
+    const request = factory.open(DB_NAME, DB_VERSION)
     request.onupgradeneeded = () => {
-      const db = request.result
-      for (const store of [ROSTER_STORE, SETUP_STORE, TRACES_STORE])
-        if (!db.objectStoreNames.contains(store)) db.createObjectStore(store)
+      const database = request.result
+      ;[ROSTER_STORE, ...LEGACY_STORES].forEach((name) => {
+        if (!database.objectStoreNames.contains(name)) database.createObjectStore(name)
+      })
     }
     request.onsuccess = () => resolve(request.result)
     request.onerror = () => reject(request.error)
   })
 
-/** Run `work` inside one transaction over `stores`, resolving when the transaction itself completes. */
-const transact = async (
-  stores: readonly string[],
-  mode: IDBTransactionMode,
-  work: (get_store: (name: string) => IDBObjectStore) => void
-): Promise<void> => {
-  const db = await open_db()
+const load_roster = async (factory: IDBFactory): Promise<readonly unknown[]> => {
+  const database = await open_database(factory)
   return new Promise((resolve, reject) => {
-    const tx = db.transaction(stores as string[], mode)
-    tx.oncomplete = () => {
-      db.close()
+    const transaction = database.transaction(ROSTER_STORE, 'readonly')
+    const request = transaction.objectStore(ROSTER_STORE).getAll()
+    transaction.oncomplete = () => {
+      database.close()
+      resolve((request.result as readonly unknown[]) ?? [])
+    }
+    transaction.onerror = () => {
+      database.close()
+      reject(transaction.error)
+    }
+    transaction.onabort = transaction.onerror
+  })
+}
+
+const save_roster = async (factory: IDBFactory, characters: readonly SimulatorCharacter[]): Promise<void> => {
+  const database = await open_database(factory)
+  return new Promise((resolve, reject) => {
+    const transaction = database.transaction(ROSTER_STORE, 'readwrite')
+    const store = transaction.objectStore(ROSTER_STORE)
+    store.clear()
+    characters.forEach((character) => store.put(character, character.id))
+    transaction.oncomplete = () => {
+      database.close()
       resolve()
     }
-    tx.onerror = () => {
-      db.close()
-      reject(tx.error)
+    transaction.onerror = () => {
+      database.close()
+      reject(transaction.error)
     }
-    work((name) => tx.objectStore(name))
+    transaction.onabort = transaction.onerror
   })
 }
 
-const request_value = <T>(request: IDBRequest<T>): Promise<T> =>
-  new Promise((resolve, reject) => {
-    request.onsuccess = () => resolve(request.result)
-    request.onerror = () => reject(request.error)
-  })
-
-/**
- * Read the persisted page state. A missing/failed database DEGRADES LOUDLY to null (one console.error) —
- * the page opens on an empty roster rather than a lie, and the next save re-creates the store.
- */
-export const load_simulator_state = async (): Promise<PersistedSimulator | null> => {
+export const browser_simulator_roster_storage = (): SimulatorRosterStorage | null => {
   try {
-    const db = await open_db()
-    const tx = db.transaction([ROSTER_STORE, SETUP_STORE], 'readonly')
-    const [roster, setup] = await Promise.all([
-      request_value(tx.objectStore(ROSTER_STORE).getAll() as IDBRequest<SimCharacter[]>),
-      request_value(tx.objectStore(SETUP_STORE).get(SETUP_KEY) as IDBRequest<PersistedSetup>),
-    ])
-    db.close()
-    return { roster: roster ?? [], setup: setup ?? null }
+    const factory = globalThis.indexedDB
+    if (!factory) return null
+    return Object.freeze({
+      load: () => load_roster(factory),
+      save: (characters) => save_roster(factory, characters),
+    })
   } catch (error) {
-    console.error('[simulator] IndexedDB read failed — starting from an empty roster', error)
+    console.error('[simulator] IndexedDB is unavailable; local characters will not persist.', error)
     return null
   }
 }
 
-/** Write the whole page state (the roster store is rewritten, so a deleted character stays deleted). */
-export const save_simulator_state = async (state: Readonly<SimulatorState>): Promise<void> => {
-  const { roster, setup } = to_persisted(state)
-  try {
-    await transact([ROSTER_STORE, SETUP_STORE], 'readwrite', (get_store) => {
-      const store = get_store(ROSTER_STORE)
-      store.clear()
-      for (const character of roster) store.put(character, character.id)
-      get_store(SETUP_STORE).put(setup, SETUP_KEY)
-    })
-  } catch (error) {
-    console.error('[simulator] IndexedDB write failed — this build will not survive a reload', error)
-  }
-}
-
-/**
- * Append one exported trace to the bounded `traces` ring (spec §6/§8). Keyed by fight id, so re-exporting the
- * same fight replaces its row; the ring is trimmed to the newest `TRACE_RING_LIMIT` by `push_trace_ring`,
- * which owns that policy — this function is only the write. A failed write is loud and non-fatal: the file
- * the player asked for has already been downloaded, and losing the in-page history is not worth a thrown error.
- */
-export const save_trace = async (trace: Readonly<{ fight_id: string }>): Promise<void> => {
-  try {
-    const kept = push_trace_ring(await load_traces(), trace as never)
-    await transact([TRACES_STORE], 'readwrite', (get_store) => {
-      const store = get_store(TRACES_STORE)
-      store.clear()
-      for (const row of kept) store.put(row, row.fight_id)
-    })
-  } catch (error) {
-    console.error('[simulator] IndexedDB trace write failed — the download itself succeeded', error)
-  }
-}
-
-/** The stored export ring, newest first. A missing/failed database degrades to an empty history. */
-export const load_traces = async (): Promise<{ fight_id: string; captured_at?: number }[]> => {
-  try {
-    const db = await open_db()
-    const tx = db.transaction([TRACES_STORE], 'readonly')
-    const rows = await request_value(
-      tx.objectStore(TRACES_STORE).getAll() as IDBRequest<{ fight_id: string; captured_at?: number }[]>
-    )
-    db.close()
-    return [...(rows ?? [])].sort((a, b) => Number(b.captured_at ?? 0) - Number(a.captured_at ?? 0))
-  } catch (error) {
-    console.error('[simulator] IndexedDB trace read failed — the export history opens empty', error)
-    return []
-  }
-}
-
-/**
- * Subscribe the persistence edge to a store: every change schedules ONE debounced flush, and the returned
- * disposer flushes anything still pending before detaching (a fast edit → navigate never loses the build).
- */
-export const install_simulator_persistence = (
-  subscribe: (listener: () => void) => () => void,
-  read_state: () => SimulatorState,
-  delay_ms = 400
-): (() => void) => {
+export const install_simulator_roster_persistence = ({
+  storage,
+  signal,
+  hydrate,
+  read_characters,
+  on_characters_changed,
+  delay_ms = 400,
+}: PersistenceInstall): void => {
+  let ready = false
+  let changed_while_loading = false
   let timer: ReturnType<typeof setTimeout> | null = null
-  const flush = () => {
+
+  const flush = (): void => {
     timer = null
-    void save_simulator_state(read_state())
+    void storage
+      .save(read_characters())
+      .catch((error) => console.error('[simulator] IndexedDB write failed; roster changes may be lost.', error))
   }
-  const unsubscribe = subscribe(() => {
+  const schedule = (): void => {
     if (timer === null) timer = setTimeout(flush, delay_ms)
-  })
-  return () => {
-    if (timer !== null) {
-      clearTimeout(timer)
-      flush()
-    }
-    unsubscribe()
   }
+  const flush_pending = (): void => {
+    if (timer === null) return
+    clearTimeout(timer)
+    flush()
+  }
+
+  on_characters_changed(() => {
+    if (signal.aborted) return
+    if (!ready) changed_while_loading = true
+    else schedule()
+  })
+
+  void storage
+    .load()
+    .then((characters) => {
+      if (signal.aborted) return
+      hydrate(characters)
+      ready = true
+      if (changed_while_loading) schedule()
+    })
+    .catch((error) => {
+      console.error('[simulator] IndexedDB read failed; starting with the in-memory roster.', error)
+      ready = true
+      if (changed_while_loading) schedule()
+    })
+
+  globalThis.window?.addEventListener('pagehide', flush_pending)
+  signal.addEventListener(
+    'abort',
+    () => {
+      globalThis.window?.removeEventListener('pagehide', flush_pending)
+      flush_pending()
+    },
+    { once: true }
+  )
 }
+/* eslint-enable functional/immutable-data */

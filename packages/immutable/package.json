@@ -1,0 +1,22 @@
+{
+  "name": "@aresrpg/immutable",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Immutable game constants shared by every AresRPG package",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./experience": "./src/experience.ts",
+    "./gathering": "./src/gathering.ts",
+    "./identity": "./src/identity.ts",
+    "./item_power": "./src/item_power.ts",
+    "./pet": "./src/pet.ts",
+    "./world": "./src/world.ts"
+  },
+  "scripts": {
+    "test": "bun test"
+  },
+  "devDependencies": {
+    "@types/bun": "latest"
+  }
+}

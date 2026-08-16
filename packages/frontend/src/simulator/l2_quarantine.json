@@ -1,8 +1,0 @@
-{
-  "_provenance": {
-    "what": "L2 QUARANTINE — scenarios where the reference oracle and the sim disagree (#930 fence 2).",
-    "rule": "A quarantine row NEVER decides who is wrong. It parks one (spell_id, scenario) pair against a FILED issue and escalates it to an L3 vector, where the Move twin adjudicates. The suite asserts every row carries a numeric `issue`, so a quarantine can never rot into a silent mute — and it caps distinct issues at 8, because a wider spread means the oracle's formula table is mis-derived rather than the sim being broken.",
-    "shape": "{ spell_id, scenario, expected, got, issue }"
-  },
-  "rows": []
-}

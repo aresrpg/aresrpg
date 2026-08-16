@@ -10,7 +10,8 @@
 ///   ③ FAILURE — the ingredients STILL burn; only the output is withheld. Deterministic
 ///     refusals (wrong output, unknown/short/redundant ingredient, under-level) abort the
 ///     WHOLE tx BEFORE the roll — a wrong client never reaches the dice.
-///   ④ JOB XP — credited on EVERY attempt: the authored `craft_xp` × the recipe-level decay
+///   ④ JOB XP — credited on EVERY attempt: XP derives from distinct ingredient slots, then
+///     receives the recipe-level decay
 ///     (full until the next slot tier, linear to 0 over +30 once out-leveled).
 ///
 /// A RECIPE IS FROZEN SEED CONTENT (owner 2026-08-10) — not an admin object: minted in
@@ -68,34 +69,29 @@ public struct Ingredient has copy, drop, store {
   quantity: u64,
 }
 
-/// A frozen recipe. `required_level` is DERIVED from the slot count at authoring (①);
-/// `craft_xp` is seed-computed (the reference craftXpFromIngredients output).
+/// A frozen recipe. Knowledge and XP both derive from the distinct ingredient-slot count.
+/// Every successful craft mints exactly one output; neither derived fact is authored or stored.
 public struct Recipe has key {
   id: UID,
   inputs: vector<Ingredient>,
   output_template: ID,
-  output_quantity: u32,
   job: String, // one of the 12 craft-job slugs — gates and earns
   required_level: u64,
-  craft_xp: u64,
 }
 
 public struct RecipeCreated has copy, drop {
   recipe: ID,
   output_template: ID,
-  output_quantity: u32,
   input_count: u64,
   job: String,
   required_level: u64,
-  craft_xp: u64,
 }
 
-/// `output_quantity` is 0 on a failed roll — the ingredients still burned (③).
+/// Success tells consumers whether the fixed one-item output was minted.
 public struct Crafted has copy, drop {
   recipe: ID,
   crafter: address,
   output_template: ID,
-  output_quantity: u32,
   success: bool,
   job_xp_gained: u64,
 }
@@ -109,32 +105,25 @@ public(package) fun new_recipe(
   registry: &mut TemplateRegistry,
   output_type: String,
   output_template: ID,
-  output_quantity: u32,
   input_templates: vector<ID>,
   input_quantities: vector<u64>,
   job: String,
-  craft_xp: u64,
 ): Recipe {
-  assert!(output_quantity >= 1, EZeroQuantity);
   let inputs = zip_inputs(input_templates, input_quantities);
   let n = inputs.length();
   let recipe = Recipe {
     id: derived_object::claim(item::registry_uid_mut(registry), RecipeKey(output_type)),
     inputs,
     output_template,
-    output_quantity,
     job,
     required_level: required_level_for(n), // ① derived, never mis-authored
-    craft_xp,
   };
   event::emit(RecipeCreated {
     recipe: recipe.id.to_inner(),
     output_template,
-    output_quantity,
     input_count: n,
     job: recipe.job,
     required_level: recipe.required_level,
-    craft_xp,
   });
   recipe
 }
@@ -208,12 +197,12 @@ public(package) fun craft(
   // ② the roll, then settle
   let success = gen.generate_u64_in_range(0, 9999) < success_bp(crafter_level);
   if (success) {
-    let minted = item::mint(output_template, recipe.output_quantity, gen, ctx);
+    let minted = item::mint(output_template, 1, gen, ctx);
     item::deposit(kiosk, cap, item_policy, existing, minted);
   };
 
   // ④ xp on every attempt
-  let gained_xp = decayed_xp(recipe.craft_xp, n, crafter_level);
+  let gained_xp = decayed_xp(craft_xp_for(n), n, crafter_level);
   {
     let chr: &mut Character = kiosk.borrow_mut(cap, character_id);
     progression::bank_job_xp(chr, job, gained_xp);
@@ -222,7 +211,6 @@ public(package) fun craft(
     recipe: object::id(recipe),
     crafter: ctx.sender(),
     output_template: recipe.output_template,
-    output_quantity: if (success) recipe.output_quantity else 0,
     success,
     job_xp_gained: gained_xp,
   });
@@ -243,6 +231,20 @@ fun required_level_for(n: u64): u64 {
   let v = ((n - 2) * 99 + 7) / 8 + 1;
   if (v > job_xp::max_level()) job_xp::max_level() else v
 }
+
+/// ④ Canonical Dofus craft XP by distinct ingredient slots. Slots above eight stay capped.
+fun craft_xp_for(n: u64): u64 {
+  if (n <= 2) 10
+  else if (n == 3) 25
+  else if (n == 4) 50
+  else if (n == 5) 100
+  else if (n == 6) 250
+  else if (n == 7) 500
+  else 1000
+}
+
+#[test_only]
+public fun test_craft_xp_for(n: u64): u64 { craft_xp_for(n) }
 
 /// ④ `base_xp × recipeLevelMultiplier(n, level)`: FULL until the next slot tier, then
 /// LINEAR to 0 at `recipe_level + 30` — integer-exact port.

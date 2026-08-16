@@ -6,8 +6,8 @@ use kiosk::personal_kiosk;
 use std::string::String;
 use sui::{
   coin::Coin,
+  derived_object,
   display_registry::{Self, DisplayRegistry},
-  dynamic_field as dfield,
   event,
   kiosk::Kiosk,
   package::{Self, Publisher},
@@ -16,7 +16,6 @@ use sui::{
 
 // ╔════════════════ [ Constants ] ════════════════════════════════════════════ ]
 
-const ENameTaken: u64 = 101;
 const ENoPoints: u64 = 106; // raise_stat: not enough available points
 const EUnknownStat: u64 = 107; // raise_stat: not one of the six characteristics
 const ENotPersonalKiosk: u64 = 108; // custody: a character must live in a PERSONAL kiosk
@@ -62,11 +61,12 @@ public struct Character has key, store {
   chance: u16,
   agility: u16,
   available_points: u16,
+  // ── spell points: 1 granted per level from level 2 (Dofus law), spent by raise_spell ──
+  available_spell_points: u16,
 }
 
-/// Shared root holding one `name → character ID` record per living character. Records are
-/// dynamic fields — REMOVABLE, so deleting a character frees its name (a derived-object claim
-/// would lock the name forever: the framework has no unclaim).
+/// Shared namespace for deterministic character IDs. A lowercase name is claimed once and
+/// remains reserved after deletion, so every client can derive the same ID without a lookup.
 public struct NameRegistry has key {
   id: UID,
 }
@@ -74,7 +74,7 @@ public struct NameRegistry has key {
 // one time witness
 public struct CHARACTER has drop {}
 
-public struct CharacterCreated has copy, drop { character: ID, name: String, classe: String }
+public struct CharacterCreated has copy, drop { character: ID, owner: address, name: String, classe: String }
 
 // ╔════════════════ [ init ] ═════════════════════════════════════════════════ ]
 
@@ -113,8 +113,8 @@ public(package) fun new_display(
 
 // ╔════════════════ [ Creation ] ═════════════════════════════════════════════ ]
 
-/// Mint for exactly 1 SUI. The name lands as a registry record (globally unique, freed again
-/// when the character is deleted). Package-private: the ONE public mint door is
+/// Mint for exactly 1 SUI. The lowercase name claims the character's deterministic ID and is
+/// permanently reserved. Package-private: the ONE public mint door is
 /// `api::create_character`, which also joins the first world — a character is never world-less.
 public(package) fun create_character(
   registry: &mut NameRegistry,
@@ -125,7 +125,7 @@ public(package) fun create_character(
   color_1: u32,
   color_2: u32,
   color_3: u32,
-  ctx: &mut TxContext,
+  ctx: &TxContext,
 ): Character {
   assert!(payment.value() == PRICE, EWrongPayment);
   transfer::public_transfer(payment, @treasury);
@@ -139,10 +139,8 @@ public(package) fun create_character(
   assert!(name.length() > 3 && name.length() < 20, ENameInvalid);
   assert!(!contains_whitespace(&name), ENameInvalid);
 
-  assert!(!dfield::exists(&registry.id, name), ENameTaken);
-
   let character = Character {
-    id: object::new(ctx),
+    id: derived_object::claim(&mut registry.id, name),
     name,
     classe,
     sex: if (male) b"male".to_string() else b"female".to_string(),
@@ -158,10 +156,11 @@ public(package) fun create_character(
     chance: 0,
     agility: 0,
     available_points: 0,
+    available_spell_points: 0,
   };
-  dfield::add(&mut registry.id, name, character.id.to_inner());
   event::emit(CharacterCreated {
     character: character.id.to_inner(),
+    owner: ctx.sender(),
     name: character.name,
     classe: character.classe,
   });
@@ -192,17 +191,30 @@ public fun agility(self: &Character): u16 { self.agility }
 
 public fun available_points(self: &Character): u16 { self.available_points }
 
+public fun available_spell_points(self: &Character): u16 { self.available_spell_points }
+
+/// The spell-raise spend door — progression asserts affordability first.
+public(package) fun spend_spell_points(self: &mut Character, amount: u16) {
+  self.available_spell_points = self.available_spell_points - amount;
+}
+
+/// RESET SPELL POINTS: every point ever granted returns — the pool becomes level − 1.
+public(package) fun refund_spell_points(self: &mut Character) {
+  self.available_spell_points = self.level - 1;
+}
+
 public(package) fun uid_mut(self: &mut Character): &mut UID { &mut self.id }
 
 public(package) fun level(self: &Character): u16 { self.level }
 
 /// Add-only — experience can never decrease. The level syncs silently off the curve; each
-/// level gained grants 5 stat points (legacy law).
+/// level gained grants 5 stat points and 1 spell point (legacy law).
 public(package) fun add_experience(self: &mut Character, experience: u64) {
   self.experience = self.experience + experience;
   let new_level = aresrpg_math::experience::level_from_xp(self.experience);
   if (new_level > self.level) {
     self.available_points = self.available_points + (new_level - self.level) * 5;
+    self.available_spell_points = self.available_spell_points + (new_level - self.level);
     self.level = new_level;
   };
 }
@@ -233,11 +245,10 @@ public(package) fun raise_stat(self: &mut Character, stat: String, amount: u16) 
   else abort EUnknownStat
 }
 
-/// Unpack primitive — the guarded delete door (no equipped items, legacy's EInventoryNotEmpty
-/// guard) lives downstream. Removes the name record: deletion FREES the name.
-public(package) fun destroy(registry: &mut NameRegistry, self: Character) {
-  let Character { id, name, .. } = self;
-  let _character_id: ID = dfield::remove(&mut registry.id, name);
+/// Unpack primitive — the guarded delete door lives downstream. The derived-name claim remains,
+/// so a deleted identity can never be impersonated by a later character.
+public(package) fun destroy(self: Character) {
+  let Character { id, .. } = self;
   id.delete();
 }
 
@@ -278,3 +289,21 @@ fun contains_whitespace(name: &String): bool {
 
 #[test_only]
 public fun test_init(ctx: &mut TxContext) { init(CHARACTER {}, ctx) }
+
+#[test_only]
+public fun test_registry(ctx: &mut TxContext): NameRegistry { NameRegistry { id: object::new(ctx) } }
+
+#[test_only]
+public fun test_derived_address(registry: &NameRegistry, name: String): address {
+  derived_object::derive_address(registry.id.to_inner(), name)
+}
+
+#[test_only]
+public fun test_claim_name(registry: &mut NameRegistry, name: String): UID {
+  derived_object::claim(&mut registry.id, name)
+}
+
+#[test_only]
+public fun test_name_exists(registry: &NameRegistry, name: String): bool {
+  derived_object::exists(&registry.id, name)
+}

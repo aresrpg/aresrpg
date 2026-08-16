@@ -64,8 +64,9 @@ pub struct AresHandler {
     /// Original package id — the type origin every game type matches against
     /// (Sui type identity pins to the DEFINING package; one publish = one id).
     package_original: String,
-    /// Latest upgrade id — new types introduced by upgrades resolve to it.
-    /// Carried for the upgrade day; until then it equals the original.
+    /// Latest upgrade id, used for lineage validation only.
+    /// Invariant: upgrades must not introduce indexed object or event types;
+    /// supporting those requires matching every package id that introduced a type.
     #[allow(dead_code)]
     package_latest: String,
 }

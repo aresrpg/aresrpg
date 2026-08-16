@@ -1,5 +1,5 @@
 {
-  "//": "LINT-ONLY project (.claude/rules/code-law.md typed tier) — never a build/typecheck input. Gives the eslint typed-FP rules a ts.Program for the TS/JS surfaces no package tsconfig covers: frontend e2e/dev plugins and the api sponsor (money path). Scope changes here must mirror the typed-tier `files` globs in scripts/eslint-rules/typed_fp.config.mjs.",
+  "//": "LINT-ONLY project (.claude/rules/code-law.md typed tier) — never a build/typecheck input. Gives the eslint typed-FP rules a ts.Program for frontend e2e/dev surfaces no package tsconfig covers. Scope changes here must mirror the typed-tier `files` globs in scripts/eslint-rules/typed_fp.config.mjs.",
   "compilerOptions": {
     "target": "ES2022",
     "module": "ESNext",
@@ -14,6 +14,6 @@
     "allowImportingTsExtensions": true,
     "types": ["node"]
   },
-  "include": ["packages/frontend/e2e/**/*.ts", "packages/frontend/dev/**/*.ts", "api/**/*.mjs", "api/**/*.js"],
+  "include": ["packages/frontend/e2e/**/*.ts", "packages/frontend/dev/**/*.ts"],
   "exclude": ["**/node_modules"]
 }

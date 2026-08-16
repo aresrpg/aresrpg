@@ -4,14 +4,15 @@
 /// entropy: nothing is predictable before the act, so exploration is forced — and cheap: a
 /// zone stores ONE seed + two consumed-bitmaps, nothing per mob. Everything DERIVES from the
 /// seed through the deterministic PRNG (the client mirrors the same math):
-///   seed → the zone's mob FAMILIES (weighted draw — hunting a specific mob means finding its
-///   zone) → groups whose count, SIZE and MIXED composition grow with DISTANCE from the
-///   center (distance IS the rate) → resource nodes, ditto.
+///   the zone's BIOME (the seeded map) → its spawnable mob AND resource rows — exactly the
+///   biome's authored config, nothing else (ruling 2026-08-14: no per-zone caps; mob weights
+///   bias every pick) → groups whose count, SIZE and MIXED composition grow with DISTANCE
+///   from the center (distance IS the rate) → resource packs, ditto.
 /// A searched zone refreshes after the TTL with a new seed. Consumption (a fight claiming a
 /// group, a gather claiming a node) flips one bit.
 module aresrpg::zone;
 
-use aresrpg::{character::Character, world::{Self, World}};
+use aresrpg::{character::Character, world::{Self, MobRow, World}};
 use aresrpg_math::prng;
 use std::string::String;
 use sui::{clock::Clock, dynamic_field as dfield, event, random::RandomGenerator};
@@ -24,7 +25,6 @@ const ENotSearched: u64 = 1303; // derive/consume: the zone has no live search
 
 const ZONE_SIZE: u32 = 512; // blocks per zone side
 const RESEARCH_TTL_MS: u64 = 7_200_000; // 2h — then the next search redraws the seed
-const MAX_FAMILIES: u64 = 3; // families a zone draws from the world list
 
 // ── the dials (rulings 2026-08-09) ──
 // PACK COUNTS ARE FIXED per zone — never distance-scaled. Distance scales what's INSIDE:
@@ -141,36 +141,45 @@ fun ramp(d: u64, at: u64, from: u64, to: u64): u64 {
   from + (to - from) * capped / at
 }
 
-/// The zone's mob families: up to MAX_FAMILIES weighted draws over the world list.
-public fun families(w: &World, seed: u64): vector<String> {
-  let rows = w.mobs();
-  if (rows.is_empty()) return vector[];
-  let mut state = prng::rng_seed(prng::mix(seed, 1));
-  let count = if (rows.length() < MAX_FAMILIES) rows.length() else MAX_FAMILIES;
-  let mut total = 0u64;
+/// The rows a zone may spawn — exactly its biome's authored list (ruling 2026-08-14: the old
+/// per-zone family cap is REPEALED for mobs; the config is the only limitation). A biome with
+/// no rows (ocean) spawns nothing; resources and portals are unaffected.
+fun biome_rows(w: &World, zx: u32, zz: u32): vector<MobRow> {
+  let all = w.mobs();
+  let biome = world::biome_of_zone(w, zx, zz);
+  let mut rows = vector[];
+  let mut k = 0;
+  while (k < all.length()) {
+    if (all[k].mob_row_biomes().contains(&biome)) rows.push_back(all[k]);
+    k = k + 1;
+  };
+  rows
+}
+
+/// Every mob family the zone can spawn — the client's "what's huntable here" read.
+public fun families(w: &World, zx: u32, zz: u32): vector<String> {
+  let rows = biome_rows(w, zx, zz);
+  let mut types = vector[];
   let mut i = 0;
   while (i < rows.length()) {
-    total = total + (rows[i].mob_row_weight_bp() as u64);
+    types.push_back(rows[i].mob_row_type());
     i = i + 1;
   };
-  let mut picked = vector[];
-  let mut n = 0;
-  while (n < count) {
-    let roll = prng::draw(&mut state) % total;
-    let mut acc = 0u64;
-    let mut j = 0;
-    while (j < rows.length()) {
-      acc = acc + (rows[j].mob_row_weight_bp() as u64);
-      if (roll < acc) {
-        let family = rows[j].mob_row_type();
-        if (!picked.contains(&family)) picked.push_back(family);
-        break
-      };
-      j = j + 1;
-    };
-    n = n + 1;
-  };
-  picked
+  types
+}
+
+/// One weighted family pick over the biome's rows — `weight_bp` is the ONLY bias (the config
+/// shapes everything; `total` is the caller's precomputed weight sum, always > 0 here since
+/// every row's weight is asserted ≥ 1 at authoring).
+fun weighted_family(rows: &vector<MobRow>, total: u64, state: &mut u64): String {
+  let roll = prng::draw(state) % total;
+  let mut acc = 0u64;
+  let mut j = 0;
+  loop {
+    acc = acc + (rows[j].mob_row_weight_bp() as u64);
+    if (roll < acc) return rows[j].mob_row_type();
+    j = j + 1;
+  }
 }
 
 /// The zone's live mob groups. The rulings, mechanized:
@@ -181,8 +190,14 @@ public fun families(w: &World, seed: u64): vector<String> {
 ///   composition: 50% of groups are single-family (same mob, different levels), 50% mix.
 public fun mob_groups(w: &World, zx: u32, zz: u32): vector<MobGroup> {
   let zone = live_zone(w, zx, zz);
-  let picked = families(w, zone.seed);
-  if (picked.is_empty()) return vector[];
+  let rows = biome_rows(w, zx, zz);
+  if (rows.is_empty()) return vector[];
+  let mut total = 0u64;
+  let mut r = 0;
+  while (r < rows.length()) {
+    total = total + (rows[r].mob_row_weight_bp() as u64);
+    r = r + 1;
+  };
   let d = distance_blocks(zx, zz);
   let mut state = prng::rng_seed(prng::mix(zone.seed, 2));
 
@@ -199,11 +214,11 @@ public fun mob_groups(w: &World, zx: u32, zz: u32): vector<MobGroup> {
     let gz = (zz * ZONE_SIZE) + ((prng::draw(&mut state) % (ZONE_SIZE as u64)) as u32);
     let size = size_lo + prng::draw(&mut state) % (size_hi - size_lo + 1);
     let homogeneous = prng::draw(&mut state) % 10_000 < HOMOGENEOUS_BP;
-    let family = picked[prng::draw(&mut state) % picked.length()];
+    let family = weighted_family(&rows, total, &mut state);
     let mut members = vector[];
     let mut m = 0u64;
     while (m < size) {
-      let mob_type = if (homogeneous) family else picked[prng::draw(&mut state) % picked.length()];
+      let mob_type = if (homogeneous) family else weighted_family(&rows, total, &mut state);
       let scalar = level_floor + prng::draw(&mut state) % (101 - level_floor);
       members.push_back(MobMember { mob_type, level_scalar: (scalar as u8) });
       m = m + 1;
@@ -216,19 +231,17 @@ public fun mob_groups(w: &World, zx: u32, zz: u32): vector<MobGroup> {
   groups
 }
 
-/// The zone's resource FAMILIES — up to MAX_FAMILIES distinct types drawn from the world list
-/// (a zone features wheat packs or diamond packs; hunting a resource = finding its zone).
-public fun resource_families(w: &World, seed: u64): vector<String> {
-  let rows = w.resources();
-  if (rows.is_empty()) return vector[];
-  let mut state = prng::rng_seed(prng::mix(seed, 4));
-  let count = if ((rows.length() as u64) < MAX_FAMILIES) rows.length() else (MAX_FAMILIES as u64);
+/// The zone's resource FAMILIES — every distinct type the ZONE'S OWN BIOME authors, nothing
+/// else (ruling 2026-08-14, same law as mobs: no per-zone cap; the config is the only
+/// limitation — hunting a resource = finding its biome).
+public fun resource_families(w: &World, zx: u32, zz: u32): vector<String> {
+  let all = w.resources();
+  let biome = world::biome_of_zone(w, zx, zz);
   let mut picked = vector[];
-  let mut n = 0u64;
-  while (n < count) {
-    let t = rows[prng::draw(&mut state) % rows.length()].resource_row_type();
-    if (!picked.contains(&t)) picked.push_back(t);
-    n = n + 1;
+  let mut k = 0;
+  while (k < all.length()) {
+    if (all[k].resource_row_biomes().contains(&biome)) picked.push_back(all[k].resource_row_type());
+    k = k + 1;
   };
   picked
 }
@@ -255,7 +268,7 @@ public fun resource_packs(w: &World, zx: u32, zz: u32): vector<ResourcePack> {
 /// EVERY pack the seed spawns, with TOTAL node counts — the one derivation home; consumption
 /// is the callers' concern.
 fun derive_res_packs(w: &World, zone: &Zone, zx: u32, zz: u32): vector<ResourcePack> {
-  let picked = resource_families(w, zone.seed);
+  let picked = resource_families(w, zx, zz);
   if (picked.is_empty()) return vector[];
   let d = distance_blocks(zx, zz);
   let mut state = prng::rng_seed(prng::mix(zone.seed, 3));

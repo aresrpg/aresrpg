@@ -5,7 +5,7 @@
 # Contracts are money.
 /packages/move/     @Sceat
 # The deterministic core + the replay gate — the correctness spine.
-/packages/sim/      @Sceat
+/packages/fight/    @Sceat
 # Workflows are the rails (the inviolable gate lives here).
 /.github/           @Sceat
 # The identity class.

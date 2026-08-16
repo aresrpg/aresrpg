@@ -1,0 +1,109 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
+
+import type { CharacterRow } from '@aresrpg/protocol'
+import {
+  BookOpen,
+  Crosshair,
+  FlaskConical,
+  Gamepad2,
+  Gift,
+  Settings,
+  ShoppingBag,
+  ShieldCheck,
+  Store,
+  Swords,
+  Trophy,
+  type LucideIcon,
+} from 'lucide-react'
+
+import type { AppCopy } from '../i18n/copy.ts'
+import type { Page } from '../modules/navigation.ts'
+import { is_admin_address } from '../admin_access.ts'
+
+type CopyStringKey = { [K in keyof AppCopy]: AppCopy[K] extends string ? K : never }[keyof AppCopy]
+
+const NAVIGATION: readonly Readonly<{ page: Page; label: CopyStringKey; Icon: LucideIcon; disabled: boolean }>[] =
+  Object.freeze([
+    { page: 'world', label: 'world', Icon: Gamepad2, disabled: false },
+    { page: 'characters', label: 'characters', Icon: Swords, disabled: true },
+    { page: 'leaderboard', label: 'leaderboard', Icon: Trophy, disabled: true },
+    { page: 'shop', label: 'shop', Icon: ShoppingBag, disabled: true },
+    { page: 'simulator', label: 'simulator', Icon: FlaskConical, disabled: false },
+    { page: 'encyclopedia', label: 'encyclopedia', Icon: BookOpen, disabled: false },
+    { page: 'marketplace', label: 'marketplace', Icon: Store, disabled: true },
+    { page: 'airdrop', label: 'airdrop', Icon: Gift, disabled: true },
+    { page: 'kolizeum', label: 'kolizeum', Icon: Crosshair, disabled: true },
+    { page: 'settings', label: 'settings', Icon: Settings, disabled: true },
+    { page: 'admin', label: 'admin', Icon: ShieldCheck, disabled: false },
+  ])
+
+type SidebarProps = Readonly<{
+  copy: AppCopy
+  page: Page
+  characters: readonly CharacterRow[]
+  selected_character_id: string | null
+  open_page: (page: Page) => void
+  select_character: (character_id: string) => void
+  address: string | null
+}>
+
+export const Sidebar = ({
+  copy,
+  page,
+  characters,
+  selected_character_id,
+  open_page,
+  select_character,
+  address,
+}: SidebarProps) => (
+  <aside
+    data-app-sidebar=""
+    className="pointer-events-auto flex w-[200px] shrink-0 flex-col border border-[#1e1e2e] bg-[#12121a]/80"
+  >
+    <div className="flex items-center justify-center gap-2.5 border-b border-[#1e1e2e] py-5">
+      <img className="size-7 drop-shadow-[0_0_12px_rgba(200,150,60,0.3)]" src="/logo.png" alt="AresRPG" />
+      <span className="bg-[linear-gradient(135deg,#fad9b3_0%,#d4a145_50%,#f0c474_100%)] bg-clip-text text-[11px] font-bold tracking-[0.3em] text-transparent uppercase">
+        AresRPG
+      </span>
+    </div>
+    <nav className="flex min-h-0 flex-1 flex-col py-3">
+      <div className="px-4 pb-2 text-[9px] tracking-[0.2em] text-[#6b7280] uppercase">{copy.navigation}</div>
+      {NAVIGATION.filter((item) => item.page !== 'admin' || is_admin_address(address)).map((item) => (
+        <button
+          className={`flex w-full items-center gap-3 border-l-2 px-4 py-2.5 text-left transition-all duration-200 ${
+            item.disabled
+              ? 'cursor-not-allowed border-transparent text-[#6b7280] opacity-40'
+              : page === item.page
+                ? 'cursor-pointer border-[#c8963c] bg-[#c8963c]/8 text-[#c8963c]'
+                : 'cursor-pointer border-transparent text-[#6b7280] hover:bg-[#c8963c]/5 hover:text-[#e8e4dc]'
+          }`}
+          disabled={item.disabled}
+          data-page={item.page}
+          key={item.page}
+          onClick={() => open_page(item.page)}
+          type="button"
+        >
+          <item.Icon aria-hidden="true" className="opacity-60" size={14} />
+          <span className="min-w-0 flex-1 text-[11px] tracking-[0.15em] uppercase">{copy[item.label]}</span>
+        </button>
+      ))}
+      {characters.length > 0 && (
+        <div className="mx-3 mt-3 border-t border-white/8 pt-3">
+          <select
+            aria-label={copy.characters}
+            className="h-9 w-full border border-white/9 bg-black/25 px-2 text-[9px] tracking-[0.12em] text-[#d6d1c8] uppercase outline-none"
+            value={selected_character_id ?? ''}
+            onChange={(event) => select_character(event.target.value)}
+          >
+            {characters.map((character) => (
+              <option className="bg-[#0a0a0f]" key={character.id} value={character.id}>
+                {character.name} · {character.classe}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
+    </nav>
+  </aside>
+)

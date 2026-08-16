@@ -207,12 +207,11 @@ public fun feed_kiosk_pet(
 
 /// Delete a character: out of the kiosk through the protected policy, guarded (nothing may
 /// be equipped — a sent item would be orphaned player value; no FIRED protector verdict —
-/// death was the last dodge, audit 2026-08-10), destroyed — and the NAME IS FREED.
+/// death was the last dodge, audit 2026-08-10), then destroyed. Its derived name stays reserved.
 public fun delete_character(
   kiosk: &mut Kiosk,
   cap: &KioskOwnerCap,
   character_id: ID,
-  registry: &mut NameRegistry,
   protected: &AresRPG_TransferPolicy<Character>,
   version: &Version,
   ctx: &mut TxContext,
@@ -222,7 +221,7 @@ public fun delete_character(
   assert!(!equipment::has_any_equipped(&chr), EDeleteWhileEquipped);
   assert!(!gathering::has_fired_verdict(&chr), EDeleteWhileAmbushed);
   assert!(!dungeon::has_run(&chr), EDeleteWhileInDungeon);
-  character::destroy(registry, chr);
+  character::destroy(chr);
 }
 
 // ╔════════════════ [ Fights ] ═══════════════════════════════════════════════ ]
@@ -356,10 +355,11 @@ public fun weapon_strike(f: &mut Fight, fighter_idx: u64, target_cell: u64, vers
   fight::strike(f, fighter_idx, target_cell, ctx);
 }
 
-/// Walk the acting fighter — tackle tolls apply along the way.
-public fun move_fighter(f: &mut Fight, target_cell: u64, version: &Version, ctx: &TxContext) {
+/// Walk the acting fighter along the caller's exact orthogonal path — tackle tolls apply along
+/// the way. Hidden displacement may stop the remaining route; the chain never chooses another.
+public fun move_fighter(f: &mut Fight, path: vector<u64>, version: &Version, ctx: &TxContext) {
   version.assert_latest();
-  fight::move_fighter(f, target_cell, ctx);
+  fight::move_fighter(f, &path, ctx);
 }
 
 entry fun end_fight_turn(f: &mut Fight, r: &Random, version: &Version, clock: &Clock, ctx: &mut TxContext) {
@@ -701,7 +701,7 @@ entry fun open_loot_box(
   loot_box::open_box(registry, kiosk, cap, box_item_id, box_template, protected_item, &mut gen, ctx);
 }
 
-/// Claim the rolled item from a box claim — mints ONE (any category; gear stats roll here). Terminal
+/// Claim the rolled quantity from a box claim (any category; gear stats roll here). Terminal
 /// `&Random`. `existing` merges a stackable result into your held stack (no dust).
 entry fun claim_loot(
   claim: BoxClaim,

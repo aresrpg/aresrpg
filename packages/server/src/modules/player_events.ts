@@ -11,6 +11,7 @@
 import { VISIBLE_SLOTS, type VisibleSlot } from '@aresrpg/protocol'
 
 import type { EventEnvelope } from '../protocol.ts'
+import { get_characters } from '../reads/get_characters.ts'
 import { get_item } from '../reads/get_item.ts'
 import logger from '../logger.ts'
 import type { PlayerModule, PlayerState } from '../player.ts'
@@ -45,6 +46,13 @@ export default {
         const { list, who } = payload.data as { list: string; who: string }
         if (payload.type === 'FriendAdded') send({ type: 'packet/friend_added', list, who })
         else send({ type: 'packet/friend_removed', list, who })
+      }
+      // a created character is chain-initialized state the receipt cannot carry — the
+      // server streams the fresh roster the moment the indexer projects it
+      if (payload.type === 'CharacterCreated') {
+        void get_characters(graph, { address })
+          .then((characters) => send({ type: 'packet/characters', characters }))
+          .catch((error) => log.error({ address, error: (error as Error).message }, 'roster refresh failed'))
       }
     })
 

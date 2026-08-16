@@ -2,7 +2,7 @@
 
 The game client's ONE write surface — a **generated projection of the Move contract**. Every
 public/entry function of `packages/move/sources/api.move` becomes one PTB builder in
-`src/doors.gen.js`; the generator (`bun run generate`) reads the Move source, so the SDK can
+`src/doors.gen.ts`; the generator (`bun run generate`) reads the Move source, so the SDK can
 never drift from the chain surface — a Move door change lands with its regenerated builder in
 the same commit, and the test suite is red otherwise (the regen-clean tooth).
 
@@ -25,7 +25,7 @@ inside a build. `sdk.hydrate([ids])` is the ONE sanctioned bootstrap roundtrip (
 gas price, and the gas coin); after it, every `execute` receipt keeps the cache fresh — the
 loop sustains itself with zero reads.
 
-```js
+```ts
 import { SDK } from '@aresrpg/sdk'
 
 const sdk = SDK({ client, signer })

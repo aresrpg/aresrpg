@@ -11,14 +11,14 @@
     "test": "bun test"
   },
   "dependencies": {
-    "@mysten/sui": "2.23.2",
+    "@mysten/sui": "2.24.0",
     "falkordb": "^6.2.07",
-    "ioredis": "^5.9.3",
-    "pino": "^10.1.1",
+    "ioredis": "^6.0.0",
+    "pino": "^10.3.1",
     "@aresrpg/protocol": "workspace:*"
   },
   "devDependencies": {
-    "typescript": "^5.9.3",
-    "@types/bun": "^1.3.5"
+    "typescript": "~6.0.3",
+    "@types/bun": "^1.3.14"
   }
 }

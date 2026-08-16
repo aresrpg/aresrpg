@@ -3,16 +3,14 @@
     "target": "ES2022",
     "module": "ESNext",
     "moduleResolution": "bundler",
+    "resolveJsonModule": true,
+    "allowImportingTsExtensions": true,
+    "verbatimModuleSyntax": true,
     "jsx": "react-jsx",
     "strict": true,
-    "esModuleInterop": true,
+    "noEmit": true,
     "skipLibCheck": true,
-    "outDir": "dist",
-    "rootDir": "src",
-    "allowJs": true,
-    "checkJs": false,
-    "resolveJsonModule": true
+    "types": ["vite/client", "vite-plugin-pwa/client", "bun"]
   },
-  "include": ["src"],
-  "exclude": ["src/**/*.test.ts", "src/**/*.test.tsx", "src/game/**/*.test.js"]
+  "include": ["src", "test", "vite.config.ts"]
 }

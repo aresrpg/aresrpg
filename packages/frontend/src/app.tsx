@@ -1,371 +1,304 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-import { Component, Suspense, lazy, type ReactNode } from 'react'
-import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom'
 
-import i18n from './i18n'
-import { report_boundary_error } from './core/report.js'
-import { use_auth, type AuthState } from './auth'
-import { DappKitProviders } from './auth/dapp_kit_providers'
-import { use_toast, TOAST_CONTAINER_CLASS, toast_glass_class } from './toast'
-import { Sidebar, LanguageCard, DiscordCard } from './components/sidebar'
-import { MobileSwitcher } from './components/mobile_switcher'
-import { MobileOrientationGate } from './game/screens/hud/MobileOrientationGate.jsx'
-import { app_mobile_classes, mobile_shell_visibility, useMobileMode } from './game/screens/hud/mobile_layout.js'
-import { ShopPage } from './pages/shop'
-import { SpectateLanding } from './pages/auth'
-import { CharactersPage } from './pages/characters'
-import { MarketplacePage } from './pages/marketplace'
-import { KolizeumPage } from './pages/kolizeum'
-import { AirdropPage } from './pages/airdrop'
-import { InboxExternalPage } from './pages/inbox'
-import { SettingsPage } from './pages/settings'
-import { GameWorldHost } from './GameWorldHost'
-import { WalletBar } from './components/wallet_bar'
-import { SponsorRunoutModalHost } from './components/sponsor_runout_modal'
-import { ContractsPausedModalHost } from './components/contracts_paused_modal'
-import { SponsorUpgradeModalHost } from './components/sponsor_upgrade_modal'
-import { RpcLagBanner } from './components/RpcLagBanner'
-import { VersionBadge } from './version_badge'
+import type { EngineQuality } from '@aresrpg/engine'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { ThinkingOrb } from 'thinking-orbs'
 
-// Lazy-routed: neither encyclopedia code nor its 2.77 MB /v1 catalog belongs on the world boot path.
-const EncyclopediaPage = lazy(() =>
-  import('./pages/encyclopedia').then((module) => ({ default: module.EncyclopediaPage }))
+import { AppShell } from './components/AppShell.tsx'
+import { CANVAS_OVERLAY_CLASS, WORLD_FRAME_LAYER, world_frame_visibility } from './components/app_layout.ts'
+import { CharacterCreateModal } from './components/CharacterCreateModal.tsx'
+import { FpsPanel } from './components/FpsPanel.tsx'
+import { Toasts } from './components/Toasts.tsx'
+import { HUD_PANEL_CLASS, HudPanel } from './components/ui/HudPanel.tsx'
+import { dispatch_app, useAppStore } from './store.ts'
+import { env } from './env.ts'
+import type { AppCopy } from './i18n/copy.ts'
+import type { Locale } from './i18n/locale.ts'
+import type { Page } from './modules/navigation.ts'
+import { toast } from './toast.ts'
+
+const GoogleIcon = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
+    <path
+      d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+      fill="#4285f4"
+    />
+    <path
+      d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+      fill="#34a853"
+    />
+    <path
+      d="M5.84 14.09a6.5 6.5 0 0 1 0-4.18V7.07H2.18A11 11 0 0 0 1 12c0 1.78.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
+      fill="#fbbc05"
+    />
+    <path
+      d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84C6.71 7.31 9.14 5.38 12 5.38z"
+      fill="#ea4335"
+    />
+  </svg>
 )
 
-// The build simulator bundles the seeded items cast (~2.3 MB), so it loads in its own chunk on demand.
-const SimulatorPage = lazy(() => import('./pages/simulator').then((m) => ({ default: m.SimulatorPage })))
+const Divider = () => <div className="h-px bg-white/10" />
 
-class ErrorBoundary extends Component<{ children: ReactNode; fallback?: ReactNode }, { error: Error | null }> {
-  state = { error: null as Error | null }
-  static getDerivedStateFromError(error: Error) {
-    return { error }
-  }
-  componentDidCatch(error: Error, info: { componentStack?: string | null }) {
-    // LOUD, always (#1563): a caught crash is still a crash. This used to be a bare captureException —
-    // no console line, no component stack — which is exactly why a total client death (every seated
-    // fight board) sat undetected: the boundary swallowed the throw and no monitor saw a thing. One
-    // door now (core/report.js), so the boundary can never diverge from the app's reporting choke.
-    report_boundary_error(error, info?.componentStack)
-    // [P0 2026-07-14 blank-page-after-login] A failed lazy-chunk import (a stale service worker
-    // holding a pre-deploy page whose old-hash chunks no longer exist) is only cured by fetching the
-    // fresh shell — a setState retry re-imports the same dead URL. One-shot reload, time-latched so a
-    // still-broken SW degrades to the visible fallback instead of a reload loop.
-    const chunk_error = /dynamically imported module|Importing a module script failed|Unable to preload CSS/i.test(
-      String(error?.message ?? error)
-    )
-    const last_reload = Number(sessionStorage.getItem('chunk_reload_at') || 0)
-    if (chunk_error && Date.now() - last_reload > 30_000) {
-      sessionStorage.setItem('chunk_reload_at', String(Date.now()))
-      // UNREGISTER the service worker BEFORE reloading — a bare reload re-fetches the shell THROUGH
-      // the stale SW's navigateFallback (the OLD precached index.html whose chunk hashes died with the
-      // last deploy), reproducing the exact failure forever (proven 2026-07-14: deterministic boundary
-      // trip on every post-deploy login). Purging the SW makes the reload hit the network fresh.
-      const purge =
-        navigator.serviceWorker?.getRegistrations?.().then((rs) => Promise.allSettled(rs.map((r) => r.unregister()))) ??
-        Promise.resolve()
-      purge.finally(() => location.reload())
-    }
-  }
-  render() {
-    if (this.state.error)
-      return (
-        this.props.fallback ?? (
-          <div className="flex flex-col items-center justify-center h-full p-12 gap-4">
-            <div className="text-red-400 text-[11px] tracking-[0.2em] uppercase">
-              {i18n.t('error_boundary.something_went_wrong')}
-            </div>
-            {/* SHOW THE ERROR — a fallback that hides WHAT broke is a dead
-                end for the player AND for us — React 19 routes the message to onUncaughtError only, so
-                a swallowed error is invisible in prod (no console line, and an ad-blocker can eat the
-                Sentry report). The message + top frames are printed here: the player can report them
-                verbatim and we can read them off a screenshot. No secrets: this is a JS error string. */}
-            <pre className="max-w-[680px] max-h-[220px] overflow-auto whitespace-pre-wrap break-words border border-border bg-black/40 p-3 text-[10px] leading-[1.5] text-muted">
-              {String(this.state.error?.message ?? this.state.error)}
-              {this.state.error?.stack ? `\n\n${this.state.error.stack.split('\n').slice(0, 6).join('\n')}` : ''}
-            </pre>
-            <button
-              type="button"
-              className="btn-outline px-4 py-2 text-[10px]"
-              onClick={() => this.setState({ error: null })}
-            >
-              {i18n.t('common.retry')}
-            </button>
-          </div>
-        )
-      )
-    return this.props.children
-  }
-}
+const Login = ({
+  auth_ready,
+  wallets,
+  copy,
+  show_wallets,
+  set_show_wallets,
+  login_google,
+  login_wallet,
+  spectate,
+}: Readonly<{
+  auth_ready: boolean
+  wallets: readonly string[]
+  copy: AppCopy
+  show_wallets: boolean
+  set_show_wallets: (shown: boolean) => void
+  login_google: () => void
+  login_wallet: (name: string) => void
+  spectate: () => void
+}>) => {
+  const auth_status = useAppStore(({ session }) => session.auth_status)
+  const error = useAppStore(({ session }) => session.auth_error)
+  const loading = auth_status === 'connecting'
 
-// ---------------------------------------------------------------------------
-//  Shared decorative components
-// ---------------------------------------------------------------------------
-
-function AmbientBackground() {
-  return (
-    <div className="fixed inset-0 overflow-hidden pointer-events-none">
-      <div
-        className="absolute bg-gold/8 blur-[128px]"
-        style={{ top: '20%', left: '-5%', width: 300, height: 300, animation: 'drift 20s ease-in-out infinite' }}
-      />
-      <div
-        className="absolute bg-cyan/5 blur-[160px]"
-        style={{
-          bottom: '15%',
-          right: '5%',
-          width: 400,
-          height: 400,
-          animation: 'drift 25s ease-in-out infinite reverse',
-        }}
-      />
-    </div>
-  )
-}
-
-// ---------------------------------------------------------------------------
-//  Toasts
-// ---------------------------------------------------------------------------
-
-function Toasts() {
-  const { toasts, remove } = use_toast()
-  if (toasts.length === 0) return null
-  // The clipped fixed layer paints above the minimap with its own small viewport inset. Cards use the
-  // comfortable, slightly rounded near-black glass recipe exported beside the position contract.
-  return (
-    <div className={TOAST_CONTAINER_CLASS}>
-      {toasts.map((toast) => (
-        <div
-          key={toast.id}
-          className={`${toast_glass_class} ${toast.type === 'error' ? 'text-red-400' : toast.type === 'pending' ? 'text-gold-light' : toast.type === 'success' ? 'text-emerald-400' : 'text-cyan'}`}
-        >
-          <div className="flex min-w-0 items-start gap-3">
-            {toast.type === 'pending' && (
-              <span className="w-3.5 h-3.5 mt-0.5 shrink-0 rounded-full border-2 border-gold/30 border-t-gold animate-spin" />
-            )}
-            {toast.type === 'success' && <span className="mt-0.5 shrink-0 text-[13px] leading-none">✓</span>}
-            <span className="min-w-0 flex-1 whitespace-pre-wrap break-words text-[11px] leading-relaxed tracking-wide">
-              {toast.message}
-            </span>
-            <button
-              type="button"
-              onClick={() => remove(toast.id)}
-              className="text-[10px] opacity-40 hover:opacity-80 transition-opacity cursor-pointer shrink-0"
-            >
-              &#10005;
-            </button>
-          </div>
-          {toast.action && (
-            <button
-              type="button"
-              onClick={toast.action.onClick}
-              className="btn-outline w-full whitespace-normal break-words px-3 py-2 text-[9px] leading-relaxed font-mono font-semibold tracking-[0.15em] uppercase cursor-pointer"
-            >
-              {toast.action.label}
-            </button>
-          )}
-        </div>
-      ))}
-    </div>
-  )
-}
-
-// ---------------------------------------------------------------------------
-//  Game-world route
-// ---------------------------------------------------------------------------
-
-// The routed game-world page is a transparent spacer: the live 3D scene is rendered by the PERSISTENT
-// GameWorldHost layer behind the router (it stays alive across tabs and render-pauses off-tab), so this
-// element only needs to claim the route and let the canvas show through. The in-world HUD is design's
-// pending P2-visual.
-function GameWorldView() {
-  return <div className="flex-1" aria-hidden />
-}
-
-// ---------------------------------------------------------------------------
-//  Layout
-// ---------------------------------------------------------------------------
-
-function Layout() {
-  const location = useLocation()
-  const mobile = useMobileMode()
-  const mobile_shell = mobile_shell_visibility(mobile, location.pathname)
-  const classes = app_mobile_classes(mobile)
-
-  const routes = (
-    <Routes>
-      <Route path="/" element={<GameWorldView />} />
-      {/* S-61/SPEC §16: idle exploration is dead by decision — the world is entered via the HUD's world
-          switcher (S-67) now. Old deep links land on the live world instead of a blank/missing route. */}
-      <Route path="/exploration" element={<Navigate to="/" replace />} />
-      <Route path="/characters" element={<CharactersPage />} />
-      <Route
-        path="/encyclopedia/*"
-        element={
-          <Suspense fallback={null}>
-            <EncyclopediaPage />
-          </Suspense>
-        }
-      />
-      <Route path="/marketplace" element={<MarketplacePage />} />
-      <Route path="/airdrop" element={<AirdropPage />} />
-      <Route path="/kolizeum" element={<KolizeumPage />} />
-      {/* S-65/S-67: friends folded into the world HUD presence panel; the scribe lives as the per-character
-          RUNEFORGE detail tab inside the Characters page (moved off the page-level
-          strip). That tab is local useState, not a URL param, so the redirect just lands on the roster. */}
-      <Route path="/scribe" element={<Navigate to="/characters" replace />} />
-      <Route path="/shop" element={<ShopPage />} />
-      <Route
-        path="/simulator"
-        element={
-          <Suspense fallback={null}>
-            <SimulatorPage />
-          </Suspense>
-        }
-      />
-      <Route path="/settings" element={<SettingsPage />} />
-      {/* The world is home. Its confirmed-empty state replaces only the bounded world slot with character
-          creation; these unconditional meta routes stay navigable with zero characters. */}
-      <Route path="*" element={<Navigate to="/" replace />} />
-    </Routes>
-  )
-
-  return mobile ? (
-    // Mobile is LANDSCAPE-ONLY (portrait → the app-wide rotate gate in AppBody). Chrome FLOATS over
-    // content — no bar ever splits the 390px height: the live game is full-bleed canvas,
-    // meta pages render inside ONE floating glass sheet, and the page switcher is a right-edge handle.
-    <div className={`${classes.shell} flex flex-col h-dvh overflow-hidden`}>
-      {mobile_shell.in_game ? (
-        <div data-mobile-page-shell className="flex-1 flex flex-col relative min-h-0 overflow-hidden">
-          <ErrorBoundary>{routes}</ErrorBoundary>
-        </div>
-      ) : (
-        <div data-mobile-page-shell className="mobile-glass-frame flex-1 flex flex-col relative min-h-0">
-          <div className="mobile-glass-sheet">
-            <ErrorBoundary>{routes}</ErrorBoundary>
-          </div>
-          {/* The balance/wallet stays reachable on every meta page (you buy on Shop/Marketplace), re-skinned
-              as a floating glass pod instead of a height-taxing top row. Sibling of the sheet so its menu
-              drop-down isn't clipped by the sheet's overflow. */}
-          {mobile_shell.show_wallet && (
-            <div data-mobile-wallet-bar className="app-wallet-slot mobile-wallet-pod">
-              <WalletBar compact />
-            </div>
-          )}
-        </div>
-      )}
-      <MobileSwitcher />
-    </div>
-  ) : (
-    <div className={`${classes.shell} flex h-dvh p-3 gap-3 overflow-hidden`}>
-      <div className="flex flex-col gap-3 overflow-y-auto min-h-0 shrink-0">
-        <Sidebar />
-        <LanguageCard />
-        <DiscordCard />
-      </div>
-      <div className="flex-1 flex flex-col relative min-h-0 overflow-y-auto">
-        <ErrorBoundary>{routes}</ErrorBoundary>
-      </div>
-    </div>
-  )
-}
-
-// ---------------------------------------------------------------------------
-//  App root
-// ---------------------------------------------------------------------------
-
-function AppBody() {
-  const location = useLocation()
-  const address = use_auth((s: AuthState) => s.address)
-  const mobile = useMobileMode()
-
-  // The external /inbox is a STANDALONE claim page for non-players: a plain Sui wallet connects
-  // and claims item gifts — its own header + Connect CTA, no game shell / engine boot. Rendered outside the auth
-  // gate (its own public surface), so a wallet holder who isn't a zkLogin player can still receive.
-  if (location.pathname === '/inbox') {
-    return (
-      <>
-        <Toasts />
-        <InboxExternalPage />
-      </>
-    )
-  }
-
-  // DEV-only VFX-LAB takes over the full screen (no auth / no engine boot) — a standalone spell-juice
-  // sandbox. Statically stripped from prod (import.meta.env.DEV is false → the branch + lazy chunk drop).
-  // #42: the standalone /expedition demo route is DELETED — the exploration loop now lives IN the real app
-  // (GameWorldHud's ExpeditionHud over the live /game-world), so there is no separate surface anymore.
-
-  // Fully inside the companion app: authenticated. The exploration loop runs chain-direct (no WS backend), so a
-  // zkLogin address alone puts the player fully in-app (the real /game-world + Hud) — the loop IS the session.
-  // Anything else (logged out) is the SPECTATE landing over the live world.
-  const in_app = !!address
   return (
     <>
-      <AmbientBackground />
-      {/* PERSISTENT game-world canvas: always-on engine + WS, render-pauses off the game-world tab. It
-          is the live-world backdrop everywhere EXCEPT an authenticated meta-tab, so the spectate landing
-          renders instantly over it (never a dark/blank page). Mounted inside the router to read the route. */}
-      <GameWorldHost />
-      <Toasts />
-      {in_app && <RpcLagBanner />}
-      {/* Daily FREE-GAMEPLAY run-out modal — opens when the sponsor allowance is spent (self-gates on the
-          connected address; renders nothing otherwise). App-global, same tier as Toasts. */}
-      <SponsorRunoutModalHost />
-      {/* CONTRACTS PAUSED — full-screen block on the game/app surfaces only (self-gates on the connected
-          address, same tier as the run-out modal); never shows over the spectate landing below nor the
-          standalone /inbox page (that branch returns before this point). */}
-      <ContractsPausedModalHost />
-      {/* STRICT SPONSOR UPGRADE — a retired-package refusal latches this non-dismissible reducer-driven modal;
-          refresh is the only continuation. Kept above every other modal by its own z-layer. */}
-      <SponsorUpgradeModalHost />
-      {/* PORTRAIT ROTATE GATE — app-wide: mobile is landscape-only, so the gate fires on
-          EVERY route (world, meta pages, and the logged-out spectate landing), not just the game canvas.
-          Self-noops out of portrait; mounted only on mobile so a narrow desktop window never sees it. */}
-      {mobile && <MobileOrientationGate />}
-      {in_app ? (
-        <div className="relative z-10">
-          <Layout />
+      <div className="fixed inset-0 z-2 bg-[#0a0a0f]/50 backdrop-blur-[7px]" />
+      <section className="fixed top-1/2 left-1/2 z-3 flex w-[min(384px,calc(100vw-32px))] -translate-1/2 flex-col items-center gap-[27px] rounded-[5px] border border-white/9 bg-[linear-gradient(135deg,rgba(18,18,26,0.92),rgba(10,10,15,0.82))] px-9 py-10 shadow-[0_18px_60px_rgba(0,0,0,0.45),inset_0_1px_rgba(255,255,255,0.05)] backdrop-blur-3xl max-[600px]:px-6 max-[600px]:py-8">
+        <img className="size-[72px] drop-shadow-[0_0_20px_rgba(200,150,60,0.3)]" src="/logo.png" alt="AresRPG" />
+        <div className="text-center">
+          <h1 className="mb-2 pl-[0.35em] text-sm font-semibold tracking-[0.35em] uppercase">AresRPG</h1>
+          <p className="text-[10px] tracking-[0.3em] text-gray-500">{copy.sign_in_to_play}</p>
         </div>
-      ) : (
-        // The spectate landing floats ABOVE the live-world canvas (the host lifts the canvas above the
-        // routed game-world spacer). pointer-events:none lets a logged-out visitor interact with the
-        // world behind; each overlay piece re-enables pointer events for itself.
-        //
-        // `data-spectate-landing` (#1255) is the page saying WHICH of the two branches above it took. It is
-        // inert — nothing reads it at runtime — but it is the difference between a driver reporting "the
-        // seams are missing" and "this page has no routes because nobody is signed in".
-        <div data-spectate-landing className="fixed inset-0 z-20 pointer-events-none">
-          <SpectateLanding />
+        <div className="flex w-full flex-col gap-3 [&_button]:h-[46px] [&_button]:w-full [&_button]:cursor-pointer [&_button]:rounded-[5px] [&_button]:transition-all [&_button]:duration-150 [&_button:disabled]:cursor-not-allowed [&_button:disabled]:opacity-45">
+          <button
+            className="flex items-center justify-center gap-3 border-0 bg-white/96 text-xs font-semibold text-[#282b31] hover:not-disabled:bg-white"
+            disabled={!auth_ready || loading}
+            onClick={login_google}
+          >
+            <GoogleIcon />
+            {loading ? copy.loading_universe : copy.continue_google}
+          </button>
+          {import.meta.env.DEV && auth_ready && (
+            <>
+              <Divider />
+              <button
+                className="border border-[#c8963c]/35 bg-transparent text-[11px] font-semibold tracking-[0.16em] text-[#c8963c] uppercase hover:border-[#c8963c]/70 hover:bg-[#c8963c]/8"
+                onClick={() => set_show_wallets(!show_wallets)}
+              >
+                {copy.connect_wallet}
+              </button>
+              {show_wallets && (
+                <div className="flex flex-col gap-1.5 border border-white/8 bg-black/18 p-2">
+                  {wallets.map((wallet) => (
+                    <button
+                      className="!h-9 border border-white/8 bg-white/4 text-[11px] text-[#e8e4dc]"
+                      key={wallet}
+                      onClick={() => login_wallet(wallet)}
+                    >
+                      {wallet}
+                    </button>
+                  ))}
+                  {wallets.length === 0 && (
+                    <span className="p-[7px] text-center text-[10px] text-gray-500">{copy.no_wallet}</span>
+                  )}
+                </div>
+              )}
+            </>
+          )}
+          <Divider />
+          <button
+            className="border border-[#4a9eff]/30 bg-transparent text-[11px] font-semibold tracking-[0.16em] text-[#67adff] uppercase hover:border-[#4a9eff]/70 hover:bg-[#4a9eff]/8"
+            onClick={spectate}
+          >
+            {copy.watch_world}
+          </button>
+          {error && <div className="text-center text-[10px] leading-6 text-[#ff7d7d]">{error}</div>}
         </div>
-      )}
+      </section>
     </>
   )
 }
+
+const Welcome = ({ copy, create }: Readonly<{ copy: AppCopy; create: () => void }>) => (
+  <section className="absolute inset-0 z-[140] grid place-items-center bg-[#050508]/34 p-5 backdrop-blur-[3px]">
+    <div className="w-full max-w-xl border border-white/10 border-t-[#c8963c] bg-[#0a0a0f]/94 p-8 shadow-[0_24px_80px_rgba(0,0,0,0.55)]">
+      <p className="mb-3 text-[8px] tracking-[0.28em] text-[#c8963c] uppercase">AresRPG</p>
+      <h2 className="text-xl font-semibold tracking-[0.06em]">{copy.welcome_title}</h2>
+      <p className="mt-4 text-[11px] leading-6 text-[#9da0a9]">{copy.welcome_body}</p>
+      <button
+        className="mt-7 h-11 cursor-pointer border border-[#4a9eff]/40 bg-[#4a9eff]/8 px-6 text-[9px] tracking-[0.18em] text-[#67adff] uppercase hover:border-[#4a9eff]/70"
+        onClick={create}
+        type="button"
+      >
+        {copy.create_character}
+      </button>
+    </div>
+  </section>
+)
 
 export function App() {
+  const session = useAppStore(({ session }) => session)
+  const navigation = useAppStore(({ navigation }) => navigation)
+  const settings = useAppStore((state) => state.settings)
+  const locale = useAppStore((state) => state.locale)
+  const copy = useAppStore((state) => state.copy)
+  const engine_status = useAppStore((state) => state.engine)
+  const [show_wallets, set_show_wallets] = useState(false)
+  const [graphics_notice_dismissed, set_graphics_notice_dismissed] = useState(false)
+  const attached_canvas = useRef<HTMLCanvasElement | null>(null)
+  const in_app = !!session.wallet
+  /* eslint-disable functional/prefer-immutable-types, functional/immutable-data -- React owns this mutable DOM ref; the engine needs the real canvas element. */
+  const attach_canvas = useCallback((canvas: HTMLCanvasElement | null): void => {
+    const previous = attached_canvas.current
+    if (previous === canvas) return
+    attached_canvas.current = canvas
+    if (previous) dispatch_app({ type: 'engine/canvas_detached', canvas: previous })
+    if (canvas) dispatch_app({ type: 'engine/canvas_attached', canvas })
+  }, [])
+  /* eslint-enable functional/prefer-immutable-types, functional/immutable-data */
+
+  const change_quality = useCallback(
+    (quality: EngineQuality): void =>
+      dispatch_app({ type: 'settings/changed', settings: Object.freeze({ ...settings, quality }) }),
+    [settings]
+  )
+  const toggle_flattened = useCallback(
+    (): void =>
+      dispatch_app({
+        type: 'settings/changed',
+        settings: Object.freeze({ ...settings, flat_mode: !settings.flat_mode }),
+      }),
+    [settings]
+  )
+  const change_locale = useCallback(
+    (next_locale: Locale): void => dispatch_app({ type: 'locale/changed', locale: next_locale }),
+    []
+  )
+  const disconnect = useCallback((): void => dispatch_app({ type: 'auth/disconnected' }), [])
+  const open_page = useCallback((page: Page): void => dispatch_app({ type: 'page/open', page }), [])
+  const open_path = useCallback((pathname: string): void => dispatch_app({ type: 'path/open', pathname }), [])
+  const select_character = useCallback(
+    (character_id: string): void => dispatch_app({ type: 'character/select', character_id }),
+    []
+  )
+  const show_graphics_notice =
+    engine_status.state === 'failed' || (engine_status.state === 'degraded' && !graphics_notice_dismissed)
+  const loading_universe = session.auth_status === 'connecting' || (in_app && !session.roster_loaded)
+
+  useEffect(() => {
+    if (!copy || !loading_universe) return
+    return toast.persistent(copy.loading_universe, 'pending')
+  }, [copy, loading_universe])
+
+  if (!copy) return <main className="fixed inset-0 bg-[#0a0a0f]" />
+
   return (
-    <>
-      {/* Version badge — mounted unconditionally so it
-          survives every route AND a router/AppBody crash, but CSS-gated MOBILE-ONLY (the
-          version over canvas is only for mobile); the desktop Layout sidebar's own bottom-center
-          v{__APP_VERSION__} tag is the sole desktop home. See version_badge.tsx. */}
-      <VersionBadge version={__APP_VERSION__} />
-      <BrowserRouter>
-        {/* [P0 2026-07-14] ROOT boundary — the app previously had NO boundary above the AppBody chrome
-            (the only one wrapped {routes}), so a lazy-chunk rejection in the HUD/sidebar unmounted the
-            ENTIRE tree to a silent blank page (React 19 routes it to onUncaughtError only — no console
-            error, no recovery). This wrap + the chunk-reload latch in componentDidCatch close the class. */}
-        <ErrorBoundary>
-          {/* dapp-kit providers wrap the app root — the CONNECT WALLET picker (rendered deep inside the
-              spectate landing) needs SuiClientProvider/WalletProvider ancestors to mount at all
-              (auth/dapp_kit_providers.tsx). Mounting is unconditional and cheap (no network calls on the
-              connect path); the #73 build-time gate still owns whether the picker ITSELF renders. */}
-          <DappKitProviders>
-            <AppBody />
-          </DappKitProviders>
-        </ErrorBoundary>
-      </BrowserRouter>
-    </>
+    <main className="fixed inset-0 overflow-hidden bg-[#0a0a0f] font-mono text-[#e8e4dc]">
+      <div
+        aria-hidden={navigation.page !== 'world'}
+        className={`fixed overflow-hidden transition-opacity duration-150 ${WORLD_FRAME_LAYER} ${world_frame_visibility(navigation.page)} ${
+          in_app
+            ? 'top-3 right-3 bottom-3 left-[224px] rounded-[14px] shadow-[0_18px_50px_rgba(0,0,0,0.55),0_0_0_1px_rgba(255,255,255,0.06),inset_0_0_0_1px_rgba(255,255,255,0.04)]'
+            : 'inset-0'
+        }`}
+      >
+        <canvas ref={attach_canvas} className="absolute inset-0 size-full touch-none" />
+
+        <div className={`${CANVAS_OVERLAY_CLASS} z-[110]`}>
+          <FpsPanel
+            active={navigation.page === 'world'}
+            change_quality={change_quality}
+            copy={copy}
+            flattened={settings.flat_mode}
+            quality={settings.quality}
+            toggle_flattened={toggle_flattened}
+          />
+        </div>
+
+        {loading_universe && (
+          <div className={`${CANVAS_OVERLAY_CLASS} z-[130] bg-[#040509]/35 backdrop-blur-[9px]`}>
+            <div className="absolute inset-0 grid place-items-center">
+              <ThinkingOrb aria-label={copy.loading_universe} size={64} state="connecting" theme="dark" />
+            </div>
+          </div>
+        )}
+        {in_app && navigation.page === 'world' && navigation.dialog === 'welcome' && (
+          <Welcome copy={copy} create={() => dispatch_app({ type: 'dialog/open', dialog: 'character_create' })} />
+        )}
+        {in_app && navigation.page === 'world' && navigation.dialog === 'character_create' && (
+          <CharacterCreateModal cancel={() => dispatch_app({ type: 'dialog/open', dialog: 'welcome' })} copy={copy} />
+        )}
+      </div>
+      <div className="pointer-events-none fixed inset-0 z-[100] bg-[repeating-linear-gradient(0deg,transparent,transparent_2px,rgba(200,150,60,0.014)_2px,rgba(200,150,60,0.014)_4px)]" />
+      <Toasts />
+
+      {show_graphics_notice && (
+        <section className="fixed inset-0 z-[200] grid place-items-center bg-[#050508]/88 p-5 backdrop-blur-lg">
+          <div className="w-full max-w-lg border border-[#ff5a8b]/35 bg-[#0a0a0f] p-7 shadow-[0_0_80px_rgba(255,27,141,0.12)]">
+            <h2 className="mb-4 text-base font-semibold text-[#e8e4dc]">{copy.title}</h2>
+            <p className="mb-5 text-xs leading-6 text-[#a3a5ad]">
+              {engine_status.state === 'failed' ? copy.fatal : copy.body}
+            </p>
+            <p className="mb-2 text-[11px] leading-5 text-[#d0ccd0]">
+              {/Chrome|Chromium|Edg/.test(navigator.userAgent) ? copy.chrome : copy.other}
+            </p>
+            {engine_status.state === 'degraded' && (
+              <button
+                className="mt-5 h-10 w-full cursor-pointer border border-[#4a9eff]/40 bg-[#4a9eff]/8 text-[10px] tracking-[0.18em] text-[#67adff] uppercase"
+                onClick={() => set_graphics_notice_dismissed(true)}
+              >
+                {copy.continue}
+              </button>
+            )}
+          </div>
+        </section>
+      )}
+
+      {!session.wallet && session.auth_status !== 'connecting' && !navigation.guest_spectating && (
+        <Login
+          auth_ready={session.auth_ready}
+          wallets={session.wallets}
+          copy={copy}
+          login_google={() => dispatch_app({ type: 'auth/login_google' })}
+          login_wallet={(name) => dispatch_app({ type: 'auth/login_wallet', name })}
+          set_show_wallets={set_show_wallets}
+          show_wallets={show_wallets}
+          spectate={() => dispatch_app({ type: 'spectate/changed', enabled: true })}
+        />
+      )}
+
+      {!session.wallet && navigation.guest_spectating && (
+        <>
+          <button
+            className={`${HUD_PANEL_CLASS} fixed bottom-6 left-1/2 z-[120] -translate-x-1/2 cursor-pointer !border-[#4a9eff]/25 px-[22px] py-3 text-[10px] tracking-[0.2em] text-[#67adff]`}
+            onClick={() => dispatch_app({ type: 'spectate/changed', enabled: false })}
+          >
+            {copy.sign_in}
+          </button>
+          <HudPanel className="fixed right-5 bottom-5 z-[120] px-3 py-2 text-[8px] tracking-[0.2em] text-[#a3a5ad] max-[600px]:hidden">
+            {copy.drag_hint}
+          </HudPanel>
+        </>
+      )}
+
+      {session.wallet && (
+        <AppShell
+          change_locale={change_locale}
+          copy={copy}
+          disconnect={disconnect}
+          locale={locale}
+          open_page={open_page}
+          open_path={open_path}
+          page={navigation.page}
+          pathname={navigation.pathname}
+          select_character={select_character}
+          session={session}
+        />
+      )}
+    </main>
   )
 }

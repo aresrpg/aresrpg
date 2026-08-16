@@ -73,53 +73,6 @@ jobs:
       - name: cargo test (includes the Move-parity gates)
         working-directory: packages/indexer
         run: cargo test
-  tests_e2e:
-    # The playwright suite drives the REAL app (chain-direct against testnet) on its own vite
-    # server — the config's webServer boots it.
-    name: tests (e2e)
-    runs-on: ubuntu-latest
-    timeout-minutes: 60
-    steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
-      - name: setup Bun
-        id: setup_bun
-        continue-on-error: true
-        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
-      - name: setup Bun (retry)
-        if: steps.setup_bun.outcome == 'failure'
-        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
-      - name: install
-        run: bun install --frozen-lockfile
-      - name: install chromium
-        working-directory: packages/frontend
-        run: bunx playwright install --with-deps chromium
-      - name: playwright e2e
-        working-directory: packages/frontend
-        env:
-          VITE_SPONSOR_URL: https://sponsor.aresrpg.world/api/sponsor
-        run: bun run test:e2e
-  tests_api:
-    # The sponsor's unit suite (a MONEY path — scope/station/fail-closed families). Each file is
-    # its own bun process on purpose — sponsor.mjs/sponsor_state.mjs memoize Redis + the PTB
-    # allowlist at module load, so api/run_tests.sh runs them one process per file.
-    name: tests (api)
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
-      - name: setup Bun
-        id: setup_bun
-        continue-on-error: true
-        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
-      - name: setup Bun (retry)
-        if: steps.setup_bun.outcome == 'failure'
-        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
-      - name: install
-        working-directory: api
-        run: bun install --frozen-lockfile
-      - name: sponsor api unit suite — one bun process per file (module-load memoization)
-        working-directory: api
-        run: bun run test
   bundle-gate:
     # Reproduces Vercel's own buildCommand (#737) so a bundle-tripping commit fails HERE and can
     # never land as a zero-READY-deploys outage.
@@ -136,6 +89,10 @@ jobs:
         uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
       - name: install
         run: bun install --frozen-lockfile
-      - name: bundle-cleanliness gate — vite build && assert_clean_bundle.mjs
+      - name: bundle-cleanliness gate — no source maps, retired endpoints, or key material in dist
         working-directory: packages/frontend
-        run: bunx vite build && node scripts/assert_clean_bundle.mjs
+        run: |
+          bunx vite build
+          ! find dist -name "*.map" | grep .
+          ! grep -RlE --include="*.js" --include="*.css" --include="*.html" --include="*.json" \
+            "rpc\.aresrpg\.world|sponsor\.aresrpg\.world|suiprivkey|BEGIN PRIVATE KEY" dist

@@ -188,6 +188,7 @@ pub struct Character {
     pub chance: u16,
     pub agility: u16,
     pub available_points: u16,
+    pub available_spell_points: u16,
 }
 
 // ╔════════════════ [ aresrpg::progression — Character DFs ] ═════════════════ ]
@@ -230,21 +231,33 @@ pub struct World {
     pub resources: Vec<ResourceRow>,
     pub dungeon_key: Option<String>,
     pub dungeon_rooms: Vec<DungeonRoom>,
+    pub biome_map: BiomeMap,
+}
+
+/// `world::BiomeMap` — one biome id per zone; the spawn filter's ground truth.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct BiomeMap {
+    pub zone_x0: u32,
+    pub zone_z0: u32,
+    pub side: u16,
+    pub cells: Vec<u8>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MobRow {
     pub mob_type: String,
     pub weight_bp: u16,
+    pub biomes: Vec<u8>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ResourceRow {
     pub item_type: String,
-    pub tool: String,
+    pub job: String,
     pub tier: u8,
     pub protector: String,
     pub rare_item_type: String,
+    pub biomes: Vec<u8>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -555,6 +568,7 @@ pub struct BoxClaim {
     pub id: Id,
     pub box_template: Id,
     pub rolled_template: Id,
+    pub amount: u32,
 }
 
 /// `forgemagie::CrushClaim` — the soulbound crush commitment: the committed
@@ -670,6 +684,7 @@ mod tests {
             chance: 0,
             agility: 55,
             available_points: 5,
+            available_spell_points: 3,
         };
         let back = roundtrip(&chr);
         assert_eq!(back.name, "aiden");

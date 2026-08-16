@@ -178,9 +178,8 @@ fn is_game_obj<'a>(outputs: &'a [ObjView<'a>], id: Id, game: &str) -> Option<&'a
 }
 
 fn pays_royalty(tx: &TxView<'_>) -> bool {
-    tx.move_calls
-        .iter()
-        .any(|call| call.ends_with("::royalty_rule::pay"))
+    let royalty_pay = format!("{SUI_FRAMEWORK}::royalty_rule::pay");
+    tx.move_calls.iter().any(|call| call == &royalty_pay)
 }
 
 /// Is a kiosk event's phantom `T` one of OUR types? The event TYPE carries it
@@ -477,6 +476,25 @@ mod tests {
 
     fn game_item_param() -> Vec<String> {
         vec![format!("{GAME}::item::Item")]
+    }
+
+    #[test]
+    fn royalty_target_requires_the_framework_package() {
+        let exact = format!("{SUI_FRAMEWORK}::royalty_rule::pay");
+        let spoofed = format!("0x{}::royalty_rule::pay", "ee".repeat(32));
+        let base = TxView {
+            tx_index: 0,
+            sender: Addr([7; 32]),
+            move_calls: std::slice::from_ref(&exact),
+            events: &[],
+            inputs: &[],
+            outputs: &[],
+        };
+        assert!(pays_royalty(&base));
+        assert!(!pays_royalty(&TxView {
+            move_calls: std::slice::from_ref(&spoofed),
+            ..base
+        }));
     }
 
     fn ty(package: &str, module: &str, name: &str) -> TypeKey {

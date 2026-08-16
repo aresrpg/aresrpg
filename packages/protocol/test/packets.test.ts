@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-// The wire contract: declared intents parse, everything else is refused — no query surface,
-// no generic envelope, no coercion.
+// The wire contract: declared intents and narrow correlated reads parse; generic query envelopes
+// and coercion remain refused.
 
 import { describe, expect, test } from 'bun:test'
 
-import { parse_client_packet, CLIENT_PACKET_TYPES } from '../src/packets.ts'
+import { parse_client_packet, parse_server_packet, CLIENT_PACKET_TYPES } from '../src/packets.ts'
 
 describe('the wire contract', () => {
   test('declared intents parse with their exact shape', () => {
@@ -24,6 +24,9 @@ describe('the wire contract', () => {
       id: 1,
       kind: 'stats',
     })
+    expect(
+      parse_client_packet(JSON.stringify({ type: 'packet/character_owner_request', id: 7, character_id: '0xabc' }))
+    ).toEqual({ type: 'packet/character_owner_request', id: 7, character_id: '0xabc' })
   })
 
   test('malformed intents throw, never coerce', () => {
@@ -39,7 +42,7 @@ describe('the wire contract', () => {
     )
   })
 
-  test('there is NO query surface — undeclared packet types are refused', () => {
+  test('undeclared generic query and subscription surfaces are refused', () => {
     expect(() => parse_client_packet(JSON.stringify({ type: 'request', kind: 'characters', id: 1 }))).toThrow(
       /unknown packet type/
     )
@@ -47,6 +50,7 @@ describe('the wire contract', () => {
       /unknown packet type/
     )
     expect(CLIENT_PACKET_TYPES).toEqual([
+      'packet/signature_response',
       'packet/embody',
       'packet/position',
       'packet/chat',
@@ -55,6 +59,7 @@ describe('the wire contract', () => {
       'packet/fight_action',
       'packet/market_observe',
       'packet/spectate',
+      'packet/character_owner_request',
       'packet/admin_request',
     ])
   })
@@ -81,9 +86,51 @@ describe('the wire contract', () => {
     expect(() => parse_client_packet(JSON.stringify({ type: 'packet/market_observe', category: 7 }))).toThrow(
       /category/
     )
+    expect(() => parse_client_packet(JSON.stringify({ type: 'packet/market_observe', category: 'made_up' }))).toThrow(
+      /category/
+    )
     expect(() => parse_client_packet(JSON.stringify({ type: 'packet/spectate', fight: 'nope' }))).toThrow(/fight id/)
     expect(() =>
       parse_client_packet(JSON.stringify({ type: 'packet/fight_action', fight: '0xf', action: [1] }))
     ).toThrow(/action object/)
+    expect(
+      parse_client_packet(
+        JSON.stringify({
+          type: 'packet/fight_action',
+          fight: '0xf',
+          action: { type: 'move_to', fighter: '1', path: ['2', '3'] },
+        })
+      )
+    ).toEqual({
+      type: 'packet/fight_action',
+      fight: '0xf',
+      action: { type: 'move_to', fighter: '1', path: ['2', '3'] },
+    })
+    expect(() =>
+      parse_client_packet(
+        JSON.stringify({
+          type: 'packet/fight_action',
+          fight: '0xf',
+          action: { type: 'move_to', fighter: '1', path: [2] },
+        })
+      )
+    ).toThrow(/decimal/)
+    let nested: Record<string, unknown> = {}
+    for (let depth = 0; depth < 7; depth += 1) nested = { nested }
+    expect(() =>
+      parse_client_packet(JSON.stringify({ type: 'packet/fight_action', fight: '0xf', action: nested }))
+    ).toThrow(/nested too deeply/)
+  })
+
+  test('the trusted server stream needs JSON syntax, not duplicate runtime schemas', () => {
+    expect(parse_server_packet(JSON.stringify({ type: 'packet/server_info', online: 12 }))).toEqual({
+      type: 'packet/server_info',
+      online: 12,
+    })
+    expect(parse_server_packet(JSON.stringify({ type: 'packet/anything', value: true })) as unknown).toEqual({
+      type: 'packet/anything',
+      value: true,
+    })
+    expect(() => parse_server_packet('not json')).toThrow()
   })
 })

@@ -25,9 +25,6 @@ public struct HpKey() has copy, drop, store;
 /// RESET_SPELL_POINTS consumable can clear the whole allocation in one act.
 public struct SpellBookKey() has copy, drop, store;
 
-/// DF key on the character → total spell points SPENT (granted = level − 1).
-public struct SpellSpentKey() has copy, drop, store;
-
 const ENotLearned: u64 = 1601; // raise_spell: below the spell's unlock level, or a mob spell
 const ESpellCapped: u64 = 1602; // raise_spell: already at the spell's top level
 const ENoSpellPoints: u64 = 1603; // raise_spell: raising from n to n+1 costs n points
@@ -106,31 +103,17 @@ public fun spell_level(chr: &Character, spell: &SpellTemplate): u64 {
   if (book.contains(&name)) (book[&name] as u64) else 1
 }
 
-/// Points available = (level − 1) granted − spent (1 per level from level 2, the Dofus law).
-public fun available_spell_points(chr: &Character): u64 {
-  let granted = (chr.level() as u64) - 1;
-  let uid = chr.uid();
-  let spent = if (dfield::exists(uid, SpellSpentKey())) {
-    (*dfield::borrow<SpellSpentKey, u64>(uid, SpellSpentKey()))
-  } else 0;
-  if (granted > spent) granted - spent else 0
-}
-
 /// Raise a spell one level. Cost = the CURRENT level (n → n+1 costs n points), 1.29 exact.
+/// The pool lives on the character (`available_spell_points`, granted 1 per level from 2).
 public(package) fun raise_spell(chr: &mut Character, spell: &SpellTemplate) {
   let current = spell_level(chr, spell);
   assert!(current >= 1, ENotLearned);
   assert!(current < spell.max_spell_level(), ESpellCapped);
-  assert!(available_spell_points(chr) >= current, ENoSpellPoints);
+  assert!((chr.available_spell_points() as u64) >= current, ENoSpellPoints);
+  character::spend_spell_points(chr, (current as u16));
 
   let name = spell.name();
   let uid = character::uid_mut(chr);
-  if (dfield::exists(uid, SpellSpentKey())) {
-    let spent: &mut u64 = dfield::borrow_mut(uid, SpellSpentKey());
-    *spent = *spent + current;
-  } else {
-    dfield::add(uid, SpellSpentKey(), current);
-  };
   if (!dfield::exists(uid, SpellBookKey())) {
     dfield::add(uid, SpellBookKey(), vec_map::empty<String, u8>());
   };
@@ -143,16 +126,14 @@ public(package) fun raise_spell(chr: &mut Character, spell: &SpellTemplate) {
   };
 }
 
-/// RESET SPELL POINTS (the consumable): clear the whole raised-spell book and zero the spent
-/// counter — every spell drops to its self-learned level 1, all points refunded.
+/// RESET SPELL POINTS (the consumable): clear the whole raised-spell book and refill the pool
+/// to level − 1 — every spell drops to its self-learned level 1, all points refunded.
 public(package) fun reset_spells(chr: &mut Character) {
   let uid = character::uid_mut(chr);
   if (dfield::exists(uid, SpellBookKey())) {
     *dfield::borrow_mut(uid, SpellBookKey()) = vec_map::empty<String, u8>();
   };
-  if (dfield::exists(uid, SpellSpentKey())) {
-    *dfield::borrow_mut<SpellSpentKey, u64>(uid, SpellSpentKey()) = 0;
-  };
+  character::refund_spell_points(chr);
 }
 
 /// HEAL the character by `amount`, capped at max hp (regen banked first). The consumable's

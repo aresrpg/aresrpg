@@ -1,12 +1,9 @@
-# Vendored game source + sim/sdk packages self-format (own prettier configs).
-# The indexer is Rust. Keep them out of the companion format/check.
-packages/frontend/src/game/
+# Binary assets, generated output, Move, and Rust stay outside the formatter.
 packages/frontend/public/sprites/
 packages/frontend/public/vfx/
 packages/frontend/public/forest/
 packages/engine/public/draco/
 public/draco/
-packages/sim/
 # Generated data assets (schematics, served corpus JSONs — machine-emitted, never hand-formatted).
 packages/engine/assets/
 packages/frontend/public/data/
@@ -22,4 +19,6 @@ packages/indexer/
 bun.lock
 dist/
 node_modules/
+deprecated/
 .claude/
+packages-old/

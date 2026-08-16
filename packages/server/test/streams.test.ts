@@ -84,7 +84,7 @@ const wire = () => {
         return [
           {
             item: {
-              properties: { id: '0xi1', name: 'hat', item_type: 'straw_hat', category: 'gear', level: 3, amount: 1 },
+              properties: { id: '0xi1', name: 'hat', item_type: 'straw_hat', category: 'helmet', level: 3, amount: 1 },
             },
           },
         ]
@@ -198,19 +198,20 @@ describe('the fight watch', () => {
     const player = create_player({ ws, address: '0xme', admin: false, graph, pubsub })
     await flush()
     await embody(player)
-    player.on_message(JSON.stringify({ type: 'packet/fight_action', fight: '0xf1', action: { aim: 3 } }))
+    const action = { type: 'move_to', fighter: '0', path: ['7'] } as const
+    player.on_message(JSON.stringify({ type: 'packet/fight_action', fight: '0xf1', action }))
     expect(sent.find((packet) => packet.type === 'packet/error' && packet.reason === 'not in this fight')).toBeTruthy()
     pubsub.emitter.emit('evt:character:0xabc', { type: 'FighterJoined', data: { fight: '0xf1', character: '0xabc' } })
     await flush()
-    player.on_message(JSON.stringify({ type: 'packet/fight_action', fight: '0xf1', action: { aim: 3 } }))
+    player.on_message(JSON.stringify({ type: 'packet/fight_action', fight: '0xf1', action }))
     expect(published.some(({ channel }) => channel === 'act:fight:0xf1')).toBe(true)
     // another fighter's intent forwards; the own echo is silent
-    pubsub.emitter.emit('act:fight:0xf1', { address: '0xfoe', action: { move: 7 } })
+    pubsub.emitter.emit('act:fight:0xf1', { address: '0xfoe', action })
     expect(sent.find((packet) => packet.type === 'packet/fight_action')).toEqual({
       type: 'packet/fight_action',
       fight: '0xf1',
       from: '0xfoe',
-      action: { move: 7 },
+      action,
     })
   })
 })
@@ -220,9 +221,9 @@ describe('market + self stream + heartbeat', () => {
     const { sent, ws, graph, pubsub } = wire()
     const player = create_player({ ws, address: '0xme', admin: false, graph, pubsub })
     await flush()
-    player.on_message(JSON.stringify({ type: 'packet/market_observe', category: 'gear' }))
+    player.on_message(JSON.stringify({ type: 'packet/market_observe', category: 'helmet' }))
     await flush()
-    expect(sent.find((packet) => packet.type === 'packet/market_slice')).toMatchObject({ category: 'gear' })
+    expect(sent.find((packet) => packet.type === 'packet/market_slice')).toMatchObject({ category: 'helmet' })
     pubsub.emitter.emit('evt:economy', {
       type: 'MarketPurchased',
       data: { kiosk: '0xk', object: '0xi9', price_mist: '5000' },

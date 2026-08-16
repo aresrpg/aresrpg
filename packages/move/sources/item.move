@@ -28,11 +28,6 @@ const EWrongTemplate: u64 = 204;
 const EStackableStats: u64 = 205; // set_template_*: a stackable carries no stats/damages
 const EPlainNeedsRoll: u64 = 207; // mint_plain: a ranged template must roll — use `mint`
 const EInvalidStatRange: u64 = 206; // set_template_stats: a min above its max would poison every mint, forever
-const EBadConsumable: u64 = 208; // set_template_consumable: kind out of the sealed 0..4 range
-
-/// The consumable effect kinds: 0 heal · 1 reset-stat-points · 2 reset-spell-points ·
-/// 3 teleport-to-center · 4 GACHA (a lootbox — opened via `loot_box`, never the plain `consume`).
-const CONSUMABLE_KINDS: u8 = 5;
 
 // ╔════════════════ [ Types ] ════════════════════════════════════════════════ ]
 
@@ -72,10 +67,6 @@ public struct StatsMinKey() has copy, drop, store;
 public struct StatsMaxKey() has copy, drop, store;
 public struct StatsKey() has copy, drop, store;
 public struct DamagesKey() has copy, drop, store;
-public struct ConsumableKey() has copy, drop, store;
-
-/// A consumable's authored effect, frozen on its template. `kind` in the sealed 0..3 set.
-public struct ConsumableEffect has copy, drop, store { kind: u8, power: u32 }
 
 // one time witness
 public struct ITEM has drop {}
@@ -117,6 +108,11 @@ public(package) fun new_display(
 /// typed keys — one seeding, one seal, no slug collisions.
 public(package) fun registry_uid_mut(registry: &mut TemplateRegistry): &mut UID {
   &mut registry.id
+}
+
+/// Content modules attach their own typed facts while the template is still hot.
+public(package) fun template_uid_mut(template: &mut ItemTemplate): &mut UID {
+  &mut template.id
 }
 
 /// Is the seeding closed forever?
@@ -171,20 +167,6 @@ public(package) fun set_template_stats(template: &mut ItemTemplate, min: ItemSta
 public(package) fun set_template_damages(template: &mut ItemTemplate, lines: vector<ItemDamages>) {
   assert!(!is_stackable(template.category), EStackableStats);
   dfield::add(&mut template.id, DamagesKey(), lines);
-}
-
-/// Seeding: author a CONSUMABLE's effect on a hot template — `kind` in 0..3 (heal,
-/// reset-stats, reset-spells, teleport-center), `power` its magnitude (hp for heal, 0 else).
-/// The consume door reads it; the resolver lives in `consumable.move`.
-public(package) fun set_template_consumable(template: &mut ItemTemplate, kind: u8, power: u32) {
-  assert!(template.category == b"consumable".to_string(), EWrongCategory);
-  assert!(kind < CONSUMABLE_KINDS, EBadConsumable);
-  dfield::add(&mut template.id, ConsumableKey(), ConsumableEffect { kind, power });
-}
-
-public fun consumable_of(template: &ItemTemplate): (u8, u32) {
-  let e: &ConsumableEffect = dfield::borrow(&template.id, ConsumableKey());
-  (e.kind, e.power)
 }
 
 /// Seal a template forever — the chain rejects every future write, from anyone.
@@ -339,6 +321,10 @@ public(package) fun uid(self: &Item): &UID {
 public fun template(self: &Item): ID { self.template }
 
 public fun template_id(template: &ItemTemplate): ID { template.id.to_inner() }
+
+public(package) fun template_uid(template: &ItemTemplate): &UID { &template.id }
+
+public(package) fun template_is_stackable(template: &ItemTemplate): bool { is_stackable(template.category) }
 
 public fun template_type(template: &ItemTemplate): String { template.item_type }
 

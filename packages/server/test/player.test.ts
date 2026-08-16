@@ -2,8 +2,8 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 // The harness under the PUSH MODEL: connecting pushes the load snapshot (his characters + his
 // inventory, scoped to the CONNECTION address — never a caller-chosen one), his social channel
-// streams without being asked, admin packets gate on the whitelist, and garbage answers an
-// error without killing the connection. No player query surface exists at all.
+// streams without being asked, narrow custody reads are correlated and limited, admin packets
+// gate on the whitelist, and garbage answers an error without killing the connection.
 
 import { EventEmitter } from 'node:events'
 
@@ -11,6 +11,7 @@ import { describe, expect, test } from 'bun:test'
 import type { ServerPacket } from '@aresrpg/protocol'
 
 import { create_player } from '../src/player.ts'
+import { create_request_limiter } from '../src/request_limiter.ts'
 
 const wire = () => {
   const sent: ServerPacket[] = []
@@ -19,6 +20,8 @@ const wire = () => {
   const graph = {
     read: async (cypher: string, params?: Record<string, unknown>) => {
       queries.push({ cypher, params })
+      if (cypher.includes('WHERE c.owner IS NOT NULL'))
+        return [{ character_id: params?.character_id, name: 'nox', owner: '0xowner' }]
       if (cypher.includes(':FRIEND')) return [{ address: '0xpal', characters: ['nyx'] }]
       if (cypher.includes('HOLDS_CLAIM') || cypher.includes('HOLDS_VOUCHER')) return []
       if (cypher.includes(':Trade')) return []
@@ -120,6 +123,36 @@ describe('the player harness (push model)', () => {
     })
   })
 
+  test('a correlated request returns the current owner of a client-derived character id', async () => {
+    const { sent, ws, graph, pubsub } = wire()
+    const player = create_player({ ws, address: '0xme', admin: false, graph, pubsub })
+    await flush()
+    player.on_message(JSON.stringify({ type: 'packet/character_owner_request', id: 9, character_id: '0xabc' }))
+    await flush()
+    expect(sent.find((packet) => 'id' in packet && packet.id === 9)).toEqual({
+      type: 'packet/character_owner_response',
+      id: 9,
+      character_id: '0xabc',
+      name: 'nox',
+      owner: '0xowner',
+    })
+  })
+
+  test('all correlated requests share the injected global limiter', async () => {
+    const { sent, ws, graph, pubsub } = wire()
+    const request_limiter = create_request_limiter({ capacity: 1 })
+    const player = create_player({ ws, address: '0xme', admin: false, graph, pubsub, request_limiter })
+    await flush()
+    player.on_message(JSON.stringify({ type: 'packet/character_owner_request', id: 10, character_id: '0xabc' }))
+    player.on_message(JSON.stringify({ type: 'packet/character_owner_request', id: 11, character_id: '0xdef' }))
+    await flush()
+    expect(sent.find((packet) => 'id' in packet && packet.id === 11)).toEqual({
+      type: 'packet/error',
+      id: 11,
+      reason: 'rate limited',
+    })
+  })
+
   test('position folds into state — the tracking module reads it from there', async () => {
     const { ws, graph, pubsub } = wire()
     const player = create_player({ ws, address: '0xme', admin: false, graph, pubsub })
@@ -137,5 +170,25 @@ describe('the player harness (push model)', () => {
     player.on_message(JSON.stringify({ type: 'query', kind: 'characters' })) // the dead surface stays dead
     expect(sent.filter((packet) => packet.type === 'packet/error')).toHaveLength(2)
     player.on_close()
+  })
+
+  test('a per-connection flood is dropped before packet effects run', async () => {
+    const { sent, graph, pubsub } = wire()
+    const closed: string[] = []
+    const ws = {
+      send: (raw: string) => sent.push(JSON.parse(raw)),
+      close: (_code?: number, reason?: string) => closed.push(reason ?? ''),
+    }
+    const player = create_player({
+      ws,
+      address: '0xme',
+      admin: false,
+      graph,
+      pubsub,
+      realtime_limiter: create_request_limiter({ capacity: 1, window_ms: 1_000 }),
+    })
+    player.on_message(JSON.stringify({ type: 'packet/market_observe', category: null }))
+    player.on_message(JSON.stringify({ type: 'packet/market_observe', category: null }))
+    expect(closed).toEqual(['RATE_LIMIT'])
   })
 })

@@ -1,0 +1,106 @@
+{
+  "name": "@aresrpg/fight",
+  "version": "0.0.0",
+  "description": "AresRPG headless fight core \u2014 ONE state atom behind ONE input door: chain-log fold + settlement fold + presentation fold. Outputs projections and the first-class BEAT STREAM ({kind, at, duration, payload} rows) the renderer plays verbatim. Node-clean: zero DOM/React/three imports.",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "test": "bun test"
+  },
+  "engines": {
+    "node": ">=21.0.0"
+  },
+  "exports": {
+    "./envelope": {
+      "import": "./src/envelope.js"
+    },
+    "./classify_input": {
+      "import": "./src/classify_input.js"
+    },
+    "./capsule": {
+      "import": "./src/capsule.js"
+    },
+    "./core": {
+      "import": "./src/core.js"
+    },
+    "./bot": {
+      "import": "./src/bot/index.js"
+    },
+    "./inputs": {
+      "import": "./src/inputs.js"
+    },
+    "./store": {
+      "import": "./src/store.js"
+    },
+    "./present": {
+      "import": "./src/present.js"
+    },
+    "./project": {
+      "import": "./src/project.js"
+    },
+    "./weapon": {
+      "import": "./src/weapon.js"
+    },
+    "./weapon_lines": {
+      "import": "./src/weapon_lines.js"
+    },
+    "./txs": {
+      "import": "./src/txs.js"
+    },
+    "./board_state": {
+      "import": "./src/board_state.js"
+    },
+    "./fight_render_events": {
+      "import": "./src/fight_render_events.js"
+    },
+    "./turn_commit": {
+      "import": "./src/turn_commit.js"
+    },
+    "./fight_control": {
+      "import": "./src/fight_control.js"
+    },
+    "./fight_status_snapshot": {
+      "import": "./src/fight_status_snapshot.js"
+    },
+    "./statuses": {
+      "import": "./src/statuses.js"
+    },
+    "./los": {
+      "import": "./src/los.js"
+    },
+    "./occupancy": {
+      "import": "./src/occupancy.js"
+    },
+    "./draft_budget": {
+      "import": "./src/draft_budget.js"
+    },
+    "./predict_cast": {
+      "import": "./src/predict_cast.js"
+    },
+    "./sim_chain": {
+      "import": "./src/sim_chain.js"
+    },
+    "./trace_tap": {
+      "import": "./src/trace_tap.js"
+    },
+    "./journal_u64": {
+      "import": "./src/journal_u64.js"
+    },
+    "./journal_normalize": {
+      "import": "./src/journal_normalize.js"
+    },
+    "./result_record": {
+      "import": "./src/result_record.js"
+    },
+    "./cast_record": {
+      "import": "./src/cast_record.js"
+    }
+  },
+  "author": "AresRPG's Team",
+  "license": "SEE LICENSE IN LICENSE",
+  "dependencies": {
+    "@aresrpg/sdk": "workspace:*",
+    "@aresrpg/sim": "workspace:*",
+    "zustand": "^5.0.14"
+  }
+}

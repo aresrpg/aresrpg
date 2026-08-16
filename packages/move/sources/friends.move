@@ -27,6 +27,9 @@ const EListExists: u64 = 2101; // create: this address already has a list
 const ENotOwner: u64 = 2102; // add/remove: sender is not the list's owner
 const EAlreadyFriend: u64 = 2103; // add: already whitelisted — abort, never a silent no-op
 const ENotFriend: u64 = 2104; // remove: the address is not on the whitelist
+const EFriendLimit: u64 = 2105; // add: a personal whitelist is capped at 100 addresses
+
+const MAX_FRIENDS: u64 = 100;
 
 // ╔════════════════ [ Types ] ════════════════════════════════════════════════ ]
 
@@ -78,6 +81,7 @@ public(package) fun create(registry: &mut FriendRegistry, ctx: &TxContext) {
 public(package) fun add(list: &mut FriendList, addr: address, ctx: &TxContext) {
   assert!(list.owner == ctx.sender(), ENotOwner);
   assert!(!list.friends.contains(&addr), EAlreadyFriend);
+  assert!(list.friends.length() < MAX_FRIENDS, EFriendLimit);
   list.friends.insert(addr);
   event::emit(FriendAdded { list: object::id(list), who: addr });
 }

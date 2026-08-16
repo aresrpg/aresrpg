@@ -1,3 +1,0 @@
-// Bun Snapshot v1, https://bun.sh/docs/test/snapshots
-
-exports[`L4 · determinism — the seed is the whole fight the capsule trace digest is STABLE — pinned, so it holds across processes too 1`] = `"f6f50eea"`;

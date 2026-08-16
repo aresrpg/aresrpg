@@ -35,6 +35,7 @@ const EFFECT_EDGES = [
   '/scripts/',
   'vite.config',
   'generate-config',
+  'packages/server/src/index.', // the server's boot edge — Bun.serve + the cluster heartbeat
 ]
 
 const mutation_family_off = {

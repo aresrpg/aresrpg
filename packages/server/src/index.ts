@@ -1,19 +1,20 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-// BOOT + THE UPGRADE DOOR (legacy index.js pattern): one Bun server, one route class — the
-// zkLogin-verified websocket upgrade. The login proof rides the query string
-// (?address&bytes&signature&uuid, one-step door); anything unverified is dropped before a
-// single byte of game traffic. One connection per address: a newcomer evicts the elder.
+// BOOT + THE LEGACY ADMISSION DOOR: transport upgrades with an address, receives a fresh
+// challenge, and becomes a player only after its signature verifies on that exact socket.
 
 import type { ServerWebSocket } from 'bun'
+import { isValidSuiAddress, normalizeSuiAddress } from '@mysten/sui/utils'
 
-import { PORT, ADMIN_ADDRESSES, MAX_PLAYERS, SERVER_ID } from './env.ts'
+import { PORT, ADMIN_ADDRESSES, ALLOWED_ORIGINS, MAX_PLAYERS, SERVER_ID } from './env.ts'
 import { verify_login } from './auth.ts'
+import { create_authenticated_connection, type AuthenticatedConnection } from './connection.ts'
 import { graph } from './graph.ts'
 import { pubsub } from './pubsub.ts'
 import { mesh } from './protocol.ts'
 import { create_player, type Player } from './player.ts'
 import logger from './logger.ts'
+import { create_request_limiter } from './request_limiter.ts'
 
 const log = logger(import.meta)
 
@@ -21,6 +22,16 @@ type Connection = ServerWebSocket<{ address: string }>
 
 /** address → the live seat (one per address; a second login evicts the first) */
 const connections = new Map<string, { ws: Connection; player: Player }>()
+const pending = new Set<Connection>()
+const handlers = new Map<Connection, AuthenticatedConnection>()
+const upgrading = new Map<string, number>()
+const upgrading_count = (): number => [...upgrading.values()].reduce((total, count) => total + count, 0)
+const decrement_upgrade = (address: string): void => {
+  const count = upgrading.get(address) ?? 0
+  if (count <= 1) upgrading.delete(address)
+  else upgrading.set(address, count - 1)
+}
+const request_limiter = create_request_limiter()
 
 // ── the cluster half (per-POD, legacy law): the 20s-TTL heartbeat key any pod count sums,
 //    and the player_connect beacon that evicts a duplicate login on ANOTHER pod ──
@@ -45,38 +56,63 @@ const server = Bun.serve<{ address: string }>({
     if (url.pathname === '/health') return new Response('ok')
     if (url.pathname !== '/') return new Response('not found', { status: 404 })
 
-    const address = url.searchParams.get('address')?.toLowerCase()
-    const bytes = url.searchParams.get('bytes')
-    const signature = url.searchParams.get('signature')
-    const uuid = url.searchParams.get('uuid')
-    if (!address || !bytes || !signature || !uuid) return new Response('missing login proof', { status: 401 })
-
-    const verified = await verify_login({ bytes, signature, address, uuid })
-    if (!verified) return new Response('refused', { status: 401 })
-    if (connections.size >= MAX_PLAYERS && !connections.has(address))
+    const origin = request.headers.get('origin')?.replace(/\/+$/, '')
+    if (!origin || !ALLOWED_ORIGINS.has(origin)) return new Response('origin refused', { status: 403 })
+    const claimed_address = url.searchParams.get('address')
+    if (!claimed_address || !isValidSuiAddress(claimed_address)) return new Response('invalid address', { status: 401 })
+    const address = normalizeSuiAddress(claimed_address)
+    if (connections.size + pending.size + upgrading_count() >= MAX_PLAYERS && !connections.has(address))
       return new Response('server full', { status: 503 })
 
+    upgrading.set(address, (upgrading.get(address) ?? 0) + 1)
     const upgraded = bun_server.upgrade(request, { data: { address } })
+    if (!upgraded) decrement_upgrade(address)
     return upgraded ? undefined : new Response('upgrade failed', { status: 500 })
   },
   websocket: {
+    maxPayloadLength: 64 * 1024,
     open(ws: Connection) {
       const { address } = ws.data
-      connections.get(address)?.ws.close(1000, 'REPLACED')
-      const player = create_player({ ws, address, admin: ADMIN_ADDRESSES.has(address), graph, pubsub })
-      connections.set(address, { ws, player })
-      void pubsub.publish(mesh.player_connect, { address, server_id: SERVER_ID })
-      log.info({ address }, 'player connected')
+      decrement_upgrade(address)
+      pending.add(ws)
+      handlers.set(
+        ws,
+        create_authenticated_connection({
+          address,
+          send: (packet) => void ws.send(JSON.stringify(packet)),
+          close: (code, reason) => ws.close(code, reason),
+          verify: verify_login,
+          promote: () => {
+            pending.delete(ws)
+            if (connections.size >= MAX_PLAYERS && !connections.has(address)) return null
+            connections.get(address)?.ws.close(1000, 'REPLACED')
+            const player = create_player({
+              ws,
+              address,
+              admin: ADMIN_ADDRESSES.has(address),
+              graph,
+              pubsub,
+              request_limiter,
+            })
+            connections.set(address, { ws, player })
+            void pubsub.publish(mesh.player_connect, { address, server_id: SERVER_ID })
+            log.info({ address }, 'player connected')
+            return player
+          },
+        })
+      )
     },
     message(ws: Connection, raw) {
-      connections.get(ws.data.address)?.player.on_message(raw)
+      void handlers.get(ws)?.on_message(raw)
     },
     close(ws: Connection) {
+      pending.delete(ws)
       const { address } = ws.data
+      handlers.get(ws)?.on_close()
+      handlers.delete(ws)
       const seat = connections.get(address)
       if (seat?.ws !== ws) return // an evicted elder closing late must not tear down its replacement
       connections.delete(address)
-      seat.player.on_close()
       log.info({ address }, 'player disconnected')
     },
   },

@@ -1,0 +1,55 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
+
+export type CharacterModelBasenames = Readonly<{ body: string; hair?: string }>
+type WornItem = Readonly<{ item_type: string; category: string }>
+
+const SENSHI_MODELS = Object.freeze({
+  male: Object.freeze({ body: 'senshi_male', hair: 'senshi_male_hair' }),
+  female: Object.freeze({ body: 'senshi_female', hair: 'senshi_female_hair' }),
+})
+
+const CHARACTER_MODELS: Readonly<
+  Record<string, Readonly<{ male: CharacterModelBasenames; female: CharacterModelBasenames }>>
+> = Object.freeze({
+  senshi: SENSHI_MODELS,
+  shugo: Object.freeze({
+    male: Object.freeze({ body: 'shugo_male' }),
+    female: Object.freeze({ body: 'shugo_female' }),
+  }),
+  tomoda: Object.freeze({
+    male: Object.freeze({ body: 'tomoda_male' }),
+    female: Object.freeze({ body: 'tomoda_female', hair: 'tomoda_female_hair' }),
+  }),
+  yajin: Object.freeze({
+    male: Object.freeze({ body: 'yajin_male', hair: 'yajin_male_hair' }),
+    female: Object.freeze({ body: 'yajin_female', hair: 'yajin_female_hair' }),
+  }),
+})
+
+export const character_model_basenames = (classe: string, male: boolean): CharacterModelBasenames =>
+  CHARACTER_MODELS[classe.toLowerCase()]?.[male ? 'male' : 'female'] ?? SENSHI_MODELS[male ? 'male' : 'female']
+
+export const resolve_cosmetic_variant = (item_type: string, basename: string): string | null => {
+  if (item_type === basename) return basename === 'capuche_bara' ? 'base' : null
+  const prefix = `${basename}_`
+  if (!item_type.startsWith(prefix)) return null
+  const variant = item_type.slice(prefix.length)
+  if (basename === 'capuche_bara' && variant === 'wisdom') return 'moonstone'
+  return variant || null
+}
+
+export const cosmetic_model_of = (
+  item: WornItem,
+  available: ReadonlySet<string>
+): Readonly<{ basename: string; variant: string | null }> | null => {
+  if (item.category !== 'hat' && item.category !== 'cloak') return null
+  const [basename] = [...available]
+    .filter((candidate) => item.item_type === candidate || item.item_type.startsWith(`${candidate}_`))
+    .toSorted((left, right) => right.length - left.length)
+  if (!basename) return null
+  return Object.freeze({
+    basename,
+    variant: resolve_cosmetic_variant(item.item_type, basename),
+  })
+}

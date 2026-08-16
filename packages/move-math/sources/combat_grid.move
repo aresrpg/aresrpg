@@ -102,6 +102,21 @@ public fun mask_get(mask: &vector<u64>, cell: u64): bool {
   (mask[w] >> ((cell % 64) as u8)) & 1 == 1
 }
 
+/// Does `path` describe an exact walk from `start` within `max_steps`? The caller chooses
+/// every orthogonal step; this validates that choice without replacing it with a BFS tie-break.
+public fun path_is_walkable(start: u64, path: &vector<u64>, wall_mask: &vector<u64>, max_steps: u64): bool {
+  if (!in_grid(start) || path.length() > max_steps) return false;
+  let mut previous = start;
+  let mut i = 0;
+  while (i < path.length()) {
+    let cell = path[i];
+    if (!in_grid(cell) || mask_get(wall_mask, cell) || manhattan(previous, cell) != 1) return false;
+    previous = cell;
+    i = i + 1;
+  };
+  true
+}
+
 // ╔════════════════ [ BFS — pathing over a wall bitset ] ═════════════════════ ]
 
 /// The 4-connected shortest-path STEP COUNT from `start` to `target` around `wall_mask`

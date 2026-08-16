@@ -18,9 +18,11 @@ const ENotInWorld: u64 = 303;
 const EOutOfBounds: u64 = 304;
 const ETravelTooFar: u64 = 305;
 
-const WORLD_SIZE: u32 = 500_000;
+/// Worlds are BOUNDED at 100k × 100k (owner 2026-08-14) — small enough that the biome map
+/// covers EVERY zone (196² cells), so the chain's biome truth is total, never approximate.
+const WORLD_SIZE: u32 = 100_000;
 /// Chain coords are unsigned — the center maps to the client's 0;0 (the corner-bug law).
-const WORLD_CENTER: u32 = 250_000;
+const WORLD_CENTER: u32 = 50_000;
 /// Game-wide, blocks/sec ×100 fixed-point — engine RUN_SPEED 10.5 b/s +10% terrain slack.
 const SPEED_BUDGET: u64 = 1150;
 const SPEED_SCALE: u64 = 100_000; // ÷100 (fixed-point) then ÷1000 (ms→s)
@@ -40,6 +42,22 @@ public struct World has key {
   resources: vector<ResourceRow>,
   dungeon_key: Option<String>, // the key item's slug — a key burns to enter this world's dungeon
   dungeon_rooms: vector<DungeonRoom>, // the room sequence; last room carries the boss (empty = no dungeon)
+  biome_map: BiomeMap, // one biome id per zone — the spawn filter's ground truth
+}
+
+/// The world's biome grid at ZONE granularity, derived by the seeding from the terrain
+/// recipe (the engine's own sampler — parity by construction, never a second implementation).
+/// Biome id = index into the recipe's biome array. An EMPTY map (side 0) reads 0 everywhere:
+/// a world without a terrain recipe seeds its mobs as biome 0 — "the whole world" — so
+/// map-less worlds spawn exactly as before. A seeded map covers the WHOLE bounded world
+/// (window (0,0) side 196 ≥ every zone of a 100k world); its cells exceed the 16,384-byte
+/// pure-argument cap, so the seeding declares the window once and APPENDS cell slices —
+/// atomic when the calls share one PTB. Edge clamping survives only as a never-hit guard.
+public struct BiomeMap has copy, drop, store {
+  zone_x0: u32, // window origin, in zone coords
+  zone_z0: u32,
+  side: u16, // window is side × side zones; 0 = no map
+  cells: vector<u8>, // row-major [ (zz - zone_z0) * side + (zx - zone_x0) ]
 }
 
 /// One dungeon room: the mobs seated when it is engaged (the last room's list carries the
@@ -53,24 +71,29 @@ public struct RoomMob has copy, drop, store {
   level_scalar: u8,
 }
 
-/// A mob family living in this world. Weight biases the zone's family draw; group SIZE and
-/// COMPOSITION are not authored — they roll from distance + the zone seed (ruling 2026-08-09),
-/// mixing families freely. Bosses never roam (dungeon rooms, always alone).
+/// A mob family of this world and the biomes it roams (ruling 2026-08-14: the config is the
+/// only spawn limit; one row per mob — a mob needing DIFFERENT weights per biome is two rows
+/// with disjoint biome lists). Weight biases every family pick among the zone's biome rows.
+/// Group SIZE and COMPOSITION are not authored — they roll from distance + the zone seed
+/// (ruling 2026-08-09), mixing families freely. Bosses never roam (dungeon rooms, always alone).
 public struct MobRow has copy, drop, store {
   mob_type: String,
   weight_bp: u16,
+  biomes: vector<u8>, // every biome id this mob spawns in ([0] = whole world while the map is empty)
 }
 
-/// A gatherable resource: which item mints, which tool works it, its tier, the protector
+/// A gatherable resource: which item mints, which JOB works it, its tier, the protector
 /// mob that may ambush (the 2% law lives in gathering), and the GOLDEN-GATHER rare variant
 /// (the 0.1% additive jackpot; empty = none). No rate — abundance grows with distance from
 /// the center (distance IS the rate).
 public struct ResourceRow has copy, drop, store {
   item_type: String,
-  tool: String, // tool_farmer | tool_herbalist | tool_miner
+  job: String, // FARMER | HERBALIST | MINER (the tool derives — tool_of_job)
   tier: u8,
   protector: String, // mob_type; empty = this resource never ambushes
   rare_item_type: String, // the linked rare variant; empty = no jackpot draw
+  biomes: vector<u8>, // every biome id this resource spawns in ([0] = whole world while the
+  // map is empty) — ONE row per resource, so divergent per-biome copies cannot exist
 }
 
 /// DF key on the character → the world it is in NOW (a `String` world name).
@@ -101,6 +124,7 @@ fun init(ctx: &mut TxContext) {
       resources: vector[],
       dungeon_key: option::none(),
       dungeon_rooms: vector[],
+      biome_map: BiomeMap { zone_x0: 0, zone_z0: 0, side: 0, cells: vector[] },
     });
   };
 }
@@ -108,27 +132,45 @@ fun init(ctx: &mut TxContext) {
 // ╔════════════════ [ Content authoring (seeding doors, sealed with the rest) ] ═══════ ]
 
 const EInvalidRate: u64 = 306; // authoring: a zero or >100% family weight
-const EInvalidTool: u64 = 308; // authoring: not one of the 3 tool slugs
+const EInvalidBiomeMap: u64 = 311; // authoring: cells do not fill the declared side × side window
+const EInvalidJob: u64 = 308; // authoring: not one of the 3 gathering jobs
 const ENoSuchResource: u64 = 309; // resource_row_of: this world does not spawn that resource
 const EEmptyRoom: u64 = 310; // new_dungeon_room: a room with no mobs is meaningless
 
-public fun new_mob_row(mob_type: String, weight_bp: u16): MobRow {
+public fun new_mob_row(mob_type: String, weight_bp: u16, biomes: vector<u8>): MobRow {
   assert!(weight_bp > 0 && weight_bp <= 10000, EInvalidRate);
-  MobRow { mob_type, weight_bp }
+  assert!(!biomes.is_empty(), EInvalidRate);
+  MobRow { mob_type, weight_bp, biomes }
+}
+
+/// Declare the map window and clear any previous cells — the seeding's first map call.
+public(package) fun set_biome_map_window(world: &mut World, zone_x0: u32, zone_z0: u32, side: u16) {
+  world.biome_map = BiomeMap { zone_x0, zone_z0, side, cells: vector[] };
+}
+
+/// Append one slice of cells. A full 196² map exceeds Sui's 16,384-byte pure-argument cap,
+/// so the seeding uploads slices — window + appends share one PTB, so the partial state is
+/// never observable between transactions (and `biome_of_zone` aborts on it regardless).
+public(package) fun append_biome_map_cells(world: &mut World, cells: vector<u8>) {
+  world.biome_map.cells.append(cells);
+  let side = world.biome_map.side as u64;
+  assert!(world.biome_map.cells.length() <= side * side, EInvalidBiomeMap);
 }
 
 public fun new_resource_row(
   item_type: String,
-  tool: String,
+  job: String,
   tier: u8,
   protector: String,
   rare_item_type: String,
+  biomes: vector<u8>,
 ): ResourceRow {
   assert!(
-    tool == b"tool_farmer".to_string() || tool == b"tool_herbalist".to_string() || tool == b"tool_miner".to_string(),
-    EInvalidTool,
+    job == b"FARMER".to_string() || job == b"HERBALIST".to_string() || job == b"MINER".to_string(),
+    EInvalidJob,
   );
-  ResourceRow { item_type, tool, tier, protector, rare_item_type }
+  assert!(!biomes.is_empty(), EInvalidRate);
+  ResourceRow { item_type, job, tier, protector, rare_item_type, biomes }
 }
 
 /// Overwrite-while-unsealed: the seeding may correct itself until the seal; then never again.
@@ -185,15 +227,38 @@ public fun mob_row_type(row: &MobRow): String { row.mob_type }
 
 public fun mob_row_weight_bp(row: &MobRow): u16 { row.weight_bp }
 
+public fun mob_row_biomes(row: &MobRow): vector<u8> { row.biomes }
+
+/// The biome of zone (zx, zz) — the ONE read every spawn filter goes through. An empty map
+/// answers 0 for every zone. A seeded map covers every zone of the bounded world, so the
+/// edge clamp below is a never-hit guard, not a semantic.
+public fun biome_of_zone(world: &World, zx: u32, zz: u32): u8 {
+  let map = &world.biome_map;
+  if (map.side == 0) return 0;
+  // A declared window with missing cells is a half-run seeding — abort loudly rather than
+  // serve a wrong biome (the whole design is that the chain's biome truth is TOTAL).
+  assert!(map.cells.length() == (map.side as u64) * (map.side as u64), EInvalidBiomeMap);
+  let last = (map.side as u32) - 1;
+  let cx = clamp_to_window(zx, map.zone_x0, last);
+  let cz = clamp_to_window(zz, map.zone_z0, last);
+  map.cells[(cz as u64) * (map.side as u64) + (cx as u64)]
+}
+
+fun clamp_to_window(zone: u32, origin: u32, last: u32): u32 {
+  if (zone <= origin) 0 else if (zone - origin >= last) last else zone - origin
+}
+
 public fun resource_row_type(row: &ResourceRow): String { row.item_type }
 
-public fun resource_row_tool(row: &ResourceRow): String { row.tool }
+public fun resource_row_job(row: &ResourceRow): String { row.job }
 
 public fun resource_row_tier(row: &ResourceRow): u8 { row.tier }
 
 public fun resource_row_protector(row: &ResourceRow): String { row.protector }
 
 public fun resource_row_rare(row: &ResourceRow): String { row.rare_item_type }
+
+public fun resource_row_biomes(row: &ResourceRow): vector<u8> { row.biomes }
 
 /// The authored row for a resource type — gathering's gates read it. Aborts when the world
 /// does not spawn this resource (a derived pack always has its row; absence is a code bug).
