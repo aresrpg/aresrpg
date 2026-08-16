@@ -101,6 +101,6 @@
   "dependencies": {
     "@aresrpg/sdk": "workspace:*",
     "@aresrpg/sim": "workspace:*",
-    "zustand": "^5.0.14"
+    "zustand": "^5.0.15"
   }
 }

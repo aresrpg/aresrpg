@@ -30,6 +30,6 @@
   "author": "AresRPG's Team",
   "license": "SEE LICENSE IN LICENSE",
   "dependencies": {
-    "zustand": "^5.0.14"
+    "zustand": "^5.0.15"
   }
 }
