@@ -7,7 +7,10 @@ import { compile_materials, validate_materials } from '../src/world_materials.ts
 
 describe('world materials', () => {
   test('compiles arbitrary names without assigning engine semantics', () => {
-    const materials = compile_materials({ basalt: '#102030', amber: '#ffbf00' })
+    const materials = compile_materials({
+      basalt: { color: '#102030', preset: 'stone' },
+      amber: { color: '#ffbf00', preset: 'sand' },
+    })
 
     expect(materials.id_for('basalt')).toBe(1)
     expect(materials.colors[0]).toEqual([0, 0, 0])
@@ -21,27 +24,35 @@ describe('world materials', () => {
   })
 
   test('keeps exactly one palette entry per authored color', () => {
-    const materials = compile_materials({ moss: '#5c8c3c' })
+    const materials = compile_materials({ moss: { color: '#5c8c3c', preset: 'grass' } })
 
     expect(materials.colors).toHaveLength(2)
     expect(materials.id_for('moss')).toBe(1)
     expect(() => materials.id_for('missing')).toThrow('unknown world material "missing"')
   })
 
-  test('rejects wrappers and malformed colors at the recipe boundary', () => {
+  test('requires one base color and one engine-owned appearance preset', () => {
     expect(
       validate_materials({
-        mist: '#abc',
+        mist: { color: '#abc', preset: 'water' },
         empty: {},
-        moss: {
-          color: {
-            cold_dry: '#000000',
-            cold_wet: '#0000ff',
-            hot_dry: '#ff0000',
-            hot_wet: '#ffffff',
-          },
-        },
+        moss: { color: '#5c8c3c', preset: 'velvet' },
+        legacy: '#ffffff',
       })
-    ).toEqual(['materials.mist must be #rrggbb', 'materials.empty must be #rrggbb', 'materials.moss must be #rrggbb'])
+    ).toEqual([
+      'materials.mist.color must be #rrggbb',
+      'materials.empty.color must be #rrggbb',
+      'materials.empty.preset must be one of stone, earth, grass, sand, snow, ice, water',
+      'materials.moss.preset must be one of stone, earth, grass, sand, snow, ice, water',
+      'materials.legacy must contain color and preset',
+    ])
+  })
+
+  test('refuses recipes that cannot fit the guaranteed WebGPU texture-array floor', () => {
+    const materials = Object.fromEntries(
+      Array.from({ length: 64 }, (_, index) => [`material_${index}`, { color: '#808080', preset: 'stone' as const }])
+    )
+
+    expect(() => compile_materials(materials)).toThrow('compiled world materials exceed 63 appearance uses')
   })
 })

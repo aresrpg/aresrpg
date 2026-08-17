@@ -54,6 +54,22 @@ const game_from_pins = (pins: DeploymentPins): GameDeployment => {
   })
 }
 
+export const package_upgrade_steps = (
+  current_version: number,
+  math_version: number,
+  game_version: number
+): Readonly<{ target_version: number; upgrade_math: boolean; upgrade_game: boolean }> => {
+  const target_version = current_version + 1
+  if (math_version > target_version || game_version > target_version)
+    throw new Error('Package UpgradeCaps are ahead of the next game version')
+  if (game_version > math_version) throw new Error('The game package cannot be newer than its math dependency')
+  return Object.freeze({
+    target_version,
+    upgrade_math: math_version < target_version,
+    upgrade_game: game_version < target_version,
+  })
+}
+
 // eslint-disable-next-line complexity -- The reducer routes one discriminated deployment lifecycle without nested effects.
 export const reduce_admin_deployment = (admin: AdminState, input: AppInput): AdminState | null => {
   const update = (deployment: AdminDeploymentState): AdminState =>
@@ -102,6 +118,66 @@ export const reduce_admin_deployment = (admin: AdminState, input: AppInput): Adm
         error: null,
       })
     )
+  if (
+    input.type === 'admin/contracts_upgrade' &&
+    ['ready', 'failed'].includes(admin.deployment.status) &&
+    deployment_bootstrapped(admin.deployment.pins) &&
+    admin.deployment.paused === false
+  )
+    return update(Object.freeze({ ...admin.deployment, status: 'upgrading', operation: 'upgrade', error: null }))
+  if (input.type === 'admin/contracts_upgraded' && admin.deployment.operation === 'upgrade')
+    return update(
+      Object.freeze({
+        ...admin.deployment,
+        status: 'ready',
+        revision: input.revision,
+        pins: input.pins,
+        operation: null,
+        paused: false,
+        error: null,
+      })
+    )
+  if (input.type === 'admin/republish_armed' && ['ready', 'failed'].includes(admin.deployment.status))
+    return update(Object.freeze({ ...admin.deployment, republish_armed: input.armed }))
+  if (
+    input.type === 'admin/contracts_republish' &&
+    ['ready', 'failed'].includes(admin.deployment.status) &&
+    admin.deployment.republish_armed &&
+    !!admin.deployment.pins?.package
+  )
+    return update(
+      Object.freeze({
+        ...admin.deployment,
+        status: 'resetting',
+        operation: 'republish',
+        republish_armed: false,
+        error: null,
+      })
+    )
+  if (input.type === 'admin/contracts_republished' && admin.deployment.operation === 'republish') {
+    const deployment = Object.freeze({
+      ...admin.deployment,
+      status: 'ready' as const,
+      revision: input.revision,
+      pins: input.pins,
+      artifact: null,
+      paused: null,
+      operation: null,
+      error: null,
+    })
+    return Object.freeze({
+      ...admin,
+      deployment,
+      config: seed_config_from(deployment),
+      snapshot: null,
+      status: 'idle',
+      operation: null,
+      progress: null,
+      cleanup: 'unknown',
+      seal_armed: false,
+      error: null,
+    })
+  }
   if (input.type === 'admin/game_pause' && admin.deployment.status === 'ready' && admin.deployment.pins?.package)
     return update(
       Object.freeze({
@@ -119,7 +195,7 @@ export const reduce_admin_deployment = (admin: AdminState, input: AppInput): Adm
     return update(Object.freeze({ ...admin.deployment, paused: input.paused }))
   if (
     input.type === 'admin/deployment_failed' &&
-    ['loading', 'compiling', 'publishing', 'operating'].includes(admin.deployment.status)
+    ['loading', 'compiling', 'publishing', 'upgrading', 'resetting', 'operating'].includes(admin.deployment.status)
   )
     return update(Object.freeze({ ...admin.deployment, status: 'failed', operation: null, error: input.error }))
   return null
@@ -225,7 +301,11 @@ export const observe_admin_deployment = ({
             const math_result = await connected.publish_contract(math_artifact!)
             math = project_math_deployment(math_result.receipt)
             log(`Math package published · ${receipt_digest(math_result.receipt)}`, 'success')
-            await save({ math_package: math.package, math_upgrade_cap: math.upgrade_cap })
+            await save({
+              math_package: math.package,
+              math_package_original: math.package,
+              math_upgrade_cap: math.upgrade_cap,
+            })
           }
 
           let game = deployment.pins?.package ? game_from_pins(deployment.pins) : null
@@ -243,6 +323,7 @@ export const observe_admin_deployment = ({
             log(`Game package published · ${receipt_digest(game_result.receipt)}`, 'success')
             await save({
               package: game.package,
+              package_original: game.package,
               kiosk_package: game.kiosk_package,
               upgrade_cap: game_package.upgrade_cap,
               admin_cap: game.admin_cap,
@@ -267,9 +348,139 @@ export const observe_admin_deployment = ({
           const { network } = deployment
           if (!network) throw new Error('The deployment network is unavailable')
           const pins = (saved.pins as Record<'testnet' | 'mainnet', DeploymentPins>)[network]
+          log('Reload the app before making player transactions against this deployment.')
           dispatch({ type: 'admin/contracts_published', pins, revision: String(saved.revision) })
         }
       )
+      .catch(fail)
+  }
+  const upgrade = (): void => {
+    const { deployment, wallet } = get_state().admin
+    const connected = wallet.session
+    const { pins } = deployment
+    if (
+      !connected ||
+      !pins?.package ||
+      !pins.math_package ||
+      !pins.upgrade_cap ||
+      !pins.math_upgrade_cap ||
+      !pins.version.id ||
+      !pins.admin_cap
+    )
+      return fail(new Error('A complete deployment and connected admin wallet are required'))
+    const { math_upgrade_cap, upgrade_cap: game_upgrade_cap, admin_cap } = pins
+    const { id: version } = pins.version
+    const math_original = pins.math_package_original ?? pins.math_package
+    const game_original = pins.package_original ?? pins.package
+    void import('@aresrpg/sdk/deployment-admin')
+      .then(async ({ project_package_id }) => {
+        let { revision } = deployment
+        const save = async (patch: Readonly<Record<string, unknown>>) => {
+          const saved = await request('PUT', { revision, patch })
+          revision = String(saved.revision)
+          return saved
+        }
+        const current_version = await connected.read_game_version(version)
+        if (current_version === 0) throw new Error('Resume the game before upgrading it')
+        const [math_cap, game_cap] = await Promise.all([
+          connected.read_package_upgrade(math_upgrade_cap),
+          connected.read_package_upgrade(game_upgrade_cap),
+        ])
+        const steps = package_upgrade_steps(current_version, math_cap.version, game_cap.version)
+        const { target_version } = steps
+        let math_package = math_cap.package
+        let package_id = game_cap.package
+        let saved = await save({
+          math_package,
+          math_package_original: math_original,
+          package: package_id,
+          package_original: game_original,
+        })
+
+        if (steps.upgrade_math) {
+          log('Compiling the math upgrade…')
+          const math_compiled = await request('POST', {
+            action: 'compile_math_upgrade',
+            math: {
+              package: math_cap.package,
+              original_package: math_original,
+              upgrade_cap: math_upgrade_cap,
+            },
+          })
+          if (!math_compiled.artifact || typeof math_compiled.artifact !== 'object')
+            throw new Error('The compiler returned no math upgrade artifact')
+          log('Upgrading the math package; confirm the wallet transaction…')
+          const math_result = await connected.upgrade_contract({
+            artifact: math_compiled.artifact as ContractArtifact,
+            upgrade_cap: math_upgrade_cap,
+          })
+          math_package = project_package_id(math_result.receipt)
+          log(`Math package upgraded · ${receipt_digest(math_result.receipt)}`, 'success')
+          saved = await save({ math_package, math_package_original: math_original })
+        } else log(`Math package already upgraded for version ${target_version}; resuming.`, 'success')
+
+        if (steps.upgrade_game) {
+          log('Compiling the game against the upgraded math package…')
+          const game_compiled = await request('POST', {
+            action: 'compile_game_upgrade',
+            current_version,
+            math: {
+              package: math_package,
+              original_package: math_original,
+              upgrade_cap: math_upgrade_cap,
+            },
+            game: {
+              package: game_cap.package,
+              original_package: game_original,
+              upgrade_cap: game_upgrade_cap,
+            },
+          })
+          if (!game_compiled.artifact || typeof game_compiled.artifact !== 'object')
+            throw new Error('The compiler returned no game upgrade artifact')
+          log('Upgrading the game package; confirm the wallet transaction…')
+          const game_result = await connected.upgrade_contract({
+            artifact: game_compiled.artifact as ContractArtifact,
+            upgrade_cap: game_upgrade_cap,
+          })
+          package_id = project_package_id(game_result.receipt)
+          log(`Game package upgraded · ${receipt_digest(game_result.receipt)}`, 'success')
+          saved = await save({ package: package_id, package_original: game_original })
+        } else log(`Game package already upgraded for version ${target_version}; resuming.`, 'success')
+
+        log('Activating the new game version; confirm the wallet transaction…')
+        const activation = await connected.set_game_paused({
+          package_id,
+          version,
+          admin_cap,
+          paused: false,
+        })
+        log(`Game version activated · ${activation.digest}`, 'success')
+        const { network } = deployment
+        if (!network) throw new Error('The deployment network is unavailable')
+        const saved_pins = (saved.pins as Record<'testnet' | 'mainnet', DeploymentPins>)[network]
+        log('Reload the app before making player transactions against this deployment.')
+        dispatch({ type: 'admin/contracts_upgraded', pins: saved_pins, revision: String(saved.revision) })
+      })
+      .catch(fail)
+  }
+  const republish = (): void => {
+    const { deployment, wallet, config } = get_state().admin
+    const connected = wallet.session
+    if (!connected || !deployment.pins) return fail(new Error('Connect the admin wallet before republishing'))
+    log('Closing any temporary seed session before abandoning this deployment…')
+    void import('./seed_content.ts')
+      .then(async ({ seed_content }) => {
+        const session = await connected.create_seed_admin(seed_content, config, deployment.pins ?? undefined)
+        await session.release?.()
+        log('Temporary seed session closed.', 'success')
+        const saved = await request('POST', { action: 'reset', revision: deployment.revision })
+        const { network } = deployment
+        if (!network) throw new Error('The deployment network is unavailable')
+        const pins = (saved.pins as Record<'testnet' | 'mainnet', DeploymentPins>)[network]
+        log('Local deployment pins cleared. Old chain objects remain immutable.', 'success')
+        log('Recreate the local FalkorDB/indexer before indexing the replacement package.')
+        dispatch({ type: 'admin/contracts_republished', pins, revision: String(saved.revision) })
+      })
       .catch(fail)
   }
   const change_pause = (): void => {
@@ -296,6 +507,8 @@ export const observe_admin_deployment = ({
     if (deployment.status === 'loading' && previous_deployment.status !== 'loading') return load()
     if (deployment.status === 'compiling' && previous_deployment.status !== 'compiling') return compile()
     if (deployment.status === 'publishing' && previous_deployment.status !== 'publishing') return publish()
+    if (deployment.status === 'upgrading' && previous_deployment.status !== 'upgrading') return upgrade()
+    if (deployment.status === 'resetting' && previous_deployment.status !== 'resetting') return republish()
     if (deployment.status === 'operating' && previous_deployment.status !== 'operating') return change_pause()
     if (
       deployment.status === 'ready' &&

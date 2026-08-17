@@ -3,55 +3,70 @@
 
 import { describe, expect, test } from 'bun:test'
 
-import { generate_chunk } from '../src/terrain_generator.ts'
-import { compile_world_recipe, type WorldRecipe } from '../src/world_recipe.ts'
+import { chunk_origin, generate_chunk, surface_chunk_layers } from '../src/terrain_generator.ts'
+import { BIOME_SLOTS, compile_world_recipe, type WorldRecipe } from '../src/world_recipe.ts'
 
 const WORLD = compile_world_recipe({
   seed: 'terrain-test',
   sea_level: 8,
-  vertical_chunks: [0],
   materials: {
-    rock: '#787878',
-    soil: '#6e4f38',
-    meadow: '#5c8c3c',
-    blades: '#668844',
+    rock: { color: '#787878', preset: 'stone' },
+    soil: { color: '#6e4f38', preset: 'earth' },
+    meadow: { color: '#5c8c3c', preset: 'grass' },
+    blades: { color: '#668844', preset: 'grass' },
   },
-  noise: Object.fromEntries(
-    ['temperature', 'humidity', 'continentalness', 'erosion', 'weirdness'].map((name) => [
-      name,
-      { period: 256, octaves: 2 },
-    ])
-  ) as WorldRecipe['noise'],
-  splines: {
-    continentalness_to_base: [
-      [0, 0],
-      [1, 20],
-    ],
-    erosion_to_amplitude: [
-      [0, 8],
-      [1, 1],
-    ],
-    pv_to_relief: [
-      [0, -0.2],
-      [1, 1],
-    ],
-  },
-  biome_selection: {
-    axis_weights: { temperature: 1, humidity: 1, continentalness: 0.6, erosion: 0.5, pv: 0.4 },
-    blend_k: 1,
-    transition_softness: 0.6,
-  },
+  biome_slots: Object.fromEntries(BIOME_SLOTS.map((slot) => [slot, 'test'])) as WorldRecipe['biome_slots'],
   biomes: [
     {
       name: 'test',
-      climate: { temperature: 0.5, humidity: 0.5, continentalness: 0.5, erosion: 0.5, pv: 0.5 },
-      weight: 1,
-      land: { surface: 'meadow', subsurface: 'soil', filler: 'rock' },
+      landscape: [
+        { x: 0, y: 0, land: { surface: 'meadow', subsurface: 'soil', filler: 'rock' } },
+        { x: 1, y: 20 },
+      ],
     },
   ],
 })
 
 describe('terrain generation', () => {
+  test('uses absolute 32-block chunk layers inside the 384-block world', () => {
+    expect(chunk_origin({ x: 2, y: 11, z: -3 })).toEqual([64, 352, -96])
+    expect(surface_chunk_layers(WORLD, 0, 0)).toEqual([0])
+  })
+
+  test('derives every vertical layer crossed by a tall surface cliff', () => {
+    const cliff = {
+      ...WORLD,
+      biomes: WORLD.biomes.map((biome) => ({
+        ...biome,
+        height_points: [
+          [0, 1],
+          [1, 100],
+        ] as const,
+      })),
+      sample_climate: (x: number) => ({
+        temperature: 0.5,
+        humidity: 0.5,
+        ground: x < 16 ? 0 : 1,
+        amplitude: 0.5,
+        transition: 0.5,
+      }),
+    }
+
+    expect(surface_chunk_layers(cliff, 0, 0)).toEqual([0, 1, 2, 3])
+  })
+
+  test('never plans chunks outside the authored world-height domain', () => {
+    const floor = compile_world_recipe({
+      ...WORLD.recipe,
+      biomes: WORLD.recipe.biomes.map((biome) => ({
+        ...biome,
+        landscape: biome.landscape.map((knot) => ({ ...knot, y: 0 })),
+      })),
+    })
+
+    expect(surface_chunk_layers(floor, 0, 0)).toEqual([0])
+  })
+
   test('terrain and its neighbour halo are deterministic', () => {
     const request = { key: '-2:0:5', coordinate: { x: -2, y: 0, z: 5 }, lod: 'mid' as const }
     const first = generate_chunk(WORLD, request)

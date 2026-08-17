@@ -32,7 +32,7 @@ import {
   type FetchedObject,
 } from './cache.ts'
 import { create_balance_cache } from './balance.ts'
-import { with_kiosk, coin_of } from './ptb.ts'
+import { coin_of, receipt_personal_kiosk_cap, with_kiosk, with_personal_kiosk } from './ptb.ts'
 import { create_gas_ledger } from './gas.ts'
 
 export { doors }
@@ -202,6 +202,15 @@ export function SDK({
     client: sui_client as ConstructorParameters<typeof KioskClient>[0]['client'],
     network,
   })
+  const { kiosk_package } = pins
+  const kiosk_transaction_client =
+    typeof kiosk_package === 'string' && kiosk_package
+      ? new KioskClient({
+          client: sui_client as ConstructorParameters<typeof KioskClient>[0]['client'],
+          network,
+          packageIds: { personalKioskRulePackageId: kiosk_package },
+        })
+      : kiosk_client
   const cache = create_cache()
   const pure_inputs = new WeakMap<Transaction, Map<string, TransactionArgument>>()
   let execution_tail: Promise<unknown> = Promise.resolve()
@@ -419,6 +428,16 @@ export function SDK({
     return submitted
   }
 
+  const execute_personal_kiosk = async (tx: Transaction, cap: KioskOwnerCap | null) => {
+    const receipt = await execute(tx, cap ? {} : { include: { objectTypes: true } })
+    const kiosk_cap = cap ?? receipt_personal_kiosk_cap(receipt)
+    if (!kiosk_cap)
+      throw new Error(
+        `[sdk] transaction ${receipt_digest(receipt)} created no reusable PersonalKioskCap in its receipt.`
+      )
+    return Object.freeze({ receipt, kiosk_cap })
+  }
+
   const call = Object.fromEntries(
     (Object.keys(doors.DOORS) as DoorName[]).map((name) => [
       name,
@@ -441,7 +460,7 @@ export function SDK({
     hydrate,
     hydrate_objects,
     hydrate_unknown,
-    get_owned_kiosks: (address: string) => kiosk_client.getOwnedKiosks({ address }),
+    get_owned_kiosks: (address: string) => kiosk_transaction_client.getOwnedKiosks({ address }),
     get_owned_transfer_policies: (address: string) => kiosk_client.getOwnedTransferPolicies({ address }),
     get_transfer_policies: (type: string) => kiosk_client.getTransferPolicies({ type }),
     transfer_policy_transaction: (transaction: Transaction, rule_package?: string) =>
@@ -469,6 +488,7 @@ export function SDK({
     doors: bound_doors,
     call,
     execute,
+    execute_personal_kiosk,
     read_sui_balance: () => {
       if (!sender) throw new Error('[sdk] balance reads need an address')
       return balance.read(sender)
@@ -477,8 +497,13 @@ export function SDK({
     with_kiosk,
     with_owner_kiosk: <T>(tx: Transaction, cap: KioskOwnerCap | null, compose: Parameters<typeof with_kiosk<T>>[3]) => {
       if (!cap) throw new Error('No owned kiosk cap is available for this transaction.')
-      return with_kiosk(tx, kiosk_client, cap, compose)
+      return with_kiosk(tx, kiosk_transaction_client, cap, compose)
     },
+    with_personal_kiosk: <T>(
+      tx: Transaction,
+      cap: KioskOwnerCap | null,
+      compose: Parameters<typeof with_personal_kiosk<T>>[3]
+    ) => with_personal_kiosk(tx, kiosk_transaction_client, cap, compose),
     coin_of,
   }
 }

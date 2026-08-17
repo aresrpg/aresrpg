@@ -4,23 +4,53 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 
-import { App } from './app.tsx'
-import { dispatch_app, initialize_app_store, observe_app } from './store.ts'
+import { dispatch_app, initialize_app_store, observe_app, type AppModuleName } from './store.ts'
 import { env } from './env.ts'
 import { load_game_settings } from './game/core/settings.ts'
 import { load_locale } from './i18n/locale.ts'
+import { load_app_copy } from './i18n/copy.ts'
 import { register_service_worker } from './pwa.ts'
 import './tailwind.css'
 
 const requested_quality = import.meta.env.DEV ? new URLSearchParams(globalThis.location.search).get('quality') : null
 initialize_app_store(load_game_settings(env.engine_quality, requested_quality))
-dispatch_app({ type: 'locale/changed', locale: load_locale() })
-observe_app()
+const locale = load_locale()
+dispatch_app({ type: 'locale/changed', locale })
+const root = createRoot(document.getElementById('root')!)
+const demo_route = globalThis.location.pathname.replace(/\/+$/, '') === '/demo'
+const PLAYER_APP_MODULES = Object.freeze([
+  'session',
+  'navigation',
+  'settings',
+  'locale',
+  'engine',
+  'fight',
+  'admin',
+]) satisfies readonly AppModuleName[]
 
-createRoot(document.getElementById('root')!).render(
-  <StrictMode>
-    <App />
-  </StrictMode>
-)
+const boot = async (): Promise<void> => {
+  if (demo_route) {
+    const [{ DemoPage }, copy] = await Promise.all([import('./demo/DemoPage.tsx'), load_app_copy(locale)])
+    dispatch_app({ type: 'locale/loaded', locale, copy })
+    observe_app(Object.freeze(['settings', 'simulator', 'fight']))
+    root.render(
+      <StrictMode>
+        <DemoPage copy={copy} />
+      </StrictMode>
+    )
+    return
+  }
+  const { App } = await import('./app.tsx')
+  observe_app(PLAYER_APP_MODULES)
+  root.render(
+    <StrictMode>
+      <App />
+    </StrictMode>
+  )
+}
 
 register_service_worker()
+void boot().catch((error: unknown) => {
+  console.error('The application failed to boot.', error)
+  root.render(<main className="fixed inset-0 bg-[#0a0a0f]" />)
+})

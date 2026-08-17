@@ -13,7 +13,7 @@
 //! * `VecSet<T>` / `VecMap<K,V>` / `Balance<T>` are struct WRAPPERS ([`VecSet`],
 //!   [`VecMap`], [`Balance`]) — never bare vectors/integers.
 //! * A dynamic field is `Field { id, name: K, value: V }` ([`Field`]); dynamic
-//!   OBJECT fields wrap `Field<K, Id>` (the child rides at its own address).
+//!   OBJECT fields use `Field<Wrapper<K>, Id>` (the child rides at its own address).
 //!
 //! CONTENT TEMPLATES ARE ABSENT by design (README, "the content cut"): item /
 //! mob / spell / recipe templates are frozen corpus the repo ships as JSON — the
@@ -73,13 +73,21 @@ pub struct VecMapEntry<K, V> {
     pub value: V,
 }
 
-/// `sui::dynamic_field::Field<K, V>` — the DF carrier object. A dynamic OBJECT
-/// field is `Field<K, Id>` (the wrapper; the child lives at its own address).
+/// `sui::dynamic_field::Field<K, V>` — the DF carrier object. A dynamic object
+/// field is `Field<dynamic_object_field::Wrapper<K>, Id>`; the child lives at
+/// its own address.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Field<K, V> {
     pub id: Id,
     pub name: K,
     pub value: V,
+}
+
+/// `sui::dynamic_object_field::Wrapper<Name>` — prevents key collisions with
+/// ordinary dynamic fields while preserving the authored name.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DynamicObjectFieldWrapper<Name> {
+    pub name: Name,
 }
 
 /// The hidden byte a zero-field Move struct serializes as — every marker key.
@@ -498,7 +506,7 @@ pub struct RolledDrop {
 }
 
 /// `fight::FighterKey(u64)` — the custody dof key; the payload IS the seat.
-/// The wrapper is `Field<FighterKey, Id>`; the child is the seated Character.
+/// The wrapper is `Field<Wrapper<FighterKey>, Id>`; the child is the seated Character.
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 pub struct FighterKey(pub u64);
 
@@ -923,14 +931,16 @@ mod tests {
 
     #[test]
     fn fighter_custody_wrapper_roundtrips() {
-        // Field<FighterKey(seat), Id> — the dof wrapper naming the seat.
+        // Field<Wrapper<FighterKey(seat)>, Id> — the dof wrapper naming the seat.
         let field = Field {
             id: Id([11; 32]),
-            name: FighterKey(4),
+            name: DynamicObjectFieldWrapper {
+                name: FighterKey(4),
+            },
             value: Id([9; 32]),
         };
-        let back: Field<FighterKey, Id> = roundtrip(&field);
-        assert_eq!(back.name.0, 4);
+        let back: Field<DynamicObjectFieldWrapper<FighterKey>, Id> = roundtrip(&field);
+        assert_eq!(back.name.name.0, 4);
     }
 
     #[test]

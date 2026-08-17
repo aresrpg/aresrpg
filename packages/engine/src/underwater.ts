@@ -15,7 +15,7 @@ import { cos, exp, float, max, min, mix, sin, uniform, vec2, vec3 } from 'three/
 import type { Node } from 'three/webgpu'
 
 import type { EngineQuality } from './types.ts'
-import { WATER_BODY_COLOR } from './water.ts'
+import type { LiquidPalette } from './liquid_palette.ts'
 
 /** Tuning knobs — the legacy owner-graded calibration, verbatim. Colours are LINEAR (the pass
  * runs pre-AgX); distances in blocks (1 voxel = 1 m). */
@@ -23,13 +23,6 @@ export const UNDERWATER = Object.freeze({
   /** Hysteresis half-band (blocks): submerge this far below the surface plane, surface this far
    * above it — a dead-band across the waterline kills per-frame flicker. */
   hysteresis_m: 0.1,
-  /** Deep-water fog target — the same body colour the surface tends toward from above, so
-   * crossing the surface is continuous in hue. */
-  fog_color: WATER_BODY_COLOR,
-  /** Brighter cyan the fog leans toward looking UP (sun through the surface). */
-  up_color: [0.05, 0.32, 0.56],
-  /** Darker navy looking DOWN (toward the unlit bed). */
-  down_color: [0.004, 0.045, 0.14],
   /** In-scatter visibility (blocks) — view depth at which the water's own colour is ~63% of
    * what a surface returns. */
   visibility_m: 7,
@@ -91,15 +84,22 @@ export type UnderwaterPass = Readonly<{
 export const create_underwater_pass = ({
   quality,
   water_gate,
-}: Readonly<{ quality: EngineQuality; water_gate: Node<'float'> }>): UnderwaterPass => {
+  water_level,
+  palette,
+}: Readonly<{
+  quality: EngineQuality
+  water_gate: Node<'float'>
+  water_level: Node<'float'>
+  palette: LiquidPalette
+}>): UnderwaterPass => {
   const u_active = uniform(0)
   const u_time = uniform(0)
   // Live uniform gated to 0 on low (tint-only tier) — the single graph serves every tier.
   const u_warp_amp = uniform(quality === 'low' ? 0 : UNDERWATER.warp_amp)
 
-  const fog_color = vec3(...UNDERWATER.fog_color)
-  const up_color = vec3(...UNDERWATER.up_color)
-  const down_color = vec3(...UNDERWATER.down_color)
+  const fog_color = vec3(...palette.body)
+  const up_color = vec3(...palette.up)
+  const down_color = vec3(...palette.down)
   const f = vec2(...UNDERWATER.warp_freq)
   const s = vec2(...UNDERWATER.warp_speed)
 
@@ -125,14 +125,14 @@ export const create_underwater_pass = ({
     // see half underwater before the effect kicks in"). Terrain below the sea plane is water
     // by construction in this generator, so the plane alone answers "is there water here".
     const frag_y = eye_y.add(ray_dir.y.mul(frag_dist))
-    const submerged_fraction = min(eye_y, frag_y)
-      .negate()
+    const submerged_fraction = water_level
+      .sub(min(eye_y, frag_y))
       .div(max(eye_y.sub(frag_y).abs(), float(1e-4)))
       .clamp(0, 1)
     const through_water = frag_dist.mul(submerged_fraction)
     // Add the vertical column ABOVE the fragment: the light that lit it came down through the
     // water first, so a deep bed is dim and blue even when the eye is a metre away.
-    const path = through_water.add(max(frag_y.negate(), float(0))).mul(water_gate)
+    const path = through_water.add(max(water_level.sub(frag_y), float(0))).mul(water_gate)
     const absorb = vec3(
       exp(path.mul(-UNDERWATER.absorption[0]!)),
       exp(path.mul(-UNDERWATER.absorption[1]!)),
@@ -140,7 +140,7 @@ export const create_underwater_pass = ({
     )
     const inscatter = float(1).sub(exp(path.div(float(UNDERWATER.visibility_m)).negate()))
     // Depth darken: the frame dims with the EYE's depth, floored so the bed stays legible.
-    const eye_depth = max(eye_y.negate(), float(0)).mul(water_gate)
+    const eye_depth = max(water_level.sub(eye_y), float(0)).mul(water_gate)
     const darken = float(1).sub(
       eye_depth
         .div(float(UNDERWATER.darken_depth_m))

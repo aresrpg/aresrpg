@@ -4,8 +4,8 @@
 // effect that plays when the camera exits the water. The field/lifecycle math lives in
 // lens_water_field.ts (pure, unit-tested); this module renders its packed per-frame output:
 // the wet SHEET (full-frame wobble fragmenting into fluid regions), the BEAD field (amorphous
-// dome lenses that burst into splinters), and the TRAILS (meandering water columns). apply()
-// wraps the finished display-space frame — inactive ⇒ exact identity via u_intensity 0.
+// dome lenses that burst into splinters), and the TRAILS (meandering water columns). The dry
+// graph is the input node itself; only an active splash pays for or samples the wet render target.
 
 import { Vector4 } from 'three'
 import type { Node } from 'three/webgpu'
@@ -39,11 +39,10 @@ import {
 import type { EngineQuality } from './types.ts'
 
 export type LensWaterPass = Readonly<{
-  /** Wraps the finished display-space vec4 — call once, last in the pipeline's output graph.
-   * Re-callable on a graph rebuild: disposes its previous rtt first. */
-  apply: (final_node: Node<'vec4'>) => Node<'vec4'>
-  /** Per-frame: advances the decay/film/bead/trail clock (self-clocked). No-op until splash(). */
-  update: () => void
+  /** Builds the exact dry identity or the wet display-space graph. */
+  apply: (final_node: Node<'vec4'>, wet?: boolean) => Node<'vec4'>
+  /** Advances the self-clocked field and reports whether the wet graph is active. */
+  update: () => boolean
   /** Reseeds the field and spikes intensity to 1 — call on the underwater EXIT edge only. */
   splash: () => void
   /** Releases the wrapped rtt's render target. */
@@ -87,7 +86,8 @@ export const create_lens_water = ({ quality }: Readonly<{ quality: EngineQuality
 
   let frame_rtt: ReturnType<typeof rtt> | null = null
 
-  const apply: LensWaterPass['apply'] = (final_node) => {
+  const apply: LensWaterPass['apply'] = (final_node, wet = true) => {
+    if (!wet) return final_node
     frame_rtt?.renderTarget?.dispose?.() // rebuild safety — quality swaps rerun the graph build
     frame_rtt = rtt(final_node)
     const frame = frame_rtt
@@ -297,23 +297,24 @@ export const create_lens_water = ({ quality }: Readonly<{ quality: EngineQuality
     u_film_t.value = 0
   }
 
-  const update = (): void => {
+  const update = (): boolean => {
     // Self-clocked and frame-rate independent: the decay is a function of elapsed wall time.
     const now = typeof performance !== 'undefined' ? performance.now() : last_frame_ms + 16.6
     const dt = primed ? Math.max(0, (now - last_frame_ms) / 1000) : 0
     last_frame_ms = now
     primed = true
-    if (disposed || t_since_splash == null) return
+    if (disposed || t_since_splash == null) return false
     t_since_splash += dt
     if (t_since_splash > LENS_WATER.max_active_s) {
       // The film is drained and every bead/splinter/trail has finished — park fully inactive.
       t_since_splash = null
       u_intensity.value = 0
-      return
+      return false
     }
     u_intensity.value = decay_intensity(t_since_splash, LENS_WATER.tau)
     u_film_t.value = t_since_splash
     sync_packed(t_since_splash)
+    return true
   }
 
   return Object.freeze({

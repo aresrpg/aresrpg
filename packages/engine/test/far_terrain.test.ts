@@ -3,49 +3,31 @@
 
 import { describe, expect, test } from 'bun:test'
 
-import { compile_world_recipe, far_shell_y, sample_world_column, type WorldRecipe } from '../src/world_recipe.ts'
+import {
+  BIOME_SLOTS,
+  compile_world_recipe,
+  far_shell_y,
+  sample_world_column,
+  type WorldRecipe,
+} from '../src/world_recipe.ts'
 
 const world = compile_world_recipe({
   seed: 'far-parity',
   sea_level: 10,
-  vertical_chunks: [0],
   materials: {
-    rock: '#787878',
-    soil: '#6e4f38',
-    meadow: '#5c8c3c',
+    rock: { color: '#787878', preset: 'stone' },
+    soil: { color: '#6e4f38', preset: 'earth' },
+    meadow: { color: '#5c8c3c', preset: 'grass' },
   },
-  noise: Object.fromEntries(
-    ['temperature', 'humidity', 'continentalness', 'erosion', 'weirdness'].map((name) => [
-      name,
-      { period: 256, octaves: 2 },
-    ])
-  ) as WorldRecipe['noise'],
-  splines: {
-    continentalness_to_base: [
-      [0, 0],
-      [0.5, 12],
-      [1, 24],
-    ],
-    erosion_to_amplitude: [
-      [0, 10],
-      [1, 1],
-    ],
-    pv_to_relief: [
-      [0, -0.2],
-      [1, 1],
-    ],
-  },
-  biome_selection: {
-    axis_weights: { temperature: 1, humidity: 1, continentalness: 0.6, erosion: 0.5, pv: 0.4 },
-    blend_k: 1,
-    transition_softness: 0.6,
-  },
+  biome_slots: Object.fromEntries(BIOME_SLOTS.map((slot) => [slot, 'ground'])) as WorldRecipe['biome_slots'],
   biomes: [
     {
       name: 'ground',
-      climate: { temperature: 0.5, humidity: 0.5, continentalness: 0.5, erosion: 0.5, pv: 0.5 },
-      weight: 1,
-      land: { surface: 'meadow', subsurface: 'soil', filler: 'rock' },
+      landscape: [
+        { x: 0, y: 0, land: { surface: 'meadow', subsurface: 'soil', filler: 'rock' } },
+        { x: 0.5, y: 12 },
+        { x: 1, y: 24 },
+      ],
     },
   ],
 })

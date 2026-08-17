@@ -10,6 +10,7 @@ import { PORT, ADMIN_ADDRESSES, ALLOWED_ORIGINS, MAX_PLAYERS, SERVER_ID } from '
 import { verify_login } from './auth.ts'
 import { create_authenticated_connection, type AuthenticatedConnection } from './connection.ts'
 import { graph } from './graph.ts'
+import { create_game_state } from './game_state.ts'
 import { create_indexing_health } from './indexing_health.ts'
 import { pubsub } from './pubsub.ts'
 import { mesh } from './protocol.ts'
@@ -38,6 +39,8 @@ const indexing_lag = create_indexing_health({
   chain_checkpoint: latest_checkpoint,
   indexed_checkpoint: pubsub.indexed_checkpoint,
 })
+const game_state = create_game_state({ graph, pubsub })
+await game_state.start()
 
 // ── the cluster half (per-POD, legacy law): the 20s-TTL heartbeat key any pod count sums,
 //    and the player_connect beacon that evicts a duplicate login on ANOTHER pod ──
@@ -98,6 +101,7 @@ const server = Bun.serve<{ address: string }>({
               admin: ADMIN_ADDRESSES.has(address),
               graph,
               pubsub,
+              game_state,
               indexing_lag,
               request_limiter,
             })

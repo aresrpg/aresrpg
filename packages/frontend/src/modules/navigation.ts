@@ -11,7 +11,6 @@ export const pages = [
   'characters',
   'leaderboard',
   'shop',
-  'simulator',
   'encyclopedia',
   'marketplace',
   'airdrop',

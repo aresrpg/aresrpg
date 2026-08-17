@@ -1937,8 +1937,6 @@ fun resolve(fight: &mut Fight, caster: u64, level: &SpellLevel, name: String, ta
   fight.turn_casts.push_back(TurnCast { spell: name, target: ledger_target });
   if (cooldown > 0) set_cooldown(fight, caster, name, cooldown);
 
-  if (spell_effect::has_offensive(&rows)) drop_rows_of_kind(fight, caster, K_INVIS); // attacking reveals
-
   // a placement spell banks its OTHER rows as the zone's payload — nothing fires now
   if (!places.is_empty()) {
     let mut p = 0;
@@ -1958,6 +1956,9 @@ fun resolve(fight: &mut Fight, caster: u64, level: &SpellLevel, name: String, ta
     return
   };
 
+  // Only an immediate direct-damage cast reveals. A zone stores its payload for a separate
+  // resolution and never reveals its owner.
+  if (spell_effect::has_direct_damage(&rows)) drop_rows_of_kind(fight, caster, K_INVIS);
   let mut estate = fight_math::effect_seed(fight.turn_seed, slot);
   resolve_rows(fight, caster, &sheet, &rows, target_cell, caster_cell, &mut estate, crit, cast_level);
 }
@@ -2604,6 +2605,88 @@ public(package) fun resolve_placement_for_testing(
   let Fight { id, .. } = fight;
   id.delete();
   answer
+}
+
+/// Test seam over the real cast resolver. A trap carries the same damage row as a direct
+/// strike, proving that placement stores it without consuming invisibility.
+#[test_only]
+public(package) fun invisible_after_damage_cast_for_testing(placement: bool, ctx: &mut TxContext): bool {
+  let board = combat_grid::generate(1, 0);
+  let caster_cell = board.start_cells_a()[0];
+  let target_cell = board.start_cells_b()[0];
+  let mut caster = fighter_for_placement_test(0, caster_cell, 6);
+  caster.effects.push_back(ActiveEffect {
+    kind: K_INVIS,
+    element: b"".to_string(),
+    value: 0,
+    turns_left: 3,
+    source: 0,
+    stat: 0,
+  });
+  let mut fighters = vector[caster];
+  if (!placement) fighters.push_back(fighter_for_placement_test(1, target_cell, 0));
+  let damage = spell_effect::new_effect(
+    K_DAMAGE,
+    b"earth".to_string(),
+    10,
+    10,
+    spell_effect::shape_point(),
+    0,
+    0,
+    10_000,
+    0,
+    0,
+  );
+  let mut rows = vector[];
+  if (placement) rows.push_back(spell_effect::new_effect(
+    K_TRAP,
+    b"".to_string(),
+    0,
+    0,
+    spell_effect::shape_point(),
+    0,
+    0,
+    10_000,
+    0,
+    0,
+  ));
+  rows.push_back(damage);
+  let level = spell_effect::new_spell_level(
+    2, 0, 40, false, false, false, false, 0, 0, 0, 0, rows, vector[],
+  );
+  let mut fight = Fight {
+    id: object::new(ctx),
+    world: b"invisibility_test".to_string(),
+    x: 0,
+    z: 0,
+    closed: combat_grid::closed_mask(&board),
+    board,
+    access_a: ACCESS_UNSET,
+    access_b: ACCESS_UNSET,
+    opener_a: option::none(),
+    opener_b: option::none(),
+    fighters,
+    zones: vector[],
+    queue: vector[0],
+    turn_ptr: 0,
+    round: 1,
+    ended: false,
+    winner: option::none(),
+    dungeon: option::none(),
+    managed: false,
+    wagered: false,
+    drops_rolled: false,
+    turn_seed: 1,
+    turn_slot: 0,
+    turn_casts: vector[],
+    placement_ms: 0,
+    turn_started_ms: 0,
+  };
+  resolve(&mut fight, 0, &level, b"invisibility_test".to_string(), target_cell, 1);
+  let hidden = is_invisible(&fight, 0);
+  let Fight { id, .. } = fight;
+  id.delete();
+  hidden
 }
 
 /// Test seam over the shared walker: a point trap on the walker's FIRST declared step pulls a

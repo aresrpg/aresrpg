@@ -12,13 +12,15 @@ import {
   set_flat_projection,
   step_flat_projection,
   type EngineRenderState,
+  type EngineQuality,
   type EngineStatus,
+  type EntityRender,
   type FightBoardRender,
+  type CharacterAppearanceRender,
   type Vec3,
 } from '@aresrpg/engine'
 
-import { worlds_source } from '../../content/worlds.ts'
-import { env } from '../../env.ts'
+import { world_character_entity, type LoadedCharacterRender } from '../character_entities.ts'
 import {
   create_camera_director,
   create_fight_addon,
@@ -27,7 +29,7 @@ import {
   type CameraAnchor,
   type FightBoardFrame,
 } from './cameras.ts'
-import { create_character_controller } from './character.ts'
+import { create_character_controller, type CharacterTransform } from './character.ts'
 import { create_chunk_manager } from './chunks.ts'
 import { CHARACTER_HEIGHT } from './collision.ts'
 
@@ -44,6 +46,12 @@ export type WorldState = Readonly<{
   displayed_chunks: number
 }>
 
+export const compose_world_entities = (
+  controlled: EntityRender | null,
+  external: readonly EntityRender[]
+): readonly EntityRender[] =>
+  Object.freeze(controlled ? [controlled, ...external.filter(({ id }) => id !== controlled.id)] : [...external])
+
 const MOVE_KEYS: Readonly<Record<string, Readonly<{ axis: 'forward' | 'strafe'; sign: 1 | -1 }>>> = Object.freeze({
   KeyW: { axis: 'forward', sign: 1 },
   ArrowUp: { axis: 'forward', sign: 1 },
@@ -55,15 +63,17 @@ const MOVE_KEYS: Readonly<Record<string, Readonly<{ axis: 'forward' | 'strafe'; 
   ArrowLeft: { axis: 'strafe', sign: -1 },
 })
 
-export const create_world = (canvas: HTMLCanvasElement) => {
-  const [first_world] = worlds_source
-  if (!first_world?.terrain) throw new Error('The first world has no terrain recipe')
-  const compiled = compile_world_recipe(parse_world_recipe(first_world.terrain))
-  const engine = create_engine({ canvas, quality: env.engine_quality, world: first_world.terrain })
+export const create_world = ({
+  canvas,
+  world,
+  quality,
+}: Readonly<{ canvas: HTMLCanvasElement; world: unknown; quality: EngineQuality }>) => {
+  const compiled = compile_world_recipe(parse_world_recipe(world))
+  const engine = create_engine({ canvas, quality, world })
   const chunks = create_chunk_manager({
     engine,
-    initial_quality: env.engine_quality,
-    vertical_chunks: first_world.terrain.vertical_chunks,
+    initial_quality: quality,
+    vertical_chunks: compiled.recipe.vertical_chunks,
   })
 
   // World oracles for the ported physics/camera: columns are analytic (the compiled recipe), so
@@ -88,6 +98,18 @@ export const create_world = (canvas: HTMLCanvasElement) => {
     flat_projection.amount < 1 && y < 0 && y >= projected_surface_y(x, z)
 
   const character = create_character_controller({ solid_at, liquid_at, position: [0, 40, 0] })
+  let character_render: LoadedCharacterRender | null = null
+  let controlled_entity: EntityRender | null = null
+  let external_entities: readonly EntityRender[] = Object.freeze([])
+  let rendered_transform: Readonly<{
+    id: string
+    x: number
+    y: number
+    z: number
+    yaw: number
+    anim: CharacterTransform['anim']
+    gait_scale: number
+  }> | null = null
   const pressed = { forward: new Set<string>(), strafe: new Set<string>() }
   const held = { forward: 0, strafe: 0 }
   const spectate = { x: 0, z: 0 }
@@ -186,6 +208,41 @@ export const create_world = (canvas: HTMLCanvasElement) => {
   const on_key_up = (event: KeyboardEvent): void => on_key(event, false)
   const on_blur = (): void => clear_movement()
 
+  const render_character = (transform = character.get_transform()): void => {
+    if (!character_render) return
+    const [x, , z] = transform.position
+    const y = transform.visual_y
+    if (
+      rendered_transform?.id === character_render.id &&
+      rendered_transform.x === x &&
+      rendered_transform.y === y &&
+      rendered_transform.z === z &&
+      rendered_transform.yaw === transform.facing_yaw &&
+      rendered_transform.anim === transform.anim &&
+      rendered_transform.gait_scale === transform.gait_scale
+    )
+      return
+    rendered_transform = Object.freeze({
+      id: character_render.id,
+      x,
+      y,
+      z,
+      yaw: transform.facing_yaw,
+      anim: transform.anim,
+      gait_scale: transform.gait_scale,
+    })
+    controlled_entity = world_character_entity(
+      character_render,
+      Object.freeze({
+        position: Object.freeze([x, y, z] as const),
+        facing_yaw: transform.facing_yaw,
+        anim: transform.anim,
+        gait_scale: transform.gait_scale,
+      })
+    )
+    engine.set_entities(compose_world_entities(controlled_entity, external_entities))
+  }
+
   const tick = (now: number, delta_seconds: number): void => {
     const previous_flat = flat_projection
     flat_projection = step_flat_projection(flat_projection, delta_seconds)
@@ -203,6 +260,9 @@ export const create_world = (canvas: HTMLCanvasElement) => {
       character.set_input({ yaw: director.active().get_yaw() })
       character.tick(delta_seconds)
       const transform = character.get_transform()
+      render_character(transform)
+      if (transform.air_jumped)
+        engine.play_jump_puff([transform.position[0], transform.visual_y, transform.position[2]])
       anchor = {
         x: transform.position[0],
         y: transform.visual_y,
@@ -258,6 +318,18 @@ export const create_world = (canvas: HTMLCanvasElement) => {
       spectate.x = focus[0]
       spectate.z = focus[1]
     },
+    set_character: (next: Readonly<{ id: string; appearance: CharacterAppearanceRender }> | null) => {
+      character_render = next ? Object.freeze(next) : null
+      controlled_entity = null
+      rendered_transform = null
+      if (character_render) render_character()
+      else engine.set_entities(compose_world_entities(null, external_entities))
+    },
+    set_entities: (next: readonly EntityRender[]) => {
+      external_entities = Object.freeze([...next])
+      engine.set_entities(compose_world_entities(controlled_entity, external_entities))
+    },
+    ground_height: (x: number, z: number) => projected_surface_y(x, z),
     /// Point the system at a character: the camera and terrain travel to its position.
     /// Cross-world pointing waits on more worlds having terrain recipes.
     point_at: (position: Readonly<{ x: number; z: number }>) => {

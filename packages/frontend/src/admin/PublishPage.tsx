@@ -57,7 +57,9 @@ export const PublishPage = () => {
   const total = admin.snapshot?.batches.length ?? 0
   const next = next_seed_batch(admin.snapshot)
   const seed_busy = admin.status === 'loading' || admin.status === 'executing'
-  const deploy_busy = ['loading', 'compiling', 'publishing', 'operating'].includes(deployment.status)
+  const deploy_busy = ['loading', 'compiling', 'publishing', 'upgrading', 'resetting', 'operating'].includes(
+    deployment.status
+  )
 
   return (
     <section className="min-h-0 flex-1 overflow-y-auto bg-[radial-gradient(circle_at_80%_0%,rgba(74,158,255,0.07),transparent_32%),radial-gradient(circle_at_15%_25%,rgba(200,150,60,0.06),transparent_28%)] px-6 py-5">
@@ -161,8 +163,68 @@ export const PublishPage = () => {
         </Step>
 
         <Step
-          body="One wallet approval opens an epoch-bound local session. Every missing pack is checked against live protocol limits and simulated before submission."
+          body="Upgrade preserves every live object and seed. Republish abandons this deployment locally and starts a new chain lineage; old chain objects cannot be erased."
           number="04"
+          state={
+            deployment.status === 'upgrading' ? 'upgrading' : deployment.status === 'resetting' ? 'resetting' : 'ready'
+          }
+          title="Maintain contracts"
+        >
+          <div className="space-y-3">
+            <div className="flex flex-wrap items-center gap-3">
+              <button
+                className={`${action_class} border-[#4a9eff]/40 bg-[#4a9eff]/8 text-[#72b5ff]`}
+                disabled={deploy_busy || !published || !wallet || deployment.paused !== false}
+                onClick={() => dispatch_app({ type: 'admin/contracts_upgrade' })}
+                type="button"
+              >
+                {deployment.status === 'upgrading' ? 'Upgrading…' : 'Upgrade + bump version'}
+              </button>
+              <span className="max-w-md text-[8px] leading-4 text-[#68707d]">
+                One action, three confirmations: math, game, then version activation.
+              </span>
+            </div>
+            <div className="flex flex-wrap items-center gap-3 border-t border-white/6 pt-3">
+              {!deployment.republish_armed ? (
+                <button
+                  className={`${action_class} border-[#ff5a8b]/30 text-[#ff8caa]`}
+                  disabled={deploy_busy || !published || !wallet}
+                  onClick={() => dispatch_app({ type: 'admin/republish_armed', armed: true })}
+                  type="button"
+                >
+                  Republish from scratch
+                </button>
+              ) : (
+                <>
+                  <button
+                    className={`${action_class} border-[#ff5a8b]/70 bg-[#ff5a8b]/14 text-[#ffd0dc]`}
+                    disabled={deploy_busy}
+                    onClick={() => dispatch_app({ type: 'admin/contracts_republish' })}
+                    type="button"
+                  >
+                    Abandon local deployment
+                  </button>
+                  <button
+                    className={`${action_class} border-white/10 text-[#777d87]`}
+                    disabled={deploy_busy}
+                    onClick={() => dispatch_app({ type: 'admin/republish_armed', armed: false })}
+                    type="button"
+                  >
+                    Cancel
+                  </button>
+                </>
+              )}
+              <span className="max-w-lg text-[8px] leading-4 text-[#8c6570]">
+                Clears this network&apos;s local pins after returning temporary seed-session SUI. Recreate FalkorDB and
+                the indexer for the replacement package.
+              </span>
+            </div>
+          </div>
+        </Step>
+
+        <Step
+          body="One wallet approval opens an epoch-bound local session. Every missing pack is checked against live protocol limits and simulated before submission."
+          number="05"
           state={sealed ? 'sealed' : admin.snapshot ? `${completed}/${total} batches` : 'not inspected'}
           title="Publish all seeds"
         >
@@ -231,7 +293,7 @@ export const PublishPage = () => {
 
         <Step
           body="Permanently closes every content authoring door. There is no unseal and no recovery transaction."
-          number="05"
+          number="06"
           state={sealed ? 'permanent' : complete ? 'available' : 'locked'}
           title="Seal content forever"
         >

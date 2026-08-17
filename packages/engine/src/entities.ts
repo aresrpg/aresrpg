@@ -6,25 +6,37 @@ import {
   AnimationMixer,
   Box3,
   Color,
+  Group,
   LoopOnce,
   LoopRepeat,
   Vector3,
+  type AnimationAction,
   type AnimationClip,
   type Material,
+  type Object3D,
   type Scene,
 } from 'three'
 
 import { create_entity_model, type EntityModel } from './entity_model.ts'
 import { BOARD_FLOOR_THICKNESS } from './fight_board_surface.ts'
-import type { EntityPathMotion, EntityRender, FightBoardRender, FightBoardRenderCell } from './types.ts'
+import { attach_invisibility, type InvisibilityEffect } from './invisibility.ts'
+import type {
+  CharacterAnimationName,
+  EntityPathMotion,
+  EntityRender,
+  FightBoardRender,
+  FightBoardRenderCell,
+} from './types.ts'
 
 type MountedEntity = Readonly<{
   spec: EntityRender
   appearance_key: string
   generation: number
   model: EntityModel | null
+  object: Group | null
   mixer: AnimationMixer | null
   anchor_offset: Vector3 | null
+  invisibility: InvisibilityEffect | null
 }>
 
 type ActiveMotion = Readonly<{
@@ -59,14 +71,23 @@ export type EntityModelLoader = (spec: EntityRender) => Promise<EntityModel>
 
 const RUN_MS_PER_CELL = 170
 const WALK_MS_PER_CELL = 480
+const FIGHT_CHARACTER_SCALE = 0.7
 
-type EntityLocomotion = 'IDLE' | 'WALK' | 'RUN'
+export const character_entity_scale = (anchor: EntityRender['anchor']['kind']): number =>
+  anchor === 'fight_cell' ? FIGHT_CHARACTER_SCALE : 1
+
+type EntityLocomotion = CharacterAnimationName
 type EntityAnimation = EntityLocomotion | 'ATTACK' | 'DEATH'
+type ActiveAnimation = Readonly<{ action: AnimationAction; clip: AnimationClip; loop: boolean }>
 
 const LOCOMOTION_PREFERENCES: Readonly<Record<EntityLocomotion, readonly string[]>> = Object.freeze({
   IDLE: Object.freeze(['IDLE']),
   WALK: Object.freeze(['WALK', 'RUN']),
   RUN: Object.freeze(['RUN', 'WALK']),
+  JUMP: Object.freeze(['JUMP']),
+  JUMP_RUN: Object.freeze(['JUMP_RUN', 'JUMP', 'RUN']),
+  FALL: Object.freeze(['FALL', 'JUMP']),
+  SWIM: Object.freeze(['SWIM', 'WALK', 'IDLE']),
 })
 
 const ACTION_PREFERENCES: Readonly<Record<'ATTACK' | 'DEATH', readonly string[]>> = Object.freeze({
@@ -83,6 +104,10 @@ export const resolve_entity_locomotion_clip = (
   for (const preference of preferences) {
     const exact = named.find(({ name }) => name === preference || name.split(/[|:/\\.-]/).at(-1) === preference)
     if (exact) return exact.clip
+  }
+  for (const preference of preferences) {
+    const partial = named.find(({ name }) => name.includes(preference))
+    if (partial) return partial.clip
   }
   return undefined
 }
@@ -144,24 +169,31 @@ const facing_yaw = (
 export const create_entity_layer = ({
   scene,
   load_model = create_entity_model,
-}: Readonly<{ scene: Scene; load_model?: EntityModelLoader }>) => {
+  attach_invisibility: attach_invisibility_effect = attach_invisibility,
+}: Readonly<{
+  scene: Scene
+  load_model?: EntityModelLoader
+  attach_invisibility?: (root: Object3D) => InvisibilityEffect
+}>) => {
   const entities = new Map<string, MountedEntity>()
   const motions = new Map<string, ActiveMotion>()
   const beats = new Map<string, ActiveBeat>()
   const flashes = new Map<string, ActiveFlash>()
+  const active_animations = new Map<string, ActiveAnimation>()
   const dead_entities = new Set<string>()
   let board: FightBoardRender | null = null
   let serial = 0
   let previous_tick = performance.now()
 
   const place = (entity: MountedEntity): void => {
-    const root = entity.model?.root
+    const root = entity.object
     if (!root || !entity.model) return
     const { anchor } = entity.spec
+    root.scale.setScalar(entity.spec.kind === 'character' ? character_entity_scale(anchor.kind) : 1)
     if (anchor.kind === 'world') {
       const [x, y, z] = anchor.position
       root.visible = true
-      root.position.set(x, y - entity.model.min_y, z)
+      root.position.set(x, y, z)
       root.rotation.y = facing_yaw(entity.spec, null, null)
       return
     }
@@ -170,7 +202,7 @@ export const create_entity_layer = ({
     if (!board || !cell) return
     root.position.set(
       board.origin.x + (cell.x + 0.5) * board.cell_size,
-      board.origin.y + BOARD_FLOOR_THICKNESS - entity.model.min_y,
+      board.origin.y + BOARD_FLOOR_THICKNESS,
       board.origin.z + (cell.y + 0.5) * board.cell_size
     )
     root.rotation.y = facing_yaw(entity.spec, board, cell)
@@ -181,12 +213,12 @@ export const create_entity_layer = ({
     if (!board || !cell || !entity.model) return null
     return new Vector3(
       board.origin.x + (cell.x + 0.5) * board.cell_size,
-      board.origin.y + BOARD_FLOOR_THICKNESS - entity.model.min_y,
+      board.origin.y + BOARD_FLOOR_THICKNESS,
       board.origin.z + (cell.y + 0.5) * board.cell_size
     )
   }
 
-  const play_clip = (entity: MountedEntity, name: EntityAnimation): AnimationClip | null => {
+  const play_clip = (entity: MountedEntity, name: EntityAnimation, requested_time_scale = 1): AnimationClip | null => {
     const { mixer, model } = entity
     if (!mixer || !model) return null
     const clip =
@@ -196,14 +228,35 @@ export const create_entity_layer = ({
     const fallback = name === 'IDLE' ? model.clips[0] : null
     const selected = clip ?? fallback
     if (!selected) return null
-    mixer.stopAllAction()
+    const loop = name !== 'ATTACK' && name !== 'DEATH'
+    const resolved_name = selected.name
+      .toUpperCase()
+      .split(/[|:/\\.-]/)
+      .at(-1)
+    const time_scale = requested_time_scale * (name === 'SWIM' && resolved_name === 'WALK' ? 0.7 : 1)
+    const active = active_animations.get(entity.spec.id)
+    if (loop && active?.loop && active.clip === selected) {
+      active.action.setEffectiveTimeScale(time_scale)
+      return selected
+    }
     const action = mixer.clipAction(selected).reset()
-    if (name === 'ATTACK' || name === 'DEATH') {
+    action.setEffectiveTimeScale(time_scale)
+    if (!loop) {
       action.setLoop(LoopOnce, 1)
       action.clampWhenFinished = true
-    } else action.setLoop(LoopRepeat, Infinity)
+    } else {
+      action.setLoop(LoopRepeat, Infinity)
+      action.clampWhenFinished = false
+    }
+    if (active && active.action !== action) action.crossFadeFrom(active.action, 0.2, false)
     action.play()
+    active_animations.set(entity.spec.id, Object.freeze({ action, clip: selected, loop }))
     return selected
+  }
+
+  const sync_animation = (entity: MountedEntity): void => {
+    const animation = entity.spec.kind === 'character' ? entity.spec.animation : undefined
+    play_clip(entity, animation?.name ?? 'IDLE', animation?.time_scale ?? 1)
   }
 
   const restore_flash = (id: string): void => {
@@ -214,7 +267,7 @@ export const create_entity_layer = ({
 
   const arm_flash = (id: string, color: number, peak: number): void => {
     const entity = entities.get(id)
-    const root = entity?.model?.root
+    const root = entity?.object
     if (!root) return
     restore_flash(id)
     const seen = new Set<Material>()
@@ -244,9 +297,11 @@ export const create_entity_layer = ({
     beats.get(id)?.resolve(false)
     beats.delete(id)
     restore_flash(id)
+    active_animations.delete(id)
     dead_entities.delete(id)
+    entity.invisibility?.dispose()
     if (!entity.model) return
-    scene.remove(entity.model.root)
+    if (entity.object) scene.remove(entity.object)
     entity.mixer?.stopAllAction()
     entity.mixer?.uncacheRoot(entity.model.root)
     entity.model.dispose()
@@ -256,13 +311,19 @@ export const create_entity_layer = ({
     const appearance_key = appearance_key_of(spec)
     const current = entities.get(spec.id)
     if (current?.appearance_key === appearance_key) {
-      const next = Object.freeze({ ...current, spec })
+      const wants_invisibility = spec.visual_effect?.kind === 'invisibility'
+      const has_invisibility = current.invisibility !== null
+      if (has_invisibility && !wants_invisibility) current.invisibility?.dispose()
+      const invisibility =
+        wants_invisibility && !has_invisibility && current.model
+          ? attach_invisibility_effect(current.model.root)
+          : wants_invisibility
+            ? current.invisibility
+            : null
+      const next = Object.freeze({ ...current, spec, invisibility })
       entities.set(spec.id, next)
-      const board_move =
-        current.spec.anchor.kind === 'fight_cell' &&
-        spec.anchor.kind === 'fight_cell' &&
-        current.spec.anchor.cell !== spec.anchor.cell
-      if (!board_move && !motions.has(spec.id) && !beats.has(spec.id) && !dead_entities.has(spec.id)) place(next)
+      if (!motions.has(spec.id) && !beats.has(spec.id) && !dead_entities.has(spec.id)) place(next)
+      if (!motions.has(spec.id) && !beats.has(spec.id) && !dead_entities.has(spec.id)) sync_animation(next)
       return
     }
     remove(spec.id)
@@ -270,7 +331,16 @@ export const create_entity_layer = ({
     const generation = serial
     entities.set(
       spec.id,
-      Object.freeze({ spec, appearance_key, generation, model: null, mixer: null, anchor_offset: null })
+      Object.freeze({
+        spec,
+        appearance_key,
+        generation,
+        model: null,
+        object: null,
+        mixer: null,
+        anchor_offset: null,
+        invisibility: null,
+      })
     )
     void load_model(spec).then(
       (model) => {
@@ -279,20 +349,27 @@ export const create_entity_layer = ({
           model.dispose()
           return
         }
-        model.root.name = `entity:${spec.id}`
+        const object = new Group()
+        const offset = new Group()
+        object.name = `entity:${spec.id}`
+        offset.position.y = -model.min_y
+        offset.add(model.root)
+        object.add(offset)
         const mixer = model.clips.length > 0 ? new AnimationMixer(model.root) : null
-        const mounted = Object.freeze({ ...pending, model, mixer, anchor_offset: null })
+        const invisibility =
+          pending.spec.visual_effect?.kind === 'invisibility' ? attach_invisibility_effect(model.root) : null
+        const mounted = Object.freeze({ ...pending, model, object, mixer, anchor_offset: null, invisibility })
         entities.set(spec.id, mounted)
-        scene.add(model.root)
+        scene.add(object)
         place(mounted)
-        play_clip(mounted, 'IDLE')
+        sync_animation(mounted)
         mixer?.update(0)
-        model.root.updateWorldMatrix(true, true)
-        const bounds = new Box3().setFromObject(model.root)
+        object.updateWorldMatrix(true, true)
+        const bounds = new Box3().setFromObject(object)
         const center = bounds.getCenter(new Vector3())
         const world_anchor = new Vector3(center.x, bounds.max.y, center.z)
         const anchor_offset = [world_anchor.x, world_anchor.y, world_anchor.z].every(Number.isFinite)
-          ? model.root.worldToLocal(world_anchor)
+          ? object.worldToLocal(world_anchor)
           : new Vector3()
         entities.set(spec.id, Object.freeze({ ...mounted, anchor_offset }))
       },
@@ -321,7 +398,7 @@ export const create_entity_layer = ({
     },
     animate: (motion: EntityPathMotion): Promise<boolean> => {
       const entity = entities.get(motion.id)
-      const root = entity?.model?.root
+      const root = entity?.object
       if (!entity || !root || entity.spec.anchor.kind !== 'fight_cell' || motion.cells.length === 0)
         return Promise.resolve(false)
       const destinations = motion.cells.map((cell) => position_at(entity, cell))
@@ -343,13 +420,13 @@ export const create_entity_layer = ({
     },
     beat: (id: string, kind: EntityBeatKind, face_id?: string, critical = false): Promise<boolean> => {
       const entity = entities.get(id)
-      const root = entity?.model?.root
+      const root = entity?.object
       if (!entity || !root) return Promise.resolve(false)
       motions.get(id)?.resolve(false)
       motions.delete(id)
       beats.get(id)?.resolve(false)
       beats.delete(id)
-      const face = face_id ? entities.get(face_id)?.model?.root.position : null
+      const face = face_id ? entities.get(face_id)?.object?.position : null
       if (face) root.rotation.y = Math.atan2(face.x - root.position.x, face.z - root.position.z)
       const clip =
         kind === 'attack' ? play_clip(entity, 'ATTACK') : kind === 'death' ? play_clip(entity, 'DEATH') : null
@@ -385,16 +462,22 @@ export const create_entity_layer = ({
         )
       })
     },
-    snap: (id: string): boolean => {
+    snap: (id: string, cell?: number): boolean => {
       const entity = entities.get(id)
-      if (!entity || dead_entities.has(id)) return false
-      place(entity)
+      const root = entity?.object
+      if (!entity || !root || dead_entities.has(id)) return false
+      if (cell === undefined) place(entity)
+      else {
+        const destination = position_at(entity, cell)
+        if (!destination) return false
+        root.position.copy(destination)
+      }
       return true
     },
     world_anchor: (id: string): Vector3 | null => {
       const entity = entities.get(id)
       if (!entity?.anchor_offset) return null
-      const root = entity?.model?.root
+      const root = entity?.object
       if (!root?.visible) return null
       root.updateWorldMatrix(true, true)
       return root.localToWorld(entity.anchor_offset.clone())
@@ -412,6 +495,7 @@ export const create_entity_layer = ({
       const delta = Math.min(0.1, Math.max(0, now - previous_tick) / 1000)
       previous_tick = now
       entities.forEach(({ mixer }) => mixer?.update(delta))
+      entities.forEach(({ invisibility }) => invisibility?.update(delta))
       flashes.forEach((flash, id) => {
         const amount = fight_flash_envelope((now - flash.started_at) / 1_000) * flash.peak
         flash.materials.forEach(({ material, baseline }) =>
@@ -424,7 +508,7 @@ export const create_entity_layer = ({
         if (now - flash.started_at >= 400) restore_flash(id)
       })
       beats.forEach((beat, id) => {
-        const root = beat.entity.model?.root
+        const root = beat.entity.object
         if (!root) return
         const progress = Math.min(1, Math.max(0, now - beat.started_at) / beat.duration_ms)
         const envelope = fight_reaction_envelope(progress)
@@ -459,7 +543,7 @@ export const create_entity_layer = ({
         beat.resolve(true)
       })
       motions.forEach((motion, id) => {
-        const root = motion.entity.model?.root
+        const root = motion.entity.object
         if (!root) return
         const elapsed = Math.max(0, now - motion.started_at)
         const segment = Math.min(motion.points.length - 2, Math.floor(elapsed / motion.cell_ms))
@@ -472,7 +556,6 @@ export const create_entity_layer = ({
         motions.delete(id)
         const current = entities.get(id)
         if (current) {
-          place(current)
           play_clip(current, 'IDLE')
         }
         motion.resolve(true)

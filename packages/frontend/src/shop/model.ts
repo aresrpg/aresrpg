@@ -2,6 +2,7 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
 import { is_equipment_category, item_is_stackable } from '@aresrpg/immutable'
+import { MAX_NON_STACKABLE_PURCHASE_QUANTITY } from '@aresrpg/sdk/shop'
 
 import type { SeedItem } from '../content/catalog.ts'
 
@@ -40,8 +41,8 @@ export const purchase_limit = ({
 }>): number => {
   if (stock < 1 || price_mist < 1n) return 0
   const affordable = balance_mist === null ? stock : Number(balance_mist / price_mist)
-  const available = Math.min(stock, Math.max(0, affordable), 4_294_967_295)
-  return item_is_stackable(category) ? available : Math.min(available, 1)
+  const transaction_limit = item_is_stackable(category) ? 4_294_967_295 : MAX_NON_STACKABLE_PURCHASE_QUANTITY
+  return Math.min(stock, Math.max(0, affordable), transaction_limit)
 }
 
 export const loot_box_odds = (item: SeedItem) => {

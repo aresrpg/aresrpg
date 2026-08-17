@@ -18,6 +18,7 @@ const cast_cue = Object.freeze({
   cast_level: 1,
   target_cell: 12,
   element: 'fire',
+  placement: null,
   critical: true,
   weapon: false,
   amount: 42,
@@ -58,6 +59,52 @@ describe('fight audio', () => {
     const second = fight_audio_variant('fire', 'cast', first.variant, () => 0)
     expect(first.key).toBe('element_cast_fire_1')
     expect(second.key).toBe('element_cast_fire_2')
+  })
+
+  test('plays the resolved impact family when a trap triggers', () => {
+    const played: string[] = []
+    const observe = create_fight_audio_observer(
+      (key) => played.push(key),
+      () => 0
+    )
+    const cue = Object.freeze({
+      id: 'fight:2:4',
+      type: 'zone',
+      action: 'trap_triggered',
+      zone_id: 'zone:1',
+      owner_id: 'fight_character_0',
+      target_id: 'fight_mob_1',
+      cell: 12,
+      element: 'earth',
+    } satisfies FightPresentationCue)
+
+    observe(cue, 'start', Object.freeze({}))
+    observe(cue, 'complete', Object.freeze({}))
+
+    expect(played).toEqual(['element_impact_earth_1'])
+  })
+
+  test('keeps the landing impact sound when a trap stores its damage', () => {
+    const played: string[] = []
+    const observe = create_fight_audio_observer(
+      (key) => played.push(key),
+      () => 0
+    )
+    const cue = Object.freeze({
+      ...cast_cue,
+      id: 'fight:3:0',
+      element: 'earth',
+      placement: 'trap',
+      amount: 0,
+      affected_cells: Object.freeze([]),
+      critical: false,
+      killed: false,
+    } satisfies FightPresentationCue)
+
+    observe(cue, 'start', Object.freeze({}))
+    observe(cue, 'complete', Object.freeze({}))
+
+    expect(played).toEqual(['cast_charge_earth', 'cast_resolve', 'element_impact_earth_1'])
   })
 
   test('preload selection keeps shared sounds and only requested effect families', () => {

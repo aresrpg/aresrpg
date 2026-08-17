@@ -2,7 +2,7 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 // The inventory paper doll wired to the seed catalog and the shared picker/detail components.
 
-import { equipment_slot_accepts, type CharacterEquipmentSlot } from '@aresrpg/immutable'
+import type { CharacterEquipmentSlot } from '@aresrpg/immutable'
 import { useMemo, useState } from 'react'
 
 import { EquipmentDoll } from '../components/EquipmentDoll.tsx'
@@ -14,6 +14,8 @@ import { encyclopedia_text } from '../encyclopedia/copy.ts'
 import type { AppCopy } from '../i18n/copy.ts'
 import type { SimulatorCharacter } from '../modules/simulator.ts'
 import { dispatch_app } from '../store.ts'
+
+import { simulator_loadout_items } from './loadout.ts'
 
 const template = (source: string, values: Readonly<Record<string, string | number>>): string =>
   Object.entries(values).reduce((text, [key, value]) => text.replaceAll(`{${key}}`, String(value)), source)
@@ -31,13 +33,7 @@ export const LoadoutSection = ({
   const encyclopedia = encyclopedia_text(copy)
   const item_for = (slot: CharacterEquipmentSlot) =>
     encyclopedia_catalog.items.find(({ item_type }) => item_type === loadout[slot]) ?? null
-  const options = useMemo(
-    () =>
-      picking
-        ? encyclopedia_catalog.items.filter(({ category }) => equipment_slot_accepts(picking, category))
-        : Object.freeze([]),
-    [picking]
-  )
+  const options = useMemo(() => (picking ? simulator_loadout_items(picking) : Object.freeze([])), [picking])
   const items = useMemo<readonly PickerItem[]>(
     () =>
       Object.freeze(

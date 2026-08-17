@@ -21,14 +21,15 @@ describe('fight presenter', () => {
       observe: (cue, phase) => log.push(`${phase}:${cue.id}`),
     })
 
-    presenter.present([turn('a'), turn('b')])
+    const batch = presenter.present([turn('a'), turn('b')])
+    expect(batch).toBeInstanceOf(Promise)
     await Promise.resolve()
     expect(log).toEqual(['start:a', 'play:a'])
     pending.shift()?.()
     await new Promise((resolve) => setTimeout(resolve, 0))
     expect(log).toEqual(['start:a', 'play:a', 'complete:a', 'start:b', 'play:b'])
     pending.shift()?.()
-    await presenter.settled()
+    await batch
     expect(log.at(-1)).toBe('complete:b')
   })
 })

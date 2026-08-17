@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
+import { readFileSync } from 'node:fs'
+
 import { generate_board } from '@aresrpg/fight'
 import { expect, test } from 'bun:test'
 
@@ -14,4 +16,11 @@ test('placement cells are transient overlays rather than static board state', ()
   expect(overlays.map(({ id }) => id)).toEqual(['__fight_start_a', '__fight_start_b'])
   expect(overlays.every(({ blob }) => blob.shape === 'per_cell')).toBeTrue()
   expect(fight_placement_overlays(board, false)).toEqual([])
+})
+
+test('cell picking is pointer-driven instead of polled by a second animation loop', () => {
+  const source = readFileSync(new URL('../../../src/game/fight/FightViewport.tsx', import.meta.url), 'utf8')
+
+  expect(source).not.toContain('pointer_ref')
+  expect(source.match(/view\.pick_cell\(/g)).toHaveLength(2)
 })

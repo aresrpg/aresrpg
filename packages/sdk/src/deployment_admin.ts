@@ -71,6 +71,35 @@ export const create_package_publish_transaction = ({
   return transaction
 }
 
+export const create_package_upgrade_transaction = ({
+  sdk,
+  artifact,
+  package: package_id,
+  upgrade_cap,
+  policy,
+}: Readonly<{
+  sdk: Sdk
+  artifact: ContractArtifact
+  package: string
+  upgrade_cap: string
+  policy: number
+}>): Transaction => {
+  const transaction = sdk.tx()
+  const capability = sdk.door_context.obj(transaction, upgrade_cap, false)
+  const ticket = transaction.moveCall({
+    target: '0x2::package::authorize_upgrade',
+    arguments: [capability, transaction.pure.u8(policy), transaction.pure.vector('u8', [...artifact.digest])],
+  })
+  const receipt = transaction.upgrade({
+    modules: [...artifact.modules],
+    dependencies: [...artifact.dependencies],
+    package: package_id,
+    ticket,
+  })
+  transaction.moveCall({ target: '0x2::package::commit_upgrade', arguments: [capability, receipt] })
+  return transaction
+}
+
 export const create_version_admin_transaction = ({
   sdk,
   package_id,

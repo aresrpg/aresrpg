@@ -5,6 +5,7 @@ import { expect, test } from 'bun:test'
 import { renderToStaticMarkup } from 'react-dom/server'
 
 import { FightTargetPreviews } from '../../../src/game/fight/FightTargetPreviews.tsx'
+import { FightEffectLines } from '../../../src/game/fight/FightEffectLines.tsx'
 
 test('spell aiming restores the fighter nametag with exact resolved HP and status previews', () => {
   const html = renderToStaticMarkup(
@@ -50,4 +51,18 @@ test('spell aiming restores the fighter nametag with exact resolved HP and statu
   expect(html).not.toContain('fight-hud__effect')
   expect(html).not.toContain('cast_cost')
   expect(html).toContain('ent-tt__delta--crit')
+})
+
+test('the compact turn status calls invisibility by its state name', () => {
+  const html = renderToStaticMarkup(
+    <FightEffectLines
+      effects={Object.freeze([
+        Object.freeze({ kind: 17n, element: '', value: 1n, turns: 2n, stat: 0n, key: 'invisible' }),
+      ])}
+    />
+  )
+  const text = html.replaceAll(/<[^>]+>/g, '')
+
+  expect(text).toContain('Invisible')
+  expect(text).not.toContain('Makes the target invisible')
 })

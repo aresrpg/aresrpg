@@ -8,11 +8,11 @@ type Rgb = readonly [number, number, number]
 
 const GRADE = Object.freeze({
   contrast: 1.24,
-  local_contrast: 1,
+  local_contrast: 1.12,
   pivot: 0.45,
-  saturation: 1.12,
+  saturation: 1.16,
   vibrance: 0.12,
-  lift: 0.014,
+  lift: 0.006,
   shoulder: 0.09,
 })
 const LUMA: Rgb = [0.2126, 0.7152, 0.0722]

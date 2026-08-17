@@ -87,11 +87,50 @@ pub fn analyze(ckpt: u64, ts_ms: u64, txs: &[TxView<'_>], game: &str) -> anyhow:
     let mut wire = Wire::default();
     for tx in txs {
         route_game_events(&mut wire, ckpt, ts_ms, tx, game)?;
+        route_game_state(&mut wire, ckpt, ts_ms, tx, game)?;
         analyze_kiosk_market(&mut wire, ckpt, ts_ms, tx, game)?;
 
         analyze_shop_sales(&mut wire, ckpt, ts_ms, tx, game)?;
     }
     Ok(wire)
+}
+
+/// The shared Version object is the emergency-brake truth. Unlike ordinary
+/// gameplay events, this state must reach every server process after its graph
+/// projection commits, including transitions authored without a Move event.
+fn route_game_state(
+    wire: &mut Wire,
+    ckpt: u64,
+    ts_ms: u64,
+    tx: &TxView<'_>,
+    game: &str,
+) -> anyhow::Result<()> {
+    for (index, output) in tx.outputs.iter().enumerate() {
+        if output.type_key.package != game
+            || output.type_key.module != "version"
+            || output.type_key.name != "Version"
+        {
+            continue;
+        }
+        let version = decode::from_bytes::<decode::Version>(output.bytes).map_err(|error| {
+            anyhow::anyhow!(
+                "layout drift: version::Version {} failed decode: {error}",
+                output.id.hex()
+            )
+        })?;
+        wire.publications.push(Publication {
+            channel: "evt:game".into(),
+            payload: envelope(
+                ckpt,
+                tx.tx_index,
+                index as u64,
+                ts_ms,
+                "GameStateChanged",
+                json!({ "frozen": version.version == 0 }),
+            ),
+        });
+    }
+    Ok(())
 }
 
 fn envelope(
@@ -397,8 +436,6 @@ fn analyze_kiosk_market(
     Ok(())
 }
 
-
-
 // ╔════════════════ [ Shop — the primary market ] ════════════════════════════ ]
 
 fn analyze_shop_sales(
@@ -519,6 +556,40 @@ mod tests {
         .unwrap()
     }
 
+    #[test]
+    fn version_output_publishes_the_global_freeze_state() {
+        let version_type = ty(GAME, "version", "Version");
+        let version = bcs::to_bytes(&crate::decode::Version {
+            id: Id([9; 32]),
+            version: 0,
+        })
+        .unwrap();
+        let outputs = [ObjView {
+            id: Id([9; 32]),
+            owner: OwnerKind::Shared,
+            type_key: &version_type,
+            bytes: &version,
+        }];
+        let tx = TxView {
+            tx_index: 3,
+            sender: Addr([7; 32]),
+            move_calls: &[],
+            events: &[],
+            inputs: &[],
+            outputs: &outputs,
+        };
+
+        let wire = analyze(55, 9_000, &[tx], GAME).unwrap();
+
+        assert_eq!(wire.publications.len(), 1);
+        assert_eq!(wire.publications[0].channel, "evt:game");
+        let payload: serde_json::Value =
+            serde_json::from_str(&wire.publications[0].payload).unwrap();
+        assert_eq!(payload["type"], "GameStateChanged");
+        assert_eq!(payload["data"]["frozen"], true);
+        assert_eq!(payload["ckpt"], 55);
+    }
+
     fn kiosk_bytes(id: u8, owner: u8, profits: u64) -> Vec<u8> {
         bcs::to_bytes(&crate::decode::Kiosk {
             id: Id([id; 32]),
@@ -631,9 +702,6 @@ mod tests {
         let wire = analyze(100, 1_000, &[tx], GAME).unwrap();
         assert!(wire.sales.is_empty() && wire.market.is_empty());
     }
-
-
-
 
     #[test]
     fn shop_sale_stamps_per_unit_and_rows_the_buyer() {
@@ -804,7 +872,6 @@ mod tests {
         assert!(wire.market.is_empty());
     }
 
-
     #[test]
     fn trade_created_lands_on_both_parties_social_doors() {
         #[derive(serde::Serialize)]
@@ -836,7 +903,11 @@ mod tests {
             outputs: &[],
         };
         let wire = analyze(1, 1, &[tx], GAME).unwrap();
-        let channels: Vec<_> = wire.publications.iter().map(|p| p.channel.as_str()).collect();
+        let channels: Vec<_> = wire
+            .publications
+            .iter()
+            .map(|p| p.channel.as_str())
+            .collect();
         assert!(channels.contains(&format!("evt:social:0x{}", "09".repeat(32)).as_str()));
         assert!(channels.contains(&format!("evt:social:0x{}", "07".repeat(32)).as_str()));
         assert_eq!(wire.publications.len(), 2);

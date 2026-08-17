@@ -16,6 +16,7 @@ import { HACK_LATTICE, HACK_PALETTE } from './hack_palette.ts'
 
 export type HackPresentation = Readonly<{
   tick: (delta_seconds: number, camera: PerspectiveCamera) => void
+  set_ground_y: (y: number) => void
   dispose: () => void
 }>
 
@@ -134,7 +135,7 @@ void main() {
   float cycle = sin(phase(0.0297)) * 0.5 + 0.5;
   vec3 minor_rgb = mix(grid_minor, ridge_rim, cycle * 0.35);
   vec3 major_rgb = mix(grid_major, sun_top, (1.0 - cycle) * 0.22);
-  vec3 minor = minor_rgb * lattice(p, px, ${HACK_LATTICE.minor_m.toFixed(1)}, 0.02) * 0.077 * breath * fade;
+  vec3 minor = minor_rgb * lattice(p, px, ${HACK_LATTICE.minor_m.toFixed(1)}, 0.02) * 0.15 * breath * fade;
   vec3 major = major_rgb * lattice(p, px, ${HACK_LATTICE.major_m.toFixed(1)}, 0.05) * 1.21 * shimmer * breath * pulse_gain * fade;
   gl_FragColor = vec4(base + minor + major, 1.0);
 }
@@ -172,6 +173,9 @@ export const create_hack_presentation = (scene: Scene): HackPresentation => {
       sky.position.copy(camera.position)
       grid.position.x = Math.round(camera.position.x / HACK_LATTICE.major_m) * HACK_LATTICE.major_m
       grid.position.z = Math.round(camera.position.z / HACK_LATTICE.major_m) * HACK_LATTICE.major_m
+    },
+    set_ground_y: (y: number) => {
+      grid.position.y = y
     },
     dispose: () => {
       scene.remove(sky, grid)

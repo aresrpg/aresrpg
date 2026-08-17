@@ -1,9 +1,11 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
-import type { EngineStatus } from '@aresrpg/engine'
+import { parse_world_recipe, type EngineStatus } from '@aresrpg/engine'
 
 import type { create_world, WorldView } from '../game/core/world.ts'
+import { character_render_source, load_character_appearance } from '../game/character_entities.ts'
+import { world_terrain } from '../content/worlds.ts'
 import type { AppInput, AppModule, AppState } from '../store.ts'
 
 import { is_world_page } from './navigation.ts'
@@ -40,6 +42,9 @@ const observe = ({ events, dispatch, get_state, signal }: Parameters<NonNullable
   let world: ReturnType<typeof create_world> | null = null
   let unsubscribe_status: (() => void) | null = null
   let generation = 0
+  let mounted_world_name: string | null | undefined
+  let character_generation = 0
+  let character_key: string | null = null
 
   const sync_activity = (state: AppState): void => {
     if (!world) return
@@ -62,30 +67,78 @@ const observe = ({ events, dispatch, get_state, signal }: Parameters<NonNullable
     else world.release()
   }
 
+  const sync_character = (state: AppState): void => {
+    if (!world) return
+    const selected = state.session.characters.find(({ id }) => id === state.session.selected_character_id)
+    const source = selected ? character_render_source(selected) : null
+    const next_key = source ? JSON.stringify(source) : null
+    if (next_key === character_key) return
+    character_key = next_key
+    character_generation += 1
+    const own_generation = character_generation
+    if (!source) {
+      world.set_character(null)
+      return
+    }
+    void load_character_appearance(source).then(
+      (appearance) => {
+        if (signal.aborted || own_generation !== character_generation || !world) return
+        world.set_character(Object.freeze({ id: source.id, appearance }))
+      },
+      (error: unknown) => {
+        if (own_generation !== character_generation || !world) return
+        console.error(`Character ${source.id} failed to resolve its appearance.`, error)
+        world.set_character(null)
+      }
+    )
+  }
+
   const sync = (state: AppState): void => {
     sync_activity(state)
     sync_settings(state)
     sync_target(state)
+    sync_character(state)
   }
 
   const dispose_world = (): void => {
     generation += 1
+    character_generation += 1
+    character_key = null
     unsubscribe_status?.()
     unsubscribe_status = null
     world?.dispose()
     world = null
+    mounted_world_name = undefined
     if (import.meta.env.DEV) visual_global.__ares_visual__ = undefined
   }
 
   const mount = (next_canvas: HTMLCanvasElement): void => {
-    if (canvas === next_canvas && world) return
+    const world_name = selected_world(get_state())
+    if (canvas === next_canvas && world && mounted_world_name === world_name) return
     dispose_world()
     canvas = next_canvas
+    mounted_world_name = world_name
+    const terrain = world_terrain(world_name)
+    if (!terrain) {
+      dispatch({
+        type: 'engine/status',
+        status: {
+          state: 'failed',
+          backend: 'none',
+          issue: { code: 'world_unavailable', detail: world_name ?? undefined },
+        },
+      })
+      return
+    }
     const own_generation = generation
     void import('../game/core/world.ts')
       .then(({ create_world: create }) => {
         if (signal.aborted || canvas !== next_canvas || generation !== own_generation) return
-        const created = create(next_canvas)
+        const created = create({
+          canvas: next_canvas,
+          world: parse_world_recipe(terrain),
+          quality: get_state().settings.quality,
+        })
         world = created
         unsubscribe_status = created.subscribe_status((status) => dispatch({ type: 'engine/status', status }))
         sync(get_state())
@@ -99,7 +152,7 @@ const observe = ({ events, dispatch, get_state, signal }: Parameters<NonNullable
           })
       })
       .catch((error) => {
-        if (signal.aborted) return
+        if (signal.aborted || canvas !== next_canvas || generation !== own_generation) return
         console.error('World engine failed to load.', error)
         dispatch({
           type: 'engine/status',
@@ -125,7 +178,9 @@ const observe = ({ events, dispatch, get_state, signal }: Parameters<NonNullable
     const selection_changed = state.session.selected_character_id !== previous.session.selected_character_id
     const target_became_available = selected_position(previous) === null && selected_position(state) !== null
     const world_changed = selected_world(state) !== selected_world(previous)
-    if (selection_changed || target_became_available || world_changed) sync_target(state)
+    if (world_changed && canvas) mount(canvas)
+    else if (selection_changed || target_became_available) sync_target(state)
+    if (selection_changed || state.session.characters !== previous.session.characters) sync_character(state)
   })
   signal.addEventListener('abort', dispose_world)
 }

@@ -5,126 +5,104 @@ import { describe, expect, test } from 'bun:test'
 
 import { sample_biome_grid } from '../src/biome_grid.ts'
 import {
-  catmull_rom,
+  BIOME_SLOTS,
+  biome_influences,
   compile_world_recipe,
+  landscape_height,
+  MAX_SURFACE_Y,
   sample_world_column,
   validate_world_recipe,
+  WORLD_HEIGHT,
   type WorldRecipe,
 } from '../src/world_recipe.ts'
 
+const shore_land = { surface: 'shore', subsurface: 'shore', filler: 'rock' } as const
+const meadow_land = { surface: 'meadow', subsurface: 'soil', filler: 'rock' } as const
 const RECIPE = {
   seed: 'first-shore',
   sea_level: 8,
-  vertical_chunks: [0],
   materials: {
-    rock: '#787878',
-    soil: '#6e4f38',
-    meadow: '#5c8c3c',
-    shore: '#d6c794',
-    blades: '#587a45',
-    water: '#2e609e',
+    rock: { color: '#787878', preset: 'stone' },
+    soil: { color: '#6e4f38', preset: 'earth' },
+    meadow: { color: '#5c8c3c', preset: 'grass' },
+    shore: { color: '#d6c794', preset: 'sand' },
+    water: { color: '#2e609e', preset: 'water' },
   },
   liquid: 'water',
-  noise: {
-    temperature: { period: 256, octaves: 2 },
-    humidity: { period: 256, octaves: 2 },
-    continentalness: { period: 512, octaves: 3 },
-    erosion: { period: 256, octaves: 2 },
-    weirdness: { period: 128, octaves: 2 },
-  },
-  splines: {
-    continentalness_to_base: [
-      [0, 4],
-      [0.5, 12],
-      [1, 20],
-    ],
-    erosion_to_amplitude: [
-      [0, 8],
-      [1, 0],
-    ],
-    pv_to_relief: [
-      [0, -0.25],
-      [1, 1],
-    ],
-  },
-  biome_selection: {
-    axis_weights: { temperature: 1, humidity: 1, continentalness: 0.6, erosion: 0.5, pv: 0.4 },
-    blend_k: 2,
-    transition_softness: 0.6,
+  biome_slots: {
+    low_low: 'shore',
+    low_mid: 'meadow',
+    low_high: 'meadow',
+    mid_low: 'meadow',
+    mid_mid: 'meadow',
+    mid_high: 'meadow',
+    high_low: 'meadow',
+    high_mid: 'meadow',
+    high_high: 'meadow',
   },
   biomes: [
     {
       name: 'shore',
-      climate: { temperature: 0.7, humidity: 0.5, continentalness: 0.3, erosion: 0.8, pv: 0.4 },
-      weight: 1,
-      land: { surface: 'shore', subsurface: 'shore', filler: 'rock' },
+      landscape: [
+        { x: 0, y: 10, land: shore_land },
+        { x: 0.5, y: 10 },
+        { x: 1, y: 10 },
+      ],
     },
     {
       name: 'meadow',
-      climate: { temperature: 0.6, humidity: 0.7, continentalness: 0.7, erosion: 0.7, pv: 0.5 },
-      weight: 1,
-      land: { surface: 'meadow', subsurface: 'soil', filler: 'rock' },
+      landscape: [
+        { x: 0, y: 30, land: meadow_land },
+        { x: 0.5, y: 30, land: { ...meadow_land, surface: 'shore' }, variance: 0.04 },
+        { x: 1, y: 30 },
+      ],
     },
   ],
 } as const satisfies WorldRecipe
 
+const controlled_world = (
+  recipe: WorldRecipe,
+  climate: ReturnType<ReturnType<typeof compile_world_recipe>['sample_climate']>
+) => {
+  const world = compile_world_recipe(recipe)
+  return { ...world, sample_climate: () => climate }
+}
+
 describe('world recipes', () => {
-  test('validates every structural problem in one pass', () => {
+  test('validates landscape points, materials, slots and removed engine controls together', () => {
     const result = validate_world_recipe({
       ...RECIPE,
-      noise: { ...RECIPE.noise, erosion: { period: 0, octaves: 17 } },
-      splines: {
-        ...RECIPE.splines,
-        pv_to_relief: [
-          [0.5, 0],
-          [0.5, 1],
-        ],
-      },
-      liquid: 'missing',
-      biomes: [{ ...RECIPE.biomes[0], land: { ...RECIPE.biomes[0].land, surface: 'missing' } }],
-    })
-
-    expect(result.ok).toBe(false)
-    expect(result.errors).toEqual(
-      expect.arrayContaining([
-        'noise.erosion.period must be greater than zero',
-        'noise.erosion.octaves must be an integer from 1 to 16',
-        'splines.pv_to_relief[1][0] must be strictly greater than the previous x',
-        'liquid references unknown material "missing"',
-        'biomes[0].land.surface references unknown material "missing"',
-      ])
-    )
-  })
-
-  test('rejects biome-selection values that cannot produce an influence', () => {
-    const result = validate_world_recipe({
-      ...RECIPE,
-      noise: {
-        ...RECIPE.noise,
-        humidity: { ...RECIPE.noise.humidity, spread: 0, gain: -1 },
-      },
-      biome_selection: {
-        axis_weights: { ...RECIPE.biome_selection.axis_weights, humidity: -1 },
-        blend_k: 0,
-        transition_softness: Number.NaN,
-      },
-      biomes: [{ ...RECIPE.biomes[0], weight: 0, climate: { ...RECIPE.biomes[0].climate, pv: Number.NaN } }],
+      noise: {},
+      vertical_chunks: [0],
+      biome_slots: { ...RECIPE.biome_slots, high_high: 'missing' },
+      biomes: [
+        {
+          ...RECIPE.biomes[0],
+          landscape: [
+            { x: 0.5, y: 1, land: { ...shore_land, surface: 'missing' } },
+            { x: 0.5, y: 2 },
+          ],
+        },
+      ],
     })
 
     expect(result.errors).toEqual(
       expect.arrayContaining([
-        'noise.humidity.spread must be greater than zero',
-        'noise.humidity.gain must be greater than zero',
-        'biome_selection.axis_weights.humidity must be a finite non-negative number',
-        'biome_selection.blend_k must be an integer from 1 to the biome count',
-        'biome_selection.transition_softness must be a finite non-negative number',
-        'biomes[0].weight must be greater than zero',
-        'biomes[0].climate.pv must be a finite number',
+        'noise is engine-owned and must not be authored',
+        'vertical_chunks is engine-owned and must not be authored',
+        'biomes[0].landscape[0].land.surface references unknown material "missing"',
+        'biomes[0].landscape[1].x must be strictly greater than the previous x',
+        'biome_slots.high_high must reference an authored biome',
       ])
     )
   })
 
-  test('keeps the accepted Catmull-Rom point behavior', () => {
+  test('keeps the nine climate slots explicit and complete', () => {
+    expect(BIOME_SLOTS).toHaveLength(9)
+    expect(validate_world_recipe(RECIPE)).toEqual({ ok: true, errors: [] })
+  })
+
+  test('linearly interpolates the authored landscape', () => {
     const points = [
       [0, 10],
       [0.25, 20],
@@ -132,23 +110,103 @@ describe('world recipes', () => {
       [1, 40],
     ] as const
 
-    expect(catmull_rom(points, -1)).toBe(10)
-    expect(catmull_rom(points, 0.25)).toBe(20)
-    expect(catmull_rom(points, 1)).toBe(40)
-    expect(catmull_rom(points, 0.5)).toBe(25)
+    expect(landscape_height(points, -1)).toBe(10)
+    expect(landscape_height(points, 0.25)).toBe(20)
+    expect(landscape_height(points, 1)).toBe(40)
+    expect(landscape_height(points, 0.5)).toBe(25)
   })
 
-  test('compiles arbitrary recipe materials once and samples deterministically', () => {
+  test('blends the four climate-grid neighbours before voxel rounding', () => {
+    const climate = { temperature: 0.43, humidity: 0.43, ground: 0.5, amplitude: 0.5, transition: 0.5 }
+    const world = controlled_world(RECIPE, climate)
+    const influences = biome_influences(world, climate)
+
+    expect(influences[0]?.biome.name).toBe('meadow')
+    expect(influences[0]?.weight).toBeCloseTo(0.75)
+    expect(influences[1]?.biome.name).toBe('shore')
+    expect(influences[1]?.weight).toBeCloseTo(0.25)
+    expect(sample_world_column(world, 0, 0).surface_y).toBe(25)
+  })
+
+  test('uses one absolute 384-block height domain and clamps procedural detail inside it', () => {
+    expect(WORLD_HEIGHT).toBe(384)
+    expect(MAX_SURFACE_Y).toBe(383)
+    const low = controlled_world(RECIPE, {
+      temperature: 0.5,
+      humidity: 0.5,
+      ground: 0,
+      amplitude: 0,
+      transition: 0.5,
+    })
+    const high_recipe = {
+      ...RECIPE,
+      biomes: RECIPE.biomes.map((biome) => ({
+        ...biome,
+        landscape: biome.landscape.map((knot) => ({ ...knot, y: MAX_SURFACE_Y })),
+      })),
+    } satisfies WorldRecipe
+    const high = controlled_world(high_recipe, {
+      temperature: 0.5,
+      humidity: 0.5,
+      ground: 1,
+      amplitude: 1,
+      transition: 0.5,
+    })
+
+    expect(sample_world_column(low, 0, 0).surface_y).toBeGreaterThanOrEqual(1)
+    expect(sample_world_column(high, 0, 0).surface_y).toBe(MAX_SURFACE_Y)
+  })
+
+  test('selects block strata from a landscape threshold with real variance', () => {
+    const before = controlled_world(RECIPE, {
+      temperature: 0.5,
+      humidity: 0.5,
+      ground: 0.49,
+      amplitude: 0.5,
+      transition: 1,
+    })
+    const after = controlled_world(RECIPE, {
+      temperature: 0.5,
+      humidity: 0.5,
+      ground: 0.53,
+      amplitude: 0.5,
+      transition: 1,
+    })
+
+    expect(sample_world_column(before, 0, 0).land.surface).toBe('meadow')
+    expect(sample_world_column(after, 0, 0).land.surface).toBe('shore')
+  })
+
+  test('compiles once and samples deterministically without mutating the recipe', () => {
     const world = compile_world_recipe(RECIPE)
     const first = sample_world_column(world, 137, -91)
 
     expect(first).toEqual(sample_world_column(world, 137, -91))
     expect(first.surface_y).toBeInteger()
-    expect(world.materials.colors[0]).toEqual([0, 0, 0])
-    expect(first.surface_id).toBe(
-      world.materials.id_for(first.biome.land.surface, 'surface', first.biome.land.subsurface)
-    )
+    expect(first.surface_id).toBe(world.materials.id_for(first.land.surface, 'surface', first.land.subsurface))
     expect(structuredClone(RECIPE)).toEqual(RECIPE)
+  })
+
+  test('traverses an authored elevation curve inside one admin voxel field', () => {
+    const relief = {
+      ...RECIPE,
+      biomes: RECIPE.biomes.map((biome) => ({
+        ...biome,
+        landscape: [
+          { x: 0, y: 0, land: biome.landscape[0]!.land! },
+          { x: 0.5, y: 50 },
+          { x: 1, y: 100 },
+        ],
+      })),
+    } satisfies WorldRecipe
+    const world = compile_world_recipe(relief)
+    const heights = Array.from({ length: 97 * 97 }, (_, index) => {
+      const x = (index % 97) * 8 - 384 + 50_000
+      const z = Math.floor(index / 97) * 8 - 384 + 50_000
+      return sample_world_column(world, x, z).surface_y
+    })
+
+    expect(Math.max(...heights) - Math.min(...heights)).toBeGreaterThanOrEqual(45)
   })
 
   test('derives the chain biome grid from the same compiled sampler', () => {
@@ -157,8 +215,5 @@ describe('world recipes', () => {
     expect(grid.side).toBe(2)
     expect(grid.cells).toHaveLength(4)
     expect([...grid.cells].every((biome) => biome < RECIPE.biomes.length)).toBeTrue()
-    expect([...sample_biome_grid(RECIPE, { world_size: 1024, world_center: 512, cell_size: 512 }).cells]).toEqual([
-      ...grid.cells,
-    ])
   })
 })

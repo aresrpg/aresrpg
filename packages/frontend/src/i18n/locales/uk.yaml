@@ -1,6 +1,8 @@
 title: WebGPU недоступний
 body: Для повного світу потрібен WebGPU. Натомість запущено спрощену сітку.
 fatal: Цей браузер не може створити графічний контекст WebGPU або WebGL.
+world_unavailable_title: Світ недоступний
+world_unavailable: Для цього світу ще не створено рецепт рельєфу.
 chrome: 'Chrome або Edge: оновіть браузер, увімкніть «Використовувати апаратне прискорення» в Налаштування → Система та перезапустіть його.'
 other: Увімкніть апаратне прискорення, оновіть браузер і графічний драйвер та перезапустіть браузер.
 continue: Продовжити із сіткою
@@ -23,7 +25,6 @@ world: Світ
 characters: Персонажі
 leaderboard: Рейтинг
 shop: Крамниця
-simulator: Симулятор
 encyclopedia: Енциклопедія
 marketplace: Ринок
 airdrop: Аірдроп
@@ -42,6 +43,7 @@ server_connected: Підключено
 latency_unit: мс
 indexing_health: Стан індексації
 indexing_lag_warning: Дії в грі можуть відображатися із затримкою
+game_frozen: Гру наразі заморожено. Докладнішу інформацію дивіться в Discord.
 network_testnet: TESTNET
 page_pending_title: Ця сторінка відновлюється
 page_pending_body: Її місце залишається видимим, поки ми чисто її відновлюємо.
@@ -55,11 +57,14 @@ sex_label: Стать
 appearance_label: Зовнішність · 3 кольори
 name_label: Ім’я
 name_placeholder: Введіть ім’я…
+name_invalid: Використовуйте 4–19 друкованих ASCII-символів без пробілів.
 male: Чоловіча
 female: Жіноча
 cancel: Назад
 create_and_play: Створити й грати
-create_unavailable: Створення стане доступним після публікації наступного пакета гри.
+character_price: Ціна
+creating_character: Створення персонажа…
+character_created: Персонажа створено
 address_verification_failed: Не вдалося перевірити цю адресу. Увійдіть знову або напишіть нам у Discord.
 dismiss: Закрити
 wallet_copy_address: Копіювати адресу
@@ -75,6 +80,24 @@ wallet_send_pending: Надсилання SUI…
 wallet_send_success: SUI надіслано
 wallet_send_failed: Не вдалося надіслати SUI
 wallet_close: Закрити
+demo_page:
+  title: Лабораторія рендерингу
+  world_lab: Світ
+  fight_lab: Бій
+  no_terrain: Немає рецепта місцевості
+  time: Час доби
+  live: Наживо
+  remove_character: Прибрати модель
+  control_character: Керувати моделлю
+  mob_group: Група монстрів
+  mob: Монстр
+  amount: Кількість
+  spawn_group: Створити групу
+  clear: Очистити
+  resources: Ресурси
+  resources_missing: Відображення ресурсів ще не відновлено. Створений список залишається доступним у seed-даних.
+  control_hint: Натисніть на canvas · WASD для руху · Пробіл для стрибка · Миша для огляду
+  back: Назад до застосунку
 shop_page:
   title: 'Крамниця'
   subtitle: 'Купуйте предмети за SUI'

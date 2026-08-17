@@ -313,4 +313,36 @@ describe('market + self stream + heartbeat', () => {
       indexing_lag: 42,
     })
   })
+
+  test('the shared game snapshot and each freeze transition reach the player immediately', () => {
+    const { sent, ws, graph, pubsub } = wire()
+    let listener = (_frozen: boolean | null): void => {}
+    create_player({
+      ws,
+      address: '0xme',
+      admin: false,
+      graph,
+      pubsub,
+      game_state: {
+        get: () => false,
+        listen: (next) => {
+          listener = next
+          return () => {
+            listener = () => {}
+          }
+        },
+        start: async () => {},
+      },
+    })
+
+    expect(sent.find((packet) => packet.type === 'packet/game_state')).toEqual({
+      type: 'packet/game_state',
+      frozen: false,
+    })
+    listener(true)
+    expect(sent.filter((packet) => packet.type === 'packet/game_state').at(-1)).toEqual({
+      type: 'packet/game_state',
+      frozen: true,
+    })
+  })
 })

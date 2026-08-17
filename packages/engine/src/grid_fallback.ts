@@ -7,7 +7,7 @@ import { create_hack_presentation } from './hack_presentation.ts'
 import { create_fight_board_layer } from './fight_board.ts'
 import { create_entity_layer } from './entities.ts'
 import { create_fight_presentation } from './fight_presentation.ts'
-import { create_fight_vfx } from './fight_vfx.ts'
+import { create_transient_effects } from './transient_effects.ts'
 import { project_screen_anchor } from './screen_projection.ts'
 import type { EngineBackend } from './backend.ts'
 import type { EnginePresentation, EngineQuality, Vec3 } from './types.ts'
@@ -20,11 +20,11 @@ export const create_grid_fallback = (
   const renderer = new WebGLRenderer({ canvas, antialias: false, powerPreference: 'low-power' })
   renderer.outputColorSpace = SRGBColorSpace
   const scene = new Scene()
-  const camera = new PerspectiveCamera(48, 1, 0.1, 3000)
+  const camera = new PerspectiveCamera(70, 1, 0.1, 3000)
   const fight_board = create_fight_board_layer({ scene, camera, canvas })
   const entities = create_entity_layer({ scene })
-  const fight_vfx = create_fight_vfx({ scene, entities })
-  const fight_presentation = create_fight_presentation({ entities, vfx: fight_vfx })
+  const effects = create_transient_effects({ scene, entities })
+  const fight_presentation = create_fight_presentation({ entities, vfx: effects })
   const presentation = create_hack_presentation(scene)
   let quality = initial_quality
   let flattened = false
@@ -57,7 +57,7 @@ export const create_grid_fallback = (
     presentation.tick(delta_seconds, camera)
     fight_board.tick(now)
     entities.tick(now)
-    fight_vfx.tick(now)
+    effects.tick(now)
     renderer.render(scene, camera)
   }
 
@@ -79,9 +79,14 @@ export const create_grid_fallback = (
       fight_board.set(board)
       entities.set_board(board)
     },
-    set_entities: entities.set,
+    set_entities: (next) => {
+      const ground_y = next.find(({ anchor }) => anchor.kind === 'world')?.anchor
+      if (ground_y?.kind === 'world') presentation.set_ground_y(ground_y.position[1])
+      entities.set(next)
+    },
     animate_entity: entities.animate,
     play_fight_cue: fight_presentation.play,
+    play_jump_puff: effects.play_jump_puff,
     project_entity: (id) => {
       const anchor = entities.world_anchor(id)
       return anchor ? project_screen_anchor(anchor, camera, canvas.getBoundingClientRect()) : null
@@ -106,7 +111,7 @@ export const create_grid_fallback = (
     flattened: () => flattened,
     dispose: () => {
       fight_board.dispose()
-      fight_vfx.dispose()
+      effects.dispose()
       entities.dispose()
       presentation.dispose()
       renderer.dispose()

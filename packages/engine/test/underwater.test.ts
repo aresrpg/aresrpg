@@ -19,3 +19,8 @@ test('the dead-band across the waterline holds the previous state (no flicker)',
 test('no water over the eye is a hard exit, whatever the previous state', () => {
   expect(is_submerged(-10, null, true)).toBeFalse()
 })
+
+test('the immersion boundary works at an absolute authored liquid height', () => {
+  expect(is_submerged(59.5, 60, false)).toBeTrue()
+  expect(is_submerged(60.5, 60, true)).toBeFalse()
+})

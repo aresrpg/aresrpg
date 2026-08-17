@@ -2,6 +2,7 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
 import type { EngineQuality } from '@aresrpg/engine'
+import type { CharacterCreateInput } from '@aresrpg/sdk/character'
 import { useCallback, useRef, useState } from 'react'
 import { ThinkingOrb } from 'thinking-orbs'
 
@@ -16,6 +17,7 @@ import { env } from './env.ts'
 import type { AppCopy } from './i18n/copy.ts'
 import type { Locale } from './i18n/locale.ts'
 import type { Page } from './modules/navigation.ts'
+import { toast } from './toast.ts'
 
 const GoogleIcon = () => (
   <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
@@ -146,10 +148,11 @@ export function App() {
   const locale = useAppStore((state) => state.locale)
   const copy = useAppStore((state) => state.copy)
   const engine_status = useAppStore((state) => state.engine)
+  const { wallet } = session
   const [show_wallets, set_show_wallets] = useState(false)
   const [graphics_notice_dismissed, set_graphics_notice_dismissed] = useState(false)
   const attached_canvas = useRef<HTMLCanvasElement | null>(null)
-  const in_app = !!session.wallet
+  const in_app = !!wallet
   /* eslint-disable functional/prefer-immutable-types, functional/immutable-data -- React owns this mutable DOM ref; the engine needs the real canvas element. */
   const attach_canvas = useCallback((canvas: HTMLCanvasElement | null): void => {
     const previous = attached_canvas.current
@@ -184,8 +187,25 @@ export function App() {
     (character_id: string): void => dispatch_app({ type: 'character/select', character_id }),
     []
   )
+  const create_character = useCallback(
+    async (character: CharacterCreateInput): Promise<void> => {
+      if (!wallet) throw new Error('The wallet session is unavailable')
+      const pending = toast.loading(copy?.creating_character ?? 'Creating character…')
+      try {
+        await wallet.create_character(character)
+        pending.success(copy?.character_created ?? 'Character created')
+        dispatch_app({ type: 'dialog/open', dialog: null })
+        dispatch_app({ type: 'wallet/refresh' })
+      } catch (error) {
+        pending.error(error)
+        throw error
+      }
+    },
+    [copy, wallet]
+  )
   const show_graphics_notice =
     engine_status.state === 'failed' || (engine_status.state === 'degraded' && !graphics_notice_dismissed)
+  const world_unavailable = engine_status.issue?.code === 'world_unavailable'
   const loading_universe = session.auth_status === 'connecting' || (in_app && !session.roster_loaded)
 
   if (!copy) return <main className="fixed inset-0 bg-[#0a0a0f]" />
@@ -224,7 +244,11 @@ export function App() {
           <Welcome copy={copy} create={() => dispatch_app({ type: 'dialog/open', dialog: 'character_create' })} />
         )}
         {in_app && navigation.page === 'world' && navigation.dialog === 'character_create' && (
-          <CharacterCreateModal cancel={() => dispatch_app({ type: 'dialog/open', dialog: 'welcome' })} copy={copy} />
+          <CharacterCreateModal
+            cancel={() => dispatch_app({ type: 'dialog/open', dialog: 'welcome' })}
+            copy={copy}
+            create={create_character}
+          />
         )}
       </div>
       <div className="pointer-events-none fixed inset-0 z-[100] bg-[repeating-linear-gradient(0deg,transparent,transparent_2px,rgba(200,150,60,0.014)_2px,rgba(200,150,60,0.014)_4px)]" />
@@ -233,13 +257,17 @@ export function App() {
       {show_graphics_notice && (
         <section className="fixed inset-0 z-[200] grid place-items-center bg-[#050508]/88 p-5 backdrop-blur-lg">
           <div className="w-full max-w-lg border border-[#ff5a8b]/35 bg-[#0a0a0f] p-7 shadow-[0_0_80px_rgba(255,27,141,0.12)]">
-            <h2 className="mb-4 text-base font-semibold text-[#e8e4dc]">{copy.title}</h2>
+            <h2 className="mb-4 text-base font-semibold text-[#e8e4dc]">
+              {world_unavailable ? copy.world_unavailable_title : copy.title}
+            </h2>
             <p className="mb-5 text-xs leading-6 text-[#a3a5ad]">
-              {engine_status.state === 'failed' ? copy.fatal : copy.body}
+              {world_unavailable ? copy.world_unavailable : engine_status.state === 'failed' ? copy.fatal : copy.body}
             </p>
-            <p className="mb-2 text-[11px] leading-5 text-[#d0ccd0]">
-              {/Chrome|Chromium|Edg/.test(navigator.userAgent) ? copy.chrome : copy.other}
-            </p>
+            {!world_unavailable && (
+              <p className="mb-2 text-[11px] leading-5 text-[#d0ccd0]">
+                {/Chrome|Chromium|Edg/.test(navigator.userAgent) ? copy.chrome : copy.other}
+              </p>
+            )}
             {engine_status.state === 'degraded' && (
               <button
                 className="mt-5 h-10 w-full cursor-pointer border border-[#4a9eff]/40 bg-[#4a9eff]/8 text-[10px] tracking-[0.18em] text-[#67adff] uppercase"

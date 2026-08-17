@@ -1,6 +1,8 @@
 title: WebGPU n'est pas disponible
 body: Le monde complet nécessite WebGPU. Une grille légère s'affiche à la place.
 fatal: Ce navigateur ne peut créer aucun contexte graphique WebGPU ou WebGL.
+world_unavailable_title: Monde indisponible
+world_unavailable: Ce monde ne possède pas encore de recette de terrain.
 chrome: "Chrome ou Edge : mettez le navigateur à jour, activez « Utiliser l'accélération graphique si disponible » dans Paramètres → Système, puis relancez-le."
 other: Activez l'accélération matérielle, mettez à jour le navigateur et le pilote graphique, puis redémarrez le navigateur.
 continue: Continuer avec la grille
@@ -23,7 +25,6 @@ world: Monde
 characters: Personnages
 leaderboard: Classement
 shop: Boutique
-simulator: Simulateur
 encyclopedia: Encyclopédie
 marketplace: Marché
 airdrop: Airdrop
@@ -42,6 +43,7 @@ server_connected: Connecté
 latency_unit: ms
 indexing_health: Santé de l’indexation
 indexing_lag_warning: Les actions en jeu peuvent apparaître en retard
+game_frozen: Le jeu est actuellement gelé. Consultez Discord pour plus d’informations.
 network_testnet: TESTNET
 page_pending_title: Cette page est en reconstruction
 page_pending_body: Sa place reste visible pendant que nous la restaurons proprement.
@@ -55,11 +57,14 @@ sex_label: Sexe
 appearance_label: Apparence · 3 couleurs
 name_label: Nom
 name_placeholder: Entrez un nom…
+name_invalid: Utilise 4 à 19 caractères ASCII imprimables, sans espaces.
 male: Homme
 female: Femme
 cancel: Retour
 create_and_play: Créer et jouer
-create_unavailable: La création sera activée avec la prochaine version publiée du jeu.
+character_price: Prix
+creating_character: Création du personnage…
+character_created: Personnage créé
 address_verification_failed: Nous n’avons pas pu vérifier cette adresse. Reconnectez-vous ou contactez-nous sur Discord.
 dismiss: Fermer
 wallet_copy_address: Copier l’adresse
@@ -75,6 +80,24 @@ wallet_send_pending: Envoi des SUI…
 wallet_send_success: SUI envoyés
 wallet_send_failed: Le transfert de SUI a échoué
 wallet_close: Fermer
+demo_page:
+  title: Laboratoire de rendu
+  world_lab: Monde
+  fight_lab: Combat
+  no_terrain: Aucune recette de terrain
+  time: Heure du jour
+  live: Direct
+  remove_character: Retirer le modèle
+  control_character: Contrôler le modèle
+  mob_group: Groupe de monstres
+  mob: Monstre
+  amount: Quantité
+  spawn_group: Faire apparaître
+  clear: Effacer
+  resources: Ressources
+  resources_missing: Le rendu des ressources n’est pas encore restauré. La liste créée reste disponible dans les données seed.
+  control_hint: Cliquer sur le canvas · WASD pour bouger · Espace pour sauter · Souris pour regarder
+  back: Retour à l’application
 shop_page:
   title: 'Boutique'
   subtitle: 'Achetez des objets avec du SUI'

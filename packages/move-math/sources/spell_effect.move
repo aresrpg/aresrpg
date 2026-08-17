@@ -206,11 +206,12 @@ public fun split_placements(effects: &vector<Effect>): (vector<Effect>, vector<E
   (placements, payload)
 }
 
-public fun has_offensive(effects: &vector<Effect>): bool {
+public fun has_direct_damage(effects: &vector<Effect>): bool {
   let mut index = 0;
   while (index < effects.length()) {
-    let kind = effects[index].kind;
-    if (kind == 0 || kind == 1 || kind == 3 || kind == 5 || kind == 6 || kind == 8 || kind == 9) {
+    let effect = &effects[index];
+    let kind = effect.kind;
+    if (kind == 0 || kind == 1 || kind == 3 || (kind == 6 && effect.stat == 12 && effect.turns == 0)) {
       return true
     };
     index = index + 1;

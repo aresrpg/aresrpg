@@ -114,6 +114,27 @@ describe('the player harness (push model)', () => {
     expect(event).toEqual({ type: 'packet/friend_added', list: '0xl', who: '0xme' })
   })
 
+  test('a projected character creation pushes the fresh roster', async () => {
+    const { sent, ws, graph, pubsub, queries } = wire()
+    create_player({ ws, address: '0xme', admin: false, graph, pubsub })
+    await flush()
+    sent.length = 0
+    queries.length = 0
+
+    pubsub.emitter.emit('evt:social:0xme', {
+      type: 'CharacterCreated',
+      ckpt: 2,
+      data: { character: '0xcharacter', owner: '0xme', name: 'nox', classe: 'senshi' },
+    })
+    await flush()
+
+    expect(sent.find(({ type }) => type === 'packet/characters')).toMatchObject({
+      type: 'packet/characters',
+      characters: [{ name: 'nox', kiosk: '0xk' }],
+    })
+    expect(queries.some(({ params }) => params?.address === '0xme')).toBe(true)
+  })
+
   test('teardown unsubscribes the watch — a closed connection goes silent', async () => {
     const { sent, ws, graph, pubsub } = wire()
     const player = create_player({ ws, address: '0xme', admin: false, graph, pubsub })

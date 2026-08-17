@@ -12,6 +12,7 @@ describe('app navigation routes', () => {
     expect(page_from_pathname('/')).toBe('world')
     expect(page_from_pathname('/encyclopedia')).toBe('encyclopedia')
     expect(page_from_pathname('/encyclopedia/items/aberrant_edge')).toBe('encyclopedia')
+    expect(page_from_pathname('/simulator')).toBe('world')
     expect(page_from_pathname('/not-a-page')).toBe('world')
   })
 

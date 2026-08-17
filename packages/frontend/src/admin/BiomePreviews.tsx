@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
-import type { WorldRecipe } from '@aresrpg/engine'
-import { useEffect, useMemo, useRef } from 'react'
+import { create_world_preview, type WorldPreview, type WorldRecipe } from '@aresrpg/engine'
+import { useEffect, useMemo, useRef, useState } from 'react'
 
-import { biome_preview, terrain_patch } from './biome_editor.ts'
+import { biome_preview, first_biome_land } from './biome_editor.ts'
 
-/* eslint-disable functional/immutable-data, fp-law/no-mutating-methods -- Canvas buffers are mutable browser effect boundaries. */
+/* eslint-disable functional/immutable-data -- Canvas buffers and refs are mutable browser effect boundaries. */
 
 type SelectedColumn = Readonly<{
   x: number
@@ -16,81 +16,131 @@ type SelectedColumn = Readonly<{
   climate: Readonly<Record<string, number>>
 }>
 
-const darken = (hex: string, factor: number): string => {
-  const value = Number.parseInt(hex.replace('#', ''), 16)
-  const channel = (shift: number) => Math.round(((value >> shift) & 0xff) * factor)
-  return `rgb(${channel(16)},${channel(8)},${channel(0)})`
-}
-
 export const TerrainPreview = ({
   recipe,
   selected,
 }: Readonly<{ recipe: WorldRecipe; selected: SelectedColumn | null }>) => {
   const canvas = useRef<HTMLCanvasElement | null>(null)
-  const patch = useMemo(
-    () => terrain_patch(recipe, { center_x: selected?.x ?? 0, center_z: selected?.z ?? 0 }),
-    [recipe, selected?.x, selected?.z]
-  )
+  const preview = useRef<WorldPreview | null>(null)
+  const drag = useRef<Readonly<{ x: number; y: number; mode: 'orbit' | 'pan' }> | null>(null)
+  const latest = useRef(recipe)
+  const focus = useRef<readonly [number, number]>([selected?.x ?? 0, selected?.z ?? 0])
+  const exact_radius = useRef(192)
+  const [radius, set_radius] = useState(192)
+  const [error, set_error] = useState<string | null>(null)
+
   useEffect(() => {
     const target = canvas.current
-    const context = target?.getContext('2d')
-    if (!target || !context) return
-    const width = 720
-    const height = 360
-    const tile = 25
-    const rise = 2.2
-    const minimum = Math.min(...patch.columns.map(({ surface_y }) => surface_y))
-    target.width = width
-    target.height = height
-    context.clearRect(0, 0, width, height)
-    context.fillStyle = '#08090e'
-    context.fillRect(0, 0, width, height)
-    for (const column of patch.columns) {
-      const screen_x = width / 2 + (column.column - column.row) * (tile / 2)
-      const ground_y = 70 + (column.column + column.row) * (tile / 4)
-      const screen_y = ground_y - (column.surface_y - minimum) * rise
-      const depth = Math.max(3, ground_y - screen_y + 5)
-      context.beginPath()
-      context.moveTo(screen_x - tile / 2, screen_y)
-      context.lineTo(screen_x, screen_y + tile / 4)
-      context.lineTo(screen_x, screen_y + tile / 4 + depth)
-      context.lineTo(screen_x - tile / 2, screen_y + depth)
-      context.closePath()
-      context.fillStyle = darken(column.color, 0.45)
-      context.fill()
-      context.beginPath()
-      context.moveTo(screen_x + tile / 2, screen_y)
-      context.lineTo(screen_x, screen_y + tile / 4)
-      context.lineTo(screen_x, screen_y + tile / 4 + depth)
-      context.lineTo(screen_x + tile / 2, screen_y + depth)
-      context.closePath()
-      context.fillStyle = darken(column.color, 0.62)
-      context.fill()
-      context.beginPath()
-      context.moveTo(screen_x, screen_y - tile / 4)
-      context.lineTo(screen_x + tile / 2, screen_y)
-      context.lineTo(screen_x, screen_y + tile / 4)
-      context.lineTo(screen_x - tile / 2, screen_y)
-      context.closePath()
-      context.fillStyle = column.color
-      context.fill()
+    if (!target) return
+    let cancelled = false
+    void create_world_preview(target, latest.current).then(
+      (created) => {
+        if (cancelled) {
+          created.dispose()
+          return
+        }
+        preview.current = created
+        created.set_focus(focus.current[0], focus.current[1])
+        created.set_exact_radius(exact_radius.current)
+        set_error(null)
+      },
+      (reason: unknown) => {
+        if (!cancelled) set_error(reason instanceof Error ? reason.message : String(reason))
+      }
+    )
+    return () => {
+      cancelled = true
+      preview.current?.dispose()
+      preview.current = null
     }
-  }, [patch])
+  }, [])
+  useEffect(() => {
+    latest.current = recipe
+    preview.current?.update(recipe)
+  }, [recipe])
+  useEffect(() => {
+    focus.current = [selected?.x ?? 0, selected?.z ?? 0]
+    preview.current?.set_focus(focus.current[0], focus.current[1])
+  }, [selected?.x, selected?.z])
+
   return (
-    <section className="border border-white/10 bg-black/20">
-      <div className="flex items-center justify-between border-b border-white/8 px-3 py-2">
-        <h2 className="text-[8px] tracking-[0.16em] text-[#c8963c] uppercase">Live voxel terrain</h2>
-        <span className="text-[7px] text-[#666b75] uppercase">Exact engine sampler</span>
-      </div>
-      <canvas className="aspect-[2/1] w-full [image-rendering:pixelated]" ref={canvas} />
-    </section>
+    <div className="absolute inset-0 bg-[#0b1017]">
+      <canvas
+        className="size-full touch-none cursor-grab active:cursor-grabbing"
+        onContextMenu={(event) => event.preventDefault()}
+        onPointerDown={(event) => {
+          if (event.button !== 0 && event.button !== 2) return
+          event.currentTarget.setPointerCapture(event.pointerId)
+          drag.current = { x: event.clientX, y: event.clientY, mode: event.button === 2 ? 'pan' : 'orbit' }
+        }}
+        onPointerMove={(event) => {
+          const previous = drag.current
+          if (!previous) return
+          const x_delta = event.clientX - previous.x
+          const y_delta = event.clientY - previous.y
+          if (previous.mode === 'pan') {
+            const next_focus = preview.current?.pan(x_delta, y_delta)
+            if (next_focus) focus.current = next_focus
+          } else preview.current?.orbit(-x_delta * 0.006, y_delta * 0.004)
+          drag.current = { x: event.clientX, y: event.clientY, mode: previous.mode }
+        }}
+        onPointerCancel={() => {
+          if (drag.current?.mode === 'pan') preview.current?.settle_pan()
+          drag.current = null
+        }}
+        onPointerUp={() => {
+          if (drag.current?.mode === 'pan') preview.current?.settle_pan()
+          drag.current = null
+        }}
+        onWheel={(event) => preview.current?.zoom(event.deltaY)}
+        ref={canvas}
+      />
+      <span className="pointer-events-none absolute bottom-3 right-3 border border-white/8 bg-[#080a10]/82 px-3 py-2 text-[7px] tracking-[0.12em] text-[#8a909b] uppercase">
+        Left-drag orbit · Right-drag pan · Scroll zoom
+      </span>
+      <label className="absolute bottom-3 left-3 w-64 border border-white/10 bg-[#080a10]/88 px-3 py-2 backdrop-blur-sm">
+        <span className="mb-1.5 flex items-center justify-between text-[7px] tracking-[0.1em] uppercase">
+          <span className="text-[#858b96]">Exact voxel field</span>
+          <strong className="tabular-nums text-[#efbd45]">
+            {radius} radius · {radius * 2 + 1}²
+          </strong>
+        </span>
+        <input
+          aria-label="Exact voxel preview radius"
+          className="h-3 w-full cursor-ew-resize accent-[#c8963c]"
+          max="384"
+          min="64"
+          onBlur={() => preview.current?.set_exact_radius(exact_radius.current)}
+          onChange={(event) => {
+            const next = Number(event.target.value)
+            exact_radius.current = next
+            set_radius(next)
+          }}
+          onKeyUp={() => preview.current?.set_exact_radius(exact_radius.current)}
+          onPointerUp={() => preview.current?.set_exact_radius(exact_radius.current)}
+          step="32"
+          type="range"
+          value={radius}
+        />
+      </label>
+      {error && (
+        <span className="absolute inset-x-4 bottom-4 border border-[#ff5a8b]/35 bg-[#16090e]/94 p-3 text-[8px] text-[#ff8caa]">
+          {error}
+        </span>
+      )}
+    </div>
   )
 }
 
 export const BiomeMap = ({
   recipe,
   select,
-}: Readonly<{ recipe: WorldRecipe; select: (column: number, row: number) => void }>) => {
+  selected,
+}: Readonly<{
+  recipe: WorldRecipe
+  select: (column: number, row: number) => void
+  selected?: readonly [number, number] | null
+}>) => {
   const canvas = useRef<HTMLCanvasElement | null>(null)
   const preview = useMemo(() => biome_preview(recipe), [recipe])
   useEffect(() => {
@@ -100,7 +150,8 @@ export const BiomeMap = ({
     const image = context.createImageData(preview.side, preview.side)
     preview.cells.forEach((biome_index, index) => {
       const biome = recipe.biomes[biome_index]
-      const color = recipe.materials[biome.land.surface] ?? '#000000'
+      const land = first_biome_land(biome)
+      const color = land ? (recipe.materials[land.surface]?.color ?? '#000000') : '#000000'
       const rgb = Number.parseInt(color.slice(1), 16)
       image.data[index * 4] = (rgb >> 16) & 0xff
       image.data[index * 4 + 1] = (rgb >> 8) & 0xff
@@ -110,25 +161,37 @@ export const BiomeMap = ({
     target.width = preview.side
     target.height = preview.side
     context.putImageData(image, 0, 0)
-  }, [preview, recipe])
+    if (selected) {
+      context.strokeStyle = '#ffffff'
+      context.lineWidth = 1
+      context.strokeRect(selected[0] - 2.5, selected[1] - 2.5, 5, 5)
+      context.strokeStyle = '#05070a'
+      context.strokeRect(selected[0] - 1.5, selected[1] - 1.5, 3, 3)
+    }
+  }, [preview, recipe, selected])
   return (
-    <canvas
-      className="aspect-square min-h-0 w-full cursor-crosshair border border-white/10 bg-black [image-rendering:pixelated]"
-      onPointerDown={(event) => {
-        const bounds = event.currentTarget.getBoundingClientRect()
-        select(
-          Math.min(
-            preview.side - 1,
-            Math.max(0, Math.floor(((event.clientX - bounds.left) / bounds.width) * preview.side))
-          ),
-          Math.min(
-            preview.side - 1,
-            Math.max(0, Math.floor(((event.clientY - bounds.top) / bounds.height) * preview.side))
+    <div className="absolute inset-0 grid place-items-center overflow-hidden bg-[#07090d] p-10">
+      <canvas
+        className="aspect-square h-full max-h-full w-auto max-w-full cursor-crosshair border border-white/10 bg-black [image-rendering:pixelated]"
+        onPointerDown={(event) => {
+          const bounds = event.currentTarget.getBoundingClientRect()
+          select(
+            Math.min(
+              preview.side - 1,
+              Math.max(0, Math.floor(((event.clientX - bounds.left) / bounds.width) * preview.side))
+            ),
+            Math.min(
+              preview.side - 1,
+              Math.max(0, Math.floor(((event.clientY - bounds.top) / bounds.height) * preview.side))
+            )
           )
-        )
-      }}
-      ref={canvas}
-    />
+        }}
+        ref={canvas}
+      />
+      <span className="pointer-events-none absolute bottom-3 right-3 border border-white/8 bg-[#080a10]/82 px-3 py-2 text-[7px] tracking-[0.12em] text-[#8a909b] uppercase">
+        Click a zone to focus the height preview · 196² authored zones
+      </span>
+    </div>
   )
 }
 
@@ -165,7 +228,10 @@ export const BiomeCoverage = ({
       <div className="grid gap-1.5 sm:grid-cols-2">
         {recipe.biomes.map((biome, index) => (
           <div className="grid grid-cols-[10px_1fr_auto] items-center gap-2 text-[8px]" key={biome.name}>
-            <span className="size-2.5" style={{ backgroundColor: recipe.materials[biome.land.surface] }} />
+            <span
+              className="size-2.5"
+              style={{ backgroundColor: recipe.materials[first_biome_land(biome)?.surface ?? '']?.color }}
+            />
             <span className="truncate">
               {biome.name}{' '}
               <small className="text-[#5f636d]">

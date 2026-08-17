@@ -3,9 +3,10 @@
 
 import { describe, expect, test } from 'bun:test'
 import type { TransactionPlugin } from '@mysten/sui/transactions'
-import { normalizeStructTag } from '@mysten/sui/utils'
+import { normalizeStructTag, normalizeSuiObjectId } from '@mysten/sui/utils'
 
 import {
+  create_package_upgrade_transaction,
   create_package_publish_transaction,
   create_deployment_bootstrap_transaction,
   create_version_admin_transaction,
@@ -28,6 +29,47 @@ describe('deployment admin', () => {
     })
 
     expect(transaction.getData().commands.map(({ $kind }) => $kind)).toEqual(['Publish', 'TransferObjects'])
+  })
+
+  test('upgrading authorizes and commits against the current package object', () => {
+    const sdk = SDK({
+      address: id('9'),
+      pins: { package: id('1') } satisfies Pins,
+      client: {
+        core: {
+          resolveTransactionPlugin: () => resolve_transaction,
+          getBalance: async () => ({ balance: { balance: '0' } }),
+          getCurrentSystemState: async () => ({ systemState: { epoch: '1', referenceGasPrice: '1' } }),
+          getChainIdentifier: async () => ({ chainIdentifier: id('0') }),
+          getReferenceGasPrice: async () => ({ referenceGasPrice: '1' }),
+          listCoins: async () => ({ objects: [] }),
+          getObjects: async () => ({ objects: [] }),
+          simulateTransaction: async () => ({}),
+          executeTransaction: async () => ({}),
+        },
+      } as SuiTransport,
+    })
+    sdk.cache.owned.set(id('3'), { objectId: id('3'), version: '1', digest: 'digest' })
+    const transaction = create_package_upgrade_transaction({
+      sdk,
+      artifact: { package_name: 'aresrpg_math', digest: [1, 2, 3], modules: ['AA=='], dependencies: [id('2')] },
+      package: id('4'),
+      upgrade_cap: id('3'),
+      policy: 0,
+    })
+
+    expect(transaction.getData().commands.map(({ $kind }) => $kind)).toEqual(['MoveCall', 'Upgrade', 'MoveCall'])
+    expect(transaction.getData().commands[0]?.MoveCall).toMatchObject({
+      package: normalizeSuiObjectId('0x2'),
+      module: 'package',
+      function: 'authorize_upgrade',
+    })
+    expect(transaction.getData().commands[1]?.Upgrade?.package).toBe(id('4'))
+    expect(transaction.getData().commands[2]?.MoveCall).toMatchObject({
+      package: normalizeSuiObjectId('0x2'),
+      module: 'package',
+      function: 'commit_upgrade',
+    })
   })
 
   test('projects a published package from the core PackageWrite effect', () => {

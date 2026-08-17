@@ -1,20 +1,20 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
-import type { FightSide } from '@aresrpg/engine'
+import type { EntityVisualEffect, FightSide } from '@aresrpg/engine'
 import type { HydratedFightCheckpoint } from '@aresrpg/fight'
+import { EFFECT_KINDS } from '@aresrpg/fight/move_contract'
 
-export type FightCharacterRenderSource = Readonly<{
-  id: string
-  classe: string
-  male: boolean
-  colors: readonly [string, string, string]
-  loadout: Readonly<Record<string, string>>
-  cell: number
-  side: FightSide
-}>
+import type { CharacterRenderSource } from '../character_entities.ts'
 
-export type FightCharacterAppearance = Omit<FightCharacterRenderSource, 'cell' | 'side'>
+export type FightCharacterRenderSource = CharacterRenderSource &
+  Readonly<{
+    cell: number
+    side: FightSide
+    visual_effect?: EntityVisualEffect
+  }>
+
+export type FightCharacterAppearance = CharacterRenderSource
 
 export const character_entity_sources = (
   characters: readonly FightCharacterAppearance[],
@@ -34,7 +34,8 @@ const DEFAULT_COLORS = Object.freeze(['#ffffff', '#d9af57', '#8b6539'] as const)
 
 export const fight_character_entity_sources = (
   checkpoint: Readonly<HydratedFightCheckpoint>,
-  appearances: readonly FightCharacterAppearance[]
+  appearances: readonly FightCharacterAppearance[],
+  viewer_team: bigint | null = null
 ): readonly FightCharacterRenderSource[] => {
   const by_id = new Map(appearances.map((appearance) => [appearance.id, appearance]))
   return Object.freeze(
@@ -57,6 +58,9 @@ export const fight_character_entity_sources = (
           cell: Number(fighter.cell),
           side: fighter.team === 0n ? ('a' as const) : ('b' as const),
           id: `fight_character_${seat}`,
+          ...(viewer_team === fighter.team && fighter.effects.some(({ kind }) => kind === EFFECT_KINDS.invis)
+            ? { visual_effect: Object.freeze({ kind: 'invisibility' as const }) }
+            : {}),
         }),
       ]
     })

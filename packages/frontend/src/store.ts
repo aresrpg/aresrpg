@@ -63,7 +63,7 @@ export type AppModule = Readonly<{
   observe?: (context: AppContext) => void
 }>
 
-const MODULES: readonly AppModule[] = Object.freeze([
+const MODULES = Object.freeze([
   session,
   navigation,
   settings,
@@ -72,7 +72,9 @@ const MODULES: readonly AppModule[] = Object.freeze([
   simulator,
   fight,
   admin,
-])
+]) satisfies readonly AppModule[]
+
+export type AppModuleName = (typeof MODULES)[number]['name']
 
 export const initial_app_state = (settings_state: GameSettings): AppState =>
   Object.freeze({
@@ -131,18 +133,19 @@ const create_app = () => {
       state = initial_app_state(settings_state)
       store.setState(state, true)
     },
-    observe: (): (() => void) => {
+    observe: (module_names: readonly AppModuleName[] | null = null): (() => void) => {
       active_observers?.abort()
       events.clear()
       const controller = new AbortController()
       active_observers = controller
+      const selected = module_names ? new Set(module_names) : null
       const context: AppContext = Object.freeze({
         events: events.api,
         signal: controller.signal,
         get_state: () => state,
         dispatch,
       })
-      for (const module of MODULES) module.observe?.(context)
+      for (const module of MODULES) if (!selected || selected.has(module.name)) module.observe?.(context)
       return () => {
         if (active_observers !== controller) return
         controller.abort()

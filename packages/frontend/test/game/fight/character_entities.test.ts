@@ -3,6 +3,7 @@
 
 import { describe, expect, test } from 'bun:test'
 import { create_character_source, create_fight } from '@aresrpg/fight'
+import { EFFECT_KINDS } from '@aresrpg/fight/move_contract'
 
 import {
   character_entity_sources,
@@ -58,5 +59,24 @@ describe('fight character projection', () => {
     expect(sources).toHaveLength(2)
     expect(sources[0]).toMatchObject({ id: 'fight_character_0', classe: 'senshi', male: false, side: 'a' })
     expect(sources[1]).toMatchObject({ id: 'fight_character_1', classe: 'yogan', male: true, side: 'b' })
+  })
+
+  test('projects allied invisibility as the shared engine visual effect', () => {
+    const source = create_character_source({ classe: 'yajin', level: 1n })
+    const checkpoint = structuredClone(
+      create_fight({
+        mode: 'local',
+        setup: {
+          players: [{ character: 'mine', owner: 'local', team: 0n, hp: 55n, source }],
+          mobs: [],
+        },
+      }).state()
+    )
+    checkpoint.contract.fighters[0]!.effects = [
+      { kind: EFFECT_KINDS.invis, element: '', value: 1n, turns_left: 2n, source: 0n, stat: 0n },
+    ]
+
+    expect(fight_character_entity_sources(checkpoint, [], 0n)[0]?.visual_effect).toEqual({ kind: 'invisibility' })
+    expect(fight_character_entity_sources(checkpoint, [], 1n)[0]?.visual_effect).toBeUndefined()
   })
 })

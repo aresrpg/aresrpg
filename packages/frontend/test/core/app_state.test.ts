@@ -5,6 +5,7 @@ import { describe, expect, test } from 'bun:test'
 import { DEFAULT_ADMIN_ADDRESS, type CharacterRow } from '@aresrpg/protocol'
 
 import type { AuthSession } from '../../src/auth.ts'
+import { package_upgrade_steps } from '../../src/admin/admin_deployment.ts'
 import { initial_app_state, reduce_app_state } from '../../src/store.ts'
 
 const settings = Object.freeze({ quality: 'medium', flat_mode: false, music_enabled: true } as const)
@@ -18,6 +19,7 @@ const auth_session = (address = '0xowner'): AuthSession =>
     gas_spent_24h: () => 0n,
     derive_character_id: () => '0xcharacter',
     is_character_name_claimed: async () => false,
+    create_character: async () => ({ digest: '', character_id: '' }),
     resolve_suins_address: async () => null,
     estimate_sui_transfer: async () => 0n,
     send_sui: async () => ({ digest: null }),
@@ -27,6 +29,9 @@ const auth_session = (address = '0xowner'): AuthSession =>
       throw new Error('unused in reducer tests')
     },
     publish_contract: async () => ({ receipt: {}, objects: [] }),
+    upgrade_contract: async () => ({ receipt: {} }),
+    read_package_upgrade: async () => ({ package: '', version: 1, policy: 0 }),
+    read_game_version: async () => 1,
     read_game_paused: async () => false,
     set_game_paused: async () => ({ digest: '' }),
     read_marketplace_royalties: async () => [],
@@ -128,6 +133,11 @@ describe('app state', () => {
     })
     expect(online.session.online).toBe(42)
     expect(online.session.indexing_lag).toBe(7)
+    const frozen = reduce_app_state(online, {
+      type: 'server/packet',
+      packet: { type: 'packet/game_state', frozen: true },
+    })
+    expect(frozen.session.game_frozen).toBeTrue()
   })
 
   test('server latency is session truth and clears before reconnecting', () => {
@@ -252,6 +262,61 @@ describe('app state', () => {
 
     expect(loaded.admin.config).toEqual({ admin_cap: '0xadmin', worlds: { shore: '0xworld' } })
     expect(loaded.admin.deployment.status).toBe('ready')
+  })
+
+  test('contract maintenance has guarded upgrade and two-step republish states', () => {
+    const base = create_state()
+    const ready = {
+      ...base,
+      admin: {
+        ...base.admin,
+        snapshot: { batches: [], sealed: true },
+        cleanup: 'closed' as const,
+        deployment: {
+          ...base.admin.deployment,
+          status: 'ready' as const,
+          network: 'testnet' as const,
+          revision: 'one',
+          paused: false,
+          pins: {
+            package: '0xpackage',
+            math_package: '0xmath',
+            upgrade_cap: '0xupgrade',
+            math_upgrade_cap: '0xmathupgrade',
+            admin_cap: '0xadmin',
+            publisher: '0xpublisher',
+            version: { id: '0xversion', shared_version: '1' },
+            template_registry: { id: '0xtemplates', shared_version: '1' },
+            loot_registry: { id: '0xloot', shared_version: '1' },
+            item_policy: { id: '0xitempolicy', shared_version: '1' },
+            character_policy: { id: '0xcharacterpolicy', shared_version: '1' },
+            item_protected_policy: { id: '0xitemprotected', shared_version: '1' },
+            character_protected_policy: { id: '0xcharacterprotected', shared_version: '1' },
+            worlds: {},
+          },
+        },
+      },
+    }
+    expect(reduce_app_state(ready, { type: 'admin/contracts_upgrade' }).admin.deployment.status).toBe('upgrading')
+
+    const armed = reduce_app_state(ready, { type: 'admin/republish_armed', armed: true })
+    const resetting = reduce_app_state(armed, { type: 'admin/contracts_republish' })
+    const republished = reduce_app_state(resetting, {
+      type: 'admin/contracts_republished',
+      revision: 'two',
+      pins: { ...ready.admin.deployment.pins!, package: null, worlds: {} },
+    })
+    expect(resetting.admin.deployment.status).toBe('resetting')
+    expect(republished.admin.snapshot).toBeNull()
+    expect(republished.admin.cleanup).toBe('unknown')
+    expect(republished.admin.deployment.pins?.package).toBeNull()
+  })
+
+  test('contract upgrade retries resume from UpgradeCap chain versions', () => {
+    expect(package_upgrade_steps(1, 1, 1)).toEqual({ target_version: 2, upgrade_math: true, upgrade_game: true })
+    expect(package_upgrade_steps(1, 2, 1)).toEqual({ target_version: 2, upgrade_math: false, upgrade_game: true })
+    expect(package_upgrade_steps(1, 2, 2)).toEqual({ target_version: 2, upgrade_math: false, upgrade_game: false })
+    expect(() => package_upgrade_steps(1, 1, 2)).toThrow('cannot be newer')
   })
 
   test('publish all is one guarded resumable operation', () => {

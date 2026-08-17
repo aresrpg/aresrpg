@@ -23,12 +23,13 @@ import { create_far_terrain } from './far_terrain.ts'
 import { create_fight_board_layer } from './fight_board.ts'
 import { create_entity_layer } from './entities.ts'
 import { create_fight_presentation } from './fight_presentation.ts'
-import { create_fight_vfx } from './fight_vfx.ts'
+import { create_transient_effects } from './transient_effects.ts'
 import { project_screen_anchor } from './screen_projection.ts'
 import { create_frame_renderer } from './frame_renderer.ts'
 import { create_flatten_uniform } from './flatten.ts'
 import type { GreedyMeshData } from './greedy_mesher.ts'
 import { create_mesh_pool } from './mesh_pool.ts'
+import { liquid_palette } from './liquid_palette.ts'
 import { get_quality_profile, quality_pixel_ratio } from './quality.ts'
 import { chunk_origin } from './terrain_generator.ts'
 import { create_terrain_pool } from './terrain_pool.ts'
@@ -48,6 +49,8 @@ import type {
   Vec3,
 } from './types.ts'
 import { compile_world_recipe, sample_world_column, type WorldRecipe } from './world_recipe.ts'
+
+const FOG_COOL_TILT = [0.62, 0.75, 1] as const
 
 type PendingUpload = Readonly<{
   chunk: RenderedChunk
@@ -77,19 +80,22 @@ export const create_webgpu_backend = async (
   await renderer.init()
   renderer.outputColorSpace = SRGBColorSpace
   renderer.toneMapping = AgXToneMapping
-  renderer.toneMappingExposure = 1.1
+  renderer.toneMappingExposure = 0.85
 
   const scene = new Scene()
-  const camera = new PerspectiveCamera(48, 1, 0.1, 3000)
+  const camera = new PerspectiveCamera(70, 1, 0.1, 3000)
   const fight_board = create_fight_board_layer({ scene, camera, canvas })
   const entities = create_entity_layer({ scene })
-  const fight_vfx = create_fight_vfx({ scene, entities })
-  const fight_presentation = create_fight_presentation({ entities, vfx: fight_vfx })
+  const effects = create_transient_effects({ scene, entities })
+  const fight_presentation = create_fight_presentation({ entities, vfx: effects })
   const sun = new DirectionalLight(0xfff2dd, 3)
   const back_fill = new DirectionalLight(0xffd6a8, 1.35)
   const hemisphere = new HemisphereLight(0xbcb2a0, 0x977f56, 0.9)
   const analytic_sky = create_sky_node({ seed: world.seed })
   const compiled_world = compile_world_recipe(world)
+  const liquid_material =
+    world.liquid === undefined ? null : compiled_world.materials.entries[compiled_world.materials.id_for(world.liquid)]!
+  const water_palette = liquid_palette(liquid_material?.color ?? [0, 0, 0])
   const light_baseline = Object.freeze({
     sun_color: [sun.color.r, sun.color.g, sun.color.b] as const,
     sun_intensity: sun.intensity,
@@ -120,13 +126,22 @@ export const create_webgpu_backend = async (
     sun_direction: analytic_sky.sun_direction,
     clouds,
   })
-  const water = create_water({ scene, quality: initial_quality, flatten, sky: analytic_sky, clouds, world })
+  const water = create_water({
+    scene,
+    quality: initial_quality,
+    flatten,
+    sky: analytic_sky,
+    clouds,
+    world: compiled_world,
+    palette: water_palette,
+  })
   // Water state for the frame passes: the tint is per-pixel (the underwater pass reads the sea
   // plane itself), so the CPU only answers "does this world have water right now" — a world
   // without a liquid material, or a flattened one, has none — plus the eye's own submerged
   // flag, which the refraction wobble and the droplet exit edge need.
   const has_water = world.liquid === undefined ? 0 : 1
   const water_gate = float(has_water).mul(float(1).sub(flatten.amount))
+  const water_level = float(world.sea_level)
   const water_world = world.liquid === undefined ? null : compiled_world
   let was_submerged = false
   const mesh_pool = create_mesh_pool(world)
@@ -138,9 +153,8 @@ export const create_webgpu_backend = async (
     presentation,
     analytic_sky.sun_direction,
     water_gate,
-    clouds,
-    world.seed,
-    analytic_sky.sample_sky_dome
+    water_level,
+    water_palette
   )
   const revisions = new Map<string, number>()
   const completions = new Map<string, Readonly<{ revision: number; resolve: (outcome: ChunkRenderOutcome) => void }>>()
@@ -161,6 +175,7 @@ export const create_webgpu_backend = async (
   let disposed = false
   let shadow_center_x = Number.NaN
   let shadow_center_z = Number.NaN
+  let has_dynamic_entities = false
   const last_shadow_direction = new Vector3()
 
   const settle_chunk = (key: string, revision: number, outcome: ChunkRenderOutcome): void => {
@@ -185,7 +200,11 @@ export const create_webgpu_backend = async (
     hemisphere.groundColor.setRGB(lighting.hemi_ground[0], lighting.hemi_ground[1], lighting.hemi_ground[2])
     hemisphere.intensity = lighting.hemi_intensity
     const fog_color = palette_for_sun(direction.y).horizon
-    scene.fog?.color.setRGB(fog_color[0], fog_color[1], fog_color[2])
+    scene.fog?.color.setRGB(
+      fog_color[0] * FOG_COOL_TILT[0],
+      fog_color[1] * FOG_COOL_TILT[1],
+      fog_color[2] * FOG_COOL_TILT[2]
+    )
     const key_direction = is_moon_key(direction.y) ? direction.clone().multiplyScalar(-1) : direction
     sun.position.set(
       sun.target.position.x + key_direction.x * 350,
@@ -224,7 +243,7 @@ export const create_webgpu_backend = async (
         tier: next,
         seed: world.seed,
         sun_direction: analytic_sky.sun_direction,
-        cool_tilt: [0.62, 0.75, 1],
+        cool_tilt: FOG_COOL_TILT,
       })
       await replacement.bake(renderer)
       if (disposed || revision !== sky_revision) {
@@ -266,7 +285,8 @@ export const create_webgpu_backend = async (
     sun.shadow.camera.near = 1
     sun.shadow.camera.far = 520
     sun.shadow.bias = -0.00035
-    sun.shadow.normalBias = 0.025
+    // A large normal offset detaches shadows from voxel terrace edges (peter-panning).
+    sun.shadow.normalBias = 0.002
     sun.shadow.needsUpdate = true
     sun.shadow.camera.updateProjectionMatrix()
     terrain.set_quality(next)
@@ -381,19 +401,19 @@ export const create_webgpu_backend = async (
       const surface_plane =
         water_world === null || flatten.flattened()
           ? null
-          : sample_world_column(water_world, camera.position.x, camera.position.z).surface_y < 0
-            ? 0
+          : sample_world_column(water_world, camera.position.x, camera.position.z).surface_y < world.sea_level
+            ? world.sea_level
             : null
       const { humidity } = compiled_world.sample_climate(camera.position.x, camera.position.z)
       clouds.set_humidity(humidity)
-      frame_renderer.set_environment({ humidity })
       was_submerged = is_submerged(camera.position.y, surface_plane, was_submerged)
       frame_renderer.set_underwater({ submerged: was_submerged, dt: delta_seconds })
       hillaire?.tick(renderer, camera, delta_seconds)
     }
     fight_board.tick(now)
     entities.tick(now)
-    fight_vfx.tick(now)
+    effects.tick(now)
+    if (has_dynamic_entities && sun.castShadow && sun.shadow.intensity > 0) sun.shadow.needsUpdate = true
     frame_renderer.render()
   }
 
@@ -446,9 +466,11 @@ export const create_webgpu_backend = async (
   }
 
   apply_quality(initial_quality, false)
-  await use_sky_quality(get_quality_profile(initial_quality).sky)
+  // Advanced atmosphere is progressive presentation, never a terrain boot gate. The analytic
+  // sky remains valid while its replacement bakes, so attach the backend and stream chunks now.
+  void use_sky_quality(get_quality_profile(initial_quality).sky)
   if (presentation === 'fight') {
-    const warmup = fight_vfx.create_warmup()
+    const warmup = effects.create_warmup()
     void renderer
       .compileAsync(warmup.object, camera, scene)
       .catch((error: unknown) => console.warn('[engine] Fight VFX shader preload failed.', error))
@@ -495,9 +517,14 @@ export const create_webgpu_backend = async (
       fight_board.set(board)
       entities.set_board(board)
     },
-    set_entities: entities.set,
+    set_entities: (next) => {
+      has_dynamic_entities = next.length > 0
+      entities.set(next)
+      sun.shadow.needsUpdate = true
+    },
     animate_entity: entities.animate,
     play_fight_cue: fight_presentation.play,
+    play_jump_puff: effects.play_jump_puff,
     project_entity: (id) => {
       const anchor = entities.world_anchor(id)
       return anchor ? project_screen_anchor(anchor, camera, canvas.getBoundingClientRect()) : null
@@ -560,7 +587,7 @@ export const create_webgpu_backend = async (
       clouds.dispose()
       water.dispose()
       fight_board.dispose()
-      fight_vfx.dispose()
+      effects.dispose()
       entities.dispose()
       frame_renderer.dispose()
       hillaire?.dispose()

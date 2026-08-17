@@ -9,6 +9,8 @@ export type AppCopy = Readonly<{
   title: string
   body: string
   fatal: string
+  world_unavailable_title: string
+  world_unavailable: string
   chrome: string
   other: string
   continue: string
@@ -31,7 +33,6 @@ export type AppCopy = Readonly<{
   characters: string
   leaderboard: string
   shop: string
-  simulator: string
   encyclopedia: string
   marketplace: string
   airdrop: string
@@ -50,6 +51,7 @@ export type AppCopy = Readonly<{
   latency_unit: string
   indexing_health: string
   indexing_lag_warning: string
+  game_frozen: string
   network_testnet: string
   page_pending_title: string
   page_pending_body: string
@@ -63,11 +65,14 @@ export type AppCopy = Readonly<{
   appearance_label: string
   name_label: string
   name_placeholder: string
+  name_invalid: string
   male: string
   female: string
   cancel: string
   create_and_play: string
-  create_unavailable: string
+  character_price: string
+  creating_character: string
+  character_created: string
   address_verification_failed: string
   dismiss: string
   wallet_copy_address: string
@@ -92,6 +97,7 @@ export type AppCopy = Readonly<{
   shop_page: Readonly<Record<string, unknown>>
   airdrop_page: Readonly<Record<string, unknown>>
   settings_page: Readonly<Record<string, string>>
+  demo_page: Readonly<Record<string, string>>
 }>
 
 export type CopyNode = Readonly<Record<string, unknown>>

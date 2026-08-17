@@ -7,7 +7,7 @@ export const HACK_PALETTE = Object.freeze({
   bg_mid: 0x2b0a4a,
   bg_drift: 0x1a0b5e,
   horizon_glow: 0xff6ec7,
-  ground: 0x0a0118,
+  ground: 0x100821,
   grid_minor: 0x00e5ff,
   grid_major: 0xff2d95,
   sun_top: 0xffd319,

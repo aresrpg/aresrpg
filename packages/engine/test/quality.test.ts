@@ -6,23 +6,37 @@ import { describe, expect, test } from 'bun:test'
 import { QUALITY_OPTIONS, QUALITY_PROFILES, quality_pixel_ratio, uses_world_post_processing } from '../src/quality.ts'
 
 describe('engine quality profiles', () => {
-  test('all three tiers remain strictly sub-native', () => {
+  test('only high renders the exploration scene at native scale', () => {
     expect(Object.keys(QUALITY_PROFILES)).toEqual(['low', 'medium', 'high'])
-    expect(Object.values(QUALITY_PROFILES).every(({ render }) => render.scale < 1)).toBe(true)
-  })
-
-  test('does not stack redundant multisampling or bloom under the post anti-aliasing pass', () => {
-    expect(Object.values(QUALITY_PROFILES).map(({ effects }) => Object.keys(effects))).toEqual([
-      ['atmosphere'],
-      ['atmosphere'],
-      ['atmosphere'],
+    expect(Object.values(QUALITY_PROFILES).map(({ render }) => [render.scale, render.scene_scale])).toEqual([
+      [0.75, 0.88],
+      [0.9, 0.82],
+      [1, 1],
     ])
   })
 
-  test('keeps local volumetrics off low and bounded on the richer tiers', () => {
-    expect(QUALITY_PROFILES.low.effects.atmosphere).toBeNull()
-    expect(QUALITY_PROFILES.medium.effects.atmosphere).toEqual({ resolution_scale: 0.35, steps: 6 })
-    expect(QUALITY_PROFILES.high.effects.atmosphere).toEqual({ resolution_scale: 0.4, steps: 8 })
+  test('reconstructs a cheaper scene into a sharper display buffer', () => {
+    expect(
+      Object.values(QUALITY_PROFILES).map(({ render }) => ({
+        display: render.scale,
+        scene: render.scale * render.scene_scale,
+      }))
+    ).toEqual([
+      { display: 0.75, scene: 0.66 },
+      { display: 0.9, scene: 0.738 },
+      { display: 1, scene: 1 },
+    ])
+  })
+
+  test('reserves selective HDR bloom for high quality', () => {
+    expect(Object.values(QUALITY_PROFILES).map(({ effects }) => Object.keys(effects))).toEqual([
+      ['bloom'],
+      ['bloom'],
+      ['bloom'],
+    ])
+    expect(QUALITY_PROFILES.low.effects.bloom).toBeNull()
+    expect(QUALITY_PROFILES.medium.effects.bloom).toBeNull()
+    expect(QUALITY_PROFILES.high.effects.bloom).toEqual({ strength: 0.13, radius: 0.6, threshold: 2.05 })
   })
 
   test('the high tier caps a 5120x1440 display below native pixels', () => {
@@ -33,8 +47,8 @@ describe('engine quality profiles', () => {
       device_pixel_ratio: 1,
     })
 
-    expect(ratio).toBe(0.8)
-    expect(5120 * 1440 * ratio * ratio).toBeLessThan(6_000_000)
+    expect(ratio).toBeLessThan(1)
+    expect(5120 * 1440 * ratio * ratio).toBeCloseTo(6_000_000)
   })
 
   test('the pixel ceiling protects dense displays independently of DPR', () => {
@@ -66,6 +80,6 @@ describe('engine quality profiles', () => {
       false,
       false,
     ])
-    expect(uses_world_post_processing('medium', 'world')).toBeTrue()
+    expect(QUALITY_OPTIONS.map((quality) => uses_world_post_processing(quality, 'world'))).toEqual([false, true, true])
   })
 })

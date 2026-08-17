@@ -90,4 +90,20 @@ describe('generic fight view', () => {
     )
     expect(select_fight_view({ checkpoint, mode: 'local', owner: 'mine', names: {} }).placement_deadline_ms).toBeNull()
   })
+
+  test('orders the spell bar by authored unlock level', () => {
+    const checkpoint = structuredClone(started_checkpoint())
+    Object.values(checkpoint.sources.players).forEach((player) => {
+      player.level = 100n
+      player.spell_levels = { late: 1n, early: 1n }
+    })
+    checkpoint.sources.spells = {
+      late: { classe: 'senshi', unlock_level: 20n, levels: [spell_level] },
+      early: { classe: 'senshi', unlock_level: 2n, levels: [spell_level] },
+    }
+
+    const view = select_fight_view({ checkpoint, mode: 'local', owner: 'mine', names: {} })
+
+    expect(view.selected?.spells.map(({ name }) => name)).toEqual(['early', 'late'])
+  })
 })

@@ -130,4 +130,25 @@ describe('local encyclopedia catalog', () => {
     expect(encyclopedia_catalog.job('HERBALIST')?.recipes).toHaveLength(17)
     expect(encyclopedia_catalog.job('MINER')?.recipes).toHaveLength(11)
   })
+
+  test('has one filename-addressable icon for every authored spell', () => {
+    const slug = (value: string): string =>
+      value
+        .toLowerCase()
+        .replaceAll(/[\u2019']/g, '')
+        .replaceAll(/[^a-z0-9]+/g, '_')
+        .replaceAll(/^_|_$/g, '')
+    const icons = new Set(
+      [...new Bun.Glob('*.webp').scanSync(`${import.meta.dir}/../../../../seed/icons/spells`)].map((file) =>
+        file.replace(/\.webp$/, '').replaceAll('_', '')
+      )
+    )
+    const missing = encyclopedia_catalog.spells.flatMap(({ classe, name }) => {
+      const asset_class = classe === 'yogan' ? 'yogen' : classe
+      const key = `${asset_class}_${slug(name)}`.replaceAll('_', '')
+      return icons.has(key) ? [] : [name]
+    })
+
+    expect(missing).toEqual([])
+  })
 })

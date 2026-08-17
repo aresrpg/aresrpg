@@ -35,4 +35,25 @@ describe('SUI balance cache', () => {
     cache.invalidate('0x1')
     expect(await cache.read('0x1')).toBe(2n)
   })
+
+  test('an invalidation supersedes an older in-flight read', async () => {
+    const resolvers: ((value: bigint) => void)[] = []
+    const cache = create_balance_cache({
+      get_balance: () =>
+        new Promise<bigint>((resolve) => {
+          resolvers.push(resolve)
+        }),
+    })
+
+    const stale = cache.read('0x1')
+    cache.invalidate('0x1')
+    const fresh = cache.read('0x1')
+    expect(resolvers).toHaveLength(2)
+
+    resolvers[1]!(2n)
+    expect(await fresh).toBe(2n)
+    resolvers[0]!(1n)
+    expect(await stale).toBe(1n)
+    expect(await cache.read('0x1')).toBe(2n)
+  })
 })

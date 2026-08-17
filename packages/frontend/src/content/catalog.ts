@@ -22,6 +22,7 @@ import type {
   SeedSpell,
   SeedSpellLevel as SpellLevel,
 } from '@aresrpg/sdk/seed'
+import type { WorldMaterial } from '@aresrpg/engine'
 
 import items_source from '../../../../seed/content/items.json'
 import mobs_source from '../../../../seed/content/mobs.json'
@@ -75,7 +76,7 @@ export type SeedWorld = Readonly<{
   terrain?: Readonly<{
     seed: string
     sea_level: number
-    materials: Readonly<Record<string, string>>
+    materials: Readonly<Record<string, WorldMaterial>>
     biomes: readonly Readonly<{
       name: string
       climate: Readonly<Record<string, number>>

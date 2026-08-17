@@ -8,6 +8,11 @@ type BalanceEntry = Readonly<{
   value: bigint
 }>
 
+type BalanceRequest = Readonly<{
+  token: object
+  promise: Promise<bigint>
+}>
+
 export const create_balance_cache = ({
   get_balance,
   now = Date.now,
@@ -16,7 +21,7 @@ export const create_balance_cache = ({
   now?: () => number
 }>) => {
   const entries = new Map<string, BalanceEntry>()
-  const in_flight = new Map<string, Promise<bigint>>()
+  const in_flight = new Map<string, BalanceRequest>()
   const key_of = (address: string): string => address.trim().toLowerCase()
 
   const read = (address: string): Promise<bigint> => {
@@ -24,20 +29,27 @@ export const create_balance_cache = ({
     const entry = entries.get(key)
     if (entry && now() - entry.at_ms < BALANCE_TTL_MS) return Promise.resolve(entry.value)
     const pending = in_flight.get(key)
-    if (pending) return pending
+    if (pending) return pending.promise
+    const token = Object.freeze({})
     const request = get_balance(key)
       .then((value) => {
-        entries.set(key, Object.freeze({ at_ms: now(), value }))
+        if (in_flight.get(key)?.token === token) entries.set(key, Object.freeze({ at_ms: now(), value }))
         return value
       })
-      .finally(() => in_flight.delete(key))
-    in_flight.set(key, request)
+      .finally(() => {
+        if (in_flight.get(key)?.token === token) in_flight.delete(key)
+      })
+    in_flight.set(key, Object.freeze({ token, promise: request }))
     return request
   }
 
   return Object.freeze({
     read,
-    invalidate: (address: string): void => void entries.delete(key_of(address)),
+    invalidate: (address: string): void => {
+      const key = key_of(address)
+      entries.delete(key)
+      in_flight.delete(key)
+    },
   })
 }
 

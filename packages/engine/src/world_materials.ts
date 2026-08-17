@@ -1,7 +1,15 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
-export type WorldMaterial = string
+import {
+  MATERIAL_PRESETS,
+  MATERIAL_PRESET_DEFINITIONS,
+  MAX_COMPILED_MATERIALS,
+  is_material_preset,
+  type MaterialPreset,
+} from './material_presets.ts'
+
+export type WorldMaterial = Readonly<{ color: string; preset: MaterialPreset }>
 export type MaterialRole = 'surface' | 'subsurface' | 'filler' | 'liquid'
 export type MaterialUse = Readonly<{
   name: string
@@ -13,6 +21,9 @@ export type CompiledMaterial = Readonly<{
   role: MaterialRole
   color: readonly [number, number, number]
   paired_color: readonly [number, number, number]
+  preset: MaterialPreset
+  roughness: number
+  climate_tint: boolean
 }>
 export type CompiledMaterials = Readonly<{
   entries: readonly CompiledMaterial[]
@@ -29,7 +40,7 @@ const linear_channel = (byte: number): number => {
   return value <= 0.04045 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4
 }
 
-export const material_color = (color: WorldMaterial): readonly [number, number, number] => {
+export const material_color = (color: string): readonly [number, number, number] => {
   const value = Number.parseInt(color.slice(1), 16)
   return [linear_channel((value >> 16) & 0xff), linear_channel((value >> 8) & 0xff), linear_channel(value & 0xff)]
 }
@@ -41,7 +52,14 @@ export const validate_materials = (materials: unknown): readonly string[] => {
   const entries = Object.entries(materials)
   if (entries.length === 0) return ['materials must not be empty']
   entries.forEach(([name, value]) => {
-    if (!is_color(value)) errors.push(`materials.${name} must be #rrggbb`)
+    if (value === null || typeof value !== 'object' || Array.isArray(value)) {
+      errors.push(`materials.${name} must contain color and preset`)
+      return
+    }
+    const material = value as Readonly<Record<string, unknown>>
+    if (!is_color(material.color)) errors.push(`materials.${name}.color must be #rrggbb`)
+    if (!is_material_preset(material.preset))
+      errors.push(`materials.${name}.preset must be one of ${MATERIAL_PRESETS.join(', ')}`)
   })
   return errors
 }
@@ -67,6 +85,9 @@ export const compile_materials = (
     role: 'filler',
     color: Object.freeze([0, 0, 0] as const),
     paired_color: Object.freeze([0, 0, 0] as const),
+    preset: 'stone',
+    roughness: MATERIAL_PRESET_DEFINITIONS.stone.roughness,
+    climate_tint: false,
   })
   const entries: CompiledMaterial[] = [empty]
 
@@ -78,8 +99,11 @@ export const compile_materials = (
     const entry = Object.freeze({
       name: use.name,
       role: use.role,
-      color: Object.freeze(material_color(authored)),
-      paired_color: Object.freeze(material_color(paired)),
+      color: Object.freeze(material_color(authored.color)),
+      paired_color: Object.freeze(material_color(paired.color)),
+      preset: authored.preset,
+      roughness: MATERIAL_PRESET_DEFINITIONS[authored.preset].roughness,
+      climate_tint: MATERIAL_PRESET_DEFINITIONS[authored.preset].climate_tint,
     })
     const id = entries.length
     ids.set(use_key(use), id)
@@ -87,7 +111,8 @@ export const compile_materials = (
     entries.push(entry)
   })
 
-  if (entries.length > 0x1000) throw new TypeError('compiled world materials exceed the 4095-entry voxel palette')
+  if (entries.length > MAX_COMPILED_MATERIALS)
+    throw new TypeError(`compiled world materials exceed ${MAX_COMPILED_MATERIALS - 1} appearance uses`)
   const frozen_entries = Object.freeze(entries)
   return Object.freeze({
     entries: frozen_entries,

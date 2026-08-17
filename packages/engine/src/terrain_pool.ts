@@ -1,10 +1,17 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-import { BufferAttribute, FrontSide, InstancedBufferGeometry, Mesh, type Material, type Scene } from 'three'
+import {
+  BufferAttribute,
+  FrontSide,
+  InstancedBufferGeometry,
+  Mesh,
+  type DataArrayTexture,
+  type Material,
+  type Scene,
+} from 'three'
 import {
   IndirectStorageBufferAttribute,
   MeshBasicNodeMaterial,
-  MeshLambertNodeMaterial,
   MeshStandardNodeMaterial,
   type Node,
   type NodeBuilder,
@@ -18,6 +25,7 @@ import {
   floor,
   fract,
   fwidth,
+  int,
   instanceIndex,
   length,
   min,
@@ -28,6 +36,8 @@ import {
   transformNormalToView,
   uint,
   varying,
+  texture,
+  vec2,
   vec3,
 } from 'three/tsl'
 
@@ -36,18 +46,21 @@ import type { FlattenUniform } from './flatten.ts'
 import { create_flat_nodes } from './flat_nodes.ts'
 import { FACE_WINDING_FLIP_BITS, type GreedyMeshData } from './greedy_mesher.ts'
 import { get_quality_profile } from './quality.ts'
+import { MATERIAL_TEXTURE_VARIANTS } from './material_presets.ts'
+import { create_material_texture } from './material_texture.ts'
 import type { create_sky_node } from './sky/sky_node.ts'
-import { surface_phase } from './surface_variation.ts'
+import { SURFACE_HASH_WRAP, surface_phase } from './surface_variation.ts'
 import { macro_tint_nodes, material_color_node } from './terrain_tint.ts'
-import { AO_FLOOR, AO_LEVELS, FACE_BRIGHTNESS } from './terrain_lighting.ts'
+import { AO_FLOOR, AO_LEVELS, FACE_BRIGHTNESS, LIT_FACE_BRIGHTNESS } from './terrain_lighting.ts'
 import type { EngineQuality, RenderedChunk } from './types.ts'
 import { derive_sub_seed } from './world_noise.ts'
 import { compile_world_recipe, type WorldRecipe } from './world_recipe.ts'
 import type { CompiledMaterials } from './world_materials.ts'
 
-const SLOT_QUADS = 512
-const MAX_SLOTS = 1024
-const SLOT_SHIFT = 9
+export const TERRAIN_POOL_LAYOUT = Object.freeze({ slot_quads: 1024, max_slots: 2048 })
+const SLOT_QUADS = TERRAIN_POOL_LAYOUT.slot_quads
+const MAX_SLOTS = TERRAIN_POOL_LAYOUT.max_slots
+const SLOT_SHIFT = Math.log2(SLOT_QUADS)
 const INDIRECT_WORDS = 4
 
 export type TerrainPool = Readonly<{
@@ -77,15 +90,14 @@ const build_material = (
   clouds: Clouds,
   color_for: (material_id: Node<'uint'>) => Node<'vec3'>,
   materials: CompiledMaterials,
+  material_texture: DataArrayTexture,
   flatten_variant: boolean
 ): Material => {
   const terrain_kind = get_quality_profile(quality).terrain
   const material =
     terrain_kind === 'flat'
       ? new MeshBasicNodeMaterial({ side: FrontSide })
-      : terrain_kind === 'lit'
-        ? new MeshLambertNodeMaterial({ side: FrontSide })
-        : new MeshStandardNodeMaterial({ side: FrontSide, roughness: 0.88, metalness: 0 })
+      : new MeshStandardNodeMaterial({ side: FrontSide, roughness: 0.88, metalness: 0 })
   const words = storage(pool_attr, 'uvec2', pool_attr.count).toReadOnly().element(instanceIndex)
   const meta = storage(meta_attr, 'vec4', meta_attr.count)
     .toReadOnly()
@@ -134,9 +146,10 @@ const build_material = (
   // layer flattened to one flat shade per greedy quad (the owner's "I see quads" bug).
   const local_frag = varying(local)
   const top = face.equal(uint(2))
+  const face_levels = terrain_kind === 'flat' ? FACE_BRIGHTNESS : LIT_FACE_BRIGHTNESS
   const face_brightness = axis_x.select(
-    float(FACE_BRIGHTNESS[0]),
-    axis_y.select(positive.select(float(FACE_BRIGHTNESS[2]), float(FACE_BRIGHTNESS[3])), float(FACE_BRIGHTNESS[4]))
+    float(face_levels[0]),
+    axis_y.select(positive.select(float(face_levels[2]), float(face_levels[3])), float(face_levels[4]))
   )
   // The four corner AO levels are PER BLOCK. A merged quad spans many blocks, so the corner
   // gradient must repeat per block cell, not stretch across the whole quad — evaluated in the
@@ -169,13 +182,18 @@ const build_material = (
   // THE PIXEL SHADER (the aresrpg-engine block look): every block face is an 8×8 grid of
   // stable hashed PIXELS, posterized to 5 discrete shades — reads as authored pixel-art
   // from one color. A per-BLOCK jitter underneath varies whole tiles.
-  const block_cell = floor(local_frag.sub(normal.mul(0.5)))
+  const hash_position = local_frag.sub(floor(local_frag.div(float(SURFACE_HASH_WRAP))).mul(float(SURFACE_HASH_WRAP)))
+  const block_cell = floor(hash_position.sub(normal.mul(0.5)))
   const block_noise = fract(
     sin(block_cell.x.mul(17.171).add(block_cell.y.mul(43.759)).add(block_cell.z.mul(91.133)).add(variation_phase)).mul(
       37_213.577
     )
   ).sub(0.5)
-  const pixel_cell = floor(local_frag.mul(8).sub(normal.mul(0.5)))
+  const material_layer = float(material_id)
+    .mul(float(MATERIAL_TEXTURE_VARIANTS))
+    .add(floor(block_noise.add(0.5).mul(float(MATERIAL_TEXTURE_VARIANTS))))
+  const texture_color = texture(material_texture, vec2(u_cells, float(1).sub(v_cells))).depth(int(material_layer)).rgb
+  const pixel_cell = floor(hash_position.mul(8).sub(normal.mul(0.5)))
   const pixel_hash = fract(
     sin(pixel_cell.x.mul(12.9898).add(pixel_cell.y.mul(37.719)).add(pixel_cell.z.mul(78.233)).add(variation_phase)).mul(
       43_758.5453
@@ -201,14 +219,17 @@ const build_material = (
     position_world: { x: local_frag.x, z: local_frag.z },
     materials,
   })
-  const grained = material_color.add(
-    block_noise
-      .mul(grain_strength)
-      .mul(0.7)
-      .mul(block_fade)
-      .add(material_noise.mul(grain_strength).mul(pixel_fade))
-      .mul(noise_modulation)
-  )
+  const grained =
+    quality === 'low'
+      ? material_color.add(
+          block_noise
+            .mul(grain_strength)
+            .mul(0.7)
+            .mul(block_fade)
+            .add(material_noise.mul(grain_strength).mul(pixel_fade))
+            .mul(noise_modulation)
+        )
+      : texture_color.add(block_noise.mul(0.035).mul(block_fade).mul(noise_modulation))
   const base_color = tint.tint_albedo(grained).mul(face_brightness).mul(ao).mul(environment_light)
   // The scan front is presentation only. Geometry uses the one global projection amount so
   // the renderer, character collision, boards, and markers all agree on exact height.
@@ -231,8 +252,9 @@ const build_material = (
     material.opacityNode = solid_opacity
     material.alphaTest = 0.5
   }
-  // Role-derived dielectric response on the PBR tier.
-  if (terrain_kind === 'pbr') (material as MeshStandardNodeMaterial).roughnessNode = tint.roughness_node
+  // Quality changes workload, not the material's meaning. Every lit tier keeps the same
+  // role-derived dielectric response; low remains the explicit unlit fallback.
+  if (terrain_kind !== 'flat') (material as MeshStandardNodeMaterial).roughnessNode = tint.roughness_node
   return material
 }
 
@@ -253,6 +275,7 @@ export const create_terrain_pool = ({
 }>): TerrainPool => {
   const capacity = MAX_SLOTS * SLOT_QUADS
   const compiled_materials = compile_world_recipe(world).materials
+  const material_texture = create_material_texture(compiled_materials)
   const color_for = (material_id: Node<'uint'>): Node<'vec3'> => material_color_node(compiled_materials, material_id)
   const variation_phase = surface_phase(derive_sub_seed(world.seed, 'surface-variation'))
   const pool_array = new Uint32Array(capacity * 2)
@@ -275,6 +298,7 @@ export const create_terrain_pool = ({
       clouds,
       color_for,
       compiled_materials,
+      material_texture,
       flatten_variant
     )
   const materials = Object.freeze({
@@ -384,6 +408,7 @@ export const create_terrain_pool = ({
       geometry.dispose()
       Object.values(materials).forEach((material) => material.dispose())
       Object.values(flatten_materials).forEach((material) => material.dispose())
+      material_texture.dispose()
       chunk_slots.clear()
       free_slots.length = 0
     },

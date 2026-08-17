@@ -22,6 +22,7 @@ export type EntityAnchor = Readonly<{ kind: 'fight_cell'; cell: number }> | Read
 export type FightSide = 'a' | 'b'
 export type EntityFacing =
   Readonly<{ kind: 'yaw'; yaw: number }> | Readonly<{ kind: 'fight_opponents'; side: FightSide }>
+export type EntityVisualEffect = Readonly<{ kind: 'invisibility' }>
 export type WornModelRender = Readonly<{ url: string; variant: string | null }>
 export type CharacterAppearanceRender = Readonly<{
   body_url: string | null
@@ -29,12 +30,15 @@ export type CharacterAppearanceRender = Readonly<{
   colors: readonly [string, string, string]
   worn: Readonly<{ head: WornModelRender | null; back: WornModelRender | null }>
 }>
+export type CharacterAnimationName = 'IDLE' | 'WALK' | 'RUN' | 'JUMP' | 'JUMP_RUN' | 'FALL' | 'SWIM'
+export type CharacterAnimationRender = Readonly<{ name: CharacterAnimationName; time_scale: number }>
 export type MobEntityRender = Readonly<{
   id: string
   kind: 'mob'
   model_url: string
   anchor: EntityAnchor
   facing: EntityFacing
+  visual_effect?: EntityVisualEffect
 }>
 export type CharacterEntityRender = Readonly<{
   id: string
@@ -42,6 +46,8 @@ export type CharacterEntityRender = Readonly<{
   appearance: CharacterAppearanceRender
   anchor: EntityAnchor
   facing: EntityFacing
+  animation?: CharacterAnimationRender
+  visual_effect?: EntityVisualEffect
 }>
 export type EntityRender = MobEntityRender | CharacterEntityRender
 export type EntityPathMotion = Readonly<{
@@ -51,6 +57,7 @@ export type EntityPathMotion = Readonly<{
 }>
 export type EntityScreenAnchor = Readonly<{ x: number; y: number }>
 export type FightBlobShape = 'single' | 'per_cell'
+export type FightBlobDecoration = 'trap'
 export type FightBlobSpec = Readonly<{
   cells: readonly number[]
   shape: FightBlobShape
@@ -62,6 +69,7 @@ export type FightBlobSpec = Readonly<{
   animate?: boolean
   animate_updates?: boolean
   duration_ms?: number
+  decoration?: FightBlobDecoration
 }>
 export type FightBlobRender = FightBlobSpec &
   Readonly<{
@@ -77,7 +85,11 @@ export type RenderChunkRequest = Readonly<{
 }>
 export type ChunkRenderOutcome = 'rendered' | 'failed' | 'removed'
 export type EngineIssueCode =
-  'webgpu_unavailable' | 'webgpu_initialization_failed' | 'advanced_sky_failed' | 'graphics_unavailable'
+  | 'webgpu_unavailable'
+  | 'webgpu_initialization_failed'
+  | 'advanced_sky_failed'
+  | 'graphics_unavailable'
+  | 'world_unavailable'
 export type EngineIssue = Readonly<{ code: EngineIssueCode; detail?: string }>
 export type EngineStatus = Readonly<{
   state: 'initializing' | 'ready' | 'degraded' | 'failed'
@@ -100,7 +112,7 @@ export type EngineFrame = Readonly<{ now: number; delta_seconds: number }>
 
 export type QualityProfile = Readonly<{
   name: EngineQuality
-  render: Readonly<{ scale: number; dpr_max: number; pixel_max: number }>
+  render: Readonly<{ scale: number; scene_scale: number; sharpness: number | null; dpr_max: number; pixel_max: number }>
   chunks: Readonly<{
     near_radius: number
     mid_radius: number
@@ -118,7 +130,7 @@ export type QualityProfile = Readonly<{
   fog: Readonly<{ near: number; far: number }>
   shadows: Readonly<{ kind: 'none' | 'basic' | 'soft'; map_size: number }>
   effects: Readonly<{
-    atmosphere: Readonly<{ resolution_scale: number; steps: number }> | null
+    bloom: Readonly<{ strength: number; radius: number; threshold: number }> | null
   }>
 }>
 
@@ -160,6 +172,7 @@ export type FightPresentationCue =
       cast_level: number
       target_cell: number
       element: string
+      placement: 'trap' | 'glyph' | null
       critical: boolean
       weapon: boolean
       amount: number
@@ -221,6 +234,15 @@ export type FightPresentationCue =
       owner_id: string
       target_id: string
       cell: number
+      element: string
+    }>
+  | Readonly<{
+      id: string
+      type: 'zone_placed'
+      action: 'trap_placed' | 'glyph_placed'
+      zone_id: string
+      owner_id: string
+      cell: number
     }>
   | Readonly<{
       id: string
@@ -241,6 +263,7 @@ export type Engine = Readonly<{
   set_entities: (entities: readonly EntityRender[]) => void
   animate_entity: (motion: EntityPathMotion) => Promise<boolean>
   play_fight_cue: (cue: FightPresentationCue) => Promise<boolean>
+  play_jump_puff: (position: Vec3) => void
   project_entity: (id: string) => EntityScreenAnchor | null
   create_fight_blob: (blob: FightBlobSpec) => string
   update_fight_blob: (id: string, blob: FightBlobSpec) => boolean

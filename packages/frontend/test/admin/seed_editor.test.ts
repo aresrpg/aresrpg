@@ -72,6 +72,17 @@ describe('seed editor model', () => {
     expect(source.known[0].value).toBe(1)
   })
 
+  test('adds an optional object leaf while keeping unknown parent paths invalid', () => {
+    const source = Object.freeze({ landscape: Object.freeze([{ x: 0, y: 84 }]) })
+
+    expect(replace_json_value(source, ['landscape', 0, 'land'], { surface: 'grass' })).toEqual({
+      landscape: [{ x: 0, y: 84, land: { surface: 'grass' } }],
+    })
+    expect(() => replace_json_value(source, ['missing', 'land'], { surface: 'grass' })).toThrow(
+      'Unknown JSON path missing.land'
+    )
+  })
+
   test('locks only an item identity, not item references in other content', () => {
     expect(is_readonly_seed_path('items', ['item_type'])).toBe(true)
     expect(is_readonly_seed_path('items', ['loot', 0, 'item_type'])).toBe(false)

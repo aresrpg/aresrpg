@@ -1001,10 +1001,11 @@ fn emit_fight_seat_teams(
 /// The escrow's whole negotiation state on ONE node — the realtime layer enriches the cap
 /// manifests from the Item/Character nodes it already has.
 fn emit_trade(cypher: &mut Vec<String>, o: &ObjView<'_>, ckpt: u64) -> anyhow::Result<()> {
-    let t = decode::from_bytes::<decode::Trade>(o.bytes)
-        .map_err(|e| drift("trade::Trade", o.id, e))?;
+    let t =
+        decode::from_bytes::<decode::Trade>(o.bytes).map_err(|e| drift("trade::Trade", o.id, e))?;
     let ids = |caps: &[Id]| {
-        serde_json::to_string(&caps.iter().map(|c| c.hex()).collect::<Vec<_>>()).expect("string array json")
+        serde_json::to_string(&caps.iter().map(|c| c.hex()).collect::<Vec<_>>())
+            .expect("string array json")
     };
     merge_set(
         cypher,

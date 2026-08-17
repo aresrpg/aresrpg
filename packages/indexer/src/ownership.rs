@@ -6,10 +6,10 @@
 //! The chain encodes custody in the OWNER of each object (README, law 4):
 //!
 //! * a kiosk-held object's owner is `ObjectOwner(wrapper)` where the wrapper is
-//!   a `dynamic_field::Field<kiosk::Item, ID>` whose OWN owner is the kiosk —
-//!   the two-hop walk (proven in the old indexer, carried);
+//!   a `dynamic_field::Field<dynamic_object_field::Wrapper<kiosk::Item>, ID>`
+//!   whose OWN owner is the kiosk — the two-hop walk;
 //! * a fight-held Character's owner is `ObjectOwner(wrapper)` where the wrapper
-//!   is `Field<fight::FighterKey(seat), ID>` owned by the Fight — same walk,
+//!   is `Field<Wrapper<fight::FighterKey(seat)>, ID>` owned by the Fight — same walk,
 //!   and the KEY carries the seat;
 //! * an EQUIPPED item's owner is `AddressOwner(character-id-as-address)` — the
 //!   TYPE disambiguates the address space: by construction an `Item` never sits
@@ -29,7 +29,7 @@
 
 use std::collections::HashMap;
 
-use crate::decode::{self, Addr, Field, FighterKey, Id, KioskItemKey};
+use crate::decode::{self, Addr, DynamicObjectFieldWrapper, Field, FighterKey, Id, KioskItemKey};
 
 /// A checkpoint object's owner, simplified to what custody needs.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -111,13 +111,15 @@ fn is_native(t: &TypeKey, module: &str, name: &str) -> bool {
     t.package == SUI_FRAMEWORK && t.module == module && t.name == name
 }
 
-/// A `0x2::dynamic_field::Field<K, V>` wrapper whose KEY type is EXACTLY
-/// `{key_package}::{key_path}` — never a substring match.
-fn is_field_with_key(t: &TypeKey, key_package: &str, key_path: &str) -> bool {
+/// A `0x2::dynamic_field::Field<0x2::dynamic_object_field::Wrapper<K>, ID>`
+/// whose authored key type is exact — never a substring match.
+fn is_dynamic_object_field_with_key(t: &TypeKey, key_package: &str, key_path: &str) -> bool {
     is_native(t, "dynamic_field", "Field")
-        && t.type_params
-            .first()
-            .is_some_and(|k| k == &format!("{key_package}::{key_path}"))
+        && t.type_params.first().is_some_and(|key| {
+            key == &format!(
+                "{SUI_FRAMEWORK}::dynamic_object_field::Wrapper<{key_package}::{key_path}>"
+            )
+        })
 }
 
 /// Resolve every custody fact this checkpoint's objects can prove.
@@ -153,11 +155,14 @@ pub fn resolve(objects: &[ObjView<'_>], game_package: &str) -> anyhow::Result<Ve
                 let OwnerKind::Object(parent) = wrapper.owner else {
                     continue;
                 };
-                if is_field_with_key(wrapper.type_key, SUI_FRAMEWORK, "kiosk::Item") {
-                    let field = decode::from_bytes::<Field<KioskItemKey, Id>>(wrapper.bytes)
-                        .map_err(|e| drift("kiosk::Item wrapper", wrapper.id, e))?;
+                if is_dynamic_object_field_with_key(wrapper.type_key, SUI_FRAMEWORK, "kiosk::Item")
+                {
+                    let field = decode::from_bytes::<
+                        Field<DynamicObjectFieldWrapper<KioskItemKey>, Id>,
+                    >(wrapper.bytes)
+                    .map_err(|e| drift("kiosk::Item wrapper", wrapper.id, e))?;
                     // wrapper key pins the child id — assert, never assume
-                    if field.name.id == view.id {
+                    if field.name.name.id == view.id {
                         // the kiosk's owner rides along when co-present (it is
                         // at every lock/place/trade) → Character.owner freshness
                         let owner = match by_id.get(&parent) {
@@ -179,13 +184,19 @@ pub fn resolve(objects: &[ObjView<'_>], game_package: &str) -> anyhow::Result<Ve
                             owner,
                         });
                     }
-                } else if is_field_with_key(wrapper.type_key, game_package, "fight::FighterKey") {
-                    let field = decode::from_bytes::<Field<FighterKey, Id>>(wrapper.bytes)
-                        .map_err(|e| drift("FighterKey wrapper", wrapper.id, e))?;
+                } else if is_dynamic_object_field_with_key(
+                    wrapper.type_key,
+                    game_package,
+                    "fight::FighterKey",
+                ) {
+                    let field = decode::from_bytes::<
+                        Field<DynamicObjectFieldWrapper<FighterKey>, Id>,
+                    >(wrapper.bytes)
+                    .map_err(|e| drift("FighterKey wrapper", wrapper.id, e))?;
                     if field.value == view.id {
                         facts.push(Custody::FightSeats {
                             fight: parent,
-                            seat: field.name.0,
+                            seat: field.name.name.0,
                             character: view.id,
                         });
                     }
@@ -246,26 +257,43 @@ mod tests {
     }
 
     #[test]
-    fn kiosk_two_hop_resolves_holds() {
+    fn captured_kiosk_two_hop_resolves_holds() {
         let character_type = t(GAME, "character", "Character", &[]);
         let wrapper_type = t(
             SUI,
             "dynamic_field",
             "Field",
             &[
-                "0x0000000000000000000000000000000000000000000000000000000000000002::kiosk::Item",
-                "0x2::object::ID",
+                "0x0000000000000000000000000000000000000000000000000000000000000002::dynamic_object_field::Wrapper<0x0000000000000000000000000000000000000000000000000000000000000002::kiosk::Item>",
+                "0x0000000000000000000000000000000000000000000000000000000000000002::object::ID",
             ],
         );
-        let child = Id([1; 32]);
-        let kiosk = Id([2; 32]);
-        let wrapper_id = Id([3; 32]);
-        let wrapper_bytes = bcs::to_bytes(&Field {
-            id: wrapper_id,
-            name: KioskItemKey { id: child },
-            value: child,
-        })
+        // Live testnet capture: wrapper 0x759406…a07f @ version 981006460,
+        // transaction EDhfar…Kaq6, captured 2026-08-17.
+        let wrapper_bytes = hex::decode(concat!(
+            "759406de53dc0570802d762b4ae48ab88580b32c8c4a3ce7d119908cf77fa07f",
+            "1c493b5be7919d5f459854bd49beea436514b5f5c0501d4d4c8b9db11e967d69",
+            "1c493b5be7919d5f459854bd49beea436514b5f5c0501d4d4c8b9db11e967d69",
+        ))
         .unwrap();
+        let child = Id(hex::decode(
+            "1c493b5be7919d5f459854bd49beea436514b5f5c0501d4d4c8b9db11e967d69",
+        )
+        .unwrap()
+        .try_into()
+        .unwrap());
+        let kiosk = Id(hex::decode(
+            "77a7927ddf70d1642cd27cfe220c162383d9fdd891a56792d061aec6c878bb92",
+        )
+        .unwrap()
+        .try_into()
+        .unwrap());
+        let wrapper_id = Id(hex::decode(
+            "759406de53dc0570802d762b4ae48ab88580b32c8c4a3ce7d119908cf77fa07f",
+        )
+        .unwrap()
+        .try_into()
+        .unwrap());
 
         let objects = [
             ObjView {
@@ -300,8 +328,8 @@ mod tests {
             "dynamic_field",
             "Field",
             &[
-                "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa::fight::FighterKey",
-                "0x2::object::ID",
+                "0x0000000000000000000000000000000000000000000000000000000000000002::dynamic_object_field::Wrapper<0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa::fight::FighterKey>",
+                "0x0000000000000000000000000000000000000000000000000000000000000002::object::ID",
             ],
         );
         let character = Id([1; 32]);
@@ -309,7 +337,9 @@ mod tests {
         let wrapper_id = Id([3; 32]);
         let wrapper_bytes = bcs::to_bytes(&Field {
             id: wrapper_id,
-            name: FighterKey(4),
+            name: DynamicObjectFieldWrapper {
+                name: FighterKey(4),
+            },
             value: character,
         })
         .unwrap();
@@ -384,5 +414,4 @@ mod tests {
         }];
         assert!(resolve(&objects, GAME).unwrap().is_empty());
     }
-
 }

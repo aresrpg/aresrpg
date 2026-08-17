@@ -58,8 +58,10 @@ export type AdminWalletState = Readonly<{
 }>
 export type DeploymentPins = Readonly<{
   package: string | null
+  package_original?: string | null
   kiosk_package?: string | null
   math_package: string | null
+  math_package_original?: string | null
   upgrade_cap: string | null
   math_upgrade_cap: string | null
   admin_cap: string | null
@@ -76,14 +78,25 @@ export type DeploymentPins = Readonly<{
   worlds: Readonly<Record<string, Readonly<{ id: string; shared_version: string }>>>
 }>
 export type AdminDeploymentState = Readonly<{
-  status: 'idle' | 'loading' | 'ready' | 'compiling' | 'publishing' | 'operating' | 'failed' | 'unavailable'
+  status:
+    | 'idle'
+    | 'loading'
+    | 'ready'
+    | 'compiling'
+    | 'publishing'
+    | 'upgrading'
+    | 'resetting'
+    | 'operating'
+    | 'failed'
+    | 'unavailable'
   network: 'testnet' | 'mainnet' | null
   token: string
   revision: string
   pins: DeploymentPins | null
   artifact: ContractArtifact | null
   paused: boolean | null
-  operation: 'compile' | 'publish' | 'pause' | 'resume' | null
+  operation: 'compile' | 'publish' | 'upgrade' | 'republish' | 'pause' | 'resume' | null
+  republish_armed: boolean
   error: string | null
 }>
 export type AdminState = Readonly<{
@@ -154,6 +167,11 @@ export type AdminInput =
   | Readonly<{ type: 'admin/contracts_compiled'; artifact: ContractArtifact }>
   | Readonly<{ type: 'admin/contracts_publish' }>
   | Readonly<{ type: 'admin/contracts_published'; revision: string; pins: DeploymentPins }>
+  | Readonly<{ type: 'admin/contracts_upgrade' }>
+  | Readonly<{ type: 'admin/contracts_upgraded'; revision: string; pins: DeploymentPins }>
+  | Readonly<{ type: 'admin/republish_armed'; armed: boolean }>
+  | Readonly<{ type: 'admin/contracts_republish' }>
+  | Readonly<{ type: 'admin/contracts_republished'; revision: string; pins: DeploymentPins }>
   | Readonly<{ type: 'admin/game_pause'; paused: boolean }>
   | Readonly<{ type: 'admin/game_pause_discovered'; paused: boolean }>
   | Readonly<{ type: 'admin/game_pause_changed'; paused: boolean }>
@@ -209,6 +227,7 @@ export const initial_admin_state = (): AdminState =>
       artifact: null,
       paused: null,
       operation: null,
+      republish_armed: false,
       error: null,
     }),
     config: Object.freeze({ admin_cap: '', worlds: Object.freeze({}) }),

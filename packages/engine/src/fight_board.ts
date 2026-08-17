@@ -186,9 +186,6 @@ export const create_fight_board_layer = ({
       map: surface_texture,
       roughness: 0.96,
       metalness: 0,
-      polygonOffset: true,
-      polygonOffsetFactor: -1,
-      polygonOffsetUnits: -1,
     })
     const slab_side = new MeshStandardMaterial({ color: 0x827a60, roughness: 0.95, metalness: 0 })
     const slab = new Mesh(slab_geometry, [slab_top, slab_side])

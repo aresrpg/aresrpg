@@ -7,6 +7,7 @@ import {
   sample_biome_grid,
   sample_world_column,
   type WorldRecipe,
+  type MaterialPreset,
 } from '@aresrpg/engine'
 import { world_center, world_size } from '@aresrpg/immutable'
 import { ZONE_SIZE } from '@aresrpg/protocol'
@@ -28,6 +29,9 @@ export const sample_biome_cell = (value: unknown, column: number, row: number) =
   return Object.freeze({ x, z, ...sample_world_column(world, x, z) })
 }
 
+export const first_biome_land = (biome: WorldRecipe['biomes'][number]) =>
+  biome.landscape.find(({ land }) => land)?.land ?? null
+
 export type TerrainPatch = Readonly<{
   side: number
   columns: readonly Readonly<{
@@ -38,6 +42,7 @@ export type TerrainPatch = Readonly<{
     surface_y: number
     biome: string
     color: string
+    preset: MaterialPreset
   }>[]
 }>
 
@@ -63,14 +68,15 @@ export const terrain_patch = (
       z,
       surface_y: sample.surface_y,
       biome: sample.biome.name,
-      color: recipe.materials[sample.biome.land.surface] ?? '#000000',
+      color: recipe.materials[sample.land.surface]?.color ?? '#000000',
+      preset: recipe.materials[sample.land.surface]?.preset ?? 'stone',
     })
   })
   return Object.freeze({ side, columns: Object.freeze(columns) })
 }
 
 export const move_spline_knot = (
-  knots: WorldRecipe['splines']['continentalness_to_base'],
+  knots: readonly (readonly [number, number])[],
   index: number,
   point: readonly [number, number]
 ): readonly (readonly [number, number])[] => {

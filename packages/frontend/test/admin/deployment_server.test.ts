@@ -1,16 +1,19 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
-import { describe, expect, test } from 'bun:test'
 import { readFile } from 'node:fs/promises'
 import { resolve } from 'node:path'
+
+import { describe, expect, test } from 'bun:test'
 
 import {
   command_failure_message,
   create_contract_build_service,
   deployment_dev_plugin,
   merge_deployment_pins,
+  next_package_version_source,
   parse_contract_artifact,
+  reset_deployment_pins,
 } from '../../deployment_dev_server.ts'
 
 const output = `compiler note\n${JSON.stringify({ modules: ['AA=='], dependencies: ['0x2'], digest: [1, 2, 3] })}`
@@ -65,7 +68,7 @@ describe('local deployment compiler', () => {
     expect(calls.some((args) => args.includes('--pubfile-path'))).toBeTrue()
     expect(calls.some((args) => args.includes('testnet'))).toBeTrue()
     expect(publication_context).toContain('chain-id = "4c78adac"')
-    expect(publication_context).toContain('version = 1')
+    expect(publication_context).toContain('version = 3')
     expect(publication_context).toContain('source = { local = "/cache/kiosk" }')
     expect(publication_context).toContain('published-at = "0x1234"')
     expect(publication_context).toContain('original-id = "0x5678"')
@@ -80,6 +83,50 @@ describe('local deployment compiler', () => {
     expect(merge_deployment_pins(pins, 'testnet', { package: '0xtest' })).toEqual({
       testnet: { package: '0xtest', version: { id: null, shared_version: null } },
       mainnet: { package: '0xmain' },
+    })
+  })
+
+  test('package version bump is retry-safe against the live Version value', () => {
+    const source = 'module aresrpg::version {\n    const PACKAGE_VERSION: u64 = 7;\n}'
+    const bumped = next_package_version_source(source, 7)
+
+    expect(bumped.version).toBe(8)
+    expect(bumped.changed).toBeTrue()
+    expect(next_package_version_source(bumped.source, 7)).toEqual({ ...bumped, changed: false })
+    expect(() => next_package_version_source(source, 8)).toThrow('behind the published game version')
+  })
+
+  test('republish clears only the selected network deployment', () => {
+    const pins = {
+      testnet: { package: '0xtest', math_package: '0xmath', worlds: { shore: { id: '0xworld' } } },
+      mainnet: { package: '0xmain', math_package: '0xmainmath' },
+    }
+
+    expect(reset_deployment_pins(pins, 'testnet')).toEqual({
+      testnet: {
+        package: null,
+        package_original: null,
+        kiosk_package: null,
+        math_package: null,
+        math_package_original: null,
+        upgrade_cap: null,
+        math_upgrade_cap: null,
+        admin_cap: null,
+        publisher: null,
+        item_publisher: null,
+        character_publisher: null,
+        version: { id: null, shared_version: null },
+        template_registry: { id: null, shared_version: null },
+        loot_registry: { id: null, shared_version: null },
+        name_registry: { id: null, shared_version: null },
+        friend_registry: { id: null, shared_version: null },
+        item_policy: { id: null, shared_version: null },
+        character_policy: { id: null, shared_version: null },
+        item_protected_policy: { id: null, shared_version: null },
+        character_protected_policy: { id: null, shared_version: null },
+        worlds: {},
+      },
+      mainnet: pins.mainnet,
     })
   })
 

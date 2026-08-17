@@ -16,7 +16,6 @@ import { ConnectionCard, DiscordCard, LanguageCard } from './SidebarCards.tsx'
 import { WalletCard } from './WalletCard.tsx'
 
 const EncyclopediaPage = lazy(() => import('../encyclopedia/EncyclopediaPage.tsx'))
-const SimulatorPage = lazy(() => import('../simulator/SimulatorPage.tsx'))
 const AdminPage = lazy(() => import('../admin/AdminPage.tsx'))
 const ShopPage = lazy(() => import('../shop/ShopPage.tsx'))
 const AirdropPage = lazy(() => import('../airdrop/AirdropPage.tsx'))
@@ -50,11 +49,6 @@ const RoutedPage = memo(
           <EncyclopediaPage copy={copy} navigate={open_path} pathname={pathname} />
         </Suspense>
       )}
-      {page === 'simulator' && (
-        <Suspense fallback={<PageFallback label={copy.loading_universe} />}>
-          <SimulatorPage copy={copy} />
-        </Suspense>
-      )}
       {page === 'admin' && (
         <Suspense fallback={<PageFallback label={copy.loading_universe} />}>
           <AdminPage copy={copy.admin_page} />
@@ -77,7 +71,6 @@ const RoutedPage = memo(
       )}
       {page !== 'world' &&
         page !== 'encyclopedia' &&
-        page !== 'simulator' &&
         page !== 'admin' &&
         page !== 'shop' &&
         page !== 'airdrop' &&
@@ -121,41 +114,52 @@ export const AppShell = ({
   open_path: (pathname: string) => void
   select_character: (character_id: string) => void
 }>) => (
-  <div className="pointer-events-none fixed inset-0 z-[10] flex h-dvh gap-3 overflow-hidden p-3">
-    <div className="pointer-events-auto flex min-h-0 shrink-0 flex-col gap-3 overflow-hidden">
-      <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto">
-        <Sidebar
-          address={session.wallet?.address ?? null}
-          characters={session.characters}
+  <div className="pointer-events-none fixed inset-0 z-[10] flex h-dvh flex-col gap-3 overflow-hidden p-3">
+    {session.game_frozen === true && (
+      <aside
+        className="pointer-events-auto border border-[#ff496c]/80 bg-[#8f1028] px-4 py-3 text-center text-[11px] font-bold tracking-[0.12em] text-white uppercase shadow-[0_0_30px_rgba(255,35,78,0.38)]"
+        data-game-frozen
+        role="alert"
+      >
+        {copy.game_frozen}
+      </aside>
+    )}
+    <div className="flex min-h-0 flex-1 gap-3 overflow-hidden">
+      <div className="pointer-events-auto flex min-h-0 shrink-0 flex-col gap-3 overflow-hidden">
+        <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto">
+          <Sidebar
+            address={session.wallet?.address ?? null}
+            characters={session.characters}
+            copy={copy}
+            open_page={open_page}
+            page={page}
+            network={network}
+            select_character={select_character}
+            selected_character_id={session.selected_character_id}
+          />
+          <WalletCard copy={copy} disconnect={disconnect} session={session} />
+          <LanguageCard change_locale={change_locale} locale={locale} />
+          <DiscordCard copy={copy} />
+        </div>
+        <ConnectionCard
           copy={copy}
-          open_page={open_page}
-          page={page}
-          network={network}
-          select_character={select_character}
-          selected_character_id={session.selected_character_id}
+          error={session.link_error}
+          indexing_lag={session.indexing_lag}
+          latency_ms={session.latency_ms}
+          status={session.link_status}
         />
-        <WalletCard copy={copy} disconnect={disconnect} session={session} />
-        <LanguageCard change_locale={change_locale} locale={locale} />
-        <DiscordCard copy={copy} />
       </div>
-      <ConnectionCard
-        copy={copy}
-        error={session.link_error}
-        indexing_lag={session.indexing_lag}
-        latency_ms={session.latency_ms}
-        status={session.link_status}
-      />
-    </div>
-    <div className="relative flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto">
-      <RoutedPage
-        copy={copy}
-        open_path={open_path}
-        page={page}
-        pathname={pathname}
-        session={session}
-        settings={settings}
-      />
-      <FightLayer copy={copy} />
+      <div className="relative flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto">
+        <RoutedPage
+          copy={copy}
+          open_path={open_path}
+          page={page}
+          pathname={pathname}
+          session={session}
+          settings={settings}
+        />
+        <FightLayer copy={copy} />
+      </div>
     </div>
   </div>
 )

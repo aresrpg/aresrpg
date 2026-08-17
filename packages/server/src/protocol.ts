@@ -31,6 +31,8 @@ export const channels = {
   kolizeum: 'evt:kolizeum',
   economy: 'evt:economy',
   content: 'evt:content',
+  /** shared Version object transitions (version 0 = frozen) */
+  game: 'evt:game',
 } as const
 
 // ╔════════════════ [ 1b. The SERVER mesh (published by server pods, never stored) ] ═ ]

@@ -1,6 +1,8 @@
 title: WebGPU を利用できません
 body: 完全なワールドには WebGPU が必要です。代わりに軽量グリッドを表示しています。
 fatal: このブラウザは WebGPU または WebGL のグラフィックコンテキストを作成できません。
+world_unavailable_title: ワールドを利用できません
+world_unavailable: このワールドにはまだ地形レシピがありません。
 chrome: Chrome または Edge を更新し、設定 → システムで「ハードウェア アクセラレーションが使用可能な場合は使用する」を有効にして再起動してください。
 other: ハードウェアアクセラレーションを有効にし、ブラウザとグラフィックドライバーを更新してからブラウザを再起動してください。
 continue: グリッドで続行
@@ -23,7 +25,6 @@ world: ワールド
 characters: キャラクター
 leaderboard: ランキング
 shop: ショップ
-simulator: シミュレーター
 encyclopedia: エンサイクロペディア
 marketplace: マーケット
 airdrop: エアドロップ
@@ -42,6 +43,7 @@ server_connected: 接続済み
 latency_unit: ms
 indexing_health: インデックス状態
 indexing_lag_warning: ゲーム内の操作が遅れて反映される場合があります
+game_frozen: 現在ゲームは凍結されています。詳しくはDiscordをご確認ください。
 network_testnet: TESTNET
 page_pending_title: このページは再構築中です
 page_pending_body: 正しく復元する間も、この場所は表示し続けます。
@@ -55,11 +57,14 @@ sex_label: 性別
 appearance_label: 外観 · 3 色
 name_label: 名前
 name_placeholder: 名前を入力…
+name_invalid: 4～19文字の印刷可能なASCII文字を使用し、空白は入れないでください。
 male: 男性
 female: 女性
 cancel: 戻る
 create_and_play: 作成してプレイ
-create_unavailable: 次のゲームパッケージ公開時に作成が有効になります。
+character_price: 価格
+creating_character: キャラクターを作成中…
+character_created: キャラクターを作成しました
 address_verification_failed: このアドレスを確認できませんでした。再度ログインするか、Discord でお問い合わせください。
 dismiss: 閉じる
 wallet_copy_address: アドレスをコピー
@@ -75,6 +80,24 @@ wallet_send_pending: SUI を送信中…
 wallet_send_success: SUI を送信しました
 wallet_send_failed: SUI の送信に失敗しました
 wallet_close: 閉じる
+demo_page:
+  title: レンダリングラボ
+  world_lab: ワールド
+  fight_lab: 戦闘
+  no_terrain: 地形レシピなし
+  time: 時刻
+  live: リアルタイム
+  remove_character: モデルを削除
+  control_character: モデルを操作
+  mob_group: モブグループ
+  mob: モブ
+  amount: 数量
+  spawn_group: グループを出現
+  clear: クリア
+  resources: リソース
+  resources_missing: リソース描画はまだ復元されていません。作成済みリストは seed データで確認できます。
+  control_hint: キャンバスをクリック · WASDで移動 · Spaceでジャンプ · マウスで視点操作
+  back: アプリに戻る
 shop_page:
   title: 'ショップ'
   subtitle: 'SUIでアイテムを購入'

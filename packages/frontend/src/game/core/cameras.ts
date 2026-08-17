@@ -69,7 +69,7 @@ export const create_spectate_addon = (
 
 // ═══ FOLLOW — the legacy shoulder rig, ported verbatim ═══
 
-const BASE_FOV = 65
+const BASE_FOV = 70
 const MAX_FOV_BOOST = 10
 const MAX_SPEED = 12
 const FOV_LAMBDA = 8

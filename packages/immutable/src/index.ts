@@ -65,7 +65,7 @@ export {
   type ItemCategory,
   type WeaponCategory,
 } from './item.ts'
-export { world_center, world_size } from './world.ts'
+export { chain_to_client_coordinate, client_to_chain_coordinate, world_center, world_size } from './world.ts'
 export {
   character_equipment_slots,
   combat_equipment_slots,

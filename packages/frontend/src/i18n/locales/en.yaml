@@ -1,6 +1,8 @@
 title: WebGPU is unavailable
 body: The full world needs WebGPU. A lightweight grid is running instead.
 fatal: This browser cannot create either a WebGPU or WebGL graphics context.
+world_unavailable_title: World unavailable
+world_unavailable: This world does not have an authored terrain recipe yet.
 chrome: 'Chrome or Edge: update the browser, then enable “Use graphics acceleration when available” under Settings → System and relaunch it.'
 other: Enable hardware acceleration, update the browser and graphics driver, then restart the browser.
 continue: Continue with grid
@@ -23,7 +25,6 @@ world: World
 characters: Characters
 leaderboard: Leaderboard
 shop: Shop
-simulator: Simulator
 encyclopedia: Encyclopedia
 marketplace: Marketplace
 airdrop: Airdrop
@@ -42,6 +43,7 @@ server_connected: Connected
 latency_unit: ms
 indexing_health: Indexing health
 indexing_lag_warning: Actions in the game can lag behind
+game_frozen: The game is currently frozen. Check Discord for more information.
 network_testnet: TESTNET
 page_pending_title: This page is being rebuilt
 page_pending_body: Its place remains visible while we restore it cleanly.
@@ -55,11 +57,14 @@ sex_label: Sex
 appearance_label: Appearance · 3 colors
 name_label: Name
 name_placeholder: Enter a name…
+name_invalid: Use 4–19 printable ASCII characters with no spaces.
 male: Male
 female: Female
 cancel: Back
 create_and_play: Create & Play
-create_unavailable: Character submission will activate with the next published game package.
+character_price: Price
+creating_character: Creating character…
+character_created: Character created
 address_verification_failed: We could not verify this wallet address. Sign in again or contact us on Discord.
 dismiss: Dismiss
 wallet_copy_address: Copy address
@@ -75,6 +80,24 @@ wallet_send_pending: Sending SUI…
 wallet_send_success: SUI sent
 wallet_send_failed: The SUI transfer failed
 wallet_close: Close
+demo_page:
+  title: Render lab
+  world_lab: World lab
+  fight_lab: Fight lab
+  no_terrain: No terrain recipe
+  time: Time of day
+  live: Live
+  remove_character: Remove model
+  control_character: Control model
+  mob_group: Mob group
+  mob: Mob
+  amount: Amount
+  spawn_group: Spawn group
+  clear: Clear
+  resources: Resources
+  resources_missing: Resource rendering has not been restored yet. The authored roster remains available in seed data.
+  control_hint: Click canvas · WASD to move · Space to jump · Mouse to look
+  back: Back to app
 shop_page:
   title: 'Shop'
   subtitle: 'Purchase items with SUI'

@@ -19,6 +19,8 @@ export type ParsedDoor = {
 
 export const API_MOVE_PATH: string
 export const DOORS_OUT_PATH: string
+export const CHARACTER_MOVE_PATH: string
+export const CHARACTER_PRICE_OUT_PATH: string
 export function parse_doors(move_source: string, include_names?: ReadonlySet<string> | null): ParsedDoor[]
 export function emit_doors(doors: ParsedDoor[], options?: Readonly<{ source?: string; description?: string }>): string
 export function generate_projected_doors(
@@ -27,3 +29,4 @@ export function generate_projected_doors(
   options?: Readonly<{ source?: string; description?: string }>
 ): Promise<string>
 export function generate(move_source: string): Promise<string>
+export function generate_character_price(move_source: string): Promise<string>

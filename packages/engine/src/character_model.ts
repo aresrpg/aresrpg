@@ -20,7 +20,6 @@ import { clone as clone_skinned } from 'three/addons/utils/SkeletonUtils.js'
 
 import type { EntityModel } from './entity_model.ts'
 import { load_gltf_source } from './gltf_loader.ts'
-import { prepare_pixel_texture } from './model_texture.ts'
 import type { CharacterAppearanceRender, WornModelRender } from './types.ts'
 
 type ModelMaterial = Material & {
@@ -33,8 +32,14 @@ type ModelMaterial = Material & {
 
 type LoadedPart = Readonly<{ root: Object3D; materials: readonly Material[] }>
 type Pixels = Readonly<{ data: Uint8ClampedArray; width: number; height: number }>
+type Colorizer = Readonly<{
+  set: (colors: readonly [string, string, string]) => void
+  dispose: () => void
+}>
 
-const CHARACTER_HEIGHT = 1.4
+export type CharacterModel = EntityModel & Readonly<{ set_colors: (colors: readonly [string, string, string]) => void }>
+
+const CHARACTER_HEIGHT = 2
 const PLACEHOLDER_COLOR = 0x8a8fa3
 const material_rows = (material: Material | Material[]): readonly Material[] =>
   Array.isArray(material) ? material : [material]
@@ -45,9 +50,6 @@ const clone_materials = (root: Object3D): readonly Material[] => {
     const cached = clones.get(original)
     if (cached) return cached
     const copy = original.clone()
-    const material = copy as ModelMaterial
-    for (const texture of new Set([material.map, material.emissiveMap].filter((row): row is Texture => !!row)))
-      prepare_pixel_texture(texture)
     clones.set(original, copy)
     return copy
   }
@@ -119,8 +121,7 @@ const image_pixels = (image: CanvasImageSource & Readonly<{ width: number; heigh
   return Object.freeze({ data: pixels.data, width: pixels.width, height: pixels.height })
 }
 
-const apply_colors = (root: Object3D, colors: readonly [string, string, string], owned_textures: Texture[]): void => {
-  if (typeof document === 'undefined' || typeof ImageData === 'undefined') return
+const create_colorizer = (root: Object3D): Colorizer => {
   const textures = new Map<string, Texture>()
   const materials = new Map<string, ModelMaterial[]>()
   root.traverse((object) => {
@@ -136,42 +137,66 @@ const apply_colors = (root: Object3D, colors: readonly [string, string, string],
       else materials.set(map_name, [material])
     })
   })
-  const rgb = colors.map((value) => {
-    const color = new Color(value)
-    return Object.freeze([color.r, color.g, color.b] as const)
-  })
-  for (const [name, base_texture] of textures) {
+  const layers = [...textures].flatMap(([name, base_texture]) => {
     const match = name.match(/^(.+)_base$/)
     const image = base_texture.image as (CanvasImageSource & Readonly<{ width: number; height: number }>) | undefined
     const base = image ? image_pixels(image) : null
-    if (!match?.[1] || !base) continue
-    let output = new Uint8ClampedArray(base.data)
-    for (const [index, layer] of ['color1', 'color2', 'color3'].entries()) {
+    if (!match?.[1] || !base) return []
+    const masks = ['color1', 'color2', 'color3'].map((layer) => {
       const mask_texture = textures.get(`${match[1]}_${layer}`)
       const mask_image = mask_texture?.image as
         (CanvasImageSource & Readonly<{ width: number; height: number }>) | undefined
-      const mask = mask_image ? image_pixels(mask_image) : null
-      const layer_color = rgb[index]
-      if (mask && layer_color && mask.width === base.width && mask.height === base.height)
-        output = compose_pixels(output, mask.data, layer_color)
-    }
-    const canvas = document.createElement('canvas')
-    canvas.width = base.width
-    canvas.height = base.height
-    canvas.getContext('2d')?.putImageData(new ImageData(output, base.width, base.height), 0, 0)
-    const texture = new CanvasTexture(canvas)
-    texture.name = `${match[1]}_customized`
-    texture.colorSpace = SRGBColorSpace
-    texture.flipY = base_texture.flipY
-    texture.wrapS = base_texture.wrapS
-    texture.wrapT = base_texture.wrapT
-    prepare_pixel_texture(texture)
-    owned_textures.push(texture)
-    for (const material of materials.get(name) ?? []) {
-      material.map = texture
-      material.needsUpdate = true
-    }
-  }
+      return mask_image ? image_pixels(mask_image) : null
+    })
+    return [Object.freeze({ base, base_texture, masks: Object.freeze(masks), name, prefix: match[1] })]
+  })
+  const customized = new Map<string, Texture>()
+
+  return Object.freeze({
+    set: (colors) => {
+      if (typeof document === 'undefined' || typeof ImageData === 'undefined') return
+      const rgb = colors.map((value) => {
+        const color = new Color(value)
+        return Object.freeze([color.r, color.g, color.b] as const)
+      })
+      layers.forEach(({ base, base_texture, masks, name, prefix }) => {
+        let output = new Uint8ClampedArray(base.data)
+        masks.forEach((mask, index) => {
+          const layer_color = rgb[index]
+          if (mask && layer_color && mask.width === base.width && mask.height === base.height)
+            output = compose_pixels(output, mask.data, layer_color)
+        })
+        const canvas = document.createElement('canvas')
+        canvas.width = base.width
+        canvas.height = base.height
+        canvas.getContext('2d')?.putImageData(new ImageData(output, base.width, base.height), 0, 0)
+        const texture = new CanvasTexture(canvas)
+        texture.name = `${prefix}_customized`
+        texture.colorSpace = SRGBColorSpace
+        texture.flipY = base_texture.flipY
+        texture.wrapS = base_texture.wrapS
+        texture.wrapT = base_texture.wrapT
+        // Characters retain the sampler authored in their GLB. Forcing the mob-only nearest
+        // policy here makes animated texels snap under sub-native reconstruction and reads as
+        // body vibration. The generated recolour must behave exactly like its source layer.
+        texture.magFilter = base_texture.magFilter
+        texture.minFilter = base_texture.minFilter
+        texture.generateMipmaps = base_texture.generateMipmaps
+        texture.anisotropy = base_texture.anisotropy
+        texture.needsUpdate = true
+        customized.get(name)?.dispose()
+        customized.set(name, texture)
+        for (const material of materials.get(name) ?? []) {
+          material.map = texture
+          material.needsUpdate = true
+        }
+      })
+    },
+    dispose: () => {
+      customized.forEach((texture) => texture.dispose())
+      customized.clear()
+    },
+  })
 }
 
 const prepare_character = (root: Object3D): number => {
@@ -265,7 +290,7 @@ const load_part = async (spec: WornModelRender): Promise<LoadedPart> => {
   return Object.freeze({ root, materials })
 }
 
-const placeholder_model = (): EntityModel => {
+const placeholder_model = (): CharacterModel => {
   const root = new Group()
   const tint = new Color(PLACEHOLDER_COLOR)
   const radius = CHARACTER_HEIGHT * 0.22
@@ -286,6 +311,10 @@ const placeholder_model = (): EntityModel => {
     root,
     clips: Object.freeze([]),
     min_y: 0,
+    set_colors: ([color]) => {
+      material.color.set(color)
+      material.emissive.set(color).multiplyScalar(0.25)
+    },
     dispose: () => {
       if (disposed) return
       disposed = true
@@ -295,14 +324,16 @@ const placeholder_model = (): EntityModel => {
   })
 }
 
-export const create_character_model = async (appearance: CharacterAppearanceRender): Promise<EntityModel> => {
+export const create_character_model = async (appearance: CharacterAppearanceRender): Promise<CharacterModel> => {
   if (!appearance.body_url) return placeholder_model()
   const body_gltf = await load_gltf_source(appearance.body_url)
   const root = clone_skinned(body_gltf.scene)
   const owned_materials = [...clone_materials(root)]
-  const owned_textures: Texture[] = []
+  const colorizers: Colorizer[] = []
   const min_y = prepare_character(root)
-  apply_colors(root, appearance.colors, owned_textures)
+  const body_colors = create_colorizer(root)
+  body_colors.set(appearance.colors)
+  colorizers.push(body_colors)
 
   let hair: Object3D | null = null
   if (appearance.hair_url) {
@@ -311,7 +342,9 @@ export const create_character_model = async (appearance: CharacterAppearanceRend
       const hair_gltf = await load_gltf_source(appearance.hair_url)
       hair = clone_skinned(hair_gltf.scene)
       owned_materials.push(...clone_materials(hair))
-      apply_colors(hair, appearance.colors, owned_textures)
+      const hair_colors = create_colorizer(hair)
+      hair_colors.set(appearance.colors)
+      colorizers.push(hair_colors)
       head.add(hair)
     } else console.warn(`Character body ${appearance.body_url} has no Head bone; hair was skipped.`)
   }
@@ -337,6 +370,7 @@ export const create_character_model = async (appearance: CharacterAppearanceRend
     root,
     clips: Object.freeze([...body_gltf.animations]),
     min_y,
+    set_colors: (colors: readonly [string, string, string]) => colorizers.forEach((colorizer) => colorizer.set(colors)),
     dispose: () => {
       if (disposed) return
       disposed = true
@@ -344,7 +378,7 @@ export const create_character_model = async (appearance: CharacterAppearanceRend
         const skinned = object as Object3D & { isSkinnedMesh?: boolean; skeleton?: { dispose?: () => void } }
         if (skinned.isSkinnedMesh) skinned.skeleton?.dispose?.()
       })
-      owned_textures.forEach((texture) => texture.dispose())
+      colorizers.forEach((colorizer) => colorizer.dispose())
       owned_materials.forEach((material) => material.dispose())
     },
   })

@@ -21,6 +21,7 @@ test('the account card sits below navigation and above language with row actions
     gas_spent_24h: () => 0n,
     derive_character_id: () => '',
     is_character_name_claimed: async () => false,
+    create_character: async () => ({ digest: '', character_id: '' }),
     resolve_suins_address: async () => null,
     estimate_sui_transfer: async () => 0n,
     send_sui: async () => ({ digest: null }),
@@ -30,6 +31,9 @@ test('the account card sits below navigation and above language with row actions
       throw new Error('not used while rendering')
     },
     publish_contract: async () => ({ receipt: {}, objects: [] }),
+    upgrade_contract: async () => ({ receipt: {} }),
+    read_package_upgrade: async () => ({ package: '', version: 1, policy: 0 }),
+    read_game_version: async () => 1,
     read_game_paused: async () => false,
     set_game_paused: async () => ({ digest: '' }),
     read_marketplace_royalties: async () => [],
@@ -68,9 +72,7 @@ test('the account card sits below navigation and above language with row actions
   expect(html).toContain('Connecting')
   expect(html).toContain('TESTNET')
   expect(html).toContain('class="flex flex-col gap-1"')
-  const simulator_button = html.match(/<button[^>]*data-page="simulator"[^>]*>/)?.[0]
-  expect(simulator_button).toBeDefined()
-  expect(simulator_button).not.toContain('disabled')
+  expect(html).not.toContain('data-page="simulator"')
   for (const page of ['shop', 'airdrop', 'settings']) {
     const button = html.match(new RegExp(`<button[^>]*data-page="${page}"[^>]*>`))?.[0]
     expect(button).toBeDefined()
@@ -132,6 +134,30 @@ test('the network badge is testnet-only', async () => {
 
   expect(sidebar('testnet')).toContain('TESTNET')
   expect(sidebar('mainnet')).not.toContain('TESTNET')
+})
+
+test('the shell makes a frozen game impossible to miss', async () => {
+  const copy = await load_app_copy('en')
+  const html = renderToStaticMarkup(
+    <AppShell
+      change_locale={() => undefined}
+      copy={copy}
+      disconnect={() => undefined}
+      locale="en"
+      network="testnet"
+      open_page={() => undefined}
+      open_path={() => undefined}
+      page="world"
+      pathname="/"
+      select_character={() => undefined}
+      session={Object.freeze({ ...initial_session_state(), game_frozen: true })}
+      settings={Object.freeze({ quality: 'medium', flat_mode: false, music_enabled: true })}
+    />
+  )
+
+  expect(html).toContain('data-game-frozen="true"')
+  expect(html).toContain('The game is currently frozen')
+  expect(html).toContain('bg-[#8f1028]')
 })
 
 test('universe loading no longer creates a persistent toast', async () => {

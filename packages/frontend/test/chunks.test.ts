@@ -20,6 +20,7 @@ const create_engine_spy = () => {
     set_entities: () => {},
     animate_entity: () => Promise.resolve(false),
     play_fight_cue: () => Promise.resolve(false),
+    play_jump_puff: () => {},
     project_entity: () => null,
     create_fight_blob: () => 'test_blob',
     update_fight_blob: () => false,
@@ -69,10 +70,59 @@ describe('game chunk planning', () => {
     expect(desired.filter(({ lod }) => lod === 'far')).toHaveLength(192)
   })
 
-  test('world-authored vertical layers expand the same horizontal residency ring', () => {
-    const desired = desired_chunks({ x: 0, y: 0, z: 0 }, 'low', [-1, 0, 1])
+  test('derived surface layers expand the same horizontal residency ring', () => {
+    const desired = desired_chunks({ x: 0, y: 0, z: 0 }, 'low', () => [-1, 0, 1])
     expect(desired).toHaveLength(147)
     expect(new Set(desired.map(({ coordinate }) => coordinate.y))).toEqual(new Set([-1, 0, 1]))
+  })
+
+  test('plans exact vertical surface layers top-first before submitting chunks', async () => {
+    const spy = create_engine_spy()
+    const chunks = create_chunk_manager({
+      engine: spy.engine,
+      initial_quality: 'low',
+      plan_layers: (columns) =>
+        Promise.resolve(columns.map(({ x, z }) => ({ x, z, layers: x === 0 && z === 0 ? [2, 3] : [2] }))),
+    })
+
+    chunks.set_focus(0, 0)
+    await Promise.resolve()
+    chunks.tick()
+
+    expect(spy.rendered).toHaveLength(2)
+    expect(spy.rendered.map(({ coordinate }) => coordinate.y)).toEqual([3, 2])
+  })
+
+  test('a stale terrain plan cannot repopulate the cache after focus moves', async () => {
+    const spy = create_engine_spy()
+    const first = Promise.withResolvers<readonly { x: number; z: number; layers: readonly number[] }[]>()
+    const latest = Promise.withResolvers<readonly { x: number; z: number; layers: readonly number[] }[]>()
+    let request_count = 0
+    const chunks = create_chunk_manager({
+      engine: spy.engine,
+      initial_quality: 'low',
+      plan_layers: (columns) => {
+        request_count += 1
+        const plans = columns.map(({ x, z }) => ({ x, z, layers: [request_count === 1 ? 1 : 7] }))
+        const request = request_count === 1 ? first : latest
+        return request.promise.then(() => plans)
+      },
+    })
+
+    chunks.set_focus(0, 0)
+    chunks.set_focus(32, 0)
+    latest.resolve([])
+    await latest.promise
+    await Promise.resolve()
+    chunks.tick()
+
+    first.resolve([])
+    await first.promise
+    await Promise.resolve()
+    chunks.tick()
+
+    expect(spy.rendered.length).toBeGreaterThan(0)
+    expect(new Set(spy.rendered.map(({ coordinate }) => coordinate.y))).toEqual(new Set([7]))
   })
 
   test('streaming bounds submissions and records residency only after acknowledgement', async () => {

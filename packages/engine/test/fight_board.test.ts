@@ -131,7 +131,7 @@ describe('fight board rendering projection', () => {
     expect(range_cells.count).toBe(3)
     const first_position = instance_transform(range_cells, 0).position
     expect(first_position.x).toBeCloseTo(0.665)
-    expect(first_position.y).toBeCloseTo(BOARD_FLOOR_THICKNESS)
+    expect(first_position.y).toBeCloseTo(BOARD_FLOOR_THICKNESS + 0.07)
     expect(first_position.z).toBeCloseTo(0.665)
     expect(instance_transform(range_cells, 0).scale.x).toBeCloseTo(0.001)
     expect(instance_transform(range_cells, 1).scale.x).toBeCloseTo(0.001)
@@ -165,6 +165,38 @@ describe('fight board rendering projection', () => {
     expect(range?.children).toHaveLength(1)
     expect(range?.children[0]).toBeInstanceOf(InstancedMesh)
     expect((range?.children[0] as InstancedMesh | undefined)?.count).toBe(3)
+    blobs.dispose()
+  })
+
+  test('renders retained trap markers as one dark cell batch plus one gold spike batch', () => {
+    const scene = new Scene()
+    const blobs = create_fight_blob_layer(scene)
+    blobs.set_board({
+      width: 2,
+      height: 1,
+      cell_size: 1.33,
+      origin: { x: 0, y: 0, z: 0 },
+      cells: [
+        { cell: 30, x: 0, y: 0, kind: 'floor' as const },
+        { cell: 31, x: 1, y: 0, kind: 'floor' as const },
+      ],
+    })
+    blobs.upsert({
+      id: 'traps',
+      cells: [30, 31],
+      shape: 'per_cell',
+      color: 0x14110b,
+      decoration: 'trap',
+      animate: false,
+      created_at: 1_000,
+    })
+
+    const trap = scene.getObjectByName('fight_blob:traps')
+    expect(trap?.children.map(({ name }) => name)).toEqual(['fight_blob_cells', 'fight_trap_spikes'])
+    const trap_cells = trap?.getObjectByName('fight_blob_cells') as InstancedMesh | undefined
+    const trap_spikes = trap?.getObjectByName('fight_trap_spikes') as InstancedMesh | undefined
+    expect(trap_cells?.count).toBe(2)
+    expect(trap_spikes?.count).toBe(2)
     blobs.dispose()
   })
 
@@ -212,7 +244,14 @@ describe('fight board rendering projection', () => {
 
     const hovered_cell = scene.getObjectByName('fight_blob:hover')?.children[0] as InstancedMesh
     expect(hovered_cell?.visible).toBeTrue()
+    expect(instance_transform(hovered_cell, 0).scale.x).toBeCloseTo(0.001)
+    const first_upload = hovered_cell.instanceMatrix.version
+    blobs.tick(1_016)
+    expect(hovered_cell.instanceMatrix.version).toBeGreaterThan(first_upload)
     expect(instance_transform(hovered_cell, 0).scale.x).toBe(1)
+    const settled_upload = hovered_cell.instanceMatrix.version
+    blobs.tick(1_032)
+    expect(hovered_cell.instanceMatrix.version).toBe(settled_upload)
     blobs.dispose()
   })
 

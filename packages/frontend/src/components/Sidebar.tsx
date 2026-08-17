@@ -5,7 +5,6 @@ import type { CharacterRow } from '@aresrpg/protocol'
 import {
   BookOpen,
   Crosshair,
-  FlaskConical,
   Gamepad2,
   Gift,
   Settings,
@@ -30,7 +29,6 @@ const NAVIGATION: readonly Readonly<{ page: Page; label: CopyStringKey; Icon: Lu
     { page: 'characters', label: 'characters', Icon: Swords, disabled: true },
     { page: 'leaderboard', label: 'leaderboard', Icon: Trophy, disabled: true },
     { page: 'shop', label: 'shop', Icon: ShoppingBag, disabled: false },
-    { page: 'simulator', label: 'simulator', Icon: FlaskConical, disabled: false },
     { page: 'encyclopedia', label: 'encyclopedia', Icon: BookOpen, disabled: false },
     { page: 'marketplace', label: 'marketplace', Icon: Store, disabled: true },
     { page: 'airdrop', label: 'airdrop', Icon: Gift, disabled: false },

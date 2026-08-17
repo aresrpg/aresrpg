@@ -19,7 +19,7 @@ import {
 
 import PINS from '../../../pins.json' with { type: 'json' }
 
-import { character_claim_id, character_id } from './character.ts'
+import { character_claim_id, character_create, character_id, type CharacterCreateInput } from './character.ts'
 import { gas_mist_from_receipt } from './gas.ts'
 import { SDK, type Pins, type SuiTransport } from './client.ts'
 import type { SeedAdminConfig, SeedAdminSession } from './seed_admin.ts'
@@ -29,9 +29,11 @@ import { sui_transfer_ptb } from './sui_transfer.ts'
 import type { MarketplaceRoyalty } from './marketplace_admin.ts'
 import type { AirdropClaim, ShopPurchase } from './shop.ts'
 import { receipt_digest, receipt_digest_or_null, type Receipt } from './cache.ts'
+import { create_personal_kiosk_runner } from './ptb.ts'
 import {
   create_deployment_bootstrap_transaction,
   create_package_publish_transaction,
+  create_package_upgrade_transaction,
   DISPLAY_REGISTRY_ID,
   type ContractArtifact,
   type GameDeployment,
@@ -45,6 +47,7 @@ export type AuthSession = Readonly<{
   gas_spent_24h: () => bigint
   derive_character_id: (name: string) => string
   is_character_name_claimed: (name: string) => Promise<boolean>
+  create_character: (character: CharacterCreateInput) => Promise<Readonly<{ digest: string; character_id: string }>>
   resolve_suins_address: (name: string) => Promise<string | null>
   estimate_sui_transfer: (recipient: string, amount_mist: bigint, drain: boolean) => Promise<bigint>
   send_sui: (recipient: string, amount_mist: bigint, drain: boolean) => Promise<Readonly<{ digest: string | null }>>
@@ -56,7 +59,15 @@ export type AuthSession = Readonly<{
       receipt: Receipt
     }>
   >
+  upgrade_contract: (
+    deployment: Readonly<{
+      artifact: ContractArtifact
+      upgrade_cap: string
+    }>
+  ) => Promise<Readonly<{ receipt: Receipt }>>
+  read_package_upgrade: (upgrade_cap: string) => Promise<Readonly<{ package: string; version: number; policy: number }>>
   bootstrap_deployment?: (deployment: GameDeployment) => Promise<Receipt>
+  read_game_version: (version: string) => Promise<number>
   read_game_paused: (version: string) => Promise<boolean>
   set_game_paused: (
     deployment: Readonly<{
@@ -208,7 +219,7 @@ const create_wallet_session = (
     kiosk_caps = request
     try {
       const { kioskOwnerCaps } = await request
-      const cap = kioskOwnerCaps.find(({ isPersonal }) => isPersonal) ?? kioskOwnerCaps[0] ?? null
+      const cap = kioskOwnerCaps.find(({ isPersonal }) => isPersonal) ?? null
       if (!cap) kiosk_caps = null
       return cap
     } catch (error) {
@@ -216,9 +227,35 @@ const create_wallet_session = (
       throw error
     }
   }
+  const personal_kiosk_action = create_personal_kiosk_runner(kiosk_cap)
   const require_registry = (): string => {
     if (!registry_pin) throw new Error('The character registry is not published on this network')
     return registry_pin
+  }
+  const read_game_version = async (version: string): Promise<number> => {
+    const { objects } = await client.core.getObjects({ objectIds: [version], include: { json: true } })
+    const object = objects.find((candidate) => !(candidate instanceof Error) && candidate.objectId === version)
+    if (!object || object instanceof Error) throw new Error('The published Version object is unavailable')
+    const current_version = Number(object.json?.current_version)
+    if (!Number.isSafeInteger(current_version) || current_version < 0)
+      throw new Error('The published Version value is invalid')
+    return current_version
+  }
+  const read_package_upgrade = async (
+    upgrade_cap: string
+  ): Promise<Readonly<{ package: string; version: number; policy: number }>> => {
+    const { objects } = await client.core.getObjects({ objectIds: [upgrade_cap], include: { json: true } })
+    const capability = objects.find((candidate) => !(candidate instanceof Error) && candidate.objectId === upgrade_cap)
+    if (!capability || capability instanceof Error) throw new Error('The package UpgradeCap is unavailable')
+    const package_id = capability.json?.package
+    const version = Number(capability.json?.version)
+    const policy = Number(capability.json?.policy)
+    if (typeof package_id !== 'string' || !isValidSuiAddress(package_id))
+      throw new Error('The package UpgradeCap has an invalid package ID')
+    if (!Number.isSafeInteger(version) || version < 1) throw new Error('The package UpgradeCap has an invalid version')
+    if (!Number.isInteger(policy) || policy < 0 || policy > 255)
+      throw new Error('The package UpgradeCap has an invalid policy')
+    return Object.freeze({ package: package_id, version, policy })
   }
   return Object.freeze({
     address: account.address,
@@ -237,6 +274,14 @@ const create_wallet_session = (
       const { objects } = await client.core.getObjects({ objectIds: [claim_id] })
       return objects.some((object) => !(object instanceof Error) && object.objectId === claim_id)
     },
+    create_character: (character) =>
+      personal_kiosk_action(async (kiosk_cap) => {
+        const { kiosk_cap: settled_kiosk_cap, ...receipt } = await character_create(sdk, {
+          ...character,
+          kiosk_cap,
+        })
+        return Object.freeze({ value: Object.freeze(receipt), kiosk_cap: settled_kiosk_cap })
+      }),
     resolve_suins_address: async (name: string) => {
       const { address } = await client.core.resolveNameServiceAddress({ name: canonical_suins_name(name) })
       return address
@@ -269,11 +314,23 @@ const create_wallet_session = (
     },
     buy_shop_item: async (purchase) => {
       const { buy_shop_item } = await import('./shop.ts')
-      return buy_shop_item(sdk, await kiosk_cap(), purchase)
+      return personal_kiosk_action(async (kiosk_cap) => {
+        const result = await buy_shop_item(sdk, kiosk_cap, purchase)
+        return Object.freeze({
+          value: Object.freeze({ digest: result.digest }),
+          kiosk_cap: result.kiosk_cap,
+        })
+      })
     },
     claim_airdrop: async (claim) => {
       const { claim_airdrop } = await import('./shop.ts')
-      return claim_airdrop(sdk, await kiosk_cap(), claim)
+      return personal_kiosk_action(async (kiosk_cap) => {
+        const result = await claim_airdrop(sdk, kiosk_cap, claim)
+        return Object.freeze({
+          value: Object.freeze({ digest: result.digest }),
+          kiosk_cap: result.kiosk_cap,
+        })
+      })
     },
     create_seed_admin: async (content, config, current_pins = sdk.pins) => {
       const { create_seed_admin } = await import('./seed_admin.ts')
@@ -339,6 +396,16 @@ const create_wallet_session = (
       })
       return Object.freeze({ receipt })
     },
+    upgrade_contract: async ({ artifact, upgrade_cap }) => {
+      await sdk.hydrate([upgrade_cap])
+      const { package: package_id, policy } = await read_package_upgrade(upgrade_cap)
+      const receipt = await sdk.execute(
+        create_package_upgrade_transaction({ sdk, artifact, package: package_id, upgrade_cap, policy }),
+        { include: { objectTypes: true } }
+      )
+      return Object.freeze({ receipt })
+    },
+    read_package_upgrade,
     bootstrap_deployment: async (deployment) => {
       await sdk.hydrate([deployment.publisher, DISPLAY_REGISTRY_ID])
       return sdk.execute(
@@ -352,12 +419,8 @@ const create_wallet_session = (
         { include: { objectTypes: true } }
       )
     },
-    read_game_paused: async (version) => {
-      const { objects } = await client.core.getObjects({ objectIds: [version], include: { json: true } })
-      const object = objects.find((candidate) => !(candidate instanceof Error) && candidate.objectId === version)
-      if (!object || object instanceof Error) throw new Error('The published Version object is unavailable')
-      return String(object.json?.current_version ?? '') === '0'
-    },
+    read_game_version,
+    read_game_paused: async (version) => (await read_game_version(version)) === 0,
     set_game_paused: async ({ package_id, version, admin_cap, paused }) => {
       await sdk.hydrate([version, admin_cap])
       const { create_version_admin_transaction } = await import('./deployment_admin.ts')

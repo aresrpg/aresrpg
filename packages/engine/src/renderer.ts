@@ -204,6 +204,7 @@ export const create_engine = ({
       backend
         ? backend.play_fight_cue(cue)
         : new Promise<boolean>((resolve) => pending_fight_cues.push(Object.freeze({ cue, resolve }))),
+    play_jump_puff: (position) => backend?.play_jump_puff(position),
     project_entity: (id) => backend?.project_entity(id) ?? null,
     create_fight_blob: (blob: FightBlobSpec) => {
       fight_blob_serial += 1

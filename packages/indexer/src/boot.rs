@@ -48,12 +48,16 @@ pub async fn publish_checkpoint(url: &str, original: &str) -> Result<u64> {
         url,
         &format!(
             r#"{{ object(address: "{original}") {{
-                 previousTransactionBlock {{ effects {{ checkpoint {{ sequenceNumber }} }} }}
+                 previousTransaction {{ effects {{ checkpoint {{ sequenceNumber }} }} }}
                }} }}"#
         ),
     )
     .await?;
-    data["object"]["previousTransactionBlock"]["effects"]["checkpoint"]["sequenceNumber"]
+    publish_checkpoint_from(&data, original)
+}
+
+fn publish_checkpoint_from(data: &Value, original: &str) -> Result<u64> {
+    data["object"]["previousTransaction"]["effects"]["checkpoint"]["sequenceNumber"]
         .as_u64()
         .ok_or_else(|| {
             anyhow!("no publish checkpoint for {original} — is the id a package on this network?")
@@ -164,4 +168,28 @@ pub async fn ensure_indexes(conn: &mut MultiplexedConnection) -> Result<()> {
     }
     info!(count = indexes.len(), "graph indexes declared");
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::publish_checkpoint_from;
+    use serde_json::json;
+
+    #[test]
+    fn decodes_the_current_sui_graphql_previous_transaction_shape() {
+        // Captured from the official testnet GraphQL endpoint for package
+        // 0xb68b4685…2387 on 2026-08-17.
+        let data = json!({
+            "object": {
+                "previousTransaction": {
+                    "effects": { "checkpoint": { "sequenceNumber": 372_762_581 } }
+                }
+            }
+        });
+
+        assert_eq!(
+            publish_checkpoint_from(&data, "0xb68b4685").expect("checkpoint"),
+            372_762_581
+        );
+    }
 }

@@ -6,6 +6,8 @@ import { resolve } from 'node:path'
 import { describe, expect, test } from 'bun:test'
 
 import {
+  chain_to_client_coordinate,
+  client_to_chain_coordinate,
   characteristic_names,
   class_names,
   craft_job_of,
@@ -56,6 +58,12 @@ describe('chain-mirrored experience curve', () => {
 })
 
 describe('immutable vocabularies', () => {
+  test('maps the unsigned chain center to the client origin without losing fractional live movement', () => {
+    expect(chain_to_client_coordinate(50_000)).toBe(0)
+    expect(chain_to_client_coordinate(50_012.25)).toBe(12.25)
+    expect(client_to_chain_coordinate(-12.25)).toBe(49_987.75)
+  })
+
   test('the job roster contains exactly the chain-backed 15 slugs', () => {
     expect(job_slugs).toHaveLength(15)
     expect(new Set(job_slugs).size).toBe(15)

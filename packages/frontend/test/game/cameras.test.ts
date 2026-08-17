@@ -32,7 +32,7 @@ describe('follow addon (legacy shoulder rig)', () => {
     const dz = settled.position[2] - anchor.z
     expect(Math.hypot(dx, dz)).toBeGreaterThan(2) // eye sits away from the body…
     expect(settled.position[1]).toBeGreaterThan(anchor.y + 1) // …and above the head (72° polar)
-    expect(settled.fov).toBeCloseTo(65, 0)
+    expect(settled.fov).toBeCloseTo(70, 0)
     expect(settled.ortho_blend).toBe(0)
   })
 

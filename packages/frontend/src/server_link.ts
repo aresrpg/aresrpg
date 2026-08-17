@@ -10,8 +10,17 @@ import type { AppInput } from './store.ts'
 const BACKOFF_START_MS = 1_000
 const BACKOFF_CAP_MS = 30_000
 const LATENCY_INTERVAL_MS = 5_000
+const PACKET_COLORS = Object.freeze({ in: '#3fb950', out: '#58a6ff' })
 
 const clock_ms = (): number => globalThis.performance?.now() ?? Date.now()
+
+const log_packet = (direction: keyof typeof PACKET_COLORS, packet: Readonly<ClientPacket> | object): void => {
+  const visible =
+    'type' in packet && packet.type === 'packet/signature_response'
+      ? { ...packet, bytes: '[redacted]', signature: '[redacted]' }
+      : packet
+  console.log(`%c WS ${direction.toUpperCase()} `, `color:${PACKET_COLORS[direction]};font-weight:700`, visible)
+}
 
 export type ServerLink = Readonly<{
   send: (packet: Readonly<ClientPacket>) => boolean
@@ -45,6 +54,11 @@ export const connect_server = ({ session, dispatch }: ServerLinkOptions): Server
   let next_probe_id = 1
   let pending_probe: Readonly<{ id: number; started_ms: number }> | null = null
 
+  const send = (target: Readonly<WebSocket>, packet: Readonly<ClientPacket>): void => {
+    log_packet('out', packet)
+    target.send(JSON.stringify(packet))
+  }
+
   const stop_latency = (): void => {
     if (latency_timer) clearInterval(latency_timer)
     latency_timer = null
@@ -56,7 +70,7 @@ export const connect_server = ({ session, dispatch }: ServerLinkOptions): Server
     const id = next_probe_id
     next_probe_id += 1
     pending_probe = Object.freeze({ id, started_ms: clock_ms() })
-    socket.send(JSON.stringify({ type: 'packet/ping', id } satisfies ClientPacket))
+    send(socket, { type: 'packet/ping', id })
   }
 
   const start_latency = (): void => {
@@ -85,6 +99,7 @@ export const connect_server = ({ session, dispatch }: ServerLinkOptions): Server
         if (disposed || socket !== next) return
         try {
           const packet = parse_server_packet(String(data))
+          log_packet('in', packet)
           if (packet.type === 'packet/pong') {
             if (pending_probe?.id !== packet.id) return
             const latency_ms = Math.max(0, Math.round(clock_ms() - pending_probe.started_ms))
@@ -95,8 +110,7 @@ export const connect_server = ({ session, dispatch }: ServerLinkOptions): Server
           if (packet.type === 'packet/signature_request') {
             void create_login_response(session, packet.payload)
               .then((response) => {
-                if (!disposed && socket === next && next.readyState === WebSocket.OPEN)
-                  next.send(JSON.stringify(response))
+                if (!disposed && socket === next && next.readyState === WebSocket.OPEN) send(next, response)
               })
               .catch((error) => {
                 console.error('Server identity proof failed.', error)
@@ -137,7 +151,7 @@ export const connect_server = ({ session, dispatch }: ServerLinkOptions): Server
   return Object.freeze({
     send: (packet: Readonly<ClientPacket>): boolean => {
       if (socket?.readyState !== WebSocket.OPEN) return false
-      socket.send(JSON.stringify(packet))
+      send(socket, packet)
       return true
     },
     dispose: () => {

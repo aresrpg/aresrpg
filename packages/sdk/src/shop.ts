@@ -25,6 +25,10 @@ export type AirdropClaim = Readonly<{
   existing_item_id?: string | null
 }>
 
+// One non-stackable item costs a split-coin command plus one buy call. Four hundred leaves
+// protocol headroom for personal-kiosk creation/finalization and Sui resolver commands.
+export const MAX_NON_STACKABLE_PURCHASE_QUANTITY = 400
+
 const published_ids = (sdk: Sdk) => {
   const package_id = sdk.pins.package
   const registry = sdk.pins.template_registry
@@ -38,43 +42,52 @@ export const buy_shop_item = async (
   sdk: Sdk,
   kiosk_cap: KioskOwnerCap | null,
   purchase: ShopPurchase
-): Promise<Readonly<{ digest: string }>> => {
+): Promise<Readonly<{ digest: string; kiosk_cap: KioskOwnerCap }>> => {
   if (!Number.isSafeInteger(purchase.quantity) || purchase.quantity < 1)
     throw new Error('Purchase quantity must be a positive integer.')
-  if (purchase.quantity > 1 && !item_is_stackable(purchase.category))
-    throw new Error('Only stackable items can be bought in quantities above one.')
   if (purchase.price_mist <= 0n) throw new Error('Shop price must be positive.')
+  if (!item_is_stackable(purchase.category) && purchase.quantity > MAX_NON_STACKABLE_PURCHASE_QUANTITY)
+    throw new Error(`A non-stackable purchase can contain at most ${MAX_NON_STACKABLE_PURCHASE_QUANTITY} items.`)
 
   const { package_id, registry_id } = published_ids(sdk)
   const sale = sale_id(registry_id, package_id, purchase.item_type)
   const template = item_template_id(registry_id, purchase.item_type)
   await sdk.hydrate_unknown([sale, template])
   const tx = sdk.tx()
-  sdk.with_owner_kiosk(tx, kiosk_cap, (kiosk, cap) => {
-    sdk.doors.buy(tx, {
-      sale,
-      template,
-      quantity: purchase.quantity,
-      payment: sdk.coin_of(tx, purchase.price_mist * BigInt(purchase.quantity)),
-      existing: item_is_stackable(purchase.category) ? (purchase.existing_item_id ?? null) : null,
-      kiosk,
-      cap,
-    })
+  sdk.with_personal_kiosk(tx, kiosk_cap, (kiosk, cap) => {
+    const stackable = item_is_stackable(purchase.category)
+    const buy = (quantity: number, payment_mist: bigint, existing: string | null) =>
+      sdk.doors.buy(tx, {
+        sale,
+        template,
+        quantity,
+        payment: sdk.coin_of(tx, payment_mist),
+        existing,
+        kiosk,
+        cap,
+      })
+
+    if (stackable) {
+      buy(purchase.quantity, purchase.price_mist * BigInt(purchase.quantity), purchase.existing_item_id ?? null)
+      return
+    }
+    for (let index = 0; index < purchase.quantity; index += 1) buy(1, purchase.price_mist, null)
   })
-  return Object.freeze({ digest: receipt_digest(await sdk.execute(tx)) })
+  const { receipt, kiosk_cap: settled_kiosk_cap } = await sdk.execute_personal_kiosk(tx, kiosk_cap)
+  return Object.freeze({ digest: receipt_digest(receipt), kiosk_cap: settled_kiosk_cap })
 }
 
 export const claim_airdrop = async (
   sdk: Sdk,
   kiosk_cap: KioskOwnerCap | null,
   claim: AirdropClaim
-): Promise<Readonly<{ digest: string }>> => {
+): Promise<Readonly<{ digest: string; kiosk_cap: KioskOwnerCap }>> => {
   const { package_id, registry_id } = published_ids(sdk)
   const drop = airdrop_id(registry_id, package_id, claim.drop_id)
   const template = item_template_id(registry_id, claim.item_type)
   await sdk.hydrate_unknown([drop, template])
   const tx = sdk.tx()
-  sdk.with_owner_kiosk(tx, kiosk_cap, (kiosk, cap) => {
+  sdk.with_personal_kiosk(tx, kiosk_cap, (kiosk, cap) => {
     sdk.doors.claim_airdrop(tx, {
       drop,
       template,
@@ -83,5 +96,6 @@ export const claim_airdrop = async (
       cap,
     })
   })
-  return Object.freeze({ digest: receipt_digest(await sdk.execute(tx)) })
+  const { receipt, kiosk_cap: settled_kiosk_cap } = await sdk.execute_personal_kiosk(tx, kiosk_cap)
+  return Object.freeze({ digest: receipt_digest(receipt), kiosk_cap: settled_kiosk_cap })
 }

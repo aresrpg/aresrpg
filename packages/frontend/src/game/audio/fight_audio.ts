@@ -107,6 +107,10 @@ export const create_fight_audio_observer = (
       return
     }
     if (phase !== 'start') return
+    if (cue.type === 'zone') {
+      emit(cue.element === 'heal' ? variant('heal', 'cast') : variant(cue.element, 'impact'), 0.5)
+      return
+    }
     if (cue.type === 'damage') {
       const heavy = cue.critical || cue.hp_after === 0 || cue.amount >= Math.max(1, cue.hp_before * 0.37)
       emit(heavy ? 'hit_heavy' : 'hit_medium')

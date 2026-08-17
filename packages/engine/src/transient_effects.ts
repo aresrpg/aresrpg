@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-// One bounded, typed particle primitive for every fight cast. It preserves the legacy choreography
-// and art facts without importing its shader catalog, adapter, render loop, or per-spell machinery.
+// One bounded particle runtime for transient fight and locomotion effects. Authored presets stay in
+// their domains; this layer alone owns shared drawables, ticking, and disposal.
 
 import {
   AdditiveBlending,
@@ -11,20 +11,26 @@ import {
   Matrix4,
   Mesh,
   MeshBasicMaterial,
+  NormalBlending,
   RingGeometry,
   Scene,
   SphereGeometry,
+  Sprite,
   Vector3,
 } from 'three'
+import { SpriteNodeMaterial } from 'three/webgpu'
+import { float, mix, sin, smoothstep, uniform, uv, vec3, vec4 } from 'three/tsl'
 
 import type { create_entity_layer } from './entities.ts'
 import { FIGHT_VFX_BEAT, FIGHT_VFX_BURSTS, FIGHT_VFX_PROFILES, fight_vfx_magnitude } from './fight_vfx_presets.ts'
 import type { FightPresentationCue } from './types.ts'
+import type { Vec3 } from './types.ts'
 
 type EntityLayer = ReturnType<typeof create_entity_layer>
-export type FightVfxAnchors = Pick<EntityLayer, 'world_anchor' | 'cell_anchor'>
+export type EffectAnchors = Pick<EntityLayer, 'world_anchor' | 'cell_anchor'>
 type CastCue = Extract<FightPresentationCue, Readonly<{ type: 'cast' }>>
 type DeathCue = Extract<FightPresentationCue, Readonly<{ type: 'death' }>>
+type ZoneCue = Extract<FightPresentationCue, Readonly<{ type: 'zone' }>>
 type ParticleMode = 'gather' | 'burst' | 'remnant'
 type ParticleSeed = Readonly<{ angle: number; radius: number; lift: number; size: number; phase: number }>
 type ParticleEffect = Readonly<{
@@ -42,7 +48,19 @@ type RingEffect = Readonly<{
   material: MeshBasicMaterial
   started_at: number
   duration_ms: number
+  start_radius: number
   radius: number
+  opacity: number
+}>
+type DustEffect = Readonly<{
+  group: Group
+  sprites: readonly Sprite[]
+  material: SpriteNodeMaterial
+  fade: ReturnType<typeof uniform>
+  center: Vector3
+  seeds: readonly ParticleSeed[]
+  started_at: number
+  duration_ms: number
 }>
 type Projectile = Readonly<{
   id: string
@@ -83,12 +101,13 @@ const particle_seed = (id: string, index: number): ParticleSeed => {
 
 const eased = (value: number): number => value * value * (3 - 2 * value)
 
-export const create_fight_vfx = ({ scene, entities }: Readonly<{ scene: Scene; entities: FightVfxAnchors }>) => {
+export const create_transient_effects = ({ scene, entities }: Readonly<{ scene: Scene; entities: EffectAnchors }>) => {
   const particle_geometry = new SphereGeometry(0.11, 5, 4)
   const core_geometry = new SphereGeometry(0.28, 10, 8)
   const ring_geometry = new RingGeometry(0.58, 0.76, 28)
   const particles: ParticleEffect[] = []
   const rings: RingEffect[] = []
+  const dusts: DustEffect[] = []
   const projectiles: Projectile[] = []
   const delayed_bursts: DelayedBurst[] = []
   const matrix = new Matrix4()
@@ -96,12 +115,12 @@ export const create_fight_vfx = ({ scene, entities }: Readonly<{ scene: Scene; e
   const scale = new Vector3()
   let previous_tick = performance.now()
 
-  const material = (color: number, opacity: number): MeshBasicMaterial =>
+  const material = (color: number, opacity: number, additive = true): MeshBasicMaterial =>
     new MeshBasicMaterial({
       color: new Color(color),
       transparent: true,
       opacity,
-      blending: AdditiveBlending,
+      blending: additive ? AdditiveBlending : NormalBlending,
       depthWrite: false,
       toneMapped: false,
     })
@@ -134,14 +153,73 @@ export const create_fight_vfx = ({ scene, entities }: Readonly<{ scene: Scene; e
     )
   }
 
-  const spawn_ring = (center: Vector3, color: number, radius: number, duration_ms: number): void => {
-    const ring_material = material(color, 0.7)
+  const spawn_ring = (
+    center: Vector3,
+    color: number,
+    radius: number,
+    duration_ms: number,
+    opacity = 0.7,
+    additive = true,
+    start_radius = 0
+  ): void => {
+    const ring_material = material(color, opacity, additive)
     const mesh = new Mesh(ring_geometry, ring_material)
     mesh.position.copy(center)
     mesh.rotation.x = -Math.PI / 2
     mesh.renderOrder = 39
     scene.add(mesh)
-    rings.push(Object.freeze({ mesh, material: ring_material, started_at: previous_tick, duration_ms, radius }))
+    rings.push(
+      Object.freeze({
+        mesh,
+        material: ring_material,
+        started_at: previous_tick,
+        duration_ms,
+        start_radius,
+        radius,
+        opacity,
+      })
+    )
+  }
+
+  const spawn_dust = (center: Vector3): void => {
+    const fade = uniform(0.6)
+    const smoke_material = new SpriteNodeMaterial()
+    smoke_material.transparent = true
+    smoke_material.depthWrite = false
+    smoke_material.toneMapped = false
+    smoke_material.blending = NormalBlending
+    const smoke_uv = uv()
+    const centered = smoke_uv.sub(0.5)
+    const radius = centered.length()
+    const billow = sin(smoke_uv.x.mul(19).add(smoke_uv.y.mul(23)))
+      .mul(0.045)
+      .add(sin(smoke_uv.x.mul(-31).add(smoke_uv.y.mul(13))).mul(0.025))
+    const body = float(1).sub(smoothstep(0.2, 0.52, radius.add(billow)))
+    const color = mix(vec3(0.4, 0.35, 0.29), vec3(0.64, 0.58, 0.47), body)
+    smoke_material.colorNode = vec4(color, body.mul(fade))
+    const group = new Group()
+    const seeds = Object.freeze(Array.from({ length: 14 }, (_, index) => particle_seed(`jump_dust`, index)))
+    const sprites = Object.freeze(
+      seeds.map(() => {
+        const sprite = new Sprite(smoke_material)
+        group.add(sprite)
+        return sprite
+      })
+    )
+    group.renderOrder = 40
+    scene.add(group)
+    dusts.push(
+      Object.freeze({
+        group,
+        sprites,
+        material: smoke_material,
+        fade,
+        center: center.clone(),
+        seeds,
+        started_at: previous_tick,
+        duration_ms: 550,
+      })
+    )
   }
 
   const spawn_impact = (id: string, at: Vector3, color: number, accent: number, radius: number): void => {
@@ -250,6 +328,23 @@ export const create_fight_vfx = ({ scene, entities }: Readonly<{ scene: Scene; e
     )
   }
 
+  const play_zone = (cue: ZoneCue): boolean => {
+    const at = entities.cell_anchor(cue.cell)
+    if (!at) return false
+    const profile =
+      cue.action === 'trap_triggered'
+        ? FIGHT_VFX_BURSTS.earth
+        : (FIGHT_VFX_PROFILES[cue.element] ?? FIGHT_VFX_PROFILES.neutral)
+    spawn_impact(
+      cue.id,
+      at.clone().add(new Vector3(0, -FIGHT_VFX_BEAT.ground_drop, 0)),
+      profile.color,
+      profile.accent,
+      cue.action === 'trap_triggered' ? FIGHT_VFX_BURSTS.earth.size / 4 : 1
+    )
+    return true
+  }
+
   const create_warmup = () => {
     const root = new Group()
     const mesh_material = material(0xffffff, 0)
@@ -302,12 +397,39 @@ export const create_fight_vfx = ({ scene, entities }: Readonly<{ scene: Scene; e
     for (let index = rings.length - 1; index >= 0; index -= 1) {
       const effect = rings[index]!
       const progress = Math.min(1, Math.max(0, (now - effect.started_at) / effect.duration_ms))
-      effect.mesh.scale.setScalar(Math.max(0.001, eased(progress) * effect.radius))
-      effect.material.opacity = 0.7 * (1 - progress)
+      effect.mesh.scale.setScalar(
+        Math.max(0.001, effect.start_radius + eased(progress) * (effect.radius - effect.start_radius))
+      )
+      effect.material.opacity = effect.opacity * (1 - progress)
       if (progress < 1) continue
       scene.remove(effect.mesh)
       effect.material.dispose()
       rings.splice(index, 1)
+    }
+  }
+
+  const update_dust = (now: number): void => {
+    for (let effect_index = dusts.length - 1; effect_index >= 0; effect_index -= 1) {
+      const effect = dusts[effect_index]!
+      const progress = Math.min(1, Math.max(0, (now - effect.started_at) / effect.duration_ms))
+      const expansion = eased(progress)
+      effect.sprites.forEach((sprite, index) => {
+        const seed = effect.seeds[index]!
+        const radial = 0.34 + expansion * (0.3 + seed.radius * 0.28)
+        sprite.position.set(
+          effect.center.x + Math.cos(seed.angle) * radial,
+          effect.center.y + progress * 0.2 + Math.sin(progress * Math.PI) * seed.lift * 0.12,
+          effect.center.z + Math.sin(seed.angle) * radial
+        )
+        const size_curve = progress < 0.5 ? 0.5 + progress : 1 - (progress - 0.5) * 0.3
+        sprite.scale.setScalar((0.42 + seed.size * 0.38) * size_curve)
+      })
+      effect.fade.value = progress < 0.5 ? 0.6 - progress * 0.2 : Math.max(0, 1 - progress) * 1
+      if (progress < 1) continue
+      scene.remove(effect.group)
+      effect.group.clear()
+      effect.material.dispose()
+      dusts.splice(effect_index, 1)
     }
   }
 
@@ -355,13 +477,20 @@ export const create_fight_vfx = ({ scene, entities }: Readonly<{ scene: Scene; e
 
   return Object.freeze({
     create_warmup,
+    play_jump_puff: (feet: Vec3): void => {
+      const center = new Vector3(feet[0], feet[1] + 0.06, feet[2])
+      spawn_dust(center)
+      spawn_ring(center, 0xa39578, 2.38, 420, 0.4, false, 1.4)
+    },
     play_cast,
     play_death,
+    play_zone,
     tick: (now: number): void => {
       previous_tick = now
       update_delayed_bursts(now)
       update_projectiles(now)
       update_particles(now)
+      update_dust(now)
       update_rings(now)
     },
     dispose: (): void => {
@@ -379,10 +508,16 @@ export const create_fight_vfx = ({ scene, entities }: Readonly<{ scene: Scene; e
         scene.remove(effect.mesh)
         effect.material.dispose()
       })
+      dusts.forEach((effect) => {
+        scene.remove(effect.group)
+        effect.group.clear()
+        effect.material.dispose()
+      })
       delayed_bursts.forEach(({ resolve }) => resolve?.(false))
       projectiles.length = 0
       particles.length = 0
       rings.length = 0
+      dusts.length = 0
       delayed_bursts.length = 0
       particle_geometry.dispose()
       core_geometry.dispose()

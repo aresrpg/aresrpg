@@ -4,6 +4,7 @@
 // the writer schema and deterministic batching law used by the admin page.
 
 import type { Transaction, TransactionObjectArgument } from '@mysten/sui/transactions'
+import { MIST_PER_SUI } from '@mysten/sui/utils'
 import { craft_job_of, item_stat_center, stat_names, type StatName } from '@aresrpg/immutable'
 
 import { bind_doors, type BoundDoors, type Resolvable, type Sdk } from './client.ts'
@@ -399,7 +400,7 @@ const sale_batches = (sdk: SeedSdk, sales: SeedContent['shop']['sales']): readon
           _: cap,
           item_type: sale.item_type,
           template: item_template_id(registry, sale.item_type),
-          price: sale.price,
+          price: BigInt(sale.price) * MIST_PER_SUI,
           supply: sale.supply,
         })
       },

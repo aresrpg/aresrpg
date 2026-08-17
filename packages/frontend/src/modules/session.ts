@@ -23,6 +23,7 @@ import { toast } from '../toast.ts'
 export type AuthStatus = 'idle' | 'connecting' | 'authenticated'
 export type AuthRequest = 'restore' | 'google' | Readonly<{ wallet: string }>
 export type LinkStatus = 'idle' | 'connecting' | 'connected' | 'ready'
+const BALANCE_POLL_MS = 5_000
 export type SessionState = Readonly<{
   auth_status: AuthStatus
   auth_request: AuthRequest | null
@@ -31,6 +32,7 @@ export type SessionState = Readonly<{
   link_error: string | null
   latency_ms: number | null
   indexing_lag: number | null
+  game_frozen: boolean | null
   roster_loaded: boolean
   characters: readonly CharacterRow[]
   inventory: readonly ItemRow[]
@@ -84,6 +86,7 @@ export const initial_session_state = (): SessionState =>
     link_error: null,
     latency_ms: null,
     indexing_lag: null,
+    game_frozen: null,
     roster_loaded: false,
     characters: [],
     inventory: [],
@@ -151,6 +154,7 @@ const fold_packet = (session: SessionState, packet: Readonly<ServerPacket>): Ses
   }
   if (packet.type === 'packet/server_info')
     return Object.freeze({ ...session, online: packet.online, indexing_lag: packet.indexing_lag })
+  if (packet.type === 'packet/game_state') return Object.freeze({ ...session, game_frozen: packet.frozen })
   if (packet.type === 'packet/inventory') return Object.freeze({ ...session, inventory: packet.items })
   if (packet.type === 'packet/friends') return Object.freeze({ ...session, friends: packet.friends })
   if (packet.type === 'packet/claims') return Object.freeze({ ...session, claims: packet.claims })
@@ -291,7 +295,7 @@ const reduce = (state: AppState, input: AppInput): AppState => {
 const observe = ({ events, dispatch, signal, get_state }: Parameters<NonNullable<AppModule['observe']>>[0]): void => {
   let link: ServerLink | null = null
   let auth: Auth | null = null
-  let balance_reading = false
+  let balance_request_id = 0
   let next_request_id = 1
   const character_requests = new Map<
     number,
@@ -338,20 +342,19 @@ const observe = ({ events, dispatch, signal, get_state }: Parameters<NonNullable
 
   const refresh_wallet = (): void => {
     const connected = get_state().session.wallet
-    if (!connected || balance_reading) return
-    balance_reading = true
+    if (!connected) return
+    balance_request_id += 1
+    const request_id = balance_request_id
     void connected
       .read_sui_balance()
       .then((balance_mist) => {
-        if (connected !== get_state().session.wallet) return
+        if (request_id !== balance_request_id || connected !== get_state().session.wallet) return
         dispatch({ type: 'wallet/refreshed', balance_mist, gas_spent_mist: connected.gas_spent_24h() })
       })
       .catch((error) => console.warn('Wallet balance could not be refreshed.', error))
-      .finally(() => {
-        balance_reading = false
-      })
   }
   events.on('wallet/refresh', refresh_wallet)
+  const balance_timer = setInterval(refresh_wallet, BALANCE_POLL_MS)
   events.on('wallet/resolve_character', ({ name, resolve, reject }) => {
     const connected = get_state().session.wallet
     if (!connected) return reject(new Error('The wallet session is unavailable'))
@@ -467,6 +470,7 @@ const observe = ({ events, dispatch, signal, get_state }: Parameters<NonNullable
     link?.send({ type: 'packet/fight_action', fight: state.fight.checkpoint.contract.id, action })
   })
   signal.addEventListener('abort', () => {
+    clearInterval(balance_timer)
     dispose_link()
     auth?.dispose()
     globalThis.removeEventListener('focus', refresh_on_focus)

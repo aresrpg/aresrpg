@@ -13,13 +13,14 @@ describe('display grade', () => {
     expect(neutral.every((channel) => channel >= 0 && channel <= 1)).toBe(true)
   })
 
-  test('uses regional luminance without amplifying detail inside one region', () => {
+  test('uses regional luminance and adds bounded local separation', () => {
     const dark = grade_rgb_low_frequency([0.3, 0.32, 0.28], 0.25)
     const light = grade_rgb_low_frequency([0.3, 0.32, 0.28], 0.7)
     const detail_before = 0.32 - 0.3
     const detail_after = dark[1] - dark[0]
 
     expect(light).not.toEqual(dark)
-    expect(Math.abs(detail_after - detail_before)).toBeLessThan(0.01)
+    expect(Math.abs(detail_after)).toBeGreaterThan(Math.abs(detail_before))
+    expect(Math.abs(detail_after)).toBeLessThan(0.04)
   })
 })

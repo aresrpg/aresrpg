@@ -74,26 +74,17 @@ export const material_color_node = (materials: CompiledMaterials, material_id: N
     'vec3' as const
   ).element(int(material_id)) as unknown as Node<'vec3'>
 
-/** Builds the macro-tint + roughness nodes for one fragment. Samples the octaves ONCE, feeding
- * albedo tint and roughness together (zero extra noise fetches). Adapted to the color-only
- * architecture: classes/roughness come from compiled structural roles via id-indexed uniform
- * arrays (the legacy O(1) ladder — a select chain per id blew naga's 127-nesting limit). */
-export const macro_tint_nodes = ({
-  material_id,
+const build_macro_tint_nodes = ({
+  tint_class,
+  base_rough,
+  paired_color,
   position_world,
-  materials,
 }: Readonly<{
-  material_id: Node<'uint'>
+  tint_class: Node<'float'>
+  base_rough: Node<'float'>
+  paired_color: Node<'vec3'>
   position_world: Readonly<{ x: Node<'float'>; z: Node<'float'> }>
-  materials: CompiledMaterials
 }>): TintNodes => {
-  const tables = material_tint_tables(materials)
-  const tint_class = uniformArray([...tables.classes]).element(int(material_id)) as unknown as Node<'float'>
-  const base_rough = uniformArray([...tables.roughness]).element(int(material_id)) as unknown as Node<'float'>
-  const paired_color = uniformArray(
-    tables.paired_colors.map((color) => new Vector3(...color)),
-    'vec3' as const
-  ).element(int(material_id)) as unknown as Node<'vec3'>
   const is_surface = tint_class.greaterThanEqual(float(2))
   const surface_amount = is_surface.select(float(1), float(0))
   const grad = SURFACE_GRADIENT_LEVELS.c
@@ -165,3 +156,46 @@ export const macro_tint_nodes = ({
     roughness_node,
   })
 }
+
+/** Builds the macro-tint + roughness nodes for one palette-backed fragment. Samples the octaves ONCE,
+ * feeding albedo tint and roughness together. Near terrain keeps its O(1) id-indexed lookups. */
+export const macro_tint_nodes = ({
+  material_id,
+  position_world,
+  materials,
+}: Readonly<{
+  material_id: Node<'uint'>
+  position_world: Readonly<{ x: Node<'float'>; z: Node<'float'> }>
+  materials: CompiledMaterials
+}>): TintNodes => {
+  const tables = material_tint_tables(materials)
+  return build_macro_tint_nodes({
+    tint_class: uniformArray([...tables.classes]).element(int(material_id)) as unknown as Node<'float'>,
+    base_rough: uniformArray([...tables.roughness]).element(int(material_id)) as unknown as Node<'float'>,
+    paired_color: uniformArray(
+      tables.paired_colors.map((color) => new Vector3(...color)),
+      'vec3' as const
+    ).element(int(material_id)) as unknown as Node<'vec3'>,
+    position_world,
+  })
+}
+
+/** Far terrain is surface-only and carries interpolated appearance attributes. It must never interpolate
+ * numeric palette ids: intermediate integers are different materials, not blends. */
+export const macro_surface_tint_nodes = ({
+  paired_color,
+  roughness,
+  climate_tint,
+  position_world,
+}: Readonly<{
+  paired_color: Node<'vec3'>
+  roughness: Node<'float'>
+  climate_tint: Node<'float'>
+  position_world: Readonly<{ x: Node<'float'>; z: Node<'float'> }>
+}>): TintNodes =>
+  build_macro_tint_nodes({
+    tint_class: climate_tint.greaterThan(0.5).select(float(3), float(1)),
+    base_rough: roughness,
+    paired_color,
+    position_world,
+  })

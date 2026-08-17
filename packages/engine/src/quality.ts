@@ -8,7 +8,7 @@ export const QUALITY_OPTIONS = Object.freeze(['low', 'medium', 'high'] as const)
 export const QUALITY_PROFILES = Object.freeze({
   low: Object.freeze({
     name: 'low',
-    render: Object.freeze({ scale: 0.5, dpr_max: 1, pixel_max: 1_500_000 }),
+    render: Object.freeze({ scale: 0.75, scene_scale: 0.88, sharpness: 0.45, dpr_max: 1, pixel_max: 1_500_000 }),
     chunks: Object.freeze({
       near_radius: 1,
       mid_radius: 2,
@@ -23,13 +23,13 @@ export const QUALITY_PROFILES = Object.freeze({
     }),
     sky: 'low',
     terrain: 'flat',
-    fog: Object.freeze({ near: 120, far: 520 }),
+    fog: Object.freeze({ near: 200, far: 640 }),
     shadows: Object.freeze({ kind: 'none', map_size: 0 }),
-    effects: Object.freeze({ atmosphere: null }),
+    effects: Object.freeze({ bloom: null }),
   }),
   medium: Object.freeze({
     name: 'medium',
-    render: Object.freeze({ scale: 0.7, dpr_max: 1.25, pixel_max: 3_500_000 }),
+    render: Object.freeze({ scale: 0.9, scene_scale: 0.82, sharpness: 0.5, dpr_max: 1.5, pixel_max: 3_500_000 }),
     chunks: Object.freeze({
       near_radius: 2,
       mid_radius: 4,
@@ -46,13 +46,11 @@ export const QUALITY_PROFILES = Object.freeze({
     terrain: 'lit',
     fog: Object.freeze({ near: 250, far: 1000 }),
     shadows: Object.freeze({ kind: 'basic', map_size: 1024 }),
-    effects: Object.freeze({
-      atmosphere: Object.freeze({ resolution_scale: 0.35, steps: 6 }),
-    }),
+    effects: Object.freeze({ bloom: null }),
   }),
   high: Object.freeze({
     name: 'high',
-    render: Object.freeze({ scale: 0.8, dpr_max: 1.5, pixel_max: 6_000_000 }),
+    render: Object.freeze({ scale: 1, scene_scale: 1, sharpness: null, dpr_max: 2, pixel_max: 6_000_000 }),
     chunks: Object.freeze({
       near_radius: 3,
       mid_radius: 6,
@@ -69,9 +67,7 @@ export const QUALITY_PROFILES = Object.freeze({
     terrain: 'pbr',
     fog: Object.freeze({ near: 500, far: 1750 }),
     shadows: Object.freeze({ kind: 'soft', map_size: 2048 }),
-    effects: Object.freeze({
-      atmosphere: Object.freeze({ resolution_scale: 0.4, steps: 8 }),
-    }),
+    effects: Object.freeze({ bloom: Object.freeze({ strength: 0.13, radius: 0.6, threshold: 2.05 }) }),
   }),
 } satisfies Readonly<Record<EngineQuality, QualityProfile>>)
 

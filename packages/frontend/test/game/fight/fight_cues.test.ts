@@ -102,6 +102,7 @@ describe('fight presentation cues', () => {
       type: 'cast',
       caster_id: 'fight_character_0',
       element: 'earth',
+      placement: null,
       critical: true,
       amount: 100,
       target_max_hp: 100,
@@ -135,5 +136,75 @@ describe('fight presentation cues', () => {
         source_id: 'fight_character_0',
       },
     ])
+  })
+
+  test('carries the resolved element on a trap trigger cue', () => {
+    const state = checkpoint()
+    const target_cell = state.contract.fighters[1]!.cell
+    const events: readonly FightEvent[] = [
+      {
+        type: 'trap_triggered',
+        payload: { zone_id: 'zone:1', owner: 0n, fighter: 1n, from: target_cell - 1n, cell: target_cell },
+      },
+      { type: 'zone_removed', payload: { zone_id: 'zone:1', kind: 'trap', reason: 'triggered' } },
+      {
+        type: 'damage_number',
+        payload: {
+          source: 0n,
+          target: 1n,
+          amount: 12n,
+          hp_before: 100n,
+          hp_after: 88n,
+          element: 'earth',
+          cause: 'trap',
+        },
+      },
+    ]
+
+    expect(project_fight_cues({ checkpoint: state, events, batch: 4 })[0]).toMatchObject({
+      type: 'zone',
+      action: 'trap_triggered',
+      element: 'earth',
+    })
+  })
+
+  test('keeps trap placement as an ordered presentation beat after its cast', () => {
+    const state = checkpoint()
+    const target_cell = state.contract.fighters[0]!.cell + 1n
+    const events: readonly FightEvent[] = [
+      {
+        type: 'spell_cast',
+        payload: {
+          caster: 0n,
+          spell: 'slash',
+          cast_level: 1n,
+          target_cell,
+          slot: 0n,
+          ap_cost: 3n,
+          critical: false,
+          weapon: false,
+        },
+      },
+      {
+        type: 'trap_placed',
+        payload: {
+          zone_id: 'zone:1',
+          owner: 0n,
+          anchor: target_cell,
+          shape: 0n,
+          size: 0n,
+          visibility: 'owner',
+        },
+      },
+    ]
+
+    expect(project_fight_cues({ checkpoint: state, events, batch: 5 }).map(({ type }) => type)).toEqual([
+      'cast',
+      'zone_placed',
+    ])
+    expect(project_fight_cues({ checkpoint: state, events, batch: 5 })[0]).toMatchObject({
+      type: 'cast',
+      placement: 'trap',
+    })
   })
 })

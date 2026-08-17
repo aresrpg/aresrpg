@@ -4,32 +4,44 @@
 import { BufferAttribute, BufferGeometry, DoubleSide, Mesh, Vector2, type Material, type Scene } from 'three'
 import {
   MeshBasicNodeMaterial,
-  MeshLambertNodeMaterial,
   MeshStandardNodeMaterial,
   type UniformNode,
   type Node,
   type NodeBuilder,
 } from 'three/webgpu'
-import { Fn, attribute, float, mix, smoothstep, transformNormalToView, uniform, uint, vec3 } from 'three/tsl'
+import {
+  Fn,
+  abs,
+  attribute,
+  float,
+  max,
+  mix,
+  positionWorld,
+  smoothstep,
+  transformNormalToView,
+  uniform,
+  vec3,
+} from 'three/tsl'
 
 import type { Clouds } from './clouds.ts'
 import type { FlattenUniform } from './flatten.ts'
 import { create_flat_nodes } from './flat_nodes.ts'
 import { get_quality_profile } from './quality.ts'
 import type { create_sky_node } from './sky/sky_node.ts'
-import { macro_tint_nodes, material_color_node } from './terrain_tint.ts'
+import { macro_surface_tint_nodes } from './terrain_tint.ts'
 import type { EngineQuality } from './types.ts'
 import { CHUNK_EDGE } from './voxel_data.ts'
-import { compile_world_recipe, type WorldRecipe } from './world_recipe.ts'
-import type { CompiledMaterials } from './world_materials.ts'
+import type { WorldRecipe } from './world_recipe.ts'
 
 type FarSample = Readonly<{
   id: number
   quality: EngineQuality
   center: readonly [number, number]
   heights: Float32Array
-  normals: Float32Array
-  material_ids: Float32Array
+  base_colors: Float32Array
+  paired_colors: Float32Array
+  roughness: Float32Array
+  climate_tint: Float32Array
 }>
 
 export type FarTerrain = Readonly<{
@@ -64,8 +76,10 @@ const create_ring_geometry = (quality: EngineQuality): BufferGeometry => {
   }
   const geometry = new BufferGeometry()
   geometry.setAttribute('position', new BufferAttribute(positions, 3))
-  geometry.setAttribute('normal', new BufferAttribute(new Float32Array(positions.length), 3))
-  geometry.setAttribute('material_id', new BufferAttribute(new Float32Array(side * side), 1))
+  geometry.setAttribute('base_color', new BufferAttribute(new Float32Array(positions.length), 3))
+  geometry.setAttribute('paired_color', new BufferAttribute(new Float32Array(positions.length), 3))
+  geometry.setAttribute('roughness', new BufferAttribute(new Float32Array(side * side), 1))
+  geometry.setAttribute('climate_tint', new BufferAttribute(new Float32Array(side * side), 1))
   geometry.setIndex(indices)
   return geometry
 }
@@ -75,34 +89,43 @@ const build_material = (
   flatten: FlattenUniform,
   sun_direction: ReturnType<typeof create_sky_node>['sun_direction'],
   clouds: Clouds,
-  center: UniformNode<'vec2', Vector2>,
-  materials: CompiledMaterials
+  center: UniformNode<'vec2', Vector2>
 ): Material => {
   const material =
     quality === 'low'
       ? new MeshBasicNodeMaterial({ side: DoubleSide })
-      : quality === 'medium'
-        ? new MeshLambertNodeMaterial({ side: DoubleSide })
-        : new MeshStandardNodeMaterial({ side: DoubleSide, roughness: 0.94, metalness: 0 })
+      : new MeshStandardNodeMaterial({ side: DoubleSide, roughness: 0.94, metalness: 0 })
   const local = attribute('position', 'vec3' as const)
-  const normal = attribute('normal', 'vec3' as const)
   const environment_light =
     quality === 'low' ? mix(float(0.32), float(1), smoothstep(-0.14, 0.18, sun_direction.y)) : float(1)
-  const material_id = uint(attribute('material_id', 'float' as const))
+  const base_color = attribute('base_color', 'vec3' as const)
+  const paired_color = attribute('paired_color', 'vec3' as const)
+  const roughness = attribute('roughness', 'float' as const)
+  const climate_tint = attribute('climate_tint', 'float' as const)
   const position_world = { x: local.x.add(center.x), z: local.z.add(center.y) }
-  const tint = macro_tint_nodes({ material_id, position_world, materials })
-  const color = tint.tint_albedo(material_color_node(materials, material_id)).mul(environment_light)
+  const tint = macro_surface_tint_nodes({ paired_color, roughness, climate_tint, position_world })
+  const color = tint.tint_albedo(base_color).mul(environment_light)
   const flat = create_flat_nodes(position_world.x, position_world.z, flatten.amount, color)
   // The shell remains half a block below direct terrain throughout flattening. Sharing y=0
   // made the overlap band z-fight precisely when flat mode needed the clearest grid read.
-  material.positionNode = vec3(local.x, mix(local.y, float(-0.5), flatten.amount), local.z)
-  material.normalNode = transformNormalToView(mix(normal, vec3(0, 1, 0), flatten.amount).normalize())
+  const { far_radius, horizon_step } = get_quality_profile(quality).chunks
+  const direct_radius = far_radius * CHUNK_EDGE - CHUNK_EDGE
+  const seam = smoothstep(
+    float(direct_radius),
+    float(direct_radius + horizon_step * 2),
+    max(abs(local.x), abs(local.z))
+  )
+  const terrain_y = local.y.sub(float(1).sub(seam).mul(8))
+  material.positionNode = vec3(local.x, mix(terrain_y, float(-0.5), flatten.amount), local.z)
+  const face_normal = positionWorld.dFdx().cross(positionWorld.dFdy()).normalize()
+  const upward_normal = face_normal.mul(face_normal.y.greaterThanEqual(0).select(float(1), float(-1)))
+  material.normalNode = transformNormalToView(mix(upward_normal, vec3(0, 1, 0), flatten.amount).normalize())
   material.colorNode = flat.color
   if (quality !== 'low')
     material.receivedShadowNode = Fn((args: readonly [Node<'float'>], _builder: NodeBuilder) =>
       args[0].mul(clouds.shadow_at(vec3(position_world.x, 0, position_world.z).xz, local.y))
     ) as unknown as () => Node
-  if (quality === 'high') (material as MeshStandardNodeMaterial).roughnessNode = tint.roughness_node
+  if (quality !== 'low') (material as MeshStandardNodeMaterial).roughnessNode = tint.roughness_node
   return material
 }
 
@@ -122,7 +145,6 @@ export const create_far_terrain = ({
   clouds: Clouds
 }>): FarTerrain => {
   const worker = new Worker(new URL('./far_worker.ts', import.meta.url), { type: 'module' })
-  const { materials } = compile_world_recipe(world)
   const centers = Object.freeze({
     low: uniform(new Vector2()),
     medium: uniform(new Vector2()),
@@ -133,7 +155,7 @@ export const create_far_terrain = ({
       (['low', 'medium', 'high'] as const).map((tier) => {
         const mesh = new Mesh(
           create_ring_geometry(tier),
-          build_material(tier, flatten, sun_direction, clouds, centers[tier], materials)
+          build_material(tier, flatten, sun_direction, clouds, centers[tier])
         )
         mesh.frustumCulled = false
         mesh.matrixAutoUpdate = false
@@ -171,12 +193,18 @@ export const create_far_terrain = ({
       const position_array = positions.array as Float32Array
       for (let index = 0; index < data.heights.length; index += 1) position_array[index * 3 + 1] = data.heights[index]
       positions.needsUpdate = true
-      const normals = mesh.geometry.getAttribute('normal') as BufferAttribute
-      ;(normals.array as Float32Array).set(data.normals)
-      normals.needsUpdate = true
-      const material_ids = mesh.geometry.getAttribute('material_id') as BufferAttribute
-      ;(material_ids.array as Float32Array).set(data.material_ids)
-      material_ids.needsUpdate = true
+      const base_colors = mesh.geometry.getAttribute('base_color') as BufferAttribute
+      ;(base_colors.array as Float32Array).set(data.base_colors)
+      base_colors.needsUpdate = true
+      const paired_colors = mesh.geometry.getAttribute('paired_color') as BufferAttribute
+      ;(paired_colors.array as Float32Array).set(data.paired_colors)
+      paired_colors.needsUpdate = true
+      const roughness = mesh.geometry.getAttribute('roughness') as BufferAttribute
+      ;(roughness.array as Float32Array).set(data.roughness)
+      roughness.needsUpdate = true
+      const climate_tint = mesh.geometry.getAttribute('climate_tint') as BufferAttribute
+      ;(climate_tint.array as Float32Array).set(data.climate_tint)
+      climate_tint.needsUpdate = true
       centers[data.quality].value.set(data.center[0], data.center[1])
       mesh.position.set(data.center[0], 0, data.center[1])
       mesh.updateMatrix()

@@ -27,6 +27,7 @@ export type EngineBackend = Readonly<{
   set_entities: (entities: readonly EntityRender[]) => void
   animate_entity: (motion: EntityPathMotion) => Promise<boolean>
   play_fight_cue: (cue: FightPresentationCue) => Promise<boolean>
+  play_jump_puff: (position: Vec3) => void
   project_entity: (id: string) => EntityScreenAnchor | null
   upsert_fight_blob: (blob: FightBlobRender) => void
   remove_fight_blob: (id: string) => void

@@ -4,10 +4,9 @@
 import { readFileSync } from 'node:fs'
 
 import { describe, expect, test } from 'bun:test'
-import { Bone, Group, LinearMipmapLinearFilter, NearestFilter, Texture } from 'three'
+import { Bone, Group } from 'three'
 
 import { compose_pixels, find_character_bone, mount_character_part } from '../src/character_model.ts'
-import { prepare_pixel_texture } from '../src/model_texture.ts'
 
 describe('character model legacy contract', () => {
   test('the shared entity loader installs Draco for the shipped character assets', () => {
@@ -64,15 +63,11 @@ describe('character model legacy contract', () => {
     expect([...result]).toEqual([100, 100, 0, 123])
   })
 
-  test('uses crisp magnification and mipmapped minification for every entity texture', () => {
-    const texture = new Texture()
+  test('preserves authored character samplers while creatures keep their pixel-art policy', () => {
+    const character_source = readFileSync(new URL('../src/character_model.ts', import.meta.url), 'utf8')
+    const mob_source = readFileSync(new URL('../src/mob_model.ts', import.meta.url), 'utf8')
 
-    prepare_pixel_texture(texture)
-
-    expect(texture.magFilter).toBe(NearestFilter)
-    expect(texture.minFilter).toBe(LinearMipmapLinearFilter)
-    expect(texture.generateMipmaps).toBeTrue()
-    expect(texture.anisotropy).toBe(8)
-    expect(texture.version).toBeGreaterThan(0)
+    expect(character_source).not.toContain('prepare_pixel_texture')
+    expect(mob_source).toContain('prepare_pixel_texture')
   })
 })

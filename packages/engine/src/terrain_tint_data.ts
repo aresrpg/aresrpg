@@ -1,11 +1,10 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 // Macro ground-tint DATA + classification — LOSSLESS PORT of the legacy NG-TINT pure half
-// (deprecated/engine/src/render/terrain_tint_data.js), adapted to the color-only material
-// architecture: classes key off compiled STRATUM ROLES instead of authored identities.
-// three-FREE on purpose — pure role tables remain testable without a renderer.
+// (deprecated/engine/src/render/terrain_tint_data.js), adapted to the color + appearance-preset
+// architecture. three-FREE on purpose — compiled tables remain testable without a renderer.
 
-import type { CompiledMaterials, MaterialRole } from './world_materials.ts'
+import type { CompiledMaterial, CompiledMaterials } from './world_materials.ts'
 
 /** Macro-tint amplitudes (periods in blocks) — the legacy calibrated field, made
  * material-agnostic. Two value-noise octaves drive: (a) a chromatic climate tint on natural
@@ -40,10 +39,8 @@ export const SURFACE_GRADIENT_LEVELS = Object.freeze({
   d: Object.freeze({ val: 1.0, hue: 1.0 }),
 })
 
-/** Role-based PBR response — metalness stays zero and natural surfaces become slightly
- * smoother under the humid field. Authored appearance presets may extend this table later. */
+/** PBR bounds — preset roughness is compiled with the material; humidity only adds the wet response. */
 export const TERRAIN_PBR = Object.freeze({
-  rough: Object.freeze({ surface: 0.85, subsurface: 0.9, filler: 0.82, liquid: 0.35 }),
   humid_dip: 0.15,
   min: 0.35,
 })
@@ -51,9 +48,10 @@ export const TERRAIN_PBR = Object.freeze({
 /** Per-octave u32 salts (decorrelate moisture / detail / the two macro octaves) — verbatim. */
 export const TINT_SALT = Object.freeze([0x9e3779b1, 0x85ebca77, 0xc2b2ae3d, 0x27d4eb2f] as const)
 
-/** NG-TINT class for a structural role: 0 none (liquids) · 1 mineral (value-only) ·
+/** NG-TINT class for a structural role and preset: 0 none (liquids) · 1 mineral (value-only) ·
  * 3 natural surface (hue + value + authored-subsurface patches). */
-export const tint_class_of = (role: MaterialRole): number => (role === 'liquid' ? 0 : role === 'surface' ? 3 : 1)
+export const tint_class_of = ({ role, climate_tint }: CompiledMaterial): number =>
+  role === 'liquid' ? 0 : role === 'surface' && climate_tint ? 3 : 1
 
 /** Id-indexed lookup tables for a recipe's material record (id 0 is the reserved empty slot —
  * compile_materials assigns ids in entry order starting at 1). One home for the id mapping. */
@@ -65,7 +63,7 @@ export const material_tint_tables = (
   paired_colors: readonly (readonly [number, number, number])[]
 }> =>
   Object.freeze({
-    classes: Object.freeze(materials.entries.map(({ role }, index) => (index === 0 ? 0 : tint_class_of(role)))),
-    roughness: Object.freeze(materials.entries.map(({ role }) => TERRAIN_PBR.rough[role])),
+    classes: Object.freeze(materials.entries.map((material, index) => (index === 0 ? 0 : tint_class_of(material)))),
+    roughness: Object.freeze(materials.entries.map(({ roughness }) => roughness)),
     paired_colors: Object.freeze(materials.entries.map(({ paired_color }) => paired_color)),
   })

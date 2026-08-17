@@ -5,6 +5,7 @@ import { describe, expect, test } from 'bun:test'
 
 import { GRID_CELLS, mask_get, neighbours } from '../src/combat_grid.ts'
 import { create_fight } from '../src/fight.ts'
+import { KINDS } from '../src/fighters.ts'
 import type { BoardZone, HydratedFightCheckpoint, SpellEffect, SpellLevel } from '../src/types.ts'
 
 import { create_fixture } from './helpers.ts'
@@ -149,6 +150,43 @@ describe('board-zone placement', () => {
 
     expect(result.error?.code).toBe('bad_target_cell')
     expect(result.state.contract.zones).toEqual([])
+  })
+
+  test('placing a damaging trap preserves invisibility while direct damage reveals', () => {
+    const checkpoint = with_placement_spell(structuredClone(create_fixture().checkpoint), 12n)
+    checkpoint.sources.spells.placement!.levels[0]!.effects.push({
+      kind: KINDS.damage,
+      element: 'earth',
+      value: 10n,
+      value_max: 10n,
+      area_shape: 0n,
+      area_size: 0n,
+      target_filter: 0n,
+      chance_bp: 10_000n,
+      turns: 0n,
+      stat: 0n,
+    })
+    checkpoint.contract.fighters[0]!.effects.push({
+      kind: KINDS.invis,
+      element: '',
+      value: 0n,
+      turns_left: 3n,
+      source: 0n,
+      stat: 0n,
+    })
+    const [anchor] = open_pair(checkpoint)
+    const fight = started_fight(checkpoint)
+
+    const placed = fight.apply({ type: 'cast_spell', fighter: 0n, spell: 'placement', target_cell: anchor })
+    expect(placed.state.contract.fighters[0]!.effects.some(({ kind }) => kind === KINDS.invis)).toBeTrue()
+
+    const damaged = fight.apply({
+      type: 'cast_spell',
+      fighter: 0n,
+      spell: 'slash',
+      target_cell: placed.state.contract.fighters[1]!.cell,
+    })
+    expect(damaged.state.contract.fighters[0]!.effects.some(({ kind }) => kind === KINDS.invis)).toBeFalse()
   })
 
   test('a second mob skips a claimed glyph center and tries its next spell', () => {

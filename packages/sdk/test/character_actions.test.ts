@@ -119,4 +119,38 @@ describe('the character builder', () => {
       })
     ).rejects.toThrow('CharacterCreated')
   })
+
+  test('create validates before building and passes only the normalized name to the Move door', async () => {
+    let tx_calls = 0
+    let raw_name = ''
+    const sdk = {
+      tx: () => {
+        tx_calls += 1
+        return {}
+      },
+      with_personal_kiosk: (_tx: unknown, _cap: unknown, compose: (kiosk: unknown, cap: unknown) => void) =>
+        compose({}, {}),
+      coin_of: () => ({}),
+      doors: {
+        create_character: (_tx: unknown, input: Readonly<{ raw_name: string }>) => {
+          ;({ raw_name } = input)
+        },
+      },
+      execute_personal_kiosk: async () => ({ receipt: {}, kiosk_cap }),
+    }
+    const input = {
+      name: 'Sceat 6',
+      classe: 'senshi',
+      male: true,
+      color_1: 1,
+      color_2: 2,
+      color_3: 3,
+      kiosk_cap,
+    }
+
+    await expect(character_create(sdk as never, input)).rejects.toThrow('4–19')
+    expect(tx_calls).toBe(0)
+    await expect(character_create(sdk as never, { ...input, name: ' AiDeN ' })).rejects.toThrow('CharacterCreated')
+    expect(raw_name).toBe('aiden')
+  })
 })

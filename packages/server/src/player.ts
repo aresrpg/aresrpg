@@ -22,6 +22,7 @@ import {
 import logger from './logger.ts'
 import { channels } from './protocol.ts'
 import type { Graph } from './graph.ts'
+import type { GameState } from './game_state.ts'
 import type { Pubsub } from './pubsub.ts'
 import player_load from './modules/player_load.ts'
 import player_info from './modules/player_info.ts'
@@ -85,6 +86,8 @@ export type PlayerContext = {
   pubsub: Pubsub
   /** Shared cached comparison of indexed checkpoint against the fullnode head. */
   indexing_lag: () => Promise<number | null>
+  /** Process-wide chain game state, loaded once and updated by the indexer wire. */
+  game_state: GameState
   /** the LOCAL loop emitter (legacy `events`): every folded action re-emits under its type,
    *  every state change emits `STATE_UPDATED(state, previous)` — observers listen here */
   events: EventEmitter
@@ -147,11 +150,18 @@ const INITIAL_STATE = (): PlayerState => ({
 })
 
 type PlayerWires = Pick<PlayerContext, 'address' | 'admin' | 'graph' | 'pubsub'> & {
+  game_state?: GameState
   indexing_lag?: () => Promise<number | null>
   request_limiter?: RequestLimiter
   realtime_limiter?: RequestLimiter
   ws: { send: (raw: string) => unknown; close: (code?: number, reason?: string) => unknown }
 }
+
+const UNKNOWN_GAME_STATE: GameState = Object.freeze({
+  get: () => null,
+  listen: () => () => {},
+  start: async () => {},
+})
 
 /** Mount one verified connection — returns the ws handler's whole surface. */
 export function create_player({
@@ -160,6 +170,7 @@ export function create_player({
   admin,
   graph,
   pubsub,
+  game_state = UNKNOWN_GAME_STATE,
   indexing_lag = async () => null,
   request_limiter = create_request_limiter(),
   realtime_limiter = create_request_limiter({ capacity: 120, window_ms: 1_000 }),
@@ -177,6 +188,7 @@ export function create_player({
     admin,
     graph,
     pubsub,
+    game_state,
     indexing_lag,
     events,
     send,

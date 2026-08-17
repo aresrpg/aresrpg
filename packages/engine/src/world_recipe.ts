@@ -8,58 +8,58 @@ import {
   type MaterialUse,
   type WorldMaterial,
 } from './world_materials.ts'
-import { create_fbm_sampler, derive_sub_seed, type NoiseField } from './world_noise.ts'
+import { create_fbm_sampler, derive_sub_seed } from './world_noise.ts'
 
 export type SplineKnot = readonly [x: number, y: number]
-export type Climate = Readonly<{
-  temperature: number
-  humidity: number
-  continentalness: number
-  erosion: number
-  pv: number
-}>
+export const WORLD_HEIGHT = 384
+export const MAX_SURFACE_Y = WORLD_HEIGHT - 1
 export type BiomeLand = Readonly<{ surface: string; subsurface: string; filler: string }>
-export type WorldBiome = Readonly<{
-  name: string
-  climate: Climate
-  weight: number
-  land: BiomeLand
-}>
+export type LandscapeKnot = Readonly<{ x: number; y: number; land?: BiomeLand; variance?: number }>
+export type ClimateBand = 'low' | 'mid' | 'high'
+export type BiomeSlot = `${ClimateBand}_${ClimateBand}`
+export const BIOME_SLOTS = Object.freeze([
+  'low_low',
+  'low_mid',
+  'low_high',
+  'mid_low',
+  'mid_mid',
+  'mid_high',
+  'high_low',
+  'high_mid',
+  'high_high',
+] as const satisfies readonly BiomeSlot[])
+
+export type WorldBiome = Readonly<{ name: string; landscape: readonly LandscapeKnot[] }>
 export type WorldRecipe = Readonly<{
   seed: string
   sea_level: number
   liquid?: string
-  vertical_chunks: readonly number[]
   materials: Readonly<Record<string, WorldMaterial>>
-  noise: Readonly<Record<'temperature' | 'humidity' | 'continentalness' | 'erosion' | 'weirdness', NoiseField>>
-  splines: Readonly<{
-    continentalness_to_base: readonly SplineKnot[]
-    erosion_to_amplitude: readonly SplineKnot[]
-    pv_to_relief: readonly SplineKnot[]
-  }>
-  biome_selection: Readonly<{
-    axis_weights: Climate
-    blend_k: number
-    transition_softness: number
-  }>
+  biome_slots: Readonly<Record<BiomeSlot, string>>
   biomes: readonly WorldBiome[]
 }>
 
-type SampledClimate = Climate & Readonly<{ weirdness: number }>
-type CompiledBiome = WorldBiome
-
+export type SampledClimate = Readonly<{
+  temperature: number
+  humidity: number
+  ground: number
+  amplitude: number
+  transition: number
+}>
+type CompiledBiome = WorldBiome & Readonly<{ height_points: readonly SplineKnot[] }>
 export type CompiledWorld = Readonly<{
   recipe: WorldRecipe
   decoration_seed: number
   materials: CompiledMaterials
   sample_climate: (x: number, z: number) => SampledClimate
   biomes: readonly CompiledBiome[]
+  slots: Readonly<Record<BiomeSlot, CompiledBiome>>
 }>
-
 export type WorldColumn = Readonly<{
   surface_y: number
   climate: SampledClimate
   biome: CompiledBiome
+  land: BiomeLand
   surface_id: number
   subsurface_id: number
   filler_id: number
@@ -68,197 +68,80 @@ export type WorldColumn = Readonly<{
 const finite = (value: unknown): value is number => typeof value === 'number' && Number.isFinite(value)
 const has_material = (materials: unknown, name: unknown): name is string =>
   typeof name === 'string' && materials !== null && typeof materials === 'object' && name in materials
+const record = (value: unknown): Readonly<Record<string, unknown>> | null =>
+  value !== null && typeof value === 'object' && !Array.isArray(value)
+    ? (value as Readonly<Record<string, unknown>>)
+    : null
 
-const validate_liquid = (liquid: unknown, materials: unknown): readonly string[] =>
-  liquid === undefined || has_material(materials, liquid)
-    ? []
-    : [`liquid references unknown material "${typeof liquid === 'string' ? liquid : ''}"`]
-
-const climate_keys = ['temperature', 'humidity', 'continentalness', 'erosion', 'pv'] as const
-
-const validate_noise = (noise: Partial<WorldRecipe>['noise']): readonly string[] =>
-  (['temperature', 'humidity', 'continentalness', 'erosion', 'weirdness'] as const).flatMap((name) => {
-    const errors: string[] = []
-    const field = noise?.[name]
-    if (!finite(field?.period) || field.period <= 0) errors.push(`noise.${name}.period must be greater than zero`)
-    if (!Number.isInteger(field?.octaves) || (field?.octaves ?? 0) < 1 || (field?.octaves ?? 0) > 16)
-      errors.push(`noise.${name}.octaves must be an integer from 1 to 16`)
-    if (field?.spread !== undefined && (!finite(field.spread) || field.spread <= 0))
-      errors.push(`noise.${name}.spread must be greater than zero`)
-    if (field?.gain !== undefined && (!finite(field.gain) || field.gain <= 0))
-      errors.push(`noise.${name}.gain must be greater than zero`)
-    return errors
-  })
-
-const validate_splines = (splines: Partial<WorldRecipe>['splines']): readonly string[] =>
-  (['continentalness_to_base', 'erosion_to_amplitude', 'pv_to_relief'] as const).flatMap((name) => {
-    const knots = splines?.[name]
-    if (!Array.isArray(knots) || knots.length < 2) return [`splines.${name} must contain at least two points`]
-    let previous = -Infinity
-    return knots.flatMap((knot, index) => {
-      if (!Array.isArray(knot) || knot.length !== 2 || !finite(knot[0]) || !finite(knot[1]))
-        return [`splines.${name}[${index}] must be a finite [x, y] point`]
-      const [x] = knot
-      const errors = x <= previous ? [`splines.${name}[${index}][0] must be strictly greater than the previous x`] : []
-      previous = x
-      return errors
-    })
-  })
-
-const validate_biome_selection = (
-  selection: Partial<WorldRecipe>['biome_selection'],
-  biome_count: number
-): readonly string[] => {
-  const errors: string[] = []
-  if (!Number.isInteger(selection?.blend_k) || (selection?.blend_k ?? 0) < 1 || (selection?.blend_k ?? 0) > biome_count)
-    errors.push('biome_selection.blend_k must be an integer from 1 to the biome count')
-  if (!finite(selection?.transition_softness) || selection.transition_softness < 0)
-    errors.push('biome_selection.transition_softness must be a finite non-negative number')
-  climate_keys.forEach((key) => {
-    const value = selection?.axis_weights?.[key]
-    if (!finite(value) || value < 0)
-      errors.push(`biome_selection.axis_weights.${key} must be a finite non-negative number`)
-  })
-  return errors
+const validate_land = (land: BiomeLand | undefined, materials: unknown, prefix: string): readonly string[] => {
+  if (!land) return [`${prefix} must define surface, subsurface and filler materials`]
+  return (['surface', 'subsurface', 'filler'] as const).flatMap((layer) =>
+    has_material(materials, land[layer])
+      ? []
+      : [`${prefix}.${layer} references unknown material "${land[layer] ?? ''}"`]
+  )
 }
 
-const validate_biomes = (biomes: Partial<WorldRecipe>['biomes'], materials: unknown): readonly string[] => {
-  if (!Array.isArray(biomes) || biomes.length === 0) return ['biomes must not be empty']
-  return biomes.flatMap((biome, biome_index) => {
-    if (biome === null || typeof biome !== 'object') return [`biomes[${biome_index}] must be an object`]
-    const errors: string[] = []
-    if (typeof biome.name !== 'string' || biome.name.length === 0)
-      errors.push(`biomes[${biome_index}].name must be a non-empty string`)
-    if (!finite(biome.weight) || biome.weight <= 0)
-      errors.push(`biomes[${biome_index}].weight must be greater than zero`)
-    climate_keys.forEach((key) => {
-      if (!finite(biome.climate?.[key])) errors.push(`biomes[${biome_index}].climate.${key} must be a finite number`)
-    })
-    for (const layer of ['surface', 'subsurface', 'filler'] as const) {
-      const material = biome.land?.[layer]
-      if (!has_material(materials, material))
-        errors.push(`biomes[${biome_index}].land.${layer} references unknown material "${material ?? ''}"`)
-    }
+const validate_landscape = (value: unknown, materials: unknown, prefix: string): readonly string[] => {
+  if (!Array.isArray(value) || value.length < 2) return [`${prefix} must contain at least two points`]
+  let previous = -Infinity
+  return value.flatMap((candidate, index) => {
+    const knot = record(candidate)
+    const point = `${prefix}[${index}]`
+    if (!knot || !finite(knot.x) || !finite(knot.y)) return [`${point} must define finite x and y values`]
+    const errors = knot.x <= previous ? [`${point}.x must be strictly greater than the previous x`] : []
+    previous = knot.x
+    if (knot.y < 0 || knot.y > MAX_SURFACE_Y) errors.push(`${point}.y must be between 0 and ${MAX_SURFACE_Y}`)
+    if (knot.variance !== undefined && (!finite(knot.variance) || knot.variance < 0 || knot.variance > 0.25))
+      errors.push(`${point}.variance must be between 0 and 0.25`)
+    if (index === 0 || knot.land)
+      errors.push(...validate_land(knot.land as BiomeLand | undefined, materials, `${point}.land`))
     return errors
   })
+}
+
+const validate_biomes = (value: unknown, materials: unknown): readonly string[] => {
+  if (!Array.isArray(value) || value.length === 0) return ['biomes must not be empty']
+  const names = new Set<string>()
+  return value.flatMap((candidate, index) => {
+    const biome = record(candidate)
+    if (!biome) return [`biomes[${index}] must be an object`]
+    const errors: string[] = []
+    if (typeof biome.name !== 'string' || biome.name.length === 0)
+      errors.push(`biomes[${index}].name must be non-empty`)
+    else if (names.has(biome.name)) errors.push(`biomes[${index}].name must be unique`)
+    else names.add(biome.name)
+    errors.push(...validate_landscape(biome.landscape, materials, `biomes[${index}].landscape`))
+    return errors
+  })
+}
+
+const validate_slots = (value: unknown, biomes: unknown): readonly string[] => {
+  const slots = record(value)
+  const names = new Set(Array.isArray(biomes) ? biomes.map((biome) => record(biome)?.name) : [])
+  if (!slots) return ['biome_slots must define all nine climate slots']
+  return BIOME_SLOTS.flatMap((slot) =>
+    typeof slots[slot] !== 'string' || !names.has(slots[slot])
+      ? [`biome_slots.${slot} must reference an authored biome`]
+      : []
+  )
 }
 
 export const validate_world_recipe = (recipe: unknown): Readonly<{ ok: boolean; errors: readonly string[] }> => {
+  const candidate = record(recipe)
+  if (!candidate) return { ok: false, errors: ['recipe must be an object'] }
   const errors: string[] = []
-  if (recipe === null || typeof recipe !== 'object') return { ok: false, errors: ['recipe must be an object'] }
-  const candidate = recipe as Partial<WorldRecipe>
-  if (typeof candidate.seed !== 'string' || candidate.seed.length === 0) errors.push('seed must be a non-empty string')
-  if (!finite(candidate.sea_level)) errors.push('sea_level must be a finite number')
+  if (typeof candidate.seed !== 'string' || candidate.seed.length === 0) errors.push('seed must be non-empty')
+  if (!finite(candidate.sea_level) || candidate.sea_level < 0 || candidate.sea_level >= WORLD_HEIGHT)
+    errors.push(`sea_level must be between 0 and ${WORLD_HEIGHT - 1}`)
   errors.push(...validate_materials(candidate.materials))
-  errors.push(...validate_liquid(candidate.liquid, candidate.materials))
-  if (
-    !Array.isArray(candidate.vertical_chunks) ||
-    candidate.vertical_chunks.length === 0 ||
-    candidate.vertical_chunks.some((value) => !Number.isInteger(value))
-  )
-    errors.push('vertical_chunks must contain at least one integer')
-
-  errors.push(...validate_noise(candidate.noise))
-  errors.push(...validate_splines(candidate.splines))
-  const biome_count = Array.isArray(candidate.biomes) ? candidate.biomes.length : 0
-  errors.push(...validate_biome_selection(candidate.biome_selection, biome_count))
+  if (candidate.liquid !== undefined && !has_material(candidate.materials, candidate.liquid))
+    errors.push(`liquid references unknown material "${typeof candidate.liquid === 'string' ? candidate.liquid : ''}"`)
+  for (const removed of ['noise', 'biome_selection', 'splines', 'vertical_chunks'] as const)
+    if (removed in candidate) errors.push(`${removed} is engine-owned and must not be authored`)
   errors.push(...validate_biomes(candidate.biomes, candidate.materials))
+  errors.push(...validate_slots(candidate.biome_slots, candidate.biomes))
   return { ok: errors.length === 0, errors }
-}
-
-export const catmull_rom = (points: readonly SplineKnot[], input: number): number => {
-  if (input <= points[0][0]) return points[0][1]
-  if (input >= points[points.length - 1][0]) return points[points.length - 1][1]
-  let index = 0
-  while (index < points.length - 1 && input > points[index + 1][0]) index += 1
-  const p1 = points[index]
-  const p2 = points[index + 1]
-  const p0 = points[index - 1] ?? p1
-  const p3 = points[index + 2] ?? p2
-  const span = p2[0] - p1[0]
-  const t = span > 0 ? (input - p1[0]) / span : 0
-  const t2 = t * t
-  const t3 = t2 * t
-  return (
-    0.5 *
-    (2 * p1[1] +
-      (-p0[1] + p2[1]) * t +
-      (2 * p0[1] - 5 * p1[1] + 4 * p2[1] - p3[1]) * t2 +
-      (-p0[1] + 3 * p1[1] - 3 * p2[1] + p3[1]) * t3)
-  )
-}
-
-const derive_pv = (weirdness: number): number =>
-  Math.max(0, Math.min(1, 1 - Math.abs(3 * Math.abs(weirdness * 2 - 1) - 2)))
-
-const climate_distance = (left: Climate, right: Climate, weights: Climate): number =>
-  (Object.keys(weights) as (keyof Climate)[]).reduce((distance, key) => {
-    const delta = (left[key] - right[key]) * weights[key]
-    return distance + delta * delta
-  }, 0)
-
-const smoothstep = (edge_0: number, edge_1: number, value: number): number => {
-  const amount = Math.max(0, Math.min(1, (value - edge_0) / (edge_1 - edge_0)))
-  return amount * amount * (3 - 2 * amount)
-}
-
-export const biome_influences = (
-  world: CompiledWorld,
-  climate: SampledClimate
-): readonly Readonly<{ biome: CompiledBiome; weight: number }>[] => {
-  const ranked = world.biomes
-    .map((biome) => ({
-      biome,
-      distance: Math.sqrt(climate_distance(climate, biome.climate, world.recipe.biome_selection.axis_weights)),
-    }))
-    .sort((left, right) => left.distance - right.distance)
-  const count = Math.min(world.recipe.biome_selection.blend_k, ranked.length)
-  const far = ranked[Math.max(0, count - 1)].distance + 1e-6
-  const weighted = ranked.slice(0, count).map(({ biome, distance }) => ({
-    biome,
-    weight: smoothstep(far * (1 + world.recipe.biome_selection.transition_softness), 0, distance) * biome.weight,
-  }))
-  const total = weighted.reduce((sum, influence) => sum + influence.weight, 0)
-  return weighted
-    .map((influence) => ({ ...influence, weight: total > 0 ? influence.weight / total : 1 / count }))
-    .sort((left, right) => right.weight - left.weight)
-}
-
-export const compile_world_recipe = (recipe: WorldRecipe): CompiledWorld => {
-  const validation = validate_world_recipe(recipe)
-  if (!validation.ok) throw new TypeError(validation.errors.join('\n'))
-  const material_uses: MaterialUse[] = recipe.biomes.flatMap(({ land }) => [
-    { name: land.surface, role: 'surface', paired_material: land.subsurface },
-    { name: land.subsurface, role: 'subsurface' },
-    { name: land.filler, role: 'filler' },
-  ])
-  if (recipe.liquid !== undefined) material_uses.push({ name: recipe.liquid, role: 'liquid' })
-  const materials = compile_materials(recipe.materials, material_uses)
-  const field = (name: keyof WorldRecipe['noise']) =>
-    create_fbm_sampler(derive_sub_seed(recipe.seed, name), recipe.noise[name])
-  const temperature = field('temperature')
-  const humidity = field('humidity')
-  const continentalness = field('continentalness')
-  const erosion = field('erosion')
-  const weirdness = field('weirdness')
-  const { biomes } = recipe
-  return Object.freeze({
-    recipe,
-    decoration_seed: derive_sub_seed(recipe.seed, 'decoration'),
-    materials,
-    biomes,
-    sample_climate: (x, z) => {
-      const weirdness_value = weirdness(x, z)
-      return {
-        temperature: temperature(x, z),
-        humidity: humidity(x, z),
-        continentalness: continentalness(x, z),
-        erosion: erosion(x, z),
-        weirdness: weirdness_value,
-        pv: derive_pv(weirdness_value),
-      }
-    },
-  })
 }
 
 export const parse_world_recipe = (value: unknown): WorldRecipe => {
@@ -267,21 +150,145 @@ export const parse_world_recipe = (value: unknown): WorldRecipe => {
   return value as WorldRecipe
 }
 
+export const landscape_height = (points: readonly SplineKnot[], input: number): number => {
+  if (input <= points[0]![0]) return points[0]![1]
+  const upper = points.findIndex(([x]) => x >= input)
+  if (upper < 0) return points.at(-1)![1]
+  const [x0, y0] = points[upper - 1]!
+  const [x1, y1] = points[upper]!
+  return y0 + ((input - x0) / (x1 - x0)) * (y1 - y0)
+}
+
+const band_weights = (value: number): Readonly<Record<ClimateBand, number>> => {
+  if (value <= 0.38) return { low: 1, mid: 0, high: 0 }
+  if (value < 0.48) {
+    const progress = (value - 0.38) / 0.1
+    const mid = progress * progress * (3 - 2 * progress)
+    return { low: 1 - mid, mid, high: 0 }
+  }
+  if (value <= 0.52) return { low: 0, mid: 1, high: 0 }
+  if (value < 0.62) {
+    const progress = (value - 0.52) / 0.1
+    const high = progress * progress * (3 - 2 * progress)
+    return { low: 0, mid: 1 - high, high }
+  }
+  return { low: 0, mid: 0, high: 1 }
+}
+
+export const biome_influences = (
+  world: CompiledWorld,
+  climate: Pick<SampledClimate, 'temperature' | 'humidity'>
+): readonly Readonly<{ biome: CompiledBiome; weight: number }>[] => {
+  const temperature = band_weights(climate.temperature)
+  const humidity = band_weights(climate.humidity)
+  const by_name = BIOME_SLOTS.reduce<Record<string, number>>((weights, slot) => {
+    const [temperature_band, humidity_band] = slot.split('_') as [ClimateBand, ClimateBand]
+    const weight = temperature[temperature_band] * humidity[humidity_band]
+    const { name } = world.slots[slot]
+    weights[name] = (weights[name] ?? 0) + weight
+    return weights
+  }, {})
+  const total = Object.values(by_name).reduce((sum, weight) => sum + weight, 0)
+  return Object.entries(by_name)
+    .filter(([, weight]) => weight > 0)
+    .map(([name, weight]) => ({ biome: world.biomes.find((biome) => biome.name === name)!, weight: weight / total }))
+    .sort((left, right) => right.weight - left.weight)
+}
+
+const material_uses = (biomes: readonly WorldBiome[]): readonly MaterialUse[] =>
+  biomes.flatMap(({ landscape }) =>
+    landscape.flatMap(({ land }) =>
+      land
+        ? [
+            { name: land.surface, role: 'surface' as const, paired_material: land.subsurface },
+            { name: land.subsurface, role: 'subsurface' as const },
+            { name: land.filler, role: 'filler' as const },
+          ]
+        : []
+    )
+  )
+
+export const compile_world_recipe = (input: WorldRecipe): CompiledWorld => {
+  const recipe = parse_world_recipe(input)
+  const biomes = recipe.biomes.map((biome) => ({
+    ...biome,
+    height_points: biome.landscape.map(({ x, y }) => [x, y] as const),
+  }))
+  const by_name = Object.fromEntries(biomes.map((biome) => [biome.name, biome]))
+  const slots = BIOME_SLOTS.reduce<Record<BiomeSlot, CompiledBiome>>(
+    (result, slot) => ({ ...result, [slot]: by_name[recipe.biome_slots[slot]]! }),
+    {} as Record<BiomeSlot, CompiledBiome>
+  )
+  const temperature = create_fbm_sampler(derive_sub_seed(recipe.seed, 'temperature'), {
+    period: 10240,
+    octaves: 6,
+    spread: 2,
+    gain: 0.5,
+  })
+  const humidity = create_fbm_sampler(derive_sub_seed(recipe.seed, 'humidity'), {
+    period: 8192,
+    octaves: 6,
+    spread: 2,
+    gain: 0.5,
+  })
+  const ground_noise = create_fbm_sampler(derive_sub_seed(recipe.seed, 'ground'), {
+    period: 2048,
+    octaves: 6,
+    spread: 2,
+    gain: 0.52,
+  })
+  const amplitude = create_fbm_sampler(derive_sub_seed(recipe.seed, 'amplitude'), {
+    period: 6144,
+    octaves: 4,
+    spread: 2,
+    gain: 0.5,
+  })
+  const transition = create_fbm_sampler(derive_sub_seed(recipe.seed, 'transition'), {
+    period: 256,
+    octaves: 2,
+    spread: 2,
+    gain: 0.5,
+  })
+  return Object.freeze({
+    recipe,
+    decoration_seed: derive_sub_seed(recipe.seed, 'decoration'),
+    materials: compile_materials(recipe.materials, material_uses(recipe.biomes)),
+    biomes: Object.freeze(biomes),
+    slots: Object.freeze(slots),
+    sample_climate: (x, z) => ({
+      temperature: temperature(x, z),
+      humidity: humidity(x, z),
+      ground: Math.max(0, Math.min(1, (ground_noise(x, z) - 0.5) * 2 ** 0.42 + 0.5)),
+      amplitude: amplitude(x, z),
+      transition: transition(x, z),
+    }),
+  })
+}
+
+const land_at = (biome: CompiledBiome, ground: number, transition: number): BiomeLand =>
+  biome.landscape.reduce((selected, knot) => {
+    const threshold = knot.x + (transition - 0.5) * (knot.variance ?? 0)
+    return threshold <= ground && knot.land ? knot.land : selected
+  }, biome.landscape[0]!.land!)
+
 export const sample_world_column = (world: CompiledWorld, x: number, z: number): WorldColumn => {
   const climate = world.sample_climate(x, z)
-  const base = catmull_rom(world.recipe.splines.continentalness_to_base, climate.continentalness)
-  const amplitude = catmull_rom(world.recipe.splines.erosion_to_amplitude, climate.erosion)
-  const relief = catmull_rom(world.recipe.splines.pv_to_relief, climate.pv)
-  const [{ biome }] = biome_influences(world, climate)
+  const influences = biome_influences(world, climate)
+  const [{ biome }] = influences
+  const authored_height = influences.reduce(
+    (sum, influence) => sum + influence.weight * landscape_height(influence.biome.height_points, climate.ground),
+    0
+  )
+  const detail = (climate.amplitude - 0.5) * 12 * Math.max(0, Math.min(1, (climate.ground - 0.3) / 0.7))
+  const land = land_at(biome, climate.ground, climate.transition)
   return {
-    // Renderer space places the authored sea level on y=0. The chain has no height,
-    // so this keeps gameplay coordinates stable while each world keeps its own profile.
-    surface_y: Math.floor(base + amplitude * relief - world.recipe.sea_level),
+    surface_y: Math.max(1, Math.min(MAX_SURFACE_Y, Math.floor(authored_height + detail + Number.EPSILON * 64))),
     climate,
     biome,
-    surface_id: world.materials.id_for(biome.land.surface, 'surface', biome.land.subsurface),
-    subsurface_id: world.materials.id_for(biome.land.subsurface, 'subsurface'),
-    filler_id: world.materials.id_for(biome.land.filler, 'filler'),
+    land,
+    surface_id: world.materials.id_for(land.surface, 'surface', land.subsurface),
+    subsurface_id: world.materials.id_for(land.subsurface, 'subsurface'),
+    filler_id: world.materials.id_for(land.filler, 'filler'),
   }
 }
 

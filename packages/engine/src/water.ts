@@ -3,8 +3,8 @@
 // Water — the legacy NG2-C optics (deprecated/engine/src/render/water_material.js) ported onto
 // this engine's ANALYTIC bed: per-vertex ground height + bed color sampled by the far worker,
 // so depth-driven transparency, Beer-Lambert see-through, and shore gradients need no
-// framebuffer depth grab. Two tiers of geometry: a fine near grid (real shorelines) and the
-// horizon plane (uniform deep body). Every knob below traces to an owner-graded decision
+// framebuffer depth grab. One adaptive surface keeps fine shore detail and coarsens toward the
+// horizon without changing its data source. Every knob below traces to an owner-graded decision
 // (legacy baseline + the 2026-08-15 blue-depth retune); do not retune casually.
 
 import { BufferAttribute, BufferGeometry, DoubleSide, Mesh, type Scene } from 'three'
@@ -22,21 +22,21 @@ import {
   pow,
   reflect,
   sin,
-  screenUV,
   smoothstep,
   time,
   uint,
   vec3,
-  viewportSharedTexture,
 } from 'three/tsl'
 import type { Node } from 'three/webgpu'
 
 import type { Clouds } from './clouds.ts'
 import type { FlattenUniform } from './flatten.ts'
+import type { LiquidPalette } from './liquid_palette.ts'
 import type { create_sky_node } from './sky/sky_node.ts'
 import type { EngineQuality } from './types.ts'
 import { macro_tint_nodes, material_color_node } from './terrain_tint.ts'
-import { compile_world_recipe, type WorldRecipe } from './world_recipe.ts'
+import { WATER_SURFACE_LAYOUT } from './water_surface_layout.ts'
+import type { CompiledWorld } from './world_recipe.ts'
 import type { CompiledMaterials } from './world_materials.ts'
 
 type AnalyticSky = Pick<ReturnType<typeof create_sky_node>, 'sample_sky_dome' | 'sun_direction'>
@@ -50,8 +50,6 @@ export type Water = Readonly<{
 // ── tuning constants (legacy owner-graded baseline; DEPTH GROUP retuned 2026-08-15 on the
 // owner's "too transparent — real blue depth" order: richer blue body, stronger absorption,
 // earlier and higher opacity ramps — the read is a saturated blue that closes fast) ──
-export const WATER_BODY_COLOR = [0.012, 0.062, 0.185] as const
-const WATER_SHALLOW_COLOR = [0.025, 0.56, 0.68] as const
 const WATER_SIGMA = [1.15, 0.78, 0.55] as const
 const WATER_FADE_START = 1.2
 const WATER_TINT_DEPTH = 11.0
@@ -60,7 +58,6 @@ const WATER_ALPHA_BASE = 0.34
 const WATER_ALPHA_DEEP = 0.95
 const WATER_ALPHA_VDEPTH_START = 0.7
 const WATER_ALPHA_VDEPTH_END = 3.2
-const WATER_ALPHA_VIEW_LEAN = 0.15
 const WATER_SHALLOW_PRESENCE = 0.58
 const WATER_PRESENCE_FEATHER = 0.05
 const WATER_PRESENCE_FULL = 1.25
@@ -70,11 +67,7 @@ const WATER_DETAIL_FADE_FAR = 150
 const WATER_DISTANT_RIPPLE = 0.12
 const WATER_SHORE_GUARD_DEPTH_START = 0.05
 const WATER_SHORE_GUARD_DEPTH_END = 1.25
-// Near-grid coverage: real shorelines within this span; beyond it the horizon plane is deep body.
-const NEAR_SPAN = 512
-const NEAR_STEP = 4
 const FOCUS_SNAP = 64
-const HORIZON_SPAN = 4096
 
 const smooth_profile = (edge_0: number, edge_1: number, value: number): number => {
   const amount = Math.max(0, Math.min(1, (value - edge_0) / (edge_1 - edge_0)))
@@ -93,7 +86,6 @@ type WaterSample = Readonly<{
   type: 'water'
   id: number
   center: readonly [number, number]
-  side: number
   bed_heights: Float32Array
   bed_material_ids: Float32Array
 }>
@@ -129,81 +121,72 @@ const build_material = (
   sky: AnalyticSky,
   clouds: Clouds,
   materials: CompiledMaterials,
-  bed: Readonly<{ height: Node<'float'>; material_id: Node<'uint'> }> | null
+  palette: LiquidPalette,
+  bed: Readonly<{ height: Node<'float'>; material_id: Node<'uint'> }>
 ): MeshBasicNodeMaterial => {
   // DoubleSide: the surface is seen from BELOW when diving, and the sampled grid's winding
   // must never decide visibility (the 2026-08-15 invisible-water bug was backface culling).
   const material = new MeshBasicNodeMaterial({ transparent: true, depthWrite: false, side: DoubleSide })
+  const bed_height = bed.height
   if (quality === 'low') {
-    const depth = bed === null ? float(6) : max(positionWorld.y.sub(bed.height), 0)
-    material.colorNode = mix(vec3(...WATER_SHALLOW_COLOR), vec3(...WATER_BODY_COLOR), smoothstep(0.5, 4, depth))
+    const depth = max(positionWorld.y.sub(bed_height), 0)
+    material.colorNode = mix(vec3(...palette.shallow), vec3(...palette.body), smoothstep(0.5, 4, depth))
     material.opacityNode = smoothstep(0, 1, depth).mul(0.78).mul(float(1).sub(flatten.amount))
     material.alphaTest = 0.02
     material.fog = true
     return material
   }
   const { normal, detail_fade, ripple } = surface_nodes(quality)
-  const broad_displacement = sin(positionLocal.x.mul(0.055).add(positionLocal.z.mul(0.021)).add(time.mul(0.42)))
+  // The mesh recentres in coarse steps as the player travels. Wave phase must therefore use world
+  // coordinates; local coordinates reset on every recenter and jump the entire ocean at once.
+  const broad_displacement = sin(positionWorld.x.mul(0.055).add(positionWorld.z.mul(0.021)).add(time.mul(0.42)))
     .mul(0.16)
-    .add(sin(positionLocal.x.mul(-0.027).add(positionLocal.z.mul(0.048)).add(time.mul(0.31))).mul(0.11))
+    .add(sin(positionWorld.x.mul(-0.027).add(positionWorld.z.mul(0.048)).add(time.mul(0.31))).mul(0.11))
   // The terrain's last submerged block ends exactly at y=0 while wave troughs reach -0.27.
   // Shoaling removes only that downward motion near the coast, preventing the water surface
   // from falling through sea-level voxels without lifting the whole ocean or flattening deep waves.
-  const shore_guard =
-    bed === null
-      ? float(0)
-      : float(1).sub(
-          smoothstep(WATER_SHORE_GUARD_DEPTH_START, WATER_SHORE_GUARD_DEPTH_END, max(bed.height.negate(), 0))
-        )
+  const shore_guard = float(1).sub(
+    smoothstep(WATER_SHORE_GUARD_DEPTH_START, WATER_SHORE_GUARD_DEPTH_END, max(positionWorld.y.sub(bed_height), 0))
+  )
   const guarded_displacement = mix(broad_displacement, max(broad_displacement, 0), shore_guard)
   material.positionNode = positionLocal.add(vec3(0, guarded_displacement.mul(detail_fade), 0))
   const view = cameraPosition.sub(positionWorld).normalize()
-  const view_up = clamp(view.y.abs(), 0.1, 1)
 
   // Depth law (ENG-18): alpha keys on the VERTICAL bed depth — rotation-invariant, so the
   // transparent→opaque boundary never sweeps with the camera. Horizon plane = fully deep.
-  const vdepth = bed === null ? float(WATER_ALPHA_VDEPTH_END + 3) : max(positionWorld.y.sub(bed.height), 0)
-  const slant = vdepth.div(view_up)
+  const vdepth = max(positionWorld.y.sub(bed_height), 0)
+  // The analytic bed gives exact vertical depth, not the point where a screen ray meets terrain.
+  // Dividing by the camera elevation invented a camera-centred shallow/deep circle which swept
+  // across the ocean while pitching. Transmission therefore keys on the stable authored column;
+  // reflection below remains correctly view-dependent.
+  const optical_depth = vdepth
   const deep_ramp = smoothstep(WATER_ALPHA_VDEPTH_START, WATER_ALPHA_VDEPTH_END, vdepth)
   const presence = smoothstep(WATER_PRESENCE_FEATHER, WATER_PRESENCE_FULL, vdepth).mul(WATER_SHALLOW_PRESENCE)
-  const alpha = clamp(
-    max(
-      float(WATER_ALPHA_BASE)
-        .add(deep_ramp.mul(WATER_ALPHA_DEEP))
-        .add(float(1).sub(view_up).mul(WATER_ALPHA_VIEW_LEAN)),
-      presence
-    ),
-    0,
-    1
-  )
+  const alpha = clamp(max(float(WATER_ALPHA_BASE).add(deep_ramp.mul(WATER_ALPHA_DEEP)), presence), 0, 1)
 
-  // Transmitted bed color (Beer-Lambert along the slant ray, red dies first) + the tuned
+  // Transmitted bed color (Beer-Lambert through the water column, red dies first) + the tuned
   // shallow→deep body ramp; the bed vanishes by ~6-8 blocks (the "no deep see-through" law).
-  const tint_t = smoothstep(WATER_FADE_START, WATER_TINT_DEPTH, slant)
-  const body = mix(vec3(...WATER_SHALLOW_COLOR), vec3(...WATER_BODY_COLOR), tint_t)
-  const analytic_transmitted =
-    bed === null
-      ? vec3(...WATER_BODY_COLOR)
-      : macro_tint_nodes({
-          material_id: bed.material_id,
-          position_world: { x: positionWorld.x, z: positionWorld.z },
-          materials,
-        })
-          .tint_albedo(material_color_node(materials, bed.material_id))
-          .mul(
-            vec3(slant.mul(-WATER_SIGMA[0]).exp(), slant.mul(-WATER_SIGMA[1]).exp(), slant.mul(-WATER_SIGMA[2]).exp())
-          )
-  // The opaque scene already exists when transparent water renders. Perturbing that sample by
-  // the physical surface normal gives real shoreline/bed refraction without another scene pass.
-  // The analytic vertical depth still owns the blend, so rotating the camera cannot move the shore.
-  const refract_strength = detail_fade.mul(float(1).sub(deep_ramp)).mul(0.011)
-  const refracted_scene = viewportSharedTexture(screenUV.add(normal.xz.mul(refract_strength))).rgb.mul(
-    vec3(0.72, 1, 1.08)
-  )
-  const transmitted = mix(analytic_transmitted, refracted_scene, float(1).sub(deep_ramp).mul(0.72))
+  const tint_t = smoothstep(WATER_FADE_START, WATER_TINT_DEPTH, optical_depth)
+  const body = mix(vec3(...palette.shallow), vec3(...palette.body), tint_t)
+  const analytic_transmitted = macro_tint_nodes({
+    material_id: bed.material_id,
+    position_world: { x: positionWorld.x, z: positionWorld.z },
+    materials,
+  })
+    .tint_albedo(material_color_node(materials, bed.material_id))
+    .mul(
+      vec3(
+        optical_depth.mul(-WATER_SIGMA[0]).exp(),
+        optical_depth.mul(-WATER_SIGMA[1]).exp(),
+        optical_depth.mul(-WATER_SIGMA[2]).exp()
+      )
+    )
+  // The analytic bed is stable in world space. Sampling the rendered viewport here made camera
+  // motion drag a screen-space image through the water, so the whole surface visibly shook.
+  const transmitted = analytic_transmitted
   // Once the bed is extinguished only the residual body glow remains (BODY × DEEP_FLOOR × the
   // scatter lighting below) — the owner's "opaque dark deep surface" law.
-  const deep_surface = vec3(...WATER_BODY_COLOR).mul(1.6)
+  const deep_surface = vec3(...palette.body).mul(1.6)
   const shallow_scatter = transmitted.mul(0.74).add(body.mul(tint_t.mul(0.45).add(0.55)))
   const scatter = mix(shallow_scatter, deep_surface, tint_t)
 
@@ -219,7 +202,7 @@ const build_material = (
   // The surface ALWAYS catches some sky — deep water must read as water, not wet mud; the
   // shallow zone keeps the stronger legacy floor (the dry-lagoon fix).
   const shallow_sky_floor = float(WATER_SHALLOW_SKY_MIN).mul(float(1).sub(deep_ramp))
-  const fresnel = max(max(fresnel_raw, float(0.15)), bed === null ? float(0.15) : shallow_sky_floor)
+  const fresnel = max(max(fresnel_raw, float(0.15)), shallow_sky_floor)
 
   // Sun road: broadens + dims as the chop converts to roughness (never a clean far ellipse).
   const daylight = smoothstep(-0.08, 0.18, sky.sun_direction.y)
@@ -251,18 +234,9 @@ const build_material = (
       .add(0.5)
   )
   const foam = foam_band.mul(mix(float(0.35), float(1), foam_breakup)).mul(daylight.mul(0.5).add(0.5))
-  const caustic_cross = pow(
-    max(sin(positionWorld.x.mul(1.7).add(time.mul(1.3))).mul(sin(positionWorld.z.mul(1.43).sub(time.mul(1.07)))), 0),
-    5
-  )
-    .mul(float(1).sub(deep_ramp))
-    .mul(daylight)
-    .mul(0.22)
   const lit_scatter = scatter.mul(mix(float(0.22), cloud_light, daylight))
   material.colorNode = mix(
-    mix(lit_scatter, sky_color, fresnel)
-      .add(vec3(glint))
-      .add(vec3(0.18, 0.52, 0.64).mul(caustic_cross)),
+    mix(lit_scatter, sky_color, fresnel).add(vec3(glint)),
     vec3(0.72, 0.88, 0.88),
     foam.mul(0.72)
   )
@@ -280,126 +254,72 @@ export const create_water = ({
   sky,
   clouds,
   world,
+  palette,
 }: Readonly<{
   scene: Scene
   quality: EngineQuality
   flatten: FlattenUniform
   sky: AnalyticSky
   clouds: Clouds
-  world: WorldRecipe
+  world: CompiledWorld
+  palette: LiquidPalette
 }>): Water => {
-  if (world.liquid === undefined)
+  if (world.recipe.liquid === undefined)
     return Object.freeze({ set_focus: () => {}, set_quality: () => {}, dispose: () => {} })
-  const { materials } = compile_world_recipe(world)
+  const { materials } = world
 
-  // ── near grid: real shorelines from the analytic bed (sampled by the far worker) ──
-  const side = Math.floor(NEAR_SPAN / NEAR_STEP) + 1
-  const near_geometry = new BufferGeometry()
-  const positions = new Float32Array(side * side * 3)
-  const bed_heights = new Float32Array(side * side)
-  const bed_material_ids = new Float32Array(side * side)
-  const indices: number[] = []
-  for (let z = 0; z < side; z += 1)
-    for (let x = 0; x < side; x += 1) {
-      positions.set([-NEAR_SPAN / 2 + x * NEAR_STEP, 0, -NEAR_SPAN / 2 + z * NEAR_STEP], (z * side + x) * 3)
-      if (x < side - 1 && z < side - 1) {
-        const top_left = z * side + x
-        indices.push(top_left, top_left + 1, top_left + side, top_left + side, top_left + 1, top_left + side + 1)
-      }
-    }
-  near_geometry.setAttribute('position', new BufferAttribute(positions, 3))
-  near_geometry.setAttribute('bed_height', new BufferAttribute(bed_heights, 1))
-  near_geometry.setAttribute('bed_material_id', new BufferAttribute(bed_material_ids, 1))
-  near_geometry.setIndex(indices)
+  // One transparent draw owns the block-scale inner water and coarse horizon. Its bed attributes cover
+  // the entire mesh; a fake deep ring would create a camera-centred colour boundary by construction.
+  const surface_geometry = new BufferGeometry()
+  const vertex_count = WATER_SURFACE_LAYOUT.positions.length / 3
+  const bed_heights = new Float32Array(vertex_count)
+  const bed_material_ids = new Float32Array(vertex_count)
+  surface_geometry.setAttribute('position', new BufferAttribute(WATER_SURFACE_LAYOUT.positions.slice(), 3))
+  surface_geometry.setAttribute('bed_height', new BufferAttribute(bed_heights, 1))
+  surface_geometry.setAttribute('bed_material_id', new BufferAttribute(bed_material_ids, 1))
+  surface_geometry.setIndex(new BufferAttribute(WATER_SURFACE_LAYOUT.indices.slice(), 1))
 
   const bed = Object.freeze({
     height: attribute('bed_height', 'float' as const).add(0), // world y of the ground under this vertex
     material_id: uint(attribute('bed_material_id', 'float' as const)),
   })
-  const near_materials = Object.freeze({
-    low: build_material('low', flatten, sky, clouds, materials, bed),
-    medium: build_material('medium', flatten, sky, clouds, materials, bed),
-    high: build_material('high', flatten, sky, clouds, materials, bed),
+  const surface_materials = Object.freeze({
+    low: build_material('low', flatten, sky, clouds, materials, palette, bed),
+    medium: build_material('medium', flatten, sky, clouds, materials, palette, bed),
+    high: build_material('high', flatten, sky, clouds, materials, palette, bed),
   })
-  const near = new Mesh(near_geometry, near_materials[quality])
-  near.frustumCulled = false
-  near.matrixAutoUpdate = false
-  near.position.y = 0.04
-  near.renderOrder = 1
-  near.visible = false // until the first bed sample lands
-  scene.add(near)
-
-  // ── horizon RING: uniform deep body beyond the sampled span — a HOLE under the near grid,
-  // or its opaque deep pixels paint over the shore transparency ──
-  const far_geometry = (() => {
-    const ring = new BufferGeometry()
-    const hole = NEAR_SPAN / 2 - NEAR_STEP
-    const out = HORIZON_SPAN / 2
-    // 8 vertices: inner square (hole) + outer square, stitched into the ring.
-    const ring_positions = new Float32Array([
-      -hole,
-      0,
-      -hole,
-      hole,
-      0,
-      -hole,
-      hole,
-      0,
-      hole,
-      -hole,
-      0,
-      hole,
-      -out,
-      0,
-      -out,
-      out,
-      0,
-      -out,
-      out,
-      0,
-      out,
-      -out,
-      0,
-      out,
-    ])
-    ring.setAttribute('position', new BufferAttribute(ring_positions, 3))
-    ring.setIndex([0, 4, 5, 0, 5, 1, 1, 5, 6, 1, 6, 2, 2, 6, 7, 2, 7, 3, 3, 7, 4, 3, 4, 0])
-    return ring
-  })()
-  const far_materials = Object.freeze({
-    low: build_material('low', flatten, sky, clouds, materials, null),
-    medium: build_material('medium', flatten, sky, clouds, materials, null),
-    high: build_material('high', flatten, sky, clouds, materials, null),
-  })
-  const far = new Mesh(far_geometry, far_materials[quality])
-  far.frustumCulled = false
-  far.matrixAutoUpdate = false
-  far.position.y = 0.03
-  far.renderOrder = 1
-  scene.add(far)
+  const surface = new Mesh(surface_geometry, surface_materials[quality])
+  surface.frustumCulled = false
+  surface.matrixAutoUpdate = false
+  surface.position.y = world.recipe.sea_level + 0.04
+  surface.renderOrder = 1
+  surface.visible = false
+  scene.add(surface)
 
   const worker = new Worker(new URL('./far_worker.ts', import.meta.url), { type: 'module' })
   worker.addEventListener('error', (event) => console.error('[engine] water bed sampling failed.', event.message))
-  worker.postMessage({ type: 'initialize', world })
+  worker.postMessage({ type: 'initialize', world: world.recipe })
   let request_id = 0
   let focus_x = 0
   let focus_z = 0
   let disposed = false
   worker.addEventListener('message', ({ data }: MessageEvent<WaterSample>) => {
     if (disposed || data.type !== 'water' || data.id !== request_id) return
-    ;(near_geometry.getAttribute('bed_height') as BufferAttribute & { array: Float32Array }).array.set(data.bed_heights)
-    near_geometry.getAttribute('bed_height').needsUpdate = true
-    ;(near_geometry.getAttribute('bed_material_id') as BufferAttribute & { array: Float32Array }).array.set(
+    ;(surface_geometry.getAttribute('bed_height') as BufferAttribute & { array: Float32Array }).array.set(
+      data.bed_heights
+    )
+    surface_geometry.getAttribute('bed_height').needsUpdate = true
+    ;(surface_geometry.getAttribute('bed_material_id') as BufferAttribute & { array: Float32Array }).array.set(
       data.bed_material_ids
     )
-    near_geometry.getAttribute('bed_material_id').needsUpdate = true
-    near.position.set(data.center[0], 0.04, data.center[1])
-    near.updateMatrix()
-    near.visible = true
+    surface_geometry.getAttribute('bed_material_id').needsUpdate = true
+    surface.position.set(data.center[0], world.recipe.sea_level + 0.04, data.center[1])
+    surface.updateMatrix()
+    surface.visible = true
   })
   const request = (): void => {
     request_id += 1
-    worker.postMessage({ type: 'water', id: request_id, center: [focus_x, focus_z], span: NEAR_SPAN, step: NEAR_STEP })
+    worker.postMessage({ type: 'water', id: request_id, center: [focus_x, focus_z] })
   }
   request()
 
@@ -412,21 +332,16 @@ export const create_water = ({
         focus_z = next_z
         request()
       }
-      far.position.set(next_x, 0.03, next_z)
-      far.updateMatrix()
     },
     set_quality: (next: EngineQuality) => {
-      near.material = near_materials[next]
-      far.material = far_materials[next]
+      surface.material = surface_materials[next]
     },
     dispose: () => {
       disposed = true
       worker.terminate()
-      scene.remove(near, far)
-      near_geometry.dispose()
-      far_geometry.dispose()
-      Object.values(near_materials).forEach((material) => material.dispose())
-      Object.values(far_materials).forEach((material) => material.dispose())
+      scene.remove(surface)
+      surface_geometry.dispose()
+      Object.values(surface_materials).forEach((material) => material.dispose())
     },
   })
 }

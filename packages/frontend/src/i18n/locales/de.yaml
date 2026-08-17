@@ -1,6 +1,8 @@
 title: WebGPU ist nicht verfügbar
 body: Die vollständige Welt benötigt WebGPU. Stattdessen läuft ein leichtes Raster.
 fatal: Dieser Browser kann weder einen WebGPU- noch einen WebGL-Grafikkontext erstellen.
+world_unavailable_title: Welt nicht verfügbar
+world_unavailable: Für diese Welt wurde noch kein Terrainrezept erstellt.
 chrome: 'Chrome oder Edge: Browser aktualisieren, unter Einstellungen → System „Grafikbeschleunigung verwenden, falls verfügbar“ aktivieren und neu starten.'
 other: Hardwarebeschleunigung aktivieren, Browser und Grafiktreiber aktualisieren und den Browser neu starten.
 continue: Mit Raster fortfahren
@@ -23,7 +25,6 @@ world: Welt
 characters: Charaktere
 leaderboard: Rangliste
 shop: Shop
-simulator: Simulator
 encyclopedia: Enzyklopädie
 marketplace: Marktplatz
 airdrop: Airdrop
@@ -42,6 +43,7 @@ server_connected: Verbunden
 latency_unit: ms
 indexing_health: Indexierungsstatus
 indexing_lag_warning: Aktionen im Spiel können verzögert erscheinen
+game_frozen: Das Spiel ist derzeit eingefroren. Weitere Informationen findest du auf Discord.
 network_testnet: TESTNET
 page_pending_title: Diese Seite wird neu aufgebaut
 page_pending_body: Ihr Platz bleibt sichtbar, während wir sie sauber wiederherstellen.
@@ -55,11 +57,14 @@ sex_label: Geschlecht
 appearance_label: Aussehen · 3 Farben
 name_label: Name
 name_placeholder: Namen eingeben…
+name_invalid: Verwende 4–19 druckbare ASCII-Zeichen ohne Leerzeichen.
 male: Männlich
 female: Weiblich
 cancel: Zurück
 create_and_play: Erstellen und spielen
-create_unavailable: Die Erstellung wird mit dem nächsten veröffentlichten Spielpaket aktiviert.
+character_price: Preis
+creating_character: Charakter wird erstellt…
+character_created: Charakter erstellt
 address_verification_failed: Diese Adresse konnte nicht verifiziert werden. Melde dich erneut an oder kontaktiere uns auf Discord.
 dismiss: Schließen
 wallet_copy_address: Adresse kopieren
@@ -75,6 +80,24 @@ wallet_send_pending: SUI wird gesendet…
 wallet_send_success: SUI gesendet
 wallet_send_failed: Die SUI-Übertragung ist fehlgeschlagen
 wallet_close: Schließen
+demo_page:
+  title: Renderlabor
+  world_lab: Welt
+  fight_lab: Kampf
+  no_terrain: Kein Terrainrezept
+  time: Tageszeit
+  live: Live
+  remove_character: Modell entfernen
+  control_character: Modell steuern
+  mob_group: Monstergruppe
+  mob: Monster
+  amount: Anzahl
+  spawn_group: Gruppe erzeugen
+  clear: Leeren
+  resources: Ressourcen
+  resources_missing: Die Ressourcendarstellung ist noch nicht wiederhergestellt. Die erstellte Liste bleibt in den Seed-Daten verfügbar.
+  control_hint: Canvas anklicken · WASD zum Bewegen · Leertaste zum Springen · Maus zum Umschauen
+  back: Zurück zur App
 shop_page:
   title: 'Laden'
   subtitle: 'Gegenstände mit SUI kaufen'

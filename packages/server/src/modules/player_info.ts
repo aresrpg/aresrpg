@@ -14,7 +14,7 @@ const INFO_INTERVAL_MS = 5_000
 
 export default {
   name: 'player_info',
-  observe: ({ events, indexing_lag, pubsub, send, signal }) => {
+  observe: ({ events, game_state, indexing_lag, pubsub, send, signal }) => {
     events.on('packet/ping', ({ id }: Extract<PlayerAction, { type: 'packet/ping' }>) =>
       send({ type: 'packet/pong', id })
     )
@@ -29,7 +29,13 @@ export default {
         .then(([online, indexing_lag]) => send({ type: 'packet/server_info', online, indexing_lag }))
         .catch((error: Error) => log.warn({ error: error.message }, 'cluster count failed'))
     const timer = setInterval(() => void push(), INFO_INTERVAL_MS)
+    const push_game_state = (frozen: boolean | null) => send({ type: 'packet/game_state', frozen })
+    const stop_game_state = game_state.listen(push_game_state)
+    push_game_state(game_state.get())
     void push()
-    signal.addEventListener('abort', () => clearInterval(timer))
+    signal.addEventListener('abort', () => {
+      clearInterval(timer)
+      stop_game_state()
+    })
   },
 } satisfies PlayerModule

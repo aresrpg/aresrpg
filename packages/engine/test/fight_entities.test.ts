@@ -2,9 +2,10 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
 import { describe, expect, test } from 'bun:test'
-import { AnimationClip, BoxGeometry, Group, Mesh, MeshBasicMaterial, Scene } from 'three'
+import { AnimationClip, BoxGeometry, Group, Mesh, MeshBasicMaterial, NumberKeyframeTrack, Scene } from 'three'
 
 import {
+  character_entity_scale,
   create_entity_layer,
   fight_flash_envelope,
   fight_gait_cell_ms,
@@ -25,6 +26,11 @@ const board = Object.freeze({
 })
 
 describe('fight entity rendering', () => {
+  test('keeps legacy world height and applies the fight-only player scale at the anchor', () => {
+    expect(character_entity_scale('world')).toBe(1)
+    expect(character_entity_scale('fight_cell')).toBe(0.7)
+  })
+
   test('prefers the requested locomotion clip over an earlier compound jump clip', () => {
     const clips = Object.freeze([
       new AnimationClip('JUMP_RUN', 1),
@@ -34,6 +40,19 @@ describe('fight entity rendering', () => {
 
     expect(resolve_entity_locomotion_clip(clips, 'RUN')?.name).toBe('RUN')
     expect(resolve_entity_locomotion_clip(clips, 'WALK')?.name).toBe('Armature|WALK')
+  })
+
+  test('uses the complete legacy character animation fallback order', () => {
+    const clips = Object.freeze([
+      new AnimationClip('Armature|JUMP_RUN', 1),
+      new AnimationClip('Armature|JUMP', 1),
+      new AnimationClip('Armature|FALL', 1),
+      new AnimationClip('Armature|WALK', 1),
+    ])
+
+    expect(resolve_entity_locomotion_clip(clips, 'JUMP_RUN')?.name).toBe('Armature|JUMP_RUN')
+    expect(resolve_entity_locomotion_clip(clips, 'FALL')?.name).toBe('Armature|FALL')
+    expect(resolve_entity_locomotion_clip(clips, 'SWIM')?.name).toBe('Armature|WALK')
   })
 
   test('uses the legacy path-length gait boundary and pace', () => {
@@ -48,6 +67,44 @@ describe('fight entity rendering', () => {
     expect(fight_reaction_envelope(1)).toBe(0)
     expect(fight_flash_envelope(0.15)).toBe(1)
     expect(fight_flash_envelope(0.4)).toBe(0)
+  })
+
+  test('attaches and clears invisibility without remounting the model', async () => {
+    const scene = new Scene()
+    const root = new Group()
+    let attached = 0
+    let disposed = 0
+    const layer = create_entity_layer({
+      scene,
+      load_model: () => Promise.resolve({ root, clips: Object.freeze([]), min_y: 0, dispose: () => {} }),
+      attach_invisibility: () => {
+        attached += 1
+        return Object.freeze({
+          update: () => undefined,
+          dispose: () => {
+            disposed += 1
+          },
+        })
+      },
+    })
+    const fighter = Object.freeze({
+      id: 'mob_10',
+      kind: 'mob' as const,
+      model_url: '/bunny.glb',
+      anchor: Object.freeze({ kind: 'fight_cell' as const, cell: 10 }),
+      facing: Object.freeze({ kind: 'yaw' as const, yaw: 0 }),
+      visual_effect: Object.freeze({ kind: 'invisibility' as const }),
+    })
+    layer.set_board(board)
+    layer.set([fighter])
+    await Promise.resolve()
+    await Promise.resolve()
+
+    expect(attached).toBe(1)
+    layer.set([Object.freeze({ ...fighter, visual_effect: undefined })])
+    expect(disposed).toBe(1)
+    expect(scene.getObjectByName('entity:mob_10')).toBeDefined()
+    layer.dispose()
   })
 
   test('plays a procedural hit before restoring the fighter to its exact cell anchor', async () => {
@@ -68,17 +125,18 @@ describe('fight entity rendering', () => {
     layer.set([fighter])
     await Promise.resolve()
     await Promise.resolve()
-    const rest = root.position.clone()
+    const object = scene.getObjectByName(`entity:${fighter.id}`)!
+    const rest = object.position.clone()
 
     const hit = layer.beat(fighter.id, 'hit', undefined, true)
     layer.tick(performance.now() + 96)
-    expect(root.position.distanceTo(rest)).toBeGreaterThan(0.1)
-    expect(root.scale.y).toBeLessThan(1)
+    expect(object.position.distanceTo(rest)).toBeGreaterThan(0.1)
+    expect(object.scale.y).toBeLessThan(1)
     layer.tick(Number.MAX_SAFE_INTEGER)
 
     expect(await hit).toBeTrue()
-    expect(root.position.toArray()).toEqual(rest.toArray())
-    expect(root.scale.toArray()).toEqual([1, 1, 1])
+    expect(object.position.toArray()).toEqual(rest.toArray())
+    expect(object.scale.toArray()).toEqual([1, 1, 1])
     layer.dispose()
   })
 
@@ -104,9 +162,9 @@ describe('fight entity rendering', () => {
     const death = layer.beat(fighter.id, 'death')
     layer.tick(Number.MAX_SAFE_INTEGER)
     expect(await death).toBeTrue()
-    expect(root.visible).toBeFalse()
+    expect(scene.getObjectByName(`entity:${fighter.id}`)?.visible).toBeFalse()
     layer.set_board(board)
-    expect(root.visible).toBeFalse()
+    expect(scene.getObjectByName(`entity:${fighter.id}`)?.visible).toBeFalse()
     layer.dispose()
   })
 
@@ -147,7 +205,7 @@ describe('fight entity rendering', () => {
     await Promise.resolve()
     await Promise.resolve()
 
-    expect(root.rotation.y).toBeCloseTo(Math.atan2(2, 1))
+    expect(scene.getObjectByName('entity:character_20')?.rotation.y).toBeCloseTo(Math.atan2(2, 1))
     layer.dispose()
   })
 
@@ -172,9 +230,11 @@ describe('fight entity rendering', () => {
     await Promise.resolve()
     await Promise.resolve()
 
-    expect(root.position.toArray()).toEqual([-1, 4.55, 0])
-    expect(root.rotation.y).toBe(0)
-    expect(scene.getObjectByName('entity:mob_10')).toBe(root)
+    const object = scene.getObjectByName('entity:mob_10')!
+    expect(object.position.toArray()).toEqual([-1, 4.3, 0])
+    expect(root.parent?.position.toArray()).toEqual([0, 0.25, 0])
+    expect(object.rotation.y).toBe(0)
+    expect(root.parent?.parent).toBe(object)
     layer.dispose()
   })
 
@@ -224,11 +284,87 @@ describe('fight entity rendering', () => {
 
     const moved = layer.animate(Object.freeze({ id: start.id, cells: Object.freeze([11]), gait: 'walk' as const }))
     layer.set([Object.freeze({ ...start, anchor: Object.freeze({ kind: 'fight_cell' as const, cell: 11 }) })])
-    expect(root.position.x).toBe(-1)
+    const object = scene.getObjectByName(`entity:${start.id}`)!
+    expect(object.position.x).toBe(-1)
     layer.tick(Number.MAX_SAFE_INTEGER)
 
     expect(await moved).toBeTrue()
-    expect(root.position.x).toBe(1)
+    expect(object.position.x).toBe(1)
+    layer.dispose()
+  })
+
+  test('finishes each accepted movement cue at that cue endpoint rather than the future checkpoint anchor', async () => {
+    const scene = new Scene()
+    const root = new Group()
+    const path_board = Object.freeze({
+      width: 3,
+      height: 1,
+      cell_size: 2,
+      origin: Object.freeze({ x: -3, y: 4, z: -1 }),
+      cells: Object.freeze([
+        Object.freeze({ cell: 10, x: 0, y: 0, kind: 'start_a' as const }),
+        Object.freeze({ cell: 11, x: 1, y: 0, kind: 'floor' as const }),
+        Object.freeze({ cell: 12, x: 2, y: 0, kind: 'start_b' as const }),
+      ]),
+    })
+    const layer = create_entity_layer({
+      scene,
+      load_model: () => Promise.resolve({ root, clips: Object.freeze([]), min_y: 0, dispose: () => {} }),
+    })
+    const start = Object.freeze({
+      id: 'mob_trap_walk',
+      kind: 'mob' as const,
+      model_url: '/bunny.glb',
+      anchor: Object.freeze({ kind: 'fight_cell' as const, cell: 10 }),
+      facing: Object.freeze({ kind: 'yaw' as const, yaw: 0 }),
+    })
+    layer.set_board(path_board)
+    layer.set([start])
+    await Promise.resolve()
+    await Promise.resolve()
+
+    const first_cue = layer.animate(Object.freeze({ id: start.id, cells: Object.freeze([11]), gait: 'walk' as const }))
+    layer.set([Object.freeze({ ...start, anchor: Object.freeze({ kind: 'fight_cell' as const, cell: 12 }) })])
+    layer.tick(Number.MAX_SAFE_INTEGER)
+
+    expect(await first_cue).toBeTrue()
+    expect(scene.getObjectByName(`entity:${start.id}`)?.position.x).toBe(0)
+    layer.dispose()
+  })
+
+  test('snaps teleport cues to their event cell rather than the future checkpoint anchor', async () => {
+    const scene = new Scene()
+    const root = new Group()
+    const path_board = Object.freeze({
+      width: 3,
+      height: 1,
+      cell_size: 2,
+      origin: Object.freeze({ x: -3, y: 4, z: -1 }),
+      cells: Object.freeze([
+        Object.freeze({ cell: 10, x: 0, y: 0, kind: 'start_a' as const }),
+        Object.freeze({ cell: 11, x: 1, y: 0, kind: 'floor' as const }),
+        Object.freeze({ cell: 12, x: 2, y: 0, kind: 'start_b' as const }),
+      ]),
+    })
+    const start = Object.freeze({
+      id: 'mob_trap_teleport',
+      kind: 'mob' as const,
+      model_url: '/bunny.glb',
+      anchor: Object.freeze({ kind: 'fight_cell' as const, cell: 10 }),
+      facing: Object.freeze({ kind: 'yaw' as const, yaw: 0 }),
+    })
+    const layer = create_entity_layer({
+      scene,
+      load_model: () => Promise.resolve({ root, clips: Object.freeze([]), min_y: 0, dispose: () => {} }),
+    })
+    layer.set_board(path_board)
+    layer.set([start])
+    await Promise.resolve()
+    await Promise.resolve()
+    layer.set([Object.freeze({ ...start, anchor: Object.freeze({ kind: 'fight_cell' as const, cell: 12 }) })])
+
+    expect(layer.snap(start.id, 11)).toBeTrue()
+    expect(scene.getObjectByName(`entity:${start.id}`)?.position.x).toBe(0)
     layer.dispose()
   })
 
@@ -269,9 +405,11 @@ describe('fight entity rendering', () => {
     )
     layer.tick(performance.now() + 200)
 
-    expect(run_root.position.x).toBe(1)
-    expect(walk_root.position.x).toBeGreaterThan(-1)
-    expect(walk_root.position.x).toBeLessThan(0)
+    const run_object = scene.getObjectByName('entity:run')!
+    const walk_object = scene.getObjectByName('entity:walk')!
+    expect(run_object.position.x).toBe(1)
+    expect(walk_object.position.x).toBeGreaterThan(-1)
+    expect(walk_object.position.x).toBeLessThan(0)
     expect(await run).toBeTrue()
     layer.tick(Number.MAX_SAFE_INTEGER)
     expect(await walk).toBeTrue()
@@ -351,9 +489,47 @@ describe('fight entity rendering', () => {
     await Promise.resolve()
 
     expect(loaded).toEqual([spec])
-    expect(root.position.toArray()).toEqual([7, 3.2, 11])
-    expect(root.rotation.y).toBe(Math.PI / 3)
-    expect(scene.getObjectByName('entity:player_1')).toBe(root)
+    const object = scene.getObjectByName('entity:player_1')!
+    expect(object.position.toArray()).toEqual([7, 3, 11])
+    expect(root.parent?.position.toArray()).toEqual([0, 0.2, 0])
+    expect(object.rotation.y).toBe(Math.PI / 3)
+    expect(root.parent?.parent).toBe(object)
+    layer.dispose()
+  })
+
+  test('advances world character animation without moving its entity anchor', async () => {
+    const scene = new Scene()
+    const model_root = new Group()
+    const clip = new AnimationClip('RUN', 1, [new NumberKeyframeTrack('.position[x]', [0, 1], [0, 1])])
+    const layer = create_entity_layer({
+      scene,
+      load_model: () =>
+        Promise.resolve({ root: model_root, clips: Object.freeze([clip]), min_y: 0, dispose: () => {} }),
+    })
+    const spec = Object.freeze({
+      id: 'player_1',
+      kind: 'character' as const,
+      appearance: Object.freeze({
+        body_url: '/senshi_male.glb',
+        hair_url: null,
+        colors: Object.freeze(['#112233', '#445566', '#778899'] as const),
+        worn: Object.freeze({ head: null, back: null }),
+      }),
+      anchor: Object.freeze({ kind: 'world' as const, position: Object.freeze([7, 3, 11] as const) }),
+      facing: Object.freeze({ kind: 'yaw' as const, yaw: 0 }),
+      animation: Object.freeze({ name: 'RUN' as const, time_scale: 1 }),
+    })
+
+    layer.set([spec])
+    await Promise.resolve()
+    await Promise.resolve()
+    const start = performance.now()
+    layer.tick(start + 100)
+    layer.set([spec])
+    layer.tick(start + 200)
+
+    expect(scene.getObjectByName('entity:player_1')?.position.toArray()).toEqual([7, 3, 11])
+    expect(model_root.position.x).toBeGreaterThan(0)
     layer.dispose()
   })
 })

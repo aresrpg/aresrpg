@@ -188,3 +188,17 @@ test('target restrictions remain visibly separated and dimmer than effect prose'
   expect(html).toContain('for 2 turns')
   expect(html).not.toContain('(allies only)for')
 })
+
+test('single-cell effects do not expose a meaningless zero-sized area', async () => {
+  const { SpellCard } = await import('../../src/encyclopedia/SpellCard.tsx')
+  const [level] = spell.levels
+  const [effect] = level.effects
+  const point_circle = {
+    ...spell,
+    levels: [{ ...level, effects: [{ ...effect, area_shape: 1, area_size: 0 }] }],
+  } satisfies SeedSpell
+
+  const html = renderToStaticMarkup(<SpellCard spell={point_circle} />)
+
+  expect(html).not.toContain('title="Circle"')
+})

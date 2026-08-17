@@ -1,6 +1,8 @@
 title: WebGPU no está disponible
 body: El mundo completo necesita WebGPU. En su lugar se muestra una cuadrícula ligera.
 fatal: Este navegador no puede crear un contexto gráfico WebGPU ni WebGL.
+world_unavailable_title: Mundo no disponible
+world_unavailable: Este mundo todavía no tiene una receta de terreno creada.
 chrome: 'Chrome o Edge: actualiza el navegador, activa «Usar aceleración de gráficos cuando esté disponible» en Configuración → Sistema y reinícialo.'
 other: Activa la aceleración por hardware, actualiza el navegador y el controlador gráfico y reinicia el navegador.
 continue: Continuar con la cuadrícula
@@ -23,7 +25,6 @@ world: Mundo
 characters: Personajes
 leaderboard: Clasificación
 shop: Tienda
-simulator: Simulador
 encyclopedia: Enciclopedia
 marketplace: Mercado
 airdrop: Airdrop
@@ -42,6 +43,7 @@ server_connected: Conectado
 latency_unit: ms
 indexing_health: Estado del indexado
 indexing_lag_warning: Las acciones del juego pueden aparecer con retraso
+game_frozen: El juego está actualmente congelado. Consulta Discord para más información.
 network_testnet: TESTNET
 page_pending_title: Esta página se está reconstruyendo
 page_pending_body: Su lugar sigue visible mientras la restauramos de forma limpia.
@@ -55,11 +57,14 @@ sex_label: Sexo
 appearance_label: Apariencia · 3 colores
 name_label: Nombre
 name_placeholder: Escribe un nombre…
+name_invalid: Usa entre 4 y 19 caracteres ASCII imprimibles, sin espacios.
 male: Hombre
 female: Mujer
 cancel: Volver
 create_and_play: Crear y jugar
-create_unavailable: La creación se activará con la próxima versión publicada del juego.
+character_price: Precio
+creating_character: Creando personaje…
+character_created: Personaje creado
 address_verification_failed: No pudimos verificar esta dirección. Inicia sesión de nuevo o contáctanos en Discord.
 dismiss: Cerrar
 wallet_copy_address: Copiar dirección
@@ -75,6 +80,24 @@ wallet_send_pending: Enviando SUI…
 wallet_send_success: SUI enviado
 wallet_send_failed: La transferencia de SUI ha fallado
 wallet_close: Cerrar
+demo_page:
+  title: Laboratorio de renderizado
+  world_lab: Mundo
+  fight_lab: Combate
+  no_terrain: Sin receta de terreno
+  time: Hora del día
+  live: En vivo
+  remove_character: Quitar modelo
+  control_character: Controlar modelo
+  mob_group: Grupo de monstruos
+  mob: Monstruo
+  amount: Cantidad
+  spawn_group: Generar grupo
+  clear: Limpiar
+  resources: Recursos
+  resources_missing: El renderizado de recursos aún no se ha restaurado. La lista creada sigue disponible en los datos seed.
+  control_hint: Haz clic en el canvas · WASD para moverte · Espacio para saltar · Ratón para mirar
+  back: Volver a la aplicación
 shop_page:
   title: 'Tienda'
   subtitle: 'Compra objetos con SUI'

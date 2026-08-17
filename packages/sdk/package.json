@@ -15,6 +15,8 @@
     "./cache": "./src/cache.ts",
     "./trade": "./src/trade.ts",
     "./character": "./src/character.ts",
+    "./character-name": "./src/character_name.ts",
+    "./character-price": "./src/character_price.ts",
     "./balance": "./src/balance.ts",
     "./marketplace-admin": "./src/marketplace_admin.ts",
     "./deployment-admin": "./src/deployment_admin.ts",

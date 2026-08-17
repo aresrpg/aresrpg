@@ -3,11 +3,12 @@
 
 import { describe, expect, test } from 'bun:test'
 
-import { ao_brightness, face_brightness } from '../src/terrain_lighting.ts'
+import { ao_brightness, face_brightness, lit_face_brightness } from '../src/terrain_lighting.ts'
 
 describe('voxel lighting contract', () => {
-  test('keeps the proven directional face contrast', () => {
+  test('reserves authored directional contrast for the unlit fallback', () => {
     expect(Array.from({ length: 6 }, (_, face) => face_brightness(face))).toEqual([0.6, 0.6, 1, 0.5, 0.8, 0.8])
+    expect(Array.from({ length: 6 }, (_, face) => lit_face_brightness(face))).toEqual([1, 1, 1, 1, 1, 1])
   })
 
   test('keeps contact shade readable and open corners unchanged', () => {

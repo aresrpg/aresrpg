@@ -3,13 +3,23 @@
 
 import type { ChunkRenderData, RenderChunkRequest, Vec3 } from './types.ts'
 import { CHUNK_EDGE, pack_voxel_occupancy, voxel_index } from './voxel_data.ts'
-import { sample_world_column, type CompiledWorld } from './world_recipe.ts'
+import { sample_world_column, WORLD_HEIGHT, type CompiledWorld } from './world_recipe.ts'
 
-const WORLD_BASE_Y = -16
 const AIR = 0
 
 export const chunk_origin = ({ x, y, z }: RenderChunkRequest['coordinate']): Vec3 =>
-  [x * CHUNK_EDGE, WORLD_BASE_Y + y * CHUNK_EDGE, z * CHUNK_EDGE] as const
+  [x * CHUNK_EDGE, y * CHUNK_EDGE, z * CHUNK_EDGE] as const
+
+export const surface_chunk_layers = (world: CompiledWorld, chunk_x: number, chunk_z: number): readonly number[] => {
+  const surfaces = Array.from({ length: (CHUNK_EDGE + 2) ** 2 }, (_, index) => {
+    const x = (index % (CHUNK_EDGE + 2)) - 1
+    const z = Math.floor(index / (CHUNK_EDGE + 2)) - 1
+    return sample_world_column(world, chunk_x * CHUNK_EDGE + x, chunk_z * CHUNK_EDGE + z).surface_y
+  })
+  const first = Math.max(0, Math.floor((Math.min(...surfaces) - 1) / CHUNK_EDGE))
+  const last = Math.min(WORLD_HEIGHT / CHUNK_EDGE - 1, Math.floor((Math.max(...surfaces) - 1) / CHUNK_EDGE))
+  return Object.freeze(Array.from({ length: Math.max(0, last - first + 1) }, (_, index) => first + index))
+}
 
 export const generate_chunk = (world: CompiledWorld, request: RenderChunkRequest): ChunkRenderData => {
   const origin = chunk_origin(request.coordinate)

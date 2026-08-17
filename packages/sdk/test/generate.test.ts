@@ -6,7 +6,15 @@ import { readFileSync } from 'node:fs'
 
 import { describe, expect, test } from 'bun:test'
 
-import { parse_doors, generate, API_MOVE_PATH, DOORS_OUT_PATH } from '../scripts/generate_doors.mjs'
+import {
+  parse_doors,
+  generate,
+  generate_character_price,
+  API_MOVE_PATH,
+  DOORS_OUT_PATH,
+  CHARACTER_MOVE_PATH,
+  CHARACTER_PRICE_OUT_PATH,
+} from '../scripts/generate_doors.mjs'
 
 const api_source = readFileSync(API_MOVE_PATH, 'utf8')
 
@@ -56,5 +64,11 @@ describe('door parsing (positive controls against the real api.move)', () => {
 describe('the regen-clean tooth (same-commit law)', () => {
   test('committed doors.gen.ts is byte-identical to a fresh generation over api.move', async () => {
     expect(readFileSync(DOORS_OUT_PATH, 'utf8')).toBe(await generate(api_source))
+  })
+
+  test('the character price export is byte-identical to character.move', async () => {
+    expect(readFileSync(CHARACTER_PRICE_OUT_PATH, 'utf8')).toBe(
+      await generate_character_price(readFileSync(CHARACTER_MOVE_PATH, 'utf8'))
+    )
   })
 })
