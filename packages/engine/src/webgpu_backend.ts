@@ -22,6 +22,9 @@ import { create_clouds } from './clouds.ts'
 import { create_far_terrain } from './far_terrain.ts'
 import { create_fight_board_layer } from './fight_board.ts'
 import { create_entity_layer } from './entities.ts'
+import { create_fight_presentation } from './fight_presentation.ts'
+import { create_fight_vfx } from './fight_vfx.ts'
+import { project_screen_anchor } from './screen_projection.ts'
 import { create_frame_renderer } from './frame_renderer.ts'
 import { create_flatten_uniform } from './flatten.ts'
 import type { GreedyMeshData } from './greedy_mesher.ts'
@@ -80,6 +83,8 @@ export const create_webgpu_backend = async (
   const camera = new PerspectiveCamera(48, 1, 0.1, 3000)
   const fight_board = create_fight_board_layer({ scene, camera, canvas })
   const entities = create_entity_layer({ scene })
+  const fight_vfx = create_fight_vfx({ scene, entities })
+  const fight_presentation = create_fight_presentation({ entities, vfx: fight_vfx })
   const sun = new DirectionalLight(0xfff2dd, 3)
   const back_fill = new DirectionalLight(0xffd6a8, 1.35)
   const hemisphere = new HemisphereLight(0xbcb2a0, 0x977f56, 0.9)
@@ -130,6 +135,7 @@ export const create_webgpu_backend = async (
     scene,
     camera,
     initial_quality,
+    presentation,
     analytic_sky.sun_direction,
     water_gate,
     clouds,
@@ -203,7 +209,7 @@ export const create_webgpu_backend = async (
   const use_sky_quality = async (next: EngineQuality): Promise<void> => {
     const revision = ++sky_revision
     sky_ready = false
-    if (next === 'low') {
+    if (presentation === 'fight' || next === 'low') {
       hillaire?.dispose()
       hillaire = null
       scene.backgroundNode = analytic_sky.background_node
@@ -247,7 +253,7 @@ export const create_webgpu_backend = async (
   const apply_quality = (next: EngineQuality, update_sky = true): void => {
     quality = next
     const profile = get_quality_profile(next)
-    scene.fog = new Fog(0x788ca8, profile.fog.near, profile.fog.far)
+    scene.fog = presentation === 'fight' ? null : new Fog(0x788ca8, profile.fog.near, profile.fog.far)
     renderer.shadowMap.enabled = profile.shadows.kind !== 'none'
     renderer.shadowMap.type = profile.shadows.kind === 'soft' ? PCFSoftShadowMap : PCFShadowMap
     sun.shadow.mapSize.set(profile.shadows.map_size || 1, profile.shadows.map_size || 1)
@@ -371,20 +377,23 @@ export const create_webgpu_backend = async (
     previous_frame = now
     resize()
     drain_uploads()
-    const surface_plane =
-      water_world === null || flatten.flattened()
-        ? null
-        : sample_world_column(water_world, camera.position.x, camera.position.z).surface_y < 0
-          ? 0
-          : null
-    const { humidity } = compiled_world.sample_climate(camera.position.x, camera.position.z)
-    clouds.set_humidity(humidity)
-    frame_renderer.set_environment({ humidity })
-    was_submerged = is_submerged(camera.position.y, surface_plane, was_submerged)
-    frame_renderer.set_underwater({ submerged: was_submerged, dt: delta_seconds })
-    hillaire?.tick(renderer, camera, delta_seconds)
+    if (presentation === 'world') {
+      const surface_plane =
+        water_world === null || flatten.flattened()
+          ? null
+          : sample_world_column(water_world, camera.position.x, camera.position.z).surface_y < 0
+            ? 0
+            : null
+      const { humidity } = compiled_world.sample_climate(camera.position.x, camera.position.z)
+      clouds.set_humidity(humidity)
+      frame_renderer.set_environment({ humidity })
+      was_submerged = is_submerged(camera.position.y, surface_plane, was_submerged)
+      frame_renderer.set_underwater({ submerged: was_submerged, dt: delta_seconds })
+      hillaire?.tick(renderer, camera, delta_seconds)
+    }
     fight_board.tick(now)
     entities.tick(now)
+    fight_vfx.tick(now)
     frame_renderer.render()
   }
 
@@ -438,6 +447,13 @@ export const create_webgpu_backend = async (
 
   apply_quality(initial_quality, false)
   await use_sky_quality(get_quality_profile(initial_quality).sky)
+  if (presentation === 'fight') {
+    const warmup = fight_vfx.create_warmup()
+    void renderer
+      .compileAsync(warmup.object, camera, scene)
+      .catch((error: unknown) => console.warn('[engine] Fight VFX shader preload failed.', error))
+      .finally(warmup.dispose)
+  }
   return Object.freeze({
     kind: 'webgpu',
     render: draw,
@@ -480,6 +496,12 @@ export const create_webgpu_backend = async (
       entities.set_board(board)
     },
     set_entities: entities.set,
+    animate_entity: entities.animate,
+    play_fight_cue: fight_presentation.play,
+    project_entity: (id) => {
+      const anchor = entities.world_anchor(id)
+      return anchor ? project_screen_anchor(anchor, camera, canvas.getBoundingClientRect()) : null
+    },
     upsert_fight_blob: fight_board.upsert_blob,
     remove_fight_blob: fight_board.remove_blob,
     pick_fight_cell: fight_board.pick,
@@ -538,6 +560,7 @@ export const create_webgpu_backend = async (
       clouds.dispose()
       water.dispose()
       fight_board.dispose()
+      fight_vfx.dispose()
       entities.dispose()
       frame_renderer.dispose()
       hillaire?.dispose()

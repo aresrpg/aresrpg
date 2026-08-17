@@ -2,7 +2,7 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
 import type { EngineQuality } from '@aresrpg/engine'
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useRef, useState } from 'react'
 import { ThinkingOrb } from 'thinking-orbs'
 
 import { AppShell } from './components/AppShell.tsx'
@@ -16,7 +16,6 @@ import { env } from './env.ts'
 import type { AppCopy } from './i18n/copy.ts'
 import type { Locale } from './i18n/locale.ts'
 import type { Page } from './modules/navigation.ts'
-import { toast } from './toast.ts'
 
 const GoogleIcon = () => (
   <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
@@ -189,11 +188,6 @@ export function App() {
     engine_status.state === 'failed' || (engine_status.state === 'degraded' && !graphics_notice_dismissed)
   const loading_universe = session.auth_status === 'connecting' || (in_app && !session.roster_loaded)
 
-  useEffect(() => {
-    if (!copy || !loading_universe) return
-    return toast.persistent(copy.loading_universe, 'pending')
-  }, [copy, loading_universe])
-
   if (!copy) return <main className="fixed inset-0 bg-[#0a0a0f]" />
 
   return (
@@ -291,12 +285,14 @@ export function App() {
           copy={copy}
           disconnect={disconnect}
           locale={locale}
+          network={env.network}
           open_page={open_page}
           open_path={open_path}
           page={navigation.page}
           pathname={navigation.pathname}
           select_character={select_character}
           session={session}
+          settings={settings}
         />
       )}
     </main>

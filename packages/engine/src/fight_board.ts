@@ -10,10 +10,8 @@ import {
   InstancedMesh,
   Matrix4,
   Mesh,
-  MeshBasicMaterial,
   MeshStandardMaterial,
   Quaternion,
-  Raycaster,
   StaticDrawUsage,
   Vector3,
   WebGPUCoordinateSystem,
@@ -78,7 +76,6 @@ export const fight_board_instances = (board: Readonly<FightBoardRender>): FightB
   })
 }
 
-type PickMesh = InstancedMesh & { userData: { cells?: readonly number[] } }
 type BoardResources = Readonly<{
   geometries: readonly { dispose: () => void }[]
   materials: readonly Material[]
@@ -132,7 +129,6 @@ export const create_fight_board_layer = ({
   group.name = 'fight_board'
   scene.add(group)
   const blobs = create_fight_blob_layer(scene)
-  const raycaster = new Raycaster()
   const near_point = new Vector3()
   const far_point = new Vector3()
   const ray_direction = new Vector3()
@@ -141,7 +137,7 @@ export const create_fight_board_layer = ({
   const scale = new Vector3()
   const matrix = new Matrix4()
   let board: FightBoardRender | null = null
-  let pick_mesh: PickMesh | null = null
+  let pick_cells: Readonly<Record<number, number>> | null = null
   let resources: BoardResources | null = null
 
   const clear = (): void => {
@@ -150,7 +146,7 @@ export const create_fight_board_layer = ({
     resources?.materials.forEach((material) => material.dispose())
     resources?.textures.forEach((texture) => texture.dispose())
     resources = null
-    pick_mesh = null
+    pick_cells = null
   }
 
   const build_instances = (
@@ -244,22 +240,16 @@ export const create_fight_board_layer = ({
     holes.name = 'board_hole'
     holes.receiveShadow = true
 
-    const pick_rows = next.cells.filter(({ kind }) => kind !== 'hole')
-    const pick_geometry = new BoxGeometry(1, 1, 1)
-    const pick_material = new MeshBasicMaterial({ colorWrite: false, depthWrite: false })
-    pick_mesh = build_instances(
-      pick_geometry,
-      pick_material,
-      pick_rows,
-      [next.cell_size, 0.04, next.cell_size],
-      () => next.origin.y + BOARD_FLOOR_THICKNESS + 0.02
-    ) as PickMesh
-    pick_mesh.userData.cells = Object.freeze(pick_rows.map(({ cell }) => cell))
+    pick_cells = Object.freeze(
+      Object.fromEntries(
+        next.cells.flatMap(({ cell, kind, x, y }) => (kind === 'hole' ? [] : [[x + y * next.width, cell]]))
+      )
+    )
 
-    group.add(slab, obstacles, holes, pick_mesh)
+    group.add(slab, obstacles, holes)
     resources = Object.freeze({
-      geometries: Object.freeze([slab_geometry, obstacle_geometry, hole_geometry, pick_geometry]),
-      materials: Object.freeze([slab_top, slab_side, obstacle_material, hole_material, pick_material]),
+      geometries: Object.freeze([slab_geometry, obstacle_geometry, hole_geometry]),
+      materials: Object.freeze([slab_top, slab_side, obstacle_material, hole_material]),
       textures: Object.freeze([surface_texture]),
     })
   }
@@ -270,7 +260,7 @@ export const create_fight_board_layer = ({
     remove_blob: blobs.remove,
     tick: blobs.tick,
     pick: (client_x: number, client_y: number): number | null => {
-      if (!board || !pick_mesh) return null
+      if (!board || !pick_cells) return null
       const rect = canvas.getBoundingClientRect()
       if (rect.width <= 0 || rect.height <= 0) return null
       const x = ((client_x - rect.left) / rect.width) * 2 - 1
@@ -279,10 +269,15 @@ export const create_fight_board_layer = ({
       near_point.set(x, y, near_z).unproject(camera)
       far_point.set(x, y, 1).unproject(camera)
       ray_direction.subVectors(far_point, near_point).normalize()
-      raycaster.ray.set(near_point, ray_direction)
-      const [hit] = raycaster.intersectObject(pick_mesh, false)
-      if (!hit || hit.instanceId === undefined) return null
-      return pick_mesh.userData.cells?.[hit.instanceId] ?? null
+      if (Math.abs(ray_direction.y) < Number.EPSILON) return null
+      const distance = (board.origin.y + BOARD_FLOOR_THICKNESS - near_point.y) / ray_direction.y
+      if (distance < 0) return null
+      const world_x = near_point.x + ray_direction.x * distance
+      const world_z = near_point.z + ray_direction.z * distance
+      const cell_x = Math.floor((world_x - board.origin.x) / board.cell_size)
+      const cell_y = Math.floor((world_z - board.origin.z) / board.cell_size)
+      if (cell_x < 0 || cell_x >= board.width || cell_y < 0 || cell_y >= board.height) return null
+      return pick_cells[cell_x + cell_y * board.width] ?? null
     },
     dispose: (): void => {
       clear()

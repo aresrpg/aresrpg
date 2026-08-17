@@ -18,7 +18,11 @@ const create_engine_spy = () => {
     set_flatten_amount: () => {},
     set_fight_board: () => {},
     set_entities: () => {},
+    animate_entity: () => Promise.resolve(false),
+    play_fight_cue: () => Promise.resolve(false),
+    project_entity: () => null,
     create_fight_blob: () => 'test_blob',
+    update_fight_blob: () => false,
     remove_fight_blob: () => {},
     pick_fight_cell: () => null,
     render_chunk: (chunk) => {

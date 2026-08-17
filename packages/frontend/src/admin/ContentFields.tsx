@@ -129,6 +129,7 @@ export const SelectField = ({
   <label className="block">
     <FieldLabel label={label} />
     <select
+      aria-label={label}
       className={`${input_class} ${width}`}
       disabled={disabled}
       onChange={(event) => change(event.target.value)}

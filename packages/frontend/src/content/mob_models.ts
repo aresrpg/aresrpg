@@ -3,20 +3,18 @@
 // One mob_type, one seed model. Three.js loading and render policy remain inside @aresrpg/engine.
 
 const model_modules = import.meta.glob('../../../../seed/models/mobs/*.glb', {
+  eager: true,
   import: 'default',
   query: '?url',
-}) as Readonly<Record<string, () => Promise<string>>>
+}) as Readonly<Record<string, string>>
 
 const basename_of = (path: string): string =>
   path
     .split('/')
     .at(-1)
     ?.replace(/\.glb$/i, '') ?? ''
-const loaders_by_mob_type = Object.freeze(
-  Object.fromEntries(Object.entries(model_modules).map(([path, load]) => [basename_of(path), load]))
+const urls_by_mob_type = Object.freeze(
+  Object.fromEntries(Object.entries(model_modules).map(([path, url]) => [basename_of(path), url]))
 )
 
-export const load_mob_model_url = async (mob_type: string): Promise<string | null> => {
-  const load = loaders_by_mob_type[mob_type]
-  return load ? load() : null
-}
+export const mob_model_url = (mob_type: string): string | null => urls_by_mob_type[mob_type] ?? null

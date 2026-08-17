@@ -31,6 +31,7 @@ export {
   type StatName,
 } from './identity.ts'
 export { pet_max_feeds } from './pet.ts'
+export { rune_effect, type RuneEffect, type RuneTier } from './rune.ts'
 export {
   item_budget_envelope,
   item_budget_stat_weight,
@@ -40,18 +41,27 @@ export {
 } from './item_power.ts'
 export {
   character_consumable_types,
+  craft_job_of,
+  accessory_categories,
+  armor_categories,
   consumable_types,
+  cosmetic_item_categories,
   element_names,
+  equipment_categories,
   item_categories,
   item_is_stackable,
   item_stat_center,
   is_item_category,
+  is_equipment_category,
+  is_tool_category,
   is_weapon_category,
   stackable_item_categories,
+  tool_categories,
   weapon_categories,
   type CharacterConsumableType,
   type ConsumableType,
   type ElementName,
+  type EquipmentCategory,
   type ItemCategory,
   type WeaponCategory,
 } from './item.ts'

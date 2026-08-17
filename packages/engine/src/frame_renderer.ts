@@ -11,9 +11,9 @@ import { create_atmosphere_pass } from './atmosphere.ts'
 import type { Clouds } from './clouds.ts'
 import { create_grade_node } from './grading.ts'
 import { create_lens_water } from './lens_water.ts'
-import { get_quality_profile } from './quality.ts'
+import { get_quality_profile, uses_world_post_processing } from './quality.ts'
 import type { create_sky_node } from './sky/sky_node.ts'
-import type { EngineQuality } from './types.ts'
+import type { EnginePresentation, EngineQuality } from './types.ts'
 import { create_underwater_pass, type UnderwaterPass } from './underwater.ts'
 
 type FramePipeline = Readonly<{
@@ -62,15 +62,16 @@ const create_pipeline = (
   scene: Scene,
   camera: PerspectiveCamera,
   quality: EngineQuality,
+  presentation: EnginePresentation,
   sun_direction: ReturnType<typeof create_sky_node>['sun_direction'],
   water_gate: Node<'float'>,
   clouds: Clouds,
   seed: string,
   sample_sky_dome: ReturnType<typeof create_sky_node>['sample_sky_dome']
 ): FramePipeline => {
-  // Low is the deliberate low-end path: one scene render, no HDR post graph, no fullscreen
-  // sampling, no wet lens. Renderer tone mapping still produces a valid display image.
-  if (quality === 'low')
+  // Low and the isolated fight presentation are direct paths: one scene render, no HDR post graph,
+  // fullscreen sampling, or wet lens. Renderer tone mapping still produces a valid display image.
+  if (!uses_world_post_processing(quality, presentation))
     return Object.freeze({
       render: () => renderer.render(scene, camera),
       set_underwater: () => {},
@@ -143,6 +144,7 @@ export const create_frame_renderer = (
   scene: Scene,
   camera: PerspectiveCamera,
   initial_quality: EngineQuality,
+  presentation: EnginePresentation,
   sun_direction: ReturnType<typeof create_sky_node>['sun_direction'],
   water_gate: Node<'float'>,
   clouds: Clouds,
@@ -155,6 +157,7 @@ export const create_frame_renderer = (
     scene,
     camera,
     quality,
+    presentation,
     sun_direction,
     water_gate,
     clouds,
@@ -175,6 +178,7 @@ export const create_frame_renderer = (
         scene,
         camera,
         next,
+        presentation,
         sun_direction,
         water_gate,
         clouds,

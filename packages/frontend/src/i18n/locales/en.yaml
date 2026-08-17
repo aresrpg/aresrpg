@@ -33,6 +33,16 @@ admin: Admin
 online: Online
 account: Account
 join_discord: Join Discord
+sui_universe: Sui Universe
+server_disconnected: Disconnected
+server_connecting: Connecting
+server_reconnecting: Reconnecting
+server_syncing: Syncing
+server_connected: Connected
+latency_unit: ms
+indexing_health: Indexing health
+indexing_lag_warning: Actions in the game can lag behind
+network_testnet: TESTNET
 page_pending_title: This page is being rebuilt
 page_pending_body: Its place remains visible while we restore it cleanly.
 welcome_title: Welcome to AresRPG
@@ -65,6 +75,71 @@ wallet_send_pending: Sending SUI…
 wallet_send_success: SUI sent
 wallet_send_failed: The SUI transfer failed
 wallet_close: Close
+shop_page:
+  title: 'Shop'
+  subtitle: 'Purchase items with SUI'
+  limited_edition_notice: 'All these objects are limited edition — once fully minted they can never be obtained again. Trade them on the marketplace for SUI.'
+  remaining_of_cap: '{{remaining}} of {{cap}} remaining'
+  processing: 'PROCESSING'
+  sold_out: 'Sold out'
+  acquire: 'Acquire'
+  wallet: 'Wallet'
+  filter_all: 'All'
+  sections:
+    pet_box: 'PET BOXES'
+    title: 'Titles'
+    cloak: 'Cloaks'
+    hat: 'Hats'
+    companion: 'Companions'
+    equipment: 'Equipment'
+    consumable: 'Consumables'
+    resource: 'Resources'
+  amount_title: 'Select amount'
+  amount_quantity: 'Quantity'
+  amount_max: 'Max'
+  amount_total: 'Total'
+  amount_available: '{{count}} available'
+  amount_confirm: 'Acquire {{count}}'
+  purchase_success_body: 'Your new items are waiting in your inventory.'
+  see_inventory: 'See your inventory'
+  buy_pending: 'Buying items…'
+  buy_success: 'Purchase complete!'
+  drop_rates: 'Drop rates'
+  pool_sub: 'One pet is rolled on open, weighted exactly as listed below.'
+  acquisition_complete: 'Acquisition Complete'
+airdrop_page:
+  title: 'Airdrops'
+  subtitle: 'Claim reserved items for eligible holders'
+  minted: '{{count}} minted'
+  eligible_count: '{{count}} eligible'
+  eligible: 'Eligible'
+  not_eligible: 'Not eligible'
+  claimed: 'Claimed'
+  claim: 'Claim'
+  empty: 'No active airdrops'
+  empty_hint: 'Airdrops for holders of partner collections will appear here when they go live.'
+  pending_claim: 'Claiming airdrop…'
+  toast_claimed: 'Airdrop claimed'
+  set:
+    title: 'The set'
+    subtitle: 'Reserved items — showcase only'
+    error: 'The airdrop set could not be loaded'
+    retry: 'Retry'
+    empty: 'The airdrop set is not published yet'
+    no_preview: 'Preview pending'
+    aura: 'Aura'
+    aura_pending: 'Aura pending'
+    awaiting_ruling: 'Awaiting ruling'
+    kind:
+      pet_glb: 'Pet'
+      cosmetic: 'Cosmetic'
+      title_relic: 'Title relic'
+      outfit: 'Outfit'
+settings_page:
+  title: 'Settings'
+  subtitle: 'Your AresRPG preferences'
+  music_label: 'Music'
+  music_hint: 'Play world and combat music.'
 admin_page:
   kicker: Publisher
   title: Publish game content
@@ -86,6 +161,11 @@ admin_page:
   admin_wallet: Admin wallet
   admin_wallet_body: Separate signer for publishing and marketplace withdrawals.
   connect_admin_wallet: Connect
+  choose_admin_wallet: Choose wallet
+  choose_admin_address: Choose address
+  cancel_wallet_selection: Cancel
+  wallet_account: Account
+  select_wallet: Select
   connecting: Connecting…
   loading_wallets: Loading wallets…
   no_admin_wallet: No compatible browser wallet installed.
@@ -194,6 +274,7 @@ fight_hud:
   placement_title: Prepare for battle
   placement_hint: Place your fighters and mark them ready
   end_turn: End turn
+  reset_turn: Reset
   forfeit: Forfeit
   forfeit_title: Forfeit {name}?
   forfeit_body: '{name} will lose all remaining HP and leave this fight.'
@@ -371,16 +452,12 @@ encyclopedia_page:
   select_job: SELECT A JOB
   crafts: Crafts
   gathering_tiers: GATHERING PROGRESSION
-  craft_xp_table: CRAFT XP TABLE
-  bulk_craft_note: XP per craft scales with the recipe's ingredient count — recipes with more unique ingredient slots award more XP per craft.
-  job_recipes: RECIPES
+  craftable_items: CRAFTABLE ITEMS
   tier: Tier
   required_level: Req. Lv.
   resource: Resource
   rare_variant: Rare Variant
   xp_per_harvest: XP / Harvest
-  slots: Slots
-  xp_awarded: XP Awarded
   job_desc:
     FARMER: Farmers harvest cereals from fields across the world. Higher tiers unlock rarer crops needed for advanced recipes.
     HERBALIST: Herbalists gather plants and flowers used in alchemy. Each tier requires a higher job level to collect.
@@ -629,6 +706,8 @@ encyclopedia_page:
   consumable_reward_heading: REWARD
   consumable_rewards: POSSIBLE REWARDS
   consumable_reward: '{{item}} · {{chance}}%'
+  rune_effect: Adds {{amount}} {{stat}} on an item
+  rune_obtained_by_crushing: Obtained by crushing items
   spell_n: SPELL {{n}}
   range: RANGE
   range_modifiability: RANGE MODIFIABILITY

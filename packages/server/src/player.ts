@@ -31,6 +31,7 @@ import player_chat from './modules/player_chat.ts'
 import player_fight from './modules/player_fight.ts'
 import player_party from './modules/player_party.ts'
 import player_market from './modules/player_market.ts'
+import player_shop from './modules/player_shop.ts'
 import player_trade from './modules/player_trade.ts'
 import player_kolizeum from './modules/player_kolizeum.ts'
 import player_admin from './modules/player_admin.ts'
@@ -82,6 +83,8 @@ export type PlayerContext = {
   graph: Graph
   /** the redis mesh — cross-connection facts (indexer envelopes, presence channels) */
   pubsub: Pubsub
+  /** Shared cached comparison of indexed checkpoint against the fullnode head. */
+  indexing_lag: () => Promise<number | null>
   /** the LOCAL loop emitter (legacy `events`): every folded action re-emits under its type,
    *  every state change emits `STATE_UPDATED(state, previous)` — observers listen here */
   events: EventEmitter
@@ -116,6 +119,7 @@ const MODULES: PlayerModule[] = [
   player_fight,
   player_party,
   player_market,
+  player_shop,
   player_trade,
   player_kolizeum,
   player_requests,
@@ -143,6 +147,7 @@ const INITIAL_STATE = (): PlayerState => ({
 })
 
 type PlayerWires = Pick<PlayerContext, 'address' | 'admin' | 'graph' | 'pubsub'> & {
+  indexing_lag?: () => Promise<number | null>
   request_limiter?: RequestLimiter
   realtime_limiter?: RequestLimiter
   ws: { send: (raw: string) => unknown; close: (code?: number, reason?: string) => unknown }
@@ -155,6 +160,7 @@ export function create_player({
   admin,
   graph,
   pubsub,
+  indexing_lag = async () => null,
   request_limiter = create_request_limiter(),
   realtime_limiter = create_request_limiter({ capacity: 120, window_ms: 1_000 }),
 }: PlayerWires): Player {
@@ -171,6 +177,7 @@ export function create_player({
     admin,
     graph,
     pubsub,
+    indexing_lag,
     events,
     send,
     drop,

@@ -39,15 +39,15 @@ const modules = [
     selected: { new_effect: 'new_effect', new_spell_level: 'new_spell_level' },
   },
   {
-    path: join(root, '../move/sources/mob_template.move'),
-    module: 'mob_template',
-    package_key: 'package',
+    path: join(root, '../move-math/sources/mob_data.move'),
+    module: 'mob_data',
+    package_key: 'math_package',
     selected: { new_loot_entry: 'new_mob_loot_entry', new_mob_spell: 'new_mob_spell' },
   },
   {
-    path: join(root, '../move/sources/world.move'),
-    module: 'world',
-    package_key: 'package',
+    path: join(root, '../move-math/sources/world_map.move'),
+    module: 'world_map',
+    package_key: 'math_package',
     selected: {
       new_mob_row: 'new_mob_row',
       new_resource_row: 'new_resource_row',

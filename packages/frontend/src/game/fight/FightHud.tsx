@@ -4,14 +4,17 @@
 // commands re-enter the same fight input door as board and streamed actions.
 
 import { CONTRACT_CONSTANTS } from '@aresrpg/fight'
-import { useEffect, useMemo, useState } from 'react'
+import { lazy, Suspense, useEffect, useMemo, useState } from 'react'
 
 import { ModalFrame } from '../../components/ModalFrame.tsx'
 import type { AppCopy } from '../../i18n/copy.ts'
 import { dispatch_app, useAppStore } from '../../store.ts'
 
 import { select_fight_view, type FightFighterView } from './fight_projection.ts'
+import { active_effect_lines, FightEffectLines } from './FightEffectLines.tsx'
 import './fight_hud.css'
+
+const LazyFightSpell = lazy(() => import('./FightSpell.tsx').then(({ FightSpell }) => ({ default: FightSpell })))
 
 const template = (source: string, values: Readonly<Record<string, string | number>>): string =>
   Object.entries(values).reduce((text, [key, value]) => text.replaceAll(`{${key}}`, String(value)), source)
@@ -19,12 +22,25 @@ const template = (source: string, values: Readonly<Record<string, string | numbe
 const percent = (value: bigint, maximum: bigint): number =>
   maximum <= 0n ? 0 : Math.max(0, Math.min(100, Number((value * 10_000n) / maximum) / 100))
 
-const FightTimeline = ({ fighters, label }: Readonly<{ fighters: readonly FightFighterView[]; label: string }>) => (
+const FightTimeline = ({
+  fighters,
+  label,
+  focus,
+}: Readonly<{
+  fighters: readonly FightFighterView[]
+  label: string
+  focus: (fighter: bigint | null) => void
+}>) => (
   <aside aria-label={label} className="fight-hud__turns">
     {fighters.map((fighter) => (
       <article
         className={`fight-hud__turn ${fighter.team === 0n ? 'ally' : 'enemy'}${fighter.active ? ' active' : ''}${fighter.dead ? ' dead' : ''}`}
         key={fighter.seat.toString()}
+        onBlur={() => focus(null)}
+        onFocus={() => focus(fighter.seat)}
+        onMouseEnter={() => focus(fighter.seat)}
+        onMouseLeave={() => focus(null)}
+        tabIndex={0}
       >
         <div aria-hidden="true" className="fight-hud__portrait">
           {fighter.name.slice(0, 1).toUpperCase()}
@@ -38,19 +54,7 @@ const FightTimeline = ({ fighters, label }: Readonly<{ fighters: readonly FightF
             <span style={{ width: `${percent(fighter.hp, fighter.max_hp)}%` }} />
             <b>{fighter.hp.toString()}</b>
           </div>
-          {fighter.effects.length > 0 && (
-            <div className="fight-hud__effects">
-              {fighter.effects.map((effect, index) => (
-                <span
-                  key={`${effect.source}:${effect.kind}:${effect.stat}:${index}`}
-                  title={`${effect.element} · ${effect.value} · ${effect.turns_left}`}
-                >
-                  {effect.element.slice(0, 1).toUpperCase()}
-                  <b>{effect.turns_left.toString()}</b>
-                </span>
-              ))}
-            </div>
-          )}
+          {fighter.effects.length > 0 && <FightEffectLines effects={active_effect_lines(fighter.effects)} />}
         </div>
       </article>
     ))}
@@ -64,42 +68,61 @@ const StatGem = ({ kind, value }: Readonly<{ kind: 'ap' | 'mp'; value: bigint }>
   </div>
 )
 
-const FightVitals = ({ fighter, can_act }: Readonly<{ fighter: FightFighterView; can_act: boolean }>) => (
-  <div className="fight-hud__bar">
-    <div className="fight-hud__vitals">
-      <div className="fight-hud__hp-gem" title={`${fighter.hp} / ${fighter.max_hp} HP`}>
-        <i />
-        <span>
-          {fighter.hp.toString()}
-          <b />
-          {fighter.max_hp.toString()}
-        </span>
+const FightVitals = ({
+  fighter,
+  can_act,
+  selected_spell,
+  select_spell,
+}: Readonly<{
+  fighter: FightFighterView
+  can_act: boolean
+  selected_spell: string | null
+  select_spell: (spell: string | null) => void
+}>) => {
+  const [percent_visible, set_percent_visible] = useState(false)
+  return (
+    <>
+      <div className="fight-hud__vitals">
+        <button
+          className="fight-hud__hp-gem"
+          onClick={() => set_percent_visible((visible) => !visible)}
+          title={`${fighter.hp} / ${fighter.max_hp} HP`}
+          type="button"
+        >
+          <i />
+          {percent_visible ? (
+            <span>{Math.round(percent(fighter.hp, fighter.max_hp))}%</span>
+          ) : (
+            <span>
+              {fighter.hp.toString()}
+              <b />
+              {fighter.max_hp.toString()}
+            </span>
+          )}
+        </button>
+        <div className="fight-hud__stat-gems">
+          <StatGem kind="ap" value={fighter.ap} />
+          <StatGem kind="mp" value={fighter.mp} />
+        </div>
       </div>
-      <div className="fight-hud__stat-gems">
-        <StatGem kind="ap" value={fighter.ap} />
-        <StatGem kind="mp" value={fighter.mp} />
+      <div className="fight-hud__spells">
+        {fighter.spells.map((spell) => {
+          const disabled = !can_act || spell.cooldown > 0n || fighter.ap < spell.details.ap_cost
+          return (
+            <Suspense fallback={<div className={`fight-hud__spell${disabled ? ' disabled' : ''}`} />} key={spell.name}>
+              <LazyFightSpell
+                disabled={disabled}
+                select={() => select_spell(selected_spell === spell.name ? null : spell.name)}
+                selected={selected_spell === spell.name}
+                spell={spell}
+              />
+            </Suspense>
+          )
+        })}
       </div>
-    </div>
-    <div className="fight-hud__spells">
-      {fighter.spells.map((spell, index) => {
-        const disabled = !can_act || spell.cooldown > 0n || fighter.ap < spell.details.ap_cost
-        return (
-          <div
-            aria-disabled={disabled}
-            className={`fight-hud__spell${disabled ? ' disabled' : ''}`}
-            key={spell.name}
-            title={`${spell.name} · Lv ${spell.level} · ${spell.details.ap_cost} AP`}
-          >
-            <kbd>{index + 1}</kbd>
-            <span>{spell.name.slice(0, 1).toUpperCase()}</span>
-            <b>{spell.details.ap_cost.toString()}</b>
-            {spell.cooldown > 0n && <em>{spell.cooldown.toString()}</em>}
-          </div>
-        )
-      })}
-    </div>
-  </div>
-)
+    </>
+  )
+}
 
 const PlacementBanner = ({
   deadline,
@@ -123,7 +146,19 @@ const PlacementBanner = ({
   )
 }
 
-export const FightHud = ({ copy }: Readonly<{ copy: AppCopy }>) => {
+export const FightHud = ({
+  copy,
+  focus_fighter,
+  selected_spell,
+  select_spell,
+  actions_locked,
+}: Readonly<{
+  copy: AppCopy
+  focus_fighter?: (fighter: bigint | null) => void
+  selected_spell: string | null
+  select_spell: (spell: string | null) => void
+  actions_locked: boolean
+}>) => {
   const fight = useAppStore((state) => state.fight)
   const session = useAppStore((state) => state.session)
   const simulator = useAppStore((state) => state.simulator)
@@ -160,6 +195,26 @@ export const FightHud = ({ copy }: Readonly<{ copy: AppCopy }>) => {
     return () => clearInterval(timer)
   }, [min_turn_ready, view?.can_end_turn])
 
+  useEffect(() => {
+    if (!view?.can_end_turn || !view.selected || actions_locked) return undefined
+    const keydown = (event: Readonly<KeyboardEvent>): void => {
+      if (event.code === 'Escape') {
+        select_spell(null)
+        return
+      }
+      const match = /^(?:Numpad|Digit)([0-9])$/.exec(event.code)
+      if (!match) return
+      const number = Number(match[1])
+      const index = number === 0 ? 9 : number - 1
+      const spell = view.selected?.spells[index]
+      if (!spell || spell.cooldown > 0n || view.selected.ap < spell.details.ap_cost) return
+      event.preventDefault()
+      select_spell(selected_spell === spell.name ? null : spell.name)
+    }
+    globalThis.addEventListener('keydown', keydown)
+    return () => globalThis.removeEventListener('keydown', keydown)
+  }, [actions_locked, select_spell, selected_spell, view])
+
   if (!view || !fight.checkpoint) return null
   if (view.phase === 'placement') return <PlacementBanner deadline={view.placement_deadline_ms} text={copy.fight_hud} />
   if (view.phase !== 'active' || !view.selected) return null
@@ -178,20 +233,52 @@ export const FightHud = ({ copy }: Readonly<{ copy: AppCopy }>) => {
       input: { type: 'forfeit', fighter: selected.seat },
     })
   }
+  const reset_turn = (): void => {
+    select_spell(null)
+    dispatch_app({ type: 'fight/reset_turn' })
+  }
 
   return (
     <div className="fight-hud">
-      <FightTimeline fighters={view.timeline} label={copy.fight_hud.turn_order} />
+      <FightTimeline
+        fighters={view.timeline}
+        focus={focus_fighter ?? (() => undefined)}
+        label={copy.fight_hud.turn_order}
+      />
       <div className="fight-hud__bottom">
-        <div className="fight-hud__controls">
-          <button disabled={!view.can_end_turn || !min_turn_ready} onClick={end_turn} type="button">
-            {copy.fight_hud.end_turn}
-          </button>
-          <button disabled={!view.can_forfeit} onClick={() => set_forfeit_open(true)} type="button">
-            {copy.fight_hud.forfeit}
-          </button>
+        <div className="fight-hud__bar">
+          <div className="fight-hud__controls">
+            <button
+              className="fight-hud__end-turn"
+              disabled={!view.can_end_turn || !min_turn_ready || actions_locked}
+              onClick={end_turn}
+              type="button"
+            >
+              {copy.fight_hud.end_turn}
+            </button>
+            <div className="fight-hud__secondary-controls">
+              {fight.mode === 'local' && (
+                <button disabled={actions_locked} onClick={reset_turn} type="button">
+                  {copy.fight_hud.reset_turn}
+                </button>
+              )}
+              <button
+                className="fight-hud__forfeit"
+                disabled={!view.can_forfeit || actions_locked}
+                onClick={() => set_forfeit_open(true)}
+                type="button"
+              >
+                {copy.fight_hud.forfeit}
+              </button>
+            </div>
+          </div>
+          <FightVitals
+            can_act={view.can_end_turn && !actions_locked}
+            fighter={selected}
+            select_spell={select_spell}
+            selected_spell={selected_spell}
+          />
         </div>
-        <FightVitals can_act={view.can_end_turn} fighter={selected} />
       </div>
       {forfeit_open && (
         <ModalFrame

@@ -1,28 +1,34 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 /// THE SEEDING — the whole one-time content publish in one file. Each batch transaction:
-/// `begin_batch` (Publisher-gated hot potato) → N × (`new_template` → `set_stats` →
+/// `begin_batch` (epoch-bound AdminCap hot potato) → N × (`new_template` → `set_stats` →
 /// `set_damages` → `freeze`) → `destroy_seed_cap`. The final transaction calls `seal` — after
 /// that, `begin_batch` aborts for eternity: the content set is a sealed artifact, zero admin
-/// power over content remains on-chain. Admin doors are Publisher-gated, never version-gated.
+/// power over content remains on-chain. Any current AdminCap may finish the session it started.
 module aresrpg::seed;
 
 use aresrpg::{
+  admin::AdminCap,
   consumable,
   crafting::{Self, Recipe},
   item::{Self, Item, ItemTemplate, TemplateRegistry},
   loot_box::{Self, LootRegistry},
-  mob_template::{Self, LootEntry, MobSpell, MobTemplate},
+  mob_template::{Self, MobTemplate},
   shop::{Self, Giftcard},
   spell_template::{Self, SpellTemplate},
-  world::{Self, DungeonRoom, MobRow, ResourceRow, World},
+  world::{Self, World},
 };
-use aresrpg_math::{item_damages::ItemDamages, item_stats::ItemStatistics, spell_effect::SpellLevel};
+use aresrpg_math::{
+  item_damages::ItemDamages,
+  item_stats::ItemStatistics,
+  mob_data::{Self, LootEntry, MobSpell},
+  spell_effect::SpellLevel,
+  world_map::{Self, DungeonRoom, MobRow, ResourceRow},
+};
 use std::string::String;
-use sui::{derived_object, package::Publisher};
+use sui::derived_object;
 
 const ESealed: u64 = 401;
-const ENotPublisher: u64 = 402;
 const EIncompleteLootBox: u64 = 403;
 
 /// The seeding key — a HOT POTATO (no abilities): born from `begin_batch`, it cannot be
@@ -36,9 +42,10 @@ public struct SealKey(String) has copy, drop, store;
 public struct WorldSeedMarker has key { id: UID }
 public struct SealMarker has key { id: UID }
 
-/// Open one seeding batch. Publisher-gated; aborts forever once sealed.
-public fun begin_batch(publisher: &Publisher, registry: &mut TemplateRegistry): SeedCap {
-  assert!(publisher.from_package<Item>(), ENotPublisher);
+/// Open one seeding batch. Current-epoch temp caps support a local publishing session;
+/// the permanent super cap works too. Both abort forever once content is sealed.
+public fun begin_batch(admin: &AdminCap, registry: &mut TemplateRegistry, ctx: &TxContext): SeedCap {
+  admin.verify(ctx);
   assert!(!item::is_sealed(registry), ESealed);
   SeedCap {}
 }
@@ -52,8 +59,9 @@ public fun new_item_template(
   item_type: String,
   category: String,
   level: u8,
+  pet_foods: vector<String>,
 ): ItemTemplate {
-  item::new_template(registry, name, item_type, category, level)
+  item::new_template(registry, name, item_type, category, level, pet_foods)
 }
 
 /// Author the stat ranges (gear only; every min ≤ max asserted before any freeze).
@@ -102,14 +110,14 @@ public fun new_mob_template(
   fire_resistance: u16,
   water_resistance: u16,
   air_resistance: u16,
-  spells: vector<MobSpell>, // rows via `mob_template::new_mob_spell` — the kit freezes here
+  spells: vector<MobSpell>, // rows via `mob_data::new_mob_spell` — the kit freezes here
   loot: vector<LootEntry>,
   xp: u64,
 ): MobTemplate {
-  mob_template::new(
-    registry, name, mob_type, element, level_min, level_max, hp, ap, mp, agility, wisdom,
+  mob_template::new(registry, mob_data::new_mob_data(
+    name, mob_type, element, level_min, level_max, hp, ap, mp, agility, wisdom,
     earth_resistance, fire_resistance, water_resistance, air_resistance, spells, loot, xp,
-  )
+  ))
 }
 
 public fun freeze_mob_template(template: MobTemplate) {
@@ -204,9 +212,9 @@ public fun new_giftcard(
   shop::new_giftcard(registry, card_id, item::template_id(template), amount)
 }
 
-/// Author a world's mob families (rows via `world::new_mob_row`). Overwrite legal until the seal.
+/// Author a world's mob families (rows via `world_map::new_mob_row`). Overwrite legal until the seal.
 public fun set_world_mobs(_: &SeedCap, world: &mut World, rows: vector<MobRow>) {
-  world::set_mobs(world, rows);
+  world_map::set_mobs(world::content_mut(world), rows);
 }
 
 /// Author a world's biome map — one biome id per zone, derived from the terrain recipe by
@@ -214,27 +222,27 @@ public fun set_world_mobs(_: &SeedCap, world: &mut World, rows: vector<MobRow>) 
 /// declares the window, then appends ≤16,384-byte cell slices — ALL IN ONE PTB (reads abort
 /// on a half-filled map). Overwrite legal until the seal: re-declaring the window restarts.
 public fun set_world_biome_window(_: &SeedCap, world: &mut World, zone_x0: u32, zone_z0: u32, side: u16) {
-  world::set_biome_map_window(world, zone_x0, zone_z0, side);
+  world_map::set_biome_map_window(world::content_mut(world), zone_x0, zone_z0, side);
 }
 
 public fun append_world_biome_cells(_: &SeedCap, world: &mut World, cells: vector<u8>) {
-  world::append_biome_map_cells(world, cells);
+  world_map::append_biome_map_cells(world::content_mut(world), cells);
 }
 
-/// Author a world's resources (rows via `world::new_resource_row`).
+/// Author a world's resources (rows via `world_map::new_resource_row`).
 public fun set_world_resources(_: &SeedCap, world: &mut World, rows: vector<ResourceRow>) {
-  world::set_resources(world, rows);
+  world_map::set_resources(world::content_mut(world), rows);
 }
 
 /// Tie the world's dungeon key item (the dungeon system reads it later).
 public fun set_world_dungeon_key(_: &SeedCap, world: &mut World, item_type: String) {
-  world::set_dungeon_key(world, item_type);
+  world_map::set_dungeon_key(world::content_mut(world), item_type);
 }
 
-/// Author the world's dungeon room sequence (rows via `world::new_dungeon_room` /
+/// Author the world's dungeon room sequence (rows via `world_map::new_dungeon_room` /
 /// `new_room_mob`; the last room carries the boss). Overwrite legal until the seal.
 public fun set_world_dungeon_rooms(_: &SeedCap, world: &mut World, rooms: vector<DungeonRoom>) {
-  world::set_dungeon_rooms(world, rooms);
+  world_map::set_dungeon_rooms(world::content_mut(world), rooms);
 }
 
 /// Commit the world's deterministic receipt in the same PTB as its content writes.
@@ -250,8 +258,8 @@ public fun destroy_seed_cap(cap: SeedCap) {
 }
 
 /// The seeding's final command: after this, `begin_batch` aborts for eternity.
-public fun seal(publisher: &Publisher, registry: &mut TemplateRegistry) {
-  assert!(publisher.from_package<Item>(), ENotPublisher);
+public fun seal(admin: &AdminCap, registry: &mut TemplateRegistry, ctx: &TxContext) {
+  admin.verify(ctx);
   transfer::freeze_object(SealMarker {
     id: derived_object::claim(item::registry_uid_mut(registry), SealKey(b"sealed".to_string())),
   });

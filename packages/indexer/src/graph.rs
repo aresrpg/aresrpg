@@ -306,6 +306,7 @@ fn emit_object(
             &s.id,
             ckpt,
             &[
+                format!("v.item_type = {}", q(&s.item_type)),
                 format!("v.template = {}", q_id(&s.template)),
                 format!("v.price = {}", q(&s.price.to_string())),
                 format!("v.supply = {}", q(&s.supply.to_string())),
@@ -323,6 +324,7 @@ fn emit_object(
             &a.id,
             ckpt,
             &[
+                format!("v.drop_id = {}", q(&a.drop_id)),
                 format!("v.template = {}", q_id(&a.template)),
                 format!("v.amount_each = {}", a.amount_each),
                 format!("v.whitelist = {whitelist}"),

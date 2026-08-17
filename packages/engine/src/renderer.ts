@@ -16,6 +16,7 @@ import type {
   FightBlobRender,
   FightBlobSpec,
   FightBoardRender,
+  FightPresentationCue,
   RenderChunkRequest,
   Vec3,
 } from './types.ts'
@@ -55,6 +56,7 @@ export const create_engine = ({
   let flat_amount = 0
   let fight_board: FightBoardRender | null = null
   let entities: readonly EntityRender[] = Object.freeze([])
+  const pending_fight_cues: Array<Readonly<{ cue: FightPresentationCue; resolve: (played: boolean) => void }>> = []
   const fight_blobs = new Map<string, FightBlobRender>()
   let fight_blob_serial = 0
   let started = false
@@ -111,6 +113,7 @@ export const create_engine = ({
     next.set_flatten_amount(flat_amount)
     next.set_fight_board(fight_board)
     next.set_entities(entities)
+    pending_fight_cues.splice(0).forEach(({ cue, resolve }) => void next.play_fight_cue(cue).then(resolve))
     fight_blobs.forEach(next.upsert_fight_blob)
     pending_chunks.forEach(submit_chunk)
     publish_status({ state: issue ? 'degraded' : 'ready', backend: next.kind, ...(issue ? { issue } : {}) })
@@ -196,6 +199,12 @@ export const create_engine = ({
       entities = Object.freeze([...next])
       backend?.set_entities(entities)
     },
+    animate_entity: (motion) => backend?.animate_entity(motion) ?? Promise.resolve(false),
+    play_fight_cue: (cue) =>
+      backend
+        ? backend.play_fight_cue(cue)
+        : new Promise<boolean>((resolve) => pending_fight_cues.push(Object.freeze({ cue, resolve }))),
+    project_entity: (id) => backend?.project_entity(id) ?? null,
     create_fight_blob: (blob: FightBlobSpec) => {
       fight_blob_serial += 1
       const id = `fight_blob_${fight_blob_serial}`
@@ -203,6 +212,13 @@ export const create_engine = ({
       fight_blobs.set(id, rendered)
       backend?.upsert_fight_blob(rendered)
       return id
+    },
+    update_fight_blob: (id: string, blob: FightBlobSpec) => {
+      if (!fight_blobs.has(id)) return false
+      const rendered = Object.freeze({ ...blob, id, created_at: performance.now() })
+      fight_blobs.set(id, rendered)
+      backend?.upsert_fight_blob(rendered)
+      return true
     },
     remove_fight_blob: (id: string) => {
       fight_blobs.delete(id)
@@ -257,6 +273,7 @@ export const create_engine = ({
       pending_chunks.clear()
       fight_blobs.clear()
       entities = Object.freeze([])
+      pending_fight_cues.splice(0).forEach(({ resolve }) => resolve(false))
       chunk_waiters.forEach(({ resolve }) => resolve('removed'))
       chunk_waiters.clear()
       backend?.dispose()

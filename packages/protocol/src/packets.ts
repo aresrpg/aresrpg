@@ -166,6 +166,15 @@ export type TradeRow = {
 /** A pending grind-safe claim (soulbound, redeem later — crush or loot box). */
 export type ClaimRow = { id: string; kind: 'crush' | 'box' }
 
+/** Mutable shop state. Authored names, prices, art, and initial caps stay in seed/. */
+export type ShopSaleState = Readonly<{ item_type: string; supply: string }>
+export type AirdropState = Readonly<{
+  drop_id: string
+  eligible: boolean
+  eligible_count: number
+}>
+export type ShopState = Readonly<{ sales: readonly ShopSaleState[]; airdrops: readonly AirdropState[] }>
+
 /** Zones are 512-block squares (zone.move ZONE_SIZE) — the tracking unit for everything. */
 export const ZONE_SIZE = 512
 export const zone_of = (x: number, z: number) => ({ zx: Math.floor(x / ZONE_SIZE), zz: Math.floor(z / ZONE_SIZE) })
@@ -215,6 +224,8 @@ export type ClientPackets = {
   'packet/character_owner_request': { id: number; character_id: string }
   /** Privileged dashboard request — whitelisted addresses only; everyone else gets a refusal. */
   'packet/admin_request': { id: number; kind: 'stats'; params?: Record<string, unknown> }
+  /** Authenticated transport probe. The server echoes the opaque id; neither side stores it. */
+  'packet/ping': { id: number }
 }
 
 // ╔════════════════ [ server → client (the push stream) ] ═════════════════════ ]
@@ -223,6 +234,8 @@ export type ServerPackets = {
   /** Pre-auth challenge. No player state exists until its matching proof verifies. */
   'packet/signature_request': { payload: string }
   'packet/connection_accepted': { address: string }
+  /** Transport-only ping response used to measure this socket's round-trip time. */
+  'packet/pong': { id: number }
   // ── the one-time load snapshot ──
   'packet/characters': { characters: CharacterRow[] }
   /** The user's ONE flat inventory — every held item, whatever kiosk custody it sits in. */
@@ -237,9 +250,11 @@ export type ServerPackets = {
   'packet/listings': { listings: ListingRow[] }
   /** The player's OPEN trades (either side) — the escrow replaces transferred caps. */
   'packet/trades': { trades: TradeRow[] }
+  /** Current mutable shop state; immutable presentation remains the local seed catalog. */
+  'packet/shop_state': ShopState
 
-  // ── cluster heartbeat (5s cadence, decorrelated from user activity — owner 2026-08-12) ──
-  'packet/server_info': { online: number }
+  // ── cluster + indexer heartbeat (5s cadence, decorrelated from user activity) ──
+  'packet/server_info': { online: number; indexing_lag: number | null }
   'packet/character_owner_response': { id: number; character_id: string; name: string; owner: string }
 
   // ── social stream (facts other players' transactions caused, targeting this player) ──
@@ -294,6 +309,10 @@ export type ServerPackets = {
   /** One of YOUR listings sold (the buyer's transaction — money arrived in your kiosk). */
   'packet/listing_sold': { object: string; price_mist: string }
 
+  // ── primary shop stream (other players' transactions only) ──
+  'packet/shop_supply': ShopSaleState
+  'packet/airdrop_remaining': { drop_id: string; eligible_count: number }
+
   // ── kolizeum stream ──
   'packet/kolizeum_created': { kolizeum: string; fight: string; pledge: string; format: string }
   'packet/kolizeum_paid': { kolizeum: string; winner: string; amount: string }
@@ -325,6 +344,7 @@ export const SESSION_PACKETS = [
   'packet/giftcards',
   'packet/listings',
   'packet/trades',
+  'packet/shop_state',
   'packet/server_info',
   'packet/character_owner_response',
   'packet/friend_added',
@@ -333,6 +353,8 @@ export const SESSION_PACKETS = [
   'packet/trade_destroyed',
   'packet/market_delisted',
   'packet/listing_sold',
+  'packet/shop_supply',
+  'packet/airdrop_remaining',
   'packet/error',
 ] as const
 
@@ -375,6 +397,9 @@ export const KOLIZEUM_PACKETS = ['packet/kolizeum_created', 'packet/kolizeum_pai
 /** Parseable but folded by NO store — arrives only on surfaces without a UI yet. */
 export const IGNORED_PACKETS = ['packet/admin_response'] as const
 
+/** Consumed at the transport boundary before packets enter a domain reducer. */
+export const TRANSPORT_PACKETS = ['packet/pong'] as const
+
 export const SERVER_PACKET_TYPES = [
   ...SESSION_PACKETS,
   ...WORLD_PACKETS,
@@ -382,6 +407,7 @@ export const SERVER_PACKET_TYPES = [
   ...MARKET_PACKETS,
   ...KOLIZEUM_PACKETS,
   ...IGNORED_PACKETS,
+  ...TRANSPORT_PACKETS,
 ] as const satisfies readonly ServerPacket['type'][]
 
 /** The server is trusted and shares this package; the client only decodes JSON syntax here. */
@@ -400,6 +426,7 @@ type RoutedPacketType =
   | (typeof MARKET_PACKETS)[number]
   | (typeof KOLIZEUM_PACKETS)[number]
   | (typeof IGNORED_PACKETS)[number]
+  | (typeof TRANSPORT_PACKETS)[number]
 // The census seal: this line reds the moment a declared server packet joins no domain list.
 const UNROUTED_SERVER_PACKETS: Record<Exclude<ServerPacket['type'], RoutedPacketType>, never> = {}
 void UNROUTED_SERVER_PACKETS
@@ -417,6 +444,7 @@ export const CLIENT_PACKET_TYPES = [
   'packet/spectate',
   'packet/character_owner_request',
   'packet/admin_request',
+  'packet/ping',
 ] as const satisfies readonly (keyof ClientPackets)[]
 
 const is_finite_number = (value: unknown): value is number => Number.isFinite(value)
@@ -502,6 +530,10 @@ export function parse_client_packet(raw: string | Buffer): ClientPacket {
   if (type === 'packet/admin_request') {
     if (packet.kind !== 'stats') throw new Error(`unknown admin kind "${String(packet.kind)}"`)
     if (!Number.isInteger(packet.id)) throw new Error('packet/admin_request needs an integer id')
+    return packet as ClientPacket
+  }
+  if (type === 'packet/ping') {
+    if (!Number.isSafeInteger(packet.id) || Number(packet.id) < 0) throw new Error('packet/ping needs a safe id')
     return packet as ClientPacket
   }
   throw new Error(`unknown packet type "${String(type)}"`)

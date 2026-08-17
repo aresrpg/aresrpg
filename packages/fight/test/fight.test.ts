@@ -6,6 +6,7 @@ import { describe, expect, test } from 'bun:test'
 import { GRID_CELLS, mask_get, neighbours } from '../src/combat_grid.ts'
 import { create_mob_snapshot } from '../src/create.ts'
 import { create_fight } from '../src/fight.ts'
+import { fight_path_to, reachable_fight_cells } from '../src/movement.ts'
 import { mix } from '../src/prng.ts'
 
 import { create_fixture } from './helpers.ts'
@@ -94,6 +95,29 @@ describe('fight API', () => {
       0n,
     ])
     expect(fight.state().contract.queue[Number(fight.state().contract.turn_ptr)]).toBe(0n)
+  })
+
+  test('local mode restores the exact current-turn boundary', () => {
+    const { checkpoint } = create_fixture()
+    const fight = create_fight({ state: checkpoint, mode: 'local', seed: 91n })
+    const started = fight.apply({ type: 'start', observed_ms: 60_000n }).state
+    const fighter = started.contract.queue[Number(started.contract.turn_ptr)]!
+    const [target] = reachable_fight_cells(started, fighter)
+    const path = target === undefined ? null : fight_path_to(started, fighter, target)
+    expect(path?.length).toBeGreaterThan(0)
+    fight.apply({ type: 'move_to', fighter, path: path! })
+    expect(fight.state()).not.toEqual(started)
+
+    const reset = fight.reset_turn()
+
+    expect(reset).toEqual({ state: started, events: [], error: null })
+    expect(fight.state()).toEqual(started)
+  })
+
+  test('remote mode cannot reset authoritative turn state', () => {
+    const fight = create_fight({ state: create_fixture().checkpoint, mode: 'remote' })
+
+    expect(fight.reset_turn().error?.code).toBe('local_mode_required')
   })
 
   test('streamed mob witnesses reproduce the local turn exactly', () => {

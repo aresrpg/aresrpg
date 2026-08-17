@@ -28,7 +28,7 @@ use aresrpg::{
   world::{Self, World},
   zone,
 };
-use aresrpg_math::job_xp;
+use aresrpg_math::{job_xp, mob_data, world_map};
 use std::string::String;
 use sui::{
   clock::Clock,
@@ -60,10 +60,6 @@ const ROOT_UNTIL_RESOLVED_MS: u64 = 3_153_600_000_000;
 //   gatherTime(jl)  = max(2s, 12s − 10s × (jl−1)/99)  — the rooting duration
 //   qty roll        ∈ [1 + 5×(jl−1)/99, max(lo, 2 + (jl−req)/5)]
 //   gatherXp(req)   = 10 + req/2  — off the RESOURCE's required level, every gather
-const GATHER_TIME_BASE_MS: u64 = 12_000;
-const GATHER_TIME_SPAN_MS: u64 = 10_000; // shaved linearly over levels 1→100
-const GATHER_TIME_FLOOR_MS: u64 = 2_000;
-
 // ╔════════════════ [ Types ] ════════════════════════════════════════════════ ]
 
 /// The GAS-UNIFORM ambush verdict (Sui `&Random` law, owner 2026-08-10: every outcome must
@@ -119,7 +115,7 @@ public(package) fun gather(
   // The live pack (a read — remaining nodes asserted) and its authored row.
   let pack = zone::resource_pack_at(w, zx, zz, pack_index);
   let item_type = pack.pack_item_type();
-  let row = world::resource_row_of(w, item_type);
+  let row = world_map::resource_row_of(world::content(w), item_type);
   assert!(item::template_type(template) == item_type, ETemplateMismatch);
 
   // Gates on the character, then the job-xp write — all refusals before any state moves.
@@ -128,16 +124,15 @@ public(package) fun gather(
     let current = world::prove_move(chr, pack.pack_x(), pack.pack_z(), clock);
     assert!(current == w.name(), EWrongWorld);
     let job = row.resource_row_job();
-    assert!(equipment::tool_of(chr) == tool_of_job(job), ENoTool);
+    assert!(equipment::tool_of(chr) == job_xp::gathering_tool(&job), ENoTool);
 
     let job_level = progression::job_level_of(chr, job);
     let required = job_xp::tier_to_level(row.resource_row_tier() as u64);
     assert!(job_level >= required, ETierLocked);
 
     // ONE yield roll in the reference band: both bounds climb with the job level.
-    let lo = 1 + 5 * (job_level - 1) / 99;
-    let hi_raw = 2 + (job_level - required) / 5;
-    let quantity = gen.generate_u64_in_range(lo, if (hi_raw < lo) lo else hi_raw);
+    let (min_quantity, max_quantity) = job_xp::gather_quantity_bounds(job_level, required);
+    let quantity = gen.generate_u64_in_range(min_quantity, max_quantity);
 
     // THE PROTECTOR VERDICT — gas-uniform by construction (Sui `&Random` law): every draw
     // happens and the SAME fixed-shape verdict writes on BOTH outcomes, so no gas budget
@@ -159,11 +154,11 @@ public(package) fun gather(
       hp,
     });
 
-    let gained_xp = 10 + required / 2; // gatherXp(reqLevel), reference-exact
+    let gained_xp = job_xp::gather_xp(required);
     progression::bank_job_xp(chr, job, gained_xp);
     // GATHER TIME roots the gatherer; a fired verdict roots UNTIL RESOLVED — same stamp,
     // same gas, different horizon.
-    let root = if (protector) ROOT_UNTIL_RESOLVED_MS else gather_time_ms(job_level);
+    let root = if (protector) ROOT_UNTIL_RESOLVED_MS else job_xp::gather_time_ms(job_level);
     world::delay_checkpoint(chr, root, clock);
     (quantity, gained_xp, protector)
   };
@@ -218,7 +213,7 @@ public(package) fun resolve_ambush(
     world::delay_checkpoint(chr, 0, clock);
     verdict
   };
-  assert!(protector_template.mob_type() == verdict.protector, EWrongProtector);
+  assert!(mob_data::mob_type(protector_template.data()) == verdict.protector, EWrongProtector);
   fight::ambush(
     protected,
     kiosk,
@@ -247,15 +242,6 @@ public(package) fun has_fired_verdict(chr: &Character): bool {
 // ╔════════════════ [ Internals ] ════════════════════════════════════════════ ]
 
 /// Overwrite-or-add the verdict DF — the same bytes land on both outcomes (the gas law).
-/// A gathering JOB's instrument (owner 2026-08-13): jobs are primary (FARMER / HERBALIST /
-/// MINER author the resource rows); the tool is derived equipment vocabulary — only these
-/// three jobs have tools, and this is the ONE place that knows which.
-fun tool_of_job(job: String): String {
-  if (job == b"FARMER".to_string()) return b"tool_farmer".to_string();
-  if (job == b"HERBALIST".to_string()) return b"tool_herbalist".to_string();
-  b"tool_miner".to_string()
-}
-
 fun write_verdict(chr: &mut Character, verdict: PendingAmbush) {
   let uid = chr.uid_mut();
   if (dfield::exists(uid, AmbushKey())) {
@@ -263,11 +249,4 @@ fun write_verdict(chr: &mut Character, verdict: PendingAmbush) {
   } else {
     dfield::add(uid, AmbushKey(), verdict);
   }
-}
-
-/// The rooting duration: `max(2s, 12s − 10s × (jl−1)/99)` — reference-exact.
-fun gather_time_ms(job_level: u64): u64 {
-  let shaved = GATHER_TIME_SPAN_MS * (job_level - 1) / 99;
-  let t = GATHER_TIME_BASE_MS - shaved;
-  if (t < GATHER_TIME_FLOOR_MS) GATHER_TIME_FLOOR_MS else t
 }

@@ -2,6 +2,7 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
 import { describe, expect, test } from 'bun:test'
+import { craft_job_of } from '@aresrpg/immutable'
 
 import airdrop from '../../../../seed/content/airdrop.json'
 import items from '../../../../seed/content/items.json'
@@ -43,15 +44,24 @@ describe('seed editor model', () => {
     expect(entity_rows('items', items)).toHaveLength(1980)
     expect(entity_rows('mobs', mobs)).toHaveLength(383)
     expect(entity_rows('spells', spells)).toHaveLength(240)
-    expect(entity_rows('recipes', recipes)).toHaveLength(1461)
+    expect(entity_rows('recipes', recipes)).toHaveLength(1477)
     expect(entity_rows('worlds', worlds)).toHaveLength(20)
     expect(entity_rows('shop', shop)).toHaveLength(36)
     expect(entity_rows('airdrop', airdrop).length).toBeGreaterThan(0)
+    expect(entity_rows('items', items)[0]?.label).toBe(items[0].name)
   })
 
   test('recipes author ingredients, never derived XP or output quantity', () => {
     expect(
       recipes.every((recipe) => !Object.hasOwn(recipe, 'craft_xp') && !Object.hasOwn(recipe, 'output_quantity'))
+    ).toBe(true)
+    const categories = new Map(items.map(({ item_type, category }) => [item_type, category]))
+    expect(
+      recipes.every((recipe) =>
+        craft_job_of(categories.get(recipe.output_type) ?? '')
+          ? !Object.hasOwn(recipe, 'job')
+          : Object.hasOwn(recipe, 'job')
+      )
     ).toBe(true)
   })
 

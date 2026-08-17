@@ -11,7 +11,7 @@ import {
   load_fight_character_entities,
   type FightCharacterRenderSource,
 } from '../game/fight/character_entities.ts'
-import { load_fight_mob_entities, type FightMobRenderSource } from '../game/fight/mob_entities.ts'
+import { fight_mob_entities, type FightMobRenderSource } from '../game/fight/mob_entities.ts'
 import type { AppCopy } from '../i18n/copy.ts'
 import { simulator_board } from '../modules/simulator.ts'
 import { dispatch_app, useAppStore } from '../store.ts'
@@ -54,8 +54,9 @@ export const SimulatorBoardPane = ({
 
   useEffect(() => {
     let current = true
-    void Promise.all([load_fight_character_entities(character_sources), load_fight_mob_entities(mob_sources)]).then(
-      ([characters, mobs]) => {
+    const mobs = fight_mob_entities(mob_sources)
+    void load_fight_character_entities(character_sources).then(
+      (characters) => {
         if (current) set_entities(Object.freeze([...characters, ...mobs]))
       },
       (error: unknown) => {
@@ -72,6 +73,7 @@ export const SimulatorBoardPane = ({
     <>
       <FightViewport
         board={setup_board}
+        board_key={`simulator:${simulator.seed}`}
         blob_request={blob_request}
         entities={entities}
         label={copy.simulator_page.fight_board}

@@ -8,7 +8,8 @@ import { create_seed_plan, type SeedBuildContext } from '@aresrpg/sdk/seed'
 import { seed_content } from '../../src/admin/seed_content.ts'
 
 const object_id = (value: number): string => `0x${value.toString(16).padStart(2, '0').repeat(32)}`
-const reference = (value: number) => ({ objectId: object_id(value), version: '1', digest: 'digest' })
+const digest = '11111111111111111111111111111111'
+const reference = (value: number) => ({ objectId: object_id(value), version: '1', digest })
 const shared = (value: number) => ({ objectId: object_id(value), initialSharedVersion: '1' })
 const pins: Pins = {
   package: `0x${'11'.repeat(32)}`,
@@ -20,27 +21,30 @@ const sdk = SDK({
   pins,
   client: {
     core: {
+      resolveTransactionPlugin: () => async (_transaction, _options, next) => next(),
+      getBalance: async () => ({ balance: { balance: '0' } }),
+      getCurrentSystemState: async () => ({ systemState: { epoch: '1', referenceGasPrice: '1' } }),
+      getChainIdentifier: async () => ({ chainIdentifier: digest }),
       getReferenceGasPrice: async () => ({ referenceGasPrice: '1' }),
       listCoins: async () => ({ objects: [] }),
       getObjects: async () => ({ objects: [] }),
       simulateTransaction: async () => ({}),
       executeTransaction: async () => ({}),
     },
-  } as SuiTransport,
+  } satisfies SuiTransport,
 })
 
 const build_context: SeedBuildContext = Object.freeze({
-  publisher: reference(5),
+  admin_cap: reference(5),
   worlds: Object.freeze(Object.fromEntries(seed_content.worlds.map(({ world }, index) => [world, shared(index + 16)]))),
 })
 
 const remember = (ids: readonly string[]): void => {
-  for (const [index, object_id] of ids.entries())
-    sdk.cache.owned.set(object_id, { objectId: object_id, version: '1', digest: `digest-${index}` })
+  for (const object_id of ids) sdk.cache.owned.set(object_id, { objectId: object_id, version: '1', digest })
 }
 
 describe('admin seed content', () => {
-  test('compiles the authored corpus into one fully resumable bounded plan', () => {
+  test('compiles the authored corpus into one fully resumable bounded plan', async () => {
     const plan = create_seed_plan(sdk, seed_content)
     const targets = plan.batches.flatMap(({ target_ids }) => target_ids)
     const existing = new Set<string>()
@@ -49,6 +53,10 @@ describe('admin seed content', () => {
       expect(batch.dependencies.every((id) => existing.has(id))).toBeTrue()
       const transaction = batch.build(build_context, existing)
       expect(transaction).not.toBeNull()
+      if (transaction) {
+        expect(transaction.getData().commands.length).toBeLessThan(1_024)
+        expect((await transaction.build({ onlyTransactionKind: true })).byteLength).toBeLessThanOrEqual(131_072)
+      }
       remember(batch.target_ids)
       for (const id of batch.target_ids) existing.add(id)
     }
@@ -57,5 +65,9 @@ describe('admin seed content', () => {
     expect(plan.batches.every(({ target_ids }) => target_ids.length > 0)).toBeTrue()
     expect(new Set(targets).size).toBe(targets.length)
     expect(plan.seal_id).not.toBeEmpty()
-  })
+    // worlds seed one batch EACH (a single indivisible worlds transaction had no way out of
+    // the 128 KiB ceiling); batches are session-signed, so count costs no wallet clicks
+    expect(plan.batches.length).toBeLessThanOrEqual(80)
+    // the biome maps run the engine's real sampler over every world — corpus-sized, not unit-sized
+  }, 30_000)
 })

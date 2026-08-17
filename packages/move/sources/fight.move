@@ -26,20 +26,24 @@ use aresrpg::{
   party::{Self, Party},
   equipment,
   item::{Self, ItemTemplate},
-  mob_template::{Self, MobTemplate, LootEntry},
+  mob_template::{Self, MobTemplate},
   progression,
   protected_policy::AresRPG_TransferPolicy,
   spell_template::SpellTemplate,
   world,
-  zone::{Self, MobMember},
+  zone,
 };
 use aresrpg_math::{
   combat_grid::{Self, GridSpec},
+  content_rules,
   fight_math,
   item_stats,
+  mob_data::{Self, LootEntry},
   prng,
   spell_effect::{Self, Effect, SpellLevel},
   weapon,
+  world_map,
+  zone_math::{Self, MobMember},
 };
 use std::string::String;
 use sui::{
@@ -71,7 +75,6 @@ const ENoAp: u64 = 1715; // cast: the pool cannot pay
 const EOutOfRange: u64 = 1716;
 const ENoLineOfSight: u64 = 1717;
 const ENotInLine: u64 = 1718; // line_launch: target not on the caster's row/column
-const ENeedsTarget: u64 = 1719; // non-free-cell spell aimed at an empty (or hidden) cell
 const EBadTargetCell: u64 = 1720; // off-shape, obstacle, hole, or an occupied placement anchor
 const ECapReached: u64 = 1721; // per-turn cap, per-target cap, or cooldown
 const ENotYourSpell: u64 = 1722; // class mismatch, not learned, or not in the mob's kit
@@ -375,11 +378,11 @@ public(package) fun dungeon_build(
   ctx: &mut TxContext,
 ): FightBuild {
   assert!(access <= ACCESS_GROUP, EBadTeam);
-  let room_mobs = w.dungeon_room_mobs(room);
+  let room_mobs = world_map::dungeon_room_at(world::content(w), room);
   let mut pending = vector[];
   let mut i = 0;
   while (i < room_mobs.length()) {
-    pending.push_back(zone::new_member(room_mobs[i].room_mob_type(), room_mobs[i].room_mob_scalar()));
+    pending.push_back(zone_math::new_member(room_mobs[i].room_mob_type(), room_mobs[i].room_mob_scalar()));
     i = i + 1;
   };
   // no travel proof: the run's character is already staged at the portal (rooted) — the
@@ -396,7 +399,7 @@ public(package) fun dungeon_build(
 public(package) fun add_mob(mut build: FightBuild, template: &MobTemplate): FightBuild {
   assert!(!build.pending.is_empty(), EWrongMob);
   let member = build.pending.remove(0);
-  assert!(member.member_type() == template.mob_type(), EWrongMob);
+  assert!(member.member_type() == mob_data::mob_type(template.data()), EWrongMob);
   let cell = build.board.start_cells_b()[build.fighters.length() - 1];
   build.fighters.push_back(mob_fighter(template, member.member_level_scalar() as u64, cell));
   build
@@ -440,7 +443,7 @@ fun share_new_fight(
   clock: &Clock,
   ctx: &mut TxContext,
 ): ID {
-  let closed = closed_mask(&board);
+  let closed = combat_grid::closed_mask(&board);
   let mut fight = Fight {
     id: object::new(ctx),
     world,
@@ -474,21 +477,6 @@ fun share_new_fight(
   event::emit(FightCreated { fight: id, world: fight.world, x, z });
   transfer::share_object(fight);
   id
-}
-
-/// Off-shape ∪ obstacles ∪ holes as one bitset — computed once, the board never changes.
-fun closed_mask(board: &GridSpec): vector<u64> {
-  let shape = board.shape_mask();
-  let mut closed = combat_grid::empty_mask();
-  let mut c = 0;
-  let n = combat_grid::grid_cells();
-  while (c < n) {
-    if (!combat_grid::mask_get(&shape, c)) combat_grid::mask_set(&mut closed, c);
-    c = c + 1;
-  };
-  combat_grid::mask_add_cells(&mut closed, &board.obstacles());
-  combat_grid::mask_add_cells(&mut closed, &board.holes());
-  closed
 }
 
 // ╔════════════════ [ Challenge — the duel door ] ═════════════════════════════ ]
@@ -757,23 +745,13 @@ public(package) fun start(fight: &mut Fight, gen: &mut RandomGenerator, clock: &
 /// Weave the two sides into one order, as evenly as unequal sizes allow: the side owing the
 /// larger share of remaining turns goes next, tie → team 0. No initiative stat exists.
 fun weave(fight: &Fight): vector<u64> {
-  let mut side_a = vector[];
-  let mut side_b = vector[];
+  let mut teams = vector[];
   let mut i = 0;
   while (i < fight.fighters.length()) {
-    if (fight.fighters[i].team == 0) side_a.push_back(i) else side_b.push_back(i);
+    teams.push_back(fight.fighters[i].team);
     i = i + 1;
   };
-  let la = side_a.length();
-  let lb = side_b.length();
-  let mut out = vector[];
-  let mut a = 0;
-  let mut b = 0;
-  while (a < la || b < lb) {
-    let take_a = if (a >= la) false else if (b >= lb) true else (la - a) * lb >= (lb - b) * la;
-    if (take_a) { out.push_back(side_a[a]); a = a + 1; } else { out.push_back(side_b[b]); b = b + 1; };
-  };
-  out
+  fight_math::weave_teams(teams)
 }
 
 // ╔════════════════ [ The player doors ] ═════════════════════════════════════ ]
@@ -939,7 +917,8 @@ public(package) fun claim_drop(
       let row = drops.remove(i);
       // clamp to 1 for a non-stackable template (audit 2026-08-10: a qty>1 row on a
       // non-stackable item aborted `mint` forever, and the unclaimable drop bricked `close`)
-      let qty = if (item::is_stackable(item::template_category(template))) row.qty else 1;
+      let category = item::template_category(template);
+      let qty = if (content_rules::is_stackable(&category)) row.qty else 1;
       let minted = item::mint(template, qty, gen, ctx);
       item::deposit(kiosk, cap, policy, existing, minted);
       return
@@ -1070,7 +1049,7 @@ fun roll_and_split(fight: &mut Fight, first_settler: u64, gen: &mut RandomGenera
     let mut ci = 0;
     while (ci < winners.length()) {
       let chr = character_of(fight, winners[ci]);
-      sum = sum + effective(chr.chance() as u64, equipment::folded(chr).chance() as u64, shift);
+      sum = sum + fight_math::apply_centered_shift(chr.chance() as u64, equipment::folded(chr).chance() as u64, shift);
       ci = ci + 1;
     };
     sum / winners.length()
@@ -1093,14 +1072,14 @@ fun roll_and_split(fight: &mut Fight, first_settler: u64, gen: &mut RandomGenera
     while (r < rows.length()) {
       let row = &rows[r];
       let scaled_bp = {
-        let bp = (mob_template::loot_chance_bp(row) as u64) * (600 + team_chance) / 600;
+        let bp = (mob_data::loot_chance_bp(row) as u64) * (600 + team_chance) / 600;
         if (bp > 10_000) 10_000 else bp
       };
       if (gen.generate_u64_in_range(0, 9_999) < scaled_bp) {
-        let lo = mob_template::loot_min_qty(row) as u64;
-        let hi = mob_template::loot_max_qty(row) as u64;
+        let lo = mob_data::loot_min_qty(row) as u64;
+        let hi = mob_data::loot_max_qty(row) as u64;
         let qty = gen.generate_u64_in_range(lo, hi);
-        let drop = RolledDrop { item_type: mob_template::loot_item_type(row), qty: qty as u32 };
+        let drop = RolledDrop { item_type: mob_data::loot_item_type(row), qty: qty as u32 };
         fight.fighters[winners[w]].drops.push_back(drop);
         w = (w + 1) % winners.length();
       };
@@ -1257,23 +1236,24 @@ fun player_fighter(chr: &mut Character, owner: address, team: u8, cell: u64, clo
 }
 
 fun mob_fighter(template: &MobTemplate, scalar: u64, cell: u64): Fighter {
-  let lo = template.level_min() as u64;
-  let hi = template.level_max() as u64;
+  let data = template.data();
+  let lo = mob_data::level_min(data) as u64;
+  let hi = mob_data::level_max(data) as u64;
   let level = lo + (hi - lo) * scalar / 100;
-  let hp = band_scaled(template.hp(), lo, hi, level);
+  let hp = fight_math::band_scaled(mob_data::hp(data), lo, hi, level);
   // the rolled level picks each kit spell's authored SpellLevel — variance for free
-  let authored = template.spells();
+  let authored = mob_data::spells(data);
   let mut kit = vector[];
   let mut k = 0;
   while (k < authored.length()) {
-    let levels = mob_template::spell_levels(&authored[k]);
+    let levels = mob_data::spell_levels(&authored[k]);
     let n = levels.length();
     let idx = if (hi == lo) n - 1 else {
       let raw = (level - lo) * n / (hi - lo + 1);
       if (raw >= n) n - 1 else raw
     };
     kit.push_back(KitSpell {
-      name: mob_template::spell_name(&authored[k]),
+      name: mob_data::spell_name(&authored[k]),
       ordinal: (idx + 1) as u8,
       level: levels[idx],
     });
@@ -1282,20 +1262,20 @@ fun mob_fighter(template: &MobTemplate, scalar: u64, cell: u64): Fighter {
   Fighter {
     team: 1,
     kind: FighterKind::Mob(MobSnapshot {
-      mob_type: template.mob_type(),
+      mob_type: mob_data::mob_type(data),
       level,
       max_hp: hp,
-      ap: template.ap() as u64,
-      mp: template.mp() as u64,
-      agility: template.agility() as u64,
-      wisdom: template.wisdom() as u64,
-      earth_res: template.earth_resistance() as u64,
-      fire_res: template.fire_resistance() as u64,
-      water_res: template.water_resistance() as u64,
-      air_res: template.air_resistance() as u64,
+      ap: mob_data::ap(data) as u64,
+      mp: mob_data::mp(data) as u64,
+      agility: mob_data::agility(data) as u64,
+      wisdom: mob_data::wisdom(data) as u64,
+      earth_res: mob_data::earth_resistance(data) as u64,
+      fire_res: mob_data::fire_resistance(data) as u64,
+      water_res: mob_data::water_resistance(data) as u64,
+      air_res: mob_data::air_resistance(data) as u64,
       kit,
-      xp: band_scaled(template.xp(), lo, hi, level),
-      loot: template.loot(),
+      xp: fight_math::band_scaled(mob_data::xp(data), lo, hi, level),
+      loot: mob_data::loot(data),
     }),
     cell,
     ready: true,
@@ -1309,17 +1289,6 @@ fun mob_fighter(template: &MobTemplate, scalar: u64, cell: u64): Fighter {
     effects: vector[],
     cooldowns: vector[],
   }
-}
-
-/// Band scaling (legacy corpus): `base × 0.7` at the band floor → `× 1.4` at the ceiling.
-fun band_scaled(base: u64, lo: u64, hi: u64, level: u64): u64 {
-  if (hi == lo) return base;
-  base * 7 * ((hi - lo) + (level - lo)) / (10 * (hi - lo))
-}
-
-/// `base + folded − center`, floored at zero (a malus below the base reads as 0).
-fun effective(base: u64, folded: u64, shift: u64): u64 {
-  sat_sub(base + folded, shift)
 }
 
 // ╔════════════════ [ Derived fighter numbers (custody or snapshot — one branch) ] ]
@@ -1351,14 +1320,14 @@ fun sheet_of(fight: &Fight, i: u64): Sheet {
     let folded = equipment::folded(chr);
     let shift = item_stats::shift() as u64;
     Sheet {
-      strength: effective(chr.strength() as u64, folded.strength() as u64, shift),
-      intelligence: effective(chr.intelligence() as u64, folded.intelligence() as u64, shift),
-      chance: effective(chr.chance() as u64, folded.chance() as u64, shift),
-      agility: effective(chr.agility() as u64, folded.agility() as u64, shift),
-      wisdom: effective(chr.wisdom() as u64, folded.wisdom() as u64, shift),
-      raw_damage: effective(0, folded.raw_damage() as u64, shift),
-      critical: effective(0, folded.critical() as u64, shift), // the Cri lowers the quotation X
-      range_bonus: effective(0, folded.range() as u64, shift),
+      strength: fight_math::apply_centered_shift(chr.strength() as u64, folded.strength() as u64, shift),
+      intelligence: fight_math::apply_centered_shift(chr.intelligence() as u64, folded.intelligence() as u64, shift),
+      chance: fight_math::apply_centered_shift(chr.chance() as u64, folded.chance() as u64, shift),
+      agility: fight_math::apply_centered_shift(chr.agility() as u64, folded.agility() as u64, shift),
+      wisdom: fight_math::apply_centered_shift(chr.wisdom() as u64, folded.wisdom() as u64, shift),
+      raw_damage: fight_math::apply_centered_shift(0, folded.raw_damage() as u64, shift),
+      critical: fight_math::apply_centered_shift(0, folded.critical() as u64, shift), // the Cri lowers the quotation X
+      range_bonus: fight_math::apply_centered_shift(0, folded.range() as u64, shift),
       level: chr.level() as u64,
     }
   };
@@ -1408,14 +1377,14 @@ fun base_ap_of(fight: &Fight, i: u64): u64 {
   let s = &fight.fighters[i];
   if (is_mob(s)) return mob_snap(s).ap;
   let folded = equipment::folded(character_of(fight, i));
-  effective(BASE_AP, folded.action() as u64, item_stats::shift() as u64)
+  fight_math::apply_centered_shift(BASE_AP, folded.action() as u64, item_stats::shift() as u64)
 }
 
 fun base_mp_of(fight: &Fight, i: u64): u64 {
   let s = &fight.fighters[i];
   if (is_mob(s)) return mob_snap(s).mp;
   let folded = equipment::folded(character_of(fight, i));
-  effective(BASE_MP, folded.movement() as u64, item_stats::shift() as u64)
+  fight_math::apply_centered_shift(BASE_MP, folded.movement() as u64, item_stats::shift() as u64)
 }
 
 /// The fighter's centered resistance for `element`, alter-resist rows folded in.
@@ -1697,7 +1666,7 @@ fun walk_toward(fight: &mut Fight, fighter: u64, target: u64) {
     tackle_departure(fight, fighter, cur, &mut beaten);
     if (fight.fighters[fighter].mp == 0) return;
 
-    let next = best_step(cur, &field);
+    let next = combat_grid::best_step(cur, &field);
     if (next.is_none()) return;
     let cell = next.destroy_some();
     // Same staleness law as walk_path: the field predates any mid-walk displacement — a body
@@ -1725,27 +1694,6 @@ fun tackle_departure(fight: &mut Fight, fighter: u64, cell: u64, beaten: &mut ve
   let (ap_loss, mp_loss) = fight_math::tackle_losses(fight.fighters[fighter].ap, mp, num, den);
   spend_ap(fight, fighter, ap_loss);
   spend_mp(fight, fighter, mp_loss);
-}
-
-/// The neighbour strictly closer to the target on the distance field (tie → lowest index).
-fun best_step(cur: u64, field: &vector<u64>): Option<u64> {
-  let here = field[cur];
-  let mut best = option::none();
-  let mut best_value = here;
-  let mut dir = 0u8;
-  while (dir < 4) {
-    let step = combat_grid::step_cell(cur, dir);
-    if (step.is_some()) {
-      let cell = step.destroy_some();
-      let value = field[cell];
-      if (value < best_value || (value == best_value && best.is_some() && cell < *best.borrow())) {
-        best = option::some(cell);
-        best_value = value;
-      };
-    };
-    dir = dir + 1;
-  };
-  best
 }
 
 /// The stored closed-board bitset ∪ living bodies (self excluded) — the movement wall set.
@@ -1959,7 +1907,6 @@ fun resolve(fight: &mut Fight, caster: u64, level: &SpellLevel, name: String, ta
 
   // an invisible enemy cannot be aimed at directly — the cell reads empty to the caster
   let occupant = visible_occupant(fight, caster, target_cell);
-  if (!level.free_cell()) assert!(occupant.is_some(), ENeedsTarget);
 
   let per_turn = level.casts_per_turn() as u64;
   if (per_turn > 0) assert!(casts_this_turn(fight, &name, option::none()) < per_turn, ECapReached);
@@ -1972,14 +1919,14 @@ fun resolve(fight: &mut Fight, caster: u64, level: &SpellLevel, name: String, ta
   if (cooldown > 0) assert!(cooldown_left(fight, caster, &name) == 0, ECapReached);
 
   let slot = fight.turn_slot;
-  let crit_roll = fight_math::slot_crit_roll(fight.turn_seed, slot);
+  let crit_roll = fight_math::spell_crit_roll(fight.turn_seed, &name);
   let crit = fight_math::crit_at(crit_roll, level.crit_1_in() as u64, sheet.critical, sheet.agility);
   // a crit with NO authored crit rows falls back to the base rows — never an empty no-op, which
   // resolves cheaper than a normal hit and lets a tight-gas end_turn/crank OOG-filter the mob wave
   // FOR crits (free damage avoidance); base rows keep both outcomes the same work (audit 2026-08-11)
   let crit_rows = level.crit_effects();
   let rows = if (crit && !crit_rows.is_empty()) crit_rows else level.effects();
-  let (places, payload) = split_placements(&rows);
+  let (places, payload) = spell_effect::split_placements(&rows);
   if (!places.is_empty()) {
     assert!(placement_anchor_available(&fight.zones, &places, target_cell, fighter_at(fight, target_cell).is_some()), EBadTargetCell);
   };
@@ -1990,7 +1937,7 @@ fun resolve(fight: &mut Fight, caster: u64, level: &SpellLevel, name: String, ta
   fight.turn_casts.push_back(TurnCast { spell: name, target: ledger_target });
   if (cooldown > 0) set_cooldown(fight, caster, name, cooldown);
 
-  if (has_offensive(&rows)) drop_rows_of_kind(fight, caster, K_INVIS); // attacking reveals
+  if (spell_effect::has_offensive(&rows)) drop_rows_of_kind(fight, caster, K_INVIS); // attacking reveals
 
   // a placement spell banks its OTHER rows as the zone's payload — nothing fires now
   if (!places.is_empty()) {
@@ -2075,17 +2022,17 @@ fun apply_to(fight: &mut Fight, caster: u64, sheet: &Sheet, row: &Effect, target
   let turns = row.turns() as u64;
 
   if (kind == K_DAMAGE) {
-    deal(fight, caster, sheet, target, &element, roll_value(row, estate), crit, cast_level);
+    deal(fight, caster, sheet, target, &element, fight_math::roll_effect_value(row, estate), crit, cast_level);
   } else if (kind == K_PCT_LIFE) {
     let base = max_hp_of(fight, target) * value / 100;
     let damage = resist(fight, target, &element, base);
     hit(fight, target, damage);
   } else if (kind == K_CASTER_DAMAGE) {
-    let damage = resist(fight, caster, &element, roll_value(row, estate));
+    let damage = resist(fight, caster, &element, fight_math::roll_effect_value(row, estate));
     hit(fight, caster, damage);
   } else if (kind == K_PUNISHMENT) {
     let base = fight_math::punishment_base(
-      roll_value(row, estate),
+      fight_math::roll_effect_value(row, estate),
       fight.fighters[caster].hp,
       max_hp_of(fight, caster),
     );
@@ -2096,18 +2043,18 @@ fun apply_to(fight: &mut Fight, caster: u64, sheet: &Sheet, row: &Effect, target
     if (channel == STAT_HP) {
       if (kind == K_ADD && turns == 0) {
         // instant heal — amplified by intelligence (1.29)
-        heal_seat(fight, target, fight_math::heal_amount(roll_value(row, estate), sheet.intelligence));
+        heal_seat(fight, target, fight_math::heal_amount(fight_math::roll_effect_value(row, estate), sheet.intelligence));
       } else if (kind == K_ADD) {
         // regen row — the per-tick number fixed at application, like the dot
-        let per_tick = fight_math::heal_amount(roll_value(row, estate), sheet.intelligence);
+        let per_tick = fight_math::heal_amount(fight_math::roll_effect_value(row, estate), sheet.intelligence);
         push_row(fight, target, row, caster, per_tick);
       } else if (kind == K_STEAL && turns == 0) {
         // life steal — deal, then drink what actually landed
-        let dealt = deal(fight, caster, sheet, target, &element, roll_value(row, estate), crit, cast_level);
+        let dealt = deal(fight, caster, sheet, target, &element, fight_math::roll_effect_value(row, estate), crit, cast_level);
         heal_seat(fight, caster, dealt);
       } else {
         // the dot (remove asserts turns ≥ 1 at construction; a lasting steal ticks the same)
-        let per_tick = full_damage(fight, sheet, target, &element, roll_value(row, estate), crit);
+        let per_tick = full_damage(fight, sheet, target, &element, fight_math::roll_effect_value(row, estate), crit);
         push_row(fight, target, row, caster, per_tick);
       };
     } else if (channel == STAT_AP || channel == STAT_MP) {
@@ -2216,14 +2163,6 @@ fun deal(fight: &mut Fight, caster: u64, sheet: &Sheet, target: u64, element: &S
 fun resist(fight: &Fight, target: u64, element: &String, damage: u64): u64 {
   let center = item_stats::shift() as u64;
   fight_math::apply_centered_resistance(damage, resistance_of(fight, target, element), center)
-}
-
-/// Roll a row's `[value, value_max]` off the effect stream — fixed rows cost no draw.
-fun roll_value(row: &Effect, estate: &mut u64): u64 {
-  let lo = row.value() as u64;
-  let hi = row.value_max() as u64;
-  if (hi <= lo) return lo;
-  fight_math::roll_in_range(lo, hi, prng::draw(estate) % 10_000)
 }
 
 /// The per-point removal contest (wisdom vs wisdom) — the guaranteed class skips the draws.
@@ -2478,23 +2417,13 @@ fun zone_targets(fight: &Fight, caster: u64, row: &Effect, anchor: u64, origin: 
 }
 
 fun travel_order(fight: &Fight, targets: vector<u64>, pivot: u64, push: bool): vector<u64> {
-  let mut sorted = targets;
-  let n = sorted.length();
+  let mut cells = vector[];
   let mut i = 0;
-  while (i < n) {
-    let mut best = i;
-    let mut j = i + 1;
-    while (j < n) {
-      let dj = combat_grid::manhattan(fight.fighters[sorted[j]].cell, pivot);
-      let db = combat_grid::manhattan(fight.fighters[sorted[best]].cell, pivot);
-      let ahead = if (push) dj > db else dj < db;
-      if (ahead || (dj == db && sorted[j] < sorted[best])) best = j;
-      j = j + 1;
-    };
-    sorted.swap(i, best);
+  while (i < fight.fighters.length()) {
+    cells.push_back(fight.fighters[i].cell);
     i = i + 1;
   };
-  sorted
+  combat_grid::travel_order(targets, &cells, pivot, push)
 }
 
 fun visible_occupant(fight: &Fight, caster: u64, cell: u64): Option<u64> {
@@ -2523,20 +2452,6 @@ fun sight_blockers(fight: &Fight, looker_seat: u64, target_cell: u64): vector<u6
   out
 }
 
-fun split_placements(rows: &vector<Effect>): (vector<Effect>, vector<Effect>) {
-  let mut places = vector[];
-  let mut payload = vector[];
-  let mut i = 0;
-  while (i < rows.length()) {
-    let row = rows[i];
-    if (is_zone_placement(&row)) places.push_back(row) else payload.push_back(row);
-    i = i + 1;
-  };
-  (places, payload)
-}
-
-fun is_zone_placement(row: &Effect): bool { row.kind() == K_TRAP || row.kind() == K_GLYPH }
-
 /// A cast creates exactly one board zone. Its anchor cannot share another zone's anchor;
 /// area overlap is irrelevant. Traps additionally require no living fighter at the anchor.
 fun placement_anchor_available(
@@ -2561,7 +2476,7 @@ fun placement_rows_castable(fight: &Fight, rows: &vector<Effect>, target_cell: u
   let mut places = vector[];
   let mut i = 0;
   while (i < rows.length()) {
-    if (is_zone_placement(&rows[i])) places.push_back(rows[i]);
+    if (spell_effect::is_zone_placement(&rows[i])) places.push_back(rows[i]);
     i = i + 1;
   };
   places.is_empty()
@@ -2647,15 +2562,16 @@ public(package) fun resolve_placement_for_testing(
     ));
     i = i + 1;
   };
+  // Deliberately retains the legacy false flag: empty anchors are legal for every spell.
   let level = spell_effect::new_spell_level(
-    2, 0, 40, false, false, false, true, 0, 0, 0, 0, rows, vector[],
+    2, 0, 40, false, false, false, false, 0, 0, 0, 0, rows, vector[],
   );
   let mut fight = Fight {
     id: object::new(ctx),
     world: b"placement_test".to_string(),
     x: 0,
     z: 0,
-    closed: closed_mask(&board),
+    closed: combat_grid::closed_mask(&board),
     board,
     access_a: ACCESS_UNSET,
     access_b: ACCESS_UNSET,
@@ -2750,20 +2666,6 @@ public(package) fun walk_into_pulled_body_for_testing(ctx: &mut TxContext): vect
   let Fight { id, .. } = fight;
   id.delete();
   answer
-}
-
-fun has_offensive(rows: &vector<Effect>): bool {
-  let mut i = 0;
-  while (i < rows.length()) {
-    let k = rows[i].kind();
-    if (
-      k == K_DAMAGE || k == K_PCT_LIFE || k == K_PUNISHMENT ||
-      k == K_REMOVE || k == K_STEAL ||
-      k == K_PUSH || k == K_PULL
-    ) return true;
-    i = i + 1;
-  };
-  false
 }
 
 fun max_1(turns: u64): u64 { if (turns == 0) 1 else turns }

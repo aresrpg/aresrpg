@@ -77,6 +77,9 @@ export const QUALITY_PROFILES = Object.freeze({
 
 export const get_quality_profile = (quality: EngineQuality): QualityProfile => QUALITY_PROFILES[quality]
 
+export const uses_world_post_processing = (quality: EngineQuality, presentation: EnginePresentation): boolean =>
+  presentation === 'world' && quality !== 'low'
+
 export const quality_pixel_ratio = ({
   quality,
   css_width,

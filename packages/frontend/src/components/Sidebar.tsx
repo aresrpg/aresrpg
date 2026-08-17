@@ -18,6 +18,7 @@ import {
 } from 'lucide-react'
 
 import type { AppCopy } from '../i18n/copy.ts'
+import type { Network } from '../env.ts'
 import type { Page } from '../modules/navigation.ts'
 import { is_admin_address } from '../admin_access.ts'
 
@@ -28,13 +29,13 @@ const NAVIGATION: readonly Readonly<{ page: Page; label: CopyStringKey; Icon: Lu
     { page: 'world', label: 'world', Icon: Gamepad2, disabled: false },
     { page: 'characters', label: 'characters', Icon: Swords, disabled: true },
     { page: 'leaderboard', label: 'leaderboard', Icon: Trophy, disabled: true },
-    { page: 'shop', label: 'shop', Icon: ShoppingBag, disabled: true },
+    { page: 'shop', label: 'shop', Icon: ShoppingBag, disabled: false },
     { page: 'simulator', label: 'simulator', Icon: FlaskConical, disabled: false },
     { page: 'encyclopedia', label: 'encyclopedia', Icon: BookOpen, disabled: false },
     { page: 'marketplace', label: 'marketplace', Icon: Store, disabled: true },
-    { page: 'airdrop', label: 'airdrop', Icon: Gift, disabled: true },
+    { page: 'airdrop', label: 'airdrop', Icon: Gift, disabled: false },
     { page: 'kolizeum', label: 'kolizeum', Icon: Crosshair, disabled: true },
-    { page: 'settings', label: 'settings', Icon: Settings, disabled: true },
+    { page: 'settings', label: 'settings', Icon: Settings, disabled: false },
     { page: 'admin', label: 'admin', Icon: ShieldCheck, disabled: false },
   ])
 
@@ -46,6 +47,7 @@ type SidebarProps = Readonly<{
   open_page: (page: Page) => void
   select_character: (character_id: string) => void
   address: string | null
+  network: Network
 }>
 
 export const Sidebar = ({
@@ -56,6 +58,7 @@ export const Sidebar = ({
   open_page,
   select_character,
   address,
+  network,
 }: SidebarProps) => (
   <aside
     data-app-sidebar=""
@@ -63,8 +66,15 @@ export const Sidebar = ({
   >
     <div className="flex items-center justify-center gap-2.5 border-b border-[#1e1e2e] py-5">
       <img className="size-7 drop-shadow-[0_0_12px_rgba(200,150,60,0.3)]" src="/logo.png" alt="AresRPG" />
-      <span className="bg-[linear-gradient(135deg,#fad9b3_0%,#d4a145_50%,#f0c474_100%)] bg-clip-text text-[11px] font-bold tracking-[0.3em] text-transparent uppercase">
-        AresRPG
+      <span className="flex flex-col items-start gap-1.5">
+        <span className="bg-[linear-gradient(135deg,#fad9b3_0%,#d4a145_50%,#f0c474_100%)] bg-clip-text text-[11px] font-bold tracking-[0.3em] text-transparent uppercase">
+          AresRPG
+        </span>
+        {network === 'testnet' && (
+          <span className="border border-[#ff5a8b]/45 bg-[#ff5a8b]/10 px-1.5 py-px text-[7px] font-black tracking-[0.25em] text-[#ff6fa8] uppercase shadow-[0_0_10px_rgba(255,90,139,0.12)]">
+            {copy.network_testnet}
+          </span>
+        )}
       </span>
     </div>
     <nav className="flex min-h-0 flex-1 flex-col py-3">

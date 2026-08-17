@@ -6,6 +6,7 @@
 
 import { describe, expect, test } from 'bun:test'
 import { Ed25519Keypair } from '@mysten/sui/keypairs/ed25519'
+import type { TransactionPlugin } from '@mysten/sui/transactions'
 
 import { SDK, absorb_receipt, type Receipt, type SuiTransport } from '../src/client.ts'
 
@@ -39,28 +40,62 @@ const changed = (
   outputOwner: owner,
 })
 
+const resolve_gas =
+  (calls: { resolutions: number }): TransactionPlugin =>
+  async (transaction_data, options, next) => {
+    calls.resolutions += 1
+    if (!options.onlyTransactionKind) {
+      transaction_data.gasData.price ??= '1000'
+      transaction_data.gasData.budget ??= '5000000'
+      transaction_data.gasData.payment ??= [{ objectId: id(50), version: '3', digest }]
+    }
+    await next()
+  }
+
 /** A fake CORE client: hydrate sources, a scriptable simulation verdict, an execution recorder. */
 const fake_client = ({ simulate_ok, execution_gate }: { simulate_ok: boolean; execution_gate?: Promise<void> }) => {
-  const calls = { simulations: 0, executions: 0, balances: 0, active_executions: 0, max_active_executions: 0 }
+  const calls = {
+    simulations: 0,
+    executions: 0,
+    balances: 0,
+    resolutions: 0,
+    hydrations: [] as string[][],
+    active_executions: 0,
+    max_active_executions: 0,
+  }
   return {
     calls,
     core: {
+      resolveTransactionPlugin: () => resolve_gas(calls),
+      getCurrentSystemState: async () => ({ systemState: { epoch: '1', referenceGasPrice: '1000' } }),
+      getChainIdentifier: async () => ({ chainIdentifier: digest }),
       getBalance: async () => {
         calls.balances += 1
         return { balance: { balance: '10000000000', coinBalance: '0', addressBalance: '10000000000' } }
       },
       getReferenceGasPrice: async () => ({ referenceGasPrice: '1000' }),
-      listCoins: async () => ({
-        objects: [{ objectId: id(50), version: '3', digest, owner: { $kind: 'AddressOwner', AddressOwner: id(99) } }],
+      listCoins: async (_input: { owner: string; coinType?: string; limit?: number; cursor?: string | null }) => ({
+        objects: [
+          {
+            objectId: id(50),
+            version: '3',
+            digest,
+            balance: '10000000000',
+            owner: { $kind: 'AddressOwner', AddressOwner: id(99) },
+          },
+        ],
       }),
-      getObjects: async ({ objectIds }: { objectIds: string[] }) => ({
-        objects: objectIds.map((object_id: string) => ({
-          objectId: object_id,
-          version: '2',
-          digest,
-          owner: { $kind: 'Shared', Shared: { initialSharedVersion: '1' } },
-        })),
-      }),
+      getObjects: async ({ objectIds }: { objectIds: string[] }) => {
+        calls.hydrations.push([...objectIds])
+        return {
+          objects: objectIds.map((object_id: string) => ({
+            objectId: object_id,
+            version: '2',
+            digest,
+            owner: { $kind: 'Shared', Shared: { initialSharedVersion: '1' } },
+          })),
+        }
+      },
       simulateTransaction: async () => {
         calls.simulations += 1
         return simulate_ok
@@ -78,11 +113,15 @@ const fake_client = ({ simulate_ok, execution_gate }: { simulate_ok: boolean; ex
         calls.max_active_executions = Math.max(calls.max_active_executions, calls.active_executions)
         await execution_gate
         calls.active_executions -= 1
+        const gas_object = changed(id(50), '4', {
+          $kind: 'AddressOwner',
+          AddressOwner: signer.toSuiAddress(),
+        })
         return {
           $kind: 'Transaction',
           Transaction: {
             digest: 'EXEC',
-            effects: { status: { success: true, error: null }, changedObjects: [changed(id(50), '4')] },
+            effects: { status: { success: true, error: null }, gasObject: gas_object, changedObjects: [gas_object] },
           },
         }
       },
@@ -94,7 +133,7 @@ const signer = new Ed25519Keypair()
 
 const game = async (client: ReturnType<typeof fake_client>) => {
   const sdk = SDK({ client, signer, pins })
-  await sdk.hydrate([id(11)]) // seeds the shared kiosk, the gas price, and the gas coin
+  await sdk.hydrate([id(11)]) // seeds the shared kiosk; Sui resolves gas while building
   absorb_receipt(sdk.cache, {
     Transaction: { effects: { changedObjects: [changed(id(13), '5')] } },
   })
@@ -102,6 +141,15 @@ const game = async (client: ReturnType<typeof fake_client>) => {
 }
 
 describe('the execute gate (core interface)', () => {
+  test('object hydration stays below the Core query payload limit', async () => {
+    const client = fake_client({ simulate_ok: true })
+    const sdk = SDK({ address: id(99), client, pins })
+
+    await sdk.hydrate(Array.from({ length: 21 }, (_, index) => id(index + 100)))
+
+    expect(client.calls.hydrations.map(({ length }) => length)).toEqual([10, 10, 1])
+  })
+
   test('balance reads include address balance instead of only legacy coin objects', async () => {
     const client = fake_client({ simulate_ok: true })
     const sdk = SDK({ address: id(99), client, pins })
@@ -132,8 +180,19 @@ describe('the execute gate (core interface)', () => {
     expect(receipt.Transaction?.digest).toBe('EXEC')
     expect(client.calls.simulations).toBe(1)
     expect(client.calls.executions).toBe(1)
-    // the gas coin's fresh version came back through effects.changedObjects — self-sustaining
+    expect(client.calls.resolutions).toBe(1)
+    // the gas coin's fresh version came back through the receipt — self-sustaining
     expect(sdk.ref(id(50))).toEqual({ objectId: id(50), version: '4', digest })
+  })
+
+  test('the next transaction uses the receipt-fresh gas ref instead of a lagging resolver ref', async () => {
+    const client = fake_client({ simulate_ok: true })
+    const sdk = await game(client)
+    await sdk.execute(sdk.tx())
+
+    const next = sdk.tx()
+    await sdk.execute(next)
+    expect(next.getData().gasData.payment).toEqual([{ objectId: id(50), version: '4', digest }])
   })
 
   test('a Wallet Standard adapter uses the same executor, gas ledger, and balance cache', async () => {
@@ -157,10 +216,30 @@ describe('the execute gate (core interface)', () => {
     await sdk.execute(transaction)
 
     expect(signatures).toBe(1)
-    expect(client.calls.simulations).toBe(1)
+    expect(client.calls.simulations).toBe(2)
     expect(client.calls.executions).toBe(1)
     await sdk.read_sui_balance()
-    expect(client.calls.balances).toBe(2)
+    expect(client.calls.balances).toBe(2) // cached UI read + post-receipt UI read
+  })
+
+  test('refuses a bad transaction before opening the wallet', async () => {
+    const client = fake_client({ simulate_ok: false })
+    let signatures = 0
+    const sdk = SDK({
+      address: id(99),
+      client,
+      pins,
+      sign_transaction: async () => {
+        signatures += 1
+        return { bytes: new Uint8Array([1]), signature: 'wallet-signature' }
+      },
+    })
+    const transaction = sdk.tx()
+    transaction.transferObjects([transaction.gas], id(98))
+
+    await expect(sdk.execute(transaction)).rejects.toThrow(/NOT submitted.*scribe locked/)
+    expect(signatures).toBe(0)
+    expect(client.calls.executions).toBe(0)
   })
 
   test('the executor serializes submissions that share its receipt-fed gas cache', async () => {
@@ -185,18 +264,53 @@ describe('the execute gate (core interface)', () => {
     expect(client.calls.max_active_executions).toBe(1)
   })
 
-  test('missing gas fails before signing and retries hydration after funding', async () => {
+  test('delegates gas selection and estimation to the configured Sui resolver', async () => {
     const client = fake_client({ simulate_ok: true })
-    let funded = false
     let coin_reads = 0
     let signatures = 0
-    client.core.listCoins = async () => {
+    client.core.listCoins = async (input: {
+      owner: string
+      coinType?: string
+      limit?: number
+      cursor?: string | null
+    }) => {
       coin_reads += 1
+      expect(input.limit).toBeUndefined()
       return {
-        objects: funded
-          ? [{ objectId: id(50), version: '3', digest, owner: { $kind: 'AddressOwner', AddressOwner: id(99) } }]
-          : [],
+        objects: [
+          {
+            objectId: id(51),
+            version: '3',
+            digest,
+            balance: '3000000000',
+            owner: { $kind: 'AddressOwner', AddressOwner: id(99) },
+          },
+          {
+            objectId: id(50),
+            version: '3',
+            digest,
+            balance: '3000000000',
+            owner: { $kind: 'AddressOwner', AddressOwner: id(99) },
+          },
+        ],
       }
+    }
+    client.core.getBalance = async () => ({
+      balance: { balance: '6000000000', addressBalance: '0', coinBalance: '6000000000' },
+    })
+    client.core.resolveTransactionPlugin = () => async (transaction_data, options, next) => {
+      client.calls.resolutions += 1
+      if (!options.onlyTransactionKind) {
+        const { objects } = await client.core.listCoins({ owner: id(99) })
+        transaction_data.gasData.price = '1000'
+        transaction_data.gasData.budget = '5000000'
+        transaction_data.gasData.payment = objects.map(({ objectId, version, digest: object_digest }) => ({
+          objectId: objectId!,
+          version: String(version),
+          digest: object_digest!,
+        }))
+      }
+      await next()
     }
     const sdk = SDK({
       address: id(99),
@@ -207,17 +321,12 @@ describe('the execute gate (core interface)', () => {
         return { bytes: new Uint8Array([1]), signature: 'wallet-signature' }
       },
     })
-    const unfunded = sdk.tx()
-    unfunded.transferObjects([unfunded.gas], id(98))
-    await expect(sdk.execute(unfunded)).rejects.toThrow('owned SUI gas coin')
-    expect(signatures).toBe(0)
+    const transaction = sdk.tx()
+    transaction.transferObjects([transaction.gas], id(98))
+    await sdk.execute(transaction)
 
-    funded = true
-    const funded_transaction = sdk.tx()
-    funded_transaction.transferObjects([funded_transaction.gas], id(98))
-    await sdk.execute(funded_transaction)
-
-    expect(coin_reads).toBe(2)
+    expect(coin_reads).toBe(1)
     expect(signatures).toBe(1)
+    expect(client.calls.resolutions).toBe(1)
   })
 })

@@ -21,29 +21,34 @@ export type FightSessionState = Readonly<{
   mode: FightMode | null
   checkpoint: HydratedFightCheckpoint | null
   events: readonly FightEvent[]
+  presentation_batch: number
   error: FightRuntimeError | null
 }>
 
 export type FightSessionInput =
   | Readonly<{ type: 'fight/opened'; mode: FightMode; setup: FightSetup; seed: bigint }>
   | Readonly<{ type: 'fight/input'; input: FightInput; origin: 'local' | 'streamed' }>
+  | Readonly<{ type: 'fight/reset_turn' }>
   | Readonly<{ type: 'fight/replaced'; checkpoint: HydratedFightCheckpoint }>
   | Readonly<{
       type: 'fight/reconciled'
       mode: FightMode
       checkpoint: HydratedFightCheckpoint
       events: readonly FightEvent[]
+      presentation_batch: number
       error: FightRuntimeError | null
     }>
+  | Readonly<{ type: 'fight/presented'; presentation_batch: number }>
   | Readonly<{ type: 'fight/closed' }>
 
 export const initial_fight_session_state = (): FightSessionState =>
-  Object.freeze({ mode: null, checkpoint: null, events: Object.freeze([]), error: null })
+  Object.freeze({ mode: null, checkpoint: null, events: Object.freeze([]), presentation_batch: 0, error: null })
 
 type ActiveFightSession = Readonly<{
   mode: FightMode
   checkpoint: HydratedFightCheckpoint
   events: readonly FightEvent[]
+  presentation_batch: number
   error: FightRuntimeError | null
 }>
 
@@ -63,6 +68,7 @@ export const create_fight_session = ({
   let runtime: Fight | null = null
   let mode: FightMode | null = null
   let current: ActiveFightSession | null = null
+  let presentation_batch = 0
 
   const reconcile_runtime = (
     checkpoint: Readonly<HydratedFightCheckpoint>,
@@ -70,10 +76,12 @@ export const create_fight_session = ({
     error: Readonly<FightRuntimeError> | null
   ): void => {
     if (!mode) return
+    if (events.length > 0) presentation_batch += 1
     current = Object.freeze({
       mode,
       checkpoint,
       events: Object.freeze([...events]),
+      presentation_batch,
       error,
     })
     reconcile(current)
@@ -93,6 +101,11 @@ export const create_fight_session = ({
       publish(runtime.apply(stamp_boundary(input, now)))
       return true
     },
+    reset_turn: (): boolean => {
+      if (!runtime) return false
+      publish(runtime.reset_turn())
+      return true
+    },
     replace: (checkpoint: Readonly<HydratedFightCheckpoint>): boolean => {
       if (!runtime || !mode) return false
       const events = runtime.replace(checkpoint)
@@ -100,6 +113,7 @@ export const create_fight_session = ({
         mode,
         checkpoint: runtime.state(),
         events: Object.freeze([...events]),
+        presentation_batch: events.length > 0 ? ++presentation_batch : presentation_batch,
         error: null,
       })
       reconcile(current)
@@ -109,6 +123,7 @@ export const create_fight_session = ({
       runtime = null
       mode = null
       current = null
+      presentation_batch = 0
     },
     state: (): ActiveFightSession | null => current,
   })
@@ -122,8 +137,14 @@ const reduce = (state: AppState, input: AppInput): AppState => {
         mode: input.mode,
         checkpoint: input.checkpoint,
         events: Object.freeze([...input.events]),
+        presentation_batch: input.presentation_batch,
         error: input.error,
       }),
+    })
+  if (input.type === 'fight/presented' && input.presentation_batch === state.fight.presentation_batch)
+    return Object.freeze({
+      ...state,
+      fight: Object.freeze({ ...state.fight, events: Object.freeze([]) }),
     })
   if (input.type === 'fight/closed') return Object.freeze({ ...state, fight: initial_fight_session_state() })
   return state
@@ -134,13 +155,21 @@ const observe = ({ dispatch, events }: Parameters<NonNullable<AppModule['observe
     // Move stores wall-clock milliseconds. A monotonic page-relative clock would make every
     // remotely hydrated deadline look permanently in the future.
     now: () => BigInt(Date.now()),
-    reconcile: ({ mode, checkpoint, events: fight_events, error }) =>
-      dispatch({ type: 'fight/reconciled', mode, checkpoint, events: fight_events, error }),
+    reconcile: ({ mode, checkpoint, events: fight_events, presentation_batch, error }) =>
+      dispatch({
+        type: 'fight/reconciled',
+        mode,
+        checkpoint,
+        events: fight_events,
+        presentation_batch,
+        error,
+      }),
   })
   events.on('fight/opened', ({ mode, seed, setup }) => {
     session.open({ mode, seed, setup })
   })
   events.on('fight/input', ({ input }) => session.apply(input))
+  events.on('fight/reset_turn', session.reset_turn)
   events.on('server/packet', ({ packet }) => {
     if (packet.type !== 'packet/fight_action' || session.state()?.checkpoint.contract.id !== packet.fight) return
     dispatch({ type: 'fight/input', input: decode_fight_action(packet.action), origin: 'streamed' })

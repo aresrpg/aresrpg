@@ -205,11 +205,45 @@ export const SpellCard = ({
   spell,
   text = english,
   edit,
-}: Readonly<{ spell: SpellCardSpell; text?: EncyclopediaText; edit?: SpellCardEdit }>) => {
-  const [level_index, set_level_index] = useState(0)
+  initial_level = 1,
+  small = false,
+}: Readonly<{
+  spell: SpellCardSpell
+  text?: EncyclopediaText
+  edit?: SpellCardEdit
+  initial_level?: number
+  small?: boolean
+}>) => {
+  const [level_index, set_level_index] = useState(Math.max(0, initial_level - 1))
   const safe_index = Math.min(level_index, spell.levels.length - 1)
   const level = spell.levels[safe_index]
   if (!level) return null
+  if (small)
+    return (
+      <article
+        className="w-full max-w-sm space-y-3"
+        data-spell-current-level={safe_index + 1}
+        data-spell-detail-card=""
+        data-spell-small=""
+      >
+        <header className="flex items-center justify-between gap-5 border-b border-white/9 pb-3">
+          <h3 className="min-w-0 truncate text-[13px] font-semibold tracking-[0.13em] text-[#e6bf79] uppercase">
+            {spell.name}
+          </h3>
+          <span className="flex shrink-0 items-center gap-2 text-[9px] tracking-[0.12em] text-[#858994] uppercase">
+            <Sparkles className="text-[#f0c35a]" size={13} strokeWidth={1.6} />
+            {text('crit_chance')}
+            <b className="text-[11px] text-[#f0c35a] tabular-nums">
+              {level.crit_1_in ? `1 / ${level.crit_1_in}` : '—'}
+            </b>
+          </span>
+        </header>
+        <section className="space-y-2" data-spell-effects="">
+          <h4 className="text-[9px] font-semibold tracking-[0.2em] text-[#777b86] uppercase">{text('effects')}</h4>
+          <EffectLines compact critical_effects={level.crit_effects} effects={level.effects} level_index={safe_index} />
+        </section>
+      </article>
+    )
   const accent = effect_color(level.effects.find(({ element }) => element)?.element ?? '')
   const change_level = (field: keyof SpellLevel, value: SpellCardValue): void =>
     edit?.change(['levels', safe_index, field], value)

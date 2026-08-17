@@ -103,7 +103,7 @@ const array_rows = (
     const human_name = object.name
     return Object.freeze({
       id,
-      label: typeof human_name === 'string' && human_name !== id ? `${human_name} · ${id}` : id,
+      label: typeof human_name === 'string' && human_name.length > 0 ? human_name : id,
       path: Object.freeze([...prefix, index]),
       value,
     })

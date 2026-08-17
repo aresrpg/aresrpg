@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
+import type { StatName } from '@aresrpg/immutable'
+
 import type { Locale } from './locale.ts'
 
 export type AppCopy = Readonly<{
@@ -39,6 +41,16 @@ export type AppCopy = Readonly<{
   online: string
   account: string
   join_discord: string
+  sui_universe: string
+  server_disconnected: string
+  server_connecting: string
+  server_reconnecting: string
+  server_syncing: string
+  server_connected: string
+  latency_unit: string
+  indexing_health: string
+  indexing_lag_warning: string
+  network_testnet: string
   page_pending_title: string
   page_pending_body: string
   welcome_title: string
@@ -77,7 +89,31 @@ export type AppCopy = Readonly<{
   simulator_page: Readonly<Record<string, string>>
   fight_hud: Readonly<Record<string, string>>
   admin_page: Readonly<Record<string, string>>
+  shop_page: Readonly<Record<string, unknown>>
+  airdrop_page: Readonly<Record<string, unknown>>
+  settings_page: Readonly<Record<string, string>>
 }>
+
+export type CopyNode = Readonly<Record<string, unknown>>
+export type CopyText = (key: string, values?: Readonly<Record<string, string | number>>) => string
+
+export const copy_text =
+  (copy: CopyNode): CopyText =>
+  (key, values = {}) => {
+    const value = key
+      .split('.')
+      .reduce<unknown>(
+        (node, part) => (typeof node === 'object' && node !== null ? (node as CopyNode)[part] : null),
+        copy
+      )
+    if (typeof value !== 'string') return key
+    return Object.entries(values).reduce(
+      (rendered, [name, replacement]) => rendered.replaceAll(`{{${name}}}`, String(replacement)),
+      value
+    )
+  }
+
+export const stat_name = (copy: AppCopy, stat: StatName): string => copy.simulator_page[`stat_${stat}`] ?? stat
 
 const loaders: Readonly<Record<Locale, () => Promise<{ default: unknown }>>> = Object.freeze({
   de: () => import('./locales/de.yaml'),

@@ -79,7 +79,7 @@ public struct SpellLevel has copy, drop, store {
   modifiable_range: bool,
   line_of_sight: bool,
   line_launch: bool,
-  free_cell: bool, // may target an empty cell (traps, teleports)
+  free_cell: bool, // retained in published spell data; every spell may target an empty cell
   casts_per_turn: u8, // 0 = unlimited (weapon strikes repeat while AP lasts)
   casts_per_target: u8, // 0 = unlimited
   cooldown_turns: u8,
@@ -191,6 +191,32 @@ public fun shape_blob(): u8 { 9 }
 // ╔════════════════ [ Reads (the resolver's surface) ] ═══════════════════════ ]
 
 public fun kind(e: &Effect): u8 { e.kind }
+
+public fun is_zone_placement(effect: &Effect): bool { effect.kind == 12 || effect.kind == 13 }
+
+public fun split_placements(effects: &vector<Effect>): (vector<Effect>, vector<Effect>) {
+  let mut placements = vector[];
+  let mut payload = vector[];
+  let mut index = 0;
+  while (index < effects.length()) {
+    let effect = effects[index];
+    if (is_zone_placement(&effect)) placements.push_back(effect) else payload.push_back(effect);
+    index = index + 1;
+  };
+  (placements, payload)
+}
+
+public fun has_offensive(effects: &vector<Effect>): bool {
+  let mut index = 0;
+  while (index < effects.length()) {
+    let kind = effects[index].kind;
+    if (kind == 0 || kind == 1 || kind == 3 || kind == 5 || kind == 6 || kind == 8 || kind == 9) {
+      return true
+    };
+    index = index + 1;
+  };
+  false
+}
 
 /// Does any base row heal — add(hp)? (The mob brain aims heal spells at allies.)
 public fun has_heal(l: &SpellLevel): bool {

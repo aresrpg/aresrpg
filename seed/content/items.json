@@ -1561,6 +1561,7 @@
     "item_type": "aetherwing",
     "name": "Aetherwing",
     "category": "pet",
+    "pet_foods": ["wheat", "quartz"],
     "level": 1
   },
   {
@@ -3021,6 +3022,7 @@
     "item_type": "arisen_tokeko",
     "name": "Arisen Tokeko",
     "category": "pet",
+    "pet_foods": ["crab_shell", "scaled_hide"],
     "level": 1
   },
   {
@@ -27421,6 +27423,7 @@
     "item_type": "golden_larvae",
     "name": "Golden Larvae",
     "category": "pet",
+    "pet_foods": ["crimson_truffle", "pollen_mote", "hive_wax"],
     "level": 1,
     "stats": {
       "min": {
@@ -27481,6 +27484,7 @@
     "item_type": "golden_silkling",
     "name": "Golden Silkling",
     "category": "pet",
+    "pet_foods": ["zephyr_silk_strand", "crow_feather", "aloe_vera"],
     "level": 1,
     "stats": {
       "min": {
@@ -33143,6 +33147,7 @@
     "item_type": "liquid_koa",
     "name": "Liquid Koa",
     "category": "pet",
+    "pet_foods": ["frost_shard", "glacial_heart", "mirrormelt_essence"],
     "level": 1,
     "stats": {
       "min": {
@@ -39234,12 +39239,14 @@
     "item_type": "pet_admin",
     "name": "Xi Jinping",
     "category": "pet",
+    "pet_foods": ["void_distillate", "primal_catalyst", "soul_shard"],
     "level": 1
   },
   {
     "item_type": "pet_aloe_gaia",
     "name": "Aloe Gaia",
     "category": "pet",
+    "pet_foods": ["aloe_vera"],
     "level": 1,
     "stats": {
       "min": {
@@ -39282,6 +39289,7 @@
     "item_type": "pet_amber_cactee",
     "name": "Amber Cactee",
     "category": "pet",
+    "pet_foods": ["amber"],
     "level": 1,
     "stats": {
       "min": {
@@ -39324,6 +39332,7 @@
     "item_type": "pet_anorak",
     "name": "Anorak",
     "category": "pet",
+    "pet_foods": ["sapling_bark", "spider_leg", "golden_silk"],
     "level": 1,
     "stats": {
       "min": {
@@ -39366,6 +39375,7 @@
     "item_type": "pet_arcane_gaia",
     "name": "Arcane Gaia",
     "category": "pet",
+    "pet_foods": ["arcaneshroom"],
     "level": 1,
     "stats": {
       "min": {
@@ -39408,6 +39418,7 @@
     "item_type": "pet_arcanite_cactee",
     "name": "Arcanite Cactee",
     "category": "pet",
+    "pet_foods": ["arcanite"],
     "level": 1,
     "stats": {
       "min": {
@@ -39450,6 +39461,7 @@
     "item_type": "pet_arcanize_bricheton",
     "name": "Arcane Bricheton",
     "category": "pet",
+    "pet_foods": ["wheat_purple"],
     "level": 1,
     "stats": {
       "min": {
@@ -39492,12 +39504,14 @@
     "item_type": "pet_arisen_bouloute",
     "name": "Arisen Bouloute",
     "category": "pet",
+    "pet_foods": ["green_mushroom", "wheat", "quartz"],
     "level": 1
   },
   {
     "item_type": "pet_arisen_corbac",
     "name": "Arisen Corbac",
     "category": "pet",
+    "pet_foods": ["green_mushroom", "wheat", "quartz"],
     "level": 1
   },
   {
@@ -39540,18 +39554,21 @@
     "item_type": "pet_arisen_modni",
     "name": "Arisen Modni Lyk",
     "category": "pet",
+    "pet_foods": ["green_mushroom", "wheat", "quartz"],
     "level": 1
   },
   {
     "item_type": "pet_arisen_timon",
     "name": "Arisen Timon",
     "category": "pet",
+    "pet_foods": ["green_mushroom", "wheat", "quartz"],
     "level": 1
   },
   {
     "item_type": "pet_barley_bricheton",
     "name": "Barley Bricheton",
     "category": "pet",
+    "pet_foods": ["wheat_barley"],
     "level": 1,
     "stats": {
       "min": {
@@ -39594,6 +39611,7 @@
     "item_type": "pet_blood_bricheton",
     "name": "Blood Bricheton",
     "category": "pet",
+    "pet_foods": ["blood_wheat"],
     "level": 1,
     "stats": {
       "min": {
@@ -39636,6 +39654,7 @@
     "item_type": "pet_bloodstone_cactee",
     "name": "Bloodstone Cactee",
     "category": "pet",
+    "pet_foods": ["bloodstone"],
     "level": 1,
     "stats": {
       "min": {
@@ -39678,12 +39697,14 @@
     "item_type": "pet_bouloute",
     "name": "Bouloute",
     "category": "pet",
+    "pet_foods": ["green_mushroom", "wheat"],
     "level": 1
   },
   {
     "item_type": "pet_burnt_bricheton",
     "name": "Scorched Bricheton",
     "category": "pet",
+    "pet_foods": ["wheat_burnt"],
     "level": 1,
     "stats": {
       "min": {
@@ -39726,6 +39747,7 @@
     "item_type": "pet_chomperion",
     "name": "Chomperion",
     "category": "pet",
+    "pet_foods": ["crab_shell", "mineral_biscuit"],
     "level": 1,
     "stats": {
       "min": {
@@ -39768,6 +39790,7 @@
     "item_type": "pet_chromafin",
     "name": "Chromafin",
     "category": "pet",
+    "pet_foods": ["crab_shell", "scaled_hide"],
     "level": 1,
     "stats": {
       "min": {
@@ -39810,12 +39833,14 @@
     "item_type": "pet_corbac",
     "name": "Corbac",
     "category": "pet",
+    "pet_foods": ["goblin_ear", "goblin_gunpowder", "refined_solution"],
     "level": 1
   },
   {
     "item_type": "pet_cryofin",
     "name": "Cryofin",
     "category": "pet",
+    "pet_foods": ["crab_shell", "scaled_hide"],
     "level": 1,
     "stats": {
       "min": {
@@ -39858,6 +39883,7 @@
     "item_type": "pet_cursed_bricheton",
     "name": "Cursed Bricheton",
     "category": "pet",
+    "pet_foods": ["wheat_white"],
     "level": 1,
     "stats": {
       "min": {
@@ -39900,6 +39926,7 @@
     "item_type": "pet_cursed_gaia",
     "name": "Cursed Gaia",
     "category": "pet",
+    "pet_foods": ["cursed_fungus"],
     "level": 1,
     "stats": {
       "min": {
@@ -39942,6 +39969,7 @@
     "item_type": "pet_cursed_gem_cactee",
     "name": "Cursed Gem Cactee",
     "category": "pet",
+    "pet_foods": ["cursed_gem"],
     "level": 1,
     "stats": {
       "min": {
@@ -39984,6 +40012,7 @@
     "item_type": "pet_deadmaw",
     "name": "Deadmaw",
     "category": "pet",
+    "pet_foods": ["void_shard", "abyss_core", "void_eye_lens"],
     "level": 1,
     "stats": {
       "min": {
@@ -40026,6 +40055,7 @@
     "item_type": "pet_diamantine_cactee",
     "name": "Diamantine Cactee",
     "category": "pet",
+    "pet_foods": ["diamond"],
     "level": 1,
     "stats": {
       "min": {
@@ -40068,6 +40098,7 @@
     "item_type": "pet_doris",
     "name": "Doris",
     "category": "pet",
+    "pet_foods": ["crab_shell", "scaled_hide"],
     "level": 1,
     "stats": {
       "min": {
@@ -40110,6 +40141,7 @@
     "item_type": "pet_draconite_cactee",
     "name": "Draconite Cactee",
     "category": "pet",
+    "pet_foods": ["draconite"],
     "level": 1,
     "stats": {
       "min": {
@@ -40152,6 +40184,7 @@
     "item_type": "pet_draconize_bricheton",
     "name": "Draconic Bricheton",
     "category": "pet",
+    "pet_foods": ["wheat_draconize"],
     "level": 1,
     "stats": {
       "min": {
@@ -40194,6 +40227,7 @@
     "item_type": "pet_dragon_gaia",
     "name": "Dragon Gaia",
     "category": "pet",
+    "pet_foods": ["dragonlily"],
     "level": 1,
     "stats": {
       "min": {
@@ -40236,6 +40270,7 @@
     "item_type": "pet_duskite_cactee",
     "name": "Duskite Cactee",
     "category": "pet",
+    "pet_foods": ["duskite"],
     "level": 1,
     "stats": {
       "min": {
@@ -40278,12 +40313,14 @@
     "item_type": "pet_ensable_crayfish",
     "name": "Ensable Crayfish",
     "category": "pet",
+    "pet_foods": ["ensable_crystal"],
     "level": 1
   },
   {
     "item_type": "pet_gaia",
     "name": "Shrooms Gaia",
     "category": "pet",
+    "pet_foods": ["green_mushroom"],
     "level": 1,
     "stats": {
       "min": {
@@ -40326,6 +40363,7 @@
     "item_type": "pet_heraklion",
     "name": "Heraklion",
     "category": "pet",
+    "pet_foods": ["draugr_bone", "nerak_marrow", "arcanite"],
     "level": 1,
     "stats": {
       "min": {
@@ -40368,12 +40406,14 @@
     "item_type": "pet_ice_corgi",
     "name": "Builder's Friend",
     "category": "pet",
+    "pet_foods": ["enriched_dough", "binding_paste"],
     "level": 1
   },
   {
     "item_type": "pet_ivory_gaia",
     "name": "Ivory Gaia",
     "category": "pet",
+    "pet_foods": ["ivory_shrooms"],
     "level": 1,
     "stats": {
       "min": {
@@ -40416,6 +40456,7 @@
     "item_type": "pet_jade_cactee",
     "name": "Jade Cactee",
     "category": "pet",
+    "pet_foods": ["jade"],
     "level": 1,
     "stats": {
       "min": {
@@ -40458,6 +40499,7 @@
     "item_type": "pet_jones",
     "name": "Jones",
     "category": "pet",
+    "pet_foods": ["shark_fin", "kraken_ink", "deep_scale"],
     "level": 1,
     "stats": {
       "min": {
@@ -40500,12 +40542,14 @@
     "item_type": "pet_krinan",
     "name": "Krinan",
     "category": "pet",
+    "pet_foods": ["soul_binder", "enchanting_dust"],
     "level": 1
   },
   {
     "item_type": "pet_lasgalen_rabbit",
     "name": "Lasgalen Rabbit",
     "category": "pet",
+    "pet_foods": ["barley_hardtack", "orchid_spore_blend"],
     "level": 1
   },
   {
@@ -40548,6 +40592,7 @@
     "item_type": "pet_malt_bricheton",
     "name": "Malt Bricheton",
     "category": "pet",
+    "pet_foods": ["wheat_malt"],
     "level": 1,
     "stats": {
       "min": {
@@ -40590,6 +40635,7 @@
     "item_type": "pet_melted_koa",
     "name": "Melted Koa",
     "category": "pet",
+    "pet_foods": ["hades_heart", "soul_shard", "soul_binder"],
     "level": 1,
     "stats": {
       "min": {
@@ -40632,12 +40678,14 @@
     "item_type": "pet_modni_lyk",
     "name": "Modni Lyk",
     "category": "pet",
+    "pet_foods": ["green_mushroom", "wheat_flour"],
     "level": 1
   },
   {
     "item_type": "pet_moonstone_cactee",
     "name": "Moonstone Cactee",
     "category": "pet",
+    "pet_foods": ["moonstone"],
     "level": 1,
     "stats": {
       "min": {
@@ -40680,6 +40728,7 @@
     "item_type": "pet_moray",
     "name": "Moray",
     "category": "pet",
+    "pet_foods": ["crab_shell", "scaled_hide"],
     "level": 1,
     "stats": {
       "min": {
@@ -40722,6 +40771,7 @@
     "item_type": "pet_nightcap_gaia",
     "name": "Nightcap Gaia",
     "category": "pet",
+    "pet_foods": ["nightcap"],
     "level": 1,
     "stats": {
       "min": {
@@ -40764,6 +40814,7 @@
     "item_type": "pet_obsidianite_cactee",
     "name": "Obsidianite Cactee",
     "category": "pet",
+    "pet_foods": ["obsidianite"],
     "level": 1,
     "stats": {
       "min": {
@@ -40842,6 +40893,7 @@
     "item_type": "pet_phacochere_son",
     "name": "Phacochere's Son",
     "category": "pet",
+    "pet_foods": ["tusk_ivory", "tusker_musk_gland", "phacochef_tusk"],
     "level": 1,
     "stats": {
       "min": {
@@ -40884,6 +40936,7 @@
     "item_type": "pet_phantom_gaia",
     "name": "Phantom Gaia",
     "category": "pet",
+    "pet_foods": ["phantom_spore"],
     "level": 1,
     "stats": {
       "min": {
@@ -40926,6 +40979,7 @@
     "item_type": "pet_quartz_cactee",
     "name": "Quartz Cactee",
     "category": "pet",
+    "pet_foods": ["quartz"],
     "level": 1,
     "stats": {
       "min": {
@@ -40968,6 +41022,7 @@
     "item_type": "pet_radient",
     "name": "Radiant",
     "category": "pet",
+    "pet_foods": ["inferno_shard", "pyre_ash", "choir_obsidian"],
     "level": 1,
     "stats": {
       "min": {
@@ -41010,6 +41065,7 @@
     "item_type": "pet_rock_koa",
     "name": "Rock Koa",
     "category": "pet",
+    "pet_foods": ["diamond", "crimson_brick", "sapling_bark"],
     "level": 1,
     "stats": {
       "min": {
@@ -41052,6 +41108,7 @@
     "item_type": "pet_siluri",
     "name": "Silury",
     "category": "pet",
+    "pet_foods": ["talokan_aero_tail", "saurian_fang", "fen_gland"],
     "level": 1,
     "stats": {
       "min": {
@@ -41094,6 +41151,7 @@
     "item_type": "pet_suize_bricheton",
     "name": "Suize Bricheton",
     "category": "pet",
+    "pet_foods": ["wheat_suize"],
     "level": 1,
     "stats": {
       "min": {
@@ -41136,12 +41194,14 @@
     "item_type": "pet_talokan_feu",
     "name": "Talokan Feu",
     "category": "pet",
+    "pet_foods": ["talokan_pearl", "hardening_compound"],
     "level": 1
   },
   {
     "item_type": "pet_tanjirize_bricheton",
     "name": "Tanjirize Bricheton",
     "category": "pet",
+    "pet_foods": ["wheat_tanjirize"],
     "level": 1,
     "stats": {
       "min": {
@@ -41184,18 +41244,21 @@
     "item_type": "pet_timon",
     "name": "Timon",
     "category": "pet",
+    "pet_foods": ["green_mushroom", "mineral_biscuit"],
     "level": 1
   },
   {
     "item_type": "pet_tokeko",
     "name": "Tokeko",
     "category": "pet",
+    "pet_foods": ["crab_shell", "scaled_hide"],
     "level": 1
   },
   {
     "item_type": "pet_truffle_gaia",
     "name": "Truffle Gaia",
     "category": "pet",
+    "pet_foods": ["crimson_truffle"],
     "level": 1,
     "stats": {
       "min": {
@@ -41238,6 +41301,7 @@
     "item_type": "pet_ukranize_bricheton",
     "name": "Ukranize Bricheton",
     "category": "pet",
+    "pet_foods": ["wheat_ukraine"],
     "level": 1,
     "stats": {
       "min": {
@@ -41280,18 +41344,21 @@
     "item_type": "pet_vainquished",
     "name": "Vanquished",
     "category": "pet",
+    "pet_foods": ["goblin_gunpowder", "goblin_tooth", "stabilizing_agent"],
     "level": 1
   },
   {
     "item_type": "pet_velkarion_wyrmling",
     "name": "Velkarion Wyrmling",
     "category": "pet",
+    "pet_foods": ["velkarion_ember"],
     "level": 1
   },
   {
     "item_type": "pet_wheat_bricheton",
     "name": "Wheat Bricheton",
     "category": "pet",
+    "pet_foods": ["wheat"],
     "level": 1,
     "stats": {
       "min": {
@@ -41334,6 +41401,7 @@
     "item_type": "pet_wind_koa",
     "name": "Wind Koa",
     "category": "pet",
+    "pet_foods": ["sky_shard", "rex_fang", "arcane_solution"],
     "level": 1,
     "stats": {
       "min": {
@@ -41376,6 +41444,7 @@
     "item_type": "pet_wither_gaia",
     "name": "Wither Gaia",
     "category": "pet",
+    "pet_foods": ["witherbloom"],
     "level": 1,
     "stats": {
       "min": {
@@ -41418,6 +41487,7 @@
     "item_type": "pet_zot",
     "name": "Zot",
     "category": "pet",
+    "pet_foods": ["stormfeather", "elemental_catalyst_air"],
     "level": 1
   },
   {
@@ -46272,6 +46342,7 @@
     "item_type": "red_gaia",
     "name": "Orchid Gaia",
     "category": "pet",
+    "pet_foods": ["red_orchid"],
     "level": 1,
     "stats": {
       "min": {
@@ -60336,7 +60407,7 @@
     "level": 1,
     "stats": {
       "min": {
-        "vitality": 16,
+        "vitality": 3,
         "wisdom": 0,
         "strength": 0,
         "intelligence": 0,
@@ -60350,10 +60421,10 @@
         "earth_resistance": 0,
         "fire_resistance": 0,
         "water_resistance": 0,
-        "air_resistance": 3
+        "air_resistance": 0
       },
       "max": {
-        "vitality": 52,
+        "vitality": 18,
         "wisdom": 0,
         "strength": 0,
         "intelligence": 0,
@@ -60367,7 +60438,7 @@
         "earth_resistance": 0,
         "fire_resistance": 0,
         "water_resistance": 0,
-        "air_resistance": 10
+        "air_resistance": 0
       }
     }
   },
@@ -64848,10 +64919,10 @@
     "level": 10,
     "stats": {
       "min": {
-        "vitality": 4,
+        "vitality": 10,
         "wisdom": 0,
-        "strength": 0,
-        "intelligence": 0,
+        "strength": 1,
+        "intelligence": 1,
         "chance": 0,
         "agility": 0,
         "range": 0,
@@ -64865,18 +64936,18 @@
         "air_resistance": 0
       },
       "max": {
-        "vitality": 16,
+        "vitality": 20,
         "wisdom": 0,
-        "strength": 0,
-        "intelligence": 0,
+        "strength": 15,
+        "intelligence": 15,
         "chance": 0,
         "agility": 0,
         "range": 0,
         "movement": 0,
         "action": 0,
         "critical": 0,
-        "raw_damage": 1,
-        "earth_resistance": 2,
+        "raw_damage": 0,
+        "earth_resistance": 0,
         "fire_resistance": 0,
         "water_resistance": 0,
         "air_resistance": 0

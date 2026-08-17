@@ -10,11 +10,13 @@ import { PORT, ADMIN_ADDRESSES, ALLOWED_ORIGINS, MAX_PLAYERS, SERVER_ID } from '
 import { verify_login } from './auth.ts'
 import { create_authenticated_connection, type AuthenticatedConnection } from './connection.ts'
 import { graph } from './graph.ts'
+import { create_indexing_health } from './indexing_health.ts'
 import { pubsub } from './pubsub.ts'
 import { mesh } from './protocol.ts'
 import { create_player, type Player } from './player.ts'
 import logger from './logger.ts'
 import { create_request_limiter } from './request_limiter.ts'
+import { latest_checkpoint } from './sui.ts'
 
 const log = logger(import.meta)
 
@@ -32,6 +34,10 @@ const decrement_upgrade = (address: string): void => {
   else upgrading.set(address, count - 1)
 }
 const request_limiter = create_request_limiter()
+const indexing_lag = create_indexing_health({
+  chain_checkpoint: latest_checkpoint,
+  indexed_checkpoint: pubsub.indexed_checkpoint,
+})
 
 // ── the cluster half (per-POD, legacy law): the 20s-TTL heartbeat key any pod count sums,
 //    and the player_connect beacon that evicts a duplicate login on ANOTHER pod ──
@@ -92,6 +98,7 @@ const server = Bun.serve<{ address: string }>({
               admin: ADMIN_ADDRESSES.has(address),
               graph,
               pubsub,
+              indexing_lag,
               request_limiter,
             })
             connections.set(address, { ws, player })

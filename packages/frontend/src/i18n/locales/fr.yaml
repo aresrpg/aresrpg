@@ -33,6 +33,16 @@ admin: Admin
 online: En ligne
 account: Compte
 join_discord: Rejoindre Discord
+sui_universe: Univers Sui
+server_disconnected: Déconnecté
+server_connecting: Connexion
+server_reconnecting: Reconnexion
+server_syncing: Synchronisation
+server_connected: Connecté
+latency_unit: ms
+indexing_health: Santé de l’indexation
+indexing_lag_warning: Les actions en jeu peuvent apparaître en retard
+network_testnet: TESTNET
 page_pending_title: Cette page est en reconstruction
 page_pending_body: Sa place reste visible pendant que nous la restaurons proprement.
 welcome_title: Bienvenue dans AresRPG
@@ -65,6 +75,71 @@ wallet_send_pending: Envoi des SUI…
 wallet_send_success: SUI envoyés
 wallet_send_failed: Le transfert de SUI a échoué
 wallet_close: Fermer
+shop_page:
+  title: 'Boutique'
+  subtitle: 'Achetez des objets avec du SUI'
+  limited_edition_notice: 'Tous ces objets sont en édition limitée — une fois le stock épuisé, ils ne pourront plus jamais être obtenus. Échangez-les sur le marché contre du SUI.'
+  remaining_of_cap: '{{remaining}} sur {{cap}} restants'
+  processing: 'TRAITEMENT'
+  sold_out: 'Épuisé'
+  acquire: 'Acquérir'
+  wallet: 'Portefeuille'
+  filter_all: 'Tout'
+  sections:
+    pet_box: 'COFFRES À FAMILIERS'
+    title: 'Titres'
+    cloak: 'Capes'
+    hat: 'Chapeaux'
+    companion: 'Compagnons'
+    equipment: 'Équipement'
+    consumable: 'Consommables'
+    resource: 'Ressources'
+  amount_title: 'Choisir la quantité'
+  amount_quantity: 'Quantité'
+  amount_max: 'Max'
+  amount_total: 'Total'
+  amount_available: '{{count}} disponibles'
+  amount_confirm: 'Acquérir {{count}}'
+  purchase_success_body: 'Vos nouveaux objets vous attendent dans votre inventaire.'
+  see_inventory: 'Voir mon inventaire'
+  buy_pending: 'Achat en cours…'
+  buy_success: 'Achat réussi !'
+  drop_rates: "Chances d'obtention"
+  pool_sub: "Un familier est tiré à l'ouverture, pondéré exactement comme listé ci-dessous."
+  acquisition_complete: 'Acquisition Terminée'
+airdrop_page:
+  title: 'Airdrops'
+  subtitle: 'Réclamez des objets réservés aux détenteurs éligibles'
+  minted: '{{count}} émis'
+  eligible_count: '{{count}} éligibles'
+  eligible: 'Éligible'
+  not_eligible: 'Non éligible'
+  claimed: 'Réclamé'
+  claim: 'Réclamer'
+  empty: 'Aucun airdrop actif'
+  empty_hint: 'Les airdrops pour les détenteurs de collections partenaires apparaîtront ici à leur lancement.'
+  pending_claim: "Réclamation de l'airdrop…"
+  toast_claimed: 'Airdrop réclamé'
+  set:
+    title: 'La collection'
+    subtitle: 'Objets réservés — vitrine uniquement'
+    error: 'Impossible de charger la collection airdrop'
+    retry: 'Réessayer'
+    empty: "La collection airdrop n'est pas encore publiée"
+    no_preview: 'Aperçu à venir'
+    aura: 'Aura'
+    aura_pending: 'Aura à venir'
+    awaiting_ruling: 'En attente de décision'
+    kind:
+      pet_glb: 'Familier'
+      cosmetic: 'Cosmétique'
+      title_relic: 'Relique de titre'
+      outfit: 'Tenue'
+settings_page:
+  title: 'Paramètres'
+  subtitle: 'Tes préférences AresRPG'
+  music_label: 'Musique'
+  music_hint: 'Joue les musiques du monde et des combats.'
 admin_page:
   kicker: Éditeur
   title: Publier le contenu du jeu
@@ -86,6 +161,11 @@ admin_page:
   admin_wallet: Portefeuille administrateur
   admin_wallet_body: Signataire distinct pour la publication et le retrait des revenus.
   connect_admin_wallet: Connecter
+  choose_admin_wallet: Choisir le portefeuille
+  choose_admin_address: Choisir l’adresse
+  cancel_wallet_selection: Annuler
+  wallet_account: Compte
+  select_wallet: Sélectionner
   connecting: Connexion…
   loading_wallets: Chargement des portefeuilles…
   no_admin_wallet: Aucun portefeuille navigateur compatible installé.
@@ -194,6 +274,7 @@ fight_hud:
   placement_title: Préparez-vous au combat
   placement_hint: Placez vos combattants et indiquez qu’ils sont prêts
   end_turn: Fin du tour
+  reset_turn: Rejouer
   forfeit: Abandonner
   forfeit_title: Abandonner avec {name} ?
   forfeit_body: '{name} perdra tous ses PV restants et quittera ce combat.'
@@ -378,16 +459,12 @@ encyclopedia_page:
   select_job: SELECTIONNEZ UN METIER
   crafts: Fabrique
   gathering_tiers: PROGRESSION DE RECOLTE
-  craft_xp_table: TABLE XP DE CRAFT
-  bulk_craft_note: L'XP par craft dépend du nombre d'ingrédients de la recette — les recettes avec plus d'emplacements d'ingrédients uniques accordent plus d'XP par craft.
-  job_recipes: RECETTES
+  craftable_items: OBJETS FABRICABLES
   tier: Palier
   required_level: Niv. Req.
   resource: Ressource
   rare_variant: Variante rare
   xp_per_harvest: XP / Recolte
-  slots: Emplacements
-  xp_awarded: XP Obtenue
   job_desc:
     FARMER: Les fermiers recoltent des cereales dans les champs. Les paliers superieurs debloquent des cultures rares pour les recettes avancees.
     HERBALIST: Les herboristes cueillent plantes et fleurs pour l'alchimie. Chaque palier necessite un niveau de metier plus eleve.
@@ -636,6 +713,8 @@ encyclopedia_page:
   consumable_reward_heading: RÉCOMPENSE
   consumable_rewards: RÉCOMPENSES POSSIBLES
   consumable_reward: '{{item}} · {{chance}}%'
+  rune_effect: Ajoute {{amount}} {{stat}} à un objet
+  rune_obtained_by_crushing: Obtenue en concassant des objets
   spell_n: SORT {{n}}
   range: PORTÉE
   range_modifiability: MODIFICATION DE PORTÉE

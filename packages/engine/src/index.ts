@@ -2,6 +2,8 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
 export { create_engine } from './renderer.ts'
+export { fight_path_gait } from './entities.ts'
+export { fight_placement_blobs } from './fight_blobs.ts'
 export { sample_biome_grid } from './biome_grid.ts'
 export { get_quality_profile, QUALITY_OPTIONS, QUALITY_PROFILES, quality_pixel_ratio } from './quality.ts'
 export { CHUNK_EDGE } from './voxel_data.ts'
@@ -34,10 +36,13 @@ export type {
   FightBlobRender,
   FightBlobShape,
   FightBlobSpec,
+  FightPresentationCue,
   FightBoardRender,
   FightBoardRenderCell,
   EntityAnchor,
   EntityFacing,
+  EntityPathMotion,
+  EntityScreenAnchor,
   EntityRender,
   FightSide,
   MobEntityRender,

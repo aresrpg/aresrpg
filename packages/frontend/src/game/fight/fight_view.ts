@@ -18,7 +18,7 @@ const EMPTY_FRAME: FightBoardFrame = Object.freeze({
 export const create_fight_view = (canvas: HTMLCanvasElement, quality: EngineQuality) => {
   const world = worlds_source[0]
   if (!world?.terrain) throw new Error('The first world has no terrain recipe')
-  const engine = create_engine({ canvas, quality, world: world.terrain })
+  const engine = create_engine({ canvas, quality, presentation: 'fight', world: world.terrain })
   const unsubscribe_status = engine.subscribe_status((status) => {
     canvas.dataset.engineBackend = status.backend
     canvas.dataset.engineStatus = status.state
@@ -54,7 +54,12 @@ export const create_fight_view = (canvas: HTMLCanvasElement, quality: EngineQual
   return Object.freeze({
     set_quality: engine.set_quality,
     set_entities: engine.set_entities,
+    animate_entity: engine.animate_entity,
+    play_fight_cue: engine.play_fight_cue,
+    project_entity: engine.project_entity,
     create_blob: engine.create_fight_blob,
+    update_blob: engine.update_fight_blob,
+    remove_blob: engine.remove_fight_blob,
     set_board: (board: FightBoardRender): void => {
       frame = Object.freeze({
         origin: board.origin,

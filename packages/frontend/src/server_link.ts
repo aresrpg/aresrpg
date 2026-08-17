@@ -9,6 +9,9 @@ import type { AppInput } from './store.ts'
 
 const BACKOFF_START_MS = 1_000
 const BACKOFF_CAP_MS = 30_000
+const LATENCY_INTERVAL_MS = 5_000
+
+const clock_ms = (): number => globalThis.performance?.now() ?? Date.now()
 
 export type ServerLink = Readonly<{
   send: (packet: Readonly<ClientPacket>) => boolean
@@ -38,6 +41,29 @@ export const connect_server = ({ session, dispatch }: ServerLinkOptions): Server
   let retry_timer: ReturnType<typeof setTimeout> | null = null
   let disposed = false
   let retry_ms = BACKOFF_START_MS
+  let latency_timer: ReturnType<typeof setInterval> | null = null
+  let next_probe_id = 1
+  let pending_probe: Readonly<{ id: number; started_ms: number }> | null = null
+
+  const stop_latency = (): void => {
+    if (latency_timer) clearInterval(latency_timer)
+    latency_timer = null
+    pending_probe = null
+  }
+
+  const probe_latency = (): void => {
+    if (!socket || socket.readyState !== WebSocket.OPEN) return
+    const id = next_probe_id
+    next_probe_id += 1
+    pending_probe = Object.freeze({ id, started_ms: clock_ms() })
+    socket.send(JSON.stringify({ type: 'packet/ping', id } satisfies ClientPacket))
+  }
+
+  const start_latency = (): void => {
+    stop_latency()
+    probe_latency()
+    latency_timer = setInterval(probe_latency, LATENCY_INTERVAL_MS)
+  }
 
   const connection_url = (): string => {
     const url = new URL(env.server_ws_url)
@@ -59,6 +85,13 @@ export const connect_server = ({ session, dispatch }: ServerLinkOptions): Server
         if (disposed || socket !== next) return
         try {
           const packet = parse_server_packet(String(data))
+          if (packet.type === 'packet/pong') {
+            if (pending_probe?.id !== packet.id) return
+            const latency_ms = Math.max(0, Math.round(clock_ms() - pending_probe.started_ms))
+            pending_probe = null
+            dispatch({ type: 'link/latency', latency_ms })
+            return
+          }
           if (packet.type === 'packet/signature_request') {
             void create_login_response(session, packet.payload)
               .then((response) => {
@@ -72,6 +105,7 @@ export const connect_server = ({ session, dispatch }: ServerLinkOptions): Server
             return
           }
           dispatch({ type: 'server/packet', packet })
+          if (packet.type === 'packet/connection_accepted') start_latency()
         } catch (error) {
           console.warn('Malformed server frame ignored.', error)
         }
@@ -79,6 +113,7 @@ export const connect_server = ({ session, dispatch }: ServerLinkOptions): Server
       next.addEventListener('close', ({ code, reason }) => {
         if (disposed || socket !== next) return
         socket = null
+        stop_latency()
         if (is_terminal_auth_close(code, reason)) {
           dispatch({ type: 'link/rejected', reason })
           return
@@ -107,6 +142,7 @@ export const connect_server = ({ session, dispatch }: ServerLinkOptions): Server
     },
     dispose: () => {
       disposed = true
+      stop_latency()
       if (retry_timer) clearTimeout(retry_timer)
       retry_timer = null
       socket?.close(1000, 'CLIENT_CLOSED')

@@ -1,0 +1,110 @@
+/* Port of the legacy fight entity tooltip. It stays pointer-transparent over the shared board. */
+.ent-tt {
+  position: fixed;
+  z-index: 70;
+  min-width: 150px;
+  max-width: 220px;
+  padding: 8px 10px;
+  pointer-events: none;
+  color: var(--fg, #e8e5dc);
+  background: linear-gradient(165deg, #12121a, #0a0a0f);
+  border: 1px solid #1e1e2e;
+  border-top-color: rgb(200 150 60 / 35%);
+  border-radius: 0;
+  box-shadow:
+    0 10px 30px -10px rgb(0 0 0 / 65%),
+    inset 0 1px 0 rgb(255 255 255 / 5%);
+  font-family: var(--font-ui, 'JetBrains Mono', monospace);
+  font-size: 0.82rem;
+  line-height: 1.4;
+  transform: translate(-50%, calc(-100% - 12px));
+  transform-origin: center bottom;
+  animation: ent-tt-in 0.15s ease-out;
+}
+
+@keyframes ent-tt-in {
+  from {
+    opacity: 0;
+    transform: translate(-50%, calc(-100% - 12px)) scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, calc(-100% - 12px)) scale(1);
+  }
+}
+
+.ent-tt__head {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+.ent-tt__dot {
+  align-self: center;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex: 0 0 auto;
+}
+.ent-tt.ally .ent-tt__dot {
+  background: var(--accent, #67b7ed);
+}
+.ent-tt.enemy .ent-tt__dot {
+  background: var(--bad, #f87171);
+}
+.ent-tt__name {
+  min-width: 0;
+  overflow: hidden;
+  font-size: 0.9rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ent-tt__hp-paren {
+  flex: 0 0 auto;
+  font-family: var(--font-mono, 'JetBrains Mono', monospace);
+  font-size: 0.82rem;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+.ent-tt__delta {
+  font-weight: 700;
+}
+.ent-tt__delta--dmg {
+  color: var(--bad, #f87171);
+}
+.ent-tt__delta--heal {
+  color: var(--good, #6ee7a2);
+}
+.ent-tt__delta--crit {
+  color: #ff9d3c;
+  font-weight: 800;
+}
+.ent-tt > .fight-effect-lines {
+  margin-top: 5px;
+  padding-top: 5px;
+  border-top: 1px solid #1e1e2e;
+}
+.ent-tt__preview {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-top: 5px;
+  padding-top: 5px;
+  border-top: 1px solid #1e1e2e;
+}
+.ent-tt__fx {
+  overflow: hidden;
+  font-family: var(--font-mono, 'JetBrains Mono', monospace);
+  font-size: 0.76rem;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.35;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ent-tt {
+    animation: none;
+  }
+}

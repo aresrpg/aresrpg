@@ -14,6 +14,7 @@ export type PublicEnv = Readonly<{
   meta_description: string
   meta_title: string
   network: Network
+  sui_rpc_url: string
   social_description: string
   social_image_url: string
   server_ws_url: string
@@ -41,6 +42,7 @@ export const resolve_env = (source: Readonly<Record<string, string | undefined>>
     VITE_GOOGLE_CLIENT_ID = '263863163058-qn6qhkjmdvmlj8f1n4r0kdi4e608usbo.apps.googleusercontent.com',
     VITE_NETWORK = 'testnet',
     VITE_GRAPHQL_URL = `https://graphql.${VITE_NETWORK}.sui.io/graphql`,
+    VITE_SUI_RPC_URL = `https://fullnode.${VITE_NETWORK}.sui.io:443`,
     VITE_SERVER_WS_URL = 'ws://localhost:9800/',
   } = source
   const network = VITE_NETWORK
@@ -61,6 +63,7 @@ export const resolve_env = (source: Readonly<Record<string, string | undefined>>
       'AresRPG is a browser-based voxel MMORPG on Sui where your characters, items, and progression live on-chain.',
     meta_title: 'AresRPG · On-chain voxel MMORPG',
     network,
+    sui_rpc_url: VITE_SUI_RPC_URL,
     social_description: 'Explore a voxel world in your browser. Your characters, items, and progression live on Sui.',
     social_image_url: new URL('og-image.png', app_url).href,
     server_ws_url: normalize_ws_url(VITE_SERVER_WS_URL),

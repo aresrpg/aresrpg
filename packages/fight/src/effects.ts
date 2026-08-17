@@ -3,13 +3,14 @@
 /* eslint-disable no-param-reassign, fp-law/no-mutating-methods -- The Move twin updates only its reducer-owned structuredClone draft; caller snapshots stay immutable. */
 // The one spell/weapon/zone resolver, ported in fight.move mutation order.
 
-import { in_grid, line_of_sight, manhattan, mask_get, same_line, zone_cells } from './combat_grid.ts'
+import { GRID_CELLS, in_grid, line_of_sight, manhattan, mask_get, same_line, zone_cells } from './combat_grid.ts'
 import { contest_points, deal, full_damage, life_steal, resist, roll_value } from './damage.ts'
-import { crit_at, effect_seed, heal_amount, punishment_base, slot_crit_roll } from './fight_math.ts'
+import { effect_seed, heal_amount, punishment_base } from './fight_math.ts'
 import { KINDS, STATS, add_ap, add_mp, heal_seat, hit, max_hp_of, sheet_of, spend_ap, spend_mp } from './fighters.ts'
 import { displace, fighter_at, living_cells } from './movement.ts'
 import { draw } from './prng.ts'
 import { add_effect_id, add_zone_id, effect_id_at, emit, fail } from './runtime.ts'
+import { spell_level_of, spell_turn_rows, type FightReadState } from './spell_turn.ts'
 import { on_enter } from './zones.ts'
 import type {
   ActiveEffect,
@@ -23,7 +24,7 @@ import type {
 
 const NO_TARGET = 0xffff_ffffn
 
-export const legal_cell = (runtime: FightRuntime, cell: bigint): boolean =>
+export const legal_cell = (runtime: FightReadState, cell: bigint): boolean =>
   in_grid(cell) && !mask_get(runtime.contract.closed, cell)
 
 const emit_effect = (runtime: FightRuntime, target: bigint, effect: ActiveEffect, id: string): void =>
@@ -66,7 +67,7 @@ const drop_invisibility = (runtime: FightRuntime, fighter: bigint, reason: strin
   emit(runtime, 'invisibility_changed', { fighter, invisible: false, reason })
 }
 
-const cooldown_left = (runtime: FightRuntime, seat: bigint, spell: string): bigint =>
+const cooldown_left = (runtime: FightReadState, seat: bigint, spell: string): bigint =>
   runtime.contract.fighters[Number(seat)].cooldowns.find((row) => row.spell === spell)?.left ?? 0n
 
 const set_cooldown = (runtime: FightRuntime, seat: bigint, spell: string, left: bigint): void => {
@@ -78,18 +79,18 @@ const set_cooldown = (runtime: FightRuntime, seat: bigint, spell: string, left: 
   emit(runtime, 'cooldown_changed', { fighter: seat, spell, before, after: left, reason: 'cast' })
 }
 
-export const casts_this_turn = (runtime: FightRuntime, spell: string, target: bigint | null = null): bigint =>
+export const casts_this_turn = (runtime: FightReadState, spell: string, target: bigint | null = null): bigint =>
   BigInt(
     runtime.contract.turn_casts.filter((row) => row.spell === spell && (target === null || row.target === target))
       .length
   )
 
-export const sight_blockers = (runtime: FightRuntime, looker: bigint, target_cell: bigint): bigint[] => [
+export const sight_blockers = (runtime: FightReadState, looker: bigint, target_cell: bigint): bigint[] => [
   ...runtime.contract.board.obstacles,
   ...living_cells(runtime, looker).filter((cell) => cell !== target_cell),
 ]
 
-const visible_occupant = (runtime: FightRuntime, caster: bigint, cell: bigint): bigint | null => {
+const visible_occupant = (runtime: FightReadState, caster: bigint, cell: bigint): bigint | null => {
   const occupant = fighter_at(runtime, cell)
   if (occupant === null) return null
   const fighter = runtime.contract.fighters[Number(occupant)]
@@ -98,7 +99,7 @@ const visible_occupant = (runtime: FightRuntime, caster: bigint, cell: bigint): 
   return invisible && fighter.team !== caster_fighter.team ? null : occupant
 }
 
-const has_offensive = (rows: SpellEffect[]): boolean =>
+const has_offensive = (rows: readonly SpellEffect[]): boolean =>
   rows.some((row) =>
     [KINDS.damage, KINDS.pct_life, KINDS.punishment, KINDS.remove, KINDS.steal, KINDS.push, KINDS.pull].includes(
       row.kind
@@ -107,17 +108,25 @@ const has_offensive = (rows: SpellEffect[]): boolean =>
 
 const is_placement = (row: SpellEffect): boolean => row.kind === KINDS.trap || row.kind === KINDS.glyph
 
-const split_placements = (rows: SpellEffect[]): { placements: SpellEffect[]; payload: SpellEffect[] } => ({
+const split_placements = (rows: readonly SpellEffect[]): { placements: SpellEffect[]; payload: SpellEffect[] } => ({
   placements: rows.filter(is_placement),
   payload: rows.filter((row) => !is_placement(row)),
 })
 
-const placement_anchor_available = (runtime: FightRuntime, placements: SpellEffect[], target_cell: bigint): boolean =>
+const placement_anchor_available = (
+  runtime: FightReadState,
+  placements: readonly SpellEffect[],
+  target_cell: bigint
+): boolean =>
   placements.length === 1 &&
   !runtime.contract.zones.some(({ anchor }) => anchor === target_cell) &&
   (placements[0].kind !== KINDS.trap || fighter_at(runtime, target_cell) === null)
 
-export const placement_rows_castable = (runtime: FightRuntime, rows: SpellEffect[], target_cell: bigint): boolean => {
+export const placement_rows_castable = (
+  runtime: FightReadState,
+  rows: readonly SpellEffect[],
+  target_cell: bigint
+): boolean => {
   const placements = rows.filter(is_placement)
   return placements.length === 0 || placement_anchor_available(runtime, placements, target_cell)
 }
@@ -401,6 +410,90 @@ export const resolve_rows = ({
   })
 }
 
+type CastLegality =
+  | Readonly<{
+      ok: true
+      sheet: FightSheet
+      occupant: bigint | null
+      critical: boolean
+      rows: readonly SpellEffect[]
+    }>
+  | Readonly<{ ok: false; code: string }>
+
+const cast_legality = ({
+  runtime,
+  caster,
+  level,
+  name,
+  target_cell,
+}: Readonly<{
+  runtime: FightReadState
+  caster: bigint
+  level: SpellLevel
+  name: string
+  target_cell: bigint
+}>): CastLegality => {
+  const fighter = runtime.contract.fighters[Number(caster)]
+  if (!fighter || fighter.ap < level.ap_cost) return Object.freeze({ ok: false, code: 'no_ap' })
+  if (!legal_cell(runtime, target_cell)) return Object.freeze({ ok: false, code: 'bad_target_cell' })
+  const sheet = sheet_of(runtime, caster)
+  const caster_cell = fighter.cell
+  const distance = manhattan(caster_cell, target_cell)
+  const range_bonus = level.modifiable_range ? sheet.range_bonus : 0n
+  if (distance < level.range_min || distance > level.range_max + range_bonus)
+    return Object.freeze({ ok: false, code: 'out_of_range' })
+  if (level.line_launch && !same_line(caster_cell, target_cell))
+    return Object.freeze({ ok: false, code: 'not_in_line' })
+  if (level.line_of_sight && !line_of_sight(caster_cell, target_cell, sight_blockers(runtime, caster, target_cell)))
+    return Object.freeze({ ok: false, code: 'no_line_of_sight' })
+  const occupant = visible_occupant(runtime, caster, target_cell)
+  if (level.casts_per_turn > 0n && casts_this_turn(runtime, name) >= level.casts_per_turn)
+    return Object.freeze({ ok: false, code: 'cast_cap' })
+  const ledger_target = occupant ?? NO_TARGET
+  if (
+    level.casts_per_target > 0n &&
+    occupant !== null &&
+    casts_this_turn(runtime, name, ledger_target) >= level.casts_per_target
+  )
+    return Object.freeze({ ok: false, code: 'target_cap' })
+  if (level.cooldown_turns > 0n && cooldown_left(runtime, caster, name) > 0n)
+    return Object.freeze({ ok: false, code: 'cooldown' })
+  const { critical, rows } = spell_turn_rows(runtime, caster, name, level)
+  const { placements } = split_placements(rows)
+  if (placements.length > 0 && !placement_anchor_available(runtime, placements, target_cell))
+    return Object.freeze({ ok: false, code: 'bad_target_cell' })
+  return Object.freeze({ ok: true, sheet, occupant, critical, rows })
+}
+
+export type SpellCellProjection = Readonly<{
+  range: readonly bigint[]
+  targetable: readonly bigint[]
+}>
+
+export const spell_target_cells = (runtime: FightReadState, caster: bigint, name: string): SpellCellProjection => {
+  const fighter = runtime.contract.fighters[Number(caster)]
+  if (!fighter || fighter.kind.type !== 'player')
+    return Object.freeze({ range: Object.freeze([]), targetable: Object.freeze([]) })
+  const level = spell_level_of(runtime, caster, name)
+  if (!level) return Object.freeze({ range: Object.freeze([]), targetable: Object.freeze([]) })
+  const range_bonus = level.modifiable_range ? sheet_of(runtime, caster).range_bonus : 0n
+  const range = Array.from({ length: Number(GRID_CELLS) }, (_, index) => BigInt(index)).filter((cell) => {
+    const distance = manhattan(fighter.cell, cell)
+    return (
+      legal_cell(runtime, cell) &&
+      distance >= level.range_min &&
+      distance <= level.range_max + range_bonus &&
+      (!level.line_launch || same_line(fighter.cell, cell))
+    )
+  })
+  return Object.freeze({
+    range: Object.freeze(range),
+    targetable: Object.freeze(
+      range.filter((target_cell) => cast_legality({ runtime, caster, level, name, target_cell }).ok)
+    ),
+  })
+}
+
 export const resolve_spell = ({
   runtime,
   caster,
@@ -418,41 +511,13 @@ export const resolve_spell = ({
   cast_level: bigint
   weapon?: boolean
 }): FightRuntime => {
-  const fighter = runtime.contract.fighters[Number(caster)]
-  const caster_cell = fighter.cell
-  if (fighter.ap < level.ap_cost) return fail(runtime, 'no_ap')
-  if (!legal_cell(runtime, target_cell)) return fail(runtime, 'bad_target_cell')
-  const sheet = sheet_of(runtime, caster)
-  const distance = manhattan(caster_cell, target_cell)
-  const range_bonus = level.modifiable_range ? sheet.range_bonus : 0n
-  if (distance < level.range_min || distance > level.range_max + range_bonus) return fail(runtime, 'out_of_range')
-  if (level.line_launch && !same_line(caster_cell, target_cell)) return fail(runtime, 'not_in_line')
-  if (level.line_of_sight && !line_of_sight(caster_cell, target_cell, sight_blockers(runtime, caster, target_cell)))
-    return fail(runtime, 'no_line_of_sight')
-  const occupant = visible_occupant(runtime, caster, target_cell)
-  if (!level.free_cell && occupant === null) return fail(runtime, 'needs_target')
-  if (level.casts_per_turn > 0n && casts_this_turn(runtime, name) >= level.casts_per_turn)
-    return fail(runtime, 'cast_cap')
-  const ledger_target = occupant ?? NO_TARGET
-  if (
-    level.casts_per_target > 0n &&
-    occupant !== null &&
-    casts_this_turn(runtime, name, ledger_target) >= level.casts_per_target
-  )
-    return fail(runtime, 'target_cap')
-  if (level.cooldown_turns > 0n && cooldown_left(runtime, caster, name) > 0n) return fail(runtime, 'cooldown')
-
-  const slot = runtime.contract.turn_slot
-  const critical = crit_at(
-    slot_crit_roll(runtime.contract.turn_seed, slot),
-    level.crit_1_in,
-    sheet.critical,
-    sheet.agility
-  )
-  const rows = critical && level.crit_effects.length > 0 ? level.crit_effects : level.effects
+  const legality = cast_legality({ runtime, caster, level, name, target_cell })
+  if (!legality.ok) return fail(runtime, legality.code)
+  const { critical, occupant, rows, sheet } = legality
+  const caster_cell = runtime.contract.fighters[Number(caster)].cell
   const split = split_placements(rows)
-  if (split.placements.length > 0 && !placement_anchor_available(runtime, split.placements, target_cell))
-    return fail(runtime, 'bad_target_cell')
+  const ledger_target = occupant ?? NO_TARGET
+  const slot = runtime.contract.turn_slot
 
   spend_ap(runtime, caster, level.ap_cost, 'cast_cost', caster)
   runtime.contract.turn_slot += 1n

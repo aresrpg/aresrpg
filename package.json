@@ -13,7 +13,7 @@
     "lint": "NODE_OPTIONS=--max-old-space-size=6144 eslint . --max-warnings 3088 && prettier . --check",
     "typecheck": "bun run --cwd packages/engine typecheck && bun run --cwd packages/protocol typecheck && bun run --cwd packages/sdk typecheck && bun run --cwd packages/server typecheck && bun run --cwd packages/fight typecheck && bun run --cwd packages/frontend typecheck",
     "format": "prettier . --write && eslint . --fix",
-    "test": "bun run --filter '*' test && node scripts/assert_seed_validation.mjs"
+    "test": "bun run --filter '*' test && bun test scripts/eslint-rules && node scripts/assert_seed_validation.mjs"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

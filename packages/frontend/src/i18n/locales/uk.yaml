@@ -33,6 +33,16 @@ admin: Адмін
 online: Онлайн
 account: Акаунт
 join_discord: Приєднатися до Discord
+sui_universe: Всесвіт Sui
+server_disconnected: Відключено
+server_connecting: Підключення
+server_reconnecting: Повторне підключення
+server_syncing: Синхронізація
+server_connected: Підключено
+latency_unit: мс
+indexing_health: Стан індексації
+indexing_lag_warning: Дії в грі можуть відображатися із затримкою
+network_testnet: TESTNET
 page_pending_title: Ця сторінка відновлюється
 page_pending_body: Її місце залишається видимим, поки ми чисто її відновлюємо.
 welcome_title: Ласкаво просимо до AresRPG
@@ -65,6 +75,71 @@ wallet_send_pending: Надсилання SUI…
 wallet_send_success: SUI надіслано
 wallet_send_failed: Не вдалося надіслати SUI
 wallet_close: Закрити
+shop_page:
+  title: 'Крамниця'
+  subtitle: 'Купуйте предмети за SUI'
+  limited_edition_notice: 'Усі ці предмети — лімітована серія: щойно запас вичерпається, отримати їх буде вже неможливо. Обмінюйте їх на торговому майданчику на SUI.'
+  remaining_of_cap: '{{remaining}} з {{cap}} залишилось'
+  processing: 'ОБРОБКА'
+  sold_out: 'Розпродано'
+  acquire: 'Придбати'
+  wallet: 'Гаманець'
+  filter_all: 'Усі'
+  sections:
+    pet_box: 'СКРИНІ З УЛЮБЛЕНЦЯМИ'
+    title: 'Титули'
+    cloak: 'Плащі'
+    hat: 'Головні убори'
+    companion: 'Компаньйони'
+    equipment: 'Спорядження'
+    consumable: 'Витратні матеріали'
+    resource: 'Ресурси'
+  amount_title: 'Виберіть кількість'
+  amount_quantity: 'Кількість'
+  amount_max: 'Макс'
+  amount_total: 'Разом'
+  amount_available: '{{count}} доступно'
+  amount_confirm: 'Придбати {{count}}'
+  purchase_success_body: 'Ваші нові предмети чекають в інвентарі.'
+  see_inventory: 'Переглянути інвентар'
+  buy_pending: 'Купівля…'
+  buy_success: 'Покупку завершено!'
+  drop_rates: 'Шанси випадіння'
+  pool_sub: 'Під час відкриття випадає один улюбленець, з вагами точно як у списку нижче.'
+  acquisition_complete: 'Придбання завершено'
+airdrop_page:
+  title: 'Ейрдропи'
+  subtitle: 'Отримайте зарезервовані предмети для відповідних власників'
+  minted: '{{count}} викарбувано'
+  eligible_count: '{{count}} відповідних'
+  eligible: 'Відповідає умовам'
+  not_eligible: 'Не відповідає умовам'
+  claimed: 'Отримано'
+  claim: 'Отримати'
+  empty: 'Немає активних ейрдропів'
+  empty_hint: "Ейрдропи для власників партнерських колекцій з'являться тут після запуску."
+  pending_claim: 'Отримання ейрдропу…'
+  toast_claimed: 'Ейрдроп отримано'
+  set:
+    title: 'Колекція'
+    subtitle: 'Зарезервовані предмети — лише вітрина'
+    error: 'Не вдалося завантажити колекцію ейрдропу'
+    retry: 'Повторити'
+    empty: 'Колекцію ейрдропу ще не опубліковано'
+    no_preview: 'Попередній перегляд готується'
+    aura: 'Аура'
+    aura_pending: 'Аура готується'
+    awaiting_ruling: 'Очікує рішення'
+    kind:
+      pet_glb: 'Улюбленець'
+      cosmetic: 'Косметика'
+      title_relic: 'Реліквія титулу'
+      outfit: 'Вбрання'
+settings_page:
+  title: 'Налаштування'
+  subtitle: 'Твої налаштування AresRPG'
+  music_label: 'Музика'
+  music_hint: 'Відтворює музику світу та боїв.'
 admin_page:
   kicker: Видавець
   title: Опублікувати вміст гри
@@ -86,6 +161,11 @@ admin_page:
   admin_wallet: Адміністративний гаманець
   admin_wallet_body: Окремий підписант для публікації та виведення доходу.
   connect_admin_wallet: Підключити
+  choose_admin_wallet: Вибрати гаманець
+  choose_admin_address: Вибрати адресу
+  cancel_wallet_selection: Скасувати
+  wallet_account: Обліковий запис
+  select_wallet: Вибрати
   connecting: Підключення…
   loading_wallets: Завантаження гаманців…
   no_admin_wallet: Сумісний браузерний гаманець не встановлено.
@@ -194,6 +274,7 @@ fight_hud:
   placement_title: Приготуйтеся до бою
   placement_hint: Розмістіть бійців і позначте їх готовими
   end_turn: Завершити хід
+  reset_turn: Скинути
   forfeit: Здатися
   forfeit_title: Здатися персонажем {name}?
   forfeit_body: '{name} втратить усі залишкові ОЗ і залишить цей бій.'
@@ -371,16 +452,12 @@ encyclopedia_page:
   select_job: ОБЕРІТЬ ПРОФЕСІЮ
   crafts: Виробляє
   gathering_tiers: ПРОГРЕС ЗБОРУ
-  craft_xp_table: ТАБЛИЦЯ XP КРАФТУ
-  bulk_craft_note: XP за крафт залежить від кількості інгредієнтів рецепта — рецепти з більшою кількістю унікальних слотів інгредієнтів дають більше XP за крафт.
-  job_recipes: РЕЦЕПТИ
+  craftable_items: ПРЕДМЕТИ ДЛЯ ВИГОТОВЛЕННЯ
   tier: Рівень
   required_level: Потр. Рів.
   resource: Ресурс
   rare_variant: Рідкісний варіант
   xp_per_harvest: XP / Збір
-  slots: Слоти
-  xp_awarded: XP Нагорода
   job_desc:
     FARMER: Фермери збирають зернові на полях по всьому світу. Вищі рівні відкривають рідкісніші культури для просунутих рецептів.
     HERBALIST: Травники збирають рослини та квіти для алхімії. Кожен рівень потребує вищого рівня професії.
@@ -629,6 +706,8 @@ encyclopedia_page:
   consumable_reward_heading: НАГОРОДА
   consumable_rewards: МОЖЛИВІ НАГОРОДИ
   consumable_reward: '{{item}} · {{chance}}%'
+  rune_effect: Додає {{amount}} до характеристики «{{stat}}» предмета
+  rune_obtained_by_crushing: Отримується за роздроблення предметів
   spell_n: ЗАКЛИНАННЯ {{n}}
   range: ДАЛЬНІСТЬ
   range_modifiability: МОЖЛИВІСТЬ ЗМІНИ ДАЛЬНОСТІ

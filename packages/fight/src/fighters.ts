@@ -9,11 +9,14 @@ import type {
   FightRuntime,
   FightSheet,
   Fighter,
+  HydratedFightCheckpoint,
   MobFighter,
   MobSnapshot,
   PlayerFighter,
   PlayerSource,
 } from './types.ts'
+
+type FightReadState = Readonly<Pick<HydratedFightCheckpoint, 'contract' | 'sources'>>
 
 const SHIFT = BigInt(CONTRACT_CONSTANTS.item_stat_shift)
 const BASE_AP = BigInt(CONTRACT_CONSTANTS.base_ap)
@@ -32,7 +35,7 @@ export const is_mob = (fighter: Fighter): fighter is MobFighter => fighter.kind.
 export const is_player = (fighter: Fighter): fighter is PlayerFighter => fighter.kind.type === 'player'
 export const mob_snapshot = (fighter: MobFighter): MobSnapshot => fighter.kind.snapshot
 
-export const player_source = (runtime: FightRuntime, seat: bigint): PlayerSource => {
+export const player_source = (runtime: FightReadState, seat: bigint): PlayerSource => {
   const fighter = runtime.contract.fighters[Number(seat)] as PlayerFighter
   return runtime.sources.players[fighter.kind.character]
 }
@@ -40,18 +43,18 @@ export const player_source = (runtime: FightRuntime, seat: bigint): PlayerSource
 export const saturating_subtract = (left: bigint, right: bigint): bigint => (left > right ? left - right : 0n)
 export const effective = (base: bigint, folded: bigint): bigint => saturating_subtract(base + folded, SHIFT)
 
-const sum_rows = (runtime: FightRuntime, seat: bigint, kind: bigint, stat: bigint): bigint =>
+const sum_rows = (runtime: FightReadState, seat: bigint, kind: bigint, stat: bigint): bigint =>
   runtime.contract.fighters[Number(seat)].effects
     .filter((row) => row.kind === kind && (stat === STATS.any || row.stat === stat))
     .reduce((total, row) => total + row.value, 0n)
 
-const row_adjusted = (runtime: FightRuntime, seat: bigint, base: bigint, stat: bigint): bigint =>
+const row_adjusted = (runtime: FightReadState, seat: bigint, base: bigint, stat: bigint): bigint =>
   saturating_subtract(
     base + sum_rows(runtime, seat, KINDS.add, stat),
     sum_rows(runtime, seat, KINDS.remove, stat) + sum_rows(runtime, seat, KINDS.steal, stat)
   )
 
-export const sheet_of = (runtime: FightRuntime, seat: bigint): FightSheet => {
+export const sheet_of = (runtime: FightReadState, seat: bigint): FightSheet => {
   const fighter = runtime.contract.fighters[Number(seat)]
   const base = is_mob(fighter)
     ? {
@@ -121,12 +124,15 @@ export const base_ap_of = (runtime: FightRuntime, seat: bigint): bigint => {
     : effective(BASE_AP, player_source(runtime, seat).folded_stats.action)
 }
 
-export const base_mp_of = (runtime: FightRuntime, seat: bigint): bigint => {
+export const base_mp_of = (runtime: FightReadState, seat: bigint): bigint => {
   const fighter = runtime.contract.fighters[Number(seat)]
   return is_mob(fighter)
     ? mob_snapshot(fighter).mp
     : effective(BASE_MP, player_source(runtime, seat).folded_stats.movement)
 }
+
+export const movement_points_of = (runtime: FightReadState, seat: bigint): bigint =>
+  row_adjusted(runtime, seat, base_mp_of(runtime, seat), STATS.mp)
 
 const mob_resistance = (snapshot: MobSnapshot, element: string): bigint => {
   if (element === 'earth') return snapshot.earth_res

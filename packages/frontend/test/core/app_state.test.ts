@@ -7,7 +7,7 @@ import { DEFAULT_ADMIN_ADDRESS, type CharacterRow } from '@aresrpg/protocol'
 import type { AuthSession } from '../../src/auth.ts'
 import { initial_app_state, reduce_app_state } from '../../src/store.ts'
 
-const settings = Object.freeze({ quality: 'medium', flat_mode: false } as const)
+const settings = Object.freeze({ quality: 'medium', flat_mode: false, music_enabled: true } as const)
 const create_state = () => initial_app_state(settings)
 const auth_session = (address = '0xowner'): AuthSession =>
   Object.freeze({
@@ -21,9 +21,14 @@ const auth_session = (address = '0xowner'): AuthSession =>
     resolve_suins_address: async () => null,
     estimate_sui_transfer: async () => 0n,
     send_sui: async () => ({ digest: null }),
+    buy_shop_item: async () => ({ digest: '' }),
+    claim_airdrop: async () => ({ digest: '' }),
     create_seed_admin: async () => {
       throw new Error('unused in reducer tests')
     },
+    publish_contract: async () => ({ receipt: {}, objects: [] }),
+    read_game_paused: async () => false,
+    set_game_paused: async () => ({ digest: '' }),
     read_marketplace_royalties: async () => [],
     claim_marketplace_royalties: async () => ({ digest: '', amount_mist: 0n, policies: [] }),
     disconnect: async () => undefined,
@@ -59,6 +64,23 @@ const character = (id: string): CharacterRow => ({
 })
 
 describe('app state', () => {
+  test('receipt-derived shop facts survive routed page changes without a transaction reducer', () => {
+    const loaded = reduce_app_state(connect(), {
+      type: 'server/packet',
+      packet: {
+        type: 'packet/shop_state',
+        sales: [{ item_type: 'pet_lootbox', supply: '8' }],
+        airdrops: [{ drop_id: 'founders', eligible: true, eligible_count: 2 }],
+      },
+    })
+    const bought = reduce_app_state(loaded, { type: 'shop/purchased', item_type: 'pet_lootbox', quantity: 2 })
+    const claimed = reduce_app_state(bought, { type: 'airdrop/claimed', drop_id: 'founders' })
+    expect(claimed.session.shop).toEqual({
+      sales: [{ item_type: 'pet_lootbox', supply: '6' }],
+      airdrops: [{ drop_id: 'founders', eligible: false, eligible_count: 1 }],
+    })
+  })
+
   test('login never guesses an empty roster before the server snapshot', () => {
     const authenticated = connect()
 
@@ -102,9 +124,28 @@ describe('app state', () => {
   test('server facts and display settings fold through the same reducer', () => {
     const online = reduce_app_state(create_state(), {
       type: 'server/packet',
-      packet: { type: 'packet/server_info', online: 42 },
+      packet: { type: 'packet/server_info', online: 42, indexing_lag: 7 },
     })
     expect(online.session.online).toBe(42)
+    expect(online.session.indexing_lag).toBe(7)
+  })
+
+  test('server latency is session truth and clears before reconnecting', () => {
+    const admitted = reduce_app_state(connect(), {
+      type: 'server/packet',
+      packet: { type: 'packet/connection_accepted', address: '0xowner' },
+    })
+    const measured = reduce_app_state(admitted, { type: 'link/latency', latency_ms: 42 })
+    const indexed = reduce_app_state(measured, {
+      type: 'server/packet',
+      packet: { type: 'packet/server_info', online: 42, indexing_lag: 12 },
+    })
+    const reconnecting = reduce_app_state(indexed, { type: 'link/failed', error: 'Connection lost' })
+
+    expect(measured.session.latency_ms).toBe(42)
+    expect(indexed.session.indexing_lag).toBe(12)
+    expect(reconnecting.session.latency_ms).toBeNull()
+    expect(reconnecting.session.indexing_lag).toBeNull()
   })
 
   test('logout clears account truth but retains device settings', () => {
@@ -161,9 +202,14 @@ describe('app state', () => {
     ).toBe(executing)
   })
 
-  test('the separate admin signer stores identity, not transaction progress', () => {
+  test('the separate admin signer requires an explicit provider and account choice', () => {
     const available = reduce_app_state(create_state(), { type: 'admin/wallets_loaded', wallets: ['Sui Wallet'] })
-    const connecting = reduce_app_state(available, { type: 'admin/wallet_connect', wallet_name: 'Sui Wallet' })
+    const authorizing = reduce_app_state(available, { type: 'admin/wallet_connect', wallet_name: 'Sui Wallet' })
+    const choosing = reduce_app_state(authorizing, {
+      type: 'admin/wallet_accounts_loaded',
+      accounts: ['0xfirst', '0xadmin'],
+    })
+    const connecting = reduce_app_state(choosing, { type: 'admin/wallet_account_select', address: '0xadmin' })
     const session = auth_session('0xadmin')
     const connected = reduce_app_state(connecting, { type: 'admin/wallet_connected', session })
 
@@ -171,11 +217,94 @@ describe('app state', () => {
       status: 'connected',
       wallets: ['Sui Wallet'],
       requested_wallet: null,
+      accounts: [],
+      requested_address: null,
       session,
       error: null,
     })
-    expect(reduce_app_state(connecting, { type: 'admin/wallet_connect', wallet_name: 'Sui Wallet' })).toBe(connecting)
+    expect(choosing.admin.wallet.status).toBe('selecting')
+    expect(choosing.admin.wallet.accounts).toEqual(['0xfirst', '0xadmin'])
+    expect(connecting.admin.wallet.requested_address).toBe('0xadmin')
+    expect(reduce_app_state(choosing, { type: 'admin/wallet_account_select', address: '0xother' })).toBe(choosing)
     expect(reduce_app_state(connected, { type: 'admin/wallet_disconnect' }).admin.wallet.status).toBe('connecting')
+  })
+
+  test('deployment pins derive seed inputs without exposing editable object ids', () => {
+    const loading = reduce_app_state(create_state(), { type: 'admin/deployment_load' })
+    const loaded = reduce_app_state(loading, {
+      type: 'admin/deployment_loaded',
+      network: 'testnet',
+      token: 'token',
+      revision: 'revision',
+      pins: {
+        package: '0xpackage',
+        math_package: '0xmath',
+        upgrade_cap: '0xupgrade',
+        math_upgrade_cap: '0xmathupgrade',
+        admin_cap: '0xadmin',
+        publisher: '0xpublisher',
+        version: { id: '0xversion', shared_version: '1' },
+        template_registry: { id: '0xtemplates', shared_version: '1' },
+        loot_registry: { id: '0xloot', shared_version: '1' },
+        worlds: { shore: { id: '0xworld', shared_version: '1' } },
+      },
+    })
+
+    expect(loaded.admin.config).toEqual({ admin_cap: '0xadmin', worlds: { shore: '0xworld' } })
+    expect(loaded.admin.deployment.status).toBe('ready')
+  })
+
+  test('publish all is one guarded resumable operation', () => {
+    const inspected = {
+      ...create_state(),
+      admin: {
+        ...create_state().admin,
+        status: 'ready' as const,
+        snapshot: {
+          sealed: false,
+          batches: [{ id: 'items:0', phase: 'items', state: 'ready' as const, targets: 2, missing_dependencies: [] }],
+        },
+      },
+    }
+    expect(reduce_app_state(inspected, { type: 'admin/publish_all' }).admin.operation).toEqual({ type: 'all' })
+  })
+
+  test('completed seed inspection exposes an explicit recoverable cleanup operation', () => {
+    const loading = reduce_app_state(create_state(), { type: 'admin/refresh' })
+    const progressing = reduce_app_state(loading, {
+      type: 'admin/progress',
+      progress: { phase: 'inspection', current: 4, total: 10, label: 'spells:3' },
+    })
+    const inspected = reduce_app_state(progressing, {
+      type: 'admin/refreshed',
+      snapshot: {
+        sealed: false,
+        batches: [{ id: 'items:0', phase: 'items', state: 'complete', targets: 2, missing_dependencies: [] }],
+      },
+    })
+    const releasing = reduce_app_state(inspected, { type: 'admin/release' })
+    const released = reduce_app_state(releasing, { type: 'admin/released' })
+
+    expect(progressing.admin.progress).toMatchObject({ current: 4, total: 10, label: 'spells:3' })
+    expect(inspected.admin.cleanup).toBe('needed')
+    expect(releasing.admin.operation).toEqual({ type: 'release' })
+    expect(released.admin.cleanup).toBe('closed')
+  })
+
+  test('deployment progress is retained as a bounded terminal log', () => {
+    const logged = Array.from({ length: 105 }, (_, index) => index).reduce(
+      (state, index) =>
+        reduce_app_state(state, {
+          type: 'admin/log',
+          tone: index === 104 ? 'success' : 'info',
+          message: `step ${index}`,
+        }),
+      create_state()
+    )
+
+    expect(logged.admin.log).toHaveLength(100)
+    expect(logged.admin.log[0]?.message).toBe('step 5')
+    expect(logged.admin.log.at(-1)).toMatchObject({ id: 105, tone: 'success', message: 'step 104' })
   })
 
   test('correlated request errors do not become connection errors', () => {

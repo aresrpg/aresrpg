@@ -12,7 +12,7 @@
 module aresrpg::equipment;
 
 use aresrpg::{character::{Self, Character}, item::{Self, Item}};
-use aresrpg_math::{item_damages::ItemDamages, item_stats::{Self, ItemStatistics}};
+use aresrpg_math::{content_rules, item_damages::ItemDamages, item_stats::{Self, ItemStatistics}};
 use std::string::String;
 use sui::{dynamic_field as dfield, event, transfer::Receiving, vec_map::{Self, VecMap}};
 
@@ -54,8 +54,8 @@ public struct ItemUnequipped has copy, drop { character: ID, slot: String, item:
 /// Equip: record the snapshot, send the item to the character's address. The caller picked the
 /// slot (that is how a ring chooses a hand); the door checks it is legal for the category.
 public(package) fun equip(chr: &mut Character, slot: String, item: Item) {
-  verify_slot(slot);
-  assert!(category_fits(&slot, &item.category()), EWrongCategory);
+  assert!(content_rules::is_slot(&slot), EInvalidSlot);
+  assert!(content_rules::category_fits(&slot, &item.category()), EWrongCategory);
   assert!((chr.level() as u64) >= (item.level() as u64), ELevelTooLow);
 
   let character_id = chr.id();
@@ -64,10 +64,10 @@ public(package) fun equip(chr: &mut Character, slot: String, item: Item) {
   assert!(!map.contains(&slot), ESlotTaken);
 
   // A relic of the same TEMPLATE can be worn only once across the six slots.
-  if (is_relic_slot(&slot)) {
+  if (content_rules::is_relic_slot(&slot)) {
     let mut i = 1u8;
     while (i <= 6) {
-      let key = relic_slot(i);
+      let key = content_rules::relic_slot(i);
       if (map.contains(&key)) {
         assert!(map[&key].template != item.template(), ERelicDuplicate);
       };
@@ -91,7 +91,7 @@ public(package) fun equip(chr: &mut Character, slot: String, item: Item) {
 /// Unequip: receive the item back off the character, erase the record, hand the item to the
 /// caller (the api door re-locks it in the kiosk).
 public(package) fun unequip(chr: &mut Character, slot: String, receiving: Receiving<Item>): Item {
-  verify_slot(slot);
+  assert!(content_rules::is_slot(&slot), EInvalidSlot);
   let character_id = chr.id();
   let map = borrow_map_mut(chr);
   assert!(map.contains(&slot), ENotEquipped);
@@ -181,65 +181,4 @@ fun refold(chr: &mut Character) {
   } else {
     dfield::add(uid, FoldedKey(), folded);
   };
-}
-
-fun is_relic_slot(slot: &String): bool {
-  *slot == b"relic_1".to_string() || *slot == b"relic_2".to_string() ||
-  *slot == b"relic_3".to_string() || *slot == b"relic_4".to_string() ||
-  *slot == b"relic_5".to_string() || *slot == b"relic_6".to_string()
-}
-
-fun relic_slot(i: u8): String {
-  if (i == 1) return b"relic_1".to_string();
-  if (i == 2) return b"relic_2".to_string();
-  if (i == 3) return b"relic_3".to_string();
-  if (i == 4) return b"relic_4".to_string();
-  if (i == 5) return b"relic_5".to_string();
-  b"relic_6".to_string()
-}
-
-/// Which categories a slot accepts. Weapons are UNIVERSAL (any class); tools have their own
-/// slot (ruling 2026-08-09 — never the weapon slot).
-fun category_fits(slot: &String, category: &String): bool {
-  if (*slot == b"weapon".to_string()) {
-    return *category == b"longsword".to_string() || *category == b"daggers".to_string() ||
-      *category == b"battleaxe".to_string() || *category == b"spear".to_string() ||
-      *category == b"staff".to_string() || *category == b"spellbook".to_string() ||
-      *category == b"bow".to_string() || *category == b"axe".to_string() ||
-      *category == b"mace".to_string() || *category == b"club".to_string() ||
-      *category == b"sword".to_string()
-  };
-  if (*slot == b"tool".to_string()) {
-    return *category == b"tool_farmer".to_string() || *category == b"tool_herbalist".to_string() ||
-      *category == b"tool_miner".to_string()
-  };
-  if (*slot == b"left_ring".to_string() || *slot == b"right_ring".to_string()) {
-    return *category == b"ring".to_string()
-  };
-  if (is_relic_slot(slot)) return *category == b"relic".to_string();
-  // every remaining slot's name IS its category (helmet, chestplate, belt, gauntlets, pants,
-  // boots, amulet, pet, title, hat, cloak)
-  *slot == *category
-}
-
-fun verify_slot(slot: String) {
-  assert!(
-    slot == b"weapon".to_string() ||
-      slot == b"tool".to_string() ||
-      slot == b"helmet".to_string() ||
-      slot == b"chestplate".to_string() ||
-      slot == b"belt".to_string() ||
-      slot == b"gauntlets".to_string() ||
-      slot == b"pants".to_string() ||
-      slot == b"boots".to_string() ||
-      slot == b"amulet".to_string() ||
-      slot == b"left_ring".to_string() ||
-      slot == b"right_ring".to_string() ||
-      slot == b"pet".to_string() ||
-      is_relic_slot(&slot) ||
-      slot == b"title".to_string() ||
-      slot == b"hat".to_string() ||
-      slot == b"cloak".to_string(),
-    EInvalidSlot,
-  );
 }

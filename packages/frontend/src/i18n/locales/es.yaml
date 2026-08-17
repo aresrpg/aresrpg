@@ -33,6 +33,16 @@ admin: Admin
 online: En línea
 account: Cuenta
 join_discord: Unirse a Discord
+sui_universe: Universo Sui
+server_disconnected: Desconectado
+server_connecting: Conectando
+server_reconnecting: Reconectando
+server_syncing: Sincronizando
+server_connected: Conectado
+latency_unit: ms
+indexing_health: Estado del indexado
+indexing_lag_warning: Las acciones del juego pueden aparecer con retraso
+network_testnet: TESTNET
 page_pending_title: Esta página se está reconstruyendo
 page_pending_body: Su lugar sigue visible mientras la restauramos de forma limpia.
 welcome_title: Bienvenido a AresRPG
@@ -65,6 +75,71 @@ wallet_send_pending: Enviando SUI…
 wallet_send_success: SUI enviado
 wallet_send_failed: La transferencia de SUI ha fallado
 wallet_close: Cerrar
+shop_page:
+  title: 'Tienda'
+  subtitle: 'Compra objetos con SUI'
+  limited_edition_notice: 'Todos estos objetos son de edición limitada — una vez agotado el suministro, nunca podrán obtenerse de nuevo. Intercámbialos en el mercado por SUI.'
+  remaining_of_cap: '{{remaining}} de {{cap}} restantes'
+  processing: 'PROCESANDO'
+  sold_out: 'Agotado'
+  acquire: 'Adquirir'
+  wallet: 'Cartera'
+  filter_all: 'Todo'
+  sections:
+    pet_box: 'CAJAS DE MASCOTAS'
+    title: 'Títulos'
+    cloak: 'Capas'
+    hat: 'Sombreros'
+    companion: 'Companieros'
+    equipment: 'Equipamiento'
+    consumable: 'Consumibles'
+    resource: 'Recursos'
+  amount_title: 'Seleccionar cantidad'
+  amount_quantity: 'Cantidad'
+  amount_max: 'Máx'
+  amount_total: 'Total'
+  amount_available: '{{count}} disponibles'
+  amount_confirm: 'Adquirir {{count}}'
+  purchase_success_body: 'Tus nuevos objetos te esperan en tu inventario.'
+  see_inventory: 'Ver mi inventario'
+  buy_pending: 'Comprando…'
+  buy_success: '¡Compra completada!'
+  drop_rates: 'Probabilidades de botín'
+  pool_sub: 'Al abrir se sortea una mascota, ponderada exactamente como se indica abajo.'
+  acquisition_complete: 'Adquisicion Completada'
+airdrop_page:
+  title: 'Airdrops'
+  subtitle: 'Reclama objetos reservados para titulares elegibles'
+  minted: '{{count}} acuñados'
+  eligible_count: '{{count}} elegibles'
+  eligible: 'Elegible'
+  not_eligible: 'No elegible'
+  claimed: 'Reclamado'
+  claim: 'Reclamar'
+  empty: 'No hay airdrops activos'
+  empty_hint: 'Los airdrops para titulares de colecciones asociadas aparecerán aquí cuando se activen.'
+  pending_claim: 'Reclamando airdrop…'
+  toast_claimed: 'Airdrop reclamado'
+  set:
+    title: 'La colección'
+    subtitle: 'Objetos reservados — solo muestra'
+    error: 'No se pudo cargar la colección del airdrop'
+    retry: 'Reintentar'
+    empty: 'La colección del airdrop aún no está publicada'
+    no_preview: 'Vista previa pendiente'
+    aura: 'Aura'
+    aura_pending: 'Aura pendiente'
+    awaiting_ruling: 'Pendiente de decisión'
+    kind:
+      pet_glb: 'Mascota'
+      cosmetic: 'Cosmético'
+      title_relic: 'Reliquia de título'
+      outfit: 'Atuendo'
+settings_page:
+  title: 'Ajustes'
+  subtitle: 'Tus preferencias de AresRPG'
+  music_label: 'Música'
+  music_hint: 'Reproduce la música del mundo y de los combates.'
 admin_page:
   kicker: Editor
   title: Publicar contenido del juego
@@ -86,6 +161,11 @@ admin_page:
   admin_wallet: Billetera de administración
   admin_wallet_body: Firmante separado para publicar y retirar ingresos.
   connect_admin_wallet: Conectar
+  choose_admin_wallet: Elegir cartera
+  choose_admin_address: Elegir dirección
+  cancel_wallet_selection: Cancelar
+  wallet_account: Cuenta
+  select_wallet: Seleccionar
   connecting: Conectando…
   loading_wallets: Cargando billeteras…
   no_admin_wallet: No hay una billetera de navegador compatible instalada.
@@ -194,6 +274,7 @@ fight_hud:
   placement_title: Prepárate para el combate
   placement_hint: Coloca a tus luchadores y márcalos como listos
   end_turn: Terminar turno
+  reset_turn: Reiniciar
   forfeit: Rendirse
   forfeit_title: ¿Rendirse con {name}?
   forfeit_body: '{name} perderá todos sus PV restantes y abandonará este combate.'
@@ -373,16 +454,12 @@ encyclopedia_page:
   select_job: SELECCIONAR UN OFICIO
   crafts: Fabrica
   gathering_tiers: PROGRESION DE RECOLECCION
-  craft_xp_table: TABLA XP DE FABRICACION
-  bulk_craft_note: La XP por fabricación depende del número de ingredientes de la receta — las recetas con más ranuras de ingredientes únicos otorgan más XP por fabricación.
-  job_recipes: RECETAS
+  craftable_items: OBJETOS FABRICABLES
   tier: Nivel
   required_level: Niv. Req.
   resource: Recurso
   rare_variant: Variante rara
   xp_per_harvest: XP / Cosecha
-  slots: Ranuras
-  xp_awarded: XP Otorgada
   job_desc:
     FARMER: Los granjeros cosechan cereales en los campos del mundo. Los niveles superiores desbloquean cultivos mas raros.
     HERBALIST: Los herbolarios recolectan plantas y flores para alquimia. Cada nivel requiere un nivel de oficio mas alto.
@@ -631,6 +708,8 @@ encyclopedia_page:
   consumable_reward_heading: RECOMPENSA
   consumable_rewards: RECOMPENSAS POSIBLES
   consumable_reward: '{{item}} · {{chance}}%'
+  rune_effect: Añade {{amount}} de {{stat}} a un objeto
+  rune_obtained_by_crushing: Se obtiene triturando objetos
   spell_n: HECHIZO {{n}}
   range: ALCANCE
   range_modifiability: MODIFICACIÓN DE ALCANCE

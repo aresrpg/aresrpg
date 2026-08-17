@@ -6,7 +6,16 @@ import { useMemo, useState } from 'react'
 
 import { encyclopedia_catalog, titleize } from '../content/catalog.ts'
 
-import { category_pill, Empty, encyclopedia_layout, Fact, LinkChip, SearchField, Section } from './components.tsx'
+import {
+  category_pill,
+  Empty,
+  encyclopedia_layout,
+  EntityGrid,
+  Fact,
+  LinkChip,
+  SearchField,
+  Section,
+} from './components.tsx'
 import type { EncyclopediaText } from './copy.ts'
 
 const world_band = (world_id: string): readonly [number, number] | null => {
@@ -73,7 +82,7 @@ export const WorldsTab = ({
           {text('no_results')}
         </Empty>
       ) : (
-        <div className="grid grid-cols-[repeat(auto-fill,minmax(280px,1fr))] gap-0">
+        <EntityGrid>
           {worlds.map((world, index) => {
             const active = selected_id === world.world
             const row_band = world_band(world.world)
@@ -105,7 +114,7 @@ export const WorldsTab = ({
               </button>
             )
           })}
-        </div>
+        </EntityGrid>
       )}
     </div>
   )

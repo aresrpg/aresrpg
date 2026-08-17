@@ -6,6 +6,7 @@ import { element_names } from '@aresrpg/immutable'
 import { Crosshair, Footprints, Sparkles, Zap, type LucideIcon } from 'lucide-react'
 import { useState, type FocusEvent, type ReactNode } from 'react'
 
+import type { EffectLineView } from '../components/EffectLine.tsx'
 import type { SpellEffect, SpellLevel } from '../content/catalog.ts'
 import { titleize } from '../content/catalog.ts'
 import { element_colors, stat_colors, stat_identities } from '../visual_identity.ts'
@@ -133,7 +134,7 @@ const InlineEffectField = ({
     set_editing(false)
     edit?.save()
   }
-  if (!edit) return display
+  if (!edit) return class_name ? <span className={class_name}>{display}</span> : display
   if (editing)
     return (
       <span className={`inline-flex items-center gap-1 ${class_name}`} onBlur={finish}>
@@ -312,22 +313,49 @@ const CriticalEditor = ({
     )}
   </>
 )
-
-const EffectLine = ({
-  effect,
-  critical,
-  critical_only = false,
-  edit,
-  update,
-  update_critical,
-}: Readonly<{
+type SpellEffectLineProps = Readonly<{
   effect: SpellEffect
   critical?: SpellEffect
   critical_only?: boolean
   edit?: SpellCardEdit
   update: EffectUpdate
   update_critical?: EffectUpdate
-}>) => {
+}>
+export const spell_effect_line_view = (effect: SpellEffect, critical_only = false): EffectLineView => {
+  const identity = effect_identity(effect)
+  const channel = channels[effect.stat] ?? ''
+  const ChannelIcon = channel_icons[channel]
+  const color = identity?.tint ?? stat_colors[channel] ?? effect_color(effect.element)
+  const words = effect_words(effect)
+  const kind = effect_kinds[effect.kind]
+  const target = kind === 'caster_damage' ? null : target_note(effect.target_filter)
+  const meta = [
+    effect.turns > 0 ? `${effect.turns} turn${effect.turns === 1 ? '' : 's'}` : null,
+    effect.chance_bp < 10000 ? `${effect.chance_bp / 100}%` : null,
+    critical_only ? 'critical only' : null,
+  ].filter(Boolean)
+  return Object.freeze({
+    ...(effect.element ? { dot: color } : identity ? { icon: identity.icon } : {}),
+    ...(effect.element || identity || !ChannelIcon ? {} : { glyph: <ChannelIcon size={15} strokeWidth={1.6} /> }),
+    pre: `${words.action}${words.amount ? ' ' : ''}`,
+    value: words.amount ? `${effect_range(effect)}${kind === 'pct_life' ? '%' : ''}` : null,
+    tone: color,
+    post: [words.suffix, words.stat ? titleize(channel) : '', target ? `(${target})` : '']
+      .filter(Boolean)
+      .map((part) => ` ${part}`)
+      .join(''),
+    meta: meta.length > 0 ? meta.join(' · ') : null,
+  })
+}
+
+export const SpellEffectLine = ({
+  effect,
+  critical,
+  critical_only = false,
+  edit,
+  update,
+  update_critical,
+}: SpellEffectLineProps) => {
   const identity = effect_identity(effect)
   const channel = channels[effect.stat] ?? ''
   const ChannelIcon = channel_icons[channel]
@@ -519,11 +547,13 @@ export const EffectLines = ({
   effects,
   critical_effects,
   level_index,
+  compact = false,
   edit,
 }: Readonly<{
   effects: SpellLevel['effects']
   critical_effects: SpellLevel['crit_effects']
   level_index: number
+  compact?: boolean
   edit?: SpellCardEdit
 }>) => {
   const update =
@@ -539,9 +569,12 @@ export const EffectLines = ({
         edit?.change(['levels', level_index, 'crit_effects', index, field], value)
     }
   return (
-    <div className="space-y-2">
+    <div
+      className={compact ? 'space-y-0.5 [&>div]:!min-h-0 [&>div]:!border-b-0 [&>div]:!py-1' : 'space-y-2'}
+      {...(compact ? { 'data-spell-effects-compact': '' } : {})}
+    >
       {effects.map((effect, index) => (
-        <EffectLine
+        <SpellEffectLine
           critical={critical_effects[index]}
           edit={edit}
           effect={effect}
@@ -553,7 +586,7 @@ export const EffectLines = ({
       {critical_effects.slice(effects.length).map((effect, offset) => {
         const index = effects.length + offset
         return (
-          <EffectLine
+          <SpellEffectLine
             critical_only
             edit={edit}
             effect={effect}

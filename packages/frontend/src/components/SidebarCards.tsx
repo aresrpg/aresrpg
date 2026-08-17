@@ -1,11 +1,12 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
-import { Globe } from 'lucide-react'
+import { Check, Globe, Wifi, WifiOff } from 'lucide-react'
 import { useState } from 'react'
 
 import type { AppCopy } from '../i18n/copy.ts'
 import { LOCALES, type Locale } from '../i18n/locale.ts'
+import type { LinkStatus } from '../modules/session.ts'
 
 export const LanguageCard = ({
   locale,
@@ -56,6 +57,7 @@ export const DiscordCard = ({ copy }: Readonly<{ copy: AppCopy }>) => (
   <a
     className="group relative flex w-[200px] items-center justify-center gap-2 overflow-hidden border border-[#5865f2]/30 bg-[linear-gradient(135deg,rgba(88,101,242,0.18)_0%,rgba(114,137,218,0.12)_45%,rgba(18,18,26,0.95)_100%)] p-3 text-white shadow-[0_0_20px_rgba(88,101,242,0.08)] transition-all hover:border-[#5865f2]/70"
     href="https://discord.gg/aresrpg"
+    data-discord-card=""
     rel="noopener noreferrer"
     target="_blank"
   >
@@ -71,3 +73,97 @@ export const DiscordCard = ({ copy }: Readonly<{ copy: AppCopy }>) => (
     <span className="text-[10px] font-semibold tracking-[0.2em]">{copy.join_discord}</span>
   </a>
 )
+
+export type IndexingHealthTone = 'unknown' | 'healthy' | 'catching_up' | 'lagging'
+
+export const indexing_health_tone = (lag: number | null): IndexingHealthTone =>
+  lag === null ? 'unknown' : lag < 10 ? 'healthy' : lag <= 50 ? 'catching_up' : 'lagging'
+
+export const ConnectionCard = ({
+  copy,
+  error,
+  indexing_lag,
+  latency_ms,
+  status,
+}: Readonly<{
+  copy: AppCopy
+  error: string | null
+  indexing_lag: number | null
+  latency_ms: number | null
+  status: LinkStatus
+}>) => {
+  const label =
+    status === 'ready'
+      ? copy.server_connected
+      : status === 'connected'
+        ? copy.server_syncing
+        : status === 'connecting'
+          ? error
+            ? copy.server_reconnecting
+            : copy.server_connecting
+          : copy.server_disconnected
+  const connected = status === 'ready'
+  const disconnected = status === 'idle'
+  const Icon = disconnected ? WifiOff : Wifi
+  const indexing_tone = indexing_health_tone(indexing_lag)
+
+  return (
+    <div
+      aria-label={`${copy.sui_universe}: ${label}`}
+      className={`w-[200px] border p-3 ${
+        connected
+          ? 'border-[#5ee38d]/25 bg-[#5ee38d]/6 text-[#77d99a]'
+          : disconnected
+            ? 'border-[#ff5a8b]/25 bg-[#ff5a8b]/6 text-[#ff7d9f]'
+            : 'border-[#4a9eff]/25 bg-[#4a9eff]/6 text-[#67adff]'
+      }`}
+      data-connection-card=""
+      role="status"
+      title={error ?? undefined}
+    >
+      <div className="flex items-center gap-2.5">
+        <Icon aria-hidden="true" className="shrink-0 opacity-70" size={13} />
+        <span className="min-w-0 flex-1">
+          <span className="block text-[7px] tracking-[0.2em] text-[#6b7280] uppercase">{copy.sui_universe}</span>
+          <span className="mt-0.5 block truncate text-[9px] font-semibold tracking-[0.13em] uppercase">{label}</span>
+        </span>
+        <span className="shrink-0 text-[8px] tracking-[0.08em] tabular-nums">
+          {latency_ms ?? '—'} {copy.latency_unit}
+        </span>
+        <span
+          aria-hidden="true"
+          className={`size-1.5 shrink-0 rounded-full ${
+            connected
+              ? 'bg-[#5ee38d] shadow-[0_0_8px_rgba(94,227,141,0.8)]'
+              : disconnected
+                ? 'bg-[#ff5a8b]'
+                : 'animate-pulse bg-[#4a9eff] shadow-[0_0_8px_rgba(74,158,255,0.7)]'
+          }`}
+        />
+      </div>
+      <div className="mt-2 border-t border-white/6 pt-2" data-indexing-health={indexing_tone}>
+        <div className="flex items-center justify-between gap-2">
+          <span className="text-[7px] tracking-[0.16em] text-[#6b7280] uppercase">{copy.indexing_health}</span>
+          {indexing_tone === 'healthy' ? (
+            <Check aria-hidden="true" className="text-[#5ee38d]" size={11} strokeWidth={2.5} />
+          ) : (
+            <span
+              className={`text-[9px] font-semibold tabular-nums ${
+                indexing_tone === 'catching_up'
+                  ? 'text-[#d89b3c]'
+                  : indexing_tone === 'lagging'
+                    ? 'text-[#ff5a8b]'
+                    : 'text-[#6b7280]'
+              }`}
+            >
+              {indexing_lag ?? '—'}
+            </span>
+          )}
+        </div>
+        {indexing_tone === 'lagging' && (
+          <span className="mt-1 block text-[7px] leading-relaxed text-[#ff7d9f]/75">{copy.indexing_lag_warning}</span>
+        )}
+      </div>
+    </div>
+  )
+}

@@ -288,6 +288,7 @@ export const create_world = (canvas: HTMLCanvasElement) => {
       }
     },
     create_fight_blob: engine.create_fight_blob,
+    update_fight_blob: engine.update_fight_blob,
     remove_fight_blob: engine.remove_fight_blob,
     pick_fight_cell: engine.pick_fight_cell,
     mode: () => mode,

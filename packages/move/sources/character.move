@@ -2,6 +2,7 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 module aresrpg::character;
 
+use aresrpg_math::content_rules;
 use kiosk::personal_kiosk;
 use std::string::String;
 use sui::{
@@ -10,7 +11,7 @@ use sui::{
   display_registry::{Self, DisplayRegistry},
   event,
   kiosk::Kiosk,
-  package::{Self, Publisher},
+  package::Publisher,
   sui::SUI,
 };
 
@@ -78,9 +79,8 @@ public struct CharacterCreated has copy, drop { character: ID, owner: address, n
 
 // ╔════════════════ [ init ] ═════════════════════════════════════════════════ ]
 
-fun init(otw: CHARACTER, ctx: &mut TxContext) {
+fun init(_otw: CHARACTER, ctx: &mut TxContext) {
   transfer::share_object(NameRegistry { id: object::new(ctx) });
-  transfer::public_transfer(package::claim(otw, ctx), ctx.sender());
 }
 
 /// Display V2 needs the shared `DisplayRegistry` (0xd), which init cannot take — runs once
@@ -137,7 +137,7 @@ public(package) fun create_character(
 
   let name = raw_name.to_ascii().to_lowercase().to_string();
   assert!(name.length() > 3 && name.length() < 20, ENameInvalid);
-  assert!(!contains_whitespace(&name), ENameInvalid);
+  assert!(content_rules::is_printable_ascii(&name), ENameInvalid);
 
   let character = Character {
     id: derived_object::claim(&mut registry.id, name),
@@ -254,35 +254,8 @@ public(package) fun destroy(self: Character) {
 
 // ╔════════════════ [ Private ] ══════════════════════════════════════════════ ]
 
-/// The class law — one home; spell_template validates against it too.
-public(package) fun is_classe(classe: &String): bool {
-  *classe == b"shugo".to_string() ||
-  *classe == b"tomoda".to_string() ||
-  *classe == b"rojin".to_string() ||
-  *classe == b"yajin".to_string() ||
-  *classe == b"tokei".to_string() ||
-  *classe == b"asobi".to_string() ||
-  *classe == b"iyashi".to_string() ||
-  *classe == b"senshi".to_string() ||
-  *classe == b"yogan".to_string() ||
-  *classe == b"mori".to_string() ||
-  *classe == b"ikari".to_string() ||
-  *classe == b"shusen".to_string()
-}
-
 fun verify_classe(classe: String) {
-  assert!(is_classe(&classe), EInvalidClasse);
-}
-
-fun contains_whitespace(name: &String): bool {
-  let bytes = name.as_bytes();
-  let n = bytes.length();
-  let mut i = 0;
-  while (i < n) {
-    if (bytes[i] <= 32u8 || bytes[i] == 127u8) return true;
-    i = i + 1;
-  };
-  false
+  assert!(content_rules::is_classe(&classe), EInvalidClasse);
 }
 
 // ╔════════════════ [ Testing ] ══════════════════════════════════════════════ ]

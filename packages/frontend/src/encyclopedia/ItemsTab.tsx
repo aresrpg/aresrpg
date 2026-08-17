@@ -1,7 +1,16 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
-import { pet_max_feeds, weapon_categories } from '@aresrpg/immutable'
+import {
+  accessory_categories,
+  armor_categories,
+  cosmetic_item_categories,
+  pet_max_feeds,
+  tool_categories,
+  weapon_categories,
+  type RuneEffect,
+  type StatName,
+} from '@aresrpg/immutable'
 import { MapPin, Search, Skull, Sparkles } from 'lucide-react'
 import { useMemo, useState } from 'react'
 
@@ -10,7 +19,7 @@ import { item_icon } from '../content/assets.ts'
 import { encyclopedia_catalog, titleize } from '../content/catalog.ts'
 import { item_detail_icon } from '../content/item_detail_assets.ts'
 
-import { category_pill, Empty, encyclopedia_layout, EntityButton, SearchField } from './components.tsx'
+import { category_pill, Empty, encyclopedia_layout, EntityButton, EntityGrid, SearchField } from './components.tsx'
 import type { EncyclopediaText } from './copy.ts'
 import { loot_box_is_random } from './loot_box.ts'
 
@@ -29,14 +38,14 @@ type Group =
 
 const GROUPS: Readonly<Record<Group, ReadonlySet<string> | null>> = Object.freeze({
   ALL: null,
-  ARMOR: new Set(['helmet', 'chestplate', 'belt', 'gauntlets', 'pants', 'boots']),
+  ARMOR: new Set(armor_categories),
   WEAPONS: new Set(weapon_categories),
-  ACCESSORIES: new Set(['amulet', 'ring']),
-  COSMETICS: new Set(['hat', 'cloak', 'title']),
+  ACCESSORIES: new Set(accessory_categories),
+  COSMETICS: new Set(cosmetic_item_categories),
   PETS: new Set(['pet']),
   RUNES: new Set(['rune']),
   RELICS: new Set(['relic']),
-  TOOLS: new Set(['tool_herbalist', 'tool_farmer', 'tool_miner']),
+  TOOLS: new Set(tool_categories),
   CONSUMABLES: new Set(['consumable', 'key']),
   RESOURCES: new Set(['resource']),
 })
@@ -59,6 +68,24 @@ const EmptyDetailRow = ({ children, kind }: Readonly<{ children: React.ReactNode
 const DetailTitle = ({ children }: Readonly<{ children: React.ReactNode }>) => (
   <span className="text-[9px] font-semibold tracking-[0.25em] text-[#6b7280] uppercase">{children}</span>
 )
+
+const RuneEffectSection = ({
+  rune,
+  stat_name,
+  text,
+}: Readonly<{
+  rune: RuneEffect | null
+  stat_name: (stat: StatName) => string
+  text: EncyclopediaText
+}>) =>
+  rune ? (
+    <section className="flex flex-col gap-2">
+      <DetailTitle>{text('effects')}</DetailTitle>
+      <div className="border-l-2 border-l-[#c8963c]/40 bg-white/3 px-3 py-2 text-[10px] tracking-wide text-[#e8e4dc]">
+        {text('rune_effect', { amount: rune.amount, stat: stat_name(rune.stat) })}
+      </div>
+    </section>
+  ) : null
 
 const consumable_effect_text = (
   consumable: NonNullable<(typeof encyclopedia_catalog.items)[number]['consumable']>,
@@ -96,11 +123,13 @@ export const ItemsTab = ({
   select_mob,
   select_world,
   text,
+  stat_name,
 }: Readonly<{
   selected_id: string | null
   select_item: (id: string) => void
   select_mob: (id: string) => void
   select_world: (id: string) => void
+  stat_name: (stat: StatName) => string
   text: EncyclopediaText
 }>) => {
   const [search, set_search] = useState('')
@@ -240,7 +269,7 @@ export const ItemsTab = ({
           {text('no_results')}
         </Empty>
       ) : (
-        <div className="grid grid-cols-[repeat(auto-fill,minmax(280px,1fr))] gap-0">
+        <EntityGrid>
           {filtered.map((item, index) => (
             <EntityButton
               active={selected_id === item.item_type}
@@ -253,7 +282,7 @@ export const ItemsTab = ({
               select={() => select_item(item.item_type)}
             />
           ))}
-        </div>
+        </EntityGrid>
       )}
     </div>
   )
@@ -274,6 +303,7 @@ export const ItemsTab = ({
         level={detail.item.level}
         name={detail.item.name}
         obtention={[
+          detail.rune ? text('rune_obtained_by_crushing') : null,
           detail.dropped_by.length > 0 ? text('obtention_dropped_by', { count: detail.dropped_by.length }) : null,
           detail.recipe ? text('obtention_crafted') : null,
         ]
@@ -281,6 +311,7 @@ export const ItemsTab = ({
           .join(' · ')}
         stats={detail.item.stats}
       >
+        <RuneEffectSection rune={detail.rune} stat_name={stat_name} text={text} />
         {detail.item.consumable && (
           <>
             {(detail.item.consumable.type !== 'loot_box' || random_loot_box) && (

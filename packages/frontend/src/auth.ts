@@ -6,7 +6,7 @@ import type { AuthSession } from '@aresrpg/sdk/auth'
 
 import { env } from './env.ts'
 
-export type { AuthSession } from '@aresrpg/sdk/auth'
+export type { AuthSession, SelectableAuthWallet } from '@aresrpg/sdk/auth'
 
 export const create_auth = () =>
   create_browser_auth({
@@ -14,9 +14,11 @@ export const create_auth = () =>
     google_client_id: env.google_client_id,
     graphql_url: env.graphql_url,
     network: env.network,
+    rpc_url: env.sui_rpc_url,
     redirect_url: `${window.location.origin}/enoki`,
   })
 
 export type Auth = ReturnType<typeof create_auth>
 
-export const create_admin_auth = () => create_wallet_auth({ graphql_url: env.graphql_url, network: env.network })
+export const create_admin_auth = () =>
+  create_wallet_auth({ graphql_url: env.graphql_url, network: env.network, rpc_url: env.sui_rpc_url })

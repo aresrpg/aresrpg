@@ -63,14 +63,7 @@ public(package) fun bank_job_xp(chr: &mut Character, job: String, gained: u64) {
 /// Max hp = 50 + 5×level + allocated vitality + the folded gear bonus (malus floored at 1).
 public(package) fun max_hp(chr: &Character): u64 {
   let base = BASE_HP + HP_PER_LEVEL * (chr.level() as u64) + (chr.vitality() as u64);
-  let vitality = equipment::folded(chr).vitality() as u64;
-  let shift = item_stats::shift() as u64;
-  if (vitality >= shift) {
-    base + (vitality - shift)
-  } else {
-    let malus = shift - vitality;
-    if (malus >= base) 1 else base - malus
-  }
+  item_stats::apply_centered_to_base(base, equipment::folded(chr).vitality() as u64)
 }
 
 /// The checkpoint door: apply lazy regen (whole ticks only — the remainder stays banked in

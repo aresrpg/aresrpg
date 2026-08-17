@@ -68,6 +68,48 @@ test('the shared spell card keeps its read layout while exposing field-level adm
   expect(html).not.toContain('aria-label="Edit spell effect"')
 })
 
+test('the shared spell card opens on the fighter invested level when requested', async () => {
+  const { SpellCard } = await import('../../src/encyclopedia/SpellCard.tsx')
+  const [first_level] = spell.levels
+  if (!first_level) throw new Error('spell fixture has no level')
+  const leveled_spell = Object.freeze({
+    ...spell,
+    levels: Object.freeze([first_level, Object.freeze({ ...first_level, ap_cost: 3 })]),
+  }) satisfies SeedSpell
+
+  const html = renderToStaticMarkup(<SpellCard initial_level={2} spell={leveled_spell} />)
+
+  expect(html).toContain('data-spell-ap-cost="3"')
+})
+
+test('small spell cards show only the invested level name, critical, and effects', async () => {
+  const { SpellCard } = await import('../../src/encyclopedia/SpellCard.tsx')
+  const [first_level] = spell.levels
+  if (!first_level) throw new Error('spell fixture has no level')
+  const leveled_spell = Object.freeze({
+    ...spell,
+    levels: Object.freeze([first_level, Object.freeze({ ...first_level, ap_cost: 3, crit_1_in: 3 })]),
+  }) satisfies SeedSpell
+
+  const html = renderToStaticMarkup(<SpellCard initial_level={2} small spell={leveled_spell} />)
+
+  expect(html).toContain('data-spell-small=""')
+  expect(html).toContain('Ruinstroke')
+  expect(html).toContain('Critical')
+  expect(html).toContain('1 / 3')
+  expect(html).toContain('data-spell-effects=""')
+  expect(html).toContain('data-spell-effects-compact=""')
+  // the compact wrapper KILLS the row separators via its override — assert the mechanism, not
+  // the absence of the underlying utility (which legitimately remains on the shared row)
+  expect(html).toContain('data-spell-effects-compact')
+  expect(html).toContain('!border-b-0')
+  expect(html).not.toContain('/spell.webp')
+  expect(html).not.toContain('data-spell-level-tabs=""')
+  expect(html).not.toContain('data-spell-ap-cost=')
+  expect(html).not.toContain('Casts / turn')
+  expect(html).not.toContain('Cooldown')
+})
+
 test('the class spell list owns unlock order and keeps unlock levels outside the card header', async () => {
   const { ClassesTab } = await import('../../src/encyclopedia/ClassesTab.tsx')
   const html = renderToStaticMarkup(
@@ -129,4 +171,20 @@ test('timed HP removal reads as damage and critical targeting inherits the norma
   expect(html).not.toContain('Removes')
   expect(html).not.toContain('enemies only')
   expect(html).not.toContain('Critical target')
+})
+
+test('target restrictions remain visibly separated and dimmer than effect prose', async () => {
+  const { SpellCard } = await import('../../src/encyclopedia/SpellCard.tsx')
+  const [level] = spell.levels
+  const [effect] = level.effects
+  const restricted = {
+    ...spell,
+    levels: [{ ...level, effects: [{ ...effect, target_filter: 3, turns: 2 }] }],
+  } satisfies SeedSpell
+  const html = renderToStaticMarkup(<SpellCard small spell={restricted} />)
+
+  expect(html).toContain('text-[8px] text-[#858994]')
+  expect(html).toContain('(allies only)')
+  expect(html).toContain('for 2 turns')
+  expect(html).not.toContain('(allies only)for')
 })

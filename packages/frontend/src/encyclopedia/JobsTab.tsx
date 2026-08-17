@@ -116,7 +116,7 @@ export const JobsTab = ({
           {text('select_job')}
         </Empty>
       ) : (
-        <div className="flex max-w-2xl flex-col gap-6">
+        <div className="flex w-full flex-col gap-6">
           <header className="flex flex-col gap-2">
             <div className="flex items-center gap-3">
               <CategoryIcon className="text-[#c8963c]" size={18} />

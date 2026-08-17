@@ -87,6 +87,19 @@ describe('resolution cache', () => {
     expect(shared_ref(cache, id(2))).toEqual({ initialSharedVersion: '3' })
   })
 
+  test('canonical Sui IDs resolve through their short form', () => {
+    const cache = create_cache()
+    const display_registry = `0x${'d'.padStart(64, '0')}`
+    absorb_object(cache, {
+      objectId: display_registry,
+      version: '5',
+      digest: 'd5',
+      owner: { $kind: 'Shared', Shared: { initialSharedVersion: '3' } },
+    })
+
+    expect(shared_ref(cache, '0xd')).toEqual({ initialSharedVersion: '3' })
+  })
+
   test('a receipt without objectChanges is a clean no-op', () => {
     const cache = create_cache()
     expect(absorb_receipt(cache, {})).toBe(cache)

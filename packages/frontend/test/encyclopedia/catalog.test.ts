@@ -30,7 +30,7 @@ describe('local encyclopedia catalog', () => {
     const definitions = (
       await Promise.all(files.map(async (file) => ({ file, source: await Bun.file(`${source_root}/${file}`).text() })))
     )
-      .filter(({ source }) => source.includes('export const encyclopedia_catalog'))
+      .filter(({ source }) => /export (?:const encyclopedia_catalog|\{[^}]*\bas encyclopedia_catalog\b)/.test(source))
       .map(({ file }) => file)
 
     expect(definitions).toEqual(['content/catalog.ts'])
@@ -48,6 +48,7 @@ describe('local encyclopedia catalog', () => {
       .sort(({ corpus: left }, { corpus: right }) => left.localeCompare(right))
 
     expect(imports).toEqual([
+      { corpus: 'airdrop.json', file: 'content/catalog.ts' },
       { corpus: 'airdrop.json', file: 'admin/seed_content.ts' },
       { corpus: 'items.json', file: 'content/catalog.ts' },
       { corpus: 'items.json', file: 'admin/seed_content.ts' },
@@ -55,6 +56,7 @@ describe('local encyclopedia catalog', () => {
       { corpus: 'mobs.json', file: 'admin/seed_content.ts' },
       { corpus: 'recipes.json', file: 'content/catalog.ts' },
       { corpus: 'recipes.json', file: 'admin/seed_content.ts' },
+      { corpus: 'shop.json', file: 'content/catalog.ts' },
       { corpus: 'shop.json', file: 'admin/seed_content.ts' },
       { corpus: 'spells.json', file: 'content/catalog.ts' },
       { corpus: 'spells.json', file: 'admin/seed_content.ts' },
@@ -67,7 +69,7 @@ describe('local encyclopedia catalog', () => {
     expect(encyclopedia_catalog.items).toHaveLength(1980)
     expect(encyclopedia_catalog.mobs).toHaveLength(383)
     expect(encyclopedia_catalog.spells).toHaveLength(240)
-    expect(encyclopedia_catalog.recipes).toHaveLength(1461)
+    expect(encyclopedia_catalog.recipes).toHaveLength(1477)
     expect(encyclopedia_catalog.worlds).toHaveLength(20)
   })
 
@@ -81,7 +83,7 @@ describe('local encyclopedia catalog', () => {
     expect(wooling?.loot.every(({ item }) => item !== null)).toBe(true)
   })
 
-  test('preserves authored consumable effects and derives the global pet-food set', () => {
+  test("preserves authored consumable effects and each pet's resource diet", () => {
     expect(encyclopedia_catalog.item('arcane_bread')?.item.consumable).toEqual({ type: 'heal', amount: 1000 })
     expect(encyclopedia_catalog.item('bag_aloe_vera')?.item.consumable).toEqual({
       type: 'loot_box',
@@ -102,8 +104,21 @@ describe('local encyclopedia catalog', () => {
           consumable.rewards[0].amount === 50
       )
     ).toBe(true)
-    expect(encyclopedia_catalog.pet_foods.every(({ category }) => category === 'pet_food')).toBe(true)
-    expect(encyclopedia_catalog.item('aetherwing')?.pet_foods).toEqual(encyclopedia_catalog.pet_foods)
+    expect(encyclopedia_catalog.item('aetherwing')?.pet_foods.map(({ item_type }) => item_type)).toEqual([
+      'wheat',
+      'quartz',
+    ])
+    expect(encyclopedia_catalog.item('pet_aloe_gaia')?.pet_foods.map(({ item_type }) => item_type)).toEqual([
+      'aloe_vera',
+    ])
+    expect(
+      encyclopedia_catalog.items
+        .filter(({ category }) => category === 'pet')
+        .every(({ item_type }) => {
+          const foods = encyclopedia_catalog.item(item_type)?.pet_foods ?? []
+          return foods.length > 0 && foods.every(({ category }) => category === 'resource')
+        })
+    ).toBe(true)
   })
 
   test('derives class and job views from immutable identities', () => {
@@ -112,7 +127,7 @@ describe('local encyclopedia catalog', () => {
     expect(encyclopedia_catalog.jobs).toHaveLength(15)
     expect(encyclopedia_catalog.job('MINER')?.resources).toHaveLength(11)
     expect(encyclopedia_catalog.job('FARMER')?.recipes).toHaveLength(11)
-    expect(encyclopedia_catalog.job('HERBALIST')?.recipes).toHaveLength(1)
+    expect(encyclopedia_catalog.job('HERBALIST')?.recipes).toHaveLength(17)
     expect(encyclopedia_catalog.job('MINER')?.recipes).toHaveLength(11)
   })
 })

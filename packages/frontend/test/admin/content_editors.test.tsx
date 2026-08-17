@@ -8,6 +8,7 @@ import items from '../../../../seed/content/items.json'
 import mobs from '../../../../seed/content/mobs.json'
 import recipes from '../../../../seed/content/recipes.json'
 import shop from '../../../../seed/content/shop.json'
+import type { ItemRecipeBinding } from '../../src/admin/ItemContentEditor.tsx'
 import type { JsonValue, SeedDomain } from '../../src/admin/seed_editor.ts'
 
 mock.module('../../src/content/assets.ts', () => ({
@@ -18,9 +19,15 @@ mock.module('../../src/content/assets.ts', () => ({
 
 const { ContentEntityEditor } = await import('../../src/admin/ContentEntityEditor.tsx')
 
-const render_editor = (domain: SeedDomain, value: JsonValue): string =>
+const render_editor = (domain: SeedDomain, value: JsonValue, item_recipe?: ItemRecipeBinding): string =>
   renderToStaticMarkup(
-    <ContentEntityEditor domain={domain} is_readonly={() => false} on_change={() => undefined} value={value} />
+    <ContentEntityEditor
+      domain={domain}
+      is_readonly={() => false}
+      item_recipe={item_recipe}
+      on_change={() => undefined}
+      value={value}
+    />
   )
 
 test('item editing is a semantic Dofus power sheet, not an appearance block form', () => {
@@ -28,8 +35,11 @@ test('item editing is a semantic Dofus power sheet, not an appearance block form
   expect(html).toContain('data-content-editor="item"')
   expect(html).toContain('Dofus item power')
   expect(html).toContain('Donor p10–p90')
+  expect(html).toContain('data-item-detail-editable=""')
   expect(html).toContain('data-item-stats=""')
   expect(html).toContain('data-item-damages=""')
+  expect(html).not.toContain('locked identity')
+  expect(html.indexOf('data-active-item-stats')).toBeLessThan(html.indexOf('data-inactive-item-stats'))
   expect(html).not.toContain('>Appearance<')
 })
 
@@ -40,10 +50,63 @@ test('mob editing keeps the combat sheet and editable shared spell cards togethe
   expect(html).toContain('data-mob-resistances=""')
   expect(html).toContain('data-spell-detail-card=""')
   expect(html).toContain('data-mob-loot=""')
+  expect(html).toContain('data-item-reference-picker="loot item"')
+  expect(html).toContain('Resource · Level 83')
+  expect(html).not.toContain('aria-label="Loot item"')
+  for (const stat of ['hp', 'ap', 'mp', 'agility', 'wisdom', 'xp'])
+    expect(html).toContain(`data-mob-stat-icon="${stat}"`)
 })
 
-test('recipes and shop use compact domain rows', () => {
-  expect(render_editor('recipes', recipes[0] as JsonValue)).toContain('data-content-editor="recipe"')
-  expect(render_editor('recipes', recipes[0] as JsonValue)).toContain('Craft XP')
+test('an item edits its separately-authored recipe in place', () => {
+  const recipe_binding: ItemRecipeBinding = {
+    value: recipes[0] as JsonValue,
+    change: () => undefined,
+    category_changed: () => undefined,
+    create: () => undefined,
+    remove: () => undefined,
+    reset: () => undefined,
+    save: () => undefined,
+    dirty: false,
+    file_dirty: false,
+    saving: false,
+  }
+  const item = items.find(({ item_type }) => item_type === recipes[0].output_type)!
+  const html = render_editor('items', item as unknown as JsonValue, recipe_binding)
+  expect(html).toContain('data-item-recipe=""')
+  expect(html).toContain('Craft XP')
+  expect(html).toContain('SWORD SMITH')
+  expect(html).toContain('data-item-reference-picker="ingredient"')
+  expect(html).not.toContain('aria-label="Profession"')
+  expect(html).not.toContain('data-item-reference-picker="crafted item"')
+  expect(html).not.toContain('aria-label="Ingredient"')
+})
+
+test('non-weapons cannot add weapon damage and fallback recipe professions remain authored', () => {
+  const helmet = items.find(({ category }) => category === 'helmet')!
+  const recipe = recipes.find(({ output_type }) => output_type === helmet.item_type)!
+  const binding: ItemRecipeBinding = {
+    value: recipe as JsonValue,
+    change: () => undefined,
+    category_changed: () => undefined,
+    create: () => undefined,
+    remove: () => undefined,
+    reset: () => undefined,
+    save: () => undefined,
+    dirty: false,
+    file_dirty: false,
+    saving: false,
+  }
+  expect(render_editor('items', helmet as unknown as JsonValue, binding)).not.toContain('+ Damage line')
+
+  const fallback_recipe = recipes.find((recipe) => 'job' in recipe && recipe.job === 'ALCHEMIST')!
+  const fallback_item = items.find(({ item_type }) => item_type === fallback_recipe.output_type)!
+  const fallback_html = render_editor('items', fallback_item as unknown as JsonValue, {
+    ...binding,
+    value: fallback_recipe as JsonValue,
+  })
+  expect(fallback_html).toContain('aria-label="Profession"')
+})
+
+test('shop uses its compact domain row', () => {
   expect(render_editor('shop', shop.sales[0] as JsonValue)).toContain('data-content-editor="shop"')
 })

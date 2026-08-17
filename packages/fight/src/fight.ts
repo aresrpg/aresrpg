@@ -24,6 +24,7 @@ export type FightResult = {
 export type Fight = {
   state: () => HydratedFightCheckpoint
   apply: (input: FightInput) => FightResult
+  reset_turn: () => FightResult
   transform: (inputs: Iterable<FightInput>) => Generator<FightEvent, void, void>
   replace: (state: HydratedFightCheckpoint) => readonly FightEvent[]
   simulate_turn: (input: { observed_ms: bigint }) => FightResult
@@ -51,8 +52,22 @@ export const create_fight = ({
   let seed_index = 0n
   let render_ids = create_render_ids(state.contract)
   let pending_turn: { input: FightCommandInput; witnesses: TurnWitness[]; emitted: number } | null = null
+  let turn_boundary: Readonly<{
+    state: HydratedFightCheckpoint
+    render_ids: ReturnType<typeof create_render_ids>
+    seed_index: bigint
+  }> | null = null
 
   const snapshot = (): HydratedFightCheckpoint => structuredClone(state)
+  const capture_turn_boundary = (): void => {
+    if (mode !== 'local' || state.contract.round === 0n || state.contract.ended) return
+    turn_boundary = Object.freeze({
+      state: snapshot(),
+      render_ids: structuredClone(render_ids),
+      seed_index,
+    })
+  }
+  capture_turn_boundary()
 
   const run = (input: FightCommandInput, supplied_witnesses: readonly TurnWitness[] = []) => {
     const witnesses = [...(input.turn_witnesses ?? [])]
@@ -123,6 +138,8 @@ export const create_fight = ({
     if (!result.error) {
       state = { contract: structuredClone(result.contract), sources: result.sources }
       render_ids = structuredClone(result.render_ids)
+      if (result.render_actions.some(({ type }) => type === 'fight_started' || type === 'turn_switched'))
+        capture_turn_boundary()
     }
     return {
       state: snapshot(),
@@ -134,6 +151,17 @@ export const create_fight = ({
   return Object.freeze({
     state: snapshot,
     apply,
+    reset_turn: () => {
+      if (mode !== 'local')
+        return { state: snapshot(), events: [], error: { code: 'local_mode_required', detail: null } }
+      if (!turn_boundary) return { state: snapshot(), events: [], error: { code: 'no_turn_boundary', detail: null } }
+      const { state: boundary_state, render_ids: boundary_render_ids, seed_index: boundary_seed_index } = turn_boundary
+      state = structuredClone(boundary_state)
+      render_ids = structuredClone(boundary_render_ids)
+      seed_index = boundary_seed_index
+      pending_turn = null
+      return { state: snapshot(), events: [], error: null }
+    },
     *transform(inputs: Iterable<FightInput>) {
       for (const input of inputs) yield* apply(input).events
     },
@@ -151,6 +179,7 @@ export const create_fight = ({
       pending_turn = null
       state = normalized
       if (!replayed_pending_turn) render_ids = create_render_ids(normalized.contract)
+      capture_turn_boundary()
       return events
     },
     simulate_turn: ({ observed_ms }: { observed_ms: bigint }) => {

@@ -4,8 +4,8 @@
 /// UTC day grows a pet from NEUTRAL stats to its rolled maximum in 60 feeds — power is
 /// linear, `stat = center + (rolled − center) × feeds / 60`, signed magnitudes scaling away
 /// from the centered encoding's neutral point. Feed state lives ON THE PET ITEM (a traded
-/// pet carries its power); food is its own stackable category (`pet_food`, one template
-/// authored at the seed) — the category IS the check, no config object.
+/// pet carries its power). Each frozen pet template authors the resource item types it eats;
+/// there is no global food category or mutable config object.
 ///
 /// ONE feed door — the pet feeds in the KIOSK. An equipped pet feeds through a FRONTEND PTB
 /// that composes existing doors (`unequip_item` → `feed_kiosk_pet` → `equip_item`), so no
@@ -13,16 +13,17 @@
 /// `scaled_stats` to fold the pet's power, so re-equipping picks up the new feed for free.
 module aresrpg::pet;
 
-use aresrpg::{item::{Self, Item}, protected_policy::AresRPG_TransferPolicy};
-use aresrpg_math::item_stats::{Self, ItemStatistics};
+use aresrpg::{item::{Self, Item, ItemTemplate}, protected_policy::AresRPG_TransferPolicy};
+use aresrpg_math::{content_rules, item_stats::{Self, ItemStatistics}};
 use sui::{clock::Clock, dynamic_field as dfield, event, kiosk::{Kiosk, KioskOwnerCap}};
 
 // ╔════════════════ [ Constants ] ════════════════════════════════════════════ ]
 
 const ENotPet: u64 = 2501; // feed: the target item is not a pet
-const ENotFood: u64 = 2502; // feed: the burned stack is not pet_food
+const ENotFood: u64 = 2502; // feed: the resource item_type is absent from this pet's diet
 const EAlreadyFedToday: u64 = 2503; // one feed per UTC day
 const EFullyFed: u64 = 2504; // 60 feeds = the maximum
+const EWrongTemplate: u64 = 2505; // feed: the supplied frozen template is not the pet's template
 
 const MAX_FEEDS: u64 = 60;
 const DAY_MS: u64 = 86_400_000; // UTC-day index = timestamp / this
@@ -41,18 +42,29 @@ public struct PetFed has copy, drop { pet: ID, feeder: address, power: u64 }
 
 // ╔════════════════ [ Door (api gates the version, then calls) ] ═════════════ ]
 
-/// Feed a pet where it sits in the kiosk — one `pet_food` unit per UTC day.
+/// Feed a pet where it sits in the kiosk — one authored resource unit per UTC day.
 public(package) fun feed_kiosk_pet(
   kiosk: &mut Kiosk,
   cap: &KioskOwnerCap,
+  pet_template: &ItemTemplate,
   protected_item: &AresRPG_TransferPolicy<Item>,
   pet_id: ID,
   food_id: ID,
   clock: &Clock,
   ctx: &mut TxContext,
 ) {
-  let category = item::burn(kiosk, cap, protected_item, food_id, 1, ctx);
-  assert!(category == b"pet_food".to_string(), ENotFood);
+  let pet_template_id = {
+    let pet: &Item = kiosk.borrow(cap, pet_id);
+    pet.template()
+  };
+  assert!(pet_template_id == item::template_id(pet_template), EWrongTemplate);
+  let (food_type, food_category) = {
+    let food: &Item = kiosk.borrow(cap, food_id);
+    (food.item_type(), food.category())
+  };
+  assert!(food_category == b"resource".to_string(), ENotFood);
+  assert!(content_rules::pet_accepts(item::template_pet_foods(pet_template), &food_type), ENotFood);
+  item::burn(kiosk, cap, protected_item, food_id, 1, ctx);
   let pet: &mut Item = kiosk.borrow_mut(cap, pet_id);
   feed(pet, clock, ctx);
 }
@@ -69,22 +81,8 @@ public fun power(pet: &Item): u64 {
 /// center. A stat-less or never-fed pet folds as neutral.
 public fun scaled_stats(pet: &Item): ItemStatistics {
   let count = power(pet);
-  let center = item_stats::shift() as u16;
   if (!pet.has_stats()) return item_stats::zero();
-  let rolled = pet.stats().to_vector();
-  let mut scaled = vector[];
-  let mut i = 0;
-  while (i < rolled.length()) {
-    let v = rolled[i];
-    let s = if (v >= center) {
-      center + ((((v - center) as u64) * count / MAX_FEEDS) as u16)
-    } else {
-      center - ((((center - v) as u64) * count / MAX_FEEDS) as u16)
-    };
-    scaled.push_back(s);
-    i = i + 1;
-  };
-  item_stats::from_vector(scaled)
+  pet.stats().scale_from_center(count, MAX_FEEDS)
 }
 
 // ╔════════════════ [ Internals ] ════════════════════════════════════════════ ]

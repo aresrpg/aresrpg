@@ -9,21 +9,20 @@ the same commit, and the test suite is red otherwise (the regen-clean tooth).
 Write-only by design: reads flow through the indexer, content lives in `seed/`, deployment ids
 live in the repo-root `pins.json`. A missing pin throws at the door — never a guess.
 
-## The zero-roundtrip law
+## The pre-resolved game-object law
 
-Sui finality is sub-second — so must every transaction be. The SDK therefore builds every PTB
-from **pre-resolved inputs only**, with zero resolution RPCs between intent and submission:
+The SDK builds every PTB from **pre-resolved game inputs**. Only gas remains a wallet concern:
 
 - shared objects → `sharedObjectRef` (the initial shared version is STABLE — learned once,
   valid forever; pins carry theirs in `pins.json`)
 - owned objects → exact `objectRef` (version + digest) from the **receipt-fed cache**
 - clock/random → the SDK's offline system helpers
-- gas → cached reference gas price + the signer's cached gas coin ref
+- gas → Sui core resolution, including payment selection and automatic budget estimation
 
 An object id the cache does not know **throws** — the SDK never falls back to an RPC lookup
-inside a build. `sdk.hydrate([ids])` is the ONE sanctioned bootstrap roundtrip (seeds refs, the
-gas price, and the gas coin); after it, every `execute` receipt keeps the cache fresh — the
-loop sustains itself with zero reads.
+inside a build. `sdk.hydrate([ids])` is the ONE sanctioned bootstrap roundtrip for game object
+refs. Sui resolves gas while building; after execution, every receipt keeps cached object
+versions fresh — the loop sustains itself with zero game-object reads.
 
 ```ts
 import { SDK } from '@aresrpg/sdk'

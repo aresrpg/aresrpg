@@ -4,6 +4,7 @@
 import { useMemo } from 'react'
 
 import type { AppCopy } from '../i18n/copy.ts'
+import { stat_name } from '../i18n/copy.ts'
 
 import { ClassesTab } from './ClassesTab.tsx'
 import { category_pill, encyclopedia_layout } from './components.tsx'
@@ -67,6 +68,7 @@ export const EncyclopediaPage = ({
             select_mob={(id) => navigate(route('bestiary', id))}
             select_world={(id) => navigate(route('worlds', id))}
             selected_id={view.id}
+            stat_name={(stat) => stat_name(copy, stat)}
             text={text}
           />
         )}

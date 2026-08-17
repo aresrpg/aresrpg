@@ -2,145 +2,131 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
 import { dispatch_app, useAppStore } from '../store.ts'
+import { format_sui } from '../wallet_amount.ts'
 
-import { AdminWalletPanel } from './AdminWalletPanel.tsx'
-import { admin_content_domains, entity_rows } from './seed_editor.ts'
+import { AdminWalletPanel, useAdminRevenue } from './AdminWalletPanel.tsx'
 
-const Fact = ({
+const card_class =
+  'rounded-xl border border-white/[0.075] bg-[linear-gradient(145deg,rgba(255,255,255,0.045),rgba(255,255,255,0.012))]'
+
+const KpiCard = ({
   label,
   value,
-  note,
-  tone = 'plain',
-}: Readonly<{ label: string; value: string; note: string; tone?: 'plain' | 'gold' | 'cyan' }>) => (
-  <section
-    className={`min-h-28 border bg-white/[0.018] p-4 ${
-      tone === 'gold' ? 'border-[#c8963c]/35' : tone === 'cyan' ? 'border-[#4a9eff]/30' : 'border-white/8'
-    }`}
-  >
-    <p className="text-[8px] tracking-[0.18em] text-[#707481] uppercase">{label}</p>
-    <p
-      className={`mt-4 text-2xl ${tone === 'gold' ? 'text-[#efbd45]' : tone === 'cyan' ? 'text-[#67adff]' : 'text-[#d8d3ca]'}`}
-    >
+  unit,
+  gold = false,
+  title,
+}: Readonly<{ label: string; value: string; unit?: string; gold?: boolean; title?: string }>) => (
+  <div className={`${card_class} min-h-28 px-4 py-4`} title={title}>
+    <p className="text-[8px] tracking-[0.13em] text-[#858993] uppercase">{label}</p>
+    <p className={`mt-5 text-[26px] font-light leading-none ${gold ? 'text-[#efbd45]' : 'text-[#e4dfd6]'}`}>
       {value}
+      {unit && <span className="ml-2 text-[9px] tracking-[0.12em] text-[#8a8172] uppercase">{unit}</span>}
     </p>
-    <p className="mt-3 text-[8px] leading-4 text-[#666a74]">{note}</p>
-  </section>
+  </div>
 )
 
-const MissingRow = ({ label, reason }: Readonly<{ label: string; reason: string }>) => (
-  <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-3 border-t border-white/7 py-3 text-[9px] first:border-t-0">
-    <span className="text-[#92959e]">{label}</span>
-    <span className="text-right text-[#626670]" title={reason}>
-      — · unavailable
-    </span>
+const EmptyVolumeChart = () => (
+  <div className={`${card_class} flex min-h-[430px] flex-col p-5 xl:col-span-8`}>
+    <div className="flex items-start justify-between gap-4">
+      <div>
+        <p className="text-[9px] tracking-[0.18em] text-[#d8d3ca] uppercase">Daily shop volume</p>
+        <p className="mt-2 text-[8px] text-[#626771]">30 days</p>
+      </div>
+      <span className="text-[8px] tracking-[0.1em] text-[#555b65] uppercase">SUI</span>
+    </div>
+    <div className="mt-8 grid min-h-0 flex-1 grid-cols-[28px_1fr] gap-3">
+      <div className="flex flex-col justify-between pb-5 text-right text-[7px] text-[#4f545d]">
+        <span>—</span>
+        <span>—</span>
+        <span>0</span>
+      </div>
+      <div className="relative min-h-72 border-b border-l border-white/[0.08]">
+        <div className="absolute inset-0 grid grid-rows-4">
+          {Array.from({ length: 4 }, (_, index) => (
+            <span className="border-t border-white/[0.035]" key={index} />
+          ))}
+        </div>
+        <div className="absolute inset-x-3 inset-y-0 grid grid-cols-[repeat(30,minmax(2px,1fr))] items-end gap-1">
+          {Array.from({ length: 30 }, (_, index) => (
+            <span
+              className="h-px bg-gradient-to-t from-[#c8963c]/35 to-[#efbd45]/60"
+              key={index}
+              title="No volume projection"
+            />
+          ))}
+        </div>
+      </div>
+    </div>
+    <div className="ml-10 mt-3 flex justify-between text-[7px] tracking-[0.08em] text-[#555b65] uppercase">
+      <span>30 days ago</span>
+      <span>Today</span>
+    </div>
   </div>
+)
+
+const PlayersCard = ({
+  online,
+  indexed,
+  loading,
+}: Readonly<{ online: number | null; indexed: number | undefined; loading: boolean }>) => (
+  <section className={`${card_class} p-5`}>
+    <div className="flex items-center justify-between gap-4">
+      <p className="text-[9px] tracking-[0.18em] text-[#d8d3ca] uppercase">Players</p>
+      <button
+        className="cursor-pointer text-[8px] tracking-[0.12em] text-[#67adff] uppercase disabled:cursor-not-allowed disabled:opacity-35"
+        disabled={loading}
+        onClick={() => dispatch_app({ type: 'admin/overview_refresh' })}
+        type="button"
+      >
+        {loading ? 'Reading…' : 'Refresh'}
+      </button>
+    </div>
+    <div className="mt-4 flex min-h-11 items-center justify-between border-b border-white/[0.055] py-2">
+      <span className="text-[8px] tracking-[0.08em] text-[#858993] uppercase">Online now</span>
+      <span className="text-sm text-[#67adff]">{online?.toLocaleString() ?? '—'}</span>
+    </div>
+    <div className="flex min-h-11 items-center justify-between py-2">
+      <span className="text-[8px] tracking-[0.08em] text-[#858993] uppercase">Indexed users</span>
+      <span className="text-sm text-[#d8d3ca]">{indexed?.toLocaleString() ?? '—'}</span>
+    </div>
+  </section>
 )
 
 export const OverviewPage = ({ copy }: Readonly<{ copy: Readonly<Record<string, string>> }>) => {
   const admin = useAppStore((state) => state.admin)
   const online = useAppStore((state) => state.session.online)
-  const { validation } = admin.editor
-  const corpus_counts = admin_content_domains.map((domain) => ({
-    ...domain,
-    count: admin.editor.files[domain.id] ? entity_rows(domain.id, admin.editor.files[domain.id]!.value).length : null,
-  }))
-  const graph_counts = Object.entries(admin.overview.counts).sort((left, right) => right[1] - left[1])
+  const revenue = useAdminRevenue(copy)
+  const collectable = revenue.royalties.length > 0 && !revenue.reading ? format_sui(revenue.claimable, 4) : '—'
+
   return (
-    <div className="min-h-0 flex-1 overflow-y-auto p-4">
-      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
-        <Fact label="Online now" note="server push state" value={online?.toLocaleString() ?? '—'} tone="cyan" />
-        <Fact
-          label="Indexed users"
-          note={admin.overview.status === 'ready' ? 'FalkorDB User nodes' : (admin.overview.error ?? 'loading source')}
-          value={admin.overview.counts.User?.toLocaleString() ?? '—'}
-        />
-        <Fact label="Shop volume 30d" note="global SaleBought rollup not projected yet" value="—" tone="gold" />
-        <Fact label="Sales 30d" note="global SaleBought rollup not projected yet" value="—" />
-        <Fact
-          label="Collectable now"
-          note="requires published policy pins and the admin wallet"
-          value="—"
-          tone="gold"
-        />
-      </div>
-
-      <div className="mt-4 grid gap-4 xl:grid-cols-[minmax(540px,1.4fr)_minmax(320px,0.6fr)]">
-        <section className="border border-white/8 bg-black/10 p-4">
-          <div className="flex items-center justify-between border-b border-white/8 pb-3">
-            <div>
-              <h2 className="text-[9px] tracking-[0.16em] text-[#c8963c] uppercase">Indexed game state</h2>
-              <p className="mt-2 text-[8px] text-[#626670]">Global label counts from the whitelisted server read</p>
-            </div>
-            <button
-              className="h-8 cursor-pointer border border-[#4a9eff]/30 px-3 text-[8px] tracking-[0.12em] text-[#67adff] uppercase disabled:opacity-40"
-              disabled={admin.overview.status === 'loading'}
-              onClick={() => dispatch_app({ type: 'admin/overview_refresh' })}
-              type="button"
-            >
-              {admin.overview.status === 'loading' ? 'Reading…' : 'Refresh'}
-            </button>
-          </div>
-          {graph_counts.length > 0 ? (
-            <div className="mt-2 grid gap-x-6 sm:grid-cols-2 lg:grid-cols-3">
-              {graph_counts.map(([label, count]) => (
-                <div className="flex items-center justify-between border-b border-white/6 py-3 text-[9px]" key={label}>
-                  <span className="text-[#8f929b]">{label}</span>
-                  <span className="text-[#d8d3ca]">{count.toLocaleString()}</span>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <p className="py-12 text-center text-[9px] text-[#626670]">
-              {admin.overview.error ?? 'No server counts loaded'}
-            </p>
-          )}
+    <div className="min-h-0 flex-1 overflow-y-auto bg-[linear-gradient(180deg,rgba(200,150,60,0.025),transparent_28%)] p-5 md:p-7">
+      <div className="mx-auto max-w-7xl">
+        <section className="grid grid-cols-2 gap-3 lg:grid-cols-5">
+          <KpiCard
+            gold
+            label="Collectable now"
+            title="Withdrawable marketplace royalties"
+            unit="SUI"
+            value={collectable}
+          />
+          <KpiCard gold label="Shop volume 30d" title="No volume projection" unit="SUI" value="—" />
+          <KpiCard label="Sales 30d" title="No sales projection" value="—" />
+          <KpiCard label="MAU" title="No monthly-active-player projection" value="—" />
+          <KpiCard label="DAU" title="No daily-active-player projection" value="—" />
         </section>
 
-        <section className="border border-white/8 bg-black/10 p-4">
-          <h2 className="border-b border-white/8 pb-3 text-[9px] tracking-[0.16em] text-[#c8963c] uppercase">
-            Revenue and activity sources
-          </h2>
-          <MissingRow label="Treasury balance" reason="No deployment treasury pin is published" />
-          <MissingRow label="Kiosk royalties" reason="TransferPolicy pins are currently null" />
-          <MissingRow label="Lifetime shop gross" reason="Needs a global SaleBought accumulator" />
-          <MissingRow label="Marketplace fee" reason="No exact realised-fee projection exists" />
-          <MissingRow label="DAU / MAU" reason="Needs unique active AresRPG sender windows" />
-          <MissingRow label="zkLogin accounts" reason="Authentication method is not indexed" />
+        <section className="mt-4 grid gap-4 xl:grid-cols-12">
+          <EmptyVolumeChart />
+          <aside className="flex flex-col gap-4 xl:col-span-4">
+            <AdminWalletPanel copy={copy} revenue={revenue} />
+            <PlayersCard
+              indexed={admin.overview.counts.User}
+              loading={admin.overview.status === 'loading'}
+              online={online}
+            />
+          </aside>
         </section>
       </div>
-
-      <div className="mt-4">
-        <AdminWalletPanel copy={copy} />
-      </div>
-
-      <section className="mt-4 border border-white/8 bg-black/10 p-4">
-        <div className="flex items-center justify-between border-b border-white/8 pb-3">
-          <div>
-            <h2 className="text-[9px] tracking-[0.16em] text-[#c8963c] uppercase">Authored corpus</h2>
-            <p className="mt-2 text-[8px] text-[#626670]">Local JSON source · validator debt stays visible</p>
-          </div>
-          <div className="text-[8px] tracking-[0.12em] uppercase">
-            <span className="text-[#ff8caa]">{validation?.reds.length ?? '—'} red</span>
-            <span className="ml-3 text-[#efbd45]">{validation?.warns.length ?? '—'} warn</span>
-          </div>
-        </div>
-        <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7">
-          {corpus_counts.map(({ id, label, count }) => (
-            <button
-              className="border border-white/7 bg-white/[0.018] p-3 text-left hover:border-[#c8963c]/30"
-              key={id}
-              onClick={() => {
-                dispatch_app({ type: 'admin/editor_domain_selected', domain: id })
-                dispatch_app({ type: 'admin/view_changed', view: 'content' })
-              }}
-              type="button"
-            >
-              <p className="text-[8px] text-[#707481] uppercase">{label}</p>
-              <p className="mt-3 text-lg text-[#d8d3ca]">{count?.toLocaleString() ?? '—'}</p>
-            </button>
-          ))}
-        </div>
-      </section>
     </div>
   )
 }

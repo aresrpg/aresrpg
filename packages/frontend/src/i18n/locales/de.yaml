@@ -33,6 +33,16 @@ admin: Admin
 online: Online
 account: Konto
 join_discord: Discord beitreten
+sui_universe: Sui-Universum
+server_disconnected: Getrennt
+server_connecting: Verbindung
+server_reconnecting: Erneute Verbindung
+server_syncing: Synchronisierung
+server_connected: Verbunden
+latency_unit: ms
+indexing_health: Indexierungsstatus
+indexing_lag_warning: Aktionen im Spiel können verzögert erscheinen
+network_testnet: TESTNET
 page_pending_title: Diese Seite wird neu aufgebaut
 page_pending_body: Ihr Platz bleibt sichtbar, während wir sie sauber wiederherstellen.
 welcome_title: Willkommen bei AresRPG
@@ -65,6 +75,71 @@ wallet_send_pending: SUI wird gesendet…
 wallet_send_success: SUI gesendet
 wallet_send_failed: Die SUI-Übertragung ist fehlgeschlagen
 wallet_close: Schließen
+shop_page:
+  title: 'Laden'
+  subtitle: 'Gegenstände mit SUI kaufen'
+  limited_edition_notice: 'Alle diese Objekte sind limitierte Editionen — sobald der Vorrat aufgebraucht ist, sind sie für immer unerreichbar. Handle sie auf dem Marktplatz gegen SUI.'
+  remaining_of_cap: '{{remaining}} von {{cap}} übrig'
+  processing: 'VERARBEITUNG'
+  sold_out: 'Ausverkauft'
+  acquire: 'Erwerben'
+  wallet: 'Geldbörse'
+  filter_all: 'Alle'
+  sections:
+    pet_box: 'HAUSTIER-BOXEN'
+    title: 'Titel'
+    cloak: 'Umhänge'
+    hat: 'Hüte'
+    companion: 'Begleiter'
+    equipment: 'Ausrüstung'
+    consumable: 'Verbrauchsgüter'
+    resource: 'Ressourcen'
+  amount_title: 'Menge wählen'
+  amount_quantity: 'Menge'
+  amount_max: 'Max'
+  amount_total: 'Gesamt'
+  amount_available: '{{count}} verfügbar'
+  amount_confirm: '{{count}} erwerben'
+  purchase_success_body: 'Deine neuen Gegenstände warten in deinem Inventar.'
+  see_inventory: 'Inventar ansehen'
+  buy_pending: 'Kauf läuft…'
+  buy_success: 'Kauf erfolgreich!'
+  drop_rates: 'Drop-Chancen'
+  pool_sub: 'Beim Öffnen wird genau ein Begleiter gezogen, gewichtet wie unten aufgeführt.'
+  acquisition_complete: 'Erwerb abgeschlossen'
+airdrop_page:
+  title: 'Airdrops'
+  subtitle: 'Reservierte Gegenstände für berechtigte Inhaber einlösen'
+  minted: '{{count}} geprägt'
+  eligible_count: '{{count}} berechtigt'
+  eligible: 'Berechtigt'
+  not_eligible: 'Nicht berechtigt'
+  claimed: 'Eingelöst'
+  claim: 'Einlösen'
+  empty: 'Keine aktiven Airdrops'
+  empty_hint: 'Airdrops für Inhaber von Partner-Kollektionen erscheinen hier, sobald sie live gehen.'
+  pending_claim: 'Airdrop wird eingelöst…'
+  toast_claimed: 'Airdrop eingelöst'
+  set:
+    title: 'Die Kollektion'
+    subtitle: 'Reservierte Gegenstände — nur zur Ansicht'
+    error: 'Die Airdrop-Kollektion konnte nicht geladen werden'
+    retry: 'Erneut versuchen'
+    empty: 'Die Airdrop-Kollektion ist noch nicht veröffentlicht'
+    no_preview: 'Vorschau folgt'
+    aura: 'Aura'
+    aura_pending: 'Aura folgt'
+    awaiting_ruling: 'Entscheidung ausstehend'
+    kind:
+      pet_glb: 'Begleiter'
+      cosmetic: 'Kosmetik'
+      title_relic: 'Titel-Relikt'
+      outfit: 'Outfit'
+settings_page:
+  title: 'Einstellungen'
+  subtitle: 'Deine AresRPG-Einstellungen'
+  music_label: 'Musik'
+  music_hint: 'Spielt die Musik der Welt und der Kämpfe.'
 admin_page:
   kicker: Herausgeber
   title: Spielinhalte veröffentlichen
@@ -86,6 +161,11 @@ admin_page:
   admin_wallet: Admin-Wallet
   admin_wallet_body: Separater Signierer für Veröffentlichung und Einnahmenabhebung.
   connect_admin_wallet: Verbinden
+  choose_admin_wallet: Wallet auswählen
+  choose_admin_address: Adresse auswählen
+  cancel_wallet_selection: Abbrechen
+  wallet_account: Konto
+  select_wallet: Auswählen
   connecting: Verbindung…
   loading_wallets: Wallets werden geladen…
   no_admin_wallet: Keine kompatible Browser-Wallet installiert.
@@ -194,6 +274,7 @@ fight_hud:
   placement_title: Bereit zum Kampf
   placement_hint: Platziere deine Kämpfer und markiere sie als bereit
   end_turn: Zug beenden
+  reset_turn: Neustart
   forfeit: Aufgeben
   forfeit_title: Mit {name} aufgeben?
   forfeit_body: '{name} verliert alle verbleibenden LP und verlässt diesen Kampf.'
@@ -373,16 +454,12 @@ encyclopedia_page:
   select_job: BERUF AUSWAHLEN
   crafts: Stellt her
   gathering_tiers: SAMMEL-FORTSCHRITT
-  craft_xp_table: HANDWERKS-XP-TABELLE
-  bulk_craft_note: Die EP pro Herstellung richtet sich nach der Anzahl der Zutaten des Rezepts — Rezepte mit mehr einzigartigen Zutaten-Slots geben mehr EP pro Herstellung.
-  job_recipes: REZEPTE
+  craftable_items: HERSTELLBARE GEGENSTÄNDE
   tier: Stufe
   required_level: Ben. Lv.
   resource: Ressource
   rare_variant: Seltene Variante
   xp_per_harvest: XP / Ernte
-  slots: Platze
-  xp_awarded: XP Belohnung
   job_desc:
     FARMER: Bauern ernten Getreide auf Feldern in der ganzen Welt. Hohere Stufen schalten seltenere Pflanzen frei.
     HERBALIST: Herbalisten sammeln Pflanzen und Blumen fur die Alchemie. Jede Stufe erfordert ein hoheres Berufslevel.
@@ -631,6 +708,8 @@ encyclopedia_page:
   consumable_reward_heading: BELOHNUNG
   consumable_rewards: MÖGLICHE BELOHNUNGEN
   consumable_reward: '{{item}} · {{chance}}%'
+  rune_effect: Fügt einem Gegenstand {{amount}} {{stat}} hinzu
+  rune_obtained_by_crushing: Durch Zerstören von Gegenständen erhalten
   spell_n: ZAUBER {{n}}
   range: REICHWEITE
   range_modifiability: REICHWEITENÄNDERUNG

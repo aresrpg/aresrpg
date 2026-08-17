@@ -32,6 +32,7 @@ use aresrpg::{
   world::{Self, World},
   zone,
 };
+use aresrpg_math::world_map;
 use std::string::String;
 use sui::{
   clock::Clock,
@@ -80,7 +81,7 @@ public fun create_character(
     color_3,
     ctx,
   );
-  world::join_world(&mut chr, world::first_world(), clock);
+  world::join_world(&mut chr, world_map::first_world(), clock);
   character::assert_personal_custody(kiosk); // soulbound custody — a personal kiosk only
   kiosk.lock(cap, policy, chr);
 }
@@ -189,11 +190,12 @@ public fun unequip_item(
   kiosk.lock(cap, item_policy, item);
 }
 
-/// Feed a pet in the kiosk — one `pet_food` unit per UTC day, 60 feeds to max. An equipped
+/// Feed a pet in the kiosk — one resource from its authored diet per UTC day, 60 feeds to max. An equipped
 /// pet feeds by a frontend PTB: unequip_item → feed_kiosk_pet → equip_item.
 public fun feed_kiosk_pet(
   kiosk: &mut Kiosk,
   cap: &KioskOwnerCap,
+  pet_template: &ItemTemplate,
   pet_id: ID,
   food_id: ID,
   protected_item: &AresRPG_TransferPolicy<Item>,
@@ -202,7 +204,7 @@ public fun feed_kiosk_pet(
   ctx: &mut TxContext,
 ) {
   version.assert_latest();
-  pet::feed_kiosk_pet(kiosk, cap, protected_item, pet_id, food_id, clock, ctx);
+  pet::feed_kiosk_pet(kiosk, cap, pet_template, protected_item, pet_id, food_id, clock, ctx);
 }
 
 /// Delete a character: out of the kiosk through the protected policy, guarded (nothing may

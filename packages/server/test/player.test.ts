@@ -24,6 +24,15 @@ const wire = () => {
         return [{ character_id: params?.character_id, name: 'nox', owner: '0xowner' }]
       if (cypher.includes(':FRIEND')) return [{ address: '0xpal', characters: ['nyx'] }]
       if (cypher.includes('HOLDS_CLAIM') || cypher.includes('HOLDS_VOUCHER')) return []
+      if (cypher.includes('MATCH (s:Sale)')) return [{ sale: { properties: { item_type: 'berserk', supply: '76' } } }]
+      if (cypher.includes('MATCH (a:Airdrop)'))
+        return [
+          {
+            airdrop: {
+              properties: { drop_id: 'founders', whitelist: ['0xme', '0xpal'] },
+            },
+          },
+        ]
       if (cypher.includes(':Trade')) return []
       if (cypher.includes('LISTED_IN')) return []
       return [
@@ -45,6 +54,7 @@ const wire = () => {
     emitter,
     heartbeat: async () => {},
     cluster_online: async () => 1,
+    indexed_checkpoint: async () => 1,
     subscribe: async () => {},
     unsubscribe: async () => {},
     publish: async (channel: string, payload: unknown) => {
@@ -58,11 +68,24 @@ const wire = () => {
 const flush = () => new Promise((resolve) => setTimeout(resolve, 0))
 
 describe('the player harness (push model)', () => {
+  test('an authenticated ping returns the same transport probe id', () => {
+    const { sent, ws, graph, pubsub } = wire()
+    const player = create_player({ ws, address: '0xme', admin: false, graph, pubsub })
+
+    player.on_message(JSON.stringify({ type: 'packet/ping', id: 42 }))
+
+    expect(sent).toContainEqual({ type: 'packet/pong', id: 42 })
+  })
+
   test('connecting pushes the load snapshot, scoped to the CONNECTION address', async () => {
     const { sent, ws, graph, pubsub, queries } = wire()
     create_player({ ws, address: '0xme', admin: false, graph, pubsub })
     await flush()
-    expect(queries.every(({ params }) => params?.address === '0xme')).toBe(true)
+    expect(
+      queries
+        .filter(({ cypher }) => !cypher.includes('MATCH (s:Sale)') && !cypher.includes('MATCH (a:Airdrop)'))
+        .every(({ params }) => params?.address === '0xme')
+    ).toBe(true)
     const types = sent.map((packet) => packet.type)
     for (const expected of [
       'packet/characters',
@@ -72,8 +95,14 @@ describe('the player harness (push model)', () => {
       'packet/giftcards',
       'packet/listings',
       'packet/trades',
+      'packet/shop_state',
     ] as const)
       expect(types).toContain(expected)
+    expect(sent.find((packet) => packet.type === 'packet/shop_state')).toEqual({
+      type: 'packet/shop_state',
+      sales: [{ item_type: 'berserk', supply: '76' }],
+      airdrops: [{ drop_id: 'founders', eligible: true, eligible_count: 2 }],
+    })
   })
 
   test('his social channel streams without being asked — the server decides the watch', async () => {

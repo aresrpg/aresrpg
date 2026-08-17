@@ -8,6 +8,7 @@ export const SETTINGS_STORAGE_KEY = 'aresrpg.settings'
 export type GameSettings = Readonly<{
   quality: EngineQuality
   flat_mode: boolean
+  music_enabled: boolean
 }>
 
 type SettingsStorage = Readonly<{
@@ -31,7 +32,7 @@ export const load_game_settings = (
   quality_override: string | null = null,
   storage: SettingsStorage | null = browser_storage()
 ): GameSettings => {
-  const defaults = Object.freeze({ quality: default_quality, flat_mode: false })
+  const defaults = Object.freeze({ quality: default_quality, flat_mode: false, music_enabled: true })
   try {
     const parsed: unknown = JSON.parse(storage?.getItem(SETTINGS_STORAGE_KEY) ?? 'null')
     const record = typeof parsed === 'object' && parsed !== null ? parsed : {}
@@ -41,7 +42,12 @@ export const load_game_settings = (
         ? Reflect.get(record, 'quality')
         : defaults.quality
     const flat_mode = Reflect.get(record, 'flat_mode')
-    return Object.freeze({ quality, flat_mode: typeof flat_mode === 'boolean' ? flat_mode : defaults.flat_mode })
+    const music_enabled = Reflect.get(record, 'music_enabled')
+    return Object.freeze({
+      quality,
+      flat_mode: typeof flat_mode === 'boolean' ? flat_mode : defaults.flat_mode,
+      music_enabled: typeof music_enabled === 'boolean' ? music_enabled : defaults.music_enabled,
+    })
   } catch (error) {
     console.warn('Saved game settings are invalid; using defaults.', error)
     return defaults

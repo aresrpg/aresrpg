@@ -6,6 +6,8 @@
 /// resource tier T1–T11 to its unlock job level — the gathering tier gate reads it.
 module aresrpg_math::job_xp;
 
+use std::string::String;
+
 const MAX_LEVEL: u64 = 100;
 
 /// Index i = the TOTAL job xp required to REACH job level i (index 0 unused, index 1 =
@@ -138,3 +140,54 @@ public fun tier_to_level(tier: u64): u64 {
 }
 
 public fun max_level(): u64 { MAX_LEVEL }
+
+public fun craft_success_bp(level: u64): u64 {
+  let basis_points = 5_000 + (level - 1) * 50;
+  if (basis_points > 9_900) 9_900 else basis_points
+}
+
+public fun craft_required_level(ingredient_count: u64): u64 {
+  if (ingredient_count <= 2) return 1;
+  let level = ((ingredient_count - 2) * 99 + 7) / 8 + 1;
+  if (level > MAX_LEVEL) MAX_LEVEL else level
+}
+
+public fun craft_xp(ingredient_count: u64): u64 {
+  if (ingredient_count <= 2) 10
+  else if (ingredient_count == 3) 25
+  else if (ingredient_count == 4) 50
+  else if (ingredient_count == 5) 100
+  else if (ingredient_count == 6) 250
+  else if (ingredient_count == 7) 500
+  else 1_000
+}
+
+public fun decayed_craft_xp(base_xp: u64, ingredient_count: u64, crafter_level: u64): u64 {
+  let recipe_level = craft_required_level(ingredient_count);
+  let zero_at = recipe_level + 30;
+  let decay_start = craft_required_level(ingredient_count + 1);
+  if (decay_start >= zero_at) {
+    if (crafter_level >= zero_at) 0 else base_xp
+  } else if (crafter_level <= decay_start) base_xp
+  else if (crafter_level >= zero_at) 0
+  else base_xp * (zero_at - crafter_level) / (zero_at - decay_start)
+}
+
+public fun gathering_tool(job: &String): String {
+  if (*job == b"FARMER".to_string()) return b"tool_farmer".to_string();
+  if (*job == b"HERBALIST".to_string()) return b"tool_herbalist".to_string();
+  b"tool_miner".to_string()
+}
+
+public fun gather_quantity_bounds(job_level: u64, required_level: u64): (u64, u64) {
+  let min = 1 + 5 * (job_level - 1) / 99;
+  let max_raw = 2 + (job_level - required_level) / 5;
+  (min, if (max_raw < min) min else max_raw)
+}
+
+public fun gather_xp(required_level: u64): u64 { 10 + required_level / 2 }
+
+public fun gather_time_ms(job_level: u64): u64 {
+  let time = 12_000 - 10_000 * (job_level - 1) / 99;
+  if (time < 2_000) 2_000 else time
+}

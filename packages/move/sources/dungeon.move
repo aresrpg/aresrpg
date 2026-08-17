@@ -26,7 +26,7 @@ use aresrpg::{
   world::{Self, World},
   zone,
 };
-use aresrpg_math::prng;
+use aresrpg_math::{prng, world_map};
 use std::string::String;
 use sui::{clock::Clock, dynamic_field as dfield, event, kiosk::{Kiosk, KioskOwnerCap}, transfer_policy::TransferPolicy};
 
@@ -87,7 +87,7 @@ public(package) fun enter(
 
   // the burned item must be THIS world's dungeon key (its item_type pins it exactly)
   let key_type = { let it: &Item = kiosk.borrow(cap, key_id); it.item_type() };
-  assert!(w.dungeon_key() == option::some(key_type), EWrongKey);
+  assert!(world_map::dungeon_key(world::content(w)) == option::some(key_type), EWrongKey);
   item::burn(kiosk, cap, protected_item, key_id, 1, ctx);
 
   let chr: &mut Character = kiosk.borrow_mut(cap, character_id);
@@ -185,7 +185,7 @@ public(package) fun settle_room(
   let chr: &mut Character = kiosk.borrow_mut(cap, character_id);
   let (rworld, room, x, z, seed) = read_run(chr);
   assert!(rworld == w.name() && room == tag_room, EWrongRoom);
-  if (won && room < w.dungeon_room_count()) {
+  if (won && room < world_map::dungeon_room_count(world::content(w))) {
     write_run(chr, DungeonRun { world: rworld, room: room + 1, x, z, seed }); // seed persists
     world::delay_checkpoint(chr, ROOT_BETWEEN_ROOMS_MS, clock); // staged for the next room
     event::emit(DungeonRoomCleared { character: character_id, world: rworld, room });

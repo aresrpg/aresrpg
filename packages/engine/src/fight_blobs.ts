@@ -4,18 +4,23 @@
 import {
   DataTexture,
   DoubleSide,
+  DynamicDrawUsage,
   Group,
+  InstancedMesh,
   LinearFilter,
   LinearMipmapLinearFilter,
+  Matrix4,
   Mesh,
   MeshBasicMaterial,
   PlaneGeometry,
+  Quaternion,
   SRGBColorSpace,
+  Vector3,
   type Scene,
 } from 'three'
 
 import { BOARD_FLOOR_THICKNESS } from './fight_board_surface.ts'
-import type { FightBlobRender, FightBoardRender, FightBoardRenderCell } from './types.ts'
+import type { FightBlobRender, FightBlobSpec, FightBoardRender } from './types.ts'
 
 const PER_CELL_FRACTION = 0.84
 const POP_MS = 180
@@ -26,6 +31,35 @@ const TEXTURE_CELL_PX = 48
 const START_A_ID = '__fight_start_a'
 const START_B_ID = '__fight_start_b'
 const START_COLORS = Object.freeze({ start_a: 0x2f6bd8, start_b: 0xff7a2c })
+
+type FightPlacementBlob = Readonly<{ id: string; blob: FightBlobSpec }>
+
+export const fight_placement_blobs = (
+  board: Readonly<FightBoardRender>,
+  visible = true
+): readonly FightPlacementBlob[] => {
+  if (!visible) return Object.freeze([])
+  const overlay = (kind: 'start_a' | 'start_b', color: number): FightPlacementBlob | null => {
+    const cells = board.cells.filter((cell) => cell.kind === kind).map(({ cell }) => cell)
+    return cells.length === 0
+      ? null
+      : Object.freeze({
+          id: kind === 'start_a' ? START_A_ID : START_B_ID,
+          blob: Object.freeze({
+            cells: Object.freeze(cells),
+            shape: 'per_cell' as const,
+            color,
+            origin_cell: cells[0],
+            reveal_step_ms: 35,
+          }),
+        })
+  }
+  return Object.freeze(
+    [overlay('start_a', START_COLORS.start_a), overlay('start_b', START_COLORS.start_b)].filter(
+      (row): row is FightPlacementBlob => row !== null
+    )
+  )
+}
 
 export type FightBlobPlanCell = Readonly<{
   cell: number
@@ -153,8 +187,22 @@ type BlobVisual = Readonly<{
   material: MeshBasicMaterial
   geometry: PlaneGeometry
   texture: DataTexture
-  meshes: readonly Readonly<{ mesh: Mesh; delay_ms: number }>[]
+  drawable: Mesh | InstancedMesh
+  cells: readonly Readonly<{
+    cell: number | null
+    world_x: number
+    world_z: number
+    started_at: number
+  }>[]
+  board_y: number
   blob: FightBlobRender
+}>
+
+type BlobTransformScratch = Readonly<{
+  matrix: Matrix4
+  position: Vector3
+  quaternion: Quaternion
+  scale: Vector3
 }>
 
 const dispose_visual = (group: Group, visual: BlobVisual): void => {
@@ -178,7 +226,48 @@ const blob_material = (blob: Readonly<FightBlobRender>, texture: DataTexture): M
     polygonOffsetUnits: -2,
   })
 
-const build_visual = (board: Readonly<FightBoardRender>, blob: Readonly<FightBlobRender>): BlobVisual | null => {
+const place_blob_mesh = (
+  mesh: Mesh,
+  cell: number | null,
+  world_x: number,
+  world_y: number,
+  world_z: number,
+  priority: number
+): void => {
+  // Keep the overlay on the board plane. Any vertical lift becomes a visible screen-space
+  // displacement under the fight camera; polygon offset already resolves the coplanar depth.
+  mesh.name = cell === null ? 'fight_blob_shape' : `fight_blob_cell:${cell}`
+  mesh.position.set(world_x, world_y, world_z)
+  mesh.renderOrder = 3 + priority
+  mesh.frustumCulled = false
+  mesh.scale.set(0.001, 1, 0.001)
+}
+
+const blob_scale = (blob: Readonly<FightBlobRender>, now: number, started_at: number): number => {
+  if (blob.animate === false) return 1
+  const progress = (now - started_at) / POP_MS
+  return blob.shape === 'per_cell' ? smoothstep(0, 1, progress) : fight_blob_cartoon_scale(progress)
+}
+
+const set_instance_transform = (
+  mesh: InstancedMesh,
+  index: number,
+  cell: Readonly<{ world_x: number; world_z: number }>,
+  board_y: number,
+  scale: number,
+  scratch: BlobTransformScratch
+): void => {
+  scratch.position.set(cell.world_x, board_y, cell.world_z)
+  scratch.scale.set(Math.max(0.001, scale), 1, Math.max(0.001, scale))
+  scratch.matrix.compose(scratch.position, scratch.quaternion, scratch.scale)
+  mesh.setMatrixAt(index, scratch.matrix)
+}
+
+const build_visual = (
+  board: Readonly<FightBoardRender>,
+  blob: Readonly<FightBlobRender>,
+  scratch: BlobTransformScratch
+): BlobVisual | null => {
   const plan = plan_fight_blob(board, blob)
   if (plan.cells.length === 0) return null
   const root = new Group()
@@ -195,62 +284,103 @@ const build_visual = (board: Readonly<FightBoardRender>, blob: Readonly<FightBlo
     merged ? (max_y - min_y + 1) * board.cell_size : plan.cell_size
   )
   geometry.rotateX(-Math.PI / 2)
-  const rows = merged
+  const board_y = board.origin.y + BOARD_FLOOR_THICKNESS
+  const cells = merged
     ? [
-        {
-          mesh: new Mesh(geometry, material),
-          delay_ms: 0,
+        Object.freeze({
+          cell: null,
           world_x: board.origin.x + ((min_x + max_x + 1) * board.cell_size) / 2,
           world_z: board.origin.z + ((min_y + max_y + 1) * board.cell_size) / 2,
-        },
+          started_at: blob.created_at,
+        }),
       ]
-    : plan.cells.map(({ world_x, world_z, delay_ms }) => ({
-        mesh: new Mesh(geometry, material),
-        delay_ms,
-        world_x,
-        world_z,
-      }))
-  rows.forEach(({ mesh, world_x, world_z }) => {
-    // Keep the overlay on the board plane. Any vertical lift becomes a visible screen-space
-    // displacement under the fight camera; polygon offset already resolves the coplanar depth.
-    mesh.position.set(world_x, board.origin.y + BOARD_FLOOR_THICKNESS, world_z)
-    mesh.renderOrder = 3
-    mesh.frustumCulled = false
-    mesh.scale.set(0.001, 1, 0.001)
-    root.add(mesh)
-  })
+    : plan.cells.map(({ cell, world_x, world_z, delay_ms }) =>
+        Object.freeze({ cell, world_x, world_z, started_at: blob.created_at + delay_ms })
+      )
+  const drawable = merged ? new Mesh(geometry, material) : new InstancedMesh(geometry, material, board.cells.length)
+  if (drawable instanceof InstancedMesh) {
+    drawable.name = 'fight_blob_cells'
+    drawable.instanceMatrix.setUsage(DynamicDrawUsage)
+    drawable.count = cells.length
+    drawable.renderOrder = 3 + (blob.priority ?? 0)
+    drawable.frustumCulled = false
+    cells.forEach((cell, index) =>
+      set_instance_transform(
+        drawable,
+        index,
+        cell,
+        board_y,
+        blob_scale(blob, blob.created_at, cell.started_at),
+        scratch
+      )
+    )
+    drawable.instanceMatrix.needsUpdate = true
+  } else {
+    const cell = cells[0]!
+    place_blob_mesh(drawable, null, cell.world_x, board_y, cell.world_z, blob.priority ?? 0)
+  }
+  root.add(drawable)
   return Object.freeze({
     root,
     material,
     geometry,
     texture,
-    meshes: Object.freeze(rows.map(({ mesh, delay_ms }) => Object.freeze({ mesh, delay_ms }))),
+    drawable,
+    cells: Object.freeze(cells),
+    board_y,
     blob,
   })
 }
 
-const start_blob = (
-  id: string,
-  color: number,
-  cells: readonly FightBoardRenderCell[],
-  created_at: number
-): FightBlobRender =>
-  Object.freeze({
-    id,
-    color,
-    cells: Object.freeze(cells.map(({ cell }) => cell)),
-    shape: 'per_cell',
-    origin_cell: cells[0]?.cell,
-    reveal_step_ms: 35,
-    created_at,
+const reconcile_per_cell_visual = (
+  visual: Readonly<BlobVisual>,
+  board: Readonly<FightBoardRender>,
+  blob: Readonly<FightBlobRender>,
+  scratch: BlobTransformScratch
+): BlobVisual | null => {
+  const plan = plan_fight_blob(board, blob)
+  if (plan.cells.length === 0 || !(visual.drawable instanceof InstancedMesh)) return null
+  const previous = new Map(visual.cells.map((row) => [row.cell, row]))
+  const cells = plan.cells.map(({ cell, world_x, world_z, delay_ms }) => {
+    const existing = previous.get(cell)
+    if (existing) return Object.freeze({ ...existing, world_x, world_z })
+    return Object.freeze({
+      cell,
+      world_x,
+      world_z,
+      started_at: blob.animate_updates === false ? blob.created_at - POP_MS : blob.created_at + delay_ms,
+    })
   })
+  visual.material.color.setHex(blob.color)
+  visual.drawable.count = cells.length
+  visual.drawable.renderOrder = 3 + (blob.priority ?? 0)
+  cells.forEach((cell, index) =>
+    set_instance_transform(
+      visual.drawable as InstancedMesh,
+      index,
+      cell,
+      visual.board_y,
+      blob_scale(blob, performance.now(), cell.started_at),
+      scratch
+    )
+  )
+  visual.drawable.instanceMatrix.needsUpdate = true
+  return Object.freeze({ ...visual, cells: Object.freeze(cells), blob })
+}
 
 export const create_fight_blob_layer = (scene: Scene) => {
   const group = new Group()
   group.name = 'fight_blobs'
   scene.add(group)
+  const transform_scratch = Object.freeze({
+    matrix: new Matrix4(),
+    position: new Vector3(),
+    quaternion: new Quaternion(),
+    scale: new Vector3(),
+  })
   const blobs = new Map<string, FightBlobRender>()
   const visuals = new Map<string, BlobVisual>()
+  const settled_transforms = new Set<string>()
   let board: FightBoardRender | null = null
 
   const remove_visual = (id: string): void => {
@@ -258,21 +388,31 @@ export const create_fight_blob_layer = (scene: Scene) => {
     if (!visual) return
     dispose_visual(group, visual)
     visuals.delete(id)
+    settled_transforms.delete(id)
   }
   const materialize = (blob: Readonly<FightBlobRender>): void => {
     remove_visual(blob.id)
     if (!board) return
-    const visual = build_visual(board, blob)
+    const visual = build_visual(board, blob, transform_scratch)
     if (!visual) return
     visuals.set(blob.id, visual)
     group.add(visual.root)
   }
   const upsert = (blob: FightBlobRender): void => {
     blobs.set(blob.id, blob)
+    settled_transforms.delete(blob.id)
+    const visual = visuals.get(blob.id)
+    if (board && visual?.blob.shape === 'per_cell' && blob.shape === 'per_cell') {
+      const reconciled = reconcile_per_cell_visual(visual, board, blob, transform_scratch)
+      if (reconciled) visuals.set(blob.id, reconciled)
+      else remove_visual(blob.id)
+      return
+    }
     materialize(blob)
   }
   const remove = (id: string): void => {
     blobs.delete(id)
+    settled_transforms.delete(id)
     remove_visual(id)
   }
 
@@ -281,34 +421,54 @@ export const create_fight_blob_layer = (scene: Scene) => {
       visuals.forEach((visual) => dispose_visual(group, visual))
       visuals.clear()
       blobs.clear()
+      settled_transforms.clear()
       board = next
       if (!next) return
       const now = performance.now()
-      const start_a = next.cells.filter(({ kind }) => kind === 'start_a')
-      const start_b = next.cells.filter(({ kind }) => kind === 'start_b')
-      if (start_a.length > 0) blobs.set(START_A_ID, start_blob(START_A_ID, START_COLORS.start_a, start_a, now))
-      if (start_b.length > 0) blobs.set(START_B_ID, start_blob(START_B_ID, START_COLORS.start_b, start_b, now))
+      fight_placement_blobs(next, next.show_start_cells !== false).forEach(({ id, blob }) =>
+        blobs.set(id, Object.freeze({ ...blob, id, created_at: now }))
+      )
       blobs.forEach(materialize)
     },
     upsert,
     remove,
     tick: (now: number): void => {
-      visuals.forEach((visual) => {
+      visuals.forEach((visual, id) => {
         const age = now - visual.blob.created_at
         const duration = visual.blob.duration_ms
         const fade = duration === undefined ? 1 : clamp01((duration - age) / FADE_MS)
         visual.material.opacity = (visual.blob.opacity ?? DEFAULT_OPACITY) * fade
-        visual.meshes.forEach(({ mesh, delay_ms }) => {
-          const scale = fight_blob_cartoon_scale((age - delay_ms) / POP_MS)
-          mesh.visible = age >= delay_ms && fade > 0
-          mesh.scale.set(Math.max(0.001, scale), 1, Math.max(0.001, scale))
-        })
+        visual.drawable.visible = fade > 0
+        if (visual.drawable instanceof InstancedMesh) {
+          if (!settled_transforms.has(id)) {
+            visual.cells.forEach((cell, index) =>
+              set_instance_transform(
+                visual.drawable as InstancedMesh,
+                index,
+                cell,
+                visual.board_y,
+                now < cell.started_at ? 0 : blob_scale(visual.blob, now, cell.started_at),
+                transform_scratch
+              )
+            )
+            visual.drawable.instanceMatrix.needsUpdate = true
+            if (visual.blob.animate === false || visual.cells.every(({ started_at }) => now >= started_at + POP_MS))
+              settled_transforms.add(id)
+          }
+          return
+        }
+        const cell = visual.cells[0]
+        if (!cell) return
+        const scale = blob_scale(visual.blob, now, cell.started_at)
+        visual.drawable.visible = (visual.blob.animate === false || now >= cell.started_at) && fade > 0
+        visual.drawable.scale.set(Math.max(0.001, scale), 1, Math.max(0.001, scale))
       })
     },
     dispose: (): void => {
       visuals.forEach((visual) => dispose_visual(group, visual))
       visuals.clear()
       blobs.clear()
+      settled_transforms.clear()
       scene.remove(group)
     },
   })

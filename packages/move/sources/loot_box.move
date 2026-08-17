@@ -24,6 +24,7 @@ use aresrpg::{
   item::{Self, Item, ItemTemplate},
   protected_policy::AresRPG_TransferPolicy,
 };
+use aresrpg_math::loot_table::{Self, LootEntry};
 use sui::{
   event,
   kiosk::{Kiosk, KioskOwnerCap},
@@ -45,10 +46,6 @@ const EUnstackableAmount: u64 = 2909; // quantities above one require a stackabl
 const ELengthMismatch: u64 = 2910;
 
 // ╔════════════════ [ Types ] ════════════════════════════════════════════════ ]
-
-/// One weighted row of a box's pool: the item template to mint on a hit + its RELATIVE weight
-/// (basis is the row sum, so rows are addable/removable pre-seal without re-normalising).
-public struct LootEntry has copy, drop, store { template: ID, weight: u64, amount: u32 }
 
 /// The loot-table registry: box template id → its weighted item pool. Shared at init, seeded EMPTY.
 public struct LootRegistry has key {
@@ -96,16 +93,16 @@ public(package) fun add_loot_reward(
   assert!(amount > 0, EZeroAmount);
   assert!(amount == 1 || item::template_is_stackable(reward_template), EUnstackableAmount);
   let box_id = item::template_id(box_template);
-  let entry = LootEntry { template: item::template_id(reward_template), weight, amount };
+  let entry = loot_table::new_entry(item::template_id(reward_template), weight, amount);
   if (registry.tables.contains(box_id)) registry.tables.borrow_mut(box_id).push_back(entry)
   else registry.tables.add(box_id, vector[entry]);
   let entries = registry.tables.borrow(box_id);
-  event::emit(LootTableSet { box_template: box_id, rows: entries.length(), weight_sum: total_weight(entries) });
+  event::emit(LootTableSet { box_template: box_id, rows: entries.length(), weight_sum: loot_table::total_weight(entries) });
 }
 
 public(package) fun has_valid_table(registry: &LootRegistry, box_template: &ItemTemplate): bool {
   let box_id = item::template_id(box_template);
-  registry.tables.contains(box_id) && total_weight(registry.tables.borrow(box_id)) > 0
+  registry.tables.contains(box_id) && loot_table::total_weight(registry.tables.borrow(box_id)) > 0
 }
 
 // ╔════════════════ [ OPEN — terminal &Random: burn, roll, mint the claim ] ══ ]
@@ -125,13 +122,15 @@ public(package) fun open_box(
   let box_tid = item::template_id(box_template);
   assert!(registry.tables.contains(box_tid), ENoTable);
   let entries = *registry.tables.borrow(box_tid); // local copy — no borrow held across the burn
-  let sum = total_weight(&entries);
+  let sum = loot_table::total_weight(&entries);
   assert!(sum > 0, EZeroWeight);
   // the passed template must be the burned item's own
   assert!({ let it: &Item = kiosk.borrow(cap, box_item_id); it.template() } == box_tid, ENotBox);
   item::burn(kiosk, cap, protected_item, box_item_id, 1, ctx);
 
-  let LootEntry { template: rolled_template, weight: _, amount } = pick(&entries, gen.generate_u64_in_range(0, sum - 1));
+  let picked = loot_table::pick(&entries, gen.generate_u64_in_range(0, sum - 1));
+  let rolled_template = loot_table::template(&picked);
+  let amount = loot_table::amount(&picked);
   let opener = ctx.sender();
   event::emit(LootBoxOpened { box_template: box_tid, rolled_template, amount, opener });
   transfer::transfer(BoxClaim { id: object::new(ctx), box_template: box_tid, rolled_template, amount }, opener);
@@ -168,31 +167,6 @@ fun is_gacha_box(template: &ItemTemplate): bool {
   consumable::is_loot_box(template)
 }
 
-fun total_weight(entries: &vector<LootEntry>): u64 {
-  let mut sum = 0;
-  let mut i = 0;
-  while (i < entries.length()) { sum = sum + entries[i].weight; i = i + 1; };
-  sum
-}
-
-/// Walk the weighted pool: `draw ∈ [0, sum)` lands in the first row whose cumulative window holds
-/// it. Deterministic given the draw; the trailing abort is unreachable (caller ensures draw < sum).
-fun pick(entries: &vector<LootEntry>, draw: u64): LootEntry {
-  let mut acc = 0;
-  let mut selected = entries[0];
-  let mut i = 0;
-  while (i < entries.length()) {
-    let at_or_after_start = draw >= acc;
-    acc = acc + entries[i].weight;
-    let before_end = draw < acc;
-    // Equality is true only inside this row's half-open window. Both comparisons run for every
-    // row and exactly one assignment runs for every valid draw: selected position cannot alter gas.
-    if (at_or_after_start == before_end) selected = entries[i];
-    i = i + 1;
-  };
-  selected
-}
-
 #[test_only]
 public fun test_pick(
   item_templates: vector<ID>,
@@ -204,9 +178,9 @@ public fun test_pick(
   let mut entries = vector[];
   let mut i = 0;
   while (i < item_templates.length()) {
-    entries.push_back(LootEntry { template: item_templates[i], weight: weights[i], amount: amounts[i] });
+    entries.push_back(loot_table::new_entry(item_templates[i], weights[i], amounts[i]));
     i = i + 1;
   };
-  let LootEntry { template, weight: _, amount } = pick(&entries, draw);
-  (template, amount)
+  let picked = loot_table::pick(&entries, draw);
+  (loot_table::template(&picked), loot_table::amount(&picked))
 }

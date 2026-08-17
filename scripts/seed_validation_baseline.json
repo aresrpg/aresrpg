@@ -1,0 +1,5 @@
+[
+  "RED  H3-CONSUMABLE — no item template authors consumable type recall — consumable.move implements it and nothing can create one",
+  "RED  H6-SCALAR — 136 dungeon room seats carry the unauthored level_scalar 0 across 20 worlds — the room difficulty band has never been balanced",
+  "RED  M6-ICON — 20 items have no canonical icons/items/{item_type} image (e.g. aragog_fangs)"
+]

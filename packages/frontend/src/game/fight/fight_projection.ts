@@ -6,18 +6,23 @@
 import {
   CONTRACT_CONSTANTS,
   player_max_hp,
+  project_spell_turn,
   type ActiveEffect,
   type Fighter,
   type FightMode,
   type HydratedFightCheckpoint,
   type SpellLevel,
+  type SpellSource,
+  type SpellTurnProjection,
 } from '@aresrpg/fight'
 
 export type FightSpellView = Readonly<{
   name: string
   level: bigint
   details: SpellLevel
+  source: SpellSource
   cooldown: bigint
+  turn: SpellTurnProjection | null
 }>
 
 export type FightFighterView = Readonly<{
@@ -55,7 +60,9 @@ const fighter_max_hp = (checkpoint: Readonly<HydratedFightCheckpoint>, fighter: 
 
 const fighter_spells = (
   checkpoint: Readonly<HydratedFightCheckpoint>,
-  fighter: Readonly<Fighter>
+  fighter: Readonly<Fighter>,
+  seat: bigint,
+  active_seat: bigint | null
 ): readonly FightSpellView[] => {
   if (fighter.kind.type !== 'player') return Object.freeze([])
   const source = checkpoint.sources.players[fighter.kind.character]
@@ -66,12 +73,15 @@ const fighter_spells = (
       const level = source.spell_levels[name] ?? 1n
       const details = spell.levels[Number(level - 1n)]
       if (!details) return []
+      const turn = seat === active_seat ? project_spell_turn(checkpoint, seat, name) : null
       return [
         Object.freeze({
           name,
           level,
           details,
+          source: spell,
           cooldown: fighter.cooldowns.find((row) => row.spell === name)?.left ?? 0n,
+          turn,
         }),
       ]
     })
@@ -135,7 +145,7 @@ export const select_fight_view = ({
       ap: fighter.ap,
       mp: fighter.mp,
       effects: Object.freeze([...fighter.effects]),
-      spells: fighter_spells(checkpoint, fighter),
+      spells: fighter_spells(checkpoint, fighter, seat, active_seat),
     })
   }
   const timeline_seats = contract.queue.length > 0 ? contract.queue : contract.fighters.map((_, index) => BigInt(index))

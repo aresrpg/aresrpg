@@ -4,12 +4,12 @@
 
 import type { FightSide, MobEntityRender } from '@aresrpg/engine'
 
-import { load_mob_model_url } from '../../content/mob_models.ts'
+import { mob_model_url } from '../../content/mob_models.ts'
 
 export type FightMobRenderSource = Readonly<{ id: string; mob_type: string; cell: number; side: FightSide }>
 
-const resolved_mob_entity = async (source: FightMobRenderSource): Promise<MobEntityRender | null> => {
-  const model_url = await load_mob_model_url(source.mob_type)
+const resolved_mob_entity = (source: FightMobRenderSource): MobEntityRender | null => {
+  const model_url = mob_model_url(source.mob_type)
   if (!model_url) {
     console.error(`No authored model is available for fight mob ${source.mob_type}.`)
     return null
@@ -23,9 +23,5 @@ const resolved_mob_entity = async (source: FightMobRenderSource): Promise<MobEnt
   })
 }
 
-export const load_fight_mob_entities = async (
-  sources: readonly FightMobRenderSource[]
-): Promise<readonly MobEntityRender[]> => {
-  const rows = await Promise.all(sources.map(resolved_mob_entity))
-  return Object.freeze(rows.filter((row): row is MobEntityRender => row !== null))
-}
+export const fight_mob_entities = (sources: readonly FightMobRenderSource[]): readonly MobEntityRender[] =>
+  Object.freeze(sources.map(resolved_mob_entity).filter((row): row is MobEntityRender => row !== null))

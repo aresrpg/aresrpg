@@ -641,6 +641,7 @@ mod tests {
         let item_type = ty(GAME, "item", "Item");
         let sale = bcs::to_bytes(&crate::decode::Sale {
             id: Id([30; 32]),
+            item_type: "health_potion".to_string(),
             template: Id([200; 32]),
             price: 100,
             supply: 90,
@@ -664,15 +665,19 @@ mod tests {
         #[derive(serde::Serialize)]
         struct Wire {
             sale: [u8; 32],
+            item_type: String,
             buyer: [u8; 32],
             quantity: u64,
             paid: u64,
+            supply: u64,
         }
         let bought = bcs::to_bytes(&Wire {
             sale: [30; 32],
+            item_type: "health_potion".to_string(),
             buyer: [7; 32],
             quantity: 10,
             paid: 1_000,
+            supply: 90,
         })
         .unwrap();
         let events = [EventView {

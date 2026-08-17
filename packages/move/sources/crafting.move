@@ -29,7 +29,7 @@ use aresrpg::{
   progression,
   protected_policy::AresRPG_TransferPolicy,
 };
-use aresrpg_math::job_xp;
+use aresrpg_math::{content_rules, job_xp, recipe_data::{Self, RecipeData}};
 use std::string::String;
 use sui::{
   derived_object,
@@ -46,37 +46,17 @@ const EUnknownIngredient: u64 = 2302; // craft: a consumed item's template is no
 const ERedundantInput: u64 = 2303; // craft: this ingredient is already fully supplied
 const EMissingIngredient: u64 = 2304; // craft: an ingredient is missing or short
 const EUnderLevel: u64 = 2305; // craft: job level below the recipe's knowledge gate (①)
-const ELengthMismatch: u64 = 2306; // authoring: templates and quantities differ in length
-const EEmptyRecipe: u64 = 2307; // authoring: a recipe with no inputs is a free mint
-const EZeroQuantity: u64 = 2308; // authoring: a zero quantity is meaningless
-
-// ② min(9900, 5000 + (level−1)×50) bp — CraftingFormulas.java:13-15.
-const SUCCESS_BASE_BP: u64 = 5000;
-const SUCCESS_PER_LEVEL_BP: u64 = 50;
-const SUCCESS_CAP_BP: u64 = 9900;
-// ④ full xp until the next slot tier, linear to 0 over +30 — CraftingFormulas.java:58-69.
-const RECIPE_XP_DECAY_RANGE: u64 = 30;
-
 // ╔════════════════ [ Types ] ════════════════════════════════════════════════ ]
 
 /// Keys a recipe's derived address by its OUTPUT item type — one recipe per output, the
 /// client derives it offline like every template.
 public struct RecipeKey(String) has copy, drop, store;
 
-/// One recipe input: `quantity` units of the item `template`.
-public struct Ingredient has copy, drop, store {
-  template: ID,
-  quantity: u64,
-}
-
 /// A frozen recipe. Knowledge and XP both derive from the distinct ingredient-slot count.
 /// Every successful craft mints exactly one output; neither derived fact is authored or stored.
 public struct Recipe has key {
   id: UID,
-  inputs: vector<Ingredient>,
-  output_template: ID,
-  job: String, // one of the 12 craft-job slugs — gates and earns
-  required_level: u64,
+  data: RecipeData,
 }
 
 public struct RecipeCreated has copy, drop {
@@ -109,21 +89,18 @@ public(package) fun new_recipe(
   input_quantities: vector<u64>,
   job: String,
 ): Recipe {
-  let inputs = zip_inputs(input_templates, input_quantities);
-  let n = inputs.length();
+  let data = recipe_data::new(output_template, input_templates, input_quantities, job);
+  let n = recipe_data::input_count(&data);
   let recipe = Recipe {
     id: derived_object::claim(item::registry_uid_mut(registry), RecipeKey(output_type)),
-    inputs,
-    output_template,
-    job,
-    required_level: required_level_for(n), // ① derived, never mis-authored
+    data,
   };
   event::emit(RecipeCreated {
     recipe: recipe.id.to_inner(),
     output_template,
     input_count: n,
-    job: recipe.job,
-    required_level: recipe.required_level,
+    job: recipe_data::job(&recipe.data),
+    required_level: recipe_data::required_level(&recipe.data),
   });
   recipe
 }
@@ -150,23 +127,24 @@ public(package) fun craft(
   gen: &mut RandomGenerator,
   ctx: &mut TxContext,
 ) {
-  assert!(object::id(output_template) == recipe.output_template, EWrongOutput);
+  assert!(object::id(output_template) == recipe_data::output_template(&recipe.data), EWrongOutput);
   // the job that gates and earns is DERIVED from the output's category (owner 2026-08-11: a
   // longsword is SWORD_SMITH, hardcoded, never seed-authored) — falling back to the recipe's
   // authored job only where the category can't name one (consumables: alchemist vs baker).
-  let job = item::craft_job_of(item::template_category(output_template)).destroy_with_default(recipe.job);
+  let category = item::template_category(output_template);
+  let job = content_rules::craft_job_of(&category).destroy_with_default(recipe_data::job(&recipe.data));
   let crafter_level = {
     let chr: &Character = kiosk.borrow(cap, character_id);
     progression::job_level_of(chr, job)
   };
-  assert!(crafter_level >= recipe.required_level, EUnderLevel); // ①
+  assert!(crafter_level >= recipe_data::required_level(&recipe.data), EUnderLevel); // ①
 
   // ③ CONSUME — every abort in here fires BEFORE the roll. remaining[j] = units still owed.
-  let n = recipe.inputs.length();
+  let n = recipe_data::input_count(&recipe.data);
   let mut remaining = vector[];
   let mut j = 0;
   while (j < n) {
-    remaining.push_back(recipe.inputs[j].quantity);
+    remaining.push_back(recipe_data::input_quantity(&recipe.data, j));
     j = j + 1;
   };
   let mut i = 0;
@@ -176,7 +154,7 @@ public(package) fun craft(
       let stack: &Item = kiosk.borrow(cap, id);
       (item::template(stack), item::amount(stack) as u64)
     };
-    let k = ingredient_index(recipe, template);
+    let k = recipe_data::ingredient_index(&recipe.data, template);
     assert!(k.is_some(), EUnknownIngredient);
     let k = k.destroy_some();
     let need = remaining[k];
@@ -195,14 +173,14 @@ public(package) fun craft(
   };
 
   // ② the roll, then settle
-  let success = gen.generate_u64_in_range(0, 9999) < success_bp(crafter_level);
+  let success = gen.generate_u64_in_range(0, 9999) < job_xp::craft_success_bp(crafter_level);
   if (success) {
     let minted = item::mint(output_template, 1, gen, ctx);
     item::deposit(kiosk, cap, item_policy, existing, minted);
   };
 
   // ④ xp on every attempt
-  let gained_xp = decayed_xp(craft_xp_for(n), n, crafter_level);
+  let gained_xp = job_xp::decayed_craft_xp(job_xp::craft_xp(n), n, crafter_level);
   {
     let chr: &mut Character = kiosk.borrow_mut(cap, character_id);
     progression::bank_job_xp(chr, job, gained_xp);
@@ -210,77 +188,11 @@ public(package) fun craft(
   event::emit(Crafted {
     recipe: object::id(recipe),
     crafter: ctx.sender(),
-    output_template: recipe.output_template,
+    output_template: recipe_data::output_template(&recipe.data),
     success,
     job_xp_gained: gained_xp,
   });
 }
 
-// ╔════════════════ [ Internals — the ported reference formulas ] ════════════ ]
-
-/// ② `min(9900, 5000 + (level−1)×50)` bp. Level ≥ 1 always, so no underflow.
-fun success_bp(level: u64): u64 {
-  let bp = SUCCESS_BASE_BP + (level - 1) * SUCCESS_PER_LEVEL_BP;
-  if (bp > SUCCESS_CAP_BP) SUCCESS_CAP_BP else bp
-}
-
-/// ① Minimum job level for `n` ingredient slots: `n ≤ 2 → 1`, else
-/// `min(100, ceil((n−2)×99/8) + 1)` — CraftingFormulas.java:38-42.
-fun required_level_for(n: u64): u64 {
-  if (n <= 2) return 1;
-  let v = ((n - 2) * 99 + 7) / 8 + 1;
-  if (v > job_xp::max_level()) job_xp::max_level() else v
-}
-
-/// ④ Canonical Dofus craft XP by distinct ingredient slots. Slots above eight stay capped.
-fun craft_xp_for(n: u64): u64 {
-  if (n <= 2) 10
-  else if (n == 3) 25
-  else if (n == 4) 50
-  else if (n == 5) 100
-  else if (n == 6) 250
-  else if (n == 7) 500
-  else 1000
-}
-
 #[test_only]
-public fun test_craft_xp_for(n: u64): u64 { craft_xp_for(n) }
-
-/// ④ `base_xp × recipeLevelMultiplier(n, level)`: FULL until the next slot tier, then
-/// LINEAR to 0 at `recipe_level + 30` — integer-exact port.
-fun decayed_xp(base_xp: u64, n: u64, crafter_level: u64): u64 {
-  let recipe_level = required_level_for(n);
-  let zero_at = recipe_level + RECIPE_XP_DECAY_RANGE;
-  let decay_start = required_level_for(n + 1);
-  if (decay_start >= zero_at) {
-    if (crafter_level >= zero_at) 0 else base_xp
-  } else if (crafter_level <= decay_start) base_xp
-  else if (crafter_level >= zero_at) 0
-  else base_xp * (zero_at - crafter_level) / (zero_at - decay_start)
-}
-
-/// The FIRST recipe slot whose template matches (authoring convention: distinct inputs).
-fun ingredient_index(recipe: &Recipe, template: ID): Option<u64> {
-  let mut i = 0;
-  while (i < recipe.inputs.length()) {
-    if (recipe.inputs[i].template == template) return option::some(i);
-    i = i + 1;
-  };
-  option::none()
-}
-
-/// Zip + validate the authored ingredient list — the one authoring-rule home.
-fun zip_inputs(templates: vector<ID>, quantities: vector<u64>): vector<Ingredient> {
-  let n = templates.length();
-  assert!(n == quantities.length(), ELengthMismatch);
-  assert!(n > 0, EEmptyRecipe);
-  let mut inputs = vector[];
-  let mut i = 0;
-  while (i < n) {
-    let quantity = quantities[i];
-    assert!(quantity >= 1, EZeroQuantity);
-    inputs.push_back(Ingredient { template: templates[i], quantity });
-    i = i + 1;
-  };
-  inputs
-}
+public fun test_craft_xp_for(n: u64): u64 { job_xp::craft_xp(n) }

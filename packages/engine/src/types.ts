@@ -15,6 +15,7 @@ export type FightBoardRender = Readonly<{
   height: number
   cell_size: number
   origin: Readonly<{ x: number; y: number; z: number }>
+  show_start_cells?: boolean
   cells: readonly FightBoardRenderCell[]
 }>
 export type EntityAnchor = Readonly<{ kind: 'fight_cell'; cell: number }> | Readonly<{ kind: 'world'; position: Vec3 }>
@@ -43,14 +44,23 @@ export type CharacterEntityRender = Readonly<{
   facing: EntityFacing
 }>
 export type EntityRender = MobEntityRender | CharacterEntityRender
+export type EntityPathMotion = Readonly<{
+  id: string
+  cells: readonly number[]
+  gait: 'walk' | 'run'
+}>
+export type EntityScreenAnchor = Readonly<{ x: number; y: number }>
 export type FightBlobShape = 'single' | 'per_cell'
 export type FightBlobSpec = Readonly<{
   cells: readonly number[]
   shape: FightBlobShape
   color: number
+  priority?: number
   origin_cell?: number
   opacity?: number
   reveal_step_ms?: number
+  animate?: boolean
+  animate_updates?: boolean
   duration_ms?: number
 }>
 export type FightBlobRender = FightBlobSpec &
@@ -141,6 +151,83 @@ export type CameraProjection = Readonly<{
   ortho_height?: number
 }>
 
+export type FightPresentationCue =
+  | Readonly<{
+      id: string
+      type: 'cast'
+      caster_id: string
+      spell: string
+      cast_level: number
+      target_cell: number
+      element: string
+      critical: boolean
+      weapon: boolean
+      amount: number
+      target_max_hp: number | null
+      affected_cells: readonly number[]
+      killed: boolean
+    }>
+  | Readonly<{
+      id: string
+      type: 'movement'
+      entity_id: string
+      cells: readonly number[]
+      mode: string
+      source_id: string
+    }>
+  | Readonly<{
+      id: string
+      type: 'damage'
+      source_id: string
+      target_id: string
+      amount: number
+      hp_before: number
+      hp_after: number
+      element: string
+      cause: string
+      critical: boolean
+    }>
+  | Readonly<{
+      id: string
+      type: 'absorb'
+      source_id: string
+      target_id: string
+      prevented: number
+      remaining: number
+    }>
+  | Readonly<{
+      id: string
+      type: 'heal'
+      source_id: string
+      target_id: string
+      amount: number
+      hp_before: number
+      hp_after: number
+      cause: string
+    }>
+  | Readonly<{
+      id: string
+      type: 'death'
+      entity_id: string
+      source_id: string
+      cell: number
+      cause: string
+    }>
+  | Readonly<{
+      id: string
+      type: 'zone'
+      action: 'trap_triggered' | 'glyph_triggered'
+      zone_id: string
+      owner_id: string
+      target_id: string
+      cell: number
+    }>
+  | Readonly<{
+      id: string
+      type: 'turn'
+      entity_id: string
+    }>
+
 export type Engine = Readonly<{
   start: (update?: (frame: EngineFrame) => void) => void
   stop: () => void
@@ -152,7 +239,11 @@ export type Engine = Readonly<{
   set_flatten_amount: (amount: number) => void
   set_fight_board: (board: FightBoardRender | null) => void
   set_entities: (entities: readonly EntityRender[]) => void
+  animate_entity: (motion: EntityPathMotion) => Promise<boolean>
+  play_fight_cue: (cue: FightPresentationCue) => Promise<boolean>
+  project_entity: (id: string) => EntityScreenAnchor | null
   create_fight_blob: (blob: FightBlobSpec) => string
+  update_fight_blob: (id: string, blob: FightBlobSpec) => boolean
   remove_fight_blob: (id: string) => void
   pick_fight_cell: (client_x: number, client_y: number) => number | null
   render_chunk: (chunk: RenderChunkRequest) => Promise<ChunkRenderOutcome>

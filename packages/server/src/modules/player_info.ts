@@ -6,7 +6,7 @@
 // player_connect eviction beacon) lives in index.ts — it is per-POD, not per-connection.
 
 import logger from '../logger.ts'
-import type { PlayerModule } from '../player.ts'
+import type { PlayerAction, PlayerModule } from '../player.ts'
 
 const log = logger(import.meta)
 
@@ -14,11 +14,19 @@ const INFO_INTERVAL_MS = 5_000
 
 export default {
   name: 'player_info',
-  observe: ({ pubsub, send, signal }) => {
+  observe: ({ events, indexing_lag, pubsub, send, signal }) => {
+    events.on('packet/ping', ({ id }: Extract<PlayerAction, { type: 'packet/ping' }>) =>
+      send({ type: 'packet/pong', id })
+    )
     const push = () =>
-      pubsub
-        .cluster_online()
-        .then((online) => send({ type: 'packet/server_info', online }))
+      Promise.all([
+        pubsub.cluster_online(),
+        indexing_lag().catch((error: Error) => {
+          log.warn({ error: error.message }, 'indexing health failed')
+          return null
+        }),
+      ])
+        .then(([online, indexing_lag]) => send({ type: 'packet/server_info', online, indexing_lag }))
         .catch((error: Error) => log.warn({ error: error.message }, 'cluster count failed'))
     const timer = setInterval(() => void push(), INFO_INTERVAL_MS)
     void push()

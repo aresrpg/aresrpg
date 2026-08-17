@@ -66,7 +66,7 @@
   gap: 8px;
   overflow-y: auto;
   padding-right: 20px;
-  pointer-events: none;
+  pointer-events: auto;
   scrollbar-color: rgba(200, 150, 60, 0.4) transparent;
   scrollbar-width: thin;
 }
@@ -87,6 +87,7 @@
     transform 160ms ease,
     border-color 160ms ease,
     box-shadow 160ms ease;
+  outline: none;
 }
 
 .fight-hud__turn.active {
@@ -185,34 +186,6 @@
   text-shadow: 0 1px 2px #000;
 }
 
-.fight-hud__effects {
-  display: flex;
-  min-height: 14px;
-  flex-wrap: wrap;
-  gap: 3px;
-}
-
-.fight-hud__effects > span {
-  position: relative;
-  display: grid;
-  width: 16px;
-  height: 16px;
-  place-items: center;
-  border: 1px solid #c8963c55;
-  background: #07070bcc;
-  color: #f5d0a9;
-  font-size: 8px;
-}
-
-.fight-hud__effects b {
-  position: absolute;
-  right: -2px;
-  bottom: -3px;
-  color: #fff;
-  font-size: 7px;
-  text-shadow: 0 1px 2px #000;
-}
-
 .fight-hud__bottom {
   position: absolute;
   bottom: 16px;
@@ -220,22 +193,26 @@
   display: flex;
   transform: translateX(-50%);
   align-items: flex-end;
-  gap: 12px;
 }
 
 .fight-hud__controls {
   display: flex;
+  width: 122px;
+  align-self: center;
   flex-direction: column;
+  justify-content: center;
   gap: 4px;
   pointer-events: auto;
 }
 
 .fight-hud__controls button {
-  min-width: 104px;
+  min-width: 0;
+  flex: none;
   cursor: pointer;
   border: 1px solid var(--fh-gold);
   background: linear-gradient(135deg, #8b6914, #c8963c, #8b6914);
-  padding: 9px 16px;
+  padding: 8px 12px;
+  border-radius: 6px;
   color: #17130a;
   font: inherit;
   font-size: 12px;
@@ -245,13 +222,33 @@
   box-shadow: 0 8px 22px rgba(200, 150, 60, 0.25);
 }
 
-.fight-hud__controls button + button {
-  border-color: rgba(248, 113, 113, 0.5);
+.fight-hud__end-turn {
+  min-height: 48px;
+  border-radius: 6px;
+  font-size: 13px;
+}
+
+.fight-hud__secondary-controls {
+  display: flex;
+  height: 24px;
+  gap: 4px;
+}
+
+.fight-hud__secondary-controls button {
+  height: 24px;
+  flex: 1;
+  border-color: rgba(85, 185, 238, 0.42);
   background: linear-gradient(165deg, #12121a, #0a0a0f);
-  padding-block: 7px;
-  color: #f87171;
-  font-size: 10px;
+  padding: 0 5px;
+  border-radius: 3px;
+  color: #55b9ee;
+  font-size: 8px;
   font-weight: 600;
+}
+
+.fight-hud__secondary-controls .fight-hud__forfeit {
+  border-color: rgba(248, 113, 113, 0.5);
+  color: #f87171;
 }
 
 .fight-hud__controls button:disabled {
@@ -264,7 +261,7 @@
   align-items: stretch;
   gap: 12px;
   border: 1px solid rgba(0, 0, 0, 0.6);
-  border-radius: 10px;
+  border-radius: 8px;
   background: linear-gradient(180deg, rgba(14, 14, 20, 0.96), rgba(7, 7, 11, 0.98));
   padding: 8px 10px;
   box-shadow:
@@ -284,11 +281,15 @@
   width: 80px;
   height: 80px;
   place-items: center;
+  cursor: pointer;
+  border: 0;
   border-radius: 50%;
   background: linear-gradient(180deg, #040405, #0e0e15);
   box-shadow:
     inset 0 5px 10px rgba(0, 0, 0, 0.82),
     inset 0 -2px 3px rgba(255, 255, 255, 0.05);
+  padding: 0;
+  font: inherit;
 }
 
 .fight-hud__hp-gem > i,
@@ -299,8 +300,9 @@
 }
 
 .fight-hud__hp-gem > i {
+  inset: 1px;
   background: conic-gradient(from -30deg, #ffc7c7, #e2453f, #a3282a, #6b1414, #8f1f22, #d43e3e, #ffc7c7);
-  box-shadow: inset 0 0 0 3px #200808;
+  box-shadow: inset 0 0 0 2px #200808;
 }
 
 .fight-hud__hp-gem > span {
@@ -363,6 +365,13 @@
   gap: 4px;
 }
 
+.fight-hud__spell-shell {
+  position: relative;
+  width: 50px;
+  height: 50px;
+  pointer-events: auto;
+}
+
 .fight-hud__spell {
   position: relative;
   display: grid;
@@ -373,14 +382,19 @@
   border: 1px solid #292936;
   border-radius: 7px;
   background: linear-gradient(145deg, #171721, #09090e);
+  padding: 0;
+  color: inherit;
+  font: inherit;
   box-shadow: inset 0 3px 6px rgba(0, 0, 0, 0.65);
   pointer-events: auto;
+  outline: none;
 }
 
-.fight-hud__spell > span {
+.fight-hud__spell > span,
+.fight-hud__spell > img {
   display: grid;
-  width: 33px;
-  height: 33px;
+  width: 100%;
+  height: 100%;
   place-items: center;
   border-radius: 22%;
   background: radial-gradient(circle at 35% 28%, #f5d0a9, #8b6914 75%);
@@ -389,7 +403,11 @@
   font-weight: 800;
 }
 
-.fight-hud__spell kbd,
+.fight-hud__spell > img {
+  image-rendering: pixelated;
+  object-fit: cover;
+}
+
 .fight-hud__spell > b {
   position: absolute;
   z-index: 2;
@@ -400,32 +418,77 @@
   font-style: normal;
 }
 
-.fight-hud__spell kbd {
-  top: 2px;
-  left: 2px;
-}
-
 .fight-hud__spell > b {
   right: 2px;
   bottom: 2px;
 }
 
-.fight-hud__spell > em {
-  position: absolute;
-  inset: 0;
-  z-index: 3;
-  display: grid;
-  place-items: center;
-  color: #fff;
-  font-size: 20px;
-  font-style: normal;
-  font-weight: 700;
-  text-shadow: 0 2px 4px #000;
+.fight-hud__spell.selected {
+  border-color: #55b9ee;
+  box-shadow:
+    inset 0 0 0 2px rgba(24, 92, 168, 0.85),
+    0 0 14px rgba(85, 185, 238, 0.45);
 }
 
-.fight-hud__spell.disabled > span {
+.fight-hud__spell.critical {
+  border-color: rgba(255, 255, 255, 0.98);
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.92),
+    inset 0 0 10px rgba(255, 255, 255, 0.35),
+    inset 0 3px 6px rgba(0, 0, 0, 0.65),
+    0 0 14px rgba(255, 255, 255, 0.85);
+  animation: fight-hud-crit-glow 2.4s ease-in-out infinite;
+}
+
+@keyframes fight-hud-crit-glow {
+  50% {
+    box-shadow:
+      0 0 0 1px #fff,
+      inset 0 0 14px rgba(255, 255, 255, 0.55),
+      inset 0 3px 6px rgba(0, 0, 0, 0.65),
+      0 0 24px rgba(255, 255, 255, 1);
+  }
+}
+
+.fight-hud__spell.disabled > span,
+.fight-hud__spell.disabled > img {
   opacity: 0.35;
   filter: grayscale(1);
+}
+
+.fight-hud__spell-detail {
+  position: absolute;
+  bottom: calc(100% + 14px);
+  left: 50%;
+  z-index: 8;
+  width: min(720px, 76vw);
+  max-height: min(720px, 72vh);
+  transform: translate(-50%, 8px);
+  overflow: auto;
+  visibility: hidden;
+  border: 1px solid rgba(200, 150, 60, 0.42);
+  border-radius: 12px;
+  background: linear-gradient(165deg, rgba(18, 18, 26, 0.99), rgba(7, 7, 11, 0.99));
+  padding: 18px;
+  opacity: 0;
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.75);
+  transition:
+    opacity 120ms ease,
+    transform 120ms ease,
+    visibility 120ms;
+}
+
+.fight-hud__spell-detail--small {
+  width: min(420px, 82vw);
+  max-height: min(420px, 60vh);
+  padding: 14px;
+}
+
+.fight-hud__spell-shell:hover .fight-hud__spell-detail,
+.fight-hud__spell-shell:focus-within .fight-hud__spell-detail {
+  transform: translate(-50%, 0);
+  visibility: visible;
+  opacity: 1;
 }
 
 @keyframes fight-hud-pulse {

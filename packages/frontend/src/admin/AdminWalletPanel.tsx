@@ -4,18 +4,28 @@
 import type { MarketplaceRoyalty } from '@aresrpg/sdk/marketplace-admin'
 import { useCallback, useEffect, useRef, useState } from 'react'
 
-import { dispatch_app, useAppStore } from '../store.ts'
+import { useAppStore } from '../store.ts'
 import { toast } from '../toast.ts'
 import { format_sui } from '../wallet_amount.ts'
 
 /* eslint-disable functional/immutable-data -- React refs are local request latches, never shared application state. */
-const button_class =
-  'h-8 cursor-pointer border border-[#4a9eff]/35 px-3 text-[8px] tracking-[0.14em] text-[#67adff] uppercase hover:border-[#4a9eff]/65 disabled:cursor-not-allowed disabled:opacity-35'
-const short_address = (address: string): string => `${address.slice(0, 8)}…${address.slice(-6)}`
 const translated = (copy: Readonly<Record<string, string>>, key: string, fallback: string): string =>
   copy[key] || fallback
 
-export const AdminWalletPanel = ({ copy }: Readonly<{ copy: Readonly<Record<string, string>> }>) => {
+export type AdminRevenue = Readonly<{
+  royalties: readonly MarketplaceRoyalty[]
+  claimable: bigint
+  reading: boolean
+  claiming: boolean
+  claim_armed: boolean
+  connected: boolean
+  error: string | null
+  refresh: () => void
+  arm_claim: () => void
+  claim: () => void
+}>
+
+export const useAdminRevenue = (copy: Readonly<Record<string, string>>): AdminRevenue => {
   const wallet = useAppStore((state) => state.admin.wallet)
   const { session } = wallet
   const [royalties, set_royalties] = useState<readonly MarketplaceRoyalty[]>([])
@@ -96,117 +106,100 @@ export const AdminWalletPanel = ({ copy }: Readonly<{ copy: Readonly<Record<stri
       })
   }
 
+  return Object.freeze({
+    royalties,
+    claimable,
+    reading,
+    claiming,
+    claim_armed,
+    connected: !!session,
+    error: wallet.error ?? error,
+    refresh,
+    arm_claim: () => set_claim_armed(true),
+    claim,
+  })
+}
+
+const RevenueRow = ({
+  label,
+  value,
+  tone = 'default',
+  title,
+}: Readonly<{ label: string; value: string; tone?: 'default' | 'gold'; title?: string }>) => (
+  <div className="flex min-h-11 items-center justify-between gap-4 border-b border-white/[0.055] py-2" title={title}>
+    <span className="text-[8px] tracking-[0.08em] text-[#858993] uppercase">{label}</span>
+    <span className={`text-[10px] ${tone === 'gold' ? 'text-[#efbd45]' : 'text-[#d8d3ca]'}`}>{value}</span>
+  </div>
+)
+
+export const AdminWalletPanel = ({
+  copy,
+  revenue,
+}: Readonly<{ copy: Readonly<Record<string, string>>; revenue: AdminRevenue }>) => {
+  const policy = (kind: MarketplaceRoyalty['kind']) => revenue.royalties.find((entry) => entry.kind === kind)
+  const item = policy('item')
+  const character = policy('character')
+  const display_policy = (royalty: MarketplaceRoyalty | undefined): string =>
+    royalty ? `${format_sui(royalty.balance_mist, 4)} SUI` : '—'
+
   return (
-    <section className="border border-white/8 bg-black/12 p-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <p className="text-[8px] tracking-[0.18em] text-[#c8963c] uppercase">
-            {translated(copy, 'admin_wallet', 'Admin wallet')}
-          </p>
-          <p className="mt-2 text-[8px] text-[#686c76]">
-            {translated(copy, 'admin_wallet_body', 'Publishing and withdrawals require an installed wallet.')}
-          </p>
-        </div>
-        {session && (
-          <div className="text-right">
-            <p className="font-mono text-[9px] text-[#d8d3ca]">{short_address(session.address)}</p>
-            <p className="mt-1 text-[7px] tracking-[0.12em] text-[#686c76] uppercase">{session.wallet_name}</p>
-          </div>
-        )}
+    <section className="flex min-h-[308px] flex-col rounded-xl border border-white/[0.08] bg-[linear-gradient(145deg,rgba(200,150,60,0.07),rgba(255,255,255,0.018)_42%,rgba(255,255,255,0.01))] p-5">
+      <div className="flex items-center justify-between gap-4">
+        <p className="text-[9px] tracking-[0.18em] text-[#d8d3ca] uppercase">Revenue</p>
+        <button
+          className="cursor-pointer text-[8px] tracking-[0.12em] text-[#67adff] uppercase disabled:cursor-not-allowed disabled:opacity-35"
+          disabled={!revenue.connected || revenue.reading}
+          onClick={revenue.refresh}
+          type="button"
+        >
+          {revenue.reading ? translated(copy, 'reading', 'Reading…') : translated(copy, 'refresh', 'Refresh')}
+        </button>
       </div>
 
-      {!session && (
-        <div className="mt-4 flex flex-wrap gap-2">
-          {wallet.wallets.map((wallet_name) => (
-            <button
-              className={button_class}
-              disabled={wallet.status === 'connecting'}
-              key={wallet_name}
-              onClick={() => dispatch_app({ type: 'admin/wallet_connect', wallet_name })}
-              type="button"
-            >
-              {wallet.status === 'connecting' && wallet.requested_wallet === wallet_name
-                ? translated(copy, 'connecting', 'Connecting…')
-                : `${translated(copy, 'connect_admin_wallet', 'Connect')} ${wallet_name}`}
-            </button>
-          ))}
-          {wallet.status === 'loading' && (
-            <span className="py-2 text-[8px] text-[#686c76]">
-              {translated(copy, 'loading_wallets', 'Loading wallets…')}
-            </span>
-          )}
-          {wallet.status === 'ready' && wallet.wallets.length === 0 && (
-            <span className="py-2 text-[8px] text-[#686c76]">
-              {translated(copy, 'no_admin_wallet', 'No compatible browser wallet installed.')}
-            </span>
-          )}
-        </div>
-      )}
+      <div className="mt-4">
+        <RevenueRow label="Treasury balance" title="Treasury balance is not projected yet" value="—" />
+        <RevenueRow
+          label="Item royalties"
+          title={item && !item.cap ? 'The connected wallet does not own this policy cap' : item?.policy_id}
+          tone="gold"
+          value={display_policy(item)}
+        />
+        <RevenueRow
+          label="Character royalties"
+          title={
+            character && !character.cap ? 'The connected wallet does not own this policy cap' : character?.policy_id
+          }
+          tone="gold"
+          value={display_policy(character)}
+        />
+        <RevenueRow label="Lifetime revenue" title="Lifetime revenue is not projected yet" value="—" />
+        <RevenueRow label="Marketplace fee" title="Marketplace fee is not projected yet" value="—" />
+      </div>
 
-      {session && (
-        <>
-          <div className="mt-4 grid gap-2 sm:grid-cols-2">
-            {royalties.map((royalty) => (
-              <div className="border border-white/7 bg-white/[0.018] p-3" key={royalty.kind}>
-                <div className="flex items-center justify-between gap-3 text-[8px] uppercase">
-                  <span className="tracking-[0.12em] text-[#858993]">
-                    {royalty.kind} {translated(copy, 'royalties', 'royalties')}
-                  </span>
-                  <span className={royalty.cap ? 'text-[#5ecf8d]' : 'text-[#ff8caa]'}>
-                    {royalty.cap
-                      ? translated(copy, 'cap_owned', 'cap owned')
-                      : translated(copy, 'cap_missing', 'cap missing')}
-                  </span>
-                </div>
-                <p className="mt-3 text-lg text-[#efbd45]">{format_sui(royalty.balance_mist, 4)} SUI</p>
-                <p className="mt-2 truncate font-mono text-[7px] text-[#555963]" title={royalty.policy_id}>
-                  {royalty.policy_id}
-                </p>
-              </div>
-            ))}
-            {reading && royalties.length === 0 && (
-              <p className="py-5 text-[8px] text-[#686c76]">
-                {translated(copy, 'reading_royalties', 'Reading policies…')}
-              </p>
-            )}
-          </div>
-          <div className="mt-4 flex flex-wrap items-center gap-2">
-            <button className={button_class} disabled={reading} onClick={refresh} type="button">
-              {reading
-                ? translated(copy, 'reading', 'Reading…')
-                : translated(copy, 'refresh_revenue', 'Refresh revenue')}
-            </button>
-            {claimable > 0n && !claim_armed && (
-              <button className={button_class} onClick={() => set_claim_armed(true)} type="button">
-                {translated(copy, 'arm_claim', 'Arm claim')} · {format_sui(claimable, 4)} SUI
-              </button>
-            )}
-            {claimable > 0n && claim_armed && (
-              <button
-                className="h-8 cursor-pointer border border-[#ff5a8b]/65 bg-[#ff5a8b]/10 px-3 text-[8px] tracking-[0.14em] text-[#ffc0d0] uppercase"
-                disabled={claiming}
-                onClick={claim}
-                type="button"
-              >
-                {claiming
-                  ? translated(copy, 'claiming', 'Claiming…')
-                  : translated(copy, 'confirm_claim', 'Confirm claim')}
-              </button>
-            )}
-            <button
-              className="ml-auto h-8 cursor-pointer border border-white/10 px-3 text-[8px] tracking-[0.12em] text-[#777b86] uppercase disabled:opacity-35"
-              disabled={reading}
-              onClick={() => dispatch_app({ type: 'admin/wallet_disconnect' })}
-              type="button"
-            >
-              {translated(copy, 'disconnect_admin_wallet', 'Disconnect')}
-            </button>
-          </div>
-        </>
-      )}
-
-      {wallet.error && <p className="mt-3 text-[8px] leading-4 text-[#ff8caa]">{wallet.error}</p>}
-      {error && <p className="mt-3 text-[8px] leading-4 text-[#ff8caa]">{error}</p>}
+      <div className="mt-auto pt-5">
+        <button
+          className={`h-9 w-full border text-[8px] tracking-[0.16em] uppercase transition disabled:cursor-not-allowed disabled:border-white/8 disabled:text-[#555a64] ${
+            revenue.claim_armed
+              ? 'border-[#efbd45]/65 bg-[#efbd45]/10 text-[#f3c761]'
+              : 'border-[#c8963c]/35 text-[#dfad4e] hover:border-[#c8963c]/65'
+          }`}
+          disabled={!revenue.connected || revenue.claimable <= 0n || revenue.claiming}
+          onClick={revenue.claim_armed ? revenue.claim : revenue.arm_claim}
+          title={!revenue.connected ? 'Connect the admin wallet in the header' : undefined}
+          type="button"
+        >
+          {revenue.claiming
+            ? translated(copy, 'claiming', 'Claiming…')
+            : revenue.claim_armed
+              ? translated(copy, 'confirm_claim', 'Confirm claim')
+              : `${translated(copy, 'claim', 'Claim')} · ${revenue.claimable > 0n ? `${format_sui(revenue.claimable, 4)} SUI` : '—'}`}
+        </button>
+        {revenue.error && (
+          <p className="mt-2 truncate text-[7px] text-[#ff8caa]" title={revenue.error}>
+            Revenue source unavailable
+          </p>
+        )}
+      </div>
     </section>
   )
 }

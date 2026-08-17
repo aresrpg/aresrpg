@@ -5,6 +5,9 @@ import type {
   CameraProjection,
   ChunkRenderOutcome,
   EntityRender,
+  EntityPathMotion,
+  EntityScreenAnchor,
+  FightPresentationCue,
   EngineQuality,
   EngineRenderState,
   FightBlobRender,
@@ -22,6 +25,9 @@ export type EngineBackend = Readonly<{
   set_flatten_amount: (amount: number) => void
   set_fight_board: (board: FightBoardRender | null) => void
   set_entities: (entities: readonly EntityRender[]) => void
+  animate_entity: (motion: EntityPathMotion) => Promise<boolean>
+  play_fight_cue: (cue: FightPresentationCue) => Promise<boolean>
+  project_entity: (id: string) => EntityScreenAnchor | null
   upsert_fight_blob: (blob: FightBlobRender) => void
   remove_fight_blob: (id: string) => void
   pick_fight_cell: (client_x: number, client_y: number) => number | null

@@ -7851,12 +7851,6 @@
         "max_qty": 1
       },
       {
-        "item_type": "spectral_essence",
-        "chance_bp": 108,
-        "min_qty": 1,
-        "max_qty": 1
-      },
-      {
         "item_type": "nerak_marrow",
         "chance_bp": 5000,
         "min_qty": 1,
@@ -33473,12 +33467,6 @@
         "max_qty": 1
       },
       {
-        "item_type": "mirrormelt_essence",
-        "chance_bp": 243,
-        "min_qty": 1,
-        "max_qty": 1
-      },
-      {
         "item_type": "frozen_striders",
         "chance_bp": 26,
         "min_qty": 1,
@@ -38438,12 +38426,6 @@
         "max_qty": 1
       },
       {
-        "item_type": "spectral_essence",
-        "chance_bp": 500,
-        "min_qty": 1,
-        "max_qty": 1
-      },
-      {
         "item_type": "water",
         "chance_bp": 3957,
         "min_qty": 1,
@@ -42257,12 +42239,6 @@
         "max_qty": 1
       },
       {
-        "item_type": "null_essence",
-        "chance_bp": 600,
-        "min_qty": 1,
-        "max_qty": 1
-      },
-      {
         "item_type": "void_eye_lens",
         "chance_bp": 683,
         "min_qty": 1,
@@ -42379,12 +42355,6 @@
       {
         "item_type": "void_eye_lens",
         "chance_bp": 638,
-        "min_qty": 1,
-        "max_qty": 1
-      },
-      {
-        "item_type": "null_essence",
-        "chance_bp": 600,
         "min_qty": 1,
         "max_qty": 1
       },
@@ -43072,12 +43042,6 @@
         "chance_bp": 666,
         "min_qty": 1,
         "max_qty": 2
-      },
-      {
-        "item_type": "null_essence",
-        "chance_bp": 600,
-        "min_qty": 1,
-        "max_qty": 2
       }
     ],
     "xp": 384375
@@ -43435,12 +43399,6 @@
         "max_qty": 1
       },
       {
-        "item_type": "null_essence",
-        "chance_bp": 600,
-        "min_qty": 1,
-        "max_qty": 1
-      },
-      {
         "item_type": "void_eye_lens",
         "chance_bp": 705,
         "min_qty": 1,
@@ -43551,12 +43509,6 @@
       {
         "item_type": "void_shard",
         "chance_bp": 658,
-        "min_qty": 1,
-        "max_qty": 1
-      },
-      {
-        "item_type": "null_essence",
-        "chance_bp": 600,
         "min_qty": 1,
         "max_qty": 1
       },
@@ -44821,12 +44773,6 @@
         "max_qty": 1
       },
       {
-        "item_type": "null_essence",
-        "chance_bp": 500,
-        "min_qty": 1,
-        "max_qty": 1
-      },
-      {
         "item_type": "hades_heart",
         "chance_bp": 491,
         "min_qty": 1,
@@ -45051,12 +44997,6 @@
       {
         "item_type": "void_shard",
         "chance_bp": 560,
-        "min_qty": 1,
-        "max_qty": 1
-      },
-      {
-        "item_type": "null_essence",
-        "chance_bp": 500,
         "min_qty": 1,
         "max_qty": 1
       }

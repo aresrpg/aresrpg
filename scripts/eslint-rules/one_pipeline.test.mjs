@@ -3,7 +3,7 @@
 // RuleTester suite for the ONE-REDUCER tripwire (scripts/eslint-rules/one_pipeline.mjs).
 // The invalid fixtures ARE the red: each is a real shape of the async-callback-store-write class,
 // headlined by the v1.12.28 prod crash (a setTimeout writing fight state off a stale closure).
-// Runs under `bun test` (wired into `ares test`'s unit lane via scripts/ares.mjs).
+// Runs under `bun test scripts/eslint-rules` — the root `test` script's second lane.
 import { describe, it } from 'bun:test'
 import { RuleTester } from 'eslint'
 

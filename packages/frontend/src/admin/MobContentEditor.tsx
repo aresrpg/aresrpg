@@ -4,7 +4,7 @@
 import { element_names, item_stat_center } from '@aresrpg/immutable'
 import { useState } from 'react'
 
-import { item_icon } from '../content/assets.ts'
+import { MobCoreStats } from '../components/MobCoreStats.tsx'
 import type { SeedSpell } from '../content/catalog.ts'
 import { SpellCard } from '../encyclopedia/SpellCard.tsx'
 import { element_colors, stat_identities } from '../visual_identity.ts'
@@ -13,7 +13,6 @@ import {
   as_record,
   button_class,
   NumberField,
-  number_value,
   SelectField,
   SheetSection,
   string_value,
@@ -21,6 +20,7 @@ import {
   titleize_field,
 } from './ContentFields.tsx'
 import { JsonEditor } from './JsonEditor.tsx'
+import { ItemReferencePicker } from './ItemReferencePicker.tsx'
 import type { JsonPath, JsonValue } from './seed_editor.ts'
 
 type EditorProps = Readonly<{
@@ -62,30 +62,6 @@ const blank_level = Object.freeze({
   effects: Object.freeze([]),
   crit_effects: Object.freeze([]),
 })
-
-const CoreStats = ({
-  mob,
-  on_change,
-}: Readonly<{ mob: Readonly<Record<string, JsonValue>>; on_change: EditorProps['on_change'] }>) => (
-  <div className="grid grid-cols-3 gap-x-4 gap-y-3 sm:grid-cols-6">
-    {[
-      ['hp', 'HP'],
-      ['ap', 'AP'],
-      ['mp', 'MP'],
-      ['agility', 'Agility'],
-      ['wisdom', 'Wisdom'],
-      ['xp', 'XP reward'],
-    ].map(([key, label]) => (
-      <NumberField
-        change={(next) => on_change([key!], next)}
-        key={key}
-        label={label!}
-        value={number_value(mob[key!])}
-        width="w-full"
-      />
-    ))}
-  </div>
-)
 
 const Resistances = ({
   mob,
@@ -221,16 +197,12 @@ const LootEditor = ({
           const item_type = string_value(row.item_type)
           return (
             <div
-              className="grid min-h-12 grid-cols-[32px_minmax(140px,1fr)_80px_60px_auto_60px_auto] items-center gap-2 border-b border-white/6 px-1"
+              className="grid min-h-14 grid-cols-[minmax(210px,1fr)_80px_60px_auto_60px_auto] items-center gap-2 border-b border-white/6 px-1"
               key={`${item_type}-${index}`}
             >
-              <span className="grid size-8 place-items-center border border-white/8 bg-black/25">
-                {item_icon(item_type) && <img alt="" className="size-7 object-contain" src={item_icon(item_type)!} />}
-              </span>
-              <input
-                aria-label="Loot item"
-                className="h-7 min-w-0 border border-white/10 bg-[#090a10] px-2 text-[9px]"
-                onChange={(event) => on_change(['loot', index, 'item_type'], event.target.value)}
+              <ItemReferencePicker
+                label="loot item"
+                select={(next) => on_change(['loot', index, 'item_type'], next)}
                 value={item_type}
               />
               <label className="flex items-center gap-1">
@@ -339,7 +311,7 @@ export const MobContentEditor = ({ value, on_change, save }: EditorProps) => {
             value={typeof mob.level_max === 'number' ? mob.level_max : 0}
           />
         </div>
-        <CoreStats mob={mob} on_change={on_change} />
+        <MobCoreStats change={(stat, next) => on_change([stat], next)} values={mob} />
       </SheetSection>
       <SheetSection
         accent="#78b5ff"

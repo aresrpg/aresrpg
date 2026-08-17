@@ -1,7 +1,16 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
-import type { CharacterRow, ClaimRow, ItemRow, ListingRow, ServerPacket, TradeRow } from '@aresrpg/protocol'
+import type {
+  AirdropState,
+  CharacterRow,
+  ClaimRow,
+  ItemRow,
+  ListingRow,
+  ServerPacket,
+  ShopState,
+  TradeRow,
+} from '@aresrpg/protocol'
 import { fight_action_to_wire } from '@aresrpg/fight'
 
 import type { Auth, AuthSession } from '../auth.ts'
@@ -20,6 +29,8 @@ export type SessionState = Readonly<{
   auth_error: string | null
   link_status: LinkStatus
   link_error: string | null
+  latency_ms: number | null
+  indexing_lag: number | null
   roster_loaded: boolean
   characters: readonly CharacterRow[]
   inventory: readonly ItemRow[]
@@ -35,6 +46,7 @@ export type SessionState = Readonly<{
   wallet: AuthSession | null
   sui_balance_mist: bigint | null
   gas_spent_mist: bigint
+  shop: Readonly<ShopState> | null
 }>
 
 export type SessionInput =
@@ -49,10 +61,13 @@ export type SessionInput =
   | Readonly<{ type: 'link/connecting' }>
   | Readonly<{ type: 'link/rejected'; reason: string }>
   | Readonly<{ type: 'link/failed'; error: string }>
+  | Readonly<{ type: 'link/latency'; latency_ms: number }>
   | Readonly<{ type: 'server/packet'; packet: Readonly<ServerPacket> }>
   | Readonly<{ type: 'character/select'; character_id: string }>
   | Readonly<{ type: 'wallet/refresh' }>
   | Readonly<{ type: 'wallet/refreshed'; balance_mist: bigint; gas_spent_mist: bigint }>
+  | Readonly<{ type: 'shop/purchased'; item_type: string; quantity: number }>
+  | Readonly<{ type: 'airdrop/claimed'; drop_id: string }>
   | Readonly<{
       type: 'wallet/resolve_character'
       name: string
@@ -67,6 +82,8 @@ export const initial_session_state = (): SessionState =>
     auth_error: null,
     link_status: 'idle',
     link_error: null,
+    latency_ms: null,
+    indexing_lag: null,
     roster_loaded: false,
     characters: [],
     inventory: [],
@@ -82,9 +99,41 @@ export const initial_session_state = (): SessionState =>
     wallet: null,
     sui_balance_mist: null,
     gas_spent_mist: 0n,
+    shop: null,
   })
 
 const with_session = (state: AppState, session: SessionState): AppState => Object.freeze({ ...state, session })
+
+const with_sale_supply = (session: SessionState, item_type: string, supply: string): SessionState => {
+  if (!session.shop) return session
+  const sales = session.shop.sales.map((sale) => (sale.item_type === item_type ? { ...sale, supply } : sale))
+  return Object.freeze({ ...session, shop: Object.freeze({ ...session.shop, sales: Object.freeze(sales) }) })
+}
+
+const with_airdrop = (
+  session: SessionState,
+  drop_id: string,
+  update: (airdrop: AirdropState) => AirdropState
+): SessionState => {
+  if (!session.shop) return session
+  const airdrops = session.shop.airdrops.map((airdrop) => (airdrop.drop_id === drop_id ? update(airdrop) : airdrop))
+  return Object.freeze({ ...session, shop: Object.freeze({ ...session.shop, airdrops: Object.freeze(airdrops) }) })
+}
+
+const fold_shop_receipt = (session: SessionState, input: AppInput): SessionState => {
+  if (input.type === 'shop/purchased') {
+    const sale = session.shop?.sales.find(({ item_type }) => item_type === input.item_type)
+    if (!sale) return session
+    const supply = BigInt(sale.supply) - BigInt(input.quantity)
+    return with_sale_supply(session, input.item_type, String(supply < 0n ? 0n : supply))
+  }
+  if (input.type !== 'airdrop/claimed') return session
+  return with_airdrop(session, input.drop_id, (airdrop) => ({
+    ...airdrop,
+    eligible: false,
+    eligible_count: Math.max(0, airdrop.eligible_count - 1),
+  }))
+}
 
 const fold_packet = (session: SessionState, packet: Readonly<ServerPacket>): SessionState => {
   if (packet.type === 'packet/characters') {
@@ -100,13 +149,22 @@ const fold_packet = (session: SessionState, packet: Readonly<ServerPacket>): Ses
       link_error: null,
     })
   }
-  if (packet.type === 'packet/server_info') return Object.freeze({ ...session, online: packet.online })
+  if (packet.type === 'packet/server_info')
+    return Object.freeze({ ...session, online: packet.online, indexing_lag: packet.indexing_lag })
   if (packet.type === 'packet/inventory') return Object.freeze({ ...session, inventory: packet.items })
   if (packet.type === 'packet/friends') return Object.freeze({ ...session, friends: packet.friends })
   if (packet.type === 'packet/claims') return Object.freeze({ ...session, claims: packet.claims })
   if (packet.type === 'packet/giftcards') return Object.freeze({ ...session, giftcards: packet.giftcards })
   if (packet.type === 'packet/listings') return Object.freeze({ ...session, listings: packet.listings })
   if (packet.type === 'packet/trades') return Object.freeze({ ...session, trades: packet.trades })
+  if (packet.type === 'packet/shop_state')
+    return Object.freeze({
+      ...session,
+      shop: Object.freeze({ sales: Object.freeze(packet.sales), airdrops: Object.freeze(packet.airdrops) }),
+    })
+  if (packet.type === 'packet/shop_supply') return with_sale_supply(session, packet.item_type, packet.supply)
+  if (packet.type === 'packet/airdrop_remaining')
+    return with_airdrop(session, packet.drop_id, (airdrop) => ({ ...airdrop, eligible_count: packet.eligible_count }))
   if (packet.type === 'packet/friend_added')
     return session.friends.includes(packet.who)
       ? session
@@ -129,6 +187,9 @@ const fold_packet = (session: SessionState, packet: Readonly<ServerPacket>): Ses
 
 const reduce = (state: AppState, input: AppInput): AppState => {
   const current = state.session
+  const can_start_auth = current.auth_status === 'idle' && current.auth_ready
+  const shop_receipt = fold_shop_receipt(current, input)
+  if (shop_receipt !== current) return with_session(state, shop_receipt)
   if (input.type === 'auth/connecting' && current.auth_status === 'idle')
     return with_session(
       state,
@@ -136,17 +197,12 @@ const reduce = (state: AppState, input: AppInput): AppState => {
     )
   if (input.type === 'auth/ready')
     return with_session(state, Object.freeze({ ...current, auth_ready: true, wallets: input.wallets }))
-  if (input.type === 'auth/login_google' && current.auth_status === 'idle' && current.auth_ready)
+  if (input.type === 'auth/login_google' && can_start_auth)
     return with_session(
       state,
       Object.freeze({ ...current, auth_status: 'connecting', auth_request: 'google', auth_error: null })
     )
-  if (
-    input.type === 'auth/login_wallet' &&
-    current.auth_status === 'idle' &&
-    current.auth_ready &&
-    current.wallets.includes(input.name)
-  )
+  if (input.type === 'auth/login_wallet' && can_start_auth && current.wallets.includes(input.name))
     return with_session(
       state,
       Object.freeze({
@@ -195,11 +251,32 @@ const reduce = (state: AppState, input: AppInput): AppState => {
       Object.freeze({ ...current, sui_balance_mist: input.balance_mist, gas_spent_mist: input.gas_spent_mist })
     )
   if (input.type === 'link/connecting')
-    return with_session(state, Object.freeze({ ...current, link_status: 'connecting', link_error: null }))
+    return with_session(
+      state,
+      Object.freeze({ ...current, link_status: 'connecting', link_error: null, latency_ms: null, indexing_lag: null })
+    )
   if (input.type === 'link/rejected')
-    return with_session(state, Object.freeze({ ...current, link_status: 'idle', link_error: input.reason }))
+    return with_session(
+      state,
+      Object.freeze({ ...current, link_status: 'idle', link_error: input.reason, latency_ms: null, indexing_lag: null })
+    )
   if (input.type === 'link/failed')
-    return with_session(state, Object.freeze({ ...current, link_status: 'connecting', link_error: input.error }))
+    return with_session(
+      state,
+      Object.freeze({
+        ...current,
+        link_status: 'connecting',
+        link_error: input.error,
+        latency_ms: null,
+        indexing_lag: null,
+      })
+    )
+  if (
+    input.type === 'link/latency' &&
+    (current.link_status === 'connected' || current.link_status === 'ready') &&
+    current.latency_ms !== input.latency_ms
+  )
+    return with_session(state, Object.freeze({ ...current, latency_ms: input.latency_ms }))
   if (input.type === 'server/packet') {
     if (input.packet.type === 'packet/connection_accepted')
       return with_session(state, Object.freeze({ ...current, link_status: 'connected', link_error: null }))

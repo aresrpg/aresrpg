@@ -2,7 +2,7 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 // One icon index shared by every frontend feature.
 
-import { slugify } from './catalog.ts'
+import { indexed_asset_key, spell_asset_key } from './asset_keys.ts'
 
 const item_modules = import.meta.glob(
   ['../../../../seed/icons/items/*.{png,webp,jpg,jpeg}', '!../../../../seed/icons/items/*_hd.{png,webp,jpg,jpeg}'],
@@ -33,12 +33,11 @@ const index_assets = (modules: Readonly<Record<string, string>>): Readonly<Recor
 
 const item_assets = index_assets(item_modules)
 const mob_assets = index_assets(mob_modules)
-const spell_assets = index_assets(spell_modules)
+const spell_assets = Object.freeze(
+  Object.fromEntries(Object.entries(index_assets(spell_modules)).map(([key, url]) => [indexed_asset_key(key), url]))
+)
 
 export const item_icon = (item_type: string): string | null => item_assets[item_type] ?? null
 export const mob_icon = (mob_type: string): string | null => mob_assets[mob_type] ?? null
-export const spell_icon = (classe: string, name: string): string | null => {
-  const asset_class = classe === 'yogan' ? 'yogen' : classe
-  const compact_name = slugify(name.replaceAll(/[’']/g, ''))
-  return spell_assets[`${asset_class}_${compact_name}`] ?? spell_assets[`${asset_class}_${slugify(name)}`] ?? null
-}
+export const spell_icon = (classe: string, name: string): string | null =>
+  spell_assets[spell_asset_key(classe, name)] ?? null

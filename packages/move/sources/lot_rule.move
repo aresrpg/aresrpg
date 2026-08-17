@@ -5,6 +5,8 @@
 /// The witness law puts `add`/`prove` here: only the defining module can construct `LotRule`.
 module aresrpg::lot_rule;
 
+use aresrpg_math::content_rules;
+
 use aresrpg::{item::{Self, Item}, version::Version};
 use sui::transfer_policy::{Self, TransferPolicy, TransferPolicyCap, TransferRequest};
 
@@ -23,7 +25,8 @@ public fun add(policy: &mut TransferPolicy<Item>, cap: &TransferPolicyCap<Item>)
 public fun prove(purchased: &Item, request: &mut TransferRequest<Item>, version: &Version) {
   version.assert_latest();
   assert!(object::id(purchased) == transfer_policy::item(request), ELotWrongItem);
-  if (item::is_stackable(purchased.category())) {
+  let category = purchased.category();
+  if (content_rules::is_stackable(&category)) {
     let amount = purchased.amount();
     assert!(amount == 1 || amount == 10 || amount == 100 || amount == 1000, ELotInvalid);
   };

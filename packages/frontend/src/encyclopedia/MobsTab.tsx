@@ -1,23 +1,21 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
-import { Search, Shield, X } from 'lucide-react'
+import { MapPin, Search, Shield, X } from 'lucide-react'
 import { useMemo, useState } from 'react'
 
+import { MobCoreStats } from '../components/MobCoreStats.tsx'
 import { mob_icon } from '../content/assets.ts'
 import { centered_resistance, encyclopedia_catalog, titleize } from '../content/catalog.ts'
-import { element_colors } from '../visual_identity.ts'
+import { element_colors, item_category_colors, stat_identities } from '../visual_identity.ts'
 
 import {
   category_pill,
   Empty,
   encyclopedia_layout,
   EntityButton,
+  EntityGrid,
   EntityIcon,
-  Fact,
-  format_number,
-  LinkChip,
-  percent,
   SearchField,
   Section,
 } from './components.tsx'
@@ -115,11 +113,11 @@ export const MobsTab = ({
               <Shield className="mr-1 inline opacity-30" size={8} />
               {text('level_bracket', { range: group.label })}
             </div>
-            <div className="grid grid-cols-[repeat(auto-fill,minmax(280px,1fr))] gap-0">{group.mobs.map(row)}</div>
+            <EntityGrid>{group.mobs.map(row)}</EntityGrid>
           </section>
         ))
       ) : (
-        <div className="grid grid-cols-[repeat(auto-fill,minmax(280px,1fr))] gap-0">{filtered.map(row)}</div>
+        <EntityGrid>{filtered.map(row)}</EntityGrid>
       )}
     </div>
   )
@@ -141,45 +139,66 @@ export const MobsTab = ({
             </p>
           </div>
         </header>
-        <div className="grid gap-1 sm:grid-cols-3">
-          <Fact label="HP" value={format_number(detail.mob.hp)} />
-          <Fact label="AP" value={detail.mob.ap} />
-          <Fact label="MP" value={detail.mob.mp} />
-          <Fact label={text('gameplay.stat_agility')} value={detail.mob.agility} />
-          <Fact label={text('gameplay.stat_wisdom')} value={detail.mob.wisdom} />
-          <Fact label="XP" value={format_number(detail.mob.xp)} />
-        </div>
+        <MobCoreStats
+          labels={{
+            agility: text('gameplay.stat_agility'),
+            wisdom: text('gameplay.stat_wisdom'),
+            xp: 'XP',
+          }}
+          values={detail.mob}
+        />
         <Section title={text('gameplay.resistance')}>
-          <div className="grid gap-1 sm:grid-cols-2">
+          <div className="grid gap-2 sm:grid-cols-2">
             {Object.entries(detail.mob.resistances).map(([name, value]) => {
               const resistance = centered_resistance(value)
+              const identity =
+                stat_identities[
+                  name === 'earth'
+                    ? 'strength'
+                    : name === 'fire'
+                      ? 'intelligence'
+                      : name === 'water'
+                        ? 'chance'
+                        : 'agility'
+                ]
+              const color = resistance < 0 ? '#ff7d7d' : (element_colors[name] ?? '#78b5ff')
               return (
-                <Fact
-                  color={resistance < 0 ? '#ff7d7d' : '#78b5ff'}
+                <div
+                  className="flex min-h-11 items-center gap-3 border border-white/8 bg-white/[0.018] px-3 py-2"
+                  data-mob-resistance={name}
                   key={name}
-                  label={titleize(name)}
-                  value={`${resistance}%`}
-                />
+                >
+                  {identity && <img alt="" className="size-6 object-contain" src={identity.icon} />}
+                  <span className="min-w-0 flex-1 text-[8px] tracking-[0.12em] uppercase" style={{ color }}>
+                    {titleize(name)}
+                  </span>
+                  <span className="text-[11px] font-semibold tabular-nums" style={{ color }}>
+                    {resistance > 0 ? '+' : ''}
+                    {resistance}%
+                  </span>
+                </div>
               )
             })}
           </div>
         </Section>
         {detail.mob.spells.length > 0 && (
           <Section title={text('mob_spells')}>
-            <div className="flex gap-0 border border-[#1e1e2e]">
-              <div className="w-40 shrink-0 border-r border-[#1e1e2e]">
+            <div className="border border-[#1e1e2e]" data-mob-spell-tabs="">
+              <div className="flex min-w-0 overflow-x-auto border-b border-[#1e1e2e] bg-black/15" role="tablist">
                 {detail.mob.spells.map((spell, index) => (
                   <button
-                    className={`block w-full border-l-2 px-3 py-2 text-left text-[9px] uppercase ${index === spell_index ? 'border-[#c8963c] bg-[#c8963c]/8 text-[#c8963c]' : 'border-transparent text-[#6b7280]'}`}
+                    aria-selected={index === spell_index}
+                    className={`shrink-0 border-b-2 px-4 py-2.5 text-[9px] tracking-[0.08em] uppercase ${index === spell_index ? 'border-[#c8963c] bg-[#c8963c]/8 text-[#c8963c]' : 'border-transparent text-[#6b7280] hover:text-[#a9a49a]'}`}
                     key={`${spell.name}-${index}`}
                     onClick={() => set_spell_index(index)}
+                    role="tab"
                     type="button"
                   >
                     {spell.name}
                   </button>
                 ))}
               </div>
-              <div className="min-w-0 flex-1 p-4">
+              <div className="min-w-0 p-4">
                 {selected_spell && (
                   <SpellCard
                     key={selected_spell.name}
@@ -198,25 +217,77 @@ export const MobsTab = ({
         )}
         <Section title={text('gameplay.section_loot')}>
           {detail.loot.length === 0 ? (
-            <p className="text-[9px] text-[#6b7280]">{text('no_drops')}</p>
+            <p className="text-[9px] italic text-[#6b7280]">{text('no_drops')}</p>
           ) : (
-            <div className="grid gap-1 sm:grid-cols-2">
-              {detail.loot.map(({ drop, item }) => (
-                <LinkChip key={drop.item_type} select={() => select_item(drop.item_type)}>
-                  {item?.name ?? titleize(drop.item_type)} · {percent(drop.chance_bp)} · {drop.min_qty}–{drop.max_qty}
-                </LinkChip>
-              ))}
+            <div className="flex flex-col gap-1">
+              {detail.loot.map(({ drop, item }) => {
+                const chance = drop.chance_bp / 100
+                const quantity = drop.min_qty === drop.max_qty ? `×${drop.min_qty}` : `×${drop.min_qty}–${drop.max_qty}`
+                const category = item?.category ?? ''
+                return (
+                  <button
+                    className="flex cursor-pointer flex-col bg-white/2 px-2 py-1.5 text-left hover:bg-[#c8963c]/8"
+                    key={drop.item_type}
+                    onClick={() => select_item(drop.item_type)}
+                    type="button"
+                  >
+                    <span className="flex items-center justify-between gap-3">
+                      <span className="flex min-w-0 items-center gap-2">
+                        <span className="truncate text-[10px] text-[#e8e4dc]">
+                          {item?.name ?? titleize(drop.item_type)}
+                        </span>
+                        {category && (
+                          <span
+                            className="shrink-0 text-[8px] tracking-wide uppercase"
+                            style={{ color: item_category_colors[category] ?? '#6b728080' }}
+                          >
+                            {titleize(category)}
+                          </span>
+                        )}
+                      </span>
+                      <span className="flex shrink-0 items-center gap-2">
+                        <span className="text-[10px] font-semibold tabular-nums text-[#c8963c]">
+                          {chance.toFixed(2)}%
+                        </span>
+                        <span className="text-[9px] text-[#6b7280]">{quantity}</span>
+                      </span>
+                    </span>
+                    <span className="mt-1 h-[3px] w-full bg-white/5" data-mob-loot-progress="">
+                      <span
+                        className="block h-full bg-[linear-gradient(90deg,rgba(200,150,60,0.6),rgba(200,150,60,0.3))]"
+                        style={{ width: `${Math.min(100, chance)}%` }}
+                      />
+                    </span>
+                  </button>
+                )
+              })}
             </div>
           )}
         </Section>
         {detail.worlds.length > 0 && (
           <Section title={text('found_in')}>
-            <div className="flex flex-wrap gap-1">
-              {detail.worlds.map((world) => (
-                <LinkChip key={world.world} select={() => select_world(world.world)}>
-                  {titleize(world.world)}
-                </LinkChip>
-              ))}
+            <div className="flex flex-col gap-1" data-mob-found-in="">
+              {detail.worlds.map((world) => {
+                const biomes = world.mobs.find(({ mob_type }) => mob_type === detail.mob.mob_type)?.biomes ?? []
+                return (
+                  <button
+                    className="flex cursor-pointer items-center gap-2 bg-white/2 px-2 py-1.5 text-left hover:bg-[#c8963c]/8"
+                    key={world.world}
+                    onClick={() => select_world(world.world)}
+                    type="button"
+                  >
+                    <MapPin className="shrink-0 text-[#c8963c]/60" size={11} />
+                    <span className="min-w-0 flex-1 text-[10px] tracking-[0.1em] text-[#c8963c] uppercase">
+                      {titleize(world.world)}
+                    </span>
+                    {biomes.length > 0 && (
+                      <span className="text-[8px] tracking-[0.12em] text-[#6b7280] uppercase">
+                        {biomes.map(titleize).join(', ')}
+                      </span>
+                    )}
+                  </button>
+                )
+              })}
             </div>
           </Section>
         )}

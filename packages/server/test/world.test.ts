@@ -69,6 +69,7 @@ const wire = ({ owns = true, pet = false, friends = [] as string[] } = {}) => {
     emitter,
     heartbeat: async () => {},
     cluster_online: async () => 1,
+    indexed_checkpoint: async () => 1,
     subscribe: async () => {},
     unsubscribe: async () => {},
     publish: async (channel: string, payload: unknown) => {

@@ -34,7 +34,8 @@ export const punishment_base = (base: bigint, hp: bigint, max_hp: bigint): bigin
 
 export const heal_amount = (base: bigint, intelligence: bigint): bigint => (base * (100n + intelligence)) / 100n
 
-export const slot_crit_roll = (turn_seed: bigint, slot: bigint): bigint => mix(mix(turn_seed, slot), DOMAIN_CRIT)
+export const spell_crit_roll = (turn_seed: bigint, spell_name: string): bigint =>
+  new TextEncoder().encode(spell_name).reduce((roll, byte) => mix(roll, BigInt(byte)), mix(turn_seed, DOMAIN_CRIT))
 
 export const effect_seed = (turn_seed: bigint, slot: bigint): bigint => mix(mix(turn_seed, slot), DOMAIN_EFFECT)
 

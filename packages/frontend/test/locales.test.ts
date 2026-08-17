@@ -10,9 +10,14 @@ import fr from '../src/i18n/locales/fr.yaml'
 import ja from '../src/i18n/locales/ja.yaml'
 import uk from '../src/i18n/locales/uk.yaml'
 
+const leaf_paths = (value: unknown, prefix = ''): readonly string[] =>
+  typeof value === 'object' && value !== null
+    ? Object.entries(value).flatMap(([key, child]) => leaf_paths(child, prefix ? `${prefix}.${key}` : key))
+    : [prefix]
+
 test('all six authored locale documents carry the same keys', () => {
-  const expected = Object.keys(en).sort()
-  for (const document of [de, es, fr, ja, uk]) expect(Object.keys(document).sort()).toEqual(expected)
+  const expected = [...leaf_paths(en)].sort()
+  for (const document of [de, es, fr, ja, uk]) expect([...leaf_paths(document)].sort()).toEqual(expected)
 })
 
 test('the simulator surface ships every string in all six locales', () => {

@@ -3,7 +3,7 @@
 
 import { describe, expect, test } from 'bun:test'
 
-import { QUALITY_PROFILES, quality_pixel_ratio } from '../src/quality.ts'
+import { QUALITY_OPTIONS, QUALITY_PROFILES, quality_pixel_ratio, uses_world_post_processing } from '../src/quality.ts'
 
 describe('engine quality profiles', () => {
   test('all three tiers remain strictly sub-native', () => {
@@ -58,5 +58,14 @@ describe('engine quality profiles', () => {
         presentation: 'fight',
       })
     ).toBe(1.5)
+  })
+
+  test('fight rendering stays direct at every quality instead of running exploration post effects', () => {
+    expect(QUALITY_OPTIONS.map((quality) => uses_world_post_processing(quality, 'fight'))).toEqual([
+      false,
+      false,
+      false,
+    ])
+    expect(uses_world_post_processing('medium', 'world')).toBeTrue()
   })
 })

@@ -13,6 +13,7 @@ use sui::{display_registry::{Self, DisplayRegistry}, package::Publisher};
 
 const EAdminCapExpired: u64 = 501;
 const ESuperAdmin: u64 = 502;
+const EGenesisEpoch: u64 = 503; // epoch 0 IS the super sentinel — a genesis temp cap would never expire
 
 // ╔════════════════ [ Types ] ════════════════════════════════════════════════ ]
 
@@ -28,9 +29,11 @@ fun init(ctx: &mut TxContext) {
 
 // ╔════════════════ [ Cap lifecycle (legacy pattern) ] ═══════════════════════ ]
 
-/// Mint a throwaway cap for the current epoch — dead in ~24h. Super-only.
+/// Mint a throwaway cap for the current epoch — dead in ~24h. Super-only. Refused during the
+/// genesis epoch: `epoch == 0` is the super sentinel, so a genesis temp cap would BE super.
 public fun mint_temp_admin_cap(self: &AdminCap, recipient: address, ctx: &mut TxContext) {
   assert!(self.super_admin(), ESuperAdmin);
+  assert!(ctx.epoch() > 0, EGenesisEpoch);
   transfer::transfer(AdminCap { id: object::new(ctx), epoch: ctx.epoch() }, recipient);
 }
 

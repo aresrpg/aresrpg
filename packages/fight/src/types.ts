@@ -433,7 +433,7 @@ export type ResolveRowsInput = {
   runtime: FightRuntime
   caster: MoveInteger
   sheet: FightSheet
-  rows: SpellEffect[]
+  rows: readonly SpellEffect[]
   anchor: MoveInteger
   origin: MoveInteger
   cursor: PrngCursor

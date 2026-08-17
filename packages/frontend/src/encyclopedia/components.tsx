@@ -91,6 +91,10 @@ export const EntityButton = ({
   </button>
 )
 
+export const EntityGrid = ({ children }: Readonly<{ children: ReactNode }>) => (
+  <div className="grid grid-cols-[repeat(auto-fill,minmax(280px,1fr))] gap-0">{children}</div>
+)
+
 export const Section = ({ title, children }: Readonly<{ title: string; children: ReactNode }>) => (
   <section className="space-y-2">
     <h3 className="border-b border-[#1e1e2e] pb-1.5 text-[9px] font-semibold tracking-[0.2em] text-[#6b7280] uppercase">

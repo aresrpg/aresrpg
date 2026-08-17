@@ -83,6 +83,8 @@ export const labels = [
   'Zone',
   'Trade',
   'Giftcard',
+  'Sale',
+  'Airdrop',
   'Meta',
 ] as const
 

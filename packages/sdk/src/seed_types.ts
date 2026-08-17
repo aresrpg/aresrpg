@@ -55,6 +55,7 @@ export type SeedItem = Readonly<{
   name: string
   category: ItemCategory
   level: number
+  pet_foods?: readonly string[]
   stats?: Readonly<{ min: Readonly<Record<StatName, number>>; max: Readonly<Record<StatName, number>> }>
   damages?: readonly Readonly<{ from: number; to: number; damage_type: string; element: ElementName }>[]
   consumable?: SeedConsumable
@@ -88,7 +89,7 @@ export type SeedMob = Readonly<{
 export type SeedRecipe = Readonly<{
   output_type: string
   inputs: Readonly<Record<string, number>>
-  job: JobSlug
+  job?: JobSlug
 }>
 
 export type SeedWorld = Readonly<{
@@ -136,7 +137,7 @@ export type SeedContent = Readonly<{
 export type SeedPhase = 'items' | 'loot_boxes' | 'spells' | 'mobs' | 'recipes' | 'sales' | 'worlds' | 'supply'
 
 export type SeedBuildContext = Readonly<{
-  publisher: Resolvable
+  admin_cap: Resolvable
   worlds: Readonly<Record<string, Resolvable>>
 }>
 

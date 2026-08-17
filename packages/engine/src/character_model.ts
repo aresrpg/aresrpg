@@ -20,6 +20,7 @@ import { clone as clone_skinned } from 'three/addons/utils/SkeletonUtils.js'
 
 import type { EntityModel } from './entity_model.ts'
 import { load_gltf_source } from './gltf_loader.ts'
+import { prepare_pixel_texture } from './model_texture.ts'
 import type { CharacterAppearanceRender, WornModelRender } from './types.ts'
 
 type ModelMaterial = Material & {
@@ -44,6 +45,9 @@ const clone_materials = (root: Object3D): readonly Material[] => {
     const cached = clones.get(original)
     if (cached) return cached
     const copy = original.clone()
+    const material = copy as ModelMaterial
+    for (const texture of new Set([material.map, material.emissiveMap].filter((row): row is Texture => !!row)))
+      prepare_pixel_texture(texture)
     clones.set(original, copy)
     return copy
   }
@@ -161,7 +165,7 @@ const apply_colors = (root: Object3D, colors: readonly [string, string, string],
     texture.flipY = base_texture.flipY
     texture.wrapS = base_texture.wrapS
     texture.wrapT = base_texture.wrapT
-    texture.needsUpdate = true
+    prepare_pixel_texture(texture)
     owned_textures.push(texture)
     for (const material of materials.get(name) ?? []) {
       material.map = texture

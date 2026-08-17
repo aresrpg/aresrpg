@@ -19,23 +19,60 @@ import { draw } from './prng.ts'
 import { push_collision_damage, tackle_contest, tackle_losses, tackle_seed } from './fight_math.ts'
 import { STATS, effective_stat, hit, spend_ap, spend_mp } from './fighters.ts'
 import { emit, fail } from './runtime.ts'
-import type { FightRuntime, FightSheet } from './types.ts'
+import type { FightRuntime, FightSheet, HydratedFightCheckpoint } from './types.ts'
 
 export type EnterHandler = (runtime: FightRuntime, fighter: bigint, from: bigint) => boolean
 
-export const living_cells = (runtime: FightRuntime, exclude: bigint): bigint[] =>
+type FightContractState = Readonly<Pick<HydratedFightCheckpoint, 'contract'>>
+
+export const living_cells = (runtime: FightContractState, exclude: bigint): bigint[] =>
   runtime.contract.fighters
     .map((fighter, index) => ({ fighter, seat: BigInt(index) }))
     .filter(({ fighter, seat }) => seat !== exclude && !fighter.dead)
     .map(({ fighter }) => fighter.cell)
 
-export const fighter_at = (runtime: FightRuntime, cell: bigint): bigint | null => {
+export const fighter_at = (runtime: FightContractState, cell: bigint): bigint | null => {
   const seat = runtime.contract.fighters.findIndex((fighter) => !fighter.dead && fighter.cell === cell)
   return seat < 0 ? null : BigInt(seat)
 }
 
-export const wall_mask = (runtime: FightRuntime, fighter: bigint): bigint[] =>
+export const wall_mask = (runtime: FightContractState, fighter: bigint): bigint[] =>
   mask_add_cells(runtime.contract.closed, living_cells(runtime, fighter))
+
+export const reachable_fight_cells = (
+  runtime: FightContractState,
+  fighter: bigint,
+  budget?: bigint
+): readonly bigint[] => {
+  const subject = runtime.contract.fighters[Number(fighter)]
+  const available = budget ?? subject?.mp ?? 0n
+  if (!subject || subject.dead || available <= 0n) return Object.freeze([])
+  const field = bfs_distance_field(subject.cell, wall_mask(runtime, fighter), available)
+  return Object.freeze(
+    field.flatMap((distance, cell) => (distance > 0n && distance <= available ? [BigInt(cell)] : []))
+  )
+}
+
+export const fight_path_to = (
+  runtime: FightContractState,
+  fighter: bigint,
+  target: bigint
+): readonly bigint[] | null => {
+  const subject = runtime.contract.fighters[Number(fighter)]
+  if (!subject || subject.dead || subject.mp <= 0n || subject.cell === target) return null
+  const walls = wall_mask(runtime, fighter)
+  const field = bfs_distance_field(target, walls, subject.mp)
+  if (field[Number(subject.cell)] > subject.mp) return null
+  const path: bigint[] = []
+  let current = subject.cell
+  while (current !== target) {
+    const next = best_step(current, field)
+    if (next === null) return null
+    path.push(next)
+    current = next
+  }
+  return Object.freeze(path)
+}
 
 const fresh_lockers = (runtime: FightRuntime, runner: bigint, cell: bigint, beaten: bigint[]) => {
   const { team } = runtime.contract.fighters[Number(runner)]

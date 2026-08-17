@@ -27,6 +27,10 @@ describe('the wire contract', () => {
     expect(
       parse_client_packet(JSON.stringify({ type: 'packet/character_owner_request', id: 7, character_id: '0xabc' }))
     ).toEqual({ type: 'packet/character_owner_request', id: 7, character_id: '0xabc' })
+    expect(parse_client_packet(JSON.stringify({ type: 'packet/ping', id: 8 }))).toEqual({
+      type: 'packet/ping',
+      id: 8,
+    })
   })
 
   test('malformed intents throw, never coerce', () => {
@@ -61,6 +65,7 @@ describe('the wire contract', () => {
       'packet/spectate',
       'packet/character_owner_request',
       'packet/admin_request',
+      'packet/ping',
     ])
   })
 
@@ -123,9 +128,10 @@ describe('the wire contract', () => {
   })
 
   test('the trusted server stream needs JSON syntax, not duplicate runtime schemas', () => {
-    expect(parse_server_packet(JSON.stringify({ type: 'packet/server_info', online: 12 }))).toEqual({
+    expect(parse_server_packet(JSON.stringify({ type: 'packet/server_info', online: 12, indexing_lag: 4 }))).toEqual({
       type: 'packet/server_info',
       online: 12,
+      indexing_lag: 4,
     })
     expect(parse_server_packet(JSON.stringify({ type: 'packet/anything', value: true })) as unknown).toEqual({
       type: 'packet/anything',

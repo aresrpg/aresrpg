@@ -1,7 +1,1 @@
-{
-  "packages/fight/src/core_inbox.js": 1,
-  "packages/fight/src/core_ingest.js": 2,
-  "packages/fight/src/fold.js": 5,
-  "packages/fight/src/inputs.js": 12,
-  "packages/sim/src/reduce.js": 3
-}
+{}

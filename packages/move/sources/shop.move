@@ -56,6 +56,7 @@ public struct GiftcardKey(String) has copy, drop, store;
 /// admin door ever touches it again — `supply` is the only field that moves.
 public struct Sale has key {
   id: UID,
+  item_type: String,
   template: ID,
   price: u64, // MIST per unit
   supply: u64, // remaining units; the seeding authors the total
@@ -66,6 +67,7 @@ public struct Sale has key {
 /// would have been two claims; the set refuses it at the seeding, mechanically.
 public struct Airdrop has key {
   id: UID,
+  drop_id: String,
   template: ID,
   amount_each: u32,
   whitelist: VecSet<address>,
@@ -79,11 +81,18 @@ public struct Giftcard has key, store {
   amount: u32,
 }
 
-public struct SaleBought has copy, drop { sale: ID, buyer: address, quantity: u64, paid: u64 }
+public struct SaleBought has copy, drop {
+  sale: ID,
+  item_type: String,
+  buyer: address,
+  quantity: u64,
+  paid: u64,
+  supply: u64,
+}
 
 public struct AirdropCreated has copy, drop { airdrop: ID, template: ID, addresses: u64 }
 
-public struct AirdropClaimed has copy, drop { airdrop: ID, claimer: address }
+public struct AirdropClaimed has copy, drop { airdrop: ID, drop_id: String, claimer: address, remaining: u64 }
 
 public struct GiftcardMinted has copy, drop { giftcard: ID, template: ID, amount: u32 }
 
@@ -104,6 +113,7 @@ public(package) fun new_sale(
   assert!(supply >= 1, EZeroQuantity);
   transfer::share_object(Sale {
     id: derived_object::claim(item::registry_uid_mut(registry), SaleKey(item_type)),
+    item_type,
     template,
     price,
     supply,
@@ -129,6 +139,7 @@ public(package) fun new_airdrop(
   };
   let drop = Airdrop {
     id: derived_object::claim(item::registry_uid_mut(registry), AirdropKey(drop_id)),
+    drop_id,
     template,
     amount_each,
     whitelist: set,
@@ -185,9 +196,11 @@ public(package) fun buy(
   item::deposit(kiosk, cap, policy, existing, item::mint_plain(template, quantity, ctx));
   event::emit(SaleBought {
     sale: sale.id.to_inner(),
+    item_type: sale.item_type,
     buyer: ctx.sender(),
     quantity: quantity as u64,
     paid: total,
+    supply: sale.supply,
   });
 }
 
@@ -205,7 +218,12 @@ public(package) fun claim_airdrop(
   assert!(drop.whitelist.contains(&ctx.sender()), ENotWhitelisted);
   drop.whitelist.remove(&ctx.sender());
   item::deposit(kiosk, cap, policy, existing, item::mint_plain(template, drop.amount_each, ctx));
-  event::emit(AirdropClaimed { airdrop: drop.id.to_inner(), claimer: ctx.sender() });
+  event::emit(AirdropClaimed {
+    airdrop: drop.id.to_inner(),
+    drop_id: drop.drop_id,
+    claimer: ctx.sender(),
+    remaining: drop.whitelist.length(),
+  });
 }
 
 /// Redeem a giftcard: the voucher burns, the item is born locked in the redeemer's kiosk.

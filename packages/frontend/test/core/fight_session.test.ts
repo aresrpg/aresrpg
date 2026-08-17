@@ -2,7 +2,7 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
 import { describe, expect, test } from 'bun:test'
-import { decode_fight_action, encode_fight_action } from '@aresrpg/fight'
+import { decode_fight_action, encode_fight_action, fight_path_to, reachable_fight_cells } from '@aresrpg/fight'
 
 import { create_fight_session } from '../../src/modules/fight.ts'
 import { initial_simulator_state, reduce_simulator_state, simulator_board } from '../../src/modules/simulator.ts'
@@ -78,6 +78,26 @@ describe('fight session owner', () => {
 
     expect(session.state()).toBeNull()
     expect(session.apply({ type: 'crank' })).toBeFalse()
+  })
+
+  test('rewinds only a local simulator runtime to its current turn boundary', () => {
+    const session = create_fight_session({ now: () => 60_000n, reconcile: () => {} })
+    const simulator = ready_setup()
+    session.open({ mode: 'local', setup: simulator_fight_setup(simulator), seed: simulator.seed })
+    session.apply({ type: 'start' })
+    const started = session.state()!.checkpoint
+    const fighter = started.contract.queue[Number(started.contract.turn_ptr)]!
+    const target = reachable_fight_cells(started, fighter)[0]!
+    session.apply({ type: 'move_to', fighter, path: fight_path_to(started, fighter, target)! })
+    expect(session.state()!.checkpoint).not.toEqual(started)
+
+    expect(session.reset_turn()).toBeTrue()
+    expect(session.state()).toMatchObject({ checkpoint: started, events: [], error: null })
+
+    const remote = create_fight_session({ now: () => 60_000n, reconcile: () => {} })
+    remote.open({ mode: 'remote', setup: simulator_fight_setup(simulator), seed: simulator.seed })
+    remote.reset_turn()
+    expect(remote.state()?.error?.code).toBe('local_mode_required')
   })
 
   test('applies a streamed action through the same runtime path as a local action', () => {

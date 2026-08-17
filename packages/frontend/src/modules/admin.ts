@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
-import { next_seed_batch, type SeedAdminConfig, type SeedAdminSession } from '@aresrpg/sdk/seed-admin'
+import { next_seed_batch, type SeedAdminSession } from '@aresrpg/sdk/seed-admin'
 
 import {
   initial_admin_state,
@@ -12,8 +12,8 @@ import {
   type SeedEditorState,
   type SeedEditorStatus,
 } from '../admin/admin_state.ts'
-import { read_admin_storage, save_admin_storage } from '../admin/admin_storage.ts'
 import { observe_admin_wallet, reduce_admin_wallet } from '../admin/admin_wallet.ts'
+import { observe_admin_deployment, reduce_admin_deployment } from '../admin/admin_deployment.ts'
 import {
   admin_content_domains,
   is_seed_file,
@@ -36,39 +36,6 @@ const can_seal = (admin: AdminState): boolean =>
   admin.seal_armed &&
   !admin.snapshot?.sealed &&
   admin.snapshot?.batches.every(({ state }) => state === 'complete') === true
-
-const reduce_config = (admin: AdminState, input: AppInput): AdminState | null => {
-  if (input.type === 'admin/storage_loaded')
-    return Object.freeze({
-      ...admin,
-      config: input.config,
-      snapshot: null,
-      status: 'idle',
-      operation: null,
-      seal_armed: false,
-      error: null,
-    })
-  if (input.type === 'admin/publisher_changed')
-    return Object.freeze({
-      ...admin,
-      config: Object.freeze({ ...admin.config, publisher: input.publisher.trim() }),
-      snapshot: null,
-      status: 'idle',
-      error: null,
-    })
-  if (input.type === 'admin/world_changed')
-    return Object.freeze({
-      ...admin,
-      config: Object.freeze({
-        ...admin.config,
-        worlds: Object.freeze({ ...admin.config.worlds, [input.world]: input.object_id.trim() }),
-      }),
-      snapshot: null,
-      status: 'idle',
-      error: null,
-    })
-  return null
-}
 
 const reduce_editor = (admin: AdminState, input: AppInput): AdminState | null => {
   const update = (editor: SeedEditorState): AdminState => Object.freeze({ ...admin, editor })
@@ -206,25 +173,69 @@ const reduce_overview = (admin: AdminState, input: AppInput): AdminState | null 
     : null
 }
 
+// eslint-disable-next-line complexity -- This root reducer only routes discriminated inputs to small domain reducers.
 const reduce = (state: AppState, input: AppInput): AppState => {
   const { admin } = state
+  if (input.type === 'admin/log') {
+    const entry = Object.freeze({
+      id: (admin.log.at(-1)?.id ?? 0) + 1,
+      tone: input.tone ?? ('info' as const),
+      message: input.message,
+    })
+    return with_admin(state, Object.freeze({ ...admin, log: Object.freeze([...admin.log, entry].slice(-100)) }))
+  }
+  if (input.type === 'admin/progress') return with_admin(state, Object.freeze({ ...admin, progress: input.progress }))
   if (input.type === 'admin/view_changed') return with_admin(state, Object.freeze({ ...admin, view: input.view }))
   const editor = reduce_editor(admin, input)
   if (editor) return with_admin(state, editor)
   const overview = reduce_overview(admin, input)
   if (overview) return with_admin(state, overview)
+  const deployment = reduce_admin_deployment(admin, input)
+  if (deployment) return with_admin(state, deployment)
   const wallet = reduce_admin_wallet(admin, input)
   if (wallet) return with_admin(state, wallet)
-  const configured = reduce_config(admin, input)
-  if (configured) return with_admin(state, configured)
   if (input.type === 'admin/refresh' && admin.status !== 'loading' && admin.status !== 'executing')
-    return with_admin(state, Object.freeze({ ...admin, status: 'loading', operation: null, error: null }))
-  if (input.type === 'admin/refreshed' && admin.status === 'loading')
-    return with_admin(state, Object.freeze({ ...admin, snapshot: input.snapshot, status: 'ready', error: null }))
+    return with_admin(
+      state,
+      Object.freeze({ ...admin, status: 'loading', operation: null, progress: null, error: null })
+    )
+  if (input.type === 'admin/refreshed' && admin.status === 'loading') {
+    const complete = input.snapshot.batches.every(({ state: batch_state }) => batch_state === 'complete')
+    return with_admin(
+      state,
+      Object.freeze({
+        ...admin,
+        snapshot: input.snapshot,
+        status: 'ready',
+        progress: null,
+        cleanup: complete && admin.cleanup !== 'closed' ? 'needed' : admin.cleanup,
+        error: null,
+      })
+    )
+  }
   if (input.type === 'admin/execute' && can_execute(admin, input.batch))
     return with_admin(
       state,
-      Object.freeze({ ...admin, status: 'executing', operation: Object.freeze({ type: 'batch', batch: input.batch }) })
+      Object.freeze({
+        ...admin,
+        status: 'executing',
+        operation: Object.freeze({ type: 'batch', batch: input.batch }),
+        cleanup: 'needed',
+      })
+    )
+  if (
+    input.type === 'admin/publish_all' &&
+    admin.status === 'ready' &&
+    next_seed_batch(admin.snapshot)?.state === 'ready'
+  )
+    return with_admin(
+      state,
+      Object.freeze({
+        ...admin,
+        status: 'executing',
+        operation: Object.freeze({ type: 'all' }),
+        cleanup: 'needed',
+      })
     )
   if (input.type === 'admin/batch_succeeded' && admin.operation?.type === 'batch')
     return admin.operation.batch === input.batch
@@ -235,10 +246,47 @@ const reduce = (state: AppState, input: AppInput): AppState => {
             snapshot: input.snapshot,
             status: 'ready',
             operation: null,
+            progress: null,
             error: null,
           })
         )
       : state
+  if (input.type === 'admin/publish_all_succeeded' && admin.operation?.type === 'all')
+    return with_admin(
+      state,
+      Object.freeze({
+        ...admin,
+        snapshot: input.snapshot,
+        status: 'ready',
+        operation: null,
+        progress: null,
+        cleanup: 'closed',
+        error: null,
+      })
+    )
+  if (input.type === 'admin/release' && admin.cleanup === 'needed' && admin.status !== 'executing')
+    return with_admin(
+      state,
+      Object.freeze({
+        ...admin,
+        status: 'executing',
+        operation: Object.freeze({ type: 'release' }),
+        progress: Object.freeze({ phase: 'cleanup', current: 0, total: 1, label: null }),
+        error: null,
+      })
+    )
+  if (input.type === 'admin/released' && admin.operation?.type === 'release')
+    return with_admin(
+      state,
+      Object.freeze({
+        ...admin,
+        status: 'ready',
+        operation: null,
+        progress: null,
+        cleanup: 'closed',
+        error: null,
+      })
+    )
   if (input.type === 'admin/seal_armed' && admin.status === 'ready')
     return with_admin(state, Object.freeze({ ...admin, seal_armed: input.armed }))
   if (input.type === 'admin/seal' && can_seal(admin))
@@ -252,7 +300,10 @@ const reduce = (state: AppState, input: AppInput): AppState => {
       Object.freeze({ ...admin, snapshot: input.snapshot, status: 'ready', operation: null, error: null })
     )
   if (input.type === 'admin/failed' && (admin.status === 'loading' || admin.status === 'executing'))
-    return with_admin(state, Object.freeze({ ...admin, status: 'failed', operation: null, error: input.error }))
+    return with_admin(
+      state,
+      Object.freeze({ ...admin, status: 'failed', operation: null, progress: null, error: input.error })
+    )
   if (input.type === 'auth/disconnected' || input.type === 'auth/rejected')
     return with_admin(state, initial_admin_state())
   return state
@@ -262,7 +313,8 @@ const observe = ({ events, dispatch, signal, get_state }: Parameters<NonNullable
   let seed_session: SeedAdminSession | null = null
   let generation = 0
   let editor_generation = 0
-  let storage_loaded = false
+  const log = (message: string, tone: 'info' | 'success' | 'error' = 'info'): void =>
+    dispatch({ type: 'admin/log', message, tone })
   const invalidate_seed_session = (): void => {
     seed_session = null
     generation += 1
@@ -270,9 +322,9 @@ const observe = ({ events, dispatch, signal, get_state }: Parameters<NonNullable
   const clear = (): void => {
     invalidate_seed_session()
     editor_generation += 1
-    storage_loaded = false
   }
   observe_admin_wallet({ events, dispatch, signal, get_state }, invalidate_seed_session)
+  observe_admin_deployment({ events, dispatch, signal, get_state })
   events.on('auth/disconnected', clear)
   events.on('auth/rejected', clear)
   const load_editor = (): void => {
@@ -338,11 +390,6 @@ const observe = ({ events, dispatch, signal, get_state }: Parameters<NonNullable
       })
   }
   events.on('STATE_UPDATED', (state, previous) => {
-    if (state.navigation.page === 'admin' && !storage_loaded) {
-      storage_loaded = true
-      dispatch({ type: 'admin/storage_loaded', ...read_admin_storage() })
-      return
-    }
     if (state.navigation.page === 'admin' && state.admin.editor.status === 'idle') {
       dispatch({ type: 'admin/editor_load' })
       return
@@ -368,24 +415,46 @@ const observe = ({ events, dispatch, signal, get_state }: Parameters<NonNullable
       seed_session = null
       generation += 1
     }
-    if (state.admin.config !== previous.admin.config) save_admin_storage(state.admin)
-
     if (state.admin.status === 'loading' && previous.admin.status !== 'loading') {
       const connected = state.admin.wallet.session
       const request = ++generation
       if (!connected) return dispatch({ type: 'admin/failed', error: 'Connect the admin wallet before publishing' })
+      log('Checking deterministic seed addresses against chain state…')
       void import('../admin/seed_content.ts')
-        .then(({ seed_content }) => connected.create_seed_admin(seed_content, state.admin.config))
+        .then(({ seed_content }) =>
+          connected.create_seed_admin(seed_content, state.admin.config, state.admin.deployment.pins ?? undefined)
+        )
         .then(async (created) => {
-          const snapshot = await created.refresh()
+          const snapshot = await created.refresh((progress) => {
+            if (!signal.aborted && request === generation)
+              dispatch({
+                type: 'admin/progress',
+                progress: {
+                  phase: 'inspection',
+                  current: progress.inspected,
+                  total: progress.total,
+                  label: progress.batch,
+                },
+              })
+          })
           if (signal.aborted || request !== generation) return
           seed_session = created
+          const complete = snapshot.batches.filter(({ state: batch_state }) => batch_state === 'complete').length
+          const next = next_seed_batch(snapshot)
+          log(
+            snapshot.sealed
+              ? 'Seed authority is permanently sealed.'
+              : `Seed status checked · ${complete}/${snapshot.batches.length} batches complete${next ? ` · next ${next.id}` : ''}`,
+            'success'
+          )
           dispatch({ type: 'admin/refreshed', snapshot })
         })
         .catch((error) => {
           if (signal.aborted || request !== generation) return
           console.error('Seed plan inspection failed.', error)
-          dispatch({ type: 'admin/failed', error: error instanceof Error ? error.message : String(error) })
+          const message = error instanceof Error ? error.message : String(error)
+          log(message, 'error')
+          dispatch({ type: 'admin/failed', error: message })
         })
       return
     }
@@ -398,21 +467,80 @@ const observe = ({ events, dispatch, signal, get_state }: Parameters<NonNullable
     const failed = (error: unknown): void => {
       if (signal.aborted || request !== generation) return
       console.error('Seed transaction failed.', error)
-      dispatch({ type: 'admin/failed', error: error instanceof Error ? error.message : String(error) })
+      const message = error instanceof Error ? error.message : String(error)
+      log(message, 'error')
+      dispatch({ type: 'admin/failed', error: message })
     }
     if (operation.type === 'batch') {
+      log(`Publishing seed batch ${operation.batch}…`)
       void active
         .execute(operation.batch)
         .then((result) => {
           if (signal.aborted || request !== generation) return
+          log(`Seed batch ${result.batch} published · ${result.digest}`, 'success')
           dispatch({ type: 'admin/batch_succeeded', batch: result.batch, snapshot: result.snapshot })
         })
         .catch(failed)
+    } else if (operation.type === 'all') {
+      void (async () => {
+        let snapshot = await active.refresh((progress) => {
+          if (!signal.aborted && request === generation)
+            dispatch({
+              type: 'admin/progress',
+              progress: {
+                phase: 'inspection',
+                current: progress.inspected,
+                total: progress.total,
+                label: progress.batch,
+              },
+            })
+        })
+        while (true) {
+          const next = next_seed_batch(snapshot)
+          if (!next) break
+          if (next.state !== 'ready') throw new Error(`Seed batch ${next.id} is blocked`)
+          const complete = snapshot.batches.filter(({ state: batch_state }) => batch_state === 'complete').length
+          dispatch({
+            type: 'admin/progress',
+            progress: {
+              phase: 'publishing',
+              current: complete,
+              total: snapshot.batches.length,
+              label: next.id,
+            },
+          })
+          log(`Publishing seed batch ${next.id}…`)
+          const result = await active.execute(next.id)
+          const { snapshot: updated_snapshot } = result
+          snapshot = updated_snapshot
+          log(`Seed batch ${result.batch} published · ${result.digest}`, 'success')
+        }
+        dispatch({
+          type: 'admin/progress',
+          progress: { phase: 'cleanup', current: 0, total: 1, label: null },
+        })
+        log('Returning unused temporary seed-session gas…')
+        await active.release?.()
+        log('All seed batches are published and the temporary session is closed.', 'success')
+        dispatch({ type: 'admin/publish_all_succeeded', snapshot })
+      })().catch(failed)
+    } else if (operation.type === 'release') {
+      if (!active.release) return failed(new Error('This admin session cannot clean up its temporary signer'))
+      log('Closing the temporary seed session and returning its remaining SUI…')
+      void active.release().then(() => {
+        if (signal.aborted || request !== generation) return
+        log('Temporary seed session closed.', 'success')
+        dispatch({ type: 'admin/released' })
+      }, failed)
     } else {
+      log('Permanently sealing seed authority; confirm the wallet transaction…')
       void active
         .seal()
-        .then(({ snapshot }) => {
-          if (!signal.aborted && request === generation) dispatch({ type: 'admin/sealed', snapshot })
+        .then(({ digest, snapshot }) => {
+          if (!signal.aborted && request === generation) {
+            log(`Seed authority permanently sealed · ${digest}`, 'success')
+            dispatch({ type: 'admin/sealed', snapshot })
+          }
         })
         .catch(failed)
     }

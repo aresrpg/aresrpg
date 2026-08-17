@@ -2,10 +2,9 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 // The one creature-model factory. Every fight surface and future world spawn uses this render policy.
 import {
+  AnimationMixer,
   Box3,
   Color,
-  LinearMipmapLinearFilter,
-  NearestFilter,
   Vector3,
   type AnimationClip,
   type Material,
@@ -15,6 +14,7 @@ import {
 import { clone as clone_skinned } from 'three/addons/utils/SkeletonUtils.js'
 
 import { load_gltf_source } from './gltf_loader.ts'
+import { prepare_pixel_texture } from './model_texture.ts'
 
 export type MobModel = Readonly<{
   root: Object3D
@@ -63,17 +63,17 @@ const prepare_material = (material: RenderMaterial): void => {
   material.emissiveMap = material.map
   material.emissive = new Color(0xffffff)
   material.emissiveIntensity = MOB_EMISSIVE_FLOOR
-  for (const texture of new Set([material.map, material.emissiveMap])) {
-    texture.magFilter = NearestFilter
-    texture.minFilter = LinearMipmapLinearFilter
-    texture.generateMipmaps = true
-    texture.anisotropy = 8
-    texture.needsUpdate = true
-  }
+  for (const texture of new Set([material.map, material.emissiveMap])) prepare_pixel_texture(texture)
   material.needsUpdate = true
 }
 
-const prepare = (root: Object3D, label: string): number => {
+export const prepare_mob_model_root = (root: Object3D, clips: readonly AnimationClip[], label: string): number => {
+  const idle = clips.find(({ name }) => name.toUpperCase().includes('IDLE'))
+  if (idle) {
+    const reference_pose = new AnimationMixer(root)
+    reference_pose.clipAction(idle).play()
+    reference_pose.setTime(0)
+  }
   root.scale.setScalar(1)
   root.updateWorldMatrix(true, true)
   const raw_height = new Box3().setFromObject(root).getSize(new Vector3()).y
@@ -107,7 +107,7 @@ export const create_mob_model = async (url: string, label = url): Promise<MobMod
   const gltf = await load_gltf_source(url)
   const root = clone_skinned(gltf.scene)
   const materials = clone_materials(root)
-  const min_y = prepare(root, label)
+  const min_y = prepare_mob_model_root(root, gltf.animations, label)
   let disposed = false
   return Object.freeze({
     root,

@@ -28,7 +28,7 @@ use aresrpg::{
   progression,
   protected_policy::AresRPG_TransferPolicy,
 };
-use aresrpg_math::{forge, item_stats, prng, rune_catalog as cat};
+use aresrpg_math::{content_rules, forge, item_stats, prng, rune_catalog as cat};
 use std::string::String;
 use sui::{
   dynamic_field as df,
@@ -248,7 +248,7 @@ public(package) fun discard_claim(mut claim: CrushClaim) {
 /// Only craftable gear is forgeable; a category with no job aborts. (A non-gear category that DOES
 /// carry a job, e.g. `key`, still fails scribe later on `has_stats` — keys carry no rolled block.)
 fun forgery_job(category: String): String {
-  let job = item::craft_job_of(category);
+  let job = content_rules::craft_job_of(&category);
   assert!(job.is_some(), ENotForgeable);
   job.destroy_some()
 }

@@ -33,6 +33,16 @@ admin: 管理
 online: オンライン
 account: アカウント
 join_discord: Discord に参加
+sui_universe: Suiユニバース
+server_disconnected: 切断
+server_connecting: 接続中
+server_reconnecting: 再接続中
+server_syncing: 同期中
+server_connected: 接続済み
+latency_unit: ms
+indexing_health: インデックス状態
+indexing_lag_warning: ゲーム内の操作が遅れて反映される場合があります
+network_testnet: TESTNET
 page_pending_title: このページは再構築中です
 page_pending_body: 正しく復元する間も、この場所は表示し続けます。
 welcome_title: AresRPG へようこそ
@@ -65,6 +75,71 @@ wallet_send_pending: SUI を送信中…
 wallet_send_success: SUI を送信しました
 wallet_send_failed: SUI の送信に失敗しました
 wallet_close: 閉じる
+shop_page:
+  title: 'ショップ'
+  subtitle: 'SUIでアイテムを購入'
+  limited_edition_notice: 'これらのアイテムはすべて数量限定です — 発行数に達すると二度と入手できなくなります。マーケットでSUIと交換しましょう。'
+  remaining_of_cap: '残り {{remaining}} / {{cap}}'
+  processing: '処理中'
+  sold_out: '完売'
+  acquire: '入手'
+  wallet: 'ウォレット'
+  filter_all: 'すべて'
+  sections:
+    pet_box: 'ペットボックス'
+    title: '称号'
+    cloak: 'マント'
+    hat: '帽子'
+    companion: 'コンパニオン'
+    equipment: '装備'
+    consumable: '消耗品'
+    resource: '素材'
+  amount_title: '数量を選択'
+  amount_quantity: '数量'
+  amount_max: '最大'
+  amount_total: '合計'
+  amount_available: '残り{{count}}'
+  amount_confirm: '{{count}}個を購入'
+  purchase_success_body: '新しいアイテムはインベントリにあります。'
+  see_inventory: 'インベントリを見る'
+  buy_pending: '購入中…'
+  buy_success: '購入完了！'
+  drop_rates: 'ドロップ率'
+  pool_sub: '開封時に下記の重み付けどおりに1体が抽選されます。'
+  acquisition_complete: '購入完了'
+airdrop_page:
+  title: 'エアドロップ'
+  subtitle: '対象ホルダー向けの限定アイテムを受け取る'
+  minted: '{{count}} 個ミント済み'
+  eligible_count: '{{count}} 件が対象'
+  eligible: '対象'
+  not_eligible: '対象外'
+  claimed: '受取済み'
+  claim: '受け取る'
+  empty: '有効なエアドロップはありません'
+  empty_hint: '提携コレクションのホルダー向けエアドロップは、開始時にここに表示されます。'
+  pending_claim: 'エアドロップを受取中…'
+  toast_claimed: 'エアドロップを受け取りました'
+  set:
+    title: 'セット'
+    subtitle: '予約アイテム — 展示のみ'
+    error: 'エアドロップセットを読み込めませんでした'
+    retry: '再試行'
+    empty: 'エアドロップセットはまだ公開されていません'
+    no_preview: 'プレビュー準備中'
+    aura: 'オーラ'
+    aura_pending: 'オーラ準備中'
+    awaiting_ruling: '判断待ち'
+    kind:
+      pet_glb: 'ペット'
+      cosmetic: 'コスメティック'
+      title_relic: '称号レリック'
+      outfit: '衣装'
+settings_page:
+  title: '設定'
+  subtitle: 'AresRPGの設定'
+  music_label: '音楽'
+  music_hint: 'ワールドと戦闘の音楽を再生します。'
 admin_page:
   kicker: パブリッシャー
   title: ゲームコンテンツを公開
@@ -86,6 +161,11 @@ admin_page:
   admin_wallet: 管理者ウォレット
   admin_wallet_body: 公開と収益引き出し専用の署名者です。
   connect_admin_wallet: 接続
+  choose_admin_wallet: ウォレットを選択
+  choose_admin_address: アドレスを選択
+  cancel_wallet_selection: キャンセル
+  wallet_account: アカウント
+  select_wallet: 選択
   connecting: 接続中…
   loading_wallets: ウォレットを読み込み中…
   no_admin_wallet: 対応するブラウザウォレットがありません。
@@ -194,6 +274,7 @@ fight_hud:
   placement_title: 戦闘準備
   placement_hint: ファイターを配置して準備完了にしてください
   end_turn: ターン終了
+  reset_turn: リセット
   forfeit: 降参
   forfeit_title: '{name}で降参しますか？'
   forfeit_body: '{name}は残りHPをすべて失い、この戦闘から離脱します。'
@@ -347,16 +428,12 @@ encyclopedia_page:
   select_job: 職業を選択
   crafts: 製作
   gathering_tiers: 採集の進行
-  craft_xp_table: 製作XPテーブル
-  bulk_craft_note: クラフトごとのXPはレシピの素材数に応じて決まります——ユニークな素材枠が多いレシピほど、クラフトごとに多くのXPを獲得できます。
-  job_recipes: レシピ
+  craftable_items: 製作可能なアイテム
   tier: ティア
   required_level: 必要Lv.
   resource: 素材
   rare_variant: レア変種
   xp_per_harvest: XP / 採集
-  slots: スロット
-  xp_awarded: 獲得XP
   job_desc:
     FARMER: 農夫は世界中の畑で穀物を収穫します。高いティアではより希少な作物が解放されます。
     HERBALIST: 薬草師は錬金術に使用する植物や花を採集します。各ティアにはより高い職業レベルが必要です。
@@ -605,6 +682,8 @@ encyclopedia_page:
   consumable_reward_heading: 報酬
   consumable_rewards: 入手可能な報酬
   consumable_reward: '{{item}} · {{chance}}%'
+  rune_effect: アイテムに{{stat}}を{{amount}}追加
+  rune_obtained_by_crushing: アイテムの粉砕で入手
   spell_n: スペル {{n}}
   range: 射程
   range_modifiability: 射程変更

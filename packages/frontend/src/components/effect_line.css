@@ -1,0 +1,68 @@
+/* Exact legacy effect-line grammar: compact grey prose, colored value, dim metadata. */
+.fight-effect-lines {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.fxl {
+  display: flex;
+  min-height: 18px;
+  align-items: center;
+  gap: 8px;
+}
+
+.fxl__ic,
+.fxl__vector {
+  width: 15px;
+  height: 15px;
+  flex: none;
+}
+
+.fxl__ic {
+  object-fit: contain;
+  image-rendering: pixelated;
+}
+
+.fxl__vector {
+  display: grid;
+  place-items: center;
+}
+
+.fxl__dot {
+  width: 7px;
+  height: 7px;
+  flex: none;
+  margin: 0 4px;
+  border-radius: 50%;
+  box-shadow: 0 0 6px currentcolor;
+}
+
+.fxl__gap {
+  width: 15px;
+  flex: none;
+}
+
+.fxl__txt {
+  min-width: 0;
+  color: var(--color-muted, #6b7280);
+  font-family: var(--font-mono, monospace);
+  font-size: 0.7rem;
+  letter-spacing: 0.05em;
+}
+
+.fxl__val {
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.fxl__meta {
+  opacity: 0.75;
+  font-size: 0.62rem;
+  letter-spacing: 0.08em;
+}
+
+.fxl--compact .fxl__txt {
+  white-space: nowrap;
+}

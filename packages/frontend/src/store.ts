@@ -105,7 +105,11 @@ const create_events = () => {
 }
 
 const create_app = () => {
-  const default_settings = Object.freeze({ quality: 'medium', flat_mode: false }) satisfies GameSettings
+  const default_settings = Object.freeze({
+    quality: 'medium',
+    flat_mode: false,
+    music_enabled: true,
+  }) satisfies GameSettings
   let state = initial_app_state(default_settings)
   let active_observers: AbortController | null = null
   const store = createStore<AppState>(() => state)

@@ -1,14 +1,19 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
+import { readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
+
 import { describe, expect, test } from 'bun:test'
 
 import {
   characteristic_names,
   class_names,
+  craft_job_of,
   craft_required_level,
   craft_xp_from_ingredient_count,
   experience_curve,
   equipment_slot_accepts,
+  equipment_categories,
   job_slugs,
   job_level_from_xp,
   is_weapon_category,
@@ -16,8 +21,11 @@ import {
   item_budget_stat_weight,
   item_budget_stat_weights,
   item_categories,
+  item_is_stackable,
+  rig_slots,
   level_from_xp,
   pet_max_feeds,
+  rune_effect,
   stat_names,
   weapon_categories,
   xp_for_level,
@@ -80,9 +88,37 @@ describe('immutable vocabularies', () => {
 
   test('item categories own the one weapon vocabulary used by equipment', () => {
     expect(new Set(item_categories).size).toBe(item_categories.length)
+    expect(item_categories.slice(0, equipment_categories.length)).toEqual([...equipment_categories])
     expect(item_categories.filter(is_weapon_category)).toEqual([...weapon_categories])
     expect(weapon_categories.every((category) => equipment_slot_accepts('weapon', category))).toBe(true)
+    expect(rig_slots).toContain('tool')
+    expect(equipment_slot_accepts('tool', 'tool_miner')).toBe(true)
     expect(equipment_slot_accepts('weapon', 'helmet')).toBe(false)
+    expect(item_categories).not.toContain('pet_food')
+    expect(item_is_stackable('pet_food')).toBe(false)
+    expect(item_categories).toContain('rune')
+    expect(item_is_stackable('rune')).toBe(true)
+  })
+
+  test('craft professions derive from strict item categories and preserve authored fallback categories', () => {
+    expect(craft_job_of('helmet')).toBe('ARMORSMITH')
+    expect(craft_job_of('staff')).toBe('STAFF_CARVER')
+    expect(craft_job_of('key')).toBe('HANDYMAN')
+    expect(craft_job_of('consumable')).toBeNull()
+    expect(craft_job_of('resource')).toBeNull()
+  })
+
+  test('craft professions match every Move category branch', () => {
+    const source = readFileSync(resolve(import.meta.dir, '../../move-math/sources/content_rules.move'), 'utf8')
+    const body = source.match(/public fun craft_job_of[\s\S]*?\n}/)?.[0]
+    expect(body).toBeDefined()
+    const move_jobs = new Map<string, string>()
+    for (const branch of body!.matchAll(/(?:if|else if) \((.*?)\) option::some\(b"([A-Z_]+)"/gs))
+      for (const category of branch[1]!.matchAll(/b"([a-z_]+)"/g)) move_jobs.set(category[1]!, branch[2]!)
+
+    expect(item_categories.map((category) => [category, craft_job_of(category)] as const)).toEqual(
+      item_categories.map((category) => [category, move_jobs.get(category) ?? null] as const)
+    )
   })
 })
 
@@ -99,5 +135,26 @@ describe('Dofus donor-fitted gear budget', () => {
     expect(item_budget_stat_weight('vitality', 50)).toBe(50)
     expect(item_budget_stat_weight('action', 1)).toBe(100)
     expect(item_budget_stat_weight('unknown_future_stat', 7)).toBe(7)
+  })
+})
+
+describe('Move rune catalog mirror', () => {
+  test('projects every Move tier amount without a second frontend table', () => {
+    const source = readFileSync(resolve(import.meta.dir, '../../move-math/sources/rune_catalog.move'), 'utf8')
+    const move_amounts = (name: string): readonly number[] => {
+      const body = new RegExp(`const ${name}: vector<u64> = vector\\[([^\\]]+)\\]`).exec(source)?.[1]
+      expect(body).toBeDefined()
+      return body!.split(',').map((value) => Number(value.trim()))
+    }
+
+    for (const [tier, constant] of [
+      ['ba', 'BA_AMOUNT'],
+      ['pa', 'PA_AMOUNT'],
+      ['ra', 'RA_AMOUNT'],
+    ] as const)
+      expect(stat_names.map((stat) => rune_effect(`rune_${stat}_${tier}`)?.amount ?? 0)).toEqual(move_amounts(constant))
+
+    expect(rune_effect('rune_strength_ra')).toEqual({ stat: 'strength', tier: 'ra', amount: 10 })
+    expect(rune_effect('rune_range_pa')).toBeNull()
   })
 })

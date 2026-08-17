@@ -6,7 +6,7 @@
 /// and the package-private template internals only the defining module can own.
 module aresrpg::item;
 
-use aresrpg_math::{item_damages::ItemDamages, item_stats::{Self, ItemStatistics}};
+use aresrpg_math::{content_rules, item_damages::ItemDamages, item_stats::{Self, ItemStatistics}};
 use std::string::String;
 use sui::{
   derived_object,
@@ -52,6 +52,7 @@ public struct ItemTemplate has key {
   item_type: String,
   category: String,
   level: u8,
+  pet_foods: vector<String>,
 }
 
 /// Derivation root for template addresses — one claim per `item_type`, duplicates abort.
@@ -135,6 +136,7 @@ public(package) fun new_template(
   item_type: String,
   category: String,
   level: u8,
+  pet_foods: vector<String>,
 ): ItemTemplate {
   verify_category(category);
   let template = ItemTemplate {
@@ -143,6 +145,7 @@ public(package) fun new_template(
     item_type,
     category,
     level,
+    pet_foods,
   };
   event::emit(TemplateCreated { template: template.id.to_inner(), item_type: template.item_type });
   template
@@ -152,7 +155,7 @@ public(package) fun new_template(
 /// the seeding ever holds a template `&mut` (frozen right after). Gear only; every min ≤ its
 /// max is asserted HERE, before the freeze can seal a poisoned range.
 public(package) fun set_template_stats(template: &mut ItemTemplate, min: ItemStatistics, max: ItemStatistics) {
-  assert!(!is_stackable(template.category), EStackableStats);
+  assert!(!content_rules::is_stackable(&template.category), EStackableStats);
   let (lo, hi) = (min.to_vector(), max.to_vector());
   let mut i = 0;
   while (i < lo.length()) {
@@ -165,7 +168,7 @@ public(package) fun set_template_stats(template: &mut ItemTemplate, min: ItemSta
 
 /// Seeding: author the damage lines on a hot template (weapons). Same possession law.
 public(package) fun set_template_damages(template: &mut ItemTemplate, lines: vector<ItemDamages>) {
-  assert!(!is_stackable(template.category), EStackableStats);
+  assert!(!content_rules::is_stackable(&template.category), EStackableStats);
   dfield::add(&mut template.id, DamagesKey(), lines);
 }
 
@@ -214,7 +217,7 @@ public(package) fun mint_plain(template: &ItemTemplate, amount: u32, ctx: &mut T
 /// on top; `mint_plain` stops here (stat-less by assertion). ONE Item construction home.
 fun mint_base(template: &ItemTemplate, amount: u32, ctx: &mut TxContext): Item {
   assert!(amount >= 1, EWrongAmount);
-  if (amount > 1) assert!(is_stackable(template.category), ENotStackable);
+  if (amount > 1) assert!(content_rules::is_stackable(&template.category), ENotStackable);
   let mut item = Item {
     id: object::new(ctx),
     template: template.id.to_inner(),
@@ -252,7 +255,7 @@ public(package) fun deposit(
 
 /// Merge a whole stack into this one — same template only.
 public(package) fun merge(self: &mut Item, item: Item) {
-  assert!(is_stackable(self.category), ENotStackable);
+  assert!(content_rules::is_stackable(&self.category), ENotStackable);
   assert!(self.template == item.template, EWrongTemplate);
   self.amount = self.amount + item.amount;
   item.destroy();
@@ -261,7 +264,7 @@ public(package) fun merge(self: &mut Item, item: Item) {
 /// Split `amount` units into a fresh stack — never empties the source. The marketplace
 /// listing seam: a lot-rule listing (1/10/100/1000) splits off the seller's big stack.
 public(package) fun split(self: &mut Item, amount: u32, ctx: &mut TxContext): Item {
-  assert!(is_stackable(self.category), ENotStackable);
+  assert!(content_rules::is_stackable(&self.category), ENotStackable);
   assert!(amount >= 1, EWrongAmount);
   assert!(self.amount > amount, EWrongAmount);
   self.amount = self.amount - amount;
@@ -324,11 +327,15 @@ public fun template_id(template: &ItemTemplate): ID { template.id.to_inner() }
 
 public(package) fun template_uid(template: &ItemTemplate): &UID { &template.id }
 
-public(package) fun template_is_stackable(template: &ItemTemplate): bool { is_stackable(template.category) }
+public(package) fun template_is_stackable(template: &ItemTemplate): bool {
+  content_rules::is_stackable(&template.category)
+}
 
 public fun template_type(template: &ItemTemplate): String { template.item_type }
 
 public fun template_category(template: &ItemTemplate): String { template.category }
+
+public(package) fun template_pet_foods(template: &ItemTemplate): &vector<String> { &template.pet_foods }
 
 public fun item_type(self: &Item): String { self.item_type }
 
@@ -357,75 +364,12 @@ public fun has_damages(self: &Item): bool { dfield::exists(&self.id, DamagesKey(
 
 public fun damages(self: &Item): vector<ItemDamages> { *dfield::borrow(&self.id, DamagesKey()) }
 
-/// The craft/forgery job that owns a gear or weapon category — the FROZEN 1.29 category map (seed
-/// SPEC §6). ONE home (owner 2026-08-11): crafting DERIVES a gear recipe's job here — never
-/// seed-authored — and forgemagie's scribe gate reads the SAME map, so a longsword is
-/// `SWORD_SMITH` for both and the two can never drift. `none` = the job is not category-derivable
-/// (consumables split across alchemist/baker), and those recipes carry an authored job.
-public fun craft_job_of(category: String): Option<String> {
-  if (category == b"longsword".to_string() || category == b"sword".to_string() || category == b"daggers".to_string()) option::some(b"SWORD_SMITH".to_string())
-  else if (category == b"axe".to_string() || category == b"battleaxe".to_string()) option::some(b"AXE_SMITH".to_string())
-  else if (category == b"club".to_string() || category == b"mace".to_string()) option::some(b"BLUNT_SMITH".to_string())
-  else if (category == b"staff".to_string() || category == b"spellbook".to_string()) option::some(b"STAFF_CARVER".to_string())
-  else if (category == b"bow".to_string() || category == b"spear".to_string()) option::some(b"BOWYER".to_string())
-  else if (category == b"helmet".to_string() || category == b"chestplate".to_string()) option::some(b"ARMORSMITH".to_string())
-  else if (category == b"pants".to_string() || category == b"boots".to_string()) option::some(b"TAILOR".to_string())
-  else if (category == b"belt".to_string() || category == b"gauntlets".to_string()) option::some(b"TANNER".to_string())
-  else if (category == b"ring".to_string() || category == b"amulet".to_string()) option::some(b"JEWELER".to_string())
-  else if (category == b"key".to_string()) option::some(b"HANDYMAN".to_string())
-  else option::none()
-}
-
-/// Stackability is DERIVED from the category — never a stored flag.
-public fun is_stackable(category: String): bool {
-  category == b"consumable".to_string() ||
-  category == b"resource".to_string() ||
-  category == b"rune".to_string() ||
-  category == b"pet_food".to_string()
-}
-
 // ╔════════════════ [ Private ] ══════════════════════════════════════════════ ]
 
 /// The reconciled category law: gear slots + cosmetics + the 11 weapon families + the 3
 /// gathering tools (dedicated tool slot — never the weapon slot) + the fungibles. No mount.
 fun verify_category(category: String) {
-  assert!(
-    // gear
-    category == b"helmet".to_string() ||
-    category == b"chestplate".to_string() ||
-    category == b"belt".to_string() ||
-    category == b"gauntlets".to_string() ||
-    category == b"pants".to_string() ||
-    category == b"boots".to_string() ||
-    category == b"amulet".to_string() ||
-    category == b"ring".to_string() ||
-    category == b"pet".to_string() ||
-    category == b"relic".to_string() ||
-    // cosmetics
-    category == b"title".to_string() ||
-    category == b"hat".to_string() ||
-    category == b"cloak".to_string() ||
-    // weapon families
-    category == b"longsword".to_string() ||
-    category == b"daggers".to_string() ||
-    category == b"battleaxe".to_string() ||
-    category == b"spear".to_string() ||
-    category == b"staff".to_string() ||
-    category == b"spellbook".to_string() ||
-    category == b"bow".to_string() ||
-    category == b"axe".to_string() ||
-    category == b"mace".to_string() ||
-    category == b"club".to_string() ||
-    category == b"sword".to_string() ||
-    // gathering tools
-    category == b"tool_farmer".to_string() ||
-    category == b"tool_herbalist".to_string() ||
-    category == b"tool_miner".to_string() ||
-    // the stackable fungibles (consumable/resource/rune/pet_food — one home: `is_stackable`)
-    is_stackable(category) ||
-    category == b"key".to_string(),
-    EWrongCategory,
-  );
+  assert!(content_rules::is_category(&category), EWrongCategory);
 }
 
 // ╔════════════════ [ Testing ] ══════════════════════════════════════════════ ]

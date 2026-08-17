@@ -9,7 +9,7 @@
 //     board census or tonight's specimens. They prove the rule generalizes from the CLASS, not from
 //     the incidents. Every fresh fixture is a control capable of failing: each one is a legal program
 //     that only the rule's own machinery distinguishes from its `valid` twin below.
-// Runs under `bun test` (wired into the unit lane via scripts/ares.mjs), same harness as one_pipeline.
+// Runs under `bun test scripts/eslint-rules` — same lane and harness as one_pipeline.
 import { describe, it } from 'bun:test'
 import { RuleTester } from 'eslint'
 

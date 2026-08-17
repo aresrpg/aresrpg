@@ -11,6 +11,7 @@
     "./identity": "./src/identity.ts",
     "./item_power": "./src/item_power.ts",
     "./pet": "./src/pet.ts",
+    "./rune": "./src/rune.ts",
     "./world": "./src/world.ts"
   },
   "scripts": {

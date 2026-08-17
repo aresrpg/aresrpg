@@ -6,8 +6,8 @@
 /// which one resolves.
 module aresrpg::spell_template;
 
-use aresrpg::{character, item::{Self, TemplateRegistry}};
-use aresrpg_math::spell_effect::SpellLevel;
+use aresrpg::item::{Self, TemplateRegistry};
+use aresrpg_math::{content_rules, spell_effect::SpellLevel};
 use std::string::String;
 use sui::{derived_object, event};
 
@@ -35,7 +35,7 @@ public(package) fun new(
   unlock_level: u8,
   levels: vector<SpellLevel>,
 ): SpellTemplate {
-  assert!(character::is_classe(&classe), EBadClasse);
+  assert!(content_rules::is_classe(&classe), EBadClasse);
   assert!(levels.length() >= 1 && levels.length() <= 6, EBadLevels);
   let template = SpellTemplate {
     id: derived_object::claim(item::registry_uid_mut(registry), SpellKey(name)),

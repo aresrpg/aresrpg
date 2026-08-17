@@ -227,6 +227,12 @@ pub struct Checkpoint {
 pub struct World {
     pub id: Id,
     pub name: String,
+    pub content: WorldContent,
+}
+
+/// `world_map::WorldContent` — the immutable authored payload embedded by `world::World`.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct WorldContent {
     pub mobs: Vec<MobRow>,
     pub resources: Vec<ResourceRow>,
     pub dungeon_key: Option<String>,
@@ -234,7 +240,7 @@ pub struct World {
     pub biome_map: BiomeMap,
 }
 
-/// `world::BiomeMap` — one biome id per zone; the spawn filter's ground truth.
+/// `world_map::BiomeMap` — one biome id per zone; the spawn filter's ground truth.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BiomeMap {
     pub zone_x0: u32,
@@ -436,7 +442,7 @@ pub struct MobSnapshot {
     pub loot: Vec<LootEntry>,
 }
 
-/// `mob_template::LootEntry` — embedded in the mob snapshot's table copy.
+/// `mob_data::LootEntry` — embedded in the mob snapshot's table copy.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct LootEntry {
     pub item_type: String,
@@ -539,6 +545,7 @@ pub struct Kolizeum {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Sale {
     pub id: Id,
+    pub item_type: String,
     pub template: Id,
     pub price: u64,
     pub supply: u64,
@@ -548,6 +555,7 @@ pub struct Sale {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Airdrop {
     pub id: Id,
+    pub drop_id: String,
     pub template: Id,
     pub amount_each: u32,
     pub whitelist: VecSet<Addr>,

@@ -100,9 +100,25 @@ const reduce = (state: AppState, input: AppInput): AppState => {
   return state
 }
 
-const observe = ({ dispatch, events, signal }: Parameters<NonNullable<AppModule['observe']>>[0]): void => {
+const observe = ({ dispatch, events, signal, get_state }: Parameters<NonNullable<AppModule['observe']>>[0]): void => {
   if (typeof globalThis.location === 'undefined' || typeof globalThis.history === 'undefined') return
+  let initial_route_read = false
+  let initial_route_scheduled = false
+  const read_route = (): void => dispatch({ type: 'route/changed', pathname: globalThis.location.pathname })
+  const schedule_initial_route = (): void => {
+    if (initial_route_read || initial_route_scheduled || signal.aborted) return
+    initial_route_scheduled = true
+    globalThis.queueMicrotask(() => {
+      initial_route_scheduled = false
+      if (initial_route_read || signal.aborted) return
+      const { auth_ready, auth_status } = get_state().session
+      if (!auth_ready || auth_status === 'connecting') return
+      initial_route_read = true
+      read_route()
+    })
+  }
   events.on('STATE_UPDATED', (state, previous) => {
+    schedule_initial_route()
     const next_pathname = state.navigation.pathname
     if (
       next_pathname === previous.navigation.pathname ||
@@ -111,11 +127,8 @@ const observe = ({ dispatch, events, signal }: Parameters<NonNullable<AppModule[
       return
     globalThis.history.pushState(null, '', next_pathname)
   })
-  const read_route = (): void => dispatch({ type: 'route/changed', pathname: globalThis.location.pathname })
   globalThis.addEventListener('popstate', read_route, { signal })
-  globalThis.queueMicrotask(() => {
-    if (!signal.aborted) read_route()
-  })
+  schedule_initial_route()
 }
 
 export default Object.freeze({ name: 'navigation', reduce, observe }) satisfies AppModule

@@ -12,7 +12,7 @@ import { SpellRow } from '../components/SpellRow.tsx'
 import { StatIdentity } from '../components/StatIdentity.tsx'
 import { spell_icon } from '../content/assets.ts'
 import { encyclopedia_catalog, titleize, type SeedSpell } from '../content/catalog.ts'
-import type { AppCopy } from '../i18n/copy.ts'
+import { stat_name, type AppCopy } from '../i18n/copy.ts'
 import { element_colors } from '../visual_identity.ts'
 import {
   CHARACTER_STATS,
@@ -171,10 +171,10 @@ function StatEditor({ character, copy }: Readonly<{ character: SimulatorCharacte
           const bonus = bonuses[stat] ?? 0
           return (
             <div className="stats__prow" key={stat}>
-              <StatIdentity label={text[`stat_${stat}`]} stat={stat} />
+              <StatIdentity label={stat_name(copy, stat)} stat={stat} />
               <input
                 type="number"
-                aria-label={text[`stat_${stat}`]}
+                aria-label={stat_name(copy, stat)}
                 className="template-input w-16 text-right"
                 value={character[stat]}
                 min={0}
@@ -196,7 +196,7 @@ function StatEditor({ character, copy }: Readonly<{ character: SimulatorCharacte
           const bonus = bonuses[stat] ?? 0
           return bonus === 0 ? null : (
             <div className="stats__prow" key={stat}>
-              <StatIdentity label={text[`stat_${stat}`]} stat={stat} />
+              <StatIdentity label={stat_name(copy, stat)} stat={stat} />
               <span className="stats__prow-bonus"> ({bonus > 0 ? `+${bonus}` : bonus})</span>
             </div>
           )

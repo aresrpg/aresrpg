@@ -6,6 +6,9 @@ import { quality_pixel_ratio } from './quality.ts'
 import { create_hack_presentation } from './hack_presentation.ts'
 import { create_fight_board_layer } from './fight_board.ts'
 import { create_entity_layer } from './entities.ts'
+import { create_fight_presentation } from './fight_presentation.ts'
+import { create_fight_vfx } from './fight_vfx.ts'
+import { project_screen_anchor } from './screen_projection.ts'
 import type { EngineBackend } from './backend.ts'
 import type { EnginePresentation, EngineQuality, Vec3 } from './types.ts'
 
@@ -20,6 +23,8 @@ export const create_grid_fallback = (
   const camera = new PerspectiveCamera(48, 1, 0.1, 3000)
   const fight_board = create_fight_board_layer({ scene, camera, canvas })
   const entities = create_entity_layer({ scene })
+  const fight_vfx = create_fight_vfx({ scene, entities })
+  const fight_presentation = create_fight_presentation({ entities, vfx: fight_vfx })
   const presentation = create_hack_presentation(scene)
   let quality = initial_quality
   let flattened = false
@@ -52,6 +57,7 @@ export const create_grid_fallback = (
     presentation.tick(delta_seconds, camera)
     fight_board.tick(now)
     entities.tick(now)
+    fight_vfx.tick(now)
     renderer.render(scene, camera)
   }
 
@@ -74,6 +80,12 @@ export const create_grid_fallback = (
       entities.set_board(board)
     },
     set_entities: entities.set,
+    animate_entity: entities.animate,
+    play_fight_cue: fight_presentation.play,
+    project_entity: (id) => {
+      const anchor = entities.world_anchor(id)
+      return anchor ? project_screen_anchor(anchor, camera, canvas.getBoundingClientRect()) : null
+    },
     upsert_fight_blob: fight_board.upsert_blob,
     remove_fight_blob: fight_board.remove_blob,
     pick_fight_cell: fight_board.pick,
@@ -94,6 +106,7 @@ export const create_grid_fallback = (
     flattened: () => flattened,
     dispose: () => {
       fight_board.dispose()
+      fight_vfx.dispose()
       entities.dispose()
       presentation.dispose()
       renderer.dispose()

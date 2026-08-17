@@ -28,6 +28,7 @@ mod tests {
     use std::collections::BTreeMap;
     use std::fmt::Write as _;
     use std::path::{Path, PathBuf};
+    use std::process::Command;
 
     use move_binary_format::binary_config::BinaryConfig;
     use move_binary_format::file_format::{CompiledModule, SignatureToken, StructFieldInformation};
@@ -50,10 +51,6 @@ mod tests {
         ("version", "Version"),
         ("world", "World"),
         // embedded value types
-        ("world", "MobRow"),
-        ("world", "ResourceRow"),
-        ("world", "DungeonRoom"),
-        ("world", "RoomMob"),
         ("world", "Checkpoint"),
         ("zone", "ZoneKey"),
         ("zone", "Zone"),
@@ -63,7 +60,6 @@ mod tests {
         ("progression", "Hp"),
         ("forgemagie", "ForgeState"),
         ("pet", "FeedState"),
-        ("mob_template", "LootEntry"),
         ("fight", "Fighter"),
         ("fight", "FighterKind"),
         ("fight", "MobSnapshot"),
@@ -137,11 +133,18 @@ mod tests {
         ("combat_grid", "GridSpec"),
         ("spell_effect", "Effect"),
         ("spell_effect", "SpellLevel"),
+        ("world_map", "WorldContent"),
+        ("world_map", "BiomeMap"),
+        ("world_map", "MobRow"),
+        ("world_map", "ResourceRow"),
+        ("world_map", "DungeonRoom"),
+        ("world_map", "RoomMob"),
+        ("mob_data", "LootEntry"),
     ];
 
     /// Events the projection DELIBERATELY does not route — each entry needs a
     /// reason. Empty today: everything the chain emits is on the wire.
-    const DEFERRED_EVENTS: &[(&str, &str)] = &[];
+    const DEFERRED_EVENTS: &[(&str, &str)] = &[("world", "WorldCreated")];
 
     fn repo_root() -> PathBuf {
         Path::new(env!("CARGO_MANIFEST_DIR"))
@@ -180,6 +183,59 @@ mod tests {
             build_dir.display()
         );
         modules
+    }
+
+    #[test]
+    fn game_package_keeps_publish_headroom() {
+        // The testnet dry run rejected 96,111 raw bytes as a 103,109-byte package object.
+        // Keeping raw bytecode below 95 KB leaves room for Sui's linkage/type-origin metadata.
+        const MAX_GAME_BYTECODE_BYTES: u64 = 95_000;
+
+        let root = repo_root();
+        let install_dir =
+            std::env::temp_dir().join(format!("aresrpg-size-gate-{}", std::process::id()));
+        if install_dir.exists() {
+            std::fs::remove_dir_all(&install_dir).expect("removing stale package-size build");
+        }
+        let output = Command::new("sui")
+            .args([
+                "move",
+                "build",
+                "--path",
+                "packages/move",
+                "--build-env",
+                "testnet",
+                "--warnings-are-errors",
+                "--install-dir",
+            ])
+            .arg(&install_dir)
+            .current_dir(&root)
+            .output()
+            .expect("running the production package-size build");
+        assert!(
+            output.status.success(),
+            "production package-size build failed:\n{}\n{}",
+            String::from_utf8_lossy(&output.stdout),
+            String::from_utf8_lossy(&output.stderr)
+        );
+        let build_dir = install_dir.join("build/aresrpg/bytecode_modules");
+        let bytes = std::fs::read_dir(&build_dir)
+            .expect("listing game bytecode modules")
+            .map(|entry| entry.expect("game bytecode module entry").path())
+            .filter(|path| path.extension().is_some_and(|extension| extension == "mv"))
+            .map(|path| {
+                std::fs::metadata(&path)
+                    .expect("reading game bytecode module metadata")
+                    .len()
+            })
+            .sum::<u64>();
+        std::fs::remove_dir_all(&install_dir).expect("removing package-size build");
+
+        assert!(
+            bytes <= MAX_GAME_BYTECODE_BYTES,
+            "game bytecode is {bytes} bytes; the {MAX_GAME_BYTECODE_BYTES}-byte budget leaves \
+             room for Sui package metadata under the 102,400-byte object limit"
+        );
     }
 
     /// Render a type compactly: primitives lowercase, datatypes as

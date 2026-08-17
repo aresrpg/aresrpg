@@ -12,8 +12,8 @@
 //   TT1 frontend src   — packages/frontend/tsconfig.json via projectService (allowJs: the .js game
 //                        tree rides the same program for free; tests are excluded THERE, so the
 //                        block must exclude them too or the parse fatals)
-//   TT2 out-of-project — /tsconfig.lint.json (frontend e2e/dev, api sponsor +
-//                        gas-pool): `files` globs here MUST mirror that tsconfig's `include`
+//   TT2 out-of-project — /tsconfig.lint.json (frontend e2e/dev): `files` globs here MUST mirror
+//                        that tsconfig's `include`
 //   TT3 strong-typed clean surfaces — the promise family promoted to ERROR where measured 0
 //   TT4 tests          — typed mutation family off (choreography, mirrors fp_law T5); the promise
 //                        family STAYS ON in tests: a missing await is a false-green generator
@@ -96,7 +96,7 @@ export default [
   {
     // TT2 — surfaces no package tsconfig covers, typed via /tsconfig.lint.json. Globs mirror its
     // `include` — extend both together or project-mode parsing fatals on the stray file.
-    files: ['packages/frontend/e2e/**/*.ts', 'packages/frontend/dev/**/*.ts', 'api/**/*.{js,mjs}'],
+    files: ['packages/frontend/e2e/**/*.ts', 'packages/frontend/dev/**/*.ts'],
     plugins: typed_plugins,
     languageOptions: {
       parserOptions: { project: ['tsconfig.lint.json'], tsconfigRootDir: REPO_ROOT },
@@ -105,7 +105,7 @@ export default [
   },
   {
     // TT3 — the promise family at ERROR where measured 0 on strong-typed .ts surfaces
-    // (frontend e2e + dev plugins). The JS surfaces (api, frontend src) stay WARN:
+    // (frontend e2e + dev plugins). The JS frontend source stays WARN:
     // their 0s ride weaker inference, and a later JSDoc improvement surfacing latent hits must not
     // redden someone else's lane — promote per the burn-down protocol instead.
     files: ['packages/frontend/e2e/**/*.ts', 'packages/frontend/dev/**/*.ts'],

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
-import type { Receipt } from './cache.ts'
+import { receipt_digest_or_null, type Receipt } from './cache.ts'
 
 const WINDOW_MS = 24 * 60 * 60 * 1_000
 const STORAGE_PREFIX = 'aresrpg:sdk:gas:24h'
@@ -17,9 +17,6 @@ const browser_storage = (): StorageLike | null => {
     return null
   }
 }
-
-const digest_of = (receipt: Receipt): string | null =>
-  receipt.Transaction?.digest ?? receipt.FailedTransaction?.digest ?? receipt.digest ?? null
 
 const gas_used_of = (receipt: Receipt) =>
   receipt.Transaction?.effects?.gasUsed ??
@@ -90,7 +87,7 @@ export const create_gas_ledger = ({
 
   return Object.freeze({
     record: (receipt: Receipt): void => {
-      const digest = digest_of(receipt)
+      const digest = receipt_digest_or_null(receipt)
       const mist = gas_mist_from_receipt(receipt)
       if (!digest || mist === null) return
       const entries = read()

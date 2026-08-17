@@ -178,6 +178,32 @@ public fun apply_raw(self: &ItemStatistics, new_raw: &vector<u64>): ItemStatisti
   from_vector(out)
 }
 
+/// Scale every signed magnitude away from neutral by `numerator / denominator`.
+public fun scale_from_center(
+  self: &ItemStatistics,
+  numerator: u64,
+  denominator: u64,
+): ItemStatistics {
+  let center = SHIFT;
+  from_vector(self.to_vector().map!(|value| {
+    if (value >= center) {
+      center + ((((value - center) as u64) * numerator / denominator) as u16)
+    } else {
+      center - ((((center - value) as u64) * numerator / denominator) as u16)
+    }
+  }))
+}
+
+public fun apply_centered_to_base(base: u64, centered: u64): u64 {
+  let center = SHIFT as u64;
+  if (centered >= center) {
+    base + (centered - center)
+  } else {
+    let penalty = center - centered;
+    if (penalty >= base) 1 else base - penalty
+  }
+}
+
 // ╔════════════════ [ Reads ] ════════════════════════════════════════════════ ]
 
 public fun vitality(self: &ItemStatistics): u16 { self.vitality }

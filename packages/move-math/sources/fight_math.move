@@ -8,7 +8,7 @@
 /// instead (never previewable). This module computes; it never stores.
 module aresrpg_math::fight_math;
 
-use aresrpg_math::prng;
+use aresrpg_math::{prng, spell_effect::Effect};
 use std::string::String;
 
 const CRIT_SCALE: u64 = 10000; // fixed-point scale (basis points)
@@ -60,10 +60,18 @@ public fun heal_amount(base: u64, intelligence: u64): u64 {
 
 // ╔════════════════ [ The turn-seed slot streams (client-previewable) ] ══════ ]
 
-/// Slot `i`'s raw crit draw — index-bound only (kills cross-target fishing). `crit_at`
-/// reduces it against the live quotation.
-public fun slot_crit_roll(turn_seed: u64, slot: u64): u64 {
-  prng::mix(prng::mix(turn_seed, slot), DOMAIN_CRIT)
+/// One stable raw crit draw for a spell during this turn. The canonical spell name separates
+/// equal-rate spells; target and cast slot are deliberately absent so aiming and repeated casts
+/// cannot reroll it. `crit_at` reduces this draw against the live quotation.
+public fun spell_crit_roll(turn_seed: u64, spell_name: &String): u64 {
+  let bytes = spell_name.as_bytes();
+  let mut roll = prng::mix(turn_seed, DOMAIN_CRIT);
+  let mut i = 0;
+  while (i < bytes.length()) {
+    roll = prng::mix(roll, bytes[i] as u64);
+    i = i + 1;
+  };
+  roll
 }
 
 /// The prng STATE a cast's per-effect draws (chance rolls, damage picks — PER TARGET, the
@@ -87,6 +95,51 @@ public fun apply_centered_resistance(damage: u64, centered: u64, center: u64): u
 public fun roll_in_range(min: u64, max: u64, roll: u64): u64 {
   if (max <= min) return min;
   min + roll * (max - min + 1) / CRIT_SCALE
+}
+
+public fun roll_effect_value(effect: &Effect, state: &mut u64): u64 {
+  let min = effect.value() as u64;
+  let max = effect.value_max() as u64;
+  if (max <= min) return min;
+  roll_in_range(min, max, prng::draw(state) % CRIT_SCALE)
+}
+
+public fun band_scaled(base: u64, min_level: u64, max_level: u64, level: u64): u64 {
+  if (max_level == min_level) return base;
+  base * 7 * ((max_level - min_level) + (level - min_level)) / (10 * (max_level - min_level))
+}
+
+public fun apply_centered_shift(base: u64, centered: u64, center: u64): u64 {
+  let combined = base + centered;
+  if (combined > center) combined - center else 0
+}
+
+public fun weave_teams(teams: vector<u8>): vector<u64> {
+  let mut side_a = vector[];
+  let mut side_b = vector[];
+  let mut index = 0;
+  while (index < teams.length()) {
+    if (teams[index] == 0) side_a.push_back(index) else side_b.push_back(index);
+    index = index + 1;
+  };
+  let side_a_count = side_a.length();
+  let side_b_count = side_b.length();
+  let mut order = vector[];
+  let mut a = 0;
+  let mut b = 0;
+  while (a < side_a_count || b < side_b_count) {
+    let take_a = if (a >= side_a_count) false
+    else if (b >= side_b_count) true
+    else (side_a_count - a) * side_b_count >= (side_b_count - b) * side_a_count;
+    if (take_a) {
+      order.push_back(side_a[a]);
+      a = a + 1;
+    } else {
+      order.push_back(side_b[b]);
+      b = b + 1;
+    };
+  };
+  order
 }
 
 /// The QUOTATION law (owner 2026-08-10 — never percent): a cast crits 1 time in X. The DENOMINATOR

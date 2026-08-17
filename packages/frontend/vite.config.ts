@@ -12,6 +12,8 @@ import { parse } from 'yaml'
 
 import { resolve_env, type PublicEnv } from './src/env.ts'
 import { seed_dev_plugin } from './seed_dev_server.ts'
+import { deployment_dev_plugin } from './deployment_dev_server.ts'
+import { sound_assets_plugin } from './sound_assets.ts'
 
 const frontend_dir = dirname(fileURLToPath(import.meta.url))
 const repo_dir = resolve(frontend_dir, '../..')
@@ -57,8 +59,12 @@ export default defineConfig(({ mode }) => {
     plugins: [
       html_env_plugin(env),
       yaml_plugin(),
+      sound_assets_plugin(resolve(repo_dir, 'seed/sounds')),
       ...(mode === 'development'
-        ? [seed_dev_plugin({ repo_dir, content_dir: resolve(repo_dir, 'seed/content') })]
+        ? [
+            seed_dev_plugin({ repo_dir, content_dir: resolve(repo_dir, 'seed/content') }),
+            deployment_dev_plugin({ repo_dir }),
+          ]
         : []),
       react(),
       tailwindcss(),

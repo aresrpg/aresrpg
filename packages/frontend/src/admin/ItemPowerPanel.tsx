@@ -22,7 +22,7 @@ export const ItemPowerPanel = ({ value }: Readonly<{ value: JsonValue }>) => {
   const p10 = scale_position(power.p10, power.hard_max)
   const p90 = scale_position(power.p90, power.hard_max)
   return (
-    <section className="border-l-2 border-[#c8963c]/55 bg-[#c8963c]/[0.025] px-4 py-3">
+    <section className="border-l-2 border-[#c8963c]/55 bg-[#c8963c]/[0.025] px-4 py-3" data-item-power="">
       <div className="mb-3 flex items-start justify-between gap-4">
         <div>
           <h2 className="text-[9px] tracking-[0.16em] text-[#c8963c] uppercase">Dofus item power</h2>

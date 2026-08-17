@@ -2,18 +2,30 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
 import { useMemo, useState } from 'react'
-import { Gift, Hammer, Package, Skull, Sparkles, Store, type LucideIcon } from 'lucide-react'
+import { Gift, Package, Skull, Sparkles, Store, type LucideIcon } from 'lucide-react'
+import { craft_job_of } from '@aresrpg/immutable'
 
 import { item_icon, mob_icon, spell_icon } from '../content/assets.ts'
 import { item_detail_icon } from '../content/item_detail_assets.ts'
 import type { SeedSpell } from '../content/catalog.ts'
 import { SpellCard } from '../encyclopedia/SpellCard.tsx'
 import { dispatch_app, useAppStore } from '../store.ts'
+import { item_category_colors } from '../visual_identity.ts'
 
 import { ContentEntityEditor } from './ContentEntityEditor.tsx'
+import { titleize_field } from './ContentFields.tsx'
+import type { SeedFileDraft, SeedEditorStatus } from './admin_state.ts'
+import {
+  content_navigation_domains,
+  content_row_category,
+  content_row_level,
+  filter_content_rows,
+  item_category_rows,
+  order_content_rows,
+} from './content_list.ts'
+import type { ItemRecipeBinding } from './ItemRecipeEditor.tsx'
 import { RawJsonEditor } from './RawJsonEditor.tsx'
 import {
-  admin_content_domains,
   entity_asset_reference,
   entity_rows,
   is_readonly_seed_path,
@@ -21,26 +33,105 @@ import {
   type EntityAssetReference,
   type JsonPath,
   type JsonValue,
+  type SeedEntityRow,
 } from './seed_editor.ts'
 
 const action_class =
   'h-8 cursor-pointer border border-[#4a9eff]/35 bg-[#4a9eff]/7 px-3 text-[8px] tracking-[0.14em] text-[#67adff] uppercase hover:border-[#4a9eff]/65 disabled:cursor-not-allowed disabled:opacity-35'
 
-const content_domains = admin_content_domains.filter(({ id }) => id !== 'worlds')
+const same_json = (left: JsonValue | null, right: JsonValue | null): boolean =>
+  JSON.stringify(left) === JSON.stringify(right)
+
+const item_recipe_binding = (
+  selected: SeedEntityRow | undefined,
+  recipes_file: SeedFileDraft | undefined,
+  status: SeedEditorStatus,
+  saving_domain: string | null
+): ItemRecipeBinding | undefined => {
+  if (!selected || !recipes_file) return undefined
+  const recipe_rows = entity_rows('recipes', recipes_file.value)
+  const saved_recipe_rows = entity_rows('recipes', recipes_file.saved_value)
+  const recipe_row = recipe_rows.find(({ id }) => id === selected.id)
+  const saved_recipe_row = saved_recipe_rows.find(({ id }) => id === selected.id)
+  const replace_file = (value: JsonValue): void =>
+    dispatch_app({ type: 'admin/editor_value_changed', domain: 'recipes', path: [], value })
+
+  return Object.freeze({
+    value: recipe_row?.value ?? null,
+    change: (path: JsonPath, value: JsonValue): void => {
+      if (!recipe_row) return
+      dispatch_app({
+        type: 'admin/editor_value_changed',
+        domain: 'recipes',
+        path: Object.freeze([...recipe_row.path, ...path]),
+        value,
+      })
+    },
+    category_changed: (category: string): void => {
+      if (
+        !recipe_row ||
+        recipe_row.value === null ||
+        typeof recipe_row.value !== 'object' ||
+        Array.isArray(recipe_row.value)
+      )
+        return
+      const { job, ...recipe } = recipe_row.value as Readonly<Record<string, JsonValue>>
+      const derived_job = craft_job_of(category)
+      dispatch_app({
+        type: 'admin/editor_value_changed',
+        domain: 'recipes',
+        path: recipe_row.path,
+        value: Object.freeze(derived_job ? recipe : { ...recipe, job: typeof job === 'string' ? job : '' }),
+      })
+    },
+    create: (): void => {
+      if (!Array.isArray(recipes_file.value) || recipe_row) return
+      replace_file(
+        Object.freeze([
+          ...recipes_file.value,
+          Object.freeze({
+            output_type: selected.id,
+            inputs: Object.freeze({}),
+            ...(craft_job_of(content_row_category(selected)) ? {} : { job: '' }),
+          }),
+        ])
+      )
+    },
+    remove: (): void => {
+      if (!Array.isArray(recipes_file.value) || !recipe_row) return
+      const index = Number(recipe_row.path[0])
+      replace_file(Object.freeze(recipes_file.value.filter((_, row_index) => row_index !== index)))
+    },
+    reset: (): void => {
+      if (!Array.isArray(recipes_file.value)) return
+      if (!recipe_row && saved_recipe_row) {
+        replace_file(Object.freeze([...recipes_file.value, saved_recipe_row.value]))
+        return
+      }
+      if (!recipe_row) return
+      const index = Number(recipe_row.path[0])
+      replace_file(
+        saved_recipe_row
+          ? Object.freeze(
+              recipes_file.value.map((row, row_index) => (row_index === index ? saved_recipe_row.value : row))
+            )
+          : Object.freeze(recipes_file.value.filter((_, row_index) => row_index !== index))
+      )
+    },
+    save: (): void => dispatch_app({ type: 'admin/editor_save', domain: 'recipes' }),
+    dirty: !same_json(recipe_row?.value ?? null, saved_recipe_row?.value ?? null),
+    file_dirty: recipes_file.dirty,
+    saving: status === 'saving' && saving_domain === 'recipes',
+  })
+}
+
 const domain_icons: Readonly<Record<string, LucideIcon>> = Object.freeze({
   airdrop: Gift,
   items: Package,
   mobs: Skull,
-  recipes: Hammer,
   shop: Store,
   spells: Sparkles,
 })
-
-const spell_unlock_level = (value: JsonValue): number | null => {
-  if (value === null || typeof value !== 'object' || Array.isArray(value)) return null
-  const level = (value as Readonly<Record<string, JsonValue>>).unlock_level
-  return typeof level === 'number' ? level : null
-}
 
 const icon_url = (reference: EntityAssetReference | null, detail = false): string | null => {
   if (!reference) return null
@@ -70,21 +161,18 @@ const EntityIcon = ({
 export const ContentPage = () => {
   const editor = useAppStore((state) => state.admin.editor)
   const [raw, set_raw] = useState(false)
+  const [item_category, set_item_category] = useState<string | null>(null)
   const file = editor.files[editor.domain]
-  const rows = useMemo(() => {
-    const source = file ? entity_rows(editor.domain, file.value) : []
-    if (editor.domain !== 'spells') return source
-    return source.toSorted(
-      (left, right) =>
-        (spell_unlock_level(left.value) ?? 0) - (spell_unlock_level(right.value) ?? 0) ||
-        left.label.localeCompare(right.label)
-    )
-  }, [editor.domain, file])
-  const filtered = useMemo(() => {
-    const query = editor.query.trim().toLowerCase()
-    return query ? rows.filter(({ label }) => label.toLowerCase().includes(query)) : rows
-  }, [editor.query, rows])
-  const selected = rows.find(({ id }) => id === editor.entity_id) ?? filtered[0] ?? rows[0]
+  const rows = useMemo(
+    () => order_content_rows(editor.domain, file ? entity_rows(editor.domain, file.value) : []),
+    [editor.domain, file]
+  )
+  const categories = useMemo(() => (editor.domain === 'items' ? item_category_rows(rows) : []), [editor.domain, rows])
+  const filtered = useMemo(
+    () => filter_content_rows(rows, editor.query, editor.domain === 'items' ? item_category : null),
+    [editor.domain, editor.query, item_category, rows]
+  )
+  const selected = filtered.find(({ id }) => id === editor.entity_id) ?? filtered[0]
   const show_raw = raw && editor.domain !== 'spells'
 
   if (editor.status === 'loading' || editor.status === 'idle')
@@ -161,11 +249,23 @@ export const ContentPage = () => {
     })
     dispatch_app({ type: 'admin/editor_entity_selected', entity_id: null })
   }
+  const item_recipe = item_recipe_binding(
+    editor.domain === 'items' ? selected : undefined,
+    editor.files.recipes,
+    editor.status,
+    editor.saving_domain
+  )
 
   return (
-    <div className="grid min-h-0 flex-1 grid-cols-[150px_260px_minmax(420px,1fr)] overflow-hidden max-xl:grid-cols-[130px_220px_minmax(360px,1fr)]">
+    <div
+      className={`grid min-h-0 flex-1 overflow-hidden ${
+        editor.domain === 'items'
+          ? 'grid-cols-[140px_150px_250px_minmax(420px,1fr)] max-xl:grid-cols-[120px_130px_210px_minmax(360px,1fr)]'
+          : 'grid-cols-[150px_260px_minmax(420px,1fr)] max-xl:grid-cols-[130px_220px_minmax(360px,1fr)]'
+      }`}
+    >
       <nav className="overflow-y-auto border-r border-white/8 bg-black/10 py-3">
-        {content_domains.map((domain) => {
+        {content_navigation_domains.map((domain) => {
           const domain_file = editor.files[domain.id]
           const count = domain_file ? entity_rows(domain.id, domain_file.value).length : 0
           const DomainIcon = domain_icons[domain.id]!
@@ -192,6 +292,51 @@ export const ContentPage = () => {
         })}
       </nav>
 
+      {editor.domain === 'items' && (
+        <aside
+          className="min-h-0 overflow-y-auto border-r border-white/8 bg-black/[0.04] py-3"
+          data-item-category-column=""
+        >
+          <button
+            className={`flex w-full items-center justify-between border-l-2 px-3 py-2 text-left text-[8px] uppercase ${
+              item_category === null
+                ? 'border-[#c8963c] bg-[#c8963c]/7 text-[#efbd45]'
+                : 'border-transparent text-[#747883] hover:bg-white/[0.025] hover:text-[#d8d3ca]'
+            }`}
+            onClick={() => {
+              set_item_category(null)
+              dispatch_app({ type: 'admin/editor_entity_selected', entity_id: null })
+            }}
+            type="button"
+          >
+            <span>All items</span>
+            <span className="tabular-nums opacity-55">{rows.length}</span>
+          </button>
+          {categories.map(({ category, count }) => {
+            const color = item_category_colors[category] ?? '#777b86'
+            return (
+              <button
+                className={`flex w-full items-center justify-between border-l-2 px-3 py-2 text-left text-[8px] uppercase ${
+                  item_category === category
+                    ? 'bg-white/[0.035] text-[#e8e4dc]'
+                    : 'border-transparent text-[#747883] hover:bg-white/[0.025] hover:text-[#d8d3ca]'
+                }`}
+                key={category}
+                onClick={() => {
+                  set_item_category(category)
+                  dispatch_app({ type: 'admin/editor_entity_selected', entity_id: null })
+                }}
+                style={item_category === category ? { borderColor: color } : undefined}
+                type="button"
+              >
+                <span className="truncate">{titleize_field(category)}</span>
+                <span className="tabular-nums opacity-55">{count}</span>
+              </button>
+            )
+          })}
+        </aside>
+      )}
+
       <aside className="flex min-h-0 flex-col border-r border-white/8 bg-black/[0.06]">
         <div className="border-b border-white/8 p-3">
           <input
@@ -217,9 +362,9 @@ export const ContentPage = () => {
             >
               <EntityIcon reference={entity_asset_reference(editor.domain, row.value)} />
               <span className="min-w-0 flex-1 truncate">{row.label}</span>
-              {editor.domain === 'spells' && spell_unlock_level(row.value) !== null && (
+              {content_row_level(editor.domain, row) !== null && (
                 <span className="shrink-0 text-[7px] text-[#626670] uppercase">
-                  Lv. {spell_unlock_level(row.value)}
+                  Lv. {content_row_level(editor.domain, row)}
                 </span>
               )}
             </button>
@@ -306,6 +451,7 @@ export const ContentPage = () => {
                   is_readonly={(path) => is_readonly_seed_path(editor.domain, path)}
                   key={selected.id}
                   on_change={replace}
+                  item_recipe={item_recipe}
                   save={() => dispatch_app({ type: 'admin/editor_save', domain: editor.domain })}
                   value={selected.value}
                 />

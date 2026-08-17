@@ -10,6 +10,7 @@ import { EventEmitter } from 'node:events'
 import { Redis } from 'ioredis'
 
 import { REDIS_URL } from './env.ts'
+import { INDEXED_CHECKPOINT_KEY, parse_indexed_checkpoint } from './indexing_health.ts'
 import logger from './logger.ts'
 
 const log = logger(import.meta)
@@ -25,6 +26,8 @@ export type Pubsub = {
   heartbeat: (server_id: string, online: number) => Promise<void>
   /** Cluster-wide online count — the sum of every live `server:*` key (cached 4s). */
   cluster_online: () => Promise<number>
+  /** Latest checkpoint the indexer committed to both graph and Redis. */
+  indexed_checkpoint: () => Promise<number | null>
   close: () => void
 }
 
@@ -33,6 +36,7 @@ const publisher = new Redis(REDIS_URL)
 const emitter = new EventEmitter()
 emitter.setMaxListeners(0)
 const refs = new Map<string, number>()
+const pending_subscriptions = new Map<string, Promise<unknown>>()
 /** one SCAN per pod per window, whatever the connection count */
 const online_cache = { value: 0, at_ms: 0 }
 
@@ -50,9 +54,27 @@ export const pubsub: Pubsub = {
   subscribe: async (channel) => {
     const count = refs.get(channel) ?? 0
     refs.set(channel, count + 1)
-    if (count === 0) await subscriber.subscribe(channel)
+    if (count > 0) {
+      await pending_subscriptions.get(channel)
+      return
+    }
+    const pending = subscriber.subscribe(channel)
+    pending_subscriptions.set(channel, pending)
+    try {
+      await pending
+    } catch (error) {
+      // a refused SUBSCRIBE must not strand the refcount — later callers would silently
+      // believe the wire is live
+      const held = refs.get(channel) ?? 0
+      if (held <= 1) refs.delete(channel)
+      else refs.set(channel, held - 1)
+      throw error
+    } finally {
+      pending_subscriptions.delete(channel)
+    }
   },
   unsubscribe: async (channel) => {
+    await pending_subscriptions.get(channel)
     const count = refs.get(channel) ?? 0
     if (count <= 1) {
       refs.delete(channel)
@@ -78,6 +100,14 @@ export const pubsub: Pubsub = {
     online_cache.value = counts.reduce((sum, count) => sum + (Number(count) || 0), 0)
     online_cache.at_ms = Date.now()
     return online_cache.value
+  },
+  indexed_checkpoint: async () => {
+    try {
+      return parse_indexed_checkpoint(await publisher.get(INDEXED_CHECKPOINT_KEY))
+    } catch (error) {
+      log.warn({ error: (error as Error).message }, 'indexer checkpoint marker is malformed')
+      return null
+    }
   },
   close: () => {
     subscriber.disconnect()

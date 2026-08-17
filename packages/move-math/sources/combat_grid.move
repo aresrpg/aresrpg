@@ -801,3 +801,61 @@ fun split_at(v: &vector<u64>, at: u64): (vector<u64>, vector<u64>) {
   };
   (head, tail)
 }
+
+/// The neighbouring cell strictly closer on a distance field, tie-breaking by cell index.
+public fun best_step(current: u64, field: &vector<u64>): Option<u64> {
+  let mut best = option::none();
+  let mut best_value = field[current];
+  let mut direction = 0u8;
+  while (direction < 4) {
+    let step = step_cell(current, direction);
+    if (step.is_some()) {
+      let cell = step.destroy_some();
+      let value = field[cell];
+      if (value < best_value || (value == best_value && best.is_some() && cell < *best.borrow())) {
+        best = option::some(cell);
+        best_value = value;
+      };
+    };
+    direction = direction + 1;
+  };
+  best
+}
+
+public fun closed_mask(board: &GridSpec): vector<u64> {
+  let shape = board.shape_mask();
+  let mut closed = empty_mask();
+  let mut cell = 0;
+  while (cell < GRID_CELLS) {
+    if (!mask_get(&shape, cell)) mask_set(&mut closed, cell);
+    cell = cell + 1;
+  };
+  mask_add_cells(&mut closed, &board.obstacles());
+  mask_add_cells(&mut closed, &board.holes());
+  closed
+}
+
+public fun travel_order(
+  targets: vector<u64>,
+  fighter_cells: &vector<u64>,
+  pivot: u64,
+  push: bool,
+): vector<u64> {
+  let mut sorted = targets;
+  let count = sorted.length();
+  let mut index = 0;
+  while (index < count) {
+    let mut best = index;
+    let mut candidate = index + 1;
+    while (candidate < count) {
+      let candidate_distance = manhattan(fighter_cells[sorted[candidate]], pivot);
+      let best_distance = manhattan(fighter_cells[sorted[best]], pivot);
+      let ahead = if (push) candidate_distance > best_distance else candidate_distance < best_distance;
+      if (ahead || (candidate_distance == best_distance && sorted[candidate] < sorted[best])) best = candidate;
+      candidate = candidate + 1;
+    };
+    sorted.swap(index, best);
+    index = index + 1;
+  };
+  sorted
+}

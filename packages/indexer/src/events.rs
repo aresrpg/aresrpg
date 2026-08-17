@@ -211,11 +211,11 @@ events! {
         => |_: &KolizeumPaid| "evt:kolizeum".to_string(),
 
     // ── economy ──
-    shop::SaleBought { sale: Id, buyer: Addr, quantity: u64, paid: u64 }
+    shop::SaleBought { sale: Id, item_type: String, buyer: Addr, quantity: u64, paid: u64, supply: u64 }
         => |_: &SaleBought| "evt:economy".to_string(),
     shop::AirdropCreated { airdrop: Id, template: Id, addresses: u64 }
         => |_: &AirdropCreated| "evt:economy".to_string(),
-    shop::AirdropClaimed { airdrop: Id, claimer: Addr }
+    shop::AirdropClaimed { airdrop: Id, drop_id: String, claimer: Addr, remaining: u64 }
         => |_: &AirdropClaimed| "evt:economy".to_string(),
     shop::GiftcardMinted { giftcard: Id, template: Id, amount: u32 }
         => |_: &GiftcardMinted| "evt:economy".to_string(),
@@ -304,21 +304,27 @@ mod tests {
         #[derive(serde::Serialize)]
         struct Wire {
             sale: [u8; 32],
+            item_type: String,
             buyer: [u8; 32],
             quantity: u64,
             paid: u64,
+            supply: u64,
         }
         let bytes = bcs::to_bytes(&Wire {
             sale: [2; 32],
+            item_type: "berserk".to_string(),
             buyer: [3; 32],
             quantity: 10,
             paid: 15_000_000_000,
+            supply: 76,
         })
         .unwrap();
         let routed = route("shop", "SaleBought", &bytes).unwrap().unwrap();
         assert_eq!(routed.topic, "evt:economy");
         assert_eq!(routed.data["paid"], "15000000000");
         assert_eq!(routed.data["quantity"], "10");
+        assert_eq!(routed.data["item_type"], "berserk");
+        assert_eq!(routed.data["supply"], "76");
     }
 
     #[test]

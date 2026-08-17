@@ -1,15 +1,19 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-// The SDK factory — WRITE-ONLY and ZERO-ROUNDTRIP after hydration: it composes PTBs whose every
-// input is PRE-RESOLVED (owner 2026-08-12: Sui finality is sub-second, so must every tx be —
-// no resolution RPC may sit between intent and submission). It never reads game state (reads
-// are the indexer's job) and carries zero content. Pins come from the ONE committed repo-root
-// pins.json. One sanctioned bootstrap roundtrip exists: `hydrate()` — everything after rides
-// receipts.
+// The SDK factory — WRITE-ONLY: it composes PTBs whose game-object inputs are PRE-RESOLVED.
+// It never reads game state (reads are the indexer's job) and carries zero content. Pins come
+// from the ONE committed repo-root pins.json. `hydrate()` seeds game refs; the Sui core client
+// separately resolves gas payment and budget because wallet coin state is its concern.
 
 import { KioskClient, TransferPolicyTransaction, type KioskOwnerCap, type TransferPolicyCap } from '@mysten/kiosk'
 import { SuiGraphQLClient } from '@mysten/sui/graphql'
-import { Transaction, type TransactionObjectArgument } from '@mysten/sui/transactions'
+import { SuiGrpcClient } from '@mysten/sui/grpc'
+import {
+  Transaction,
+  type TransactionArgument,
+  type TransactionObjectArgument,
+  type TransactionPlugin,
+} from '@mysten/sui/transactions'
 import { fromBase64 } from '@mysten/sui/utils'
 import type { Signer } from '@mysten/sui/cryptography'
 
@@ -22,6 +26,7 @@ import {
   absorb_object,
   owned_ref,
   receipt_digest,
+  receipt_gas_ref,
   shared_ref,
   type Receipt,
   type FetchedObject,
@@ -36,22 +41,42 @@ export * from './ptb.ts'
 export * from './cache.ts'
 export * from './gas.ts'
 
-const DEFAULT_GAS_BUDGET = 50_000_000n
-
 export type SharedPin = { id: string | null; shared_version: string | null }
-export type Pins = Record<string, SharedPin | string | null | undefined> & { package?: string | null }
+export type Pins = Record<string, SharedPin | string | null | undefined | Readonly<Record<string, SharedPin>>> & {
+  package?: string | null
+}
+
+const is_shared_pin = (value: unknown): value is Readonly<{ id: string; shared_version: string }> =>
+  typeof value === 'object' &&
+  value !== null &&
+  typeof Reflect.get(value, 'id') === 'string' &&
+  typeof Reflect.get(value, 'shared_version') === 'string'
 
 /**
  * The transport the SDK needs — the modern CORE interface, identical on the gRPC and GraphQL
  * clients (`client.core.*`; JSON-RPC is dead — owner 2026-08-12). Structural on purpose so any
- * flavor or test fake fits: hydrate + simulate + execute, NEVER resolution.
+ * flavor or test fake fits: hydrate + resolve gas + simulate + execute.
  */
 export interface SuiTransport {
   core: {
-    getBalance?: (input: { owner: string }) => Promise<{ balance: { balance: string | bigint } }>
+    resolveTransactionPlugin: () => TransactionPlugin
+    getProtocolConfig?: () => Promise<{
+      protocolConfig: { protocolVersion: string; attributes: Record<string, string | null> }
+    }>
+    getBalance: (input: { owner: string }) => Promise<{
+      balance: { balance: string | bigint; addressBalance?: string | bigint; coinBalance?: string | bigint }
+    }>
+    getCurrentSystemState: () => Promise<{
+      systemState: { epoch: string; referenceGasPrice: string }
+    }>
+    getChainIdentifier: () => Promise<{ chainIdentifier: string }>
     getReferenceGasPrice: () => Promise<{ referenceGasPrice: string | bigint }>
-    listCoins: (input: { owner: string; coinType?: string; limit?: number }) => Promise<{ objects: FetchedObject[] }>
-    getObjects: (input: { objectIds: string[] }) => Promise<{ objects: FetchedObject[] }>
+    listCoins: (input: { owner: string; coinType?: string; limit?: number; cursor?: string | null }) => Promise<{
+      objects: FetchedObject[]
+      cursor?: string | null
+      hasNextPage?: boolean
+    }>
+    getObjects: (input: { objectIds: string[]; include?: { json?: boolean } }) => Promise<{ objects: FetchedObject[] }>
     simulateTransaction: (input: { transaction: Uint8Array; include?: object }) => Promise<Receipt>
     executeTransaction: (input: { transaction: Uint8Array; signatures: string[]; include?: object }) => Promise<Receipt>
   }
@@ -76,9 +101,11 @@ export type SdkOptions = {
   network?: SdkNetwork
   /** constructs the production GraphQL transport when client is omitted */
   graphql_url?: string
+  /** Sui gRPC endpoint used to resolve transaction gas and validity */
+  rpc_url?: string
   /** override for tests/local publishes; defaults to pins.json[network] */
   pins?: Pins
-  /** default budget in MIST (fixed, never dry-run derived) */
+  /** optional explicit budget in MIST; otherwise the Sui resolver estimates it */
   gas_budget?: bigint
 }
 
@@ -95,6 +122,18 @@ export type DoorCtx = {
   obj: (tx: Transaction, value: Resolvable, mutable: boolean) => TransactionObjectArgument
   pin: (tx: Transaction, key: string, mutable: boolean) => TransactionObjectArgument
   receiving: (tx: Transaction, value: Resolvable) => TransactionObjectArgument
+  pure: {
+    id: (tx: Transaction, value: string) => TransactionArgument
+    address: (tx: Transaction, value: string) => TransactionArgument
+    bool: (tx: Transaction, value: boolean) => TransactionArgument
+    u8: (tx: Transaction, value: number) => TransactionArgument
+    u16: (tx: Transaction, value: number) => TransactionArgument
+    u32: (tx: Transaction, value: number) => TransactionArgument
+    u64: (tx: Transaction, value: bigint | number | string) => TransactionArgument
+    string: (tx: Transaction, value: string) => TransactionArgument
+    option: (tx: Transaction, type: string, value: unknown) => TransactionArgument
+    vector: (tx: Transaction, type: string, value: readonly unknown[]) => TransactionArgument
+  }
 }
 
 type GeneratedDoor = (tx: Transaction, context: DoorCtx, args: never) => unknown
@@ -143,12 +182,19 @@ export function SDK({
   sign_transaction,
   network = 'testnet',
   graphql_url,
+  rpc_url,
   pins = (PINS as Record<string, Pins>)[network],
-  gas_budget = DEFAULT_GAS_BUDGET,
+  gas_budget,
 }: SdkOptions = {}) {
   const sui_client =
-    client ?? (graphql_url ? (new SuiGraphQLClient({ network, url: graphql_url }) as unknown as SuiTransport) : null)
-  if (!sui_client) throw new Error('[sdk] SDK({ client }) or SDK({ graphql_url }) — a chain transport is required')
+    client ??
+    (rpc_url
+      ? (new SuiGrpcClient({ network, baseUrl: rpc_url }) as unknown as SuiTransport)
+      : graphql_url
+        ? (new SuiGraphQLClient({ network, url: graphql_url }) as unknown as SuiTransport)
+        : null)
+  if (!sui_client)
+    throw new Error('[sdk] SDK({ client }), SDK({ rpc_url }), or SDK({ graphql_url }) needs a chain transport')
   if (!pins) throw new Error(`[sdk] unknown network "${network}" — pins.json carries no entry for it`)
 
   // the kiosk client rides the same transport (structurally identical at the core seam)
@@ -157,11 +203,11 @@ export function SDK({
     network,
   })
   const cache = create_cache()
-  const gas: { price: bigint | null; coin: string | null } = { price: null, coin: null }
-  let execution_hydration: Promise<void> | null = null
+  const pure_inputs = new WeakMap<Transaction, Map<string, TransactionArgument>>()
   let execution_tail: Promise<unknown> = Promise.resolve()
-  const gas_ledger = create_gas_ledger({ address: address ?? signer?.toSuiAddress() ?? null, network })
+  let latest_gas_ref: ReturnType<typeof receipt_gas_ref> = undefined
   const sender = address ?? signer?.toSuiAddress() ?? null
+  const gas_ledger = create_gas_ledger({ address: sender, network })
   const balance = create_balance_cache({
     get_balance: async (owner) => {
       if (!sui_client.core.getBalance) throw new Error('[sdk] transport does not support balance reads')
@@ -170,7 +216,7 @@ export function SDK({
     },
   })
 
-  // ── the resolver: cache → pre-resolved input; unknown → THROW (zero-roundtrip law) ──────
+  // ── game-object resolver: cache → pre-resolved input; unknown → THROW ──────────────────
   const resolve = (tx: Transaction, value: Resolvable, mutable: boolean): TransactionObjectArgument => {
     if (typeof value !== 'string') {
       // already an in-PTB argument (a result, a resolved input) or an explicit ref object
@@ -188,6 +234,23 @@ export function SDK({
     )
   }
 
+  const intern_pure = (
+    tx: Transaction,
+    type: string,
+    value: unknown,
+    create: () => TransactionArgument
+  ): TransactionArgument => {
+    const values = pure_inputs.get(tx) ?? new Map<string, TransactionArgument>()
+    if (!pure_inputs.has(tx)) pure_inputs.set(tx, values)
+    const encoded = JSON.stringify(value, (_key, entry) => (typeof entry === 'bigint' ? `${entry}n` : entry))
+    const key = `${type}:${encoded}`
+    const existing = values.get(key)
+    if (existing) return existing
+    const input = create()
+    values.set(key, input)
+    return input
+  }
+
   const ctx: DoorCtx = {
     pins: new Proxy(pins, {
       get(target, key) {
@@ -200,9 +263,13 @@ export function SDK({
     obj: resolve,
     pin: (tx, key, mutable) => {
       const entry = pins[key]
-      if (typeof entry !== 'object' || !entry?.id || !entry?.shared_version)
+      if (!is_shared_pin(entry))
         throw new Error(`[sdk] missing pin "${key}" — pins.json carries no id for it on this network`)
-      return tx.sharedObjectRef({ objectId: entry.id, initialSharedVersion: String(entry.shared_version), mutable })
+      return tx.sharedObjectRef({
+        objectId: String(entry.id),
+        initialSharedVersion: String(entry.shared_version),
+        mutable,
+      })
     },
     receiving: (tx, value) => {
       const ref = typeof value === 'string' ? owned_ref(cache, value) : value
@@ -212,44 +279,48 @@ export function SDK({
         )
       return tx.receivingRef(ref)
     },
+    pure: {
+      id: (tx, value) => intern_pure(tx, 'id', value, () => tx.pure.id(value)),
+      address: (tx, value) => intern_pure(tx, 'address', value, () => tx.pure.address(value)),
+      bool: (tx, value) => intern_pure(tx, 'bool', value, () => tx.pure.bool(value)),
+      u8: (tx, value) => intern_pure(tx, 'u8', value, () => tx.pure.u8(value)),
+      u16: (tx, value) => intern_pure(tx, 'u16', value, () => tx.pure.u16(value)),
+      u32: (tx, value) => intern_pure(tx, 'u32', value, () => tx.pure.u32(value)),
+      u64: (tx, value) => intern_pure(tx, 'u64', value, () => tx.pure.u64(value)),
+      string: (tx, value) => intern_pure(tx, 'string', value, () => tx.pure.string(value)),
+      option: (tx, type, value) =>
+        intern_pure(tx, `option:${type}`, value, () => tx.pure.option(type as never, value as never)),
+      vector: (tx, type, value) =>
+        intern_pure(tx, `vector:${type}`, value, () => tx.pure.vector(type as never, [...value] as never)),
+    },
   }
 
   type DoorName = keyof typeof doors.DOORS
   const bound_doors = bind_doors(doors, ctx)
 
-  // ── the ONE sanctioned roundtrip: seed refs, gas price, and the gas coin ────────────────
+  // ── the ONE sanctioned roundtrip: seed object refs. Sui cold-resolves gas. ─────────────
   const hydrate_objects = async (ids: readonly string[]) => {
-    if (!ids.length) return cache
-    const { objects } = await sui_client.core.getObjects({ objectIds: [...ids] })
-    for (const row of objects) absorb_object(cache, row)
-    return cache
-  }
-
-  const hydrate = async (ids: readonly string[] = [], wallet_address?: string) => {
-    const owner = wallet_address ?? sender ?? undefined
-    const [{ referenceGasPrice }, coins] = await Promise.all([
-      sui_client.core.getReferenceGasPrice(),
-      owner ? sui_client.core.listCoins({ owner, limit: 1 }) : { objects: [] as FetchedObject[] },
-      hydrate_objects(ids),
-    ])
-    gas.price = BigInt(referenceGasPrice)
-    const [coin] = coins.objects
-    if (coin?.objectId) {
-      gas.coin = coin.objectId
-      absorb_object(cache, coin)
+    const groups = Array.from({ length: Math.ceil(ids.length / 10) }, (_, index) =>
+      ids.slice(index * 10, index * 10 + 10)
+    )
+    for (const group of groups) {
+      const { objects } = await sui_client.core.getObjects({ objectIds: group })
+      for (const row of objects) absorb_object(cache, row)
     }
     return cache
   }
 
-  const ensure_execution_hydrated = async (): Promise<void> => {
-    if (gas.price !== null && gas.coin !== null) return
-    execution_hydration ??= hydrate().then(() => undefined)
-    try {
-      await execution_hydration
-    } finally {
-      execution_hydration = null
-    }
-    if (gas.coin === null) throw new Error('[sdk] execute needs an owned SUI gas coin')
+  const hydrate = async (ids: readonly string[] = []) => {
+    await hydrate_objects(ids)
+    return cache
+  }
+
+  /** Fetch only the ids the cache does not already know — shared objects keep their initial
+   *  version for life, so a known ref is never worth a second network read. */
+  const hydrate_unknown = async (ids: readonly string[]) => {
+    const unknown = [...new Set(ids)].filter((id) => !owned_ref(cache, id) && !shared_ref(cache, id))
+    if (unknown.length) await hydrate_objects(unknown)
+    return cache
   }
 
   // A failed result's honest message, whatever depth the error hides at.
@@ -265,16 +336,14 @@ export function SDK({
   }
 
   // ── execute: fully-formed tx in, sub-second receipt out — and a tx that would FAIL never
-  // leaves the client (owner 2026-08-12): sign ONCE (offline when hydrated), SIMULATE the exact
+  // leaves the client (owner 2026-08-12): resolve gas, sign ONCE, SIMULATE the exact
   // bytes, refuse on any simulated failure (zero gas, no digest), then submit those same bytes.
   // An EXECUTED failure still throws and is never auto-retried (a digest exists = gas burned).
-  const prepare_transaction = async (tx: Transaction, sender: string, { budget = gas_budget } = {}) => {
-    tx.setSenderIfNotSet(sender)
-    if (gas.price) tx.setGasPrice(gas.price)
-    tx.setGasBudgetIfNotSet(budget)
-    const gas_ref = gas.coin ? owned_ref(cache, gas.coin) : undefined
-    if (gas_ref) tx.setGasPayment([gas_ref])
-    return tx.toJSON({ supportedIntents: [], client: sui_client as never })
+  const prepare_transaction = async (tx: Transaction, sender_address: string, { budget = gas_budget } = {}) => {
+    tx.setSenderIfNotSet(sender_address)
+    if (budget !== undefined) tx.setGasBudgetIfNotSet(budget)
+    if (latest_gas_ref && !tx.getData().gasData.payment) tx.setGasPayment([latest_gas_ref])
+    await tx.build({ client: sui_client as never })
   }
 
   const execute_signed = async (
@@ -292,10 +361,12 @@ export function SDK({
       signatures: [signature],
       include: { effects: true, events: true, ...include },
     })
+    const fresh_gas_ref = sender ? receipt_gas_ref(receipt, sender) : undefined
+    if (fresh_gas_ref !== undefined) latest_gas_ref = fresh_gas_ref
     gas_ledger.record(receipt)
     if (sender) balance.invalidate(sender)
     if (receipt?.$kind === 'FailedTransaction') {
-      absorb_receipt(cache, receipt) // gas coin still mutated — keep it fresh
+      absorb_receipt(cache, receipt) // owned game objects the failed tx still touched stay fresh
       throw new Error(`[sdk] transaction ${receipt_digest(receipt)} failed on-chain: ${failure_of(receipt)}`)
     }
     absorb_receipt(cache, receipt)
@@ -307,9 +378,8 @@ export function SDK({
     { budget = gas_budget, include }: { budget?: bigint; include?: object } = {}
   ): Promise<Receipt> => {
     if (!sender) throw new Error('[sdk] simulate needs an address')
-    await ensure_execution_hydrated()
     await prepare_transaction(tx, sender, { budget })
-    const bytes = await tx.build({ client: sui_client as never })
+    const bytes = await tx.build()
     return sui_client.core.simulateTransaction({ transaction: bytes, include: { effects: true, ...include } })
   }
 
@@ -318,13 +388,17 @@ export function SDK({
     { budget = gas_budget, include }: { budget?: bigint; include?: object } = {}
   ) => {
     if (!sender) throw new Error('[sdk] execute needs an address')
-    await ensure_execution_hydrated()
     await prepare_transaction(tx, sender, { budget })
-    const signed = signer
-      ? await tx.sign({ client: sui_client as never, signer })
-      : sign_transaction
-        ? await sign_transaction(tx)
-        : null
+    if (sign_transaction) {
+      const unsigned = await tx.build()
+      const preflight = await sui_client.core.simulateTransaction({
+        transaction: unsigned,
+        include: { effects: true },
+      })
+      const refusal = failure_of(preflight)
+      if (refusal !== null) throw new Error(`[sdk] dry run failed — transaction NOT submitted (zero gas): ${refusal}`)
+    }
+    const signed = signer ? await tx.sign({ signer }) : sign_transaction ? await sign_transaction(tx) : null
     if (!signed) throw new Error('[sdk] execute needs a signer')
     const { bytes, signature } = signed
     return execute_signed(bytes, signature, { include })
@@ -366,9 +440,25 @@ export function SDK({
     sui_client,
     hydrate,
     hydrate_objects,
+    hydrate_unknown,
     get_owned_kiosks: (address: string) => kiosk_client.getOwnedKiosks({ address }),
     get_owned_transfer_policies: (address: string) => kiosk_client.getOwnedTransferPolicies({ address }),
     get_transfer_policies: (type: string) => kiosk_client.getTransferPolicies({ type }),
+    transfer_policy_transaction: (transaction: Transaction, rule_package?: string) =>
+      new TransferPolicyTransaction({
+        kioskClient: rule_package
+          ? new KioskClient({
+              client: sui_client as ConstructorParameters<typeof KioskClient>[0]['client'],
+              network,
+              packageIds: {
+                royaltyRulePackageId: rule_package,
+                kioskLockRulePackageId: rule_package,
+                personalKioskRulePackageId: rule_package,
+              },
+            })
+          : kiosk_client,
+        transaction,
+      }),
     withdraw_transfer_policy: (tx: Transaction, cap: TransferPolicyCap, recipient: string) =>
       new TransferPolicyTransaction({ kioskClient: kiosk_client, transaction: tx, cap }).withdraw(recipient),
     simulate,

@@ -70,6 +70,8 @@ export const claim_marketplace_royalties = async (sdk: MarketplaceAdminSdk, addr
   const receipt = await sdk.execute(transaction)
   return Object.freeze({
     digest: receipt_digest(receipt),
+    // the balances as READ when the claim was composed — royalties accruing between the read
+    // and the execution land on-chain but are not counted here (display only, never settlement)
     amount_mist: claimable.reduce((sum, { balance_mist }) => sum + balance_mist, 0n),
     policies: Object.freeze(claimable.map(({ kind }) => kind)),
   })

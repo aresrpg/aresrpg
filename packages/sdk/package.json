@@ -17,6 +17,8 @@
     "./character": "./src/character.ts",
     "./balance": "./src/balance.ts",
     "./marketplace-admin": "./src/marketplace_admin.ts",
+    "./deployment-admin": "./src/deployment_admin.ts",
+    "./shop": "./src/shop.ts",
     "./sui-transfer": "./src/sui_transfer.ts"
   },
   "scripts": {

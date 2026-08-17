@@ -20,19 +20,24 @@ describe('game settings', () => {
     expect(load_game_settings('medium', null, memory_storage('{'))).toEqual({
       quality: 'medium',
       flat_mode: false,
+      music_enabled: true,
     })
   })
 
-  test('loads and saves quality and flat mode together', () => {
+  test('loads and saves display and music preferences together', () => {
     const storage = memory_storage()
-    save_game_settings({ quality: 'high', flat_mode: true }, storage)
+    save_game_settings({ quality: 'high', flat_mode: true, music_enabled: false }, storage)
 
-    expect(load_game_settings('low', null, storage)).toEqual({ quality: 'high', flat_mode: true })
+    expect(load_game_settings('low', null, storage)).toEqual({ quality: 'high', flat_mode: true, music_enabled: false })
   })
 
   test('a valid development override wins without erasing flat mode', () => {
     const storage = memory_storage(JSON.stringify({ quality: 'low', flat_mode: true }))
 
-    expect(load_game_settings('medium', 'high', storage)).toEqual({ quality: 'high', flat_mode: true })
+    expect(load_game_settings('medium', 'high', storage)).toEqual({
+      quality: 'high',
+      flat_mode: true,
+      music_enabled: true,
+    })
   })
 })
