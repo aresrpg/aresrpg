@@ -65,7 +65,31 @@ const weighted_type = (pack: CompiledStructurePack, roll: number): CompiledStruc
   ).type
 }
 
+/** Cell memo — a candidate is a pure function of (world, pack, cell); every chunk whose search
+ *  margin covers the cell re-asks the exact same question, so the answer is computed once. */
+const candidate_caches = new WeakMap<CompiledWorld, Map<string, StructurePlacement | null>>()
+
 const candidate = (
+  world: CompiledWorld,
+  pack: CompiledStructurePack,
+  cell_x: number,
+  cell_z: number
+): StructurePlacement | null => {
+  let cache = candidate_caches.get(world)
+  if (!cache) {
+    cache = new Map()
+    candidate_caches.set(world, cache)
+  }
+  const key = `${pack.name}:${cell_x}:${cell_z}`
+  const cached = cache.get(key)
+  if (cached !== undefined) return cached
+  if (cache.size >= 65_536) cache.clear()
+  const placement = compute_candidate(world, pack, cell_x, cell_z)
+  cache.set(key, placement)
+  return placement
+}
+
+const compute_candidate = (
   world: CompiledWorld,
   pack: CompiledStructurePack,
   cell_x: number,

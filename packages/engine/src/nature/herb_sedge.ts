@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 // Sedge — a few tall, strictly upright stalks; one carries a dark seed head. Reads as reeds and
-// meadow accents between the drifting tall-grass clumps.
+// grassland accents between the drifting tall-grass clumps.
 
 import { pixel_cross, randint, type PixelCell, type SpriteBuilder } from './sprite_kit.ts'
 

@@ -79,7 +79,7 @@ const smoothstep_01 = (low: number, high: number, value: number): number => {
   return amount * amount * (3 - 2 * amount)
 }
 
-/** Two octaves + a sharpening band: broad meadow waves with true bare gaps, never a linear
+/** Two octaves + a sharpening band: broad grassland waves with true bare gaps, never a linear
  * gradient (an even sprinkle reads as poles; a single smooth field reads as a slow fade). */
 const PATCH_PERIOD_BROAD = 96
 const PATCH_PERIOD_FINE = 24
@@ -150,7 +150,7 @@ const derive_colors = (
     }
     case 'flower': {
       // Only the HUE derives from the ground — petals force full saturation and brightness,
-      // otherwise a muted meadow breeds grey blooms (owner 2026-08-19: "grey, feels a bit sad").
+      // otherwise a muted field breeds grey blooms (owner 2026-08-19: "grey, feels a bit sad").
       const [surface_hue] = rgb_to_hsv(colors.surface)
       const petal_hue = (surface_hue + (100 + roll * 200) / 360) % 1
       return { color: scale_rgb(colors.surface, 0.55), accent: hsv_to_rgb([petal_hue, 0.85, 0.95]) }

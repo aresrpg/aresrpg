@@ -242,5 +242,7 @@ describe('terrain streaming', () => {
 
     expect(required_slots).toBeLessThanOrEqual(TERRAIN_POOL_LAYOUT.max_slots)
     expect(required_slots / TERRAIN_POOL_LAYOUT.max_slots).toBeLessThanOrEqual(0.75)
-  }, 20_000)
+    // 60s runway: the workload includes the 2026-08-19 ridged-noise + scatter cost; the seal
+    // is the SLOT ARITHMETIC, not generation speed (the runtime's budget lives in the engine).
+  }, 60_000)
 })

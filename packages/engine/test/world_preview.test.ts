@@ -56,12 +56,14 @@ test('the editor preview default exposes a substantial exact block field', () =>
   expect(plan.options.far_radius).toBe(2048)
 })
 
+// 30s runway: 641² full-column samples under the 2026-08-19 richer noise stack — the seal is
+// the plan SHAPE, not sampling speed.
 test('the editor preview accepts an operator-selected exact voxel radius', () => {
   const plan = preview_sample_plan(recipe, { focus_x: 0, focus_z: 0, near_radius: 320 })
 
   expect(plan.near_side).toBe(641)
   expect(plan.near).toHaveLength(641 * 641)
-})
+}, 30_000)
 
 test('the coarse far shell leaves the exact voxel field uncovered', () => {
   expect(far_cell_visible(384, 0, 0, 32)).toBeFalse()

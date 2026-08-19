@@ -318,7 +318,28 @@ const land_at = (biome: CompiledBiome, ground: number, transition: number): Biom
     return threshold <= ground && knot.land ? knot.land : selected
   }, biome.landscape[0]!.land!)
 
+/** Column memo — the sampler is pure and every stage of a chunk's build (structure search,
+ *  generation halo, ground scatter) plus physics and the minimap ask for overlapping columns;
+ *  one bounded cache at the SOURCE means nobody ever pays the climate stack twice. */
+const COLUMN_CACHE_CAP = 262_144
+const column_caches = new WeakMap<CompiledWorld, Map<number, WorldColumn>>()
+
 export const sample_world_column = (world: CompiledWorld, x: number, z: number): WorldColumn => {
+  let cache = column_caches.get(world)
+  if (!cache) {
+    cache = new Map()
+    column_caches.set(world, cache)
+  }
+  const key = x * 200_003 + z
+  const cached = cache.get(key)
+  if (cached !== undefined) return cached
+  if (cache.size >= COLUMN_CACHE_CAP) cache.clear()
+  const column = sample_column_uncached(world, x, z)
+  cache.set(key, column)
+  return column
+}
+
+const sample_column_uncached = (world: CompiledWorld, x: number, z: number): WorldColumn => {
   const climate = world.sample_climate(x, z)
   const influences = biome_influences(world, climate)
   const [{ biome }] = influences

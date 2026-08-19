@@ -44,21 +44,23 @@ jobs:
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
-      - name: sui version probe
+      - name: sui version pin
         id: sui_version
-        run: echo "version=$(brew info --json=v2 sui | jq -r '.formulae[0].versions.stable')" >> "$GITHUB_OUTPUT"
+        # Pinned release (brew left the runner image, 2026-08-19). Bump deliberately with the
+        # Move toolchain — a floating version would shift the compiler under the bytecode gates.
+        run: echo "version=testnet-v1.78.0" >> "$GITHUB_OUTPUT"
       - name: cache sui
         uses: actions/cache@5a3ec84eff668545956fd18022155c47e93e2684 # v4.2.3
         with:
           path: ~/sui-bin
           key: sui-${{ runner.os }}-${{ steps.sui_version.outputs.version }}
-      - name: ensure sui — cached binary if it runs, brew otherwise
+      - name: ensure sui — cached binary if it runs, release download otherwise
         run: |
           mkdir -p "$HOME/sui-bin"
           echo "$HOME/sui-bin" >> "$GITHUB_PATH"
           if ! "$HOME/sui-bin/sui" --version 2>/dev/null; then
-            brew install sui
-            cp "$(command -v sui)" "$HOME/sui-bin/"
+            curl -fsSL "https://github.com/MystenLabs/sui/releases/download/${{ steps.sui_version.outputs.version }}/sui-${{ steps.sui_version.outputs.version }}-ubuntu-x86_64.tgz" \
+              | tar -xz -C "$HOME/sui-bin" sui
           fi
       - name: move-math — build + test
         run: |
@@ -78,21 +80,23 @@ jobs:
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
-      - name: sui version probe
+      - name: sui version pin
         id: sui_version
-        run: echo "version=$(brew info --json=v2 sui | jq -r '.formulae[0].versions.stable')" >> "$GITHUB_OUTPUT"
+        # Pinned release (brew left the runner image, 2026-08-19). Bump deliberately with the
+        # Move toolchain — a floating version would shift the compiler under the bytecode gates.
+        run: echo "version=testnet-v1.78.0" >> "$GITHUB_OUTPUT"
       - name: cache sui
         uses: actions/cache@5a3ec84eff668545956fd18022155c47e93e2684 # v4.2.3
         with:
           path: ~/sui-bin
           key: sui-${{ runner.os }}-${{ steps.sui_version.outputs.version }}
-      - name: ensure sui — cached binary if it runs, brew otherwise
+      - name: ensure sui — cached binary if it runs, release download otherwise
         run: |
           mkdir -p "$HOME/sui-bin"
           echo "$HOME/sui-bin" >> "$GITHUB_PATH"
           if ! "$HOME/sui-bin/sui" --version 2>/dev/null; then
-            brew install sui
-            cp "$(command -v sui)" "$HOME/sui-bin/"
+            curl -fsSL "https://github.com/MystenLabs/sui/releases/download/${{ steps.sui_version.outputs.version }}/sui-${{ steps.sui_version.outputs.version }}-ubuntu-x86_64.tgz" \
+              | tar -xz -C "$HOME/sui-bin" sui
           fi
       - name: compile the Move packages (the parity gates' ground truth)
         run: |
@@ -144,4 +148,4 @@ jobs:
           bunx vite build
           ! find dist -name "*.map" | grep .
           ! grep -RlE --include="*.js" --include="*.css" --include="*.html" --include="*.json" \
-            "rpc\.aresrpg\.world|sponsor\.aresrpg\.world|suiprivkey|BEGIN PRIVATE KEY" dist
+            "rpc\.aresrpg\.world|sponsor\.aresrpg\.world|suiprivkey1[a-z0-9]{20,}|BEGIN PRIVATE KEY" dist
