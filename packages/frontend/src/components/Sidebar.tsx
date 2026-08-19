@@ -15,6 +15,7 @@ import {
   type LucideIcon,
 } from 'lucide-react'
 
+import { version } from '../../package.json'
 import type { AppCopy } from '../i18n/copy.ts'
 import type { Network } from '../env.ts'
 import type { Page } from '../modules/navigation.ts'
@@ -55,11 +56,16 @@ export const Sidebar = ({ copy, page, open_page, address, network }: SidebarProp
         <span className="bg-[linear-gradient(135deg,#fad9b3_0%,#d4a145_50%,#f0c474_100%)] bg-clip-text text-[11px] font-bold tracking-[0.3em] text-transparent uppercase">
           AresRPG
         </span>
-        {network === 'testnet' && (
-          <span className="border border-[#ff5a8b]/45 bg-[#ff5a8b]/10 px-1.5 py-px text-[7px] font-black tracking-[0.25em] text-[#ff6fa8] uppercase shadow-[0_0_10px_rgba(255,90,139,0.12)]">
-            {copy.network_testnet}
+        <span className="flex items-center gap-1.5">
+          {network === 'testnet' && (
+            <span className="border border-[#ff5a8b]/45 bg-[#ff5a8b]/10 px-1.5 py-px text-[7px] font-black tracking-[0.25em] text-[#ff6fa8] uppercase shadow-[0_0_10px_rgba(255,90,139,0.12)]">
+              {copy.network_testnet}
+            </span>
+          )}
+          <span className="border border-white/12 bg-white/4 px-1.5 py-px text-[7px] font-black tracking-[0.25em] text-[#8d9099] uppercase">
+            v{version}
           </span>
-        )}
+        </span>
       </span>
     </div>
     <nav className="flex min-h-0 flex-1 flex-col py-3">
