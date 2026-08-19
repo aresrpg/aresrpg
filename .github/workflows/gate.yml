@@ -44,6 +44,11 @@ jobs:
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          # This job reads only the Move packages — never the 1.8GB asset tree.
+          sparse-checkout: |
+            packages/move
+            packages/move-math
       - name: sui version pin
         id: sui_version
         # Pinned release (brew left the runner image, 2026-08-19). Bump deliberately with the
@@ -82,6 +87,12 @@ jobs:
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          # Indexer + the Move packages its parity gates compile — never the asset tree.
+          sparse-checkout: |
+            packages/move
+            packages/move-math
+            packages/indexer
       - name: sui version pin
         id: sui_version
         # Pinned release (brew left the runner image, 2026-08-19). Bump deliberately with the
