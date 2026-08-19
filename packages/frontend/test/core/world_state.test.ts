@@ -67,6 +67,18 @@ test('players appear, move by id, and leave — a move for an unknown player is 
   expect(state.players['0xc2']).toBeUndefined()
 })
 
+test('a visible slot change folds onto the known presence row — unknown ids are dropped', () => {
+  const state = fold([
+    { type: 'packet/player_appeared', player: presence('0xc1', 10, 10) },
+    { type: 'packet/player_equipment', character_id: '0xc1', slot: 'hat', item_type: 'straw_hat' },
+    { type: 'packet/player_equipment', character_id: '0xc1', slot: 'pet', item_type: 'tofu' },
+    { type: 'packet/player_equipment', character_id: '0xghost', slot: 'hat', item_type: 'straw_hat' },
+  ])
+
+  expect(state.players['0xc1']).toMatchObject({ hat: 'straw_hat', pet: 'tofu' })
+  expect(state.players['0xghost']).toBeUndefined()
+})
+
 test('zone spawns fold by zone and project to client-space markers', () => {
   const state = fold([
     {

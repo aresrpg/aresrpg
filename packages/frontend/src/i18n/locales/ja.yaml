@@ -51,6 +51,8 @@ page_pending_title: このページは再構築中です
 page_pending_body: 正しく復元する間も、この場所は表示し続けます。
 welcome_title: AresRPG へようこそ
 welcome_body: AresRPG は、プレイヤー主導の経済を持つ完全オンチェーン MMORPG です。最初のキャラクターを作り、世界に入ってモンスターと戦いましょう。
+welcome_need_sui: プレイには少額の SUI が必要です — すべてのアクションはオンチェーン取引で、最初のキャラクター作成には {{price}} SUI かかります。下のアドレスに SUI を入金して始めましょう。
+insufficient_sui: ウォレットの SUI が不足しています
 create_character: キャラクター作成
 create_title: キャラクターを作成
 create_lead: クラス、色、名前を選んでください。背景では世界がすでに動いています。

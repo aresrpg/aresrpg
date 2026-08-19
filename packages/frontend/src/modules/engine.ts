@@ -13,6 +13,7 @@ import {
   type ChainAnchor,
 } from '../game/core/position_store.ts'
 import { read_pose, subscribe_pose } from '../game/core/pose_feed.ts'
+import { create_presence_renderer } from '../game/presence_entities.ts'
 import { world_terrain } from '../content/worlds.ts'
 import type { AppInput, AppModule, AppState } from '../store.ts'
 
@@ -68,6 +69,7 @@ const selected_world = (state: AppState): string | null =>
 const observe = ({ events, dispatch, get_state, signal }: Parameters<NonNullable<AppModule['observe']>>[0]): void => {
   let canvas: HTMLCanvasElement | null = null
   let world: ReturnType<typeof create_world> | null = null
+  let presence: ReturnType<typeof create_presence_renderer> | null = null
   let unsubscribe_status: (() => void) | null = null
   let generation = 0
   let mounted_world_name: string | null | undefined
@@ -146,17 +148,24 @@ const observe = ({ events, dispatch, get_state, signal }: Parameters<NonNullable
     )
   }
 
+  const sync_presence = (state: AppState): void => {
+    presence?.update(state.world.players, state.session.selected_character_id)
+  }
+
   const sync = (state: AppState): void => {
     sync_activity(state)
     sync_settings(state)
     sync_target(state)
     sync_character(state)
+    sync_presence(state)
   }
 
   const dispose_world = (): void => {
     generation += 1
     character_generation += 1
     character_key = null
+    presence?.dispose()
+    presence = null
     unsubscribe_status?.()
     unsubscribe_status = null
     world?.dispose()
@@ -193,6 +202,7 @@ const observe = ({ events, dispatch, get_state, signal }: Parameters<NonNullable
           quality: get_state().settings.quality,
         })
         world = created
+        presence = create_presence_renderer({ submit: created.set_entities, entity_height: created.entity_height })
         unsubscribe_status = created.subscribe_status((status) => dispatch({ type: 'engine/status', status }))
         sync(get_state())
         if (import.meta.env.DEV)
@@ -254,6 +264,7 @@ const observe = ({ events, dispatch, get_state, signal }: Parameters<NonNullable
     if (world_changed && canvas) mount(canvas)
     else if (selection_changed || target_became_available) sync_target(state)
     if (selection_changed || state.session.characters !== previous.session.characters) sync_character(state)
+    if (selection_changed || state.world.players !== previous.world.players) sync_presence(state)
   })
   signal.addEventListener('abort', () => {
     writer.flush()

@@ -59,6 +59,8 @@ export type AppCopy = Readonly<{
   page_pending_body: string
   welcome_title: string
   welcome_body: string
+  welcome_need_sui: string
+  insufficient_sui: string
   create_character: string
   create_title: string
   create_lead: string

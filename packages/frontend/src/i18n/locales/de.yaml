@@ -51,6 +51,8 @@ page_pending_title: Diese Seite wird neu aufgebaut
 page_pending_body: Ihr Platz bleibt sichtbar, während wir sie sauber wiederherstellen.
 welcome_title: Willkommen bei AresRPG
 welcome_body: AresRPG ist ein vollständig On-Chain-MMORPG mit einer spielergesteuerten Wirtschaft. Erstelle deinen ersten Charakter, betrete die Welt und finde Monster zum Kämpfen.
+welcome_need_sui: Du brauchst etwas SUI zum Spielen — jede Aktion ist eine On-Chain-Transaktion, und dein erster Charakter kostet {{price}} SUI. Zahle etwas SUI auf deine Adresse unten ein, um zu beginnen.
+insufficient_sui: Nicht genug SUI in deiner Wallet
 create_character: Charakter erstellen
 create_title: Erstelle deinen Charakter
 create_lead: Wähle eine Klasse, deine Farben und einen Namen. Die Welt lebt bereits hinter dir.

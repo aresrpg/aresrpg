@@ -51,6 +51,8 @@ page_pending_title: This page is being rebuilt
 page_pending_body: Its place remains visible while we restore it cleanly.
 welcome_title: Welcome to AresRPG
 welcome_body: AresRPG is a fully on-chain MMORPG with a player-driven economy. Create your first character, enter the world, and find mobs to fight.
+welcome_need_sui: You need a little SUI to play — every action is an on-chain transaction, and your first character costs {{price}} SUI. Deposit some SUI to your address below to begin.
+insufficient_sui: Not enough SUI in your wallet
 create_character: Create character
 create_title: Create your character
 create_lead: Pick a class, choose your colors, and name your character. The world is already live behind you.

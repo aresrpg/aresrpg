@@ -112,6 +112,17 @@ const fold_packet = (world: WorldState, packet: Readonly<ServerPacket>): WorldSt
       }),
     })
   }
+  if (packet.type === 'packet/player_equipment') {
+    const known = world.players[packet.character_id]
+    if (!known) return world
+    return Object.freeze({
+      ...world,
+      players: Object.freeze({
+        ...world.players,
+        [packet.character_id]: Object.freeze({ ...known, [packet.slot]: packet.item_type }),
+      }),
+    })
+  }
   if (packet.type === 'packet/player_left') {
     if (!(packet.character_id in world.players)) return world
     const players = { ...world.players }

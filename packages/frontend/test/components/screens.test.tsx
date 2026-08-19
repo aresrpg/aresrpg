@@ -20,7 +20,7 @@ test('each standalone screen exposes only its own surface', async () => {
 
   // Character creation reserves the model preview and carries no release-status copy.
   const create = renderToStaticMarkup(
-    <CharacterCreateModal cancel={() => undefined} copy={copy} create={async () => undefined} />
+    <CharacterCreateModal cancel={() => undefined} copy={copy} create={async () => undefined} insufficient={false} />
   )
 
   expect(create).toContain('data-character-preview=""')

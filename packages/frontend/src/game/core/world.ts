@@ -515,6 +515,7 @@ export const create_world = ({
       external_entities = Object.freeze([...next])
       submit_entities()
     },
+    entity_height: engine.entity_height,
     set_pet: (next: Readonly<{ id: string; model_url: string; locomotion: PetLocomotion }> | null) => {
       pet = next ? Object.freeze(next) : null
       pet_motion = empty_pet_motion()

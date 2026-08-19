@@ -10,7 +10,7 @@ import type {
   Vec3,
   WornModelRender,
 } from '@aresrpg/engine'
-import type { CharacterRow, EquippedItem } from '@aresrpg/protocol'
+import type { CharacterRow, EquippedItem, PresenceRow } from '@aresrpg/protocol'
 
 type CharacterRenderRow = Readonly<
   Omit<CharacterRow, 'equipment'> & {
@@ -44,6 +44,19 @@ export const character_render_source = (character: CharacterRenderRow): Characte
       color_hex(character.color_3),
     ] as const),
     loadout: Object.freeze(Object.fromEntries(character.equipment.map(({ slot, item_type }) => [slot, item_type]))),
+  })
+
+/** A nearby player's display payload projected into the same render source as own characters. */
+export const presence_render_source = (row: Readonly<PresenceRow>): CharacterRenderSource =>
+  Object.freeze({
+    id: row.character_id,
+    classe: row.classe,
+    male: row.sex === 'male',
+    colors: Object.freeze([color_hex(row.color_1), color_hex(row.color_2), color_hex(row.color_3)] as const),
+    loadout: Object.freeze({
+      ...(row.hat ? { hat: row.hat } : {}),
+      ...(row.cloak ? { cloak: row.cloak } : {}),
+    }),
   })
 
 export const load_character_appearance = async (

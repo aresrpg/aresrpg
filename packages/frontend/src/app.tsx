@@ -3,6 +3,8 @@
 
 import type { EngineQuality } from '@aresrpg/engine'
 import type { CharacterCreateInput } from '@aresrpg/sdk/character'
+import { CHARACTER_PRICE_MIST } from '@aresrpg/sdk/character-price'
+import { Check, Copy } from 'lucide-react'
 import { useCallback, useRef, useState } from 'react'
 import { ThinkingOrb } from 'thinking-orbs'
 
@@ -21,6 +23,11 @@ import type { AppCopy } from './i18n/copy.ts'
 import type { Locale } from './i18n/locale.ts'
 import type { Page } from './modules/navigation.ts'
 import { toast } from './toast.ts'
+import { format_sui } from './wallet_amount.ts'
+
+// Creation moves CHARACTER_PRICE_MIST on-chain and burns gas on top — the margin keeps the
+// gate honest for the whole transaction, not just the price.
+const CREATE_GAS_MARGIN_MIST = 20_000_000n
 
 const GoogleIcon = () => (
   <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
@@ -127,22 +134,57 @@ const Login = ({
   )
 }
 
-const Welcome = ({ copy, create }: Readonly<{ copy: AppCopy; create: () => void }>) => (
-  <section className="absolute inset-0 z-[140] grid place-items-center bg-[#050508]/34 p-5 backdrop-blur-[3px]">
-    <div className="w-full max-w-xl border border-white/10 border-t-[#c8963c] bg-[#0a0a0f]/94 p-8 shadow-[0_24px_80px_rgba(0,0,0,0.55)]">
-      <p className="mb-3 text-[8px] tracking-[0.28em] text-[#c8963c] uppercase">AresRPG</p>
-      <h2 className="text-xl font-semibold tracking-[0.06em]">{copy.welcome_title}</h2>
-      <p className="mt-4 text-[11px] leading-6 text-[#9da0a9]">{copy.welcome_body}</p>
-      <button
-        className="mt-7 h-11 cursor-pointer border border-[#4a9eff]/40 bg-[#4a9eff]/8 px-6 text-[9px] tracking-[0.18em] text-[#67adff] uppercase hover:border-[#4a9eff]/70"
-        onClick={create}
-        type="button"
-      >
-        {copy.create_character}
-      </button>
-    </div>
-  </section>
-)
+const Welcome = ({
+  copy,
+  create,
+  funding_address,
+}: Readonly<{ copy: AppCopy; create: () => void; funding_address: string | null }>) => {
+  const [copied, set_copied] = useState(false)
+  const copy_address = (): void => {
+    if (!funding_address) return
+    void navigator.clipboard.writeText(funding_address).then(() => {
+      set_copied(true)
+      setTimeout(() => set_copied(false), 2_000)
+    })
+  }
+  return (
+    <section className="absolute inset-0 z-[140] grid place-items-center bg-[#050508]/34 p-5 backdrop-blur-[3px]">
+      <div className="w-full max-w-xl border border-white/10 border-t-[#c8963c] bg-[#0a0a0f]/94 p-8 shadow-[0_24px_80px_rgba(0,0,0,0.55)]">
+        <p className="mb-3 text-[8px] tracking-[0.28em] text-[#c8963c] uppercase">AresRPG</p>
+        <h2 className="text-xl font-semibold tracking-[0.06em]">{copy.welcome_title}</h2>
+        <p className="mt-4 text-[11px] leading-6 text-[#9da0a9]">{copy.welcome_body}</p>
+        {funding_address && (
+          <div className="mt-5 border border-[#c8963c]/35 bg-[#c8963c]/6 p-4">
+            <p className="text-[11px] leading-6 text-[#d9af57]">
+              {copy.welcome_need_sui.replaceAll('{{price}}', format_sui(CHARACTER_PRICE_MIST, 0))}
+            </p>
+            <div className="mt-3 flex items-center gap-2 border border-white/10 bg-black/30 px-3 py-2">
+              <span className="min-w-0 flex-1 font-mono text-[10px] break-all text-[#c8963c] select-all">
+                {funding_address}
+              </span>
+              <button
+                aria-label={copy.wallet_copy_address}
+                className="shrink-0 cursor-pointer opacity-55 hover:opacity-95"
+                onClick={copy_address}
+                type="button"
+              >
+                {copied ? <Check className="text-emerald-400" size={13} /> : <Copy size={13} />}
+              </button>
+            </div>
+          </div>
+        )}
+        <button
+          className="mt-7 h-11 cursor-pointer border border-[#4a9eff]/40 bg-[#4a9eff]/8 px-6 text-[9px] tracking-[0.18em] text-[#67adff] uppercase hover:border-[#4a9eff]/70 disabled:cursor-not-allowed disabled:border-white/10 disabled:bg-transparent disabled:text-[#5a5e68]"
+          disabled={!!funding_address}
+          onClick={create}
+          type="button"
+        >
+          {copy.create_character}
+        </button>
+      </div>
+    </section>
+  )
+}
 
 export function App() {
   const session = useAppStore(({ session }) => session)
@@ -207,6 +249,8 @@ export function App() {
     },
     [copy, wallet]
   )
+  const sui_insufficient =
+    session.sui_balance_mist !== null && session.sui_balance_mist < CHARACTER_PRICE_MIST + CREATE_GAS_MARGIN_MIST
   const show_graphics_notice =
     engine_status.state === 'failed' || (engine_status.state === 'degraded' && !graphics_notice_dismissed)
   const world_unavailable = engine_status.issue?.code === 'world_unavailable'
@@ -259,7 +303,11 @@ export function App() {
           </div>
         )}
         {in_app && navigation.page === 'world' && navigation.dialog === 'welcome' && (
-          <Welcome copy={copy} create={() => dispatch_app({ type: 'dialog/open', dialog: 'character_create' })} />
+          <Welcome
+            copy={copy}
+            create={() => dispatch_app({ type: 'dialog/open', dialog: 'character_create' })}
+            funding_address={sui_insufficient && wallet ? wallet.address : null}
+          />
         )}
       </div>
       <div className="pointer-events-none fixed inset-0 z-[100] bg-[repeating-linear-gradient(0deg,transparent,transparent_2px,rgba(200,150,60,0.014)_2px,rgba(200,150,60,0.014)_4px)]" />
@@ -270,6 +318,7 @@ export function App() {
           }
           copy={copy}
           create={create_character}
+          insufficient={sui_insufficient}
         />
       )}
       <Toasts />

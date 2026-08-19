@@ -85,7 +85,13 @@ export const CharacterCreateModal = ({
   copy,
   cancel,
   create,
-}: Readonly<{ copy: AppCopy; cancel: () => void; create: (input: CharacterCreateInput) => Promise<void> }>) => {
+  insufficient,
+}: Readonly<{
+  copy: AppCopy
+  cancel: () => void
+  create: (input: CharacterCreateInput) => Promise<void>
+  insufficient: boolean
+}>) => {
   const [identity, set_identity] = useState<CharacterIdentity>(DEFAULT_IDENTITY)
   const [submitting, set_submitting] = useState(false)
   const name_error = character_name_error_text(copy, identity.name)
@@ -99,7 +105,7 @@ export const CharacterCreateModal = ({
   }, [cancel])
   const submit = (event: Readonly<FormEvent>): void => {
     event.preventDefault()
-    if (!valid || submitting) return
+    if (!valid || submitting || insufficient) return
     set_submitting(true)
     const [color_1, color_2, color_3] = identity.colors.map((color) => Number.parseInt(color.slice(1), 16))
     void create({
@@ -229,6 +235,11 @@ export const CharacterCreateModal = ({
             <div className="mt-1 text-[12px] font-semibold tracking-[0.12em] text-[#d9af57]">
               {format_sui(CHARACTER_PRICE_MIST, 0)} SUI
             </div>
+            {insufficient && (
+              <div className="mt-1 text-[9px] tracking-[0.08em] text-[#ff667c]" role="alert">
+                {copy.insufficient_sui}
+              </div>
+            )}
           </div>
           <button
             className="h-10 cursor-pointer border border-white/10 px-5 text-[9px] tracking-[0.16em] text-[#8d9099] uppercase"
@@ -240,7 +251,7 @@ export const CharacterCreateModal = ({
           </button>
           <button
             className="h-10 cursor-pointer border border-[#c8963c]/45 bg-[#c8963c]/8 px-5 text-[9px] tracking-[0.16em] text-[#d9af57] uppercase hover:border-[#c8963c]/75 disabled:cursor-not-allowed disabled:border-[#c8963c]/20 disabled:bg-[#c8963c]/5 disabled:text-[#c8963c]/45"
-            disabled={!valid || submitting}
+            disabled={!valid || submitting || insufficient}
             type="submit"
           >
             {submitting ? copy.creating_character : copy.create_and_play}
