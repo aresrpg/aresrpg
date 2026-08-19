@@ -11,7 +11,9 @@ import plugin from './one_pipeline.mjs'
 
 RuleTester.describe = describe
 RuleTester.it = it
-RuleTester.itOnly = it.only
+// Lazy: newer bun throws on even TOUCHING it.only under CI — resolve it only if a
+// focused rule test ever actually runs (none should).
+RuleTester.itOnly = (...args) => it.only(...args)
 
 const tester = new RuleTester({
   languageOptions: { ecmaVersion: 'latest', sourceType: 'module' },

@@ -29,7 +29,12 @@ const cast_cue = Object.freeze({
 
 describe('fight audio', () => {
   test('registers every authored seed sound exactly once', () => {
-    const authored = readdirSync(resolve(import.meta.dir, '../../../../../seed/sounds')).sort()
+    // PROVENANCE.md is the sounds' licensing record — the ONE non-audio file allowed to live
+    // beside them (the seed root's five-homes law forbids it living higher). Anything else
+    // non-registered in the directory still reds this census.
+    const authored = readdirSync(resolve(import.meta.dir, '../../../../../seed/sounds'))
+      .filter((name) => name !== 'PROVENANCE.md')
+      .sort()
     const registered = [...Object.values(FIGHT_AUDIO_ASSETS), ...Object.values(FOOTSTEP_AUDIO_ASSETS)]
       .map((source) => source.replace('/sound_effect/', ''))
       .sort()
