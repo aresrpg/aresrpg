@@ -192,7 +192,11 @@ const build_material = (
   // bevel, geometry never changes. Edge flags come from the mesher (word B bits 28-31); the
   // whole computation stays branchless arithmetic — select chains in the normalNode context
   // compile to garbage on WebGPU (2026-08-15 probe chain).
-  const round_radius = float(0.3)
+  // SUBTLE is the whole point (owner 2026-08-19: 0.3 read as fat white chalk lips): a thin
+  // 0.1-block margin, and the bend capped below 45° so a lit top edge brightens instead of
+  // turning into a specular stripe.
+  const round_radius = float(0.1)
+  const round_strength = float(0.7)
   const edge_flags = word_b.shiftRight(uint(28))
   const round_u_low = float(edge_flags.bitAnd(uint(1)))
   const round_u_high = float(edge_flags.shiftRight(uint(1)).bitAnd(uint(1)))
@@ -204,7 +208,7 @@ const build_material = (
   const overrun_v = round_v_high
     .mul(v_cells.sub(height_frag.sub(round_radius)).max(0))
     .sub(round_v_low.mul(round_radius.sub(v_cells).max(0)))
-  const bent_local = vec3(overrun_u, overrun_v, round_radius).normalize()
+  const bent_local = vec3(overrun_u.mul(round_strength), overrun_v.mul(round_strength), round_radius).normalize()
   const rounded_normal = u_axis.mul(bent_local.x).add(v_axis.mul(bent_local.y)).add(normal.mul(bent_local.z))
   // The scan front is presentation only. Geometry uses the one global projection amount so
   // the renderer, character collision, boards, and markers all agree on exact height.
