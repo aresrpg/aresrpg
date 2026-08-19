@@ -60,7 +60,7 @@ public(package) fun search(
 }
 
 public fun mob_groups(world_object: &World, zx: u32, zz: u32): vector<MobGroup> {
-  let zone = live_zone(world_object, zx, zz);
+  let zone = lz(world_object, zx, zz);
   zone_math::mob_groups(
     world_map::mobs(world::content(world_object)),
     world_map::biome_map(world::content(world_object)),
@@ -73,14 +73,14 @@ public fun mob_groups(world_object: &World, zx: u32, zz: u32): vector<MobGroup> 
 
 public(package) fun consume_mob_group(world_object: &mut World, zx: u32, zz: u32, index: u64) {
   assert!(index < 128, ENothingThere);
-  let zone = live_zone_mut(world_object, zx, zz);
+  let zone = lzm(world_object, zx, zz);
   let bit = 1u128 << (index as u8);
   assert!(zone.mob_taken & bit == 0, ENothingThere);
   zone.mob_taken = zone.mob_taken | bit;
 }
 
 public fun resource_pack_at(world_object: &World, zx: u32, zz: u32, index: u64): ResourcePack {
-  let zone = live_zone(world_object, zx, zz);
+  let zone = lz(world_object, zx, zz);
   zone_math::resource_pack_at(
     world_map::resources(world::content(world_object)),
     world_map::biome_map(world::content(world_object)),
@@ -93,7 +93,7 @@ public fun resource_pack_at(world_object: &World, zx: u32, zz: u32, index: u64):
 }
 
 public(package) fun consume_resource_node(world_object: &mut World, zx: u32, zz: u32, index: u64) {
-  let zone_read = live_zone(world_object, zx, zz);
+  let zone_read = lz(world_object, zx, zz);
   let total = zone_math::total_resource_nodes(
     world_map::resources(world::content(world_object)),
     world_map::biome_map(world::content(world_object)),
@@ -102,7 +102,7 @@ public(package) fun consume_resource_node(world_object: &mut World, zx: u32, zz:
     zone_read.seed,
     index,
   );
-  let zone = live_zone_mut(world_object, zx, zz);
+  let zone = lzm(world_object, zx, zz);
   while ((zone.res_taken.length() as u64) <= index) zone.res_taken.push_back(0);
   let taken = &mut zone.res_taken[index];
   assert!(*taken < total, ENothingThere);
@@ -110,7 +110,7 @@ public(package) fun consume_resource_node(world_object: &mut World, zx: u32, zz:
 }
 
 public fun seed_of(world_object: &World, zx: u32, zz: u32): u64 {
-  live_zone(world_object, zx, zz).seed
+  lz(world_object, zx, zz).seed
 }
 
 public fun portal_of(world_object: &World, zx: u32, zz: u32): (bool, u32, u32) {
@@ -124,13 +124,15 @@ public fun portal_of(world_object: &World, zx: u32, zz: u32): (bool, u32, u32) {
 
 public fun level_floor(zx: u32, zz: u32): u64 { zone_math::level_floor(zx, zz) }
 
-fun live_zone(world_object: &World, zx: u32, zz: u32): Zone {
+// live_zone
+fun lz(world_object: &World, zx: u32, zz: u32): Zone {
   let uid = world::uid(world_object);
   assert!(dfield::exists(uid, ZoneKey { zx, zz }), ENotSearched);
   *dfield::borrow(uid, ZoneKey { zx, zz })
 }
 
-fun live_zone_mut(world_object: &mut World, zx: u32, zz: u32): &mut Zone {
+// live_zone_mut
+fun lzm(world_object: &mut World, zx: u32, zz: u32): &mut Zone {
   let uid = world::uid_mut(world_object);
   assert!(dfield::exists(uid, ZoneKey { zx, zz }), ENotSearched);
   dfield::borrow_mut(uid, ZoneKey { zx, zz })

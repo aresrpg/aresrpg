@@ -144,7 +144,7 @@ public(package) fun gather(
     let scalar = floor + gen.generate_u64_in_range(0, 100 - floor);
     let board_seed = gen.generate_u64();
     let hp = progression::touch(chr, clock);
-    write_verdict(chr, PendingAmbush {
+    wv(chr, PendingAmbush {
       fires: protector,
       protector: row.resource_row_protector(),
       x: pack.pack_x(),
@@ -241,8 +241,9 @@ public(package) fun has_fired_verdict(chr: &Character): bool {
 
 // ╔════════════════ [ Internals ] ════════════════════════════════════════════ ]
 
+// write_verdict
 /// Overwrite-or-add the verdict DF — the same bytes land on both outcomes (the gas law).
-fun write_verdict(chr: &mut Character, verdict: PendingAmbush) {
+fun wv(chr: &mut Character, verdict: PendingAmbush) {
   let uid = chr.uid_mut();
   if (dfield::exists(uid, AmbushKey())) {
     *dfield::borrow_mut(uid, AmbushKey()) = verdict;

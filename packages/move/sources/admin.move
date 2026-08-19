@@ -32,25 +32,26 @@ fun init(ctx: &mut TxContext) {
 /// Mint a throwaway cap for the current epoch — dead in ~24h. Super-only. Refused during the
 /// genesis epoch: `epoch == 0` is the super sentinel, so a genesis temp cap would BE super.
 public fun mint_temp_admin_cap(self: &AdminCap, recipient: address, ctx: &mut TxContext) {
-  assert!(self.super_admin(), ESuperAdmin);
+  assert!(self.sa(), ESuperAdmin);
   assert!(ctx.epoch() > 0, EGenesisEpoch);
   transfer::transfer(AdminCap { id: object::new(ctx), epoch: ctx.epoch() }, recipient);
 }
 
 /// Clean up an expired temp cap. The super cap cannot be destroyed.
 entry fun delete_admin_cap(self: AdminCap) {
-  assert!(!self.super_admin(), ESuperAdmin);
+  assert!(!self.sa(), ESuperAdmin);
   let AdminCap { id, .. } = self;
   id.delete();
 }
 
 public(package) fun verify(self: &AdminCap, ctx: &TxContext) {
-  if (!self.super_admin()) {
+  if (!self.sa()) {
     assert!(self.epoch == ctx.epoch(), EAdminCapExpired);
   }
 }
 
-fun super_admin(self: &AdminCap): bool { self.epoch == 0 }
+// super_admin
+fun sa(self: &AdminCap): bool { self.epoch == 0 }
 
 // ╔════════════════ [ Display creation (seeding, once) ] ═════════════════════ ]
 // The marketplace policies (protected + royalty/lock) are minted by the seeding PTB —

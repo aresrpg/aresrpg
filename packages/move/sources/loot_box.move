@@ -89,7 +89,7 @@ public(package) fun add_loot_reward(
   weight: u64,
   amount: u32,
 ) {
-  assert!(is_gacha_box(box_template), ENotBox);
+  assert!(igb(box_template), ENotBox);
   assert!(amount > 0, EZeroAmount);
   assert!(amount == 1 || item::template_is_stackable(reward_template), EUnstackableAmount);
   let box_id = item::template_id(box_template);
@@ -118,7 +118,7 @@ public(package) fun open_box(
   gen: &mut RandomGenerator,
   ctx: &mut TxContext,
 ) {
-  assert!(is_gacha_box(box_template), ENotBox);
+  assert!(igb(box_template), ENotBox);
   let box_tid = item::template_id(box_template);
   assert!(registry.tables.contains(box_tid), ENoTable);
   let entries = *registry.tables.borrow(box_tid); // local copy — no borrow held across the burn
@@ -162,8 +162,9 @@ public(package) fun claim_loot(
 
 // ╔════════════════ [ Internals (pure) ] ═════════════════════════════════════ ]
 
+// is_gacha_box
 /// A box is a consumable template carrying the typed `LootBox` effect — nothing else opens.
-fun is_gacha_box(template: &ItemTemplate): bool {
+fun igb(template: &ItemTemplate): bool {
   consumable::is_loot_box(template)
 }
 

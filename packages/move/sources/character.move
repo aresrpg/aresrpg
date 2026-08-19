@@ -130,7 +130,7 @@ public(package) fun create_character(
   assert!(payment.value() == PRICE, EWrongPayment);
   transfer::public_transfer(payment, @treasury);
 
-  verify_classe(classe);
+  vc(classe);
   validate_range!(color_1, 0, MAX_COLOR_VALUE, EInvalidColor);
   validate_range!(color_2, 0, MAX_COLOR_VALUE, EInvalidColor);
   validate_range!(color_3, 0, MAX_COLOR_VALUE, EInvalidColor);
@@ -254,7 +254,8 @@ public(package) fun destroy(self: Character) {
 
 // ╔════════════════ [ Private ] ══════════════════════════════════════════════ ]
 
-fun verify_classe(classe: String) {
+// verify_classe
+fun vc(classe: String) {
   assert!(content_rules::is_classe(&classe), EInvalidClasse);
 }
 

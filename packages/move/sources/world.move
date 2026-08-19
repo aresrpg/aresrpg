@@ -130,7 +130,7 @@ public(package) fun prove_move(character: &mut Character, x: u32, z: u32, clock:
   // banked before it was equipped. `cp.pet` is the start-point snapshot; this saves the
   // live state as the next leg's start.
   let pet_now = equipment::pet_equipped(character);
-  let (world, cp) = current_checkpoint_mut(character);
+  let (world, cp) = ccm(character);
   let now = clock.timestamp_ms();
   assert!(world_map::travel_ok(cp.x, cp.z, cp.at_ms, cp.pet, x, z, now, pet_now), ETravelTooFar);
   cp.x = x;
@@ -145,7 +145,7 @@ public(package) fun prove_move(character: &mut Character, x: u32, z: u32, clock:
 /// no move, no next gather, no fight join — until the clock catches up. The gather duration
 /// rides the machinery that already exists instead of a new timer field.
 public(package) fun delay_checkpoint(character: &mut Character, extra_ms: u64, clock: &Clock) {
-  let (_, cp) = current_checkpoint_mut(character);
+  let (_, cp) = ccm(character);
   cp.at_ms = clock.timestamp_ms() + extra_ms;
 }
 
@@ -167,16 +167,17 @@ public(package) fun teleport_center(character: &mut Character, clock: &Clock) {
   let pet = equipment::pet_equipped(character);
   let now = clock.timestamp_ms();
   let center = world_map::world_center();
-  let (_, cp) = current_checkpoint_mut(character);
+  let (_, cp) = ccm(character);
   cp.x = center;
   cp.z = center;
   cp.at_ms = now;
   cp.pet = pet;
 }
 
+// current_checkpoint_mut
 /// The ONE door to the current world's checkpoint — every writer (`prove_move`,
 /// `delay_checkpoint`) reads and mutates through here; nobody re-derives the DF pair.
-fun current_checkpoint_mut(character: &mut Character): (String, &mut Checkpoint) {
+fun ccm(character: &mut Character): (String, &mut Checkpoint) {
   let uid = character.uid_mut();
   assert!(dfield::exists(uid, CurrentWorldKey {}), ENotInWorld);
   let world: String = *dfield::borrow(uid, CurrentWorldKey {});

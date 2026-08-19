@@ -33,30 +33,31 @@ public enum Effect has copy, drop, store {
   LootBox,
 }
 
-fun set_effect(template: &mut ItemTemplate, effect: Effect) {
+// set_effect
+fun se(template: &mut ItemTemplate, effect: Effect) {
   assert!(item::template_category(template) == b"consumable".to_string(), ENotConsumable);
   dfield::add(item::template_uid_mut(template), EffectKey(), effect);
 }
 
 public(package) fun set_heal(template: &mut ItemTemplate, amount: u32) {
   assert!(amount > 0, EZeroHeal);
-  set_effect(template, Effect::Heal(amount));
+  se(template, Effect::Heal(amount));
 }
 
 public(package) fun set_reset_stats(template: &mut ItemTemplate) {
-  set_effect(template, Effect::ResetStats);
+  se(template, Effect::ResetStats);
 }
 
 public(package) fun set_reset_spells(template: &mut ItemTemplate) {
-  set_effect(template, Effect::ResetSpells);
+  se(template, Effect::ResetSpells);
 }
 
 public(package) fun set_recall(template: &mut ItemTemplate) {
-  set_effect(template, Effect::Recall);
+  se(template, Effect::Recall);
 }
 
 public(package) fun set_loot_box(template: &mut ItemTemplate) {
-  set_effect(template, Effect::LootBox);
+  se(template, Effect::LootBox);
 }
 
 public(package) fun is_loot_box(template: &ItemTemplate): bool {

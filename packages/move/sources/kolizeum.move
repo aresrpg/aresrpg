@@ -96,7 +96,7 @@ public(package) fun create(
 ) {
   assert!(format == 1 || format == 3 || format == 6, EBadFormat);
   assert!(level_min <= level_max, ELevelOutOfRange);
-  gate_character(kiosk, cap, character_id, level_min, level_max, clock);
+  gc(kiosk, cap, character_id, level_min, level_max, clock);
 
   let pledge = pledge_coin.value();
   let fight_id = fight::kolizeum_birth(protected, kiosk, cap, character_id, board_seed, access, clock, ctx);
@@ -133,7 +133,7 @@ public(package) fun join(
   assert!(object::id(fight) == lobby.fight, EWrongFight);
   assert!(pledge_coin.value() == lobby.pledge, EPledgeMismatch);
   if (lobby.allowed.is_some()) assert!(lobby.allowed.borrow().contains(&ctx.sender()), ENotFriend);
-  gate_character(kiosk, cap, character_id, lobby.level_min, lobby.level_max, clock);
+  gc(kiosk, cap, character_id, lobby.level_min, lobby.level_max, clock);
   assert!(fight::side_players(fight, side) < lobby.format, ESideFull);
 
   lobby.pot.join(pledge_coin.into_balance());
@@ -218,10 +218,11 @@ public(package) fun sweep(lobby: Kolizeum) {
 
 // ╔════════════════ [ Internals ] ════════════════════════════════════════════ ]
 
+// gate_character
 /// A joiner/creator must be within the level range and NOT rooted (a gather-time root or a
 /// fired protector verdict holds them — arena joins are travel-free, so we gate it here, the
 /// same escape the recall-potion exploit taught us).
-fun gate_character(kiosk: &Kiosk, cap: &KioskOwnerCap, character_id: ID, level_min: u16, level_max: u16, clock: &Clock) {
+fun gc(kiosk: &Kiosk, cap: &KioskOwnerCap, character_id: ID, level_min: u16, level_max: u16, clock: &Clock) {
   let chr: &Character = kiosk.borrow(cap, character_id);
   let lvl = chr.level();
   assert!(lvl >= level_min && lvl <= level_max, ELevelOutOfRange);

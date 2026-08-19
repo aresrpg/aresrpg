@@ -92,9 +92,9 @@ public(package) fun deposit_cap<T: key + store>(
   assert!(!trade.locked, ELocked);
   assert!(kiosk::purchase_cap_min_price(&cap) == 0, EPricedCap);
   let item = kiosk::purchase_cap_item(&cap);
-  my_manifest(trade, ctx).push_back(item);
+  mm(trade, ctx).push_back(item);
   dof::add(&mut trade.id, CapKey { item }, cap);
-  touch(trade);
+  t1(trade);
 }
 
 /// Take a parked cap back (pre-lock only) — chain `kiosk::return_purchase_cap` in the same
@@ -105,21 +105,21 @@ public(package) fun withdraw_cap<T: key + store>(
   ctx: &TxContext,
 ): PurchaseCap<T> {
   assert!(!trade.locked, ELocked);
-  remove_from(my_manifest(trade, ctx), item);
-  touch(trade);
+  rf(mm(trade, ctx), item);
+  t1(trade);
   dof::remove(&mut trade.id, CapKey { item })
 }
 
 public(package) fun deposit_sui(trade: &mut Trade, coin: Coin<SUI>, ctx: &TxContext) {
   assert!(!trade.locked, ELocked);
-  my_balance(trade, ctx).join(coin.into_balance());
-  touch(trade);
+  mb1(trade, ctx).join(coin.into_balance());
+  t1(trade);
 }
 
 public(package) fun withdraw_sui(trade: &mut Trade, amount: u64, ctx: &mut TxContext): Coin<SUI> {
   assert!(!trade.locked, ELocked);
-  let coin = coin::from_balance(my_balance(trade, ctx).split(amount), ctx);
-  touch(trade);
+  let coin = coin::from_balance(mb1(trade, ctx).split(amount), ctx);
+  t1(trade);
   coin
 }
 
@@ -129,7 +129,7 @@ public(package) fun accept(trade: &mut Trade, version: u64, ctx: &TxContext) {
   assert!(!trade.locked, ELocked);
   assert!(trade.version == version, EStaleAccept);
   let sender = ctx.sender();
-  assert_party(trade, sender);
+  ap2(trade, sender);
   if (sender == trade.a) trade.accept_a = true else trade.accept_b = true;
   event::emit(TradeAccepted { trade: trade.id.to_inner(), who: sender });
   if (trade.accept_a && trade.accept_b) {
@@ -146,21 +146,21 @@ public(package) fun claim_cap<T: key + store>(
   ctx: &TxContext,
 ): PurchaseCap<T> {
   assert!(trade.locked, ENotLocked);
-  remove_from(their_manifest(trade, ctx), item);
+  rf(tm(trade, ctx), item);
   dof::remove(&mut trade.id, CapKey { item })
 }
 
 /// Claim the COUNTERPARTY's whole escrowed SUI (post-lock).
 public(package) fun claim_sui(trade: &mut Trade, ctx: &mut TxContext): Coin<SUI> {
   assert!(trade.locked, ENotLocked);
-  let balance = their_balance(trade, ctx).withdraw_all();
+  let balance = tb(trade, ctx).withdraw_all();
   coin::from_balance(balance, ctx)
 }
 
 /// Delete a DRAINED trade — pre-lock after both sides withdrew, or post-lock after both
 /// sides claimed. Either player may sweep it.
 public(package) fun destroy(trade: Trade, ctx: &TxContext) {
-  assert_party(&trade, ctx.sender());
+  ap2(&trade, ctx.sender());
   let Trade { id, sui_a, sui_b, caps_a, caps_b, .. } = trade;
   assert!(caps_a.is_empty() && caps_b.is_empty(), ENotDrained);
   event::emit(TradeDestroyed { trade: id.to_inner() });
@@ -171,39 +171,46 @@ public(package) fun destroy(trade: Trade, ctx: &TxContext) {
 
 // ╔════════════════ [ Internals ] ════════════════════════════════════════════ ]
 
-fun assert_party(trade: &Trade, who: address) {
+// assert_party
+fun ap2(trade: &Trade, who: address) {
   assert!(who == trade.a || who == trade.b, ENotAParty);
 }
 
+// touch
 /// Every mutation reopens negotiation: bump the version, void both signatures.
-fun touch(trade: &mut Trade) {
+fun t1(trade: &mut Trade) {
   trade.version = trade.version + 1;
   trade.accept_a = false;
   trade.accept_b = false;
   event::emit(TradeChanged { trade: trade.id.to_inner(), version: trade.version });
 }
 
-fun my_manifest(trade: &mut Trade, ctx: &TxContext): &mut vector<ID> {
-  assert_party(trade, ctx.sender());
+// my_manifest
+fun mm(trade: &mut Trade, ctx: &TxContext): &mut vector<ID> {
+  ap2(trade, ctx.sender());
   if (ctx.sender() == trade.a) &mut trade.caps_a else &mut trade.caps_b
 }
 
-fun their_manifest(trade: &mut Trade, ctx: &TxContext): &mut vector<ID> {
-  assert_party(trade, ctx.sender());
+// their_manifest
+fun tm(trade: &mut Trade, ctx: &TxContext): &mut vector<ID> {
+  ap2(trade, ctx.sender());
   if (ctx.sender() == trade.a) &mut trade.caps_b else &mut trade.caps_a
 }
 
-fun my_balance(trade: &mut Trade, ctx: &TxContext): &mut Balance<SUI> {
-  assert_party(trade, ctx.sender());
+// my_balance
+fun mb1(trade: &mut Trade, ctx: &TxContext): &mut Balance<SUI> {
+  ap2(trade, ctx.sender());
   if (ctx.sender() == trade.a) &mut trade.sui_a else &mut trade.sui_b
 }
 
-fun their_balance(trade: &mut Trade, ctx: &TxContext): &mut Balance<SUI> {
-  assert_party(trade, ctx.sender());
+// their_balance
+fun tb(trade: &mut Trade, ctx: &TxContext): &mut Balance<SUI> {
+  ap2(trade, ctx.sender());
   if (ctx.sender() == trade.a) &mut trade.sui_b else &mut trade.sui_a
 }
 
-fun remove_from(manifest: &mut vector<ID>, item: ID) {
+// remove_from
+fun rf(manifest: &mut vector<ID>, item: ID) {
   let (found, index) = manifest.index_of(&item);
   assert!(found, ECapNotFound);
   manifest.remove(index);

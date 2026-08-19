@@ -61,7 +61,7 @@ public(package) fun create(chr: &Character, ctx: &mut TxContext) {
 
 /// The leader records an invitation — intent only, membership waits for `accept`.
 public(package) fun invite(party: &mut Party, leader: &Character, invited: ID) {
-  assert!(is_leader(party, leader), ENotLeader);
+  assert!(il(party, leader), ENotLeader);
   assert!(!is_member(party, invited), EAlreadyMember);
   assert!(!party.pending.contains(&invited), EAlreadyInvited);
   assert!(party.members.length() < MAX_MEMBERS, EPartyFull);
@@ -72,7 +72,7 @@ public(package) fun invite(party: &mut Party, leader: &Character, invited: ID) {
 /// The invited character's CURRENT owner takes the slot.
 public(package) fun accept(party: &mut Party, chr: &Character, ctx: &TxContext) {
   let id = character::id(chr);
-  remove_pending(party, id);
+  rp(party, id);
   assert!(!is_member(party, id), EAlreadyMember);
   assert!(party.members.length() < MAX_MEMBERS, EPartyFull);
   party.members.push_back(Member { character: id, owner: ctx.sender() });
@@ -80,21 +80,21 @@ public(package) fun accept(party: &mut Party, chr: &Character, ctx: &TxContext) 
 }
 
 public(package) fun decline(party: &mut Party, chr: &Character) {
-  remove_pending(party, character::id(chr));
+  rp(party, character::id(chr));
 }
 
 /// The leader withdraws a pending invite before it is accepted (a misclick, or a change of
 /// mind) — the invited character never had to answer.
 public(package) fun rescind(party: &mut Party, leader: &Character, invited: ID) {
-  assert!(is_leader(party, leader), ENotLeader);
-  remove_pending(party, invited);
+  assert!(il(party, leader), ENotLeader);
+  rp(party, invited);
 }
 
 /// Leave by proven character. A leaving leader passes the lead to the oldest survivor; a
 /// solo leader disbands instead — a live party never dangles.
 public(package) fun leave(party: &mut Party, chr: &Character) {
   let id = character::id(chr);
-  let (found, idx) = member_position(party, id);
+  let (found, idx) = mp1(party, id);
   assert!(found, ENotMember);
   if (idx == 0) assert!(party.members.length() > 1, ELeaderAlone);
   party.members.remove(idx);
@@ -103,8 +103,8 @@ public(package) fun leave(party: &mut Party, chr: &Character) {
 
 /// The leader removes an accepted member — consent is not a kick authority.
 public(package) fun kick(party: &mut Party, leader: &Character, target: ID) {
-  assert!(is_leader(party, leader), ENotLeader);
-  let (found, idx) = member_position(party, target);
+  assert!(il(party, leader), ENotLeader);
+  let (found, idx) = mp1(party, target);
   assert!(found, ENotMember);
   assert!(idx != 0, ECannotKickLeader);
   party.members.remove(idx);
@@ -113,7 +113,7 @@ public(package) fun kick(party: &mut Party, leader: &Character, target: ID) {
 
 /// Delete a SOLO party — multi-member leaders `leave` and pass the lead instead.
 public(package) fun disband(party: Party, leader: &Character) {
-  assert!(is_leader(&party, leader), ENotLeader);
+  assert!(il(&party, leader), ENotLeader);
   assert!(party.members.length() == 1, EPartyNotSolo);
   let id = character::id(leader);
   let party_id = party.id.to_inner();
@@ -126,24 +126,27 @@ public(package) fun disband(party: Party, leader: &Character) {
 
 /// The fight's group gate is the only reader — a member check by character id.
 public fun is_member(party: &Party, chr: ID): bool {
-  let (found, _) = member_position(party, chr);
+  let (found, _) = mp1(party, chr);
   found
 }
 
 // ╔════════════════ [ Internals ] ════════════════════════════════════════════ ]
 
-fun is_leader(party: &Party, chr: &Character): bool {
+// is_leader
+fun il(party: &Party, chr: &Character): bool {
   party.members[0].character == character::id(chr)
 }
 
+// remove_pending
 /// Drop `id` from the pending list (accept/decline/rescind share this) — absent aborts.
-fun remove_pending(party: &mut Party, id: ID) {
+fun rp(party: &mut Party, id: ID) {
   let (found, idx) = party.pending.index_of(&id);
   assert!(found, EInviteNotFound);
   party.pending.remove(idx);
 }
 
-fun member_position(party: &Party, chr: ID): (bool, u64) {
+// member_position
+fun mp1(party: &Party, chr: ID): (bool, u64) {
   let mut i = 0;
   while (i < party.members.length()) {
     if (party.members[i].character == chr) return (true, i);

@@ -93,7 +93,7 @@ public(package) fun enter(
   let chr: &mut Character = kiosk.borrow_mut(cap, character_id);
   let current = world::prove_move(chr, px, pz, clock); // walk to the portal (not yet rooted)
   assert!(current == w.name(), EWrongWorld);
-  write_run(chr, DungeonRun { world: w.name(), room: 1, x: px, z: pz, seed });
+  wr(chr, DungeonRun { world: w.name(), room: 1, x: px, z: pz, seed });
   world::delay_checkpoint(chr, ROOT_BETWEEN_ROOMS_MS, clock); // captive between rooms
   event::emit(DungeonEntered { character: character_id, world: w.name(), x: px, z: pz });
 }
@@ -113,7 +113,7 @@ public(package) fun engage_room(
   clock: &Clock,
   ctx: &mut TxContext,
 ): FightBuild {
-  let (rworld, room, x, z, seed) = read_run(kiosk.borrow(cap, character_id));
+  let (rworld, room, x, z, seed) = rr(kiosk.borrow(cap, character_id));
   assert!(rworld == w.name(), EWrongWorld);
   // the board is DERIVED from the run's committed seed + room — unpredictable, not caller-chosen
   let board_seed = prng::mix(seed, room);
@@ -131,7 +131,7 @@ public(package) fun join_room(
   clock: &Clock,
   ctx: &mut TxContext,
 ) {
-  gate_join(fight, kiosk.borrow(cap, character_id));
+  gj(fight, kiosk.borrow(cap, character_id));
   fight::join(fight, protected, kiosk, cap, character_id, 0, 0, false, clock, ctx);
 }
 
@@ -146,15 +146,16 @@ public(package) fun join_room_grouped(
   clock: &Clock,
   ctx: &mut TxContext,
 ) {
-  gate_join(fight, kiosk.borrow(cap, character_id));
+  gj(fight, kiosk.borrow(cap, character_id));
   fight::join_grouped(fight, protected, kiosk, cap, character_id, 0, shared_party, false, clock, ctx);
 }
 
+// gate_join
 /// The joiner's run must be the same DUNGEON (world) and the same ROOM as the fight — the
 /// portal is only the entrance (owner 2026-08-11: the dungeon is the same for every portal;
 /// rooms are fake, coord-less, all same-room players converge whichever portal they took).
-fun gate_join(fight: &Fight, chr: &Character) {
-  let (rworld, room, _, _, _) = read_run(chr);
+fun gj(fight: &Fight, chr: &Character) {
+  let (rworld, room, _, _, _) = rr(chr);
   assert!(fight::dungeon_room_of(fight) == option::some(room), EWrongRoom);
   assert!(fight::fight_world(fight) == rworld, EWrongWorld);
 }
@@ -177,20 +178,20 @@ public(package) fun settle_room(
 ) {
   // the run to advance is DERIVED from the settled seat, and the fight must be a real dungeon
   // room — never a free character id pointed at another character's run (audit 2026-08-11).
-  let tag_room = dungeon_tag(fight);
+  let tag_room = dt(fight);
   let character_id = fight::fighter_character(fight, fighter_idx);
   let won = fight::fighter_won(fight, fighter_idx);
   fight::settle(fight, fighter_idx, kiosk, cap, policy, gen, clock, ctx);
 
   let chr: &mut Character = kiosk.borrow_mut(cap, character_id);
-  let (rworld, room, x, z, seed) = read_run(chr);
+  let (rworld, room, x, z, seed) = rr(chr);
   assert!(rworld == w.name() && room == tag_room, EWrongRoom);
   if (won && room < world_map::dungeon_room_count(world::content(w))) {
-    write_run(chr, DungeonRun { world: rworld, room: room + 1, x, z, seed }); // seed persists
+    wr(chr, DungeonRun { world: rworld, room: room + 1, x, z, seed }); // seed persists
     world::delay_checkpoint(chr, ROOT_BETWEEN_ROOMS_MS, clock); // staged for the next room
     event::emit(DungeonRoomCleared { character: character_id, world: rworld, room });
   } else {
-    end_run(chr, clock);
+    er(chr, clock);
     event::emit(DungeonEnded { character: character_id, world: rworld, room, won });
   };
 }
@@ -206,18 +207,19 @@ public(package) fun give_up_room(
   clock: &Clock,
   ctx: &TxContext,
 ) {
-  let tag_room = dungeon_tag(fight);
+  let tag_room = dt(fight);
   let character_id = fight::fighter_character(fight, fighter_idx);
   fight::forfeit(fight, fighter_idx, kiosk, cap, policy, clock, ctx);
   let chr: &mut Character = kiosk.borrow_mut(cap, character_id);
-  let (rworld, room, _, _, _) = read_run(chr);
+  let (rworld, room, _, _, _) = rr(chr);
   assert!(room == tag_room, EWrongRoom);
-  end_run(chr, clock);
+  er(chr, clock);
   event::emit(DungeonEnded { character: character_id, world: rworld, room, won: false });
 }
 
+// dungeon_tag
 /// The fight's dungeon room tag — aborts if the fight is not a dungeon room at all.
-fun dungeon_tag(fight: &Fight): u64 {
+fun dt(fight: &Fight): u64 {
   let tag = fight::dungeon_room_of(fight);
   assert!(tag.is_some(), ENotDungeonFight);
   *tag.borrow()
@@ -232,8 +234,8 @@ public(package) fun abandon_run(
   clock: &Clock,
 ) {
   let chr: &mut Character = kiosk.borrow_mut(cap, character_id);
-  let (rworld, room, _, _, _) = read_run(chr);
-  end_run(chr, clock);
+  let (rworld, room, _, _, _) = rr(chr);
+  er(chr, clock);
   event::emit(DungeonEnded { character: character_id, world: rworld, room, won: false });
 }
 
@@ -241,14 +243,16 @@ public(package) fun abandon_run(
 
 public fun has_run(chr: &Character): bool { dfield::exists(chr.uid(), DungeonRunKey()) }
 
-fun read_run(chr: &Character): (String, u64, u32, u32, u64) {
+// read_run
+fun rr(chr: &Character): (String, u64, u32, u32, u64) {
   let uid = chr.uid();
   assert!(dfield::exists(uid, DungeonRunKey()), ENoRun);
   let r: &DungeonRun = dfield::borrow(uid, DungeonRunKey());
   (r.world, r.room, r.x, r.z, r.seed)
 }
 
-fun write_run(chr: &mut Character, run: DungeonRun) {
+// write_run
+fun wr(chr: &mut Character, run: DungeonRun) {
   let uid = chr.uid_mut();
   if (dfield::exists(uid, DungeonRunKey())) {
     *dfield::borrow_mut(uid, DungeonRunKey()) = run;
@@ -257,8 +261,9 @@ fun write_run(chr: &mut Character, run: DungeonRun) {
   }
 }
 
+// end_run
 /// End a run: remove the DF and unroot (checkpoint back to now, at the portal).
-fun end_run(chr: &mut Character, clock: &Clock) {
+fun er(chr: &mut Character, clock: &Clock) {
   let uid = chr.uid_mut();
   let DungeonRun { .. } = dfield::remove(uid, DungeonRunKey());
   world::delay_checkpoint(chr, 0, clock);

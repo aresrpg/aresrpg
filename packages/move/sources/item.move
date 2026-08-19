@@ -138,7 +138,7 @@ public(package) fun new_template(
   level: u8,
   pet_foods: vector<String>,
 ): ItemTemplate {
-  verify_category(category);
+  vc1(category);
   let template = ItemTemplate {
     id: derived_object::claim(&mut registry.id, item_type),
     name,
@@ -189,7 +189,7 @@ public(package) fun mint(
   gen: &mut RandomGenerator,
   ctx: &mut TxContext,
 ): Item {
-  let mut item = mint_base(template, amount, ctx);
+  let mut item = mb(template, amount, ctx);
   if (dfield::exists(&template.id, StatsMinKey())) {
     let lo: &ItemStatistics = dfield::borrow(&template.id, StatsMinKey());
     let hi: &ItemStatistics = dfield::borrow(&template.id, StatsMaxKey());
@@ -210,12 +210,13 @@ public(package) fun mint(
 /// roll, so it aborts here — the rolling `mint` is its only door.
 public(package) fun mint_plain(template: &ItemTemplate, amount: u32, ctx: &mut TxContext): Item {
   assert!(!dfield::exists(&template.id, StatsMinKey()), EPlainNeedsRoll);
-  mint_base(template, amount, ctx)
+  mb(template, amount, ctx)
 }
 
+// mint_base
 /// The shared factory: the snapshot Item + the damage-line copy. `mint` adds the stat roll
 /// on top; `mint_plain` stops here (stat-less by assertion). ONE Item construction home.
-fun mint_base(template: &ItemTemplate, amount: u32, ctx: &mut TxContext): Item {
+fun mb(template: &ItemTemplate, amount: u32, ctx: &mut TxContext): Item {
   assert!(amount >= 1, EWrongAmount);
   if (amount > 1) assert!(content_rules::is_stackable(&template.category), ENotStackable);
   let mut item = Item {
@@ -366,9 +367,10 @@ public fun damages(self: &Item): vector<ItemDamages> { *dfield::borrow(&self.id,
 
 // ╔════════════════ [ Private ] ══════════════════════════════════════════════ ]
 
+// verify_category
 /// The reconciled category law: gear slots + cosmetics + the 11 weapon families + the 3
 /// gathering tools (dedicated tool slot — never the weapon slot) + the fungibles. No mount.
-fun verify_category(category: String) {
+fun vc1(category: String) {
   assert!(content_rules::is_category(&category), EWrongCategory);
 }
 

@@ -60,7 +60,7 @@ public(package) fun equip(chr: &mut Character, slot: String, item: Item) {
 
   let character_id = chr.id();
   let character_address = character_id.to_address();
-  let map = borrow_map_mut(chr);
+  let map = bmm(chr);
   assert!(!map.contains(&slot), ESlotTaken);
 
   // A relic of the same TEMPLATE can be worn only once across the six slots.
@@ -83,7 +83,7 @@ public(package) fun equip(chr: &mut Character, slot: String, item: Item) {
     damages: if (item.has_damages()) item.damages() else vector[],
   };
   map.insert(slot, record);
-  refold(chr);
+  r1(chr);
   event::emit(ItemEquipped { character: character_id, slot, item: object::id(&item) });
   transfer::public_transfer(item, character_address);
 }
@@ -93,13 +93,13 @@ public(package) fun equip(chr: &mut Character, slot: String, item: Item) {
 public(package) fun unequip(chr: &mut Character, slot: String, receiving: Receiving<Item>): Item {
   assert!(content_rules::is_slot(&slot), EInvalidSlot);
   let character_id = chr.id();
-  let map = borrow_map_mut(chr);
+  let map = bmm(chr);
   assert!(map.contains(&slot), ENotEquipped);
   let (_, record) = map.remove(&slot);
 
   let item = transfer::public_receive(character::uid_mut(chr), receiving);
   assert!(object::id(&item) == record.item, EWrongItem);
-  refold(chr);
+  r1(chr);
   event::emit(ItemUnequipped { character: character_id, slot, item: record.item });
   item
 }
@@ -107,11 +107,11 @@ public(package) fun unequip(chr: &mut Character, slot: String, receiving: Receiv
 /// Rewrite one slot's stat snapshot and refold — the PET seam: feeding scales the pet's
 /// stats, and the sent-away item can't be re-read, so the feeder hands the fresh numbers in.
 public(package) fun set_slot_stats(chr: &mut Character, slot: String, stats: ItemStatistics) {
-  let map = borrow_map_mut(chr);
+  let map = bmm(chr);
   assert!(map.contains(&slot), ENotEquipped);
   let record = map.get_mut(&slot);
   record.stats = option::some(stats);
-  refold(chr);
+  r1(chr);
 }
 
 /// Is a pet on the pet slot? (The travel checkpoint's ×1.5 flag reads this.)
@@ -155,7 +155,8 @@ public(package) fun record_damages(record: &EquippedRecord): vector<ItemDamages>
 
 // ╔════════════════ [ Private ] ══════════════════════════════════════════════ ]
 
-fun borrow_map_mut(chr: &mut Character): &mut VecMap<String, EquippedRecord> {
+// borrow_map_mut
+fun bmm(chr: &mut Character): &mut VecMap<String, EquippedRecord> {
   let uid = character::uid_mut(chr);
   if (!dfield::exists(uid, EquipmentKey())) {
     dfield::add(uid, EquipmentKey(), vec_map::empty<String, EquippedRecord>());
@@ -163,8 +164,9 @@ fun borrow_map_mut(chr: &mut Character): &mut VecMap<String, EquippedRecord> {
   dfield::borrow_mut(uid, EquipmentKey())
 }
 
+// refold
 /// Recompute the folded total from the slot map — called by the two writers only.
-fun refold(chr: &mut Character) {
+fun r1(chr: &mut Character) {
   let mut blocks = vector[];
   let map = equipped(chr);
   let keys = map.keys();
