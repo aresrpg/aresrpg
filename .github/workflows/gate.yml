@@ -59,8 +59,10 @@ jobs:
           mkdir -p "$HOME/sui-bin"
           echo "$HOME/sui-bin" >> "$GITHUB_PATH"
           if ! "$HOME/sui-bin/sui" --version 2>/dev/null; then
+            # the release tarball prefixes members with ./ — extract the one cli binary only
             curl -fsSL "https://github.com/MystenLabs/sui/releases/download/${{ steps.sui_version.outputs.version }}/sui-${{ steps.sui_version.outputs.version }}-ubuntu-x86_64.tgz" \
-              | tar -xz -C "$HOME/sui-bin" sui
+              | tar -xz -C "$HOME/sui-bin" ./sui
+            "$HOME/sui-bin/sui" --version
           fi
       - name: move-math — build + test
         run: |
@@ -95,8 +97,10 @@ jobs:
           mkdir -p "$HOME/sui-bin"
           echo "$HOME/sui-bin" >> "$GITHUB_PATH"
           if ! "$HOME/sui-bin/sui" --version 2>/dev/null; then
+            # the release tarball prefixes members with ./ — extract the one cli binary only
             curl -fsSL "https://github.com/MystenLabs/sui/releases/download/${{ steps.sui_version.outputs.version }}/sui-${{ steps.sui_version.outputs.version }}-ubuntu-x86_64.tgz" \
-              | tar -xz -C "$HOME/sui-bin" sui
+              | tar -xz -C "$HOME/sui-bin" ./sui
+            "$HOME/sui-bin/sui" --version
           fi
       - name: compile the Move packages (the parity gates' ground truth)
         run: |
