@@ -88,15 +88,16 @@ const SELECTED_CHARACTER_KEY = 'aresrpg.selected_character'
 const read_selected_character = (): string | null => {
   try {
     return globalThis.localStorage?.getItem(SELECTED_CHARACTER_KEY) ?? null
-  } catch {
+  } catch (error) {
+    console.warn('Character-tab storage is unavailable; starting on the first character.', error)
     return null
   }
 }
 const remember_selected_character = (character_id: string): void => {
   try {
     globalThis.localStorage?.setItem(SELECTED_CHARACTER_KEY, character_id)
-  } catch {
-    // private browsing — the tab just won't stick across reloads
+  } catch (error) {
+    console.warn('Character-tab storage is unavailable; the selection will not survive a reload.', error)
   }
 }
 
