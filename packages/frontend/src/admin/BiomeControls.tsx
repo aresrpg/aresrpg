@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
-import { MATERIAL_PRESETS, landscape_height, type WorldRecipe } from '@aresrpg/engine'
+import { MATERIAL_PRESETS, STRUCTURE_PACKS, STRUCTURE_TYPES, landscape_height, type WorldRecipe } from '@aresrpg/engine'
 import { useEffect, useRef, useState } from 'react'
 
 import { item_icon, mob_icon } from '../content/assets.ts'
@@ -9,7 +9,7 @@ import { item_icon, mob_icon } from '../content/assets.ts'
 import { move_spline_knot } from './biome_editor.ts'
 import type { JsonPath, JsonValue } from './seed_editor.ts'
 
-/* eslint-disable functional/immutable-data -- Pointer-drag drafts and debounce timers are local UI effect boundaries. */
+/* eslint-disable functional/immutable-data -- Pointer-drag drafts are local UI effect boundaries. */
 
 const input_class =
   'h-8 border border-white/12 bg-[#090a10] px-2 text-[9px] text-[#dedad2] outline-none focus:border-[#4a9eff]/60'
@@ -43,6 +43,11 @@ export const MaterialEditor = ({
           recipe.liquid === name ||
           recipe.biomes.some(({ landscape }) =>
             landscape.some(({ land }) => land && Object.values(land).includes(name))
+          ) ||
+          recipe.biomes.some(({ structure_packs = [] }) =>
+            structure_packs.some((pack_name) =>
+              STRUCTURE_PACKS[pack_name]?.types.some(({ type }) => STRUCTURE_TYPES[type]?.palette.includes(name))
+            )
           )
         return (
           <div
@@ -118,6 +123,9 @@ export const SplineEditor = ({
   fill = false,
   selected,
   select,
+  disabled = false,
+  x_domain,
+  y_domain,
 }: Readonly<{
   name: string
   knots: readonly (readonly [number, number])[]
@@ -126,46 +134,42 @@ export const SplineEditor = ({
   fill?: boolean
   selected?: number
   select?: (index: number) => void
+  disabled?: boolean
+  x_domain?: readonly [number, number]
+  y_domain?: readonly [number, number]
 }>) => {
   const [dragging, set_dragging] = useState<number | null>(null)
   const [draft_knots, set_draft_knots] = useState(knots)
   const draft_ref = useRef(knots)
-  const change_timer = useRef<ReturnType<typeof setTimeout> | null>(null)
   useEffect(() => {
     if (dragging !== null) return
     draft_ref.current = knots
     set_draft_knots(knots)
   }, [dragging, knots])
-  useEffect(
-    () => () => {
-      if (change_timer.current !== null) clearTimeout(change_timer.current)
-    },
-    []
-  )
   const show_knots = (next: readonly (readonly [number, number])[]): void => {
     draft_ref.current = next
     set_draft_knots(next)
   }
   const commit_drag = (): void => {
-    if (change_timer.current !== null) clearTimeout(change_timer.current)
-    change_timer.current = null
-    change(draft_ref.current)
+    if (dragging === null) return
     set_dragging(null)
+    if (draft_ref.current.some(([x, y], index) => x !== knots[index]?.[0] || y !== knots[index]?.[1]))
+      change(draft_ref.current)
   }
   const preview_drag = (next: readonly (readonly [number, number])[]): void => {
     show_knots(next)
-    if (change_timer.current !== null) clearTimeout(change_timer.current)
-    change_timer.current = setTimeout(() => change(next), 220)
   }
   const width = 640
   const height = 108
-  const x_min = Math.min(...draft_knots.map(([x]) => x))
-  const x_max = Math.max(...draft_knots.map(([x]) => x))
-  const y_low = Math.min(...draft_knots.map(([, y]) => y))
-  const y_high = Math.max(...draft_knots.map(([, y]) => y))
-  const padding = Math.max(0.1, (y_high - y_low) * 0.15)
-  const y_min = y_low - padding
-  const y_max = y_high + padding
+  const [x_min, x_max] = x_domain ?? [
+    Math.min(...draft_knots.map(([x]) => x)),
+    Math.max(...draft_knots.map(([x]) => x)),
+  ]
+  const [y_min, y_max] = y_domain ?? [
+    Math.min(...draft_knots.map(([, y]) => y)),
+    Math.max(...draft_knots.map(([, y]) => y)),
+  ]
+  const clamp = (value: number, minimum: number, maximum: number): number => Math.max(minimum, Math.min(maximum, value))
   const to_x = (x: number): number => 12 + ((x - x_min) / Math.max(0.0001, x_max - x_min)) * (width - 24)
   const to_y = (y: number): number => height - 12 - ((y - y_min) / Math.max(0.0001, y_max - y_min)) * (height - 24)
   const point_from_event = (
@@ -177,8 +181,8 @@ export const SplineEditor = ({
     const px = ((client_x - bounds.left) / bounds.width) * width
     const py = ((client_y - bounds.top) / bounds.height) * height
     return [
-      x_min + ((px - 12) / (width - 24)) * (x_max - x_min),
-      y_min + ((height - 12 - py) / (height - 24)) * (y_max - y_min),
+      clamp(x_min + ((px - 12) / (width - 24)) * (x_max - x_min), x_min, x_max),
+      clamp(y_min + ((height - 12 - py) / (height - 24)) * (y_max - y_min), y_min, y_max),
     ]
   }
   const curve = Array.from({ length: 121 }, (_, index) => {
@@ -191,11 +195,12 @@ export const SplineEditor = ({
         <div>
           <h3 className="text-[9px] tracking-[0.14em] text-[#c8963c] uppercase">{name.replaceAll('_', ' ')}</h3>
           <p className="mt-1 text-[7px] text-[#626670]">
-            Drag a blue knot; the voxel preview updates from the exact terrain sampler.
+            {disabled ? 'Rebuilding the exact voxel field…' : 'Drag a blue knot; release once to rebuild terrain.'}
           </p>
         </div>
         <button
           className={button_class}
+          disabled={disabled}
           onClick={() => {
             const gaps = draft_knots
               .slice(1)
@@ -218,7 +223,8 @@ export const SplineEditor = ({
         </button>
       </div>
       <svg
-        className={`w-full touch-none border border-white/6 bg-[#08080d] ${fill ? 'min-h-40 flex-1' : ''}`}
+        aria-disabled={disabled}
+        className={`w-full touch-none border border-white/6 bg-[#08080d] ${fill ? 'min-h-40 flex-1' : ''} ${disabled ? 'pointer-events-none cursor-wait opacity-55' : ''}`}
         onPointerMove={(event) =>
           dragging === null ||
           preview_drag(
@@ -229,6 +235,7 @@ export const SplineEditor = ({
             )
           )
         }
+        onPointerCancel={commit_drag}
         onPointerUp={commit_drag}
         preserveAspectRatio={fill ? 'none' : undefined}
         viewBox={`0 0 ${width} ${height}`}
@@ -241,6 +248,7 @@ export const SplineEditor = ({
             fill="none"
             key={`${index}-${x}`}
             onPointerDown={(event) => {
+              if (disabled) return
               event.currentTarget.setPointerCapture(event.pointerId)
               select?.(index)
               set_dragging(index)
@@ -251,6 +259,14 @@ export const SplineEditor = ({
           />
         ))}
       </svg>
+      <div className="mt-1 flex justify-between text-[6px] tabular-nums text-[#555a64] uppercase">
+        <span>
+          Elevation {y_min}–{y_max}
+        </span>
+        <span>
+          Ground noise {x_min}–{x_max}
+        </span>
+      </div>
       {!compact && (
         <div className="mt-2 flex flex-wrap gap-2">
           {draft_knots.map(([x, y], index) => (
@@ -258,6 +274,7 @@ export const SplineEditor = ({
               <span className="px-1 text-[7px] text-[#5f636d]">{index + 1}</span>
               <input
                 className={`${input_class} w-14`}
+                disabled={disabled}
                 onChange={(event) => change(move_spline_knot(draft_knots, index, [Number(event.target.value), y]))}
                 step="0.01"
                 type="number"
@@ -265,6 +282,7 @@ export const SplineEditor = ({
               />
               <input
                 className={`${input_class} w-14`}
+                disabled={disabled}
                 onChange={(event) => change(move_spline_knot(draft_knots, index, [x, Number(event.target.value)]))}
                 step="0.01"
                 type="number"
@@ -272,7 +290,7 @@ export const SplineEditor = ({
               />
               <button
                 className={button_class}
-                disabled={draft_knots.length <= 2}
+                disabled={disabled || draft_knots.length <= 2}
                 onClick={() => change(draft_knots.filter((_, knot) => knot !== index))}
                 type="button"
               >

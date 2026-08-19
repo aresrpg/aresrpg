@@ -320,7 +320,7 @@ export type FightEventPayloads = {
   }
   fighter_died: { fighter: MoveInteger; source: MoveInteger; cause: string; cell: MoveInteger }
   fight_ended: { winner: MoveInteger | null }
-  reaction_triggered: {
+  chatiment_triggered: {
     fighter: MoveInteger
     stance_effect_id: string
     added_effect_id: string
@@ -337,6 +337,16 @@ export type FightEventPayloads = {
     value: MoveInteger
     turns: MoveInteger
     source: MoveInteger
+  }
+  // The wisdom contest over an AP/MP removal, dodges included — emitted even when nothing
+  // lands, so a full dodge is visible truth instead of silence.
+  points_contested: {
+    source: MoveInteger
+    target: MoveInteger
+    channel: MoveInteger
+    attempted: MoveInteger
+    removed: MoveInteger
+    stolen: boolean
   }
   effect_expired: { target: MoveInteger; effect_id: string; kind: MoveInteger; channel: MoveInteger }
   effects_dispelled: { target: MoveInteger; removed_effect_ids: string[] }
@@ -437,7 +447,6 @@ export type ResolveRowsInput = {
   anchor: MoveInteger
   origin: MoveInteger
   cursor: PrngCursor
-  critical: boolean
   cast_level: MoveInteger
   cause: string
 }

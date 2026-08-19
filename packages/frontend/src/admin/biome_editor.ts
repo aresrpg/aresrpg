@@ -3,13 +3,16 @@
 
 import {
   compile_world_recipe,
+  MAX_SURFACE_Y,
   parse_world_recipe,
   sample_biome_grid,
   sample_world_column,
+  surface_layer_for_slope,
+  terrain_slope,
   type WorldRecipe,
   type MaterialPreset,
 } from '@aresrpg/engine'
-import { world_center, world_size } from '@aresrpg/immutable'
+import { chain_to_client_coordinate, world_center, world_size } from '@aresrpg/immutable'
 import { ZONE_SIZE } from '@aresrpg/protocol'
 
 export const biome_preview = (value: unknown) => {
@@ -24,13 +27,15 @@ export const biome_preview = (value: unknown) => {
 export const sample_biome_cell = (value: unknown, column: number, row: number) => {
   const recipe = parse_world_recipe(value)
   const world = compile_world_recipe(recipe)
-  const x = column * ZONE_SIZE + ZONE_SIZE / 2 - world_center
-  const z = row * ZONE_SIZE + ZONE_SIZE / 2 - world_center
+  const x = chain_to_client_coordinate(column * ZONE_SIZE + ZONE_SIZE / 2)
+  const z = chain_to_client_coordinate(row * ZONE_SIZE + ZONE_SIZE / 2)
   return Object.freeze({ x, z, ...sample_world_column(world, x, z) })
 }
 
 export const first_biome_land = (biome: WorldRecipe['biomes'][number]) =>
   biome.landscape.find(({ land }) => land)?.land ?? null
+
+export const world_height_domain = (): readonly [number, number] => [0, MAX_SURFACE_Y]
 
 export type TerrainPatch = Readonly<{
   side: number
@@ -55,12 +60,22 @@ export const terrain_patch = (
   const side = options.side ?? 17
   const spacing = options.spacing ?? 64
   const offset = (side - 1) / 2
-  const columns = Array.from({ length: side * side }, (_, index) => {
+  const samples = Array.from({ length: side * side }, (_, index) => {
     const column = index % side
     const row = Math.floor(index / side)
     const x = options.center_x + (column - offset) * spacing
     const z = options.center_z + (row - offset) * spacing
-    const sample = sample_world_column(world, x, z)
+    return Object.freeze({ column, row, x, z, sample: sample_world_column(world, x, z) })
+  })
+  const columns = samples.map(({ column, row, x, z, sample }, index) => {
+    const neighbours = [
+      column > 0 ? samples[index - 1] : undefined,
+      column + 1 < side ? samples[index + 1] : undefined,
+      row > 0 ? samples[index - side] : undefined,
+      row + 1 < side ? samples[index + side] : undefined,
+    ].flatMap((candidate) => (candidate ? [candidate.sample.surface_y] : []))
+    const layer = surface_layer_for_slope(terrain_slope(sample.surface_y, neighbours, spacing))
+    const material = recipe.materials[sample.land[layer]]
     return Object.freeze({
       column,
       row,
@@ -68,8 +83,8 @@ export const terrain_patch = (
       z,
       surface_y: sample.surface_y,
       biome: sample.biome.name,
-      color: recipe.materials[sample.land.surface]?.color ?? '#000000',
-      preset: recipe.materials[sample.land.surface]?.preset ?? 'stone',
+      color: material?.color ?? '#000000',
+      preset: material?.preset ?? 'stone',
     })
   })
   return Object.freeze({ side, columns: Object.freeze(columns) })

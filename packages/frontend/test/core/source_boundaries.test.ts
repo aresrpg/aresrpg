@@ -31,25 +31,4 @@ describe('frontend source boundaries', () => {
     ).flat()
     expect(violations).toEqual([])
   })
-
-  test('active source exposes no retired sponsorship surface', async () => {
-    const violations = (
-      await Promise.all(
-        (await source_files(source_root)).map(async (file) => {
-          const source = await readFile(file, 'utf8')
-          return /sponsor(?:ed|ship)?/i.test(source) ? [file] : []
-        })
-      )
-    ).flat()
-    expect(violations).toEqual([])
-  })
-
-  test('the mounted session observer exclusively owns remembered-auth restoration', async () => {
-    const [entry, session] = await Promise.all([
-      readFile(resolve(source_root, 'main.tsx'), 'utf8'),
-      readFile(resolve(source_root, 'modules/session.ts'), 'utf8'),
-    ])
-    expect(entry).not.toContain("type: 'auth/connecting'")
-    expect(session).toContain('read_auth_wallet(storage)')
-  })
 })

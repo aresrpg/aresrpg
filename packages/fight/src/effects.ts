@@ -4,13 +4,15 @@
 // The one spell/weapon/zone resolver, ported in fight.move mutation order.
 
 import { GRID_CELLS, in_grid, line_of_sight, manhattan, mask_get, same_line, zone_cells } from './combat_grid.ts'
+import { TARGET_FILTERS } from './move_contract.gen.ts'
 import { contest_points, deal, full_damage, life_steal, resist, roll_value } from './damage.ts'
-import { effect_seed, heal_amount, punishment_base } from './fight_math.ts'
+import { amplify_damage, effect_seed, heal_amount, primary_stat, punishment_base } from './fight_math.ts'
 import { KINDS, STATS, add_ap, add_mp, heal_seat, hit, max_hp_of, sheet_of, spend_ap, spend_mp } from './fighters.ts'
 import { displace, fighter_at, living_cells } from './movement.ts'
 import { draw } from './prng.ts'
 import { add_effect_id, add_zone_id, effect_id_at, emit, fail } from './runtime.ts'
 import { spell_level_of, spell_turn_rows, type FightReadState } from './spell_turn.ts'
+import { weapon_level_of } from './weapon.ts'
 import { on_enter } from './zones.ts'
 import type {
   ActiveEffect,
@@ -99,11 +101,13 @@ const visible_occupant = (runtime: FightReadState, caster: bigint, cell: bigint)
   return invisible && fighter.team !== caster_fighter.team ? null : occupant
 }
 
-const has_offensive = (rows: readonly SpellEffect[]): boolean =>
-  rows.some((row) =>
-    [KINDS.damage, KINDS.pct_life, KINDS.punishment, KINDS.remove, KINDS.steal, KINDS.push, KINDS.pull].includes(
-      row.kind
-    )
+const has_direct_damage = (rows: readonly SpellEffect[]): boolean =>
+  rows.some(
+    (row) =>
+      row.kind === KINDS.damage ||
+      row.kind === KINDS.pct_life ||
+      row.kind === KINDS.punishment ||
+      (row.kind === KINDS.steal && row.stat === STATS.hp && row.turns === 0n)
   )
 
 const is_placement = (row: SpellEffect): boolean => row.kind === KINDS.trap || row.kind === KINDS.glyph
@@ -138,17 +142,21 @@ const zone_targets = (
   anchor: bigint,
   origin: bigint
 ): bigint[] => {
-  const { team } = runtime.contract.fighters[Number(caster)]
+  const caster_fighter = runtime.contract.fighters[Number(caster)]
+  if (!caster_fighter || caster_fighter.dead) return []
+  if (row.target_filter === TARGET_FILTERS.only_caster) return [caster]
   return zone_cells(row.area_shape, row.area_size, anchor, origin)
     .map((cell) => fighter_at(runtime, cell))
     .filter((seat): seat is bigint => seat !== null)
-    .filter((seat) => {
-      if (row.target_filter === 1n) return runtime.contract.fighters[Number(seat)].team !== team
-      if (row.target_filter === 2n) return seat !== caster
-      if (row.target_filter === 3n) return runtime.contract.fighters[Number(seat)].team === team
-      if (row.target_filter === 4n) return seat === caster
-      return true
-    })
+    .filter((seat) => target_allowed(runtime, caster, row, seat))
+}
+
+const target_allowed = (runtime: FightReadState, caster: bigint, row: SpellEffect, target: bigint): boolean => {
+  const { team } = runtime.contract.fighters[Number(caster)]
+  if (row.target_filter === TARGET_FILTERS.not_team) return runtime.contract.fighters[Number(target)].team !== team
+  if (row.target_filter === TARGET_FILTERS.not_self) return target !== caster
+  if (row.target_filter === TARGET_FILTERS.not_enemy) return runtime.contract.fighters[Number(target)].team === team
+  return row.target_filter !== TARGET_FILTERS.only_caster || target === caster
 }
 
 const travel_order = (runtime: FightRuntime, targets: bigint[], pivot: bigint, push: boolean): bigint[] =>
@@ -167,20 +175,10 @@ type NumberRowInput = {
   row: SpellEffect
   target: bigint
   cursor: PrngCursor
-  critical: boolean
   cast_level: bigint
 }
 
-const apply_number_row = ({
-  runtime,
-  caster,
-  sheet,
-  row,
-  target,
-  cursor,
-  critical,
-  cast_level,
-}: NumberRowInput): void => {
+const apply_number_row = ({ runtime, caster, sheet, row, target, cursor, cast_level }: NumberRowInput): void => {
   const channel = row.stat
   const { turns } = row
   if (channel === STATS.hp) {
@@ -204,13 +202,7 @@ const apply_number_row = ({
         cast_level,
       })
     } else {
-      push_row(
-        runtime,
-        target,
-        row,
-        caster,
-        full_damage(runtime, sheet, target, row.element, roll_value(row, cursor), critical)
-      )
+      push_row(runtime, target, row, caster, full_damage(runtime, sheet, target, row.element, roll_value(row, cursor)))
     }
     return
   }
@@ -225,12 +217,20 @@ const apply_number_row = ({
       return
     }
     const removed = contest_points(runtime, sheet, target, row, cursor)
+    emit(runtime, 'points_contested', {
+      source: caster,
+      target,
+      channel,
+      attempted: row.value,
+      removed,
+      stolen: row.kind === KINDS.steal,
+    })
     if (removed === 0n) return
     if (active) {
       if (channel === STATS.ap) spend_ap(runtime, target, removed, 'effect_remove', caster)
       else spend_mp(runtime, target, removed, 'effect_remove', caster)
     }
-    push_row(runtime, target, row, caster, removed)
+    if (!active || turns > 0n) push_row(runtime, target, row, caster, removed)
     if (row.kind === KINDS.steal) {
       if (channel === STATS.ap) add_ap(runtime, caster, removed, 'effect_steal', target)
       else add_mp(runtime, caster, removed, 'effect_steal', target)
@@ -246,25 +246,14 @@ const apply_number_row = ({
 
 type ApplyToInput = NumberRowInput & { origin: bigint; cause: string }
 
-const apply_to = ({
-  runtime,
-  caster,
-  sheet,
-  row,
-  target,
-  origin,
-  cursor,
-  critical,
-  cast_level,
-  cause,
-}: ApplyToInput): void => {
+const apply_to = ({ runtime, caster, sheet, row, target, origin, cursor, cast_level, cause }: ApplyToInput): void => {
   if (row.kind === KINDS.damage) {
     deal({ runtime, caster, sheet, target, element: row.element, base: roll_value(row, cursor), cast_level, cause })
   } else if (row.kind === KINDS.pct_life) {
     const maximum = max_hp_of(runtime, target)
     hit(runtime, {
       target,
-      amount: resist(runtime, target, row.element, (maximum * row.value) / 100n),
+      amount: resist(runtime, target, row.element, (maximum * roll_value(row, cursor)) / 100n),
       source: caster,
       cause: 'percent_life',
       element: row.element,
@@ -292,9 +281,11 @@ const apply_to = ({
       cast_level,
       cause: 'punishment',
     })
+  } else if (row.kind === KINDS.reduce) {
+    push_row(runtime, target, row, caster, amplify_damage(row.value, primary_stat(row.element, sheet), 0n))
   } else if ([KINDS.add, KINDS.remove, KINDS.steal].includes(row.kind)) {
-    apply_number_row({ runtime, caster, sheet, row, target, cursor, critical, cast_level })
-  } else if (row.kind === KINDS.reaction) {
+    apply_number_row({ runtime, caster, sheet, row, target, cursor, cast_level })
+  } else if (row.kind === KINDS.chatiment) {
     push_row(runtime, target, row, caster, row.value)
   } else if (row.kind === KINDS.push || row.kind === KINDS.pull) {
     displace({
@@ -324,18 +315,7 @@ const apply_to = ({
 
 type ApplyRowInput = Omit<ApplyToInput, 'target'> & { anchor: bigint }
 
-const apply_row = ({
-  runtime,
-  caster,
-  sheet,
-  row,
-  anchor,
-  origin,
-  cursor,
-  critical,
-  cast_level,
-  cause,
-}: ApplyRowInput): void => {
+const apply_row = ({ runtime, caster, sheet, row, anchor, origin, cursor, cast_level, cause }: ApplyRowInput): void => {
   if (row.kind === KINDS.teleport) {
     if (fighter_at(runtime, anchor) === null && legal_cell(runtime, anchor)) {
       const from = runtime.contract.fighters[Number(caster)].cell
@@ -353,8 +333,8 @@ const apply_row = ({
     return
   }
   if (row.kind === KINDS.swap) {
-    const other = fighter_at(runtime, anchor)
-    if (other !== null && other !== caster) {
+    const other = visible_occupant(runtime, caster, anchor)
+    if (other !== null && other !== caster && target_allowed(runtime, caster, row, other)) {
       const caster_cell = runtime.contract.fighters[Number(caster)].cell
       const other_cell = runtime.contract.fighters[Number(other)].cell
       runtime.contract.fighters[Number(caster)].cell = other_cell
@@ -386,8 +366,7 @@ const apply_row = ({
       ? travel_order(runtime, targets, origin, row.kind === KINDS.push)
       : targets
   ordered.forEach((target) => {
-    if (!runtime.contract.ended)
-      apply_to({ runtime, caster, sheet, row, target, origin, cursor, critical, cast_level, cause })
+    if (!runtime.contract.ended) apply_to({ runtime, caster, sheet, row, target, origin, cursor, cast_level, cause })
   })
 }
 
@@ -399,14 +378,13 @@ export const resolve_rows = ({
   anchor,
   origin,
   cursor,
-  critical,
   cast_level,
   cause,
 }: ResolveRowsInput): void => {
   rows.forEach((row) => {
     if (runtime.contract.ended) return
     if (row.chance_bp >= 10_000n || draw(cursor) % 10_000n < row.chance_bp)
-      apply_row({ runtime, caster, sheet, row, anchor, origin, cursor, critical, cast_level, cause })
+      apply_row({ runtime, caster, sheet, row, anchor, origin, cursor, cast_level, cause })
   })
 }
 
@@ -470,11 +448,15 @@ export type SpellCellProjection = Readonly<{
   targetable: readonly bigint[]
 }>
 
-export const spell_target_cells = (runtime: FightReadState, caster: bigint, name: string): SpellCellProjection => {
+const level_target_cells = (
+  runtime: FightReadState,
+  caster: bigint,
+  name: string,
+  level: Readonly<SpellLevel> | null
+): SpellCellProjection => {
   const fighter = runtime.contract.fighters[Number(caster)]
   if (!fighter || fighter.kind.type !== 'player')
     return Object.freeze({ range: Object.freeze([]), targetable: Object.freeze([]) })
-  const level = spell_level_of(runtime, caster, name)
   if (!level) return Object.freeze({ range: Object.freeze([]), targetable: Object.freeze([]) })
   const range_bonus = level.modifiable_range ? sheet_of(runtime, caster).range_bonus : 0n
   const range = Array.from({ length: Number(GRID_CELLS) }, (_, index) => BigInt(index)).filter((cell) => {
@@ -493,6 +475,12 @@ export const spell_target_cells = (runtime: FightReadState, caster: bigint, name
     ),
   })
 }
+
+export const spell_target_cells = (runtime: FightReadState, caster: bigint, name: string): SpellCellProjection =>
+  level_target_cells(runtime, caster, name, spell_level_of(runtime, caster, name))
+
+export const weapon_target_cells = (runtime: FightReadState, caster: bigint): SpellCellProjection =>
+  level_target_cells(runtime, caster, 'strike', weapon_level_of(runtime, caster))
 
 export const resolve_spell = ({
   runtime,
@@ -533,7 +521,6 @@ export const resolve_spell = ({
     critical,
     weapon,
   })
-  if (has_offensive(rows)) drop_invisibility(runtime, caster, 'offensive_cast')
   if (split.placements.length > 0) {
     split.placements.forEach((row) => {
       const zone = {
@@ -558,6 +545,7 @@ export const resolve_spell = ({
     })
     return runtime
   }
+  if (has_direct_damage(rows)) drop_invisibility(runtime, caster, 'direct_damage_cast')
   resolve_rows({
     runtime,
     caster,
@@ -566,7 +554,6 @@ export const resolve_spell = ({
     anchor: target_cell,
     origin: caster_cell,
     cursor: { state: effect_seed(runtime.contract.turn_seed, slot) },
-    critical,
     cast_level,
     cause: weapon ? 'weapon' : 'spell',
   })

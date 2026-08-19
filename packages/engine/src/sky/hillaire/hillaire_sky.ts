@@ -12,8 +12,10 @@
 import { PerspectiveCamera, Vector3 } from 'three'
 import type { ComputeNode, Node, WebGPURenderer } from 'three/webgpu'
 import {
+  abs,
   cameraPosition,
   clamp,
+  exp,
   float,
   fog,
   length,
@@ -30,6 +32,7 @@ import {
 } from 'three/tsl'
 
 import { create_night_sky_node } from '../night_sky.ts'
+import { HEIGHT_FOG } from '../../height_fog.ts'
 import { SUN_DISC_COS } from '../sky_node.ts'
 import {
   MOON_DISC_COS,
@@ -186,6 +189,11 @@ export function create_hillaire_sky(opts: HillaireSkyOptions = {}) {
     // near-no-op there). World units (≈m). Live-tunable via __hillaire.art.near_fog_{start,full}.
     near_fog_start: uniform(40),
     near_fog_full: uniform(150),
+    height_base_y: uniform(0),
+    height_humidity: uniform(0.5),
+    height_density: uniform(opts.tier === 'high' ? HEIGHT_FOG.density : 0),
+    height_falloff: uniform(1 / HEIGHT_FOG.falloff_height),
+    height_max: uniform(HEIGHT_FOG.max_opacity),
     horizon_cap: uniform(0.25), // sky-view background luma ceiling (post-exposure linear, pre-AgX) — MEASURED 2026-07-11: up-horizon L=148 (≤150 gate), rgb(110,153,209) blue not white; zenith L=120 (deep blue)
   }
   /** night→day fade on sun elevation (far_field.js's proven pair); tilt = identity at night ⇒ byte-dark. */
@@ -306,7 +314,26 @@ export function create_hillaire_sky(opts: HillaireSkyOptions = {}) {
   const raw_color = aerial.inscatter.mul(U.exposure).div(max(base_factor, float(1e-3)))
   const tilt = mix(vec3(1, 1, 1), A.cool_tilt, day_f.mul(A.tilt_amt).clamp(0, 1))
   const fog_color = raw_color.mul(tilt)
-  const fog_node = /** @type {*} */ fog(fog_color, fog_factor)
+  // The legacy engine's cool ambiance came from an omnipresent 75-step noisy fog march. Keep its
+  // near-ground depth with a closed-form height integral instead: humidity pools haze in valleys,
+  // nearby detail remains clear, and no extra fullscreen pass or temporal volume exists.
+  const ray_y_raw = positionWorld.y.sub(cameraPosition.y).div(frag_len.max(1e-3))
+  const ray_sign = ray_y_raw.greaterThanEqual(0).select(float(1), float(-1))
+  const ray_y = ray_sign.mul(abs(ray_y_raw).max(0.02))
+  const camera_density = exp(cameraPosition.y.sub(A.height_base_y).mul(A.height_falloff).negate())
+  const humid_density = A.height_density.mul(mix(float(0.45), float(1.25), A.height_humidity))
+  const slope_amount = humid_density
+    .div(A.height_falloff)
+    .mul(camera_density)
+    .mul(float(1).sub(exp(frag_len.mul(ray_y).mul(A.height_falloff).negate())))
+    .div(ray_y)
+  const horizontal_amount = humid_density.mul(camera_density).mul(frag_len)
+  const height_amount = mix(horizontal_amount, slope_amount, smoothstep(0.015, 0.05, abs(ray_y_raw)))
+  const height_factor = float(1)
+    .sub(exp(height_amount.negate()))
+    .mul(smoothstep(HEIGHT_FOG.near_clear, HEIGHT_FOG.full_distance, frag_len))
+    .min(A.height_max)
+  const fog_node = /** @type {*} */ fog(fog_color, fog_factor.max(height_factor))
 
   // ── param writer (set_atmosphere_params + mood crossfade feed) ─────────────────────────────────────
   const write_uniforms = () => {
@@ -334,6 +361,11 @@ export function create_hillaire_sky(opts: HillaireSkyOptions = {}) {
     params = merge_atmosphere_params(params, partial)
     write_uniforms()
     params_dirty = true // transmittance + multiple-scattering rebuild on the next tick
+  }
+
+  const set_ground_haze = (ground_y: number, humidity: number): void => {
+    A.height_base_y.value = ground_y + HEIGHT_FOG.base_offset
+    A.height_humidity.value = Math.max(0, Math.min(1, humidity))
   }
 
   // ── lifecycle ─────────────────────────────────────────────────────────────────────────────────────
@@ -412,6 +444,7 @@ export function create_hillaire_sky(opts: HillaireSkyOptions = {}) {
     fog_node,
     sample_sky,
     set_atmosphere_params,
+    set_ground_haze,
     bake,
     tick,
     tier,

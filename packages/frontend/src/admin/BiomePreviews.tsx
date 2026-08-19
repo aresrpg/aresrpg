@@ -19,7 +19,12 @@ type SelectedColumn = Readonly<{
 export const TerrainPreview = ({
   recipe,
   selected,
-}: Readonly<{ recipe: WorldRecipe; selected: SelectedColumn | null }>) => {
+  on_rendering_change,
+}: Readonly<{
+  recipe: WorldRecipe
+  selected: SelectedColumn | null
+  on_rendering_change: (rendering: boolean) => void
+}>) => {
   const canvas = useRef<HTMLCanvasElement | null>(null)
   const preview = useRef<WorldPreview | null>(null)
   const drag = useRef<Readonly<{ x: number; y: number; mode: 'orbit' | 'pan' }> | null>(null)
@@ -33,8 +38,10 @@ export const TerrainPreview = ({
     const target = canvas.current
     if (!target) return
     let cancelled = false
-    void create_world_preview(target, latest.current).then(
-      (created) => {
+    on_rendering_change(true)
+    void (async () => {
+      try {
+        const created = await create_world_preview(target, latest.current)
         if (cancelled) {
           created.dispose()
           return
@@ -42,22 +49,45 @@ export const TerrainPreview = ({
         preview.current = created
         created.set_focus(focus.current[0], focus.current[1])
         created.set_exact_radius(exact_radius.current)
+        await created.update(latest.current)
+        if (cancelled) return
         set_error(null)
-      },
-      (reason: unknown) => {
-        if (!cancelled) set_error(reason instanceof Error ? reason.message : String(reason))
+        on_rendering_change(false)
+        // eslint-disable-next-line no-silent-failures/no-swallowed-failure -- The preview failure is rendered inline below the canvas.
+      } catch (reason) {
+        if (!cancelled) {
+          set_error(reason instanceof Error ? reason.message : String(reason))
+          on_rendering_change(false)
+        }
       }
-    )
+    })()
     return () => {
       cancelled = true
       preview.current?.dispose()
       preview.current = null
+      on_rendering_change(false)
     }
-  }, [])
+  }, [on_rendering_change])
   useEffect(() => {
     latest.current = recipe
-    preview.current?.update(recipe)
-  }, [recipe])
+    const { current } = preview
+    if (!current) return
+    let active = true
+    on_rendering_change(true)
+    void current.update(recipe).then(
+      () => {
+        if (active) on_rendering_change(false)
+      },
+      (reason: unknown) => {
+        if (!active) return
+        set_error(reason instanceof Error ? reason.message : String(reason))
+        on_rendering_change(false)
+      }
+    )
+    return () => {
+      active = false
+    }
+  }, [on_rendering_change, recipe])
   useEffect(() => {
     focus.current = [selected?.x ?? 0, selected?.z ?? 0]
     preview.current?.set_focus(focus.current[0], focus.current[1])

@@ -96,7 +96,7 @@ const empty_array_row = (key: string): JsonValue => {
       rare_item_type: '',
       biomes: Object.freeze([]),
     })
-  if (key === 'whitelist' || key === 'biomes' || key === 'vertical_chunks') return key === 'vertical_chunks' ? 0 : ''
+  if (key === 'whitelist' || key === 'biomes') return ''
   if (key === 'rooms') return Object.freeze([])
   return null
 }

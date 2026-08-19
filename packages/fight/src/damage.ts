@@ -7,11 +7,13 @@ import { apply_centered_resistance, amplify_damage, primary_stat, remove_points,
 import {
   KINDS,
   STATS,
+  action_points_of,
   base_ap_of,
   base_mp_of,
   effective_stat,
   heal_seat,
   hit,
+  movement_points_of,
   resistance_of,
   sum_effect_rows,
 } from './fighters.ts'
@@ -26,8 +28,7 @@ export const full_damage = (
   sheet: FightSheet,
   target: bigint,
   element: string,
-  base: bigint,
-  _critical?: boolean
+  base: bigint
 ): bigint =>
   apply_centered_resistance(
     amplify_damage(base, primary_stat(element, sheet), sheet.raw_damage),
@@ -64,7 +65,10 @@ type DealInput = {
 export const deal = ({ runtime, caster, sheet, target, element, base, cast_level, cause }: DealInput): bigint => {
   if (runtime.contract.ended || runtime.contract.fighters[Number(target)].dead) return 0n
   const raw_damage = full_damage(runtime, sheet, target, element, base)
-  const shield = sum_effect_rows(runtime, target, KINDS.reduce, STATS.any)
+  const shield_rows = runtime.contract.fighters[Number(target)].effects
+    .map((row, index) => ({ row, index }))
+    .filter(({ row }) => row.kind === KINDS.reduce && (row.element === '' || row.element === element))
+  const shield = shield_rows.reduce((total, { row }) => total + row.value, 0n)
   const damage = raw_damage > shield ? raw_damage - shield : 0n
   if (shield > 0n) {
     emit(runtime, 'damage_reduced', {
@@ -72,10 +76,7 @@ export const deal = ({ runtime, caster, sheet, target, element, base, cast_level
       target,
       prevented: raw_damage - damage,
       remaining: damage,
-      effect_ids: runtime.contract.fighters[Number(target)].effects
-        .map((row, index) => ({ row, index }))
-        .filter(({ row }) => row.kind === KINDS.reduce)
-        .map(({ index }) => effect_id_at(runtime, target, index)),
+      effect_ids: shield_rows.map(({ index }) => effect_id_at(runtime, target, index)),
     })
   }
   if (damage === 0n) return 0n
@@ -119,13 +120,20 @@ export const contest_points = (
 ): bigint => {
   const is_ap = row.stat === STATS.ap
   const fighter = runtime.contract.fighters[Number(target)]
+  const active = runtime.contract.queue[Number(runtime.contract.turn_ptr)] === target
   const result = remove_points({
     rng: draw(cursor),
     value: row.value,
     dodge: true,
     caster_wisdom: sheet.wisdom,
     target_wisdom: effective_stat(runtime, target, STATS.wisdom),
-    current: is_ap ? fighter.ap : fighter.mp,
+    current: active
+      ? is_ap
+        ? fighter.ap
+        : fighter.mp
+      : is_ap
+        ? action_points_of(runtime, target)
+        : movement_points_of(runtime, target),
     maximum: is_ap ? base_ap_of(runtime, target) : base_mp_of(runtime, target),
   })
   cursor.state = result.state
@@ -151,5 +159,6 @@ export const life_steal = ({
     cast_level,
     cause: 'life_steal',
   })
-  heal_seat(runtime, { target: caster, amount: landed, source: caster, cause: 'life_steal' })
+  // Dofus law: the drink is HALF of what actually landed (overkill already excluded by deal).
+  heal_seat(runtime, { target: caster, amount: landed / 2n, source: caster, cause: 'life_steal' })
 }

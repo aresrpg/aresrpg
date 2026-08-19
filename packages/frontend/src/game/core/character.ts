@@ -95,7 +95,7 @@ export const create_character_controller = ({
   // [D215] fixed-step physics renders at frame rate: keep the previous step's pose and let
   // get_transform interpolate by the accumulator fraction — avatar and camera read one smooth source.
   const prev = { position: [...state.position] as Vec3Mut, visual_y: state.visual_y, facing_yaw: state.facing_yaw }
-  const input: ControllerInput = { forward: 0, strafe: 0, jump: false, walk: false, speed_scale: 1, yaw }
+  const input: ControllerInput = { forward: 0, strafe: 0, jump: false, glide: false, walk: false, speed_scale: 1, yaw }
   let acc = 0
   let air_jump_event = false
   let disposed = false
@@ -106,6 +106,7 @@ export const create_character_controller = ({
       if (next.forward !== undefined) input.forward = next.forward
       if (next.strafe !== undefined) input.strafe = next.strafe
       if (next.jump !== undefined) input.jump = next.jump
+      if (next.glide !== undefined) input.glide = next.glide
       if (next.walk !== undefined) input.walk = next.walk
       if (next.speed_scale !== undefined) input.speed_scale = next.speed_scale
       if (next.yaw !== undefined) input.yaw = next.yaw

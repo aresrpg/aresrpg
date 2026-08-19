@@ -3,6 +3,7 @@
 // One adapter from live fight effects to the shared spell-effect line used by every fight surface.
 
 import type { ActiveEffect } from '@aresrpg/fight'
+import { CHANNELS, EFFECT_KINDS } from '@aresrpg/fight/move_contract'
 
 import { EffectLine } from '../../components/EffectLine.tsx'
 import type { SpellEffect } from '../../content/catalog.ts'
@@ -52,10 +53,20 @@ const compact_effect_line = (effect: Readonly<FightEffectLineView>): ReturnType<
   const view = spell_effect_line_view(spell_effect(effect))
   const action = view.pre.trim()
   const label = view.post.trim()
+  const damage_over_time = effect.stat === CHANNELS.hp && effect.kind !== EFFECT_KINDS.add
   return Object.freeze({
     ...view,
-    pre: action === 'Adds' ? '+' : action === 'Removes' || action === 'Steals' ? '−' : view.pre,
-    post: ` ${label === 'Raw Damage' ? 'damages' : label}`,
+    pre: damage_over_time
+      ? ''
+      : effect.kind === EFFECT_KINDS.invis
+        ? 'Invisible'
+        : action === 'Adds'
+          ? '+'
+          : action === 'Removes' || action === 'Steals'
+            ? '−'
+            : view.pre,
+    value: effect.kind === EFFECT_KINDS.invis ? null : view.value,
+    post: ` ${damage_over_time || label === 'Raw Damage' ? 'damages' : label}`,
   })
 }
 

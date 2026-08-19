@@ -11,27 +11,14 @@ import { CHAT_MIN_INTERVAL_MS } from '@aresrpg/protocol'
 
 import { mesh, type ChatFact } from '../protocol.ts'
 import type { PlayerModule, PlayerAction, PlayerState } from '../player.ts'
+import { create_watcher } from '../pubsub_bus.ts'
 
 export default {
   name: 'player_chat',
   observe: ({ pubsub, events, send, address, get_state, signal }) => {
     /** the flood clock — validation bookkeeping, one law for all three doors */
     const clock = { last_ms: 0 }
-    const watched = new Map<string, (payload: never) => void>()
-
-    const watch = (channel: string, forward: (payload: never) => void) => {
-      if (watched.has(channel)) return
-      watched.set(channel, forward)
-      pubsub.emitter.on(channel, forward as (payload: unknown) => void)
-      void pubsub.subscribe(channel)
-    }
-    const unwatch = (channel: string) => {
-      const forward = watched.get(channel)
-      if (!forward) return
-      watched.delete(channel)
-      pubsub.emitter.off(channel, forward as (payload: unknown) => void)
-      void pubsub.unsubscribe(channel)
-    }
+    const { watch, unwatch, watched } = create_watcher(pubsub)
 
     const flood_gated = (): boolean => {
       const now = Date.now()
@@ -47,7 +34,7 @@ export default {
       const { character } = get_state()
       if (!character) return // chat before embody is noise
       if (flood_gated()) return
-      void pubsub.publish(mesh.chat_world(character.world), { address, character: character.name, text })
+      void pubsub.mesh.publish(mesh.chat_world(character.world), { address, character: character.name, text })
     })
 
     events.on('packet/chat_party', ({ text }: Extract<PlayerAction, { type: 'packet/chat_party' }>) => {
@@ -58,14 +45,14 @@ export default {
         return
       }
       if (flood_gated()) return
-      void pubsub.publish(mesh.chat_party(party), { address, character: character.name, text })
+      void pubsub.mesh.publish(mesh.chat_party(party), { address, character: character.name, text })
     })
 
     events.on('packet/chat_whisper', ({ to, text }: Extract<PlayerAction, { type: 'packet/chat_whisper' }>) => {
       const { character } = get_state()
       if (!character) return
       if (flood_gated()) return
-      void pubsub.publish(mesh.chat_user(to), { address, character: character.name, text })
+      void pubsub.mesh.publish(mesh.chat_user(to), { address, character: character.name, text })
     })
 
     const forward_world_chat = (fact: ChatFact) => {
@@ -101,7 +88,7 @@ export default {
     watch(mesh.chat_user(address), forward_whisper as (payload: never) => void)
 
     signal.addEventListener('abort', () => {
-      for (const channel of [...watched.keys()]) unwatch(channel)
+      for (const channel of watched()) unwatch(channel)
     })
   },
 } satisfies PlayerModule

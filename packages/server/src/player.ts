@@ -23,7 +23,7 @@ import logger from './logger.ts'
 import { channels } from './protocol.ts'
 import type { Graph } from './graph.ts'
 import type { GameState } from './game_state.ts'
-import type { Pubsub } from './pubsub.ts'
+import type { Pubsub } from './pubsub_bus.ts'
 import player_load from './modules/player_load.ts'
 import player_info from './modules/player_info.ts'
 import player_events from './modules/player_events.ts'
@@ -68,8 +68,12 @@ export type PlayerState = {
   character: Embodied | null
   /** friend addresses — visibility-cap bypass, loaded with the embody */
   friends: ReadonlySet<string>
-  /** when the last accepted move folded — the speed law's clock */
-  last_move_ms: number
+  /** The speed law's ANCHOR — the last proven position + its timestamp. Seeded by the chain
+   *  checkpoint at embody, re-anchored at most once per second by accepted moves: the budget
+   *  prices DISTANCE FROM HERE over ELAPSED SINCE HERE (the chain's travel_ok shape), so
+   *  physics transients (a jump arc, a terrain snap) never read as speed hacks the way a
+   *  per-sample check made them (2026-08-19). */
+  move_anchor: Readonly<{ x: number; z: number; at_ms: number }> | null
   /** the LIVE fight this connection streams — own seat or spectate, one slot */
   fight: string | null
   /** the embodied character's party */
@@ -82,7 +86,8 @@ export type PlayerContext = {
   address: string
   admin: boolean
   graph: Graph
-  /** the redis mesh — cross-connection facts (indexer envelopes, presence channels) */
+  /** the two pub/sub doors — `graph` (the bound indexer set's evt:* truth) and `mesh` (the
+   *  cluster redis for player-published ephemera); channel names route via create_watcher */
   pubsub: Pubsub
   /** Shared cached comparison of indexed checkpoint against the fullnode head. */
   indexing_lag: () => Promise<number | null>
@@ -143,7 +148,7 @@ const READ_PACKETS = new Set<string>([
 const INITIAL_STATE = (): PlayerState => ({
   character: null,
   friends: new Set(),
-  last_move_ms: 0,
+  move_anchor: null,
   fight: null,
   party: null,
   market_category: null,

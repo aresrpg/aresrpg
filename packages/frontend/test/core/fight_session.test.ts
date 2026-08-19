@@ -4,7 +4,7 @@
 import { describe, expect, test } from 'bun:test'
 import { decode_fight_action, encode_fight_action, fight_path_to, reachable_fight_cells } from '@aresrpg/fight'
 
-import { create_fight_session } from '../../src/modules/fight.ts'
+import { create_fight_session, local_fight_should_close } from '../../src/modules/fight.ts'
 import { initial_simulator_state, reduce_simulator_state, simulator_board } from '../../src/modules/simulator.ts'
 import { simulator_fight_setup } from '../../src/simulator/fight_setup.ts'
 
@@ -117,5 +117,18 @@ describe('fight session owner', () => {
     streamed.apply(decode_fight_action(encode_fight_action(action)))
 
     expect(streamed.state()).toEqual(local.state())
+  })
+
+  test('returns a completed local fight to setup only after its presentation settles', () => {
+    const session = create_fight_session({ now: () => 60_000n, reconcile: () => {} })
+    const simulator = ready_setup()
+    session.open({ mode: 'local', setup: simulator_fight_setup(simulator), seed: simulator.seed })
+    session.apply({ type: 'start' })
+    session.apply({ type: 'forfeit', fighter: 0n })
+    const ended = session.state()!
+
+    expect(ended.checkpoint.contract.ended).toBeTrue()
+    expect(local_fight_should_close(ended)).toBeFalse()
+    expect(local_fight_should_close(Object.freeze({ ...ended, events: Object.freeze([]) }))).toBeTrue()
   })
 })

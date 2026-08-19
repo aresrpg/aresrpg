@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
-import type { CharacterRow } from '@aresrpg/protocol'
 import {
   BookOpen,
   Crosshair,
@@ -40,24 +39,12 @@ const NAVIGATION: readonly Readonly<{ page: Page; label: CopyStringKey; Icon: Lu
 type SidebarProps = Readonly<{
   copy: AppCopy
   page: Page
-  characters: readonly CharacterRow[]
-  selected_character_id: string | null
   open_page: (page: Page) => void
-  select_character: (character_id: string) => void
   address: string | null
   network: Network
 }>
 
-export const Sidebar = ({
-  copy,
-  page,
-  characters,
-  selected_character_id,
-  open_page,
-  select_character,
-  address,
-  network,
-}: SidebarProps) => (
+export const Sidebar = ({ copy, page, open_page, address, network }: SidebarProps) => (
   <aside
     data-app-sidebar=""
     className="pointer-events-auto flex w-[200px] shrink-0 flex-col border border-[#1e1e2e] bg-[#12121a]/80"
@@ -96,22 +83,6 @@ export const Sidebar = ({
           <span className="min-w-0 flex-1 text-[11px] tracking-[0.15em] uppercase">{copy[item.label]}</span>
         </button>
       ))}
-      {characters.length > 0 && (
-        <div className="mx-3 mt-3 border-t border-white/8 pt-3">
-          <select
-            aria-label={copy.characters}
-            className="h-9 w-full border border-white/9 bg-black/25 px-2 text-[9px] tracking-[0.12em] text-[#d6d1c8] uppercase outline-none"
-            value={selected_character_id ?? ''}
-            onChange={(event) => select_character(event.target.value)}
-          >
-            {characters.map((character) => (
-              <option className="bg-[#0a0a0f]" key={character.id} value={character.id}>
-                {character.name} · {character.classe}
-              </option>
-            ))}
-          </select>
-        </div>
-      )}
     </nav>
   </aside>
 )

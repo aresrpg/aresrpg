@@ -1,6 +1,10 @@
 node_modules
 bun.lockb
 
+# The pre-rewrite app — kept on disk as the extraction reference until the purge completes,
+# no longer part of the repo.
+deprecated/
+
 dist/
 build/
 

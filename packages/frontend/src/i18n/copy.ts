@@ -48,8 +48,10 @@ export type AppCopy = Readonly<{
   server_reconnecting: string
   server_syncing: string
   server_connected: string
+  server_violation: string
   latency_unit: string
   indexing_health: string
+  online_players: string
   indexing_lag_warning: string
   game_frozen: string
   network_testnet: string
@@ -98,6 +100,7 @@ export type AppCopy = Readonly<{
   airdrop_page: Readonly<Record<string, unknown>>
   settings_page: Readonly<Record<string, string>>
   demo_page: Readonly<Record<string, string>>
+  world_hud: Readonly<Record<string, string>>
 }>
 
 export type CopyNode = Readonly<Record<string, unknown>>

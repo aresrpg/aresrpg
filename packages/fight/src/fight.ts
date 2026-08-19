@@ -23,6 +23,7 @@ export type FightResult = {
 }
 export type Fight = {
   state: () => HydratedFightCheckpoint
+  zone_ids: () => readonly string[]
   apply: (input: FightInput) => FightResult
   reset_turn: () => FightResult
   transform: (inputs: Iterable<FightInput>) => Generator<FightEvent, void, void>
@@ -51,7 +52,11 @@ export const create_fight = ({
     : create_fight_state(setup!)
   let seed_index = 0n
   let render_ids = create_render_ids(state.contract)
-  let pending_turn: { input: FightCommandInput; witnesses: TurnWitness[]; emitted: number } | null = null
+  let pending_turn: Readonly<{
+    input: FightCommandInput
+    witnesses: readonly TurnWitness[]
+    emitted: number
+  }> | null = null
   let turn_boundary: Readonly<{
     state: HydratedFightCheckpoint
     render_ids: ReturnType<typeof create_render_ids>
@@ -70,8 +75,7 @@ export const create_fight = ({
   capture_turn_boundary()
 
   const run = (input: FightCommandInput, supplied_witnesses: readonly TurnWitness[] = []) => {
-    const witnesses = [...(input.turn_witnesses ?? [])]
-    witnesses.push(...supplied_witnesses)
+    let witnesses = [...(input.turn_witnesses ?? []), ...supplied_witnesses]
     const seed_for = (fighter: bigint): SeedWitness | null => {
       if (mode === 'local') {
         const next = seed_at(seed, seed_index)
@@ -80,7 +84,8 @@ export const create_fight = ({
       }
       const witness_index = witnesses.findIndex((witness) => witness.fighter === fighter)
       if (witness_index < 0) return null
-      const [witness] = witnesses.splice(witness_index, 1)
+      const witness = witnesses[witness_index]!
+      witnesses = witnesses.filter((_, index) => index !== witness_index)
       return { seed: witness.seed, witnessed: true }
     }
     const runtime = create_runtime({
@@ -107,10 +112,11 @@ export const create_fight = ({
 
   const replay_pending_turn = (): FightResult => {
     if (!pending_turn) return { state: snapshot(), events: [], error: { code: 'no_pending_turn', detail: null } }
-    const result = run(pending_turn.input, pending_turn.witnesses)
+    const pending = pending_turn
+    const result = run(pending.input, pending.witnesses)
     const transcript = proven_events(result)
-    const events = transcript.slice(pending_turn.emitted)
-    pending_turn.emitted = transcript.length
+    const events = transcript.slice(pending.emitted)
+    pending_turn = Object.freeze({ ...pending, emitted: transcript.length })
     if (!result.error) {
       state = { contract: structuredClone(result.contract), sources: result.sources }
       render_ids = structuredClone(result.render_ids)
@@ -124,7 +130,10 @@ export const create_fight = ({
     if (input.type === 'turn_seed') {
       if (!pending_turn)
         return { state: snapshot(), events: [], error: { code: 'unexpected_turn_seed', detail: input } }
-      pending_turn.witnesses.push({ fighter: input.fighter, seed: input.seed })
+      pending_turn = Object.freeze({
+        ...pending_turn,
+        witnesses: [...pending_turn.witnesses, { fighter: input.fighter, seed: input.seed }],
+      })
       return replay_pending_turn()
     }
     if (pending_turn) return { state: snapshot(), events: [], error: { code: 'turn_witnesses_pending', detail: null } }
@@ -132,7 +141,7 @@ export const create_fight = ({
     if (mode === 'remote' && (input.type === 'start' || input.type === 'end_turn' || input.type === 'crank')) {
       if (result.error && !AWAITING_WITNESS.has(result.error.code))
         return { state: snapshot(), events: [], error: result.error }
-      pending_turn = { input, witnesses: [], emitted: 0 }
+      pending_turn = Object.freeze({ input, witnesses: Object.freeze([]), emitted: 0 })
       return { state: snapshot(), events: [], error: null }
     }
     if (!result.error) {
@@ -150,6 +159,7 @@ export const create_fight = ({
 
   return Object.freeze({
     state: snapshot,
+    zone_ids: () => Object.freeze([...render_ids.zones]),
     apply,
     reset_turn: () => {
       if (mode !== 'local')
@@ -171,7 +181,10 @@ export const create_fight = ({
       let events: readonly FightEvent[] = []
       if (pending_turn && !normalized.contract.ended && normalized.contract.queue.length > 0) {
         const fighter = normalized.contract.queue[Number(normalized.contract.turn_ptr)]
-        pending_turn.witnesses.push({ fighter, seed: normalized.contract.turn_seed })
+        pending_turn = Object.freeze({
+          ...pending_turn,
+          witnesses: [...pending_turn.witnesses, { fighter, seed: normalized.contract.turn_seed }],
+        })
         const { events: replayed_events } = replay_pending_turn()
         events = replayed_events
         replayed_pending_turn = pending_turn === null

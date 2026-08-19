@@ -26,6 +26,8 @@ const make_character = ({ pet = false } = {}) => ({
     checkpoint_world: 'overworld',
     x: 100,
     z: 100,
+    // the checkpoint's own timestamp — the budget the FIRST stream move prices against
+    at_ms: Date.now() - 60_000,
     spells: '{}',
     spell_points_spent: 0,
   },
@@ -65,11 +67,8 @@ const wire = ({ owns = true, pet = false, friends = [] as string[] } = {}) => {
   }
   const emitter = new EventEmitter()
   const published: { channel: string; payload: any }[] = []
-  const pubsub = {
+  const bus = {
     emitter,
-    heartbeat: async () => {},
-    cluster_online: async () => 1,
-    indexed_checkpoint: async () => 1,
     subscribe: async () => {},
     unsubscribe: async () => {},
     publish: async (channel: string, payload: unknown) => {
@@ -77,6 +76,11 @@ const wire = ({ owns = true, pet = false, friends = [] as string[] } = {}) => {
       emitter.emit(channel, payload) // loopback so a second connection would see it
     },
     close: () => {},
+  }
+  const pubsub = {
+    emitter,
+    graph: { ...bus, indexed_checkpoint: async () => 1 },
+    mesh: { ...bus, heartbeat: async () => {}, cluster_online: async () => 7 },
   }
   return { sent, ws, graph, pubsub, published, dropped }
 }
@@ -124,8 +128,14 @@ describe('the world module', () => {
     await flush()
     player.on_message(JSON.stringify({ type: 'packet/embody', character_id: '0xabc' }))
     await flush()
-    // 10,000 blocks in one tick — far past any authored budget
-    player.on_message(JSON.stringify({ type: 'packet/position', x: 10100, y: 0, z: 100 }))
+    // The FIRST move prices against the CHECKPOINT'S OWN TIMESTAMP (the chain's travel_ok
+    // semantics): a player who walked 500 blocks off-anchor since a 60s-old checkpoint is
+    // LEGAL (500/60 ≈ 8.3 b/s) — the 2026-08-19 bug priced it against embody wall-clock and
+    // drop-looped every session into load-snapshot spam.
+    player.on_message(JSON.stringify({ type: 'packet/position', x: 600, y: 0, z: 100 }))
+    expect(dropped).toEqual([])
+    // 10,000 further blocks in one tick — far past any authored budget
+    player.on_message(JSON.stringify({ type: 'packet/position', x: 10600, y: 0, z: 100 }))
     expect(dropped).toEqual(['SPEED'])
   })
 
@@ -142,8 +152,9 @@ describe('the world module', () => {
     await flush()
     walking.on_message(JSON.stringify({ type: 'packet/embody', character_id: '0xabc' }))
     await flush()
-    // 0.7 blocks inside the 50ms clamp window: 14 b/s — above 11.5 (walk), below 17.25 (mounted)
-    walking.on_message(JSON.stringify({ type: 'packet/position', x: 100.7, y: 0, z: 100 }))
+    // 850 blocks over the checkpoint's 60s budget: ~14.2 b/s — above 11.5 (walk), below
+    // 17.25 (mounted). The budget prices distance-from-anchor over elapsed-since-anchor.
+    walking.on_message(JSON.stringify({ type: 'packet/position', x: 950, y: 0, z: 100 }))
     expect(walker.dropped).toEqual(['SPEED'])
 
     const rider = wire({ pet: true })
@@ -157,7 +168,7 @@ describe('the world module', () => {
     await flush()
     riding.on_message(JSON.stringify({ type: 'packet/embody', character_id: '0xabc' }))
     await flush()
-    riding.on_message(JSON.stringify({ type: 'packet/position', x: 100.7, y: 0, z: 100 }))
+    riding.on_message(JSON.stringify({ type: 'packet/position', x: 950, y: 0, z: 100 }))
     expect(rider.dropped).toEqual([])
   })
 

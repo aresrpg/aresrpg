@@ -12,10 +12,12 @@ import type {
   TradeRow,
 } from '@aresrpg/protocol'
 import { fight_action_to_wire } from '@aresrpg/fight'
+import { client_to_chain_coordinate } from '@aresrpg/immutable'
 
 import type { Auth, AuthSession } from '../auth.ts'
 import { browser_auth_storage, clear_auth_wallet, read_auth_wallet, remember_auth_wallet } from '../auth_storage.ts'
 import { env } from '../env.ts'
+import { read_pose, subscribe_pose } from '../game/core/pose_feed.ts'
 import { connect_server, type ServerLink } from '../server_link.ts'
 import type { AppInput, AppModule, AppState } from '../store.ts'
 import { toast } from '../toast.ts'
@@ -30,6 +32,8 @@ export type SessionState = Readonly<{
   auth_error: string | null
   link_status: LinkStatus
   link_error: string | null
+  /** the server dropped us for a rule violation — red state until a connection is accepted */
+  link_violation: string | null
   latency_ms: number | null
   indexing_lag: number | null
   game_frozen: boolean | null
@@ -63,6 +67,7 @@ export type SessionInput =
   | Readonly<{ type: 'link/connecting' }>
   | Readonly<{ type: 'link/rejected'; reason: string }>
   | Readonly<{ type: 'link/failed'; error: string }>
+  | Readonly<{ type: 'link/violation'; reason: string }>
   | Readonly<{ type: 'link/latency'; latency_ms: number }>
   | Readonly<{ type: 'server/packet'; packet: Readonly<ServerPacket> }>
   | Readonly<{ type: 'character/select'; character_id: string }>
@@ -84,6 +89,7 @@ export const initial_session_state = (): SessionState =>
     auth_error: null,
     link_status: 'idle',
     link_error: null,
+    link_violation: null,
     latency_ms: null,
     indexing_lag: null,
     game_frozen: null,
@@ -264,6 +270,17 @@ const reduce = (state: AppState, input: AppInput): AppState => {
       state,
       Object.freeze({ ...current, link_status: 'idle', link_error: input.reason, latency_ms: null, indexing_lag: null })
     )
+  if (input.type === 'link/violation')
+    return with_session(
+      state,
+      Object.freeze({
+        ...current,
+        link_status: 'idle',
+        link_error: input.reason,
+        link_violation: input.reason,
+        latency_ms: null,
+      })
+    )
   if (input.type === 'link/failed')
     return with_session(
       state,
@@ -283,7 +300,10 @@ const reduce = (state: AppState, input: AppInput): AppState => {
     return with_session(state, Object.freeze({ ...current, latency_ms: input.latency_ms }))
   if (input.type === 'server/packet') {
     if (input.packet.type === 'packet/connection_accepted')
-      return with_session(state, Object.freeze({ ...current, link_status: 'connected', link_error: null }))
+      return with_session(
+        state,
+        Object.freeze({ ...current, link_status: 'connected', link_error: null, link_violation: null })
+      )
     const next = fold_packet(current, input.packet)
     return next === current ? state : with_session(state, next)
   }
@@ -414,6 +434,12 @@ const observe = ({ events, dispatch, signal, get_state }: Parameters<NonNullable
       return
     }
   })
+  // world chat rides the link; the local echo is the speaker's own chat/line (the server
+  // never echoes a speaker back to himself)
+  events.on('chat/speak', ({ text }) => {
+    link?.send({ type: 'packet/chat', text })
+  })
+
   events.on('link/rejected', ({ reason }) => {
     const { copy } = get_state()
     toast.persistent(
@@ -463,6 +489,29 @@ const observe = ({ events, dispatch, signal, get_state }: Parameters<NonNullable
     const character_id = state.session.selected_character_id
     if (link && character_id && (selection_changed || became_ready)) link.send({ type: 'packet/embody', character_id })
   })
+  // ── the multiplayer heartbeat: the pose lane → packet/position (chain space), throttled.
+  //    The server's speed law prices the travel; a fight or spectate publishes no pose at all. ──
+  const POSITION_SEND_MS = 50
+  let last_position = { at_ms: 0, sent: null as Readonly<{ x: number; y: number; z: number }> | null }
+  const unsubscribe_pose = subscribe_pose(() => {
+    const pose = read_pose()
+    if (!pose || !link) return
+    const state = get_state()
+    if (state.session.link_status !== 'ready' || !state.session.selected_character_id) return
+    const now = Date.now()
+    if (now - last_position.at_ms < POSITION_SEND_MS) return
+    // FRACTIONAL coords on purpose: rounding would quantize a smooth walk into 1-block hops
+    // whose instantaneous speed spikes past the server's authored ceiling (presence is
+    // off-chain data — only real chain moves need integer coordinates).
+    const next = { x: client_to_chain_coordinate(pose.x), y: pose.y, z: client_to_chain_coordinate(pose.z) }
+    // continuous only WHILE MOVING — a standing player is silent, the server keeps its last fact
+    const { sent } = last_position
+    if (sent && Math.hypot(sent.x - next.x, sent.y - next.y, sent.z - next.z) < 0.25) return
+    last_position = { at_ms: now, sent: next }
+    link.send({ type: 'packet/position', ...next })
+  })
+  signal.addEventListener('abort', unsubscribe_pose)
+
   events.on('fight/input', ({ input, origin }) => {
     const state = get_state()
     const action = fight_action_to_wire(input)

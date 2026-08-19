@@ -48,7 +48,7 @@ const appearance = Object.freeze({
 }) satisfies CharacterAppearanceRender
 
 describe('shared character rendering', () => {
-  test('projects chain appearance once for both world and fight renderers', () => {
+  test('projects chain appearance once for both renderers, then anchors it to the controller transform', () => {
     expect(character_render_source(character)).toEqual({
       id: '0xcharacter',
       classe: 'yajin',
@@ -56,9 +56,7 @@ describe('shared character rendering', () => {
       colors: ['#112233', '#445566', '#778899'],
       loadout: { hat: 'hat_item' },
     })
-  })
 
-  test('anchors the selected character to the controller transform', () => {
     expect(
       world_character_entity(
         Object.freeze({ id: character.id, appearance }),

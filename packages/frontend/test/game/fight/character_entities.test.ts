@@ -11,7 +11,7 @@ import {
 } from '../../../src/game/fight/character_entity_sources.ts'
 
 describe('fight character projection', () => {
-  test('projects placed simulator characters instead of silently dropping blue seats', () => {
+  test('projects every seat — placed simulator characters and checkpoint players alike', () => {
     const characters = Object.freeze([
       Object.freeze({
         id: 'sim_c1',
@@ -32,9 +32,8 @@ describe('fight character projection', () => {
         side: 'a',
       },
     ])
-  })
 
-  test('projects every checkpoint player and falls back to senshi for missing appearance data', () => {
+    // Checkpoint players project too, falling back to senshi for missing appearance data.
     const source = create_character_source({ classe: 'yogan', level: 1n })
     const checkpoint = create_fight({
       mode: 'local',

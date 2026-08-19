@@ -2,7 +2,7 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
 import { describe, expect, test } from 'bun:test'
-import type { Engine, RenderChunkRequest } from '@aresrpg/engine'
+import { get_quality_profile, type Engine, type RenderChunkRequest } from '@aresrpg/engine'
 
 import { chunk_at, create_chunk_manager, desired_chunks } from '../src/game/core/chunks.ts'
 
@@ -13,6 +13,7 @@ const create_engine_spy = () => {
     start: () => {},
     stop: () => {},
     set_camera: () => {},
+    set_character_anchor: () => {},
     set_quality: () => {},
     set_time_of_day: () => {},
     set_flatten_amount: () => {},
@@ -22,6 +23,7 @@ const create_engine_spy = () => {
     play_fight_cue: () => Promise.resolve(false),
     play_jump_puff: () => {},
     project_entity: () => null,
+    entity_height: () => null,
     create_fight_blob: () => 'test_blob',
     update_fight_blob: () => false,
     remove_fight_blob: () => {},
@@ -62,12 +64,16 @@ describe('game chunk planning', () => {
 
   test('the high ring has one coordinate per near, mid, and far LOD', () => {
     const desired = desired_chunks({ x: 3, y: 0, z: -2 }, 'high')
+    const { near_radius, mid_radius, far_radius } = get_quality_profile('high').chunks
+    const square = (radius: number): number => (radius * 2 + 1) ** 2
 
     expect(desired[0]).toEqual({ coordinate: { x: 3, y: 0, z: -2 }, lod: 'near', distance: 0 })
-    expect(new Set(desired.map(({ coordinate }) => `${coordinate.x}:${coordinate.y}:${coordinate.z}`)).size).toBe(361)
-    expect(desired.filter(({ lod }) => lod === 'near')).toHaveLength(49)
-    expect(desired.filter(({ lod }) => lod === 'mid')).toHaveLength(120)
-    expect(desired.filter(({ lod }) => lod === 'far')).toHaveLength(192)
+    expect(new Set(desired.map(({ coordinate }) => `${coordinate.x}:${coordinate.y}:${coordinate.z}`)).size).toBe(
+      square(far_radius)
+    )
+    expect(desired.filter(({ lod }) => lod === 'near')).toHaveLength(square(near_radius))
+    expect(desired.filter(({ lod }) => lod === 'mid')).toHaveLength(square(mid_radius) - square(near_radius))
+    expect(desired.filter(({ lod }) => lod === 'far')).toHaveLength(square(far_radius) - square(mid_radius))
   })
 
   test('derived surface layers expand the same horizontal residency ring', () => {
@@ -91,6 +97,32 @@ describe('game chunk planning', () => {
 
     expect(spy.rendered).toHaveLength(2)
     expect(spy.rendered.map(({ coordinate }) => coordinate.y)).toEqual([3, 2])
+  })
+
+  test('renders the focus column before planning outer residency rings', async () => {
+    const spy = create_engine_spy()
+    const center = Promise.withResolvers<readonly { x: number; z: number; layers: readonly number[] }[]>()
+    const outer = Promise.withResolvers<readonly { x: number; z: number; layers: readonly number[] }[]>()
+    const requests: Array<readonly { x: number; z: number }[]> = []
+    const chunks = create_chunk_manager({
+      engine: spy.engine,
+      initial_quality: 'low',
+      plan_layers: (columns) => {
+        requests.push(columns)
+        return requests.length === 1 ? center.promise : outer.promise
+      },
+    })
+
+    chunks.set_focus(0, 0)
+    expect(requests[0]).toEqual([{ x: 0, z: 0 }])
+    center.resolve([{ x: 0, z: 0, layers: [3] }])
+    await center.promise
+    await Promise.resolve()
+    chunks.tick()
+
+    expect(spy.rendered[0]?.coordinate).toEqual({ x: 0, y: 3, z: 0 })
+    expect(requests[1]).toHaveLength(8)
+    outer.resolve([])
   })
 
   test('a stale terrain plan cannot repopulate the cache after focus moves', async () => {
@@ -152,13 +184,16 @@ describe('game chunk planning', () => {
       desired_chunks({ x: 0, y: 0, z: 0 }, 'low').map(({ coordinate }) => `${coordinate.x}:0:${coordinate.z}`)
     )
 
-    chunks.set_quality('low')
+    chunks.set_quality('low', null)
     chunks.tick()
 
     expect(spy.removed.filter((key) => low_keys.has(key))).toEqual([])
   })
 
-  test('crossing a detail-band boundary never rebuilds identical resident terrain', async () => {
+  test('crossing a detail-band boundary re-renders only at a NEW lod, never the same one twice', async () => {
+    // Residency is LOD-aware (2026-08-19, ground scatter exists only at near): a chunk that
+    // changes bands on a focus move MUST re-render at its new lod, but a chunk that stays in
+    // its band never rebuilds — the invariant is unique (key, lod) pairs, not unique keys.
     const spy = create_engine_spy()
     const chunks = create_chunk_manager({ engine: spy.engine, initial_quality: 'low' })
     chunks.set_focus(0, 0)
@@ -173,6 +208,9 @@ describe('game chunk planning', () => {
       await Promise.resolve()
     }
 
-    expect(new Set(spy.rendered.map(({ key }) => key)).size).toBe(spy.rendered.length)
+    const passes = spy.rendered.map(({ key, lod }) => `${key}@${lod}`)
+    expect(new Set(passes).size).toBe(passes.length)
+    // the crossing actually promoted/demoted some chunks — same key seen at two lods
+    expect(new Set(spy.rendered.map(({ key }) => key)).size).toBeLessThan(spy.rendered.length)
   })
 })

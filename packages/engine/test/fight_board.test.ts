@@ -21,6 +21,7 @@ import {
   BOARD_CELL_OBSTACLE,
   BOARD_FLOOR_THICKNESS,
   bake_fight_board_surface,
+  build_fight_board_pits,
   build_fight_board_slab,
 } from '../src/fight_board_surface.ts'
 import { write_orthographic_projection } from '../src/webgpu_backend.ts'
@@ -35,8 +36,9 @@ const instance_transform = (mesh: InstancedMesh, index: number) => {
 }
 
 describe('fight board rendering projection', () => {
-  test('plans inset per-cell blobs as an outward distance wave', () => {
-    const board = {
+  test('per-cell blobs reveal as an outward wave, without overshoot, and skip the wave when told to', () => {
+    // 1 — the plan staggers each cell by its distance from the origin cell.
+    const wave_board = {
       width: 3,
       height: 1,
       cell_size: 2,
@@ -47,7 +49,7 @@ describe('fight board rendering projection', () => {
         { cell: 12, x: 2, y: 0, kind: 'floor' as const },
       ],
     }
-    const plan = plan_fight_blob(board, {
+    const plan = plan_fight_blob(wave_board, {
       id: 'range',
       cells: [10, 11, 12],
       shape: 'per_cell',
@@ -58,8 +60,113 @@ describe('fight board rendering projection', () => {
     })
 
     expect(plan.kind).toBe('per_cell')
-    expect(plan.cell_size).toBeLessThan(board.cell_size)
+    expect(plan.cell_size).toBeLessThan(wave_board.cell_size)
     expect(plan.cells.map(({ delay_ms }) => delay_ms)).toEqual([0, 50, 100])
+
+    // 2 — a per-cell reveal never takes the single-shape cartoon overshoot.
+    const overshoot_scene = new Scene()
+    const overshoot_blobs = create_fight_blob_layer(overshoot_scene)
+    overshoot_blobs.set_board({
+      width: 1,
+      height: 1,
+      cell_size: 1.33,
+      origin: { x: 0, y: 0, z: 0 },
+      cells: [{ cell: 33, x: 0, y: 0, kind: 'floor' as const }],
+    })
+    overshoot_blobs.upsert({ id: 'range', cells: [33], shape: 'per_cell', color: 0x35b34a, created_at: 1_000 })
+    overshoot_blobs.upsert({ id: 'glyph', cells: [33], shape: 'single', color: 0xe0791e, created_at: 1_000 })
+    overshoot_blobs.tick(1_126)
+
+    const range_cell = overshoot_scene.getObjectByName('fight_blob:range')?.children[0] as InstancedMesh
+    const glyph = overshoot_scene.getObjectByName('fight_blob:glyph')?.children[0]
+    expect(instance_transform(range_cell, 0).scale.x).toBeLessThanOrEqual(1)
+    expect(glyph?.scale.x).toBeGreaterThan(1)
+    overshoot_blobs.dispose()
+
+    // 3 — a pointer hover has no reveal at all, and settles its uploads.
+    const hover_scene = new Scene()
+    const hover_blobs = create_fight_blob_layer(hover_scene)
+    hover_blobs.set_board({
+      width: 2,
+      height: 1,
+      cell_size: 1.33,
+      origin: { x: 0, y: 0, z: 0 },
+      cells: [
+        { cell: 34, x: 0, y: 0, kind: 'floor' as const },
+        { cell: 35, x: 1, y: 0, kind: 'floor' as const },
+      ],
+    })
+    hover_blobs.upsert({
+      id: 'hover',
+      cells: [34],
+      shape: 'per_cell',
+      color: 0xd73545,
+      animate: false,
+      created_at: 1_000,
+    })
+    hover_blobs.tick(1_000)
+
+    const hovered_cell = hover_scene.getObjectByName('fight_blob:hover')?.children[0] as InstancedMesh
+    expect(hovered_cell?.visible).toBeTrue()
+    expect(instance_transform(hovered_cell, 0).scale.x).toBe(1)
+    const first_upload = hovered_cell.instanceMatrix.version
+    hover_blobs.upsert({
+      id: 'hover',
+      cells: [34, 35],
+      shape: 'per_cell',
+      color: 0xd73545,
+      animate: false,
+      created_at: 1_008,
+    })
+    expect(instance_transform(hovered_cell, 0).scale.x).toBe(1)
+    expect(instance_transform(hovered_cell, 1).scale.x).toBe(1)
+    hover_blobs.tick(1_016)
+    expect(hovered_cell.instanceMatrix.version).toBeGreaterThan(first_upload)
+    expect(instance_transform(hovered_cell, 0).scale.x).toBe(1)
+    hover_blobs.tick(1_032)
+    expect(hovered_cell.instanceMatrix.version).toBeGreaterThan(first_upload)
+    hover_blobs.tick(1_188)
+    const settled_upload = hovered_cell.instanceMatrix.version
+    hover_blobs.tick(1_204)
+    expect(hovered_cell.instanceMatrix.version).toBe(settled_upload)
+    hover_blobs.dispose()
+
+    // 4 — the first reveal animates while later cell additions arrive instantly.
+    const layer_scene = new Scene()
+    const layer_blobs = create_fight_blob_layer(layer_scene)
+    layer_blobs.set_board({
+      width: 2,
+      height: 1,
+      cell_size: 1.33,
+      origin: { x: 0, y: 0, z: 0 },
+      cells: [
+        { cell: 37, x: 0, y: 0, kind: 'floor' as const },
+        { cell: 38, x: 1, y: 0, kind: 'floor' as const },
+      ],
+    })
+    layer_blobs.upsert({
+      id: 'targetable',
+      cells: [37],
+      shape: 'per_cell',
+      color: 0x185ca8,
+      animate_updates: false,
+      created_at: 1_000,
+    })
+    layer_blobs.tick(1_000)
+    const targetable = layer_scene.getObjectByName('fight_blob:targetable')?.children[0] as InstancedMesh
+    expect(instance_transform(targetable, 0).scale.x).toBeCloseTo(0.001)
+
+    layer_blobs.upsert({
+      id: 'targetable',
+      cells: [37, 38],
+      shape: 'per_cell',
+      color: 0x185ca8,
+      animate_updates: false,
+      created_at: 1_100,
+    })
+    layer_blobs.tick(1_100)
+    expect(instance_transform(targetable, 1).scale.x).toBe(1)
+    layer_blobs.dispose()
   })
 
   test('plans a merged blob as one surface and gives its growth a cartoon overshoot', () => {
@@ -131,7 +238,7 @@ describe('fight board rendering projection', () => {
     expect(range_cells.count).toBe(3)
     const first_position = instance_transform(range_cells, 0).position
     expect(first_position.x).toBeCloseTo(0.665)
-    expect(first_position.y).toBeCloseTo(BOARD_FLOOR_THICKNESS + 0.07)
+    expect(first_position.y).toBeCloseTo(BOARD_FLOOR_THICKNESS)
     expect(first_position.z).toBeCloseTo(0.665)
     expect(instance_transform(range_cells, 0).scale.x).toBeCloseTo(0.001)
     expect(instance_transform(range_cells, 1).scale.x).toBeCloseTo(0.001)
@@ -168,7 +275,7 @@ describe('fight board rendering projection', () => {
     blobs.dispose()
   })
 
-  test('renders retained trap markers as one dark cell batch plus one gold spike batch', () => {
+  test('renders a multi-cell trap as one seamless area with one spike at its anchor', () => {
     const scene = new Scene()
     const blobs = create_fight_blob_layer(scene)
     blobs.set_board({
@@ -184,74 +291,19 @@ describe('fight board rendering projection', () => {
     blobs.upsert({
       id: 'traps',
       cells: [30, 31],
-      shape: 'per_cell',
+      shape: 'single',
       color: 0x14110b,
       decoration: 'trap',
+      origin_cell: 30,
       animate: false,
       created_at: 1_000,
     })
 
     const trap = scene.getObjectByName('fight_blob:traps')
-    expect(trap?.children.map(({ name }) => name)).toEqual(['fight_blob_cells', 'fight_trap_spikes'])
-    const trap_cells = trap?.getObjectByName('fight_blob_cells') as InstancedMesh | undefined
+    expect(trap?.children.map(({ name }) => name)).toEqual(['fight_blob_shape', 'fight_trap_spikes'])
     const trap_spikes = trap?.getObjectByName('fight_trap_spikes') as InstancedMesh | undefined
-    expect(trap_cells?.count).toBe(2)
-    expect(trap_spikes?.count).toBe(2)
-    blobs.dispose()
-  })
-
-  test('reveals per-cell blobs without the single-shape cartoon overshoot', () => {
-    const scene = new Scene()
-    const blobs = create_fight_blob_layer(scene)
-    const board = {
-      width: 1,
-      height: 1,
-      cell_size: 1.33,
-      origin: { x: 0, y: 0, z: 0 },
-      cells: [{ cell: 33, x: 0, y: 0, kind: 'floor' as const }],
-    }
-    blobs.set_board(board)
-    blobs.upsert({ id: 'range', cells: [33], shape: 'per_cell', color: 0x35b34a, created_at: 1_000 })
-    blobs.upsert({ id: 'glyph', cells: [33], shape: 'single', color: 0xe0791e, created_at: 1_000 })
-    blobs.tick(1_126)
-
-    const range_cell = scene.getObjectByName('fight_blob:range')?.children[0] as InstancedMesh
-    const glyph = scene.getObjectByName('fight_blob:glyph')?.children[0]
-    expect(instance_transform(range_cell, 0).scale.x).toBeLessThanOrEqual(1)
-    expect(glyph?.scale.x).toBeGreaterThan(1)
-    blobs.dispose()
-  })
-
-  test('renders pointer-hover blobs immediately without a reveal animation', () => {
-    const scene = new Scene()
-    const blobs = create_fight_blob_layer(scene)
-    blobs.set_board({
-      width: 1,
-      height: 1,
-      cell_size: 1.33,
-      origin: { x: 0, y: 0, z: 0 },
-      cells: [{ cell: 34, x: 0, y: 0, kind: 'floor' as const }],
-    })
-    blobs.upsert({
-      id: 'hover',
-      cells: [34],
-      shape: 'per_cell',
-      color: 0xd73545,
-      animate: false,
-      created_at: 1_000,
-    })
-    blobs.tick(1_000)
-
-    const hovered_cell = scene.getObjectByName('fight_blob:hover')?.children[0] as InstancedMesh
-    expect(hovered_cell?.visible).toBeTrue()
-    expect(instance_transform(hovered_cell, 0).scale.x).toBeCloseTo(0.001)
-    const first_upload = hovered_cell.instanceMatrix.version
-    blobs.tick(1_016)
-    expect(hovered_cell.instanceMatrix.version).toBeGreaterThan(first_upload)
-    expect(instance_transform(hovered_cell, 0).scale.x).toBe(1)
-    const settled_upload = hovered_cell.instanceMatrix.version
-    blobs.tick(1_032)
-    expect(hovered_cell.instanceMatrix.version).toBe(settled_upload)
+    expect(trap_spikes?.count).toBe(1)
+    expect(instance_transform(trap_spikes!, 0).position.x).toBeCloseTo(0.665)
     blobs.dispose()
   })
 
@@ -303,45 +355,6 @@ describe('fight board rendering projection', () => {
     blobs.dispose()
   })
 
-  test('can reveal a blue layer initially while making later cell additions immediate', () => {
-    const scene = new Scene()
-    const blobs = create_fight_blob_layer(scene)
-    const board = {
-      width: 2,
-      height: 1,
-      cell_size: 1.33,
-      origin: { x: 0, y: 0, z: 0 },
-      cells: [
-        { cell: 37, x: 0, y: 0, kind: 'floor' as const },
-        { cell: 38, x: 1, y: 0, kind: 'floor' as const },
-      ],
-    }
-    blobs.set_board(board)
-    blobs.upsert({
-      id: 'targetable',
-      cells: [37],
-      shape: 'per_cell',
-      color: 0x185ca8,
-      animate_updates: false,
-      created_at: 1_000,
-    })
-    blobs.tick(1_000)
-    const targetable = scene.getObjectByName('fight_blob:targetable')?.children[0] as InstancedMesh
-    expect(instance_transform(targetable, 0).scale.x).toBeCloseTo(0.001)
-
-    blobs.upsert({
-      id: 'targetable',
-      cells: [37, 38],
-      shape: 'per_cell',
-      color: 0x185ca8,
-      animate_updates: false,
-      created_at: 1_100,
-    })
-    blobs.tick(1_100)
-    expect(instance_transform(targetable, 1).scale.x).toBe(1)
-    blobs.dispose()
-  })
-
   test('does not materialize placement bands when the board hides starting cells', () => {
     const scene = new Scene()
     const blobs = create_fight_blob_layer(scene)
@@ -378,6 +391,32 @@ describe('fight board rendering projection', () => {
     expect(center(0, 0)).not.toBe(center(1, 0))
     expect(slab.groups[0]?.count).toBe(18)
     texture.dispose()
+    slab.dispose()
+  })
+
+  test('removes internal walls between adjacent board holes', () => {
+    const mask = new Uint8Array([BOARD_CELL_HOLE, BOARD_CELL_HOLE])
+    const pits = build_fight_board_pits(mask, 2, 1, 1.33, { x: 0, y: 0, z: 0 })
+
+    expect(pits.getIndex()?.count).toBe(48)
+    pits.dispose()
+  })
+
+  test('assigns hole walls only to the pit geometry', () => {
+    const mask = new Uint8Array([
+      BOARD_CELL_FLOOR,
+      BOARD_CELL_FLOOR,
+      BOARD_CELL_FLOOR,
+      BOARD_CELL_FLOOR,
+      BOARD_CELL_HOLE,
+      BOARD_CELL_FLOOR,
+      BOARD_CELL_FLOOR,
+      BOARD_CELL_FLOOR,
+      BOARD_CELL_FLOOR,
+    ])
+    const slab = build_fight_board_slab(mask, 3, 3, 1.33, { x: 0, y: 0, z: 0 })
+
+    expect(slab.groups[1]?.count).toBe(72)
     slab.dispose()
   })
 

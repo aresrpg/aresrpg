@@ -32,8 +32,8 @@ export default {
       }
     }
 
-    pubsub.emitter.on(channels.economy, forward as (payload: unknown) => void)
-    void pubsub
+    pubsub.graph.emitter.on(channels.economy, forward as (payload: unknown) => void)
+    void pubsub.graph
       .subscribe(channels.economy)
       .then(() => get_shop_state(graph, { address }))
       .then((state) => send({ type: 'packet/shop_state', ...state }))
@@ -43,8 +43,8 @@ export default {
       })
 
     signal.addEventListener('abort', () => {
-      pubsub.emitter.off(channels.economy, forward as (payload: unknown) => void)
-      void pubsub.unsubscribe(channels.economy)
+      pubsub.graph.emitter.off(channels.economy, forward as (payload: unknown) => void)
+      void pubsub.graph.unsubscribe(channels.economy)
     })
   },
 } satisfies PlayerModule

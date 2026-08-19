@@ -15,6 +15,10 @@ export type FightBlobPreset =
   | 'spell_hover'
   | 'glyph'
   | 'trap'
+  | 'team_a'
+  | 'team_b'
+  | 'team_a_active'
+  | 'team_b_active'
 
 type FightBlobFacts = Readonly<{
   cells: readonly number[]
@@ -67,12 +71,52 @@ const PRESETS: Readonly<Record<FightBlobPreset, Omit<FightBlobSpec, 'cells' | 'o
   }),
   glyph: Object.freeze({ shape: 'single', color: 0xe0791e, priority: 2, opacity: 0.78, animate: false }),
   trap: Object.freeze({
-    shape: 'per_cell',
+    shape: 'single',
     color: 0x14110b,
     priority: 3,
     opacity: 0.95,
     animate: false,
     decoration: 'trap',
+  }),
+  // subtle team ring under every fighter; the *_active variants breathe stronger under the
+  // viewer's own playing character
+  team_a: Object.freeze({
+    shape: 'per_cell',
+    color: 0x2f6bd8,
+    priority: 1,
+    opacity: 0.42,
+    style: 'border',
+    animate: false,
+    animate_updates: false,
+  }),
+  team_b: Object.freeze({
+    shape: 'per_cell',
+    color: 0xff7a2c,
+    priority: 1,
+    opacity: 0.42,
+    style: 'border',
+    animate: false,
+    animate_updates: false,
+  }),
+  team_a_active: Object.freeze({
+    shape: 'per_cell',
+    color: 0x2f6bd8,
+    priority: 1,
+    opacity: 0.95,
+    style: 'border',
+    pulse: true,
+    animate: false,
+    animate_updates: false,
+  }),
+  team_b_active: Object.freeze({
+    shape: 'per_cell',
+    color: 0xff7a2c,
+    priority: 1,
+    opacity: 0.95,
+    style: 'border',
+    pulse: true,
+    animate: false,
+    animate_updates: false,
   }),
 })
 

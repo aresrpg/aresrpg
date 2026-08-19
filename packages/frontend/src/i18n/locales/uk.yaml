@@ -40,8 +40,10 @@ server_connecting: Підключення
 server_reconnecting: Повторне підключення
 server_syncing: Синхронізація
 server_connected: Підключено
+server_violation: Відключено — порушення правил. Скоро повторна спроба.
 latency_unit: мс
 indexing_health: Стан індексації
+online_players: Гравці онлайн
 indexing_lag_warning: Дії в грі можуть відображатися із затримкою
 game_frozen: Гру наразі заморожено. Докладнішу інформацію дивіться в Discord.
 network_testnet: TESTNET
@@ -80,6 +82,18 @@ wallet_send_pending: Надсилання SUI…
 wallet_send_success: SUI надіслано
 wallet_send_failed: Не вдалося надіслати SUI
 wallet_close: Закрити
+world_hud:
+  compass_label: Компас
+  zone: ЗОНА
+  unsearched: НЕДОСЛІДЖЕНА
+  searched: ДОСЛІДЖЕНА
+  out_of_bounds: ПОЗА МЕЖАМИ
+  mob_group: Група монстрів ({{size}})
+  resource: Ресурс
+  cluster_count: +{{extra}} ще
+  zone_edge: Межа зони {{dist}}
+  coordinates: Координати
+  world_map: Карта світу
 demo_page:
   title: Лабораторія рендерингу
   world_lab: Світ
@@ -89,6 +103,12 @@ demo_page:
   live: Наживо
   remove_character: Прибрати модель
   control_character: Керувати моделлю
+  hat: Головний убір
+  cloak: Плащ
+  pet: Улюбленець
+  none: Немає
+  ride_pet: Осідлати улюбленця
+  dismount_pet: Спішитися
   mob_group: Група монстрів
   mob: Монстр
   amount: Кількість
@@ -163,6 +183,8 @@ settings_page:
   subtitle: 'Твої налаштування AresRPG'
   music_label: 'Музика'
   music_hint: 'Відтворює музику світу та боїв.'
+  render_distance_label: Відстань промальовування
+  render_distance_hint: Наскільки далеко завантажується світ навколо вас. Більше — коштує продуктивності.
 admin_page:
   kicker: Видавець
   title: Опублікувати вміст гри
@@ -268,6 +290,8 @@ simulator_page:
   stat_action: Дія
   stat_critical: Критичний удар
   stat_raw_damage: Чиста шкода
+  stat_resistance: Опір
+  stat_power: Сила
   stat_earth_resistance: Опір землі
   stat_fire_resistance: Опір вогню
   stat_water_resistance: Опір воді
@@ -298,10 +322,42 @@ fight_hud:
   placement_hint: Розмістіть бійців і позначте їх готовими
   end_turn: Завершити хід
   reset_turn: Скинути
+  weapon_attack: Атака зброєю
+  bare_hands: Голіруч
+  log_fight_started: Бій починається
+  log_cast: '{caster} застосовує {spell}'
+  log_critical_cast: 'Критичний! {caster} застосовує {spell}'
+  log_heal: '{source} відновлює {target} {amount} ОЗ'
+  log_ap_change: '{target}: {delta} ОД'
+  log_mp_change: '{target}: {delta} ОР'
+  log_lost: '{target} втрачає {amount} ОЗ'
+  log_lost_reduced: '{target} втрачає {amount} ОЗ (зменшено на {reduced})'
+  log_absorbed: '{target} поглинає {reduced} шкоди'
+  log_returned: '{target} повертає закляття'
+  log_stat_change: '{target}: {delta} {stat} ({turns} {turns_word})'
+  unit_ap: ОД
+  unit_mp: ОР
+  log_points_loss: '{target} втрачає {amount} {unit}'
+  log_points_steal: '{source} краде {amount} {unit} у {target}'
+  log_points_partial: '{target} ухиляється від {dodged} {unit} і втрачає {amount}'
+  log_points_dodge: '{target} ухиляється від втрати {attempted} {unit}'
+  log_trap_placed: '{owner} ставить пастку'
+  log_glyph_placed: '{owner} ставить гліф'
+  log_death: '{target} гине'
+  log_forfeit: '{target} здається'
+  log_draw: Бій завершується нічиєю
+  log_team_wins: Команда {team} перемагає
   forfeit: Здатися
   forfeit_title: Здатися персонажем {name}?
   forfeit_body: '{name} втратить усі залишкові ОЗ і залишить цей бій.'
   confirm_forfeit: Підтвердити здачу
+  unit_turns: ходи
+  chat_title: Чат
+  chat_tab_general: Загальний
+  chat_tab_combat: Бій
+  chat_placeholder: Скажіть щось…
+  chat_you: Ви
+  chat_line: '{name}: {message}'
 wallet_legacy:
   sui: SUI
   how_to_get: Як отримати SUI
@@ -542,7 +598,7 @@ encyclopedia_page:
     blocking: ЩИТИ
     blocking_desc: Деякі заклинання надають щит, що поглинає вхідну шкоду відповідної стихії, доки не вичерпається. Немає ні витривалості, ні стійки захисту, щити є єдиним поглинанням шкоди.
     resistance: ОПІР
-    resistance_desc: Стихійний опір є відсотковим зниженням, застосованим до фінальної шкоди, обмеженим 60% на стихію. Від'ємний опір (слабкість) натомість підсилює шкоду.
+    resistance_desc: Стихійний опір є відсотковим зниженням, застосованим до фінальної шкоди, обмеженим 50% на стихію. Від'ємний опір (слабкість) натомість підсилює шкоду.
     life_steal: КРАДІЖКА ЖИТТЯ
     life_steal_desc: "Ефекти заклинань висмоктування завдають шкоди та зцілюють заклинача на половину здоров'я, яке ціль справді втратила. Зцілює лише висмоктування гравця: монстр, що читає те саме заклинання, завдає шкоди й не зцілюється."
     life_steal_note: Шкода спершу проходить через стандартну формулу шкоди, потім заклинач зцілюється на половину здоров'я, яке справді втратила призначена ціль — удар, перенаправлений на іншого бійця, або перетворений ціллю на зцілення, не повертає нічого.

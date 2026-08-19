@@ -20,7 +20,7 @@ export default {
     )
     const push = () =>
       Promise.all([
-        pubsub.cluster_online(),
+        pubsub.mesh.cluster_online(),
         indexing_lag().catch((error: Error) => {
           log.warn({ error: error.message }, 'indexing health failed')
           return null

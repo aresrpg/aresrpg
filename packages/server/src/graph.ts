@@ -7,7 +7,7 @@
 
 import { FalkorDB } from 'falkordb'
 
-import { REDIS_URL, GRAPH_NAME } from './env.ts'
+import { GRAPH_URL, GRAPH_NAME } from './env.ts'
 import logger from './logger.ts'
 
 const log = logger(import.meta)
@@ -20,9 +20,11 @@ export type Graph = {
   close: () => Promise<void>
 }
 
-const db = await FalkorDB.connect({ url: REDIS_URL })
+// Death watch note: pod suicide on a lost indexer set lives on the graph BUS (pubsub.ts) —
+// bus and graph point at the same instance, so one door owns the watch.
+const db = await FalkorDB.connect({ url: GRAPH_URL })
 const falkor_graph = db.selectGraph(GRAPH_NAME)
-log.info({ url: REDIS_URL, graph: GRAPH_NAME }, 'graph connected')
+log.info({ url: GRAPH_URL, graph: GRAPH_NAME }, 'graph connected')
 
 export const graph: Graph = {
   read: async (cypher, params) => {

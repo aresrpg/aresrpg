@@ -8,10 +8,15 @@ import {
   fight_path_to,
   movement_points_of,
   preview_spell_cast,
+  preview_weapon_strike,
   reachable_fight_cells,
   spell_area_cells,
   spell_target_cells,
+  weapon_area_cells,
+  weapon_target_cells,
+  type HydratedFightCheckpoint,
 } from '@aresrpg/fight'
+import { EFFECT_KINDS } from '@aresrpg/fight/move_contract'
 import { RotateCcw } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 
@@ -20,15 +25,36 @@ import type { AppCopy } from '../../i18n/copy.ts'
 import { dispatch_app, useAppStore } from '../../store.ts'
 
 import { create_fight_audio_observer, preload_fight_sounds } from '../audio/fight_audio.ts'
+import { character_render_source } from '../character_entities.ts'
 import { fight_character_entity_sources, type FightCharacterAppearance } from './character_entity_sources.ts'
 import { project_fight_cues } from './fight_cues.ts'
+import {
+  fight_visual_checkpoint,
+  fight_range_seat,
+  fight_zone_visual_state,
+  project_fight_overlays,
+  type FightZoneVisualState,
+} from './fight_overlays.ts'
 import type { FightCuePhase } from './fight_presenter.ts'
-import { FightViewport, type FightBlobOverlay } from './FightViewport.tsx'
+import { FightViewport } from './FightViewport.tsx'
 import { FightHud } from './FightHud.tsx'
+import type { FightActionSelection } from './fight_projection.ts'
 import type { FightMobRenderSource } from './mob_entities.ts'
 import { FightTargetPreviews, type FightTargetPreviewView } from './FightTargetPreviews.tsx'
 
-const color_hex = (value: number): string => `#${value.toString(16).padStart(6, '0').slice(-6)}`
+const displayed_checkpoint = (
+  presented: Readonly<HydratedFightCheckpoint> | null,
+  canonical: Readonly<HydratedFightCheckpoint> | null
+): HydratedFightCheckpoint | null => presented ?? canonical
+
+const zone_visual_state = (
+  checkpoint: Readonly<HydratedFightCheckpoint> | null,
+  zone_ids: readonly string[]
+): FightZoneVisualState | null => (checkpoint ? Object.freeze({ checkpoint, zone_ids }) : null)
+
+const viewer_team_of = (checkpoint: Readonly<HydratedFightCheckpoint> | null, owner: string | null): bigint | null =>
+  checkpoint?.contract.fighters.find((fighter) => fighter.kind.type === 'player' && fighter.kind.owner === owner)
+    ?.team ?? null
 
 export const FightLayer = ({ copy }: Readonly<{ copy: AppCopy }>) => {
   const fight = useAppStore((state) => state.fight)
@@ -39,12 +65,32 @@ export const FightLayer = ({ copy }: Readonly<{ copy: AppCopy }>) => {
   const fight_audio = useMemo(create_fight_audio_observer, [])
   const [hovered_seat, set_hovered_seat] = useState<bigint | null>(null)
   const [hovered_cell, set_hovered_cell] = useState<bigint | null>(null)
-  const [selected_spell, set_selected_spell] = useState<string | null>(null)
-  const [presenting_movement, set_presenting_movement] = useState(false)
+  const [selected_action, set_selected_action] = useState<FightActionSelection>(null)
+  const [presentation_active, set_presentation_active] = useState(false)
+  // the turn card follows the PLAYED turn cues, never the instantly-reconciled canonical head
+  const [presented_turn_seat, set_presented_turn_seat] = useState<bigint | null>(null)
+  const [crit_serial, set_crit_serial] = useState(0)
   const [entity_anchors, set_entity_anchors] = useState<Readonly<Record<string, Readonly<{ x: number; y: number }>>>>(
     Object.freeze({})
   )
   const checkpoint = fight.checkpoint
+  const [presented_checkpoint, set_presented_checkpoint] = useState<HydratedFightCheckpoint | null>(checkpoint)
+  const canonical_zone_state = zone_visual_state(checkpoint, fight.zone_ids)
+  const [presented_zone_state, set_presented_zone_state] = useState<FightZoneVisualState | null>(canonical_zone_state)
+  const render_checkpoint = displayed_checkpoint(presented_checkpoint, checkpoint)
+  const zone_render_state = presented_zone_state ?? canonical_zone_state
+  const owner = fight.mode === 'local' ? 'local' : (session.wallet?.address ?? null)
+  const viewer_team = viewer_team_of(checkpoint, owner)
+  // the viewer's own fighters — the turn-start sound rings only for them
+  const owned_entity_ids = useMemo(
+    () =>
+      new Set(
+        (checkpoint?.contract.fighters ?? []).flatMap((fighter, seat) =>
+          fighter.kind.type === 'player' && fighter.kind.owner === owner ? [`fight_character_${seat}`] : []
+        )
+      ),
+    [checkpoint, owner]
+  )
   const presentation_cues = useMemo(
     () =>
       checkpoint && fight.events.length > 0
@@ -52,31 +98,17 @@ export const FightLayer = ({ copy }: Readonly<{ copy: AppCopy }>) => {
         : Object.freeze([]),
     [checkpoint, fight.events, fight.presentation_batch]
   )
+  const presentation_pending = presentation_active || presentation_cues.length > 0
   const appearances = useMemo<readonly FightCharacterAppearance[]>(
-    () =>
-      Object.freeze([
-        ...simulator.characters,
-        ...session.characters.map((character) =>
-          Object.freeze({
-            id: character.id,
-            classe: character.classe,
-            male: character.sex === 'male',
-            colors: Object.freeze([
-              color_hex(character.color_1),
-              color_hex(character.color_2),
-              color_hex(character.color_3),
-            ]) as readonly [string, string, string],
-            loadout: Object.freeze(
-              Object.fromEntries(character.equipment.map(({ slot, item_type }) => [slot, item_type]))
-            ),
-          })
-        ),
-      ]),
+    () => Object.freeze([...simulator.characters, ...session.characters.map(character_render_source)]),
     [session.characters, simulator.characters]
   )
   const character_sources = useMemo(
-    () => (checkpoint ? fight_character_entity_sources(checkpoint, appearances) : Object.freeze([])),
-    [appearances, checkpoint]
+    () =>
+      render_checkpoint
+        ? fight_character_entity_sources(render_checkpoint, appearances, viewer_team)
+        : Object.freeze([]),
+    [appearances, render_checkpoint, viewer_team]
   )
   const character_voices = useMemo(
     () => Object.freeze(Object.fromEntries(character_sources.map(({ id, male }) => [id, male]))),
@@ -84,9 +116,9 @@ export const FightLayer = ({ copy }: Readonly<{ copy: AppCopy }>) => {
   )
   const mob_sources = useMemo<readonly FightMobRenderSource[]>(
     () =>
-      checkpoint
+      render_checkpoint
         ? Object.freeze(
-            checkpoint.contract.fighters.flatMap((fighter, seat) =>
+            render_checkpoint.contract.fighters.flatMap((fighter, seat) =>
               fighter.kind.type === 'mob'
                 ? [
                     Object.freeze({
@@ -94,15 +126,18 @@ export const FightLayer = ({ copy }: Readonly<{ copy: AppCopy }>) => {
                       mob_type: fighter.kind.snapshot.mob_type,
                       cell: Number(fighter.cell),
                       side: fighter.team === 0n ? ('a' as const) : ('b' as const),
+                      ...(viewer_team === fighter.team &&
+                      fighter.effects.some(({ kind }) => kind === EFFECT_KINDS.invis)
+                        ? { visual_effect: Object.freeze({ kind: 'invisibility' as const }) }
+                        : {}),
                     }),
                   ]
                 : []
             )
           )
         : Object.freeze([]),
-    [checkpoint]
+    [render_checkpoint, viewer_team]
   )
-  const owner = fight.mode === 'local' ? 'local' : (session.wallet?.address ?? null)
   const active_seat = checkpoint?.contract.queue[Number(checkpoint.contract.turn_ptr)] ?? null
   const active_fighter = active_seat === null ? null : checkpoint?.contract.fighters[Number(active_seat)]
   const owned_active_seat =
@@ -115,44 +150,47 @@ export const FightLayer = ({ copy }: Readonly<{ copy: AppCopy }>) => {
     !active_fighter.settled
       ? active_seat
       : null
-  const range_seat = hovered_seat ?? owned_active_seat
+  const range_seat = fight_range_seat(owned_active_seat, hovered_seat)
   const movement_cells = useMemo<readonly bigint[]>(() => {
     if (!checkpoint || range_seat === null) return Object.freeze([])
     const budget = range_seat === owned_active_seat ? undefined : movement_points_of(checkpoint, range_seat)
     return reachable_fight_cells(checkpoint, range_seat, budget)
   }, [checkpoint, owned_active_seat, range_seat])
-  const movement_path = useMemo(
-    () =>
-      checkpoint &&
-      owned_active_seat !== null &&
-      hovered_cell !== null &&
-      selected_spell === null &&
-      range_seat === owned_active_seat
-        ? fight_path_to(checkpoint, owned_active_seat, hovered_cell)
-        : null,
-    [checkpoint, hovered_cell, owned_active_seat, range_seat, selected_spell]
-  )
+  const selected_spell = selected_action?.type === 'spell' ? selected_action.name : null
+  const weapon_selected = selected_action?.type === 'weapon'
   const spell_cells = useMemo(
     () =>
-      checkpoint && owned_active_seat !== null && selected_spell
-        ? spell_target_cells(checkpoint, owned_active_seat, selected_spell)
+      checkpoint && owned_active_seat !== null
+        ? selected_spell
+          ? spell_target_cells(checkpoint, owned_active_seat, selected_spell)
+          : weapon_selected
+            ? weapon_target_cells(checkpoint, owned_active_seat)
+            : null
         : null,
-    [checkpoint, owned_active_seat, selected_spell]
+    [checkpoint, owned_active_seat, selected_spell, weapon_selected]
   )
   const hovered_spell_targetable = hovered_cell !== null && Boolean(spell_cells?.targetable.includes(hovered_cell))
   const spell_preview = useMemo(
     () =>
-      checkpoint && owned_active_seat !== null && selected_spell && hovered_cell !== null && hovered_spell_targetable
-        ? preview_spell_cast(checkpoint, owned_active_seat, selected_spell, hovered_cell)
+      checkpoint && owned_active_seat !== null && hovered_cell !== null && hovered_spell_targetable
+        ? selected_spell
+          ? preview_spell_cast(checkpoint, owned_active_seat, selected_spell, hovered_cell)
+          : weapon_selected
+            ? preview_weapon_strike(checkpoint, owned_active_seat, hovered_cell)
+            : null
         : null,
-    [checkpoint, hovered_cell, hovered_spell_targetable, owned_active_seat, selected_spell]
+    [checkpoint, hovered_cell, hovered_spell_targetable, owned_active_seat, selected_spell, weapon_selected]
   )
   const spell_hover_area = useMemo(
     () =>
-      checkpoint && owned_active_seat !== null && selected_spell && hovered_cell !== null && hovered_spell_targetable
-        ? spell_area_cells(checkpoint, owned_active_seat, selected_spell, hovered_cell)
+      checkpoint && owned_active_seat !== null && hovered_cell !== null && hovered_spell_targetable
+        ? selected_spell
+          ? spell_area_cells(checkpoint, owned_active_seat, selected_spell, hovered_cell)
+          : weapon_selected
+            ? weapon_area_cells(checkpoint, owned_active_seat, hovered_cell)
+            : Object.freeze([])
         : Object.freeze([]),
-    [checkpoint, hovered_cell, hovered_spell_targetable, owned_active_seat, selected_spell]
+    [checkpoint, hovered_cell, hovered_spell_targetable, owned_active_seat, selected_spell, weapon_selected]
   )
   const preview_targets = useMemo<readonly FightTargetPreviewView[]>(() => {
     if (!checkpoint) return Object.freeze([])
@@ -185,6 +223,7 @@ export const FightLayer = ({ copy }: Readonly<{ copy: AppCopy }>) => {
               cell_before: hovered.cell,
               cell_after: hovered.cell,
               effects: Object.freeze([]),
+              movements: Object.freeze([]),
             }),
           ]
         : []
@@ -209,110 +248,58 @@ export const FightLayer = ({ copy }: Readonly<{ copy: AppCopy }>) => {
       })
     )
   }, [checkpoint, hovered_seat, owner, session.characters, simulator.characters, spell_preview])
-  const blob_overlays = useMemo<readonly FightBlobOverlay[]>(() => {
-    if (!checkpoint || presenting_movement) return Object.freeze([])
-    if (hovered_seat === null && spell_cells && owned_active_seat !== null) {
-      const fighter = checkpoint.contract.fighters[Number(owned_active_seat)]
-      const hovered_target = hovered_spell_targetable ? hovered_cell : null
-      const hovered_area = new Set(spell_hover_area)
-      const overlays: readonly FightBlobOverlay[] = [
-        Object.freeze({
-          id: 'spell-range',
-          blob: Object.freeze({
-            cells: Object.freeze(spell_cells.range.filter((cell) => !hovered_area.has(cell)).map(Number)),
-            shape: 'per_cell',
-            color: 0x67b7ed,
-            priority: 0,
-            origin_cell: Number(fighter.cell),
-            opacity: 0.56,
-            reveal_step_ms: 15,
-          }),
-        }),
-        Object.freeze({
-          id: 'spell-targetable',
-          blob: Object.freeze({
-            cells: Object.freeze(spell_cells.targetable.filter((cell) => !hovered_area.has(cell)).map(Number)),
-            shape: 'per_cell',
-            color: 0x185ca8,
-            priority: 1,
-            origin_cell: Number(fighter.cell),
-            opacity: 0.82,
-            reveal_step_ms: 15,
-            animate_updates: false,
-          }),
-        }),
-      ]
-      const hover =
-        hovered_target !== null
-          ? [
-              Object.freeze({
-                id: 'spell-hover',
-                blob: Object.freeze({
-                  cells: Object.freeze(spell_hover_area.map(Number)),
-                  shape: 'single' as const,
-                  color: 0xd73545,
-                  priority: 2,
-                  origin_cell: Number(hovered_target),
-                  opacity: 0.92,
-                  reveal_step_ms: 0,
-                  animate: false,
-                }),
-              }),
-            ]
-          : []
-      return Object.freeze([...overlays, ...hover])
-    }
-    if (range_seat === null) return Object.freeze([])
-    const fighter = checkpoint.contract.fighters[Number(range_seat)]
-    if (!fighter || movement_cells.length === 0) return Object.freeze([])
-    const range_blob = Object.freeze({
-      id: 'movement-range',
-      blob: Object.freeze({
-        cells: Object.freeze(movement_cells.map(Number)),
-        shape: 'per_cell' as const,
-        color: 0x55b979,
-        priority: 0,
-        origin_cell: Number(fighter.cell),
-        opacity: range_seat === owned_active_seat ? 0.75 : 0.6,
-        reveal_step_ms: 15,
-        animate: hovered_seat === null,
-      }),
-    })
-    const path_blob = movement_path
-      ? Object.freeze({
-          id: 'movement-path',
-          blob: Object.freeze({
-            cells: Object.freeze(movement_path.map(Number)),
-            shape: 'per_cell' as const,
-            color: 0x176b3a,
-            priority: 1,
-            origin_cell: Number(fighter.cell),
-            opacity: 0.9,
-            reveal_step_ms: 10,
-            animate: false,
-          }),
-        })
-      : null
-    return Object.freeze(path_blob ? [range_blob, path_blob] : [range_blob])
-  }, [
-    checkpoint,
-    hovered_cell,
-    hovered_seat,
-    movement_cells,
-    movement_path,
-    owned_active_seat,
-    range_seat,
-    spell_cells,
-    spell_hover_area,
-    hovered_spell_targetable,
-    presenting_movement,
-  ])
+  const blob_overlays = useMemo(
+    () =>
+      checkpoint
+        ? project_fight_overlays({
+            checkpoint,
+            presentation_active: presentation_pending,
+            hovered_cell,
+            owned_active_seat,
+            attack_selected: selected_action !== null,
+            movement_cells,
+            range_seat,
+            spell_cells,
+            spell_hover_area,
+            hovered_spell_targetable,
+            viewer_owner: owner,
+            ...(zone_render_state
+              ? { zone_checkpoint: zone_render_state.checkpoint, zone_ids: zone_render_state.zone_ids }
+              : {}),
+          })
+        : Object.freeze([]),
+    [
+      checkpoint,
+      hovered_cell,
+      hovered_spell_targetable,
+      movement_cells,
+      owned_active_seat,
+      presentation_pending,
+      range_seat,
+      selected_action,
+      spell_cells,
+      spell_hover_area,
+      owner,
+      zone_render_state,
+    ]
+  )
 
   useEffect(() => {
-    set_selected_spell(null)
+    set_presented_checkpoint((presented) => fight_visual_checkpoint(presented, checkpoint, fight.events.length > 0))
+    set_presented_zone_state((presented) => {
+      if (!checkpoint) return null
+      if (fight.events.length > 0 && presented?.checkpoint.contract.id === checkpoint.contract.id) return presented
+      return Object.freeze({ checkpoint, zone_ids: Object.freeze([...fight.zone_ids]) })
+    })
+  }, [checkpoint, fight.events.length, fight.zone_ids])
+
+  useEffect(() => {
+    set_selected_action(null)
   }, [owned_active_seat])
 
   useEffect(() => {
+    set_presented_turn_seat(null)
+    set_crit_serial(0)
     if (checkpoint) preload_fight_sounds(checkpoint)
     // The fight ID owns immutable participants and authored kits; commands only clone the checkpoint.
     // eslint-disable-next-line react-hooks/exhaustive-deps -- preload once per fight identity.
@@ -348,9 +335,16 @@ export const FightLayer = ({ copy }: Readonly<{ copy: AppCopy }>) => {
         blob_overlays={blob_overlays}
         entities={entities}
         label={copy.fight_hud.board_label}
+        on_presentation_active={set_presentation_active}
         on_presentation_cue={(cue: FightPresentationCue, phase: FightCuePhase) => {
-          if (cue.type === 'movement') set_presenting_movement(phase === 'start')
-          fight_audio(cue, phase, character_voices)
+          fight_audio(cue, phase, character_voices, owned_entity_ids)
+          if (cue.type === 'turn' && phase === 'start') {
+            const seat = Number(cue.entity_id.split('_').at(-1))
+            set_presented_turn_seat(Number.isInteger(seat) ? BigInt(seat) : null)
+          }
+          // any critical on the board pulses the vignette, whoever landed it
+          if (cue.type === 'damage' && cue.critical && phase === 'start') set_crit_serial((serial) => serial + 1)
+          set_presented_zone_state((presented) => fight_zone_visual_state(presented, canonical_zone_state, cue, phase))
         }}
         presentation_request={
           presentation_cues.length > 0
@@ -363,17 +357,26 @@ export const FightLayer = ({ copy }: Readonly<{ copy: AppCopy }>) => {
             : null
         }
         on_cell_click={(cell) => {
-          if (!checkpoint || owned_active_seat === null || presenting_movement) return
-          if (selected_spell !== null) {
+          if (!checkpoint || owned_active_seat === null || presentation_pending) return
+          if (selected_action !== null) {
             if (!spell_cells?.targetable.includes(cell)) {
-              set_selected_spell(null)
+              set_selected_action(null)
               return
             }
-            set_selected_spell(null)
+            const action = selected_action
+            set_selected_action(null)
             dispatch_app({
               type: 'fight/input',
               origin: 'local',
-              input: { type: 'cast_spell', fighter: owned_active_seat, spell: selected_spell, target_cell: cell },
+              input:
+                action.type === 'weapon'
+                  ? { type: 'weapon_strike', fighter: owned_active_seat, target_cell: cell }
+                  : {
+                      type: 'cast_spell',
+                      fighter: owned_active_seat,
+                      spell: action.name,
+                      target_cell: cell,
+                    },
             })
             return
           }
@@ -402,12 +405,14 @@ export const FightLayer = ({ copy }: Readonly<{ copy: AppCopy }>) => {
         critical={spell_preview?.critical ?? false}
         targets={preview_targets}
       />
+      {crit_serial > 0 && <div aria-hidden className="fight-crit-vignette" key={crit_serial} />}
       <FightHud
-        actions_locked={presenting_movement}
+        actions_locked={presentation_pending}
         copy={copy}
         focus_fighter={set_hovered_seat}
-        select_spell={set_selected_spell}
-        selected_spell={selected_spell}
+        presented_turn_seat={presented_turn_seat}
+        select_action={set_selected_action}
+        selected_action={selected_action}
       />
       {fight.mode === 'local' && (
         <button

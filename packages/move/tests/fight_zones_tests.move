@@ -73,3 +73,26 @@ fun map_wide_zone_area_overlap_is_legal_when_centers_differ() {
 fun glyph_center_accepts_a_living_fighter() {
   assert_committed(resolve(0, false, true, vector[13]), 1);
 }
+
+#[test]
+fun movement_inside_a_multi_cell_trap_fires_it() {
+  let mut scenario = test_scenario::begin(OWNER);
+  assert!(fight::covered_trap_fires_on_move_for_testing(scenario.ctx()), 0);
+  scenario.end();
+}
+
+#[test]
+fun stepping_off_the_edge_of_a_trap_area_stays_silent() {
+  let mut scenario = test_scenario::begin(OWNER);
+  assert!(fight::trap_edge_exit_for_testing(scenario.ctx()), 0);
+  scenario.end();
+}
+
+#[test]
+fun overlapping_damage_trap_resolves_before_push_trap() {
+  let mut scenario = test_scenario::begin(OWNER);
+  let result = fight::layered_traps_damage_before_push_for_testing(scenario.ctx());
+  assert!(result[0] < 100, 0);
+  assert!(result[1] == result[2], 1);
+  scenario.end();
+}

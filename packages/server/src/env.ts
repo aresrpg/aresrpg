@@ -5,7 +5,10 @@
 import { DEFAULT_ADMIN_ADDRESS } from '@aresrpg/protocol'
 
 const {
-  REDIS_URL = 'redis://localhost:6379',
+  /** the bound indexer set — graph reads, chain evt:* channels, the checkpoint marker */
+  GRAPH_URL = 'redis://localhost:6379',
+  /** the ONE cluster redis — player-published ephemera + server heartbeats */
+  MESH_REDIS_URL = 'redis://localhost:6379',
   GRAPH_NAME = 'aresrpg',
   PORT: RAW_PORT = '9800',
   SUI_NETWORK = 'testnet',
@@ -15,7 +18,7 @@ const {
   ALLOWED_ORIGINS: RAW_ALLOWED_ORIGINS = 'http://localhost:5173,https://aresrpg.world',
 } = process.env
 
-export { REDIS_URL, GRAPH_NAME, SUI_NETWORK, SUI_RPC_URL }
+export { GRAPH_URL, MESH_REDIS_URL, GRAPH_NAME, SUI_NETWORK, SUI_RPC_URL }
 
 export const PORT = Number(RAW_PORT)
 export const MAX_PLAYERS = Number(RAW_MAX_PLAYERS)

@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-
 import { AREA_SHAPES, CHANNELS, EFFECT_KINDS, TARGET_FILTERS } from '@aresrpg/fight/move_contract'
 import { element_names } from '@aresrpg/immutable'
 import { Crosshair, Footprints, Sparkles, Zap, type LucideIcon } from 'lucide-react'
@@ -10,7 +9,6 @@ import type { EffectLineView } from '../components/EffectLine.tsx'
 import type { SpellEffect, SpellLevel } from '../content/catalog.ts'
 import { titleize } from '../content/catalog.ts'
 import { element_colors, stat_colors, stat_identities } from '../visual_identity.ts'
-
 export type SpellCardPath = readonly (string | number)[]
 export type SpellCardValue =
   string | number | boolean | null | readonly SpellCardValue[] | Readonly<{ [key: string]: SpellCardValue }>
@@ -18,13 +16,10 @@ export type SpellCardEdit = Readonly<{
   change: (path: SpellCardPath, value: SpellCardValue) => void
   save: () => void
 }>
-
 const field_class =
   'h-7 border border-white/12 bg-[#090a10] px-1.5 text-[9px] text-[#e8e4dc] outline-none focus:border-[#c8963c]/60'
-
 const reverse = (values: Readonly<Record<string, bigint>>): Readonly<Record<number, string>> =>
   Object.freeze(Object.fromEntries(Object.entries(values).map(([name, value]) => [Number(value), name])))
-
 const effect_kinds = reverse(EFFECT_KINDS)
 const area_shapes = reverse(AREA_SHAPES)
 const channels = reverse(CHANNELS)
@@ -34,9 +29,7 @@ const shape_options = Object.entries(AREA_SHAPES).map(([name, value]) => [titlei
 const target_options = Object.entries(TARGET_FILTERS).map(([name, value]) => [titleize(name), Number(value)] as const)
 const stat_options = Object.entries(CHANNELS).map(([name, value]) => [titleize(name), Number(value)] as const)
 const element_options = ['', ...element_names].map((value) => [value ? titleize(value) : 'None', value] as const)
-
 export const effect_color = (element: string): string => element_colors[element] ?? '#b8b4ac'
-
 const element_stats: Readonly<Record<string, string>> = Object.freeze({
   earth: 'strength',
   fire: 'intelligence',
@@ -60,7 +53,6 @@ const area_masks: Readonly<Record<string, readonly string[]>> = Object.freeze({
   podium: Object.freeze(['00100', '00100', '01110', '11111', '00000']),
   blob: Object.freeze(['00100', '01110', '01110', '00100', '00000']),
 })
-
 const NumberField = ({
   value,
   change,
@@ -157,7 +149,7 @@ const InlineEffectField = ({
 const AreaGlyph = ({ shape, size }: Readonly<{ shape: number; size: number }>) => {
   const name = area_shapes[shape]
   const mask = name ? area_masks[name] : null
-  if (!mask) return null
+  if (!mask || (name !== 'allmap' && size <= 0)) return null
   return (
     <span className="inline-flex items-center gap-1" title={titleize(name)}>
       <span aria-hidden="true" className="grid grid-cols-5 gap-px">
@@ -190,6 +182,11 @@ const effect_identity = (effect: SpellEffect): Readonly<{ icon: string; label: s
 const effect_range = ({ value, value_max }: SpellEffect): string =>
   value === value_max ? String(value) : `${value} to ${value_max}`
 
+// Percent-valued effects: %-of-max-hp damage, and resistance rows (resistance IS a percent
+// reduction of final damage) — the suffix states the unit wherever the number shows.
+const effect_value_suffix = (effect: SpellEffect): string =>
+  effect_kinds[effect.kind] === 'pct_life' || channels[effect.stat] === 'resist' ? '%' : ''
+
 const effect_words = (
   effect: SpellEffect
 ): Readonly<{ action: string; suffix: string; amount: boolean; stat: boolean }> => {
@@ -200,12 +197,15 @@ const effect_words = (
   if (kind === 'caster_damage') return { action: 'Inflicts', suffix: 'damage on yourself', amount: true, stat: false }
   if (kind === 'punishment')
     return { action: 'Deals', suffix: 'damage, increased by missing HP', amount: true, stat: false }
+  if (kind === 'add' && channels[effect.stat] === 'hp')
+    return { action: 'Heals', suffix: 'HP', amount: true, stat: false }
   if (kind === 'add') return { action: 'Adds', suffix: '', amount: true, stat: true }
   if (kind === 'remove' && channels[effect.stat] === 'hp')
     return { action: 'Deals', suffix: 'damage', amount: true, stat: false }
   if (kind === 'remove') return { action: 'Removes', suffix: '', amount: true, stat: true }
   if (kind === 'steal') return { action: 'Steals', suffix: '', amount: true, stat: true }
-  if (kind === 'reduce') return { action: 'Reduces', suffix: '', amount: true, stat: true }
+  if (kind === 'reduce') return { action: 'Reduces damage by', suffix: '', amount: true, stat: false }
+  if (kind === 'reflect') return { action: 'Reflects', suffix: 'damage', amount: true, stat: false }
   if (kind === 'push') return { action: 'Pushes', suffix: 'cells', amount: true, stat: false }
   if (kind === 'pull') return { action: 'Pulls', suffix: 'cells', amount: true, stat: false }
   if (kind === 'teleport') return { action: 'Teleports', suffix: 'cells', amount: true, stat: false }
@@ -214,6 +214,9 @@ const effect_words = (
   if (kind === 'glyph') return { action: 'Places a glyph', suffix: '', amount: false, stat: false }
   if (kind === 'dispel') return { action: 'Dispels effects', suffix: '', amount: false, stat: false }
   if (kind === 'invis') return { action: 'Makes the target invisible', suffix: '', amount: false, stat: false }
+  // the threshold derives from the invested level at cast time — the authored value is unused
+  if (kind === 'return')
+    return { action: "Returns spells (up to this spell's level)", suffix: '', amount: false, stat: false }
   return { action: titleize(kind), suffix: '', amount: true, stat: false }
 }
 
@@ -227,7 +230,7 @@ const target_note = (filter: number): string | null => {
 }
 
 const critical_delta = (normal: SpellEffect, critical: SpellEffect): string | null => {
-  const critical_range = `${effect_range(critical)}${effect_kinds[critical.kind] === 'pct_life' ? '%' : ''}`
+  const critical_range = `${effect_range(critical)}${effect_value_suffix(critical)}`
   const changes = [
     (normal.value !== critical.value || normal.value_max !== critical.value_max) && critical_range,
     normal.turns !== critical.turns && `${critical.turns} turn${critical.turns === 1 ? '' : 's'}`,
@@ -338,7 +341,7 @@ export const spell_effect_line_view = (effect: SpellEffect, critical_only = fals
     ...(effect.element ? { dot: color } : identity ? { icon: identity.icon } : {}),
     ...(effect.element || identity || !ChannelIcon ? {} : { glyph: <ChannelIcon size={15} strokeWidth={1.6} /> }),
     pre: `${words.action}${words.amount ? ' ' : ''}`,
-    value: words.amount ? `${effect_range(effect)}${kind === 'pct_life' ? '%' : ''}` : null,
+    value: words.amount ? `${effect_range(effect)}${effect_value_suffix(effect)}` : null,
     tone: color,
     post: [words.suffix, words.stat ? titleize(channel) : '', target ? `(${target})` : '']
       .filter(Boolean)
@@ -413,7 +416,7 @@ export const SpellEffectLine = ({
             display={
               <span style={{ color }}>
                 {effect_range(effect)}
-                {kind === 'pct_life' ? '%' : ''}
+                {effect_value_suffix(effect)}
               </span>
             }
             edit={edit}
@@ -463,24 +466,29 @@ export const SpellEffectLine = ({
           />
         )}
       </span>
-      {area_masks[area_shapes[effect.area_shape] ?? ''] && (
-        <InlineEffectField
-          display={<AreaGlyph shape={effect.area_shape} size={effect.area_size} />}
-          edit={edit}
-          editor={
-            <>
-              <SelectField
-                change={(value) => update('area_shape', value)}
-                label="Area shape"
-                options={shape_options}
-                value={effect.area_shape}
-              />
-              <NumberField change={(value) => update('area_size', value)} label="Area size" value={effect.area_size} />
-            </>
-          }
-          label="area"
-        />
-      )}
+      {(edit || effect.area_size > 0 || area_shapes[effect.area_shape] === 'allmap') &&
+        area_masks[area_shapes[effect.area_shape] ?? ''] && (
+          <InlineEffectField
+            display={<AreaGlyph shape={effect.area_shape} size={effect.area_size} />}
+            edit={edit}
+            editor={
+              <>
+                <SelectField
+                  change={(value) => update('area_shape', value)}
+                  label="Area shape"
+                  options={shape_options}
+                  value={effect.area_shape}
+                />
+                <NumberField
+                  change={(value) => update('area_size', value)}
+                  label="Area size"
+                  value={effect.area_size}
+                />
+              </>
+            }
+            label="area"
+          />
+        )}
       {target_editable && (target || edit) && (
         <InlineEffectField
           class_name="text-[8px] text-[#858994]"

@@ -30,7 +30,7 @@ export type CharacterAppearanceRender = Readonly<{
   colors: readonly [string, string, string]
   worn: Readonly<{ head: WornModelRender | null; back: WornModelRender | null }>
 }>
-export type CharacterAnimationName = 'IDLE' | 'WALK' | 'RUN' | 'JUMP' | 'JUMP_RUN' | 'FALL' | 'SWIM'
+export type CharacterAnimationName = 'IDLE' | 'WALK' | 'RUN' | 'JUMP' | 'JUMP_RUN' | 'FALL' | 'SWIM' | 'SIT'
 export type CharacterAnimationRender = Readonly<{ name: CharacterAnimationName; time_scale: number }>
 export type MobEntityRender = Readonly<{
   id: string
@@ -38,7 +38,9 @@ export type MobEntityRender = Readonly<{
   model_url: string
   anchor: EntityAnchor
   facing: EntityFacing
+  animation?: CharacterAnimationRender
   visual_effect?: EntityVisualEffect
+  visible?: boolean
 }>
 export type CharacterEntityRender = Readonly<{
   id: string
@@ -48,12 +50,15 @@ export type CharacterEntityRender = Readonly<{
   facing: EntityFacing
   animation?: CharacterAnimationRender
   visual_effect?: EntityVisualEffect
+  visible?: boolean
 }>
 export type EntityRender = MobEntityRender | CharacterEntityRender
+// 'slide' is forced displacement (push/pull): faster travel, no locomotion clip, and the
+// entity keeps its facing — being shoved is not walking.
 export type EntityPathMotion = Readonly<{
   id: string
   cells: readonly number[]
-  gait: 'walk' | 'run'
+  gait: 'walk' | 'run' | 'slide'
 }>
 export type EntityScreenAnchor = Readonly<{ x: number; y: number }>
 export type FightBlobShape = 'single' | 'per_cell'
@@ -70,6 +75,10 @@ export type FightBlobSpec = Readonly<{
   animate_updates?: boolean
   duration_ms?: number
   decoration?: FightBlobDecoration
+  // 'border' paints only a glowing edge band instead of the filled shape
+  style?: 'fill' | 'border'
+  // slow breathing on opacity — the active-fighter emphasis
+  pulse?: boolean
 }>
 export type FightBlobRender = FightBlobSpec &
   Readonly<{
@@ -126,11 +135,19 @@ export type QualityProfile = Readonly<{
     horizon_step: number
   }>
   sky: EngineQuality
-  terrain: 'flat' | 'lit' | 'pbr'
+  terrain: Readonly<{ kind: 'flat' | 'lit' | 'pbr'; texture_size: 16 | 32 }>
   fog: Readonly<{ near: number; far: number }>
   shadows: Readonly<{ kind: 'none' | 'basic' | 'soft'; map_size: number }>
   effects: Readonly<{
     bloom: Readonly<{ strength: number; radius: number; threshold: number }> | null
+    sun_shafts: Readonly<{
+      samples: number
+      resolution: number
+      density: number
+      decay: number
+      strength: number
+      threshold: number
+    }> | null
   }>
 }>
 
@@ -163,6 +180,9 @@ export type CameraProjection = Readonly<{
   ortho_height?: number
 }>
 
+export type FightCastStyle =
+  'damage' | 'dot' | 'heal' | 'trap' | 'glyph' | 'push' | 'pull' | 'teleport' | 'buff' | 'debuff' | 'state' | 'weapon'
+
 export type FightPresentationCue =
   | Readonly<{
       id: string
@@ -172,9 +192,8 @@ export type FightPresentationCue =
       cast_level: number
       target_cell: number
       element: string
-      placement: 'trap' | 'glyph' | null
+      style: FightCastStyle
       critical: boolean
-      weapon: boolean
       amount: number
       target_max_hp: number | null
       affected_cells: readonly number[]
@@ -187,6 +206,8 @@ export type FightPresentationCue =
       cells: readonly number[]
       mode: string
       source_id: string
+      mp_spent: number
+      gait: EntityPathMotion['gait']
     }>
   | Readonly<{
       id: string
@@ -233,6 +254,7 @@ export type FightPresentationCue =
       zone_id: string
       owner_id: string
       target_id: string
+      affected_ids?: readonly string[]
       cell: number
       element: string
     }>
@@ -248,6 +270,25 @@ export type FightPresentationCue =
       id: string
       type: 'turn'
       entity_id: string
+      // minimum on-screen duration of THIS turn before the next turn cue may play
+      // (the chain's per-mob turn floor, projected by the game side)
+      min_ms?: number
+    }>
+  | Readonly<{
+      id: string
+      type: 'tackle'
+      entity_id: string
+      source_id: string
+      ap_lost: number
+      mp_lost: number
+    }>
+  | Readonly<{
+      id: string
+      type: 'pool'
+      entity_id: string
+      // signed deltas: a loss is negative, a gain positive
+      ap: number
+      mp: number
     }>
 
 export type Engine = Readonly<{
@@ -256,6 +297,9 @@ export type Engine = Readonly<{
   // projection.fov drives the perspective lens; projection.ortho_blend (0 = perspective,
   // 1 = orthographic) lets game-side camera addons travel between views seamlessly.
   set_camera: (position: Vec3, target: Vec3, projection?: CameraProjection) => void
+  /** The followed character's FEET (null when nobody is followed) — feeds character-anchored
+   * presentation like the night lantern. */
+  set_character_anchor: (position: Vec3 | null) => void
   set_quality: (quality: EngineQuality) => void
   set_time_of_day: (time: number) => void
   set_flatten_amount: (amount: number) => void
@@ -265,6 +309,7 @@ export type Engine = Readonly<{
   play_fight_cue: (cue: FightPresentationCue) => Promise<boolean>
   play_jump_puff: (position: Vec3) => void
   project_entity: (id: string) => EntityScreenAnchor | null
+  entity_height: (id: string) => number | null
   create_fight_blob: (blob: FightBlobSpec) => string
   update_fight_blob: (id: string, blob: FightBlobSpec) => boolean
   remove_fight_blob: (id: string) => void

@@ -95,11 +95,8 @@ const wire = () => {
   }
   const emitter = new EventEmitter()
   const published: { channel: string; payload: any }[] = []
-  const pubsub = {
+  const bus = {
     emitter,
-    heartbeat: async () => {},
-    cluster_online: async () => 7,
-    indexed_checkpoint: async () => 1,
     subscribe: async () => {},
     unsubscribe: async () => {},
     publish: async (channel: string, payload: unknown) => {
@@ -107,6 +104,11 @@ const wire = () => {
       emitter.emit(channel, payload)
     },
     close: () => {},
+  }
+  const pubsub = {
+    emitter,
+    graph: { ...bus, indexed_checkpoint: async () => 1 },
+    mesh: { ...bus, heartbeat: async () => {}, cluster_online: async () => 7 },
   }
   return { sent, ws, graph, pubsub, published }
 }

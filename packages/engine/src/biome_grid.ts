@@ -15,7 +15,7 @@ export const sample_biome_grid = (
   const { world_size, world_center, cell_size } = options
   if (![world_size, world_center, cell_size].every(Number.isSafeInteger) || world_size < 1 || cell_size < 1)
     throw new TypeError('Biome grid dimensions must be positive safe integers')
-  const world = compile_world_recipe(recipe)
+  const world = compile_world_recipe(recipe, { structures: false })
   if (world.biomes.length > 0x100) throw new TypeError('A biome grid supports at most 256 biomes')
   const side = Math.ceil(world_size / cell_size)
   if (side > 0xffff) throw new TypeError('Biome grid side exceeds u16')

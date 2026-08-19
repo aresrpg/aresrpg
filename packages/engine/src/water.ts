@@ -131,7 +131,7 @@ const build_material = (
   if (quality === 'low') {
     const depth = max(positionWorld.y.sub(bed_height), 0)
     material.colorNode = mix(vec3(...palette.shallow), vec3(...palette.body), smoothstep(0.5, 4, depth))
-    material.opacityNode = smoothstep(0, 1, depth).mul(0.78).mul(float(1).sub(flatten.amount))
+    material.opacityNode = smoothstep(0, 1, depth).mul(0.78).mul(flatten.water_visibility)
     material.alphaTest = 0.02
     material.fog = true
     return material
@@ -240,8 +240,8 @@ const build_material = (
     vec3(0.72, 0.88, 0.88),
     foam.mul(0.72)
   )
-  // The flat-world projection dissolves the water with the terrain burn.
-  material.opacityNode = alpha.mul(float(1).sub(flatten.amount))
+  // Water exits during the first projection phase; terrain does not move until it is gone.
+  material.opacityNode = alpha.mul(flatten.water_visibility)
   material.alphaTest = 0.02
   material.fog = true
   return material

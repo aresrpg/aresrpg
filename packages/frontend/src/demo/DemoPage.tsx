@@ -9,7 +9,10 @@ import { useEffect, useMemo, useState } from 'react'
 import { FpsPanel } from '../components/FpsPanel.tsx'
 import { HudPanel } from '../components/ui/HudPanel.tsx'
 import { content_catalog, titleize, type SeedWorld } from '../content/catalog.ts'
+import { load_pet_model_url } from '../content/pet_models.ts'
+import { worn_cosmetic_options } from '../content/worn_cosmetics.ts'
 import { create_world } from '../game/core/world.ts'
+import { pet_locomotion_of } from '../game/core/pet_locomotion.ts'
 import { load_character_appearance } from '../game/character_entities.ts'
 import { FightLayer } from '../game/fight/FightLayer.tsx'
 import { mob_entities } from '../game/mob_entities.ts'
@@ -24,6 +27,8 @@ const renderable_worlds = Object.freeze(content_catalog.worlds.filter(({ terrain
 const initial_world = renderable_worlds[0] ?? null
 const initial_mob = initial_world?.mobs[0]?.mob_type ?? content_catalog.mobs[0]?.mob_type ?? ''
 const DEFAULT_COLORS = Object.freeze(['#f3eadb', '#2f8fe8', '#d9af57'] as const)
+const { hats, cloaks } = worn_cosmetic_options
+const pets = Object.freeze(content_catalog.items.filter(({ category }) => category === 'pet'))
 
 const field_class =
   'h-9 min-w-0 border border-white/10 bg-[#08090e] px-2 text-[9px] text-[#d5d2cb] outline-none focus:border-[#4a9eff]/45'
@@ -52,6 +57,10 @@ const WorldLab = ({ active, copy }: Readonly<{ active: boolean; copy: AppCopy }>
   const [male, set_male] = useState(true)
   const [colors, set_colors] = useState<readonly [string, string, string]>(DEFAULT_COLORS)
   const [character_enabled, set_character_enabled] = useState(false)
+  const [hat, set_hat] = useState('')
+  const [cloak, set_cloak] = useState('')
+  const [pet, set_pet] = useState('')
+  const [riding, set_riding] = useState(false)
   const [mob_type, set_mob_type] = useState(initial_mob)
   const [mob_amount, set_mob_amount] = useState(3)
   const [spawned_group, set_spawned_group] = useState<SpawnedGroup | null>(null)
@@ -91,9 +100,9 @@ const WorldLab = ({ active, copy }: Readonly<{ active: boolean; copy: AppCopy }>
   }, [active, world_api])
 
   useEffect(() => {
-    world_api?.set_quality(settings.quality)
+    world_api?.set_quality(settings.quality, settings.render_distance)
     world_api?.set_flattened(settings.flat_mode)
-  }, [settings.flat_mode, settings.quality, world_api])
+  }, [settings.flat_mode, settings.quality, settings.render_distance, world_api])
 
   useEffect(() => {
     world_api?.set_time_of_day(live_time ? null : time)
@@ -111,7 +120,7 @@ const WorldLab = ({ active, copy }: Readonly<{ active: boolean; copy: AppCopy }>
       classe,
       male,
       colors,
-      loadout: Object.freeze({}),
+      loadout: Object.freeze({ ...(hat ? { hat } : {}), ...(cloak ? { cloak } : {}) }),
     })
     void load_character_appearance(source).then(
       (appearance) => {
@@ -124,7 +133,40 @@ const WorldLab = ({ active, copy }: Readonly<{ active: boolean; copy: AppCopy }>
     return () => {
       current = false
     }
-  }, [character_enabled, classe, colors, male, world_api])
+  }, [character_enabled, classe, cloak, colors, hat, male, world_api])
+
+  useEffect(() => {
+    set_riding(false)
+    world_api?.set_riding(false)
+    if (!world_api || !character_enabled || !pet) {
+      world_api?.set_pet(null)
+      return undefined
+    }
+    let current = true
+    void load_pet_model_url(pet).then((model_url) => {
+      const item = content_catalog.item(pet)?.item
+      if (current && model_url && item)
+        world_api.set_pet(Object.freeze({ id: 'demo_pet', model_url, locomotion: pet_locomotion_of(item) }))
+    })
+    return () => {
+      current = false
+      world_api.set_pet(null)
+    }
+  }, [character_enabled, pet, world_api])
+
+  useEffect(() => {
+    if (!active || !world_api || !character_enabled || !pet) return undefined
+    const toggle = (event: KeyboardEvent): void => {
+      if (event.code !== 'KeyX' || event.repeat) return
+      event.preventDefault()
+      set_riding((current) => {
+        world_api.set_riding(!current)
+        return world_api.riding()
+      })
+    }
+    globalThis.addEventListener('keydown', toggle)
+    return () => globalThis.removeEventListener('keydown', toggle)
+  }, [active, character_enabled, pet, world_api])
 
   useEffect(() => {
     if (!world_api || !spawned_group) {
@@ -266,6 +308,41 @@ const WorldLab = ({ active, copy }: Readonly<{ active: boolean; copy: AppCopy }>
                 />
               ))}
             </div>
+            <div className="grid grid-cols-2 gap-2">
+              <label className={label_class}>
+                {text.hat}
+                <select className={field_class} onChange={(event) => set_hat(event.target.value)} value={hat}>
+                  <option value="">{text.none}</option>
+                  {hats.map(({ item_type, name }) => (
+                    <option key={item_type} value={item_type}>
+                      {name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className={label_class}>
+                {text.cloak}
+                <select className={field_class} onChange={(event) => set_cloak(event.target.value)} value={cloak}>
+                  <option value="">{text.none}</option>
+                  {cloaks.map(({ item_type, name }) => (
+                    <option key={item_type} value={item_type}>
+                      {name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
+            <label className={label_class}>
+              {text.pet}
+              <select className={field_class} onChange={(event) => set_pet(event.target.value)} value={pet}>
+                <option value="">{text.none}</option>
+                {pets.map(({ item_type, name }) => (
+                  <option key={item_type} value={item_type}>
+                    {name}
+                  </option>
+                ))}
+              </select>
+            </label>
             <button className={button_class} onClick={() => set_character_enabled((enabled) => !enabled)} type="button">
               {character_enabled ? text.remove_character : text.control_character}
             </button>
@@ -331,9 +408,25 @@ const WorldLab = ({ active, copy }: Readonly<{ active: boolean; copy: AppCopy }>
             <p className="text-[8px] leading-4 text-[#777b86]">{text.resources_missing}</p>
           </div>
         </HudPanel>
-        <HudPanel className="absolute bottom-3 left-1/2 -translate-x-1/2 px-3 py-2 text-[8px] tracking-[0.15em] text-[#a3a5ad] uppercase">
-          {character_enabled ? text.control_hint : copy.drag_hint}
-        </HudPanel>
+        {character_enabled && pet ? (
+          <button
+            className="pointer-events-auto absolute bottom-24 left-1/2 flex -translate-x-1/2 cursor-pointer items-center gap-2 border border-[#c8963c]/35 bg-[linear-gradient(165deg,#12121a,#0a0a0f)] px-3.5 py-2 font-mono text-[9px] tracking-[0.18em] uppercase shadow-[0_0_0_1px_rgba(200,150,60,0.08)] transition hover:border-[#c8963c] hover:shadow-[0_0_20px_rgba(200,150,60,0.35)]"
+            onClick={() => {
+              world_api?.set_riding(!riding)
+              set_riding(world_api?.riding() ?? false)
+            }}
+            type="button"
+          >
+            <kbd className="flex h-5 min-w-5 items-center justify-center border border-[#c8963c] px-1 text-[9px] font-semibold text-[#c8963c] shadow-[inset_0_0_8px_rgba(200,150,60,0.2)]">
+              X
+            </kbd>
+            <span className="text-[#e8c878]">{riding ? text.dismount_pet : text.ride_pet}</span>
+          </button>
+        ) : (
+          <HudPanel className="absolute bottom-3 left-1/2 -translate-x-1/2 px-3 py-2 text-[8px] tracking-[0.15em] text-[#a3a5ad] uppercase">
+            {character_enabled ? text.control_hint : copy.drag_hint}
+          </HudPanel>
+        )}
       </div>
     </section>
   )

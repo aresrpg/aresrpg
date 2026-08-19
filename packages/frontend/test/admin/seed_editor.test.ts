@@ -10,6 +10,7 @@ import mobs from '../../../../seed/content/mobs.json'
 import recipes from '../../../../seed/content/recipes.json'
 import shop from '../../../../seed/content/shop.json'
 import spells from '../../../../seed/content/spells.json'
+import structure_packs from '../../../../seed/content/structure_packs.json'
 import worlds from '../../../../seed/content/worlds.json'
 import { item_power_summary, item_upu_budget } from '../../src/admin/item_power.ts'
 import {
@@ -22,7 +23,7 @@ import {
   type JsonValue,
 } from '../../src/admin/seed_editor.ts'
 
-const corpus = Object.freeze({ airdrop, items, mobs, recipes, shop, spells, worlds })
+const corpus = Object.freeze({ airdrop, items, mobs, recipes, shop, spells, structure_packs, worlds })
 
 const leaf_paths = (value: unknown, path: readonly (string | number)[] = []): readonly string[] => {
   if (value === null || typeof value !== 'object') return [path.join('.')]

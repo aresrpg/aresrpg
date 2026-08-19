@@ -68,6 +68,7 @@ export const create_grid_fallback = (
       camera.position.set(...position)
       camera.lookAt(...target)
     },
+    set_character_anchor: () => {},
     set_quality: (next: EngineQuality) => {
       quality = next
     },
@@ -91,6 +92,7 @@ export const create_grid_fallback = (
       const anchor = entities.world_anchor(id)
       return anchor ? project_screen_anchor(anchor, camera, canvas.getBoundingClientRect()) : null
     },
+    entity_height: entities.entity_height,
     upsert_fight_blob: fight_board.upsert_blob,
     remove_fight_blob: fight_board.remove_blob,
     pick_fight_cell: fight_board.pick,

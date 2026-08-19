@@ -17,12 +17,21 @@ import {
   SphereGeometry,
   Sprite,
   Vector3,
+  type BufferGeometry,
 } from 'three'
 import { SpriteNodeMaterial } from 'three/webgpu'
 import { float, mix, sin, smoothstep, uniform, uv, vec3, vec4 } from 'three/tsl'
 
 import type { create_entity_layer } from './entities.ts'
-import { FIGHT_VFX_BEAT, FIGHT_VFX_BURSTS, FIGHT_VFX_PROFILES, fight_vfx_magnitude } from './fight_vfx_presets.ts'
+import { create_fight_float_layer, type FightFloatKind } from './fight_floats.ts'
+import { create_fight_vfx_geometries, fight_vfx_appearance } from './fight_vfx_geometry.ts'
+import {
+  FIGHT_VFX_BEAT,
+  FIGHT_VFX_BURSTS,
+  FIGHT_VFX_PROFILES,
+  fight_vfx_magnitude,
+  type FightVfxProfile,
+} from './fight_vfx_presets.ts'
 import type { FightPresentationCue } from './types.ts'
 import type { Vec3 } from './types.ts'
 
@@ -72,6 +81,7 @@ type Projectile = Readonly<{
   angle: number
   radius: number
   profile: (typeof FIGHT_VFX_PROFILES)[string]
+  appearance: FightVfxProfile['appearance']
   magnitude: number
   resolve: (rendered: boolean) => void
 }>
@@ -81,8 +91,10 @@ type DelayedBurst = Readonly<{
   accent: number
   radius: number
   at_ms: number
+  appearance: FightVfxProfile['appearance']
   resolve: ((rendered: boolean) => void) | null
 }>
+type DelayedResolution = Readonly<{ at_ms: number; resolve: (rendered: boolean) => void }>
 
 const particle_seed = (id: string, index: number): ParticleSeed => {
   let hash = 2_166_136_261
@@ -102,14 +114,16 @@ const particle_seed = (id: string, index: number): ParticleSeed => {
 const eased = (value: number): number => value * value * (3 - 2 * value)
 
 export const create_transient_effects = ({ scene, entities }: Readonly<{ scene: Scene; entities: EffectAnchors }>) => {
+  const floats = create_fight_float_layer({ scene, entities })
   const particle_geometry = new SphereGeometry(0.11, 5, 4)
-  const core_geometry = new SphereGeometry(0.28, 10, 8)
+  const fight_geometries = create_fight_vfx_geometries()
   const ring_geometry = new RingGeometry(0.58, 0.76, 28)
   const particles: ParticleEffect[] = []
   const rings: RingEffect[] = []
   const dusts: DustEffect[] = []
   const projectiles: Projectile[] = []
   const delayed_bursts: DelayedBurst[] = []
+  const delayed_resolutions: DelayedResolution[] = []
   const matrix = new Matrix4()
   const position = new Vector3()
   const scale = new Vector3()
@@ -132,10 +146,12 @@ export const create_transient_effects = ({ scene, entities }: Readonly<{ scene: 
     radius: number,
     duration_ms: number,
     mode: ParticleMode,
-    count: number
+    count: number,
+    geometry: BufferGeometry = particle_geometry
   ): void => {
     const particle_material = material(color, mode === 'remnant' ? 0.42 : 0.72)
-    const mesh = new InstancedMesh(particle_geometry, particle_material, count)
+    const mesh = new InstancedMesh(geometry, particle_material, count)
+    mesh.name = id
     mesh.frustumCulled = false
     mesh.renderOrder = 40
     scene.add(mesh)
@@ -222,8 +238,24 @@ export const create_transient_effects = ({ scene, entities }: Readonly<{ scene: 
     )
   }
 
-  const spawn_impact = (id: string, at: Vector3, color: number, accent: number, radius: number): void => {
-    spawn_particles(`${id}:impact`, at, color, radius, FIGHT_VFX_BEAT.impact_seconds * 1_000, 'burst', 30)
+  const spawn_impact = (
+    id: string,
+    at: Vector3,
+    color: number,
+    accent: number,
+    radius: number,
+    appearance: FightVfxProfile['appearance']
+  ): void => {
+    spawn_particles(
+      `${id}:impact`,
+      at,
+      color,
+      radius,
+      FIGHT_VFX_BEAT.impact_seconds * 1_000,
+      'burst',
+      30,
+      fight_geometries[appearance]
+    )
     spawn_ring(at, accent, radius, FIGHT_VFX_BEAT.impact_seconds * 1_000)
   }
 
@@ -240,7 +272,8 @@ export const create_transient_effects = ({ scene, entities }: Readonly<{ scene: 
       impact_at,
       projectile.profile.color,
       projectile.profile.accent,
-      Math.max(1, (authored_size / 4) * projectile.magnitude)
+      Math.max(1, (authored_size / 4) * projectile.magnitude),
+      projectile.appearance
     )
     spawn_particles(
       `${projectile.id}:remnant`,
@@ -249,7 +282,8 @@ export const create_transient_effects = ({ scene, entities }: Readonly<{ scene: 
       Math.max(1, (projectile.profile.remnant_size / 4) * projectile.magnitude),
       projectile.profile.remnant_seconds * 1_000,
       'remnant',
-      16
+      16,
+      fight_geometries[projectile.appearance]
     )
     projectile.resolve(true)
   }
@@ -269,11 +303,13 @@ export const create_transient_effects = ({ scene, entities }: Readonly<{ scene: 
             accent: burst.accent,
             radius: Math.max(1, (burst.size / 4) * magnitude),
             at_ms: previous_tick + burst.delay_seconds * 1_000,
+            appearance: 'neutral',
             resolve,
           })
         )
       })
     const profile = FIGHT_VFX_PROFILES[cue.element] ?? FIGHT_VFX_PROFILES.neutral
+    const appearance = fight_vfx_appearance(cue.style, profile.appearance)
     const windup_at = profile.windup_ground ? from.clone().add(new Vector3(0, -FIGHT_VFX_BEAT.ground_drop, 0)) : from
     spawn_particles(
       `${cue.id}:windup`,
@@ -282,14 +318,17 @@ export const create_transient_effects = ({ scene, entities }: Readonly<{ scene: 
       Math.max(1, (profile.windup_size / 4) * magnitude),
       FIGHT_VFX_BEAT.windup_seconds * 1_000,
       'gather',
-      22
+      44,
+      fight_geometries[appearance]
     )
     spawn_ring(windup_at, profile.accent, Math.max(1, profile.windup_size / 4), 450)
     return new Promise<boolean>((resolve) => {
       const core_material = material(profile.accent, 0.9)
       const trail_material = material(profile.color, 0.48)
-      const core = new Mesh(core_geometry, core_material)
-      const trail = new InstancedMesh(particle_geometry, trail_material, 12)
+      const core = new Mesh(fight_geometries[appearance], core_material)
+      const trail = new InstancedMesh(fight_geometries[appearance], trail_material, 26)
+      core.name = `${cue.id}:projectile`
+      trail.name = `${cue.id}:trail`
       core.renderOrder = 42
       trail.renderOrder = 41
       trail.frustumCulled = false
@@ -305,6 +344,7 @@ export const create_transient_effects = ({ scene, entities }: Readonly<{ scene: 
           angle: particle_seed(cue.id, 0).angle,
           radius: Math.max(1, (profile.projectile_size / 4) * magnitude),
           profile,
+          appearance,
           magnitude,
           resolve,
         })
@@ -323,26 +363,31 @@ export const create_transient_effects = ({ scene, entities }: Readonly<{ scene: 
         accent: burst.accent,
         radius: burst.size / 4,
         at_ms: previous_tick,
+        appearance: 'neutral',
         resolve: null,
       })
     )
   }
 
-  const play_zone = (cue: ZoneCue): boolean => {
+  const play_zone = (cue: ZoneCue): Promise<boolean> => {
     const at = entities.cell_anchor(cue.cell)
-    if (!at) return false
+    if (!at) return Promise.resolve(false)
     const profile =
-      cue.action === 'trap_triggered'
-        ? FIGHT_VFX_BURSTS.earth
-        : (FIGHT_VFX_PROFILES[cue.element] ?? FIGHT_VFX_PROFILES.neutral)
+      FIGHT_VFX_PROFILES[cue.action === 'trap_triggered' ? 'earth' : cue.element] ?? FIGHT_VFX_PROFILES.neutral
     spawn_impact(
       cue.id,
       at.clone().add(new Vector3(0, -FIGHT_VFX_BEAT.ground_drop, 0)),
       profile.color,
       profile.accent,
-      cue.action === 'trap_triggered' ? FIGHT_VFX_BURSTS.earth.size / 4 : 1
+      cue.action === 'trap_triggered' ? profile.impact_size / 4 : 1,
+      profile.appearance
     )
-    return true
+    if (cue.action !== 'trap_triggered') return Promise.resolve(true)
+    return new Promise<boolean>((resolve) => {
+      delayed_resolutions.push(
+        Object.freeze({ at_ms: previous_tick + FIGHT_VFX_BEAT.trap_pause_seconds * 1_000, resolve })
+      )
+    })
   }
 
   const create_warmup = () => {
@@ -470,8 +515,17 @@ export const create_transient_effects = ({ scene, entities }: Readonly<{ scene: 
       const burst = delayed_bursts[index]!
       if (now < burst.at_ms) continue
       delayed_bursts.splice(index, 1)
-      spawn_impact(`burst:${burst.at_ms}`, burst.at, burst.color, burst.accent, burst.radius)
+      spawn_impact(`burst:${burst.at_ms}`, burst.at, burst.color, burst.accent, burst.radius, burst.appearance)
       burst.resolve?.(true)
+    }
+  }
+
+  const update_delayed_resolutions = (now: number): void => {
+    for (let index = delayed_resolutions.length - 1; index >= 0; index -= 1) {
+      const pending = delayed_resolutions[index]!
+      if (now < pending.at_ms) continue
+      delayed_resolutions.splice(index, 1)
+      pending.resolve(true)
     }
   }
 
@@ -484,9 +538,13 @@ export const create_transient_effects = ({ scene, entities }: Readonly<{ scene: 
     },
     play_cast,
     play_death,
+    play_float: (entity_id: string, amount: number, kind: FightFloatKind): boolean =>
+      floats.play(entity_id, amount, kind),
     play_zone,
     tick: (now: number): void => {
       previous_tick = now
+      floats.tick(now)
+      update_delayed_resolutions(now)
       update_delayed_bursts(now)
       update_projectiles(now)
       update_particles(now)
@@ -494,6 +552,7 @@ export const create_transient_effects = ({ scene, entities }: Readonly<{ scene: 
       update_rings(now)
     },
     dispose: (): void => {
+      floats.dispose()
       projectiles.forEach((projectile) => {
         scene.remove(projectile.core, projectile.trail)
         ;(projectile.core.material as MeshBasicMaterial).dispose()
@@ -514,13 +573,15 @@ export const create_transient_effects = ({ scene, entities }: Readonly<{ scene: 
         effect.material.dispose()
       })
       delayed_bursts.forEach(({ resolve }) => resolve?.(false))
+      delayed_resolutions.forEach(({ resolve }) => resolve(false))
       projectiles.length = 0
       particles.length = 0
       rings.length = 0
       dusts.length = 0
       delayed_bursts.length = 0
+      delayed_resolutions.length = 0
       particle_geometry.dispose()
-      core_geometry.dispose()
+      Object.values(fight_geometries).forEach((geometry) => geometry.dispose())
       ring_geometry.dispose()
     },
   })

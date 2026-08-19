@@ -13,12 +13,22 @@ import {
 } from 'three'
 import { MeshBasicNodeMaterial, WebGPURenderer } from 'three/webgpu'
 
-import { compile_world_recipe, parse_world_recipe, sample_world_column, type WorldRecipe } from './world_recipe.ts'
+import { structure_voxels } from './structure_placement.ts'
+import { preview_structure_geometry, type PreviewStructureVoxel } from './world_preview_structures.ts'
+import {
+  compile_world_recipe,
+  parse_world_recipe,
+  sample_world_column,
+  terrain_layer,
+  terrain_slope,
+  type WorldRecipe,
+} from './world_recipe.ts'
 
 type PreviewColumn = Readonly<{
   local_x: number
   local_z: number
   surface_y: number
+  slope: number
   colors: Readonly<{ surface: string; subsurface: string; filler: string }>
 }>
 
@@ -47,6 +57,7 @@ export type WorldPreviewSamplePlan = Readonly<{
   near: readonly PreviewColumn[]
   far_side: number
   far: readonly PreviewColumn[]
+  structures: readonly PreviewStructureVoxel[]
   liquid_color: string | null
 }>
 
@@ -87,6 +98,7 @@ const preview_column = (
     local_x,
     local_z,
     surface_y: column.surface_y,
+    slope: 0,
     colors: Object.freeze({
       surface: color_of(recipe, column.land.surface),
       subsurface: color_of(recipe, column.land.subsurface),
@@ -94,6 +106,21 @@ const preview_column = (
     }),
   })
 }
+
+const expose_surface = (columns: readonly PreviewColumn[], side: number, spacing: number): readonly PreviewColumn[] =>
+  Object.freeze(
+    columns.map((column, index) => {
+      const x = index % side
+      const z = Math.floor(index / side)
+      const neighbours = [
+        x > 0 ? columns[index - 1] : undefined,
+        x + 1 < side ? columns[index + 1] : undefined,
+        z > 0 ? columns[index - side] : undefined,
+        z + 1 < side ? columns[index + side] : undefined,
+      ].flatMap((candidate) => (candidate ? [candidate.surface_y] : []))
+      return Object.freeze({ ...column, slope: terrain_slope(column.surface_y, neighbours, spacing) })
+    })
+  )
 
 export const preview_sample_plan = (
   world: WorldRecipe,
@@ -103,33 +130,59 @@ export const preview_sample_plan = (
   const compiled = compile_world_recipe(recipe)
   const complete = Object.freeze({ ...DEFAULT_OPTIONS, ...options })
   const near_side = complete.near_radius * 2 + 1
-  const near = Array.from({ length: near_side * near_side }, (_, index) =>
-    preview_column(
-      recipe,
-      compiled,
-      complete.focus_x,
-      complete.focus_z,
-      (index % near_side) - complete.near_radius,
-      Math.floor(index / near_side) - complete.near_radius
-    )
+  const near = expose_surface(
+    Array.from({ length: near_side * near_side }, (_, index) =>
+      preview_column(
+        recipe,
+        compiled,
+        complete.focus_x,
+        complete.focus_z,
+        (index % near_side) - complete.near_radius,
+        Math.floor(index / near_side) - complete.near_radius
+      )
+    ),
+    near_side,
+    1
   )
   const far_side = Math.floor((complete.far_radius * 2) / complete.far_step) + 1
-  const far = Array.from({ length: far_side * far_side }, (_, index) =>
-    preview_column(
-      recipe,
-      compiled,
-      complete.focus_x,
-      complete.focus_z,
-      -complete.far_radius + (index % far_side) * complete.far_step,
-      -complete.far_radius + Math.floor(index / far_side) * complete.far_step
-    )
+  const far = expose_surface(
+    Array.from({ length: far_side * far_side }, (_, index) =>
+      preview_column(
+        recipe,
+        compiled,
+        complete.focus_x,
+        complete.focus_z,
+        -complete.far_radius + (index % far_side) * complete.far_step,
+        -complete.far_radius + Math.floor(index / far_side) * complete.far_step
+      )
+    ),
+    far_side,
+    complete.far_step
   )
+  const structures = structure_voxels(compiled, {
+    min_x: complete.focus_x - complete.near_radius,
+    max_x: complete.focus_x + complete.near_radius,
+    min_z: complete.focus_z - complete.near_radius,
+    max_z: complete.focus_z + complete.near_radius,
+  }).flatMap(({ x, y, z, material_id }) => {
+    const material = compiled.materials.entries[material_id]
+    if (!material || y < sample_world_column(compiled, x, z).surface_y) return []
+    return [
+      Object.freeze({
+        local_x: x - complete.focus_x,
+        y,
+        local_z: z - complete.focus_z,
+        color: color_of(recipe, material.name),
+      }),
+    ]
+  })
   return Object.freeze({
     options: complete,
     near_side,
     near: Object.freeze(near),
     far_side,
     far: Object.freeze(far),
+    structures: Object.freeze(structures),
     liquid_color: recipe.liquid === undefined ? null : color_of(recipe, recipe.liquid),
   })
 }
@@ -151,28 +204,39 @@ const create_color_resolver = (): ((hex: string, light?: number) => Rgb) => {
   }
 }
 
-const add_quad = (
+const add_colored_quad = (
   positions: number[],
   colors: number[],
   indices: number[],
   points: readonly (readonly [number, number, number])[],
-  color: Rgb
+  point_colors: readonly Rgb[]
 ): void => {
   const vertex = positions.length / 3
-  const [red, green, blue] = color
-  points.forEach((point) => {
+  points.forEach((point, index) => {
+    const [red, green, blue] = point_colors[index]!
     positions.push(...point)
     colors.push(red, green, blue)
   })
   indices.push(vertex, vertex + 1, vertex + 2, vertex, vertex + 2, vertex + 3)
 }
 
+const add_quad = (
+  positions: number[],
+  colors: number[],
+  indices: number[],
+  points: readonly (readonly [number, number, number])[],
+  color: Rgb
+): void =>
+  add_colored_quad(
+    positions,
+    colors,
+    indices,
+    points,
+    points.map(() => color)
+  )
+
 const layer_color = (column: PreviewColumn, y: number): string =>
-  y < column.surface_y - 4
-    ? column.colors.filler
-    : y < column.surface_y - 1
-      ? column.colors.subsurface
-      : column.colors.surface
+  column.colors[terrain_layer(column.surface_y - y - 1, column.slope)]
 
 const add_height_edge = (
   positions: number[],
@@ -222,7 +286,7 @@ const near_geometry = (plan: WorldPreviewSamplePlan): BufferGeometry => {
         [x + 0.5, y, z + 0.5],
         [x + 0.5, y, z - 0.5],
       ],
-      color_for(column.colors.surface)
+      color_for(layer_color(column, y - 1))
     )
     const column_x = index % plan.near_side
     const column_z = Math.floor(index / plan.near_side)
@@ -283,12 +347,12 @@ const far_geometry = (plan: WorldPreviewSamplePlan): BufferGeometry => {
       if (columns.some((column) => column === undefined)) continue
       if (!far_cell_visible(plan.options.near_radius, columns[0].local_x, columns[0].local_z, plan.options.far_step))
         continue
-      add_quad(
+      add_colored_quad(
         positions,
         colors,
         indices,
         columns.map(({ local_x, local_z, surface_y }) => [local_x, surface_y - 0.75, local_z] as const),
-        color_for(columns[0].colors.surface)
+        columns.map((column) => color_for(layer_color(column, column.surface_y - 1)))
       )
     }
   }
@@ -313,7 +377,7 @@ export const create_world_preview = async (
   const solid_material = new MeshBasicNodeMaterial({ side: DoubleSide, vertexColors: true })
   const far_material = new MeshBasicNodeMaterial({ side: DoubleSide, vertexColors: true })
   const water_material = new MeshBasicNodeMaterial({
-    color: new Color('#2e609e'),
+    color: new Color(),
     depthWrite: false,
     opacity: 0.28,
     side: DoubleSide,
@@ -329,6 +393,7 @@ export const create_world_preview = async (
 
   let near: Mesh | null = null
   let far: Mesh | null = null
+  let structures: Mesh | null = null
   let world = initial_world
   let focus_x = 0
   let focus_z = 0
@@ -370,7 +435,9 @@ export const create_world_preview = async (
     const plan = preview_sample_plan(world, { focus_x, focus_z, near_radius: exact_radius })
     const next_near = new Mesh(near_geometry(plan), solid_material)
     const next_far = new Mesh(far_geometry(plan), far_material)
+    const next_structures = new Mesh(preview_structure_geometry(plan.structures), solid_material)
     next_near.renderOrder = 1
+    next_structures.renderOrder = 1
     next_far.renderOrder = 0
     if (near) {
       scene.remove(near)
@@ -380,11 +447,16 @@ export const create_world_preview = async (
       scene.remove(far)
       far.geometry.dispose()
     }
+    if (structures) {
+      scene.remove(structures)
+      structures.geometry.dispose()
+    }
     near = next_near
     far = next_far
+    structures = next_structures
     rendered_focus_x = focus_x
     rendered_focus_z = focus_z
-    scene.add(next_far, next_near)
+    scene.add(next_far, next_near, next_structures)
     water.visible = plan.liquid_color !== null
     if (plan.liquid_color) water_material.color.set(plan.liquid_color)
     water.position.y = world.sea_level
@@ -431,6 +503,7 @@ export const create_world_preview = async (
       const mesh_z = rendered_focus_z - focus_z
       near?.position.set(mesh_x, 0, mesh_z)
       far?.position.set(mesh_x, 0, mesh_z)
+      structures?.position.set(mesh_x, 0, mesh_z)
       request_draw()
       return [focus_x, focus_z]
     },
@@ -454,6 +527,7 @@ export const create_world_preview = async (
       update_resolvers = []
       near?.geometry.dispose()
       far?.geometry.dispose()
+      structures?.geometry.dispose()
       water.geometry.dispose()
       solid_material.dispose()
       far_material.dispose()

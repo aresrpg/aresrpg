@@ -21,14 +21,20 @@ describe('game settings', () => {
       quality: 'medium',
       flat_mode: false,
       music_enabled: true,
+      render_distance: null,
     })
   })
 
   test('loads and saves display and music preferences together', () => {
     const storage = memory_storage()
-    save_game_settings({ quality: 'high', flat_mode: true, music_enabled: false }, storage)
+    save_game_settings({ quality: 'high', flat_mode: true, music_enabled: false, render_distance: 8 }, storage)
 
-    expect(load_game_settings('low', null, storage)).toEqual({ quality: 'high', flat_mode: true, music_enabled: false })
+    expect(load_game_settings('low', null, storage)).toEqual({
+      quality: 'high',
+      flat_mode: true,
+      music_enabled: false,
+      render_distance: 8,
+    })
   })
 
   test('a valid development override wins without erasing flat mode', () => {
@@ -38,6 +44,7 @@ describe('game settings', () => {
       quality: 'high',
       flat_mode: true,
       music_enabled: true,
+      render_distance: null,
     })
   })
 })

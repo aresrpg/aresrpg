@@ -3,7 +3,14 @@
 
 import { expect, test } from 'bun:test'
 
-import { create_flat_projection, project_height, set_flat_projection, step_flat_projection } from '../src/flatten.ts'
+import {
+  create_flat_projection,
+  flat_terrain_amount,
+  flat_water_visibility,
+  project_height,
+  set_flat_projection,
+  step_flat_projection,
+} from '../src/flatten.ts'
 
 test('the flat projection reverses without resetting its progress', () => {
   let projection = set_flat_projection(create_flat_projection(), true)
@@ -19,7 +26,13 @@ test('the flat projection reverses without resetting its progress', () => {
 
 test('the same amount projects every consumer onto the same height', () => {
   expect(project_height(18, 0)).toBe(18)
-  expect(project_height(18, 0.5)).toBe(9)
   expect(project_height(18, 1)).toBe(0)
-  expect(project_height(-8, 0.25)).toBe(-6)
+})
+
+test('water exits before terrain starts flattening', () => {
+  expect(flat_water_visibility(0)).toBe(1)
+  expect(flat_terrain_amount(0.2)).toBe(0)
+  expect(flat_water_visibility(0.2)).toBe(0)
+  expect(flat_terrain_amount(0.21)).toBeGreaterThan(0)
+  expect(project_height(18, 0.2)).toBe(18)
 })

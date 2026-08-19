@@ -36,7 +36,6 @@ const TRAP_SPIKE_RADIUS = 0.12
 const TRAP_SPIKE_HEIGHT = 0.42
 const TRAP_SPIKE_SEGMENTS = 6
 const TRAP_SPIKE_COLOR = 0xc8963c
-const FLOOR_CLEARANCE = 0.07
 
 type FightPlacementBlob = Readonly<{ id: string; blob: FightBlobSpec }>
 
@@ -132,7 +131,7 @@ const rounded_coverage = (
   return 1 - smoothstep(0, 0.035, Math.hypot(qx, qy) - radius)
 }
 
-const make_blob_texture = (cells: readonly FightBlobPlanCell[], merged: boolean): DataTexture => {
+const make_blob_texture = (cells: readonly FightBlobPlanCell[], merged: boolean, border = false): DataTexture => {
   const min_x = Math.min(...cells.map(({ x }) => x))
   const max_x = Math.max(...cells.map(({ x }) => x))
   const min_y = Math.min(...cells.map(({ y }) => y))
@@ -163,7 +162,8 @@ const make_blob_texture = (cells: readonly FightBlobPlanCell[], merged: boolean)
         : { left: false, right: false, top: false, bottom: false }
       const coverage = rounded_coverage(u, v, connected)
       const rim = Math.max(Math.abs(u - 0.5), Math.abs(v - 0.5)) * 2
-      const alpha = coverage * (0.58 + rim * 0.42)
+      // border style keeps only a soft edge band of the rounded shape — a glowing ring
+      const alpha = border ? coverage * smoothstep(0.52, 0.86, rim) : merged ? coverage : coverage * (0.58 + rim * 0.42)
       const offset = (pixel_x + pixel_y * width) * 4
       pixels[offset] = 255
       pixels[offset + 1] = 255
@@ -226,6 +226,9 @@ const blob_material = (blob: Readonly<FightBlobRender>, texture: DataTexture): M
     depthWrite: false,
     side: DoubleSide,
     toneMapped: false,
+    polygonOffset: true,
+    polygonOffsetFactor: -2,
+    polygonOffsetUnits: -2,
   })
 
 const place_blob_mesh = (
@@ -286,7 +289,7 @@ const build_visual = (
   const root = new Group()
   root.name = `fight_blob:${blob.id}`
   const merged = blob.shape === 'single'
-  const texture = make_blob_texture(plan.cells, merged)
+  const texture = make_blob_texture(plan.cells, merged, blob.style === 'border')
   const material = blob_material(blob, texture)
   const min_x = Math.min(...plan.cells.map(({ x }) => x))
   const max_x = Math.max(...plan.cells.map(({ x }) => x))
@@ -297,9 +300,7 @@ const build_visual = (
     merged ? (max_y - min_y + 1) * board.cell_size : plan.cell_size
   )
   geometry.rotateX(-Math.PI / 2)
-  // WebGPU polygon offset is not a reliable substitute for physical clearance on transparent
-  // coplanar paint. Keep the proven tactical-board gap above the slab so no cell loses the depth race.
-  const board_y = board.origin.y + BOARD_FLOOR_THICKNESS + FLOOR_CLEARANCE
+  const board_y = board.origin.y + BOARD_FLOOR_THICKNESS
   const cells = merged
     ? [
         Object.freeze({
@@ -325,7 +326,7 @@ const build_visual = (
         index,
         cell,
         board_y,
-        blob.animate === false ? 0 : blob_scale(blob, blob.created_at, cell.started_at),
+        blob_scale(blob, blob.created_at, cell.started_at),
         scratch
       )
     )
@@ -335,8 +336,9 @@ const build_visual = (
     place_blob_mesh(drawable, null, cell.world_x, board_y, cell.world_z, blob.priority ?? 0)
   }
   root.add(drawable)
+  const trap_origin = plan.cells.find(({ cell }) => cell === blob.origin_cell) ?? plan.cells[0]
   const decoration =
-    blob.decoration === 'trap'
+    blob.decoration === 'trap' && trap_origin
       ? (() => {
           const geometry = new ConeGeometry(TRAP_SPIKE_RADIUS, TRAP_SPIKE_HEIGHT, TRAP_SPIKE_SEGMENTS)
           geometry.translate(0, TRAP_SPIKE_HEIGHT / 2, 0)
@@ -348,12 +350,12 @@ const build_visual = (
             side: DoubleSide,
             toneMapped: false,
           })
-          const spikes = new InstancedMesh(geometry, material, board.cells.length)
+          const spikes = new InstancedMesh(geometry, material, 1)
           spikes.name = 'fight_trap_spikes'
-          spikes.count = cells.length
+          spikes.count = 1
           spikes.renderOrder = 3 + (blob.priority ?? 0) + 0.1
           spikes.frustumCulled = false
-          cells.forEach((cell, index) => set_trap_transform(spikes, index, cell, board_y, scratch))
+          set_trap_transform(spikes, 0, trap_origin, board_y, scratch)
           spikes.instanceMatrix.needsUpdate = true
           root.add(spikes)
           return Object.freeze({ drawable: spikes, geometry, material })
@@ -406,10 +408,9 @@ const reconcile_per_cell_visual = (
   )
   visual.drawable.instanceMatrix.needsUpdate = true
   if (visual.decoration) {
-    visual.decoration.drawable.count = cells.length
-    cells.forEach((cell, index) =>
-      set_trap_transform(visual.decoration!.drawable, index, cell, visual.board_y, scratch)
-    )
+    const origin = cells.find(({ cell }) => cell === blob.origin_cell) ?? cells[0]
+    visual.decoration.drawable.count = origin ? 1 : 0
+    if (origin) set_trap_transform(visual.decoration.drawable, 0, origin, visual.board_y, scratch)
     visual.decoration.drawable.instanceMatrix.needsUpdate = true
   }
   return Object.freeze({ ...visual, cells: Object.freeze(cells), blob })
@@ -428,7 +429,6 @@ export const create_fight_blob_layer = (scene: Scene) => {
   const blobs = new Map<string, FightBlobRender>()
   const visuals = new Map<string, BlobVisual>()
   const settled_transforms = new Set<string>()
-  const primed_static_transforms = new Set<string>()
   let board: FightBoardRender | null = null
 
   const remove_visual = (id: string): void => {
@@ -437,7 +437,6 @@ export const create_fight_blob_layer = (scene: Scene) => {
     dispose_visual(group, visual)
     visuals.delete(id)
     settled_transforms.delete(id)
-    primed_static_transforms.delete(id)
   }
   const materialize = (blob: Readonly<FightBlobRender>): void => {
     remove_visual(blob.id)
@@ -450,7 +449,6 @@ export const create_fight_blob_layer = (scene: Scene) => {
   const upsert = (blob: FightBlobRender): void => {
     blobs.set(blob.id, blob)
     settled_transforms.delete(blob.id)
-    primed_static_transforms.delete(blob.id)
     const visual = visuals.get(blob.id)
     if (
       board &&
@@ -468,7 +466,6 @@ export const create_fight_blob_layer = (scene: Scene) => {
   const remove = (id: string): void => {
     blobs.delete(id)
     settled_transforms.delete(id)
-    primed_static_transforms.delete(id)
     remove_visual(id)
   }
 
@@ -478,7 +475,6 @@ export const create_fight_blob_layer = (scene: Scene) => {
       visuals.clear()
       blobs.clear()
       settled_transforms.clear()
-      primed_static_transforms.clear()
       board = next
       if (!next) return
       const now = performance.now()
@@ -494,7 +490,8 @@ export const create_fight_blob_layer = (scene: Scene) => {
         const age = now - visual.blob.created_at
         const duration = visual.blob.duration_ms
         const fade = duration === undefined ? 1 : clamp01((duration - age) / FADE_MS)
-        visual.material.opacity = (visual.blob.opacity ?? DEFAULT_OPACITY) * fade
+        const pulse = visual.blob.pulse ? 0.7 + 0.3 * Math.sin(now / 280) : 1
+        visual.material.opacity = (visual.blob.opacity ?? DEFAULT_OPACITY) * fade * pulse
         visual.drawable.visible = fade > 0
         if (visual.decoration) {
           visual.decoration.material.opacity = 0.95 * fade
@@ -502,7 +499,6 @@ export const create_fight_blob_layer = (scene: Scene) => {
         }
         if (visual.drawable instanceof InstancedMesh) {
           if (!settled_transforms.has(id)) {
-            const static_ready = visual.blob.animate === false && primed_static_transforms.has(id)
             visual.cells.forEach((cell, index) =>
               set_instance_transform(
                 visual.drawable as InstancedMesh,
@@ -510,9 +506,7 @@ export const create_fight_blob_layer = (scene: Scene) => {
                 cell,
                 visual.board_y,
                 visual.blob.animate === false
-                  ? static_ready
-                    ? 1
-                    : 0
+                  ? 1
                   : now < cell.started_at
                     ? 0
                     : blob_scale(visual.blob, now, cell.started_at),
@@ -520,10 +514,11 @@ export const create_fight_blob_layer = (scene: Scene) => {
               )
             )
             visual.drawable.instanceMatrix.needsUpdate = true
-            if (visual.blob.animate === false) {
-              if (primed_static_transforms.has(id)) settled_transforms.add(id)
-              else primed_static_transforms.add(id)
-            } else if (visual.cells.every(({ started_at }) => now >= started_at + POP_MS))
+            if (
+              visual.blob.animate === false
+                ? now >= visual.blob.created_at + POP_MS
+                : visual.cells.every(({ started_at }) => now >= started_at + POP_MS)
+            )
               settled_transforms.add(id)
           }
           return
@@ -540,7 +535,6 @@ export const create_fight_blob_layer = (scene: Scene) => {
       visuals.clear()
       blobs.clear()
       settled_transforms.clear()
-      primed_static_transforms.clear()
       scene.remove(group)
     },
   })

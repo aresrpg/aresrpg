@@ -273,7 +273,9 @@ export const NIGHT_SKY_LIVE: NightSkyCfg = {
   mw_width: 0.12,
   planet_scale: 3.2,
   planet_count: 2,
-  ringed_planet: 0,
+  // OFF until the planet BODY renders inside it — the annulus alone read as a naked white
+  // torus beside the moon (owner report 2026-08-19; repro scratchpad/ring-hunt.md).
+  ringed_planet: -1,
   moon_glow_mul: 0.3, // in-engine: the full moon-glow washed the deep colour grey; 0.3 keeps a gentle lift
   arcane_tint: { rgb: [0.04, 0.05, 0.08], amount: 0.012 },
   // HORIZON FADE (ship-gate rider: "curve a bit the horizon... it should go behind

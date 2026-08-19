@@ -40,8 +40,10 @@ server_connecting: Connecting
 server_reconnecting: Reconnecting
 server_syncing: Syncing
 server_connected: Connected
+server_violation: Disconnected — rule violation. Retrying soon.
 latency_unit: ms
 indexing_health: Indexing health
+online_players: Online players
 indexing_lag_warning: Actions in the game can lag behind
 game_frozen: The game is currently frozen. Check Discord for more information.
 network_testnet: TESTNET
@@ -80,6 +82,18 @@ wallet_send_pending: Sending SUI…
 wallet_send_success: SUI sent
 wallet_send_failed: The SUI transfer failed
 wallet_close: Close
+world_hud:
+  compass_label: Compass
+  zone: ZONE
+  unsearched: UNSEARCHED
+  searched: SEARCHED
+  out_of_bounds: OUT OF BOUNDS
+  mob_group: Mob group ({{size}})
+  resource: Resource
+  cluster_count: +{{extra}} more
+  zone_edge: Zone edge {{dist}}
+  coordinates: Coordinates
+  world_map: World map
 demo_page:
   title: Render lab
   world_lab: World lab
@@ -89,6 +103,12 @@ demo_page:
   live: Live
   remove_character: Remove model
   control_character: Control model
+  hat: Hat
+  cloak: Cloak
+  pet: Pet
+  none: None
+  ride_pet: Ride pet
+  dismount_pet: Dismount
   mob_group: Mob group
   mob: Mob
   amount: Amount
@@ -163,6 +183,8 @@ settings_page:
   subtitle: 'Your AresRPG preferences'
   music_label: 'Music'
   music_hint: 'Play world and combat music.'
+  render_distance_label: Render distance
+  render_distance_hint: How far the world loads around you. Higher costs performance.
 admin_page:
   kicker: Publisher
   title: Publish game content
@@ -268,6 +290,8 @@ simulator_page:
   stat_action: Action
   stat_critical: Critical chance
   stat_raw_damage: Raw damage
+  stat_resistance: Resistance
+  stat_power: Power
   stat_earth_resistance: Earth resistance
   stat_fire_resistance: Fire resistance
   stat_water_resistance: Water resistance
@@ -298,10 +322,42 @@ fight_hud:
   placement_hint: Place your fighters and mark them ready
   end_turn: End turn
   reset_turn: Reset
+  weapon_attack: Weapon attack
+  bare_hands: Bare hands
+  log_fight_started: The fight begins
+  log_cast: '{caster} casts {spell}'
+  log_critical_cast: 'Critical! {caster} casts {spell}'
+  log_heal: '{source} heals {target} for {amount} HP'
+  log_ap_change: '{target}: {delta} AP'
+  log_mp_change: '{target}: {delta} MP'
+  log_lost: '{target} lost {amount} HP'
+  log_lost_reduced: '{target} lost {amount} HP (reduced {reduced})'
+  log_absorbed: '{target} absorbed {reduced} damage'
+  log_returned: '{target} returned the spell'
+  log_stat_change: '{target}: {delta} {stat} ({turns} {turns_word})'
+  unit_ap: AP
+  unit_mp: MP
+  log_points_loss: '{target} loses {amount} {unit}'
+  log_points_steal: '{source} steals {amount} {unit} from {target}'
+  log_points_partial: '{target} dodges {dodged} {unit} and loses {amount}'
+  log_points_dodge: '{target} dodges the {attempted} {unit} loss'
+  log_trap_placed: '{owner} places a trap'
+  log_glyph_placed: '{owner} places a glyph'
+  log_death: '{target} dies'
+  log_forfeit: '{target} forfeits'
+  log_draw: The fight ends in a draw
+  log_team_wins: Team {team} wins
   forfeit: Forfeit
   forfeit_title: Forfeit {name}?
   forfeit_body: '{name} will lose all remaining HP and leave this fight.'
   confirm_forfeit: Confirm forfeit
+  unit_turns: turns
+  chat_title: Chat
+  chat_tab_general: General
+  chat_tab_combat: Combat
+  chat_placeholder: Say something…
+  chat_you: You
+  chat_line: '{name}: {message}'
 wallet_legacy:
   sui: SUI
   how_to_get: How to get SUI
@@ -579,7 +635,7 @@ encyclopedia_page:
     blocking: SHIELDS
     blocking_desc: Some spells grant a shield that soaks incoming damage of a matching element until it is used up. There is no stamina or guard stance, shields are the only damage absorption.
     resistance: RESISTANCE
-    resistance_desc: Elemental resistance is a percentage reduction applied to the final damage, capped at 60% per element. Negative resistance (a weakness) amplifies the damage instead.
+    resistance_desc: Elemental resistance is a percentage reduction applied to the final damage, capped at 50% per element. Negative resistance (a weakness) amplifies the damage instead.
     life_steal: LIFE STEAL
     life_steal_desc: "Drain spell effects deal damage and heal the caster for half of the health the target actually loses. Only a player's drain heals: a mob casting the same spell deals its damage and heals nothing."
     life_steal_note: Damage runs through the standard damage formula first, then the caster heals for half of the health the intended target actually lost — a hit redirected onto another fighter, or one the target converts into healing, steals nothing back.

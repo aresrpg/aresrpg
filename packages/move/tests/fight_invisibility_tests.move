@@ -25,3 +25,11 @@ fun trap_placement_preserves_invisibility() {
 fun direct_damage_reveals() {
   assert!(!invisible_after_cast(false), 0);
 }
+
+#[test]
+fun mob_searches_when_every_enemy_is_invisible() {
+  let mut scenario = test_scenario::begin(OWNER);
+  let cells = fight::mob_searches_for_invisible_enemy_for_testing(scenario.ctx());
+  assert!(cells[0] != cells[1], 0);
+  scenario.end();
+}

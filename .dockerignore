@@ -1,16 +1,45 @@
-# Build context for api/Dockerfile (the sponsor image) — the only root-context build in this repo.
-# Deny everything, then re-admit exactly the two homes that image reads: the sponsor sources and the
-# canonical release.json it bakes its PTB-scope allowlist from. A path ladder is required because a
-# "!" exception cannot re-admit a file whose parent directory is still excluded.
+# Build context for packages/server/Dockerfile — the only root-context build in this repo
+# (packages/indexer builds from its own directory). Deny everything, then re-admit exactly
+# what the server image reads: the workspace manifests and the server's dependency closure.
+# A path ladder is required because a "!" exception cannot re-admit a file whose parent
+# directory is still excluded.
 *
-!api
+!package.json
+!bun.lock
 !packages
 packages/*
+!packages/engine
+packages/engine/*
+!packages/engine/package.json
+!packages/engine/src
+!packages/fight
+packages/fight/*
+!packages/fight/package.json
+!packages/fight/src
+!packages/frontend
+packages/frontend/*
+!packages/frontend/package.json
+!packages/immutable
+packages/immutable/*
+!packages/immutable/package.json
+!packages/immutable/src
+!packages/protocol
+packages/protocol/*
+!packages/protocol/package.json
+!packages/protocol/src
 !packages/sdk
 packages/sdk/*
-!packages/sdk/src
-packages/sdk/src/*
-!packages/sdk/src/deployment
+!packages/sdk/package.json
+!packages/server
+packages/server/*
+!packages/server/package.json
+!packages/server/src
+
+!seed
+seed/*
+!seed/content
+!seed/structures
 
 # Never, whatever the ladder above re-admits.
 **/node_modules
+node_modules

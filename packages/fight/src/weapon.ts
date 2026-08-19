@@ -2,6 +2,7 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
 import { AREA_SHAPES, CLASS_AFFINITIES, EFFECT_KINDS, TARGET_FILTERS, WEAPON_PHYSICS } from './move_contract.gen.ts'
+import type { FightReadState } from './spell_turn.ts'
 import type { SpellEffect, SpellLevel, WeaponDamage, WeaponSource } from './types.ts'
 
 type WeaponPhysics = {
@@ -78,4 +79,11 @@ export const strike_of = (classe: string, weapon: WeaponSource | null): SpellLev
     weapon.damages,
     (CLASS_AFFINITIES as Record<string, string>)[classe] === weapon.category
   )
+}
+
+export const weapon_level_of = (runtime: FightReadState, caster: bigint): SpellLevel | null => {
+  const fighter = runtime.contract.fighters[Number(caster)]
+  if (!fighter || fighter.kind.type !== 'player') return null
+  const source = runtime.sources.players[fighter.kind.character]
+  return source ? strike_of(source.classe, source.weapon) : null
 }

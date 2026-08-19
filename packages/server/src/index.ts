@@ -7,6 +7,7 @@ import type { ServerWebSocket } from 'bun'
 import { isValidSuiAddress, normalizeSuiAddress } from '@mysten/sui/utils'
 
 import { PORT, ADMIN_ADDRESSES, ALLOWED_ORIGINS, MAX_PLAYERS, SERVER_ID } from './env.ts'
+import { BANNABLE_REASONS, create_ban_list } from './ban_list.ts'
 import { verify_login } from './auth.ts'
 import { create_authenticated_connection, type AuthenticatedConnection } from './connection.ts'
 import { graph } from './graph.ts'
@@ -35,28 +36,30 @@ const decrement_upgrade = (address: string): void => {
   else upgrading.set(address, count - 1)
 }
 const request_limiter = create_request_limiter()
+/** dropped-for-cheating addresses cool off before the door opens again (owner 2026-08-19) */
+const bans = create_ban_list()
 const indexing_lag = create_indexing_health({
   chain_checkpoint: latest_checkpoint,
-  indexed_checkpoint: pubsub.indexed_checkpoint,
+  indexed_checkpoint: pubsub.graph.indexed_checkpoint,
 })
-const game_state = create_game_state({ graph, pubsub })
+const game_state = create_game_state({ graph, pubsub: pubsub.graph })
 await game_state.start()
 
 // ── the cluster half (per-POD, legacy law): the 20s-TTL heartbeat key any pod count sums,
 //    and the player_connect beacon that evicts a duplicate login on ANOTHER pod ──
 const HEARTBEAT_MS = 5_000
 setInterval(() => {
-  void pubsub
+  void pubsub.mesh
     .heartbeat(SERVER_ID, connections.size)
     .catch((error: Error) => log.warn({ error: error.message }, 'heartbeat failed'))
 }, HEARTBEAT_MS)
 
-pubsub.emitter.on(mesh.player_connect, (payload) => {
+pubsub.mesh.emitter.on(mesh.player_connect, (payload) => {
   const { address, server_id } = payload as { address: string; server_id: string }
   if (server_id === SERVER_ID) return // same-pod eviction happens in open()
   connections.get(address)?.ws.close(1008, 'ALREADY_CONNECTED')
 })
-void pubsub.subscribe(mesh.player_connect)
+void pubsub.mesh.subscribe(mesh.player_connect)
 
 const server = Bun.serve<{ address: string }>({
   port: PORT,
@@ -70,6 +73,7 @@ const server = Bun.serve<{ address: string }>({
     const claimed_address = url.searchParams.get('address')
     if (!claimed_address || !isValidSuiAddress(claimed_address)) return new Response('invalid address', { status: 401 })
     const address = normalizeSuiAddress(claimed_address)
+    if (bans.is_banned(address)) return new Response('cooling off', { status: 403 })
     if (connections.size + pending.size + upgrading_count() >= MAX_PLAYERS && !connections.has(address))
       return new Response('server full', { status: 503 })
 
@@ -106,7 +110,7 @@ const server = Bun.serve<{ address: string }>({
               request_limiter,
             })
             connections.set(address, { ws, player })
-            void pubsub.publish(mesh.player_connect, { address, server_id: SERVER_ID })
+            void pubsub.mesh.publish(mesh.player_connect, { address, server_id: SERVER_ID })
             log.info({ address }, 'player connected')
             return player
           },
@@ -116,7 +120,8 @@ const server = Bun.serve<{ address: string }>({
     message(ws: Connection, raw) {
       void handlers.get(ws)?.on_message(raw)
     },
-    close(ws: Connection) {
+    close(ws: Connection, code: number, reason: string) {
+      if (code === 1008 && BANNABLE_REASONS.has(reason)) bans.ban(ws.data.address)
       pending.delete(ws)
       const { address } = ws.data
       handlers.get(ws)?.on_close()

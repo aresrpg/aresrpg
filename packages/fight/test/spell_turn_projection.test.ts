@@ -71,4 +71,25 @@ describe('next spell turn projection', () => {
 
     expect(spell_area_cells(checkpoint, 0n, 'slash', 24n)).toEqual([4n, 23n, 24n, 25n, 44n])
   })
+
+  test('does not invent target-independent rolls after an AP or MP contest', () => {
+    const checkpoint = structuredClone(create_fixture().checkpoint)
+    const level = checkpoint.sources.spells.slash.levels[0]!
+    level.effects = [
+      {
+        ...level.effects[0]!,
+        kind: KINDS.remove,
+        element: '',
+        value: 2n,
+        value_max: 2n,
+        turns: 1n,
+        stat: STATS.ap,
+      },
+      { ...level.effects[0]!, value: 10n, value_max: 20n },
+    ]
+
+    const projection = project_spell_turn(checkpoint, 0n, 'slash')
+
+    expect(projection?.effects[1]).toMatchObject({ value: 10n, value_max: 20n })
+  })
 })

@@ -6,11 +6,15 @@ import { describe, expect, test } from 'bun:test'
 import { sample_biome_grid } from '../src/biome_grid.ts'
 import {
   BIOME_SLOTS,
+  balance_climate,
   biome_influences,
+  CLIMATE_FIELDS,
+  climate_band_weights,
   compile_world_recipe,
   landscape_height,
   MAX_SURFACE_Y,
   sample_world_column,
+  surface_layer_for_slope,
   validate_world_recipe,
   WORLD_HEIGHT,
   type WorldRecipe,
@@ -18,6 +22,15 @@ import {
 
 const shore_land = { surface: 'shore', subsurface: 'shore', filler: 'rock' } as const
 const meadow_land = { surface: 'meadow', subsurface: 'soil', filler: 'rock' } as const
+
+test('surface cover yields to authored lower strata as terrain gets steeper', () => {
+  expect(surface_layer_for_slope(0)).toBe('surface')
+  expect(surface_layer_for_slope(1.99)).toBe('surface')
+  expect(surface_layer_for_slope(2)).toBe('subsurface')
+  expect(surface_layer_for_slope(3.99)).toBe('subsurface')
+  expect(surface_layer_for_slope(4)).toBe('filler')
+})
+
 const RECIPE = {
   seed: 'first-shore',
   sea_level: 8,
@@ -65,10 +78,32 @@ const controlled_world = (
   climate: ReturnType<ReturnType<typeof compile_world_recipe>['sample_climate']>
 ) => {
   const world = compile_world_recipe(recipe)
-  return { ...world, sample_climate: () => climate }
+  return { ...world, sample_climate: () => climate, sample_ridges: () => 0.5 }
 }
 
 describe('world recipes', () => {
+  test('climate spreads into broad territories on legacy-scale fields, never middle-band slivers', () => {
+    // Bands: whole territories with blended borders, not slivers.
+    expect(climate_band_weights(0.29)).toEqual({ low: 1, mid: 0, high: 0 })
+    expect(climate_band_weights(0.35).low).toBeCloseTo(0.5)
+    expect(climate_band_weights(0.35).mid).toBeCloseTo(0.5)
+    expect(climate_band_weights(0.5)).toEqual({ low: 0, mid: 1, high: 0 })
+    expect(climate_band_weights(0.65).mid).toBeCloseTo(0.5)
+    expect(climate_band_weights(0.65).high).toBeCloseTo(0.5)
+    expect(climate_band_weights(0.71)).toEqual({ low: 0, mid: 0, high: 1 })
+
+    // Balancing pushes the extremes out without narrowing that middle territory.
+    expect(balance_climate(0.4)).toBeCloseTo(0.35)
+    expect(balance_climate(0.5)).toBe(0.5)
+    expect(balance_climate(0.6)).toBeCloseTo(0.65)
+
+    // …over detailed fields, not locally planar continents.
+    expect(CLIMATE_FIELDS).toEqual({
+      temperature: { period: 8192, octaves: 6, spread: 2, gain: 0.5 },
+      humidity: { period: 8192, octaves: 6, spread: 2, gain: 0.5 },
+    })
+  })
+
   test('validates landscape points, materials, slots and removed engine controls together', () => {
     const result = validate_world_recipe({
       ...RECIPE,
@@ -97,6 +132,17 @@ describe('world recipes', () => {
     )
   })
 
+  test('rejects unknown structure packs at the biome that references them', () => {
+    const result = validate_world_recipe({
+      ...RECIPE,
+      biomes: RECIPE.biomes.map((biome, index) =>
+        index === 0 ? { ...biome, structure_packs: ['missing_pack'] } : biome
+      ),
+    })
+
+    expect(result.errors).toContain('biomes[0].structure_packs[0] references unknown pack "missing_pack"')
+  })
+
   test('keeps the nine climate slots explicit and complete', () => {
     expect(BIOME_SLOTS).toHaveLength(9)
     expect(validate_world_recipe(RECIPE)).toEqual({ ok: true, errors: [] })
@@ -117,7 +163,7 @@ describe('world recipes', () => {
   })
 
   test('blends the four climate-grid neighbours before voxel rounding', () => {
-    const climate = { temperature: 0.43, humidity: 0.43, ground: 0.5, amplitude: 0.5, transition: 0.5 }
+    const climate = { temperature: 0.35, humidity: 0.35, ground: 0.5, amplitude: 0.5, transition: 0.5 }
     const world = controlled_world(RECIPE, climate)
     const influences = biome_influences(world, climate)
 

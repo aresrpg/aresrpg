@@ -20,17 +20,12 @@ import {
 import {
   Fn,
   attribute,
-  cos,
   float,
-  floor,
   fract,
-  fwidth,
   int,
   instanceIndex,
-  length,
   min,
   mix,
-  sin,
   smoothstep,
   storage,
   transformNormalToView,
@@ -46,22 +41,20 @@ import type { FlattenUniform } from './flatten.ts'
 import { create_flat_nodes } from './flat_nodes.ts'
 import { FACE_WINDING_FLIP_BITS, type GreedyMeshData } from './greedy_mesher.ts'
 import { get_quality_profile } from './quality.ts'
-import { MATERIAL_TEXTURE_VARIANTS } from './material_presets.ts'
 import { create_material_texture } from './material_texture.ts'
 import type { create_sky_node } from './sky/sky_node.ts'
-import { SURFACE_HASH_WRAP, surface_phase } from './surface_variation.ts'
-import { macro_tint_nodes, material_color_node } from './terrain_tint.ts'
+import { macro_tint_nodes } from './terrain_tint.ts'
 import { AO_FLOOR, AO_LEVELS, FACE_BRIGHTNESS, LIT_FACE_BRIGHTNESS } from './terrain_lighting.ts'
 import type { EngineQuality, RenderedChunk } from './types.ts'
-import { derive_sub_seed } from './world_noise.ts'
 import { compile_world_recipe, type WorldRecipe } from './world_recipe.ts'
 import type { CompiledMaterials } from './world_materials.ts'
 
-export const TERRAIN_POOL_LAYOUT = Object.freeze({ slot_quads: 1024, max_slots: 2048 })
+export const TERRAIN_POOL_LAYOUT = Object.freeze({ slot_quads: 1024, max_slots: 3072 })
 const SLOT_QUADS = TERRAIN_POOL_LAYOUT.slot_quads
 const MAX_SLOTS = TERRAIN_POOL_LAYOUT.max_slots
 const SLOT_SHIFT = Math.log2(SLOT_QUADS)
 const INDIRECT_WORDS = 4
+const MATERIAL_TEXTURE_BLOCK_SPAN = 4
 
 export type TerrainPool = Readonly<{
   upload: (chunk: RenderedChunk, data: GreedyMeshData) => 'uploaded' | 'full' | 'too_large'
@@ -85,15 +78,13 @@ const build_material = (
   pool_attr: StorageBufferAttribute,
   meta_attr: StorageBufferAttribute,
   flatten: FlattenUniform,
-  variation_phase: number,
   sun_direction: ReturnType<typeof create_sky_node>['sun_direction'],
   clouds: Clouds,
-  color_for: (material_id: Node<'uint'>) => Node<'vec3'>,
   materials: CompiledMaterials,
   material_texture: DataArrayTexture,
   flatten_variant: boolean
 ): Material => {
-  const terrain_kind = get_quality_profile(quality).terrain
+  const terrain_kind = get_quality_profile(quality).terrain.kind
   const material =
     terrain_kind === 'flat'
       ? new MeshBasicNodeMaterial({ side: FrontSide })
@@ -167,8 +158,10 @@ const build_material = (
   }
   const u_cells = varying(rendered_corner_u.mul(width))
   const v_cells = varying(corner_v.mul(height))
-  const cell_u = fract(min(u_cells, varying(width).sub(0.001)))
-  const cell_v = fract(min(v_cells, varying(height).sub(0.001)))
+  const width_frag = varying(width)
+  const height_frag = varying(height)
+  const cell_u = fract(min(u_cells, width_frag.sub(0.001)))
+  const cell_v = fract(min(v_cells, height_frag.sub(0.001)))
   const ao_fraction = mix(
     mix(ao_fraction_of(0), ao_fraction_of(1), cell_u),
     mix(ao_fraction_of(2), ao_fraction_of(3), cell_u),
@@ -176,40 +169,14 @@ const build_material = (
   )
   const ao_floor = top.select(float(AO_FLOOR.top), float(AO_FLOOR.side))
   const ao = mix(ao_floor, float(1), ao_fraction)
-  const material_color = color_for(material_id)
-  const distance_from_extreme = min(length(material_color), length(material_color.sub(1)))
-  const noise_modulation = mix(float(0.2), float(1), smoothstep(float(0), float(0.5), distance_from_extreme))
-  // THE PIXEL SHADER (the aresrpg-engine block look): every block face is an 8×8 grid of
-  // stable hashed PIXELS, posterized to 5 discrete shades — reads as authored pixel-art
-  // from one color. A per-BLOCK jitter underneath varies whole tiles.
-  const hash_position = local_frag.sub(floor(local_frag.div(float(SURFACE_HASH_WRAP))).mul(float(SURFACE_HASH_WRAP)))
-  const block_cell = floor(hash_position.sub(normal.mul(0.5)))
-  const block_noise = fract(
-    sin(block_cell.x.mul(17.171).add(block_cell.y.mul(43.759)).add(block_cell.z.mul(91.133)).add(variation_phase)).mul(
-      37_213.577
-    )
-  ).sub(0.5)
-  const material_layer = float(material_id)
-    .mul(float(MATERIAL_TEXTURE_VARIANTS))
-    .add(floor(block_noise.add(0.5).mul(float(MATERIAL_TEXTURE_VARIANTS))))
-  const texture_color = texture(material_texture, vec2(u_cells, float(1).sub(v_cells))).depth(int(material_layer)).rgb
-  const pixel_cell = floor(hash_position.mul(8).sub(normal.mul(0.5)))
-  const pixel_hash = fract(
-    sin(pixel_cell.x.mul(12.9898).add(pixel_cell.y.mul(37.719)).add(pixel_cell.z.mul(78.233)).add(variation_phase)).mul(
-      43_758.5453
-    )
+  // One world-space field spans several blocks. A material never switches texture layers at a
+  // voxel boundary, so greedy-quad and block identity cannot draw a straight texture seam.
+  const texture_uv = vec2(local_frag.dot(u_axis), local_frag.dot(v_axis).negate()).div(
+    float(MATERIAL_TEXTURE_BLOCK_SPAN)
   )
-  const material_noise = floor(pixel_hash.mul(5)).div(4).sub(0.5) // 5 posterized shades — the pixel-art read
-  // BAND-LIMITING (2026-08-15): the grain is an analytic function with no mip chain, so once a
-  // screen pixel covers more than its cell the fragment samples far below Nyquist and shimmers.
-  // `fwidth` gives the world size of a pixel, and each layer fades out as its cell drops below
-  // that — the close-up look is untouched, the distance stops crawling.
-  const world_per_pixel = fwidth(local_frag).length()
-  const cell_fade = (cell_size: number) =>
-    float(1).sub(smoothstep(float(cell_size * 0.5), float(cell_size), world_per_pixel))
-  const pixel_fade = cell_fade(0.125) // the 8×8 grid: one cell per eighth of a block
-  const block_fade = cell_fade(1) // the per-block jitter under it
-  const grain_strength = quality === 'low' ? 0.07 : 0.11
+  const texture_sample = texture(material_texture, texture_uv).depth(int(material_id))
+  const texture_color = texture_sample.rgb
+  const micro_roughness = texture_sample.a.sub(0.5)
   const environment_light =
     quality === 'low' ? mix(float(0.32), float(1), smoothstep(-0.14, 0.18, sun_direction.y)) : float(1)
   // The legacy NG-TINT macro field (moisture, climate, underlayer patches, and macro gradient)
@@ -219,23 +186,31 @@ const build_material = (
     position_world: { x: local_frag.x, z: local_frag.z },
     materials,
   })
-  const grained =
-    quality === 'low'
-      ? material_color.add(
-          block_noise
-            .mul(grain_strength)
-            .mul(0.7)
-            .mul(block_fade)
-            .add(material_noise.mul(grain_strength).mul(pixel_fade))
-            .mul(noise_modulation)
-        )
-      : texture_color.add(block_noise.mul(0.035).mul(block_fade).mul(noise_modulation))
-  const base_color = tint.tint_albedo(grained).mul(face_brightness).mul(ao).mul(environment_light)
+  const base_color = tint.tint_albedo(texture_color).mul(face_brightness).mul(ao).mul(environment_light)
+  // Rounded corners (port of the legacy engine's uSmoothEdgeRadius): near a CONVEX quad edge
+  // the fragment normal bends as if the surface curved away — lighting reads the edge as a
+  // bevel, geometry never changes. Edge flags come from the mesher (word B bits 28-31); the
+  // whole computation stays branchless arithmetic — select chains in the normalNode context
+  // compile to garbage on WebGPU (2026-08-15 probe chain).
+  const round_radius = float(0.3)
+  const edge_flags = word_b.shiftRight(uint(28))
+  const round_u_low = float(edge_flags.bitAnd(uint(1)))
+  const round_u_high = float(edge_flags.shiftRight(uint(1)).bitAnd(uint(1)))
+  const round_v_low = float(edge_flags.shiftRight(uint(2)).bitAnd(uint(1)))
+  const round_v_high = float(edge_flags.shiftRight(uint(3)).bitAnd(uint(1)))
+  const overrun_u = round_u_high
+    .mul(u_cells.sub(width_frag.sub(round_radius)).max(0))
+    .sub(round_u_low.mul(round_radius.sub(u_cells).max(0)))
+  const overrun_v = round_v_high
+    .mul(v_cells.sub(height_frag.sub(round_radius)).max(0))
+    .sub(round_v_low.mul(round_radius.sub(v_cells).max(0)))
+  const bent_local = vec3(overrun_u, overrun_v, round_radius).normalize()
+  const rounded_normal = u_axis.mul(bent_local.x).add(v_axis.mul(bent_local.y)).add(normal.mul(bent_local.z))
   // The scan front is presentation only. Geometry uses the one global projection amount so
   // the renderer, character collision, boards, and markers all agree on exact height.
   const flat = create_flat_nodes(local_frag.x, local_frag.z, flatten.amount, base_color)
   const flattened_position = vec3(local.x, mix(local.y, float(0), flatten.amount), local.z)
-  const flattened_normal = mix(normal, vec3(0, 1, 0), flatten.amount).normalize()
+  const flattened_normal = mix(rounded_normal, vec3(0, 1, 0), flatten.amount).normalize()
   const solid_opacity = top.select(float(1), float(1).sub(flatten.amount))
 
   material.positionNode = flattened_position
@@ -254,7 +229,8 @@ const build_material = (
   }
   // Quality changes workload, not the material's meaning. Every lit tier keeps the same
   // role-derived dielectric response; low remains the explicit unlit fallback.
-  if (terrain_kind !== 'flat') (material as MeshStandardNodeMaterial).roughnessNode = tint.roughness_node
+  if (terrain_kind !== 'flat')
+    (material as MeshStandardNodeMaterial).roughnessNode = tint.roughness_node.add(micro_roughness).clamp(0.1, 1)
   return material
 }
 
@@ -275,9 +251,6 @@ export const create_terrain_pool = ({
 }>): TerrainPool => {
   const capacity = MAX_SLOTS * SLOT_QUADS
   const compiled_materials = compile_world_recipe(world).materials
-  const material_texture = create_material_texture(compiled_materials)
-  const color_for = (material_id: Node<'uint'>): Node<'vec3'> => material_color_node(compiled_materials, material_id)
-  const variation_phase = surface_phase(derive_sub_seed(world.seed, 'surface-variation'))
   const pool_array = new Uint32Array(capacity * 2)
   const meta_array = new Float32Array(MAX_SLOTS * 4)
   const indirect_array = new Uint32Array(MAX_SLOTS * INDIRECT_WORDS)
@@ -287,33 +260,40 @@ export const create_terrain_pool = ({
   const geometry = create_geometry(capacity)
   const free_slots = Array.from({ length: MAX_SLOTS }, (_, index) => MAX_SLOTS - index - 1)
   const chunk_slots = new Map<string, Readonly<{ origin: RenderedChunk['origin']; slots: readonly number[] }>>()
-  const build = (tier: EngineQuality, flatten_variant: boolean) =>
+  const build = (tier: EngineQuality, material_texture: DataArrayTexture, flatten_variant: boolean) =>
     build_material(
       tier,
       pool_attr,
       meta_attr,
       flatten,
-      variation_phase,
       sun_direction,
       clouds,
-      color_for,
       compiled_materials,
       material_texture,
       flatten_variant
     )
-  const materials = Object.freeze({
-    low: build('low', false),
-    medium: build('medium', false),
-    high: build('high', false),
-  })
-  const flatten_materials = Object.freeze({
-    low: build('low', true),
-    medium: build('medium', true),
-    high: build('high', true),
-  })
+  const create_quality_resources = (tier: EngineQuality, retained_texture?: DataArrayTexture) => {
+    const { texture_size } = get_quality_profile(tier).terrain
+    const material_texture = retained_texture ?? create_material_texture(compiled_materials, texture_size)
+    return Object.freeze({
+      texture_size,
+      material_texture,
+      material: build(tier, material_texture, false),
+      flatten_material: build(tier, material_texture, true),
+    })
+  }
+  const dispose_quality_resources = (
+    resources: ReturnType<typeof create_quality_resources>,
+    dispose_texture = true
+  ): void => {
+    resources.material.dispose()
+    resources.flatten_material.dispose()
+    if (dispose_texture) resources.material_texture.dispose()
+  }
   let flatten_active = false
   let current_quality = quality
-  const mesh = new Mesh(geometry, materials[quality])
+  let quality_resources = create_quality_resources(quality)
+  const mesh = new Mesh(geometry, quality_resources.material)
   mesh.frustumCulled = false
   mesh.matrixAutoUpdate = false
   mesh.castShadow = quality !== 'low'
@@ -391,24 +371,31 @@ export const create_terrain_pool = ({
     },
     remove,
     set_quality: (next: EngineQuality) => {
+      if (next === current_quality) return
+      const previous_resources = quality_resources
+      const { texture_size: next_texture_size } = get_quality_profile(next).terrain
+      const reuse_texture = next_texture_size === previous_resources.texture_size
+      quality_resources = create_quality_resources(
+        next,
+        reuse_texture ? previous_resources.material_texture : undefined
+      )
       current_quality = next
-      mesh.material = (flatten_active ? flatten_materials : materials)[next]
+      mesh.material = flatten_active ? quality_resources.flatten_material : quality_resources.material
       mesh.castShadow = next !== 'low'
       mesh.receiveShadow = next !== 'low'
+      dispose_quality_resources(previous_resources, !reuse_texture)
     },
     /// The transparent side-fade variant rides ONLY while the flat projection is live.
     set_flatten_active: (active: boolean) => {
       if (active === flatten_active) return
       flatten_active = active
-      mesh.material = (active ? flatten_materials : materials)[current_quality]
+      mesh.material = active ? quality_resources.flatten_material : quality_resources.material
     },
     count: () => chunk_slots.size,
     dispose: () => {
       scene.remove(mesh)
       geometry.dispose()
-      Object.values(materials).forEach((material) => material.dispose())
-      Object.values(flatten_materials).forEach((material) => material.dispose())
-      material_texture.dispose()
+      dispose_quality_resources(quality_resources)
       chunk_slots.clear()
       free_slots.length = 0
     },

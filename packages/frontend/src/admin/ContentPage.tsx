@@ -2,7 +2,7 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
 import { useMemo, useState } from 'react'
-import { Gift, Package, Skull, Sparkles, Store, type LucideIcon } from 'lucide-react'
+import { Gift, Package, Skull, Sparkles, Store, Trees, type LucideIcon } from 'lucide-react'
 import { craft_job_of } from '@aresrpg/immutable'
 
 import { item_icon, mob_icon, spell_icon } from '../content/assets.ts'
@@ -131,6 +131,7 @@ const domain_icons: Readonly<Record<string, LucideIcon>> = Object.freeze({
   mobs: Skull,
   shop: Store,
   spells: Sparkles,
+  structure_packs: Trees,
 })
 
 const icon_url = (reference: EntityAssetReference | null, detail = false): string | null => {

@@ -8,7 +8,13 @@ import {
   type MaterialUse,
   type WorldMaterial,
 } from './world_materials.ts'
-import { create_fbm_sampler, derive_sub_seed } from './world_noise.ts'
+import { create_fbm_sampler, create_ridged_sampler, derive_sub_seed } from './world_noise.ts'
+import {
+  compile_structures,
+  structure_material_uses,
+  validate_biome_structure_packs,
+  type CompiledStructures,
+} from './structures.ts'
 
 export type SplineKnot = readonly [x: number, y: number]
 export const WORLD_HEIGHT = 384
@@ -29,7 +35,11 @@ export const BIOME_SLOTS = Object.freeze([
   'high_high',
 ] as const satisfies readonly BiomeSlot[])
 
-export type WorldBiome = Readonly<{ name: string; landscape: readonly LandscapeKnot[] }>
+export type WorldBiome = Readonly<{
+  name: string
+  landscape: readonly LandscapeKnot[]
+  structure_packs?: readonly string[]
+}>
 export type WorldRecipe = Readonly<{
   seed: string
   sea_level: number
@@ -51,7 +61,9 @@ export type CompiledWorld = Readonly<{
   recipe: WorldRecipe
   decoration_seed: number
   materials: CompiledMaterials
+  structures: CompiledStructures
   sample_climate: (x: number, z: number) => SampledClimate
+  sample_ridges: (x: number, z: number) => number
   biomes: readonly CompiledBiome[]
   slots: Readonly<Record<BiomeSlot, CompiledBiome>>
 }>
@@ -64,6 +76,24 @@ export type WorldColumn = Readonly<{
   subsurface_id: number
   filler_id: number
 }>
+
+export type TerrainLayer = keyof BiomeLand
+
+/** Rise per horizontal block from the steepest sampled cardinal neighbour. */
+export const terrain_slope = (center_y: number, neighbour_heights: readonly number[], spacing = 1): number =>
+  neighbour_heights.reduce((steepest, height) => Math.max(steepest, Math.abs(height - center_y) / spacing), 0)
+
+/** Thin cover survives gentle ground; steep ground exposes the strata authored below it. */
+export const terrain_layer = (depth: number, slope: number): TerrainLayer => {
+  if (slope >= 4 || depth >= 4) return 'filler'
+  if (slope >= 2 || depth >= 1) return 'subsurface'
+  return 'surface'
+}
+
+export const surface_layer_for_slope = (slope: number): TerrainLayer => terrain_layer(0, slope)
+
+export const terrain_material_id = (column: WorldColumn, depth: number, slope: number): number =>
+  column[`${terrain_layer(depth, slope)}_id`]
 
 const finite = (value: unknown): value is number => typeof value === 'number' && Number.isFinite(value)
 const has_material = (materials: unknown, name: unknown): name is string =>
@@ -112,6 +142,7 @@ const validate_biomes = (value: unknown, materials: unknown): readonly string[] 
     else if (names.has(biome.name)) errors.push(`biomes[${index}].name must be unique`)
     else names.add(biome.name)
     errors.push(...validate_landscape(biome.landscape, materials, `biomes[${index}].landscape`))
+    errors.push(...validate_biome_structure_packs(biome.structure_packs, materials, `biomes[${index}].structure_packs`))
     return errors
   })
 }
@@ -159,16 +190,16 @@ export const landscape_height = (points: readonly SplineKnot[], input: number): 
   return y0 + ((input - x0) / (x1 - x0)) * (y1 - y0)
 }
 
-const band_weights = (value: number): Readonly<Record<ClimateBand, number>> => {
-  if (value <= 0.38) return { low: 1, mid: 0, high: 0 }
-  if (value < 0.48) {
-    const progress = (value - 0.38) / 0.1
+export const climate_band_weights = (value: number): Readonly<Record<ClimateBand, number>> => {
+  if (value <= 0.3) return { low: 1, mid: 0, high: 0 }
+  if (value < 0.4) {
+    const progress = (value - 0.3) / 0.1
     const mid = progress * progress * (3 - 2 * progress)
     return { low: 1 - mid, mid, high: 0 }
   }
-  if (value <= 0.52) return { low: 0, mid: 1, high: 0 }
-  if (value < 0.62) {
-    const progress = (value - 0.52) / 0.1
+  if (value <= 0.6) return { low: 0, mid: 1, high: 0 }
+  if (value < 0.7) {
+    const progress = (value - 0.6) / 0.1
     const high = progress * progress * (3 - 2 * progress)
     return { low: 0, mid: 1 - high, high }
   }
@@ -179,8 +210,8 @@ export const biome_influences = (
   world: CompiledWorld,
   climate: Pick<SampledClimate, 'temperature' | 'humidity'>
 ): readonly Readonly<{ biome: CompiledBiome; weight: number }>[] => {
-  const temperature = band_weights(climate.temperature)
-  const humidity = band_weights(climate.humidity)
+  const temperature = climate_band_weights(climate.temperature)
+  const humidity = climate_band_weights(climate.humidity)
   const by_name = BIOME_SLOTS.reduce<Record<string, number>>((weights, slot) => {
     const [temperature_band, humidity_band] = slot.split('_') as [ClimateBand, ClimateBand]
     const weight = temperature[temperature_band] * humidity[humidity_band]
@@ -208,7 +239,18 @@ const material_uses = (biomes: readonly WorldBiome[]): readonly MaterialUse[] =>
     )
   )
 
-export const compile_world_recipe = (input: WorldRecipe): CompiledWorld => {
+/** Legacy-scale climate fields: large territories, but enough harmonics to keep their borders organic
+ * inside one visible horizon instead of reading as straight continental cuts. */
+export const CLIMATE_FIELDS = Object.freeze({
+  temperature: Object.freeze({ period: 8192, octaves: 6, spread: 2, gain: 0.5 }),
+  humidity: Object.freeze({ period: 8192, octaves: 6, spread: 2, gain: 0.5 }),
+})
+export const balance_climate = (value: number): number => Math.max(0, Math.min(1, (value - 0.5) * 1.5 + 0.5))
+
+export const compile_world_recipe = (
+  input: WorldRecipe,
+  options: Readonly<{ structures?: boolean }> = {}
+): CompiledWorld => {
   const recipe = parse_world_recipe(input)
   const biomes = recipe.biomes.map((biome) => ({
     ...biome,
@@ -219,18 +261,8 @@ export const compile_world_recipe = (input: WorldRecipe): CompiledWorld => {
     (result, slot) => ({ ...result, [slot]: by_name[recipe.biome_slots[slot]]! }),
     {} as Record<BiomeSlot, CompiledBiome>
   )
-  const temperature = create_fbm_sampler(derive_sub_seed(recipe.seed, 'temperature'), {
-    period: 10240,
-    octaves: 6,
-    spread: 2,
-    gain: 0.5,
-  })
-  const humidity = create_fbm_sampler(derive_sub_seed(recipe.seed, 'humidity'), {
-    period: 8192,
-    octaves: 6,
-    spread: 2,
-    gain: 0.5,
-  })
+  const temperature = create_fbm_sampler(derive_sub_seed(recipe.seed, 'temperature'), CLIMATE_FIELDS.temperature)
+  const humidity = create_fbm_sampler(derive_sub_seed(recipe.seed, 'humidity'), CLIMATE_FIELDS.humidity)
   const ground_noise = create_fbm_sampler(derive_sub_seed(recipe.seed, 'ground'), {
     period: 2048,
     octaves: 6,
@@ -243,25 +275,40 @@ export const compile_world_recipe = (input: WorldRecipe): CompiledWorld => {
     spread: 2,
     gain: 0.5,
   })
+  const ridges = create_ridged_sampler(derive_sub_seed(recipe.seed, 'ridges'), {
+    period: 3072,
+    octaves: 5,
+    spread: 2,
+    gain: 0.48,
+  })
   const transition = create_fbm_sampler(derive_sub_seed(recipe.seed, 'transition'), {
     period: 256,
     octaves: 2,
     spread: 2,
     gain: 0.5,
   })
+  const include_structures = options.structures !== false
+  const materials = compile_materials(recipe.materials, [
+    ...material_uses(recipe.biomes),
+    ...(include_structures ? structure_material_uses(recipe.biomes) : []),
+  ])
   return Object.freeze({
     recipe,
     decoration_seed: derive_sub_seed(recipe.seed, 'decoration'),
-    materials: compile_materials(recipe.materials, material_uses(recipe.biomes)),
+    materials,
+    structures: include_structures
+      ? compile_structures(recipe.biomes, materials)
+      : Object.freeze({ packs: Object.freeze([]), max_footprint: 0 }),
     biomes: Object.freeze(biomes),
     slots: Object.freeze(slots),
     sample_climate: (x, z) => ({
-      temperature: temperature(x, z),
-      humidity: humidity(x, z),
+      temperature: balance_climate(temperature(x, z)),
+      humidity: balance_climate(humidity(x, z)),
       ground: Math.max(0, Math.min(1, (ground_noise(x, z) - 0.5) * 2 ** 0.42 + 0.5)),
       amplitude: amplitude(x, z),
       transition: transition(x, z),
     }),
+    sample_ridges: ridges,
   })
 }
 
@@ -279,7 +326,8 @@ export const sample_world_column = (world: CompiledWorld, x: number, z: number):
     (sum, influence) => sum + influence.weight * landscape_height(influence.biome.height_points, climate.ground),
     0
   )
-  const detail = (climate.amplitude - 0.5) * 12 * Math.max(0, Math.min(1, (climate.ground - 0.3) / 0.7))
+  const mountain = Math.max(0, Math.min(1, (climate.ground - 0.32) / 0.5))
+  const detail = (climate.amplitude - 0.5) * 12 * mountain + (world.sample_ridges(x, z) - 0.5) * 48 * mountain
   const land = land_at(biome, climate.ground, climate.transition)
   return {
     surface_y: Math.max(1, Math.min(MAX_SURFACE_Y, Math.floor(authored_height + detail + Number.EPSILON * 64))),

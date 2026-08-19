@@ -4,14 +4,21 @@
 // commands re-enter the same fight input door as board and streamed actions.
 
 import { CONTRACT_CONSTANTS } from '@aresrpg/fight'
+import { Swords } from 'lucide-react'
 import { lazy, Suspense, useEffect, useMemo, useState } from 'react'
 
 import { ModalFrame } from '../../components/ModalFrame.tsx'
 import type { AppCopy } from '../../i18n/copy.ts'
 import { dispatch_app, useAppStore } from '../../store.ts'
 
-import { select_fight_view, type FightFighterView } from './fight_projection.ts'
+import {
+  select_fight_view,
+  type FightActionSelection,
+  type FightFighterView,
+  type FightSpellView,
+} from './fight_projection.ts'
 import { active_effect_lines, FightEffectLines } from './FightEffectLines.tsx'
+import { Chat } from '../../components/Chat.tsx'
 import './fight_hud.css'
 
 const LazyFightSpell = lazy(() => import('./FightSpell.tsx').then(({ FightSpell }) => ({ default: FightSpell })))
@@ -71,15 +78,29 @@ const StatGem = ({ kind, value }: Readonly<{ kind: 'ap' | 'mp'; value: bigint }>
 const FightVitals = ({
   fighter,
   can_act,
-  selected_spell,
-  select_spell,
+  selected_action,
+  select_action,
+  text,
 }: Readonly<{
   fighter: FightFighterView
   can_act: boolean
-  selected_spell: string | null
-  select_spell: (spell: string | null) => void
+  selected_action: FightActionSelection
+  select_action: (action: FightActionSelection) => void
+  text: Readonly<Record<string, string>>
 }>) => {
   const [percent_visible, set_percent_visible] = useState(false)
+  const weapon_label = fighter.weapon?.bare_hands ? text.bare_hands : text.weapon_attack
+  const weapon_spell: FightSpellView | null = fighter.weapon
+    ? Object.freeze({
+        name: weapon_label,
+        level: 1n,
+        details: fighter.weapon.details,
+        source: Object.freeze({ classe: '', unlock_level: 1n, levels: [fighter.weapon.details] }),
+        cooldown: 0n,
+        turn: fighter.weapon.turn,
+      })
+    : null
+  const card_count = fighter.spells.length + (weapon_spell ? 1 : 0)
   return (
     <>
       <div className="fight-hud__vitals">
@@ -105,15 +126,35 @@ const FightVitals = ({
           <StatGem kind="mp" value={fighter.mp} />
         </div>
       </div>
-      <div className="fight-hud__spells">
+      <div
+        className="fight-hud__spells"
+        style={{ gridTemplateColumns: `repeat(${Math.max(1, Math.ceil(card_count / 2))}, 50px)` }}
+      >
+        {weapon_spell && (
+          <Suspense fallback={<div className="fight-hud__spell disabled" />}>
+            <LazyFightSpell
+              disabled={!can_act || fighter.ap < weapon_spell.details.ap_cost}
+              fallback_icon={<Swords aria-hidden="true" size={25} strokeWidth={1.6} />}
+              select={() => select_action(selected_action?.type === 'weapon' ? null : { type: 'weapon' })}
+              selected={selected_action?.type === 'weapon'}
+              spell={weapon_spell}
+            />
+          </Suspense>
+        )}
         {fighter.spells.map((spell) => {
           const disabled = !can_act || spell.cooldown > 0n || fighter.ap < spell.details.ap_cost
           return (
             <Suspense fallback={<div className={`fight-hud__spell${disabled ? ' disabled' : ''}`} />} key={spell.name}>
               <LazyFightSpell
                 disabled={disabled}
-                select={() => select_spell(selected_spell === spell.name ? null : spell.name)}
-                selected={selected_spell === spell.name}
+                select={() =>
+                  select_action(
+                    selected_action?.type === 'spell' && selected_action.name === spell.name
+                      ? null
+                      : { type: 'spell', name: spell.name }
+                  )
+                }
+                selected={selected_action?.type === 'spell' && selected_action.name === spell.name}
                 spell={spell}
               />
             </Suspense>
@@ -149,15 +190,19 @@ const PlacementBanner = ({
 export const FightHud = ({
   copy,
   focus_fighter,
-  selected_spell,
-  select_spell,
+  selected_action,
+  select_action,
   actions_locked,
+  presented_turn_seat = null,
 }: Readonly<{
   copy: AppCopy
   focus_fighter?: (fighter: bigint | null) => void
-  selected_spell: string | null
-  select_spell: (spell: string | null) => void
+  selected_action: FightActionSelection
+  select_action: (action: FightActionSelection) => void
   actions_locked: boolean
+  // the seat whose TURN CUE is currently presented: the timeline card follows the played
+  // cues (mob turns hold their floor), never the canonical head that reconciles instantly
+  presented_turn_seat?: bigint | null
 }>) => {
   const fight = useAppStore((state) => state.fight)
   const session = useAppStore((state) => state.session)
@@ -199,7 +244,13 @@ export const FightHud = ({
     if (!view?.can_end_turn || !view.selected || actions_locked) return undefined
     const keydown = (event: Readonly<KeyboardEvent>): void => {
       if (event.code === 'Escape') {
-        select_spell(null)
+        select_action(null)
+        return
+      }
+      if (event.code === 'Backquote') {
+        if (!view.selected?.weapon || view.selected.ap < view.selected.weapon.details.ap_cost) return
+        event.preventDefault()
+        select_action(selected_action?.type === 'weapon' ? null : { type: 'weapon' })
         return
       }
       const match = /^(?:Numpad|Digit)([0-9])$/.exec(event.code)
@@ -209,11 +260,15 @@ export const FightHud = ({
       const spell = view.selected?.spells[index]
       if (!spell || spell.cooldown > 0n || view.selected.ap < spell.details.ap_cost) return
       event.preventDefault()
-      select_spell(selected_spell === spell.name ? null : spell.name)
+      select_action(
+        selected_action?.type === 'spell' && selected_action.name === spell.name
+          ? null
+          : { type: 'spell', name: spell.name }
+      )
     }
     globalThis.addEventListener('keydown', keydown)
     return () => globalThis.removeEventListener('keydown', keydown)
-  }, [actions_locked, select_spell, selected_spell, view])
+  }, [actions_locked, select_action, selected_action, view])
 
   if (!view || !fight.checkpoint) return null
   if (view.phase === 'placement') return <PlacementBanner deadline={view.placement_deadline_ms} text={copy.fight_hud} />
@@ -234,16 +289,29 @@ export const FightHud = ({
     })
   }
   const reset_turn = (): void => {
-    select_spell(null)
+    select_action(null)
     dispatch_app({ type: 'fight/reset_turn' })
   }
 
   return (
     <div className="fight-hud">
       <FightTimeline
-        fighters={view.timeline}
+        fighters={
+          presented_turn_seat === null
+            ? view.timeline
+            : view.timeline.map((fighter) =>
+                Object.freeze({ ...fighter, active: fighter.seat === presented_turn_seat })
+              )
+        }
         focus={focus_fighter ?? (() => undefined)}
         label={copy.fight_hud.turn_order}
+      />
+      <Chat
+        names={Object.fromEntries(view.timeline.map(({ seat, name }) => [Number(seat), name]))}
+        self_name={selected.name}
+        // stat_* display names live in ONE home (simulator_page, stat_name's section) — the
+        // chat resolves them through this merge instead of carrying duplicate rows
+        text={{ ...copy.simulator_page, ...copy.fight_hud }}
       />
       <div className="fight-hud__bottom">
         <div className="fight-hud__bar">
@@ -275,8 +343,9 @@ export const FightHud = ({
           <FightVitals
             can_act={view.can_end_turn && !actions_locked}
             fighter={selected}
-            select_spell={select_spell}
-            selected_spell={selected_spell}
+            select_action={select_action}
+            selected_action={selected_action}
+            text={copy.fight_hud}
           />
         </div>
       </div>

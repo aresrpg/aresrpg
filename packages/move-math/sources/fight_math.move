@@ -9,6 +9,10 @@
 module aresrpg_math::fight_math;
 
 use aresrpg_math::{prng, spell_effect::Effect};
+
+public fun sat_sub(a: u64, b: u64): u64 { if (a > b) a - b else 0 }
+
+public fun max_1(value: u64): u64 { if (value == 0) 1 else value }
 use std::string::String;
 
 const CRIT_SCALE: u64 = 10000; // fixed-point scale (basis points)
@@ -89,6 +93,14 @@ public fun apply_centered_resistance(damage: u64, centered: u64, center: u64): u
   } else {
     damage * (100 + (center - centered)) / 100
   }
+}
+
+public fun resist(damage: u64, centered: u64, center: u64): u64 {
+  apply_centered_resistance(damage, centered, center)
+}
+
+public fun resolved_damage(base: u64, primary: u64, raw_damage: u64, centered: u64, center: u64): u64 {
+  resist(amplify_damage(base, primary, raw_damage), centered, center)
 }
 
 /// Map a roll fraction onto an authored `[min, max]` (inclusive). `max <= min` ⇒ `min`.

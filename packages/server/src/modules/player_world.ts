@@ -20,6 +20,7 @@ import {
 } from '@aresrpg/protocol'
 
 import { channels, mesh, type EventEnvelope, type MeshFact } from '../protocol.ts'
+import { mob_groups, resource_packs, world_population } from '../zone_spawns.ts'
 import { get_owned_character } from '../reads/get_owned_character.ts'
 import { get_friends } from '../reads/get_friends.ts'
 import { get_zones } from '../reads/get_zones.ts'
@@ -27,11 +28,16 @@ import { get_world_fights } from '../reads/get_world_fights.ts'
 import { get_item } from '../reads/get_item.ts'
 import logger from '../logger.ts'
 import type { PlayerModule, PlayerContext, PlayerAction, PlayerState, Embodied } from '../player.ts'
+import { create_watcher } from '../pubsub_bus.ts'
 
 const log = logger(import.meta)
 
 /** Tracked radius in zones around the player — 3×3 of 512-block squares. */
 const TRACKING_RADIUS = 1
+/** The speed anchor re-arms at most this often — the budget always prices a real time span. */
+const ANCHOR_WINDOW_MS = 1_000
+/** Physics-transient allowance on top of the authored budget (jump arcs, terrain snaps). */
+const TRANSIENT_SLACK_BLOCKS = 3
 /** Visible-player ceiling per connection (owner 2026-08-12): crowded zones never bloat the
  *  client — the cap drops strangers past 100, FRIENDS always pass. A capped-out stranger
  *  becomes visible on its next zone-cross (appears republish there). */
@@ -61,14 +67,16 @@ export default {
         friends: action.friends,
         party: action.party,
         fight: action.fight,
-        last_move_ms: action.at_ms,
+        move_anchor: { x: action.character.x, z: action.character.z, at_ms: action.at_ms },
       }
     if (action.type === 'action/move') {
       if (!state.character) return state
+      const anchor_aged = !state.move_anchor || action.at_ms - state.move_anchor.at_ms >= ANCHOR_WINDOW_MS
       return {
         ...state,
         character: { ...state.character, x: action.x, y: action.y, z: action.z },
-        last_move_ms: action.at_ms,
+        // re-anchor at most once per window — the budget always prices a real span of time
+        move_anchor: anchor_aged ? { x: action.x, z: action.z, at_ms: action.at_ms } : state.move_anchor,
       }
     }
     if (action.type === 'action/equip') {
@@ -83,23 +91,9 @@ export default {
     const { graph, pubsub, events, signal, send, address, dispatch, get_state, drop } = context
 
     /** channel → forwarder — the subscription machinery, rebuilt by mount/unmount */
-    const watched = new Map<string, (payload: never) => void>()
+    const { watch, unwatch, has, watched } = create_watcher(pubsub)
     /** character_id → address of players this connection currently renders (the cap's ledger) */
     const visible = new Map<string, string>()
-
-    const watch = (channel: string, forward: (payload: never) => void) => {
-      if (watched.has(channel)) return
-      watched.set(channel, forward)
-      pubsub.emitter.on(channel, forward as (payload: unknown) => void)
-      void pubsub.subscribe(channel)
-    }
-    const unwatch = (channel: string) => {
-      const forward = watched.get(channel)
-      if (!forward) return
-      watched.delete(channel)
-      pubsub.emitter.off(channel, forward as (payload: unknown) => void)
-      void pubsub.unsubscribe(channel)
-    }
 
     /** A VISIBLE player's own chain stream — their visible-slot equips forward as packets. */
     const forward_visible_equipment = (payload: EventEnvelope) => {
@@ -141,10 +135,33 @@ export default {
       }
     }
 
+    /** A zone's live population (zone_math twin) — the derivation the client never runs. */
+    const send_zone_spawns = (
+      w: string,
+      zx: number,
+      zz: number,
+      seed: string,
+      mob_taken: string,
+      res_taken: readonly number[]
+    ) => {
+      const population = world_population(w)
+      if (!population) return
+      send({
+        type: 'packet/zone_spawns',
+        world: w,
+        zx,
+        zz,
+        mobs: [...mob_groups(population, zx, zz, BigInt(seed), BigInt(mob_taken))],
+        resources: [...resource_packs(population, zx, zz, BigInt(seed), res_taken)],
+      })
+    }
+
     const forward_world_event = (payload: EventEnvelope) => {
       if (payload.type === 'ZoneSearched') {
         const { world: w, zx, zz, seed } = payload.data as { world: string; zx: number; zz: number; seed: string }
         send({ type: 'packet/zone_searched', world: w, zx, zz, seed })
+        // a TRACKED zone just (re)rolled — fresh seed means fresh, unconsumed spawns
+        if (has(mesh.pos(w, zx, zz))) send_zone_spawns(w, zx, zz, seed, '0', [])
       }
       if (payload.type === 'FightCreated') {
         const { fight, world: w, x, z } = payload.data as { fight: string; world: string; x: number; z: number }
@@ -180,8 +197,8 @@ export default {
     /** Push the states of newly tracked zones + their fights, and (re)wire the mesh channels. */
     const track = async (world: string, next: { zx: number; zz: number }[]) => {
       const wanted = new Set(next.map(({ zx, zz }) => mesh.pos(world, zx, zz)))
-      const fresh = next.filter(({ zx, zz }) => !watched.has(mesh.pos(world, zx, zz)))
-      for (const channel of [...watched.keys()]) {
+      const fresh = next.filter(({ zx, zz }) => !has(mesh.pos(world, zx, zz)))
+      for (const channel of watched()) {
         if (channel.startsWith('pos:') && !wanted.has(channel)) unwatch(channel)
       }
       for (const { zx, zz } of fresh) watch(mesh.pos(world, zx, zz), forward_presence)
@@ -192,23 +209,26 @@ export default {
       ])
       if (zones.length) send({ type: 'packet/zones', zones })
       if (fights.length) send({ type: 'packet/fights', fights })
+      // every newly tracked DISCOVERED zone carries its live population
+      for (const zone of zones)
+        send_zone_spawns(zone.world, zone.zx, zone.zz, zone.seed, zone.mob_taken, zone.res_taken)
     }
 
     const mount = async (character: Embodied) => {
       watch(channels.world(character.world), forward_world_event as (payload: never) => void)
       const { zx, zz } = zone_of(character.x, character.z)
       await track(character.world, spiral(zx, zz))
-      void pubsub.publish(mesh.pos(character.world, zx, zz), { kind: 'appear', player: character, address })
+      void pubsub.mesh.publish(mesh.pos(character.world, zx, zz), { kind: 'appear', player: character, address })
     }
 
     const unmount = (character: Embodied) => {
       const { zx, zz } = zone_of(character.x, character.z)
-      void pubsub.publish(mesh.pos(character.world, zx, zz), {
+      void pubsub.mesh.publish(mesh.pos(character.world, zx, zz), {
         kind: 'leave',
         character_id: character.character_id,
         address,
       })
-      for (const channel of [...watched.keys()]) unwatch(channel)
+      for (const channel of watched()) unwatch(channel)
       visible.clear()
     }
 
@@ -218,19 +238,19 @@ export default {
       const current_zone = zone_of(current.x, current.z)
       if (current_zone.zx !== previous_zone.zx || current_zone.zz !== previous_zone.zz) {
         void track(current.world, spiral(current_zone.zx, current_zone.zz))
-        void pubsub.publish(mesh.pos(current.world, previous_zone.zx, previous_zone.zz), {
+        void pubsub.mesh.publish(mesh.pos(current.world, previous_zone.zx, previous_zone.zz), {
           kind: 'leave',
           character_id: current.character_id,
           address,
         })
-        void pubsub.publish(mesh.pos(current.world, current_zone.zx, current_zone.zz), {
+        void pubsub.mesh.publish(mesh.pos(current.world, current_zone.zx, current_zone.zz), {
           kind: 'appear',
           player: current,
           address,
         })
         return
       }
-      void pubsub.publish(mesh.pos(current.world, current_zone.zx, current_zone.zz), {
+      void pubsub.mesh.publish(mesh.pos(current.world, current_zone.zx, current_zone.zz), {
         kind: 'move',
         character_id: current.character_id,
         address,
@@ -272,7 +292,11 @@ export default {
           friends,
           party,
           fight: fight?.id ?? null,
-          at_ms: Date.now(),
+          // THE CHECKPOINT'S OWN TIMESTAMP, never the embody wall-clock (chain travel_ok
+          // semantics): the travel budget accrues from the last PROVEN position — a player
+          // legitimately far off an old anchor must not read as a speed hack on first move
+          // (2026-08-19: that misread drop-looped every session into load-snapshot spam).
+          at_ms: (character.at_ms as number) ?? 0,
         })
       })().catch((error: Error) => {
         log.error({ address, error: error.message }, 'embody failed')
@@ -281,14 +305,16 @@ export default {
     })
 
     events.on('packet/position', (action: Extract<PlayerAction, { type: 'packet/position' }>) => {
-      const { character, last_move_ms } = get_state()
-      if (!character) return // position before embody is noise
+      const { character, move_anchor } = get_state()
+      if (!character || !move_anchor) return // position before embody is noise
       const now = Date.now()
-      const elapsed_s = Math.max((now - last_move_ms) / 1000, 0.05)
-      const travelled = Math.hypot(action.x - character.x, action.z - character.z)
-      // THE AUTHORED SPEED LAW — the same budget world.move proves travel against, mount included
+      const elapsed_s = (now - move_anchor.at_ms) / 1000
+      const travelled = Math.hypot(action.x - move_anchor.x, action.z - move_anchor.z)
+      // THE AUTHORED SPEED LAW, priced the chain's way (travel_ok): distance FROM THE ANCHOR
+      // over elapsed SINCE THE ANCHOR, plus a small jitter slack — a 50ms sample of a jump arc
+      // is not a speed hack, a sustained overspeed still runs out of budget inside one window.
       const ceiling = SPEED_BUDGET_BLOCKS_PER_SECOND * (character.pet !== null ? PET_SPEED_MULTIPLIER : 1)
-      if (travelled / elapsed_s > ceiling) {
+      if (travelled > ceiling * elapsed_s + TRANSIENT_SLACK_BLOCKS) {
         log.warn({ address, travelled, elapsed_s }, 'impossible speed — connection dropped')
         drop('SPEED')
         return
@@ -314,7 +340,7 @@ export default {
     })
 
     signal.addEventListener('abort', () => {
-      for (const channel of [...watched.keys()]) unwatch(channel)
+      for (const channel of watched()) unwatch(channel)
     })
   },
 } satisfies PlayerModule

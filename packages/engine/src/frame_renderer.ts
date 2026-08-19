@@ -1,7 +1,15 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
-import { AgXToneMapping, Matrix4, SRGBColorSpace, Vector3, type PerspectiveCamera, type Scene } from 'three'
+import {
+  AgXToneMapping,
+  Matrix4,
+  SRGBColorSpace,
+  Vector3,
+  type DirectionalLight,
+  type PerspectiveCamera,
+  type Scene,
+} from 'three'
 import { RenderPipeline, type WebGPURenderer } from 'three/webgpu'
 import type { Node } from 'three/webgpu'
 import { float, luminance, pass, renderOutput, rtt, screenUV, uniform, vec2, vec4 } from 'three/tsl'
@@ -14,6 +22,7 @@ import { create_lens_water } from './lens_water.ts'
 import type { LiquidPalette } from './liquid_palette.ts'
 import { get_quality_profile, uses_world_post_processing } from './quality.ts'
 import type { create_sky_node } from './sky/sky_node.ts'
+import { create_sun_shafts } from './sun_shafts.ts'
 import type { EnginePresentation, EngineQuality } from './types.ts'
 import { create_underwater_pass, type UnderwaterPass } from './underwater.ts'
 
@@ -62,6 +71,7 @@ const create_pipeline = (
   camera: PerspectiveCamera,
   quality: EngineQuality,
   presentation: EnginePresentation,
+  sun: DirectionalLight,
   sun_direction: ReturnType<typeof create_sky_node>['sun_direction'],
   water_gate: Node<'float'>,
   water_level: Node<'float'>,
@@ -76,7 +86,7 @@ const create_pipeline = (
       dispose: () => {},
     })
   const profile = get_quality_profile(quality)
-  const { bloom: bloom_config } = profile.effects
+  const { bloom: bloom_config, sun_shafts: shaft_config } = profile.effects
   // One scene sample is the proven legacy path. Quality scales reconstruction; one final
   // display-space FXAA pass stabilizes voxel silhouettes without multisampling the world.
   const scene_pass = pass(scene, camera)
@@ -93,13 +103,30 @@ const create_pipeline = (
     frag_dist as unknown as Node<'float'>,
     view
   )
-  const hdr_texture = bloom_config === null ? null : rtt(vec4(immersed, 1))
+  const shafts =
+    shaft_config === null
+      ? null
+      : create_sun_shafts({
+          camera,
+          sun,
+          sun_direction,
+          scene_texture: scene_pass.getTextureNode() as Parameters<typeof create_sun_shafts>[0]['scene_texture'],
+          config: shaft_config,
+        })
+  const shaft_texture = shafts === null ? null : rtt(vec4(shafts.color, 1))
+  if (shaft_texture !== null) {
+    shaft_texture.setResolutionScale(shaft_config!.resolution)
+    shaft_texture.autoUpdate = false
+  }
+  const atmosphere =
+    shaft_texture === null || shafts === null ? immersed : immersed.add(shaft_texture.rgb.mul(shafts.active))
+  const hdr_texture = bloom_config === null ? null : rtt(vec4(atmosphere, 1))
   if (hdr_texture !== null) hdr_texture.autoUpdate = false
   const hdr_bloom =
     hdr_texture === null || bloom_config === null
       ? null
       : bloom(hdr_texture, bloom_config.strength, bloom_config.radius, bloom_config.threshold)
-  const hdr_color = hdr_texture === null || hdr_bloom === null ? immersed : hdr_texture.rgb.add(hdr_bloom.rgb)
+  const hdr_color = hdr_texture === null || hdr_bloom === null ? atmosphere : hdr_texture.rgb.add(hdr_bloom.rgb)
   const display = renderOutput(vec4(hdr_color, 1), AgXToneMapping, SRGBColorSpace)
   const low_frequency = rtt(display, 96, 54)
   const grade = create_grade_node(sun_direction.y)
@@ -114,10 +141,13 @@ const create_pipeline = (
   const lens_dry = lens.apply(final_frame, false)
   const lens_wet = lens.apply(final_frame, true)
   pipeline.outputNode = lens_dry
+  let submerged = false
 
   return Object.freeze({
     render: () => {
       view.sync()
+      const shafts_visible = shafts?.update(submerged) ?? false
+      if (shaft_texture !== null && shafts_visible) shaft_texture.textureNeedsUpdate = true
       if (hdr_texture !== null) hdr_texture.textureNeedsUpdate = true
       const lens_output = lens.update() ? lens_wet : lens_dry
       if (pipeline.outputNode !== lens_output) {
@@ -127,6 +157,7 @@ const create_pipeline = (
       pipeline.render()
     },
     set_underwater: (state: Readonly<{ submerged: boolean; dt: number }>) => {
+      ;({ submerged } = state)
       underwater.update(state)
       // The droplets fire on the EXIT edge only — never on entry, never while submerged.
       if (underwater.just_exited()) lens.splash()
@@ -134,6 +165,7 @@ const create_pipeline = (
     dispose: () => {
       lens.dispose()
       low_frequency.renderTarget?.dispose()
+      shaft_texture?.renderTarget?.dispose()
       hdr_texture?.renderTarget?.dispose()
       scene_pass.dispose()
       pipeline.dispose()
@@ -147,6 +179,7 @@ export const create_frame_renderer = (
   camera: PerspectiveCamera,
   initial_quality: EngineQuality,
   presentation: EnginePresentation,
+  sun: DirectionalLight,
   sun_direction: ReturnType<typeof create_sky_node>['sun_direction'],
   water_gate: Node<'float'>,
   water_level: Node<'float'>,
@@ -159,6 +192,7 @@ export const create_frame_renderer = (
     camera,
     quality,
     presentation,
+    sun,
     sun_direction,
     water_gate,
     water_level,
@@ -178,6 +212,7 @@ export const create_frame_renderer = (
         camera,
         next,
         presentation,
+        sun,
         sun_direction,
         water_gate,
         water_level,

@@ -15,6 +15,7 @@ import { get_characters } from '../reads/get_characters.ts'
 import { get_item } from '../reads/get_item.ts'
 import logger from '../logger.ts'
 import type { PlayerModule, PlayerState } from '../player.ts'
+import { create_watcher } from '../pubsub_bus.ts'
 
 const log = logger(import.meta)
 
@@ -24,24 +25,10 @@ export default {
   name: 'player_events',
   observe: (context) => {
     const { pubsub, graph, send, channels, address, events, signal, dispatch } = context
-    const listeners = new Map<string, (payload: EventEnvelope) => void>()
-
-    const watch = (channel: string, forward: (payload: EventEnvelope) => void) => {
-      if (listeners.has(channel)) return
-      listeners.set(channel, forward)
-      pubsub.emitter.on(channel, forward)
-      void pubsub.subscribe(channel)
-    }
-    const unwatch = (channel: string) => {
-      const listener = listeners.get(channel)
-      if (!listener) return
-      listeners.delete(channel)
-      pubsub.emitter.off(channel, listener)
-      void pubsub.unsubscribe(channel)
-    }
+    const { watch, unwatch, watched } = create_watcher(pubsub)
 
     // the player's own social channel — friend facts + exclusive offers, as REAL packets
-    watch(channels.social(address), (payload) => {
+    watch(channels.social(address), (payload: EventEnvelope) => {
       if (payload.type === 'FriendAdded' || payload.type === 'FriendRemoved') {
         const { list, who } = payload.data as { list: string; who: string }
         if (payload.type === 'FriendAdded') send({ type: 'packet/friend_added', list, who })
@@ -95,7 +82,7 @@ export default {
     })
 
     signal.addEventListener('abort', () => {
-      for (const channel of [...listeners.keys()]) unwatch(channel)
+      for (const channel of watched()) unwatch(channel)
     })
   },
 } satisfies PlayerModule

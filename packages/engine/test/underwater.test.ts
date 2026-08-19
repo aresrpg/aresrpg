@@ -5,22 +5,26 @@ import { expect, test } from 'bun:test'
 
 import { UNDERWATER, is_submerged } from '../src/underwater.ts'
 
-test('the eye submerges past the band and surfaces past the band', () => {
-  expect(is_submerged(-0.5, 0, false)).toBeTrue()
-  expect(is_submerged(0.5, 0, true)).toBeFalse()
-})
+const GRAZING = UNDERWATER.hysteresis_m / 2
 
-test('the dead-band across the waterline holds the previous state (no flicker)', () => {
-  const grazing = UNDERWATER.hysteresis_m / 2
-  expect(is_submerged(-grazing, 0, false)).toBeFalse()
-  expect(is_submerged(grazing, 0, true)).toBeTrue()
-})
+test('immersion follows the waterline with a flicker-free dead band and a hard dry exit', () => {
+  const cases: readonly {
+    why: string
+    eye: number
+    liquid: number | null
+    previous: boolean
+    submerged: boolean
+  }[] = [
+    { why: 'the eye submerges past the band', eye: -0.5, liquid: 0, previous: false, submerged: true },
+    { why: 'the eye surfaces past the band', eye: 0.5, liquid: 0, previous: true, submerged: false },
+    { why: 'the dead band holds a dry eye dry', eye: -GRAZING, liquid: 0, previous: false, submerged: false },
+    { why: 'the dead band holds a wet eye wet', eye: GRAZING, liquid: 0, previous: true, submerged: true },
+    { why: 'no water over the eye is a hard exit', eye: -10, liquid: null, previous: true, submerged: false },
+    { why: 'an absolute authored height submerges', eye: 59.5, liquid: 60, previous: false, submerged: true },
+    { why: 'an absolute authored height surfaces', eye: 60.5, liquid: 60, previous: true, submerged: false },
+  ]
 
-test('no water over the eye is a hard exit, whatever the previous state', () => {
-  expect(is_submerged(-10, null, true)).toBeFalse()
-})
-
-test('the immersion boundary works at an absolute authored liquid height', () => {
-  expect(is_submerged(59.5, 60, false)).toBeTrue()
-  expect(is_submerged(60.5, 60, true)).toBeFalse()
+  cases.forEach(({ why, eye, liquid, previous, submerged }) => {
+    expect(is_submerged(eye, liquid, previous), why).toBe(submerged)
+  })
 })

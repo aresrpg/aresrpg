@@ -6,13 +6,15 @@ import { CHUNK_EDGE, halo_index, voxel_index } from './voxel_data.ts'
 
 const ROWS_PER_AXIS = CHUNK_EDGE * CHUNK_EDGE
 const MATERIAL_ID_MASK = 0xfff
-const FULL_SUN_WORD = (7 << 12) | (7 << 15) | (3 << 18) | (7 << 28) | (1 << 31)
+const FULL_SUN_WORD = (7 << 12) | (7 << 15) | (3 << 18)
 const OPEN_AO = 0xff
+const ALL_EDGES_CONVEX = 0b1111
 // The shared quad basis points inward for -X, +Y, and -Z. The vertex shader mirrors U for these faces.
 export const FACE_WINDING_FLIP_BITS = 0b100110
 export type GreedyMeshData = Readonly<{
-  // Compact GPU contract: word A owns geometry; word B owns the recipe's
-  // material id plus the reserved light and AO fields.
+  // Compact GPU contract: word A owns geometry; word B owns the recipe's material id, the
+  // reserved light fields, the AO corners (bits 20-27), and the convex-edge flags (bits 28-31:
+  // u-low, u-high, v-low, v-high) that drive the rounded-corner normal bend.
   quads: Uint32Array
   quad_count: number
 }>
@@ -25,7 +27,8 @@ const encode_geometry = (
   height: number,
   face: number,
   material_id: number,
-  ao = OPEN_AO
+  ao = OPEN_AO,
+  edges = ALL_EDGES_CONVEX
 ): readonly [number, number] => [
   (x | (y << 6) | (z << 12) | ((width - 1) << 18) | ((height - 1) << 23) | (face << 28)) >>> 0,
   ((material_id & MATERIAL_ID_MASK) |
@@ -33,7 +36,8 @@ const encode_geometry = (
     ((ao & 0x3) << 20) |
     (((ao >>> 2) & 0x3) << 22) |
     (((ao >>> 4) & 0x3) << 24) |
-    (((ao >>> 6) & 0x3) << 26)) >>>
+    (((ao >>> 6) & 0x3) << 26) |
+    ((edges & 0xf) << 28)) >>>
     0,
 ]
 
@@ -106,6 +110,15 @@ const projected_coordinates = (axis: number, x: number, y: number, z: number): r
   return [z, x, y]
 }
 
+// A face cell's convex edges: sides where NO same-level neighbour continues the surface in the
+// face's own plane. Baked into the merge class, so greedy quads only merge cells with identical
+// convexity — the per-quad border rounding is then exact for every cell (a strip's open lip is
+// always the quad's own border).
+const cell_edge_flags = (chunk: ChunkRenderData, axis: number, x: number, y: number, z: number): number => {
+  const open = (du: number, dv: number): number => (face_neighbor_solid(chunk, axis, 0, x, y, z, du, dv) ? 0 : 1)
+  return open(-1, 0) | (open(1, 0) << 1) | (open(0, -1) << 2) | (open(0, 1) << 3)
+}
+
 const emit_direction = (
   chunk: ChunkRenderData,
   axis: number,
@@ -128,7 +141,8 @@ const emit_direction = (
         const [depth, u, v] = projected_coordinates(axis, x, y, z)
         const material_id = chunk.material_ids[voxel_index(x, y, z)] ?? 0
         const ao = face_ao(chunk, axis, positive, x, y, z)
-        plane_faces[depth * CHUNK_EDGE * CHUNK_EDGE + v * CHUNK_EDGE + u] = material_id | (ao << 12)
+        const edges = cell_edge_flags(chunk, axis, x, y, z)
+        plane_faces[depth * CHUNK_EDGE * CHUNK_EDGE + v * CHUNK_EDGE + u] = material_id | (ao << 12) | (edges << 20)
       }
     }
   }
@@ -163,7 +177,8 @@ const emit_direction = (
             height,
             axis * 2 + (positive ? 0 : 1),
             face_class & MATERIAL_ID_MASK,
-            face_class >>> 12
+            (face_class >>> 12) & 0xff,
+            face_class >>> 20
           )
         )
       }

@@ -4,8 +4,10 @@
 import { describe, expect, test } from 'bun:test'
 
 import { GRID_CELLS, mask_get, neighbours } from '../src/combat_grid.ts'
-import { create_mob_snapshot } from '../src/create.ts'
+import { create_character_source, create_fight_state, create_mob_snapshot, player_max_hp } from '../src/create.ts'
+import { roll_value } from '../src/damage.ts'
 import { create_fight } from '../src/fight.ts'
+import { effect_seed } from '../src/fight_math.ts'
 import { fight_path_to, reachable_fight_cells } from '../src/movement.ts'
 import { mix } from '../src/prng.ts'
 
@@ -293,6 +295,129 @@ describe('fight API', () => {
     expect(result.error).toBeNull()
     expect(result.events.map(({ type }) => type)).toEqual(['ap_mp_change', 'spell_cast', 'damage_number'])
     expect(result.events[2]).toMatchObject({ type: 'damage_number', payload: { target: 1n, amount: 40n } })
+  })
+
+  test('a caster-only cost lands when a full-health ally is targeted outside the caster area', () => {
+    const source = create_character_source({ classe: 'iyashi', level: 48n })
+    const full_hp = player_max_hp(source)
+    const checkpoint = create_fight_state({
+      players: [
+        { character: '0xc1', owner: 'local', team: 0n, ready: true, hp: full_hp, source },
+        { character: '0xc2', owner: 'local', team: 0n, ready: true, hp: full_hp, source },
+        { character: '0xc3', owner: 'other', team: 1n, ready: true, hp: full_hp, source },
+      ],
+      mobs: [],
+      spells: {
+        bleeding_word: {
+          classe: 'iyashi',
+          unlock_level: 48n,
+          levels: [
+            {
+              ap_cost: 2n,
+              range_min: 1n,
+              range_max: 40n,
+              modifiable_range: false,
+              line_of_sight: false,
+              line_launch: false,
+              free_cell: false,
+              casts_per_turn: 0n,
+              casts_per_target: 0n,
+              cooldown_turns: 0n,
+              crit_1_in: 0n,
+              effects: [
+                {
+                  kind: 2n,
+                  element: 'water',
+                  value: 18n,
+                  value_max: 18n,
+                  area_shape: 0n,
+                  area_size: 0n,
+                  target_filter: 4n,
+                  chance_bp: 10_000n,
+                  turns: 0n,
+                  stat: 0n,
+                },
+                {
+                  kind: 4n,
+                  element: '',
+                  value: 18n,
+                  value_max: 18n,
+                  area_shape: 0n,
+                  area_size: 0n,
+                  target_filter: 3n,
+                  chance_bp: 10_000n,
+                  turns: 0n,
+                  stat: 12n,
+                },
+              ],
+              crit_effects: [],
+            },
+          ],
+        },
+      },
+    })
+    const fight = create_fight({ state: checkpoint, mode: 'local', seed: 91n })
+    fight.apply({ type: 'start', observed_ms: 60_000n })
+
+    const result = fight.apply({
+      type: 'cast_spell',
+      fighter: 0n,
+      spell: 'bleeding_word',
+      target_cell: fight.state().contract.fighters[1]!.cell,
+    })
+
+    expect(result.error).toBeNull()
+    expect(result.state.contract.fighters[0]!.hp).toBe(full_hp - 18n)
+    expect(result.state.contract.fighters[1]!.hp).toBe(full_hp)
+    expect(result.events).toContainEqual(
+      expect.objectContaining({ type: 'damage_number', payload: expect.objectContaining({ target: 0n, amount: 18n }) })
+    )
+    expect(result.events.some(({ type }) => type === 'heal_number')).toBeFalse()
+  })
+
+  test('percent-life damage rolls its authored band before scaling maximum HP', () => {
+    const checkpoint = structuredClone(create_fixture().checkpoint)
+    const row = {
+      kind: 1n,
+      element: 'earth',
+      value: 8n,
+      value_max: 11n,
+      area_shape: 0n,
+      area_size: 0n,
+      target_filter: 1n,
+      chance_bp: 10_000n,
+      turns: 0n,
+      stat: 0n,
+    }
+    checkpoint.sources.spells.percentage = {
+      classe: 'senshi',
+      unlock_level: 1n,
+      levels: [{ ...checkpoint.sources.spells.slash.levels[0]!, effects: [row], crit_effects: [] }],
+    }
+    checkpoint.contract.round = 1n
+    checkpoint.contract.queue = [0n, 1n]
+    checkpoint.contract.turn_ptr = 0n
+    checkpoint.contract.turn_seed = 7n
+    checkpoint.contract.turn_slot = 0n
+    checkpoint.contract.fighters[0]!.ap = 6n
+    const expected_percentage = roll_value(row, { state: effect_seed(7n, 0n) })
+    expect(expected_percentage).toBeGreaterThan(8n)
+    const fight = create_fight({ state: checkpoint, mode: 'local' })
+
+    const result = fight.apply({
+      type: 'cast_spell',
+      fighter: 0n,
+      spell: 'percentage',
+      target_cell: checkpoint.contract.fighters[1]!.cell,
+    })
+
+    expect(result.error).toBeNull()
+    expect(result.events).toContainEqual(
+      expect.objectContaining({
+        type: 'damage_number',
+        payload: expect.objectContaining({ target: 1n, amount: expected_percentage }),
+      })
+    )
   })
 
   test('a lasting stat effect carries its exact channel, value, and duration', () => {

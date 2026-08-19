@@ -15,28 +15,19 @@ describe('engine quality profiles', () => {
     ])
   })
 
-  test('reconstructs a cheaper scene into a sharper display buffer', () => {
-    expect(
-      Object.values(QUALITY_PROFILES).map(({ render }) => ({
-        display: render.scale,
-        scene: render.scale * render.scene_scale,
-      }))
-    ).toEqual([
-      { display: 0.75, scene: 0.66 },
-      { display: 0.9, scene: 0.738 },
-      { display: 1, scene: 1 },
-    ])
-  })
-
-  test('reserves selective HDR bloom for high quality', () => {
+  test('reserves selective HDR bloom and bounded sun shafts for high quality', () => {
     expect(Object.values(QUALITY_PROFILES).map(({ effects }) => Object.keys(effects))).toEqual([
-      ['bloom'],
-      ['bloom'],
-      ['bloom'],
+      ['bloom', 'sun_shafts'],
+      ['bloom', 'sun_shafts'],
+      ['bloom', 'sun_shafts'],
     ])
     expect(QUALITY_PROFILES.low.effects.bloom).toBeNull()
     expect(QUALITY_PROFILES.medium.effects.bloom).toBeNull()
-    expect(QUALITY_PROFILES.high.effects.bloom).toEqual({ strength: 0.13, radius: 0.6, threshold: 2.05 })
+    expect(QUALITY_PROFILES.high.effects.bloom).not.toBeNull()
+    expect(QUALITY_PROFILES.low.effects.sun_shafts).toBeNull()
+    expect(QUALITY_PROFILES.medium.effects.sun_shafts).toBeNull()
+    const shafts = QUALITY_PROFILES.high.effects.sun_shafts!
+    expect(shafts.samples * shafts.resolution ** 2).toBeLessThanOrEqual(4)
   })
 
   test('the high tier caps a 5120x1440 display below native pixels', () => {

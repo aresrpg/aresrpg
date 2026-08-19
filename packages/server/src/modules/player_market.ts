@@ -60,8 +60,8 @@ export default {
       }
     }
 
-    pubsub.emitter.on(channels.economy, forward_economy as (payload: unknown) => void)
-    void pubsub.subscribe(channels.economy)
+    pubsub.graph.emitter.on(channels.economy, forward_economy as (payload: unknown) => void)
+    void pubsub.graph.subscribe(channels.economy)
 
     events.on('STATE_UPDATED', (state: PlayerState, previous: PlayerState) => {
       if (state.market_category === previous.market_category || !state.market_category) return
@@ -72,8 +72,8 @@ export default {
     })
 
     signal.addEventListener('abort', () => {
-      pubsub.emitter.off(channels.economy, forward_economy as (payload: unknown) => void)
-      void pubsub.unsubscribe(channels.economy)
+      pubsub.graph.emitter.off(channels.economy, forward_economy as (payload: unknown) => void)
+      void pubsub.graph.unsubscribe(channels.economy)
     })
   },
 } satisfies PlayerModule

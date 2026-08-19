@@ -302,6 +302,15 @@ fun neighbours(c: u64): vector<u64> {
   out
 }
 
+public fun first_free(starts: &vector<u64>, occupied: &vector<u64>): Option<u64> {
+  let mut i = 0;
+  while (i < starts.length()) {
+    if (!occupied.contains(&starts[i])) return option::some(starts[i]);
+    i = i + 1;
+  };
+  option::none()
+}
+
 fun cell_can_cast(from: u64, target: u64, range_min: u64, range_max: u64, needs_los: bool, los_obstacles: &vector<u64>): bool {
   let d = manhattan(from, target);
   d >= range_min && d <= range_max && (!needs_los || line_of_sight(from, target, los_obstacles))

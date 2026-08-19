@@ -7,6 +7,8 @@ import {
   CONTRACT_CONSTANTS,
   player_max_hp,
   project_spell_turn,
+  project_weapon_turn,
+  weapon_level_of,
   type ActiveEffect,
   type Fighter,
   type FightMode,
@@ -25,6 +27,14 @@ export type FightSpellView = Readonly<{
   turn: SpellTurnProjection | null
 }>
 
+export type FightWeaponView = Readonly<{
+  bare_hands: boolean
+  details: SpellLevel
+  turn: SpellTurnProjection | null
+}>
+
+export type FightActionSelection = Readonly<{ type: 'spell'; name: string }> | Readonly<{ type: 'weapon' }> | null
+
 export type FightFighterView = Readonly<{
   seat: bigint
   team: bigint
@@ -40,6 +50,7 @@ export type FightFighterView = Readonly<{
   ap: bigint
   mp: bigint
   effects: readonly ActiveEffect[]
+  weapon: FightWeaponView | null
   spells: readonly FightSpellView[]
 }>
 
@@ -68,23 +79,29 @@ const fighter_spells = (
   const source = checkpoint.sources.players[fighter.kind.character]
   if (!source) return Object.freeze([])
   return Object.freeze(
-    Object.entries(checkpoint.sources.spells).flatMap(([name, spell]) => {
-      if (spell.classe !== source.classe || source.level < spell.unlock_level) return []
-      const level = source.spell_levels[name] ?? 1n
-      const details = spell.levels[Number(level - 1n)]
-      if (!details) return []
-      const turn = seat === active_seat ? project_spell_turn(checkpoint, seat, name) : null
-      return [
-        Object.freeze({
-          name,
-          level,
-          details,
-          source: spell,
-          cooldown: fighter.cooldowns.find((row) => row.spell === name)?.left ?? 0n,
-          turn,
-        }),
-      ]
-    })
+    Object.entries(checkpoint.sources.spells)
+      .flatMap(([name, spell]) => {
+        if (spell.classe !== source.classe || source.level < spell.unlock_level) return []
+        const level = source.spell_levels[name] ?? 1n
+        const details = spell.levels[Number(level - 1n)]
+        if (!details) return []
+        const turn = seat === active_seat ? project_spell_turn(checkpoint, seat, name) : null
+        return [
+          Object.freeze({
+            name,
+            level,
+            details,
+            source: spell,
+            cooldown: fighter.cooldowns.find((row) => row.spell === name)?.left ?? 0n,
+            turn,
+          }),
+        ]
+      })
+      .toSorted((left, right) =>
+        left.source.unlock_level === right.source.unlock_level
+          ? left.name.localeCompare(right.name)
+          : Number(left.source.unlock_level - right.source.unlock_level)
+      )
   )
 }
 
@@ -127,6 +144,8 @@ export const select_fight_view = ({
     const fighter = contract.fighters[Number(seat)]!
     const character_id = fighter.kind.type === 'player' ? fighter.kind.character : null
     const fallback_name = fighter.kind.type === 'player' ? fighter.kind.character : fighter.kind.snapshot.mob_type
+    const player_source = fighter.kind.type === 'player' ? checkpoint.sources.players[fighter.kind.character] : null
+    const weapon_level = weapon_level_of(checkpoint, seat)
     return Object.freeze({
       seat,
       team: fighter.team,
@@ -145,6 +164,14 @@ export const select_fight_view = ({
       ap: fighter.ap,
       mp: fighter.mp,
       effects: Object.freeze([...fighter.effects]),
+      weapon:
+        player_source && weapon_level
+          ? Object.freeze({
+              bare_hands: !player_source.weapon || player_source.weapon.damages.length === 0,
+              details: weapon_level,
+              turn: seat === active_seat ? project_weapon_turn(checkpoint, seat) : null,
+            })
+          : null,
       spells: fighter_spells(checkpoint, fighter, seat, active_seat),
     })
   }

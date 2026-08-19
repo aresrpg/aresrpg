@@ -155,12 +155,16 @@ const direction_values = (source) => {
 }
 
 const target_filters = (source) => {
-  const [, body] = required_match(source, /fun zone_targets\([\s\S]*?\): vector<u64> \{([\s\S]*?)\n\}/, 'zone_targets')
+  const [, body] = required_match(
+    source,
+    /public fun target_allowed\([\s\S]*?\): bool \{([\s\S]*?)\n\}/,
+    'target_allowed'
+  )
   const patterns = {
-    not_team: /filter == (\d+)\) fight\.fighters\[s\]\.team != team/,
-    not_self: /filter == (\d+)\) s != caster/,
-    not_enemy: /filter == (\d+)\) fight\.fighters\[s\]\.team == team/,
-    only_caster: /filter == (\d+)\) s == caster/,
+    not_team: /filter == (\d+)\) target_team != caster_team/,
+    not_self: /filter == (\d+)\) !self_target/,
+    not_enemy: /filter == (\d+)\) target_team == caster_team/,
+    only_caster: /filter == (\d+)\) self_target/,
   }
   return Object.fromEntries([
     ['none', '0'],
@@ -325,7 +329,7 @@ export const CHANNELS = Object.freeze(${literal(consts(fight, 'STAT_'), true)})
 export const AREA_SHAPES = Object.freeze(${literal(shape_values(spell_effect), true)})
 export const BOARD_SHAPES = Object.freeze(${literal(consts(combat_grid, 'SHAPE_'), true)})
 export const DIRECTIONS = Object.freeze(${literal(direction_values(combat_grid), true)})
-export const TARGET_FILTERS = Object.freeze(${literal(target_filters(fight), true)})
+export const TARGET_FILTERS = Object.freeze(${literal(target_filters(spell_effect), true)})
 export const ACCESS = Object.freeze(${literal(consts(fight, 'ACCESS_'), true)})
 
 export const CONTRACT_CONSTANTS = Object.freeze(${literal(contract_constants, true)})

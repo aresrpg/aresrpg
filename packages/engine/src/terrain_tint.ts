@@ -79,11 +79,13 @@ const build_macro_tint_nodes = ({
   base_rough,
   paired_color,
   position_world,
+  patch_scale = 1,
 }: Readonly<{
   tint_class: Node<'float'>
   base_rough: Node<'float'>
   paired_color: Node<'vec3'>
   position_world: Readonly<{ x: Node<'float'>; z: Node<'float'> }>
+  patch_scale?: number
 }>): TintNodes => {
   const is_surface = tint_class.greaterThanEqual(float(2))
   const surface_amount = is_surface.select(float(1), float(0))
@@ -142,7 +144,7 @@ const build_macro_tint_nodes = ({
   const humid_mul = mix(vec3(1, 1, 1), vec3(NG_TINT.HUMID_RGB[0], NG_TINT.HUMID_RGB[1], NG_TINT.HUMID_RGB[2]), humid)
   // (c) Sparse exposed-underlayer patches use the recipe's paired subsurface color.
   const patch_blend = smoothstep(float(NG_TINT.PATCH_LO), float(NG_TINT.PATCH_HI), detail)
-    .mul(float(NG_TINT.PATCH_MAX))
+    .mul(float(NG_TINT.PATCH_MAX * patch_scale))
     .mul(surface_mask)
     .mul(float(1).sub(humid))
   // PBR roughness: humid dew dip on natural surfaces; every base response comes from its
@@ -187,15 +189,19 @@ export const macro_surface_tint_nodes = ({
   roughness,
   climate_tint,
   position_world,
+  patch_scale,
 }: Readonly<{
   paired_color: Node<'vec3'>
   roughness: Node<'float'>
   climate_tint: Node<'float'>
   position_world: Readonly<{ x: Node<'float'>; z: Node<'float'> }>
+  /** 0 disables the exposed-underlayer patches — consumers without a subsurface (e.g. clutter). */
+  patch_scale?: number
 }>): TintNodes =>
   build_macro_tint_nodes({
     tint_class: climate_tint.greaterThan(0.5).select(float(3), float(1)),
     base_rough: roughness,
     paired_color,
     position_world,
+    patch_scale,
   })

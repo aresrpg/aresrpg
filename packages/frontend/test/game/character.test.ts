@@ -12,7 +12,7 @@ const no_liquid = () => false
 const env = { solid_at: flat, liquid_at: no_liquid }
 
 const run_steps = (state: ReturnType<typeof create_controller_state>, input: object, steps: number) => {
-  const full = { forward: 0, strafe: 0, jump: false, walk: false, speed_scale: 1, yaw: 0, ...input }
+  const full = { forward: 0, strafe: 0, jump: false, glide: false, walk: false, speed_scale: 1, yaw: 0, ...input }
   let [, peak_y] = state.position
   for (let i = 0; i < steps; i += 1) {
     step_controller(state, full, env, 1 / 60)
@@ -59,6 +59,12 @@ describe('locomotion (legacy feel constants)', () => {
     expect(glide).toBeLessThan(0.6) // …never ice (the S-73v2 band)
   })
 
+  test('mounted movement scales the canonical run speed by 1.5', () => {
+    const state = create_controller_state([0.5, 0, 0.5])
+    run_steps(state, { forward: 1, speed_scale: 1.5 }, 120)
+    expect(state.speed).toBeCloseTo(CONTROLLER_CONSTANTS.RUN_SPEED * 1.5, 0)
+  })
+
   test('jump reaches the approved apex, double-jump bounces higher', () => {
     const state = create_controller_state([0.5, 0, 0.5])
     run_steps(state, {}, 5) // settle grounded
@@ -73,10 +79,22 @@ describe('locomotion (legacy feel constants)', () => {
     expect(bounce_peak).toBeGreaterThan(single_peak + 1)
   })
 
+  test('a flying mount glides while jump remains held during descent', () => {
+    const falling = create_controller_state([0.5, 10, 0.5])
+    const gliding = create_controller_state([0.5, 10, 0.5])
+    falling.velocity[1] = -5
+    gliding.velocity[1] = -5
+    run_steps(falling, {}, 5)
+    run_steps(gliding, { jump: true, glide: true }, 5)
+
+    expect(gliding.velocity[1]).toBeGreaterThan(falling.velocity[1])
+    expect(gliding.position[1]).toBeGreaterThan(falling.position[1])
+  })
+
   test('swim mode floats in liquid', () => {
     const water_env = { solid_at: ((_x: number, y: number) => y < -10) as SolidFn, liquid_at: () => true }
     const state = create_controller_state([0.5, 0, 0.5])
-    const full = { forward: 0, strafe: 0, jump: true, walk: false, speed_scale: 1, yaw: 0 }
+    const full = { forward: 0, strafe: 0, jump: true, glide: false, walk: false, speed_scale: 1, yaw: 0 }
     for (let i = 0; i < 30; i += 1) step_controller(state, full, water_env, 1 / 60)
     expect(state.anim).toBe('SWIM')
     expect(state.velocity[1]).toBeGreaterThan(0) // holding jump = buoyant rise

@@ -56,6 +56,7 @@ export const create_engine = ({
   let flat_amount = 0
   let fight_board: FightBoardRender | null = null
   let entities: readonly EntityRender[] = Object.freeze([])
+  let character_anchor: Vec3 | null = null
   const pending_fight_cues: Array<Readonly<{ cue: FightPresentationCue; resolve: (played: boolean) => void }>> = []
   const fight_blobs = new Map<string, FightBlobRender>()
   let fight_blob_serial = 0
@@ -109,6 +110,7 @@ export const create_engine = ({
     backend = next
     next.set_quality(quality)
     next.set_camera(camera.position, camera.target, camera.projection)
+    next.set_character_anchor(character_anchor)
     next.set_time_of_day(time_of_day)
     next.set_flatten_amount(flat_amount)
     next.set_fight_board(fight_board)
@@ -178,6 +180,10 @@ export const create_engine = ({
       camera = { position, target, projection }
       backend?.set_camera(position, target, projection)
     },
+    set_character_anchor: (position: Vec3 | null) => {
+      character_anchor = position
+      backend?.set_character_anchor(position)
+    },
     set_quality: (next: EngineQuality) => {
       quality = next
       backend?.set_quality(next)
@@ -206,6 +212,7 @@ export const create_engine = ({
         : new Promise<boolean>((resolve) => pending_fight_cues.push(Object.freeze({ cue, resolve }))),
     play_jump_puff: (position) => backend?.play_jump_puff(position),
     project_entity: (id) => backend?.project_entity(id) ?? null,
+    entity_height: (id) => backend?.entity_height(id) ?? null,
     create_fight_blob: (blob: FightBlobSpec) => {
       fight_blob_serial += 1
       const id = `fight_blob_${fight_blob_serial}`

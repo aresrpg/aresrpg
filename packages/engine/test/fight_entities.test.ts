@@ -2,10 +2,12 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
 import { describe, expect, test } from 'bun:test'
-import { AnimationClip, BoxGeometry, Group, Mesh, MeshBasicMaterial, NumberKeyframeTrack, Scene } from 'three'
+import { AnimationClip, BoxGeometry, Group, Mesh, MeshBasicMaterial, NumberKeyframeTrack, Scene, Vector3 } from 'three'
 
+import type { CharacterAnimationName } from '../src/types.ts'
 import {
   character_entity_scale,
+  cardinal_target_yaw,
   create_entity_layer,
   fight_flash_envelope,
   fight_gait_cell_ms,
@@ -26,47 +28,62 @@ const board = Object.freeze({
 })
 
 describe('fight entity rendering', () => {
-  test('keeps legacy world height and applies the fight-only player scale at the anchor', () => {
-    expect(character_entity_scale('world')).toBe(1)
-    expect(character_entity_scale('fight_cell')).toBe(0.7)
+  test('retains every legacy scale, gait, facing, and envelope pin', () => {
+    const origin = new Vector3(0, 0, 0)
+    const pins: readonly { why: string; actual: unknown; expected: unknown }[] = [
+      { why: 'world height is unscaled', actual: character_entity_scale('world'), expected: 1 },
+      { why: 'the fight-only player scale', actual: character_entity_scale('fight_cell'), expected: 0.7 },
+      {
+        why: 'the path-length gait boundary',
+        actual: [1, 2, 3, 4].map(fight_path_gait),
+        expected: ['walk', 'walk', 'run', 'run'],
+      },
+      { why: 'the walk pace', actual: fight_gait_cell_ms('walk'), expected: 480 },
+      { why: 'the run pace', actual: fight_gait_cell_ms('run'), expected: 170 },
+      { why: 'facing quantizes east', actual: cardinal_target_yaw(origin, new Vector3(1, 0, 4)), expected: 0 },
+      { why: 'facing quantizes south', actual: cardinal_target_yaw(origin, new Vector3(1, 0, -4)), expected: Math.PI },
+      { why: 'the reaction envelope opens at rest', actual: fight_reaction_envelope(0), expected: 0 },
+      { why: 'the reaction envelope peaks', actual: fight_reaction_envelope(0.32), expected: 1 },
+      { why: 'the reaction envelope closes', actual: fight_reaction_envelope(1), expected: 0 },
+      { why: 'the flash envelope peaks', actual: fight_flash_envelope(0.15), expected: 1 },
+      { why: 'the flash envelope closes', actual: fight_flash_envelope(0.4), expected: 0 },
+    ]
+
+    pins.forEach(({ why, actual, expected }) => {
+      expect(actual, why).toEqual(expected)
+    })
+
+    // The two diagonal quadrants land on a half-turn, so they are compared loosely.
+    expect(cardinal_target_yaw(origin, new Vector3(4, 0, 1))).toBeCloseTo(Math.PI / 2)
+    expect(cardinal_target_yaw(origin, new Vector3(-4, 0, 1))).toBeCloseTo(-Math.PI / 2)
   })
 
-  test('prefers the requested locomotion clip over an earlier compound jump clip', () => {
+  test('resolves a locomotion clip through the complete legacy fallback order', () => {
     const clips = Object.freeze([
       new AnimationClip('JUMP_RUN', 1),
       new AnimationClip('RUN', 1),
       new AnimationClip('Armature|WALK', 1),
     ])
-
-    expect(resolve_entity_locomotion_clip(clips, 'RUN')?.name).toBe('RUN')
-    expect(resolve_entity_locomotion_clip(clips, 'WALK')?.name).toBe('Armature|WALK')
-  })
-
-  test('uses the complete legacy character animation fallback order', () => {
-    const clips = Object.freeze([
+    const namespaced = Object.freeze([
       new AnimationClip('Armature|JUMP_RUN', 1),
       new AnimationClip('Armature|JUMP', 1),
       new AnimationClip('Armature|FALL', 1),
       new AnimationClip('Armature|WALK', 1),
+      new AnimationClip('IDLE', 1),
     ])
+    const cases: readonly { clips: readonly AnimationClip[]; requested: CharacterAnimationName; resolved: string }[] = [
+      // The requested clip wins over an earlier compound jump clip.
+      { clips, requested: 'RUN', resolved: 'RUN' },
+      { clips, requested: 'WALK', resolved: 'Armature|WALK' },
+      { clips: namespaced, requested: 'JUMP_RUN', resolved: 'Armature|JUMP_RUN' },
+      { clips: namespaced, requested: 'FALL', resolved: 'Armature|FALL' },
+      { clips: namespaced, requested: 'SWIM', resolved: 'Armature|WALK' },
+      { clips: namespaced, requested: 'SIT', resolved: 'IDLE' },
+    ]
 
-    expect(resolve_entity_locomotion_clip(clips, 'JUMP_RUN')?.name).toBe('Armature|JUMP_RUN')
-    expect(resolve_entity_locomotion_clip(clips, 'FALL')?.name).toBe('Armature|FALL')
-    expect(resolve_entity_locomotion_clip(clips, 'SWIM')?.name).toBe('Armature|WALK')
-  })
-
-  test('uses the legacy path-length gait boundary and pace', () => {
-    expect([1, 2, 3, 4].map(fight_path_gait)).toEqual(['walk', 'walk', 'run', 'run'])
-    expect(fight_gait_cell_ms('walk')).toBe(480)
-    expect(fight_gait_cell_ms('run')).toBe(170)
-  })
-
-  test('retains the exact legacy hit reaction and flash timing envelopes', () => {
-    expect(fight_reaction_envelope(0)).toBe(0)
-    expect(fight_reaction_envelope(0.32)).toBe(1)
-    expect(fight_reaction_envelope(1)).toBe(0)
-    expect(fight_flash_envelope(0.15)).toBe(1)
-    expect(fight_flash_envelope(0.4)).toBe(0)
+    cases.forEach(({ clips: available, requested, resolved }) => {
+      expect(resolve_entity_locomotion_clip(available, requested)?.name, requested).toBe(resolved)
+    })
   })
 
   test('attaches and clears invisibility without remounting the model', async () => {
@@ -127,16 +144,21 @@ describe('fight entity rendering', () => {
     await Promise.resolve()
     const object = scene.getObjectByName(`entity:${fighter.id}`)!
     const rest = object.position.clone()
+    // The beat animates only the inner wobble node; the root's position never leaves the
+    // anchor — that single ownership is what keeps a mid-beat snap (swap) from rolling back.
+    const wobble = object.children[0]!
 
     const hit = layer.beat(fighter.id, 'hit', undefined, true)
     layer.tick(performance.now() + 96)
-    expect(object.position.distanceTo(rest)).toBeGreaterThan(0.1)
-    expect(object.scale.y).toBeLessThan(1)
+    expect(object.position.toArray()).toEqual(rest.toArray())
+    expect(Math.hypot(wobble.position.x, wobble.position.z)).toBeGreaterThan(0.1)
+    expect(wobble.scale.y).toBeLessThan(1)
     layer.tick(Number.MAX_SAFE_INTEGER)
 
     expect(await hit).toBeTrue()
     expect(object.position.toArray()).toEqual(rest.toArray())
-    expect(object.scale.toArray()).toEqual([1, 1, 1])
+    expect([wobble.position.x, wobble.position.z]).toEqual([0, 0])
+    expect(wobble.scale.toArray()).toEqual([1, 1, 1])
     layer.dispose()
   })
 
@@ -260,6 +282,7 @@ describe('fight entity rendering', () => {
     await Promise.resolve()
 
     expect(layer.world_anchor('mob_10')?.toArray()).toEqual([-1, 6.3, 0])
+    expect(layer.entity_height('mob_10')).toBe(2)
     layer.dispose()
   })
 
@@ -290,6 +313,42 @@ describe('fight entity rendering', () => {
 
     expect(await moved).toBeTrue()
     expect(object.position.x).toBe(1)
+    layer.set([Object.freeze({ ...start, anchor: Object.freeze({ kind: 'fight_cell' as const, cell: 11 }) })])
+    expect(object.rotation.y).toBeCloseTo(Math.PI / 2)
+    layer.dispose()
+  })
+
+  test('a slide displacement travels without ever turning the entity', async () => {
+    const scene = new Scene()
+    const root = new Group()
+    const layer = create_entity_layer({
+      scene,
+      load_model: () => Promise.resolve({ root, clips: Object.freeze([]), min_y: 0, dispose: () => {} }),
+    })
+    const start = Object.freeze({
+      id: 'mob_10',
+      kind: 'mob' as const,
+      model_url: '/bunny.glb',
+      anchor: Object.freeze({ kind: 'fight_cell' as const, cell: 10 }),
+      facing: Object.freeze({ kind: 'yaw' as const, yaw: Math.PI }),
+    })
+    layer.set_board(board)
+    layer.set([start])
+    await Promise.resolve()
+    await Promise.resolve()
+    const object = scene.getObjectByName(`entity:${start.id}`)!
+    const facing_before = object.rotation.y
+
+    const pushed = layer.animate(Object.freeze({ id: start.id, cells: Object.freeze([11]), gait: 'slide' as const }))
+    layer.tick(performance.now() + 55)
+    // mid-slide: moving, not reorienting toward the travel direction
+    expect(object.rotation.y).toBe(facing_before)
+    layer.tick(Number.MAX_SAFE_INTEGER)
+
+    expect(await pushed).toBeTrue()
+    expect(object.position.x).toBe(1)
+    expect(object.rotation.y).toBe(facing_before)
+    expect(fight_gait_cell_ms('slide')).toBeLessThan(fight_gait_cell_ms('run'))
     layer.dispose()
   })
 
@@ -494,6 +553,12 @@ describe('fight entity rendering', () => {
     expect(root.parent?.position.toArray()).toEqual([0, 0.2, 0])
     expect(object.rotation.y).toBe(Math.PI / 3)
     expect(root.parent?.parent).toBe(object)
+    layer.set([Object.freeze({ ...spec, visible: false })])
+    expect(object.visible).toBeFalse()
+    expect(loaded).toHaveLength(1)
+    layer.set([Object.freeze({ ...spec, visible: true })])
+    expect(object.visible).toBeTrue()
+    expect(loaded).toHaveLength(1)
     layer.dispose()
   })
 

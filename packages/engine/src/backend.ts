@@ -20,6 +20,9 @@ export type EngineBackend = Readonly<{
   kind: 'webgpu' | 'grid'
   render: (now: number) => void
   set_camera: (position: Vec3, target: Vec3, projection?: CameraProjection) => void
+  /** The followed character's FEET — character-anchored presentation (the night lantern) rides
+   * this, never the camera target (which leads the character). Null when nobody is followed. */
+  set_character_anchor: (position: Vec3 | null) => void
   set_quality: (quality: EngineQuality) => void
   set_time_of_day: (time: number) => void
   set_flatten_amount: (amount: number) => void
@@ -29,6 +32,7 @@ export type EngineBackend = Readonly<{
   play_fight_cue: (cue: FightPresentationCue) => Promise<boolean>
   play_jump_puff: (position: Vec3) => void
   project_entity: (id: string) => EntityScreenAnchor | null
+  entity_height: (id: string) => number | null
   upsert_fight_blob: (blob: FightBlobRender) => void
   remove_fight_blob: (id: string) => void
   pick_fight_cell: (client_x: number, client_y: number) => number | null

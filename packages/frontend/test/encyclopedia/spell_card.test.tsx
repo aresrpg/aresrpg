@@ -44,8 +44,14 @@ const spell = Object.freeze({
   ]),
 }) satisfies SeedSpell
 
-test('the shared spell card keeps its read layout while exposing field-level admin edits', async () => {
+const [base_level] = spell.levels
+const [base_effect] = base_level.effects
+
+test('the shared spell card keeps its read layout at every size and opens on the invested level', async () => {
   const { SpellCard } = await import('../../src/encyclopedia/SpellCard.tsx')
+
+  // The full card: read layout intact, field-level admin edits exposed, and no
+  // raw form control leaking into the read surface.
   const html = renderToStaticMarkup(
     <SpellCard edit={{ change: () => undefined, save: () => undefined }} spell={spell} />
   )
@@ -66,48 +72,36 @@ test('the shared spell card keeps its read layout while exposing field-level adm
   expect(html).not.toContain('<select')
   expect(html).not.toContain('data-spell-edit=')
   expect(html).not.toContain('aria-label="Edit spell effect"')
-})
 
-test('the shared spell card opens on the fighter invested level when requested', async () => {
-  const { SpellCard } = await import('../../src/encyclopedia/SpellCard.tsx')
-  const [first_level] = spell.levels
-  if (!first_level) throw new Error('spell fixture has no level')
-  const leveled_spell = Object.freeze({
+  // It opens on the fighter's invested level when asked.
+  const leveled = Object.freeze({
     ...spell,
-    levels: Object.freeze([first_level, Object.freeze({ ...first_level, ap_cost: 3 })]),
+    levels: Object.freeze([base_level, Object.freeze({ ...base_level, ap_cost: 3 })]),
   }) satisfies SeedSpell
+  expect(renderToStaticMarkup(<SpellCard initial_level={2} spell={leveled} />)).toContain('data-spell-ap-cost="3"')
 
-  const html = renderToStaticMarkup(<SpellCard initial_level={2} spell={leveled_spell} />)
-
-  expect(html).toContain('data-spell-ap-cost="3"')
-})
-
-test('small spell cards show only the invested level name, critical, and effects', async () => {
-  const { SpellCard } = await import('../../src/encyclopedia/SpellCard.tsx')
-  const [first_level] = spell.levels
-  if (!first_level) throw new Error('spell fixture has no level')
-  const leveled_spell = Object.freeze({
+  // The small card shows only the invested level's name, critical, and effects.
+  const small_spell = Object.freeze({
     ...spell,
-    levels: Object.freeze([first_level, Object.freeze({ ...first_level, ap_cost: 3, crit_1_in: 3 })]),
+    levels: Object.freeze([base_level, Object.freeze({ ...base_level, ap_cost: 3, crit_1_in: 3 })]),
   }) satisfies SeedSpell
+  const small_html = renderToStaticMarkup(<SpellCard initial_level={2} small spell={small_spell} />)
 
-  const html = renderToStaticMarkup(<SpellCard initial_level={2} small spell={leveled_spell} />)
-
-  expect(html).toContain('data-spell-small=""')
-  expect(html).toContain('Ruinstroke')
-  expect(html).toContain('Critical')
-  expect(html).toContain('1 / 3')
-  expect(html).toContain('data-spell-effects=""')
-  expect(html).toContain('data-spell-effects-compact=""')
+  expect(small_html).toContain('data-spell-small=""')
+  expect(small_html).toContain('Ruinstroke')
+  expect(small_html).toContain('Critical')
+  expect(small_html).toContain('1 / 3')
+  expect(small_html).toContain('data-spell-effects=""')
+  expect(small_html).toContain('data-spell-effects-compact=""')
   // the compact wrapper KILLS the row separators via its override — assert the mechanism, not
   // the absence of the underlying utility (which legitimately remains on the shared row)
-  expect(html).toContain('data-spell-effects-compact')
-  expect(html).toContain('!border-b-0')
-  expect(html).not.toContain('/spell.webp')
-  expect(html).not.toContain('data-spell-level-tabs=""')
-  expect(html).not.toContain('data-spell-ap-cost=')
-  expect(html).not.toContain('Casts / turn')
-  expect(html).not.toContain('Cooldown')
+  expect(small_html).toContain('data-spell-effects-compact')
+  expect(small_html).toContain('!border-b-0')
+  expect(small_html).not.toContain('/spell.webp')
+  expect(small_html).not.toContain('data-spell-level-tabs=""')
+  expect(small_html).not.toContain('data-spell-ap-cost=')
+  expect(small_html).not.toContain('Casts / turn')
+  expect(small_html).not.toContain('Cooldown')
 })
 
 test('the class spell list owns unlock order and keeps unlock levels outside the card header', async () => {
@@ -123,82 +117,86 @@ test('the class spell list owns unlock order and keeps unlock levels outside the
   expect(card_header).not.toContain('Lv.')
 })
 
-test('damage formula prose explains punishment scaling and caster self-damage', async () => {
+test('every effect kind reads as player prose, never as a raw stat row', async () => {
   const { SpellCard } = await import('../../src/encyclopedia/SpellCard.tsx')
-  const [level] = spell.levels
-  const [effect] = level.effects
-  const punishment = {
-    ...spell,
-    levels: [{ ...level, effects: [{ ...effect, kind: 3, value: 41, value_max: 59 }] }],
-  } satisfies SeedSpell
-  const caster_damage = {
-    ...spell,
-    levels: [{ ...level, effects: [{ ...effect, kind: 2, value: 11, value_max: 15, target_filter: 4 }] }],
-  } satisfies SeedSpell
-  const punishment_html = renderToStaticMarkup(<SpellCard spell={punishment} />)
-  const caster_html = renderToStaticMarkup(<SpellCard spell={caster_damage} />)
 
-  expect(punishment_html).toContain('41 to 59')
-  expect(punishment_html).toContain('damage, increased by missing HP')
-  expect(punishment_html).not.toContain('41 to 59%')
-  expect(caster_html).toContain('Inflicts')
-  expect(caster_html).toContain('damage on yourself')
-  expect(caster_html).not.toContain('(caster only)')
-})
+  const cases: readonly {
+    why: string
+    effects: readonly Record<string, unknown>[]
+    crit_effects?: readonly Record<string, unknown>[]
+    small?: boolean
+    edit?: boolean
+    reads: readonly string[]
+    never: readonly string[]
+  }[] = [
+    {
+      why: 'punishment scaling names the missing-HP term, not a percentage',
+      effects: [{ ...base_effect, kind: 3, value: 41, value_max: 59 }],
+      reads: ['41 to 59', 'damage, increased by missing HP'],
+      never: ['41 to 59%'],
+    },
+    {
+      why: 'caster self-damage addresses the caster instead of labelling a filter',
+      effects: [{ ...base_effect, kind: 2, value: 11, value_max: 15, target_filter: 4 }],
+      reads: ['Inflicts', 'damage on yourself'],
+      never: ['(caster only)'],
+    },
+    {
+      why: 'timed HP removal reads as damage, and a critical row inherits the normal targeting',
+      effects: [{ ...base_effect, kind: 5, stat: 12, value: 2, value_max: 3, turns: 2, target_filter: 0 }],
+      crit_effects: [{ ...base_effect, kind: 5, stat: 12, value: 5, value_max: 5, turns: 2, target_filter: 1 }],
+      edit: true,
+      reads: ['Deals', '2 to 3', 'damage', 'for 2 turns'],
+      never: ['Removes', 'enemies only', 'Critical target'],
+    },
+    {
+      why: 'an HP grant reads as healing, not a generic stat addition',
+      effects: [{ ...base_effect, kind: 4, stat: 12, value: 8, value_max: 8, target_filter: 4 }],
+      reads: ['Heals', '8', 'HP'],
+      never: ['Adds'],
+    },
+    {
+      why: 'damage reduction reads as a shield and never leaks its ignored stat field',
+      effects: [{ ...base_effect, kind: 14, stat: 0, value: 12, value_max: 12, turns: 1, target_filter: 3 }],
+      reads: ['Reduces damage by', '12'],
+      never: ['Strength'],
+    },
+    {
+      why: 'reflect names the fixed non-elemental damage Move applies',
+      effects: [{ ...base_effect, kind: 15, element: '', value: 2, value_max: 2, turns: 2 }],
+      small: true,
+      reads: ['Reflects', '2', 'damage'],
+      never: ['Reflect 2'],
+    },
+    {
+      why: 'a target restriction stays visibly separated and dimmer than the effect prose',
+      effects: [{ ...base_effect, target_filter: 3, turns: 2 }],
+      small: true,
+      reads: ['text-[8px] text-[#858994]', '(allies only)', 'for 2 turns'],
+      never: ['(allies only)for'],
+    },
+    {
+      why: 'a single-cell effect exposes no meaningless zero-sized area',
+      effects: [{ ...base_effect, area_shape: 1, area_size: 0 }],
+      reads: [],
+      never: ['title="Circle"'],
+    },
+  ]
 
-test('timed HP removal reads as damage and critical targeting inherits the normal row', async () => {
-  const { SpellCard } = await import('../../src/encyclopedia/SpellCard.tsx')
-  const [level] = spell.levels
-  const [effect] = level.effects
-  const timed_damage = {
-    ...spell,
-    levels: [
-      {
-        ...level,
-        effects: [{ ...effect, kind: 5, stat: 12, value: 2, value_max: 3, turns: 2, target_filter: 0 }],
-        crit_effects: [{ ...effect, kind: 5, stat: 12, value: 5, value_max: 5, turns: 2, target_filter: 1 }],
-      },
-    ],
-  } satisfies SeedSpell
-  const html = renderToStaticMarkup(
-    <SpellCard edit={{ change: () => undefined, save: () => undefined }} spell={timed_damage} />
-  )
+  cases.forEach(({ why, effects, crit_effects, small, edit, reads, never }) => {
+    const fixture = {
+      ...spell,
+      levels: [{ ...base_level, effects, ...(crit_effects ? { crit_effects } : {}) }],
+    } as unknown as SeedSpell
+    const html = renderToStaticMarkup(
+      <SpellCard
+        edit={edit ? { change: () => undefined, save: () => undefined } : undefined}
+        small={small}
+        spell={fixture}
+      />
+    )
 
-  expect(html).toContain('Deals')
-  expect(html).toContain('2 to 3')
-  expect(html).toContain('damage')
-  expect(html).toContain('for 2 turns')
-  expect(html).not.toContain('Removes')
-  expect(html).not.toContain('enemies only')
-  expect(html).not.toContain('Critical target')
-})
-
-test('target restrictions remain visibly separated and dimmer than effect prose', async () => {
-  const { SpellCard } = await import('../../src/encyclopedia/SpellCard.tsx')
-  const [level] = spell.levels
-  const [effect] = level.effects
-  const restricted = {
-    ...spell,
-    levels: [{ ...level, effects: [{ ...effect, target_filter: 3, turns: 2 }] }],
-  } satisfies SeedSpell
-  const html = renderToStaticMarkup(<SpellCard small spell={restricted} />)
-
-  expect(html).toContain('text-[8px] text-[#858994]')
-  expect(html).toContain('(allies only)')
-  expect(html).toContain('for 2 turns')
-  expect(html).not.toContain('(allies only)for')
-})
-
-test('single-cell effects do not expose a meaningless zero-sized area', async () => {
-  const { SpellCard } = await import('../../src/encyclopedia/SpellCard.tsx')
-  const [level] = spell.levels
-  const [effect] = level.effects
-  const point_circle = {
-    ...spell,
-    levels: [{ ...level, effects: [{ ...effect, area_shape: 1, area_size: 0 }] }],
-  } satisfies SeedSpell
-
-  const html = renderToStaticMarkup(<SpellCard spell={point_circle} />)
-
-  expect(html).not.toContain('title="Circle"')
+    reads.forEach((prose) => expect(html, `${why} — reads "${prose}"`).toContain(prose))
+    never.forEach((prose) => expect(html, `${why} — never "${prose}"`).not.toContain(prose))
+  })
 })

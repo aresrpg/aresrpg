@@ -3,6 +3,8 @@
 
 import { expect, mock, test } from 'bun:test'
 import type { SpellEffect, SpellLevel } from '@aresrpg/fight'
+import { createElement } from 'react'
+import { renderToStaticMarkup } from 'react-dom/server'
 
 import type { FightSpellView } from '../../../src/game/fight/fight_projection.ts'
 
@@ -52,4 +54,81 @@ test('fight spell details display the fight-projected critical denominator', asy
   })
 
   expect(fight_spell_detail(spell).levels[0]?.crit_1_in).toBe(2)
+})
+
+test('an unaffordable spell does not display the turn-critical border', async () => {
+  const { FightSpell } = await import('../../../src/game/fight/FightSpell.tsx')
+  const details: SpellLevel = {
+    ap_cost: 3n,
+    range_min: 1n,
+    range_max: 4n,
+    modifiable_range: false,
+    line_of_sight: true,
+    line_launch: false,
+    free_cell: false,
+    casts_per_turn: 0n,
+    casts_per_target: 0n,
+    cooldown_turns: 0n,
+    crit_1_in: 3n,
+    effects: [effect],
+    crit_effects: [],
+  }
+  const spell: FightSpellView = Object.freeze({
+    name: 'Cinder Shaft',
+    level: 1n,
+    details,
+    source: Object.freeze({ classe: 'yogan', unlock_level: 1n, levels: [details] }),
+    cooldown: 0n,
+    turn: Object.freeze({
+      critical: true,
+      crit_1_in: 2n,
+      effects: Object.freeze([{ ...effect, critical_only: false }]),
+    }),
+  })
+
+  const html = renderToStaticMarkup(
+    createElement(FightSpell, { spell, disabled: true, selected: false, select: () => {} })
+  )
+
+  expect(html).toContain('disabled')
+  expect(html).not.toContain(' critical')
+  expect(html).not.toContain('data-turn-critical')
+})
+
+test('an affordable turn-critical spell marks its socket shell for shared hover-detail styling', async () => {
+  const { FightSpell } = await import('../../../src/game/fight/FightSpell.tsx')
+  const details: SpellLevel = {
+    ap_cost: 3n,
+    range_min: 1n,
+    range_max: 4n,
+    modifiable_range: false,
+    line_of_sight: true,
+    line_launch: false,
+    free_cell: false,
+    casts_per_turn: 0n,
+    casts_per_target: 0n,
+    cooldown_turns: 0n,
+    crit_1_in: 3n,
+    effects: [effect],
+    crit_effects: [effect],
+  }
+  const spell: FightSpellView = Object.freeze({
+    name: 'Cinder Shaft',
+    level: 1n,
+    details,
+    source: Object.freeze({ classe: 'yogan', unlock_level: 1n, levels: [details] }),
+    cooldown: 0n,
+    turn: Object.freeze({
+      critical: true,
+      crit_1_in: 2n,
+      effects: Object.freeze([{ ...effect, critical_only: false }]),
+    }),
+  })
+
+  const html = renderToStaticMarkup(
+    createElement(FightSpell, { spell, disabled: false, selected: false, select: () => {} })
+  )
+
+  expect(html).toContain('fight-hud__spell-shell critical')
+  expect(html).toContain('data-turn-critical="true"')
 })

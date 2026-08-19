@@ -5,15 +5,25 @@ import { uniform } from 'three/tsl'
 import type { UniformNode } from 'three/webgpu'
 
 const TRANSITION_SECONDS = 0.85
+const WATER_EXIT_END = 0.2
 
 export type FlatProjection = Readonly<{ amount: number; target: 0 | 1 }>
 export type FlattenUniform = Readonly<{
   amount: UniformNode<'float', number>
+  water_visibility: UniformNode<'float', number>
   set: (amount: number) => boolean
   flattened: () => boolean
 }>
 
 const clamp_amount = (amount: number): number => Math.min(1, Math.max(0, amount))
+
+export const flat_terrain_amount = (progress: number): number =>
+  clamp_amount((clamp_amount(progress) - WATER_EXIT_END) / (1 - WATER_EXIT_END))
+
+export const flat_water_visibility = (progress: number): number => {
+  const amount = clamp_amount(clamp_amount(progress) / WATER_EXIT_END)
+  return 1 - amount * amount * (3 - 2 * amount)
+}
 
 export const create_flat_projection = (flattened = false): FlatProjection =>
   Object.freeze({ amount: flattened ? 1 : 0, target: flattened ? 1 : 0 })
@@ -29,16 +39,21 @@ export const step_flat_projection = (state: FlatProjection, delta_seconds: numbe
 }
 
 export const project_height = (source_y: number, flat_amount: number): number =>
-  source_y + (0 - source_y) * clamp_amount(flat_amount)
+  source_y + (0 - source_y) * flat_terrain_amount(flat_amount)
 
 export const create_flatten_uniform = (): FlattenUniform => {
   const amount = uniform(0, 'float')
+  const water_visibility = uniform(1, 'float')
+  let progress = 0
   return Object.freeze({
     amount,
+    water_visibility,
     set: (next: number) => {
       const value = clamp_amount(next)
-      if (amount.value === value) return false
-      amount.value = value
+      if (progress === value) return false
+      progress = value
+      amount.value = flat_terrain_amount(value)
+      water_visibility.value = flat_water_visibility(value)
       return true
     },
     flattened: () => amount.value >= 1,

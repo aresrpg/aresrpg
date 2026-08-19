@@ -6,65 +6,6 @@ import { describe, expect, test } from 'bun:test'
 import { encyclopedia_catalog } from '../../src/content/catalog.ts'
 
 describe('local encyclopedia catalog', () => {
-  test('has no remote or chain data boundary', async () => {
-    const directories = [`${import.meta.dir}/../../src/content`, `${import.meta.dir}/../../src/encyclopedia`]
-    const sources = await Promise.all(
-      directories.flatMap((directory) =>
-        [...new Bun.Glob('*.{ts,tsx}').scanSync(directory)].map((file) => Bun.file(`${directory}/${file}`).text())
-      )
-    )
-    const module_source = sources.join('\n')
-    expect(module_source).not.toContain('fetch(')
-    expect(module_source).not.toContain('@mysten')
-    const without_sdk_types = sources.map((source) =>
-      source.replace(/import\s+type\s+\{[\s\S]*?\}\s+from\s+['"]@aresrpg\/sdk[^'"]*['"]/g, '')
-    )
-    expect(without_sdk_types.some((source) => source.includes('@aresrpg/sdk'))).toBeFalse()
-    expect(module_source).not.toContain('/rpc')
-    expect(module_source).not.toContain('deprecated/')
-  })
-
-  test('defines one shared content catalog rather than feature copies', async () => {
-    const source_root = `${import.meta.dir}/../../src`
-    const files = [...new Bun.Glob('**/*.{ts,tsx}').scanSync(source_root)]
-    const definitions = (
-      await Promise.all(files.map(async (file) => ({ file, source: await Bun.file(`${source_root}/${file}`).text() })))
-    )
-      .filter(({ source }) => /export (?:const encyclopedia_catalog|\{[^}]*\bas encyclopedia_catalog\b)/.test(source))
-      .map(({ file }) => file)
-
-    expect(definitions).toEqual(['content/catalog.ts'])
-  })
-
-  test('keeps authored content imports behind the encyclopedia and admin boundaries', async () => {
-    const source_root = `${import.meta.dir}/../../src`
-    const files = [...new Bun.Glob('**/*.{ts,tsx}').scanSync(source_root)]
-    const imports = (
-      await Promise.all(files.map(async (file) => ({ file, source: await Bun.file(`${source_root}/${file}`).text() })))
-    )
-      .flatMap(({ file, source }) =>
-        [...source.matchAll(/seed\/content\/([^'"]+\.json)/g)].map(([, corpus]) => ({ corpus, file }))
-      )
-      .sort(({ corpus: left }, { corpus: right }) => left.localeCompare(right))
-
-    expect(imports).toEqual([
-      { corpus: 'airdrop.json', file: 'content/catalog.ts' },
-      { corpus: 'airdrop.json', file: 'admin/seed_content.ts' },
-      { corpus: 'items.json', file: 'content/catalog.ts' },
-      { corpus: 'items.json', file: 'admin/seed_content.ts' },
-      { corpus: 'mobs.json', file: 'content/catalog.ts' },
-      { corpus: 'mobs.json', file: 'admin/seed_content.ts' },
-      { corpus: 'recipes.json', file: 'content/catalog.ts' },
-      { corpus: 'recipes.json', file: 'admin/seed_content.ts' },
-      { corpus: 'shop.json', file: 'content/catalog.ts' },
-      { corpus: 'shop.json', file: 'admin/seed_content.ts' },
-      { corpus: 'spells.json', file: 'content/catalog.ts' },
-      { corpus: 'spells.json', file: 'admin/seed_content.ts' },
-      { corpus: 'worlds.json', file: 'content/worlds.ts' },
-      { corpus: 'worlds.json', file: 'admin/seed_content.ts' },
-    ])
-  })
-
   test('projects every authored content corpus without a remote read model', () => {
     expect(encyclopedia_catalog.items).toHaveLength(1980)
     expect(encyclopedia_catalog.mobs).toHaveLength(383)

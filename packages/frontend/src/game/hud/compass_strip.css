@@ -1,0 +1,286 @@
+/* SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available */
+/* © 2026 Sceat — All rights reserved. See LICENSE. */
+/* COMPASS STRIP — the top-strip compass in the GOLD GOTHIC terminal, carried over from the
+ * pre-rewrite app byte-for-byte in look: cardinal ruler + center forward caret, spawn pips
+ * hanging below with distance labels + near/mid/far fade, zone-state line — and the day-night
+ * progress line hugging the bottom edge. The coordinate chips AND the fps readout of the old
+ * info row are DELIBERATELY GONE (owner 2026-08-19): coordinates live on the minimap, fps on
+ * the top-left stats. */
+
+.gw-compass-wrap {
+  position: absolute;
+  top: 14px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 6;
+  /* reserves the top-right minimap (~300px) on both sides so the strip never overlaps it */
+  width: min(720px, calc(100vw - 660px));
+  min-width: 340px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  pointer-events: none;
+}
+
+.gw-compass {
+  position: relative;
+  width: 100%;
+  overflow: hidden;
+  pointer-events: none;
+  font-family: var(--font-mono, inherit);
+  -webkit-mask: linear-gradient(90deg, transparent, #000 9%, #000 91%, transparent);
+  mask: linear-gradient(90deg, transparent, #000 9%, #000 91%, transparent);
+}
+
+/* SEARCHABLE GLOW: gold inset pulse while the zone under the avatar is actionable. Inset, not an
+ * outer halo — the edge-fade mask above would clip an outset shadow. */
+.gw-compass--searchable {
+  animation: gw-compass-searchable-pulse 4.2s ease-in-out infinite;
+}
+@keyframes gw-compass-searchable-pulse {
+  0%,
+  100% {
+    box-shadow:
+      inset 0 0 0 1px rgba(200, 150, 60, 0.25),
+      inset 0 0 22px -6px rgba(200, 150, 60, 0.45);
+  }
+  50% {
+    box-shadow:
+      inset 0 0 0 1px rgba(200, 150, 60, 0.55),
+      inset 0 0 34px -4px rgba(200, 150, 60, 0.65);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .gw-compass--searchable {
+    animation: none;
+    box-shadow:
+      inset 0 0 0 1px rgba(200, 150, 60, 0.4),
+      inset 0 0 26px -5px rgba(200, 150, 60, 0.5);
+  }
+}
+
+/* ── the bearing band: ruler, cardinals, forward caret, pips ─────────────────────────────── */
+.gw-compass__band {
+  position: relative;
+  height: 58px;
+}
+.gw-compass__ruler {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 27px;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(200, 150, 60, 0.5), transparent);
+}
+/* a cardinal = label over its own tick, sliding along the ruler with the camera (170ms ≈ the
+   ~20Hz pose cadence, so discrete updates read as continuous motion) */
+.gw-compass__card {
+  position: absolute;
+  top: 7px;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  font-size: 9px;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  color: var(--color-muted);
+  transition: left 0.17s linear;
+}
+.gw-compass__card::after {
+  content: '';
+  width: 1px;
+  height: 7px;
+  background: rgba(200, 150, 60, 0.35);
+}
+.gw-compass__card--major {
+  top: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-gold-light);
+}
+.gw-compass__card--major::after {
+  height: 10px;
+  background: rgba(200, 150, 60, 0.6);
+}
+
+/* center forward indicator — gold caret + fading stem */
+.gw-compass__fwd {
+  position: absolute;
+  left: 50%;
+  top: 2px;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  z-index: 1;
+}
+.gw-compass__caret {
+  width: 0;
+  height: 0;
+  border-left: 5px solid transparent;
+  border-right: 5px solid transparent;
+  border-top: 7px solid var(--color-gold);
+  filter: drop-shadow(0 0 6px rgba(200, 150, 60, 0.6));
+}
+.gw-compass__stem {
+  width: 1px;
+  height: 47px;
+  background: linear-gradient(180deg, var(--color-gold), transparent);
+}
+
+/* spawn pips hanging below the ruler — mob red / resource cyan, distance label, tier fade */
+.gw-compass__pip {
+  position: absolute;
+  top: 31px;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  transition:
+    left 0.17s linear,
+    opacity 0.3s;
+}
+.gw-compass__pip-dot-row {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+.gw-compass__pip-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+}
+.gw-compass__pip--mob .gw-compass__pip-dot {
+  background: #f87171;
+  box-shadow: 0 0 8px rgba(248, 113, 113, 0.8);
+}
+.gw-compass__pip--resource .gw-compass__pip-dot {
+  background: var(--color-cyan);
+  box-shadow: 0 0 8px rgba(74, 158, 255, 0.8);
+}
+.gw-compass__pip-count {
+  font-size: 7px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  color: var(--color-gold-light);
+  font-variant-numeric: tabular-nums;
+}
+.gw-compass__pip-dist {
+  font-size: 8px;
+  color: var(--color-muted);
+  font-variant-numeric: tabular-nums;
+}
+.gw-compass__pip--mid {
+  opacity: 0.72;
+}
+.gw-compass__pip--mid .gw-compass__pip-dot {
+  width: 7px;
+  height: 7px;
+}
+.gw-compass__pip--far {
+  opacity: 0.45;
+}
+.gw-compass__pip--far .gw-compass__pip-dot {
+  width: 5px;
+  height: 5px;
+}
+
+/* zone-boundary marker — a thin tick, visually distinct from the pips. Undiscovered neighbor =
+   gold (new territory), discovered = muted grey. */
+.gw-compass__edge {
+  position: absolute;
+  top: 16px;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  transition: left 0.17s linear;
+}
+.gw-compass__edge-tick {
+  width: 1px;
+  height: 16px;
+}
+.gw-compass__edge-label {
+  font-size: 8px;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.gw-compass__edge--undiscovered .gw-compass__edge-tick {
+  background: rgba(200, 150, 60, 0.6);
+}
+.gw-compass__edge--undiscovered .gw-compass__edge-label {
+  color: var(--color-gold-light);
+}
+.gw-compass__edge--discovered .gw-compass__edge-tick {
+  background: rgba(107, 114, 128, 0.45);
+}
+.gw-compass__edge--discovered .gw-compass__edge-label {
+  color: var(--color-muted);
+}
+
+/* ── info row: zone state centered (coord chips and fps both left the strip) ────────────── */
+.gw-compass__info {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 3px 16px 6px;
+  border-top: 1px solid rgba(200, 150, 60, 0.15);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.15em;
+}
+.gw-compass__zone {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: center;
+  text-transform: uppercase;
+  color: var(--color-gold-light);
+  font-variant-numeric: tabular-nums;
+}
+/* ── day-night progress line: thin two-tone track on the strip's bottom edge — gold across the
+   DAY fraction, cyan across the NIGHT fraction; a phase-coloured marker rides it. ───────── */
+.gw-compass__tod {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 3px;
+  height: 2px;
+  background: linear-gradient(
+    90deg,
+    rgba(200, 150, 60, 0.28) 0,
+    rgba(200, 150, 60, 0.28) var(--gw-tod-split, 75%),
+    rgba(74, 158, 255, 0.28) var(--gw-tod-split, 75%),
+    rgba(74, 158, 255, 0.28) 100%
+  );
+}
+.gw-compass__tod-mark {
+  position: absolute;
+  top: 50%;
+  width: 2px;
+  height: 8px;
+  transform: translate(-50%, -50%);
+  background: var(--color-gold-light);
+  box-shadow: 0 0 7px 1px rgba(200, 150, 60, 0.85);
+  transition: left 0.9s linear;
+}
+.gw-compass__tod--night .gw-compass__tod-mark {
+  background: #cfe0ff;
+  box-shadow: 0 0 7px 1px rgba(74, 158, 255, 0.7);
+}
+@media (prefers-reduced-motion: reduce) {
+  .gw-compass__tod-mark {
+    transition: none;
+  }
+}

@@ -40,10 +40,13 @@ describe('binary greedy voxel meshing', () => {
     expect(greedy_mesh(chunk(() => true)).quad_count).toBe(0)
   })
 
-  test('an isolated solid chunk collapses to six quads', () => {
+  test('an isolated solid chunk collapses to nine quads per face (interior + convex border strips)', () => {
     const data = chunk((x, y, z) => x >= 0 && y >= 0 && z >= 0 && x < CHUNK_EDGE && y < CHUNK_EDGE && z < CHUNK_EDGE)
 
-    expect(greedy_mesh(data).quad_count).toBe(6)
+    // Convex-edge classes split each face into its closed interior, four open border strips,
+    // and four corner cells — the price of exact rounded edges. Inside a continuous world the
+    // halo closes chunk seams, so real terrain never pays this synthetic worst case.
+    expect(greedy_mesh(data).quad_count).toBe(6 * 9)
   })
 
   test('a single voxel emits six packed quads', () => {
@@ -79,9 +82,29 @@ describe('binary greedy voxel meshing', () => {
     expect(word_b & 0xfff).toBe(0xfff)
     expect((word_b >>> 12) & 0x7).toBe(7)
     expect((word_b >>> 15) & 0x7).toBe(7)
-    expect((word_b >>> 28) & 0x7).toBe(7)
-    expect(word_b >>> 31).toBe(1)
+    // A lone voxel's faces have empty in-plane neighbours everywhere: all four edges convex.
+    expect(word_b >>> 28).toBe(0b1111)
     expect((word_b >>> 20) & 0xff).toBe(0xff)
+  })
+
+  test('word B edge flags round only borders with no same-level neighbour', () => {
+    // Two-block plateau: each top cell keeps its own convexity class — the shared edge is
+    // closed on both, the outer lips open — so the tops stay two quads with mirrored flags.
+    const plateau = greedy_mesh(chunk((x, y, z) => y === 0 && z === 0 && (x === 0 || x === 1)))
+    const top_flags = Array.from({ length: plateau.quad_count }, (_, quad) => quad)
+      .filter((quad) => ((plateau.quads[quad * 2]! >>> 28) & 0x7) === 2)
+      .map((quad) => plateau.quads[quad * 2 + 1]! >>> 28)
+      .sort()
+    expect(top_flags).toEqual([0b1101, 0b1110])
+
+    // Lone block at x=0 with a two-high wall at x=1: the +u edge of the top face borders the
+    // wall's same-level voxel, so it must NOT round; the other three edges stay convex.
+    const stepped = greedy_mesh(chunk((x, y, z) => (z === 0 && x === 1 && y <= 1) || (x === 0 && y === 0 && z === 0)))
+    const lone_top = Array.from({ length: stepped.quad_count }, (_, quad) => quad).find((quad) => {
+      const word_a = stepped.quads[quad * 2]!
+      return ((word_a >>> 28) & 0x7) === 2 && (word_a & 0x3f) === 0 && ((word_a >>> 6) & 0x3f) === 0
+    })!
+    expect(stepped.quads[lone_top * 2 + 1]! >>> 28).toBe(0b1101)
   })
 
   test('word B carries classic corner occlusion and prevents shading-incompatible merges', () => {

@@ -10,6 +10,7 @@ import fight, { initial_fight_session_state, type FightSessionInput, type FightS
 import type { Locale } from './i18n/locale.ts'
 import type { AppCopy } from './i18n/copy.ts'
 import admin, { initial_admin_state, type AdminInput, type AdminState } from './modules/admin.ts'
+import chat, { initial_chat_state, type ChatInput, type ChatState } from './modules/chat.ts'
 import locale, { type LocaleInput } from './modules/locale.ts'
 import navigation, {
   initial_navigation_state,
@@ -19,6 +20,7 @@ import navigation, {
 import session, { initial_session_state, type SessionInput, type SessionState } from './modules/session.ts'
 import simulator, { initial_simulator_state, type SimulatorInput, type SimulatorState } from './modules/simulator.ts'
 import settings, { type SettingsInput } from './modules/settings.ts'
+import world, { initial_world_state, type WorldInput, type WorldState } from './modules/world.ts'
 
 export type AppState = Readonly<{
   session: SessionState
@@ -30,6 +32,8 @@ export type AppState = Readonly<{
   copy: AppCopy | null
   simulator: SimulatorState
   admin: AdminState
+  chat: ChatState
+  world: WorldState
 }>
 
 export type AppInput =
@@ -41,6 +45,8 @@ export type AppInput =
   | SimulatorInput
   | FightSessionInput
   | AdminInput
+  | ChatInput
+  | WorldInput
 
 type EventArguments = {
   [K in AppInput['type']]: [Extract<AppInput, { type: K }>]
@@ -72,6 +78,8 @@ const MODULES = Object.freeze([
   simulator,
   fight,
   admin,
+  chat,
+  world,
 ]) satisfies readonly AppModule[]
 
 export type AppModuleName = (typeof MODULES)[number]['name']
@@ -87,6 +95,8 @@ export const initial_app_state = (settings_state: GameSettings): AppState =>
     copy: null,
     simulator: initial_simulator_state(),
     admin: initial_admin_state(),
+    chat: initial_chat_state(),
+    world: initial_world_state(),
   })
 
 const create_events = () => {
@@ -111,6 +121,7 @@ const create_app = () => {
     quality: 'medium',
     flat_mode: false,
     music_enabled: true,
+    render_distance: null,
   }) satisfies GameSettings
   let state = initial_app_state(default_settings)
   let active_observers: AbortController | null = null

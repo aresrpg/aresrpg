@@ -26,16 +26,19 @@ import { create_fight_presentation } from './fight_presentation.ts'
 import { create_transient_effects } from './transient_effects.ts'
 import { project_screen_anchor } from './screen_projection.ts'
 import { create_frame_renderer } from './frame_renderer.ts'
-import { create_flatten_uniform } from './flatten.ts'
+import { create_flatten_uniform, flat_terrain_amount } from './flatten.ts'
 import type { GreedyMeshData } from './greedy_mesher.ts'
 import { create_mesh_pool } from './mesh_pool.ts'
+import { create_lantern } from './lantern.ts'
 import { liquid_palette } from './liquid_palette.ts'
 import { get_quality_profile, quality_pixel_ratio } from './quality.ts'
+import type { ScatterInstance } from './scatter.ts'
+import { create_scatter_layer } from './scatter_layer.ts'
 import { chunk_origin } from './terrain_generator.ts'
 import { create_terrain_pool } from './terrain_pool.ts'
 import { is_submerged } from './underwater.ts'
 import { create_water } from './water.ts'
-import { couple_lighting, fill_dir_of, is_moon_key } from './lighting/sky_light_coupling.ts'
+import { couple_lighting, fill_dir_of, is_moon_key, shadow_direction_changed } from './lighting/sky_light_coupling.ts'
 import { create_sky_node, palette_for_sun } from './sky/sky_node.ts'
 import { create_hillaire_sky } from './sky/hillaire/hillaire_sky.ts'
 import type {
@@ -55,6 +58,7 @@ const FOG_COOL_TILT = [0.62, 0.75, 1] as const
 type PendingUpload = Readonly<{
   chunk: RenderedChunk
   data: GreedyMeshData
+  scatter: readonly ScatterInstance[]
   revision: number
 }>
 
@@ -87,12 +91,12 @@ export const create_webgpu_backend = async (
   const fight_board = create_fight_board_layer({ scene, camera, canvas })
   const entities = create_entity_layer({ scene })
   const effects = create_transient_effects({ scene, entities })
-  const fight_presentation = create_fight_presentation({ entities, vfx: effects })
+  const fight_presentation = create_fight_presentation({ entities, vfx: effects, shock: () => crit_shock() })
   const sun = new DirectionalLight(0xfff2dd, 3)
   const back_fill = new DirectionalLight(0xffd6a8, 1.35)
   const hemisphere = new HemisphereLight(0xbcb2a0, 0x977f56, 0.9)
   const analytic_sky = create_sky_node({ seed: world.seed })
-  const compiled_world = compile_world_recipe(world)
+  const compiled_world = compile_world_recipe(world, { structures: false })
   const liquid_material =
     world.liquid === undefined ? null : compiled_world.materials.entries[compiled_world.materials.id_for(world.liquid)]!
   const water_palette = liquid_palette(liquid_material?.color ?? [0, 0, 0])
@@ -126,6 +130,8 @@ export const create_webgpu_backend = async (
     sun_direction: analytic_sky.sun_direction,
     clouds,
   })
+  const scatter = create_scatter_layer({ scene })
+  const lantern = create_lantern({ scene })
   const water = create_water({
     scene,
     quality: initial_quality,
@@ -140,7 +146,7 @@ export const create_webgpu_backend = async (
   // without a liquid material, or a flattened one, has none — plus the eye's own submerged
   // flag, which the refraction wobble and the droplet exit edge need.
   const has_water = world.liquid === undefined ? 0 : 1
-  const water_gate = float(has_water).mul(float(1).sub(flatten.amount))
+  const water_gate = float(has_water).mul(flatten.water_visibility)
   const water_level = float(world.sea_level)
   const water_world = world.liquid === undefined ? null : compiled_world
   let was_submerged = false
@@ -151,6 +157,7 @@ export const create_webgpu_backend = async (
     camera,
     initial_quality,
     presentation,
+    sun,
     analytic_sky.sun_direction,
     water_gate,
     water_level,
@@ -188,8 +195,9 @@ export const create_webgpu_backend = async (
   sun.shadow.autoUpdate = false
   sun.shadow.needsUpdate = true
 
-  const apply_sky_lighting = (): void => {
+  const apply_sky_lighting = (force_shadow_transform = false): void => {
     const direction = analytic_sky.sun_direction.value
+    lantern.set_sun_elevation(direction.y)
     const lighting = couple_lighting([direction.x, direction.y, direction.z], light_baseline)
     sun.color.setRGB(lighting.sun_color[0], lighting.sun_color[1], lighting.sun_color[2])
     sun.intensity = lighting.sun_intensity
@@ -206,11 +214,15 @@ export const create_webgpu_backend = async (
       fog_color[2] * FOG_COOL_TILT[2]
     )
     const key_direction = is_moon_key(direction.y) ? direction.clone().multiplyScalar(-1) : direction
-    sun.position.set(
-      sun.target.position.x + key_direction.x * 350,
-      sun.target.position.y + key_direction.y * 350,
-      sun.target.position.z + key_direction.z * 350
-    )
+    if (force_shadow_transform || shadow_direction_changed(last_shadow_direction.dot(key_direction))) {
+      last_shadow_direction.copy(key_direction)
+      sun.position.set(
+        sun.target.position.x + key_direction.x * 350,
+        sun.target.position.y + key_direction.y * 350,
+        sun.target.position.z + key_direction.z * 350
+      )
+      if (lighting.shadow_intensity > 0) sun.shadow.needsUpdate = true
+    }
     // The fill rides the key (see fill_dir_of): opposite azimuth, low — so the shaded side always
     // has form and the world never shows a lit side whose light is nowhere in the sky.
     const fill_direction = fill_dir_of([key_direction.x, key_direction.y, key_direction.z])
@@ -219,10 +231,6 @@ export const create_webgpu_backend = async (
       back_fill.target.position.y + fill_direction[1] * 300,
       back_fill.target.position.z + fill_direction[2] * 300
     )
-    if (lighting.shadow_intensity > 0 && last_shadow_direction.dot(key_direction) < 0.99939) {
-      last_shadow_direction.copy(key_direction)
-      sun.shadow.needsUpdate = true
-    }
   }
 
   const use_sky_quality = async (next: EngineQuality): Promise<void> => {
@@ -385,11 +393,19 @@ export const create_webgpu_backend = async (
       }
       pending_uploads.delete(entry.chunk.key)
       pool_full_chunks.delete(entry.chunk.key)
+      scatter.add(entry.chunk, entry.scatter)
       settle_chunk(entry.chunk.key, entry.revision, 'rendered')
       sun.shadow.needsUpdate = true
       bytes += entry.data.quads.byteLength
       uploaded += 1
     }
+  }
+
+  // one short camera shock per critical hit, whoever lands it — decays over ~260ms
+  let shock_at = -10_000
+  const CRIT_SHOCK_MS = 260
+  const crit_shock = (): void => {
+    shock_at = previous_frame
   }
 
   const draw = (now = performance.now()): void => {
@@ -398,14 +414,17 @@ export const create_webgpu_backend = async (
     resize()
     drain_uploads()
     if (presentation === 'world') {
+      const camera_column = sample_world_column(compiled_world, camera.position.x, camera.position.z)
       const surface_plane =
         water_world === null || flatten.flattened()
           ? null
-          : sample_world_column(water_world, camera.position.x, camera.position.z).surface_y < world.sea_level
+          : camera_column.surface_y < world.sea_level
             ? world.sea_level
             : null
-      const { humidity } = compiled_world.sample_climate(camera.position.x, camera.position.z)
+      const { humidity } = camera_column.climate
       clouds.set_humidity(humidity)
+      hillaire?.set_ground_haze(camera_column.surface_y, humidity)
+      lantern.tick(now)
       was_submerged = is_submerged(camera.position.y, surface_plane, was_submerged)
       frame_renderer.set_underwater({ submerged: was_submerged, dt: delta_seconds })
       hillaire?.tick(renderer, camera, delta_seconds)
@@ -414,6 +433,18 @@ export const create_webgpu_backend = async (
     entities.tick(now)
     effects.tick(now)
     if (has_dynamic_entities && sun.castShadow && sun.shadow.intensity > 0) sun.shadow.needsUpdate = true
+    const shock = Math.max(0, 1 - (now - shock_at) / CRIT_SHOCK_MS)
+    if (shock > 0) {
+      const amplitude = 0.11 * shock * shock
+      const offset_x = Math.sin(now * 0.09) * amplitude
+      const offset_y = Math.cos(now * 0.117) * amplitude * 0.6
+      camera.position.x += offset_x
+      camera.position.y += offset_y
+      frame_renderer.render()
+      camera.position.x -= offset_x
+      camera.position.y -= offset_y
+      return
+    }
     frame_renderer.render()
   }
 
@@ -429,6 +460,7 @@ export const create_webgpu_backend = async (
     if (retry_timer !== undefined) clearTimeout(retry_timer)
     retry_timers.delete(key)
     terrain.remove(key)
+    scatter.remove(key)
     sun.shadow.needsUpdate = true
   }
 
@@ -438,11 +470,11 @@ export const create_webgpu_backend = async (
     const distance_z = origin[2] - camera.position.z
     void mesh_pool
       .mesh(chunk, distance_x * distance_x + distance_z * distance_z)
-      .then(({ chunk: generated, mesh: data }) => {
+      .then(({ chunk: generated, mesh: data, scatter: scatter_instances }) => {
         if (disposed || revisions.get(chunk.key) !== revision) return
         retry_timers.delete(chunk.key)
         failed_chunks.delete(chunk.key)
-        pending_uploads.set(chunk.key, Object.freeze({ chunk: generated, data, revision }))
+        pending_uploads.set(chunk.key, Object.freeze({ chunk: generated, data, scatter: scatter_instances, revision }))
         uploads_dirty = true
       })
       .catch((error: unknown) => {
@@ -495,12 +527,16 @@ export const create_webgpu_backend = async (
         shadow_center_z = next_shadow_z
         sun.target.position.set(next_shadow_x, target[1], next_shadow_z)
         back_fill.target.position.set(next_shadow_x, target[1], next_shadow_z)
-        apply_sky_lighting()
+        apply_sky_lighting(true)
         sun.shadow.needsUpdate = true
       }
       far_terrain.set_focus(target[0], target[2])
       clouds.set_focus(target[0], target[2])
       water.set_focus(target[0], target[2])
+    },
+    set_character_anchor: (position: Vec3 | null) => {
+      if (position) lantern.set_focus(position[0], position[1], position[2])
+      lantern.set_active(position !== null)
     },
     set_quality: (next: EngineQuality) => {
       if (next !== quality) apply_quality(next)
@@ -511,7 +547,8 @@ export const create_webgpu_backend = async (
     },
     set_flatten_amount: (amount: number) => {
       if (flatten.set(amount)) sun.shadow.needsUpdate = true
-      terrain.set_flatten_active(amount > 0)
+      terrain.set_flatten_active(flat_terrain_amount(amount) > 0)
+      scatter.set_flatten_active(flat_terrain_amount(amount) > 0)
     },
     set_fight_board: (board) => {
       fight_board.set(board)
@@ -529,6 +566,7 @@ export const create_webgpu_backend = async (
       const anchor = entities.world_anchor(id)
       return anchor ? project_screen_anchor(anchor, camera, canvas.getBoundingClientRect()) : null
     },
+    entity_height: entities.entity_height,
     upsert_fight_blob: fight_board.upsert_blob,
     remove_fight_blob: fight_board.remove_blob,
     pick_fight_cell: fight_board.pick,
@@ -583,6 +621,8 @@ export const create_webgpu_backend = async (
       completions.forEach(({ resolve }) => resolve('removed'))
       completions.clear()
       terrain.dispose()
+      scatter.dispose()
+      lantern.dispose()
       far_terrain.dispose()
       clouds.dispose()
       water.dispose()

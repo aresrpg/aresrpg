@@ -2,14 +2,15 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
 import { BIOME_SLOTS, parse_world_recipe, type BiomeSlot, type WorldRecipe } from '@aresrpg/engine'
-import { Boxes, ChevronDown, ChevronUp, Dna, Layers3, Map as MapIcon, Mountain } from 'lucide-react'
+import { Boxes, ChevronDown, ChevronUp, Dna, Layers3, Map as MapIcon, Mountain, TreePine } from 'lucide-react'
 import { useMemo, useState, type ComponentType } from 'react'
 
 import { dispatch_app, useAppStore } from '../store.ts'
 
+import { BiomeAtmosphere } from './BiomeAtmosphere.tsx'
 import { MaterialEditor, PopulationEditor, SplineEditor } from './BiomeControls.tsx'
 import { BiomeCoverage, BiomeMap, TerrainPreview } from './BiomePreviews.tsx'
-import { first_biome_land, move_spline_knot, sample_biome_cell } from './biome_editor.ts'
+import { first_biome_land, move_spline_knot, sample_biome_cell, world_height_domain } from './biome_editor.ts'
 import { entity_rows, type JsonPath, type JsonValue } from './seed_editor.ts'
 
 const action_class =
@@ -23,12 +24,18 @@ const record = (value: JsonValue | undefined): Readonly<Record<string, JsonValue
     ? (value as Readonly<Record<string, JsonValue>>)
     : null
 
-type BiomeTab = 'landscape' | 'materials' | 'population'
+type BiomeTab = 'landscape' | 'materials' | 'atmosphere' | 'population'
 type PreviewMode = 'height' | 'map'
 const tabs: readonly Readonly<{ id: BiomeTab; label: string; help: string; icon: ComponentType<{ size?: number }> }>[] =
   Object.freeze([
     { id: 'landscape', label: 'Landscape', help: 'Map nine climate slots, then shape one biome.', icon: Dna },
     { id: 'materials', label: 'Materials', help: 'World bounds, block colors and render presets.', icon: Layers3 },
+    {
+      id: 'atmosphere',
+      label: 'Atmosphere',
+      help: 'Assign deterministic structure packs to each biome.',
+      icon: TreePine,
+    },
     { id: 'population', label: 'Population', help: 'Assign mobs and resources to biome pools.', icon: Boxes },
   ])
 
@@ -101,7 +108,17 @@ const ClimateSlots = ({
   </section>
 )
 
-const LandscapeControls = ({ recipe, replace }: Readonly<{ recipe: WorldRecipe; replace: ReplaceTerrain }>) => {
+const LandscapeControls = ({
+  recipe,
+  replace,
+  preview_busy,
+  begin_preview_update,
+}: Readonly<{
+  recipe: WorldRecipe
+  replace: ReplaceTerrain
+  preview_busy: boolean
+  begin_preview_update: () => void
+}>) => {
   const [selected_slot, set_selected_slot] = useState<BiomeSlot>('mid_mid')
   const [selected_point, set_selected_point] = useState(0)
   const biome_name = recipe.biome_slots[selected_slot]
@@ -117,6 +134,7 @@ const LandscapeControls = ({ recipe, replace }: Readonly<{ recipe: WorldRecipe; 
   const numeric_knots = biome.landscape.map(({ x, y }) => [x, y] as const)
   const point_path = ['terrain', 'biomes', biome_index, 'landscape', point_index] as const
   const change_landscape = (next: readonly (readonly [number, number])[]): void => {
+    begin_preview_update()
     const same_length = next.length === biome.landscape.length
     const landscape = next.map(([x, y], index) => {
       const source = same_length
@@ -152,12 +170,15 @@ const LandscapeControls = ({ recipe, replace }: Readonly<{ recipe: WorldRecipe; 
       <SplineEditor
         change={change_landscape}
         compact
+        disabled={preview_busy}
         fill
         key={biome.name}
         knots={numeric_knots}
         name={`${biome.name} landscape`}
         select={set_selected_point}
         selected={point_index}
+        x_domain={[0, 1]}
+        y_domain={world_height_domain()}
       />
       <section className="shrink-0 border-l-2 border-[#efbd45]/55 bg-black/22 px-2.5 py-2">
         <div className="mb-2 flex items-end justify-between gap-2">
@@ -170,6 +191,7 @@ const LandscapeControls = ({ recipe, replace }: Readonly<{ recipe: WorldRecipe; 
               <span className={micro_label}>Threshold</span>
               <input
                 className={`${input_class} mt-1 w-16`}
+                disabled={preview_busy}
                 max={
                   point_index === biome.landscape.length - 1 ? undefined : biome.landscape[point_index + 1]!.x - 0.0001
                 }
@@ -186,6 +208,7 @@ const LandscapeControls = ({ recipe, replace }: Readonly<{ recipe: WorldRecipe; 
               <span className={micro_label}>Height</span>
               <input
                 className={`${input_class} mt-1 w-16`}
+                disabled={preview_busy}
                 onChange={(event) =>
                   change_landscape(move_spline_knot(numeric_knots, point_index, [point.x, Number(event.target.value)]))
                 }
@@ -214,8 +237,9 @@ const LandscapeControls = ({ recipe, replace }: Readonly<{ recipe: WorldRecipe; 
             </label>
             <button
               className="h-7 border border-white/10 px-2 text-[8px] text-[#777b86] hover:border-[#ff5a8b]/45 hover:text-[#ff8caa] disabled:opacity-25"
-              disabled={biome.landscape.length <= 2}
+              disabled={preview_busy || biome.landscape.length <= 2}
               onClick={() => {
+                begin_preview_update()
                 replace(
                   ['terrain', 'biomes', biome_index, 'landscape'],
                   biome.landscape.filter((_, index) => index !== point_index) as JsonValue
@@ -323,23 +347,6 @@ const WorldAndMaterials = ({ recipe, replace }: Readonly<{ recipe: WorldRecipe; 
           ))}
         </select>
       </label>
-      <label>
-        <span className={micro_label}>Vertical chunks</span>
-        <input
-          className={`${input_class} mt-1 w-28`}
-          defaultValue={recipe.vertical_chunks.join(', ')}
-          key={recipe.vertical_chunks.join(',')}
-          onBlur={(event) =>
-            replace(
-              ['terrain', 'vertical_chunks'],
-              event.target.value
-                .split(',')
-                .map((value) => Number(value.trim()))
-                .filter(Number.isInteger)
-            )
-          }
-        />
-      </label>
     </section>
     <MaterialEditor change={(path, value) => replace(['terrain', 'materials', ...path], value)} recipe={recipe} />
   </div>
@@ -357,6 +364,7 @@ export const BiomePage = () => {
   const [tab, set_tab] = useState<BiomeTab>('landscape')
   const [mode, set_mode] = useState<PreviewMode>('height')
   const [panel_open, set_panel_open] = useState(true)
+  const [preview_busy, set_preview_busy] = useState(false)
   let recipe: WorldRecipe | null = null
   let recipe_error: string | null = null
   try {
@@ -404,7 +412,10 @@ export const BiomePage = () => {
               <button
                 className={`flex h-7 items-center gap-2 px-3 text-[8px] tracking-[0.12em] uppercase ${mode === id ? 'bg-[#4a9eff]/14 text-[#8fc4ff]' : 'text-[#777b86] hover:text-[#d8d3ca]'}`}
                 key={id}
-                onClick={() => set_mode(id)}
+                onClick={() => {
+                  set_preview_busy(false)
+                  set_mode(id)
+                }}
                 type="button"
               >
                 <Icon size={12} />
@@ -434,7 +445,9 @@ export const BiomePage = () => {
       </header>
 
       <div className="absolute inset-0 pt-14">
-        {recipe && mode === 'height' && <TerrainPreview recipe={recipe} selected={sampled} />}
+        {recipe && mode === 'height' && (
+          <TerrainPreview on_rendering_change={set_preview_busy} recipe={recipe} selected={sampled} />
+        )}
         {recipe && mode === 'map' && <BiomeMap recipe={recipe} select={(x, y) => set_cell([x, y])} selected={cell} />}
       </div>
 
@@ -479,6 +492,11 @@ export const BiomePage = () => {
               <strong className="text-[9px] tracking-[0.15em] text-[#e0b86b] uppercase">Live terrain editor</strong>
               <p className="mt-0.5 text-[7px] text-[#6f747e]">{active_tab.help} Live preview uses the same sampler.</p>
             </div>
+            {preview_busy && (
+              <span className="ml-auto mr-2 animate-pulse text-[7px] tracking-[0.12em] text-[#efbd45] uppercase">
+                Rebuilding terrain…
+              </span>
+            )}
             <button
               aria-label="Collapse terrain editor"
               className="grid size-8 place-items-center border border-white/8 text-[#858994] hover:text-white"
@@ -488,7 +506,7 @@ export const BiomePage = () => {
               <ChevronUp className="rotate-90" size={14} />
             </button>
           </div>
-          <nav className="grid shrink-0 grid-cols-3 border-b border-white/8 bg-black/15">
+          <nav className="grid shrink-0 grid-cols-4 border-b border-white/8 bg-black/15">
             {tabs.map(({ id, label, icon: Icon }) => (
               <button
                 className={`flex h-10 items-center justify-center gap-1.5 border-b-2 text-[7px] tracking-[0.1em] uppercase ${tab === id ? 'border-[#c8963c] bg-[#c8963c]/7 text-[#e0b86b]' : 'border-transparent text-[#747883] hover:text-[#d8d3ca]'}`}
@@ -502,8 +520,26 @@ export const BiomePage = () => {
             ))}
           </nav>
           <div className="min-h-0 flex-1 overflow-y-auto p-2.5">
-            {tab === 'landscape' && <LandscapeControls recipe={recipe} replace={replace} />}
+            {tab === 'landscape' && (
+              <LandscapeControls
+                begin_preview_update={() => {
+                  if (mode === 'height') set_preview_busy(true)
+                }}
+                preview_busy={preview_busy}
+                recipe={recipe}
+                replace={replace}
+              />
+            )}
             {tab === 'materials' && <WorldAndMaterials recipe={recipe} replace={replace} />}
+            {tab === 'atmosphere' && (
+              <BiomeAtmosphere
+                begin_preview_update={() => {
+                  if (mode === 'height') set_preview_busy(true)
+                }}
+                recipe={recipe}
+                replace={replace}
+              />
+            )}
             {tab === 'population' && (
               <PopulationEditor biome_names={recipe.biomes.map(({ name }) => name)} change={replace} world={world} />
             )}

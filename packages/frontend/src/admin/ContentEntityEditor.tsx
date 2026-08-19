@@ -8,6 +8,7 @@ import { ItemContentEditor, type ItemRecipeBinding } from './ItemContentEditor.t
 import { JsonEditor } from './JsonEditor.tsx'
 import { MobContentEditor } from './MobContentEditor.tsx'
 import type { JsonPath, JsonValue, SeedDomain } from './seed_editor.ts'
+import { StructurePackEditor } from './StructurePackEditor.tsx'
 
 type Props = Readonly<{
   domain: SeedDomain
@@ -100,5 +101,6 @@ export const ContentEntityEditor = ({ domain, value, on_change, is_readonly, sav
   if (domain === 'mobs') return <MobContentEditor on_change={on_change} save={save} value={value} />
   if (domain === 'shop') return <ShopEditor on_change={on_change} value={value} />
   if (domain === 'airdrop') return <AirdropEditor is_readonly={is_readonly} on_change={on_change} value={value} />
+  if (domain === 'structure_packs') return <StructurePackEditor on_change={on_change} save={save} value={value} />
   return <JsonEditor is_readonly={is_readonly} on_change={on_change} value={value} />
 }

@@ -57,7 +57,7 @@ test('mob editing keeps the combat sheet and editable shared spell cards togethe
     expect(html).toContain(`data-mob-stat-icon="${stat}"`)
 })
 
-test('an item edits its separately-authored recipe in place', () => {
+test('a domain row carries its own editor, and an item edits its authored recipe in place', () => {
   const recipe_binding: ItemRecipeBinding = {
     value: recipes[0] as JsonValue,
     change: () => undefined,
@@ -79,34 +79,22 @@ test('an item edits its separately-authored recipe in place', () => {
   expect(html).not.toContain('aria-label="Profession"')
   expect(html).not.toContain('data-item-reference-picker="crafted item"')
   expect(html).not.toContain('aria-label="Ingredient"')
-})
 
-test('non-weapons cannot add weapon damage and fallback recipe professions remain authored', () => {
+  // Non-weapons cannot add weapon damage, and a fallback profession stays authored.
   const helmet = items.find(({ category }) => category === 'helmet')!
-  const recipe = recipes.find(({ output_type }) => output_type === helmet.item_type)!
-  const binding: ItemRecipeBinding = {
-    value: recipe as JsonValue,
-    change: () => undefined,
-    category_changed: () => undefined,
-    create: () => undefined,
-    remove: () => undefined,
-    reset: () => undefined,
-    save: () => undefined,
-    dirty: false,
-    file_dirty: false,
-    saving: false,
-  }
-  expect(render_editor('items', helmet as unknown as JsonValue, binding)).not.toContain('+ Damage line')
+  const helmet_recipe = recipes.find(({ output_type }) => output_type === helmet.item_type)!
+  const helmet_binding: ItemRecipeBinding = { ...recipe_binding, value: helmet_recipe as JsonValue }
+  expect(render_editor('items', helmet as unknown as JsonValue, helmet_binding)).not.toContain('+ Damage line')
 
   const fallback_recipe = recipes.find((recipe) => 'job' in recipe && recipe.job === 'ALCHEMIST')!
   const fallback_item = items.find(({ item_type }) => item_type === fallback_recipe.output_type)!
-  const fallback_html = render_editor('items', fallback_item as unknown as JsonValue, {
-    ...binding,
-    value: fallback_recipe as JsonValue,
-  })
-  expect(fallback_html).toContain('aria-label="Profession"')
-})
+  expect(
+    render_editor('items', fallback_item as unknown as JsonValue, {
+      ...recipe_binding,
+      value: fallback_recipe as JsonValue,
+    })
+  ).toContain('aria-label="Profession"')
 
-test('shop uses its compact domain row', () => {
+  // Shop keeps its own compact domain row.
   expect(render_editor('shop', shop.sales[0] as JsonValue)).toContain('data-content-editor="shop"')
 })

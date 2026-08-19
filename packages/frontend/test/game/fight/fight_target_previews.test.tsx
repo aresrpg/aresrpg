@@ -27,42 +27,64 @@ test('spell aiming restores the fighter nametag with exact resolved HP and statu
           mp_after: 4n,
           mp_delta: 0n,
           cell_before: 32n,
-          cell_after: 32n,
+          cell_after: 34n,
+          movements: Object.freeze([Object.freeze({ mode: 'push' as const, cells: 2n })]),
           active_effects: Object.freeze([
             Object.freeze({ kind: 4n, element: '', value: 9n, turns_left: 0n, source: 0n, stat: 9n }),
           ]),
-          effects: Object.freeze([Object.freeze({ kind: 5n, channel: 6n, element: '', value: 2n, turns: 2n })]),
+          effects: Object.freeze([
+            Object.freeze({ kind: 0n, channel: 12n, element: 'earth', value: 40n, turns: 0n }),
+            Object.freeze({ kind: 5n, channel: 6n, element: '', value: 2n, turns: 2n }),
+          ]),
         }),
       ])}
     />
   )
   const text = html.replaceAll(/<[^>]+>/g, '')
+  const compact_text = text.replaceAll(/\s+/g, ' ').trim()
 
   expect(html).toContain('Bannerwatch')
   expect(html).toContain('200')
   expect(html).toContain('−40')
+  expect(html).toContain('ent-tt__delta--dmg')
   expect(html).toContain('−')
   expect(html).toContain('Ap')
   expect(html).toContain('2 turns')
   expect(html).toContain('fxl__txt')
   expect(text).toContain('+9 damages (1 turn)')
   expect(text).toContain('−2 Ap (2 turns)')
+  expect(compact_text).toContain('Pushes 2 cells')
+  expect(compact_text).not.toContain('↦ 34')
+  expect(compact_text).not.toContain('Deals 40 damage')
   expect(html).not.toContain(' · ')
   expect(html).not.toContain('fight-hud__effect')
   expect(html).not.toContain('cast_cost')
   expect(html).toContain('ent-tt__delta--crit')
 })
 
-test('the compact turn status calls invisibility by its state name', () => {
-  const html = renderToStaticMarkup(
+test('the compact turn status names a state and keeps the legacy damage-over-time wording', () => {
+  const invisible = renderToStaticMarkup(
     <FightEffectLines
       effects={Object.freeze([
         Object.freeze({ kind: 17n, element: '', value: 1n, turns: 2n, stat: 0n, key: 'invisible' }),
       ])}
     />
-  )
-  const text = html.replaceAll(/<[^>]+>/g, '')
+  ).replaceAll(/<[^>]+>/g, '')
 
-  expect(text).toContain('Invisible')
-  expect(text).not.toContain('Makes the target invisible')
+  expect(invisible).toContain('Invisible')
+  expect(invisible).not.toContain('Makes the target invisible')
+
+  const poison = renderToStaticMarkup(
+    <FightEffectLines
+      effects={Object.freeze([
+        Object.freeze({ kind: 5n, element: 'earth', value: 6n, turns: 2n, stat: 12n, key: 'poison' }),
+      ])}
+    />
+  )
+    .replaceAll(/<[^>]+>/g, '')
+    .replaceAll(/\s+/g, ' ')
+    .trim()
+
+  expect(poison).toBe('6 damages (2 turns)')
+  expect(poison).not.toContain('Deals')
 })

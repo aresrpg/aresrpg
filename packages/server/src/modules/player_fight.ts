@@ -12,6 +12,7 @@ import { channels, mesh, type EventEnvelope, type FightActionFact } from '../pro
 import { get_fight } from '../reads/get_fight.ts'
 import logger from '../logger.ts'
 import type { PlayerModule, PlayerAction, PlayerState } from '../player.ts'
+import { create_watcher } from '../pubsub_bus.ts'
 
 const log = logger(import.meta)
 
@@ -31,21 +32,7 @@ export default {
 
   observe: (context) => {
     const { pubsub, graph, events, send, address, dispatch, get_state, signal } = context
-    const watched = new Map<string, (payload: never) => void>()
-
-    const watch = (channel: string, forward: (payload: never) => void) => {
-      if (watched.has(channel)) return
-      watched.set(channel, forward)
-      pubsub.emitter.on(channel, forward as (payload: unknown) => void)
-      void pubsub.subscribe(channel)
-    }
-    const unwatch = (channel: string) => {
-      const forward = watched.get(channel)
-      if (!forward) return
-      watched.delete(channel)
-      pubsub.emitter.off(channel, forward as (payload: unknown) => void)
-      void pubsub.unsubscribe(channel)
-    }
+    const { watch, unwatch, watched } = create_watcher(pubsub)
 
     const forward_fight_event = (payload: EventEnvelope) => {
       if (payload.type === 'FightStarted') {
@@ -110,7 +97,7 @@ export default {
         send({ type: 'packet/error', reason: 'not in this fight' })
         return
       }
-      void pubsub.publish(mesh.fight_actions(action.fight), { address, action: action.action })
+      void pubsub.mesh.publish(mesh.fight_actions(action.fight), { address, action: action.action })
     })
 
     // THE EFFECT DOOR — the watch follows the state slot; arming pushes the live fight row.
@@ -149,7 +136,7 @@ export default {
     })
 
     signal.addEventListener('abort', () => {
-      for (const channel of [...watched.keys()]) unwatch(channel)
+      for (const channel of watched()) unwatch(channel)
     })
   },
 } satisfies PlayerModule

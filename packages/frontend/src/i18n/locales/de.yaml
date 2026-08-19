@@ -40,8 +40,10 @@ server_connecting: Verbindung
 server_reconnecting: Erneute Verbindung
 server_syncing: Synchronisierung
 server_connected: Verbunden
+server_violation: Getrennt — Regelverstoß. Bald erneuter Versuch.
 latency_unit: ms
 indexing_health: Indexierungsstatus
+online_players: Spieler online
 indexing_lag_warning: Aktionen im Spiel können verzögert erscheinen
 game_frozen: Das Spiel ist derzeit eingefroren. Weitere Informationen findest du auf Discord.
 network_testnet: TESTNET
@@ -80,6 +82,18 @@ wallet_send_pending: SUI wird gesendet…
 wallet_send_success: SUI gesendet
 wallet_send_failed: Die SUI-Übertragung ist fehlgeschlagen
 wallet_close: Schließen
+world_hud:
+  compass_label: Kompass
+  zone: ZONE
+  unsearched: UNDURCHSUCHT
+  searched: DURCHSUCHT
+  out_of_bounds: AUSSERHALB
+  mob_group: Monstergruppe ({{size}})
+  resource: Ressource
+  cluster_count: +{{extra}} weitere
+  zone_edge: Zonenrand {{dist}}
+  coordinates: Koordinaten
+  world_map: Weltkarte
 demo_page:
   title: Renderlabor
   world_lab: Welt
@@ -89,6 +103,12 @@ demo_page:
   live: Live
   remove_character: Modell entfernen
   control_character: Modell steuern
+  hat: Kopfbedeckung
+  cloak: Umhang
+  pet: Begleiter
+  none: Keine
+  ride_pet: Begleiter reiten
+  dismount_pet: Absteigen
   mob_group: Monstergruppe
   mob: Monster
   amount: Anzahl
@@ -163,6 +183,8 @@ settings_page:
   subtitle: 'Deine AresRPG-Einstellungen'
   music_label: 'Musik'
   music_hint: 'Spielt die Musik der Welt und der Kämpfe.'
+  render_distance_label: Sichtweite
+  render_distance_hint: Wie weit die Welt um dich herum lädt. Mehr kostet Leistung.
 admin_page:
   kicker: Herausgeber
   title: Spielinhalte veröffentlichen
@@ -268,6 +290,8 @@ simulator_page:
   stat_action: Aktion
   stat_critical: Kritischer Treffer
   stat_raw_damage: Rohschaden
+  stat_resistance: Resistenz
+  stat_power: Macht
   stat_earth_resistance: Erdwiderstand
   stat_fire_resistance: Feuerwiderstand
   stat_water_resistance: Wasserwiderstand
@@ -298,10 +322,42 @@ fight_hud:
   placement_hint: Platziere deine Kämpfer und markiere sie als bereit
   end_turn: Zug beenden
   reset_turn: Neustart
+  weapon_attack: Waffenangriff
+  bare_hands: Unbewaffnet
+  log_fight_started: Der Kampf beginnt
+  log_cast: '{caster} wirkt {spell}'
+  log_critical_cast: 'Kritisch! {caster} wirkt {spell}'
+  log_heal: '{source} heilt {target} um {amount} LP'
+  log_ap_change: '{target}: {delta} AP'
+  log_mp_change: '{target}: {delta} BP'
+  log_lost: '{target} verliert {amount} LP'
+  log_lost_reduced: '{target} verliert {amount} LP (reduziert um {reduced})'
+  log_absorbed: '{target} absorbiert {reduced} Schaden'
+  log_returned: '{target} wirft den Zauber zurück'
+  log_stat_change: '{target}: {delta} {stat} ({turns} {turns_word})'
+  unit_ap: AP
+  unit_mp: BP
+  log_points_loss: '{target} verliert {amount} {unit}'
+  log_points_steal: '{source} stiehlt {target} {amount} {unit}'
+  log_points_partial: '{target} weicht {dodged} {unit} aus und verliert {amount}'
+  log_points_dodge: '{target} weicht dem Verlust von {attempted} {unit} aus'
+  log_trap_placed: '{owner} legt eine Falle'
+  log_glyph_placed: '{owner} platziert eine Glyphe'
+  log_death: '{target} stirbt'
+  log_forfeit: '{target} gibt auf'
+  log_draw: Der Kampf endet unentschieden
+  log_team_wins: Team {team} gewinnt
   forfeit: Aufgeben
   forfeit_title: Mit {name} aufgeben?
   forfeit_body: '{name} verliert alle verbleibenden LP und verlässt diesen Kampf.'
   confirm_forfeit: Aufgabe bestätigen
+  unit_turns: Züge
+  chat_title: Chat
+  chat_tab_general: Allgemein
+  chat_tab_combat: Kampf
+  chat_placeholder: Sag etwas…
+  chat_you: Du
+  chat_line: '{name}: {message}'
 wallet_legacy:
   sui: SUI
   how_to_get: Wie man SUI bekommt
@@ -544,7 +600,7 @@ encyclopedia_page:
     blocking: SCHILDE
     blocking_desc: Manche Zauber gewähren einen Schild, der eingehenden Schaden eines passenden Elements absorbiert, bis er aufgebraucht ist. Es gibt keine Ausdauer und keine Verteidigungshaltung, Schilde sind die einzige Schadensabsorption.
     resistance: WIDERSTAND
-    resistance_desc: Elementar-Widerstand ist eine prozentuale Reduktion, die auf den finalen Schaden angewendet wird, gedeckelt bei 60% pro Element. Negativer Widerstand (eine Schwäche) verstärkt den Schaden stattdessen.
+    resistance_desc: Elementar-Widerstand ist eine prozentuale Reduktion, die auf den finalen Schaden angewendet wird, gedeckelt bei 50% pro Element. Negativer Widerstand (eine Schwäche) verstärkt den Schaden stattdessen.
     life_steal: LEBENSRAUB
     life_steal_desc: 'Drain-Zaubereffekte verursachen Schaden und heilen den Wirker um die Hälfte der Lebenspunkte, die das Ziel tatsächlich verliert. Nur der Drain eines Spielers heilt: Ein Monster, das denselben Zauber wirkt, verursacht seinen Schaden und heilt sich nicht.'
     life_steal_note: Der Schaden durchläuft zuerst die Standard-Schadensformel, dann heilt sich der Wirker um die Hälfte der Lebenspunkte, die das vorgesehene Ziel tatsächlich verloren hat — ein auf einen anderen Kämpfer umgeleiteter Treffer, oder einer, den das Ziel in Heilung umwandelt, gibt nichts zurück.

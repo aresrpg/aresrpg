@@ -184,7 +184,14 @@ async fn main() -> Result<()> {
     indexer
         .sequential_pipeline(
             AresHandler::new(&package_original, &package_latest)?,
-            SequentialConfig::default(),
+            // Explicit channel sizes: the framework defaults derive them from num_cpus/2,
+            // which is 0 under a 1-CPU container limit — mpsc::channel(0) panics at boot
+            // (2026-08-19, first k8s deploy). Sized for one sequential pipeline, not cores.
+            SequentialConfig {
+                processor_channel_size: Some(4),
+                pipeline_depth: Some(4),
+                ..SequentialConfig::default()
+            },
         )
         .await
         .context("registering ares pipeline")?;

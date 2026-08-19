@@ -18,13 +18,12 @@ import { useEffect, useMemo, useRef } from 'react'
 
 import { create_fight_view } from './fight_view.ts'
 import { create_fight_presenter } from './fight_presenter.ts'
+import type { FightBlobOverlay } from './fight_overlays.ts'
 import type { FightCuePhase } from './fight_presenter.ts'
 
 const CELL_SIZE = 1.33
 const BOARD_Y = 0
 const EMPTY_ENTITIES: readonly EntityRender[] = Object.freeze([])
-
-export type FightBlobOverlay = Readonly<{ id: string; blob: FightBlobSpec }>
 
 export const fight_board_render = (board: Readonly<FightBoard>): FightBoardRender => {
   const width = Number(board.width)
@@ -56,6 +55,7 @@ export const FightViewport = ({
   blob_overlays = Object.freeze([]),
   presentation_request,
   on_presentation_cue,
+  on_presentation_active,
   show_start_cells = true,
   entities = EMPTY_ENTITIES,
 }: Readonly<{
@@ -70,6 +70,7 @@ export const FightViewport = ({
   blob_request?: Readonly<{ sequence: number; blob: FightBlobSpec }> | null
   blob_overlays?: readonly FightBlobOverlay[]
   on_presentation_cue?: (cue: FightPresentationCue, phase: FightCuePhase) => void
+  on_presentation_active?: (active: boolean) => void
   presentation_request?: Readonly<{
     batch: number
     cues: readonly FightPresentationCue[]
@@ -84,10 +85,10 @@ export const FightViewport = ({
   const initial_quality_ref = useRef(quality)
   const click_ref = useRef(on_cell_click)
   const hover_ref = useRef(on_cell_hover)
-  const pointer_ref = useRef<Readonly<{ x: number; y: number }> | null>(null)
   const hovered_cell_ref = useRef<number | null>(null)
   const cue_observer_ref = useRef(on_presentation_cue)
   const presentation_request_ref = useRef(presentation_request)
+  const presentation_active_ref = useRef(on_presentation_active)
   const anchors_ref = useRef(on_entity_anchors)
   // A fight board is immutable under its contract ID. Checkpoint reducers clone it, so depending
   // on object identity would rebuild GPU geometry after every command.
@@ -103,6 +104,7 @@ export const FightViewport = ({
   hover_ref.current = on_cell_hover
   cue_observer_ref.current = on_presentation_cue
   presentation_request_ref.current = presentation_request
+  presentation_active_ref.current = on_presentation_active
   anchors_ref.current = on_entity_anchors
   const tracked_ids = tracked_entity_ids.join('\u0000')
 
@@ -126,11 +128,9 @@ export const FightViewport = ({
       if (cell !== null) click_ref.current?.(BigInt(cell), { x: event.clientX, y: event.clientY })
     }
     const move = (event: MouseEvent): void => {
-      pointer_ref.current = Object.freeze({ x: event.clientX, y: event.clientY })
       publish_hover(view.pick_cell(event.clientX, event.clientY))
     }
     const leave = (): void => {
-      pointer_ref.current = null
       publish_hover(null)
     }
     canvas.addEventListener('click', click)
@@ -140,7 +140,6 @@ export const FightViewport = ({
       canvas.removeEventListener('click', click)
       canvas.removeEventListener('mousemove', move)
       canvas.removeEventListener('mouseleave', leave)
-      pointer_ref.current = null
       hovered_cell_ref.current = null
       view_ref.current = null
       presenter_ref.current?.dispose()
@@ -202,40 +201,43 @@ export const FightViewport = ({
     const presenter = presenter_ref.current
     const request = presentation_request_ref.current
     if (!presenter || !request) return
-    presenter.present(request.cues)
-    request.presented()
+    let current = true
+    presentation_active_ref.current?.(true)
+    void presenter.present(request.cues).then(() => {
+      if (!current) return
+      presentation_active_ref.current?.(false)
+      request.presented()
+    })
+    return () => {
+      current = false
+    }
   }, [presentation_request?.batch])
 
   useEffect(() => {
     const ids = tracked_ids ? tracked_ids.split('\u0000') : []
+    if (ids.length === 0) {
+      anchors_ref.current?.(Object.freeze({}))
+      return undefined
+    }
     let frame = 0
     let previous = ''
     const project = (): void => {
       const view = view_ref.current
-      const pointer = pointer_ref.current
-      const hovered = pointer && view ? view.pick_cell(pointer.x, pointer.y) : null
-      if (hovered !== hovered_cell_ref.current) {
-        hovered_cell_ref.current = hovered
-        hover_ref.current?.(hovered === null ? null : BigInt(hovered))
-      }
-      if (ids.length > 0) {
-        const anchors = Object.freeze(
-          Object.fromEntries(
-            ids.flatMap((id) => {
-              const anchor = view?.project_entity(id)
-              return anchor ? [[id, anchor] as const] : []
-            })
-          )
+      const anchors = Object.freeze(
+        Object.fromEntries(
+          ids.flatMap((id) => {
+            const anchor = view?.project_entity(id)
+            return anchor ? [[id, anchor] as const] : []
+          })
         )
-        const signature = JSON.stringify(anchors)
-        if (signature !== previous) {
-          previous = signature
-          anchors_ref.current?.(anchors)
-        }
+      )
+      const signature = JSON.stringify(anchors)
+      if (signature !== previous) {
+        previous = signature
+        anchors_ref.current?.(anchors)
       }
       frame = requestAnimationFrame(project)
     }
-    if (ids.length === 0) anchors_ref.current?.(Object.freeze({}))
     frame = requestAnimationFrame(project)
     return () => cancelAnimationFrame(frame)
   }, [tracked_ids])

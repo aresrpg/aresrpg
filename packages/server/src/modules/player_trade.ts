@@ -10,27 +10,14 @@ import { channels, type EventEnvelope } from '../protocol.ts'
 import { get_trades, get_trade } from '../reads/get_trades.ts'
 import logger from '../logger.ts'
 import type { PlayerModule } from '../player.ts'
+import { create_watcher } from '../pubsub_bus.ts'
 
 const log = logger(import.meta)
 
 export default {
   name: 'player_trade',
   observe: ({ pubsub, graph, send, address, signal }) => {
-    const watched = new Map<string, (payload: never) => void>()
-
-    const watch = (channel: string, forward: (payload: never) => void) => {
-      if (watched.has(channel)) return
-      watched.set(channel, forward)
-      pubsub.emitter.on(channel, forward as (payload: unknown) => void)
-      void pubsub.subscribe(channel)
-    }
-    const unwatch = (channel: string) => {
-      const forward = watched.get(channel)
-      if (!forward) return
-      watched.delete(channel)
-      pubsub.emitter.off(channel, forward as (payload: unknown) => void)
-      void pubsub.unsubscribe(channel)
-    }
+    const { watch, unwatch, watched } = create_watcher(pubsub)
 
     const push_trade = (trade_id: string) =>
       get_trade(graph, { trade_id })
@@ -70,7 +57,7 @@ export default {
     watch(channels.social(address), forward_birth as (payload: never) => void)
 
     signal.addEventListener('abort', () => {
-      for (const channel of [...watched.keys()]) unwatch(channel)
+      for (const channel of watched()) unwatch(channel)
     })
   },
 } satisfies PlayerModule

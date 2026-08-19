@@ -40,8 +40,10 @@ server_connecting: Conectando
 server_reconnecting: Reconectando
 server_syncing: Sincronizando
 server_connected: Conectado
+server_violation: Desconectado — violación de reglas. Reintento pronto.
 latency_unit: ms
 indexing_health: Estado del indexado
+online_players: Jugadores en línea
 indexing_lag_warning: Las acciones del juego pueden aparecer con retraso
 game_frozen: El juego está actualmente congelado. Consulta Discord para más información.
 network_testnet: TESTNET
@@ -80,6 +82,18 @@ wallet_send_pending: Enviando SUI…
 wallet_send_success: SUI enviado
 wallet_send_failed: La transferencia de SUI ha fallado
 wallet_close: Cerrar
+world_hud:
+  compass_label: Brújula
+  zone: ZONA
+  unsearched: SIN REGISTRAR
+  searched: REGISTRADA
+  out_of_bounds: FUERA DE LÍMITES
+  mob_group: Grupo de monstruos ({{size}})
+  resource: Recurso
+  cluster_count: +{{extra}} más
+  zone_edge: Borde de zona {{dist}}
+  coordinates: Coordenadas
+  world_map: Mapa del mundo
 demo_page:
   title: Laboratorio de renderizado
   world_lab: Mundo
@@ -89,6 +103,12 @@ demo_page:
   live: En vivo
   remove_character: Quitar modelo
   control_character: Controlar modelo
+  hat: Sombrero
+  cloak: Capa
+  pet: Mascota
+  none: Ninguno
+  ride_pet: Montar mascota
+  dismount_pet: Desmontar
   mob_group: Grupo de monstruos
   mob: Monstruo
   amount: Cantidad
@@ -163,6 +183,8 @@ settings_page:
   subtitle: 'Tus preferencias de AresRPG'
   music_label: 'Música'
   music_hint: 'Reproduce la música del mundo y de los combates.'
+  render_distance_label: Distancia de renderizado
+  render_distance_hint: Hasta dónde se carga el mundo a tu alrededor. Más lejos cuesta rendimiento.
 admin_page:
   kicker: Editor
   title: Publicar contenido del juego
@@ -268,6 +290,8 @@ simulator_page:
   stat_action: Acción
   stat_critical: Golpe crítico
   stat_raw_damage: Daño bruto
+  stat_resistance: Resistencia
+  stat_power: Poder
   stat_earth_resistance: Resistencia a tierra
   stat_fire_resistance: Resistencia a fuego
   stat_water_resistance: Resistencia a agua
@@ -298,10 +322,42 @@ fight_hud:
   placement_hint: Coloca a tus luchadores y márcalos como listos
   end_turn: Terminar turno
   reset_turn: Reiniciar
+  weapon_attack: Ataque con arma
+  bare_hands: Manos desnudas
+  log_fight_started: Comienza el combate
+  log_cast: '{caster} lanza {spell}'
+  log_critical_cast: '¡Crítico! {caster} lanza {spell}'
+  log_heal: '{source} cura {amount} PV a {target}'
+  log_ap_change: '{target}: {delta} PA'
+  log_mp_change: '{target}: {delta} PM'
+  log_lost: '{target} pierde {amount} PV'
+  log_lost_reduced: '{target} pierde {amount} PV (reducido {reduced})'
+  log_absorbed: '{target} absorbe {reduced} de daño'
+  log_returned: '{target} devuelve el hechizo'
+  log_stat_change: '{target}: {delta} {stat} ({turns} {turns_word})'
+  unit_ap: PA
+  unit_mp: PM
+  log_points_loss: '{target} pierde {amount} {unit}'
+  log_points_steal: '{source} roba {amount} {unit} a {target}'
+  log_points_partial: '{target} esquiva {dodged} {unit} y pierde {amount}'
+  log_points_dodge: '{target} esquiva la pérdida de {attempted} {unit}'
+  log_trap_placed: '{owner} coloca una trampa'
+  log_glyph_placed: '{owner} coloca un glifo'
+  log_death: '{target} muere'
+  log_forfeit: '{target} se rinde'
+  log_draw: El combate termina en empate
+  log_team_wins: El equipo {team} gana
   forfeit: Rendirse
   forfeit_title: ¿Rendirse con {name}?
   forfeit_body: '{name} perderá todos sus PV restantes y abandonará este combate.'
   confirm_forfeit: Confirmar rendición
+  unit_turns: turnos
+  chat_title: Chat
+  chat_tab_general: General
+  chat_tab_combat: Combate
+  chat_placeholder: Di algo…
+  chat_you: Tú
+  chat_line: '{name}: {message}'
 wallet_legacy:
   sui: SUI
   how_to_get: Como obtener SUI
@@ -544,7 +600,7 @@ encyclopedia_page:
     blocking: ESCUDOS
     blocking_desc: Algunos hechizos otorgan un escudo que absorbe el daño entrante de un elemento correspondiente hasta agotarse. No hay aguante ni postura de guardia, los escudos son la única absorción de daño.
     resistance: RESISTENCIA
-    resistance_desc: La resistencia elemental es una reducción porcentual aplicada al daño final, con un tope del 60% por elemento. La resistencia negativa (una debilidad) amplifica el daño en su lugar.
+    resistance_desc: La resistencia elemental es una reducción porcentual aplicada al daño final, con un tope del 50% por elemento. La resistencia negativa (una debilidad) amplifica el daño en su lugar.
     life_steal: ROBO DE VIDA
     life_steal_desc: 'Los efectos de hechizo de drenaje infligen daño y curan al lanzador la mitad de la vida que el objetivo pierde realmente. Solo el drenaje de un jugador cura: un mob que lanza el mismo hechizo inflige su daño y no se cura nada.'
     life_steal_note: El daño pasa primero por la fórmula de daño estándar, luego el lanzador se cura la mitad de la vida que el objetivo previsto perdió realmente — un golpe redirigido a otro combatiente, o convertido en curación por el objetivo, no devuelve nada.

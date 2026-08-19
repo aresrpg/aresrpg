@@ -20,8 +20,12 @@
 //! indexer never decodes them. [`World`] survives only for the id → name map
 //! zones and boot need.
 //!
-//! Roundtrip tests prove self-consistency; byte-for-byte pins against LIVE
-//! testnet captures land once the package publishes (the old indexer's law).
+//! TESTS (L-D4): the layout-bearing twins are pinned against REAL captured
+//! testnet object contents — a self-round-trip encodes with the same struct it
+//! decodes with, so it can only prove internal consistency (the 2026-07-17 XP
+//! incident). Round-trip survives only for the shapes no live object carries
+//! yet (`Fight`, the equipment `VecMap`); each captured test names its object
+//! id, version, and capture date.
 
 use serde::{Deserialize, Serialize};
 
@@ -650,7 +654,7 @@ pub struct Trade {
     pub caps_b: Vec<Id>,
 }
 
-// ╔════════════════ [ Tests — roundtrip self-consistency ] ═══════════════════ ]
+// ╔════════════════ [ Tests — captured-byte layout pins ] ════════════════════ ]
 
 #[cfg(test)]
 mod tests {
@@ -681,78 +685,161 @@ mod tests {
         }
     }
 
-    #[test]
-    fn character_roundtrips() {
-        let chr = Character {
-            id: Id([1; 32]),
-            name: "aiden".into(),
-            classe: "sram".into(),
-            sex: "male".into(),
-            experience: 12_345,
-            level: 42,
-            color_1: 0xFFFFFF,
-            color_2: 0,
-            color_3: 0x8B0000,
-            vitality: 10,
-            wisdom: 0,
-            strength: 100,
-            intelligence: 0,
-            chance: 0,
-            agility: 55,
-            available_points: 5,
-            available_spell_points: 3,
-        };
-        let back = roundtrip(&chr);
-        assert_eq!(back.name, "aiden");
-        assert_eq!(back.level, 42);
-        assert_eq!(back.id.hex(), format!("0x{}", "01".repeat(32)));
+    /// Every capture below is `sui client object <id> --bcs`' `contents` — the
+    /// raw Move object payload, taken from testnet package
+    /// `0xfed435d0e2eb89ccd94cf5f68112ae4e3eebf7bbab74e9cf227589f6dd45a09c`.
+    fn captured(hex_lines: &[&str]) -> Vec<u8> {
+        hex::decode(hex_lines.concat()).expect("captured hex")
     }
 
     #[test]
-    fn marker_key_field_roundtrips() {
-        // Field<HpKey, Hp> — the marker key is one hidden bool byte.
-        let field = Field {
-            id: Id([2; 32]),
-            name: false as MarkerKey,
-            value: Hp {
-                current: 137,
-                last_ms: 1_700_000_000_000,
-            },
-        };
-        let back: Field<MarkerKey, Hp> = roundtrip(&field);
-        assert_eq!(back.value.current, 137);
+    fn captured_character_decodes_field_for_field() {
+        // Live testnet capture: character 0x1c493b…7d69 @ version 981006460,
+        // transaction EDhfar…Kaq6, captured 2026-08-19.
+        let bytes = captured(&[
+            "1c493b5be7919d5f459854bd49beea436514b5f5c0501d4d4c8b9db11e967d69",
+            "0573636561740579616a696e046d616c6500000000000000000100fd8e4900ff",
+            "7d1a003de5ff0000000000000000000000000000000000",
+        ]);
+        let chr: Character = from_bytes(&bytes).expect("decode");
+        assert_eq!(
+            chr.id.hex(),
+            "0x1c493b5be7919d5f459854bd49beea436514b5f5c0501d4d4c8b9db11e967d69"
+        );
+        assert_eq!(chr.name, "sceat");
+        assert_eq!(chr.classe, "yajin");
+        assert_eq!(chr.sex, "male");
+        assert_eq!(chr.experience, 0);
+        assert_eq!(chr.level, 1);
+        // The three colours are the only non-zero numerics — a field-order slip
+        // between them and the stat block reads as garbage here, not as a pass.
+        assert_eq!(
+            (chr.color_1, chr.color_2, chr.color_3),
+            (4_820_733, 1_736_191, 16_770_365)
+        );
+        assert_eq!(
+            (
+                chr.vitality,
+                chr.wisdom,
+                chr.strength,
+                chr.intelligence,
+                chr.chance,
+                chr.agility,
+                chr.available_points,
+                chr.available_spell_points
+            ),
+            (0, 0, 0, 0, 0, 0, 0, 0)
+        );
     }
 
     #[test]
-    fn job_xp_field_roundtrips() {
-        let field = Field {
-            id: Id([3; 32]),
-            name: JobXpKey("tool_miner".into()),
-            value: 4_242u64,
-        };
-        let back: Field<JobXpKey, u64> = roundtrip(&field);
-        assert_eq!(back.name.0, "tool_miner");
-        assert_eq!(back.value, 4_242);
+    fn captured_marker_key_field_decodes_the_hidden_byte() {
+        // Live testnet capture: Field<progression::HpKey, progression::Hp>
+        // 0xe3c352…d722 @ version 981006460, a dynamic field of character
+        // 0x1c493b…7d69, captured 2026-08-19. `HpKey()` has no Move fields, so
+        // the wire carries one hidden `dummy_field: bool` between id and value —
+        // a twin that omits it shifts the whole payload by a byte.
+        let bytes = captured(&[
+            "e3c35270cf3c66c5af75fbc7d2241aed272bf10f4c7ca11f8cc2db4b1897d722",
+            "00",
+            "3700000000000000",
+            "70dde70ea0010000",
+        ]);
+        let field: Field<MarkerKey, Hp> = from_bytes(&bytes).expect("decode");
+        assert_eq!(
+            field.id.hex(),
+            "0xe3c35270cf3c66c5af75fbc7d2241aed272bf10f4c7ca11f8cc2db4b1897d722"
+        );
+        assert!(!field.name);
+        assert_eq!(field.value.current, 55);
+        assert_eq!(field.value.last_ms, 1_786_956_471_664);
     }
 
     #[test]
-    fn zone_field_roundtrips_with_u128_bitmap() {
-        let field = Field {
-            id: Id([4; 32]),
-            name: ZoneKey { zx: 488, zz: 511 },
-            value: Zone {
-                seed: u32::MAX as u64,
-                searched_at_ms: 1_700_000_000_000,
-                mob_taken: (1u128 << 127) | 0b101,
-                res_taken: vec![0, 3, 1],
-            },
-        };
-        let back: Field<ZoneKey, Zone> = roundtrip(&field);
-        assert_eq!(back.value.mob_taken, (1u128 << 127) | 0b101);
-        assert_eq!(back.name.zx, 488);
+    fn captured_positional_key_field_decodes_its_wrapped_string() {
+        // Live testnet capture: Field<world::CheckpointKey, world::Checkpoint>
+        // 0xa75ea0…f46a @ version 981006460, a dynamic field of character
+        // 0x1c493b…7d69, captured 2026-08-19. `CheckpointKey(String)` is a
+        // positional single-field struct: BCS gives it NO extra framing, so the
+        // key is the bare string — the layout a newtype twin must mirror.
+        let bytes = captured(&[
+            "a75ea0140fd96747a34866269e67d55496baf09cabcff5d7d140176f240bf46a",
+            "0e30315f66697273745f73686f7265",
+            "50c3000050c3000070dde70ea001000000",
+        ]);
+        let field: Field<CheckpointKey, Checkpoint> = from_bytes(&bytes).expect("decode");
+        assert_eq!(field.name.0, "01_first_shore");
+        assert_eq!((field.value.x, field.value.z), (50_000, 50_000));
+        assert_eq!(field.value.at_ms, 1_786_956_471_664);
+        assert!(!field.value.pet);
     }
 
     #[test]
+    fn captured_world_decodes_the_whole_authored_content() {
+        // Live testnet capture: world::World 0x025f98…58d3 @ version 980034688,
+        // captured 2026-08-19. The deepest nesting the projection reads — three
+        // vectors of structs, an Option<String>, and the trailing BiomeMap. Any
+        // field the twin drops or reorders leaves bytes unread, and `from_bytes`
+        // refuses trailing bytes.
+        let bytes = captured(&[
+            "025f98651c2eab622de3e3e1c297705adcc49f11bf91c5d5e5487cba751a58d3",
+            "0f30395f636f72616c5f7468726f6e65110e736861646f775f76756c74757265",
+            "401f01000d62616e6e65725f777261697468401f01000b656c6465725f736c6f",
+            "7468401f01000d656d6265725f6b776565626563401f010007736e61706a6177",
+            "401f010011656e7361626c655f68617463686c696e67401f01000962726f6f64",
+            "6c696e67401f01000970616c65626f6e6573401f0100136b7765656265635f67",
+            "726f76655f6865617274401f0100076772697a7a6c79401f01000e7361757269",
+            "616e5f77617264656e401f01000f73636172616b5f646566656e646572401f01",
+            "000a7361626572746f6f7468401f0100126e696e655f7461696c735f6b697473",
+            "756e65401f01000c707972655f77617274686f67401f01000a626f6e655f6368",
+            "6f6972401f01000b70616c655f7765617665720d050100030c617263616e6573",
+            "68726f6f6d0948455242414c495354091570726f746563746f725f617263616e",
+            "655f6761696100010009647261636f6e697465054d494e4552091370726f7465",
+            "63746f725f647261636f6e6974650001000c77686561745f707572706c650646",
+            "41524d4552091c70726f746563746f725f617263616e697a655f627269636865",
+            "746f6e000100010f746964655f7468726f6e655f6b657903020e736861646f77",
+            "5f76756c74757265000d62616e6e65725f7772616974680002136b7765656265",
+            "635f67726f76655f686561727400076772697a7a6c790002167363796c6c6172",
+            "5f7468655f636f72616c5f6b696e67000a626f6e655f63686f69720000000000",
+            "00000000000000",
+        ]);
+        let world: World = from_bytes(&bytes).expect("decode");
+        assert_eq!(world.name, "09_coral_throne");
+        assert_eq!(world.content.mobs.len(), 17);
+        assert_eq!(world.content.mobs[0].mob_type, "shadow_vulture");
+        assert_eq!(world.content.mobs[0].weight_bp, 8_000);
+        // The last row's odd remainder weight is the one value a mis-sized
+        // weight field could not fake.
+        assert_eq!(world.content.mobs[16].mob_type, "pale_weaver");
+        assert_eq!(world.content.mobs[16].weight_bp, 1_293);
+        assert_eq!(world.content.resources.len(), 3);
+        assert_eq!(world.content.resources[0].item_type, "arcaneshroom");
+        assert_eq!(world.content.resources[0].job, "HERBALIST");
+        assert_eq!(world.content.resources[0].tier, 9);
+        assert_eq!(
+            world.content.resources[0].protector,
+            "protector_arcane_gaia"
+        );
+        assert_eq!(world.content.resources[0].rare_item_type, "");
+        assert_eq!(
+            world.content.dungeon_key.as_deref(),
+            Some("tide_throne_key")
+        );
+        assert_eq!(world.content.dungeon_rooms.len(), 3);
+        assert_eq!(
+            world.content.dungeon_rooms[2].mobs[0].mob_type,
+            "scyllar_the_coral_king"
+        );
+        assert_eq!(world.content.biome_map.side, 0);
+        assert!(world.content.biome_map.cells.is_empty());
+    }
+
+    #[test]
+    /// SELF-ROUND-TRIP, deliberately: no live testnet object carries an
+    /// equipment `VecMap` yet (checked 2026-08-19 — the type has zero instances
+    /// on chain), so there are no bytes to pin. This proves internal
+    /// consistency only; it becomes a captured pin the first time a character
+    /// equips on the published lineage.
     fn equipment_map_roundtrips() {
         let map: EquipmentMap = VecMap {
             contents: vec![VecMapEntry {
@@ -782,6 +869,10 @@ mod tests {
     }
 
     #[test]
+    /// SELF-ROUND-TRIP, deliberately: no `Fight` has ever existed on chain
+    /// (checked 2026-08-19 — zero instances, zero `fight` events on every
+    /// published lineage), so the enum-variant layout has no bytes to pin yet.
+    /// It becomes a captured pin the first fight the published lineage opens.
     fn fight_roundtrips_both_fighter_kinds() {
         let fight = Fight {
             id: Id([8; 32]),
@@ -927,57 +1018,6 @@ mod tests {
         assert_eq!(snapshot.kit[0].level.crit_1_in, 20);
         assert_eq!(back.winner, None);
         assert_eq!(back.dungeon, Some(2));
-    }
-
-    #[test]
-    fn fighter_custody_wrapper_roundtrips() {
-        // Field<Wrapper<FighterKey(seat)>, Id> — the dof wrapper naming the seat.
-        let field = Field {
-            id: Id([11; 32]),
-            name: DynamicObjectFieldWrapper {
-                name: FighterKey(4),
-            },
-            value: Id([9; 32]),
-        };
-        let back: Field<DynamicObjectFieldWrapper<FighterKey>, Id> = roundtrip(&field);
-        assert_eq!(back.name.name.0, 4);
-    }
-
-    #[test]
-    fn kiosk_listing_field_roundtrips() {
-        // Field<Listing{id, is_exclusive}, u64-price>.
-        let field = Field {
-            id: Id([12; 32]),
-            name: KioskListingKey {
-                id: Id([5; 32]),
-                is_exclusive: true,
-            },
-            value: 1_500_000_000u64,
-        };
-        let back: Field<KioskListingKey, u64> = roundtrip(&field);
-        assert!(back.name.is_exclusive);
-        assert_eq!(back.value, 1_500_000_000);
-    }
-
-    #[test]
-    fn kolizeum_roundtrips_with_friends_snapshot() {
-        let lobby = Kolizeum {
-            id: Id([13; 32]),
-            pot: Balance {
-                value: 2_000_000_000,
-            },
-            pledge: 1_000_000_000,
-            fight: Id([8; 32]),
-            format: 3,
-            level_min: 20,
-            level_max: 60,
-            allowed: Some(VecSet {
-                contents: vec![Addr([10; 32]), Addr([14; 32])],
-            }),
-        };
-        let back = roundtrip(&lobby);
-        assert_eq!(back.pot.value, 2_000_000_000);
-        assert_eq!(back.allowed.unwrap().contents.len(), 2);
     }
 
     #[test]

@@ -2,9 +2,6 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 // Shared tactical substrate and picking for simulator, world fights, duels, and kolizeum.
 import {
-  BackSide,
-  BoxGeometry,
-  BufferAttribute,
   Color,
   Group,
   InstancedMesh,
@@ -16,6 +13,7 @@ import {
   Vector3,
   WebGPUCoordinateSystem,
   type Camera,
+  type BufferGeometry,
   type Material,
   type Scene,
 } from 'three'
@@ -28,6 +26,7 @@ import {
   BOARD_CELL_VOID,
   BOARD_FLOOR_THICKNESS,
   bake_fight_board_surface,
+  build_fight_board_pits,
   build_fight_board_slab,
 } from './fight_board_surface.ts'
 import { create_fight_blob_layer } from './fight_blobs.ts'
@@ -82,7 +81,6 @@ type BoardResources = Readonly<{
   textures: readonly { dispose: () => void }[]
 }>
 
-const HOLE_DEPTH = 1.8
 const OBSTACLE_HEIGHT_RATIO = 0.58
 const OBSTACLE_INSET = 0.14
 const OBSTACLE_TONES = Object.freeze([0x847a5e, 0x746c56, 0x94886a])
@@ -102,22 +100,6 @@ const cell_hash = (x: number, y: number): number => {
   value = Math.imul(value ^ (value >>> 13), 1274126177)
   value ^= value >>> 16
   return (value >>> 0) / 4294967296
-}
-
-const paint_pit_gradient = (geometry: BoxGeometry): void => {
-  const position = geometry.getAttribute('position')
-  const top = new Color(0x2c2d31)
-  const bottom = new Color(0x040506)
-  const color = new Color()
-  const colors = new Float32Array(position.count * 3)
-  for (let vertex = 0; vertex < position.count; vertex += 1) {
-    const mix = Math.pow((position.getY(vertex) + HOLE_DEPTH / 2) / HOLE_DEPTH, 2.4)
-    color.copy(bottom).lerp(top, Math.max(0, Math.min(1, mix)))
-    colors[vertex * 3] = color.r
-    colors[vertex * 3 + 1] = color.g
-    colors[vertex * 3 + 2] = color.b
-  }
-  geometry.setAttribute('color', new BufferAttribute(colors, 3))
 }
 
 export const create_fight_board_layer = ({
@@ -150,7 +132,7 @@ export const create_fight_board_layer = ({
   }
 
   const build_instances = (
-    geometry: BoxGeometry | RoundedBoxGeometry,
+    geometry: BufferGeometry | RoundedBoxGeometry,
     material: Material,
     rows: readonly FightBoardRenderCell[],
     dimensions: readonly [number, number, number],
@@ -223,17 +205,10 @@ export const create_fight_board_layer = ({
     obstacles.castShadow = false
     obstacles.receiveShadow = false
 
-    const hole_rows = next.cells.filter(({ kind }) => kind === 'hole')
-    const hole_geometry = new BoxGeometry(next.cell_size - 0.05, HOLE_DEPTH, next.cell_size - 0.05, 1, 4, 1)
-    paint_pit_gradient(hole_geometry)
-    const hole_material = new MeshStandardMaterial({ vertexColors: true, roughness: 1, metalness: 0, side: BackSide })
-    const holes = build_instances(
-      hole_geometry,
-      hole_material,
-      hole_rows,
-      [1, 1, 1],
-      () => next.origin.y + BOARD_FLOOR_THICKNESS - HOLE_DEPTH / 2
-    )
+    const hole_geometry = build_fight_board_pits(mask, next.width, next.height, next.cell_size, next.origin)
+    const hole_material = new MeshStandardMaterial({ vertexColors: true, roughness: 1, metalness: 0 })
+    const holes = new Mesh(hole_geometry, hole_material)
+    holes.frustumCulled = false
     holes.name = 'board_hole'
     holes.receiveShadow = true
 

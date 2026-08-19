@@ -1561,6 +1561,7 @@
     "item_type": "aetherwing",
     "name": "Aetherwing",
     "category": "pet",
+    "pet_movement": "fly",
     "pet_foods": ["wheat", "quartz"],
     "level": 1
   },
@@ -39239,6 +39240,7 @@
     "item_type": "pet_admin",
     "name": "Xi Jinping",
     "category": "pet",
+    "pet_movement": "fly",
     "pet_foods": ["void_distillate", "primal_catalyst", "soul_shard"],
     "level": 1
   },
@@ -39511,6 +39513,7 @@
     "item_type": "pet_arisen_corbac",
     "name": "Arisen Corbac",
     "category": "pet",
+    "pet_movement": "fly",
     "pet_foods": ["green_mushroom", "wheat", "quartz"],
     "level": 1
   },
@@ -39747,6 +39750,7 @@
     "item_type": "pet_chomperion",
     "name": "Chomperion",
     "category": "pet",
+    "pet_movement": "swim",
     "pet_foods": ["crab_shell", "mineral_biscuit"],
     "level": 1,
     "stats": {
@@ -39790,6 +39794,7 @@
     "item_type": "pet_chromafin",
     "name": "Chromafin",
     "category": "pet",
+    "pet_movement": "swim",
     "pet_foods": ["crab_shell", "scaled_hide"],
     "level": 1,
     "stats": {
@@ -39833,6 +39838,7 @@
     "item_type": "pet_corbac",
     "name": "Corbac",
     "category": "pet",
+    "pet_movement": "fly",
     "pet_foods": ["goblin_ear", "goblin_gunpowder", "refined_solution"],
     "level": 1
   },
@@ -39840,6 +39846,7 @@
     "item_type": "pet_cryofin",
     "name": "Cryofin",
     "category": "pet",
+    "pet_movement": "swim",
     "pet_foods": ["crab_shell", "scaled_hide"],
     "level": 1,
     "stats": {
@@ -40098,6 +40105,7 @@
     "item_type": "pet_doris",
     "name": "Doris",
     "category": "pet",
+    "pet_movement": "swim",
     "pet_foods": ["crab_shell", "scaled_hide"],
     "level": 1,
     "stats": {
@@ -40499,6 +40507,7 @@
     "item_type": "pet_jones",
     "name": "Jones",
     "category": "pet",
+    "pet_movement": "swim",
     "pet_foods": ["shark_fin", "kraken_ink", "deep_scale"],
     "level": 1,
     "stats": {
@@ -40728,6 +40737,7 @@
     "item_type": "pet_moray",
     "name": "Moray",
     "category": "pet",
+    "pet_movement": "swim",
     "pet_foods": ["crab_shell", "scaled_hide"],
     "level": 1,
     "stats": {
@@ -41194,6 +41204,7 @@
     "item_type": "pet_talokan_feu",
     "name": "Talokan Feu",
     "category": "pet",
+    "pet_movement": "swim",
     "pet_foods": ["talokan_pearl", "hardening_compound"],
     "level": 1
   },
@@ -41351,6 +41362,7 @@
     "item_type": "pet_velkarion_wyrmling",
     "name": "Velkarion Wyrmling",
     "category": "pet",
+    "pet_movement": "fly",
     "pet_foods": ["velkarion_ember"],
     "level": 1
   },
@@ -41487,6 +41499,7 @@
     "item_type": "pet_zot",
     "name": "Zot",
     "category": "pet",
+    "pet_movement": "fly",
     "pet_foods": ["stormfeather", "elemental_catalyst_air"],
     "level": 1
   },

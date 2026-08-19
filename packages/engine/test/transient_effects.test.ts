@@ -2,18 +2,21 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
 import { describe, expect, test } from 'bun:test'
-import { Group, Scene, Sprite, Vector3 } from 'three'
+import { Group, Mesh, Scene, Sprite, Vector3 } from 'three'
 
 import { create_transient_effects, type EffectAnchors } from '../src/transient_effects.ts'
 import { fight_vfx_magnitude } from '../src/fight_vfx_presets.ts'
-import type { FightPresentationCue } from '../src/types.ts'
+import type { FightCastStyle, FightPresentationCue } from '../src/types.ts'
 
 const anchors = Object.freeze({
   world_anchor: (id: string) => (id === 'caster' ? new Vector3(0, 2, 0) : null),
   cell_anchor: (cell: number) => (cell === 12 ? new Vector3(4, 1.2, 0) : null),
 }) satisfies EffectAnchors
 
-const cast = (element: string): Extract<FightPresentationCue, Readonly<{ type: 'cast' }>> =>
+const cast = (
+  element: string,
+  style: FightCastStyle = 'damage'
+): Extract<FightPresentationCue, Readonly<{ type: 'cast' }>> =>
   Object.freeze({
     id: `cast:${element}`,
     type: 'cast',
@@ -22,6 +25,7 @@ const cast = (element: string): Extract<FightPresentationCue, Readonly<{ type: '
     cast_level: 1,
     target_cell: 12,
     element,
+    style,
     placement: null,
     critical: false,
     weapon: false,
@@ -48,23 +52,31 @@ describe('transient effects', () => {
     vfx.dispose()
   })
 
-  test('plays the retained earth burst when a trap triggers', () => {
+  test('holds a triggered trap beat before movement can resume', async () => {
     const scene = new Scene()
     const vfx = create_transient_effects({ scene, entities: anchors })
+    vfx.tick(100)
 
-    expect(
-      vfx.play_zone({
-        id: 'trap:1',
-        type: 'zone',
-        action: 'trap_triggered',
-        zone_id: 'zone:1',
-        owner_id: 'caster',
-        target_id: 'target',
-        cell: 12,
-        element: 'water',
-      })
-    ).toBeTrue()
+    const played = vfx.play_zone({
+      id: 'trap:1',
+      type: 'zone',
+      action: 'trap_triggered',
+      zone_id: 'zone:1',
+      owner_id: 'caster',
+      target_id: 'target',
+      cell: 12,
+      element: 'water',
+    })
+    let resolved = false
+    void played.then(() => {
+      resolved = true
+    })
     expect(scene.children).not.toHaveLength(0)
+    vfx.tick(749)
+    await Promise.resolve()
+    expect(resolved).toBeFalse()
+    vfx.tick(750)
+    expect(await played).toBeTrue()
     vfx.dispose()
   })
 
@@ -87,7 +99,7 @@ describe('transient effects', () => {
     const scene = new Scene()
     const vfx = create_transient_effects({ scene, entities: anchors })
     vfx.tick(100)
-    const earth = vfx.play_cast(cast('earth'))
+    const earth = vfx.play_cast(cast('weapon'))
     expect(scene.children).toHaveLength(0)
     vfx.tick(650)
     expect(await earth).toBeTrue()
@@ -96,6 +108,44 @@ describe('transient effects', () => {
     vfx.dispose()
     expect(await pending).toBeFalse()
     expect(scene.children).toHaveLength(0)
+  })
+
+  test('every authored element renders cast, falling projectile, and impact with its own silhouette', async () => {
+    const silhouettes: string[] = []
+    for (const element of ['fire', 'water', 'air', 'neutral', 'heal', 'earth']) {
+      const scene = new Scene()
+      const vfx = create_transient_effects({ scene, entities: anchors })
+      vfx.tick(100)
+      const played = vfx.play_cast(cast(element))
+      expect(scene.getObjectByName(`cast:${element}:windup`)).toBeDefined()
+      const projectile = scene.getObjectByName(`cast:${element}:projectile`)
+      expect(projectile).toBeDefined()
+      if (projectile instanceof Mesh) silhouettes.push(projectile.geometry.type)
+      vfx.tick(650)
+      expect(await played).toBeTrue()
+      expect(scene.getObjectByName(`cast:${element}:impact`)).toBeDefined()
+      vfx.dispose()
+    }
+    expect(new Set(silhouettes).size).toBe(6)
+  })
+
+  test('spell mechanics select different pack silhouettes without changing their element palette', () => {
+    const scene = new Scene()
+    const vfx = create_transient_effects({ scene, entities: anchors })
+    vfx.tick(100)
+
+    void vfx.play_cast(cast('fire', 'damage'))
+    void vfx.play_cast(Object.freeze({ ...cast('fire', 'push'), id: 'cast:fire:push' }))
+    void vfx.play_cast(Object.freeze({ ...cast('fire', 'trap'), id: 'cast:fire:trap' }))
+
+    const geometry = (name: string): string | null => {
+      const object = scene.getObjectByName(name)
+      return object instanceof Mesh ? object.geometry.type : null
+    }
+    expect(geometry('cast:fire:projectile')).toBe('ConeGeometry')
+    expect(geometry('cast:fire:push:projectile')).toBe('BoxGeometry')
+    expect(geometry('cast:fire:trap:projectile')).toBe('DodecahedronGeometry')
+    vfx.dispose()
   })
 
   test('plays the legacy double-jump dust and ring as one bounded effect', () => {

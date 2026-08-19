@@ -8,7 +8,12 @@ import type { AuthSession } from '../../src/auth.ts'
 import { package_upgrade_steps } from '../../src/admin/admin_deployment.ts'
 import { initial_app_state, reduce_app_state } from '../../src/store.ts'
 
-const settings = Object.freeze({ quality: 'medium', flat_mode: false, music_enabled: true } as const)
+const settings = Object.freeze({
+  quality: 'medium',
+  flat_mode: false,
+  music_enabled: true,
+  render_distance: null,
+} as const)
 const create_state = () => initial_app_state(settings)
 const auth_session = (address = '0xowner'): AuthSession =>
   Object.freeze({
@@ -178,198 +183,210 @@ describe('app state', () => {
     expect(rejected.navigation).toEqual({ page: 'world', pathname: '/', dialog: null, guest_spectating: false })
   })
 
-  test('only the publisher wallet can open admin and only the next inspected batch can execute', () => {
-    const outsider = reduce_app_state(create_state(), { type: 'page/open', page: 'admin' })
-    expect(outsider.navigation.page).toBe('world')
+  test('admin opens only for the publisher wallet, behind an explicit separate signer', () => {
+    // only the publisher wallet can open admin and only the next inspected batch can execute
+    {
+      const outsider = reduce_app_state(create_state(), { type: 'page/open', page: 'admin' })
+      expect(outsider.navigation.page).toBe('world')
 
-    const authenticated = connect(DEFAULT_ADMIN_ADDRESS)
-    const opened = reduce_app_state(authenticated, { type: 'page/open', page: 'admin' })
-    const loading = reduce_app_state(opened, { type: 'admin/refresh' })
-    const ready = reduce_app_state(loading, {
-      type: 'admin/refreshed',
-      snapshot: {
-        batches: [
-          { id: 'items:0', phase: 'items', state: 'ready', targets: 10, missing_dependencies: [] },
-          { id: 'items:1', phase: 'items', state: 'pending', targets: 10, missing_dependencies: [] },
-        ],
-        sealed: false,
-      },
-    })
-
-    expect(opened.navigation.page).toBe('admin')
-    expect(reduce_app_state(ready, { type: 'admin/execute', batch: 'items:1' })).toBe(ready)
-    const executing = reduce_app_state(ready, { type: 'admin/execute', batch: 'items:0' })
-    expect(executing.admin.operation).toEqual({
-      type: 'batch',
-      batch: 'items:0',
-    })
-    expect(
-      reduce_app_state(executing, {
-        type: 'admin/batch_succeeded',
-        batch: 'items:1',
-        snapshot: { batches: [], sealed: false },
+      const authenticated = connect(DEFAULT_ADMIN_ADDRESS)
+      const opened = reduce_app_state(authenticated, { type: 'page/open', page: 'admin' })
+      const loading = reduce_app_state(opened, { type: 'admin/refresh' })
+      const ready = reduce_app_state(loading, {
+        type: 'admin/refreshed',
+        snapshot: {
+          batches: [
+            { id: 'items:0', phase: 'items', state: 'ready', targets: 10, missing_dependencies: [] },
+            { id: 'items:1', phase: 'items', state: 'pending', targets: 10, missing_dependencies: [] },
+          ],
+          sealed: false,
+        },
       })
-    ).toBe(executing)
+
+      expect(opened.navigation.page).toBe('admin')
+      expect(reduce_app_state(ready, { type: 'admin/execute', batch: 'items:1' })).toBe(ready)
+      const executing = reduce_app_state(ready, { type: 'admin/execute', batch: 'items:0' })
+      expect(executing.admin.operation).toEqual({
+        type: 'batch',
+        batch: 'items:0',
+      })
+      expect(
+        reduce_app_state(executing, {
+          type: 'admin/batch_succeeded',
+          batch: 'items:1',
+          snapshot: { batches: [], sealed: false },
+        })
+      ).toBe(executing)
+    }
+
+    // the separate admin signer requires an explicit provider and account choice
+    {
+      const available = reduce_app_state(create_state(), { type: 'admin/wallets_loaded', wallets: ['Sui Wallet'] })
+      const authorizing = reduce_app_state(available, { type: 'admin/wallet_connect', wallet_name: 'Sui Wallet' })
+      const choosing = reduce_app_state(authorizing, {
+        type: 'admin/wallet_accounts_loaded',
+        accounts: ['0xfirst', '0xadmin'],
+      })
+      const connecting = reduce_app_state(choosing, { type: 'admin/wallet_account_select', address: '0xadmin' })
+      const session = auth_session('0xadmin')
+      const connected = reduce_app_state(connecting, { type: 'admin/wallet_connected', session })
+
+      expect(connected.admin.wallet).toEqual({
+        status: 'connected',
+        wallets: ['Sui Wallet'],
+        requested_wallet: null,
+        accounts: [],
+        requested_address: null,
+        session,
+        error: null,
+      })
+      expect(choosing.admin.wallet.status).toBe('selecting')
+      expect(choosing.admin.wallet.accounts).toEqual(['0xfirst', '0xadmin'])
+      expect(connecting.admin.wallet.requested_address).toBe('0xadmin')
+      expect(reduce_app_state(choosing, { type: 'admin/wallet_account_select', address: '0xother' })).toBe(choosing)
+      expect(reduce_app_state(connected, { type: 'admin/wallet_disconnect' }).admin.wallet.status).toBe('connecting')
+    }
   })
 
-  test('the separate admin signer requires an explicit provider and account choice', () => {
-    const available = reduce_app_state(create_state(), { type: 'admin/wallets_loaded', wallets: ['Sui Wallet'] })
-    const authorizing = reduce_app_state(available, { type: 'admin/wallet_connect', wallet_name: 'Sui Wallet' })
-    const choosing = reduce_app_state(authorizing, {
-      type: 'admin/wallet_accounts_loaded',
-      accounts: ['0xfirst', '0xadmin'],
-    })
-    const connecting = reduce_app_state(choosing, { type: 'admin/wallet_account_select', address: '0xadmin' })
-    const session = auth_session('0xadmin')
-    const connected = reduce_app_state(connecting, { type: 'admin/wallet_connected', session })
+  test('deployment pins, contract maintenance, and every guarded operation hold their states', () => {
+    // deployment pins derive seed inputs without exposing editable object ids
+    {
+      const loading = reduce_app_state(create_state(), { type: 'admin/deployment_load' })
+      const loaded = reduce_app_state(loading, {
+        type: 'admin/deployment_loaded',
+        network: 'testnet',
+        token: 'token',
+        revision: 'revision',
+        pins: {
+          package: '0xpackage',
+          math_package: '0xmath',
+          upgrade_cap: '0xupgrade',
+          math_upgrade_cap: '0xmathupgrade',
+          admin_cap: '0xadmin',
+          publisher: '0xpublisher',
+          version: { id: '0xversion', shared_version: '1' },
+          template_registry: { id: '0xtemplates', shared_version: '1' },
+          loot_registry: { id: '0xloot', shared_version: '1' },
+          worlds: { shore: { id: '0xworld', shared_version: '1' } },
+        },
+      })
 
-    expect(connected.admin.wallet).toEqual({
-      status: 'connected',
-      wallets: ['Sui Wallet'],
-      requested_wallet: null,
-      accounts: [],
-      requested_address: null,
-      session,
-      error: null,
-    })
-    expect(choosing.admin.wallet.status).toBe('selecting')
-    expect(choosing.admin.wallet.accounts).toEqual(['0xfirst', '0xadmin'])
-    expect(connecting.admin.wallet.requested_address).toBe('0xadmin')
-    expect(reduce_app_state(choosing, { type: 'admin/wallet_account_select', address: '0xother' })).toBe(choosing)
-    expect(reduce_app_state(connected, { type: 'admin/wallet_disconnect' }).admin.wallet.status).toBe('connecting')
-  })
+      expect(loaded.admin.config).toEqual({ admin_cap: '0xadmin', worlds: { shore: '0xworld' } })
+      expect(loaded.admin.deployment.status).toBe('ready')
+    }
 
-  test('deployment pins derive seed inputs without exposing editable object ids', () => {
-    const loading = reduce_app_state(create_state(), { type: 'admin/deployment_load' })
-    const loaded = reduce_app_state(loading, {
-      type: 'admin/deployment_loaded',
-      network: 'testnet',
-      token: 'token',
-      revision: 'revision',
-      pins: {
-        package: '0xpackage',
-        math_package: '0xmath',
-        upgrade_cap: '0xupgrade',
-        math_upgrade_cap: '0xmathupgrade',
-        admin_cap: '0xadmin',
-        publisher: '0xpublisher',
-        version: { id: '0xversion', shared_version: '1' },
-        template_registry: { id: '0xtemplates', shared_version: '1' },
-        loot_registry: { id: '0xloot', shared_version: '1' },
-        worlds: { shore: { id: '0xworld', shared_version: '1' } },
-      },
-    })
-
-    expect(loaded.admin.config).toEqual({ admin_cap: '0xadmin', worlds: { shore: '0xworld' } })
-    expect(loaded.admin.deployment.status).toBe('ready')
-  })
-
-  test('contract maintenance has guarded upgrade and two-step republish states', () => {
-    const base = create_state()
-    const ready = {
-      ...base,
-      admin: {
-        ...base.admin,
-        snapshot: { batches: [], sealed: true },
-        cleanup: 'closed' as const,
-        deployment: {
-          ...base.admin.deployment,
-          status: 'ready' as const,
-          network: 'testnet' as const,
-          revision: 'one',
-          paused: false,
-          pins: {
-            package: '0xpackage',
-            math_package: '0xmath',
-            upgrade_cap: '0xupgrade',
-            math_upgrade_cap: '0xmathupgrade',
-            admin_cap: '0xadmin',
-            publisher: '0xpublisher',
-            version: { id: '0xversion', shared_version: '1' },
-            template_registry: { id: '0xtemplates', shared_version: '1' },
-            loot_registry: { id: '0xloot', shared_version: '1' },
-            item_policy: { id: '0xitempolicy', shared_version: '1' },
-            character_policy: { id: '0xcharacterpolicy', shared_version: '1' },
-            item_protected_policy: { id: '0xitemprotected', shared_version: '1' },
-            character_protected_policy: { id: '0xcharacterprotected', shared_version: '1' },
-            worlds: {},
+    // contract maintenance has guarded upgrade and two-step republish states
+    {
+      const base = create_state()
+      const ready = {
+        ...base,
+        admin: {
+          ...base.admin,
+          snapshot: { batches: [], sealed: true },
+          cleanup: 'closed' as const,
+          deployment: {
+            ...base.admin.deployment,
+            status: 'ready' as const,
+            network: 'testnet' as const,
+            revision: 'one',
+            paused: false,
+            pins: {
+              package: '0xpackage',
+              math_package: '0xmath',
+              upgrade_cap: '0xupgrade',
+              math_upgrade_cap: '0xmathupgrade',
+              admin_cap: '0xadmin',
+              publisher: '0xpublisher',
+              version: { id: '0xversion', shared_version: '1' },
+              template_registry: { id: '0xtemplates', shared_version: '1' },
+              loot_registry: { id: '0xloot', shared_version: '1' },
+              item_policy: { id: '0xitempolicy', shared_version: '1' },
+              character_policy: { id: '0xcharacterpolicy', shared_version: '1' },
+              item_protected_policy: { id: '0xitemprotected', shared_version: '1' },
+              character_protected_policy: { id: '0xcharacterprotected', shared_version: '1' },
+              worlds: {},
+            },
           },
         },
-      },
+      }
+      expect(reduce_app_state(ready, { type: 'admin/contracts_upgrade' }).admin.deployment.status).toBe('upgrading')
+
+      const armed = reduce_app_state(ready, { type: 'admin/republish_armed', armed: true })
+      const resetting = reduce_app_state(armed, { type: 'admin/contracts_republish' })
+      const republished = reduce_app_state(resetting, {
+        type: 'admin/contracts_republished',
+        revision: 'two',
+        pins: { ...ready.admin.deployment.pins!, package: null, worlds: {} },
+      })
+      expect(resetting.admin.deployment.status).toBe('resetting')
+      expect(republished.admin.snapshot).toBeNull()
+      expect(republished.admin.cleanup).toBe('unknown')
+      expect(republished.admin.deployment.pins?.package).toBeNull()
     }
-    expect(reduce_app_state(ready, { type: 'admin/contracts_upgrade' }).admin.deployment.status).toBe('upgrading')
 
-    const armed = reduce_app_state(ready, { type: 'admin/republish_armed', armed: true })
-    const resetting = reduce_app_state(armed, { type: 'admin/contracts_republish' })
-    const republished = reduce_app_state(resetting, {
-      type: 'admin/contracts_republished',
-      revision: 'two',
-      pins: { ...ready.admin.deployment.pins!, package: null, worlds: {} },
-    })
-    expect(resetting.admin.deployment.status).toBe('resetting')
-    expect(republished.admin.snapshot).toBeNull()
-    expect(republished.admin.cleanup).toBe('unknown')
-    expect(republished.admin.deployment.pins?.package).toBeNull()
-  })
+    // contract upgrade retries resume from UpgradeCap chain versions
+    {
+      expect(package_upgrade_steps(1, 1, 1)).toEqual({ target_version: 2, upgrade_math: true, upgrade_game: true })
+      expect(package_upgrade_steps(1, 2, 1)).toEqual({ target_version: 2, upgrade_math: false, upgrade_game: true })
+      expect(package_upgrade_steps(1, 2, 2)).toEqual({ target_version: 2, upgrade_math: false, upgrade_game: false })
+      expect(() => package_upgrade_steps(1, 1, 2)).toThrow('cannot be newer')
+    }
 
-  test('contract upgrade retries resume from UpgradeCap chain versions', () => {
-    expect(package_upgrade_steps(1, 1, 1)).toEqual({ target_version: 2, upgrade_math: true, upgrade_game: true })
-    expect(package_upgrade_steps(1, 2, 1)).toEqual({ target_version: 2, upgrade_math: false, upgrade_game: true })
-    expect(package_upgrade_steps(1, 2, 2)).toEqual({ target_version: 2, upgrade_math: false, upgrade_game: false })
-    expect(() => package_upgrade_steps(1, 1, 2)).toThrow('cannot be newer')
-  })
+    // publish all is one guarded resumable operation
+    {
+      const inspected = {
+        ...create_state(),
+        admin: {
+          ...create_state().admin,
+          status: 'ready' as const,
+          snapshot: {
+            sealed: false,
+            batches: [{ id: 'items:0', phase: 'items', state: 'ready' as const, targets: 2, missing_dependencies: [] }],
+          },
+        },
+      }
+      expect(reduce_app_state(inspected, { type: 'admin/publish_all' }).admin.operation).toEqual({ type: 'all' })
+    }
 
-  test('publish all is one guarded resumable operation', () => {
-    const inspected = {
-      ...create_state(),
-      admin: {
-        ...create_state().admin,
-        status: 'ready' as const,
+    // completed seed inspection exposes an explicit recoverable cleanup operation
+    {
+      const loading = reduce_app_state(create_state(), { type: 'admin/refresh' })
+      const progressing = reduce_app_state(loading, {
+        type: 'admin/progress',
+        progress: { phase: 'inspection', current: 4, total: 10, label: 'spells:3' },
+      })
+      const inspected = reduce_app_state(progressing, {
+        type: 'admin/refreshed',
         snapshot: {
           sealed: false,
-          batches: [{ id: 'items:0', phase: 'items', state: 'ready' as const, targets: 2, missing_dependencies: [] }],
+          batches: [{ id: 'items:0', phase: 'items', state: 'complete', targets: 2, missing_dependencies: [] }],
         },
-      },
+      })
+      const releasing = reduce_app_state(inspected, { type: 'admin/release' })
+      const released = reduce_app_state(releasing, { type: 'admin/released' })
+
+      expect(progressing.admin.progress).toMatchObject({ current: 4, total: 10, label: 'spells:3' })
+      expect(inspected.admin.cleanup).toBe('needed')
+      expect(releasing.admin.operation).toEqual({ type: 'release' })
+      expect(released.admin.cleanup).toBe('closed')
     }
-    expect(reduce_app_state(inspected, { type: 'admin/publish_all' }).admin.operation).toEqual({ type: 'all' })
-  })
 
-  test('completed seed inspection exposes an explicit recoverable cleanup operation', () => {
-    const loading = reduce_app_state(create_state(), { type: 'admin/refresh' })
-    const progressing = reduce_app_state(loading, {
-      type: 'admin/progress',
-      progress: { phase: 'inspection', current: 4, total: 10, label: 'spells:3' },
-    })
-    const inspected = reduce_app_state(progressing, {
-      type: 'admin/refreshed',
-      snapshot: {
-        sealed: false,
-        batches: [{ id: 'items:0', phase: 'items', state: 'complete', targets: 2, missing_dependencies: [] }],
-      },
-    })
-    const releasing = reduce_app_state(inspected, { type: 'admin/release' })
-    const released = reduce_app_state(releasing, { type: 'admin/released' })
+    // deployment progress is retained as a bounded terminal log
+    {
+      const logged = Array.from({ length: 105 }, (_, index) => index).reduce(
+        (state, index) =>
+          reduce_app_state(state, {
+            type: 'admin/log',
+            tone: index === 104 ? 'success' : 'info',
+            message: `step ${index}`,
+          }),
+        create_state()
+      )
 
-    expect(progressing.admin.progress).toMatchObject({ current: 4, total: 10, label: 'spells:3' })
-    expect(inspected.admin.cleanup).toBe('needed')
-    expect(releasing.admin.operation).toEqual({ type: 'release' })
-    expect(released.admin.cleanup).toBe('closed')
-  })
-
-  test('deployment progress is retained as a bounded terminal log', () => {
-    const logged = Array.from({ length: 105 }, (_, index) => index).reduce(
-      (state, index) =>
-        reduce_app_state(state, {
-          type: 'admin/log',
-          tone: index === 104 ? 'success' : 'info',
-          message: `step ${index}`,
-        }),
-      create_state()
-    )
-
-    expect(logged.admin.log).toHaveLength(100)
-    expect(logged.admin.log[0]?.message).toBe('step 5')
-    expect(logged.admin.log.at(-1)).toMatchObject({ id: 105, tone: 'success', message: 'step 104' })
+      expect(logged.admin.log).toHaveLength(100)
+      expect(logged.admin.log[0]?.message).toBe('step 5')
+      expect(logged.admin.log.at(-1)).toMatchObject({ id: 105, tone: 'success', message: 'step 104' })
+    }
   })
 
   test('correlated request errors do not become connection errors', () => {

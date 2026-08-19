@@ -55,9 +55,10 @@ const integer_power = (base: number, exponent: number): number => {
   return result
 }
 
-export const create_fbm_sampler = (
+const create_octave_sampler = (
   seed: number,
-  { period, octaves, spread = 2, gain = 0.5 }: NoiseField
+  { period, octaves, spread = 2, gain = 0.5 }: NoiseField,
+  shape: (noise: number) => number
 ): ((x: number, z: number) => number) => {
   const noise = createNoise2D(alea(seed))
   const frequencies = Array.from({ length: octaves }, (_, index) => integer_power(spread, index) / period)
@@ -66,9 +67,52 @@ export const create_fbm_sampler = (
   return (x, z) => {
     let value = 0
     for (let index = 0; index < octaves; index += 1)
-      value += (noise(x * frequencies[index], z * frequencies[index]) * 0.5 + 0.5) * amplitudes[index]
+      value += shape(noise(x * frequencies[index], z * frequencies[index])) * amplitudes[index]
     return Math.max(0, Math.min(1, value / amplitude_sum))
   }
+}
+
+export const create_fbm_sampler = (seed: number, field: NoiseField): ((x: number, z: number) => number) =>
+  create_octave_sampler(seed, field, (noise) => noise * 0.5 + 0.5)
+
+/** Fold simplex valleys into crests, producing connected mountain ridges instead of round noise domes. */
+export const create_ridged_sampler = (seed: number, field: NoiseField): ((x: number, z: number) => number) =>
+  create_octave_sampler(seed, field, (noise) => (1 - Math.abs(noise)) ** 2)
+
+const hash_string = (value: string): number => {
+  let hash = 0x811c9dc5
+  for (let index = 0; index < value.length; index += 1) hash = Math.imul(hash ^ value.charCodeAt(index), 0x01000193)
+  return hash >>> 0
+}
+
+/** Deterministic u32 for one labelled world position — every decoration decision hashes here. */
+export const hash_position = (seed: number, label: string, x: number, z: number, salt: number): number => {
+  let hash = seed ^ hash_string(label) ^ Math.imul(x, 0x9e3779b1) ^ Math.imul(z, 0x85ebca77) ^ salt
+  hash = Math.imul(hash ^ (hash >>> 16), 0x7feb352d)
+  hash = Math.imul(hash ^ (hash >>> 15), 0x846ca68b)
+  return (hash ^ (hash >>> 16)) >>> 0
+}
+
+const smooth = (value: number): number => value * value * (3 - 2 * value)
+
+/** Coarse deterministic value field in [0,1) — clusters any per-position decision into patches. */
+export const field_value = (
+  seed: number,
+  label: string,
+  x: number,
+  z: number,
+  period: number,
+  salt: number
+): number => {
+  const grid_x = Math.floor(x / period)
+  const grid_z = Math.floor(z / period)
+  const fraction_x = smooth(x / period - grid_x)
+  const fraction_z = smooth(z / period - grid_z)
+  const at = (offset_x: number, offset_z: number): number =>
+    hash_position(seed, label, grid_x + offset_x, grid_z + offset_z, salt) / 0x1_0000_0000
+  const top = at(0, 0) + (at(1, 0) - at(0, 0)) * fraction_x
+  const bottom = at(0, 1) + (at(1, 1) - at(0, 1)) * fraction_x
+  return top + (bottom - top) * fraction_z
 }
 
 const U64_MASK = (1n << 64n) - 1n

@@ -206,9 +206,9 @@ const NIGHT_SKYGLOW: Rgb = [0.62, 0.78, 1.12]
 const MOON_MUL_DEFAULT = 0.26
 const MOON_TINT: Rgb = [0.58, 0.7, 1.0]
 /** Ambient intensity comfort floor (fraction of the baseline) — night never crushes to pitch black
- *  (target: "never pitch black … shapes stay legible while the world reads NIGHT"; lifted with the moon key
- *  so the moonlit world reads soft blue-grey, still < 0.6× the day ambient so it stays unmistakably night). */
-const AMBIENT_NIGHT_FLOOR_DEFAULT = 0.5
+ *  (target: "never pitch black … shapes stay legible while the world reads NIGHT"; 0.6× keeps the
+ *  existing soft blue-grey hue while lifting shadowed terrain without turning night into dim daylight). */
+const AMBIENT_NIGHT_FLOOR_DEFAULT = 0.6
 
 // ── CONFIGURABLE NIGHT DIALS (2026-07-19: moonlit terrain reads PITCH-BLACK — the moon key + ambient
 //    floor are too low to give the terrain FORM). These are a TASTE dial the seat picks: raising moon_mul
@@ -230,6 +230,13 @@ const AMBIENT_NIGHT_FLOOR_DEFAULT = 0.5
 export function shadow_intensity_for(y: number): number {
   return smooth(0.0, 0.12, y)
 }
+
+const SHADOW_DIRECTION_STEP_COS = Math.cos(Math.PI / 720)
+
+/** Keep the directional shadow projection fixed until the moving key advances by 0.25°. Updating
+ * it every frame makes static voxel edges crawl across shadow-map texels during the day cycle. */
+export const shadow_direction_changed = (previous_dot_next: number): boolean =>
+  previous_dot_next < SHADOW_DIRECTION_STEP_COS
 
 /** The reference (noon) anchors, derived ONCE from the same functions — zero hardcoded runtime numbers.
  *  Noon sun elevation is SUN_PEAK_Y (sky_node.js) ≈ 0.98; use it directly for the transmittance anchor. */

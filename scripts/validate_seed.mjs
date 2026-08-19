@@ -42,8 +42,8 @@ const warns = []
 const red = (rule, message) => reds.push(`RED  ${rule} — ${message}`)
 const warn = (rule, message) => warns.push(`WARN ${rule} — ${message}`)
 
-// The seed boundary has four physical homes. A fifth bucket recreates the ambiguity this layout removed.
-const SEED_HOMES = ['content', 'icons', 'models', 'sounds']
+// The seed boundary has five physical homes; structures keep generated voxel types beside editable packs.
+const SEED_HOMES = ['content', 'icons', 'models', 'sounds', 'structures']
 const actual_seed_homes = readdirSync(seed_dir).sort()
 if (actual_seed_homes.join(',') !== SEED_HOMES.join(','))
   red('S-LAYOUT', `seed contains [${actual_seed_homes.join(', ')}], expected only [${SEED_HOMES.join(', ')}]`)
@@ -104,6 +104,12 @@ const check_effect = (where, effect) => {
     red('C-CHANCE', `${where}: chance_bp ${effect.chance_bp} above 100% (EBadChance)`)
   check_number(where, 'turns', effect.turns, 8)
   check_number(where, 'area_size', effect.area_size, 8)
+  const instant = effect.kind <= 3 || (effect.kind >= 8 && effect.kind <= 12) || effect.kind === 16
+  const timed = [13, 14, 15, 17, 18, 19].includes(effect.kind)
+  if (instant && effect.turns !== 0)
+    red('C-TURNS', `${where}: instantaneous kind ${effect.kind} must carry turns 0 (EBadTurns)`)
+  if (timed && effect.turns < 1)
+    red('C-TURNS', `${where}: timed kind ${effect.kind} must carry at least one turn (EBadTurns)`)
   // the CHANNEL rules — spell_effect.move aborts on each of these before the freeze:
   // add/remove/steal (4/5/6) take any channel 0..12; remove(hp) needs turns ≥ 1; remove/steal
   // on hp carry an element, add(hp) — a heal — carries none; reaction (7) takes stat channels
@@ -155,12 +161,43 @@ const items = load('items.json')
 const mobs = load('mobs.json')
 const spells = load('spells.json')
 const recipes = load('recipes.json')
+const structure_packs_file = load('structure_packs.json')
 const worlds = load('worlds.json')
 const shop = load('shop.json')
+const structure_types_file = JSON.parse(readFileSync(join(seed_dir, 'structures', 'types.json'), 'utf8'))
+const structure_packs = structure_packs_file?.packs ?? {}
+const structure_types = structure_types_file?.types ?? {}
+
+if (structure_packs_file?.version !== 1 || !structure_packs_file.packs)
+  red('S-STRUCTURE', 'structure_packs.json must contain version 1 and a packs object')
+if (structure_types_file?.version !== 1 || !structure_types_file.types)
+  red('S-STRUCTURE', 'structures/types.json must contain version 1 and a types object')
+for (const [name, pack] of Object.entries(structure_packs)) {
+  const where = `structure_packs[${name}]`
+  check_exact_keys(where, pack, ['category', 'spacing', 'density_bp', 'max_slope', 'bury', 'types'])
+  if (!['trees', 'rocks', 'ruins'].includes(pack.category))
+    red('S-STRUCTURE', `${where}: unknown category ${pack.category}`)
+  if (!Number.isInteger(pack.spacing) || pack.spacing < 4)
+    red('S-STRUCTURE', `${where}: spacing must be an integer >= 4`)
+  if (!Number.isInteger(pack.density_bp) || pack.density_bp < 0 || pack.density_bp > 10000)
+    red('S-STRUCTURE', `${where}: density_bp must be within 0..10000`)
+  if (!Number.isInteger(pack.max_slope) || pack.max_slope < 0)
+    red('S-STRUCTURE', `${where}: max_slope must be a non-negative integer`)
+  if (!Number.isInteger(pack.bury) || pack.bury < 0) red('S-STRUCTURE', `${where}: bury must be a non-negative integer`)
+  if (!Array.isArray(pack.types) || pack.types.length === 0) red('S-STRUCTURE', `${where}: types must not be empty`)
+  for (const [index, row] of (pack.types ?? []).entries()) {
+    if (!structure_types[row.type]) red('S-STRUCTURE', `${where}.types[${index}]: unknown type "${row.type}"`)
+    if (!Number.isInteger(row.weight) || row.weight < 1)
+      red('S-STRUCTURE', `${where}.types[${index}]: weight must be a positive integer`)
+  }
+}
 
 const item_types = new Set(items.map((row) => row.item_type))
 const mob_types = new Set(mobs.map((row) => row.mob_type))
 const categories_of = new Map(items.map((row) => [row.item_type, row.category]))
+for (const pet of items.filter(({ category }) => category === 'pet'))
+  if (!existsSync(join(seed_dir, 'models', 'pets', `${pet.item_type}.glb`)))
+    red('M-PET-MODEL', `pet item ${pet.item_type} has no exact models/pets/${pet.item_type}.glb`)
 
 const check_loot_rewards = (where, rewards) => {
   if (!Array.isArray(rewards) || rewards.length === 0)
@@ -407,6 +444,20 @@ for (const world of worlds) {
     const recipe = validate_world_recipe(world.terrain)
     if (!recipe.ok) for (const error of recipe.errors) red('M2-RECIPE', `${where}: ${error}`)
     if (biomes.length > 255) red('M2-BIOMES', `${where}: ${biomes.length} biomes overflow the u8 biome id`)
+    for (const [biome_index, biome] of biomes.entries())
+      for (const [pack_index, pack_name] of (biome.structure_packs ?? []).entries()) {
+        const pack = structure_packs[pack_name]
+        if (!pack) {
+          red('S-STRUCTURE', `${where}.terrain.biomes[${biome_index}].structure_packs[${pack_index}]: unknown pack`)
+          continue
+        }
+        for (const { type } of pack.types) {
+          const template = structure_types[type]
+          for (const material of template?.palette ?? [])
+            if (material !== 'air' && !world.terrain.materials[material])
+              red('S-STRUCTURE', `${where}: pack ${pack_name} type ${type} needs missing material "${material}"`)
+        }
+      }
   }
   if (world.terrain && biomes.some((biome) => biome.mobs !== undefined || biome.resources !== undefined))
     red('M2-SHAPE', `${where}: biome objects carry mobs/resources — spawns are world-level lists with a biomes field`)

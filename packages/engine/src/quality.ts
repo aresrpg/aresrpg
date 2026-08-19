@@ -22,10 +22,10 @@ export const QUALITY_PROFILES = Object.freeze({
       horizon_step: 32,
     }),
     sky: 'low',
-    terrain: 'flat',
+    terrain: Object.freeze({ kind: 'flat', texture_size: 16 }),
     fog: Object.freeze({ near: 200, far: 640 }),
     shadows: Object.freeze({ kind: 'none', map_size: 0 }),
-    effects: Object.freeze({ bloom: null }),
+    effects: Object.freeze({ bloom: null, sun_shafts: null }),
   }),
   medium: Object.freeze({
     name: 'medium',
@@ -43,10 +43,10 @@ export const QUALITY_PROFILES = Object.freeze({
       horizon_step: 24,
     }),
     sky: 'medium',
-    terrain: 'lit',
+    terrain: Object.freeze({ kind: 'lit', texture_size: 32 }),
     fog: Object.freeze({ near: 250, far: 1000 }),
     shadows: Object.freeze({ kind: 'basic', map_size: 1024 }),
-    effects: Object.freeze({ bloom: null }),
+    effects: Object.freeze({ bloom: null, sun_shafts: null }),
   }),
   high: Object.freeze({
     name: 'high',
@@ -54,7 +54,7 @@ export const QUALITY_PROFILES = Object.freeze({
     chunks: Object.freeze({
       near_radius: 3,
       mid_radius: 6,
-      far_radius: 9,
+      far_radius: 11,
       evict_per_frame: 12,
       request_per_frame: 6,
       max_in_flight: 12,
@@ -64,10 +64,20 @@ export const QUALITY_PROFILES = Object.freeze({
       horizon_step: 16,
     }),
     sky: 'high',
-    terrain: 'pbr',
+    terrain: Object.freeze({ kind: 'pbr', texture_size: 32 }),
     fog: Object.freeze({ near: 500, far: 1750 }),
     shadows: Object.freeze({ kind: 'soft', map_size: 2048 }),
-    effects: Object.freeze({ bloom: Object.freeze({ strength: 0.13, radius: 0.6, threshold: 2.05 }) }),
+    effects: Object.freeze({
+      bloom: Object.freeze({ strength: 0.18, radius: 0.65, threshold: 1.6 }),
+      sun_shafts: Object.freeze({
+        samples: 24,
+        resolution: 0.4,
+        density: 0.72,
+        decay: 0.93,
+        strength: 0.12,
+        threshold: 1.45,
+      }),
+    }),
   }),
 } satisfies Readonly<Record<EngineQuality, QualityProfile>>)
 

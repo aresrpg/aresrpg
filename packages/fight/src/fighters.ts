@@ -117,7 +117,7 @@ export const max_hp_of = (runtime: FightRuntime, seat: bigint): bigint => {
   return malus >= base ? 1n : base - malus
 }
 
-export const base_ap_of = (runtime: FightRuntime, seat: bigint): bigint => {
+export const base_ap_of = (runtime: FightReadState, seat: bigint): bigint => {
   const fighter = runtime.contract.fighters[Number(seat)]
   return is_mob(fighter)
     ? mob_snapshot(fighter).ap
@@ -130,6 +130,9 @@ export const base_mp_of = (runtime: FightReadState, seat: bigint): bigint => {
     ? mob_snapshot(fighter).mp
     : effective(BASE_MP, player_source(runtime, seat).folded_stats.movement)
 }
+
+export const action_points_of = (runtime: FightReadState, seat: bigint): bigint =>
+  row_adjusted(runtime, seat, base_ap_of(runtime, seat), STATS.ap)
 
 export const movement_points_of = (runtime: FightReadState, seat: bigint): bigint =>
   row_adjusted(runtime, seat, base_mp_of(runtime, seat), STATS.mp)
@@ -266,19 +269,33 @@ export const hit = (
     kill_fighter(runtime, target, source, cause)
     return landed
   }
-  const stances = fighter.effects.filter((row) => row.kind === KINDS.reaction)
+  const stances = fighter.effects.filter((row) => row.kind === KINDS.chatiment)
   stances.forEach((row) => {
-    const effect = {
-      kind: KINDS.add,
-      element: row.element,
-      value: row.value,
-      turns_left: row.turns_left,
-      source: row.source,
-      stat: row.stat,
-    }
-    fighter.effects.push(effect)
-    const effect_id = add_effect_id(runtime, target)
-    emit(runtime, 'reaction_triggered', {
+    // The stance's accrued bonus is ONE fact: fold each trigger into the standing gain row
+    // (same channel, element, source, and decay), creating it only on the first trigger.
+    const standing = fighter.effects.findIndex(
+      (gain) =>
+        gain.kind === KINDS.add &&
+        gain.stat === row.stat &&
+        gain.element === row.element &&
+        gain.source === row.source &&
+        gain.turns_left === row.turns_left
+    )
+    const effect =
+      standing < 0
+        ? {
+            kind: KINDS.add,
+            element: row.element,
+            value: row.value,
+            turns_left: row.turns_left,
+            source: row.source,
+            stat: row.stat,
+          }
+        : { ...fighter.effects[standing], value: fighter.effects[standing].value + row.value }
+    if (standing < 0) fighter.effects.push(effect)
+    else fighter.effects[standing] = effect
+    const effect_id = standing < 0 ? add_effect_id(runtime, target) : effect_id_at(runtime, target, standing)
+    emit(runtime, 'chatiment_triggered', {
       fighter: target,
       stance_effect_id: effect_id_at(runtime, target, fighter.effects.indexOf(row)),
       added_effect_id: effect_id,
@@ -319,3 +336,7 @@ export const has_row = (runtime: FightRuntime, seat: bigint, kind: bigint): bool
   runtime.contract.fighters[Number(seat)].effects.some((row) => row.kind === kind)
 
 export const sum_effect_rows = sum_rows
+
+// The ap_mp_change reasons born from EFFECTS (grants, removals, steals) — the one home every
+// presentation surface derives its pool-delta filters from. Costs/refills are the other family.
+export const POOL_EFFECT_REASONS = Object.freeze(['effect_grant', 'effect_remove', 'effect_steal'] as const)

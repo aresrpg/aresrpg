@@ -10,10 +10,12 @@ export type { FightBlobPreset } from './fight_blob_presets.ts'
 export { sample_biome_grid } from './biome_grid.ts'
 export { get_quality_profile, QUALITY_OPTIONS, QUALITY_PROFILES, quality_pixel_ratio } from './quality.ts'
 export { CHUNK_EDGE } from './voxel_data.ts'
-export { CELESTIAL_CYCLE_MS } from './sky/celestial_motion.ts'
+export { CELESTIAL_CYCLE_MS, DAY_FRAC } from './sky/celestial_motion.ts'
 export { MATERIAL_PRESETS, material_pattern } from './material_presets.ts'
 export { create_world_preview } from './world_preview.ts'
 export { create_terrain_planner } from './terrain_planner.ts'
+export { structure_voxels } from './structure_placement.ts'
+export { STRUCTURE_PACKS, STRUCTURE_TYPES } from './structures.ts'
 export { create_flat_projection, project_height, set_flat_projection, step_flat_projection } from './flatten.ts'
 export {
   BIOME_SLOTS,
@@ -22,13 +24,17 @@ export {
   MAX_SURFACE_Y,
   parse_world_recipe,
   sample_world_column,
+  surface_layer_for_slope,
+  terrain_layer,
+  terrain_material_id,
+  terrain_slope,
   validate_world_recipe,
   WORLD_HEIGHT,
 } from './world_recipe.ts'
 export type { WorldMaterial } from './world_materials.ts'
 export type { MaterialPreset } from './material_presets.ts'
 export type { BiomeGrid } from './biome_grid.ts'
-export type { BiomeSlot, WorldRecipe } from './world_recipe.ts'
+export type { BiomeSlot, CompiledWorld, WorldRecipe } from './world_recipe.ts'
 export type { WorldPreview } from './world_preview.ts'
 export type { TerrainColumnCoordinate, TerrainColumnPlan, TerrainPlanner } from './terrain_planner.ts'
 export type { CharacterPreview } from './character_preview.ts'
@@ -52,6 +58,7 @@ export type {
   FightBlobDecoration,
   FightBlobShape,
   FightBlobSpec,
+  FightCastStyle,
   FightPresentationCue,
   FightBoardRender,
   FightBoardRenderCell,

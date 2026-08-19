@@ -9,6 +9,7 @@ import { describe, expect, test } from 'bun:test'
 
 import { create_fight_audio_observer, fight_audio_variant } from '../../../src/game/audio/fight_audio.ts'
 import { FIGHT_AUDIO_ASSETS, fight_audio_keys_for_families } from '../../../src/game/audio/fight_audio_registry.ts'
+import { FOOTSTEP_AUDIO_ASSETS } from '../../../src/game/audio/footstep_recordings.ts'
 
 const cast_cue = Object.freeze({
   id: 'fight:1:0',
@@ -18,9 +19,8 @@ const cast_cue = Object.freeze({
   cast_level: 1,
   target_cell: 12,
   element: 'fire',
-  placement: null,
+  style: 'damage',
   critical: true,
-  weapon: false,
   amount: 42,
   target_max_hp: 100,
   affected_cells: Object.freeze([12, 13, 14]),
@@ -30,7 +30,7 @@ const cast_cue = Object.freeze({
 describe('fight audio', () => {
   test('registers every authored seed sound exactly once', () => {
     const authored = readdirSync(resolve(import.meta.dir, '../../../../../seed/sounds')).sort()
-    const registered = Object.values(FIGHT_AUDIO_ASSETS)
+    const registered = [...Object.values(FIGHT_AUDIO_ASSETS), ...Object.values(FOOTSTEP_AUDIO_ASSETS)]
       .map((source) => source.replace('/sound_effect/', ''))
       .sort()
     expect(registered).toEqual(authored)
@@ -94,7 +94,7 @@ describe('fight audio', () => {
       ...cast_cue,
       id: 'fight:3:0',
       element: 'earth',
-      placement: 'trap',
+      style: 'trap',
       amount: 0,
       affected_cells: Object.freeze([]),
       critical: false,

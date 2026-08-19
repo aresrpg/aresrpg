@@ -86,6 +86,26 @@ export type ZoneRow = {
   res_taken: number[]
 }
 
+/** One live mob group of a zone — derived deterministically from the zone seed (zone_math.move
+ *  twin, server-side); positions are CHAIN space. `index` is the on-chain engage key. */
+export type MobGroupRow = {
+  index: number
+  x: number
+  z: number
+  members: { mob_type: string; level_scalar: number }[]
+}
+
+/** One live resource pack of a zone — `nodes` is what remains after consumption. */
+export type ResourcePackRow = {
+  index: number
+  x: number
+  z: number
+  item_type: string
+  job: string
+  tier: number
+  nodes: number
+}
+
 /** A live fight marker in the world — enough to render and approach; details come on spectate. */
 export type FightRow = {
   id: string
@@ -183,6 +203,11 @@ export const zone_of = (x: number, z: number) => ({ zx: Math.floor(x / ZONE_SIZE
  *  engine RUN_SPEED 10.5 + 10% terrain slack. The server enforces the SAME number the chain
  *  proves travel against; never a separate constant. */
 export const SPEED_BUDGET_BLOCKS_PER_SECOND = 11.5
+
+/** The 1008-close reasons that mean the SERVER dropped this client for a rule violation —
+ *  the server's cool-off ban and the client's red connection state both key on this ONE set
+ *  (lifecycle closes like REPLACED / ALREADY_CONNECTED share the code, never the meaning). */
+export const VIOLATION_DROP_REASONS: ReadonlySet<string> = new Set(['SPEED', 'RATE_LIMIT'])
 /** Mounted pet = ×1.5 (world.move PET_NUM/PET_DEN, the both-end rule chain-side). */
 export const PET_SPEED_MULTIPLIER = 1.5
 
@@ -271,6 +296,9 @@ export type ServerPackets = {
   // ── the world (pushed on embody + as the tracked spiral moves; owner: chunk-spiral law) ──
   'packet/zones': { zones: ZoneRow[] }
   'packet/fights': { fights: FightRow[] }
+  /** A tracked zone's live population — sent when a discovered zone enters the spiral and again
+   *  the moment a tracked zone is searched (fresh seed, fresh spawns). */
+  'packet/zone_spawns': { world: string; zx: number; zz: number; mobs: MobGroupRow[]; resources: ResourcePackRow[] }
 
   // ── the presence mesh (other players in tracked zones) ──
   'packet/player_appeared': { player: PresenceRow }
@@ -363,6 +391,7 @@ export const SESSION_PACKETS = [
 
 export const WORLD_PACKETS = [
   'packet/zones',
+  'packet/zone_spawns',
   'packet/fights',
   'packet/player_appeared',
   'packet/player_moved',

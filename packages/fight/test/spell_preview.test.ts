@@ -4,7 +4,7 @@
 import { describe, expect, test } from 'bun:test'
 
 import { create_fight } from '../src/fight.ts'
-import { preview_spell_cast } from '../src/spell_preview.ts'
+import { preview_spell_cast, preview_weapon_strike } from '../src/spell_preview.ts'
 
 import { create_fixture } from './helpers.ts'
 
@@ -42,4 +42,21 @@ describe('spell cast preview', () => {
 
     expect(checkpoint).toEqual(before)
   })
+})
+
+test('weapon previews execute the canonical strike command on a disposable checkpoint', () => {
+  const checkpoint = structuredClone(create_fixture().checkpoint)
+  checkpoint.contract.closed = checkpoint.contract.closed.map(() => 0n)
+  checkpoint.contract.round = 1n
+  checkpoint.contract.queue = [0n, 1n]
+  checkpoint.contract.fighters[0]!.cell = 100n
+  checkpoint.contract.fighters[0]!.ap = 4n
+  checkpoint.contract.fighters[1]!.cell = 101n
+  const before = structuredClone(checkpoint)
+
+  const preview = preview_weapon_strike(checkpoint, 0n, 101n)
+
+  expect(preview.error).toBeNull()
+  expect(preview.targets).toContainEqual(expect.objectContaining({ fighter: 1n, hp_before: 100n, hp_after: 92n }))
+  expect(checkpoint).toEqual(before)
 })

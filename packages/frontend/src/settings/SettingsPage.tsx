@@ -1,9 +1,15 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
-import { Music2, Settings as SettingsIcon } from 'lucide-react'
+import { get_quality_profile } from '@aresrpg/engine'
+import { Mountain, Music2, Settings as SettingsIcon } from 'lucide-react'
 
-import type { GameSettings } from '../game/core/settings.ts'
+import {
+  effective_render_distance,
+  RENDER_DISTANCE_MAX,
+  RENDER_DISTANCE_MIN,
+  type GameSettings,
+} from '../game/core/settings.ts'
 import { copy_text, type AppCopy } from '../i18n/copy.ts'
 import { dispatch_app } from '../store.ts'
 
@@ -30,6 +36,12 @@ export default function SettingsPage({ copy, settings }: Readonly<{ copy: AppCop
   const t = copy_text(copy.settings_page)
   const change_music = (music_enabled: boolean): void =>
     dispatch_app({ type: 'settings/changed', settings: Object.freeze({ ...settings, music_enabled }) })
+  const change_render_distance = (render_distance: number): void =>
+    dispatch_app({ type: 'settings/changed', settings: Object.freeze({ ...settings, render_distance }) })
+  const render_distance = effective_render_distance(
+    get_quality_profile(settings.quality).chunks.far_radius,
+    settings.render_distance
+  )
 
   return (
     <section className="pointer-events-auto min-h-full flex-1 overflow-y-auto border border-border bg-[#0a0a0f]/97 p-3 lg:p-8">
@@ -52,6 +64,29 @@ export default function SettingsPage({ copy, settings }: Readonly<{ copy: AppCop
           </div>
         </div>
         <Toggle change={change_music} checked={settings.music_enabled} label={t('music_label')} />
+      </div>
+
+      <div className="mt-4 flex max-w-lg items-center justify-between gap-5 border border-border bg-surface/80 p-4 lg:p-5">
+        <div className="flex min-w-0 items-center gap-3">
+          <Mountain className="shrink-0 text-gold opacity-70" size={15} />
+          <div className="min-w-0">
+            <div className="text-[11px] tracking-wide text-text">{t('render_distance_label')}</div>
+            <div className="mt-1 text-[9px] leading-5 tracking-wide text-muted">{t('render_distance_hint')}</div>
+          </div>
+        </div>
+        <div className="flex shrink-0 items-center gap-3">
+          <input
+            aria-label={t('render_distance_label')}
+            className="w-32 cursor-pointer accent-gold"
+            max={RENDER_DISTANCE_MAX}
+            min={RENDER_DISTANCE_MIN}
+            onChange={(event) => change_render_distance(Number(event.target.value))}
+            step={1}
+            type="range"
+            value={render_distance}
+          />
+          <output className="min-w-4 text-right text-[11px] text-gold tabular-nums">{render_distance}</output>
+        </div>
       </div>
     </section>
   )

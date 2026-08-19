@@ -24,11 +24,11 @@ export default {
         send({ type: 'packet/kolizeum_paid', kolizeum, winner, amount })
       }
     }
-    pubsub.emitter.on(channels.kolizeum, forward as (payload: unknown) => void)
-    void pubsub.subscribe(channels.kolizeum)
+    pubsub.graph.emitter.on(channels.kolizeum, forward as (payload: unknown) => void)
+    void pubsub.graph.subscribe(channels.kolizeum)
     signal.addEventListener('abort', () => {
-      pubsub.emitter.off(channels.kolizeum, forward as (payload: unknown) => void)
-      void pubsub.unsubscribe(channels.kolizeum)
+      pubsub.graph.emitter.off(channels.kolizeum, forward as (payload: unknown) => void)
+      void pubsub.graph.unsubscribe(channels.kolizeum)
     })
   },
 } satisfies PlayerModule

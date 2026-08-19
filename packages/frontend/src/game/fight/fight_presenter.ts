@@ -28,11 +28,12 @@ export const create_fight_presenter = ({
   }
 
   return Object.freeze({
-    present: (cues: readonly FightPresentationCue[]): void => {
+    present: (cues: readonly FightPresentationCue[]): Promise<void> => {
       const owned = Object.freeze([...cues])
       owned.forEach((cue) => {
         tail = tail.then(() => present_one(cue))
       })
+      return tail
     },
     settled: (): Promise<void> => tail,
     dispose: (): void => {

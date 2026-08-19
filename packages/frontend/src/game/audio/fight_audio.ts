@@ -88,7 +88,12 @@ export const create_fight_audio_observer = (
     last_variant.set(resolved.family_layer, resolved.variant)
     return resolved.key
   }
-  return (cue: FightPresentationCue, phase: FightCuePhase, character_voices: CharacterVoices): void => {
+  return (
+    cue: FightPresentationCue,
+    phase: FightCuePhase,
+    character_voices: CharacterVoices,
+    owned_entity_ids: ReadonlySet<string> = new Set()
+  ): void => {
     if (cue.type === 'cast') {
       if (phase === 'start') {
         const charge = CAST_CHARGE[cue.element]
@@ -96,7 +101,7 @@ export const create_fight_audio_observer = (
         return
       }
       emit('cast_resolve')
-      if (cue.amount <= 0) return
+      if (cue.amount <= 0 && cue.style !== 'trap' && cue.style !== 'glyph') return
       emit(
         cue.element === 'heal' ? variant('heal', 'cast') : variant(cue.element, 'impact'),
         cue.element === 'heal' ? 0.35 : 0.5
@@ -122,7 +127,8 @@ export const create_fight_audio_observer = (
       emit(ABSORB[stable_index(cue.id, ABSORB.length)])
       return
     }
-    if (cue.type === 'turn') emit('turn_start')
+    // the turn bell rings only when it is YOUR turn to play
+    if (cue.type === 'turn' && owned_entity_ids.has(cue.entity_id)) emit('turn_start')
     if (cue.type === 'movement' && cue.mode === 'knockback') emit('knockback', 0.32)
   }
 }

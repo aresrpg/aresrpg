@@ -9,6 +9,9 @@ import { ThinkingOrb } from 'thinking-orbs'
 import { AppShell } from './components/AppShell.tsx'
 import { CANVAS_OVERLAY_CLASS, WORLD_FRAME_LAYER, world_frame_visibility } from './components/app_layout.ts'
 import { CharacterCreateModal } from './components/CharacterCreateModal.tsx'
+import { Chat } from './components/Chat.tsx'
+import { CompassStrip } from './game/hud/CompassStrip.tsx'
+import { Minimap } from './game/hud/Minimap.tsx'
 import { FpsPanel } from './components/FpsPanel.tsx'
 import { Toasts } from './components/Toasts.tsx'
 import { HUD_PANEL_CLASS, HudPanel } from './components/ui/HudPanel.tsx'
@@ -148,6 +151,7 @@ export function App() {
   const locale = useAppStore((state) => state.locale)
   const copy = useAppStore((state) => state.copy)
   const engine_status = useAppStore((state) => state.engine)
+  const fight_active = useAppStore((state) => state.fight.mode !== null)
   const { wallet } = session
   const [show_wallets, set_show_wallets] = useState(false)
   const [graphics_notice_dismissed, set_graphics_notice_dismissed] = useState(false)
@@ -207,6 +211,8 @@ export function App() {
     engine_status.state === 'failed' || (engine_status.state === 'degraded' && !graphics_notice_dismissed)
   const world_unavailable = engine_status.issue?.code === 'world_unavailable'
   const loading_universe = session.auth_status === 'connecting' || (in_app && !session.roster_loaded)
+  const selected_character_name =
+    session.characters.find(({ id }) => id === session.selected_character_id)?.name ?? null
 
   if (!copy) return <main className="fixed inset-0 bg-[#0a0a0f]" />
 
@@ -216,12 +222,24 @@ export function App() {
         aria-hidden={navigation.page !== 'world'}
         className={`fixed overflow-hidden transition-opacity duration-150 ${WORLD_FRAME_LAYER} ${world_frame_visibility(navigation.page)} ${
           in_app
-            ? 'top-3 right-3 bottom-3 left-[224px] rounded-[14px] shadow-[0_18px_50px_rgba(0,0,0,0.55),0_0_0_1px_rgba(255,255,255,0.06),inset_0_0_0_1px_rgba(255,255,255,0.04)]'
+            ? 'top-[46px] right-3 bottom-3 left-[224px] rounded-[14px] shadow-[0_18px_50px_rgba(0,0,0,0.55),0_0_0_1px_rgba(255,255,255,0.06),inset_0_0_0_1px_rgba(255,255,255,0.04)]'
             : 'inset-0'
         }`}
       >
         <canvas ref={attach_canvas} className="absolute inset-0 size-full touch-none" />
 
+        {in_app && navigation.page === 'world' && !fight_active && (
+          <div className={`${CANVAS_OVERLAY_CLASS} z-[105]`}>
+            <CompassStrip copy={copy} />
+            <Minimap copy={copy} />
+            <div className="gw-worldchat">
+              <Chat
+                self_name={selected_character_name ?? undefined}
+                text={{ ...copy.simulator_page, ...copy.fight_hud }}
+              />
+            </div>
+          </div>
+        )}
         <div className={`${CANVAS_OVERLAY_CLASS} z-[110]`}>
           <FpsPanel
             active={navigation.page === 'world'}
@@ -243,15 +261,17 @@ export function App() {
         {in_app && navigation.page === 'world' && navigation.dialog === 'welcome' && (
           <Welcome copy={copy} create={() => dispatch_app({ type: 'dialog/open', dialog: 'character_create' })} />
         )}
-        {in_app && navigation.page === 'world' && navigation.dialog === 'character_create' && (
-          <CharacterCreateModal
-            cancel={() => dispatch_app({ type: 'dialog/open', dialog: 'welcome' })}
-            copy={copy}
-            create={create_character}
-          />
-        )}
       </div>
       <div className="pointer-events-none fixed inset-0 z-[100] bg-[repeating-linear-gradient(0deg,transparent,transparent_2px,rgba(200,150,60,0.014)_2px,rgba(200,150,60,0.014)_4px)]" />
+      {in_app && navigation.dialog === 'character_create' && (
+        <CharacterCreateModal
+          cancel={() =>
+            dispatch_app({ type: 'dialog/open', dialog: session.characters.length === 0 ? 'welcome' : null })
+          }
+          copy={copy}
+          create={create_character}
+        />
+      )}
       <Toasts />
 
       {show_graphics_notice && (
@@ -311,6 +331,7 @@ export function App() {
         <AppShell
           change_locale={change_locale}
           copy={copy}
+          create_character={() => dispatch_app({ type: 'dialog/open', dialog: 'character_create' })}
           disconnect={disconnect}
           locale={locale}
           network={env.network}

@@ -2,7 +2,7 @@
   "name": "@aresrpg/server",
   "version": "1.0.0",
   "private": true,
-  "description": "The one realtime door — zkLogin-verified websocket serving the indexer's graph and relaying player events. Writes nothing.",
+  "description": "The one realtime door \u2014 zkLogin-verified websocket serving the indexer's graph and relaying player events. Writes nothing.",
   "type": "module",
   "scripts": {
     "dev": "bun --watch src/index.ts",
@@ -15,7 +15,9 @@
     "falkordb": "^6.2.07",
     "ioredis": "^6.0.0",
     "pino": "^10.3.1",
-    "@aresrpg/protocol": "workspace:*"
+    "@aresrpg/protocol": "workspace:*",
+    "@aresrpg/fight": "workspace:*",
+    "@aresrpg/engine": "workspace:*"
   },
   "devDependencies": {
     "typescript": "~6.0.3",

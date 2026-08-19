@@ -4,7 +4,7 @@
 // then load the graph snapshot: no connection waits for a future transition.
 
 import type { Graph } from './graph.ts'
-import type { Pubsub } from './pubsub.ts'
+import type { GraphBus } from './pubsub_bus.ts'
 import { channels, type EventEnvelope } from './protocol.ts'
 
 export type GameState = {
@@ -18,7 +18,7 @@ type State = Readonly<{ frozen: boolean | null }>
 export const reduce_game_state = (state: State, frozen: boolean): State =>
   state.frozen === frozen ? state : Object.freeze({ frozen })
 
-export const create_game_state = ({ graph, pubsub }: Readonly<{ graph: Graph; pubsub: Pubsub }>): GameState => {
+export const create_game_state = ({ graph, pubsub }: Readonly<{ graph: Graph; pubsub: GraphBus }>): GameState => {
   let state: State = Object.freeze({ frozen: null })
   let indexed_changes = 0
   const listeners = new Set<(frozen: boolean | null) => void>()

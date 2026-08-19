@@ -35,6 +35,11 @@ export const channels = {
   game: 'evt:game',
 } as const
 
+/** The bus a channel lives on is declared by its name: `evt:*` is indexer-published and rides
+ *  the bound set's own redis (the graph bus); every other channel is server-published ephemera
+ *  on the ONE cluster mesh redis. Minted here, derived everywhere — never decided at a call site. */
+export const is_indexer_channel = (channel: string): boolean => channel.startsWith('evt:')
+
 // ╔════════════════ [ 1b. The SERVER mesh (published by server pods, never stored) ] ═ ]
 
 /** Channels the server itself publishes on — OFF-CHAIN ephemera ONLY (owner 2026-08-12):

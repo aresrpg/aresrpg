@@ -5,7 +5,14 @@ import { get_quality_profile } from './quality.ts'
 import { material_pattern } from './material_presets.ts'
 import type { EngineQuality } from './types.ts'
 import { WATER_SURFACE_LAYOUT } from './water_surface_layout.ts'
-import { compile_world_recipe, sample_world_column, type CompiledWorld, type WorldRecipe } from './world_recipe.ts'
+import {
+  compile_world_recipe,
+  sample_world_column,
+  surface_layer_for_slope,
+  terrain_slope,
+  type CompiledWorld,
+  type WorldRecipe,
+} from './world_recipe.ts'
 
 type Request =
   | Readonly<{ type: 'initialize'; world: WorldRecipe }>
@@ -16,7 +23,7 @@ let world: CompiledWorld | null = null
 
 self.addEventListener('message', ({ data }: MessageEvent<Request>) => {
   if (data.type === 'initialize') {
-    world = compile_world_recipe(data.world)
+    world = compile_world_recipe(data.world, { structures: false })
     return
   }
   if (!world) throw new Error('far worker received work before its world recipe')
@@ -47,15 +54,31 @@ self.addEventListener('message', ({ data }: MessageEvent<Request>) => {
   const paired_colors = new Float32Array(count * 3)
   const roughness = new Float32Array(count)
   const climate_tint = new Float32Array(count)
+  const columns = Array.from({ length: count }, (_, index) => {
+    const x = index % side
+    const z = Math.floor(index / side)
+    return sample_world_column(
+      world!,
+      data.center[0] - horizon_radius + x * horizon_step,
+      data.center[1] - horizon_radius + z * horizon_step
+    )
+  })
   for (let z = 0; z < side; z += 1) {
     for (let x = 0; x < side; x += 1) {
       const index = z * side + x
       const world_x = data.center[0] - horizon_radius + x * horizon_step
       const world_z = data.center[1] - horizon_radius + z * horizon_step
-      const column = sample_world_column(world, world_x, world_z)
+      const column = columns[index]!
       heights[index] = column.surface_y - 0.5
-      const surface = world.materials.entries[column.surface_id]!
-      const modulation = 1 + material_pattern(surface.preset, world_x, world_z, 0)
+      const neighbours = [
+        x > 0 ? columns[index - 1] : undefined,
+        x + 1 < side ? columns[index + 1] : undefined,
+        z > 0 ? columns[index - side] : undefined,
+        z + 1 < side ? columns[index + side] : undefined,
+      ].flatMap((candidate) => (candidate ? [candidate.surface_y] : []))
+      const layer = surface_layer_for_slope(terrain_slope(column.surface_y, neighbours, horizon_step))
+      const surface = world.materials.entries[column[`${layer}_id`]]!
+      const modulation = 1 + material_pattern(surface.preset, world_x, world_z)
       base_colors.set(
         surface.color.map((channel) => channel * modulation),
         index * 3

@@ -24,9 +24,8 @@ test('editable item stat rows promote defined values and retain the complete voc
 
   expect(rows.slice(0, 2).map(({ key }) => key)).toEqual(['vitality', 'movement'])
   expect(rows.find(({ key }) => key === 'wisdom')).toEqual({ key: 'wisdom', minimum: 0, maximum: 0 })
-})
 
-test('negative stat ranges display from the mildest to the strongest penalty', () => {
+  // Negative ranges display from the mildest to the strongest penalty.
   expect(item_stat_display_range({ key: 'intelligence', minimum: -9, maximum: -1 })).toEqual([-1, -9])
   expect(item_stat_display_range({ key: 'vitality', minimum: 3, maximum: 18 })).toEqual([3, 18])
 })

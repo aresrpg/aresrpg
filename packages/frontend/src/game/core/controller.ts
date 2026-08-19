@@ -29,6 +29,8 @@ const GRAVITY_UNDERWATER = 5
 const SWIM_LAMBDA = 12
 const SWIM_UP_SPEED = 1.5 * GRAVITY_UNDERWATER
 const TERMINAL_FALL = -60
+const GLIDE_GRAVITY = 8
+const GLIDE_TERMINAL_FALL = -5
 const COYOTE_TIME = 0.12
 const JUMP_BUFFER = 0.12
 const FALL_ANIM_THRESHOLD = 3
@@ -45,6 +47,7 @@ export type ControllerInput = {
   forward: number
   strafe: number
   jump: boolean
+  glide: boolean
   walk: boolean
   speed_scale: number
   yaw: number
@@ -201,8 +204,9 @@ export const step_controller = (
       state._jump_buffer = 0
       state._air_jump_fired = true
     } else {
-      const g = vel[1] > 0 ? RISE_GRAVITY : RISE_GRAVITY * FALL_GRAVITY_MULT
-      vel[1] = Math.max(TERMINAL_FALL, vel[1] - g * dt)
+      const gliding = input.glide && vel[1] <= 0
+      const gravity = gliding ? GLIDE_GRAVITY : vel[1] > 0 ? RISE_GRAVITY : RISE_GRAVITY * FALL_GRAVITY_MULT
+      vel[1] = Math.max(gliding ? GLIDE_TERMINAL_FALL : TERMINAL_FALL, vel[1] - gravity * dt)
     }
   }
 
@@ -277,6 +281,8 @@ export const CONTROLLER_CONSTANTS = Object.freeze({
   WALK_SPEED,
   RUN_SPEED,
   SWIM_SPEED,
+  GLIDE_GRAVITY,
+  GLIDE_TERMINAL_FALL,
   GROUND_ACCEL,
   GROUND_BRAKE,
   MC_STOP_FACTOR,

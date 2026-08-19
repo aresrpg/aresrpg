@@ -5,7 +5,7 @@ import { describe, expect, test } from 'bun:test'
 
 import { GRID_CELLS, mask_get, neighbours } from '../src/combat_grid.ts'
 import { create_fight } from '../src/fight.ts'
-import { KINDS } from '../src/fighters.ts'
+import { KINDS, STATS } from '../src/fighters.ts'
 import type { BoardZone, HydratedFightCheckpoint, SpellEffect, SpellLevel } from '../src/types.ts'
 
 import { create_fixture } from './helpers.ts'
@@ -187,6 +187,80 @@ describe('board-zone placement', () => {
       target_cell: placed.state.contract.fighters[1]!.cell,
     })
     expect(damaged.state.contract.fighters[0]!.effects.some(({ kind }) => kind === KINDS.invis)).toBeFalse()
+  })
+
+  test('life steal drinks exactly half of what landed', () => {
+    const checkpoint = structuredClone(create_fixture().checkpoint)
+    checkpoint.sources.spells.drain = {
+      classe: 'senshi',
+      unlock_level: 1n,
+      levels: [
+        {
+          ...checkpoint.sources.spells.slash.levels[0]!,
+          effects: [
+            {
+              kind: KINDS.steal,
+              element: 'earth',
+              value: 15n,
+              value_max: 15n,
+              area_shape: 0n,
+              area_size: 0n,
+              target_filter: 1n,
+              chance_bp: 10_000n,
+              turns: 0n,
+              stat: STATS.hp,
+            },
+          ],
+        },
+      ],
+    }
+    checkpoint.contract.fighters[0]!.hp = 40n
+    const fight = started_fight(checkpoint)
+
+    const result = fight.apply({
+      type: 'cast_spell',
+      fighter: 0n,
+      spell: 'drain',
+      target_cell: checkpoint.contract.fighters[1]!.cell,
+    })
+
+    expect(result.error).toBeNull()
+    const damage = result.events.find(({ type }) => type === 'damage_number')
+    const heal = result.events.find(({ type }) => type === 'heal_number')
+    if (damage?.type !== 'damage_number' || heal?.type !== 'heal_number') throw new Error('steal events missing')
+    expect(damage.payload.amount).toBeGreaterThan(0n)
+    expect(heal.payload.target).toBe(0n)
+    expect(heal.payload.amount).toBe(damage.payload.amount / 2n)
+  })
+
+  test('a chatiment folds its triggers into one standing gain row', () => {
+    const checkpoint = structuredClone(create_fixture().checkpoint)
+    checkpoint.contract.fighters[1]!.effects.push({
+      kind: KINDS.chatiment,
+      element: '',
+      value: 2n,
+      turns_left: 3n,
+      source: 1n,
+      stat: STATS.strength,
+    })
+    const fight = started_fight(checkpoint)
+    const target_cell = checkpoint.contract.fighters[1]!.cell
+
+    const first = fight.apply({ type: 'cast_spell', fighter: 0n, spell: 'slash', target_cell })
+    const second = fight.apply({ type: 'cast_spell', fighter: 0n, spell: 'slash', target_cell })
+
+    expect(first.error).toBeNull()
+    expect(second.error).toBeNull()
+    const gains = second.state.contract.fighters[1]!.effects.filter(
+      ({ kind, stat }) => kind === KINDS.add && stat === STATS.strength
+    )
+    expect(gains).toHaveLength(1)
+    expect(gains[0]!.value).toBe(4n)
+    // both triggers reference the SAME standing row
+    const applied = [...first.events, ...second.events].filter(({ type }) => type === 'effect_applied')
+    expect(new Set(applied.map((event) => (event.type === 'effect_applied' ? event.payload.effect_id : ''))).size).toBe(
+      1
+    )
   })
 
   test('a second mob skips a claimed glyph center and tries its next spell', () => {

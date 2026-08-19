@@ -11,17 +11,13 @@ import type { Plugin } from 'vite'
 const SOUND_ROUTE = '/sound_effect/'
 
 export const sound_assets_plugin = (sounds_dir: string): Plugin => {
-  let filenames: readonly string[] = Object.freeze([])
-  const load_filenames = async (): Promise<readonly string[]> => {
-    if (filenames.length > 0) return filenames
-    filenames = Object.freeze(
+  const load_filenames = async (): Promise<readonly string[]> =>
+    Object.freeze(
       (await readdir(sounds_dir, { withFileTypes: true }))
         .filter((entry) => entry.isFile())
         .map(({ name }) => name)
         .sort()
     )
-    return filenames
-  }
   return {
     name: 'aresrpg-sound-assets',
     async buildStart() {

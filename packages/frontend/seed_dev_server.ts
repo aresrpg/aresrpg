@@ -90,6 +90,7 @@ export const seed_content_files = Object.freeze([
   'recipes.json',
   'shop.json',
   'spells.json',
+  'structure_packs.json',
   'worlds.json',
 ] as const)
 

@@ -2,9 +2,9 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 /* eslint-disable no-param-reassign -- The Move twin updates only its reducer-owned structuredClone draft; caller snapshots stay immutable. */
 
-import { in_zone } from './combat_grid.ts'
+import { GRID_CELLS, in_zone } from './combat_grid.ts'
 import { effect_seed } from './fight_math.ts'
-import { sheet_of } from './fighters.ts'
+import { KINDS, sheet_of } from './fighters.ts'
 import { mix } from './prng.ts'
 import { emit } from './runtime.ts'
 import type { BoardZone, FightRuntime, ResolveRows } from './types.ts'
@@ -12,23 +12,44 @@ import type { BoardZone, FightRuntime, ResolveRows } from './types.ts'
 type IdentifiedZone = { zone: BoardZone; id: string }
 type ZonePartition = { fired: IdentifiedZone[]; kept: IdentifiedZone[] }
 
+const displacement_kind = (kind: bigint): boolean =>
+  kind === KINDS.push || kind === KINDS.pull || kind === KINDS.teleport || kind === KINDS.swap
+
+// The zone IS the payload's area: one authored fact (the trap's shape/size) decides who is
+// trigger-able, displayed, and affected — payload rows never carry a second area of their own.
+// Displacement resolves last so number rows land before bodies move.
+const trap_rows = (zone: Readonly<BoardZone>): BoardZone['effects'] => {
+  const rows = zone.effects.map((row) => ({ ...row, area_shape: zone.shape, area_size: zone.size }))
+  return [...rows.filter(({ kind }) => !displacement_kind(kind)), ...rows.filter(({ kind }) => displacement_kind(kind))]
+}
+
+const displaces = ({ zone }: Readonly<IdentifiedZone>): boolean =>
+  zone.effects.some(({ kind }) => displacement_kind(kind))
+
+export const board_zone_cells = (zone: Readonly<BoardZone>): readonly bigint[] =>
+  Object.freeze(
+    Array.from({ length: Number(GRID_CELLS) }, (_, cell) => BigInt(cell)).filter((cell) =>
+      in_zone(zone.shape, zone.size, zone.anchor, cell)
+    )
+  )
+
 export const on_enter = (runtime: FightRuntime, fighter: bigint, from: bigint, resolve_rows: ResolveRows): boolean => {
   if (runtime.contract.fighters[Number(fighter)].dead) return false
   const { cell } = runtime.contract.fighters[Number(fighter)]
   const partitioned = runtime.contract.zones.reduce<ZonePartition>(
     (result, zone, index) => {
-      const crosses =
-        zone.trap &&
-        in_zone(zone.shape, zone.size, zone.anchor, cell) &&
-        !in_zone(zone.shape, zone.size, zone.anchor, from)
+      // A trap fires only on ENTERING one of its cells. Movement calls on_enter per step, so
+      // crossing the zone always touches it; stepping OFF the edge touches nothing and stays silent.
+      const touches = zone.trap && in_zone(zone.shape, zone.size, zone.anchor, cell)
       const wrapped = { zone, id: runtime.render_ids.zones[index] }
-      return crosses ? { ...result, fired: [...result.fired, wrapped] } : { ...result, kept: [...result.kept, wrapped] }
+      return touches ? { ...result, fired: [...result.fired, wrapped] } : { ...result, kept: [...result.kept, wrapped] }
     },
     { fired: [], kept: [] }
   )
   runtime.contract.zones = partitioned.kept.map(({ zone }) => zone)
   runtime.render_ids.zones = partitioned.kept.map(({ id }) => id)
-  partitioned.fired.forEach(({ zone, id }) => {
+  const ordered = [...partitioned.fired.filter((entry) => !displaces(entry)), ...partitioned.fired.filter(displaces)]
+  ordered.forEach(({ zone, id }) => {
     if (runtime.contract.ended) return
     emit(runtime, 'trap_triggered', {
       zone_id: id,
@@ -42,11 +63,10 @@ export const on_enter = (runtime: FightRuntime, fighter: bigint, from: bigint, r
       runtime,
       caster: zone.owner_fighter,
       sheet: sheet_of(runtime, zone.owner_fighter),
-      rows: zone.effects,
+      rows: trap_rows(zone),
       anchor: zone.anchor,
       origin: zone.anchor,
       cursor: { state: mix(runtime.contract.turn_seed, zone.anchor) },
-      critical: false,
       cast_level: 0n,
       cause: 'trap',
     })
@@ -73,7 +93,6 @@ export const fire_glyphs_under = (runtime: FightRuntime, fighter: bigint, resolv
       anchor: cell,
       origin: cell,
       cursor: { state: mix(runtime.contract.turn_seed, zone.anchor) },
-      critical: false,
       cast_level: 0n,
       cause: 'glyph',
     })

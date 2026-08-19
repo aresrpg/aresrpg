@@ -3,266 +3,1290 @@
     "world": "01_first_shore",
     "terrain": {
       "seed": "ares-paradise-atoll",
-      "sea_level": 128,
-      "vertical_chunks": [-1, 0, 1, 2],
+      "sea_level": 60,
       "materials": {
-        "stone": "#787878",
-        "dirt": "#6e4f38",
-        "grass": "#5c8c3c",
-        "sand": "#d6c794",
-        "water": "#2e609e"
-      },
-      "liquid": "water",
-      "noise": {
-        "temperature": {
-          "period": 2048,
-          "octaves": 6,
-          "spread": 2,
-          "gain": 0.5
+        "stone": {
+          "color": "#707777",
+          "preset": "stone"
         },
-        "humidity": {
-          "period": 1536,
-          "octaves": 6,
-          "spread": 2,
-          "gain": 0.5
+        "deep_stone": {
+          "color": "#465258",
+          "preset": "stone"
         },
-        "continentalness": {
-          "period": 2000,
-          "octaves": 6,
-          "spread": 2,
-          "gain": 0.5
+        "limestone": {
+          "color": "#958d75",
+          "preset": "stone"
         },
-        "erosion": {
-          "period": 1024,
-          "octaves": 6,
-          "spread": 2,
-          "gain": 0.5
+        "gravel": {
+          "color": "#766f61",
+          "preset": "stone"
         },
-        "weirdness": {
-          "period": 512,
-          "octaves": 4,
-          "spread": 2,
-          "gain": 0.5
+        "dirt": {
+          "color": "#654d36",
+          "preset": "earth"
+        },
+        "rich_soil": {
+          "color": "#493a2d",
+          "preset": "earth"
+        },
+        "clay": {
+          "color": "#76514b",
+          "preset": "earth"
+        },
+        "grass": {
+          "color": "#668047",
+          "preset": "grass"
+        },
+        "meadow": {
+          "color": "#89984e",
+          "preset": "grass"
+        },
+        "moss": {
+          "color": "#456a4b",
+          "preset": "grass"
+        },
+        "sand": {
+          "color": "#b9a77e",
+          "preset": "sand"
+        },
+        "coral_sand": {
+          "color": "#cdbb90",
+          "preset": "sand"
+        },
+        "red_sand": {
+          "color": "#9b6248",
+          "preset": "sand"
+        },
+        "water": {
+          "color": "#2e609e",
+          "preset": "water"
+        },
+        "snow": {
+          "color": "#f4f6f3",
+          "preset": "snow"
+        },
+        "ice": {
+          "color": "#74ccf4",
+          "preset": "ice"
+        },
+        "wet_sand": {
+          "color": "#9d896b",
+          "preset": "sand"
+        },
+        "golden_sand": {
+          "color": "#d8b570",
+          "preset": "sand"
+        },
+        "blackstone": {
+          "color": "#373737",
+          "preset": "stone"
+        },
+        "scorched_stone": {
+          "color": "#4f4f4f",
+          "preset": "stone"
+        },
+        "taiga_wood": {
+          "color": "#554536",
+          "preset": "wood"
+        },
+        "taiga_foliage": {
+          "color": "#315346",
+          "preset": "foliage"
+        },
+        "grassland_wood": {
+          "color": "#76543a",
+          "preset": "wood"
+        },
+        "grassland_foliage": {
+          "color": "#64843e",
+          "preset": "foliage"
+        },
+        "temperate_wood": {
+          "color": "#624936",
+          "preset": "wood"
+        },
+        "temperate_foliage": {
+          "color": "#416f49",
+          "preset": "foliage"
+        },
+        "swamp_wood": {
+          "color": "#493d32",
+          "preset": "wood"
+        },
+        "swamp_foliage": {
+          "color": "#395d42",
+          "preset": "foliage"
+        },
+        "desert_wood": {
+          "color": "#77533b",
+          "preset": "wood"
+        },
+        "desert_foliage": {
+          "color": "#72814b",
+          "preset": "foliage"
+        },
+        "tropical_wood": {
+          "color": "#5c3c2b",
+          "preset": "wood"
+        },
+        "tropical_foliage": {
+          "color": "#317149",
+          "preset": "foliage"
+        },
+        "cactus": {
+          "color": "#4c874f",
+          "preset": "foliage"
+        },
+        "coral": {
+          "color": "#c46975",
+          "preset": "stone"
         }
       },
-      "splines": {
-        "continentalness_to_base": [
-          [0, 98],
-          [0.1, 108],
-          [0.2, 120],
-          [0.28, 125],
-          [0.34, 130],
-          [0.48, 134],
-          [0.68, 139],
-          [0.85, 143],
-          [1, 147]
-        ],
-        "erosion_to_amplitude": [
-          [0, 34],
-          [0.25, 22],
-          [0.5, 12],
-          [0.72, 6],
-          [1, 3]
-        ],
-        "pv_to_relief": [
-          [0, -0.3],
-          [0.18, 0],
-          [0.45, 0.22],
-          [0.72, 0.5],
-          [1, 0.9]
-        ]
-      },
-      "biome_selection": {
-        "axis_weights": {
-          "temperature": 1,
-          "humidity": 1,
-          "continentalness": 0.6,
-          "erosion": 0.5,
-          "pv": 0.4
-        },
-        "blend_k": 3,
-        "transition_softness": 0.6
-      },
+      "liquid": "water",
       "biomes": [
         {
-          "name": "ocean",
-          "climate": {
-            "temperature": 0.6,
-            "humidity": 0.6,
-            "continentalness": 0.05,
-            "erosion": 0.8,
-            "pv": 0.3
-          },
-          "weight": 1.4,
-          "land": {
-            "surface": "sand",
-            "subsurface": "sand",
-            "filler": "stone"
-          }
+          "name": "taiga",
+          "structure_packs": ["taiga_trees", "taiga_rocks"],
+          "landscape": [
+            {
+              "x": 0,
+              "y": 114,
+              "land": {
+                "surface": "moss",
+                "subsurface": "rich_soil",
+                "filler": "stone"
+              }
+            },
+            {
+              "x": 0.1,
+              "y": 114
+            },
+            {
+              "x": 0.2,
+              "y": 88
+            },
+            {
+              "x": 0.28,
+              "y": 194
+            },
+            {
+              "x": 0.4,
+              "y": 199,
+              "land": {
+                "surface": "snow",
+                "subsurface": "stone",
+                "filler": "deep_stone"
+              },
+              "variance": 0.02
+            },
+            {
+              "x": 0.7,
+              "y": 241
+            },
+            {
+              "x": 0.8,
+              "y": 231
+            },
+            {
+              "x": 1,
+              "y": 231
+            }
+          ]
         },
         {
-          "name": "beach",
-          "climate": {
-            "temperature": 0.65,
-            "humidity": 0.5,
-            "continentalness": 0.32,
-            "erosion": 0.85,
-            "pv": 0.45
-          },
-          "weight": 1.2,
-          "land": {
-            "surface": "sand",
-            "subsurface": "sand",
-            "filler": "stone"
-          }
+          "name": "glacier",
+          "structure_packs": ["glacier_rocks"],
+          "landscape": [
+            {
+              "x": 0,
+              "y": 88,
+              "land": {
+                "surface": "ice",
+                "subsurface": "ice",
+                "filler": "deep_stone"
+              }
+            },
+            {
+              "x": 0.14,
+              "y": 88
+            },
+            {
+              "x": 0.15,
+              "y": 88,
+              "land": {
+                "surface": "snow",
+                "subsurface": "stone",
+                "filler": "deep_stone"
+              },
+              "variance": 0.02
+            },
+            {
+              "x": 0.17,
+              "y": 119
+            },
+            {
+              "x": 0.22,
+              "y": 141
+            },
+            {
+              "x": 0.24,
+              "y": 178
+            },
+            {
+              "x": 0.29,
+              "y": 194
+            },
+            {
+              "x": 0.3,
+              "y": 220
+            },
+            {
+              "x": 0.35,
+              "y": 247
+            },
+            {
+              "x": 0.39,
+              "y": 331
+            },
+            {
+              "x": 0.43,
+              "y": 358
+            },
+            {
+              "x": 0.46,
+              "y": 342
+            },
+            {
+              "x": 0.48,
+              "y": 231
+            },
+            {
+              "x": 0.52,
+              "y": 231
+            },
+            {
+              "x": 0.54,
+              "y": 342
+            },
+            {
+              "x": 0.57,
+              "y": 358
+            },
+            {
+              "x": 0.61,
+              "y": 331
+            },
+            {
+              "x": 0.65,
+              "y": 247
+            },
+            {
+              "x": 0.7,
+              "y": 220
+            },
+            {
+              "x": 0.71,
+              "y": 194
+            },
+            {
+              "x": 0.76,
+              "y": 178
+            },
+            {
+              "x": 0.78,
+              "y": 141
+            },
+            {
+              "x": 0.83,
+              "y": 119
+            },
+            {
+              "x": 0.86,
+              "y": 88
+            },
+            {
+              "x": 0.87,
+              "y": 82,
+              "land": {
+                "surface": "ice",
+                "subsurface": "ice",
+                "filler": "deep_stone"
+              },
+              "variance": 0.02
+            },
+            {
+              "x": 1,
+              "y": 88
+            }
+          ]
         },
         {
-          "name": "river",
-          "climate": {
-            "temperature": 0.6,
-            "humidity": 0.7,
-            "continentalness": 0.55,
-            "erosion": 0.7,
-            "pv": 0.02
-          },
-          "weight": 1.2,
-          "land": {
-            "surface": "sand",
-            "subsurface": "dirt",
-            "filler": "stone"
-          }
-        },
-        {
-          "name": "tropical",
-          "climate": {
-            "temperature": 0.85,
-            "humidity": 0.8,
-            "continentalness": 0.6,
-            "erosion": 0.78,
-            "pv": 0.48
-          },
-          "weight": 1.3,
-          "land": {
-            "surface": "grass",
-            "subsurface": "dirt",
-            "filler": "stone"
-          }
+          "name": "arctic",
+          "structure_packs": ["arctic_rocks"],
+          "landscape": [
+            {
+              "x": 0,
+              "y": 35,
+              "land": {
+                "surface": "ice",
+                "subsurface": "ice",
+                "filler": "deep_stone"
+              }
+            },
+            {
+              "x": 0.26,
+              "y": 77
+            },
+            {
+              "x": 0.4,
+              "y": 72
+            },
+            {
+              "x": 0.42,
+              "y": 77,
+              "land": {
+                "surface": "stone",
+                "subsurface": "gravel",
+                "filler": "deep_stone"
+              },
+              "variance": 0.02
+            },
+            {
+              "x": 0.47,
+              "y": 93
+            },
+            {
+              "x": 0.49,
+              "y": 109,
+              "land": {
+                "surface": "snow",
+                "subsurface": "stone",
+                "filler": "deep_stone"
+              },
+              "variance": 0.02
+            },
+            {
+              "x": 0.57,
+              "y": 130
+            },
+            {
+              "x": 0.71,
+              "y": 103
+            },
+            {
+              "x": 0.75,
+              "y": 98,
+              "land": {
+                "surface": "ice",
+                "subsurface": "ice",
+                "filler": "deep_stone"
+              },
+              "variance": 0.02
+            },
+            {
+              "x": 0.78,
+              "y": 98,
+              "land": {
+                "surface": "snow",
+                "subsurface": "stone",
+                "filler": "deep_stone"
+              },
+              "variance": 0.02
+            },
+            {
+              "x": 1,
+              "y": 146
+            }
+          ]
         },
         {
           "name": "grassland",
-          "climate": {
-            "temperature": 0.82,
-            "humidity": 0.55,
-            "continentalness": 0.7,
-            "erosion": 0.8,
-            "pv": 0.5
-          },
-          "weight": 1,
-          "land": {
-            "surface": "grass",
-            "subsurface": "dirt",
-            "filler": "stone"
-          }
+          "structure_packs": ["grassland_trees", "grassland_rocks"],
+          "landscape": [
+            {
+              "x": 0,
+              "y": 77,
+              "land": {
+                "surface": "meadow",
+                "subsurface": "dirt",
+                "filler": "limestone"
+              }
+            },
+            {
+              "x": 0.11,
+              "y": 93
+            },
+            {
+              "x": 0.16,
+              "y": 74
+            },
+            {
+              "x": 0.26,
+              "y": 74
+            },
+            {
+              "x": 0.4,
+              "y": 98
+            },
+            {
+              "x": 0.51,
+              "y": 74
+            },
+            {
+              "x": 0.59,
+              "y": 74
+            },
+            {
+              "x": 0.72,
+              "y": 109
+            },
+            {
+              "x": 0.87,
+              "y": 109
+            },
+            {
+              "x": 0.9,
+              "y": 119,
+              "land": {
+                "surface": "stone",
+                "subsurface": "gravel",
+                "filler": "deep_stone"
+              },
+              "variance": 0.02
+            },
+            {
+              "x": 0.94,
+              "y": 141
+            },
+            {
+              "x": 1,
+              "y": 151
+            }
+          ]
+        },
+        {
+          "name": "temperate",
+          "structure_packs": ["temperate_trees", "temperate_rocks", "temperate_ruins"],
+          "landscape": [
+            {
+              "x": 0,
+              "y": 88,
+              "land": {
+                "surface": "grass",
+                "subsurface": "rich_soil",
+                "filler": "stone"
+              }
+            },
+            {
+              "x": 0.09,
+              "y": 93
+            },
+            {
+              "x": 0.1,
+              "y": 130,
+              "land": {
+                "surface": "stone",
+                "subsurface": "gravel",
+                "filler": "deep_stone"
+              },
+              "variance": 0.02
+            },
+            {
+              "x": 0.13,
+              "y": 225
+            },
+            {
+              "x": 0.17,
+              "y": 278
+            },
+            {
+              "x": 0.2,
+              "y": 289
+            },
+            {
+              "x": 0.26,
+              "y": 278
+            },
+            {
+              "x": 0.31,
+              "y": 183
+            },
+            {
+              "x": 0.32,
+              "y": 172,
+              "land": {
+                "surface": "grass",
+                "subsurface": "rich_soil",
+                "filler": "stone"
+              },
+              "variance": 0.02
+            },
+            {
+              "x": 0.37,
+              "y": 88
+            },
+            {
+              "x": 0.55,
+              "y": 90
+            },
+            {
+              "x": 0.59,
+              "y": 135
+            },
+            {
+              "x": 0.6,
+              "y": 141,
+              "land": {
+                "surface": "stone",
+                "subsurface": "gravel",
+                "filler": "deep_stone"
+              },
+              "variance": 0.02
+            },
+            {
+              "x": 0.68,
+              "y": 289
+            },
+            {
+              "x": 0.69,
+              "y": 305,
+              "land": {
+                "surface": "moss",
+                "subsurface": "rich_soil",
+                "filler": "stone"
+              },
+              "variance": 0.02
+            },
+            {
+              "x": 0.75,
+              "y": 315
+            },
+            {
+              "x": 0.78,
+              "y": 305,
+              "land": {
+                "surface": "stone",
+                "subsurface": "gravel",
+                "filler": "deep_stone"
+              },
+              "variance": 0.02
+            },
+            {
+              "x": 0.85,
+              "y": 167
+            },
+            {
+              "x": 0.86,
+              "y": 156,
+              "land": {
+                "surface": "grass",
+                "subsurface": "rich_soil",
+                "filler": "stone"
+              },
+              "variance": 0.02
+            },
+            {
+              "x": 0.92,
+              "y": 90
+            },
+            {
+              "x": 1,
+              "y": 82
+            }
+          ]
+        },
+        {
+          "name": "swamp",
+          "structure_packs": ["swamp_trees", "swamp_ruins"],
+          "landscape": [
+            {
+              "x": 0,
+              "y": 8,
+              "land": {
+                "surface": "sand",
+                "subsurface": "sand",
+                "filler": "limestone"
+              }
+            },
+            {
+              "x": 0.18,
+              "y": 56
+            },
+            {
+              "x": 0.19,
+              "y": 64,
+              "land": {
+                "surface": "rich_soil",
+                "subsurface": "clay",
+                "filler": "stone"
+              },
+              "variance": 0.02
+            },
+            {
+              "x": 0.23,
+              "y": 66,
+              "land": {
+                "surface": "moss",
+                "subsurface": "rich_soil",
+                "filler": "stone"
+              },
+              "variance": 0.02
+            },
+            {
+              "x": 0.31,
+              "y": 66,
+              "land": {
+                "surface": "rich_soil",
+                "subsurface": "clay",
+                "filler": "stone"
+              },
+              "variance": 0.02
+            },
+            {
+              "x": 0.35,
+              "y": 64,
+              "land": {
+                "surface": "sand",
+                "subsurface": "sand",
+                "filler": "limestone"
+              },
+              "variance": 0.02
+            },
+            {
+              "x": 0.41,
+              "y": 61
+            },
+            {
+              "x": 0.42,
+              "y": 64,
+              "land": {
+                "surface": "rich_soil",
+                "subsurface": "clay",
+                "filler": "stone"
+              },
+              "variance": 0.02
+            },
+            {
+              "x": 0.47,
+              "y": 66,
+              "land": {
+                "surface": "moss",
+                "subsurface": "rich_soil",
+                "filler": "stone"
+              },
+              "variance": 0.02
+            },
+            {
+              "x": 0.54,
+              "y": 66,
+              "land": {
+                "surface": "rich_soil",
+                "subsurface": "clay",
+                "filler": "stone"
+              },
+              "variance": 0.02
+            },
+            {
+              "x": 0.59,
+              "y": 64,
+              "land": {
+                "surface": "sand",
+                "subsurface": "sand",
+                "filler": "limestone"
+              },
+              "variance": 0.02
+            },
+            {
+              "x": 0.65,
+              "y": 61
+            },
+            {
+              "x": 0.66,
+              "y": 64,
+              "land": {
+                "surface": "rich_soil",
+                "subsurface": "clay",
+                "filler": "stone"
+              },
+              "variance": 0.02
+            },
+            {
+              "x": 0.69,
+              "y": 66,
+              "land": {
+                "surface": "moss",
+                "subsurface": "rich_soil",
+                "filler": "stone"
+              },
+              "variance": 0.02
+            },
+            {
+              "x": 0.74,
+              "y": 66,
+              "land": {
+                "surface": "rich_soil",
+                "subsurface": "clay",
+                "filler": "stone"
+              },
+              "variance": 0.02
+            },
+            {
+              "x": 0.77,
+              "y": 64,
+              "land": {
+                "surface": "sand",
+                "subsurface": "sand",
+                "filler": "limestone"
+              },
+              "variance": 0.02
+            },
+            {
+              "x": 0.83,
+              "y": 61
+            },
+            {
+              "x": 0.84,
+              "y": 64,
+              "land": {
+                "surface": "rich_soil",
+                "subsurface": "clay",
+                "filler": "stone"
+              },
+              "variance": 0.02
+            },
+            {
+              "x": 0.87,
+              "y": 66,
+              "land": {
+                "surface": "moss",
+                "subsurface": "rich_soil",
+                "filler": "stone"
+              },
+              "variance": 0.02
+            },
+            {
+              "x": 0.92,
+              "y": 66,
+              "land": {
+                "surface": "rich_soil",
+                "subsurface": "clay",
+                "filler": "stone"
+              },
+              "variance": 0.02
+            },
+            {
+              "x": 0.95,
+              "y": 64,
+              "land": {
+                "surface": "sand",
+                "subsurface": "sand",
+                "filler": "limestone"
+              },
+              "variance": 0.02
+            },
+            {
+              "x": 1,
+              "y": 61
+            }
+          ]
+        },
+        {
+          "name": "scorched",
+          "structure_packs": ["scorched_rocks", "scorched_ruins"],
+          "landscape": [
+            {
+              "x": 0,
+              "y": 72,
+              "land": {
+                "surface": "red_sand",
+                "subsurface": "clay",
+                "filler": "scorched_stone"
+              }
+            },
+            {
+              "x": 0.04,
+              "y": 72
+            },
+            {
+              "x": 0.08,
+              "y": 77,
+              "land": {
+                "surface": "blackstone",
+                "subsurface": "scorched_stone",
+                "filler": "deep_stone"
+              },
+              "variance": 0.02
+            },
+            {
+              "x": 0.11,
+              "y": 72,
+              "land": {
+                "surface": "scorched_stone",
+                "subsurface": "blackstone",
+                "filler": "deep_stone"
+              },
+              "variance": 0.02
+            },
+            {
+              "x": 0.16,
+              "y": 88
+            },
+            {
+              "x": 0.18,
+              "y": 109
+            },
+            {
+              "x": 0.19,
+              "y": 125,
+              "land": {
+                "surface": "blackstone",
+                "subsurface": "scorched_stone",
+                "filler": "deep_stone"
+              },
+              "variance": 0.02
+            },
+            {
+              "x": 0.2,
+              "y": 135
+            },
+            {
+              "x": 0.22,
+              "y": 130,
+              "land": {
+                "surface": "scorched_stone",
+                "subsurface": "blackstone",
+                "filler": "deep_stone"
+              },
+              "variance": 0.02
+            },
+            {
+              "x": 0.26,
+              "y": 77
+            },
+            {
+              "x": 0.35,
+              "y": 72
+            },
+            {
+              "x": 0.38,
+              "y": 77
+            },
+            {
+              "x": 0.42,
+              "y": 135
+            },
+            {
+              "x": 0.43,
+              "y": 156,
+              "land": {
+                "surface": "blackstone",
+                "subsurface": "scorched_stone",
+                "filler": "deep_stone"
+              },
+              "variance": 0.02
+            },
+            {
+              "x": 0.46,
+              "y": 199
+            },
+            {
+              "x": 0.48,
+              "y": 167
+            },
+            {
+              "x": 0.49,
+              "y": 146,
+              "land": {
+                "surface": "scorched_stone",
+                "subsurface": "blackstone",
+                "filler": "deep_stone"
+              },
+              "variance": 0.02
+            },
+            {
+              "x": 0.51,
+              "y": 109
+            },
+            {
+              "x": 0.57,
+              "y": 77
+            },
+            {
+              "x": 0.6,
+              "y": 82,
+              "land": {
+                "surface": "blackstone",
+                "subsurface": "scorched_stone",
+                "filler": "deep_stone"
+              },
+              "variance": 0.02
+            },
+            {
+              "x": 0.63,
+              "y": 77,
+              "land": {
+                "surface": "red_sand",
+                "subsurface": "clay",
+                "filler": "scorched_stone"
+              },
+              "variance": 0.02
+            },
+            {
+              "x": 0.71,
+              "y": 77,
+              "land": {
+                "surface": "blackstone",
+                "subsurface": "scorched_stone",
+                "filler": "deep_stone"
+              },
+              "variance": 0.02
+            },
+            {
+              "x": 0.75,
+              "y": 82,
+              "land": {
+                "surface": "scorched_stone",
+                "subsurface": "blackstone",
+                "filler": "deep_stone"
+              },
+              "variance": 0.02
+            },
+            {
+              "x": 0.8,
+              "y": 82
+            },
+            {
+              "x": 0.82,
+              "y": 98
+            },
+            {
+              "x": 0.87,
+              "y": 199
+            },
+            {
+              "x": 0.89,
+              "y": 215,
+              "land": {
+                "surface": "blackstone",
+                "subsurface": "scorched_stone",
+                "filler": "deep_stone"
+              },
+              "variance": 0.02
+            },
+            {
+              "x": 0.95,
+              "y": 236
+            },
+            {
+              "x": 0.96,
+              "y": 220,
+              "land": {
+                "surface": "red_sand",
+                "subsurface": "clay",
+                "filler": "scorched_stone"
+              },
+              "variance": 0.02
+            },
+            {
+              "x": 1,
+              "y": 220
+            }
+          ]
         },
         {
           "name": "desert",
-          "climate": {
-            "temperature": 0.9,
-            "humidity": 0.25,
-            "continentalness": 0.42,
-            "erosion": 0.85,
-            "pv": 0.45
-          },
-          "weight": 1,
-          "land": {
-            "surface": "sand",
-            "subsurface": "sand",
-            "filler": "stone"
-          }
+          "structure_packs": ["desert_trees", "desert_rocks", "desert_ruins"],
+          "landscape": [
+            {
+              "x": 0,
+              "y": 24,
+              "land": {
+                "surface": "wet_sand",
+                "subsurface": "clay",
+                "filler": "limestone"
+              }
+            },
+            {
+              "x": 0.18,
+              "y": 61
+            },
+            {
+              "x": 0.2,
+              "y": 72,
+              "land": {
+                "surface": "sand",
+                "subsurface": "sand",
+                "filler": "limestone"
+              },
+              "variance": 0.02
+            },
+            {
+              "x": 0.44,
+              "y": 77
+            },
+            {
+              "x": 0.56,
+              "y": 130
+            },
+            {
+              "x": 0.59,
+              "y": 156
+            },
+            {
+              "x": 0.61,
+              "y": 172,
+              "land": {
+                "surface": "golden_sand",
+                "subsurface": "sand",
+                "filler": "stone"
+              },
+              "variance": 0.02
+            },
+            {
+              "x": 0.65,
+              "y": 183
+            },
+            {
+              "x": 0.68,
+              "y": 172
+            },
+            {
+              "x": 0.71,
+              "y": 88
+            },
+            {
+              "x": 0.74,
+              "y": 82
+            },
+            {
+              "x": 0.76,
+              "y": 88
+            },
+            {
+              "x": 0.79,
+              "y": 178
+            },
+            {
+              "x": 0.84,
+              "y": 178
+            },
+            {
+              "x": 0.85,
+              "y": 167,
+              "land": {
+                "surface": "sand",
+                "subsurface": "sand",
+                "filler": "limestone"
+              },
+              "variance": 0.02
+            },
+            {
+              "x": 0.88,
+              "y": 109
+            },
+            {
+              "x": 0.91,
+              "y": 88
+            },
+            {
+              "x": 1,
+              "y": 88
+            }
+          ]
         },
         {
-          "name": "alpine",
-          "climate": {
-            "temperature": 0.7,
-            "humidity": 0.3,
-            "continentalness": 0.8,
-            "erosion": 0.2,
-            "pv": 0.7
-          },
-          "weight": 1,
-          "land": {
-            "surface": "stone",
-            "subsurface": "stone",
-            "filler": "stone"
-          }
+          "name": "tropical",
+          "structure_packs": ["tropical_trees", "tropical_rocks"],
+          "landscape": [
+            {
+              "x": 0,
+              "y": 35,
+              "land": {
+                "surface": "wet_sand",
+                "subsurface": "clay",
+                "filler": "limestone"
+              }
+            },
+            {
+              "x": 0.14,
+              "y": 50
+            },
+            {
+              "x": 0.18,
+              "y": 66,
+              "land": {
+                "surface": "sand",
+                "subsurface": "sand",
+                "filler": "limestone"
+              },
+              "variance": 0.02
+            },
+            {
+              "x": 0.34,
+              "y": 77
+            },
+            {
+              "x": 0.36,
+              "y": 82,
+              "land": {
+                "surface": "stone",
+                "subsurface": "gravel",
+                "filler": "deep_stone"
+              },
+              "variance": 0.02
+            },
+            {
+              "x": 0.39,
+              "y": 204
+            },
+            {
+              "x": 0.4,
+              "y": 252,
+              "land": {
+                "surface": "grass",
+                "subsurface": "rich_soil",
+                "filler": "stone"
+              },
+              "variance": 0.02
+            },
+            {
+              "x": 0.43,
+              "y": 278
+            },
+            {
+              "x": 0.44,
+              "y": 273
+            },
+            {
+              "x": 0.45,
+              "y": 252,
+              "land": {
+                "surface": "stone",
+                "subsurface": "gravel",
+                "filler": "deep_stone"
+              },
+              "variance": 0.02
+            },
+            {
+              "x": 0.49,
+              "y": 125
+            },
+            {
+              "x": 0.5,
+              "y": 93,
+              "land": {
+                "surface": "sand",
+                "subsurface": "sand",
+                "filler": "limestone"
+              },
+              "variance": 0.02
+            },
+            {
+              "x": 0.53,
+              "y": 77
+            },
+            {
+              "x": 0.63,
+              "y": 72
+            },
+            {
+              "x": 0.76,
+              "y": 66,
+              "land": {
+                "surface": "wet_sand",
+                "subsurface": "clay",
+                "filler": "limestone"
+              },
+              "variance": 0.02
+            },
+            {
+              "x": 0.93,
+              "y": 40
+            },
+            {
+              "x": 1,
+              "y": 19
+            }
+          ]
         }
-      ]
+      ],
+      "biome_slots": {
+        "low_low": "taiga",
+        "low_mid": "glacier",
+        "low_high": "arctic",
+        "mid_low": "grassland",
+        "mid_mid": "temperate",
+        "mid_high": "swamp",
+        "high_low": "scorched",
+        "high_mid": "desert",
+        "high_high": "tropical"
+      }
     },
     "mobs": [
       {
         "mob_type": "wooling",
         "weight_bp": 8000,
-        "biomes": ["beach", "tropical", "grassland", "desert", "alpine"]
+        "biomes": ["taiga", "glacier", "arctic", "grassland", "temperate", "swamp", "scorched", "desert", "tropical"]
       },
       {
         "mob_type": "razkin",
         "weight_bp": 8000,
-        "biomes": ["beach", "tropical", "grassland", "desert", "alpine"]
+        "biomes": ["taiga", "glacier", "arctic", "grassland", "temperate", "swamp", "scorched", "desert", "tropical"]
       },
       {
         "mob_type": "alley_bunny",
         "weight_bp": 8000,
-        "biomes": ["beach", "tropical", "grassland", "desert", "alpine"]
+        "biomes": ["taiga", "glacier", "arctic", "grassland", "temperate", "swamp", "scorched", "desert", "tropical"]
       },
       {
         "mob_type": "green_walker",
         "weight_bp": 8000,
-        "biomes": ["beach", "tropical", "grassland", "desert", "alpine"]
+        "biomes": ["taiga", "glacier", "arctic", "grassland", "temperate", "swamp", "scorched", "desert", "tropical"]
       },
       {
         "mob_type": "runt_piglet",
         "weight_bp": 8000,
-        "biomes": ["beach", "tropical", "grassland", "desert", "alpine"]
+        "biomes": ["taiga", "glacier", "arctic", "grassland", "temperate", "swamp", "scorched", "desert", "tropical"]
       },
       {
         "mob_type": "razmo",
         "weight_bp": 8000,
-        "biomes": ["beach", "tropical", "grassland", "desert", "alpine"]
+        "biomes": ["taiga", "glacier", "arctic", "grassland", "temperate", "swamp", "scorched", "desert", "tropical"]
       },
       {
         "mob_type": "piglet",
         "weight_bp": 8000,
-        "biomes": ["beach", "tropical", "grassland", "desert", "alpine"]
+        "biomes": ["taiga", "glacier", "arctic", "grassland", "temperate", "swamp", "scorched", "desert", "tropical"]
       },
       {
         "mob_type": "bonelet",
         "weight_bp": 8000,
-        "biomes": ["beach", "tropical", "grassland", "desert", "alpine"]
+        "biomes": ["taiga", "glacier", "arctic", "grassland", "temperate", "swamp", "scorched", "desert", "tropical"]
       },
       {
         "mob_type": "ditch_koaletin",
         "weight_bp": 8000,
-        "biomes": ["beach", "tropical", "grassland", "desert", "alpine"]
+        "biomes": ["taiga", "glacier", "arctic", "grassland", "temperate", "swamp", "scorched", "desert", "tropical"]
       },
       {
         "mob_type": "sparrowdart",
         "weight_bp": 8000,
-        "biomes": ["beach", "tropical", "grassland", "desert", "alpine"]
+        "biomes": ["taiga", "glacier", "arctic", "grassland", "temperate", "swamp", "scorched", "desert", "tropical"]
       },
       {
         "mob_type": "grainfox",
         "weight_bp": 8000,
-        "biomes": ["beach", "tropical", "grassland", "desert", "alpine"]
+        "biomes": ["taiga", "glacier", "arctic", "grassland", "temperate", "swamp", "scorched", "desert", "tropical"]
       },
       {
         "mob_type": "pecker_the_widow",
         "weight_bp": 444,
-        "biomes": ["beach", "tropical", "grassland", "desert", "alpine"]
+        "biomes": ["taiga", "glacier", "arctic", "grassland", "temperate", "swamp", "scorched", "desert", "tropical"]
       },
       {
         "mob_type": "razmo_the_plague_king",
         "weight_bp": 444,
-        "biomes": ["beach", "tropical", "grassland", "desert", "alpine"]
+        "biomes": ["taiga", "glacier", "arctic", "grassland", "temperate", "swamp", "scorched", "desert", "tropical"]
       }
     ],
     "resources": [
@@ -272,7 +1296,7 @@
         "tier": 1,
         "protector": "protector_shrooms_gaia",
         "rare_item_type": "",
-        "biomes": ["beach", "tropical", "grassland", "desert", "alpine"]
+        "biomes": ["taiga", "glacier", "arctic", "grassland", "temperate", "swamp", "scorched", "desert", "tropical"]
       },
       {
         "item_type": "quartz",
@@ -280,7 +1304,7 @@
         "tier": 1,
         "protector": "protector_quartz",
         "rare_item_type": "",
-        "biomes": ["beach", "tropical", "grassland", "desert", "alpine"]
+        "biomes": ["taiga", "glacier", "arctic", "grassland", "temperate", "swamp", "scorched", "desert", "tropical"]
       },
       {
         "item_type": "wheat",
@@ -288,7 +1312,7 @@
         "tier": 1,
         "protector": "protector_wheat_bricheton",
         "rare_item_type": "",
-        "biomes": ["beach", "tropical", "grassland", "desert", "alpine"]
+        "biomes": ["taiga", "glacier", "arctic", "grassland", "temperate", "swamp", "scorched", "desert", "tropical"]
       }
     ],
     "dungeon": {

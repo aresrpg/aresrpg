@@ -167,12 +167,12 @@ export const WorldsTab = ({
               <Fact label={text('sea_level')} value={detail.terrain.sea_level} />
             </div>
             <div className="mt-2 flex flex-wrap gap-1">
-              {Object.entries(detail.terrain.materials).map(([name, color]) => (
+              {Object.entries(detail.terrain.materials).map(([name, material]) => (
                 <span
                   className="flex items-center gap-2 border border-[#1e1e2e] px-2 py-1.5 text-[8px] text-[#9da0a9]"
                   key={name}
                 >
-                  <span className="size-2" style={{ backgroundColor: color }} />
+                  <span className="size-2" style={{ backgroundColor: material.color }} />
                   {titleize(name)}
                 </span>
               ))}

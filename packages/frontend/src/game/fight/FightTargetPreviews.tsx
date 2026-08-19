@@ -4,7 +4,7 @@
 
 import type { EntityScreenAnchor } from '@aresrpg/engine'
 import type { ActiveEffect } from '@aresrpg/fight'
-import { EFFECT_KINDS } from '@aresrpg/fight/move_contract'
+import { CHANNELS, EFFECT_KINDS } from '@aresrpg/fight/move_contract'
 
 import type { SpellTargetPreview } from '@aresrpg/fight'
 
@@ -31,10 +31,38 @@ const point_effect = (stat: bigint, amount: bigint, key: string): FightEffectLin
     key,
   })
 
+const movement_effect = (
+  movement: Readonly<SpellTargetPreview['movements'][number]>,
+  index: number
+): FightEffectLineView =>
+  Object.freeze({
+    kind:
+      movement.mode === 'push'
+        ? EFFECT_KINDS.push
+        : movement.mode === 'pull'
+          ? EFFECT_KINDS.pull
+          : movement.mode === 'teleport'
+            ? EFFECT_KINDS.teleport
+            : EFFECT_KINDS.swap,
+    element: '',
+    value: movement.cells,
+    turns: 0n,
+    stat: 0n,
+    key: `${movement.mode}:${index}`,
+  })
+
+const is_damage_effect = ({ kind, channel }: Readonly<SpellTargetPreview['effects'][number]>): boolean =>
+  kind === EFFECT_KINDS.damage ||
+  kind === EFFECT_KINDS.pct_life ||
+  kind === EFFECT_KINDS.caster_damage ||
+  kind === EFFECT_KINDS.punishment ||
+  (channel === CHANNELS.hp && kind !== EFFECT_KINDS.add)
+
 const preview_effect_lines = (target: Readonly<FightTargetPreviewView>): readonly FightEffectLineView[] => {
-  const applied_stats = new Set(target.effects.map(({ channel }) => channel))
+  const visible_effects = target.effects.filter((effect) => !is_damage_effect(effect))
+  const applied_stats = new Set(visible_effects.map(({ channel }) => channel))
   return Object.freeze([
-    ...target.effects.map((effect, index) =>
+    ...visible_effects.map((effect, index) =>
       Object.freeze({
         kind: effect.kind,
         element: effect.element,
@@ -46,6 +74,7 @@ const preview_effect_lines = (target: Readonly<FightTargetPreviewView>): readonl
     ),
     ...(target.ap_delta !== 0n && !applied_stats.has(6n) ? [point_effect(6n, target.ap_delta, 'ap')] : []),
     ...(target.mp_delta !== 0n && !applied_stats.has(7n) ? [point_effect(7n, target.mp_delta, 'mp')] : []),
+    ...target.movements.map(movement_effect),
   ])
 }
 
@@ -87,10 +116,9 @@ export const FightTargetPreviews = ({
             </span>
           </div>
           <FightEffectLines effects={active_effect_lines(target.active_effects)} />
-          {(preview_effects.length > 0 || target.cell_before !== target.cell_after) && (
+          {preview_effects.length > 0 && (
             <div className="ent-tt__preview">
               <FightEffectLines effects={preview_effects} />
-              {target.cell_before !== target.cell_after && <div className="ent-tt__fx">↦ {target.cell_after}</div>}
             </div>
           )}
         </div>,

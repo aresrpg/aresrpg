@@ -322,7 +322,6 @@ function CreateForm({ copy, on_created }: Readonly<{ copy: AppCopy; on_created: 
         style={{ border: `1px solid ${GOLD}`, color: GOLD, background: 'rgba(200,150,60,0.08)' }}
         onClick={() => {
           const character_id = next_simulator_character_id(characters)
-          if (!character_id) return
           dispatch_app({ type: 'simulator/character_added', character_id, classe, name, male })
           on_created(character_id)
         }}

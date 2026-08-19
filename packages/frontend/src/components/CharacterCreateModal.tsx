@@ -90,6 +90,13 @@ export const CharacterCreateModal = ({
   const [submitting, set_submitting] = useState(false)
   const name_error = character_name_error_text(copy, identity.name)
   const valid = is_valid_character_name(identity.name)
+  useEffect(() => {
+    const close_on_escape = (event: Readonly<KeyboardEvent>): void => {
+      if (event.key === 'Escape') cancel()
+    }
+    globalThis.addEventListener('keydown', close_on_escape)
+    return () => globalThis.removeEventListener('keydown', close_on_escape)
+  }, [cancel])
   const submit = (event: Readonly<FormEvent>): void => {
     event.preventDefault()
     if (!valid || submitting) return

@@ -51,16 +51,29 @@ const look_target = (position: Vec3, yaw: number, pitch: number): Vec3 => {
 // ═══ SPECTATE — the pre-login overview (this era's own view; drag pan lives in world.ts) ═══
 
 export const create_spectate_addon = (
-  view: Readonly<{ focus: () => readonly [number, number]; zoom: () => number }>
+  view: Readonly<{
+    focus: () => readonly [number, number]
+    zoom: () => number
+    ground_y: () => number
+    yaw: () => number
+    pitch: () => number
+  }>
 ): CameraAddon =>
   Object.freeze({
     get_yaw: () => 0,
     frame: () => {
       const [x, z] = view.focus()
       const zoom = view.zoom()
+      const ground_y = view.ground_y()
+      const arm = zoom * 1.2
+      const horizontal = Math.cos(view.pitch()) * arm
       return {
-        position: [x + zoom * 0.72, zoom * 0.62, z + zoom * 0.72] as Vec3,
-        target: [x, 3, z] as Vec3,
+        position: [
+          x + Math.sin(view.yaw()) * horizontal,
+          ground_y + Math.sin(view.pitch()) * arm,
+          z + Math.cos(view.yaw()) * horizontal,
+        ] as Vec3,
+        target: [x, ground_y, z] as Vec3,
         fov: 48,
         ortho_blend: 0,
       }
@@ -112,6 +125,12 @@ const create_spring = (initial_halflife: number) => {
   let z = 0
   let initialized = false
   return Object.assign(spring, {
+    translate: (dx: number, dy: number, dz: number): void => {
+      if (!initialized) return
+      x += dx
+      y += dy
+      z += dz
+    },
     update: (tx: number, ty: number, tz: number, dt: number): Vec3 => {
       if (!initialized) {
         x = tx
@@ -183,6 +202,7 @@ export type FollowAddon = CameraAddon &
     get_bob_offset: () => number
     is_first_person: () => boolean
     distance: () => number
+    translate_y: (amount: number) => void
   }>
 
 export const create_follow_addon = (
@@ -312,6 +332,7 @@ export const create_follow_addon = (
     is_rotating: () => controls.is_locked(),
     rotate: apply_rotate,
     dolly,
+    translate_y: (amount: number) => follow.translate(0, amount, 0),
     get_bob_offset: () => last_bob_y,
     is_first_person: () => fp_mode,
     /// Effective eye distance (collapses to 0 in first person) — the avatar-hide gate.

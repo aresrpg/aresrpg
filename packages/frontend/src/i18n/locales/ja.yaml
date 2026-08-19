@@ -40,8 +40,10 @@ server_connecting: 接続中
 server_reconnecting: 再接続中
 server_syncing: 同期中
 server_connected: 接続済み
+server_violation: 切断 — ルール違反。まもなく再試行します。
 latency_unit: ms
 indexing_health: インデックス状態
+online_players: オンラインプレイヤー
 indexing_lag_warning: ゲーム内の操作が遅れて反映される場合があります
 game_frozen: 現在ゲームは凍結されています。詳しくはDiscordをご確認ください。
 network_testnet: TESTNET
@@ -80,6 +82,18 @@ wallet_send_pending: SUI を送信中…
 wallet_send_success: SUI を送信しました
 wallet_send_failed: SUI の送信に失敗しました
 wallet_close: 閉じる
+world_hud:
+  compass_label: コンパス
+  zone: ゾーン
+  unsearched: 未探索
+  searched: 探索済み
+  out_of_bounds: 範囲外
+  mob_group: モンスター群 ({{size}})
+  resource: 資源
+  cluster_count: 他{{extra}}件
+  zone_edge: ゾーン境界 {{dist}}
+  coordinates: 座標
+  world_map: ワールドマップ
 demo_page:
   title: レンダリングラボ
   world_lab: ワールド
@@ -89,6 +103,12 @@ demo_page:
   live: リアルタイム
   remove_character: モデルを削除
   control_character: モデルを操作
+  hat: 帽子
+  cloak: マント
+  pet: ペット
+  none: なし
+  ride_pet: ペットに乗る
+  dismount_pet: 降りる
   mob_group: モブグループ
   mob: モブ
   amount: 数量
@@ -163,6 +183,8 @@ settings_page:
   subtitle: 'AresRPGの設定'
   music_label: '音楽'
   music_hint: 'ワールドと戦闘の音楽を再生します。'
+  render_distance_label: 描画距離
+  render_distance_hint: 周囲のワールドを読み込む範囲。広いほど負荷が上がります。
 admin_page:
   kicker: パブリッシャー
   title: ゲームコンテンツを公開
@@ -268,6 +290,8 @@ simulator_page:
   stat_action: アクション
   stat_critical: クリティカル
   stat_raw_damage: 固定ダメージ
+  stat_resistance: 耐性
+  stat_power: パワー
   stat_earth_resistance: 地耐性
   stat_fire_resistance: 火耐性
   stat_water_resistance: 水耐性
@@ -298,10 +322,42 @@ fight_hud:
   placement_hint: ファイターを配置して準備完了にしてください
   end_turn: ターン終了
   reset_turn: リセット
+  weapon_attack: 武器攻撃
+  bare_hands: 素手
+  log_fight_started: 戦闘開始
+  log_cast: '{caster}が{spell}を使用'
+  log_critical_cast: 'クリティカル！ {caster}が{spell}を使用'
+  log_heal: '{source}が{target}を{amount}HP回復'
+  log_ap_change: '{target}：{delta} AP'
+  log_mp_change: '{target}：{delta} MP'
+  log_lost: '{target}が{amount}HPを失う'
+  log_lost_reduced: '{target}が{amount}HPを失う（{reduced}軽減）'
+  log_absorbed: '{target}が{reduced}ダメージを吸収'
+  log_returned: '{target}が呪文を跳ね返す'
+  log_stat_change: '{target}：{delta} {stat} ({turns} {turns_word})'
+  unit_ap: AP
+  unit_mp: MP
+  log_points_loss: '{target}が{amount}{unit}を失う'
+  log_points_steal: '{source}が{target}から{amount}{unit}を奪う'
+  log_points_partial: '{target}が{dodged}{unit}を回避し{amount}を失う'
+  log_points_dodge: '{target}が{attempted}{unit}の損失を回避'
+  log_trap_placed: '{owner}が罠を設置'
+  log_glyph_placed: '{owner}がグリフを設置'
+  log_death: '{target}が倒れた'
+  log_forfeit: '{target}が降参'
+  log_draw: 戦闘は引き分け
+  log_team_wins: チーム{team}の勝利
   forfeit: 降参
   forfeit_title: '{name}で降参しますか？'
   forfeit_body: '{name}は残りHPをすべて失い、この戦闘から離脱します。'
   confirm_forfeit: 降参を確定
+  unit_turns: ターン
+  chat_title: チャット
+  chat_tab_general: 一般
+  chat_tab_combat: 戦闘
+  chat_placeholder: メッセージを入力…
+  chat_you: あなた
+  chat_line: '{name}：{message}'
 wallet_legacy:
   sui: SUI
   how_to_get: SUIの入手方法
@@ -518,7 +574,7 @@ encyclopedia_page:
     blocking: シールド
     blocking_desc: 一部の呪文は、対応する属性の入ってくるダメージを使い切るまで吸収するシールドを付与します。スタミナやガード姿勢はなく、シールドが唯一のダメージ吸収手段です。
     resistance: 耐性
-    resistance_desc: 属性耐性は最終ダメージに適用される割合減少で、属性ごとに上限60%です。負の耐性（弱点）は代わりにダメージを増幅します。
+    resistance_desc: 属性耐性は最終ダメージに適用される割合減少で、属性ごとに上限50%です。負の耐性（弱点）は代わりにダメージを増幅します。
     life_steal: ライフスティール
     life_steal_desc: ドレイン呪文の効果はダメージを与え、対象が実際に失った体力の半分だけ詠唱者を回復します。回復するのはプレイヤーのドレインだけで、同じ呪文を唱えたモブはダメージを与えるだけで回復しません。
     life_steal_note: ダメージはまず標準のダメージ計算式を通り、その後詠唱者は本来の対象が実際に失った体力の半分を回復します。他の戦闘員へ転嫁された攻撃や、対象が回復に変換した攻撃では何も奪えません。

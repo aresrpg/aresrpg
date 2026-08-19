@@ -11,14 +11,21 @@ export {
 } from './create.ts'
 export { generate_board } from './board_gen.ts'
 export { project_board_cells } from './board.ts'
-export { spell_target_cells } from './effects.ts'
+export { spell_target_cells, weapon_target_cells } from './effects.ts'
 export type { SpellCellProjection } from './effects.ts'
-export { preview_spell_cast } from './spell_preview.ts'
-export type { SpellCastPreview, SpellPreviewEffect, SpellTargetPreview } from './spell_preview.ts'
-export { project_spell_turn, spell_area_cells } from './spell_turn_projection.ts'
+export { preview_spell_cast, preview_weapon_strike } from './spell_preview.ts'
+export type { SpellCastPreview, SpellPreviewEffect, SpellPreviewMovement, SpellTargetPreview } from './spell_preview.ts'
+export {
+  project_spell_turn,
+  project_weapon_turn,
+  spell_area_cells,
+  weapon_area_cells,
+} from './spell_turn_projection.ts'
 export type { SpellTurnProjection } from './spell_turn_projection.ts'
-export { movement_points_of } from './fighters.ts'
+export { movement_points_of, POOL_EFFECT_REASONS } from './fighters.ts'
+export { weapon_level_of } from './weapon.ts'
 export { fight_path_to, reachable_fight_cells } from './movement.ts'
+export { board_zone_cells } from './zones.ts'
 export { decode_fight_action, encode_fight_action, fight_action_to_wire, parse_fight_wire_action } from './wire.ts'
 export { CONTRACT_CONSTANTS, MOVE_SOURCE_HASH } from './move_contract.gen.ts'
 export type { FightBoardCell, FightBoardCellKind } from './board.ts'

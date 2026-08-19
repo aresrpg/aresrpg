@@ -4,6 +4,7 @@
 import {
   BufferAttribute,
   BufferGeometry,
+  Color,
   DataTexture,
   LinearFilter,
   LinearMipmapLinearFilter,
@@ -16,6 +17,7 @@ export const BOARD_CELL_OBSTACLE = 1
 export const BOARD_CELL_HOLE = 2
 export const BOARD_CELL_VOID = 3
 export const BOARD_FLOOR_THICKNESS = 0.3
+export const BOARD_HOLE_DEPTH = 1.8
 
 const TONE_LIGHT = [0xdd, 0xd4, 0xb6] as const
 const TONE_MID = [0xcf, 0xc5, 0xa2] as const
@@ -263,7 +265,8 @@ export const build_fight_board_slab = (
         [cell_x - 1, cell_y, x0, z1, x0, z0, -1, 0],
       ] as const
       edges.forEach(([next_x, next_y, edge_x0, edge_z0, edge_x1, edge_z1, normal_x, normal_z]) => {
-        if (is_slab(mask, width, height, next_x, next_y)) return
+        const neighbour = read_board_cell(mask, next_x, next_y, width, height)
+        if (is_slab(mask, width, height, next_x, next_y) || neighbour === BOARD_CELL_HOLE) return
         const edge_a = vertex(edge_x0, top_y, edge_z0, normal_x, 0, normal_z, 0, 0)
         const edge_b = vertex(edge_x1, top_y, edge_z1, normal_x, 0, normal_z, 0, 0)
         const edge_c = vertex(edge_x1, bottom_y, edge_z1, normal_x, 0, normal_z, 0, 0)
@@ -279,5 +282,70 @@ export const build_fight_board_slab = (
   geometry.setIndex([...top_indices, ...side_indices])
   geometry.addGroup(0, top_indices.length, 0)
   geometry.addGroup(top_indices.length, side_indices.length, 1)
+  return geometry
+}
+
+export const build_fight_board_pits = (
+  mask: BoardMask,
+  width: number,
+  height: number,
+  cell_size: number,
+  origin: BoardOrigin
+): BufferGeometry => {
+  const positions: number[] = []
+  const normals: number[] = []
+  const colors: number[] = []
+  const indices: number[] = []
+  const top_y = origin.y + BOARD_FLOOR_THICKNESS
+  const bottom_y = top_y - BOARD_HOLE_DEPTH
+  const top_color = new Color(0x2c2d31)
+  const bottom_color = new Color(0x040506)
+  const vertex = (x: number, y: number, z: number, nx: number, ny: number, nz: number): number => {
+    const color = y === top_y ? top_color : bottom_color
+    positions.push(x, y, z)
+    normals.push(nx, ny, nz)
+    colors.push(color.r, color.g, color.b)
+    return positions.length / 3 - 1
+  }
+  const quad = (a: number, b: number, c: number, d: number): void => {
+    indices.push(a, b, c, a, c, d)
+  }
+  const hole_at = (x: number, y: number): boolean => read_board_cell(mask, x, y, width, height) === BOARD_CELL_HOLE
+
+  for (let cell_y = 0; cell_y < height; cell_y += 1)
+    for (let cell_x = 0; cell_x < width; cell_x += 1) {
+      if (!hole_at(cell_x, cell_y)) continue
+      const x0 = origin.x + cell_x * cell_size
+      const x1 = x0 + cell_size
+      const z0 = origin.z + cell_y * cell_size
+      const z1 = z0 + cell_size
+      quad(
+        vertex(x0, bottom_y, z0, 0, 1, 0),
+        vertex(x0, bottom_y, z1, 0, 1, 0),
+        vertex(x1, bottom_y, z1, 0, 1, 0),
+        vertex(x1, bottom_y, z0, 0, 1, 0)
+      )
+      const edges = [
+        [cell_x, cell_y - 1, x0, z0, x1, z0, 0, 1],
+        [cell_x + 1, cell_y, x1, z0, x1, z1, -1, 0],
+        [cell_x, cell_y + 1, x1, z1, x0, z1, 0, -1],
+        [cell_x - 1, cell_y, x0, z1, x0, z0, 1, 0],
+      ] as const
+      edges.forEach(([next_x, next_y, edge_x0, edge_z0, edge_x1, edge_z1, normal_x, normal_z]) => {
+        if (hole_at(next_x, next_y)) return
+        quad(
+          vertex(edge_x0, top_y, edge_z0, normal_x, 0, normal_z),
+          vertex(edge_x0, bottom_y, edge_z0, normal_x, 0, normal_z),
+          vertex(edge_x1, bottom_y, edge_z1, normal_x, 0, normal_z),
+          vertex(edge_x1, top_y, edge_z1, normal_x, 0, normal_z)
+        )
+      })
+    }
+
+  const geometry = new BufferGeometry()
+  geometry.setAttribute('position', new BufferAttribute(new Float32Array(positions), 3))
+  geometry.setAttribute('normal', new BufferAttribute(new Float32Array(normals), 3))
+  geometry.setAttribute('color', new BufferAttribute(new Float32Array(colors), 3))
+  geometry.setIndex(indices)
   return geometry
 }

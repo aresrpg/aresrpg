@@ -11,6 +11,7 @@ import type { SessionState } from '../modules/session.ts'
 import type { GameSettings } from '../game/core/settings.ts'
 import { FightLayer } from '../game/fight/FightLayer.tsx'
 
+import { CharacterTabs, character_tabs_visible } from './CharacterTabs.tsx'
 import { Sidebar } from './Sidebar.tsx'
 import { ConnectionCard, DiscordCard, LanguageCard } from './SidebarCards.tsx'
 import { WalletCard } from './WalletCard.tsx'
@@ -96,6 +97,7 @@ export const AppShell = ({
   session,
   settings,
   change_locale,
+  create_character,
   disconnect,
   open_page,
   open_path,
@@ -109,6 +111,7 @@ export const AppShell = ({
   session: SessionState
   settings: GameSettings
   change_locale: (locale: Locale) => void
+  create_character: () => void
   disconnect: () => void
   open_page: (page: Page) => void
   open_path: (pathname: string) => void
@@ -129,13 +132,10 @@ export const AppShell = ({
         <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto">
           <Sidebar
             address={session.wallet?.address ?? null}
-            characters={session.characters}
             copy={copy}
             open_page={open_page}
             page={page}
             network={network}
-            select_character={select_character}
-            selected_character_id={session.selected_character_id}
           />
           <WalletCard copy={copy} disconnect={disconnect} session={session} />
           <LanguageCard change_locale={change_locale} locale={locale} />
@@ -145,20 +145,33 @@ export const AppShell = ({
           copy={copy}
           error={session.link_error}
           indexing_lag={session.indexing_lag}
+          violation={session.link_violation}
           latency_ms={session.latency_ms}
+          online={session.online}
           status={session.link_status}
         />
       </div>
-      <div className="relative flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto">
-        <RoutedPage
-          copy={copy}
-          open_path={open_path}
-          page={page}
-          pathname={pathname}
-          session={session}
-          settings={settings}
-        />
-        <FightLayer copy={copy} />
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-3">
+        {character_tabs_visible(page) && (
+          <CharacterTabs
+            characters={session.characters}
+            copy={copy}
+            create_character={create_character}
+            select_character={select_character}
+            selected_character_id={session.selected_character_id}
+          />
+        )}
+        <div className="relative flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto">
+          <RoutedPage
+            copy={copy}
+            open_path={open_path}
+            page={page}
+            pathname={pathname}
+            session={session}
+            settings={settings}
+          />
+          <FightLayer copy={copy} />
+        </div>
       </div>
     </div>
   </div>

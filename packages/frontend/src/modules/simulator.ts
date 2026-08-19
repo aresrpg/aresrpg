@@ -102,7 +102,6 @@ const without_cell = <T>(rows: Readonly<Record<number, T>>, cell: bigint): Reado
 
 export const CHARACTER_STATS = characteristic_names
 export type CharacterStat = CharacteristicName
-export const MAX_SIMULATOR_CHARACTERS = 6
 export const MAX_SIMULATOR_NAME_LENGTH = 24
 export const stat_budget = (level: number): number => (level - 1) * 5
 
@@ -250,11 +249,12 @@ const map_character = (
     ),
   })
 
-export const next_simulator_character_id = (characters: readonly SimulatorCharacter[]): string | null => {
+// The lab has no roster cap: the smallest unused index always exists within length + 1 candidates.
+export const next_simulator_character_id = (characters: readonly SimulatorCharacter[]): string => {
   const used = new Set(characters.map(({ id }) => id))
   return (
-    Array.from({ length: MAX_SIMULATOR_CHARACTERS }, (_, index) => `sim_c${index + 1}`).find((id) => !used.has(id)) ??
-    null
+    Array.from({ length: characters.length + 1 }, (_, index) => `sim_c${index + 1}`).find((id) => !used.has(id)) ??
+    `sim_c${characters.length + 1}`
   )
 }
 
@@ -283,12 +283,12 @@ export const reduce_simulator_state = (
     state.characters.forEach((character) => by_id.set(character.id, character))
     return Object.freeze({
       ...state,
-      characters: Object.freeze([...by_id.values()].slice(0, MAX_SIMULATOR_CHARACTERS)),
+      characters: Object.freeze([...by_id.values()]),
     })
   }
   if (input.type === 'simulator/character_added') {
     const id = next_simulator_character_id(state.characters)
-    if (!id || input.character_id !== id || !is_class_name(input.classe)) return state
+    if (input.character_id !== id || !is_class_name(input.classe)) return state
     const character: SimulatorCharacter = Object.freeze({
       id,
       name: clean_name(input.name, id),

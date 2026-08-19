@@ -2,9 +2,17 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
 import { parse_world_recipe, type EngineStatus } from '@aresrpg/engine'
+import { chain_to_client_coordinate } from '@aresrpg/immutable'
 
 import type { create_world, WorldView } from '../game/core/world.ts'
 import { character_render_source, load_character_appearance } from '../game/character_entities.ts'
+import {
+  browser_position_storage,
+  create_position_writer,
+  resume_position,
+  type ChainAnchor,
+} from '../game/core/position_store.ts'
+import { read_pose, subscribe_pose } from '../game/core/pose_feed.ts'
 import { world_terrain } from '../content/worlds.ts'
 import type { AppInput, AppModule, AppState } from '../store.ts'
 
@@ -31,7 +39,27 @@ const visual_global = globalThis as typeof globalThis & { __ares_visual__?: Visu
 const selected_position = (state: AppState): Readonly<{ x: number; z: number }> | null => {
   const selected = state.session.characters.find(({ id }) => id === state.session.selected_character_id)
   if (!selected || selected.world !== selected.checkpoint_world) return null
-  return Number.isFinite(selected.x) && Number.isFinite(selected.z) ? { x: selected.x!, z: selected.z! } : null
+  return Number.isFinite(selected.x) && Number.isFinite(selected.z)
+    ? {
+        x: chain_to_client_coordinate(selected.x!),
+        z: chain_to_client_coordinate(selected.z!),
+      }
+    : null
+}
+
+/** The chain checkpoint as the LOCAL cache's identity: a saved pose is honored only while it
+ *  was captured under this exact anchor (chain truth moved = the cache is stale). */
+const selected_anchor = (
+  state: AppState
+): Readonly<{ character_id: string; world: string; anchor: ChainAnchor }> | null => {
+  const selected = state.session.characters.find(({ id }) => id === state.session.selected_character_id)
+  if (!selected?.world || selected.world !== selected.checkpoint_world) return null
+  if (!Number.isFinite(selected.x) || !Number.isFinite(selected.z)) return null
+  return Object.freeze({
+    character_id: selected.id,
+    world: selected.world,
+    anchor: Object.freeze({ x: selected.x!, z: selected.z!, at_ms: selected.at_ms ?? 0 }),
+  })
 }
 
 const selected_world = (state: AppState): string | null =>
@@ -45,6 +73,8 @@ const observe = ({ events, dispatch, get_state, signal }: Parameters<NonNullable
   let mounted_world_name: string | null | undefined
   let character_generation = 0
   let character_key: string | null = null
+  let target_generation = 0
+  const storage = browser_position_storage()
 
   const sync_activity = (state: AppState): void => {
     if (!world) return
@@ -56,15 +86,38 @@ const observe = ({ events, dispatch, get_state, signal }: Parameters<NonNullable
 
   const sync_settings = (state: AppState): void => {
     if (!world) return
-    world.set_quality(state.settings.quality)
+    world.set_quality(state.settings.quality, state.settings.render_distance)
     world.set_flattened(state.settings.flat_mode)
   }
 
   const sync_target = (state: AppState): void => {
     if (!world) return
     const position = selected_position(state)
-    if (position) world.point_at(position)
-    else world.release()
+    if (!position) {
+      world.release()
+      return
+    }
+    // The saved local pose (IndexedDB) wins over the checkpoint only while it explains
+    // itself against the current chain anchor; the arbitration is async, so the point is
+    // deferred and guarded against a selection change in flight.
+    const identity = selected_anchor(state)
+    target_generation += 1
+    const own_generation = target_generation
+    const point = (resumed: Readonly<{ x: number; z: number }> | null): void => {
+      if (signal.aborted || own_generation !== target_generation || !world) return
+      world.point_at(resumed ?? position)
+    }
+    if (!identity) {
+      point(null)
+      return
+    }
+    storage
+      .load(identity.character_id, identity.world)
+      .then((saved) => point(resume_position(saved, identity.anchor)))
+      .catch((error: unknown) => {
+        console.error('The saved position could not be read — resuming at the checkpoint.', error)
+        point(null)
+      })
   }
 
   const sync_character = (state: AppState): void => {
@@ -165,6 +218,26 @@ const observe = ({ events, dispatch, get_state, signal }: Parameters<NonNullable
       })
   }
 
+  // ── the resume cache's write half: debounced saves from the pose lane, fight-gated ──
+  const writer = create_position_writer({
+    save: (row) => {
+      const identity = selected_anchor(get_state())
+      if (!identity) return
+      void storage
+        .save(identity.character_id, identity.world, row)
+        .catch((error: unknown) => console.warn('The position cache write failed.', error))
+    },
+  })
+  const unsubscribe_pose = subscribe_pose(() => {
+    const pose = read_pose()
+    if (!pose) return
+    const state = get_state()
+    if (state.fight.mode !== null) return // a fight takes the body out of the world
+    const identity = selected_anchor(state)
+    if (!identity) return
+    writer.note(pose, identity.anchor)
+  })
+
   events.on('engine/canvas_attached', ({ canvas: next_canvas }) => mount(next_canvas))
   events.on('engine/canvas_detached', ({ canvas: previous_canvas }) => {
     if (canvas !== previous_canvas) return
@@ -182,7 +255,11 @@ const observe = ({ events, dispatch, get_state, signal }: Parameters<NonNullable
     else if (selection_changed || target_became_available) sync_target(state)
     if (selection_changed || state.session.characters !== previous.session.characters) sync_character(state)
   })
-  signal.addEventListener('abort', dispose_world)
+  signal.addEventListener('abort', () => {
+    writer.flush()
+    unsubscribe_pose()
+    dispose_world()
+  })
 }
 
 export default Object.freeze({ name: 'engine', reduce, observe }) satisfies AppModule

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
-import { parse_server_packet, type ClientPacket } from '@aresrpg/protocol'
+import { parse_server_packet, VIOLATION_DROP_REASONS, type ClientPacket } from '@aresrpg/protocol'
 
 import type { AuthSession } from './auth.ts'
 import { env } from './env.ts'
@@ -9,6 +9,8 @@ import type { AppInput } from './store.ts'
 
 const BACKOFF_START_MS = 1_000
 const BACKOFF_CAP_MS = 30_000
+/** retry pace while the server's violation cool-off holds the door shut */
+const VIOLATION_RETRY_MS = 60_000
 const LATENCY_INTERVAL_MS = 5_000
 const PACKET_COLORS = Object.freeze({ in: '#3fb950', out: '#58a6ff' })
 
@@ -130,6 +132,14 @@ export const connect_server = ({ session, dispatch }: ServerLinkOptions): Server
         stop_latency()
         if (is_terminal_auth_close(code, reason)) {
           dispatch({ type: 'link/rejected', reason })
+          return
+        }
+        // a rule-violation drop: surface it red and retry SLOWLY — the server's cool-off ban
+        // refuses the door anyway, hammering it would only be noise
+        if (code === 1008 && VIOLATION_DROP_REASONS.has(reason)) {
+          dispatch({ type: 'link/violation', reason })
+          retry_ms = VIOLATION_RETRY_MS
+          retry_timer = setTimeout(() => void open(), VIOLATION_RETRY_MS)
           return
         }
         dispatch({ type: 'link/failed', error: reason || 'Connection lost' })

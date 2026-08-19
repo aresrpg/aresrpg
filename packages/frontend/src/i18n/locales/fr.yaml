@@ -40,8 +40,10 @@ server_connecting: Connexion
 server_reconnecting: Reconnexion
 server_syncing: Synchronisation
 server_connected: Connecté
+server_violation: Déconnecté — violation des règles. Nouvelle tentative bientôt.
 latency_unit: ms
 indexing_health: Santé de l’indexation
+online_players: Joueurs en ligne
 indexing_lag_warning: Les actions en jeu peuvent apparaître en retard
 game_frozen: Le jeu est actuellement gelé. Consultez Discord pour plus d’informations.
 network_testnet: TESTNET
@@ -80,6 +82,18 @@ wallet_send_pending: Envoi des SUI…
 wallet_send_success: SUI envoyés
 wallet_send_failed: Le transfert de SUI a échoué
 wallet_close: Fermer
+world_hud:
+  compass_label: Boussole
+  zone: ZONE
+  unsearched: NON FOUILLÉE
+  searched: FOUILLÉE
+  out_of_bounds: HORS LIMITES
+  mob_group: Groupe de monstres ({{size}})
+  resource: Ressource
+  cluster_count: +{{extra}} autres
+  zone_edge: Bord de zone {{dist}}
+  coordinates: Coordonnées
+  world_map: Carte du monde
 demo_page:
   title: Laboratoire de rendu
   world_lab: Monde
@@ -89,6 +103,12 @@ demo_page:
   live: Direct
   remove_character: Retirer le modèle
   control_character: Contrôler le modèle
+  hat: Coiffe
+  cloak: Cape
+  pet: Familier
+  none: Aucun
+  ride_pet: Monter le familier
+  dismount_pet: Descendre
   mob_group: Groupe de monstres
   mob: Monstre
   amount: Quantité
@@ -163,6 +183,8 @@ settings_page:
   subtitle: 'Tes préférences AresRPG'
   music_label: 'Musique'
   music_hint: 'Joue les musiques du monde et des combats.'
+  render_distance_label: Distance d'affichage
+  render_distance_hint: Jusqu'où le monde se charge autour de vous. Plus loin coûte des performances.
 admin_page:
   kicker: Éditeur
   title: Publier le contenu du jeu
@@ -268,6 +290,8 @@ simulator_page:
   stat_action: Action
   stat_critical: Coup critique
   stat_raw_damage: Dommages bruts
+  stat_resistance: Résistance
+  stat_power: Puissance
   stat_earth_resistance: Résistance terre
   stat_fire_resistance: Résistance feu
   stat_water_resistance: Résistance eau
@@ -298,10 +322,42 @@ fight_hud:
   placement_hint: Placez vos combattants et indiquez qu’ils sont prêts
   end_turn: Fin du tour
   reset_turn: Rejouer
+  weapon_attack: Attaque d’arme
+  bare_hands: Mains nues
+  log_fight_started: Le combat commence
+  log_cast: '{caster} lance {spell}'
+  log_critical_cast: 'Critique ! {caster} lance {spell}'
+  log_heal: '{source} soigne {target} de {amount} PV'
+  log_ap_change: '{target} : {delta} PA'
+  log_mp_change: '{target} : {delta} PM'
+  log_lost: '{target} perd {amount} PV'
+  log_lost_reduced: '{target} perd {amount} PV (réduit de {reduced})'
+  log_absorbed: '{target} absorbe {reduced} dégâts'
+  log_returned: '{target} renvoie le sort'
+  log_stat_change: '{target} : {delta} {stat} ({turns} {turns_word})'
+  unit_ap: PA
+  unit_mp: PM
+  log_points_loss: '{target} perd {amount} {unit}'
+  log_points_steal: '{source} vole {amount} {unit} à {target}'
+  log_points_partial: '{target} esquive {dodged} {unit} et perd {amount}'
+  log_points_dodge: '{target} esquive la perte de {attempted} {unit}'
+  log_trap_placed: '{owner} pose un piège'
+  log_glyph_placed: '{owner} pose un glyphe'
+  log_death: '{target} meurt'
+  log_forfeit: '{target} abandonne'
+  log_draw: Le combat se termine par un match nul
+  log_team_wins: L’équipe {team} gagne
   forfeit: Abandonner
   forfeit_title: Abandonner avec {name} ?
   forfeit_body: '{name} perdra tous ses PV restants et quittera ce combat.'
   confirm_forfeit: Confirmer l’abandon
+  unit_turns: tours
+  chat_title: Chat
+  chat_tab_general: Général
+  chat_tab_combat: Combat
+  chat_placeholder: Dites quelque chose…
+  chat_you: Vous
+  chat_line: '{name} : {message}'
 wallet_legacy:
   sui: SUI
   how_to_get: Comment obtenir du SUI
@@ -549,7 +605,7 @@ encyclopedia_page:
     blocking: BOUCLIERS
     blocking_desc: Certains sorts accordent un bouclier qui absorbe les dégâts entrants d'un élément correspondant jusqu'à épuisement. Il n'y a ni endurance ni posture de garde, les boucliers sont la seule absorption de dégâts.
     resistance: RÉSISTANCE
-    resistance_desc: La résistance élémentaire est une réduction en pourcentage appliquée aux dégâts finaux, plafonnée à 60% par élément. Une résistance négative (une faiblesse) amplifie les dégâts à la place.
+    resistance_desc: La résistance élémentaire est une réduction en pourcentage appliquée aux dégâts finaux, plafonnée à 50% par élément. Une résistance négative (une faiblesse) amplifie les dégâts à la place.
     life_steal: VOL DE VIE
     life_steal_desc: "Les effets de sort de drain infligent des dégâts et soignent le lanceur de la moitié des points de vie réellement perdus par la cible. Seul le drain d'un joueur soigne : un monstre lançant le même sort inflige ses dégâts et ne se soigne pas."
     life_steal_note: Les dégâts passent d'abord par la formule standard, puis le lanceur récupère la moitié des points de vie réellement perdus par la cible visée — un coup redirigé sur un autre combattant, ou converti en soin par la cible, ne rend rien.

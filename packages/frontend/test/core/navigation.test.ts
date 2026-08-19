@@ -23,7 +23,9 @@ describe('app navigation routes', () => {
   })
 
   test('folds sidebar and browser navigation through the same reducer', () => {
-    const state = initial_app_state(Object.freeze({ quality: 'medium', flat_mode: false, music_enabled: true }))
+    const state = initial_app_state(
+      Object.freeze({ quality: 'medium', flat_mode: false, music_enabled: true, render_distance: null })
+    )
     const opened = reduce_app_state(state, { type: 'page/open', page: 'encyclopedia' })
     const selected = reduce_app_state(opened, { type: 'path/open', pathname: '/encyclopedia/items/aberrant_edge' })
     const returned = reduce_app_state(selected, { type: 'route/changed', pathname: '/' })
@@ -42,7 +44,9 @@ describe('app navigation routes', () => {
     const controller = new AbortController()
     let state_listener: ((state: AppState, previous: AppState) => void) | undefined
     const dispatched: unknown[] = []
-    let state = initial_app_state(Object.freeze({ quality: 'medium', flat_mode: false, music_enabled: true }))
+    let state = initial_app_state(
+      Object.freeze({ quality: 'medium', flat_mode: false, music_enabled: true, render_distance: null })
+    )
     try {
       navigation.observe?.({
         dispatch: (input) => dispatched.push(input),

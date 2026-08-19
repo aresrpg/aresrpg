@@ -13,6 +13,11 @@ export type SpellPreviewEffect = Readonly<{
   turns: bigint
 }>
 
+export type SpellPreviewMovement = Readonly<{
+  mode: 'push' | 'pull' | 'teleport' | 'swap'
+  cells: bigint
+}>
+
 export type SpellTargetPreview = Readonly<{
   fighter: bigint
   hp_before: bigint
@@ -26,6 +31,7 @@ export type SpellTargetPreview = Readonly<{
   cell_before: bigint
   cell_after: bigint
   effects: readonly SpellPreviewEffect[]
+  movements: readonly SpellPreviewMovement[]
 }>
 
 export type SpellCastPreview = Readonly<{
@@ -34,14 +40,14 @@ export type SpellCastPreview = Readonly<{
   targets: readonly SpellTargetPreview[]
 }>
 
-export const preview_spell_cast = (
+const preview_cast = (
   checkpoint: Readonly<HydratedFightCheckpoint>,
-  caster: bigint,
-  spell: string,
-  target_cell: bigint
+  action:
+    | Readonly<{ type: 'cast_spell'; fighter: bigint; spell: string; target_cell: bigint }>
+    | Readonly<{ type: 'weapon_strike'; fighter: bigint; target_cell: bigint }>
 ): SpellCastPreview => {
   const simulation = create_fight({ state: checkpoint as HydratedFightCheckpoint, mode: 'local' })
-  const result = simulation.apply({ type: 'cast_spell', fighter: caster, spell, target_cell })
+  const result = simulation.apply(action)
   if (result.error) return Object.freeze({ error: result.error, critical: false, targets: Object.freeze([]) })
   const critical = result.events.find((event) => event.type === 'spell_cast')?.payload.critical ?? false
   const effects = result.events.flatMap((event) =>
@@ -56,6 +62,16 @@ export const preview_spell_cast = (
               value: event.payload.value,
               turns: event.payload.turns,
             }),
+          }),
+        ]
+      : []
+  )
+  const movement_events = result.events.flatMap((event) =>
+    event.type === 'fighter_moved' && event.payload.mode !== 'walk'
+      ? [
+          Object.freeze({
+            fighter: event.payload.fighter,
+            mode: event.payload.mode as SpellPreviewMovement['mode'],
           }),
         ]
       : []
@@ -85,6 +101,14 @@ export const preview_spell_cast = (
     const after = result.state.contract.fighters[index]
     if (!after || !impacted.has(BigInt(index))) return []
     const applied = effects.filter(({ fighter }) => fighter === BigInt(index)).map(({ effect }) => effect)
+    const movements = movement_events
+      .filter(({ fighter }) => fighter === BigInt(index))
+      .reduce<readonly SpellPreviewMovement[]>((rows, movement) => {
+        const previous = rows.at(-1)
+        if (previous?.mode !== movement.mode)
+          return Object.freeze([...rows, Object.freeze({ mode: movement.mode, cells: 1n })])
+        return Object.freeze([...rows.slice(0, -1), Object.freeze({ mode: movement.mode, cells: previous.cells + 1n })])
+      }, Object.freeze([]))
     return [
       Object.freeze({
         fighter: BigInt(index),
@@ -99,8 +123,22 @@ export const preview_spell_cast = (
         cell_before: before.cell,
         cell_after: after.cell,
         effects: Object.freeze(applied),
+        movements: Object.freeze(movements),
       }),
     ]
   })
   return Object.freeze({ error: null, critical, targets: Object.freeze(targets) })
 }
+
+export const preview_spell_cast = (
+  checkpoint: Readonly<HydratedFightCheckpoint>,
+  caster: bigint,
+  spell: string,
+  target_cell: bigint
+): SpellCastPreview => preview_cast(checkpoint, { type: 'cast_spell', fighter: caster, spell, target_cell })
+
+export const preview_weapon_strike = (
+  checkpoint: Readonly<HydratedFightCheckpoint>,
+  caster: bigint,
+  target_cell: bigint
+): SpellCastPreview => preview_cast(checkpoint, { type: 'weapon_strike', fighter: caster, target_cell })

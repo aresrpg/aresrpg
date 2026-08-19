@@ -84,16 +84,21 @@ export const ConnectionCard = ({
   error,
   indexing_lag,
   latency_ms,
+  online,
   status,
+  violation = null,
 }: Readonly<{
   copy: AppCopy
   error: string | null
   indexing_lag: number | null
   latency_ms: number | null
+  online: number | null
   status: LinkStatus
+  violation?: string | null
 }>) => {
-  const label =
-    status === 'ready'
+  const label = violation
+    ? copy.server_violation
+    : status === 'ready'
       ? copy.server_connected
       : status === 'connected'
         ? copy.server_syncing
@@ -102,8 +107,8 @@ export const ConnectionCard = ({
             ? copy.server_reconnecting
             : copy.server_connecting
           : copy.server_disconnected
-  const connected = status === 'ready'
-  const disconnected = status === 'idle'
+  const connected = status === 'ready' && !violation
+  const disconnected = status === 'idle' || violation !== null
   const Icon = disconnected ? WifiOff : Wifi
   const indexing_tone = indexing_health_tone(indexing_lag)
 
@@ -118,6 +123,7 @@ export const ConnectionCard = ({
             : 'border-[#4a9eff]/25 bg-[#4a9eff]/6 text-[#67adff]'
       }`}
       data-connection-card=""
+      data-connection-violation={violation ?? undefined}
       role="status"
       title={error ?? undefined}
     >
@@ -163,6 +169,10 @@ export const ConnectionCard = ({
         {indexing_tone === 'lagging' && (
           <span className="mt-1 block text-[7px] leading-relaxed text-[#ff7d9f]/75">{copy.indexing_lag_warning}</span>
         )}
+        <div className="mt-1.5 flex items-center justify-between gap-2">
+          <span className="text-[7px] tracking-[0.16em] text-[#6b7280] uppercase">{copy.online_players}</span>
+          <span className="text-[9px] font-semibold tabular-nums">{online ?? '—'}</span>
+        </div>
       </div>
     </div>
   )

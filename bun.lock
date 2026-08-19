@@ -104,6 +104,8 @@
       "name": "@aresrpg/server",
       "version": "1.0.0",
       "dependencies": {
+        "@aresrpg/engine": "workspace:*",
+        "@aresrpg/fight": "workspace:*",
         "@aresrpg/protocol": "workspace:*",
         "@mysten/sui": "2.24.0",
         "falkordb": "^6.2.07",

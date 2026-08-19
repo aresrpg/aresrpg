@@ -5,10 +5,19 @@ import { QUALITY_OPTIONS, type EngineQuality } from '@aresrpg/engine'
 
 export const SETTINGS_STORAGE_KEY = 'aresrpg.settings'
 
+// render_distance: the player's chunk radius override (null = the quality tier's default)
+export const RENDER_DISTANCE_MIN = 4
+export const RENDER_DISTANCE_MAX = 12
+
+// THE one door every consumer derives the effective chunk radius from.
+export const effective_render_distance = (tier_far_radius: number, override: number | null): number =>
+  override ?? tier_far_radius
+
 export type GameSettings = Readonly<{
   quality: EngineQuality
   flat_mode: boolean
   music_enabled: boolean
+  render_distance: number | null
 }>
 
 type SettingsStorage = Readonly<{
@@ -32,7 +41,12 @@ export const load_game_settings = (
   quality_override: string | null = null,
   storage: SettingsStorage | null = browser_storage()
 ): GameSettings => {
-  const defaults = Object.freeze({ quality: default_quality, flat_mode: false, music_enabled: true })
+  const defaults = Object.freeze({
+    quality: default_quality,
+    flat_mode: false,
+    music_enabled: true,
+    render_distance: null,
+  })
   try {
     const parsed: unknown = JSON.parse(storage?.getItem(SETTINGS_STORAGE_KEY) ?? 'null')
     const record = typeof parsed === 'object' && parsed !== null ? parsed : {}
@@ -43,10 +57,19 @@ export const load_game_settings = (
         : defaults.quality
     const flat_mode = Reflect.get(record, 'flat_mode')
     const music_enabled = Reflect.get(record, 'music_enabled')
+    const stored_distance = Reflect.get(record, 'render_distance')
+    const render_distance =
+      typeof stored_distance === 'number' &&
+      Number.isInteger(stored_distance) &&
+      stored_distance >= RENDER_DISTANCE_MIN &&
+      stored_distance <= RENDER_DISTANCE_MAX
+        ? stored_distance
+        : null
     return Object.freeze({
       quality,
       flat_mode: typeof flat_mode === 'boolean' ? flat_mode : defaults.flat_mode,
       music_enabled: typeof music_enabled === 'boolean' ? music_enabled : defaults.music_enabled,
+      render_distance,
     })
   } catch (error) {
     console.warn('Saved game settings are invalid; using defaults.', error)

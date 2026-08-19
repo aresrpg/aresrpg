@@ -1,0 +1,835 @@
+{
+  "version": 1,
+  "packs": {
+    "arctic_rocks": {
+      "category": "rocks",
+      "spacing": 18,
+      "density_bp": 2200,
+      "max_slope": 6,
+      "bury": 1,
+      "types": [
+        {
+          "type": "arctic_big_rock_g1",
+          "weight": 8
+        },
+        {
+          "type": "arctic_big_rock_g2",
+          "weight": 8
+        },
+        {
+          "type": "arctic_big_rock_g3",
+          "weight": 8
+        },
+        {
+          "type": "arctic_icepic_g1",
+          "weight": 8
+        },
+        {
+          "type": "arctic_icepic_g2",
+          "weight": 8
+        },
+        {
+          "type": "arctic_icepic_g3",
+          "weight": 8
+        },
+        {
+          "type": "arctic_icepic_g4",
+          "weight": 8
+        },
+        {
+          "type": "arctic_icepic_g5",
+          "weight": 8
+        },
+        {
+          "type": "arctic_icepic_g6",
+          "weight": 8
+        }
+      ]
+    },
+    "desert_trees": {
+      "category": "trees",
+      "spacing": 10,
+      "density_bp": 6500,
+      "max_slope": 2,
+      "bury": 0,
+      "types": [
+        {
+          "type": "desert_cactus_g1",
+          "weight": 4
+        },
+        {
+          "type": "desert_cactus_g2",
+          "weight": 4
+        },
+        {
+          "type": "desert_cactus_g3",
+          "weight": 8
+        },
+        {
+          "type": "desert_cactus_g4",
+          "weight": 8
+        },
+        {
+          "type": "desert_dead_tree_g1",
+          "weight": 4
+        },
+        {
+          "type": "desert_dead_tree_g2",
+          "weight": 4
+        },
+        {
+          "type": "desert_dead_tree_g3",
+          "weight": 4
+        },
+        {
+          "type": "desert_dead_tree_g4",
+          "weight": 4
+        },
+        {
+          "type": "desert_tree_g1",
+          "weight": 4
+        },
+        {
+          "type": "desert_tree_g2",
+          "weight": 4
+        },
+        {
+          "type": "desert_tree_g3",
+          "weight": 4
+        },
+        {
+          "type": "desert_tree_g4",
+          "weight": 4
+        },
+        {
+          "type": "desert_tree_g5",
+          "weight": 4
+        },
+        {
+          "type": "desert_tree_g6",
+          "weight": 4
+        }
+      ]
+    },
+    "desert_rocks": {
+      "category": "rocks",
+      "spacing": 18,
+      "density_bp": 1600,
+      "max_slope": 6,
+      "bury": 1,
+      "types": [
+        {
+          "type": "desert_big_rock_g1",
+          "weight": 8
+        },
+        {
+          "type": "desert_big_rock_g2",
+          "weight": 8
+        },
+        {
+          "type": "desert_big_rock_g3",
+          "weight": 8
+        },
+        {
+          "type": "desert_big_rock_g4",
+          "weight": 8
+        }
+      ]
+    },
+    "glacier_rocks": {
+      "category": "rocks",
+      "spacing": 18,
+      "density_bp": 3000,
+      "max_slope": 6,
+      "bury": 1,
+      "types": [
+        {
+          "type": "glacier_big_rock_g1",
+          "weight": 8
+        },
+        {
+          "type": "glacier_big_rock_g2",
+          "weight": 8
+        },
+        {
+          "type": "glacier_iceberg_g1",
+          "weight": 8
+        },
+        {
+          "type": "glacier_icesurface_g1",
+          "weight": 8
+        },
+        {
+          "type": "glacier_icesurface_g10",
+          "weight": 8
+        },
+        {
+          "type": "glacier_icesurface_g11",
+          "weight": 8
+        },
+        {
+          "type": "glacier_icesurface_g12",
+          "weight": 8
+        },
+        {
+          "type": "glacier_icesurface_g13",
+          "weight": 8
+        },
+        {
+          "type": "glacier_icesurface_g14",
+          "weight": 8
+        },
+        {
+          "type": "glacier_icesurface_g15",
+          "weight": 8
+        },
+        {
+          "type": "glacier_icesurface_g2",
+          "weight": 8
+        },
+        {
+          "type": "glacier_icesurface_g3",
+          "weight": 8
+        },
+        {
+          "type": "glacier_icesurface_g4",
+          "weight": 8
+        },
+        {
+          "type": "glacier_icesurface_g5",
+          "weight": 8
+        },
+        {
+          "type": "glacier_icesurface_g6",
+          "weight": 8
+        },
+        {
+          "type": "glacier_icesurface_g7",
+          "weight": 8
+        },
+        {
+          "type": "glacier_icesurface_g8",
+          "weight": 8
+        },
+        {
+          "type": "glacier_icesurface_g9",
+          "weight": 8
+        },
+        {
+          "type": "glacier_rock_g1",
+          "weight": 8
+        },
+        {
+          "type": "glacier_rock_g2",
+          "weight": 8
+        },
+        {
+          "type": "glacier_rock_g3",
+          "weight": 8
+        }
+      ]
+    },
+    "grassland_trees": {
+      "category": "trees",
+      "spacing": 9,
+      "density_bp": 8000,
+      "max_slope": 2,
+      "bury": 0,
+      "types": [
+        {
+          "type": "grassland_acacia_g1",
+          "weight": 4
+        },
+        {
+          "type": "grassland_acacia_g2",
+          "weight": 4
+        },
+        {
+          "type": "grassland_acacia_g3",
+          "weight": 4
+        },
+        {
+          "type": "grassland_acacia_g4",
+          "weight": 4
+        },
+        {
+          "type": "grassland_big_tree_g1",
+          "weight": 4
+        },
+        {
+          "type": "grassland_big_tree_g2",
+          "weight": 8
+        },
+        {
+          "type": "grassland_birch_g1",
+          "weight": 4
+        },
+        {
+          "type": "grassland_birch_g2",
+          "weight": 4
+        },
+        {
+          "type": "grassland_birch_g3",
+          "weight": 4
+        },
+        {
+          "type": "grassland_birch_g4",
+          "weight": 4
+        },
+        {
+          "type": "grassland_tree_g1",
+          "weight": 4
+        },
+        {
+          "type": "grassland_tree_g2",
+          "weight": 4
+        },
+        {
+          "type": "grassland_tree_g3",
+          "weight": 4
+        },
+        {
+          "type": "grassland_tree_g4",
+          "weight": 4
+        }
+      ]
+    },
+    "grassland_rocks": {
+      "category": "rocks",
+      "spacing": 18,
+      "density_bp": 900,
+      "max_slope": 6,
+      "bury": 1,
+      "types": [
+        {
+          "type": "grassland_rock_g1",
+          "weight": 8
+        },
+        {
+          "type": "grassland_rock_g2",
+          "weight": 8
+        },
+        {
+          "type": "grassland_rock_g3",
+          "weight": 8
+        },
+        {
+          "type": "grassland_rock_g4",
+          "weight": 8
+        },
+        {
+          "type": "grassland_rock_g5",
+          "weight": 8
+        },
+        {
+          "type": "grassland_rock_g6",
+          "weight": 8
+        }
+      ]
+    },
+    "scorched_rocks": {
+      "category": "rocks",
+      "spacing": 18,
+      "density_bp": 3000,
+      "max_slope": 6,
+      "bury": 1,
+      "types": [
+        {
+          "type": "scorched_rock_dome_g1",
+          "weight": 8
+        },
+        {
+          "type": "scorched_rock_dome_g2",
+          "weight": 8
+        },
+        {
+          "type": "scorched_rock_dome_g3",
+          "weight": 8
+        },
+        {
+          "type": "scorched_rock_dome_g4",
+          "weight": 8
+        },
+        {
+          "type": "scorched_rock_dome_g5",
+          "weight": 8
+        },
+        {
+          "type": "scorched_rock_lava_g1",
+          "weight": 8
+        },
+        {
+          "type": "scorched_rock_lava_g2",
+          "weight": 8
+        },
+        {
+          "type": "scorched_rock_lava_g3",
+          "weight": 8
+        },
+        {
+          "type": "scorched_rock_lava_g4",
+          "weight": 8
+        },
+        {
+          "type": "scorched_rock_little_g1",
+          "weight": 8
+        },
+        {
+          "type": "scorched_rock_little_g2",
+          "weight": 8
+        },
+        {
+          "type": "scorched_rock_little_g3",
+          "weight": 8
+        },
+        {
+          "type": "scorched_rock_little_g4",
+          "weight": 8
+        },
+        {
+          "type": "scorched_rock_little_g5",
+          "weight": 8
+        },
+        {
+          "type": "scorched_rock_little_g6",
+          "weight": 8
+        }
+      ]
+    },
+    "swamp_trees": {
+      "category": "trees",
+      "spacing": 8,
+      "density_bp": 9500,
+      "max_slope": 2,
+      "bury": 0,
+      "types": [
+        {
+          "type": "swamp_big_tree_g1",
+          "weight": 8
+        },
+        {
+          "type": "swamp_big_tree_g2",
+          "weight": 8
+        },
+        {
+          "type": "swamp_big_tree_g3",
+          "weight": 8
+        },
+        {
+          "type": "swamp_big_tree_g4",
+          "weight": 4
+        },
+        {
+          "type": "swamp_big_tree_g5",
+          "weight": 8
+        },
+        {
+          "type": "swamp_dead_tree_g1",
+          "weight": 4
+        },
+        {
+          "type": "swamp_dead_tree_g2",
+          "weight": 4
+        },
+        {
+          "type": "swamp_dead_tree_g3",
+          "weight": 8
+        },
+        {
+          "type": "swamp_dead_tree_g4",
+          "weight": 4
+        },
+        {
+          "type": "swamp_normal_tree_g1",
+          "weight": 4
+        },
+        {
+          "type": "swamp_normal_tree_g2",
+          "weight": 4
+        },
+        {
+          "type": "swamp_normal_tree_g3",
+          "weight": 4
+        },
+        {
+          "type": "swamp_normal_tree_g4",
+          "weight": 8
+        },
+        {
+          "type": "swamp_normal_tree_g5",
+          "weight": 4
+        },
+        {
+          "type": "swamp_normal_tree_g6",
+          "weight": 4
+        }
+      ]
+    },
+    "taiga_trees": {
+      "category": "trees",
+      "spacing": 8,
+      "density_bp": 9500,
+      "max_slope": 2,
+      "bury": 0,
+      "types": [
+        {
+          "type": "taiga_big_sapin_neige_g1",
+          "weight": 12
+        },
+        {
+          "type": "taiga_big_sapin_neige_g2",
+          "weight": 8
+        },
+        {
+          "type": "taiga_big_sapin_neige_g3",
+          "weight": 8
+        },
+        {
+          "type": "taiga_huge_sapin_g1",
+          "weight": 12
+        },
+        {
+          "type": "taiga_huge_sapin_g2",
+          "weight": 12
+        },
+        {
+          "type": "taiga_huge_sapin_g3",
+          "weight": 12
+        },
+        {
+          "type": "taiga_normal_chene_g1",
+          "weight": 4
+        },
+        {
+          "type": "taiga_normal_chene_g2",
+          "weight": 4
+        },
+        {
+          "type": "taiga_normal_chene_g3",
+          "weight": 4
+        },
+        {
+          "type": "taiga_normal_sapin_g1",
+          "weight": 4
+        },
+        {
+          "type": "taiga_normal_sapin_g2",
+          "weight": 4
+        },
+        {
+          "type": "taiga_normal_sapin_g3",
+          "weight": 8
+        },
+        {
+          "type": "taiga_normal_sapin_g4",
+          "weight": 8
+        },
+        {
+          "type": "taiga_normal_sapin_g5",
+          "weight": 4
+        },
+        {
+          "type": "taiga_normal_sapin_g6",
+          "weight": 8
+        },
+        {
+          "type": "taiga_tree_g1",
+          "weight": 4
+        },
+        {
+          "type": "taiga_tree_g2",
+          "weight": 4
+        },
+        {
+          "type": "taiga_tree_g3",
+          "weight": 4
+        }
+      ]
+    },
+    "taiga_rocks": {
+      "category": "rocks",
+      "spacing": 18,
+      "density_bp": 1200,
+      "max_slope": 6,
+      "bury": 1,
+      "types": [
+        {
+          "type": "taiga_rock_g1",
+          "weight": 8
+        },
+        {
+          "type": "taiga_rock_g10",
+          "weight": 8
+        },
+        {
+          "type": "taiga_rock_g2",
+          "weight": 8
+        },
+        {
+          "type": "taiga_rock_g3",
+          "weight": 8
+        },
+        {
+          "type": "taiga_rock_g4",
+          "weight": 8
+        },
+        {
+          "type": "taiga_rock_g5",
+          "weight": 8
+        },
+        {
+          "type": "taiga_rock_g6",
+          "weight": 8
+        },
+        {
+          "type": "taiga_rock_g7",
+          "weight": 8
+        },
+        {
+          "type": "taiga_rock_g8",
+          "weight": 8
+        },
+        {
+          "type": "taiga_rock_g9",
+          "weight": 8
+        }
+      ]
+    },
+    "temperate_trees": {
+      "category": "trees",
+      "spacing": 8,
+      "density_bp": 9500,
+      "max_slope": 2,
+      "bury": 0,
+      "types": [
+        {
+          "type": "temperate_large_tree_g1",
+          "weight": 12
+        },
+        {
+          "type": "temperate_large_tree_g2",
+          "weight": 8
+        },
+        {
+          "type": "temperate_large_tree_g3",
+          "weight": 8
+        },
+        {
+          "type": "temperate_thin_tree_g1",
+          "weight": 4
+        },
+        {
+          "type": "temperate_thin_tree_g2",
+          "weight": 4
+        },
+        {
+          "type": "temperate_thin_tree_g3",
+          "weight": 8
+        },
+        {
+          "type": "temperate_thin_tree_g4",
+          "weight": 8
+        },
+        {
+          "type": "temperate_thin_tree_g5",
+          "weight": 12
+        },
+        {
+          "type": "temperate_thin_tree_g6",
+          "weight": 12
+        }
+      ]
+    },
+    "temperate_rocks": {
+      "category": "rocks",
+      "spacing": 18,
+      "density_bp": 750,
+      "max_slope": 6,
+      "bury": 1,
+      "types": [
+        {
+          "type": "temperate_rock_g1",
+          "weight": 8
+        },
+        {
+          "type": "temperate_rock_g2",
+          "weight": 8
+        },
+        {
+          "type": "temperate_rock_g3",
+          "weight": 8
+        },
+        {
+          "type": "temperate_rock_g4",
+          "weight": 8
+        },
+        {
+          "type": "temperate_rock_g5",
+          "weight": 8
+        },
+        {
+          "type": "temperate_rock_g6",
+          "weight": 8
+        }
+      ]
+    },
+    "tropical_trees": {
+      "category": "trees",
+      "spacing": 7,
+      "density_bp": 10000,
+      "max_slope": 2,
+      "bury": 0,
+      "types": [
+        {
+          "type": "tropical_normal_tree_g1",
+          "weight": 4
+        },
+        {
+          "type": "tropical_normal_tree_g10",
+          "weight": 4
+        },
+        {
+          "type": "tropical_normal_tree_g11",
+          "weight": 8
+        },
+        {
+          "type": "tropical_normal_tree_g12",
+          "weight": 8
+        },
+        {
+          "type": "tropical_normal_tree_g2",
+          "weight": 4
+        },
+        {
+          "type": "tropical_normal_tree_g3",
+          "weight": 4
+        },
+        {
+          "type": "tropical_normal_tree_g4",
+          "weight": 4
+        },
+        {
+          "type": "tropical_normal_tree_g5",
+          "weight": 4
+        },
+        {
+          "type": "tropical_normal_tree_g6",
+          "weight": 4
+        },
+        {
+          "type": "tropical_normal_tree_g7",
+          "weight": 4
+        },
+        {
+          "type": "tropical_normal_tree_g8",
+          "weight": 4
+        },
+        {
+          "type": "tropical_normal_tree_g9",
+          "weight": 4
+        }
+      ]
+    },
+    "tropical_rocks": {
+      "category": "rocks",
+      "spacing": 18,
+      "density_bp": 1300,
+      "max_slope": 6,
+      "bury": 1,
+      "types": [
+        {
+          "type": "tropical_big_rock_g1",
+          "weight": 8
+        },
+        {
+          "type": "tropical_big_rock_g2",
+          "weight": 8
+        },
+        {
+          "type": "tropical_big_rock_g3",
+          "weight": 8
+        },
+        {
+          "type": "tropical_big_rock_g4",
+          "weight": 8
+        },
+        {
+          "type": "tropical_corail_g1",
+          "weight": 8
+        },
+        {
+          "type": "tropical_corail_g2",
+          "weight": 8
+        },
+        {
+          "type": "tropical_corail_g3",
+          "weight": 8
+        },
+        {
+          "type": "tropical_corail_g4",
+          "weight": 8
+        },
+        {
+          "type": "tropical_corail_g5",
+          "weight": 8
+        },
+        {
+          "type": "tropical_corail_g6",
+          "weight": 8
+        }
+      ]
+    },
+    "temperate_ruins": {
+      "category": "ruins",
+      "spacing": 320,
+      "density_bp": 6000,
+      "max_slope": 2,
+      "bury": 0,
+      "types": [
+        {
+          "type": "temperate_ruined_arch",
+          "weight": 1
+        }
+      ]
+    },
+    "desert_ruins": {
+      "category": "ruins",
+      "spacing": 320,
+      "density_bp": 6000,
+      "max_slope": 2,
+      "bury": 0,
+      "types": [
+        {
+          "type": "desert_broken_columns",
+          "weight": 1
+        }
+      ]
+    },
+    "scorched_ruins": {
+      "category": "ruins",
+      "spacing": 320,
+      "density_bp": 6000,
+      "max_slope": 2,
+      "bury": 0,
+      "types": [
+        {
+          "type": "scorched_altar",
+          "weight": 1
+        }
+      ]
+    },
+    "swamp_ruins": {
+      "category": "ruins",
+      "spacing": 320,
+      "density_bp": 6000,
+      "max_slope": 2,
+      "bury": 0,
+      "types": [
+        {
+          "type": "swamp_broken_wall",
+          "weight": 1
+        }
+      ]
+    }
+  }
+}

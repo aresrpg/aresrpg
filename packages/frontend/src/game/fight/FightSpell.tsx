@@ -4,7 +4,7 @@
 
 import { spell_icon } from '../../content/assets.ts'
 import { SpellCard } from '../../encyclopedia/SpellCard.tsx'
-import { useState, type FocusEvent } from 'react'
+import { useState, type FocusEvent, type ReactNode } from 'react'
 
 import type { FightSpellView } from './fight_projection.ts'
 
@@ -70,17 +70,25 @@ export const FightSpell = ({
   disabled,
   selected,
   select,
-}: Readonly<{ spell: FightSpellView; disabled: boolean; selected: boolean; select: () => void }>) => {
+  fallback_icon,
+}: Readonly<{
+  spell: FightSpellView
+  disabled: boolean
+  selected: boolean
+  select: () => void
+  fallback_icon?: ReactNode
+}>) => {
   const [detail_open, set_detail_open] = useState(false)
   const icon = spell_icon(spell.source.classe, spell.name)
   const detail = fight_spell_detail(spell)
+  const critical = spell.turn?.critical === true && !disabled
   const close_focus = (event: Readonly<FocusEvent<HTMLDivElement>>): void => {
     if (event.relatedTarget && event.currentTarget.contains(event.relatedTarget)) return
     set_detail_open(false)
   }
   return (
     <div
-      className="fight-hud__spell-shell"
+      className={`fight-hud__spell-shell${critical ? ' critical' : ''}`}
       onBlur={close_focus}
       onFocus={() => set_detail_open(true)}
       onMouseEnter={() => set_detail_open(true)}
@@ -89,14 +97,19 @@ export const FightSpell = ({
       <button
         aria-label={`${spell.name}, level ${spell.level}, ${spell.details.ap_cost} AP`}
         aria-pressed={selected}
-        className={`fight-hud__spell${disabled ? ' disabled' : ''}${selected ? ' selected' : ''}${spell.turn?.critical ? ' critical' : ''}`}
-        data-turn-critical={spell.turn?.critical || undefined}
+        className={`fight-hud__spell${disabled ? ' disabled' : ''}${selected ? ' selected' : ''}${critical ? ' critical' : ''}`}
+        data-turn-critical={critical || undefined}
         disabled={disabled}
         onClick={select}
         type="button"
       >
-        {icon ? <img alt="" draggable={false} src={icon} /> : <span>{spell.name.slice(0, 1).toUpperCase()}</span>}
+        {icon ? (
+          <img alt="" draggable={false} src={icon} />
+        ) : (
+          <span>{fallback_icon ?? spell.name.slice(0, 1).toUpperCase()}</span>
+        )}
         <b>{spell.details.ap_cost.toString()}</b>
+        {spell.cooldown > 0n && <em className="fight-hud__spell-cooldown">{spell.cooldown.toString()}</em>}
       </button>
       {detail_open && (
         <div className="fight-hud__spell-detail fight-hud__spell-detail--small">

@@ -16,10 +16,12 @@ import {
 
 import type { AppInput, AppModule, AppState } from '../store.ts'
 import { select_fight_view } from '../game/fight/fight_projection.ts'
+import { project_fight_chat_lines } from '../game/fight/fight_chat_lines.ts'
 
 export type FightSessionState = Readonly<{
   mode: FightMode | null
   checkpoint: HydratedFightCheckpoint | null
+  zone_ids: readonly string[]
   events: readonly FightEvent[]
   presentation_batch: number
   error: FightRuntimeError | null
@@ -34,6 +36,7 @@ export type FightSessionInput =
       type: 'fight/reconciled'
       mode: FightMode
       checkpoint: HydratedFightCheckpoint
+      zone_ids: readonly string[]
       events: readonly FightEvent[]
       presentation_batch: number
       error: FightRuntimeError | null
@@ -42,11 +45,23 @@ export type FightSessionInput =
   | Readonly<{ type: 'fight/closed' }>
 
 export const initial_fight_session_state = (): FightSessionState =>
-  Object.freeze({ mode: null, checkpoint: null, events: Object.freeze([]), presentation_batch: 0, error: null })
+  Object.freeze({
+    mode: null,
+    checkpoint: null,
+    zone_ids: Object.freeze([]),
+    events: Object.freeze([]),
+    presentation_batch: 0,
+    error: null,
+  })
+
+export const local_fight_should_close = (
+  fight: Readonly<Pick<FightSessionState, 'mode' | 'checkpoint' | 'events'>>
+): boolean => fight.mode === 'local' && fight.checkpoint?.contract.ended === true && fight.events.length === 0
 
 type ActiveFightSession = Readonly<{
   mode: FightMode
   checkpoint: HydratedFightCheckpoint
+  zone_ids: readonly string[]
   events: readonly FightEvent[]
   presentation_batch: number
   error: FightRuntimeError | null
@@ -80,6 +95,7 @@ export const create_fight_session = ({
     current = Object.freeze({
       mode,
       checkpoint,
+      zone_ids: Object.freeze([...(runtime?.zone_ids() ?? [])]),
       events: Object.freeze([...events]),
       presentation_batch,
       error,
@@ -112,6 +128,7 @@ export const create_fight_session = ({
       current = Object.freeze({
         mode,
         checkpoint: runtime.state(),
+        zone_ids: runtime.zone_ids(),
         events: Object.freeze([...events]),
         presentation_batch: events.length > 0 ? ++presentation_batch : presentation_batch,
         error: null,
@@ -130,17 +147,19 @@ export const create_fight_session = ({
 }
 
 const reduce = (state: AppState, input: AppInput): AppState => {
-  if (input.type === 'fight/reconciled')
+  if (input.type === 'fight/reconciled') {
     return Object.freeze({
       ...state,
       fight: Object.freeze({
         mode: input.mode,
         checkpoint: input.checkpoint,
+        zone_ids: Object.freeze([...input.zone_ids]),
         events: Object.freeze([...input.events]),
         presentation_batch: input.presentation_batch,
         error: input.error,
       }),
     })
+  }
   if (input.type === 'fight/presented' && input.presentation_batch === state.fight.presentation_batch)
     return Object.freeze({
       ...state,
@@ -150,20 +169,46 @@ const reduce = (state: AppState, input: AppInput): AppState => {
   return state
 }
 
-const observe = ({ dispatch, events }: Parameters<NonNullable<AppModule['observe']>>[0]): void => {
+const observe = ({ dispatch, events, get_state }: Parameters<NonNullable<AppModule['observe']>>[0]): void => {
   const session = create_fight_session({
     // Move stores wall-clock milliseconds. A monotonic page-relative clock would make every
     // remotely hydrated deadline look permanently in the future.
     now: () => BigInt(Date.now()),
-    reconcile: ({ mode, checkpoint, events: fight_events, presentation_batch, error }) =>
+    reconcile: ({ mode, checkpoint, zone_ids, events: fight_events, presentation_batch, error }) =>
       dispatch({
         type: 'fight/reconciled',
         mode,
         checkpoint,
+        zone_ids,
         events: fight_events,
         presentation_batch,
         error,
       }),
+  })
+  // The combat log rides the ONE game chat: every reconciled batch's events project to
+  // semantic chat lines here (fight module -> chat module), never into a fight-local log.
+  // A per-open instance stamp keeps line ids unique when a fight id is reused (lab restarts).
+  let fight_instance = 0
+  events.on('fight/opened', () => {
+    fight_instance += 1
+  })
+  events.on('fight/reconciled', ({ checkpoint, events: fight_events, presentation_batch }) => {
+    if (fight_events.length === 0) return
+    const state = get_state()
+    const name_of = (seat: bigint): string => {
+      const fighter = checkpoint.contract.fighters[Number(seat)]
+      if (!fighter) return `#${seat}`
+      if (fighter.kind.type === 'mob') return fighter.kind.snapshot.mob_type
+      const { character } = fighter.kind
+      return (
+        state.session.characters.find(({ id }) => id === character)?.name ??
+        state.simulator.characters.find(({ id }) => id === character)?.name ??
+        `#${seat}`
+      )
+    }
+    project_fight_chat_lines(checkpoint, fight_events, `${fight_instance}.${presentation_batch}`, name_of).forEach(
+      (line) => dispatch({ type: 'chat/line', line })
+    )
   })
   events.on('fight/opened', ({ mode, seed, setup }) => {
     session.open({ mode, seed, setup })
@@ -175,6 +220,10 @@ const observe = ({ dispatch, events }: Parameters<NonNullable<AppModule['observe
     dispatch({ type: 'fight/input', input: decode_fight_action(packet.action), origin: 'streamed' })
   })
   events.on('STATE_UPDATED', (state, previous) => {
+    if (state.fight !== previous.fight && local_fight_should_close(state.fight)) {
+      dispatch({ type: 'fight/closed' })
+      return
+    }
     if (
       state.fight === previous.fight ||
       state.fight.mode !== 'remote' ||

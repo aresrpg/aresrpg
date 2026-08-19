@@ -92,9 +92,21 @@ const cooldown_left = (runtime: FightRuntime, mob: bigint, spell: string): bigin
 const enter = (runtime: FightRuntime, fighter: bigint, from: bigint): boolean =>
   on_enter(runtime, fighter, from, resolve_rows)
 
+const rush_toward = (runtime: FightRuntime, mob: bigint, target: bigint): FightRuntime => {
+  const fighter = runtime.contract.fighters[Number(mob)]
+  const rush = bfs_best_toward(fighter.cell, target, wall_mask(runtime, mob), fighter.mp)
+  if (rush !== fighter.cell) walk_toward(runtime, mob, rush, enter)
+  return runtime
+}
+
 export const mob_turn = (runtime: FightRuntime, mob: bigint): FightRuntime => {
   const enemy = nearest_enemy(runtime, mob)
-  if (enemy === null) return runtime
+  if (enemy === null) {
+    const fighter = runtime.contract.fighters[Number(mob)]
+    const starts = fighter.team === 0n ? runtime.contract.board.start_cells_a : runtime.contract.board.start_cells_b
+    const [anchor] = starts
+    return anchor === undefined ? runtime : rush_toward(runtime, mob, anchor)
+  }
   const { kit } = mob_snapshot(runtime.contract.fighters[Number(mob)] as MobFighter)
   for (const spell of kit as KitSpell[]) {
     const heal = has_heal(spell.level)
@@ -148,15 +160,7 @@ export const mob_turn = (runtime: FightRuntime, mob: bigint): FightRuntime => {
       }
     }
   }
-  const fighter = runtime.contract.fighters[Number(mob)]
-  const rush = bfs_best_toward(
-    fighter.cell,
-    runtime.contract.fighters[Number(enemy)].cell,
-    wall_mask(runtime, mob),
-    fighter.mp
-  )
-  if (rush !== fighter.cell) walk_toward(runtime, mob, rush, enter)
-  return runtime
+  return rush_toward(runtime, mob, runtime.contract.fighters[Number(enemy)].cell)
 }
 
 const random_turn_start = (runtime: FightRuntime, actor: bigint): boolean => {

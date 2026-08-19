@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
-export type SeedDomain = 'airdrop' | 'items' | 'mobs' | 'recipes' | 'shop' | 'spells' | 'worlds'
+export type SeedDomain = 'airdrop' | 'items' | 'mobs' | 'recipes' | 'shop' | 'spells' | 'structure_packs' | 'worlds'
 export type JsonPrimitive = string | number | boolean | null
 export type JsonValue = JsonPrimitive | readonly JsonValue[] | Readonly<{ [key: string]: JsonValue }>
 export type JsonPath = readonly (string | number)[]
@@ -25,6 +25,7 @@ export const admin_content_domains = Object.freeze([
   Object.freeze({ id: 'recipes', file: 'recipes.json', label: 'Recipes' }),
   Object.freeze({ id: 'shop', file: 'shop.json', label: 'Shop' }),
   Object.freeze({ id: 'spells', file: 'spells.json', label: 'Spells' }),
+  Object.freeze({ id: 'structure_packs', file: 'structure_packs.json', label: 'Structure packs' }),
   Object.freeze({ id: 'worlds', file: 'worlds.json', label: 'Worlds' }),
 ] as const)
 
@@ -123,6 +124,14 @@ export const entity_rows = (domain: SeedDomain, value: unknown): readonly SeedEn
         Object.freeze({ ...row, id: `${section}:${row.id}`, label: `${section} · ${row.label}` })
       )
     })
+  if (domain === 'structure_packs') {
+    const packs = as_object(object.packs)
+    return packs
+      ? Object.entries(packs).map(([key, child]) =>
+          Object.freeze({ id: key, label: key, path: Object.freeze(['packs', key]), value: child })
+        )
+      : []
+  }
   return Object.entries(object).map(([key, child]) =>
     Object.freeze({ id: key, label: key, path: Object.freeze([key]), value: child })
   )
@@ -158,6 +167,7 @@ export const replace_json_value = (value: JsonValue, path: JsonPath, replacement
     )
   }
   const key = String(segment)
+  if (rest.length === 0) return Object.freeze({ ...value, [key]: replacement })
   if (!(key in value)) throw new TypeError(`Unknown JSON path ${path.join('.')}`)
   return Object.freeze({
     ...value,
