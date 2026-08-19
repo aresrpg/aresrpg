@@ -136,6 +136,10 @@ jobs:
         with:
           ref: edge
           fetch-depth: 0
+          # The engine does ref math (merge-base, ff-push) and runs .github scripts — it never
+          # reads the art tree. Full commit history, blobs only for the engine's own files.
+          filter: blob:none
+          sparse-checkout: .github
       - name: stale-engine canary — the checked-out engine must be the CURRENT one (#1573)
         if: steps.gate.outputs.count != '0'
         # The failure class this ref change exists to kill: an engine checked out from a branch that

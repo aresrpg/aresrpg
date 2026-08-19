@@ -78,6 +78,9 @@ jobs:
           # until the authorized /promote here applies `promote-requested` (label-is-the-hold law).
           ref: edge
           fetch-depth: 0
+          # Same engine, same needs as promote-queue: ref math + .github scripts/templates only.
+          filter: blob:none
+          sparse-checkout: .github
       - name: ensure the promote-requested label exists, then apply it
         run: |
           gh label create promote-requested --repo "$GITHUB_REPOSITORY" --color BFD4F2 \

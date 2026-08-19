@@ -45,6 +45,12 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           fetch-depth: 0 # tags visible for the idempotence check
+          # This job reads only the version field and the newest release changelog — never art.
+          filter: blob:none
+          sparse-checkout: |
+            packages/frontend/package.json
+            changelog
+          sparse-checkout-cone-mode: false
       # The player-visible version lives in packages/frontend/package.json (the badge the client
       # renders) — NOT the workspace root (which idles at 1.0.x). First fresh-repo tag = v1.12.36:
       # CONTINUITY with the monorepo era (ruled 2026-07-20 — players saw v35; the badge history
