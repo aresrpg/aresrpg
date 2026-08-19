@@ -82,6 +82,24 @@ export type SessionInput =
       reject: (error: Readonly<Error>) => void
     }>
 
+/** The last tab the player stood on survives reloads; a stale id (deleted character, other
+ * account) falls back to the roster's first entry inside the packet fold. */
+const SELECTED_CHARACTER_KEY = 'aresrpg.selected_character'
+const read_selected_character = (): string | null => {
+  try {
+    return globalThis.localStorage?.getItem(SELECTED_CHARACTER_KEY) ?? null
+  } catch {
+    return null
+  }
+}
+const remember_selected_character = (character_id: string): void => {
+  try {
+    globalThis.localStorage?.setItem(SELECTED_CHARACTER_KEY, character_id)
+  } catch {
+    // private browsing — the tab just won't stick across reloads
+  }
+}
+
 export const initial_session_state = (): SessionState =>
   Object.freeze({
     auth_status: 'idle',
@@ -101,7 +119,7 @@ export const initial_session_state = (): SessionState =>
     giftcards: [],
     listings: [],
     trades: [],
-    selected_character_id: null,
+    selected_character_id: read_selected_character(),
     online: null,
     auth_ready: false,
     wallets: [],
@@ -439,6 +457,8 @@ const observe = ({ events, dispatch, signal, get_state }: Parameters<NonNullable
   events.on('chat/speak', ({ text }) => {
     link?.send({ type: 'packet/chat', text })
   })
+
+  events.on('character/select', ({ character_id }) => remember_selected_character(character_id))
 
   events.on('link/rejected', ({ reason }) => {
     const { copy } = get_state()

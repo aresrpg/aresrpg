@@ -16,7 +16,11 @@ const PACKET_COLORS = Object.freeze({ in: '#3fb950', out: '#58a6ff' })
 
 const clock_ms = (): number => globalThis.performance?.now() ?? Date.now()
 
+/** Position traffic is ~continuous in both directions — pure console noise, never logged. */
+const SILENT_PACKETS: ReadonlySet<string> = new Set(['packet/position', 'packet/player_moved'])
+
 const log_packet = (direction: keyof typeof PACKET_COLORS, packet: Readonly<ClientPacket> | object): void => {
+  if ('type' in packet && typeof packet.type === 'string' && SILENT_PACKETS.has(packet.type)) return
   const visible =
     'type' in packet && packet.type === 'packet/signature_response'
       ? { ...packet, bytes: '[redacted]', signature: '[redacted]' }

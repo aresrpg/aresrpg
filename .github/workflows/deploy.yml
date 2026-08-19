@@ -1,0 +1,76 @@
+# SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+# © 2026 Sceat — All rights reserved. See LICENSE.
+# THE DEPLOY (owner 2026-08-20): the app builds HERE, where the art tree restores from the
+# actions cache in seconds, and ships to Vercel as a PREBUILT output (`vercel deploy
+# --prebuilt`) — Vercel's own git builds are retired because their uncacheable full clone of
+# the 1.9GB tree burned 20+ minutes per push. Deploys run only after the gate workflow is
+# GREEN on a push to edge (preview domain) or master (production): a red branch cannot deploy.
+# This file carries the deploy secret, so it lives OUTSIDE gate.yml (which is fork-safe,
+# no-secrets by its own law) and triggers only on trusted push-driven runs.
+name: deploy
+on:
+  workflow_run:
+    workflows: [gate]
+    types: [completed]
+permissions:
+  contents: read
+jobs:
+  vercel:
+    if: >-
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.event == 'push' &&
+      (github.event.workflow_run.head_branch == 'edge' || github.event.workflow_run.head_branch == 'master')
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      VERCEL_ORG_ID: team_ir5eY7QCUS7qgcTBq81H89FM
+      VERCEL_PROJECT_ID: prj_sBuXZOg6DJTciA0SYyTQZhESAekP
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+      PROD: ${{ github.event.workflow_run.head_branch == 'master' && '1' || '' }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+          # Same art-cache scheme as the gate — the 1.8GB tree restores from cache, not git.
+          filter: blob:none
+          sparse-checkout: |
+            /*
+            !seed/icons
+            !seed/models
+          sparse-checkout-cone-mode: false
+      - name: art tree key
+        id: art
+        run: echo "tree=$(git rev-parse HEAD:seed/icons)-$(git rev-parse HEAD:seed/models)" >> "$GITHUB_OUTPUT"
+      - name: cache the art tree
+        id: art_cache
+        uses: actions/cache@5a3ec84eff668545956fd18022155c47e93e2684 # v4.2.3
+        with:
+          path: |
+            seed/icons
+            seed/models
+          key: art-${{ steps.art.outputs.tree }}
+      - name: materialize the art tree (cache miss only)
+        if: steps.art_cache.outputs.cache-hit != 'true'
+        run: |
+          git sparse-checkout set --no-cone '/*'
+          git checkout HEAD -- seed/icons seed/models
+      - name: setup Bun
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
+      - name: cache bun downloads
+        uses: actions/cache@5a3ec84eff668545956fd18022155c47e93e2684 # v4.2.3
+        with:
+          path: ~/.bun/install/cache
+          key: bun-${{ runner.os }}-${{ hashFiles('bun.lock') }}
+          restore-keys: bun-${{ runner.os }}-
+      - name: install
+        run: bun install --frozen-lockfile
+      - name: pull the Vercel environment
+        run: bunx vercel pull --yes --environment=${{ env.PROD && 'production' || 'preview' }} ${{ env.PROD && '' || '--git-branch=edge' }} --token="$VERCEL_TOKEN"
+      - name: build
+        run: bunx vercel build ${{ env.PROD && '--prod' || '' }} --token="$VERCEL_TOKEN"
+      - name: deploy the prebuilt output
+        id: deploy
+        run: echo "url=$(bunx vercel deploy --prebuilt ${{ env.PROD && '--prod' || '' }} --token="$VERCEL_TOKEN")" >> "$GITHUB_OUTPUT"
+      - name: point edge.aresrpg.world at the fresh edge deploy
+        if: ${{ !env.PROD }}
+        run: bunx vercel alias set "${{ steps.deploy.outputs.url }}" edge.aresrpg.world --token="$VERCEL_TOKEN"

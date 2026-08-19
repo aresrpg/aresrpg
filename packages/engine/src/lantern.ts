@@ -9,10 +9,13 @@ import { PointLight, type Scene } from 'three'
 /** Fully lit below this sun elevation, off above the upper bound — the dusk crossfade. */
 const NIGHT_ELEVATION = -0.12
 const DAY_ELEVATION = 0.04
-const BASE_INTENSITY = 9
+/** Sized for a clearly lit ~8-block pool (owner 2026-08-20: "we still see nothing" at the old
+ * falloff): gentler decay carries the light out, and the small lift off the ground stops the
+ * grazing angle from strangling the pool — the center stays the character's feet. */
+const BASE_INTENSITY = 22
 const RANGE = 48
-/** The halo centers on the ground under the character — just high enough to not sink into it. */
-const HEIGHT_ABOVE_FOCUS = 0.5
+const DECAY = 1.2
+const HEIGHT_ABOVE_FOCUS = 1.2
 
 /** 0 in daylight, 1 at night, smooth through dusk — pure so the ramp is testable. */
 export const lantern_intensity = (sun_elevation: number): number => {
@@ -35,7 +38,7 @@ export type Lantern = Readonly<{
 }>
 
 export const create_lantern = ({ scene }: Readonly<{ scene: Scene }>): Lantern => {
-  const light = new PointLight(0xffc37a, 0, RANGE, 1.4)
+  const light = new PointLight(0xffc37a, 0, RANGE, DECAY)
   light.castShadow = false
   scene.add(light)
   let night_amount = 0

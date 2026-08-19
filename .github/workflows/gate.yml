@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 # © 2026 Sceat — All rights reserved. See LICENSE.
-# The CI gate — every PR into edge/master passes it; master merges deploy (Vercel git integration).
+# The CI gate — every PR and push into edge/master passes it; a GREEN push then deploys through
+# deploy.yml (prebuilt Vercel output built here in CI — the git integration is retired).
 # Fork-safe by construction: no secrets in this workflow, ever.
 name: gate
 on:
@@ -161,8 +162,9 @@ jobs:
         working-directory: packages/indexer
         run: cargo test
   bundle-gate:
-    # Reproduces Vercel's own buildCommand (#737) so a bundle-tripping commit fails HERE and can
-    # never land as a zero-READY-deploys outage.
+    # Reproduces the deploy build on PULL REQUESTS so a bundle-tripping commit fails before it
+    # lands; on pushes the deploy workflow's own build is the proof, so this job skips there.
+    if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
