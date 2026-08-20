@@ -17,7 +17,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           # Metadata-only clone: the 1.8GB art tree restores from the actions cache below
           # (keyed by its own git tree hash) — a run downloads art only when art CHANGED.
@@ -32,7 +32,7 @@ jobs:
         run: echo "tree=$(git rev-parse HEAD:seed/icons)-$(git rev-parse HEAD:seed/models)" >> "$GITHUB_OUTPUT"
       - name: cache the art tree
         id: art_cache
-        uses: actions/cache@5a3ec84eff668545956fd18022155c47e93e2684 # v4.2.3
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: |
             seed/icons
@@ -51,7 +51,7 @@ jobs:
         if: steps.setup_bun.outcome == 'failure'
         uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
       - name: cache bun downloads
-        uses: actions/cache@5a3ec84eff668545956fd18022155c47e93e2684 # v4.2.3
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/.bun/install/cache
           key: bun-${{ runner.os }}-${{ hashFiles('bun.lock') }}
@@ -70,7 +70,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           # This job reads only the Move packages — never the 1.8GB asset tree.
           sparse-checkout: |
@@ -82,7 +82,7 @@ jobs:
         # Move toolchain — a floating version would shift the compiler under the bytecode gates.
         run: echo "version=testnet-v1.78.0" >> "$GITHUB_OUTPUT"
       - name: cache sui
-        uses: actions/cache@5a3ec84eff668545956fd18022155c47e93e2684 # v4.2.3
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/sui-bin
           key: sui-${{ runner.os }}-${{ steps.sui_version.outputs.version }}
@@ -113,7 +113,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           # Indexer + the Move packages its parity gates compile — never the asset tree.
           sparse-checkout: |
@@ -126,7 +126,7 @@ jobs:
         # Move toolchain — a floating version would shift the compiler under the bytecode gates.
         run: echo "version=testnet-v1.78.0" >> "$GITHUB_OUTPUT"
       - name: cache sui
-        uses: actions/cache@5a3ec84eff668545956fd18022155c47e93e2684 # v4.2.3
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/sui-bin
           key: sui-${{ runner.os }}-${{ steps.sui_version.outputs.version }}
@@ -145,7 +145,7 @@ jobs:
           sui move build --path packages/move-math
           sui move build --path packages/move
       - name: cache cargo
-        uses: actions/cache@5a3ec84eff668545956fd18022155c47e93e2684 # v4.2.3
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: |
             ~/.cargo/registry
@@ -169,7 +169,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           # Same art-cache scheme as the gate job — art downloads only when art changed.
           filter: blob:none
@@ -183,7 +183,7 @@ jobs:
         run: echo "tree=$(git rev-parse HEAD:seed/icons)-$(git rev-parse HEAD:seed/models)" >> "$GITHUB_OUTPUT"
       - name: cache the art tree
         id: art_cache
-        uses: actions/cache@5a3ec84eff668545956fd18022155c47e93e2684 # v4.2.3
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: |
             seed/icons
@@ -202,7 +202,7 @@ jobs:
         if: steps.setup_bun.outcome == 'failure'
         uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
       - name: cache bun downloads
-        uses: actions/cache@5a3ec84eff668545956fd18022155c47e93e2684 # v4.2.3
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/.bun/install/cache
           key: bun-${{ runner.os }}-${{ hashFiles('bun.lock') }}

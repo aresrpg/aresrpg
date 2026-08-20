@@ -132,7 +132,7 @@ jobs:
           [ "$COUNT" = "0" ] && echo "no promote-requested PRs — nothing to do" || echo "$COUNT promote-requested PR(s) to evaluate"
       - name: checkout the TRUSTED engine (edge, never the triggering PR head)
         if: steps.gate.outputs.count != '0'
-        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: edge
           fetch-depth: 0
