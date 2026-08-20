@@ -132,6 +132,11 @@
   color: var(--chat-name);
   font-weight: 600;
 }
+/* the speaker's OWN name — blue sets your lines apart from the gold of everyone else */
+.chat-tok--self {
+  color: var(--chat-target);
+  font-weight: 600;
+}
 .chat-tok--target {
   color: var(--chat-target);
   font-weight: 600;

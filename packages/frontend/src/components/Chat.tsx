@@ -90,7 +90,7 @@ export const Chat = ({
         channel: 'general' as const,
         key: 'chat_line',
         values: Object.freeze({
-          name: Object.freeze({ text: self_name ?? text.chat_you ?? 'me', cls: 'name' }),
+          name: Object.freeze({ text: self_name ?? text.chat_you ?? 'me', cls: 'self' }),
           message: Object.freeze({ text: message, cls: 'says' }),
         }),
       }),

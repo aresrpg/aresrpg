@@ -82,4 +82,6 @@ jobs:
         id: deploy
         run: echo "url=$(bunx vercel deploy --prebuilt --token="$VERCEL_TOKEN")" >> "$GITHUB_OUTPUT"
       - name: point edge.aresrpg.world at the fresh edge deploy
-        run: bunx vercel alias set "${{ steps.deploy.outputs.url }}" edge.aresrpg.world --token="$VERCEL_TOKEN"
+        # `alias set` is the one CLI command that ignores VERCEL_ORG_ID and falls back to the
+        # token's personal scope — the explicit team scope is mandatory here.
+        run: bunx vercel alias set "${{ steps.deploy.outputs.url }}" edge.aresrpg.world --scope aresrpg --token="$VERCEL_TOKEN"
