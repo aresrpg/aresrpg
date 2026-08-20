@@ -37,10 +37,14 @@ on:
         default: false
 permissions:
   contents: write
+  actions: read # the prod-deploy job polls the gate run's conclusion
 jobs:
   tag-and-release:
     runs-on: ubuntu-latest
     timeout-minutes: 5
+    outputs:
+      created: ${{ steps.tag.outputs.created }}
+      version: ${{ steps.v.outputs.version }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
@@ -134,3 +138,69 @@ jobs:
             -F "files[0]=@.github/assets/discord_banner.png;type=image/png" \
             "$DISCORD_WEBHOOK" \
             || echo "webhook POST failed (non-blocking — the release itself already succeeded)"
+
+  # PRODUCTION DEPLOY (owner 2026-08-20): aresrpg.world ships ONLY when this master push minted
+  # a fresh semver tag (`bun version patch` → land → tag) — a promotion that carries no version
+  # bump deploys nothing. Edge deploys per-commit in deploy.yml; this job is the prod half.
+  deploy-production:
+    needs: tag-and-release
+    if: needs.tag-and-release.outputs.created == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      VERCEL_ORG_ID: team_ir5eY7QCUS7qgcTBq81H89FM
+      VERCEL_PROJECT_ID: prj_sBuXZOg6DJTciA0SYyTQZhESAekP
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: wait for the gate to conclude GREEN on this sha (red cannot deploy)
+        run: |
+          for i in $(seq 1 60); do
+            conclusion=$(gh api "repos/${GITHUB_REPOSITORY}/actions/workflows/gate.yml/runs?head_sha=${GITHUB_SHA}&per_page=1" \
+              --jq '.workflow_runs[0] | select(.status == "completed") | .conclusion' 2>/dev/null || true)
+            if [ "$conclusion" = "success" ]; then echo "gate green"; exit 0; fi
+            if [ -n "$conclusion" ]; then echo "::error::gate concluded '$conclusion' — refusing to deploy"; exit 1; fi
+            echo "gate still running ($i/60)…"; sleep 20
+          done
+          echo "::error::gate never concluded within 20 minutes"; exit 1
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          # Same art-cache scheme as the gate — the 1.8GB tree restores from cache, not git.
+          filter: blob:none
+          sparse-checkout: |
+            /*
+            !seed/icons
+            !seed/models
+          sparse-checkout-cone-mode: false
+      - name: art tree key
+        id: art
+        run: echo "tree=$(git rev-parse HEAD:seed/icons)-$(git rev-parse HEAD:seed/models)" >> "$GITHUB_OUTPUT"
+      - name: cache the art tree
+        id: art_cache
+        uses: actions/cache@5a3ec84eff668545956fd18022155c47e93e2684 # v4.2.3
+        with:
+          path: |
+            seed/icons
+            seed/models
+          key: art-${{ steps.art.outputs.tree }}
+      - name: materialize the art tree (cache miss only)
+        if: steps.art_cache.outputs.cache-hit != 'true'
+        run: |
+          git sparse-checkout set --no-cone '/*'
+          git checkout HEAD -- seed/icons seed/models
+      - name: setup Bun
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
+      - name: cache bun downloads
+        uses: actions/cache@5a3ec84eff668545956fd18022155c47e93e2684 # v4.2.3
+        with:
+          path: ~/.bun/install/cache
+          key: bun-${{ runner.os }}-${{ hashFiles('bun.lock') }}
+          restore-keys: bun-${{ runner.os }}-
+      - name: install
+        run: bun install --frozen-lockfile
+      - name: pull the Vercel environment
+        run: bunx vercel pull --yes --environment=production --token="$VERCEL_TOKEN"
+      - name: build
+        run: bunx vercel build --prod --token="$VERCEL_TOKEN"
+      - name: deploy v${{ needs.tag-and-release.outputs.version }} to production
+        run: bunx vercel deploy --prebuilt --prod --token="$VERCEL_TOKEN"

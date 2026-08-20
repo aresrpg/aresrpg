@@ -1,7 +1,8 @@
 # SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 # © 2026 Sceat — All rights reserved. See LICENSE.
-# The CI gate — every PR and push into edge/master passes it; a GREEN push then deploys through
-# deploy.yml (prebuilt Vercel output built here in CI — the git integration is retired).
+# The CI gate — every PR and push into edge/master passes it. A GREEN edge push then deploys
+# through deploy.yml; production deploys through release.yml on a fresh semver tag only
+# (prebuilt Vercel output built in CI — the git integration is retired).
 # Fork-safe by construction: no secrets in this workflow, ever.
 name: gate
 on:
