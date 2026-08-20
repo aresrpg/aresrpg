@@ -34,8 +34,11 @@ const log = logger(import.meta)
 
 /** Tracked radius in zones around the player — 3×3 of 512-block squares. */
 const TRACKING_RADIUS = 1
-/** The speed anchor re-arms at most this often — the budget always prices a real time span. */
-const ANCHOR_WINDOW_MS = 1_000
+/** The travel bucket banks at most this much time — the burst allowance between packets.
+ *  (2026-08-20: pricing each packet against a re-anchored wall clock dropped legal walks —
+ *  a network stall flushes buffered positions in ONE millisecond, and a zero-second window
+ *  reads any step as infinite speed. A bucket spends distance against banked time instead.) */
+const BUDGET_CAP_S = 1
 /** Physics-transient allowance on top of the authored budget (jump arcs, terrain snaps). */
 const TRANSIENT_SLACK_BLOCKS = 3
 /** Visible-player ceiling per connection (owner 2026-08-12): crowded zones never bloat the
@@ -70,16 +73,15 @@ export default {
         friends: action.friends,
         party: action.party,
         fight: action.fight,
-        move_anchor: { x: action.character.x, z: action.character.z, at_ms: action.at_ms },
+        move_anchor: { x: action.character.x, z: action.character.z, at_ms: action.at_ms, blocks: 0 },
       }
     if (action.type === 'action/move') {
       if (!state.character) return state
-      const anchor_aged = !state.move_anchor || action.at_ms - state.move_anchor.at_ms >= ANCHOR_WINDOW_MS
       return {
         ...state,
         character: { ...state.character, x: action.x, y: action.y, z: action.z },
-        // re-anchor at most once per window — the budget always prices a real span of time
-        move_anchor: anchor_aged ? { x: action.x, z: action.z, at_ms: action.at_ms } : state.move_anchor,
+        // the bucket rolls forward: what the step didn't spend stays banked (capped)
+        move_anchor: { x: action.x, z: action.z, at_ms: action.at_ms, blocks: action.budget_blocks },
       }
     }
     if (action.type === 'action/equip') {
@@ -340,18 +342,27 @@ export default {
       const { character, move_anchor } = get_state()
       if (!character || !move_anchor) return // position before embody is noise
       const now = Date.now()
-      const elapsed_s = (now - move_anchor.at_ms) / 1000
-      const travelled = Math.hypot(action.x - move_anchor.x, action.z - move_anchor.z)
-      // THE AUTHORED SPEED LAW, priced the chain's way (travel_ok): distance FROM THE ANCHOR
-      // over elapsed SINCE THE ANCHOR, plus a small jitter slack — a 50ms sample of a jump arc
-      // is not a speed hack, a sustained overspeed still runs out of budget inside one window.
+      // THE AUTHORED SPEED LAW as a token bucket: time banks travel allowance (uncapped
+      // accrual — the chain's travel_ok semantics: a long gap legitimately covers a long
+      // walk), each step SPENDS its distance, and the leftover carries capped at one banked
+      // second — so a burst of buffered packets spends the bank instead of dividing by zero,
+      // while a sustained overspeed drains it and a teleport overdraws it instantly.
       const ceiling = SPEED_BUDGET_BLOCKS_PER_SECOND * (character.pet !== null ? PET_SPEED_MULTIPLIER : 1)
-      if (travelled > ceiling * elapsed_s + TRANSIENT_SLACK_BLOCKS) {
-        log.warn({ address, travelled, elapsed_s }, 'impossible speed — connection dropped')
+      const available = move_anchor.blocks + ceiling * Math.max(0, (now - move_anchor.at_ms) / 1000)
+      const step = Math.hypot(action.x - move_anchor.x, action.z - move_anchor.z)
+      if (step > available + TRANSIENT_SLACK_BLOCKS) {
+        log.warn({ address, step, available }, 'impossible speed — connection dropped')
         drop('SPEED')
         return
       }
-      dispatch({ type: 'action/move', x: action.x, y: action.y, z: action.z, at_ms: now })
+      dispatch({
+        type: 'action/move',
+        x: action.x,
+        y: action.y,
+        z: action.z,
+        at_ms: now,
+        budget_blocks: Math.min(Math.max(available - step, 0), ceiling * BUDGET_CAP_S),
+      })
     })
 
     // THE EFFECT DOOR — everything the world does is a reaction to a state DELTA.

@@ -55,7 +55,7 @@ export type PlayerAction =
       fight: string | null
       at_ms: number
     }
-  | { type: 'action/move'; x: number; y: number; z: number; at_ms: number }
+  | { type: 'action/move'; x: number; y: number; z: number; at_ms: number; budget_blocks: number }
   /** the OWN character's visible-slot change (chain event folded back into presence truth) */
   | { type: 'action/equip'; slot: VisibleSlot; item_type: string | null }
   /** the ONE fight watch slot: own seat (auto via FighterJoined) or a validated spectate */
@@ -73,7 +73,8 @@ export type PlayerState = {
    *  prices DISTANCE FROM HERE over ELAPSED SINCE HERE (the chain's travel_ok shape), so
    *  physics transients (a jump arc, a terrain snap) never read as speed hacks the way a
    *  per-sample check made them (2026-08-19). */
-  move_anchor: Readonly<{ x: number; z: number; at_ms: number }> | null
+  /** the travel bucket: last accepted position + banked allowance (blocks, capped at ~1s) */
+  move_anchor: Readonly<{ x: number; z: number; at_ms: number; blocks: number }> | null
   /** the LIVE fight this connection streams — own seat or spectate, one slot */
   fight: string | null
   /** the embodied character's party */

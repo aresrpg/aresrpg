@@ -139,6 +139,25 @@ describe('the world module', () => {
     expect(dropped).toEqual(['SPEED'])
   })
 
+  test('a buffered burst of legal steps spends the banked budget instead of dropping', async () => {
+    // 2026-08-20 production drop: a network stall flushed queued positions in ONE millisecond;
+    // the old law re-anchored on the first and priced the rest against a zero-second window
+    // (`elapsed_s: 0`), so 3.2 blocks of ordinary walking read as infinite speed.
+    const { ws, graph, pubsub, dropped } = wire()
+    const player = create_player({ ws, address: '0xme', admin: false, graph, pubsub })
+    await flush()
+    player.on_message(JSON.stringify({ type: 'packet/embody', character_id: '0xabc' }))
+    await flush()
+    player.on_message(JSON.stringify({ type: 'packet/position', x: 600, y: 0, z: 100 }))
+    // six buffered samples land back-to-back, one block apart — 6 blocks in ~0ms, all legal
+    for (let step = 1; step <= 6; step++)
+      player.on_message(JSON.stringify({ type: 'packet/position', x: 600 + step, y: 0, z: 100 }))
+    expect(dropped).toEqual([])
+    // the bank is finite: a same-instant TELEPORT still overdraws it
+    player.on_message(JSON.stringify({ type: 'packet/position', x: 700, y: 0, z: 100 }))
+    expect(dropped).toEqual(['SPEED'])
+  })
+
   test('the speed ceiling is the AUTHORED one — mounted passes what unmounted drops', async () => {
     // 14 blocks in ~1s: above 11.5 (walk), below 17.25 (mounted)
     const walker = wire()
