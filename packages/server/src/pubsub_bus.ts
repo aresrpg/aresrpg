@@ -172,7 +172,9 @@ export const create_mesh_bus = ({ subscriber, publisher }: BusWires): MeshBus =>
 }
 
 export type Watcher = {
-  watch: (channel: string, forward: (payload: never) => void) => void
+  /** resolves when the subscription is REGISTERED — publish-after-watch needs the await
+   *  (the who-probe answer must not race the joiner's own subscribe) */
+  watch: (channel: string, forward: (payload: never) => void) => Promise<void>
   unwatch: (channel: string) => void
   has: (channel: string) => boolean
   watched: () => readonly string[]
@@ -184,11 +186,11 @@ export const create_watcher = ({ graph, mesh }: Pubsub): Watcher => {
   const forwards = new Map<string, (payload: never) => void>()
   const bus_of = (channel: string): Omit<Bus, 'publish'> => (is_indexer_channel(channel) ? graph : mesh)
   return {
-    watch: (channel, forward) => {
+    watch: async (channel, forward) => {
       if (forwards.has(channel)) return
       forwards.set(channel, forward)
       bus_of(channel).emitter.on(channel, forward as (payload: unknown) => void)
-      void bus_of(channel).subscribe(channel)
+      await bus_of(channel).subscribe(channel)
     },
     unwatch: (channel) => {
       const forward = forwards.get(channel)

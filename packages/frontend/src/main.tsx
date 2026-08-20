@@ -26,6 +26,10 @@ const PLAYER_APP_MODULES = Object.freeze([
   'engine',
   'fight',
   'admin',
+  // the chat observer folds incoming packet/chat_message into chat lines — reducers always
+  // run, but an observer only listens when armed here (2026-08-20: chat was missing, so
+  // everyone's messages published fine and nobody ever saw them)
+  'chat',
 ]) satisfies readonly AppModuleName[]
 
 const boot = async (): Promise<void> => {

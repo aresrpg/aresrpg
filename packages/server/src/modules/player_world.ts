@@ -227,7 +227,9 @@ export default {
       for (const channel of watched()) {
         if (channel.startsWith('pos:') && !wanted.has(channel)) unwatch(channel)
       }
-      for (const { zx, zz } of fresh) watch(mesh.pos(world, zx, zz), forward_presence)
+      // subscriptions must be REGISTERED before the probes fire — an answer that arrives
+      // before our own subscribe lands is silently undeliverable (the join-later race)
+      await Promise.all(fresh.map(({ zx, zz }) => watch(mesh.pos(world, zx, zz), forward_presence)))
       // ask each fresh zone who is already there (the occupants ARE the presence state)
       for (const { zx, zz } of fresh)
         void pubsub.mesh.publish(mesh.pos(world, zx, zz), { kind: 'who', address, world, zx, zz })
