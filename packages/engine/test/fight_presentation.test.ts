@@ -40,6 +40,7 @@ test('cast facing, movement cost, and damage numbers use the serialized presenta
     id: 'cast',
     type: 'cast',
     caster_id: 'caster',
+    self_cast: false,
     spell: 'Push',
     cast_level: 1,
     target_cell: 22,

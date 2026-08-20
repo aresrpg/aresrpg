@@ -30,7 +30,7 @@ export const create_fight_presentation = ({
       }
       if (cue.type === 'cast') {
         entities.face_cell(cue.caster_id, cue.target_cell)
-        void entities.beat(cue.caster_id, 'attack')
+        void entities.beat(cue.caster_id, cue.self_cast ? 'buff' : 'attack')
         return vfx.play_cast(cue)
       }
       if (cue.type === 'movement') {

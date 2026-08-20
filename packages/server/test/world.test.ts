@@ -201,25 +201,60 @@ describe('the world module', () => {
     appear(999, '0xbestie') // the friend arrives past the cap
     const appeared = sent.filter((packet) => packet.type === 'packet/player_appeared')
     expect(appeared).toHaveLength(101) // 100 strangers + the friend
-    // an uncapped stranger's move flows; a capped one's is silent
+    // a NEAR uncapped stranger's move flows; a capped one's is silent
     pubsub.emitter.emit('pos:overworld:0:0', {
       kind: 'move',
       character_id: '0xp5',
       address: '0xstranger5',
-      x: 1,
+      x: 105,
       y: 0,
-      z: 1,
+      z: 105,
     })
     pubsub.emitter.emit('pos:overworld:0:0', {
       kind: 'move',
       character_id: '0xp115',
       address: '0xstranger115',
-      x: 1,
+      x: 105,
       y: 0,
-      z: 1,
+      z: 105,
     })
     const moves = sent.filter((packet) => packet.type === 'packet/player_moved')
     expect(moves.map((move) => (move as { character_id: string }).character_id)).toEqual(['0xp5'])
+    // a FAR player's moves throttle to 1-in-4 (legacy tuning: >100 blocks skips 3)
+    for (let step = 0; step < 4; step++)
+      pubsub.emitter.emit('pos:overworld:0:0', {
+        kind: 'move',
+        character_id: '0xp6',
+        address: '0xstranger6',
+        x: 300 + step,
+        y: 0,
+        z: 300,
+      })
+    const far_moves = sent.filter(
+      (packet) => packet.type === 'packet/player_moved' && (packet as { character_id: string }).character_id === '0xp6'
+    )
+    expect(far_moves).toHaveLength(1)
+    expect((far_moves[0] as { x: number }).x).toBe(303)
+  })
+
+  test('a later joiner probes tracked zones and a standing player re-announces to it', async () => {
+    const { graph, ws, pubsub, published } = wire()
+    const player = create_player({ ws, address: '0xme', admin: false, graph, pubsub })
+    await flush()
+    player.on_message(JSON.stringify({ type: 'packet/embody', character_id: '0xabc' }))
+    await flush()
+    // mounting probed every fresh zone (the join-later cure)
+    const probes = published.filter(({ payload }) => payload.kind === 'who')
+    expect(probes.length).toBeGreaterThan(0)
+    published.length = 0
+    // someone else probes MY zone — I stand there, so I re-announce myself
+    pubsub.emitter.emit('pos:overworld:0:0', { kind: 'who', address: '0xlater', world: 'overworld', zx: 0, zz: 0 })
+    const announces = published.filter(({ payload }) => payload.kind === 'appear')
+    expect(announces).toHaveLength(1)
+    // a probe for a zone I merely track but do not stand in stays unanswered
+    published.length = 0
+    pubsub.emitter.emit('pos:overworld:0:0', { kind: 'who', address: '0xlater', world: 'overworld', zx: 1, zz: 0 })
+    expect(published.filter(({ payload }) => payload.kind === 'appear')).toHaveLength(0)
   })
 
   test('a plausible move within the zone publishes a move fact, not a re-track', async () => {

@@ -188,6 +188,8 @@ export type FightPresentationCue =
       id: string
       type: 'cast'
       caster_id: string
+      /** the caster aimed its own cell — plays the buff pose instead of the attack swing */
+      self_cast: boolean
       spell: string
       cast_level: number
       target_cell: number

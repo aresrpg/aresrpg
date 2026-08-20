@@ -15,6 +15,7 @@ const cast_cue = Object.freeze({
   id: 'fight:1:0',
   type: 'cast',
   caster_id: 'fight_character_0',
+  self_cast: false,
   spell: 'Inferno',
   cast_level: 1,
   target_cell: 12,

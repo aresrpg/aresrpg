@@ -11,9 +11,22 @@ import type { PresenceRow } from '@aresrpg/protocol'
 
 import { load_character_appearance, presence_render_source, world_character_entity } from './character_entities.ts'
 import { pet_locomotion_of, pet_seat_height, type PetLocomotion } from './core/pet_locomotion.ts'
+import { read_pose } from './core/pose_feed.ts'
 
 /** A stopped player stops emitting moves — after this quiet window the run pose relaxes. */
 const IDLE_AFTER_MS = 300
+/** Legacy-tuned interpolation: the shown position converges to the network target over 0.1s. */
+const MOVE_LERP_SECONDS = 0.1
+/** Under this remaining distance the lerp snaps and the tick loop rests (legacy 0.01). */
+const SNAP_DISTANCE = 0.01
+/** Past this range a player's mixer freezes on the idle pose — animation costs nothing far away. */
+const ANIMATION_RANGE_BLOCKS = 100
+
+// bun's test runtime has no requestAnimationFrame — a timer keeps the module loadable there
+const raf: (callback: (now: number) => void) => void =
+  typeof globalThis.requestAnimationFrame === 'function'
+    ? (callback) => globalThis.requestAnimationFrame(callback)
+    : (callback) => void setTimeout(() => callback(performance.now()), 16)
 
 type LoadedPresence = {
   appearance: Awaited<ReturnType<typeof load_character_appearance>>
@@ -23,9 +36,14 @@ type LoadedPresence = {
 type PresenceSlot = {
   source_key: string
   loaded: LoadedPresence | null
+  /** shown position — converges toward the target each frame */
   x: number
   y: number
   z: number
+  /** network target — the last packet's truth */
+  tx: number
+  ty: number
+  tz: number
   yaw: number
   moved_at: number
 }
@@ -41,24 +59,65 @@ export const create_presence_renderer = ({
   const generations = new Map<string, number>()
   let idle_timer: ReturnType<typeof setTimeout> | null = null
   let disposed = false
+  let ticking = false
+  let last_tick_ms = 0
+
+  /** rAF loop that runs only while a shown position still chases its target. */
+  const tick = (now: number): void => {
+    if (disposed) return
+    const delta_seconds = Math.min((now - last_tick_ms) / 1000, 0.25)
+    last_tick_ms = now
+    const factor = Math.min(delta_seconds / MOVE_LERP_SECONDS, 1)
+    let converging = false
+    for (const slot of slots.values()) {
+      const dx = slot.tx - slot.x
+      const dy = slot.ty - slot.y
+      const dz = slot.tz - slot.z
+      if (dx === 0 && dy === 0 && dz === 0) continue
+      if (Math.hypot(dx, dy, dz) < SNAP_DISTANCE) {
+        slot.x = slot.tx
+        slot.y = slot.ty
+        slot.z = slot.tz
+      } else {
+        slot.x += dx * factor
+        slot.y += dy * factor
+        slot.z += dz * factor
+        converging = true
+      }
+    }
+    build()
+    ticking = converging
+    if (converging) raf(tick)
+  }
+
+  const wake_tick = (): void => {
+    if (ticking || disposed) return
+    ticking = true
+    last_tick_ms = performance.now()
+    raf(tick)
+  }
 
   const build = (): void => {
     if (disposed) return
     const now = Date.now()
+    const own = read_pose()
     const entities = [...slots.entries()].flatMap(([character_id, slot]): EntityRender[] => {
       if (!slot.loaded) return []
-      const moving = now - slot.moved_at < IDLE_AFTER_MS
+      // beyond animation range the mixer freezes on the idle pose (never a T-pose: IDLE still applies)
+      const far = own ? Math.hypot(slot.x - own.x, slot.z - own.z) > ANIMATION_RANGE_BLOCKS : false
+      const moving = !far && now - slot.moved_at < IDLE_AFTER_MS
       const mounted = slot.loaded.pet !== null
       const pet_id = `${character_id}:pet`
       const rider_y = mounted ? slot.y + pet_seat_height(entity_height(pet_id)) : slot.y
-      const anim: CharacterAnimationName = mounted ? 'SIT' : moving ? 'RUN' : 'IDLE'
+      const anim: CharacterAnimationName = far ? 'IDLE' : mounted ? 'SIT' : moving ? 'RUN' : 'IDLE'
+      const time_scale = far ? 0 : 1
       const character = world_character_entity(
         Object.freeze({ id: character_id, appearance: slot.loaded.appearance }),
         Object.freeze({
           position: Object.freeze([slot.x, rider_y, slot.z] as const),
           facing_yaw: slot.yaw,
           anim,
-          gait_scale: 1,
+          gait_scale: time_scale,
         })
       )
       if (!slot.loaded.pet) return [character]
@@ -70,7 +129,7 @@ export const create_presence_renderer = ({
           model_url: slot.loaded.pet.model_url,
           anchor: Object.freeze({ kind: 'world' as const, position: Object.freeze([slot.x, slot.y, slot.z] as const) }),
           facing: Object.freeze({ kind: 'yaw' as const, yaw: slot.yaw }),
-          animation: Object.freeze({ name: moving ? ('RUN' as const) : ('IDLE' as const), time_scale: 1 }),
+          animation: Object.freeze({ name: moving ? ('RUN' as const) : ('IDLE' as const), time_scale }),
         }),
       ]
     })
@@ -126,12 +185,16 @@ export const create_presence_renderer = ({
         const z = chain_to_client_coordinate(row.z)
         const slot = slots.get(character_id)
         if (!slot || slot.source_key !== source_key) {
+          // a new arrival spawns AT its target — only subsequent moves interpolate
           slots.set(character_id, {
             source_key,
             loaded: null,
-            x,
-            y: row.y,
-            z,
+            x: slot?.x ?? x,
+            y: slot?.y ?? row.y,
+            z: slot?.z ?? z,
+            tx: x,
+            ty: row.y,
+            tz: z,
             yaw: slot?.yaw ?? 0,
             moved_at: 0,
           })
@@ -139,15 +202,16 @@ export const create_presence_renderer = ({
           changed = true
           continue
         }
-        const dx = x - slot.x
-        const dz = z - slot.z
-        if (dx !== 0 || dz !== 0 || row.y !== slot.y) {
+        const dx = x - slot.tx
+        const dz = z - slot.tz
+        if (dx !== 0 || dz !== 0 || row.y !== slot.ty) {
           slot.yaw = dx * dx + dz * dz > 0.000_1 ? Math.atan2(dx, dz) : slot.yaw
-          slot.x = x
-          slot.y = row.y
-          slot.z = z
+          slot.tx = x
+          slot.ty = row.y
+          slot.tz = z
           slot.moved_at = now
           changed = true
+          wake_tick()
         }
       }
       if (changed) build()

@@ -59,11 +59,14 @@ export const mesh = {
   player_connect: 'player_connect',
 } as const
 
-/** What rides a `pos:` channel — presence facts. */
+/** What rides a `pos:` channel — presence facts. `who` is the join-later cure: a server
+ *  starting to track a zone probes it, and every player already standing there re-announces —
+ *  presence needs no stored snapshot because the occupants themselves are the state. */
 export type MeshFact =
   | { kind: 'appear'; player: import('@aresrpg/protocol').PresenceRow; address: string }
   | { kind: 'move'; character_id: string; address: string; x: number; y: number; z: number }
   | { kind: 'leave'; character_id: string; address: string }
+  | { kind: 'who'; address: string; world: string; zx: number; zz: number }
 
 /** What rides `chat:world:` / `chat:party:` / `chat:user:` channels. */
 export type ChatFact = { address: string; character: string; text: string }

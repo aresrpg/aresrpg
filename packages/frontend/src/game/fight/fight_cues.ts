@@ -291,6 +291,9 @@ export const project_fight_cues = ({
           id,
           type: 'cast',
           caster_id: entity_id(checkpoint, event.payload.caster),
+          self_cast:
+            Number(checkpoint.contract.fighters[Number(event.payload.caster)]?.cell ?? -1) ===
+            Number(event.payload.target_cell),
           spell: event.payload.spell,
           cast_level: Number(event.payload.cast_level),
           target_cell: Number(event.payload.target_cell),

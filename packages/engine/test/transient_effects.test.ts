@@ -21,6 +21,7 @@ const cast = (
     id: `cast:${element}`,
     type: 'cast',
     caster_id: 'caster',
+    self_cast: false,
     spell: 'Test',
     cast_level: 1,
     target_cell: 12,

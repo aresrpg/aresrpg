@@ -42,6 +42,9 @@ const TRANSIENT_SLACK_BLOCKS = 3
  *  client — the cap drops strangers past 100, FRIENDS always pass. A capped-out stranger
  *  becomes visible on its next zone-cross (appears republish there). */
 const VISIBLE_PLAYERS_CAP = 100
+/** Legacy-tuned distance throttle: past this range a visible player's moves forward at 1/4 rate. */
+const FAR_PLAYER_BLOCKS = 100
+const FAR_MOVE_SKIP = 3
 
 /** The spiral: every zone within TRACKING_RADIUS of the center. */
 const spiral = (zx: number, zz: number) =>
@@ -94,6 +97,8 @@ export default {
     const { watch, unwatch, has, watched } = create_watcher(pubsub)
     /** character_id → address of players this connection currently renders (the cap's ledger) */
     const visible = new Map<string, string>()
+    /** character_id → skipped-move count — far players forward at 1/4 rate (legacy tuning) */
+    const move_skips = new Map<string, number>()
 
     /** A VISIBLE player's own chain stream — their visible-slot equips forward as packets. */
     const forward_visible_equipment = (payload: EventEnvelope) => {
@@ -126,12 +131,33 @@ export default {
       }
       if (fact.kind === 'move') {
         if (!visible.has(fact.character_id)) return // never appeared to us — silent until it does
+        const me = get_state().character
+        const far = me ? Math.hypot(fact.x - me.x, fact.z - me.z) > FAR_PLAYER_BLOCKS : false
+        const skipped = move_skips.get(fact.character_id) ?? 0
+        if (far && skipped < FAR_MOVE_SKIP) {
+          move_skips.set(fact.character_id, skipped + 1)
+          return
+        }
+        move_skips.set(fact.character_id, 0)
         send({ type: 'packet/player_moved', character_id: fact.character_id, x: fact.x, y: fact.y, z: fact.z })
       }
       if (fact.kind === 'leave') {
         if (!visible.delete(fact.character_id)) return
+        move_skips.delete(fact.character_id)
         unwatch(channels.character(fact.character_id))
         send({ type: 'packet/player_left', character_id: fact.character_id })
+      }
+      if (fact.kind === 'who') {
+        // a later joiner probes the zone it now tracks — only a player STANDING there answers
+        const me = get_state().character
+        if (!me || me.world !== fact.world) return
+        const my_zone = zone_of(me.x, me.z)
+        if (my_zone.zx !== fact.zx || my_zone.zz !== fact.zz) return
+        void pubsub.mesh.publish(mesh.pos(me.world, my_zone.zx, my_zone.zz), {
+          kind: 'appear',
+          player: me,
+          address,
+        })
       }
     }
 
@@ -202,6 +228,9 @@ export default {
         if (channel.startsWith('pos:') && !wanted.has(channel)) unwatch(channel)
       }
       for (const { zx, zz } of fresh) watch(mesh.pos(world, zx, zz), forward_presence)
+      // ask each fresh zone who is already there (the occupants ARE the presence state)
+      for (const { zx, zz } of fresh)
+        void pubsub.mesh.publish(mesh.pos(world, zx, zz), { kind: 'who', address, world, zx, zz })
       if (fresh.length === 0) return
       const [zones, fights] = await Promise.all([
         get_zones(graph, { world, zones: fresh }),
@@ -230,6 +259,7 @@ export default {
       })
       for (const channel of watched()) unwatch(channel)
       visible.clear()
+      move_skips.clear()
     }
 
     const move = (before: Embodied, current: Embodied) => {

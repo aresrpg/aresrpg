@@ -52,7 +52,7 @@ type ActiveMotion = Readonly<{
   resolve: (completed: boolean) => void
 }>
 
-type EntityBeatKind = 'attack' | 'hit' | 'heal' | 'death'
+type EntityBeatKind = 'attack' | 'buff' | 'hit' | 'heal' | 'death'
 
 type ActiveBeat = Readonly<{
   entity: MountedEntity
@@ -85,7 +85,7 @@ export const character_entity_scale = (anchor: EntityRender['anchor']['kind']): 
   anchor === 'fight_cell' ? FIGHT_CHARACTER_SCALE : 1
 
 type EntityLocomotion = CharacterAnimationName
-type EntityAnimation = EntityLocomotion | 'ATTACK' | 'DEATH'
+type EntityAnimation = EntityLocomotion | 'ATTACK' | 'BUFF' | 'DEATH'
 type ActiveAnimation = Readonly<{ action: AnimationAction; clip: AnimationClip; loop: boolean }>
 
 const LOCOMOTION_PREFERENCES: Readonly<Record<EntityLocomotion, readonly string[]>> = Object.freeze({
@@ -99,8 +99,10 @@ const LOCOMOTION_PREFERENCES: Readonly<Record<EntityLocomotion, readonly string[
   SIT: Object.freeze(['SIT', 'IDLE']),
 })
 
-const ACTION_PREFERENCES: Readonly<Record<'ATTACK' | 'DEATH', readonly string[]>> = Object.freeze({
+const ACTION_PREFERENCES: Readonly<Record<'ATTACK' | 'BUFF' | 'DEATH', readonly string[]>> = Object.freeze({
   ATTACK: Object.freeze(['ATTACK', 'SPELL', 'CAST']),
+  // a self-cast plays the buff pose — models carry SPELL_BUFF; older names stay reachable
+  BUFF: Object.freeze(['SPELL_BUFF', 'CAST_BUFF', 'BUFF', 'SPELL', 'CAST', 'ATTACK']),
   DEATH: Object.freeze(['DEATH', 'DIE', 'KO']),
 })
 
@@ -123,7 +125,7 @@ export const resolve_entity_locomotion_clip = (
 
 export const resolve_entity_action_clip = (
   clips: readonly AnimationClip[],
-  action: 'ATTACK' | 'DEATH'
+  action: 'ATTACK' | 'BUFF' | 'DEATH'
 ): AnimationClip | undefined => {
   const named = clips.map((clip) => Object.freeze({ clip, name: clip.name.toUpperCase() }))
   for (const preference of ACTION_PREFERENCES[action]) {
@@ -238,14 +240,14 @@ export const create_entity_layer = ({
   const play_clip = (entity: MountedEntity, name: EntityAnimation, requested_time_scale = 1): AnimationClip | null => {
     const { mixer, model } = entity
     if (!mixer || !model) return null
-    const clip =
-      name === 'ATTACK' || name === 'DEATH'
-        ? resolve_entity_action_clip(model.clips, name)
-        : resolve_entity_locomotion_clip(model.clips, name)
+    const is_action = name === 'ATTACK' || name === 'BUFF' || name === 'DEATH'
+    const clip = is_action
+      ? resolve_entity_action_clip(model.clips, name)
+      : resolve_entity_locomotion_clip(model.clips, name)
     const fallback = name === 'IDLE' ? model.clips[0] : null
     const selected = clip ?? fallback
     if (!selected) return null
-    const loop = name !== 'ATTACK' && name !== 'DEATH'
+    const loop = !is_action
     const resolved_name = selected.name
       .toUpperCase()
       .split(/[|:/\\.-]/)
@@ -499,7 +501,13 @@ export const create_entity_layer = ({
         retained_facing.set(id, root.rotation.y)
       }
       const clip =
-        kind === 'attack' ? play_clip(entity, 'ATTACK') : kind === 'death' ? play_clip(entity, 'DEATH') : null
+        kind === 'attack'
+          ? play_clip(entity, 'ATTACK')
+          : kind === 'buff'
+            ? play_clip(entity, 'BUFF')
+            : kind === 'death'
+              ? play_clip(entity, 'DEATH')
+              : null
       const duration_ms =
         kind === 'hit'
           ? 300
