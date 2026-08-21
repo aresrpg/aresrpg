@@ -262,7 +262,7 @@ export const create_world = ({
   }
 
   // ── spectate drag-pan (the pre-login overview keeps its own gesture) ──
-  const on_pointer_down = (event: PointerEvent): void => {
+  const on_pointer_down = (event: Readonly<PointerEvent>): void => {
     update_mouse_forward(event.buttons)
     if (!enabled || (event.button !== 0 && event.button !== 2)) return
     // capture so the release lands here even when the cursor leaves the canvas mid-hold
@@ -272,7 +272,7 @@ export const create_world = ({
     pointer = [event.clientX, event.clientY]
     canvas.setPointerCapture(event.pointerId)
   }
-  const on_pointer_move = (event: PointerEvent): void => {
+  const on_pointer_move = (event: Readonly<PointerEvent>): void => {
     update_mouse_forward(event.buttons)
     if (!enabled || !dragging || mode !== 'spectate') return
     const dx = event.clientX - pointer[0]
@@ -287,16 +287,16 @@ export const create_world = ({
     }
     pointer = [event.clientX, event.clientY]
   }
-  const on_pointer_up = (event: PointerEvent): void => {
+  const on_pointer_up = (event: Readonly<PointerEvent>): void => {
     update_mouse_forward(event.buttons)
     dragging = null
     if (canvas.hasPointerCapture(event.pointerId)) canvas.releasePointerCapture(event.pointerId)
   }
-  const on_context_menu = (event: MouseEvent): void => {
+  const on_context_menu = (event: Readonly<MouseEvent>): void => {
     // follow mode owns the right button (camera + the both-buttons run) — no browser menu
     if (enabled && (mode === 'spectate' || mode === 'follow')) event.preventDefault()
   }
-  const on_wheel = (event: WheelEvent): void => {
+  const on_wheel = (event: Readonly<WheelEvent>): void => {
     if (!enabled || mode !== 'spectate') return
     event.preventDefault()
     spectate_zoom = Math.min(1_600, Math.max(60, spectate_zoom * Math.exp(event.deltaY * 0.0015)))
@@ -309,7 +309,7 @@ export const create_world = ({
     held.strafe = pressed.strafe.size ? Number([...pressed.strafe].at(-1)) : 0
     character.set_input({ forward: held.forward, strafe: held.strafe })
   }
-  const on_key = (event: KeyboardEvent, down: boolean): void => {
+  const on_key = (event: Readonly<KeyboardEvent>, down: boolean): void => {
     if (!enabled || mode !== 'follow') return
     const move = MOVE_KEYS[event.code]
     if (move !== undefined) {
@@ -364,12 +364,12 @@ export const create_world = ({
     focused_fight_id = id && fight_label ? id : null
     publish_fight_prompt({ root: focused_fight_id ? fight_label : null, focused_id: focused_fight_id })
   }
-  const on_key_down = (event: KeyboardEvent): void => {
+  const on_key_down = (event: Readonly<KeyboardEvent>): void => {
     if (mode === 'follow' && (MOVE_KEYS[event.code] !== undefined || event.code === 'Space')) footsteps.unlock()
     on_key(event, true)
   }
-  const on_key_up = (event: KeyboardEvent): void => on_key(event, false)
-  const on_blur = (): void => clear_movement()
+  const on_key_up = (event: Readonly<KeyboardEvent>): void => on_key(event, false)
+  const on_blur = clear_movement
 
   const render_character = (transform = character.get_transform()): boolean => {
     if (!character_render) return false
@@ -626,7 +626,7 @@ export const create_world = ({
     },
     set_riding,
     riding: () => riding,
-    ground_height: (x: number, z: number) => projected_surface_y(x, z),
+    ground_height: projected_surface_y,
     /// Where the camera currently looks — its ground focus. The natural spawn when handing
     /// control to a character mid-session.
     camera_focus: () => Object.freeze({ x: spectate.x, z: spectate.z }),

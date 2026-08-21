@@ -86,7 +86,7 @@ export const WorldMap = ({
   }, [compiled, world_name])
 
   useEffect(() => {
-    const on_key = (event: KeyboardEvent): void => {
+    const on_key = (event: Readonly<KeyboardEvent>): void => {
       if (event.key === 'Escape') on_close()
     }
     globalThis.addEventListener('keydown', on_key)

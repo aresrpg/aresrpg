@@ -23,7 +23,7 @@ export const PlayerContextMenu = ({ copy }: Readonly<{ copy: AppCopy }>) => {
 
   useEffect(() => {
     if (!menu) return undefined
-    const dismiss = (event: KeyboardEvent | MouseEvent): void => {
+    const dismiss = (event: Readonly<KeyboardEvent | MouseEvent>): void => {
       if (event instanceof KeyboardEvent && event.code !== 'Escape') return
       close()
     }

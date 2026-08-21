@@ -30,7 +30,7 @@ export type CameraAnchor = Readonly<{
 export type CameraAddon = Readonly<{
   frame: (anchor: CameraAnchor, dt: number) => CameraFrame
   get_yaw: () => number
-  attach?: (canvas: HTMLElement) => void
+  attach?: (canvas: Readonly<HTMLElement>) => void
   detach?: () => void
 }>
 
@@ -327,7 +327,7 @@ export const create_follow_addon = (
   return Object.freeze({
     frame,
     get_yaw: () => azimuth,
-    attach: (canvas: HTMLElement) => controls.attach(canvas),
+    attach: (canvas: Readonly<HTMLElement>) => controls.attach(canvas),
     detach: () => controls.detach(),
     is_rotating: () => controls.is_locked(),
     rotate: apply_rotate,
@@ -387,7 +387,7 @@ export const create_fight_addon = ({
   let zoom = 0
   let elapsed = 0
   let dragging: Readonly<{ x: number; y: number; id: number }> | null = null
-  let canvas: HTMLElement | null = null
+  let canvas: Readonly<HTMLElement> | null = null
 
   const pan_limits = (): readonly [number, number] => {
     const frame = board()
@@ -411,27 +411,27 @@ export const create_fight_addon = ({
     pan_z = 0
     zoom = 0
   }
-  const on_down = (event: PointerEvent): void => {
+  const on_down = (event: Readonly<PointerEvent>): void => {
     if (event.button !== 2) return
     event.preventDefault()
     dragging = { x: event.clientX, y: event.clientY, id: event.pointerId }
     canvas?.setPointerCapture(event.pointerId)
   }
-  const on_move = (event: PointerEvent): void => {
+  const on_move = (event: Readonly<PointerEvent>): void => {
     if (!dragging || event.pointerId !== dragging.id) return
     pan_by_pixels(event.clientX - dragging.x, event.clientY - dragging.y)
     dragging = { x: event.clientX, y: event.clientY, id: dragging.id }
   }
-  const on_up = (event: PointerEvent): void => {
+  const on_up = (event: Readonly<PointerEvent>): void => {
     if (!dragging || event.pointerId !== dragging.id) return
     if (canvas?.hasPointerCapture(event.pointerId)) canvas.releasePointerCapture(event.pointerId)
     dragging = null
   }
-  const on_wheel = (event: WheelEvent): void => {
+  const on_wheel = (event: Readonly<WheelEvent>): void => {
     event.preventDefault()
     zoom = clamp(zoom + Math.sign(event.deltaY) * 0.8, -21, 20)
   }
-  const on_context_menu = (event: Event): void => event.preventDefault()
+  const on_context_menu = (event: Readonly<Event>): void => event.preventDefault()
 
   return Object.freeze({
     frame: (_anchor: CameraAnchor, dt: number) => {
@@ -474,7 +474,7 @@ export const create_fight_addon = ({
       }
     },
     get_yaw: () => FIGHT_AZIMUTH,
-    attach: (element: HTMLElement) => {
+    attach: (element: Readonly<HTMLElement>) => {
       canvas = element
       element.addEventListener('pointerdown', on_down)
       globalThis.addEventListener('pointermove', on_move)
@@ -536,7 +536,7 @@ export type CameraDirector = Readonly<{
   frame: (anchor: CameraAnchor, dt: number) => CameraFrame
 }>
 
-export const create_camera_director = (initial: CameraAddon, canvas: HTMLElement): CameraDirector => {
+export const create_camera_director = (initial: CameraAddon, canvas: Readonly<HTMLElement>): CameraDirector => {
   let active = initial
   let last_frame: CameraFrame | null = null
   let departure: CameraFrame | null = null

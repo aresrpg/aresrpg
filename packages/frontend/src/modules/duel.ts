@@ -240,7 +240,7 @@ const observe: NonNullable<AppModule['observe']> = ({ events, dispatch, get_stat
           x: Math.round(client_to_chain_coordinate(pose.x)),
           z: Math.round(client_to_chain_coordinate(pose.z)),
         })
-        .catch((error: Error) => toast.add(error))
+        .catch((error: unknown) => toast.add(error))
       return
     }
 
@@ -250,7 +250,7 @@ const observe: NonNullable<AppModule['observe']> = ({ events, dispatch, get_stat
       dispatch({ type: 'duel/cleared' })
       void wallet.fight
         .join({ fight, character_id: selected_character_id, custody, team: 1, access: 1 })
-        .catch((error: Error) => toast.add(error))
+        .catch((error: unknown) => toast.add(error))
     }
   })
 }

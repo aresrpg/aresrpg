@@ -20,8 +20,8 @@ const last_ready = (checkpoint: Readonly<HydratedFightCheckpoint>, seat: bigint)
 
 const submit = (
   fight: string,
-  input: FightInput,
-  actions: FightActions,
+  input: Readonly<FightInput>,
+  actions: Readonly<FightActions>,
   checkpoint: Readonly<HydratedFightCheckpoint>,
   custody: Readonly<{ kiosk: string; kiosk_cap?: string }> | undefined
 ): Promise<unknown> | null => {
@@ -57,7 +57,9 @@ const observe: NonNullable<AppModule['observe']> = ({ events, dispatch, get_stat
     const fight = state.fight.checkpoint.contract.id
     const row = state.session.characters.find(({ id }) => id === state.session.selected_character_id)
     const custody = row ? { kiosk: row.kiosk, kiosk_cap: row.kiosk_cap } : undefined
-    void submit(fight, input, wallet.fight, state.fight.checkpoint, custody)?.catch((error: Error) => toast.add(error))
+    void submit(fight, input, wallet.fight, state.fight.checkpoint, custody)?.catch((error: unknown) =>
+      toast.add(error)
+    )
   })
 
   // THE END: the chain closed the fight — settle the own unsettled seat (duels are
@@ -83,7 +85,7 @@ const observe: NonNullable<AppModule['observe']> = ({ events, dispatch, get_stat
             return row ? { kiosk: row.kiosk, kiosk_cap: row.kiosk_cap } : undefined
           })(),
         })
-        .catch((error: Error) => toast.add(error))
+        .catch((error: unknown) => toast.add(error))
     }
     // the surface is NOT released here: closing on the packet's arrival cuts the final blow's
     // death cue mid-animation. `fight_should_close` releases it from the observed state once the

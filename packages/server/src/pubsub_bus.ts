@@ -26,7 +26,6 @@ export type BusRedis = {
   setex: (key: string, seconds: number, value: string) => Promise<unknown>
   get: (key: string) => Promise<string | null>
   scan: (cursor: string, match: 'MATCH', pattern: string, count: 'COUNT', size: number) => Promise<[string, string[]]>
-  // eslint-disable-next-line functional/prefer-immutable-types -- mirrors ioredis' mutable-array signature
   mget: (keys: string[]) => Promise<(string | null)[]>
   disconnect: () => void
 }

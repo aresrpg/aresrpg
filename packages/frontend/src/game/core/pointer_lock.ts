@@ -12,7 +12,7 @@ export type PointerLockOptions = Readonly<{
 }>
 
 export type PointerLockControls = Readonly<{
-  attach: (element: HTMLElement) => void
+  attach: (element: Readonly<HTMLElement>) => void
   detach: () => void
   is_locked: () => boolean
 }>
@@ -22,14 +22,14 @@ export const create_pointer_lock_controls = ({
   on_wheel,
   drag_threshold_px = 6,
 }: PointerLockOptions): PointerLockControls => {
-  let el: HTMLElement | null = null
+  let el: Readonly<HTMLElement> | null = null
   let armed = false // LEFT button currently down
   let requested = false // lock requested for this drag
   let locked = false // lock CONFIRMED (movementX/Y now valid)
   let down_x = 0
   let down_y = 0
 
-  const on_mousedown = (e: MouseEvent): void => {
+  const on_mousedown = (e: Readonly<MouseEvent>): void => {
     if (e.button !== 0) return
     armed = true
     requested = false
@@ -37,7 +37,7 @@ export const create_pointer_lock_controls = ({
     down_y = e.clientY
   }
 
-  const on_mousemove = (e: MouseEvent): void => {
+  const on_mousemove = (e: Readonly<MouseEvent>): void => {
     if (locked) {
       on_rotate(e.movementX || 0, e.movementY || 0)
       return
@@ -53,7 +53,7 @@ export const create_pointer_lock_controls = ({
     }
   }
 
-  const on_mouseup = (e: MouseEvent): void => {
+  const on_mouseup = (e: Readonly<MouseEvent>): void => {
     if (e.button !== 0) return
     armed = false
     // Only release a lock THIS drag itself requested — an external sticky lock owns its own exit.
@@ -66,7 +66,7 @@ export const create_pointer_lock_controls = ({
     locked = !!el && el.ownerDocument.pointerLockElement === el
   }
 
-  const on_wheel_evt = (e: WheelEvent): void => {
+  const on_wheel_evt = (e: Readonly<WheelEvent>): void => {
     if (on_wheel) {
       e.preventDefault()
       on_wheel(e.deltaY)
@@ -79,7 +79,7 @@ export const create_pointer_lock_controls = ({
   }
 
   return Object.freeze({
-    attach: (element: HTMLElement) => {
+    attach: (element: Readonly<HTMLElement>) => {
       el = element
       element.addEventListener('mousedown', on_mousedown)
       globalThis.addEventListener('mousemove', on_mousemove)

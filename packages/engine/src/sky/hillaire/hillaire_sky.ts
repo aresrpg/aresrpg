@@ -278,12 +278,12 @@ export function create_hillaire_sky(opts: HillaireSkyOptions = {}) {
   // elevated exposure. Soft-cap the in-scatter LUMA with a hue-preserving smooth-min (below) so the horizon
   // stays LUMINOUS but never white; the deep-blue zenith (luma ≪ cap) is untouched and a dark night sky is
   // inert. The sun/moon discs are added AFTER the cap so they keep full brightness.
-  const sky_L = sky_radiance.dot(vec3(0.2126, 0.7152, 0.0722)).max(float(1e-4))
+  const sky_luma = sky_radiance.dot(vec3(0.2126, 0.7152, 0.0722)).max(float(1e-4))
   // smooth-min knee (∼min(L,cap) with a soft shoulder): ≈ L when L ≪ cap so the deep-blue zenith is UNTOUCHED,
   // asymptotes to cap when L ≫ cap so only the blown-out horizon is clipped. Hue-preserving (scales RGB by
   // capped/L). Inert at night (L ≪ cap).
-  const sky_L_capped = sky_L.div(pow(float(1).add(pow(sky_L.div(A.horizon_cap), float(4))), float(0.25)))
-  const sky_capped = sky_radiance.mul(sky_L_capped.div(sky_L))
+  const sky_luma_capped = sky_luma.div(pow(float(1).add(pow(sky_luma.div(A.horizon_cap), float(4))), float(0.25)))
+  const sky_capped = sky_radiance.mul(sky_luma_capped.div(sky_luma))
   const background_node = sky_capped.add(sun_glow).add(moon_glow).add(night.node).max(0)
 
   /** @param {*} dir vec3 world dir @returns {*} vec3 in-scatter radiance (ambient/mirror hook). */

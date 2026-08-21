@@ -83,11 +83,14 @@ export const initial_world_state = (): WorldState =>
 
 const with_world = (state: AppState, world: WorldState): AppState => Object.freeze({ ...state, world })
 
+/** A record without one key — the immutable `delete`, the one home for the two folds that drop a row. */
+const without = <T>(record: Readonly<Record<string, T>>, dropped: string): Record<string, T> =>
+  Object.fromEntries(Object.entries(record).filter(([key]) => key !== dropped))
+
 const fold_packet = (world: WorldState, packet: Readonly<ServerPacket>): WorldState => {
   if (packet.type === 'packet/zones') {
-    const zones = { ...world.zones }
-    for (const zone of packet.zones) zones[zone_key(zone.world, zone.zx, zone.zz)] = zone
-    return Object.freeze({ ...world, zones: Object.freeze(zones) })
+    const arrived = Object.fromEntries(packet.zones.map((zone) => [zone_key(zone.world, zone.zx, zone.zz), zone]))
+    return Object.freeze({ ...world, zones: Object.freeze({ ...world.zones, ...arrived }) })
   }
   if (packet.type === 'packet/zone_searched') {
     const key = zone_key(packet.world, packet.zx, packet.zz)
@@ -115,8 +118,7 @@ const fold_packet = (world: WorldState, packet: Readonly<ServerPacket>): WorldSt
   }
   if (packet.type === 'packet/fights') {
     // whole-set replace: the snapshot IS the tracked zones' truth (ended fights never ride it)
-    const fights: Record<string, FightRow> = {}
-    for (const fight of packet.fights) fights[fight.id] = fight
+    const fights: Record<string, FightRow> = Object.fromEntries(packet.fights.map((fight) => [fight.id, fight]))
     return Object.freeze({ ...world, fights: Object.freeze(fights) })
   }
   if (packet.type === 'packet/fight_created')
@@ -129,9 +131,7 @@ const fold_packet = (world: WorldState, packet: Readonly<ServerPacket>): WorldSt
     const known = world.fights[packet.fight]
     if (!known) return world
     if (packet.phase === 'ended') {
-      const fights = { ...world.fights }
-      delete fights[packet.fight]
-      return Object.freeze({ ...world, fights: Object.freeze(fights) })
+      return Object.freeze({ ...world, fights: Object.freeze(without(world.fights, packet.fight)) })
     }
     return Object.freeze({
       ...world,
@@ -173,11 +173,9 @@ const fold_packet = (world: WorldState, packet: Readonly<ServerPacket>): WorldSt
   }
   if (packet.type === 'packet/player_left') {
     if (!(packet.character_id in world.players)) return world
-    const players = { ...world.players }
-    delete players[packet.character_id]
     return Object.freeze({
       ...world,
-      players: Object.freeze(players),
+      players: Object.freeze(without(world.players, packet.character_id)),
       // a vanished target takes its menu with it
       player_menu: world.player_menu?.character_id === packet.character_id ? null : world.player_menu,
     })

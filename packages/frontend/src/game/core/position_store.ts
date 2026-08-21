@@ -44,7 +44,7 @@ const open_database = (factory: IDBFactory): Promise<IDBDatabase> =>
 const in_transaction = async <T>(
   factory: IDBFactory,
   mode: IDBTransactionMode,
-  act: (store: IDBObjectStore) => IDBRequest<T> | null
+  act: (store: Readonly<IDBObjectStore>) => IDBRequest<T> | null
 ): Promise<T | null> => {
   const database = await open_database(factory)
   return new Promise((resolve, reject) => {

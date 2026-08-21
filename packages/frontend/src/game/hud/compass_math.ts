@@ -124,21 +124,19 @@ export const CLUSTER_ANGLE_DEG = 2
 /** Of the surviving pips, only the nearest this-many PER KIND keep a distance label. */
 export const LABEL_CAP = 3
 
+/** Bucket pips by kind — kinds in first-appearance order, members in input order. The one home
+ *  for the grouping every density pass starts from. */
+const group_by_kind = <T extends Pip>(pips: readonly T[]): readonly (readonly [string, readonly T[]])[] =>
+  [...new Set(pips.map((pip) => pip.kind))].map((kind) => [kind, pips.filter((pip) => pip.kind === kind)] as const)
+
 /** Keep only the nearest `caps[kind]` entries per kind — stable, ties keep input order. */
 export const cap_nearest_pips = <T extends Pip>(
   pips: readonly T[],
   caps: Readonly<Record<string, number>> = PIP_CAP
-): T[] => {
-  const by_kind = new Map<string, T[]>()
-  for (const pip of pips) {
-    if (!by_kind.has(pip.kind)) by_kind.set(pip.kind, [])
-    by_kind.get(pip.kind)!.push(pip)
-  }
-  const out: T[] = []
-  for (const [kind, list] of by_kind)
-    out.push(...[...list].sort((a, b) => a.dist - b.dist).slice(0, caps[kind] ?? list.length))
-  return out
-}
+): T[] =>
+  group_by_kind(pips).flatMap(([kind, list]) =>
+    [...list].sort((a, b) => a.dist - b.dist).slice(0, caps[kind] ?? list.length)
+  )
 
 /** Merge pips within `angle_deg` of each other's bearing into one marker, per kind. The nearest
  *  member represents the cluster; `count` is how many folded in. Chains transitively and wraps
@@ -148,13 +146,8 @@ export const cluster_pips = <T extends Pip>(
   angle_deg: number = CLUSTER_ANGLE_DEG
 ): (T & { count: number })[] => {
   const threshold = (angle_deg * Math.PI) / 180
-  const by_kind = new Map<string, T[]>()
-  for (const pip of pips) {
-    if (!by_kind.has(pip.kind)) by_kind.set(pip.kind, [])
-    by_kind.get(pip.kind)!.push(pip)
-  }
   const out: (T & { count: number })[] = []
-  for (const list of by_kind.values()) {
+  for (const [, list] of group_by_kind(pips)) {
     const sorted = [...list].sort((a, b) => wrap_pi(a.bearing) - wrap_pi(b.bearing))
     const groups: { members: T[] }[] = []
     for (const pip of sorted) {

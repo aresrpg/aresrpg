@@ -181,7 +181,7 @@ const WorldLab = ({ active, copy }: Readonly<{ active: boolean; copy: AppCopy }>
 
   useEffect(() => {
     if (!active || !world_api || !character_enabled || !pet) return undefined
-    const toggle = (event: KeyboardEvent): void => {
+    const toggle = (event: Readonly<KeyboardEvent>): void => {
       if (event.code !== 'KeyX' || event.repeat) return
       event.preventDefault()
       set_riding((current) => {

@@ -251,7 +251,7 @@ const observe = ({ events, dispatch, get_state, signal }: Parameters<NonNullable
 
   // right-click on a nearby BODY (screen-space pick over the shown positions) opens the
   // player context menu; anywhere else keeps the camera's right-drag untouched
-  const on_context_menu = (event: MouseEvent): void => {
+  const on_context_menu = (event: Readonly<MouseEvent>): void => {
     const view = world?.camera_frame()
     const own = read_pose()
     if (!world || !presence || !view || !own || !canvas || world.mode() !== 'follow') return
