@@ -81,6 +81,18 @@ impl ToJson for RolledDrop {
 
 // ╔════════════════ [ The table ] ════════════════════════════════════════════ ]
 
+/// The zone twin of move-math's `zone_math::ZONE_SIZE` — one 512×512 block square. Rust cannot
+/// import a Move constant, so this copy is PINNED against the compiled accessor by
+/// `gates::the_indexer_zone_size_is_the_compiled_one`: a zone_math change reds it, same commit.
+pub(crate) const ZONE_SIZE: u32 = 512;
+
+/// The per-zone live wire: `evt:zone:{world}:{zx}:{zz}`. Zone-local facts (a fight's whole
+/// lifecycle) ride ONLY this — world-global channels are for private/group lanes, never
+/// presence spam (distributed law: a pod subscribes a zone when it tracks it).
+pub(crate) fn zone_topic(world: &str, x: u32, z: u32) -> String {
+    format!("evt:zone:{}:{}:{}", world, x / ZONE_SIZE, z / ZONE_SIZE)
+}
+
 /// One decoded event, routed: the pub/sub channel + the payload's `data`.
 #[derive(Debug, Clone, PartialEq)]
 pub struct Routed {
@@ -150,12 +162,19 @@ events! {
         => |e: &DungeonEnded| format!("evt:character:{}", e.character.hex()),
 
     // ── fights (object-state-first; these are the lifecycle beacons) ──
-    fight::FightCreated { fight: Id, world: String, x: u32, z: u32 }
-        => |e: &FightCreated| format!("evt:world:{}", e.world),
-    // routed to the JOINER's character channel — the realtime layer keys its
-    // per-character fight watch on it (nearby watchers already saw FightCreated)
+    // a fight's birth is ZONE-LOCAL presence: only bystanders standing in its zone need it
+    fight::FightCreated { fight: Id, world: String, x: u32, z: u32, placement_ms: u64 }
+        => |e: &FightCreated| zone_topic(&e.world, e.x, e.z),
+    // routed to the FIGHT's channel — it tells the roster's existing watchers (a duel's
+    // opener, teammates in placement) that a seat filled. It does NOT arm the joiner's own
+    // watch: a seat is custody, and `publish::route_fight_seats` witnesses every seat,
+    // including the creator's, which no join ever announces.
     fight::FighterJoined { fight: Id, character: Id, team: u8 }
-        => |e: &FighterJoined| format!("evt:character:{}", e.character.hex()),
+        => |e: &FighterJoined| format!("evt:fight:{}", e.fight.hex()),
+    // a walk-out reaches the survivors' fight channel: it is the ONLY witness of a forfeit
+    // that leaves the fight running, and their screens replay it as the seat's death
+    fight::FighterForfeited { fight: Id, fighter: u64 }
+        => |e: &FighterForfeited| format!("evt:fight:{}", e.fight.hex()),
     fight::FightStarted { fight: Id, queue: Vec<u64> }
         => |e: &FightStarted| format!("evt:fight:{}", e.fight.hex()),
     fight::TurnSeedUsed { fight: Id, seat: u64, seed: u64 }
@@ -165,13 +184,13 @@ events! {
     fight::DropsRolled { fight: Id, fighter: u64, drops: Vec<RolledDrop> }
         => |e: &DropsRolled| format!("evt:fight:{}", e.fight.hex()),
 
-    // ── world surface (visible to everyone standing there) ──
+    // ── world surface (zone-local presence — NOTHING rides a world-global channel) ──
     zone::ZoneSearched { world: String, zx: u32, zz: u32, seed: u64, fresh: bool }
-        => |e: &ZoneSearched| format!("evt:world:{}", e.world),
-    gathering::ResourceGathered { world: String, gatherer: Addr, item_type: String, tier: u8, quantity: u64, job_xp_gained: u64, protector: bool }
-        => |e: &ResourceGathered| format!("evt:world:{}", e.world),
-    gathering::RareGathered { world: String, gatherer: Addr, item_type: String, rare_item_type: String }
-        => |e: &RareGathered| format!("evt:world:{}", e.world),
+        => |e: &ZoneSearched| format!("evt:zone:{}:{}:{}", e.world, e.zx, e.zz),
+    gathering::ResourceGathered { world: String, x: u32, z: u32, gatherer: Addr, item_type: String, tier: u8, quantity: u64, job_xp_gained: u64, protector: bool }
+        => |e: &ResourceGathered| zone_topic(&e.world, e.x, e.z),
+    gathering::RareGathered { world: String, x: u32, z: u32, gatherer: Addr, item_type: String, rare_item_type: String }
+        => |e: &RareGathered| zone_topic(&e.world, e.x, e.z),
 
     // ── social ──
     party::PartyCreated { party: Id, character: Id }

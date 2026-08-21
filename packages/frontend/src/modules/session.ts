@@ -15,16 +15,26 @@ import { fight_action_to_wire } from '@aresrpg/fight'
 import { client_to_chain_coordinate } from '@aresrpg/immutable'
 
 import type { Auth, AuthSession } from '../auth.ts'
-import { browser_auth_storage, clear_auth_wallet, read_auth_wallet, remember_auth_wallet } from '../auth_storage.ts'
+import {
+  browser_auth_storage,
+  clear_auth_wallet,
+  read_auth_wallet,
+  read_selected_character,
+  remember_auth_wallet,
+  remember_selected_character,
+} from '../auth_storage.ts'
 import { env } from '../env.ts'
 import { read_pose, subscribe_pose } from '../game/core/pose_feed.ts'
 import { connect_server, type ServerLink } from '../server_link.ts'
 import type { AppInput, AppModule, AppState } from '../store.ts'
 import { toast } from '../toast.ts'
 
+import { fold_character_receipt } from './character_folds.ts'
+import { observe_failure_toasts } from './session_toasts.ts'
+
 export type AuthStatus = 'idle' | 'connecting' | 'authenticated'
 export type AuthRequest = 'restore' | 'google' | Readonly<{ wallet: string }>
-export type LinkStatus = 'idle' | 'connecting' | 'connected' | 'ready'
+export type LinkStatus = 'idle' | 'connecting' | 'connected' | 'ready' | 'replaced'
 const BALANCE_POLL_MS = 5_000
 export type SessionState = Readonly<{
   auth_status: AuthStatus
@@ -65,6 +75,7 @@ export type SessionInput =
   | Readonly<{ type: 'auth/rejected'; error: string }>
   | Readonly<{ type: 'auth/disconnected' }>
   | Readonly<{ type: 'link/connecting' }>
+  | Readonly<{ type: 'link/replaced' }>
   | Readonly<{ type: 'link/rejected'; reason: string }>
   | Readonly<{ type: 'link/failed'; error: string }>
   | Readonly<{ type: 'link/violation'; reason: string }>
@@ -76,30 +87,34 @@ export type SessionInput =
   | Readonly<{ type: 'shop/purchased'; item_type: string; quantity: number }>
   | Readonly<{ type: 'airdrop/claimed'; drop_id: string }>
   | Readonly<{
+      type: 'character/equip_folded'
+      character_id: string
+      equipped: readonly Readonly<{ slot: string; item_id: string }>[]
+      unequipped: readonly Readonly<{ slot: string; item_id: string }>[]
+    }>
+  | Readonly<{ type: 'character/stats_raised'; character_id: string; allocation: Readonly<Record<string, number>> }>
+  | Readonly<{ type: 'character/spell_raised'; character_id: string; spell: string }>
+  | Readonly<{
+      type: 'character/consumed'
+      character_id: string
+      item_id: string
+      effect: 'heal' | 'reset_stats' | 'reset_spells' | 'recall'
+      heal: number
+    }>
+  | Readonly<{ type: 'character/rune_scribed'; gear_id: string; rune_item_id: string }>
+  | Readonly<{ type: 'inventory/box_opened'; box_item_id: string; claim_id: string }>
+  | Readonly<{ type: 'inventory/claim_settled'; claim_id: string }>
+  | Readonly<{ type: 'inventory/gear_crushed'; gear_ids: readonly string[]; claim_id: string }>
+  | Readonly<{ type: 'inventory/pet_fed'; pet_id: string; food_id: string }>
+  // prettier-ignore
+  | Readonly<{ type: 'character/crafted'; character_id: string; job: string; xp: number; inputs: readonly Readonly<{ item_id: string; amount: number }>[] }>
+  | Readonly<{ type: 'inventory/destroyed'; item_id: string; amount: number }>
+  | Readonly<{
       type: 'wallet/resolve_character'
       name: string
       resolve: (recipient: Readonly<{ address: string; name: string }>) => void
       reject: (error: Readonly<Error>) => void
     }>
-
-/** The last tab the player stood on survives reloads; a stale id (deleted character, other
- * account) falls back to the roster's first entry inside the packet fold. */
-const SELECTED_CHARACTER_KEY = 'aresrpg.selected_character'
-const read_selected_character = (): string | null => {
-  try {
-    return globalThis.localStorage?.getItem(SELECTED_CHARACTER_KEY) ?? null
-  } catch (error) {
-    console.warn('Character-tab storage is unavailable; starting on the first character.', error)
-    return null
-  }
-}
-const remember_selected_character = (character_id: string): void => {
-  try {
-    globalThis.localStorage?.setItem(SELECTED_CHARACTER_KEY, character_id)
-  } catch (error) {
-    console.warn('Character-tab storage is unavailable; the selection will not survive a reload.', error)
-  }
-}
 
 export const initial_session_state = (): SessionState =>
   Object.freeze({
@@ -181,6 +196,15 @@ const fold_packet = (session: SessionState, packet: Readonly<ServerPacket>): Ses
     return Object.freeze({ ...session, online: packet.online, indexing_lag: packet.indexing_lag })
   if (packet.type === 'packet/game_state') return Object.freeze({ ...session, game_frozen: packet.frozen })
   if (packet.type === 'packet/inventory') return Object.freeze({ ...session, inventory: packet.items })
+  if (packet.type === 'packet/item_updated')
+    return Object.freeze({
+      ...session,
+      inventory: Object.freeze(
+        session.inventory.some(({ id }) => id === packet.item.id)
+          ? session.inventory.map((row) => (row.id === packet.item.id ? packet.item : row))
+          : [...session.inventory, packet.item]
+      ),
+    })
   if (packet.type === 'packet/friends') return Object.freeze({ ...session, friends: packet.friends })
   if (packet.type === 'packet/claims') return Object.freeze({ ...session, claims: packet.claims })
   if (packet.type === 'packet/giftcards') return Object.freeze({ ...session, giftcards: packet.giftcards })
@@ -214,11 +238,50 @@ const fold_packet = (session: SessionState, packet: Readonly<ServerPacket>): Ses
   return session
 }
 
+/** link/* lifecycle transitions — split from `reduce` to keep its branch count lawful. */
+const fold_link_input = (session: SessionState, input: AppInput): SessionState => {
+  if (input.type === 'link/connecting')
+    return Object.freeze({
+      ...session,
+      link_status: 'connecting',
+      link_error: null,
+      latency_ms: null,
+      indexing_lag: null,
+    })
+  if (input.type === 'link/rejected' || input.type === 'link/replaced')
+    return Object.freeze({
+      ...session,
+      link_status: input.type === 'link/replaced' ? ('replaced' as const) : ('idle' as const),
+      link_error: input.type === 'link/rejected' ? input.reason : null,
+      latency_ms: null,
+      indexing_lag: null,
+    })
+  if (input.type === 'link/violation')
+    return Object.freeze({
+      ...session,
+      link_status: 'idle',
+      link_error: input.reason,
+      link_violation: input.reason,
+      latency_ms: null,
+    })
+  if (input.type === 'link/failed')
+    return Object.freeze({
+      ...session,
+      link_status: 'connecting',
+      link_error: input.error,
+      latency_ms: null,
+      indexing_lag: null,
+    })
+  return session
+}
+
 const reduce = (state: AppState, input: AppInput): AppState => {
   const current = state.session
   const can_start_auth = current.auth_status === 'idle' && current.auth_ready
-  const shop_receipt = fold_shop_receipt(current, input)
-  if (shop_receipt !== current) return with_session(state, shop_receipt)
+  const receipt = fold_character_receipt(fold_shop_receipt(current, input), input)
+  if (receipt !== current) return with_session(state, receipt)
+  const link_state = fold_link_input(current, input)
+  if (link_state !== current) return with_session(state, link_state)
   if (input.type === 'auth/connecting' && current.auth_status === 'idle')
     return with_session(
       state,
@@ -278,38 +341,6 @@ const reduce = (state: AppState, input: AppInput): AppState => {
     return with_session(
       state,
       Object.freeze({ ...current, sui_balance_mist: input.balance_mist, gas_spent_mist: input.gas_spent_mist })
-    )
-  if (input.type === 'link/connecting')
-    return with_session(
-      state,
-      Object.freeze({ ...current, link_status: 'connecting', link_error: null, latency_ms: null, indexing_lag: null })
-    )
-  if (input.type === 'link/rejected')
-    return with_session(
-      state,
-      Object.freeze({ ...current, link_status: 'idle', link_error: input.reason, latency_ms: null, indexing_lag: null })
-    )
-  if (input.type === 'link/violation')
-    return with_session(
-      state,
-      Object.freeze({
-        ...current,
-        link_status: 'idle',
-        link_error: input.reason,
-        link_violation: input.reason,
-        latency_ms: null,
-      })
-    )
-  if (input.type === 'link/failed')
-    return with_session(
-      state,
-      Object.freeze({
-        ...current,
-        link_status: 'connecting',
-        link_error: input.error,
-        latency_ms: null,
-        indexing_lag: null,
-      })
     )
   if (
     input.type === 'link/latency' &&
@@ -453,28 +484,16 @@ const observe = ({ events, dispatch, signal, get_state }: Parameters<NonNullable
       return
     }
   })
-  // world chat rides the link; the local echo is the speaker's own chat/line (the server
-  // never echoes a speaker back to himself)
+  // world chat rides the link; the local echo is the speaker's own chat line
   events.on('chat/speak', ({ text }) => {
     link?.send({ type: 'packet/chat', text })
   })
-
-  events.on('character/select', ({ character_id }) => remember_selected_character(character_id))
-
-  events.on('link/rejected', ({ reason }) => {
-    const { copy } = get_state()
-    toast.persistent(
-      copy?.address_verification_failed ?? 'We could not verify this wallet address.',
-      'error',
-      copy
-        ? Object.freeze({
-            label: copy.join_discord,
-            onClick: () => globalThis.open(env.discord_url, '_blank', 'noopener,noreferrer'),
-          })
-        : undefined
-    )
-    dispatch({ type: 'auth/rejected', error: reason })
+  // a fight watch arms the server-side stream (roster + lifecycle) while a modal stands open
+  events.on('fight/watch', ({ fight }) => {
+    link?.send({ type: 'packet/spectate', fight })
   })
+  events.on('character/select', ({ character_id }) => remember_selected_character(character_id))
+  observe_failure_toasts({ events, dispatch, get_state, signal })
   events.on('STATE_UPDATED', (state, previous) => {
     if (state.session.auth_request !== previous.session.auth_request) {
       const request = state.session.auth_request
@@ -510,10 +529,10 @@ const observe = ({ events, dispatch, signal, get_state }: Parameters<NonNullable
     const character_id = state.session.selected_character_id
     if (link && character_id && (selection_changed || became_ready)) link.send({ type: 'packet/embody', character_id })
   })
-  // ── the multiplayer heartbeat: the pose lane → packet/position (chain space), throttled.
-  //    The server's speed law prices the travel; a fight or spectate publishes no pose at all. ──
+  // ── the multiplayer heartbeat: pose → packet/position (chain space), throttled; the
+  //    server's speed law prices the travel ──
   const POSITION_SEND_MS = 50
-  let last_position = { at_ms: 0, sent: null as Readonly<{ x: number; y: number; z: number }> | null }
+  let last_position = { at_ms: 0, sent: null as Readonly<{ x: number; y: number; z: number; riding: boolean }> | null }
   const unsubscribe_pose = subscribe_pose(() => {
     const pose = read_pose()
     if (!pose || !link) return
@@ -524,14 +543,26 @@ const observe = ({ events, dispatch, signal, get_state }: Parameters<NonNullable
     // FRACTIONAL coords on purpose: rounding would quantize a smooth walk into 1-block hops
     // whose instantaneous speed spikes past the server's authored ceiling (presence is
     // off-chain data — only real chain moves need integer coordinates).
-    const next = { x: client_to_chain_coordinate(pose.x), y: pose.y, z: client_to_chain_coordinate(pose.z) }
-    // continuous only WHILE MOVING — a standing player is silent, the server keeps its last fact
+    const next = {
+      x: client_to_chain_coordinate(pose.x),
+      y: pose.y,
+      z: client_to_chain_coordinate(pose.z),
+      riding: pose.riding,
+    }
+    // continuous only WHILE MOVING — a standing player is silent, the server keeps its last
+    // fact; a mount toggle forces ONE packet so the state change never waits on a step
     const { sent } = last_position
-    if (sent && Math.hypot(sent.x - next.x, sent.y - next.y, sent.z - next.z) < 0.25) return
+    if (sent && sent.riding === next.riding && Math.hypot(sent.x - next.x, sent.y - next.y, sent.z - next.z) < 0.25)
+      return
     last_position = { at_ms: now, sent: next }
     link.send({ type: 'packet/position', ...next })
   })
   signal.addEventListener('abort', unsubscribe_pose)
+
+  // duel signals ride the link like chat — the duel module owns the state, this owns the socket
+  events.on('duel/signal', ({ to, kind }) => {
+    link?.send({ type: 'packet/duel', to, kind })
+  })
 
   events.on('fight/input', ({ input, origin }) => {
     const state = get_state()

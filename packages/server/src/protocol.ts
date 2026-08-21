@@ -23,7 +23,9 @@ export type EventEnvelope = {
 /** Channel builders — the exact topics events.rs routes to. */
 export const channels = {
   character: (id: string) => `evt:character:${id}`,
-  world: (world: string) => `evt:world:${world}`,
+  /** one zone's indexer facts (fights, gathers, zone re-rolls) — a pod subscribes exactly the
+   *  zones its players track; presence spam never rides a world-global wire */
+  zone: (world: string, zx: number, zz: number) => `evt:zone:${world}:${zx}:${zz}`,
   fight: (id: string) => `evt:fight:${id}`,
   party: (id: string) => `evt:party:${id}`,
   trade: (id: string) => `evt:trade:${id}`,
@@ -53,6 +55,8 @@ export const mesh = {
   chat_party: (party: string) => `chat:party:${party}`,
   /** whispers (and only whispers) land on the target's own door */
   chat_user: (address: string) => `chat:user:${address}`,
+  /** duel handshake signals land on the target's own door (invite/accept/decline/created) */
+  duel: (address: string) => `duel:user:${address}`,
   /** live fight-turn intents relayed between fighters/spectators */
   fight_actions: (fight: string) => `act:fight:${fight}`,
   /** cluster-wide connect beacon — cross-pod duplicate eviction (legacy player_connect) */
@@ -64,12 +68,19 @@ export const mesh = {
  *  presence needs no stored snapshot because the occupants themselves are the state. */
 export type MeshFact =
   | { kind: 'appear'; player: import('@aresrpg/protocol').PresenceRow; address: string }
-  | { kind: 'move'; character_id: string; address: string; x: number; y: number; z: number }
+  | { kind: 'move'; character_id: string; address: string; x: number; y: number; z: number; riding: boolean }
   | { kind: 'leave'; character_id: string; address: string }
   | { kind: 'who'; address: string; world: string; zx: number; zz: number }
 
 /** What rides `chat:world:` / `chat:party:` / `chat:user:` channels. */
 export type ChatFact = { address: string; character: string; text: string }
+
+/** What rides a `duel:user:` channel — sender identity is socket-derived, never client-claimed. */
+export type DuelFact = {
+  address: string
+  character: string
+  kind: import('@aresrpg/protocol').DuelSignalKind
+}
 
 /** What rides an `act:fight:` channel. */
 export type FightActionFact = {

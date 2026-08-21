@@ -11,11 +11,12 @@
 import { draw, mix, rng_seed } from '@aresrpg/fight/prng'
 import { sample_biome_grid, type BiomeGrid } from '@aresrpg/engine/biomes'
 import { parse_world_recipe } from '@aresrpg/engine/recipe'
-import type { MobGroupRow, ResourcePackRow } from '@aresrpg/protocol'
+import { ZONE_SIZE as ZONE_BLOCKS, type MobGroupRow, type ResourcePackRow } from '@aresrpg/protocol'
 
 import worlds_source from '../../../seed/content/worlds.json'
 
-const ZONE_SIZE = 512n
+/** the wire's zone unit, not a second opinion — protocol is this side's one home */
+const ZONE_SIZE = BigInt(ZONE_BLOCKS)
 const WORLD_SIZE = 100_000
 const WORLD_CENTER = 50_000n
 const GROUPS_MIN = 48n

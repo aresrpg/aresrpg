@@ -54,7 +54,9 @@ export default {
         dispatch({ type: 'action/party', party })
       }
       if (payload.type === 'PartyLeft') dispatch({ type: 'action/party', party: null })
-      if (payload.type === 'FighterJoined') {
+      // a SEAT is custody, not a join: the indexer publishes it from the projection, so the
+      // duel challenger who took seat 0 at the fight's birth arms the same door as a joiner.
+      if (payload.type === 'CharacterSeated') {
         const { fight } = payload.data as { fight: string }
         dispatch({ type: 'action/fight', fight })
       }

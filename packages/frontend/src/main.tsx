@@ -4,7 +4,8 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 
-import { dispatch_app, initialize_app_store, observe_app, type AppModuleName } from './store.ts'
+import { dispatch_app, initialize_app_store, observe_app } from './store.ts'
+import { DEMO_APP_MODULES, PLAYER_APP_MODULES } from './app_modules.ts'
 import { env } from './env.ts'
 import { load_game_settings } from './game/core/settings.ts'
 import { load_locale } from './i18n/locale.ts'
@@ -18,25 +19,12 @@ const locale = load_locale()
 dispatch_app({ type: 'locale/changed', locale })
 const root = createRoot(document.getElementById('root')!)
 const demo_route = globalThis.location.pathname.replace(/\/+$/, '') === '/demo'
-const PLAYER_APP_MODULES = Object.freeze([
-  'session',
-  'navigation',
-  'settings',
-  'locale',
-  'engine',
-  'fight',
-  'admin',
-  // the chat observer folds incoming packet/chat_message into chat lines — reducers always
-  // run, but an observer only listens when armed here (2026-08-20: chat was missing, so
-  // everyone's messages published fine and nobody ever saw them)
-  'chat',
-]) satisfies readonly AppModuleName[]
 
 const boot = async (): Promise<void> => {
   if (demo_route) {
     const [{ DemoPage }, copy] = await Promise.all([import('./demo/DemoPage.tsx'), load_app_copy(locale)])
     dispatch_app({ type: 'locale/loaded', locale, copy })
-    observe_app(Object.freeze(['settings', 'simulator', 'fight']))
+    observe_app(DEMO_APP_MODULES)
     root.render(
       <StrictMode>
         <DemoPage copy={copy} />

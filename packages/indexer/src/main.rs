@@ -96,6 +96,20 @@ struct Args {
     ingest_max_concurrency: usize,
 }
 
+/// A connection string with its userinfo stripped — `redis://user:pw@host:6379`
+/// becomes `redis://***@host:6379`. Boot logs name the endpoint the operator
+/// needs to recognise; the credential in it is not part of that fact, and logs
+/// outlive the process in places the secret store does not reach.
+fn redacted_url(url: &str) -> String {
+    let Some((scheme, rest)) = url.split_once("://") else {
+        return url.to_string();
+    };
+    match rest.rsplit_once('@') {
+        Some((_, host)) => format!("{scheme}://***@{host}"),
+        None => url.to_string(),
+    }
+}
+
 #[tokio::main]
 async fn main() -> Result<()> {
     dotenvy::dotenv().ok();
@@ -142,10 +156,10 @@ async fn main() -> Result<()> {
     }
 
     info!(
-        redis_url = %args.redis_url,
+        redis_url = %redacted_url(&args.redis_url),
         package_original = %package_original,
         package_latest = %package_latest,
-        remote_store_url = %args.remote_store_url,
+        remote_store_url = %redacted_url(args.remote_store_url.as_str()),
         first_checkpoint = ?args.indexer.first_checkpoint,
         "starting AresRPG indexer"
     );
@@ -201,4 +215,32 @@ async fn main() -> Result<()> {
     service.join().await.context("joining indexer service")?;
     info!("indexer stopped");
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::redacted_url;
+
+    #[test]
+    fn boot_logs_never_carry_the_password() {
+        assert_eq!(
+            redacted_url("redis://admin:hunter2@falkor.internal:6379"),
+            "redis://***@falkor.internal:6379"
+        );
+        // a password containing '@' still redacts — the LAST '@' separates the host
+        assert_eq!(
+            redacted_url("redis://admin:p@ss@falkor.internal:6379"),
+            "redis://***@falkor.internal:6379"
+        );
+        // credential-free urls survive whole: the endpoint IS the fact worth logging
+        assert_eq!(
+            redacted_url("redis://127.0.0.1:6379"),
+            "redis://127.0.0.1:6379"
+        );
+        assert_eq!(
+            redacted_url("https://checkpoints.testnet.sui.io"),
+            "https://checkpoints.testnet.sui.io"
+        );
+        assert_eq!(redacted_url("not-a-url"), "not-a-url");
+    }
 }

@@ -25,10 +25,13 @@ const auth_session = (address = '0xowner'): AuthSession =>
     derive_character_id: () => '0xcharacter',
     is_character_name_claimed: async () => false,
     create_character: async () => ({ digest: '', character_id: '' }),
+    // action namespaces are never exercised by these reducer/DOM tests
+    fight: {} as never,
+    character: {} as never,
     resolve_suins_address: async () => null,
     estimate_sui_transfer: async () => 0n,
     send_sui: async () => ({ digest: null }),
-    buy_shop_item: async () => ({ digest: '' }),
+    buy_shop_item: async () => ({ digest: '', items: [] }),
     claim_airdrop: async () => ({ digest: '' }),
     create_seed_admin: async () => {
       throw new Error('unused in reducer tests')
@@ -396,4 +399,9 @@ describe('app state', () => {
     })
     expect(state.session.link_error).toBeNull()
   })
+})
+
+test('a session takeover parks the link red and terminal', () => {
+  const state = reduce_app_state(initial_app_state(settings), { type: 'link/replaced' })
+  expect(state.session.link_status).toBe('replaced')
 })

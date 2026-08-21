@@ -10,7 +10,8 @@ import { chain_to_client_coordinate } from '@aresrpg/immutable'
 import type { PresenceRow } from '@aresrpg/protocol'
 
 import { load_character_appearance, presence_render_source, world_character_entity } from './character_entities.ts'
-import { pet_locomotion_of, pet_seat_height, type PetLocomotion } from './core/pet_locomotion.ts'
+import { pet_locomotion_of, pet_seat_height, pet_vertical_offset, type PetLocomotion } from './core/pet_locomotion.ts'
+import { empty_pet_motion, step_pet_follow, type PetMotion } from './core/pet_follow.ts'
 import { read_pose } from './core/pose_feed.ts'
 
 /** A stopped player stops emitting moves — after this quiet window the run pose relaxes. */
@@ -46,6 +47,10 @@ type PresenceSlot = {
   tz: number
   yaw: number
   moved_at: number
+  /** actually mounted (the wire's riding flag) — an unridden pet FOLLOWS on foot instead */
+  riding: boolean
+  /** the follower's own local walk — the same pure sim the own pet runs */
+  pet_motion: PetMotion
 }
 
 export const create_presence_renderer = ({
@@ -85,6 +90,14 @@ export const create_presence_renderer = ({
         converging = true
       }
     }
+    // unridden pets walk their own leash beside their owner — the loop stays awake until
+    // every follower has settled (arrivals and mount toggles wake it through wake_tick)
+    for (const slot of slots.values()) {
+      if (!slot.loaded?.pet || slot.riding) continue
+      const spawning = !Number.isFinite(slot.pet_motion.x)
+      slot.pet_motion = step_pet_follow(slot.pet_motion, { x: slot.x, z: slot.z }, delta_seconds)
+      converging ||= slot.pet_motion.moving || spawning
+    }
     build()
     ticking = converging
     if (converging) raf(tick)
@@ -106,7 +119,7 @@ export const create_presence_renderer = ({
       // beyond animation range the mixer freezes on the idle pose (never a T-pose: IDLE still applies)
       const far = own ? Math.hypot(slot.x - own.x, slot.z - own.z) > ANIMATION_RANGE_BLOCKS : false
       const moving = !far && now - slot.moved_at < IDLE_AFTER_MS
-      const mounted = slot.loaded.pet !== null
+      const mounted = slot.riding && slot.loaded.pet !== null
       const pet_id = `${character_id}:pet`
       const rider_y = mounted ? slot.y + pet_seat_height(entity_height(pet_id)) : slot.y
       const anim: CharacterAnimationName = far ? 'IDLE' : mounted ? 'SIT' : moving ? 'RUN' : 'IDLE'
@@ -121,15 +134,25 @@ export const create_presence_renderer = ({
         })
       )
       if (!slot.loaded.pet) return [character]
+      // ridden: the pet carries the rider at their position; unridden: it walks its own leash
+      const follower = !mounted && Number.isFinite(slot.pet_motion.x)
+      const pet_y = slot.y + pet_vertical_offset(slot.loaded.pet.locomotion, now / 1000)
+      const pet_position = follower
+        ? Object.freeze([slot.pet_motion.x, pet_y, slot.pet_motion.z] as const)
+        : Object.freeze([slot.x, mounted ? slot.y : pet_y, slot.z] as const)
+      const pet_moving = follower ? slot.pet_motion.moving : moving
       return [
         character,
         Object.freeze({
           id: pet_id,
           kind: 'mob' as const,
           model_url: slot.loaded.pet.model_url,
-          anchor: Object.freeze({ kind: 'world' as const, position: Object.freeze([slot.x, slot.y, slot.z] as const) }),
-          facing: Object.freeze({ kind: 'yaw' as const, yaw: slot.yaw }),
-          animation: Object.freeze({ name: moving ? ('RUN' as const) : ('IDLE' as const), time_scale }),
+          anchor: Object.freeze({ kind: 'world' as const, position: pet_position }),
+          facing: Object.freeze({ kind: 'yaw' as const, yaw: follower ? slot.pet_motion.yaw : slot.yaw }),
+          animation: Object.freeze({
+            name: pet_moving ? ('RUN' as const) : ('IDLE' as const),
+            time_scale: pet_moving ? 1.5 * time_scale : time_scale,
+          }),
         }),
       ]
     })
@@ -166,6 +189,14 @@ export const create_presence_renderer = ({
   }
 
   return Object.freeze({
+    /** Shown (interpolated, CLIENT-space) positions — the screen-space pick reads these so a
+     *  right-click lands on the body the eye sees, not the network target it chases. */
+    positions: (): readonly Readonly<{ character_id: string; x: number; y: number; z: number }>[] =>
+      Object.freeze(
+        [...slots.entries()]
+          .filter(([, slot]) => slot.loaded)
+          .map(([character_id, slot]) => Object.freeze({ character_id, x: slot.x, y: slot.y, z: slot.z }))
+      ),
     update: (rows: Readonly<Record<string, PresenceRow>>, own_character_id: string | null): void => {
       if (disposed) return
       const now = Date.now()
@@ -197,10 +228,17 @@ export const create_presence_renderer = ({
             tz: z,
             yaw: slot?.yaw ?? 0,
             moved_at: 0,
+            riding: row.riding,
+            pet_motion: slot?.pet_motion ?? empty_pet_motion(),
           })
           load(character_id, row, source_key)
           changed = true
           continue
+        }
+        if (row.riding !== slot.riding) {
+          slot.riding = row.riding
+          changed = true
+          wake_tick()
         }
         const dx = x - slot.tx
         const dz = z - slot.tz

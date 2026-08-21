@@ -4,7 +4,7 @@
 import { describe, expect, test } from 'bun:test'
 import { decode_fight_action, encode_fight_action, fight_path_to, reachable_fight_cells } from '@aresrpg/fight'
 
-import { create_fight_session, local_fight_should_close } from '../../src/modules/fight.ts'
+import { create_fight_session, fight_should_close } from '../../src/modules/fight.ts'
 import { initial_simulator_state, reduce_simulator_state, simulator_board } from '../../src/modules/simulator.ts'
 import { simulator_fight_setup } from '../../src/simulator/fight_setup.ts'
 
@@ -128,7 +128,56 @@ describe('fight session owner', () => {
     const ended = session.state()!
 
     expect(ended.checkpoint.contract.ended).toBeTrue()
-    expect(local_fight_should_close(ended)).toBeFalse()
-    expect(local_fight_should_close(Object.freeze({ ...ended, events: Object.freeze([]) }))).toBeTrue()
+    expect(fight_should_close(ended, null)).toBeFalse()
+    expect(fight_should_close(Object.freeze({ ...ended, events: Object.freeze([]) }), null)).toBeTrue()
+  })
+
+  test('a remote fight releases the surface once the viewer’s own seat is settled', () => {
+    // THE DUEL INCIDENT (2026-08-21): win and loss both leave through the chain's FightEnded
+    // packet, but a forfeit that does NOT end the fight emits nothing — the player is out of
+    // the roster, his character is back in his kiosk, and his screen still shows the board.
+    // Settled is the one fact common to all three exits the owner named: forfeit, loss, win.
+    const session = create_fight_session({ now: () => 60_000n, reconcile: () => {} })
+    const simulator = ready_setup()
+    session.open({ mode: 'local', setup: simulator_fight_setup(simulator), seed: simulator.seed })
+    session.apply({ type: 'start' })
+    const owner = session.state()!.checkpoint.contract.fighters[0]!
+    if (owner.kind.type !== 'player') throw new Error('seat 0 must be a player for this fixture')
+    const address = owner.kind.owner
+    const before = Object.freeze({ ...session.state()!, mode: 'remote' as const, events: Object.freeze([]) })
+
+    expect(fight_should_close(before, address)).toBeFalse()
+
+    session.apply({ type: 'forfeit', fighter: 0n })
+    const after = Object.freeze({ ...session.state()!, mode: 'remote' as const, events: Object.freeze([]) })
+
+    expect(fight_should_close(after, address)).toBeTrue()
+    // a spectator holds no seat, so only the fight ENDING releases them — and this forfeit was
+    // the side's last living fighter, so it did end
+    expect(after.checkpoint.contract.ended).toBeTrue()
+    expect(fight_should_close(after, '0xnobody')).toBeTrue()
+    // while it still runs, a seatless viewer stays
+    const running = Object.freeze({
+      ...after,
+      checkpoint: { ...after.checkpoint, contract: { ...after.checkpoint.contract, ended: false } },
+    })
+    expect(fight_should_close(running, '0xnobody')).toBeFalse()
+    // …and the forfeiter still leaves, on their own settled seat alone
+    expect(fight_should_close(running, address)).toBeTrue()
+  })
+
+  test('the presentation drains before a remote surface closes', () => {
+    // closing the instant the fold lands would cut the forfeiter's own death animation
+    const session = create_fight_session({ now: () => 60_000n, reconcile: () => {} })
+    const simulator = ready_setup()
+    session.open({ mode: 'local', setup: simulator_fight_setup(simulator), seed: simulator.seed })
+    session.apply({ type: 'start' })
+    const seat = session.state()!.checkpoint.contract.fighters[0]!
+    if (seat.kind.type !== 'player') throw new Error('seat 0 must be a player for this fixture')
+    session.apply({ type: 'forfeit', fighter: 0n })
+    const undrained = Object.freeze({ ...session.state()!, mode: 'remote' as const })
+
+    expect(undrained.events.length).toBeGreaterThan(0)
+    expect(fight_should_close(undrained, seat.kind.owner)).toBeFalse()
   })
 })

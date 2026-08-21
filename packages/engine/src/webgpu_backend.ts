@@ -21,7 +21,9 @@ import type { EngineBackend } from './backend.ts'
 import { create_clouds } from './clouds.ts'
 import { create_far_terrain } from './far_terrain.ts'
 import { create_fight_board_layer } from './fight_board.ts'
+import { create_fight_sword_layer } from './fight_swords.ts'
 import { create_entity_layer } from './entities.ts'
+import { create_entity_label_layer } from './entity_labels.ts'
 import { create_fight_presentation } from './fight_presentation.ts'
 import { create_transient_effects } from './transient_effects.ts'
 import { project_screen_anchor } from './screen_projection.ts'
@@ -36,6 +38,7 @@ import type { ScatterInstance } from './scatter.ts'
 import { create_scatter_layer } from './scatter_layer.ts'
 import { chunk_origin } from './terrain_generator.ts'
 import { create_terrain_pool } from './terrain_pool.ts'
+import { create_board_occlusion, project_board_screen } from './board_occlusion.ts'
 import { is_submerged } from './underwater.ts'
 import { create_water } from './water.ts'
 import { couple_lighting, fill_dir_of, is_moon_key, shadow_direction_changed } from './lighting/sky_light_coupling.ts'
@@ -89,7 +92,9 @@ export const create_webgpu_backend = async (
   const scene = new Scene()
   const camera = new PerspectiveCamera(70, 1, 0.1, 3000)
   const fight_board = create_fight_board_layer({ scene, camera, canvas })
+  let fight_swords: ReturnType<typeof create_fight_sword_layer> | null = null
   const entities = create_entity_layer({ scene })
+  const entity_labels = create_entity_label_layer({ canvas, scene, camera, entities })
   const effects = create_transient_effects({ scene, entities })
   const fight_presentation = create_fight_presentation({ entities, vfx: effects, shock: () => crit_shock() })
   const sun = new DirectionalLight(0xfff2dd, 3)
@@ -114,6 +119,11 @@ export const create_webgpu_backend = async (
 
   const flatten = create_flatten_uniform()
   const clouds = create_clouds({ scene, quality: initial_quality, seed: world.seed, sky: analytic_sky })
+  const board_occlusion = create_board_occlusion()
+  let board_footprint: Readonly<{ center: readonly [number, number, number]; half_x: number; half_z: number }> | null =
+    null
+  // scratch, reused every frame — the draw loop allocates nothing
+  const board_view_projection = new Matrix4()
   const terrain = create_terrain_pool({
     scene,
     quality: initial_quality,
@@ -121,6 +131,7 @@ export const create_webgpu_backend = async (
     world,
     sun_direction: analytic_sky.sun_direction,
     clouds,
+    board_occlusion,
   })
   const far_terrain = create_far_terrain({
     scene,
@@ -130,7 +141,7 @@ export const create_webgpu_backend = async (
     sun_direction: analytic_sky.sun_direction,
     clouds,
   })
-  const scatter = create_scatter_layer({ scene })
+  const scatter = create_scatter_layer({ scene, board_occlusion })
   const lantern = create_lantern({ scene })
   const water = create_water({
     scene,
@@ -277,6 +288,7 @@ export const create_webgpu_backend = async (
     }
   }
 
+  let render_distance: number | null = null
   const apply_quality = (next: EngineQuality, update_sky = true): void => {
     quality = next
     const profile = get_quality_profile(next)
@@ -298,7 +310,7 @@ export const create_webgpu_backend = async (
     sun.shadow.needsUpdate = true
     sun.shadow.camera.updateProjectionMatrix()
     terrain.set_quality(next)
-    far_terrain.set_quality(next)
+    far_terrain.set_quality(next, render_distance)
     clouds.set_quality(next)
     water.set_quality(next)
     frame_renderer.set_quality(next)
@@ -349,6 +361,7 @@ export const create_webgpu_backend = async (
     render_pixel_ratio = pixel_ratio
     renderer.setPixelRatio(pixel_ratio)
     renderer.setSize(width, height, false)
+    entity_labels.resize(width, height)
     camera.aspect = width / height
     apply_projection()
   }
@@ -430,8 +443,31 @@ export const create_webgpu_backend = async (
       hillaire?.tick(renderer, camera, delta_seconds)
     }
     fight_board.tick(now)
+    // the peephole follows the camera: where the board lands on screen this frame decides what
+    // stands between the eye and it. A board behind the eye occludes nothing, so the mask rests.
+    if (board_footprint) {
+      camera.updateMatrixWorld()
+      board_view_projection.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse)
+      const projected = project_board_screen(
+        board_view_projection,
+        camera.matrixWorldInverse,
+        board_footprint.center,
+        board_footprint.half_x,
+        board_footprint.half_z,
+        board_footprint.center[1]
+      )
+      if (projected)
+        board_occlusion.set_frame({
+          ...projected,
+          floor_y: board_footprint.center[1],
+          center_xz: [board_footprint.center[0], board_footprint.center[2]],
+          radius: Math.hypot(board_footprint.half_x, board_footprint.half_z),
+          clear_half: [board_footprint.half_x + 1, board_footprint.half_z + 1],
+        })
+    }
     entities.tick(now)
     effects.tick(now)
+    fight_swords?.tick(now)
     if (has_dynamic_entities && sun.castShadow && sun.shadow.intensity > 0) sun.shadow.needsUpdate = true
     const shock = Math.max(0, 1 - (now - shock_at) / CRIT_SHOCK_MS)
     if (shock > 0) {
@@ -441,11 +477,13 @@ export const create_webgpu_backend = async (
       camera.position.x += offset_x
       camera.position.y += offset_y
       frame_renderer.render()
+      entity_labels.render()
       camera.position.x -= offset_x
       camera.position.y -= offset_y
       return
     }
     frame_renderer.render()
+    entity_labels.render()
   }
 
   const remove_chunk = (key: string): void => {
@@ -538,7 +576,12 @@ export const create_webgpu_backend = async (
       if (position) lantern.set_focus(position[0], position[1], position[2])
       lantern.set_active(position !== null)
     },
-    set_quality: (next: EngineQuality) => {
+    set_quality: (next: EngineQuality, next_render_distance: number | null = null) => {
+      // the far shell's hole tracks the player's chunk radius — same door as the tier switch
+      if (next_render_distance !== render_distance) {
+        render_distance = next_render_distance
+        far_terrain.set_quality(next, render_distance)
+      }
       if (next !== quality) apply_quality(next)
     },
     set_time_of_day: (time: number) => {
@@ -552,6 +595,21 @@ export const create_webgpu_backend = async (
     },
     set_fight_board: (board) => {
       fight_board.set(board)
+      // the peephole arms with the board and remembers its footprint; disarming restores the
+      // fast terrain material, so the discard never survives the fight
+      board_footprint = board
+        ? Object.freeze({
+            center: [
+              board.origin.x + (board.width * board.cell_size) / 2,
+              board.origin.y,
+              board.origin.z + (board.height * board.cell_size) / 2,
+            ] as const,
+            half_x: (board.width * board.cell_size) / 2,
+            half_z: (board.height * board.cell_size) / 2,
+          })
+        : null
+      board_occlusion.set_active(board !== null)
+      terrain.set_occlusion_active(board !== null)
       entities.set_board(board)
     },
     set_entities: (next) => {
@@ -559,6 +617,11 @@ export const create_webgpu_backend = async (
       entities.set(next)
       sun.shadow.needsUpdate = true
     },
+    set_fight_swords: (url, markers) => {
+      fight_swords ??= create_fight_sword_layer({ scene, url })
+      fight_swords.set_markers(markers)
+    },
+    set_fight_sword_label: (id, element) => fight_swords?.set_label(id, element),
     animate_entity: entities.animate,
     play_fight_cue: fight_presentation.play,
     play_jump_puff: effects.play_jump_puff,
@@ -566,6 +629,7 @@ export const create_webgpu_backend = async (
       const anchor = entities.world_anchor(id)
       return anchor ? project_screen_anchor(anchor, camera, canvas.getBoundingClientRect()) : null
     },
+    set_entity_label: entity_labels.set,
     entity_height: entities.entity_height,
     upsert_fight_blob: fight_board.upsert_blob,
     remove_fight_blob: fight_board.remove_blob,
@@ -629,6 +693,7 @@ export const create_webgpu_backend = async (
       fight_board.dispose()
       effects.dispose()
       entities.dispose()
+      entity_labels.dispose()
       frame_renderer.dispose()
       hillaire?.dispose()
       renderer.dispose()

@@ -16,23 +16,37 @@ import { fight_placement_blobs } from '@aresrpg/engine'
 import { project_board_cells, type FightBoard } from '@aresrpg/fight'
 import { useEffect, useMemo, useRef } from 'react'
 
-import { create_fight_view } from './fight_view.ts'
+import { claim_scene_entities, submit_scene_entities, type SceneHandle } from '../core/scene_feed.ts'
 import { create_fight_presenter } from './fight_presenter.ts'
 import type { FightBlobOverlay } from './fight_overlays.ts'
 import type { FightCuePhase } from './fight_presenter.ts'
 
 const CELL_SIZE = 1.33
 const BOARD_Y = 0
+// One block of clearance above the ground it is laid on: the arena reads as a built platform
+// standing ON the world rather than tiles painted into the dirt, and the terrain it covers
+// passes cleanly underneath instead of fighting the slab for the same depth.
+const BOARD_LIFT = 1
 const EMPTY_ENTITIES: readonly EntityRender[] = Object.freeze([])
 
-export const fight_board_render = (board: Readonly<FightBoard>): FightBoardRender => {
+/** `anchor` is where the fight STANDS in the world — the chain's own coordinates, grounded on
+ *  the terrain there. The board is laid centred on it, so the arena appears exactly where the
+ *  challenge was thrown. Absent (the simulator's synthetic board), it falls back to the origin. */
+export const fight_board_render = (
+  board: Readonly<FightBoard>,
+  anchor: Readonly<{ x: number; y: number; z: number }> = { x: 0, y: BOARD_Y, z: 0 }
+): FightBoardRender => {
   const width = Number(board.width)
   const height = Number(board.height)
   return Object.freeze({
     width,
     height,
     cell_size: CELL_SIZE,
-    origin: Object.freeze({ x: -(width * CELL_SIZE) / 2, y: BOARD_Y, z: -(height * CELL_SIZE) / 2 }),
+    origin: Object.freeze({
+      x: anchor.x - (width * CELL_SIZE) / 2,
+      y: anchor.y,
+      z: anchor.z - (height * CELL_SIZE) / 2,
+    }),
     show_start_cells: false,
     cells: Object.freeze(
       project_board_cells(board).map(({ cell, ...projected }) => Object.freeze({ ...projected, cell: Number(cell) }))
@@ -41,6 +55,28 @@ export const fight_board_render = (board: Readonly<FightBoard>): FightBoardRende
 }
 
 export const fight_placement_overlays = fight_placement_blobs
+
+/** The live world, dressed as the board view this surface drives. Mounting claims the scene's
+ *  entity list (a fight shows its fighters and nobody else); disposing hands the board back and
+ *  returns the camera to the player, which releases the list to presence again. */
+const scene_fight_view = (scene: SceneHandle) => {
+  claim_scene_entities('fight')
+  return Object.freeze({
+    set_board: (board: FightBoardRender) => scene.show_fight_board(board),
+    set_entities: (entities: readonly EntityRender[]) => submit_scene_entities('fight', entities),
+    animate_entity: scene.animate_entity,
+    play_fight_cue: scene.play_fight_cue,
+    project_entity: scene.project_entity,
+    create_blob: scene.create_fight_blob,
+    update_blob: scene.update_fight_blob,
+    remove_blob: scene.remove_fight_blob,
+    pick_cell: scene.pick_fight_cell,
+    dispose: (): void => {
+      scene.show_fight_board(null)
+      claim_scene_entities('presence')
+    },
+  })
+}
 
 export const FightViewport = ({
   board,
@@ -58,6 +94,8 @@ export const FightViewport = ({
   on_presentation_active,
   show_start_cells = true,
   entities = EMPTY_ENTITIES,
+  world_anchor = null,
+  scene,
 }: Readonly<{
   board: FightBoard
   board_key: string
@@ -78,9 +116,13 @@ export const FightViewport = ({
   }> | null
   show_start_cells?: boolean
   entities?: readonly EntityRender[]
+  /** the fight's world position in CLIENT coordinates — null keeps the board at the origin */
+  world_anchor?: Readonly<{ x: number; z: number }> | null
+  /** THE WORLD THIS BOARD IS MOUNTED IN, handed over by its owner. Not looked up: a surface that
+   *  could find "the live scene" on its own will eventually draw into somebody else's. */
+  scene: SceneHandle
 }>) => {
-  const canvas_ref = useRef<HTMLCanvasElement | null>(null)
-  const view_ref = useRef<ReturnType<typeof create_fight_view> | null>(null)
+  const view_ref = useRef<ReturnType<typeof scene_fight_view> | null>(null)
   const presenter_ref = useRef<ReturnType<typeof create_fight_presenter> | null>(null)
   const initial_quality_ref = useRef(quality)
   const click_ref = useRef(on_cell_click)
@@ -92,8 +134,21 @@ export const FightViewport = ({
   const anchors_ref = useRef(on_entity_anchors)
   // A fight board is immutable under its contract ID. Checkpoint reducers clone it, so depending
   // on object identity would rebuild GPU geometry after every command.
-  // eslint-disable-next-line react-hooks/exhaustive-deps -- board_key is the board's domain identity.
-  const render_board = useMemo(() => fight_board_render(board), [board_key])
+  const anchor_key = world_anchor ? `${world_anchor.x}:${world_anchor.z}` : ''
+  const render_board = useMemo(
+    () =>
+      // EVERY board rests on the ground, anchored or not. A local or simulator board has no
+      // world coordinates, but it is still mounted in a real world now — left at y=0 it would
+      // be buried under the terrain instead of standing on it.
+      ((anchor = world_anchor ?? { x: 0, z: 0 }) =>
+        fight_board_render(board, {
+          x: anchor.x,
+          y: scene.ground_height(anchor.x, anchor.z) + BOARD_LIFT,
+          z: anchor.z,
+        }))(),
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- board_key + the anchor are the board's domain identity.
+    [board_key, anchor_key, scene]
+  )
   const rendered_overlays = useMemo(
     () => Object.freeze([...fight_placement_overlays(render_board, show_start_cells), ...blob_overlays]),
     [blob_overlays, render_board, show_start_cells]
@@ -109,10 +164,14 @@ export const FightViewport = ({
   const tracked_ids = tracked_entity_ids.join('\u0000')
 
   useEffect(() => {
-    const canvas = canvas_ref.current
-    if (!canvas) return undefined
-    const view = create_fight_view(canvas, initial_quality_ref.current)
+    // THE BOARD IS MOUNTED IN THE LIVE WORLD, never in a renderer of its own: the world is
+    // already drawn behind it, the camera rig travels down to the board instead of cutting,
+    // and the fight stops being an opaque panel over the app.
+    const view = scene_fight_view(scene)
     view_ref.current = view
+    // a freshly mounted scene holds none of our GPU blobs — the bookkeeping starts empty or the
+    // overlay pass would try to update ids that no longer exist
+    overlay_ids_ref.current = new Map()
     const publish_hover = (cell: number | null): void => {
       if (cell === hovered_cell_ref.current) return
       hovered_cell_ref.current = cell
@@ -122,39 +181,36 @@ export const FightViewport = ({
       play: view.play_fight_cue,
       observe: (cue, phase) => cue_observer_ref.current?.(cue, phase),
     })
+    // the board draws on the WORLD's canvas, which this surface does not own — so pointer work
+    // rides the document and answers only for events that landed on that canvas. Anything over
+    // the HUD is the HUD's, and the world's own controls are inert outside follow mode.
+    const on_board = (event: MouseEvent): boolean => event.target instanceof HTMLCanvasElement
     const click = (event: MouseEvent): void => {
-      if (event.button !== 0) return
+      if (event.button !== 0 || !on_board(event)) return
       const cell = view.pick_cell(event.clientX, event.clientY)
       if (cell !== null) click_ref.current?.(BigInt(cell), { x: event.clientX, y: event.clientY })
     }
     const move = (event: MouseEvent): void => {
-      publish_hover(view.pick_cell(event.clientX, event.clientY))
+      publish_hover(on_board(event) ? view.pick_cell(event.clientX, event.clientY) : null)
     }
-    const leave = (): void => {
-      publish_hover(null)
-    }
-    canvas.addEventListener('click', click)
-    canvas.addEventListener('mousemove', move)
-    canvas.addEventListener('mouseleave', leave)
+    globalThis.addEventListener('click', click)
+    globalThis.addEventListener('mousemove', move)
     return () => {
-      canvas.removeEventListener('click', click)
-      canvas.removeEventListener('mousemove', move)
-      canvas.removeEventListener('mouseleave', leave)
+      globalThis.removeEventListener('click', click)
+      globalThis.removeEventListener('mousemove', move)
       hovered_cell_ref.current = null
       view_ref.current = null
       presenter_ref.current?.dispose()
       presenter_ref.current = null
       view.dispose()
     }
-  }, [])
-
-  useEffect(() => {
-    view_ref.current?.set_quality(quality)
-  }, [quality])
+  }, [scene])
 
   useEffect(() => {
     view_ref.current?.set_board(render_board)
-  }, [render_board])
+    // `scene` is a dependency on purpose: its owner may hand over a different world,
+    // so without it this effect never fires again and no board is ever mounted
+  }, [render_board, scene])
 
   useEffect(() => {
     const view = view_ref.current
@@ -182,7 +238,7 @@ export const FightViewport = ({
       if (!next.has(id)) view.remove_blob(engine_id)
     })
     overlay_ids_ref.current = next
-  }, [render_board, rendered_overlays])
+  }, [render_board, rendered_overlays, scene])
 
   useEffect(
     () => () => {
@@ -195,7 +251,7 @@ export const FightViewport = ({
 
   useEffect(() => {
     view_ref.current?.set_entities(entities)
-  }, [entities])
+  }, [entities, scene])
 
   useEffect(() => {
     const presenter = presenter_ref.current
@@ -246,12 +302,7 @@ export const FightViewport = ({
     if (blob_request) view_ref.current?.create_blob(blob_request.blob)
   }, [blob_request])
 
-  return (
-    <canvas
-      aria-label={label}
-      className="absolute inset-0 size-full touch-none"
-      data-fight-viewport=""
-      ref={canvas_ref}
-    />
-  )
+  // no canvas of its own: the board lives on the world's, so this surface renders only the
+  // accessible name for the board it mounted there
+  return <span aria-label={label} className="sr-only" data-fight-viewport="" role="img" />
 }

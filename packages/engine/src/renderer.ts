@@ -47,6 +47,7 @@ export const create_engine = ({
   let backend: EngineBackend | null = null
   let status: EngineStatus = Object.freeze({ state: 'initializing', backend: 'none' })
   let quality = initial_quality
+  let render_distance: number | null = null
   let camera: Readonly<{ position: Vec3; target: Vec3; projection: CameraProjection }> = {
     position: [36, 34, 36],
     target: [0, 0, 0],
@@ -108,7 +109,7 @@ export const create_engine = ({
       return
     }
     backend = next
-    next.set_quality(quality)
+    next.set_quality(quality, render_distance)
     next.set_camera(camera.position, camera.target, camera.projection)
     next.set_character_anchor(character_anchor)
     next.set_time_of_day(time_of_day)
@@ -184,9 +185,10 @@ export const create_engine = ({
       character_anchor = position
       backend?.set_character_anchor(position)
     },
-    set_quality: (next: EngineQuality) => {
+    set_quality: (next: EngineQuality, next_render_distance: number | null = null) => {
       quality = next
-      backend?.set_quality(next)
+      render_distance = next_render_distance
+      backend?.set_quality(next, next_render_distance)
     },
     set_time_of_day: (time: number) => {
       time_of_day = ((time % 1) + 1) % 1
@@ -205,6 +207,8 @@ export const create_engine = ({
       entities = Object.freeze([...next])
       backend?.set_entities(entities)
     },
+    set_fight_swords: (url, markers) => backend?.set_fight_swords(url, markers),
+    set_fight_sword_label: (id, element) => backend?.set_fight_sword_label(id, element),
     animate_entity: (motion) => backend?.animate_entity(motion) ?? Promise.resolve(false),
     play_fight_cue: (cue) =>
       backend
@@ -212,6 +216,7 @@ export const create_engine = ({
         : new Promise<boolean>((resolve) => pending_fight_cues.push(Object.freeze({ cue, resolve }))),
     play_jump_puff: (position) => backend?.play_jump_puff(position),
     project_entity: (id) => backend?.project_entity(id) ?? null,
+    set_entity_label: (id, element) => backend?.set_entity_label(id, element),
     entity_height: (id) => backend?.entity_height(id) ?? null,
     create_fight_blob: (blob: FightBlobSpec) => {
       fight_blob_serial += 1

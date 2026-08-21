@@ -9,11 +9,14 @@ export const toast_glass_class =
 
 export type ToastType = 'error' | 'info' | 'pending' | 'success'
 
+export type ToastAction = Readonly<{ label: string; onClick: () => void }>
+
 export type Toast = Readonly<{
   id: string
   message: string
   type: ToastType
-  action?: Readonly<{ label: string; onClick: () => void }>
+  /** inline buttons on the toast's own line — the toast grows, never stacks (owner 2026-08-21) */
+  actions?: readonly ToastAction[]
   persistent?: boolean
 }>
 
@@ -24,6 +27,30 @@ const listeners = new Set<Listener>()
 const emit = (event: ToastEvent): void => listeners.forEach((listener) => listener(event))
 const message_of = (message: unknown): string =>
   typeof message === 'string' ? message : message instanceof Error ? message.message : 'Something went wrong'
+
+/** The Sui SDK's gas-refusal vocabulary — a failed ATTEMPT is the only trigger for the
+ *  top-up prompt (never a balance poll: first logins stay unbothered). */
+const GAS_EMPTY_PATTERN = /gas coin|no valid gas|insufficientgas|gasbalancetoolow|unable to select a gas/i
+const gas_empty_cell: { listener: (() => void) | null } = { listener: null }
+/** Registered by the session observer (injection breaks the store↔toast cycle). */
+export const on_gas_empty = (listener: (() => void) | null): void => {
+  // eslint-disable-next-line functional/immutable-data -- the one injection cell of this module
+  gas_empty_cell.listener = listener
+}
+const notice_gas_empty = (type: ToastType, message: string): void => {
+  if (type === 'error' && GAS_EMPTY_PATTERN.test(message)) gas_empty_cell.listener?.()
+}
+
+const translate_cell: { translate: ((message: string) => string | null) | null } = { translate: null }
+/** Registered by the session observer (it holds the localized copy): raw chain failures a
+ *  player could never read — the version-gate abort, etc. — become honest player sentences.
+ *  A translator returns null to leave a message untouched. Errors only. */
+export const on_error_translate = (translate: ((message: string) => string | null) | null): void => {
+  // eslint-disable-next-line functional/immutable-data -- the one injection cell of this module
+  translate_cell.translate = translate
+}
+const translated = (type: ToastType, message: string): string =>
+  (type === 'error' ? translate_cell.translate?.(message) : null) ?? message
 
 const show = (toast: Toast): void => emit(Object.freeze({ type: 'show', toast }))
 const remove = (id: string): void => emit(Object.freeze({ type: 'remove', id }))
@@ -36,19 +63,25 @@ export const toast = Object.freeze({
   remove,
   add: (message: unknown, type: Exclude<ToastType, 'pending'> = 'error'): void => {
     const id = crypto.randomUUID()
-    show(Object.freeze({ id, message: message_of(message), type }))
+    notice_gas_empty(type, message_of(message))
+    show(Object.freeze({ id, message: translated(type, message_of(message)), type }))
     setTimeout(() => remove(id), 5_000)
   },
-  persistent: (message: string, type: Exclude<ToastType, 'success'>, action?: Toast['action']): (() => void) => {
+  persistent: (
+    message: string,
+    type: Exclude<ToastType, 'success'>,
+    ...actions: readonly ToastAction[]
+  ): (() => void) => {
     const id = crypto.randomUUID()
-    show(Object.freeze({ id, message, type, action, persistent: true }))
+    show(Object.freeze({ id, message, type, actions: Object.freeze(actions), persistent: true }))
     return () => remove(id)
   },
   loading: (message: string) => {
     const id = crypto.randomUUID()
     show(Object.freeze({ id, message, type: 'pending', persistent: true }))
     const finish = (next: unknown, type: 'error' | 'success'): void => {
-      show(Object.freeze({ id, message: message_of(next), type }))
+      notice_gas_empty(type, message_of(next))
+      show(Object.freeze({ id, message: translated(type, message_of(next)), type }))
       setTimeout(() => remove(id), type === 'success' ? 1_400 : 5_000)
     }
     return Object.freeze({

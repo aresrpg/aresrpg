@@ -9,9 +9,9 @@ export const SETTINGS_STORAGE_KEY = 'aresrpg.settings'
 export const RENDER_DISTANCE_MIN = 4
 export const RENDER_DISTANCE_MAX = 12
 
-// THE one door every consumer derives the effective chunk radius from.
-export const effective_render_distance = (tier_far_radius: number, override: number | null): number =>
-  override ?? tier_far_radius
+// The one derivation door lives in the engine (voxels AND the far shell share it) — re-exported
+// here so frontend consumers keep their settings import.
+export { effective_render_distance } from '@aresrpg/engine'
 
 export type GameSettings = Readonly<{
   quality: EngineQuality

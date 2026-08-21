@@ -86,7 +86,7 @@ export const join_world = (
 /**
  * `api::search_zone` — TERMINAL (&Random): last command of its transaction.
  * @arg kiosk — &mut Kiosk
- * @arg cap — &KioskOwnerCap
+ * @arg personal — &PersonalKioskCap
  * @arg character_id — ID
  * @arg x — u32
  * @arg z — u32
@@ -95,13 +95,13 @@ export const join_world = (
 export const search_zone = (
   tx: Transaction,
   ctx: DoorCtx,
-  args: { kiosk: Resolvable; cap: Resolvable; character_id: string; x: number; z: number; w: Resolvable }
+  args: { kiosk: Resolvable; personal: Resolvable; character_id: string; x: number; z: number; w: Resolvable }
 ) =>
   tx.moveCall({
     target: `${ctx.pins.package}::api::search_zone`,
     arguments: [
       ctx.obj(tx, args.kiosk, true),
-      ctx.obj(tx, args.cap, false),
+      ctx.obj(tx, args.personal, false),
       ctx.pure.id(tx, args.character_id),
       ctx.pure.u32(tx, args.x),
       ctx.pure.u32(tx, args.z),
@@ -327,7 +327,7 @@ export const launch_fight = (tx: Transaction, ctx: DoorCtx, args: { build: Resol
 /**
  * `api::challenge_duel` — TERMINAL (&Random): last command of its transaction.
  * @arg kiosk — &mut Kiosk
- * @arg cap — &KioskOwnerCap
+ * @arg personal — &PersonalKioskCap
  * @arg character_id — ID
  * @arg x — u32
  * @arg z — u32
@@ -336,13 +336,13 @@ export const launch_fight = (tx: Transaction, ctx: DoorCtx, args: { build: Resol
 export const challenge_duel = (
   tx: Transaction,
   ctx: DoorCtx,
-  args: { kiosk: Resolvable; cap: Resolvable; character_id: string; x: number; z: number; access: number }
+  args: { kiosk: Resolvable; personal: Resolvable; character_id: string; x: number; z: number; access: number }
 ) =>
   tx.moveCall({
     target: `${ctx.pins.package}::api::challenge_duel`,
     arguments: [
       ctx.obj(tx, args.kiosk, true),
-      ctx.obj(tx, args.cap, false),
+      ctx.obj(tx, args.personal, false),
       ctx.pure.id(tx, args.character_id),
       ctx.pure.u32(tx, args.x),
       ctx.pure.u32(tx, args.z),
@@ -579,12 +579,12 @@ export const forfeit_fight = (
  * @arg f — &mut Fight
  * @arg fighter_idx — u64
  * @arg kiosk — &mut Kiosk
- * @arg cap — &KioskOwnerCap
+ * @arg personal — &PersonalKioskCap
  */
 export const settle_fight = (
   tx: Transaction,
   ctx: DoorCtx,
-  args: { f: Resolvable; fighter_idx: bigint | number | string; kiosk: Resolvable; cap: Resolvable }
+  args: { f: Resolvable; fighter_idx: bigint | number | string; kiosk: Resolvable; personal: Resolvable }
 ) =>
   tx.moveCall({
     target: `${ctx.pins.package}::api::settle_fight`,
@@ -592,7 +592,7 @@ export const settle_fight = (
       ctx.obj(tx, args.f, true),
       ctx.pure.u64(tx, args.fighter_idx),
       ctx.obj(tx, args.kiosk, true),
-      ctx.obj(tx, args.cap, false),
+      ctx.obj(tx, args.personal, false),
       ctx.pin(tx, 'character_policy', false),
       tx.object.random(),
       ctx.pin(tx, 'version', false),
@@ -607,7 +607,7 @@ export const settle_fight = (
  * @arg template — &ItemTemplate
  * @arg existing — Option<ID>
  * @arg kiosk — &mut Kiosk
- * @arg cap — &KioskOwnerCap
+ * @arg personal — &PersonalKioskCap
  */
 export const claim_fight_drop = (
   tx: Transaction,
@@ -618,7 +618,7 @@ export const claim_fight_drop = (
     template: Resolvable
     existing: string | null | undefined
     kiosk: Resolvable
-    cap: Resolvable
+    personal: Resolvable
   }
 ) =>
   tx.moveCall({
@@ -629,7 +629,7 @@ export const claim_fight_drop = (
       ctx.obj(tx, args.template, false),
       ctx.pure.option(tx, 'id', args.existing ?? null),
       ctx.obj(tx, args.kiosk, true),
-      ctx.obj(tx, args.cap, false),
+      ctx.obj(tx, args.personal, false),
       ctx.pin(tx, 'item_policy', false),
       tx.object.random(),
       ctx.pin(tx, 'version', false),
@@ -865,7 +865,7 @@ export const use_consumable = (
  * `api::gather` — TERMINAL (&Random): last command of its transaction.
  * @arg w — &mut World
  * @arg kiosk — &mut Kiosk
- * @arg cap — &KioskOwnerCap
+ * @arg personal — &PersonalKioskCap
  * @arg character_id — ID
  * @arg zx — u32
  * @arg zz — u32
@@ -881,7 +881,7 @@ export const gather = (
   args: {
     w: Resolvable
     kiosk: Resolvable
-    cap: Resolvable
+    personal: Resolvable
     character_id: string
     zx: number
     zz: number
@@ -897,7 +897,7 @@ export const gather = (
     arguments: [
       ctx.obj(tx, args.w, true),
       ctx.obj(tx, args.kiosk, true),
-      ctx.obj(tx, args.cap, false),
+      ctx.obj(tx, args.personal, false),
       ctx.pure.id(tx, args.character_id),
       ctx.pure.u32(tx, args.zx),
       ctx.pure.u32(tx, args.zz),
@@ -942,7 +942,7 @@ export const resolve_ambush = (
  * `api::craft` — TERMINAL (&Random): last command of its transaction.
  * @arg recipe — &Recipe
  * @arg kiosk — &mut Kiosk
- * @arg cap — &KioskOwnerCap
+ * @arg personal — &PersonalKioskCap
  * @arg character_id — ID
  * @arg input_item_ids — vector<ID>
  * @arg output_template — &ItemTemplate
@@ -954,7 +954,7 @@ export const craft = (
   args: {
     recipe: Resolvable
     kiosk: Resolvable
-    cap: Resolvable
+    personal: Resolvable
     character_id: string
     input_item_ids: readonly string[]
     output_template: Resolvable
@@ -966,7 +966,7 @@ export const craft = (
     arguments: [
       ctx.obj(tx, args.recipe, false),
       ctx.obj(tx, args.kiosk, true),
-      ctx.obj(tx, args.cap, false),
+      ctx.obj(tx, args.personal, false),
       ctx.pure.id(tx, args.character_id),
       ctx.pure.vector(tx, 'id', args.input_item_ids),
       ctx.obj(tx, args.output_template, false),
@@ -981,7 +981,7 @@ export const craft = (
 /**
  * `api::scribe_rune` — TERMINAL (&Random): last command of its transaction.
  * @arg kiosk — &mut Kiosk
- * @arg cap — &KioskOwnerCap
+ * @arg personal — &PersonalKioskCap
  * @arg character_id — ID
  * @arg gear_id — ID
  * @arg gear_template — &ItemTemplate
@@ -992,7 +992,7 @@ export const scribe_rune = (
   ctx: DoorCtx,
   args: {
     kiosk: Resolvable
-    cap: Resolvable
+    personal: Resolvable
     character_id: string
     gear_id: string
     gear_template: Resolvable
@@ -1003,7 +1003,7 @@ export const scribe_rune = (
     target: `${ctx.pins.package}::api::scribe_rune`,
     arguments: [
       ctx.obj(tx, args.kiosk, true),
-      ctx.obj(tx, args.cap, false),
+      ctx.obj(tx, args.personal, false),
       ctx.pure.id(tx, args.character_id),
       ctx.pure.id(tx, args.gear_id),
       ctx.obj(tx, args.gear_template, false),
@@ -1017,19 +1017,19 @@ export const scribe_rune = (
 /**
  * `api::crush_gear` — TERMINAL (&Random): last command of its transaction.
  * @arg kiosk — &mut Kiosk
- * @arg cap — &KioskOwnerCap
+ * @arg personal — &PersonalKioskCap
  * @arg gear_ids — vector<ID>
  */
 export const crush_gear = (
   tx: Transaction,
   ctx: DoorCtx,
-  args: { kiosk: Resolvable; cap: Resolvable; gear_ids: readonly string[] }
+  args: { kiosk: Resolvable; personal: Resolvable; gear_ids: readonly string[] }
 ) =>
   tx.moveCall({
     target: `${ctx.pins.package}::api::crush_gear`,
     arguments: [
       ctx.obj(tx, args.kiosk, true),
-      ctx.obj(tx, args.cap, false),
+      ctx.obj(tx, args.personal, false),
       ctx.pure.vector(tx, 'id', args.gear_ids),
       ctx.pin(tx, 'item_protected_policy', false),
       tx.object.random(),
@@ -1082,21 +1082,21 @@ export const discard_crush_claim = (tx: Transaction, ctx: DoorCtx, args: { claim
 /**
  * `api::open_loot_box` — TERMINAL (&Random): last command of its transaction.
  * @arg kiosk — &mut Kiosk
- * @arg cap — &KioskOwnerCap
+ * @arg personal — &PersonalKioskCap
  * @arg box_item_id — ID
  * @arg box_template — &ItemTemplate
  */
 export const open_loot_box = (
   tx: Transaction,
   ctx: DoorCtx,
-  args: { kiosk: Resolvable; cap: Resolvable; box_item_id: string; box_template: Resolvable }
+  args: { kiosk: Resolvable; personal: Resolvable; box_item_id: string; box_template: Resolvable }
 ) =>
   tx.moveCall({
     target: `${ctx.pins.package}::api::open_loot_box`,
     arguments: [
       ctx.pin(tx, 'loot_registry', false),
       ctx.obj(tx, args.kiosk, true),
-      ctx.obj(tx, args.cap, false),
+      ctx.obj(tx, args.personal, false),
       ctx.pure.id(tx, args.box_item_id),
       ctx.obj(tx, args.box_template, false),
       ctx.pin(tx, 'item_protected_policy', false),
@@ -1111,7 +1111,7 @@ export const open_loot_box = (
  * @arg rolled_template — &ItemTemplate
  * @arg existing — Option<ID>
  * @arg kiosk — &mut Kiosk
- * @arg cap — &KioskOwnerCap
+ * @arg personal — &PersonalKioskCap
  */
 export const claim_loot = (
   tx: Transaction,
@@ -1121,7 +1121,7 @@ export const claim_loot = (
     rolled_template: Resolvable
     existing: string | null | undefined
     kiosk: Resolvable
-    cap: Resolvable
+    personal: Resolvable
   }
 ) =>
   tx.moveCall({
@@ -1131,7 +1131,7 @@ export const claim_loot = (
       ctx.obj(tx, args.rolled_template, false),
       ctx.pure.option(tx, 'id', args.existing ?? null),
       ctx.obj(tx, args.kiosk, true),
-      ctx.obj(tx, args.cap, false),
+      ctx.obj(tx, args.personal, false),
       ctx.pin(tx, 'item_policy', false),
       tx.object.random(),
       ctx.pin(tx, 'version', false),
@@ -1268,7 +1268,7 @@ export const redeem_giftcard = (
  * `api::enter_dungeon` — TERMINAL (&Random): last command of its transaction.
  * @arg w — &World
  * @arg kiosk — &mut Kiosk
- * @arg cap — &KioskOwnerCap
+ * @arg personal — &PersonalKioskCap
  * @arg character_id — ID
  * @arg zx — u32
  * @arg zz — u32
@@ -1280,7 +1280,7 @@ export const enter_dungeon = (
   args: {
     w: Resolvable
     kiosk: Resolvable
-    cap: Resolvable
+    personal: Resolvable
     character_id: string
     zx: number
     zz: number
@@ -1292,7 +1292,7 @@ export const enter_dungeon = (
     arguments: [
       ctx.obj(tx, args.w, false),
       ctx.obj(tx, args.kiosk, true),
-      ctx.obj(tx, args.cap, false),
+      ctx.obj(tx, args.personal, false),
       ctx.pure.id(tx, args.character_id),
       ctx.pure.u32(tx, args.zx),
       ctx.pure.u32(tx, args.zz),
@@ -1389,12 +1389,12 @@ export const join_dungeon_room_grouped = (
  * @arg f — &mut Fight
  * @arg fighter_idx — u64
  * @arg kiosk — &mut Kiosk
- * @arg cap — &KioskOwnerCap
+ * @arg personal — &PersonalKioskCap
  */
 export const settle_dungeon_room = (
   tx: Transaction,
   ctx: DoorCtx,
-  args: { w: Resolvable; f: Resolvable; fighter_idx: bigint | number | string; kiosk: Resolvable; cap: Resolvable }
+  args: { w: Resolvable; f: Resolvable; fighter_idx: bigint | number | string; kiosk: Resolvable; personal: Resolvable }
 ) =>
   tx.moveCall({
     target: `${ctx.pins.package}::api::settle_dungeon_room`,
@@ -1403,7 +1403,7 @@ export const settle_dungeon_room = (
       ctx.obj(tx, args.f, true),
       ctx.pure.u64(tx, args.fighter_idx),
       ctx.obj(tx, args.kiosk, true),
-      ctx.obj(tx, args.cap, false),
+      ctx.obj(tx, args.personal, false),
       ctx.pin(tx, 'character_policy', false),
       tx.object.random(),
       ctx.pin(tx, 'version', false),
@@ -1466,7 +1466,7 @@ export const abandon_dungeon_run = (
  * @arg level_max — u16
  * @arg access — u8
  * @arg kiosk — &mut Kiosk
- * @arg cap — &KioskOwnerCap
+ * @arg personal — &PersonalKioskCap
  * @arg character_id — ID
  */
 export const create_kolizeum = (
@@ -1479,7 +1479,7 @@ export const create_kolizeum = (
     level_max: number
     access: number
     kiosk: Resolvable
-    cap: Resolvable
+    personal: Resolvable
     character_id: string
   }
 ) =>
@@ -1493,7 +1493,7 @@ export const create_kolizeum = (
       ctx.pure.u8(tx, args.access),
       ctx.pin(tx, 'character_protected_policy', false),
       ctx.obj(tx, args.kiosk, true),
-      ctx.obj(tx, args.cap, false),
+      ctx.obj(tx, args.personal, false),
       ctx.pure.id(tx, args.character_id),
       tx.object.random(),
       ctx.pin(tx, 'version', false),
@@ -1510,7 +1510,7 @@ export const create_kolizeum = (
  * @arg access — u8
  * @arg list — &FriendList
  * @arg kiosk — &mut Kiosk
- * @arg cap — &KioskOwnerCap
+ * @arg personal — &PersonalKioskCap
  * @arg character_id — ID
  */
 export const create_kolizeum_friends = (
@@ -1524,7 +1524,7 @@ export const create_kolizeum_friends = (
     access: number
     list: Resolvable
     kiosk: Resolvable
-    cap: Resolvable
+    personal: Resolvable
     character_id: string
   }
 ) =>
@@ -1539,7 +1539,7 @@ export const create_kolizeum_friends = (
       ctx.obj(tx, args.list, false),
       ctx.pin(tx, 'character_protected_policy', false),
       ctx.obj(tx, args.kiosk, true),
-      ctx.obj(tx, args.cap, false),
+      ctx.obj(tx, args.personal, false),
       ctx.pure.id(tx, args.character_id),
       tx.object.random(),
       ctx.pin(tx, 'version', false),
@@ -1609,12 +1609,18 @@ export const start_kolizeum = (tx: Transaction, ctx: DoorCtx, args: { lobby: Res
  * @arg f — &mut Fight
  * @arg fighter_idx — u64
  * @arg kiosk — &mut Kiosk
- * @arg cap — &KioskOwnerCap
+ * @arg personal — &PersonalKioskCap
  */
 export const settle_kolizeum = (
   tx: Transaction,
   ctx: DoorCtx,
-  args: { lobby: Resolvable; f: Resolvable; fighter_idx: bigint | number | string; kiosk: Resolvable; cap: Resolvable }
+  args: {
+    lobby: Resolvable
+    f: Resolvable
+    fighter_idx: bigint | number | string
+    kiosk: Resolvable
+    personal: Resolvable
+  }
 ) =>
   tx.moveCall({
     target: `${ctx.pins.package}::api::settle_kolizeum`,
@@ -1623,7 +1629,7 @@ export const settle_kolizeum = (
       ctx.obj(tx, args.f, true),
       ctx.pure.u64(tx, args.fighter_idx),
       ctx.obj(tx, args.kiosk, true),
-      ctx.obj(tx, args.cap, false),
+      ctx.obj(tx, args.personal, false),
       ctx.pin(tx, 'character_policy', false),
       tx.object.random(),
       ctx.pin(tx, 'version', false),
@@ -1881,7 +1887,7 @@ export const DOORS = {
     terminal: false,
   },
   join_world: { params: ['kiosk', 'cap', 'character_id', 'world'], terminal: false },
-  search_zone: { params: ['kiosk', 'cap', 'character_id', 'x', 'z', 'w'], terminal: true },
+  search_zone: { params: ['kiosk', 'personal', 'character_id', 'x', 'z', 'w'], terminal: true },
   raise_stat: { params: ['kiosk', 'cap', 'character_id', 'stat', 'amount'], terminal: false },
   raise_spell: { params: ['kiosk', 'cap', 'character_id', 'spell'], terminal: false },
   equip_item: { params: ['kiosk', 'cap', 'character_id', 'slot', 'item_id'], terminal: false },
@@ -1891,7 +1897,7 @@ export const DOORS = {
   engage_fight: { params: ['kiosk', 'cap', 'character_id', 'w', 'zx', 'zz', 'group_index', 'access'], terminal: false },
   add_fight_mob: { params: ['build', 'template'], terminal: false },
   launch_fight: { params: ['build'], terminal: false },
-  challenge_duel: { params: ['kiosk', 'cap', 'character_id', 'x', 'z', 'access'], terminal: true },
+  challenge_duel: { params: ['kiosk', 'personal', 'character_id', 'x', 'z', 'access'], terminal: true },
   join_fight: { params: ['f', 'kiosk', 'cap', 'character_id', 'team', 'access'], terminal: false },
   join_fight_grouped: { params: ['f', 'kiosk', 'cap', 'character_id', 'team', 'shared_party'], terminal: false },
   place_fighter: { params: ['f', 'fighter_idx', 'cell'], terminal: false },
@@ -1903,8 +1909,8 @@ export const DOORS = {
   end_fight_turn: { params: ['f'], terminal: true },
   crank_fight: { params: ['f'], terminal: true },
   forfeit_fight: { params: ['f', 'fighter_idx', 'kiosk', 'cap'], terminal: false },
-  settle_fight: { params: ['f', 'fighter_idx', 'kiosk', 'cap'], terminal: true },
-  claim_fight_drop: { params: ['f', 'fighter_idx', 'template', 'existing', 'kiosk', 'cap'], terminal: true },
+  settle_fight: { params: ['f', 'fighter_idx', 'kiosk', 'personal'], terminal: true },
+  claim_fight_drop: { params: ['f', 'fighter_idx', 'template', 'existing', 'kiosk', 'personal'], terminal: true },
   close_fight: { params: ['f'], terminal: false },
   create_party: { params: ['kiosk', 'cap', 'character_id'], terminal: false },
   party_invite: { params: ['p', 'kiosk', 'cap', 'leader_id', 'invited_character'], terminal: false },
@@ -1919,7 +1925,7 @@ export const DOORS = {
     params: [
       'w',
       'kiosk',
-      'cap',
+      'personal',
       'character_id',
       'zx',
       'zz',
@@ -1933,37 +1939,40 @@ export const DOORS = {
   },
   resolve_ambush: { params: ['kiosk', 'cap', 'character_id', 'protector_template'], terminal: false },
   craft: {
-    params: ['recipe', 'kiosk', 'cap', 'character_id', 'input_item_ids', 'output_template', 'existing'],
+    params: ['recipe', 'kiosk', 'personal', 'character_id', 'input_item_ids', 'output_template', 'existing'],
     terminal: true,
   },
-  scribe_rune: { params: ['kiosk', 'cap', 'character_id', 'gear_id', 'gear_template', 'rune_item_id'], terminal: true },
-  crush_gear: { params: ['kiosk', 'cap', 'gear_ids'], terminal: true },
+  scribe_rune: {
+    params: ['kiosk', 'personal', 'character_id', 'gear_id', 'gear_template', 'rune_item_id'],
+    terminal: true,
+  },
+  crush_gear: { params: ['kiosk', 'personal', 'gear_ids'], terminal: true },
   redeem_rune: { params: ['claim', 'template', 'existing', 'kiosk', 'cap'], terminal: false },
   discard_crush_claim: { params: ['claim'], terminal: false },
-  open_loot_box: { params: ['kiosk', 'cap', 'box_item_id', 'box_template'], terminal: true },
-  claim_loot: { params: ['claim', 'rolled_template', 'existing', 'kiosk', 'cap'], terminal: true },
+  open_loot_box: { params: ['kiosk', 'personal', 'box_item_id', 'box_template'], terminal: true },
+  claim_loot: { params: ['claim', 'rolled_template', 'existing', 'kiosk', 'personal'], terminal: true },
   burn_item: { params: ['kiosk', 'cap', 'item_id', 'amount'], terminal: false },
   buy: { params: ['sale', 'template', 'quantity', 'payment', 'existing', 'kiosk', 'cap'], terminal: false },
   claim_airdrop: { params: ['drop', 'template', 'existing', 'kiosk', 'cap'], terminal: false },
   redeem_giftcard: { params: ['card', 'template', 'existing', 'kiosk', 'cap'], terminal: false },
-  enter_dungeon: { params: ['w', 'kiosk', 'cap', 'character_id', 'zx', 'zz', 'key_id'], terminal: true },
+  enter_dungeon: { params: ['w', 'kiosk', 'personal', 'character_id', 'zx', 'zz', 'key_id'], terminal: true },
   engage_dungeon_room: { params: ['w', 'kiosk', 'cap', 'character_id', 'access'], terminal: false },
   join_dungeon_room: { params: ['f', 'kiosk', 'cap', 'character_id'], terminal: false },
   join_dungeon_room_grouped: { params: ['f', 'kiosk', 'cap', 'character_id', 'shared_party'], terminal: false },
-  settle_dungeon_room: { params: ['w', 'f', 'fighter_idx', 'kiosk', 'cap'], terminal: true },
+  settle_dungeon_room: { params: ['w', 'f', 'fighter_idx', 'kiosk', 'personal'], terminal: true },
   give_up_dungeon_room: { params: ['f', 'fighter_idx', 'kiosk', 'cap'], terminal: false },
   abandon_dungeon_run: { params: ['kiosk', 'cap', 'character_id'], terminal: false },
   create_kolizeum: {
-    params: ['pledge', 'format', 'level_min', 'level_max', 'access', 'kiosk', 'cap', 'character_id'],
+    params: ['pledge', 'format', 'level_min', 'level_max', 'access', 'kiosk', 'personal', 'character_id'],
     terminal: true,
   },
   create_kolizeum_friends: {
-    params: ['pledge', 'format', 'level_min', 'level_max', 'access', 'list', 'kiosk', 'cap', 'character_id'],
+    params: ['pledge', 'format', 'level_min', 'level_max', 'access', 'list', 'kiosk', 'personal', 'character_id'],
     terminal: true,
   },
   join_kolizeum: { params: ['lobby', 'f', 'pledge', 'side', 'kiosk', 'cap', 'character_id'], terminal: false },
   start_kolizeum: { params: ['lobby', 'f'], terminal: true },
-  settle_kolizeum: { params: ['lobby', 'f', 'fighter_idx', 'kiosk', 'cap'], terminal: true },
+  settle_kolizeum: { params: ['lobby', 'f', 'fighter_idx', 'kiosk', 'personal'], terminal: true },
   exit_kolizeum: { params: ['lobby', 'f', 'fighter_idx', 'kiosk', 'cap'], terminal: false },
   forfeit_kolizeum: { params: ['f', 'fighter_idx', 'kiosk', 'cap'], terminal: false },
   sweep_kolizeum: { params: ['lobby'], terminal: false },

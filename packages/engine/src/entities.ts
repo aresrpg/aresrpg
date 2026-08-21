@@ -13,8 +13,10 @@ import {
   type AnimationAction,
   type AnimationClip,
   type Material,
+  type Mesh,
   type Object3D,
   type Scene,
+  type SkinnedMesh,
 } from 'three'
 
 import { create_entity_model, type EntityModel } from './entity_model.ts'
@@ -534,6 +536,30 @@ export const create_entity_layer = ({
         root.position.copy(destination)
       }
       return true
+    },
+    // The LIVE crown: bounds recomputed from the current bone pose (SkinnedMesh.computeBoundingBox
+    // skins the vertices), so a label riding this point tracks the animated body every frame —
+    // the load-pose anchor_offset drifts as soon as a clip moves the mesh. Per-frame cost is one
+    // vertex sweep; callers use it for the FEW labeled entities, never in bulk.
+    live_crown: (id: string): Vector3 | null => {
+      const root = entities.get(id)?.object
+      if (!root?.visible) return null
+      root.updateWorldMatrix(true, true)
+      const bounds = new Box3()
+      root.traverse((node) => {
+        const skinned = node as SkinnedMesh
+        if (skinned.isSkinnedMesh) {
+          skinned.computeBoundingBox()
+          bounds.union(skinned.boundingBox.clone().applyMatrix4(skinned.matrixWorld))
+          return
+        }
+        const mesh = node as Mesh
+        if (!mesh.isMesh) return
+        if (!mesh.geometry.boundingBox) mesh.geometry.computeBoundingBox()
+        if (mesh.geometry.boundingBox) bounds.union(mesh.geometry.boundingBox.clone().applyMatrix4(mesh.matrixWorld))
+      })
+      if (bounds.isEmpty()) return null
+      return new Vector3((bounds.min.x + bounds.max.x) / 2, bounds.max.y, (bounds.min.z + bounds.max.z) / 2)
     },
     world_anchor: (id: string): Vector3 | null => {
       const entity = entities.get(id)

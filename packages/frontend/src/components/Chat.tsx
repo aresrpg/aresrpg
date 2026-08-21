@@ -50,7 +50,14 @@ export const Chat = ({
   self_name,
 }: Readonly<{ text: ChatText; names?: LiveNames; self_name?: string }>) => {
   const lines = useAppStore((state) => state.chat.lines)
+  const players = useAppStore((state) => state.world.players)
   const log = useRef<HTMLDivElement>(null)
+  // a spoken NAME that maps to a nearby player opens the same context menu as their body —
+  // minus the duel, which needs the two of them standing together (owner 2026-08-21)
+  const open_player_menu = (name: string, x: number, y: number): void => {
+    const row = Object.values(players).find((player) => player.name === name)
+    if (row) dispatch_app({ type: 'world/player_menu', menu: { character_id: row.character_id, x, y, source: 'chat' } })
+  }
   // checked = visible in the merged log; all channels checked by default
   const [enabled, set_enabled] = useState<ReadonlySet<ChatChannel>>(
     () => new Set(CHANNELS.map(({ channel }) => channel))
@@ -114,11 +121,21 @@ export const Chat = ({
       <div className="chat__lines" ref={log} role="log">
         {rendered.map((line) => (
           <p className={`chat__line chat__line--${line.channel}`} key={line.id}>
-            {line.tokens.map((token, index) => (
-              <span className={`chat-tok--${token.cls}`} key={index}>
-                {token.text}
-              </span>
-            ))}
+            {line.tokens.map((token, index) =>
+              token.cls === 'name' ? (
+                <span
+                  className={`chat-tok--${token.cls} chat-tok--clickable`}
+                  key={index}
+                  onClick={(event) => open_player_menu(token.text, event.clientX, event.clientY)}
+                >
+                  {token.text}
+                </span>
+              ) : (
+                <span className={`chat-tok--${token.cls}`} key={index}>
+                  {token.text}
+                </span>
+              )
+            )}
           </p>
         ))}
       </div>

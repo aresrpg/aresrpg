@@ -33,6 +33,7 @@ use aresrpg::{
   zone,
 };
 use aresrpg_math::world_map;
+use kiosk::personal_kiosk::{Self, PersonalKioskCap};
 use std::string::String;
 use sui::{
   clock::Clock,
@@ -105,7 +106,7 @@ public fun join_world(
 /// walk is proven, then fresh entropy draws what lives there. ENTRY: `&Random` law.
 entry fun search_zone(
   kiosk: &mut Kiosk,
-  cap: &KioskOwnerCap,
+  personal: &PersonalKioskCap,
   character_id: ID,
   x: u32,
   z: u32,
@@ -115,6 +116,8 @@ entry fun search_zone(
   clock: &Clock,
   ctx: &mut TxContext,
 ) {
+  // the packed cap unpacks HERE — a &Random door admits no PTB-side borrow (Sui law)
+  let cap = personal_kiosk::borrow(personal);
   version.assert_latest();
   let mut gen = r.new_generator(ctx);
   let chr: &mut Character = kiosk.borrow_mut(cap, character_id);
@@ -261,7 +264,7 @@ public fun launch_fight(build: FightBuild, clock: &Clock, ctx: &mut TxContext) {
 /// law (the board rolls fresh). Duels never touch persistent hp, xp, or loot.
 entry fun challenge_duel(
   kiosk: &mut Kiosk,
-  cap: &KioskOwnerCap,
+  personal: &PersonalKioskCap,
   character_id: ID,
   x: u32,
   z: u32,
@@ -272,6 +275,8 @@ entry fun challenge_duel(
   clock: &Clock,
   ctx: &mut TxContext,
 ) {
+  // the packed cap unpacks HERE — a &Random door admits no PTB-side borrow (Sui law)
+  let cap = personal_kiosk::borrow(personal);
   version.assert_latest();
   let mut gen = r.new_generator(ctx);
   fight::challenge(protected, kiosk, cap, character_id, x, z, access, &mut gen, clock, ctx);
@@ -402,13 +407,15 @@ entry fun settle_fight(
   f: &mut Fight,
   fighter_idx: u64,
   kiosk: &mut Kiosk,
-  cap: &KioskOwnerCap,
+  personal: &PersonalKioskCap,
   policy: &TransferPolicy<Character>,
   r: &Random,
   version: &Version,
   clock: &Clock,
   ctx: &mut TxContext,
 ) {
+  // the packed cap unpacks HERE — a &Random door admits no PTB-side borrow (Sui law)
+  let cap = personal_kiosk::borrow(personal);
   version.assert_latest();
   assert!(!fight::is_managed(f), EManagedFight); // dungeon rooms settle via the dungeon door
   let mut gen = r.new_generator(ctx);
@@ -424,12 +431,14 @@ entry fun claim_fight_drop(
   template: &ItemTemplate,
   existing: Option<ID>,
   kiosk: &mut Kiosk,
-  cap: &KioskOwnerCap,
+  personal: &PersonalKioskCap,
   item_policy: &TransferPolicy<Item>,
   r: &Random,
   version: &Version,
   ctx: &mut TxContext,
 ) {
+  // the packed cap unpacks HERE — a &Random door admits no PTB-side borrow (Sui law)
+  let cap = personal_kiosk::borrow(personal);
   version.assert_latest();
   let mut gen = r.new_generator(ctx);
   fight::claim_drop(f, fighter_idx, template, existing, kiosk, cap, item_policy, &mut gen, ctx);
@@ -520,7 +529,7 @@ public fun use_consumable(
 entry fun gather(
   w: &mut World,
   kiosk: &mut Kiosk,
-  cap: &KioskOwnerCap,
+  personal: &PersonalKioskCap,
   character_id: ID,
   zx: u32,
   zz: u32,
@@ -535,6 +544,8 @@ entry fun gather(
   clock: &Clock,
   ctx: &mut TxContext,
 ) {
+  // the packed cap unpacks HERE — a &Random door admits no PTB-side borrow (Sui law)
+  let cap = personal_kiosk::borrow(personal);
   version.assert_latest();
   let mut gen = r.new_generator(ctx);
   gathering::gather(
@@ -588,7 +599,7 @@ public fun resolve_ambush(
 entry fun craft(
   recipe: &Recipe,
   kiosk: &mut Kiosk,
-  cap: &KioskOwnerCap,
+  personal: &PersonalKioskCap,
   character_id: ID,
   input_item_ids: vector<ID>,
   output_template: &ItemTemplate,
@@ -599,6 +610,8 @@ entry fun craft(
   version: &Version,
   ctx: &mut TxContext,
 ) {
+  // the packed cap unpacks HERE — a &Random door admits no PTB-side borrow (Sui law)
+  let cap = personal_kiosk::borrow(personal);
   version.assert_latest();
   let mut gen = r.new_generator(ctx);
   crafting::craft(
@@ -622,7 +635,7 @@ entry fun craft(
 /// the forgery job that must be ≥ 70). Terminal `&Random`.
 entry fun scribe_rune(
   kiosk: &mut Kiosk,
-  cap: &KioskOwnerCap,
+  personal: &PersonalKioskCap,
   character_id: ID,
   gear_id: ID,
   gear_template: &ItemTemplate,
@@ -632,6 +645,8 @@ entry fun scribe_rune(
   version: &Version,
   ctx: &mut TxContext,
 ) {
+  // the packed cap unpacks HERE — a &Random door admits no PTB-side borrow (Sui law)
+  let cap = personal_kiosk::borrow(personal);
   version.assert_latest();
   let mut gen = r.new_generator(ctx);
   forgemagie::scribe(
@@ -652,13 +667,15 @@ entry fun scribe_rune(
 /// can't be composed + inspected + aborted for a free re-roll).
 entry fun crush_gear(
   kiosk: &mut Kiosk,
-  cap: &KioskOwnerCap,
+  personal: &PersonalKioskCap,
   gear_ids: vector<ID>,
   protected_item: &AresRPG_TransferPolicy<Item>,
   r: &Random,
   version: &Version,
   ctx: &mut TxContext,
 ) {
+  // the packed cap unpacks HERE — a &Random door admits no PTB-side borrow (Sui law)
+  let cap = personal_kiosk::borrow(personal);
   version.assert_latest();
   let mut gen = r.new_generator(ctx);
   forgemagie::crush(kiosk, cap, gear_ids, protected_item, &mut gen, ctx);
@@ -690,7 +707,7 @@ public fun discard_crush_claim(claim: CrushClaim, version: &Version) {
 entry fun open_loot_box(
   registry: &LootRegistry,
   kiosk: &mut Kiosk,
-  cap: &KioskOwnerCap,
+  personal: &PersonalKioskCap,
   box_item_id: ID,
   box_template: &ItemTemplate,
   protected_item: &AresRPG_TransferPolicy<Item>,
@@ -698,6 +715,8 @@ entry fun open_loot_box(
   version: &Version,
   ctx: &mut TxContext,
 ) {
+  // the packed cap unpacks HERE — a &Random door admits no PTB-side borrow (Sui law)
+  let cap = personal_kiosk::borrow(personal);
   version.assert_latest();
   let mut gen = r.new_generator(ctx);
   loot_box::open_box(registry, kiosk, cap, box_item_id, box_template, protected_item, &mut gen, ctx);
@@ -710,12 +729,14 @@ entry fun claim_loot(
   rolled_template: &ItemTemplate,
   existing: Option<ID>,
   kiosk: &mut Kiosk,
-  cap: &KioskOwnerCap,
+  personal: &PersonalKioskCap,
   item_policy: &TransferPolicy<Item>,
   r: &Random,
   version: &Version,
   ctx: &mut TxContext,
 ) {
+  // the packed cap unpacks HERE — a &Random door admits no PTB-side borrow (Sui law)
+  let cap = personal_kiosk::borrow(personal);
   version.assert_latest();
   let mut gen = r.new_generator(ctx);
   loot_box::claim_loot(claim, rolled_template, existing, kiosk, cap, item_policy, &mut gen, ctx);
@@ -792,7 +813,7 @@ public fun redeem_giftcard(
 entry fun enter_dungeon(
   w: &World,
   kiosk: &mut Kiosk,
-  cap: &KioskOwnerCap,
+  personal: &PersonalKioskCap,
   character_id: ID,
   zx: u32,
   zz: u32,
@@ -803,6 +824,8 @@ entry fun enter_dungeon(
   clock: &Clock,
   ctx: &mut TxContext,
 ) {
+  // the packed cap unpacks HERE — a &Random door admits no PTB-side borrow (Sui law)
+  let cap = personal_kiosk::borrow(personal);
   version.assert_latest();
   // the run's board seed is drawn HERE from Sui randomness (terminal) — the room boards derive
   // from it, so no caller can enumerate a favorable dungeon layout.
@@ -865,13 +888,15 @@ entry fun settle_dungeon_room(
   f: &mut Fight,
   fighter_idx: u64,
   kiosk: &mut Kiosk,
-  cap: &KioskOwnerCap,
+  personal: &PersonalKioskCap,
   policy: &TransferPolicy<Character>,
   r: &Random,
   version: &Version,
   clock: &Clock,
   ctx: &mut TxContext,
 ) {
+  // the packed cap unpacks HERE — a &Random door admits no PTB-side borrow (Sui law)
+  let cap = personal_kiosk::borrow(personal);
   version.assert_latest();
   let mut gen = r.new_generator(ctx);
   dungeon::settle_room(w, f, fighter_idx, kiosk, cap, policy, &mut gen, clock, ctx);
@@ -915,13 +940,15 @@ entry fun create_kolizeum(
   access: u8,
   protected: &AresRPG_TransferPolicy<Character>,
   kiosk: &mut Kiosk,
-  cap: &KioskOwnerCap,
+  personal: &PersonalKioskCap,
   character_id: ID,
   r: &Random,
   version: &Version,
   clock: &Clock,
   ctx: &mut TxContext,
 ) {
+  // the packed cap unpacks HERE — a &Random door admits no PTB-side borrow (Sui law)
+  let cap = personal_kiosk::borrow(personal);
   version.assert_latest();
   let mut gen = r.new_generator(ctx);
   kolizeum::create(pledge, format, level_min, level_max, access, option::none(), protected, kiosk, cap, character_id, gen.generate_u64(), clock, ctx);
@@ -937,13 +964,15 @@ entry fun create_kolizeum_friends(
   list: &FriendList,
   protected: &AresRPG_TransferPolicy<Character>,
   kiosk: &mut Kiosk,
-  cap: &KioskOwnerCap,
+  personal: &PersonalKioskCap,
   character_id: ID,
   r: &Random,
   version: &Version,
   clock: &Clock,
   ctx: &mut TxContext,
 ) {
+  // the packed cap unpacks HERE — a &Random door admits no PTB-side borrow (Sui law)
+  let cap = personal_kiosk::borrow(personal);
   version.assert_latest();
   assert!(friends::owner(list) == ctx.sender(), ENotOwnList); // snapshot only your OWN list
   let mut gen = r.new_generator(ctx);
@@ -982,13 +1011,15 @@ entry fun settle_kolizeum(
   f: &mut Fight,
   fighter_idx: u64,
   kiosk: &mut Kiosk,
-  cap: &KioskOwnerCap,
+  personal: &PersonalKioskCap,
   policy: &TransferPolicy<Character>,
   r: &Random,
   version: &Version,
   clock: &Clock,
   ctx: &mut TxContext,
 ) {
+  // the packed cap unpacks HERE — a &Random door admits no PTB-side borrow (Sui law)
+  let cap = personal_kiosk::borrow(personal);
   version.assert_latest();
   let mut gen = r.new_generator(ctx);
   kolizeum::settle(lobby, f, fighter_idx, kiosk, cap, policy, &mut gen, clock, ctx);

@@ -5,7 +5,9 @@ import { PerspectiveCamera, Scene, SRGBColorSpace, WebGLRenderer } from 'three'
 import { quality_pixel_ratio } from './quality.ts'
 import { create_hack_presentation } from './hack_presentation.ts'
 import { create_fight_board_layer } from './fight_board.ts'
+import { create_fight_sword_layer } from './fight_swords.ts'
 import { create_entity_layer } from './entities.ts'
+import { create_entity_label_layer } from './entity_labels.ts'
 import { create_fight_presentation } from './fight_presentation.ts'
 import { create_transient_effects } from './transient_effects.ts'
 import { project_screen_anchor } from './screen_projection.ts'
@@ -23,9 +25,11 @@ export const create_grid_fallback = (
   const camera = new PerspectiveCamera(70, 1, 0.1, 3000)
   const fight_board = create_fight_board_layer({ scene, camera, canvas })
   const entities = create_entity_layer({ scene })
+  const entity_labels = create_entity_label_layer({ canvas, scene, camera, entities })
   const effects = create_transient_effects({ scene, entities })
   const fight_presentation = create_fight_presentation({ entities, vfx: effects })
   const presentation = create_hack_presentation(scene)
+  let fight_swords: ReturnType<typeof create_fight_sword_layer> | null = null
   let quality = initial_quality
   let flattened = false
   let previous_frame = performance.now()
@@ -51,6 +55,7 @@ export const create_grid_fallback = (
       render_pixel_ratio = pixel_ratio
       renderer.setPixelRatio(pixel_ratio)
       renderer.setSize(width, height, false)
+      entity_labels.resize(width, height)
       camera.aspect = width / height
       camera.updateProjectionMatrix()
     }
@@ -58,7 +63,9 @@ export const create_grid_fallback = (
     fight_board.tick(now)
     entities.tick(now)
     effects.tick(now)
+    fight_swords?.tick(now)
     renderer.render(scene, camera)
+    entity_labels.render()
   }
 
   return Object.freeze({
@@ -85,6 +92,11 @@ export const create_grid_fallback = (
       if (ground_y?.kind === 'world') presentation.set_ground_y(ground_y.position[1])
       entities.set(next)
     },
+    set_fight_swords: (url, markers) => {
+      fight_swords ??= create_fight_sword_layer({ scene, url })
+      fight_swords.set_markers(markers)
+    },
+    set_fight_sword_label: (id, element) => fight_swords?.set_label(id, element),
     animate_entity: entities.animate,
     play_fight_cue: fight_presentation.play,
     play_jump_puff: effects.play_jump_puff,
@@ -92,6 +104,7 @@ export const create_grid_fallback = (
       const anchor = entities.world_anchor(id)
       return anchor ? project_screen_anchor(anchor, camera, canvas.getBoundingClientRect()) : null
     },
+    set_entity_label: entity_labels.set,
     entity_height: entities.entity_height,
     upsert_fight_blob: fight_board.upsert_blob,
     remove_fight_blob: fight_board.remove_blob,
@@ -112,6 +125,7 @@ export const create_grid_fallback = (
     }),
     flattened: () => flattened,
     dispose: () => {
+      entity_labels.dispose()
       fight_board.dispose()
       effects.dispose()
       entities.dispose()

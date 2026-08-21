@@ -1,0 +1,727 @@
+/* SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available */
+/* © 2026 Sceat — All rights reserved. See LICENSE. */
+/*
+ * Jobs drawer — master/detail. LEFT: a job-list rail grouped by category (selectable rows + level
+ * chip). RIGHT: the selected job's detail (header, XP bar, stacked Resources / Recipes sections). Ported in
+ * structure from the aresrpg companion encyclopedia jobs tab, restyled to the house tokens: frosted
+ * glass, ONE ice-blue accent (selection + xp fill + section markers), hairline dividers, mono tabular
+ * numbers, no left-accent rails on cards, no glow soup. Reads tokens only.
+ */
+
+.jobs {
+  display: grid;
+  grid-template-columns: 248px 1fr;
+  gap: var(--s-4);
+  /* T72: fill the tab body + stretch the columns so the PANELS own the scroll (one owner), not the page —
+     kills the double scrollbar (was: panels scrolled AND the page overflowed past the viewport-magic cap). */
+  align-items: stretch;
+  min-height: 0;
+  height: 100%;
+}
+
+/* ── LEFT: job list rail ───────────────────────────────────────────────────── */
+.jobs__list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+  border-right: 1px solid var(--hair);
+  /* T74: symmetric L/R padding (lead: left was 0; match the right, consistent ~16px across both panels). */
+  padding-left: var(--s-4);
+  padding-right: var(--s-4);
+  /* T58-B: contain the rail — scroll WITHIN the panel, never off the page bottom. */
+  min-height: 0;
+  max-height: 100%;
+  overflow-y: auto;
+}
+
+.jobs__list-group {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.jobs__list-head {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  padding: var(--s-1) 0 var(--s-2);
+  font-size: 0.6rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--fg-faint);
+}
+
+.jobs__list-glyph {
+  width: 13px;
+  height: 13px;
+  color: var(--accent);
+  display: inline-flex;
+  opacity: 0.7;
+}
+
+.jobs__list-glyph .jobs__glyph {
+  width: 13px;
+  height: 13px;
+}
+
+.jobs__list-row {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  width: 100%;
+  text-align: left;
+  padding: var(--s-2);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--r-2);
+  cursor: pointer;
+  transition:
+    background var(--dur-1) var(--ease),
+    border-color var(--dur-1) var(--ease);
+}
+
+.jobs__list-row:hover {
+  background: var(--surface-2);
+}
+
+.jobs__list-row.is-selected {
+  background: var(--accent-dim);
+  border-color: var(--accent);
+}
+
+.jobs__list-id {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+  flex: 1;
+}
+
+.jobs__list-name {
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  color: var(--fg);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.jobs__list-sub {
+  font-size: 0.62rem;
+  color: var(--fg-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.jobs__list-lvl {
+  flex: none;
+  min-width: 22px;
+  text-align: center;
+  font-size: 0.66rem;
+  color: var(--fg-muted);
+  background: rgba(0, 0, 0, 0.28);
+  border: 1px solid var(--hair);
+  border-radius: var(--r-1);
+  padding: 1px 5px;
+}
+
+.jobs__list-row.is-selected .jobs__list-lvl {
+  color: var(--fg);
+  border-color: var(--accent);
+}
+
+.jobs__list-tag {
+  flex: none;
+  font-family: var(--font-mono);
+  font-size: 0.52rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--accent-ink);
+  background: var(--accent);
+  border-radius: var(--r-1);
+  padding: 2px 5px;
+}
+
+/* ── RIGHT: detail panel ───────────────────────────────────────────────────── */
+.jobs__detail {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+  min-width: 0;
+  /* T74: symmetric L/R padding so content + the inner scrollbar never sit flush to either panel edge
+     (a reported "missing padding on the right"; lead: match left, consistent ~16px). The scroll now lives
+     in the child panes (.jobs__browse / .jobs__item-detail) — the header + XP stay pinned while the
+     browse + detail scroll independently (encyclopedia master/detail), so this column never scrolls. */
+  padding-left: var(--s-4);
+  padding-right: var(--s-4);
+  /* T58-B/T72: bound the height so the inner panes own the scroll, never the page. */
+  min-height: 0;
+  max-height: 100%;
+  overflow: hidden;
+}
+
+/* ── browse / item-detail split (encyclopedia master-detail) ──────── */
+.jobs__browse-area {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--s-4);
+  flex: 1;
+  min-height: 0;
+  /* T74: force the grid to FILL the detail column's width — a flex item that's also a grid container
+     can otherwise size to its content (max-content) instead of stretching, leaving the reclaimed roster
+     width as dead whitespace and pinning the table column narrow. width:100% makes the browse 1fr column
+     actually claim the freed space so the resource/recipe table shows full names + YIELD + XP. */
+  width: 100%;
+  min-width: 0;
+}
+/* item selected -> the browse collapses to a narrower column + the detail opens on the right. */
+.jobs__browse-area.has-detail {
+  grid-template-columns: minmax(0, 1fr) minmax(300px, 360px);
+}
+.jobs__browse {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+  min-width: 0;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.jobs__detail-head {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+}
+
+.jobs__icon {
+  width: 40px;
+  height: 40px;
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--hair);
+  border-radius: var(--r-2);
+  background: rgba(0, 0, 0, 0.22);
+  color: var(--accent);
+}
+
+.jobs__glyph {
+  width: 22px;
+  height: 22px;
+}
+
+.jobs__detail-id {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+  flex: 1;
+}
+
+.jobs__detail-title-row {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+}
+
+.jobs__detail-name {
+  font-size: 1.05rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  color: var(--fg);
+}
+
+.jobs__detail-sub {
+  font-size: 0.7rem;
+  color: var(--fg-muted);
+}
+
+.jobs__tool {
+  color: var(--fg);
+}
+
+.jobs__detail-lvl {
+  flex: none;
+  align-self: flex-start;
+  font-size: 0.78rem;
+  color: var(--fg-muted);
+  white-space: nowrap;
+}
+
+/* xp bar */
+.jobs__xp {
+  position: relative;
+  height: 16px;
+  border-radius: var(--r-1);
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid var(--hair);
+  overflow: hidden;
+}
+
+.jobs__xp-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent), var(--accent-strong));
+  transition: width var(--dur-2) var(--ease);
+}
+
+.jobs__xp-num {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.58rem;
+  color: var(--fg);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.7);
+  pointer-events: none;
+}
+
+/* gather affordance — targets the selected world node (Wave GATHER) */
+.jobs__gather {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  min-height: 30px;
+  padding: var(--s-2) var(--s-3);
+  border: 1px solid var(--hair);
+  border-radius: var(--r-2);
+  background: var(--accent-dim);
+}
+.jobs__gather.is-active {
+  flex-direction: column;
+  align-items: stretch;
+  gap: var(--s-1);
+}
+.jobs__gather-btn {
+  flex: 0 0 auto;
+}
+.jobs__gather-label {
+  font-size: 0.62rem;
+  color: var(--fg);
+}
+.jobs__gather-hint {
+  font-size: 0.6rem;
+  color: var(--fg-muted);
+}
+.jobs__gather-bar {
+  position: relative;
+  height: 8px;
+  border-radius: var(--r-1);
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid var(--hair);
+  overflow: hidden;
+}
+.jobs__gather-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent), var(--accent-strong));
+  transition: width var(--dur-2) var(--ease);
+}
+
+/* stacked section headings — the retired active-tab marker becomes each section's accent marker */
+.jobs__section-head {
+  display: flex;
+  border-bottom: 1px solid var(--hair);
+}
+
+.jobs__section-head > span {
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--fg);
+  border-bottom: 2px solid var(--accent);
+  padding: var(--s-1) 0 var(--s-2);
+  margin-bottom: -1px;
+}
+
+/* ── resources table ───────────────────────────────────────────────────────── */
+.jobs__table {
+  display: flex;
+  flex-direction: column;
+}
+
+.jobs__table-head,
+.jobs__table-row {
+  display: grid;
+  grid-template-columns: 46px 58px 1fr 70px 56px;
+  align-items: center;
+  gap: var(--s-2);
+  padding: var(--s-2);
+}
+
+.jobs__table-head {
+  font-size: 0.58rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--fg-faint);
+  border-bottom: 1px solid var(--hair);
+}
+
+/* rows are buttons (click -> the right-section item detail) — reset native chrome */
+.jobs__table-row {
+  width: 100%;
+  border: none;
+  border-bottom: 1px solid var(--hair);
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background var(--dur-1) var(--ease);
+}
+
+.jobs__table-row:hover {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.jobs__table-row:last-child {
+  border-bottom: none;
+}
+
+.jobs__table-row.is-locked {
+  opacity: 0.42;
+}
+
+/* T74: mark the open item so the selection stays visible + switchable while the detail pane is open. */
+.jobs__table-row.is-selected {
+  background: var(--accent-dim);
+}
+
+.jobs__col-tier {
+  color: var(--accent);
+  font-size: 0.72rem;
+}
+
+.jobs__col-req {
+  color: var(--fg-muted);
+  font-size: 0.72rem;
+}
+
+.jobs__col-name {
+  display: flex;
+  align-items: center;
+  gap: var(--s-1);
+  color: var(--fg);
+  font-size: 0.82rem;
+  min-width: 0;
+}
+
+.jobs__col-yield {
+  text-align: right;
+  font-size: 0.72rem;
+  color: var(--accent);
+}
+
+.jobs__col-xp {
+  text-align: right;
+  font-size: 0.72rem;
+  color: var(--good);
+}
+
+.jobs__table-row.is-locked .jobs__col-xp,
+.jobs__table-row.is-locked .jobs__col-yield {
+  color: var(--fg-faint);
+}
+
+/* ── recipes grid ──────────────────────────────────────────────────────────── */
+.jobs__recipes {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-4);
+}
+
+.jobs__recipe-block {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+}
+
+.jobs__recipe-block-head {
+  font-size: 0.6rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--fg-muted);
+}
+
+.jobs__recipe-block-head.is-locked {
+  color: var(--fg-faint);
+}
+
+.jobs__recipe-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(204px, 1fr));
+  gap: var(--s-2);
+}
+
+/* recipe chip — clickable; item icon + name/meta + a small quality DOT (NO left-accent rail). */
+.jobs__recipe {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  width: 100%;
+  text-align: left;
+  padding: var(--s-2);
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid var(--hair);
+  border-radius: var(--r-1);
+  min-width: 0;
+  cursor: pointer;
+  transition:
+    background var(--dur-1) var(--ease),
+    border-color var(--dur-1) var(--ease);
+}
+
+.jobs__recipe:hover {
+  background: var(--surface-2);
+  border-color: color-mix(in srgb, var(--accent) 36%, transparent);
+}
+
+.jobs__recipe.is-locked {
+  opacity: 0.42;
+}
+
+/* T74: the open recipe stays highlighted in the grid while its detail shows on the right. */
+.jobs__recipe.is-selected {
+  background: var(--accent-dim);
+  border-color: var(--accent);
+}
+
+.jobs__recipe-id {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  flex: 1;
+}
+
+.jobs__recipe-name {
+  font-size: 0.76rem;
+  color: var(--fg);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.jobs__recipe-meta {
+  font-size: 0.6rem;
+  color: var(--fg-muted);
+  text-transform: capitalize;
+}
+
+/* NO QUALITY TIERS: the per-tier recipe dot + its q-* ramp died with the concept. */
+
+.jobs__recipe-empty {
+  font-size: 0.74rem;
+  color: var(--fg-muted);
+  font-style: italic;
+  padding: var(--s-2) 0;
+}
+
+/* ── item icon (real CDN art, glyph fallback) ──────────────────────────────── */
+.jobs__item-img {
+  flex: none;
+  object-fit: contain;
+  image-rendering: pixelated;
+  border-radius: var(--r-1);
+}
+
+.jobs__item-glyph {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--r-1);
+  background: rgba(0, 0, 0, 0.24);
+  border: 1px solid var(--hair);
+  color: var(--steel);
+}
+.jobs__item-glyph svg {
+  width: 60%;
+  height: 60%;
+}
+
+/* ── item detail (RIGHT pane of the browse split) — the reused encyclopedia ItemDetailView.
+   Sits ALONGSIDE the resource/recipe list (not replacing it) + scrolls independently, so the list stays
+   browsable beside an open item. Mirrors .enc__detail--items. ──────────────── */
+.jobs__item-detail {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+  min-width: 0;
+  min-height: 0;
+  max-height: 100%;
+  overflow-y: auto;
+  border-left: 1px solid var(--hair);
+  /* T74: symmetric L/R padding on the detail pane (qa: right was 0 → content flush right). */
+  padding-left: var(--s-4);
+  padding-right: var(--s-4);
+  /* T86: breathing room under the last element so the CRAFT button is never flush at the scroll
+     bottom / clipped at short viewports — scrolled to the end, the button sits clear of the panel edge. */
+  padding-bottom: var(--s-5);
+}
+
+/* X close (top-right of the item-detail pane), mirroring .enc__detail-close. The detail now sits BESIDE
+   the browse list (not replacing it), so it closes — it doesn't "go back". */
+.jobs__detail-close {
+  position: absolute;
+  top: 0;
+  right: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  background: none;
+  border: 1px solid var(--hair);
+  border-radius: var(--r-1);
+  color: var(--fg-muted);
+  cursor: pointer;
+  transition:
+    border-color var(--dur-1) var(--ease),
+    color var(--dur-1) var(--ease);
+}
+.jobs__detail-close:hover {
+  border-color: var(--accent);
+  color: var(--accent-strong);
+}
+.jobs__detail-close svg {
+  width: 14px;
+  height: 14px;
+}
+
+/* ── inline craft controls (rendered as ItemDetailView children) ───────────── */
+.jobs__craft {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+}
+
+.jobs__craft-head {
+  font-size: 0.6rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--fg-faint);
+  border-top: 1px solid var(--hair);
+  padding-top: var(--s-3);
+}
+
+.jobs__ingredients {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-1);
+}
+
+.jobs__ingredient {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  padding: var(--s-1) var(--s-2);
+  border-radius: var(--r-1);
+}
+.jobs__ingredient:hover {
+  background: var(--surface-2);
+}
+
+.jobs__ingredient-id {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.jobs__ingredient-name {
+  min-width: 0;
+  font-size: 0.78rem;
+  color: var(--fg);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.jobs__ingredient-lvl {
+  font-size: 0.66rem;
+  color: var(--fg-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+/* OWNED / REQUIRED — semantic state color: GREEN when owned>=required, ORANGE short. */
+.jobs__ingredient-amt {
+  flex: none;
+  font-size: 0.78rem;
+  font-variant-numeric: tabular-nums;
+}
+.jobs__ingredient-amt.is-enough {
+  color: var(--good);
+}
+.jobs__ingredient-amt.is-short {
+  color: var(--warn);
+}
+
+/* SUCCESS CHANCE (#2034) — the chain rolls this off the crafter's job level, so the player reads the bet
+   before spending. Same micro-label + tabular-num grammar as every other stat row in this panel. */
+.jobs__craft-chance {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--s-3);
+  margin-top: var(--s-2);
+}
+
+.jobs__craft-chance-label {
+  font-size: 0.6rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--fg-faint);
+}
+
+.jobs__craft-chance-value {
+  font-size: 0.85rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--accent);
+}
+
+/* craft action bar — amount picker + the CRAFT button (enabled only at job level >= recipe level). */
+.jobs__craft-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-3);
+  margin-top: var(--s-3);
+  padding-top: var(--s-3);
+  border-top: 1px solid var(--hair);
+}
+
+.jobs__craft-amount {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+}
+
+.jobs__craft-amount-label {
+  font-size: 0.74rem;
+  color: var(--fg-muted);
+}
+
+.jobs__craft-input {
+  width: 64px;
+  padding: 5px 8px;
+  font-size: 0.8rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--fg);
+  background: var(--surface-2, rgba(255, 255, 255, 0.05));
+  border: 1px solid var(--edge);
+  border-radius: var(--r-1);
+}
+.jobs__craft-input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.jobs__craft-btn {
+  min-width: 110px;
+}

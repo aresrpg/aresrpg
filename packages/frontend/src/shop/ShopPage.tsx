@@ -84,6 +84,8 @@ export default function ShopPage({
       })
       .then(() => {
         dispatch_app({ type: 'shop/purchased', item_type: sale.item_type, quantity })
+        // the minted item STREAMS from the server (ItemWritten — projection-driven);
+        // the receipt only unlocks the next action
         set_success(sale.item)
         pending.success(t('buy_success'))
         dispatch_app({ type: 'wallet/refresh' })

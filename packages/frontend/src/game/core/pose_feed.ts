@@ -12,6 +12,8 @@ export type WorldPose = Readonly<{
   z: number
   /** camera rig yaw (radians) — compass heading derives as wrap_pi(-yaw) */
   yaw: number
+  /** mounted on the equipped pet right now — rides the position stream to other players */
+  riding: boolean
   /** 0..1 through the celestial cycle — feeds the day/night bar */
   time_of_day: number
 }>

@@ -2,7 +2,7 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 // The established mob combat-stat cards, shared by authored editing and player-facing details.
 
-import { Footprints, HeartPulse, TrendingUp, Zap, type LucideIcon } from 'lucide-react'
+import { TrendingUp, type LucideIcon } from 'lucide-react'
 
 import { stat_identities } from '../visual_identity.ts'
 
@@ -17,9 +17,9 @@ type MobStatIdentity = Readonly<{
 }>
 
 const mob_stat_identities: readonly MobStatIdentity[] = Object.freeze([
-  { key: 'hp', label: 'HP', color: '#ef6b78', icon: HeartPulse },
-  { key: 'ap', label: 'AP', color: '#e8b44f', icon: Zap },
-  { key: 'mp', label: 'MP', color: '#42c7c7', icon: Footprints },
+  { key: 'hp', label: 'HP', color: '#ef6b78', image: stat_identities.hp!.icon },
+  { key: 'ap', label: 'AP', color: '#e8b44f', image: stat_identities.ap!.icon },
+  { key: 'mp', label: 'MP', color: '#42c7c7', image: stat_identities.mp!.icon },
   { key: 'agility', label: 'Agility', color: stat_identities.agility!.tint, image: stat_identities.agility!.icon },
   { key: 'wisdom', label: 'Wisdom', color: stat_identities.wisdom!.tint, image: stat_identities.wisdom!.icon },
   { key: 'xp', label: 'XP reward', color: '#65c993', icon: TrendingUp },

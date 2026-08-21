@@ -623,6 +623,23 @@ pub struct Kiosk {
     pub allow_extensions: bool,
 }
 
+/// Mysten's `personal_kiosk::PersonalKioskCap` — the owned wrapper holding the kiosk's
+/// KioskOwnerCap (`cap` is None only mid-transaction while borrowed). Projected as
+/// `Kiosk.personal_cap` so the wire can hand the client its custody cap id — the client
+/// never discovers kiosks over RPC (owner 2026-08-21).
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PersonalKioskCap {
+    pub id: Id,
+    pub cap: Option<KioskOwnerCap>,
+}
+
+/// `sui::kiosk::KioskOwnerCap { id, for }` — the inner cap naming its kiosk.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct KioskOwnerCap {
+    pub id: Id,
+    pub for_: Id,
+}
+
 /// `sui::kiosk::Listing { id, is_exclusive }` — DF key on the kiosk; the DF
 /// value is the price (u64 MIST). `is_exclusive` = a PurchaseCap exists.
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]

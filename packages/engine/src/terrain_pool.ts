@@ -45,6 +45,7 @@ import { create_material_texture } from './material_texture.ts'
 import type { create_sky_node } from './sky/sky_node.ts'
 import { macro_tint_nodes } from './terrain_tint.ts'
 import { AO_FLOOR, AO_LEVELS, FACE_BRIGHTNESS, LIT_FACE_BRIGHTNESS } from './terrain_lighting.ts'
+import { occlusion_dither_discard, type BoardOcclusion } from './board_occlusion.ts'
 import type { EngineQuality, RenderedChunk } from './types.ts'
 import { compile_world_recipe, type WorldRecipe } from './world_recipe.ts'
 import type { CompiledMaterials } from './world_materials.ts'
@@ -61,6 +62,8 @@ export type TerrainPool = Readonly<{
   remove: (key: string) => void
   set_quality: (quality: EngineQuality) => void
   set_flatten_active: (active: boolean) => void
+  /** swap the see-through variant in while a fight board is mounted */
+  set_occlusion_active: (active: boolean) => void
   count: () => number
   dispose: () => void
 }>
@@ -82,7 +85,8 @@ const build_material = (
   clouds: Clouds,
   materials: CompiledMaterials,
   material_texture: DataArrayTexture,
-  flatten_variant: boolean
+  flatten_variant: boolean,
+  occlusion: BoardOcclusion | null
 ): Material => {
   const terrain_kind = get_quality_profile(quality).terrain.kind
   const material =
@@ -219,7 +223,16 @@ const build_material = (
 
   material.positionNode = flattened_position
   material.normalNode = transformNormalToView(flattened_normal)
-  material.colorNode = flat.color
+  // The peephole's screen-door discard MUST ride the colour output graph: a nested Fn's Discard
+  // never reaches the outer stack, and a bare build-scope discard is compiled away entirely
+  // (three's node builder only emits what an output slot reaches). This variant is the only
+  // terrain material that can discard, and it renders only while a board is mounted.
+  material.colorNode = occlusion
+    ? (Fn(() => {
+        occlusion_dither_discard(occlusion)
+        return flat.color
+      })() as typeof flat.color)
+    : flat.color
   if (terrain_kind !== 'flat')
     material.receivedShadowNode = Fn((args: readonly [Node<'float'>], _builder: NodeBuilder) =>
       args[0].mul(clouds.shadow_at(local_frag.xz, local_frag.y))
@@ -245,6 +258,7 @@ export const create_terrain_pool = ({
   world,
   sun_direction,
   clouds,
+  board_occlusion,
 }: Readonly<{
   scene: Scene
   quality: EngineQuality
@@ -252,6 +266,8 @@ export const create_terrain_pool = ({
   world: WorldRecipe
   sun_direction: ReturnType<typeof create_sky_node>['sun_direction']
   clouds: Clouds
+  /** the shared peephole uniforms — the see-through variant is built against them */
+  board_occlusion: BoardOcclusion
 }>): TerrainPool => {
   const capacity = MAX_SLOTS * SLOT_QUADS
   const compiled_materials = compile_world_recipe(world).materials
@@ -264,7 +280,12 @@ export const create_terrain_pool = ({
   const geometry = create_geometry(capacity)
   const free_slots = Array.from({ length: MAX_SLOTS }, (_, index) => MAX_SLOTS - index - 1)
   const chunk_slots = new Map<string, Readonly<{ origin: RenderedChunk['origin']; slots: readonly number[] }>>()
-  const build = (tier: EngineQuality, material_texture: DataArrayTexture, flatten_variant: boolean) =>
+  const build = (
+    tier: EngineQuality,
+    material_texture: DataArrayTexture,
+    flatten_variant: boolean,
+    occlusion: BoardOcclusion | null = null
+  ) =>
     build_material(
       tier,
       pool_attr,
@@ -274,7 +295,8 @@ export const create_terrain_pool = ({
       clouds,
       compiled_materials,
       material_texture,
-      flatten_variant
+      flatten_variant,
+      occlusion
     )
   const create_quality_resources = (tier: EngineQuality, retained_texture?: DataArrayTexture) => {
     const { texture_size } = get_quality_profile(tier).terrain
@@ -284,6 +306,10 @@ export const create_terrain_pool = ({
       material_texture,
       material: build(tier, material_texture, false),
       flatten_material: build(tier, material_texture, true),
+      // THE PEEPHOLE VARIANT. Its screen-door discard costs early-Z on every GPU, so it exists
+      // beside the fast material and is swapped in only while a board is mounted — normal play
+      // never renders a shader that can discard.
+      occlusion_material: build(tier, material_texture, false, board_occlusion),
     })
   }
   const dispose_quality_resources = (
@@ -292,9 +318,18 @@ export const create_terrain_pool = ({
   ): void => {
     resources.material.dispose()
     resources.flatten_material.dispose()
+    resources.occlusion_material.dispose()
     if (dispose_texture) resources.material_texture.dispose()
   }
   let flatten_active = false
+  let occlusion_active = false
+  // flat mode wins: it already erases every occluder, so it keeps its own variant
+  const pick_material = () =>
+    flatten_active
+      ? quality_resources.flatten_material
+      : occlusion_active
+        ? quality_resources.occlusion_material
+        : quality_resources.material
   let current_quality = quality
   let quality_resources = create_quality_resources(quality)
   const mesh = new Mesh(geometry, quality_resources.material)
@@ -384,7 +419,7 @@ export const create_terrain_pool = ({
         reuse_texture ? previous_resources.material_texture : undefined
       )
       current_quality = next
-      mesh.material = flatten_active ? quality_resources.flatten_material : quality_resources.material
+      mesh.material = pick_material()
       mesh.castShadow = next !== 'low'
       mesh.receiveShadow = next !== 'low'
       dispose_quality_resources(previous_resources, !reuse_texture)
@@ -393,7 +428,14 @@ export const create_terrain_pool = ({
     set_flatten_active: (active: boolean) => {
       if (active === flatten_active) return
       flatten_active = active
-      mesh.material = active ? quality_resources.flatten_material : quality_resources.material
+      mesh.material = pick_material()
+    },
+    /// The see-through variant rides ONLY while a fight board is mounted (flat mode already
+    /// flattens every occluder away, so it keeps its own variant).
+    set_occlusion_active: (active: boolean) => {
+      if (active === occlusion_active) return
+      occlusion_active = active
+      mesh.material = pick_material()
     },
     count: () => chunk_slots.size,
     dispose: () => {

@@ -297,13 +297,33 @@ export const create_water = ({
   scene.add(surface)
 
   const worker = new Worker(new URL('./far_worker.ts', import.meta.url), { type: 'module' })
-  worker.addEventListener('error', (event) => console.error('[engine] water bed sampling failed.', event.message))
   worker.postMessage({ type: 'initialize', world: world.recipe })
   let request_id = 0
+  let in_flight_id: number | null = null
   let focus_x = 0
   let focus_z = 0
   let disposed = false
+
+  // Same contract as far_terrain: ONE job in flight, the newest focus dispatched when it
+  // answers. Without the gate every camera step posted a fresh sample and the worker ate a
+  // storm of jobs whose answers were all discarded but the last.
+  const dispatch_latest = (): void => {
+    if (in_flight_id !== null) return
+    in_flight_id = request_id
+    worker.postMessage({ type: 'water', id: request_id, center: [focus_x, focus_z] })
+  }
+
+  // An error frees the slot so the next focus recovers. Deliberately NO retry: a worker that
+  // throws on every message would answer each error with a fresh post.
+  worker.addEventListener('error', (event) => {
+    console.error('[engine] water bed sampling failed.', event.message)
+    in_flight_id = null
+  })
   worker.addEventListener('message', ({ data }: MessageEvent<WaterSample>) => {
+    if (data.type === 'water' && data.id === in_flight_id) {
+      in_flight_id = null
+      if (!disposed && request_id > data.id) dispatch_latest()
+    }
     if (disposed || data.type !== 'water' || data.id !== request_id) return
     ;(surface_geometry.getAttribute('bed_height') as BufferAttribute & { array: Float32Array }).array.set(
       data.bed_heights
@@ -319,7 +339,7 @@ export const create_water = ({
   })
   const request = (): void => {
     request_id += 1
-    worker.postMessage({ type: 'water', id: request_id, center: [focus_x, focus_z] })
+    dispatch_latest()
   }
   request()
 

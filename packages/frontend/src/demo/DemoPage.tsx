@@ -3,16 +3,17 @@
 // Public composition lab. It owns controls only; every rendered fact crosses a production boundary.
 import type { EngineQuality, EngineStatus } from '@aresrpg/engine'
 import { class_names } from '@aresrpg/immutable'
-import { Boxes, FlaskConical, RotateCcw, Swords, UserRound, UsersRound } from 'lucide-react'
-import { useEffect, useMemo, useState } from 'react'
+import { Boxes, FlaskConical, Mountain, Package, RotateCcw, Swords, UserRound, UsersRound } from 'lucide-react'
+import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react'
 
 import { FpsPanel } from '../components/FpsPanel.tsx'
 import { HudPanel } from '../components/ui/HudPanel.tsx'
 import { content_catalog, titleize, type SeedWorld } from '../content/catalog.ts'
-import { load_pet_model_url } from '../content/pet_models.ts'
+import { worlds_source } from '../content/worlds.ts'
+import { load_pet_companion } from '../content/pet_models.ts'
 import { worn_cosmetic_options } from '../content/worn_cosmetics.ts'
 import { create_world } from '../game/core/world.ts'
-import { pet_locomotion_of } from '../game/core/pet_locomotion.ts'
+import { WorldStage } from '../game/core/WorldStage.tsx'
 import { load_character_appearance } from '../game/character_entities.ts'
 import { FightLayer } from '../game/fight/FightLayer.tsx'
 import { mob_entities } from '../game/mob_entities.ts'
@@ -20,7 +21,24 @@ import type { AppCopy } from '../i18n/copy.ts'
 import { dispatch_app, useAppStore } from '../store.ts'
 import SimulatorPage from '../simulator/SimulatorPage.tsx'
 
-type DemoView = 'world' | 'fight'
+// The seed editors ship only in the dev bundle: the /__seed doors exist only on the local Vite
+// process, so production emits no editor chunks at all (the DEV check is static).
+const ContentPage = import.meta.env.DEV
+  ? lazy(() => import('../editor/ContentPage.tsx').then((m) => ({ default: m.ContentPage })))
+  : (): null => null
+const BiomePage = import.meta.env.DEV
+  ? lazy(() => import('../editor/BiomePage.tsx').then((m) => ({ default: m.BiomePage })))
+  : (): null => null
+
+type DemoView = 'world' | 'fight' | 'content' | 'biomes'
+const DEMO_VIEWS: readonly DemoView[] = Object.freeze(
+  import.meta.env.DEV ? ['world', 'fight', 'content', 'biomes'] : ['world', 'fight']
+)
+const VIEW_ICONS = Object.freeze({ world: FlaskConical, fight: Swords, content: Package, biomes: Mountain })
+const initial_view = (): DemoView => {
+  const hash = globalThis.location.hash.slice(1)
+  return (DEMO_VIEWS as readonly string[]).includes(hash) ? (hash as DemoView) : 'world'
+}
 type SpawnedGroup = Readonly<{ mob_type: string; amount: number; serial: number }>
 
 const renderable_worlds = Object.freeze(content_catalog.worlds.filter(({ terrain }) => terrain !== undefined))
@@ -81,7 +99,10 @@ const WorldLab = ({ active, copy }: Readonly<{ active: boolean; copy: AppCopy }>
   }, [mob_rows, mob_type])
 
   useEffect(() => {
-    if (!canvas || !selected_world?.terrain) return undefined
+    // THE LAB'S ENGINE IS LAZY (owner 2026-08-21): every pane on this page stays mounted and is
+    // only hidden by CSS, so building the world eagerly meant a second live WebGPU engine — and a
+    // second publisher of the one scene — for anyone who never opened the biome editor at all.
+    if (!active || !canvas || !selected_world?.terrain) return undefined
     const created = create_world({ canvas, world: selected_world.terrain, quality: settings.quality })
     const unsubscribe = created.subscribe_status(set_status)
     set_world_api(created)
@@ -92,7 +113,7 @@ const WorldLab = ({ active, copy }: Readonly<{ active: boolean; copy: AppCopy }>
     }
     // World identity is the lifetime boundary; settings update through their own production doors.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [canvas, world_id])
+  }, [active, canvas, world_id])
 
   useEffect(() => {
     world_api?.set_active(active)
@@ -126,7 +147,6 @@ const WorldLab = ({ active, copy }: Readonly<{ active: boolean; copy: AppCopy }>
       (appearance) => {
         if (!current) return
         world_api.set_character(Object.freeze({ id: source.id, appearance }))
-        world_api.point_at(Object.freeze({ x: 0, z: 0 }))
       },
       (error: unknown) => console.error('The demo character model failed to load.', error)
     )
@@ -134,6 +154,13 @@ const WorldLab = ({ active, copy }: Readonly<{ active: boolean; copy: AppCopy }>
       current = false
     }
   }, [character_enabled, classe, cloak, colors, hat, male, world_api])
+
+  // handing over control spawns at the camera's current focus — never a hardcoded origin;
+  // cosmetic re-renders keep the character exactly where it stands
+  useEffect(() => {
+    if (!world_api || !character_enabled) return
+    world_api.point_at(world_api.camera_focus())
+  }, [character_enabled, world_api])
 
   useEffect(() => {
     set_riding(false)
@@ -143,10 +170,8 @@ const WorldLab = ({ active, copy }: Readonly<{ active: boolean; copy: AppCopy }>
       return undefined
     }
     let current = true
-    void load_pet_model_url(pet).then((model_url) => {
-      const item = content_catalog.item(pet)?.item
-      if (current && model_url && item)
-        world_api.set_pet(Object.freeze({ id: 'demo_pet', model_url, locomotion: pet_locomotion_of(item) }))
+    void load_pet_companion('demo_pet', pet).then((companion) => {
+      if (current && companion) world_api.set_pet(companion)
     })
     return () => {
       current = false
@@ -433,30 +458,98 @@ const WorldLab = ({ active, copy }: Readonly<{ active: boolean; copy: AppCopy }>
 }
 
 export const DemoPage = ({ copy }: Readonly<{ copy: AppCopy }>) => {
-  const [view, set_view] = useState<DemoView>('world')
+  const quality = useAppStore((state) => state.settings.quality)
+  const [view, set_view] = useState<DemoView>(initial_view)
   const text = copy.demo_page
+  const seed_changed = useRef(false)
+  // the seed corpus loads on first editor-tab open, never on a plain lab visit (reducer ignores
+  // the input unless the editor is still idle)
+  useEffect(() => {
+    if (view === 'content' || view === 'biomes') dispatch_app({ type: 'editor/load' })
+  }, [view])
+  // Seed saves no longer full-reload (the vite plugin suppresses the JSON invalidation and sends
+  // this event instead): while editing, the editor state IS the fresh truth; the reload is owed
+  // only when a lab tab needs the rebuilt seed imports — deferred to the next tab switch.
+  useEffect(() => {
+    const on_seed_changed = (): void => {
+      const editing = globalThis.location.hash === '#content' || globalThis.location.hash === '#biomes'
+      if (editing) {
+        // eslint-disable-next-line functional/immutable-data -- a React ref is the sanctioned mutable cell
+        seed_changed.current = true
+        return
+      }
+      globalThis.location.reload()
+    }
+    import.meta.hot?.on('aresrpg:seed-changed', on_seed_changed)
+    return () => import.meta.hot?.off('aresrpg:seed-changed', on_seed_changed)
+  }, [])
+  // the hash survives any reload — you land back on your tab
+  const select_view = (next: DemoView): void => {
+    globalThis.history.replaceState(null, '', `#${next}`)
+    if (seed_changed.current && next !== 'content' && next !== 'biomes') {
+      globalThis.location.reload()
+      return
+    }
+    set_view(next)
+  }
+  const view_label = (candidate: DemoView): string =>
+    candidate === 'world'
+      ? text.world_lab
+      : candidate === 'fight'
+        ? text.fight_lab
+        : candidate === 'content'
+          ? 'Content'
+          : 'Biomes'
 
   return (
     <main className="fixed inset-0 overflow-hidden bg-[#08090e] font-mono text-[#e8e4dc]">
       <WorldLab active={view === 'world'} copy={copy} />
-      <section className={`absolute inset-0 ${view === 'fight' ? 'visible' : 'invisible'}`}>
-        <SimulatorPage copy={copy} />
-        <FightLayer copy={copy} />
-      </section>
-      <HudPanel className="pointer-events-auto fixed top-3 left-1/2 z-50 flex -translate-x-1/2 overflow-hidden text-[8px] tracking-[0.16em] uppercase">
-        {(['world', 'fight'] as const).map((candidate) => (
-          <button
-            className={`flex cursor-pointer items-center gap-2 px-4 py-2.5 ${
-              view === candidate ? 'bg-[#4a9eff]/12 text-[#67adff]' : 'text-[#777b86] hover:text-[#d5d2cb]'
-            }`}
-            key={candidate}
-            onClick={() => set_view(candidate)}
-            type="button"
+      {/* UNMOUNTED, not merely hidden: a surface you cannot see must not exist, and a mounted
+          one would keep a whole world alive behind the tab you are actually looking at. */}
+      {view === 'fight' && (
+        <section className="absolute inset-0">
+          {/* ONE stage, handed to both children. The setup board and any live fight draw into
+              the SAME world, and neither can reach the biome lab's. */}
+          <WorldStage quality={quality} terrain={worlds_source[0]?.terrain}>
+            {(scene) => (
+              <>
+                <SimulatorPage copy={copy} scene={scene} />
+                <FightLayer copy={copy} scene={scene} />
+              </>
+            )}
+          </WorldStage>
+        </section>
+      )}
+      {import.meta.env.DEV && (view === 'content' || view === 'biomes') && (
+        <section className="absolute inset-0 flex flex-col bg-[#0d0d14] pt-14">
+          <Suspense
+            fallback={
+              <div className="grid flex-1 place-items-center text-[9px] tracking-[0.18em] text-[#c8963c] uppercase">
+                Loading seed files…
+              </div>
+            }
           >
-            {candidate === 'world' ? <FlaskConical size={11} /> : <Swords size={11} />}
-            {candidate === 'world' ? text.world_lab : text.fight_lab}
-          </button>
-        ))}
+            {view === 'content' ? <ContentPage /> : <BiomePage />}
+          </Suspense>
+        </section>
+      )}
+      <HudPanel className="pointer-events-auto fixed top-3 left-1/2 z-50 flex -translate-x-1/2 overflow-hidden text-[8px] tracking-[0.16em] uppercase">
+        {DEMO_VIEWS.map((candidate) => {
+          const ViewIcon = VIEW_ICONS[candidate]
+          return (
+            <button
+              className={`flex cursor-pointer items-center gap-2 px-4 py-2.5 ${
+                view === candidate ? 'bg-[#4a9eff]/12 text-[#67adff]' : 'text-[#777b86] hover:text-[#d5d2cb]'
+              }`}
+              key={candidate}
+              onClick={() => select_view(candidate)}
+              type="button"
+            >
+              <ViewIcon size={11} />
+              {view_label(candidate)}
+            </button>
+          )
+        })}
         <a className="border-l border-white/10 px-4 py-2.5 text-[#c8963c] hover:bg-[#c8963c]/8" href="/">
           {text.back}
         </a>

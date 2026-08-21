@@ -11,7 +11,7 @@
     "test": "bun test"
   },
   "dependencies": {
-    "@mysten/sui": "2.24.0",
+    "@mysten/sui": "2.26.2",
     "falkordb": "^6.2.07",
     "ioredis": "^6.0.0",
     "pino": "^10.3.1",

@@ -17,12 +17,20 @@ export type MarketplaceRoyalty = Readonly<{
 
 type MarketplaceAdminSdk = Pick<
   Sdk,
-  'pins' | 'get_owned_transfer_policies' | 'get_transfer_policies' | 'tx' | 'withdraw_transfer_policy' | 'execute'
+  | 'pins'
+  | 'game_type_package'
+  | 'get_owned_transfer_policies'
+  | 'get_transfer_policies'
+  | 'tx'
+  | 'withdraw_transfer_policy'
+  | 'execute'
 >
 
 const policy_targets = (sdk: MarketplaceAdminSdk) => {
-  const package_id = sdk.pins.package
-  if (typeof package_id !== 'string' || !package_id) throw new Error('Marketplace royalties need pins.package')
+  // types are named by the first-publish package id; pins.package drifts with every upgrade
+  const package_id = sdk.game_type_package
+  if (typeof package_id !== 'string' || !package_id)
+    throw new Error('Marketplace royalties need a published game package in pins.json')
   return Object.freeze([
     Object.freeze({ kind: 'item' as const, type: `${package_id}::item::Item`, pin: sdk.pins.item_policy }),
     Object.freeze({

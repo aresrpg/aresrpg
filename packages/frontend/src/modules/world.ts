@@ -4,7 +4,7 @@
 // positions. One reducer folds the packets; the compass and minimap render this slice.
 
 import { chain_to_client_coordinate } from '@aresrpg/immutable'
-import type { MobGroupRow, PresenceRow, ResourcePackRow, ServerPacket, ZoneRow } from '@aresrpg/protocol'
+import type { FightRow, MobGroupRow, PresenceRow, ResourcePackRow, ServerPacket, ZoneRow } from '@aresrpg/protocol'
 
 import type { AppInput, AppModule, AppState } from '../store.ts'
 
@@ -15,9 +15,25 @@ export type WorldState = Readonly<{
   players: Readonly<Record<string, PresenceRow>>
   /** tracked zones' live populations by `world:zx:zz` — server-derived (zone_math twin) */
   spawns: Readonly<Record<string, Readonly<{ mobs: readonly MobGroupRow[]; resources: readonly ResourcePackRow[] }>>>
+  /** live fights in the tracked zones by fight id — the sword markers render this slice */
+  fights: Readonly<Record<string, FightRow>>
+  /** the right-clicked nearby player — the context menu renders while this holds a target */
+  player_menu: PlayerMenu | null
 }>
 
-export type WorldInput = Readonly<{ type: 'server/packet'; packet: Readonly<ServerPacket> }>
+/** WHERE the menu was opened from decides what it may offer: a duel needs the two characters
+ *  standing together (the chain proves the walk to the fight cell), and a name clicked in the
+ *  chat log proves nothing about distance. Only the menu opened ON a body is a duel door. */
+export type PlayerMenu = Readonly<{
+  character_id: string
+  x: number
+  y: number
+  source: 'body' | 'chat'
+}>
+
+export type WorldInput =
+  | Readonly<{ type: 'server/packet'; packet: Readonly<ServerPacket> }>
+  | Readonly<{ type: 'world/player_menu'; menu: PlayerMenu | null }>
 
 export const zone_key = (world: string, zx: number, zz: number): string => `${world}:${zx}:${zz}`
 
@@ -62,7 +78,8 @@ export const spawn_markers = (world: WorldState): readonly SpawnMarker[] =>
     ]
   })
 
-export const initial_world_state = (): WorldState => Object.freeze({ zones: {}, players: {}, spawns: {} })
+export const initial_world_state = (): WorldState =>
+  Object.freeze({ zones: {}, players: {}, spawns: {}, fights: {}, player_menu: null })
 
 const with_world = (state: AppState, world: WorldState): AppState => Object.freeze({ ...state, world })
 
@@ -96,6 +113,31 @@ const fold_packet = (world: WorldState, packet: Readonly<ServerPacket>): WorldSt
       }),
     })
   }
+  if (packet.type === 'packet/fights') {
+    // whole-set replace: the snapshot IS the tracked zones' truth (ended fights never ride it)
+    const fights: Record<string, FightRow> = {}
+    for (const fight of packet.fights) fights[fight.id] = fight
+    return Object.freeze({ ...world, fights: Object.freeze(fights) })
+  }
+  if (packet.type === 'packet/fight_created')
+    // the projected row lands whole — this fold never fills a field the wire did not carry
+    return Object.freeze({
+      ...world,
+      fights: Object.freeze({ ...world.fights, [packet.fight.id]: packet.fight }),
+    })
+  if (packet.type === 'packet/fight_phase') {
+    const known = world.fights[packet.fight]
+    if (!known) return world
+    if (packet.phase === 'ended') {
+      const fights = { ...world.fights }
+      delete fights[packet.fight]
+      return Object.freeze({ ...world, fights: Object.freeze(fights) })
+    }
+    return Object.freeze({
+      ...world,
+      fights: Object.freeze({ ...world.fights, [packet.fight]: Object.freeze({ ...known, phase: packet.phase }) }),
+    })
+  }
   if (packet.type === 'packet/player_appeared')
     return Object.freeze({
       ...world,
@@ -108,7 +150,13 @@ const fold_packet = (world: WorldState, packet: Readonly<ServerPacket>): WorldSt
       ...world,
       players: Object.freeze({
         ...world.players,
-        [packet.character_id]: Object.freeze({ ...known, x: packet.x, y: packet.y, z: packet.z }),
+        [packet.character_id]: Object.freeze({
+          ...known,
+          x: packet.x,
+          y: packet.y,
+          z: packet.z,
+          riding: packet.riding,
+        }),
       }),
     })
   }
@@ -127,7 +175,12 @@ const fold_packet = (world: WorldState, packet: Readonly<ServerPacket>): WorldSt
     if (!(packet.character_id in world.players)) return world
     const players = { ...world.players }
     delete players[packet.character_id]
-    return Object.freeze({ ...world, players: Object.freeze(players) })
+    return Object.freeze({
+      ...world,
+      players: Object.freeze(players),
+      // a vanished target takes its menu with it
+      player_menu: world.player_menu?.character_id === packet.character_id ? null : world.player_menu,
+    })
   }
   return world
 }
@@ -135,6 +188,8 @@ const fold_packet = (world: WorldState, packet: Readonly<ServerPacket>): WorldSt
 const reduce = (state: AppState, input: AppInput): AppState => {
   if (input.type === 'auth/disconnected' || input.type === 'auth/rejected')
     return with_world(state, initial_world_state())
+  if (input.type === 'world/player_menu')
+    return with_world(state, Object.freeze({ ...state.world, player_menu: input.menu }))
   if (input.type !== 'server/packet') return state
   // a re-embody starts a fresh surrounding — the server re-pushes the load snapshot
   if (input.packet.type === 'packet/characters') return state

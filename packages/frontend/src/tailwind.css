@@ -54,6 +54,19 @@
   }
 }
 
+/* No browser gives `<button>` a pointer cursor, and Preflight does not add one either, so the
+   affordance belongs to the role classes themselves — one home, instead of every call site
+   repeating `cursor-pointer` and every new button forgetting it. */
+.btn-gold,
+.btn-outline {
+  cursor: pointer;
+}
+
+.btn-gold:disabled,
+.btn-outline:disabled {
+  cursor: not-allowed;
+}
+
 .btn-gold {
   border: 0;
   background: linear-gradient(135deg, var(--color-gold-dark), var(--color-gold), var(--color-gold-dark));

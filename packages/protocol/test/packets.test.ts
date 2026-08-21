@@ -9,12 +9,14 @@ import { parse_client_packet, parse_server_packet, CLIENT_PACKET_TYPES } from '.
 
 describe('the wire contract', () => {
   test('declared intents parse with their exact shape', () => {
-    expect(parse_client_packet(JSON.stringify({ type: 'packet/position', x: 1, y: 2, z: 3 }))).toEqual({
+    expect(parse_client_packet(JSON.stringify({ type: 'packet/position', x: 1, y: 2, z: 3, riding: false }))).toEqual({
       type: 'packet/position',
       x: 1,
       y: 2,
       z: 3,
+      riding: false,
     })
+    expect(() => parse_client_packet(JSON.stringify({ type: 'packet/position', x: 1, y: 2, z: 3 }))).toThrow(/riding/)
     expect(parse_client_packet(JSON.stringify({ type: 'packet/embody', character_id: '0xabc' }))).toEqual({
       type: 'packet/embody',
       character_id: '0xabc',
@@ -46,6 +48,26 @@ describe('the wire contract', () => {
     )
   })
 
+  test('duel signals parse by kind and refuse malformed handshakes', () => {
+    expect(parse_client_packet(JSON.stringify({ type: 'packet/duel', to: '0xabc', kind: 'invite' }))).toEqual({
+      type: 'packet/duel',
+      to: '0xabc',
+      kind: 'invite',
+    })
+    expect(() => parse_client_packet(JSON.stringify({ type: 'packet/duel', to: 'bob', kind: 'invite' }))).toThrow(
+      /target address/
+    )
+    expect(() => parse_client_packet(JSON.stringify({ type: 'packet/duel', to: '0xabc', kind: 'nuke' }))).toThrow(
+      /known kind/
+    )
+    // THE RELAY CARRIES INTENT ONLY (2026-08-21): `created` was how one client handed another
+    // the chain object it would transact against. A duel's fight now reaches the acceptor as
+    // the indexer's own zone fact, so the wire refuses the signal outright.
+    expect(() =>
+      parse_client_packet(JSON.stringify({ type: 'packet/duel', to: '0xabc', kind: 'created', fight: '0xf1' }))
+    ).toThrow(/known kind/)
+  })
+
   test('undeclared generic query and subscription surfaces are refused', () => {
     expect(() => parse_client_packet(JSON.stringify({ type: 'request', kind: 'characters', id: 1 }))).toThrow(
       /unknown packet type/
@@ -60,6 +82,7 @@ describe('the wire contract', () => {
       'packet/chat',
       'packet/chat_party',
       'packet/chat_whisper',
+      'packet/duel',
       'packet/fight_action',
       'packet/market_observe',
       'packet/spectate',

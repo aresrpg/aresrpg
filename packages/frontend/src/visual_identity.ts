@@ -1,9 +1,15 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
+import action_icon from './assets/statistics/action.png'
 import agility_icon from './assets/statistics/agility.png'
 import chance_icon from './assets/statistics/chance.png'
+import crit_icon from './assets/statistics/crit.png'
+import health_icon from './assets/statistics/health.png'
 import intelligence_icon from './assets/statistics/intelligence.png'
+import movement_icon from './assets/statistics/movement.png'
+import range_icon from './assets/statistics/range.png'
+import raw_damage_icon from './assets/statistics/raw_damage.png'
 import strength_icon from './assets/statistics/strength.png'
 import vitality_icon from './assets/statistics/vitality.png'
 import wisdom_icon from './assets/statistics/wisdom.png'
@@ -32,6 +38,8 @@ export const stat_colors: Readonly<Record<string, string>> = Object.freeze({
   air_resistance: element_colors.air!,
 })
 
+/** Every stat/channel with authored icon art — keyed by BOTH the stat vocabulary and the
+ *  fight-channel vocabulary (ap/mp/hp) so every effect surface resolves the same asset. */
 export const stat_identities: Readonly<Record<string, Readonly<{ icon: string; tint: string }>>> = Object.freeze({
   vitality: Object.freeze({ icon: vitality_icon, tint: '#ef5350' }),
   wisdom: Object.freeze({ icon: wisdom_icon, tint: '#b07cff' }),
@@ -39,6 +47,15 @@ export const stat_identities: Readonly<Record<string, Readonly<{ icon: string; t
   intelligence: Object.freeze({ icon: intelligence_icon, tint: '#5db4ff' }),
   chance: Object.freeze({ icon: chance_icon, tint: '#4fd6a0' }),
   agility: Object.freeze({ icon: agility_icon, tint: '#ffce85' }),
+  range: Object.freeze({ icon: range_icon, tint: '#9d7bd8' }),
+  critical: Object.freeze({ icon: crit_icon, tint: '#ffb454' }),
+  raw_damage: Object.freeze({ icon: raw_damage_icon, tint: '#ef5350' }),
+  action: Object.freeze({ icon: action_icon, tint: '#efbd45' }),
+  ap: Object.freeze({ icon: action_icon, tint: '#efbd45' }),
+  movement: Object.freeze({ icon: movement_icon, tint: '#4a9eff' }),
+  mp: Object.freeze({ icon: movement_icon, tint: '#4a9eff' }),
+  hp: Object.freeze({ icon: health_icon, tint: '#ff6b86' }),
+  health: Object.freeze({ icon: health_icon, tint: '#ff6b86' }),
 })
 
 export const item_category_colors: Readonly<Record<string, string>> = Object.freeze({

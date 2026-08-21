@@ -12,10 +12,11 @@
 //!   properties over a `MERGE` skeleton; nothing ever replaces a whole node.
 //! * **One ownership edge per object** — custody writes DELETE the standing
 //!   `HOLDS|FIGHTER|EQUIPS` edge before creating the new one.
-//! * **DF writes need their parent co-present** with the expected type — every
-//!   chain writer borrows the parent `&mut`, so the parent is always in the
-//!   same checkpoint; a Field whose parent is absent or foreign writes nothing
-//!   (this is also what keeps ceremony-template DFs out of the item space).
+//! * **DF writes are parent-guarded, never parent-blocked** — a DF born WITH its
+//!   typed parent merges order-free; a DF arriving alone (equip/hp/scribe mutate
+//!   only the child — a `&mut` borrow emits no parent object, measured 2026-08-21)
+//!   writes MATCH-guarded on the parent's label: a foreign or unknown parent
+//!   matches nothing (this still keeps ceremony-template DFs out of the item space).
 //! * **Strings ≥ 2⁵³** — seeds, bitmasks, MIST are string properties.
 //!
 //! Statement order per checkpoint: nodes (tx order) → custody edges → fight
@@ -186,22 +187,50 @@ fn field_key(t: &TypeKey) -> Option<&str> {
     (is_native(t, "dynamic_field", "Field")).then(|| t.type_params[0].as_str())
 }
 
-/// The co-present parent of a DF, verified by type — a Field whose parent is
-/// absent or unexpected writes nothing (the ceremony-template guard).
+/// The parent of a DF, from its owner edge. The bool marks TYPED CO-PRESENCE: the parent
+/// object rode the same checkpoint (a fresh parent+DF birth — write with MERGE, order-free).
+/// A DF arriving ALONE (equip/hp/scribe mutate only the child — measured 2026-08-21: the
+/// equip projection silently dropped for every real player) writes MATCH-guarded instead:
+/// the GRAPH's own label is the type guard, a foreign parent matches nothing.
 fn df_parent<'a>(
     view: &ObjView<'_>,
     outputs: &'a [ObjView<'a>],
     game: &str,
     module: &str,
     name: &str,
-) -> Option<Id> {
+) -> Option<(Id, bool)> {
     let OwnerKind::Object(parent) = view.owner else {
         return None;
     };
-    outputs
+    let co_present = outputs
         .iter()
-        .any(|o| o.id == parent && is_game(o.type_key, game, module, name))
-        .then_some(parent)
+        .any(|o| o.id == parent && is_game(o.type_key, game, module, name));
+    Some((parent, co_present))
+}
+
+/// A DF-driven write on the parent node: MERGE when the typed parent is co-present (birth
+/// order inside one checkpoint is arbitrary), MATCH otherwise (the label guards the type).
+fn child_set(
+    cypher: &mut Vec<String>,
+    co_present: bool,
+    label: &str,
+    id: &Id,
+    ckpt: u64,
+    assigns: &[String],
+) {
+    if co_present {
+        merge_set(cypher, label, id, ckpt, assigns);
+        return;
+    }
+    let mut set = format!("v.ckpt = {ckpt}");
+    for assign in assigns {
+        set.push_str(", ");
+        set.push_str(assign);
+    }
+    cypher.push(format!(
+        "MATCH (v:{label} {{id: {id}}}) SET {set}",
+        id = q_id(id),
+    ));
 }
 
 fn emit_object(
@@ -425,11 +454,42 @@ fn emit_object(
         return Ok(());
     }
 
+    // ── the personal kiosk wrapper (Mysten's official rule package — the one that mints
+    //    every live cap). The projected cap id is what the wire hands the client for custody
+    //    transactions: the client never discovers kiosks over RPC (owner 2026-08-21). ──
+    if is_personal_kiosk_cap(t) {
+        let p = decode::from_bytes::<decode::PersonalKioskCap>(o.bytes)
+            .map_err(|e| drift("personal_kiosk::PersonalKioskCap", o.id, e))?;
+        // a borrowed cap (None) is a mid-transaction state no checkpoint output persists
+        if let Some(inner) = &p.cap {
+            cypher.push(format!(
+                "MERGE (k:Kiosk {{id: {kiosk}}}) SET k.personal_cap = {cap}, k.ckpt = {ckpt}",
+                kiosk = q_id(&inner.for_),
+                cap = q(&p.id.hex()),
+            ));
+        }
+        return Ok(());
+    }
+
     // ── dynamic fields, dispatched by KEY type ──
     if let Some(key) = field_key(t) {
         emit_field(cypher, o, key, view, game)?;
     }
     Ok(())
+}
+
+/// The two OFFICIAL personal-kiosk rule packages (@mysten/kiosk constants — protocol-stable).
+const PERSONAL_KIOSK_PACKAGES: [&str; 2] = [
+    // testnet
+    "0x06f6bdd3f2e2e759d8a4b9c252f379f7a05e72dfe4c0b9311cdac27b8eb791b1",
+    // mainnet
+    "0x0cb4bcc0560340eb1a1b929cabe56b33fc6449820ec8c1980d69bb98b649b802",
+];
+
+fn is_personal_kiosk_cap(t: &TypeKey) -> bool {
+    t.module == "personal_kiosk"
+        && t.name == "PersonalKioskCap"
+        && PERSONAL_KIOSK_PACKAGES.contains(&t.package.as_str())
 }
 
 // ╔════════════════ [ Dynamic fields ] ═══════════════════════════════════════ ]
@@ -450,13 +510,15 @@ fn emit_field(
 
     // ── Character DFs ──
     if key == game_key(game, "progression::HpKey") {
-        let Some(parent) = df_parent(o, outputs, game, "character", "Character") else {
+        let Some((parent, co_present)) = df_parent(o, outputs, game, "character", "Character")
+        else {
             return Ok(());
         };
         let f = decode::from_bytes::<Field<MarkerKey, decode::Hp>>(o.bytes)
             .map_err(|e| drift(key, o.id, e))?;
-        merge_set(
+        child_set(
             cypher,
+            co_present,
             "Character",
             &parent,
             ckpt,
@@ -468,7 +530,8 @@ fn emit_field(
         return Ok(());
     }
     if key == game_key(game, "progression::JobXpKey") {
-        let Some(parent) = df_parent(o, outputs, game, "character", "Character") else {
+        let Some((parent, co_present)) = df_parent(o, outputs, game, "character", "Character")
+        else {
             return Ok(());
         };
         let f = decode::from_bytes::<Field<decode::JobXpKey, u64>>(o.bytes)
@@ -481,8 +544,9 @@ fn emit_field(
             .chars()
             .filter(|c| c.is_ascii_alphanumeric() || *c == '_')
             .collect();
-        merge_set(
+        child_set(
             cypher,
+            co_present,
             "Character",
             &parent,
             ckpt,
@@ -495,7 +559,8 @@ fn emit_field(
         return Ok(());
     }
     if key == game_key(game, "progression::SpellBookKey") {
-        let Some(parent) = df_parent(o, outputs, game, "character", "Character") else {
+        let Some((parent, co_present)) = df_parent(o, outputs, game, "character", "Character")
+        else {
             return Ok(());
         };
         let f = decode::from_bytes::<Field<MarkerKey, decode::SpellBook>>(o.bytes)
@@ -507,8 +572,9 @@ fn emit_field(
                 .map(|e| (e.key.clone(), json!(e.value)))
                 .collect(),
         );
-        merge_set(
+        child_set(
             cypher,
+            co_present,
             "Character",
             &parent,
             ckpt,
@@ -517,13 +583,15 @@ fn emit_field(
         return Ok(());
     }
     if key == game_key(game, "equipment::FoldedKey") {
-        let Some(parent) = df_parent(o, outputs, game, "character", "Character") else {
+        let Some((parent, co_present)) = df_parent(o, outputs, game, "character", "Character")
+        else {
             return Ok(());
         };
         let f = decode::from_bytes::<Field<MarkerKey, decode::ItemStatistics>>(o.bytes)
             .map_err(|e| drift(key, o.id, e))?;
-        merge_set(
+        child_set(
             cypher,
+            co_present,
             "Character",
             &parent,
             ckpt,
@@ -532,7 +600,7 @@ fn emit_field(
         return Ok(());
     }
     if key == game_key(game, "equipment::EquipmentKey") {
-        let Some(parent) = df_parent(o, outputs, game, "character", "Character") else {
+        let Some((parent, _)) = df_parent(o, outputs, game, "character", "Character") else {
             return Ok(());
         };
         let f = decode::from_bytes::<Field<MarkerKey, decode::EquipmentMap>>(o.bytes)
@@ -558,13 +626,15 @@ fn emit_field(
         return Ok(());
     }
     if key == game_key(game, "world::CurrentWorldKey") {
-        let Some(parent) = df_parent(o, outputs, game, "character", "Character") else {
+        let Some((parent, co_present)) = df_parent(o, outputs, game, "character", "Character")
+        else {
             return Ok(());
         };
         let f = decode::from_bytes::<Field<MarkerKey, String>>(o.bytes)
             .map_err(|e| drift(key, o.id, e))?;
-        merge_set(
+        child_set(
             cypher,
+            co_present,
             "Character",
             &parent,
             ckpt,
@@ -573,7 +643,8 @@ fn emit_field(
         return Ok(());
     }
     if key == game_key(game, "world::CheckpointKey") {
-        let Some(parent) = df_parent(o, outputs, game, "character", "Character") else {
+        let Some((parent, co_present)) = df_parent(o, outputs, game, "character", "Character")
+        else {
             return Ok(());
         };
         let f = decode::from_bytes::<Field<decode::CheckpointKey, decode::Checkpoint>>(o.bytes)
@@ -581,8 +652,9 @@ fn emit_field(
         // `checkpoint_world` names which world this position belongs to — the
         // consumer trusts x/z only when it equals `world` (both land in the
         // same tx, so they cohere; no read-modify-write needed here).
-        merge_set(
+        child_set(
             cypher,
+            co_present,
             "Character",
             &parent,
             ckpt,
@@ -597,7 +669,8 @@ fn emit_field(
         return Ok(());
     }
     if key == game_key(game, "dungeon::DungeonRunKey") {
-        let Some(parent) = df_parent(o, outputs, game, "character", "Character") else {
+        let Some((parent, co_present)) = df_parent(o, outputs, game, "character", "Character")
+        else {
             return Ok(());
         };
         let f = decode::from_bytes::<Field<MarkerKey, decode::DungeonRun>>(o.bytes)
@@ -609,8 +682,9 @@ fn emit_field(
             "z": f.value.z,
             "seed": f.value.seed.to_string(),
         });
-        merge_set(
+        child_set(
             cypher,
+            co_present,
             "Character",
             &parent,
             ckpt,
@@ -619,7 +693,8 @@ fn emit_field(
         return Ok(());
     }
     if key == game_key(game, "gathering::AmbushKey") {
-        let Some(parent) = df_parent(o, outputs, game, "character", "Character") else {
+        let Some((parent, co_present)) = df_parent(o, outputs, game, "character", "Character")
+        else {
             return Ok(());
         };
         let f = decode::from_bytes::<Field<MarkerKey, decode::PendingAmbush>>(o.bytes)
@@ -639,19 +714,20 @@ fn emit_field(
         } else {
             "v.ambush = NULL".to_string()
         };
-        merge_set(cypher, "Character", &parent, ckpt, &[assign]);
+        child_set(cypher, co_present, "Character", &parent, ckpt, &[assign]);
         return Ok(());
     }
 
     // ── Item DFs ──
     if key == game_key(game, "item::StatsKey") {
-        let Some(parent) = df_parent(o, outputs, game, "item", "Item") else {
+        let Some((parent, co_present)) = df_parent(o, outputs, game, "item", "Item") else {
             return Ok(());
         };
         let f = decode::from_bytes::<Field<MarkerKey, decode::ItemStatistics>>(o.bytes)
             .map_err(|e| drift(key, o.id, e))?;
-        merge_set(
+        child_set(
             cypher,
+            co_present,
             "Item",
             &parent,
             ckpt,
@@ -662,13 +738,14 @@ fn emit_field(
     if key == game_key(game, "item::DamagesKey") {
         // the SAME key exists on ceremony templates — the parent check keeps
         // those out (a template is never an Item output).
-        let Some(parent) = df_parent(o, outputs, game, "item", "Item") else {
+        let Some((parent, co_present)) = df_parent(o, outputs, game, "item", "Item") else {
             return Ok(());
         };
         let f = decode::from_bytes::<Field<MarkerKey, Vec<decode::ItemDamages>>>(o.bytes)
             .map_err(|e| drift(key, o.id, e))?;
-        merge_set(
+        child_set(
             cypher,
+            co_present,
             "Item",
             &parent,
             ckpt,
@@ -677,14 +754,15 @@ fn emit_field(
         return Ok(());
     }
     if key == game_key(game, "forgemagie::ForgeKey") {
-        let Some(parent) = df_parent(o, outputs, game, "item", "Item") else {
+        let Some((parent, co_present)) = df_parent(o, outputs, game, "item", "Item") else {
             return Ok(());
         };
         let f = decode::from_bytes::<Field<MarkerKey, decode::ForgeState>>(o.bytes)
             .map_err(|e| drift(key, o.id, e))?;
         let apps = Value::Array(f.value.apps.iter().map(|a| json!(a)).collect());
-        merge_set(
+        child_set(
             cypher,
+            co_present,
             "Item",
             &parent,
             ckpt,
@@ -696,13 +774,14 @@ fn emit_field(
         return Ok(());
     }
     if key == game_key(game, "pet::FeedKey") {
-        let Some(parent) = df_parent(o, outputs, game, "item", "Item") else {
+        let Some((parent, co_present)) = df_parent(o, outputs, game, "item", "Item") else {
             return Ok(());
         };
         let f = decode::from_bytes::<Field<MarkerKey, decode::FeedState>>(o.bytes)
             .map_err(|e| drift(key, o.id, e))?;
-        merge_set(
+        child_set(
             cypher,
+            co_present,
             "Item",
             &parent,
             ckpt,
@@ -716,7 +795,7 @@ fn emit_field(
 
     // ── World DFs: zones ──
     if key == game_key(game, "zone::ZoneKey") {
-        let Some(parent) = df_parent(o, outputs, game, "world", "World") else {
+        let Some((parent, _)) = df_parent(o, outputs, game, "world", "World") else {
             return Ok(());
         };
         let f = decode::from_bytes::<Field<decode::ZoneKey, decode::Zone>>(o.bytes)
@@ -1293,14 +1372,23 @@ mod tests {
             "Field",
             &[&key, "u64"],
         );
-        // parent ABSENT → nothing written (custody unchanged, foreign guarded)
+        // parent ABSENT from the checkpoint → the write is MATCH-guarded: it lands on the
+        // character IF the graph knows it, and on nothing otherwise (2026-08-21: equip/hp
+        // transactions mutate only the DF — the old drop-it rule lost every such write)
         let orphan = [ObjView {
             id: Id([9; 32]),
             owner: OwnerKind::Object(Id([1; 32])),
             type_key: &ty,
             bytes: &bytes,
         }];
-        assert!(project(&view(&orphan, &[], &[]), GAME).unwrap().is_empty());
+        let lone = project(&view(&orphan, &[], &[]), GAME).unwrap();
+        assert_eq!(lone.len(), 1);
+        assert!(
+            lone[0].starts_with("MATCH (v:Character"),
+            "guarded, never MERGE: {}",
+            lone[0]
+        );
+        assert!(lone[0].contains("v.hp = '137'"));
 
         // parent present → the two hp props land on the character node
         let chr_ty = t(GAME, "character", "Character", &[]);

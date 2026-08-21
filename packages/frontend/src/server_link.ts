@@ -1,7 +1,12 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
-import { parse_server_packet, VIOLATION_DROP_REASONS, type ClientPacket } from '@aresrpg/protocol'
+import {
+  parse_server_packet,
+  TAKEOVER_DROP_REASONS,
+  VIOLATION_DROP_REASONS,
+  type ClientPacket,
+} from '@aresrpg/protocol'
 
 import type { AuthSession } from './auth.ts'
 import { env } from './env.ts'
@@ -47,6 +52,10 @@ const AUTH_REJECTION_REASONS = new Set(['INVALID_SIGNATURE', 'INVALID_PACKET', '
 
 export const is_terminal_auth_close = (code: number, reason: string): boolean =>
   code === 1008 && AUTH_REJECTION_REASONS.has(reason)
+
+/** the server seats one socket per address — the evicted one is told, and never fights back */
+export const is_session_takeover_close = (code: number, reason: string): boolean =>
+  TAKEOVER_DROP_REASONS.has(reason) && (code === 1000 || code === 1008)
 
 export const create_login_response = async (
   session: Pick<AuthSession, 'sign_personal_message'>,
@@ -141,6 +150,12 @@ export const connect_server = ({ session, dispatch }: ServerLinkOptions): Server
         stop_latency()
         if (is_terminal_auth_close(code, reason)) {
           dispatch({ type: 'link/rejected', reason })
+          return
+        }
+        // connected from another place: stay red, never reconnect — a retry here would just
+        // steal the seat back and ping-pong both tabs forever
+        if (is_session_takeover_close(code, reason)) {
+          dispatch({ type: 'link/replaced' })
           return
         }
         // a rule-violation drop: surface it red and retry SLOWLY — the server's cool-off ban

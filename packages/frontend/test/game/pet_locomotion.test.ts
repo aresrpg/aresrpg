@@ -14,11 +14,11 @@ describe('pet locomotion', () => {
     expect(pet_locomotion_of(content_catalog.item('pet_siluri')!.item)).toBe('walk')
   })
 
-  test('makes grounded pets share the owner jump while fish hover independently', () => {
-    expect(pet_vertical_offset('walk', 0, 1.25)).toBe(1.25)
-    expect(pet_vertical_offset('fly', 0, 1.25)).toBe(1.25)
-    expect(pet_vertical_offset('swim', 0, 1.25)).toBe(1.5)
-    expect(pet_vertical_offset('swim', 0.65, 0)).toBeCloseTo(1.65)
+  test('never mirrors the owner jump: walkers stay grounded, swim/fly hover on their own clock', () => {
+    expect(pet_vertical_offset('walk', 0)).toBe(0)
+    expect(pet_vertical_offset('fly', 0)).toBe(1.5)
+    expect(pet_vertical_offset('swim', 0)).toBe(1.5)
+    expect(pet_vertical_offset('swim', 0.65)).toBeCloseTo(1.65)
   })
 
   test('seats the rider from the rendered pet height', () => {

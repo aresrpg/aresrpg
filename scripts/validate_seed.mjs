@@ -288,6 +288,11 @@ for (const item of items) {
     red('I-CONSUMABLE', `${where}: only consumable templates may carry a consumable effect`)
   if (item.consumable) check_consumable(where, item.consumable)
   if (item.category === 'pet') {
+    if (!item.stats)
+      red(
+        'H4-PETSTATS',
+        `${where}: a fully fed pet gives stats — every pet must author a stats block (owner 2026-08-20)`
+      )
     if (!Array.isArray(item.pet_foods) || item.pet_foods.length === 0)
       red('H4-PETFOOD', `${where}: every pet must author at least one resource item_type in pet_foods`)
     else {

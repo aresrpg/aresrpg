@@ -40,11 +40,56 @@ const fight_node = {
     access_b: 0,
     managed: false,
     wagered: false,
-    fighters: JSON.stringify([{ kind: 'player', character: '0xabc', owner: '0xme' }]),
+    winner: null,
+    dungeon_room: null,
+    drops_rolled: false,
+    turn_ptr: 0,
+    round: 0,
+    turn_seed: '0',
+    placement_ms: 0,
+    turn_started_ms: 0,
+    // the indexer's machine document (graph.rs fight_machine) — the replayable blob
+    machine: JSON.stringify({
+      board: {
+        width: 8,
+        height: 8,
+        shape_mask: ['0'],
+        obstacles: [],
+        holes: [],
+        start_cells_a: [1],
+        start_cells_b: [62],
+      },
+      closed: [],
+      opener_a: '0xabc',
+      opener_b: null,
+      queue: [],
+      turn_slot: 0,
+      turn_casts: [],
+      zones: [],
+      fighters: [
+        {
+          team: 0,
+          kind: { player: { character: '0xabc', owner: '0xme' } },
+          cell: 1,
+          ready: false,
+          dead: false,
+          settled: false,
+          forfeited: false,
+          hp: 100,
+          ap: 6,
+          mp: 3,
+          drops: [],
+          effects: [],
+          cooldowns: [],
+        },
+      ],
+    }),
   },
 }
 
-const wire = () => {
+/** `seated` puts the character in a fight BEFORE the connection exists — the custody the
+ *  embody read must find (a reconnect mid-fight, or the creator seated at the fight's birth). */
+const wire = ({ seated = false } = {}) => {
   const sent: ServerPacket[] = []
   const ws = {
     send: (raw: string) => sent.push(JSON.parse(raw)),
@@ -52,9 +97,21 @@ const wire = () => {
   }
   const graph = {
     read: async (cypher: string, _params?: Record<string, unknown>) => {
-      if (cypher.includes(':Fight {id:')) return [{ fight: fight_node }]
+      if (cypher.includes(':Fight {id:')) return [{ fight: fight_node, seats: [{ character, weapon: null }] }]
+      if (cypher.includes(':Fight {world:')) return []
+      // seated: the kiosk's HOLDS edge is severed by law, so custody proves nothing and the
+      // embody gate must read the seat out of the fight's machine document instead
       if (cypher.includes(':Character {id:'))
-        return [{ character, held_kiosk: '0xk', kiosk: '0xk', fight: null, party: null, worn: [] }]
+        return [
+          {
+            character,
+            held_kiosk: seated ? null : '0xk',
+            kiosk: '0xk',
+            fight: seated ? fight_node : null,
+            party: null,
+            worn: [],
+          },
+        ]
       if (cypher.includes(':FRIEND')) return []
       if (cypher.includes('HOLDS_CLAIM') || cypher.includes('HOLDS_VOUCHER')) return []
       if (cypher.includes('MATCH (s:Sale)') || cypher.includes('MATCH (a:Airdrop)')) return []
@@ -173,19 +230,22 @@ describe('chat', () => {
 })
 
 describe('the fight watch', () => {
-  test('FighterJoined on the self stream arms the watch; the chain stream forwards; FightEnded disarms', async () => {
+  test('CharacterSeated on the self stream arms the watch; the chain stream forwards; FightEnded disarms', async () => {
     const { sent, ws, graph, pubsub } = wire()
     const player = create_player({ ws, address: '0xme', admin: false, graph, pubsub })
     await flush()
     await embody(player)
-    pubsub.emitter.emit('evt:character:0xabc', { type: 'FighterJoined', data: { fight: '0xf1', character: '0xabc' } })
+    pubsub.emitter.emit('evt:character:0xabc', {
+      type: 'CharacterSeated',
+      data: { fight: '0xf1', character: '0xabc', seat: 0 },
+    })
     await flush()
     // arming pushed the live fight row with OUR seat
     const state = sent.find((packet) => packet.type === 'packet/fight_state')
     expect(state).toMatchObject({ type: 'packet/fight_state', seat: 0 })
-    pubsub.emitter.emit('evt:fight:0xf1', { type: 'MobTurnPlayed', data: { fight: '0xf1', seat: '2', seed: '99' } })
-    expect(sent.find((packet) => packet.type === 'packet/mob_turn')).toEqual({
-      type: 'packet/mob_turn',
+    pubsub.emitter.emit('evt:fight:0xf1', { type: 'TurnSeedUsed', data: { fight: '0xf1', seat: '2', seed: '99' } })
+    expect(sent.find((packet) => packet.type === 'packet/turn_seed')).toEqual({
+      type: 'packet/turn_seed',
       fight: '0xf1',
       seat: '2',
       seed: '99',
@@ -193,8 +253,27 @@ describe('the fight watch', () => {
     pubsub.emitter.emit('evt:fight:0xf1', { type: 'FightEnded', data: { fight: '0xf1', winner: 0 } })
     await flush()
     // disarmed: further fight facts stay silent
-    pubsub.emitter.emit('evt:fight:0xf1', { type: 'MobTurnPlayed', data: { fight: '0xf1', seat: '3', seed: '1' } })
-    expect(sent.filter((packet) => packet.type === 'packet/mob_turn')).toHaveLength(1)
+    pubsub.emitter.emit('evt:fight:0xf1', { type: 'TurnSeedUsed', data: { fight: '0xf1', seat: '3', seed: '1' } })
+    expect(sent.filter((packet) => packet.type === 'packet/turn_seed')).toHaveLength(1)
+  })
+
+  test('a character seated in a fight embodies on its seat and lands back on the board', async () => {
+    // THE DUEL INCIDENT (2026-08-21): a seated character has NO kiosk HOLDS edge, so the seat
+    // is the only ownership proof — and the gate read a `fighters` prop the projection never
+    // writes (the seats live in the machine document). Every seated character was therefore
+    // "not your character": no reconnect, no way back to the board, no way out of the fight.
+    const { sent, ws, graph, pubsub } = wire({ seated: true })
+    const player = create_player({ ws, address: '0xme', admin: false, graph, pubsub })
+    await flush()
+    await embody(player)
+    await flush()
+    // the gate admitted the seat — no "not your character" refusal
+    expect(sent.filter((packet) => packet.type === 'packet/error' && packet.reason.includes('character'))).toEqual([])
+    expect(sent.find((packet) => packet.type === 'packet/fight_state')).toMatchObject({
+      type: 'packet/fight_state',
+      fight: '0xf1',
+      seat: 0,
+    })
   })
 
   test('a fight action relays only within the armed fight', async () => {
@@ -205,7 +284,10 @@ describe('the fight watch', () => {
     const action = { type: 'move_to', fighter: '0', path: ['7'] } as const
     player.on_message(JSON.stringify({ type: 'packet/fight_action', fight: '0xf1', action }))
     expect(sent.find((packet) => packet.type === 'packet/error' && packet.reason === 'not in this fight')).toBeTruthy()
-    pubsub.emitter.emit('evt:character:0xabc', { type: 'FighterJoined', data: { fight: '0xf1', character: '0xabc' } })
+    pubsub.emitter.emit('evt:character:0xabc', {
+      type: 'CharacterSeated',
+      data: { fight: '0xf1', character: '0xabc', seat: 0 },
+    })
     await flush()
     player.on_message(JSON.stringify({ type: 'packet/fight_action', fight: '0xf1', action }))
     expect(published.some(({ channel }) => channel === 'act:fight:0xf1')).toBe(true)

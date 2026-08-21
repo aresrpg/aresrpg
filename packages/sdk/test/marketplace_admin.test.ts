@@ -6,6 +6,8 @@ import { describe, expect, test } from 'bun:test'
 import { claim_marketplace_royalties, read_marketplace_royalties } from '../src/marketplace_admin.ts'
 
 const package_id = `0x${'11'.repeat(32)}`
+// the upgraded package object — types never live here, only move-call targets do
+const latest_package_id = `0x${'77'.repeat(32)}`
 const address = `0x${'22'.repeat(32)}`
 const item_policy = `0x${'33'.repeat(32)}`
 const character_policy = `0x${'44'.repeat(32)}`
@@ -17,8 +19,10 @@ const caps = [
 ]
 
 const sdk = (withdrawals: string[] = [], owned_caps = caps) => ({
+  game_type_package: package_id,
   pins: {
-    package: package_id,
+    // pins.package follows the latest upgrade; royalty reads must not use it for types
+    package: latest_package_id,
     item_policy: { id: item_policy, shared_version: '1' },
     character_policy: { id: character_policy, shared_version: '1' },
   },

@@ -82,6 +82,8 @@ public struct PendingAmbush has copy, drop, store {
 
 public struct ResourceGathered has copy, drop {
   world: String,
+  x: u32,
+  z: u32,
   gatherer: address,
   item_type: String,
   tier: u8,
@@ -91,7 +93,9 @@ public struct ResourceGathered has copy, drop {
 }
 
 /// The golden-gather jackpot — SEPARATE from the base event so its shape stays untouched.
-public struct RareGathered has copy, drop { world: String, gatherer: address, item_type: String, rare_item_type: String }
+/// Both carry their anchor so the realtime layer routes them to the ZONE channel — presence
+/// spam never rides a world-global wire.
+public struct RareGathered has copy, drop { world: String, x: u32, z: u32, gatherer: address, item_type: String, rare_item_type: String }
 
 // ╔════════════════ [ The gather door ] ══════════════════════════════════════ ]
 
@@ -173,12 +177,14 @@ public(package) fun gather(
     assert!(item::template_type(rare_template) == rare, ERareMismatch);
     if (gen.generate_u64_in_range(0, 9999) < RARE_BP) {
       item::deposit(kiosk, cap, item_policy, existing_rare, item::mint(rare_template, 1, gen, ctx));
-      event::emit(RareGathered { world: w.name(), gatherer: ctx.sender(), item_type, rare_item_type: rare });
+      event::emit(RareGathered { world: w.name(), x: pack.pack_x(), z: pack.pack_z(), gatherer: ctx.sender(), item_type, rare_item_type: rare });
     };
   };
 
   event::emit(ResourceGathered {
     world: w.name(),
+    x: pack.pack_x(),
+    z: pack.pack_z(),
     gatherer: ctx.sender(),
     item_type,
     tier: row.resource_row_tier(),

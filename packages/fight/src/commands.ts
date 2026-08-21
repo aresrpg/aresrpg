@@ -3,7 +3,7 @@
 /* eslint-disable no-param-reassign, fp-law/no-mutating-methods -- The Move twin updates only its reducer-owned structuredClone draft; caller snapshots stay immutable. */
 
 import { resolve_spell } from './effects.ts'
-import { is_mob, is_player, kill_fighter } from './fighters.ts'
+import { is_mob, is_player, kill_fighter, living_count } from './fighters.ts'
 import { CONTRACT_CONSTANTS } from './move_contract.gen.ts'
 import { walk_path } from './movement.ts'
 import { emit, fail } from './runtime.ts'
@@ -28,9 +28,6 @@ import type {
 } from './types.ts'
 
 const placement_open = (runtime: FightRuntime): boolean => runtime.contract.round === 0n && !runtime.contract.ended
-const living_count = (runtime: FightRuntime, team: bigint): bigint =>
-  BigInt(runtime.contract.fighters.filter((fighter) => fighter.team === team && !fighter.dead).length)
-
 const assert_actor = (runtime: FightRuntime, fighter: bigint): boolean => {
   if (runtime.contract.round < 1n || runtime.contract.ended) return false
   const actor = runtime.contract.queue[Number(runtime.contract.turn_ptr)]
@@ -142,7 +139,8 @@ const start = (runtime: FightRuntime, options: CommandOptions): FightRuntime => 
   const now = options.observed_ms!
   if (!all_players_ready(runtime) && now < runtime.contract.placement_ms + CONTRACT_CONSTANTS.placement_force_ms)
     return fail(runtime, 'not_ready')
-  if (living_count(runtime, 0n) < 1n || living_count(runtime, 1n) < 1n) return fail(runtime, 'empty_side')
+  if (living_count(runtime.contract.fighters, 0n) < 1n || living_count(runtime.contract.fighters, 1n) < 1n)
+    return fail(runtime, 'empty_side')
   runtime.contract.queue = weave(runtime.contract)
   runtime.contract.round = 1n
   emit(runtime, 'fight_started', { queue: runtime.contract.queue, round: 1n })

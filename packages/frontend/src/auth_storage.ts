@@ -39,3 +39,23 @@ export const clear_auth_wallet = (storage: AuthStorage | null): void => {
     console.warn('Remembered auth could not be cleared.', error)
   }
 }
+
+// ── the last-played character tab (survives reloads; a stale id falls back in the fold) ──
+const SELECTED_CHARACTER_KEY = 'aresrpg.selected_character'
+
+export const read_selected_character = (): string | null => {
+  try {
+    return globalThis.localStorage?.getItem(SELECTED_CHARACTER_KEY) ?? null
+  } catch (error) {
+    console.warn('Character-tab storage is unavailable; starting on the first character.', error)
+    return null
+  }
+}
+
+export const remember_selected_character = (character_id: string): void => {
+  try {
+    globalThis.localStorage?.setItem(SELECTED_CHARACTER_KEY, character_id)
+  } catch (error) {
+    console.warn('Character-tab storage is unavailable; the selection will not survive a reload.', error)
+  }
+}

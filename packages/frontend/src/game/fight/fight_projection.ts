@@ -5,6 +5,7 @@
 
 import {
   CONTRACT_CONSTANTS,
+  living_count,
   player_max_hp,
   project_spell_turn,
   project_weapon_turn,
@@ -62,6 +63,8 @@ export type FightView = Readonly<{
   placement_deadline_ms: bigint | null
   can_end_turn: boolean
   can_forfeit: boolean
+  /** both sides hold a living fighter — the chain's own precondition for starting a fight */
+  sides_manned: boolean
 }>
 
 const fighter_max_hp = (checkpoint: Readonly<HydratedFightCheckpoint>, fighter: Readonly<Fighter>): bigint =>
@@ -187,5 +190,10 @@ export const select_fight_view = ({
       phase === 'placement' && mode === 'remote' ? contract.placement_ms + CONTRACT_CONSTANTS.placement_force_ms : null,
     can_end_turn: phase === 'active' && selected?.seat === active_seat && !!selected.owned,
     can_forfeit: phase !== 'ended' && !!selected?.owned && !selected.dead && !selected.settled,
+    // Both sides hold a living fighter. The chain refuses to start otherwise — "nobody fights
+    // an empty side; a challenge nobody accepted exits via placement-forfeit" (fight.move
+    // `start`) — so a UI that offers a start here would only ever compose an aborting
+    // transaction. This says NOTHING about readiness or the placement deadline.
+    sides_manned: living_count(contract.fighters, 0n) > 0n && living_count(contract.fighters, 1n) > 0n,
   })
 }

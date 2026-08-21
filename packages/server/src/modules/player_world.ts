@@ -25,6 +25,7 @@ import { get_owned_character } from '../reads/get_owned_character.ts'
 import { get_friends } from '../reads/get_friends.ts'
 import { get_zones } from '../reads/get_zones.ts'
 import { get_world_fights } from '../reads/get_world_fights.ts'
+import { get_fight } from '../reads/get_fight.ts'
 import { get_item } from '../reads/get_item.ts'
 import logger from '../logger.ts'
 import type { PlayerModule, PlayerContext, PlayerAction, PlayerState, Embodied } from '../player.ts'
@@ -79,7 +80,7 @@ export default {
       if (!state.character) return state
       return {
         ...state,
-        character: { ...state.character, x: action.x, y: action.y, z: action.z },
+        character: { ...state.character, x: action.x, y: action.y, z: action.z, riding: action.riding },
         // the bucket rolls forward: what the step didn't spend stays banked (capped)
         move_anchor: { x: action.x, z: action.z, at_ms: action.at_ms, blocks: action.budget_blocks },
       }
@@ -101,6 +102,8 @@ export default {
     const visible = new Map<string, string>()
     /** character_id → skipped-move count — far players forward at 1/4 rate (legacy tuning) */
     const move_skips = new Map<string, number>()
+    /** character_id → the mount state last forwarded — a toggle always beats the throttle */
+    const riding_seen = new Map<string, boolean>()
 
     /** A VISIBLE player's own chain stream — their visible-slot equips forward as packets. */
     const forward_visible_equipment = (payload: EventEnvelope) => {
@@ -127,6 +130,7 @@ export default {
         const known = visible.has(fact.player.character_id)
         if (!known && !get_state().friends.has(fact.address) && visible.size >= VISIBLE_PLAYERS_CAP) return
         visible.set(fact.player.character_id, fact.address)
+        riding_seen.set(fact.player.character_id, fact.player.riding)
         if (!known)
           watch(channels.character(fact.player.character_id), forward_visible_equipment as (payload: never) => void)
         send({ type: 'packet/player_appeared', player: fact.player })
@@ -136,16 +140,28 @@ export default {
         const me = get_state().character
         const far = me ? Math.hypot(fact.x - me.x, fact.z - me.z) > FAR_PLAYER_BLOCKS : false
         const skipped = move_skips.get(fact.character_id) ?? 0
-        if (far && skipped < FAR_MOVE_SKIP) {
+        // the distance throttle drops POSITIONS, never a mount toggle: a player who mounts and
+        // stands still far away would otherwise never send another fact to carry the change
+        const toggled = riding_seen.get(fact.character_id) !== fact.riding
+        if (far && !toggled && skipped < FAR_MOVE_SKIP) {
           move_skips.set(fact.character_id, skipped + 1)
           return
         }
         move_skips.set(fact.character_id, 0)
-        send({ type: 'packet/player_moved', character_id: fact.character_id, x: fact.x, y: fact.y, z: fact.z })
+        riding_seen.set(fact.character_id, fact.riding)
+        send({
+          type: 'packet/player_moved',
+          character_id: fact.character_id,
+          x: fact.x,
+          y: fact.y,
+          z: fact.z,
+          riding: fact.riding,
+        })
       }
       if (fact.kind === 'leave') {
         if (!visible.delete(fact.character_id)) return
         move_skips.delete(fact.character_id)
+        riding_seen.delete(fact.character_id)
         unwatch(channels.character(fact.character_id))
         send({ type: 'packet/player_left', character_id: fact.character_id })
       }
@@ -184,16 +200,29 @@ export default {
       })
     }
 
-    const forward_world_event = (payload: EventEnvelope) => {
+    /** A tracked ZONE's facts (evt:zone channels) — sword markers, zone re-rolls, gathers.
+     *  NOTHING rides a world-global channel anymore: presence is zone-scoped by law. */
+    const forward_zone_event = (payload: EventEnvelope) => {
+      if (payload.type === 'FightCreated') {
+        // the event is the TRIGGER, the graph is the truth: the projection already wrote this
+        // fight's node (pipeline.rs orders graph writes before publishes), so the marker ships
+        // as the same projected row the zone snapshot carries — the client never fills a gap.
+        const { fight } = payload.data as { fight: string }
+        void get_fight(graph, { fight_id: fight })
+          .then(([row]) => row && send({ type: 'packet/fight_created', fight: row }))
+          .catch((error: Error) => log.warn({ fight, error: error.message }, 'fight marker read failed'))
+      }
+      if (payload.type === 'FightStarted' || payload.type === 'FightEnded')
+        send({
+          type: 'packet/fight_phase',
+          fight: (payload.data as { fight: string }).fight,
+          phase: payload.type === 'FightStarted' ? 'active' : 'ended',
+        })
       if (payload.type === 'ZoneSearched') {
         const { world: w, zx, zz, seed } = payload.data as { world: string; zx: number; zz: number; seed: string }
         send({ type: 'packet/zone_searched', world: w, zx, zz, seed })
         // a TRACKED zone just (re)rolled — fresh seed means fresh, unconsumed spawns
         if (has(mesh.pos(w, zx, zz))) send_zone_spawns(w, zx, zz, seed, '0', [])
-      }
-      if (payload.type === 'FightCreated') {
-        const { fight, world: w, x, z } = payload.data as { fight: string; world: string; x: number; z: number }
-        send({ type: 'packet/fight_created', fight, world: w, x, z })
       }
       if (payload.type === 'ResourceGathered') {
         const {
@@ -225,13 +254,19 @@ export default {
     /** Push the states of newly tracked zones + their fights, and (re)wire the mesh channels. */
     const track = async (world: string, next: { zx: number; zz: number }[]) => {
       const wanted = new Set(next.map(({ zx, zz }) => mesh.pos(world, zx, zz)))
+      const wanted_zone_events = new Set(next.map(({ zx, zz }) => channels.zone(world, zx, zz)))
       const fresh = next.filter(({ zx, zz }) => !has(mesh.pos(world, zx, zz)))
       for (const channel of watched()) {
         if (channel.startsWith('pos:') && !wanted.has(channel)) unwatch(channel)
+        // zone facts ride the graph bus — the indexer publishes evt:zone:{world}:{zx}:{zz}
+        if (channel.startsWith('evt:zone:') && !wanted_zone_events.has(channel)) unwatch(channel)
       }
       // subscriptions must be REGISTERED before the probes fire — an answer that arrives
       // before our own subscribe lands is silently undeliverable (the join-later race)
       await Promise.all(fresh.map(({ zx, zz }) => watch(mesh.pos(world, zx, zz), forward_presence)))
+      await Promise.all(
+        fresh.map(({ zx, zz }) => watch(channels.zone(world, zx, zz), forward_zone_event as (payload: never) => void))
+      )
       // ask each fresh zone who is already there (the occupants ARE the presence state)
       for (const { zx, zz } of fresh)
         void pubsub.mesh.publish(mesh.pos(world, zx, zz), { kind: 'who', address, world, zx, zz })
@@ -248,7 +283,6 @@ export default {
     }
 
     const mount = async (character: Embodied) => {
-      watch(channels.world(character.world), forward_world_event as (payload: never) => void)
       const { zx, zz } = zone_of(character.x, character.z)
       await track(character.world, spiral(zx, zz))
       void pubsub.mesh.publish(mesh.pos(character.world, zx, zz), { kind: 'appear', player: character, address })
@@ -264,10 +298,18 @@ export default {
       for (const channel of watched()) unwatch(channel)
       visible.clear()
       move_skips.clear()
+      riding_seen.clear()
     }
 
     const move = (before: Embodied, current: Embodied) => {
-      if (before.x === current.x && before.y === current.y && before.z === current.z) return // a refit, not a move
+      // a refit, not a move — but a mount toggle while standing still IS presence news
+      if (
+        before.x === current.x &&
+        before.y === current.y &&
+        before.z === current.z &&
+        before.riding === current.riding
+      )
+        return
       const previous_zone = zone_of(before.x, before.z)
       const current_zone = zone_of(current.x, current.z)
       if (current_zone.zx !== previous_zone.zx || current_zone.zz !== previous_zone.zz) {
@@ -291,6 +333,7 @@ export default {
         x: current.x,
         y: current.y,
         z: current.z,
+        riding: current.riding,
       })
     }
 
@@ -310,6 +353,7 @@ export default {
           type: 'action/embody',
           character: {
             character_id: character.id as string,
+            owner: address,
             name: character.name as string,
             classe: character.classe as string,
             sex: character.sex as string,
@@ -321,6 +365,7 @@ export default {
             x: (character.x as number) ?? 0,
             y: 0,
             z: (character.z as number) ?? 0,
+            riding: false,
             world,
           },
           friends,
@@ -360,6 +405,8 @@ export default {
         x: action.x,
         y: action.y,
         z: action.z,
+        // a petless rider is a lie — the flag only stands while a pet is equipped (chain truth)
+        riding: action.riding && character.pet !== null,
         at_ms: now,
         budget_blocks: Math.min(Math.max(available - step, 0), ceiling * BUDGET_CAP_S),
       })

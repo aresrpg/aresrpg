@@ -9,7 +9,7 @@
 
 import { BufferAttribute, BufferGeometry, DoubleSide, Group, Mesh, type Scene } from 'three'
 import { MeshStandardNodeMaterial } from 'three/webgpu'
-import { attribute, cos, float, positionLocal, positionWorld, sin, time, vec3 } from 'three/tsl'
+import { Fn, attribute, cos, float, positionLocal, positionWorld, sin, time, vec3 } from 'three/tsl'
 
 import { flower_bloom } from './nature/flower_bloom.ts'
 import { herb_bush } from './nature/herb_bush.ts'
@@ -23,6 +23,7 @@ import { twig_branch } from './nature/twig_branch.ts'
 import { mulberry, rotate_y, type RecipeVertex, type SpriteBuilder } from './nature/sprite_kit.ts'
 import { RECIPE_VARIANTS, type ScatterInstance, type ScatterKind } from './scatter.ts'
 import { macro_surface_tint_nodes } from './terrain_tint.ts'
+import { occlusion_dither_discard, type BoardOcclusion } from './board_occlusion.ts'
 import type { RenderedChunk } from './types.ts'
 
 /** A kind's variant pool cycles through its sprite species — placement only picks an index. */
@@ -119,7 +120,10 @@ export type ScatterLayer = Readonly<{
   dispose: () => void
 }>
 
-export const create_scatter_layer = ({ scene }: Readonly<{ scene: Scene }>): ScatterLayer => {
+export const create_scatter_layer = ({
+  scene,
+  board_occlusion,
+}: Readonly<{ scene: Scene; board_occlusion: BoardOcclusion }>): ScatterLayer => {
   const group = new Group()
   scene.add(group)
   const meshes = new Map<string, Mesh>()
@@ -134,7 +138,14 @@ export const create_scatter_layer = ({ scene }: Readonly<{ scene: Scene }>): Sca
     position_world: { x: positionWorld.x, z: positionWorld.z },
     patch_scale: 0,
   })
-  material.colorNode = tint.tint_albedo(authored)
+  // CLUTTER MELTS FOR A BOARD. Grass grows through a slab that was laid on top of it, and it
+  // stands between the camera and the arena — both are the peephole's job. Unlike terrain this
+  // is one thin sprite layer, never the depth workhorse, so it carries the discard directly
+  // rather than paying for a second material; the uniform folds it away when nothing is mounted.
+  material.colorNode = Fn(() => {
+    occlusion_dither_discard(board_occlusion)
+    return tint.tint_albedo(authored)
+  })() as ReturnType<typeof tint.tint_albedo>
   material.roughnessNode = tint.roughness_node
   const sway = attribute('sway', 'float' as const)
   const phase = attribute('phase', 'float' as const)

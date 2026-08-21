@@ -86,15 +86,15 @@ const TYPE_MAP = {
 }
 
 const MOVE_VALUE_TYPES = Object.freeze({
-  ItemDamages: { package_key: 'math_package', module: 'item_damages' },
-  Effect: { package_key: 'math_package', module: 'spell_effect' },
-  SpellLevel: { package_key: 'math_package', module: 'spell_effect' },
-  MobSpell: { package_key: 'math_package', module: 'mob_data' },
-  LootEntry: { package_key: 'math_package', module: 'mob_data' },
-  MobRow: { package_key: 'math_package', module: 'world_map' },
-  ResourceRow: { package_key: 'math_package', module: 'world_map' },
-  RoomMob: { package_key: 'math_package', module: 'world_map' },
-  DungeonRoom: { package_key: 'math_package', module: 'world_map' },
+  ItemDamages: { type_package: 'math_type_package', module: 'item_damages' },
+  Effect: { type_package: 'math_type_package', module: 'spell_effect' },
+  SpellLevel: { type_package: 'math_type_package', module: 'spell_effect' },
+  MobSpell: { type_package: 'math_type_package', module: 'mob_data' },
+  LootEntry: { type_package: 'math_type_package', module: 'mob_data' },
+  MobRow: { type_package: 'math_type_package', module: 'world_map' },
+  ResourceRow: { type_package: 'math_type_package', module: 'world_map' },
+  RoomMob: { type_package: 'math_type_package', module: 'world_map' },
+  DungeonRoom: { type_package: 'math_type_package', module: 'world_map' },
 })
 
 /** @param {string} type @returns {DoorStrategy} */
@@ -162,7 +162,8 @@ const arg_expr = ({ name, strategy }) => {
       return `ctx.pure.vector(tx, '${strategy.helper}', args.${name})`
     case 'move_vector': {
       const value = MOVE_VALUE_TYPES[strategy.type]
-      return `tx.makeMoveVec({ type: \`\${ctx.pins.${value.package_key}}::${value.module}::${strategy.type}\`, elements: [...args.${name}] })`
+      // type arguments name types by their DEFINING package — never the latest upgrade target
+      return `tx.makeMoveVec({ type: \`\${ctx.${value.type_package}}::${value.module}::${strategy.type}\`, elements: [...args.${name}] })`
     }
     case 'receiving':
       return `ctx.receiving(tx, args.${name})`

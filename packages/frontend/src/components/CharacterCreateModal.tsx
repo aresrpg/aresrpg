@@ -10,6 +10,7 @@ import { useEffect, useRef, useState, type FormEvent } from 'react'
 
 import type { AppCopy } from '../i18n/copy.ts'
 import { format_sui } from '../wallet_amount.ts'
+import { toast } from '../toast.ts'
 
 type CharacterIdentity = Readonly<{
   name: string
@@ -116,7 +117,10 @@ export const CharacterCreateModal = ({
       color_2: color_2!,
       color_3: color_3!,
     })
-      .catch((error: unknown) => console.error('Character creation failed.', error))
+      .catch((error: unknown) => {
+        console.error('Character creation failed.', error)
+        toast.add(error)
+      })
       .finally(() => set_submitting(false))
   }
 

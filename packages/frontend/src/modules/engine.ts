@@ -13,7 +13,9 @@ import {
   type ChainAnchor,
 } from '../game/core/position_store.ts'
 import { read_pose, subscribe_pose } from '../game/core/pose_feed.ts'
+import { publish_scene, submit_scene_entities, subscribe_scene } from '../game/core/scene_feed.ts'
 import { create_presence_renderer } from '../game/presence_entities.ts'
+import { pick_player } from '../game/core/player_pick.ts'
 import { world_terrain } from '../content/worlds.ts'
 import type { AppInput, AppModule, AppState } from '../store.ts'
 
@@ -152,18 +154,91 @@ const observe = ({ events, dispatch, get_state, signal }: Parameters<NonNullable
     presence?.update(state.world.players, state.session.selected_character_id)
   }
 
+  /** The tracked zones' live fights as planted swords — kolizeum fights are arena-internal
+   *  (nominal world) and never stand in a world's ground. */
+  let sword_url: string | null = null
+  const sync_fights = (state: AppState): void => {
+    const api = world
+    if (!api) return
+    const world_name = selected_world(state)
+    if (!world_name || Object.keys(state.world.fights).length === 0) {
+      // never arm the layer with a blank url — an empty marker set only needs clearing once
+      // the url is known (a torn-down world clears its own scene anyway)
+      if (sword_url) api.set_fight_swords(sword_url, [])
+      return
+    }
+    const arm = (url: string): void => {
+      sword_url = url
+      const markers = Object.values(state.world.fights)
+        .filter((fight) => fight.world === world_name && !fight.managed && !fight.wagered)
+        .map((fight) => {
+          const x = chain_to_client_coordinate(fight.x)
+          const z = chain_to_client_coordinate(fight.z)
+          return {
+            id: fight.id,
+            x,
+            y: api.ground_height(x, z),
+            z,
+            placement_ms: Number(fight.placement_ms),
+          }
+        })
+      api.set_fight_swords(url, markers)
+    }
+    if (sword_url) arm(sword_url)
+    // content modules stay dynamic — fight_models uses Vite's import.meta.glob, a build-only door
+    else
+      void import('../content/fight_models.ts')
+        .then(({ load_fight_sword_url }) => load_fight_sword_url())
+        .then((url) => url && arm(url))
+  }
+
+  // the OWN companion — the SAME loader and shape the demo lab uses (one code path, owner
+  // 2026-08-21); it follows the equipped pet slot of the selected character
+  let pet_key: string | null = null
+  let pet_generation = 0
+  const sync_pet = (state: AppState): void => {
+    if (!world) return
+    const selected = state.session.characters.find(({ id }) => id === state.session.selected_character_id)
+    const pet_type = selected?.equipment.find(({ slot }) => slot === 'pet')?.item_type ?? null
+    if (pet_type === pet_key) return
+    pet_key = pet_type
+    pet_generation += 1
+    const own_generation = pet_generation
+    if (!pet_type) {
+      world.set_pet(null)
+      return
+    }
+    void import('../content/pet_models.ts')
+      .then(({ load_pet_companion }) => load_pet_companion('own_pet', pet_type))
+      .then(
+        (companion) => {
+          if (signal.aborted || own_generation !== pet_generation || !world) return
+          world.set_pet(companion)
+        },
+        (error: unknown) => {
+          if (own_generation !== pet_generation || !world) return
+          console.error(`The companion ${pet_type} failed to load.`, error)
+          world.set_pet(null)
+        }
+      )
+  }
+
   const sync = (state: AppState): void => {
     sync_activity(state)
     sync_settings(state)
     sync_target(state)
     sync_character(state)
     sync_presence(state)
+    sync_pet(state)
+    sync_fights(state)
   }
 
   const dispose_world = (): void => {
     generation += 1
     character_generation += 1
     character_key = null
+    pet_key = null
+    publish_scene(null)
     presence?.dispose()
     presence = null
     unsubscribe_status?.()
@@ -174,11 +249,38 @@ const observe = ({ events, dispatch, get_state, signal }: Parameters<NonNullable
     if (import.meta.env.DEV) visual_global.__ares_visual__ = undefined
   }
 
+  // right-click on a nearby BODY (screen-space pick over the shown positions) opens the
+  // player context menu; anywhere else keeps the camera's right-drag untouched
+  const on_context_menu = (event: MouseEvent): void => {
+    const view = world?.camera_frame()
+    const own = read_pose()
+    if (!world || !presence || !view || !own || !canvas || world.mode() !== 'follow') return
+    // in-game the browser menu never belongs on the canvas — a missed pick must not leak it
+    event.preventDefault()
+    const rect = canvas.getBoundingClientRect()
+    const picked = pick_player({
+      view,
+      width: rect.width,
+      height: rect.height,
+      click_x: event.clientX - rect.left,
+      click_y: event.clientY - rect.top,
+      own,
+      candidates: presence.positions(),
+    })
+    if (!picked) return
+    dispatch({
+      type: 'world/player_menu',
+      menu: { character_id: picked, x: event.clientX, y: event.clientY, source: 'body' },
+    })
+  }
+
   const mount = (next_canvas: HTMLCanvasElement): void => {
     const world_name = selected_world(get_state())
     if (canvas === next_canvas && world && mounted_world_name === world_name) return
     dispose_world()
+    canvas?.removeEventListener('contextmenu', on_context_menu)
     canvas = next_canvas
+    next_canvas.addEventListener('contextmenu', on_context_menu)
     mounted_world_name = world_name
     const terrain = world_terrain(world_name)
     if (!terrain) {
@@ -202,7 +304,15 @@ const observe = ({ events, dispatch, get_state, signal }: Parameters<NonNullable
           quality: get_state().settings.quality,
         })
         world = created
-        presence = create_presence_renderer({ submit: created.set_entities, entity_height: created.entity_height })
+        // the running scene becomes reachable to the surfaces that draw into it — the fight
+        // board mounts INSIDE this engine rather than standing a second one in front of it
+        publish_scene(created)
+        presence = create_presence_renderer({
+          // presence no longer writes the entity list directly: it holds it only while no
+          // board is mounted (owner 2026-08-21 — a fight shows its fighters and nobody else)
+          submit: (entities) => submit_scene_entities('presence', entities),
+          entity_height: created.entity_height,
+        })
         unsubscribe_status = created.subscribe_status((status) => dispatch({ type: 'engine/status', status }))
         sync(get_state())
         if (import.meta.env.DEV)
@@ -238,6 +348,9 @@ const observe = ({ events, dispatch, get_state, signal }: Parameters<NonNullable
         .catch((error: unknown) => console.warn('The position cache write failed.', error))
     },
   })
+  // the entity list changed hands (a board mounted, or gave it back) — presence rebuilds only on
+  // a store delta, so without this the world's crowd stays empty until somebody moves
+  const unsubscribe_scene = subscribe_scene(() => sync_presence(get_state()))
   const unsubscribe_pose = subscribe_pose(() => {
     const pose = read_pose()
     if (!pose) return
@@ -251,6 +364,7 @@ const observe = ({ events, dispatch, get_state, signal }: Parameters<NonNullable
   events.on('engine/canvas_attached', ({ canvas: next_canvas }) => mount(next_canvas))
   events.on('engine/canvas_detached', ({ canvas: previous_canvas }) => {
     if (canvas !== previous_canvas) return
+    previous_canvas.removeEventListener('contextmenu', on_context_menu)
     canvas = null
     dispose_world()
   })
@@ -263,12 +377,17 @@ const observe = ({ events, dispatch, get_state, signal }: Parameters<NonNullable
     const world_changed = selected_world(state) !== selected_world(previous)
     if (world_changed && canvas) mount(canvas)
     else if (selection_changed || target_became_available) sync_target(state)
-    if (selection_changed || state.session.characters !== previous.session.characters) sync_character(state)
+    if (selection_changed || state.session.characters !== previous.session.characters) {
+      sync_character(state)
+      sync_pet(state)
+    }
     if (selection_changed || state.world.players !== previous.world.players) sync_presence(state)
+    if (state.world.fights !== previous.world.fights) sync_fights(state)
   })
   signal.addEventListener('abort', () => {
     writer.flush()
     unsubscribe_pose()
+    unsubscribe_scene()
     dispose_world()
   })
 }

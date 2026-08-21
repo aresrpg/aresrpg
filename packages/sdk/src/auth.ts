@@ -19,6 +19,7 @@ import {
 
 import PINS from '../../../pins.json' with { type: 'json' }
 
+import { canonical_suins_name } from './suins.ts'
 import { character_claim_id, character_create, character_id, type CharacterCreateInput } from './character.ts'
 import { gas_mist_from_receipt } from './gas.ts'
 import { SDK, type Pins, type SuiTransport } from './client.ts'
@@ -28,16 +29,22 @@ import type { SeedSessionRecord, SeedSessionStore } from './seed_session.ts'
 import { sui_transfer_ptb } from './sui_transfer.ts'
 import type { MarketplaceRoyalty } from './marketplace_admin.ts'
 import type { AirdropClaim, ShopPurchase } from './shop.ts'
+import { character_actions, type CharacterActions } from './character_actions.ts'
+import { fight_actions, type FightActions } from './fight.ts'
 import { receipt_digest, receipt_digest_or_null, type Receipt } from './cache.ts'
 import { create_personal_kiosk_runner } from './ptb.ts'
 import {
   create_deployment_bootstrap_transaction,
   create_package_publish_transaction,
   create_package_upgrade_transaction,
+  DEPLOYMENT_GAS_BUDGET_MIST,
   DISPLAY_REGISTRY_ID,
   type ContractArtifact,
   type GameDeployment,
 } from './deployment_admin.ts'
+
+export type { CharacterActions } from './character_actions.ts'
+export type { FightActions } from './fight.ts'
 
 export type AuthSession = Readonly<{
   address: string
@@ -48,6 +55,10 @@ export type AuthSession = Readonly<{
   derive_character_id: (name: string) => string
   is_character_name_claimed: (name: string) => Promise<boolean>
   create_character: (character: CharacterCreateInput) => Promise<Readonly<{ digest: string; character_id: string }>>
+  /** the remote-fight chain hand — duels and PvM share it (local vs remote is the ONLY split) */
+  fight: FightActions
+  /** the character-upkeep chain hand — equipment, stats, spells, consumables, runes */
+  character: CharacterActions
   resolve_suins_address: (name: string) => Promise<string | null>
   estimate_sui_transfer: (recipient: string, amount_mist: bigint, drain: boolean) => Promise<bigint>
   send_sui: (recipient: string, amount_mist: bigint, drain: boolean) => Promise<Readonly<{ digest: string | null }>>
@@ -214,12 +225,17 @@ const create_wallet_session = (
   // The found cap is cached for the session (kiosks are for life); an EMPTY answer is never
   // cached — the player whose first purchase creates their kiosk must be found on the next call.
   let kiosk_caps: ReturnType<typeof sdk.get_owned_kiosks> | null = null
-  const kiosk_cap = async () => {
+  /** Custody doors must present the kiosk that HOLDS the acted-on object — with several
+   *  personal kiosks on one address (2026-08-21 legacy: broken lookups minted spares), the
+   *  first cap is the wrong one whenever the character lives elsewhere. Callers that know
+   *  the holding kiosk pass its id; the first personal cap remains the creation-time default. */
+  const kiosk_cap = async (kiosk_id?: string) => {
     const request = kiosk_caps ?? sdk.get_owned_kiosks(account.address)
     kiosk_caps = request
     try {
       const { kioskOwnerCaps } = await request
-      const cap = kioskOwnerCaps.find(({ isPersonal }) => isPersonal) ?? null
+      const personal = kioskOwnerCaps.filter(({ isPersonal }) => isPersonal)
+      const cap = (kiosk_id ? personal.find(({ kioskId }) => kioskId === kiosk_id) : personal[0]) ?? null
       if (!cap) kiosk_caps = null
       return cap
     } catch (error) {
@@ -274,6 +290,8 @@ const create_wallet_session = (
       const { objects } = await client.core.getObjects({ objectIds: [claim_id] })
       return objects.some((object) => !(object instanceof Error) && object.objectId === claim_id)
     },
+    fight: fight_actions(sdk, { kiosk_cap }),
+    character: character_actions(sdk, { kiosk_cap }),
     create_character: (character) =>
       personal_kiosk_action(async (kiosk_cap) => {
         const { kiosk_cap: settled_kiosk_cap, ...receipt } = await character_create(sdk, {
@@ -392,6 +410,7 @@ const create_wallet_session = (
     },
     publish_contract: async (artifact) => {
       const receipt = await sdk.execute(create_package_publish_transaction({ artifact, recipient: account.address }), {
+        budget: DEPLOYMENT_GAS_BUDGET_MIST,
         include: { objectTypes: true },
       })
       return Object.freeze({ receipt })
@@ -401,7 +420,7 @@ const create_wallet_session = (
       const { package: package_id, policy } = await read_package_upgrade(upgrade_cap)
       const receipt = await sdk.execute(
         create_package_upgrade_transaction({ sdk, artifact, package: package_id, upgrade_cap, policy }),
-        { include: { objectTypes: true } }
+        { budget: DEPLOYMENT_GAS_BUDGET_MIST, include: { objectTypes: true } }
       )
       return Object.freeze({ receipt })
     },
@@ -416,7 +435,7 @@ const create_wallet_session = (
           publisher: deployment.publisher,
           recipient: account.address,
         }),
-        { include: { objectTypes: true } }
+        { budget: DEPLOYMENT_GAS_BUDGET_MIST, include: { objectTypes: true } }
       )
     },
     read_game_version,
@@ -535,9 +554,4 @@ export const create_wallet_auth = (options: WalletAuthOptions) => {
 
 export type BrowserAuth = ReturnType<typeof create_browser_auth>
 
-export const canonical_suins_name = (value: string): string => {
-  const name = value.trim().toLowerCase()
-  if (name.startsWith('@')) return `${name.slice(1)}.sui`
-  const subname = /^([^@\s]+)@([^@\s]+)$/.exec(name)
-  return subname ? `${subname[1]}.${subname[2]}.sui` : name
-}
+export { canonical_suins_name } from './suins.ts'

@@ -41,11 +41,17 @@ server_reconnecting: 再接続中
 server_syncing: 同期中
 server_connected: 接続済み
 server_violation: 切断 — ルール違反。まもなく再試行します。
+server_replaced: 別の場所で接続中
+session_replaced_title: 別の場所から接続されました
+session_replaced_body: アカウントが別の場所でゲームを開いたため、このウィンドウは切断されました。他のセッションを閉じるか、ここで再接続してこのウィンドウでプレイしてください。
+session_replaced_reconnect: ここで再接続
 latency_unit: ms
 indexing_health: インデックス状態
 online_players: オンラインプレイヤー
 indexing_lag_warning: ゲーム内の操作が遅れて反映される場合があります
 game_frozen: 現在ゲームは凍結されています。詳しくはDiscordをご確認ください。
+gas_budget_toast: このアクションは確保しているネットワーク手数料を超えました。実行されておらず、費用もかかっていません。ご報告ください。
+game_paused_toast: アップデートのためゲームは一時停止中です。アクションは実行されませんでした。数分後にもう一度お試しください。
 network_testnet: TESTNET
 page_pending_title: このページは再構築中です
 page_pending_body: 正しく復元する間も、この場所は表示し続けます。
@@ -96,6 +102,33 @@ world_hud:
   zone_edge: ゾーン境界 {{dist}}
   coordinates: 座標
   world_map: ワールドマップ
+  menu_group: グループに招待
+  menu_trade: 取引
+  menu_message: メッセージを送る
+  mount_prompt: '{{key}} で騎乗'
+  fight_press_join: '{{key}} で参加'
+  fight_press_spectate: '{{key}} で観戦'
+  fight_locked: 'プライベートな戦闘'
+  fight_join_title: '戦闘に参加'
+  fight_spectate_title: '戦闘を観戦'
+  fight_side_a: 'サイドA'
+  fight_side_b: 'サイドB'
+  fight_empty_side: 'まだファイターなし'
+  fight_unknown: '不明なファイター'
+  fight_join_button: '参加'
+  fight_spectate_button: '観戦'
+  fight_started_ago: '開始'
+  fight_placement: '配置中'
+  fight_wallet_hint: '参加にはウォレット接続が必要'
+  fight_close: '閉じる'
+  menu_duel: 決闘を申し込む
+  duel_invite: '{{name}} が決闘を申し込んできた'
+  duel_accept: 受ける
+  duel_decline: 断る
+  duel_waiting: '{{name}} を待っています…'
+  duel_cancel: キャンセル
+  duel_declined: '{{name}} が決闘を断りました'
+  duel_never_started: 決闘は始まりませんでした。何も起きていないので、そのままプレイを続けられます。
 demo_page:
   title: レンダリングラボ
   world_lab: ワールド
@@ -225,7 +258,6 @@ admin_page:
   arm_claim: 引き出しを準備
   claiming: 引き出し中…
   confirm_claim: 引き出しを確定
-  claim_success: ロイヤリティを受け取りました
   disconnect_admin_wallet: 切断
   claim_digest: 引き出しトランザクション
 simulator_page:
@@ -322,6 +354,13 @@ fight_hud:
   turn_order: ターン順
   placement_title: 戦闘準備
   placement_hint: ファイターを配置して準備完了にしてください
+  placement_ready: 準備完了
+  placement_waiting: 他のプレイヤーを待っています…
+  placement_force_prompt: プレイヤーが不在です — 戦闘開始を強制しますか？
+  placement_force_button: 強制開始
+  placement_no_opponent: 誰も挑戦を受けなかった
+  crank_prompt: 現在のプレイヤーがターンを終了していません。
+  crank_button: ターン終了を強制する
   end_turn: ターン終了
   reset_turn: リセット
   weapon_attack: 武器攻撃
@@ -2823,3 +2862,275 @@ encyclopedia_page:
     zephyr_legwraps: '何も履いていないかのように軽い。何も履かないのも選択肢だが、防御力は落ちる。'
     zephyr_silk_strand: '風が注入された自力で浮く絹糸。仕立て屋は大好き。その猫は個人的な敵とみなしている。'
     zukin_muru: 'A shinobi cowl for people who want to look like they left quietly, even when they slam the door.'
+out_of_sui_body: トランザクション手数料を支払うSUIがなくなりました。プレイを続けるにはウォレットにチャージしてください。
+characters_page:
+  tab_equipment: 装備
+  tab_stats: ステータス
+  tab_spells: 呪文
+  tab_jobs: 職業
+  tab_runeforge: ルーン鍛冶
+  no_character: キャラクターが未選択です — 上のタブバーで選んでください
+  level: 'Lv {{level}}'
+  experience: 経験値
+  equipment_head: 装備
+  equipped_totals: 装備合計
+  no_gear_equipped: 装備なし
+  bag_equipment: 装備
+  bag_cosmetics: コスメ
+  bag_consumables: 消耗品
+  bag_resources: 素材
+  accept: 確定
+  cancel: キャンセル
+  equip_pending: 装備を更新中…
+  equip_success: 装備を更新しました
+  consume_pending: アイテムを使用中…
+  consume_success: アイテムを使用しました
+  already_full_hp: HPはすでに満タンです
+  refusal_wrong_slot: このアイテムはそのスロットに装備できません
+  refusal_level_too_low: レベルが足りません
+  refusal_relic_duplicate: 同じ種類のレリックをすでに装備しています
+  refusal_item_listed: このアイテムは出品中です
+  points_to_assign: 割り振りポイント
+  spend_hint: 6つの特性にポイントを割り振り、確定してください
+  reset: リセット
+  confirm: 確定
+  tx_pending: 確認中…
+  stats_pending: ポイントを割り振り中…
+  stats_success: ポイントを割り振りました
+  health: HP
+  action: AP
+  movement: MP
+  characteristics: 特性
+  resistances: 耐性
+  secondary: 二次ステータス
+  element_fire: 火
+  element_water: 水
+  element_earth: 土
+  element_air: 風
+  add_point: '{{stat}}にポイントを追加'
+  remove_point: '{{stat}}からポイントを戻す'
+  grimoire: 魔導書
+  spell_points: 呪文ポイント
+  unlocked: '{{unlocked}} / {{total}} 習得済み'
+  unlocks_at: 'Lv {{level}}で解放'
+  unlock_line: 'Lv {{level}}'
+  lv_of: '{{current}} / {{max}}'
+  locked: 未解放
+  mastered: 極めました
+  no_points: 呪文ポイントが足りません
+  upgrading: レベルアップ中…
+  upgrade_success: '{{spell}}がレベルアップしました'
+  level_up: 'レベルアップ · {{cost}}pt'
+  lv: 'Lv {{level}}'
+  xp_progress: '{{current}} / {{needed}} XP'
+  max: 最大
+  resources: 素材
+  back: 戻る
+  gate_note: 装備のクラフト職業レベル70が必要です
+  detail_title: アイテム
+  forge_title: 鍛冶台
+  inventory_title: インベントリ
+  tab_gear: 装備
+  tab_runes: ルーン
+  place_gear: 装備を置く
+  place_rune: ルーンを置く
+  random_notice: 結果はチェーン上で抽選されます。ルーンは成功・不発・別ステータスの喪失のいずれかで、保証はありません。
+  one_rune_note: 1回の試行につきルーンを1つ消費します
+  apply: ルーンを刻む
+  scribing: 刻印中…
+  outcome_success: ルーンが定着しました
+  outcome_neutral: ルーンは不発でした — 変化なし
+  outcome_failure: ルーンが暴発しました — ステータスを失いました
+  requires_job: '{{job}}レベル70が必要です'
+  clear: 外す
+  inspect_empty: 調べる装備を選んでください
+  no_forge_gear: 鍛冶できる装備がバッグにありません
+  no_runes: ルーンがバッグにありません
+  menu_feed: 餌をあげる
+  menu_consume: 使用する
+  menu_crush: 粉砕する
+  menu_destroy: 破棄する
+  feed_title: ペットに餌をあげる
+  feed_power_label: パワー
+  feed_power: '{{count}} / {{max}}'
+  feed_pick_food: 餌を選んでください
+  feed_no_food: バッグに適した餌がありません
+  feed_already_today: 今日はもう餌をあげました — また明日
+  feed_full: 満腹です
+  feed_pending: 給餌中…
+  feed_success: 餌をあげました
+  claim_success: 報酬を受け取りました
+  crush_title: 装備を粉砕
+  crush_confirm_body: '{{name}}を粉砕しますか？アイテムは永久に失われ、ルーンになります。'
+  crush_cta: 粉砕
+  crush_pending: 粉砕中…
+  crush_success: 装備を粉砕しました
+  destroy_title: アイテムを破棄
+  destroy_confirm_body: '{{name}} ×{{amount}}を破棄しますか？取り消せません。'
+  destroy_cta: 破棄
+  destroy_pending: 破棄中…
+  destroy_success: アイテムを破棄しました
+  unsealing: 開封中…
+  skip_hint: クリックでスキップ
+  reveal_eyebrow: 獲得しました
+  revealing: 公開中…
+  collecting: 受け取り中…
+  continue_cta: 続ける
+  stat_maxed: このアイテムではこのステータスのルーン上限に達しています
+  stat:
+    movement: 'MP'
+    action: 'AP'
+    range: '射程'
+    critical_chance: 'クリティカル率'
+    critical_outcomes: 'クリティカル率'
+    vitality: '体力'
+    wisdom: '知恵'
+    strength: '筋力'
+    intelligence: '知力'
+    chance: '幸運'
+    agility: '敏捷'
+    heal: '回復'
+    critical_hit: 'クリティカルヒット'
+    percent_damage: 'ダメージ'
+    raw_damage: '生ダメージ'
+    fire_resistance: '火耐性'
+    water_resistance: '水耐性'
+    earth_resistance: '土耐性'
+    air_resistance: '風耐性'
+  stats:
+    no_character: 'キャラクターが選択されていません'
+    unavailable: 'ステータスを取得できません'
+    level: 'Lv. {{level}}'
+    adventurer: '冒険者'
+    points_to_assign: '割り振り可能ポイント'
+    spend_hint: '特性に割り振ってください'
+    reset: 'リセット'
+    health: 'HP'
+    action: '行動'
+    move: '移動'
+    characteristics: '特性'
+    resistances: '耐性'
+    secondary: '副次ステータス'
+    element:
+      fire: '火'
+      water: '水'
+      earth: '土'
+      air: '風'
+    description:
+      vitality: '最大HPが増加する'
+      wisdom: '獲得経験値が増加する'
+      strength: '土属性ダメージが増加する'
+      intelligence: '火属性ダメージと回復量が増加する'
+      chance: '水属性ダメージとアイテムのドロップ率が増加する'
+      agility: '風属性ダメージ、足止め、AP/MPロスの回避が増加する'
+      critical_hit: 'クリティカルヒットの確率が上昇する'
+      raw_damage: 'ダメージ効果とライフスティール効果に固定値を追加する'
+    add_point: '{{stat}}に1ポイント追加'
+    remove_point: '{{stat}}から1ポイント減らす'
+    tx_pending: '割り振り中…'
+    tx_success: 'ステータスポイントを割り振りました'
+  spells:
+    range_modifiable: '射程変更可'
+    no_character: 'キャラクターが選択されていません'
+    select_prompt: '呪文を選択'
+    level: 'レベル {{level}}'
+    spell_points: '呪文ポイント'
+    available: '利用可能'
+    grimoire: '魔道書'
+    unlocked: '{{unlocked}} / {{total}} 解放済み'
+    locked: 'ロック中'
+    lv: 'Lv {{level}}'
+    lv_of: 'Lv {{cur}}/{{max}}'
+    unlocks_at: 'Lv {{level}} で解放'
+    current_level: '現在のレベル'
+    ap_cost: 'APコスト'
+    range: '射程'
+    cooldown: 'クールダウン'
+    crit_chance: 'クリティカル率'
+    casts_per_turn: '使用回数 / ターン'
+    unlimited: '無制限'
+    description: '説明'
+    effects: '効果'
+    levels_head: 'レベル'
+    mastered: '習得済み'
+    upgrade_success: '{{spell}}がレベルアップ！'
+    upgrading: 'レベルアップ中…'
+    level_up_spell: '呪文をレベルアップ'
+    pts: '{{count}} pt'
+    pts_one: '{{count}} pt'
+    pts_other: '{{count}} pt'
+    requires_lv: 'Lv {{level}} が必要'
+    no_points: 'ポイント不足'
+    tag_self: '自身'
+    tag_melee: '近接'
+    tag_ranged: '遠隔'
+    tag_zone: '範囲'
+    tag_line_of_sight: '視線'
+    el_fire: '火'
+    el_water: '水'
+    el_earth: '地'
+    el_air: '風'
+    buff: '強化'
+    utility: 'ユーティリティ'
+    heal: '回復'
+    neutral: '無属性'
+    element: '属性'
+    damage: 'ダメージ'
+    turns: 'ターン'
+    crit_val: 'クリ {{value}}'
+    range_fixed: '固定 — 射程ステータスは無効'
+  jobs:
+    category:
+      gathering: '採集'
+      weapon: '武器製作'
+      equipment: '防具製作'
+      consumable: '消耗品製作'
+    recipes_fallback: 'レシピ'
+    equipped: '装備中'
+    table:
+      tier: 'ティア'
+      req_lvl: '必要Lv'
+      resource: '素材'
+      yield: '採取量'
+      xp: 'XP'
+      unlocks_at: '{{name}}（レベル{{level}}で解放）'
+      gather_detail: '{{name}} · 採集{{gather}}秒 · 再出現{{respawn}}秒'
+      locked: 'ロック中'
+    lv_badge: 'Lv {{level}}'
+    tier_badge: 'T{{tier}}'
+    craft:
+      recipe_head: 'レシピ'
+      recipe_not_seeded: 'このレシピはまだコンテンツに含まれていません。'
+      ingredients_head: '材料'
+      requires_level: '{{job}} Lv {{required}}が必要（現在Lv {{level}}）'
+      not_enough: '材料が不足しています'
+      success_chance: '成功率'
+      craft_tooltip: '{{name}}を製作'
+      craft_button: '製作'
+      crafting: '製作中…'
+      craft_success: '{{name}}を製作しました'
+      roll_failed: '{{name}}の製作ロールに失敗しました（成功率{{chance}}%）— 材料は消費されました'
+      locked_level: 'ロック中 · Lv {{level}}'
+    detail:
+      close_aria: 'アイテム詳細を閉じる'
+      item_not_seeded: 'このアイテムはコンテンツに含まれていません。'
+      tool_label: '道具'
+      crafts_label: '{{covers}}を製作'
+      xp_progress: '{{current}} / {{needed}} XP'
+    recipes:
+      empty_seed: 'この職業のレシピはクラフトコンテンツと共に追加されます。'
+      unlocked: '解放済み'
+      locked: 'ロック中'
+      meta: 'Lv {{level}} · {{category}}'
+    gather:
+      in_progress: '{{name}}を採集中…'
+      button: '{{name}}を採集'
+      hint: 'ワールド内の{{job}}ノードをクリックして採集します。'
+    tabs:
+      resources: '素材'
+      recipes: 'レシピ'
+    no_character: 'キャラクターが選択されていません'
+  common:
+    experience: '経験値'
+    confirm: '確認'
+    max: 'MAX'

@@ -53,7 +53,23 @@ const resolve_gas =
   }
 
 /** A fake CORE client: hydrate sources, a scriptable simulation verdict, an execution recorder. */
-const fake_client = ({ simulate_ok, execution_gate }: { simulate_ok: boolean; execution_gate?: Promise<void> }) => {
+const fake_client = ({
+  simulate_ok,
+  execution_gate,
+  failure_branch = 'FailedTransaction',
+  failure_message = 'MoveAbort(2701) — scribe locked',
+  lag = new Map<string, number>(),
+}: {
+  simulate_ok: boolean
+  execution_gate?: Promise<void>
+  /** what the simulated failure says — the SDK reads it to tell OUR budget from THEIR wallet */
+  failure_message?: string
+  /** objectId → how many reads this node answers empty before the object shows up */
+  lag?: Map<string, number>
+  /** Which branch a refused simulation arrives in — a `success: false` status can ride the
+   *  Transaction branch, and the preflight must refuse that identically. */
+  failure_branch?: 'FailedTransaction' | 'Transaction'
+}) => {
   const calls = {
     simulations: 0,
     executions: 0,
@@ -88,24 +104,33 @@ const fake_client = ({ simulate_ok, execution_gate }: { simulate_ok: boolean; ex
       getObjects: async ({ objectIds }: { objectIds: string[] }) => {
         calls.hydrations.push([...objectIds])
         return {
-          objects: objectIds.map((object_id: string) => ({
-            objectId: object_id,
-            version: '2',
-            digest,
-            owner: { $kind: 'Shared', Shared: { initialSharedVersion: '1' } },
-          })),
+          objects: objectIds.flatMap((object_id: string) => {
+            // a node still behind answers with NOTHING for an object that already exists;
+            // each miss burns one tick, so the object appears once the lag is spent
+            const remaining = lag.get(object_id) ?? 0
+            if (remaining > 0) {
+              lag.set(object_id, remaining - 1)
+              return []
+            }
+            return [
+              {
+                objectId: object_id,
+                version: '2',
+                digest,
+                owner: { $kind: 'Shared', Shared: { initialSharedVersion: '1' } },
+              },
+            ]
+          }),
         }
       },
       simulateTransaction: async () => {
         calls.simulations += 1
-        return simulate_ok
-          ? { $kind: 'Transaction', Transaction: { effects: { status: { success: true, error: null } } } }
-          : {
-              $kind: 'FailedTransaction',
-              FailedTransaction: {
-                effects: { status: { success: false, error: { message: 'MoveAbort(2701) — scribe locked' } } },
-              },
-            }
+        if (simulate_ok)
+          return { $kind: 'Transaction', Transaction: { effects: { status: { success: true, error: null } } } }
+        const effects = { status: { success: false, error: { message: failure_message } } }
+        return failure_branch === 'Transaction'
+          ? { $kind: 'Transaction', Transaction: { effects } }
+          : { $kind: 'FailedTransaction', FailedTransaction: { effects } }
       },
       executeTransaction: async () => {
         calls.executions += 1
@@ -150,6 +175,27 @@ describe('the execute gate (core interface)', () => {
     expect(client.calls.hydrations.map(({ length }) => length)).toEqual([10, 10, 1])
   })
 
+  // THE DUEL JOIN (2026-08-21): the challenger's fight id reaches the acceptor the instant it
+  // commits, and the acceptor's node can still be a checkpoint behind. Before this, the empty
+  // read absorbed nothing SILENTLY and the build then blamed the caller for not hydrating.
+  test('an id that must exist waits for a node that is behind', async () => {
+    const client = fake_client({ simulate_ok: true, lag: new Map([[id(77), 2]]) })
+    const sdk = SDK({ address: id(99), client, pins })
+
+    await sdk.hydrate_required([id(77)])
+    expect(sdk.cache.shared.has(id(77))).toBeTrue()
+    expect(client.calls.hydrations).toHaveLength(3) // two empty reads, then the object
+  })
+
+  test('an id that never arrives names itself instead of blaming the caller', async () => {
+    const client = fake_client({ simulate_ok: true, lag: new Map([[id(78), 99]]) })
+    const sdk = SDK({ address: id(99), client, pins })
+
+    await expect(sdk.hydrate_required([id(78)])).rejects.toThrow(/never showed.*0x0*78/)
+    // absence stays DATA for the tolerant door — a seal probe must not throw or wait
+    await expect(sdk.hydrate_unknown([id(78)])).resolves.toBeDefined()
+  })
+
   test('balance reads include address balance instead of only legacy coin objects', async () => {
     const client = fake_client({ simulate_ok: true })
     const sdk = SDK({ address: id(99), client, pins })
@@ -185,14 +231,61 @@ describe('the execute gate (core interface)', () => {
     expect(sdk.ref(id(50))).toEqual({ objectId: id(50), version: '4', digest })
   })
 
-  test('the next transaction uses the receipt-fresh gas ref instead of a lagging resolver ref', async () => {
+  // THE DUEL INCIDENT (2026-08-21): the SDK used to pin the receipt's gas coin onto the next
+  // transaction. Naming any coin opts out of address-balance gas — and a testnet address owns
+  // NO coin objects — so a wallet holding 1000 SUI was refused for "gas". Gas payment belongs
+  // to the resolver, every single time.
+  // The budget is OURS and fixed, so a gas refusal at the dry run is our bug, not an empty
+  // wallet. The message must say so — and must NOT carry the raw `InsufficientGas`, which is
+  // the vocabulary the app's out-of-SUI prompt watches for.
+  test('a dry run refused for gas names the budget, not the wallet', async () => {
+    const client = fake_client({ simulate_ok: false, failure_message: 'InsufficientGas' })
+    const sdk = await game(client)
+
+    await expect(sdk.execute(sdk.tx())).rejects.toThrow(/gas budget exceeded.*NOT submitted/)
+    await expect(sdk.execute(sdk.tx())).rejects.not.toThrow(/InsufficientGas/)
+    expect(client.calls.executions).toBe(0)
+  })
+
+  test('gas payment is never pinned from a receipt — the resolver decides every transaction', async () => {
     const client = fake_client({ simulate_ok: true })
+    const sdk = await game(client)
+    await sdk.execute(sdk.tx()) // its receipt reports the gas object at version 4
+
+    const next = sdk.tx()
+    await sdk.execute(next)
+    expect(next.getData().gasData.payment).toEqual([{ objectId: id(50), version: '3', digest }])
+  })
+
+  test('a gasless transaction keeps the resolver empty payment — the address balance pays', async () => {
+    const client = fake_client({ simulate_ok: true })
+    client.core.resolveTransactionPlugin = () => async (transaction_data, options, next) => {
+      client.calls.resolutions += 1
+      if (!options.onlyTransactionKind) {
+        transaction_data.gasData.price = '1000'
+        transaction_data.gasData.budget = '5000000'
+        transaction_data.gasData.payment = [] // no Coin object exists to name
+        // what the real resolver does for an empty payment: replay protection moves to the epoch
+        transaction_data.expiration = {
+          $kind: 'ValidDuring',
+          ValidDuring: {
+            minEpoch: '1',
+            maxEpoch: '2',
+            minTimestamp: null,
+            maxTimestamp: null,
+            chain: digest,
+            nonce: 7,
+          },
+        }
+      }
+      await next()
+    }
     const sdk = await game(client)
     await sdk.execute(sdk.tx())
 
     const next = sdk.tx()
     await sdk.execute(next)
-    expect(next.getData().gasData.payment).toEqual([{ objectId: id(50), version: '4', digest }])
+    expect(next.getData().gasData.payment).toEqual([])
   })
 
   test('a Wallet Standard adapter uses the same executor, gas ledger, and balance cache', async () => {
@@ -216,7 +309,8 @@ describe('the execute gate (core interface)', () => {
     await sdk.execute(transaction)
 
     expect(signatures).toBe(1)
-    expect(client.calls.simulations).toBe(2)
+    // strictly two roundtrips: ONE dry run, then the execution (owner 2026-08-21)
+    expect(client.calls.simulations).toBe(1)
     expect(client.calls.executions).toBe(1)
     await sdk.read_sui_balance()
     expect(client.calls.balances).toBe(2) // cached UI read + post-receipt UI read
@@ -224,6 +318,29 @@ describe('the execute gate (core interface)', () => {
 
   test('refuses a bad transaction before opening the wallet', async () => {
     const client = fake_client({ simulate_ok: false })
+    let signatures = 0
+    const sdk = SDK({
+      address: id(99),
+      client,
+      pins,
+      sign_transaction: async () => {
+        signatures += 1
+        return { bytes: new Uint8Array([1]), signature: 'wallet-signature' }
+      },
+    })
+    const transaction = sdk.tx()
+    transaction.transferObjects([transaction.gas], id(98))
+
+    await expect(sdk.execute(transaction)).rejects.toThrow(/NOT submitted.*scribe locked/)
+    expect(signatures).toBe(0)
+    expect(client.calls.executions).toBe(0)
+  })
+
+  // The same verdict wearing a different hat: a refused simulation whose `success: false` sits
+  // in the Transaction branch. Reading only FailedTransaction would submit it and burn the gas
+  // for a failure the preflight already knew about.
+  test('refuses a failed simulation that arrives in the Transaction branch', async () => {
+    const client = fake_client({ simulate_ok: false, failure_branch: 'Transaction' })
     let signatures = 0
     const sdk = SDK({
       address: id(99),

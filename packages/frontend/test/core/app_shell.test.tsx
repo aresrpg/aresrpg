@@ -22,6 +22,9 @@ test('the account card sits below navigation and above language with row actions
     derive_character_id: () => '',
     is_character_name_claimed: async () => false,
     create_character: async () => ({ digest: '', character_id: '' }),
+    // action namespaces are never exercised by these reducer/DOM tests
+    fight: {} as never,
+    character: {} as never,
     resolve_suins_address: async () => null,
     estimate_sui_transfer: async () => 0n,
     send_sui: async () => ({ digest: null }),
@@ -226,4 +229,22 @@ test('the character tab strip lives on character-scoped pages and selects throug
   expect(world).toContain('Oeuftermath')
   expect(world).toContain('data-character-tab-create')
   expect(shell('shop')).not.toContain('data-character-tabs')
+})
+
+test('a replaced link renders red with its own label and never as reconnecting', async () => {
+  const copy = await load_app_copy('en')
+  const html = renderToStaticMarkup(
+    <ConnectionCard
+      copy={copy}
+      error={null}
+      indexing_lag={null}
+      latency_ms={null}
+      online={null}
+      status="replaced"
+      violation={null}
+    />
+  )
+  expect(html).toContain(copy.server_replaced)
+  expect(html).toContain('#ff5a8b')
+  expect(html).not.toContain(copy.server_reconnecting)
 })

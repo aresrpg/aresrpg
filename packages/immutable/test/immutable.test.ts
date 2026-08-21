@@ -28,6 +28,7 @@ import {
   level_from_xp,
   pet_max_feeds,
   rune_effect,
+  rune_max_apps,
   stat_names,
   weapon_categories,
   xp_for_level,
@@ -164,5 +165,13 @@ describe('Move rune catalog mirror', () => {
 
     expect(rune_effect('rune_strength_ra')).toEqual({ stat: 'strength', tier: 'ra', amount: 10 })
     expect(rune_effect('rune_range_pa')).toBeNull()
+  })
+
+  test('mirrors the Move per-item application caps exactly', () => {
+    const source = readFileSync(resolve(import.meta.dir, '../../move-math/sources/rune_catalog.move'), 'utf8')
+    const body = /const MAX_APPS: vector<u64> = vector\[([^\]]+)\]/.exec(source)?.[1]
+    expect(body).toBeDefined()
+    const move_caps = body!.split(',').map((value) => Number(value.trim()))
+    expect(stat_names.map((stat) => rune_max_apps(stat))).toEqual(move_caps)
   })
 })

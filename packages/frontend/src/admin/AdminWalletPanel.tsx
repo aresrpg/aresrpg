@@ -2,11 +2,24 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
 import type { MarketplaceRoyalty } from '@aresrpg/sdk/marketplace-admin'
+import type { create_admin_overview as CreateAdminOverview } from '@aresrpg/sdk/admin-overview'
 import { useCallback, useEffect, useRef, useState } from 'react'
 
+import { env } from '../env.ts'
 import { useAppStore } from '../store.ts'
 import { toast } from '../toast.ts'
 import { format_sui } from '../wallet_amount.ts'
+
+// The read-only chain reader (no wallet, the one sanctioned direct-GraphQL path — owner
+// 2026-08-21): built once per page lifetime, lazily, inside the admin chunk.
+const overview_cell: { reader: Promise<ReturnType<typeof CreateAdminOverview>> | null } = { reader: null }
+const admin_overview = () => {
+  // eslint-disable-next-line functional/immutable-data -- the one lazy-singleton cell of this module
+  overview_cell.reader ??= import('@aresrpg/sdk/admin-overview').then(({ create_admin_overview }) =>
+    create_admin_overview({ graphql_url: env.graphql_url, network: env.network })
+  )
+  return overview_cell.reader
+}
 
 /* eslint-disable functional/immutable-data -- React refs are local request latches, never shared application state. */
 const translated = (copy: Readonly<Record<string, string>>, key: string, fallback: string): string =>
@@ -14,6 +27,7 @@ const translated = (copy: Readonly<Record<string, string>>, key: string, fallbac
 
 export type AdminRevenue = Readonly<{
   royalties: readonly MarketplaceRoyalty[]
+  treasury_mist: bigint | null
   claimable: bigint
   reading: boolean
   claiming: boolean
@@ -29,6 +43,7 @@ export const useAdminRevenue = (copy: Readonly<Record<string, string>>): AdminRe
   const wallet = useAppStore((state) => state.admin.wallet)
   const { session } = wallet
   const [royalties, set_royalties] = useState<readonly MarketplaceRoyalty[]>([])
+  const [treasury_mist, set_treasury] = useState<bigint | null>(null)
   const [reading, set_reading] = useState(false)
   const [claim_armed, set_claim_armed] = useState(false)
   const [error, set_error] = useState<string | null>(null)
@@ -39,20 +54,30 @@ export const useAdminRevenue = (copy: Readonly<Record<string, string>>): AdminRe
   const active_claim = useRef<ReturnType<typeof toast.loading> | null>(null)
 
   const refresh = useCallback((): void => {
-    if (!session || reading_now.current) return
+    if (reading_now.current) return
     const generation = ++request_generation.current
     reading_now.current = true
     set_reading(true)
     set_error(null)
-    void session
-      .read_marketplace_royalties()
-      .then((next_royalties) => {
-        if (request_generation.current === generation) set_royalties(next_royalties)
-      })
-      .catch((reason) => {
+    // royalty rows: the connected wallet's read when present (cap = CONNECTED-wallet truth,
+    // it gates the claim button honestly); the wallet-free chain read otherwise
+    const chain_read = admin_overview().then((overview) => overview.read())
+    const read_royalties = session
+      ? session.read_marketplace_royalties()
+      : chain_read.then(({ royalties: rows }) => rows)
+    const read_treasury = chain_read.then(({ treasury_mist: balance }) => balance)
+    void Promise.allSettled([read_royalties, read_treasury])
+      .then(([royalties_result, treasury_result]) => {
         if (request_generation.current !== generation) return
-        console.error('Marketplace royalties could not be read.', reason)
-        set_error(reason instanceof Error ? reason.message : String(reason))
+        if (royalties_result.status === 'fulfilled') set_royalties(royalties_result.value)
+        if (treasury_result.status === 'fulfilled') set_treasury(treasury_result.value)
+        const failure = [royalties_result, treasury_result].find(
+          (result): result is PromiseRejectedResult => result.status === 'rejected'
+        )
+        if (failure) {
+          console.error('Admin overview could not be read.', failure.reason)
+          set_error(failure.reason instanceof Error ? failure.reason.message : String(failure.reason))
+        }
       })
       .finally(() => {
         if (request_generation.current !== generation) return
@@ -72,7 +97,7 @@ export const useAdminRevenue = (copy: Readonly<Record<string, string>>): AdminRe
     set_royalties([])
     set_claim_armed(false)
     set_error(null)
-    if (session) refresh()
+    refresh()
     // The session identity is the boundary; request state must not restart this effect.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session])
@@ -108,6 +133,7 @@ export const useAdminRevenue = (copy: Readonly<Record<string, string>>): AdminRe
 
   return Object.freeze({
     royalties,
+    treasury_mist,
     claimable,
     reading,
     claiming,
@@ -148,7 +174,7 @@ export const AdminWalletPanel = ({
         <p className="text-[9px] tracking-[0.18em] text-[#d8d3ca] uppercase">Revenue</p>
         <button
           className="cursor-pointer text-[8px] tracking-[0.12em] text-[#67adff] uppercase disabled:cursor-not-allowed disabled:opacity-35"
-          disabled={!revenue.connected || revenue.reading}
+          disabled={revenue.reading}
           onClick={revenue.refresh}
           type="button"
         >
@@ -157,7 +183,12 @@ export const AdminWalletPanel = ({
       </div>
 
       <div className="mt-4">
-        <RevenueRow label="Treasury balance" title="Treasury balance is not projected yet" value="—" />
+        <RevenueRow
+          label="Treasury balance"
+          title="SUI held by the admin address"
+          tone="gold"
+          value={revenue.treasury_mist === null ? '—' : `${format_sui(revenue.treasury_mist, 4)} SUI`}
+        />
         <RevenueRow
           label="Item royalties"
           title={item && !item.cap ? 'The connected wallet does not own this policy cap' : item?.policy_id}

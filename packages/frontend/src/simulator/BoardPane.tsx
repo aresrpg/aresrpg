@@ -6,6 +6,7 @@ import type { EntityRender, FightBlobShape, FightBlobSpec } from '@aresrpg/engin
 import { useEffect, useMemo, useState } from 'react'
 
 import { FightViewport } from '../game/fight/FightViewport.tsx'
+import type { SceneHandle } from '../game/core/scene_feed.ts'
 import {
   character_entity_sources,
   load_fight_character_entities,
@@ -27,9 +28,12 @@ type BlobDebug = Readonly<{ color: number; range: number; shape: FightBlobShape 
 export const SimulatorBoardPane = ({
   copy,
   blob_debug,
+  scene,
 }: Readonly<{
   copy: AppCopy
   blob_debug: BlobDebug | null
+  /** the stage this setup board is mounted in, owned by the page above */
+  scene: SceneHandle
 }>) => {
   const simulator = useAppStore((state) => state.simulator)
   const quality = useAppStore(({ settings }) => settings.quality)
@@ -72,6 +76,7 @@ export const SimulatorBoardPane = ({
   return (
     <>
       <FightViewport
+        scene={scene}
         board={setup_board}
         board_key={`simulator:${simulator.seed}`}
         blob_request={blob_request}

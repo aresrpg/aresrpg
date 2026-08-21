@@ -16,6 +16,9 @@
   position: absolute;
   top: 72px;
   left: 50%;
+  /* `.fight-hud` is pointer-transparent so the board stays draggable underneath; every card
+     that carries controls has to opt back in, or its buttons are decorative. */
+  pointer-events: auto;
   display: flex;
   min-width: 260px;
   transform: translateX(-50%);
@@ -24,6 +27,8 @@
   gap: 2px;
   border: 1px solid var(--fh-edge);
   border-top-color: rgba(200, 150, 60, 0.35);
+  /* the same soft corner the HUD's command bar carries — a card here, a card there */
+  border-radius: 8px;
   background: linear-gradient(165deg, #12121a, #0a0a0f);
   padding: 10px 28px 12px;
   box-shadow: 0 16px 44px rgba(0, 0, 0, 0.55);

@@ -18,6 +18,11 @@ const rune_amounts = Object.freeze({
   ra: Object.freeze([30, 10, 10, 10, 10, 10, 0, 0, 0, 0, 0, 10, 10, 10, 10]),
 } satisfies Readonly<Record<RuneTier, readonly number[]>>)
 
+/** Hard per-item application cap (0 = uncapped) — rune_catalog.move MAX_APPS. */
+const rune_apps_caps = Object.freeze([0, 0, 0, 0, 0, 0, 1, 1, 1, 10, 0, 0, 0, 0, 0])
+
+export const rune_max_apps = (stat: StatName): number => rune_apps_caps[stat_names.indexOf(stat)] ?? 0
+
 const rune_pattern = /^rune_(.+)_(ba|pa|ra)$/
 
 export const rune_effect = (item_type: string): RuneEffect | null => {

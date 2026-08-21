@@ -10,7 +10,11 @@ import fight, { initial_fight_session_state, type FightSessionInput, type FightS
 import type { Locale } from './i18n/locale.ts'
 import type { AppCopy } from './i18n/copy.ts'
 import admin, { initial_admin_state, type AdminInput, type AdminState } from './modules/admin.ts'
+import editor, { initial_editor_state, type EditorInput, type SeedEditorState } from './modules/editor.ts'
 import chat, { initial_chat_state, type ChatInput, type ChatState } from './modules/chat.ts'
+import claims from './modules/claims.ts'
+import duel, { initial_duel_state, type DuelInput, type DuelState } from './modules/duel.ts'
+import fight_chain from './modules/fight_chain.ts'
 import locale, { type LocaleInput } from './modules/locale.ts'
 import navigation, {
   initial_navigation_state,
@@ -32,8 +36,10 @@ export type AppState = Readonly<{
   copy: AppCopy | null
   simulator: SimulatorState
   admin: AdminState
+  editor: SeedEditorState
   chat: ChatState
   world: WorldState
+  duel: DuelState
 }>
 
 export type AppInput =
@@ -45,8 +51,10 @@ export type AppInput =
   | SimulatorInput
   | FightSessionInput
   | AdminInput
+  | EditorInput
   | ChatInput
   | WorldInput
+  | DuelInput
 
 type EventArguments = {
   [K in AppInput['type']]: [Extract<AppInput, { type: K }>]
@@ -78,11 +86,18 @@ const MODULES = Object.freeze([
   simulator,
   fight,
   admin,
+  editor,
   chat,
   world,
+  duel,
+  fight_chain,
+  claims,
 ]) satisfies readonly AppModule[]
 
 export type AppModuleName = (typeof MODULES)[number]['name']
+
+/** Every registered module name — the arming-census seal reads it (app_modules.test.ts). */
+export const MODULE_NAMES = Object.freeze(MODULES.map(({ name }) => name)) as readonly AppModuleName[]
 
 export const initial_app_state = (settings_state: GameSettings): AppState =>
   Object.freeze({
@@ -95,8 +110,10 @@ export const initial_app_state = (settings_state: GameSettings): AppState =>
     copy: null,
     simulator: initial_simulator_state(),
     admin: initial_admin_state(),
+    editor: initial_editor_state(),
     chat: initial_chat_state(),
     world: initial_world_state(),
+    duel: initial_duel_state(),
   })
 
 const create_events = () => {

@@ -41,11 +41,17 @@ server_reconnecting: Reconnecting
 server_syncing: Syncing
 server_connected: Connected
 server_violation: Disconnected — rule violation. Retrying soon.
+server_replaced: Connected elsewhere
+session_replaced_title: Connected from another place
+session_replaced_body: Your account opened the game somewhere else, so this window was disconnected. Close the other session or reconnect here to play in this window.
+session_replaced_reconnect: Reconnect here
 latency_unit: ms
 indexing_health: Indexing health
 online_players: Online players
 indexing_lag_warning: Actions in the game can lag behind
 game_frozen: The game is currently frozen. Check Discord for more information.
+gas_budget_toast: This action was too heavy for the network fee we reserve. It was not executed and cost you nothing — please report it.
+game_paused_toast: The game is paused for an update. Your action was not executed — try again in a few minutes.
 network_testnet: TESTNET
 page_pending_title: This page is being rebuilt
 page_pending_body: Its place remains visible while we restore it cleanly.
@@ -96,6 +102,33 @@ world_hud:
   zone_edge: Zone edge {{dist}}
   coordinates: Coordinates
   world_map: World map
+  menu_group: Invite to group
+  menu_trade: Trade
+  menu_message: Send a message
+  mount_prompt: 'Press {{key}} to mount'
+  fight_press_join: 'Press {{key}} to join'
+  fight_press_spectate: 'Press {{key}} to spectate'
+  fight_locked: 'Private fight'
+  fight_join_title: 'Join the fight'
+  fight_spectate_title: 'Spectate fight'
+  fight_side_a: 'Side A'
+  fight_side_b: 'Side B'
+  fight_empty_side: 'No fighter yet'
+  fight_unknown: 'Unknown fighter'
+  fight_join_button: 'Join'
+  fight_spectate_button: 'Spectate'
+  fight_started_ago: 'Started'
+  fight_placement: 'Placement'
+  fight_wallet_hint: 'Connect a wallet to join'
+  fight_close: 'Close'
+  menu_duel: Challenge to a duel
+  duel_invite: '{{name}} challenges you to a duel'
+  duel_accept: Accept
+  duel_decline: Decline
+  duel_waiting: 'Waiting for {{name}}…'
+  duel_cancel: Cancel
+  duel_declined: '{{name}} declined the duel'
+  duel_never_started: The duel never started — nothing happened, you can keep playing.
 demo_page:
   title: Render lab
   world_lab: World lab
@@ -225,7 +258,6 @@ admin_page:
   arm_claim: Arm claim
   claiming: Claiming…
   confirm_claim: Confirm claim
-  claim_success: Royalties claimed
   disconnect_admin_wallet: Disconnect
   claim_digest: Claim transaction
 simulator_page:
@@ -322,6 +354,13 @@ fight_hud:
   turn_order: Turn order
   placement_title: Prepare for battle
   placement_hint: Place your fighters and mark them ready
+  placement_ready: Ready
+  placement_waiting: Waiting for the others…
+  placement_force_prompt: A player is away — force the fight to start?
+  placement_force_button: Force start
+  placement_no_opponent: Nobody accepted the challenge
+  crank_prompt: The current player is not ending their turn.
+  crank_button: Force end turn
   end_turn: End turn
   reset_turn: Reset
   weapon_attack: Weapon attack
@@ -346,7 +385,7 @@ fight_hud:
   log_trap_placed: '{owner} places a trap'
   log_glyph_placed: '{owner} places a glyph'
   log_death: '{target} dies'
-  log_forfeit: '{target} forfeits'
+  log_forfeit: '{target} gave up'
   log_draw: The fight ends in a draw
   log_team_wins: Team {team} wins
   forfeit: Forfeit
@@ -2847,3 +2886,280 @@ encyclopedia_page:
     zephyr_legwraps: 'So light they feel like wearing nothing. Which is also an option, but less protective.'
     zephyr_silk_strand: ''
     zukin_muru: 'A shinobi cowl for people who want to look like they left quietly, even when they slam the door.'
+out_of_sui_body: You ran out of SUI to pay for transaction fees. Please top up your wallet to continue playing.
+characters_page:
+  tab_equipment: Equipment
+  tab_stats: Stats
+  tab_spells: Spells
+  tab_jobs: Jobs
+  tab_runeforge: Runeforge
+  no_character: No character selected — pick one in the tab bar above
+  level: 'Lv {{level}}'
+  experience: Experience
+  # equipment
+  equipment_head: Equipment
+  equipped_totals: Equipped totals
+  no_gear_equipped: No gear equipped
+  bag_equipment: Equipment
+  bag_cosmetics: Cosmetics
+  bag_consumables: Consumables
+  bag_resources: Resources
+  accept: Accept
+  cancel: Cancel
+  equip_pending: Updating equipment…
+  equip_success: Equipment updated
+  consume_pending: Using item…
+  consume_success: Item used
+  already_full_hp: Health is already full
+  refusal_wrong_slot: This item does not fit that slot
+  refusal_level_too_low: Your level is too low for this item
+  refusal_relic_duplicate: A relic of the same kind is already worn
+  refusal_item_listed: This item is listed for sale
+  # stats
+  points_to_assign: Points to assign
+  spend_hint: Spend points on the six characteristics, then confirm
+  reset: Reset
+  confirm: Confirm
+  tx_pending: Confirming…
+  stats_pending: Assigning points…
+  stats_success: Points assigned
+  health: Health
+  action: Action
+  movement: Movement
+  characteristics: Characteristics
+  resistances: Resistances
+  secondary: Secondary
+  element_fire: Fire
+  element_water: Water
+  element_earth: Earth
+  element_air: Air
+  add_point: 'Add a point to {{stat}}'
+  remove_point: 'Remove a point from {{stat}}'
+  # spells
+  grimoire: Grimoire
+  spell_points: Spell points
+  unlocked: '{{unlocked}} / {{total}} unlocked'
+  unlocks_at: 'Unlocks at Lv {{level}}'
+  unlock_line: 'Lv {{level}}'
+  lv_of: '{{current}} / {{max}}'
+  locked: Locked
+  mastered: Mastered
+  no_points: Not enough spell points
+  upgrading: Leveling up…
+  upgrade_success: '{{spell}} leveled up'
+  level_up: 'Level up · {{cost}} pts'
+  # jobs
+  lv: 'Lv {{level}}'
+  xp_progress: '{{current}} / {{needed}} XP'
+  max: Max
+  resources: Resources
+  back: Back
+  # runeforge
+  gate_note: Requires the gear's craft job at level 70
+  detail_title: Item
+  forge_title: Forge
+  inventory_title: Inventory
+  tab_gear: Gear
+  tab_runes: Runes
+  place_gear: Place gear
+  place_rune: Place rune
+  random_notice: The outcome is rolled on-chain. A rune can apply, fizzle, or cost another stat — nothing is guaranteed.
+  one_rune_note: One rune is consumed per attempt
+  apply: Apply rune
+  scribing: Scribing…
+  outcome_success: The rune took hold
+  outcome_neutral: The rune fizzled — nothing changed
+  outcome_failure: The rune backfired — a stat was lost
+  requires_job: 'Requires {{job}} level 70'
+  clear: Clear
+  inspect_empty: Pick a gear piece to inspect
+  no_forge_gear: No forgeable gear in the bag
+  no_runes: No runes in the bag
+  menu_feed: Feed
+  menu_consume: Consume
+  menu_crush: Crush
+  menu_destroy: Destroy
+  feed_title: Feed pet
+  feed_power_label: Power
+  feed_power: '{{count}} / {{max}}'
+  feed_pick_food: Pick a food
+  feed_no_food: No suitable food in the bag
+  feed_already_today: Already fed today — come back tomorrow
+  feed_full: Fully fed
+  feed_pending: Feeding…
+  feed_success: Pet fed
+  claim_success: Reward claimed
+  crush_title: Crush gear
+  crush_confirm_body: 'Crush {{name}}? The item is destroyed forever and yields runes.'
+  crush_cta: Crush
+  crush_pending: Crushing…
+  crush_success: Gear crushed
+  destroy_title: Destroy item
+  destroy_confirm_body: 'Destroy {{name}} ×{{amount}}? This cannot be undone.'
+  destroy_cta: Destroy
+  destroy_pending: Destroying…
+  destroy_success: Item destroyed
+  unsealing: Unsealing…
+  skip_hint: Click to skip
+  reveal_eyebrow: You received
+  revealing: Revealing…
+  collecting: Collecting…
+  continue_cta: Continue
+  stat_maxed: This stat has reached its rune cap on this item
+  stat:
+    movement: 'MP'
+    action: 'AP'
+    range: 'Range'
+    critical_chance: 'Critical Chance'
+    critical_outcomes: 'Critical Chance'
+    vitality: 'Vitality'
+    wisdom: 'Wisdom'
+    strength: 'Strength'
+    intelligence: 'Intelligence'
+    chance: 'Chance'
+    agility: 'Agility'
+    heal: 'Heal'
+    critical_hit: 'Critical Hit'
+    percent_damage: 'Damage'
+    raw_damage: 'Raw Damage'
+    fire_resistance: 'Fire Resistance'
+    water_resistance: 'Water Resistance'
+    earth_resistance: 'Earth Resistance'
+    air_resistance: 'Air Resistance'
+  stats:
+    no_character: 'No character selected'
+    unavailable: 'Stats unavailable'
+    level: 'Lv. {{level}}'
+    adventurer: 'Adventurer'
+    points_to_assign: 'Points to assign'
+    spend_hint: 'Spend them on your characteristics'
+    reset: 'Reset'
+    health: 'Health'
+    action: 'Action'
+    move: 'Move'
+    characteristics: 'Characteristics'
+    resistances: 'Resistances'
+    secondary: 'Secondary'
+    element:
+      fire: 'Fire'
+      water: 'Water'
+      earth: 'Earth'
+      air: 'Air'
+    description:
+      vitality: 'Increases your max HP'
+      wisdom: 'Increases your XP gain'
+      strength: 'Increases your earth damage'
+      intelligence: 'Increases your fire damage and healing'
+      chance: 'Increases your water damage and loot drop chance'
+      agility: 'Increases your air damage, tackle, and dodge of AP/MP loss'
+      critical_hit: 'Improves your odds of landing a critical hit'
+      raw_damage: 'Adds a flat amount to damage and life-steal effects'
+    add_point: 'Add a point to {{stat}}'
+    remove_point: 'Remove a point from {{stat}}'
+    tx_pending: 'Assigning…'
+    tx_success: 'Stat points assigned'
+  spells:
+    range_modifiable: 'Modifiable range'
+    no_character: 'No character selected'
+    select_prompt: 'Select a spell'
+    level: 'Level {{level}}'
+    spell_points: 'Spell Points'
+    available: 'Available'
+    grimoire: 'Grimoire'
+    unlocked: '{{unlocked}} / {{total}} Unlocked'
+    locked: 'Locked'
+    lv: 'Lv {{level}}'
+    lv_of: 'Lv {{cur}}/{{max}}'
+    unlocks_at: 'Unlocks at Lv {{level}}'
+    current_level: 'Current Level'
+    ap_cost: 'AP Cost'
+    range: 'Range'
+    cooldown: 'Cooldown'
+    crit_chance: 'Crit Chance'
+    casts_per_turn: 'Casts / Turn'
+    unlimited: 'Unlimited'
+    description: 'Description'
+    effects: 'Effects'
+    levels_head: 'Levels'
+    mastered: 'Mastered'
+    upgrade_success: '{{spell}} leveled up!'
+    upgrading: 'Leveling up…'
+    level_up_spell: 'Level up spell'
+    pts: '{{count}} pts'
+    pts_one: '{{count}} pt'
+    pts_other: '{{count}} pts'
+    requires_lv: 'Requires Lv {{level}}'
+    no_points: 'No Points'
+    tag_self: 'Self'
+    tag_melee: 'Melee'
+    tag_ranged: 'Ranged'
+    tag_zone: 'Zone'
+    tag_line_of_sight: 'Line of Sight'
+    el_fire: 'Fire'
+    el_water: 'Water'
+    el_earth: 'Earth'
+    el_air: 'Air'
+    buff: 'Buff'
+    utility: 'Utility'
+    heal: 'Heal'
+    neutral: 'Neutral'
+    element: 'Element'
+    damage: 'Damage'
+    turns: 'turns'
+    crit_val: 'crit {{value}}'
+    range_fixed: 'FIXED — +RANGE STAT DOES NOT APPLY'
+  jobs:
+    category:
+      gathering: 'Gathering'
+      weapon: 'Weapon craft'
+      equipment: 'Equipment craft'
+      consumable: 'Consumable craft'
+    recipes_fallback: 'Recipes'
+    equipped: 'Equipped'
+    table:
+      tier: 'Tier'
+      req_lvl: 'Req. lvl'
+      resource: 'Resource'
+      yield: 'Yield'
+      xp: 'XP'
+      unlocks_at: '{{name}} (unlocks at level {{level}})'
+      gather_detail: '{{name}} · gather {{gather}}s · respawn {{respawn}}s'
+      locked: 'locked'
+    lv_badge: 'Lv {{level}}'
+    tier_badge: 'T{{tier}}'
+    craft:
+      recipe_head: 'Recipe'
+      recipe_not_seeded: 'This recipe is not yet in the content seed.'
+      ingredients_head: 'Ingredients'
+      requires_level: 'Requires {{job}} Lv {{required}} (you are Lv {{level}})'
+      not_enough: 'Not enough ingredients'
+      success_chance: 'Success chance'
+      craft_tooltip: 'Craft {{name}}'
+      craft_button: 'Craft'
+      crafting: 'Crafting…'
+      craft_success: '{{name}} crafted'
+      roll_failed: 'The craft roll failed for {{name}} ({{chance}}% odds) — the ingredients were spent'
+      locked_level: 'Locked · Lv {{level}}'
+    detail:
+      close_aria: 'Close item detail'
+      item_not_seeded: 'This item is not in the content seed.'
+      tool_label: 'Tool'
+      crafts_label: 'Crafts {{covers}}'
+      xp_progress: '{{current}} / {{needed}} XP'
+    recipes:
+      empty_seed: 'Recipes for this profession arrive with the crafting content seed.'
+      unlocked: 'Unlocked'
+      locked: 'Locked'
+      meta: 'Lv {{level}} · {{category}}'
+    gather:
+      in_progress: 'Gathering {{name}}…'
+      button: 'Gather {{name}}'
+      hint: 'Click a {{job}} node in the world to gather.'
+    tabs:
+      resources: 'Resources'
+      recipes: 'Recipes'
+    no_character: 'No character selected'
+  common:
+    experience: 'Experience'
+    confirm: 'Confirm'
+    max: 'MAX'

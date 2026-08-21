@@ -132,6 +132,13 @@
   color: var(--chat-name);
   font-weight: 600;
 }
+/* a name that maps to a nearby player opens their context menu */
+.chat-tok--clickable {
+  cursor: pointer;
+}
+.chat-tok--clickable:hover {
+  text-decoration: underline;
+}
 /* the speaker's OWN name — blue sets your lines apart from the gold of everyone else */
 .chat-tok--self {
   color: var(--chat-target);

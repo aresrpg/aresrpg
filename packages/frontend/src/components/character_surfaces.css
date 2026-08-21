@@ -1,0 +1,433 @@
+/* SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available */
+/* © 2026 Sceat — All rights reserved. See LICENSE. */
+/* Exact retained rules used by the tracked simulator modal and its shared HUD rows. */
+
+.gw-tab {
+  --bg: #0a0a0f;
+  --surface-1: #0d0d14;
+  --surface-2: #12121a;
+  --surface-3: #1a1a26;
+  --steel: #1e1e2e;
+  --slate: #2a2a3a;
+  --fg: #e8e4dc;
+  --fg-muted: #9a9488;
+  --fg-faint: #6b7280;
+  --accent: #c8963c;
+  --accent-strong: #f5d0a9;
+  --accent-ink: #0a0a0f;
+  --accent-dim: rgba(200, 150, 60, 0.14);
+  --accent-glow: rgba(200, 150, 60, 0.35);
+  --cyan: #4a9eff;
+  --cyan-strong: #7bb8ff;
+  --cyan-dim: rgba(74, 158, 255, 0.14);
+  --gold: #c8963c;
+  --hair: rgba(255, 255, 255, 0.07);
+  --hair-strong: rgba(255, 255, 255, 0.16);
+  --edge: rgba(255, 255, 255, 0.06);
+  --edge-top: rgba(255, 255, 255, 0.1);
+  --glass: rgba(18, 18, 26, 0.55);
+  --glass-hi: rgba(30, 30, 42, 0.6);
+  --good: #4ade80;
+  --warn: #fbbf24;
+  --bad: #ef4444;
+  --danger: #ef4444;
+  --r-1: 0;
+  --r-2: 0;
+  --r-3: 0;
+  --s-1: 4px;
+  --s-2: 8px;
+  --s-3: 12px;
+  --s-4: 16px;
+  --s-5: 24px;
+  --s-6: 32px;
+  --s-7: 48px;
+  --s-8: 64px;
+  --dock-clear: 0;
+  --dur-1: 120ms;
+  --dur-2: 200ms;
+  --dur-3: 300ms;
+  --ease: cubic-bezier(0.16, 1, 0.3, 1);
+  --font-ui: 'JetBrains Mono', ui-monospace, monospace;
+  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+  color: var(--fg);
+  font-family: var(--font-mono);
+  font-size: 0.9rem;
+}
+
+.gw-tab.gw-tab--carrier {
+  display: contents;
+  --dock-clear: 132px;
+}
+
+.text-gradient {
+  background: linear-gradient(135deg, #fad9b3 0%, #d4a145 50%, #f0c474 100%);
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.template-input {
+  padding: 6px 10px;
+  color: var(--color-text);
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--color-border);
+  outline: none;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  transition: border-color 0.2s ease;
+}
+
+.template-input:focus {
+  border-color: rgba(200, 150, 60, 0.4);
+}
+
+.stats__prow {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  padding: var(--s-2) var(--s-3);
+}
+
+.stats__prow:not(:last-child) {
+  border-bottom: 1px solid var(--hair);
+}
+
+.stats__prow-icon {
+  display: grid;
+  width: 26px;
+  height: 26px;
+  flex: none;
+  place-items: center;
+  border-radius: var(--r-1);
+  background: color-mix(in srgb, var(--tint) 16%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--tint) 40%, transparent);
+}
+
+.stats__prow-icon img {
+  width: 16px;
+  height: 16px;
+  object-fit: contain;
+}
+
+.stats__prow-labels {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  flex-flow: column nowrap;
+  gap: 2px;
+}
+
+.stats__prow-label {
+  color: var(--fg);
+  font-size: 0.84rem;
+}
+
+.stats__prow-bonus {
+  color: color-mix(in srgb, var(--accent) 42%, var(--fg-muted));
+  font-size: 0.74rem;
+}
+
+.sb__rows {
+  min-height: 0;
+  flex: 1;
+  overflow-y: auto;
+}
+
+.sb__rows--grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));
+  column-gap: 22px;
+  overflow: visible;
+}
+
+.sb__row {
+  display: flex;
+  width: 100%;
+  cursor: pointer;
+  align-items: center;
+  gap: 12px;
+  padding: 11px 15px 11px 13px;
+  border-bottom: 1px solid rgba(200, 150, 60, 0.06);
+  border-left: 2px solid transparent;
+  background: none;
+  text-align: left;
+  transition: background var(--dur-1) var(--ease);
+}
+
+.sb__row:hover {
+  background: rgba(200, 150, 60, 0.04);
+}
+
+.sb__row--dense {
+  gap: 9px;
+  padding: 5px 4px 5px 6px;
+}
+
+.sb__ic {
+  width: 40px;
+  height: 40px;
+  flex: none;
+  border: 1px solid var(--color-border);
+  background: #05050a;
+  object-fit: cover;
+}
+
+.sb__row--dense .sb__ic {
+  width: 26px;
+  height: 26px;
+}
+
+.sb__art--fallback {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--el, var(--color-gold));
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.sb__meta {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.sb__row--dense .sb__meta {
+  flex-direction: row;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.sb__nm {
+  overflow: hidden;
+  color: var(--color-text);
+  font-size: 0.72rem;
+  letter-spacing: 0.12em;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.sb__row--dense .sb__nm {
+  flex: 0 1 auto;
+  font-size: 0.66rem;
+}
+
+.sb__rl {
+  margin-top: 4px;
+  color: var(--color-muted);
+  font-size: 0.5rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+}
+
+.sb__row--dense .sb__rl {
+  min-width: 0;
+  flex: 1 1 auto;
+  overflow: hidden;
+  margin-top: 0;
+  font-size: 0.44rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sb__right {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 9px;
+}
+
+.inv__doll {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+  padding: var(--s-4);
+  border: 1px solid var(--hair);
+  border-radius: var(--r-3);
+  background: rgba(0, 0, 0, 0.18);
+}
+
+.inv__doll--flat {
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
+}
+
+.inv__doll-body {
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  gap: var(--s-3);
+}
+
+.inv__doll--compact .inv__doll-body {
+  align-items: flex-start;
+  justify-content: flex-start;
+  flex-direction: column;
+}
+
+.inv__relics {
+  display: grid;
+  width: 52px;
+  flex: none;
+  grid-template-columns: 1fr;
+  gap: 7px;
+}
+
+.inv__relics .inv__slot {
+  width: 52px;
+  height: 52px;
+}
+
+.inv__doll--compact .inv__relics {
+  width: auto;
+  grid-template-columns: repeat(6, 44px);
+  gap: var(--s-2);
+}
+
+.inv__rig {
+  display: grid;
+  flex: 1 1 auto;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--s-2);
+}
+
+.inv__rig .inv__slot {
+  width: 100%;
+  height: auto;
+  aspect-ratio: 1;
+}
+
+.inv__doll--compact .inv__rig {
+  flex: none;
+  grid-template-columns: repeat(3, 44px);
+}
+
+.inv__slot-gap {
+  aspect-ratio: 1;
+}
+
+.inv__doll--compact .inv__slot-gap {
+  width: 44px;
+}
+
+.inv__cosmetics {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--s-2);
+}
+
+.inv__cosmetics .inv__slot {
+  width: 100%;
+  height: auto;
+  aspect-ratio: 1;
+}
+
+.inv__cosmetics.inv__cosmetics--compact {
+  justify-content: flex-start;
+  grid-template-columns: repeat(3, 44px);
+}
+
+.inv__slot {
+  position: relative;
+  display: flex;
+  width: 52px;
+  height: 52px;
+  cursor: pointer;
+  user-select: none;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--hair);
+  border-radius: var(--r-2);
+  background: linear-gradient(160deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.01));
+  transition:
+    border-color var(--dur-1) var(--ease),
+    background var(--dur-1) var(--ease),
+    box-shadow var(--dur-1) var(--ease);
+}
+
+.inv__doll--compact .inv__relics .inv__slot,
+.inv__doll--compact .inv__rig .inv__slot,
+.inv__cosmetics.inv__cosmetics--compact .inv__slot {
+  width: 44px;
+  height: 44px;
+}
+
+.inv__slot:hover {
+  border-color: var(--hair-strong);
+}
+
+.inv__slot--weapon {
+  background: linear-gradient(150deg, rgba(93, 180, 255, 0.1), rgba(0, 0, 0, 0.26));
+}
+
+.inv__slot.is-filled {
+  background-image: linear-gradient(160deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.01));
+}
+
+.inv__slot-lvl {
+  position: absolute;
+  top: 3px;
+  right: 4px;
+  pointer-events: none;
+  color: var(--fg-muted);
+  font-family: var(--font-mono);
+  font-size: 0.54rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.inv__slot-glyph {
+  width: 42%;
+  height: 42%;
+  color: var(--fg-faint);
+  opacity: 0.5;
+}
+
+.inv__slot-label {
+  position: absolute;
+  right: 0;
+  bottom: 4px;
+  left: 0;
+  pointer-events: none;
+  color: var(--fg-faint);
+  font-family: var(--font-mono);
+  font-size: 0.46rem;
+  letter-spacing: 0.04em;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.inv__doll--compact .inv__slot-glyph,
+.inv__cosmetics.inv__cosmetics--compact .inv__slot-glyph {
+  width: 36%;
+  height: 36%;
+  margin-bottom: 7px;
+}
+
+.inv__doll--compact .inv__slot-label,
+.inv__cosmetics.inv__cosmetics--compact .inv__slot-label {
+  right: 0;
+  bottom: 3px;
+  left: 0;
+  overflow: hidden;
+  padding: 0 2px;
+  font-size: 0.4rem;
+  letter-spacing: 0;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.inv__slot-art {
+  display: flex;
+  width: 100%;
+  height: 100%;
+  box-sizing: border-box;
+  cursor: pointer;
+  object-fit: contain;
+  padding: 5px;
+}

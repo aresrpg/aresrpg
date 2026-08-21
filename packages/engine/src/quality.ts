@@ -81,6 +81,11 @@ export const QUALITY_PROFILES = Object.freeze({
   }),
 } satisfies Readonly<Record<EngineQuality, QualityProfile>>)
 
+// THE one door every consumer derives the effective chunk radius from — the player's
+// render-distance override wins over the tier default, for voxels AND the far shell alike.
+export const effective_render_distance = (tier_far_radius: number, override: number | null): number =>
+  override ?? tier_far_radius
+
 export const get_quality_profile = (quality: EngineQuality): QualityProfile => QUALITY_PROFILES[quality]
 
 export const uses_world_post_processing = (quality: EngineQuality, presentation: EnginePresentation): boolean =>

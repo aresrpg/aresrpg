@@ -98,17 +98,19 @@ export const ConnectionCard = ({
 }>) => {
   const label = violation
     ? copy.server_violation
-    : status === 'ready'
-      ? copy.server_connected
-      : status === 'connected'
-        ? copy.server_syncing
-        : status === 'connecting'
-          ? error
-            ? copy.server_reconnecting
-            : copy.server_connecting
-          : copy.server_disconnected
+    : status === 'replaced'
+      ? copy.server_replaced
+      : status === 'ready'
+        ? copy.server_connected
+        : status === 'connected'
+          ? copy.server_syncing
+          : status === 'connecting'
+            ? error
+              ? copy.server_reconnecting
+              : copy.server_connecting
+            : copy.server_disconnected
   const connected = status === 'ready' && !violation
-  const disconnected = status === 'idle' || violation !== null
+  const disconnected = status === 'idle' || status === 'replaced' || violation !== null
   const Icon = disconnected ? WifiOff : Wifi
   const indexing_tone = indexing_health_tone(indexing_lag)
 

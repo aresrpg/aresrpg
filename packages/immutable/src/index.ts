@@ -4,7 +4,10 @@
 export {
   experience_curve,
   craft_required_level,
+  craft_success_percent,
   craft_xp_from_ingredient_count,
+  gather_quantity_bounds,
+  gather_xp,
   job_experience_curve,
   job_level_from_xp,
   job_max_level,
@@ -31,7 +34,7 @@ export {
   type StatName,
 } from './identity.ts'
 export { pet_max_feeds } from './pet.ts'
-export { rune_effect, type RuneEffect, type RuneTier } from './rune.ts'
+export { rune_effect, rune_max_apps, type RuneEffect, type RuneTier } from './rune.ts'
 export {
   item_budget_envelope,
   item_budget_stat_weight,

@@ -9,6 +9,7 @@ import { useState } from 'react'
 import type { AppCopy } from '../i18n/copy.ts'
 import { can_start_simulator_fight } from '../modules/simulator.ts'
 import { dispatch_app, useAppStore } from '../store.ts'
+import type { SceneHandle } from '../game/core/scene_feed.ts'
 
 import { SimulatorBoardPane } from './BoardPane.tsx'
 import { CharacterRow } from './CharacterRow.tsx'
@@ -18,7 +19,7 @@ import { CharacterModal } from './CharacterModal.tsx'
 const template = (source: string, values: Readonly<Record<string, string | number>>): string =>
   Object.entries(values).reduce((text, [key, value]) => text.replaceAll(`{${key}}`, String(value)), source)
 
-const SimulatorPage = ({ copy }: Readonly<{ copy: AppCopy }>) => {
+const SimulatorPage = ({ copy, scene }: Readonly<{ copy: AppCopy; scene: SceneHandle }>) => {
   const simulator = useAppStore((state) => state.simulator)
   const [editing, set_editing] = useState<string | 'new' | null>(null)
   const [blob_color, set_blob_color] = useState('#35b34a')
@@ -144,6 +145,7 @@ const SimulatorPage = ({ copy }: Readonly<{ copy: AppCopy }>) => {
 
         <div className="relative min-h-0 overflow-hidden bg-[#08090e]">
           <SimulatorBoardPane
+            scene={scene}
             blob_debug={
               blob_enabled
                 ? Object.freeze({

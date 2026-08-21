@@ -10,6 +10,8 @@ import { promisify } from 'node:util'
 
 import type { Plugin } from 'vite'
 
+import { seed_content_domains } from './src/editor/seed_editor.ts'
+
 export type SeedValidation = Readonly<{ reds: readonly string[]; warns: readonly string[] }>
 type SeedFileServiceOptions = Readonly<{
   content_dir: string
@@ -83,16 +85,7 @@ export type SeedFileService = ReturnType<typeof create_seed_file_service>
 
 const exec_file = promisify(execFile)
 
-export const seed_content_files = Object.freeze([
-  'airdrop.json',
-  'items.json',
-  'mobs.json',
-  'recipes.json',
-  'shop.json',
-  'spells.json',
-  'structure_packs.json',
-  'worlds.json',
-] as const)
+export const seed_content_files = Object.freeze(seed_content_domains.map(({ file }) => file))
 
 export const create_seed_validator =
   ({
@@ -157,6 +150,14 @@ export const seed_dev_plugin = ({
   })
   return {
     name: 'aresrpg-seed-editor',
+    // A seed save must not full-reload the editing client mid-session: the JSON modules are
+    // deliberately NOT invalidated here — clients get a custom event instead and choose their
+    // own reload moment (the /demo editor defers it to the next tab switch).
+    handleHotUpdate: ({ file, server }) => {
+      if (!file.startsWith(`${content_dir}/`) || !file.endsWith('.json')) return undefined
+      server.ws.send({ type: 'custom', event: 'aresrpg:seed-changed' })
+      return []
+    },
     configureServer: (server) => {
       server.middlewares.use((request, response, next) => {
         const url = new URL(request.url ?? '/', `http://${request.headers.host ?? 'localhost'}`)

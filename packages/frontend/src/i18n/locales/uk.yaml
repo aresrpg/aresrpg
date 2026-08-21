@@ -41,11 +41,17 @@ server_reconnecting: Повторне підключення
 server_syncing: Синхронізація
 server_connected: Підключено
 server_violation: Відключено — порушення правил. Скоро повторна спроба.
+server_replaced: Підключено в іншому місці
+session_replaced_title: Підключено з іншого місця
+session_replaced_body: Ваш обліковий запис відкрив гру в іншому місці, тому це вікно було відключено. Закрийте інший сеанс або повторно підключіться тут, щоб грати в цьому вікні.
+session_replaced_reconnect: Повторно підключитися тут
 latency_unit: мс
 indexing_health: Стан індексації
 online_players: Гравці онлайн
 indexing_lag_warning: Дії в грі можуть відображатися із затримкою
 game_frozen: Гру наразі заморожено. Докладнішу інформацію дивіться в Discord.
+gas_budget_toast: Ця дія перевищила зарезервовану мережеву комісію. Її не виконано, і вона нічого вам не коштувала — будь ласка, повідомте про це.
+game_paused_toast: Гру призупинено для оновлення. Вашу дію не виконано — спробуйте ще раз за кілька хвилин.
 network_testnet: TESTNET
 page_pending_title: Ця сторінка відновлюється
 page_pending_body: Її місце залишається видимим, поки ми чисто її відновлюємо.
@@ -96,6 +102,33 @@ world_hud:
   zone_edge: Межа зони {{dist}}
   coordinates: Координати
   world_map: Карта світу
+  menu_group: Запросити до групи
+  menu_trade: Торгувати
+  menu_message: Надіслати повідомлення
+  mount_prompt: 'Натисніть {{key}}, щоб осідлати'
+  fight_press_join: 'Натисніть {{key}}, щоб приєднатися'
+  fight_press_spectate: 'Натисніть {{key}}, щоб спостерігати'
+  fight_locked: 'Приватний бій'
+  fight_join_title: 'Приєднатися до бою'
+  fight_spectate_title: 'Спостерігати за боєм'
+  fight_side_a: 'Сторона А'
+  fight_side_b: 'Сторона Б'
+  fight_empty_side: 'Ще немає бійця'
+  fight_unknown: 'Невідомий бієць'
+  fight_join_button: 'Приєднатися'
+  fight_spectate_button: 'Спостерігати'
+  fight_started_ago: 'Почався'
+  fight_placement: 'Розміщення'
+  fight_wallet_hint: 'Підключіть гаманець, щоб приєднатися'
+  fight_close: 'Закрити'
+  menu_duel: Викликати на дуель
+  duel_invite: '{{name}} викликає вас на дуель'
+  duel_accept: Прийняти
+  duel_decline: Відхилити
+  duel_waiting: 'Очікування {{name}}…'
+  duel_cancel: Скасувати
+  duel_declined: '{{name}} відхилив дуель'
+  duel_never_started: Дуель так і не почалася — нічого не сталося, можете грати далі.
 demo_page:
   title: Лабораторія рендерингу
   world_lab: Світ
@@ -225,7 +258,6 @@ admin_page:
   arm_claim: Підготувати виведення
   claiming: Виведення…
   confirm_claim: Підтвердити виведення
-  claim_success: Роялті отримано
   disconnect_admin_wallet: Відключити
   claim_digest: Транзакція виведення
 simulator_page:
@@ -322,6 +354,13 @@ fight_hud:
   turn_order: Порядок ходів
   placement_title: Приготуйтеся до бою
   placement_hint: Розмістіть бійців і позначте їх готовими
+  placement_ready: Готовий
+  placement_waiting: Очікування інших…
+  placement_force_prompt: Гравець відсутній — примусово почати бій?
+  placement_force_button: Примусовий старт
+  placement_no_opponent: Ніхто не прийняв виклик
+  crank_prompt: Поточний гравець не завершує свій хід.
+  crank_button: Примусово завершити хід
   end_turn: Завершити хід
   reset_turn: Скинути
   weapon_attack: Атака зброєю
@@ -2847,3 +2886,275 @@ encyclopedia_page:
     zephyr_legwraps: 'Такі легкі, що ніби нічого не вдягнено. Що теж варіант, але менш захисний.'
     zephyr_silk_strand: 'Шовкова нитка з вітром, що плаває сама. Кравці її обожнюють. Їхні коти вважають її особистим ворогом.'
     zukin_muru: 'A shinobi cowl for people who want to look like they left quietly, even when they slam the door.'
+out_of_sui_body: У вас закінчилися SUI для оплати комісій за транзакції. Поповніть гаманець, щоб продовжити гру.
+characters_page:
+  tab_equipment: Спорядження
+  tab_stats: Характеристики
+  tab_spells: Закляття
+  tab_jobs: Професії
+  tab_runeforge: Рунне кування
+  no_character: Персонажа не вибрано — оберіть його на панелі вкладок угорі
+  level: 'Рів {{level}}'
+  experience: Досвід
+  equipment_head: Спорядження
+  equipped_totals: Підсумки спорядження
+  no_gear_equipped: Нічого не вдягнено
+  bag_equipment: Спорядження
+  bag_cosmetics: Косметика
+  bag_consumables: Витратні
+  bag_resources: Ресурси
+  accept: Підтвердити
+  cancel: Скасувати
+  equip_pending: Оновлення спорядження…
+  equip_success: Спорядження оновлено
+  consume_pending: Використання предмета…
+  consume_success: Предмет використано
+  already_full_hp: Здоровʼя вже повне
+  refusal_wrong_slot: Цей предмет не підходить до цього слота
+  refusal_level_too_low: Ваш рівень занизький для цього предмета
+  refusal_relic_duplicate: Така реліквія вже вдягнена
+  refusal_item_listed: Цей предмет виставлено на продаж
+  points_to_assign: Очки для розподілу
+  spend_hint: Розподіліть очки між шістьма характеристиками та підтвердіть
+  reset: Скинути
+  confirm: Підтвердити
+  tx_pending: Підтвердження…
+  stats_pending: Розподіл очок…
+  stats_success: Очки розподілено
+  health: Здоровʼя
+  action: Дія
+  movement: Рух
+  characteristics: Характеристики
+  resistances: Опори
+  secondary: Другорядні
+  element_fire: Вогонь
+  element_water: Вода
+  element_earth: Земля
+  element_air: Повітря
+  add_point: 'Додати очко до {{stat}}'
+  remove_point: 'Прибрати очко з {{stat}}'
+  grimoire: Гримуар
+  spell_points: Очки заклять
+  unlocked: 'Відкрито {{unlocked}} / {{total}}'
+  unlocks_at: 'Відкривається на рів {{level}}'
+  unlock_line: 'Рів {{level}}'
+  lv_of: '{{current}} / {{max}}'
+  locked: Заблоковано
+  mastered: Опановано
+  no_points: Недостатньо очок заклять
+  upgrading: Підвищення рівня…
+  upgrade_success: '{{spell}} підвищено'
+  level_up: 'Підвищити · {{cost}} оч.'
+  lv: 'Рів {{level}}'
+  xp_progress: '{{current}} / {{needed}} XP'
+  max: Макс
+  resources: Ресурси
+  back: Назад
+  gate_note: Потрібна реміснича професія предмета на рівні 70
+  detail_title: Предмет
+  forge_title: Кузня
+  inventory_title: Інвентар
+  tab_gear: Спорядження
+  tab_runes: Руни
+  place_gear: Покладіть предмет
+  place_rune: Покладіть руну
+  random_notice: Результат розігрується в ланцюгу. Руна може спрацювати, схибити або коштувати іншої характеристики — гарантій немає.
+  one_rune_note: Одна руна витрачається за спробу
+  apply: Застосувати руну
+  scribing: Гравіювання…
+  outcome_success: Руна прижилася
+  outcome_neutral: Руна схибила — нічого не змінилося
+  outcome_failure: Руна зірвалася — характеристику втрачено
+  requires_job: 'Потрібно {{job}} рівня 70'
+  clear: Прибрати
+  inspect_empty: Оберіть спорядження для огляду
+  no_forge_gear: У сумці немає спорядження для кування
+  no_runes: У сумці немає рун
+  menu_feed: Годувати
+  menu_consume: Спожити
+  menu_crush: Розтрощити
+  menu_destroy: Знищити
+  feed_title: Годування улюбленця
+  feed_power_label: Сила
+  feed_power: '{{count}} / {{max}}'
+  feed_pick_food: Оберіть їжу
+  feed_no_food: У сумці немає підходящої їжі
+  feed_already_today: Сьогодні вже годували — поверніться завтра
+  feed_full: Повністю нагодований
+  feed_pending: Годування…
+  feed_success: Улюбленця нагодовано
+  claim_success: Нагороду отримано
+  crush_title: Розтрощити спорядження
+  crush_confirm_body: 'Розтрощити {{name}}? Предмет буде знищено назавжди, а ви отримаєте руни.'
+  crush_cta: Розтрощити
+  crush_pending: Трощення…
+  crush_success: Спорядження розтрощено
+  destroy_title: Знищити предмет
+  destroy_confirm_body: 'Знищити {{name}} ×{{amount}}? Цю дію не можна скасувати.'
+  destroy_cta: Знищити
+  destroy_pending: Знищення…
+  destroy_success: Предмет знищено
+  unsealing: Розпечатування…
+  skip_hint: Натисніть, щоб пропустити
+  reveal_eyebrow: Ви отримали
+  revealing: Відкриття…
+  collecting: Отримання…
+  continue_cta: Продовжити
+  stat_maxed: Ця характеристика досягла ліміту рун на цьому предметі
+  stat:
+    movement: 'ОР'
+    action: 'ОД'
+    range: 'Дальність'
+    critical_chance: 'Шанс криту'
+    critical_outcomes: 'Шанс криту'
+    vitality: 'Живучість'
+    wisdom: 'Мудрість'
+    strength: 'Сила'
+    intelligence: 'Інтелект'
+    chance: 'Удача'
+    agility: 'Спритність'
+    heal: 'Зцілення'
+    critical_hit: 'Критичний Удар'
+    percent_damage: 'Шкода'
+    raw_damage: 'Сира Шкода'
+    fire_resistance: 'Вогнестійкість'
+    water_resistance: 'Водостійкість'
+    earth_resistance: 'Землестійкість'
+    air_resistance: 'Повітростійкість'
+  stats:
+    no_character: 'Персонажа не вибрано'
+    unavailable: 'Характеристики недоступні'
+    level: 'Рів. {{level}}'
+    adventurer: 'Шукач пригод'
+    points_to_assign: 'Очки для розподілу'
+    spend_hint: 'Розподіліть їх між характеристиками'
+    reset: 'Скинути'
+    health: 'Здоров’я'
+    action: 'Дія'
+    move: 'Рух'
+    characteristics: 'Характеристики'
+    resistances: 'Опір'
+    secondary: 'Вторинні характеристики'
+    element:
+      fire: 'Вогонь'
+      water: 'Вода'
+      earth: 'Земля'
+      air: 'Повітря'
+    description:
+      vitality: 'Збільшує максимальне здоров’я'
+      wisdom: 'Збільшує отримання досвіду'
+      strength: 'Збільшує шкоду від землі'
+      intelligence: 'Збільшує шкоду від вогню та зцілення'
+      chance: 'Збільшує шкоду від води та шанс отримання здобичі'
+      agility: 'Збільшує шкоду від повітря, захоплення та ухилення від втрати ОД/ОР'
+      critical_hit: 'Покращує ймовірність критичного удару'
+      raw_damage: 'Додає фіксоване значення до ефектів шкоди та викрадення життя'
+    add_point: 'Збільшити {{stat}} на одне очко'
+    remove_point: 'Зменшити {{stat}} на одне очко'
+    tx_pending: 'Розподіл…'
+    tx_success: 'Очки характеристик розподілено'
+  spells:
+    range_modifiable: 'Змінна дальність'
+    no_character: 'Персонажа не вибрано'
+    select_prompt: 'Виберіть закляття'
+    level: 'Рівень {{level}}'
+    spell_points: 'Очки заклять'
+    available: 'Доступно'
+    grimoire: 'Гримуар'
+    unlocked: '{{unlocked}} / {{total}} відкрито'
+    locked: 'Заблоковано'
+    lv: 'Рв {{level}}'
+    lv_of: 'Рв {{cur}}/{{max}}'
+    unlocks_at: 'Відкриється на рв {{level}}'
+    current_level: 'Поточний рівень'
+    ap_cost: 'Вартість ОД'
+    range: 'Дальність'
+    cooldown: 'Перезарядка'
+    crit_chance: 'Шанс криту'
+    casts_per_turn: 'Використань / Хід'
+    unlimited: 'Необмежено'
+    description: 'Опис'
+    effects: 'Ефекти'
+    levels_head: 'Рівні'
+    mastered: 'Опановано'
+    upgrade_success: '{{spell}} підвищено рівень!'
+    upgrading: 'Підвищення рівня…'
+    level_up_spell: 'Покращити закляття'
+    pts: '{{count}} очок'
+    pts_one: '{{count}} очко'
+    pts_other: '{{count}} очок'
+    requires_lv: 'Потрібен рівень {{level}}'
+    no_points: 'Немає очок'
+    tag_self: 'На себе'
+    tag_melee: 'Ближній бій'
+    tag_ranged: 'Дальній бій'
+    tag_zone: 'Зона'
+    tag_line_of_sight: 'Лінія зору'
+    el_fire: 'Вогонь'
+    el_water: 'Вода'
+    el_earth: 'Земля'
+    el_air: 'Повітря'
+    buff: 'Підсилення'
+    utility: 'Допоміжне'
+    heal: 'Зцілення'
+    neutral: 'Нейтральна'
+    element: 'Стихія'
+    damage: 'Шкода'
+    turns: 'ходів'
+    crit_val: 'крит {{value}}'
+    range_fixed: 'ФІКСОВАНА — СТАТ. ДАЛЬНОСТІ НЕ ДІЄ'
+  jobs:
+    category:
+      gathering: 'Збиральництво'
+      weapon: 'Виготовлення зброї'
+      equipment: 'Виготовлення спорядження'
+      consumable: 'Виготовлення витратних матеріалів'
+    recipes_fallback: 'Рецепти'
+    equipped: 'Споряджено'
+    table:
+      tier: 'Рівень'
+      req_lvl: 'Потр. рів.'
+      resource: 'Ресурс'
+      yield: 'Врожай'
+      xp: 'XP'
+      unlocks_at: '{{name}} (розблоковується на рівні {{level}})'
+      gather_detail: '{{name}} · збір {{gather}}с · відродження {{respawn}}с'
+      locked: 'заблоковано'
+    lv_badge: 'Рв {{level}}'
+    tier_badge: 'T{{tier}}'
+    craft:
+      recipe_head: 'Рецепт'
+      recipe_not_seeded: 'Цього рецепта ще немає в контенті.'
+      ingredients_head: 'Інгредієнти'
+      requires_level: 'Потрібен {{job}} Рв {{required}} (у вас Рв {{level}})'
+      not_enough: 'Недостатньо інгредієнтів'
+      success_chance: 'Шанс успіху'
+      craft_tooltip: 'Виготовити {{name}}'
+      craft_button: 'Виготовити'
+      crafting: 'Виготовлення…'
+      craft_success: '{{name}} виготовлено'
+      roll_failed: 'Кидок виготовлення для {{name}} не вдався ({{chance}}% шансу) — інгредієнти витрачено'
+      locked_level: 'Заблоковано · Рв {{level}}'
+    detail:
+      close_aria: 'Закрити деталі предмета'
+      item_not_seeded: 'Цього предмета немає в контенті.'
+      tool_label: 'Інструмент'
+      crafts_label: 'Виробляє {{covers}}'
+      xp_progress: '{{current}} / {{needed}} XP'
+    recipes:
+      empty_seed: "Рецепти цієї професії з'являться разом із контентом крафту."
+      unlocked: 'Відкрито'
+      locked: 'Заблоковано'
+      meta: 'Рв {{level}} · {{category}}'
+    gather:
+      in_progress: 'Збір {{name}}…'
+      button: 'Зібрати {{name}}'
+      hint: 'Натисніть на вузол {{job}} у світі, щоб зібрати ресурс.'
+    tabs:
+      resources: 'Ресурси'
+      recipes: 'Рецепти'
+    no_character: 'Персонажа не вибрано'
+  common:
+    experience: 'Досвід'
+    confirm: 'Підтвердити'
+    max: 'МАКС'

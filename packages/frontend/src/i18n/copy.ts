@@ -49,17 +49,24 @@ export type AppCopy = Readonly<{
   server_syncing: string
   server_connected: string
   server_violation: string
+  server_replaced: string
+  session_replaced_title: string
+  session_replaced_body: string
+  session_replaced_reconnect: string
   latency_unit: string
   indexing_health: string
   online_players: string
   indexing_lag_warning: string
   game_frozen: string
+  gas_budget_toast: string
+  game_paused_toast: string
   network_testnet: string
   page_pending_title: string
   page_pending_body: string
   welcome_title: string
   welcome_body: string
   welcome_need_sui: string
+  out_of_sui_body: string
   insufficient_sui: string
   create_character: string
   create_title: string
@@ -100,6 +107,7 @@ export type AppCopy = Readonly<{
   admin_page: Readonly<Record<string, string>>
   shop_page: Readonly<Record<string, unknown>>
   airdrop_page: Readonly<Record<string, unknown>>
+  characters_page: Readonly<Record<string, unknown>>
   settings_page: Readonly<Record<string, string>>
   demo_page: Readonly<Record<string, string>>
   world_hud: Readonly<Record<string, string>>

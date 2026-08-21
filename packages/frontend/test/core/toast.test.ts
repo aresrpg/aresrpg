@@ -3,7 +3,7 @@
 
 import { describe, expect, test } from 'bun:test'
 
-import { TOAST_CONTAINER_CLASS, toast, toast_glass_class, type Toast } from '../../src/toast.ts'
+import { on_error_translate, TOAST_CONTAINER_CLASS, toast, toast_glass_class, type Toast } from '../../src/toast.ts'
 
 describe('app toast effects', () => {
   test('a persistent toast is a show/remove event pair with no second store', () => {
@@ -16,6 +16,24 @@ describe('app toast effects', () => {
     expect(shown.toast).toMatchObject({ message: 'Loading the universe', type: 'pending', persistent: true })
     dismiss()
     expect(events[1]).toEqual({ type: 'remove', id: shown.toast.id })
+    unsubscribe()
+  })
+
+  test('a registered translator turns a raw chain abort into player copy — errors only', () => {
+    const events: unknown[] = []
+    const unsubscribe = toast.subscribe((event) => events.push(event))
+    on_error_translate((message) => (message.includes('::version::assert_latest') ? 'The game is paused.' : null))
+    toast.add(
+      new Error(
+        "Transaction resolution failed: MoveAbort in 3rd command, abort code: 601, in '0xfed::version::assert_latest' (instruction 8)"
+      )
+    )
+    toast.add('plain info line', 'info')
+    on_error_translate(null)
+    const [aborted, info] = events as readonly Readonly<{ toast: Toast }>[]
+    expect(aborted!.toast.message).toBe('The game is paused.')
+    expect(aborted!.toast.type).toBe('error')
+    expect(info!.toast.message).toBe('plain info line')
     unsubscribe()
   })
 

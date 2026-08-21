@@ -121,22 +121,6 @@ const changed_rows = (receipt: Receipt | null | undefined): ChangedObject[] => {
   return effects?.gasObject ? [effects.gasObject, ...(effects.changedObjects ?? [])] : (effects?.changedObjects ?? [])
 }
 
-/** The exact post-transaction gas ref when it remains owned by `owner`. `undefined` means the
- *  receipt carried no gas-object fact; `null` means the former payment is no longer reusable. */
-export const receipt_gas_ref = (receipt: Receipt, owner: string): OwnedRef | null | undefined => {
-  const gas = effects_of(receipt)?.gasObject
-  if (!gas) return undefined
-  if (
-    gas.outputState !== 'ObjectWrite' ||
-    gas.outputOwner?.AddressOwner !== owner ||
-    !gas.objectId ||
-    !gas.outputVersion ||
-    !gas.outputDigest
-  )
-    return null
-  return Object.freeze({ objectId: gas.objectId, version: String(gas.outputVersion), digest: gas.outputDigest })
-}
-
 /** The one write door: fold a transaction result's changed objects into the cache. Stale
  *  versions never regress a newer entry (results can land out of order). Deleted objects
  *  leave. Returns the same cache (the cache IS the store; this is its only writer). */

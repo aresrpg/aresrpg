@@ -6,7 +6,11 @@ import type { CSSProperties } from 'react'
 
 import { stat_identities } from '../visual_identity.ts'
 
-export const StatIdentity = ({ stat, label }: Readonly<{ stat: string; label: string }>) => {
+export const StatIdentity = ({
+  stat,
+  label,
+  description,
+}: Readonly<{ stat: string; label: string; description?: string }>) => {
   const identity = stat_identities[stat]
   return (
     <>
@@ -20,6 +24,7 @@ export const StatIdentity = ({ stat, label }: Readonly<{ stat: string; label: st
       </span>
       <span className="stats__prow-labels">
         <span className="stats__prow-label">{label}</span>
+        {description && <span className="stats__prow-desc">{description}</span>}
       </span>
     </>
   )

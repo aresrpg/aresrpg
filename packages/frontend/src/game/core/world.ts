@@ -19,6 +19,7 @@ import {
   type EngineStatus,
   type EntityRender,
   type FightBoardRender,
+  type FightSwordMarker,
   type MaterialPreset,
   type CharacterAppearanceRender,
   type MobEntityRender,
@@ -28,17 +29,21 @@ import {
 import { world_character_entity, type LoadedCharacterRender } from '../character_entities.ts'
 import { create_footsteps, footstep_preset } from '../audio/footsteps.ts'
 import {
+  camera_mode_after,
   create_camera_director,
   create_fight_addon,
   create_follow_addon,
   create_spectate_addon,
   type CameraAnchor,
+  type CameraFrame,
   type FightBoardFrame,
 } from './cameras.ts'
 import { create_character_controller, type CharacterTransform } from './character.ts'
 import { create_chunk_manager } from './chunks.ts'
 import { CHARACTER_HEIGHT } from './collision.ts'
 import { empty_pet_motion, step_pet_follow, type PetMotion } from './pet_follow.ts'
+import { publish_mount_prompt } from './mount_prompt_feed.ts'
+import { publish_fight_prompt } from './fight_prompt_feed.ts'
 import { publish_pose } from './pose_feed.ts'
 import { pet_seat_height, pet_vertical_offset, type PetLocomotion } from './pet_locomotion.ts'
 
@@ -61,6 +66,8 @@ export const compose_world_entities = (
 ): readonly EntityRender[] =>
   Object.freeze(controlled ? [controlled, ...external.filter(({ id }) => id !== controlled.id)] : [...external])
 
+/** X mounts only inside this radius — the nametag shows exactly while it would work */
+const MOUNT_RANGE = 4
 const MOVE_KEYS: Readonly<Record<string, Readonly<{ axis: 'forward' | 'strafe'; sign: 1 | -1 }>>> = Object.freeze({
   KeyW: { axis: 'forward', sign: 1 },
   ArrowUp: { axis: 'forward', sign: 1 },
@@ -199,6 +206,7 @@ export const create_world = ({
     viewport: () => [canvas.clientWidth, canvas.clientHeight],
   })
   const director = create_camera_director(spectate_addon, canvas)
+  let last_view: CameraFrame | null = null
 
   const addon_for = (next: typeof mode) =>
     next === 'spectate' ? spectate_addon : next === 'follow' ? follow_addon : fight_addon
@@ -213,7 +221,12 @@ export const create_world = ({
   }
 
   const submitted_entities = (): readonly EntityRender[] =>
-    compose_world_entities(controlled_entity, pet_entity ? [pet_entity, ...external_entities] : external_entities)
+    // A MOUNTED BOARD SHOWS ITS FIGHTERS AND NOBODY ELSE (owner 2026-08-21). Your overworld
+    // avatar and your pet are not among them — your FIGHTER is — so the composition that
+    // normally leads with the controlled character steps aside while a fight holds the scene.
+    mode === 'fight'
+      ? external_entities
+      : compose_world_entities(controlled_entity, pet_entity ? [pet_entity, ...external_entities] : external_entities)
 
   const submit_entities = (): void => engine.set_entities(submitted_entities())
 
@@ -308,6 +321,48 @@ export const create_world = ({
     }
     if (event.code === 'Space') character.set_input({ jump: down, glide: down && riding && pet?.locomotion === 'fly' })
     if (event.code === 'ShiftLeft' || event.code === 'ShiftRight') character.set_input({ walk: down })
+    if (event.code === 'KeyX' && down) {
+      if (riding) set_riding(false)
+      else if (pet_mountable()) set_riding(true)
+    }
+  }
+
+  /** X mounts only while the companion is beside you — the nametag's own rule. */
+  const pet_mountable = (): boolean => {
+    if (!pet || riding || !character_render) return false
+    const [owner_x, , owner_z] = character.get_transform().position
+    return Math.hypot(pet_motion.x - owner_x, pet_motion.z - owner_z) <= MOUNT_RANGE
+  }
+
+  // ── fight swords: the world mirrors what it renders so F-key focus stays pure geometry ──
+  let fight_markers: readonly FightSwordMarker[] = []
+  const fight_label = typeof document === 'undefined' ? null : document.createElement('div')
+  let focused_fight_id: string | null = null
+
+  const nearest_fight_marker = (): FightSwordMarker | null => {
+    if (fight_markers.length === 0 || mode !== 'follow') return null
+    const [px, , pz] = character.get_transform().position
+    let best: FightSwordMarker | null = null
+    let best_range = MOUNT_RANGE
+    for (const marker of fight_markers) {
+      const range = Math.hypot(marker.x - px, marker.z - pz)
+      if (range <= best_range) {
+        best = marker
+        best_range = range
+      }
+    }
+    return best
+  }
+
+  /** the focused sword's tag: ONE element re-floated onto whichever marker stands closest */
+  const label_focused_fight = (): void => {
+    const focused = nearest_fight_marker()
+    const id = focused?.id ?? null
+    if (id === focused_fight_id) return
+    if (focused_fight_id && fight_label) engine.set_fight_sword_label(focused_fight_id, null)
+    if (id && fight_label) engine.set_fight_sword_label(id, fight_label)
+    focused_fight_id = id && fight_label ? id : null
+    publish_fight_prompt({ root: focused_fight_id ? fight_label : null, focused_id: focused_fight_id })
   }
   const on_key_down = (event: KeyboardEvent): void => {
     if (mode === 'follow' && (MOVE_KEYS[event.code] !== undefined || event.code === 'Space')) footsteps.unlock()
@@ -356,10 +411,24 @@ export const create_world = ({
     return true
   }
 
+  // the mount nametag is an ENGINE label (a three CSS2D object over the pet's rendered crown —
+  // positioned by the frame's own camera pass, never a lagging overlay); React portals the chip
+  // content into this element through the mount-prompt feed
+  const mount_label = typeof document === 'undefined' ? null : document.createElement('div')
+  let labeled_pet_id: string | null = null
+  const label_pet = (pet_id: string | null): void => {
+    if (pet_id === labeled_pet_id) return
+    if (labeled_pet_id) engine.set_entity_label(labeled_pet_id, null)
+    if (pet_id && mount_label) engine.set_entity_label(pet_id, mount_label)
+    labeled_pet_id = pet_id && mount_label ? pet_id : null
+    publish_mount_prompt(labeled_pet_id ? mount_label : null)
+  }
+
   const render_pet = (transform = character.get_transform(), delta_seconds = 0): boolean => {
     if (!pet || !character_render) {
       const changed = pet_entity !== null
       pet_entity = null
+      label_pet(null)
       return changed
     }
     const [owner_x, , owner_z] = transform.position
@@ -367,32 +436,34 @@ export const create_world = ({
     if (!riding) pet_motion = step_pet_follow(pet_motion, { x: owner_x, z: owner_z }, delta_seconds)
     const x = riding ? owner_x : pet_motion.x
     const z = riding ? owner_z : pet_motion.z
-    const owner_ground = projected_surface_y(owner_x, owner_z)
-    const owner_air_height = Math.max(0, transform.visual_y - owner_ground)
     const y = riding
       ? transform.visual_y
-      : projected_surface_y(x, z) + pet_vertical_offset(pet.locomotion, pet_elapsed_seconds, owner_air_height)
-    const airborne = pet.locomotion !== 'swim' && !transform.on_ground
+      : projected_surface_y(x, z) + pet_vertical_offset(pet.locomotion, pet_elapsed_seconds)
+    // a FOLLOWING pet animates from ITS OWN motion — the owner's pose drives it only when ridden
+    // (a follower jumping in sync with the player was the bug, owner 2026-08-21)
     const animation =
       pet.locomotion === 'swim'
         ? ('SWIM' as const)
-        : airborne
-          ? transform.anim
-          : riding
-            ? transform.speed > 0.5
+        : riding
+          ? !transform.on_ground
+            ? transform.anim
+            : transform.speed > 0.5
               ? ('RUN' as const)
               : ('IDLE' as const)
-            : pet_motion.moving
-              ? ('RUN' as const)
-              : ('IDLE' as const)
+          : pet_motion.moving
+            ? ('RUN' as const)
+            : ('IDLE' as const)
     pet_entity = Object.freeze({
       id: pet.id,
       kind: 'mob',
       model_url: pet.model_url,
       anchor: Object.freeze({ kind: 'world', position: Object.freeze([x, y, z] as const) }),
       facing: Object.freeze({ kind: 'yaw', yaw: riding ? transform.facing_yaw : pet_motion.yaw }),
-      animation: Object.freeze({ name: animation, time_scale: 1 }),
+      // the companion covers ground at 1.5× the player's run — its gait plays at the same
+      // scale so the feet match the floor (2026-08-21: the run looked like slow motion)
+      animation: Object.freeze({ name: animation, time_scale: animation === 'RUN' ? 1.5 : 1 }),
     })
+    label_pet(pet_mountable() ? pet.id : null)
     return true
   }
 
@@ -423,6 +494,7 @@ export const create_world = ({
       const character_changed = render_character(transform)
       const pet_changed = render_pet(transform, delta_seconds)
       if (character_changed || pet_changed) submit_entities()
+      label_focused_fight()
       footsteps.tick({
         position: transform.position,
         on_ground: transform.on_ground,
@@ -444,6 +516,7 @@ export const create_world = ({
         y: anchor.y,
         z: anchor.z,
         yaw: director.active().get_yaw(),
+        riding,
         time_of_day: pinned_time ?? (performance.now() / CELESTIAL_CYCLE_MS + 0.31) % 1,
       })
       // the night lantern (and any character-anchored presentation) follows the FEET, never
@@ -463,6 +536,7 @@ export const create_world = ({
     }
     const view = director.frame(anchor, delta_seconds)
     if (mode === 'follow' && render_character()) submit_entities()
+    last_view = view
     engine.set_camera(view.position, view.target, {
       fov: view.fov,
       ortho_blend: view.ortho_blend,
@@ -483,9 +557,19 @@ export const create_world = ({
   globalThis.addEventListener('keydown', on_key_down)
   globalThis.addEventListener('keyup', on_key_up)
   globalThis.addEventListener('blur', on_blur)
+  const set_riding = (next: boolean): void => {
+    riding = Boolean(next && pet && character_render)
+    character.set_input({ speed_scale: riding ? 1.5 : 1, glide: false })
+    rendered_transform = null
+    render_character()
+    render_pet()
+    submit_entities()
+  }
+
   return Object.freeze({
     set_quality: (quality: 'low' | 'medium' | 'high', render_distance: number | null) => {
-      engine.set_quality(quality)
+      // one radius for both terrains: voxel chunks AND the far shell's hole track the override
+      engine.set_quality(quality, render_distance)
       chunks.set_quality(quality, render_distance)
     },
     backend: engine.backend,
@@ -515,6 +599,17 @@ export const create_world = ({
       external_entities = Object.freeze([...next])
       submit_entities()
     },
+    /** mirror + forward: the world keeps the marker list for F-key focus geometry, the engine
+     *  layer renders them (the join-window clock made physical) */
+    set_fight_swords: (url: string, markers: readonly FightSwordMarker[]) => {
+      fight_markers = markers
+      if (markers.length === 0 && focused_fight_id) {
+        if (fight_label && focused_fight_id) engine.set_fight_sword_label(focused_fight_id, null)
+        focused_fight_id = null
+        publish_fight_prompt({ root: null, focused_id: null })
+      }
+      engine.set_fight_swords(url, markers)
+    },
     entity_height: engine.entity_height,
     set_pet: (next: Readonly<{ id: string; model_url: string; locomotion: PetLocomotion }> | null) => {
       pet = next ? Object.freeze(next) : null
@@ -529,24 +624,20 @@ export const create_world = ({
       render_pet()
       submit_entities()
     },
-    set_riding: (next: boolean) => {
-      riding = Boolean(next && pet && character_render)
-      character.set_input({ speed_scale: riding ? 1.5 : 1, glide: false })
-      rendered_transform = null
-      render_character()
-      render_pet()
-      submit_entities()
-    },
+    set_riding,
     riding: () => riding,
     ground_height: (x: number, z: number) => projected_surface_y(x, z),
+    /// Where the camera currently looks — its ground focus. The natural spawn when handing
+    /// control to a character mid-session.
+    camera_focus: () => Object.freeze({ x: spectate.x, z: spectate.z }),
     /// Point the system at a character: the camera and terrain travel to its position.
     /// Cross-world pointing waits on more worlds having terrain recipes.
     point_at: (position: Readonly<{ x: number; z: number }>) => {
       footsteps.reset()
       character.teleport([position.x, projected_surface_y(position.x, position.z), position.z])
-      set_mode('follow')
+      set_mode(camera_mode_after(mode, { mode: 'follow', from: 'character' }))
     },
-    release: () => set_mode('spectate'),
+    release: () => set_mode(camera_mode_after(mode, { mode: 'spectate', from: 'character' })),
     set_fight: (frame: FightBoardFrame | null) => {
       if (frame === null) set_mode('follow')
       else {
@@ -573,9 +664,16 @@ export const create_world = ({
     update_fight_blob: engine.update_fight_blob,
     remove_fight_blob: engine.remove_fight_blob,
     pick_fight_cell: engine.pick_fight_cell,
+    // the rest of the fight presentation, forwarded beside the board doors above — the surface
+    // that mounts a board here drives its cues and its models through the same handle
+    play_fight_cue: engine.play_fight_cue,
+    animate_entity: engine.animate_entity,
+    project_entity: engine.project_entity,
     mode: () => mode,
     /// The follow rig's knobs (cinematic toggle, programmatic dolly) for the app layer.
     follow_camera: () => follow_addon,
+    /// The last rendered camera frame — the screen-space pick (player right-click) reads it.
+    camera_frame: (): CameraFrame | null => last_view,
     state: (): WorldState =>
       Object.freeze({
         engine: engine.status(),
@@ -606,6 +704,8 @@ export const create_world = ({
     },
     dispose: () => {
       publish_pose(null)
+      focused_fight_id = null
+      publish_fight_prompt({ root: null, focused_id: null })
       canvas.removeEventListener('pointerdown', on_pointer_down)
       canvas.removeEventListener('pointermove', on_pointer_move)
       canvas.removeEventListener('pointerup', on_pointer_up)

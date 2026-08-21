@@ -3,7 +3,7 @@
 // The embody gate. Two custody shapes prove ownership:
 //   held   — the caller's own kiosk HOLDS the character (the normal chain),
 //   seated — the character sits a live Fight (HOLDS is severed by law); the Fight node's
-//            fighters JSON names each seat's OWNER — the address must appear there.
+//            MACHINE document names each seat's OWNER — the address must appear there.
 // The read also carries everything embodiment needs in ONE roundtrip: the four VISIBLE
 // equipment slots (presence visuals), the party, and the live fight + seat.
 
@@ -21,7 +21,10 @@ export type OwnedCharacter = {
   fight: { id: string; seat: number } | null
 }
 
-type FighterEntry = { kind: string; character?: string; owner?: string }
+/** A seat as the graph STORES it (graph.rs `fight_machine`): the kind is a tagged union, and
+ *  a player seat names its character and the address that seated it. The fight-core's flat
+ *  decode form is `get_fight_checkpoint`'s reshape — never this node's storage form. */
+type MachineFighter = { kind: { player?: { character: string; owner: string } } }
 
 export async function get_owned_character(
   graph: Graph,
@@ -42,10 +45,14 @@ export async function get_owned_character(
   const [row] = rows
   if (!row) return null
 
-  // ownership: the custody chain, or a seat whose fighters JSON names this address
+  // ownership: the custody chain, or a seat whose machine document names this address
   const fight_node = row.fight as Node
-  const fighters = JSON.parse((fight_node?.properties?.fighters as string) ?? '[]') as FighterEntry[]
-  const seat = fighters.findIndex((fighter) => fighter.character === character_id && fighter.owner === address)
+  const machine = JSON.parse((fight_node?.properties?.machine as string) ?? '{}') as {
+    fighters?: MachineFighter[]
+  }
+  const seat = (machine.fighters ?? []).findIndex(
+    (fighter) => fighter.kind.player?.character === character_id && fighter.kind.player.owner === address
+  )
   if (!row.held_kiosk && seat === -1) return null
 
   const worn = row.worn as { slot: string | null; item_type: string | null }[]

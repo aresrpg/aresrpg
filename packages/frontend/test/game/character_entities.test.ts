@@ -57,6 +57,7 @@ describe('shared character rendering', () => {
       presence_render_source(
         Object.freeze({
           character_id: '0xnearby',
+          owner: '0xowner',
           name: 'Cra',
           classe: 'senshi',
           sex: 'female',
@@ -68,6 +69,7 @@ describe('shared character rendering', () => {
           cloak: null,
           title: null,
           pet: 'tofu',
+          riding: false,
           x: 50_000,
           y: 64,
           z: 50_000,

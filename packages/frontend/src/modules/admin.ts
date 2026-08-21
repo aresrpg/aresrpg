@@ -9,22 +9,13 @@ import {
   type AdminOverviewState,
   type AdminState,
   type AdminView,
-  type SeedEditorState,
-  type SeedEditorStatus,
 } from '../admin/admin_state.ts'
 import { observe_admin_wallet, reduce_admin_wallet } from '../admin/admin_wallet.ts'
 import { observe_admin_deployment, reduce_admin_deployment } from '../admin/admin_deployment.ts'
-import {
-  admin_content_domains,
-  is_seed_file,
-  replace_json_value,
-  type JsonValue,
-  type SeedDomain,
-} from '../admin/seed_editor.ts'
 import type { AppInput, AppModule, AppState } from '../store.ts'
 
 export { initial_admin_state }
-export type { AdminInput, AdminState, AdminView, SeedEditorStatus }
+export type { AdminInput, AdminState, AdminView }
 
 const with_admin = (state: AppState, admin: AdminState): AppState => Object.freeze({ ...state, admin })
 
@@ -36,107 +27,6 @@ const can_seal = (admin: AdminState): boolean =>
   admin.seal_armed &&
   !admin.snapshot?.sealed &&
   admin.snapshot?.batches.every(({ state }) => state === 'complete') === true
-
-const reduce_editor = (admin: AdminState, input: AppInput): AdminState | null => {
-  const update = (editor: SeedEditorState): AdminState => Object.freeze({ ...admin, editor })
-  if (input.type === 'admin/editor_load' && admin.editor.status === 'idle')
-    return update(Object.freeze({ ...admin.editor, status: 'loading', error: null }))
-  if (input.type === 'admin/editor_loaded' && admin.editor.status === 'loading') {
-    const domains_by_file = new Map(admin_content_domains.map(({ id, file }) => [file, id] as const))
-    const files = Object.freeze(
-      Object.fromEntries(
-        input.files.flatMap((loaded) => {
-          const domain = domains_by_file.get(loaded.file)
-          return domain
-            ? [[domain, Object.freeze({ ...loaded, saved_value: loaded.value, dirty: false, validation: null })]]
-            : []
-        })
-      )
-    )
-    return update(
-      Object.freeze({
-        ...admin.editor,
-        status: 'ready',
-        token: input.token,
-        files,
-        validation: input.validation,
-        error: null,
-      })
-    )
-  }
-  if (input.type === 'admin/editor_unavailable' && admin.editor.status === 'loading')
-    return update(Object.freeze({ ...admin.editor, status: 'unavailable', error: null }))
-  if (input.type === 'admin/editor_domain_selected')
-    return update(Object.freeze({ ...admin.editor, domain: input.domain, entity_id: null, query: '' }))
-  if (input.type === 'admin/editor_entity_selected')
-    return update(Object.freeze({ ...admin.editor, entity_id: input.entity_id }))
-  if (input.type === 'admin/editor_query_changed') return update(Object.freeze({ ...admin.editor, query: input.query }))
-  if (input.type === 'admin/editor_value_changed') {
-    const file = admin.editor.files[input.domain]
-    if (!file || admin.editor.status !== 'ready') return null
-    const value = replace_json_value(file.value, input.path, input.value)
-    return update(
-      Object.freeze({
-        ...admin.editor,
-        files: Object.freeze({
-          ...admin.editor.files,
-          [input.domain]: Object.freeze({ ...file, value, dirty: true, validation: null }),
-        }),
-      })
-    )
-  }
-  if (input.type === 'admin/editor_reset') {
-    const file = admin.editor.files[input.domain]
-    if (!file || admin.editor.status !== 'ready') return null
-    return update(
-      Object.freeze({
-        ...admin.editor,
-        files: Object.freeze({
-          ...admin.editor.files,
-          [input.domain]: Object.freeze({ ...file, value: file.saved_value, dirty: false, validation: null }),
-        }),
-      })
-    )
-  }
-  if (input.type === 'admin/editor_save') {
-    const file = admin.editor.files[input.domain]
-    return file?.dirty && admin.editor.status === 'ready'
-      ? update(Object.freeze({ ...admin.editor, status: 'saving', saving_domain: input.domain, error: null }))
-      : null
-  }
-  if (input.type === 'admin/editor_saved' && admin.editor.saving_domain === input.domain) {
-    const file = admin.editor.files[input.domain]
-    if (!file) return null
-    const saved = Object.freeze({
-      ...file,
-      revision: input.revision,
-      value: input.value,
-      saved_value: input.value,
-      dirty: false,
-      validation: input.validation,
-    })
-    return update(
-      Object.freeze({
-        ...admin.editor,
-        status: 'ready',
-        saving_domain: null,
-        validation: input.validation,
-        files: Object.freeze({ ...admin.editor.files, [input.domain]: saved }),
-        error: null,
-      })
-    )
-  }
-  if (input.type === 'admin/editor_failed' && ['loading', 'saving'].includes(admin.editor.status))
-    return update(
-      Object.freeze({
-        ...admin.editor,
-        status: admin.editor.status === 'saving' ? 'ready' : 'failed',
-        saving_domain: null,
-        error: input.error,
-      })
-    )
-  return null
-}
 
 const reduce_overview = (admin: AdminState, input: AppInput): AdminState | null => {
   const update = (overview: AdminOverviewState): AdminState => Object.freeze({ ...admin, overview })
@@ -186,8 +76,6 @@ const reduce = (state: AppState, input: AppInput): AppState => {
   }
   if (input.type === 'admin/progress') return with_admin(state, Object.freeze({ ...admin, progress: input.progress }))
   if (input.type === 'admin/view_changed') return with_admin(state, Object.freeze({ ...admin, view: input.view }))
-  const editor = reduce_editor(admin, input)
-  if (editor) return with_admin(state, editor)
   const overview = reduce_overview(admin, input)
   if (overview) return with_admin(state, overview)
   const deployment = reduce_admin_deployment(admin, input)
@@ -312,97 +200,17 @@ const reduce = (state: AppState, input: AppInput): AppState => {
 const observe = ({ events, dispatch, signal, get_state }: Parameters<NonNullable<AppModule['observe']>>[0]): void => {
   let seed_session: SeedAdminSession | null = null
   let generation = 0
-  let editor_generation = 0
   const log = (message: string, tone: 'info' | 'success' | 'error' = 'info'): void =>
     dispatch({ type: 'admin/log', message, tone })
   const invalidate_seed_session = (): void => {
     seed_session = null
     generation += 1
   }
-  const clear = (): void => {
-    invalidate_seed_session()
-    editor_generation += 1
-  }
   observe_admin_wallet({ events, dispatch, signal, get_state }, invalidate_seed_session)
   observe_admin_deployment({ events, dispatch, signal, get_state })
-  events.on('auth/disconnected', clear)
-  events.on('auth/rejected', clear)
-  const load_editor = (): void => {
-    if (!import.meta.env.DEV) return dispatch({ type: 'admin/editor_unavailable' })
-    const request = ++editor_generation
-    void fetch('/__seed/files', { cache: 'no-store' })
-      .then(async (response) => {
-        if (signal.aborted || request !== editor_generation) return
-        if (response.status === 404) return dispatch({ type: 'admin/editor_unavailable' })
-        const body = (await response.json()) as Readonly<{
-          files?: readonly Readonly<{ file: string; revision: string; value: JsonValue }>[]
-          token?: string
-          validation?: Readonly<{ reds: readonly string[]; warns: readonly string[] }>
-          error?: string
-        }>
-        if (!response.ok || !body.files || !body.token || !body.validation)
-          throw new Error(body.error || `Seed files returned ${response.status}`)
-        dispatch({
-          type: 'admin/editor_loaded',
-          files: body.files.filter(is_seed_file),
-          token: body.token,
-          validation: body.validation,
-        })
-      })
-      .catch((error) => {
-        if (signal.aborted || request !== editor_generation) return
-        console.error('Seed files could not be loaded.', error)
-        dispatch({ type: 'admin/editor_failed', error: error instanceof Error ? error.message : String(error) })
-      })
-  }
-  const save_editor = (domain: SeedDomain): void => {
-    const { editor } = get_state().admin
-    const file = editor.files[domain]
-    if (!file || editor.saving_domain !== domain) return
-    const request = ++editor_generation
-    void fetch(`/__seed/files/${encodeURIComponent(file.file)}`, {
-      method: 'PUT',
-      headers: { 'content-type': 'application/json', 'x-aresrpg-seed-token': editor.token },
-      body: JSON.stringify({ revision: file.revision, value: file.value }),
-    })
-      .then(async (response) => {
-        if (signal.aborted || request !== editor_generation) return
-        const body = (await response.json()) as Readonly<{
-          revision?: string
-          value?: JsonValue
-          validation?: Readonly<{ reds: readonly string[]; warns: readonly string[] }>
-          error?: string
-        }>
-        if (!response.ok || !body.revision || body.value === undefined || !body.validation)
-          throw new Error(body.error || `Seed save returned ${response.status}`)
-        dispatch({
-          type: 'admin/editor_saved',
-          domain,
-          revision: body.revision,
-          value: body.value,
-          validation: body.validation,
-        })
-      })
-      .catch((error) => {
-        if (signal.aborted || request !== editor_generation) return
-        console.error('Seed file could not be saved.', error)
-        dispatch({ type: 'admin/editor_failed', error: error instanceof Error ? error.message : String(error) })
-      })
-  }
+  events.on('auth/disconnected', invalidate_seed_session)
+  events.on('auth/rejected', invalidate_seed_session)
   events.on('STATE_UPDATED', (state, previous) => {
-    if (state.navigation.page === 'admin' && state.admin.editor.status === 'idle') {
-      dispatch({ type: 'admin/editor_load' })
-      return
-    }
-    if (state.admin.editor.status === 'loading' && previous.admin.editor.status !== 'loading') {
-      load_editor()
-      return
-    }
-    if (state.admin.editor.status === 'saving' && previous.admin.editor.status !== 'saving') {
-      const domain = state.admin.editor.saving_domain
-      if (domain) save_editor(domain)
-      return
-    }
     if (
       state.navigation.page === 'admin' &&
       state.admin.view === 'overview' &&
@@ -534,6 +342,16 @@ const observe = ({ events, dispatch, signal, get_state }: Parameters<NonNullable
       }, failed)
     } else {
       log('Permanently sealing seed authority; confirm the wallet transaction…')
+      // a wallet popup dismissed by CLOSING it never settles its promise — every later
+      // transaction then queues silently behind it. Surface the stall instead of hiding it.
+      const stall_timer = setTimeout(() => {
+        if (!signal.aborted && request === generation)
+          log(
+            'Still waiting on the wallet after 30s — open the wallet extension: a pending ' +
+              'request may be stuck there (approve or reject it), or reload this page to retry.',
+            'error'
+          )
+      }, 30_000)
       void active
         .seal()
         .then(({ digest, snapshot }) => {
@@ -543,6 +361,7 @@ const observe = ({ events, dispatch, signal, get_state }: Parameters<NonNullable
           }
         })
         .catch(failed)
+        .finally(() => clearTimeout(stall_timer))
     }
   })
 }

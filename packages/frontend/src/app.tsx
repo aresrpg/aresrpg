@@ -8,12 +8,16 @@ import { Check, Copy } from 'lucide-react'
 import { useCallback, useRef, useState } from 'react'
 import { ThinkingOrb } from 'thinking-orbs'
 
+import { AddFundsModal } from './components/AddFundsModal.tsx'
 import { AppShell } from './components/AppShell.tsx'
 import { CANVAS_OVERLAY_CLASS, WORLD_FRAME_LAYER, world_frame_visibility } from './components/app_layout.ts'
 import { CharacterCreateModal } from './components/CharacterCreateModal.tsx'
 import { Chat } from './components/Chat.tsx'
 import { CompassStrip } from './game/hud/CompassStrip.tsx'
 import { Minimap } from './game/hud/Minimap.tsx'
+import { MountPrompt } from './components/MountPrompt.tsx'
+import { FightPrompt } from './components/FightPrompt.tsx'
+import { PlayerContextMenu } from './components/PlayerContextMenu.tsx'
 import { FpsPanel } from './components/FpsPanel.tsx'
 import { Toasts } from './components/Toasts.tsx'
 import { HUD_PANEL_CLASS, HudPanel } from './components/ui/HudPanel.tsx'
@@ -28,7 +32,6 @@ import { format_sui } from './wallet_amount.ts'
 // Creation moves CHARACTER_PRICE_MIST on-chain and burns gas on top — the margin keeps the
 // gate honest for the whole transaction, not just the price.
 const CREATE_GAS_MARGIN_MIST = 20_000_000n
-
 const GoogleIcon = () => (
   <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
     <path
@@ -193,7 +196,7 @@ export function App() {
   const locale = useAppStore((state) => state.locale)
   const copy = useAppStore((state) => state.copy)
   const engine_status = useAppStore((state) => state.engine)
-  const fight_active = useAppStore((state) => state.fight.mode !== null)
+  const fight_active = useAppStore((state) => state.fight.mode !== null && state.fight.mounted)
   const { wallet } = session
   const [show_wallets, set_show_wallets] = useState(false)
   const [graphics_notice_dismissed, set_graphics_notice_dismissed] = useState(false)
@@ -274,6 +277,9 @@ export function App() {
 
         {in_app && navigation.page === 'world' && !fight_active && (
           <div className={`${CANVAS_OVERLAY_CLASS} z-[105]`}>
+            <PlayerContextMenu copy={copy} />
+            <MountPrompt copy={copy} />
+            <FightPrompt copy={copy} />
             <CompassStrip copy={copy} />
             <Minimap copy={copy} />
             <div className="gw-worldchat">
@@ -311,6 +317,14 @@ export function App() {
         )}
       </div>
       <div className="pointer-events-none fixed inset-0 z-[100] bg-[repeating-linear-gradient(0deg,transparent,transparent_2px,rgba(200,150,60,0.014)_2px,rgba(200,150,60,0.014)_4px)]" />
+      {in_app && wallet && navigation.dialog === 'top_up' && (
+        <AddFundsModal
+          address={wallet.address}
+          copy={copy}
+          on_close={() => dispatch_app({ type: 'dialog/open', dialog: null })}
+          warning={copy.out_of_sui_body}
+        />
+      )}
       {in_app && navigation.dialog === 'character_create' && (
         <CharacterCreateModal
           cancel={() =>

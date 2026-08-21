@@ -322,7 +322,8 @@ impl Processor for AresHandler {
                 outputs: &output_views[i],
             })
             .collect();
-        let wire = publish::analyze(ckpt, ts_ms, &tx_views, game)?;
+        let mut wire = publish::analyze(ckpt, ts_ms, &tx_views, game)?;
+        publish::route_fight_seats(&mut wire, ckpt, ts_ms, &custody);
 
         // the graph: flat outputs + deletes, tx order
         let flat_outputs: Vec<ObjView<'_>> = output_views.iter().flatten().cloned().collect();

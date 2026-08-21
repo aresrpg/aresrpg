@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
-import { lazy, memo, Suspense } from 'react'
+import { lazy, memo, Suspense, useSyncExternalStore } from 'react'
 
 import type { AppCopy } from '../i18n/copy.ts'
 import type { Locale } from '../i18n/locale.ts'
@@ -10,8 +10,11 @@ import type { Page } from '../modules/navigation.ts'
 import type { SessionState } from '../modules/session.ts'
 import type { GameSettings } from '../game/core/settings.ts'
 import { FightLayer } from '../game/fight/FightLayer.tsx'
+import { read_scene, subscribe_scene } from '../game/core/scene_feed.ts'
+import { useAppStore } from '../store.ts'
 
 import { CharacterTabs, character_tabs_visible } from './CharacterTabs.tsx'
+import { SessionReplacedModal } from './SessionReplacedModal.tsx'
 import { Sidebar } from './Sidebar.tsx'
 import { ConnectionCard, DiscordCard, LanguageCard } from './SidebarCards.tsx'
 import { WalletCard } from './WalletCard.tsx'
@@ -21,6 +24,7 @@ const AdminPage = lazy(() => import('../admin/AdminPage.tsx'))
 const ShopPage = lazy(() => import('../shop/ShopPage.tsx'))
 const AirdropPage = lazy(() => import('../airdrop/AirdropPage.tsx'))
 const SettingsPage = lazy(() => import('../settings/SettingsPage.tsx'))
+const CharactersPage = lazy(() => import('../characters/CharactersPage.tsx'))
 
 const PageFallback = ({ label }: Readonly<{ label: string }>) => (
   <section className="pointer-events-auto z-[12] grid min-h-full flex-1 place-items-center border border-white/8 bg-[#111119]/96 text-[9px] tracking-[0.18em] text-[#c8963c] uppercase">
@@ -70,12 +74,18 @@ const RoutedPage = memo(
           <SettingsPage copy={copy} settings={settings} />
         </Suspense>
       )}
+      {page === 'characters' && (
+        <Suspense fallback={<PageFallback label={copy.loading_universe} />}>
+          <CharactersPage copy={copy} />
+        </Suspense>
+      )}
       {page !== 'world' &&
         page !== 'encyclopedia' &&
         page !== 'admin' &&
         page !== 'shop' &&
         page !== 'airdrop' &&
-        page !== 'settings' && (
+        page !== 'settings' &&
+        page !== 'characters' && (
           <section className="pointer-events-auto z-[12] grid min-h-full min-w-0 flex-1 place-items-center border border-white/8 bg-[#111119]/96 text-center shadow-[0_18px_60px_rgba(0,0,0,0.35)] backdrop-blur-xl">
             <div>
               <p className="text-[8px] tracking-[0.26em] text-[#c8963c] uppercase">{copy[page]}</p>
@@ -87,6 +97,16 @@ const RoutedPage = memo(
     </>
   )
 )
+
+/** The GAME's fight surface, mounted in the world the engine module owns. This is the ONE place
+ *  that reads the game's scene lane — everything downstream receives the handle as an argument,
+ *  so no component can wander into a world that is not its own. */
+const GameFightLayer = ({ copy }: Readonly<{ copy: AppCopy }>) => {
+  const scene = useSyncExternalStore(subscribe_scene, read_scene, () => null)
+  const mounted = useAppStore((state) => state.fight.mounted)
+  // a previewing modal hydrates the session without mounting the board — mounting is the COMMIT
+  return scene && mounted ? <FightLayer copy={copy} scene={scene} /> : null
+}
 
 export const AppShell = ({
   copy,
@@ -118,6 +138,7 @@ export const AppShell = ({
   select_character: (character_id: string) => void
 }>) => (
   <div className="pointer-events-none fixed inset-0 z-[10] flex h-dvh flex-col gap-3 overflow-hidden p-3">
+    {session.link_status === 'replaced' && <SessionReplacedModal copy={copy} />}
     {session.game_frozen === true && (
       <aside
         className="pointer-events-auto border border-[#ff496c]/80 bg-[#8f1028] px-4 py-3 text-center text-[11px] font-bold tracking-[0.12em] text-white uppercase shadow-[0_0_30px_rgba(255,35,78,0.38)]"
@@ -170,7 +191,7 @@ export const AppShell = ({
             session={session}
             settings={settings}
           />
-          <FightLayer copy={copy} />
+          <GameFightLayer copy={copy} />
         </div>
       </div>
     </div>

@@ -26,7 +26,7 @@ import {
 import type { Clouds } from './clouds.ts'
 import type { FlattenUniform } from './flatten.ts'
 import { create_flat_nodes } from './flat_nodes.ts'
-import { get_quality_profile } from './quality.ts'
+import { effective_render_distance, get_quality_profile } from './quality.ts'
 import type { create_sky_node } from './sky/sky_node.ts'
 import { macro_surface_tint_nodes } from './terrain_tint.ts'
 import type { EngineQuality } from './types.ts'
@@ -46,24 +46,21 @@ type FarSample = Readonly<{
 
 export type FarTerrain = Readonly<{
   set_focus: (x: number, z: number) => void
-  set_quality: (quality: EngineQuality) => void
+  set_quality: (quality: EngineQuality, render_distance: number | null) => void
   ready: () => boolean
   dispose: () => void
 }>
 
-const create_ring_geometry = (quality: EngineQuality): BufferGeometry => {
-  const { horizon_radius, horizon_step, far_radius } = get_quality_profile(quality).chunks
+/** The shell opens where direct voxel terrain ends — the EFFECTIVE chunk radius, not the tier's. */
+export const seam_radius = (far_radius: number): number => far_radius * CHUNK_EDGE - CHUNK_EDGE
+
+/** The hole is carried by the INDEX buffer alone — vertices and attributes never move, so a
+ *  render-distance change swaps indices without touching the worker-sampled heights. */
+export const ring_indices = (quality: EngineQuality, far_radius: number): number[] => {
+  const { horizon_radius, horizon_step } = get_quality_profile(quality).chunks
   const side = Math.floor((horizon_radius * 2) / horizon_step) + 1
-  const positions = new Float32Array(side * side * 3)
+  const direct_radius = seam_radius(far_radius)
   const indices: number[] = []
-  for (let z = 0; z < side; z += 1) {
-    for (let x = 0; x < side; x += 1) {
-      const vertex = (z * side + x) * 3
-      positions[vertex] = -horizon_radius + x * horizon_step
-      positions[vertex + 2] = -horizon_radius + z * horizon_step
-    }
-  }
-  const direct_radius = far_radius * CHUNK_EDGE - CHUNK_EDGE
   for (let z = 0; z < side - 1; z += 1) {
     for (let x = 0; x < side - 1; x += 1) {
       const center_x = -horizon_radius + (x + 0.5) * horizon_step
@@ -74,6 +71,21 @@ const create_ring_geometry = (quality: EngineQuality): BufferGeometry => {
       indices.push(top_left, top_left + 1, bottom_left, bottom_left, top_left + 1, bottom_left + 1)
     }
   }
+  return indices
+}
+
+const create_ring_geometry = (quality: EngineQuality, far_radius: number): BufferGeometry => {
+  const { horizon_radius, horizon_step } = get_quality_profile(quality).chunks
+  const side = Math.floor((horizon_radius * 2) / horizon_step) + 1
+  const positions = new Float32Array(side * side * 3)
+  for (let z = 0; z < side; z += 1) {
+    for (let x = 0; x < side; x += 1) {
+      const vertex = (z * side + x) * 3
+      positions[vertex] = -horizon_radius + x * horizon_step
+      positions[vertex + 2] = -horizon_radius + z * horizon_step
+    }
+  }
+  const indices = ring_indices(quality, far_radius)
   const geometry = new BufferGeometry()
   geometry.setAttribute('position', new BufferAttribute(positions, 3))
   geometry.setAttribute('base_color', new BufferAttribute(new Float32Array(positions.length), 3))
@@ -89,7 +101,8 @@ const build_material = (
   flatten: FlattenUniform,
   sun_direction: ReturnType<typeof create_sky_node>['sun_direction'],
   clouds: Clouds,
-  center: UniformNode<'vec2', Vector2>
+  center: UniformNode<'vec2', Vector2>,
+  seam: UniformNode<'float', number>
 ): Material => {
   const material =
     quality === 'low'
@@ -108,14 +121,9 @@ const build_material = (
   const flat = create_flat_nodes(position_world.x, position_world.z, flatten.amount, color)
   // The shell remains half a block below direct terrain throughout flattening. Sharing y=0
   // made the overlap band z-fight precisely when flat mode needed the clearest grid read.
-  const { far_radius, horizon_step } = get_quality_profile(quality).chunks
-  const direct_radius = far_radius * CHUNK_EDGE - CHUNK_EDGE
-  const seam = smoothstep(
-    float(direct_radius),
-    float(direct_radius + horizon_step * 2),
-    max(abs(local.x), abs(local.z))
-  )
-  const terrain_y = local.y.sub(float(1).sub(seam).mul(8))
+  const { horizon_step } = get_quality_profile(quality).chunks
+  const seam_band = smoothstep(seam, seam.add(float(horizon_step * 2)), max(abs(local.x), abs(local.z)))
+  const terrain_y = local.y.sub(float(1).sub(seam_band).mul(8))
   material.positionNode = vec3(local.x, mix(terrain_y, float(-0.5), flatten.amount), local.z)
   const face_normal = positionWorld.dFdx().cross(positionWorld.dFdy()).normalize()
   const upward_normal = face_normal.mul(face_normal.y.greaterThanEqual(0).select(float(1), float(-1)))
@@ -150,12 +158,22 @@ export const create_far_terrain = ({
     medium: uniform(new Vector2()),
     high: uniform(new Vector2()),
   })
+  const tier_radius = (tier: EngineQuality): number =>
+    effective_render_distance(get_quality_profile(tier).chunks.far_radius, render_distance)
+  let render_distance: number | null = null
+  const applied_radii = new Map<EngineQuality, number>()
+  const seams = Object.freeze({
+    low: uniform(seam_radius(tier_radius('low'))),
+    medium: uniform(seam_radius(tier_radius('medium'))),
+    high: uniform(seam_radius(tier_radius('high'))),
+  })
   const meshes = Object.freeze(
     Object.fromEntries(
       (['low', 'medium', 'high'] as const).map((tier) => {
+        applied_radii.set(tier, tier_radius(tier))
         const mesh = new Mesh(
-          create_ring_geometry(tier),
-          build_material(tier, flatten, sun_direction, clouds, centers[tier])
+          create_ring_geometry(tier, tier_radius(tier)),
+          build_material(tier, flatten, sun_direction, clouds, centers[tier], seams[tier])
         )
         mesh.frustumCulled = false
         mesh.matrixAutoUpdate = false
@@ -166,6 +184,16 @@ export const create_far_terrain = ({
       })
     ) as Record<EngineQuality, Mesh>
   )
+  /** the hole tracks the effective radius: swap indices + seam uniform, never the vertices */
+  const apply_render_distance = (): void => {
+    for (const tier of ['low', 'medium', 'high'] as const) {
+      const radius = tier_radius(tier)
+      if (applied_radii.get(tier) === radius) continue
+      applied_radii.set(tier, radius)
+      meshes[tier].geometry.setIndex(ring_indices(tier, radius))
+      seams[tier].value = seam_radius(radius)
+    }
+  }
   let active_quality = quality
   let desired_center: readonly [number, number] = [0, 0]
   let request_id = 0
@@ -214,7 +242,14 @@ export const create_far_terrain = ({
     }
     if (!disposed && request_id > data.id) dispatch_latest()
   })
-  worker.addEventListener('error', (event) => console.error('[engine] far-terrain worker failed.', event.error))
+  // A failed job never answers, so the in-flight slot would stay taken forever and
+  // `dispatch_latest` would refuse every later focus — one exception freezing the far shell
+  // for the whole session. Free the slot so the next focus recovers. Deliberately NO retry
+  // here: a worker that throws on every message would answer each error with a fresh post.
+  worker.addEventListener('error', (event) => {
+    console.error('[engine] far-terrain worker failed.', event.error)
+    in_flight_id = null
+  })
   worker.postMessage({ type: 'initialize', world })
   request()
 
@@ -226,7 +261,10 @@ export const create_far_terrain = ({
       desired_center = next
       request()
     },
-    set_quality: (next: EngineQuality) => {
+    set_quality: (next: EngineQuality, next_render_distance: number | null) => {
+      if (next === active_quality && next_render_distance === render_distance) return
+      render_distance = next_render_distance
+      apply_render_distance()
       if (next === active_quality) return
       active_quality = next
       const step = get_quality_profile(next).chunks.horizon_step

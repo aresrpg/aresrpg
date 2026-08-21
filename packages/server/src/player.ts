@@ -29,8 +29,10 @@ import player_info from './modules/player_info.ts'
 import player_events from './modules/player_events.ts'
 import player_world from './modules/player_world.ts'
 import player_chat from './modules/player_chat.ts'
+import player_duel from './modules/player_duel.ts'
 import player_fight from './modules/player_fight.ts'
 import player_party from './modules/player_party.ts'
+import player_items from './modules/player_items.ts'
 import player_market from './modules/player_market.ts'
 import player_shop from './modules/player_shop.ts'
 import player_trade from './modules/player_trade.ts'
@@ -55,7 +57,7 @@ export type PlayerAction =
       fight: string | null
       at_ms: number
     }
-  | { type: 'action/move'; x: number; y: number; z: number; at_ms: number; budget_blocks: number }
+  | { type: 'action/move'; x: number; y: number; z: number; riding: boolean; at_ms: number; budget_blocks: number }
   /** the OWN character's visible-slot change (chain event folded back into presence truth) */
   | { type: 'action/equip'; slot: VisibleSlot; item_type: string | null }
   /** the ONE fight watch slot: own seat (auto via FighterJoined) or a validated spectate */
@@ -125,9 +127,11 @@ const MODULES: PlayerModule[] = [
   player_events,
   player_world,
   player_chat,
+  player_duel,
   player_fight,
   player_party,
   player_market,
+  player_items,
   player_shop,
   player_trade,
   player_kolizeum,

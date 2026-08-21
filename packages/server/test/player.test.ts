@@ -35,6 +35,12 @@ const wire = () => {
         ]
       if (cypher.includes(':Trade')) return []
       if (cypher.includes('LISTED_IN')) return []
+      // the roster's two custody shapes: kiosk-held and fight-seated
+      if (cypher.includes('[:HOLDS]->(c:Character)'))
+        return [
+          { character: { properties: { name: 'nox' } }, kiosk_node: { properties: { id: '0xk' } }, equipment: [] },
+        ]
+      if (cypher.includes('[:FIGHTER]->(c:Character {owner:')) return []
       return [
         {
           character: { properties: { name: 'nox' } },
@@ -242,5 +248,37 @@ describe('the player harness (push model)', () => {
     player.on_message(JSON.stringify({ type: 'packet/market_observe', category: null }))
     player.on_message(JSON.stringify({ type: 'packet/market_observe', category: null }))
     expect(closed).toEqual(['RATE_LIMIT'])
+  })
+
+  test('a projected item write streams to the kiosk owner without any client request', async () => {
+    // the 2026-08-21 ruling: the indexer publishes ItemWritten after the graph write of the
+    // same checkpoint; the server re-reads the projected row and pushes it — the client never
+    // pulls (its receipt only unlocks the next action). Foreign items stay silent.
+    const { ws, pubsub } = wire()
+    const sent: ServerPacket[] = []
+    const own_ws = { send: (raw: string) => sent.push(JSON.parse(raw)), close: () => 0 }
+    const graph = {
+      read: async (cypher: string, params?: Record<string, unknown>) => {
+        if (cypher.includes('HOLDS]->(i:Item {id:'))
+          return params?.id === '0xcape'
+            ? [{ item: { properties: { id: '0xcape', name: 'Lorito Cloak', item_type: 'cape_lorito' } }, kiosk: '0xk' }]
+            : [{ item: { properties: { id: params?.id } }, kiosk: '0xtheirs' }]
+        if (cypher.includes('OWNS]->(k:Kiosk) RETURN k.id')) return [{ kiosk: '0xk' }]
+        return []
+      },
+      close: async () => {},
+    }
+    void ws
+    const player = create_player({ ws: own_ws, address: '0xme', admin: false, graph, pubsub })
+    await flush()
+
+    pubsub.emitter.emit('evt:economy', { type: 'ItemWritten', data: { item: '0xcape', holder: '0xk' } })
+    pubsub.emitter.emit('evt:economy', { type: 'ItemWritten', data: { item: '0xforeign', holder: '0xtheirs' } })
+    await flush()
+
+    const updates = sent.filter((packet) => packet.type === 'packet/item_updated')
+    expect(updates).toHaveLength(1)
+    expect(updates[0]).toMatchObject({ type: 'packet/item_updated', item: { id: '0xcape', kiosk: '0xk' } })
+    player.on_close()
   })
 })

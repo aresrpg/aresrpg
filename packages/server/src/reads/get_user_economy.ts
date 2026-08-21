@@ -21,10 +21,14 @@ export async function get_claims(graph: Graph, { address }: { address: string })
   )
   return rows
     .filter(({ claim }) => claim)
-    .map(({ claim, kinds }) => ({
-      id: ((claim as Node)!.properties as { id: string }).id,
-      kind: (kinds as string[]).includes('CrushClaim') ? ('crush' as const) : ('box' as const),
-    }))
+    .map(({ claim, kinds }) => {
+      const props = (claim as Node)!.properties as { id: string; rolled_template?: string; amount?: number }
+      const kind = (kinds as string[]).includes('CrushClaim') ? ('crush' as const) : ('box' as const)
+      // a box claim carries its projected roll so the silent redeem composes chain-read-free
+      return kind === 'box'
+        ? { id: props.id, kind, rolled_template: props.rolled_template, amount: Number(props.amount ?? 1) }
+        : { id: props.id, kind }
+    })
 }
 
 export async function get_giftcards(graph: Graph, { address }: { address: string }) {

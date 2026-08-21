@@ -87,7 +87,7 @@ export const set_damages = (
     target: `${ctx.pins.package}::seed::set_damages`,
     arguments: [
       ctx.obj(tx, args.template, true),
-      tx.makeMoveVec({ type: `${ctx.pins.math_package}::item_damages::ItemDamages`, elements: [...args.lines] }),
+      tx.makeMoveVec({ type: `${ctx.math_type_package}::item_damages::ItemDamages`, elements: [...args.lines] }),
     ],
   })
 
@@ -226,8 +226,8 @@ export const new_mob_template = (
       ctx.pure.u16(tx, args.fire_resistance),
       ctx.pure.u16(tx, args.water_resistance),
       ctx.pure.u16(tx, args.air_resistance),
-      tx.makeMoveVec({ type: `${ctx.pins.math_package}::mob_data::MobSpell`, elements: [...args.spells] }),
-      tx.makeMoveVec({ type: `${ctx.pins.math_package}::mob_data::LootEntry`, elements: [...args.loot] }),
+      tx.makeMoveVec({ type: `${ctx.math_type_package}::mob_data::MobSpell`, elements: [...args.spells] }),
+      tx.makeMoveVec({ type: `${ctx.math_type_package}::mob_data::LootEntry`, elements: [...args.loot] }),
       ctx.pure.u64(tx, args.xp),
     ],
   })
@@ -269,7 +269,7 @@ export const new_spell = (
       ctx.pure.string(tx, args.name),
       ctx.pure.string(tx, args.classe),
       ctx.pure.u8(tx, args.unlock_level),
-      tx.makeMoveVec({ type: `${ctx.pins.math_package}::spell_effect::SpellLevel`, elements: [...args.levels] }),
+      tx.makeMoveVec({ type: `${ctx.math_type_package}::spell_effect::SpellLevel`, elements: [...args.levels] }),
     ],
   })
 
@@ -453,7 +453,7 @@ export const set_world_mobs = (
     arguments: [
       ctx.obj(tx, args._, false),
       ctx.obj(tx, args.world, true),
-      tx.makeMoveVec({ type: `${ctx.pins.math_package}::world_map::MobRow`, elements: [...args.rows] }),
+      tx.makeMoveVec({ type: `${ctx.math_type_package}::world_map::MobRow`, elements: [...args.rows] }),
     ],
   })
 
@@ -513,7 +513,7 @@ export const set_world_resources = (
     arguments: [
       ctx.obj(tx, args._, false),
       ctx.obj(tx, args.world, true),
-      tx.makeMoveVec({ type: `${ctx.pins.math_package}::world_map::ResourceRow`, elements: [...args.rows] }),
+      tx.makeMoveVec({ type: `${ctx.math_type_package}::world_map::ResourceRow`, elements: [...args.rows] }),
     ],
   })
 
@@ -549,7 +549,7 @@ export const set_world_dungeon_rooms = (
     arguments: [
       ctx.obj(tx, args._, false),
       ctx.obj(tx, args.world, true),
-      tx.makeMoveVec({ type: `${ctx.pins.math_package}::world_map::DungeonRoom`, elements: [...args.rooms] }),
+      tx.makeMoveVec({ type: `${ctx.math_type_package}::world_map::DungeonRoom`, elements: [...args.rooms] }),
     ],
   })
 
@@ -764,8 +764,8 @@ export const new_spell_level = (
       ctx.pure.u8(tx, args.casts_per_target),
       ctx.pure.u8(tx, args.cooldown_turns),
       ctx.pure.u16(tx, args.crit_1_in),
-      tx.makeMoveVec({ type: `${ctx.pins.math_package}::spell_effect::Effect`, elements: [...args.effects] }),
-      tx.makeMoveVec({ type: `${ctx.pins.math_package}::spell_effect::Effect`, elements: [...args.crit_effects] }),
+      tx.makeMoveVec({ type: `${ctx.math_type_package}::spell_effect::Effect`, elements: [...args.effects] }),
+      tx.makeMoveVec({ type: `${ctx.math_type_package}::spell_effect::Effect`, elements: [...args.crit_effects] }),
     ],
   })
 
@@ -805,7 +805,7 @@ export const new_mob_spell = (
     target: `${ctx.pins.math_package}::mob_data::new_mob_spell`,
     arguments: [
       ctx.pure.string(tx, args.name),
-      tx.makeMoveVec({ type: `${ctx.pins.math_package}::spell_effect::SpellLevel`, elements: [...args.levels] }),
+      tx.makeMoveVec({ type: `${ctx.math_type_package}::spell_effect::SpellLevel`, elements: [...args.levels] }),
     ],
   })
 
@@ -880,7 +880,7 @@ export const new_room_mob = (tx: Transaction, ctx: DoorCtx, args: { mob_type: st
 export const new_dungeon_room = (tx: Transaction, ctx: DoorCtx, args: { mobs: readonly TransactionObjectArgument[] }) =>
   tx.moveCall({
     target: `${ctx.pins.math_package}::world_map::new_dungeon_room`,
-    arguments: [tx.makeMoveVec({ type: `${ctx.pins.math_package}::world_map::RoomMob`, elements: [...args.mobs] })],
+    arguments: [tx.makeMoveVec({ type: `${ctx.math_type_package}::world_map::RoomMob`, elements: [...args.mobs] })],
   })
 
 /** Every door, by name — { params: caller-facing names, terminal: carries &Random }. */

@@ -57,10 +57,18 @@ const started_checkpoint = () => {
 }
 
 describe('generic fight view', () => {
-  test('boots the engine through its full-resolution fight presentation', () => {
-    const source = readFileSync(new URL('../../../src/game/fight/fight_view.ts', import.meta.url), 'utf8')
+  test('the fight surface neither builds a world nor goes looking for one', () => {
+    // The board is mounted INSIDE a live world (owner 2026-08-21). Two laws, both learned the
+    // hard way: a second engine hides the very world it stands in, and a surface that can ASK
+    // for "the live scene" draws into whichever one happens to be published — it landed the
+    // fight board in the biome lab twice. The world arrives as an argument or not at all.
+    const source = readFileSync(new URL('../../../src/game/fight/FightViewport.tsx', import.meta.url), 'utf8')
 
-    expect(source).toContain("presentation: 'fight'")
+    expect(source).not.toContain('create_engine')
+    expect(source).not.toContain('create_fight_view')
+    expect(source).not.toContain('read_scene')
+    expect(source).not.toContain('subscribe_scene')
+    expect(source).toContain('scene: SceneHandle')
   })
 
   test('selects the next living owned fighter from the canonical queue', () => {
@@ -89,6 +97,30 @@ describe('generic fight view', () => {
       72_345n
     )
     expect(select_fight_view({ checkpoint, mode: 'local', owner: 'mine', names: {} }).placement_deadline_ms).toBeNull()
+  })
+
+  test('a challenge nobody accepted is unstartable, and its one seat can always leave', () => {
+    // THE DUEL INCIDENT (2026-08-21): the challenger sat alone in placement while the HUD
+    // offered "Force start" — a transaction the chain can only abort, because `fight::start`
+    // refuses a side with no living fighter — and offered no way out at all.
+    const checkpoint = structuredClone(started_checkpoint())
+    checkpoint.contract.fighters = [checkpoint.contract.fighters[0]!]
+    checkpoint.contract.round = 0n
+    checkpoint.contract.queue = []
+
+    const view = select_fight_view({ checkpoint, mode: 'remote', owner: 'mine', names: {} })
+
+    expect(view.phase).toBe('placement')
+    expect(view.sides_manned).toBeFalse()
+    expect(view.can_forfeit).toBeTrue()
+  })
+
+  test('both sides manned reads as startable', () => {
+    const checkpoint = structuredClone(started_checkpoint())
+    checkpoint.contract.round = 0n
+    checkpoint.contract.queue = []
+
+    expect(select_fight_view({ checkpoint, mode: 'remote', owner: 'mine', names: {} }).sides_manned).toBeTrue()
   })
 
   test('orders the spell bar by authored unlock level', () => {

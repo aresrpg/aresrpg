@@ -6,7 +6,7 @@
 
 import { describe, expect, test } from 'bun:test'
 import { Ed25519Keypair } from '@mysten/sui/keypairs/ed25519'
-import type { KioskOwnerCap } from '@mysten/kiosk'
+import { PERSONAL_KIOSK_RULE_ADDRESS, type KioskOwnerCap } from '@mysten/kiosk'
 import type { Transaction, TransactionPlugin } from '@mysten/sui/transactions'
 
 import { SDK, type Receipt, type SuiTransport } from '../src/client.ts'
@@ -119,10 +119,13 @@ const pure_u32s = (tx: Transaction): readonly number[] =>
   })
 
 describe('shop SDK actions', () => {
-  test('reusable personal kiosks are queried from the same pinned package used by PTBs', async () => {
+  test('reusable personal kiosks are queried from the OFFICIAL personal-kiosk package (never the game rules pin)', async () => {
+    // 2026-08-21: querying by the game pin was blind to every real cap — wrappers are minted
+    // by Mysten's network-default personal_kiosk package, the one the SDK ships
     const { client, sdk } = game()
     await sdk.get_owned_kiosks(id(99))
-    expect(client.owned_types).toContain(`${kiosk_package_id}::personal_kiosk::PersonalKioskCap`)
+    expect(client.owned_types).toContain(`${PERSONAL_KIOSK_RULE_ADDRESS.testnet}::personal_kiosk::PersonalKioskCap`)
+    expect(client.owned_types).not.toContain(`${kiosk_package_id}::personal_kiosk::PersonalKioskCap`)
   })
 
   test('buy composes the real api::buy door with the exact split payment and quantity', async () => {
@@ -154,6 +157,7 @@ describe('shop SDK actions', () => {
     ])
     // the composed transaction names the REAL door on the REAL package
     expect(move_call_targets(composed!)).toContain(`${package_id}::api::buy`)
+    // calls target the game's rules-lineage pin (v3) — the lineage-split law (client.ts)
     expect(move_call_targets(composed!)).toContain(`${kiosk_package_id}::personal_kiosk::borrow_val`)
     expect(move_call_targets(composed!)).toContain(`${kiosk_package_id}::personal_kiosk::return_val`)
     // the payment split is price × quantity, present as a pure u64 input

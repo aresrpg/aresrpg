@@ -87,3 +87,17 @@ const craft_xp_by_ingredient_count = Object.freeze([0, 0, 10, 25, 50, 100, 250, 
 /// Base crafting XP from distinct ingredient slots. Mirrors crafting.move::craft_xp_for.
 export const craft_xp_from_ingredient_count = (ingredient_count: number): number =>
   craft_xp_by_ingredient_count[Math.max(2, Math.min(Math.floor(ingredient_count), 10))]!
+
+/// Craft roll odds off the crafter's job level. Mirrors job_xp.move::craft_success_bp.
+export const craft_success_percent = (level: number): number =>
+  Math.min(99, Math.floor((5_000 + (Math.max(1, level) - 1) * 50) / 100))
+
+/// Gather xp per harvest. Mirrors job_xp.move::gather_xp.
+export const gather_xp = (required_level: number): number => 10 + Math.floor(required_level / 2)
+
+/// Gather yield bounds at a job level. Mirrors job_xp.move::gather_quantity_bounds.
+export const gather_quantity_bounds = (job_level: number, required_level: number): readonly [number, number] => {
+  const min = 1 + Math.floor((5 * (Math.max(1, job_level) - 1)) / 99)
+  const max_raw = 2 + Math.floor((job_level - required_level) / 5)
+  return [min, Math.max(min, max_raw)]
+}

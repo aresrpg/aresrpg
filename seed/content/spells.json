@@ -17433,7 +17433,7 @@
         "casts_per_turn": 0,
         "casts_per_target": 0,
         "cooldown_turns": 0,
-        "crit_1_in": 2,
+        "crit_1_in": 50,
         "effects": [
           {
             "kind": 0,
@@ -17474,7 +17474,7 @@
         "casts_per_turn": 0,
         "casts_per_target": 0,
         "cooldown_turns": 0,
-        "crit_1_in": 2,
+        "crit_1_in": 50,
         "effects": [
           {
             "kind": 0,
@@ -17515,7 +17515,7 @@
         "casts_per_turn": 0,
         "casts_per_target": 0,
         "cooldown_turns": 0,
-        "crit_1_in": 2,
+        "crit_1_in": 50,
         "effects": [
           {
             "kind": 0,
@@ -17556,7 +17556,7 @@
         "casts_per_turn": 0,
         "casts_per_target": 0,
         "cooldown_turns": 0,
-        "crit_1_in": 2,
+        "crit_1_in": 50,
         "effects": [
           {
             "kind": 0,
@@ -17597,7 +17597,7 @@
         "casts_per_turn": 0,
         "casts_per_target": 0,
         "cooldown_turns": 0,
-        "crit_1_in": 2,
+        "crit_1_in": 50,
         "effects": [
           {
             "kind": 0,
@@ -17638,7 +17638,7 @@
         "casts_per_turn": 0,
         "casts_per_target": 0,
         "cooldown_turns": 0,
-        "crit_1_in": 2,
+        "crit_1_in": 50,
         "effects": [
           {
             "kind": 0,
@@ -19942,7 +19942,7 @@
             "value_max": 1,
             "area_shape": 1,
             "area_size": 1,
-            "target_filter": 1,
+            "target_filter": 0,
             "chance_bp": 10000,
             "turns": 2,
             "stat": 0
@@ -19954,7 +19954,7 @@
             "value_max": 1,
             "area_shape": 0,
             "area_size": 0,
-            "target_filter": 1,
+            "target_filter": 0,
             "chance_bp": 10000,
             "turns": 0,
             "stat": 7
@@ -19966,7 +19966,7 @@
             "value_max": 4,
             "area_shape": 0,
             "area_size": 0,
-            "target_filter": 1,
+            "target_filter": 0,
             "chance_bp": 10000,
             "turns": 2,
             "stat": 12
@@ -19977,8 +19977,8 @@
       {
         "ap_cost": 5,
         "range_min": 1,
-        "range_max": 1,
-        "modifiable_range": false,
+        "range_max": 2,
+        "modifiable_range": true,
         "line_of_sight": false,
         "line_launch": false,
         "free_cell": true,
@@ -19994,7 +19994,7 @@
             "value_max": 1,
             "area_shape": 1,
             "area_size": 1,
-            "target_filter": 1,
+            "target_filter": 0,
             "chance_bp": 10000,
             "turns": 2,
             "stat": 0
@@ -20006,7 +20006,7 @@
             "value_max": 1,
             "area_shape": 0,
             "area_size": 0,
-            "target_filter": 1,
+            "target_filter": 0,
             "chance_bp": 10000,
             "turns": 0,
             "stat": 7
@@ -20018,7 +20018,7 @@
             "value_max": 5,
             "area_shape": 0,
             "area_size": 0,
-            "target_filter": 1,
+            "target_filter": 0,
             "chance_bp": 10000,
             "turns": 2,
             "stat": 12
@@ -20029,7 +20029,7 @@
       {
         "ap_cost": 5,
         "range_min": 1,
-        "range_max": 1,
+        "range_max": 3,
         "modifiable_range": false,
         "line_of_sight": false,
         "line_launch": false,
@@ -20046,7 +20046,7 @@
             "value_max": 1,
             "area_shape": 1,
             "area_size": 1,
-            "target_filter": 1,
+            "target_filter": 0,
             "chance_bp": 10000,
             "turns": 2,
             "stat": 0
@@ -20058,7 +20058,7 @@
             "value_max": 2,
             "area_shape": 0,
             "area_size": 0,
-            "target_filter": 1,
+            "target_filter": 0,
             "chance_bp": 10000,
             "turns": 0,
             "stat": 7
@@ -20070,7 +20070,7 @@
             "value_max": 5,
             "area_shape": 0,
             "area_size": 0,
-            "target_filter": 1,
+            "target_filter": 0,
             "chance_bp": 10000,
             "turns": 2,
             "stat": 12
@@ -20081,7 +20081,7 @@
       {
         "ap_cost": 4,
         "range_min": 1,
-        "range_max": 1,
+        "range_max": 4,
         "modifiable_range": false,
         "line_of_sight": false,
         "line_launch": false,
@@ -20098,7 +20098,7 @@
             "value_max": 1,
             "area_shape": 1,
             "area_size": 1,
-            "target_filter": 1,
+            "target_filter": 0,
             "chance_bp": 10000,
             "turns": 3,
             "stat": 0
@@ -20110,7 +20110,7 @@
             "value_max": 2,
             "area_shape": 0,
             "area_size": 0,
-            "target_filter": 1,
+            "target_filter": 0,
             "chance_bp": 10000,
             "turns": 0,
             "stat": 7
@@ -20122,7 +20122,7 @@
             "value_max": 6,
             "area_shape": 0,
             "area_size": 0,
-            "target_filter": 1,
+            "target_filter": 0,
             "chance_bp": 10000,
             "turns": 2,
             "stat": 12
@@ -20133,7 +20133,7 @@
       {
         "ap_cost": 3,
         "range_min": 1,
-        "range_max": 1,
+        "range_max": 4,
         "modifiable_range": false,
         "line_of_sight": false,
         "line_launch": false,
@@ -20150,7 +20150,7 @@
             "value_max": 1,
             "area_shape": 1,
             "area_size": 1,
-            "target_filter": 1,
+            "target_filter": 0,
             "chance_bp": 10000,
             "turns": 3,
             "stat": 0
@@ -20162,7 +20162,7 @@
             "value_max": 3,
             "area_shape": 0,
             "area_size": 0,
-            "target_filter": 1,
+            "target_filter": 0,
             "chance_bp": 10000,
             "turns": 0,
             "stat": 7
@@ -20174,7 +20174,7 @@
             "value_max": 8,
             "area_shape": 0,
             "area_size": 0,
-            "target_filter": 1,
+            "target_filter": 0,
             "chance_bp": 10000,
             "turns": 2,
             "stat": 12
@@ -20185,7 +20185,7 @@
       {
         "ap_cost": 3,
         "range_min": 1,
-        "range_max": 1,
+        "range_max": 5,
         "modifiable_range": false,
         "line_of_sight": false,
         "line_launch": false,
@@ -20202,7 +20202,7 @@
             "value_max": 1,
             "area_shape": 1,
             "area_size": 1,
-            "target_filter": 1,
+            "target_filter": 0,
             "chance_bp": 10000,
             "turns": 4,
             "stat": 0
@@ -20214,7 +20214,7 @@
             "value_max": 3,
             "area_shape": 0,
             "area_size": 0,
-            "target_filter": 1,
+            "target_filter": 0,
             "chance_bp": 10000,
             "turns": 0,
             "stat": 7
@@ -20226,7 +20226,7 @@
             "value_max": 9,
             "area_shape": 0,
             "area_size": 0,
-            "target_filter": 1,
+            "target_filter": 0,
             "chance_bp": 10000,
             "turns": 3,
             "stat": 12
@@ -64045,7 +64045,7 @@
     "unlock_level": 1,
     "levels": [
       {
-        "ap_cost": 2,
+        "ap_cost": 6,
         "range_min": 0,
         "range_max": 0,
         "modifiable_range": false,
@@ -64085,7 +64085,7 @@
         "crit_effects": []
       },
       {
-        "ap_cost": 2,
+        "ap_cost": 5,
         "range_min": 0,
         "range_max": 0,
         "modifiable_range": false,

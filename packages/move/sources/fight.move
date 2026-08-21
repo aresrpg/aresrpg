@@ -291,15 +291,26 @@ public struct FightBuild {
   dungeon: Option<u64>, // some(room) → launch tags a dungeon room fight
 }
 
-public struct FightCreated has copy, drop { fight: ID, world: String, x: u32, z: u32 }
+/// Carries `placement_ms` so the realtime layer can run the join-window clock (the sword's
+/// sink) off chain truth instead of packet-arrival guesses.
+public struct FightCreated has copy, drop { fight: ID, world: String, x: u32, z: u32, placement_ms: u64 }
 
 /// A character took a seat — the ONLY receipt-independent witness of WHO joined (FightCreated
 /// names no one); the realtime layer keys its per-character fight watch on it.
 public struct FighterJoined has copy, drop { fight: ID, character: ID, team: u8 }
 
-public struct FightStarted has copy, drop { fight: ID, queue: vector<u64> }
+/// A fighter WALKED OUT. The only witness of a forfeit that does not end the fight: the roster
+/// keeps the seat (settled + forfeited), no other event fires, and the survivors would
+/// otherwise never learn the player left — no death on their screen, no line in their log.
+public struct FighterForfeited has copy, drop { fight: ID, fighter: u64 }
 
-public struct FightEnded has copy, drop { fight: ID, winner: Option<u8> }
+/// Carries the anchor so the realtime layer can route the start to the fight's ZONE —
+/// bystanders flip their sword marker to spectate-only the moment a fight goes live.
+public struct FightStarted has copy, drop { fight: ID, world: String, x: u32, z: u32, queue: vector<u64> }
+
+/// Carries the anchor so the zone channel can despawn the sword marker the moment a fight
+/// ends — standing bystanders never re-pull the fights list.
+public struct FightEnded has copy, drop { fight: ID, world: String, x: u32, z: u32, winner: Option<u8> }
 /// One intermediate turn consumed `seed`. The resting player's seed persists on `Fight`; every
 /// actor the machine advances past needs this receipt witness, including a player killed by a
 /// randomized turn-start effect before control could return to the client.
@@ -475,7 +486,7 @@ fun snf(
   };
   let id = fight.id.to_inner();
   dof::add(&mut fight.id, FighterKey(0), seat0);
-  event::emit(FightCreated { fight: id, world: fight.world, x, z });
+  event::emit(FightCreated { fight: id, world: fight.world, x, z, placement_ms: fight.placement_ms });
   transfer::share_object(fight);
   id
 }
@@ -756,7 +767,7 @@ public(package) fun start(fight: &mut Fight, gen: &mut RandomGenerator, clock: &
   };
   fight.queue = fight_math::weave_teams(teams); // woven once, sealed — dead fighters skip at advance
   fight.round = 1;
-  event::emit(FightStarted { fight: fight.id.to_inner(), queue: fight.queue });
+  event::emit(FightStarted { fight: fight.id.to_inner(), world: fight.world, x: fight.x, z: fight.z, queue: fight.queue });
 
   // the leading turn goes to the first LIVING queue slot (placement forfeits skip)
   let mut ptr = 0;
@@ -846,6 +857,9 @@ public(package) fun forfeit(
   // keeps the Player identity so its character can still be returned + re-join later).
   *&mut fight.fighters[fighter_idx].settled = true;
   *&mut fight.fighters[fighter_idx].forfeited = true; // FLED — out of the xp roster, no re-join
+  // emitted BEFORE the kill door so the witness stands on its own: `k1` only emits when the
+  // side empties, and a forfeit that leaves the fight running emits nothing else at all.
+  event::emit(FighterForfeited { fight: fight.id.to_inner(), fighter: fighter_idx });
   k1(fight, fighter_idx);
   let mut chr: Character = dof::remove(&mut fight.id, FighterKey(fighter_idx));
   if (pvm) progression::set_hp(&mut chr, 1, clock); // duels never touch persistent hp
@@ -1142,7 +1156,7 @@ fun k1(fight: &mut Fight, fighter_idx: u64) {
     let a = lc(fight, 0) > 0;
     let b = lc(fight, 1) > 0;
     fight.winner = if (a) option::some(0) else if (b) option::some(1) else option::none();
-    event::emit(FightEnded { fight: fight.id.to_inner(), winner: fight.winner });
+    event::emit(FightEnded { fight: fight.id.to_inner(), world: fight.world, x: fight.x, z: fight.z, winner: fight.winner });
   };
 }
 

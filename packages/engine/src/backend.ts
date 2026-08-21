@@ -12,6 +12,7 @@ import type {
   EngineRenderState,
   FightBlobRender,
   FightBoardRender,
+  FightSwordMarker,
   RenderChunkRequest,
   Vec3,
 } from './types.ts'
@@ -23,15 +24,18 @@ export type EngineBackend = Readonly<{
   /** The followed character's FEET — character-anchored presentation (the night lantern) rides
    * this, never the camera target (which leads the character). Null when nobody is followed. */
   set_character_anchor: (position: Vec3 | null) => void
-  set_quality: (quality: EngineQuality) => void
+  set_quality: (quality: EngineQuality, render_distance?: number | null) => void
   set_time_of_day: (time: number) => void
   set_flatten_amount: (amount: number) => void
   set_fight_board: (board: FightBoardRender | null) => void
   set_entities: (entities: readonly EntityRender[]) => void
+  set_fight_swords: (url: string, markers: readonly FightSwordMarker[]) => void
+  set_fight_sword_label: (id: string, element: HTMLElement | null) => void
   animate_entity: (motion: EntityPathMotion) => Promise<boolean>
   play_fight_cue: (cue: FightPresentationCue) => Promise<boolean>
   play_jump_puff: (position: Vec3) => void
   project_entity: (id: string) => EntityScreenAnchor | null
+  set_entity_label: (id: string, element: HTMLElement | null) => void
   entity_height: (id: string) => number | null
   upsert_fight_blob: (blob: FightBlobRender) => void
   remove_fight_blob: (id: string) => void

@@ -1,132 +1,132 @@
 {
   "testnet": {
-    "package": "0xfed435d0e2eb89ccd94cf5f68112ae4e3eebf7bbab74e9cf227589f6dd45a09c",
-    "package_original": "0xfed435d0e2eb89ccd94cf5f68112ae4e3eebf7bbab74e9cf227589f6dd45a09c",
+    "package": "0x05e854a747d824e46fbbc0656fd6259a3c7bf5ed110bb93745e690568e63911f",
+    "package_original": "0x05e854a747d824e46fbbc0656fd6259a3c7bf5ed110bb93745e690568e63911f",
     "kiosk_package": "0x0717a13f43deaf5345682153e3633f76cdcf695405959697fcd63f63f289320b",
-    "math_package": "0xfbdbcff22cca0e60bd83bd5c1690734dc14c660e97cf9d5ce03b4b823e606b73",
-    "math_package_original": "0xfbdbcff22cca0e60bd83bd5c1690734dc14c660e97cf9d5ce03b4b823e606b73",
-    "upgrade_cap": "0x45af4aeb7533e51087a0cbfaba9b905a555547d8af7b1c6e61ad21992e2ac2d2",
-    "math_upgrade_cap": "0xf1e8ccc789ef44c4d7ecb93edef82348226a4bffce3680a055714722d39ce165",
-    "admin_cap": "0x856bf4f9d1f06375badf49ed445f92b25bede7cfaaa9232fa92544eea04264fb",
-    "publisher": "0x95b87f661cb2da4922e1f6bd99ee3c98e90d18ace410058db313191d86cf919b",
-    "item_publisher": "0x95b87f661cb2da4922e1f6bd99ee3c98e90d18ace410058db313191d86cf919b",
-    "character_publisher": "0x95b87f661cb2da4922e1f6bd99ee3c98e90d18ace410058db313191d86cf919b",
+    "math_package": "0x5016004a1f1262e6154a0a6c566036661b8735e6f2c69a18708b7c0b09d4359b",
+    "math_package_original": "0x5016004a1f1262e6154a0a6c566036661b8735e6f2c69a18708b7c0b09d4359b",
+    "upgrade_cap": "0xafbb9da99c7e8941a3e78d23d037783c4b810d2e8fad66618d3da612529df72a",
+    "math_upgrade_cap": "0xc3d988f68ee106a1b98c2401a3acd823baeff482f9e1090137cf547aa004d899",
+    "admin_cap": "0xbe468c4be4041b337f5c8154f88a230bd4a218b5e72d259f94fae556848818ee",
+    "publisher": "0x95b6f8447c444698416f2325a1e481a8257bffecaa50383c3bc0bfbc185d76da",
+    "item_publisher": "0x95b6f8447c444698416f2325a1e481a8257bffecaa50383c3bc0bfbc185d76da",
+    "character_publisher": "0x95b6f8447c444698416f2325a1e481a8257bffecaa50383c3bc0bfbc185d76da",
     "version": {
-      "id": "0x28585c42b8ed6cec435409a459139e823d7bfa72e0ca87f44e506ebce0bffae6",
-      "shared_version": "980034639"
+      "id": "0xa64d7f0b7244a39c2db91a3c56f8ba96905c3ba8aec62010e548056650e277a7",
+      "shared_version": "985139506"
     },
     "template_registry": {
-      "id": "0x62cf2489615f38e3fd3ea362993fcd8ceca76d3d7ef41915698f223a1a240c96",
-      "shared_version": "980034639"
+      "id": "0x5b1266aea2fa4672b1cdd8b4d9e3349d49c4df78b4f3708a1e4c17f5022bfe3a",
+      "shared_version": "985139506"
     },
     "loot_registry": {
-      "id": "0x3ff4f225c2fec93a13a5e498418a59566f038bd8b7b62e080dec7314309cf506",
-      "shared_version": "980034639"
+      "id": "0xfb97866bf9c95684a9020146037ed725fd4f0e1b51c1d046df6486a642f1a83f",
+      "shared_version": "985139506"
     },
     "name_registry": {
-      "id": "0xb7dcf04317a995a7b712f13d301d2f31c98a5963d5ebe53eaae59f2f4782131e",
-      "shared_version": "980034639"
+      "id": "0x6934ac57f9c3a7548bdb403ab269d8b3978840bf95979c879f40631d76d499eb",
+      "shared_version": "985139506"
     },
     "friend_registry": {
-      "id": "0x395edfe3ef29b5d6f100cdf7f439b785e9848b005dc14fd9af785ecf1c80f2c0",
-      "shared_version": "980034639"
+      "id": "0xb110a0ff3ce28bcd88621722a348ca959b893da092b07d2a61e183f5be18bf75",
+      "shared_version": "985139506"
     },
     "item_policy": {
-      "id": "0x6a3ba1e74c35be3a4c06eeff6c4a8b94499c823e5368bbc02e1ff3fef3d53af5",
-      "shared_version": "980034640"
+      "id": "0x753aac11aa07a90ef1e7efbb4ead0f1f66070a71db4b46ea9b4fbb5900f014e5",
+      "shared_version": "985148609"
     },
     "character_policy": {
-      "id": "0xee9e8c070e904609d53cda830cb415672ed64d10dfce56278f97603d6bada5c6",
-      "shared_version": "980034640"
+      "id": "0x14c76eaf64bcbe9e3d933399a32947b16a1683c2768ec6433bd01db3d986942a",
+      "shared_version": "985148609"
     },
     "item_protected_policy": {
-      "id": "0x65d228546b5aafea68c1c9c440df015f2e372ff23a36b0eb480094f6bcf0af8a",
-      "shared_version": "980034640"
+      "id": "0xac23493f81c1a5147f65485ed0386d1a25c9278b067d6eef464a5a6570f37ce9",
+      "shared_version": "985148609"
     },
     "character_protected_policy": {
-      "id": "0xa62457bafb639025be4e6161a4fb20f2676bbea2e7a725879b4287a49c7e8fee",
-      "shared_version": "980034640"
+      "id": "0x9ba01139f160da98b11db0c3eec805d26aa425af378797b440be4c749cf8008d",
+      "shared_version": "985148609"
     },
     "worlds": {
       "20_zenith_scar": {
-        "id": "0xb5c24ee12a8e14f66f80bc3084f8b231ad920fa3eeee4a29667eb5a0383b0c43",
-        "shared_version": "980034639"
+        "id": "0x0b1e9617489d17d01beff1dba4d2d54d47d9a51a1dfcadb0cf66f09350614486",
+        "shared_version": "985139506"
       },
       "19_hollow_crown": {
-        "id": "0x570ab74df81ed97d36b72ddc23dacef348d931f9eb63d6fa639d4c825e8e3177",
-        "shared_version": "980034639"
+        "id": "0x02bbe334b0d21b407b6ec099d1ae15bc7b6293c582731345df70879a8977ea01",
+        "shared_version": "985139506"
       },
       "18_abyssal_weald": {
-        "id": "0x0590db0490e6c0fce1c7e25a8f01814a343076563b30b532ae6553fe7ec565b8",
-        "shared_version": "980034639"
+        "id": "0xaa442f83c861817e2779b3054c758bbebd00b7d8e0ba933d21a5adbe1c62e0b1",
+        "shared_version": "985139506"
       },
       "17_obsidian_choir": {
-        "id": "0xdb85ef4204c944370e732d976847ed7d5e6560356f1a77cdb1ea23ffa1b20225",
-        "shared_version": "980034639"
+        "id": "0x368a853c0119af5a302379b33c595eb17465448b7d8201ac0819d803e76167f4",
+        "shared_version": "985139506"
       },
       "16_the_sundering": {
-        "id": "0xfa85aa392d601d24f304389824921be75d77050b49adc86e7bf213462ef709e7",
-        "shared_version": "980034639"
+        "id": "0xd7d89863f5e37f583db04985e783dcc49deae29feb0ec20e78cca4568c6ee2e1",
+        "shared_version": "985139506"
       },
       "15_silent_atoll": {
-        "id": "0xb8a585847d62bfa354928601252c3523365eb48faa7f0490eeef014012368613",
-        "shared_version": "980034639"
+        "id": "0x7f811a30c972f39e26d0661777ce6c4b6027fa16d3498c71c2605eaedd2d2990",
+        "shared_version": "985139506"
       },
       "14_charnel_marches": {
-        "id": "0xd06c20809a6a16f345de76b28b749f2bb7c992e25ea18b0dda54f1e26e730a2d",
-        "shared_version": "980034639"
+        "id": "0xfbd69f93f54206f118c3c84f6a628901b86a554d645dfbaf2fed745911237662",
+        "shared_version": "985139506"
       },
       "13_mirrormere": {
-        "id": "0x610f07a7a65747a6946c92a79600dbdb076b32b3b62fe090ecbce9b119465b8a",
-        "shared_version": "980034639"
+        "id": "0xba85903fce978db8f24fa2329c1b822b6a5fbcadfc2edb6ee8e043227c45b7b7",
+        "shared_version": "985139506"
       },
       "12_static_fields": {
-        "id": "0x4da6c77667e0acf468e9a181cdff540532af21aa4ecf4df027ba27cab8557448",
-        "shared_version": "980034639"
+        "id": "0xae74d0da56c5b9920e9f66d2c42afc8a71f2c97115de003c362f36565598bf7d",
+        "shared_version": "985139506"
       },
       "11_rootheart": {
-        "id": "0xff080e9da369acb159831736e75409c688416aab5142e2dfd2c7ccfc30ba4665",
-        "shared_version": "980034639"
+        "id": "0xa1f0f584592aaa7f86a05afcda56480e874960598b003d9f6e5e5a6e1c2c65c4",
+        "shared_version": "985139506"
       },
       "10_sunspire_dunes": {
-        "id": "0xeb5d07dd8fe58681893d97f5cb1d91a8da054fbd2a24f5ea52b5f3bc3377d8a6",
-        "shared_version": "980034639"
+        "id": "0x7ac391bebe5660c18ba5477125b3f18931a97acd3bde0257f7fd69d55dc0c294",
+        "shared_version": "985139506"
       },
       "09_coral_throne": {
-        "id": "0x025f98651c2eab622de3e3e1c297705adcc49f11bf91c5d5e5487cba751a58d3",
-        "shared_version": "980034639"
+        "id": "0x386b6837832fde83541578cae000bcb557b1a8afe4642042fffb85357ab40d45",
+        "shared_version": "985139506"
       },
       "08_palewood": {
-        "id": "0x72d1d78354be47a78963544758e34015943928fc1f1581a4cb73f8ff2a23b8e2",
-        "shared_version": "980034639"
+        "id": "0x0ea37a078b0cadadfd61303d7a95bf6ac0a939abd7df7ac6be1453d37c829fa4",
+        "shared_version": "985139506"
       },
       "07_cinderforge_depths": {
-        "id": "0x730ca6b47f2dc49c7581490dd37790a13dafd3de35d4084b4c06acc3a026c1e4",
-        "shared_version": "980034639"
+        "id": "0xb753ee0ef807050d807e4b8779feede19751cc0f2575dee277b940c302d0672b",
+        "shared_version": "985139506"
       },
       "06_pandora_reach": {
-        "id": "0x0d74ed2b1f49f90e897c9dc974147883ac7daea08551cf63296c492e3904ceb0",
-        "shared_version": "980034639"
+        "id": "0xcc554a3eb898e11775e41eccdfb3c4b42708f939ff50227684ad5b51459ad531",
+        "shared_version": "985139506"
       },
       "05_drowned_fen": {
-        "id": "0x15e73d0f266d30afd662dfcd406b48dc98f4f8a31e80b6f2fe41d92248d965aa",
-        "shared_version": "980034639"
+        "id": "0xc968b639640c00940e67906694cd3438915f7e55cf799966c950b197679e7d26",
+        "shared_version": "985139506"
       },
       "04_mistral_heights": {
-        "id": "0x47d5788c2d0e732e5b3fb41d78a7ff46ed5e39d548acf4072bbfcb275aa0bd4a",
-        "shared_version": "980034639"
+        "id": "0xc8495cb1b260ee0b32b36006dcf34b640c32fbeadaa0c6f73b0e85677997fec3",
+        "shared_version": "985139506"
       },
       "03_emberfall_steppe": {
-        "id": "0xbc0e2d19acb68da4df84e617bfd41a7b994740d3f20ab0bc3930fa5d504c97d3",
-        "shared_version": "980034639"
+        "id": "0x78915969fcbad0ca233771729f6f2d309170f314ea5d61039aab54ff6c49185d",
+        "shared_version": "985139506"
       },
       "02_verdant_hollow": {
-        "id": "0xc89acaa03f72bddf81379f92280079680070103e531d3c07093aa25ad2c4d6a5",
-        "shared_version": "980034639"
+        "id": "0x92c59eff48451d97801405d16d11180aa9089164ad877500ca86b2d77b092ac0",
+        "shared_version": "985139506"
       },
       "01_first_shore": {
-        "id": "0x63c690a72f7da7d0ad3d2aa5b7b9ff87c035cd34b1ecd94c1c35e8d56028e6d5",
-        "shared_version": "980034639"
+        "id": "0x3a7809b7f8825a4fe2a7e5face07fd031bd22b1264bf7b3fbe068f0d1ca1e4aa",
+        "shared_version": "985139506"
       }
     }
   },

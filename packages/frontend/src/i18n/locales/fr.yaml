@@ -41,11 +41,17 @@ server_reconnecting: Reconnexion
 server_syncing: Synchronisation
 server_connected: Connecté
 server_violation: Déconnecté — violation des règles. Nouvelle tentative bientôt.
+server_replaced: Connecté ailleurs
+session_replaced_title: Connecté depuis un autre endroit
+session_replaced_body: Votre compte a ouvert le jeu ailleurs, cette fenêtre a donc été déconnectée. Fermez l’autre session ou reconnectez-vous ici pour jouer dans cette fenêtre.
+session_replaced_reconnect: Se reconnecter ici
 latency_unit: ms
 indexing_health: Santé de l’indexation
 online_players: Joueurs en ligne
 indexing_lag_warning: Les actions en jeu peuvent apparaître en retard
 game_frozen: Le jeu est actuellement gelé. Consultez Discord pour plus d’informations.
+gas_budget_toast: Cette action dépassait les frais de réseau que nous réservons. Elle n’a pas été exécutée et ne vous a rien coûté — merci de le signaler.
+game_paused_toast: Le jeu est en pause pour une mise à jour. Votre action n’a pas été exécutée — réessayez dans quelques minutes.
 network_testnet: TESTNET
 page_pending_title: Cette page est en reconstruction
 page_pending_body: Sa place reste visible pendant que nous la restaurons proprement.
@@ -96,6 +102,33 @@ world_hud:
   zone_edge: Bord de zone {{dist}}
   coordinates: Coordonnées
   world_map: Carte du monde
+  menu_group: Inviter dans le groupe
+  menu_trade: Échanger
+  menu_message: Envoyer un message
+  mount_prompt: 'Appuyez sur {{key}} pour monter'
+  fight_press_join: 'Appuyez sur {{key}} pour rejoindre'
+  fight_press_spectate: 'Appuyez sur {{key}} pour spectater'
+  fight_locked: 'Combat privé'
+  fight_join_title: 'Rejoindre le combat'
+  fight_spectate_title: 'Spectater le combat'
+  fight_side_a: 'Côté A'
+  fight_side_b: 'Côté B'
+  fight_empty_side: 'Aucun combattant'
+  fight_unknown: 'Combattant inconnu'
+  fight_join_button: 'Rejoindre'
+  fight_spectate_button: 'Spectater'
+  fight_started_ago: 'Commencé'
+  fight_placement: 'Placement'
+  fight_wallet_hint: 'Connectez un portefeuille pour rejoindre'
+  fight_close: 'Fermer'
+  menu_duel: Provoquer en duel
+  duel_invite: '{{name}} vous provoque en duel'
+  duel_accept: Accepter
+  duel_decline: Refuser
+  duel_waiting: 'En attente de {{name}}…'
+  duel_cancel: Annuler
+  duel_declined: '{{name}} a refusé le duel'
+  duel_never_started: Le duel n’a jamais commencé — rien ne s’est passé, vous pouvez continuer à jouer.
 demo_page:
   title: Laboratoire de rendu
   world_lab: Monde
@@ -225,7 +258,6 @@ admin_page:
   arm_claim: Préparer le retrait
   claiming: Retrait…
   confirm_claim: Confirmer le retrait
-  claim_success: Redevances retirées
   disconnect_admin_wallet: Déconnecter
   claim_digest: Transaction de retrait
 simulator_page:
@@ -322,6 +354,13 @@ fight_hud:
   turn_order: Ordre des tours
   placement_title: Préparez-vous au combat
   placement_hint: Placez vos combattants et indiquez qu’ils sont prêts
+  placement_ready: Prêt
+  placement_waiting: En attente des autres…
+  placement_force_prompt: Un joueur est absent — forcer le début du combat ?
+  placement_force_button: Forcer le début
+  placement_no_opponent: Personne n'a accepté le défi
+  crank_prompt: Le joueur actuel ne termine pas son tour.
+  crank_button: Forcer la fin du tour
   end_turn: Fin du tour
   reset_turn: Rejouer
   weapon_attack: Attaque d’arme
@@ -2854,3 +2893,275 @@ encyclopedia_page:
     zephyr_legwraps: "Si légers qu'on croirait ne rien porter. Une option qui existe aussi, mais bien moins protectrice."
     zephyr_silk_strand: "Fil de soie infusé de vent qui flotte seul. Les tailleurs l'adorent. Leurs chats le considèrent comme un ennemi personnel."
     zukin_muru: 'A shinobi cowl for people who want to look like they left quietly, even when they slam the door.'
+out_of_sui_body: Vous n'avez plus de SUI pour payer les frais de transaction. Rechargez votre portefeuille pour continuer à jouer.
+characters_page:
+  tab_equipment: Équipement
+  tab_stats: Caractéristiques
+  tab_spells: Sorts
+  tab_jobs: Métiers
+  tab_runeforge: Forgemagie
+  no_character: Aucun personnage sélectionné — choisissez-en un dans la barre d'onglets
+  level: 'Niv {{level}}'
+  experience: Expérience
+  equipment_head: Équipement
+  equipped_totals: Totaux équipés
+  no_gear_equipped: Aucun équipement porté
+  bag_equipment: Équipement
+  bag_cosmetics: Cosmétiques
+  bag_consumables: Consommables
+  bag_resources: Ressources
+  accept: Valider
+  cancel: Annuler
+  equip_pending: Mise à jour de l'équipement…
+  equip_success: Équipement mis à jour
+  consume_pending: Utilisation…
+  consume_success: Objet utilisé
+  already_full_hp: La vie est déjà au maximum
+  refusal_wrong_slot: Cet objet ne va pas dans cet emplacement
+  refusal_level_too_low: Votre niveau est trop bas pour cet objet
+  refusal_relic_duplicate: Une relique identique est déjà portée
+  refusal_item_listed: Cet objet est en vente
+  points_to_assign: Points à répartir
+  spend_hint: Répartissez vos points entre les six caractéristiques, puis confirmez
+  reset: Réinitialiser
+  confirm: Confirmer
+  tx_pending: Confirmation…
+  stats_pending: Attribution des points…
+  stats_success: Points attribués
+  health: Vie
+  action: Action
+  movement: Mouvement
+  characteristics: Caractéristiques
+  resistances: Résistances
+  secondary: Secondaires
+  element_fire: Feu
+  element_water: Eau
+  element_earth: Terre
+  element_air: Air
+  add_point: 'Ajouter un point en {{stat}}'
+  remove_point: 'Retirer un point de {{stat}}'
+  grimoire: Grimoire
+  spell_points: Points de sorts
+  unlocked: '{{unlocked}} / {{total}} débloqués'
+  unlocks_at: 'Débloqué au niv {{level}}'
+  unlock_line: 'Niv {{level}}'
+  lv_of: '{{current}} / {{max}}'
+  locked: Verrouillé
+  mastered: Maîtrisé
+  no_points: Pas assez de points de sorts
+  upgrading: Montée de niveau…
+  upgrade_success: '{{spell}} a gagné un niveau'
+  level_up: 'Monter · {{cost}} pts'
+  lv: 'Niv {{level}}'
+  xp_progress: '{{current}} / {{needed}} XP'
+  max: Max
+  resources: Ressources
+  back: Retour
+  gate_note: Nécessite le métier d'artisanat de l'objet au niveau 70
+  detail_title: Objet
+  forge_title: Forge
+  inventory_title: Inventaire
+  tab_gear: Équipement
+  tab_runes: Runes
+  place_gear: Placer l'objet
+  place_rune: Placer la rune
+  random_notice: Le résultat est tiré sur la chaîne. Une rune peut prendre, échouer, ou coûter une autre caractéristique — rien n'est garanti.
+  one_rune_note: Une rune est consommée par tentative
+  apply: Appliquer la rune
+  scribing: Gravure…
+  outcome_success: La rune a pris
+  outcome_neutral: La rune a échoué — rien n'a changé
+  outcome_failure: La rune a mal tourné — une caractéristique est perdue
+  requires_job: 'Nécessite {{job}} niveau 70'
+  clear: Retirer
+  inspect_empty: Choisissez un équipement à inspecter
+  no_forge_gear: Aucun équipement forgeable dans le sac
+  no_runes: Aucune rune dans le sac
+  menu_feed: Nourrir
+  menu_consume: Consommer
+  menu_crush: Briser
+  menu_destroy: Détruire
+  feed_title: Nourrir le familier
+  feed_power_label: Puissance
+  feed_power: '{{count}} / {{max}}'
+  feed_pick_food: Choisissez une nourriture
+  feed_no_food: Aucune nourriture adaptée dans le sac
+  feed_already_today: Déjà nourri aujourd'hui — revenez demain
+  feed_full: Rassasié au maximum
+  feed_pending: Nourrissage…
+  feed_success: Familier nourri
+  claim_success: Récompense récupérée
+  crush_title: Briser l'équipement
+  crush_confirm_body: "Briser {{name}} ? L'objet est détruit à jamais et produit des runes."
+  crush_cta: Briser
+  crush_pending: Brisage…
+  crush_success: Équipement brisé
+  destroy_title: Détruire l'objet
+  destroy_confirm_body: 'Détruire {{name}} ×{{amount}} ? Cette action est irréversible.'
+  destroy_cta: Détruire
+  destroy_pending: Destruction…
+  destroy_success: Objet détruit
+  unsealing: Descellement…
+  skip_hint: Cliquez pour passer
+  reveal_eyebrow: Vous avez reçu
+  revealing: Révélation…
+  collecting: Récupération…
+  continue_cta: Continuer
+  stat_maxed: Cette caractéristique a atteint sa limite de runes sur cet objet
+  stat:
+    movement: 'PM'
+    action: 'PA'
+    range: 'Portée'
+    critical_chance: 'Chance Critique'
+    critical_outcomes: 'Chance Critique'
+    vitality: 'Vitalité'
+    wisdom: 'Sagesse'
+    strength: 'Force'
+    intelligence: 'Intelligence'
+    chance: 'Chance'
+    agility: 'Agilité'
+    heal: 'Soin'
+    critical_hit: 'Coup Critique'
+    percent_damage: 'Dégâts'
+    raw_damage: 'Dégâts Bruts'
+    fire_resistance: 'Résistance Feu'
+    water_resistance: 'Résistance Eau'
+    earth_resistance: 'Résistance Terre'
+    air_resistance: 'Résistance Air'
+  stats:
+    no_character: 'Aucun personnage sélectionné'
+    unavailable: 'Caractéristiques indisponibles'
+    level: 'Nv. {{level}}'
+    adventurer: 'Aventurier'
+    points_to_assign: 'Points à attribuer'
+    spend_hint: 'Attribuez-les à vos caractéristiques'
+    reset: 'Réinitialiser'
+    health: 'Vie'
+    action: 'Action'
+    move: 'Déplacement'
+    characteristics: 'Caractéristiques'
+    resistances: 'Résistances'
+    secondary: 'Secondaires'
+    element:
+      fire: 'Feu'
+      water: 'Eau'
+      earth: 'Terre'
+      air: 'Air'
+    description:
+      vitality: 'Augmente votre Vie maximum'
+      wisdom: 'Augmente votre gain d’XP'
+      strength: 'Augmente vos dégâts Terre'
+      intelligence: 'Augmente vos dégâts Feu et vos soins'
+      chance: 'Augmente vos dégâts Eau et vos chances d’obtenir du butin'
+      agility: 'Augmente vos dégâts Air, votre tacle et votre esquive de perte de PA/PM'
+      critical_hit: 'Améliore vos chances de coup critique'
+      raw_damage: 'Ajoute un montant fixe aux effets de dégâts et de vol de vie'
+    add_point: 'Ajouter un point à {{stat}}'
+    remove_point: 'Retirer un point de {{stat}}'
+    tx_pending: 'Attribution…'
+    tx_success: 'Points de caractéristiques attribués'
+  spells:
+    range_modifiable: 'Portée modifiable'
+    no_character: 'Aucun personnage sélectionné'
+    select_prompt: 'Sélectionnez un sort'
+    level: 'Niveau {{level}}'
+    spell_points: 'Points de sort'
+    available: 'Disponibles'
+    grimoire: 'Grimoire'
+    unlocked: '{{unlocked}} / {{total}} débloqués'
+    locked: 'Verrouillé'
+    lv: 'Niv {{level}}'
+    lv_of: 'Niv {{cur}}/{{max}}'
+    unlocks_at: 'Débloqué au niv {{level}}'
+    current_level: 'Niveau actuel'
+    ap_cost: 'Coût PA'
+    range: 'Portée'
+    cooldown: 'Délai'
+    crit_chance: 'Chance de critique'
+    casts_per_turn: 'Lancers / Tour'
+    unlimited: 'Illimité'
+    description: 'Description'
+    effects: 'Effets'
+    levels_head: 'Niveaux'
+    mastered: 'Maîtrisé'
+    upgrade_success: "{{spell}} monté d'un niveau !"
+    upgrading: 'Amélioration…'
+    level_up_spell: 'Améliorer le sort'
+    pts: '{{count}} pts'
+    pts_one: '{{count}} pt'
+    pts_other: '{{count}} pts'
+    requires_lv: 'Niveau {{level}} requis'
+    no_points: 'Aucun point'
+    tag_self: 'Soi'
+    tag_melee: 'Mêlée'
+    tag_ranged: 'Distance'
+    tag_zone: 'Zone'
+    tag_line_of_sight: 'Ligne de vue'
+    el_fire: 'Feu'
+    el_water: 'Eau'
+    el_earth: 'Terre'
+    el_air: 'Air'
+    buff: 'Amélioration'
+    utility: 'Utilitaire'
+    heal: 'Soin'
+    neutral: 'Neutre'
+    element: 'Élément'
+    damage: 'Dégâts'
+    turns: 'tours'
+    crit_val: 'crit {{value}}'
+    range_fixed: "FIXE — LA STAT PORTÉE N'A AUCUN EFFET"
+  jobs:
+    category:
+      gathering: 'Récolte'
+      weapon: "Artisanat d'armes"
+      equipment: "Artisanat d'équipement"
+      consumable: 'Artisanat de consommables'
+    recipes_fallback: 'Recettes'
+    equipped: 'Équipé'
+    table:
+      tier: 'Palier'
+      req_lvl: 'Niv. req.'
+      resource: 'Ressource'
+      yield: 'Rendement'
+      xp: 'XP'
+      unlocks_at: '{{name}} (débloqué au niveau {{level}})'
+      gather_detail: '{{name}} · récolte {{gather}}s · réapparition {{respawn}}s'
+      locked: 'verrouillé'
+    lv_badge: 'Niv {{level}}'
+    tier_badge: 'T{{tier}}'
+    craft:
+      recipe_head: 'Recette'
+      recipe_not_seeded: "Cette recette n'est pas encore dans le contenu."
+      ingredients_head: 'Ingrédients'
+      requires_level: 'Nécessite {{job}} Niv {{required}} (vous êtes Niv {{level}})'
+      not_enough: 'Ingrédients insuffisants'
+      success_chance: 'Chance de réussite'
+      craft_tooltip: 'Fabriquer {{name}}'
+      craft_button: 'Fabriquer'
+      crafting: 'Fabrication…'
+      craft_success: '{{name}} fabriqué'
+      roll_failed: 'Le jet de fabrication a échoué pour {{name}} ({{chance}}% de chances) — les ingrédients ont été consommés'
+      locked_level: 'Verrouillé · Niv {{level}}'
+    detail:
+      close_aria: "Fermer le détail de l'objet"
+      item_not_seeded: "Cet objet n'est pas dans le contenu."
+      tool_label: 'Outil'
+      crafts_label: 'Fabrique {{covers}}'
+      xp_progress: '{{current}} / {{needed}} XP'
+    recipes:
+      empty_seed: "Les recettes de ce métier arrivent avec le contenu d'artisanat."
+      unlocked: 'Débloquées'
+      locked: 'Verrouillées'
+      meta: 'Niv {{level}} · {{category}}'
+    gather:
+      in_progress: 'Récolte de {{name}}…'
+      button: 'Récolter {{name}}'
+      hint: 'Cliquez sur un nœud de {{job}} dans le monde pour récolter.'
+    tabs:
+      resources: 'Ressources'
+      recipes: 'Recettes'
+    no_character: 'Aucun personnage sélectionné'
+  common:
+    experience: 'Expérience'
+    confirm: 'Confirmer'
+    max: 'MAX'

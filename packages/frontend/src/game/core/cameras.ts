@@ -569,3 +569,16 @@ export const create_camera_director = (initial: CameraAddon, canvas: HTMLElement
     },
   })
 }
+
+export type CameraMode = 'spectate' | 'follow' | 'fight'
+
+/** WHO OWNS THE CAMERA — a MOUNTED BOARD does, until its own door hands the camera back.
+ *  Pointing the world at a character is ASYNCHRONOUS (the saved pose is read from IndexedDB),
+ *  so on a refresh into a live fight the handover can land AFTER the board mounted and quietly
+ *  drop the player into follow mode: free to walk, the board still drawn, and their overworld
+ *  avatar back on the scene beside their own fighter (2026-08-21). A character-driven request
+ *  still moves the character; it just cannot take a camera the board is holding. */
+export const camera_mode_after = (
+  current: CameraMode,
+  request: Readonly<{ mode: CameraMode; from: 'board' | 'character' }>
+): CameraMode => (current === 'fight' && request.from === 'character' ? current : request.mode)

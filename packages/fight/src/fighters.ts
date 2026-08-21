@@ -223,8 +223,12 @@ export const add_mp = (runtime: FightRuntime, seat: bigint, amount: bigint, reas
   pool_change(runtime, seat, fighter.ap, fighter.mp + amount, reason, source)
 }
 
-const living_count = (runtime: FightRuntime, team: bigint): bigint =>
-  BigInt(runtime.contract.fighters.filter((fighter) => fighter.team === team && !fighter.dead).length)
+/** Living fighters on a side — the client's mirror of the chain's `lc` (fight.move): it counts
+ *  the NOT-DEAD, mobs included, and never inspects `settled`, so a forfeited seat is already out
+ *  (forfeit runs the kill door). The ONE home of this rule: the start gate, the wipe check, and
+ *  the placement view all read it here rather than restating the predicate. */
+export const living_count = (fighters: readonly Fighter[], team: bigint): bigint =>
+  BigInt(fighters.filter((fighter) => fighter.team === team && !fighter.dead).length)
 
 export const kill_fighter = (runtime: FightRuntime, seat: bigint, source: bigint, cause: string): void => {
   const fighter = runtime.contract.fighters[Number(seat)]
@@ -232,10 +236,10 @@ export const kill_fighter = (runtime: FightRuntime, seat: bigint, source: bigint
   fighter.dead = true
   fighter.hp = 0n
   if (!was_dead) emit(runtime, 'fighter_died', { fighter: seat, source, cause, cell: fighter.cell })
-  if (!runtime.contract.ended && living_count(runtime, fighter.team) === 0n) {
+  if (!runtime.contract.ended && living_count(runtime.contract.fighters, fighter.team) === 0n) {
     runtime.contract.ended = true
-    const team_a = living_count(runtime, 0n) > 0n
-    const team_b = living_count(runtime, 1n) > 0n
+    const team_a = living_count(runtime.contract.fighters, 0n) > 0n
+    const team_b = living_count(runtime.contract.fighters, 1n) > 0n
     runtime.contract.winner = team_a ? 0n : team_b ? 1n : null
     emit(runtime, 'fight_ended', { winner: runtime.contract.winner })
   }

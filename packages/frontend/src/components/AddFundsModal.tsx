@@ -241,7 +241,8 @@ export const AddFundsModal = ({
   address,
   copy,
   on_close,
-}: Readonly<{ address: string; copy: AppCopy; on_close: () => void }>) => {
+  warning,
+}: Readonly<{ address: string; copy: AppCopy; on_close: () => void; warning?: string }>) => {
   const [expanded, set_expanded] = useState<string | null>(null)
   const [show_exchanges, set_show_exchanges] = useState(false)
   const [show_faq, set_show_faq] = useState(true)
@@ -284,6 +285,14 @@ export const AddFundsModal = ({
           </button>
         </div>
         <div className="flex-1 space-y-6 overflow-y-auto p-4">
+          {warning && (
+            <aside
+              className="border border-[#c8963c]/50 bg-[#c8963c]/8 px-4 py-3 text-[11px] leading-6 text-[#d9af57]"
+              role="alert"
+            >
+              {warning}
+            </aside>
+          )}
           <section>
             <h3 className="mb-1 text-[11px] font-semibold tracking-[0.2em] text-text uppercase">
               {wallet_text(copy, 'how_to_pay')}

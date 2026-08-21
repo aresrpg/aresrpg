@@ -20,6 +20,16 @@ export type FightBoardRender = Readonly<{
 }>
 export type EntityAnchor = Readonly<{ kind: 'fight_cell'; cell: number }> | Readonly<{ kind: 'world'; position: Vec3 }>
 export type FightSide = 'a' | 'b'
+/** A planted fight sword — the join-window clock made physical. `y` is the anchor's ground
+ *  level; every height the layer animates measures from there. */
+export type FightSwordMarker = Readonly<{
+  id: string
+  x: number
+  y: number
+  z: number
+  /** the chain's placement birth wall-clock (ms epoch) */
+  placement_ms: number
+}>
 export type EntityFacing =
   Readonly<{ kind: 'yaw'; yaw: number }> | Readonly<{ kind: 'fight_opponents'; side: FightSide }>
 export type EntityVisualEffect = Readonly<{ kind: 'invisibility' }>
@@ -302,15 +312,21 @@ export type Engine = Readonly<{
   /** The followed character's FEET (null when nobody is followed) — feeds character-anchored
    * presentation like the night lantern. */
   set_character_anchor: (position: Vec3 | null) => void
-  set_quality: (quality: EngineQuality) => void
+  set_quality: (quality: EngineQuality, render_distance?: number | null) => void
   set_time_of_day: (time: number) => void
   set_flatten_amount: (amount: number) => void
   set_fight_board: (board: FightBoardRender | null) => void
   set_entities: (entities: readonly EntityRender[]) => void
+  /** planted fight swords — the join-window clock made physical (whole-set replace) */
+  set_fight_swords: (url: string, markers: readonly FightSwordMarker[]) => void
+  set_fight_sword_label: (id: string, element: HTMLElement | null) => void
   animate_entity: (motion: EntityPathMotion) => Promise<boolean>
   play_fight_cue: (cue: FightPresentationCue) => Promise<boolean>
   play_jump_puff: (position: Vec3) => void
   project_entity: (id: string) => EntityScreenAnchor | null
+  /** float a DOM element over an entity's rendered crown, positioned by the frame's own camera
+   *  pass (three CSS2D labels — never lags the render); null detaches */
+  set_entity_label: (id: string, element: HTMLElement | null) => void
   entity_height: (id: string) => number | null
   create_fight_blob: (blob: FightBlobSpec) => string
   update_fight_blob: (id: string, blob: FightBlobSpec) => boolean

@@ -17,11 +17,13 @@ import {
   type HydratedFightCheckpoint,
 } from '@aresrpg/fight'
 import { EFFECT_KINDS } from '@aresrpg/fight/move_contract'
+import { chain_to_client_coordinate } from '@aresrpg/immutable'
 import { RotateCcw } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 
 import { encyclopedia_catalog } from '../../content/catalog.ts'
 import type { AppCopy } from '../../i18n/copy.ts'
+import type { SceneHandle } from '../core/scene_feed.ts'
 import { dispatch_app, useAppStore } from '../../store.ts'
 
 import { create_fight_audio_observer, preload_fight_sounds } from '../audio/fight_audio.ts'
@@ -56,7 +58,7 @@ const viewer_team_of = (checkpoint: Readonly<HydratedFightCheckpoint> | null, ow
   checkpoint?.contract.fighters.find((fighter) => fighter.kind.type === 'player' && fighter.kind.owner === owner)
     ?.team ?? null
 
-export const FightLayer = ({ copy }: Readonly<{ copy: AppCopy }>) => {
+export const FightLayer = ({ copy, scene }: Readonly<{ copy: AppCopy; scene: SceneHandle }>) => {
   const fight = useAppStore((state) => state.fight)
   const simulator = useAppStore((state) => state.simulator)
   const session = useAppStore((state) => state.session)
@@ -149,6 +151,15 @@ export const FightLayer = ({ copy }: Readonly<{ copy: AppCopy }>) => {
     !active_fighter.dead &&
     !active_fighter.settled
       ? active_seat
+      : null
+  // placement: the own seat (any owned living fighter) may re-pick among its side's start cells
+  const owned_placement_seat =
+    checkpoint !== null && checkpoint.contract.round === 0n && !checkpoint.contract.ended
+      ? (checkpoint.contract.fighters.reduce<bigint | null>(
+          (found, fighter, index) =>
+            found ?? (fighter.kind.type === 'player' && fighter.kind.owner === owner ? BigInt(index) : null),
+          null
+        ) ?? null)
       : null
   const range_seat = fight_range_seat(owned_active_seat, hovered_seat)
   const movement_cells = useMemo<readonly bigint[]>(() => {
@@ -326,12 +337,30 @@ export const FightLayer = ({ copy }: Readonly<{ copy: AppCopy }>) => {
     }
   }, [character_sources, mob_sources])
 
+  const world_anchor = useMemo(
+    () =>
+      checkpoint && fight.mode === 'remote'
+        ? Object.freeze({
+            x: chain_to_client_coordinate(Number(checkpoint.contract.x)),
+            z: chain_to_client_coordinate(Number(checkpoint.contract.z)),
+          })
+        : null,
+    [checkpoint, fight.mode]
+  )
+
   if (!checkpoint || !fight.mode) return null
   return (
-    <section className="pointer-events-auto absolute inset-0 z-30 overflow-hidden bg-[#08090e]">
+    // TRANSPARENT AND CLICK-THROUGH: the board is drawn by the world engine underneath, so a
+    // filled panel here would hide the very world it stands in — and cover every other page
+    // while a fight is open. Only the controls inside opt back into pointer events.
+    <section className="pointer-events-none absolute inset-0 z-30 overflow-hidden">
       <FightViewport
         board={checkpoint.contract.board}
         board_key={checkpoint.contract.id}
+        // the arena stands where the challenge was thrown: the chain carries the fight's own
+        // world coordinates, so the board is laid there rather than at a synthetic origin
+        scene={scene}
+        world_anchor={world_anchor}
         blob_overlays={blob_overlays}
         entities={entities}
         label={copy.fight_hud.board_label}
@@ -357,7 +386,22 @@ export const FightLayer = ({ copy }: Readonly<{ copy: AppCopy }>) => {
             : null
         }
         on_cell_click={(cell) => {
-          if (!checkpoint || owned_active_seat === null || presentation_pending) return
+          if (!checkpoint) return
+          // placement phase: clicking one of the own side's free start cells re-places the fighter
+          if (owned_placement_seat !== null) {
+            const me = checkpoint.contract.fighters[Number(owned_placement_seat)]
+            const starts =
+              me?.team === 0n ? checkpoint.contract.board.start_cells_a : checkpoint.contract.board.start_cells_b
+            const taken = checkpoint.contract.fighters.some((fighter) => fighter.cell === cell)
+            if (!me || me.ready || taken || !starts.includes(cell)) return
+            dispatch_app({
+              type: 'fight/input',
+              origin: 'local',
+              input: { type: 'place', fighter: owned_placement_seat, cell },
+            })
+            return
+          }
+          if (owned_active_seat === null || presentation_pending) return
           if (selected_action !== null) {
             if (!spell_cells?.targetable.includes(cell)) {
               set_selected_action(null)

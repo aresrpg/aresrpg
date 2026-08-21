@@ -26,7 +26,7 @@ import {
 import { dispatch_app, useAppStore } from '../store.ts'
 
 import { LoadoutSection } from './LoadoutSection.tsx'
-import './character_modal.css'
+import '../components/character_surfaces.css'
 
 const GOLD = '#c8963c'
 const micro = 'text-[9px] tracking-[0.22em] uppercase'

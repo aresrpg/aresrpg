@@ -20,7 +20,7 @@ export const pages = [
 ] as const
 
 export type Page = (typeof pages)[number]
-export type AppDialog = 'welcome' | 'character_create'
+export type AppDialog = 'welcome' | 'character_create' | 'top_up'
 
 export type NavigationState = Readonly<{
   page: Page

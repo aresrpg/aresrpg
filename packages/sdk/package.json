@@ -2,7 +2,7 @@
   "name": "@aresrpg/sdk",
   "version": "6.0.0",
   "private": true,
-  "description": "AresRPG write SDK — a generated projection of the Move contract (one PTB builder per api.move door) plus a receipt-fed object-version cache",
+  "description": "AresRPG write SDK \u2014 a generated projection of the Move contract (one PTB builder per api.move door) plus a receipt-fed object-version cache",
   "type": "module",
   "exports": {
     ".": "./src/client.ts",
@@ -19,9 +19,11 @@
     "./character-price": "./src/character_price.ts",
     "./balance": "./src/balance.ts",
     "./marketplace-admin": "./src/marketplace_admin.ts",
+    "./admin-overview": "./src/admin_overview.ts",
     "./deployment-admin": "./src/deployment_admin.ts",
     "./shop": "./src/shop.ts",
-    "./sui-transfer": "./src/sui_transfer.ts"
+    "./sui-transfer": "./src/sui_transfer.ts",
+    "./seed-ids": "./src/seed_ids.ts"
   },
   "scripts": {
     "generate": "node scripts/generate_doors.mjs && node scripts/generate_seed_doors.mjs",
@@ -32,8 +34,8 @@
     "@aresrpg/immutable": "workspace:*",
     "@aresrpg/protocol": "workspace:*",
     "@mysten/enoki": "^1.2.3",
-    "@mysten/kiosk": "1.4.0",
-    "@mysten/sui": "2.24.0",
+    "@mysten/kiosk": "1.4.4",
+    "@mysten/sui": "2.26.2",
     "@mysten/wallet-standard": "^0.21.5"
   },
   "devDependencies": {

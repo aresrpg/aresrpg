@@ -122,6 +122,44 @@ describe('the world module', () => {
     expect(published.some(({ payload }) => payload.kind === 'appear')).toBe(false)
   })
 
+  test('mounting while standing still publishes — and a petless riding claim is clamped', async () => {
+    // owner 2026-08-21: mount/dismount rides the position stream, so a toggle with ZERO
+    // displacement must still reach the zone (the old "refit, not a move" gate ate it).
+    const rider = wire({ pet: true })
+    const mounted = create_player({
+      ws: rider.ws,
+      address: '0xme',
+      admin: false,
+      graph: rider.graph,
+      pubsub: rider.pubsub,
+    })
+    await flush()
+    mounted.on_message(JSON.stringify({ type: 'packet/embody', character_id: '0xabc' }))
+    await flush()
+    const before = rider.published.length
+    mounted.on_message(JSON.stringify({ type: 'packet/position', x: 100, y: 0, z: 100, riding: true }))
+    const toggle = rider.published.slice(before).filter(({ payload }) => payload.kind === 'move')
+    expect(toggle).toHaveLength(1)
+    expect(toggle[0]!.payload.riding).toBe(true)
+
+    // no pet equipped: the claim is a lie and the server clamps it to false
+    const walker = wire()
+    const walking = create_player({
+      ws: walker.ws,
+      address: '0xme',
+      admin: false,
+      graph: walker.graph,
+      pubsub: walker.pubsub,
+    })
+    await flush()
+    walking.on_message(JSON.stringify({ type: 'packet/embody', character_id: '0xabc' }))
+    await flush()
+    walking.on_message(JSON.stringify({ type: 'packet/position', x: 101, y: 0, z: 100, riding: true }))
+    const claimed = walker.published.filter(({ payload }) => payload.kind === 'move')
+    expect(claimed).toHaveLength(1)
+    expect(claimed[0]!.payload.riding).toBe(false)
+  })
+
   test('an impossible move drops the connection', async () => {
     const { ws, graph, pubsub, dropped } = wire()
     const player = create_player({ ws, address: '0xme', admin: false, graph, pubsub })
@@ -132,10 +170,10 @@ describe('the world module', () => {
     // semantics): a player who walked 500 blocks off-anchor since a 60s-old checkpoint is
     // LEGAL (500/60 ≈ 8.3 b/s) — the 2026-08-19 bug priced it against embody wall-clock and
     // drop-looped every session into load-snapshot spam.
-    player.on_message(JSON.stringify({ type: 'packet/position', x: 600, y: 0, z: 100 }))
+    player.on_message(JSON.stringify({ type: 'packet/position', x: 600, y: 0, z: 100, riding: false }))
     expect(dropped).toEqual([])
     // 10,000 further blocks in one tick — far past any authored budget
-    player.on_message(JSON.stringify({ type: 'packet/position', x: 10600, y: 0, z: 100 }))
+    player.on_message(JSON.stringify({ type: 'packet/position', x: 10600, y: 0, z: 100, riding: false }))
     expect(dropped).toEqual(['SPEED'])
   })
 
@@ -148,13 +186,13 @@ describe('the world module', () => {
     await flush()
     player.on_message(JSON.stringify({ type: 'packet/embody', character_id: '0xabc' }))
     await flush()
-    player.on_message(JSON.stringify({ type: 'packet/position', x: 600, y: 0, z: 100 }))
+    player.on_message(JSON.stringify({ type: 'packet/position', x: 600, y: 0, z: 100, riding: false }))
     // six buffered samples land back-to-back, one block apart — 6 blocks in ~0ms, all legal
     for (let step = 1; step <= 6; step++)
-      player.on_message(JSON.stringify({ type: 'packet/position', x: 600 + step, y: 0, z: 100 }))
+      player.on_message(JSON.stringify({ type: 'packet/position', x: 600 + step, y: 0, z: 100, riding: false }))
     expect(dropped).toEqual([])
     // the bank is finite: a same-instant TELEPORT still overdraws it
-    player.on_message(JSON.stringify({ type: 'packet/position', x: 700, y: 0, z: 100 }))
+    player.on_message(JSON.stringify({ type: 'packet/position', x: 700, y: 0, z: 100, riding: false }))
     expect(dropped).toEqual(['SPEED'])
   })
 
@@ -173,7 +211,7 @@ describe('the world module', () => {
     await flush()
     // 850 blocks over the checkpoint's 60s budget: ~14.2 b/s — above 11.5 (walk), below
     // 17.25 (mounted). The budget prices distance-from-anchor over elapsed-since-anchor.
-    walking.on_message(JSON.stringify({ type: 'packet/position', x: 950, y: 0, z: 100 }))
+    walking.on_message(JSON.stringify({ type: 'packet/position', x: 950, y: 0, z: 100, riding: false }))
     expect(walker.dropped).toEqual(['SPEED'])
 
     const rider = wire({ pet: true })
@@ -187,7 +225,7 @@ describe('the world module', () => {
     await flush()
     riding.on_message(JSON.stringify({ type: 'packet/embody', character_id: '0xabc' }))
     await flush()
-    riding.on_message(JSON.stringify({ type: 'packet/position', x: 950, y: 0, z: 100 }))
+    riding.on_message(JSON.stringify({ type: 'packet/position', x: 950, y: 0, z: 100, riding: true }))
     expect(rider.dropped).toEqual([])
   })
 
@@ -283,7 +321,7 @@ describe('the world module', () => {
     player.on_message(JSON.stringify({ type: 'packet/embody', character_id: '0xabc' }))
     await flush()
     published.length = 0
-    player.on_message(JSON.stringify({ type: 'packet/position', x: 100.3, y: 0, z: 100.3 }))
+    player.on_message(JSON.stringify({ type: 'packet/position', x: 100.3, y: 0, z: 100.3, riding: false }))
     expect(published.every(({ payload }) => payload.kind === 'move')).toBe(true)
   })
 })

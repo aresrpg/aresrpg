@@ -26,7 +26,6 @@ import {
   absorb_object,
   owned_ref,
   receipt_digest,
-  receipt_gas_ref,
   shared_ref,
   type Receipt,
   type FetchedObject,
@@ -84,6 +83,12 @@ export interface SuiTransport {
 
 export type SdkNetwork = 'testnet' | 'mainnet'
 
+/** The one gas budget, for every transaction (owner 2026-08-21: "it should never go above that
+ *  anyway"). A budget is RESERVED, not spent — the unused part never leaves the address — and
+ *  pinning it is what removes the estimation dry run. A PTB that outgrows it is refused at the
+ *  dry run with `GasBudgetExceeded`, never submitted. */
+export const GAS_BUDGET_MIST = 100_000_000n
+
 export type TransactionSigner = (
   transaction: Transaction
 ) => Promise<Readonly<{ bytes: string | Uint8Array; signature: string }>>
@@ -119,6 +124,9 @@ export type Resolvable =
 /** The composition context every generated door receives. */
 export type DoorCtx = {
   pins: Pins
+  /** Addresses that NAME published types on-chain (first-publish ids) — never move-call targets. */
+  game_type_package: string | null
+  math_type_package: string | null
   obj: (tx: Transaction, value: Resolvable, mutable: boolean) => TransactionObjectArgument
   pin: (tx: Transaction, key: string, mutable: boolean) => TransactionObjectArgument
   receiving: (tx: Transaction, value: Resolvable) => TransactionObjectArgument
@@ -197,11 +205,30 @@ export function SDK({
     throw new Error('[sdk] SDK({ client }), SDK({ rpc_url }), or SDK({ graphql_url }) needs a chain transport')
   if (!pins) throw new Error(`[sdk] unknown network "${network}" — pins.json carries no entry for it`)
 
+  // On-chain type arguments name types by their FIRST-publish package address forever;
+  // pins.package / pins.math_package follow the latest upgrade's package object and are
+  // move-call targets only. Raw reads — the pins proxy fails fast on missing pins.
+  const defining_package = (key: 'package' | 'math_package'): string | null => {
+    const original = pins[`${key}_original`]
+    if (typeof original === 'string' && original) return original
+    const latest = pins[key]
+    return typeof latest === 'string' && latest ? latest : null
+  }
+  const game_type_package = defining_package('package')
+  const math_type_package = defining_package('math_package')
+
   // the kiosk client rides the same transport (structurally identical at the core seam)
   const kiosk_client = new KioskClient({
     client: sui_client as ConstructorParameters<typeof KioskClient>[0]['client'],
     network,
   })
+  // THE KIOSK LINEAGE SPLIT (2026-08-21, measured the hard way): the game's `kiosk_package`
+  // pin is an UPGRADE of Mysten's rules lineage (bd8fc194 v1 → official 0x06f6 v2, which
+  // defines personal_kiosk → the game's v3). Sui refuses two versions of one lineage in a
+  // transaction, and the game package links v3 — so CALLS (borrow_val/return_val) must
+  // target the pin. But owned-object TYPE FILTERS use the DEFINING version (v2, the SDK's
+  // network default) — so LOOKUPS must use the default client. One id serving both jobs is
+  // the trap that blinded getOwnedKiosks ("no personal kiosk" for a 27-cap wallet).
   const { kiosk_package } = pins
   const kiosk_transaction_client =
     typeof kiosk_package === 'string' && kiosk_package
@@ -214,7 +241,6 @@ export function SDK({
   const cache = create_cache()
   const pure_inputs = new WeakMap<Transaction, Map<string, TransactionArgument>>()
   let execution_tail: Promise<unknown> = Promise.resolve()
-  let latest_gas_ref: ReturnType<typeof receipt_gas_ref> = undefined
   const sender = address ?? signer?.toSuiAddress() ?? null
   const gas_ledger = create_gas_ledger({ address: sender, network })
   const balance = create_balance_cache({
@@ -269,6 +295,8 @@ export function SDK({
         return value
       },
     }),
+    game_type_package,
+    math_type_package,
     obj: resolve,
     pin: (tx, key, mutable) => {
       const entry = pins[key]
@@ -319,39 +347,92 @@ export function SDK({
     return cache
   }
 
+  const unresolved_ids = (ids: readonly string[]): readonly string[] =>
+    ids.filter((id) => !owned_ref(cache, id) && !shared_ref(cache, id))
+
   const hydrate = async (ids: readonly string[] = []) => {
     await hydrate_objects(ids)
     return cache
   }
 
   /** Fetch only the ids the cache does not already know — shared objects keep their initial
-   *  version for life, so a known ref is never worth a second network read. */
+   *  version for life, so a known ref is never worth a second network read. Absence is DATA
+   *  here: callers that merely ask whether an object exists yet get their answer, not a throw. */
   const hydrate_unknown = async (ids: readonly string[]) => {
-    const unknown = [...new Set(ids)].filter((id) => !owned_ref(cache, id) && !shared_ref(cache, id))
+    const unknown = unresolved_ids([...new Set(ids)])
     if (unknown.length) await hydrate_objects(unknown)
     return cache
   }
 
-  // A failed result's honest message, whatever depth the error hides at.
+  /** READ-AFTER-WRITE (2026-08-21, the duel join): a peer hands us an object id the moment
+   *  THEIR transaction commits, and our fullnode can still be a checkpoint behind — the fetch
+   *  comes back empty, absorbs nothing, says nothing, and the failure surfaces later as
+   *  "hydrate it first" about an object we HAD just hydrated. For an id that MUST exist, a
+   *  short bounded wait covers the lag; past it, the id that never arrived throws here,
+   *  naming itself. Ids whose absence is a legitimate answer use `hydrate_unknown`. */
+  const HYDRATE_WAITS_MS = Object.freeze([150, 400, 900, 1_800])
+  const hydrate_required = async (ids: readonly string[]) => {
+    const wanted = [...new Set(ids)]
+    await hydrate_unknown(wanted)
+    // a node that is behind can also fail the read itself — that failure is carried, not
+    // swallowed: it becomes the reason in the throw if the object never shows up
+    let last_failure: unknown = null
+    for (const wait_ms of HYDRATE_WAITS_MS) {
+      if (!unresolved_ids(wanted).length) return cache
+      await new Promise((resolve) => setTimeout(resolve, wait_ms))
+      last_failure = await hydrate_objects(unresolved_ids(wanted)).then(
+        () => null,
+        (error: unknown) => error
+      )
+    }
+    const missing = unresolved_ids(wanted)
+    if (missing.length)
+      throw new Error(
+        `[sdk] the chain never showed ${missing.join(', ')} — it does not exist, or this node is still behind` +
+          (last_failure ? ` (last read failed: ${String(last_failure)})` : '')
+      )
+    return cache
+  }
+
+  // A failed result's honest message, whatever depth the error hides at. The FailedTransaction
+  // branch is how a failed simulation normally arrives, but a `success: false` status inside the
+  // Transaction branch is the same verdict wearing a different hat — read BOTH, or a tx that the
+  // simulation already refused would submit anyway and burn its gas for the same failure.
   const failure_of = (result: Receipt): string | null => {
     const failed =
       result?.FailedTransaction ??
       (result?.$kind === 'FailedTransaction' ? (result as { effects?: { status?: unknown } }) : null)
-    if (!failed) return null
-    const status = (failed.effects as { status?: { error?: { message?: string } | string } } | undefined)?.status
+    const effects = (failed ?? result?.Transaction ?? result)?.effects as
+      { status?: { success?: boolean; error?: { message?: string } | string | null } } | undefined
+    const status = effects?.status
+    if (!failed && status?.success !== false) return null
     const error = status?.error
     if (error && typeof error === 'object') return error.message ?? JSON.stringify(error)
     return error ?? JSON.stringify('unknown')
   }
 
+  /** A dry run refused for gas is TWO different sentences, and only one of them is the player's
+   *  fault. The budget is ours and constant, so `InsufficientGas` means the action outgrew it —
+   *  a bug to fix here, never "top up your wallet". The raw verdict is deliberately NOT quoted:
+   *  the app's out-of-SUI prompt watches for that vocabulary. */
+  const GAS_BUDGET_REFUSAL = /insufficient.?gas|gas.?budget/i
+  const refusal_error = (refusal: string): Error =>
+    GAS_BUDGET_REFUSAL.test(refusal)
+      ? new Error(`[sdk] gas budget exceeded — this action needs more than ${GAS_BUDGET_MIST} MIST; NOT submitted`)
+      : new Error(`[sdk] dry run failed — transaction NOT submitted (zero gas): ${refusal}`)
+
   // ── execute: fully-formed tx in, sub-second receipt out — and a tx that would FAIL never
   // leaves the client (owner 2026-08-12): resolve gas, sign ONCE, SIMULATE the exact
   // bytes, refuse on any simulated failure (zero gas, no digest), then submit those same bytes.
   // An EXECUTED failure still throws and is never auto-retried (a digest exists = gas burned).
+  // GAS PAYMENT IS THE RESOLVER'S (2026-08-21, the duel incident): the SDK used to pin the
+  // receipt's gas coin onto the next transaction, with no fallback when that single ref stopped
+  // covering the budget. Which coin — or whether a coin is involved at all — depends on how the
+  // address holds its SUI (Coin objects vs an address balance), and only the resolver knows.
+  // The BUDGET is ours and constant, which is what removes the estimation dry run.
   const prepare_transaction = async (tx: Transaction, sender_address: string, { budget = gas_budget } = {}) => {
     tx.setSenderIfNotSet(sender_address)
-    if (budget !== undefined) tx.setGasBudgetIfNotSet(budget)
-    if (latest_gas_ref && !tx.getData().gasData.payment) tx.setGasPayment([latest_gas_ref])
+    tx.setGasBudgetIfNotSet(budget ?? GAS_BUDGET_MIST)
     await tx.build({ client: sui_client as never })
   }
 
@@ -361,17 +442,11 @@ export function SDK({
     { include }: { include?: object } = {}
   ) => {
     const raw = typeof bytes === 'string' ? fromBase64(bytes) : bytes
-    const simulation = await sui_client.core.simulateTransaction({ transaction: raw, include: { effects: true } })
-    const refusal = failure_of(simulation)
-    if (refusal !== null) throw new Error(`[sdk] dry run failed — transaction NOT submitted (zero gas): ${refusal}`)
-
     const receipt = await sui_client.core.executeTransaction({
       transaction: raw,
       signatures: [signature],
       include: { effects: true, events: true, ...include },
     })
-    const fresh_gas_ref = sender ? receipt_gas_ref(receipt, sender) : undefined
-    if (fresh_gas_ref !== undefined) latest_gas_ref = fresh_gas_ref
     gas_ledger.record(receipt)
     if (sender) balance.invalidate(sender)
     if (receipt?.$kind === 'FailedTransaction') {
@@ -398,15 +473,16 @@ export function SDK({
   ) => {
     if (!sender) throw new Error('[sdk] execute needs an address')
     await prepare_transaction(tx, sender, { budget })
-    if (sign_transaction) {
-      const unsigned = await tx.build()
-      const preflight = await sui_client.core.simulateTransaction({
-        transaction: unsigned,
-        include: { effects: true },
-      })
-      const refusal = failure_of(preflight)
-      if (refusal !== null) throw new Error(`[sdk] dry run failed — transaction NOT submitted (zero gas): ${refusal}`)
-    }
+    // THE ONE DRY RUN (owner 2026-08-21: a transaction is strictly two roundtrips). It runs on
+    // the UNSIGNED bytes — a signature is not part of what a simulation sees, so these are the
+    // exact bytes that will be submitted — and it runs BEFORE signing, so a doomed transaction
+    // never opens the player's wallet. A refusal here means nothing was submitted: zero gas.
+    const preflight = await sui_client.core.simulateTransaction({
+      transaction: await tx.build(),
+      include: { effects: true },
+    })
+    const refusal = failure_of(preflight)
+    if (refusal !== null) throw refusal_error(refusal)
     const signed = signer ? await tx.sign({ signer }) : sign_transaction ? await sign_transaction(tx) : null
     if (!signed) throw new Error('[sdk] execute needs a signer')
     const { bytes, signature } = signed
@@ -429,7 +505,8 @@ export function SDK({
   }
 
   const execute_personal_kiosk = async (tx: Transaction, cap: KioskOwnerCap | null) => {
-    const receipt = await execute(tx, cap ? {} : { include: { objectTypes: true } })
+    // objectTypes always rides: callers fold their own minted/touched items from it
+    const receipt = await execute(tx, { include: { objectTypes: true } })
     const kiosk_cap = cap ?? receipt_personal_kiosk_cap(receipt)
     if (!kiosk_cap)
       throw new Error(
@@ -455,12 +532,16 @@ export function SDK({
   return {
     network,
     pins,
+    game_type_package,
+    math_type_package,
     cache,
     sui_client,
     hydrate,
     hydrate_objects,
     hydrate_unknown,
-    get_owned_kiosks: (address: string) => kiosk_transaction_client.getOwnedKiosks({ address }),
+    hydrate_required,
+    // lookup by the DEFINING package (the default client) — see the lineage-split note above
+    get_owned_kiosks: (address: string) => kiosk_client.getOwnedKiosks({ address }),
     get_owned_transfer_policies: (address: string) => kiosk_client.getOwnedTransferPolicies({ address }),
     get_transfer_policies: (type: string) => kiosk_client.getTransferPolicies({ type }),
     transfer_policy_transaction: (transaction: Transaction, rule_package?: string) =>

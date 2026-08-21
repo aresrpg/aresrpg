@@ -31,7 +31,9 @@ mod tests {
     use std::process::Command;
 
     use move_binary_format::binary_config::BinaryConfig;
-    use move_binary_format::file_format::{CompiledModule, SignatureToken, StructFieldInformation};
+    use move_binary_format::file_format::{
+        Bytecode, CompiledModule, SignatureToken, SignatureToken as Sig, StructFieldInformation,
+    };
 
     /// Every datatype the projection reads, per build — THE dependency
     /// manifest. Adding a projection arm means adding its row here.
@@ -48,6 +50,7 @@ mod tests {
         ("shop", "Giftcard"),
         ("loot_box", "BoxClaim"),
         ("forgemagie", "CrushClaim"),
+        ("trade", "Trade"),
         ("version", "Version"),
         ("world", "World"),
         // embedded value types
@@ -60,6 +63,7 @@ mod tests {
         ("progression", "Hp"),
         ("forgemagie", "ForgeState"),
         ("pet", "FeedState"),
+        ("party", "Member"),
         ("fight", "Fighter"),
         ("fight", "FighterKind"),
         ("fight", "MobSnapshot"),
@@ -94,18 +98,27 @@ mod tests {
         ("dungeon", "DungeonRoomCleared"),
         ("dungeon", "DungeonEnded"),
         ("fight", "FightCreated"),
+        ("fight", "FighterJoined"),
+        ("fight", "FighterForfeited"),
         ("fight", "FightStarted"),
+        ("fight", "TurnSeedUsed"),
         ("fight", "FightEnded"),
         ("fight", "DropsRolled"),
         ("zone", "ZoneSearched"),
         ("gathering", "ResourceGathered"),
         ("gathering", "RareGathered"),
         ("party", "PartyCreated"),
+        ("party", "PartyInvited"),
         ("party", "PartyJoined"),
         ("party", "PartyLeft"),
         ("friends", "FriendListCreated"),
         ("friends", "FriendAdded"),
         ("friends", "FriendRemoved"),
+        ("trade", "TradeCreated"),
+        ("trade", "TradeChanged"),
+        ("trade", "TradeAccepted"),
+        ("trade", "TradeLocked"),
+        ("trade", "TradeDestroyed"),
         ("kolizeum", "KolizeumCreated"),
         ("kolizeum", "KolizeumPaid"),
         ("shop", "SaleBought"),
@@ -143,7 +156,9 @@ mod tests {
     ];
 
     /// Events the projection DELIBERATELY does not route — each entry needs a
-    /// reason. Empty today: everything the chain emits is on the wire.
+    /// reason. `world::WorldCreated` fires once per world at seeding time, before
+    /// any player can be watching, and the World object's own projection carries
+    /// everything the event would have said.
     const DEFERRED_EVENTS: &[(&str, &str)] = &[("world", "WorldCreated")];
 
     fn repo_root() -> PathBuf {
@@ -347,6 +362,55 @@ mod tests {
         );
     }
 
+    /// THE ZONE UNIT IS THE CHAIN'S (2026-08-21). `events.rs` routes a fight to
+    /// `evt:zone:{world}:{x/ZONE_SIZE}:{z/ZONE_SIZE}` from a Rust const that Rust cannot
+    /// import from Move — so it is pinned HERE, against the compiled accessor. A zone_math
+    /// change reds this in the same commit instead of silently mis-routing every zone
+    /// channel (the server would subscribe squares that no longer exist).
+    #[test]
+    fn the_indexer_zone_size_is_the_compiled_one() {
+        let root = repo_root();
+        let math =
+            load_modules(&root.join("packages/move-math/build/aresrpg_math/bytecode_modules"));
+        let module = math
+            .get("zone_math")
+            .expect("zone_math is part of the math build");
+
+        let accessor = module
+            .function_defs()
+            .iter()
+            .find(|def| {
+                let handle = module.function_handle_at(def.function);
+                module.identifier_at(handle.name).as_str() == "zone_size"
+            })
+            .expect("zone_math::zone_size is the constant's only public witness");
+        let code = &accessor
+            .code
+            .as_ref()
+            .expect("zone_size has a body")
+            .code;
+
+        // the accessor is `LdConst(ZONE_SIZE); Ret` — any other shape means the constant
+        // moved and this gate can no longer speak for it
+        let [Bytecode::LdConst(index), Bytecode::Ret] = code[..] else {
+            panic!("zone_math::zone_size is no longer a plain constant load: {code:?}")
+        };
+        let constant = module.constant_at(index);
+        assert_eq!(constant.type_, Sig::U32, "zone_size returns a u32");
+        let bytes: [u8; 4] = constant
+            .data
+            .as_slice()
+            .try_into()
+            .expect("a u32 constant is four bytes");
+
+        assert_eq!(
+            u32::from_le_bytes(bytes),
+            crate::events::ZONE_SIZE,
+            "events.rs ZONE_SIZE drifted from zone_math::ZONE_SIZE — resync it, \
+             every evt:zone channel is derived from it"
+        );
+    }
+
     #[test]
     fn move_layouts_match_the_committed_snapshot() {
         let root = repo_root();
@@ -448,6 +512,22 @@ mod tests {
             assert!(
                 emitted.iter().any(|(m, n)| m == module && n == name),
                 "`{module}::{name}` is routed but no Move source emits it — dead route?"
+            );
+        }
+    }
+
+    /// The census proves every event is ROUTED; this proves every route is
+    /// PINNED. Without it a routed event's twin layout sits outside the parity
+    /// manifest, so a Move field change reds nothing and the decode goes
+    /// silently stale — the exact 2026-08-12 failure, one step removed.
+    #[test]
+    fn every_routed_event_layout_is_pinned() {
+        for (module, name) in crate::events::ROUTED {
+            assert!(
+                GAME.iter().any(|(m, n)| m == module && n == name),
+                "`{module}::{name}` is routed (events.rs) but absent from the GAME manifest — \
+                 its layout is unpinned, so a Move field change would red nothing. Add the row \
+                 and regenerate with `UPDATE_LAYOUTS=1 cargo test`"
             );
         }
     }

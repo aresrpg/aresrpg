@@ -1,0 +1,584 @@
+/* SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available */
+/* © 2026 Sceat — All rights reserved. See LICENSE. */
+/* The Stats tab's hud-panels.css half, ported verbatim (base .stats + every .stats__ rule —
+   including the owner's cap-and-center ruling on the sheet width). */
+
+/* ════════════════════════ STATS (character sheet) ════════════════════════
+ * Ported from the AresRPG dapp game-characteristic.vue (icon rows + `+` upgrade + capital + commit),
+ * rebuilt on Frosted Obsidian: per-stat icon chips with a muted tint, exact-xp meter, vitals strip,
+ * a read-only secondary section. ice-blue accent only on the `+` step + commit CTA. */
+.stats {
+  display: flex;
+  flex-flow: column nowrap;
+  gap: var(--s-2);
+  /* fit-to-viewport: fill the drawer slot, never grow past it. The hero + capital card stay pinned
+     while the stat sections scroll inside .stats__scroll (the inv/mkt/enc pinned-head + flex:1
+     min-height:0 scroll-body SSOT), so the player never scroll-hunts for the allocate CTA. */
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+  /* owner review #1 (8): in the wide companion detail panel the sheet stretched to ~980px, so a stat
+     label and its value sat far apart (hard to map). Cap + center the sheet so each row reads compact;
+     in the narrow in-world drawer (~440px) it still fills 100% (cap > width, auto margins are no-ops). */
+  width: 100%;
+  max-width: 600px;
+  margin-inline: auto;
+}
+
+/* pinned regions: identity + the points-to-assign CTA stay visible while the rest scrolls */
+.stats__hero,
+.stats__assign {
+  flex: none;
+}
+
+/* the scrolling remainder (vitals, characteristics, resistances, secondary) */
+.stats__scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-flow: column nowrap;
+  gap: var(--s-3);
+  /* dock clearance is the shared .hud-drawer__body --dock-clear (SSOT) — do not re-add it here. */
+  /* a hair of right padding so rows clear the scrollbar gutter */
+  padding-right: 2px;
+}
+
+/* hero header — portrait + identity + class + experience, on a faint tinted card */
+.stats__hero {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  padding: var(--s-3);
+  background: rgba(0, 0, 0, 0.22);
+  border: 1px solid var(--hair);
+  border-radius: var(--r-3);
+}
+
+.stats__hero-portrait {
+  flex: none;
+  width: 64px;
+  height: 64px;
+  border-radius: var(--r-2);
+  background: rgba(0, 0, 0, 0.28);
+  box-shadow: inset 0 0 0 1px var(--hair);
+}
+
+.stats__hero-body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-flow: column nowrap;
+  gap: 3px;
+}
+
+.stats__hero-top {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+}
+
+.stats__hero-name {
+  font-weight: 600;
+  font-size: 1.02rem;
+  letter-spacing: 0.01em;
+  color: var(--fg);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.stats__hero-lvl {
+  flex: none;
+  font-size: 0.66rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--accent);
+  padding: 1px var(--s-1);
+  background: var(--accent-dim);
+  border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
+  border-radius: var(--r-1);
+}
+
+.stats__hero-class {
+  font-size: 0.64rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--fg-faint);
+}
+
+.stats__hero-xp-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-top: 2px;
+}
+
+.stats__hero-xp-label {
+  font-size: 0.6rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--fg-faint);
+}
+
+.stats__hero-xp-value {
+  font-size: 0.72rem;
+  color: var(--fg-muted);
+}
+
+.stats__bar {
+  height: 7px;
+  border-radius: var(--r-1);
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid var(--hair);
+  overflow: hidden;
+}
+
+.stats__bar-fill {
+  height: 100%;
+  background: var(--bad);
+  transition: width var(--dur-2) var(--ease);
+}
+
+/* Experience = ice-blue (progression toward the next level) */
+.stats__bar-fill--xp {
+  background: linear-gradient(90deg, var(--accent), var(--accent-strong));
+  box-shadow: 0 0 8px var(--accent-glow);
+}
+
+/* vitals strip — health / action / movement, evenly split, each element-tinted */
+.stats__vitals {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--s-2);
+}
+
+.stats__vital {
+  display: flex;
+  flex-flow: column nowrap;
+  align-items: center;
+  gap: 2px;
+  padding: var(--s-2) var(--s-1);
+  background: color-mix(in srgb, var(--tint, transparent) 12%, rgba(0, 0, 0, 0.22));
+  border: 1px solid color-mix(in srgb, var(--tint, transparent) 26%, var(--hair));
+  border-radius: var(--r-2);
+}
+
+.stats__vital--health {
+  --tint: #ef5350;
+}
+
+.stats__vital--action {
+  --tint: var(--accent);
+}
+
+.stats__vital--move {
+  --tint: #66bb6a;
+}
+
+.stats__vital-icon {
+  width: 18px;
+  height: 18px;
+  object-fit: contain;
+}
+
+.stats__vital-label {
+  font-size: 0.6rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--fg-faint);
+}
+
+.stats__vital-value {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-size: 0.78rem;
+  color: var(--fg);
+}
+
+.stats__section {
+  font-size: 0.64rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--fg-faint);
+  margin-top: var(--s-1);
+}
+
+/* a stat card groups the rows on a faint tinted surface */
+.stats__card {
+  display: flex;
+  flex-flow: column nowrap;
+  background: rgba(0, 0, 0, 0.22);
+  border: 1px solid var(--hair);
+  border-radius: var(--r-2);
+  overflow: hidden;
+}
+
+/* PRIMARY (allocatable) row */
+.stats__prow {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  padding: var(--s-2) var(--s-3);
+}
+
+.stats__prow:not(:last-child) {
+  border-bottom: 1px solid var(--hair);
+}
+
+.stats__prow-icon {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  flex: none;
+  border-radius: var(--r-1);
+  background: color-mix(in srgb, var(--tint) 16%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--tint) 40%, transparent);
+}
+
+.stats__prow-icon img {
+  width: 16px;
+  height: 16px;
+  object-fit: contain;
+}
+
+/* label + sim-truth description stack — flex:1 + min-width:0 (flex children default to min-width:auto,
+   which would force the row wider instead of letting the wrapped #489 description line fit). */
+.stats__prow-labels {
+  display: flex;
+  flex-flow: column nowrap;
+  flex: 1;
+  min-width: 0;
+  gap: 2px;
+}
+
+.stats__prow-label {
+  font-size: 0.84rem;
+  color: var(--fg);
+}
+
+/* #489: full copy, wraps to fit the panel width — an explanatory sim-truth sentence must never
+   ellipsis-clip mid-sentence (Raw Damage observed). */
+.stats__prow-desc {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  color: var(--fg-faint);
+  white-space: normal;
+  overflow-wrap: break-word;
+}
+
+.stats__prow-value {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-size: 0.84rem;
+  color: var(--fg);
+  /* keep clear whitespace between the number and the +/- steppers */
+  margin-right: var(--s-1);
+}
+
+/* equipment contribution — the house accent softened into secondary ink. */
+.stats__prow-bonus {
+  color: color-mix(in srgb, var(--accent) 42%, var(--fg-muted));
+  font-size: 0.74rem;
+}
+
+/* current-session allocation — the orange "+N" (already correct, keep as-is). */
+.stats__prow-pending {
+  color: var(--accent);
+  font-size: 0.74rem;
+}
+
+/* Compact bridge for the shared btn-outline / btn-gold roles. Scoped to `.stats` (Stats.jsx's own root
+   div, present on every mount) rather than `.hud-root` — the Characters PAGE variant
+   (pages/characters.tsx → CharactersDrawer variant="page" → Stats) renders `.stats` OUTSIDE any
+   `.hud-root` ancestor, so a `.hud-root`-scoped rule silently never fired there and the buttons fell
+   back to bare browser-default `<button>` sizing (the "cramped 16-18px chip" report). `.stats
+   .stats__step` still out-specifies the `.hud-root button { background:none; border:none }
+
+` reset
+   ((0,2,0) beats (0,1,1)) on the drawer mount, so one rule now covers both surfaces. */
+.stats .stats__step {
+  width: 32px;
+  height: 32px;
+  flex: none;
+  line-height: 1;
+  font-size: 1.2rem;
+  font-weight: 700;
+  font-family: var(--font-mono);
+  display: grid;
+  place-items: center;
+  border-radius: var(--r-2);
+  cursor: pointer;
+  padding: 0;
+  transition:
+    background var(--dur-1) var(--ease),
+    color var(--dur-1) var(--ease),
+    border-color var(--dur-1) var(--ease),
+    box-shadow var(--dur-1) var(--ease);
+}
+
+.stats .stats__step.btn-outline {
+  color: var(--color-gold);
+  background: transparent;
+  border: 1px solid rgba(200, 150, 60, 0.3);
+}
+
+.stats__step.btn-outline:hover:not(:disabled) {
+  background: rgba(200, 150, 60, 0.08);
+  border-color: rgba(200, 150, 60, 0.6);
+  box-shadow: 0 0 20px rgba(200, 150, 60, 0.1);
+}
+
+.stats .stats__step--add.btn-gold {
+  color: #0a0a0f;
+  background: linear-gradient(135deg, var(--color-gold-dark), var(--color-gold), var(--color-gold-dark));
+  border: none;
+  box-shadow:
+    0 0 20px rgba(200, 150, 60, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.15);
+}
+
+.stats__step--add.btn-gold:hover:not(:disabled) {
+  box-shadow:
+    0 0 30px rgba(200, 150, 60, 0.4),
+    0 0 60px rgba(200, 150, 60, 0.15),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+}
+
+.stats__step.btn-outline:disabled,
+.stats__step--add.btn-gold:disabled {
+  opacity: 0.32;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+.stats__step.btn-outline:disabled {
+  background: transparent;
+  border-color: rgba(200, 150, 60, 0.3);
+}
+
+/* capital card — the "points to assign" (c198: obvious + prominent). Ice-blue when there is capital. */
+.stats__assign {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  padding: var(--s-2) var(--s-3);
+  background: rgba(0, 0, 0, 0.22);
+  border: 1px solid var(--hair);
+  border-radius: var(--r-3);
+  transition:
+    background var(--dur-2) var(--ease),
+    border-color var(--dur-2) var(--ease);
+}
+
+.stats__assign.is-active {
+  background: var(--accent-dim);
+  border-color: color-mix(in srgb, var(--accent) 40%, transparent);
+  box-shadow: 0 0 16px color-mix(in srgb, var(--accent) 18%, transparent);
+}
+
+.stats__assign-num {
+  flex: none;
+  width: 38px;
+  text-align: center;
+  font-size: 1.7rem;
+  line-height: 1;
+  font-weight: 600;
+  color: var(--fg-faint);
+}
+
+.stats__assign.is-active .stats__assign-num {
+  color: var(--accent);
+}
+
+.stats__assign-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-flow: column nowrap;
+  gap: 1px;
+}
+
+.stats__assign-title {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--fg);
+}
+
+.stats__assign-sub {
+  font-size: 0.64rem;
+  line-height: 1.25;
+  color: var(--fg-faint);
+}
+
+.stats__assign-actions {
+  flex: none;
+  display: flex;
+  gap: var(--s-1);
+}
+
+.hud-root .stats__assign-btn {
+  font-family: var(--font-mono);
+  font-size: 0.66rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--fg-muted);
+  background: var(--surface-2);
+  border: 1px solid var(--hair-strong);
+  border-radius: var(--r-1);
+  padding: var(--s-1) var(--s-2);
+  cursor: pointer;
+  transition:
+    color var(--dur-1) var(--ease),
+    background var(--dur-1) var(--ease),
+    border-color var(--dur-1) var(--ease);
+}
+
+.stats__assign-btn:hover:not(:disabled) {
+  color: var(--fg);
+  border-color: var(--hair-strong);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.hud-root .stats__assign-btn--confirm {
+  color: var(--accent-ink);
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+.stats__assign-btn--confirm:hover:not(:disabled) {
+  color: var(--accent-ink);
+  background: var(--accent-strong);
+  border-color: var(--accent-strong);
+}
+
+.stats__assign-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* RESISTANCES — a dedicated element-coloured block of four shield chips with fill bars */
+.stats__resists {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--s-2);
+}
+
+.stats__resist {
+  display: flex;
+  flex-flow: column nowrap;
+  gap: var(--s-1);
+  padding: var(--s-2) var(--s-1) calc(var(--s-1) + 1px);
+  background: color-mix(in srgb, var(--rc) 10%, rgba(0, 0, 0, 0.22));
+  border: 1px solid color-mix(in srgb, var(--rc) 30%, var(--hair));
+  border-radius: var(--r-2);
+  cursor: default;
+}
+
+.stats__resist-head {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.stats__resist-glyph {
+  flex: none;
+  width: 11px;
+  height: 11px;
+  color: var(--rc);
+}
+
+.stats__resist-label {
+  font-size: 0.56rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--fg-muted);
+}
+
+.stats__resist-value {
+  margin-left: auto;
+  font-size: 0.74rem;
+  font-weight: 600;
+  color: var(--fg);
+}
+
+.stats__resist-bar {
+  height: 3px;
+  border-radius: var(--r-1);
+  background: rgba(0, 0, 0, 0.35);
+  overflow: hidden;
+}
+
+.stats__resist-fill {
+  height: 100%;
+  min-width: 2px;
+  background: var(--rc);
+  border-radius: inherit;
+  transition: width var(--dur-2) var(--ease);
+}
+
+/* SECONDARY (read-only derived) rows — two-up grid, denser than the primaries */
+.stats__card--secondary {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+}
+
+.stats__srow {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  padding: var(--s-2) var(--s-3);
+  border-bottom: 1px solid var(--hair);
+  cursor: default;
+}
+
+/* drop the bottom hairline on the last row of each column */
+.stats__srow:nth-last-child(-n + 2) {
+  border-bottom: none;
+}
+
+.stats__srow:nth-child(odd) {
+  border-right: 1px solid var(--hair);
+}
+
+.stats__srow-mark {
+  flex: none;
+  width: 9px;
+  height: 9px;
+  border-radius: 2px;
+  background: var(--tint);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, #000 25%, transparent);
+}
+
+/* label + sim-truth description stack — same min-width:0 wrap seam as .stats__prow-labels. */
+.stats__srow-labels {
+  display: flex;
+  flex-flow: column nowrap;
+  flex: 1;
+  min-width: 0;
+  gap: 2px;
+}
+
+.stats__srow-label {
+  font-size: 0.78rem;
+  color: var(--fg-muted);
+}
+
+/* #489: full copy, wraps to fit the panel width — same no-ellipsis rule as .stats__prow-desc. */
+.stats__srow-desc {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: 0.6rem;
+  color: var(--fg-faint);
+  white-space: normal;
+  overflow-wrap: break-word;
+}
+
+.stats__srow-value {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-size: 0.8rem;
+  color: var(--fg);
+}

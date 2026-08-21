@@ -11,7 +11,7 @@ import { CHARACTER_HEIGHT, ground_height_below, resolve_movement, type SolidFn, 
 
 // ═══ GAME-FEEL TUNABLES (ported verbatim — the A/B history lives in the legacy source) ═══
 const WALK_SPEED = 4.8
-const RUN_SPEED = 10.5
+export const RUN_SPEED = 10.5
 const SWIM_SPEED = 10
 const GROUND_ACCEL = 50
 const GROUND_BRAKE = 160

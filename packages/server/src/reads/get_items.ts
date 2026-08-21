@@ -8,6 +8,8 @@ import type { ItemRow } from '@aresrpg/protocol'
 
 import { type Graph, type Node } from '../graph.ts'
 
+import { shape_item } from './stat_block.ts'
+
 export async function get_items(graph: Graph, { address }: { address: string }) {
   const rows = await graph.read(
     `
@@ -15,5 +17,5 @@ export async function get_items(graph: Graph, { address }: { address: string }) 
     RETURN i AS item, k.id AS kiosk`,
     { address }
   )
-  return rows.map(({ item, kiosk }) => ({ ...(item as Node)!.properties, kiosk })) as ItemRow[]
+  return rows.map(({ item, kiosk }) => ({ ...shape_item((item as Node)!.properties), kiosk })) as ItemRow[]
 }

@@ -31,7 +31,7 @@ use serde_json::json;
 use crate::decode::{self, Addr, Id};
 use crate::events;
 use crate::graph::MarketStamp;
-use crate::ownership::{ObjView, SUI_FRAMEWORK};
+use crate::ownership::{Custody, ObjView, OwnerKind, SUI_FRAMEWORK};
 
 /// One `PUBLISH channel payload`.
 #[derive(Debug, Clone, PartialEq)]
@@ -88,6 +88,7 @@ pub fn analyze(ckpt: u64, ts_ms: u64, txs: &[TxView<'_>], game: &str) -> anyhow:
     for tx in txs {
         route_game_events(&mut wire, ckpt, ts_ms, tx, game)?;
         route_game_state(&mut wire, ckpt, ts_ms, tx, game)?;
+        route_item_writes(&mut wire, ckpt, ts_ms, tx, game)?;
         analyze_kiosk_market(&mut wire, ckpt, ts_ms, tx, game)?;
 
         analyze_shop_sales(&mut wire, ckpt, ts_ms, tx, game)?;
@@ -131,6 +132,78 @@ fn route_game_state(
         });
     }
     Ok(())
+}
+
+/// Every game Item OUTPUT reaches its holder as a STREAM, never a client pull:
+/// a mint's receipt cannot carry the rolled contents, and a client request
+/// would race the projection — so the projection itself is the trigger (the
+/// `route_game_state` precedent: object outputs, no Move event required).
+/// `holder` is the owning parent (a kiosk for inventory, a character when
+/// equipped); the server scopes delivery to the players whose kiosk it is.
+fn route_item_writes(
+    wire: &mut Wire,
+    ckpt: u64,
+    ts_ms: u64,
+    tx: &TxView<'_>,
+    game: &str,
+) -> anyhow::Result<()> {
+    for (index, output) in tx.outputs.iter().enumerate() {
+        if output.type_key.package != game
+            || output.type_key.module != "item"
+            || output.type_key.name != "Item"
+        {
+            continue;
+        }
+        let OwnerKind::Object(holder) = output.owner else {
+            continue;
+        };
+        wire.publications.push(Publication {
+            channel: "evt:economy".into(),
+            payload: envelope(
+                ckpt,
+                tx.tx_index,
+                index as u64,
+                ts_ms,
+                "ItemWritten",
+                json!({ "item": output.id.hex(), "holder": holder.hex() }),
+            ),
+        });
+    }
+    Ok(())
+}
+
+/// Every fight SEAT reaches its own character's channel — the seat is CUSTODY, not an
+/// event. `FighterJoined` witnesses only the seats taken by a join; a fight's creator
+/// (a duel challenge, a mob engage, a gathering ambush) takes seat 0 at BIRTH with no
+/// join at all, so the player whose character sits in it heard nothing and never entered
+/// the fight. The projection is the trigger (the `route_item_writes` precedent): one
+/// mechanism for every seat, however it was taken.
+pub fn route_fight_seats(wire: &mut Wire, ckpt: u64, ts_ms: u64, custody: &[Custody]) {
+    for (index, fact) in custody.iter().enumerate() {
+        let Custody::FightSeats {
+            fight,
+            seat,
+            character,
+        } = fact
+        else {
+            continue;
+        };
+        wire.publications.push(Publication {
+            channel: format!("evt:character:{}", character.hex()),
+            payload: envelope(
+                ckpt,
+                0,
+                index as u64,
+                ts_ms,
+                "CharacterSeated",
+                json!({
+                    "fight": fight.hex(),
+                    "character": character.hex(),
+                    "seat": seat,
+                }),
+            ),
+        });
+    }
 }
 
 fn envelope(
@@ -196,6 +269,25 @@ fn route_game_events(
                     channel: format!("evt:social:{creator}"),
                     payload: payload.clone(),
                 });
+            }
+        }
+        // fight-phase MIRROR: the roster's watchers hear starts/ends on the fight channel,
+        // but the ZONE's bystanders (sword markers) need the same facts — the events carry
+        // their anchor precisely for this fan-out.
+        if matches!(routed.kind, "FightStarted" | "FightEnded") {
+            if let (Some(world), Some(x), Some(z)) = (
+                routed.data["world"].as_str(),
+                routed.data["x"].as_u64(),
+                routed.data["z"].as_u64(),
+            ) {
+                // the MIRROR is best-effort; the fight's own channel below is not. An anchor
+                // this fan-out cannot read must never cost the participants their event.
+                if let (Ok(x), Ok(z)) = (u32::try_from(x), u32::try_from(z)) {
+                    wire.publications.push(Publication {
+                        channel: crate::events::zone_topic(world, x, z),
+                        payload: payload.clone(),
+                    });
+                }
             }
         }
         wire.publications.push(Publication {
@@ -452,22 +544,34 @@ fn analyze_shop_sales(
         let e: events::SaleBought = decode::from_bytes(event.bytes)?;
         // the minted stack (or the stack it merged into) is an output of the
         // same tx; the mutated Sale names the template that ties them.
-        let template = tx.outputs.iter().find_map(|o| {
-            (o.type_key.package == game && o.type_key.name == "Sale" && o.id == e.sale).then(
-                || {
-                    decode::from_bytes::<decode::Sale>(o.bytes)
-                        .ok()
-                        .map(|s| s.template)
-                },
-            )?
-        });
-        let bought = template.and_then(|template| {
-            tx.outputs.iter().find_map(|o| {
-                (o.type_key.package == game && o.type_key.name == "Item")
-                    .then(|| decode::from_bytes::<decode::Item>(o.bytes).ok())?
-                    .filter(|i| i.template == template)
+        // A type-matched output that will not decode is LAYOUT DRIFT, never noise: it errors
+        // the checkpoint like every other decode here, instead of quietly dropping the row.
+        let template = tx
+            .outputs
+            .iter()
+            .find(|o| o.type_key.package == game && o.type_key.name == "Sale" && o.id == e.sale)
+            .map(|o| {
+                decode::from_bytes::<decode::Sale>(o.bytes).map_err(|error| {
+                    anyhow::anyhow!("layout drift: shop::Sale {} failed decode: {error}", o.id.hex())
+                })
             })
-        });
+            .transpose()?
+            .map(|sale| sale.template);
+        let Some(template) = template else {
+            continue;
+        };
+        let bought = tx
+            .outputs
+            .iter()
+            .filter(|o| o.type_key.package == game && o.type_key.name == "Item")
+            .map(|o| {
+                decode::from_bytes::<decode::Item>(o.bytes).map_err(|error| {
+                    anyhow::anyhow!("layout drift: item::Item {} failed decode: {error}", o.id.hex())
+                })
+            })
+            .collect::<anyhow::Result<Vec<_>>>()?
+            .into_iter()
+            .find(|i| i.template == template);
         let Some(item) = bought else {
             continue;
         };
@@ -554,6 +658,62 @@ mod tests {
             amount,
         })
         .unwrap()
+    }
+
+    #[test]
+    fn a_projected_item_output_streams_to_its_holder() {
+        let item_type = ty(GAME, "item", "Item");
+        let bytes = item_bytes(3, "wool", 1);
+        let outputs = [ObjView {
+            id: Id([3; 32]),
+            owner: OwnerKind::Object(Id([77; 32])),
+            type_key: &item_type,
+            bytes: &bytes,
+        }];
+        let tx = TxView {
+            tx_index: 2,
+            sender: Addr([7; 32]),
+            move_calls: &[],
+            events: &[],
+            inputs: &[],
+            outputs: &outputs,
+        };
+
+        let wire = analyze(60, 4_000, &[tx], GAME).unwrap();
+
+        assert_eq!(wire.publications.len(), 1);
+        assert_eq!(wire.publications[0].channel, "evt:economy");
+        let payload: serde_json::Value =
+            serde_json::from_str(&wire.publications[0].payload).unwrap();
+        assert_eq!(payload["type"], "ItemWritten");
+        assert_eq!(payload["data"]["item"], Id([3; 32]).hex());
+        assert_eq!(payload["data"]["holder"], Id([77; 32]).hex());
+    }
+
+    #[test]
+    fn an_address_owned_item_output_stays_silent() {
+        // only PARENTED items stream (kiosk inventory / character equipment) — an
+        // address-owned Item is outside game custody and has no holder to scope to
+        let item_type = ty(GAME, "item", "Item");
+        let bytes = item_bytes(4, "wool", 1);
+        let outputs = [ObjView {
+            id: Id([4; 32]),
+            owner: OwnerKind::Address(Addr([8; 32])),
+            type_key: &item_type,
+            bytes: &bytes,
+        }];
+        let tx = TxView {
+            tx_index: 2,
+            sender: Addr([7; 32]),
+            move_calls: &[],
+            events: &[],
+            inputs: &[],
+            outputs: &outputs,
+        };
+
+        let wire = analyze(60, 4_000, &[tx], GAME).unwrap();
+
+        assert!(wire.publications.is_empty());
     }
 
     #[test]
@@ -765,8 +925,12 @@ mod tests {
             outputs: &outputs,
         };
         let wire = analyze(55, 9_000, &[tx], GAME).unwrap();
-        // SaleBought is a game event too → 1 publication + 1 row + 1 stamp
-        assert_eq!(wire.publications.len(), 1);
+        // SaleBought is a game event AND the minted item streams → 2 publications
+        assert_eq!(wire.publications.len(), 2);
+        assert!(wire
+            .publications
+            .iter()
+            .any(|p| p.payload.contains("ItemWritten")));
         assert_eq!(wire.sales.len(), 1);
         assert!(wire.sales[0].member.starts_with("55:0:2|"));
         assert_eq!(wire.market[0].price_per_unit_mist, 100);
@@ -806,7 +970,11 @@ mod tests {
         };
         let wire = analyze(100, 1_000, &[tx], GAME).unwrap();
         assert!(wire.sales.is_empty() && wire.market.is_empty());
-        assert!(wire.publications.is_empty());
+        // the item WRITE itself still streams (its custody moved) — but nothing money-shaped
+        assert!(wire
+            .publications
+            .iter()
+            .all(|p| p.payload.contains("ItemWritten")));
     }
 
     #[test]
@@ -911,5 +1079,88 @@ mod tests {
         assert!(channels.contains(&format!("evt:social:0x{}", "09".repeat(32)).as_str()));
         assert!(channels.contains(&format!("evt:social:0x{}", "07".repeat(32)).as_str()));
         assert_eq!(wire.publications.len(), 2);
+    }
+
+    #[test]
+    fn fighter_joined_lands_on_the_fight_door_alone() {
+        #[derive(serde::Serialize)]
+        struct Wire {
+            fight: [u8; 32],
+            character: [u8; 32],
+            team: u8,
+        }
+        let bytes = bcs::to_bytes(&Wire {
+            fight: [1; 32],
+            character: [5; 32],
+            team: 1,
+        })
+        .unwrap();
+        let events = [EventView {
+            package: GAME,
+            module: "fight",
+            name: "FighterJoined",
+            type_params: &[],
+            bytes: &bytes,
+            index: 0,
+        }];
+        let tx = TxView {
+            tx_index: 0,
+            sender: Addr([5; 32]),
+            move_calls: &[],
+            events: &events,
+            inputs: &[],
+            outputs: &[],
+        };
+        let wire = analyze(1, 1, &[tx], GAME).unwrap();
+        let channels: Vec<_> = wire
+            .publications
+            .iter()
+            .map(|p| p.channel.as_str())
+            .collect();
+        // the fight door only — the roster watchers (a duel's opener, teammates in placement)
+        // see the seat fill. The joiner's OWN watch arms from the custody fact instead, the
+        // one witness that also covers the creator's seat 0.
+        assert_eq!(channels, vec![format!("evt:fight:0x{}", "01".repeat(32))]);
+    }
+
+    #[test]
+    fn a_seat_taken_at_fight_birth_reaches_its_own_character_door() {
+        // THE DUEL INCIDENT (2026-08-21): a challenger's transaction created the fight and
+        // sealed his character in seat 0, emitting FightCreated and nothing else. His client
+        // arms its fight stream on the OWN-CHARACTER door alone, so he stayed in the
+        // overworld with an empty roster while his character sat on a board he could not
+        // see. A birth carries NO FighterJoined — only the custody fact witnesses seat 0.
+        let custody = [Custody::FightSeats {
+            fight: Id([1; 32]),
+            seat: 0,
+            character: Id([5; 32]),
+        }];
+        let mut wire = Wire::default();
+        route_fight_seats(&mut wire, 7, 42, &custody);
+        assert_eq!(wire.publications.len(), 1);
+        assert_eq!(
+            wire.publications[0].channel,
+            format!("evt:character:0x{}", "05".repeat(32))
+        );
+        let payload: serde_json::Value =
+            serde_json::from_str(&wire.publications[0].payload).unwrap();
+        assert_eq!(payload["type"], "CharacterSeated");
+        assert_eq!(payload["data"]["fight"], format!("0x{}", "01".repeat(32)));
+        assert_eq!(payload["data"]["seat"], 0);
+    }
+
+    #[test]
+    fn custody_that_is_not_a_seat_publishes_nothing() {
+        // the resolver hands over every custody fact of the checkpoint — a character being
+        // locked back into its kiosk (settle, forfeit) must never re-arm a fight stream.
+        let custody = [Custody::KioskHolds {
+            kiosk: Id([2; 32]),
+            object: Id([5; 32]),
+            label: "Character",
+            owner: None,
+        }];
+        let mut wire = Wire::default();
+        route_fight_seats(&mut wire, 7, 42, &custody);
+        assert!(wire.publications.is_empty());
     }
 }

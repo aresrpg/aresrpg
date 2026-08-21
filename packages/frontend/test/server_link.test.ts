@@ -3,7 +3,7 @@
 
 import { describe, expect, test } from 'bun:test'
 
-import { create_login_response, is_terminal_auth_close } from '../src/server_link.ts'
+import { create_login_response, is_session_takeover_close, is_terminal_auth_close } from '../src/server_link.ts'
 
 describe('server authentication link', () => {
   test('signs the server challenge on the socket that issued it', async () => {
@@ -25,5 +25,14 @@ describe('server authentication link', () => {
     expect(is_terminal_auth_close(1008, 'SIGNATURE_TIMEOUT')).toBeTrue()
     expect(is_terminal_auth_close(1008, 'SERVER_FULL')).toBeFalse()
     expect(is_terminal_auth_close(1006, '')).toBeFalse()
+  })
+
+  test('a session takeover is terminal on both close codes — the kicked tab never reconnects', () => {
+    expect(is_session_takeover_close(1008, 'ALREADY_CONNECTED')).toBeTrue()
+    expect(is_session_takeover_close(1000, 'REPLACED')).toBeTrue()
+    expect(is_session_takeover_close(1006, '')).toBeFalse()
+    expect(is_session_takeover_close(1008, 'SPEED')).toBeFalse()
+    // a takeover is neither an auth rejection nor a violation retry
+    expect(is_terminal_auth_close(1008, 'ALREADY_CONNECTED')).toBeFalse()
   })
 })

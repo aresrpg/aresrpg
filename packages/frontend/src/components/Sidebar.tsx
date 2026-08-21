@@ -26,7 +26,7 @@ type CopyStringKey = { [K in keyof AppCopy]: AppCopy[K] extends string ? K : nev
 const NAVIGATION: readonly Readonly<{ page: Page; label: CopyStringKey; Icon: LucideIcon; disabled: boolean }>[] =
   Object.freeze([
     { page: 'world', label: 'world', Icon: Gamepad2, disabled: false },
-    { page: 'characters', label: 'characters', Icon: Swords, disabled: true },
+    { page: 'characters', label: 'characters', Icon: Swords, disabled: false },
     { page: 'leaderboard', label: 'leaderboard', Icon: Trophy, disabled: true },
     { page: 'shop', label: 'shop', Icon: ShoppingBag, disabled: false },
     { page: 'encyclopedia', label: 'encyclopedia', Icon: BookOpen, disabled: false },

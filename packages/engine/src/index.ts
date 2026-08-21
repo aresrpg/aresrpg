@@ -8,7 +8,13 @@ export { fight_placement_blobs } from './fight_blobs.ts'
 export { fight_blob_preset } from './fight_blob_presets.ts'
 export type { FightBlobPreset } from './fight_blob_presets.ts'
 export { sample_biome_grid } from './biome_grid.ts'
-export { get_quality_profile, QUALITY_OPTIONS, QUALITY_PROFILES, quality_pixel_ratio } from './quality.ts'
+export {
+  effective_render_distance,
+  get_quality_profile,
+  QUALITY_OPTIONS,
+  QUALITY_PROFILES,
+  quality_pixel_ratio,
+} from './quality.ts'
 export { CHUNK_EDGE } from './voxel_data.ts'
 export { CELESTIAL_CYCLE_MS, DAY_FRAC } from './sky/celestial_motion.ts'
 export { MATERIAL_PRESETS, material_pattern } from './material_presets.ts'
@@ -69,6 +75,7 @@ export type {
   EntityRender,
   EntityVisualEffect,
   FightSide,
+  FightSwordMarker,
   MobEntityRender,
   QualityProfile,
   RenderChunkRequest,

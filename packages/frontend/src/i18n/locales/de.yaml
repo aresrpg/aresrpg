@@ -41,11 +41,17 @@ server_reconnecting: Erneute Verbindung
 server_syncing: Synchronisierung
 server_connected: Verbunden
 server_violation: Getrennt — Regelverstoß. Bald erneuter Versuch.
+server_replaced: Woanders verbunden
+session_replaced_title: Von einem anderen Ort verbunden
+session_replaced_body: Dein Konto hat das Spiel an einem anderen Ort geöffnet, deshalb wurde dieses Fenster getrennt. Schließe die andere Sitzung oder verbinde dich hier neu, um in diesem Fenster zu spielen.
+session_replaced_reconnect: Hier neu verbinden
 latency_unit: ms
 indexing_health: Indexierungsstatus
 online_players: Spieler online
 indexing_lag_warning: Aktionen im Spiel können verzögert erscheinen
 game_frozen: Das Spiel ist derzeit eingefroren. Weitere Informationen findest du auf Discord.
+gas_budget_toast: Diese Aktion war zu schwer für die reservierte Netzwerkgebühr. Sie wurde nicht ausgeführt und hat dich nichts gekostet — bitte melde es.
+game_paused_toast: Das Spiel ist für ein Update pausiert. Deine Aktion wurde nicht ausgeführt — versuche es in ein paar Minuten erneut.
 network_testnet: TESTNET
 page_pending_title: Diese Seite wird neu aufgebaut
 page_pending_body: Ihr Platz bleibt sichtbar, während wir sie sauber wiederherstellen.
@@ -96,6 +102,33 @@ world_hud:
   zone_edge: Zonenrand {{dist}}
   coordinates: Koordinaten
   world_map: Weltkarte
+  menu_group: In die Gruppe einladen
+  menu_trade: Handeln
+  menu_message: Nachricht senden
+  mount_prompt: 'Drücke {{key}} zum Aufsteigen'
+  fight_press_join: 'Drücke {{key}} zum Beitreten'
+  fight_press_spectate: 'Drücke {{key}} zum Zuschauen'
+  fight_locked: 'Privater Kampf'
+  fight_join_title: 'Kampf beitreten'
+  fight_spectate_title: 'Kampf zuschauen'
+  fight_side_a: 'Seite A'
+  fight_side_b: 'Seite B'
+  fight_empty_side: 'Noch kein Kämpfer'
+  fight_unknown: 'Unbekannter Kämpfer'
+  fight_join_button: 'Beitreten'
+  fight_spectate_button: 'Zuschauen'
+  fight_started_ago: 'Gestartet'
+  fight_placement: 'Aufstellung'
+  fight_wallet_hint: 'Verbinde eine Wallet zum Beitreten'
+  fight_close: 'Schließen'
+  menu_duel: Zum Duell fordern
+  duel_invite: '{{name}} fordert dich zum Duell'
+  duel_accept: Annehmen
+  duel_decline: Ablehnen
+  duel_waiting: 'Warten auf {{name}}…'
+  duel_cancel: Abbrechen
+  duel_declined: '{{name}} hat das Duell abgelehnt'
+  duel_never_started: Das Duell hat nie begonnen — nichts ist passiert, du kannst weiterspielen.
 demo_page:
   title: Renderlabor
   world_lab: Welt
@@ -225,7 +258,6 @@ admin_page:
   arm_claim: Abhebung vorbereiten
   claiming: Abhebung…
   confirm_claim: Abhebung bestätigen
-  claim_success: Lizenzgebühren ausgezahlt
   disconnect_admin_wallet: Trennen
   claim_digest: Abhebungstransaktion
 simulator_page:
@@ -322,6 +354,13 @@ fight_hud:
   turn_order: Zugreihenfolge
   placement_title: Bereit zum Kampf
   placement_hint: Platziere deine Kämpfer und markiere sie als bereit
+  placement_ready: Bereit
+  placement_waiting: Warten auf die anderen…
+  placement_force_prompt: Ein Spieler ist abwesend — Kampfstart erzwingen?
+  placement_force_button: Start erzwingen
+  placement_no_opponent: Niemand hat die Herausforderung angenommen
+  crank_prompt: Der aktuelle Spieler beendet seinen Zug nicht.
+  crank_button: Zugende erzwingen
   end_turn: Zug beenden
   reset_turn: Neustart
   weapon_attack: Waffenangriff
@@ -2849,3 +2888,275 @@ encyclopedia_page:
     zephyr_legwraps: 'So leicht, dass es sich anfühlt, als trüge man nichts. Was ebenfalls eine Option ist, aber weniger schützend.'
     zephyr_silk_strand: 'Windgetränkter Seidenfaden, der von selbst schwebt. Schneider verehren ihn. Ihre Katzen betrachten ihn als persönlichen Feind.'
     zukin_muru: 'A shinobi cowl for people who want to look like they left quietly, even when they slam the door.'
+out_of_sui_body: Dir ist das SUI für Transaktionsgebühren ausgegangen. Bitte lade dein Wallet auf, um weiterzuspielen.
+characters_page:
+  tab_equipment: Ausrüstung
+  tab_stats: Werte
+  tab_spells: Zauber
+  tab_jobs: Berufe
+  tab_runeforge: Runenschmiede
+  no_character: Kein Charakter ausgewählt — wähle einen in der Tab-Leiste oben
+  level: 'Stufe {{level}}'
+  experience: Erfahrung
+  equipment_head: Ausrüstung
+  equipped_totals: Angelegte Summen
+  no_gear_equipped: Keine Ausrüstung angelegt
+  bag_equipment: Ausrüstung
+  bag_cosmetics: Kosmetik
+  bag_consumables: Verbrauchsgüter
+  bag_resources: Ressourcen
+  accept: Bestätigen
+  cancel: Abbrechen
+  equip_pending: Ausrüstung wird aktualisiert…
+  equip_success: Ausrüstung aktualisiert
+  consume_pending: Gegenstand wird benutzt…
+  consume_success: Gegenstand benutzt
+  already_full_hp: Die Lebenspunkte sind bereits voll
+  refusal_wrong_slot: Dieser Gegenstand passt nicht in diesen Platz
+  refusal_level_too_low: Deine Stufe ist zu niedrig für diesen Gegenstand
+  refusal_relic_duplicate: Ein gleiches Relikt wird bereits getragen
+  refusal_item_listed: Dieser Gegenstand steht zum Verkauf
+  points_to_assign: Punkte zu verteilen
+  spend_hint: Verteile Punkte auf die sechs Attribute und bestätige dann
+  reset: Zurücksetzen
+  confirm: Bestätigen
+  tx_pending: Wird bestätigt…
+  stats_pending: Punkte werden verteilt…
+  stats_success: Punkte verteilt
+  health: Leben
+  action: Aktion
+  movement: Bewegung
+  characteristics: Attribute
+  resistances: Resistenzen
+  secondary: Sekundär
+  element_fire: Feuer
+  element_water: Wasser
+  element_earth: Erde
+  element_air: Luft
+  add_point: 'Einen Punkt zu {{stat}} hinzufügen'
+  remove_point: 'Einen Punkt von {{stat}} entfernen'
+  grimoire: Grimoire
+  spell_points: Zauberpunkte
+  unlocked: '{{unlocked}} / {{total}} freigeschaltet'
+  unlocks_at: 'Ab Stufe {{level}}'
+  unlock_line: 'Stufe {{level}}'
+  lv_of: '{{current}} / {{max}}'
+  locked: Gesperrt
+  mastered: Gemeistert
+  no_points: Nicht genug Zauberpunkte
+  upgrading: Stufenaufstieg…
+  upgrade_success: '{{spell}} ist aufgestiegen'
+  level_up: 'Aufwerten · {{cost}} Pkt'
+  lv: 'Stufe {{level}}'
+  xp_progress: '{{current}} / {{needed}} EP'
+  max: Max
+  resources: Ressourcen
+  back: Zurück
+  gate_note: Erfordert den Handwerksberuf des Gegenstands auf Stufe 70
+  detail_title: Gegenstand
+  forge_title: Schmiede
+  inventory_title: Inventar
+  tab_gear: Ausrüstung
+  tab_runes: Runen
+  place_gear: Gegenstand ablegen
+  place_rune: Rune ablegen
+  random_notice: Das Ergebnis wird auf der Chain gewürfelt. Eine Rune kann wirken, verpuffen oder ein anderes Attribut kosten — nichts ist garantiert.
+  one_rune_note: Pro Versuch wird eine Rune verbraucht
+  apply: Rune anwenden
+  scribing: Gravur…
+  outcome_success: Die Rune hat gewirkt
+  outcome_neutral: Die Rune ist verpufft — nichts hat sich geändert
+  outcome_failure: Die Rune ging schief — ein Attribut ging verloren
+  requires_job: 'Erfordert {{job}} Stufe 70'
+  clear: Entfernen
+  inspect_empty: Wähle ein Ausrüstungsstück zum Ansehen
+  no_forge_gear: Keine schmiedbare Ausrüstung im Beutel
+  no_runes: Keine Runen im Beutel
+  menu_feed: Füttern
+  menu_consume: Verbrauchen
+  menu_crush: Zerschlagen
+  menu_destroy: Zerstören
+  feed_title: Begleiter füttern
+  feed_power_label: Stärke
+  feed_power: '{{count}} / {{max}}'
+  feed_pick_food: Wähle ein Futter
+  feed_no_food: Kein passendes Futter im Beutel
+  feed_already_today: Heute schon gefüttert — komm morgen wieder
+  feed_full: Vollständig gefüttert
+  feed_pending: Füttern…
+  feed_success: Begleiter gefüttert
+  claim_success: Belohnung abgeholt
+  crush_title: Ausrüstung zerschlagen
+  crush_confirm_body: '{{name}} zerschlagen? Der Gegenstand wird für immer zerstört und ergibt Runen.'
+  crush_cta: Zerschlagen
+  crush_pending: Wird zerschlagen…
+  crush_success: Ausrüstung zerschlagen
+  destroy_title: Gegenstand zerstören
+  destroy_confirm_body: '{{name}} ×{{amount}} zerstören? Das kann nicht rückgängig gemacht werden.'
+  destroy_cta: Zerstören
+  destroy_pending: Wird zerstört…
+  destroy_success: Gegenstand zerstört
+  unsealing: Wird entsiegelt…
+  skip_hint: Klicken zum Überspringen
+  reveal_eyebrow: Du hast erhalten
+  revealing: Wird enthüllt…
+  collecting: Wird eingesammelt…
+  continue_cta: Weiter
+  stat_maxed: Dieses Attribut hat sein Runen-Limit auf diesem Gegenstand erreicht
+  stat:
+    movement: 'BP'
+    action: 'AP'
+    range: 'Reichweite'
+    critical_chance: 'Kritische Chance'
+    critical_outcomes: 'Kritische Chance'
+    vitality: 'Vitalität'
+    wisdom: 'Weisheit'
+    strength: 'Stärke'
+    intelligence: 'Intelligenz'
+    chance: 'Glück'
+    agility: 'Agilität'
+    heal: 'Heilung'
+    critical_hit: 'Kritischer Treffer'
+    percent_damage: 'Schaden'
+    raw_damage: 'Rohschaden'
+    fire_resistance: 'Feuerwiderstand'
+    water_resistance: 'Wasserwiderstand'
+    earth_resistance: 'Erdwiderstand'
+    air_resistance: 'Luftwiderstand'
+  stats:
+    no_character: 'Kein Charakter ausgewählt'
+    unavailable: 'Werte nicht verfügbar'
+    level: 'Lv. {{level}}'
+    adventurer: 'Abenteurer'
+    points_to_assign: 'Zu verteilende Punkte'
+    spend_hint: 'Verteile sie auf deine Eigenschaften'
+    reset: 'Zurücksetzen'
+    health: 'Leben'
+    action: 'Aktion'
+    move: 'Bewegung'
+    characteristics: 'Eigenschaften'
+    resistances: 'Resistenzen'
+    secondary: 'Sekundärwerte'
+    element:
+      fire: 'Feuer'
+      water: 'Wasser'
+      earth: 'Erde'
+      air: 'Luft'
+    description:
+      vitality: 'Erhöht dein maximales Leben'
+      wisdom: 'Erhöht deinen XP-Gewinn'
+      strength: 'Erhöht deinen Erdschaden'
+      intelligence: 'Erhöht deinen Feuerschaden und deine Heilung'
+      chance: 'Erhöht deinen Wasserschaden und deine Beutechance'
+      agility: 'Erhöht deinen Luftschaden, deine Fesselung und dein Ausweichen bei AP/BP-Verlust'
+      critical_hit: 'Verbessert deine Chance auf einen kritischen Treffer'
+      raw_damage: 'Fügt Schadens- und Lebensraub-Effekten einen festen Wert hinzu'
+    add_point: '{{stat}} um einen Punkt erhöhen'
+    remove_point: '{{stat}} um einen Punkt verringern'
+    tx_pending: 'Verteilen…'
+    tx_success: 'Stat-Punkte verteilt'
+  spells:
+    range_modifiable: 'Veränderbare Reichweite'
+    no_character: 'Kein Charakter ausgewählt'
+    select_prompt: 'Zauber auswählen'
+    level: 'Stufe {{level}}'
+    spell_points: 'Zauberpunkte'
+    available: 'Verfügbar'
+    grimoire: 'Zauberbuch'
+    unlocked: '{{unlocked}} / {{total}} freigeschaltet'
+    locked: 'Gesperrt'
+    lv: 'St {{level}}'
+    lv_of: 'St {{cur}}/{{max}}'
+    unlocks_at: 'Freigeschaltet auf St {{level}}'
+    current_level: 'Aktuelle Stufe'
+    ap_cost: 'AP-Kosten'
+    range: 'Reichweite'
+    cooldown: 'Abklingzeit'
+    crit_chance: 'Kritische Chance'
+    casts_per_turn: 'Einsätze / Zug'
+    unlimited: 'Unbegrenzt'
+    description: 'Beschreibung'
+    effects: 'Effekte'
+    levels_head: 'Stufen'
+    mastered: 'Gemeistert'
+    upgrade_success: '{{spell}} verbessert!'
+    upgrading: 'Wird verbessert…'
+    level_up_spell: 'Zauber verbessern'
+    pts: '{{count}} Pkt'
+    pts_one: '{{count}} Pkt'
+    pts_other: '{{count}} Pkt'
+    requires_lv: 'Benötigt Stufe {{level}}'
+    no_points: 'Keine Punkte'
+    tag_self: 'Selbst'
+    tag_melee: 'Nahkampf'
+    tag_ranged: 'Fernkampf'
+    tag_zone: 'Zone'
+    tag_line_of_sight: 'Sichtlinie'
+    el_fire: 'Feuer'
+    el_water: 'Wasser'
+    el_earth: 'Erde'
+    el_air: 'Luft'
+    buff: 'Verstärkung'
+    utility: 'Unterstützung'
+    heal: 'Heilung'
+    neutral: 'Neutral'
+    element: 'Element'
+    damage: 'Schaden'
+    turns: 'Züge'
+    crit_val: 'krit {{value}}'
+    range_fixed: 'FEST — REICHWEITE-STAT WIRKT NICHT'
+  jobs:
+    category:
+      gathering: 'Sammeln'
+      weapon: 'Waffenhandwerk'
+      equipment: 'Rüstungshandwerk'
+      consumable: 'Verbrauchsgüter-Handwerk'
+    recipes_fallback: 'Rezepte'
+    equipped: 'Ausgerüstet'
+    table:
+      tier: 'Stufe'
+      req_lvl: 'Ben. Lv.'
+      resource: 'Ressource'
+      yield: 'Ertrag'
+      xp: 'XP'
+      unlocks_at: '{{name}} (freigeschaltet ab Level {{level}})'
+      gather_detail: '{{name}} · Sammeln {{gather}}s · Respawn {{respawn}}s'
+      locked: 'gesperrt'
+    lv_badge: 'St {{level}}'
+    tier_badge: 'T{{tier}}'
+    craft:
+      recipe_head: 'Rezept'
+      recipe_not_seeded: 'Dieses Rezept ist noch nicht im Content enthalten.'
+      ingredients_head: 'Zutaten'
+      requires_level: 'Erfordert {{job}} St {{required}} (du bist St {{level}})'
+      not_enough: 'Nicht genug Zutaten'
+      success_chance: 'Erfolgschance'
+      craft_tooltip: '{{name}} herstellen'
+      craft_button: 'Herstellen'
+      crafting: 'Wird hergestellt…'
+      craft_success: '{{name}} hergestellt'
+      roll_failed: 'Der Herstellungswurf für {{name}} ist fehlgeschlagen ({{chance}}% Chance) — die Zutaten wurden verbraucht'
+      locked_level: 'Gesperrt · St {{level}}'
+    detail:
+      close_aria: 'Objektdetails schließen'
+      item_not_seeded: 'Dieser Gegenstand ist nicht im Content enthalten.'
+      tool_label: 'Werkzeug'
+      crafts_label: 'Herstellung: {{covers}}'
+      xp_progress: '{{current}} / {{needed}} XP'
+    recipes:
+      empty_seed: 'Rezepte für diesen Beruf kommen mit dem Crafting-Content.'
+      unlocked: 'Freigeschaltet'
+      locked: 'Gesperrt'
+      meta: 'St {{level}} · {{category}}'
+    gather:
+      in_progress: 'Sammle {{name}}…'
+      button: '{{name}} sammeln'
+      hint: 'Klicke im Spiel auf einen {{job}}-Knoten, um zu sammeln.'
+    tabs:
+      resources: 'Ressourcen'
+      recipes: 'Rezepte'
+    no_character: 'Kein Charakter ausgewählt'
+  common:
+    experience: 'Erfahrung'
+    confirm: 'Bestätigen'
+    max: 'MAX'
