@@ -934,11 +934,13 @@ mod tests {
         assert!(wire
             .publications
             .iter()
-            .any(|row| row.payload.contains("MarketDelisted") && row.payload.contains(&Id([5; 32]).hex())));
+            .any(|row| row.payload.contains("MarketDelisted")
+                && row.payload.contains(&Id([5; 32]).hex())));
         assert!(wire
             .publications
             .iter()
-            .any(|row| row.payload.contains("MarketListed") && row.payload.contains(&Id([6; 32]).hex())));
+            .any(|row| row.payload.contains("MarketListed")
+                && row.payload.contains(&Id([6; 32]).hex())));
     }
 
     #[test]
