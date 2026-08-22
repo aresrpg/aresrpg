@@ -6,10 +6,8 @@
 # is unit-testable in isolation (issue #695). Sourced-only (no shebang on purpose — it is never
 # executed directly); the directive above tells shellcheck which dialect to lint it as.
 #
-# THE RACE IT CLOSES: promote-queue.yml triggers on `workflow_run: completed` for gate. Some gate
-# jobs are slow (the playwright e2e leg — live network). When a fast leg finishes first, the queue
-# can fire and call promote-land.sh WHILE a slow job may not have registered a check-run on the
-# SHA yet at all. The old assert only rejected check-runs that EXISTED and were non-green
+# THE RACE IT CLOSES: a `/promote` can arrive while a slow gate job has not yet registered a
+# check-run on the SHA at all. The old assert only rejected check-runs that EXISTED and were non-green
 # (`select(.conclusion != "success" and ...)`), so a required check that simply hadn't been
 # CREATED yet was invisible to it and read as clean — a still-red landing could fast-forward.
 #
@@ -22,9 +20,8 @@
 #      registered) is MISSING and fails closed — this is the half that catches the original race.
 #   An empty check-runs response fails closed via gate 2: every required name is missing.
 #
-# Sourced by promote-land.sh (the real engine) and by test/promote-green-eval-check.sh (canned `gh
-# api` JSON fixtures, plus direct calls into derive_required_checks() against fixture YAML) — this
-# file has no side effects of its own and is never executed directly.
+# Sourced by promote-land.sh (the real engine) — this file has no side effects of its own and
+# is never executed directly.
 #
 # THE REQUIRED SET IS DERIVED, NOT HAND-KEPT (issue #725): a hand-maintained REQUIRED_CHECKS array
 # went stale ONE commit after its own creation — f6c7686b added the `tests (api)` job to gate.yml
@@ -56,8 +53,7 @@
 # provenance-eligible row can ever carry is a PERMANENT wedge — every landing refused with "missing
 # required check(s): CodeQL". The `fp-codeql` job keeps the FP query pack on the bar under its own
 # producible Actions name via the enumeration above; default-setup CodeQL stays defense-in-depth at
-# the GitHub level, outside this queue's bar. The class is sealed by a test asserting derived ⊆
-# producible (test/promote-green-eval-check.sh case 19).
+# the GitHub level, outside this bar.
 
 # derive_required_checks <workflow.yml> [<workflow.yml>...] — prints a JSON array of every
 # check-run NAME the given workflow file(s) produce on a PR/push head (see HOW above). Deduped +
@@ -166,109 +162,6 @@ evaluate_green() {
   fi
 
   echo green
-}
-
-# ── THE RANGE, NOT ONLY THE HEAD (#1002) ────────────────────────────────────────────────────────
-# The assert above reads ONE sha; the push below it fast-forwards a RANGE. A branch of N commits was
-# admitted on the strength of commit N, and it already put a commit whose own `gate` and
-# `tests (fight)` read failure into edge's history (163b3345, PR #979) — pinned as a fixture in
-# test/fixtures/interior-red-163b3345.check-runs.json.
-#
-# THE RULE THIS IS NOT (#1852, parked by the operator): "every sha in origin/base..head carries a
-# completed green REQUIRED check-run". That rule refuses EVERY landing in this repo. gate.yml
-# triggers on `pull_request` plus `push` to edge/master, so CI produces check-runs for a
-# branch's HEAD and for nothing else. Measured on train-39's real landing range: the three interior
-# commits carry 0, 0 and 0 check-runs; the head carries 49. Its unit test never caught that because
-# it fed the interior SYNTHETIC red verdicts and asserted not-green — correct for a real red, and
-# simultaneously indistinguishable from the permanent state of every interior commit in reality.
-#
-# THE RULE THAT IS THE QUEUE'S ACTUAL CONTRACT: the head's gate run covers the range's resulting
-# tree, so an interior commit with NO run of its own is covered, not unproven — that is what CI
-# offers and the head assert already reads it. What the head can never cover is an interior commit
-# that WAS gated and came back RED: that verdict is a fact about that sha's own tree, it survives in
-# history as a legitimate checkout and bisect target, and no amount of green at the tip retracts it.
-# So a completed red anywhere in the range POISONS the landing, and the only way forward is a fresh
-# commit — a rebase mints new shas and a clean range; a re-run cannot unsay a red.
-#
-# PROVENANCE IS DELIBERATELY NOT APPLIED HERE, and the fixture is why: 163b3345's two red rows carry
-# `check_suite.head_branch: null` and `pull_requests: []` — the lane branch was deleted at landing,
-# so the metadata the head's provenance filter needs is simply gone. Filtering the interior the same
-# way would discard the exact evidence this gate exists to read. The app slug still binds (a foreign
-# app cannot wedge the queue); the branch a red came from does not change what it says about the sha.
-#
-# evaluate_range_green <interior_json> [app_slug]
-#   interior_json = [{sha, check_runs: [...]}, ...] — one entry per commit in origin/base..head
-#                   EXCLUDING the head, which the assert above judges on its own, in full.
-#                   check_runs takes either payload shape, exactly like evaluate_green.
-# Prints "green" or "not-green: <reason>" naming the offending sha and checks. Always returns 0.
-evaluate_range_green() {
-  local interior_json="$1" app_slug="${2:-github-actions}" poisoned
-  poisoned=$(jq -r --arg app "$app_slug" '
-      [ .[]
-        | . as $commit
-        | ((.check_runs // []) | if type == "array" then . else .check_runs end) as $runs
-        | [ $runs[]
-            | select((.app.slug // $app) == $app)
-            | select(.status == "completed")
-            | select(.conclusion != "success" and .conclusion != "skipped" and .conclusion != "neutral")
-            | .name ] as $red
-        | select(($red | length) > 0)
-        | "\($commit.sha[0:12]) (\($red | unique | join(", ")))" ]
-      | join("; ")
-    ' <<<"$interior_json")
-  if [ -n "$poisoned" ]; then
-    echo "not-green: red interior commit(s) in this range: $poisoned — a red sha stays poisoned; rebase to re-cut it, a re-run cannot unsay it"
-    return 0
-  fi
-  echo green
-}
-
-# AN UNREAD RANGE IS NOT A CLEAN ONE — the fail-closed collector (lead review of 317cc1cf8).
-# The first cut of the caller built the interior payload with
-#   runs=$(gh api --paginate ".../check-runs" --jq '.check_runs[]' | jq -s '.')
-# and that fails OPEN, which is the one thing a gate may never do: when `gh api` dies on a rate
-# limit or a 5xx it writes nothing, `jq -s` slurps empty stdin to `[]`, and `[]` is BYTE-IDENTICAL
-# to the payload of a commit CI never gated — so an unreadable range evaluates "covered" and lands.
-#
-# `set -euo pipefail` does NOT save it, measured rather than assumed: with both flags in force, that
-# assignment sitting inside a command substitution (exactly how the caller builds its payload) does
-# not abort the script — the loop runs to completion and hands on `check_runs: []` with exit 0. A
-# gate whose arming depends on an ambient shell flag is prose; this one refuses explicitly.
-#
-# collect_interior_check_runs <sha-list> <fetch_fn>
-#   sha-list  = whitespace-separated interior shas.
-#   fetch_fn  = name of a function taking one sha and PRINTING its check-run payload (array or the
-#               `{check_runs: [...]}` envelope), returning non-zero if the read itself failed. The
-#               distinction that matters is the whole point: a successful read of ZERO runs is `[]`
-#               and means covered; a FAILED read is non-zero and means unknown.
-# Prints the interior JSON evaluate_range_green consumes, or nothing and returns 1 if ANY sha could
-# not be read. The caller must treat that as not-green and leave the pull request queued — a refusal
-# costs one queue tick, and the queue re-runs on its own.
-collect_interior_check_runs() {
-  local shas="$1" fetch="${2:-}" sha runs acc='[]' tmpdir runs_file acc_file acc_next
-  if [ -z "$fetch" ]; then echo "collect_interior_check_runs: a fetch function name is required" >&2; return 1; fi
-  tmpdir=$(mktemp -d) || return 1
-  trap 'rm -rf "$tmpdir"' RETURN
-  runs_file="$tmpdir/runs.json"; acc_file="$tmpdir/acc.json"; acc_next="$tmpdir/acc.next.json"
-  printf '%s' "$acc" > "$acc_file" || return 1
-  for sha in $shas; do
-    runs=$("$fetch" "$sha") || return 1
-    # Also the empty-payload tooth: jq exits 4 on empty stdin, so a fetcher that returned success
-    # while printing nothing is refused here rather than read as an ungated commit.
-    runs=$(jq -ce 'if type == "array" then . else .check_runs end' <<<"$runs") || return 1
-    # ARGV IS NOT A TRANSPORT (#1002's tooth must fire on unread ranges, never on unREADABLE ones).
-    # `--argjson runs "$runs"` hands the whole payload to execve as ONE argument: Linux caps a single
-    # argv item at MAX_ARG_STRLEN (128KB) whatever ARG_MAX is, and a head-adjacent commit's check-runs
-    # blow past it. jq then dies "Argument list too long", the collector returns 1, and a range this
-    # run READ PERFECTLY WELL is refused as unreadable — the release stalls on a healthy history.
-    # Both large values therefore travel by file/stdin, where no such ceiling exists.
-    printf '%s' "$runs" > "$runs_file" || return 1
-    jq -c --arg sha "$sha" --slurpfile runs "$runs_file" '. + [{sha: $sha, check_runs: $runs[0]}]' \
-      <<<"$acc" > "$acc_next" || return 1
-    mv -f "$acc_next" "$acc_file" || return 1
-    acc=$(cat "$acc_file") || return 1
-  done
-  printf '%s' "$acc"
 }
 
 # ── THE REPUBLISH WINDOW NEVER REACHES PRODUCTION (#1305 review, CRITICAL) ──────────────────────

@@ -4,10 +4,11 @@
 #
 # promote-land.sh — the SHARED landing engine for the promotion queue (issue #105).
 #
-# ONE home for "land a promote-requested PR onto its base by fast-forward, signatures intact".
-# Called by BOTH triggers so the asserts + ff-push are never duplicated:
-#   • .github/workflows/promote.yml       — the authorized maintainer's `/promote` command
-#   • .github/workflows/promote-queue.yml — gate/checks workflow_run:completed (land-on-green)
+# ONE home for "land a PR onto its base by fast-forward, signatures intact".
+# Called by .github/workflows/promote.yml — the authorized maintainer's `/promote` command.
+# THE CONTRACT (owner ruling 2026-08-23): `/promote` lands NOW if everything is green, and
+# refuses otherwise. There is no queue, no deferred landing, no land-on-green watcher — a
+# refused promotion is cured by fixing the branch and commenting `/promote` again.
 #
 # The green assert itself lives in the sibling promote-green-eval.sh (sourced below, unit-tested
 # in test/promote-green-eval.test.sh) — split out so "is this sha actually green" is testable
@@ -34,7 +35,7 @@
 #   it via the step output). Result ∈
 #     landed · stale · not-green · wrong-base · unauthorized · not-release-tipped ·
 #     republish-window · master-push-rejected
-#   Exit code: 0 landed · 3 transient (stale | not-green — leave the label, the queue retries) ·
+#   Exit code: 0 landed · 3 refused-for-now (stale | not-green — fix, then /promote again) ·
 #              1 hard refusal (wrong-base | unauthorized | not-release-tipped | republish-window |
 #                master-push-rejected — the ruleset turned the ff down) or infra error ·
 #              4 LANDED, but a post-landing automation dispatch failed — the push is done and must
@@ -64,14 +65,13 @@ BASE=$(jq -r .baseRefName <<<"$PR_META")
 HEAD_REF=$(jq -r .headRefName <<<"$PR_META")
 case "$BASE" in
   edge | master) ;;
-  *) emit wrong-base; echo "PR #$PR targets '$BASE' — the queue serves edge and master only"; exit 1 ;;
+  *) emit wrong-base; echo "PR #$PR targets '$BASE' — /promote serves edge and master only"; exit 1 ;;
 esac
 
 # ── owner authorization — the LABEL IS NOT A CAPABILITY ──────────────────────────────────────
 # `promote-requested` is add-able by any write collaborator via the UI, so it can never be the
-# authorization token. An authorized-account `/promote` comment must exist on this PR. This carries
-# the explicit authorization into the workflow_run path (which has no
-# commenter) and makes a manually-labeled PR un-landable. Numeric id is immortal, login the
+# authorization token. An authorized-account `/promote` comment must exist on this PR — it
+# makes a manually-labeled PR un-landable. Numeric id is immortal, login the
 # readable second factor — BOTH hold.
 OWNER_PROMOTE=$(gh api "repos/${REPO}/issues/${PR}/comments" --paginate \
   --jq "[.[] | select(.user.id==${OWNER_ID} and .user.login==\"${OWNER_LOGIN}\" and (.body|startswith(\"/promote\")))] | length")
@@ -115,18 +115,17 @@ fi
 # ── fast-forward gate (the always-rebase tooth) — BEFORE the green check ─────────────────────
 # If the base is not an ancestor of the head, the branch is stale. In this signature-preserving
 # queue the AUTHOR rebases locally (never the API — rebased copies come back unsigned); report
-# `stale` so /promote can post the one-line rebase command, and leave the label so the next green
-# cycle lands it with zero further interaction.
+# `stale` so /promote can post the one-line rebase command; the author rebases and
+# `/promote`s again.
 if ! git merge-base --is-ancestor "refs/remotes/origin/${BASE}" "$HEAD_SHA"; then
   emit stale; echo "PR #$PR is behind $BASE — author-side rebase required"; exit 3
 fi
 
 # ── checks green? — every REQUIRED check-run present + green on this exact sha (issue #695) ──
 # The old assert only rejected check-runs that EXISTED and were non-green — a required check that
-# hadn't been CREATED yet at evaluation time (a slow gate.yml leg like the playwright e2e job can
-# still be unregistered on the sha when a faster leg fires the queue first) was invisible to it
-# and read as clean — a still-red landing could fast-forward. evaluate_green() (sourced from
-# promote-green-eval.sh, unit-tested in test/promote-green-eval.test.sh) additionally requires
+# hadn't been CREATED yet at evaluation time (a slow gate.yml leg can still be unregistered on
+# the sha) was invisible to it and read as clean — a still-red landing could fast-forward.
+# evaluate_green() (sourced from promote-green-eval.sh) additionally requires
 # every name in REQUIRED_CHECKS to have a completed green check-run on $HEAD_SHA — missing/pending
 # = not eligible, and an empty check-runs response fails closed the same way.
 # shellcheck source=.github/scripts/promote-green-eval.sh
@@ -137,38 +136,7 @@ PROVENANCE_JSON=$(jq -nc --argjson pr "$PR" --arg head "$HEAD_REF" '{pr: $pr, he
 CHECK_RUNS_JSON=$(gh api --paginate "repos/${REPO}/commits/${HEAD_SHA}/check-runs" --jq '.check_runs[]' | jq -s '.')
 GREEN=$(evaluate_green "$CHECK_RUNS_JSON" "$REQUIRED_CHECKS_JSON" "$PROVENANCE_JSON")
 if [ "$GREEN" != "green" ]; then
-  emit not-green; echo "${GREEN#not-green: } on $HEAD_SHA — leaving it queued"; exit 3
-fi
-
-# ── the range the push admits, not only the head (issue #1002) ───────────────────────────────
-# The assert above reads one sha; the push below fast-forwards origin/$BASE..$HEAD_SHA. CI produces
-# check-runs for a branch's HEAD and nothing else, so an interior commit with no run of its own is
-# COVERED by the head's gate — demanding per-sha green refuses every train in this repo (#1852) and
-# is the rule that was parked. What the head cannot cover is an interior commit that was gated and
-# came back RED: that verdict is a fact about that sha's tree, it survives as a checkout and bisect
-# target, and it is how 163b3345 (`gate` + `tests (fight)` failing) became an ancestor of edge. One
-# API read per interior commit; the head is excluded because it is judged above, in full.
-# This cannot wedge the master hop on history it can no longer fix: `origin/$BASE..$HEAD_SHA` excludes
-# everything already on the base, and all three known-red commits (163b3345, 6548e526, 451e477c) are
-# ancestors of master today. Arming this on the edge hop is what stops a new one being minted.
-# The read is a named function so its exit code is the collector's business, never a pipe's: `gh`'s
-# status is captured directly here, and an empty result is only ever reported for a read that
-# SUCCEEDED and found no runs. See collect_interior_check_runs for what a failed read must cost.
-# shellcheck disable=SC2329  # invoked indirectly, by name, from collect_interior_check_runs
-fetch_commit_check_runs() {
-  local rows
-  rows=$(gh api --paginate "repos/${REPO}/commits/${1}/check-runs" --jq '.check_runs[]') || return 1
-  jq -s '.' <<<"$rows"
-}
-INTERIOR_SHAS=$(git rev-list "refs/remotes/origin/${BASE}..${HEAD_SHA}" | grep -v "^${HEAD_SHA}$" || true)
-if ! INTERIOR_JSON=$(collect_interior_check_runs "$INTERIOR_SHAS" fetch_commit_check_runs); then
-  emit not-green
-  echo "could not read the check-runs of every commit in origin/${BASE}..${HEAD_SHA} — refusing to admit a range this run could not read; leaving PR #$PR queued"
-  exit 3
-fi
-RANGE_GREEN=$(evaluate_range_green "$INTERIOR_JSON")
-if [ "$RANGE_GREEN" != "green" ]; then
-  emit not-green; echo "${RANGE_GREEN#not-green: } — leaving PR #$PR queued"; exit 3
+  emit not-green; echo "${GREEN#not-green: } on $HEAD_SHA — fix, then /promote again"; exit 3
 fi
 
 # ── the republish window never reaches production (#1305 review) ────────────────────────────
@@ -185,10 +153,9 @@ if [ "$BASE" = master ]; then
 fi
 
 # ── the landing: a plain fast-forward push (git itself rejects anything non-ff) ─────────────
-# THE ENGINE NEVER MINTS THE `promoted` STAMP (seat ruling 2026-07-29, issue #1573). It used to
-# stamp right here, before the push — but this engine also runs unattended from promote-queue.yml,
-# and a landing engine that writes its own permission slip is not a gate. The stamp is minted by
-# promote.yml alone, at the authorized maintainer's `/promote`, and the queue holds no statuses:write at all.
+# THE ENGINE NEVER MINTS THE `promoted` STAMP (seat ruling 2026-07-29, issue #1573): a landing
+# engine that writes its own permission slip is not a gate. The stamp is minted by promote.yml
+# alone, at the authorized maintainer's `/promote`.
 # master's ruleset then enforces the stamp SERVER-SIDE on the push below: an unapproved sha
 # (a rebase makes a new one, carrying nothing) is refused by GitHub, not by this script.
 # Everything past this line is post-landing bookkeeping over a push that ALREADY HAPPENED and can

@@ -7,7 +7,8 @@
 //! At boot, against the official GraphQL endpoint:
 //!
 //! * **lineage** — the latest id must be a version of the original package
-//!   (`packageVersions`); a typo'd or foreign id refuses to boot.
+//!   (`packageVersionsAfter` — the endpoint renamed `packageVersions` away in
+//!   the 2026-08 schema); a typo'd or foreign id refuses to boot.
 //! * **start checkpoint** — the checkpoint containing the ORIGINAL package's
 //!   publish transaction. Consulted only when no watermark exists yet and no
 //!   `FIRST_CHECKPOINT` override is given; a resuming deploy never needs the
@@ -73,24 +74,29 @@ pub async fn validate_lineage(url: &str, original: &str, latest: &str) -> Result
         url,
         &format!(
             r#"{{ object(address: "{original}") {{
-                 asMovePackage {{ packageVersions {{ nodes {{ address }} }} }}
+                 asMovePackage {{ packageVersionsAfter {{ nodes {{ address }} }} }}
                }} }}"#
         ),
     )
     .await?;
-    let versions = data["object"]["asMovePackage"]["packageVersions"]["nodes"]
-        .as_array()
-        .ok_or_else(|| anyhow!("{original} is not a package on this network"))?;
-    let is_version = versions
-        .iter()
-        .filter_map(|node| node["address"].as_str())
-        .any(|address| address == latest);
-    if !is_version {
+    if !lineage_contains(&data, original, latest)? {
         return Err(anyhow!(
             "{latest} is not an upgrade of {original} — check the two ids"
         ));
     }
     Ok(())
+}
+
+/// Pure read of the lineage response: is `latest` among the versions published
+/// after `original`? (Querying from the ORIGINAL, "after" is every upgrade.)
+fn lineage_contains(data: &Value, original: &str, latest: &str) -> Result<bool> {
+    let versions = data["object"]["asMovePackage"]["packageVersionsAfter"]["nodes"]
+        .as_array()
+        .ok_or_else(|| anyhow!("{original} is not a package on this network"))?;
+    Ok(versions
+        .iter()
+        .filter_map(|node| node["address"].as_str())
+        .any(|address| address == latest))
 }
 
 /// Does the pipeline already have a watermark? (A resuming deploy must never
@@ -172,8 +178,34 @@ pub async fn ensure_indexes(conn: &mut MultiplexedConnection) -> Result<()> {
 
 #[cfg(test)]
 mod tests {
-    use super::publish_checkpoint_from;
+    use super::{lineage_contains, publish_checkpoint_from};
     use serde_json::json;
+
+    #[test]
+    fn decodes_the_current_sui_graphql_package_versions_after_shape() {
+        // Captured from the official testnet GraphQL endpoint for package
+        // 0xff31200a…0baa on 2026-08-22 — the schema that renamed
+        // `packageVersions` to `packageVersionsAfter`/`Before` and broke boot.
+        let data = json!({
+            "object": {
+                "asMovePackage": {
+                    "packageVersionsAfter": {
+                        "nodes": [{
+                            "address": "0x80ce7b5b5b3b2809da8ea973f9f267f9e5d8372524a01e7427a97a640762c79a"
+                        }]
+                    }
+                }
+            }
+        });
+
+        assert!(lineage_contains(
+            &data,
+            "0xff31200a",
+            "0x80ce7b5b5b3b2809da8ea973f9f267f9e5d8372524a01e7427a97a640762c79a"
+        )
+        .expect("lineage"));
+        assert!(!lineage_contains(&data, "0xff31200a", "0xdead").expect("lineage"));
+    }
 
     #[test]
     fn decodes_the_current_sui_graphql_previous_transaction_shape() {

@@ -2,17 +2,16 @@
 # © 2026 Sceat — All rights reserved. See LICENSE.
 # promote.yml — the `/promote` REQUEST handler (maintainer-triggered, signature-preserving).
 #
-# `/promote` is a one-time land REQUEST, not a babysat rebase→wait→re-comment loop (issue #105).
-# Trigger = the authorized maintainer commenting `/promote` on a PR targeting edge OR master (explicit command,
-# never an approval side-effect). This job asserts the commenter's identity, applies the
-# `promote-requested` label, then invokes the SHARED landing engine (.github/scripts/promote-land.sh):
-#   • green + fast-forward → it lands NOW (byte-identical ff-push; signatures survive; label removed).
-#   • behind its base       → it reports `stale`; this job posts the ONE-TIME author rebase command.
-#                             The author rebases locally (commits stay signed — the API rebase is
-#                             OFF the table, it returns unsigned copies edge's required_signatures
-#                             would reject) and force-pushes; the queue (promote-queue.yml) lands it
-#                             on the next green cycle with zero further `/promote`.
-#   • not yet green         → it reports `not-green`; the queue lands it when the checks pass.
+# `/promote` lands NOW or refuses (owner ruling 2026-08-23 — the land-on-green queue and its
+# cron sweep are DELETED; a promotion never waits). Trigger = the authorized maintainer
+# commenting `/promote` on a PR targeting edge OR master (explicit command, never an approval
+# side-effect). This job asserts the commenter's identity, applies the `promote-requested`
+# label (audit breadcrumb only), then invokes the landing engine (.github/scripts/promote-land.sh):
+#   • green + fast-forward → it lands NOW (byte-identical ff-push; signatures survive).
+#   • behind its base       → refused as `stale`; the author rebases locally (commits stay
+#                             signed — the API rebase returns unsigned copies edge's
+#                             required_signatures would reject) and `/promote`s again.
+#   • not green             → refused as `not-green`; fix, then `/promote` again.
 #
 # BRANCH CLEANUP: a successful land also deletes the PR's head branch (best-effort, non-fatal —
 # see the engine). GitHub's repo-level `delete_branch_on_merge` setting NEVER fires for this flow:
@@ -33,7 +32,7 @@
 # only behind a maintainer-identity assert on a human comment. The HANDLER definition stays pinned
 # to the default branch, while its checkout below executes the shared engine from protected `edge`:
 # this keeps the mint frozen but prevents master's stale script copy from bypassing landing fixes
-# (#972). The unattended queue holds NO statuses:write, so the code that lands PRs can iterate at
+# (#972). Only this handler holds statuses:write, so the engine code can iterate at
 # edge speed while the code that mints deploy permission cannot. Changing this file changes who may put a commit on production:
 # it reaches master only through the authorized maintainer's promotion command, which is the acceptance this
 # ruling records.
@@ -78,20 +77,19 @@ jobs:
           # until the authorized /promote here applies `promote-requested` (label-is-the-hold law).
           ref: edge
           fetch-depth: 0
-          # Same engine, same needs as promote-queue: ref math + .github scripts/templates only.
+          # The engine needs ref math + .github scripts/templates only.
           filter: blob:none
           sparse-checkout: .github
       - name: ensure the promote-requested label exists, then apply it
         run: |
           gh label create promote-requested --repo "$GITHUB_REPOSITORY" --color BFD4F2 \
-            --description "queued for land-on-green (issue #105)" --force >/dev/null
+            --description "an authorized /promote was requested here" --force >/dev/null
           gh pr edit "$PR" --repo "$GITHUB_REPOSITORY" --add-label promote-requested >/dev/null
       - name: stamp `promoted` on the head sha (master hop only) — the maintainer command is the mint
         # THE SPLIT (seat ruling 2026-07-29, issue #1573). master's ruleset requires a `promoted`
         # status on the sha AT PUSH TIME, and exactly one place may mint it: here, behind the
-        # maintainer-identity assert above. The shared engine no longer stamps — the unattended queue
-        # runs that same engine with no statuses:write, so a landing it performs can only ever
-        # fast-forward a sha the authorized maintainer already approved.
+        # maintainer-identity assert above. The engine itself never stamps — a landing can only
+        # ever fast-forward a sha the authorized maintainer already approved.
         #
         # ORDER: the stamp is written BEFORE the engine's asserts run, and that is sound — a commit
         # status carries no permission of its own, and the push it enables is still gated by the

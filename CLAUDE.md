@@ -55,10 +55,9 @@ music/           # the biome soundtracks — the one tracked home (hack_radio/ i
 
 Work is PR-shaped and history is LINEAR, always: one branch per feature/fix, **always
 rebased** on the latest `edge` — enforced by construction: landings on both hops are
-fast-forward pushes (an unrebased branch cannot ff), driven by a one-time `/promote` REQUEST —
-it labels the PR `promote-requested` and a land-on-green queue fast-forwards it the moment it is
-a green ancestor; a branch that has gone stale rebases locally (signatures preserved) and lands
-automatically on its next green run, no second `/promote` → **PR into `edge`** (the CI gate must
+fast-forward pushes (an unrebased branch cannot ff), driven by `/promote` — commented when the
+PR is green, it lands NOW by fast-forward; not green or stale, it refuses and you fix, then
+`/promote` again (owner ruling 2026-08-23 — no queue, no deferred landing) → **PR into `edge`** (the CI gate must
 pass — `.github/workflows/gate.yml`) → `edge` soaks → `/promote` the edge→master PR → it
 fast-forwards production (byte-identical commits — signatures survive; edge auto-aligns
 after). `edge` accepts direct pushes (owner 2026-08-21 — it is the integration branch, and the

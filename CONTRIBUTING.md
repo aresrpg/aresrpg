@@ -16,15 +16,10 @@ History is linear by law; nothing ever rewrites what landed.
 1. Branch off `edge`, one branch per feature/fix.
 2. **Always rebase** — keep your branch rebased on the latest `edge`; a merge commit never
    enters a branch. **This is enforced by construction:** landings are fast-forward pushes, and
-   an unrebased branch cannot fast-forward. `/promote` is a one-time REQUEST — it labels the PR
-   `promote-requested`, and a land-on-green queue fast-forwards it the moment it is a green
-   ancestor of its base. If your branch is behind, the bot posts the exact one-line rebase
-   command; rebase locally (your commits stay signed) and force-push, and it lands automatically
-   on the next green run — you never `/promote` twice.
-   **To HOLD an armed PR, convert it to a draft** (`gh pr ready --undo`) — removing the
-   `promote-requested` label does NOT stop a landing already in the queue's flight (measured
-   2026-07-28: a label-stripped green ancestor landed anyway). Draft state is the only hold the
-   queue cannot race.
+   an unrebased branch cannot fast-forward. `/promote` lands the PR NOW when every check is
+   green and the branch is current; otherwise it refuses with the reason (not green, or stale —
+   the bot posts the exact rebase command). Fix the branch, then comment `/promote` again —
+   nothing lands unattended, and nothing waits in a queue.
 3. Landings on BOTH hops are `/promote` — the repository owner's explicit word (on his own
    PRs the comment itself is the approval, since GitHub forbids self-review; on contributor
    PRs his approving review is required first). The **master hop is deploy-class**; the edge
