@@ -9,7 +9,7 @@
 
 import { BufferAttribute, BufferGeometry, DoubleSide, Group, Mesh, type Scene } from 'three'
 import { MeshStandardNodeMaterial } from 'three/webgpu'
-import { Fn, attribute, cos, float, positionLocal, positionWorld, sin, time, vec3 } from 'three/tsl'
+import { Fn, attribute, float, positionWorld } from 'three/tsl'
 
 import { flower_bloom } from './nature/flower_bloom.ts'
 import { herb_bush } from './nature/herb_bush.ts'
@@ -21,6 +21,7 @@ import { mushroom_toadstool } from './nature/mushroom_toadstool.ts'
 import { rock_pebbles } from './nature/rock_pebbles.ts'
 import { twig_branch } from './nature/twig_branch.ts'
 import { mulberry, rotate_y, type RecipeVertex, type SpriteBuilder } from './nature/sprite_kit.ts'
+import { plant_wind_position } from './nature/plant_wind.ts'
 import { RECIPE_VARIANTS, type ScatterInstance, type ScatterKind } from './scatter.ts'
 import { macro_surface_tint_nodes } from './terrain_tint.ts'
 import { occlusion_dither_discard, type BoardOcclusion } from './board_occlusion.ts'
@@ -147,19 +148,7 @@ export const create_scatter_layer = ({
     return tint.tint_albedo(authored)
   })() as ReturnType<typeof tint.tint_albedo>
   material.roughnessNode = tint.roughness_node
-  const sway = attribute('sway', 'float' as const)
-  const phase = attribute('phase', 'float' as const)
-  material.positionNode = positionLocal.add(
-    vec3(
-      sin(phase.add(time.mul(1.6)))
-        .mul(sway)
-        .mul(0.1),
-      0,
-      cos(phase.add(time.mul(1.1)))
-        .mul(sway)
-        .mul(0.06)
-    )
-  )
+  material.positionNode = plant_wind_position()
   const remove = (key: string): void => {
     const mesh = meshes.get(key)
     if (!mesh) return

@@ -228,9 +228,9 @@ the same change. Every new `event::emit` must be routed in `events.rs` or explic
 ## Git workflow
 
 History is linear and work is PR-shaped: one branch per concern, rebased onto current `edge`.
-Changes enter through a PR to `edge`, soak there, and reach `master` through the edge-to-master
-promotion PR. Both landings are fast-forward only. Nobody pushes directly to `edge` or `master`,
-including maintainers. Hotfixes also travel through `edge`. The promotion PR contains the sole
+`edge` is the integration branch and accepts owner pushes after its gate; `master` never accepts
+direct pushes and receives only the edge-to-master promotion. Hotfixes also travel through
+`edge`. The promotion PR contains the sole
 human-edited `package.json` version bump; CI creates tags and releases. Never create tags locally.
 
 ## Trust and security

@@ -15,19 +15,9 @@ export const create_fight_presentation = ({
   vfx,
   shock = () => {},
 }: Readonly<{ entities: EntityLayer; vfx: TransientEffects; shock?: () => void }>) => {
-  // The previous turn's on-screen floor: a mob turn holds the card for its chain-projected
-  // minimum before the next turn cue may take over.
-  let turn_shown_at = 0
-  let turn_min_ms = 0
   return Object.freeze({
     play: async (cue: FightPresentationCue): Promise<boolean> => {
-      if (cue.type === 'turn') {
-        const remaining = turn_shown_at + turn_min_ms - performance.now()
-        if (remaining > 0) await new Promise((resolve) => setTimeout(resolve, remaining))
-        turn_shown_at = performance.now()
-        turn_min_ms = cue.min_ms ?? 0
-        return true
-      }
+      if (cue.type === 'turn') return true
       if (cue.type === 'cast') {
         entities.face_cell(cue.caster_id, cue.target_cell)
         void entities.beat(cue.caster_id, cue.self_cast ? 'buff' : 'attack')

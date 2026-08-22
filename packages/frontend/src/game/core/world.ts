@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
+/* eslint-disable functional/immutable-data, functional/prefer-immutable-types, functional/prefer-tacit, max-lines, no-param-reassign -- the world runtime is the explicit mutable engine and browser-device boundary. */
 
 import {
   CHUNK_EDGE,
@@ -20,6 +21,7 @@ import {
   type EntityRender,
   type FightBoardRender,
   type FightSwordMarker,
+  type ResourceNodeMarker,
   type MaterialPreset,
   type CharacterAppearanceRender,
   type MobEntityRender,
@@ -43,6 +45,7 @@ import { create_chunk_manager } from './chunks.ts'
 import { CHARACTER_HEIGHT } from './collision.ts'
 import { empty_pet_motion, step_pet_follow, type PetMotion } from './pet_follow.ts'
 import { publish_mount_prompt } from './mount_prompt_feed.ts'
+import { publish_portal_prompt } from './portal_prompt_feed.ts'
 import { publish_fight_prompt } from './fight_prompt_feed.ts'
 import { publish_pose } from './pose_feed.ts'
 import { pet_seat_height, pet_vertical_offset, type PetLocomotion } from './pet_locomotion.ts'
@@ -68,6 +71,10 @@ export const compose_world_entities = (
 
 /** X mounts only inside this radius — the nametag shows exactly while it would work */
 const MOUNT_RANGE = 4
+/** T travels only this close to the star gate (client 0;0 — the chain's own portal law) */
+const PORTAL_RANGE = 10
+/** the gate stands at the world origin — eligibility is just the body's horizontal offset */
+export const portal_near = (x: number, z: number): boolean => Math.hypot(x, z) <= PORTAL_RANGE
 const MOVE_KEYS: Readonly<Record<string, Readonly<{ axis: 'forward' | 'strafe'; sign: 1 | -1 }>>> = Object.freeze({
   KeyW: { axis: 'forward', sign: 1 },
   ArrowUp: { axis: 'forward', sign: 1 },
@@ -82,9 +89,18 @@ export const create_world = ({
   canvas,
   world,
   quality,
-}: Readonly<{ canvas: HTMLCanvasElement; world: unknown; quality: EngineQuality }>) => {
+  on_travel,
+  initial_focus = [0, 0],
+}: Readonly<{
+  canvas: HTMLCanvasElement
+  world: unknown
+  quality: EngineQuality
+  /** fired when T is pressed beside the star gate — the app owns what travel means */
+  on_travel?: () => void
+  initial_focus?: readonly [number, number]
+}>) => {
   const compiled = compile_world_recipe(parse_world_recipe(world))
-  const engine = create_engine({ canvas, quality, world })
+  const engine = create_engine({ canvas, quality, world, initial_focus })
   const terrain_planner = create_terrain_planner(compiled.recipe)
   const chunks = create_chunk_manager({
     engine,
@@ -235,6 +251,7 @@ export const create_world = ({
     if (next !== 'follow') {
       publish_pose(null)
       engine.set_character_anchor(null)
+      label_portal(false)
     }
     if (next === 'spectate') {
       const { position } = character.get_transform()
@@ -265,8 +282,6 @@ export const create_world = ({
   const on_pointer_down = (event: PointerEvent): void => {
     update_mouse_forward(event.buttons)
     if (!enabled || (event.button !== 0 && event.button !== 2)) return
-    // capture so the release lands here even when the cursor leaves the canvas mid-hold
-    if (mode === 'follow') canvas.setPointerCapture(event.pointerId)
     if (mode !== 'spectate') return
     dragging = event.button === 2 ? 'orbit' : 'pan'
     pointer = [event.clientX, event.clientY]
@@ -287,6 +302,9 @@ export const create_world = ({
     }
     pointer = [event.clientX, event.clientY]
   }
+  // the release listens on the WINDOW: a button let go off-canvas must still clear the run, and
+  // follow mode cannot capture the pointer — its rotate drag holds a native pointer lock, which
+  // both voids an existing capture and makes setPointerCapture throw InvalidStateError
   const on_pointer_up = (event: PointerEvent): void => {
     update_mouse_forward(event.buttons)
     dragging = null
@@ -325,6 +343,7 @@ export const create_world = ({
       if (riding) set_riding(false)
       else if (pet_mountable()) set_riding(true)
     }
+    if (event.code === 'KeyT' && down && portal_labeled) on_travel?.()
   }
 
   /** X mounts only while the companion is beside you — the nametag's own rule. */
@@ -424,6 +443,24 @@ export const create_world = ({
     publish_mount_prompt(labeled_pet_id ? mount_label : null)
   }
 
+  // the star-gate prompt rides the SAME engine label pass — one element floated over the portal
+  // while the body stands close enough for T to mean travel
+  const portal_label = typeof document === 'undefined' ? null : document.createElement('div')
+  let portal_labeled = false
+  const label_portal = (near: boolean): void => {
+    const attach = near && !!portal_label
+    if (attach === portal_labeled) return
+    engine.set_portal_label(attach && portal_label ? portal_label : null)
+    portal_labeled = attach
+    publish_portal_prompt(attach && portal_label ? portal_label : null)
+  }
+  /** eligibility delegates to the exported origin law — one distance rule everywhere */
+  const portal_eligible = (): boolean => {
+    if (mode !== 'follow' || !character_render) return false
+    const [x, , z] = character.get_transform().position
+    return portal_near(x, z)
+  }
+
   const render_pet = (transform = character.get_transform(), delta_seconds = 0): boolean => {
     if (!pet || !character_render) {
       const changed = pet_entity !== null
@@ -494,6 +531,7 @@ export const create_world = ({
       const character_changed = render_character(transform)
       const pet_changed = render_pet(transform, delta_seconds)
       if (character_changed || pet_changed) submit_entities()
+      label_portal(portal_eligible())
       label_focused_fight()
       footsteps.tick({
         position: transform.position,
@@ -512,6 +550,7 @@ export const create_world = ({
         on_ground: transform.on_ground,
       }
       publish_pose({
+        character_id: character_render?.id ?? '',
         x: anchor.x,
         y: anchor.y,
         z: anchor.z,
@@ -550,8 +589,8 @@ export const create_world = ({
 
   canvas.addEventListener('pointerdown', on_pointer_down)
   canvas.addEventListener('pointermove', on_pointer_move)
-  canvas.addEventListener('pointerup', on_pointer_up)
-  canvas.addEventListener('pointercancel', on_pointer_up)
+  globalThis.addEventListener('pointerup', on_pointer_up)
+  globalThis.addEventListener('pointercancel', on_pointer_up)
   canvas.addEventListener('contextmenu', on_context_menu)
   canvas.addEventListener('wheel', on_wheel, { passive: false })
   globalThis.addEventListener('keydown', on_key_down)
@@ -601,15 +640,17 @@ export const create_world = ({
     },
     /** mirror + forward: the world keeps the marker list for F-key focus geometry, the engine
      *  layer renders them (the join-window clock made physical) */
-    set_fight_swords: (url: string, markers: readonly FightSwordMarker[]) => {
+    set_fight_swords: (url: string, impact_sound_url: string, markers: readonly FightSwordMarker[]) => {
       fight_markers = markers
       if (markers.length === 0 && focused_fight_id) {
         if (fight_label && focused_fight_id) engine.set_fight_sword_label(focused_fight_id, null)
         focused_fight_id = null
         publish_fight_prompt({ root: null, focused_id: null })
       }
-      engine.set_fight_swords(url, markers)
+      engine.set_fight_swords(url, impact_sound_url, markers)
     },
+    set_resource_nodes: (markers: readonly ResourceNodeMarker[]) => engine.set_resource_nodes(markers),
+    set_resource_node_label: (id: string, element: HTMLElement | null) => engine.set_resource_node_label(id, element),
     entity_height: engine.entity_height,
     set_pet: (next: Readonly<{ id: string; model_url: string; locomotion: PetLocomotion }> | null) => {
       pet = next ? Object.freeze(next) : null
@@ -674,6 +715,9 @@ export const create_world = ({
     follow_camera: () => follow_addon,
     /// The last rendered camera frame — the screen-space pick (player right-click) reads it.
     camera_frame: (): CameraFrame | null => last_view,
+    set_entity_label: (id: string, element: HTMLElement | null) => engine.set_entity_label(id, element),
+    set_world_label: (id: string, element: HTMLElement | null, position: Vec3 | null) =>
+      engine.set_world_label(id, element, position),
     state: (): WorldState =>
       Object.freeze({
         engine: engine.status(),
@@ -708,8 +752,8 @@ export const create_world = ({
       publish_fight_prompt({ root: null, focused_id: null })
       canvas.removeEventListener('pointerdown', on_pointer_down)
       canvas.removeEventListener('pointermove', on_pointer_move)
-      canvas.removeEventListener('pointerup', on_pointer_up)
-      canvas.removeEventListener('pointercancel', on_pointer_up)
+      globalThis.removeEventListener('pointerup', on_pointer_up)
+      globalThis.removeEventListener('pointercancel', on_pointer_up)
       canvas.removeEventListener('contextmenu', on_context_menu)
       canvas.removeEventListener('wheel', on_wheel)
       globalThis.removeEventListener('keydown', on_key_down)

@@ -35,7 +35,7 @@ public(package) fun new(
 ): MobTemplate {
   let mob_type = mob_data::mob_type(&data);
   let template = MobTemplate {
-    id: derived_object::claim(item::registry_uid_mut(registry), MobKey(mob_type)),
+    id: derived_object::claim(item::ru(registry), MobKey(mob_type)),
     data,
   };
   event::emit(MobTemplateCreated { template: template.id.to_inner(), mob_type });

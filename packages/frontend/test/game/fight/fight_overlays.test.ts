@@ -1,12 +1,15 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
+import { readFileSync } from 'node:fs'
+
 import { create_character_source, create_fight, fight_path_to, reachable_fight_cells } from '@aresrpg/fight'
 import { AREA_SHAPES } from '@aresrpg/fight/move_contract'
 import { expect, test } from 'bun:test'
 
 import {
   fight_visual_checkpoint,
+  fight_visual_checkpoint_after_cue,
   fight_range_seat,
   fight_zone_visual_state,
   project_fight_overlays,
@@ -202,7 +205,7 @@ test('persistent board truth exposes owned traps and public glyphs through engin
     spell_cells: null,
     spell_hover_area: [],
     hovered_spell_targetable: false,
-    viewer_owner: 'local',
+    viewer_team: 0n,
     zone_ids: ['zone:ally', 'zone:enemy', 'zone:glyph'],
   })
 
@@ -213,6 +216,70 @@ test('persistent board truth exposes owned traps and public glyphs through engin
     decoration: 'trap',
   })
   expect(overlays.find(({ id }) => id === 'zone:zone:glyph')?.blob.cells).toEqual([Number(enemy.cell)])
+  expect(overlays.find(({ id }) => id === 'zone:zone:enemy')).toBeUndefined()
+})
+
+test('the active team ring follows the turn being presented, including mobs and opponents', () => {
+  const state = checkpoint()
+  const overlays = project_fight_overlays({
+    checkpoint: state,
+    presentation_active: true,
+    presented_turn_seat: 1n,
+    hovered_cell: null,
+    owned_active_seat: null,
+    attack_selected: false,
+    movement_cells: [],
+    range_seat: null,
+    spell_cells: null,
+    spell_hover_area: [],
+    hovered_spell_targetable: false,
+  })
+
+  expect(overlays.find(({ id }) => id === 'team:0')?.blob).toMatchObject({ opacity: 0.42 })
+  expect(overlays.find(({ id }) => id === 'team:1')?.blob).toMatchObject({ opacity: 0.95, pulse: true })
+})
+
+test('the visual checkpoint marks damage, movement, and death only when each cue completes', () => {
+  const before = checkpoint()
+  const target = before.contract.fighters[1]!
+  const damage = {
+    id: 'damage',
+    type: 'damage',
+    source_id: 'fight_character_0',
+    target_id: 'fight_character_1',
+    amount: Number(target.hp),
+    hp_before: Number(target.hp),
+    hp_after: 0,
+    element: 'earth',
+    cause: 'spell',
+    critical: false,
+  } as const
+  const moved_cell = target.cell + 1n
+  const movement = {
+    id: 'movement',
+    type: 'movement',
+    entity_id: 'fight_character_1',
+    cells: [Number(moved_cell)],
+    mode: 'walk',
+    source_id: 'fight_character_1',
+    mp_spent: 1,
+    gait: 'walk',
+  } as const
+  const death = {
+    id: 'death',
+    type: 'death',
+    entity_id: 'fight_character_1',
+    source_id: 'fight_character_0',
+    cell: Number(moved_cell),
+    cause: 'spell',
+  } as const
+
+  expect(fight_visual_checkpoint_after_cue(before, death, 'start')).toBe(before)
+  const damaged = fight_visual_checkpoint_after_cue(before, damage, 'complete')
+  const moved = fight_visual_checkpoint_after_cue(damaged, movement, 'complete')
+  const dead = fight_visual_checkpoint_after_cue(moved, death, 'complete')
+
+  expect(dead.contract.fighters[1]).toMatchObject({ hp: 0n, cell: moved_cell, dead: true })
 })
 
 test('unpresented events retain the previous visual checkpoint until their cue batch settles', () => {
@@ -222,6 +289,8 @@ test('unpresented events retain the previous visual checkpoint until their cue b
 
   expect(fight_visual_checkpoint(before, after, true)).toBe(before)
   expect(fight_visual_checkpoint(before, after, false)).toBe(after)
+  const layer = readFileSync(new URL('../../../src/game/fight/FightLayer.tsx', import.meta.url), 'utf8')
+  expect(layer).toContain('fight_visual_checkpoint(presented_checkpoint, checkpoint, presentation_queued)')
 })
 
 test('a trap placement advances persistent zones when its presentation beat completes', () => {

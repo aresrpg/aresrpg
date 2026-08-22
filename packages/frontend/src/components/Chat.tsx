@@ -17,6 +17,14 @@ type LiveNames = Readonly<Record<number, string>>
 
 type ChatToken = Readonly<{ text: string; cls: string }>
 
+export const selected_chat_name = (
+  session: Readonly<{
+    selected_character_id: string | null
+    characters: readonly Readonly<{ id: string; name: string }>[]
+  }>,
+  fallback: string
+): string => session.characters.find(({ id }) => id === session.selected_character_id)?.name ?? fallback
+
 const CHANNELS: readonly Readonly<{ channel: ChatChannel; label_key: string }>[] = Object.freeze([
   Object.freeze({ channel: 'general' as const, label_key: 'chat_tab_general' }),
   Object.freeze({ channel: 'combat' as const, label_key: 'chat_tab_combat' }),
@@ -44,13 +52,10 @@ export const chat_line_tokens = (line: Readonly<ChatLine>, text: ChatText, names
   )
 }
 
-export const Chat = ({
-  text,
-  names = Object.freeze({}),
-  self_name,
-}: Readonly<{ text: ChatText; names?: LiveNames; self_name?: string }>) => {
+export const Chat = ({ text, names = Object.freeze({}) }: Readonly<{ text: ChatText; names?: LiveNames }>) => {
   const lines = useAppStore((state) => state.chat.lines)
   const players = useAppStore((state) => state.world.players)
+  const self_name = useAppStore((state) => selected_chat_name(state.session, text.chat_you ?? 'me'))
   const log = useRef<HTMLDivElement>(null)
   // a spoken NAME that maps to a nearby player opens the same context menu as their body —
   // minus the duel, which needs the two of them standing together (owner 2026-08-21)
@@ -97,7 +102,7 @@ export const Chat = ({
         channel: 'general' as const,
         key: 'chat_line',
         values: Object.freeze({
-          name: Object.freeze({ text: self_name ?? text.chat_you ?? 'me', cls: 'self' }),
+          name: Object.freeze({ text: self_name, cls: 'self' }),
           message: Object.freeze({ text: message, cls: 'says' }),
         }),
       }),

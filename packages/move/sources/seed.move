@@ -61,34 +61,34 @@ public fun new_item_template(
   level: u8,
   pet_foods: vector<String>,
 ): ItemTemplate {
-  item::new_template(registry, name, item_type, category, level, pet_foods)
+  item::nt(registry, name, item_type, category, level, pet_foods)
 }
 
 /// Author the stat ranges (gear only; every min ≤ max asserted before any freeze).
 public fun set_stats(template: &mut ItemTemplate, min: ItemStatistics, max: ItemStatistics) {
-  item::set_template_stats(template, min, max);
+  item::sts(template, min, max);
 }
 
 /// Author the damage lines (weapons).
 public fun set_damages(template: &mut ItemTemplate, lines: vector<ItemDamages>) {
-  item::set_template_damages(template, lines);
+  item::std(template, lines);
 }
 
 public fun set_consumable_heal(template: &mut ItemTemplate, amount: u32) { consumable::set_heal(template, amount); }
-public fun set_consumable_reset_stats(template: &mut ItemTemplate) { consumable::set_reset_stats(template); }
-public fun set_consumable_reset_spells(template: &mut ItemTemplate) { consumable::set_reset_spells(template); }
+public fun set_consumable_reset_stats(template: &mut ItemTemplate) { consumable::srs(template); }
+public fun set_consumable_reset_spells(template: &mut ItemTemplate) { consumable::srp(template); }
 public fun set_consumable_recall(template: &mut ItemTemplate) { consumable::set_recall(template); }
 public fun set_consumable_loot_box(template: &mut ItemTemplate) { consumable::set_loot_box(template); }
 
 /// Seal one template forever — the chain rejects every future write, from anyone.
 public fun freeze_item_template(template: ItemTemplate) {
   assert!(!consumable::is_loot_box(&template), EIncompleteLootBox);
-  item::freeze_template(template);
+  item::ft(template);
 }
 
 public fun freeze_loot_box_template(template: ItemTemplate, loot_registry: &mut LootRegistry) {
   assert!(consumable::is_loot_box(&template) && loot_box::has_valid_table(loot_registry, &template), EIncompleteLootBox);
-  item::freeze_template(template);
+  item::ft(template);
 }
 
 /// Mint a mob template at its `mob_type`-derived address — key-only like the item template:
@@ -248,7 +248,7 @@ public fun set_world_dungeon_rooms(_: &SeedCap, world: &mut World, rooms: vector
 /// Commit the world's deterministic receipt in the same PTB as its content writes.
 public fun mark_world_seeded(_: &SeedCap, registry: &mut TemplateRegistry, world_name: String) {
   transfer::freeze_object(WorldSeedMarker {
-    id: derived_object::claim(item::registry_uid_mut(registry), WorldSeedKey(world_name)),
+    id: derived_object::claim(item::ru(registry), WorldSeedKey(world_name)),
   });
 }
 
@@ -261,7 +261,7 @@ public fun destroy_seed_cap(cap: SeedCap) {
 public fun seal(admin: &AdminCap, registry: &mut TemplateRegistry, ctx: &TxContext) {
   admin.verify(ctx);
   transfer::freeze_object(SealMarker {
-    id: derived_object::claim(item::registry_uid_mut(registry), SealKey(b"sealed".to_string())),
+    id: derived_object::claim(item::ru(registry), SealKey(b"sealed".to_string())),
   });
   item::seal(registry);
 }

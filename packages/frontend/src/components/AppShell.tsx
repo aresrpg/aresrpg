@@ -13,6 +13,7 @@ import { FightLayer } from '../game/fight/FightLayer.tsx'
 import { read_scene, subscribe_scene } from '../game/core/scene_feed.ts'
 import { useAppStore } from '../store.ts'
 
+import { fight_surface_visible } from './app_layout.ts'
 import { CharacterTabs, character_tabs_visible } from './CharacterTabs.tsx'
 import { SessionReplacedModal } from './SessionReplacedModal.tsx'
 import { Sidebar } from './Sidebar.tsx'
@@ -25,6 +26,7 @@ const ShopPage = lazy(() => import('../shop/ShopPage.tsx'))
 const AirdropPage = lazy(() => import('../airdrop/AirdropPage.tsx'))
 const SettingsPage = lazy(() => import('../settings/SettingsPage.tsx'))
 const CharactersPage = lazy(() => import('../characters/CharactersPage.tsx'))
+const MarketplacePage = lazy(() => import('../marketplace/MarketplacePage.tsx'))
 
 const PageFallback = ({ label }: Readonly<{ label: string }>) => (
   <section className="pointer-events-auto z-[12] grid min-h-full flex-1 place-items-center border border-white/8 bg-[#111119]/96 text-[9px] tracking-[0.18em] text-[#c8963c] uppercase">
@@ -35,6 +37,7 @@ const PageFallback = ({ label }: Readonly<{ label: string }>) => (
 const RoutedPage = memo(
   ({
     copy,
+    locale,
     page,
     pathname,
     session,
@@ -42,6 +45,7 @@ const RoutedPage = memo(
     open_path,
   }: Readonly<{
     copy: AppCopy
+    locale: Locale
     page: Page
     pathname: string
     session: SessionState
@@ -79,13 +83,19 @@ const RoutedPage = memo(
           <CharactersPage copy={copy} />
         </Suspense>
       )}
+      {page === 'marketplace' && (
+        <Suspense fallback={<PageFallback label={copy.loading_universe} />}>
+          <MarketplacePage copy={copy} locale={locale} />
+        </Suspense>
+      )}
       {page !== 'world' &&
         page !== 'encyclopedia' &&
         page !== 'admin' &&
         page !== 'shop' &&
         page !== 'airdrop' &&
         page !== 'settings' &&
-        page !== 'characters' && (
+        page !== 'characters' &&
+        page !== 'marketplace' && (
           <section className="pointer-events-auto z-[12] grid min-h-full min-w-0 flex-1 place-items-center border border-white/8 bg-[#111119]/96 text-center shadow-[0_18px_60px_rgba(0,0,0,0.35)] backdrop-blur-xl">
             <div>
               <p className="text-[8px] tracking-[0.26em] text-[#c8963c] uppercase">{copy[page]}</p>
@@ -101,11 +111,11 @@ const RoutedPage = memo(
 /** The GAME's fight surface, mounted in the world the engine module owns. This is the ONE place
  *  that reads the game's scene lane — everything downstream receives the handle as an argument,
  *  so no component can wander into a world that is not its own. */
-const GameFightLayer = ({ copy }: Readonly<{ copy: AppCopy }>) => {
+const GameFightLayer = ({ copy, page }: Readonly<{ copy: AppCopy; page: Page }>) => {
   const scene = useSyncExternalStore(subscribe_scene, read_scene, () => null)
   const mounted = useAppStore((state) => state.fight.mounted)
   // a previewing modal hydrates the session without mounting the board — mounting is the COMMIT
-  return scene && mounted ? <FightLayer copy={copy} scene={scene} /> : null
+  return scene && fight_surface_visible(page, mounted) ? <FightLayer copy={copy} scene={scene} /> : null
 }
 
 export const AppShell = ({
@@ -136,64 +146,67 @@ export const AppShell = ({
   open_page: (page: Page) => void
   open_path: (pathname: string) => void
   select_character: (character_id: string) => void
-}>) => (
-  <div className="pointer-events-none fixed inset-0 z-[10] flex h-dvh flex-col gap-3 overflow-hidden p-3">
-    {session.link_status === 'replaced' && <SessionReplacedModal copy={copy} />}
-    {session.game_frozen === true && (
-      <aside
-        className="pointer-events-auto border border-[#ff496c]/80 bg-[#8f1028] px-4 py-3 text-center text-[11px] font-bold tracking-[0.12em] text-white uppercase shadow-[0_0_30px_rgba(255,35,78,0.38)]"
-        data-game-frozen
-        role="alert"
-      >
-        {copy.game_frozen}
-      </aside>
-    )}
-    <div className="flex min-h-0 flex-1 gap-3 overflow-hidden">
-      <div className="pointer-events-auto flex min-h-0 shrink-0 flex-col gap-3 overflow-hidden">
-        <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto">
-          <Sidebar
-            address={session.wallet?.address ?? null}
+}>) => {
+  return (
+    <div className="pointer-events-none fixed inset-0 z-[10] flex h-dvh flex-col gap-3 overflow-hidden p-3">
+      {session.link_status === 'replaced' && <SessionReplacedModal copy={copy} />}
+      {session.game_frozen === true && (
+        <aside
+          className="pointer-events-auto border border-[#ff496c]/80 bg-[#8f1028] px-4 py-3 text-center text-[11px] font-bold tracking-[0.12em] text-white uppercase shadow-[0_0_30px_rgba(255,35,78,0.38)]"
+          data-game-frozen
+          role="alert"
+        >
+          {copy.game_frozen}
+        </aside>
+      )}
+      <div className="flex min-h-0 flex-1 gap-3 overflow-hidden">
+        <div className="pointer-events-auto flex min-h-0 shrink-0 flex-col gap-3 overflow-hidden">
+          <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto">
+            <Sidebar
+              address={session.wallet?.address ?? null}
+              copy={copy}
+              open_page={open_page}
+              page={page}
+              network={network}
+            />
+            <WalletCard copy={copy} disconnect={disconnect} session={session} />
+            <LanguageCard change_locale={change_locale} locale={locale} />
+            <DiscordCard copy={copy} />
+          </div>
+          <ConnectionCard
             copy={copy}
-            open_page={open_page}
-            page={page}
-            network={network}
+            error={session.link_error}
+            indexing_lag={session.indexing_lag}
+            violation={session.link_violation}
+            latency_ms={session.latency_ms}
+            online={session.online}
+            status={session.link_status}
           />
-          <WalletCard copy={copy} disconnect={disconnect} session={session} />
-          <LanguageCard change_locale={change_locale} locale={locale} />
-          <DiscordCard copy={copy} />
         </div>
-        <ConnectionCard
-          copy={copy}
-          error={session.link_error}
-          indexing_lag={session.indexing_lag}
-          violation={session.link_violation}
-          latency_ms={session.latency_ms}
-          online={session.online}
-          status={session.link_status}
-        />
-      </div>
-      <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-3">
-        {character_tabs_visible(page) && (
-          <CharacterTabs
-            characters={session.characters}
-            copy={copy}
-            create_character={create_character}
-            select_character={select_character}
-            selected_character_id={session.selected_character_id}
-          />
-        )}
-        <div className="relative flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto">
-          <RoutedPage
-            copy={copy}
-            open_path={open_path}
-            page={page}
-            pathname={pathname}
-            session={session}
-            settings={settings}
-          />
-          <GameFightLayer copy={copy} />
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-3">
+          {character_tabs_visible(page) && (
+            <CharacterTabs
+              characters={session.characters}
+              copy={copy}
+              create_character={create_character}
+              select_character={select_character}
+              selected_character_id={session.selected_character_id}
+            />
+          )}
+          <div className="relative flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto">
+            <RoutedPage
+              copy={copy}
+              locale={locale}
+              open_path={open_path}
+              page={page}
+              pathname={pathname}
+              session={session}
+              settings={settings}
+            />
+            <GameFightLayer copy={copy} page={page} />
+          </div>
         </div>
       </div>
     </div>
-  </div>
-)
+  )
+}

@@ -43,6 +43,10 @@ export const BoxReveal = ({
   const [rolled, set_rolled] = useState<Rolled | null>(null)
   const [anim_done, set_anim_done] = useState(false)
   const [escape_ready, set_escape_ready] = useState(false)
+  /** the settle is durable and runs without this overlay — after a wait, stop pretending the
+   *  player has to watch it (2026-08-22: a claim whose roll had not been projected yet left
+   *  this button spinning on Collecting… with no way out but the Escape key) */
+  const [collect_escape, set_collect_escape] = useState(false)
   // collected the moment the SILENT claimer settles the claim out of the session
   const collected = !!rolled && !claims.some(({ id }) => id === rolled.claim_id)
 
@@ -75,6 +79,7 @@ export const BoxReveal = ({
         const { claim_id, rolled_template, amount } = await wallet.character.open_loot_box({
           box_item_id: box.id,
           box_item_type: box.item_type,
+          custody: { kiosk: box.kiosk },
         })
         // the fold lands the claim — the SILENT claimer settles it during the celebration
         dispatch_app({ type: 'inventory/box_opened', box_item_id: box.id, claim_id })
@@ -117,6 +122,12 @@ export const BoxReveal = ({
     const timer = setTimeout(() => set_escape_ready(true), PENDING_ESCAPE_MS)
     return () => clearTimeout(timer)
   }, [phase])
+
+  useEffect(() => {
+    if (phase !== 'reveal' || collected) return undefined
+    const timer = setTimeout(() => set_collect_escape(true), PENDING_ESCAPE_MS)
+    return () => clearTimeout(timer)
+  }, [phase, collected])
 
   const animating = phase === 'charging' || phase === 'burst'
   // skipping also silences the pending celebration timers so a late burst can never
@@ -191,7 +202,7 @@ export const BoxReveal = ({
               {rolled.amount > 1 && <span> ×{rolled.amount}</span>}
             </div>
           </div>
-          {collected ? (
+          {collected || collect_escape ? (
             <button className="btn-gold boxreveal__collect" onClick={close} type="button">
               {t('continue_cta')}
             </button>

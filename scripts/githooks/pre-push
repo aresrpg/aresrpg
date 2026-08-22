@@ -1,0 +1,4 @@
+#!/bin/sh
+# Refuse to publish a tree that the repository's complete source-style gate rejects.
+set -e
+bun run lint

@@ -88,12 +88,70 @@ pub fn analyze(ckpt: u64, ts_ms: u64, txs: &[TxView<'_>], game: &str) -> anyhow:
     for tx in txs {
         route_game_events(&mut wire, ckpt, ts_ms, tx, game)?;
         route_game_state(&mut wire, ckpt, ts_ms, tx, game)?;
+        route_fight_writes(&mut wire, ckpt, ts_ms, tx, game)?;
         route_item_writes(&mut wire, ckpt, ts_ms, tx, game)?;
         analyze_kiosk_market(&mut wire, ckpt, ts_ms, tx, game)?;
 
         analyze_shop_sales(&mut wire, ckpt, ts_ms, tx, game)?;
     }
     Ok(wire)
+}
+
+/// Every Fight write reconciles the optimistic live stream. Turn events carry animation
+/// witnesses; this trailing projection event tells watchers to load the final AP/MP/HP/cells.
+/// Ended writes additionally wake each participant's durable settlement recovery.
+fn route_fight_writes(
+    wire: &mut Wire,
+    ckpt: u64,
+    ts_ms: u64,
+    tx: &TxView<'_>,
+    game: &str,
+) -> anyhow::Result<()> {
+    for (index, output) in tx.outputs.iter().enumerate() {
+        if output.type_key.package != game
+            || output.type_key.module != "fight"
+            || output.type_key.name != "Fight"
+        {
+            continue;
+        }
+        wire.publications.push(Publication {
+            channel: format!("evt:fight:{}", output.id.hex()),
+            payload: envelope(
+                ckpt,
+                tx.tx_index,
+                index as u64,
+                ts_ms,
+                "FightProjected",
+                json!({ "fight": output.id.hex() }),
+            ),
+        });
+        let fight = decode::from_bytes::<decode::Fight>(output.bytes).map_err(|error| {
+            anyhow::anyhow!(
+                "layout drift: fight::Fight {} failed decode: {error}",
+                output.id.hex()
+            )
+        })?;
+        if !fight.ended {
+            continue;
+        }
+        for fighter in &fight.fighters {
+            let decode::FighterKind::Player { character, .. } = &fighter.kind else {
+                continue;
+            };
+            wire.publications.push(Publication {
+                channel: format!("evt:character:{}", character.hex()),
+                payload: envelope(
+                    ckpt,
+                    tx.tx_index,
+                    index as u64,
+                    ts_ms,
+                    "FightResolutionChanged",
+                    json!({ "fight": fight.id.hex(), "character": character.hex() }),
+                ),
+            });
+        }
+    }
+    Ok(())
 }
 
 /// The shared Version object is the emergency-brake truth. Unlike ordinary
@@ -172,29 +230,23 @@ fn route_item_writes(
     Ok(())
 }
 
-/// Every fight SEAT reaches its own character's channel — the seat is CUSTODY, not an
-/// event. `FighterJoined` witnesses only the seats taken by a join; a fight's creator
-/// (a duel challenge, a mob engage, a gathering ambush) takes seat 0 at BIRTH with no
-/// join at all, so the player whose character sits in it heard nothing and never entered
-/// the fight. The projection is the trigger (the `route_item_writes` precedent): one
-/// mechanism for every seat, however it was taken.
-pub fn route_fight_seats(wire: &mut Wire, ckpt: u64, ts_ms: u64, custody: &[Custody]) {
+/// A CHARACTER'S CUSTODY, BOTH WAYS, on its own channel — custody is state, not an event.
+/// `FighterJoined` witnesses only the seats taken by a join; a fight's creator (a duel
+/// challenge, a mob engage, a gathering ambush) takes seat 0 at BIRTH with no join at all,
+/// so the player whose character sits in it heard nothing and never entered the fight.
+/// The RETURN needs the same witness: a forfeit or a settle re-locks the character into its
+/// kiosk, and a client whose roster still names the old seat refuses every next action
+/// ("already in a fight", 2026-08-22). The projection is the trigger (the `route_item_writes`
+/// precedent): one mechanism for every custody move, whichever door caused it.
+pub fn route_character_custody(wire: &mut Wire, ckpt: u64, ts_ms: u64, custody: &[Custody]) {
     for (index, fact) in custody.iter().enumerate() {
-        let Custody::FightSeats {
-            fight,
-            seat,
-            character,
-        } = fact
-        else {
-            continue;
-        };
-        wire.publications.push(Publication {
-            channel: format!("evt:character:{}", character.hex()),
-            payload: envelope(
-                ckpt,
-                0,
-                index as u64,
-                ts_ms,
+        let (character, kind, data) = match fact {
+            Custody::FightSeats {
+                fight,
+                seat,
+                character,
+            } => (
+                character,
                 "CharacterSeated",
                 json!({
                     "fight": fight.hex(),
@@ -202,6 +254,21 @@ pub fn route_fight_seats(wire: &mut Wire, ckpt: u64, ts_ms: u64, custody: &[Cust
                     "seat": seat,
                 }),
             ),
+            Custody::KioskHolds {
+                kiosk,
+                object,
+                label: "Character",
+                ..
+            } => (
+                object,
+                "CharacterHeld",
+                json!({ "character": object.hex(), "kiosk": kiosk.hex() }),
+            ),
+            _ => continue,
+        };
+        wire.publications.push(Publication {
+            channel: format!("evt:character:{}", character.hex()),
+            payload: envelope(ckpt, 0, index as u64, ts_ms, kind, data),
         });
     }
 }
@@ -468,6 +535,8 @@ fn analyze_kiosk_market(
                         json!({
                             "kiosk": e.kiosk.hex(),
                             "object": e.id.hex(),
+                            "buyer": tx.sender.hex(),
+                            "kind": if sold.type_key.name == "Character" { "character" } else { "item" },
                             "price_mist": e.price.to_string(),
                         }),
                     ),
@@ -476,19 +545,6 @@ fn analyze_kiosk_market(
             "ItemListed" | "ItemDelisted" => {
                 // foreign collections never reach the game channel (M4)
                 if !is_game_market_event(event, game) {
-                    continue;
-                }
-                // suppress the extract pair: ANY same-tx 0-price purchase of a
-                // game object marks the tx as plumbing — keyed on the price,
-                // never on the (spoofable) royalty call.
-                let plumbing = tx.events.iter().any(|other| {
-                    other.module == "kiosk"
-                        && other.name == "ItemPurchased"
-                        && decode::from_bytes::<events::KioskItemPurchased>(other.bytes)
-                            .map(|purchase| purchase.price == 0)
-                            .unwrap_or(false)
-                });
-                if plumbing {
                     continue;
                 }
                 let (id, kiosk, price) = if event.name == "ItemListed" {
@@ -501,6 +557,20 @@ fn analyze_kiosk_market(
                     )?;
                     (e.id, e.kiosk, None)
                 };
+                // Suppress only THIS object's protected-policy extract pair. Another stack may
+                // legitimately list/delist in the same PTB while a merge consumes a 0-price
+                // source; transaction-wide suppression made that real market delta disappear.
+                let plumbing = price == Some(0)
+                    && tx.events.iter().any(|other| {
+                        other.module == "kiosk"
+                            && other.name == "ItemPurchased"
+                            && decode::from_bytes::<events::KioskItemPurchased>(other.bytes)
+                                .map(|purchase| purchase.price == 0 && purchase.id == id)
+                                .unwrap_or(false)
+                    });
+                if plumbing {
+                    continue;
+                }
                 let kind = if event.name == "ItemListed" {
                     "MarketListed"
                 } else {
@@ -552,7 +622,10 @@ fn analyze_shop_sales(
             .find(|o| o.type_key.package == game && o.type_key.name == "Sale" && o.id == e.sale)
             .map(|o| {
                 decode::from_bytes::<decode::Sale>(o.bytes).map_err(|error| {
-                    anyhow::anyhow!("layout drift: shop::Sale {} failed decode: {error}", o.id.hex())
+                    anyhow::anyhow!(
+                        "layout drift: shop::Sale {} failed decode: {error}",
+                        o.id.hex()
+                    )
                 })
             })
             .transpose()?
@@ -566,7 +639,10 @@ fn analyze_shop_sales(
             .filter(|o| o.type_key.package == game && o.type_key.name == "Item")
             .map(|o| {
                 decode::from_bytes::<decode::Item>(o.bytes).map_err(|error| {
-                    anyhow::anyhow!("layout drift: item::Item {} failed decode: {error}", o.id.hex())
+                    anyhow::anyhow!(
+                        "layout drift: item::Item {} failed decode: {error}",
+                        o.id.hex()
+                    )
                 })
             })
             .collect::<anyhow::Result<Vec<_>>>()?
@@ -776,6 +852,95 @@ mod tests {
         .unwrap()
     }
 
+    fn listed_bytes(kiosk: u8, id: u8, price: u64) -> Vec<u8> {
+        #[derive(serde::Serialize)]
+        struct Wire {
+            kiosk: [u8; 32],
+            id: [u8; 32],
+            price: u64,
+        }
+        bcs::to_bytes(&Wire {
+            kiosk: [kiosk; 32],
+            id: [id; 32],
+            price,
+        })
+        .unwrap()
+    }
+
+    fn delisted_bytes(kiosk: u8, id: u8) -> Vec<u8> {
+        #[derive(serde::Serialize)]
+        struct Wire {
+            kiosk: [u8; 32],
+            id: [u8; 32],
+        }
+        bcs::to_bytes(&Wire {
+            kiosk: [kiosk; 32],
+            id: [id; 32],
+        })
+        .unwrap()
+    }
+
+    #[test]
+    fn zero_price_merge_suppresses_only_its_own_listing_pair() {
+        let purchase = purchased_bytes(2, 5, 0);
+        let extracted_listing = listed_bytes(2, 5, 0);
+        let real_delist = delisted_bytes(2, 5);
+        let real_listing = listed_bytes(2, 6, 700);
+        let phantom = game_item_param();
+        let events = [
+            EventView {
+                package: SUI_FRAMEWORK,
+                module: "kiosk",
+                name: "ItemPurchased",
+                type_params: &phantom,
+                bytes: &purchase,
+                index: 0,
+            },
+            EventView {
+                package: SUI_FRAMEWORK,
+                module: "kiosk",
+                name: "ItemDelisted",
+                type_params: &phantom,
+                bytes: &real_delist,
+                index: 1,
+            },
+            EventView {
+                package: SUI_FRAMEWORK,
+                module: "kiosk",
+                name: "ItemListed",
+                type_params: &phantom,
+                bytes: &extracted_listing,
+                index: 2,
+            },
+            EventView {
+                package: SUI_FRAMEWORK,
+                module: "kiosk",
+                name: "ItemListed",
+                type_params: &phantom,
+                bytes: &real_listing,
+                index: 3,
+            },
+        ];
+        let tx = TxView {
+            tx_index: 1,
+            sender: Addr([7; 32]),
+            move_calls: &[],
+            events: &events,
+            inputs: &[],
+            outputs: &[],
+        };
+        let wire = analyze(100, 1_000, &[tx], GAME).unwrap();
+        assert_eq!(wire.publications.len(), 2);
+        assert!(wire
+            .publications
+            .iter()
+            .any(|row| row.payload.contains("MarketDelisted") && row.payload.contains(&Id([5; 32]).hex())));
+        assert!(wire
+            .publications
+            .iter()
+            .any(|row| row.payload.contains("MarketListed") && row.payload.contains(&Id([6; 32]).hex())));
+    }
+
     #[test]
     fn genuine_purchase_needs_royalty_and_our_output() {
         let item_type = ty(GAME, "item", "Item");
@@ -820,6 +985,17 @@ mod tests {
         let wire = analyze(100, 1_000, std::slice::from_ref(&tx), GAME).unwrap();
         assert_eq!(wire.sales.len(), 2);
         assert!(wire.sales[0].member.starts_with("100:1:0|"));
+        let purchased: serde_json::Value = serde_json::from_str(
+            &wire
+                .publications
+                .iter()
+                .find(|row| row.payload.contains("MarketPurchased"))
+                .expect("the purchase reaches the economy stream")
+                .payload,
+        )
+        .unwrap();
+        assert_eq!(purchased["data"]["buyer"], Addr([7; 32]).hex());
+        assert_eq!(purchased["data"]["kind"], "item");
         assert_eq!(
             wire.market,
             vec![MarketStamp {
@@ -1136,7 +1312,7 @@ mod tests {
             character: Id([5; 32]),
         }];
         let mut wire = Wire::default();
-        route_fight_seats(&mut wire, 7, 42, &custody);
+        route_character_custody(&mut wire, 7, 42, &custody);
         assert_eq!(wire.publications.len(), 1);
         assert_eq!(
             wire.publications[0].channel,
@@ -1150,9 +1326,10 @@ mod tests {
     }
 
     #[test]
-    fn custody_that_is_not_a_seat_publishes_nothing() {
-        // the resolver hands over every custody fact of the checkpoint — a character being
-        // locked back into its kiosk (settle, forfeit) must never re-arm a fight stream.
+    fn a_character_locked_back_into_its_kiosk_witnesses_its_return() {
+        // THE OTHER HALF (2026-08-22): a forfeit or a settle re-locks the character, and the
+        // client that still reads the old seat off its roster refuses the next duel it is
+        // offered. The return is custody too — the same door, a different word.
         let custody = [Custody::KioskHolds {
             kiosk: Id([2; 32]),
             object: Id([5; 32]),
@@ -1160,7 +1337,30 @@ mod tests {
             owner: None,
         }];
         let mut wire = Wire::default();
-        route_fight_seats(&mut wire, 7, 42, &custody);
+        route_character_custody(&mut wire, 7, 42, &custody);
+        assert_eq!(wire.publications.len(), 1);
+        assert_eq!(
+            wire.publications[0].channel,
+            format!("evt:character:0x{}", "05".repeat(32))
+        );
+        let payload: serde_json::Value =
+            serde_json::from_str(&wire.publications[0].payload).unwrap();
+        assert_eq!(payload["type"], "CharacterHeld");
+        assert_eq!(payload["data"]["kiosk"], format!("0x{}", "02".repeat(32)));
+    }
+
+    #[test]
+    fn an_item_moving_between_kiosks_stays_off_the_character_doors() {
+        // custody carries every kiosk write of the checkpoint — only a CHARACTER's own
+        // custody is a character-door fact; an item's is inventory, and rides its own path.
+        let custody = [Custody::KioskHolds {
+            kiosk: Id([2; 32]),
+            object: Id([9; 32]),
+            label: "Item",
+            owner: None,
+        }];
+        let mut wire = Wire::default();
+        route_character_custody(&mut wire, 7, 42, &custody);
         assert!(wire.publications.is_empty());
     }
 }

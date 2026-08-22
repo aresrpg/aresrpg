@@ -19,14 +19,20 @@ export const PLAYER_APP_MODULES = Object.freeze([
   // run, but an observer only listens when armed here (2026-08-20: chat was missing, so
   // everyone's messages published fine and nobody ever saw them)
   'chat',
-  // the duel handshake's signals/toasts and the remote fight's chain submissions are
-  // observer effects — unarmed they are the same silent death as chat above (2026-08-21:
-  // challenging a duel did nothing at all; every test armed them explicitly and stayed green)
+  // the duel's challenge transaction and its invitation prompt, and the remote fight's chain
+  // submissions, are observer effects — unarmed they are the same silent death as chat above
+  // (2026-08-21: challenging a duel did nothing at all; every test armed them and stayed green)
   'duel',
   'fight_chain',
+  'fight_result',
   // the silent claimer settles loot-box/crush claims during the reveal — unarmed, the card
   // spins on "Collecting…" forever (2026-08-21, the THIRD kill of this class in two days)
   'claims',
+  // the world observer fires the zone-search transaction — the FOURTH member of the class the
+  // comments above name: its reducer folds the stream whether or not it is listed here, so an
+  // unarmed world module leaves the discovery prompt pressing a key that does nothing at all
+  'world',
+  'marketplace',
 ]) satisfies readonly AppModuleName[]
 
 export const DEMO_APP_MODULES = Object.freeze([

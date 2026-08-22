@@ -236,8 +236,10 @@ const normalize_player = (input: unknown): PlayerSource => {
   const player = raw_record(input)
   const weapon = player.weapon ? raw_record(player.weapon) : null
   return {
+    name: typeof player.name === 'string' ? player.name : '',
     classe: String(player.classe),
     level: as_bigint(player.level, 'player.level'),
+    experience: as_bigint(player.experience ?? 0, 'player.experience'),
     vitality: as_bigint(player.vitality ?? 0, 'player.vitality'),
     wisdom: as_bigint(player.wisdom ?? 0, 'player.wisdom'),
     strength: as_bigint(player.strength ?? 0, 'player.strength'),

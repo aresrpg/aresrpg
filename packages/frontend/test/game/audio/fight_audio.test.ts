@@ -7,7 +7,11 @@ import { resolve } from 'node:path'
 import type { FightPresentationCue } from '@aresrpg/engine'
 import { describe, expect, test } from 'bun:test'
 
-import { create_fight_audio_observer, fight_audio_variant } from '../../../src/game/audio/fight_audio.ts'
+import {
+  create_fight_audio_observer,
+  fight_audio_variant,
+  play_fight_turn_start,
+} from '../../../src/game/audio/fight_audio.ts'
 import { FIGHT_AUDIO_ASSETS, fight_audio_keys_for_families } from '../../../src/game/audio/fight_audio_registry.ts'
 import { FOOTSTEP_AUDIO_ASSETS } from '../../../src/game/audio/footstep_recordings.ts'
 
@@ -121,5 +125,11 @@ describe('fight audio', () => {
     expect(keys).toContain('element_impact_fire_1')
     expect(keys).not.toContain('cast_charge_water')
     expect(keys).not.toContain('element_impact_water_1')
+  })
+
+  test('the owned-turn delta rings the turn clock', () => {
+    const played: string[] = []
+    play_fight_turn_start((key) => played.push(key))
+    expect(played).toEqual(['turn_start'])
   })
 })

@@ -23,6 +23,7 @@ test('game state subscribes before loading the Version snapshot and then follows
       subscribe: async () => void calls.push('subscribe'),
       unsubscribe: async () => {},
       indexed_checkpoint: async () => null,
+      sales_history: async () => [],
       close: () => {},
     },
   })

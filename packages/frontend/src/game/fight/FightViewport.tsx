@@ -73,7 +73,7 @@ const scene_fight_view = (scene: SceneHandle) => {
     pick_cell: scene.pick_fight_cell,
     dispose: (): void => {
       scene.show_fight_board(null)
-      claim_scene_entities('presence')
+      claim_scene_entities('world')
     },
   })
 }
@@ -101,7 +101,7 @@ export const FightViewport = ({
   board_key: string
   quality: EngineQuality
   label: string
-  on_cell_click?: (cell: bigint, pointer: Readonly<{ x: number; y: number }>) => void
+  on_cell_click?: (cell: bigint | null, pointer: Readonly<{ x: number; y: number }>) => void
   on_cell_hover?: (cell: bigint | null) => void
   on_entity_anchors?: (anchors: Readonly<Record<string, EntityScreenAnchor>>) => void
   tracked_entity_ids?: readonly string[]
@@ -188,7 +188,7 @@ export const FightViewport = ({
     const click = (event: MouseEvent): void => {
       if (event.button !== 0 || !on_board(event)) return
       const cell = view.pick_cell(event.clientX, event.clientY)
-      if (cell !== null) click_ref.current?.(BigInt(cell), { x: event.clientX, y: event.clientY })
+      click_ref.current?.(cell === null ? null : BigInt(cell), { x: event.clientX, y: event.clientY })
     }
     const move = (event: MouseEvent): void => {
       publish_hover(on_board(event) ? view.pick_cell(event.clientX, event.clientY) : null)

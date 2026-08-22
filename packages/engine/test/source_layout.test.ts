@@ -27,6 +27,13 @@ const BANNED_PATHS = [
 ] as const
 
 describe('engine source layout', () => {
+  test('far terrain prewarms the caller-provided initial focus during backend boot', () => {
+    const source = readFileSync(join(source_root, 'far_terrain.ts'), 'utf8')
+    expect(source).toContain('initial_focus = [0, 0]')
+    expect(source).toContain('Math.round(initial_focus[0] / initial_step) * initial_step')
+    expect(source).toContain("worker.postMessage({ type: 'initialize', world })\n  request()")
+  })
+
   test('the engine ships none of its banned paths and no authored material name reaches the runtime', () => {
     const roots = {
       src: source_entries(source_root),

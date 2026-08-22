@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
+/* eslint-disable functional/immutable-data, functional/prefer-immutable-types, no-param-reassign -- canvas rendering is an explicit effect boundary over its mutable drawing context. */
 // MINIMAP RENDER — pure sampling + painting for the 2D maps (minimap lens AND the full-screen
 // world map share this pipeline at different radii). North-up, analytic: the terrain comes
 // straight from the compiled world recipe's per-column sampler (no chunk residency, works before

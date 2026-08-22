@@ -31,7 +31,7 @@ const NODES_RAMP_AT = 20_000n
 const HOMOGENEOUS_BP = 5_000n
 
 type MobRow = Readonly<{ mob_type: string; weight_bp: bigint; biomes: readonly number[] }>
-type ResourceRow = Readonly<{ item_type: string; job: string; tier: number; biomes: readonly number[] }>
+type ResourceRow = Readonly<{ item_type: string; biomes: readonly number[] }>
 type WorldPopulation = Readonly<{ mobs: readonly MobRow[]; resources: readonly ResourceRow[]; map: BiomeGrid }>
 
 const populations = new Map<string, WorldPopulation | null>()
@@ -55,15 +55,8 @@ export const world_population = (world: string): WorldPopulation | null => {
         biomes: Object.freeze(row.biomes.map(biome_id)),
       })
   )
-  const resources = (
-    source.resources as readonly { item_type: string; job: string; tier: number; biomes: readonly string[] }[]
-  ).map((row) =>
-    Object.freeze({
-      item_type: row.item_type,
-      job: row.job,
-      tier: row.tier,
-      biomes: Object.freeze(row.biomes.map(biome_id)),
-    })
+  const resources = (source.resources as readonly { item_type: string; biomes: readonly string[] }[]).map((row) =>
+    Object.freeze({ item_type: row.item_type, biomes: Object.freeze(row.biomes.map(biome_id)) })
   )
   const map = sample_biome_grid(parse_world_recipe(source.terrain), {
     world_size: WORLD_SIZE,
@@ -97,6 +90,13 @@ const ramp = (distance: bigint, full_at: bigint, from: bigint, to: bigint): bigi
   return from + ((to - from) * capped) / full_at
 }
 
+export const mob_group_size_bounds = (distance: bigint): readonly [bigint, bigint] => {
+  const low = ramp(distance, GROUP_SIZE_FULL_AT, 1n, 6n)
+  // At 2,000 blocks low=2 and high=4: uniform 2..4 has the authored average of three.
+  const high = ramp(distance, (GROUP_SIZE_AVG3_AT * 5n) / 3n, 1n, 6n)
+  return Object.freeze([low, high < low ? low : high])
+}
+
 const weighted_family = (rows: readonly MobRow[], total: bigint, cursor: { state: bigint }): string => {
   const roll = draw(cursor) % total
   let accumulated = 0n
@@ -107,13 +107,16 @@ const weighted_family = (rows: readonly MobRow[], total: bigint, cursor: { state
   return rows.at(-1)!.mob_type // unreachable when weights sum to total — Move loops forever here
 }
 
-/** zone_math::mob_groups — `taken` is the on-chain u128 consumption bitmap. */
+/** zone_math::mob_groups, MINUS its taken filter: every group the seed draws, in draw order.
+ *  zone_math itself draws them all and only skips the taken ones on the way out — so emitting
+ *  the whole stream is the same derivation, not a looser one. Liveness is the caller's job
+ *  (a set bit in the zone's `mob_taken`), because the population is worth sending once per
+ *  seed while consumption changes constantly. */
 export const mob_groups = (
   population: WorldPopulation,
   zx: number,
   zz: number,
-  seed: bigint,
-  taken: bigint
+  seed: bigint
 ): readonly MobGroupRow[] => {
   const biome = biome_of_zone(population.map, zx, zz)
   const rows = population.mobs.filter((row) => row.biomes.includes(biome))
@@ -122,9 +125,7 @@ export const mob_groups = (
   const distance = distance_blocks(BigInt(zx), BigInt(zz))
   const cursor = { state: rng_seed(mix(seed, 2n)) }
   const count = GROUPS_MIN + (draw(cursor) % (GROUPS_MAX - GROUPS_MIN + 1n))
-  const size_lo = ramp(distance, GROUP_SIZE_FULL_AT, 1n, 6n)
-  const size_hi_raw = ramp(distance, GROUP_SIZE_AVG3_AT * 3n, 1n, 6n)
-  const size_hi = size_hi_raw < size_lo ? size_lo : size_hi_raw
+  const [size_lo, size_hi] = mob_group_size_bounds(distance)
   const level_floor = ramp(distance, LEVEL_RAMP_AT, 0n, LEVEL_FLOOR_CAP)
   const groups: MobGroupRow[] = []
   for (let index = 0n; index < count; index += 1n) {
@@ -139,18 +140,19 @@ export const mob_groups = (
       const scalar = level_floor + (draw(cursor) % (101n - level_floor))
       members.push({ mob_type, level_scalar: Number(scalar) })
     }
-    if ((taken & (1n << index)) === 0n) groups.push({ index: Number(index), x: Number(x), z: Number(z), members })
+    groups.push({ index: Number(index), x: Number(x), z: Number(z), members })
   }
   return groups
 }
 
-/** zone_math::resource_packs — `taken[index]` is the pack's consumed-node count. */
+/** zone_math::resource_packs, MINUS its consumption filter: every pack the seed draws with its
+ *  TOTAL node count. What is left of a pack is `nodes - res_taken[index]`, derived by whoever
+ *  holds the zone's state — same reason as `mob_groups`. */
 export const resource_packs = (
   population: WorldPopulation,
   zx: number,
   zz: number,
-  seed: bigint,
-  taken: readonly number[]
+  seed: bigint
 ): readonly ResourcePackRow[] => {
   const biome = biome_of_zone(population.map, zx, zz)
   const rows = population.resources.filter((row) => row.biomes.includes(biome))
@@ -166,17 +168,7 @@ export const resource_packs = (
     const z = BigInt(zz) * ZONE_SIZE + (draw(cursor) % ZONE_SIZE)
     const row = rows[Number(draw(cursor) % BigInt(rows.length))]!
     const nodes = nodes_lo + (draw(cursor) % (nodes_hi - nodes_lo + 1n))
-    const consumed = BigInt(taken[Number(index)] ?? 0)
-    if (consumed < nodes)
-      packs.push({
-        index: Number(index),
-        x: Number(x),
-        z: Number(z),
-        item_type: row.item_type,
-        job: row.job,
-        tier: row.tier,
-        nodes: Number(nodes - consumed),
-      })
+    packs.push({ index: Number(index), x: Number(x), z: Number(z), item_type: row.item_type, nodes: Number(nodes) })
   }
   return packs
 }

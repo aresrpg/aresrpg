@@ -30,7 +30,7 @@ const NAVIGATION: readonly Readonly<{ page: Page; label: CopyStringKey; Icon: Lu
     { page: 'leaderboard', label: 'leaderboard', Icon: Trophy, disabled: true },
     { page: 'shop', label: 'shop', Icon: ShoppingBag, disabled: false },
     { page: 'encyclopedia', label: 'encyclopedia', Icon: BookOpen, disabled: false },
-    { page: 'marketplace', label: 'marketplace', Icon: Store, disabled: true },
+    { page: 'marketplace', label: 'marketplace', Icon: Store, disabled: false },
     { page: 'airdrop', label: 'airdrop', Icon: Gift, disabled: false },
     { page: 'kolizeum', label: 'kolizeum', Icon: Crosshair, disabled: true },
     { page: 'settings', label: 'settings', Icon: Settings, disabled: false },

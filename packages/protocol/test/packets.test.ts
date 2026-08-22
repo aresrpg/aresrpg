@@ -9,17 +9,20 @@ import { parse_client_packet, parse_server_packet, CLIENT_PACKET_TYPES } from '.
 
 describe('the wire contract', () => {
   test('declared intents parse with their exact shape', () => {
-    expect(parse_client_packet(JSON.stringify({ type: 'packet/position', x: 1, y: 2, z: 3, riding: false }))).toEqual({
-      type: 'packet/position',
-      x: 1,
-      y: 2,
-      z: 3,
-      riding: false,
-    })
-    expect(() => parse_client_packet(JSON.stringify({ type: 'packet/position', x: 1, y: 2, z: 3 }))).toThrow(/riding/)
-    expect(parse_client_packet(JSON.stringify({ type: 'packet/embody', character_id: '0xabc' }))).toEqual({
-      type: 'packet/embody',
+    expect(
+      parse_client_packet(
+        JSON.stringify({ type: 'packet/position', character_id: '0xabc', x: 1, y: 2, z: 3, riding: false })
+      )
+    ).toEqual({ type: 'packet/position', character_id: '0xabc', x: 1, y: 2, z: 3, riding: false })
+    expect(() =>
+      parse_client_packet(JSON.stringify({ type: 'packet/position', character_id: '0xabc', x: 1, y: 2, z: 3 }))
+    ).toThrow(/riding/)
+    expect(
+      parse_client_packet(JSON.stringify({ type: 'packet/track_character', character_id: '0xabc', tracked: true }))
+    ).toEqual({
+      type: 'packet/track_character',
       character_id: '0xabc',
+      tracked: true,
     })
     expect(parse_client_packet(JSON.stringify({ type: 'packet/admin_request', id: 1, kind: 'stats' }))).toEqual({
       type: 'packet/admin_request',
@@ -37,9 +40,14 @@ describe('the wire contract', () => {
 
   test('malformed intents throw, never coerce', () => {
     expect(() => parse_client_packet(JSON.stringify({ type: 'packet/position', x: 'a' }))).toThrow(/needs/)
-    expect(() => parse_client_packet(JSON.stringify({ type: 'packet/embody', character_id: 'nope' }))).toThrow(
-      /character_id/
-    )
+    expect(() =>
+      parse_client_packet(
+        JSON.stringify({ type: 'packet/position', character_id: 'nope', x: 1, y: 2, z: 3, riding: false })
+      )
+    ).toThrow(/character_id/)
+    expect(() =>
+      parse_client_packet(JSON.stringify({ type: 'packet/track_character', character_id: 'nope', tracked: true }))
+    ).toThrow(/character_id/)
     expect(() => parse_client_packet(JSON.stringify({ type: 'packet/admin_request', kind: 'stats' }))).toThrow(
       /integer id/
     )
@@ -48,24 +56,14 @@ describe('the wire contract', () => {
     )
   })
 
-  test('duel signals parse by kind and refuse malformed handshakes', () => {
-    expect(parse_client_packet(JSON.stringify({ type: 'packet/duel', to: '0xabc', kind: 'invite' }))).toEqual({
-      type: 'packet/duel',
-      to: '0xabc',
-      kind: 'invite',
-    })
-    expect(() => parse_client_packet(JSON.stringify({ type: 'packet/duel', to: 'bob', kind: 'invite' }))).toThrow(
-      /target address/
-    )
-    expect(() => parse_client_packet(JSON.stringify({ type: 'packet/duel', to: '0xabc', kind: 'nuke' }))).toThrow(
-      /known kind/
-    )
-    // THE RELAY CARRIES INTENT ONLY (2026-08-21): `created` was how one client handed another
-    // the chain object it would transact against. A duel's fight now reaches the acceptor as
-    // the indexer's own zone fact, so the wire refuses the signal outright.
-    expect(() =>
-      parse_client_packet(JSON.stringify({ type: 'packet/duel', to: '0xabc', kind: 'created', fight: '0xf1' }))
-    ).toThrow(/known kind/)
+  test('the duel relay is gone from the wire — the chain reserves the seat', () => {
+    // THE CHALLENGE IS THE INVITATION (2026-08-22): side B is reserved on chain
+    // (fight.move ACCESS_INVITED), so no client ever negotiates a duel over the wire. The
+    // relay that did — invite/accept/decline — is refused as the undeclared surface it is.
+    for (const kind of ['invite', 'accept', 'decline'])
+      expect(() => parse_client_packet(JSON.stringify({ type: 'packet/duel', to: '0xabc', kind }))).toThrow(
+        /unknown packet type/
+      )
   })
 
   test('undeclared generic query and subscription surfaces are refused', () => {
@@ -77,12 +75,11 @@ describe('the wire contract', () => {
     )
     expect(CLIENT_PACKET_TYPES).toEqual([
       'packet/signature_response',
-      'packet/embody',
+      'packet/track_character',
       'packet/position',
       'packet/chat',
       'packet/chat_party',
       'packet/chat_whisper',
-      'packet/duel',
       'packet/fight_action',
       'packet/market_observe',
       'packet/spectate',
@@ -93,31 +90,49 @@ describe('the wire contract', () => {
   })
 
   test('the chat door trims, bounds, and refuses emptiness', () => {
-    expect(parse_client_packet(JSON.stringify({ type: 'packet/chat', text: '  gg  ' }))).toEqual({
+    expect(parse_client_packet(JSON.stringify({ type: 'packet/chat', character_id: '0xc', text: '  gg  ' }))).toEqual({
       type: 'packet/chat',
+      character_id: '0xc',
       text: 'gg',
     })
-    expect(() => parse_client_packet(JSON.stringify({ type: 'packet/chat', text: '   ' }))).toThrow(/empty/)
-    expect(() => parse_client_packet(JSON.stringify({ type: 'packet/chat', text: 'x'.repeat(241) }))).toThrow(
-      /exceeds 240/
-    )
-    expect(() => parse_client_packet(JSON.stringify({ type: 'packet/chat_whisper', to: 'bob', text: 'hi' }))).toThrow(
-      /target address/
-    )
+    expect(() =>
+      parse_client_packet(JSON.stringify({ type: 'packet/chat', character_id: '0xc', text: '   ' }))
+    ).toThrow(/empty/)
+    expect(() =>
+      parse_client_packet(JSON.stringify({ type: 'packet/chat', character_id: '0xc', text: 'x'.repeat(241) }))
+    ).toThrow(/exceeds 240/)
+    expect(() =>
+      parse_client_packet(JSON.stringify({ type: 'packet/chat_whisper', character_id: '0xc', to: 'bob', text: 'hi' }))
+    ).toThrow(/target address/)
   })
 
   test('observe intents fold a value or null — anything else refused', () => {
-    expect(parse_client_packet(JSON.stringify({ type: 'packet/market_observe', category: null }))).toEqual({
+    expect(parse_client_packet(JSON.stringify({ type: 'packet/market_observe', observation: null }))).toEqual({
       type: 'packet/market_observe',
-      category: null,
+      observation: null,
     })
-    expect(() => parse_client_packet(JSON.stringify({ type: 'packet/market_observe', category: 7 }))).toThrow(
-      /category/
+    expect(
+      parse_client_packet(
+        JSON.stringify({
+          type: 'packet/market_observe',
+          observation: { categories: ['sword', 'sword', 'helmet'], characters: false },
+        })
+      )
+    ).toEqual({
+      type: 'packet/market_observe',
+      observation: { categories: ['sword', 'helmet'], characters: false },
+    })
+    expect(() => parse_client_packet(JSON.stringify({ type: 'packet/market_observe', observation: 7 }))).toThrow(
+      /observation/
     )
-    expect(() => parse_client_packet(JSON.stringify({ type: 'packet/market_observe', category: 'made_up' }))).toThrow(
-      /category/
-    )
-    expect(() => parse_client_packet(JSON.stringify({ type: 'packet/spectate', fight: 'nope' }))).toThrow(/fight id/)
+    expect(() =>
+      parse_client_packet(
+        JSON.stringify({ type: 'packet/market_observe', observation: { categories: ['made_up'], characters: false } })
+      )
+    ).toThrow(/categories/)
+    expect(() =>
+      parse_client_packet(JSON.stringify({ type: 'packet/spectate', character_id: '0xc', fight: 'nope' }))
+    ).toThrow(/fight id/)
     expect(() =>
       parse_client_packet(JSON.stringify({ type: 'packet/fight_action', fight: '0xf', action: [1] }))
     ).toThrow(/action object/)

@@ -14,6 +14,7 @@ import {
   craft_required_level,
   craft_xp_from_ingredient_count,
   experience_curve,
+  experience_progress,
   equipment_slot_accepts,
   equipment_categories,
   job_slugs,
@@ -31,6 +32,8 @@ import {
   rune_max_apps,
   stat_names,
   weapon_categories,
+  world_entry_level,
+  WORLD_GATES,
   xp_for_level,
 } from '../src/index.ts'
 
@@ -55,6 +58,11 @@ describe('chain-mirrored experience curve', () => {
     expect(level_from_xp(95_885_999)).toBe(99)
     expect(level_from_xp(95_886_000)).toBe(100)
     expect(level_from_xp(Number.MAX_SAFE_INTEGER)).toBe(200)
+  })
+
+  test('progress reports the current level slice and fills at the cap', () => {
+    expect(experience_progress(380)).toEqual({ level: 2, into: 270, span: 540, percent: 50 })
+    expect(experience_progress(7_407_232_000)).toEqual({ level: 200, into: 0, span: 0, percent: 100 })
   })
 })
 
@@ -173,5 +181,23 @@ describe('Move rune catalog mirror', () => {
     expect(body).toBeDefined()
     const move_caps = body!.split(',').map((value) => Number(value.trim()))
     expect(stat_names.map((stat) => rune_max_apps(stat))).toEqual(move_caps)
+  })
+})
+
+describe('the world gates twin', () => {
+  test('names and entry levels match every world_map.move branch, in chain order', () => {
+    const source = readFileSync(resolve(import.meta.dir, '../../move-math/sources/world_map.move'), 'utf8')
+    const body = source.match(/public fun entry_level[\s\S]*?\n}/)?.[0]
+    expect(body).toBeDefined()
+    const move_gates: [string, number][] = []
+    for (const branch of body!.matchAll(/if \(\*world == b"([a-z0-9_]+)".to_string\(\)\) return (\d+);/g))
+      move_gates.push([branch[1]!, Number(branch[2]!)])
+
+    expect(move_gates.length).toBe(WORLD_GATES.length)
+    expect(WORLD_GATES.map(({ name, entry_level }) => [name, entry_level])).toEqual(move_gates)
+  })
+
+  test('an unknown world reads as forever locked, never level zero', () => {
+    expect(world_entry_level('99_nowhere')).toBe(Number.MAX_SAFE_INTEGER)
   })
 })

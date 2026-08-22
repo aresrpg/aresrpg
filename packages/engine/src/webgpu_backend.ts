@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
+/* eslint-disable max-lines -- the WebGPU backend remains one cohesive device adapter pending a behavior-neutral extraction. */
 import {
   AgXToneMapping,
   Matrix4,
@@ -21,7 +22,7 @@ import type { EngineBackend } from './backend.ts'
 import { create_clouds } from './clouds.ts'
 import { create_far_terrain } from './far_terrain.ts'
 import { create_fight_board_layer } from './fight_board.ts'
-import { create_fight_sword_layer } from './fight_swords.ts'
+import { create_fight_sword_layer, fight_swords_visible } from './fight_swords.ts'
 import { create_entity_layer } from './entities.ts'
 import { create_entity_label_layer } from './entity_labels.ts'
 import { create_fight_presentation } from './fight_presentation.ts'
@@ -33,9 +34,11 @@ import type { GreedyMeshData } from './greedy_mesher.ts'
 import { create_mesh_pool } from './mesh_pool.ts'
 import { create_lantern } from './lantern.ts'
 import { liquid_palette } from './liquid_palette.ts'
+import { create_portal } from './portal.ts'
 import { get_quality_profile, quality_pixel_ratio } from './quality.ts'
 import type { ScatterInstance } from './scatter.ts'
 import { create_scatter_layer } from './scatter_layer.ts'
+import { create_resource_node_layer, resource_nodes_visible as should_show_resource_nodes } from './resource_nodes.ts'
 import { chunk_origin } from './terrain_generator.ts'
 import { create_terrain_pool } from './terrain_pool.ts'
 import { create_board_occlusion, project_board_screen } from './board_occlusion.ts'
@@ -81,7 +84,8 @@ export const create_webgpu_backend = async (
   initial_quality: EngineQuality,
   world: WorldRecipe,
   report_issue: (issue?: EngineIssue) => void = () => {},
-  presentation: EnginePresentation = 'world'
+  presentation: EnginePresentation = 'world',
+  initial_focus: readonly [number, number] = [0, 0]
 ): Promise<EngineBackend> => {
   const renderer = new WebGPURenderer({ canvas, antialias: false, powerPreference: 'high-performance' })
   await renderer.init()
@@ -140,8 +144,10 @@ export const create_webgpu_backend = async (
     world,
     sun_direction: analytic_sky.sun_direction,
     clouds,
+    initial_focus,
   })
   const scatter = create_scatter_layer({ scene, board_occlusion })
+  const resource_nodes = create_resource_node_layer({ scene, wind: true })
   const lantern = create_lantern({ scene })
   const water = create_water({
     scene,
@@ -152,6 +158,8 @@ export const create_webgpu_backend = async (
     world: compiled_world,
     palette: water_palette,
   })
+  // the star gate — world dressing at client 0;0; a fight-only scene has no ground to stand it on
+  const portal = presentation === 'world' ? create_portal({ scene, world: compiled_world }) : null
   // Water state for the frame passes: the tint is per-pixel (the underwater pass reads the sea
   // plane itself), so the CPU only answers "does this world have water right now" — a world
   // without a liquid material, or a flattened one, has none — plus the eye's own submerged
@@ -189,6 +197,8 @@ export const create_webgpu_backend = async (
   let previous_frame = performance.now()
   let render_width = 0
   let render_height = 0
+  let terrain_presented = false
+  let resource_nodes_visible = false
   let render_pixel_ratio = 0
   let disposed = false
   let shadow_center_x = Number.NaN
@@ -467,6 +477,16 @@ export const create_webgpu_backend = async (
     }
     entities.tick(now)
     effects.tick(now)
+    const show_resource_nodes = should_show_resource_nodes({
+      terrain_presented,
+      flattened: flatten.flattened(),
+      board_active: board_footprint !== null,
+    })
+    if (show_resource_nodes !== resource_nodes_visible) {
+      resource_nodes_visible = show_resource_nodes
+      resource_nodes.set_visible(show_resource_nodes)
+    }
+    if (terrain_presented) portal?.tick(camera.position.x, camera.position.y, camera.position.z)
     fight_swords?.tick(now)
     if (has_dynamic_entities && sun.castShadow && sun.shadow.intensity > 0) sun.shadow.needsUpdate = true
     const shock = Math.max(0, 1 - (now - shock_at) / CRIT_SHOCK_MS)
@@ -478,12 +498,14 @@ export const create_webgpu_backend = async (
       camera.position.y += offset_y
       frame_renderer.render()
       entity_labels.render()
+      if (!terrain_presented && terrain.count() > 0) terrain_presented = true
       camera.position.x -= offset_x
       camera.position.y -= offset_y
       return
     }
     frame_renderer.render()
     entity_labels.render()
+    if (!terrain_presented && terrain.count() > 0) terrain_presented = true
   }
 
   const remove_chunk = (key: string): void => {
@@ -592,9 +614,17 @@ export const create_webgpu_backend = async (
       if (flatten.set(amount)) sun.shadow.needsUpdate = true
       terrain.set_flatten_active(flat_terrain_amount(amount) > 0)
       scatter.set_flatten_active(flat_terrain_amount(amount) > 0)
+      resource_nodes_visible = should_show_resource_nodes({
+        terrain_presented,
+        flattened: flat_terrain_amount(amount) > 0,
+        board_active: board_footprint !== null,
+      })
+      resource_nodes.set_visible(resource_nodes_visible)
+      portal?.set_flatten(amount)
     },
     set_fight_board: (board) => {
       fight_board.set(board)
+      portal?.set_active(board === null)
       // the peephole arms with the board and remembers its footprint; disarming restores the
       // fast terrain material, so the discard never survives the fight
       board_footprint = board
@@ -610,6 +640,13 @@ export const create_webgpu_backend = async (
         : null
       board_occlusion.set_active(board !== null)
       terrain.set_occlusion_active(board !== null)
+      fight_swords?.set_visible(fight_swords_visible(board !== null))
+      resource_nodes_visible = should_show_resource_nodes({
+        terrain_presented,
+        flattened: flatten.flattened(),
+        board_active: board_footprint !== null,
+      })
+      resource_nodes.set_visible(resource_nodes_visible)
       entities.set_board(board)
     },
     set_entities: (next) => {
@@ -617,11 +654,23 @@ export const create_webgpu_backend = async (
       entities.set(next)
       sun.shadow.needsUpdate = true
     },
-    set_fight_swords: (url, markers) => {
-      fight_swords ??= create_fight_sword_layer({ scene, url })
+    set_fight_swords: (url, impact_sound_url, markers) => {
+      fight_swords ??= create_fight_sword_layer({
+        scene,
+        url,
+        impact_sound_url,
+        impact: effects.play_sword_impact,
+      })
+      fight_swords.set_visible(fight_swords_visible(board_footprint !== null))
       fight_swords.set_markers(markers)
     },
     set_fight_sword_label: (id, element) => fight_swords?.set_label(id, element),
+    set_resource_nodes: resource_nodes.set_markers,
+    set_resource_node_label: resource_nodes.set_label,
+    set_portal_label: (element) => {
+      // the anchor is a GETTER — the gate's ground rides the flatten projection, so must its tag
+      if (portal) entity_labels.set_static('portal', element, portal.label_anchor)
+    },
     animate_entity: entities.animate,
     play_fight_cue: fight_presentation.play,
     play_jump_puff: effects.play_jump_puff,
@@ -630,6 +679,8 @@ export const create_webgpu_backend = async (
       return anchor ? project_screen_anchor(anchor, camera, canvas.getBoundingClientRect()) : null
     },
     set_entity_label: entity_labels.set,
+    set_world_label: (id, element, position) =>
+      entity_labels.set_static(id, element, new Vector3(...(position ?? [0, 0, 0]))),
     entity_height: entities.entity_height,
     upsert_fight_blob: fight_board.upsert_blob,
     remove_fight_blob: fight_board.remove_blob,
@@ -686,10 +737,12 @@ export const create_webgpu_backend = async (
       completions.clear()
       terrain.dispose()
       scatter.dispose()
+      resource_nodes.dispose()
       lantern.dispose()
       far_terrain.dispose()
       clouds.dispose()
       water.dispose()
+      portal?.dispose()
       fight_board.dispose()
       effects.dispose()
       entities.dispose()

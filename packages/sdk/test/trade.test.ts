@@ -72,8 +72,17 @@ const fake_client = () => ({
 })
 
 const kiosk_cap = { objectId: id(3), kioskId: id(4), isPersonal: true } as KioskOwnerCap
+const load_kiosk_cap = async () => kiosk_cap
 
-const pins = { package: package_id, version: { id: id(6), shared_version: '1' } }
+const pins = {
+  package: package_id,
+  package_original: id(13),
+  kiosk_package: id(9),
+  version: { id: id(6), shared_version: '1' },
+  item_policy: { id: id(10), shared_version: '1' },
+  character_policy: { id: id(11), shared_version: '1' },
+  item_protected_policy: { id: id(12), shared_version: '1' },
+}
 
 const game = () => {
   const sdk = SDK({ client: fake_client() as unknown as SuiTransport, signer: new Ed25519Keypair(), pins })
@@ -113,6 +122,9 @@ const targets = (tx: Transaction): readonly string[] =>
       return `${pkg}::${module}::${fn}`
     })
 
+const type_arguments = (tx: Transaction): readonly string[] =>
+  tx.getData().commands.flatMap((command) => command.MoveCall?.typeArguments ?? [])
+
 const pure_u64s = (tx: Transaction): readonly bigint[] =>
   tx.getData().inputs.flatMap((input) => {
     if (!input.Pure?.bytes) return []
@@ -127,7 +139,7 @@ describe('escrow projections (the contract math, restated locally)', () => {
     const actions = trade_actions(sdk as never, {
       trade: trade_row({ accept_a: true, accept_b: true }),
       address: me,
-      kiosk_cap,
+      kiosk_cap: load_kiosk_cap,
     })
     const { trade } = await actions.deposit_sui(250n)
     expect(trade.version).toBe(5)
@@ -138,14 +150,14 @@ describe('escrow projections (the contract math, restated locally)', () => {
 
   test('a withdrawal below the rendered escrow refuses before any transaction', async () => {
     const { sdk } = game()
-    const actions = trade_actions(sdk as never, { trade: trade_row(), address: me, kiosk_cap })
+    const actions = trade_actions(sdk as never, { trade: trade_row(), address: me, kiosk_cap: load_kiosk_cap })
     await expect(actions.withdraw_sui(2000n)).rejects.toThrow('lower than that withdrawal')
     await expect(actions.deposit_sui(0n)).rejects.toThrow('positive')
   })
 
   test('the counterparty side updates side B, never side A', async () => {
     const { sdk } = game()
-    const actions = trade_actions(sdk as never, { trade: trade_row(), address: other, kiosk_cap })
+    const actions = trade_actions(sdk as never, { trade: trade_row(), address: other, kiosk_cap: load_kiosk_cap })
     const { trade } = await actions.deposit_sui(9n)
     expect(trade.sui_b).toBe('9')
     expect(trade.sui_a).toBe('1000')
@@ -153,13 +165,17 @@ describe('escrow projections (the contract math, restated locally)', () => {
 
   test('a stranger to the trade is refused', () => {
     const { sdk } = game()
-    const actions = trade_actions(sdk as never, { trade: trade_row(), address: id(9), kiosk_cap })
+    const actions = trade_actions(sdk as never, { trade: trade_row(), address: id(9), kiosk_cap: load_kiosk_cap })
     expect(actions.deposit_sui(1n)).rejects.toThrow('not a party')
   })
 
   test('accept locks only when both sides accepted, and never bumps the version', async () => {
     const { sdk } = game()
-    const actions = trade_actions(sdk as never, { trade: trade_row({ accept_b: true }), address: me, kiosk_cap })
+    const actions = trade_actions(sdk as never, {
+      trade: trade_row({ accept_b: true }),
+      address: me,
+      kiosk_cap: load_kiosk_cap,
+    })
     const { trade } = await actions.accept()
     expect(trade.version).toBe(4)
     expect(trade.accept_a).toBeTrue()
@@ -171,7 +187,7 @@ describe('escrow projections (the contract math, restated locally)', () => {
     const actions = trade_actions(sdk as never, {
       trade: trade_row({ locked: true, sui_b: '77' }),
       address: me,
-      kiosk_cap,
+      kiosk_cap: load_kiosk_cap,
     })
     const { trade } = await actions.claim_sui()
     expect(trade.sui_b).toBe('0')
@@ -184,7 +200,7 @@ describe('escrow projections (the contract math, restated locally)', () => {
 describe('escrow composition (the real doors)', () => {
   test('deposit_sui names the real door and splits the exact amount', async () => {
     const { sdk, tx } = game()
-    const actions = trade_actions(sdk as never, { trade: trade_row(), address: me, kiosk_cap })
+    const actions = trade_actions(sdk as never, { trade: trade_row(), address: me, kiosk_cap: load_kiosk_cap })
     await actions.deposit_sui(250n)
     expect(targets(tx())).toContain(`${package_id}::api::trade_deposit_sui`)
     expect(pure_u64s(tx())).toContain(250n)
@@ -192,7 +208,11 @@ describe('escrow composition (the real doors)', () => {
 
   test('accept pins the EXACT version this instance rendered', async () => {
     const { sdk, tx } = game()
-    const actions = trade_actions(sdk as never, { trade: trade_row({ version: 4 }), address: me, kiosk_cap })
+    const actions = trade_actions(sdk as never, {
+      trade: trade_row({ version: 4 }),
+      address: me,
+      kiosk_cap: load_kiosk_cap,
+    })
     await actions.accept()
     expect(targets(tx())).toContain(`${package_id}::api::trade_accept`)
     // a stale UI accepting version 4 while the chain moved on must abort on-chain — the pin
@@ -201,11 +221,38 @@ describe('escrow composition (the real doors)', () => {
 
   test('an item deposit lists through the kiosk purchase-cap door before parking the cap', async () => {
     const { sdk, tx } = game()
-    const actions = trade_actions(sdk as never, { trade: trade_row(), address: me, kiosk_cap })
+    const actions = trade_actions(sdk as never, { trade: trade_row(), address: me, kiosk_cap: load_kiosk_cap })
     await actions.deposit_item({ id: id(30), name: 'hat', item_type: 'straw_hat', category: 'hat' } as never)
     expect(targets(tx())).toContain(
       '0x0000000000000000000000000000000000000000000000000000000000000002::kiosk::list_with_purchase_cap'
     )
+    expect(type_arguments(tx())).toContain(`${id(13)}::item::Item`)
+    expect(type_arguments(tx())).not.toContain(`${package_id}::item::Item`)
     expect(targets(tx())).toContain(`${package_id}::api::trade_deposit_item_cap`)
+  })
+
+  test('a locked exchange item claims, resolves its policy, and merges into the existing stack', async () => {
+    const offered = {
+      object: id(30),
+      kind: 'item' as const,
+      name: 'Wool',
+      item_type: 'wool',
+      category: 'resource',
+      kiosk: id(31),
+    }
+    const { sdk, tx } = game()
+    const actions = trade_actions(sdk as never, {
+      trade: trade_row({ locked: true, caps_b: [offered] }),
+      address: me,
+      kiosk_cap: load_kiosk_cap,
+    })
+    const { trade } = await actions.claim_cap(offered, { id: id(32), kiosk: id(4) })
+    expect(trade.caps_b).toEqual([])
+    expect(targets(tx())).toContain(`${package_id}::api::trade_claim_item_cap`)
+    expect(targets(tx())).toContain(
+      '0x0000000000000000000000000000000000000000000000000000000000000002::kiosk::purchase_with_cap'
+    )
+    expect(targets(tx())).toContain(`${id(9)}::royalty_rule::pay`)
+    expect(targets(tx())).toContain(`${package_id}::api::merge_stacks`)
   })
 })

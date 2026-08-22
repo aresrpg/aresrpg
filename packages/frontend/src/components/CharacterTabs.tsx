@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
-import type { CharacterRow } from '@aresrpg/protocol'
+import { MAX_TRACKED_CHARACTERS, type CharacterRow } from '@aresrpg/protocol'
 import { Plus } from 'lucide-react'
 
 import type { AppCopy } from '../i18n/copy.ts'
@@ -55,15 +55,17 @@ export const CharacterTabs = ({
         </button>
       )
     })}
-    <button
-      aria-label={copy.create_character}
-      className="grid w-[26px] shrink-0 cursor-pointer place-items-center border-r border-[#1e1e2e] text-[#6b7280] transition-colors duration-200 hover:bg-[#c8963c]/5 hover:text-[#e8c07a]"
-      data-character-tab-create=""
-      onClick={create_character}
-      title={copy.create_character}
-      type="button"
-    >
-      <Plus aria-hidden="true" size={11} />
-    </button>
+    {characters.length < MAX_TRACKED_CHARACTERS && (
+      <button
+        aria-label={copy.create_character}
+        className="grid w-[26px] shrink-0 cursor-pointer place-items-center border-r border-[#1e1e2e] text-[#6b7280] transition-colors duration-200 hover:bg-[#c8963c]/5 hover:text-[#e8c07a]"
+        data-character-tab-create=""
+        onClick={create_character}
+        title={copy.create_character}
+        type="button"
+      >
+        <Plus aria-hidden="true" size={11} />
+      </button>
+    )}
   </nav>
 )

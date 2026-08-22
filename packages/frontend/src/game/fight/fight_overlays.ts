@@ -24,6 +24,46 @@ export const fight_visual_checkpoint = (
   return presentation_pending ? presented : canonical
 }
 
+const fighter_seat_of = (entity_id: string): number | null => {
+  const seat = Number(entity_id.split('_').at(-1))
+  return Number.isInteger(seat) && seat >= 0 ? seat : null
+}
+
+/** Advance display truth only when its matching cue has actually played. Canonical state may
+ * already contain the whole mob wave; cards, rings, and bodies must not reveal its future. */
+export const fight_visual_checkpoint_after_cue = (
+  checkpoint: Readonly<HydratedFightCheckpoint>,
+  cue: Readonly<FightPresentationCue>,
+  phase: 'start' | 'complete'
+): HydratedFightCheckpoint => {
+  if (phase !== 'complete') return checkpoint
+  const entity_id =
+    cue.type === 'damage' || cue.type === 'heal'
+      ? cue.target_id
+      : cue.type === 'death' || cue.type === 'movement'
+        ? cue.entity_id
+        : null
+  if (!entity_id) return checkpoint
+  const seat = fighter_seat_of(entity_id)
+  const fighter = seat === null ? null : checkpoint.contract.fighters[seat]
+  if (seat === null || !fighter) return checkpoint
+  const cell = cue.type === 'movement' ? cue.cells.at(-1) : undefined
+  if (cue.type === 'movement' && cell === undefined) return checkpoint
+  const next =
+    cue.type === 'damage' || cue.type === 'heal'
+      ? Object.freeze({ ...fighter, hp: BigInt(cue.hp_after) })
+      : cue.type === 'death'
+        ? Object.freeze({ ...fighter, hp: 0n, dead: true })
+        : Object.freeze({ ...fighter, cell: BigInt(cell!) })
+  return Object.freeze({
+    ...checkpoint,
+    contract: Object.freeze({
+      ...checkpoint.contract,
+      fighters: checkpoint.contract.fighters.map((candidate, index) => (index === seat ? next : candidate)),
+    }),
+  })
+}
+
 const with_zones = (
   state: Readonly<FightZoneVisualState>,
   zones: Readonly<HydratedFightCheckpoint['contract']['zones']>,
@@ -70,16 +110,15 @@ const unique_cells = (cells: readonly bigint[]): readonly number[] => Object.fre
 // stronger. Reads the PRESENTED checkpoint so rings lag with the animation, like zones.
 const team_ring_overlays = (
   checkpoint: Readonly<HydratedFightCheckpoint>,
-  viewer_owner: string | null
+  presented_turn_seat: bigint | null
 ): readonly FightBlobOverlay[] => {
-  const active_seat = checkpoint.contract.queue[Number(checkpoint.contract.turn_ptr)]
+  const active_seat = presented_turn_seat ?? checkpoint.contract.queue[Number(checkpoint.contract.turn_ptr)]
   return Object.freeze(
     checkpoint.contract.fighters.flatMap((fighter, seat) => {
       if (fighter.dead) return []
-      const owned = fighter.kind.type === 'player' && viewer_owner !== null && fighter.kind.owner === viewer_owner
       const active = BigInt(seat) === active_seat && checkpoint.contract.round !== 0n
       const side = fighter.team === 0n ? 'a' : 'b'
-      const preset = active && owned ? (`team_${side}_active` as const) : (`team_${side}` as const)
+      const preset = active ? (`team_${side}_active` as const) : (`team_${side}` as const)
       return [
         Object.freeze({
           id: `team:${seat}`,
@@ -96,14 +135,13 @@ const team_ring_overlays = (
 const zone_overlays = (
   checkpoint: Readonly<HydratedFightCheckpoint>,
   zone_ids: readonly string[],
-  viewer_owner: string | null
+  viewer_team: bigint | null
 ): readonly FightBlobOverlay[] => {
   return Object.freeze(
     checkpoint.contract.zones.flatMap((zone, index) => {
       const id = zone_ids[index] ?? `initial:zone:${index}`
       const owner = checkpoint.contract.fighters[Number(zone.owner_fighter)]
-      const visible =
-        !zone.trap || (viewer_owner !== null && owner?.kind.type === 'player' && owner.kind.owner === viewer_owner)
+      const visible = !zone.trap || (viewer_team !== null && owner?.team === viewer_team)
       if (!visible) return []
       return [
         Object.freeze({
@@ -129,7 +167,9 @@ export const project_fight_overlays = ({
   spell_cells,
   spell_hover_area,
   hovered_spell_targetable,
-  viewer_owner,
+  viewer_team = null,
+  presented_turn_seat = null,
+  visual_checkpoint = checkpoint,
   zone_checkpoint = checkpoint,
   zone_ids = Object.freeze([]),
 }: Readonly<{
@@ -143,13 +183,15 @@ export const project_fight_overlays = ({
   spell_cells: SpellCellProjection | null
   spell_hover_area: readonly bigint[]
   hovered_spell_targetable: boolean
-  viewer_owner?: string | null
+  viewer_team?: bigint | null
+  presented_turn_seat?: bigint | null
+  visual_checkpoint?: Readonly<HydratedFightCheckpoint>
   zone_checkpoint?: Readonly<HydratedFightCheckpoint>
   zone_ids?: readonly string[]
 }>): readonly FightBlobOverlay[] => {
   const zones = Object.freeze([
-    ...team_ring_overlays(zone_checkpoint, viewer_owner ?? null),
-    ...zone_overlays(zone_checkpoint, zone_ids, viewer_owner ?? null),
+    ...team_ring_overlays(visual_checkpoint, presented_turn_seat),
+    ...zone_overlays(zone_checkpoint, zone_ids, viewer_team),
   ])
   if (presentation_active) return zones
   if (spell_cells && owned_active_seat !== null) {

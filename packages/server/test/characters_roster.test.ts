@@ -49,6 +49,17 @@ describe('the roster', () => {
     expect((await get_characters(graph, { address: '0xme' })).map(({ id }) => id)).toEqual(['0xheld', '0xseated'])
   })
 
+  test('legacy wallets above the cap expose one stable six-character roster', async () => {
+    const rows = ['0x09', '0x02', '0x07', '0x01', '0x08', '0x03', '0x06', '0x04', '0x05'].map((id) => ({
+      character: character(id),
+      kiosk_node: kiosk,
+      equipment: [],
+    }))
+    const roster = await get_characters(graph_of(rows, []), { address: '0xme' })
+
+    expect(roster.map(({ id }) => id)).toEqual(['0x01', '0x02', '0x03', '0x04', '0x05', '0x06'])
+  })
+
   test('a kiosk the indexer has not met yet yields no cap, never an undefined one', async () => {
     const graph = graph_of(
       [{ character: character('0xheld'), kiosk_node: { properties: { id: '0xk' } }, equipment: [] }],

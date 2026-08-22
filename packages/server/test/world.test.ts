@@ -10,10 +10,11 @@ import { describe, expect, test } from 'bun:test'
 import type { ServerPacket } from '@aresrpg/protocol'
 
 import { create_player } from '../src/player.ts'
+import type { Pubsub } from '../src/pubsub_bus.ts'
 
-const make_character = ({ pet = false } = {}) => ({
+const make_character = ({ pet = false, id = '0xabc', x = 100, z = 100 } = {}) => ({
   properties: {
-    id: '0xabc',
+    id,
     pet,
     name: 'nox',
     classe: 'senshi',
@@ -24,8 +25,8 @@ const make_character = ({ pet = false } = {}) => ({
     color_3: 3,
     world: 'overworld',
     checkpoint_world: 'overworld',
-    x: 100,
-    z: 100,
+    x,
+    z,
     // the checkpoint's own timestamp — the budget the FIRST stream move prices against
     at_ms: Date.now() - 60_000,
     spells: '{}',
@@ -34,7 +35,22 @@ const make_character = ({ pet = false } = {}) => ({
 })
 const character = make_character()
 
-const wire = ({ owns = true, pet = false, friends = [] as string[] } = {}) => {
+type WireOptions = Readonly<{
+  owns?: boolean
+  pet?: boolean
+  friends?: string[]
+  character_ids?: string[]
+  shared_pubsub?: Pubsub
+}>
+type TestPubsub = Pubsub & Readonly<{ emitter: EventEmitter }>
+
+const wire = ({
+  owns = true,
+  pet = false,
+  friends = [] as string[],
+  character_ids = ['0xabc', '0xdef'],
+  shared_pubsub,
+}: WireOptions = {}) => {
   const sent: ServerPacket[] = []
   const dropped: string[] = []
   const ws = {
@@ -42,12 +58,16 @@ const wire = ({ owns = true, pet = false, friends = [] as string[] } = {}) => {
     close: (_c?: number, reason?: string) => dropped.push(reason ?? ''),
   }
   const graph = {
-    read: async (cypher: string, _params?: Record<string, unknown>) => {
+    read: async (cypher: string, params?: Record<string, unknown>) => {
       if (cypher.includes(':Character {id:'))
         return owns
           ? [
               {
-                character: make_character(),
+                character: make_character({
+                  pet,
+                  id: String(params?.character_id ?? '0xabc'),
+                  x: String(params?.character_id) === character_ids[1] ? 700 : 100,
+                }),
                 held_kiosk: '0xk',
                 kiosk: '0xk',
                 fight: null,
@@ -57,6 +77,16 @@ const wire = ({ owns = true, pet = false, friends = [] as string[] } = {}) => {
             ]
           : []
       if (cypher.includes(':FRIEND')) return friends.map((friend) => ({ address: friend, characters: [] }))
+      if (cypher.includes('[:HOLDS]->(c:Character)'))
+        return owns
+          ? character_ids.map((id, index) => ({
+              character: make_character({ id, x: index === 1 ? 700 : 100 }),
+              kiosk_node: { properties: { id: '0xk' } },
+              equipment: [],
+            }))
+          : []
+      if (cypher.includes('[:FIGHTER]->(c:Character {owner:')) return []
+      if (cypher.includes('RESULT_FOR')) return []
       if (cypher.includes('HOLDS_CLAIM') || cypher.includes('HOLDS_VOUCHER') || cypher.includes('CAN_BUY')) return []
       if (cypher.includes('LISTED_IN')) return []
       if (cypher.includes(':Zone')) return [{ zone: { properties: { world: 'overworld', zx: 0, zz: 0, seed: '7' } } }]
@@ -77,11 +107,13 @@ const wire = ({ owns = true, pet = false, friends = [] as string[] } = {}) => {
     },
     close: () => {},
   }
-  const pubsub = {
-    emitter,
-    graph: { ...bus, indexed_checkpoint: async () => 1 },
-    mesh: { ...bus, heartbeat: async () => {}, cluster_online: async () => 7 },
-  }
+  const pubsub: TestPubsub = shared_pubsub
+    ? { ...shared_pubsub, emitter: shared_pubsub.graph.emitter }
+    : {
+        emitter,
+        graph: { ...bus, indexed_checkpoint: async () => 1, sales_history: async () => [] },
+        mesh: { ...bus, heartbeat: async () => {}, cluster_online: async () => 7 },
+      }
   return { sent, ws, graph, pubsub, published, dropped }
 }
 
@@ -92,33 +124,151 @@ describe('the world module', () => {
     const { sent, ws, graph, pubsub, published } = wire()
     const player = create_player({ ws, address: '0xme', admin: false, graph, pubsub })
     await flush()
-    player.on_message(JSON.stringify({ type: 'packet/embody', character_id: '0xabc' }))
+    player.on_message(JSON.stringify({ type: 'packet/track_character', character_id: '0xabc', tracked: true }))
     await flush()
+    expect(sent).toContainEqual({ type: 'packet/character_tracked', character_id: '0xabc', fight: null })
     expect(sent.some((packet) => packet.type === 'packet/zones')).toBe(true)
     expect(published.some(({ payload }) => payload.kind === 'appear')).toBe(true)
   })
 
-  test('nothing folds at packet ARRIVAL — the mount waits for the validation dispatch', async () => {
+  test('tracks and moves two owned characters without replacing either window or anchor', async () => {
+    const { sent, ws, graph, pubsub, published, dropped } = wire()
+    const player = create_player({ ws, address: '0xme', admin: false, graph, pubsub })
+    await flush()
+    player.on_message(JSON.stringify({ type: 'packet/track_character', character_id: '0xabc', tracked: true }))
+    player.on_message(JSON.stringify({ type: 'packet/track_character', character_id: '0xdef', tracked: true }))
+    await flush()
+    await flush()
+
+    expect(
+      sent.flatMap((packet) => (packet.type === 'packet/character_tracked' ? [packet.character_id] : [])).sort()
+    ).toEqual(['0xabc', '0xdef'])
+    expect(
+      sent.flatMap((packet) => (packet.type === 'packet/tracked_zones' ? [packet.character_id] : [])).sort()
+    ).toEqual(['0xabc', '0xdef'])
+
+    published.length = 0
+    player.on_message(
+      JSON.stringify({ type: 'packet/position', character_id: '0xdef', x: 701, y: 0, z: 100, riding: false })
+    )
+    expect(dropped).toEqual([])
+    expect(published.some(({ payload }) => payload.kind === 'move' && payload.character_id === '0xdef')).toBeTrue()
+
+    published.length = 0
+    player.on_message(JSON.stringify({ type: 'packet/track_character', character_id: '0xdef', tracked: false }))
+    player.on_message(
+      JSON.stringify({ type: 'packet/position', character_id: '0xdef', x: 702, y: 0, z: 100, riding: false })
+    )
+    expect(published.some(({ payload }) => payload.kind === 'move' && payload.character_id === '0xdef')).toBeTrue()
+  })
+
+  test('a fighting character keeps its zone window but leaves world presence immediately', async () => {
     const { ws, graph, pubsub, published } = wire()
     const player = create_player({ ws, address: '0xme', admin: false, graph, pubsub })
     await flush()
-    player.on_message(JSON.stringify({ type: 'packet/embody', character_id: '0xabc' }))
-    // synchronously after arrival: the reducer folded nothing, no effect fired yet
-    expect(published).toHaveLength(0)
     await flush()
-    expect(published.some(({ payload }) => payload.kind === 'appear')).toBe(true)
+    published.length = 0
+
+    player.dispatch({ type: 'action/fight', character_id: '0xdef', fight: '0xfight', seat: 0 })
+    expect(published.some(({ payload }) => payload.kind === 'leave' && payload.character_id === '0xdef')).toBeTrue()
+
+    published.length = 0
+    pubsub.emitter.emit('pos:overworld:1:0', {
+      kind: 'who',
+      address: '0xother',
+      world: 'overworld',
+      zx: 1,
+      zz: 0,
+    })
+    expect(
+      published.some(({ payload }) => payload.kind === 'appear' && payload.player?.character_id === '0xdef')
+    ).toBeFalse()
+
+    player.on_message(
+      JSON.stringify({ type: 'packet/position', character_id: '0xdef', x: 701, y: 0, z: 100, riding: false })
+    )
+    expect(published.some(({ payload }) => payload.kind === 'move' && payload.character_id === '0xdef')).toBeFalse()
   })
 
-  test('a foreign character never mounts — ownership is enforced at the read', async () => {
+  test('two accounts receive each other symmetrically across presence, movement, and world chat', async () => {
+    const first = wire({ character_ids: ['0xa'] })
+    const first_player = create_player({
+      ws: first.ws,
+      address: '0xfirst',
+      admin: false,
+      graph: first.graph,
+      pubsub: first.pubsub,
+    })
+    await flush()
+    await flush()
+    const second = wire({ character_ids: ['0xb'], shared_pubsub: first.pubsub })
+    const second_player = create_player({
+      ws: second.ws,
+      address: '0xsecond',
+      admin: false,
+      graph: second.graph,
+      pubsub: second.pubsub,
+    })
+    await flush()
+    await flush()
+
+    expect(
+      first.sent.some((packet) => packet.type === 'packet/player_appeared' && packet.player.character_id === '0xb')
+    ).toBeTrue()
+    expect(
+      second.sent.some((packet) => packet.type === 'packet/player_appeared' && packet.player.character_id === '0xa')
+    ).toBeTrue()
+
+    second_player.on_message(
+      JSON.stringify({ type: 'packet/position', character_id: '0xb', x: 101, y: 0, z: 100, riding: false })
+    )
+    expect(
+      first.sent.some((packet) => packet.type === 'packet/player_moved' && packet.character_id === '0xb')
+    ).toBeTrue()
+
+    second_player.on_message(JSON.stringify({ type: 'packet/chat', character_id: '0xb', text: 'hello' }))
+    await flush()
+    expect(
+      first.sent.some(
+        (packet) => packet.type === 'packet/chat_message' && packet.character === 'nox' && packet.text === 'hello'
+      )
+    ).toBeTrue()
+    void first_player
+  })
+
+  test('a duplicate client tracking request cannot remount an already server-tracked character', async () => {
+    const { ws, graph, pubsub, published } = wire()
+    const player = create_player({ ws, address: '0xme', admin: false, graph, pubsub })
+    await flush()
+    await flush()
+    published.length = 0
+    player.on_message(JSON.stringify({ type: 'packet/track_character', character_id: '0xabc', tracked: true }))
+    expect(published).toHaveLength(0)
+    await flush()
+    expect(published).toHaveLength(0)
+  })
+
+  test("a position carrying another character's id is never priced against the current anchor", async () => {
+    const { ws, graph, pubsub, published, dropped } = wire()
+    const player = create_player({ ws, address: '0xme', admin: false, graph, pubsub })
+    await flush()
+    player.on_message(JSON.stringify({ type: 'packet/track_character', character_id: '0xabc', tracked: true }))
+    player.on_message(
+      JSON.stringify({ type: 'packet/position', character_id: '0xother', x: 10_000, y: 0, z: 10_000, riding: false })
+    )
+
+    expect(dropped).toEqual([])
+    expect(published.some(({ payload }) => payload.kind === 'move')).toBeFalse()
+    await flush()
+  })
+
+  test('a character outside the capped roster remains completely invisible to tracking requests', async () => {
     const { sent, ws, graph, pubsub, published } = wire({ owns: false })
     const player = create_player({ ws, address: '0xme', admin: false, graph, pubsub })
     await flush()
-    player.on_message(JSON.stringify({ type: 'packet/embody', character_id: '0xdead' }))
+    player.on_message(JSON.stringify({ type: 'packet/track_character', character_id: '0xdead', tracked: true }))
     await flush()
-    expect(sent.find((packet) => packet.type === 'packet/error')).toEqual({
-      type: 'packet/error',
-      reason: 'not your character',
-    })
+    expect(sent.find((packet) => packet.type === 'packet/character_tracked')).toBeUndefined()
     expect(published.some(({ payload }) => payload.kind === 'appear')).toBe(false)
   })
 
@@ -134,10 +284,12 @@ describe('the world module', () => {
       pubsub: rider.pubsub,
     })
     await flush()
-    mounted.on_message(JSON.stringify({ type: 'packet/embody', character_id: '0xabc' }))
+    mounted.on_message(JSON.stringify({ type: 'packet/track_character', character_id: '0xabc', tracked: true }))
     await flush()
     const before = rider.published.length
-    mounted.on_message(JSON.stringify({ type: 'packet/position', x: 100, y: 0, z: 100, riding: true }))
+    mounted.on_message(
+      JSON.stringify({ type: 'packet/position', character_id: '0xabc', x: 100, y: 0, z: 100, riding: true })
+    )
     const toggle = rider.published.slice(before).filter(({ payload }) => payload.kind === 'move')
     expect(toggle).toHaveLength(1)
     expect(toggle[0]!.payload.riding).toBe(true)
@@ -152,9 +304,11 @@ describe('the world module', () => {
       pubsub: walker.pubsub,
     })
     await flush()
-    walking.on_message(JSON.stringify({ type: 'packet/embody', character_id: '0xabc' }))
+    walking.on_message(JSON.stringify({ type: 'packet/track_character', character_id: '0xabc', tracked: true }))
     await flush()
-    walking.on_message(JSON.stringify({ type: 'packet/position', x: 101, y: 0, z: 100, riding: true }))
+    walking.on_message(
+      JSON.stringify({ type: 'packet/position', character_id: '0xabc', x: 101, y: 0, z: 100, riding: true })
+    )
     const claimed = walker.published.filter(({ payload }) => payload.kind === 'move')
     expect(claimed).toHaveLength(1)
     expect(claimed[0]!.payload.riding).toBe(false)
@@ -164,16 +318,20 @@ describe('the world module', () => {
     const { ws, graph, pubsub, dropped } = wire()
     const player = create_player({ ws, address: '0xme', admin: false, graph, pubsub })
     await flush()
-    player.on_message(JSON.stringify({ type: 'packet/embody', character_id: '0xabc' }))
+    player.on_message(JSON.stringify({ type: 'packet/track_character', character_id: '0xabc', tracked: true }))
     await flush()
     // The FIRST move prices against the CHECKPOINT'S OWN TIMESTAMP (the chain's travel_ok
     // semantics): a player who walked 500 blocks off-anchor since a 60s-old checkpoint is
     // LEGAL (500/60 ≈ 8.3 b/s) — the 2026-08-19 bug priced it against embody wall-clock and
     // drop-looped every session into load-snapshot spam.
-    player.on_message(JSON.stringify({ type: 'packet/position', x: 600, y: 0, z: 100, riding: false }))
+    player.on_message(
+      JSON.stringify({ type: 'packet/position', character_id: '0xabc', x: 600, y: 0, z: 100, riding: false })
+    )
     expect(dropped).toEqual([])
     // 10,000 further blocks in one tick — far past any authored budget
-    player.on_message(JSON.stringify({ type: 'packet/position', x: 10600, y: 0, z: 100, riding: false }))
+    player.on_message(
+      JSON.stringify({ type: 'packet/position', character_id: '0xabc', x: 10600, y: 0, z: 100, riding: false })
+    )
     expect(dropped).toEqual(['SPEED'])
   })
 
@@ -184,15 +342,21 @@ describe('the world module', () => {
     const { ws, graph, pubsub, dropped } = wire()
     const player = create_player({ ws, address: '0xme', admin: false, graph, pubsub })
     await flush()
-    player.on_message(JSON.stringify({ type: 'packet/embody', character_id: '0xabc' }))
+    player.on_message(JSON.stringify({ type: 'packet/track_character', character_id: '0xabc', tracked: true }))
     await flush()
-    player.on_message(JSON.stringify({ type: 'packet/position', x: 600, y: 0, z: 100, riding: false }))
+    player.on_message(
+      JSON.stringify({ type: 'packet/position', character_id: '0xabc', x: 600, y: 0, z: 100, riding: false })
+    )
     // six buffered samples land back-to-back, one block apart — 6 blocks in ~0ms, all legal
     for (let step = 1; step <= 6; step++)
-      player.on_message(JSON.stringify({ type: 'packet/position', x: 600 + step, y: 0, z: 100, riding: false }))
+      player.on_message(
+        JSON.stringify({ type: 'packet/position', character_id: '0xabc', x: 600 + step, y: 0, z: 100, riding: false })
+      )
     expect(dropped).toEqual([])
     // the bank is finite: a same-instant TELEPORT still overdraws it
-    player.on_message(JSON.stringify({ type: 'packet/position', x: 700, y: 0, z: 100, riding: false }))
+    player.on_message(
+      JSON.stringify({ type: 'packet/position', character_id: '0xabc', x: 700, y: 0, z: 100, riding: false })
+    )
     expect(dropped).toEqual(['SPEED'])
   })
 
@@ -207,11 +371,13 @@ describe('the world module', () => {
       pubsub: walker.pubsub,
     })
     await flush()
-    walking.on_message(JSON.stringify({ type: 'packet/embody', character_id: '0xabc' }))
+    walking.on_message(JSON.stringify({ type: 'packet/track_character', character_id: '0xabc', tracked: true }))
     await flush()
     // 850 blocks over the checkpoint's 60s budget: ~14.2 b/s — above 11.5 (walk), below
     // 17.25 (mounted). The budget prices distance-from-anchor over elapsed-since-anchor.
-    walking.on_message(JSON.stringify({ type: 'packet/position', x: 950, y: 0, z: 100, riding: false }))
+    walking.on_message(
+      JSON.stringify({ type: 'packet/position', character_id: '0xabc', x: 950, y: 0, z: 100, riding: false })
+    )
     expect(walker.dropped).toEqual(['SPEED'])
 
     const rider = wire({ pet: true })
@@ -223,9 +389,11 @@ describe('the world module', () => {
       pubsub: rider.pubsub,
     })
     await flush()
-    riding.on_message(JSON.stringify({ type: 'packet/embody', character_id: '0xabc' }))
+    riding.on_message(JSON.stringify({ type: 'packet/track_character', character_id: '0xabc', tracked: true }))
     await flush()
-    riding.on_message(JSON.stringify({ type: 'packet/position', x: 950, y: 0, z: 100, riding: true }))
+    riding.on_message(
+      JSON.stringify({ type: 'packet/position', character_id: '0xabc', x: 950, y: 0, z: 100, riding: true })
+    )
     expect(rider.dropped).toEqual([])
   })
 
@@ -233,7 +401,7 @@ describe('the world module', () => {
     const { sent, ws, graph, pubsub } = wire({ friends: ['0xbestie'] })
     const player = create_player({ ws, address: '0xme', admin: false, graph, pubsub })
     await flush()
-    player.on_message(JSON.stringify({ type: 'packet/embody', character_id: '0xabc' }))
+    player.on_message(JSON.stringify({ type: 'packet/track_character', character_id: '0xabc', tracked: true }))
     await flush()
     const appear = (index: number, address: string) =>
       pubsub.emitter.emit('pos:overworld:0:0', {
@@ -294,11 +462,45 @@ describe('the world module', () => {
     expect((far_moves[0] as { x: number }).x).toBe(303)
   })
 
+  test('crossing a zone retires players from the departed subscription window', async () => {
+    const { sent, ws, graph, pubsub } = wire()
+    const player = create_player({ ws, address: '0xme', admin: false, graph, pubsub })
+    await flush()
+    player.on_message(JSON.stringify({ type: 'packet/track_character', character_id: '0xabc', tracked: true }))
+    await flush()
+    pubsub.emitter.emit('pos:overworld:-1:0', {
+      kind: 'appear',
+      address: '0xold',
+      player: {
+        ...make_character().properties,
+        character_id: '0xold',
+        owner: '0xold',
+        x: -100,
+        riding: false,
+        y: 0,
+      },
+    })
+    expect(sent.some((packet) => packet.type === 'packet/player_appeared')).toBe(true)
+
+    player.dispatch({
+      type: 'action/move',
+      character_id: '0xabc',
+      x: 600,
+      y: 0,
+      z: 100,
+      riding: false,
+      at_ms: Date.now(),
+      budget_blocks: 0,
+    })
+    await flush()
+    expect(sent.some((packet) => packet.type === 'packet/player_left' && packet.character_id === '0xold')).toBe(true)
+  })
+
   test('a later joiner probes tracked zones and a standing player re-announces to it', async () => {
     const { graph, ws, pubsub, published } = wire()
     const player = create_player({ ws, address: '0xme', admin: false, graph, pubsub })
     await flush()
-    player.on_message(JSON.stringify({ type: 'packet/embody', character_id: '0xabc' }))
+    player.on_message(JSON.stringify({ type: 'packet/track_character', character_id: '0xabc', tracked: true }))
     await flush()
     // mounting probed every fresh zone (the join-later cure)
     const probes = published.filter(({ payload }) => payload.kind === 'who')
@@ -308,20 +510,22 @@ describe('the world module', () => {
     pubsub.emitter.emit('pos:overworld:0:0', { kind: 'who', address: '0xlater', world: 'overworld', zx: 0, zz: 0 })
     const announces = published.filter(({ payload }) => payload.kind === 'appear')
     expect(announces).toHaveLength(1)
-    // a probe for a zone I merely track but do not stand in stays unanswered
+    // the other owned character stands in zone 1 and answers even while not selected
     published.length = 0
     pubsub.emitter.emit('pos:overworld:0:0', { kind: 'who', address: '0xlater', world: 'overworld', zx: 1, zz: 0 })
-    expect(published.filter(({ payload }) => payload.kind === 'appear')).toHaveLength(0)
+    expect(published.filter(({ payload }) => payload.kind === 'appear')).toHaveLength(1)
   })
 
   test('a plausible move within the zone publishes a move fact, not a re-track', async () => {
     const { graph, ws, pubsub, published } = wire()
     const player = create_player({ ws, address: '0xme', admin: false, graph, pubsub })
     await flush()
-    player.on_message(JSON.stringify({ type: 'packet/embody', character_id: '0xabc' }))
+    player.on_message(JSON.stringify({ type: 'packet/track_character', character_id: '0xabc', tracked: true }))
     await flush()
     published.length = 0
-    player.on_message(JSON.stringify({ type: 'packet/position', x: 100.3, y: 0, z: 100.3, riding: false }))
+    player.on_message(
+      JSON.stringify({ type: 'packet/position', character_id: '0xabc', x: 100.3, y: 0, z: 100.3, riding: false })
+    )
     expect(published.every(({ payload }) => payload.kind === 'move')).toBe(true)
   })
 })

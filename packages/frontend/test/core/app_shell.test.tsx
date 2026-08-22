@@ -5,6 +5,7 @@ import { expect, test } from 'bun:test'
 import { renderToStaticMarkup } from 'react-dom/server'
 
 import { AppShell } from '../../src/components/AppShell.tsx'
+import { CharacterTabs } from '../../src/components/CharacterTabs.tsx'
 import { Sidebar } from '../../src/components/Sidebar.tsx'
 import { ConnectionCard, indexing_health_tone } from '../../src/components/SidebarCards.tsx'
 import type { AuthSession } from '../../src/auth.ts'
@@ -25,6 +26,10 @@ test('the account card sits below navigation and above language with row actions
     // action namespaces are never exercised by these reducer/DOM tests
     fight: {} as never,
     character: {} as never,
+    marketplace: {} as never,
+    stacks: {} as never,
+    create_trade: async () => ({ digest: '', trade: {} as never }),
+    trade: () => ({}) as never,
     resolve_suins_address: async () => null,
     estimate_sui_transfer: async () => 0n,
     send_sui: async () => ({ digest: null }),
@@ -229,6 +234,17 @@ test('the character tab strip lives on character-scoped pages and selects throug
   expect(world).toContain('Oeuftermath')
   expect(world).toContain('data-character-tab-create')
   expect(shell('shop')).not.toContain('data-character-tabs')
+
+  const capped = renderToStaticMarkup(
+    <CharacterTabs
+      characters={Array.from({ length: 6 }, (_, index) => ({ ...character, id: `0xc${index}`, name: `C${index}` }))}
+      copy={copy}
+      create_character={() => undefined}
+      select_character={() => undefined}
+      selected_character_id="0xc0"
+    />
+  )
+  expect(capped).not.toContain('data-character-tab-create')
 })
 
 test('a replaced link renders red with its own label and never as reconnecting', async () => {

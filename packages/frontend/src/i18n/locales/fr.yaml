@@ -101,11 +101,21 @@ world_hud:
   cluster_count: +{{extra}} autres
   zone_edge: Bord de zone {{dist}}
   coordinates: Coordonnées
+  biome: Biome
   world_map: Carte du monde
   menu_group: Inviter dans le groupe
   menu_trade: Échanger
   menu_message: Envoyer un message
   mount_prompt: 'Appuyez sur {{key}} pour monter'
+  portal_prompt: 'Appuyez sur {{key}} pour voyager vers un autre monde'
+  travel_title: Porte des étoiles
+  travel_search: 'Rechercher {{title}}…'
+  travel_entry_level: 'Niveau requis {{level}}'
+  travel_pending: Ouverture de la porte…
+  travel_success: 'Bienvenue dans {{world}}'
+  travel_empty: Aucun monde
+  travel_showing: '{{filtered}} / {{total}} résultats'
+  travel_selected: 'Sélection · {{label}}'
   fight_press_join: 'Appuyez sur {{key}} pour rejoindre'
   fight_press_spectate: 'Appuyez sur {{key}} pour spectater'
   fight_locked: 'Combat privé'
@@ -123,12 +133,30 @@ world_hud:
   fight_close: 'Fermer'
   menu_duel: Provoquer en duel
   duel_invite: '{{name}} vous provoque en duel'
+  duel_challenging: 'Défi lancé à {{name}}…'
+  duel_no_position: Aucune position — le duel n’a pas été créé.
+  duel_unknown_challenger: un adversaire
   duel_accept: Accepter
   duel_decline: Refuser
-  duel_waiting: 'En attente de {{name}}…'
-  duel_cancel: Annuler
-  duel_declined: '{{name}} a refusé le duel'
-  duel_never_started: Le duel n’a jamais commencé — rien ne s’est passé, vous pouvez continuer à jouer.
+  zone_unsearched_title: 'Zone inexplorée'
+  zone_press_search: 'Appuyez sur {{key}} pour explorer la zone'
+  zone_searching: 'Exploration de la zone…'
+  zone_searched_toast: 'La zone livre ses secrets'
+  spawn_group: 'Groupe de {{size}}'
+  spawn_unknown_mob: 'Créature inconnue'
+  spawn_press_attack: 'Appuyez sur {{key}} pour attaquer'
+  spawn_engaging: 'Engagement du groupe…'
+  spawn_never_arrived: 'Le combat a été exécuté, mais le plateau n’est jamais arrivé'
+  resource_press_collect: 'Appuyez sur {{key}} pour récolter {{name}}'
+  resource_need_level: 'Métier {{job}} niv. {{level}} requis'
+  resource_need_tool: 'Un outil de {{job}} est requis'
+  resource_gathering: 'Récolte…'
+  resource_gathered: 'Ressource récoltée'
+  resource_ambushed: 'Un protecteur vous attaque'
+  resource_resolving_ambush: 'Le protecteur bloque votre route…'
+  resource_ambush_title: 'Embuscade du protecteur'
+  resource_face_protector: 'Appuyez sur {{key}} pour l’affronter'
+  zone_never_arrived: "La recherche est passée, mais le monde ne l'a jamais montrée — la couche de lecture est peut-être en retard"
 demo_page:
   title: Laboratoire de rendu
   world_lab: Monde
@@ -153,6 +181,66 @@ demo_page:
   resources_missing: Le rendu des ressources n’est pas encore restauré. La liste créée reste disponible dans les données seed.
   control_hint: Cliquer sur le canvas · WASD pour bouger · Espace pour sauter · Souris pour regarder
   back: Retour à l’application
+marketplace_page:
+  title: Marché
+  subtitle: Annonces des joueurs sur Sui
+  tab_buy: Acheter
+  tab_sell: Vendre
+  tab_history: Historique
+  browse: Parcourir
+  group_cosmetics: Cosmétiques
+  group_equipment: Équipement
+  group_pets: Familiers
+  group_runes: Runes
+  group_consumable: Consommables
+  group_resources: Ressources
+  group_characters: Personnages
+  level: Niveau
+  class: Classe
+  search: Rechercher…
+  no_results: Aucune annonce
+  select_item: Sélectionnez un objet
+  listing_count: '{{count}} annonces'
+  rolled_stats: Stats aléatoires
+  characteristics: Caractéristiques
+  damages: dégâts
+  range_to: à
+  seller: Vendeur
+  buy: Acheter
+  pay: Payer
+  yours: À vous
+  insufficient: SUI insuffisant
+  cancel: Annuler
+  your_listings: Vos annonces
+  no_listings: Aucune annonce active
+  withdraw: Retirer
+  list_for_sale: Mettre en vente
+  select_to_list: Sélectionnez un objet de l’inventaire
+  price: Prix
+  lot_size: Taille du lot
+  paid_automatically: Le produit de la vente arrive automatiquement dans votre kiosque.
+  lot_required: 'Cette pile contient ×{{amount}}. Les lots doivent être ×1, ×10, ×100 ou ×1000.'
+  inventory: Inventaire
+  characters: Personnages
+  items: Objets
+  empty_inventory: Rien à vendre
+  revenue_30d: 30 derniers jours
+  sales_count: '{{count}} ventes'
+  unclaimed: Revenus non retirés
+  collect: Retirer
+  no_history: Aucun historique de vente
+  item: Objet
+  date: Date
+  buyer: Acheteur
+  load_more: Charger plus
+  list_pending: Création de l’annonce…
+  list_success: Annonce créée
+  delist_pending: Retrait de l’annonce…
+  delist_success: Annonce retirée
+  buy_pending: Achat en cours…
+  buy_success: Achat terminé
+  collect_pending: Retrait des revenus…
+  collect_success: Revenus retirés
 shop_page:
   title: 'Boutique'
   subtitle: 'Achetez des objets avec du SUI'
@@ -356,12 +444,15 @@ fight_hud:
   placement_hint: Placez vos combattants et indiquez qu’ils sont prêts
   placement_ready: Prêt
   placement_waiting: En attente des autres…
+  placement_starting: Démarrage du combat…
+  placement_start_retry: Le démarrage a échoué — réessayez
   placement_force_prompt: Un joueur est absent — forcer le début du combat ?
   placement_force_button: Forcer le début
   placement_no_opponent: Personne n'a accepté le défi
   crank_prompt: Le joueur actuel ne termine pas son tour.
   crank_button: Forcer la fin du tour
   end_turn: Fin du tour
+  end_turn_queued: Fin du tour en attente
   reset_turn: Rejouer
   weapon_attack: Attaque d’arme
   bare_hands: Mains nues
@@ -399,6 +490,23 @@ fight_hud:
   chat_placeholder: Dites quelque chose…
   chat_you: Vous
   chat_line: '{name} : {message}'
+  result_title: Résultat du combat
+  result_party: Votre groupe
+  result_enemies: Ennemis
+  result_victory: Victoire
+  result_defeat: Défaite
+  result_you: Vous
+  result_fallen: Tombé
+  result_survived: Survivant
+  result_collecting: Récupération du butin…
+  result_continue: Continuer
+  result_retry: Réessayer
+  level_up_title: Niveau supérieur
+  level_up_reached: Niveau atteint
+  level_up_stat_points: Points de caractéristiques
+  level_up_spell_points: Points de sorts
+  level_up_new_spell: Nouveau sort débloqué
+  level_up_continue: Continuer
 wallet_legacy:
   sui: SUI
   how_to_get: Comment obtenir du SUI
@@ -2981,6 +3089,7 @@ characters_page:
   menu_consume: Consommer
   menu_crush: Briser
   menu_destroy: Détruire
+  menu_explorer: Voir sur l’explorateur
   feed_title: Nourrir le familier
   feed_power_label: Puissance
   feed_power: '{{count}} / {{max}}'

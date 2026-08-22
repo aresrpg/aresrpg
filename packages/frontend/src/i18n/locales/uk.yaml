@@ -101,11 +101,21 @@ world_hud:
   cluster_count: +{{extra}} ще
   zone_edge: Межа зони {{dist}}
   coordinates: Координати
+  biome: Біом
   world_map: Карта світу
   menu_group: Запросити до групи
   menu_trade: Торгувати
   menu_message: Надіслати повідомлення
   mount_prompt: 'Натисніть {{key}}, щоб осідлати'
+  portal_prompt: 'Натисніть {{key}}, щоб подорожувати до іншого світу'
+  travel_title: Зоряна брама
+  travel_search: 'Пошук {{title}}…'
+  travel_entry_level: 'Потрібний рівень {{level}}'
+  travel_pending: Ворота відкриваються…
+  travel_success: 'Ласкаво просимо до {{world}}'
+  travel_empty: Немає світів
+  travel_showing: '{{filtered}} / {{total}} результатів'
+  travel_selected: 'Вибрано · {{label}}'
   fight_press_join: 'Натисніть {{key}}, щоб приєднатися'
   fight_press_spectate: 'Натисніть {{key}}, щоб спостерігати'
   fight_locked: 'Приватний бій'
@@ -123,12 +133,30 @@ world_hud:
   fight_close: 'Закрити'
   menu_duel: Викликати на дуель
   duel_invite: '{{name}} викликає вас на дуель'
+  duel_challenging: 'Виклик для {{name}}…'
+  duel_no_position: Немає позиції — дуель не створено.
+  duel_unknown_challenger: суперник
   duel_accept: Прийняти
   duel_decline: Відхилити
-  duel_waiting: 'Очікування {{name}}…'
-  duel_cancel: Скасувати
-  duel_declined: '{{name}} відхилив дуель'
-  duel_never_started: Дуель так і не почалася — нічого не сталося, можете грати далі.
+  zone_unsearched_title: 'Недосліджена зона'
+  zone_press_search: 'Натисніть {{key}}, щоб дослідити зону'
+  zone_searching: 'Дослідження зони…'
+  zone_searched_toast: 'Зона розкриває свої таємниці'
+  spawn_group: 'Зграя з {{size}}'
+  spawn_unknown_mob: 'Невідома істота'
+  spawn_press_attack: 'Натисніть {{key}}, щоб атакувати'
+  spawn_engaging: 'Атака зграї…'
+  spawn_never_arrived: 'Бій виконано, але поле не надійшло'
+  resource_press_collect: 'Натисніть {{key}}, щоб зібрати {{name}}'
+  resource_need_level: 'Потрібен {{job}} рівня {{level}}'
+  resource_need_tool: 'Потрібен інструмент {{job}}'
+  resource_gathering: 'Збирання…'
+  resource_gathered: 'Ресурс зібрано'
+  resource_ambushed: 'Захисник нападає на вас'
+  resource_resolving_ambush: 'Захисник перекриває шлях…'
+  resource_ambush_title: 'Засідка захисника'
+  resource_face_protector: 'Натисніть {{key}}, щоб битися'
+  zone_never_arrived: 'Пошук пройшов, але світ його не показав — шар читання, можливо, відстає'
 demo_page:
   title: Лабораторія рендерингу
   world_lab: Світ
@@ -153,6 +181,66 @@ demo_page:
   resources_missing: Відображення ресурсів ще не відновлено. Створений список залишається доступним у seed-даних.
   control_hint: Натисніть на canvas · WASD для руху · Пробіл для стрибка · Миша для огляду
   back: Назад до застосунку
+marketplace_page:
+  title: Ринок
+  subtitle: Оголошення гравців у Sui
+  tab_buy: Купити
+  tab_sell: Продати
+  tab_history: Історія
+  browse: Перегляд
+  group_cosmetics: Косметика
+  group_equipment: Спорядження
+  group_pets: Улюбленці
+  group_runes: Руни
+  group_consumable: Витратні предмети
+  group_resources: Ресурси
+  group_characters: Персонажі
+  level: Рівень
+  class: Клас
+  search: Пошук предметів…
+  no_results: Оголошень ще немає
+  select_item: Виберіть предмет
+  listing_count: '{{count}} оголошень'
+  rolled_stats: Випадкові характеристики
+  characteristics: Характеристики
+  damages: шкоди
+  range_to: до
+  seller: Продавець
+  buy: Купити
+  pay: Сплатити
+  yours: Ваше
+  insufficient: Недостатньо SUI
+  cancel: Скасувати
+  your_listings: Ваші оголошення
+  no_listings: Активних оголошень немає
+  withdraw: Зняти
+  list_for_sale: Виставити на продаж
+  select_to_list: Виберіть предмет з інвентарю
+  price: Ціна
+  lot_size: Розмір лота
+  paid_automatically: Виручка автоматично надходить у ваш кіоск.
+  lot_required: 'У стосі ×{{amount}}. Дозволені лоти ×1, ×10, ×100 або ×1000.'
+  inventory: Інвентар
+  characters: Персонажі
+  items: Предмети
+  empty_inventory: Немає доступних предметів
+  revenue_30d: Останні 30 днів
+  sales_count: '{{count}} продажів'
+  unclaimed: Неотримана виручка
+  collect: Отримати
+  no_history: Історії продажів ще немає
+  item: Предмет
+  date: Дата
+  buyer: Покупець
+  load_more: Завантажити ще
+  list_pending: Створення оголошення…
+  list_success: Оголошення створено
+  delist_pending: Зняття оголошення…
+  delist_success: Оголошення знято
+  buy_pending: Купівля…
+  buy_success: Купівлю завершено
+  collect_pending: Отримання виручки…
+  collect_success: Виручку отримано
 shop_page:
   title: 'Крамниця'
   subtitle: 'Купуйте предмети за SUI'
@@ -356,12 +444,15 @@ fight_hud:
   placement_hint: Розмістіть бійців і позначте їх готовими
   placement_ready: Готовий
   placement_waiting: Очікування інших…
+  placement_starting: Початок бою…
+  placement_start_retry: Бій не почався — спробуйте ще раз
   placement_force_prompt: Гравець відсутній — примусово почати бій?
   placement_force_button: Примусовий старт
   placement_no_opponent: Ніхто не прийняв виклик
   crank_prompt: Поточний гравець не завершує свій хід.
   crank_button: Примусово завершити хід
   end_turn: Завершити хід
+  end_turn_queued: Завершення ходу в черзі
   reset_turn: Скинути
   weapon_attack: Атака зброєю
   bare_hands: Голіруч
@@ -399,6 +490,23 @@ fight_hud:
   chat_placeholder: Скажіть щось…
   chat_you: Ви
   chat_line: '{name}: {message}'
+  result_title: Результат бою
+  result_party: Ваша група
+  result_enemies: Вороги
+  result_victory: Перемога
+  result_defeat: Поразка
+  result_you: Ви
+  result_fallen: Поліг
+  result_survived: Вижив
+  result_collecting: Збираємо здобич…
+  result_continue: Продовжити
+  result_retry: Спробувати знову
+  level_up_title: Новий рівень
+  level_up_reached: Досягнуто рівня
+  level_up_stat_points: Очки характеристик
+  level_up_spell_points: Очки заклинань
+  level_up_new_spell: Відкрито нове заклинання
+  level_up_continue: Продовжити
 wallet_legacy:
   sui: SUI
   how_to_get: Як отримати SUI
@@ -2974,6 +3082,7 @@ characters_page:
   menu_consume: Спожити
   menu_crush: Розтрощити
   menu_destroy: Знищити
+  menu_explorer: Переглянути в оглядачі
   feed_title: Годування улюбленця
   feed_power_label: Сила
   feed_power: '{{count}} / {{max}}'

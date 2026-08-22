@@ -52,8 +52,12 @@ export default function EquipmentTab({
   const t = copy_text(copy.characters_page)
   const encyclopedia = encyclopedia_text(copy)
   const wallet = useAppStore(({ session }) => session.wallet)
-  const inventory = useAppStore(({ session }) => session.inventory)
-  const listings = useAppStore(({ session }) => session.listings)
+  const all_inventory = useAppStore(({ session }) => session.inventory)
+  const listings = useAppStore(({ marketplace }) => marketplace.own_listings)
+  const inventory = useMemo(
+    () => all_inventory.filter(({ kiosk }) => kiosk === character.kiosk),
+    [all_inventory, character.kiosk]
+  )
   const real = useMemo(() => equipment_map_of(character), [character])
   const [staged, set_staged] = useState<EquipmentMap | null>(null)
   const [category, set_category] = useState<BagCategory>('equipment')
@@ -124,7 +128,12 @@ export default function EquipmentTab({
       return void toast.add(t('already_full_hp'), 'info')
     const pending = toast.loading(t('consume_pending'))
     void wallet.character
-      .use_consumable({ character_id: character.id, item_id: item.id, item_type: item.item_type })
+      .use_consumable({
+        character_id: character.id,
+        item_id: item.id,
+        item_type: item.item_type,
+        custody: { kiosk: character.kiosk, kiosk_cap: character.kiosk_cap },
+      })
       .then(() => {
         dispatch_app({
           type: 'character/consumed',
@@ -151,7 +160,12 @@ export default function EquipmentTab({
     set_committing(true)
     const pending = toast.loading(t('equip_pending'))
     void wallet.character
-      .equip({ character_id: character.id, to_equip: changes.to_equip, to_unequip: changes.to_unequip })
+      .equip({
+        character_id: character.id,
+        to_equip: changes.to_equip,
+        to_unequip: changes.to_unequip,
+        custody: { kiosk: character.kiosk, kiosk_cap: character.kiosk_cap },
+      })
       .then(() => {
         dispatch_app({
           type: 'character/equip_folded',

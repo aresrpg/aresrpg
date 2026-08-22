@@ -3,7 +3,7 @@
 /* eslint-disable no-param-reassign, fp-law/no-mutating-methods -- The Move twin updates only its reducer-owned structuredClone draft; caller snapshots stay immutable. */
 
 import { resolve_spell } from './effects.ts'
-import { is_mob, is_player, kill_fighter, living_count } from './fighters.ts'
+import { is_mob, is_player, kill_fighter, living_count, players_ready_after } from './fighters.ts'
 import { CONTRACT_CONSTANTS } from './move_contract.gen.ts'
 import { walk_path } from './movement.ts'
 import { emit, fail } from './runtime.ts'
@@ -131,13 +131,13 @@ const ready = (runtime: FightRuntime, action: ReadyAction): FightRuntime => {
   return runtime
 }
 
-const all_players_ready = (runtime: FightRuntime): boolean =>
-  runtime.contract.fighters.every((fighter) => !is_player(fighter) || fighter.dead || fighter.ready)
-
 const start = (runtime: FightRuntime, options: CommandOptions): FightRuntime => {
   if (!placement_open(runtime)) return fail(runtime, 'not_placement')
   const now = options.observed_ms!
-  if (!all_players_ready(runtime) && now < runtime.contract.placement_ms + CONTRACT_CONSTANTS.placement_force_ms)
+  if (
+    !players_ready_after(runtime.contract.fighters, null) &&
+    now < runtime.contract.placement_ms + CONTRACT_CONSTANTS.placement_force_ms
+  )
     return fail(runtime, 'not_ready')
   if (living_count(runtime.contract.fighters, 0n) < 1n || living_count(runtime.contract.fighters, 1n) < 1n)
     return fail(runtime, 'empty_side')

@@ -63,8 +63,10 @@ export const mob_scalar_for_level = (template: MobTemplateSource, requested_leve
 }
 
 export const create_character_source = ({
+  name = '',
   classe,
   level = 1n,
+  experience = 0n,
   vitality = 0n,
   wisdom = 0n,
   strength = 0n,
@@ -78,8 +80,10 @@ export const create_character_source = ({
   normalize_sources({
     players: {
       character: {
+        name,
         classe,
         level,
+        experience,
         vitality,
         wisdom,
         strength,

@@ -48,7 +48,11 @@ export default function RuneforgeTab({
   const t = copy_text(copy.characters_page)
   const encyclopedia = encyclopedia_text(copy)
   const wallet = useAppStore(({ session }) => session.wallet)
-  const inventory = useAppStore(({ session }) => session.inventory)
+  const all_inventory = useAppStore(({ session }) => session.inventory)
+  const inventory = useMemo(
+    () => all_inventory.filter(({ kiosk }) => kiosk === character.kiosk),
+    [all_inventory, character.kiosk]
+  )
   const [gear_id, set_gear_id] = useState<string | null>(null)
   const [rune_id, set_rune_id] = useState<string | null>(null)
   const [pool_tab, set_pool_tab] = useState<'gear' | 'runes'>('gear')
@@ -75,6 +79,7 @@ export default function RuneforgeTab({
         gear_id: sel_gear.id,
         gear_item_type: sel_gear.item_type,
         rune_item_id: sel_rune.id,
+        custody: { kiosk: character.kiosk, kiosk_cap: character.kiosk_cap },
       })
       .then((outcome) => {
         // the rune spend folds now; the gear's CAPPED new block arrives via packet/item_updated

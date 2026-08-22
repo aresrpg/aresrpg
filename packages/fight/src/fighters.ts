@@ -4,6 +4,7 @@
 // Fighter access and writes mirror fight.move's single branch and single death door.
 
 import { CHANNELS, CONTRACT_CONSTANTS, EFFECT_KINDS } from './move_contract.gen.ts'
+import { level_penalty_bp, xp_for_player } from './fight_math.ts'
 import { add_effect_id, effect_id_at, emit } from './runtime.ts'
 import type {
   FightRuntime,
@@ -34,6 +35,10 @@ export const STATS = Object.fromEntries(
 export const is_mob = (fighter: Fighter): fighter is MobFighter => fighter.kind.type === 'mob'
 export const is_player = (fighter: Fighter): fighter is PlayerFighter => fighter.kind.type === 'player'
 export const mob_snapshot = (fighter: MobFighter): MobSnapshot => fighter.kind.snapshot
+
+/** Would every living player be ready after `seat` readies? Mobs never hold placement open. */
+export const players_ready_after = (fighters: readonly Fighter[], seat: bigint | null): boolean =>
+  fighters.every((fighter, index) => BigInt(index) === seat || !is_player(fighter) || fighter.dead || fighter.ready)
 
 export const player_source = (runtime: FightReadState, seat: bigint): PlayerSource => {
   const fighter = runtime.contract.fighters[Number(seat)] as PlayerFighter
@@ -95,6 +100,34 @@ export const sheet_of = (runtime: FightReadState, seat: bigint): FightSheet => {
     range_bonus: row_adjusted(runtime, seat, base.range_bonus, STATS.range),
     level: base.level,
   }
+}
+
+/** A modifiable spell's authored reach participates in range removal too. Folding removal only
+ * into the unsigned bonus floors at zero and incorrectly preserves the authored base range. */
+export const modifiable_range_max = (runtime: FightReadState, seat: bigint, authored_max: bigint): bigint => {
+  const fighter = runtime.contract.fighters[Number(seat)]
+  const base_bonus = is_mob(fighter) ? 0n : effective(0n, player_source(runtime, seat).folded_stats.range)
+  return saturating_subtract(
+    authored_max + base_bonus + sum_rows(runtime, seat, KINDS.add, STATS.range),
+    sum_rows(runtime, seat, KINDS.remove, STATS.range) + sum_rows(runtime, seat, KINDS.steal, STATS.range)
+  )
+}
+
+/** Exact fight.move `xs`/`sc` settlement award from the ended checkpoint. */
+export const xp_award_of = (checkpoint: FightReadState, seat: bigint): bigint => {
+  const fighter = checkpoint.contract.fighters[Number(seat)]
+  if (!fighter || fighter.kind.type !== 'player' || checkpoint.contract.winner !== fighter.team) return 0n
+  const sheet = sheet_of(checkpoint, seat)
+  const penalized = checkpoint.contract.fighters.reduce((total, enemy) => {
+    if (enemy.team === fighter.team || !is_mob(enemy)) return total
+    return total + (enemy.kind.snapshot.xp * level_penalty_bp(enemy.kind.snapshot.level, sheet.level)) / 10_000n
+  }, 0n)
+  const members = BigInt(
+    checkpoint.contract.fighters.filter(
+      (member) => member.team === fighter.team && member.kind.type === 'player' && !member.forfeited
+    ).length
+  )
+  return xp_for_player(penalized, sheet.wisdom, members)
 }
 
 export const effective_stat = (runtime: FightRuntime, seat: bigint, stat: bigint): bigint => {

@@ -67,10 +67,7 @@ export const to_mob_template = (mob: SeedMob): MobTemplateSource => ({
 })
 
 /** The whole spell catalog as fight sources — computed once (seed content is immutable). */
-let catalog_spells: Readonly<Record<string, SpellSource>> | null = null
-export const catalog_spell_sources = (): Readonly<Record<string, SpellSource>> => {
-  catalog_spells ??= Object.freeze(
-    Object.fromEntries(encyclopedia_catalog.spells.map((spell) => [spell.name, to_spell_source(spell)]))
-  )
-  return catalog_spells
-}
+const catalog_spells: Readonly<Record<string, SpellSource>> = Object.freeze(
+  Object.fromEntries(encyclopedia_catalog.spells.map((spell) => [spell.name, to_spell_source(spell)]))
+)
+export const catalog_spell_sources = (): Readonly<Record<string, SpellSource>> => catalog_spells

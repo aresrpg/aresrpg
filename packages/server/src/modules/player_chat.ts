@@ -30,16 +30,17 @@ export default {
       return false
     }
 
-    events.on('packet/chat', ({ text }: Extract<PlayerAction, { type: 'packet/chat' }>) => {
-      const { character } = get_state()
-      if (!character) return // chat before embody is noise
+    events.on('packet/chat', ({ character_id, text }: Extract<PlayerAction, { type: 'packet/chat' }>) => {
+      const character = get_state().characters[character_id]?.presence
+      if (!character) return
       if (flood_gated()) return
       void pubsub.mesh.publish(mesh.chat_world(character.world), { address, character: character.name, text })
     })
 
-    events.on('packet/chat_party', ({ text }: Extract<PlayerAction, { type: 'packet/chat_party' }>) => {
-      const { character, party } = get_state()
-      if (!character) return
+    events.on('packet/chat_party', ({ character_id, text }: Extract<PlayerAction, { type: 'packet/chat_party' }>) => {
+      const tracked = get_state().characters[character_id]
+      if (!tracked) return
+      const { presence: character, party } = tracked
       if (!party) {
         send({ type: 'packet/error', reason: 'no party' })
         return
@@ -48,12 +49,15 @@ export default {
       void pubsub.mesh.publish(mesh.chat_party(party), { address, character: character.name, text })
     })
 
-    events.on('packet/chat_whisper', ({ to, text }: Extract<PlayerAction, { type: 'packet/chat_whisper' }>) => {
-      const { character } = get_state()
-      if (!character) return
-      if (flood_gated()) return
-      void pubsub.mesh.publish(mesh.chat_user(to), { address, character: character.name, text })
-    })
+    events.on(
+      'packet/chat_whisper',
+      ({ character_id, to, text }: Extract<PlayerAction, { type: 'packet/chat_whisper' }>) => {
+        const character = get_state().characters[character_id]?.presence
+        if (!character) return
+        if (flood_gated()) return
+        void pubsub.mesh.publish(mesh.chat_user(to), { address, character: character.name, text })
+      }
+    )
 
     const forward_world_chat = (fact: ChatFact) => {
       if (fact.address === address) return // never echo the speaker to himself
@@ -66,13 +70,16 @@ export default {
       })
     }
 
-    // the world's chat room follows the embodied world — armed off the state delta
+    // One connection hears every world occupied by one of its characters.
     events.on('STATE_UPDATED', (state: PlayerState, previous: PlayerState) => {
-      const before = previous.character?.world ?? null
-      const current = state.character?.world ?? null
-      if (before === current) return
-      if (before) unwatch(mesh.chat_world(before))
-      if (current) watch(mesh.chat_world(current), forward_world_chat as (payload: never) => void)
+      const before = new Set(Object.values(previous.characters).map(({ presence }) => presence.world))
+      const current = new Set(Object.values(state.characters).map(({ presence }) => presence.world))
+      before.forEach((world) => {
+        if (!current.has(world)) unwatch(mesh.chat_world(world))
+      })
+      current.forEach((world) => {
+        if (!before.has(world)) watch(mesh.chat_world(world), forward_world_chat as (payload: never) => void)
+      })
     })
 
     // the standing whisper door — the one chat channel that exists before any embody

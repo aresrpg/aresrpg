@@ -5,7 +5,7 @@
 // are equally his: the roster is what the client selects and embodies from, so a character
 // missing here is a character its owner cannot reach at all.
 
-import type { CharacterRow } from '@aresrpg/protocol'
+import { MAX_TRACKED_CHARACTERS, type CharacterRow } from '@aresrpg/protocol'
 
 import { type Graph, type Node } from '../graph.ts'
 
@@ -15,7 +15,7 @@ import { shape_item, stats_record_of } from './stat_block.ts'
  *  `job_<slug>` per job, `folded_stats` as the canonical 15-int array. Shape them into the
  *  protocol row here — the one decode seam. */
 export const shape_character = (props: Record<string, unknown>) => {
-  const { spells, available_spell_points, folded_stats, ...rest } = props
+  const { spells, available_spell_points, folded_stats, ambush, ...rest } = props
   const jobs = Object.fromEntries(
     Object.entries(rest)
       .filter(([key]) => key.startsWith('job_'))
@@ -29,11 +29,12 @@ export const shape_character = (props: Record<string, unknown>) => {
     spells: typeof spells === 'string' ? (JSON.parse(spells) as Record<string, number>) : {},
     available_spell_points: Number(available_spell_points ?? 0),
     ...(Array.isArray(folded_stats) ? { folded_stats: stats_record_of(folded_stats) } : {}),
+    ...(typeof ambush === 'string' ? { ambush: JSON.parse(ambush) as CharacterRow['ambush'] } : {}),
     jobs,
   }
 }
 
-const shape_row = ({ character, kiosk_node, equipment }: Record<string, unknown>) => {
+const shape_row = ({ character, kiosk_node, equipment }: Record<string, unknown>, custody: CharacterRow['custody']) => {
   const kiosk = (kiosk_node as Node)?.properties ?? {}
   return {
     ...shape_character((character as Exclude<Node, null | undefined>).properties),
@@ -43,6 +44,7 @@ const shape_row = ({ character, kiosk_node, equipment }: Record<string, unknown>
     equipment: (equipment as { slot: string; item: Node }[])
       .filter((entry) => entry.item)
       .map(({ slot, item }) => ({ slot, ...shape_item(item!.properties) })),
+    custody,
   }
 }
 
@@ -70,5 +72,9 @@ export async function get_characters(graph: Graph, { address }: { address: strin
       { address }
     ),
   ])
-  return [...held, ...seated].map(shape_row) as CharacterRow[]
+  const rows = [
+    ...held.map((row) => shape_row(row, 'kiosk')),
+    ...seated.map((row) => shape_row(row, 'fight')),
+  ] as CharacterRow[]
+  return [...rows].sort((left, right) => left.id.localeCompare(right.id)).slice(0, MAX_TRACKED_CHARACTERS)
 }

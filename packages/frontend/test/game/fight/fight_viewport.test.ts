@@ -24,3 +24,9 @@ test('cell picking is pointer-driven instead of polled by a second animation loo
   expect(source).not.toContain('pointer_ref')
   expect(source.match(/view\.pick_cell\(/g)).toHaveLength(2)
 })
+
+test('a canvas click with no picked fight cell still reaches the fight interaction owner', () => {
+  const source = readFileSync(new URL('../../../src/game/fight/FightViewport.tsx', import.meta.url), 'utf8')
+
+  expect(source).toContain('click_ref.current?.(cell === null ? null : BigInt(cell)')
+})

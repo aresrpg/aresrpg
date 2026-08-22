@@ -92,7 +92,7 @@ public(package) fun new_recipe(
   let data = recipe_data::new(output_template, input_templates, input_quantities, job);
   let n = recipe_data::input_count(&data);
   let recipe = Recipe {
-    id: derived_object::claim(item::registry_uid_mut(registry), RecipeKey(output_type)),
+    id: derived_object::claim(item::ru(registry), RecipeKey(output_type)),
     data,
   };
   event::emit(RecipeCreated {

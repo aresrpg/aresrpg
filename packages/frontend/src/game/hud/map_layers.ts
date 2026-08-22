@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
+/* eslint-disable fp-law/no-mutating-methods, functional/immutable-data, functional/prefer-immutable-types, no-param-reassign -- canvas rendering is an explicit effect boundary over its mutable drawing context. */
 // MAP LAYERS — the canvas painters the minimap lens and the full world map share: zone
 // delimitation (unsearched veil + gold boundary + optional signed zone labels), spawn markers,
 // live players, and the player arrow. One home for every overlay mark, whatever the map size.

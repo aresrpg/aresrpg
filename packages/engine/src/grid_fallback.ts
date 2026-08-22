@@ -1,13 +1,14 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-import { PerspectiveCamera, Scene, SRGBColorSpace, WebGLRenderer } from 'three'
+import { PerspectiveCamera, Scene, SRGBColorSpace, Vector3, WebGLRenderer } from 'three'
 
 import { quality_pixel_ratio } from './quality.ts'
 import { create_hack_presentation } from './hack_presentation.ts'
 import { create_fight_board_layer } from './fight_board.ts'
-import { create_fight_sword_layer } from './fight_swords.ts'
+import { create_fight_sword_layer, fight_swords_visible } from './fight_swords.ts'
 import { create_entity_layer } from './entities.ts'
 import { create_entity_label_layer } from './entity_labels.ts'
+import { create_resource_node_layer, resource_nodes_visible } from './resource_nodes.ts'
 import { create_fight_presentation } from './fight_presentation.ts'
 import { create_transient_effects } from './transient_effects.ts'
 import { project_screen_anchor } from './screen_projection.ts'
@@ -26,12 +27,14 @@ export const create_grid_fallback = (
   const fight_board = create_fight_board_layer({ scene, camera, canvas })
   const entities = create_entity_layer({ scene })
   const entity_labels = create_entity_label_layer({ canvas, scene, camera, entities })
+  const resource_nodes = create_resource_node_layer({ scene })
   const effects = create_transient_effects({ scene, entities })
   const fight_presentation = create_fight_presentation({ entities, vfx: effects })
   const presentation = create_hack_presentation(scene)
   let fight_swords: ReturnType<typeof create_fight_sword_layer> | null = null
   let quality = initial_quality
   let flattened = false
+  let board_active = false
   let previous_frame = performance.now()
   let render_width = 0
   let render_height = 0
@@ -82,8 +85,12 @@ export const create_grid_fallback = (
     set_time_of_day: () => {},
     set_flatten_amount: (amount: number) => {
       flattened = amount >= 1
+      resource_nodes.set_visible(resource_nodes_visible({ terrain_presented: true, flattened, board_active }))
     },
     set_fight_board: (board) => {
+      board_active = board !== null
+      resource_nodes.set_visible(resource_nodes_visible({ terrain_presented: true, flattened, board_active }))
+      fight_swords?.set_visible(fight_swords_visible(board_active))
       fight_board.set(board)
       entities.set_board(board)
     },
@@ -92,11 +99,21 @@ export const create_grid_fallback = (
       if (ground_y?.kind === 'world') presentation.set_ground_y(ground_y.position[1])
       entities.set(next)
     },
-    set_fight_swords: (url, markers) => {
-      fight_swords ??= create_fight_sword_layer({ scene, url })
+    set_fight_swords: (url, impact_sound_url, markers) => {
+      fight_swords ??= create_fight_sword_layer({
+        scene,
+        url,
+        impact_sound_url,
+        impact: effects.play_sword_impact,
+      })
+      fight_swords.set_visible(fight_swords_visible(board_active))
       fight_swords.set_markers(markers)
     },
     set_fight_sword_label: (id, element) => fight_swords?.set_label(id, element),
+    set_resource_nodes: resource_nodes.set_markers,
+    set_resource_node_label: resource_nodes.set_label,
+    // the retrowave fallback has no world dressing — there is no gate to label
+    set_portal_label: () => {},
     animate_entity: entities.animate,
     play_fight_cue: fight_presentation.play,
     play_jump_puff: effects.play_jump_puff,
@@ -105,6 +122,8 @@ export const create_grid_fallback = (
       return anchor ? project_screen_anchor(anchor, camera, canvas.getBoundingClientRect()) : null
     },
     set_entity_label: entity_labels.set,
+    set_world_label: (id, element, position) =>
+      entity_labels.set_static(id, element, new Vector3(...(position ?? [0, 0, 0]))),
     entity_height: entities.entity_height,
     upsert_fight_blob: fight_board.upsert_blob,
     remove_fight_blob: fight_board.remove_blob,
@@ -128,6 +147,7 @@ export const create_grid_fallback = (
       entity_labels.dispose()
       fight_board.dispose()
       effects.dispose()
+      resource_nodes.dispose()
       entities.dispose()
       presentation.dispose()
       renderer.dispose()

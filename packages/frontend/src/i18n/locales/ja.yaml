@@ -101,11 +101,21 @@ world_hud:
   cluster_count: 他{{extra}}件
   zone_edge: ゾーン境界 {{dist}}
   coordinates: 座標
+  biome: バイオーム
   world_map: ワールドマップ
   menu_group: グループに招待
   menu_trade: 取引
   menu_message: メッセージを送る
   mount_prompt: '{{key}} で騎乗'
+  portal_prompt: '{{key}} を押して別のワールドへ移動'
+  travel_title: スターゲート
+  travel_search: '{{title}}を検索…'
+  travel_entry_level: '必要レベル {{level}}'
+  travel_pending: ゲートを開いています…
+  travel_success: '{{world}}へようこそ'
+  travel_empty: ワールドがありません
+  travel_showing: '{{filtered}} / {{total}} 件'
+  travel_selected: '選択中 · {{label}}'
   fight_press_join: '{{key}} で参加'
   fight_press_spectate: '{{key}} で観戦'
   fight_locked: 'プライベートな戦闘'
@@ -123,12 +133,30 @@ world_hud:
   fight_close: '閉じる'
   menu_duel: 決闘を申し込む
   duel_invite: '{{name}} が決闘を申し込んできた'
+  duel_challenging: '{{name}} に決闘を挑んでいます…'
+  duel_no_position: 位置が取得できません。決闘は作成されませんでした。
+  duel_unknown_challenger: 挑戦者
   duel_accept: 受ける
   duel_decline: 断る
-  duel_waiting: '{{name}} を待っています…'
-  duel_cancel: キャンセル
-  duel_declined: '{{name}} が決闘を断りました'
-  duel_never_started: 決闘は始まりませんでした。何も起きていないので、そのままプレイを続けられます。
+  zone_unsearched_title: '未探索のゾーン'
+  zone_press_search: '{{key}} を押してゾーンを探索'
+  zone_searching: 'ゾーンを探索中…'
+  zone_searched_toast: 'ゾーンが秘密を明かした'
+  spawn_group: '{{size}}体の群れ'
+  spawn_unknown_mob: '未知の生物'
+  spawn_press_attack: '{{key}} を押して攻撃'
+  spawn_engaging: '群れに交戦中…'
+  spawn_never_arrived: '戦闘は実行されましたが、ボードが届きませんでした'
+  resource_press_collect: '{{key}} で {{name}} を採集'
+  resource_need_level: '{{job}} レベル {{level}} が必要'
+  resource_need_tool: '{{job}} の道具が必要'
+  resource_gathering: '採集中…'
+  resource_gathered: '資源を採集しました'
+  resource_ambushed: '守護者が襲ってきた'
+  resource_resolving_ambush: '守護者が道を塞いでいる…'
+  resource_ambush_title: '守護者の待ち伏せ'
+  resource_face_protector: '{{key}} で立ち向かう'
+  zone_never_arrived: '探索は成立したが、世界に反映されなかった — 読み取り層が遅れている可能性がある'
 demo_page:
   title: レンダリングラボ
   world_lab: ワールド
@@ -153,6 +181,66 @@ demo_page:
   resources_missing: リソース描画はまだ復元されていません。作成済みリストは seed データで確認できます。
   control_hint: キャンバスをクリック · WASDで移動 · Spaceでジャンプ · マウスで視点操作
   back: アプリに戻る
+marketplace_page:
+  title: マーケット
+  subtitle: Sui上のプレイヤー出品
+  tab_buy: 購入
+  tab_sell: 出品
+  tab_history: 履歴
+  browse: 閲覧
+  group_cosmetics: コスメ
+  group_equipment: 装備
+  group_pets: ペット
+  group_runes: ルーン
+  group_consumable: 消耗品
+  group_resources: 素材
+  group_characters: キャラクター
+  level: レベル
+  class: クラス
+  search: アイテム検索…
+  no_results: 出品はありません
+  select_item: アイテムを選択
+  listing_count: '{{count}}件'
+  rolled_stats: ランダム能力
+  characteristics: 特性
+  damages: ダメージ
+  range_to: ～
+  seller: 出品者
+  buy: 購入
+  pay: 支払う
+  yours: 自分の出品
+  insufficient: SUI不足
+  cancel: キャンセル
+  your_listings: 自分の出品
+  no_listings: 出品中の品はありません
+  withdraw: 取り下げ
+  list_for_sale: 出品する
+  select_to_list: インベントリから選択
+  price: 価格
+  lot_size: ロット数
+  paid_automatically: 売上は自動的にキオスクへ入ります。
+  lot_required: 'このスタックは×{{amount}}です。×1、×10、×100、×1000のみ出品できます。'
+  inventory: インベントリ
+  characters: キャラクター
+  items: アイテム
+  empty_inventory: 出品可能な品がありません
+  revenue_30d: 過去30日
+  sales_count: '{{count}}件の販売'
+  unclaimed: 未回収の売上
+  collect: 回収
+  no_history: 販売履歴はありません
+  item: アイテム
+  date: 日付
+  buyer: 購入者
+  load_more: さらに表示
+  list_pending: 出品中…
+  list_success: 出品しました
+  delist_pending: 出品を取り下げ中…
+  delist_success: 出品を取り下げました
+  buy_pending: 購入中…
+  buy_success: 購入完了
+  collect_pending: 売上を回収中…
+  collect_success: 売上を回収しました
 shop_page:
   title: 'ショップ'
   subtitle: 'SUIでアイテムを購入'
@@ -356,12 +444,15 @@ fight_hud:
   placement_hint: ファイターを配置して準備完了にしてください
   placement_ready: 準備完了
   placement_waiting: 他のプレイヤーを待っています…
+  placement_starting: 戦闘を開始しています…
+  placement_start_retry: 開始できませんでした — もう一度お試しください
   placement_force_prompt: プレイヤーが不在です — 戦闘開始を強制しますか？
   placement_force_button: 強制開始
   placement_no_opponent: 誰も挑戦を受けなかった
   crank_prompt: 現在のプレイヤーがターンを終了していません。
   crank_button: ターン終了を強制する
   end_turn: ターン終了
+  end_turn_queued: ターン終了を予約
   reset_turn: リセット
   weapon_attack: 武器攻撃
   bare_hands: 素手
@@ -399,6 +490,23 @@ fight_hud:
   chat_placeholder: メッセージを入力…
   chat_you: あなた
   chat_line: '{name}：{message}'
+  result_title: 戦闘結果
+  result_party: 味方
+  result_enemies: 敵
+  result_victory: 勝利
+  result_defeat: 敗北
+  result_you: あなた
+  result_fallen: 戦闘不能
+  result_survived: 生存
+  result_collecting: 戦利品を回収中…
+  result_continue: 続ける
+  result_retry: 再試行
+  level_up_title: レベルアップ
+  level_up_reached: レベル到達
+  level_up_stat_points: ステータスポイント
+  level_up_spell_points: スペルポイント
+  level_up_new_spell: 新しいスペルを習得
+  level_up_continue: 続ける
 wallet_legacy:
   sui: SUI
   how_to_get: SUIの入手方法
@@ -2950,6 +3058,7 @@ characters_page:
   menu_consume: 使用する
   menu_crush: 粉砕する
   menu_destroy: 破棄する
+  menu_explorer: エクスプローラーで見る
   feed_title: ペットに餌をあげる
   feed_power_label: パワー
   feed_power: '{{count}} / {{max}}'

@@ -13,6 +13,7 @@ import type {
   FightBlobRender,
   FightBoardRender,
   FightSwordMarker,
+  ResourceNodeMarker,
   RenderChunkRequest,
   Vec3,
 } from './types.ts'
@@ -29,13 +30,18 @@ export type EngineBackend = Readonly<{
   set_flatten_amount: (amount: number) => void
   set_fight_board: (board: FightBoardRender | null) => void
   set_entities: (entities: readonly EntityRender[]) => void
-  set_fight_swords: (url: string, markers: readonly FightSwordMarker[]) => void
+  set_fight_swords: (url: string, impact_sound_url: string, markers: readonly FightSwordMarker[]) => void
   set_fight_sword_label: (id: string, element: HTMLElement | null) => void
+  set_resource_nodes: (markers: readonly ResourceNodeMarker[]) => void
+  set_resource_node_label: (id: string, element: HTMLElement | null) => void
+  /** the star-gate approach tooltip — anchored at the world origin's fixed dressing point */
+  set_portal_label: (element: HTMLElement | null) => void
   animate_entity: (motion: EntityPathMotion) => Promise<boolean>
   play_fight_cue: (cue: FightPresentationCue) => Promise<boolean>
   play_jump_puff: (position: Vec3) => void
   project_entity: (id: string) => EntityScreenAnchor | null
   set_entity_label: (id: string, element: HTMLElement | null) => void
+  set_world_label: (id: string, element: HTMLElement | null, position: Vec3 | null) => void
   entity_height: (id: string) => number | null
   upsert_fight_blob: (blob: FightBlobRender) => void
   remove_fight_blob: (id: string) => void

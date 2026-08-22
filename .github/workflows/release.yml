@@ -54,6 +54,7 @@ jobs:
           sparse-checkout: |
             packages/frontend/package.json
             changelog
+            .github/assets/discord_banner.png
           sparse-checkout-cone-mode: false
       # The player-visible version lives in packages/frontend/package.json (the badge the client
       # renders) — NOT the workspace root (which idles at 1.0.x). First fresh-repo tag = v1.12.36:

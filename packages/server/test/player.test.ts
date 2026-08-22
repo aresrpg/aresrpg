@@ -67,7 +67,7 @@ const wire = () => {
   }
   const pubsub = {
     emitter,
-    graph: { ...bus, indexed_checkpoint: async () => 1 },
+    graph: { ...bus, indexed_checkpoint: async () => 1, sales_history: async () => [] },
     mesh: { ...bus, heartbeat: async () => {}, cluster_online: async () => 7 },
   }
   return { sent, ws, graph, pubsub, queries, published }
@@ -106,6 +106,7 @@ describe('the player harness (push model)', () => {
       'packet/shop_state',
     ] as const)
       expect(types).toContain(expected)
+    expect(types.indexOf('packet/listings')).toBeLessThan(types.indexOf('packet/characters'))
     expect(sent.find((packet) => packet.type === 'packet/shop_state')).toEqual({
       type: 'packet/shop_state',
       sales: [{ item_type: 'berserk', supply: '76' }],
@@ -214,10 +215,12 @@ describe('the player harness (push model)', () => {
   test('position folds into state — the tracking module reads it from there', async () => {
     const { ws, graph, pubsub } = wire()
     const player = create_player({ ws, address: '0xme', admin: false, graph, pubsub })
-    player.on_message(JSON.stringify({ type: 'packet/position', world: 'overworld', x: 1, y: 2, z: 3 }))
+    player.on_message(
+      JSON.stringify({ type: 'packet/position', character_id: '0xabc', world: 'overworld', x: 1, y: 2, z: 3 })
+    )
     // the fold is internal; proven indirectly: a malformed position is refused loudly instead
     expect(() =>
-      player.on_message(JSON.stringify({ type: 'packet/position', world: 'overworld', x: 'a' }))
+      player.on_message(JSON.stringify({ type: 'packet/position', character_id: '0xabc', world: 'overworld', x: 'a' }))
     ).not.toThrow()
   })
 

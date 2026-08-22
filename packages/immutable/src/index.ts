@@ -3,6 +3,7 @@
 
 export {
   experience_curve,
+  experience_progress,
   craft_required_level,
   craft_success_percent,
   craft_xp_from_ingredient_count,
@@ -68,7 +69,15 @@ export {
   type ItemCategory,
   type WeaponCategory,
 } from './item.ts'
-export { chain_to_client_coordinate, client_to_chain_coordinate, world_center, world_size } from './world.ts'
+export {
+  chain_to_client_coordinate,
+  client_to_chain_coordinate,
+  world_center,
+  world_entry_level,
+  world_size,
+  WORLD_GATES,
+  type WorldGate,
+} from './world.ts'
 export {
   character_equipment_slots,
   combat_equipment_slots,

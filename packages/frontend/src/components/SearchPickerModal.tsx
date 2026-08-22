@@ -88,6 +88,7 @@ export const SearchPickerModal = ({
   pills = [],
   render_tooltip,
   empty_label,
+  locked_ids,
 }: Readonly<{
   copy: PickerCopy
   title: string
@@ -98,6 +99,8 @@ export const SearchPickerModal = ({
   pills?: readonly string[]
   render_tooltip?: (id: string) => ReactNode | null
   empty_label?: string
+  /** rows that render greyed and refuse selection (e.g. worlds above the character's level) */
+  locked_ids?: ReadonlySet<string>
 }>) => {
   const [search, set_search] = useState('')
   const [category, set_category] = useState<string | null>(null)
@@ -225,12 +228,13 @@ export const SearchPickerModal = ({
             )}
             {filtered.map((item) => {
               const selected = item.id === value
+              const locked = locked_ids?.has(item.id) ?? false
               return (
                 <button
-                  className={`flex w-full cursor-pointer items-start gap-3 border-l-2 px-4 py-2 text-left ${selected ? 'border-[#c8963c] bg-[#c8963c]/10 text-[#c8963c]' : 'border-transparent hover:bg-[#c8963c]/10 hover:text-[#c8963c]'}`}
+                  className={`flex w-full items-start gap-3 border-l-2 px-4 py-2 text-left ${selected ? 'border-[#c8963c] bg-[#c8963c]/10 text-[#c8963c]' : locked ? 'border-transparent text-[#555b66] opacity-45' : 'cursor-pointer border-transparent hover:bg-[#c8963c]/10 hover:text-[#c8963c]'}`}
                   key={item.id}
                   onClick={() => {
-                    if (press_read.current) {
+                    if (locked || press_read.current) {
                       press_read.current = false
                       set_hovered_id(null)
                       return

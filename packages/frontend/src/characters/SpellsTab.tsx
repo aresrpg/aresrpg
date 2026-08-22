@@ -66,7 +66,11 @@ export default function SpellsTab({ character, copy }: Readonly<{ character: Rea
     set_raising(true)
     const pending = toast.loading(t('spells.upgrading'))
     void wallet.character
-      .raise_spell({ character_id: character.id, spell: selected.name })
+      .raise_spell({
+        character_id: character.id,
+        spell: selected.name,
+        custody: { kiosk: character.kiosk, kiosk_cap: character.kiosk_cap },
+      })
       .then(() => {
         dispatch_app({ type: 'character/spell_raised', character_id: character.id, spell: selected.name })
         pending.success(t('spells.upgrade_success', { spell: titleize(selected.name) }))

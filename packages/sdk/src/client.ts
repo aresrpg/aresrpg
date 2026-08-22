@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
+/* eslint-disable max-lines -- the SDK client remains the single Sui read boundary pending a behavior-neutral extraction. */
 // The SDK factory — WRITE-ONLY: it composes PTBs whose game-object inputs are PRE-RESOLVED.
 // It never reads game state (reads are the indexer's job) and carries zero content. Pins come
 // from the ONE committed repo-root pins.json. `hydrate()` seeds game refs; the Sui core client
@@ -14,7 +15,7 @@ import {
   type TransactionObjectArgument,
   type TransactionPlugin,
 } from '@mysten/sui/transactions'
-import { fromBase64 } from '@mysten/sui/utils'
+import { fromBase64, normalizeSuiObjectId } from '@mysten/sui/utils'
 import type { Signer } from '@mysten/sui/cryptography'
 
 import PINS from '../../../pins.json' with { type: 'json' }
@@ -43,6 +44,47 @@ export * from './gas.ts'
 export type SharedPin = { id: string | null; shared_version: string | null }
 export type Pins = Record<string, SharedPin | string | null | undefined | Readonly<Record<string, SharedPin>>> & {
   package?: string | null
+}
+
+/**
+ * The two addresses every SEED-DERIVED id needs: the template registry it hangs off, and the
+ * package that NAMES the key's type.
+ *
+ * That second one is `game_type_package`, never `pins.package`. A derived object id is computed
+ * from a type tag, and on Sui a type is named by its FIRST-publish address forever, while
+ * `pins.package` follows the latest upgrade and is a move-call target only. Deriving with the
+ * upgraded address produces ids that have never existed — after the 2026-08-22 upgrade every mob
+ * template, spell, recipe and sale id did exactly that, and engaging a mob died on an unresolved
+ * object rather than anything about mobs.
+ */
+export const seed_registry = (
+  sdk: Readonly<{ pins: Pins; game_type_package: string | null }>,
+  what: string
+): Readonly<{ registry: string; package_id: string }> => {
+  const registry = sdk.pins.template_registry
+  const id = typeof registry === 'object' && registry !== null ? Reflect.get(registry, 'id') : registry
+  const package_id = sdk.game_type_package
+  if (typeof id !== 'string' || typeof package_id !== 'string')
+    throw new Error(`${what} unavailable: pins.json has no template registry for this network.`)
+  return Object.freeze({ registry: id, package_id })
+}
+
+/**
+ * The shared `World` object a world NAME stands for. The app knows a world the way players and
+ * content do — by its authored name — while every world door takes `&mut World`, an object. This
+ * is the ONE translation between the two, and it lives here because pins.json is the SDK's
+ * business alone (2026-08-22: passing the name through handed Sui "01_first_shore" as an address
+ * and every world action died on "Unable to parse Address").
+ *
+ * The pin carries a full shared ref, so nothing needs hydrating — and a world the pins do not
+ * carry throws HERE, naming itself, rather than composing a transaction that cannot execute.
+ */
+export const world_ref = (pins: Pins, world: string): Readonly<{ objectId: string; initialSharedVersion: string }> => {
+  const { worlds } = pins
+  const entry = typeof worlds === 'object' && worlds !== null ? Reflect.get(worlds, world) : undefined
+  if (!is_shared_pin(entry))
+    throw new Error(`[sdk] unknown world "${world}" — pins.json carries no World object for it on this network`)
+  return Object.freeze({ objectId: String(entry.id), initialSharedVersion: String(entry.shared_version) })
 }
 
 const is_shared_pin = (value: unknown): value is Readonly<{ id: string; shared_version: string }> =>
@@ -87,7 +129,7 @@ export type SdkNetwork = 'testnet' | 'mainnet'
  *  anyway"). A budget is RESERVED, not spent — the unused part never leaves the address — and
  *  pinning it is what removes the estimation dry run. A PTB that outgrows it is refused at the
  *  dry run with `GasBudgetExceeded`, never submitted. */
-export const GAS_BUDGET_MIST = 100_000_000n
+export const GAS_BUDGET_MIST = 200_000_000n
 
 export type TransactionSigner = (
   transaction: Transaction
@@ -110,8 +152,9 @@ export type SdkOptions = {
   rpc_url?: string
   /** override for tests/local publishes; defaults to pins.json[network] */
   pins?: Pins
-  /** optional explicit budget in MIST; otherwise the Sui resolver estimates it */
-  gas_budget?: bigint
+  /** optional explicit budget in MIST; `'estimate'` lets the Sui resolver price the
+   *  transaction itself (deployment-sized surfaces); otherwise the game-door law applies */
+  gas_budget?: bigint | 'estimate'
 }
 
 /** What the resolver accepts: a bare id (cache-resolved), an explicit ref, or an in-PTB value. */
@@ -355,6 +398,32 @@ export function SDK({
     return cache
   }
 
+  /** Wait until this client's read node can see every receipt-fresh owned version already in
+   * cache. A load-balanced node may briefly report the previous version; composing our newer
+   * ref against that node fails before submission with "provided version doesn't match". */
+  const hydrate_owned_current = async (ids: readonly string[]) => {
+    const wanted = [...new Set(ids)].map((id) => {
+      const object_id = normalizeSuiObjectId(id)
+      return Object.freeze({ object_id, minimum: owned_ref(cache, object_id)?.version ?? null })
+    })
+    for (let attempt = 0; attempt < 12; attempt += 1) {
+      const { objects } = await sui_client.core.getObjects({ objectIds: wanted.map(({ object_id }) => object_id) })
+      objects.forEach((row) => absorb_object(cache, row))
+      const current = new Map(
+        objects.flatMap((row) => (row.objectId ? [[normalizeSuiObjectId(row.objectId), row]] : []))
+      )
+      const behind = wanted.filter(({ object_id, minimum }) => {
+        const row = current.get(object_id)
+        return !row?.version || (minimum !== null && BigInt(row.version) < BigInt(minimum))
+      })
+      if (behind.length === 0) return cache
+      await new Promise<void>((resolve) => setTimeout(resolve, 250))
+    }
+    throw new Error(
+      `[sdk] owned object node lag did not settle: ${wanted.map(({ object_id }) => object_id).join(', ')}`
+    )
+  }
+
   /** Fetch only the ids the cache does not already know — shared objects keep their initial
    *  version for life, so a known ref is never worth a second network read. Absence is DATA
    *  here: callers that merely ask whether an object exists yet get their answer, not a throw. */
@@ -429,10 +498,15 @@ export function SDK({
   // receipt's gas coin onto the next transaction, with no fallback when that single ref stopped
   // covering the budget. Which coin — or whether a coin is involved at all — depends on how the
   // address holds its SUI (Coin objects vs an address balance), and only the resolver knows.
-  // The BUDGET is ours and constant, which is what removes the estimation dry run.
-  const prepare_transaction = async (tx: Transaction, sender_address: string, { budget = gas_budget } = {}) => {
+  // The BUDGET is ours and constant for GAME doors; `'estimate'` hands pricing to the resolver
+  // for surfaces whose cost is not constant (deployments, seed ceremonies).
+  const prepare_transaction = async (
+    tx: Transaction,
+    sender_address: string,
+    { budget = gas_budget }: { budget?: bigint | 'estimate' } = {}
+  ) => {
     tx.setSenderIfNotSet(sender_address)
-    tx.setGasBudgetIfNotSet(budget ?? GAS_BUDGET_MIST)
+    if (budget !== 'estimate') tx.setGasBudgetIfNotSet(budget ?? GAS_BUDGET_MIST)
     await tx.build({ client: sui_client as never })
   }
 
@@ -459,7 +533,7 @@ export function SDK({
 
   const simulate = async (
     tx: Transaction,
-    { budget = gas_budget, include }: { budget?: bigint; include?: object } = {}
+    { budget = gas_budget, include }: { budget?: bigint | 'estimate'; include?: object } = {}
   ): Promise<Receipt> => {
     if (!sender) throw new Error('[sdk] simulate needs an address')
     await prepare_transaction(tx, sender, { budget })
@@ -469,7 +543,7 @@ export function SDK({
 
   const execute_now = async (
     tx: Transaction,
-    { budget = gas_budget, include }: { budget?: bigint; include?: object } = {}
+    { budget = gas_budget, include }: { budget?: bigint | 'estimate'; include?: object } = {}
   ) => {
     if (!sender) throw new Error('[sdk] execute needs an address')
     await prepare_transaction(tx, sender, { budget })
@@ -491,7 +565,7 @@ export function SDK({
 
   const execute = (
     tx: Transaction,
-    options: Readonly<{ budget?: bigint; include?: object }> = {}
+    options: Readonly<{ budget?: bigint | 'estimate'; include?: object }> = {}
   ): Promise<Receipt> => {
     const submitted = execution_tail.then(
       () => execute_now(tx, options),
@@ -518,7 +592,7 @@ export function SDK({
   const call = Object.fromEntries(
     (Object.keys(doors.DOORS) as DoorName[]).map((name) => [
       name,
-      async (args: Record<string, unknown>, opts?: { budget?: bigint; include?: object }) => {
+      async (args: Record<string, unknown>, opts?: { budget?: bigint | 'estimate'; include?: object }) => {
         const tx = new Transaction()
         ;(bound_doors[name] as (transaction: Transaction, input: never) => unknown)(tx, args as never)
         return execute(tx, opts)
@@ -526,7 +600,7 @@ export function SDK({
     ])
   ) as Record<
     DoorName,
-    (args: Record<string, unknown>, opts?: { budget?: bigint; include?: object }) => Promise<Receipt>
+    (args: Record<string, unknown>, opts?: { budget?: bigint | 'estimate'; include?: object }) => Promise<Receipt>
   >
 
   return {
@@ -538,6 +612,7 @@ export function SDK({
     sui_client,
     hydrate,
     hydrate_objects,
+    hydrate_owned_current,
     hydrate_unknown,
     hydrate_required,
     // lookup by the DEFINING package (the default client) — see the lineage-split note above

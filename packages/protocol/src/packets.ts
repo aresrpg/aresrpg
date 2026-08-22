@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
+/* eslint-disable complexity, max-lines -- the wire keeps packet shapes and their exhaustive parser in one auditable contract. */
 // THE WIRE CONTRACT (owner 2026-08-12, legacy model): every packet is a REAL shape with a
 // `packet/<name>` discriminant — no generic envelopes, no `kind: string`. The app and the
 // server both import THIS module; a packet that isn't declared here does not exist.
@@ -13,6 +14,8 @@ import { is_item_category, type ItemCategory } from '@aresrpg/immutable'
 import { parse_fight_wire_action, type FightWireAction } from '@aresrpg/fight'
 
 export type { FightWireAction } from '@aresrpg/fight'
+
+export const MAX_TRACKED_CHARACTERS = 6
 
 // ╔════════════════ [ Shared model rows (graph-projected shapes) ] ════════════ ]
 
@@ -51,8 +54,8 @@ export type CharacterRow = {
   name: string
   classe: string
   sex: string
-  experience: string
   level: number
+  experience: string
   color_1: number
   color_2: number
   color_3: number
@@ -82,6 +85,16 @@ export type CharacterRow = {
   at_ms?: number
   /** the checkpoint's equipment-derived mount flag (×1.5 speed law) */
   pet?: boolean
+  /** fired gathering protector verdict; while present, resolve_ambush is the character's only
+   * legal exit. Absent/null verdicts are deliberately omitted from the row. */
+  ambush?: Readonly<{
+    protector: string
+    x: number
+    z: number
+    scalar: number
+    board_seed: string
+    hp: string
+  }>
   /** the chain's own equipment fold (FoldedKey DF), stat_names order, RAW centered values —
    *  absent while the character never equipped anything (fold neutral) */
   folded_stats?: Record<string, number>
@@ -90,10 +103,14 @@ export type CharacterRow = {
    *  the SDK for custody transactions; absent until the indexer first meets the cap object */
   kiosk_cap?: string
   equipment: EquippedItem[]
+  /** Current object custody. A seated character remains in the roster but cannot be listed. */
+  custody?: 'kiosk' | 'fight'
 }
 
-/** A searched zone as the indexer projects it — the SEED is the world surface: mobs and
- *  resources derive from it deterministically (zone.move law), consumption rides the bitmaps. */
+/** A searched zone as the indexer projects it — the SEED draws its population deterministically
+ *  (zone.move law) and the bitmaps decide what of that population is still alive. Both facts
+ *  ride this one row, so `packet/zones` is the single door for "a zone changed": a track push
+ *  and a mob group being engaged are the same packet. */
 export type ZoneRow = {
   world: string
   zx: number
@@ -104,8 +121,9 @@ export type ZoneRow = {
   res_taken: number[]
 }
 
-/** One live mob group of a zone — derived deterministically from the zone seed (zone_math.move
- *  twin, server-side); positions are CHAIN space. `index` is the on-chain engage key. */
+/** One mob group the zone seed draws — deterministic (zone_math.move twin, server-side);
+ *  positions are CHAIN space. `index` is the on-chain engage key AND the bit this group owns
+ *  in the zone's `mob_taken` bitmap: a group whose bit is set has been engaged and is gone. */
 export type MobGroupRow = {
   index: number
   x: number
@@ -113,14 +131,21 @@ export type MobGroupRow = {
   members: { mob_type: string; level_scalar: number }[]
 }
 
-/** One live resource pack of a zone — `nodes` is what remains after consumption. */
+/** One resource pack the zone seed draws: WHAT it is, WHERE it stands, and HOW MUCH of it the
+ *  seed drew. `nodes` is the pack's TOTAL — what is left is `nodes - res_taken[index]` off the
+ *  zone's own state (a pack at zero is exhausted). The chain gathers a PACK by `index`; the
+ *  individual blocks a client scatters over it are visual.
+ *
+ *  `item_type` is the whole identity: the job, the tier, the protector and the golden-gather
+ *  link are fields of the AUTHORED resource row, which every client already holds (the seed
+ *  ships in the bundle) and must read anyway — a gather cannot be composed without the
+ *  protector and rare links, which never rode this packet. Repeating job and tier here would
+ *  put half of one row on the wire and half in the bundle, for 40-odd packs per zone. */
 export type ResourcePackRow = {
   index: number
   x: number
   z: number
   item_type: string
-  job: string
-  tier: number
   nodes: number
 }
 
@@ -135,6 +160,11 @@ export type FightRow = {
   phase: string
   access_a: number
   access_b: number
+  /** each side's OPENING character — side B of a duel names the character its seat is
+   *  RESERVED for (`ACCESS_INVITED`), which is how the challenged player learns a fight is
+   *  theirs to answer. Null while a side is unclaimed. */
+  opener_a: string | null
+  opener_b: string | null
   managed: boolean
   wagered: boolean
   placement_ms: string
@@ -149,6 +179,7 @@ export type FightPlayerSourceRow = {
   name: string
   classe: string
   level: number
+  experience: string
   vitality: number
   wisdom: number
   strength: number
@@ -178,8 +209,9 @@ export type VisibleSlot = (typeof VISIBLE_SLOTS)[number]
  *  The four visible slots carry the equipped item's TYPE (null when bare). */
 export type PresenceRow = {
   character_id: string
+  world: string
   /** the character's current custody wallet (public chain fact) — client-signed social
-   *  transactions (trade create, duel relay, whisper) address the player by it */
+   *  transactions (trade create, whisper) address the player by it */
   owner: string
   name: string
   classe: string
@@ -203,16 +235,37 @@ export type PresenceRow = {
 
 /** A market listing — the projected item + its LISTED_IN price edge. */
 export type ListingRow = {
+  kind: 'item' | 'character'
   id: string
   name: string
-  item_type: string
-  category: string
+  item_type: string | null
+  category: string | null
   level: number
   amount: number
+  classe?: string
   price_mist: string
   kiosk: string
+  seller: string
   at_ms: number
 }
+
+/** One immutable realised marketplace sale from the player's retained history. */
+export type MarketSaleRow = {
+  object: string
+  kind: 'item' | 'character'
+  item_type: string | null
+  amount: number
+  price_mist: string
+  counterparty: string | null
+  ts_ms: number
+}
+
+/** The exact chain categories wanted by the current browse group. `characters` is separate
+ * because Character is not an Item category. Null closes the marketplace subscription. */
+export type MarketObservation = Readonly<{
+  categories: readonly ItemCategory[]
+  characters: boolean
+}>
 
 /** The player's party as projected (MEMBER_OF edges around one Party node). */
 export type PartyRow = {
@@ -221,7 +274,14 @@ export type PartyRow = {
 }
 
 /** One parked cap inside a trade — the item the counterparty will receive. */
-export type TradeCapRow = { object: string; name: string; item_type: string }
+export type TradeCapRow = {
+  object: string
+  kind: 'item' | 'character'
+  name: string
+  item_type: string | null
+  category: string | null
+  kiosk: string
+}
 
 /** The p2p escrow as projected (trade.move Trade — the graph node, manifests enriched). */
 export type TradeRow = {
@@ -243,6 +303,21 @@ export type TradeRow = {
  *  carries its projected roll so the redeem transaction composes without any chain read. */
 export type ClaimRow = { id: string; kind: 'crush' | 'box'; rolled_template?: string; amount?: number }
 
+/** Durable post-fight work projected from an ended Fight. Presence means settlement or loot is
+ *  still owed; disappearance is the chain proof that the seat is completely reconciled. */
+export type FightResolutionRow = {
+  fight: string
+  fighter: number
+  character: string
+  team: number
+  winner: number | null
+  dead: boolean
+  settled: boolean
+  level: number
+  experience: string
+  drops: { item_type: string; qty: number }[]
+}
+
 /** Mutable shop state. Authored names, prices, art, and initial caps stay in seed/. */
 export type ShopSaleState = Readonly<{ item_type: string; supply: string }>
 export type AirdropState = Readonly<{
@@ -255,6 +330,34 @@ export type ShopState = Readonly<{ sales: readonly ShopSaleState[]; airdrops: re
 /** Zones are 512-block squares (zone.move ZONE_SIZE) — the tracking unit for everything. */
 export const ZONE_SIZE = 512
 export const zone_of = (x: number, z: number) => ({ zx: Math.floor(x / ZONE_SIZE), zz: Math.floor(z / ZONE_SIZE) })
+
+/** What a zone's consumption state says about its population. The wire carries the two facts
+ *  apart — the seed's population once, the bitmaps on every change — so the join lives here,
+ *  beside the rows it gives meaning to, and every surface reads the same verdict. */
+export type ZoneConsumption = Readonly<{ mob_taken: string; res_taken: readonly number[] }>
+
+/** The groups still standing: a group owns bit `index` of `mob_taken`, and a set bit means an
+ *  engage already consumed it (zone.move `consume_mob_group`). */
+export const live_mob_groups = (
+  groups: readonly MobGroupRow[],
+  { mob_taken }: ZoneConsumption
+): readonly MobGroupRow[] => {
+  const taken = BigInt(mob_taken)
+  return groups.filter(({ index }) => (taken & (1n << BigInt(index))) === 0n)
+}
+
+/** The packs still standing, each carrying what REMAINS of it: `res_taken[index]` counts the
+ *  nodes already gathered (zone.move `consume_resource_node`), and the array is grown lazily
+ *  on chain, so an index past its end has simply never been touched. A pack whose nodes are
+ *  all gone stops existing rather than reporting zero. */
+export const live_resource_packs = (
+  packs: readonly ResourcePackRow[],
+  { res_taken }: ZoneConsumption
+): readonly ResourcePackRow[] =>
+  packs.flatMap((pack) => {
+    const left = pack.nodes - (res_taken[pack.index] ?? 0)
+    return left > 0 ? [{ ...pack, nodes: left }] : []
+  })
 
 /** The AUTHORED speed law (world.move SPEED_BUDGET 1150 ×100 fixed-point): 11.5 blocks/s —
  *  engine RUN_SPEED 10.5 + 10% terrain slack. The server enforces the SAME number the chain
@@ -274,15 +377,6 @@ export const PET_SPEED_MULTIPLIER = 1.5
 export const CHAT_MAX_LENGTH = 240
 export const CHAT_MIN_INTERVAL_MS = 1000
 
-/** The duel handshake steps — one relay packet, one kind field (see packet/duel). */
-// NO `created` SIGNAL (2026-08-21): a client never hands another client a chain object. The
-// challenger's fight reaches the acceptor as the indexer's own `packet/fight_created` on the
-// zone channel — truth from the projection, never from a peer's word.
-export const DUEL_SIGNAL_KINDS = ['invite', 'accept', 'decline'] as const
-export type DuelSignalKind = (typeof DUEL_SIGNAL_KINDS)[number]
-/** How long an unanswered duel invite stays alive on BOTH clients before it self-expires. */
-export const DUEL_INVITE_TTL_MS = 30_000
-
 /** The owner's admin address — ONE home: the server's `ADMIN_ADDRESSES` default and the
  *  client's admin-page gate both derive from it. UI-side gating is cosmetic; authority stays
  *  the server whitelist and the on-chain caps. */
@@ -293,29 +387,25 @@ export const DEFAULT_ADMIN_ADDRESS = '0x3d1342fb7de99c69ce821183bcfc5b6374d81453
 export type ClientPackets = {
   /** The sole pre-auth packet: proof over the challenge issued by this exact socket. */
   'packet/signature_response': { bytes: string; signature: string }
-  /** Play THIS character — the server verifies ownership, then mounts world tracking around
-   *  its checkpoint and pushes the world (zones, fights, players). */
-  'packet/embody': { character_id: string }
+  /** Deprecated rolling-compatibility no-op. The server tracks its capped roster itself. */
+  'packet/track_character': { character_id: string; tracked: boolean }
   /** The player's live position — drives zone tracking, visibility, and the presence mesh. */
-  'packet/position': { x: number; y: number; z: number; riding: boolean }
+  'packet/position': { character_id: string; x: number; y: number; z: number; riding: boolean }
   /** World chat — heard by everyone standing in the same world, never stored. */
-  'packet/chat': { text: string }
+  'packet/chat': { character_id: string; text: string }
   /** Party chat — rides the party's channel; refused when partyless. */
-  'packet/chat_party': { text: string }
+  'packet/chat_party': { character_id: string; text: string }
   /** Whisper — rides the target address's own channel. */
-  'packet/chat_whisper': { to: string; text: string }
-  /** Duel handshake relay (off-chain, like chat — the chain door has no target concept):
-   *  invite → accept/decline → created (carries the fight id the acceptor joins). */
-  'packet/duel': { to: string; kind: DuelSignalKind }
+  'packet/chat_whisper': { character_id: string; to: string; text: string }
   /** A live fight action relayed to the other fighters. The fight package owns its shape. */
   'packet/fight_action': { fight: string; action: FightWireAction }
   /** Browse intent — folds the observed category into state; the server pushes the slice and
    *  streams its deltas while observed. Null stops observing. Not a query: state, then push. */
-  'packet/market_observe': { category: ItemCategory | null }
+  'packet/market_observe': { observation: MarketObservation | null }
   /** Spectate a fight standing in the tracked spiral — folds into state; the server verifies
    *  the fight is truly nearby, then streams it. Null stops. Doubles as the join/spectate
    *  modal's live watch: arming streams the roster while the modal stands open. */
-  'packet/spectate': { fight: string | null }
+  'packet/spectate': { character_id: string; fight: string | null }
   /** Registry + name derived the character ID client-side. Current wallet custody is mutable,
    *  so this narrowly asks the indexed owner of that exact object. */
   'packet/character_owner_request': { id: number; character_id: string }
@@ -333,6 +423,9 @@ export type ServerPackets = {
   'packet/connection_accepted': { address: string }
   /** Transport-only ping response used to measure this socket's round-trip time. */
   'packet/pong': { id: number }
+  /** Authoritative tracking result. A fight id means its checkpoint follows; null proves this
+   *  character is free and invalidates only that character's cached fight. */
+  'packet/character_tracked': { character_id: string; fight: string | null }
   // ── the one-time load snapshot ──
   'packet/characters': { characters: CharacterRow[] }
   /** The user's ONE flat inventory — every held item, whatever kiosk custody it sits in. */
@@ -341,6 +434,8 @@ export type ServerPackets = {
   'packet/friends': { friends: string[] }
   /** Pending grind-safe claims (crush/box) awaiting their reveal transaction. */
   'packet/claims': { claims: ClaimRow[] }
+  /** Ended fight seats still owing settlement or automatic loot claims. */
+  'packet/fight_resolutions': { resolutions: FightResolutionRow[] }
   /** Held giftcard vouchers. */
   'packet/giftcards': { giftcards: { id: string; template: string; amount: number }[] }
   /** The player's own ACTIVE market listings. */
@@ -366,10 +461,17 @@ export type ServerPackets = {
   'packet/party_invited': { party: string; character: string }
 
   // ── the world (pushed on embody + as the tracked spiral moves; owner: chunk-spiral law) ──
+  /** The complete zone subscription window for this connection. Rows outside it are obsolete;
+   *  rows inside it stay until their normal deltas replace them. */
+  'packet/tracked_zones': { character_id: string; world: string; zones: { zx: number; zz: number }[] }
   'packet/zones': { zones: ZoneRow[] }
   'packet/fights': { fights: FightRow[] }
-  /** A tracked zone's live population — sent when a discovered zone enters the spiral and again
-   *  the moment a tracked zone is searched (fresh seed, fresh spawns). */
+  /** A tracked zone's SEED-DERIVED population — every group and every pack the seed draws,
+   *  consumption NOT applied. It is a pure function of the seed, so it is sent once per zone
+   *  per seed (when a discovered zone enters the spiral, and again when the zone re-rolls).
+   *  What is still ALIVE derives from the zone's own `mob_taken`/`res_taken`, which ride
+   *  `packet/zones` — one home for a zone's mutable state, ~200 bytes per change instead of
+   *  the whole population. */
   'packet/zone_spawns': { world: string; zx: number; zz: number; mobs: MobGroupRow[]; resources: ResourcePackRow[] }
 
   // ── the presence mesh (other players in tracked zones) ──
@@ -382,7 +484,6 @@ export type ServerPackets = {
   'packet/item_updated': { item: ItemRow }
 
   // ── live world stream (indexer facts other players caused) ──
-  'packet/zone_searched': { world: string; zx: number; zz: number; seed: string }
   /** A fight was born in a tracked zone. It ships the PROJECTED row, never an id plus a few
    *  loose facts: a client that receives half a row has to invent the other half, and it
    *  invents it wrong (2026-08-21 — an unset access sentinel and a guessed `managed` put a
@@ -391,19 +492,15 @@ export type ServerPackets = {
   /** A nearby fight changed phase (started or ended) — the zone's bystanders keep their sword
    *  markers honest without ever re-pulling the fights list. */
   'packet/fight_phase': { fight: string; phase: 'active' | 'ended' }
-  'packet/resource_gathered': { world: string; gatherer: string; item_type: string; tier: number; quantity: number }
-  'packet/rare_gathered': { world: string; gatherer: string; item_type: string; rare_item_type: string }
   /** A VISIBLE player changed a visible slot (their chain event, forwarded). */
   'packet/player_equipment': { character_id: string; slot: VisibleSlot; item_type: string | null }
 
   // ── chat (off-chain, published on the mesh, never stored) ──
   'packet/chat_message': { channel: 'world' | 'party' | 'whisper'; from: string; character: string; text: string }
-  /** A duel signal targeting this player — identity is server-derived from the sender's socket. */
-  'packet/duel': { from: string; character: string; kind: DuelSignalKind }
 
   // ── the fight stream (own fight auto-watched via FighterJoined; spectate by intent) ──
   /** The player's embodied character sits a LIVE fight — pushed at embody (mid-fight reconnect). */
-  'packet/fight_state': { fight: string; state: FightStateRow; seat: number }
+  'packet/fight_state': { fight: string; state: FightStateRow; seats: Record<string, number> }
   /** `started_ms` is the relay's wall-clock witness of the transition (absent when this socket
    *  armed after the fight had already begun). */
   'packet/fight_started': { fight: string; queue: string[]; started_ms?: string }
@@ -420,12 +517,18 @@ export type ServerPackets = {
   'packet/fight_action': { fight: string; from: string; action: FightWireAction }
 
   // ── party stream (the party's channel — other members' transactions) ──
-  'packet/party': { party: PartyRow | null }
+  'packet/party': { character_id: string; party: PartyRow | null }
   'packet/party_joined': { party: string; character: string }
   'packet/party_left': { party: string; character: string }
 
   // ── market stream (only while observing a category — plus your own sales, always) ──
-  'packet/market_slice': { category: string; listings: ListingRow[] }
+  'packet/market_slice': { observation: MarketObservation; listings: ListingRow[] }
+  'packet/market_history': {
+    sales: MarketSaleRow[]
+    revenue_30d_mist: string
+    total: number
+    profits: { kiosk: string; amount_mist: string }[]
+  }
   'packet/market_listed': { listing: ListingRow }
   'packet/market_delisted': { object: string }
   /** One of YOUR listings sold (the buyer's transaction — money arrived in your kiosk). */
@@ -465,7 +568,6 @@ export const SESSION_PACKETS = [
   'packet/claims',
   'packet/giftcards',
   'packet/item_updated',
-  'packet/listings',
   'packet/trades',
   'packet/shop_state',
   'packet/server_info',
@@ -483,6 +585,7 @@ export const SESSION_PACKETS = [
 ] as const
 
 export const WORLD_PACKETS = [
+  'packet/tracked_zones',
   'packet/zones',
   'packet/zone_spawns',
   'packet/fights',
@@ -491,19 +594,17 @@ export const WORLD_PACKETS = [
   'packet/player_left',
   'packet/player_equipment',
   'packet/chat_message',
-  'packet/duel',
   'packet/party',
   'packet/party_invited',
   'packet/party_joined',
   'packet/party_left',
-  'packet/zone_searched',
   'packet/fight_created',
   'packet/fight_phase',
-  'packet/resource_gathered',
-  'packet/rare_gathered',
 ] as const
 
 export const FIGHT_PACKETS = [
+  'packet/character_tracked',
+  'packet/fight_resolutions',
   'packet/fight_state',
   'packet/fight_started',
   'packet/turn_seed',
@@ -514,7 +615,9 @@ export const FIGHT_PACKETS = [
 ] as const
 
 export const MARKET_PACKETS = [
+  'packet/listings',
   'packet/market_slice',
+  'packet/market_history',
   'packet/market_listed',
   'packet/market_delisted',
   'packet/listing_sold',
@@ -562,12 +665,11 @@ void UNROUTED_SERVER_PACKETS
 /** Every declared client packet type — the parse door's allowlist. */
 export const CLIENT_PACKET_TYPES = [
   'packet/signature_response',
-  'packet/embody',
+  'packet/track_character',
   'packet/position',
   'packet/chat',
   'packet/chat_party',
   'packet/chat_whisper',
-  'packet/duel',
   'packet/fight_action',
   'packet/market_observe',
   'packet/spectate',
@@ -623,36 +725,59 @@ export function parse_client_packet(raw: string | Buffer): ClientPacket {
       throw new Error('packet/signature_response needs bytes and signature')
     return packet as ClientPacket
   }
-  if (type === 'packet/embody') {
-    if (typeof packet.character_id !== 'string' || !packet.character_id.startsWith('0x'))
-      throw new Error('packet/embody needs a character_id')
+  if (type === 'packet/track_character') {
+    if (
+      typeof packet.character_id !== 'string' ||
+      !packet.character_id.startsWith('0x') ||
+      typeof packet.tracked !== 'boolean'
+    )
+      throw new Error('packet/track_character needs { character_id, tracked }')
     return packet as ClientPacket
   }
   if (type === 'packet/position') {
-    const { x, y, z, riding } = packet
-    if (!is_finite_number(x) || !is_finite_number(y) || !is_finite_number(z) || typeof riding !== 'boolean')
-      throw new Error('packet/position needs { x, y, z, riding }')
+    const { character_id, x, y, z, riding } = packet
+    if (
+      !is_id(character_id) ||
+      !is_finite_number(x) ||
+      !is_finite_number(y) ||
+      !is_finite_number(z) ||
+      typeof riding !== 'boolean'
+    )
+      throw new Error('packet/position needs { character_id, x, y, z, riding }')
     return packet as ClientPacket
   }
   if (type === 'packet/chat' || type === 'packet/chat_party') {
-    return { type, text: assert_chat_text(packet.text) }
+    if (!is_id(packet.character_id)) throw new Error(`${type} needs a character_id`)
+    return { type, character_id: packet.character_id, text: assert_chat_text(packet.text) }
   }
   if (type === 'packet/chat_whisper') {
+    if (!is_id(packet.character_id)) throw new Error('packet/chat_whisper needs a character_id')
     if (!is_id(packet.to)) throw new Error('packet/chat_whisper needs a target address')
-    return { type, to: packet.to, text: assert_chat_text(packet.text) }
-  }
-  if (type === 'packet/duel') {
-    if (!is_id(packet.to)) throw new Error('packet/duel needs a target address')
-    if (!DUEL_SIGNAL_KINDS.includes(packet.kind as DuelSignalKind)) throw new Error('packet/duel needs a known kind')
-    return packet as ClientPacket
+    return { type, character_id: packet.character_id, to: packet.to, text: assert_chat_text(packet.text) }
   }
   if (type === 'packet/fight_action') return parse_fight_action_packet(packet)
   if (type === 'packet/market_observe') {
-    if (packet.category !== null && (typeof packet.category !== 'string' || !is_item_category(packet.category)))
-      throw new Error('packet/market_observe needs a category or null')
-    return packet as ClientPacket
+    if (packet.observation === null) return { type, observation: null }
+    if (typeof packet.observation !== 'object' || Array.isArray(packet.observation))
+      throw new Error('packet/market_observe needs an observation or null')
+    const observation = packet.observation as Record<string, unknown>
+    if (
+      !Array.isArray(observation.categories) ||
+      observation.categories.length > 32 ||
+      !observation.categories.every((category) => typeof category === 'string' && is_item_category(category)) ||
+      typeof observation.characters !== 'boolean'
+    )
+      throw new Error('packet/market_observe needs valid categories and characters')
+    return {
+      type,
+      observation: {
+        categories: [...new Set(observation.categories)] as ItemCategory[],
+        characters: observation.characters,
+      },
+    }
   }
   if (type === 'packet/spectate') {
+    if (!is_id(packet.character_id)) throw new Error('packet/spectate needs a character_id')
     if (packet.fight !== null && !is_id(packet.fight)) throw new Error('packet/spectate needs a fight id or null')
     return packet as ClientPacket
   }

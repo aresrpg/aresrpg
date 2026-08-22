@@ -112,7 +112,7 @@ public(package) fun new_sale(
 ) {
   assert!(supply >= 1, EZeroQuantity);
   transfer::share_object(Sale {
-    id: derived_object::claim(item::registry_uid_mut(registry), SaleKey(item_type)),
+    id: derived_object::claim(item::ru(registry), SaleKey(item_type)),
     item_type,
     template,
     price,
@@ -138,7 +138,7 @@ public(package) fun new_airdrop(
     i = i + 1;
   };
   let drop = Airdrop {
-    id: derived_object::claim(item::registry_uid_mut(registry), AirdropKey(drop_id)),
+    id: derived_object::claim(item::ru(registry), AirdropKey(drop_id)),
     drop_id,
     template,
     amount_each,
@@ -162,7 +162,7 @@ public(package) fun new_giftcard(
 ): Giftcard {
   assert!(amount >= 1, EZeroQuantity);
   let card = Giftcard {
-    id: derived_object::claim(item::registry_uid_mut(registry), GiftcardKey(card_id)),
+    id: derived_object::claim(item::ru(registry), GiftcardKey(card_id)),
     template,
     amount,
   };
@@ -193,7 +193,7 @@ public(package) fun buy(
   assert!(payment.value() == total, EWrongPayment);
   transfer::public_transfer(payment, @treasury);
   sale.supply = sale.supply - (quantity as u64);
-  item::deposit(kiosk, cap, policy, existing, item::mint_plain(template, quantity, ctx));
+  item::deposit(kiosk, cap, policy, existing, item::mp(template, quantity, ctx));
   event::emit(SaleBought {
     sale: sale.id.to_inner(),
     item_type: sale.item_type,
@@ -217,7 +217,7 @@ public(package) fun claim_airdrop(
   assert!(object::id(template) == drop.template, EWrongTemplate);
   assert!(drop.whitelist.contains(&ctx.sender()), ENotWhitelisted);
   drop.whitelist.remove(&ctx.sender());
-  item::deposit(kiosk, cap, policy, existing, item::mint_plain(template, drop.amount_each, ctx));
+  item::deposit(kiosk, cap, policy, existing, item::mp(template, drop.amount_each, ctx));
   event::emit(AirdropClaimed {
     airdrop: drop.id.to_inner(),
     drop_id: drop.drop_id,
@@ -240,5 +240,5 @@ public(package) fun redeem_giftcard(
   assert!(object::id(template) == wanted, EWrongTemplate);
   event::emit(GiftcardRedeemed { giftcard: id.to_inner(), redeemer: ctx.sender() });
   id.delete();
-  item::deposit(kiosk, cap, policy, existing, item::mint_plain(template, amount, ctx));
+  item::deposit(kiosk, cap, policy, existing, item::mp(template, amount, ctx));
 }

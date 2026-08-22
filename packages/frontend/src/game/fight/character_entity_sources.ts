@@ -40,7 +40,9 @@ export const fight_character_entity_sources = (
   const by_id = new Map(appearances.map((appearance) => [appearance.id, appearance]))
   return Object.freeze(
     checkpoint.contract.fighters.flatMap((fighter, seat) => {
-      if (fighter.kind.type !== 'player') return []
+      if (fighter.kind.type !== 'player' || fighter.dead) return []
+      const invisible = fighter.effects.some(({ kind }) => kind === EFFECT_KINDS.invis)
+      if (invisible && viewer_team !== fighter.team) return []
       const known = by_id.get(fighter.kind.character)
       const source = checkpoint.sources.players[fighter.kind.character]
       const appearance =
@@ -58,9 +60,7 @@ export const fight_character_entity_sources = (
           cell: Number(fighter.cell),
           side: fighter.team === 0n ? ('a' as const) : ('b' as const),
           id: `fight_character_${seat}`,
-          ...(viewer_team === fighter.team && fighter.effects.some(({ kind }) => kind === EFFECT_KINDS.invis)
-            ? { visual_effect: Object.freeze({ kind: 'invisibility' as const }) }
-            : {}),
+          ...(invisible ? { visual_effect: Object.freeze({ kind: 'invisibility' as const }) } : {}),
         }),
       ]
     })

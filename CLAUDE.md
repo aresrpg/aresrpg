@@ -61,7 +61,9 @@ a green ancestor; a branch that has gone stale rebases locally (signatures prese
 automatically on its next green run, no second `/promote` → **PR into `edge`** (the CI gate must
 pass — `.github/workflows/gate.yml`) → `edge` soaks → `/promote` the edge→master PR → it
 fast-forwards production (byte-identical commits — signatures survive; edge auto-aligns
-after). Nobody pushes `master` or `edge` — including maintainers. Hotfixes ride edge. The
+after). `edge` accepts direct pushes (owner 2026-08-21 — it is the integration branch, and the
+CI gate still runs on it); `master` does not, and reaches production only through `/promote`.
+Hotfixes ride edge. The
 promotion PR carries the `package.json` version bump — the only human-touched version artifact;
 on merge, CI tags `vX.Y.Z` and publishes the GitHub Release while Vercel deploys off the same
 push. Tags are never created locally (a ruleset enforces it).

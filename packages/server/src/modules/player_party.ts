@@ -1,9 +1,7 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-// THE PARTY STREAM. state.party arms it: set by the embody read, then kept true by the
-// membership mirror on the self stream (action/party). The delta mounts the party's two
-// channels — evt:party (other members' chain facts) and chat:party (the mesh) — and pushes
-// the full party row on arm; PartyLeft for the OWN character disarms via the mirror.
+// THE PARTY STREAM. Every tracked character carries its own membership; the connection watches
+// the union of those parties and shares subscriptions when two characters belong to one.
 
 import type { PartyRow } from '@aresrpg/protocol'
 
@@ -19,12 +17,21 @@ export default {
   name: 'player_party',
 
   reduce: (state, action) => {
-    if (action.type === 'action/party') return { ...state, party: action.party }
-    if (action.type === 'close') return state.party ? { ...state, party: null } : state
+    if (action.type === 'action/party') {
+      const tracked = state.characters[action.character_id]
+      if (!tracked) return state
+      return {
+        ...state,
+        characters: {
+          ...state.characters,
+          [action.character_id]: { ...tracked, party: action.party },
+        },
+      }
+    }
     return state
   },
 
-  observe: ({ pubsub, graph, events, send, address, signal }) => {
+  observe: ({ pubsub, graph, events, send, address, signal, get_state }) => {
     const { watch, unwatch, watched } = create_watcher(pubsub)
 
     const forward_party_event = (payload: EventEnvelope) => {
@@ -46,7 +53,7 @@ export default {
       })
     }
 
-    const push_party = (party: string) =>
+    const push_party = (character_id: string, party: string) =>
       get_party(graph, { party_id: party })
         .then(([row]) => {
           if (!row) return
@@ -56,6 +63,7 @@ export default {
           }
           send({
             type: 'packet/party',
+            character_id,
             party: {
               id,
               members: members.map((member) => ({ character_id: member.id, name: member.name, order: member.order })),
@@ -65,18 +73,34 @@ export default {
         .catch((error: Error) => log.warn({ party, error: error.message }, 'party read failed'))
 
     events.on('STATE_UPDATED', (state: PlayerState, previous: PlayerState) => {
-      if (state.party === previous.party) return
-      if (previous.party) {
-        unwatch(channels.party(previous.party))
-        unwatch(mesh.chat_party(previous.party))
-      }
-      if (!state.party) {
-        send({ type: 'packet/party', party: null })
-        return
-      }
-      watch(channels.party(state.party), forward_party_event as (payload: never) => void)
-      watch(mesh.chat_party(state.party), forward_party_chat as (payload: never) => void)
-      void push_party(state.party)
+      const before_parties = new Set(Object.values(previous.characters).flatMap(({ party }) => (party ? [party] : [])))
+      const current_parties = new Set(Object.values(state.characters).flatMap(({ party }) => (party ? [party] : [])))
+      before_parties.forEach((party) => {
+        if (current_parties.has(party)) return
+        unwatch(channels.party(party))
+        unwatch(mesh.chat_party(party))
+      })
+      current_parties.forEach((party) => {
+        if (before_parties.has(party)) return
+        void Promise.all([
+          watch(channels.party(party), forward_party_event as (payload: never) => void),
+          watch(mesh.chat_party(party), forward_party_chat as (payload: never) => void),
+        ]).catch((error: Error) => log.warn({ party, error: error.message }, 'party watch failed'))
+      })
+      Object.entries(state.characters).forEach(([character_id, tracked]) => {
+        if (previous.characters[character_id]?.party === tracked.party) return
+        if (!tracked.party) send({ type: 'packet/party', character_id, party: null })
+        else
+          void Promise.all([
+            watch(channels.party(tracked.party), forward_party_event as (payload: never) => void),
+            watch(mesh.chat_party(tracked.party), forward_party_chat as (payload: never) => void),
+          ])
+            .then(() => {
+              if (get_state().characters[character_id]?.party === tracked.party)
+                return push_party(character_id, tracked.party!)
+            })
+            .catch((error: Error) => log.warn({ party: tracked.party, error: error.message }, 'party watch failed'))
+      })
     })
 
     signal.addEventListener('abort', () => {

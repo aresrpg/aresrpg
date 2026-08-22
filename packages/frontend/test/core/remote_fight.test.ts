@@ -1,15 +1,13 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-// Seals the 2026-08-20 audit blockers: (1) the duel reducer's full handshake — validity is
-// decided in the fold, effects fire on the `challenge`/`join` pendings appearing; (2) a raw
-// wire checkpoint opens a remote fight session without throwing; (3) a turn seed with no
-// pending boundary replays a crank (with a real clock) instead of desyncing forever.
+// The remote fight's two truths: (1) a raw wire checkpoint opens a session without throwing,
+// (2) a seat of our own — however the chain gave it to us — puts the board on screen, while a
+// fight we hold no seat in stays a preview. The duel handshake that used to live here is gone
+// with the relay it tested: the chain reserves the challenged seat now (2026-08-22), so the
+// invitation is a derivation over the world's fights, covered in duel_invite.test.ts.
 
 import { describe, expect, test } from 'bun:test'
-import { DUEL_INVITE_TTL_MS } from '@aresrpg/protocol'
-import { client_to_chain_coordinate } from '@aresrpg/immutable'
 
-import duel_module from '../../src/modules/duel.ts'
 import fight_chain_module from '../../src/modules/fight_chain.ts'
 import fight_module, { create_fight_session } from '../../src/modules/fight.ts'
 import { catalog_spell_sources } from '../../src/content/fight_sources.ts'
@@ -21,141 +19,6 @@ const settings = Object.freeze({
   music_enabled: true,
   render_distance: null,
 } as const)
-
-// ── the duel handshake, pure fold ───────────────────────────────────────────────────────────
-
-const fold = (state: AppState, ...inputs: readonly AppInput[]): AppState =>
-  inputs.reduce((folded, input) => reduce_app_state(folded, input), state)
-
-describe('the duel reducer', () => {
-  const base = initial_app_state(settings)
-
-  test('challenger: invite → accept folds the challenge pending (the effect trigger)', () => {
-    const invited = fold(base, { type: 'duel/invited', to: '0xher', character: 'Nyx', at_ms: 1_000 })
-    expect(invited.duel.outgoing).toEqual({ to: '0xher', character: 'Nyx', at_ms: 1_000 })
-    const accepted = fold(invited, {
-      type: 'duel/received',
-      from: '0xher',
-      character: 'Nyx',
-      kind: 'accept',
-      at_ms: 2_000,
-    })
-    expect(accepted.duel.outgoing).toBeNull()
-    expect(accepted.duel.challenge).toEqual({ to: '0xher' })
-  })
-
-  test('challenger: an accept past the TTL is void — no transaction pending', () => {
-    const invited = fold(base, { type: 'duel/invited', to: '0xher', character: 'Nyx', at_ms: 1_000 })
-    const late = fold(invited, {
-      type: 'duel/received',
-      from: '0xher',
-      character: 'Nyx',
-      kind: 'accept',
-      at_ms: 1_000 + DUEL_INVITE_TTL_MS + 1,
-    })
-    expect(late.duel.challenge).toBeNull()
-    expect(late.duel.outgoing).toBeNull()
-  })
-
-  test("challenger: a stranger's accept changes nothing", () => {
-    const invited = fold(base, { type: 'duel/invited', to: '0xher', character: 'Nyx', at_ms: 1_000 })
-    const forged = fold(invited, {
-      type: 'duel/received',
-      from: '0xevil',
-      character: 'Mallory',
-      kind: 'accept',
-      at_ms: 2_000,
-    })
-    expect(forged.duel.challenge).toBeNull()
-    expect(forged.duel.outgoing).not.toBeNull()
-  })
-
-  // THE FIGHT COMES FROM THE INDEXER, NOT THE PEER (owner 2026-08-21): the acceptor matches
-  // the streamed `packet/fight_created` against the challenger's OWN standing position — a
-  // client can no longer name the chain object another client will transact against.
-  const standing = (owner: string, x: number, z: number): AppInput => ({
-    type: 'server/packet',
-    packet: {
-      type: 'packet/player_appeared',
-      player: { character_id: `chr-${owner}`, owner, name: 'Nox', x, y: 0, z } as never,
-    },
-  })
-  const fight_born = (x: number, z: number, id = '0xf1'): AppInput => ({
-    type: 'server/packet',
-    packet: {
-      type: 'packet/fight_created',
-      fight: { id, world: 'w', x, z, phase: 'placement', access_a: 1, access_b: 255 } as never,
-    },
-  })
-  // the challenger stands at client 40/60 — the chain cell the fight is born on
-  const CHAIN_X = Math.round(client_to_chain_coordinate(40))
-  const CHAIN_Z = Math.round(client_to_chain_coordinate(60))
-
-  test("acceptor: the challenger's own fight folds the join pending", () => {
-    const answered = fold(
-      base,
-      standing('0xhim', 40, 60),
-      { type: 'duel/received', from: '0xhim', character: 'Nox', kind: 'invite', at_ms: 1_000 },
-      { type: 'duel/answered', accept: true, to: '0xhim', at_ms: 2_000 }
-    )
-    expect(answered.duel.accepted).toEqual({ from: '0xhim', at_ms: 2_000 })
-
-    const joined = fold(answered, fight_born(CHAIN_X, CHAIN_Z))
-    expect(joined.duel.accepted).toBeNull()
-    expect(joined.duel.join).toEqual({ from: '0xhim', fight: '0xf1' })
-  })
-
-  test('acceptor: a fight born anywhere else is not our duel', () => {
-    const answered = fold(
-      base,
-      standing('0xhim', 40, 60),
-      { type: 'duel/received', from: '0xhim', character: 'Nox', kind: 'invite', at_ms: 1_000 },
-      { type: 'duel/answered', accept: true, to: '0xhim', at_ms: 2_000 }
-    )
-    const elsewhere = fold(answered, fight_born(CHAIN_X + 40, CHAIN_Z, '0xbad'))
-    expect(elsewhere.duel.join).toBeNull()
-    expect(elsewhere.duel.accepted).not.toBeNull() // still waiting on the real challenger
-  })
-
-  test('acceptor: a fight with no accepted handshake is just scenery', () => {
-    const watching = fold(base, standing('0xhim', 40, 60), fight_born(CHAIN_X, CHAIN_Z))
-    expect(watching.duel.join).toBeNull()
-  })
-
-  test('decline clears the outgoing without any pending', () => {
-    const declined = fold(
-      base,
-      { type: 'duel/invited', to: '0xher', character: 'Nyx', at_ms: 1_000 },
-      { type: 'duel/received', from: '0xher', character: 'Nyx', kind: 'decline', at_ms: 2_000 }
-    )
-    expect(declined.duel).toEqual(initial_app_state(settings).duel)
-  })
-
-  test('the duel module observe reads targets from INPUTS, never post-fold state', () => {
-    // regression for the audit blocker: reduce runs before emit — an effect reading the field
-    // its own fold just cleared sends nothing. The signal must derive from the input.
-    const signals: AppInput[] = []
-    const listeners = new Map<string, (payload: never) => void>()
-    let state = initial_app_state(settings)
-    duel_module.observe?.({
-      events: { on: (name, listener) => listeners.set(name, listener as unknown as (payload: never) => void) },
-      signal: new AbortController().signal,
-      get_state: () => state,
-      dispatch: (input) => {
-        state = reduce_app_state(state, input)
-        if (input.type === 'duel/signal') signals.push(input)
-      },
-    })
-    // simulate the store: fold FIRST, then emit — exactly the order that killed the old code
-    const emit = (input: AppInput): void => {
-      state = reduce_app_state(state, input)
-      ;(listeners.get(input.type) as ((payload: AppInput) => void) | undefined)?.(input)
-    }
-    emit({ type: 'duel/received', from: '0xhim', character: 'Nox', kind: 'invite', at_ms: 1_000 })
-    emit({ type: 'duel/answered', accept: true, to: '0xhim', at_ms: 2_000 })
-    expect(signals).toEqual([{ type: 'duel/signal', to: '0xhim', kind: 'accept' }])
-  })
-})
 
 // ── the remote checkpoint, wire-shaped (numbers + decimal strings, never bigint) ────────────
 
@@ -237,9 +100,24 @@ describe('the remote fight fold', () => {
     expect(session.state()?.checkpoint.contract.fighters).toHaveLength(2)
   })
 
+  test('an authoritative restore discards a refused boundary pending its turn seed', () => {
+    const session = create_fight_session({ now: () => 99_000n, reconcile: () => undefined })
+    const checkpoint = raw_checkpoint() as never
+    session.open({ mode: 'remote', state: checkpoint })
+    session.apply({ type: 'end_turn', fighter: 0n, observed_ms: 99_000n })
+    session.restore(checkpoint)
+    session.apply({ type: 'turn_seed', fighter: 1n, seed: 7n })
+
+    expect(session.state()?.error?.code).toBe('unexpected_turn_seed')
+  })
+
   test('the fight module forwards `state` through fight/opened (audit blocker regression)', () => {
     const listeners = new Map<string, ((payload: never) => void)[]>()
-    let state = initial_app_state(settings)
+    const base = initial_app_state(settings)
+    let state: AppState = {
+      ...base,
+      session: { ...base.session, selected_character_id: '0xa', wallet: { address: '0xme' } as never },
+    }
     const dispatched: AppInput[] = []
     const emit = (input: AppInput): void => {
       state = reduce_app_state(state, input)
@@ -284,12 +162,282 @@ describe('the remote fight fold', () => {
       (input) => input.type === 'fight/input' && input.input.type === 'crank' && input.input.observed_ms !== undefined
     )
     expect(crank).toBeDefined()
+    const after_witness = state.fight.checkpoint
+    const presentation_count = state.fight.presentations.length
+    emit({
+      type: 'server/packet',
+      packet: { type: 'packet/turn_seed', fight: '0xf1', seat: '1', seed: '999' } as never,
+    })
+    expect(state.fight.checkpoint).toEqual(after_witness)
+    expect(state.fight.presentations).toHaveLength(presentation_count)
+    expect(state.fight.error?.code).not.toBe('unexpected_turn_seed')
+
+    emit({
+      type: 'server/packet',
+      packet: { type: 'packet/character_tracked', character_id: '0xa', fight: null },
+    })
+    expect(state.fight.mode).toBeNull()
+  })
+
+  // A SEAT IS THE MOUNT (2026-08-22 incident): a duel seats a character by transaction, with no
+  // modal anywhere. Mounting off the modal alone left the challenger standing in the overworld
+  // while his character sat on a board he could not see — and the fight looked "never started".
+  const drive_fight_state = (owner: string | null): AppState => {
+    const listeners = new Map<string, ((payload: never) => void)[]>()
+    const base = initial_app_state(settings)
+    let state: AppState = owner
+      ? {
+          ...base,
+          session: { ...base.session, selected_character_id: '0xa', wallet: { address: owner } as never },
+        }
+      : base
+    const emit = (input: AppInput): void => {
+      state = reduce_app_state(state, input)
+      for (const listener of listeners.get(input.type) ?? []) (listener as (payload: AppInput) => void)(input)
+    }
+    fight_module.observe?.({
+      events: {
+        on: (name, listener) => {
+          listeners.set(name, [...(listeners.get(name) ?? []), listener as unknown as (payload: never) => void])
+        },
+      },
+      signal: new AbortController().signal,
+      get_state: () => state,
+      dispatch: emit,
+    })
+    emit({
+      type: 'server/packet',
+      packet: {
+        type: 'packet/fight_state',
+        fight: '0xf1',
+        state: {
+          contract: raw_checkpoint().contract,
+          players: { '0xa': raw_player_source(), '0xb': raw_player_source() },
+        },
+        seat: 0,
+      } as never,
+    })
+    return state
+  }
+
+  test('a streamed fight holding OUR OWN seat mounts the board by itself', () => {
+    expect(drive_fight_state('0xme').fight.mounted).toBe(true)
+  })
+
+  test('a streamed fight we hold no seat in stays an unmounted preview', () => {
+    expect(drive_fight_state('0xstranger').fight.mounted).toBe(false)
+  })
+
+  test('selecting a character outside the fight releases its board immediately', () => {
+    const active = drive_fight_state('0xme')
+    const state = reduce_app_state(
+      {
+        ...active,
+        session: {
+          ...active.session,
+          characters: [{ id: '0xa' }, { id: '0xoutside' }] as never,
+          selected_character_id: '0xa',
+        },
+      },
+      { type: 'character/select', character_id: '0xoutside' }
+    )
+
+    expect(state.session.selected_character_id).toBe('0xoutside')
+    expect(state.fight.mode).toBe('remote')
+    expect(state.fight.mounted).toBeFalse()
+
+    const returned = reduce_app_state(state, { type: 'character/select', character_id: '0xa' })
+    expect(returned.session.selected_character_id).toBe('0xa')
+    expect(returned.fight.checkpoint?.contract.id).toBe('0xf1')
+    expect(returned.fight.mounted).toBeTrue()
+  })
+
+  test('selecting another owned character in the same fight keeps that board mounted', () => {
+    const active = drive_fight_state('0xme')
+    const checkpoint = structuredClone(active.fight.checkpoint!)
+    checkpoint.contract.fighters[1]!.kind = { type: 'player', character: '0xb', owner: '0xme' }
+    const state = reduce_app_state(
+      {
+        ...active,
+        fight: { ...active.fight, checkpoint, cached: { [checkpoint.contract.id]: checkpoint } },
+        session: {
+          ...active.session,
+          characters: [{ id: '0xa' }, { id: '0xb' }] as never,
+          selected_character_id: '0xa',
+        },
+      },
+      { type: 'character/select', character_id: '0xb' }
+    )
+
+    expect(state.session.selected_character_id).toBe('0xb')
+    expect(state.fight.mode).toBe('remote')
+    expect(state.fight.mounted).toBeTrue()
+  })
+
+  test('releasing one owned seat preserves the shared fight for another owned character', () => {
+    const active = drive_fight_state('0xme')
+    const checkpoint = structuredClone(active.fight.checkpoint!)
+    checkpoint.contract.fighters[1]!.kind = { type: 'player', character: '0xb', owner: '0xme' }
+    const shared = {
+      ...active,
+      fight: { ...active.fight, checkpoint, cached: { [checkpoint.contract.id]: checkpoint } },
+      session: {
+        ...active.session,
+        characters: [{ id: '0xa' }, { id: '0xb' }] as never,
+        selected_character_id: '0xa',
+      },
+    }
+    const released = reduce_app_state(shared, { type: 'fight/released', character_id: '0xa' })
+    expect(released.fight.mounted).toBeFalse()
+    expect(released.fight.cached['0xf1']).toBeDefined()
+
+    const switched = reduce_app_state(released, { type: 'character/select', character_id: '0xb' })
+    expect(switched.fight.checkpoint?.contract.id).toBe('0xf1')
+    expect(switched.fight.mounted).toBeTrue()
+  })
+
+  test('selecting a character in another cached fight swaps boards without waiting for the server', () => {
+    const active = drive_fight_state('0xme')
+    const other = structuredClone(active.fight.checkpoint!)
+    other.contract.id = '0xf2'
+    other.contract.fighters[0]!.kind = { type: 'player', character: '0xb', owner: '0xme' }
+    const cached = reduce_app_state(active, { type: 'fight/cached', checkpoint: other })
+    const state = reduce_app_state(
+      {
+        ...cached,
+        session: {
+          ...cached.session,
+          characters: [{ id: '0xa' }, { id: '0xb' }] as never,
+        },
+      },
+      { type: 'character/select', character_id: '0xb' }
+    )
+
+    expect(state.fight.checkpoint?.contract.id).toBe('0xf2')
+    expect(state.fight.mounted).toBeTrue()
+    expect(Object.keys(state.fight.cached).sort()).toEqual(['0xf1', '0xf2'])
+  })
+
+  test('back-to-back witness batches wait in presentation order instead of replacing damage cues', () => {
+    let state = drive_fight_state('0xme')
+    const checkpoint = state.fight.checkpoint!
+    const reconcile = (batch: number) => {
+      state = reduce_app_state(state, {
+        type: 'fight/reconciled',
+        mode: 'remote',
+        checkpoint,
+        zone_ids: [],
+        events: [{ type: 'turn_switched', payload: { from: 0n, to: 1n, round: 1n, skipped: [], reason: 'test' } }],
+        presentation_batch: batch,
+        error: null,
+      })
+    }
+    reconcile(1)
+    reconcile(2)
+
+    expect(state.fight.presentations.map(({ batch }) => batch)).toEqual([1, 2])
+    state = reduce_app_state(state, { type: 'fight/presented', presentation_batch: 1 })
+    expect(state.fight.presentations.map(({ batch }) => batch)).toEqual([2])
+  })
+
+  test('End Turn stays queued through the current action and clears at the next turn boundary', () => {
+    let state = drive_fight_state('0xme')
+    const checkpoint = state.fight.checkpoint!
+    state = reduce_app_state(state, {
+      type: 'fight/end_turn_queued',
+      fight: checkpoint.contract.id,
+      queued: true,
+    })
+    state = reduce_app_state(state, {
+      type: 'fight/reconciled',
+      mode: 'remote',
+      checkpoint,
+      zone_ids: [],
+      events: [],
+      presentation_batch: 1,
+      error: null,
+    })
+    expect(state.fight.end_turn_queued).toBeTrue()
+
+    const next_turn = structuredClone(checkpoint)
+    next_turn.contract.turn_started_ms += 1n
+    state = reduce_app_state(state, {
+      type: 'fight/reconciled',
+      mode: 'remote',
+      checkpoint: next_turn,
+      zone_ids: [],
+      events: [],
+      presentation_batch: 1,
+      error: null,
+    })
+    expect(state.fight.end_turn_queued).toBeFalse()
+  })
+
+  test('End Turn cannot queue a second submission while a transaction is pending', () => {
+    let state = drive_fight_state('0xme')
+    const fight = state.fight.checkpoint!.contract.id
+    state = reduce_app_state(state, { type: 'fight/transaction_pending', fight, pending: true })
+    state = reduce_app_state(state, { type: 'fight/end_turn_queued', fight, queued: true })
+
+    expect(state.fight.transaction_pending).toBeTrue()
+    expect(state.fight.end_turn_queued).toBeFalse()
+  })
+
+  test('End Turn stays latched after transaction completion until canonical turn truth advances', () => {
+    let state = drive_fight_state('0xme')
+    const checkpoint = state.fight.checkpoint!
+    state = reduce_app_state(state, {
+      type: 'fight/input',
+      origin: 'local',
+      input: { type: 'end_turn', fighter: 0n, observed_ms: 99_000n },
+    })
+    expect(state.fight.end_turn_submitted).toBeTrue()
+
+    state = reduce_app_state(state, {
+      type: 'fight/transaction_pending',
+      fight: checkpoint.contract.id,
+      pending: false,
+    })
+    state = reduce_app_state(state, {
+      type: 'fight/reconciled',
+      mode: 'remote',
+      checkpoint,
+      zone_ids: [],
+      events: [],
+      presentation_batch: 1,
+      error: null,
+    })
+    expect(state.fight.end_turn_submitted).toBeTrue()
+
+    const next_turn = structuredClone(checkpoint)
+    next_turn.contract.turn_started_ms += 3_000n
+    state = reduce_app_state(state, {
+      type: 'fight/reconciled',
+      mode: 'remote',
+      checkpoint: next_turn,
+      zone_ids: [],
+      events: [],
+      presentation_batch: 1,
+      error: null,
+    })
+    expect(state.fight.end_turn_submitted).toBeFalse()
   })
 
   test("the LAST seat's ready carries the start in the same transaction", () => {
     const listeners = new Map<string, ((payload: never) => void)[]>()
-    let state = initial_app_state(settings)
     const ready_calls: unknown[] = []
+    const base = initial_app_state(settings)
+    let state: AppState = {
+      ...base,
+      session: {
+        ...base.session,
+        selected_character_id: '0xa',
+        wallet: {
+          address: '0xme',
+          fight: { ready: async (args: unknown) => void ready_calls.push(args) },
+        } as never,
+      },
+    }
     const emit = (input: AppInput): void => {
       state = reduce_app_state(state, input)
       for (const listener of listeners.get(input.type) ?? []) (listener as (payload: AppInput) => void)(input)
@@ -320,18 +468,132 @@ describe('the remote fight fold', () => {
         seat: 0,
       } as never,
     })
-    // a wallet whose fight hand records the ready call
-    state = Object.freeze({
-      ...state,
-      session: Object.freeze({
-        ...state.session,
-        wallet: {
-          address: '0xme',
-          fight: { ready: async (args: unknown) => void ready_calls.push(args) },
-        } as never,
-      }),
-    })
     emit({ type: 'fight/input', origin: 'local', input: { type: 'ready', fighter: 0n } })
     expect(ready_calls).toEqual([{ fight: '0xf1', fighter_idx: 0n, and_start: true }])
+  })
+
+  test('a confirmed turn feeds its receipt witnesses into presentation without waiting for the indexer', async () => {
+    const listeners = new Map<string, ((payload: never) => void)[]>()
+    const dispatched: AppInput[] = []
+    const base = initial_app_state(settings)
+    const state: AppState = {
+      ...base,
+      fight: { ...base.fight, mode: 'remote', checkpoint: raw_checkpoint() as never },
+      session: {
+        ...base.session,
+        selected_character_id: '0xa',
+        wallet: {
+          address: '0xme',
+          fight: {
+            commit_turn: async () => ({
+              digest: 'turn',
+              turn_witnesses: [{ fighter: 1n, seed: 42n }],
+            }),
+          },
+        } as never,
+      },
+    }
+    fight_chain_module.observe?.({
+      events: {
+        on: (name, listener) => {
+          listeners.set(name, [...(listeners.get(name) ?? []), listener as unknown as (payload: never) => void])
+        },
+      },
+      signal: new AbortController().signal,
+      get_state: () => state,
+      dispatch: (input) => void dispatched.push(input),
+    })
+
+    listeners.get('fight/input')?.forEach((listener) =>
+      listener({
+        type: 'fight/input',
+        origin: 'local',
+        input: { type: 'end_turn', fighter: 0n, observed_ms: 99_000n },
+      } as never)
+    )
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    expect(dispatched).toContainEqual({
+      type: 'fight/input',
+      origin: 'streamed',
+      input: { type: 'turn_seed', fighter: 1n, seed: 42n },
+    })
+  })
+
+  test('a refused remote command restores chain-confirmed state and unlocks input', async () => {
+    const listeners = new Map<string, ((payload: never) => void)[]>()
+    const turn_calls: unknown[] = []
+    const base = initial_app_state(settings)
+    let state: AppState = {
+      ...base,
+      session: {
+        ...base.session,
+        selected_character_id: '0xa',
+        wallet: {
+          address: '0xme',
+          fight: {
+            commit_turn: async (turn: unknown) => {
+              turn_calls.push(turn)
+              throw new Error('MoveAbort 1725')
+            },
+          },
+        } as never,
+      },
+    }
+    const emit = (input: AppInput): void => {
+      state = reduce_app_state(state, input)
+      for (const listener of listeners.get(input.type) ?? []) (listener as (payload: AppInput) => void)(input)
+    }
+    const context = {
+      events: {
+        on: (name: string, listener: unknown) => {
+          listeners.set(name, [...(listeners.get(name) ?? []), listener as (payload: never) => void])
+        },
+      },
+      signal: new AbortController().signal,
+      get_state: () => state,
+      dispatch: emit,
+    }
+    fight_module.observe?.(context as never)
+    fight_chain_module.observe?.(context as never)
+    emit({
+      type: 'server/packet',
+      packet: {
+        type: 'packet/fight_state',
+        fight: '0xf1',
+        state: {
+          contract: raw_checkpoint().contract,
+          players: { '0xa': raw_player_source(), '0xb': raw_player_source() },
+        },
+        seat: 0,
+      } as never,
+    })
+
+    emit({ type: 'fight/input', origin: 'local', input: { type: 'move_to', fighter: 0n, path: [2n] } })
+    expect(state.fight.transaction_pending).toBeFalse()
+    expect(state.fight.checkpoint?.contract.fighters[0]?.cell).toBe(2n)
+    emit({ type: 'fight/input', origin: 'local', input: { type: 'move_to', fighter: 0n, path: [3n] } })
+    expect(turn_calls).toHaveLength(0)
+    emit({
+      type: 'fight/input',
+      origin: 'local',
+      input: { type: 'end_turn', fighter: 0n, observed_ms: 99_000n },
+    })
+    expect(state.fight.transaction_pending).toBeTrue()
+    expect(turn_calls).toEqual([
+      {
+        fight: '0xf1',
+        ended: false,
+        actions: [
+          { type: 'move', path: [2n] },
+          { type: 'move', path: [3n] },
+        ],
+      },
+    ])
+
+    await new Promise((resolve) => setTimeout(resolve, 0))
+    expect(state.fight.transaction_pending).toBeFalse()
+    expect(state.fight.end_turn_submitted).toBeFalse()
+    expect(state.fight.checkpoint?.contract.fighters[0]?.cell).toBe(1n)
   })
 })

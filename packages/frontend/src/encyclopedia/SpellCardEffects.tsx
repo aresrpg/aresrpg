@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
+/* eslint-disable complexity, max-lines -- this exhaustive effect presenter keeps the effect-kind mapping in one visible home. */
 import { AREA_SHAPES, CHANNELS, EFFECT_KINDS, TARGET_FILTERS } from '@aresrpg/fight/move_contract'
 import { element_names } from '@aresrpg/immutable'
 import { Crosshair, Footprints, Sparkles, Zap, type LucideIcon } from 'lucide-react'

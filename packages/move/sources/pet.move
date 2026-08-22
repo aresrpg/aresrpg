@@ -63,7 +63,7 @@ public(package) fun feed_kiosk_pet(
     (food.item_type(), food.category())
   };
   assert!(food_category == b"resource".to_string(), ENotFood);
-  assert!(content_rules::pet_accepts(item::template_pet_foods(pet_template), &food_type), ENotFood);
+  assert!(content_rules::pet_accepts(item::tpf(pet_template), &food_type), ENotFood);
   item::burn(kiosk, cap, protected_item, food_id, 1, ctx);
   let pet: &mut Item = kiosk.borrow_mut(cap, pet_id);
   f1(pet, clock, ctx);

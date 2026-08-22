@@ -800,27 +800,38 @@ fn emit_field(
         };
         let f = decode::from_bytes::<Field<decode::ZoneKey, decode::Zone>>(o.bytes)
             .map_err(|e| drift(key, o.id, e))?;
-        let world_name = match outputs.iter().find(|w| w.id == parent) {
-            Some(w) => Some(
-                decode::from_bytes::<decode::World>(w.bytes)
-                    .map_err(|e| drift("world::World", w.id, e))?,
-            ),
-            None => None,
+        // A zone is addressed by its WORLD'S NAME, like every other node in this graph (a Fight
+        // carries `world` as the name too). The DF hangs off the World OBJECT, so the name has to
+        // be read off the parent — and it is always there to read: every Move door that writes a
+        // zone DF takes `&mut World` (search, consume_mob_group, consume_resource_node), so the
+        // World is a mutated output of the same transaction, always.
+        //
+        // Keying on the parent's OBJECT ID instead (with the name kept beside it as a second
+        // property) is what this used to do, and it made every zone unreadable: the server asks
+        // for `{world: "01_first_shore"}` because that is the only world identity the chain gives
+        // a player, and nothing ever matched.
+        let Some(world) = outputs.iter().find(|w| w.id == parent) else {
+            return Err(anyhow::anyhow!(
+                "zone {} wrote without its parent World {} in the same checkpoint — the world \
+                 name is this node's key and is never invented",
+                o.id.hex(),
+                parent.hex(),
+            ));
         };
+        let world_name = decode::from_bytes::<decode::World>(world.bytes)
+            .map_err(|e| drift("world::World", world.id, e))?
+            .name;
         let taken = Value::Array(f.value.res_taken.iter().map(|n| json!(n)).collect());
-        let mut assigns = vec![
+        let assigns = [
             format!("v.seed = {}", q(&f.value.seed.to_string())),
             format!("v.searched_at_ms = {}", f.value.searched_at_ms),
             format!("v.mob_taken = {}", q(&f.value.mob_taken.to_string())),
             format!("v.res_taken = {}", taken),
             format!("v.ckpt = {}", ckpt),
         ];
-        if let Some(w) = world_name {
-            assigns.push(format!("v.world_name = {}", q(&w.name)));
-        }
         cypher.push(format!(
             "MERGE (v:Zone {{world: {w}, zx: {zx}, zz: {zz}}}) SET {set}",
-            w = q_id(&parent),
+            w = q(&world_name),
             zx = f.name.zx,
             zz = f.name.zz,
             set = assigns.join(", "),
@@ -892,6 +903,18 @@ fn emit_fight(cypher: &mut Vec<String>, o: &ObjView<'_>, ckpt: u64) -> anyhow::R
             },
             format!("v.access_a = {}", f.access_a),
             format!("v.access_b = {}", f.access_b),
+            // the SIDE OPENERS ride the row, not just the machine blob: a reserved seat names
+            // the character it waits for, and the client that must answer the invitation reads
+            // it off the same marker row a bystander sees (2026-08-22 — matching a fight to a
+            // player by POSITION was the alternative, and it matched the wrong things)
+            match &f.opener_a {
+                Some(id) => format!("v.opener_a = {}", q(&id.hex())),
+                None => "v.opener_a = NULL".to_string(),
+            },
+            match &f.opener_b {
+                Some(id) => format!("v.opener_b = {}", q(&id.hex())),
+                None => "v.opener_b = NULL".to_string(),
+            },
             format!("v.managed = {}", f.managed),
             format!("v.wagered = {}", f.wagered),
             match f.dungeon {
@@ -907,6 +930,41 @@ fn emit_fight(cypher: &mut Vec<String>, o: &ObjView<'_>, ckpt: u64) -> anyhow::R
             format!("v.machine = {}", q_json(&fight_machine(&f))),
         ],
     );
+    // Durable post-fight work. FIGHTER remains custody and disappears when settlement returns
+    // the character; RESULT_FOR deliberately survives that move until the seat has settled and
+    // every rolled drop has been claimed. Rebuilding the complete edge set from the Fight output
+    // makes reconnect recovery latest-wins and idempotent.
+    cypher.push(format!(
+        "MATCH (f:Fight {{id: {}}}) OPTIONAL MATCH (f)-[r:RESULT_FOR]->() DELETE r",
+        q_id(&f.id)
+    ));
+    if f.ended {
+        for (seat, fighter) in f.fighters.iter().enumerate() {
+            let decode::FighterKind::Player { character, owner } = &fighter.kind else {
+                continue;
+            };
+            if fighter.settled && fighter.drops.is_empty() {
+                continue;
+            }
+            let drops = json!(fighter
+                .drops
+                .iter()
+                .map(|drop| json!({ "item_type": drop.item_type, "qty": drop.qty }))
+                .collect::<Vec<_>>());
+            cypher.push(format!(
+                "MATCH (f:Fight {{id: {fight}}}) MERGE (u:User {{address: {owner}}}) \
+                 CREATE (f)-[:RESULT_FOR {{seat: {seat}, character: {character}, team: {team}, \
+                 dead: {dead}, settled: {settled}, drops: {drops}}}]->(u)",
+                fight = q_id(&f.id),
+                owner = q(&owner.hex()),
+                character = q(&character.hex()),
+                team = fighter.team,
+                dead = fighter.dead,
+                settled = fighter.settled,
+                drops = q_json(&drops),
+            ));
+        }
+    }
     Ok(())
 }
 
@@ -1429,6 +1487,121 @@ mod tests {
         let cypher = project(&view(&outputs, &[], &[]), GAME).unwrap();
         let hp_write = cypher.iter().find(|c| c.contains("v.hp = '137'")).unwrap();
         assert!(hp_write.contains("v.hp_ms = 5"));
+    }
+
+    /// A World with no content — enough to carry its NAME, which is all a zone needs from it.
+    fn world_bytes(name: &str) -> Vec<u8> {
+        bcs::to_bytes(&decode::World {
+            id: Id([1; 32]),
+            name: name.into(),
+            content: decode::WorldContent {
+                mobs: vec![],
+                resources: vec![],
+                dungeon_key: None,
+                dungeon_rooms: vec![],
+                biome_map: decode::BiomeMap {
+                    zone_x0: 0,
+                    zone_z0: 0,
+                    side: 0,
+                    cells: vec![],
+                },
+            },
+        })
+        .unwrap()
+    }
+
+    #[test]
+    fn a_zone_is_keyed_by_its_world_name_like_every_other_node() {
+        // 2026-08-22: this node used to key on the parent World's OBJECT ID and keep the name
+        // beside it as `world_name`. Every read asks for `{world: "01_first_shore"}` — the only
+        // world identity the chain hands a player — so nothing ever matched and a searched zone
+        // came back empty: no mobs, no resources, no compass pips, and a discovery prompt that
+        // never went away because the row it waits for could not arrive.
+        let world_ty = t(GAME, "world", "World", &[]);
+        let world = world_bytes("01_first_shore");
+        let zone_ty = t(
+            crate::ownership::SUI_FRAMEWORK,
+            "dynamic_field",
+            "Field",
+            &[
+                &format!("{GAME}::zone::ZoneKey"),
+                &format!("{GAME}::zone::Zone"),
+            ],
+        );
+        let zone = bcs::to_bytes(&Field {
+            id: Id([9; 32]),
+            name: decode::ZoneKey { zx: 97, zz: 98 },
+            value: decode::Zone {
+                seed: 4_163_223_416,
+                searched_at_ms: 1_787_383_013_369,
+                mob_taken: 5,
+                res_taken: vec![1, 2],
+            },
+        })
+        .unwrap();
+        let outputs = [
+            ObjView {
+                id: Id([1; 32]),
+                owner: OwnerKind::Shared,
+                type_key: &world_ty,
+                bytes: &world,
+            },
+            ObjView {
+                id: Id([9; 32]),
+                owner: OwnerKind::Object(Id([1; 32])),
+                type_key: &zone_ty,
+                bytes: &zone,
+            },
+        ];
+
+        let cypher = project(&view(&outputs, &[], &[]), GAME).unwrap();
+        let write = cypher.iter().find(|c| c.contains(":Zone")).unwrap();
+
+        assert!(write.contains("MERGE (v:Zone {world: '01_first_shore', zx: 97, zz: 98})"));
+        // the name is the KEY, never a second property beside an id key
+        assert!(!write.contains("world_name"));
+        assert!(!write.contains("0x0101"));
+        assert!(write.contains("v.seed = '4163223416'"));
+        assert!(write.contains("v.mob_taken = '5'"));
+        assert!(write.contains("v.res_taken = [1,2]"));
+    }
+
+    #[test]
+    fn a_zone_without_its_parent_world_fails_loudly_rather_than_unkeyed() {
+        // the name cannot be invented, and a zone written under a guessed key is worse than one
+        // not written at all — it would be permanently invisible to every read
+        let zone_ty = t(
+            crate::ownership::SUI_FRAMEWORK,
+            "dynamic_field",
+            "Field",
+            &[
+                &format!("{GAME}::zone::ZoneKey"),
+                &format!("{GAME}::zone::Zone"),
+            ],
+        );
+        let zone = bcs::to_bytes(&Field {
+            id: Id([9; 32]),
+            name: decode::ZoneKey { zx: 1, zz: 2 },
+            value: decode::Zone {
+                seed: 7,
+                searched_at_ms: 1,
+                mob_taken: 0,
+                res_taken: vec![],
+            },
+        })
+        .unwrap();
+        let outputs = [ObjView {
+            id: Id([9; 32]),
+            owner: OwnerKind::Object(Id([1; 32])),
+            type_key: &zone_ty,
+            bytes: &zone,
+        }];
+
+        let failure = project(&view(&outputs, &[], &[]), GAME)
+            .unwrap_err()
+            .to_string();
+
+        assert!(failure.contains("without its parent World"));
     }
 
     #[test]

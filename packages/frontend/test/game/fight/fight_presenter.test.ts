@@ -32,4 +32,34 @@ describe('fight presenter', () => {
     await batch
     expect(log.at(-1)).toBe('complete:b')
   })
+
+  test('holds the current mob card for its floor before starting the next turn card', async () => {
+    const log: string[] = []
+    let now = 1_000
+    const presenter = create_fight_presenter({
+      now: () => now,
+      wait: async (milliseconds) => {
+        log.push(`wait:${milliseconds}`)
+        now += milliseconds
+      },
+      play: async (cue) => {
+        log.push(`play:${cue.id}`)
+        return true
+      },
+      observe: (cue, phase) => log.push(`${phase}:${cue.id}`),
+    })
+    const mob = { ...turn('mob'), entity_id: 'fight_mob_1', min_ms: 3_000 } as const
+
+    await presenter.present([mob, turn('player')])
+
+    expect(log).toEqual([
+      'start:mob',
+      'play:mob',
+      'complete:mob',
+      'wait:3000',
+      'start:player',
+      'play:player',
+      'complete:player',
+    ])
+  })
 })

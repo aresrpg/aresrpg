@@ -13,12 +13,14 @@ export const ModalFrame = ({
   close_label,
   label,
   max_width = 'max-w-md',
+  soft = false,
 }: Readonly<{
   children: ReactNode
   close: () => void
   close_label: string
   label: string
   max_width?: string
+  soft?: boolean
 }>) => {
   useEffect(() => {
     const keydown = (event: KeyboardEvent): void => {
@@ -40,18 +42,20 @@ export const ModalFrame = ({
         if (event.target === event.currentTarget) close()
       }}
       role="presentation"
-      style={{ backgroundColor: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(6px)' }}
+      style={{ backgroundColor: soft ? 'rgba(0,0,0,0.68)' : 'rgba(0,0,0,0.85)', backdropFilter: 'blur(8px)' }}
     >
       <div
         aria-label={label}
         aria-modal="true"
-        className={`relative mx-4 max-h-[90vh] w-full ${max_width} overflow-y-auto bg-surface`}
+        className={`relative mx-4 max-h-[90vh] w-full ${max_width} overflow-y-auto ${soft ? 'rounded-xl bg-[#101018]/95' : 'bg-surface'}`}
         role="dialog"
         style={{
           animation: 'modal-enter 0.3s ease-out',
-          border: '1px solid var(--color-border)',
-          borderImage: 'linear-gradient(135deg, #c8963c, #8b6914, #f5d0a9) 1',
-          boxShadow: '0 0 30px rgba(200,150,60,0.12), inset 0 0 30px rgba(200,150,60,0.03)',
+          border: soft ? '1px solid rgba(200,150,60,0.28)' : '1px solid var(--color-border)',
+          borderImage: soft ? undefined : 'linear-gradient(135deg, #c8963c, #8b6914, #f5d0a9) 1',
+          boxShadow: soft
+            ? '0 22px 70px rgba(0,0,0,0.58), inset 0 1px rgba(255,255,255,0.04)'
+            : '0 0 30px rgba(200,150,60,0.12), inset 0 0 30px rgba(200,150,60,0.03)',
         }}
       >
         <button

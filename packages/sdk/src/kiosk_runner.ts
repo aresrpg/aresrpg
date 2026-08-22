@@ -59,7 +59,11 @@ export const create_kiosk_runner = (sdk: GameSdk, kiosk_cap: KioskCapLoader) => 
     ): Promise<Receipt> => {
       const personal = await resolve_cap(options.custody)
       if (!personal) throw new Error('No personal kiosk exists for this session yet')
-      await sdk.hydrate_unknown([personal.kioskId, personal.objectId])
+      // The server's custody row names the right objects, but its owned-cap ref may trail a
+      // preceding kiosk transaction. Refresh the cap unconditionally; `hydrate_unknown`
+      // would preserve a known stale digest and make the next terminal action unbuildable.
+      await sdk.hydrate_owned_current([personal.objectId])
+      await sdk.hydrate_unknown([personal.kioskId])
       const tx = sdk.tx()
       compose(tx, personal.kioskId, personal.objectId)
       return sdk.execute(tx, options)

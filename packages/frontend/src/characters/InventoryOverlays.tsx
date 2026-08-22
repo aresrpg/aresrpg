@@ -8,9 +8,11 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import type { ItemRow } from '@aresrpg/protocol'
-import { Cat, Gift, Hammer, Loader2, Trash2 } from 'lucide-react'
+import { Cat, ExternalLink, Gift, Hammer, Loader2, Trash2 } from 'lucide-react'
 
 import { ModalFrame } from '../components/ModalFrame.tsx'
+import { env } from '../env.ts'
+import { explorer_object_url } from '../explorer.ts'
 import { PET_MAX_FEEDS } from '../game/character_stats.ts'
 import { item_icon } from '../content/assets.ts'
 import { encyclopedia_catalog } from '../content/catalog.ts'
@@ -39,7 +41,7 @@ const FeedPetModal = ({ pet, copy, close }: Readonly<{ pet: Readonly<ItemRow>; c
   const live = inventory.find(({ id }) => id === pet.id) ?? pet
   const [feeding, set_feeding] = useState(false)
   const diet = encyclopedia_catalog.item(pet.item_type)?.item.pet_foods ?? []
-  const foods = inventory.filter((row) => diet.includes(row.item_type))
+  const foods = inventory.filter((row) => row.kiosk === pet.kiosk && diet.includes(row.item_type))
   const power = live.pet_power ?? 0
   const fed_today = (live.pet_last_day ?? 0) >= utc_day()
   const full = power >= PET_MAX_FEEDS
@@ -50,7 +52,12 @@ const FeedPetModal = ({ pet, copy, close }: Readonly<{ pet: Readonly<ItemRow>; c
     set_feeding(true)
     const pending = toast.loading(t('feed_pending'))
     void wallet.character
-      .feed_pet({ pet_id: pet.id, pet_item_type: pet.item_type, food_id: food.id })
+      .feed_pet({
+        pet_id: pet.id,
+        pet_item_type: pet.item_type,
+        food_id: food.id,
+        custody: { kiosk: pet.kiosk },
+      })
       .then(() => {
         dispatch_app({ type: 'inventory/pet_fed', pet_id: pet.id, food_id: food.id })
         pending.success(t('feed_success'))
@@ -169,7 +176,7 @@ export const InventoryActionOverlays = ({
   const t = copy_text(copy.characters_page)
   const wallet = useAppStore(({ session }) => session.wallet)
   const inventory = useAppStore(({ session }) => session.inventory)
-  const listings = useAppStore(({ session }) => session.listings)
+  const listings = useAppStore(({ marketplace }) => marketplace.own_listings)
   const [feed_pet, set_feed_pet] = useState<ItemRow | null>(null)
   const [crush_target, set_crush_target] = useState<ItemRow | null>(null)
   const [destroy_target, set_destroy_target] = useState<ItemRow | null>(null)
@@ -188,7 +195,7 @@ export const InventoryActionOverlays = ({
     set_busy(true)
     const pending = toast.loading(t('crush_pending'))
     void wallet.character
-      .crush_gear({ gear_ids: [item.id] })
+      .crush_gear({ gear_ids: [item.id], custody: { kiosk: item.kiosk } })
       .then(({ claim_id }) => {
         // the fold lands the claim; the SILENT claimer redeems it and the yield rides the stream
         dispatch_app({ type: 'inventory/gear_crushed', gear_ids: [item.id], claim_id })
@@ -204,7 +211,7 @@ export const InventoryActionOverlays = ({
     set_busy(true)
     const pending = toast.loading(t('destroy_pending'))
     void wallet.character
-      .destroy_item({ item_id: item.id, amount: item.amount })
+      .destroy_item({ item_id: item.id, amount: item.amount, custody: { kiosk: item.kiosk } })
       .then(() => {
         dispatch_app({ type: 'inventory/destroyed', item_id: item.id, amount: item.amount })
         set_destroy_target(null)
@@ -214,7 +221,7 @@ export const InventoryActionOverlays = ({
       .finally(() => set_busy(false))
   }
 
-  // a LISTED item is untouchable (the chain would refuse every action) — no menu at all
+  // A listed item is chain-locked, but its object remains inspectable on the explorer.
   const entries =
     menu && !listed.has(menu.item.id)
       ? [
@@ -233,14 +240,24 @@ export const InventoryActionOverlays = ({
 
   return (
     <>
-      {menu && entries.length > 0 && (
+      {menu && (
         <div
           className="fixed z-[60] flex min-w-[150px] flex-col border border-border bg-[#0e0e16] shadow-[0_14px_40px_rgba(0,0,0,0.6)]"
           style={{
             left: Math.min(menu.x, globalThis.innerWidth - 170),
-            top: Math.min(menu.y, globalThis.innerHeight - entries.length * 34 - 10),
+            top: Math.min(menu.y, globalThis.innerHeight - (entries.length + 1) * 34 - 10),
           }}
         >
+          <a
+            className="flex items-center gap-2.5 px-3.5 py-2 text-left text-[9px] tracking-[0.16em] text-text uppercase hover:bg-gold/10 hover:text-gold"
+            href={explorer_object_url(env.network, menu.item.id)}
+            onClick={close_menu}
+            rel="noopener noreferrer"
+            target="_blank"
+          >
+            <ExternalLink className="opacity-60" size={11} />
+            {t('menu_explorer')}
+          </a>
           {entries.map(({ key, Icon, label, act }) => (
             <button
               className="flex cursor-pointer items-center gap-2.5 px-3.5 py-2 text-left text-[9px] tracking-[0.16em] text-text uppercase hover:bg-gold/10 hover:text-gold"

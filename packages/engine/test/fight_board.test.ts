@@ -5,6 +5,8 @@ import { describe, expect, test } from 'bun:test'
 import {
   InstancedMesh,
   Matrix4,
+  Mesh,
+  MeshStandardMaterial,
   PerspectiveCamera,
   Quaternion,
   Scene,
@@ -418,6 +420,29 @@ describe('fight board rendering projection', () => {
 
     expect(slab.groups[1]?.count).toBe(72)
     slab.dispose()
+  })
+
+  test('renders pits as depth-tested cavities instead of overlays above the board', () => {
+    const scene = new Scene()
+    const layer = create_fight_board_layer({
+      scene,
+      camera: new PerspectiveCamera(),
+      canvas: { getBoundingClientRect: () => ({ left: 0, top: 0, width: 1, height: 1 }) } as HTMLCanvasElement,
+    })
+    layer.set({
+      width: 1,
+      height: 1,
+      cell_size: 1.33,
+      origin: { x: 0, y: 0, z: 0 },
+      show_start_cells: false,
+      cells: [{ cell: 0, x: 0, y: 0, kind: 'hole' }],
+    })
+
+    const pit = scene.getObjectByName('board_hole') as Mesh
+    const material = pit.material as MeshStandardMaterial
+    expect(material.depthTest).toBeTrue()
+    expect(material.depthWrite).toBeTrue()
+    layer.dispose()
   })
 
   test('keeps floor, blockers, pits, and both starting bands distinct', () => {

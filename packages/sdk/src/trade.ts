@@ -5,26 +5,26 @@
 // row, derived locally the way the chain will derive it. The app never reads a receipt.
 
 import type { CharacterRow, ItemRow, TradeCapRow, TradeRow } from '@aresrpg/protocol'
-import type { KioskOwnerCap } from '@mysten/kiosk'
 import type { Transaction, TransactionObjectArgument } from '@mysten/sui/transactions'
 
 import { SDK } from './client.ts'
 import { receipt_digest, receipt_event, type Receipt } from './cache.ts'
-
-export type { KioskOwnerCap } from '@mysten/kiosk'
+import { resolve_marketplace_transfer } from './marketplace.ts'
+import { merge_stacks_ptb } from './stacks.ts'
+import type { KioskCapLoader } from './kiosk_runner.ts'
 
 type GameSdk = ReturnType<typeof SDK>
 
 export type TradeReceipt = { digest: string; trade: TradeRow }
 
-const package_id = (sdk: GameSdk): string => {
-  const value = sdk.pins.package
-  if (!value) throw new Error('Trade transaction unavailable: pins.json has no published package id for this network.')
+const type_package = (sdk: GameSdk): string => {
+  const value = sdk.game_type_package
+  if (!value) throw new Error('Trade transaction unavailable: pins.json has no defining package id for this network.')
   return value
 }
 
 const type_tag = (sdk: GameSdk, kind: 'item' | 'character'): string =>
-  `${package_id(sdk)}::${kind}::${kind === 'item' ? 'Item' : 'Character'}`
+  `${type_package(sdk)}::${kind}::${kind === 'item' ? 'Item' : 'Character'}`
 
 const list_with_purchase_cap = (
   tx: Transaction,
@@ -97,6 +97,16 @@ const sui_claimed = (trade: TradeRow, address: string): TradeRow => {
   return side === 'a' ? { ...trade, sui_b: '0' } : { ...trade, sui_a: '0' }
 }
 
+const cap_claimed = (trade: TradeRow, address: string, object: string): TradeRow => {
+  const side = own_side(trade, address)
+  if (!trade.locked) throw new Error('Trade items can be claimed only after both parties accept.')
+  const offered = side === 'a' ? trade.caps_b : trade.caps_a
+  if (!offered.some((cap) => cap.object === object)) throw new Error('That item is not in the counterparty escrow.')
+  return side === 'a'
+    ? { ...trade, caps_b: trade.caps_b.filter((cap) => cap.object !== object) }
+    : { ...trade, caps_a: trade.caps_a.filter((cap) => cap.object !== object) }
+}
+
 export const trade_is_drained = (trade: TradeRow): boolean =>
   trade.caps_a.length === 0 && trade.caps_b.length === 0 && BigInt(trade.sui_a) === 0n && BigInt(trade.sui_b) === 0n
 
@@ -130,7 +140,7 @@ export const trade_create = async (
 export type TradeActionsCtx = {
   trade: TradeRow
   address: string
-  kiosk_cap: KioskOwnerCap | null
+  kiosk_cap: KioskCapLoader
 }
 
 /** The builder: one trade, one party, every mutation. Rebuild it from the fresh row after each
@@ -143,40 +153,60 @@ export const trade_actions = (sdk: GameSdk, { trade, address, kiosk_cap }: Trade
     return { digest: receipt_digest(receipt), trade: next }
   }
 
-  const deposit_cap = (kind: 'item' | 'character', cap: TradeCapRow) =>
-    submit(cap_added(trade, address, cap), (tx) => {
-      sdk.with_owner_kiosk(tx, kiosk_cap, (kiosk, owner_cap) => {
+  const cap_for = async (kiosk?: string) => {
+    const cap = await kiosk_cap(kiosk)
+    if (!cap) throw new Error('No personal kiosk is available for this trade action.')
+    return cap
+  }
+
+  const deposit_cap = async (kind: 'item' | 'character', cap: TradeCapRow) => {
+    const owner = await cap_for(cap.kiosk)
+    return submit(cap_added(trade, address, cap), (tx) => {
+      sdk.with_owner_kiosk(tx, owner, (kiosk, owner_cap) => {
         const purchase_cap = list_with_purchase_cap(tx, kiosk, owner_cap, cap.object, type_tag(sdk, kind))
         if (kind === 'item') sdk.doors.trade_deposit_item_cap(tx, { t: trade.id, cap: purchase_cap })
         else sdk.doors.trade_deposit_character_cap(tx, { t: trade.id, cap: purchase_cap, kiosk, kiosk_cap: owner_cap })
       })
     })
+  }
 
   return {
     deposit_item: async (item: ItemRow) =>
-      deposit_cap('item', { object: item.id, name: item.name, item_type: item.item_type }),
+      deposit_cap('item', {
+        object: item.id,
+        kind: 'item',
+        name: item.name,
+        item_type: item.item_type,
+        category: item.category,
+        kiosk: item.kiosk,
+      }),
 
     deposit_character: async (character: CharacterRow) =>
       deposit_cap('character', {
         object: character.id,
+        kind: 'character',
         name: character.name,
-        item_type: type_tag(sdk, 'character'),
+        item_type: null,
+        category: null,
+        kiosk: character.kiosk,
       }),
 
-    withdraw_cap: async (cap: TradeCapRow, kind: 'item' | 'character') =>
-      submit(cap_removed(trade, address, cap.object), (tx) => {
-        sdk.with_owner_kiosk(tx, kiosk_cap, (kiosk) => {
+    withdraw_cap: async (cap: TradeCapRow) => {
+      const owner = await cap_for(cap.kiosk)
+      return submit(cap_removed(trade, address, cap.object), (tx) => {
+        sdk.with_owner_kiosk(tx, owner, (kiosk) => {
           const purchase_cap =
-            kind === 'item'
+            cap.kind === 'item'
               ? sdk.doors.trade_withdraw_item_cap(tx, { t: trade.id, item: cap.object })
               : sdk.doors.trade_withdraw_character_cap(tx, { t: trade.id, item: cap.object })
           tx.moveCall({
             target: '0x2::kiosk::return_purchase_cap',
-            typeArguments: [type_tag(sdk, kind)],
+            typeArguments: [type_tag(sdk, cap.kind)],
             arguments: [kiosk, purchase_cap],
           })
         })
-      }),
+      })
+    },
 
     deposit_sui: async (amount: bigint) => {
       if (amount <= 0n) throw new Error('Deposit amount must be positive.')
@@ -204,6 +234,31 @@ export const trade_actions = (sdk: GameSdk, { trade, address, kiosk_cap }: Trade
         tx.transferObjects([coin], tx.pure.address(address))
       }),
 
+    claim_cap: async (cap: TradeCapRow, existing: Readonly<{ id: string; kiosk: string }> | null = null) => {
+      const owner = await cap_for(existing?.kiosk)
+      return submit(cap_claimed(trade, address, cap.object), (tx) => {
+        sdk.with_owner_kiosk(tx, owner, (buyer_kiosk, buyer_cap) => {
+          const purchase_cap =
+            cap.kind === 'item'
+              ? sdk.doors.trade_claim_item_cap(tx, { t: trade.id, item: cap.object })
+              : sdk.doors.trade_claim_character_cap(tx, { t: trade.id, item: cap.object })
+          const [purchased, request] = tx.moveCall({
+            target: '0x2::kiosk::purchase_with_cap',
+            typeArguments: [type_tag(sdk, cap.kind)],
+            arguments: [tx.object(cap.kiosk), purchase_cap, sdk.coin_of(tx, 0n)],
+          }) as unknown as [TransactionObjectArgument, TransactionObjectArgument]
+          resolve_marketplace_transfer(sdk, tx, cap.kind, cap.object, 0n, buyer_kiosk, buyer_cap, purchased, request)
+          if (cap.kind === 'item' && existing)
+            merge_stacks_ptb(
+              sdk,
+              tx,
+              { kiosk: buyer_kiosk, cap: buyer_cap },
+              { target_id: existing.id, source_id: cap.object }
+            )
+        })
+      })
+    },
+
     destroy: async (): Promise<{ digest: string }> => {
       const tx = sdk.tx()
       sdk.doors.trade_destroy(tx, { t: trade.id })
@@ -212,3 +267,5 @@ export const trade_actions = (sdk: GameSdk, { trade, address, kiosk_cap }: Trade
     },
   }
 }
+
+export type TradeActions = ReturnType<typeof trade_actions>

@@ -7,13 +7,30 @@ import type { TradeRow, TradeCapRow } from '@aresrpg/protocol'
 
 import { type Graph, type Node } from '../graph.ts'
 
-import { get_item } from './get_item.ts'
-
 const enrich_caps = async (graph: Graph, ids: string[]): Promise<TradeCapRow[]> => {
-  const items = await Promise.all(ids.map((id) => get_item(graph, { id })))
-  return items
-    .filter((item) => item !== null)
-    .map((item) => ({ object: item.id, name: item.name, item_type: item.item_type }))
+  const assets = await Promise.all(
+    ids.map(async (id) => {
+      const rows = await graph.read(
+        `MATCH (asset {id: $id})-[l:LISTED_IN {exclusive: true}]->(k:Kiosk)
+         WHERE asset:Item OR asset:Character
+         RETURN asset, labels(asset) AS kinds, k.id AS kiosk`,
+        { id }
+      )
+      const [row] = rows
+      if (!row?.asset) return null
+      const props = (row.asset as Exclude<Node, null | undefined>).properties
+      const kind = (row.kinds as string[]).includes('Character') ? ('character' as const) : ('item' as const)
+      return {
+        object: String(props.id),
+        kind,
+        name: String(props.name),
+        item_type: kind === 'item' ? String(props.item_type) : null,
+        category: kind === 'item' ? String(props.category) : null,
+        kiosk: String(row.kiosk),
+      }
+    })
+  )
+  return assets.filter((asset): asset is TradeCapRow => asset !== null)
 }
 
 const shape_trade = async (graph: Graph, props: Record<string, unknown>): Promise<TradeRow> => {

@@ -16,10 +16,12 @@ import { airdrop_id, item_template_id, sale_id } from '../src/seed_ids.ts'
 const id = (n: number) => `0x${String(n).padStart(64, '0')}`
 const digest = '11111111111111111111111111111111'
 const package_id = id(1)
+const defining_package_id = id(8)
 const registry_id = id(2)
 const kiosk_package_id = id(7)
 const pins = {
   package: package_id,
+  package_original: defining_package_id,
   kiosk_package: kiosk_package_id,
   template_registry: { id: registry_id, shared_version: '1' },
   item_policy: { id: id(5), shared_version: '1' },
@@ -152,7 +154,7 @@ describe('shop SDK actions', () => {
 
     // the derived sale + template ids were hydrated (and only those two)
     expect(client.hydrations[0]).toEqual([
-      sale_id(registry_id, package_id, 'pet_lootbox'),
+      sale_id(registry_id, defining_package_id, 'pet_lootbox'),
       item_template_id(registry_id, 'pet_lootbox'),
     ])
     // the composed transaction names the REAL door on the REAL package
@@ -246,7 +248,7 @@ describe('shop SDK actions', () => {
     })
     expect(result).toEqual({ digest, kiosk_cap })
     expect(client.hydrations[0]).toEqual([
-      airdrop_id(registry_id, package_id, 'founders'),
+      airdrop_id(registry_id, defining_package_id, 'founders'),
       item_template_id(registry_id, 'title_veteran'),
     ])
     expect(move_call_targets(composed!)).toContain(`${package_id}::api::claim_airdrop`)

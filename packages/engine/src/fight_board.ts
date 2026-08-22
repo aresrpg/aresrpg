@@ -206,7 +206,13 @@ export const create_fight_board_layer = ({
     obstacles.receiveShadow = false
 
     const hole_geometry = build_fight_board_pits(mask, next.width, next.height, next.cell_size, next.origin)
-    const hole_material = new MeshStandardMaterial({ vertexColors: true, roughness: 1, metalness: 0 })
+    // The pit stays inside the board's ground clearance and participates in normal depth. Drawing
+    // it as an overlay projects its walls across fighters and floor tiles as giant black prisms.
+    const hole_material = new MeshStandardMaterial({
+      vertexColors: true,
+      roughness: 1,
+      metalness: 0,
+    })
     const holes = new Mesh(hole_geometry, hole_material)
     holes.frustumCulled = false
     holes.name = 'board_hole'

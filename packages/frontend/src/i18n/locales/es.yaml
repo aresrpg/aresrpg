@@ -101,11 +101,21 @@ world_hud:
   cluster_count: +{{extra}} más
   zone_edge: Borde de zona {{dist}}
   coordinates: Coordenadas
+  biome: Bioma
   world_map: Mapa del mundo
   menu_group: Invitar al grupo
   menu_trade: Comerciar
   menu_message: Enviar un mensaje
   mount_prompt: 'Pulsa {{key}} para montar'
+  portal_prompt: 'Pulsa {{key}} para viajar a otro mundo'
+  travel_title: Portal estelar
+  travel_search: 'Buscar {{title}}…'
+  travel_entry_level: 'Nivel requerido {{level}}'
+  travel_pending: Abriendo el portal…
+  travel_success: 'Bienvenido a {{world}}'
+  travel_empty: Ningún mundo
+  travel_showing: '{{filtered}} / {{total}} resultados'
+  travel_selected: 'Seleccionado · {{label}}'
   fight_press_join: 'Pulsa {{key}} para unirte'
   fight_press_spectate: 'Pulsa {{key}} para espectar'
   fight_locked: 'Combate privado'
@@ -123,12 +133,30 @@ world_hud:
   fight_close: 'Cerrar'
   menu_duel: Retar a duelo
   duel_invite: '{{name}} te reta a un duelo'
+  duel_challenging: 'Desafiando a {{name}}…'
+  duel_no_position: Sin posición — el duelo no se creó.
+  duel_unknown_challenger: un rival
   duel_accept: Aceptar
   duel_decline: Rechazar
-  duel_waiting: 'Esperando a {{name}}…'
-  duel_cancel: Cancelar
-  duel_declined: '{{name}} rechazó el duelo'
-  duel_never_started: El duelo nunca empezó — no pasó nada, puedes seguir jugando.
+  zone_unsearched_title: 'Zona inexplorada'
+  zone_press_search: 'Pulsa {{key}} para explorar la zona'
+  zone_searching: 'Explorando la zona…'
+  zone_searched_toast: 'La zona revela sus secretos'
+  spawn_group: 'Grupo de {{size}}'
+  spawn_unknown_mob: 'Criatura desconocida'
+  spawn_press_attack: 'Pulsa {{key}} para atacar'
+  spawn_engaging: 'Atacando al grupo…'
+  spawn_never_arrived: 'El combate se ejecutó, pero el tablero no llegó'
+  resource_press_collect: 'Pulsa {{key}} para recoger {{name}}'
+  resource_need_level: 'Necesitas {{job}} nv. {{level}}'
+  resource_need_tool: 'Necesitas una herramienta de {{job}}'
+  resource_gathering: 'Recolectando…'
+  resource_gathered: 'Recurso recolectado'
+  resource_ambushed: 'Un protector te ataca'
+  resource_resolving_ambush: 'El protector bloquea tu camino…'
+  resource_ambush_title: 'Emboscada del protector'
+  resource_face_protector: 'Pulsa {{key}} para enfrentarlo'
+  zone_never_arrived: 'La búsqueda se completó, pero el mundo nunca la mostró — la capa de lectura puede ir con retraso'
 demo_page:
   title: Laboratorio de renderizado
   world_lab: Mundo
@@ -153,6 +181,66 @@ demo_page:
   resources_missing: El renderizado de recursos aún no se ha restaurado. La lista creada sigue disponible en los datos seed.
   control_hint: Haz clic en el canvas · WASD para moverte · Espacio para saltar · Ratón para mirar
   back: Volver a la aplicación
+marketplace_page:
+  title: Mercado
+  subtitle: Anuncios de jugadores en Sui
+  tab_buy: Comprar
+  tab_sell: Vender
+  tab_history: Historial
+  browse: Explorar
+  group_cosmetics: Cosméticos
+  group_equipment: Equipo
+  group_pets: Mascotas
+  group_runes: Runas
+  group_consumable: Consumibles
+  group_resources: Recursos
+  group_characters: Personajes
+  level: Nivel
+  class: Clase
+  search: Buscar objetos…
+  no_results: Aún no hay anuncios
+  select_item: Selecciona un objeto
+  listing_count: '{{count}} anuncios'
+  rolled_stats: Estadísticas aleatorias
+  characteristics: Características
+  damages: daño
+  range_to: a
+  seller: Vendedor
+  buy: Comprar
+  pay: Pagar
+  yours: Tuyo
+  insufficient: SUI insuficiente
+  cancel: Cancelar
+  your_listings: Tus anuncios
+  no_listings: No tienes anuncios activos
+  withdraw: Retirar
+  list_for_sale: Poner a la venta
+  select_to_list: Selecciona un objeto del inventario
+  price: Precio
+  lot_size: Tamaño del lote
+  paid_automatically: Los ingresos llegan automáticamente a tu quiosco.
+  lot_required: 'Esta pila tiene ×{{amount}}. Los lotes deben ser ×1, ×10, ×100 o ×1000.'
+  inventory: Inventario
+  characters: Personajes
+  items: Objetos
+  empty_inventory: No hay nada disponible
+  revenue_30d: Últimos 30 días
+  sales_count: '{{count}} ventas'
+  unclaimed: Ingresos sin reclamar
+  collect: Recoger
+  no_history: Aún no hay historial
+  item: Objeto
+  date: Fecha
+  buyer: Comprador
+  load_more: Cargar más
+  list_pending: Creando anuncio…
+  list_success: Anuncio creado
+  delist_pending: Retirando anuncio…
+  delist_success: Anuncio retirado
+  buy_pending: Comprando…
+  buy_success: Compra completada
+  collect_pending: Recogiendo ingresos…
+  collect_success: Ingresos recogidos
 shop_page:
   title: 'Tienda'
   subtitle: 'Compra objetos con SUI'
@@ -356,12 +444,15 @@ fight_hud:
   placement_hint: Coloca a tus luchadores y márcalos como listos
   placement_ready: Listo
   placement_waiting: Esperando a los demás…
+  placement_starting: Iniciando combate…
+  placement_start_retry: El inicio falló — inténtalo de nuevo
   placement_force_prompt: Un jugador está ausente — ¿forzar el inicio del combate?
   placement_force_button: Forzar inicio
   placement_no_opponent: Nadie aceptó el desafío
   crank_prompt: El jugador actual no termina su turno.
   crank_button: Forzar fin de turno
   end_turn: Terminar turno
+  end_turn_queued: Fin de turno en cola
   reset_turn: Reiniciar
   weapon_attack: Ataque con arma
   bare_hands: Manos desnudas
@@ -399,6 +490,23 @@ fight_hud:
   chat_placeholder: Di algo…
   chat_you: Tú
   chat_line: '{name}: {message}'
+  result_title: Resultado del combate
+  result_party: Tu grupo
+  result_enemies: Enemigos
+  result_victory: Victoria
+  result_defeat: Derrota
+  result_you: Tú
+  result_fallen: Caído
+  result_survived: Sobrevivió
+  result_collecting: Recogiendo botín…
+  result_continue: Continuar
+  result_retry: Reintentar
+  level_up_title: Subida de nivel
+  level_up_reached: Nivel alcanzado
+  level_up_stat_points: Puntos de características
+  level_up_spell_points: Puntos de hechizo
+  level_up_new_spell: Nuevo hechizo desbloqueado
+  level_up_continue: Continuar
 wallet_legacy:
   sui: SUI
   how_to_get: Como obtener SUI
@@ -2976,6 +3084,7 @@ characters_page:
   menu_consume: Consumir
   menu_crush: Triturar
   menu_destroy: Destruir
+  menu_explorer: Ver en el explorador
   feed_title: Alimentar mascota
   feed_power_label: Poder
   feed_power: '{{count}} / {{max}}'

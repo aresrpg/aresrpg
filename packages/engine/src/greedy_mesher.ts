@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
+/* eslint-disable max-depth -- the measured meshing hot path keeps its nested spatial scan explicit. */
 
 import type { ChunkRenderData } from './types.ts'
 import { CHUNK_EDGE, halo_index, voxel_index } from './voxel_data.ts'

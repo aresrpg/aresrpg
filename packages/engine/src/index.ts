@@ -23,6 +23,10 @@ export { create_terrain_planner } from './terrain_planner.ts'
 export { structure_voxels } from './structure_placement.ts'
 export { STRUCTURE_PACKS, STRUCTURE_TYPES } from './structures.ts'
 export { create_flat_projection, project_height, set_flat_projection, step_flat_projection } from './flatten.ts'
+// the engine's deterministic-placement PRNG, shared upward: the world's chain-driven spawns seed
+// their own scatter and wander from it, so a mob stands where it stood last reload and never
+// grows a second copy of this algorithm
+export { mulberry } from './nature/sprite_kit.ts'
 export {
   BIOME_SLOTS,
   compile_world_recipe,
@@ -78,6 +82,7 @@ export type {
   FightSwordMarker,
   MobEntityRender,
   QualityProfile,
+  ResourceNodeMarker,
   RenderChunkRequest,
   Vec3,
   WornModelRender,

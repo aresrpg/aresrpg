@@ -17,6 +17,8 @@ import {
   type ServerPacket,
   type PresenceRow,
   type VisibleSlot,
+  type MarketObservation,
+  type CharacterRow,
 } from '@aresrpg/protocol'
 
 import logger from './logger.ts'
@@ -29,7 +31,6 @@ import player_info from './modules/player_info.ts'
 import player_events from './modules/player_events.ts'
 import player_world from './modules/player_world.ts'
 import player_chat from './modules/player_chat.ts'
-import player_duel from './modules/player_duel.ts'
 import player_fight from './modules/player_fight.ts'
 import player_party from './modules/player_party.ts'
 import player_items from './modules/player_items.ts'
@@ -45,44 +46,65 @@ const log = logger(import.meta)
 
 /** The embodied presence — a PresenceRow pinned to the world it walks in. */
 export type Embodied = PresenceRow & { world: string }
+export type MoveAnchor = Readonly<{ x: number; z: number; at_ms: number; blocks: number }>
+export type TrackedCharacter = Readonly<{
+  presence: Embodied
+  move_anchor: MoveAnchor
+  party: string | null
+  fight: string | null
+  fight_seat: number | null
+  active_fighter: number | null
+}>
 
 /** Actions the reducers fold: client packets + validated internal actions + lifecycle marks. */
 export type PlayerAction =
   | ClientPacket
   | {
-      type: 'action/embody'
+      type: 'action/track_character'
       character: Embodied
       friends: ReadonlySet<string>
       party: string | null
       fight: string | null
+      fight_seat: number | null
       at_ms: number
     }
-  | { type: 'action/move'; x: number; y: number; z: number; riding: boolean; at_ms: number; budget_blocks: number }
+  | { type: 'action/character_roster'; characters: readonly CharacterRow[] }
+  | {
+      type: 'action/move'
+      character_id: string
+      x: number
+      y: number
+      z: number
+      riding: boolean
+      at_ms: number
+      budget_blocks: number
+    }
   /** the OWN character's visible-slot change (chain event folded back into presence truth) */
-  | { type: 'action/equip'; slot: VisibleSlot; item_type: string | null }
-  /** the ONE fight watch slot: own seat (auto via FighterJoined) or a validated spectate */
-  | { type: 'action/fight'; fight: string | null }
-  | { type: 'action/party'; party: string | null }
+  | { type: 'action/equip'; character_id: string; slot: VisibleSlot; item_type: string | null }
+  | {
+      type: 'action/fight'
+      character_id: string
+      fight: string | null
+      seat?: number | null
+      active_fighter?: number | null
+    }
+  | { type: 'action/party'; character_id: string; party: string | null }
+  | { type: 'action/spectate'; character_id: string; fight: string | null }
   | { type: 'close' }
 
 export type PlayerState = {
-  /** the embodied presence — null until an embody VALIDATES (ownership proven at the read) */
-  character: Embodied | null
-  /** friend addresses — visibility-cap bypass, loaded with the embody */
+  /** Every owned character tracked by this connection, keyed by explicit wire identity. */
+  characters: Readonly<Record<string, TrackedCharacter>>
+  /** The capped server roster; it is also the complete server-managed tracking set. */
+  allowed_characters: ReadonlySet<string>
+  /** Chain-anchor signatures decide which server-managed track needs refreshing. */
+  character_signatures: Readonly<Record<string, string>>
+  /** friend addresses — address-wide visibility-cap bypass */
   friends: ReadonlySet<string>
-  /** The speed law's ANCHOR — the last proven position + its timestamp. Seeded by the chain
-   *  checkpoint at embody, re-anchored at most once per second by accepted moves: the budget
-   *  prices DISTANCE FROM HERE over ELAPSED SINCE HERE (the chain's travel_ok shape), so
-   *  physics transients (a jump arc, a terrain snap) never read as speed hacks the way a
-   *  per-sample check made them (2026-08-19). */
-  /** the travel bucket: last accepted position + banked allowance (blocks, capped at ~1s) */
-  move_anchor: Readonly<{ x: number; z: number; at_ms: number; blocks: number }> | null
-  /** the LIVE fight this connection streams — own seat or spectate, one slot */
-  fight: string | null
-  /** the embodied character's party */
-  party: string | null
-  /** the market category under observation (packet/market_observe folds it directly) */
-  market_category: string | null
+  /** Optional spectator watch, explicitly anchored to one owned character. */
+  spectating: Readonly<{ character_id: string; fight: string }> | null
+  /** the marketplace category window under observation */
+  market_observation: MarketObservation | null
 }
 
 export type PlayerContext = {
@@ -127,7 +149,6 @@ const MODULES: PlayerModule[] = [
   player_events,
   player_world,
   player_chat,
-  player_duel,
   player_fight,
   player_party,
   player_market,
@@ -143,7 +164,6 @@ const MODULES: PlayerModule[] = [
  *  Modules never rate-limit themselves; the door does (owner 2026-08-16: one global gate,
  *  loose enough — never per-module sprinkling). */
 const READ_PACKETS = new Set<string>([
-  'packet/embody',
   'packet/spectate',
   'packet/market_observe',
   'packet/character_owner_request',
@@ -151,12 +171,12 @@ const READ_PACKETS = new Set<string>([
 ])
 
 const INITIAL_STATE = (): PlayerState => ({
-  character: null,
+  characters: {},
+  allowed_characters: new Set(),
+  character_signatures: {},
   friends: new Set(),
-  move_anchor: null,
-  fight: null,
-  party: null,
-  market_category: null,
+  spectating: null,
+  market_observation: null,
 })
 
 type PlayerWires = Pick<PlayerContext, 'address' | 'admin' | 'graph' | 'pubsub'> & {

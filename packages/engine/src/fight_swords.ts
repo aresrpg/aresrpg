@@ -2,7 +2,7 @@
 // © 2026 Sceat — All rights reserved.
 // Planted fight swords — the join-window clock made physical. A sword slams in from the sky,
 // then sinks linearly across the placement window until only the handle shows (the dapp's
-// exact geometry, ported beat for beat minus the spin/jitter theatrics). Each marker carries
+// exact geometry, including its grow, spin, wobble and one impact edge). Each marker carries
 // an optional DOM element slot floating above it (the prompt/lock tag), positioned by the
 // SAME CSS2D pass the entity labels use.
 
@@ -26,10 +26,61 @@ const PLANT_SCALE = 2.5
 const clamp01 = (value: number): number => Math.min(1, Math.max(0, value))
 const ease_out_quad = (t: number): number => t * (2 - t)
 const ease_in_expo = (t: number): number => (t >= 1 ? 1 : 2 ** (10 * t - 10))
+const ease_out_elastic = (t: number): number =>
+  t === 0 || t === 1 ? t : 2 ** (-10 * t) * Math.sin(((t * 10 - 0.75) * 2 * Math.PI) / 3) + 1
 
-type Planted = Readonly<{ root: Object3D; marker: FightSwordMarker; label: CSS2DObject | null }>
+export const fight_swords_visible = (board_active: boolean): boolean => !board_active
 
-export const create_fight_sword_layer = ({ scene, url }: Readonly<{ scene: Scene; url: string }>) => {
+export const fight_sword_frame = (
+  placement_ms: number,
+  spawned_ms: number,
+  now_ms: number
+): Readonly<{ height: number; scale: number; yaw: number; impacted: boolean }> => {
+  const elapsed = Math.max(0, now_ms - spawned_ms)
+  const placement_age = Math.max(0, spawned_ms - placement_ms)
+  const time_left = Math.max(0, WINDOW_MS - placement_age)
+  const target = EXPOSED_HEIGHT - clamp01(placement_age / WINDOW_MS) * (EXPOSED_HEIGHT - HANDLE_HEIGHT)
+  const grow = clamp01(elapsed / GROW_MS)
+  const scale = START_SCALE + (PLANT_SCALE - START_SCALE) * ease_out_quad(grow)
+  if (elapsed <= GROW_MS) return Object.freeze({ height: SKY_HEIGHT, scale, yaw: 0, impacted: false })
+  const fall = clamp01((elapsed - GROW_MS) / (INTRO_MS - GROW_MS))
+  if (elapsed < INTRO_MS)
+    return Object.freeze({
+      height: SKY_HEIGHT + (target - SKY_HEIGHT) * ease_in_expo(fall),
+      scale,
+      yaw: ease_out_elastic(fall) * Math.PI * 2,
+      impacted: false,
+    })
+  const sink = clamp01((elapsed - INTRO_MS) / Math.max(1, time_left))
+  return Object.freeze({
+    height: target + (HANDLE_HEIGHT - target) * sink,
+    scale,
+    yaw: Math.PI * 2,
+    impacted: true,
+  })
+}
+
+type Planted = Readonly<{
+  root: Object3D
+  marker: FightSwordMarker
+  label: CSS2DObject | null
+  spawned_ms: number
+  impacted: boolean
+}>
+
+export const create_fight_sword_layer = ({
+  scene,
+  url,
+  impact_sound_url,
+  impact,
+}: Readonly<{
+  scene: Scene
+  url: string
+  impact_sound_url: string
+  impact?: (position: readonly [number, number, number]) => void
+}>) => {
+  const impact_audio = typeof Audio === 'undefined' ? null : new Audio(impact_sound_url)
+  if (impact_audio) impact_audio.preload = 'auto'
   let template: Object3D | null = null
   void load_gltf_source(url)
     .then((gltf) => {
@@ -40,6 +91,7 @@ export const create_fight_sword_layer = ({ scene, url }: Readonly<{ scene: Scene
     .catch((error: unknown) => console.error('fight_sword.glb failed to load', error))
 
   const planted = new Map<string, Planted>()
+  let visible = true
 
   /** blade-down stance baked ONCE — no per-frame rotation theatrics */
   const rebuild = (root: Object3D): void => {
@@ -66,9 +118,10 @@ export const create_fight_sword_layer = ({ scene, url }: Readonly<{ scene: Scene
       }
       const root = new Object3D()
       root.position.set(marker.x, marker.y, marker.z)
+      root.visible = visible
       rebuild(root)
       scene.add(root)
-      planted.set(marker.id, { root, marker, label: null })
+      planted.set(marker.id, { root, marker, label: null, spawned_ms: Date.now(), impacted: !visible })
     }
   }
 
@@ -87,17 +140,30 @@ export const create_fight_sword_layer = ({ scene, url }: Readonly<{ scene: Scene
     planted.set(id, { ...entry, label })
   }
 
-  const tick = (now: number): void => {
+  const tick = (_frame_now: number): void => {
     if (planted.size === 0) return
-    planted.forEach(({ root, marker }) => {
-      const elapsed = now - marker.placement_ms
-      const track = EXPOSED_HEIGHT - clamp01(elapsed / WINDOW_MS) * (EXPOSED_HEIGHT - HANDLE_HEIGHT)
-      const intro = clamp01(elapsed / INTRO_MS)
-      const height = elapsed <= INTRO_MS ? SKY_HEIGHT + (track - SKY_HEIGHT) * ease_in_expo(intro) : track
-      const grow = clamp01(elapsed / GROW_MS)
-      const scale = START_SCALE + (PLANT_SCALE - START_SCALE) * ease_out_quad(grow)
+    const now_ms = Date.now()
+    planted.forEach((entry, id) => {
+      const { root, marker } = entry
+      const { height, scale, yaw, impacted } = fight_sword_frame(marker.placement_ms, entry.spawned_ms, now_ms)
       root.position.set(marker.x, marker.y + height, marker.z)
       root.scale.setScalar(Math.max(scale, 0.001))
+      root.rotation.y = yaw
+      if (!impacted) {
+        root.rotation.x = Math.random() * 0.02 - 0.01
+        root.rotation.z += Math.random() * 0.02 - 0.01
+      } else {
+        root.rotation.x = 0
+        root.rotation.z = 0
+      }
+      if (impacted && !entry.impacted) {
+        impact?.([marker.x, marker.y, marker.z])
+        if (impact_audio) {
+          impact_audio.currentTime = 0
+          void impact_audio.play().catch((error: unknown) => console.warn('Fight sword impact sound failed.', error))
+        }
+        planted.set(id, Object.freeze({ ...entry, impacted: true }))
+      }
       root.updateWorldMatrix(true, false)
     })
   }
@@ -108,7 +174,19 @@ export const create_fight_sword_layer = ({ scene, url }: Readonly<{ scene: Scene
     template = null
   }
 
-  return Object.freeze({ set_markers, set_label, tick, dispose })
+  return Object.freeze({
+    set_markers,
+    set_label,
+    set_visible: (next: boolean) => {
+      visible = next
+      planted.forEach((entry, id) => {
+        entry.root.visible = next
+        if (!next && !entry.impacted) planted.set(id, Object.freeze({ ...entry, impacted: true }))
+      })
+    },
+    tick,
+    dispose,
+  })
 }
 
 export type FightSwordLayer = ReturnType<typeof create_fight_sword_layer>

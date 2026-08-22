@@ -12,7 +12,8 @@ import {
   load_fight_character_entities,
   type FightCharacterRenderSource,
 } from '../game/fight/character_entities.ts'
-import { fight_mob_entities, type FightMobRenderSource } from '../game/fight/mob_entities.ts'
+import { fight_mob_entities } from '../game/fight/mob_entities.ts'
+import type { FightMobRenderSource } from '../game/fight/mob_entity_sources.ts'
 import type { AppCopy } from '../i18n/copy.ts'
 import { simulator_board } from '../modules/simulator.ts'
 import { dispatch_app, useAppStore } from '../store.ts'
@@ -83,6 +84,7 @@ export const SimulatorBoardPane = ({
         entities={entities}
         label={copy.simulator_page.fight_board}
         on_cell_click={(cell, pointer) => {
+          if (cell === null) return
           if (blob_debug) {
             const blob = simulator_debug_blob(setup_board, cell, blob_debug.range, blob_debug.shape, blob_debug.color)
             if (blob) set_blob_request((current) => Object.freeze({ sequence: (current?.sequence ?? 0) + 1, blob }))

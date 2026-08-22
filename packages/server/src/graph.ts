@@ -16,7 +16,7 @@ export type GraphRow = Record<string, any>
 /** A Falkor node row: `{ properties: {...} }` — the shape `RETURN n` yields. */
 export type Node = { properties: Record<string, unknown> } | null | undefined
 export type Graph = {
-  read: (cypher: string, params?: Record<string, string | number | boolean>) => Promise<GraphRow[]>
+  read: (cypher: string, params?: Record<string, any>) => Promise<GraphRow[]>
   close: () => Promise<void>
 }
 

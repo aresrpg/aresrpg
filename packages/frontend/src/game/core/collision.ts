@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
+/* eslint-disable functional/immutable-data, functional/prefer-immutable-types, no-param-reassign -- collision probes are caller-owned scratch vectors mutated in this measured hot path. */
 // Capsule-vs-voxel collision resolution — LOSSLESS PORT of the proven legacy solver
 // (deprecated/engine/src/player/collision.js). Pure math, no renderer coupling: the player is an
 // axis-aligned box around a feet-centre against a `solid(x, y, z)` voxel oracle. Single home for

@@ -16,6 +16,7 @@ export type ShopPurchase = Readonly<{
   price_mist: bigint
   quantity: number
   existing_item_id?: string | null
+  existing_kiosk_id?: string | null
 }>
 
 export type AirdropClaim = Readonly<{
@@ -23,6 +24,7 @@ export type AirdropClaim = Readonly<{
   item_type: string
   category: string
   existing_item_id?: string | null
+  existing_kiosk_id?: string | null
 }>
 
 // One non-stackable item costs a split-coin command plus one buy call. Four hundred leaves
@@ -30,7 +32,7 @@ export type AirdropClaim = Readonly<{
 export const MAX_NON_STACKABLE_PURCHASE_QUANTITY = 400
 
 const published_ids = (sdk: Sdk) => {
-  const package_id = sdk.pins.package
+  const package_id = sdk.game_type_package
   const registry = sdk.pins.template_registry
   if (typeof package_id !== 'string' || !package_id) throw new Error('The game package is not published.')
   const registry_id = typeof registry === 'object' && registry !== null ? Reflect.get(registry, 'id') : null

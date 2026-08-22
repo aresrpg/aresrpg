@@ -14,6 +14,54 @@ import type { Transaction } from '@mysten/sui/transactions'
 import type { DoorCtx, Resolvable } from './client.ts'
 
 /**
+ * `api::split_stack`
+ * @arg kiosk — &mut Kiosk
+ * @arg cap — &KioskOwnerCap
+ * @arg item_id — ID
+ * @arg amount — u32
+ */
+export const split_stack = (
+  tx: Transaction,
+  ctx: DoorCtx,
+  args: { kiosk: Resolvable; cap: Resolvable; item_id: string; amount: number }
+) =>
+  tx.moveCall({
+    target: `${ctx.pins.package}::api::split_stack`,
+    arguments: [
+      ctx.obj(tx, args.kiosk, true),
+      ctx.obj(tx, args.cap, false),
+      ctx.pin(tx, 'item_policy', false),
+      ctx.pure.id(tx, args.item_id),
+      ctx.pure.u32(tx, args.amount),
+      ctx.pin(tx, 'version', false),
+    ],
+  })
+
+/**
+ * `api::merge_stacks`
+ * @arg kiosk — &mut Kiosk
+ * @arg cap — &KioskOwnerCap
+ * @arg target_id — ID
+ * @arg source_id — ID
+ */
+export const merge_stacks = (
+  tx: Transaction,
+  ctx: DoorCtx,
+  args: { kiosk: Resolvable; cap: Resolvable; target_id: string; source_id: string }
+) =>
+  tx.moveCall({
+    target: `${ctx.pins.package}::api::merge_stacks`,
+    arguments: [
+      ctx.obj(tx, args.kiosk, true),
+      ctx.obj(tx, args.cap, false),
+      ctx.pin(tx, 'item_protected_policy', false),
+      ctx.pure.id(tx, args.target_id),
+      ctx.pure.id(tx, args.source_id),
+      ctx.pin(tx, 'version', false),
+    ],
+  })
+
+/**
  * `api::create_character`
  * @arg payment — Coin<SUI>
  * @arg kiosk — &mut Kiosk
@@ -329,6 +377,7 @@ export const launch_fight = (tx: Transaction, ctx: DoorCtx, args: { build: Resol
  * @arg kiosk — &mut Kiosk
  * @arg personal — &PersonalKioskCap
  * @arg character_id — ID
+ * @arg target — ID
  * @arg x — u32
  * @arg z — u32
  * @arg access — u8
@@ -336,7 +385,15 @@ export const launch_fight = (tx: Transaction, ctx: DoorCtx, args: { build: Resol
 export const challenge_duel = (
   tx: Transaction,
   ctx: DoorCtx,
-  args: { kiosk: Resolvable; personal: Resolvable; character_id: string; x: number; z: number; access: number }
+  args: {
+    kiosk: Resolvable
+    personal: Resolvable
+    character_id: string
+    target: string
+    x: number
+    z: number
+    access: number
+  }
 ) =>
   tx.moveCall({
     target: `${ctx.pins.package}::api::challenge_duel`,
@@ -344,6 +401,7 @@ export const challenge_duel = (
       ctx.obj(tx, args.kiosk, true),
       ctx.obj(tx, args.personal, false),
       ctx.pure.id(tx, args.character_id),
+      ctx.pure.id(tx, args.target),
       ctx.pure.u32(tx, args.x),
       ctx.pure.u32(tx, args.z),
       ctx.pure.u8(tx, args.access),
@@ -1882,6 +1940,8 @@ export const trade_destroy = (tx: Transaction, ctx: DoorCtx, args: { t: Resolvab
 
 /** Every door, by name — { params: caller-facing names, terminal: carries &Random }. */
 export const DOORS = {
+  split_stack: { params: ['kiosk', 'cap', 'item_id', 'amount'], terminal: false },
+  merge_stacks: { params: ['kiosk', 'cap', 'target_id', 'source_id'], terminal: false },
   create_character: {
     params: ['payment', 'kiosk', 'cap', 'raw_name', 'classe', 'male', 'color_1', 'color_2', 'color_3'],
     terminal: false,
@@ -1897,7 +1957,7 @@ export const DOORS = {
   engage_fight: { params: ['kiosk', 'cap', 'character_id', 'w', 'zx', 'zz', 'group_index', 'access'], terminal: false },
   add_fight_mob: { params: ['build', 'template'], terminal: false },
   launch_fight: { params: ['build'], terminal: false },
-  challenge_duel: { params: ['kiosk', 'personal', 'character_id', 'x', 'z', 'access'], terminal: true },
+  challenge_duel: { params: ['kiosk', 'personal', 'character_id', 'target', 'x', 'z', 'access'], terminal: true },
   join_fight: { params: ['f', 'kiosk', 'cap', 'character_id', 'team', 'access'], terminal: false },
   join_fight_grouped: { params: ['f', 'kiosk', 'cap', 'character_id', 'team', 'shared_party'], terminal: false },
   place_fighter: { params: ['f', 'fighter_idx', 'cell'], terminal: false },

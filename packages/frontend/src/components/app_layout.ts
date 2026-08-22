@@ -9,3 +9,5 @@ export const CANVAS_OVERLAY_CLASS = 'pointer-events-none absolute inset-0 p-4'
 
 export const world_frame_visibility = (page: Page): string =>
   is_world_page(page) ? 'visible opacity-100' : 'invisible pointer-events-none opacity-0'
+
+export const fight_surface_visible = (page: Page, mounted: boolean): boolean => is_world_page(page) && mounted

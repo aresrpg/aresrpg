@@ -10,16 +10,31 @@ import type { Plugin } from 'vite'
 
 const SOUND_ROUTE = '/sound_effect/'
 
-export const sound_assets_plugin = (sounds_dir: string): Plugin => {
+const audio_assets_plugin = ({
+  name,
+  source_dir,
+  route,
+  output_dir,
+  accepts,
+  content_type,
+}: Readonly<{
+  name: string
+  source_dir: string
+  route: string
+  output_dir: string
+  accepts: (file: string) => boolean
+  content_type: (file: string) => string
+}>): readonly Plugin[] => {
   const load_filenames = async (): Promise<readonly string[]> =>
     Object.freeze(
-      (await readdir(sounds_dir, { withFileTypes: true }))
-        .filter((entry) => entry.isFile())
+      (await readdir(source_dir, { withFileTypes: true }))
+        .filter((entry) => entry.isFile() && accepts(entry.name))
         .map(({ name }) => name)
         .sort()
     )
-  return {
-    name: 'aresrpg-sound-assets',
+  const build_plugin: Plugin = {
+    name: `${name}-build`,
+    apply: 'build',
     async buildStart() {
       const files = await load_filenames()
       await Promise.all(
@@ -27,23 +42,27 @@ export const sound_assets_plugin = (sounds_dir: string): Plugin => {
           // eslint-disable-next-line functional/no-this-expressions -- Vite binds its required plugin context to this hook.
           this.emitFile({
             type: 'asset',
-            fileName: `sound_effect/${file}`,
-            source: await readFile(join(sounds_dir, file)),
+            fileName: `${output_dir}/${file}`,
+            source: await readFile(join(source_dir, file)),
           })
         )
       )
     },
+  }
+  const serve_plugin: Plugin = {
+    name: `${name}-serve`,
+    apply: 'serve',
     configureServer: (server) => {
       server.middlewares.use((request, response, next) => {
         const url = new URL(request.url ?? '/', `http://${request.headers.host ?? 'localhost'}`)
-        if (!url.pathname.startsWith(SOUND_ROUTE) || request.method !== 'GET') return next()
-        const requested = decodeURIComponent(url.pathname.slice(SOUND_ROUTE.length))
+        if (!url.pathname.startsWith(route) || request.method !== 'GET') return next()
+        const requested = decodeURIComponent(url.pathname.slice(route.length))
         if (!requested || basename(requested) !== requested) return next()
         void load_filenames().then(async (files) => {
           if (!files.includes(requested)) return next()
-          const source = await readFile(join(sounds_dir, requested))
+          const source = await readFile(join(source_dir, requested))
           response.writeHead(200, {
-            'content-type': requested.endsWith('.aac') ? 'audio/aac' : 'audio/ogg',
+            'content-type': content_type(requested),
             'cache-control': 'public, max-age=3600',
             'content-length': source.byteLength,
           })
@@ -52,4 +71,25 @@ export const sound_assets_plugin = (sounds_dir: string): Plugin => {
       })
     },
   }
+  return Object.freeze([build_plugin, serve_plugin])
 }
+
+export const sound_assets_plugin = (sounds_dir: string): readonly Plugin[] =>
+  audio_assets_plugin({
+    name: 'aresrpg-sound-assets',
+    source_dir: sounds_dir,
+    route: SOUND_ROUTE,
+    output_dir: 'sound_effect',
+    accepts: (file) => file.endsWith('.aac') || file.endsWith('.ogg'),
+    content_type: (file) => (file.endsWith('.aac') ? 'audio/aac' : 'audio/ogg'),
+  })
+
+export const music_assets_plugin = (music_dir: string): readonly Plugin[] =>
+  audio_assets_plugin({
+    name: 'aresrpg-music-assets',
+    source_dir: music_dir,
+    route: '/music/',
+    output_dir: 'music',
+    accepts: (file) => file.endsWith('.mp3'),
+    content_type: () => 'audio/mpeg',
+  })

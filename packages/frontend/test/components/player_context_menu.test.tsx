@@ -9,11 +9,13 @@ import type { PlayerMenu } from '../../src/modules/world.ts'
 
 const menu_cell: { menu: PlayerMenu | null } = { menu: null }
 const target = Object.freeze({ character_id: 'chr-1', name: 'Aiko', owner: '0xaiko' })
-
 mock.module('../../src/store.ts', () => ({
   dispatch_app: () => undefined,
   useAppStore: (select: (state: unknown) => unknown) =>
-    select({ world: { player_menu: menu_cell.menu, players: { 'chr-1': target } } }),
+    select({
+      world: { player_menu: menu_cell.menu, players: { 'chr-1': target } },
+      session: { characters: [{ id: 'own' }], selected_character_id: 'own' },
+    }),
 }))
 
 const { PlayerContextMenu } = await import('../../src/components/PlayerContextMenu.tsx')

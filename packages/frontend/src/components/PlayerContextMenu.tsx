@@ -6,7 +6,7 @@
 // BODY only (owner 2026-08-21): a challenge needs the two characters standing together, and a
 // name clicked in the chat log says nothing about where its owner is.
 
-import { useEffect } from 'react'
+import { useEffect, type PointerEvent as ReactPointerEvent } from 'react'
 
 import type { AppCopy } from '../i18n/copy.ts'
 import { dispatch_app, useAppStore } from '../store.ts'
@@ -23,7 +23,7 @@ export const PlayerContextMenu = ({ copy }: Readonly<{ copy: AppCopy }>) => {
 
   useEffect(() => {
     if (!menu) return undefined
-    const dismiss = (event: KeyboardEvent | MouseEvent): void => {
+    const dismiss = (event: Readonly<KeyboardEvent | MouseEvent>): void => {
       if (event instanceof KeyboardEvent && event.code !== 'Escape') return
       close()
     }
@@ -37,14 +37,14 @@ export const PlayerContextMenu = ({ copy }: Readonly<{ copy: AppCopy }>) => {
 
   if (!menu || !target) return null
   const duel = (): void => {
-    dispatch_app({ type: 'duel/invited', to: target.owner, character: target.name, at_ms: Date.now() })
+    dispatch_app({ type: 'duel/challenged', character_id: target.character_id, name: target.name })
     close()
   }
   return (
     <div
       className={`${HUD_PANEL_CLASS} pointer-events-auto fixed z-[140] min-w-[168px] divide-y divide-white/10 text-[11px]`}
       style={{ left: menu.x, top: menu.y }}
-      onPointerDown={(event) => event.stopPropagation()}
+      onPointerDown={(event: Readonly<ReactPointerEvent<HTMLDivElement>>) => event.stopPropagation()}
       role="menu"
     >
       <button className={ROW_CLASS} disabled role="menuitem" type="button">

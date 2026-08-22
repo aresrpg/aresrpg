@@ -4,6 +4,7 @@
 import { describe, expect, test } from 'bun:test'
 
 import { spell_target_cells, weapon_target_cells } from '../src/effects.ts'
+import { KINDS, STATS } from '../src/fighters.ts'
 
 import { create_fixture } from './helpers.ts'
 
@@ -42,6 +43,22 @@ describe('spell target cells', () => {
 
     expect(projection.range).toContain(105n)
     expect(projection.targetable).not.toContain(105n)
+  })
+
+  test('range theft reduces a modifiable spell below its authored maximum', () => {
+    const checkpoint = structuredClone(create_fixture().checkpoint)
+    checkpoint.contract.closed = checkpoint.contract.closed.map(() => 0n)
+    checkpoint.contract.fighters[0]!.cell = 100n
+    checkpoint.contract.fighters[0]!.effects = [
+      { kind: KINDS.steal, element: '', value: 1n, turns_left: 2n, source: 1n, stat: STATS.range },
+    ]
+    checkpoint.sources.spells.slash.levels[0]!.range_max = 3n
+    checkpoint.sources.spells.slash.levels[0]!.modifiable_range = true
+
+    const projection = spell_target_cells(checkpoint, 0n, 'slash')
+
+    expect(projection.range).toContain(102n)
+    expect(projection.range).not.toContain(103n)
   })
 
   test('projects the assembled bare-hands strike through the same targeting rules', () => {

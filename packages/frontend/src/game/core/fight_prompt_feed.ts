@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved.
+/* eslint-disable functional/immutable-data -- this external-store adapter owns and mutates its private feed. */
 // The fight-prompt lane (the mount-prompt lane's twin): the world loop floats ONE DOM element
 // over the nearest sword marker and publishes it here together with that marker's id; React
 // portals the chip's CONTENT (lock, join tag, spectate tag) into it. Per-frame presentation

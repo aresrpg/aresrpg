@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
+/* eslint-disable complexity, functional/immutable-data, functional/prefer-immutable-types, no-param-reassign -- the frame controller mutates its owned simulation state and vectors in one measured hot path. */
 // The locomotion brain — LOSSLESS PORT of the proven legacy controller
 // (deprecated/engine/src/player/controller.js): WASD relative to camera yaw, linear accel/brake
 // ground curves with a minecraft-style multiplicative no-input stop, sprint, a real jump

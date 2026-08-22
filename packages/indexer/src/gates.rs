@@ -384,11 +384,7 @@ mod tests {
                 module.identifier_at(handle.name).as_str() == "zone_size"
             })
             .expect("zone_math::zone_size is the constant's only public witness");
-        let code = &accessor
-            .code
-            .as_ref()
-            .expect("zone_size has a body")
-            .code;
+        let code = &accessor.code.as_ref().expect("zone_size has a body").code;
 
         // the accessor is `LdConst(ZONE_SIZE); Ret` — any other shape means the constant
         // moved and this gate can no longer speak for it
@@ -520,6 +516,86 @@ mod tests {
     /// PINNED. Without it a routed event's twin layout sits outside the parity
     /// manifest, so a Move field change reds nothing and the decode goes
     /// silently stale — the exact 2026-08-12 failure, one step removed.
+    /// One mirror field's Rust type, spelled the way `layout_line` renders the Move one — the
+    /// two vocabularies meet here, once, instead of in every reader's head.
+    fn rust_as_move(ty: &str, module: &str) -> String {
+        let ty = ty.replace(' ', "");
+        match ty.as_str() {
+            "Id" => "object::ID".to_string(),
+            "Addr" => "address".to_string(),
+            "String" => "string::String".to_string(),
+            "bool" | "u8" | "u16" | "u32" | "u64" | "u128" => ty,
+            _ => {
+                if let Some(inner) = ty.strip_prefix("Vec<").and_then(|t| t.strip_suffix('>')) {
+                    format!("vector<{}>", rust_as_move(inner, module))
+                } else if let Some(inner) =
+                    ty.strip_prefix("Option<").and_then(|t| t.strip_suffix('>'))
+                {
+                    format!("option::Option<{}>", rust_as_move(inner, module))
+                } else {
+                    // a value type of the event's own module (fight::RolledDrop, …)
+                    format!("{module}::{ty}")
+                }
+            }
+        }
+    }
+
+    /// The fields one struct declares in the compiled bytecode, IN ORDER: `name: type`.
+    fn declared_fields(
+        modules: &BTreeMap<String, CompiledModule>,
+        module_name: &str,
+        datatype: &str,
+    ) -> Vec<String> {
+        let module = modules
+            .get(module_name)
+            .unwrap_or_else(|| panic!("module `{module_name}` is not in the compiled package"));
+        for def in &module.struct_defs {
+            let handle = module.datatype_handle_at(def.struct_handle);
+            if module.identifier_at(handle.name).as_str() != datatype {
+                continue;
+            }
+            let StructFieldInformation::Declared(fields) = &def.field_information else {
+                panic!("{module_name}::{datatype} is native?");
+            };
+            return fields
+                .iter()
+                .map(|f| {
+                    format!(
+                        "{}: {}",
+                        module.identifier_at(f.name),
+                        render(module, &f.signature.0)
+                    )
+                })
+                .collect();
+        }
+        panic!("{module_name}::{datatype} is not a struct in the compiled package");
+    }
+
+    /// THE WEDGE GATE (2026-08-22). BCS is POSITIONAL and the event decoder is a hand-written
+    /// mirror: a mirror missing a field reads the NEXT field's bytes, and one bad event stops
+    /// the whole pipeline — no graph write, no publish, every client frozen on a stale world.
+    /// `FightEnded`/`FightStarted` each dropped `world/x/z` and wedged the indexer the moment a
+    /// fight ended; the snapshot gate could not see it, because it only compares Move to Move.
+    /// This one compares the MIRROR to the bytecode, which is the drift that actually hurts.
+    #[test]
+    fn every_event_mirror_matches_the_compiled_field_order() {
+        let game = load_modules(&repo_root().join("packages/move/build/aresrpg/bytecode_modules"));
+        for (module, name, mirrored) in crate::events::ROUTED_FIELDS {
+            let declared = declared_fields(&game, module, name);
+            let mirror = mirrored
+                .iter()
+                .map(|(field, ty)| format!("{field}: {}", rust_as_move(ty, module)))
+                .collect::<Vec<_>>();
+            assert_eq!(
+                declared, mirror,
+                "EVENT MIRROR DRIFT — `events.rs` decodes `{module}::{name}` as {mirror:?} \
+                 while the compiled event declares {declared:?}. BCS is positional AND \
+                 width-sensitive: this mirror poisons every checkpoint carrying the event. \
+                 Resync the mirror."
+            );
+        }
+    }
+
     #[test]
     fn every_routed_event_layout_is_pinned() {
         for (module, name) in crate::events::ROUTED {

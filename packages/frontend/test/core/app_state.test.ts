@@ -5,7 +5,11 @@ import { describe, expect, test } from 'bun:test'
 import { DEFAULT_ADMIN_ADDRESS, type CharacterRow } from '@aresrpg/protocol'
 
 import type { AuthSession } from '../../src/auth.ts'
-import { package_upgrade_steps } from '../../src/admin/admin_deployment.ts'
+import {
+  PACKAGE_PROPAGATION_MS,
+  package_upgrade_steps,
+  wait_for_package_propagation,
+} from '../../src/admin/admin_deployment.ts'
 import { initial_app_state, reduce_app_state } from '../../src/store.ts'
 
 const settings = Object.freeze({
@@ -28,6 +32,10 @@ const auth_session = (address = '0xowner'): AuthSession =>
     // action namespaces are never exercised by these reducer/DOM tests
     fight: {} as never,
     character: {} as never,
+    marketplace: {} as never,
+    stacks: {} as never,
+    create_trade: async () => ({ digest: '', trade: {} as never }),
+    trade: () => ({}) as never,
     resolve_suins_address: async () => null,
     estimate_sui_transfer: async () => 0n,
     send_sui: async () => ({ digest: null }),
@@ -398,6 +406,12 @@ describe('app state', () => {
       packet: { type: 'packet/error', id: 7, reason: 'character not found' },
     })
     expect(state.session.link_error).toBeNull()
+  })
+
+  test('package upgrades wait before the next RPC node must resolve the new package', async () => {
+    const waits: number[] = []
+    await wait_for_package_propagation(async (milliseconds) => void waits.push(milliseconds))
+    expect(waits).toEqual([PACKAGE_PROPAGATION_MS])
   })
 })
 

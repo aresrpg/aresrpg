@@ -13,8 +13,13 @@ import admin, { initial_admin_state, type AdminInput, type AdminState } from './
 import editor, { initial_editor_state, type EditorInput, type SeedEditorState } from './modules/editor.ts'
 import chat, { initial_chat_state, type ChatInput, type ChatState } from './modules/chat.ts'
 import claims from './modules/claims.ts'
-import duel, { initial_duel_state, type DuelInput, type DuelState } from './modules/duel.ts'
+import duel, { type DuelInput } from './modules/duel.ts'
 import fight_chain from './modules/fight_chain.ts'
+import fight_result, {
+  initial_fight_result_state,
+  type FightResultInput,
+  type FightResultState,
+} from './modules/fight_result.ts'
 import locale, { type LocaleInput } from './modules/locale.ts'
 import navigation, {
   initial_navigation_state,
@@ -25,6 +30,11 @@ import session, { initial_session_state, type SessionInput, type SessionState } 
 import simulator, { initial_simulator_state, type SimulatorInput, type SimulatorState } from './modules/simulator.ts'
 import settings, { type SettingsInput } from './modules/settings.ts'
 import world, { initial_world_state, type WorldInput, type WorldState } from './modules/world.ts'
+import marketplace, {
+  initial_marketplace_state,
+  type MarketplaceInput,
+  type MarketplaceState,
+} from './modules/marketplace.ts'
 
 export type AppState = Readonly<{
   session: SessionState
@@ -33,13 +43,14 @@ export type AppState = Readonly<{
   locale: Locale
   engine: EngineState
   fight: FightSessionState
+  fight_result: FightResultState
   copy: AppCopy | null
   simulator: SimulatorState
   admin: AdminState
   editor: SeedEditorState
   chat: ChatState
   world: WorldState
-  duel: DuelState
+  marketplace: MarketplaceState
 }>
 
 export type AppInput =
@@ -50,11 +61,13 @@ export type AppInput =
   | EngineInput
   | SimulatorInput
   | FightSessionInput
+  | FightResultInput
   | AdminInput
   | EditorInput
   | ChatInput
   | WorldInput
   | DuelInput
+  | MarketplaceInput
 
 type EventArguments = {
   [K in AppInput['type']]: [Extract<AppInput, { type: K }>]
@@ -85,6 +98,7 @@ const MODULES = Object.freeze([
   engine,
   simulator,
   fight,
+  fight_result,
   admin,
   editor,
   chat,
@@ -92,6 +106,7 @@ const MODULES = Object.freeze([
   duel,
   fight_chain,
   claims,
+  marketplace,
 ]) satisfies readonly AppModule[]
 
 export type AppModuleName = (typeof MODULES)[number]['name']
@@ -107,13 +122,14 @@ export const initial_app_state = (settings_state: GameSettings): AppState =>
     locale: 'en',
     engine: initial_engine_state(),
     fight: initial_fight_session_state(),
+    fight_result: initial_fight_result_state(),
     copy: null,
     simulator: initial_simulator_state(),
     admin: initial_admin_state(),
     editor: initial_editor_state(),
     chat: initial_chat_state(),
     world: initial_world_state(),
-    duel: initial_duel_state(),
+    marketplace: initial_marketplace_state(),
   })
 
 const create_events = () => {

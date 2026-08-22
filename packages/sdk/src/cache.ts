@@ -95,6 +95,16 @@ export const receipt_events = (receipt: Receipt, suffix: string): readonly Recor
 export const receipt_event = (receipt: Receipt, suffix: string): Record<string, unknown> | null =>
   receipt_events(receipt, suffix)[0] ?? null
 
+/** First object CREATED with a receipt type ending in `suffix`, or null. */
+export const created_object_id = (receipt: Receipt, suffix: string): string | null => {
+  const transaction = receipt.Transaction
+  const types = transaction?.objectTypes ?? {}
+  const created = transaction?.effects?.changedObjects?.filter(({ idOperation }) => idOperation === 'Created') ?? []
+  return (
+    created.find(({ objectId }) => typeof objectId === 'string' && types[objectId]?.endsWith(suffix))?.objectId ?? null
+  )
+}
+
 /** A fetched core-client Object (a hydrate row). */
 export type FetchedObject = {
   objectId?: string

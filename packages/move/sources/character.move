@@ -85,7 +85,7 @@ fun init(_otw: CHARACTER, ctx: &mut TxContext) {
 
 /// Display V2 needs the shared `DisplayRegistry` (0xd), which init cannot take — runs once
 /// post-publish through `admin::create_character_display`. Returns the cap.
-public(package) fun new_display(
+public(package) fun nd(
   registry: &mut DisplayRegistry,
   publisher: &mut Publisher,
   ctx: &mut TxContext,
@@ -194,12 +194,12 @@ public fun available_points(self: &Character): u16 { self.available_points }
 public fun available_spell_points(self: &Character): u16 { self.available_spell_points }
 
 /// The spell-raise spend door — progression asserts affordability first.
-public(package) fun spend_spell_points(self: &mut Character, amount: u16) {
+public(package) fun ssp(self: &mut Character, amount: u16) {
   self.available_spell_points = self.available_spell_points - amount;
 }
 
 /// RESET SPELL POINTS: every point ever granted returns — the pool becomes level − 1.
-public(package) fun refund_spell_points(self: &mut Character) {
+public(package) fun rsp(self: &mut Character) {
   self.available_spell_points = self.level - 1;
 }
 
@@ -209,7 +209,7 @@ public(package) fun level(self: &Character): u16 { self.level }
 
 /// Add-only — experience can never decrease. The level syncs silently off the curve; each
 /// level gained grants 5 stat points and 1 spell point (legacy law).
-public(package) fun add_experience(self: &mut Character, experience: u64) {
+public(package) fun ae(self: &mut Character, experience: u64) {
   self.experience = self.experience + experience;
   let new_level = aresrpg_math::experience::level_from_xp(self.experience);
   if (new_level > self.level) {

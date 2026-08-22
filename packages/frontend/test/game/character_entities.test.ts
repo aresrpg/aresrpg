@@ -57,6 +57,7 @@ describe('shared character rendering', () => {
       presence_render_source(
         Object.freeze({
           character_id: '0xnearby',
+          world: 'overworld',
           owner: '0xowner',
           name: 'Cra',
           classe: 'senshi',

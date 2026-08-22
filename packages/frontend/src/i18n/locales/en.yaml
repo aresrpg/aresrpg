@@ -101,11 +101,21 @@ world_hud:
   cluster_count: +{{extra}} more
   zone_edge: Zone edge {{dist}}
   coordinates: Coordinates
+  biome: Biome
   world_map: World map
   menu_group: Invite to group
   menu_trade: Trade
   menu_message: Send a message
   mount_prompt: 'Press {{key}} to mount'
+  portal_prompt: 'Press {{key}} to travel to another world'
+  travel_title: Star gate
+  travel_search: 'Search {{title}}…'
+  travel_entry_level: 'Entry level {{level}}'
+  travel_pending: Opening the gate…
+  travel_success: 'Welcome to {{world}}'
+  travel_empty: No worlds
+  travel_showing: '{{filtered}} / {{total}} results'
+  travel_selected: 'Selected · {{label}}'
   fight_press_join: 'Press {{key}} to join'
   fight_press_spectate: 'Press {{key}} to spectate'
   fight_locked: 'Private fight'
@@ -123,12 +133,30 @@ world_hud:
   fight_close: 'Close'
   menu_duel: Challenge to a duel
   duel_invite: '{{name}} challenges you to a duel'
+  duel_challenging: 'Challenging {{name}}…'
+  duel_no_position: No position — the duel was not created.
+  duel_unknown_challenger: a challenger
   duel_accept: Accept
   duel_decline: Decline
-  duel_waiting: 'Waiting for {{name}}…'
-  duel_cancel: Cancel
-  duel_declined: '{{name}} declined the duel'
-  duel_never_started: The duel never started — nothing happened, you can keep playing.
+  zone_unsearched_title: 'Unexplored zone'
+  zone_press_search: 'Press {{key}} to discover the zone'
+  zone_searching: 'Scouting the zone…'
+  zone_searched_toast: 'The zone gives up its secrets'
+  spawn_group: 'Pack of {{size}}'
+  spawn_unknown_mob: 'Unknown creature'
+  spawn_press_attack: 'Press {{key}} to attack'
+  spawn_engaging: 'Engaging the pack…'
+  spawn_never_arrived: 'The fight executed, but its board never arrived'
+  resource_press_collect: 'Press {{key}} to collect {{name}}'
+  resource_need_level: 'You need {{job}} lvl {{level}} to collect'
+  resource_need_tool: 'You need a {{job}} tool to collect'
+  resource_gathering: 'Gathering…'
+  resource_gathered: 'Resource gathered'
+  resource_ambushed: 'A protector ambushes you'
+  resource_resolving_ambush: 'The protector blocks your path…'
+  resource_ambush_title: 'Protector ambush'
+  resource_face_protector: 'Press {{key}} to face it'
+  zone_never_arrived: 'The search went through, but the world never showed it — the read layer may be behind'
 demo_page:
   title: Render lab
   world_lab: World lab
@@ -153,6 +181,66 @@ demo_page:
   resources_missing: Resource rendering has not been restored yet. The authored roster remains available in seed data.
   control_hint: Click canvas · WASD to move · Space to jump · Mouse to look
   back: Back to app
+marketplace_page:
+  title: Marketplace
+  subtitle: Player listings on Sui
+  tab_buy: Buy
+  tab_sell: Sell
+  tab_history: History
+  browse: Browse
+  group_cosmetics: Cosmetics
+  group_equipment: Equipment
+  group_pets: Pets
+  group_runes: Runes
+  group_consumable: Consumables
+  group_resources: Resources
+  group_characters: Characters
+  level: Level
+  class: Class
+  search: Search items…
+  no_results: No listings here yet
+  select_item: Select an item to view listings
+  listing_count: '{{count}} listings'
+  rolled_stats: Rolled stats
+  characteristics: Characteristics
+  damages: damage
+  range_to: to
+  seller: Seller
+  buy: Buy
+  pay: Pay
+  yours: Yours
+  insufficient: Not enough SUI
+  cancel: Cancel
+  your_listings: Your listings
+  no_listings: You have no active listings
+  withdraw: Delist
+  list_for_sale: List for sale
+  select_to_list: Select an item from your inventory
+  price: Price
+  lot_size: Lot size
+  paid_automatically: Sale proceeds arrive in your kiosk automatically.
+  lot_required: 'This stack has ×{{amount}}. Stackable listings must be ×1, ×10, ×100, or ×1000.'
+  inventory: Inventory
+  characters: Characters
+  items: Items
+  empty_inventory: Nothing is available to list
+  revenue_30d: Last 30 days
+  sales_count: '{{count}} sales'
+  unclaimed: Unclaimed proceeds
+  collect: Collect
+  no_history: No sales history yet
+  item: Item
+  date: Date
+  buyer: Buyer
+  load_more: Load more
+  list_pending: Creating listing…
+  list_success: Listing created
+  delist_pending: Removing listing…
+  delist_success: Listing removed
+  buy_pending: Buying listing…
+  buy_success: Purchase complete
+  collect_pending: Collecting marketplace proceeds…
+  collect_success: Marketplace proceeds collected
 shop_page:
   title: 'Shop'
   subtitle: 'Purchase items with SUI'
@@ -356,12 +444,15 @@ fight_hud:
   placement_hint: Place your fighters and mark them ready
   placement_ready: Ready
   placement_waiting: Waiting for the others…
+  placement_starting: Starting fight…
+  placement_start_retry: Start did not land — try again
   placement_force_prompt: A player is away — force the fight to start?
   placement_force_button: Force start
   placement_no_opponent: Nobody accepted the challenge
   crank_prompt: The current player is not ending their turn.
   crank_button: Force end turn
   end_turn: End turn
+  end_turn_queued: End turn queued
   reset_turn: Reset
   weapon_attack: Weapon attack
   bare_hands: Bare hands
@@ -399,6 +490,23 @@ fight_hud:
   chat_placeholder: Say something…
   chat_you: You
   chat_line: '{name}: {message}'
+  result_title: Fight result
+  result_party: Your party
+  result_enemies: Enemies
+  result_victory: Victory
+  result_defeat: Defeat
+  result_you: You
+  result_fallen: Fallen
+  result_survived: Survived
+  result_collecting: Collecting loot…
+  result_continue: Continue
+  result_retry: Retry
+  level_up_title: Level up
+  level_up_reached: Level reached
+  level_up_stat_points: Stat points
+  level_up_spell_points: Spell points
+  level_up_new_spell: New spell unlocked
+  level_up_continue: Continue
 wallet_legacy:
   sui: SUI
   how_to_get: How to get SUI
@@ -2979,6 +3087,7 @@ characters_page:
   menu_consume: Consume
   menu_crush: Crush
   menu_destroy: Destroy
+  menu_explorer: See on explorer
   feed_title: Feed pet
   feed_power_label: Power
   feed_power: '{{count}} / {{max}}'

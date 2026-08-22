@@ -8,7 +8,7 @@
 // Confirm composes ONE raise_stats transaction whose proven receipt folds in the reducer.
 
 import { useState } from 'react'
-import { characteristic_names, level_from_xp, xp_for_level, type CharacteristicName } from '@aresrpg/immutable'
+import { characteristic_names, experience_progress, type CharacteristicName } from '@aresrpg/immutable'
 import type { CharacterRow } from '@aresrpg/protocol'
 
 import action_icon from '../assets/statistics/action.png'
@@ -63,11 +63,7 @@ export default function StatsTab({ character, copy }: Readonly<{ character: Read
   const can_upgrade = remaining > 0 && !pending_tx
 
   const experience = Number(character.experience)
-  const level = level_from_xp(experience)
-  const floor = xp_for_level(level) ?? 0
-  const ceiling = xp_for_level(level + 1) ?? floor
-  const into = experience - floor
-  const span = Math.max(1, ceiling - floor)
+  const { level, into, span, percent } = experience_progress(experience)
 
   const max_health = character_max_hp(character)
   const health = projected_hp(character, Date.now())
@@ -78,7 +74,11 @@ export default function StatsTab({ character, copy }: Readonly<{ character: Read
     set_pending_tx(true)
     const pending = toast.loading(t('stats.tx_pending'))
     void wallet.character
-      .raise_stats({ character_id: character.id, allocation: staged })
+      .raise_stats({
+        character_id: character.id,
+        allocation: staged,
+        custody: { kiosk: character.kiosk, kiosk_cap: character.kiosk_cap },
+      })
       .then(() => {
         dispatch_app({ type: 'character/stats_raised', character_id: character.id, allocation: staged })
         set_alloc(empty_allocation())
@@ -105,10 +105,7 @@ export default function StatsTab({ character, copy }: Readonly<{ character: Read
             </span>
           </div>
           <div className="stats__bar">
-            <div
-              className="stats__bar-fill stats__bar-fill--xp"
-              style={{ width: `${bar_pct((into / span) * 100)}%` }}
-            />
+            <div className="stats__bar-fill stats__bar-fill--xp" style={{ width: `${bar_pct(percent)}%` }} />
           </div>
         </div>
       </div>

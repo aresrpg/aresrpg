@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
+/* eslint-disable functional/immutable-data, functional/prefer-immutable-types -- this renderer owns its mutable interpolation cache and Three.js-facing elements. */
 // Nearby players rendered in the world: folds the presence slice (PresenceRow by character id)
 // into the world scene's external-entity door. Appearances load once per identity change; live
 // positions ride packet/player_moved through the store. A row with a pet is MOUNTED by
@@ -12,6 +13,7 @@ import type { PresenceRow } from '@aresrpg/protocol'
 import { load_character_appearance, presence_render_source, world_character_entity } from './character_entities.ts'
 import { pet_locomotion_of, pet_seat_height, pet_vertical_offset, type PetLocomotion } from './core/pet_locomotion.ts'
 import { empty_pet_motion, step_pet_follow, type PetMotion } from './core/pet_follow.ts'
+import { publish_other_tag } from './core/nametag_feed.ts'
 import { read_pose } from './core/pose_feed.ts'
 
 /** A stopped player stops emitting moves — after this quiet window the run pose relaxes. */
@@ -22,6 +24,8 @@ const MOVE_LERP_SECONDS = 0.1
 const SNAP_DISTANCE = 0.01
 /** Past this range a player's mixer freezes on the idle pose — animation costs nothing far away. */
 const ANIMATION_RANGE_BLOCKS = 100
+/** Nametags show within this range (owner 2026-08-21) — beyond it a crowd is just a crowd. */
+const NAMETAG_RANGE_BLOCKS = 15
 
 // bun's test runtime has no requestAnimationFrame — a timer keeps the module loadable there
 const raf: (callback: (now: number) => void) => void =
@@ -56,16 +60,42 @@ type PresenceSlot = {
 export const create_presence_renderer = ({
   submit,
   entity_height,
+  label,
 }: Readonly<{
   submit: (entities: readonly EntityRender[]) => void
   entity_height: (id: string) => number | null
+  /** the engine's crown-label door — nametags ride the SAME CSS2D pass as every other tag */
+  label: (character_id: string, element: HTMLElement | null) => void
 }>) => {
   const slots = new Map<string, PresenceSlot>()
   const generations = new Map<string, number>()
+  const tag_elements = new Map<string, HTMLElement>()
+  const label_attached = new Set<string>()
   let idle_timer: ReturnType<typeof setTimeout> | null = null
   let disposed = false
   let ticking = false
   let last_tick_ms = 0
+
+  /** attach/detach a slot's nametag — range-gated (owner: 15 blocks), loaded bodies only. */
+  const sync_tag = (character_id: string): void => {
+    const slot = slots.get(character_id)
+    const own = read_pose()
+    const within_range = !!slot?.loaded && !!own && Math.hypot(slot.x - own.x, slot.z - own.z) <= NAMETAG_RANGE_BLOCKS
+    if (within_range === label_attached.has(character_id)) return
+    if (within_range) {
+      const div = typeof document === 'undefined' ? null : document.createElement('div')
+      if (!div) return
+      tag_elements.set(character_id, div)
+      label(character_id, div)
+      label_attached.add(character_id)
+      publish_other_tag(character_id, div)
+    } else {
+      label(character_id, null)
+      tag_elements.delete(character_id)
+      label_attached.delete(character_id)
+      publish_other_tag(character_id, null)
+    }
+  }
 
   /** rAF loop that runs only while a shown position still chases its target. */
   const tick = (now: number): void => {
@@ -204,6 +234,13 @@ export const create_presence_renderer = ({
       for (const stale of [...slots.keys()].filter((id) => !(id in rows) || id === own_character_id)) {
         slots.delete(stale)
         generations.delete(stale)
+        // a gone body takes its tag with it
+        if (label_attached.has(stale)) {
+          label(stale, null)
+          label_attached.delete(stale)
+          tag_elements.delete(stale)
+          publish_other_tag(stale, null)
+        }
         changed = true
       }
       for (const [character_id, row] of Object.entries(rows)) {
@@ -252,11 +289,20 @@ export const create_presence_renderer = ({
           wake_tick()
         }
       }
+      // nametag range rides every presence delta (moves fold here) — shown positions lag the
+      // targets by one lerp at most, which no eye can read on a 15-block gate
+      for (const character_id of slots.keys()) sync_tag(character_id)
       if (changed) build()
     },
     dispose: (): void => {
       disposed = true
       if (idle_timer) clearTimeout(idle_timer)
+      for (const character_id of label_attached) {
+        label(character_id, null)
+        publish_other_tag(character_id, null)
+      }
+      label_attached.clear()
+      tag_elements.clear()
       slots.clear()
       generations.clear()
       submit(Object.freeze([]))

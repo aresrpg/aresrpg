@@ -19,6 +19,8 @@
     "./character-price": "./src/character_price.ts",
     "./balance": "./src/balance.ts",
     "./marketplace-admin": "./src/marketplace_admin.ts",
+    "./marketplace": "./src/marketplace.ts",
+    "./stacks": "./src/stacks.ts",
     "./admin-overview": "./src/admin_overview.ts",
     "./deployment-admin": "./src/deployment_admin.ts",
     "./shop": "./src/shop.ts",

@@ -7,6 +7,7 @@ import {
   CONTRACT_CONSTANTS,
   living_count,
   player_max_hp,
+  players_ready_after,
   project_spell_turn,
   project_weapon_turn,
   weapon_level_of,
@@ -18,6 +19,26 @@ import {
   type SpellSource,
   type SpellTurnProjection,
 } from '@aresrpg/fight'
+import type { FightPresentationCue } from '@aresrpg/engine'
+
+export const turn_seconds_remaining = (turn_started_ms: bigint, now: number): number =>
+  Math.max(0, Math.ceil((Number(turn_started_ms + CONTRACT_CONSTANTS.turn_max_ms) - now) / 1_000))
+
+export const presented_turn_after_cue = (
+  current: bigint | null,
+  cue: Readonly<FightPresentationCue>,
+  phase: 'start' | 'complete'
+): bigint | null => {
+  if (cue.type !== 'turn') return current
+  const seat = Number(cue.entity_id.split('_').at(-1))
+  if (!Number.isInteger(seat)) return current
+  // Completion of the TURN cue is not completion of the turn: the presenter holds the card until
+  // the next turn cue while movement/casts play. The whole presentation batch clears it.
+  return phase === 'start' ? BigInt(seat) : current
+}
+
+export const presented_turn_after_queue = (current: bigint | null, queued_batches: number): bigint | null =>
+  queued_batches > 0 ? current : null
 
 export type FightSpellView = Readonly<{
   name: string
@@ -65,7 +86,31 @@ export type FightView = Readonly<{
   can_forfeit: boolean
   /** both sides hold a living fighter — the chain's own precondition for starting a fight */
   sides_manned: boolean
+  /** this selected player's ready transaction also starts the fight */
+  ready_starts_fight: boolean
+  /** the 45-second force-pass matters only when another human can invoke it */
+  show_turn_timer: boolean
+  /** exactly one human with a real opposing side: safe to auto-submit the 60s start */
+  solo_human_fight: boolean
 }>
+
+export type FightFighterDisplay = Readonly<{ seat: number; hp: string; dead: boolean }>
+
+export const fight_view_with_display = (
+  view: Readonly<FightView>,
+  display: readonly FightFighterDisplay[]
+): FightView => {
+  if (display.length === 0) return view
+  const by_seat = new Map(display.map((row) => [row.seat, row]))
+  const timeline = Object.freeze(
+    view.timeline.map((fighter) => {
+      const row = by_seat.get(Number(fighter.seat))
+      return row ? Object.freeze({ ...fighter, hp: BigInt(row.hp), dead: row.dead }) : fighter
+    })
+  )
+  const selected = view.selected ? (timeline.find(({ seat }) => seat === view.selected?.seat) ?? view.selected) : null
+  return Object.freeze({ ...view, timeline, selected })
+}
 
 const fighter_max_hp = (checkpoint: Readonly<HydratedFightCheckpoint>, fighter: Readonly<Fighter>): bigint =>
   fighter.kind.type === 'mob'
@@ -111,9 +156,20 @@ const fighter_spells = (
 const selected_seat = (
   checkpoint: Readonly<HydratedFightCheckpoint>,
   owner: string | null,
-  active_seat: bigint | null
+  active_seat: bigint | null,
+  character_id: string | null
 ): bigint | null => {
   const { fighters, queue, turn_ptr } = checkpoint.contract
+  if (character_id) {
+    const seat = fighters.findIndex(
+      (fighter) =>
+        fighter.kind.type === 'player' &&
+        fighter.kind.character === character_id &&
+        fighter.kind.owner === owner &&
+        !fighter.settled
+    )
+    return seat < 0 ? null : BigInt(seat)
+  }
   const owned = (seat: bigint): boolean => {
     const fighter = fighters[Number(seat)]
     return (
@@ -132,17 +188,22 @@ export const select_fight_view = ({
   checkpoint,
   mode,
   owner,
+  character_id = null,
+  canonical_ended = false,
   names,
 }: Readonly<{
   checkpoint: HydratedFightCheckpoint
   mode: FightMode
   owner: string | null
+  character_id?: string | null
+  canonical_ended?: boolean
   names: Readonly<Record<string, string>>
 }>): FightView => {
   const { contract } = checkpoint
-  const phase = contract.ended ? 'ended' : contract.round === 0n ? 'placement' : 'active'
+  const phase =
+    contract.ended && (mode === 'local' || canonical_ended) ? 'ended' : contract.round === 0n ? 'placement' : 'active'
   const active_seat = phase === 'active' ? (contract.queue[Number(contract.turn_ptr)] ?? null) : null
-  const focus = selected_seat(checkpoint, owner, active_seat)
+  const focus = selected_seat(checkpoint, owner, active_seat, character_id)
   const project = (seat: bigint): FightFighterView => {
     const fighter = contract.fighters[Number(seat)]!
     const character_id = fighter.kind.type === 'player' ? fighter.kind.character : null
@@ -152,7 +213,7 @@ export const select_fight_view = ({
     return Object.freeze({
       seat,
       team: fighter.team,
-      name: names[character_id ?? fallback_name] ?? fallback_name,
+      name: names[character_id ?? fallback_name] ?? player_source?.name ?? fallback_name,
       level:
         fighter.kind.type === 'mob'
           ? fighter.kind.snapshot.level
@@ -195,5 +256,11 @@ export const select_fight_view = ({
     // `start`) — so a UI that offers a start here would only ever compose an aborting
     // transaction. This says NOTHING about readiness or the placement deadline.
     sides_manned: living_count(contract.fighters, 0n) > 0n && living_count(contract.fighters, 1n) > 0n,
+    ready_starts_fight: phase === 'placement' && focus !== null && players_ready_after(contract.fighters, focus),
+    show_turn_timer: contract.fighters.filter((fighter) => fighter.kind.type === 'player').length > 1,
+    solo_human_fight:
+      contract.fighters.filter((fighter) => fighter.kind.type === 'player').length === 1 &&
+      living_count(contract.fighters, 0n) > 0n &&
+      living_count(contract.fighters, 1n) > 0n,
   })
 }

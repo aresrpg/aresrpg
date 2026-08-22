@@ -17,7 +17,9 @@ export const BOARD_CELL_OBSTACLE = 1
 export const BOARD_CELL_HOLE = 2
 export const BOARD_CELL_VOID = 3
 export const BOARD_FLOOR_THICKNESS = 0.3
-export const BOARD_HOLE_DEPTH = 1.8
+// The board stands one block above its sampled ground. Keep the cavity inside that clearance so
+// normal depth testing can compose it with terrain instead of cheating as a screen overlay.
+export const BOARD_HOLE_DEPTH = 0.95
 
 const TONE_LIGHT = [0xdd, 0xd4, 0xb6] as const
 const TONE_MID = [0xcf, 0xc5, 0xa2] as const

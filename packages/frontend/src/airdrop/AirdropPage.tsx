@@ -9,7 +9,8 @@ import { item_detail_icon } from '../content/item_detail_assets.ts'
 import { env } from '../env.ts'
 import { copy_text, type AppCopy, type CopyText } from '../i18n/copy.ts'
 import type { SessionState } from '../modules/session.ts'
-import { dispatch_app } from '../store.ts'
+import { stack_merge_target_row } from '../inventory_stacks.ts'
+import { dispatch_app, useAppStore } from '../store.ts'
 import { toast } from '../toast.ts'
 
 const glyphs: Readonly<Record<string, LucideIcon>> = Object.freeze({
@@ -57,19 +58,21 @@ export default function AirdropPage({ copy, session }: Readonly<{ copy: AppCopy;
   const t = copy_text(copy.airdrop_page)
   const [busy, set_busy] = useState<string | null>(null)
   const address = session.wallet?.address ?? null
+  const listings = useAppStore(({ marketplace }) => marketplace.own_listings)
 
   const claim = (drop: (typeof content_catalog.airdrop.drops)[number]): void => {
     const { wallet } = session
     if (!wallet || busy || !drop.item) return
     set_busy(drop.id)
     const pending = toast.loading(t('pending_claim'))
-    const existing_item_id = session.inventory.find(({ item_type }) => item_type === drop.item_type)?.id ?? null
+    const existing = stack_merge_target_row(session.inventory, listings, drop.item_type)
     void wallet
       .claim_airdrop({
         drop_id: drop.id,
         item_type: drop.item_type,
         category: drop.item.category,
-        existing_item_id,
+        existing_item_id: existing?.id ?? null,
+        existing_kiosk_id: existing?.kiosk ?? null,
       })
       .then(() => {
         dispatch_app({ type: 'airdrop/claimed', drop_id: drop.id })

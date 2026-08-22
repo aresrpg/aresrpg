@@ -6,6 +6,7 @@ import { SuiGraphQLClient } from '@mysten/sui/graphql'
 import { SuiGrpcClient } from '@mysten/sui/grpc'
 import type { Transaction } from '@mysten/sui/transactions'
 import { isValidSuiAddress } from '@mysten/sui/utils'
+import type { TradeRow } from '@aresrpg/protocol'
 import {
   getWallets,
   isWalletWithRequiredFeatureSet,
@@ -28,6 +29,9 @@ import type { SeedContent } from './seed.ts'
 import type { SeedSessionRecord, SeedSessionStore } from './seed_session.ts'
 import { sui_transfer_ptb } from './sui_transfer.ts'
 import type { MarketplaceRoyalty } from './marketplace_admin.ts'
+import { marketplace_actions, type MarketplaceActions } from './marketplace.ts'
+import { stack_actions, type StackActions } from './stacks.ts'
+import { trade_actions, trade_create, type TradeActions } from './trade.ts'
 import type { AirdropClaim, ShopPurchase } from './shop.ts'
 import { character_actions, type CharacterActions } from './character_actions.ts'
 import { fight_actions, type FightActions } from './fight.ts'
@@ -37,7 +41,7 @@ import {
   create_deployment_bootstrap_transaction,
   create_package_publish_transaction,
   create_package_upgrade_transaction,
-  DEPLOYMENT_GAS_BUDGET_MIST,
+  project_package_id,
   DISPLAY_REGISTRY_ID,
   type ContractArtifact,
   type GameDeployment,
@@ -59,6 +63,10 @@ export type AuthSession = Readonly<{
   fight: FightActions
   /** the character-upkeep chain hand — equipment, stats, spells, consumables, runes */
   character: CharacterActions
+  marketplace: MarketplaceActions
+  stacks: StackActions
+  create_trade: (counterparty: string) => Promise<Readonly<{ digest: string; trade: TradeRow }>>
+  trade: (trade: TradeRow) => TradeActions
   resolve_suins_address: (name: string) => Promise<string | null>
   estimate_sui_transfer: (recipient: string, amount_mist: bigint, drain: boolean) => Promise<bigint>
   send_sui: (recipient: string, amount_mist: bigint, drain: boolean) => Promise<Readonly<{ digest: string | null }>>
@@ -292,6 +300,10 @@ const create_wallet_session = (
     },
     fight: fight_actions(sdk, { kiosk_cap }),
     character: character_actions(sdk, { kiosk_cap }),
+    marketplace: marketplace_actions(sdk, { address: account.address, kiosk_cap }),
+    stacks: stack_actions(sdk, { kiosk_cap }),
+    create_trade: (counterparty) => trade_create(sdk, { address: account.address, counterparty }),
+    trade: (trade) => trade_actions(sdk, { trade, address: account.address, kiosk_cap }),
     create_character: (character) =>
       personal_kiosk_action(async (kiosk_cap) => {
         const { kiosk_cap: settled_kiosk_cap, ...receipt } = await character_create(sdk, {
@@ -332,6 +344,12 @@ const create_wallet_session = (
     },
     buy_shop_item: async (purchase) => {
       const { buy_shop_item } = await import('./shop.ts')
+      if (purchase.existing_kiosk_id) {
+        const cap = await kiosk_cap(purchase.existing_kiosk_id)
+        if (!cap) throw new Error('The merge-target kiosk is unavailable.')
+        const result = await buy_shop_item(sdk, cap, purchase)
+        return Object.freeze({ digest: result.digest })
+      }
       return personal_kiosk_action(async (kiosk_cap) => {
         const result = await buy_shop_item(sdk, kiosk_cap, purchase)
         return Object.freeze({
@@ -342,6 +360,12 @@ const create_wallet_session = (
     },
     claim_airdrop: async (claim) => {
       const { claim_airdrop } = await import('./shop.ts')
+      if (claim.existing_kiosk_id) {
+        const cap = await kiosk_cap(claim.existing_kiosk_id)
+        if (!cap) throw new Error('The merge-target kiosk is unavailable.')
+        const result = await claim_airdrop(sdk, cap, claim)
+        return Object.freeze({ digest: result.digest })
+      }
       return personal_kiosk_action(async (kiosk_cap) => {
         const result = await claim_airdrop(sdk, kiosk_cap, claim)
         return Object.freeze({
@@ -355,13 +379,23 @@ const create_wallet_session = (
       const { create_seed_session } = await import('./seed_session.ts')
       const seed_sdk =
         current_pins === sdk.pins
-          ? sdk
+          ? SDK({
+              client: resolution_client as unknown as SuiTransport,
+              address: account.address,
+              network,
+              pins: current_pins,
+              sign_transaction,
+              // a seed batch is a HUNDRED-command ceremony — pricing belongs to the resolver
+              gas_budget: 'estimate',
+            })
           : SDK({
               client: resolution_client as unknown as SuiTransport,
               address: account.address,
               network,
               pins: current_pins,
               sign_transaction,
+              // a seed batch is a HUNDRED-command ceremony — pricing belongs to the resolver
+              gas_budget: 'estimate',
             })
       const super_session = await create_seed_admin({ sdk: seed_sdk, content, config })
       const package_id = seed_sdk.pins.package
@@ -381,6 +415,7 @@ const create_wallet_session = (
             signer: keypair,
             network,
             pins: seed_sdk.pins,
+            gas_budget: 'estimate',
           }),
       })
 
@@ -410,9 +445,12 @@ const create_wallet_session = (
     },
     publish_contract: async (artifact) => {
       const receipt = await sdk.execute(create_package_publish_transaction({ artifact, recipient: account.address }), {
-        budget: DEPLOYMENT_GAS_BUDGET_MIST,
+        budget: 'estimate',
         include: { objectTypes: true },
       })
+      // a package this session just created is not readable on every node yet — the caller's
+      // NEXT transaction targets it, so the wait belongs here (read-after-write, 2026-08-21)
+      await sdk.hydrate_required([project_package_id(receipt)])
       return Object.freeze({ receipt })
     },
     upgrade_contract: async ({ artifact, upgrade_cap }) => {
@@ -420,8 +458,13 @@ const create_wallet_session = (
       const { package: package_id, policy } = await read_package_upgrade(upgrade_cap)
       const receipt = await sdk.execute(
         create_package_upgrade_transaction({ sdk, artifact, package: package_id, upgrade_cap, policy }),
-        { budget: DEPLOYMENT_GAS_BUDGET_MIST, include: { objectTypes: true } }
+        { budget: 'estimate', include: { objectTypes: true } }
       )
+      // THE UPGRADE'S OWN LAG (2026-08-22): the version activation that follows targets the
+      // package this transaction just wrote, and our fullnode is a load balancer — the node
+      // that answers the next dry run may not have it yet, which reads as a flat
+      // "Object <package> not found" mid-ceremony. An upgrade returns READABLE or it throws.
+      await sdk.hydrate_required([project_package_id(receipt)])
       return Object.freeze({ receipt })
     },
     read_package_upgrade,
@@ -435,7 +478,7 @@ const create_wallet_session = (
           publisher: deployment.publisher,
           recipient: account.address,
         }),
-        { budget: DEPLOYMENT_GAS_BUDGET_MIST, include: { objectTypes: true } }
+        { budget: 'estimate', include: { objectTypes: true } }
       )
     },
     read_game_version,

@@ -118,6 +118,15 @@ macro_rules! events {
             $( (stringify!($module), stringify!($name)) ),+
         ];
 
+        /// Each mirror's FIELD ORDER — BCS is positional, so a mirror that skips a Move field
+        /// decodes the next field's bytes and poisons the whole checkpoint (the 2026-08-22
+        /// wedge: `FightEnded` missed `world/x/z` and every fight that ended stopped the
+        /// pipeline dead). The gate compares this against the compiled bytecode.
+        #[cfg(test)]
+        pub const ROUTED_FIELDS: &[(&str, &str, &[(&str, &str)])] = &[
+            $( (stringify!($module), stringify!($name), &[$((stringify!($field), stringify!($ty))),+]) ),+
+        ];
+
         /// Decode + route one game event by `(module, name)`. `None` = not a
         /// game event we forward (never an error — foreign events are data).
         pub fn route(module: &str, name: &str, bytes: &[u8]) -> anyhow::Result<Option<Routed>> {
@@ -167,7 +176,7 @@ events! {
         => |e: &FightCreated| zone_topic(&e.world, e.x, e.z),
     // routed to the FIGHT's channel — it tells the roster's existing watchers (a duel's
     // opener, teammates in placement) that a seat filled. It does NOT arm the joiner's own
-    // watch: a seat is custody, and `publish::route_fight_seats` witnesses every seat,
+    // watch: a seat is custody, and `publish::route_character_custody` witnesses every seat,
     // including the creator's, which no join ever announces.
     fight::FighterJoined { fight: Id, character: Id, team: u8 }
         => |e: &FighterJoined| format!("evt:fight:{}", e.fight.hex()),
@@ -175,11 +184,11 @@ events! {
     // that leaves the fight running, and their screens replay it as the seat's death
     fight::FighterForfeited { fight: Id, fighter: u64 }
         => |e: &FighterForfeited| format!("evt:fight:{}", e.fight.hex()),
-    fight::FightStarted { fight: Id, queue: Vec<u64> }
+    fight::FightStarted { fight: Id, world: String, x: u32, z: u32, queue: Vec<u64> }
         => |e: &FightStarted| format!("evt:fight:{}", e.fight.hex()),
     fight::TurnSeedUsed { fight: Id, seat: u64, seed: u64 }
         => |e: &TurnSeedUsed| format!("evt:fight:{}", e.fight.hex()),
-    fight::FightEnded { fight: Id, winner: Option<u8> }
+    fight::FightEnded { fight: Id, world: String, x: u32, z: u32, winner: Option<u8> }
         => |e: &FightEnded| format!("evt:fight:{}", e.fight.hex()),
     fight::DropsRolled { fight: Id, fighter: u64, drops: Vec<RolledDrop> }
         => |e: &DropsRolled| format!("evt:fight:{}", e.fight.hex()),
@@ -348,26 +357,33 @@ mod tests {
 
     #[test]
     fn option_winner_serializes_value_or_null() {
+        // THE WIRE IS `fight, world, x, z, winner` (fight.move) — a hand-built fixture that
+        // skips a field proves only that the mirror agrees with itself, and this one did while
+        // the real event wedged the pipeline (2026-08-22). The field ORDER is pinned against
+        // the compiled bytecode by `gates::every_event_mirror_matches_the_compiled_field_order`.
         #[derive(serde::Serialize)]
         struct Wire {
             fight: [u8; 32],
+            world: String,
+            x: u32,
+            z: u32,
             winner: Option<u8>,
         }
-        let with = bcs::to_bytes(&Wire {
+        let wire = |winner: Option<u8>| Wire {
             fight: [4; 32],
-            winner: Some(1),
-        })
-        .unwrap();
+            world: "01_first_shore".to_string(),
+            x: 49_986,
+            z: 49_998,
+            winner,
+        };
+        let with = bcs::to_bytes(&wire(Some(1))).unwrap();
         let routed = route("fight", "FightEnded", &with).unwrap().unwrap();
         assert_eq!(routed.data["winner"], 1);
 
-        let without = bcs::to_bytes(&Wire {
-            fight: [4; 32],
-            winner: None,
-        })
-        .unwrap();
+        let without = bcs::to_bytes(&wire(None)).unwrap();
         let routed = route("fight", "FightEnded", &without).unwrap().unwrap();
         assert!(routed.data["winner"].is_null());
+        assert_eq!(routed.topic, format!("evt:fight:0x{}", "04".repeat(32)));
     }
 
     #[test]

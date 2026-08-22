@@ -103,7 +103,7 @@ public(package) fun raise_spell(chr: &mut Character, spell: &SpellTemplate) {
   assert!(current >= 1, ENotLearned);
   assert!(current < spell.max_spell_level(), ESpellCapped);
   assert!((chr.available_spell_points() as u64) >= current, ENoSpellPoints);
-  character::spend_spell_points(chr, (current as u16));
+  character::ssp(chr, (current as u16));
 
   let name = spell.name();
   let uid = character::uid_mut(chr);
@@ -126,7 +126,7 @@ public(package) fun reset_spells(chr: &mut Character) {
   if (dfield::exists(uid, SpellBookKey())) {
     *dfield::borrow_mut(uid, SpellBookKey()) = vec_map::empty<String, u8>();
   };
-  character::refund_spell_points(chr);
+  character::rsp(chr);
 }
 
 /// HEAL the character by `amount`, capped at max hp (regen banked first). The consumable's

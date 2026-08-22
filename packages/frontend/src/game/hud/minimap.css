@@ -1,8 +1,8 @@
 /* SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available */
 /* © 2026 Sceat — All rights reserved. See LICENSE. */
 /* MINIMAP — gothic terminal lens, top-right: sharp corners, near-black double frame with gold
- * corner brackets and a north tick, CRT scanlines over the relief, labeled coordinate chips
- * beneath. The lens is a button — it opens the full world map. */
+ * corner brackets and a north tick, CRT scanlines over the relief, then biome and coordinate
+ * chips beneath. The lens is a button — it opens the full world map. */
 
 .gw-minimap {
   position: absolute;
@@ -112,14 +112,36 @@
   line-height: 1.4;
 }
 
-.gw-minimap__coords {
+.gw-minimap__readout {
   display: flex;
-  justify-content: flex-end;
+  align-items: flex-start;
+  justify-content: space-between;
   gap: 4px;
+}
+
+.gw-minimap__biome,
+.gw-minimap__coords {
   color: var(--color-gold);
   font-size: 10px;
   font-weight: 500;
   letter-spacing: 0.15em;
+}
+
+.gw-minimap__biome {
+  min-width: 0;
+  overflow: hidden;
+  padding: 1px 7px;
+  border: 1px solid rgba(200, 150, 60, 0.18);
+  background: rgba(10, 10, 15, 0.6);
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.gw-minimap__coords {
+  display: flex;
+  flex: none;
+  gap: 4px;
 }
 
 .gw-minimap__coord {

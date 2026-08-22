@@ -7,7 +7,19 @@ import { GRID_CELLS, in_grid, line_of_sight, manhattan, mask_get, same_line, zon
 import { TARGET_FILTERS } from './move_contract.gen.ts'
 import { contest_points, deal, full_damage, life_steal, resist, roll_value } from './damage.ts'
 import { amplify_damage, effect_seed, heal_amount, primary_stat, punishment_base } from './fight_math.ts'
-import { KINDS, STATS, add_ap, add_mp, heal_seat, hit, max_hp_of, sheet_of, spend_ap, spend_mp } from './fighters.ts'
+import {
+  KINDS,
+  STATS,
+  add_ap,
+  add_mp,
+  heal_seat,
+  hit,
+  max_hp_of,
+  modifiable_range_max,
+  sheet_of,
+  spend_ap,
+  spend_mp,
+} from './fighters.ts'
 import { displace, fighter_at, living_cells } from './movement.ts'
 import { draw } from './prng.ts'
 import { add_effect_id, add_zone_id, effect_id_at, emit, fail } from './runtime.ts'
@@ -417,9 +429,8 @@ const cast_legality = ({
   const sheet = sheet_of(runtime, caster)
   const caster_cell = fighter.cell
   const distance = manhattan(caster_cell, target_cell)
-  const range_bonus = level.modifiable_range ? sheet.range_bonus : 0n
-  if (distance < level.range_min || distance > level.range_max + range_bonus)
-    return Object.freeze({ ok: false, code: 'out_of_range' })
+  const range_max = level.modifiable_range ? modifiable_range_max(runtime, caster, level.range_max) : level.range_max
+  if (distance < level.range_min || distance > range_max) return Object.freeze({ ok: false, code: 'out_of_range' })
   if (level.line_launch && !same_line(caster_cell, target_cell))
     return Object.freeze({ ok: false, code: 'not_in_line' })
   if (level.line_of_sight && !line_of_sight(caster_cell, target_cell, sight_blockers(runtime, caster, target_cell)))
@@ -458,13 +469,13 @@ const level_target_cells = (
   if (!fighter || fighter.kind.type !== 'player')
     return Object.freeze({ range: Object.freeze([]), targetable: Object.freeze([]) })
   if (!level) return Object.freeze({ range: Object.freeze([]), targetable: Object.freeze([]) })
-  const range_bonus = level.modifiable_range ? sheet_of(runtime, caster).range_bonus : 0n
+  const range_max = level.modifiable_range ? modifiable_range_max(runtime, caster, level.range_max) : level.range_max
   const range = Array.from({ length: Number(GRID_CELLS) }, (_, index) => BigInt(index)).filter((cell) => {
     const distance = manhattan(fighter.cell, cell)
     return (
       legal_cell(runtime, cell) &&
       distance >= level.range_min &&
-      distance <= level.range_max + range_bonus &&
+      distance <= range_max &&
       (!level.line_launch || same_line(fighter.cell, cell))
     )
   })

@@ -36,7 +36,7 @@ public enum Effect has copy, drop, store {
 // set_effect
 fun se(template: &mut ItemTemplate, effect: Effect) {
   assert!(item::template_category(template) == b"consumable".to_string(), ENotConsumable);
-  dfield::add(item::template_uid_mut(template), EffectKey(), effect);
+  dfield::add(item::tu(template), EffectKey(), effect);
 }
 
 public(package) fun set_heal(template: &mut ItemTemplate, amount: u32) {
@@ -44,11 +44,11 @@ public(package) fun set_heal(template: &mut ItemTemplate, amount: u32) {
   se(template, Effect::Heal(amount));
 }
 
-public(package) fun set_reset_stats(template: &mut ItemTemplate) {
+public(package) fun srs(template: &mut ItemTemplate) {
   se(template, Effect::ResetStats);
 }
 
-public(package) fun set_reset_spells(template: &mut ItemTemplate) {
+public(package) fun srp(template: &mut ItemTemplate) {
   se(template, Effect::ResetSpells);
 }
 
@@ -62,7 +62,7 @@ public(package) fun set_loot_box(template: &mut ItemTemplate) {
 
 public(package) fun is_loot_box(template: &ItemTemplate): bool {
   if (item::template_category(template) != b"consumable".to_string()) return false;
-  let effect: &Effect = dfield::borrow(item::template_uid(template), EffectKey());
+  let effect: &Effect = dfield::borrow(item::tuid(template), EffectKey());
   match (effect) {
     Effect::LootBox => true,
     _ => false,
@@ -88,7 +88,7 @@ public(package) fun consume(
   let category = item::burn(kiosk, cap, protected_item, item_id, 1, ctx);
   assert!(category == b"consumable".to_string(), ENotConsumable);
 
-  let effect: Effect = *dfield::borrow(item::template_uid(template), EffectKey());
+  let effect: Effect = *dfield::borrow(item::tuid(template), EffectKey());
   let chr: &mut Character = kiosk.borrow_mut(cap, character_id);
   match (effect) {
     Effect::Heal(amount) => progression::heal(chr, amount as u64, clock),

@@ -63,7 +63,9 @@ describe('websocket admission', () => {
       promote: () => ({ dispatch: () => undefined, on_message: () => undefined, on_close: () => undefined }),
     })
 
-    await connection.on_message(JSON.stringify({ type: 'packet/embody', character_id: '0xcharacter' }))
+    await connection.on_message(
+      JSON.stringify({ type: 'packet/track_character', character_id: '0xcharacter', tracked: true })
+    )
     expect(closed).toEqual(['INVALID_PACKET'])
     connection.on_close()
   })

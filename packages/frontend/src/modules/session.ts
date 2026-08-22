@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
+/* eslint-disable max-lines -- authentication, websocket lifecycle, and its reducer remain one session boundary. */
 
 import type {
   AirdropState,
   CharacterRow,
   ClaimRow,
   ItemRow,
-  ListingRow,
   ServerPacket,
   ShopState,
   TradeRow,
@@ -24,7 +24,7 @@ import {
   remember_selected_character,
 } from '../auth_storage.ts'
 import { env } from '../env.ts'
-import { read_pose, subscribe_pose } from '../game/core/pose_feed.ts'
+import { pose_matches_character, read_pose, subscribe_pose } from '../game/core/pose_feed.ts'
 import { connect_server, type ServerLink } from '../server_link.ts'
 import type { AppInput, AppModule, AppState } from '../store.ts'
 import { toast } from '../toast.ts'
@@ -53,7 +53,6 @@ export type SessionState = Readonly<{
   friends: readonly string[]
   claims: readonly ClaimRow[]
   giftcards: readonly { id: string; template: string; amount: number }[]
-  listings: readonly ListingRow[]
   trades: readonly TradeRow[]
   selected_character_id: string | null
   online: number | null
@@ -102,6 +101,11 @@ export type SessionInput =
       heal: number
     }>
   | Readonly<{ type: 'character/rune_scribed'; gear_id: string; rune_item_id: string }>
+  | Readonly<{
+      type: 'character/world_joined'
+      character_id: string
+      joined: Readonly<{ world: string; x: number; z: number; first_join: boolean }>
+    }>
   | Readonly<{ type: 'inventory/box_opened'; box_item_id: string; claim_id: string }>
   | Readonly<{ type: 'inventory/claim_settled'; claim_id: string }>
   | Readonly<{ type: 'inventory/gear_crushed'; gear_ids: readonly string[]; claim_id: string }>
@@ -115,6 +119,14 @@ export type SessionInput =
       resolve: (recipient: Readonly<{ address: string; name: string }>) => void
       reject: (error: Readonly<Error>) => void
     }>
+
+/** The played character's row — the roster is the one truth about custody, and every door that
+ *  composes a chain transaction reads its kiosk pair from here. */
+export const selected_character = (session: Readonly<SessionState>): CharacterRow | null =>
+  session.characters.find(({ id }) => id === session.selected_character_id) ?? null
+
+export const character_custody = (character: Readonly<CharacterRow>) =>
+  Object.freeze({ kiosk: character.kiosk, ...(character.kiosk_cap ? { kiosk_cap: character.kiosk_cap } : {}) })
 
 export const initial_session_state = (): SessionState =>
   Object.freeze({
@@ -133,7 +145,6 @@ export const initial_session_state = (): SessionState =>
     friends: [],
     claims: [],
     giftcards: [],
-    listings: [],
     trades: [],
     selected_character_id: read_selected_character(),
     online: null,
@@ -208,7 +219,6 @@ const fold_packet = (session: SessionState, packet: Readonly<ServerPacket>): Ses
   if (packet.type === 'packet/friends') return Object.freeze({ ...session, friends: packet.friends })
   if (packet.type === 'packet/claims') return Object.freeze({ ...session, claims: packet.claims })
   if (packet.type === 'packet/giftcards') return Object.freeze({ ...session, giftcards: packet.giftcards })
-  if (packet.type === 'packet/listings') return Object.freeze({ ...session, listings: packet.listings })
   if (packet.type === 'packet/trades') return Object.freeze({ ...session, trades: packet.trades })
   if (packet.type === 'packet/shop_state')
     return Object.freeze({
@@ -231,8 +241,6 @@ const fold_packet = (session: SessionState, packet: Readonly<ServerPacket>): Ses
     })
   if (packet.type === 'packet/trade_destroyed')
     return Object.freeze({ ...session, trades: session.trades.filter(({ id }) => id !== packet.trade) })
-  if (packet.type === 'packet/market_delisted' || packet.type === 'packet/listing_sold')
-    return Object.freeze({ ...session, listings: session.listings.filter(({ id }) => id !== packet.object) })
   if (packet.type === 'packet/error')
     return packet.id === undefined ? Object.freeze({ ...session, link_error: packet.reason }) : session
   return session
@@ -486,15 +494,34 @@ const observe = ({ events, dispatch, signal, get_state }: Parameters<NonNullable
   })
   // world chat rides the link; the local echo is the speaker's own chat line
   events.on('chat/speak', ({ text }) => {
-    link?.send({ type: 'packet/chat', text })
+    const character_id = get_state().session.selected_character_id
+    if (character_id) link?.send({ type: 'packet/chat', character_id, text })
   })
   // a fight watch arms the server-side stream (roster + lifecycle) while a modal stands open
   events.on('fight/watch', ({ fight }) => {
-    link?.send({ type: 'packet/spectate', fight })
+    const character_id = get_state().session.selected_character_id
+    if (character_id) link?.send({ type: 'packet/spectate', character_id, fight })
   })
   events.on('character/select', ({ character_id }) => remember_selected_character(character_id))
   observe_failure_toasts({ events, dispatch, get_state, signal })
+  const sync_market_subscription = (state: AppState, previous: AppState): void => {
+    const market_open = state.navigation.page === 'marketplace'
+    const market_was_open = previous.navigation.page === 'marketplace'
+    const link_became_ready = state.session.link_status === 'ready' && previous.session.link_status !== 'ready'
+    if (
+      !link ||
+      (!link_became_ready &&
+        market_open === market_was_open &&
+        (!market_open || state.marketplace.observation === previous.marketplace.observation))
+    )
+      return
+    link.send({
+      type: 'packet/market_observe',
+      observation: market_open ? state.marketplace.observation : null,
+    })
+  }
   events.on('STATE_UPDATED', (state, previous) => {
+    sync_market_subscription(state, previous)
     if (state.session.auth_request !== previous.session.auth_request) {
       const request = state.session.auth_request
       if (request === 'restore' && auth) {
@@ -523,23 +550,24 @@ const observe = ({ events, dispatch, signal, get_state }: Parameters<NonNullable
     }
     if (state.session.wallet !== previous.session.wallet && !state.session.wallet)
       forget_session(previous.session.wallet)
-    const ready_now = state.session.link_status === 'ready'
-    const selection_changed = state.session.selected_character_id !== previous.session.selected_character_id
-    const became_ready = ready_now && previous.session.link_status !== 'ready'
-    const character_id = state.session.selected_character_id
-    if (link && character_id && (selection_changed || became_ready)) link.send({ type: 'packet/embody', character_id })
   })
   // ── the multiplayer heartbeat: pose → packet/position (chain space), throttled; the
   //    server's speed law prices the travel ──
   const POSITION_SEND_MS = 50
-  let last_position = { at_ms: 0, sent: null as Readonly<{ x: number; y: number; z: number; riding: boolean }> | null }
+  const last_positions = new Map<
+    string,
+    Readonly<{ at_ms: number; sent: Readonly<{ x: number; y: number; z: number; riding: boolean }> }>
+  >()
   const unsubscribe_pose = subscribe_pose(() => {
     const pose = read_pose()
     if (!pose || !link) return
     const state = get_state()
-    if (state.session.link_status !== 'ready' || !state.session.selected_character_id) return
+    if (state.session.link_status !== 'ready' || !pose_matches_character(pose, state.session.selected_character_id))
+      return
+    const { character_id } = pose
     const now = Date.now()
-    if (now - last_position.at_ms < POSITION_SEND_MS) return
+    const last_position = last_positions.get(character_id)
+    if (last_position && now - last_position.at_ms < POSITION_SEND_MS) return
     // FRACTIONAL coords on purpose: rounding would quantize a smooth walk into 1-block hops
     // whose instantaneous speed spikes past the server's authored ceiling (presence is
     // off-chain data — only real chain moves need integer coordinates).
@@ -551,23 +579,28 @@ const observe = ({ events, dispatch, signal, get_state }: Parameters<NonNullable
     }
     // continuous only WHILE MOVING — a standing player is silent, the server keeps its last
     // fact; a mount toggle forces ONE packet so the state change never waits on a step
-    const { sent } = last_position
+    const sent = last_position?.sent ?? null
     if (sent && sent.riding === next.riding && Math.hypot(sent.x - next.x, sent.y - next.y, sent.z - next.z) < 0.25)
       return
-    last_position = { at_ms: now, sent: next }
-    link.send({ type: 'packet/position', ...next })
+    last_positions.set(character_id, Object.freeze({ at_ms: now, sent: next }))
+    link.send({ type: 'packet/position', character_id, ...next })
   })
   signal.addEventListener('abort', unsubscribe_pose)
 
-  // duel signals ride the link like chat — the duel module owns the state, this owns the socket
-  events.on('duel/signal', ({ to, kind }) => {
-    link?.send({ type: 'packet/duel', to, kind })
-  })
-
   events.on('fight/input', ({ input, origin }) => {
     const state = get_state()
+    // The courtesy lane carries the drafted move/cast/strike only. End Turn is the PTB commit
+    // boundary; relaying it early would hand peers a turn the chain has not accepted yet.
+    if (input.type === 'end_turn') return
     const action = fight_action_to_wire(input)
-    if (origin !== 'local' || state.fight.mode !== 'remote' || !state.fight.checkpoint || !action) return
+    if (
+      origin !== 'local' ||
+      state.fight.mode !== 'remote' ||
+      state.fight.transaction_pending ||
+      !state.fight.checkpoint ||
+      !action
+    )
+      return
     link?.send({ type: 'packet/fight_action', fight: state.fight.checkpoint.contract.id, action })
   })
   signal.addEventListener('abort', () => {

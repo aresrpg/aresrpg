@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
+/* eslint-disable functional/immutable-data -- this external-store adapter owns and mutates its private scene feed. */
 // THE GAME'S LIVE SCENE. The engine module owns the one world the game runs in and publishes it
 // here so the app shell can hand it to the fight surface. This is a lane between exactly TWO
 // parties, not an ambient lookup: nothing reads a scene from here to draw into it. Every surface
@@ -13,6 +14,8 @@
 // else"). The scene carries ONE entity list, so two writers would clobber each other frame by
 // frame. Instead a single source holds it at a time and the other's writes are dropped at this
 // door — the rule is mechanical here, not a discipline every caller has to remember.
+// The overworld has more than one INHABITANT (players, and the zone's mobs), but it is still one
+// SOURCE: the engine module composes them and writes once.
 
 import type { EntityRender } from '@aresrpg/engine'
 
@@ -38,8 +41,11 @@ export type SceneHandle = Pick<
   | 'set_quality'
 >
 
-/** The two surfaces that populate the scene's entity list. Never both. */
-export type EntitySource = 'presence' | 'fight'
+/** The two surfaces that populate the scene's entity list. Never both. `world` is everything
+ *  that lives in the overworld — the other players AND the zone's own mobs, composed by the
+ *  engine module before it writes. They share a source because they share the list: two writers
+ *  under one owner would clobber each other exactly like two owners would. */
+export type EntitySource = 'world' | 'fight'
 
 type Feed = {
   scene: SceneHandle | null
@@ -47,7 +53,7 @@ type Feed = {
   listeners: Set<() => void>
 }
 
-const feed: Feed = { scene: null, owner: 'presence', listeners: new Set() }
+const feed: Feed = { scene: null, owner: 'world', listeners: new Set() }
 
 const announce = (): void => {
   for (const listener of feed.listeners) listener()
@@ -59,7 +65,7 @@ export const publish_scene = (scene: SceneHandle | null): void => {
   feed.scene = scene
   // a torn-down world takes its ownership with it: leaving the list claimed by a fight that no
   // longer exists would silence presence for the whole of the next world
-  if (!scene) feed.owner = 'presence'
+  if (!scene) feed.owner = 'world'
   announce()
 }
 
@@ -71,13 +77,13 @@ export const subscribe_scene = (listener: () => void): (() => void) => {
 export const read_scene = (): SceneHandle | null => feed.scene
 
 /** Take the entity list. The previous owner's entities are cleared in the same breath, so the
- *  world's other players are gone the instant a board mounts rather than lingering a frame. */
+ *  world's players and mobs are gone the instant a board mounts rather than lingering a frame. */
 export const claim_scene_entities = (source: EntitySource): void => {
   if (feed.owner === source) return
   feed.owner = source
   feed.scene?.set_entities(Object.freeze([]))
   // the handover is announced: the new owner has just been emptied and has to repopulate, and
-  // presence rebuilds only on a delta — without this, walking out of a fight leaves a still
+  // the world rebuilds only on a delta — without this, walking out of a fight leaves a still
   // crowd invisible until somebody happens to move
   announce()
 }

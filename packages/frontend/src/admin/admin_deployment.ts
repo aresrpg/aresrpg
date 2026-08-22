@@ -70,6 +70,15 @@ export const package_upgrade_steps = (
   })
 }
 
+/** Upgrade finality and package availability can reach different RPC nodes at different times.
+ * The dependent transaction targets the new package, so wait briefly without retrying a
+ * transaction that may already have executed. */
+export const PACKAGE_PROPAGATION_MS = 6_000
+export const wait_for_package_propagation = (
+  wait: (milliseconds: number) => Promise<void> = (milliseconds) =>
+    new Promise((resolve) => setTimeout(resolve, milliseconds))
+): Promise<void> => wait(PACKAGE_PROPAGATION_MS)
+
 // eslint-disable-next-line complexity -- The reducer routes one discriminated deployment lifecycle without nested effects.
 export const reduce_admin_deployment = (admin: AdminState, input: AppInput): AdminState | null => {
   const update = (deployment: AdminDeploymentState): AdminState =>
@@ -416,6 +425,8 @@ export const observe_admin_deployment = ({
           })
           math_package = project_package_id(math_result.receipt)
           log(`Math package upgraded · ${receipt_digest(math_result.receipt)}`, 'success')
+          log('Waiting for the math package to propagate across RPC nodes…')
+          await wait_for_package_propagation()
           saved = await save({ math_package, math_package_original: math_original })
         } else log(`Math package already upgraded for version ${target_version}; resuming.`, 'success')
 
@@ -447,6 +458,10 @@ export const observe_admin_deployment = ({
           saved = await save({ package: package_id, package_original: game_original })
         } else log(`Game package already upgraded for version ${target_version}; resuming.`, 'success')
 
+        // Also wait on a resumed run: the previous attempt may have upgraded successfully and
+        // failed only because activation reached a lagging resolver node.
+        log('Waiting for the game package to propagate before activation…')
+        await wait_for_package_propagation()
         log('Activating the new game version; confirm the wallet transaction…')
         const activation = await connected.set_game_paused({
           package_id,

@@ -5,7 +5,7 @@
 // watch (packet/spectate) so the roster hydrates and updates live; joining or spectating is
 // then only a frontend commit over a stream that is already flowing.
 
-/* eslint-disable functional/prefer-immutable-types -- React lifecycle boundary. */
+/* eslint-disable functional/immutable-data, functional/prefer-immutable-types -- React refs and lifecycle events are mutable platform boundaries. */
 import { Lock, Swords } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
@@ -14,8 +14,10 @@ import { content_catalog } from '../content/catalog.ts'
 import type { AppCopy } from '../i18n/copy.ts'
 import { useFightPrompt } from '../game/core/fight_prompt_feed.ts'
 import { dispatch_app, useAppStore } from '../store.ts'
+import { selected_character } from '../modules/session.ts'
 
 import { ModalFrame } from './ModalFrame.tsx'
+import { PromptChip, PromptKey, split_key_template } from './PromptChip.tsx'
 
 const ACCESS_GROUP = 1
 const PLACEMENT_WINDOW_MS = 60_000
@@ -55,25 +57,21 @@ export const FightPrompt = ({ copy }: Readonly<{ copy: AppCopy }>) => {
     : spectate_only
       ? copy.world_hud.fight_press_spectate
       : copy.world_hud.fight_press_join
-  const [before, after] = template.split('{{key}}')
+  const [before, after] = split_key_template(template)
   return (
     <>
       {createPortal(
-        <div className="pointer-events-none -translate-y-full">
-          <div className="flex items-center gap-1.5 rounded-xl border border-white/12 bg-[#0a0a0f]/82 px-3 py-1.5 text-[10px] tracking-[0.18em] whitespace-nowrap text-[#e8e4dc] uppercase shadow-[0_4px_18px_rgba(0,0,0,0.45)] backdrop-blur-md">
-            {locked ? (
-              <Lock className="text-[#ffca57]" size={13} />
-            ) : (
-              <>
-                {before?.trim()}
-                <kbd className="inline-grid min-w-[18px] place-items-center rounded-[5px] border border-white/25 border-b-2 border-b-white/40 bg-white/10 px-1.5 py-0.5 font-mono text-[10px] leading-none font-semibold text-[#f5d0a9] shadow-[inset_0_-1px_0_rgba(0,0,0,0.5)]">
-                  F
-                </kbd>
-                {after?.trim()}
-              </>
-            )}
-          </div>
-        </div>,
+        <PromptChip>
+          {locked ? (
+            <Lock className="text-[#ffca57]" size={13} />
+          ) : (
+            <>
+              {before?.trim()}
+              <PromptKey label="F" />
+              {after?.trim()}
+            </>
+          )}
+        </PromptChip>,
         prompt.root
       )}
       {open_id ? <FightModal close={() => set_open_id(null)} copy={copy} fight_id={open_id} /> : null}
@@ -137,7 +135,7 @@ const FightModal = ({ close, copy, fight_id }: Readonly<{ close: () => void; cop
   const row = useAppStore((state) => state.world.fights[fight_id])
   const wallet = useAppStore((state) => state.session.wallet)
   const selected_character_id = useAppStore((state) => state.session.selected_character_id)
-  const characters = useAppStore((state) => state.session.characters)
+  const own_row = useAppStore((state) => selected_character(state.session))
   const [, force_tick] = useState(0)
   // a COMMIT (join/spectate) hands the session over to the board — the teardown below must not
   // then disarm the very stream the committed surface lives on
@@ -191,13 +189,13 @@ const FightModal = ({ close, copy, fight_id }: Readonly<{ close: () => void; cop
 
   const join = (team: number): void => {
     if (!wallet || !selected_character_id) return
-    const own_row = characters.find(({ id }) => id === selected_character_id)
     const custody = own_row ? { kiosk: own_row.kiosk, kiosk_cap: own_row.kiosk_cap } : undefined
     void wallet.fight
       .join({ fight: fight_id, character_id: selected_character_id, custody, team, access: 1 })
       .then(() => {
+        // no mount dispatch: the seat we just took mounts the board on its own checkpoint
+        // (fight.ts derives it). This click only hands the armed stream over to the board.
         committed.current = true
-        dispatch_app({ type: 'fight/mounted', mounted: true })
         close()
       })
       .catch((error: unknown) => console.error('The fight join failed.', error))

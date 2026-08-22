@@ -46,12 +46,6 @@ export type BootstrapDeployment = Readonly<{
 
 export const DISPLAY_REGISTRY_ID = '0xd'
 
-/// Deployment transactions are NOT constant-cost: a publish carries the whole compiled package
-/// as inputs and pays its storage. The game doors' 0.1 SUI law would starve them, so the
-/// deployment doors ride the protocol's MAX transaction budget instead — unspent gas returns,
-/// only actual compute+storage commits, and nothing deployment-sized can be refused for budget.
-export const DEPLOYMENT_GAS_BUDGET_MIST = 50_000_000_000n
-
 const changed_objects = (receipt: DeploymentReceipt) => receipt.Transaction?.effects?.changedObjects ?? []
 const type_entries = (receipt: DeploymentReceipt): readonly (readonly [string, string])[] =>
   Object.entries(receipt.Transaction?.objectTypes ?? {})

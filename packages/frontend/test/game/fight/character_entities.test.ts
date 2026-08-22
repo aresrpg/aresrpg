@@ -9,6 +9,7 @@ import {
   character_entity_sources,
   fight_character_entity_sources,
 } from '../../../src/game/fight/character_entity_sources.ts'
+import { fight_mob_entity_sources } from '../../../src/game/fight/mob_entity_sources.ts'
 
 describe('fight character projection', () => {
   test('projects every seat — placed simulator characters and checkpoint players alike', () => {
@@ -76,6 +77,29 @@ describe('fight character projection', () => {
     ]
 
     expect(fight_character_entity_sources(checkpoint, [], 0n)[0]?.visual_effect).toEqual({ kind: 'invisibility' })
-    expect(fight_character_entity_sources(checkpoint, [], 1n)[0]?.visual_effect).toBeUndefined()
+    expect(fight_character_entity_sources(checkpoint, [], 1n)).toEqual([])
+    expect(fight_character_entity_sources(checkpoint, [], null)).toEqual([])
+  })
+
+  test('dead fighters never become model sources again after a remount', () => {
+    const source = create_character_source({ classe: 'senshi', level: 1n })
+    const checkpoint = structuredClone(
+      create_fight({
+        mode: 'local',
+        setup: {
+          players: [
+            { character: 'mine', owner: 'local', team: 0n, hp: 55n, source },
+            { character: 'other', owner: 'other', team: 1n, hp: 55n, source },
+          ],
+          mobs: [],
+        },
+      }).state()
+    )
+    checkpoint.contract.fighters[0]!.dead = true
+    checkpoint.contract.fighters[1]!.kind = { type: 'mob', snapshot: { mob_type: 'razmo' } } as never
+    checkpoint.contract.fighters[1]!.dead = true
+
+    expect(fight_character_entity_sources(checkpoint, [])).toEqual([])
+    expect(fight_mob_entity_sources(checkpoint)).toEqual([])
   })
 })

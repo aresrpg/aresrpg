@@ -149,7 +149,7 @@ public(package) fun scribe(
       rune_stat, rune_value, rune_weight, FORGE_LEVEL, state.puits, &mut rng,
     );
 
-    item::set_stats(gear, stats.apply_raw(&forge::new_stats(&res)));
+    item::ss(gear, stats.apply_raw(&forge::new_stats(&res)));
 
     let succeeded = forge::outcome(&res) != forge::outcome_cf();
     let mut apps = state.apps;
@@ -228,7 +228,7 @@ public(package) fun redeem_rune(
   let qty = claim.owed[idx];
   if (qty == 0) return;
   *&mut claim.owed[idx] = 0;
-  let stack = item::mint_plain(template, qty as u32, ctx); // runes are stackable + stat-less
+  let stack = item::mp(template, qty as u32, ctx); // runes are stackable + stat-less
   item::deposit(kiosk, cap, item_policy, existing, stack);
 }
 

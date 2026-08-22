@@ -127,6 +127,18 @@ export const fold_character_receipt = (session: SessionState, input: AppInput): 
       ...session,
       inventory: Object.freeze(with_item_spent(session.inventory, input.rune_item_id)),
     })
+  if (input.type === 'character/world_joined')
+    // the star gate: the receipt's own WorldJoined event (world + arrival AT the destination's
+    // portal) — the checkpoint timestamp stays the stream's truth, never a local invention
+    return with_character(session, input.character_id, (character) =>
+      Object.freeze({
+        ...character,
+        world: input.joined.world,
+        checkpoint_world: input.joined.world,
+        x: input.joined.x,
+        z: input.joined.z,
+      })
+    )
   return fold_inventory_receipt(session, input)
 }
 

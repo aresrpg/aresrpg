@@ -8,7 +8,14 @@ import { registerSW } from 'virtual:pwa-register'
  *  then swap and reload the app on their own. */
 const UPDATE_CHECK_MS = 60_000
 
-export function register_service_worker(): void {
+export async function register_service_worker(): Promise<void> {
+  // A production worker previously registered on localhost can keep serving an old protocol
+  // bundle over Vite. Development is live source: remove every inherited worker before boot.
+  if (import.meta.env.DEV) {
+    const registrations = await globalThis.navigator?.serviceWorker?.getRegistrations()
+    await Promise.all((registrations ?? []).map((registration) => registration.unregister()))
+    return
+  }
   registerSW({
     immediate: true,
     onRegisteredSW: (_url, registration) => {

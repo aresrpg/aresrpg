@@ -107,6 +107,7 @@ export type AppCopy = Readonly<{
   admin_page: Readonly<Record<string, string>>
   shop_page: Readonly<Record<string, unknown>>
   airdrop_page: Readonly<Record<string, unknown>>
+  marketplace_page: Readonly<Record<string, unknown>>
   characters_page: Readonly<Record<string, unknown>>
   settings_page: Readonly<Record<string, string>>
   demo_page: Readonly<Record<string, string>>

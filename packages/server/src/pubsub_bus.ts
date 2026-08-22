@@ -26,8 +26,8 @@ export type BusRedis = {
   setex: (key: string, seconds: number, value: string) => Promise<unknown>
   get: (key: string) => Promise<string | null>
   scan: (cursor: string, match: 'MATCH', pattern: string, count: 'COUNT', size: number) => Promise<[string, string[]]>
-  // eslint-disable-next-line functional/prefer-immutable-types -- mirrors ioredis' mutable-array signature
   mget: (keys: string[]) => Promise<(string | null)[]>
+  zrevrange: (key: string, start: number, stop: number) => Promise<string[]>
   disconnect: () => void
 }
 
@@ -44,6 +44,8 @@ export type Bus = {
 export type GraphBus = Omit<Bus, 'publish'> & {
   /** Latest checkpoint the bound indexer committed to both graph and its redis. */
   indexed_checkpoint: () => Promise<number | null>
+  /** Immutable retained sale rows for one player, newest first. */
+  sales_history: (address: string) => Promise<readonly string[]>
 }
 
 export type MeshBus = Bus & {
@@ -58,13 +60,22 @@ export type MeshBus = Bus & {
 /** The pair every player context carries — chain truth and player ephemera, never mixed. */
 export type Pubsub = { graph: GraphBus; mesh: MeshBus }
 
-type BusWires = Readonly<{ subscriber: BusRedis; publisher: BusRedis }>
+type BusWires = Readonly<{ subscriber: BusRedis; publisher: BusRedis; unsubscribe_grace_ms?: number }>
 
-const create_bus = ({ subscriber, publisher }: BusWires): Bus & { closed: () => boolean } => {
+/** Legacy synchronizer law: movement removes demand immediately, but Redis subscriptions cool
+ * down later. This breaks the packet-rate → Redis-command coupling at zone boundaries. */
+const UNSUBSCRIBE_GRACE_MS = 10_000
+
+const create_bus = ({
+  subscriber,
+  publisher,
+  unsubscribe_grace_ms = UNSUBSCRIBE_GRACE_MS,
+}: BusWires): Bus & { closed: () => boolean } => {
   const emitter = new EventEmitter()
   emitter.setMaxListeners(0)
   const refs = new Map<string, number>()
   const pending_subscriptions = new Map<string, Promise<unknown>>()
+  const pending_unsubscriptions = new Map<string, ReturnType<typeof setTimeout>>()
   let closed = false
 
   subscriber.on('message', (channel: string, raw: string) => {
@@ -80,6 +91,13 @@ const create_bus = ({ subscriber, publisher }: BusWires): Bus & { closed: () => 
     closed: () => closed,
     /** Refcounted: the first watcher SUBSCRIBEs, the rest ride the same wire. */
     subscribe: async (channel) => {
+      const pending_unsubscribe = pending_unsubscriptions.get(channel)
+      if (pending_unsubscribe) {
+        clearTimeout(pending_unsubscribe)
+        pending_unsubscriptions.delete(channel)
+        refs.set(channel, 1)
+        return
+      }
       const count = refs.get(channel) ?? 0
       refs.set(channel, count + 1)
       if (count > 0) {
@@ -91,11 +109,9 @@ const create_bus = ({ subscriber, publisher }: BusWires): Bus & { closed: () => 
       try {
         await pending
       } catch (error) {
-        // a refused SUBSCRIBE must not strand the refcount — later callers would silently
-        // believe the wire is live
-        const held = refs.get(channel) ?? 0
-        if (held <= 1) refs.delete(channel)
-        else refs.set(channel, held - 1)
+        // every caller sharing this pending wire failed together; no phantom reference may
+        // convince the next caller that Redis is subscribed
+        refs.delete(channel)
         throw error
       } finally {
         pending_subscriptions.delete(channel)
@@ -106,7 +122,14 @@ const create_bus = ({ subscriber, publisher }: BusWires): Bus & { closed: () => 
       const count = refs.get(channel) ?? 0
       if (count <= 1) {
         refs.delete(channel)
-        await subscriber.unsubscribe(channel)
+        if (pending_unsubscriptions.has(channel)) return
+        pending_unsubscriptions.set(
+          channel,
+          setTimeout(() => {
+            pending_unsubscriptions.delete(channel)
+            if (!refs.has(channel)) void subscriber.unsubscribe(channel)
+          }, unsubscribe_grace_ms)
+        )
       } else refs.set(channel, count - 1)
     },
     publish: async (channel, payload) => {
@@ -114,6 +137,8 @@ const create_bus = ({ subscriber, publisher }: BusWires): Bus & { closed: () => 
     },
     close: () => {
       closed = true
+      pending_unsubscriptions.forEach(clearTimeout)
+      pending_unsubscriptions.clear()
       subscriber.disconnect()
       publisher.disconnect()
     },
@@ -123,9 +148,10 @@ const create_bus = ({ subscriber, publisher }: BusWires): Bus & { closed: () => 
 export const create_graph_bus = ({
   subscriber,
   publisher,
+  unsubscribe_grace_ms,
   on_lost,
 }: BusWires & Readonly<{ on_lost: (reason: string) => void }>): GraphBus => {
-  const bus = create_bus({ subscriber, publisher })
+  const bus = create_bus({ subscriber, publisher, unsubscribe_grace_ms })
   const lost = (reason: string) => (): void => {
     if (!bus.closed()) on_lost(reason)
   }
@@ -134,6 +160,7 @@ export const create_graph_bus = ({
   const { closed: _closed, publish: _publish, ...doors } = bus
   return {
     ...doors,
+    sales_history: (address) => publisher.zrevrange(`sales:${address}`, 0, 499),
     indexed_checkpoint: async () => {
       try {
         return parse_indexed_checkpoint(await publisher.get(INDEXED_CHECKPOINT_KEY))
@@ -145,8 +172,8 @@ export const create_graph_bus = ({
   }
 }
 
-export const create_mesh_bus = ({ subscriber, publisher }: BusWires): MeshBus => {
-  const { closed: _closed, ...doors } = create_bus({ subscriber, publisher })
+export const create_mesh_bus = ({ subscriber, publisher, unsubscribe_grace_ms }: BusWires): MeshBus => {
+  const { closed: _closed, ...doors } = create_bus({ subscriber, publisher, unsubscribe_grace_ms })
   /** one SCAN per pod per window, whatever the connection count */
   const online_cache = { value: 0, at_ms: 0 }
   return {
@@ -184,20 +211,34 @@ export type Watcher = {
  *  (protocol.ts law), the map keeps one forward per channel, teardown walks `watched()`. */
 export const create_watcher = ({ graph, mesh }: Pubsub): Watcher => {
   const forwards = new Map<string, (payload: never) => void>()
+  const readiness = new Map<string, Promise<void>>()
   const bus_of = (channel: string): Omit<Bus, 'publish'> => (is_indexer_channel(channel) ? graph : mesh)
   return {
     watch: async (channel, forward) => {
-      if (forwards.has(channel)) return
+      const existing = readiness.get(channel)
+      if (existing) return existing
       forwards.set(channel, forward)
       bus_of(channel).emitter.on(channel, forward as (payload: unknown) => void)
-      await bus_of(channel).subscribe(channel)
+      const ready = bus_of(channel)
+        .subscribe(channel)
+        .catch((error) => {
+          readiness.delete(channel)
+          forwards.delete(channel)
+          bus_of(channel).emitter.off(channel, forward as (payload: unknown) => void)
+          throw error
+        })
+      readiness.set(channel, ready)
+      return ready
     },
     unwatch: (channel) => {
       const forward = forwards.get(channel)
       if (!forward) return
+      readiness.delete(channel)
       forwards.delete(channel)
       bus_of(channel).emitter.off(channel, forward as (payload: unknown) => void)
-      void bus_of(channel).unsubscribe(channel)
+      void bus_of(channel)
+        .unsubscribe(channel)
+        .catch((error: Error) => log.error({ channel, error: error.message }, 'unsubscribe failed'))
     },
     has: (channel) => forwards.has(channel),
     watched: () => [...forwards.keys()],

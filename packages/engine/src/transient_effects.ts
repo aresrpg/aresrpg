@@ -531,6 +531,17 @@ export const create_transient_effects = ({ scene, entities }: Readonly<{ scene: 
 
   return Object.freeze({
     create_warmup,
+    play_sword_impact: (feet: Vec3): void => {
+      const profile = FIGHT_VFX_PROFILES.earth
+      spawn_impact(
+        `fight-sword:${previous_tick}`,
+        new Vector3(feet[0], feet[1], feet[2]),
+        profile.color,
+        profile.accent,
+        profile.impact_size / 2,
+        profile.appearance
+      )
+    },
     play_jump_puff: (feet: Vec3): void => {
       const center = new Vector3(feet[0], feet[1] + 0.06, feet[2])
       spawn_dust(center)

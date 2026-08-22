@@ -51,6 +51,38 @@ const EManagedFight: u64 = 1103; // a managed fight (dungeon/kolizeum) joins/set
 const EDeleteWhileInDungeon: u64 = 1104; // delete_character: finish or abandon the run first
 const ENotOwnList: u64 = 1105; // create_kolizeum_friends: the FriendList is not the creator's own
 
+public fun split_stack(
+  kiosk: &mut Kiosk,
+  cap: &KioskOwnerCap,
+  policy: &TransferPolicy<Item>,
+  item_id: ID,
+  amount: u32,
+  version: &Version,
+  ctx: &mut TxContext,
+): ID {
+  version.assert_latest();
+  let source: &mut Item = kiosk.borrow_mut<Item>(cap, item_id);
+  let lot = source.split(amount, ctx);
+  let lot_id = object::id(&lot);
+  kiosk.lock(cap, policy, lot);
+  lot_id
+}
+
+public fun merge_stacks(
+  kiosk: &mut Kiosk,
+  cap: &KioskOwnerCap,
+  protected: &AresRPG_TransferPolicy<Item>,
+  target_id: ID,
+  source_id: ID,
+  version: &Version,
+  ctx: &mut TxContext,
+) {
+  version.assert_latest();
+  let source = protected.x(kiosk, cap, source_id, ctx);
+  let target: &mut Item = kiosk.borrow_mut<Item>(cap, target_id);
+  target.merge(source);
+}
+
 /// Mint a character for exactly 1 SUI, join it to the first world, and LOCK it into the
 /// sender's personal kiosk — one act. A character is never world-less and never wallet-loose:
 /// it is born inside the market constitution (personal-kiosk, royalty, lock rules).
@@ -164,7 +196,7 @@ public fun equip_item(
   ctx: &mut TxContext,
 ) {
   version.assert_latest();
-  let item = protected.extract_from_kiosk(kiosk, cap, item_id, ctx);
+  let item = protected.x(kiosk, cap, item_id, ctx);
   // A PET folds its POWER-scaled stats (not the raw roll). The ×1.5 travel boost is NOT set
   // here — it derives live in `prove_move` (both-end rule), so no flag can go stale.
   let is_pet = item.category() == b"pet".to_string();
@@ -222,7 +254,7 @@ public fun delete_character(
   ctx: &mut TxContext,
 ) {
   version.assert_latest();
-  let chr: Character = protected.extract_from_kiosk(kiosk, cap, character_id, ctx);
+  let chr: Character = protected.x(kiosk, cap, character_id, ctx);
   assert!(!equipment::has_any_equipped(&chr), EDeleteWhileEquipped);
   assert!(!gathering::has_fired_verdict(&chr), EDeleteWhileAmbushed);
   assert!(!dungeon::has_run(&chr), EDeleteWhileInDungeon);
@@ -260,12 +292,14 @@ public fun launch_fight(build: FightBuild, clock: &Clock, ctx: &mut TxContext) {
   fight::launch(build, clock, ctx)
 }
 
-/// Challenge a DUEL at your proven spot — side B waits for an acceptor. ENTRY: `&Random`
-/// law (the board rolls fresh). Duels never touch persistent hp, xp, or loot.
+/// Challenge a DUEL at your proven spot — side B is RESERVED for `target`, so the challenge
+/// itself is the invitation and no bystander can take that seat. ENTRY: `&Random` law (the
+/// board rolls fresh). Duels never touch persistent hp, xp, or loot.
 entry fun challenge_duel(
   kiosk: &mut Kiosk,
   personal: &PersonalKioskCap,
   character_id: ID,
+  target: ID,
   x: u32,
   z: u32,
   access: u8, // 0 public · 1 group-only
@@ -279,7 +313,7 @@ entry fun challenge_duel(
   let cap = personal_kiosk::borrow(personal);
   version.assert_latest();
   let mut gen = r.new_generator(ctx);
-  fight::challenge(protected, kiosk, cap, character_id, x, z, access, &mut gen, clock, ctx);
+  fight::challenge(protected, kiosk, cap, character_id, target, x, z, access, &mut gen, clock, ctx);
 }
 
 /// Join EITHER side of a fight during placement (walk proven, kiosk exit, custody). Any

@@ -87,6 +87,7 @@ const ENotAMob: u64 = 1728; // internal: a mob accessor called on a player fight
 
 const ACCESS_PUBLIC: u8 = 0; // anyone joins the side
 const ACCESS_GROUP: u8 = 1; // only the side-opener's party joins (check lands with social)
+const ACCESS_INVITED: u8 = 2; // RESERVED: only the character named as this side's opener
 const ACCESS_UNSET: u8 = 255; // no player opened the side yet (a duel's empty seat, a mob side)
 
 const BASE_AP: u64 = 6; // the 1.29 base — gear `action` shifts it
@@ -356,7 +357,7 @@ public(package) fun engage(
   };
   assert!(found, ENoSuchGroup);
 
-  let mut chr = protected.extract_from_kiosk(kiosk, cap, character_id, ctx);
+  let mut chr = protected.x(kiosk, cap, character_id, ctx);
   let current = world::prove_move(&mut chr, x, z, clock);
   assert!(current == w.name(), EWrongWorld);
 
@@ -398,7 +399,7 @@ public(package) fun dungeon_build(
   };
   // no travel proof: the run's character is already staged at the portal (rooted) — the
   // dungeon module owns the run-state, and a rooted prove_move would refuse.
-  let mut chr = protected.extract_from_kiosk(kiosk, cap, character_id, ctx);
+  let mut chr = protected.x(kiosk, cap, character_id, ctx);
   let board = combat_grid::generate(board_seed, 0);
   assert!(pending.length() <= board.start_cells_b().length(), EBoardTooSmall);
   assert!(!board.start_cells_a().is_empty(), EBoardTooSmall);
@@ -494,13 +495,16 @@ fun snf(
 // ╔════════════════ [ Challenge — the duel door ] ═════════════════════════════ ]
 
 /// Open a DUEL at your proven spot: the board rolls from fresh entropy, side A seats you
-/// under your access setting, side B waits empty — the first acceptor opens it with theirs.
+/// under your access setting, and side B is RESERVED for `target` — the challenge IS the
+/// invitation, so nobody else can take that seat and the invited player learns of the duel
+/// from the fight itself (no off-chain word decides who a fight belongs to).
 /// No mobs, no potato; PvP fights never touch persistent hp, xp, or loot.
 public(package) fun challenge(
   protected: &AresRPG_TransferPolicy<Character>,
   kiosk: &mut Kiosk,
   cap: &KioskOwnerCap,
   character_id: ID,
+  target: ID,
   x: u32,
   z: u32,
   access: u8,
@@ -509,17 +513,18 @@ public(package) fun challenge(
   ctx: &mut TxContext,
 ) {
   assert!(access <= ACCESS_GROUP, EBadTeam);
-  let mut chr = protected.extract_from_kiosk(kiosk, cap, character_id, ctx);
+  let mut chr = protected.x(kiosk, cap, character_id, ctx);
   let world = world::prove_move(&mut chr, x, z, clock);
   let board = combat_grid::generate(gen.generate_u32() as u64, 0);
   assert!(!board.start_cells_a().is_empty() && !board.start_cells_b().is_empty(), EBoardTooSmall);
   let fighter = pf(&mut chr, ctx.sender(), 0, board.start_cells_a()[0], clock);
-  // side B (ACCESS_UNSET) waits for the acceptor to open it with their setting. A plain duel
-  // is NOT managed — it settles through the raw doors (consequence-free); kolizeum has its own.
+  // side B is RESERVED for the challenged character (ACCESS_INVITED): its join door admits
+  // that character and nobody else. A plain duel is NOT managed — it settles through the raw
+  // doors (consequence-free); kolizeum has its own.
   let _ = snf(
     world, x, z, board,
-    access, ACCESS_UNSET,
-    option::some(character_id), option::none(),
+    access, ACCESS_INVITED,
+    option::some(character_id), option::some(target),
     vector[fighter], chr, option::none(), false, false, clock, ctx,
   );
 }
@@ -542,7 +547,7 @@ public(package) fun kolizeum_birth(
   ctx: &mut TxContext,
 ): ID {
   assert!(access <= ACCESS_GROUP, EBadTeam);
-  let mut chr = protected.extract_from_kiosk(kiosk, cap, character_id, ctx);
+  let mut chr = protected.x(kiosk, cap, character_id, ctx);
   let board = combat_grid::generate(board_seed, 0);
   assert!(!board.start_cells_a().is_empty() && !board.start_cells_b().is_empty(), EBoardTooSmall);
   let fighter = pf(&mut chr, ctx.sender(), 0, board.start_cells_a()[0], clock);
@@ -576,7 +581,7 @@ public(package) fun ambush(
   clock: &Clock,
   ctx: &mut TxContext,
 ) {
-  let mut chr = protected.extract_from_kiosk(kiosk, cap, character_id, ctx);
+  let mut chr = protected.x(kiosk, cap, character_id, ctx);
   let world = world::prove_move(&mut chr, x, z, clock);
   let board = combat_grid::generate(board_seed, 0);
   assert!(!board.start_cells_a().is_empty() && !board.start_cells_b().is_empty(), EBoardTooSmall);
@@ -615,8 +620,8 @@ public(package) fun join(
 ) {
   jg(fight, team);
   assert!(access <= ACCESS_GROUP, EBadTeam);
-  if (pc(fight, team) == 0) {
-    // opening the side — the first player's setting AND identity become its rule
+  if (cs(fight, team, character_id)) {
+    // the side was unclaimed — this player's setting AND identity become its rule
     if (team == 0) {
       fight.access_a = access;
       fight.opener_a = option::some(character_id);
@@ -624,12 +629,30 @@ public(package) fun join(
       fight.access_b = access;
       fight.opener_b = option::some(character_id);
     };
-  } else {
-    // a public side lets anyone in; a group side needs `join_grouped` with the party proof
-    let side_access = if (team == 0) fight.access_a else fight.access_b;
-    assert!(side_access == ACCESS_PUBLIC, EGroupOnly);
   };
   a1(fight, protected, kiosk, cap, character_id, team, travel, clock, ctx);
+}
+
+// claims_side
+/// THE ONE RULE OF WHO MAY TAKE A SIDE — the side's ACCESS decides, never its population.
+/// Returns true when the side is unclaimed and this joiner writes its rule; aborts when the
+/// standing rule refuses them. Reading the crowd instead (`pc == 0`) let a bystander take a
+/// duel's reserved seat, and let a side whose last player forfeited be re-opened under a
+/// stranger's setting.
+fun cs(fight: &Fight, team: u8, character_id: ID): bool {
+  let side_access = if (team == 0) fight.access_a else fight.access_b;
+  // a RESERVED seat admits the character it names and nobody else, however full the side is
+  if (side_access == ACCESS_INVITED) {
+    let opener = if (team == 0) &fight.opener_a else &fight.opener_b;
+    assert!(opener.is_some() && *opener.borrow() == character_id, EGroupOnly);
+    return false
+  };
+  // an UNCLAIMED, EMPTY side is the one claimable case. A sealed side (ambush) is UNSET too,
+  // but never empty, so it stays shut.
+  if (side_access == ACCESS_UNSET && pc(fight, team) == 0) return true;
+  // a public side lets anyone in; a group side needs `join_grouped` with the party proof
+  assert!(side_access == ACCESS_PUBLIC, EGroupOnly);
+  false
 }
 
 /// Join a GROUP-gated side: both the joiner and the side's OPENER (its first player) must
@@ -687,7 +710,7 @@ fun a1(
   clock: &Clock,
   ctx: &mut TxContext,
 ) {
-  let mut chr = protected.extract_from_kiosk(kiosk, cap, character_id, ctx);
+  let mut chr = protected.x(kiosk, cap, character_id, ctx);
   if (travel) {
     let current = world::prove_move(&mut chr, fight.x, fight.z, clock);
     assert!(current == fight.world, EWrongWorld);
@@ -909,7 +932,7 @@ public(package) fun settle(
     fight.drops_rolled = true;
   };
   let mut chr: Character = dof::remove(&mut fight.id, FighterKey(fighter_idx));
-  if (team_won) character::add_experience(&mut chr, share);
+  if (team_won) character::ae(&mut chr, share);
   // a pure-PvP fight leaves persistent hp UNTOUCHED (ruling 2026-08-10: duels are
   // consequence-free — regen banked through the whole fight as if it never happened)
   if (hm(fight)) {
@@ -935,24 +958,39 @@ public(package) fun claim_drop(
   ctx: &mut TxContext,
 ) {
   afc(fight, fighter_idx, ctx);
-  let drops = &mut fight.fighters[fighter_idx].drops;
   let wanted = item::template_type(template);
-  let n = drops.length();
+  let stackable = content_rules::is_stackable(&item::template_category(template));
+  let drops = &mut fight.fighters[fighter_idx].drops;
+  let (count, total) = tmd(drops, &wanted);
+  assert!(count > 0, ENoSuchDrop);
   let mut i = 0;
-  while (i < n) {
-    if (drops[i].item_type == wanted) {
-      let row = drops.remove(i);
-      // clamp to 1 for a non-stackable template (audit 2026-08-10: a qty>1 row on a
-      // non-stackable item aborted `mint` forever, and the unclaimable drop bricked `close`)
-      let category = item::template_category(template);
-      let qty = if (content_rules::is_stackable(&category)) row.qty else 1;
-      let minted = item::mint(template, qty, gen, ctx);
-      item::deposit(kiosk, cap, policy, existing, minted);
-      return
-    };
+  if (stackable) item::deposit(kiosk, cap, policy, existing, item::mint(template, total, gen, ctx))
+  else while (i < count) {
+      // A non-stackable row mints one object whatever its authored qty. Every matching row
+      // is consumed in this ONE transaction, so duplicate loot types never need an inventory
+      // refresh between claims and can never create dust stacks.
+      item::deposit(kiosk, cap, policy, option::none(), item::mint(template, 1, gen, ctx));
     i = i + 1;
+  }
+}
+
+// take_matching_drops
+/// Consume every row of one item type and return `(row count, total quantity)`. Keeping this independent of
+/// minting seals the anti-flicker contract: one item type is one claim transaction however many
+/// mobs contributed rows to its result-card tile.
+fun tmd(drops: &mut vector<RolledDrop>, wanted: &String): (u64, u32) {
+  let mut count: u64 = 0;
+  let mut total: u32 = 0;
+  let mut i = 0;
+  while (i < drops.length()) {
+    if (&drops[i].item_type == wanted) {
+      let row = drops.remove(i);
+      count = count + 1;
+      total = total + row.qty;
+    }
+    else i = i + 1;
   };
-  abort ENoSuchDrop
+  (count, total)
 }
 
 /// Destroy an ended fight once every player settled and every drop is claimed — the closer
@@ -1365,6 +1403,24 @@ fun ra1(fight: &Fight, fighter: u64, base: u64, stat: u8): u64 {
   let plus = sr(fight, fighter, K_ADD, stat);
   let minus = sr(fight, fighter, K_REMOVE, stat) + sr(fight, fighter, K_STEAL, stat);
   fight_math::sat_sub(base + plus, minus)
+}
+
+// range_max_adjusted
+/// Range removal reaches into a modifiable spell's AUTHORED range after consuming gear bonus.
+/// Folding it into the unsigned bonus alone floors at zero and makes base range untouchable.
+fun rma(fight: &Fight, fighter: u64, authored_max: u64, base_bonus: u64): u64 {
+  let plus = sr(fight, fighter, K_ADD, STAT_RANGE);
+  let minus = sr(fight, fighter, K_REMOVE, STAT_RANGE) + sr(fight, fighter, K_STEAL, STAT_RANGE);
+  fight_math::sat_sub(authored_max + base_bonus + plus, minus)
+}
+
+// base_range_bonus
+fun brb(fight: &Fight, fighter: u64): u64 {
+  if (im(&fight.fighters[fighter])) 0
+  else {
+    let folded = equipment::folded(co(fight, fighter));
+    fight_math::apply_centered_shift(0, folded.range() as u64, item_stats::shift() as u64)
+  }
 }
 
 // eff_stat
@@ -1958,8 +2014,9 @@ fun r2(fight: &mut Fight, caster: u64, level: &SpellLevel, name: String, target_
 
   let sheet = so1(fight, caster); // ONE custody read for the whole resolution
   let d = combat_grid::manhattan(caster_cell, target_cell);
-  let range_bonus = if (level.modifiable_range()) sheet.range_bonus else 0;
-  assert!(d >= (level.range_min() as u64) && d <= (level.range_max() as u64) + range_bonus, EOutOfRange);
+  let range_max = if (level.modifiable_range()) rma(fight, caster, level.range_max() as u64, brb(fight, caster))
+    else level.range_max() as u64;
+  assert!(d >= (level.range_min() as u64) && d <= range_max, EOutOfRange);
   if (level.line_launch()) assert!(combat_grid::same_line(caster_cell, target_cell), ENotInLine);
   if (level.line_of_sight()) {
     assert!(
@@ -3198,6 +3255,55 @@ public(package) fun pool_removal_semantics_for_testing(ctx: &mut TxContext): vec
   answer
 }
 
+/// Test seam over the ONE side-admission rule (`cs`): builds a fight whose side B carries
+/// `side_access`/`opener`, optionally already holding a live player, and answers whether the
+/// joiner CLAIMS the side. A refusal aborts, so the refusal cases assert the abort code.
+#[test_only]
+public(package) fun side_admission_for_testing(
+  side_access: u8,
+  opener: Option<ID>,
+  occupied: bool,
+  joiner: ID,
+  ctx: &mut TxContext,
+): bool {
+  let board = combat_grid::generate(1, 0);
+  let mut fighters = vector[];
+  if (occupied) fighters.push_back(Fighter {
+    team: 1,
+    kind: FighterKind::Player { character: opener.get_with_default(joiner), owner: @0x1 },
+    cell: board.start_cells_b()[0],
+    ready: false, dead: false, settled: false, forfeited: false,
+    hp: 100, ap: 6, mp: 3, drops: vector[], effects: vector[], cooldowns: vector[],
+  });
+  let fight = Fight {
+    id: object::new(ctx), world: b"access_test".to_string(), x: 0, z: 0,
+    closed: combat_grid::closed_mask(&board), board,
+    access_a: ACCESS_UNSET, access_b: side_access,
+    opener_a: option::none(), opener_b: opener,
+    fighters,
+    zones: vector[], queue: vector[], turn_ptr: 0, round: 0, ended: false,
+    winner: option::none(), dungeon: option::none(), managed: false, wagered: false,
+    drops_rolled: false, turn_seed: 0, turn_slot: 0, turn_casts: vector[],
+    placement_ms: 0, turn_started_ms: 0,
+  };
+  let claims = cs(&fight, 1, joiner);
+  let Fight { id, .. } = fight;
+  id.delete();
+  claims
+}
+
+#[test_only]
+public(package) fun matching_drops_for_testing(): vector<u32> {
+  let mut drops = vector[
+    RolledDrop { item_type: b"silk".to_string(), qty: 2 },
+    RolledDrop { item_type: b"fang".to_string(), qty: 1 },
+    RolledDrop { item_type: b"silk".to_string(), qty: 3 },
+  ];
+  let (count, total) = tmd(&mut drops, &b"silk".to_string());
+  assert!(drops.length() == 1 && drops[0].item_type == b"fang".to_string(), 0);
+  vector[count as u32, total]
+}
+
 #[test_only]
 public(package) fun trap_edge_exit_for_testing(ctx: &mut TxContext): bool {
   let board = combat_grid::generate(1, 0);
@@ -3265,6 +3371,29 @@ public(package) fun life_steal_half_for_testing(ctx: &mut TxContext): vector<u64
   let mut estate = 1;
   rr1(&mut fight, 0, &sheet, &vector[row], target_cell, caster_cell, &mut estate, 1);
   let answer = vector[fight.fighters[1].hp, fight.fighters[0].hp];
+  let Fight { id, .. } = fight;
+  id.delete();
+  answer
+}
+
+#[test_only]
+public(package) fun range_removal_reaches_authored_max_for_testing(ctx: &mut TxContext): u64 {
+  let board = combat_grid::generate(1, 0);
+  let mut fighter = ffpt(0, board.start_cells_a()[0], 6);
+  fighter.effects.push_back(ActiveEffect {
+    kind: K_STEAL, element: b"".to_string(), value: 1, turns_left: 2, source: 1, stat: STAT_RANGE,
+  });
+  let fight = Fight {
+    id: object::new(ctx), world: b"range_test".to_string(), x: 0, z: 0,
+    closed: combat_grid::closed_mask(&board), board,
+    access_a: ACCESS_UNSET, access_b: ACCESS_UNSET,
+    opener_a: option::none(), opener_b: option::none(),
+    fighters: vector[fighter], zones: vector[], queue: vector[0], turn_ptr: 0, round: 1, ended: false,
+    winner: option::none(), dungeon: option::none(), managed: false, wagered: false,
+    drops_rolled: false, turn_seed: 1, turn_slot: 0, turn_casts: vector[],
+    placement_ms: 0, turn_started_ms: 0,
+  };
+  let answer = rma(&fight, 0, 3, 0);
   let Fight { id, .. } = fight;
   id.delete();
   answer

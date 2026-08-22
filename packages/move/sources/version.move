@@ -7,7 +7,7 @@ module aresrpg::version;
 
 use aresrpg::admin::AdminCap;
 
-const PACKAGE_VERSION: u64 = 1;
+const PACKAGE_VERSION: u64 = 4;
 
 const EVersionMismatch: u64 = 601;
 

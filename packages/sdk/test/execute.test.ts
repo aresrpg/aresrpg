@@ -8,7 +8,14 @@ import { describe, expect, test } from 'bun:test'
 import { Ed25519Keypair } from '@mysten/sui/keypairs/ed25519'
 import type { TransactionPlugin } from '@mysten/sui/transactions'
 
-import { SDK, absorb_receipt, type Receipt, type SuiTransport } from '../src/client.ts'
+import {
+  GAS_BUDGET_MIST,
+  SDK,
+  absorb_receipt,
+  type FetchedObject,
+  type Receipt,
+  type SuiTransport,
+} from '../src/client.ts'
 
 type ChangedRow = NonNullable<NonNullable<Receipt['effects']>['changedObjects']>[number]
 
@@ -59,6 +66,7 @@ const fake_client = ({
   failure_branch = 'FailedTransaction',
   failure_message = 'MoveAbort(2701) — scribe locked',
   lag = new Map<string, number>(),
+  owned_versions = new Map<string, string[]>(),
 }: {
   simulate_ok: boolean
   execution_gate?: Promise<void>
@@ -66,6 +74,8 @@ const fake_client = ({
   failure_message?: string
   /** objectId → how many reads this node answers empty before the object shows up */
   lag?: Map<string, number>
+  /** objectId → versions returned across reads, for receipt-fresh node-lag tests */
+  owned_versions?: Map<string, string[]>
   /** Which branch a refused simulation arrives in — a `success: false` status can ride the
    *  Transaction branch, and the preflight must refuse that identically. */
   failure_branch?: 'FailedTransaction' | 'Transaction'
@@ -104,13 +114,18 @@ const fake_client = ({
       getObjects: async ({ objectIds }: { objectIds: string[] }) => {
         calls.hydrations.push([...objectIds])
         return {
-          objects: objectIds.flatMap((object_id: string) => {
+          objects: objectIds.flatMap<FetchedObject>((object_id: string) => {
             // a node still behind answers with NOTHING for an object that already exists;
             // each miss burns one tick, so the object appears once the lag is spent
             const remaining = lag.get(object_id) ?? 0
             if (remaining > 0) {
               lag.set(object_id, remaining - 1)
               return []
+            }
+            const versions = owned_versions.get(object_id)
+            if (versions) {
+              const version = versions.length > 1 ? versions.shift()! : versions[0]!
+              return [{ objectId: object_id, version, digest, owner: { $kind: 'AddressOwner', AddressOwner: id(99) } }]
             }
             return [
               {
@@ -166,6 +181,10 @@ const game = async (client: ReturnType<typeof fake_client>) => {
 }
 
 describe('the execute gate (core interface)', () => {
+  test('game transactions reserve the owner-approved 0.2 SUI ceiling', () => {
+    expect(GAS_BUDGET_MIST).toBe(200_000_000n)
+  })
+
   test('object hydration stays below the Core query payload limit', async () => {
     const client = fake_client({ simulate_ok: true })
     const sdk = SDK({ address: id(99), client, pins })
@@ -194,6 +213,18 @@ describe('the execute gate (core interface)', () => {
     await expect(sdk.hydrate_required([id(78)])).rejects.toThrow(/never showed.*0x0*78/)
     // absence stays DATA for the tolerant door — a seal probe must not throw or wait
     await expect(sdk.hydrate_unknown([id(78)])).resolves.toBeDefined()
+  })
+
+  test('a receipt-fresh owned ref waits until the read node reaches its cached version', async () => {
+    const object_id = id(79)
+    const client = fake_client({ simulate_ok: true, owned_versions: new Map([[object_id, ['4', '5']]]) })
+    const sdk = SDK({ address: id(99), client, pins })
+    absorb_receipt(sdk.cache, { Transaction: { effects: { changedObjects: [changed(object_id, '5')] } } })
+
+    await sdk.hydrate_owned_current([object_id])
+
+    expect(client.calls.hydrations).toHaveLength(2)
+    expect(sdk.ref(object_id)?.version).toBe('5')
   })
 
   test('balance reads include address balance instead of only legacy coin objects', async () => {

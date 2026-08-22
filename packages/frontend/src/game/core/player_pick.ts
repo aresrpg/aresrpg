@@ -8,10 +8,10 @@
 import type { CameraFrame } from './cameras.ts'
 
 export const PLAYER_INTERACT_RANGE_BLOCKS = 10
-const PICK_RADIUS_PX = 48
+export const PICK_RADIUS_PX = 48
 /** The clickable body is the WHOLE character: the feet→crown segment in screen space (a single
  *  torso point left the head and feet dead, owner 2026-08-20). Crown sits at character height. */
-const BODY_TOP = 2.0
+export const BODY_TOP = 2.0
 
 export type PickCandidate = Readonly<{ character_id: string; x: number; y: number; z: number }>
 
@@ -19,8 +19,8 @@ export type PlayerPickInput = Readonly<{
   view: CameraFrame
   width: number
   height: number
-  click_x: number
-  click_y: number
+  cursor_x: number
+  cursor_y: number
   own: Readonly<{ x: number; y: number; z: number }>
   candidates: readonly PickCandidate[]
 }>
@@ -62,35 +62,60 @@ export const project_to_screen = (
   return [sx, sy]
 }
 
-export const pick_player = ({
+/** Cursor → projected feet→crown SEGMENT distance — the ONE body-distance primitive. Null =
+ *  body not on screen. */
+const cursor_body_distance = (
+  view: CameraFrame,
+  width: number,
+  height: number,
+  cursor_x: number,
+  cursor_y: number,
+  body: Readonly<{ x: number; y: number; z: number }>
+): number | null => {
+  const project = (x: number, y: number, z: number) => project_to_screen(view, width, height, x, y, z)
+  const feet = project(body.x, body.y, body.z)
+  const crown = project(body.x, body.y + BODY_TOP, body.z)
+  if (!feet || !crown) return null
+  const [ax, ay] = feet
+  const [bx, by] = crown
+  const abx = bx - ax
+  const aby = by - ay
+  const ab_sq = abx * abx + aby * aby
+  const t = ab_sq === 0 ? 0 : Math.max(0, Math.min(1, ((cursor_x - ax) * abx + (cursor_y - ay) * aby) / ab_sq))
+  return Math.hypot(ax + t * abx - cursor_x, ay + t * aby - cursor_y)
+}
+
+export type WorldHover = Readonly<{
+  /** the nearby OTHER player under the cursor (interact-range gated) — the right-click target */
+  target: string | null
+  /** our own body is under the cursor */
+  self: boolean
+}>
+
+/** THE ONE WORLD-BODY HOVER (owner 2026-08-21): right-click menu, self nametag and any future
+ *  surface read the SAME verdict from this resolver — one walk over the bodies, one distance
+ *  law per body, no per-surface re-detection. Fight-board cells are a different domain (the
+ *  chain addresses fights by cell) and keep their own picker. */
+export const resolve_world_hover = ({
   view,
   width,
   height,
-  click_x,
-  click_y,
+  cursor_x,
+  cursor_y,
   own,
   candidates,
-}: PlayerPickInput): string | null => {
-  const project = (x: number, y: number, z: number) => project_to_screen(view, width, height, x, y, z)
-  // distance from the click to the projected feet→crown SEGMENT — head and feet click too
-  const distance_to_body = (candidate: PickCandidate): number | null => {
-    const feet = project(candidate.x, candidate.y, candidate.z)
-    const crown = project(candidate.x, candidate.y + BODY_TOP, candidate.z)
-    if (!feet || !crown) return null
-    const [ax, ay] = feet
-    const [bx, by] = crown
-    const abx = bx - ax
-    const aby = by - ay
-    const ab_sq = abx * abx + aby * aby
-    const t = ab_sq === 0 ? 0 : Math.max(0, Math.min(1, ((click_x - ax) * abx + (click_y - ay) * aby) / ab_sq))
-    return Math.hypot(ax + t * abx - click_x, ay + t * aby - click_y)
-  }
-  const picked = candidates.reduce<{ character_id: string; distance_px: number } | null>((best, candidate) => {
+}: PlayerPickInput): WorldHover => {
+  let target: string | null = null
+  let best_distance = Number.POSITIVE_INFINITY
+  for (const candidate of candidates) {
     if (Math.hypot(candidate.x - own.x, candidate.y - own.y, candidate.z - own.z) > PLAYER_INTERACT_RANGE_BLOCKS)
-      return best
-    const distance_px = distance_to_body(candidate)
-    if (distance_px === null || distance_px > PICK_RADIUS_PX) return best
-    return best && best.distance_px <= distance_px ? best : { character_id: candidate.character_id, distance_px }
-  }, null)
-  return picked?.character_id ?? null
+      continue
+    const distance_px = cursor_body_distance(view, width, height, cursor_x, cursor_y, candidate)
+    if (distance_px === null || distance_px >= best_distance) continue
+    if (distance_px > PICK_RADIUS_PX) continue
+    target = candidate.character_id
+    best_distance = distance_px
+  }
+  const self_distance = cursor_body_distance(view, width, height, cursor_x, cursor_y, own)
+  return { target, self: self_distance !== null && self_distance <= PICK_RADIUS_PX }
 }

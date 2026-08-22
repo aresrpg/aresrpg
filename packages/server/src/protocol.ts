@@ -55,8 +55,6 @@ export const mesh = {
   chat_party: (party: string) => `chat:party:${party}`,
   /** whispers (and only whispers) land on the target's own door */
   chat_user: (address: string) => `chat:user:${address}`,
-  /** duel handshake signals land on the target's own door (invite/accept/decline/created) */
-  duel: (address: string) => `duel:user:${address}`,
   /** live fight-turn intents relayed between fighters/spectators */
   fight_actions: (fight: string) => `act:fight:${fight}`,
   /** cluster-wide connect beacon — cross-pod duplicate eviction (legacy player_connect) */
@@ -74,13 +72,6 @@ export type MeshFact =
 
 /** What rides `chat:world:` / `chat:party:` / `chat:user:` channels. */
 export type ChatFact = { address: string; character: string; text: string }
-
-/** What rides a `duel:user:` channel — sender identity is socket-derived, never client-claimed. */
-export type DuelFact = {
-  address: string
-  character: string
-  kind: import('@aresrpg/protocol').DuelSignalKind
-}
 
 /** What rides an `act:fight:` channel. */
 export type FightActionFact = {
@@ -115,6 +106,7 @@ export const relations = {
   HOLDS: ['Kiosk', 'Item|Character'], // kiosk-held (severed while fighting/equipped)
   EQUIPS: ['Character', 'Item'], // props: { slot }
   FIGHTER: ['Fight', 'Character'], // props: { seat, team }
+  RESULT_FOR: ['Fight', 'User'], // props: durable unsettled seat / unclaimed drops
   MEMBER_OF: ['Character', 'Party'], // props: { order }
   FRIEND: ['User', 'User'],
   INVITED: ['Party', 'Character'],

@@ -45,16 +45,29 @@ export async function get_giftcards(graph: Graph, { address }: { address: string
 export async function get_my_listings(graph: Graph, { address }: { address: string }): Promise<ListingRow[]> {
   const rows = await graph.read(
     `
-    MATCH (:User {address: $address})-[:OWNS]->(k:Kiosk)<-[l:LISTED_IN]-(i:Item)
-    RETURN i AS item, l.price AS price_mist, l.at_ms AS at_ms, k.id AS kiosk`,
+    MATCH (:User {address: $address})-[:OWNS]->(k:Kiosk)<-[l:LISTED_IN {exclusive: false}]-(asset)
+    WHERE asset:Item OR asset:Character
+    RETURN asset, labels(asset) AS kinds, l.price AS price_mist, l.at_ms AS at_ms, k.id AS kiosk`,
     { address }
   )
   return rows
-    .filter(({ item }) => item)
-    .map(({ item, price_mist, at_ms, kiosk }) => ({
-      ...((item as Node)!.properties as Omit<ListingRow, 'price_mist' | 'at_ms' | 'kiosk'>),
-      price_mist: String(price_mist),
-      at_ms: Number(at_ms),
-      kiosk: kiosk as string,
-    }))
+    .filter(({ asset }) => asset)
+    .map(({ asset, kinds, price_mist, at_ms, kiosk }) => {
+      const row = (asset as Node)!.properties
+      const kind = (kinds as string[]).includes('Character') ? ('character' as const) : ('item' as const)
+      return {
+        kind,
+        id: String(row.id),
+        name: String(row.name),
+        item_type: kind === 'item' ? String(row.item_type) : null,
+        category: kind === 'item' ? String(row.category) : null,
+        level: Number(row.level),
+        amount: kind === 'item' ? Number(row.amount) : 1,
+        ...(kind === 'character' ? { classe: String(row.classe) } : {}),
+        price_mist: String(price_mist),
+        at_ms: Number(at_ms),
+        kiosk: String(kiosk),
+        seller: address,
+      }
+    })
 }

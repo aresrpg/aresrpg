@@ -3,13 +3,14 @@
 // MINIMAP — the top-right 2D map. North-up (the real-map convention); only the centered player
 // arrow rotates with the camera. Terrain is the analytic relief from minimap_render; the overlay
 // marks (zone delimitation, spawns, players, arrow) are the shared map_layers painters. Labeled
-// x/y/z chips read below the lens; clicking the lens opens the full WorldMap over the canvas.
+// biome name and x/y/z chips read below the lens; clicking opens the full WorldMap over the canvas.
 // Self-gates on the pose feed.
 
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { compile_world_recipe, parse_world_recipe, type CompiledWorld } from '@aresrpg/engine'
+import { compile_world_recipe, parse_world_recipe, sample_world_column, type CompiledWorld } from '@aresrpg/engine'
 
 import './minimap.css'
+import { titleize } from '../../content/catalog.ts'
 import { world_terrain } from '../../content/worlds.ts'
 import { copy_text, type AppCopy } from '../../i18n/copy.ts'
 import { spawn_markers, zone_key } from '../../modules/world.ts'
@@ -30,6 +31,33 @@ import { WorldMap } from './WorldMap.tsx'
 const SIZE = 288
 
 const AXES = ['x', 'y', 'z'] as const
+type Coordinates = Readonly<Record<(typeof AXES)[number], number>>
+
+export const MinimapReadout = ({
+  biome_name,
+  biome_label,
+  coordinates,
+  coordinates_label,
+}: Readonly<{
+  biome_name: string
+  biome_label: string
+  coordinates: Coordinates
+  coordinates_label: string
+}>) => (
+  <div className="gw-minimap__readout">
+    <span aria-label={biome_label} className="gw-minimap__biome">
+      {biome_name}
+    </span>
+    <div aria-label={coordinates_label} className="gw-minimap__coords">
+      {AXES.map((axis) => (
+        <span className="gw-minimap__coord" key={axis}>
+          <span className="gw-minimap__axis">{axis}</span>
+          {coordinates[axis]}
+        </span>
+      ))}
+    </div>
+  </div>
+)
 
 export const Minimap = ({ copy }: Readonly<{ copy: AppCopy }>) => {
   const pose = useWorldPose()
@@ -59,6 +87,7 @@ export const Minimap = ({ copy }: Readonly<{ copy: AppCopy }>) => {
     const context = canvas.getContext('2d')
     if (!context) return
     const key = resample_key(pose.x, pose.z)
+    // eslint-disable-next-line functional/immutable-data -- React owns this component-local cache cell
     if (grid_ref.current?.key !== key) grid_ref.current = { key, grid: sample_relief_grid(compiled, pose.x, pose.z) }
     const { grid } = grid_ref.current
     const view = { center_x: grid.center_x, center_z: grid.center_z, size: SIZE, radius: VIEW_RADIUS_BLOCKS }
@@ -72,6 +101,7 @@ export const Minimap = ({ copy }: Readonly<{ copy: AppCopy }>) => {
   if (!pose || !compiled) return null
 
   const coords = { x: Math.round(pose.x), y: Math.round(pose.y), z: Math.round(pose.z) }
+  const biome_name = titleize(sample_world_column(compiled, coords.x, coords.z).biome.name)
 
   return (
     <div className="gw-minimap" data-minimap="">
@@ -93,14 +123,12 @@ export const Minimap = ({ copy }: Readonly<{ copy: AppCopy }>) => {
           N
         </span>
       </div>
-      <div aria-label={text('coordinates')} className="gw-minimap__coords">
-        {AXES.map((axis) => (
-          <span className="gw-minimap__coord" key={axis}>
-            <span className="gw-minimap__axis">{axis}</span>
-            {coords[axis]}
-          </span>
-        ))}
-      </div>
+      <MinimapReadout
+        biome_label={text('biome')}
+        biome_name={biome_name}
+        coordinates={coords}
+        coordinates_label={text('coordinates')}
+      />
       {map_open && <WorldMap compiled={compiled} copy={copy} on_close={() => set_map_open(false)} />}
     </div>
   )

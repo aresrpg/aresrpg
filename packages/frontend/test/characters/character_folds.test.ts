@@ -358,3 +358,32 @@ describe('stat derivations', () => {
     expect(character_max_hp(character({ level: 1, vitality: 0, folded_stats: { vitality: SHIFT - 60_000 } }))).toBe(1)
   })
 })
+
+describe('the star-gate join fold', () => {
+  test('the receipt WorldJoined re-points world, checkpoint, and arrival coordinates', () => {
+    const state = seeded_state(
+      [character({ world: '01_first_shore', checkpoint_world: '01_first_shore', x: 50200, z: 49800 })],
+      []
+    )
+    const next = reduce_app_state(state, {
+      type: 'character/world_joined',
+      character_id: '0xchar',
+      joined: { world: '02_verdant_hollow', x: 50000, z: 50000, first_join: false },
+    })
+    const row = next.session.characters[0]!
+    expect(row.world).toBe('02_verdant_hollow')
+    expect(row.checkpoint_world).toBe('02_verdant_hollow')
+    expect(row.x).toBe(50000)
+    expect(row.z).toBe(50000)
+  })
+
+  test('an unknown character id folds to no state change', () => {
+    const state = seeded_state([character()], [])
+    const next = reduce_app_state(state, {
+      type: 'character/world_joined',
+      character_id: '0xghost',
+      joined: { world: '02_verdant_hollow', x: 50000, z: 50000, first_join: true },
+    })
+    expect(next).toBe(state)
+  })
+})

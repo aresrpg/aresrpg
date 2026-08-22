@@ -82,7 +82,7 @@ fun init(otw: ITEM, ctx: &mut TxContext) {
 }
 
 /// Display V2, once post-publish through `admin::create_item_display`. Returns the cap.
-public(package) fun new_display(
+public(package) fun nd(
   registry: &mut DisplayRegistry,
   publisher: &mut Publisher,
   ctx: &mut TxContext,
@@ -107,12 +107,12 @@ public(package) fun new_display(
 
 /// Sibling content modules (mob_template) derive under the SAME registry with their own
 /// typed keys — one seeding, one seal, no slug collisions.
-public(package) fun registry_uid_mut(registry: &mut TemplateRegistry): &mut UID {
+public(package) fun ru(registry: &mut TemplateRegistry): &mut UID {
   &mut registry.id
 }
 
 /// Content modules attach their own typed facts while the template is still hot.
-public(package) fun template_uid_mut(template: &mut ItemTemplate): &mut UID {
+public(package) fun tu(template: &mut ItemTemplate): &mut UID {
   &mut template.id
 }
 
@@ -130,7 +130,7 @@ public(package) fun seal(registry: &mut TemplateRegistry) {
 /// type aborts. NOT a hot potato (a potato can't become an object): `key` WITHOUT `store` is
 /// the force — no transfer, no wrapping, no dynamic-field storage, and the only public
 /// consumer is `freeze_template`. An unconsumed template fails the whole transaction.
-public(package) fun new_template(
+public(package) fun nt(
   registry: &mut TemplateRegistry,
   name: String,
   item_type: String,
@@ -154,7 +154,7 @@ public(package) fun new_template(
 /// Seeding: author the stat RANGES on a hot template. Possession IS the authorization — only
 /// the seeding ever holds a template `&mut` (frozen right after). Gear only; every min ≤ its
 /// max is asserted HERE, before the freeze can seal a poisoned range.
-public(package) fun set_template_stats(template: &mut ItemTemplate, min: ItemStatistics, max: ItemStatistics) {
+public(package) fun sts(template: &mut ItemTemplate, min: ItemStatistics, max: ItemStatistics) {
   assert!(!content_rules::is_stackable(&template.category), EStackableStats);
   let (lo, hi) = (min.to_vector(), max.to_vector());
   let mut i = 0;
@@ -167,13 +167,13 @@ public(package) fun set_template_stats(template: &mut ItemTemplate, min: ItemSta
 }
 
 /// Seeding: author the damage lines on a hot template (weapons). Same possession law.
-public(package) fun set_template_damages(template: &mut ItemTemplate, lines: vector<ItemDamages>) {
+public(package) fun std(template: &mut ItemTemplate, lines: vector<ItemDamages>) {
   assert!(!content_rules::is_stackable(&template.category), EStackableStats);
   dfield::add(&mut template.id, DamagesKey(), lines);
 }
 
 /// Seal a template forever — the chain rejects every future write, from anyone.
-public(package) fun freeze_template(template: ItemTemplate) {
+public(package) fun ft(template: ItemTemplate) {
   transfer::freeze_object(template);
 }
 
@@ -208,7 +208,7 @@ public(package) fun mint(
 /// Mint WITHOUT a generator — legal only for templates that carry NO stat ranges (shop
 /// sales, airdrops, giftcards: owner 2026-08-10, "no stats there"). A ranged template MUST
 /// roll, so it aborts here — the rolling `mint` is its only door.
-public(package) fun mint_plain(template: &ItemTemplate, amount: u32, ctx: &mut TxContext): Item {
+public(package) fun mp(template: &ItemTemplate, amount: u32, ctx: &mut TxContext): Item {
   assert!(!dfield::exists(&template.id, StatsMinKey()), EPlainNeedsRoll);
   mb(template, amount, ctx)
 }
@@ -262,8 +262,6 @@ public(package) fun merge(self: &mut Item, item: Item) {
   item.destroy();
 }
 
-/// Split `amount` units into a fresh stack — never empties the source. The marketplace
-/// listing seam: a lot-rule listing (1/10/100/1000) splits off the seller's big stack.
 public(package) fun split(self: &mut Item, amount: u32, ctx: &mut TxContext): Item {
   assert!(content_rules::is_stackable(&self.category), ENotStackable);
   assert!(amount >= 1, EWrongAmount);
@@ -305,7 +303,7 @@ public(package) fun burn(
     stack.amount = stack.amount - amount;
     stack.category
   } else {
-    let stack: Item = protected.extract_from_kiosk(kiosk, cap, id, ctx);
+    let stack: Item = protected.x(kiosk, cap, id, ctx);
     let category = stack.category;
     stack.destroy();
     category
@@ -326,9 +324,9 @@ public fun template(self: &Item): ID { self.template }
 
 public fun template_id(template: &ItemTemplate): ID { template.id.to_inner() }
 
-public(package) fun template_uid(template: &ItemTemplate): &UID { &template.id }
+public(package) fun tuid(template: &ItemTemplate): &UID { &template.id }
 
-public(package) fun template_is_stackable(template: &ItemTemplate): bool {
+public(package) fun tis(template: &ItemTemplate): bool {
   content_rules::is_stackable(&template.category)
 }
 
@@ -336,7 +334,7 @@ public fun template_type(template: &ItemTemplate): String { template.item_type }
 
 public fun template_category(template: &ItemTemplate): String { template.category }
 
-public(package) fun template_pet_foods(template: &ItemTemplate): &vector<String> { &template.pet_foods }
+public(package) fun tpf(template: &ItemTemplate): &vector<String> { &template.pet_foods }
 
 public fun item_type(self: &Item): String { self.item_type }
 
@@ -352,7 +350,7 @@ public fun stats(self: &Item): ItemStatistics { *dfield::borrow(&self.id, StatsK
 
 /// Overwrite the rolled block — the forgemagie scribe's one writer (the item already carries a
 /// rolled block from mint; scribing replaces it). Aborts if the item was never rolled.
-public(package) fun set_stats(self: &mut Item, stats: ItemStatistics) {
+public(package) fun ss(self: &mut Item, stats: ItemStatistics) {
   *dfield::borrow_mut(&mut self.id, StatsKey()) = stats;
 }
 

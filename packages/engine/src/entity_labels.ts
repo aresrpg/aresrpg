@@ -24,6 +24,11 @@ export const create_entity_label_layer = ({
   surface.style.overflow = 'hidden'
   canvas.parentElement?.appendChild(surface)
   const labels = new Map<string, CSS2DObject>()
+  /** world-dressing tags (the star gate) — anchored at one fixed point, never an entity */
+  const statics = new Map<string, CSS2DObject>()
+  /** static tags track LIVE anchors — a fixed world point goes stale the moment the world
+   *  itself moves under it (the flatten projection), so anchors are getters, re-read per frame */
+  const static_anchors = new Map<string, () => Vector3>()
 
   return Object.freeze({
     /** attach (or replace) the DOM element floating over an entity; null detaches */
@@ -39,12 +44,38 @@ export const create_entity_label_layer = ({
       labels.set(id, label)
       scene.add(label)
     },
+    /** attach a DOM element at a world position that may MOVE (a getter re-read every frame —
+     *  the flatten projection drags anchors around); null detaches */
+    set_static: (id: string, element: HTMLElement | null, anchor: (() => Vector3) | Vector3): void => {
+      const existing = statics.get(id)
+      const read_anchor = typeof anchor === 'function' ? anchor : () => anchor
+      if (existing?.element === element) {
+        existing.position.copy(read_anchor())
+        static_anchors.set(id, read_anchor)
+        return
+      }
+      if (existing) {
+        scene.remove(existing)
+        statics.delete(id)
+        static_anchors.delete(id)
+      }
+      if (!element) return
+      const label = new CSS2DObject(element)
+      label.position.copy(read_anchor())
+      statics.set(id, label)
+      static_anchors.set(id, read_anchor)
+      scene.add(label)
+    },
     resize: (width: number, height: number): void => renderer.setSize(width, height),
     render: (): void => {
-      if (labels.size === 0) return
+      if (labels.size === 0 && statics.size === 0) return
       labels.forEach((label, id) => {
         const anchor = entities.live_crown(id)
         label.visible = anchor !== null
+        if (anchor) label.position.copy(anchor)
+      })
+      statics.forEach((label, id) => {
+        const anchor = static_anchors.get(id)?.()
         if (anchor) label.position.copy(anchor)
       })
       renderer.render(scene, camera)
@@ -52,6 +83,9 @@ export const create_entity_label_layer = ({
     dispose: (): void => {
       labels.forEach((label) => scene.remove(label))
       labels.clear()
+      statics.forEach((label) => scene.remove(label))
+      statics.clear()
+      static_anchors.clear()
       surface.remove()
     },
   })

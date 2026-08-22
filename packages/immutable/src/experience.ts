@@ -44,6 +44,17 @@ export function level_from_xp(xp: number): number {
   return low
 }
 
+export const experience_progress = (xp: number) => {
+  const level = level_from_xp(xp)
+  if (level === max_level) return { level, into: 0, span: 0, percent: 100 }
+
+  const floor = experience_curve[level]!
+  const ceiling = experience_curve[level + 1]!
+  const into = Math.max(0, xp - floor)
+  const span = ceiling - floor
+  return { level, into, span, percent: Math.floor((into * 100) / span) }
+}
+
 // ── JOB XP (the second immutable curve) ──
 // Mirrors packages/move-math/sources/job_xp.move JOB_CURVE exactly: index = job level,
 // index 0 unused, 100 levels. Extracted mechanically from the Move source.

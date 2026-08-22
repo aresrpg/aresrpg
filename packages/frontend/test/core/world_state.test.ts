@@ -4,7 +4,14 @@
 import { expect, test } from 'bun:test'
 import type { PresenceRow, ServerPacket } from '@aresrpg/protocol'
 
-import world, { initial_world_state, spawn_markers, zone_key } from '../../src/modules/world.ts'
+import world, {
+  engage_sword_markers,
+  initial_world_state,
+  live_spawns,
+  spawn_markers,
+  zone_key,
+} from '../../src/modules/world.ts'
+import { sword_fights } from '../../src/modules/world_engage.ts'
 import { initial_app_state } from '../../src/store.ts'
 import type { GameSettings } from '../../src/game/core/settings.ts'
 
@@ -14,15 +21,20 @@ const settings: GameSettings = Object.freeze({
   music_enabled: true,
   render_distance: null,
 })
+const app_state = (): ReturnType<typeof initial_app_state> => {
+  const state = initial_app_state(settings)
+  return Object.freeze({
+    ...state,
+    session: Object.freeze({ ...state.session, selected_character_id: '0xc' }),
+  })
+}
 
 const fold = (packets: readonly ServerPacket[]) =>
-  packets.reduce(
-    (state, packet) => world.reduce!(state, { type: 'server/packet', packet }),
-    initial_app_state(settings)
-  ).world
+  packets.reduce((state, packet) => world.reduce!(state, { type: 'server/packet', packet }), app_state()).world
 
 const presence = (character_id: string, x: number, z: number): PresenceRow => ({
   character_id,
+  world: 'overworld',
   owner: '0xowner',
   name: 'Cra',
   classe: 'senshi',
@@ -40,23 +52,51 @@ const presence = (character_id: string, x: number, z: number): PresenceRow => ({
   y: 64,
   z,
 })
+const tracked = (world: string, zones: readonly { zx: number; zz: number }[]): ServerPacket => ({
+  type: 'packet/tracked_zones',
+  character_id: '0xc',
+  world,
+  zones: [...zones],
+})
 
-test('zones fold by key and a search stamps the fresh seed without losing consumption', () => {
+test('packet/zones is the ONE door for a zone changing — rows merge and land whole', () => {
+  // a spiral push, a discovery and a consumption all arrive the same way: the projected row.
+  // Nothing is carried forward by hand — a re-roll ZEROES consumption on chain, and the client
+  // that used to preserve the old bitmaps was inventing state the chain had already discarded.
   const state = fold([
+    tracked('overworld', [
+      { zx: 3, zz: 4 },
+      { zx: 9, zz: 9 },
+    ]),
     {
       type: 'packet/zones',
-      zones: [{ world: 'overworld', zx: 3, zz: 4, seed: '7', searched_at_ms: 1, mob_taken: '5', res_taken: [1] }],
+      zones: [
+        { world: 'overworld', zx: 3, zz: 4, seed: '7', searched_at_ms: 1, mob_taken: '5', res_taken: [1] },
+        { world: 'overworld', zx: 9, zz: 9, seed: '1', searched_at_ms: 2, mob_taken: '0', res_taken: [] },
+      ],
     },
-    { type: 'packet/zone_searched', world: 'overworld', zx: 3, zz: 4, seed: '9' },
+    {
+      type: 'packet/zones',
+      zones: [{ world: 'overworld', zx: 3, zz: 4, seed: '9', searched_at_ms: 500, mob_taken: '0', res_taken: [] }],
+    },
   ])
 
-  const row = state.zones[zone_key('overworld', 3, 4)]!
-  expect(row.seed).toBe('9')
-  expect(row.mob_taken).toBe('5')
+  expect(state.zones[zone_key('overworld', 3, 4)]).toEqual({
+    world: 'overworld',
+    zx: 3,
+    zz: 4,
+    seed: '9',
+    searched_at_ms: 500,
+    mob_taken: '0',
+    res_taken: [],
+  })
+  // the single-row update MERGES — the other tracked zone is untouched
+  expect(state.zones[zone_key('overworld', 9, 9)]?.seed).toBe('1')
 })
 
 test('players appear, move by id, and leave — a move for an unknown player is dropped', () => {
   const state = fold([
+    tracked('overworld', [{ zx: 0, zz: 0 }]),
     { type: 'packet/player_appeared', player: presence('0xc1', 10, 10) },
     { type: 'packet/player_moved', character_id: '0xc1', x: 11, y: 64, z: 12, riding: false },
     { type: 'packet/player_moved', character_id: '0xghost', x: 1, y: 1, z: 1, riding: false },
@@ -73,10 +113,12 @@ test('mounting rides the position stream — the riding flag folds onto the pres
   // owner 2026-08-21: mount/dismount forwards through the EXISTING position packet, never its
   // own packet or a sync timer — a toggle is one flag arriving with the next position fact
   const state = fold([
+    tracked('overworld', [{ zx: 0, zz: 0 }]),
     { type: 'packet/player_appeared', player: presence('0xc1', 10, 10) },
     { type: 'packet/player_moved', character_id: '0xc1', x: 10, y: 64, z: 10, riding: true },
   ])
   const dismounted = fold([
+    tracked('overworld', [{ zx: 0, zz: 0 }]),
     { type: 'packet/player_appeared', player: presence('0xc1', 10, 10) },
     { type: 'packet/player_moved', character_id: '0xc1', x: 10, y: 64, z: 10, riding: true },
     { type: 'packet/player_moved', character_id: '0xc1', x: 10, y: 64, z: 10, riding: false },
@@ -88,6 +130,7 @@ test('mounting rides the position stream — the riding flag folds onto the pres
 
 test('a visible slot change folds onto the known presence row — unknown ids are dropped', () => {
   const state = fold([
+    tracked('overworld', [{ zx: 0, zz: 0 }]),
     { type: 'packet/player_appeared', player: presence('0xc1', 10, 10) },
     { type: 'packet/player_equipment', character_id: '0xc1', slot: 'hat', item_type: 'straw_hat' },
     { type: 'packet/player_equipment', character_id: '0xc1', slot: 'pet', item_type: 'tofu' },
@@ -98,28 +141,169 @@ test('a visible slot change folds onto the known presence row — unknown ids ar
   expect(state.players['0xghost']).toBeUndefined()
 })
 
+const POPULATED_ZONE: readonly ServerPacket[] = [
+  { type: 'packet/tracked_zones', character_id: '0xc', world: 'overworld', zones: [{ zx: 97, zz: 98 }] },
+  {
+    type: 'packet/zones',
+    zones: [{ world: 'overworld', zx: 97, zz: 98, seed: '7', searched_at_ms: 1, mob_taken: '0', res_taken: [] }],
+  },
+  {
+    type: 'packet/zone_spawns',
+    world: 'overworld',
+    zx: 97,
+    zz: 98,
+    mobs: [
+      { index: 2, x: 49_700, z: 50_200, members: [{ mob_type: 'wooling', level_scalar: 40 }] },
+      { index: 3, x: 49_710, z: 50_210, members: [{ mob_type: 'razkin', level_scalar: 60 }] },
+    ],
+    resources: [{ index: 0, x: 49_800, z: 50_180, item_type: 'green_mushroom', nodes: 3 }],
+  },
+]
+
 test('zone spawns fold by zone and project to client-space markers', () => {
+  const state = fold(POPULATED_ZONE)
+
+  const markers = spawn_markers(state)
+  expect(markers).toHaveLength(3)
+  const mob = markers.find(({ spawn_id }) => spawn_id.endsWith('m2'))!
+  expect(mob).toMatchObject({ x: -300, z: 200, zx: 97, zz: 98, size: 1 })
+  const resource = markers.find(({ kind }) => kind === 'resource')!
+  expect(resource).toMatchObject({ x: -200, z: 180, item_type: 'green_mushroom' })
+})
+
+test('engage hides the mob and plants a reversible sword before the transaction settles', () => {
+  const loaded = POPULATED_ZONE.reduce(
+    (state, packet) => world.reduce!(state, { type: 'server/packet', packet }),
+    app_state()
+  )
+  const group = 'overworld:97:98:s7:m2'
+  const pending = world.reduce!(loaded, { type: 'world/engage', group, started_at_ms: 12_345 })
+
+  expect(spawn_markers(pending.world).some(({ spawn_id }) => spawn_id === group)).toBe(false)
+  expect(engage_sword_markers(pending.world)).toEqual([
+    { id: `engage:${group}`, x: -300, z: 200, placement_ms: 12_345 },
+  ])
+
+  const submitted = world.reduce!(pending, { type: 'world/engage_submitted', group, fight: '0xfight' })
+  expect(engage_sword_markers(submitted.world)).toHaveLength(1)
+  const consumed = world.reduce!(submitted, {
+    type: 'server/packet',
+    packet: {
+      type: 'packet/zones',
+      zones: [{ world: 'overworld', zx: 97, zz: 98, seed: '7', searched_at_ms: 2, mob_taken: '4', res_taken: [] }],
+    },
+  })
+  expect(consumed.world.pending_engages).toEqual({})
+  expect(spawn_markers(consumed.world).some(({ spawn_id }) => spawn_id === group)).toBe(false)
+  const mounted = world.reduce!(submitted, { type: 'world/engage_confirmed', group })
+  expect(engage_sword_markers(mounted.world)).toEqual([])
+
+  const rejected = world.reduce!(pending, { type: 'world/engage_failed', group })
+  expect(spawn_markers(rejected.world).some(({ spawn_id }) => spawn_id === group)).toBe(true)
+  expect(engage_sword_markers(rejected.world)).toEqual([])
+})
+
+test('consumption arrives as the zone row alone and retires what it took', () => {
+  // the population is worth ~15KB and never changes for a seed; a group being engaged is one
+  // bit. The wire ships the bit, and the join happens here.
   const state = fold([
+    ...POPULATED_ZONE,
     {
-      type: 'packet/zone_spawns',
-      world: 'overworld',
-      zx: 97,
-      zz: 98,
-      mobs: [{ index: 2, x: 49_700, z: 50_200, members: [{ mob_type: 'wooling', level_scalar: 40 }] }],
-      resources: [{ index: 0, x: 49_800, z: 50_180, item_type: 'green_mushroom', job: 'HERBALIST', tier: 1, nodes: 3 }],
+      type: 'packet/zones',
+      zones: [{ world: 'overworld', zx: 97, zz: 98, seed: '7', searched_at_ms: 1, mob_taken: '4', res_taken: [2] }],
     },
   ])
 
   const markers = spawn_markers(state)
-  expect(markers).toHaveLength(2)
-  const mob = markers.find(({ kind }) => kind === 'mob')!
-  expect(mob).toMatchObject({ x: -300, z: 200, zx: 97, zz: 98, size: 1 })
-  const resource = markers.find(({ kind }) => kind === 'resource')!
-  expect(resource).toMatchObject({ x: -200, z: 180, job: 'HERBALIST', tier: 1 })
+  // group 2 was engaged (bit 2 set); group 3 still stands
+  expect(markers.map(({ spawn_id }) => spawn_id.split(':').at(-1))).toEqual(['m3', 'r0'])
+  // the population itself was never re-sent — the pack simply reports what it has left
+  expect(state.spawns[zone_key('overworld', 97, 98)]?.resources[0]?.nodes).toBe(3)
+  expect(live_spawns(state, zone_key('overworld', 97, 98)).resources[0]?.nodes).toBe(1)
+})
+
+test('a reroll flushes the old population before the replacement seed arrives', () => {
+  const rerolled = fold([
+    ...POPULATED_ZONE,
+    {
+      type: 'packet/zones',
+      zones: [{ world: 'overworld', zx: 97, zz: 98, seed: '8', searched_at_ms: 2, mob_taken: '0', res_taken: [] }],
+    },
+  ])
+  expect(spawn_markers(rerolled)).toEqual([])
+
+  const replaced = fold([
+    ...POPULATED_ZONE,
+    {
+      type: 'packet/zones',
+      zones: [{ world: 'overworld', zx: 97, zz: 98, seed: '8', searched_at_ms: 2, mob_taken: '0', res_taken: [] }],
+    },
+    POPULATED_ZONE[2]!,
+  ])
+  expect(spawn_markers(replaced).every(({ spawn_id }) => spawn_id.includes(':s8:'))).toBe(true)
+})
+
+test('the tracked window prunes departed rows and a world change clears presence', () => {
+  const old = fold([
+    { type: 'packet/tracked_zones', character_id: '0xc', world: 'overworld', zones: [{ zx: 97, zz: 98 }] },
+    ...POPULATED_ZONE.slice(1),
+    { type: 'packet/player_appeared', player: presence('0xc1', 49_700, 50_200) },
+  ])
+  const moved = world.reduce!(
+    { ...app_state(), world: old },
+    {
+      type: 'server/packet',
+      packet: { type: 'packet/tracked_zones', character_id: '0xc', world: 'overworld', zones: [{ zx: 98, zz: 98 }] },
+    }
+  ).world
+  expect(moved.zones).toEqual({})
+  expect(moved.spawns).toEqual({})
+  expect(moved.all_zones).toEqual({})
+  expect(moved.all_spawns).toEqual({})
+
+  const changed = world.reduce!(
+    { ...app_state(), world: moved },
+    {
+      type: 'server/packet',
+      packet: { type: 'packet/tracked_zones', character_id: '0xc', world: 'verdant', zones: [] },
+    }
+  ).world
+  expect(changed.players).toEqual({})
+})
+
+test('character selection projects an already-cached independent zone window', () => {
+  const packets: readonly ServerPacket[] = [
+    { type: 'packet/tracked_zones', character_id: '0xc', world: 'overworld', zones: [{ zx: 1, zz: 1 }] },
+    { type: 'packet/tracked_zones', character_id: '0xd', world: 'verdant', zones: [{ zx: 2, zz: 2 }] },
+    {
+      type: 'packet/zones',
+      zones: [
+        { world: 'overworld', zx: 1, zz: 1, seed: '1', searched_at_ms: 1, mob_taken: '0', res_taken: [] },
+        { world: 'verdant', zx: 2, zz: 2, seed: '2', searched_at_ms: 1, mob_taken: '0', res_taken: [] },
+      ],
+    },
+  ]
+  const before = packets.reduce((state, packet) => world.reduce!(state, { type: 'server/packet', packet }), app_state())
+  const selected = world.reduce!(
+    { ...before, session: { ...before.session, selected_character_id: '0xd' } },
+    { type: 'character/select', character_id: '0xd' }
+  )
+
+  expect(Object.keys(before.world.zones)).toEqual(['overworld:1:1'])
+  expect(Object.keys(selected.world.zones)).toEqual(['verdant:2:2'])
+  expect(Object.keys(selected.world.all_zones).sort()).toEqual(['overworld:1:1', 'verdant:2:2'])
+})
+
+test('a population with no zone row states nothing about consumption and renders nothing', () => {
+  // the seed only ever reaches the client alongside its row; the reverse is a torn moment, and
+  // rendering it as "nothing taken" would republish every consumed group as live truth
+  const state = fold([POPULATED_ZONE[2]!])
+
+  expect(spawn_markers(state)).toHaveLength(0)
 })
 
 test('a disconnect clears the whole surrounding', () => {
-  const populated = initial_app_state(settings)
+  const populated = app_state()
   const with_player = world.reduce!(populated, {
     type: 'server/packet',
     packet: { type: 'packet/player_appeared', player: presence('0xc1', 0, 0) },
@@ -129,7 +313,7 @@ test('a disconnect clears the whole surrounding', () => {
   expect(cleared.world).toEqual(initial_world_state())
 })
 
-test('fight markers fold: snapshots replace, creations upsert, phases flip and despawn', () => {
+test('fight markers fold: tracked batches merge, creations upsert, phases flip and despawn', () => {
   const row = {
     id: '0xfight1',
     world: 'zenith',
@@ -138,12 +322,14 @@ test('fight markers fold: snapshots replace, creations upsert, phases flip and d
     phase: 'placement',
     access_a: 0,
     access_b: 255,
+    opener_a: null,
+    opener_b: null,
     managed: false,
     wagered: false,
     placement_ms: '1000',
   }
-  // the snapshot IS the tracked zones' truth: a stale marker outside it is dropped
-  const snapshotted = fold([{ type: 'packet/fights', fights: [row] }])
+  // the initial tracked batch seeds the marker set; later batches may contain only fresh zones
+  const snapshotted = fold([tracked('zenith', [{ zx: 0, zz: 0 }]), { type: 'packet/fights', fights: [row] }])
   expect(Object.keys(snapshotted.fights)).toEqual(['0xfight1'])
 
   // A CREATION SHIPS THE PROJECTED ROW (2026-08-21): the fold stores what the wire carried and
@@ -151,18 +337,23 @@ test('fight markers fold: snapshots replace, creations upsert, phases flip and d
   // must never wear one, until the next snapshot happened to correct it.
   const born = { ...row, id: '0xf2', x: 5, z: 6, managed: true, access_a: 1, placement_ms: '2000' }
   const created = fold([
+    tracked('zenith', [{ zx: 0, zz: 0 }]),
     { type: 'packet/fights', fights: [] },
     { type: 'packet/fight_created', fight: born },
   ])
   expect(created.fights['0xf2']).toEqual(born)
 
   const active = fold([
+    tracked('zenith', [{ zx: 0, zz: 0 }]),
     { type: 'packet/fights', fights: [row] },
     { type: 'packet/fight_phase', fight: '0xfight1', phase: 'active' },
   ])
   expect(active.fights['0xfight1']?.phase).toBe('active')
+  expect(sword_fights(active.fights, 'zenith').map(({ id }) => id)).toEqual(['0xfight1'])
+  expect(sword_fights(snapshotted.fights, 'zenith').map(({ id }) => id)).toEqual(['0xfight1'])
 
   const ended = fold([
+    tracked('zenith', [{ zx: 0, zz: 0 }]),
     { type: 'packet/fights', fights: [row] },
     { type: 'packet/fight_phase', fight: '0xfight1', phase: 'ended' },
   ])

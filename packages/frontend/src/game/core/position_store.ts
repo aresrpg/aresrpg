@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
+/* eslint-disable functional/prefer-immutable-types -- this browser storage boundary accepts the platform's mutable position shape. */
 // Local resume position — the finer-grained "exactly where you stood" cache over the chain
 // checkpoint (the only authoritative anchor). A saved pose is honored ONLY while it can
 // explain itself against the chain: same character/world, captured under the SAME chain
@@ -25,6 +26,7 @@ export type PositionStorage = Readonly<{
   load: (character_id: string, world: string) => Promise<SavedPosition | null>
   save: (character_id: string, world: string, row: SavedPosition) => Promise<void>
 }>
+export type PositionIdentity = Readonly<{ character_id: string; world: string }>
 
 const row_key = (character_id: string, world: string): string => `${character_id}:${world}`
 
@@ -104,6 +106,21 @@ export const resume_position = (
   return Object.freeze({ x: saved.x, y: saved.y, z: saved.z })
 }
 
+/** Resolve the first real terrain focus before the render loop starts. The app previously
+ * scheduled origin chunks while IndexedDB decided between the checkpoint and saved pose. */
+export const resolve_world_boot_position = async ({
+  checkpoint,
+  chain_anchor,
+  load,
+}: Readonly<{
+  checkpoint: Readonly<{ x: number; z: number }>
+  chain_anchor: ChainAnchor | null
+  load: () => Promise<SavedPosition | null>
+}>): Promise<Readonly<{ x: number; z: number }>> => {
+  const resumed = resume_position(await load(), chain_anchor)
+  return resumed ? Object.freeze({ x: resumed.x, z: resumed.z }) : checkpoint
+}
+
 /** Debounced writer: at most one write per interval while moving, plus a trailing write when
  *  movement stops. `note` is called from the pose lane; `flush` on teardown. */
 export const create_position_writer = ({
@@ -112,26 +129,29 @@ export const create_position_writer = ({
   settle_ms = 750,
   now = () => Date.now(),
 }: Readonly<{
-  save: (row: SavedPosition) => void
+  save: (identity: PositionIdentity, row: SavedPosition) => void
   interval_ms?: number
   settle_ms?: number
   now?: () => number
 }>): Readonly<{
-  note: (pose: Readonly<{ x: number; y: number; z: number }>, anchor: ChainAnchor) => void
+  note: (pose: Readonly<{ x: number; y: number; z: number }>, anchor: ChainAnchor, identity: PositionIdentity) => void
   flush: () => void
 }> => {
   let last_write = 0
-  let pending: SavedPosition | null = null
+  let pending: Readonly<{ identity: PositionIdentity; row: SavedPosition }> | null = null
   let settle_timer: ReturnType<typeof setTimeout> | null = null
   const write = (): void => {
     if (!pending) return
     last_write = now()
-    save(pending)
+    save(pending.identity, pending.row)
     pending = null
   }
   return Object.freeze({
-    note: (pose, anchor) => {
-      pending = Object.freeze({ x: pose.x, y: pose.y, z: pose.z, saved_at: now(), anchor })
+    note: (pose, anchor, identity) => {
+      pending = Object.freeze({
+        identity,
+        row: Object.freeze({ x: pose.x, y: pose.y, z: pose.z, saved_at: now(), anchor }),
+      })
       if (settle_timer) clearTimeout(settle_timer)
       settle_timer = setTimeout(write, settle_ms)
       if (now() - last_write >= interval_ms) write()

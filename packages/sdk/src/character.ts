@@ -3,8 +3,6 @@
 // The character builder — creation + progression through the app's ONE chain door. Creation
 // projects only receipt facts; the server streams the full chain-authored row.
 
-import type { CharacteristicName } from '@aresrpg/immutable'
-import type { CharacterRow } from '@aresrpg/protocol'
 import type { KioskOwnerCap } from '@mysten/kiosk'
 import { bcs } from '@mysten/sui/bcs'
 import { deriveDynamicFieldID, deriveObjectID } from '@mysten/sui/utils'
@@ -41,8 +39,6 @@ export const character_claim_id = (name_registry_id: string, name: string): stri
     '0x2::derived_object::Claimed',
     bcs.Address.serialize(character_id(name_registry_id, name)).toBytes()
   )
-
-export type CharacterReceipt = { digest: string; character: CharacterRow }
 
 export type CharacterCreateCtx = {
   name: string
@@ -83,30 +79,3 @@ export const character_create = async (
   if (typeof character_id !== 'string') throw new Error('The create receipt did not expose its CharacterCreated id.')
   return { digest: receipt_digest(receipt), character_id, kiosk_cap: settled_kiosk_cap }
 }
-
-export type CharacterActionsCtx = {
-  character: CharacterRow
-  kiosk_cap: KioskOwnerCap | null
-}
-
-/** The builder: one character, its progression doors. Rebuild it from the fresh row after
- *  each action. */
-export const character_actions = (sdk: GameSdk, { character, kiosk_cap }: CharacterActionsCtx) => ({
-  raise_stat: async (stat: CharacteristicName, amount: number): Promise<CharacterReceipt> => {
-    if (amount <= 0) throw new Error('Stat amount must be positive.')
-    if (character.available_points < amount) throw new Error('Not enough available stat points.')
-    const tx = sdk.tx()
-    sdk.with_owner_kiosk(tx, kiosk_cap, (kiosk, cap) => {
-      sdk.doors.raise_stat(tx, { kiosk, cap, character_id: character.id, stat, amount })
-    })
-    const receipt = await sdk.execute(tx)
-    return {
-      digest: receipt_digest(receipt),
-      character: {
-        ...character,
-        [stat]: character[stat] + amount,
-        available_points: character.available_points - amount,
-      },
-    }
-  },
-})

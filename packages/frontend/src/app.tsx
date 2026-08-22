@@ -1,9 +1,11 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
+/* eslint-disable complexity -- the app root explicitly composes mutually exclusive route surfaces. */
 
 import type { EngineQuality } from '@aresrpg/engine'
 import type { CharacterCreateInput } from '@aresrpg/sdk/character'
 import { CHARACTER_PRICE_MIST } from '@aresrpg/sdk/character-price'
+import { MAX_TRACKED_CHARACTERS } from '@aresrpg/protocol'
 import { Check, Copy } from 'lucide-react'
 import { useCallback, useRef, useState } from 'react'
 import { ThinkingOrb } from 'thinking-orbs'
@@ -15,8 +17,16 @@ import { CharacterCreateModal } from './components/CharacterCreateModal.tsx'
 import { Chat } from './components/Chat.tsx'
 import { CompassStrip } from './game/hud/CompassStrip.tsx'
 import { Minimap } from './game/hud/Minimap.tsx'
+import { OverworldVitals } from './game/hud/OverworldVitals.tsx'
+import { BiomeMusic } from './game/audio/BiomeMusic.tsx'
 import { MountPrompt } from './components/MountPrompt.tsx'
+import { PortalPrompt } from './components/PortalPrompt.tsx'
+import { TravelModal } from './components/TravelModal.tsx'
 import { FightPrompt } from './components/FightPrompt.tsx'
+import { PlayerNametag } from './components/PlayerNametag.tsx'
+import { ZonePrompt } from './components/ZonePrompt.tsx'
+import { SpawnNametag } from './components/SpawnNametag.tsx'
+import { AmbushPrompt } from './components/AmbushPrompt.tsx'
 import { PlayerContextMenu } from './components/PlayerContextMenu.tsx'
 import { FpsPanel } from './components/FpsPanel.tsx'
 import { Toasts } from './components/Toasts.tsx'
@@ -28,6 +38,7 @@ import type { Locale } from './i18n/locale.ts'
 import type { Page } from './modules/navigation.ts'
 import { toast } from './toast.ts'
 import { format_sui } from './wallet_amount.ts'
+import { FightLevelUpCard, FightResultCard } from './game/fight/FightResultCard.tsx'
 
 // Creation moves CHARACTER_PRICE_MIST on-chain and burns gas on top — the margin keeps the
 // gate honest for the whole transaction, not just the price.
@@ -239,6 +250,7 @@ export function App() {
   const create_character = useCallback(
     async (character: CharacterCreateInput): Promise<void> => {
       if (!wallet) throw new Error('The wallet session is unavailable')
+      if (session.characters.length >= MAX_TRACKED_CHARACTERS) return
       const pending = toast.loading(copy?.creating_character ?? 'Creating character…')
       try {
         await wallet.create_character(character)
@@ -250,7 +262,7 @@ export function App() {
         throw error
       }
     },
-    [copy, wallet]
+    [copy, session.characters.length, wallet]
   )
   const sui_insufficient =
     session.sui_balance_mist !== null && session.sui_balance_mist < CHARACTER_PRICE_MIST + CREATE_GAS_MARGIN_MIST
@@ -258,9 +270,6 @@ export function App() {
     engine_status.state === 'failed' || (engine_status.state === 'degraded' && !graphics_notice_dismissed)
   const world_unavailable = engine_status.issue?.code === 'world_unavailable'
   const loading_universe = session.auth_status === 'connecting' || (in_app && !session.roster_loaded)
-  const selected_character_name =
-    session.characters.find(({ id }) => id === session.selected_character_id)?.name ?? null
-
   if (!copy) return <main className="fixed inset-0 bg-[#0a0a0f]" />
 
   return (
@@ -273,6 +282,7 @@ export function App() {
             : 'inset-0'
         }`}
       >
+        <BiomeMusic />
         <canvas ref={attach_canvas} className="absolute inset-0 size-full touch-none" />
 
         {in_app && navigation.page === 'world' && !fight_active && (
@@ -280,13 +290,16 @@ export function App() {
             <PlayerContextMenu copy={copy} />
             <MountPrompt copy={copy} />
             <FightPrompt copy={copy} />
+            <PortalPrompt copy={copy} />
+            <PlayerNametag />
+            <SpawnNametag copy={copy} />
+            <AmbushPrompt copy={copy} />
             <CompassStrip copy={copy} />
+            <ZonePrompt copy={copy} />
             <Minimap copy={copy} />
+            <OverworldVitals />
             <div className="gw-worldchat">
-              <Chat
-                self_name={selected_character_name ?? undefined}
-                text={{ ...copy.simulator_page, ...copy.fight_hud }}
-              />
+              <Chat text={{ ...copy.simulator_page, ...copy.fight_hud }} />
             </div>
           </div>
         )}
@@ -325,7 +338,7 @@ export function App() {
           warning={copy.out_of_sui_body}
         />
       )}
-      {in_app && navigation.dialog === 'character_create' && (
+      {in_app && navigation.dialog === 'character_create' && session.characters.length < MAX_TRACKED_CHARACTERS && (
         <CharacterCreateModal
           cancel={() =>
             dispatch_app({ type: 'dialog/open', dialog: session.characters.length === 0 ? 'welcome' : null })
@@ -335,7 +348,14 @@ export function App() {
           insufficient={sui_insufficient}
         />
       )}
+      {in_app && navigation.dialog === 'travel' && <TravelModal copy={copy} />}
       <Toasts />
+      {in_app && navigation.page === 'world' && (
+        <>
+          <FightResultCard copy={copy} />
+          <FightLevelUpCard copy={copy} />
+        </>
+      )}
 
       {show_graphics_notice && (
         <section className="fixed inset-0 z-[200] grid place-items-center bg-[#050508]/88 p-5 backdrop-blur-lg">

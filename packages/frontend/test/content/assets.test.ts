@@ -127,6 +127,7 @@ describe('shipped content assets', () => {
       hair: 'senshi_male_hair',
     })
     expect(character_model_basenames('shugo', false)).toEqual({ body: 'shugo_female' })
+    expect(character_model_basenames('tomoda', false)).toEqual({ body: 'tomoda_female' })
     expect(character_model_basenames('yogan', true)).toEqual({
       body: 'senshi_male',
       hair: 'senshi_male_hair',

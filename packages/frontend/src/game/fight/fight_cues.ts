@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
+/* eslint-disable complexity -- cue projection exhaustively maps the sealed fight-event union in one function. */
 // Pure fight-event -> engine-cue projection. This is the only game-side presentation mapping;
 // it reads canonical results and never re-resolves combat.
 /* eslint-disable functional/immutable-data -- The reducer mutates only its fresh local cue accumulator, then freezes it. */

@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
+/* eslint-disable functional/immutable-data, functional/prefer-immutable-types -- camera adapters mutate owned Three.js vectors and consume mutable platform handles. */
 // Camera addons — pluggable views over one frame contract; the director travels between them so
 // every switch is one continuous move. The follow addon is a LOSSLESS PORT of the legacy shoulder
 // rig (deprecated/engine/src/player/camera_rig.js — spring follow, shoulder offset, hold-to-rotate
@@ -196,7 +197,6 @@ const wall_march = (
 
 export type FollowAddon = CameraAddon &
   Readonly<{
-    is_rotating: () => boolean
     rotate: (dx: number, dy: number) => void
     dolly: (meters: number) => void
     get_bob_offset: () => number
@@ -329,7 +329,6 @@ export const create_follow_addon = (
     get_yaw: () => azimuth,
     attach: (canvas: HTMLElement) => controls.attach(canvas),
     detach: () => controls.detach(),
-    is_rotating: () => controls.is_locked(),
     rotate: apply_rotate,
     dolly,
     translate_y: (amount: number) => follow.translate(0, amount, 0),

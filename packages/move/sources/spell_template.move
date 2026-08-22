@@ -38,7 +38,7 @@ public(package) fun new(
   assert!(content_rules::is_classe(&classe), EBadClasse);
   assert!(levels.length() >= 1 && levels.length() <= 6, EBadLevels);
   let template = SpellTemplate {
-    id: derived_object::claim(item::registry_uid_mut(registry), SpellKey(name)),
+    id: derived_object::claim(item::ru(registry), SpellKey(name)),
     name,
     classe,
     unlock_level,

@@ -19,7 +19,8 @@ const CHARACTER_MODELS: Readonly<
   }),
   tomoda: Object.freeze({
     male: Object.freeze({ body: 'tomoda_male' }),
-    female: Object.freeze({ body: 'tomoda_female', hair: 'tomoda_female_hair' }),
+    // This body already carries Material.008 hair. The standalone extraction duplicates it.
+    female: Object.freeze({ body: 'tomoda_female' }),
   }),
   yajin: Object.freeze({
     male: Object.freeze({ body: 'yajin_male', hair: 'yajin_male_hair' }),

@@ -11,9 +11,10 @@ import { VitePWA } from 'vite-plugin-pwa'
 import { parse } from 'yaml'
 
 import { resolve_env, type PublicEnv } from './src/env.ts'
+import { display_assets_plugin } from './display_assets.ts'
 import { seed_dev_plugin } from './seed_dev_server.ts'
 import { deployment_dev_plugin } from './deployment_dev_server.ts'
-import { sound_assets_plugin } from './sound_assets.ts'
+import { music_assets_plugin, sound_assets_plugin } from './sound_assets.ts'
 
 const frontend_dir = dirname(fileURLToPath(import.meta.url))
 const repo_dir = resolve(frontend_dir, '../..')
@@ -59,7 +60,12 @@ export default defineConfig(({ mode }) => {
     plugins: [
       html_env_plugin(env),
       yaml_plugin(),
-      sound_assets_plugin(resolve(repo_dir, 'seed/sounds')),
+      ...sound_assets_plugin(resolve(repo_dir, 'seed/sounds')),
+      ...music_assets_plugin(resolve(repo_dir, 'music')),
+      ...display_assets_plugin({
+        characters_dir: resolve(repo_dir, 'seed/icons/characters'),
+        items_dir: resolve(repo_dir, 'seed/icons/items'),
+      }),
       ...(mode === 'development'
         ? [
             seed_dev_plugin({ repo_dir, content_dir: resolve(repo_dir, 'seed/content') }),

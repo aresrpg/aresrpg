@@ -2,17 +2,10 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 // Content-to-render projection for mobs. The engine remains the only model loader and scene owner.
 
-import type { EntityVisualEffect, FightSide, MobEntityRender } from '@aresrpg/engine'
+import type { MobEntityRender } from '@aresrpg/engine'
 
 import { mob_entities } from '../mob_entities.ts'
-
-export type FightMobRenderSource = Readonly<{
-  id: string
-  mob_type: string
-  cell: number
-  side: FightSide
-  visual_effect?: EntityVisualEffect
-}>
+import type { FightMobRenderSource } from './mob_entity_sources.ts'
 
 export const fight_mob_entities = (sources: readonly FightMobRenderSource[]): readonly MobEntityRender[] =>
   mob_entities(

@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
+/* eslint-disable fp-law/no-mutating-methods, functional/immutable-data -- canvas path construction mutates fresh local arrays before returning immutable geometry. */
 // COMPASS MATH — pure bearing/format helpers for the top-strip compass (CompassStrip.tsx). One
 // home for the angle conventions so the strip, its tests, and any future consumer never drift:
 //   • World axes are the voxel scene's: +X = east, +Z = south → NORTH = -Z (the minimap's up).

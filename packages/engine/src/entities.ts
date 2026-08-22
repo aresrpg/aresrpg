@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
+/* eslint-disable max-lines -- entity lifecycle remains one cohesive engine boundary pending a behavior-neutral extraction. */
 // One entity lifecycle for terrain and fight boards. Callers provide identity, appearance, and an anchor;
 // the engine alone owns model loading, animation, placement, and disposal.
 import {
@@ -529,6 +530,10 @@ export const create_entity_layer = ({
       const entity = entities.get(id)
       const root = entity?.object
       if (!entity || !root || dead_entities.has(id)) return false
+      // An explicit snap (teleport, authoritative rollback) supersedes locomotion already in
+      // flight. Leaving the motion alive would lerp the entity back to the rejected endpoint.
+      motions.get(id)?.resolve(false)
+      motions.delete(id)
       if (cell === undefined) place(entity)
       else {
         const destination = position_at(entity, cell)

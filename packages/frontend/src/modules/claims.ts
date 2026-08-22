@@ -18,6 +18,7 @@ import { env } from '../env.ts'
 import { toast } from '../toast.ts'
 import type { AppModule } from '../store.ts'
 import { is_rune } from '../characters/forge_eligibility.ts'
+import { stack_merge_target } from '../inventory_stacks.ts'
 
 const RETRY_COOLDOWN_MS = 30_000
 /** the indexer projects a yield a beat after finality — one per-item request covers it */
@@ -38,6 +39,13 @@ export const rolled_item_types = (() => {
   }
 })()
 
+/** A BOX CLAIM WITHOUT ITS ROLL IS NOT READY — IT IS NOT BROKEN (2026-08-22). The open receipt
+ *  names the CLAIM, never its contents: what it rolled is the PROJECTION's to tell, and it
+ *  arrives on the streamed row. Settling before then threw "not in the authored catalog" — a
+ *  lie, the catalog was fine — and left the reveal spinning on Collecting… forever. */
+export const claim_is_settleable = (claim: Readonly<ClaimRow>): boolean =>
+  claim.kind !== 'box' || !!claim.rolled_template
+
 type Attempt = Readonly<{ tried_at_ms: number; latched: boolean }>
 
 /** An EXECUTED failure carries a digest in the SDK's error message — gas burned, never refire. */
@@ -49,15 +57,20 @@ const observe: NonNullable<AppModule['observe']> = ({ events, dispatch, get_stat
   const in_flight = new Set<string>()
 
   const settle = async (claim: Readonly<ClaimRow>): Promise<void> => {
-    const { wallet, inventory } = get_state().session
+    const state = get_state()
+    const { wallet, inventory } = state.session
     if (!wallet) return
+    const kiosk = state.session.characters[0]?.kiosk ?? inventory[0]?.kiosk
+    const character = state.session.characters.find((row) => row.kiosk === kiosk)
+    const custody = kiosk ? { kiosk, kiosk_cap: character?.kiosk_cap } : undefined
     if (claim.kind === 'box') {
       const rolled_item_type = claim.rolled_template ? rolled_item_types().get(claim.rolled_template) : null
-      if (!rolled_item_type) throw new Error('The rolled item is not in the authored catalog')
-      const existing = inventory.find((row) => row.item_type === rolled_item_type)?.id ?? null
+      if (!rolled_item_type)
+        throw new Error(`The rolled template ${claim.rolled_template} is not in the authored catalog`)
+      const existing = stack_merge_target(inventory, state.marketplace.own_listings, rolled_item_type, kiosk)
       // the yield's CONTENTS stream from the server (ItemWritten — projection-driven);
       // the receipt only settles the claim locally
-      await wallet.character.claim_loot({ claim_id: claim.id, rolled_item_type, existing })
+      await wallet.character.claim_loot({ claim_id: claim.id, rolled_item_type, existing, custody })
       dispatch({ type: 'inventory/claim_settled', claim_id: claim.id })
       return
     }
@@ -65,9 +78,9 @@ const observe: NonNullable<AppModule['observe']> = ({ events, dispatch, get_stat
       .filter((item) => item.category === 'rune')
       .map(({ item_type }) => ({
         item_type,
-        existing: inventory.find((row) => row.item_type === item_type && is_rune(row))?.id ?? null,
+        existing: stack_merge_target(inventory.filter(is_rune), state.marketplace.own_listings, item_type, kiosk),
       }))
-    await wallet.character.redeem_crush({ claim_id: claim.id, runes })
+    await wallet.character.redeem_crush({ claim_id: claim.id, runes, custody })
     dispatch({ type: 'inventory/claim_settled', claim_id: claim.id })
   }
 
@@ -77,6 +90,9 @@ const observe: NonNullable<AppModule['observe']> = ({ events, dispatch, get_stat
     const now = Date.now()
     for (const claim of session.claims) {
       if (in_flight.has(claim.id)) continue
+      // no attempt is recorded for an unready claim: the cooldown would otherwise swallow the
+      // very stream that makes it settleable
+      if (!claim_is_settleable(claim)) continue
       const attempt = attempts.get(claim.id)
       if (attempt && (attempt.latched || now - attempt.tried_at_ms < RETRY_COOLDOWN_MS)) continue
       in_flight.add(claim.id)

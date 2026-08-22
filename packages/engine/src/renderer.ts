@@ -17,6 +17,8 @@ import type {
   FightBlobSpec,
   FightBoardRender,
   FightPresentationCue,
+  FightSwordMarker,
+  ResourceNodeMarker,
   RenderChunkRequest,
   Vec3,
 } from './types.ts'
@@ -26,16 +28,30 @@ const ENGINE_BOOT = Symbol('aresrpg.engine_boot')
 
 const supports_webgpu = (): boolean => typeof navigator !== 'undefined' && 'gpu' in navigator && navigator.gpu != null
 
+export const create_retained_values = <T>() => {
+  const values = new Map<string, T>()
+  return Object.freeze({
+    set: (id: string, value: T | null): void => {
+      if (value === null) values.delete(id)
+      else values.set(id, value)
+    },
+    replay: (apply: (id: string, value: T) => void): void => values.forEach((value, id) => apply(id, value)),
+    clear: (): void => values.clear(),
+  })
+}
+
 export const create_engine = ({
   canvas,
   world: world_value,
   quality: initial_quality = 'medium',
   presentation = 'world',
+  initial_focus = [0, 0],
 }: Readonly<{
   canvas: HTMLCanvasElement
   world: unknown
   quality?: EngineQuality
   presentation?: EnginePresentation
+  initial_focus?: readonly [number, number]
 }>): Engine => {
   const world = parse_world_recipe(world_value)
   const pending_chunks = new Map<string, RenderChunkRequest>()
@@ -49,14 +65,25 @@ export const create_engine = ({
   let quality = initial_quality
   let render_distance: number | null = null
   let camera: Readonly<{ position: Vec3; target: Vec3; projection: CameraProjection }> = {
-    position: [36, 34, 36],
-    target: [0, 0, 0],
+    position: [initial_focus[0] + 36, 34, initial_focus[1] + 36],
+    target: [initial_focus[0], 0, initial_focus[1]],
     projection: {},
   }
   let time_of_day = 0.31
   let flat_amount = 0
   let fight_board: FightBoardRender | null = null
   let entities: readonly EntityRender[] = Object.freeze([])
+  let resource_nodes: readonly ResourceNodeMarker[] = Object.freeze([])
+  let fight_swords: Readonly<{
+    url: string
+    impact_sound_url: string
+    markers: readonly FightSwordMarker[]
+  }> | null = null
+  const entity_labels = create_retained_values<HTMLElement>()
+  const world_labels = create_retained_values<Readonly<{ element: HTMLElement; position: Vec3 }>>()
+  const resource_labels = create_retained_values<HTMLElement>()
+  const fight_sword_labels = create_retained_values<HTMLElement>()
+  const portal_labels = create_retained_values<HTMLElement>()
   let character_anchor: Vec3 | null = null
   const pending_fight_cues: Array<Readonly<{ cue: FightPresentationCue; resolve: (played: boolean) => void }>> = []
   const fight_blobs = new Map<string, FightBlobRender>()
@@ -116,6 +143,13 @@ export const create_engine = ({
     next.set_flatten_amount(flat_amount)
     next.set_fight_board(fight_board)
     next.set_entities(entities)
+    next.set_resource_nodes(resource_nodes)
+    if (fight_swords) next.set_fight_swords(fight_swords.url, fight_swords.impact_sound_url, fight_swords.markers)
+    entity_labels.replay(next.set_entity_label)
+    world_labels.replay((id, label) => next.set_world_label(id, label.element, label.position))
+    resource_labels.replay(next.set_resource_node_label)
+    fight_sword_labels.replay(next.set_fight_sword_label)
+    portal_labels.replay((_, element) => next.set_portal_label(element))
     pending_fight_cues.splice(0).forEach(({ cue, resolve }) => void next.play_fight_cue(cue).then(resolve))
     fight_blobs.forEach(next.upsert_fight_blob)
     pending_chunks.forEach(submit_chunk)
@@ -144,7 +178,10 @@ export const create_engine = ({
               issue ? { state: 'degraded', backend: 'webgpu', issue } : { state: 'ready', backend: 'webgpu' }
             )
         }
-        attach(await create_webgpu_backend(canvas, quality, world, report_issue, presentation), sky_issue)
+        attach(
+          await create_webgpu_backend(canvas, quality, world, report_issue, presentation, initial_focus),
+          sky_issue
+        )
         return
       } catch (error) {
         console.error('WebGPU initialization failed; using the grid fallback.', error)
@@ -207,8 +244,26 @@ export const create_engine = ({
       entities = Object.freeze([...next])
       backend?.set_entities(entities)
     },
-    set_fight_swords: (url, markers) => backend?.set_fight_swords(url, markers),
-    set_fight_sword_label: (id, element) => backend?.set_fight_sword_label(id, element),
+    set_fight_swords: (url, impact_sound_url, markers) => {
+      fight_swords = Object.freeze({ url, impact_sound_url, markers: Object.freeze([...markers]) })
+      backend?.set_fight_swords(url, impact_sound_url, fight_swords.markers)
+    },
+    set_fight_sword_label: (id, element) => {
+      fight_sword_labels.set(id, element)
+      backend?.set_fight_sword_label(id, element)
+    },
+    set_resource_nodes: (markers) => {
+      resource_nodes = Object.freeze([...markers])
+      backend?.set_resource_nodes(resource_nodes)
+    },
+    set_resource_node_label: (id, element) => {
+      resource_labels.set(id, element)
+      backend?.set_resource_node_label(id, element)
+    },
+    set_portal_label: (element) => {
+      portal_labels.set('portal', element)
+      backend?.set_portal_label(element)
+    },
     animate_entity: (motion) => backend?.animate_entity(motion) ?? Promise.resolve(false),
     play_fight_cue: (cue) =>
       backend
@@ -216,7 +271,16 @@ export const create_engine = ({
         : new Promise<boolean>((resolve) => pending_fight_cues.push(Object.freeze({ cue, resolve }))),
     play_jump_puff: (position) => backend?.play_jump_puff(position),
     project_entity: (id) => backend?.project_entity(id) ?? null,
-    set_entity_label: (id, element) => backend?.set_entity_label(id, element),
+    set_entity_label: (id, element) => {
+      entity_labels.set(id, element)
+      backend?.set_entity_label(id, element)
+    },
+    set_world_label: (id, element, position) => {
+      const label =
+        element && position ? Object.freeze({ element, position: Object.freeze([...position]) as Vec3 }) : null
+      world_labels.set(id, label)
+      backend?.set_world_label(id, element, position)
+    },
     entity_height: (id) => backend?.entity_height(id) ?? null,
     create_fight_blob: (blob: FightBlobSpec) => {
       fight_blob_serial += 1
@@ -286,6 +350,13 @@ export const create_engine = ({
       pending_chunks.clear()
       fight_blobs.clear()
       entities = Object.freeze([])
+      resource_nodes = Object.freeze([])
+      fight_swords = null
+      entity_labels.clear()
+      world_labels.clear()
+      resource_labels.clear()
+      fight_sword_labels.clear()
+      portal_labels.clear()
       pending_fight_cues.splice(0).forEach(({ resolve }) => resolve(false))
       chunk_waiters.forEach(({ resolve }) => resolve('removed'))
       chunk_waiters.clear()

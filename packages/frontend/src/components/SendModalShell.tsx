@@ -6,10 +6,8 @@ import { useEffect, useState, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 
 import { env } from '../env.ts'
+import { explorer_transaction_url } from '../explorer.ts'
 import type { AppCopy } from '../i18n/copy.ts'
-
-const explorer_tx_url = (digest: string): string =>
-  `https://${env.network === 'mainnet' ? 'suivision.xyz' : `${env.network}.suivision.xyz`}/txblock/${digest}`
 
 export const truncate_digest = (digest: string): string =>
   digest.length <= 16 ? digest : `${digest.slice(0, 10)}...${digest.slice(-6)}`
@@ -28,7 +26,7 @@ export const DigestLink = ({ copy, digest }: Readonly<{ copy: AppCopy; digest: s
       <div className="flex items-center gap-2">
         <a
           className="flex items-center gap-1.5 font-mono text-[10px] tracking-wide text-cyan transition-colors hover:underline"
-          href={explorer_tx_url(digest)}
+          href={explorer_transaction_url(env.network, digest)}
           rel="noopener noreferrer"
           target="_blank"
         >

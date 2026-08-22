@@ -7,6 +7,7 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
+    "portraits": "bun run scripts/render_character_portraits.ts",
     "lint": "eslint . && prettier . --check",
     "format": "prettier . --write && eslint . --fix",
     "test": "bun test",

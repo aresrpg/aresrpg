@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
+/* eslint-disable complexity -- the HUD exhaustively composes sealed placement, turn, result, and spectator states. */
 // The production fight HUD. It is a pure reader of the shared fight projection; its two
 // commands re-enter the same fight input door as board and streamed actions.
 
@@ -8,12 +9,18 @@ import { Swords } from 'lucide-react'
 import { lazy, Suspense, useEffect, useMemo, useState } from 'react'
 
 import { ModalFrame } from '../../components/ModalFrame.tsx'
+import { content_catalog } from '../../content/catalog.ts'
 import type { AppCopy } from '../../i18n/copy.ts'
 import { dispatch_app, useAppStore } from '../../store.ts'
+import { ActionSlots } from '../hud/ActionSlots.tsx'
+import { VitalsDisplay } from '../hud/VitalsDisplay.tsx'
 
 import {
   select_fight_view,
+  fight_view_with_display,
+  turn_seconds_remaining,
   type FightActionSelection,
+  type FightFighterDisplay,
   type FightFighterView,
   type FightSpellView,
 } from './fight_projection.ts'
@@ -29,14 +36,23 @@ const template = (source: string, values: Readonly<Record<string, string | numbe
 const percent = (value: bigint, maximum: bigint): number =>
   maximum <= 0n ? 0 : Math.max(0, Math.min(100, Number((value * 10_000n) / maximum) / 100))
 
+const submit_end_turn = (fighter: bigint): void =>
+  dispatch_app({
+    type: 'fight/input',
+    origin: 'local',
+    input: { type: 'end_turn', fighter, observed_ms: BigInt(Date.now()) },
+  })
+
 const FightTimeline = ({
   fighters,
   label,
   focus,
+  turn_seconds,
 }: Readonly<{
   fighters: readonly FightFighterView[]
   label: string
   focus: (fighter: bigint | null) => void
+  turn_seconds: number | null
 }>) => (
   <aside aria-label={label} className="fight-hud__turns">
     {fighters.map((fighter) => (
@@ -55,7 +71,9 @@ const FightTimeline = ({
         <div className="fight-hud__turn-body">
           <div className="fight-hud__turn-id">
             <span className="fight-hud__turn-name">{fighter.name}</span>
-            <span className="fight-hud__turn-level">Lv {fighter.level.toString()}</span>
+            <span className="fight-hud__turn-level">
+              {fighter.active && turn_seconds !== null ? `${turn_seconds}s` : `Lv ${fighter.level}`}
+            </span>
           </div>
           <div className="fight-hud__turn-hp" title={`${fighter.hp} / ${fighter.max_hp} HP`}>
             <span style={{ width: `${percent(fighter.hp, fighter.max_hp)}%` }} />
@@ -66,13 +84,6 @@ const FightTimeline = ({
       </article>
     ))}
   </aside>
-)
-
-const StatGem = ({ kind, value }: Readonly<{ kind: 'ap' | 'mp'; value: bigint }>) => (
-  <div aria-label={`${kind.toUpperCase()} ${value}`} className={`fight-hud__gem fight-hud__gem--${kind}`}>
-    <i />
-    <span>{value.toString()}</span>
-  </div>
 )
 
 const FightVitals = ({
@@ -88,7 +99,6 @@ const FightVitals = ({
   select_action: (action: FightActionSelection) => void
   text: Readonly<Record<string, string>>
 }>) => {
-  const [percent_visible, set_percent_visible] = useState(false)
   const weapon_label = fighter.weapon?.bare_hands ? text.bare_hands : text.weapon_attack
   const weapon_spell: FightSpellView | null = fighter.weapon
     ? Object.freeze({
@@ -100,36 +110,10 @@ const FightVitals = ({
         turn: fighter.weapon.turn,
       })
     : null
-  const card_count = fighter.spells.length + (weapon_spell ? 1 : 0)
   return (
     <>
-      <div className="fight-hud__vitals">
-        <button
-          className="fight-hud__hp-gem"
-          onClick={() => set_percent_visible((visible) => !visible)}
-          title={`${fighter.hp} / ${fighter.max_hp} HP`}
-          type="button"
-        >
-          <i />
-          {percent_visible ? (
-            <span>{Math.round(percent(fighter.hp, fighter.max_hp))}%</span>
-          ) : (
-            <span>
-              {fighter.hp.toString()}
-              <b />
-              {fighter.max_hp.toString()}
-            </span>
-          )}
-        </button>
-        <div className="fight-hud__stat-gems">
-          <StatGem kind="ap" value={fighter.ap} />
-          <StatGem kind="mp" value={fighter.mp} />
-        </div>
-      </div>
-      <div
-        className="fight-hud__spells"
-        style={{ gridTemplateColumns: `repeat(${Math.max(1, Math.ceil(card_count / 2))}, 50px)` }}
-      >
+      <VitalsDisplay ap={fighter.ap} hp={fighter.hp} max_hp={fighter.max_hp} mp={fighter.mp} />
+      <ActionSlots capacity={20} columns={10}>
         {weapon_spell && (
           <Suspense fallback={<div className="fight-hud__spell disabled" />}>
             <LazyFightSpell
@@ -160,18 +144,33 @@ const FightVitals = ({
             </Suspense>
           )
         })}
-      </div>
+      </ActionSlots>
     </>
   )
 }
 
 // 6px is the radius this HUD's own controls carry (`.fight-hud__controls button`)
 const BANNER_BUTTON = 'mt-1 rounded-[6px] px-4 py-1.5 text-[10px] tracking-[0.14em]'
+const END_TURN_SUBMIT_GUARD_MS = 500
+
+export const end_turn_wait_ms = (observed_at_ms: number, now_ms: number): number =>
+  Math.max(0, observed_at_ms + Number(CONTRACT_CONSTANTS.turn_min_ms) + END_TURN_SUBMIT_GUARD_MS - now_ms)
+
+export const should_auto_start_placement = ({
+  auto_start,
+  stalled,
+  locked,
+  attempted,
+}: Readonly<{ auto_start: boolean; stalled: boolean; locked: boolean; attempted: boolean }>): boolean =>
+  auto_start && stalled && !locked && !attempted
 
 const PlacementBanner = ({
   deadline,
   text,
   ready,
+  starting,
+  locked,
+  auto_start,
   sides_manned,
   can_forfeit,
   on_ready,
@@ -182,6 +181,9 @@ const PlacementBanner = ({
   text: Readonly<Record<string, string>>
   /** null hides the button (local fights pre-ready everyone); true disables it (already ready) */
   ready: boolean | null
+  starting: boolean
+  locked: boolean
+  auto_start: boolean
   /** false = a side is empty, so the chain would refuse a start (fight.move `start`) */
   sides_manned: boolean
   can_forfeit: boolean
@@ -190,6 +192,7 @@ const PlacementBanner = ({
   on_forfeit: () => void
 }>) => {
   const [now, set_now] = useState(() => Date.now())
+  const [auto_attempted, set_auto_attempted] = useState(false)
   useEffect(() => {
     if (deadline === null) return undefined
     const timer = setInterval(() => set_now(Date.now()), 1_000)
@@ -199,6 +202,11 @@ const PlacementBanner = ({
   // the window closed with someone still unready — every participant may force the start
   // (the chain door admits anyone once the placement deadline passes)
   const stalled = sides_manned && ready !== null && seconds === 0
+  useEffect(() => {
+    if (!should_auto_start_placement({ auto_start, stalled, locked, attempted: auto_attempted })) return
+    set_auto_attempted(true)
+    on_force_start()
+  }, [auto_attempted, auto_start, locked, on_force_start, stalled])
   return (
     <div className="fight-hud__placement" role="status">
       <span>{text.placement_title}</span>
@@ -207,22 +215,30 @@ const PlacementBanner = ({
         <strong className={seconds <= 10 ? 'urgent' : ''}>0:{String(seconds).padStart(2, '0')}</strong>
       )}
       <small>
-        {!sides_manned ? text.placement_no_opponent : stalled ? text.placement_force_prompt : text.placement_hint}
+        {!sides_manned
+          ? text.placement_no_opponent
+          : stalled && auto_start
+            ? auto_attempted && !locked
+              ? text.placement_start_retry
+              : text.placement_starting
+            : stalled
+              ? text.placement_force_prompt
+              : text.placement_hint}
       </small>
       {sides_manned && ready !== null && !stalled && (
-        <button className={`btn-gold ${BANNER_BUTTON}`} disabled={ready} onClick={on_ready} type="button">
-          {ready ? text.placement_waiting : text.placement_ready}
+        <button className={`btn-gold ${BANNER_BUTTON}`} disabled={ready || locked} onClick={on_ready} type="button">
+          {ready ? (starting ? text.placement_starting : text.placement_waiting) : text.placement_ready}
         </button>
       )}
-      {stalled && (
-        <button className={`btn-gold ${BANNER_BUTTON}`} onClick={on_force_start} type="button">
+      {stalled && (!auto_start || (auto_attempted && !locked)) && (
+        <button className={`btn-gold ${BANNER_BUTTON}`} disabled={locked} onClick={on_force_start} type="button">
           {text.placement_force_button}
         </button>
       )}
       {/* leaving is legal for the whole of placement, not only when a side is empty: an
           opponent who joins and then vanishes strands you exactly the same way */}
       {can_forfeit && (
-        <button className={`btn-outline ${BANNER_BUTTON}`} onClick={on_forfeit} type="button">
+        <button className={`btn-outline ${BANNER_BUTTON}`} disabled={locked} onClick={on_forfeit} type="button">
           {text.forfeit}
         </button>
       )}
@@ -247,7 +263,7 @@ const CrankBanner = ({
   return (
     <div className="fight-hud__crank" role="status">
       <span>{text.crank_prompt}</span>
-      <button onClick={on_crank} type="button">
+      <button className={`btn-gold ${BANNER_BUTTON}`} onClick={on_crank} type="button">
         {text.crank_button}
       </button>
     </div>
@@ -256,6 +272,7 @@ const CrankBanner = ({
 
 export const FightHud = ({
   copy,
+  display_fighters = Object.freeze([]),
   focus_fighter,
   selected_action,
   select_action,
@@ -263,6 +280,7 @@ export const FightHud = ({
   presented_turn_seat = null,
 }: Readonly<{
   copy: AppCopy
+  display_fighters?: readonly FightFighterDisplay[]
   focus_fighter?: (fighter: bigint | null) => void
   selected_action: FightActionSelection
   select_action: (action: FightActionSelection) => void
@@ -282,24 +300,40 @@ export const FightHud = ({
         Object.fromEntries([
           ...session.characters.map(({ id, name }) => [id, name]),
           ...simulator.characters.map(({ id, name }) => [id, name]),
+          ...content_catalog.mobs.map(({ mob_type, name }) => [mob_type, name]),
         ])
       ),
     [session.characters, simulator.characters]
   )
-  const view = useMemo(
+  const canonical_view = useMemo(
     () =>
       fight.checkpoint && fight.mode
         ? select_fight_view({
             checkpoint: fight.checkpoint,
             mode: fight.mode,
             owner: fight.mode === 'local' ? 'local' : (session.wallet?.address ?? null),
+            character_id: fight.mode === 'remote' ? session.selected_character_id : null,
+            canonical_ended: fight.canonical_ended,
             names,
           })
         : null,
-    [fight.checkpoint, fight.mode, names, session.wallet?.address]
+    [fight.canonical_ended, fight.checkpoint, fight.mode, names, session.selected_character_id, session.wallet?.address]
   )
-  const ready_at = fight.checkpoint ? fight.checkpoint.contract.turn_started_ms + CONTRACT_CONSTANTS.turn_min_ms : 0n
-  const min_turn_ready = BigInt(now) >= ready_at
+  const view = useMemo(
+    () => (canonical_view ? fight_view_with_display(canonical_view, display_fighters) : null),
+    [canonical_view, display_fighters]
+  )
+  const turn_key =
+    fight.checkpoint && view && view.active_seat !== null
+      ? `${fight.checkpoint.contract.id}:${view.active_seat}:${fight.checkpoint.contract.turn_started_ms}`
+      : null
+  const [observed_turn, set_observed_turn] = useState(() => ({ key: turn_key, at_ms: performance.now() }))
+  useEffect(() => {
+    if (observed_turn.key !== turn_key) set_observed_turn({ key: turn_key, at_ms: performance.now() })
+  }, [observed_turn.key, turn_key])
+  const wait_ms = observed_turn.key === turn_key ? end_turn_wait_ms(observed_turn.at_ms, performance.now()) : Infinity
+  const min_turn_ready = wait_ms === 0
+  const min_wait_seconds = Number.isFinite(wait_ms) ? Math.ceil(wait_ms / 1_000) : 4
 
   useEffect(() => {
     if (!view?.can_end_turn || min_turn_ready) return undefined
@@ -309,12 +343,13 @@ export const FightHud = ({
 
   // the stall watch: while SOMEONE ELSE holds the turn in a remote fight, a slow clock keeps
   // `now` honest so the crank banner appears the second the chain would accept the clearance
-  const watching_stall = fight.mode === 'remote' && view?.phase === 'active' && !view.can_end_turn
+  const watching_turn_clock = fight.mode === 'remote' && view?.phase === 'active' && view.show_turn_timer
+  const watching_stall = watching_turn_clock && !view?.can_end_turn
   useEffect(() => {
-    if (!watching_stall) return undefined
+    if (!watching_turn_clock) return undefined
     const timer = setInterval(() => set_now(Date.now()), 1_000)
     return () => clearInterval(timer)
-  }, [watching_stall])
+  }, [watching_turn_clock])
 
   useEffect(() => {
     if (!view?.can_end_turn || !view.selected || actions_locked) return undefined
@@ -346,6 +381,20 @@ export const FightHud = ({
     return () => globalThis.removeEventListener('keydown', keydown)
   }, [actions_locked, select_action, selected_action, view])
 
+  useEffect(() => {
+    if (
+      !fight.end_turn_queued ||
+      !fight.checkpoint ||
+      !view?.can_end_turn ||
+      !view.selected ||
+      !min_turn_ready ||
+      actions_locked
+    )
+      return
+    submit_end_turn(view.selected.seat)
+    dispatch_app({ type: 'fight/end_turn_queued', fight: fight.checkpoint.contract.id, queued: false })
+  }, [actions_locked, fight.checkpoint, fight.end_turn_queued, min_turn_ready, view])
+
   if (!view || !fight.checkpoint) return null
   if (view.phase === 'placement') {
     const own_seat = view.selected?.seat
@@ -376,6 +425,9 @@ export const FightHud = ({
             dispatch_app({ type: 'fight/input', origin: 'local', input: { type: 'ready', fighter: own_seat } })
           }
           ready={own_ready}
+          starting={Boolean(own_ready && view.ready_starts_fight)}
+          locked={actions_locked}
+          auto_start={view.solo_human_fight}
           sides_manned={view.sides_manned}
           text={copy.fight_hud}
         />
@@ -384,12 +436,14 @@ export const FightHud = ({
   }
   if (view.phase !== 'active' || !view.selected) return null
   const selected = view.selected
-  const end_turn = (): void =>
-    dispatch_app({
-      type: 'fight/input',
-      origin: 'local',
-      input: { type: 'end_turn', fighter: selected.seat, observed_ms: BigInt(Date.now()) },
-    })
+  const queue_or_end_turn = (): void => {
+    if (fight.transaction_pending || fight.end_turn_queued || fight.end_turn_submitted) return
+    if (actions_locked || !min_turn_ready) {
+      dispatch_app({ type: 'fight/end_turn_queued', fight: fight.checkpoint!.contract.id, queued: true })
+      return
+    }
+    submit_end_turn(selected.seat)
+  }
   const forfeit = (): void => {
     set_forfeit_open(false)
     dispatch_app({
@@ -429,10 +483,14 @@ export const FightHud = ({
         }
         focus={focus_fighter ?? (() => undefined)}
         label={copy.fight_hud.turn_order}
+        turn_seconds={
+          fight.mode === 'remote' && view.show_turn_timer && presented_turn_seat === null
+            ? turn_seconds_remaining(fight.checkpoint.contract.turn_started_ms, now)
+            : null
+        }
       />
       <Chat
         names={Object.fromEntries(view.timeline.map(({ seat, name }) => [Number(seat), name]))}
-        self_name={selected.name}
         // stat_* display names live in ONE home (simulator_page, stat_name's section) — the
         // chat resolves them through this merge instead of carrying duplicate rows
         text={{ ...copy.simulator_page, ...copy.fight_hud }}
@@ -441,12 +499,18 @@ export const FightHud = ({
         <div className="fight-hud__bar">
           <div className="fight-hud__controls">
             <button
-              className="fight-hud__end-turn"
-              disabled={!view.can_end_turn || !min_turn_ready || actions_locked}
-              onClick={end_turn}
+              className={`fight-hud__end-turn${fight.end_turn_queued ? ' queued' : ''}`}
+              disabled={
+                !view.can_end_turn || fight.end_turn_queued || fight.end_turn_submitted || fight.transaction_pending
+              }
+              onClick={queue_or_end_turn}
               type="button"
             >
-              {copy.fight_hud.end_turn}
+              {fight.end_turn_queued
+                ? copy.fight_hud.end_turn_queued
+                : min_wait_seconds > 0
+                  ? `${copy.fight_hud.end_turn} · ${min_wait_seconds}`
+                  : copy.fight_hud.end_turn}
             </button>
             <div className="fight-hud__secondary-controls">
               {fight.mode === 'local' && (
@@ -478,6 +542,7 @@ export const FightHud = ({
           close={() => set_forfeit_open(false)}
           close_label={copy.dismiss}
           label={template(copy.fight_hud.forfeit_title, { name: selected.name })}
+          soft
         >
           <div className="p-7">
             <h2 className="text-sm font-semibold tracking-[0.16em] text-[#f87171] uppercase">
@@ -488,14 +553,14 @@ export const FightHud = ({
             </p>
             <div className="mt-6 grid grid-cols-2 gap-3">
               <button
-                className="h-11 cursor-pointer border border-white/10 text-[9px] tracking-[0.16em] uppercase"
+                className="h-11 cursor-pointer rounded-lg border border-white/10 bg-white/3 text-[9px] tracking-[0.16em] uppercase transition hover:bg-white/7"
                 onClick={() => set_forfeit_open(false)}
                 type="button"
               >
                 {copy.cancel}
               </button>
               <button
-                className="h-11 cursor-pointer border border-[#f87171]/50 bg-[#2a1014] text-[9px] tracking-[0.16em] text-[#f87171] uppercase"
+                className="h-11 cursor-pointer rounded-lg border border-[#f87171]/40 bg-[#2a1014]/80 text-[9px] tracking-[0.16em] text-[#f87171] uppercase transition hover:bg-[#3a151b]"
                 onClick={forfeit}
                 type="button"
               >

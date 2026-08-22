@@ -128,8 +128,10 @@ describe('fight session owner', () => {
     const ended = session.state()!
 
     expect(ended.checkpoint.contract.ended).toBeTrue()
-    expect(fight_should_close(ended, null)).toBeFalse()
-    expect(fight_should_close(Object.freeze({ ...ended, events: Object.freeze([]) }), null)).toBeTrue()
+    expect(
+      fight_should_close({ mode: ended.mode, checkpoint: ended.checkpoint, presentations: [{} as never] }, null)
+    ).toBeFalse()
+    expect(fight_should_close({ mode: ended.mode, checkpoint: ended.checkpoint, presentations: [] }, null)).toBeTrue()
   })
 
   test('a remote fight releases the surface once the viewer’s own seat is settled', () => {
@@ -144,26 +146,60 @@ describe('fight session owner', () => {
     const owner = session.state()!.checkpoint.contract.fighters[0]!
     if (owner.kind.type !== 'player') throw new Error('seat 0 must be a player for this fixture')
     const address = owner.kind.owner
+    const character_id = owner.kind.character
     const before = Object.freeze({ ...session.state()!, mode: 'remote' as const, events: Object.freeze([]) })
 
-    expect(fight_should_close(before, address)).toBeFalse()
+    expect(
+      fight_should_close({ mode: before.mode, checkpoint: before.checkpoint, presentations: [] }, character_id)
+    ).toBeFalse()
 
     session.apply({ type: 'forfeit', fighter: 0n })
     const after = Object.freeze({ ...session.state()!, mode: 'remote' as const, events: Object.freeze([]) })
 
-    expect(fight_should_close(after, address)).toBeTrue()
+    expect(
+      fight_should_close({ mode: after.mode, checkpoint: after.checkpoint, presentations: [] }, character_id)
+    ).toBeTrue()
     // a spectator holds no seat, so only the fight ENDING releases them — and this forfeit was
     // the side's last living fighter, so it did end
     expect(after.checkpoint.contract.ended).toBeTrue()
-    expect(fight_should_close(after, '0xnobody')).toBeTrue()
+    expect(
+      fight_should_close(
+        { mode: after.mode, checkpoint: after.checkpoint, presentations: [], canonical_ended: true },
+        '0xnobody'
+      )
+    ).toBeTrue()
     // while it still runs, a seatless viewer stays
     const running = Object.freeze({
       ...after,
       checkpoint: { ...after.checkpoint, contract: { ...after.checkpoint.contract, ended: false } },
     })
-    expect(fight_should_close(running, '0xnobody')).toBeFalse()
+    expect(
+      fight_should_close({ mode: running.mode, checkpoint: running.checkpoint, presentations: [] }, '0xnobody')
+    ).toBeFalse()
     // …and the forfeiter still leaves, on their own settled seat alone
-    expect(fight_should_close(running, address)).toBeTrue()
+    expect(
+      fight_should_close({ mode: running.mode, checkpoint: running.checkpoint, presentations: [] }, character_id)
+    ).toBeTrue()
+
+    const shared = {
+      ...running,
+      checkpoint: {
+        ...running.checkpoint,
+        contract: {
+          ...running.checkpoint.contract,
+          fighters: [
+            ...running.checkpoint.contract.fighters,
+            {
+              ...running.checkpoint.contract.fighters[0]!,
+              kind: { ...owner.kind, character: '0xother-character' },
+              settled: false,
+            },
+          ],
+        },
+      },
+    }
+    expect(fight_should_close({ ...shared, presentations: [] }, '0xother-character')).toBeFalse()
+    expect(fight_should_close({ ...shared, presentations: [] }, character_id)).toBeTrue()
   })
 
   test('the presentation drains before a remote surface closes', () => {
@@ -178,6 +214,11 @@ describe('fight session owner', () => {
     const undrained = Object.freeze({ ...session.state()!, mode: 'remote' as const })
 
     expect(undrained.events.length).toBeGreaterThan(0)
-    expect(fight_should_close(undrained, seat.kind.owner)).toBeFalse()
+    expect(
+      fight_should_close(
+        { mode: undrained.mode, checkpoint: undrained.checkpoint, presentations: [{} as never] },
+        seat.kind.character
+      )
+    ).toBeFalse()
   })
 })

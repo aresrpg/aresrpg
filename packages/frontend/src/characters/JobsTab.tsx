@@ -30,6 +30,7 @@ import { item_icon } from '../content/assets.ts'
 import { encyclopedia_catalog, titleize, type SeedRecipe } from '../content/catalog.ts'
 import { encyclopedia_text } from '../encyclopedia/copy.ts'
 import { copy_text, type AppCopy, type CopyText } from '../i18n/copy.ts'
+import { allocate_stack_amount, available_item_stacks, stack_merge_target } from '../inventory_stacks.ts'
 import { dispatch_app, useAppStore } from '../store.ts'
 import { toast } from '../toast.ts'
 
@@ -116,11 +117,19 @@ const CraftControls = ({
 }>) => {
   const wallet = useAppStore(({ session }) => session.wallet)
   const inventory = useAppStore(({ session }) => session.inventory)
+  const listings = useAppStore(({ marketplace }) => marketplace.own_listings)
   const [pending, set_pending] = useState(false)
 
   const rows = Object.entries(recipe.inputs).map(([item_type, need]) => {
-    const stack = inventory.find((row) => row.item_type === item_type)
-    return { item_type, need, have: stack?.amount ?? 0, stack, enough: (stack?.amount ?? 0) >= need }
+    const stacks = available_item_stacks(inventory, listings, item_type, character.kiosk)
+    const allocation = allocate_stack_amount(stacks, need)
+    return {
+      item_type,
+      need,
+      have: stacks.reduce((total, stack) => total + stack.amount, 0),
+      allocation,
+      enough: allocation !== null,
+    }
   })
   const required = recipe_required_level(recipe)
   const level_ok = level >= required
@@ -134,13 +143,14 @@ const CraftControls = ({
     set_pending(true)
     const name = output?.name ?? titleize(recipe.output_type)
     const pending_toast = toast.loading(t('jobs.craft.craft_tooltip', { name }))
-    const existing = inventory.find((row) => row.item_type === recipe.output_type)?.id ?? null
+    const existing = stack_merge_target(inventory, listings, recipe.output_type, character.kiosk)
     void wallet.character
       .craft({
         character_id: character.id,
         output_type: recipe.output_type,
-        input_item_ids: rows.flatMap(({ stack }) => (stack ? [stack.id] : [])),
+        input_item_ids: rows.flatMap(({ allocation }) => allocation?.map(({ item_id }) => item_id) ?? []),
         existing,
+        custody: { kiosk: character.kiosk, kiosk_cap: character.kiosk_cap },
       })
       .then(({ success, job_xp_gained }) => {
         dispatch_app({
@@ -148,7 +158,7 @@ const CraftControls = ({
           character_id: character.id,
           job,
           xp: job_xp_gained,
-          inputs: rows.map(({ stack, need }) => ({ item_id: stack!.id, amount: need })),
+          inputs: rows.flatMap(({ allocation }) => allocation ?? []),
         })
         // the roll is the outcome — inputs burned and xp credited either way (crafting.move)
         if (success) pending_toast.success(t('jobs.craft.craft_success', { name }))

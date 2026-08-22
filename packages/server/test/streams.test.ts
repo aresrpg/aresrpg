@@ -89,7 +89,7 @@ const fight_node = {
 
 /** `seated` puts the character in a fight BEFORE the connection exists — the custody the
  *  embody read must find (a reconnect mid-fight, or the creator seated at the fight's birth). */
-const wire = ({ seated = false } = {}) => {
+const wire = ({ seated = false, fight = fight_node } = {}) => {
   const sent: ServerPacket[] = []
   const ws = {
     send: (raw: string) => sent.push(JSON.parse(raw)),
@@ -97,7 +97,8 @@ const wire = ({ seated = false } = {}) => {
   }
   const graph = {
     read: async (cypher: string, _params?: Record<string, unknown>) => {
-      if (cypher.includes(':Fight {id:')) return [{ fight: fight_node, seats: [{ character, weapon: null }] }]
+      if (cypher.includes(':Fight {id:')) return [{ fight }]
+      if (cypher.includes('WHERE c.id IN')) return [{ character, weapon: null }]
       if (cypher.includes(':Fight {world:')) return []
       // seated: the kiosk's HOLDS edge is severed by law, so custody proves nothing and the
       // embody gate must read the seat out of the fight's machine document instead
@@ -107,12 +108,14 @@ const wire = ({ seated = false } = {}) => {
             character,
             held_kiosk: seated ? null : '0xk',
             kiosk: '0xk',
-            fight: seated ? fight_node : null,
+            fight: seated ? fight : null,
             party: null,
             worn: [],
           },
         ]
       if (cypher.includes(':FRIEND')) return []
+      if (cypher.includes('RESULT_FOR')) return []
+      if (cypher.includes('[:HOLDS]->(i:Item)')) return []
       if (cypher.includes('HOLDS_CLAIM') || cypher.includes('HOLDS_VOUCHER')) return []
       if (cypher.includes('MATCH (s:Sale)') || cypher.includes('MATCH (a:Airdrop)')) return []
       if (cypher.includes(':Trade {id:'))
@@ -164,7 +167,7 @@ const wire = ({ seated = false } = {}) => {
   }
   const pubsub = {
     emitter,
-    graph: { ...bus, indexed_checkpoint: async () => 1 },
+    graph: { ...bus, indexed_checkpoint: async () => 1, sales_history: async () => [] },
     mesh: { ...bus, heartbeat: async () => {}, cluster_online: async () => 7 },
   }
   return { sent, ws, graph, pubsub, published }
@@ -173,7 +176,7 @@ const wire = ({ seated = false } = {}) => {
 const flush = () => new Promise((resolve) => setTimeout(resolve, 0))
 
 const embody = async (player: { on_message: (raw: string) => void }) => {
-  player.on_message(JSON.stringify({ type: 'packet/embody', character_id: '0xabc' }))
+  player.on_message(JSON.stringify({ type: 'packet/track_character', character_id: '0xabc', tracked: true }))
   await flush()
 }
 
@@ -183,7 +186,7 @@ describe('chat', () => {
     const player = create_player({ ws, address: '0xme', admin: false, graph, pubsub })
     await flush()
     await embody(player)
-    player.on_message(JSON.stringify({ type: 'packet/chat', text: 'gg' }))
+    player.on_message(JSON.stringify({ type: 'packet/chat', character_id: '0xabc', text: 'gg' }))
     const chat = published.find(({ channel }) => channel.startsWith('chat:world:'))
     expect(chat?.channel).toBe('chat:world:overworld')
     expect(chat?.payload).toEqual({ address: '0xme', character: 'nox', text: 'gg' })
@@ -196,7 +199,7 @@ describe('chat', () => {
       character: 'nyx',
       text: 'hey',
     })
-    player.on_message(JSON.stringify({ type: 'packet/chat', text: 'again' }))
+    player.on_message(JSON.stringify({ type: 'packet/chat', character_id: '0xabc', text: 'again' }))
     expect(sent.find((packet) => packet.type === 'packet/error' && packet.reason === 'chat too fast')).toBeTruthy()
     expect(published.filter(({ channel }) => channel.startsWith('chat:world:'))).toHaveLength(1)
   })
@@ -206,7 +209,7 @@ describe('chat', () => {
     const player = create_player({ ws, address: '0xme', admin: false, graph, pubsub })
     await flush()
     await embody(player)
-    player.on_message(JSON.stringify({ type: 'packet/chat_whisper', to: '0xpal', text: 'psst' }))
+    player.on_message(JSON.stringify({ type: 'packet/chat_whisper', character_id: '0xabc', to: '0xpal', text: 'psst' }))
     expect(published.some(({ channel }) => channel === 'chat:user:0xpal')).toBe(true)
     pubsub.emitter.emit('chat:user:0xme', { address: '0xpal', character: 'nyx', text: 'yo' })
     expect(sent.find((packet) => packet.type === 'packet/chat_message')).toEqual({
@@ -223,14 +226,14 @@ describe('chat', () => {
     const player = create_player({ ws, address: '0xme', admin: false, graph, pubsub })
     await flush()
     await embody(player)
-    player.on_message(JSON.stringify({ type: 'packet/chat_party', text: 'anyone?' }))
+    player.on_message(JSON.stringify({ type: 'packet/chat_party', character_id: '0xabc', text: 'anyone?' }))
     expect(sent.find((packet) => packet.type === 'packet/error' && packet.reason === 'no party')).toBeTruthy()
     expect(published.filter(({ channel }) => channel.startsWith('chat:party'))).toHaveLength(0)
   })
 })
 
 describe('the fight watch', () => {
-  test('CharacterSeated on the self stream arms the watch; the chain stream forwards; FightEnded disarms', async () => {
+  test('CharacterSeated arms the watch and FightEnded keeps it through settlement', async () => {
     const { sent, ws, graph, pubsub } = wire()
     const player = create_player({ ws, address: '0xme', admin: false, graph, pubsub })
     await flush()
@@ -240,21 +243,39 @@ describe('the fight watch', () => {
       data: { fight: '0xf1', character: '0xabc', seat: 0 },
     })
     await flush()
+    await flush()
     // arming pushed the live fight row with OUR seat
     const state = sent.find((packet) => packet.type === 'packet/fight_state')
-    expect(state).toMatchObject({ type: 'packet/fight_state', seat: 0 })
+    expect(state).toMatchObject({ type: 'packet/fight_state', seats: { '0xabc': 0 } })
     pubsub.emitter.emit('evt:fight:0xf1', { type: 'TurnSeedUsed', data: { fight: '0xf1', seat: '2', seed: '99' } })
+    await flush()
     expect(sent.find((packet) => packet.type === 'packet/turn_seed')).toEqual({
       type: 'packet/turn_seed',
       fight: '0xf1',
       seat: '2',
       seed: '99',
     })
+    pubsub.emitter.emit('evt:fight:0xf1', {
+      type: 'DropsRolled',
+      data: { fight: '0xf1', fighter: '0', drops: [{ item_type: 'silk', qty: 3 }] },
+    })
+    expect(sent.find((packet) => packet.type === 'packet/fight_drops')).toEqual({
+      type: 'packet/fight_drops',
+      fight: '0xf1',
+      fighter: '0',
+      drops: [{ item_type: 'silk', qty: 3 }],
+    })
+    const checkpoints = sent.filter((packet) => packet.type === 'packet/fight_state').length
+    pubsub.emitter.emit('evt:fight:0xf1', { type: 'FightProjected', data: { fight: '0xf1' } })
+    await flush()
+    expect(sent.filter((packet) => packet.type === 'packet/fight_state')).toHaveLength(checkpoints + 1)
     pubsub.emitter.emit('evt:fight:0xf1', { type: 'FightEnded', data: { fight: '0xf1', winner: 0 } })
     await flush()
-    // disarmed: further fight facts stay silent
+    // settlement can emit DropsRolled after FightEnded, so the seat keeps its watch until
+    // CharacterHeld proves custody returned
     pubsub.emitter.emit('evt:fight:0xf1', { type: 'TurnSeedUsed', data: { fight: '0xf1', seat: '3', seed: '1' } })
-    expect(sent.filter((packet) => packet.type === 'packet/turn_seed')).toHaveLength(1)
+    await flush()
+    expect(sent.filter((packet) => packet.type === 'packet/turn_seed')).toHaveLength(2)
   })
 
   test('a character seated in a fight embodies on its seat and lands back on the board', async () => {
@@ -272,22 +293,23 @@ describe('the fight watch', () => {
     expect(sent.find((packet) => packet.type === 'packet/fight_state')).toMatchObject({
       type: 'packet/fight_state',
       fight: '0xf1',
-      seat: 0,
+      seats: { '0xabc': 0 },
     })
   })
 
-  test('a fight action relays only within the armed fight', async () => {
+  test('only the owned seat relays — a spectator may watch but never speak for a fighter', async () => {
     const { sent, ws, graph, pubsub, published } = wire()
     const player = create_player({ ws, address: '0xme', admin: false, graph, pubsub })
     await flush()
     await embody(player)
-    const action = { type: 'move_to', fighter: '0', path: ['7'] } as const
+    const action = { type: 'ready', fighter: '0' } as const
     player.on_message(JSON.stringify({ type: 'packet/fight_action', fight: '0xf1', action }))
     expect(sent.find((packet) => packet.type === 'packet/error' && packet.reason === 'not in this fight')).toBeTruthy()
     pubsub.emitter.emit('evt:character:0xabc', {
       type: 'CharacterSeated',
       data: { fight: '0xf1', character: '0xabc', seat: 0 },
     })
+    await flush()
     await flush()
     player.on_message(JSON.stringify({ type: 'packet/fight_action', fight: '0xf1', action }))
     expect(published.some(({ channel }) => channel === 'act:fight:0xf1')).toBe(true)
@@ -299,6 +321,81 @@ describe('the fight watch', () => {
       from: '0xfoe',
       action,
     })
+
+    const spectator_wire = wire()
+    const spectator = create_player({
+      ws: spectator_wire.ws,
+      address: '0xwatcher',
+      admin: false,
+      graph: spectator_wire.graph,
+      pubsub: spectator_wire.pubsub,
+    })
+    await flush()
+    await embody(spectator)
+    spectator.on_message(JSON.stringify({ type: 'packet/spectate', character_id: '0xabc', fight: '0xf1' }))
+    await flush()
+    spectator.on_message(JSON.stringify({ type: 'packet/fight_action', fight: '0xf1', action }))
+    expect(spectator_wire.published.some(({ channel }) => channel === 'act:fight:0xf1')).toBe(false)
+    expect(
+      spectator_wire.sent.find((packet) => packet.type === 'packet/error' && packet.reason === 'not your fighter')
+    ).toBeTruthy()
+  })
+
+  test('an active relay names both the owned seat and the projected turn', async () => {
+    const machine = JSON.parse(fight_node.properties.machine)
+    const active = {
+      properties: {
+        ...fight_node.properties,
+        phase: 'active',
+        round: 1,
+        machine: JSON.stringify({ ...machine, queue: [0] }),
+      },
+    }
+    const current = wire({ seated: true, fight: active })
+    const player = create_player({
+      ws: current.ws,
+      address: '0xme',
+      admin: false,
+      graph: current.graph,
+      pubsub: current.pubsub,
+    })
+    await flush()
+    await embody(player)
+    await flush()
+    player.on_message(
+      JSON.stringify({
+        type: 'packet/fight_action',
+        fight: '0xf1',
+        action: { type: 'move_to', fighter: '0', path: ['7'] },
+      })
+    )
+    expect(current.published.some(({ channel }) => channel === 'act:fight:0xf1')).toBe(true)
+
+    const wrong_turn = {
+      ...active,
+      properties: { ...active.properties, machine: JSON.stringify({ ...machine, queue: [1] }) },
+    }
+    const waiting = wire({ seated: true, fight: wrong_turn })
+    const waiting_player = create_player({
+      ws: waiting.ws,
+      address: '0xme',
+      admin: false,
+      graph: waiting.graph,
+      pubsub: waiting.pubsub,
+    })
+    await flush()
+    await embody(waiting_player)
+    waiting_player.on_message(
+      JSON.stringify({
+        type: 'packet/fight_action',
+        fight: '0xf1',
+        action: { type: 'move_to', fighter: '0', path: ['7'] },
+      })
+    )
+    expect(waiting.published.some(({ channel }) => channel === 'act:fight:0xf1')).toBe(false)
+    expect(waiting.sent.some((packet) => packet.type === 'packet/error' && packet.reason === 'not your turn')).toBe(
+      true
+    )
   })
 })
 
@@ -336,18 +433,32 @@ describe('market + self stream + heartbeat', () => {
     const { sent, ws, graph, pubsub } = wire()
     const player = create_player({ ws, address: '0xme', admin: false, graph, pubsub })
     await flush()
-    player.on_message(JSON.stringify({ type: 'packet/market_observe', category: 'helmet' }))
+    player.on_message(
+      JSON.stringify({
+        type: 'packet/market_observe',
+        observation: { categories: ['helmet'], characters: false },
+      })
+    )
     await flush()
-    expect(sent.find((packet) => packet.type === 'packet/market_slice')).toMatchObject({ category: 'helmet' })
+    expect(sent.find((packet) => packet.type === 'packet/market_slice')).toMatchObject({
+      observation: { categories: ['helmet'], characters: false },
+    })
     pubsub.emitter.emit('evt:economy', {
       type: 'MarketPurchased',
-      data: { kiosk: '0xk', object: '0xi9', price_mist: '5000' },
+      data: { kiosk: '0xk', object: '0xi9', buyer: '0xother', kind: 'item', price_mist: '5000' },
     })
     expect(sent.find((packet) => packet.type === 'packet/listing_sold')).toEqual({
       type: 'packet/listing_sold',
       object: '0xi9',
       price_mist: '5000',
     })
+    const roster_packets = sent.filter((packet) => packet.type === 'packet/characters').length
+    pubsub.emitter.emit('evt:economy', {
+      type: 'MarketPurchased',
+      data: { kiosk: '0xother-kiosk', object: '0xc9', buyer: '0xme', kind: 'character', price_mist: '5000' },
+    })
+    await flush()
+    expect(sent.filter((packet) => packet.type === 'packet/characters')).toHaveLength(roster_packets + 1)
   })
 
   test('a party invite naming my character forwards from the self stream', async () => {

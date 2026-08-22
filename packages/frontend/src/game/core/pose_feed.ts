@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
+/* eslint-disable functional/immutable-data -- this external-store adapter owns and mutates its private pose feed. */
 // The live pose lane: the world loop publishes the controlled character's pose ~20 Hz and the
 // HUD (compass, minimap) reads it through useSyncExternalStore — deliberately OUTSIDE the app
 // reducer, which never carries per-frame presentation state.
@@ -7,6 +8,8 @@
 import { useSyncExternalStore } from 'react'
 
 export type WorldPose = Readonly<{
+  /** The controlled entity that produced this pose. Selection is not a pose identity. */
+  character_id: string
   x: number
   y: number
   z: number
@@ -42,5 +45,8 @@ export const subscribe_pose = (listener: () => void): (() => void) => {
 }
 
 export const read_pose = (): WorldPose | null => feed.pose
+
+export const pose_matches_character = (pose: WorldPose | null, character_id: string | null): pose is WorldPose =>
+  pose !== null && character_id !== null && pose.character_id === character_id
 
 export const useWorldPose = (): WorldPose | null => useSyncExternalStore(subscribe_pose, read_pose, () => null)

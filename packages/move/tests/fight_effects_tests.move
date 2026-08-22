@@ -25,6 +25,13 @@ fun life_steal_drinks_exactly_half_of_what_landed() {
 }
 
 #[test]
+fun range_removal_reduces_modifiable_authored_reach() {
+  let mut scenario = test_scenario::begin(OWNER);
+  assert!(fight::range_removal_reaches_authored_max_for_testing(scenario.ctx()) == 2, 0);
+  scenario.end();
+}
+
+#[test]
 fun a_chatiment_folds_its_triggers_into_one_gain_row() {
   let mut scenario = test_scenario::begin(OWNER);
   // two 10-damage hits on a +2-strength stance: ONE standing gain row at 4, hp at 80

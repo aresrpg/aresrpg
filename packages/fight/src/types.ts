@@ -175,8 +175,10 @@ export type WeaponSource = {
 }
 
 export type PlayerSource = {
+  name: string
   classe: string
   level: MoveInteger
+  experience: MoveInteger
   vitality: MoveInteger
   wisdom: MoveInteger
   strength: MoveInteger
@@ -454,8 +456,10 @@ export type ResolveRowsInput = {
 export type ResolveRows = (input: ResolveRowsInput) => void
 
 export type CharacterSourceInput = {
+  name?: string
   classe: string
   level?: MoveInteger
+  experience?: MoveInteger
   vitality?: MoveInteger
   wisdom?: MoveInteger
   strength?: MoveInteger

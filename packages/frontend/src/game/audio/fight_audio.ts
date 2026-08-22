@@ -52,6 +52,9 @@ export const fight_audio_families = (checkpoint: Readonly<HydratedFightCheckpoin
 export const preload_fight_sounds = (checkpoint: Readonly<HydratedFightCheckpoint>): void =>
   preload_fight_audio(fight_audio_keys_for_families(fight_audio_families(checkpoint)))
 
+export const play_fight_turn_start = (emit: (key: string, volume?: number) => void = play_fight_audio): void =>
+  emit('turn_start')
+
 const fight_audio_family_layer = (family: string, layer: string): keyof typeof ELEMENT_AUDIO_VARIANTS => {
   const exact = `${family}:${layer}` as keyof typeof ELEMENT_AUDIO_VARIANTS
   return Object.hasOwn(ELEMENT_AUDIO_VARIANTS, exact)
@@ -88,12 +91,7 @@ export const create_fight_audio_observer = (
     last_variant.set(resolved.family_layer, resolved.variant)
     return resolved.key
   }
-  return (
-    cue: FightPresentationCue,
-    phase: FightCuePhase,
-    character_voices: CharacterVoices,
-    owned_entity_ids: ReadonlySet<string> = new Set()
-  ): void => {
+  return (cue: FightPresentationCue, phase: FightCuePhase, character_voices: CharacterVoices): void => {
     if (cue.type === 'cast') {
       if (phase === 'start') {
         const charge = CAST_CHARGE[cue.element]
@@ -127,8 +125,6 @@ export const create_fight_audio_observer = (
       emit(ABSORB[stable_index(cue.id, ABSORB.length)])
       return
     }
-    // the turn bell rings only when it is YOUR turn to play
-    if (cue.type === 'turn' && owned_entity_ids.has(cue.entity_id)) emit('turn_start')
     if (cue.type === 'movement' && cue.mode === 'knockback') emit('knockback', 0.32)
   }
 }

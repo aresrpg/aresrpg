@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
+/* eslint-disable functional/immutable-data -- the character controller is the effect boundary that mutates its owned Three.js rig. */
 // The character-controller facade — LOSSLESS PORT of the legacy contract
 // (deprecated/engine/src/player/character_controller.js): the game loop sends INPUT and reads the
 // TRANSFORM; physics runs fixed-step internally with render interpolation (the D215 anti-jitter),

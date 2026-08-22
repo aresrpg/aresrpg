@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
+/* eslint-disable functional/immutable-data, functional/prefer-immutable-types -- this external-store adapter owns its mutable feed and platform elements. */
 // The mount-prompt lane: the world loop hands the engine a DOM element to float over the pet
 // (three CSS2D labels — the ENGINE positions it every frame, so it never lags the render) and
 // publishes that element here; React portals the chip's CONTENT into it. Per-frame presentation

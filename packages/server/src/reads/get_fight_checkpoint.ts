@@ -41,6 +41,7 @@ const player_source_of = (character: Record<string, unknown>, weapon: Record<str
     name: String(character.name),
     classe: String(character.classe),
     level: Number(character.level),
+    experience: String(character.experience ?? 0),
     vitality: Number(character.vitality),
     wisdom: Number(character.wisdom),
     strength: Number(character.strength),
@@ -56,19 +57,25 @@ export async function get_fight_checkpoint(
   graph: Graph,
   { fight_id }: { fight_id: string }
 ): Promise<FightStateRow | null> {
-  const rows = await graph.read(
-    `MATCH (f:Fight {id: $fight_id})
-     OPTIONAL MATCH (f)-[:FIGHTER]->(c:Character)
-     OPTIONAL MATCH (c)-[:EQUIPS {slot: 'weapon'}]->(w:Item)
-     RETURN f AS fight, collect({ character: c, weapon: w }) AS seats`,
-    { fight_id }
-  )
+  const rows = await graph.read(`MATCH (f:Fight {id: $fight_id}) RETURN f AS fight`, { fight_id })
   const [row] = rows
   if (!row?.fight) return null
   const fight = (row.fight as Exclude<Node, null | undefined>).properties
   const machine = JSON.parse((fight.machine as string) ?? '{}') as Record<string, unknown> & {
     fighters?: MachineFighter[]
   }
+  // FIGHTER is custody and disappears as each character settles. Result viewers still need the
+  // complete source roster, so hydrate player sources by the machine's immutable character ids.
+  const character_ids = (machine.fighters ?? []).flatMap((fighter) =>
+    fighter.kind.player ? [fighter.kind.player.character] : []
+  )
+  const seats = character_ids.length
+    ? await graph.read(
+        `MATCH (c:Character) WHERE c.id IN ${JSON.stringify(character_ids)}
+         OPTIONAL MATCH (c)-[:EQUIPS {slot: 'weapon'}]->(w:Item)
+         RETURN c AS character, w AS weapon`
+      )
+    : []
   const contract = {
     ...machine,
     fighters: (machine.fighters ?? []).map(tag_fighter_kind),
@@ -91,7 +98,7 @@ export async function get_fight_checkpoint(
     turn_started_ms: fight.turn_started_ms,
   }
   const players = Object.fromEntries(
-    (row.seats as { character: Node; weapon: Node }[])
+    (seats as { character: Node; weapon: Node }[])
       .filter((seat) => seat.character)
       .map((seat) => [
         seat.character!.properties.id as string,

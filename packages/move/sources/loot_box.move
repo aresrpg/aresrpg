@@ -91,7 +91,7 @@ public(package) fun add_loot_reward(
 ) {
   assert!(igb(box_template), ENotBox);
   assert!(amount > 0, EZeroAmount);
-  assert!(amount == 1 || item::template_is_stackable(reward_template), EUnstackableAmount);
+  assert!(amount == 1 || item::tis(reward_template), EUnstackableAmount);
   let box_id = item::template_id(box_template);
   let entry = loot_table::new_entry(item::template_id(reward_template), weight, amount);
   if (registry.tables.contains(box_id)) registry.tables.borrow_mut(box_id).push_back(entry)

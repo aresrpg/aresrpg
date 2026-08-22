@@ -144,6 +144,7 @@ export const create_far_terrain = ({
   world,
   sun_direction,
   clouds,
+  initial_focus = [0, 0],
 }: Readonly<{
   scene: Scene
   quality: EngineQuality
@@ -151,6 +152,7 @@ export const create_far_terrain = ({
   world: WorldRecipe
   sun_direction: ReturnType<typeof create_sky_node>['sun_direction']
   clouds: Clouds
+  initial_focus?: readonly [number, number]
 }>): FarTerrain => {
   const worker = new Worker(new URL('./far_worker.ts', import.meta.url), { type: 'module' })
   const centers = Object.freeze({
@@ -195,7 +197,11 @@ export const create_far_terrain = ({
     }
   }
   let active_quality = quality
-  let desired_center: readonly [number, number] = [0, 0]
+  const initial_step = get_quality_profile(active_quality).chunks.horizon_step
+  let desired_center: readonly [number, number] = [
+    Math.round(initial_focus[0] / initial_step) * initial_step,
+    Math.round(initial_focus[1] / initial_step) * initial_step,
+  ]
   let request_id = 0
   let applied_id = 0
   let in_flight_id: number | null = null

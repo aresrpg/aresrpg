@@ -27,10 +27,10 @@ describe('Move contract generation', () => {
       TurnCast: ['spell', 'target'],
       Cooldown: ['spell', 'left'],
       RolledDrop: ['item_type', 'qty'],
-      FightCreated: ['fight', 'world', 'x', 'z'],
+      FightCreated: ['fight', 'world', 'x', 'z', 'placement_ms'],
       FighterJoined: ['fight', 'character', 'team'],
-      FightStarted: ['fight', 'queue'],
-      FightEnded: ['fight', 'winner'],
+      FightStarted: ['fight', 'world', 'x', 'z', 'queue'],
+      FightEnded: ['fight', 'world', 'x', 'z', 'winner'],
       TurnSeedUsed: ['fight', 'seat', 'seed'],
       DropsRolled: ['fight', 'fighter', 'drops'],
     })

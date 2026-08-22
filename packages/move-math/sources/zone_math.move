@@ -57,6 +57,13 @@ fun ramp(distance: u64, full_at: u64, from: u64, to: u64): u64 {
   from + (to - from) * capped / full_at
 }
 
+fun group_size_bounds(distance: u64): (u64, u64) {
+  let low = ramp(distance, GROUP_SIZE_FULL_AT, 1, 6);
+  // At 2,000 blocks low=2 and high=4: uniform 2..4 has the authored average of three.
+  let high_raw = ramp(distance, GROUP_SIZE_AVG3_AT * 5 / 3, 1, 6);
+  (low, if (high_raw < low) low else high_raw)
+}
+
 fun biome_mob_rows(rows: vector<MobRow>, map: &BiomeMap, zx: u32, zz: u32): vector<MobRow> {
   let biome = world_map::biome_of_zone(map, zx, zz);
   rows.filter!(|row| world_map::mob_row_biomes(row).contains(&biome))
@@ -91,9 +98,7 @@ public fun mob_groups(
   let distance = distance_blocks(zx, zz);
   let mut state = prng::rng_seed(prng::mix(seed, 2));
   let count = GROUPS_MIN + prng::draw(&mut state) % (GROUPS_MAX - GROUPS_MIN + 1);
-  let size_lo = ramp(distance, GROUP_SIZE_FULL_AT, 1, 6);
-  let size_hi_raw = ramp(distance, GROUP_SIZE_AVG3_AT * 3, 1, 6);
-  let size_hi = if (size_hi_raw < size_lo) size_lo else size_hi_raw;
+  let (size_lo, size_hi) = group_size_bounds(distance);
   let level_floor = ramp(distance, LEVEL_RAMP_AT, 0, LEVEL_FLOOR_CAP);
   let mut groups = vector[];
   let mut index = 0u64;
@@ -117,6 +122,12 @@ public fun mob_groups(
     index = index + 1;
   };
   groups
+}
+
+#[test_only]
+public fun group_size_bounds_for_testing(distance: u64): vector<u64> {
+  let (low, high) = group_size_bounds(distance);
+  vector[low, high]
 }
 
 public fun resource_families(
