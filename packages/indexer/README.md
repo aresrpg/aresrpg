@@ -41,6 +41,7 @@ Hand-pasted allowlists and hand-anchored checkpoints are the disease the rewrite
 | --- | --- |
 | `PACKAGE_ORIGINAL` | original game package id (`0x…`) |
 | `PACKAGE_LATEST` | latest upgrade id (`0x…`) — lineage-validated at boot |
+| `SEED_PACKAGE_ORIGINAL` | original living-content package id (`0x…`) |
 | `REDIS_URL` | the FalkorDB instance |
 | `REMOTE_STORE_URL` / `STREAMING_URL` | checkpoint sources (backfill / live gRPC) |
 | `GRAPHQL_URL` | official GraphQL endpoint, boot derivation only (default testnet) |
@@ -85,7 +86,7 @@ touches a float. Every written node carries `ckpt` (the checkpoint that last wro
 | | `spells` (map name→level), `spell_points_spent` | `SpellBookKey` / `SpellSpentKey` DFs |
 | | `folded_stats` | `FoldedKey` DF (byte-mirror of the chain's own fold — never computed here) |
 | | `world`, `x`, `z`, `at_ms`, `pet` | `CurrentWorldKey` + `CheckpointKey(world)` DFs (rooted = `at_ms > now`, derived by consumers) |
-| | `dungeon_run` (map: world, room, x, z, seed(string) \| null — NULLed when the run's DF is removed) | `DungeonRunKey` DF |
+| | `dungeon_run` (map: world, room, x, z, seed(string) \| null) plus indexed `dungeon_world`, `dungeon_room`, `dungeon_x`, `dungeon_z`, `dungeon_seed` (NULLed together when the run DF is removed) | `DungeonRunKey` DF |
 | | `ambush` (map: mob_type, x, z, scalar, board_seed(string), hp \| null) | `AmbushKey` DF, `fires == true` only |
 | `:Item` | `id`, `name`, `item_type`, `category`, `level`, `amount` | Item struct (`item_type` IS the template key — template addresses derive from it; no template edge, no template prop) |
 | | `stats`, `damages` | `StatsKey` / `DamagesKey` DFs |
@@ -146,7 +147,9 @@ projects LIVE state only.
 5. **Replay convergence.** Crash after data, before watermark → the checkpoint replays: MERGE
    and per-property SET converge, edge replace converges, zset members carry their
    `{ckpt}:{tx}:{evt}` coordinate so re-adds collide into no-ops. Nothing increments.
-6. **Transactions apply in order** within a checkpoint — ownership inversions forbidden.
+6. **Checkpoint writes are dependency-phased.** Node outputs retain transaction order, then
+   dynamic fields retain transaction order, then custody and deletes apply. A relationship field
+   can name a node born in the same transaction; raw Sui output order is not dependency order.
 7. **The sale discriminator — three independent gates, all required.** A kiosk purchase is a
    sale only when: the event type's phantom `T` is a game type (foreign collections filter on
    the TYPE, the body cannot tell) · `price > 0` (the 0.01 SUI royalty floor makes a genuine
@@ -184,7 +187,7 @@ the graph.
 | `evt:social:{address}` | FriendListCreated · FriendAdded · FriendRemoved |
 | `evt:kolizeum` | KolizeumCreated · KolizeumPaid |
 | `evt:economy` | SaleBought · AirdropCreated/Claimed · GiftcardMinted/Redeemed · Crafted · RuneScribed · GearCrushed · LootBoxOpened · LootClaimed · PetFed · genuine kiosk ItemListed/Purchased/Delisted (phantom-`T`-filtered, plumbing-suppressed) |
-| `evt:content` | TemplateCreated · MobTemplateCreated · SpellCreated · RecipeCreated · LootTableSet (ceremony-time, then silent forever) |
+| `evt:content` | ContentWritten plus content-object creation and loot-table audit events |
 
 ## The Move-parity gates
 

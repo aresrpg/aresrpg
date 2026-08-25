@@ -134,7 +134,7 @@ const session_of = (
     client: transport as unknown as SuiTransport,
     signer: undefined,
     address: id(9),
-    pins: { package: package_id },
+    pins: { package: package_id, control_package: package_id, seed_package: package_id },
     sign_transaction: async (tx: Transaction) => ({ bytes: await tx.build(), signature: 'sig' }),
   })
   absorb_receipt(super_sdk.cache, {
@@ -160,7 +160,11 @@ const session_of = (
     package_id,
     build_session_sdk: (keypair: Ed25519Keypair) => {
       if (sdk_builds) sdk_builds.count += 1
-      return SDK({ client: transport as unknown as SuiTransport, signer: keypair, pins: { package: package_id } })
+      return SDK({
+        client: transport as unknown as SuiTransport,
+        signer: keypair,
+        pins: { package: package_id, control_package: package_id, seed_package: package_id },
+      })
     },
   })
 }

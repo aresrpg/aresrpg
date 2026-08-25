@@ -37,6 +37,53 @@ export type SeedSession = Readonly<{
   release: () => Promise<void>
 }>
 
+const seed_session_storage_key = (network: string, owner: string): string =>
+  `aresrpg_admin_seed_session:${network}:${owner.toLowerCase()}`
+
+/** Seed-session storage failures stop before funding; this record holds a live signer and capability. */
+export const browser_seed_session_store = (network: string, owner: string): SeedSessionStore => {
+  const key = seed_session_storage_key(network, owner)
+  return {
+    read: () => {
+      const storage = globalThis.localStorage
+      if (!storage) return null
+      const source = storage.getItem(key)
+      if (!source) return null
+      const value = JSON.parse(source) as Partial<SeedSessionRecord>
+      if (
+        typeof value.secret !== 'string' ||
+        typeof value.epoch !== 'string' ||
+        typeof value.network !== 'string' ||
+        typeof value.owner !== 'string' ||
+        typeof value.package !== 'string'
+      )
+        throw new Error(
+          `The stored seed session record at "${key}" is corrupt — an earlier session may be orphaned. ` +
+            'Recover it manually before authorizing a new one.'
+        )
+      return Object.freeze({
+        secret: value.secret,
+        admin_cap: typeof value.admin_cap === 'string' ? value.admin_cap : null,
+        epoch: value.epoch,
+        network: value.network,
+        owner: value.owner,
+        package: value.package,
+      })
+    },
+    write: (record) => {
+      const storage = globalThis.localStorage
+      if (!storage) throw new Error('No browser storage is available to hold the seed session record.')
+      storage.setItem(key, JSON.stringify(record))
+    },
+    clear: () => {
+      const storage = globalThis.localStorage
+      if (!storage) return
+      storage.removeItem(key)
+      if (storage.getItem(key) !== null) throw new Error('The temporary signer record remains present')
+    },
+  }
+}
+
 const current_epoch = async (sdk: Sdk): Promise<string> => {
   const { systemState } = await sdk.sui_client.core.getCurrentSystemState()
   return String(systemState.epoch)

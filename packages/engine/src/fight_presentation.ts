@@ -18,6 +18,9 @@ export const create_fight_presentation = ({
   return Object.freeze({
     play: async (cue: FightPresentationCue): Promise<boolean> => {
       if (cue.type === 'turn') return true
+      // Visibility is a checkpoint presentation edge; the entity projection applies it when
+      // this ordered cue starts. The engine has no independent visibility state to mutate.
+      if (cue.type === 'visibility') return true
       if (cue.type === 'cast') {
         entities.face_cell(cue.caster_id, cue.target_cell)
         void entities.beat(cue.caster_id, cue.self_cast ? 'buff' : 'attack')

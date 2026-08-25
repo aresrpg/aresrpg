@@ -6,10 +6,11 @@
 /// doors take the kiosk and borrow through the owner's cap.
 module aresrpg::api;
 
+use aresrpg_seed::{item_rows::{Self, ItemTemplate}, recipe_rows::Recipe};
 use aresrpg::{
   character::{Self, Character, NameRegistry},
   consumable,
-  crafting::{Self, Recipe},
+  crafting,
   dungeon,
   equipment,
   fight::{Self, Fight, FightBuild},
@@ -17,9 +18,8 @@ use aresrpg::{
   friends::{Self, FriendList, FriendRegistry},
   gathering,
   kolizeum::{Self, Kolizeum},
-  item::{Self, Item, ItemTemplate},
+  item::{Self, Item, PM},
   loot_box::{Self, LootRegistry, BoxClaim},
-  mob_template::MobTemplate,
   naked_rule,
   party::{Self, Party},
   trade::{Self, Trade},
@@ -27,12 +27,11 @@ use aresrpg::{
   progression,
   protected_policy::AresRPG_TransferPolicy,
   shop::{Self, Airdrop, Giftcard, Sale},
-  spell_template::SpellTemplate,
   version::Version,
   world::{Self, World},
   zone,
 };
-use aresrpg_math::world_map;
+use aresrpg_seed::{mob_rows::MobTemplate, spell_rows::SpellTemplate, board_catalog::BoardCatalog, world_content::WorldContent};
 use kiosk::personal_kiosk::{Self, PersonalKioskCap};
 use std::string::String;
 use sui::{
@@ -78,7 +77,7 @@ public fun merge_stacks(
   ctx: &mut TxContext,
 ) {
   version.assert_latest();
-  let source = protected.x(kiosk, cap, source_id, ctx);
+  let source = protected.extract_from_kiosk(kiosk, cap, source_id, ctx);
   let target: &mut Item = kiosk.borrow_mut<Item>(cap, target_id);
   target.merge(source);
 }
@@ -98,11 +97,13 @@ public fun create_character(
   color_1: u32,
   color_2: u32,
   color_3: u32,
+  first_world: &WorldContent,
   version: &Version,
   clock: &Clock,
   ctx: &mut TxContext,
 ) {
   version.assert_latest();
+  world::assert_start_world(first_world);
   let mut chr = character::create_character(
     registry,
     payment,
@@ -114,7 +115,7 @@ public fun create_character(
     color_3,
     ctx,
   );
-  world::join_world(&mut chr, world_map::first_world(), clock);
+  world::join_world(&mut chr, first_world, clock);
   character::assert_personal_custody(kiosk); // soulbound custody — a personal kiosk only
   kiosk.lock(cap, policy, chr);
 }
@@ -125,13 +126,13 @@ public fun join_world(
   kiosk: &mut Kiosk,
   cap: &KioskOwnerCap,
   character_id: ID,
-  world: String,
+  destination: &WorldContent,
   version: &Version,
   clock: &Clock,
 ) {
   version.assert_latest();
   let chr: &mut Character = kiosk.borrow_mut(cap, character_id);
-  world::join_world(chr, world, clock);
+  world::join_world(chr, destination, clock);
 }
 
 /// Discover (or refresh after the TTL) the zone at the character's claimed position — the
@@ -196,7 +197,7 @@ public fun equip_item(
   ctx: &mut TxContext,
 ) {
   version.assert_latest();
-  let item = protected.x(kiosk, cap, item_id, ctx);
+  let item = protected.extract_from_kiosk(kiosk, cap, item_id, ctx);
   // A PET folds its POWER-scaled stats (not the raw roll). The ×1.5 travel boost is NOT set
   // here — it derives live in `prove_move` (both-end rule), so no flag can go stale.
   let is_pet = item.category() == b"pet".to_string();
@@ -254,7 +255,7 @@ public fun delete_character(
   ctx: &mut TxContext,
 ) {
   version.assert_latest();
-  let chr: Character = protected.x(kiosk, cap, character_id, ctx);
+  let chr: Character = protected.extract_from_kiosk(kiosk, cap, character_id, ctx);
   assert!(!equipment::has_any_equipped(&chr), EDeleteWhileEquipped);
   assert!(!gathering::has_fired_verdict(&chr), EDeleteWhileAmbushed);
   assert!(!dungeon::has_run(&chr), EDeleteWhileInDungeon);
@@ -271,17 +272,19 @@ public fun engage_fight(
   cap: &KioskOwnerCap,
   character_id: ID,
   w: &mut World,
+  wc: &WorldContent,
   zx: u32,
   zz: u32,
   group_index: u64,
   access: u8, // 0 public — anyone joins your side · 1 group-only
   protected: &AresRPG_TransferPolicy<Character>,
+  catalog: &BoardCatalog,
   version: &Version,
   clock: &Clock,
   ctx: &mut TxContext,
 ): FightBuild {
   version.assert_latest();
-  fight::engage(protected, kiosk, cap, character_id, w, zx, zz, group_index, access, clock, ctx)
+  fight::engage(protected, kiosk, cap, character_id, w, wc, zx, zz, group_index, access, catalog, clock, ctx)
 }
 
 public fun add_fight_mob(build: FightBuild, template: &MobTemplate): FightBuild {
@@ -304,6 +307,7 @@ entry fun challenge_duel(
   z: u32,
   access: u8, // 0 public · 1 group-only
   protected: &AresRPG_TransferPolicy<Character>,
+  catalog: &BoardCatalog,
   r: &Random,
   version: &Version,
   clock: &Clock,
@@ -313,7 +317,7 @@ entry fun challenge_duel(
   let cap = personal_kiosk::borrow(personal);
   version.assert_latest();
   let mut gen = r.new_generator(ctx);
-  fight::challenge(protected, kiosk, cap, character_id, target, x, z, access, &mut gen, clock, ctx);
+  fight::challenge(protected, kiosk, cap, character_id, target, x, z, access, catalog, &mut gen, clock, ctx);
 }
 
 /// Join EITHER side of a fight during placement (walk proven, kiosk exit, custody). Any
@@ -437,12 +441,18 @@ public fun forfeit_fight(
 
 /// Walk out of an ended fight: hp writes back, winners take xp and roll their drops off
 /// FRESH entropy (the loot draw is value-bearing — the RANDOMNESS LAW). ENTRY: `&Random`.
+public fun prepare_fight_loot(template: &ItemTemplate, existing: Option<ID>): PM {
+  item::prepare_plan(template, existing)
+}
+
 entry fun settle_fight(
   f: &mut Fight,
   fighter_idx: u64,
+  plan: vector<PM>,
   kiosk: &mut Kiosk,
   personal: &PersonalKioskCap,
   policy: &TransferPolicy<Character>,
+  item_policy: &TransferPolicy<Item>,
   r: &Random,
   version: &Version,
   clock: &Clock,
@@ -453,35 +463,15 @@ entry fun settle_fight(
   version.assert_latest();
   assert!(!fight::is_managed(f), EManagedFight); // dungeon rooms settle via the dungeon door
   let mut gen = r.new_generator(ctx);
-  fight::settle(f, fighter_idx, kiosk, cap, policy, &mut gen, clock, ctx);
+  fight::settle(f, fighter_idx, kiosk, cap, policy, item_policy, plan, &mut gen, clock, ctx);
 }
 
-/// Mint one rolled drop straight into your kiosk (the item's stats roll HERE); pass your
-/// held stack of the same resource as `existing` to grow it instead (the no-dust law).
-/// ENTRY: `&Random` law.
-entry fun claim_fight_drop(
-  f: &mut Fight,
-  fighter_idx: u64,
-  template: &ItemTemplate,
-  existing: Option<ID>,
-  kiosk: &mut Kiosk,
-  personal: &PersonalKioskCap,
-  item_policy: &TransferPolicy<Item>,
-  r: &Random,
-  version: &Version,
-  ctx: &mut TxContext,
-) {
-  // the packed cap unpacks HERE — a &Random door admits no PTB-side borrow (Sui law)
-  let cap = personal_kiosk::borrow(personal);
+/// Reclaim a spent fight's storage deposit — any of its players, once every seat settled.
+/// The rebate lands on the closer's gas coin; a lost race against another closer costs only
+/// the transaction floor.
+entry fun close_fight(f: Fight, version: &Version, ctx: &TxContext) {
   version.assert_latest();
-  let mut gen = r.new_generator(ctx);
-  fight::claim_drop(f, fighter_idx, template, existing, kiosk, cap, item_policy, &mut gen, ctx);
-}
-
-/// Destroy an ended fight once every fighter settled and every drop is claimed.
-public fun close_fight(f: Fight, version: &Version) {
-  version.assert_latest();
-  fight::close(f);
+  fight::close(f, ctx);
 }
 
 // ╔════════════════ [ Party ] ════════════════════════════════════════════════ ]
@@ -562,6 +552,7 @@ public fun use_consumable(
 /// when the row has no link.
 entry fun gather(
   w: &mut World,
+  wc: &WorldContent,
   kiosk: &mut Kiosk,
   personal: &PersonalKioskCap,
   character_id: ID,
@@ -584,6 +575,7 @@ entry fun gather(
   let mut gen = r.new_generator(ctx);
   gathering::gather(
     w,
+    wc,
     kiosk,
     cap,
     character_id,
@@ -609,6 +601,7 @@ public fun resolve_ambush(
   cap: &KioskOwnerCap,
   character_id: ID,
   protector_template: &MobTemplate,
+  catalog: &BoardCatalog,
   version: &Version,
   clock: &Clock,
   ctx: &mut TxContext,
@@ -620,6 +613,7 @@ public fun resolve_ambush(
     cap,
     character_id,
     protector_template,
+    catalog,
     clock,
     ctx,
   );
@@ -627,7 +621,7 @@ public fun resolve_ambush(
 
 // ╔════════════════ [ Crafting ] ═════════════════════════════════════════════ ]
 
-/// Craft a frozen recipe: the exact ingredient tally burns (success OR failure), the roll
+/// Craft a live recipe: the exact ingredient tally burns (success OR failure), the roll
 /// runs off your job level, a success mints into your kiosk (merged into `existing` under
 /// the no-dust law). ENTRY: `&Random` law.
 entry fun craft(
@@ -849,6 +843,7 @@ entry fun enter_dungeon(
   kiosk: &mut Kiosk,
   personal: &PersonalKioskCap,
   character_id: ID,
+  wc: &WorldContent,
   zx: u32,
   zz: u32,
   key_id: ID,
@@ -864,24 +859,26 @@ entry fun enter_dungeon(
   // the run's board seed is drawn HERE from Sui randomness (terminal) — the room boards derive
   // from it, so no caller can enumerate a favorable dungeon layout.
   let mut gen = r.new_generator(ctx);
-  dungeon::enter(w, protected_item, kiosk, cap, character_id, zx, zz, key_id, gen.generate_u64(), clock, ctx);
+  dungeon::enter(w, wc, protected_item, kiosk, cap, character_id, zx, zz, key_id, gen.generate_u64(), clock, ctx);
 }
 
 /// Birth the run's current room fight — returns the build potato: `add_fight_mob` × the
 /// room's mobs (exact order), then `launch_fight`.
 public fun engage_dungeon_room(
   w: &World,
+  wc: &WorldContent,
   kiosk: &mut Kiosk,
   cap: &KioskOwnerCap,
   character_id: ID,
   access: u8,
   protected: &AresRPG_TransferPolicy<Character>,
+  catalog: &BoardCatalog,
   version: &Version,
   clock: &Clock,
   ctx: &mut TxContext,
 ): FightBuild {
   version.assert_latest();
-  dungeon::engage_room(w, protected, kiosk, cap, character_id, access, clock, ctx)
+  dungeon::engage_room(w, wc, protected, kiosk, cap, character_id, access, catalog, clock, ctx)
 }
 
 /// Join a PUBLIC dungeon room fight — your run must be at the fight's room.
@@ -918,12 +915,14 @@ public fun join_dungeon_room_grouped(
 /// Leave an ended room: settle + normal loot, then advance the run (win) or end it (win-last
 /// or loss). ENTRY: `&Random` law (the loot draw).
 entry fun settle_dungeon_room(
-  w: &World,
+  wc: &WorldContent,
   f: &mut Fight,
   fighter_idx: u64,
+  plan: vector<PM>,
   kiosk: &mut Kiosk,
   personal: &PersonalKioskCap,
   policy: &TransferPolicy<Character>,
+  item_policy: &TransferPolicy<Item>,
   r: &Random,
   version: &Version,
   clock: &Clock,
@@ -933,7 +932,7 @@ entry fun settle_dungeon_room(
   let cap = personal_kiosk::borrow(personal);
   version.assert_latest();
   let mut gen = r.new_generator(ctx);
-  dungeon::settle_room(w, f, fighter_idx, kiosk, cap, policy, &mut gen, clock, ctx);
+  dungeon::settle_room(wc, f, fighter_idx, kiosk, cap, policy, item_policy, plan, &mut gen, clock, ctx);
 }
 
 /// Give up the current room mid-fight — forfeit and end the run (the key is already gone).
@@ -976,6 +975,7 @@ entry fun create_kolizeum(
   kiosk: &mut Kiosk,
   personal: &PersonalKioskCap,
   character_id: ID,
+  catalog: &BoardCatalog,
   r: &Random,
   version: &Version,
   clock: &Clock,
@@ -985,7 +985,7 @@ entry fun create_kolizeum(
   let cap = personal_kiosk::borrow(personal);
   version.assert_latest();
   let mut gen = r.new_generator(ctx);
-  kolizeum::create(pledge, format, level_min, level_max, access, option::none(), protected, kiosk, cap, character_id, gen.generate_u64(), clock, ctx);
+  kolizeum::create(pledge, format, level_min, level_max, access, option::none(), protected, kiosk, cap, character_id, gen.generate_u64(), catalog, clock, ctx);
 }
 
 /// Open a FRIENDS-ONLY wagered arena — only the creator's whitelist may join. ENTRY: `&Random`.
@@ -1000,6 +1000,7 @@ entry fun create_kolizeum_friends(
   kiosk: &mut Kiosk,
   personal: &PersonalKioskCap,
   character_id: ID,
+  catalog: &BoardCatalog,
   r: &Random,
   version: &Version,
   clock: &Clock,
@@ -1011,7 +1012,7 @@ entry fun create_kolizeum_friends(
   assert!(friends::owner(list) == ctx.sender(), ENotOwnList); // snapshot only your OWN list
   let mut gen = r.new_generator(ctx);
   let allowed = option::some(friends::snapshot(list));
-  kolizeum::create(pledge, format, level_min, level_max, access, allowed, protected, kiosk, cap, character_id, gen.generate_u64(), clock, ctx);
+  kolizeum::create(pledge, format, level_min, level_max, access, allowed, protected, kiosk, cap, character_id, gen.generate_u64(), catalog, clock, ctx);
 }
 
 /// Stake the matching pledge and seat on a side (format-capped, level-gated, whitelist-gated).
@@ -1039,24 +1040,21 @@ entry fun start_kolizeum(lobby: &mut Kolizeum, f: &mut Fight, r: &Random, versio
   kolizeum::start(lobby, f, &mut gen, clock, ctx);
 }
 
-/// Settle out of the ended arena — a winner is paid their pot share. ENTRY: `&Random` law.
-entry fun settle_kolizeum(
+/// Settle out of the ended arena — pot payout only; PvP has no loot or Random work.
+public fun settle_kolizeum(
   lobby: &mut Kolizeum,
   f: &mut Fight,
   fighter_idx: u64,
   kiosk: &mut Kiosk,
   personal: &PersonalKioskCap,
   policy: &TransferPolicy<Character>,
-  r: &Random,
   version: &Version,
   clock: &Clock,
   ctx: &mut TxContext,
 ) {
-  // the packed cap unpacks HERE — a &Random door admits no PTB-side borrow (Sui law)
   let cap = personal_kiosk::borrow(personal);
   version.assert_latest();
-  let mut gen = r.new_generator(ctx);
-  kolizeum::settle(lobby, f, fighter_idx, kiosk, cap, policy, &mut gen, clock, ctx);
+  kolizeum::settle(lobby, f, fighter_idx, kiosk, cap, policy, clock, ctx);
 }
 
 /// Leave before the fight starts — full pledge refund.

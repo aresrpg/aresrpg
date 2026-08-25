@@ -41,7 +41,7 @@ export const surface_chunk_layers = (
       bounds.max_z >= area.min_z &&
       bounds.min_z <= area.max_z
   )
-  const first_y = Math.min(...surfaces, ...structures.map(({ bounds }) => bounds.min_y))
+  const first_y = Math.min(...surfaces.map((height) => height - 1), ...structures.map(({ bounds }) => bounds.min_y))
   const last_y = Math.max(...surfaces.map((height) => height - 1), ...structures.map(({ bounds }) => bounds.max_y))
   const first = Math.max(0, Math.floor(first_y / CHUNK_EDGE))
   const last = Math.min(WORLD_HEIGHT / CHUNK_EDGE - 1, Math.floor(last_y / CHUNK_EDGE))

@@ -45,6 +45,7 @@ type FarSample = Readonly<{
 }>
 
 export type FarTerrain = Readonly<{
+  set_visible: (visible: boolean) => void
   set_focus: (x: number, z: number) => void
   set_quality: (quality: EngineQuality, render_distance: number | null) => void
   ready: () => boolean
@@ -206,6 +207,7 @@ export const create_far_terrain = ({
   let applied_id = 0
   let in_flight_id: number | null = null
   let disposed = false
+  let visible = true
 
   const dispatch_latest = (): void => {
     if (in_flight_id !== null) return
@@ -243,7 +245,7 @@ export const create_far_terrain = ({
       mesh.position.set(data.center[0], 0, data.center[1])
       mesh.updateMatrix()
       Object.entries(meshes).forEach(([tier, candidate]) => {
-        candidate.visible = tier === active_quality
+        candidate.visible = visible && tier === active_quality
       })
     }
     if (!disposed && request_id > data.id) dispatch_latest()
@@ -260,6 +262,10 @@ export const create_far_terrain = ({
   request()
 
   return Object.freeze({
+    set_visible: (next: boolean) => {
+      visible = next
+      Object.entries(meshes).forEach(([tier, mesh]) => (mesh.visible = next && tier === active_quality))
+    },
     set_focus: (x: number, z: number) => {
       const step = get_quality_profile(active_quality).chunks.horizon_step
       const next = [Math.round(x / step) * step, Math.round(z / step) * step] as const

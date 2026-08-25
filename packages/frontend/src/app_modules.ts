@@ -32,6 +32,7 @@ export const PLAYER_APP_MODULES = Object.freeze([
   // comments above name: its reducer folds the stream whether or not it is listed here, so an
   // unarmed world module leaves the discovery prompt pressing a key that does nothing at all
   'world',
+  'dungeon',
   'marketplace',
 ]) satisfies readonly AppModuleName[]
 

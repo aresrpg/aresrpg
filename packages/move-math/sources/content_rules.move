@@ -6,16 +6,10 @@ module aresrpg_math::content_rules;
 use std::string::String;
 
 fun is_weapon(category: &String): bool {
-  *category == b"longsword".to_string() ||
-    *category == b"daggers".to_string() ||
-    *category == b"battleaxe".to_string() ||
+  *category == b"daggers".to_string() ||
     *category == b"spear".to_string() ||
-    *category == b"staff".to_string() ||
-    *category == b"spellbook".to_string() ||
     *category == b"bow".to_string() ||
     *category == b"axe".to_string() ||
-    *category == b"mace".to_string() ||
-    *category == b"club".to_string() ||
     *category == b"sword".to_string()
 }
 
@@ -37,19 +31,15 @@ public fun pet_accepts(food_types: &vector<String>, food_type: &String): bool {
 }
 
 public fun is_category(category: &String): bool {
-  *category == b"helmet".to_string() ||
-    *category == b"chestplate".to_string() ||
+  *category == b"hat".to_string() ||
+    *category == b"cloak".to_string() ||
     *category == b"belt".to_string() ||
-    *category == b"gauntlets".to_string() ||
-    *category == b"pants".to_string() ||
     *category == b"boots".to_string() ||
     *category == b"amulet".to_string() ||
     *category == b"ring".to_string() ||
     *category == b"pet".to_string() ||
     *category == b"relic".to_string() ||
     *category == b"title".to_string() ||
-    *category == b"hat".to_string() ||
-    *category == b"cloak".to_string() ||
     is_weapon(category) ||
     is_tool(category) ||
     is_stackable(category) ||
@@ -57,14 +47,10 @@ public fun is_category(category: &String): bool {
 }
 
 public fun craft_job_of(category: &String): Option<String> {
-  if (*category == b"longsword".to_string() || *category == b"sword".to_string() || *category == b"daggers".to_string()) option::some(b"SWORD_SMITH".to_string())
-  else if (*category == b"axe".to_string() || *category == b"battleaxe".to_string()) option::some(b"AXE_SMITH".to_string())
-  else if (*category == b"club".to_string() || *category == b"mace".to_string()) option::some(b"BLUNT_SMITH".to_string())
-  else if (*category == b"staff".to_string() || *category == b"spellbook".to_string()) option::some(b"STAFF_CARVER".to_string())
-  else if (*category == b"bow".to_string() || *category == b"spear".to_string()) option::some(b"BOWYER".to_string())
-  else if (*category == b"helmet".to_string() || *category == b"chestplate".to_string()) option::some(b"ARMORSMITH".to_string())
-  else if (*category == b"pants".to_string() || *category == b"boots".to_string()) option::some(b"TAILOR".to_string())
-  else if (*category == b"belt".to_string() || *category == b"gauntlets".to_string()) option::some(b"TANNER".to_string())
+  if (*category == b"sword".to_string() || *category == b"daggers".to_string() || *category == b"axe".to_string()) option::some(b"FORGER".to_string())
+  else if (*category == b"bow".to_string() || *category == b"spear".to_string()) option::some(b"CARVER".to_string())
+  else if (*category == b"hat".to_string() || *category == b"cloak".to_string()) option::some(b"TAILOR".to_string())
+  else if (*category == b"boots".to_string() || *category == b"belt".to_string()) option::some(b"TANNER".to_string())
   else if (*category == b"ring".to_string() || *category == b"amulet".to_string()) option::some(b"JEWELER".to_string())
   else if (*category == b"key".to_string()) option::some(b"HANDYMAN".to_string())
   else option::none()
@@ -98,20 +84,16 @@ public fun category_fits(slot: &String, category: &String): bool {
 public fun is_slot(slot: &String): bool {
   *slot == b"weapon".to_string() ||
     *slot == b"tool".to_string() ||
-    *slot == b"helmet".to_string() ||
-    *slot == b"chestplate".to_string() ||
+    *slot == b"hat".to_string() ||
+    *slot == b"cloak".to_string() ||
     *slot == b"belt".to_string() ||
-    *slot == b"gauntlets".to_string() ||
-    *slot == b"pants".to_string() ||
     *slot == b"boots".to_string() ||
     *slot == b"amulet".to_string() ||
     *slot == b"left_ring".to_string() ||
     *slot == b"right_ring".to_string() ||
     *slot == b"pet".to_string() ||
     is_relic_slot(slot) ||
-    *slot == b"title".to_string() ||
-    *slot == b"hat".to_string() ||
-    *slot == b"cloak".to_string()
+    *slot == b"title".to_string()
 }
 
 public fun is_classe(classe: &String): bool {

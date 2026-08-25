@@ -4,10 +4,19 @@
 import { describe, expect, test } from 'bun:test'
 
 import { GRID_CELLS, mask_get, neighbours } from '../src/combat_grid.ts'
-import { create_character_source, create_fight_state, create_mob_snapshot, player_max_hp } from '../src/create.ts'
+import {
+  create_character_source,
+  create_fight_state,
+  create_mob_snapshot,
+  mob_band_scaled,
+  mob_centered_band_scaled,
+  mob_loot_chance_scaled,
+  player_max_hp,
+} from '../src/create.ts'
 import { roll_value } from '../src/damage.ts'
 import { create_fight } from '../src/fight.ts'
 import { effect_seed } from '../src/fight_math.ts'
+import { xp_award_of } from '../src/fighters.ts'
 import { fight_path_to, reachable_fight_cells } from '../src/movement.ts'
 import { mix } from '../src/prng.ts'
 
@@ -19,8 +28,8 @@ describe('fight API', () => {
   })
 
   test('mob birth derives the exact Move band and spell level from template plus scalar', () => {
-    const level = (value: bigint) => ({
-      ap_cost: value,
+    const level = (ap_cost: bigint) => ({
+      ap_cost,
       range_min: 1n,
       range_max: 1n,
       modifiable_range: false,
@@ -31,32 +40,100 @@ describe('fight API', () => {
       casts_per_target: 0n,
       cooldown_turns: 0n,
       crit_1_in: 0n,
-      effects: [],
+      effects: [
+        {
+          kind: 0n,
+          element: 'earth',
+          value: 100n,
+          value_max: 120n,
+          area_shape: 0n,
+          area_size: 0n,
+          target_filter: 1n,
+          chance_bp: 10_000n,
+          turns: 0n,
+          stat: 0n,
+        },
+      ],
       crit_effects: [],
     })
-    const snapshot = create_mob_snapshot(
-      {
-        mob_type: 'banded',
-        level_min: 10n,
-        level_max: 20n,
-        hp: 1_000n,
-        ap: 6n,
-        mp: 3n,
-        agility: 4n,
-        wisdom: 5n,
-        earth_res: 32_768n,
-        fire_res: 32_768n,
-        water_res: 32_768n,
-        air_res: 32_768n,
-        spells: [{ name: 'bite', levels: [level(1n), level(2n)] }],
-        loot: [],
-        xp: 500n,
-      },
-      50n
-    )
+    const template = {
+      mob_type: 'banded',
+      level_min: 10n,
+      level_max: 20n,
+      hp: 1_000n,
+      ap: 6n,
+      mp: 3n,
+      agility: 4n,
+      wisdom: 5n,
+      earth_res: 32_868n,
+      fire_res: 32_668n,
+      water_res: 32_768n,
+      air_res: 32_768n,
+      spells: [{ name: 'bite', level: level(3n) }],
+      loot: [{ item_type: 'fang', chance_bp: 5_000n, min_qty: 1n, max_qty: 2n }],
+      xp: 500n,
+    }
+    const low = create_mob_snapshot(template, 0n)
+    const high = create_mob_snapshot(template, 100n)
 
-    expect(snapshot).toMatchObject({ level: 15n, max_hp: 1_050n, xp: 525n })
-    expect(snapshot.kit).toEqual([{ name: 'bite', ordinal: 1n, level: level(1n) }])
+    expect(low).toMatchObject({
+      level: 10n,
+      max_hp: 600n,
+      ap: 6n,
+      mp: 3n,
+      agility: 2n,
+      wisdom: 3n,
+      earth_res: 32_828n,
+      fire_res: 32_608n,
+      xp: 300n,
+      loot: [{ item_type: 'fang', chance_bp: 4_000n, min_qty: 1n, max_qty: 2n }],
+    })
+    expect(low.kit[0]?.level.effects[0]).toMatchObject({ value: 60n, value_max: 72n })
+    expect(low.kit[0]).toMatchObject({ ordinal: 1n, level: { ap_cost: 3n } })
+    expect(high).toMatchObject({
+      level: 20n,
+      max_hp: 1_600n,
+      ap: 8n,
+      mp: 4n,
+      agility: 6n,
+      wisdom: 8n,
+      earth_res: 32_928n,
+      fire_res: 32_708n,
+      xp: 800n,
+      loot: [{ item_type: 'fang', chance_bp: 6_000n, min_qty: 1n, max_qty: 2n }],
+    })
+    expect(high.kit[0]?.level.effects[0]).toMatchObject({ value: 160n, value_max: 192n })
+    expect(high.kit[0]).toMatchObject({ ordinal: 1n, level: { ap_cost: 3n } })
+    expect(mob_band_scaled(1_000n, 10n, 20n, 15n)).toBe(1_100n)
+    expect(mob_centered_band_scaled(32_868n, 32_768n, 10n, 20n, 15n)).toBe(32_878n)
+    expect(mob_centered_band_scaled(32_668n, 32_768n, 10n, 20n, 15n)).toBe(32_658n)
+    expect(mob_loot_chance_scaled(5_000n, 10n, 20n, 15n)).toBe(5_000n)
+    expect(mob_loot_chance_scaled(9_000n, 10n, 20n, 20n)).toBe(10_000n)
+  })
+
+  test('Retro XP uses the stable player-level snapshots for every winner', () => {
+    const checkpoint = structuredClone(create_fixture().checkpoint)
+    const player = checkpoint.contract.fighters[0]!
+    const mob = checkpoint.contract.fighters[1]!
+    if (player.kind.type !== 'player' || mob.kind.type !== 'mob') throw new Error('fixture kinds changed')
+    player.kind.level = 5n
+    checkpoint.sources.players[player.kind.character] = {
+      ...checkpoint.sources.players[player.kind.character]!,
+      level: 5n,
+    }
+    mob.kind.snapshot.level = 12n
+    mob.kind.snapshot.xp = 1_970n
+    for (let index = 2; index <= 6; index += 1) {
+      const character = `0xc${index}`
+      const teammate = structuredClone(player)
+      teammate.kind = { type: 'player', character, owner: `0xa${index}`, level: 5n }
+      checkpoint.sources.players[character] = structuredClone(checkpoint.sources.players[player.kind.character]!)
+      checkpoint.contract.fighters.push(teammate)
+    }
+    checkpoint.contract.winner = 0n
+
+    expect(xp_award_of(checkpoint, 0n)).toBe(472n)
+    expect(xp_award_of(checkpoint, 6n)).toBe(472n)
   })
 
   test('the same fighter action has the same result regardless of who delivered it', () => {
@@ -133,11 +210,13 @@ describe('fight API', () => {
     const first_mob_seed = (mix(91n, 2n) << 32n) | mix(91n, 3n)
     const boundary = remote.apply({ type: 'end_turn', fighter: 0n, observed_ms: 63_000n })
     const mob_turn = remote.apply({ type: 'turn_seed', fighter: 1n, seed: first_mob_seed })
+    expect(remote.awaiting_witness()).toBeTrue()
     const final_events = remote.replace(local_result.state)
 
     expect(boundary).toMatchObject({ events: [], error: null })
     expect(mob_turn.error).toBeNull()
     expect([...mob_turn.events, ...final_events]).toEqual([...local_result.events])
+    expect(remote.awaiting_witness()).toBeFalse()
     expect(remote.state()).toEqual(local_result.state)
   })
 
@@ -216,7 +295,7 @@ describe('fight API', () => {
 
     const duel_checkpoint = structuredClone(create_fixture().checkpoint)
     const [, opponent] = duel_checkpoint.contract.fighters
-    opponent.kind = { type: 'player', character: '0xc2', owner: '0xa2' }
+    opponent.kind = { type: 'player', character: '0xc2', owner: '0xa2', level: 10n }
     opponent.settled = false
     duel_checkpoint.sources.players['0xc2'] = duel_checkpoint.sources.players['0xc1']
     const duel = create_fight({ state: duel_checkpoint }).apply({ type: 'forfeit', fighter: 0n })
@@ -439,7 +518,7 @@ describe('fight API', () => {
               area_size: 0n,
               target_filter: 4n,
               chance_bp: 10_000n,
-              turns: 3n,
+              turns: 2n,
               stat: 0n,
             },
           ],
@@ -454,8 +533,14 @@ describe('fight API', () => {
 
     expect(result.events.at(-1)).toMatchObject({
       type: 'effect_applied',
-      payload: { target: 0n, channel: 0n, value: 10n, turns: 3n },
+      payload: { target: 0n, channel: 0n, value: 10n, turns: 2n },
     })
+
+    expect(fight.state().contract.fighters[0]?.effects[0]?.turns_left).toBe(2n)
+    expect(fight.apply({ type: 'end_turn', fighter: 0n, observed_ms: 63_000n }).error).toBeNull()
+    expect(fight.state().contract.fighters[0]?.effects[0]?.turns_left).toBe(1n)
+    expect(fight.apply({ type: 'end_turn', fighter: 0n, observed_ms: 100_000n }).error).toBeNull()
+    expect(fight.state().contract.fighters[0]?.effects).toEqual([])
   })
 
   test('an invalid action is atomic and emits nothing', () => {

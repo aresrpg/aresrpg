@@ -5,7 +5,7 @@ import { readFileSync } from 'node:fs'
 
 import { expect, test } from 'bun:test'
 
-import { result_participant_shows_progress, result_xp_progress } from '../../../src/modules/fight_result.ts'
+import { compact_xp, result_participant_shows_progress, result_xp_progress } from '../../../src/modules/fight_result.ts'
 
 test('the result row composes current XP and this fight gain on one progression bar', () => {
   const progress = result_xp_progress(20, 30)
@@ -29,6 +29,12 @@ test('only character rows own progression chrome', () => {
   expect(result_participant_shows_progress({ character_id: null })).toBeFalse()
 })
 
+test('large XP values stay compact enough for max-content columns', () => {
+  expect(compact_xp(20_500)).toBe('20.5k')
+  expect(compact_xp(20_000)).toBe('20k')
+  expect(compact_xp(1_250_000)).toBe('1.3m')
+})
+
 test('the result card has no you badge or hp bar and keeps larger loot on one row', () => {
   const component = readFileSync(new URL('../../../src/game/fight/FightResultCard.tsx', import.meta.url), 'utf8')
   const css = readFileSync(new URL('../../../src/game/fight/fight_result.css', import.meta.url), 'utf8')
@@ -36,9 +42,19 @@ test('the result card has no you badge or hp bar and keeps larger loot on one ro
   expect(component).not.toContain('fe-hp')
   expect(component).toContain('left: `${base_percent}%`')
   expect(component).toContain('rad-rays')
+  expect(component).toContain("'level_up_allocate'")
+  expect(component).toContain("'level_up_later'")
+  expect(component).toContain("pathname: '/characters/stats'")
+  expect(component).toContain("type: 'character/select'")
   expect(component).toContain('level_up_stat_points')
+  expect(component).toContain('item_icon(loot.item_type)')
+  expect(component).not.toContain('item_detail_icon')
+  expect(component).toContain("'result_duration'")
+  expect(component).toContain("'result_gas_spent'")
   expect(css).toContain('width: min(980px, 96vw)')
-  expect(css).toContain('minmax(160px, 1fr) 140px')
+  expect(css).toContain('max-content minmax(0, 1fr) max-content max-content minmax(0, 2fr)')
   expect(css).toContain('flex-wrap: nowrap')
   expect(css).toContain('width: 42px')
+  expect(css).toContain('width: max-content')
+  expect(css).toContain('rgba(4, 5, 8, 0.48)')
 })

@@ -6,10 +6,12 @@ import {
   class_names,
   craft_job_of,
   craft_xp_from_ingredient_count,
+  gatherable_of,
   item_stat_center,
   job_slugs,
   rune_effect,
   tier_unlock_level,
+  type GatheringJob,
   type JobSlug,
   type StatName,
 } from '@aresrpg/immutable'
@@ -32,6 +34,7 @@ import shop_source from '../../../../seed/content/shop.json'
 import spells_source from '../../../../seed/content/spells.json'
 
 import { worlds_source } from './worlds.ts'
+import { derive_mob_filter_rows } from './mob_filters.ts'
 
 type AirdropSource = Readonly<{
   drops: readonly Readonly<{ id: string; item_type: string; amount_each: number; whitelist: readonly string[] }>[]
@@ -48,8 +51,12 @@ type AirdropSource = Readonly<{
   legacy_pool: readonly Readonly<Record<string, unknown>>[]
   pending: readonly Readonly<{ id: string; name: string }>[]
 }>
+type ShopSource = Readonly<{
+  sales: readonly Readonly<{ item_type: string; price: number; supply: number | null; enabled?: boolean }>[]
+}>
 
 const authored_airdrop = airdrop_source as unknown as AirdropSource
+const authored_shop = shop_source as unknown as ShopSource
 
 export type StatBlock = Readonly<Record<StatName, number>>
 
@@ -58,7 +65,7 @@ export type LootRow = SeedMob['loot'][number]
 
 export type WorldResource = Readonly<{
   item_type: string
-  job: string
+  job: GatheringJob
   tier: number
   protector: string
   rare_item_type: string
@@ -73,6 +80,7 @@ export type WorldMob = Readonly<{
 
 export type SeedWorld = Readonly<{
   world: string
+  entry_level: number
   terrain?: Readonly<{
     seed: string
     sea_level: number
@@ -88,14 +96,14 @@ export type SeedWorld = Readonly<{
   resources: readonly WorldResource[]
   dungeon?: Readonly<{
     key: string
-    rooms: readonly (readonly Readonly<{ mob_type: string; level_scalar: number }>[])[]
+    rooms: readonly (readonly Readonly<{ mob_type: string }>[])[]
   }>
 }>
 
 type RawSeedWorld = Omit<SeedWorld, 'mobs' | 'resources'> &
   Readonly<{
     mobs: readonly WorldMob[] | Readonly<Record<string, number>>
-    resources: readonly (Omit<WorldResource, 'biomes'> & Readonly<{ biomes?: readonly string[] }>)[]
+    resources: readonly Readonly<{ item_type: string; biomes?: readonly string[] }>[]
   }>
 
 const items = Object.freeze(items_source as unknown as readonly SeedItem[])
@@ -114,7 +122,11 @@ const worlds = Object.freeze(
             )
       ),
       resources: Object.freeze(
-        world.resources.map((resource) => Object.freeze({ ...resource, biomes: Object.freeze(resource.biomes ?? []) }))
+        world.resources.map((resource) => {
+          const gatherable = gatherable_of(resource.item_type)
+          if (!gatherable) throw new Error(`Unknown gatherable ${resource.item_type} in ${world.world}`)
+          return Object.freeze({ ...gatherable, biomes: Object.freeze(resource.biomes ?? []) })
+        })
       ),
     })
   )
@@ -150,7 +162,11 @@ const drops = group_entries(
   mobs.flatMap((mob) => mob.loot.map((drop) => [drop.item_type, Object.freeze({ mob, drop })] as const))
 )
 const mob_worlds = group_entries(
-  worlds.flatMap((world) => world.mobs.map(({ mob_type }) => [mob_type, world] as const))
+  worlds.flatMap((world) =>
+    [
+      ...new Set([...world.mobs.map(({ mob_type }) => mob_type), ...world.resources.map(({ protector }) => protector)]),
+    ].map((mob_type) => [mob_type, world] as const)
+  )
 )
 const item_worlds = group_entries(
   worlds.flatMap((world) => world.resources.map(({ item_type }) => [item_type, world] as const))
@@ -257,9 +273,22 @@ const jobs = Object.freeze(
 )
 const jobs_by_id = keyed(jobs, ({ id }) => id)
 const worlds_by_id = keyed(worlds, ({ world }) => world)
+const mob_filters = derive_mob_filter_rows(
+  mobs,
+  worlds.map((world) =>
+    Object.freeze({
+      world: world.world,
+      biome_names: Object.freeze(world.terrain?.biomes.map(({ name }) => name) ?? []),
+      mobs: world.mobs,
+      protectors: Object.freeze(
+        world.resources.map(({ protector, biomes }) => Object.freeze({ mob_type: protector, biomes }))
+      ),
+    })
+  )
+)
 
 const shop_sales = Object.freeze(
-  shop_source.sales.map((sale) =>
+  authored_shop.sales.map((sale) =>
     Object.freeze({
       ...sale,
       item: items_by_type[sale.item_type] ?? null,
@@ -281,6 +310,7 @@ export const content_catalog = Object.freeze({
   recipes,
   spells,
   worlds,
+  mob_filters,
   classes,
   jobs,
   shop: Object.freeze({ sales: shop_sales }),

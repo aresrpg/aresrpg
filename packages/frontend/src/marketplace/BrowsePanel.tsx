@@ -6,7 +6,6 @@ import { useMemo, useState } from 'react'
 import { class_names } from '@aresrpg/immutable'
 
 import { ItemDetailView } from '../components/ItemDetailView.tsx'
-import { item_icon } from '../content/assets.ts'
 import { content_catalog, titleize } from '../content/catalog.ts'
 import type { CopyText } from '../i18n/copy.ts'
 import { MARKET_GROUPS, type MarketGroup } from '../modules/marketplace.ts'
@@ -219,7 +218,7 @@ export const BrowsePanel = ({ text }: Readonly<{ text: CopyText }>) => {
                     <ItemDetailView
                       category={item.category}
                       damages={item.damages ?? []}
-                      icon={item_icon(item.item_type)}
+                      item_type={item.item_type}
                       labels={{
                         characteristics: text('characteristics'),
                         damages: text('damages'),

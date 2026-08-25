@@ -4,6 +4,7 @@
 import {
   compile_world_recipe,
   MAX_SURFACE_Y,
+  WORLD_HEIGHT,
   parse_world_recipe,
   sample_biome_grid,
   sample_world_column,
@@ -35,7 +36,27 @@ export const sample_biome_cell = (value: unknown, column: number, row: number) =
 export const first_biome_land = (biome: WorldRecipe['biomes'][number]) =>
   biome.landscape.find(({ land }) => land)?.land ?? null
 
+/** Representative biome strata: the authored land state covering the widest ground interval. */
+export const dominant_biome_land = (biome: WorldRecipe['biomes'][number]) => {
+  const spans = new Map<string, { width: number; land: NonNullable<(typeof biome.landscape)[number]['land']> }>()
+  let current = biome.landscape[0]!.land!
+  biome.landscape.forEach((knot, index) => {
+    if (knot.land) current = knot.land
+    const width = (biome.landscape[index + 1]?.x ?? 1) - knot.x
+    const key = `${current.surface}/${current.subsurface}/${current.filler}`
+    const previous = spans.get(key)
+    spans.set(key, { width: (previous?.width ?? 0) + width, land: current })
+  })
+  return [...spans.values()].sort((left, right) => right.width - left.width)[0]?.land ?? null
+}
+
+export const biome_map_color = (recipe: WorldRecipe, biome: WorldRecipe['biomes'][number]): string => {
+  const material = biome.name === recipe.ocean?.biome ? recipe.liquid : dominant_biome_land(biome)?.surface
+  return material ? (recipe.materials[material]?.color ?? '#000000') : '#000000'
+}
+
 export const world_height_domain = (): readonly [number, number] => [0, MAX_SURFACE_Y]
+export const world_height_graph_domain = (): readonly [number, number] => [0, WORLD_HEIGHT]
 
 export type TerrainPatch = Readonly<{
   side: number

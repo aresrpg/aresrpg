@@ -53,7 +53,7 @@ export default function SpellsTab({ character, copy }: Readonly<{ character: Rea
   const max_level = selected?.levels.length ?? 0
   const mastered = current >= max_level && current > 0
   const cost = current
-  const can_raise = !!selected && current >= 1 && !mastered && points >= cost && !raising
+  const can_raise = !!wallet && !!selected && current >= 1 && !mastered && points >= cost && !raising
   const raise_hint =
     !selected || raising || can_raise || mastered
       ? undefined

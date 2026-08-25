@@ -3,23 +3,10 @@
 
 import type { JobSlug } from './identity.ts'
 
-export const weapon_categories = Object.freeze([
-  'longsword',
-  'daggers',
-  'battleaxe',
-  'spear',
-  'staff',
-  'spellbook',
-  'bow',
-  'axe',
-  'mace',
-  'club',
-  'sword',
-] as const)
+export const weapon_categories = Object.freeze(['daggers', 'spear', 'bow', 'axe', 'sword'] as const)
 
-export const armor_categories = Object.freeze(['helmet', 'chestplate', 'belt', 'gauntlets', 'pants', 'boots'] as const)
-export const accessory_categories = Object.freeze(['amulet', 'ring'] as const)
-export const cosmetic_item_categories = Object.freeze(['title', 'hat', 'cloak'] as const)
+export const armor_categories = Object.freeze(['hat', 'cloak', 'belt', 'boots'] as const)
+export const accessory_categories = Object.freeze(['amulet', 'ring', 'title'] as const)
 export const tool_categories = Object.freeze(['tool_farmer', 'tool_herbalist', 'tool_miner'] as const)
 
 export const equipment_categories = Object.freeze([
@@ -27,7 +14,6 @@ export const equipment_categories = Object.freeze([
   ...accessory_categories,
   'pet',
   'relic',
-  ...cosmetic_item_categories,
   ...weapon_categories,
   ...tool_categories,
 ] as const)
@@ -55,23 +41,15 @@ export const is_tool_category = (category: string): boolean => (tool_categories 
 // Mirrors move-math/content_rules.move::craft_job_of. Categories absent here deliberately use
 // the recipe's authored job because one category can serve several professions.
 const craft_jobs_by_category: Readonly<Partial<Record<ItemCategory, JobSlug>>> = Object.freeze({
-  longsword: 'SWORD_SMITH',
-  sword: 'SWORD_SMITH',
-  daggers: 'SWORD_SMITH',
-  axe: 'AXE_SMITH',
-  battleaxe: 'AXE_SMITH',
-  club: 'BLUNT_SMITH',
-  mace: 'BLUNT_SMITH',
-  staff: 'STAFF_CARVER',
-  spellbook: 'STAFF_CARVER',
-  bow: 'BOWYER',
-  spear: 'BOWYER',
-  helmet: 'ARMORSMITH',
-  chestplate: 'ARMORSMITH',
-  pants: 'TAILOR',
-  boots: 'TAILOR',
+  sword: 'FORGER',
+  daggers: 'FORGER',
+  axe: 'FORGER',
+  bow: 'CARVER',
+  spear: 'CARVER',
+  hat: 'TAILOR',
+  cloak: 'TAILOR',
+  boots: 'TANNER',
   belt: 'TANNER',
-  gauntlets: 'TANNER',
   ring: 'JEWELER',
   amulet: 'JEWELER',
   key: 'HANDYMAN',

@@ -1,15 +1,17 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-/// The 20 hardcoded worlds + everything about a character's place in them. Position lives as
+/// Dynamic authored worlds + everything about a character's place in them. Position lives as
 /// dynamic fields ON the character (one checkpoint per visited world — automatic memory), so
 /// joining and moving touch zero shared objects. The shared `World` objects carry per-world
 /// content settings (mobs, resources, dungeon key — designed later) and load only when read.
 module aresrpg::world;
 
 use aresrpg::{character::Character, equipment, progression};
-use aresrpg_math::world_map::{Self, WorldContent};
+use aresrpg_control::admin::AdminCap;
+use aresrpg_seed::{registry::{Self, Registry}, world_content::{Self, WorldContent}};
+use aresrpg_math::world_map;
 use std::string::String;
-use sui::{clock::Clock, dynamic_field as dfield, event};
+use sui::{clock::Clock, derived_object, dynamic_field as dfield, event};
 
 // ╔════════════════ [ Constants ] ════════════════════════════════════════════ ]
 
@@ -17,17 +19,22 @@ const ELevelTooLow: u64 = 302;
 const ENotInWorld: u64 = 303;
 const EOutOfBounds: u64 = 304;
 const ETravelTooFar: u64 = 305;
+const EWrongStartWorld: u64 = 306;
+const START_WORLD: vector<u8> = b"nauvis";
 
 // ╔════════════════ [ Types ] ════════════════════════════════════════════════ ]
 
-/// One shared object per world — the content settings home. Filled by the seeding
-/// (SeedCap-gated doors, so the one seal closes world content too); after the seal no door can
-/// ever write again — immutability by door-absence. Identity and entry level stay hardcoded law.
+/// One shared object per world — SLIM by law (the ÷10 plan, Lever 2: a mutable object pays
+/// storage at its full size on every touch, so the 39KB of authored content lives in the
+/// seed package's own `WorldContent` object, passed read-only beside this one). This object
+/// carries identity + the zone dynamic fields, nothing else.
 public struct World has key {
   id: UID,
   name: String,
-  content: WorldContent,
 }
+
+/// Derived under the living Registry root, so every client can resolve a world from its JSON name.
+public struct WorldKey(String) has copy, drop, store;
 
 /// DF key on the character → the world it is in NOW (a `String` world name).
 public struct CurrentWorldKey has copy, drop, store {}
@@ -46,20 +53,18 @@ public struct Checkpoint has copy, drop, store {
 public struct WorldJoined has copy, drop { character: ID, world: String, x: u32, z: u32, first_join: bool }
 public struct WorldCreated has copy, drop { world: ID, name: String }
 
-// ╔════════════════ [ init — the 20 worlds ] ═════════════════════════════════ ]
+// ╔════════════════ [ Living creation ] ══════════════════════════════════════ ]
 
-fun init(ctx: &mut TxContext) {
-  let mut names = world_map::world_names();
-  while (!names.is_empty()) {
-    let name = names.pop_back();
-    let world = World {
-      id: object::new(ctx),
-      name,
-      content: world_map::empty_world_content(),
-    };
-    event::emit(WorldCreated { world: object::id(&world), name });
-    transfer::share_object(world);
+/// Create the gameplay state beside a newly authored WorldContent. Existing worlds remain
+/// mutable through that content object; adding another JSON row needs no package upgrade.
+public fun create(cap: &AdminCap, root: &mut Registry, content: &WorldContent, ctx: &TxContext) {
+  let name = world_content::name(content);
+  let world = World {
+    id: derived_object::claim(registry::uid_mut(cap, root, ctx), WorldKey(name)),
+    name,
   };
+  event::emit(WorldCreated { world: object::id(&world), name });
+  transfer::share_object(world);
 }
 
 /// Zone state rides the World's UID — the zone module is the only writer.
@@ -67,15 +72,15 @@ public(package) fun uid(world: &World): &UID { &world.id }
 
 public(package) fun uid_mut(world: &mut World): &mut UID { &mut world.id }
 
-/// Static content reads/writes cross this custody seam. Only package code can obtain the mutable
-/// reference; the public math functions operating on it therefore add no authoring authority.
-public(package) fun content(world: &World): &WorldContent { &world.content }
-
-public(package) fun content_mut(world: &mut World): &mut WorldContent { &mut world.content }
-
 // ╔════════════════ [ Content reads ] ═════════════════════════════════════════ ]
 
 public fun name(world: &World): String { world.name }
+
+/// Character creation is the one deliberate hardcode: every new character starts on Nauvis.
+/// Travel remains fully content-driven after birth.
+public(package) fun assert_start_world(content: &WorldContent) {
+  assert!(world_content::name(content) == START_WORLD.to_string(), EWrongStartWorld);
+}
 
 // ╔════════════════ [ Travel ] ═══════════════════════════════════════════════ ]
 
@@ -84,8 +89,9 @@ public fun name(world: &World): String { world.name }
 /// CURRENT world, then materializes at the DESTINATION portal. A fresh character (no world
 /// yet) joins free: there is no origin gate to walk to. The level requirement checks every
 /// time. Package-private: the public door is `api::join_world` (kiosk-borrowing).
-public(package) fun join_world(character: &mut Character, world: String, clock: &Clock) {
-  assert!(character.level() >= world_map::entry_level(&world), ELevelTooLow);
+public(package) fun join_world(character: &mut Character, content: &WorldContent, clock: &Clock) {
+  assert!(character.level() >= world_content::entry_level(content), ELevelTooLow);
+  let world = world_content::name(content);
   progression::touch(character, clock);
 
   let character_id = character.id();
@@ -183,8 +189,3 @@ fun ccm(character: &mut Character): (String, &mut Checkpoint) {
   let world: String = *dfield::borrow(uid, CurrentWorldKey {});
   (world, dfield::borrow_mut(uid, CheckpointKey(world)))
 }
-
-// ╔════════════════ [ Testing ] ══════════════════════════════════════════════ ]
-
-#[test_only]
-public fun test_init(ctx: &mut TxContext) { init(ctx) }

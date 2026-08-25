@@ -209,7 +209,7 @@ public(package) fun level(self: &Character): u16 { self.level }
 
 /// Add-only — experience can never decrease. The level syncs silently off the curve; each
 /// level gained grants 5 stat points and 1 spell point (legacy law).
-public(package) fun ae(self: &mut Character, experience: u64) {
+public(package) fun add_experience(self: &mut Character, experience: u64) {
   self.experience = self.experience + experience;
   let new_level = aresrpg_math::experience::level_from_xp(self.experience);
   if (new_level > self.level) {

@@ -6,9 +6,9 @@
 // Picking a world fires ONE join_world transaction and folds its own WorldJoined receipt.
 
 import { useMemo } from 'react'
-import { WORLD_GATES } from '@aresrpg/immutable'
 
 import { encyclopedia_catalog, titleize } from '../content/catalog.ts'
+import { worlds_source } from '../content/worlds.ts'
 import type { AppCopy } from '../i18n/copy.ts'
 import { copy_text } from '../i18n/copy.ts'
 import { dispatch_app, useAppStore } from '../store.ts'
@@ -26,13 +26,13 @@ export const TravelModal = ({ copy }: Readonly<{ copy: AppCopy }>) => {
 
   const items = useMemo<PickerItem[]>(
     () =>
-      WORLD_GATES.map((gate) => {
-        const biomes = encyclopedia_catalog.world(gate.name)?.terrain?.biomes.map(({ name }) => titleize(name))
+      worlds_source.map((world) => {
+        const biomes = encyclopedia_catalog.world(world.world)?.terrain?.biomes.map(({ name }) => titleize(name))
         return {
-          id: gate.name,
-          label: titleize(gate.name),
+          id: world.world,
+          label: titleize(world.world),
           color: '#c8963c',
-          sublabel: [text('travel_entry_level', { level: gate.entry_level }), biomes?.join(' · ')]
+          sublabel: [text('travel_entry_level', { level: world.entry_level }), biomes?.join(' · ')]
             .filter(Boolean)
             .join(' · '),
         }
@@ -40,7 +40,8 @@ export const TravelModal = ({ copy }: Readonly<{ copy: AppCopy }>) => {
     [text]
   )
   const locked_ids = useMemo(
-    () => new Set(WORLD_GATES.filter((gate) => (character?.level ?? 0) < gate.entry_level).map(({ name }) => name)),
+    () =>
+      new Set(worlds_source.filter((world) => (character?.level ?? 0) < world.entry_level).map(({ world }) => world)),
     [character]
   )
   const picker_copy = useMemo<PickerCopy>(

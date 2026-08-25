@@ -9,6 +9,7 @@ import { chain_to_client_coordinate, client_to_chain_coordinate, world_center } 
 import { ZONE_SIZE, zone_of } from '@aresrpg/protocol'
 
 import type { spawn_markers } from '../../modules/world.ts'
+import type { DungeonPortalMarker } from '../../modules/world_spawns.ts'
 
 import { to_canvas } from './minimap_render.ts'
 
@@ -76,6 +77,34 @@ export const draw_spawn_markers = (
       context.arc(px, pz, 3, 0, Math.PI * 2)
       context.fill()
     }
+  }
+}
+
+/** Dungeon entrances: dark-green core with a bright breathing ring, shared by both map lenses. */
+export const draw_dungeon_portal_markers = (
+  context: CanvasRenderingContext2D,
+  view: MapView,
+  markers: readonly DungeonPortalMarker[],
+  now = Date.now()
+): void => {
+  const pulse = 4.5 + (Math.sin(now * 0.006) + 1) * 1.25
+  for (const marker of markers) {
+    const { px, pz } = to_canvas(marker.x, marker.z, view.center_x, view.center_z, view.size, view.radius)
+    if (px < 0 || pz < 0 || px > view.size || pz > view.size) continue
+    context.save()
+    context.shadowColor = '#45ff88'
+    context.shadowBlur = 10
+    context.strokeStyle = '#58ff94'
+    context.lineWidth = 1.5
+    context.beginPath()
+    context.arc(px, pz, pulse, 0, Math.PI * 2)
+    context.stroke()
+    context.shadowBlur = 0
+    context.fillStyle = '#063d24'
+    context.beginPath()
+    context.arc(px, pz, 3.5, 0, Math.PI * 2)
+    context.fill()
+    context.restore()
   }
 }
 

@@ -1,0 +1,12 @@
+[package]
+name = "aresrpg_control"
+edition = "2024"
+license = "LicenseRef-AresRPG-Source-Available"
+authors = ["Sceat"]
+
+[addresses]
+aresrpg_control = "0x0"
+
+# The ONE application-authority package. It owns the sole AdminCap type reused by
+# seed and core; package UpgradeCaps remain Sui framework authority and are consumed
+# separately by the final freeze PTB.

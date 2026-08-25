@@ -30,6 +30,7 @@ import player_load from './modules/player_load.ts'
 import player_info from './modules/player_info.ts'
 import player_events from './modules/player_events.ts'
 import player_world from './modules/player_world.ts'
+import player_dungeon from './modules/player_dungeon.ts'
 import player_chat from './modules/player_chat.ts'
 import player_fight from './modules/player_fight.ts'
 import player_party from './modules/player_party.ts'
@@ -54,6 +55,7 @@ export type TrackedCharacter = Readonly<{
   fight: string | null
   fight_seat: number | null
   active_fighter: number | null
+  dungeon_run: CharacterRow['dungeon_run'] | null
 }>
 
 /** Actions the reducers fold: client packets + validated internal actions + lifecycle marks. */
@@ -66,6 +68,7 @@ export type PlayerAction =
       party: string | null
       fight: string | null
       fight_seat: number | null
+      dungeon_run: CharacterRow['dungeon_run'] | null
       at_ms: number
     }
   | { type: 'action/character_roster'; characters: readonly CharacterRow[] }
@@ -118,6 +121,7 @@ export type PlayerContext = {
   indexing_lag: () => Promise<number | null>
   /** Process-wide chain game state, loaded once and updated by the indexer wire. */
   game_state: GameState
+  /** Whether this process observed a content write after loading its bundled seed. */
   /** the LOCAL loop emitter (legacy `events`): every folded action re-emits under its type,
    *  every state change emits `STATE_UPDATED(state, previous)` — observers listen here */
   events: EventEmitter
@@ -148,6 +152,7 @@ const MODULES: PlayerModule[] = [
   player_info,
   player_events,
   player_world,
+  player_dungeon,
   player_chat,
   player_fight,
   player_party,

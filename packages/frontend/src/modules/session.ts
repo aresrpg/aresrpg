@@ -7,6 +7,7 @@ import type {
   CharacterRow,
   ClaimRow,
   ItemRow,
+  PartyRow,
   ServerPacket,
   ShopState,
   TradeRow,
@@ -54,6 +55,7 @@ export type SessionState = Readonly<{
   claims: readonly ClaimRow[]
   giftcards: readonly { id: string; template: string; amount: number }[]
   trades: readonly TradeRow[]
+  parties: Readonly<Record<string, PartyRow | null>>
   selected_character_id: string | null
   online: number | null
   auth_ready: boolean
@@ -146,6 +148,7 @@ export const initial_session_state = (): SessionState =>
     claims: [],
     giftcards: [],
     trades: [],
+    parties: Object.freeze({}),
     selected_character_id: read_selected_character(),
     online: null,
     auth_ready: false,
@@ -177,7 +180,7 @@ const with_airdrop = (
 const fold_shop_receipt = (session: SessionState, input: AppInput): SessionState => {
   if (input.type === 'shop/purchased') {
     const sale = session.shop?.sales.find(({ item_type }) => item_type === input.item_type)
-    if (!sale) return session
+    if (!sale || sale.infinite) return session
     const supply = BigInt(sale.supply) - BigInt(input.quantity)
     return with_sale_supply(session, input.item_type, String(supply < 0n ? 0n : supply))
   }
@@ -220,6 +223,11 @@ const fold_packet = (session: SessionState, packet: Readonly<ServerPacket>): Ses
   if (packet.type === 'packet/claims') return Object.freeze({ ...session, claims: packet.claims })
   if (packet.type === 'packet/giftcards') return Object.freeze({ ...session, giftcards: packet.giftcards })
   if (packet.type === 'packet/trades') return Object.freeze({ ...session, trades: packet.trades })
+  if (packet.type === 'packet/party')
+    return Object.freeze({
+      ...session,
+      parties: Object.freeze({ ...session.parties, [packet.character_id]: packet.party }),
+    })
   if (packet.type === 'packet/shop_state')
     return Object.freeze({
       ...session,

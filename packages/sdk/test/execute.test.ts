@@ -194,37 +194,27 @@ describe('the execute gate (core interface)', () => {
     expect(client.calls.hydrations.map(({ length }) => length)).toEqual([10, 10, 1])
   })
 
-  // THE DUEL JOIN (2026-08-21): the challenger's fight id reaches the acceptor the instant it
-  // commits, and the acceptor's node can still be a checkpoint behind. Before this, the empty
-  // read absorbed nothing SILENTLY and the build then blamed the caller for not hydrating.
-  test('an id that must exist waits for a node that is behind', async () => {
-    const client = fake_client({ simulate_ok: true, lag: new Map([[id(77), 2]]) })
+  test('an external id is read once and absence remains data', async () => {
+    const client = fake_client({ simulate_ok: true, lag: new Map([[id(77), 99]]) })
     const sdk = SDK({ address: id(99), client, pins })
 
-    await sdk.hydrate_required([id(77)])
-    expect(sdk.cache.shared.has(id(77))).toBeTrue()
-    expect(client.calls.hydrations).toHaveLength(3) // two empty reads, then the object
+    await sdk.hydrate_unknown([id(77)])
+    expect(sdk.cache.shared.has(id(77))).toBeFalse()
+    expect(client.calls.hydrations).toHaveLength(1)
   })
 
-  test('an id that never arrives names itself instead of blaming the caller', async () => {
-    const client = fake_client({ simulate_ok: true, lag: new Map([[id(78), 99]]) })
-    const sdk = SDK({ address: id(99), client, pins })
-
-    await expect(sdk.hydrate_required([id(78)])).rejects.toThrow(/never showed.*0x0*78/)
-    // absence stays DATA for the tolerant door — a seal probe must not throw or wait
-    await expect(sdk.hydrate_unknown([id(78)])).resolves.toBeDefined()
-  })
-
-  test('a receipt-fresh owned ref waits until the read node reaches its cached version', async () => {
+  test('a receipt-fresh owned ref is reused without asking a read node', async () => {
     const object_id = id(79)
-    const client = fake_client({ simulate_ok: true, owned_versions: new Map([[object_id, ['4', '5']]]) })
+    const client = fake_client({ simulate_ok: true, owned_versions: new Map([[object_id, ['4']]]) })
     const sdk = SDK({ address: id(99), client, pins })
     absorb_receipt(sdk.cache, { Transaction: { effects: { changedObjects: [changed(object_id, '5')] } } })
 
-    await sdk.hydrate_owned_current([object_id])
+    await sdk.hydrate_unknown([object_id])
 
-    expect(client.calls.hydrations).toHaveLength(2)
+    expect(client.calls.hydrations).toHaveLength(0)
     expect(sdk.ref(object_id)?.version).toBe('5')
+    expect(sdk).not.toHaveProperty('hydrate_required')
+    expect(sdk).not.toHaveProperty('hydrate_owned_current')
   })
 
   test('balance reads include address balance instead of only legacy coin objects', async () => {

@@ -4,7 +4,6 @@
 import {
   accessory_categories,
   armor_categories,
-  cosmetic_item_categories,
   pet_max_feeds,
   tool_categories,
   weapon_categories,
@@ -17,31 +16,19 @@ import { useMemo, useState } from 'react'
 import { ItemDetailView } from '../components/ItemDetailView.tsx'
 import { item_icon } from '../content/assets.ts'
 import { encyclopedia_catalog, titleize } from '../content/catalog.ts'
-import { item_detail_icon } from '../content/item_detail_assets.ts'
 
 import { category_pill, Empty, encyclopedia_layout, EntityButton, EntityGrid, SearchField } from './components.tsx'
 import type { EncyclopediaText } from './copy.ts'
 import { loot_box_is_random } from './loot_box.ts'
 
 type Group =
-  | 'ALL'
-  | 'ARMOR'
-  | 'WEAPONS'
-  | 'ACCESSORIES'
-  | 'COSMETICS'
-  | 'PETS'
-  | 'RUNES'
-  | 'RELICS'
-  | 'TOOLS'
-  | 'CONSUMABLES'
-  | 'RESOURCES'
+  'ALL' | 'ARMOR' | 'WEAPONS' | 'ACCESSORIES' | 'PETS' | 'RUNES' | 'RELICS' | 'TOOLS' | 'CONSUMABLES' | 'RESOURCES'
 
 const GROUPS: Readonly<Record<Group, ReadonlySet<string> | null>> = Object.freeze({
   ALL: null,
   ARMOR: new Set(armor_categories),
   WEAPONS: new Set(weapon_categories),
   ACCESSORIES: new Set(accessory_categories),
-  COSMETICS: new Set(cosmetic_item_categories),
   PETS: new Set(['pet']),
   RUNES: new Set(['rune']),
   RELICS: new Set(['relic']),
@@ -293,7 +280,7 @@ export const ItemsTab = ({
         category={detail.item.category}
         damages={detail.item.damages ?? []}
         description={description === description_key ? '' : description}
-        icon={item_detail_icon(detail.item.item_type)}
+        item_type={detail.item.item_type}
         labels={{
           characteristics: text('characteristics'),
           damages: text('damages'),

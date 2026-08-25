@@ -14,12 +14,18 @@ import type { CompiledWorld } from '@aresrpg/engine'
 
 import './world_map.css'
 import { copy_text, type AppCopy } from '../../i18n/copy.ts'
-import { spawn_markers, zone_key } from '../../modules/world.ts'
+import { dungeon_portal_markers, spawn_markers, zone_key } from '../../modules/world.ts'
 import { useAppStore } from '../../store.ts'
 import { useWorldPose } from '../core/pose_feed.ts'
 
 import { camera_heading } from './compass_math.ts'
-import { draw_players, draw_self_arrow, draw_spawn_markers, draw_zone_layer } from './map_layers.ts'
+import {
+  draw_dungeon_portal_markers,
+  draw_players,
+  draw_self_arrow,
+  draw_spawn_markers,
+  draw_zone_layer,
+} from './map_layers.ts'
 import { empty_relief_grid, fill_relief_rows, paint_relief, type ReliefGrid } from './minimap_render.ts'
 
 /** 3×3 zones exactly: the lens spans 1.5 zones from the CURRENT zone's center to each edge. */
@@ -108,6 +114,7 @@ export const WorldMap = ({
       true
     )
     draw_spawn_markers(context, view, spawn_markers(world_state))
+    draw_dungeon_portal_markers(context, view, dungeon_portal_markers(world_state, world_name))
     draw_players(context, view, Object.values(world_state.players))
     draw_self_arrow(context, view, pose.x, pose.z, camera_heading(pose.yaw))
   }, [grid, sampled_rows, pose, world_state, world_name])

@@ -3,39 +3,24 @@
 // The established paper-doll layout, extracted from the inventory for reuse by local character
 // authoring AND the live characters page (drag-drop staging rides the optional slot_state).
 
-import {
-  Award,
-  Cat,
-  CircleDot,
-  Crown,
-  Footprints,
-  Gem,
-  Minus,
-  Shield,
-  Shirt,
-  Sparkles,
-  Star,
-  Swords,
-} from 'lucide-react'
+import { Award, Cat, CircleDot, Crown, Footprints, Gem, Minus, Shirt, Sparkles, Star, Swords } from 'lucide-react'
 import type { DragEvent, ReactNode } from 'react'
-import { cosmetic_slots, relic_slots, rig_slots, type CharacterEquipmentSlot } from '@aresrpg/immutable'
+import { relic_slots, rig_slots, type CharacterEquipmentSlot } from '@aresrpg/immutable'
 
 /** The anatomical body order — DOM reading order IS the layout (the .inv__rig auto-flow
  *  grid), so the slot ORDER belongs to this component, never its callers (the canon doll's
- *  law). TOOL took the old spacer cell, keeping the spine (helmet/chestplate/belt/pants)
- *  column-centred and the weapon on the RIGHT. */
+ *  law). Hat, cloak, and title are ordinary equipment in this same grid. */
 const RIG_ORDER = Object.freeze([
   'tool',
-  'helmet',
+  'hat',
   'amulet',
-  'gauntlets',
-  'chestplate',
+  'cloak',
   'weapon',
   'left_ring',
   'belt',
   'right_ring',
   'pet',
-  'pants',
+  'title',
   'boots',
 ] as const satisfies readonly (typeof rig_slots)[number][])
 
@@ -53,13 +38,9 @@ export type DollSlotState = Readonly<{
 
 const SLOT_ICON: Readonly<Record<string, typeof Sparkles>> = Object.freeze({
   relic: Sparkles,
-  helmet: Crown,
   hat: Crown,
   cloak: Shirt,
   amulet: Gem,
-  chestplate: Shirt,
-  gauntlets: Shield,
-  pants: Star,
   title: Award,
   weapon: Swords,
   tool: Swords,
@@ -145,11 +126,6 @@ export const EquipmentDoll = ({
           ))}
         </div>
       </div>
-    </div>
-    <div className={`inv__cosmetics${compact ? ' inv__cosmetics--compact' : ''}`}>
-      {cosmetic_slots.map((slot) => (
-        <EquipmentSlot item={item_for(slot)} key={slot} open={open} slot={slot} state={slot_state?.(slot)} />
-      ))}
     </div>
     {footer}
   </div>

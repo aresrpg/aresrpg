@@ -3,10 +3,10 @@
 /* Exact retained rules used by the tracked simulator modal and its shared HUD rows. */
 
 .gw-tab {
-  --bg: #0a0a0f;
-  --surface-1: #0d0d14;
-  --surface-2: #12121a;
-  --surface-3: #1a1a26;
+  --bg: #0b0d0e;
+  --surface-1: #101315;
+  --surface-2: #181c1f;
+  --surface-3: #1e2327;
   --steel: #1e1e2e;
   --slate: #2a2a3a;
   --fg: #e8e4dc;
@@ -316,23 +316,6 @@
   width: 44px;
 }
 
-.inv__cosmetics {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: var(--s-2);
-}
-
-.inv__cosmetics .inv__slot {
-  width: 100%;
-  height: auto;
-  aspect-ratio: 1;
-}
-
-.inv__cosmetics.inv__cosmetics--compact {
-  justify-content: flex-start;
-  grid-template-columns: repeat(3, 44px);
-}
-
 .inv__slot {
   position: relative;
   display: flex;
@@ -352,8 +335,7 @@
 }
 
 .inv__doll--compact .inv__relics .inv__slot,
-.inv__doll--compact .inv__rig .inv__slot,
-.inv__cosmetics.inv__cosmetics--compact .inv__slot {
+.inv__doll--compact .inv__rig .inv__slot {
   width: 44px;
   height: 44px;
 }
@@ -402,15 +384,13 @@
   text-transform: uppercase;
 }
 
-.inv__doll--compact .inv__slot-glyph,
-.inv__cosmetics.inv__cosmetics--compact .inv__slot-glyph {
+.inv__doll--compact .inv__slot-glyph {
   width: 36%;
   height: 36%;
   margin-bottom: 7px;
 }
 
-.inv__doll--compact .inv__slot-label,
-.inv__cosmetics.inv__cosmetics--compact .inv__slot-label {
+.inv__doll--compact .inv__slot-label {
   right: 0;
   bottom: 3px;
   left: 0;
@@ -430,4 +410,42 @@
   cursor: pointer;
   object-fit: contain;
   padding: 5px;
+}
+
+/* Fight Lab has a wide authoring dialog: keep its selector readable instead of letting
+ * the shared flexible rig collapse to its intrinsic minimum. */
+[data-fight-lab-equipment] {
+  width: max-content;
+  max-width: 100%;
+}
+
+[data-fight-lab-equipment] .inv__doll-body {
+  justify-content: flex-start;
+}
+
+[data-fight-lab-equipment] .inv__relics {
+  width: 64px;
+}
+
+[data-fight-lab-equipment] .inv__rig {
+  flex: none;
+  grid-template-columns: repeat(3, 64px);
+}
+
+[data-fight-lab-equipment] .inv__slot {
+  width: 64px;
+  height: 64px;
+}
+
+[data-fight-lab-equipment] .inv__slot-glyph {
+  width: 48%;
+  height: 48%;
+}
+
+[data-fight-lab-equipment] .inv__slot-label {
+  font-size: 0.52rem;
+}
+
+[data-fight-lab-equipment] .inv__slot-art {
+  padding: 4px;
 }

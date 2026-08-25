@@ -25,6 +25,7 @@ test('the account card sits below navigation and above language with row actions
     create_character: async () => ({ digest: '', character_id: '' }),
     // action namespaces are never exercised by these reducer/DOM tests
     fight: {} as never,
+    dungeon: {} as never,
     character: {} as never,
     marketplace: {} as never,
     stacks: {} as never,

@@ -6,6 +6,8 @@ import { create_grid_fallback } from './grid_fallback.ts'
 import type {
   CameraProjection,
   ChunkRenderOutcome,
+  DungeonPortalMarker,
+  DungeonStageRender,
   EntityRender,
   EngineFrame,
   Engine,
@@ -74,6 +76,8 @@ export const create_engine = ({
   let fight_board: FightBoardRender | null = null
   let entities: readonly EntityRender[] = Object.freeze([])
   let resource_nodes: readonly ResourceNodeMarker[] = Object.freeze([])
+  let dungeon_portals: readonly DungeonPortalMarker[] = Object.freeze([])
+  let dungeon_stage: DungeonStageRender | null = null
   let fight_swords: Readonly<{
     url: string
     impact_sound_url: string
@@ -144,6 +148,8 @@ export const create_engine = ({
     next.set_fight_board(fight_board)
     next.set_entities(entities)
     next.set_resource_nodes(resource_nodes)
+    next.set_dungeon_portals(dungeon_portals)
+    next.set_dungeon_stage(dungeon_stage)
     if (fight_swords) next.set_fight_swords(fight_swords.url, fight_swords.impact_sound_url, fight_swords.markers)
     entity_labels.replay(next.set_entity_label)
     world_labels.replay((id, label) => next.set_world_label(id, label.element, label.position))
@@ -260,6 +266,14 @@ export const create_engine = ({
       resource_labels.set(id, element)
       backend?.set_resource_node_label(id, element)
     },
+    set_dungeon_portals: (markers) => {
+      dungeon_portals = Object.freeze([...markers])
+      backend?.set_dungeon_portals(dungeon_portals)
+    },
+    set_dungeon_stage: (stage) => {
+      dungeon_stage = stage ? Object.freeze({ ...stage }) : null
+      backend?.set_dungeon_stage(dungeon_stage)
+    },
     set_portal_label: (element) => {
       portal_labels.set('portal', element)
       backend?.set_portal_label(element)
@@ -351,6 +365,8 @@ export const create_engine = ({
       fight_blobs.clear()
       entities = Object.freeze([])
       resource_nodes = Object.freeze([])
+      dungeon_portals = Object.freeze([])
+      dungeon_stage = null
       fight_swords = null
       entity_labels.clear()
       world_labels.clear()

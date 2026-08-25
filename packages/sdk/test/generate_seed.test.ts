@@ -17,9 +17,9 @@ import {
 describe('seed door generation', () => {
   test('projects every public seed door plus the required value constructors', () => {
     const names = seed_doors().map(({ export_name, name }) => export_name ?? name)
-    expect(names).toContain('begin_batch')
+    expect(names).toContain('add_item')
     expect(names).toContain('add_loot_reward')
-    expect(names).toContain('freeze_loot_box_template')
+    expect(names).toContain('freeze_forever')
     expect(names).toContain('new_item_stats')
     expect(names).toContain('new_spell_level')
     expect(new Set(names).size).toBe(names.length)
@@ -31,14 +31,16 @@ describe('seed door generation', () => {
 
   test('derived object key descriptors are byte-identical to Move source generation', async () => {
     expect(seed_string_keys().map(({ name }) => name)).toEqual([
-      'WorldSeedKey',
-      'SealKey',
-      'MobKey',
-      'SpellKey',
-      'RecipeKey',
       'SaleKey',
       'AirdropKey',
       'GiftcardKey',
+      'WorldKey',
+      'CheckpointKey',
+      'ItemKey',
+      'MobKey',
+      'SpellKey',
+      'RecipeKey',
+      'WorldContentKey',
     ])
     expect(readFileSync(SEED_CONTRACT_OUT_PATH, 'utf8')).toBe(await generate_seed_contract())
   })

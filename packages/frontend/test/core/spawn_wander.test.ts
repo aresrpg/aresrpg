@@ -89,11 +89,11 @@ describe('a group stands as a pack', () => {
   test('the pack label rides the live centroid above its tallest member', () => {
     expect(
       group_label_anchor([
-        { x: 0, y: 1, z: 0 },
-        { x: 3, y: 2, z: 6 },
-        { x: 6, y: 4, z: 3 },
+        { x: 0, y: 1, z: 0, height: 1 },
+        { x: 3, y: 2, z: 6, height: 3 },
+        { x: 6, y: 4, z: 3, height: 1.5 },
       ])
-    ).toEqual({ x: 3, y: 6, z: 3 })
+    ).toEqual({ x: 3, y: 5.7, z: 3 })
   })
 
   test('a lone mob stands on the chain point; a pack rings it snugly', () => {

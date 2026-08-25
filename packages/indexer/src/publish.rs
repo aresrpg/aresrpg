@@ -30,7 +30,7 @@ use serde_json::json;
 
 use crate::decode::{self, Addr, Id};
 use crate::events;
-use crate::graph::MarketStamp;
+use crate::graph::{FightLifecycleStamp, MarketStamp};
 use crate::ownership::{Custody, ObjView, OwnerKind, SUI_FRAMEWORK};
 
 /// One `PUBLISH channel payload`.
@@ -81,13 +81,21 @@ pub struct Wire {
     pub publications: Vec<Publication>,
     pub sales: Vec<SalesRow>,
     pub market: Vec<MarketStamp>,
+    pub fight_lifecycle: Vec<FightLifecycleStamp>,
 }
 
-pub fn analyze(ckpt: u64, ts_ms: u64, txs: &[TxView<'_>], game: &str) -> anyhow::Result<Wire> {
+pub fn analyze(
+    ckpt: u64,
+    ts_ms: u64,
+    txs: &[TxView<'_>],
+    game: &str,
+    seed: &str,
+) -> anyhow::Result<Wire> {
     let mut wire = Wire::default();
     for tx in txs {
-        route_game_events(&mut wire, ckpt, ts_ms, tx, game)?;
+        route_game_events(&mut wire, ckpt, ts_ms, tx, game, seed)?;
         route_game_state(&mut wire, ckpt, ts_ms, tx, game)?;
+        route_dungeon_writes(&mut wire, ckpt, ts_ms, tx, game)?;
         route_fight_writes(&mut wire, ckpt, ts_ms, tx, game)?;
         route_item_writes(&mut wire, ckpt, ts_ms, tx, game)?;
         analyze_kiosk_market(&mut wire, ckpt, ts_ms, tx, game)?;
@@ -131,6 +139,19 @@ fn route_fight_writes(
                 output.id.hex()
             )
         })?;
+        if fight.dungeon.is_some() {
+            wire.publications.push(Publication {
+                channel: dungeon_topic(&fight.world, fight.x, fight.z),
+                payload: envelope(
+                    ckpt,
+                    tx.tx_index,
+                    index as u64,
+                    ts_ms,
+                    "DungeonLobbyChanged",
+                    json!({ "world": fight.world, "x": fight.x, "z": fight.z }),
+                ),
+            });
+        }
         if !fight.ended {
             continue;
         }
@@ -150,6 +171,80 @@ fn route_fight_writes(
                 ),
             });
         }
+    }
+    Ok(())
+}
+
+fn dungeon_topic(world: &str, x: u32, z: u32) -> String {
+    format!("evt:dungeon:{world}:{x}:{z}")
+}
+
+fn decode_dungeon_run(
+    view: &ObjView<'_>,
+    game: &str,
+) -> anyhow::Result<Option<decode::DungeonRun>> {
+    let expected = format!("{game}::dungeon::DungeonRunKey");
+    if view.type_key.package != SUI_FRAMEWORK
+        || view.type_key.module != "dynamic_field"
+        || view.type_key.name != "Field"
+        || view.type_key.type_params.first() != Some(&expected)
+    {
+        return Ok(None);
+    }
+    let field =
+        decode::from_bytes::<decode::Field<decode::MarkerKey, decode::DungeonRun>>(view.bytes)
+            .map_err(|error| {
+                anyhow::anyhow!(
+                    "layout drift: dungeon run {} failed decode: {error}",
+                    view.id.hex()
+                )
+            })?;
+    Ok(Some(field.value))
+}
+
+/// Dungeon lobby invalidation follows projected run state, including DF deletion, so every
+/// entrant/advance/exit reaches peers without a world-zone subscription or a duplicate event.
+fn route_dungeon_writes(
+    wire: &mut Wire,
+    ckpt: u64,
+    ts_ms: u64,
+    tx: &TxView<'_>,
+    game: &str,
+) -> anyhow::Result<()> {
+    for (index, output) in tx.outputs.iter().enumerate() {
+        let Some(run) = decode_dungeon_run(output, game)? else {
+            continue;
+        };
+        wire.publications.push(Publication {
+            channel: dungeon_topic(&run.world, run.x, run.z),
+            payload: envelope(
+                ckpt,
+                tx.tx_index,
+                index as u64,
+                ts_ms,
+                "DungeonLobbyChanged",
+                json!({ "world": run.world, "x": run.x, "z": run.z }),
+            ),
+        });
+    }
+    for (index, input) in tx.inputs.iter().enumerate() {
+        if tx.outputs.iter().any(|output| output.id == input.id) {
+            continue;
+        }
+        let Some(run) = decode_dungeon_run(input, game)? else {
+            continue;
+        };
+        wire.publications.push(Publication {
+            channel: dungeon_topic(&run.world, run.x, run.z),
+            payload: envelope(
+                ckpt,
+                tx.tx_index,
+                index as u64,
+                ts_ms,
+                "DungeonLobbyChanged",
+                json!({ "world": run.world, "x": run.x, "z": run.z }),
+            ),
+        });
     }
     Ok(())
 }
@@ -300,9 +395,13 @@ fn route_game_events(
     ts_ms: u64,
     tx: &TxView<'_>,
     game: &str,
+    seed: &str,
 ) -> anyhow::Result<()> {
     for event in tx.events {
-        if event.package != game {
+        // TWO origins since the living-content split (2026-08-23): gameplay events come
+        // from core, content events (template creations, ContentWritten) from the seed
+        // package — both are ours.
+        if event.package != game && event.package != seed {
             continue;
         }
         let Some(routed) = events::route(event.module, event.name, event.bytes)? else {
@@ -342,6 +441,13 @@ fn route_game_events(
         // but the ZONE's bystanders (sword markers) need the same facts — the events carry
         // their anchor precisely for this fan-out.
         if matches!(routed.kind, "FightStarted" | "FightEnded") {
+            if let Some(fight) = routed.data["fight"].as_str() {
+                wire.fight_lifecycle.push(FightLifecycleStamp {
+                    fight: fight.to_string(),
+                    started: routed.kind == "FightStarted",
+                    ts_ms,
+                });
+            }
             if let (Some(world), Some(x), Some(z)) = (
                 routed.data["world"].as_str(),
                 routed.data["x"].as_u64(),
@@ -690,6 +796,7 @@ mod tests {
     use crate::ownership::{OwnerKind, TypeKey};
 
     const GAME: &str = "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
+    const SEED: &str = "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
 
     fn game_item_param() -> Vec<String> {
         vec![format!("{GAME}::item::Item")]
@@ -736,6 +843,67 @@ mod tests {
         .unwrap()
     }
 
+    fn dungeon_run_type() -> TypeKey {
+        TypeKey {
+            package: SUI_FRAMEWORK.into(),
+            module: "dynamic_field".into(),
+            name: "Field".into(),
+            type_params: vec![format!("{GAME}::dungeon::DungeonRunKey")],
+        }
+    }
+
+    fn dungeon_run_bytes(id: u8) -> Vec<u8> {
+        bcs::to_bytes(&crate::decode::Field {
+            id: Id([id; 32]),
+            name: false,
+            value: crate::decode::DungeonRun {
+                world: "nauvis".into(),
+                room: 2,
+                x: 1_649,
+                z: 2_490,
+                seed: 88,
+            },
+        })
+        .unwrap()
+    }
+
+    #[test]
+    fn dungeon_run_writes_and_deletion_invalidate_only_the_portal_lobby() {
+        let run_type = dungeon_run_type();
+        let bytes = dungeon_run_bytes(44);
+        let run = ObjView {
+            id: Id([44; 32]),
+            owner: OwnerKind::Object(Id([5; 32])),
+            type_key: &run_type,
+            bytes: &bytes,
+        };
+        let output_tx = TxView {
+            tx_index: 2,
+            sender: Addr([7; 32]),
+            move_calls: &[],
+            events: &[],
+            inputs: &[],
+            outputs: std::slice::from_ref(&run),
+        };
+        let deleted_tx = TxView {
+            tx_index: 3,
+            sender: Addr([7; 32]),
+            move_calls: &[],
+            events: &[],
+            inputs: std::slice::from_ref(&run),
+            outputs: &[],
+        };
+
+        for tx in [output_tx, deleted_tx] {
+            let wire = analyze(60, 4_000, &[tx], GAME, SEED).unwrap();
+            assert_eq!(wire.publications.len(), 1);
+            assert_eq!(wire.publications[0].channel, "evt:dungeon:nauvis:1649:2490");
+            let payload: serde_json::Value =
+                serde_json::from_str(&wire.publications[0].payload).unwrap();
+            assert_eq!(payload["type"], "DungeonLobbyChanged");
+        }
+    }
+
     #[test]
     fn a_projected_item_output_streams_to_its_holder() {
         let item_type = ty(GAME, "item", "Item");
@@ -755,7 +923,7 @@ mod tests {
             outputs: &outputs,
         };
 
-        let wire = analyze(60, 4_000, &[tx], GAME).unwrap();
+        let wire = analyze(60, 4_000, &[tx], GAME, SEED).unwrap();
 
         assert_eq!(wire.publications.len(), 1);
         assert_eq!(wire.publications[0].channel, "evt:economy");
@@ -787,7 +955,7 @@ mod tests {
             outputs: &outputs,
         };
 
-        let wire = analyze(60, 4_000, &[tx], GAME).unwrap();
+        let wire = analyze(60, 4_000, &[tx], GAME, SEED).unwrap();
 
         assert!(wire.publications.is_empty());
     }
@@ -815,7 +983,7 @@ mod tests {
             outputs: &outputs,
         };
 
-        let wire = analyze(55, 9_000, &[tx], GAME).unwrap();
+        let wire = analyze(55, 9_000, &[tx], GAME, SEED).unwrap();
 
         assert_eq!(wire.publications.len(), 1);
         assert_eq!(wire.publications[0].channel, "evt:game");
@@ -929,7 +1097,7 @@ mod tests {
             inputs: &[],
             outputs: &[],
         };
-        let wire = analyze(100, 1_000, &[tx], GAME).unwrap();
+        let wire = analyze(100, 1_000, &[tx], GAME, SEED).unwrap();
         assert_eq!(wire.publications.len(), 2);
         assert!(wire
             .publications
@@ -984,7 +1152,7 @@ mod tests {
             inputs: &[],
             outputs: &outputs,
         };
-        let wire = analyze(100, 1_000, std::slice::from_ref(&tx), GAME).unwrap();
+        let wire = analyze(100, 1_000, std::slice::from_ref(&tx), GAME, SEED).unwrap();
         assert_eq!(wire.sales.len(), 2);
         assert!(wire.sales[0].member.starts_with("100:1:0|"));
         let purchased: serde_json::Value = serde_json::from_str(
@@ -1012,7 +1180,7 @@ mod tests {
             move_calls: &[],
             ..tx.clone()
         };
-        let wire = analyze(100, 1_000, &[plumbing], GAME).unwrap();
+        let wire = analyze(100, 1_000, &[plumbing], GAME, SEED).unwrap();
         assert!(wire.sales.is_empty() && wire.market.is_empty());
     }
 
@@ -1037,7 +1205,7 @@ mod tests {
             inputs: &[],
             outputs: &[], // no game object changed hands
         };
-        let wire = analyze(100, 1_000, &[tx], GAME).unwrap();
+        let wire = analyze(100, 1_000, &[tx], GAME, SEED).unwrap();
         assert!(wire.sales.is_empty() && wire.market.is_empty());
     }
 
@@ -1051,6 +1219,8 @@ mod tests {
             template: Id([200; 32]),
             price: 100,
             supply: 90,
+            infinite: false,
+            enabled: true,
         })
         .unwrap();
         let minted = item_bytes(5, "health_potion", 10);
@@ -1102,7 +1272,7 @@ mod tests {
             inputs: &[],
             outputs: &outputs,
         };
-        let wire = analyze(55, 9_000, &[tx], GAME).unwrap();
+        let wire = analyze(55, 9_000, &[tx], GAME, SEED).unwrap();
         // SaleBought is a game event AND the minted item streams → 2 publications
         assert_eq!(wire.publications.len(), 2);
         assert!(wire
@@ -1146,7 +1316,7 @@ mod tests {
             inputs: &[],
             outputs: &outputs,
         };
-        let wire = analyze(100, 1_000, &[tx], GAME).unwrap();
+        let wire = analyze(100, 1_000, &[tx], GAME, SEED).unwrap();
         assert!(wire.sales.is_empty() && wire.market.is_empty());
         // the item WRITE itself still streams (its custody moved) — but nothing money-shaped
         assert!(wire
@@ -1177,7 +1347,7 @@ mod tests {
             inputs: &[],
             outputs: &[],
         };
-        let wire = analyze(1, 1, &[tx], GAME).unwrap();
+        let wire = analyze(1, 1, &[tx], GAME, SEED).unwrap();
         assert!(wire.publications.is_empty());
     }
 
@@ -1212,7 +1382,7 @@ mod tests {
             inputs: &[],
             outputs: &[],
         };
-        let wire = analyze(1, 1, &[tx], GAME).unwrap();
+        let wire = analyze(1, 1, &[tx], GAME, SEED).unwrap();
         assert!(wire.publications.is_empty());
         assert!(wire.sales.is_empty());
         assert!(wire.market.is_empty());
@@ -1248,7 +1418,7 @@ mod tests {
             inputs: &[],
             outputs: &[],
         };
-        let wire = analyze(1, 1, &[tx], GAME).unwrap();
+        let wire = analyze(1, 1, &[tx], GAME, SEED).unwrap();
         let channels: Vec<_> = wire
             .publications
             .iter()
@@ -1289,7 +1459,7 @@ mod tests {
             inputs: &[],
             outputs: &[],
         };
-        let wire = analyze(1, 1, &[tx], GAME).unwrap();
+        let wire = analyze(1, 1, &[tx], GAME, SEED).unwrap();
         let channels: Vec<_> = wire
             .publications
             .iter()
@@ -1299,6 +1469,52 @@ mod tests {
         // see the seat fill. The joiner's OWN watch arms from the custody fact instead, the
         // one witness that also covers the creator's seat 0.
         assert_eq!(channels, vec![format!("evt:fight:0x{}", "01".repeat(32))]);
+    }
+
+    #[test]
+    fn fight_start_persists_its_checkpoint_timestamp() {
+        #[derive(serde::Serialize)]
+        struct Wire {
+            fight: [u8; 32],
+            world: String,
+            x: u32,
+            z: u32,
+            queue: Vec<u64>,
+        }
+        let bytes = bcs::to_bytes(&Wire {
+            fight: [1; 32],
+            world: "01_first_shore".into(),
+            x: 50_000,
+            z: 50_000,
+            queue: vec![0, 1],
+        })
+        .unwrap();
+        let events = [EventView {
+            package: GAME,
+            module: "fight",
+            name: "FightStarted",
+            type_params: &[],
+            bytes: &bytes,
+            index: 0,
+        }];
+        let tx = TxView {
+            tx_index: 0,
+            sender: Addr([5; 32]),
+            move_calls: &[],
+            events: &events,
+            inputs: &[],
+            outputs: &[],
+        };
+
+        let wire = analyze(7, 123_456, &[tx], GAME, SEED).unwrap();
+        assert_eq!(
+            wire.fight_lifecycle,
+            vec![FightLifecycleStamp {
+                fight: format!("0x{}", "01".repeat(32)),
+                started: true,
+                ts_ms: 123_456,
+            }]
+        );
     }
 
     #[test]

@@ -6,6 +6,8 @@ import type { FightPresentationCue } from '@aresrpg/engine'
 
 export type FightCuePhase = 'start' | 'complete'
 
+const MOB_TURN_ANTICIPATION_MS = 1_000
+
 export const create_fight_presenter = ({
   play,
   observe = () => {},
@@ -22,10 +24,17 @@ export const create_fight_presenter = ({
   let turn_shown_at = 0
   let turn_min_ms = 0
 
+  const turn_floor_remaining = (): number => Math.max(0, turn_shown_at + turn_min_ms - now())
+
+  const wait_for_turn_floor = async (): Promise<void> => {
+    const remaining = turn_floor_remaining()
+    if (remaining > 0) await wait(remaining)
+  }
+
   const present_one = async (cue: FightPresentationCue): Promise<void> => {
     if (disposed) return
     if (cue.type === 'turn') {
-      const remaining = turn_shown_at + turn_min_ms - now()
+      const remaining = turn_floor_remaining()
       if (remaining > 0) await wait(remaining)
       if (disposed) return
       turn_shown_at = now()
@@ -38,6 +47,7 @@ export const create_fight_presenter = ({
       console.error(`Fight presentation cue ${cue.id} failed.`, error)
     }
     if (!disposed) observe(cue, 'complete')
+    if (cue.type === 'turn' && turn_min_ms > 0) await wait(Math.min(MOB_TURN_ANTICIPATION_MS, turn_min_ms))
   }
 
   return Object.freeze({
@@ -46,6 +56,9 @@ export const create_fight_presenter = ({
       owned.forEach((cue) => {
         tail = tail.then(() => present_one(cue))
       })
+      // A streamed mob witness can end a batch before the following player's resting
+      // checkpoint arrives. The batch itself therefore owns the same floor as the next cue.
+      tail = tail.then(wait_for_turn_floor)
       return tail
     },
     settled: (): Promise<void> => tail,

@@ -43,6 +43,7 @@ test('authored copy names the universe and keeps item descriptions inside the lo
 
   expect(english.loading_universe).toBe('Loading the universe')
   expect(en).not.toHaveProperty('connecting')
-  expect(english.encyclopedia_page.item_descriptions.aberrant_edge).toStartWith('Forged wrong.')
-  expect(french.encyclopedia_page.item_descriptions.aberrant_edge).toStartWith('Forgée de travers.')
+  expect(english.encyclopedia_page.item_descriptions.water).toBe('')
+  expect(french.encyclopedia_page.item_descriptions.water).toBe('')
+  expect(english.encyclopedia_page.item_descriptions).not.toHaveProperty('aberrant_edge')
 })

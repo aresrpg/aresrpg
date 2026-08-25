@@ -15,7 +15,7 @@ const EInvalidElement: u64 = 1204;
 
 public struct MobSpell has copy, drop, store {
   name: String,
-  levels: vector<SpellLevel>,
+  level: SpellLevel,
 }
 
 public struct LootEntry has copy, drop, store {
@@ -116,14 +116,11 @@ public fun new_loot_entry(item_type: String, chance_bp: u16, min_qty: u8, max_qt
   LootEntry { item_type, chance_bp, min_qty, max_qty }
 }
 
-public fun new_mob_spell(name: String, levels: vector<SpellLevel>): MobSpell {
-  assert!(levels.length() >= 1 && levels.length() <= 6, ETooManySpells);
-  MobSpell { name, levels }
-}
+public fun new_mob_spell(name: String, level: SpellLevel): MobSpell { MobSpell { name, level } }
 
 public fun spell_name(spell: &MobSpell): String { spell.name }
 
-public fun spell_levels(spell: &MobSpell): vector<SpellLevel> { spell.levels }
+public fun spell_level(spell: &MobSpell): SpellLevel { spell.level }
 
 public fun loot_item_type(entry: &LootEntry): String { entry.item_type }
 

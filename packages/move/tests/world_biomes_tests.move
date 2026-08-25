@@ -7,43 +7,43 @@
 #[test_only]
 module aresrpg::world_biomes_tests;
 
-use aresrpg::world::{Self, World};
-use aresrpg_math::{world_map::{Self, MobRow}, zone_math};
+use aresrpg_math::{world_map::{Self, MobRow, WorldContent}, zone_math};
 use sui::test_scenario;
 
 const OWNER: address = @0xA11CE;
 
-fun families(w: &World, zx: u32, zz: u32): vector<std::string::String> {
+// The law under test is pure math over authored CONTENT — since the ÷10 plan's Lever 2 the
+// content is its own value (the seed package's shared object wraps this exact type), so the
+// tests hold it directly; no World object involved.
+fun families(w: &WorldContent, zx: u32, zz: u32): vector<std::string::String> {
   zone_math::families(
-    world_map::mobs(world::content(w)),
-    world_map::biome_map(world::content(w)),
+    world_map::mobs(w),
+    world_map::biome_map(w),
     zx,
     zz,
   )
 }
 
-fun resource_families(w: &World, zx: u32, zz: u32): vector<std::string::String> {
+fun resource_families(w: &WorldContent, zx: u32, zz: u32): vector<std::string::String> {
   zone_math::resource_families(
-    world_map::resources(world::content(w)),
-    world_map::biome_map(world::content(w)),
+    world_map::resources(w),
+    world_map::biome_map(w),
     zx,
     zz,
   )
 }
 
-fun seed_map(w: &mut World, x0: u32, z0: u32, side: u16, cells: vector<u8>) {
-  world_map::set_biome_map_window(world::content_mut(w), x0, z0, side);
-  world_map::append_biome_map_cells(world::content_mut(w), cells);
+fun seed_map(w: &mut WorldContent, x0: u32, z0: u32, side: u16, cells: vector<u8>) {
+  world_map::set_biome_map_window(w, x0, z0, side);
+  world_map::append_biome_map_cells(w, cells);
 }
 
 fun world_with(
   rows: vector<MobRow>,
-  scenario: &mut test_scenario::Scenario,
-): World {
-  world::test_init(scenario.ctx());
-  scenario.next_tx(OWNER);
-  let mut w = scenario.take_shared<World>();
-  world_map::set_mobs(world::content_mut(&mut w), rows);
+  _scenario: &mut test_scenario::Scenario,
+): WorldContent {
+  let mut w = world_map::empty_world_content();
+  world_map::set_mobs(&mut w, rows);
   w
 }
 
@@ -65,7 +65,6 @@ fun zone_families_respect_the_biome_map() {
   // Far outside the window the id clamps to the nearest edge cell (south-east → biome 2).
   assert!(families(&w, 900, 900) == vector[b"bonelet".to_string()], 2);
 
-  test_scenario::return_shared(w);
   scenario.end();
 }
 
@@ -78,7 +77,6 @@ fun a_biome_without_rows_spawns_nothing() {
 
   assert!(families(&w, 0, 0).is_empty(), 0);
 
-  test_scenario::return_shared(w);
   scenario.end();
 }
 
@@ -91,7 +89,6 @@ fun an_empty_map_reads_biome_zero_everywhere() {
   assert!(families(&w, 0, 0) == vector[b"wooling".to_string()], 0);
   assert!(families(&w, 512, 700) == vector[b"wooling".to_string()], 1);
 
-  test_scenario::return_shared(w);
   scenario.end();
 }
 
@@ -113,7 +110,6 @@ fun a_zone_spawns_its_biome_s_whole_list() {
 
   assert!(families(&w, 0, 0).length() == 5, 0);
 
-  test_scenario::return_shared(w);
   scenario.end();
 }
 
@@ -122,10 +118,11 @@ fun zone_resources_respect_the_biome_map() {
   let mut scenario = test_scenario::begin(OWNER);
   let mut w = world_with(vector[], &mut scenario);
   world_map::set_resources(
-    world::content_mut(&mut w),
+    &mut w,
     vector[
       world_map::new_resource_row(b"wheat".to_string(), b"FARMER".to_string(), 1, b"".to_string(), b"".to_string(), vector[1]),
       world_map::new_resource_row(b"quartz".to_string(), b"MINER".to_string(), 1, b"".to_string(), b"".to_string(), vector[1, 2]),
+      world_map::new_resource_row(b"moonstone".to_string(), b"MINER".to_string(), 4, b"".to_string(), b"".to_string(), vector[]),
     ],
   );
   seed_map(&mut w, 0, 0, 2, vector[1, 2, 1, 2]);
@@ -134,7 +131,6 @@ fun zone_resources_respect_the_biome_map() {
   assert!(resource_families(&w, 0, 0) == vector[b"wheat".to_string(), b"quartz".to_string()], 0);
   assert!(resource_families(&w, 1, 0) == vector[b"quartz".to_string()], 1);
 
-  test_scenario::return_shared(w);
   scenario.end();
 }
 
@@ -156,7 +152,6 @@ fun zones_below_the_window_origin_clamp_to_its_first_cell() {
   assert!(families(&w, 3, 11) == vector[b"wooling".to_string()], 1); // below x0 only
   assert!(families(&w, 11, 11) == vector[b"bonelet".to_string()], 2); // inside
 
-  test_scenario::return_shared(w);
   scenario.end();
 }
 
@@ -165,8 +160,8 @@ fun zones_below_the_window_origin_clamp_to_its_first_cell() {
 fun cells_beyond_the_window_abort_at_authoring() {
   let mut scenario = test_scenario::begin(OWNER);
   let mut w = world_with(vector[], &mut scenario);
-  world_map::set_biome_map_window(world::content_mut(&mut w), 0, 0, 2);
-  world_map::append_biome_map_cells(world::content_mut(&mut w), vector[1, 2, 3, 4, 5]);
+  world_map::set_biome_map_window(&mut w, 0, 0, 2);
+  world_map::append_biome_map_cells(&mut w, vector[1, 2, 3, 4, 5]);
   abort 0
 }
 
@@ -177,8 +172,8 @@ fun a_half_filled_map_refuses_every_read() {
   // serve a wrong biome; the window + appends share one PTB precisely for this.
   let mut scenario = test_scenario::begin(OWNER);
   let mut w = world_with(vector[world_map::new_mob_row(b"wooling".to_string(), 8000, vector[0])], &mut scenario);
-  world_map::set_biome_map_window(world::content_mut(&mut w), 0, 0, 2);
-  world_map::append_biome_map_cells(world::content_mut(&mut w), vector[1, 2]);
+  world_map::set_biome_map_window(&mut w, 0, 0, 2);
+  world_map::append_biome_map_cells(&mut w, vector[1, 2]);
   families(&w, 0, 0);
   abort 0
 }

@@ -2,7 +2,7 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 /// LOOT BOX — the gacha box (legacy port), GENERIC over item type: a box is a consumable template
 /// carrying the typed `LootBox` effect; opening it rolls on-chain randomness across a weighted pool
-/// of ANY item templates (pets, gear, cosmetics, resources). Each row authors an exact quantity.
+/// of ANY item templates (pets, equipment, resources). Each row authors an exact quantity.
 /// Two-phase, and WHY (the
 /// same grind-safe shape as the crush):
 ///   • `open_box` (TERMINAL `&Random`): prove it's a gacha box + its table is set, BURN one box unit,
@@ -19,9 +19,13 @@
 /// SeedCap-gated) and frozen with the rest — no live admin door post-seal.
 module aresrpg::loot_box;
 
+use aresrpg_math::content_rules;
+use aresrpg_control::admin::AdminCap;
+use aresrpg_seed::registry::{Self, Registry};
+use aresrpg_seed::item_rows::{Self, ItemTemplate};
 use aresrpg::{
   consumable,
-  item::{Self, Item, ItemTemplate},
+  item::{Self, Item},
   protected_policy::AresRPG_TransferPolicy,
 };
 use aresrpg_math::loot_table::{Self, LootEntry};
@@ -79,29 +83,49 @@ fun init(ctx: &mut TxContext) {
 
 // ╔════════════════ [ Seeding authoring (seed.move gates, then calls) ] ══════ ]
 
-/// Add one validated reward row. Taking both templates by reference proves that their IDs exist;
-/// validating stackability here prevents a permanently unredeemable quantity from being sealed.
-/// Zero-weight rows are inert and legal, but `has_valid_table` refuses an all-zero table at freeze.
-public(package) fun add_loot_reward(
+/// Add one validated reward row — a LIVING content door (AdminCap-gated, bumped through the
+/// seed registry so `freeze_forever` closes it; pools are the RULED live-read: tuning applies
+/// to owned boxes, the Dofus norm). Taking both templates by reference proves their IDs exist.
+public fun add_loot_reward(
+  cap: &AdminCap,
+  root: &mut Registry,
   registry: &mut LootRegistry,
   box_template: &ItemTemplate,
   reward_template: &ItemTemplate,
   weight: u64,
   amount: u32,
+  ctx: &TxContext,
 ) {
   assert!(igb(box_template), ENotBox);
   assert!(amount > 0, EZeroAmount);
-  assert!(amount == 1 || item::tis(reward_template), EUnstackableAmount);
-  let box_id = item::template_id(box_template);
-  let entry = loot_table::new_entry(item::template_id(reward_template), weight, amount);
+  assert!(amount == 1 || content_rules::is_stackable(&item_rows::template_category(reward_template)), EUnstackableAmount);
+  let box_id = item_rows::template_id(box_template);
+  let entry = loot_table::new_entry(item_rows::template_id(reward_template), weight, amount);
   if (registry.tables.contains(box_id)) registry.tables.borrow_mut(box_id).push_back(entry)
   else registry.tables.add(box_id, vector[entry]);
   let entries = registry.tables.borrow(box_id);
   event::emit(LootTableSet { box_template: box_id, rows: entries.length(), weight_sum: loot_table::total_weight(entries) });
+  registry::bump(cap, root, b"loot_boxes".to_string(), item_rows::template_type(box_template), ctx);
+}
+
+/// Rebalance one box's whole pool in place — replace beats row surgery (modify/remove =
+/// resetting the table, then adding the new rows in the same PTB).
+public fun clear_loot_table(
+  cap: &AdminCap,
+  root: &mut Registry,
+  registry: &mut LootRegistry,
+  box_template: &ItemTemplate,
+  ctx: &TxContext,
+) {
+  let box_id = item_rows::template_id(box_template);
+  if (registry.tables.contains(box_id)) {
+    let _: vector<loot_table::LootEntry> = registry.tables.remove(box_id);
+  };
+  registry::bump(cap, root, b"loot_boxes".to_string(), item_rows::template_type(box_template), ctx);
 }
 
 public(package) fun has_valid_table(registry: &LootRegistry, box_template: &ItemTemplate): bool {
-  let box_id = item::template_id(box_template);
+  let box_id = item_rows::template_id(box_template);
   registry.tables.contains(box_id) && loot_table::total_weight(registry.tables.borrow(box_id)) > 0
 }
 
@@ -119,7 +143,7 @@ public(package) fun open_box(
   ctx: &mut TxContext,
 ) {
   assert!(igb(box_template), ENotBox);
-  let box_tid = item::template_id(box_template);
+  let box_tid = item_rows::template_id(box_template);
   assert!(registry.tables.contains(box_tid), ENoTable);
   let entries = *registry.tables.borrow(box_tid); // local copy — no borrow held across the burn
   let sum = loot_table::total_weight(&entries);
@@ -153,7 +177,7 @@ public(package) fun claim_loot(
   ctx: &mut TxContext,
 ) {
   let BoxClaim { id, box_template, rolled_template: rolled_tid, amount } = claim;
-  assert!(item::template_id(rolled_template) == rolled_tid, EClaimMismatch);
+  assert!(item_rows::template_id(rolled_template) == rolled_tid, EClaimMismatch);
   let loot = item::mint(rolled_template, amount, gen, ctx); // any item type — stats roll here if it has ranges
   item::deposit(kiosk, cap, item_policy, existing, loot);
   event::emit(LootClaimed { box_template, rolled_template: rolled_tid, amount, opener: ctx.sender() });
@@ -165,7 +189,10 @@ public(package) fun claim_loot(
 // is_gacha_box
 /// A box is a consumable template carrying the typed `LootBox` effect — nothing else opens.
 fun igb(template: &ItemTemplate): bool {
-  consumable::is_loot_box(template)
+  {
+    let effect = item_rows::consumable_effect(template);
+    effect.is_some() && aresrpg_math::consumable_effect::is_loot_box(effect.borrow())
+  }
 }
 
 #[test_only]

@@ -15,7 +15,7 @@ import { shape_item, stats_record_of } from './stat_block.ts'
  *  `job_<slug>` per job, `folded_stats` as the canonical 15-int array. Shape them into the
  *  protocol row here — the one decode seam. */
 export const shape_character = (props: Record<string, unknown>) => {
-  const { spells, available_spell_points, folded_stats, ambush, ...rest } = props
+  const { spells, available_spell_points, folded_stats, ambush, dungeon_run, ...rest } = props
   const jobs = Object.fromEntries(
     Object.entries(rest)
       .filter(([key]) => key.startsWith('job_'))
@@ -24,12 +24,23 @@ export const shape_character = (props: Record<string, unknown>) => {
       .map(([key, value]) => [key.slice(4).toUpperCase(), String(value)])
   )
   const plain = Object.fromEntries(Object.entries(rest).filter(([key]) => !key.startsWith('job_')))
+  const run = typeof dungeon_run === 'string' ? (JSON.parse(dungeon_run) as Record<string, unknown>) : null
   return {
     ...plain,
     spells: typeof spells === 'string' ? (JSON.parse(spells) as Record<string, number>) : {},
     available_spell_points: Number(available_spell_points ?? 0),
     ...(Array.isArray(folded_stats) ? { folded_stats: stats_record_of(folded_stats) } : {}),
     ...(typeof ambush === 'string' ? { ambush: JSON.parse(ambush) as CharacterRow['ambush'] } : {}),
+    ...(run
+      ? {
+          dungeon_run: Object.freeze({
+            world: String(run.world),
+            room: Number(run.room),
+            x: Number(run.x),
+            z: Number(run.z),
+          }),
+        }
+      : {}),
     jobs,
   }
 }

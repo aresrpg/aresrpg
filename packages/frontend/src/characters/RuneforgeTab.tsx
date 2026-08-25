@@ -4,10 +4,11 @@
 // ItemDetailView, rolled stats), CENTER the work surface (place gear + rune, apply), RIGHT
 // the bag pool (gear / runes tabs). The outcome is the chain's random roll — no success
 // percentage is ever shown (honest-data law); the RuneScribed event is the one truth and
-// folds through the session reducer. Gate: the gear category's forgery job must be ≥ 70
-// (forgemagie.move RUNE_UNLOCK_LEVEL) — predicted here so a doomed transaction never fires.
+// folds through the session reducer. The gear category's forgery-job gate is projected from
+// forgemagie.move so this prediction cannot drift from the chain.
 
 import { useMemo, useState } from 'react'
+import { CONTRACT_CONSTANTS } from '@aresrpg/fight/move_contract'
 import {
   craft_job_of,
   item_stat_center,
@@ -22,6 +23,7 @@ import { Gem, Plus, Sparkles, Swords, X } from 'lucide-react'
 import { ItemDetailView } from '../components/ItemDetailView.tsx'
 import { item_icon } from '../content/assets.ts'
 import { titleize } from '../content/catalog.ts'
+import { item_detail_icon } from '../content/item_detail_assets.ts'
 import { encyclopedia_text } from '../encyclopedia/copy.ts'
 import { copy_text, type AppCopy } from '../i18n/copy.ts'
 import { dispatch_app, useAppStore } from '../store.ts'
@@ -29,8 +31,7 @@ import { toast } from '../toast.ts'
 
 import { is_forge_gear, is_rune } from './forge_eligibility.ts'
 
-/** forgemagie.move RUNE_UNLOCK_LEVEL — the job gate the chain re-asserts. */
-const RUNE_UNLOCK_LEVEL = 70
+const rune_unlock_level = Number(CONTRACT_CONSTANTS.rune_unlock_level)
 
 /** rune_catalog MAX_APPS predicted off the projected ForgeKey counters — a capped stat
  *  never fires a doomed transaction. */
@@ -65,9 +66,9 @@ export default function RuneforgeTab({
 
   const forge_job = sel_gear ? craft_job_of(sel_gear.category) : null
   const forge_job_level = forge_job ? job_level_from_xp(Number(character.jobs[forge_job] ?? 0)) : 0
-  const job_short = !!sel_gear && !!forge_job && forge_job_level < RUNE_UNLOCK_LEVEL
+  const job_short = !!sel_gear && !!forge_job && forge_job_level < rune_unlock_level
   const stat_maxed = rune_stat_maxed(sel_gear, sel_rune)
-  const can_apply = !!sel_gear && !!sel_rune && !job_short && !stat_maxed && !busy
+  const can_apply = !!wallet && !!sel_gear && !!sel_rune && !job_short && !stat_maxed && !busy
 
   const apply = (): void => {
     if (!can_apply || !wallet || !sel_gear || !sel_rune) return
@@ -106,7 +107,7 @@ export default function RuneforgeTab({
       name: sel_gear.name,
       category: sel_gear.category,
       level: sel_gear.level,
-      icon: item_icon(sel_gear.item_type),
+      item_type: sel_gear.item_type,
       stats: rolled ? { min: rolled, max: rolled } : undefined,
       damages: (sel_gear.damages ?? []).map((line) => ({
         element: line.element,
@@ -147,8 +148,8 @@ export default function RuneforgeTab({
             <button aria-label={t('clear')} className="chr-forge__clear" onClick={clear} type="button">
               <X size={13} />
             </button>
-            {item_icon(selected.item_type) ? (
-              <img alt="" className="size-14 object-contain" src={item_icon(selected.item_type)!} />
+            {item_detail_icon(selected.item_type) ? (
+              <img alt="" className="size-14 object-contain" src={item_detail_icon(selected.item_type)!} />
             ) : (
               <Glyph className="opacity-40" size={20} />
             )}
@@ -185,7 +186,7 @@ export default function RuneforgeTab({
               <ItemDetailView
                 category={gear_detail.category}
                 damages={gear_detail.damages}
-                icon={gear_detail.icon}
+                item_type={gear_detail.item_type}
                 labels={{
                   characteristics: encyclopedia('characteristics'),
                   damages: encyclopedia('damages'),

@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 // Chain-driven resource props. A patch is one chain row; its blocks are deterministic visual
-// seats. Geometry is instanced by gathering job+tier, so hundreds of nodes cost at most 33 draws.
+// seats. Geometry is instanced by resource identity, so hundreds of nodes still cost at most
+// one draw per authored gatherable.
 
 import {
   BufferAttribute,
@@ -21,12 +22,14 @@ import { CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js'
 
 import { flora_cluster } from './nature/flora_cluster.ts'
 import { grain_stalk } from './nature/grain_stalk.ts'
+import { mushroom_cluster } from './nature/mushroom_cluster.ts'
 import { ore_vein } from './nature/ore_vein.ts'
 import { plant_wind_position } from './nature/plant_wind.ts'
 import { mulberry, type SpriteBuilder } from './nature/sprite_kit.ts'
 import type { ResourceNodeMarker } from './types.ts'
 
 export type ResourceFamily = 'FARMER' | 'HERBALIST' | 'MINER'
+export type ResourceSilhouette = 'grain' | 'flora' | 'mushroom' | 'ore'
 
 export const resource_nodes_visible = ({
   terrain_presented,
@@ -35,14 +38,15 @@ export const resource_nodes_visible = ({
 }: Readonly<{ terrain_presented: boolean; flattened: boolean; board_active: boolean }>): boolean =>
   terrain_presented && !flattened && !board_active
 
-const BUILDERS: Readonly<Record<ResourceFamily, SpriteBuilder>> = Object.freeze({
-  FARMER: grain_stalk,
-  HERBALIST: flora_cluster,
-  MINER: ore_vein,
+const BUILDERS: Readonly<Record<ResourceSilhouette, SpriteBuilder>> = Object.freeze({
+  grain: grain_stalk,
+  flora: flora_cluster,
+  mushroom: mushroom_cluster,
+  ore: ore_vein,
 })
 
-// The deprecated build's visual law survives without copying 33 content ids: family chooses
-// silhouette and the authored tier chooses one rung of its 11-step material ramp.
+// The job+tier ramp remains the fallback for grain and minerals. Herbalist identity overrides
+// it because “ivory mushroom” and “red orchid” are visual facts, not interchangeable tier paint.
 const HUES: Readonly<Record<ResourceFamily, readonly [number, number]>> = Object.freeze({
   FARMER: [48, 8],
   HERBALIST: [112, 286],
@@ -51,25 +55,56 @@ const HUES: Readonly<Record<ResourceFamily, readonly [number, number]>> = Object
 
 const clamp_tier = (tier: number): number => Math.max(1, Math.min(11, Math.trunc(tier)))
 
-export const resource_visual = (job: string, tier: number) => {
+const HERBALIST_VISUALS: Readonly<
+  Record<string, Readonly<{ silhouette: 'flora' | 'mushroom'; body: string; accent: string }>>
+> = Object.freeze({
+  green_mushroom: Object.freeze({ silhouette: 'mushroom', body: '#b9a57e', accent: '#62bf52' }),
+  red_orchid: Object.freeze({ silhouette: 'flora', body: '#315f37', accent: '#e04458' }),
+  ivory_shrooms: Object.freeze({ silhouette: 'mushroom', body: '#b7aa90', accent: '#fff4dc' }),
+  aloe_vera: Object.freeze({ silhouette: 'flora', body: '#315f3d', accent: '#82d47c' }),
+  nightcap: Object.freeze({ silhouette: 'mushroom', body: '#493c62', accent: '#7c6be2' }),
+  crimson_truffle: Object.freeze({ silhouette: 'mushroom', body: '#5b2930', accent: '#cf4d59' }),
+  phantom_spore: Object.freeze({ silhouette: 'mushroom', body: '#49636d', accent: '#b8f4e8' }),
+  witherbloom: Object.freeze({ silhouette: 'flora', body: '#4b5033', accent: '#94769a' }),
+  arcaneshroom: Object.freeze({ silhouette: 'mushroom', body: '#3c315d', accent: '#55ddd0' }),
+  dragonlily: Object.freeze({ silhouette: 'flora', body: '#3f4e2c', accent: '#f17a43' }),
+  cursed_fungus: Object.freeze({ silhouette: 'mushroom', body: '#292436', accent: '#a5d74f' }),
+})
+
+const color_tuple = (value: string): readonly [number, number, number] => {
+  const color = new Color(value)
+  return Object.freeze([color.r, color.g, color.b] as const)
+}
+
+export const resource_visual = (item_type: string, job: string, tier: number) => {
   const family: ResourceFamily = job === 'FARMER' || job === 'MINER' ? job : 'HERBALIST'
   const step = (clamp_tier(tier) - 1) / 10
   const [hue_lo, hue_hi] = HUES[family]
   const hue = hue_lo + (hue_hi - hue_lo) * step
-  const body = new Color().setHSL(hue / 360, family === 'MINER' ? 0.38 : 0.52, family === 'MINER' ? 0.3 : 0.28)
-  const accent = new Color().setHSL(hue / 360, 0.72, 0.62)
+  const fallback_body = new Color().setHSL(hue / 360, family === 'MINER' ? 0.38 : 0.52, family === 'MINER' ? 0.3 : 0.28)
+  const fallback_accent = new Color().setHSL(hue / 360, 0.72, 0.62)
+  const authored = family === 'HERBALIST' ? HERBALIST_VISUALS[item_type] : undefined
   return Object.freeze({
     family,
     tier: clamp_tier(tier),
-    body: Object.freeze([body.r, body.g, body.b] as const),
-    accent: Object.freeze([accent.r, accent.g, accent.b] as const),
+    silhouette: authored?.silhouette ?? (family === 'FARMER' ? 'grain' : family === 'MINER' ? 'ore' : 'flora'),
+    body: authored
+      ? color_tuple(authored.body)
+      : Object.freeze([fallback_body.r, fallback_body.g, fallback_body.b] as const),
+    accent: authored
+      ? color_tuple(authored.accent)
+      : Object.freeze([fallback_accent.r, fallback_accent.g, fallback_accent.b] as const),
     scale: 0.9 + step * 0.22,
   })
 }
 
-const geometry_for = (job: string, tier: number): BufferGeometry => {
-  const visual = resource_visual(job, tier)
-  const recipe = BUILDERS[visual.family](mulberry(visual.tier * 977 + visual.family.length * 131))
+const geometry_for = (item_type: string, job: string, tier: number): BufferGeometry => {
+  const visual = resource_visual(item_type, job, tier)
+  const item_seed = [...item_type].reduce(
+    (hash, char) => Math.imul(hash ^ char.charCodeAt(0), 16_777_619),
+    2_166_136_261
+  )
+  const recipe = BUILDERS[visual.silhouette](mulberry(item_seed + visual.tier * 977))
   const positions = new Float32Array(recipe.length * 3)
   const colors = new Float32Array(recipe.length * 3)
   const normals = new Float32Array(recipe.length * 3)
@@ -171,15 +206,20 @@ export const create_resource_node_layer = ({ scene, wind = false }: Readonly<{ s
     markers = new Map(next.map((marker) => [marker.id, marker]))
     const buckets = new Map<string, ResourceNodeMarker[]>()
     next.forEach((row) => {
-      const key = `${row.job}:${clamp_tier(row.tier)}`
+      const key = `${row.item_type}:${row.job}:${clamp_tier(row.tier)}`
       const rows = buckets.get(key) ?? []
       rows.push(row)
       buckets.set(key, rows)
     })
     buckets.forEach((rows, key) => {
       const first = rows[0]!
-      const visual = resource_visual(first.job, first.tier)
-      const mesh = new InstancedMesh(geometry_for(first.job, first.tier), material_for(visual, wind), rows.length)
+      const visual = resource_visual(first.item_type, first.job, first.tier)
+      const mesh = new InstancedMesh(
+        geometry_for(first.item_type, first.job, first.tier),
+        material_for(visual, wind),
+        rows.length
+      )
+      mesh.name = `resource:${first.item_type}`
       rows.forEach((row, index) => {
         const yaw =
           mulberry(

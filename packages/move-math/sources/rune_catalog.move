@@ -6,41 +6,40 @@
 /// read this table; the game door reads `rune_of` to turn a rune ITEM into its catalog coords.
 ///
 /// ── STAT-ID SPACE ────────────────────────────────────────────────────────────────────────
-/// A rune targets one of the 17 `item_stats` fields, indexed 0..16 in DECLARATION ORDER. Every
+/// A rune targets one of the 15 `item_stats` fields, indexed 0..14 in DECLARATION ORDER. Every
 /// table below is indexed by this id. The game side converts an item's centered `ItemStatistics`
 /// ↔ the raw `vector<u64>` these libs consume (`item_stats::to_raw`).
 ///
-/// ── WEIGHT SCALE (×5) ────────────────────────────────────────────────────────────────────
-/// Retro's Vitalité weighs 0.2/point — fractional. ALL weights are stored ×5 (`WEIGHT_SCALE`)
-/// so every weight is an integer and the puits ledger never goes fractional; the scale cancels
-/// exactly everywhere it matters.
+/// ── WEIGHT SCALE (×20) ───────────────────────────────────────────────────────────────────
+/// Retro's Vitalité weighs 0.25/point — the smallest fractional unit. ALL weights are stored
+/// ×20 (`WEIGHT_SCALE`) so the puits ledger stays integral; the scale cancels at presentation.
 ///
 /// ── RUNE IDENTITY (engine-canonical slugs) ─────────────────────────────────────────────────
 /// Each rune is a hardcoded stackable item template whose `item_type` is `rune_<stat>_<tier>`
 /// (e.g. `rune_strength_ra`). `rune_of` maps that frozen slug → (stat, tier); the seed authors
 /// the templates to match. Single-tier majors carry `_ba` only.
 ///
-/// | id | field            | Ba amt | Pa amt | Ra amt | unit wt ×5 | max apps |
+/// | id | field            | Ba amt | Pa amt | Ra amt | unit wt ×20 | max apps |
 /// |----|------------------|--------|--------|--------|------------|----------|
-/// |  0 | vitality         |   3    |  10    |  30    |     1      |    ∞     |
-/// |  1 | wisdom           |   1    |   3    |  10    |    15      |    ∞     |
-/// |  2 | strength         |   1    |   3    |  10    |     5      |    ∞     |
-/// |  3 | intelligence     |   1    |   3    |  10    |     5      |    ∞     |
-/// |  4 | chance           |   1    |   3    |  10    |     5      |    ∞     |
-/// |  5 | agility          |   1    |   3    |  10    |     5      |    ∞     |
-/// |  6 | range            |   1    |   —    |   —    |   255      |    1     |
-/// |  7 | movement (+1 PM) |   1    |   —    |   —    |   450      |    1     |
-/// |  8 | action   (+1 PA) |   1    |   —    |   —    |   500      |    1     |
-/// |  9 | critical (+1 Cri)|   1    |   —    |   —    |    50      |   10     |
-/// | 10 | raw_damage (Do)  |   1    |   —    |   —    |   100      |    ∞     |
-/// | 11 | earth_resistance |   1    |   3    |  10    |    10      |    ∞     |
-/// | 12 | fire_resistance  |   1    |   3    |  10    |    10      |    ∞     |
-/// | 13 | water_resistance |   1    |   3    |  10    |    10      |    ∞     |
-/// | 14 | air_resistance   |   1    |   3    |  10    |    10      |    ∞     |
+/// |  0 | vitality         |   3    |  10    |  30    |      5      |    ∞     |
+/// |  1 | wisdom           |   1    |   3    |  10    |     60      |    ∞     |
+/// |  2 | strength         |   1    |   3    |  10    |     20      |    ∞     |
+/// |  3 | intelligence     |   1    |   3    |  10    |     20      |    ∞     |
+/// |  4 | chance           |   1    |   3    |  10    |     20      |    ∞     |
+/// |  5 | agility          |   1    |   3    |  10    |     20      |    ∞     |
+/// |  6 | range            |   1    |   —    |   —    |  1_020      |    1     |
+/// |  7 | movement (+1 PM) |   1    |   —    |   —    |  1_800      |    1     |
+/// |  8 | action   (+1 PA) |   1    |   —    |   —    |  2_000      |    1     |
+/// |  9 | critical (+1 Cri)|   1    |   —    |   —    |    600      |   10     |
+/// | 10 | raw_damage (Do)  |   1    |   —    |   —    |    400      |    ∞     |
+/// | 11 | earth_resistance |   1    |   3    |  10    |     80      |    ∞     |
+/// | 12 | fire_resistance  |   1    |   3    |  10    |     80      |    ∞     |
+/// | 13 | water_resistance |   1    |   3    |  10    |     80      |    ∞     |
+/// | 14 | air_resistance   |   1    |   3    |  10    |     80      |    ∞     |
 /// (crit-rate/damage are weapon settings, not stats — they left the block, owner 2026-08-11)
 ///
-/// Rune WEIGHT is DERIVED `amount × unit_weight` (exact for every row — the puits-conservation
-/// law: destroying the points a rune added releases exactly the rune's weight), never stored twice.
+/// Rune WEIGHT is DERIVED from `amount × unit_weight`, rounded up to the next whole weight as
+/// Retro does (Vi/Pa Vi/Ra Vi therefore weigh 1/3/8). It is never stored twice.
 module aresrpg_math::rune_catalog;
 
 use std::string::String;
@@ -48,7 +47,7 @@ use std::string::String;
 // ╔════════════════ [ Space + scale ] ════════════════════════════════════════ ]
 
 const STAT_COUNT: u64 = 15;
-const WEIGHT_SCALE: u64 = 5;
+const WEIGHT_SCALE: u64 = 20;
 
 const TIER_BA: u8 = 1;
 const TIER_PA: u8 = 2;
@@ -60,10 +59,11 @@ const EBadStat: u64 = 1; // stat id outside 0..16
 const ENotRuneable: u64 = 2; // (stat, tier) has no rune in the catalog
 const EUnknownRune: u64 = 3; // rune_of: the item_type is not a catalog rune slug
 
-// ╔════════════════ [ Tables (index = stat id 0..16) ] ══════════════════════ ]
+// ╔════════════════ [ Tables (index = stat id 0..14) ] ══════════════════════ ]
 
-/// Forgemagie unit weight per point, ×5 — every one of the 15 stats is runeable.
-const UNIT_WEIGHTS: vector<u64> = vector[1, 15, 5, 5, 5, 5, 255, 450, 500, 50, 100, 10, 10, 10, 10];
+/// Exact Retro unit weight per point, ×20. Ares resistances are percentage resistances,
+/// therefore they use Retro's `% Res` weight 4 rather than fixed-resistance weight 5.
+const UNIT_WEIGHTS: vector<u64> = vector[5, 60, 20, 20, 20, 20, 1020, 1800, 2000, 600, 400, 80, 80, 80, 80];
 
 /// 1 = a rune can target this field. All 15 are runeable now (the crit-rate settings that were
 /// the only non-runeable fields have left the stat block — owner 2026-08-11).
@@ -91,8 +91,8 @@ public fun tier_ra(): u8 { TIER_RA }
 
 // ╔════════════════ [ Per-stat accessors ] ═══════════════════════════════════ ]
 
-/// Forgemagie unit weight (per point, ×5) of `stat` — the gain-cap divisor, the
-/// `select_stat_to_reduce` price, and the crush base. Defined for ALL 17 fields.
+/// Forgemagie unit weight (per point, ×20) of `stat` — the gain-cap divisor, the
+/// `select_stat_to_reduce` price, and the crush base. Defined for all 15 fields.
 public fun stat_unit_weight(stat: u8): u64 {
   assert!((stat as u64) < STAT_COUNT, EBadStat);
   let t = UNIT_WEIGHTS;
@@ -134,10 +134,11 @@ public fun rune_amount(stat: u8, tier: u8): u64 {
   tier_amount_vec(tier)[stat as u64]
 }
 
-/// Forgemagie WEIGHT (×5) of a `(stat, tier)` rune — DERIVED `amount × unit_weight` (the
-/// puits-conservation law). The puits cost on scribe + the crush base denominator.
+/// Forgemagie WEIGHT (×20) of a `(stat, tier)` rune — `amount × unit_weight`, rounded up to
+/// a whole Retro weight. The puits cost on scribe + the crush base denominator.
 public fun rune_weight(stat: u8, tier: u8): u64 {
-  rune_amount(stat, tier) * stat_unit_weight(stat)
+  let raw = rune_amount(stat, tier) * stat_unit_weight(stat);
+  ((raw + WEIGHT_SCALE - 1) / WEIGHT_SCALE) * WEIGHT_SCALE
 }
 
 // ╔════════════════ [ rune_of — the frozen slug → (stat, tier) map ] ═════════ ]
@@ -186,9 +187,21 @@ fun tier_slug(tier: u8): String {
 
 fun stat_slug(stat: u8): String {
   let names = vector[
-    b"vitality", b"wisdom", b"strength", b"intelligence", b"chance", b"agility", b"range",
-    b"movement", b"action", b"critical", b"raw_damage",
-    b"earth_resistance", b"fire_resistance", b"water_resistance", b"air_resistance",
+    b"vitality",
+    b"wisdom",
+    b"strength",
+    b"intelligence",
+    b"chance",
+    b"agility",
+    b"range",
+    b"movement",
+    b"action",
+    b"critical",
+    b"raw_damage",
+    b"earth_resistance",
+    b"fire_resistance",
+    b"water_resistance",
+    b"air_resistance",
   ];
   names[stat as u64].to_string()
 }

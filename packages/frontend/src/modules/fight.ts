@@ -19,6 +19,8 @@ import { catalog_spell_sources } from '../content/fight_sources.ts'
 import { project_fight_chat_lines } from '../game/fight/fight_chat_lines.ts'
 
 import { fight_should_close, terminal_remote_draft_needs_commit } from './fight_lifecycle.ts'
+import { create_fight_session } from './fight_session.ts'
+export { create_fight_session, type ActiveFightSession } from './fight_session.ts'
 
 export { fight_should_close, terminal_remote_draft_needs_commit } from './fight_lifecycle.ts'
 
@@ -40,7 +42,8 @@ export type FightSessionState = Readonly<{
   /** Only a streamed checkpoint may end a remote fight; local turn drafts are not chain truth. */
   canonical_ended: boolean
   /** the board is on screen. DERIVED from our own seat on every reconcile; `fight/mounted`
-   *  sets it directly for a SPECTATOR alone, who never holds a seat to derive from. */
+   *  sets it directly for a SPECTATOR alone, who never holds a seat to derive from. A local
+   *  Fight Lab runtime mounts itself because its authored roster has no chain session seat. */
   mounted: boolean
   /** a spectator's commit — the one mount that no seat can witness */
   spectating: boolean
@@ -54,6 +57,8 @@ export type FightSessionState = Readonly<{
   end_turn_submitted: boolean
   /** increments only on an authoritative rollback; the engine snaps every fighter to it */
   restore_serial: number
+  /** a remote boundary has only some seeds; keep its card, visual fold, and input lock alive */
+  awaiting_turn_witness: boolean
 }>
 
 export type FightSessionInput =
@@ -79,8 +84,9 @@ export type FightSessionInput =
       events: readonly FightEvent[]
       presentation_batch: number
       error: FightRuntimeError | null
+      awaiting_turn_witness: boolean
     }>
-  | Readonly<{ type: 'fight/presented'; presentation_batch: number }>
+  | Readonly<{ type: 'fight/presented'; presentation: FightPresentationBatch }>
   | Readonly<{ type: 'fight/mounted'; mounted: boolean }>
   | Readonly<{ type: 'fight/started_at'; fight: string; at_ms: number }>
   | Readonly<{ type: 'fight/transaction_pending'; fight: string; pending: boolean }>
@@ -107,106 +113,8 @@ export const initial_fight_session_state = (): FightSessionState =>
     end_turn_queued: false,
     end_turn_submitted: false,
     restore_serial: 0,
+    awaiting_turn_witness: false,
   })
-
-type ActiveFightSession = Readonly<{
-  mode: FightMode
-  checkpoint: HydratedFightCheckpoint
-  zone_ids: readonly string[]
-  events: readonly FightEvent[]
-  presentation_batch: number
-  error: FightRuntimeError | null
-}>
-
-const stamp_boundary = (input: Readonly<FightInput>, now: () => bigint): FightInput => {
-  if (input.type !== 'start' && input.type !== 'end_turn' && input.type !== 'crank') return input
-  return input.observed_ms === undefined ? Object.freeze({ ...input, observed_ms: now() }) : input
-}
-
-/** Owns the one stateful @aresrpg/fight instance mounted by every fight surface. */
-export const create_fight_session = ({
-  now,
-  reconcile,
-}: Readonly<{
-  now: () => bigint
-  reconcile: (state: ActiveFightSession) => void
-}>) => {
-  let runtime: Fight | null = null
-  let mode: FightMode | null = null
-  let current: ActiveFightSession | null = null
-  let presentation_batch = 0
-
-  const reconcile_runtime = (
-    checkpoint: Readonly<HydratedFightCheckpoint>,
-    events: readonly Readonly<FightEvent>[],
-    error: Readonly<FightRuntimeError> | null
-  ): void => {
-    if (!mode) return
-    if (events.length > 0) presentation_batch += 1
-    current = Object.freeze({
-      mode,
-      checkpoint,
-      zone_ids: Object.freeze([...(runtime?.zone_ids() ?? [])]),
-      events: Object.freeze([...events]),
-      presentation_batch,
-      error,
-    })
-    reconcile(current)
-  }
-
-  const publish = (result: Readonly<ReturnType<Fight['apply']>>): void =>
-    reconcile_runtime(result.state, result.events, result.error)
-
-  return Object.freeze({
-    open: ({
-      setup,
-      state,
-      mode: next_mode,
-      seed,
-    }: Readonly<{ setup?: FightSetup; state?: HydratedFightCheckpoint; mode: FightMode; seed?: bigint }>): void => {
-      mode = next_mode
-      runtime = create_fight({ setup, state, mode, seed })
-      reconcile_runtime(runtime.state(), Object.freeze([]), null)
-    },
-    apply: (input: Readonly<FightInput>): boolean => {
-      if (!runtime) return false
-      publish(runtime.apply(stamp_boundary(input, now)))
-      return true
-    },
-    reset_turn: (): boolean => {
-      if (!runtime) return false
-      publish(runtime.reset_turn())
-      return true
-    },
-    replace: (checkpoint: Readonly<HydratedFightCheckpoint>): boolean => {
-      if (!runtime || !mode) return false
-      const events = runtime.replace(checkpoint)
-      current = Object.freeze({
-        mode,
-        checkpoint: runtime.state(),
-        zone_ids: runtime.zone_ids(),
-        events: Object.freeze([...events]),
-        presentation_batch: events.length > 0 ? ++presentation_batch : presentation_batch,
-        error: null,
-      })
-      reconcile(current)
-      return true
-    },
-    restore: (checkpoint: Readonly<HydratedFightCheckpoint>): boolean => {
-      if (!runtime || !mode) return false
-      runtime = create_fight({ state: checkpoint, mode })
-      reconcile_runtime(runtime.state(), Object.freeze([]), null)
-      return true
-    },
-    close: (): void => {
-      runtime = null
-      mode = null
-      current = null
-      presentation_batch = 0
-    },
-    state: (): ActiveFightSession | null => current,
-  })
-}
 
 /** A SEAT IS THE MOUNT (2026-08-22): a chain transaction — a duel challenge, a duel accept, a
  *  mob engage — seats a character without any modal ever opening, and the board must appear on
@@ -257,8 +165,10 @@ const reconcile_fight = (
       error: input.error,
       canonical_ended: same_fight ? state.fight.canonical_ended : false,
       // The selected character owns the board. Wallet ownership is too broad: one account may
-      // have several characters standing in different worlds or fights.
+      // have several characters standing in different worlds or fights. The local lab has no
+      // selected chain character; successful local reconciliation is its mount witness.
       mounted:
+        input.mode === 'local' ||
         state.fight.spectating ||
         (input.mode === 'remote' &&
           holds_selected_seat(
@@ -267,7 +177,11 @@ const reconcile_fight = (
             state.session.wallet?.address ?? null
           )),
       spectating: state.fight.spectating,
-      started_at_ms: state.fight.started_at_ms,
+      started_at_ms: same_fight
+        ? state.fight.started_at_ms
+        : input.checkpoint.contract.started_ms === null
+          ? null
+          : Number(input.checkpoint.contract.started_ms),
       transaction_pending: state.fight.transaction_pending,
       end_turn_queued:
         same_fight && state.fight.checkpoint?.contract.turn_started_ms === input.checkpoint.contract.turn_started_ms
@@ -278,6 +192,7 @@ const reconcile_fight = (
           ? state.fight.end_turn_submitted
           : false,
       restore_serial: state.fight.restore_serial,
+      awaiting_turn_witness: input.awaiting_turn_witness,
     }),
   })
 }
@@ -410,7 +325,7 @@ const reduce = (state: AppState, input: AppInput): AppState => {
         restore_serial: state.fight.restore_serial + 1,
       }),
     })
-  if (input.type === 'fight/presented' && input.presentation_batch === state.fight.presentations[0]?.batch)
+  if (input.type === 'fight/presented' && input.presentation.batch === state.fight.presentations[0]?.batch)
     return Object.freeze({
       ...state,
       fight: Object.freeze({ ...state.fight, presentations: Object.freeze(state.fight.presentations.slice(1)) }),
@@ -425,7 +340,15 @@ const observe = ({ dispatch, events, get_state }: Parameters<NonNullable<AppModu
     // Move stores wall-clock milliseconds. A monotonic page-relative clock would make every
     // remotely hydrated deadline look permanently in the future.
     now: () => BigInt(Date.now()),
-    reconcile: ({ mode, checkpoint, zone_ids, events: fight_events, presentation_batch, error }) =>
+    reconcile: ({
+      mode,
+      checkpoint,
+      zone_ids,
+      events: fight_events,
+      presentation_batch,
+      error,
+      awaiting_turn_witness,
+    }) =>
       dispatch({
         type: 'fight/reconciled',
         mode,
@@ -434,9 +357,10 @@ const observe = ({ dispatch, events, get_state }: Parameters<NonNullable<AppModu
         events: fight_events,
         presentation_batch,
         error,
+        awaiting_turn_witness,
       }),
   })
-  // The combat log rides the ONE game chat: every reconciled batch's events project to
+  // The combat log rides the ONE game chat, but only after the matching visual batch completes.
   // A per-open instance stamp keeps line ids unique when a fight id is reused (lab restarts).
   let fight_instance = 0
   let watched_fight: string | null = null
@@ -448,7 +372,8 @@ const observe = ({ dispatch, events, get_state }: Parameters<NonNullable<AppModu
     fight_instance += 1
     applied_turn_witnesses.clear()
   })
-  events.on('fight/reconciled', ({ checkpoint, events: fight_events, presentation_batch }) => {
+  events.on('fight/presented', ({ presentation }) => {
+    const { checkpoint, events: fight_events, batch } = presentation
     if (fight_events.length === 0) return
     const state = get_state()
     const name_of = (seat: bigint): string => {
@@ -462,8 +387,8 @@ const observe = ({ dispatch, events, get_state }: Parameters<NonNullable<AppModu
         `#${seat}`
       )
     }
-    project_fight_chat_lines(checkpoint, fight_events, `${fight_instance}.${presentation_batch}`, name_of).forEach(
-      (line) => dispatch({ type: 'chat/line', line })
+    project_fight_chat_lines(checkpoint, fight_events, `${fight_instance}.${batch}`, name_of).forEach((line) =>
+      dispatch({ type: 'chat/line', line })
     )
   })
   events.on('fight/opened', ({ mode, seed, setup, state }) => {
@@ -471,6 +396,10 @@ const observe = ({ dispatch, events, get_state }: Parameters<NonNullable<AppModu
   })
   events.on('fight/input', ({ input, origin }) => {
     if (origin === 'local' && get_state().fight.transaction_pending) return
+    if (origin === 'local' && input.type === 'start') {
+      const fight = get_state().fight.checkpoint?.contract.id
+      if (fight) dispatch({ type: 'fight/started_at', fight, at_ms: Date.now() })
+    }
     const witness_key = input.type === 'turn_seed' ? `${input.fighter}:${input.seed}` : null
     if (witness_key && applied_turn_witnesses.has(witness_key)) return
     session.apply(input)
@@ -523,12 +452,21 @@ const observe = ({ dispatch, events, get_state }: Parameters<NonNullable<AppModu
       const ended = Boolean((packet.state.contract as { ended?: boolean }).ended)
       dispatch({ type: 'fight/canonical_ended', fight: packet.fight, ended })
       if (ended && canonical?.contract.id === packet.fight)
-        dispatch({ type: 'fight_result/checkpoint', checkpoint: canonical })
+        dispatch({
+          type: 'fight_result/checkpoint',
+          checkpoint: canonical,
+          observed_at_ms: Date.now(),
+          gas_spent_mist: get_state().session.wallet?.fight.gas_spent(packet.fight) ?? 0n,
+        })
       return
     }
     if (session.state()?.checkpoint.contract.id !== ('fight' in packet ? packet.fight : null)) return
     if (packet.type === 'packet/fight_started')
-      dispatch({ type: 'fight/started_at', fight: packet.fight, at_ms: Number(packet.started_ms ?? Date.now()) })
+      dispatch({
+        type: 'fight/started_at',
+        fight: packet.fight,
+        at_ms: Number(packet.started_ms ?? Date.now()),
+      })
     if (packet.type === 'packet/fight_action') {
       dispatch({ type: 'fight/input', input: decode_fight_action(packet.action), origin: 'streamed' })
       return

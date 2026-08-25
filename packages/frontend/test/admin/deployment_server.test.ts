@@ -9,11 +9,14 @@ import { describe, expect, test } from 'bun:test'
 import {
   command_failure_message,
   create_contract_build_service,
+  deployment_revision_of_pins,
   deployment_dev_plugin,
   merge_deployment_pins,
+  merge_seed_ledger_pins,
   next_package_version_source,
   parse_contract_artifact,
   reset_deployment_pins,
+  seed_ledger_from_pins,
 } from '../../deployment_dev_server.ts'
 
 const output = `compiler note\n${JSON.stringify({ modules: ['AA=='], dependencies: ['0x2'], digest: [1, 2, 3] })}`
@@ -63,7 +66,12 @@ describe('local deployment compiler', () => {
         return { stdout: output, stderr: '' }
       },
     })
-    await service.compile_game('testnet', { package: '0xmath', upgrade_cap: '0xcap' })
+    await service.compile_game(
+      'testnet',
+      { package: '0xmath', upgrade_cap: '0xcap' },
+      { package: '0xc011', upgrade_cap: '0xccap' },
+      { package: '0x5eed', upgrade_cap: '0x5cap' }
+    )
 
     expect(calls.some((args) => args.includes('--pubfile-path'))).toBeTrue()
     expect(calls.some((args) => args.includes('testnet'))).toBeTrue()
@@ -72,7 +80,8 @@ describe('local deployment compiler', () => {
     expect(publication_context).toContain('source = { local = "/cache/kiosk" }')
     expect(publication_context).toContain('published-at = "0x1234"')
     expect(publication_context).toContain('original-id = "0x5678"')
-    expect(publication_context).toContain('version = 3')
+    expect(publication_context).toContain('published-at = "0x5eed"')
+    expect(publication_context).toContain('packages/seed')
   })
 
   test('pin updates preserve the other network and unrelated deployment facts', () => {
@@ -84,6 +93,29 @@ describe('local deployment compiler', () => {
       testnet: { package: '0xtest', version: { id: null, shared_version: null } },
       mainnet: { package: '0xmain' },
     })
+  })
+
+  test('content addresses live in pins without invalidating package-operation revisions', () => {
+    const pins = {
+      testnet: { package: '0xgame' },
+      mainnet: { package: null },
+    }
+    const revision = deployment_revision_of_pins(pins)
+    const ledger = {
+      '0xitem': { hash: 'abc', label: 'item wheat', addresses: ['0xitem'] },
+      'board:0': { hash: 'def', label: 'board #0', addresses: ['0xcatalog'] },
+    }
+    const next = merge_seed_ledger_pins(pins, 'testnet', '0xroot', ledger, {
+      '0xitem': 'item wheat',
+      '0xcatalog': 'fight board catalog',
+    })
+
+    expect(seed_ledger_from_pins(next, 'testnet', '0xroot')).toEqual(ledger)
+    expect(next.testnet.seed_addresses).toEqual({
+      '0xroot': { '0xitem': 'item wheat', '0xcatalog': 'fight board catalog' },
+    })
+    expect(deployment_revision_of_pins(next)).toBe(revision)
+    expect(next.mainnet).toEqual(pins.mainnet)
   })
 
   test('package version bump is retry-safe against the live Version value', () => {
@@ -98,44 +130,31 @@ describe('local deployment compiler', () => {
 
   test('republish clears only the selected network deployment', () => {
     const pins = {
-      testnet: { package: '0xtest', math_package: '0xmath', worlds: { shore: { id: '0xworld' } } },
+      testnet: {
+        package: '0xtest',
+        math_package: '0xmath',
+        worlds: { shore: { id: '0xworld' } },
+        seed_ledgers: { '0xroot': { '0xitem': { hash: 'abc', label: 'item wheat' } } },
+        seed_addresses: { '0xroot': { '0xitem': 'item wheat' } },
+      },
       mainnet: { package: '0xmain', math_package: '0xmainmath' },
     }
 
-    expect(reset_deployment_pins(pins, 'testnet')).toEqual({
-      testnet: {
-        package: null,
-        package_original: null,
-        kiosk_package: null,
-        math_package: null,
-        math_package_original: null,
-        upgrade_cap: null,
-        math_upgrade_cap: null,
-        admin_cap: null,
-        publisher: null,
-        item_publisher: null,
-        character_publisher: null,
-        version: { id: null, shared_version: null },
-        template_registry: { id: null, shared_version: null },
-        loot_registry: { id: null, shared_version: null },
-        name_registry: { id: null, shared_version: null },
-        friend_registry: { id: null, shared_version: null },
-        item_policy: { id: null, shared_version: null },
-        character_policy: { id: null, shared_version: null },
-        item_protected_policy: { id: null, shared_version: null },
-        character_protected_policy: { id: null, shared_version: null },
-        worlds: {},
-      },
-      mainnet: pins.mainnet,
-    })
+    const reset = reset_deployment_pins(pins, 'testnet')
+    expect(reset.mainnet).toEqual(pins.mainnet)
+    expect(reset.testnet.math_package).toBe('0xmath')
+    expect(reset.testnet.package).toBeNull()
+    expect(reset.testnet.worlds).toBeUndefined()
+    expect(reset.testnet.seed_ledgers).toEqual(pins.testnet.seed_ledgers)
+    expect(reset.testnet.seed_addresses).toEqual(pins.testnet.seed_addresses)
   })
 
   test('pin writes stay inside the admin reducer instead of reloading the app through HMR', async () => {
     const plugin = deployment_dev_plugin({ repo_dir: '/repo' })
-    expect(plugin.handleHotUpdate).toBeFunction()
-    const handle_hot_update = plugin.handleHotUpdate as (context: { file: string }) => unknown
+    expect(plugin.hotUpdate).toBeFunction()
+    const hot_update = plugin.hotUpdate as (context: { file: string }) => unknown
 
-    expect(await handle_hot_update({ file: '/repo/pins.json' })).toEqual([])
-    expect(await handle_hot_update({ file: '/repo/packages/frontend/src/app.tsx' })).toBeUndefined()
+    expect(await hot_update({ file: '/repo/pins.json' })).toEqual([])
+    expect(await hot_update({ file: '/repo/packages/frontend/src/app.tsx' })).toBeUndefined()
   })
 })

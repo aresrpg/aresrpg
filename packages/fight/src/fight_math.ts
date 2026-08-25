@@ -126,6 +126,25 @@ export const push_collision_damage = (caster_level: bigint, blocked_cells: bigin
   return (raw < 1n ? 1n : raw) * blocked_cells
 }
 
+export const point_removal_chance = ({
+  caster_wisdom,
+  target_wisdom,
+  current,
+  maximum,
+}: {
+  caster_wisdom: bigint
+  target_wisdom: bigint
+  current: bigint
+  maximum: bigint
+}): bigint => {
+  if (maximum === 0n) return 0n
+  const wisdom = caster_wisdom / 10n < 1n ? 1n : caster_wisdom / 10n
+  const resistance = target_wisdom / 10n < 1n ? 1n : target_wisdom / 10n
+  const resist_rate = (50n * wisdom) / resistance
+  const raw = (resist_rate * current) / maximum
+  return raw < DODGE_MIN ? DODGE_MIN : raw > DODGE_MAX ? DODGE_MAX : raw
+}
+
 export const remove_points = ({
   rng,
   value,
@@ -145,34 +164,48 @@ export const remove_points = ({
 }): { state: bigint; removed: bigint } => {
   if (!dodge) return { state: rng, removed: value < current ? value : current }
   if (maximum === 0n) return { state: rng, removed: 0n }
-  const wisdom = caster_wisdom / 10n < 1n ? 1n : caster_wisdom / 10n
-  const resistance = target_wisdom / 10n < 1n ? 1n : target_wisdom / 10n
-  const resist_rate = (50n * wisdom) / resistance
   const cursor = { state: rng }
   let removed = 0n
   while (removed < value && removed < current) {
-    const raw = (resist_rate * (current - removed)) / maximum
-    const chance = raw < DODGE_MIN ? DODGE_MIN : raw > DODGE_MAX ? DODGE_MAX : raw
+    const chance = point_removal_chance({ caster_wisdom, target_wisdom, current: current - removed, maximum })
     if (draw(cursor) % 100n < chance) removed += 1n
     else break
   }
   return { state: cursor.state, removed }
 }
 
-export const level_penalty_bp = (mob_level: bigint, player_level: bigint): bigint => {
-  const gap = mob_level >= player_level ? mob_level - player_level : player_level - mob_level
-  const scaled_spot = (player_level * 33n) / 100n
-  const spot = scaled_spot < 2n ? 2n : scaled_spot
-  if (gap <= spot) return 10_000n
-  const over_7 = (gap - spot) * 7n
-  const gaps = [0n, 3n, 5n, 7n, 9n, 13n]
-  const multipliers = [10_000n, 8_000n, 6_000n, 4_000n, 1_000n, 0n]
-  if (over_7 >= gaps[gaps.length - 1] * spot) return 0n
-  const band = gaps.findIndex((entry, index) => index < gaps.length - 1 && over_7 <= gaps[index + 1] * spot)
-  const low = gaps[band] * spot
-  const high = gaps[band + 1] * spot
-  return multipliers[band] - ((over_7 - low) * (multipliers[band] - multipliers[band + 1])) / (high - low)
+export const RETRO_GROUP_XP_TENTHS = Object.freeze([10n, 11n, 15n, 23n, 31n, 36n])
+
+export const retro_group_coefficient_tenths = (eligible_players: bigint): bigint => {
+  if (eligible_players === 0n) return 0n
+  const index = Number(eligible_players - 1n)
+  return RETRO_GROUP_XP_TENTHS[Math.min(index, RETRO_GROUP_XP_TENTHS.length - 1)]!
 }
 
-export const xp_for_player = (penalized_sum: bigint, wisdom: bigint, members: bigint): bigint =>
-  members === 0n ? 0n : (((penalized_sum * (600n + wisdom)) / 600n) * (100n + 20n * (members - 1n))) / 100n / members
+export const xp_for_player = (
+  base_xp: bigint,
+  wisdom: bigint,
+  player_level: bigint,
+  player_total_level: bigint,
+  mob_total_level: bigint,
+  highest_mob_level: bigint,
+  eligible_players: bigint
+): bigint => {
+  if (
+    base_xp === 0n ||
+    player_level === 0n ||
+    player_total_level === 0n ||
+    mob_total_level === 0n ||
+    highest_mob_level === 0n ||
+    eligible_players === 0n
+  )
+    return 0n
+
+  let group_xp = (base_xp * retro_group_coefficient_tenths(eligible_players)) / 10n
+  if (mob_total_level > player_total_level + 10n) group_xp = (group_xp * (player_total_level + 10n)) / mob_total_level
+  if (player_total_level > mob_total_level + 5n) group_xp = (group_xp * mob_total_level) / player_total_level
+  if (player_total_level * 2n > highest_mob_level * 5n)
+    group_xp = (group_xp * (highest_mob_level * 5n)) / (player_total_level * 2n)
+
+  return (((group_xp * player_level) / player_total_level) * (600n + wisdom)) / 600n
+}

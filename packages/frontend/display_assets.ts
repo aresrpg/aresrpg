@@ -61,6 +61,11 @@ export const display_asset_rows = async ({
 }: Readonly<{ characters_dir: string; items_dir: string }>): Promise<readonly DisplayAssetRow[]> =>
   Object.freeze([...(await item_asset_rows(items_dir)), ...character_asset_rows(characters_dir)])
 
+export const display_asset_for_route = async (
+  directories: Readonly<{ characters_dir: string; items_dir: string }>,
+  route: string
+): Promise<DisplayAssetRow | null> => (await display_asset_rows(directories)).find((row) => row.route === route) ?? null
+
 export const display_assets_plugin = (
   directories: Readonly<{ characters_dir: string; items_dir: string }>
 ): readonly Plugin[] => {
@@ -76,23 +81,24 @@ export const display_assets_plugin = (
   const serve_plugin: Plugin = {
     name: 'aresrpg-display-assets-serve',
     apply: 'serve',
-    configureServer: async (server) => {
-      const rows = await display_asset_rows(directories)
+    configureServer: (server) => {
       server.middlewares.use((request, response, next) => {
         if (request.method !== 'GET') return next()
         const path = decodeURIComponent(
           new URL(request.url ?? '/', `http://${request.headers.host ?? 'localhost'}`).pathname
         )
-        const row = rows.find(({ route }) => route === path)
-        if (!row) return next()
-        void readFile(row.source_path).then((source) => {
-          response.writeHead(200, {
-            'cache-control': 'public, max-age=3600',
-            'content-length': source.byteLength,
-            'content-type': row.content_type,
+        void display_asset_for_route(directories, path)
+          .then(async (row) => {
+            if (!row) return next()
+            const source = await readFile(row.source_path)
+            response.writeHead(200, {
+              'cache-control': 'public, max-age=3600',
+              'content-length': source.byteLength,
+              'content-type': row.content_type,
+            })
+            response.end(source)
           })
-          response.end(source)
-        }, next)
+          .catch(next)
       })
     },
   }

@@ -56,7 +56,7 @@ export const to_mob_template = (mob: SeedMob): MobTemplateSource => ({
   fire_res: BigInt(mob.resistances.fire ?? 32_768),
   water_res: BigInt(mob.resistances.water ?? 32_768),
   air_res: BigInt(mob.resistances.air ?? 32_768),
-  spells: mob.spells.map((spell) => ({ name: spell.name, levels: spell.levels.map(to_spell_level) })),
+  spells: mob.spells.map((spell) => ({ name: spell.name, level: to_spell_level(spell.levels[0]!) })),
   loot: mob.loot.map((row) => ({
     item_type: row.item_type,
     chance_bp: BigInt(row.chance_bp),

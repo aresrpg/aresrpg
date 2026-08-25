@@ -1,9 +1,10 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
-import { MapPin, Search, Shield, X } from 'lucide-react'
+import { MapPin, Search, Shield } from 'lucide-react'
 import { useMemo, useState } from 'react'
 
+import { FacetRail, type FacetOption } from '../components/FacetRail.tsx'
 import { MobCoreStats } from '../components/MobCoreStats.tsx'
 import { mob_icon } from '../content/assets.ts'
 import { centered_resistance, encyclopedia_catalog, titleize } from '../content/catalog.ts'
@@ -30,6 +31,27 @@ const LEVEL_BRACKETS = Object.freeze([
   { label: '121+', minimum: 121, maximum: Number.POSITIVE_INFINITY },
 ])
 
+const mob_facet_options = (text: EncyclopediaText): readonly FacetOption[] =>
+  encyclopedia_catalog.mob_filters.map((row, index) => {
+    const previous = encyclopedia_catalog.mob_filters[index - 1]
+    const section =
+      row.kind === 'world' && previous?.kind !== 'world' && previous?.kind !== 'biome'
+        ? text('worlds_tab')
+        : row.kind === 'family' && previous?.kind !== 'family'
+          ? text('all_families')
+          : row.kind === 'element' && previous?.kind !== 'element'
+            ? text('elements_filter')
+            : undefined
+    return Object.freeze({
+      value: `${row.kind}:${row.id}`,
+      label: titleize(row.kind === 'biome' ? row.id.slice(row.id.indexOf(':') + 1) : row.id),
+      count: row.count,
+      color: row.kind === 'element' ? element_colors[row.id] : undefined,
+      section,
+      indent: row.kind === 'biome',
+    })
+  })
+
 export const MobsTab = ({
   selected_id,
   select_item,
@@ -44,17 +66,27 @@ export const MobsTab = ({
   text: EncyclopediaText
 }>) => {
   const [search, set_search] = useState('')
-  const [elements, set_elements] = useState<readonly string[]>([])
+  const [mob_filter, set_mob_filter] = useState<string | null>(null)
   const [sort, set_sort] = useState('level_asc')
   const [view, set_view] = useState<'all' | 'by_level'>('all')
   const [spell_index, set_spell_index] = useState(0)
+  const facet_options = useMemo(() => mob_facet_options(text), [text])
+  const matching_types = useMemo(
+    () =>
+      new Set(
+        mob_filter
+          ? (encyclopedia_catalog.mob_filters.find((row) => `${row.kind}:${row.id}` === mob_filter)?.mob_types ?? [])
+          : encyclopedia_catalog.mobs.map(({ mob_type }) => mob_type)
+      ),
+    [mob_filter]
+  )
   const filtered = useMemo(() => {
     const query = search.trim().toLowerCase()
     return encyclopedia_catalog.mobs
       .filter(
         (mob) =>
           (!query || mob.name.toLowerCase().includes(query) || mob.mob_type.includes(query)) &&
-          (elements.length === 0 || elements.includes(mob.element))
+          matching_types.has(mob.mob_type)
       )
       .toSorted((left, right) =>
         sort === 'name_asc'
@@ -63,7 +95,7 @@ export const MobsTab = ({
             ? right.level_min - left.level_min || left.name.localeCompare(right.name)
             : left.level_min - right.level_min || left.name.localeCompare(right.name)
       )
-  }, [elements, search, sort])
+  }, [matching_types, search, sort])
   const grouped = useMemo(
     () =>
       LEVEL_BRACKETS.map((bracket) =>
@@ -83,10 +115,6 @@ export const MobsTab = ({
     set_spell_index(0)
     select_mob(id)
   }
-  const toggle_element = (element: string): void =>
-    set_elements((current) =>
-      current.includes(element) ? current.filter((candidate) => candidate !== element) : [...current, element]
-    )
   const row = (mob: (typeof encyclopedia_catalog.mobs)[number], index: number) => (
     <EntityButton
       accent={`${element_colors[mob.element] ?? '#6b7280'}40`}
@@ -297,6 +325,14 @@ export const MobsTab = ({
 
   return (
     <div className="flex min-h-0 flex-1">
+      <FacetRail
+        all_label={text('view_all')}
+        class_name="w-40 shrink-0"
+        on_select={set_mob_filter}
+        options={facet_options}
+        selected={mob_filter}
+        total={encyclopedia_catalog.mobs.length}
+      />
       <div className={`flex min-h-0 min-w-0 flex-col ${detail ? 'flex-[7]' : 'flex-1'}`}>
         <div className={encyclopedia_layout.filters}>
           <div className="flex items-center gap-3">
@@ -323,35 +359,6 @@ export const MobsTab = ({
             <button className={category_pill(view === 'by_level')} onClick={() => set_view('by_level')} type="button">
               {text('view_by_level')}
             </button>
-          </div>
-          <div className="flex items-center gap-2">
-            {Object.entries(element_colors).map(([element, color]) => {
-              const active = elements.includes(element)
-              return (
-                <button
-                  className="size-2 cursor-pointer"
-                  key={element}
-                  onClick={() => toggle_element(element)}
-                  style={{
-                    background: color,
-                    opacity: active ? 1 : 0.3,
-                    boxShadow: active ? `0 0 8px ${color}` : 'none',
-                  }}
-                  title={titleize(element)}
-                  type="button"
-                />
-              )
-            })}
-            {elements.map((element) => (
-              <button
-                className="flex items-center gap-1 border border-[#c8963c]/20 bg-[#c8963c]/6 px-1.5 py-0.5 text-[7px] tracking-[0.15em] text-[#c8963c] uppercase"
-                key={element}
-                onClick={() => toggle_element(element)}
-                type="button"
-              >
-                {titleize(element)} <X size={8} />
-              </button>
-            ))}
           </div>
         </div>
         {list}

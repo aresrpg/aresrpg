@@ -13,6 +13,7 @@ import { SDK, absorb_receipt, type Receipt, type SuiTransport } from '../src/cli
 import { character_create } from '../src/character.ts'
 import { character_actions as gate_actions } from '../src/character_actions.ts'
 import { fight_actions } from '../src/fight.ts'
+import { item_template_id, recipe_id, world_content_id, world_id } from '../src/seed_ids.ts'
 
 const id = (n: number) => `0x${String(n).padStart(64, '0')}`
 const digest = '11111111111111111111111111111111'
@@ -55,6 +56,10 @@ const fake_client = (receipt: () => Receipt) => ({
 
 const pins = {
   package: id(1),
+  package_original: id(1),
+  seed_package: id(60),
+  seed_package_original: id(60),
+  content_root: { id: id(61), shared_version: '1' },
   version: { id: id(6), shared_version: '1' },
   name_registry: { id: id(4), shared_version: '1' },
   character_policy: { id: id(5), shared_version: '1' },
@@ -69,14 +74,14 @@ const terminal_sdk = (doors: Record<string, unknown>, events: readonly unknown[]
   tx: () => ({}),
   execute: async () => ({ $kind: 'Transaction', Transaction: { digest, events } }) as unknown as Receipt,
   hydrate: async () => {},
-  hydrate_owned_current: async () => {},
   hydrate_unknown: async () => {},
-  // the seed-derived doors resolve their templates off the registry pin, and the world doors
-  // resolve the shared World object off the worlds pin
+  // every content and gameplay world id derives from the living Registry root
   pins: {
     ...pins,
     template_registry: { id: id(7), shared_version: '1' },
-    worlds: { '01_first_shore': { id: id(31), shared_version: '985950005' } },
+    seed_package: id(60),
+    seed_package_original: id(60),
+    content_root: { id: id(61), shared_version: '1' },
   },
   // a derived id names its type by the DEFINING package — never pins.package
   game_type_package: id(1),
@@ -129,15 +134,19 @@ describe('the character builder', () => {
   test('create refuses to invent the character id when the receipt carries no CharacterCreated', async () => {
     const sdk = game()
     await expect(
-      character_create(sdk as never, {
-        name: 'aiden',
-        classe: 'senshi',
-        male: true,
-        color_1: 1,
-        color_2: 2,
-        color_3: 3,
-        kiosk_cap,
-      })
+      character_create(
+        sdk as never,
+        {
+          name: 'aiden',
+          classe: 'senshi',
+          male: true,
+          color_1: 1,
+          color_2: 2,
+          color_3: 3,
+          kiosk_cap,
+        },
+        'nauvis'
+      )
     ).rejects.toThrow('CharacterCreated')
   })
 
@@ -158,6 +167,8 @@ describe('the character builder', () => {
         },
       },
       execute_personal_kiosk: async () => ({ receipt: {}, kiosk_cap }),
+      pins: { content_root: { id: id(1) }, seed_package_original: id(2) },
+      hydrate_unknown: async () => undefined,
     }
     const input = {
       name: 'Sceat 6',
@@ -169,9 +180,11 @@ describe('the character builder', () => {
       kiosk_cap,
     }
 
-    await expect(character_create(sdk as never, input)).rejects.toThrow('4–19')
+    await expect(character_create(sdk as never, input, 'nauvis')).rejects.toThrow('4–19')
     expect(tx_calls).toBe(0)
-    await expect(character_create(sdk as never, { ...input, name: ' AiDeN ' })).rejects.toThrow('CharacterCreated')
+    await expect(character_create(sdk as never, { ...input, name: ' AiDeN ' }, 'nauvis')).rejects.toThrow(
+      'CharacterCreated'
+    )
     expect(raw_name).toBe('aiden')
   })
 
@@ -184,7 +197,7 @@ describe('the character builder', () => {
         events: [
           {
             type: `${id(1)}::world::WorldJoined`,
-            json: { character: id(20), world: '02_verdant_hollow', x: 50000, z: 50000, first_join: false },
+            json: { character: id(20), world: 'yakutia', x: 50000, z: 50000, first_join: false },
           },
         ],
       },
@@ -195,6 +208,7 @@ describe('the character builder', () => {
         compose('kiosk_id', {}),
       execute: async () => receipt,
       hydrate_unknown: async () => {},
+      pins,
       doors: {
         join_world: (_tx: unknown, args: Record<string, unknown>) => {
           door_args = args
@@ -202,9 +216,13 @@ describe('the character builder', () => {
       },
     }
     const actions = gate_actions(sdk as never, { kiosk_cap: async () => kiosk_cap })
-    const out = await actions.join_world({ character_id: id(20), world: '02_verdant_hollow' })
-    expect(door_args).toMatchObject({ kiosk: 'kiosk_id', character_id: id(20), world: '02_verdant_hollow' })
-    expect(out.joined).toEqual({ world: '02_verdant_hollow', x: 50000, z: 50000, first_join: false })
+    const out = await actions.join_world({ character_id: id(20), world: 'yakutia' })
+    expect(door_args).toMatchObject({
+      kiosk: 'kiosk_id',
+      character_id: id(20),
+      destination: world_content_id(id(61), id(60), 'yakutia'),
+    })
+    expect(out.joined).toEqual({ world: 'yakutia', x: 50000, z: 50000, first_join: false })
   })
 
   test('seed-derived ids name their type by the DEFINING package, never the upgraded one', async () => {
@@ -214,12 +232,19 @@ describe('the character builder', () => {
     // package was upgraded, every content id (mob, spell, recipe, sale…) pointed at nothing.
     const upgraded = id(90)
     const defining = id(91)
-    const registry = id(7)
+    const root = id(7)
     const sdk = {
       tx: () => ({}),
       execute: async () => ({ $kind: 'Transaction', Transaction: { digest } }) as unknown as Receipt,
       hydrate_unknown: async () => {},
-      pins: { ...pins, package: upgraded, template_registry: { id: registry, shared_version: '1' } },
+      // living content: the derivation anchors on the seed package's ORIGINAL id — the
+      // upgraded id must never leak into an address
+      pins: {
+        ...pins,
+        seed_package: upgraded,
+        seed_package_original: defining,
+        content_root: { id: root, shared_version: '1' },
+      },
       game_type_package: defining,
       doors: {},
     }
@@ -238,27 +263,90 @@ describe('the character builder', () => {
       spell: 'Cleaving Strike',
     })
 
-    expect(seen as string | null).toBe(spell_template_id(registry, defining, 'Cleaving Strike'))
-    expect(seen as string | null).not.toBe(spell_template_id(registry, upgraded, 'Cleaving Strike'))
+    expect(seen as string | null).toBe(spell_template_id(root, defining, 'Cleaving Strike'))
+    expect(seen as string | null).not.toBe(spell_template_id(root, upgraded, 'Cleaving Strike'))
+  })
+
+  test('scribe_rune composes the terminal door and returns only the RuneScribed receipt truth', async () => {
+    let door_args: Record<string, unknown> | null = null
+    const sdk = terminal_sdk(
+      { scribe_rune: (_tx: unknown, args: Record<string, unknown>) => void (door_args = args) },
+      [
+        {
+          type: `${id(1)}::forgemagie::RuneScribed`,
+          json: { stat: 0, outcome: 1, applied_value: 3, lost_stat: 4, lost_amount: 2 },
+        },
+      ]
+    )
+    const actions = gate_actions(sdk as never, { kiosk_cap: async () => kiosk_cap })
+
+    const outcome = await actions.scribe_rune({
+      character_id: id(20),
+      gear_id: id(21),
+      gear_item_type: 'straw_hat',
+      rune_item_id: id(22),
+      custody: { kiosk: kiosk_cap.kioskId, kiosk_cap: kiosk_cap.objectId },
+    })
+
+    expect(door_args).toMatchObject({
+      kiosk: kiosk_cap.kioskId,
+      personal: kiosk_cap.objectId,
+      character_id: id(20),
+      gear_id: id(21),
+      gear_template: item_template_id(id(61), id(60), 'straw_hat'),
+      rune_item_id: id(22),
+    })
+    expect(outcome).toMatchObject({ stat: 0, outcome: 1, applied_value: 3, lost_stat: 4, lost_amount: 2 })
+  })
+
+  test('craft composes the terminal recipe door and projects success plus job XP', async () => {
+    let door_args: Record<string, unknown> | null = null
+    const sdk = terminal_sdk({ craft: (_tx: unknown, args: Record<string, unknown>) => void (door_args = args) }, [
+      { type: `${id(1)}::crafting::Crafted`, json: { success: true, job_xp_gained: 25 } },
+    ])
+    const actions = gate_actions(sdk as never, { kiosk_cap: async () => kiosk_cap })
+
+    const outcome = await actions.craft({
+      character_id: id(20),
+      output_type: 'wheat_flour',
+      input_item_ids: [id(31), id(32)],
+      existing: id(33),
+      custody: { kiosk: kiosk_cap.kioskId, kiosk_cap: kiosk_cap.objectId },
+    })
+
+    expect(door_args).toMatchObject({
+      kiosk: kiosk_cap.kioskId,
+      personal: kiosk_cap.objectId,
+      character_id: id(20),
+      recipe: recipe_id(id(61), id(60), 'wheat_flour'),
+      output_template: item_template_id(id(61), id(60), 'wheat_flour'),
+      input_item_ids: [id(31), id(32)],
+      existing: id(33),
+    })
+    expect(outcome).toMatchObject({ success: true, job_xp_gained: 25 })
   })
 
   test('a world door receives the World OBJECT, never the world NAME', async () => {
     // 2026-08-22: pressing G failed with "invalid object_id: Unable to parse Address (must be hex
     // string of length 32)". `api::search_zone` takes `&mut World` — an OBJECT — while the app
-    // knows a world by its authored name; passing the name straight through handed Sui the
-    // string "01_first_shore" as an address. The pins carry the id, and the SDK is the only
-    // layer that may know that.
+    // knows a world by its authored name; passing the name straight through handed Sui a
+    // non-address. The SDK derives the object from the Registry root and core type package.
     let door_args: Record<string, unknown> | null = null
     const sdk = terminal_sdk({ search_zone: (_tx: unknown, args: Record<string, unknown>) => void (door_args = args) })
     const actions = gate_actions(sdk as never, { kiosk_cap: async () => kiosk_cap })
 
-    await actions.search_zone({ character_id: id(20), world: '01_first_shore', x: 1, z: 2 })
+    await actions.search_zone({ character_id: id(20), world: 'nauvis', x: 1, z: 2 })
 
-    expect(door_args!.w).toEqual({ objectId: id(31), initialSharedVersion: '985950005' })
+    expect(door_args!.w).toBe(world_id(id(61), id(1), 'nauvis'))
   })
 
-  test('a world the pins do not carry fails LOUDLY, before the transaction is built', async () => {
-    const sdk = terminal_sdk({ search_zone: () => {} })
+  test('a world whose derived object does not exist fails during explicit hydration', async () => {
+    const sdk = {
+      ...terminal_sdk({ search_zone: () => {} }),
+      hydrate_unknown: async () => {
+        throw new Error('unknown world 99_nowhere')
+      },
+    }
     const actions = gate_actions(sdk as never, { kiosk_cap: async () => kiosk_cap })
 
     await expect(actions.search_zone({ character_id: id(20), world: '99_nowhere', x: 1, z: 2 })).rejects.toThrow(
@@ -273,7 +361,7 @@ describe('the character builder', () => {
     const sdk = terminal_sdk({ search_zone: (_tx: unknown, args: Record<string, unknown>) => void (door_args = args) })
     const actions = gate_actions(sdk as never, { kiosk_cap: async () => kiosk_cap })
 
-    const out = await actions.search_zone({ character_id: id(20), world: '01_first_shore', x: 49_700, z: 50_200 })
+    const out = await actions.search_zone({ character_id: id(20), world: 'nauvis', x: 49_700, z: 50_200 })
 
     expect(door_args).toMatchObject({
       kiosk: kiosk_cap.kioskId,
@@ -281,7 +369,7 @@ describe('the character builder', () => {
       character_id: id(20),
       x: 49_700,
       z: 50_200,
-      w: { objectId: id(31), initialSharedVersion: '985950005' },
+      w: world_id(id(61), id(1), 'nauvis'),
     })
     expect(out).toEqual({ digest })
   })
@@ -336,6 +424,20 @@ describe('the character builder', () => {
     expect(out.ambushed).toBe(false)
   })
 
+  test('protector resolution returns the created fight id from its own receipt', async () => {
+    const fight = id(30)
+    const sdk = {
+      ...terminal_sdk({ resolve_ambush: () => {} }, [{ type: `${id(1)}::fight::FightCreated`, json: { fight } }]),
+      with_owner_kiosk: (_tx: unknown, _cap: unknown, compose: (kiosk: string, owner_cap: unknown) => void) =>
+        compose(id(12), {}),
+    }
+    const actions = gate_actions(sdk as never, { kiosk_cap: async () => kiosk_cap })
+
+    await expect(
+      actions.resolve_ambush({ character_id: id(20), protector_mob_type: 'protector_wheat_bricheton' })
+    ).resolves.toEqual({ digest, fight })
+  })
+
   test('gather refuses to invent an outcome when the receipt carries no ResourceGathered', async () => {
     const sdk = terminal_sdk({ gather: () => {} })
     const actions = gate_actions(sdk as never, { kiosk_cap: async () => kiosk_cap })
@@ -362,37 +464,52 @@ describe('the character builder', () => {
         compose('kiosk_id', {}),
       execute: async () => ({ $kind: 'Transaction', Transaction: { digest } }) as unknown as Receipt,
       hydrate_unknown: async () => {},
+      pins,
       doors: { join_world: () => {} },
     }
     const actions = gate_actions(sdk as never, { kiosk_cap: async () => kiosk_cap })
-    await expect(actions.join_world({ character_id: id(20), world: '02_verdant_hollow' })).rejects.toThrow(
-      'WorldJoined'
-    )
+    await expect(actions.join_world({ character_id: id(20), world: 'yakutia' })).rejects.toThrow('WorldJoined')
   })
 
-  test('a fight loot claim is one terminal item-type transaction', async () => {
-    let args: Record<string, unknown> | null = null
-    const refreshed: string[] = []
+  test('fight settlement prepares every loot type and collects all of them in one transaction without polling', async () => {
+    const calls: { door: string; args: Record<string, unknown> }[] = []
+    const hydrated: string[][] = []
+    let executions = 0
     const sdk = {
       ...terminal_sdk({
-        claim_fight_drop: (_tx: unknown, input: Record<string, unknown>) => void (args = input),
+        prepare_fight_loot: (_tx: unknown, input: Record<string, unknown>) => {
+          calls.push({ door: 'prepare', args: input })
+          return `prepared-${calls.length}`
+        },
+        settle_fight: (_tx: unknown, input: Record<string, unknown>) =>
+          void calls.push({ door: 'settle', args: input }),
       }),
-      hydrate_owned_current: async (ids: readonly string[]) => void refreshed.push(...ids),
+      hydrate_unknown: async (ids: readonly string[]) => void hydrated.push([...ids]),
+      execute: async () => {
+        executions += 1
+        return { $kind: 'Transaction', Transaction: { digest } } as unknown as Receipt
+      },
     }
-    await fight_actions(sdk as never, { kiosk_cap: async () => kiosk_cap }).claim_drop({
+    await fight_actions(sdk as never, { kiosk_cap: async () => kiosk_cap }).settle({
       fight: id(40),
       fighter_idx: 2n,
-      item_type: 'silk',
-      existing: id(41),
+      loot: [
+        { item_type: 'silk', existing: id(41) },
+        { item_type: 'fang', existing: null },
+        { item_type: 'silk', existing: id(41) },
+      ],
       custody: { kiosk: kiosk_cap.kioskId, kiosk_cap: kiosk_cap.objectId },
     })
-    expect(args).toMatchObject({
+    expect(executions).toBe(1)
+    expect(calls.map(({ door }) => door)).toEqual(['prepare', 'prepare', 'settle'])
+    expect(calls[2]?.args).toMatchObject({
       f: id(40),
       fighter_idx: 2n,
-      existing: id(41),
+      plan: ['prepared-1', 'prepared-2'],
       kiosk: kiosk_cap.kioskId,
       personal: kiosk_cap.objectId,
     })
-    expect(refreshed).toEqual([kiosk_cap.objectId])
+    expect(hydrated).toHaveLength(2)
+    expect(sdk).not.toHaveProperty('hydrate_owned_current')
   })
 })

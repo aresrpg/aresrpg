@@ -22,6 +22,8 @@ const create_engine_spy = () => {
     set_fight_swords: () => {},
     set_fight_sword_label: () => {},
     set_resource_nodes: () => {},
+    set_dungeon_portals: () => {},
+    set_dungeon_stage: () => {},
     set_resource_node_label: () => {},
     set_portal_label: () => {},
     animate_entity: () => Promise.resolve(false),

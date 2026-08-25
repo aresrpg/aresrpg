@@ -61,6 +61,9 @@ pub struct CheckpointWrites {
 
 /// The game projection handler.
 pub struct AresHandler {
+    /// The seed (living-content) package's original id — the SECOND origin:
+    /// content events (ContentWritten, template creations) are typed by it.
+    seed_original: String,
     /// Original package id — the type origin every game type matches against
     /// (Sui type identity pins to the DEFINING package; one publish = one id).
     package_original: String,
@@ -72,9 +75,10 @@ pub struct AresHandler {
 }
 
 impl AresHandler {
-    pub fn new(package_original: &str, package_latest: &str) -> Result<Self> {
+    pub fn new(package_original: &str, package_latest: &str, seed_original: &str) -> Result<Self> {
         Ok(Self {
             package_original: canonical(package_original)?,
+            seed_original: canonical(seed_original)?,
             package_latest: canonical(package_latest)?,
         })
     }
@@ -322,7 +326,7 @@ impl Processor for AresHandler {
                 outputs: &output_views[i],
             })
             .collect();
-        let mut wire = publish::analyze(ckpt, ts_ms, &tx_views, game)?;
+        let mut wire = publish::analyze(ckpt, ts_ms, &tx_views, game, self.seed_original.as_str())?;
         publish::route_character_custody(&mut wire, ckpt, ts_ms, &custody);
 
         // the graph: flat outputs + deletes, tx order
@@ -336,6 +340,7 @@ impl Processor for AresHandler {
                 deleted: &flat_deleted,
                 custody: &custody,
                 market: &wire.market,
+                fight_lifecycle: &wire.fight_lifecycle,
             },
             game,
         )?;

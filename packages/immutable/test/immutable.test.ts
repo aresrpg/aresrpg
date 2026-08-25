@@ -10,32 +10,46 @@ import {
   client_to_chain_coordinate,
   characteristic_names,
   class_names,
+  class_spell_shape_errors,
+  class_spell_unlocks,
   craft_job_of,
+  craft_max_ingredients,
   craft_required_level,
+  craft_xp_at_level,
   craft_xp_from_ingredient_count,
+  dofus_weapon_damage_envelope,
   experience_curve,
   experience_progress,
   equipment_slot_accepts,
   equipment_categories,
+  gatherable_catalog,
+  gatherable_of,
+  gather_time_ms,
   job_slugs,
   job_level_from_xp,
   is_weapon_category,
   item_budget_envelope,
+  item_budget_standing,
   item_budget_stat_weight,
   item_budget_stat_weights,
   item_categories,
   item_is_stackable,
   rig_slots,
   level_from_xp,
+  model_variant_identity,
   pet_max_feeds,
+  protector_level_range,
   rune_effect,
+  rune_unit_weight,
+  rune_weight_scale,
   rune_max_apps,
   stat_names,
   weapon_categories,
-  world_entry_level,
-  WORLD_GATES,
   xp_for_level,
 } from '../src/index.ts'
+import { DOFUS_GEAR_POWER, DOFUS_WEAPON_POWER } from '../src/dofus_item_power_corpus.gen.ts'
+import { DOFUS_MOB_GRADES } from '../src/dofus_mob_power_corpus.gen.ts'
+import { dofus_mob_power_envelope, mob_power_cohort_of_role } from '../src/mob_power.ts'
 
 describe('chain-mirrored experience curve', () => {
   test('spot values match experience.move at low, middle, and cap levels', () => {
@@ -66,6 +80,12 @@ describe('chain-mirrored experience curve', () => {
   })
 })
 
+test('gather time mirrors the 12s to 2s chain root', () => {
+  expect(gather_time_ms(1)).toBe(12_000)
+  expect(gather_time_ms(100)).toBe(2_000)
+  expect(gather_time_ms(200)).toBe(2_000)
+})
+
 describe('immutable vocabularies', () => {
   test('maps the unsigned chain center to the client origin without losing fractional live movement', () => {
     expect(chain_to_client_coordinate(50_000)).toBe(0)
@@ -73,22 +93,68 @@ describe('immutable vocabularies', () => {
     expect(client_to_chain_coordinate(-12.25)).toBe(49_987.75)
   })
 
-  test('the job roster contains exactly the chain-backed 15 slugs', () => {
-    expect(job_slugs).toHaveLength(15)
-    expect(new Set(job_slugs).size).toBe(15)
+  test('the job roster contains exactly the chain-backed 11 slugs', () => {
+    expect(job_slugs).toHaveLength(11)
+    expect(new Set(job_slugs).size).toBe(11)
     expect(job_slugs.slice(0, 3)).toEqual(['FARMER', 'HERBALIST', 'MINER'])
   })
 
-  test('craft requirements mirror the Move ingredient-count formula', () => {
-    expect(craft_required_level(2)).toBe(1)
-    expect(craft_required_level(3)).toBe(14)
-    expect(craft_required_level(10)).toBe(100)
+  test('the immutable gatherable catalog owns job, tier, protector, and rare identity', () => {
+    expect(gatherable_catalog).toHaveLength(33)
+    expect(new Set(gatherable_catalog.map(({ item_type }) => item_type)).size).toBe(33)
+    expect(
+      ['FARMER', 'HERBALIST', 'MINER'].map((job) =>
+        gatherable_catalog.filter((row) => row.job === job).map(({ tier }) => tier)
+      )
+    ).toEqual([
+      [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11],
+      [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11],
+      [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11],
+    ])
+    expect(gatherable_of('wheat')).toEqual({
+      item_type: 'wheat',
+      job: 'FARMER',
+      tier: 1,
+      protector: 'protector_wheat_bricheton',
+      rare_item_type: 'golden_wheat',
+    })
+    expect(gatherable_of('golden_wheat')).toBeNull()
   })
 
-  test('craft XP depends only on distinct ingredient slots', () => {
-    expect([2, 3, 4, 5, 6, 7, 8, 9, 10].map(craft_xp_from_ingredient_count)).toEqual([
-      10, 25, 50, 100, 250, 500, 1000, 1000, 1000,
-    ])
+  test('protector levels use fixed introductory bands then follow resource level', () => {
+    expect(protector_level_range(1, 80)).toEqual({ level_min: 1, level_max: 5 })
+    expect(protector_level_range(2, 80)).toEqual({ level_min: 8, level_max: 12 })
+    expect(protector_level_range(3, 80)).toEqual({ level_min: 15, level_max: 25 })
+    expect(protector_level_range(4, 30)).toEqual({ level_min: 20, level_max: 40 })
+    expect(protector_level_range(11, 75)).toEqual({ level_min: 65, level_max: 85 })
+  })
+
+  test('model variants use an explicit separator without confusing underscores in exact models', () => {
+    const models = ['aragne', 'cro', 'cro_wani']
+    expect(model_variant_identity('aragne__fire', models)).toEqual({ basename: 'aragne', variant: 'fire' })
+    expect(model_variant_identity('cro_wani__white', models)).toEqual({ basename: 'cro_wani', variant: 'white' })
+    expect(model_variant_identity('cro_wani', models)).toEqual({ basename: 'cro_wani', variant: null })
+    expect(model_variant_identity('cro_wani_white', models)).toBeNull()
+    expect(model_variant_identity('missing__fire', models)).toBeNull()
+  })
+
+  test('craft requirements mirror the Move ingredient-count formula', () => {
+    expect(craft_max_ingredients).toBe(8)
+    expect([2, 3, 4, 5, 6, 7, 8].map(craft_required_level)).toEqual([1, 10, 20, 40, 60, 80, 100])
+  })
+
+  test('base craft XP depends only on distinct ingredient slots', () => {
+    expect([2, 3, 4, 5, 6, 7, 8].map(craft_xp_from_ingredient_count)).toEqual([10, 25, 50, 100, 250, 500, 1000])
+  })
+
+  test('obsolete recipes stop granting XP at Retro slot boundaries', () => {
+    expect(craft_xp_at_level(2, 59)).toBe(10)
+    expect(craft_xp_at_level(2, 60)).toBe(0)
+    expect(craft_xp_at_level(3, 79)).toBe(25)
+    expect(craft_xp_at_level(3, 80)).toBe(0)
+    expect(craft_xp_at_level(4, 99)).toBe(50)
+    expect(craft_xp_at_level(4, 100)).toBe(0)
+    expect(craft_xp_at_level(5, 100)).toBe(100)
   })
 
   test('pet power mirrors the Move feed cap', () => {
@@ -110,7 +176,7 @@ describe('immutable vocabularies', () => {
     expect(weapon_categories.every((category) => equipment_slot_accepts('weapon', category))).toBe(true)
     expect(rig_slots).toContain('tool')
     expect(equipment_slot_accepts('tool', 'tool_miner')).toBe(true)
-    expect(equipment_slot_accepts('weapon', 'helmet')).toBe(false)
+    expect(equipment_slot_accepts('weapon', 'hat')).toBe(false)
     expect(item_categories).not.toContain('pet_food')
     expect(item_is_stackable('pet_food')).toBe(false)
     expect(item_categories).toContain('rune')
@@ -118,8 +184,9 @@ describe('immutable vocabularies', () => {
   })
 
   test('craft professions derive from strict item categories and preserve authored fallback categories', () => {
-    expect(craft_job_of('helmet')).toBe('ARMORSMITH')
-    expect(craft_job_of('staff')).toBe('STAFF_CARVER')
+    expect(craft_job_of('hat')).toBe('TAILOR')
+    expect(craft_job_of('spear')).toBe('CARVER')
+    expect(craft_job_of('sword')).toBe('FORGER')
     expect(craft_job_of('key')).toBe('HANDYMAN')
     expect(craft_job_of('consumable')).toBeNull()
     expect(craft_job_of('resource')).toBeNull()
@@ -139,23 +206,139 @@ describe('immutable vocabularies', () => {
   })
 })
 
-describe('Dofus donor-fitted gear budget', () => {
-  test('preserves the fitted growth, certified medians, and donor variance from level one', () => {
-    expect(item_budget_envelope(1)).toEqual({ median: 2, p10: 1, p90: 5, hard_max: 12 })
-    expect(item_budget_envelope(80)).toEqual({ median: 663, p10: 412, p90: 1453, hard_max: 3341 })
-    expect(item_budget_envelope(105)).toEqual({ median: 945, p10: 587, p90: 2071, hard_max: 4763 })
-    expect(item_budget_envelope(195)).toEqual({ median: 2083, p10: 1294, p90: 4351, hard_max: 7490 })
+describe('Dofus Retro item power', () => {
+  test('ships the complete anonymous projection extracted from the official client', () => {
+    expect(Object.values(DOFUS_GEAR_POWER).flat()).toHaveLength(900)
+    expect(Object.values(DOFUS_WEAPON_POWER).flat()).toHaveLength(353)
   })
 
-  test('uses the fixed gear-budget weights, including premium stats', () => {
+  test('uses nearby real Retro donors instead of a fitted level curve', () => {
+    expect(item_budget_envelope(1, 'tool_farmer')).toMatchObject({
+      median: 3.75,
+      p10: 1,
+      p90: 14,
+      corpus_max: 138,
+      sample_count: 141,
+    })
+    expect(item_budget_envelope(60, 'tool_farmer')).toMatchObject({
+      median: 120,
+      p10: 32.5,
+      p90: 230,
+      corpus_max: 400,
+      sample_count: 141,
+    })
+  })
+
+  test('positions an authored maximum against donor maximums from that same cohort', () => {
+    expect(item_budget_standing(10, 'hat', 80)).toEqual({
+      percentile: 98,
+      exact_level_power_donors: 1,
+    })
+  })
+
+  test('unsupported Retro stats cannot stretch an Ares comparison cohort', () => {
+    expect(DOFUS_GEAR_POWER.hat).not.toContainEqual([20, 25_000])
+    expect(item_budget_envelope(10, 'hat').corpus_max).toBe(80)
+  })
+
+  test('uses the exact shared Retro rune weights', () => {
     expect(Object.keys(item_budget_stat_weights).toSorted()).toEqual([...stat_names].toSorted())
-    expect(item_budget_stat_weight('vitality', 50)).toBe(50)
+    expect(item_budget_stat_weight('vitality', 50)).toBe(12.5)
+    expect(item_budget_stat_weight('wisdom', 60)).toBe(180)
     expect(item_budget_stat_weight('action', 1)).toBe(100)
+    expect(item_budget_stat_weight('critical', 1)).toBe(30)
+    expect(item_budget_stat_weight('earth_resistance', 1)).toBe(4)
     expect(item_budget_stat_weight('unknown_future_stat', 7)).toBe(7)
+  })
+
+  test('keeps weapon output separate and compares damage per AP by family', () => {
+    expect(dofus_weapon_damage_envelope(50, 'sword')).toEqual({
+      average_p10: 2.3,
+      average_median: 3.9,
+      average_p90: 6.1,
+      average_max: 9.75,
+      maximum_p10: 3.1,
+      maximum_median: 4.8,
+      maximum_p90: 8.33,
+      maximum_max: 14,
+      sample_count: 21,
+      level_min: 40,
+      level_max: 60,
+    })
+  })
+})
+
+describe('Dofus Retro mob power', () => {
+  test('keeps the anonymous official grade corpus and its four cohorts intact', () => {
+    expect(DOFUS_MOB_GRADES).toHaveLength(4_067)
+    expect(
+      Object.fromEntries(
+        [0, 1, 2, 3].map((cohort) => [
+          cohort,
+          DOFUS_MOB_GRADES.filter(([, , , , , , , , candidate]) => candidate === cohort).length,
+        ])
+      )
+    ).toEqual({ 0: 2_289, 1: 1_418, 2: 285, 3: 75 })
+    expect(
+      DOFUS_MOB_GRADES.every(([level, hp, ap, mp]) => level >= 1 && level <= 255 && hp > 0 && ap >= 0 && mp >= 0)
+    ).toBeTrue()
+    expect(DOFUS_MOB_GRADES.filter(([, , , , , , , , , xp, damage]) => xp >= 0 && damage >= 0)).toHaveLength(3_662)
+  })
+
+  test('uses nearby real grades and the authored role cohort', () => {
+    expect(dofus_mob_power_envelope(40)).toMatchObject({
+      cohort: 'regular',
+      sample_count: 58,
+      level_min: 40,
+      level_max: 40,
+      hp: { average: 343, p25: 313, median: 350, p75: 350, p90: 400 },
+      ap: { median: 7 },
+      mp: { median: 5 },
+    })
+    expect(dofus_mob_power_envelope(40, 'archi').hp).toEqual({
+      average: 687,
+      p25: 600,
+      median: 700,
+      p75: 765,
+      p90: 800,
+    })
+    expect(mob_power_cohort_of_role('protector')).toBe('protector')
+    expect(mob_power_cohort_of_role('boss')).toBe('boss')
+  })
+
+  test('falls back to same-level regular grades before borrowing a distant role cohort', () => {
+    expect(dofus_mob_power_envelope(3, 'protector')).toMatchObject({
+      requested_cohort: 'protector',
+      cohort: 'regular',
+      level_min: 3,
+      level_max: 3,
+      damage: { average: 9, p25: 4, median: 6, p75: 12, p90: 22 },
+    })
+    expect(dofus_mob_power_envelope(10, 'protector')).toMatchObject({
+      requested_cohort: 'protector',
+      cohort: 'protector',
+      level_min: 10,
+      level_max: 10,
+      damage: { average: 90 },
+    })
   })
 })
 
 describe('Move rune catalog mirror', () => {
+  test('mirrors the exact Retro unit weights and scale', () => {
+    expect(rune_weight_scale).toBe(20)
+    expect(stat_names.map(rune_unit_weight)).toEqual([0.25, 3, 1, 1, 1, 1, 51, 90, 100, 30, 20, 4, 4, 4, 4])
+    const source = readFileSync(resolve(import.meta.dir, '../../move-math/sources/rune_catalog.move'), 'utf8')
+    const move_scale = Number(/const WEIGHT_SCALE: u64 = (\d+)/u.exec(source)?.[1])
+    const move_weights = /const UNIT_WEIGHTS: vector<u64> = vector\[([^\]]+)\]/u
+      .exec(source)?.[1]
+      ?.split(',')
+      .map((value) => Number(value.trim().replaceAll('_', '')))
+
+    expect(move_scale).toBe(rune_weight_scale)
+    expect(move_weights).toEqual(stat_names.map((stat) => rune_unit_weight(stat) * rune_weight_scale))
+  })
+
   test('projects every Move tier amount without a second frontend table', () => {
     const source = readFileSync(resolve(import.meta.dir, '../../move-math/sources/rune_catalog.move'), 'utf8')
     const move_amounts = (name: string): readonly number[] => {
@@ -184,20 +367,22 @@ describe('Move rune catalog mirror', () => {
   })
 })
 
-describe('the world gates twin', () => {
-  test('names and entry levels match every world_map.move branch, in chain order', () => {
-    const source = readFileSync(resolve(import.meta.dir, '../../move-math/sources/world_map.move'), 'utf8')
-    const body = source.match(/public fun entry_level[\s\S]*?\n}/)?.[0]
-    expect(body).toBeDefined()
-    const move_gates: [string, number][] = []
-    for (const branch of body!.matchAll(/if \(\*world == b"([a-z0-9_]+)".to_string\(\)\) return (\d+);/g))
-      move_gates.push([branch[1]!, Number(branch[2]!)])
+describe('the class spell law', () => {
+  const ladder_for = (classe: string) =>
+    class_spell_unlocks.map((unlock_level, i) => ({ name: `${classe}_${i}`, classe, unlock_level }))
+  const full_corpus = () => class_names.flatMap((classe) => ladder_for(classe))
 
-    expect(move_gates.length).toBe(WORLD_GATES.length)
-    expect(WORLD_GATES.map(({ name, entry_level }) => [name, entry_level])).toEqual(move_gates)
+  test('the exact ladder for every class passes', () => {
+    expect(class_spell_shape_errors(full_corpus())).toEqual([])
   })
 
-  test('an unknown world reads as forever locked, never level zero', () => {
-    expect(world_entry_level('99_nowhere')).toBe(Number.MAX_SAFE_INTEGER)
+  test('an extra spell, a missing slot, or a duplicated level each name their class', () => {
+    const extra = [...full_corpus(), { name: 'one_too_many', classe: 'senshi', unlock_level: 50 }]
+    expect(class_spell_shape_errors(extra)).toEqual(['senshi has 21 spells; the law is exactly 20'])
+
+    const swapped = full_corpus().map((spell) => (spell.name === 'mori_3' ? { ...spell, unlock_level: 90 } : spell))
+    expect(class_spell_shape_errors(swapped)).toEqual([
+      'mori breaks the unlock ladder — too many at level 90; none at level 3',
+    ])
   })
 })

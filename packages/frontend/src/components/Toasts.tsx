@@ -37,10 +37,13 @@ export const Toasts = () => {
           key={toast.id}
         >
           <div className="flex min-w-0 items-center gap-3">
-            {toast.type === 'pending' && (
+            {toast.icon ? (
+              <img alt="" aria-hidden="true" className="size-8 shrink-0 object-contain" src={toast.icon} />
+            ) : toast.type === 'pending' ? (
               <span className="size-3.5 shrink-0 animate-spin rounded-full border-2 border-[#c8963c]/30 border-t-[#c8963c]" />
-            )}
-            {toast.type === 'success' && <span className="shrink-0 text-[13px] leading-none">✓</span>}
+            ) : toast.type === 'success' ? (
+              <span className="shrink-0 text-[13px] leading-none">✓</span>
+            ) : null}
             <span className="min-w-0 flex-1 text-[11px] leading-relaxed tracking-wide break-words whitespace-pre-wrap">
               {toast.message}
             </span>

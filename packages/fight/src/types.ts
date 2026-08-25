@@ -85,6 +85,7 @@ export type PlayerFighterKind = {
   type: 'player'
   character: string
   owner: string
+  level: MoveInteger
 }
 
 export type MobFighterKind = {
@@ -133,7 +134,7 @@ export type BoardZone = {
   effects: SpellEffect[]
 }
 
-/** The complete normalized fight object mirrored from Move. */
+/** The complete normalized fight object mirrored from Move, plus indexed lifecycle clocks. */
 export type FightContract = {
   id: string
   world: string
@@ -160,6 +161,9 @@ export type FightContract = {
   turn_slot: MoveInteger
   turn_casts: TurnCast[]
   placement_ms: MoveInteger
+  /** Checkpoint timestamps persisted by the indexer from lifecycle event envelopes. */
+  started_ms: MoveInteger | null
+  ended_ms: MoveInteger | null
   turn_started_ms: MoveInteger
 }
 
@@ -501,7 +505,7 @@ export type MobTemplateSource = {
   fire_res: MoveInteger
   water_res: MoveInteger
   air_res: MoveInteger
-  spells: { name: string; levels: SpellLevel[] }[]
+  spells: { name: string; level: SpellLevel }[]
   loot: MobLoot[]
   xp: MoveInteger
 }
@@ -512,6 +516,9 @@ export type FightSetup = {
   x?: MoveInteger
   z?: MoveInteger
   board_seed?: MoveInteger
+  /** an AUTHORED board (a fight_boards.json catalog row, bigint-shaped) — when present it
+   * wins over board_seed generation; live fights always read their stored board instead */
+  board?: FightBoard
   players: FightPlayerInput[]
   mobs: FightMobInput[]
   spells?: Record<string, SpellSource>

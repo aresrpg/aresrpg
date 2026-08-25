@@ -6,6 +6,7 @@
 /// and the package-private template internals only the defining module can own.
 module aresrpg::item;
 
+use aresrpg_seed::item_rows::{Self, ItemTemplate};
 use aresrpg_math::{content_rules, item_damages::ItemDamages, item_stats::{Self, ItemStatistics}};
 use std::string::String;
 use sui::{
@@ -21,13 +22,10 @@ use sui::{
 
 // ╔════════════════ [ Constants ] ════════════════════════════════════════════ ]
 
-const EWrongCategory: u64 = 201;
 const ENotStackable: u64 = 202;
 const EWrongAmount: u64 = 203;
 const EWrongTemplate: u64 = 204;
-const EStackableStats: u64 = 205; // set_template_*: a stackable carries no stats/damages
 const EPlainNeedsRoll: u64 = 207; // mint_plain: a ranged template must roll — use `mint`
-const EInvalidStatRange: u64 = 206; // set_template_stats: a min above its max would poison every mint, forever
 
 // ╔════════════════ [ Types ] ════════════════════════════════════════════════ ]
 
@@ -44,40 +42,32 @@ public struct Item has key, store {
   amount: u32,
 }
 
-/// The frozen content blueprint. Stat ranges / damages / effects attach as dynamic fields by
-/// their own modules BEFORE `freeze_template` seals it — frozen objects accept nothing more.
-public struct ItemTemplate has key {
-  id: UID,
-  name: String,
-  item_type: String,
-  category: String,
-  level: u8,
-  pet_foods: vector<String>,
-}
-
-/// Derivation root for template addresses — one claim per `item_type`, duplicates abort.
-public struct TemplateRegistry has key {
-  id: UID,
+/// An authenticated PTB-local mint value prepared from one immutable template before the
+/// terminal Random call. Private fields prevent a caller from forging item facts.
+public struct PM has drop {
+  t: ID,
+  n: String,
+  y: String,
+  c: String,
+  l: u8,
+  a: vector<u16>,
+  b: vector<u16>,
+  d: vector<ItemDamages>,
+  e: Option<ID>,
 }
 
 /// One-time seal marker on the registry — its presence closes the seeding forever.
-public struct SealedKey() has copy, drop, store;
 
 /// DF keys: authored stat RANGES on the template; the ROLLED block + damage snapshot on the item.
-public struct StatsMinKey() has copy, drop, store;
-public struct StatsMaxKey() has copy, drop, store;
 public struct StatsKey() has copy, drop, store;
 public struct DamagesKey() has copy, drop, store;
 
 // one time witness
 public struct ITEM has drop {}
 
-public struct TemplateCreated has copy, drop { template: ID, item_type: String }
-
 // ╔════════════════ [ init ] ═════════════════════════════════════════════════ ]
 
 fun init(otw: ITEM, ctx: &mut TxContext) {
-  transfer::share_object(TemplateRegistry { id: object::new(ctx) });
   transfer::public_transfer(package::claim(otw, ctx), ctx.sender());
 }
 
@@ -105,76 +95,49 @@ public(package) fun nd(
 
 // ╔════════════════ [ Seed internals (the seeding lives in seed.move) ] ══════ ]
 
-/// Sibling content modules (mob_template) derive under the SAME registry with their own
-/// typed keys — one seeding, one seal, no slug collisions.
-public(package) fun ru(registry: &mut TemplateRegistry): &mut UID {
-  &mut registry.id
+public(package) fun prepare_plan(template: &ItemTemplate, existing: Option<ID>): PM {
+  let has_stats = item_rows::has_stats(template);
+  let stats_lo = if (has_stats) item_rows::stats_min(template).to_vector() else vector[];
+  let stats_hi = if (has_stats) item_rows::stats_max(template).to_vector() else vector[];
+  PM {
+    t: item_rows::template_id(template),
+    n: item_rows::template_name(template),
+    y: item_rows::template_type(template),
+    c: item_rows::template_category(template),
+    l: item_rows::template_level(template),
+    a: stats_lo,
+    b: stats_hi,
+    d: item_rows::damage_lines(template),
+    e: existing,
+  }
 }
 
-/// Content modules attach their own typed facts while the template is still hot.
-public(package) fun tu(template: &mut ItemTemplate): &mut UID {
-  &mut template.id
-}
-
-/// Is the seeding closed forever?
-public fun is_sealed(registry: &TemplateRegistry): bool {
-  dfield::exists(&registry.id, SealedKey())
-}
-
-/// Write the eternal seal — a second call aborts on the duplicate field.
-public(package) fun seal(registry: &mut TemplateRegistry) {
-  dfield::add(&mut registry.id, SealedKey(), true);
-}
-
-/// Mint a template at the address derived from its `item_type` — a second mint of the same
-/// type aborts. NOT a hot potato (a potato can't become an object): `key` WITHOUT `store` is
-/// the force — no transfer, no wrapping, no dynamic-field storage, and the only public
-/// consumer is `freeze_template`. An unconsumed template fails the whole transaction.
-public(package) fun nt(
-  registry: &mut TemplateRegistry,
-  name: String,
-  item_type: String,
-  category: String,
-  level: u8,
-  pet_foods: vector<String>,
-): ItemTemplate {
-  vc1(category);
-  let template = ItemTemplate {
-    id: derived_object::claim(&mut registry.id, item_type),
-    name,
-    item_type,
-    category,
-    level,
-    pet_foods,
-  };
-  event::emit(TemplateCreated { template: template.id.to_inner(), item_type: template.item_type });
-  template
-}
-
-/// Seeding: author the stat RANGES on a hot template. Possession IS the authorization — only
-/// the seeding ever holds a template `&mut` (frozen right after). Gear only; every min ≤ its
-/// max is asserted HERE, before the freeze can seal a poisoned range.
-public(package) fun sts(template: &mut ItemTemplate, min: ItemStatistics, max: ItemStatistics) {
-  assert!(!content_rules::is_stackable(&template.category), EStackableStats);
-  let (lo, hi) = (min.to_vector(), max.to_vector());
+/// Consume every rolled row of `wanted` through its authenticated blueprint. `count` is the
+/// number of non-stackable objects; `total` is the one stackable amount.
+public(package) fun deliver_drops(
+  plan: &mut vector<PM>,
+  wanted: &String,
+  count: u64,
+  total: u32,
+  kiosk: &mut Kiosk,
+  cap: &KioskOwnerCap,
+  policy: &TransferPolicy<Item>,
+  gen: &mut RandomGenerator,
+  ctx: &mut TxContext,
+) {
   let mut i = 0;
-  while (i < lo.length()) {
-    assert!(lo[i] <= hi[i], EInvalidStatRange);
-    i = i + 1;
+  while (i < plan.length() && &plan[i].y != wanted) i = i + 1;
+  // A missing authenticated template aborts on the vector bound before any transaction commits.
+  let row = plan.remove(i);
+  if (content_rules::is_stackable(&row.c)) {
+    deposit(kiosk, cap, policy, row.e, pm(&row, total, gen, ctx));
+  } else {
+    let mut n = 0;
+    while (n < count) {
+      deposit(kiosk, cap, policy, option::none(), pm(&row, 1, gen, ctx));
+      n = n + 1;
+    };
   };
-  dfield::add(&mut template.id, StatsMinKey(), min);
-  dfield::add(&mut template.id, StatsMaxKey(), max);
-}
-
-/// Seeding: author the damage lines on a hot template (weapons). Same possession law.
-public(package) fun std(template: &mut ItemTemplate, lines: vector<ItemDamages>) {
-  assert!(!content_rules::is_stackable(&template.category), EStackableStats);
-  dfield::add(&mut template.id, DamagesKey(), lines);
-}
-
-/// Seal a template forever — the chain rejects every future write, from anyone.
-public(package) fun ft(template: ItemTemplate) {
-  transfer::freeze_object(template);
 }
 
 // ╔════════════════ [ Package ] ══════════════════════════════════════════════ ]
@@ -189,19 +152,37 @@ public(package) fun mint(
   gen: &mut RandomGenerator,
   ctx: &mut TxContext,
 ): Item {
-  let mut item = mb(template, amount, ctx);
-  if (dfield::exists(&template.id, StatsMinKey())) {
-    let lo: &ItemStatistics = dfield::borrow(&template.id, StatsMinKey());
-    let hi: &ItemStatistics = dfield::borrow(&template.id, StatsMaxKey());
-    let (lo_v, hi_v) = (lo.to_vector(), hi.to_vector());
+  let row = prepare_plan(template, option::none());
+  pm(&row, amount, gen, ctx)
+}
+
+fun pm(row: &PM, amount: u32, gen: &mut RandomGenerator, ctx: &mut TxContext): Item {
+  let mut minted = pb(row, amount, ctx);
+  if (!row.a.is_empty()) {
     let mut rolled = vector[];
     let mut i = 0;
-    while (i < lo_v.length()) {
-      rolled.push_back(gen.generate_u16_in_range(lo_v[i], hi_v[i]));
+    while (i < row.a.length()) {
+      rolled.push_back(gen.generate_u16_in_range(row.a[i], row.b[i]));
       i = i + 1;
     };
-    dfield::add(&mut item.id, StatsKey(), item_stats::from_vector(rolled));
+    dfield::add(&mut minted.id, StatsKey(), item_stats::from_vector(rolled));
   };
+  minted
+}
+
+fun pb(row: &PM, amount: u32, ctx: &mut TxContext): Item {
+  assert!(amount >= 1, EWrongAmount);
+  if (amount > 1) assert!(content_rules::is_stackable(&row.c), ENotStackable);
+  let mut item = Item {
+    id: object::new(ctx),
+    template: row.t,
+    name: row.n,
+    item_type: row.y,
+    category: row.c,
+    level: row.l,
+    amount,
+  };
+  if (!row.d.is_empty()) dfield::add(&mut item.id, DamagesKey(), row.d);
   item
 }
 
@@ -209,30 +190,9 @@ public(package) fun mint(
 /// sales, airdrops, giftcards: owner 2026-08-10, "no stats there"). A ranged template MUST
 /// roll, so it aborts here — the rolling `mint` is its only door.
 public(package) fun mp(template: &ItemTemplate, amount: u32, ctx: &mut TxContext): Item {
-  assert!(!dfield::exists(&template.id, StatsMinKey()), EPlainNeedsRoll);
-  mb(template, amount, ctx)
-}
-
-// mint_base
-/// The shared factory: the snapshot Item + the damage-line copy. `mint` adds the stat roll
-/// on top; `mint_plain` stops here (stat-less by assertion). ONE Item construction home.
-fun mb(template: &ItemTemplate, amount: u32, ctx: &mut TxContext): Item {
-  assert!(amount >= 1, EWrongAmount);
-  if (amount > 1) assert!(content_rules::is_stackable(&template.category), ENotStackable);
-  let mut item = Item {
-    id: object::new(ctx),
-    template: template.id.to_inner(),
-    name: template.name,
-    item_type: template.item_type,
-    category: template.category,
-    level: template.level,
-    amount,
-  };
-  if (dfield::exists(&template.id, DamagesKey())) {
-    let lines: &vector<ItemDamages> = dfield::borrow(&template.id, DamagesKey());
-    dfield::add(&mut item.id, DamagesKey(), *lines);
-  };
-  item
+  assert!(!item_rows::has_stats(template), EPlainNeedsRoll);
+  let row = prepare_plan(template, option::none());
+  pb(&row, amount, ctx)
 }
 
 /// Land a minted stack in the owner's kiosk: MERGE into the presented existing stack
@@ -303,7 +263,7 @@ public(package) fun burn(
     stack.amount = stack.amount - amount;
     stack.category
   } else {
-    let stack: Item = protected.x(kiosk, cap, id, ctx);
+    let stack: Item = protected.extract_from_kiosk(kiosk, cap, id, ctx);
     let category = stack.category;
     stack.destroy();
     category
@@ -321,20 +281,6 @@ public(package) fun uid(self: &Item): &UID {
 // ╔════════════════ [ Reads ] ════════════════════════════════════════════════ ]
 
 public fun template(self: &Item): ID { self.template }
-
-public fun template_id(template: &ItemTemplate): ID { template.id.to_inner() }
-
-public(package) fun tuid(template: &ItemTemplate): &UID { &template.id }
-
-public(package) fun tis(template: &ItemTemplate): bool {
-  content_rules::is_stackable(&template.category)
-}
-
-public fun template_type(template: &ItemTemplate): String { template.item_type }
-
-public fun template_category(template: &ItemTemplate): String { template.category }
-
-public(package) fun tpf(template: &ItemTemplate): &vector<String> { &template.pet_foods }
 
 public fun item_type(self: &Item): String { self.item_type }
 
@@ -354,25 +300,34 @@ public(package) fun ss(self: &mut Item, stats: ItemStatistics) {
   *dfield::borrow_mut(&mut self.id, StatsKey()) = stats;
 }
 
-/// The template's authored MAX block — the forgemagie scribe reads it as the proximity ceiling.
-public fun template_max_stats(template: &ItemTemplate): ItemStatistics {
-  *dfield::borrow(&template.id, StatsMaxKey())
-}
-
 public fun has_damages(self: &Item): bool { dfield::exists(&self.id, DamagesKey()) }
 
 public fun damages(self: &Item): vector<ItemDamages> { *dfield::borrow(&self.id, DamagesKey()) }
 
 // ╔════════════════ [ Private ] ══════════════════════════════════════════════ ]
 
-// verify_category
-/// The reconciled category law: gear slots + cosmetics + the 11 weapon families + the 3
-/// gathering tools (dedicated tool slot — never the weapon slot) + the fungibles. No mount.
-fun vc1(category: String) {
-  assert!(content_rules::is_category(&category), EWrongCategory);
-}
-
 // ╔════════════════ [ Testing ] ══════════════════════════════════════════════ ]
 
 #[test_only]
 public fun test_init(ctx: &mut TxContext) { init(ITEM {}, ctx) }
+
+#[test_only]
+public fun split_preserves_template_for_testing(ctx: &mut TxContext): bool {
+  let template_uid = object::new(ctx);
+  let template = template_uid.to_inner();
+  template_uid.delete();
+  let mut stack = Item {
+    id: object::new(ctx),
+    template,
+    name: b"potion".to_string(),
+    item_type: b"potion".to_string(),
+    category: b"consumable".to_string(),
+    level: 1,
+    amount: 2,
+  };
+  let lot = stack.split(1, ctx);
+  let preserved = lot.template == stack.template && lot.amount == 1 && stack.amount == 1;
+  lot.destroy();
+  stack.destroy();
+  preserved
+}

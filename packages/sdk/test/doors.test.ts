@@ -24,6 +24,7 @@ const pins = {
   character_protected_policy: pin(8),
   item_protected_policy: pin(9),
   friend_registry: pin(10),
+  board_catalog: pin(20),
 }
 
 const owned = (object_id: string, version = '5'): ChangedRow => ({
@@ -62,7 +63,7 @@ const move_calls = (tx: Transaction) =>
 const inputs_of = (tx: Transaction) => tx.getData().inputs
 
 describe('generated doors through the bound resolver', () => {
-  test('create_character: right target, 13 args, every object input PRE-RESOLVED', () => {
+  test('create_character: right target, 14 args, every object input PRE-RESOLVED', () => {
     const sdk = game()
     const tx = sdk.tx()
     sdk.doors.create_character(tx, {
@@ -75,12 +76,13 @@ describe('generated doors through the bound resolver', () => {
       color_1: 1,
       color_2: 2,
       color_3: 3,
+      first_world: id(14),
     })
     const [call] = move_calls(tx)
     expect(call.package).toBe(pins.package)
     expect(call.module).toBe('api')
     expect(call.function).toBe('create_character')
-    expect(call.arguments).toHaveLength(13)
+    expect(call.arguments).toHaveLength(14)
     // ZERO unresolved inputs: every object is a SharedObject or ImmOrOwnedObject ref already
     const unresolved = inputs_of(tx).filter((i) => 'UnresolvedObject' in i || 'UnresolvedPure' in i)
     expect(unresolved).toHaveLength(0)
@@ -115,6 +117,8 @@ describe('generated doors through the bound resolver', () => {
       cap: id(13),
       character_id: id(13),
       w: id(15),
+      wc: { objectId: id(21), initialSharedVersion: '7' },
+      catalog: { objectId: id(22), initialSharedVersion: '8' },
       zx: 0,
       zz: 0,
       group_index: 0,

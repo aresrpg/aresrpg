@@ -35,6 +35,7 @@ import marketplace, {
   type MarketplaceInput,
   type MarketplaceState,
 } from './modules/marketplace.ts'
+import dungeon, { initial_dungeon_state, type DungeonInput, type DungeonState } from './modules/dungeon.ts'
 
 export type AppState = Readonly<{
   session: SessionState
@@ -51,6 +52,7 @@ export type AppState = Readonly<{
   chat: ChatState
   world: WorldState
   marketplace: MarketplaceState
+  dungeon: DungeonState
 }>
 
 export type AppInput =
@@ -68,6 +70,7 @@ export type AppInput =
   | WorldInput
   | DuelInput
   | MarketplaceInput
+  | DungeonInput
 
 type EventArguments = {
   [K in AppInput['type']]: [Extract<AppInput, { type: K }>]
@@ -107,6 +110,7 @@ const MODULES = Object.freeze([
   fight_chain,
   claims,
   marketplace,
+  dungeon,
 ]) satisfies readonly AppModule[]
 
 export type AppModuleName = (typeof MODULES)[number]['name']
@@ -130,6 +134,7 @@ export const initial_app_state = (settings_state: GameSettings): AppState =>
     chat: initial_chat_state(),
     world: initial_world_state(),
     marketplace: initial_marketplace_state(),
+    dungeon: initial_dungeon_state(),
   })
 
 const create_events = () => {

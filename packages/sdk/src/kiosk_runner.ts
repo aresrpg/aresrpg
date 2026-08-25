@@ -28,7 +28,7 @@ export type KioskCustody = Readonly<{ kiosk: string; kiosk_cap?: string }>
  *  cap is wrong whenever the object lives elsewhere. */
 export type KioskCapLoader = (kiosk_id?: string) => Promise<KioskOwnerCap | null>
 
-type RunOptions = Readonly<{ include?: object; custody?: KioskCustody }>
+type RunOptions = Readonly<{ include?: object; custody?: KioskCustody; gas_scope?: string }>
 
 export const create_kiosk_runner = (sdk: GameSdk, kiosk_cap: KioskCapLoader) => {
   const resolve_cap = async (custody?: KioskCustody): Promise<KioskOwnerCap | null> =>
@@ -59,11 +59,9 @@ export const create_kiosk_runner = (sdk: GameSdk, kiosk_cap: KioskCapLoader) => 
     ): Promise<Receipt> => {
       const personal = await resolve_cap(options.custody)
       if (!personal) throw new Error('No personal kiosk exists for this session yet')
-      // The server's custody row names the right objects, but its owned-cap ref may trail a
-      // preceding kiosk transaction. Refresh the cap unconditionally; `hydrate_unknown`
-      // would preserve a known stale digest and make the next terminal action unbuildable.
-      await sdk.hydrate_owned_current([personal.objectId])
-      await sdk.hydrate_unknown([personal.kioskId])
+      // Unknown external inputs read once. After any own transaction, the receipt-fed cache
+      // already holds the exact next cap ref; polling a load-balanced node may only regress it.
+      await sdk.hydrate_unknown([personal.objectId, personal.kioskId])
       const tx = sdk.tx()
       compose(tx, personal.kioskId, personal.objectId)
       return sdk.execute(tx, options)

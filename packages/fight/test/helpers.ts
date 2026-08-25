@@ -69,7 +69,7 @@ export const create_fixture = () => {
             fire_res: 32_768n,
             water_res: 32_768n,
             air_res: 32_768n,
-            spells: [{ name: 'bite', levels: [spell_level(10n)] }],
+            spells: [{ name: 'bite', level: spell_level(10n) }],
             xp: 50n,
             loot: [],
           },

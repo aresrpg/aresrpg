@@ -4,7 +4,9 @@
 import { readFileSync } from 'node:fs'
 
 import { create_character_source, create_fight, reachable_fight_cells } from '@aresrpg/fight'
+import { CHANNELS, EFFECT_KINDS } from '@aresrpg/fight/move_contract'
 import { describe, expect, test } from 'bun:test'
+import { renderToStaticMarkup } from 'react-dom/server'
 
 import {
   presented_turn_after_cue,
@@ -13,7 +15,13 @@ import {
   select_fight_view,
   turn_seconds_remaining,
 } from '../../../src/game/fight/fight_projection.ts'
-import { end_turn_wait_ms, should_auto_start_placement } from '../../../src/game/fight/FightHud.tsx'
+import { crank_prompt_hidden, end_turn_wait_ms } from '../../../src/game/fight/FightHud.tsx'
+import { fight_portrait_source, FightTimeline } from '../../../src/game/fight/FightTimeline.tsx'
+import {
+  fight_turn_card_after_observation,
+  fight_turn_card_view,
+  FightTurnCard,
+} from '../../../src/game/fight/FightTurnCard.tsx'
 
 const source = create_character_source({ classe: 'senshi', level: 1n, spell_levels: { slash: 1n } })
 const spell_level = {
@@ -64,6 +72,13 @@ const started_checkpoint = () => {
 }
 
 describe('generic fight view', () => {
+  test('a crank prompt stays dismissed after one tap and returns only on rollback', () => {
+    const attempt = { turn_key: 'fight:1:1000', restore_serial: 4 }
+    expect(crank_prompt_hidden(attempt, 'fight:1:1000', 4)).toBeTrue()
+    expect(crank_prompt_hidden(attempt, 'fight:1:1000', 5)).toBeFalse()
+    expect(crank_prompt_hidden(attempt, 'fight:0:2000', 4)).toBeFalse()
+  })
+
   test('end turn waits from local observation, independent of wall-clock skew', () => {
     expect(end_turn_wait_ms(10_000, 10_000)).toBe(3_500)
     expect(end_turn_wait_ms(10_000, 13_499)).toBe(1)
@@ -122,6 +137,91 @@ describe('generic fight view', () => {
     expect(view.timeline.find(({ character_id }) => character_id === 'theirs')?.name).toBe('Enemy Name')
   })
 
+  test('mob turn cards retain their asset identity and resolve its authored portrait', () => {
+    const checkpoint = started_checkpoint()
+    checkpoint.contract.fighters[2]!.kind = {
+      type: 'mob',
+      snapshot: { mob_type: 'aragne__fire', level: 1n, max_hp: 55n },
+    } as never
+    const view = select_fight_view({ checkpoint, mode: 'remote', owner: 'mine', names: {} })
+    const mob = view.timeline.find(({ seat }) => seat === 2n)!
+
+    expect(mob.mob_type).toBe('aragne__fire')
+    const icon_for = (mob_type: string) => `/mob/${mob_type}.png`
+    expect(fight_portrait_source(mob, icon_for)).toBe('/mob/aragne__fire.png')
+    expect(fight_portrait_source(view.timeline[0]!, icon_for)).toBeNull()
+    expect(
+      renderToStaticMarkup(
+        FightTimeline({
+          fighters: view.timeline,
+          focus: () => undefined,
+          label: 'Turn order',
+          mob_icon_for: icon_for,
+          turn_seconds: null,
+        })
+      )
+    ).toContain('src="/mob/aragne__fire.png"')
+  })
+
+  test('a final-turn AP and Power buff remains visible on its timeline card', () => {
+    const checkpoint = started_checkpoint()
+    checkpoint.contract.fighters[2]!.effects = [
+      { kind: EFFECT_KINDS.add, element: '', value: 2n, turns_left: 1n, source: 1n, stat: CHANNELS.ap },
+      { kind: EFFECT_KINDS.add, element: '', value: 50n, turns_left: 1n, source: 1n, stat: CHANNELS.power },
+    ]
+    const view = select_fight_view({ checkpoint, mode: 'local', owner: 'mine', names: {} })
+    const html = renderToStaticMarkup(
+      FightTimeline({
+        fighters: view.timeline,
+        focus: () => undefined,
+        label: 'Turn order',
+        mob_icon_for: () => null,
+        turn_seconds: null,
+      })
+    )
+
+    expect(html).toContain('>2</b> AP')
+    expect(html).toContain('>50</b>')
+    expect(html.toLowerCase()).toContain('power')
+    expect(html).toContain('(1 turn)')
+  })
+
+  test('the turn-start card follows the presented fighter and falls back for characters', () => {
+    const checkpoint = started_checkpoint()
+    checkpoint.contract.fighters[2]!.kind = {
+      type: 'mob',
+      snapshot: { mob_type: 'aragne__fire', level: 45n, max_hp: 55n },
+    } as never
+    const view = select_fight_view({ checkpoint, mode: 'remote', owner: 'mine', names: { aragne__fire: 'Aragne' } })
+    const presented = fight_turn_card_view(view.timeline, 2n, 'fight:0:1000')
+
+    expect(presented).toMatchObject({ key: 'fight:0:1000:2', fighter: { name: 'Aragne', level: 45n } })
+    const current = fight_turn_card_view(view.timeline, null, 'fight:0:1000')
+    expect(fight_turn_card_after_observation(current, view.timeline, null, 'fight:0:1000', true)).toBe(current)
+    expect(fight_turn_card_after_observation(null, view.timeline, null, 'fight:0:1000', true)).toBeNull()
+    expect(fight_turn_card_after_observation(current, view.timeline, 2n, 'fight:0:1000', true)).toEqual(presented)
+    expect(
+      renderToStaticMarkup(
+        FightTurnCard({ fighter: presented!.fighter, level_label: 'Level 45', mob_icon_for: () => '/mob.png' })
+      )
+    ).toContain('src="/mob.png"')
+
+    const character = fight_turn_card_view(view.timeline, null, 'fight:0:1001')
+    expect(character?.fighter.character_id).not.toBeNull()
+    expect(
+      renderToStaticMarkup(
+        FightTurnCard({ fighter: character!.fighter, level_label: 'Level 1', mob_icon_for: () => null })
+      )
+    ).toContain('data-character-placeholder=""')
+
+    const css = readFileSync(new URL('../../../src/game/fight/fight_hud.css', import.meta.url), 'utf8')
+    const card_rule = /\.fight-hud__turn-card\s*\{(?<body>[^}]*)\}/s.exec(css)?.groups?.body ?? ''
+    const body_rule = /\.fight-hud__turn-card-body\s*\{(?<body>[^}]*)\}/s.exec(css)?.groups?.body ?? ''
+    expect(card_rule).toContain('background: transparent')
+    expect(card_rule).not.toContain('clip-path')
+    expect(body_rule).toContain('justify-content: flex-start')
+  })
+
   test('a refreshed canonical own turn reconstructs its MP range without local history', () => {
     const checkpoint = started_checkpoint()
     const view = select_fight_view({ checkpoint, mode: 'remote', owner: 'mine', names: {} })
@@ -166,7 +266,7 @@ describe('generic fight view', () => {
     expect(select_fight_view({ checkpoint, mode: 'remote', owner: 'mine', names: {} }).sides_manned).toBeTrue()
   })
 
-  test('a solo PvM ready starts immediately instead of waiting for imaginary players', () => {
+  test('a solo PvM starts only through Ready, never from the placement timer', () => {
     const checkpoint = structuredClone(started_checkpoint())
     checkpoint.contract.fighters = [
       checkpoint.contract.fighters[0]!,
@@ -179,9 +279,9 @@ describe('generic fight view', () => {
     const view = select_fight_view({ checkpoint, mode: 'remote', owner: 'mine', names: {} })
     expect(view.ready_starts_fight).toBeTrue()
     expect(view.show_turn_timer).toBeFalse()
-    expect(
-      should_auto_start_placement({ auto_start: view.solo_human_fight, stalled: true, locked: false, attempted: false })
-    ).toBeTrue()
+    const hud = readFileSync(new URL('../../../src/game/fight/FightHud.tsx', import.meta.url), 'utf8')
+    expect(hud).not.toContain('should_auto_start_placement')
+    expect(hud).not.toContain('auto_attempted')
   })
 
   test('the remote clock counts down from the chain 45-second window', () => {

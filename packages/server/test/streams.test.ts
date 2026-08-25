@@ -69,7 +69,7 @@ const fight_node = {
       fighters: [
         {
           team: 0,
-          kind: { player: { character: '0xabc', owner: '0xme' } },
+          kind: { player: { character: '0xabc', owner: '0xme', level: 10 } },
           cell: 1,
           ready: false,
           dead: false,
@@ -145,7 +145,7 @@ const wire = ({ seated = false, fight = fight_node } = {}) => {
         return [
           {
             item: {
-              properties: { id: '0xi1', name: 'hat', item_type: 'straw_hat', category: 'helmet', level: 3, amount: 1 },
+              properties: { id: '0xi1', name: 'hat', item_type: 'straw_hat', category: 'hat', level: 3, amount: 1 },
             },
           },
         ]
@@ -436,12 +436,12 @@ describe('market + self stream + heartbeat', () => {
     player.on_message(
       JSON.stringify({
         type: 'packet/market_observe',
-        observation: { categories: ['helmet'], characters: false },
+        observation: { categories: ['hat'], characters: false },
       })
     )
     await flush()
     expect(sent.find((packet) => packet.type === 'packet/market_slice')).toMatchObject({
-      observation: { categories: ['helmet'], characters: false },
+      observation: { categories: ['hat'], characters: false },
     })
     pubsub.emitter.emit('evt:economy', {
       type: 'MarketPurchased',

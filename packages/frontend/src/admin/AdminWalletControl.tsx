@@ -59,7 +59,7 @@ export const AdminWalletControl = ({ copy }: Readonly<{ copy: Readonly<Record<st
         >
           <div
             aria-label="Admin wallet selection"
-            className="w-full max-w-sm border border-[#c8963c]/35 bg-[#0d0d14] p-4 shadow-[0_24px_80px_rgba(0,0,0,0.7)]"
+            className="w-full max-w-sm border border-[#c8963c]/35 bg-[#181c1f] p-4 shadow-[0_24px_80px_rgba(0,0,0,0.58)]"
             onClick={(event) => event.stopPropagation()}
             role="dialog"
           >

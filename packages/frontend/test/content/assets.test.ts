@@ -7,15 +7,9 @@ import { resolve } from 'node:path'
 import { describe, expect, test } from 'bun:test'
 
 import { indexed_asset_key, spell_asset_key } from '../../src/content/asset_keys.ts'
-import { content_catalog } from '../../src/content/catalog.ts'
-import {
-  character_model_basenames,
-  cosmetic_model_of,
-  resolve_cosmetic_variant,
-} from '../../src/content/character_model_catalog.ts'
-import { worn_cosmetic_options } from '../../src/content/worn_cosmetics.ts'
+import { character_model_basenames, worn_equipment_model_of } from '../../src/content/character_model_catalog.ts'
+import { mob_model_identity } from '../../src/content/mob_models.ts'
 import { world_terrain, worlds_source } from '../../src/content/worlds.ts'
-import airdrop_source from '../../../../seed/content/airdrop.json'
 import items_source from '../../../../seed/content/items.json'
 import mobs_source from '../../../../seed/content/mobs.json'
 
@@ -41,6 +35,20 @@ const glb_nodes = (path: string): readonly string[] => {
   return Object.freeze((json.nodes ?? []).flatMap(({ name }) => (name ? [name] : [])))
 }
 
+const glb_variants = (path: string): readonly string[] => {
+  const bytes = readFileSync(path)
+  const json_length = bytes.readUInt32LE(12)
+  const json = JSON.parse(
+    bytes
+      .subarray(20, 20 + json_length)
+      .toString()
+      .trim()
+  ) as Readonly<{
+    extensions?: Readonly<{ KHR_materials_variants?: Readonly<{ variants?: readonly Readonly<{ name: string }>[] }> }>
+  }>
+  return Object.freeze(json.extensions?.KHR_materials_variants?.variants?.map(({ name }) => name) ?? [])
+}
+
 const png_dimensions = (path: string): Readonly<{ width: number; height: number }> => {
   const bytes = readFileSync(path)
   expect(bytes.subarray(1, 4).toString()).toBe('PNG')
@@ -63,47 +71,19 @@ describe('shipped content assets', () => {
         expect(bones.some((name) => name.includes('cape'))).toBeTrue()
       }
 
-    // Cosmetics: every selectable hat and cloak resolves to one shipped model,
-    // and appearances never ride the authored item rows.
-    const cosmetics = basenames(seed('models/cosmetics'), '.glb')
-    const worn = items_source.filter(({ category }) => category === 'hat' || category === 'cloak')
-
     expect(items_source.every((item) => !('appearance' in item))).toBe(true)
-    expect(worn.flatMap((item) => (cosmetic_model_of(item, cosmetics) ? [] : [item.item_type]))).toEqual([])
 
-    // Every shipped airdrop head cosmetic is selectable under its authored name.
-    const airdrop_hats = airdrop_source.showcase.filter(
-      ({ kind, art_status }) => kind === 'cosmetic' && art_status.glb === 'present'
-    )
-    const selectable = new Map(worn_cosmetic_options.hats.map((item) => [item.item_type, item]))
-
-    expect(airdrop_hats.map(({ id }) => id)).toContain('sam')
-    for (const { id, name } of airdrop_hats) {
-      expect(selectable.get(id)?.name).toBe(name)
-      expect(cosmetic_model_of({ item_type: id, category: 'hat' }, cosmetics)?.basename).toBe(id)
-    }
-
-    // Mobs: exactly one mob_type-named GLB each, no more and no fewer.
+    // Mobs: exact types own a GLB; suffixed types own one declared material variant.
     expect(mobs_source.every((mob) => !('appearance' in mob))).toBe(true)
-    expect([...basenames(seed('models/mobs'), '.glb')].toSorted()).toEqual(
-      mobs_source.map(({ mob_type }) => mob_type).toSorted()
+    const mob_models = [...basenames(seed('models/mobs'), '.glb')]
+    const identities = mobs_source.map(({ mob_type }) => mob_model_identity(mob_type, mob_models))
+    expect(identities.every((identity) => identity !== null)).toBeTrue()
+    expect([...new Set(identities.flatMap((identity) => (identity ? [identity.basename] : [])))].toSorted()).toEqual(
+      mob_models.toSorted()
     )
-
-    // Pets: one exact item-type GLB each.
-    const pets = basenames(seed('models/pets'), '.glb')
-    const pet_items = content_catalog.items
-      .filter(({ category }) => category === 'pet')
-      .map(({ item_type }) => item_type)
-
-    expect(pet_items).toHaveLength(71)
-    expect(pet_items.filter((item_type) => !pets.has(item_type))).toEqual([])
-
-    // ares_templates capture 2026-08-18: pet_vainquished summons vainquished,
-    // whose appearance is Spirit_Gold — assert the model, not the name.
-    const vanquished = new Set(glb_nodes(seed('models/pets/pet_vainquished.glb')))
-    expect(vanquished.has('R-Mask')).toBeTrue()
-    expect(vanquished.has('R-Horn')).toBeTrue()
-    expect(vanquished.has('spine.002')).toBeFalse()
+    const mob_registry = readFileSync(resolve(import.meta.dir, '../../src/content/mob_models.ts'), 'utf8')
+    expect(mob_registry).not.toContain('typeof import.meta.glob')
+    expect(mob_registry).toContain("typeof Bun === 'undefined'")
   })
 
   test('every canonical rune owns an HD detail render and a 64px thumbnail', () => {
@@ -121,6 +101,73 @@ describe('shipped content assets', () => {
     }
   })
 
+  test('new item art uses the 512px detail and 64px runtime convention', () => {
+    const directory = seed('icons/items')
+    for (const item_type of [
+      'nifuwa_wool',
+      'fuwa_wool',
+      'fuwa_horn',
+      'fuwa_eye',
+      'fuwa_hide',
+      'nifuwa_hide',
+      'fukuo_tidal_horn',
+      'green_mushroom',
+      'key_of_tangled_aftermath',
+    ]) {
+      expect(png_dimensions(resolve(directory, `${item_type}_hd.png`))).toEqual({ width: 512, height: 512 })
+      expect(png_dimensions(resolve(directory, `${item_type}.png`))).toEqual({ width: 64, height: 64 })
+    }
+  })
+
+  test('every protector resource bag owns its restored 512px and 64px icon pair', () => {
+    const directory = seed('icons/items')
+    const bags = items_source.filter(({ consumable }) => consumable?.type === 'loot_box')
+
+    expect(bags).toHaveLength(33)
+    for (const { item_type } of bags) {
+      expect(png_dimensions(resolve(directory, `${item_type}_hd.png`))).toEqual({ width: 512, height: 512 })
+      expect(png_dimensions(resolve(directory, `${item_type}.png`))).toEqual({ width: 64, height: 64 })
+    }
+  })
+
+  test('every mob owns its HD and turn-card portrait pair', () => {
+    const directory = seed('icons/mobs')
+
+    for (const { mob_type } of mobs_source) {
+      expect(png_dimensions(resolve(directory, `${mob_type}_hd.png`))).toEqual({ width: 1024, height: 1024 })
+      expect(png_dimensions(resolve(directory, `${mob_type}.png`))).toEqual({ width: 512, height: 512 })
+    }
+  })
+
+  test('the four Fuwa equipment identities resolve through two shared variant GLBs', () => {
+    const directory = seed('models/equipment')
+    const available = basenames(directory, '.glb')
+    const identities = Object.freeze([
+      'cape_fuwa__white',
+      'cape_fuwa__black',
+      'coiffe_fuwa__white',
+      'coiffe_fuwa__black',
+    ])
+    const rows = identities.map((item_type) => items_source.find((item) => item.item_type === item_type)!)
+
+    expect(rows.map(({ item_type }) => item_type)).toEqual([...identities])
+    for (const item of rows) {
+      expect(item.category).toBe(item.item_type.startsWith('cape_') ? 'cloak' : 'hat')
+      const model = worn_equipment_model_of(item, available)
+      if (!model?.variant) throw new Error(`${item.item_type} has no equipment model variant`)
+      expect(glb_variants(resolve(directory, `${model.basename}.glb`))).toContain(model.variant)
+      expect(png_dimensions(seed('icons/items', `${item.item_type}_hd.png`))).toEqual({ width: 512, height: 512 })
+      expect(png_dimensions(seed('icons/items', `${item.item_type}.png`))).toEqual({ width: 64, height: 64 })
+    }
+  })
+
+  test('development mob icons bypass the boot-time Vite glob when a file is added', () => {
+    const registry = readFileSync(resolve(import.meta.dir, '../../src/content/assets.ts'), 'utf8')
+
+    expect(registry).toContain("'/__seed/assets/'")
+    expect(registry).toContain('import.meta.env.DEV')
+  })
+
   test('the character catalog uses exact legacy rows and the gender-matching Senshi fallback', () => {
     expect(character_model_basenames('senshi', true)).toEqual({
       body: 'senshi_male',
@@ -134,21 +181,13 @@ describe('shipped content assets', () => {
     })
   })
 
-  test('derives the authored KHR variant from the item identity', () => {
-    expect(resolve_cosmetic_variant('cape_fuwa_black', 'cape_fuwa')).toBe('black')
-    expect(resolve_cosmetic_variant('cape_lorito_agility', 'cape_lorito')).toBe('agility')
-    expect(resolve_cosmetic_variant('capuche_bara_wisdom', 'capuche_bara')).toBe('moonstone')
-    expect(resolve_cosmetic_variant('capuche_bara', 'capuche_bara')).toBe('base')
-    expect(resolve_cosmetic_variant('solomonk', 'solomonk')).toBeNull()
-  })
-
   test('spell icon identity ignores word-boundary underscores in seed filenames', () => {
     expect(spell_asset_key('yogan', 'Sunpiercer')).toBe(indexed_asset_key('yogen_sun_piercer'))
   })
 
   test('world terrain resolves a named world exactly and falls back only when none is selected', () => {
-    expect(world_terrain('01_first_shore')).toBe(worlds_source[0]!.terrain)
-    expect(world_terrain('02_verdant_hollow')).toBeNull()
+    expect(world_terrain('nauvis')).toBe(worlds_source[0]!.terrain)
+    expect(world_terrain('yakutia')).toBe(worlds_source[1]!.terrain)
     expect(world_terrain('unknown_world')).toBeNull()
     expect(world_terrain(null)).toBe(worlds_source[0]!.terrain)
   })

@@ -53,6 +53,7 @@ const compact_effect_line = (effect: Readonly<FightEffectLineView>): ReturnType<
   const view = spell_effect_line_view(spell_effect(effect))
   const action = view.pre.trim()
   const label = view.post.trim()
+  const compact_label = ['ap', 'mp', 'hp'].includes(label.toLowerCase()) ? label.toUpperCase() : label
   const damage_over_time = effect.stat === CHANNELS.hp && effect.kind !== EFFECT_KINDS.add
   return Object.freeze({
     ...view,
@@ -66,7 +67,7 @@ const compact_effect_line = (effect: Readonly<FightEffectLineView>): ReturnType<
             ? '−'
             : view.pre,
     value: effect.kind === EFFECT_KINDS.invis ? null : view.value,
-    post: ` ${damage_over_time || label === 'Raw Damage' ? 'damages' : label}`,
+    post: ` ${damage_over_time || compact_label.toLowerCase() === 'raw damage' ? 'damages' : compact_label}`,
   })
 }
 

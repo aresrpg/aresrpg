@@ -59,7 +59,7 @@ export default function StatsTab({ character, copy }: Readonly<{ character: Read
   const staged_total = characteristic_names.reduce((total, stat) => total + alloc[stat], 0)
   const remaining = Math.max(0, character.available_points - staged_total)
   const has_pending = staged_total > 0
-  const can_confirm = has_pending && staged_total <= character.available_points && !pending_tx
+  const can_confirm = !!wallet && has_pending && staged_total <= character.available_points && !pending_tx
   const can_upgrade = remaining > 0 && !pending_tx
 
   const experience = Number(character.experience)

@@ -2,14 +2,22 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 /* eslint-disable no-param-reassign -- The Move twin updates only its reducer-owned structuredClone draft; caller snapshots stay immutable. */
 
-import { bfs_best_toward, bfs_cast_cell, in_zone, line_of_sight, manhattan, same_line } from './combat_grid.ts'
+import {
+  GRID_CELLS,
+  approach_field,
+  bfs_cast_cell,
+  in_zone,
+  line_of_sight,
+  manhattan,
+  same_line,
+} from './combat_grid.ts'
 import { KINDS, STATS, base_ap_of, base_mp_of, is_mob, max_hp_of, mob_snapshot, set_pools } from './fighters.ts'
 import { placement_rows_castable, resolve_rows, resolve_spell, sight_blockers } from './effects.ts'
-import { walk_toward, wall_mask } from './movement.ts'
+import { walk_down, walk_toward, wall_mask } from './movement.ts'
 import { emit, fail } from './runtime.ts'
-import { apply_pool_effects, tick_cooldowns, tick_turn_start } from './turn_effects.ts'
+import { apply_pool_effects, tick_cooldowns, tick_turn_end, tick_turn_start } from './turn_effects.ts'
 import { on_enter } from './zones.ts'
-import { CONTRACT_CONSTANTS } from './move_contract.gen.ts'
+import { CONTRACT_CONSTANTS, TARGET_FILTERS } from './move_contract.gen.ts'
 import type {
   FightContract,
   FightRuntime,
@@ -72,8 +80,35 @@ const wounded_ally = (runtime: FightRuntime, mob: bigint): bigint | null => {
   )
 }
 
+const nearest_ally = (runtime: FightRuntime, mob: bigint): bigint => {
+  const fighter = runtime.contract.fighters[Number(mob)]
+  return (
+    runtime.contract.fighters.reduce<{ seat: bigint; distance: bigint } | null>((best, candidate, index) => {
+      const seat = BigInt(index)
+      if (seat === mob || candidate.dead || candidate.team !== fighter.team) return best
+      const distance = manhattan(candidate.cell, fighter.cell)
+      return best === null || distance < best.distance ? { seat, distance } : best
+    }, null)?.seat ?? mob
+  )
+}
+
 const has_heal = (level: SpellLevel): boolean =>
   level.effects.some((row) => row.kind === KINDS.add && row.stat === STATS.hp)
+
+const spell_rows = (level: SpellLevel) => [...level.effects, ...level.crit_effects]
+const aims_only_at_allies = (level: SpellLevel): boolean => {
+  const rows = spell_rows(level)
+  return (
+    rows.length > 0 &&
+    rows.every(
+      ({ target_filter }) => target_filter === TARGET_FILTERS.not_enemy || target_filter === TARGET_FILTERS.only_caster
+    )
+  )
+}
+const aims_only_at_caster = (level: SpellLevel): boolean => {
+  const rows = spell_rows(level)
+  return rows.length > 0 && rows.every(({ target_filter }) => target_filter === TARGET_FILTERS.only_caster)
+}
 
 const placement_level_castable = (runtime: FightRuntime, level: SpellLevel, anchor: bigint): boolean =>
   placement_rows_castable(runtime, level.effects, anchor) &&
@@ -93,10 +128,13 @@ const enter = (runtime: FightRuntime, fighter: bigint, from: bigint): boolean =>
   on_enter(runtime, fighter, from, resolve_rows)
 
 const rush_toward = (runtime: FightRuntime, mob: bigint, target: bigint): FightRuntime => {
+  // ONE approach flood from the target's open flanks, walked down as far as MP allows — a
+  // detour routes by construction (the frog law). A sealed target leaves the field
+  // unreached at the mob's cell — the one legal hold. Twin of aresrpg::fight `rt`.
   const fighter = runtime.contract.fighters[Number(mob)]
-  const rush = bfs_best_toward(fighter.cell, target, wall_mask(runtime, mob), fighter.mp)
-  if (rush !== fighter.cell) walk_toward(runtime, mob, rush, enter)
-  return runtime
+  const field = approach_field(target, wall_mask(runtime, mob), fighter.cell)
+  if (field[Number(fighter.cell)] === GRID_CELLS) return runtime
+  return walk_down(runtime, mob, field, enter)
 }
 
 export const mob_turn = (runtime: FightRuntime, mob: bigint): FightRuntime => {
@@ -110,7 +148,17 @@ export const mob_turn = (runtime: FightRuntime, mob: bigint): FightRuntime => {
   const { kit } = mob_snapshot(runtime.contract.fighters[Number(mob)] as MobFighter)
   for (const spell of kit as KitSpell[]) {
     const heal = has_heal(spell.level)
-    const anchor_seat = heal ? wounded_ally(runtime, mob) : enemy
+    const caster_only = aims_only_at_caster(spell.level)
+    const ally_only = aims_only_at_allies(spell.level)
+    const anchor_seat = caster_only
+      ? mob
+      : heal
+        ? wounded_ally(runtime, mob)
+        : ally_only && spell.level.range_max === 0n
+          ? mob
+          : ally_only
+            ? nearest_ally(runtime, mob)
+            : enemy
     const fighter = runtime.contract.fighters[Number(mob)]
     if (anchor_seat === null || fighter.ap < spell.level.ap_cost || cooldown_left(runtime, mob, spell.name) > 0n)
       continue
@@ -127,7 +175,8 @@ export const mob_turn = (runtime: FightRuntime, mob: bigint): FightRuntime => {
       })
       return runtime
     }
-    if (!heal) {
+    // provably unreachable this turn (triangle inequality) — skip the flood entirely
+    if (!heal && !caster_only && manhattan(fighter.cell, anchor) <= fighter.mp + spell.level.range_max) {
       const cast_cell = bfs_cast_cell({
         start: fighter.cell,
         target: anchor,
@@ -230,6 +279,7 @@ export const run_until_player = ({
       if (on_mob_turn) on_mob_turn(actor, supplied.seed)
       mob_turn(runtime, actor)
       if (runtime.contract.ended) return runtime
+      tick_turn_end(runtime, actor)
       tick_cooldowns(runtime, actor)
       virtual_ms += CONTRACT_CONSTANTS.turn_min_ms
     }

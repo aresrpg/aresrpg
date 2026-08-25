@@ -2,8 +2,11 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 import {
   BufferAttribute,
+  type Camera,
+  Frustum,
   FrontSide,
   InstancedBufferGeometry,
+  Matrix4,
   Mesh,
   type DataArrayTexture,
   type Material,
@@ -37,6 +40,7 @@ import {
 } from 'three/tsl'
 
 import type { Clouds } from './clouds.ts'
+import { chunk_in_frustum } from './chunk_visibility.ts'
 import type { FlattenUniform } from './flatten.ts'
 import { create_flat_nodes } from './flat_nodes.ts'
 import { FACE_WINDING_FLIP_BITS, type GreedyMeshData } from './greedy_mesher.ts'
@@ -49,6 +53,7 @@ import { occlusion_dither_discard, type BoardOcclusion } from './board_occlusion
 import type { EngineQuality, RenderedChunk } from './types.ts'
 import { compile_world_recipe, type WorldRecipe } from './world_recipe.ts'
 import type { CompiledMaterials } from './world_materials.ts'
+import { CHUNK_EDGE } from './voxel_data.ts'
 
 export const TERRAIN_POOL_LAYOUT = Object.freeze({ slot_quads: 1024, max_slots: 3072 })
 const SLOT_QUADS = TERRAIN_POOL_LAYOUT.slot_quads
@@ -58,12 +63,14 @@ const INDIRECT_WORDS = 4
 const MATERIAL_TEXTURE_BLOCK_SPAN = 4
 
 export type TerrainPool = Readonly<{
+  set_visible: (visible: boolean) => void
   upload: (chunk: RenderedChunk, data: GreedyMeshData) => 'uploaded' | 'full' | 'too_large'
   remove: (key: string) => void
   set_quality: (quality: EngineQuality) => void
   set_flatten_active: (active: boolean) => void
   /** swap the see-through variant in while a fight board is mounted */
   set_occlusion_active: (active: boolean) => void
+  set_view: (camera: Camera, shadow_camera: Camera | null) => void
   count: () => number
   dispose: () => void
 }>
@@ -278,6 +285,7 @@ export const create_terrain_pool = ({
   const meta_attr = new StorageBufferAttribute(meta_array, 4)
   const indirect_attr = new IndirectStorageBufferAttribute(indirect_array, INDIRECT_WORDS)
   const geometry = create_geometry(capacity)
+  const shadow_geometry = create_geometry(capacity)
   const free_slots = Array.from({ length: MAX_SLOTS }, (_, index) => MAX_SLOTS - index - 1)
   const chunk_slots = new Map<string, Readonly<{ origin: RenderedChunk['origin']; slots: readonly number[] }>>()
   const build = (
@@ -335,9 +343,15 @@ export const create_terrain_pool = ({
   const mesh = new Mesh(geometry, quality_resources.material)
   mesh.frustumCulled = false
   mesh.matrixAutoUpdate = false
-  mesh.castShadow = quality !== 'low'
+  mesh.castShadow = false
   mesh.receiveShadow = quality !== 'low'
-  scene.add(mesh)
+  const shadow_mesh = new Mesh(shadow_geometry, quality_resources.material)
+  shadow_mesh.frustumCulled = false
+  shadow_mesh.matrixAutoUpdate = false
+  shadow_mesh.castShadow = quality !== 'low'
+  shadow_mesh.receiveShadow = false
+  shadow_mesh.layers.set(1)
+  scene.add(mesh, shadow_mesh)
 
   for (let slot = 0; slot < MAX_SLOTS; slot += 1) {
     const offset = slot * INDIRECT_WORDS
@@ -347,13 +361,42 @@ export const create_terrain_pool = ({
     indirect_array[offset + 3] = slot * SLOT_QUADS
   }
 
-  const rebuild_draws = (): void => {
-    geometry.setIndirect(
+  const view_projection = new Matrix4()
+  const shadow_view_projection = new Matrix4()
+  const view_frustum = new Frustum()
+  const shadow_frustum = new Frustum()
+  let view_active = false
+  let shadow_view_active = false
+  let visible_draw_slots: readonly number[] | null = null
+  let shadow_draw_slots: readonly number[] | null = null
+  const visible_scratch: number[] = []
+  const shadow_scratch: number[] = []
+  const same_slots = (left: readonly number[], right: readonly number[]): boolean =>
+    left.length === right.length && left.every((slot, index) => slot === right[index])
+  const write_draws = (
+    target: InstancedBufferGeometry,
+    next: readonly number[],
+    current: readonly number[] | null
+  ): readonly number[] => {
+    if (current && same_slots(next, current)) return current
+    const slots = Object.freeze([...next])
+    target.setIndirect(
       indirect_attr,
-      [...chunk_slots.values()].flatMap(({ slots }) =>
-        slots.map((slot) => slot * INDIRECT_WORDS * Uint32Array.BYTES_PER_ELEMENT)
-      )
+      slots.map((slot) => slot * INDIRECT_WORDS * Uint32Array.BYTES_PER_ELEMENT)
     )
+    return slots
+  }
+  const rebuild_draws = (): void => {
+    visible_scratch.length = 0
+    shadow_scratch.length = 0
+    chunk_slots.forEach(({ origin, slots }) => {
+      if (!view_active || flatten_active || chunk_in_frustum(origin, CHUNK_EDGE, view_frustum.planes))
+        visible_scratch.push(...slots)
+      if (shadow_view_active && (flatten_active || chunk_in_frustum(origin, CHUNK_EDGE, shadow_frustum.planes)))
+        shadow_scratch.push(...slots)
+    })
+    visible_draw_slots = write_draws(geometry, visible_scratch, visible_draw_slots)
+    shadow_draw_slots = write_draws(shadow_geometry, shadow_scratch, shadow_draw_slots)
   }
   rebuild_draws()
 
@@ -385,6 +428,10 @@ export const create_terrain_pool = ({
   }
 
   return Object.freeze({
+    set_visible: (visible: boolean) => {
+      mesh.visible = visible
+      shadow_mesh.visible = visible
+    },
     upload: (chunk: RenderedChunk, data: GreedyMeshData) => {
       const required = Math.ceil(data.quad_count / SLOT_QUADS)
       const reusable = chunk_slots.get(chunk.key)?.slots.length ?? 0
@@ -420,8 +467,10 @@ export const create_terrain_pool = ({
       )
       current_quality = next
       mesh.material = pick_material()
-      mesh.castShadow = next !== 'low'
+      shadow_mesh.material = pick_material()
+      shadow_mesh.castShadow = next !== 'low'
       mesh.receiveShadow = next !== 'low'
+      rebuild_draws()
       dispose_quality_resources(previous_resources, !reuse_texture)
     },
     /// The transparent side-fade variant rides ONLY while the flat projection is live.
@@ -429,6 +478,8 @@ export const create_terrain_pool = ({
       if (active === flatten_active) return
       flatten_active = active
       mesh.material = pick_material()
+      shadow_mesh.material = pick_material()
+      rebuild_draws()
     },
     /// The see-through variant rides ONLY while a fight board is mounted (flat mode already
     /// flattens every occluder away, so it keeps its own variant).
@@ -436,11 +487,30 @@ export const create_terrain_pool = ({
       if (active === occlusion_active) return
       occlusion_active = active
       mesh.material = pick_material()
+      shadow_mesh.material = pick_material()
+    },
+    set_view: (camera, shadow_camera) => {
+      camera.updateMatrixWorld()
+      view_projection.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse)
+      view_frustum.setFromProjectionMatrix(view_projection, camera.coordinateSystem, camera.reversedDepth)
+      view_active = true
+      shadow_view_active = shadow_camera !== null
+      if (shadow_camera) {
+        shadow_camera.updateMatrixWorld()
+        shadow_view_projection.multiplyMatrices(shadow_camera.projectionMatrix, shadow_camera.matrixWorldInverse)
+        shadow_frustum.setFromProjectionMatrix(
+          shadow_view_projection,
+          shadow_camera.coordinateSystem,
+          shadow_camera.reversedDepth
+        )
+      }
+      rebuild_draws()
     },
     count: () => chunk_slots.size,
     dispose: () => {
-      scene.remove(mesh)
+      scene.remove(mesh, shadow_mesh)
       geometry.dispose()
+      shadow_geometry.dispose()
       dispose_quality_resources(quality_resources)
       chunk_slots.clear()
       free_slots.length = 0

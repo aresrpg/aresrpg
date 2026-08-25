@@ -33,7 +33,6 @@ export const create_game_state = ({ graph, pubsub }: Readonly<{ graph: Graph; pu
     indexed_changes += 1
     apply(payload.data.frozen)
   }
-
   return Object.freeze({
     get: () => state.frozen,
     listen: (listener) => {

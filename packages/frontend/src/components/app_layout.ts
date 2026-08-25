@@ -11,3 +11,5 @@ export const world_frame_visibility = (page: Page): string =>
   is_world_page(page) ? 'visible opacity-100' : 'invisible pointer-events-none opacity-0'
 
 export const fight_surface_visible = (page: Page, mounted: boolean): boolean => is_world_page(page) && mounted
+
+export const fight_lab_surface = (mounted: boolean): 'setup' | 'fight' => (mounted ? 'fight' : 'setup')

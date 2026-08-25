@@ -4,6 +4,7 @@
 import { element_names, item_categories, stat_names } from '@aresrpg/immutable'
 import { useState, type FocusEvent, type ReactNode } from 'react'
 
+import { item_detail_icon } from '../content/item_detail_assets.ts'
 import { element_colors, item_category_colors, stat_colors, stat_identities } from '../visual_identity.ts'
 
 export type ItemDetailPath = readonly (string | number)[]
@@ -56,7 +57,7 @@ const input_class =
 const action_class =
   'h-7 border border-white/12 bg-white/[0.025] px-2 text-[8px] tracking-[0.12em] text-[#8c919c] uppercase hover:border-[#c8963c]/50 hover:text-[#efbd45]'
 
-const InlineField = ({
+export const InlineField = ({
   class_name = '',
   display,
   edit,
@@ -294,7 +295,7 @@ type ItemDetailProps = Readonly<{
   damages: readonly ItemDamage[]
   description?: string | null
   edit?: ItemDetailEdit
-  icon: string | null
+  item_type: string
   labels: Readonly<{ characteristics: string; damages: string; level_short: string; range_to: string }>
   level: number
   name: string
@@ -310,7 +311,7 @@ export const ItemDetailView = ({
   damages,
   description,
   edit,
-  icon,
+  item_type,
   labels,
   level,
   name,
@@ -318,6 +319,7 @@ export const ItemDetailView = ({
   stat_budget,
   stats,
 }: ItemDetailProps) => {
+  const icon = item_detail_icon(item_type)
   const stat_rows = stats ? item_stat_rows(stats, Boolean(edit)) : []
   const defined_stats = stat_rows.filter(stat_is_defined)
   const undefined_stats = stat_rows.filter((row) => !stat_is_defined(row))
@@ -358,7 +360,7 @@ export const ItemDetailView = ({
               }
               label="item name"
             />
-            {level > 0 && (
+            {(edit || level > 0) && (
               <InlineField
                 class_name="ml-auto shrink-0"
                 display={

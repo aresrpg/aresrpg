@@ -28,11 +28,17 @@ export const rolled_item_types = (() => {
   let map: Map<string, string> | null = null
   return (): Map<string, string> => {
     if (map) return map
-    const registry = (PINS as unknown as Record<string, { template_registry?: { id?: string } }>)[env.network]
-      ?.template_registry?.id
+    const pins = (
+      PINS as unknown as Record<string, { content_root?: { id?: string }; seed_package_original?: string }>
+    )[env.network]
+    const content_root = pins?.content_root?.id
+    const seed_original = pins?.seed_package_original
     map = new Map(
-      registry
-        ? encyclopedia_catalog.items.map(({ item_type }) => [item_template_id(registry, item_type), item_type])
+      content_root && seed_original
+        ? encyclopedia_catalog.items.map(({ item_type }) => [
+            item_template_id(content_root, seed_original, item_type),
+            item_type,
+          ])
         : []
     )
     return map

@@ -26,13 +26,20 @@ const RES_PACKS_MAX = 42n
 const GROUP_SIZE_FULL_AT = 10_000n
 const GROUP_SIZE_AVG3_AT = 2_000n
 const LEVEL_RAMP_AT = 20_000n
-const LEVEL_FLOOR_CAP = 75n
+const LEVEL_LOW_CAP = 75n
+const LEVEL_HIGH_CAP = 100n
 const NODES_RAMP_AT = 20_000n
 const HOMOGENEOUS_BP = 5_000n
+const PORTAL_BP = 1_000n
 
 type MobRow = Readonly<{ mob_type: string; weight_bp: bigint; biomes: readonly number[] }>
 type ResourceRow = Readonly<{ item_type: string; biomes: readonly number[] }>
-type WorldPopulation = Readonly<{ mobs: readonly MobRow[]; resources: readonly ResourceRow[]; map: BiomeGrid }>
+type WorldPopulation = Readonly<{
+  mobs: readonly MobRow[]
+  resources: readonly ResourceRow[]
+  map: BiomeGrid
+  has_dungeon: boolean
+}>
 
 const populations = new Map<string, WorldPopulation | null>()
 
@@ -63,7 +70,13 @@ export const world_population = (world: string): WorldPopulation | null => {
     world_center: Number(WORLD_CENTER),
     cell_size: Number(ZONE_SIZE),
   })
-  const population = Object.freeze({ mobs: Object.freeze(mobs), resources: Object.freeze(resources), map })
+  const dungeon = source.dungeon as Readonly<{ rooms?: readonly unknown[] }> | undefined
+  const population = Object.freeze({
+    mobs: Object.freeze(mobs),
+    resources: Object.freeze(resources),
+    map,
+    has_dungeon: (dungeon?.rooms?.length ?? 0) > 0,
+  })
   populations.set(world, population)
   return population
 }
@@ -97,6 +110,25 @@ export const mob_group_size_bounds = (distance: bigint): readonly [bigint, bigin
   return Object.freeze([low, high < low ? low : high])
 }
 
+export const mob_level_scalar_bounds = (distance: bigint): readonly [bigint, bigint] =>
+  Object.freeze([ramp(distance, LEVEL_RAMP_AT, 0n, LEVEL_LOW_CAP), ramp(distance, LEVEL_RAMP_AT, 0n, LEVEL_HIGH_CAP)])
+
+/** zone_math::portal_of — one optional portal per searched zone, before no other population draw. */
+export const dungeon_portal = (
+  population: WorldPopulation,
+  zx: number,
+  zz: number,
+  seed: bigint
+): Readonly<{ x: number; z: number }> | null => {
+  if (!population.has_dungeon) return null
+  const cursor = { state: rng_seed(mix(seed, 5n)) }
+  if (draw(cursor) % 10_000n >= PORTAL_BP) return null
+  return Object.freeze({
+    x: Number(BigInt(zx) * ZONE_SIZE + (draw(cursor) % ZONE_SIZE)),
+    z: Number(BigInt(zz) * ZONE_SIZE + (draw(cursor) % ZONE_SIZE)),
+  })
+}
+
 const weighted_family = (rows: readonly MobRow[], total: bigint, cursor: { state: bigint }): string => {
   const roll = draw(cursor) % total
   let accumulated = 0n
@@ -126,7 +158,7 @@ export const mob_groups = (
   const cursor = { state: rng_seed(mix(seed, 2n)) }
   const count = GROUPS_MIN + (draw(cursor) % (GROUPS_MAX - GROUPS_MIN + 1n))
   const [size_lo, size_hi] = mob_group_size_bounds(distance)
-  const level_floor = ramp(distance, LEVEL_RAMP_AT, 0n, LEVEL_FLOOR_CAP)
+  const [level_lo, level_hi] = mob_level_scalar_bounds(distance)
   const groups: MobGroupRow[] = []
   for (let index = 0n; index < count; index += 1n) {
     const x = BigInt(zx) * ZONE_SIZE + (draw(cursor) % ZONE_SIZE)
@@ -137,7 +169,7 @@ export const mob_groups = (
     const members: MobGroupRow['members'] = []
     for (let member = 0n; member < size; member += 1n) {
       const mob_type = homogeneous ? family : weighted_family(rows, total, cursor)
-      const scalar = level_floor + (draw(cursor) % (101n - level_floor))
+      const scalar = level_lo + (draw(cursor) % (level_hi - level_lo + 1n))
       members.push({ mob_type, level_scalar: Number(scalar) })
     }
     groups.push({ index: Number(index), x: Number(x), z: Number(z), members })

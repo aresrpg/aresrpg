@@ -25,6 +25,7 @@ export type ResultParticipant = Readonly<{
   hp: number
   max_hp: number
   dead: boolean
+  forfeited: boolean
   settled: boolean
   xp_awarded: number
   loot: readonly ResultLoot[]
@@ -32,7 +33,11 @@ export type ResultParticipant = Readonly<{
 
 export type FightResult = Readonly<{
   fight: string
+  dungeon: Readonly<{ world: string; room: number }> | null
   winner: number | null
+  duration_ms: number | null
+  /** This wallet's net executed fight cost: computation + storage - rebate. */
+  gas_spent_mist: bigint
   participants: readonly ResultParticipant[]
   own_seat: number | null
   resolution_synced: boolean
@@ -49,7 +54,13 @@ export type FightResultState = Readonly<{
 }>
 
 export type FightResultInput =
-  | Readonly<{ type: 'fight_result/checkpoint'; checkpoint: HydratedFightCheckpoint }>
+  | Readonly<{
+      type: 'fight_result/checkpoint'
+      checkpoint: HydratedFightCheckpoint
+      observed_at_ms: number
+      gas_spent_mist: bigint
+    }>
+  | Readonly<{ type: 'fight_result/gas_updated'; fight: string; gas_spent_mist: bigint }>
   | Readonly<{ type: 'fight_result/retry' }>
   | Readonly<{ type: 'fight_result/claim_failed'; fight: string; error: string }>
   | Readonly<{ type: 'fight_result/level_acknowledged' }>
@@ -63,6 +74,22 @@ export const fight_result_available = (
   fight: Readonly<{ checkpoint: Readonly<{ contract: Readonly<{ id: string }> }> | null }>,
   result_fight: string
 ): boolean => fight.checkpoint?.contract.id !== result_fight
+
+/** Older in-memory resolution rows omitted both dungeon fields. Absence means an ordinary
+ * fight, never an incomplete dungeon transaction with an undefined world name. */
+export const fight_resolution_dungeon = (
+  row: Readonly<{ dungeon?: unknown; world?: unknown }>
+): Readonly<{ world: string; room: number }> | null => {
+  if (row.dungeon === null || row.dungeon === undefined) return null
+  if (
+    !Number.isSafeInteger(row.dungeon) ||
+    Number(row.dungeon) < 0 ||
+    typeof row.world !== 'string' ||
+    row.world.length === 0
+  )
+    throw new Error('Fight resolution carries an incomplete dungeon identity.')
+  return Object.freeze({ world: row.world, room: Number(row.dungeon) })
+}
 
 export const fight_result_surface = (
   result: Readonly<Pick<FightResult, 'result_open' | 'level_up_open'>>
@@ -109,6 +136,45 @@ export const result_participant_shows_progress = (
   participant: Readonly<Pick<ResultParticipant, 'character_id'>>
 ): boolean => participant.character_id !== null
 
+export const compact_xp = (value: number): string => {
+  const compact = (divisor: number, suffix: string): string => {
+    const amount = Math.round((value / divisor) * 10) / 10
+    return `${Number.isInteger(amount) ? amount.toFixed(0) : amount.toFixed(1)}${suffix}`
+  }
+  if (Math.abs(value) >= 1_000_000_000) return compact(1_000_000_000, 'b')
+  if (Math.abs(value) >= 1_000_000) return compact(1_000_000, 'm')
+  if (Math.abs(value) >= 1_000) return compact(1_000, 'k')
+  return value.toLocaleString()
+}
+
+export const format_fight_duration = (duration_ms: number): string => {
+  const seconds = Math.max(0, Math.floor(duration_ms / 1000))
+  return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`
+}
+
+export const fight_duration = (
+  started_at_ms: bigint | number | null,
+  ended_at_ms: bigint | number | null
+): number | null =>
+  started_at_ms === null || ended_at_ms === null
+    ? null
+    : Math.max(0, Number(BigInt(ended_at_ms) - BigInt(started_at_ms)))
+
+const result_accounting = (
+  indexed_started_ms: bigint | null,
+  indexed_ended_ms: bigint | null,
+  observed_started_ms: number | null,
+  observed_at_ms: number,
+  gas_spent_mist: bigint,
+  existing: FightResult | null
+) =>
+  Object.freeze({
+    duration_ms:
+      existing?.duration_ms ??
+      fight_duration(indexed_started_ms ?? observed_started_ms, indexed_ended_ms ?? observed_at_ms),
+    gas_spent_mist,
+  })
+
 const participant_from = (
   checkpoint: Readonly<HydratedFightCheckpoint>,
   fighter: Readonly<Fighter>,
@@ -133,13 +199,19 @@ const participant_from = (
     hp: Number(fighter.hp),
     max_hp: Number(fighter.kind.type === 'mob' ? fighter.kind.snapshot.max_hp : source ? player_max_hp(source) : 1n),
     dead: fighter.dead,
+    forfeited: fighter.forfeited,
     settled: fighter.settled,
     xp_awarded,
     loot: aggregate_result_loot(fighter.drops),
   })
 }
 
-const merge_checkpoint = (state: AppState, checkpoint: Readonly<HydratedFightCheckpoint>): FightResultState => {
+const merge_checkpoint = (
+  state: AppState,
+  checkpoint: Readonly<HydratedFightCheckpoint>,
+  observed_at_ms: number,
+  gas_spent_mist: bigint
+): FightResultState => {
   if (!checkpoint.contract.ended) return state.fight_result
   const existing = state.fight_result.current?.fight === checkpoint.contract.id ? state.fight_result.current : null
   const wallet = state.session.wallet?.address ?? null
@@ -168,7 +240,19 @@ const merge_checkpoint = (state: AppState, checkpoint: Readonly<HydratedFightChe
     ...state.fight_result,
     current: Object.freeze({
       fight: checkpoint.contract.id,
+      dungeon:
+        checkpoint.contract.dungeon === null
+          ? null
+          : Object.freeze({ world: checkpoint.contract.world, room: Number(checkpoint.contract.dungeon) }),
       winner: checkpoint.contract.winner === null ? null : Number(checkpoint.contract.winner),
+      ...result_accounting(
+        checkpoint.contract.started_ms,
+        checkpoint.contract.ended_ms,
+        state.fight.started_at_ms,
+        observed_at_ms,
+        gas_spent_mist,
+        existing
+      ),
       participants: Object.freeze(participants),
       own_seat: own_seat < 0 ? null : own_seat,
       resolution_synced:
@@ -193,6 +277,7 @@ const merge_resolution = (participant: ResultParticipant, row: Readonly<FightRes
     level_after: Math.max(participant.level_after, row.level),
     experience_after: Number(row.experience),
     dead: row.dead,
+    forfeited: participant.forfeited,
     settled: row.settled,
     xp_awarded: participant.xp_awarded,
     loot: merge_result_loot(participant.loot, aggregate_result_loot(row.drops)),
@@ -213,13 +298,17 @@ const recover_result = (state: AppState, row: Readonly<FightResolutionRow>): Fig
     hp: row.dead ? 0 : 1,
     max_hp: 1,
     dead: row.dead,
+    forfeited: false,
     settled: row.settled,
     xp_awarded: 0,
     loot: aggregate_result_loot(row.drops),
   })
   return Object.freeze({
     fight: row.fight,
+    dungeon: fight_resolution_dungeon(row),
     winner: row.winner,
+    duration_ms: null,
+    gas_spent_mist: 0n,
     participants: Object.freeze([participant]),
     own_seat: 0,
     resolution_synced: true,
@@ -291,7 +380,18 @@ const fold_packet = (state: AppState, packet: Readonly<ServerPacket>): AppState 
 
 const reduce = (state: AppState, input: AppInput): AppState => {
   if (input.type === 'fight_result/checkpoint')
-    return Object.freeze({ ...state, fight_result: merge_checkpoint(state, input.checkpoint) })
+    return Object.freeze({
+      ...state,
+      fight_result: merge_checkpoint(state, input.checkpoint, input.observed_at_ms, input.gas_spent_mist),
+    })
+  if (input.type === 'fight_result/gas_updated' && state.fight_result.current?.fight === input.fight)
+    return Object.freeze({
+      ...state,
+      fight_result: Object.freeze({
+        ...state.fight_result,
+        current: Object.freeze({ ...state.fight_result.current, gas_spent_mist: input.gas_spent_mist }),
+      }),
+    })
   if (input.type === 'server/packet') return fold_packet(state, input.packet)
   if (input.type === 'fight_result/claim_failed' && state.fight_result.current?.fight === input.fight)
     return Object.freeze({
@@ -339,14 +439,8 @@ const reduce = (state: AppState, input: AppInput): AppState => {
 type Attempt = Readonly<{ latched: boolean }>
 const executed = (error: unknown): boolean => error instanceof Error && error.message.includes('failed on-chain')
 
-export const next_fight_resolution_step = (
-  row: Readonly<FightResolutionRow>
-): Readonly<{ type: 'settle' }> | Readonly<{ type: 'claim'; item_type: string }> | null =>
-  !row.settled
-    ? Object.freeze({ type: 'settle' })
-    : row.drops[0]
-      ? Object.freeze({ type: 'claim', item_type: row.drops[0].item_type })
-      : null
+export const next_fight_resolution_step = (_row: Readonly<FightResolutionRow>): Readonly<{ type: 'settle' }> =>
+  Object.freeze({ type: 'settle' })
 
 const observe: NonNullable<AppModule['observe']> = ({ events, dispatch, get_state }) => {
   const attempts = new Map<string, Attempt>()
@@ -361,29 +455,47 @@ const observe: NonNullable<AppModule['observe']> = ({ events, dispatch, get_stat
     const [pending] = state.fight_result.resolutions
     if (!pending) return
     if (!fight_result_available(state.fight, pending.fight)) return
-    const step = next_fight_resolution_step(pending)
-    if (!step) return
-    const key = `${pending.fight}:${pending.fighter}:${step.type === 'claim' ? step.item_type : 'settle'}`
+    const key = `${pending.fight}:${pending.fighter}:settle`
     if (attempts.get(key)?.latched) return
     const character = characters.find(({ id }) => id === pending.character)
     active = key
     const custody = character ? { kiosk: character.kiosk, kiosk_cap: character.kiosk_cap } : undefined
-    const existing =
-      step.type === 'claim'
-        ? stack_merge_target(inventory, state.marketplace.own_listings, step.item_type, custody?.kiosk)
-        : null
+    const loot = pending.loot_types.map((item_type) => ({
+      item_type,
+      existing: stack_merge_target(inventory, state.marketplace.own_listings, item_type, custody?.kiosk),
+    }))
+    const dungeon = fight_resolution_dungeon(pending)
     const transaction =
-      step.type === 'claim'
-        ? wallet.fight.claim_drop({
+      dungeon === null
+        ? wallet.fight.settle({
             fight: pending.fight,
             fighter_idx: BigInt(pending.fighter),
-            item_type: step.item_type,
-            existing,
+            loot,
             custody,
           })
-        : wallet.fight.settle({ fight: pending.fight, fighter_idx: BigInt(pending.fighter), custody })
+        : wallet.dungeon.settle_fight({
+            fight: pending.fight,
+            fighter_idx: BigInt(pending.fighter),
+            world: dungeon.world,
+            loot,
+            custody,
+          })
     void transaction
-      .then(() => attempts.set(key, Object.freeze({ latched: true })))
+      .then(() => {
+        attempts.set(key, Object.freeze({ latched: true }))
+        // the LAST settler reclaims the fight's storage deposit: every OTHER seat already
+        // settled means our settle (just confirmed) completed the roster. A lost race
+        // against another closer aborts for the transaction floor only — benign, logged,
+        // never toasted.
+        const { current } = get_state().fight_result
+        const roster_complete =
+          current?.fight === pending.fight &&
+          current.participants.every(({ seat, settled }) => seat === pending.fighter || settled)
+        if (roster_complete)
+          void wallet.fight.close({ fight: pending.fight }).catch((error: unknown) => {
+            console.warn('[fight_result] fight close lost its race', error)
+          })
+      })
       .catch((error: unknown) => {
         attempts.set(key, Object.freeze({ latched: executed(error) }))
         dispatch({
@@ -394,6 +506,9 @@ const observe: NonNullable<AppModule['observe']> = ({ events, dispatch, get_stat
         toast.add(error)
       })
       .finally(() => {
+        const gas_spent_mist = get_state().session.wallet?.fight.gas_spent(pending.fight)
+        if (gas_spent_mist !== undefined)
+          dispatch({ type: 'fight_result/gas_updated', fight: pending.fight, gas_spent_mist })
         active = null
         if (resolution_changed_while_active) {
           resolution_changed_while_active = false
@@ -403,7 +518,13 @@ const observe: NonNullable<AppModule['observe']> = ({ events, dispatch, get_stat
   }
 
   events.on('fight/reconciled', ({ checkpoint, mode }) => {
-    if (mode === 'local') dispatch({ type: 'fight_result/checkpoint', checkpoint })
+    if (mode === 'local')
+      dispatch({
+        type: 'fight_result/checkpoint',
+        checkpoint,
+        observed_at_ms: Date.now(),
+        gas_spent_mist: get_state().session.wallet?.fight.gas_spent(checkpoint.contract.id) ?? 0n,
+      })
   })
   events.on('fight_result/retry', () => {
     const fight = get_state().fight_result.current?.fight
@@ -416,6 +537,10 @@ const observe: NonNullable<AppModule['observe']> = ({ events, dispatch, get_stat
       return
     }
     if (state.fight_result.resolutions !== previous.fight_result.resolutions) {
+      const result = state.fight_result.current
+      const gas_spent_mist = result ? state.session.wallet?.fight.gas_spent(result.fight) : undefined
+      if (result && gas_spent_mist !== undefined)
+        dispatch({ type: 'fight_result/gas_updated', fight: result.fight, gas_spent_mist })
       if (active) resolution_changed_while_active = true
       else sweep()
       return
@@ -433,6 +558,7 @@ export const fight_result_complete = (state: Readonly<FightResultState>): boolea
   if (!result) return true
   if (result.own_seat === null) return true
   const own = result.participants[result.own_seat]
+  if (own?.forfeited) return true
   return !!own?.settled && result.resolution_synced && !state.resolutions.some(({ fight }) => fight === result.fight)
 }
 

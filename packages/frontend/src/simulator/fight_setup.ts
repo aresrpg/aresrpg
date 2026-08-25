@@ -5,6 +5,7 @@
 import { create_character_source, mob_scalar_for_level, player_max_hp, type FightSetup } from '@aresrpg/fight'
 import { equipment_slot_accepts, item_stat_center, stat_names, type CharacterEquipmentSlot } from '@aresrpg/immutable'
 
+import { simulator_board } from '../modules/simulator.ts'
 import { encyclopedia_catalog } from '../content/catalog.ts'
 import { catalog_spell_sources, to_mob_template } from '../content/fight_sources.ts'
 import type { SimulatorState } from '../modules/simulator.ts'
@@ -91,6 +92,8 @@ export const simulator_fight_setup = (state: Readonly<SimulatorState>): FightSet
     fight_id: `local_${state.seed}`,
     world: 'local',
     board_seed: state.seed,
+    // the simulator draws from the SAME authored catalog the chain publishes — one SSOT
+    board: simulator_board(state),
     players,
     mobs,
     spells: { ...catalog_spell_sources() },

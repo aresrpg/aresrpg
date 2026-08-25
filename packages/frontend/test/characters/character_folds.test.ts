@@ -55,9 +55,9 @@ const character = (overrides: Partial<CharacterRow> = {}): CharacterRow => ({
 
 const item = (overrides: Partial<ItemRow> = {}): ItemRow => ({
   id: '0xitem',
-  name: 'Iron Helmet',
-  item_type: 'iron_helmet',
-  category: 'helmet',
+  name: 'Veteran Title',
+  item_type: 'title_veteran',
+  category: 'title',
   level: 5,
   amount: 1,
   kiosk: '0xkiosk',
@@ -87,45 +87,45 @@ describe('equipment staging', () => {
   test('equipment.move guards are predicted: level, category, relic duplicates, listings', () => {
     const guard = (input: ItemRow, slot: Parameters<typeof equip_refusal>[0]['slot'], listed: string[] = []) =>
       equip_refusal({ item: input, slot, character_level: 10, equipment: {}, listed_ids: new Set(listed) })
-    expect(guard(item({ level: 50 }), 'helmet')).toBe('level_too_low')
+    expect(guard(item({ level: 50 }), 'title')).toBe('level_too_low')
     expect(guard(item(), 'boots')).toBe('wrong_slot')
-    expect(guard(item(), 'helmet', ['0xitem'])).toBe('item_listed')
+    expect(guard(item(), 'title', ['0xitem'])).toBe('item_listed')
     const relic = item({ id: '0xrelic2', category: 'relic', item_type: 'skull_relic' })
     const wearing = stage_equip({}, item({ id: '0xrelic1', category: 'relic', item_type: 'skull_relic' }), 'relic_1')
     expect(
       equip_refusal({ item: relic, slot: 'relic_2', character_level: 10, equipment: wearing, listed_ids: new Set() })
     ).toBe('relic_duplicate')
-    expect(guard(item(), 'helmet')).toBeNull()
+    expect(guard(item(), 'title')).toBeNull()
   })
 
   test('the change-set is the staged−real diff; a replace unequips and equips the same slot', () => {
     const real = equipment_map_of(
-      character({ equipment: [{ slot: 'helmet', ...item({ id: '0xold' }), kiosk: undefined } as never] })
+      character({ equipment: [{ slot: 'title', ...item({ id: '0xold' }), kiosk: undefined } as never] })
     )
-    const staged = stage_equip(real, item({ id: '0xnew' }), 'helmet')
+    const staged = stage_equip(real, item({ id: '0xnew' }), 'title')
     expect(equipment_change_set(staged, real)).toEqual({
-      to_equip: [{ slot: 'helmet', item_id: '0xnew' }],
-      to_unequip: [{ slot: 'helmet', item_id: '0xold' }],
+      to_equip: [{ slot: 'title', item_id: '0xnew' }],
+      to_unequip: [{ slot: 'title', item_id: '0xold' }],
     })
-    expect(equipment_change_set(stage_unequip(real, 'helmet'), real)).toEqual({
+    expect(equipment_change_set(stage_unequip(real, 'title'), real)).toEqual({
       to_equip: [],
-      to_unequip: [{ slot: 'helmet', item_id: '0xold' }],
+      to_unequip: [{ slot: 'title', item_id: '0xold' }],
     })
   })
 })
 
 describe('character receipt folds', () => {
   test('equip fold moves the item into equipment, refolds gear stats, frees the slot back', () => {
-    const helmet = item({ stats: { vitality: SHIFT + 20 } })
-    const state = seeded_state([character()], [helmet])
+    const title = item({ stats: { vitality: SHIFT + 20 } })
+    const state = seeded_state([character()], [title])
     const equipped = reduce_app_state(state, {
       type: 'character/equip_folded',
       character_id: '0xchar',
-      equipped: [{ slot: 'helmet', item_id: '0xitem' }],
+      equipped: [{ slot: 'title', item_id: '0xitem' }],
       unequipped: [],
     })
     const row = equipped.session.characters[0]!
-    expect(row.equipment.map(({ id, slot }) => ({ id, slot }))).toEqual([{ id: '0xitem', slot: 'helmet' }])
+    expect(row.equipment.map(({ id, slot }) => ({ id, slot }))).toEqual([{ id: '0xitem', slot: 'title' }])
     expect(row.folded_stats?.vitality).toBe(SHIFT + 20)
     expect(equipped.session.inventory).toHaveLength(0)
 
@@ -133,7 +133,7 @@ describe('character receipt folds', () => {
       type: 'character/equip_folded',
       character_id: '0xchar',
       equipped: [],
-      unequipped: [{ slot: 'helmet', item_id: '0xitem' }],
+      unequipped: [{ slot: 'title', item_id: '0xitem' }],
     })
     expect(unequipped.session.characters[0]!.equipment).toHaveLength(0)
     expect(unequipped.session.characters[0]!.folded_stats?.vitality).toBe(SHIFT)
@@ -242,15 +242,15 @@ describe('character receipt folds', () => {
   })
 
   test('a replace change-set folds through: same slot unequipped and equipped in one receipt', () => {
-    const old_helmet = item({ id: '0xold', stats: { vitality: SHIFT + 5 } })
-    const new_helmet = item({ id: '0xnew', stats: { vitality: SHIFT + 9 } })
-    const worn = character({ equipment: [{ slot: 'helmet', ...old_helmet, kiosk: undefined } as never] })
-    const state = seeded_state([worn], [new_helmet])
+    const old_title = item({ id: '0xold', stats: { vitality: SHIFT + 5 } })
+    const new_title = item({ id: '0xnew', stats: { vitality: SHIFT + 9 } })
+    const worn = character({ equipment: [{ slot: 'title', ...old_title, kiosk: undefined } as never] })
+    const state = seeded_state([worn], [new_title])
     const next = reduce_app_state(state, {
       type: 'character/equip_folded',
       character_id: '0xchar',
-      equipped: [{ slot: 'helmet', item_id: '0xnew' }],
-      unequipped: [{ slot: 'helmet', item_id: '0xold' }],
+      equipped: [{ slot: 'title', item_id: '0xnew' }],
+      unequipped: [{ slot: 'title', item_id: '0xold' }],
     })
     const row = next.session.characters[0]!
     expect(row.equipment.map(({ id }) => id)).toEqual(['0xnew'])
@@ -323,7 +323,7 @@ describe('inventory receipt folds', () => {
 describe('stat derivations', () => {
   test('fold twin matches item_stats.move: centered offsets sum around SHIFT, clamped low', () => {
     const folded = fold_equipment_stats([
-      { slot: 'helmet', ...item({ stats: { vitality: SHIFT + 30, agility: SHIFT - 10 } }) } as never,
+      { slot: 'title', ...item({ stats: { vitality: SHIFT + 30, agility: SHIFT - 10 } }) } as never,
       { slot: 'boots', ...item({ id: '0xboots', stats: { vitality: SHIFT + 12 } }) } as never,
     ])
     expect(folded.vitality).toBe(SHIFT + 42)
@@ -331,7 +331,7 @@ describe('stat derivations', () => {
     expect(folded.strength).toBe(SHIFT)
     // a malus deeper than the center clamps to 0, exactly like the Move fold
     const cursed = fold_equipment_stats([
-      { slot: 'helmet', ...item({ stats: { vitality: SHIFT - 20_000 } }) } as never,
+      { slot: 'title', ...item({ stats: { vitality: SHIFT - 20_000 } }) } as never,
       { slot: 'boots', ...item({ id: '0xboots2', stats: { vitality: SHIFT - 20_000 } }) } as never,
     ])
     expect(cursed.vitality).toBe(0)
@@ -352,6 +352,10 @@ describe('stat derivations', () => {
     expect(character_max_hp(row)).toBe(50 + 50 + 10 + 20)
     const now = Date.now()
     expect(projected_hp(character({ hp: '40', hp_ms: now - 10_000 }), now)).toBe(50)
+    const just_defeated = character({ hp: '1', hp_ms: now })
+    expect(projected_hp(just_defeated, now)).toBe(1)
+    expect(projected_hp(just_defeated, now + 999)).toBe(1)
+    expect(projected_hp(just_defeated, now + 1_000)).toBe(2)
     // an uninitialized hp DF means full health — pinned as the explicit expected NUMBER
     expect(projected_hp(character(), now)).toBe(110)
     // a gear malus deeper than the base floors max hp at 1, never 0 or negative
@@ -361,18 +365,15 @@ describe('stat derivations', () => {
 
 describe('the star-gate join fold', () => {
   test('the receipt WorldJoined re-points world, checkpoint, and arrival coordinates', () => {
-    const state = seeded_state(
-      [character({ world: '01_first_shore', checkpoint_world: '01_first_shore', x: 50200, z: 49800 })],
-      []
-    )
+    const state = seeded_state([character({ world: 'nauvis', checkpoint_world: 'nauvis', x: 50200, z: 49800 })], [])
     const next = reduce_app_state(state, {
       type: 'character/world_joined',
       character_id: '0xchar',
-      joined: { world: '02_verdant_hollow', x: 50000, z: 50000, first_join: false },
+      joined: { world: 'yakutia', x: 50000, z: 50000, first_join: false },
     })
     const row = next.session.characters[0]!
-    expect(row.world).toBe('02_verdant_hollow')
-    expect(row.checkpoint_world).toBe('02_verdant_hollow')
+    expect(row.world).toBe('yakutia')
+    expect(row.checkpoint_world).toBe('yakutia')
     expect(row.x).toBe(50000)
     expect(row.z).toBe(50000)
   })
@@ -382,7 +383,7 @@ describe('the star-gate join fold', () => {
     const next = reduce_app_state(state, {
       type: 'character/world_joined',
       character_id: '0xghost',
-      joined: { world: '02_verdant_hollow', x: 50000, z: 50000, first_join: true },
+      joined: { world: 'yakutia', x: 50000, z: 50000, first_join: true },
     })
     expect(next).toBe(state)
   })

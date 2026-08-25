@@ -9,9 +9,9 @@ import type { create_world, WorldView } from '../game/core/world.ts'
 import { character_render_source, load_character_appearance } from '../game/character_entities.ts'
 import {
   browser_position_storage,
+  chain_anchor_changed,
   create_position_writer,
   resolve_world_boot_position,
-  type ChainAnchor,
 } from '../game/core/position_store.ts'
 import { pose_matches_character, read_pose, subscribe_pose } from '../game/core/pose_feed.ts'
 import { publish_scene, submit_scene_entities, subscribe_scene } from '../game/core/scene_feed.ts'
@@ -24,15 +24,22 @@ import { content_catalog } from '../content/catalog.ts'
 import type { AppInput, AppModule, AppState } from '../store.ts'
 
 import { engage_sword_markers, live_spawns, mob_group_id, resource_pack_id } from './world.ts'
+import {
+  selected_anchor,
+  selected_character_in_dungeon,
+  selected_position,
+  selected_world,
+  sync_dungeon_scene,
+} from './engine_selection.ts'
 import { sword_fights } from './world_engage.ts'
 import { is_world_page } from './navigation.ts'
+import { selected_world_action_lock } from './world_gather.ts'
 
 export type EngineState = EngineStatus
 export type EngineInput =
   | Readonly<{ type: 'engine/canvas_attached'; canvas: HTMLCanvasElement }>
   | Readonly<{ type: 'engine/canvas_detached'; canvas: HTMLCanvasElement }>
   | Readonly<{ type: 'engine/status'; status: EngineStatus }>
-
 export const initial_engine_state = (): EngineState => ({ state: 'initializing', backend: 'none' })
 
 const reduce = (state: AppState, input: AppInput): AppState =>
@@ -44,35 +51,6 @@ type VisualControl = Readonly<{
 }>
 
 const visual_global = globalThis as typeof globalThis & { __ares_visual__?: VisualControl }
-
-const selected_position = (state: AppState): Readonly<{ x: number; z: number }> | null => {
-  const selected = state.session.characters.find(({ id }) => id === state.session.selected_character_id)
-  if (!selected || selected.world !== selected.checkpoint_world) return null
-  return Number.isFinite(selected.x) && Number.isFinite(selected.z)
-    ? {
-        x: chain_to_client_coordinate(selected.x!),
-        z: chain_to_client_coordinate(selected.z!),
-      }
-    : null
-}
-
-/** The chain checkpoint as the LOCAL cache's identity: a saved pose is honored only while it
- *  was captured under this exact anchor (chain truth moved = the cache is stale). */
-const selected_anchor = (
-  state: AppState
-): Readonly<{ character_id: string; world: string; anchor: ChainAnchor }> | null => {
-  const selected = state.session.characters.find(({ id }) => id === state.session.selected_character_id)
-  if (!selected?.world || selected.world !== selected.checkpoint_world) return null
-  if (!Number.isFinite(selected.x) || !Number.isFinite(selected.z)) return null
-  return Object.freeze({
-    character_id: selected.id,
-    world: selected.world,
-    anchor: Object.freeze({ x: selected.x!, z: selected.z!, at_ms: selected.at_ms ?? 0 }),
-  })
-}
-
-const selected_world = (state: AppState): string | null =>
-  state.session.characters.find(({ id }) => id === state.session.selected_character_id)?.world ?? null
 
 const observe = ({ events, dispatch, get_state, signal }: Parameters<NonNullable<AppModule['observe']>>[0]): void => {
   let canvas: HTMLCanvasElement | null = null
@@ -111,6 +89,7 @@ const observe = ({ events, dispatch, get_state, signal }: Parameters<NonNullable
     world.set_interactive(
       is_world_page(state.navigation.page) && (!!state.session.wallet || state.navigation.guest_spectating)
     )
+    world.set_action_lock(is_world_page(state.navigation.page) ? selected_world_action_lock(state) : null)
   }
 
   const sync_settings = (state: AppState): void => {
@@ -190,6 +169,7 @@ const observe = ({ events, dispatch, get_state, signal }: Parameters<NonNullable
         submit_world_entities()
       },
       ground_height: api.ground_height,
+      entity_height: api.entity_height,
       label: (group_id, element, position) => api.set_world_label(group_id, element, position),
     })
   }
@@ -202,7 +182,8 @@ const observe = ({ events, dispatch, get_state, signal }: Parameters<NonNullable
     })
 
   const sync_presence = (state: AppState): void => {
-    presence?.update(state.world.players, state.session.selected_character_id)
+    const in_dungeon = selected_character_in_dungeon(state)
+    presence?.update(in_dungeon ? Object.freeze({}) : state.world.players, state.session.selected_character_id)
   }
 
   /** The tracked zones' LIVE mob groups, in client space — what the seed drew minus what the
@@ -211,7 +192,8 @@ const observe = ({ events, dispatch, get_state, signal }: Parameters<NonNullable
   const sync_spawns = (state: AppState): void => {
     if (!spawns) return
     const world_name = selected_world(state)
-    if (!world_name) {
+    const selected = state.session.characters.find(({ id }) => id === state.session.selected_character_id)
+    if (!world_name || selected?.dungeon_run) {
       spawns.update([])
       return
     }
@@ -232,8 +214,9 @@ const observe = ({ events, dispatch, get_state, signal }: Parameters<NonNullable
   const sync_resources = (state: AppState): void => {
     if (!resources) return
     const world_name = selected_world(state)
+    const selected = state.session.characters.find(({ id }) => id === state.session.selected_character_id)
     const authored = world_name ? (content_catalog.world(world_name)?.resources ?? []) : []
-    if (!world_name) {
+    if (!world_name || selected?.dungeon_run) {
       resources.update([])
       return
     }
@@ -268,9 +251,10 @@ const observe = ({ events, dispatch, get_state, signal }: Parameters<NonNullable
     const api = world
     if (!api) return
     const world_name = selected_world(state)
+    const selected = state.session.characters.find(({ id }) => id === state.session.selected_character_id)
     const arm = (assets: Readonly<{ model_url: string; impact_sound_url: string }>): void => {
       sword_assets = assets
-      const canonical = sword_fights(state.world.fights, world_name).map((fight) => {
+      const canonical = (selected?.dungeon_run ? [] : sword_fights(state.world.fights, world_name)).map((fight) => {
         const x = chain_to_client_coordinate(fight.x)
         const z = chain_to_client_coordinate(fight.z)
         return {
@@ -342,6 +326,7 @@ const observe = ({ events, dispatch, get_state, signal }: Parameters<NonNullable
     sync_presence(state)
     sync_spawns(state)
     sync_resources(state)
+    sync_dungeon_scene(world, state)
     sync_pet(state)
     sync_fights(state)
     // The published demo's target is its known origin. The player app must likewise resolve
@@ -452,6 +437,12 @@ const observe = ({ events, dispatch, get_state, signal }: Parameters<NonNullable
       })
       return
     }
+    const world_content = content_catalog.world(world_name ?? '')
+    const world_mobs = [
+      ...(world_content?.mobs ?? []),
+      ...(world_content?.dungeon?.rooms.flatMap((room) => room) ?? []),
+    ]
+    void import('../game/mob_entities.ts').then(({ preload_world_mobs }) => preload_world_mobs(world_mobs))
     const own_generation = generation
     void Promise.all([import('../game/core/world.ts'), boot_position])
       .then(([{ create_world: create }, initial_position]) => {
@@ -532,6 +523,7 @@ const observe = ({ events, dispatch, get_state, signal }: Parameters<NonNullable
     sync_presence(get_state())
     sync_spawns(get_state())
     sync_resources(get_state())
+    sync_dungeon_scene(world, get_state())
   })
   const unsubscribe_pose = subscribe_pose(() => {
     const pose = read_pose()
@@ -539,7 +531,7 @@ const observe = ({ events, dispatch, get_state, signal }: Parameters<NonNullable
     const state = get_state()
     spawns?.refresh()
     sync_resources(state)
-    if (state.fight.mounted) return // only the selected character's mounted fight takes the body out of the world
+    if (state.fight.mounted || selected_character_in_dungeon(state)) return
     const identity = selected_anchor(state)
     if (!identity || !pose_matches_character(pose, identity.character_id)) return
     writer.note(pose, identity.anchor, identity)
@@ -555,17 +547,25 @@ const observe = ({ events, dispatch, get_state, signal }: Parameters<NonNullable
     dispose_world()
   })
   events.on('STATE_UPDATED', (state, previous) => {
-    if (state.navigation !== previous.navigation || state.session.wallet !== previous.session.wallet)
-      sync_activity(state)
+    sync_activity(state)
     if (state.settings !== previous.settings) sync_settings(state)
     const selection_changed = state.session.selected_character_id !== previous.session.selected_character_id
     const target_became_available = selected_position(previous) === null && selected_position(state) !== null
+    const target_anchor_changed = chain_anchor_changed(
+      selected_anchor(previous)?.anchor ?? null,
+      selected_anchor(state)?.anchor ?? null
+    )
     const world_changed = selected_world(state) !== selected_world(previous)
     if (world_changed && canvas) mount(canvas)
-    else if (selection_changed || target_became_available) sync_target(state)
+    else if (selection_changed || target_became_available || target_anchor_changed) sync_target(state)
     if (selection_changed || state.session.characters !== previous.session.characters) {
       sync_character(state)
       sync_pet(state)
+      sync_presence(state)
+      sync_spawns(state)
+      sync_resources(state)
+      sync_dungeon_scene(world, state)
+      sync_fights(state)
     }
     if (selection_changed || state.world.players !== previous.world.players) sync_presence(state)
     // the population and the consumption are two facts on the wire — either moving changes what
@@ -579,6 +579,7 @@ const observe = ({ events, dispatch, get_state, signal }: Parameters<NonNullable
       sync_spawns(state)
     if (selection_changed || state.world.spawns !== previous.world.spawns || state.world.zones !== previous.world.zones)
       sync_resources(state)
+    if (selection_changed || state.world.spawns !== previous.world.spawns) sync_dungeon_scene(world, state)
     if (state.world.fights !== previous.world.fights || state.world.pending_engages !== previous.world.pending_engages)
       sync_fights(state)
   })

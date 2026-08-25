@@ -24,7 +24,10 @@ export const ExperienceBar = ({ experience }: Readonly<{ experience: string }>) 
       className="fight-hud__experience"
       role="progressbar"
     >
-      <span style={{ width: `${percent}%` }} />
+      <span aria-hidden="true" className="fight-hud__experience-fill" style={{ width: `${percent}%` }} />
+      <span aria-hidden="true" className="fight-hud__experience-amount">
+        {label}
+      </span>
     </div>
   )
 }
@@ -44,17 +47,17 @@ export const OverworldVitals = () => {
   return (
     <div className="fight-hud fight-hud--overworld">
       <div className="fight-hud__bottom">
-        <div className="fight-hud__bar">
-          <div className="fight-hud__overworld-vitals">
+        <div className="fight-hud__bar fight-hud__bar--overworld">
+          <div className="fight-hud__overworld-row">
             <VitalsDisplay
               ap={BigInt(action_points(character))}
               hp={BigInt(projected_hp(character, now))}
               max_hp={BigInt(character_max_hp(character))}
               mp={BigInt(movement_points(character))}
             />
-            <ExperienceBar experience={character.experience} />
+            <EmptyActionCells />
           </div>
-          <EmptyActionCells />
+          <ExperienceBar experience={character.experience} />
         </div>
       </div>
     </div>

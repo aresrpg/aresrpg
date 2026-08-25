@@ -2,13 +2,21 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
 import { describe, expect, test } from 'bun:test'
-import { decode_fight_action, encode_fight_action, fight_path_to, reachable_fight_cells } from '@aresrpg/fight'
+import {
+  create_fight,
+  decode_fight_action,
+  encode_fight_action,
+  fight_path_to,
+  reachable_fight_cells,
+} from '@aresrpg/fight'
 
 import { create_fight_session, fight_should_close } from '../../src/modules/fight.ts'
 import { initial_simulator_state, reduce_simulator_state, simulator_board } from '../../src/modules/simulator.ts'
 import { simulator_fight_setup } from '../../src/simulator/fight_setup.ts'
+import { content_catalog } from '../../src/content/catalog.ts'
 
 const ready_setup = () => {
+  const mob = content_catalog.mobs[0]!
   const character = {
     id: 'local_senshi',
     name: 'Local Senshi',
@@ -38,10 +46,10 @@ const ready_setup = () => {
   return reduce_simulator_state(ally, {
     type: 'simulator/mob_placed',
     cell: board.start_cells_b[0]!,
-    mob_type: 'alley_bunny',
-    level: 4,
-    level_min: 1,
-    level_max: 6,
+    mob_type: mob.mob_type,
+    level: mob.level_min,
+    level_min: mob.level_min,
+    level_max: mob.level_max,
   })
 }
 
@@ -117,6 +125,22 @@ describe('fight session owner', () => {
     streamed.apply(decode_fight_action(encode_fight_action(action)))
 
     expect(streamed.state()).toEqual(local.state())
+  })
+
+  test('keeps a remote boundary pending until its authoritative resting checkpoint arrives', () => {
+    const simulator = ready_setup()
+    const setup = simulator_fight_setup(simulator)
+    const local = create_fight({ mode: 'local', setup, seed: simulator.seed })
+    const started = local.apply({ type: 'start', observed_ms: 60_000n }).state
+    const actor = started.contract.queue[Number(started.contract.turn_ptr)]!
+    const resting = local.apply({ type: 'end_turn', fighter: actor, observed_ms: 63_000n }).state
+    const remote = create_fight_session({ now: () => 63_000n, reconcile: () => undefined })
+    remote.open({ mode: 'remote', state: started })
+
+    remote.apply({ type: 'end_turn', fighter: actor })
+    expect(remote.state()?.awaiting_turn_witness).toBeTrue()
+    remote.replace(resting)
+    expect(remote.state()?.awaiting_turn_witness).toBeFalse()
   })
 
   test('returns a completed local fight to setup only after its presentation settles', () => {

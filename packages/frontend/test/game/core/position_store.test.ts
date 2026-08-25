@@ -4,6 +4,7 @@
 import { expect, test } from 'bun:test'
 
 import {
+  chain_anchor_changed,
   create_position_writer,
   resolve_world_boot_position,
   resume_position,
@@ -22,6 +23,21 @@ test('the saved pose resumes only while it explains itself against the chain anc
   expect(resume_position(saved, anchor, 50_000 + 31 * 60 * 1000)).toBeNull()
   expect(resume_position(null, anchor, 60_000)).toBeNull()
   expect(resume_position(saved, null, 60_000)).toBeNull()
+
+  const rooted_anchor = Object.freeze({ x: 100, z: 200, at_ms: 70_000 })
+  expect(resume_position({ ...saved, x: 103.68, z: 200, anchor: rooted_anchor }, rooted_anchor, 60_000)).toBeNull()
+  expect(resume_position({ ...saved, x: 100, z: 200, anchor: rooted_anchor }, rooted_anchor, 60_000)).toEqual({
+    x: 100,
+    y: 64,
+    z: 200,
+  })
+})
+
+test('a gather or ambush checkpoint change invalidates the live visual target immediately', () => {
+  expect(chain_anchor_changed(anchor, anchor)).toBeFalse()
+  expect(chain_anchor_changed(anchor, { ...anchor, at_ms: 13_000 })).toBeTrue()
+  expect(chain_anchor_changed(anchor, { ...anchor, x: 103 })).toBeTrue()
+  expect(chain_anchor_changed(null, anchor)).toBeTrue()
 })
 
 test('world boot resolves its real target before chunk scheduling starts', async () => {

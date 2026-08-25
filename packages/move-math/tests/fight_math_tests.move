@@ -6,6 +6,48 @@ module aresrpg_math::fight_math_tests;
 use aresrpg_math::fight_math;
 
 #[test]
+fun mob_bands_scale_from_sixty_to_one_sixty_percent() {
+  assert!(fight_math::band_scaled(1_000, 10, 20, 10) == 600, 0);
+  assert!(fight_math::band_scaled(1_000, 10, 20, 15) == 1_100, 1);
+  assert!(fight_math::band_scaled(1_000, 10, 20, 20) == 1_600, 2);
+  assert!(fight_math::band_scaled(1_000, 10, 10, 10) == 1_000, 3);
+
+  let center = 32_768;
+  assert!(fight_math::centered_band_scaled(center, center, 10, 20, 10) == center, 4);
+  assert!(fight_math::centered_band_scaled(center + 100, center, 10, 20, 10) == center + 60, 5);
+  assert!(fight_math::centered_band_scaled(center - 100, center, 10, 20, 10) == center - 160, 6);
+  assert!(fight_math::centered_band_scaled(center - 100, center, 10, 20, 15) == center - 110, 7);
+  assert!(fight_math::centered_band_scaled(center - 100, center, 10, 20, 20) == center - 60, 8);
+
+  assert!(fight_math::mob_loot_chance_scaled(5_000, 10, 20, 10) == 4_000, 9);
+  assert!(fight_math::mob_loot_chance_scaled(5_000, 10, 20, 15) == 5_000, 10);
+  assert!(fight_math::mob_loot_chance_scaled(5_000, 10, 20, 20) == 6_000, 11);
+  assert!(fight_math::mob_loot_chance_scaled(9_000, 10, 20, 20) == 10_000, 12);
+
+  assert!(fight_math::mob_pool_scaled(6, 10, 20, 10) == 6, 13);
+  assert!(fight_math::mob_pool_scaled(6, 10, 20, 15) == 7, 14);
+  assert!(fight_math::mob_pool_scaled(6, 10, 20, 20) == 8, 15);
+  assert!(fight_math::mob_pool_scaled(3, 10, 20, 20) == 4, 16);
+  assert!(fight_math::mob_pool_scaled(6, 10, 10, 10) == 6, 17);
+}
+
+#[test]
+fun retro_fight_xp_balances_groups_then_splits_by_level() {
+  assert!(fight_math::retro_group_coefficient_tenths(1) == 10, 0);
+  assert!(fight_math::retro_group_coefficient_tenths(2) == 11, 1);
+  assert!(fight_math::retro_group_coefficient_tenths(6) == 36, 2);
+  assert!(fight_math::xp_for_player(1_970, 0, 12, 12, 12, 12, 1) == 1_970, 3);
+  assert!(fight_math::xp_for_player(1_970, 0, 5, 30, 12, 12, 6) == 472, 4);
+  assert!(fight_math::xp_for_player(1_000, 0, 5, 15, 15, 15, 2) == 366, 5);
+  assert!(fight_math::xp_for_player(1_000, 0, 10, 15, 15, 15, 2) == 733, 6);
+  assert!(fight_math::xp_for_player(1_200, 0, 1, 1, 12, 12, 1) == 1_100, 7);
+  assert!(fight_math::xp_for_player(1_200, 0, 20, 20, 12, 12, 1) == 720, 8);
+  assert!(fight_math::xp_for_player(1_200, 0, 40, 40, 12, 12, 1) == 270, 9);
+  // Ares keeps its established Wisdom scale after the Retro group calculation.
+  assert!(fight_math::xp_for_player(1_000, 600, 12, 12, 12, 12, 1) == 2_000, 10);
+}
+
+#[test]
 fun critical_draw_is_stable_per_turn_and_spell() {
   let slash = fight_math::spell_crit_roll(5, &b"slash".to_string());
   let stab = fight_math::spell_crit_roll(5, &b"stab".to_string());

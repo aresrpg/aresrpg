@@ -10,6 +10,8 @@ use std::string::String;
 const ELengthMismatch: u64 = 2306;
 const EEmptyRecipe: u64 = 2307;
 const EZeroQuantity: u64 = 2308;
+const ETooManyIngredients: u64 = 2310;
+const EDuplicateIngredient: u64 = 2311;
 
 public struct Ingredient has copy, drop, store {
   template: ID,
@@ -32,11 +34,17 @@ public fun new(
   let n = templates.length();
   assert!(n == quantities.length(), ELengthMismatch);
   assert!(n > 0, EEmptyRecipe);
+  assert!(n <= job_xp::max_craft_ingredients(), ETooManyIngredients);
   let mut inputs = vector[];
   let mut i = 0;
   while (i < n) {
     let quantity = quantities[i];
     assert!(quantity >= 1, EZeroQuantity);
+    let mut previous = 0;
+    while (previous < i) {
+      assert!(templates[previous] != templates[i], EDuplicateIngredient);
+      previous = previous + 1;
+    };
     inputs.push_back(Ingredient { template: templates[i], quantity });
     i = i + 1;
   };

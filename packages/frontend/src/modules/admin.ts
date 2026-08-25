@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
-import { next_seed_batch, type SeedAdminSession } from '@aresrpg/sdk/seed-admin'
+import { next_seed_batch, type SeedAdminSession, type SeedLedger, type SeedSyncView } from '@aresrpg/sdk/seed-admin'
 
+import { env } from '../env.ts'
 import {
   initial_admin_state,
   type AdminInput,
@@ -20,12 +21,17 @@ export type { AdminInput, AdminState, AdminView }
 const with_admin = (state: AppState, admin: AdminState): AppState => Object.freeze({ ...state, admin })
 
 const can_execute = (admin: AdminState, batch: string): boolean =>
-  admin.status === 'ready' && !admin.snapshot?.sealed && next_seed_batch(admin.snapshot)?.id === batch
+  admin.status === 'ready' && next_seed_batch(admin.snapshot)?.id === batch
 
 const can_seal = (admin: AdminState): boolean =>
   admin.status === 'ready' &&
   admin.seal_armed &&
-  !admin.snapshot?.sealed &&
+  admin.changes !== null &&
+  admin.changes.new_count === 0 &&
+  admin.changes.changed.length === 0 &&
+  admin.changes.board_removals.length === 0 &&
+  admin.changes.fixed.length === 0 &&
+  admin.changes.errors.length === 0 &&
   admin.snapshot?.batches.every(({ state }) => state === 'complete') === true
 
 const reduce_overview = (admin: AdminState, input: AppInput): AdminState | null => {
@@ -175,6 +181,30 @@ const reduce = (state: AppState, input: AppInput): AppState => {
         error: null,
       })
     )
+  if (input.type === 'admin/changes_checked')
+    return with_admin(state, Object.freeze({ ...admin, changes: input.changes }))
+  if (input.type === 'admin/frozen_discovered')
+    return with_admin(state, Object.freeze({ ...admin, frozen: input.frozen }))
+  if (
+    input.type === 'admin/apply_changes' &&
+    admin.status === 'ready' &&
+    ((admin.changes?.changed.length ?? 0) > 0 || (admin.changes?.board_removals.length ?? 0) > 0) &&
+    !admin.changes?.errors.length
+  )
+    return with_admin(
+      state,
+      Object.freeze({
+        ...admin,
+        status: 'executing',
+        operation: Object.freeze({ type: 'changes' }),
+        cleanup: 'needed',
+      })
+    )
+  if (input.type === 'admin/changes_applied' && admin.operation?.type === 'changes')
+    return with_admin(
+      state,
+      Object.freeze({ ...admin, changes: input.changes, status: 'ready', operation: null, error: null })
+    )
   if (input.type === 'admin/seal_armed' && admin.status === 'ready')
     return with_admin(state, Object.freeze({ ...admin, seal_armed: input.armed }))
   if (input.type === 'admin/seal' && can_seal(admin))
@@ -185,7 +215,7 @@ const reduce = (state: AppState, input: AppInput): AppState => {
   if (input.type === 'admin/sealed' && admin.operation?.type === 'seal')
     return with_admin(
       state,
-      Object.freeze({ ...admin, snapshot: input.snapshot, status: 'ready', operation: null, error: null })
+      Object.freeze({ ...admin, snapshot: input.snapshot, frozen: true, status: 'ready', operation: null, error: null })
     )
   if (input.type === 'admin/failed' && (admin.status === 'loading' || admin.status === 'executing'))
     return with_admin(
@@ -206,6 +236,37 @@ const observe = ({ events, dispatch, signal, get_state }: Parameters<NonNullable
     seed_session = null
     generation += 1
   }
+  const changes_summary = (view: SeedSyncView): NonNullable<AdminState['changes']> =>
+    Object.freeze({
+      new_count: view.new_rows.length,
+      changed: Object.freeze(view.changed.map(({ label }) => label)),
+      board_removals: Object.freeze(view.board_removals.map(({ label }) => label)),
+      removed: Object.freeze(view.removed.map(({ label }) => label)),
+      fixed: Object.freeze(view.fixed.map(({ label }) => label)),
+      unchanged: view.unchanged,
+      errors: view.errors,
+    })
+  const get_ledger = async (): Promise<SeedLedger> => {
+    const { content_root } = get_state().admin.config
+    const response = await fetch(
+      `/__admin/seed-ledger?network=${env.network}&content_root=${encodeURIComponent(content_root)}`,
+      { cache: 'no-store' }
+    )
+    if (!response.ok) throw new Error(`The content record returned ${response.status}`)
+    const body = (await response.json()) as Readonly<{ ledger?: SeedLedger }>
+    return body.ledger ?? {}
+  }
+  const put_ledger = async (ledger: SeedLedger, addresses: Readonly<Record<string, string>>): Promise<void> => {
+    const { token } = get_state().admin.deployment
+    const { content_root } = get_state().admin.config
+    const response = await fetch('/__admin/seed-ledger', {
+      method: 'PUT',
+      headers: { 'content-type': 'application/json', 'x-aresrpg-admin-token': token },
+      body: JSON.stringify({ network: env.network, content_root, ledger, addresses }),
+    })
+    if (!response.ok) throw new Error(`The content record refused the update (${response.status})`)
+  }
+
   observe_admin_wallet({ events, dispatch, signal, get_state }, invalidate_seed_session)
   observe_admin_deployment({ events, dispatch, signal, get_state })
   events.on('auth/disconnected', invalidate_seed_session)
@@ -250,12 +311,23 @@ const observe = ({ events, dispatch, signal, get_state }: Parameters<NonNullable
           const complete = snapshot.batches.filter(({ state: batch_state }) => batch_state === 'complete').length
           const next = next_seed_batch(snapshot)
           log(
-            snapshot.sealed
-              ? 'Seed authority is permanently sealed.'
-              : `Seed status checked · ${complete}/${snapshot.batches.length} batches complete${next ? ` · next ${next.id}` : ''}`,
+            `Seed status checked · ${complete}/${snapshot.batches.length} batches complete${next ? ` · next ${next.id}` : ''}`,
             'success'
           )
           dispatch({ type: 'admin/refreshed', snapshot })
+          const view = await created.check_changes(await get_ledger())
+          if (signal.aborted || request !== generation) return
+          const summary = changes_summary(view)
+          log(
+            `Files vs chain · ${summary.new_count} new · ${summary.changed.length} changed · ${summary.board_removals.length} boards removed · ` +
+              `${summary.removed.length} removed from files · ${summary.unchanged} up to date`,
+            'success'
+          )
+          dispatch({ type: 'admin/changes_checked', changes: summary })
+          const frozen = await created.read_frozen()
+          if (signal.aborted || request !== generation) return
+          dispatch({ type: 'admin/frozen_discovered', frozen })
+          if (frozen) log('The game content is permanently frozen on chain.', 'info')
         })
         .catch((error) => {
           if (signal.aborted || request !== generation) return
@@ -283,9 +355,10 @@ const observe = ({ events, dispatch, signal, get_state }: Parameters<NonNullable
       log(`Publishing seed batch ${operation.batch}…`)
       void active
         .execute(operation.batch)
-        .then((result) => {
+        .then(async (result) => {
           if (signal.aborted || request !== generation) return
           log(`Seed batch ${result.batch} published · ${result.digest}`, 'success')
+          await put_ledger(await active.created_ledger(await get_ledger()), await active.address_book())
           dispatch({ type: 'admin/batch_succeeded', batch: result.batch, snapshot: result.snapshot })
         })
         .catch(failed)
@@ -322,15 +395,37 @@ const observe = ({ events, dispatch, signal, get_state }: Parameters<NonNullable
           const { snapshot: updated_snapshot } = result
           snapshot = updated_snapshot
           log(`Seed batch ${result.batch} published · ${result.digest}`, 'success')
+          // Every successful creation transaction durably records its addresses before the
+          // next wallet operation. A later crash can resume from pins.json alone.
+          await put_ledger(await active.created_ledger(await get_ledger()), await active.address_book())
         }
+        // creates done — now write every changed row so one click fully matches the files
+        // (the board list also lands here: a fresh catalog is born empty)
+        const applied = await active.apply_changes(await get_ledger())
+        await put_ledger(applied.ledger, await active.address_book())
+        for (const digest of applied.digests) log(`Changes written · ${digest}`, 'success')
+        dispatch({ type: 'admin/changes_checked', changes: changes_summary(applied.view) })
         dispatch({
           type: 'admin/progress',
           progress: { phase: 'cleanup', current: 0, total: 1, label: null },
         })
         log('Returning unused temporary seed-session gas…')
         await active.release?.()
-        log('All seed batches are published and the temporary session is closed.', 'success')
+        log('All content is published, up to date with the files, and the temporary session is closed.', 'success')
         dispatch({ type: 'admin/publish_all_succeeded', snapshot })
+      })().catch(failed)
+    } else if (operation.type === 'changes') {
+      void (async () => {
+        const ledger = await get_ledger()
+        const { changes } = get_state().admin
+        const count = (changes?.changed.length ?? 0) + (changes?.board_removals.length ?? 0)
+        log(`Rewriting ${count} changed row${count === 1 ? '' : 's'} on chain…`)
+        const result = await active.apply_changes(ledger)
+        await put_ledger(result.ledger, await active.address_book())
+        for (const digest of result.digests) log(`Changes written · ${digest}`, 'success')
+        if (signal.aborted || request !== generation) return
+        log('Every changed row now matches its file.', 'success')
+        dispatch({ type: 'admin/changes_applied', changes: changes_summary(result.view) })
       })().catch(failed)
     } else if (operation.type === 'release') {
       if (!active.release) return failed(new Error('This admin session cannot clean up its temporary signer'))
@@ -341,7 +436,7 @@ const observe = ({ events, dispatch, signal, get_state }: Parameters<NonNullable
         dispatch({ type: 'admin/released' })
       }, failed)
     } else {
-      log('Permanently sealing seed authority; confirm the wallet transaction…')
+      log('Freezing ALL game content forever; confirm the wallet transaction…')
       // a wallet popup dismissed by CLOSING it never settles its promise — every later
       // transaction then queues silently behind it. Surface the stall instead of hiding it.
       const stall_timer = setTimeout(() => {
@@ -353,10 +448,10 @@ const observe = ({ events, dispatch, signal, get_state }: Parameters<NonNullable
           )
       }, 30_000)
       void active
-        .seal()
+        .freeze_forever()
         .then(({ digest, snapshot }) => {
           if (!signal.aborted && request === generation) {
-            log(`Seed authority permanently sealed · ${digest}`, 'success')
+            log(`Game content frozen forever · ${digest}`, 'success')
             dispatch({ type: 'admin/sealed', snapshot })
           }
         })

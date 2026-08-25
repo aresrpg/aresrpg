@@ -1,26 +1,38 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
-import { item_budget_envelope, item_budget_stat_weight, item_damage_line_weight } from '@aresrpg/immutable'
+import {
+  dofus_weapon_damage_envelope,
+  item_budget_envelope,
+  item_budget_standing,
+  item_budget_stat_weight,
+  type ItemBudgetEnvelope,
+  type ItemBudgetStanding,
+  type WeaponDamageEnvelope,
+} from '@aresrpg/immutable'
+import { WEAPON_PHYSICS } from '@aresrpg/fight/move_contract'
 
 import type { JsonValue } from './seed_editor.ts'
 
-export type ItemPowerStatus = 'weak' | 'balanced' | 'overpowered' | 'broken'
+export type ItemPowerStatus = 'weak' | 'balanced' | 'high' | 'beyond'
 
-export type ItemPowerSummary = Readonly<{
-  level: number
-  category: string
-  budget: number
-  p10: number
-  p90: number
-  hard_max: number
-  stat_weight: number
-  damage_weight: number
-  total_weight: number
-  score: number
-  status: ItemPowerStatus
-  stat_contributions: Readonly<Record<string, number>>
-}>
+export type WeaponPowerSummary = WeaponDamageEnvelope &
+  Readonly<{
+    average_per_ap: number
+    maximum_per_ap: number
+    status: ItemPowerStatus
+  }>
+
+export type ItemPowerSummary = ItemBudgetEnvelope &
+  ItemBudgetStanding &
+  Readonly<{
+    level: number
+    category: string
+    stat_power: number
+    status: ItemPowerStatus
+    stat_contributions: Readonly<Record<string, number>>
+    weapon: WeaponPowerSummary | null
+  }>
 
 const json_record = (value: JsonValue | undefined): Readonly<Record<string, JsonValue>> | null =>
   value !== null && value !== undefined && typeof value === 'object' && !Array.isArray(value)
@@ -30,9 +42,37 @@ const json_record = (value: JsonValue | undefined): Readonly<Record<string, Json
 const finite_number = (value: JsonValue | undefined): number =>
   typeof value === 'number' && Number.isFinite(value) ? value : 0
 
-export const item_upu_budget = (level: number): number => (level > 0 ? item_budget_envelope(level).median : 0)
+const status_of = (value: number, p10: number, p90: number, maximum: number): ItemPowerStatus =>
+  value < p10 ? 'weak' : value <= p90 ? 'balanced' : value <= maximum ? 'high' : 'beyond'
+
+export const item_power_budget = (level: number, category = ''): number =>
+  level > 0 ? item_budget_envelope(level, category).median : 0
 
 export const item_stat_weight = item_budget_stat_weight
+
+const weapon_power = (level: number, category: string, damages: readonly JsonValue[]): WeaponPowerSummary | null => {
+  const physics = (WEAPON_PHYSICS as Readonly<Record<string, Readonly<{ ap: bigint }>>>)[category]
+  const envelope = dofus_weapon_damage_envelope(level, category)
+  if (!physics || !envelope || damages.length === 0) return null
+  const ap = Number(physics.ap)
+  const totals = damages.reduce<Readonly<{ average: number; maximum: number }>>(
+    (sum, damage) => {
+      const line = json_record(damage)
+      const from = finite_number(line?.from)
+      const to = finite_number(line?.to)
+      return { average: sum.average + (from + to) / 2, maximum: sum.maximum + to }
+    },
+    { average: 0, maximum: 0 }
+  )
+  const average_per_ap = Math.round((totals.average / ap) * 100) / 100
+  const maximum_per_ap = Math.round((totals.maximum / ap) * 100) / 100
+  return Object.freeze({
+    ...envelope,
+    average_per_ap,
+    maximum_per_ap,
+    status: status_of(average_per_ap, envelope.average_p10, envelope.average_p90, envelope.average_max),
+  })
+}
 
 export const item_power_summary = (value: JsonValue): ItemPowerSummary | null => {
   const item = json_record(value)
@@ -48,35 +88,16 @@ export const item_power_summary = (value: JsonValue): ItemPowerSummary | null =>
       Object.entries(maximum ?? {}).map(([stat, amount]) => [stat, item_stat_weight(stat, finite_number(amount))])
     )
   )
-  const stat_weight = Object.values(stat_contributions).reduce((sum, weight) => sum + weight, 0)
-  const damage_weight = damages.reduce((sum, damage) => {
-    const line = json_record(damage)
-    return sum + finite_number(line?.to) * item_damage_line_weight
-  }, 0)
-  const envelope = item_budget_envelope(level)
-  const budget = level > 0 ? envelope.median : 0
-  const total_weight = stat_weight + damage_weight
-  const score = budget > 0 ? Math.round((total_weight / budget) * 100) : 0
-  const status: ItemPowerStatus =
-    total_weight < envelope.p10
-      ? 'weak'
-      : total_weight <= envelope.p90
-        ? 'balanced'
-        : total_weight <= envelope.hard_max
-          ? 'overpowered'
-          : 'broken'
+  const stat_power = Object.values(stat_contributions).reduce((sum, weight) => sum + weight, 0)
+  const envelope = item_budget_envelope(level, category)
   return Object.freeze({
+    ...envelope,
+    ...item_budget_standing(level, category, stat_power),
     level,
     category,
-    budget,
-    p10: envelope.p10,
-    p90: envelope.p90,
-    hard_max: envelope.hard_max,
-    stat_weight,
-    damage_weight,
-    total_weight,
-    score,
-    status,
+    stat_power,
+    status: status_of(stat_power, envelope.p10, envelope.p90, envelope.corpus_max),
     stat_contributions,
+    weapon: weapon_power(level, category, damages),
   })
 }

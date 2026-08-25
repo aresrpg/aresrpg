@@ -31,14 +31,18 @@ export const WANDER_SPEED = 0.9
 const ARRIVE_EPS = 0.03
 
 export const group_label_anchor = (
-  members: readonly Readonly<{ x: number; y: number; z: number }>[]
+  members: readonly Readonly<{ x: number; y: number; z: number; height?: number | null }>[]
 ): Readonly<{ x: number; y: number; z: number }> | null => {
   if (members.length === 0) return null
   const totals = members.reduce(
-    (sum, member) => ({ x: sum.x + member.x, z: sum.z + member.z, y: Math.max(sum.y, member.y) }),
+    (sum, member) => ({
+      x: sum.x + member.x,
+      z: sum.z + member.z,
+      y: Math.max(sum.y, member.y + (member.height ?? 2)),
+    }),
     { x: 0, y: Number.NEGATIVE_INFINITY, z: 0 }
   )
-  return Object.freeze({ x: totals.x / members.length, y: totals.y + 2, z: totals.z / members.length })
+  return Object.freeze({ x: totals.x / members.length, y: totals.y + 0.2, z: totals.z / members.length })
 }
 
 export type WanderState = Readonly<{

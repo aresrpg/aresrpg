@@ -16,7 +16,8 @@ const RES_PACKS_MAX: u64 = 42;
 const GROUP_SIZE_FULL_AT: u64 = 10_000;
 const GROUP_SIZE_AVG3_AT: u64 = 2_000;
 const LEVEL_RAMP_AT: u64 = 20_000;
-const LEVEL_FLOOR_CAP: u64 = 75;
+const LEVEL_LOW_CAP: u64 = 75;
+const LEVEL_HIGH_CAP: u64 = 100;
 const NODES_RAMP_AT: u64 = 20_000;
 const HOMOGENEOUS_BP: u64 = 5_000;
 const PORTAL_BP: u64 = 1_000;
@@ -64,6 +65,13 @@ fun group_size_bounds(distance: u64): (u64, u64) {
   (low, if (high_raw < low) low else high_raw)
 }
 
+fun level_bounds_at_distance(distance: u64): (u64, u64) {
+  (
+    ramp(distance, LEVEL_RAMP_AT, 0, LEVEL_LOW_CAP),
+    ramp(distance, LEVEL_RAMP_AT, 0, LEVEL_HIGH_CAP),
+  )
+}
+
 fun biome_mob_rows(rows: vector<MobRow>, map: &BiomeMap, zx: u32, zz: u32): vector<MobRow> {
   let biome = world_map::biome_of_zone(map, zx, zz);
   rows.filter!(|row| world_map::mob_row_biomes(row).contains(&biome))
@@ -99,7 +107,7 @@ public fun mob_groups(
   let mut state = prng::rng_seed(prng::mix(seed, 2));
   let count = GROUPS_MIN + prng::draw(&mut state) % (GROUPS_MAX - GROUPS_MIN + 1);
   let (size_lo, size_hi) = group_size_bounds(distance);
-  let level_floor = ramp(distance, LEVEL_RAMP_AT, 0, LEVEL_FLOOR_CAP);
+  let (level_lo, level_hi) = level_bounds_at_distance(distance);
   let mut groups = vector[];
   let mut index = 0u64;
   while (index < count) {
@@ -112,7 +120,7 @@ public fun mob_groups(
     let mut member_index = 0u64;
     while (member_index < size) {
       let mob_type = if (homogeneous) family else weighted_family(&rows, total, &mut state);
-      let scalar = level_floor + prng::draw(&mut state) % (101 - level_floor);
+      let scalar = level_lo + prng::draw(&mut state) % (level_hi - level_lo + 1);
       members.push_back(MobMember { mob_type, level_scalar: scalar as u8 });
       member_index = member_index + 1;
     };
@@ -127,6 +135,12 @@ public fun mob_groups(
 #[test_only]
 public fun group_size_bounds_for_testing(distance: u64): vector<u64> {
   let (low, high) = group_size_bounds(distance);
+  vector[low, high]
+}
+
+#[test_only]
+public fun level_bounds_for_testing(distance: u64): vector<u64> {
+  let (low, high) = level_bounds_at_distance(distance);
   vector[low, high]
 }
 
@@ -234,8 +248,8 @@ public fun portal_of(has_dungeon: bool, seed: u64, zx: u32, zz: u32): (bool, u32
   (true, x, z)
 }
 
-public fun level_floor(zx: u32, zz: u32): u64 {
-  ramp(distance_blocks(zx, zz), LEVEL_RAMP_AT, 0, LEVEL_FLOOR_CAP)
+public fun level_bounds(zx: u32, zz: u32): (u64, u64) {
+  level_bounds_at_distance(distance_blocks(zx, zz))
 }
 
 public fun group_index(group: &MobGroup): u64 { group.index }

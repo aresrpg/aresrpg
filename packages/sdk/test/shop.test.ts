@@ -19,6 +19,8 @@ const package_id = id(1)
 const defining_package_id = id(8)
 const registry_id = id(2)
 const kiosk_package_id = id(7)
+const seed_package_id = id(11)
+const content_root_id = id(12)
 const pins = {
   package: package_id,
   package_original: defining_package_id,
@@ -26,6 +28,9 @@ const pins = {
   template_registry: { id: registry_id, shared_version: '1' },
   item_policy: { id: id(5), shared_version: '1' },
   version: { id: id(6), shared_version: '1' },
+  seed_package: seed_package_id,
+  seed_package_original: seed_package_id,
+  content_root: { id: content_root_id, shared_version: '1' },
 }
 
 const resolve_gas: TransactionPlugin = async (transaction_data, options, next) => {
@@ -154,8 +159,8 @@ describe('shop SDK actions', () => {
 
     // the derived sale + template ids were hydrated (and only those two)
     expect(client.hydrations[0]).toEqual([
-      sale_id(registry_id, defining_package_id, 'pet_lootbox'),
-      item_template_id(registry_id, 'pet_lootbox'),
+      sale_id(content_root_id, defining_package_id, 'pet_lootbox'),
+      item_template_id(content_root_id, seed_package_id, 'pet_lootbox'),
     ])
     // the composed transaction names the REAL door on the REAL package
     expect(move_call_targets(composed!)).toContain(`${package_id}::api::buy`)
@@ -166,7 +171,7 @@ describe('shop SDK actions', () => {
     expect(pure_u64s(composed!)).toContain(75_000_000_000n)
   })
 
-  test('buys multiple non-stackable cosmetics through distinct calls in one PTB', async () => {
+  test('buys multiple non-stackable equipment items through distinct calls in one PTB', async () => {
     const { client, sdk } = game()
     let composed: Transaction | null = null
     const original_execute = sdk.execute_personal_kiosk
@@ -248,8 +253,8 @@ describe('shop SDK actions', () => {
     })
     expect(result).toEqual({ digest, kiosk_cap })
     expect(client.hydrations[0]).toEqual([
-      airdrop_id(registry_id, defining_package_id, 'founders'),
-      item_template_id(registry_id, 'title_veteran'),
+      airdrop_id(content_root_id, defining_package_id, 'founders'),
+      item_template_id(content_root_id, seed_package_id, 'title_veteran'),
     ])
     expect(move_call_targets(composed!)).toContain(`${package_id}::api::claim_airdrop`)
   })

@@ -109,40 +109,36 @@ export const bfs_distance_field = (target: bigint, wall_mask: Mask, max_steps: b
   return field
 }
 
-export const bfs_best_toward = (start: bigint, target: bigint, wall_mask: Mask, budget: bigint): bigint => {
-  if (!in_grid(start)) return start
-  let best = start
-  let best_distance = manhattan(start, target)
-  let best_cost = 0n
-  let visited = mask_from_cells([start])
-  let frontier = [start]
-  let cost = 0n
-  while (cost < budget && frontier.length > 0) {
-    cost += 1n
+/** The APPROACH FIELD to `target`: distances to the nearest of the target's open flanks
+ * (its in-grid, unwalled neighbours — the target's own cell is usually a body and thus a
+ * wall). One flood answers "which way around" for the whole board, so a rusher just walks
+ * DOWN it; the flood stops early once `until` (the rusher's cell) is assigned. A sealed
+ * target has no open flank — everything reads the unreachable sentinel and the rusher holds.
+ * Twin of aresrpg_math::combat_grid::approach_field — mirror every change. */
+export const approach_field = (target: bigint, wall_mask: Mask, until: bigint): bigint[] => {
+  const field = Array.from({ length: Number(GRID_CELLS) }, () => GRID_CELLS)
+  let frontier: bigint[] = []
+  neighbours(target).forEach((flank) => {
+    if (!mask_get(wall_mask, flank)) {
+      field[Number(flank)] = 0n
+      frontier.push(flank)
+    }
+  })
+  let steps = 0n
+  while (frontier.length > 0 && field[Number(until)] === GRID_CELLS) {
+    steps += 1n
     const next: bigint[] = []
     frontier.forEach((cell) => {
       neighbours(cell).forEach((candidate) => {
-        if (!mask_get(visited, candidate) && !mask_get(wall_mask, candidate)) {
-          visited = mask_add_cells(visited, [candidate])
+        if (field[Number(candidate)] === GRID_CELLS && !mask_get(wall_mask, candidate)) {
+          field[Number(candidate)] = steps
           next.push(candidate)
-          if (candidate !== target) {
-            const distance = manhattan(candidate, target)
-            if (
-              distance < best_distance ||
-              (distance === best_distance && cost < best_cost) ||
-              (distance === best_distance && cost === best_cost && candidate < best)
-            ) {
-              best = candidate
-              best_distance = distance
-              best_cost = cost
-            }
-          }
         }
       })
     })
     frontier = next
   }
-  return best
+  return field
 }
 
 const cell_can_cast = (
@@ -320,7 +316,24 @@ export const zone_cells = (shape_code: bigint, size: bigint, anchor: bigint, cas
     return [...tbar_cells(anchor, caster, size), ...(forward === null ? [] : [forward])]
   }
   if (shape_code === shape('cone')) return cone_cells(anchor, caster, size)
-  return Array.from({ length: Number(GRID_CELLS) }, (_, index) => BigInt(index)).filter((cell) =>
-    in_zone(shape_code, size, anchor, cell)
-  )
+  // allmap is the ONE shape a box would silently amputate — it keeps the board scan.
+  if (shape_code === shape('allmap'))
+    return Array.from({ length: Number(GRID_CELLS) }, (_, index) => BigInt(index)).filter((cell) =>
+      in_zone(shape_code, size, anchor, cell)
+    )
+  // circle / cross / ring / blob live inside the anchor's ±size box — scan that, not 380.
+  const ax = cell_x(anchor)
+  const ay = cell_y(anchor)
+  const x0 = ax > size ? ax - size : 0n
+  const y0 = ay > size ? ay - size : 0n
+  const x1 = ax + size < GRID_W - 1n ? ax + size : GRID_W - 1n
+  const y1 = ay + size < GRID_H - 1n ? ay + size : GRID_H - 1n
+  const out: bigint[] = []
+  for (let y = y0; y <= y1; y += 1n) {
+    for (let x = x0; x <= x1; x += 1n) {
+      const cell = encode_cell(x, y)
+      if (in_zone(shape_code, size, anchor, cell)) out.push(cell)
+    }
+  }
+  return out
 }

@@ -4,9 +4,9 @@
 /// authority, clock, entropy, event, or dynamic field; the game package owns every state write.
 module aresrpg_math::world_map;
 
+use aresrpg_math::prng;
 use std::string::String;
 
-const EUnknownWorld: u64 = 301;
 const EInvalidRate: u64 = 306;
 const EInvalidJob: u64 = 308;
 const EEmptyRoom: u64 = 310;
@@ -30,10 +30,7 @@ public struct BiomeMap has copy, drop, store {
 
 public struct DungeonRoom has copy, drop, store { mobs: vector<RoomMob> }
 
-public struct RoomMob has copy, drop, store {
-  mob_type: String,
-  level_scalar: u8,
-}
+public struct RoomMob has copy, drop, store { mob_type: String }
 
 public struct MobRow has copy, drop, store {
   mob_type: String,
@@ -87,6 +84,8 @@ public fun append_biome_map_cells(content: &mut WorldContent, cells: vector<u8>)
   content.biome_map = append_biome_cells(&content.biome_map, cells);
 }
 
+public fun clear_biome_map(content: &mut WorldContent) { content.biome_map = empty_biome_map(); }
+
 public fun set_mobs(content: &mut WorldContent, rows: vector<MobRow>) { content.mobs = rows; }
 
 public fun set_resources(content: &mut WorldContent, rows: vector<ResourceRow>) { content.resources = rows; }
@@ -111,6 +110,12 @@ public fun dungeon_room_count(content: &WorldContent): u64 { content.dungeon_roo
 
 public fun dungeon_room_at(content: &WorldContent, room: u64): vector<RoomMob> {
   dungeon_room_mobs(&content.dungeon_rooms[room - 1])
+}
+
+/// One run-room seed commits every seat's full-band mob roll. A retried engage therefore
+/// reproduces levels exactly instead of opening a reroll surface.
+public fun dungeon_level_scalar(room_seed: u64, seat: u64): u8 {
+  (prng::mix(room_seed, seat) % 101) as u8
 }
 
 public fun resource_row_of(content: &WorldContent, item_type: String): ResourceRow {
@@ -152,13 +157,11 @@ public fun new_resource_row(
     job == b"FARMER".to_string() || job == b"HERBALIST".to_string() || job == b"MINER".to_string(),
     EInvalidJob,
   );
-  assert!(!biomes.is_empty(), EInvalidRate);
+  // Empty means the resource remains in the content catalog without spawning in this world.
   ResourceRow { item_type, job, tier, protector, rare_item_type, biomes }
 }
 
-public fun new_room_mob(mob_type: String, level_scalar: u8): RoomMob {
-  RoomMob { mob_type, level_scalar }
-}
+public fun new_room_mob(mob_type: String): RoomMob { RoomMob { mob_type } }
 
 public fun new_dungeon_room(mobs: vector<RoomMob>): DungeonRoom {
   assert!(!mobs.is_empty(), EEmptyRoom);
@@ -168,8 +171,6 @@ public fun new_dungeon_room(mobs: vector<RoomMob>): DungeonRoom {
 public fun dungeon_room_mobs(room: &DungeonRoom): vector<RoomMob> { room.mobs }
 
 public fun room_mob_type(mob: &RoomMob): String { mob.mob_type }
-
-public fun room_mob_scalar(mob: &RoomMob): u8 { mob.level_scalar }
 
 public fun mob_row_type(row: &MobRow): String { row.mob_type }
 
@@ -224,55 +225,4 @@ public fun travel_ok(
 
 fun abs_diff(a: u32, b: u32): u64 {
   if (a > b) ((a - b) as u64) else ((b - a) as u64)
-}
-
-public fun first_world(): String { b"01_first_shore".to_string() }
-
-public fun entry_level(world: &String): u16 {
-  if (*world == b"01_first_shore".to_string()) return 1;
-  if (*world == b"02_verdant_hollow".to_string()) return 1;
-  if (*world == b"03_emberfall_steppe".to_string()) return 10;
-  if (*world == b"04_mistral_heights".to_string()) return 14;
-  if (*world == b"05_drowned_fen".to_string()) return 18;
-  if (*world == b"06_pandora_reach".to_string()) return 22;
-  if (*world == b"07_cinderforge_depths".to_string()) return 30;
-  if (*world == b"08_palewood".to_string()) return 34;
-  if (*world == b"09_coral_throne".to_string()) return 40;
-  if (*world == b"10_sunspire_dunes".to_string()) return 45;
-  if (*world == b"11_rootheart".to_string()) return 52;
-  if (*world == b"12_static_fields".to_string()) return 60;
-  if (*world == b"13_mirrormere".to_string()) return 68;
-  if (*world == b"14_charnel_marches".to_string()) return 75;
-  if (*world == b"15_silent_atoll".to_string()) return 82;
-  if (*world == b"16_the_sundering".to_string()) return 95;
-  if (*world == b"17_obsidian_choir".to_string()) return 110;
-  if (*world == b"18_abyssal_weald".to_string()) return 125;
-  if (*world == b"19_hollow_crown".to_string()) return 145;
-  if (*world == b"20_zenith_scar".to_string()) return 170;
-  abort EUnknownWorld
-}
-
-public fun world_names(): vector<String> {
-  vector[
-    b"01_first_shore".to_string(),
-    b"02_verdant_hollow".to_string(),
-    b"03_emberfall_steppe".to_string(),
-    b"04_mistral_heights".to_string(),
-    b"05_drowned_fen".to_string(),
-    b"06_pandora_reach".to_string(),
-    b"07_cinderforge_depths".to_string(),
-    b"08_palewood".to_string(),
-    b"09_coral_throne".to_string(),
-    b"10_sunspire_dunes".to_string(),
-    b"11_rootheart".to_string(),
-    b"12_static_fields".to_string(),
-    b"13_mirrormere".to_string(),
-    b"14_charnel_marches".to_string(),
-    b"15_silent_atoll".to_string(),
-    b"16_the_sundering".to_string(),
-    b"17_obsidian_choir".to_string(),
-    b"18_abyssal_weald".to_string(),
-    b"19_hollow_crown".to_string(),
-    b"20_zenith_scar".to_string(),
-  ]
 }

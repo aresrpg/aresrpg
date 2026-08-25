@@ -9,6 +9,19 @@ use sui::test_scenario;
 const OWNER: address = @0xA11CE;
 
 #[test]
+fun mob_spell_numbers_scale_but_geometry_does_not() {
+  assert!(fight::mob_effect_scaling_for_testing() == vector[60, 72, 160, 192, 3], 0);
+}
+
+#[test]
+fun a_final_turn_buff_stays_visible_and_effective_until_that_turn_closes() {
+  let mut scenario = test_scenario::begin(OWNER);
+  // +2 AP and +50 Power remain in the live sheet at duration one, then expire at turn end.
+  assert!(fight::final_turn_buff_for_testing(scenario.ctx()) == vector[8, 50, 2, 1, 0], 0);
+  scenario.end();
+}
+
+#[test]
 fun pool_removal_uses_the_next_pool_and_instant_active_removal_does_not_repeat() {
   let mut scenario = test_scenario::begin(OWNER);
   let result = fight::pool_removal_semantics_for_testing(scenario.ctx());

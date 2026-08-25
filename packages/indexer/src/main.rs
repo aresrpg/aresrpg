@@ -70,6 +70,11 @@ struct Args {
     #[arg(long, env = "PACKAGE_LATEST")]
     package_latest: String,
 
+    /// The seed (living-content) package's ORIGINAL id — content events and
+    /// content-typed objects match this second origin.
+    #[arg(long, env = "SEED_PACKAGE_ORIGINAL")]
+    seed_package_original: String,
+
     /// Override the boot-derived start checkpoint (fresh pipelines only —
     /// ignored once a watermark exists). Unset = derived from the original
     /// package's publish transaction.
@@ -123,6 +128,7 @@ async fn main() -> Result<()> {
 
     let mut args = Args::parse();
     let package_original = pipeline::canonical(&args.package_original)?;
+    let seed_package_original = pipeline::canonical(&args.seed_package_original)?;
     let package_latest = pipeline::canonical(&args.package_latest)?;
 
     let store = FalkorStore::new(&args.redis_url)
@@ -197,7 +203,7 @@ async fn main() -> Result<()> {
     // The ONE pipeline: objects → graph, events → pub/sub + sales zsets.
     indexer
         .sequential_pipeline(
-            AresHandler::new(&package_original, &package_latest)?,
+            AresHandler::new(&package_original, &package_latest, &seed_package_original)?,
             // Explicit channel sizes: the framework defaults derive them from num_cpus/2,
             // which is 0 under a 1-CPU container limit — mpsc::channel(0) panics at boot
             // (2026-08-19, first k8s deploy). Sized for one sequential pipeline, not cores.

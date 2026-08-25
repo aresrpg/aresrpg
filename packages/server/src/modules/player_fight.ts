@@ -9,6 +9,7 @@ import { zone_of } from '@aresrpg/protocol'
 import { channels, mesh, type EventEnvelope, type FightActionFact } from '../protocol.ts'
 import { get_fight } from '../reads/get_fight.ts'
 import { get_fight_checkpoint } from '../reads/get_fight_checkpoint.ts'
+import { latest_keyed_reader } from '../latest_read.ts'
 import logger from '../logger.ts'
 import type { PlayerModule, PlayerAction, PlayerState } from '../player.ts'
 import { create_watcher } from '../pubsub_bus.ts'
@@ -22,19 +23,7 @@ type FighterEntry = { kind: { type: string; character?: string; owner?: string }
 
 /** Only the newest requested checkpoint may publish. Graph reads are async; without this gate,
  * a slow placement read can arrive after a completed mob wave and roll every client back. */
-export const latest_fight_state_reader = <T>(
-  read: (fight: string) => Promise<T>,
-  deliver: (fight: string, state: T) => void
-) => {
-  const generations = new Map<string, number>()
-  return (fight: string): Promise<void> => {
-    const generation = (generations.get(fight) ?? 0) + 1
-    generations.set(fight, generation)
-    return read(fight).then((state) => {
-      if (generations.get(fight) === generation) deliver(fight, state)
-    })
-  }
-}
+export const latest_fight_state_reader = latest_keyed_reader
 
 export default {
   name: 'player_fight',

@@ -9,6 +9,7 @@ import { JsonEditor } from './JsonEditor.tsx'
 import { MobContentEditor } from './MobContentEditor.tsx'
 import type { JsonPath, JsonValue, SeedDomain } from './seed_editor.ts'
 import { StructurePackEditor } from './StructurePackEditor.tsx'
+import type { ItemReferenceFilterRow } from './content_list.ts'
 
 type Props = Readonly<{
   domain: SeedDomain
@@ -17,6 +18,8 @@ type Props = Readonly<{
   is_readonly: (path: JsonPath) => boolean
   save?: () => void
   item_recipe?: ItemRecipeBinding
+  item_filters?: readonly ItemReferenceFilterRow[]
+  mob_templates?: readonly JsonValue[]
 }>
 
 const ItemThumb = ({ item_type }: Readonly<{ item_type: string }>) => (
@@ -33,24 +36,50 @@ const ShopEditor = ({ value, on_change }: Pick<Props, 'value' | 'on_change'>) =>
   const sale = as_record(value)
   if (!sale) return null
   const item_type = string_value(sale.item_type)
+  const infinite = sale.supply === null
+  const enabled = sale.enabled !== false
   return (
     <div className="mx-auto max-w-2xl" data-content-editor="shop">
       <section className="flex items-center gap-4 border-b border-white/9 pb-5">
         <ItemThumb item_type={item_type} />
         <div className="flex flex-wrap items-end gap-3">
-          <TextField change={(next) => on_change(['item_type'], next)} label="Item" value={item_type} width="w-56" />
+          <TextField
+            change={(next) => on_change(['item_type'], next)}
+            disabled
+            label="Item"
+            value={item_type}
+            width="w-56"
+          />
           <NumberField
             change={(next) => on_change(['price'], next)}
             label="Price"
             value={typeof sale.price === 'number' ? sale.price : 0}
             width="w-24"
           />
-          <NumberField
-            change={(next) => on_change(['supply'], next)}
-            label="Supply"
-            value={typeof sale.supply === 'number' ? sale.supply : 0}
-            width="w-24"
-          />
+          {!infinite && (
+            <NumberField
+              change={(next) => on_change(['supply'], next)}
+              label="Supply"
+              value={typeof sale.supply === 'number' ? sale.supply : 1}
+              width="w-24"
+            />
+          )}
+          <label className="flex h-10 items-center gap-2 text-[8px] tracking-[0.12em] text-[#8c929d] uppercase">
+            <input
+              checked={infinite}
+              onChange={(event) => on_change(['supply'], event.target.checked ? null : 1)}
+              type="checkbox"
+            />
+            Infinite
+          </label>
+          <label className="flex h-10 items-center gap-2 text-[8px] tracking-[0.12em] text-[#8c929d] uppercase">
+            <input
+              checked={enabled}
+              onChange={(event) => on_change(['enabled'], event.target.checked)}
+              type="checkbox"
+            />
+            Enabled
+          </label>
         </div>
       </section>
     </div>
@@ -87,18 +116,29 @@ const AirdropEditor = ({ value, on_change, is_readonly }: Pick<Props, 'value' | 
   )
 }
 
-export const ContentEntityEditor = ({ domain, value, on_change, is_readonly, save, item_recipe }: Props) => {
+export const ContentEntityEditor = ({
+  domain,
+  value,
+  on_change,
+  is_readonly,
+  save,
+  item_recipe,
+  item_filters,
+  mob_templates,
+}: Props) => {
   if (domain === 'items')
     return (
       <ItemContentEditor
         is_readonly={is_readonly}
         item_recipe={item_recipe}
+        item_filters={item_filters}
         on_change={on_change}
         save={save}
         value={value}
       />
     )
-  if (domain === 'mobs') return <MobContentEditor on_change={on_change} save={save} value={value} />
+  if (domain === 'mobs')
+    return <MobContentEditor mob_templates={mob_templates} on_change={on_change} save={save} value={value} />
   if (domain === 'shop') return <ShopEditor on_change={on_change} value={value} />
   if (domain === 'airdrop') return <AirdropEditor is_readonly={is_readonly} on_change={on_change} value={value} />
   if (domain === 'structure_packs') return <StructurePackEditor on_change={on_change} save={save} value={value} />

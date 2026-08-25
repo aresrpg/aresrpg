@@ -2,7 +2,7 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 // C9 — Hillaire EGSR 2020 sky/atmosphere: the ATMOSPHERE PARAMETER STRUCT (the R2 per-world tie-in).
 // ONE physical parameter set drives Earth, Mars-class, and tiny-planet skies (paper fig. 1/10) — the
-// S-72 "20 worlds = 20 atmosphere parameter SETS, not 20 hand-tuned gradients" goal. The B5 mood
+// Each authored world derives one atmosphere parameter set instead of a hand-tuned gradient. The B5 mood
 // crossfader lerps these fields; set_atmosphere_params(...) (engine api) writes them live.
 //
 // ALL LENGTHS ARE IN KILOMETRES and all scattering/absorption coefficients are PER-KILOMETRE. The

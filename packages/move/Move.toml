@@ -11,6 +11,12 @@ Kiosk = { git = "https://github.com/MystenLabs/apps.git", subdir = "kiosk", rev 
 # The immutable static layer (curves, grids, formulas, prng, spell algebra) — published
 # first, pinned at publish; pure functions only, the client twin mirrors it byte for byte.
 aresrpg_math = { local = "../move-math" }
+# The one application AdminCap type, shared by seed and core.
+aresrpg_control = { local = "../control" }
+# The living content layer (owner 2026-08-23): content objects + admin doors. Core reads
+# content as DATA through dumb accessors only — never logic across the boundary (Sui pins a
+# dependent's code version).
+aresrpg_seed = { local = "../seed" }
 
 [addresses]
 # Fixed proceeds sink (one home, never a per-sale field).

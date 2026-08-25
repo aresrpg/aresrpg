@@ -69,6 +69,7 @@ export const job_experience_curve = Object.freeze([
 ])
 
 export const job_max_level = 100
+export const craft_max_ingredients = 8
 
 export const job_xp_for_level = (level: number): number | undefined => job_experience_curve[level]
 
@@ -89,15 +90,35 @@ export function job_level_from_xp(xp: number): number {
 /// Resource tier (T1–T11) → the job level that unlocks it (job_xp.move tier_to_level).
 export const tier_unlock_level = (tier: number): number => (tier <= 1 ? 1 : Math.min((tier - 1) * 10, job_max_level))
 
-/// Minimum crafting job level for N distinct ingredient types. Mirrors crafting.move::required_level_for.
+/// Dofus Retro crafting-slot unlocks: 2 slots at birth, then 3/4/5/6/7/8 at
+/// profession levels 10/20/40/60/80/100. Mirrors move-math/job_xp.move.
+const craft_required_level_by_ingredient_count = Object.freeze([0, 0, 1, 10, 20, 40, 60, 80, 100])
 export const craft_required_level = (ingredient_count: number): number =>
-  ingredient_count <= 2 ? 1 : Math.min(Math.ceil(((ingredient_count - 2) * 99) / 8) + 1, job_max_level)
+  ingredient_count <= 2
+    ? 1
+    : craft_required_level_by_ingredient_count[Math.min(Math.floor(ingredient_count), craft_max_ingredients)]!
 
-const craft_xp_by_ingredient_count = Object.freeze([0, 0, 10, 25, 50, 100, 250, 500, 1000, 1000, 1000])
+/// Number of ingredient slots unlocked at a job level. Mirrors move-math/job_xp.move.
+export const craft_slot_capacity = (level: number): number => {
+  const safe_level = Math.max(1, Math.floor(level))
+  if (safe_level < 10) return 2
+  if (safe_level < 20) return 3
+  if (safe_level < 40) return 4
+  if (safe_level < 60) return 5
+  if (safe_level < 80) return 6
+  if (safe_level < 100) return 7
+  return craft_max_ingredients
+}
 
-/// Base crafting XP from distinct ingredient slots. Mirrors crafting.move::craft_xp_for.
+const craft_xp_by_ingredient_count = Object.freeze([0, 0, 10, 25, 50, 100, 250, 500, 1000])
+
+/// Base crafting XP from distinct ingredient slots. Mirrors job_xp.move::craft_xp.
 export const craft_xp_from_ingredient_count = (ingredient_count: number): number =>
-  craft_xp_by_ingredient_count[Math.max(2, Math.min(Math.floor(ingredient_count), 10))]!
+  craft_xp_by_ingredient_count[Math.max(2, Math.min(Math.floor(ingredient_count), craft_max_ingredients))]!
+
+/// Retro XP floor: recipes four or more slots below current capacity grant no XP.
+export const craft_xp_at_level = (ingredient_count: number, crafter_level: number): number =>
+  ingredient_count + 3 < craft_slot_capacity(crafter_level) ? 0 : craft_xp_from_ingredient_count(ingredient_count)
 
 /// Craft roll odds off the crafter's job level. Mirrors job_xp.move::craft_success_bp.
 export const craft_success_percent = (level: number): number =>
@@ -105,6 +126,10 @@ export const craft_success_percent = (level: number): number =>
 
 /// Gather xp per harvest. Mirrors job_xp.move::gather_xp.
 export const gather_xp = (required_level: number): number => 10 + Math.floor(required_level / 2)
+
+/// Post-harvest root duration. Mirrors job_xp.move::gather_time_ms exactly.
+export const gather_time_ms = (job_level: number): number =>
+  Math.max(2_000, 12_000 - Math.floor((10_000 * (Math.max(1, job_level) - 1)) / 99))
 
 /// Gather yield bounds at a job level. Mirrors job_xp.move::gather_quantity_bounds.
 export const gather_quantity_bounds = (job_level: number, required_level: number): readonly [number, number] => {

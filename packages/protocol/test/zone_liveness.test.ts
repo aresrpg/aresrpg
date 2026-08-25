@@ -5,9 +5,17 @@
 // again. It is the seam where a wrong bit retires the wrong group, so it is sealed here rather
 // than re-derived by each surface that renders a zone.
 
+import { readFileSync } from 'node:fs'
+
 import { describe, expect, test } from 'bun:test'
 
-import { live_mob_groups, live_resource_packs, type MobGroupRow, type ResourcePackRow } from '../src/packets.ts'
+import {
+  live_mob_groups,
+  live_resource_packs,
+  ZONE_RESEARCH_TTL_MS,
+  type MobGroupRow,
+  type ResourcePackRow,
+} from '../src/packets.ts'
 
 const group = (index: number): MobGroupRow => ({
   index,
@@ -25,6 +33,13 @@ const pack = (index: number, nodes: number): ResourcePackRow => ({
 })
 
 describe('a zone joins its population with its consumption', () => {
+  test('the client reroll clock matches the Move source constant', () => {
+    const source = readFileSync(new URL('../../move/sources/zone.move', import.meta.url), 'utf8')
+    const ttl = /const RESEARCH_TTL_MS: u64 = ([\d_]+);/.exec(source)?.[1]
+
+    expect(Number(ttl?.replaceAll('_', ''))).toBe(ZONE_RESEARCH_TTL_MS)
+  })
+
   test('a set bit retires exactly its own group', () => {
     const groups = [group(0), group(1), group(2), group(3)]
 

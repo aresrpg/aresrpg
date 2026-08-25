@@ -14,6 +14,7 @@ import type { EventEnvelope } from '../protocol.ts'
 import { get_characters } from '../reads/get_characters.ts'
 import { get_item } from '../reads/get_item.ts'
 import { get_fight_resolutions } from '../reads/get_fight_resolutions.ts'
+import { latest_keyed_reader } from '../latest_read.ts'
 import logger from '../logger.ts'
 import type { PlayerModule, PlayerState } from '../player.ts'
 import { create_watcher } from '../pubsub_bus.ts'
@@ -27,13 +28,17 @@ export default {
   observe: (context) => {
     const { pubsub, graph, send, channels, address, events, signal, dispatch } = context
     const { watch, unwatch, watched } = create_watcher(pubsub)
+    const read_latest_roster = latest_keyed_reader(
+      (owner) => get_characters(graph, { address: owner }),
+      (_owner, characters) => {
+        dispatch({ type: 'action/character_roster', characters })
+        send({ type: 'packet/characters', characters })
+      }
+    )
     const refresh_roster = (): void => {
-      void get_characters(graph, { address })
-        .then((characters) => {
-          dispatch({ type: 'action/character_roster', characters })
-          send({ type: 'packet/characters', characters })
-        })
-        .catch((error) => log.error({ address, error: (error as Error).message }, 'roster refresh failed'))
+      void read_latest_roster(address).catch((error) =>
+        log.error({ address, error: (error as Error).message }, 'roster refresh failed')
+      )
     }
 
     // the player's own social channel — friend facts + exclusive offers, as REAL packets
@@ -83,6 +88,8 @@ export default {
         dispatch({ type: 'action/fight', character_id: character, fight: null })
         refresh_roster()
       }
+      if (payload.type === 'DungeonEntered' || payload.type === 'DungeonRoomCleared' || payload.type === 'DungeonEnded')
+        refresh_roster()
       if (payload.type === 'FightResolutionChanged' || payload.type === 'CharacterHeld') {
         void get_fight_resolutions(graph, { address })
           .then((resolutions) => send({ type: 'packet/fight_resolutions', resolutions }))

@@ -14,8 +14,8 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import type { ItemRow } from '@aresrpg/protocol'
 import { Loader2 } from 'lucide-react'
 
-import { item_icon } from '../content/assets.ts'
 import { encyclopedia_catalog } from '../content/catalog.ts'
+import { item_detail_icon } from '../content/item_detail_assets.ts'
 import { play_fight_audio } from '../game/audio/fight_audio_registry.ts'
 import { rolled_item_types } from '../modules/claims.ts'
 import { copy_text, type AppCopy } from '../i18n/copy.ts'
@@ -161,8 +161,8 @@ export const BoxReveal = ({
         <div className="boxreveal__stage">
           <div aria-hidden="true" className="boxreveal__aura" />
           <div className="boxreveal__box">
-            {item_icon(box.item_type) && (
-              <img alt="" className="boxreveal__box-art" draggable={false} src={item_icon(box.item_type)!} />
+            {item_detail_icon(box.item_type) && (
+              <img alt="" className="boxreveal__box-art" draggable={false} src={item_detail_icon(box.item_type)!} />
             )}
           </div>
           <div aria-hidden="true" className="boxreveal__sparks">
@@ -194,8 +194,8 @@ export const BoxReveal = ({
         <div className="boxreveal__card-wrap" onClick={(event) => event.stopPropagation()}>
           <div className="boxreveal__eyebrow">{t('reveal_eyebrow')}</div>
           <div className="boxreveal__card">
-            {item_icon(rolled.item_type) && (
-              <img alt="" className="boxreveal__pet-art" draggable={false} src={item_icon(rolled.item_type)!} />
+            {item_detail_icon(rolled.item_type) && (
+              <img alt="" className="boxreveal__pet-art" draggable={false} src={item_detail_icon(rolled.item_type)!} />
             )}
             <div className="boxreveal__pet-name">
               {seed?.name ?? rolled.item_type}

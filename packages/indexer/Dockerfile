@@ -65,6 +65,7 @@ COPY --from=builder /usr/local/bin/aresrpg-indexer /usr/local/bin/aresrpg-indexe
 # Env-driven configuration (see src/main.rs `Args`):
 #   PACKAGE_ORIGINAL  (required) — the game package's original id
 #   PACKAGE_LATEST    (required) — its latest upgrade id
+#   SEED_PACKAGE_ORIGINAL (required) — the living-content package's original id
 #   REDIS_URL         (default redis://127.0.0.1:6379) — the FalkorDB instance
 #   REMOTE_STORE_URL  (default https://checkpoints.testnet.sui.io)
 #   STREAMING_URL     (optional) — gRPC live primary; remote store is backfill

@@ -15,16 +15,23 @@ import { fileURLToPath } from 'node:url'
 
 import { validate_world_recipe } from '../packages/engine/src/index.ts'
 import {
-  character_consumable_types,
   class_names,
+  class_spell_shape_errors,
   consumable_types,
   craft_job_of,
+  craft_max_ingredients,
+  craft_required_level,
   element_names,
+  gatherable_catalog,
+  gatherable_of,
   item_categories,
   item_is_stackable,
   item_stat_center,
   job_slugs,
+  model_variant_identity,
+  protector_level_range,
   stat_names,
+  tier_unlock_level,
 } from '../packages/immutable/src/index.ts'
 const PARKED_CLASSES = []
 
@@ -55,14 +62,13 @@ if (duplicate_mob_renders.length)
 /// item.move:429-466 verify_category — a category outside this set aborts `new_template`.
 const CATEGORIES = new Set(item_categories)
 const ELEMENTS = new Set(element_names)
-const GATHERING_JOBS = new Set(job_slugs.slice(0, 3))
+const MOB_ROLES = new Set(['normal', 'boss', 'archi', 'protector'])
 /// Recipe jobs (owner 2026-08-16): the 12 craft slugs PLUS the gathering jobs — each gathering
 /// job transforms its own harvest (FARMER mills flour, MINER grinds powder, HERBALIST distills);
 /// HANDYMAN sweeps the intermediates no dedicated job claims. crafting.move:78 derives the job
 /// from the output category and falls back to the authored slug — the chain accepts all 15.
 const RECIPE_JOBS = new Set(job_slugs)
 /// consumable.move::Effect — authored names mirror the on-chain enum one-for-one.
-const CHARACTER_CONSUMABLES = new Set(character_consumable_types)
 const CONSUMABLE_TYPES = new Set(consumable_types)
 
 const is_u = (value, bits) => Number.isSafeInteger(value) && value >= 0 && BigInt(value) < 1n << BigInt(bits)
@@ -195,7 +201,86 @@ for (const [name, pack] of Object.entries(structure_packs)) {
 
 const item_types = new Set(items.map((row) => row.item_type))
 const mob_types = new Set(mobs.map((row) => row.mob_type))
+const boss_types = new Set(mobs.filter(({ role }) => role === 'boss').map(({ mob_type }) => mob_type))
+const archi_types = new Set(mobs.filter(({ role }) => role === 'archi').map(({ mob_type }) => mob_type))
 const categories_of = new Map(items.map((row) => [row.item_type, row.category]))
+const items_by_type = new Map(items.map((row) => [row.item_type, row]))
+const mobs_by_type = new Map(mobs.map((row) => [row.mob_type, row]))
+
+const mob_model_dir = join(seed_dir, 'models', 'mobs')
+const mob_model_basenames = readdirSync(mob_model_dir)
+  .filter((name) => name.endsWith('.glb'))
+  .map((name) => name.slice(0, -4))
+const glb_json = (basename) => {
+  const bytes = readFileSync(join(mob_model_dir, `${basename}.glb`))
+  const json_length = bytes.readUInt32LE(12)
+  return JSON.parse(
+    bytes
+      .subarray(20, 20 + json_length)
+      .toString()
+      .replace(/\0+$/u, '')
+  )
+}
+const used_mob_models = new Set()
+for (const { mob_type } of mobs) {
+  const model = model_variant_identity(mob_type, mob_model_basenames)
+  if (!model) {
+    red('M-MOB-MODEL', `mob ${mob_type} has no exact or __-variant model`)
+    continue
+  }
+  used_mob_models.add(model.basename)
+  if (model.variant) {
+    const json = glb_json(model.basename)
+    const variants = json.extensions?.KHR_materials_variants?.variants ?? []
+    const variant_index = variants.findIndex(({ name }) => name?.toLowerCase() === model.variant.toLowerCase())
+    if (variant_index < 0) {
+      red('M-MOB-MODEL', `mob ${mob_type} names missing ${model.basename}.glb variant "${model.variant}"`)
+      continue
+    }
+    const mappings = (json.meshes ?? []).flatMap(({ primitives }) =>
+      (primitives ?? []).flatMap(
+        ({ extensions }) =>
+          extensions?.KHR_materials_variants?.mappings?.filter(({ variants: indexes }) =>
+            indexes?.includes(variant_index)
+          ) ?? []
+      )
+    )
+    if (!mappings.length)
+      red('M-MOB-MODEL', `mob ${mob_type} variant "${model.variant}" has no primitive material mapping`)
+  }
+}
+for (const basename of mob_model_basenames)
+  if (!used_mob_models.has(basename)) red('M-MOB-MODEL', `models/mobs/${basename}.glb belongs to no mob_type`)
+
+// The hand-curation floor: no generated gear or creature ladder. Exact rosters make corpus
+// bloat a red diff instead of a gradual relapse.
+const category_counts = Object.fromEntries(
+  [...new Set(items.map(({ category }) => category))].map((category) => [
+    category,
+    items.filter((item) => item.category === category).length,
+  ])
+)
+const expected_category_counts = {
+  resource: 107,
+  consumable: 33,
+  hat: 2,
+  cloak: 2,
+  rune: 35,
+  tool_farmer: 5,
+  tool_herbalist: 5,
+  tool_miner: 5,
+  title: 1,
+  key: 1,
+}
+if (
+  items.length !== 196 ||
+  Object.keys(category_counts).length !== Object.keys(expected_category_counts).length ||
+  Object.entries(expected_category_counts).some(([category, count]) => category_counts[category] !== count)
+)
+  red(
+    'CURATED-ITEMS',
+    `expected the 196-item hand-curation floor, got ${items.length}: ${JSON.stringify(category_counts)}`
+  )
 for (const pet of items.filter(({ category }) => category === 'pet'))
   if (!existsSync(join(seed_dir, 'models', 'pets', `${pet.item_type}.glb`)))
     red('M-PET-MODEL', `pet item ${pet.item_type} has no exact models/pets/${pet.item_type}.glb`)
@@ -335,17 +420,12 @@ for (const stat of stat_names)
       red('H2-RUNE', `${slug} is category "${categories_of.get(slug)}", not rune`)
   }
 
-// H3 — a character consumable resolver with no template is a live door with no content.
-for (const type of CHARACTER_CONSUMABLES)
-  if (!items.some((row) => row.consumable?.type === type))
-    red(
-      'H3-CONSUMABLE',
-      `no item template authors consumable type ${type} — consumable.move implements it and nothing can create one`
-    )
-
 // ── mobs ─────────────────────────────────────────────────────────────────────────────────
 for (const mob of mobs) {
   const where = `mobs[${mob.mob_type}]`
+  if (typeof mob.family !== 'string' || !/^[a-z][a-z0-9_]*$/.test(mob.family))
+    red('M-FAMILY', `${where}: family must be a non-empty snake_case editor taxonomy`)
+  if (!MOB_ROLES.has(mob.role)) red('M-ROLE', `${where}: unknown role "${mob.role}"`)
   if (!ELEMENTS.has(mob.element))
     red('M-ELEMENT', `${where}: element "${mob.element}" is not one of the 4 (mob_template.move:109)`)
   check_number(where, 'level_min', mob.level_min, 8)
@@ -365,11 +445,8 @@ for (const mob of mobs) {
   if (mob.spells.length > 5)
     red('M2-KIT', `${where}: ${mob.spells.length} spells, the cap is 5 (mob_template.move:107)`)
   for (const spell of mob.spells) {
-    if (spell.levels.length < 1 || spell.levels.length > 6)
-      red(
-        'M2-LEVELS',
-        `${where}.${spell.name}: ${spell.levels.length} levels, the chain takes 1..6 (mob_template.move:81)`
-      )
+    if (spell.levels.length !== 1)
+      red('M2-LEVELS', `${where}.${spell.name}: ${spell.levels.length} levels, every mob spell requires exactly 1`)
     spell.levels.forEach((level, i) => check_level(`${where}.${spell.name}[${i}]`, level))
   }
   if (mob.loot.length > 16)
@@ -390,6 +467,12 @@ if (new Set(mobs.map((row) => row.mob_type)).size !== mobs.length) red('L-DUP', 
 const wisdomless = mobs.filter((mob) => mob.wisdom === 0).length
 if (wisdomless)
   warn('H5-WISDOM', `${wisdomless} mobs carry wisdom 0 — the dodge stat has NO legacy source and is unauthored`)
+const unfinished_mobs = mobs.filter(
+  ({ role, hp, ap, mp, xp, spells }) =>
+    role !== 'protector' && hp === 1 && ap === 0 && mp === 0 && xp === 0 && !spells.length
+)
+if (unfinished_mobs.length)
+  warn('M-PLACEHOLDER', `${unfinished_mobs.length} curated mobs await manual stats, levels, XP, and spells`)
 
 // ── spells ───────────────────────────────────────────────────────────────────────────────
 for (const spell of spells) {
@@ -397,12 +480,17 @@ for (const spell of spells) {
   if (!class_names.includes(spell.classe))
     red('C2-CLASSE', `${where}: classe "${spell.classe}" is not one of the 12 (spell_template.move:38 EBadClasse)`)
   check_number(where, 'unlock_level', spell.unlock_level, 8)
-  if (spell.levels.length < 1 || spell.levels.length > 6)
-    red('M2-LEVELS', `${where}: ${spell.levels.length} levels, the chain takes 1..6 (spell_template.move:39)`)
+  if (spell.levels.length !== 6)
+    red('M2-LEVELS', `${where}: ${spell.levels.length} levels, every player spell requires exactly 6`)
   spell.levels.forEach((level, i) => check_level(`${where}[${i}]`, level))
 }
 if (new Set(spells.map((row) => row.name)).size !== spells.length)
   red('L-DUP', 'spells.json holds a duplicate name — the spell address derives from it')
+// THE CLASS SPELL LAW (owner 2026-08-24): exactly twenty spells per class on the Dofus
+// unlock ladder — three at level 1, then 3,6,9,… A class kit on chain is "every spell
+// object naming that class", and chain objects are forever, so the shape must hold BEFORE
+// anything is written.
+for (const error of class_spell_shape_errors(spells)) red('C2-LADDER', error)
 const covered = new Set(spells.map((row) => row.classe))
 const missing = class_names.filter((classe) => !covered.has(classe))
 if (missing.length)
@@ -423,6 +511,8 @@ for (const recipe of recipes) {
     red('M1-JOB', `${where}: invalid authored fallback job "${recipe.job}" (crafting.move)`)
   const inputs = Object.entries(recipe.inputs)
   if (!inputs.length) red('R-INPUTS', `${where}: a recipe with no inputs`)
+  if (inputs.length > craft_max_ingredients)
+    red('R-INPUTS', `${where}: ${inputs.length} ingredient slots exceed Dofus Retro's maximum ${craft_max_ingredients}`)
   if (!item_types.has(recipe.output_type))
     red('X-RECIPE', `${where}: output references the unknown item "${recipe.output_type}"`)
   for (const [slug, quantity] of inputs) {
@@ -433,17 +523,48 @@ for (const recipe of recipes) {
 if (new Set(recipes.map((row) => row.output_type)).size !== recipes.length)
   red('L-DUP', 'recipes.json holds two recipes for one output — RecipeKey derivation aborts on the second')
 
+const resources_by_job = new Map(
+  ['FARMER', 'HERBALIST', 'MINER'].map((job) => [
+    job,
+    gatherable_catalog.filter((row) => row.job === job).toSorted((left, right) => left.tier - right.tier),
+  ])
+)
+for (const [job, resources] of resources_by_job) {
+  const rows = recipes.filter((recipe) => recipe.job === job)
+  if (resources.length !== 11 || rows.length !== 11)
+    red(
+      'CURATED-RECIPES',
+      `${job}: expected 11 resources and 11 processing recipes, got ${resources.length}/${rows.length}`
+    )
+  rows.forEach((recipe, index) => {
+    const job_level = tier_unlock_level(index + 1)
+    const slot_count =
+      Array.from({ length: craft_max_ingredients - 1 }, (_, offset) => offset + 2)
+        .filter((count) => craft_required_level(count) <= job_level)
+        .at(-1) ?? 2
+    const raw_count = slot_count - 1
+    const recent = resources.slice(Math.max(0, index - raw_count + 1), index + 1).toReversed()
+    const expected = Object.fromEntries([...recent.map(({ item_type }) => [item_type, 2]), ['water', 1]])
+    if (JSON.stringify(recipe.inputs) !== JSON.stringify(expected))
+      red(
+        'CURATED-RECIPES',
+        `${recipe.output_type}: expected ${JSON.stringify(expected)}, got ${JSON.stringify(recipe.inputs)}`
+      )
+  })
+}
 // ── worlds ───────────────────────────────────────────────────────────────────────────────
-let unauthored_scalars = 0
 let roaming_bosses = 0
 for (const world of worlds) {
   const where = `worlds[${world.world}]`
+  check_number(where, 'entry_level', world.entry_level, 16)
+  if (world.entry_level < 1) red('W-ENTRY', `${where}: entry_level must be at least 1`)
   // Spawn shape (ruling 2026-08-14): a world WITH a terrain recipe authors ONE world-level
   // mob list — rows of { mob_type, weight_bp, biomes: [names] } (per-biome weights = two rows
   // with disjoint biome lists); a world WITHOUT terrain keeps the flat name→weight map
   // (seeded as biome [0] until its recipe lands).
   const biomes = world.terrain?.biomes ?? []
   const biome_names = new Set(biomes.map(({ name }) => name))
+  const ocean_biome = world.terrain?.ocean?.biome
   if (world.terrain) {
     // The recipe must COMPILE, not just parse — a schema-broken terrain block otherwise
     // survives this gate and only explodes inside derive_biome_map at ceremony time.
@@ -457,6 +578,8 @@ for (const world of worlds) {
           red('S-STRUCTURE', `${where}.terrain.biomes[${biome_index}].structure_packs[${pack_index}]: unknown pack`)
           continue
         }
+        if (biome.name === ocean_biome && pack.category === 'trees')
+          red('S-OCEAN', `${where}: ocean biome cannot reference tree pack ${pack_name}`)
         for (const { type } of pack.types) {
           const template = structure_types[type]
           for (const material of template?.palette ?? [])
@@ -482,56 +605,54 @@ for (const world of worlds) {
     }
     for (const name of row_biomes)
       if (!biome_names.has(name)) red('M2-MOBBIOMES', `${where}: mob ${mob_type} names the unknown biome "${name}"`)
+      else if (name === ocean_biome) red('M2-OCEAN', `${where}: mob ${mob_type} cannot spawn in the ocean biome`)
   }
-  if (world.terrain && spawn_entries.length === 0)
-    red('M2-COVERAGE', `${where}: no mob rows — every zone of this world would be lifeless`)
   const spawnable_mobs = new Set(spawn_entries.map(([, mob]) => mob))
+  for (const mob_type of spawnable_mobs)
+    if (boss_types.has(mob_type)) red('M2-BOSS', `${where}: boss ${mob_type} cannot appear in roaming spawns`)
+    else if (archi_types.has(mob_type))
+      red('M2-ARCHI', `${where}: archimob ${mob_type} needs rare substitution, not a normal spawn row`)
   // Resources are ONE world-level list; each entry names its biomes (terrain worlds only) —
   // one row per resource, so divergent per-biome copies cannot exist by construction.
   const resource_entries = world.resources ?? []
   for (const resource of resource_entries) {
+    check_exact_keys(`${where}.resources[${resource.item_type}]`, resource, ['item_type', 'biomes'])
     if (!world.terrain) continue
-    if (!Array.isArray(resource.biomes) || resource.biomes.length === 0)
-      red('M2-RESBIOMES', `${where}: resource ${resource.item_type} names no biomes`)
-    else
-      for (const name of resource.biomes)
-        if (!biome_names.has(name))
-          red('M2-RESBIOMES', `${where}: resource ${resource.item_type} names the unknown biome "${name}"`)
+    if (!Array.isArray(resource.biomes)) {
+      red('M2-RESBIOMES', `${where}: resource ${resource.item_type} biomes must be an array`)
+      continue
+    }
+    for (const name of resource.biomes)
+      if (!biome_names.has(name))
+        red('M2-RESBIOMES', `${where}: resource ${resource.item_type} names the unknown biome "${name}"`)
+      else if (name === ocean_biome)
+        red('M2-OCEAN', `${where}: resource ${resource.item_type} cannot spawn in the ocean biome`)
   }
   for (const resource of resource_entries) {
-    if (!GATHERING_JOBS.has(resource.job))
-      red('M2-JOB', `${where}: resource ${resource.item_type} job "${resource.job}" (world.move EInvalidJob)`)
-    check_number(`${where}.${resource.item_type}`, 'tier', resource.tier, 8)
     if (!item_types.has(resource.item_type))
       red('X-RESOURCE', `${where}: resource references the unknown item "${resource.item_type}"`)
-    if (resource.protector !== '' && !mob_types.has(resource.protector))
-      red('X-PROTECTOR', `${where}: protector "${resource.protector}" is not a mob`)
-    if (resource.rare_item_type !== '' && !item_types.has(resource.rare_item_type))
-      red('X-RARE', `${where}: rare variant "${resource.rare_item_type}" is not an item`)
+    if (!gatherable_of(resource.item_type))
+      red('X-RESOURCE', `${where}: resource ${resource.item_type} is absent from the immutable gatherable catalog`)
   }
   if (world.dungeon.key !== '' && !item_types.has(world.dungeon.key))
     red('X-KEY', `${where}: dungeon key "${world.dungeon.key}" is not an item`)
   world.dungeon.rooms.forEach((room, i) => {
     if (!room.length) red('M2-ROOM', `${where}: dungeon room ${i + 1} is empty (world.move:148 EEmptyRoom)`)
+    if (room.length > 6)
+      red('M2-ROOM', `${where}: dungeon room ${i + 1} has ${room.length} enemies; fight boards seat at most 6`)
     for (const seat of room) {
       if (!mob_types.has(seat.mob_type))
         red('X-ROOM', `${where}: room ${i + 1} seats the unknown mob "${seat.mob_type}"`)
-      if (!is_u(seat.level_scalar, 8) || seat.level_scalar > 100)
-        red('W-SCALAR', `${where}: room ${i + 1} ${seat.mob_type} level_scalar ${seat.level_scalar} outside 0..100`)
-      if (seat.level_scalar === 0) unauthored_scalars += 1
+      if (Object.keys(seat).some((key) => key !== 'mob_type'))
+        red('W-ROOM-FIELD', `${where}: room ${i + 1} ${seat.mob_type} may author only mob_type; level is run-random`)
       // "bosses never roam" (world.move:56-58) — the rule survives only because mobs.json keeps `role`
       if (spawnable_mobs.has(seat.mob_type)) roaming_bosses += 1
     }
   })
 }
-if (unauthored_scalars)
-  red(
-    'H6-SCALAR',
-    `${unauthored_scalars} dungeon room seats carry the unauthored level_scalar 0 across ${worlds.length} worlds — the room difficulty band has never been balanced`
-  )
 
-// A castable level with zero effects is a dead button — the voided-effect drift (PD-7/14/15)
-// made flesh. Counts both books: class spells and inline mob kits.
+// Empty class levels are explicit authoring placeholders during the hand-curation pass. Mob
+// kits remain live content, author exactly one level, and may not carry dead buttons.
 {
   const dead_class = spells.filter((s) => s.levels.every((l) => !l.effects.length && !l.crit_effects.length))
   const empty_class_levels = spells.reduce((n, s) => n + s.levels.filter((l) => !l.effects.length).length, 0)
@@ -539,32 +660,150 @@ if (unauthored_scalars)
     (n, m) => n + m.spells.filter((s) => s.levels.some((l) => !l.effects.length)).length,
     0
   )
-  if (dead_class.length || empty_class_levels || empty_mob_kits)
-    red(
-      'S-EMPTY',
-      `${dead_class.length} class spells are fully dead and ${empty_class_levels} class levels + ${empty_mob_kits} mob kit spells carry zero effects — the sealed effect model voids their legacy payloads (PD-7/PD-15/PD-16)`
+  if (dead_class.length || empty_class_levels)
+    warn(
+      'S-PLACEHOLDER',
+      `${dead_class.length} class spells / ${empty_class_levels} levels await manual effect authoring`
     )
+  if (empty_class_levels !== dead_class.length * 6)
+    red('S-PLACEHOLDER', 'a spell must be entirely authored or carry six empty placeholder levels')
+  if (empty_mob_kits) red('S-EMPTY', `${empty_mob_kits} live mob spell kits carry an empty level`)
 }
 if (roaming_bosses)
   warn(
     'H6-ROAM',
     `${roaming_bosses} dungeon room seats ALSO appear in their world's spawn weights — "bosses never roam" (world.move:58) is violated by the legacy corpus`
   )
-const rareless = worlds.reduce((sum, world) => {
-  const rows = world.terrain ? world.terrain.biomes.flatMap((biome) => biome.resources ?? []) : (world.resources ?? [])
-  return sum + new Set(rows.filter((row) => row.rare_item_type === '').map((row) => row.item_type)).size
-}, 0)
-if (rareless)
-  warn(
-    'M7-RARE',
-    `${rareless} resource rows carry no rare variant — the golden-gather jackpot draws nothing (gathering.move:53)`
+const authored_world_names = worlds.map(({ world }) => world)
+if (JSON.stringify(authored_world_names) !== JSON.stringify(['nauvis', 'yakutia']))
+  red('CURATED-WORLDS', `expected worlds [nauvis,yakutia], got ${JSON.stringify(authored_world_names)}`)
+const resource_rows = worlds.flatMap(({ resources }) => resources)
+const unique_resources = new Set(resource_rows.map(({ item_type }) => item_type))
+const unique_rares = new Set(gatherable_catalog.map(({ rare_item_type }) => rare_item_type))
+const protectors = new Set(gatherable_catalog.map(({ protector }) => protector))
+const resource_bags = items.filter(
+  ({ category, consumable }) => category === 'consumable' && consumable?.type === 'loot_box'
+)
+if (resource_bags.length !== gatherable_catalog.length)
+  red('CURATED-PROTECTOR-BAGS', `expected 33 resource bags, got ${resource_bags.length}`)
+for (const gatherable of gatherable_catalog) {
+  const where = `immutable.gatherables[${gatherable.item_type}]`
+  if (!job_slugs.slice(0, 3).includes(gatherable.job))
+    red('M2-JOB', `${where}: invalid gathering job ${gatherable.job}`)
+  check_number(where, 'tier', gatherable.tier, 8)
+  if (gatherable.tier < 1 || gatherable.tier > 11) red('M2-TIER', `${where}: tier ${gatherable.tier} outside 1..11`)
+  if (!item_types.has(gatherable.item_type)) red('X-RESOURCE', `${where}: unknown base item`)
+  if (!mob_types.has(gatherable.protector)) red('X-PROTECTOR', `${where}: unknown protector ${gatherable.protector}`)
+  if (!item_types.has(gatherable.rare_item_type))
+    red('X-RARE', `${where}: unknown rare variant ${gatherable.rare_item_type}`)
+  const resource = items_by_type.get(gatherable.item_type)
+  const protector = mobs_by_type.get(gatherable.protector)
+  const bags = resource_bags.filter(
+    ({ consumable }) => consumable.rewards.length === 1 && consumable.rewards[0]?.item_type === gatherable.item_type
   )
+  if (bags.length !== 1)
+    red('CURATED-PROTECTOR-BAGS', `${gatherable.item_type}: expected one resource bag, got ${bags.length}`)
+  const [bag] = bags
+  const reward = bag?.consumable.rewards[0]
+  if (reward && (reward.weight !== 1 || reward.amount !== 50))
+    red('CURATED-PROTECTOR-BAGS', `${bag.item_type}: expected one weight-1 reward of 50 ${gatherable.item_type}`)
+  const expected_loot = bag ? [{ item_type: bag.item_type, chance_bp: 10_000, min_qty: 1, max_qty: 1 }] : []
+  if (protector && JSON.stringify(protector.loot) !== JSON.stringify(expected_loot))
+    red('CURATED-PROTECTOR-BAGS', `${gatherable.protector}: expected sole loot ${JSON.stringify(expected_loot)}`)
+  if (resource && protector) {
+    const expected = protector_level_range(gatherable.tier, resource.level)
+    if (protector.level_min !== expected.level_min || protector.level_max !== expected.level_max)
+      red(
+        'CURATED-PROTECTORS',
+        `${gatherable.protector}: expected level ${expected.level_min}..${expected.level_max}, got ${protector.level_min}..${protector.level_max}`
+      )
+  }
+}
+if (resource_rows.length !== 33 || unique_resources.size !== 33 || unique_rares.size !== 33 || protectors.size !== 33)
+  red(
+    'CURATED-WORLDS',
+    `expected 33 placements / 33 base / 33 rare / 33 protector links, got ${resource_rows.length}/${unique_resources.size}/${unique_rares.size}/${protectors.size}`
+  )
+const nauvis = worlds.find(({ world }) => world === 'nauvis')
+const yakutia = worlds.find(({ world }) => world === 'yakutia')
+for (const job of ['FARMER', 'HERBALIST', 'MINER']) {
+  const tiers_in = (world) =>
+    (world?.resources ?? [])
+      .flatMap(({ item_type }) => {
+        const gatherable = gatherable_of(item_type)
+        return gatherable?.job === job ? [gatherable.tier] : []
+      })
+      .toSorted((left, right) => left - right)
+  const nauvis_tiers = tiers_in(nauvis)
+  const yakutia_tiers = tiers_in(yakutia)
+  if (JSON.stringify(nauvis_tiers) !== JSON.stringify([1, 2, 3]))
+    red('CURATED-RESOURCES', `nauvis ${job}: expected tiers 1,2,3, got ${nauvis_tiers}`)
+  if (JSON.stringify(yakutia_tiers) !== JSON.stringify([4, 5, 6, 7, 8, 9, 10, 11]))
+    red('CURATED-RESOURCES', `yakutia ${job}: expected tiers 4..11, got ${yakutia_tiers}`)
+}
+if (yakutia?.resources.some(({ biomes }) => biomes.length > 0))
+  red('CURATED-RESOURCES', 'yakutia backup resources must remain unplaced')
+const nauvis_resource_biomes = Object.fromEntries(nauvis?.resources.map(({ item_type, biomes }) => [item_type, biomes]))
+const expected_nauvis_resource_biomes = {
+  wheat: ['plains'],
+  green_mushroom: ['forest', 'rainforest'],
+  quartz: ['highlands'],
+  wheat_barley: ['plains'],
+  red_orchid: ['rainforest'],
+  amber: ['highlands'],
+  wheat_malt: ['plains'],
+  ivory_shrooms: ['forest', 'rainforest'],
+  jade: ['desert'],
+}
+if (JSON.stringify(nauvis_resource_biomes) !== JSON.stringify(expected_nauvis_resource_biomes))
+  red('CURATED-RESOURCES', 'nauvis resource biome assignments differ from the curated nine-row placement')
+const expected_curated_mobs = [
+  'ant_red',
+  'ant_white',
+  'aragne__fire',
+  'aragne__water',
+  'aragne__air',
+  'aragne__earth',
+  'aragne__arakiri',
+  'araknomath',
+  'crab',
+  'cro_wani__green',
+  'cro_wani__white',
+  'fuwa__white',
+  'fuwa__black',
+  'fuwa__fukuo',
+  'misui__fire',
+  'misui__earth',
+  'misui__wind',
+  'misui__water',
+  'misui__vitality',
+  'misui__misunami',
+  'moka',
+  'moyumi',
+]
+const actual_curated_mobs = mobs.filter(({ mob_type }) => !protectors.has(mob_type)).map(({ mob_type }) => mob_type)
+if (
+  mobs.length !== 55 ||
+  JSON.stringify(actual_curated_mobs) !== JSON.stringify(expected_curated_mobs) ||
+  mobs.some(({ mob_type, role }) =>
+    protectors.has(mob_type)
+      ? role !== 'protector'
+      : mob_type === 'araknomath'
+        ? role !== 'boss'
+        : archi_types.has(mob_type)
+          ? role !== 'archi'
+          : role !== 'normal'
+  )
+)
+  red('CURATED-MOBS', 'mobs.json must contain 33 protectors, 18 roamers, Araknomath, and the exact 3 archimobs')
 
 // ── shop ─────────────────────────────────────────────────────────────────────────────────
 for (const sale of shop.sales) {
   if (!item_types.has(sale.item_type)) red('X-SALE', `shop sale references the unknown item "${sale.item_type}"`)
-  if (!(sale.supply >= 1))
+  if (sale.supply !== null && !(sale.supply >= 1))
     red('S-SUPPLY', `shop sale ${sale.item_type}: supply ${sale.supply} (shop.move:100 EZeroQuantity)`)
+  if (sale.enabled !== undefined && typeof sale.enabled !== 'boolean')
+    red('S-ENABLED', `shop sale ${sale.item_type}: enabled must be a boolean when present`)
   check_number(`shop.sales[${sale.item_type}]`, 'price', sale.price, 64)
 }
 if (new Set(shop.sales.map((row) => row.item_type)).size !== shop.sales.length)
@@ -572,6 +811,15 @@ if (new Set(shop.sales.map((row) => row.item_type)).size !== shop.sales.length)
 // airdrop.json — the airdrop domain (owner 2026-08-12: split from shop.json; shop = sales only):
 // `showcase` rows are the airdrop page's display data; `drops`/`giftcards` are the chain rows.
 const airdrop = load('airdrop.json')
+if (
+  shop.sales.length !== 0 ||
+  airdrop.showcase.length !== 0 ||
+  airdrop.drops.length !== 0 ||
+  airdrop.giftcards.length !== 0 ||
+  airdrop.legacy_pool.length !== 0 ||
+  airdrop.pending.length !== 0
+)
+  red('CURATED-SUPPLY', 'shop and every airdrop corpus must stay empty until their replacements are hand-authored')
 for (const row of airdrop.showcase) {
   if (typeof row.id !== 'string' || row.id === '') red('A-SHOWCASE', `showcase row without an id`)
   if (typeof row.name !== 'string' || row.name === '') red('A-SHOWCASE', `showcase ${row.id}: empty name`)
@@ -633,6 +881,88 @@ if (existsSync(icons_dir)) {
   warn('M6-ICON', 'seed/icons/items does not exist — icon presence unchecked')
 }
 
+// ── fight boards ─────────────────────────────────────────────────────────────────────────
+// Boards are authored content (the ÷10 plan, Lever 1): the chain's `grid_spec` holds only a
+// cheap sanity floor, so the DEEP proof — every open cell one connected component — lives
+// HERE, on every board, before anything reaches the catalog doors.
+const BOARD_GRID_W = 20
+const BOARD_GRID_CELLS = 380
+const boards_file = load('fight_boards.json')
+const fight_boards = boards_file?.boards ?? []
+if (boards_file?.version !== 1 || !Array.isArray(boards_file?.boards))
+  red('B-SHAPE', 'fight_boards.json must be { version: 1, boards: [...] }')
+if (fight_boards.length < 1)
+  red('B-EMPTY', 'the catalog must hold at least one board (seed % 0 is a fight-creation DoS)')
+const board_mask_get = (words, cell) => (BigInt(words[Math.floor(cell / 64)]) >> BigInt(cell % 64)) & 1n
+fight_boards.forEach((board, i) => {
+  const where = `fight_boards[${i}]`
+  check_exact_keys(where, board, [
+    'width',
+    'height',
+    'shape_mask',
+    'obstacles',
+    'holes',
+    'start_cells_a',
+    'start_cells_b',
+  ])
+  check_number(where, 'width', board.width, 8)
+  check_number(where, 'height', board.height, 8)
+  if (board.width < 1 || board.width > BOARD_GRID_W || board.height < 1 || board.height > 19)
+    red('B-DIMS', `${where} is ${board.width}×${board.height}; the grid law is ≤20×19`)
+  if (
+    !Array.isArray(board.shape_mask) ||
+    board.shape_mask.length !== 6 ||
+    board.shape_mask.some((w) => typeof w !== 'string' || !/^\d+$/.test(w) || BigInt(w) >= 1n << 64n)
+  )
+    return red('B-MASK', `${where}.shape_mask must be 6 u64 words as strings (the 2^53 law)`)
+  const on_mask = (cell) =>
+    Number.isInteger(cell) && cell >= 0 && cell < BOARD_GRID_CELLS && board_mask_get(board.shape_mask, cell) === 1n
+  for (let cell = 0; cell < BOARD_GRID_CELLS; cell += 1)
+    if (on_mask(cell) && (cell % BOARD_GRID_W >= board.width || Math.floor(cell / BOARD_GRID_W) >= board.height))
+      red('B-DIMS', `${where}.shape_mask contains cell ${cell} outside its declared dimensions`)
+  const blocked = new Set([...board.obstacles, ...board.holes])
+  for (const [field, need_open] of [
+    ['obstacles', false],
+    ['holes', false],
+    ['start_cells_a', true],
+    ['start_cells_b', true],
+  ]) {
+    if (!Array.isArray(board[field])) return red('B-CELLS', `${where}.${field} must be an array of cells`)
+    for (const cell of board[field]) {
+      if (!on_mask(cell)) red('B-CELLS', `${where}.${field} cell ${cell} is off-grid or off-shape`)
+      if (need_open && blocked.has(cell)) red('B-STARTS', `${where}.${field} cell ${cell} sits on a blocker`)
+    }
+    if (need_open && board[field].length !== 6)
+      red('B-STARTS', `${where}.${field} holds ${board[field].length} cells; every side requires exactly 6`)
+    if (new Set(board[field]).size !== board[field].length) red('B-CELLS', `${where}.${field} contains duplicate cells`)
+  }
+  const overlap = board.start_cells_a.filter((cell) => board.start_cells_b.includes(cell))
+  if (overlap.length) red('B-STARTS', `${where} gives both teams the same starts: ${overlap.join(', ')}`)
+  // the connectivity PROOF: flood from one open cell, every open cell must be reached
+  const open = []
+  for (let cell = 0; cell < BOARD_GRID_CELLS; cell += 1) if (on_mask(cell) && !blocked.has(cell)) open.push(cell)
+  if (open.length === 0) return red('B-CONNECT', `${where} has no open cell`)
+  const seen = new Set([open[0]])
+  const frontier = [open[0]]
+  while (frontier.length > 0) {
+    const cell = frontier.pop()
+    const x = cell % BOARD_GRID_W
+    for (const next of [
+      x > 0 ? cell - 1 : -1,
+      x < BOARD_GRID_W - 1 ? cell + 1 : -1,
+      cell - BOARD_GRID_W,
+      cell + BOARD_GRID_W,
+    ]) {
+      if (next >= 0 && next < BOARD_GRID_CELLS && on_mask(next) && !blocked.has(next) && !seen.has(next)) {
+        seen.add(next)
+        frontier.push(next)
+      }
+    }
+  }
+  if (seen.size !== open.length)
+    red('B-CONNECT', `${where} splits into islands: ${seen.size}/${open.length} open cells reachable`)
+})
+
 // ── verdict ──────────────────────────────────────────────────────────────────────────────
 const counts = [
   `items ${items.length}`,
@@ -641,6 +971,7 @@ const counts = [
   `recipes ${recipes.length}`,
   `worlds ${worlds.length}`,
   `sales ${shop.sales.length}`,
+  `boards ${fight_boards.length}`,
 ].join(' · ')
 if (json_output) process.stdout.write(`${JSON.stringify({ counts, reds, warns })}\n`)
 else {

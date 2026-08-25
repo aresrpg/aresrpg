@@ -5,6 +5,7 @@ import { describe, expect, test } from 'bun:test'
 
 import { cloud_coverage_threshold, cloud_sample_xz, cloud_shadow_strength } from '../src/clouds.ts'
 import { grade_rgb, grade_rgb_low_frequency } from '../src/grading.ts'
+import { distance_haze_factor } from '../src/distance_fog.ts'
 import { HEIGHT_FOG, height_fog_density } from '../src/height_fog.ts'
 import {
   sun_shafts_sample_gain,
@@ -68,6 +69,21 @@ describe('height fog', () => {
     expect(wet_valley).toBeGreaterThan(dry_valley)
     expect(wet_peak).toBeLessThan(wet_valley * 0.1)
     expect(HEIGHT_FOG.max_opacity).toBeLessThanOrEqual(0.25)
+  })
+})
+
+describe('terminal distance haze', () => {
+  test('stays clear through the foreground and closes the far-shell horizon monotonically', () => {
+    const samples = [0, 500, 750, 1_000, 1_250, 1_500, 1_750, 2_000].map((distance) =>
+      distance_haze_factor(distance, 500, 1_750)
+    )
+
+    expect(samples[0]).toBe(0)
+    expect(samples[1]).toBe(0)
+    expect(samples[2]).toBeLessThan(0.1)
+    expect(samples.at(-2)).toBeCloseTo(0.995)
+    expect(samples.at(-1)).toBeCloseTo(0.995)
+    expect(samples.every((value, index) => index === 0 || value >= samples[index - 1]!)).toBeTrue()
   })
 })
 

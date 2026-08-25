@@ -62,18 +62,18 @@ export const presence_render_source = (row: Readonly<PresenceRow>): CharacterRen
 export const load_character_appearance = async (
   source: Readonly<CharacterRenderSource>
 ): Promise<CharacterAppearanceRender> => {
-  const [{ load_character_model_urls, load_cosmetic_model_url }, { worn_cosmetic_options }] = await Promise.all([
+  const [{ load_character_model_urls, load_worn_equipment_model_url }, { worn_equipment_options }] = await Promise.all([
     import('../content/character_models.ts'),
-    import('../content/worn_cosmetics.ts'),
+    import('../content/worn_equipment.ts'),
   ])
   const worn_model = async (
     item_type: string | undefined,
     category: 'hat' | 'cloak'
   ): Promise<WornModelRender | null> => {
     if (!item_type) return null
-    const options = category === 'hat' ? worn_cosmetic_options.hats : worn_cosmetic_options.cloaks
+    const options = category === 'hat' ? worn_equipment_options.hats : worn_equipment_options.cloaks
     const item = options.find((candidate) => candidate.item_type === item_type)
-    return item ? load_cosmetic_model_url(item) : null
+    return item ? load_worn_equipment_model_url(item) : null
   }
   const [{ body_url, hair_url }, head, back] = await Promise.all([
     load_character_model_urls(source.classe, source.male),

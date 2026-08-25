@@ -5,11 +5,14 @@ import type { EntityVisualEffect, FightSide } from '@aresrpg/engine'
 import type { HydratedFightCheckpoint } from '@aresrpg/fight'
 import { EFFECT_KINDS } from '@aresrpg/fight/move_contract'
 
+import { mob_model_scalar_for_level } from '../mob_entities.ts'
+
 export type FightMobRenderSource = Readonly<{
   id: string
   mob_type: string
   cell: number
   side: FightSide
+  level_scalar: number
   visual_effect?: EntityVisualEffect
 }>
 
@@ -28,6 +31,7 @@ export const fight_mob_entity_sources = (
           mob_type: fighter.kind.snapshot.mob_type,
           cell: Number(fighter.cell),
           side: fighter.team === 0n ? ('a' as const) : ('b' as const),
+          level_scalar: mob_model_scalar_for_level(fighter.kind.snapshot.mob_type, Number(fighter.kind.snapshot.level)),
           ...(invisible ? { visual_effect: Object.freeze({ kind: 'invisibility' as const }) } : {}),
         }),
       ]

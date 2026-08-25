@@ -14,6 +14,8 @@ import {
   project_kiosk_package,
   project_bootstrap_deployment,
   project_math_deployment,
+  project_control_deployment,
+  project_seed_deployment,
   DISPLAY_REGISTRY_ID,
 } from '../src/deployment_admin.ts'
 import { SDK, type Pins, type SuiTransport } from '../src/client.ts'
@@ -235,11 +237,11 @@ describe('deployment admin', () => {
           package_name: 'aresrpg',
           digest: [],
           modules: [],
-          dependencies: ['0x1', '0x2', id('3'), id('4')],
+          dependencies: ['0x1', '0x2', id('3'), id('4'), id('5'), id('6')],
         },
-        id('3')
+        [id('3'), id('4'), id('5')]
       )
-    ).toBe(id('4'))
+    ).toBe(id('6'))
   })
 
   test('publication facts use receipt-created Publishers and worlds without post-publish reads', () => {
@@ -250,11 +252,9 @@ describe('deployment admin', () => {
       receipt: {
         Transaction: {
           objectTypes: {
-            [id('3')]: `${package_id}::admin::AdminCap`,
             [id('4')]: `${package_id}::version::Version`,
             [id('5')]: '0x2::package::Publisher',
             [id('7')]: '0x2::package::Publisher',
-            [id('6')]: `${package_id}::item::TemplateRegistry`,
             [world_id]: `${package_id}::world::World`,
           },
           events: [
@@ -268,7 +268,6 @@ describe('deployment admin', () => {
               { objectId: package_id, idOperation: 'Created', outputState: 'PackageWrite', outputOwner: null },
               { objectId: world_id, idOperation: 'Created', outputOwner: { Shared: { initialSharedVersion: '7' } } },
               { objectId: id('4'), idOperation: 'Created', outputOwner: { Shared: { initialSharedVersion: '8' } } },
-              { objectId: id('6'), idOperation: 'Created', outputOwner: { Shared: { initialSharedVersion: '9' } } },
             ],
           },
         },
@@ -277,11 +276,49 @@ describe('deployment admin', () => {
 
     expect(deployment.package).toBe(package_id)
     expect(deployment.kiosk_package).toBe(id('8'))
-    expect(deployment.admin_cap).toBe(id('3'))
     expect(deployment.item_publisher).toBe(id('5'))
     expect(deployment.character_publisher).toBe(id('5'))
     expect(deployment.version).toEqual({ id: id('4'), shared_version: '8' })
-    expect(deployment.template_registry).toEqual({ id: id('6'), shared_version: '9' })
-    expect(deployment.worlds).toEqual({ '01_first_shore': { id: world_id, shared_version: '7' } })
+  })
+
+  test('projects the control publication: the ONE AdminCap', () => {
+    const package_id = id('9')
+    const deployment = project_control_deployment({
+      Transaction: {
+        objectTypes: {
+          [id('b')]: `${package_id}::admin::AdminCap`,
+          [id('d')]: '0x2::package::UpgradeCap',
+        },
+        effects: {
+          changedObjects: [
+            { objectId: package_id, idOperation: 'Created', outputState: 'PackageWrite', outputOwner: null },
+          ],
+        },
+      },
+    })
+
+    expect(deployment).toEqual({ package: package_id, admin_cap: id('b'), upgrade_cap: id('d') })
+  })
+
+  test('projects the seed publication and its shared Registry root', () => {
+    const package_id = id('a')
+    const deployment = project_seed_deployment({
+      Transaction: {
+        objectTypes: {
+          [id('c')]: `${package_id}::registry::Registry`,
+          [id('d')]: '0x2::package::UpgradeCap',
+        },
+        effects: {
+          changedObjects: [
+            { objectId: package_id, idOperation: 'Created', outputState: 'PackageWrite', outputOwner: null },
+            { objectId: id('c'), idOperation: 'Created', outputOwner: { Shared: { initialSharedVersion: '5' } } },
+          ],
+        },
+      },
+    })
+
+    expect(deployment.package).toBe(package_id)
+    expect(deployment.upgrade_cap).toBe(id('d'))
+    expect(deployment.content_root).toEqual({ id: id('c'), shared_version: '5' })
   })
 })

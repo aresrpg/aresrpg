@@ -13,7 +13,8 @@
 /// `scaled_stats` to fold the pet's power, so re-equipping picks up the new feed for free.
 module aresrpg::pet;
 
-use aresrpg::{item::{Self, Item, ItemTemplate}, protected_policy::AresRPG_TransferPolicy};
+use aresrpg_seed::item_rows::{Self, ItemTemplate};
+use aresrpg::{item::{Self, Item}, protected_policy::AresRPG_TransferPolicy};
 use aresrpg_math::{content_rules, item_stats::{Self, ItemStatistics}};
 use sui::{clock::Clock, dynamic_field as dfield, event, kiosk::{Kiosk, KioskOwnerCap}};
 
@@ -57,13 +58,13 @@ public(package) fun feed_kiosk_pet(
     let pet: &Item = kiosk.borrow(cap, pet_id);
     pet.template()
   };
-  assert!(pet_template_id == item::template_id(pet_template), EWrongTemplate);
+  assert!(pet_template_id == item_rows::template_id(pet_template), EWrongTemplate);
   let (food_type, food_category) = {
     let food: &Item = kiosk.borrow(cap, food_id);
     (food.item_type(), food.category())
   };
   assert!(food_category == b"resource".to_string(), ENotFood);
-  assert!(content_rules::pet_accepts(item::tpf(pet_template), &food_type), ENotFood);
+  assert!(content_rules::pet_accepts(&item_rows::pet_foods(pet_template), &food_type), ENotFood);
   item::burn(kiosk, cap, protected_item, food_id, 1, ctx);
   let pet: &mut Item = kiosk.borrow_mut(cap, pet_id);
   f1(pet, clock, ctx);

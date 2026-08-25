@@ -46,9 +46,11 @@ import { CHARACTER_HEIGHT } from './collision.ts'
 import { empty_pet_motion, step_pet_follow, type PetMotion } from './pet_follow.ts'
 import { publish_mount_prompt } from './mount_prompt_feed.ts'
 import { publish_portal_prompt } from './portal_prompt_feed.ts'
-import { publish_fight_prompt } from './fight_prompt_feed.ts'
+import { fight_prompt_targets, publish_fight_prompt } from './fight_prompt_feed.ts'
+import { dungeon_portal_targets, publish_dungeon_portal_prompt } from './dungeon_portal_feed.ts'
 import { publish_pose } from './pose_feed.ts'
 import { pet_seat_height, pet_vertical_offset, type PetLocomotion } from './pet_locomotion.ts'
+import type { DungeonPortalMarker } from '../../modules/world.ts'
 
 export type WorldView = Readonly<{
   focus: readonly [number, number]
@@ -202,6 +204,8 @@ export const create_world = ({
   let fight_board: FightBoardFrame = { origin: { x: 0, y: 0, z: 0 }, grid_w: 1, grid_h: 1, cell_size: 1 }
   let active = false
   let enabled = false
+  let action_lock: Readonly<{ character_id: string; animation: 'gather' | null }> | null = null
+  let action_animation_timer: ReturnType<typeof setInterval> | null = null
   let dragging: 'pan' | 'orbit' | null = null
   let pointer = [0, 0] as [number, number]
   // Dev affordance: `?time=0.3` pins the day cycle (verification needs deterministic light).
@@ -271,7 +275,7 @@ export const create_world = ({
   // pointerdown — the state is the `buttons` bitmask, read on every pointer event ──
   let mouse_forward = false
   const update_mouse_forward = (buttons: number): void => {
-    const next = enabled && mode === 'follow' && (buttons & 3) === 3
+    const next = enabled && !action_lock && mode === 'follow' && (buttons & 3) === 3
     if (next === mouse_forward) return
     mouse_forward = next
     if (next) footsteps.unlock()
@@ -329,6 +333,7 @@ export const create_world = ({
   }
   const on_key = (event: KeyboardEvent, down: boolean): void => {
     if (!enabled || mode !== 'follow') return
+    if (action_lock) return
     const move = MOVE_KEYS[event.code]
     if (move !== undefined) {
       const bucket = pressed[move.axis]
@@ -355,33 +360,93 @@ export const create_world = ({
 
   // ── fight swords: the world mirrors what it renders so F-key focus stays pure geometry ──
   let fight_markers: readonly FightSwordMarker[] = []
-  const fight_label = typeof document === 'undefined' ? null : document.createElement('div')
+  const fight_labels = new Map<string, HTMLElement>()
   let focused_fight_id: string | null = null
 
-  const nearest_fight_marker = (): FightSwordMarker | null => {
-    if (fight_markers.length === 0 || mode !== 'follow') return null
+  /** Sword cards advertise at mob-nametag range; F focuses only the nearest close sword. */
+  const sync_fight_labels = (): void => {
     const [px, , pz] = character.get_transform().position
-    let best: FightSwordMarker | null = null
-    let best_range = MOUNT_RANGE
-    for (const marker of fight_markers) {
-      const range = Math.hypot(marker.x - px, marker.z - pz)
-      if (range <= best_range) {
-        best = marker
-        best_range = range
-      }
+    const targets =
+      mode === 'follow'
+        ? fight_prompt_targets(fight_markers, px, pz)
+        : Object.freeze({ visible_ids: Object.freeze([]), focused_id: null })
+    const visible = new Set(targets.visible_ids)
+    let changed = targets.focused_id !== focused_fight_id
+    for (const [id] of fight_labels) {
+      if (visible.has(id)) continue
+      engine.set_fight_sword_label(id, null)
+      fight_labels.delete(id)
+      changed = true
     }
-    return best
+    for (const id of targets.visible_ids) {
+      if (fight_labels.has(id) || typeof document === 'undefined') continue
+      const element = document.createElement('div')
+      fight_labels.set(id, element)
+      engine.set_fight_sword_label(id, element)
+      changed = true
+    }
+    focused_fight_id = targets.focused_id
+    if (changed) {
+      publish_fight_prompt({
+        roots: Object.freeze(Object.fromEntries(fight_labels)),
+        focused_id: focused_fight_id,
+      })
+    }
   }
 
-  /** the focused sword's tag: ONE element re-floated onto whichever marker stands closest */
-  const label_focused_fight = (): void => {
-    const focused = nearest_fight_marker()
-    const id = focused?.id ?? null
-    if (id === focused_fight_id) return
-    if (focused_fight_id && fight_label) engine.set_fight_sword_label(focused_fight_id, null)
-    if (id && fight_label) engine.set_fight_sword_label(id, fight_label)
-    focused_fight_id = id && fight_label ? id : null
-    publish_fight_prompt({ root: focused_fight_id ? fight_label : null, focused_id: focused_fight_id })
+  const clear_fight_labels = (): void => {
+    for (const id of fight_labels.keys()) engine.set_fight_sword_label(id, null)
+    fight_labels.clear()
+    focused_fight_id = null
+    publish_fight_prompt({ roots: Object.freeze({}), focused_id: null })
+  }
+
+  let dungeon_portal_markers: readonly DungeonPortalMarker[] = Object.freeze([])
+  const dungeon_portal_labels = new Map<string, HTMLElement>()
+  let focused_dungeon_portal_id: string | null = null
+
+  const sync_dungeon_portal_labels = (): void => {
+    const [px, , pz] = character.get_transform().position
+    const targets =
+      mode === 'follow' && !action_lock
+        ? dungeon_portal_targets(dungeon_portal_markers, px, pz)
+        : Object.freeze({ visible_ids: Object.freeze([]), focused_id: null })
+    const visible = new Set(targets.visible_ids)
+    let changed = targets.focused_id !== focused_dungeon_portal_id
+    for (const [id] of dungeon_portal_labels) {
+      if (visible.has(id)) continue
+      engine.set_world_label(id, null, null)
+      dungeon_portal_labels.delete(id)
+      changed = true
+    }
+    for (const id of targets.visible_ids) {
+      const portal = dungeon_portal_markers.find((marker) => marker.id === id)
+      if (!portal) continue
+      const existing = dungeon_portal_labels.get(id)
+      if (existing) {
+        engine.set_world_label(id, existing, [portal.x, projected_surface_y(portal.x, portal.z) + 5.2, portal.z])
+        continue
+      }
+      if (typeof document === 'undefined') continue
+      const element = document.createElement('div')
+      dungeon_portal_labels.set(id, element)
+      engine.set_world_label(id, element, [portal.x, projected_surface_y(portal.x, portal.z) + 5.2, portal.z])
+      changed = true
+    }
+    focused_dungeon_portal_id = targets.focused_id
+    if (changed)
+      publish_dungeon_portal_prompt({
+        roots: Object.freeze(Object.fromEntries(dungeon_portal_labels)),
+        portals: Object.freeze(Object.fromEntries(dungeon_portal_markers.map((portal) => [portal.id, portal]))),
+        focused_id: focused_dungeon_portal_id,
+      })
+  }
+
+  const clear_dungeon_portal_labels = (): void => {
+    for (const id of dungeon_portal_labels.keys()) engine.set_world_label(id, null, null)
+    dungeon_portal_labels.clear()
+    focused_dungeon_portal_id = null
+    publish_dungeon_portal_prompt({ roots: Object.freeze({}), portals: Object.freeze({}), focused_id: null })
   }
   const on_key_down = (event: KeyboardEvent): void => {
     if (mode === 'follow' && (MOVE_KEYS[event.code] !== undefined || event.code === 'Space')) footsteps.unlock()
@@ -532,7 +597,8 @@ export const create_world = ({
       const pet_changed = render_pet(transform, delta_seconds)
       if (character_changed || pet_changed) submit_entities()
       label_portal(portal_eligible())
-      label_focused_fight()
+      sync_fight_labels()
+      sync_dungeon_portal_labels()
       footsteps.tick({
         position: transform.position,
         on_ground: transform.on_ground,
@@ -642,14 +708,16 @@ export const create_world = ({
      *  layer renders them (the join-window clock made physical) */
     set_fight_swords: (url: string, impact_sound_url: string, markers: readonly FightSwordMarker[]) => {
       fight_markers = markers
-      if (markers.length === 0 && focused_fight_id) {
-        if (fight_label && focused_fight_id) engine.set_fight_sword_label(focused_fight_id, null)
-        focused_fight_id = null
-        publish_fight_prompt({ root: null, focused_id: null })
-      }
       engine.set_fight_swords(url, impact_sound_url, markers)
+      sync_fight_labels()
     },
     set_resource_nodes: (markers: readonly ResourceNodeMarker[]) => engine.set_resource_nodes(markers),
+    set_dungeon_portals: (markers: readonly DungeonPortalMarker[]) => {
+      dungeon_portal_markers = Object.freeze([...markers])
+      engine.set_dungeon_portals(markers)
+      sync_dungeon_portal_labels()
+    },
+    set_dungeon_stage: engine.set_dungeon_stage,
     set_resource_node_label: (id: string, element: HTMLElement | null) => engine.set_resource_node_label(id, element),
     entity_height: engine.entity_height,
     set_pet: (next: Readonly<{ id: string; model_url: string; locomotion: PetLocomotion }> | null) => {
@@ -746,10 +814,43 @@ export const create_world = ({
       if (!next) clear_movement()
       canvas.style.cursor = next ? 'grab' : 'default'
     },
+    set_action_lock: (next: Readonly<{ character_id: string; animation: 'gather' | null }> | null) => {
+      const next_key = next ? `${next.character_id}:${next.animation ?? ''}` : null
+      const current_key = action_lock ? `${action_lock.character_id}:${action_lock.animation ?? ''}` : null
+      if (next_key === current_key) return
+      if (action_animation_timer) clearInterval(action_animation_timer)
+      action_animation_timer = null
+      action_lock = next
+      clear_movement()
+      if (next?.animation !== 'gather') return
+      const play = (): void => {
+        // Reuse the character model's authored self-buff clip. World space has no fight cell,
+        // so the VFX half declines cleanly while the entity beat still plays.
+        void engine.play_fight_cue({
+          id: `gather:${next.character_id}:${Date.now()}`,
+          type: 'cast',
+          caster_id: next.character_id,
+          self_cast: true,
+          spell: 'gather',
+          cast_level: 0,
+          target_cell: 0,
+          element: 'neutral',
+          style: 'buff',
+          critical: false,
+          amount: 0,
+          target_max_hp: null,
+          affected_cells: Object.freeze([]),
+          killed: false,
+        })
+      }
+      play()
+      action_animation_timer = setInterval(play, 2_200)
+    },
     dispose: () => {
+      if (action_animation_timer) clearInterval(action_animation_timer)
       publish_pose(null)
-      focused_fight_id = null
-      publish_fight_prompt({ root: null, focused_id: null })
+      clear_fight_labels()
+      clear_dungeon_portal_labels()
       canvas.removeEventListener('pointerdown', on_pointer_down)
       canvas.removeEventListener('pointermove', on_pointer_move)
       globalThis.removeEventListener('pointerup', on_pointer_up)

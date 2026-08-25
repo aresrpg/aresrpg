@@ -234,59 +234,13 @@ pub struct Checkpoint {
     pub pet: bool,
 }
 
-/// `world::World` — decoded ONLY for the id → name map (content is corpus).
+/// `world::World` — decoded ONLY for the id → name map. SLIM by law since the ÷10 plan's
+/// Lever 2: authored content lives in the seed package's own `WorldContent` object (corpus —
+/// the projection never reads it), so the mutable World carries identity alone.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct World {
     pub id: Id,
     pub name: String,
-    pub content: WorldContent,
-}
-
-/// `world_map::WorldContent` — the immutable authored payload embedded by `world::World`.
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct WorldContent {
-    pub mobs: Vec<MobRow>,
-    pub resources: Vec<ResourceRow>,
-    pub dungeon_key: Option<String>,
-    pub dungeon_rooms: Vec<DungeonRoom>,
-    pub biome_map: BiomeMap,
-}
-
-/// `world_map::BiomeMap` — one biome id per zone; the spawn filter's ground truth.
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct BiomeMap {
-    pub zone_x0: u32,
-    pub zone_z0: u32,
-    pub side: u16,
-    pub cells: Vec<u8>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct MobRow {
-    pub mob_type: String,
-    pub weight_bp: u16,
-    pub biomes: Vec<u8>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ResourceRow {
-    pub item_type: String,
-    pub job: String,
-    pub tier: u8,
-    pub protector: String,
-    pub rare_item_type: String,
-    pub biomes: Vec<u8>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct DungeonRoom {
-    pub mobs: Vec<RoomMob>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct RoomMob {
-    pub mob_type: String,
-    pub level_scalar: u8,
 }
 
 // ╔════════════════ [ aresrpg::zone — World DF ] ═════════════════════════════ ]
@@ -415,7 +369,11 @@ pub struct Fight {
 /// `fight::FighterKind` — Player holds custody refs; Mob is a value snapshot.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum FighterKind {
-    Player { character: Id, owner: Addr },
+    Player {
+        character: Id,
+        owner: Addr,
+        level: u16,
+    },
     Mob(MobSnapshot),
 }
 
@@ -561,6 +519,8 @@ pub struct Sale {
     pub template: Id,
     pub price: u64,
     pub supply: u64,
+    pub infinite: bool,
+    pub enabled: bool,
 }
 
 /// `shop::Airdrop` — the whitelist IS the claim state (shrinks per claim).
@@ -792,66 +752,6 @@ mod tests {
     }
 
     #[test]
-    fn captured_world_decodes_the_whole_authored_content() {
-        // Live testnet capture: world::World 0x025f98…58d3 @ version 980034688,
-        // captured 2026-08-19. The deepest nesting the projection reads — three
-        // vectors of structs, an Option<String>, and the trailing BiomeMap. Any
-        // field the twin drops or reorders leaves bytes unread, and `from_bytes`
-        // refuses trailing bytes.
-        let bytes = captured(&[
-            "025f98651c2eab622de3e3e1c297705adcc49f11bf91c5d5e5487cba751a58d3",
-            "0f30395f636f72616c5f7468726f6e65110e736861646f775f76756c74757265",
-            "401f01000d62616e6e65725f777261697468401f01000b656c6465725f736c6f",
-            "7468401f01000d656d6265725f6b776565626563401f010007736e61706a6177",
-            "401f010011656e7361626c655f68617463686c696e67401f01000962726f6f64",
-            "6c696e67401f01000970616c65626f6e6573401f0100136b7765656265635f67",
-            "726f76655f6865617274401f0100076772697a7a6c79401f01000e7361757269",
-            "616e5f77617264656e401f01000f73636172616b5f646566656e646572401f01",
-            "000a7361626572746f6f7468401f0100126e696e655f7461696c735f6b697473",
-            "756e65401f01000c707972655f77617274686f67401f01000a626f6e655f6368",
-            "6f6972401f01000b70616c655f7765617665720d050100030c617263616e6573",
-            "68726f6f6d0948455242414c495354091570726f746563746f725f617263616e",
-            "655f6761696100010009647261636f6e697465054d494e4552091370726f7465",
-            "63746f725f647261636f6e6974650001000c77686561745f707572706c650646",
-            "41524d4552091c70726f746563746f725f617263616e697a655f627269636865",
-            "746f6e000100010f746964655f7468726f6e655f6b657903020e736861646f77",
-            "5f76756c74757265000d62616e6e65725f7772616974680002136b7765656265",
-            "635f67726f76655f686561727400076772697a7a6c790002167363796c6c6172",
-            "5f7468655f636f72616c5f6b696e67000a626f6e655f63686f69720000000000",
-            "00000000000000",
-        ]);
-        let world: World = from_bytes(&bytes).expect("decode");
-        assert_eq!(world.name, "09_coral_throne");
-        assert_eq!(world.content.mobs.len(), 17);
-        assert_eq!(world.content.mobs[0].mob_type, "shadow_vulture");
-        assert_eq!(world.content.mobs[0].weight_bp, 8_000);
-        // The last row's odd remainder weight is the one value a mis-sized
-        // weight field could not fake.
-        assert_eq!(world.content.mobs[16].mob_type, "pale_weaver");
-        assert_eq!(world.content.mobs[16].weight_bp, 1_293);
-        assert_eq!(world.content.resources.len(), 3);
-        assert_eq!(world.content.resources[0].item_type, "arcaneshroom");
-        assert_eq!(world.content.resources[0].job, "HERBALIST");
-        assert_eq!(world.content.resources[0].tier, 9);
-        assert_eq!(
-            world.content.resources[0].protector,
-            "protector_arcane_gaia"
-        );
-        assert_eq!(world.content.resources[0].rare_item_type, "");
-        assert_eq!(
-            world.content.dungeon_key.as_deref(),
-            Some("tide_throne_key")
-        );
-        assert_eq!(world.content.dungeon_rooms.len(), 3);
-        assert_eq!(
-            world.content.dungeon_rooms[2].mobs[0].mob_type,
-            "scyllar_the_coral_king"
-        );
-        assert_eq!(world.content.biome_map.side, 0);
-        assert!(world.content.biome_map.cells.is_empty());
-    }
-
-    #[test]
     /// SELF-ROUND-TRIP, deliberately: no live testnet object carries an
     /// equipment `VecMap` yet (checked 2026-08-19 — the type has zero instances
     /// on chain), so there are no bytes to pin. This proves internal
@@ -916,6 +816,7 @@ mod tests {
                     kind: FighterKind::Player {
                         character: Id([9; 32]),
                         owner: Addr([10; 32]),
+                        level: 10,
                     },
                     cell: 3,
                     ready: true,
@@ -1028,7 +929,10 @@ mod tests {
             turn_started_ms: 1_700_000_060_000,
         };
         let back = roundtrip(&fight);
-        assert!(matches!(back.fighters[0].kind, FighterKind::Player { .. }));
+        let FighterKind::Player { level, .. } = &back.fighters[0].kind else {
+            panic!("expected player");
+        };
+        assert_eq!(*level, 10);
         let FighterKind::Mob(snapshot) = &back.fighters[1].kind else {
             panic!("expected mob");
         };

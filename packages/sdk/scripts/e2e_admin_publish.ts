@@ -16,15 +16,19 @@ import {
   create_package_publish_transaction,
   DISPLAY_REGISTRY_ID,
   project_bootstrap_deployment,
+  project_control_deployment,
   project_game_deployment,
   project_kiosk_package,
   project_math_deployment,
+  project_seed_deployment,
   type BootstrapDeployment,
+  type ControlDeployment,
   type GameDeployment,
   type MathDeployment,
+  type SeedDeployment,
 } from '../src/deployment_admin.ts'
-import { create_seed_admin, next_seed_batch } from '../src/seed_admin.ts'
-import { create_seal_transaction } from '../src/seed.ts'
+import { create_seed_admin, next_seed_batch, type SeedLedger } from '../src/seed_admin.ts'
+import { create_freeze_forever_transaction } from '../src/seed.ts'
 import { create_seed_session, type SeedSessionRecord, type SeedSessionStore } from '../src/seed_session.ts'
 
 type PublishedGame = GameDeployment & Readonly<{ upgrade_cap: string }>
@@ -32,10 +36,14 @@ type State = Readonly<{
   signer_secret: string
   return_address: string
   math?: MathDeployment
+  control?: ControlDeployment
+  seed?: SeedDeployment
   game?: PublishedGame
   bootstrap?: BootstrapDeployment
   seed_session?: SeedSessionRecord
   seed_top_up_mist?: string
+  /** one fingerprint per written content row — what "check changes" compares the files against */
+  seed_ledger?: SeedLedger
   digests: readonly string[]
 }>
 
@@ -71,11 +79,16 @@ const save_state = async (state: State): Promise<State> => {
 const append_digest = (state: State, receipt: Receipt): State =>
   Object.freeze({ ...state, digests: Object.freeze([...state.digests, receipt_digest(receipt)]) })
 
+// eslint-disable-next-line complexity -- The resumable manual proof projects every optional publication boundary independently.
 const pins_from = (state: State): Pins => ({
   package: state.game?.package ?? null,
   math_package: state.math?.package ?? null,
+  control_package: state.control?.package ?? null,
+  control_package_original: state.control?.package ?? null,
+  seed_package: state.seed?.package ?? null,
+  seed_package_original: state.seed?.package ?? null,
+  content_root: state.seed?.content_root ?? { id: null, shared_version: null },
   version: state.game?.version ?? { id: null, shared_version: null },
-  template_registry: state.game?.template_registry ?? { id: null, shared_version: null },
   loot_registry: state.game?.loot_registry ?? { id: null, shared_version: null },
   name_registry: state.game?.name_registry ?? { id: null, shared_version: null },
   friend_registry: state.game?.friend_registry ?? { id: null, shared_version: null },
@@ -123,10 +136,46 @@ const main = async (): Promise<void> => {
     console.log(`PUBLISHED math ${math.package} ${receipt_digest(receipt)}`)
   }
 
+  if (!state.control) {
+    console.log('COMPILE control')
+    const artifact = await builds.compile_control('testnet')
+    console.log('PUBLISH control')
+    const sdk = sdk_for(signer, state)
+    const receipt = await sdk.execute(
+      create_package_publish_transaction({ artifact, recipient: signer.toSuiAddress() }),
+      { include: { objectTypes: true } }
+    )
+    const control = project_control_deployment(receipt)
+    state = await save_state(Object.freeze({ ...append_digest(state, receipt), control }))
+    console.log(`PUBLISHED control ${control.package} ${receipt_digest(receipt)}`)
+  }
+
+  if (!state.seed) {
+    console.log('COMPILE seed')
+    const artifact = await builds.compile_seed('testnet', state.math!, state.control!)
+    console.log('PUBLISH seed')
+    const sdk = sdk_for(signer, state)
+    const receipt = await sdk.execute(
+      create_package_publish_transaction({ artifact, recipient: signer.toSuiAddress() }),
+      { include: { objectTypes: true } }
+    )
+    const seed = project_seed_deployment(receipt)
+    state = await save_state(Object.freeze({ ...append_digest(state, receipt), seed }))
+    console.log(`PUBLISHED seed ${seed.package} ${receipt_digest(receipt)}`)
+  }
+
   if (!state.game) {
     console.log('COMPILE game')
-    const artifact = await builds.compile_game('testnet', state.math!)
-    const kiosk_package = project_kiosk_package(artifact, state.math!.package)
+    const artifact = await builds.compile_game('testnet', state.math!, state.control!, {
+      package: state.seed!.package,
+      original_package: state.seed!.package,
+      upgrade_cap: state.seed!.upgrade_cap,
+    })
+    const kiosk_package = project_kiosk_package(artifact, [
+      state.math!.package,
+      state.control!.package,
+      state.seed!.package,
+    ])
     console.log('PUBLISH game')
     const sdk = sdk_for(signer, state)
     game_receipt = await sdk.execute(
@@ -161,8 +210,14 @@ const main = async (): Promise<void> => {
   }
 
   const config = Object.freeze({
-    admin_cap: state.game!.admin_cap,
-    worlds: Object.freeze(Object.fromEntries(Object.entries(state.game!.worlds).map(([name, pin]) => [name, pin.id]))),
+    admin_cap: state.control!.admin_cap,
+    content_root: state.seed!.content_root.id,
+    upgrade_caps: [
+      { cap: state.math!.upgrade_cap, package: state.math!.package },
+      { cap: state.control!.upgrade_cap, package: state.control!.package },
+      { cap: state.seed!.upgrade_cap, package: state.seed!.package },
+      { cap: state.game!.upgrade_cap, package: state.game!.package },
+    ],
   })
   const permanent_sdk = sdk_for(signer, state)
   if (game_receipt) absorb_receipt(permanent_sdk.cache, game_receipt)
@@ -187,10 +242,10 @@ const main = async (): Promise<void> => {
   const session = create_seed_session({
     store: session_store,
     super_sdk: permanent_sdk,
-    super_admin_cap: state.game!.admin_cap,
+    super_admin_cap: state.control!.admin_cap,
     network: 'testnet',
     owner: state.return_address,
-    package_id: state.game!.package,
+    package_id: state.control!.package,
     build_session_sdk: (session_keypair) => sdk_for(session_keypair, state),
   })
   const ensured = await session.ensure()
@@ -236,17 +291,37 @@ const main = async (): Promise<void> => {
     console.log(`SEEDED ${result.batch} ${result.digest}`)
   }
 
+  // creates are done — write every row the files changed since the last run, and the fight
+  // boards (a fresh catalog is born empty; the change lane is its one writer)
+  const applied = await delegated.apply_changes(state.seed_ledger ?? {})
+  for (const digest of applied.digests) {
+    state = await save_state(append_digest(state, { digest }))
+    console.log(`CHANGES ${digest}`)
+  }
+  state = await save_state(Object.freeze({ ...state, seed_ledger: applied.ledger }))
+  console.log(
+    `SYNCED new:${applied.view.new_rows.length} changed:${applied.view.changed.length} up_to_date:${applied.view.unchanged}`
+  )
+
   console.log('RELEASE seed-session')
   await session.release()
   console.log('RELEASED')
 
   const complete = await permanent_session.refresh()
-  if (complete.sealed || complete.batches.some(({ state: batch_state }) => batch_state !== 'complete'))
-    throw new Error('Final chain inspection did not recover every completed seed batch before sealing')
-  console.log('PREFLIGHT seal')
-  const seal_simulation = await permanent_sdk.simulate(create_seal_transaction(permanent_sdk, state.game!.admin_cap))
-  if (seal_simulation.$kind === 'FailedTransaction') throw new Error('The final seal transaction failed preflight')
-  console.log('PREFLIGHTED seal')
+  if (complete.batches.some(({ state: batch_state }) => batch_state !== 'complete'))
+    throw new Error('Final chain inspection did not recover every completed seed batch')
+  console.log('PREFLIGHT freeze_forever')
+  const freeze_simulation = await permanent_sdk.simulate(
+    create_freeze_forever_transaction(permanent_sdk, state.control!.admin_cap, state.seed!.content_root.id, [
+      state.math!.upgrade_cap,
+      state.control!.upgrade_cap,
+      state.seed!.upgrade_cap,
+      state.game!.upgrade_cap,
+    ])
+  )
+  if (freeze_simulation.$kind === 'FailedTransaction')
+    throw new Error('The freeze_forever transaction failed preflight')
+  console.log('PREFLIGHTED freeze_forever (NOT executed — the game stays rebalanceable)')
 
   console.log('RETURN remaining SUI')
   const cleanup = permanent_sdk.tx()

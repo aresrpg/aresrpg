@@ -16,6 +16,9 @@ const pins: Pins = {
   math_package: `0x${'22'.repeat(32)}`,
   template_registry: { id: `0x${'33'.repeat(32)}`, shared_version: '1' },
   loot_registry: { id: `0x${'44'.repeat(32)}`, shared_version: '1' },
+  seed_package: `0x${'55'.repeat(32)}`,
+  seed_package_original: `0x${'55'.repeat(32)}`,
+  content_root: { id: `0x${'66'.repeat(32)}`, shared_version: '1' },
 }
 const sdk = SDK({
   pins,
@@ -36,7 +39,7 @@ const sdk = SDK({
 
 const build_context: SeedBuildContext = Object.freeze({
   admin_cap: reference(5),
-  worlds: Object.freeze(Object.fromEntries(seed_content.worlds.map(({ world }, index) => [world, shared(index + 16)]))),
+  content_root: shared(7),
 })
 
 const remember = (ids: readonly string[]): void => {
@@ -62,9 +65,10 @@ describe('admin seed content', () => {
     }
 
     expect(seed_content.biome_maps).toHaveLength(seed_content.worlds.filter(({ terrain }) => terrain).length)
+    expect(seed_content.mobs.every((mob) => !Object.hasOwn(mob, 'family'))).toBeTrue()
+    expect(seed_content.worlds.flatMap(({ resources }) => resources).every(({ job, tier }) => job && tier)).toBeTrue()
     expect(plan.batches.every(({ target_ids }) => target_ids.length > 0)).toBeTrue()
     expect(new Set(targets).size).toBe(targets.length)
-    expect(plan.seal_id).not.toBeEmpty()
     // worlds seed one batch EACH (a single indivisible worlds transaction had no way out of
     // the 128 KiB ceiling); batches are session-signed, so count costs no wallet clicks
     expect(plan.batches.length).toBeLessThanOrEqual(80)

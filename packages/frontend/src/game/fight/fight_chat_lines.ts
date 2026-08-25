@@ -97,6 +97,12 @@ const stat_change_values = (
   name_of: NameOf,
   pool_logged: ReadonlySet<string>
 ): Readonly<Record<string, ChatLineValue>> | null => {
+  if (
+    event.payload.kind !== EFFECT_KINDS.add &&
+    event.payload.kind !== EFFECT_KINDS.remove &&
+    event.payload.kind !== EFFECT_KINDS.steal
+  )
+    return null
   if (before?.type === 'chatiment_triggered') return null
   const gain = event.payload.kind === EFFECT_KINDS.add
   const pool = event.payload.channel === CHANNELS.ap || event.payload.channel === CHANNELS.mp

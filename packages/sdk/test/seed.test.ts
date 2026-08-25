@@ -5,7 +5,8 @@ import { describe, expect, test } from 'bun:test'
 import type { Transaction, TransactionPlugin } from '@mysten/sui/transactions'
 
 import type { Sdk } from '../src/client.ts'
-import { create_seed_plan, type SeedContent } from '../src/seed.ts'
+import { create_seed_plan, recipe_door_args, type SeedContent } from '../src/seed.ts'
+import { board_catalog_id, item_template_id, world_content_id, world_id } from '../src/seed_ids.ts'
 import { SDK, type Pins, type SuiTransport } from '../src/client.ts'
 
 const REGISTRY = `0x${'11'.repeat(32)}`
@@ -14,10 +15,13 @@ const ADMIN_CAP = `0x${'44'.repeat(32)}`
 const resolve_transaction: TransactionPlugin = async (_data, _options, next) => next()
 
 const sdk = {
+  game_type_package: PACKAGE,
   pins: {
     package: PACKAGE,
     math_package: `0x${'33'.repeat(32)}`,
-    template_registry: { id: REGISTRY, shared_version: '1' },
+    seed_package: '0x5eed'.padEnd(66, '0'),
+    seed_package_original: '0x5eed'.padEnd(66, '0'),
+    content_root: { id: '0xc0'.padEnd(66, '0'), shared_version: '1' },
   },
 } as unknown as Sdk
 
@@ -42,7 +46,25 @@ const content: SeedContent = {
     giftcards: [{ id: 'press', item_type: 'ore', amount: 3, custody: `0x${'55'.repeat(32)}` }],
   },
   biome_maps: [],
+  boards: [],
 }
+
+test('recipe composition refuses a ninth ingredient before building a transaction', () => {
+  const inputs = Object.fromEntries(Array.from({ length: 9 }, (_, index) => [`ingredient_${index}`, 1]))
+  expect(() =>
+    recipe_door_args('0xc0'.padEnd(66, '0'), '0x5eed'.padEnd(66, '0'), { output_type: 'ore', inputs }, 'MINER')
+  ).toThrow('must use 1..8 distinct ingredients')
+})
+
+test('fieldless BoardCatalogKey derives the catalog created on Testnet', () => {
+  // Captured 2026-08-25 from successful transaction 646PM6JqsZNcbvu3uRcZb4xvYF5BwayTjwe6arQuJkDF.
+  expect(
+    board_catalog_id(
+      '0x1bd402ec24ffc9e82663d88e44bc13b76c3d2cc176d7def52455e53bb1310a98',
+      '0x3e7f52a64c7bcea94cdeadd5a0b32b6f83bd03f35aebf8f1060107213a53bb77'
+    )
+  ).toBe('0x759f42d1cdbc221789b9010d4a12a7dc53ea8b651180fb69417c2d35cb361a73')
+})
 
 const game = () => {
   const result = SDK({
@@ -111,18 +133,53 @@ describe('seed plan', () => {
         { item_type: 'ore_b', name: 'Ore', category: 'resource', level: 1 },
       ],
     })
-    const transaction = plan.batches[0]?.build({ admin_cap: ADMIN_CAP, worlds: {} }, new Set<string>())
+    const transaction = plan.batches[0]?.build({ admin_cap: ADMIN_CAP, content_root: ADMIN_CAP }, new Set<string>())
 
     expect(transaction?.getData().inputs.length).toBeLessThan(10)
   })
 
+  test('a JSON world creates both derived objects without deployment world pins', () => {
+    const seeded = game()
+    const root = '0xc0'.padEnd(66, '0')
+    const seed_original = '0x5eed'.padEnd(66, '0')
+    const plan = create_seed_plan(seeded, {
+      ...content,
+      worlds: [
+        {
+          world: 'nauvis',
+          entry_level: 1,
+          mobs: [],
+          resources: [],
+          dungeon: { key: '', rooms: [] },
+        },
+      ],
+    })
+    const batch = plan.batches.find(({ phase }) => phase === 'worlds')!
+    const transaction = batch.build({ admin_cap: ADMIN_CAP, content_root: ADMIN_CAP }, new Set<string>())!
+    const calls = transaction
+      .getData()
+      .commands.flatMap((command) =>
+        command.MoveCall ? [`${command.MoveCall.module}::${command.MoveCall.function}`] : []
+      )
+
+    expect(batch.target_ids).toEqual([
+      world_content_id(root, seed_original, 'nauvis'),
+      world_id(root, PACKAGE, 'nauvis'),
+    ])
+    expect(calls).toContain('world_content::create')
+    expect(calls).toContain('world::create')
+  })
+
   test('seeds authored SUI shop prices as MIST', () => {
-    const plan = create_seed_plan(game(), {
+    const seeded = game()
+    const template = item_template_id('0xc0'.padEnd(66, '0'), '0x5eed'.padEnd(66, '0'), 'ore')
+    seeded.cache.owned.set(template, { objectId: template, version: '1', digest: 'digest' })
+    const plan = create_seed_plan(seeded, {
       ...content,
       shop: { sales: [{ item_type: 'ore', price: 5, supply: 8 }] },
     })
     const batch = plan.batches.find(({ phase }) => phase === 'sales')
-    const transaction = batch?.build({ admin_cap: ADMIN_CAP, worlds: {} }, new Set<string>())
+    const transaction = batch?.build({ admin_cap: ADMIN_CAP, content_root: ADMIN_CAP }, new Set<string>())
 
     expect(transaction).toBeDefined()
     expect(pure_u64s(transaction!)).toContain(5_000_000_000n)

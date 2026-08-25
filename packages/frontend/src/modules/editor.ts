@@ -10,6 +10,7 @@ import {
   type JsonValue,
   type SeedDomain,
 } from '../editor/seed_editor.ts'
+import { board_catalog_errors, type AuthoredBoard } from '../editor/board_editor.ts'
 import { initial_editor_state, type EditorInput, type SeedEditorState } from '../editor/editor_state.ts'
 import type { AppInput, AppModule, AppState } from '../store.ts'
 
@@ -17,6 +18,48 @@ export { initial_editor_state }
 export type { EditorInput, SeedEditorState }
 
 const with_editor = (state: AppState, editor: SeedEditorState): AppState => Object.freeze({ ...state, editor })
+
+const AUTOSAVE_DEBOUNCE_MS = 800
+const BOARD_AUTOSAVE_DEBOUNCE_MS = 500
+const SPELL_FOCUS_LOSS_AUTOSAVE_MS = 5_000
+export const editor_autosave_delay_ms = (domain: SeedDomain): number =>
+  domain === 'fight_boards'
+    ? BOARD_AUTOSAVE_DEBOUNCE_MS
+    : domain === 'spells'
+      ? SPELL_FOCUS_LOSS_AUTOSAVE_MS
+      : AUTOSAVE_DEBOUNCE_MS
+export const editor_domain_autosave_ready = (domain: SeedDomain, focused_domain: SeedDomain | null): boolean =>
+  domain !== 'spells' || focused_domain !== 'spells'
+const mob_spell_drafts_complete = (value: JsonValue): boolean =>
+  Array.isArray(value) &&
+  value.every((entry) => {
+    if (!entry || typeof entry !== 'object' || Array.isArray(entry)) return false
+    const { spells } = entry as Readonly<Record<string, JsonValue>>
+    return (
+      Array.isArray(spells) &&
+      spells.every((spell) => {
+        if (!spell || typeof spell !== 'object' || Array.isArray(spell)) return false
+        const { levels } = spell as Readonly<Record<string, JsonValue>>
+        if (!Array.isArray(levels) || levels.length !== 1) return false
+        const [level] = levels
+        if (!level || typeof level !== 'object' || Array.isArray(level)) return false
+        const row = level as Readonly<Record<string, JsonValue>>
+        return (
+          (Array.isArray(row.effects) && row.effects.length > 0) ||
+          (Array.isArray(row.crit_effects) && row.crit_effects.length > 0)
+        )
+      })
+    )
+  })
+export const editor_domain_saveable = (domain: SeedDomain, value: JsonValue): boolean => {
+  if (domain === 'mobs') return mob_spell_drafts_complete(value)
+  if (domain !== 'fight_boards') return true
+  if (value === null || typeof value !== 'object' || Array.isArray(value)) return false
+  const { boards } = value as Readonly<Record<string, JsonValue>>
+  return (
+    Array.isArray(boards) && boards.length > 0 && board_catalog_errors(boards as readonly AuthoredBoard[]).length === 0
+  )
+}
 
 const reduce = (state: AppState, input: AppInput): AppState => {
   const { editor } = state
@@ -47,10 +90,23 @@ const reduce = (state: AppState, input: AppInput): AppState => {
   if (input.type === 'editor/unavailable' && editor.status === 'loading')
     return with_editor(state, Object.freeze({ ...editor, status: 'unavailable', error: null }))
   if (input.type === 'editor/domain_selected')
-    return with_editor(state, Object.freeze({ ...editor, domain: input.domain, entity_id: null, query: '' }))
+    return with_editor(
+      state,
+      Object.freeze({ ...editor, domain: input.domain, entity_id: null, query: '', focused_domain: null })
+    )
   if (input.type === 'editor/entity_selected')
     return with_editor(state, Object.freeze({ ...editor, entity_id: input.entity_id }))
   if (input.type === 'editor/query_changed') return with_editor(state, Object.freeze({ ...editor, query: input.query }))
+  if (input.type === 'editor/focus_changed') {
+    const focused_domain = input.focused
+      ? input.domain
+      : editor.focused_domain === input.domain
+        ? null
+        : editor.focused_domain
+    return focused_domain === editor.focused_domain
+      ? state
+      : with_editor(state, Object.freeze({ ...editor, focused_domain }))
+  }
   if (input.type === 'editor/value_changed') {
     const file = editor.files[input.domain]
     // typing stays legal while an autosave is in flight — the finished save never clobbers it
@@ -122,6 +178,9 @@ const observe = ({ events, dispatch, signal, get_state }: Parameters<NonNullable
     return
   }
   let generation = 0
+  // A refused save pins the exact SENT value. Edits may continue while that request is in flight;
+  // pinning the newer live value would suppress the corrective save that follows the rejection.
+  const refused_values = new Map<SeedDomain, JsonValue>()
   const load = (): void => {
     const request = ++generation
     void fetch('/__seed/files', { cache: 'no-store' })
@@ -181,32 +240,37 @@ const observe = ({ events, dispatch, signal, get_state }: Parameters<NonNullable
       })
       .catch((error) => {
         if (signal.aborted || request !== generation) return
+        refused_values.set(domain, sent)
         console.error('Seed file could not be saved.', error)
         dispatch({ type: 'editor/failed', error: error instanceof Error ? error.message : String(error) })
       })
   }
-  // ── autosave: every edit lands on disk after a short settle; git is the owner's undo ──
-  const AUTOSAVE_DEBOUNCE_MS = 800
+  // Board strokes and text edits debounce independently; requests remain serialized, so a drag
+  // gesture coalesces into one validated board write instead of one transaction per crossed cell.
   let save_timer: ReturnType<typeof setTimeout> | null = null
-  // a save the validator refused pins its failing value — retry only once the value changes,
-  // never in a loop against the same rejection
-  const refused_values = new Map<SeedDomain, JsonValue>()
   const next_dirty_domain = (): SeedDomain | null => {
     const { editor } = get_state()
     if (editor.status !== 'ready') return null
-    const entry = Object.entries(editor.files).find(
-      ([domain, file]) => file?.dirty && refused_values.get(domain as SeedDomain) !== file.value
+    const entries = Object.entries(editor.files).filter(
+      ([domain, file]) =>
+        file?.dirty &&
+        refused_values.get(domain as SeedDomain) !== file.value &&
+        editor_domain_autosave_ready(domain as SeedDomain, editor.focused_domain) &&
+        editor_domain_saveable(domain as SeedDomain, file.value)
     )
+    const entry = entries.find(([domain]) => domain === 'fight_boards') ?? entries[0]
     return (entry?.[0] as SeedDomain) ?? null
   }
   const schedule_save = (): void => {
     if (save_timer) clearTimeout(save_timer)
+    const scheduled_domain = next_dirty_domain()
+    if (!scheduled_domain) return
     save_timer = setTimeout(() => {
       save_timer = null
       if (signal.aborted) return
       const domain = next_dirty_domain()
       if (domain) dispatch({ type: 'editor/save', domain })
-    }, AUTOSAVE_DEBOUNCE_MS)
+    }, editor_autosave_delay_ms(scheduled_domain))
   }
   signal.addEventListener('abort', () => {
     if (save_timer) clearTimeout(save_timer)
@@ -219,11 +283,6 @@ const observe = ({ events, dispatch, signal, get_state }: Parameters<NonNullable
       if (domain) save(domain)
       return
     }
-    if (state.editor.error && !previous.editor.error && previous.editor.saving_domain)
-      refused_values.set(
-        previous.editor.saving_domain,
-        state.editor.files[previous.editor.saving_domain]?.value ?? null
-      )
     if (state.editor.status === 'ready' && Object.values(state.editor.files).some((file) => file?.dirty))
       schedule_save()
   })

@@ -5,7 +5,6 @@
 import {
   accessory_categories,
   armor_categories,
-  cosmetic_item_categories,
   tool_categories,
   weapon_categories,
   type ItemCategory,
@@ -17,15 +16,7 @@ import { toast } from '../toast.ts'
 import { copy_text } from '../i18n/copy.ts'
 import { stack_merge_target_row } from '../inventory_stacks.ts'
 
-export const MARKET_GROUPS = [
-  'COSMETICS',
-  'EQUIPMENT',
-  'PETS',
-  'RUNES',
-  'CONSUMABLE',
-  'RESOURCES',
-  'CHARACTERS',
-] as const
+export const MARKET_GROUPS = ['EQUIPMENT', 'PETS', 'RUNES', 'CONSUMABLE', 'RESOURCES', 'CHARACTERS'] as const
 export type MarketGroup = (typeof MARKET_GROUPS)[number]
 
 const equipment = Object.freeze([
@@ -39,19 +30,17 @@ const equipment = Object.freeze([
 export const market_observation = (group: MarketGroup): MarketObservation =>
   Object.freeze({
     categories: Object.freeze(
-      group === 'COSMETICS'
-        ? [...cosmetic_item_categories]
-        : group === 'EQUIPMENT'
-          ? equipment
-          : group === 'PETS'
-            ? ['pet']
-            : group === 'RUNES'
-              ? ['rune']
-              : group === 'CONSUMABLE'
-                ? ['consumable', 'key']
-                : group === 'RESOURCES'
-                  ? ['resource']
-                  : []
+      group === 'EQUIPMENT'
+        ? equipment
+        : group === 'PETS'
+          ? ['pet']
+          : group === 'RUNES'
+            ? ['rune']
+            : group === 'CONSUMABLE'
+              ? ['consumable', 'key']
+              : group === 'RESOURCES'
+                ? ['resource']
+                : []
     ) as readonly ItemCategory[],
     characters: group === 'CHARACTERS',
   })

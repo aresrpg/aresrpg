@@ -52,11 +52,12 @@ export const PublishPage = () => {
     !!pins.item_protected_policy?.id &&
     !!pins.character_protected_policy?.id
   const complete = !!admin.snapshot?.batches.length && admin.snapshot.batches.every(({ state }) => state === 'complete')
-  const sealed = admin.snapshot?.sealed === true
+  const sealed = admin.frozen
   const completed = admin.snapshot?.batches.filter(({ state }) => state === 'complete').length ?? 0
   const total = admin.snapshot?.batches.length ?? 0
   const next = next_seed_batch(admin.snapshot)
   const seed_busy = admin.status === 'loading' || admin.status === 'executing'
+  const writable_changes = (admin.changes?.changed.length ?? 0) + (admin.changes?.board_removals.length ?? 0)
   const deploy_busy = ['loading', 'compiling', 'publishing', 'upgrading', 'resetting', 'operating'].includes(
     deployment.status
   )
@@ -80,14 +81,14 @@ export const PublishPage = () => {
 
       <div className="mx-auto max-w-6xl">
         <Step
-          body="Runs warnings-as-errors for the Move packages and prepares wallet-safe bytecode. No transaction is signed."
+          body="Compiles pure math first with warnings as errors. Publish checks and compiles each dependent in order."
           number="01"
           state={deployment.artifact ? 'compiled' : deployment.status}
           title="Compile contracts"
         >
           <button
             className={`${action_class} border-[#4a9eff]/40 bg-[#4a9eff]/8 text-[#72b5ff]`}
-            disabled={deploy_busy || deployment.status === 'unavailable' || !!pins?.math_package}
+            disabled={deploy_busy || deployment.status === 'unavailable' || contract_published}
             onClick={() => dispatch_app({ type: 'admin/contracts_compile' })}
             type="button"
           >
@@ -100,7 +101,7 @@ export const PublishPage = () => {
         </Step>
 
         <Step
-          body="Publishes the immutable math layer first, recompiles the game against it, then publishes the game and records every created object."
+          body="Publishes changed packages in dependency order — math, control, content, then game — and records every created object."
           number="02"
           state={
             published
@@ -123,7 +124,7 @@ export const PublishPage = () => {
           ) : (
             <button
               className={`${action_class} border-[#c8963c]/45 bg-gradient-to-r from-[#c8963c]/14 to-[#4a9eff]/8 text-[#efbd45]`}
-              disabled={deploy_busy || (!deployment.artifact && !pins?.math_package) || !wallet}
+              disabled={deploy_busy || !deployment.artifact || !wallet}
               onClick={() => dispatch_app({ type: 'admin/contracts_publish' })}
               type="button"
             >
@@ -163,7 +164,7 @@ export const PublishPage = () => {
         </Step>
 
         <Step
-          body="Upgrade preserves every live object and seed. Republish abandons this deployment locally and starts a new chain lineage; old chain objects cannot be erased."
+          body="Upgrade preserves package lineages. Republish replaces core and each changed dependency, while reusing unchanged packages."
           number="04"
           state={
             deployment.status === 'upgrading' ? 'upgrading' : deployment.status === 'resetting' ? 'resetting' : 'ready'
@@ -181,7 +182,7 @@ export const PublishPage = () => {
                 {deployment.status === 'upgrading' ? 'Upgrading…' : 'Upgrade + bump version'}
               </button>
               <span className="max-w-md text-[8px] leading-4 text-[#68707d]">
-                One action, three confirmations: math, game, then version activation.
+                Only changed packages request confirmation. A changed game package is activated last.
               </span>
             </div>
             <div className="flex flex-wrap items-center gap-3 border-t border-white/6 pt-3">
@@ -192,7 +193,7 @@ export const PublishPage = () => {
                   onClick={() => dispatch_app({ type: 'admin/republish_armed', armed: true })}
                   type="button"
                 >
-                  Republish from scratch
+                  Republish core
                 </button>
               ) : (
                 <>
@@ -223,7 +224,7 @@ export const PublishPage = () => {
         </Step>
 
         <Step
-          body="One wallet approval opens an epoch-bound local session. Every missing pack is checked against live protocol limits and simulated before submission."
+          body="One wallet approval opens a temporary local session. Checking compares the JSON files against the chain: missing rows are created, changed rows can be rewritten, and the differences are listed below before anything is signed."
           number="05"
           state={sealed ? 'sealed' : admin.snapshot ? `${completed}/${total} batches` : 'not inspected'}
           title="Publish all seeds"
@@ -264,7 +265,55 @@ export const PublishPage = () => {
               {complete && admin.cleanup !== 'closed' && (
                 <span className="text-[8px] text-[#5ecf8d]">✓ All content published</span>
               )}
+              {writable_changes > 0 && !admin.changes?.errors.length && (
+                <button
+                  className={`${action_class} border-[#c8963c]/45 bg-[#c8963c]/9 text-[#efbd45]`}
+                  disabled={seed_busy || !wallet || sealed}
+                  onClick={() => dispatch_app({ type: 'admin/apply_changes' })}
+                  type="button"
+                >
+                  {admin.operation?.type === 'changes'
+                    ? 'Writing changes…'
+                    : `Write ${writable_changes} change${writable_changes === 1 ? '' : 's'}`}
+                </button>
+              )}
             </div>
+            {admin.changes && (
+              <div className="max-w-2xl space-y-2 border-l-2 border-white/12 bg-[#080b10]/70 px-4 py-3 text-[8px]">
+                <div className="flex flex-wrap gap-4 tracking-[0.1em] uppercase">
+                  <span className="text-[#72b5ff]">{admin.changes.new_count} new</span>
+                  <span className="text-[#efbd45]">{admin.changes.changed.length} changed</span>
+                  <span className="text-[#ff8caa]">{admin.changes.board_removals.length} boards removed</span>
+                  <span className="text-[#ff8caa]">{admin.changes.removed.length} removed from files</span>
+                  <span className="text-[#697686]">{admin.changes.unchanged} up to date</span>
+                </div>
+                {admin.changes.errors.length > 0 && (
+                  <div className="text-[#ff5a8b]">
+                    ✕ nothing can be written until the files are fixed · {admin.changes.errors.join(' · ')}
+                  </div>
+                )}
+                {admin.changes.changed.length > 0 && (
+                  <div className="text-[#d9c08a]">changed · {admin.changes.changed.join(' · ')}</div>
+                )}
+                {admin.changes.board_removals.length > 0 && (
+                  <div className="text-[#ff9bb6]">
+                    removed from the board catalog · {admin.changes.board_removals.join(' · ')}
+                  </div>
+                )}
+                {admin.changes.removed.length > 0 && (
+                  <div className="text-[#ff9bb6]">
+                    removed from files (still live on chain — retire them by editing whatever points at them) ·{' '}
+                    {admin.changes.removed.join(' · ')}
+                  </div>
+                )}
+                {admin.changes.fixed.length > 0 && (
+                  <div className="text-[#ff9bb6]">
+                    cannot rewrite (airdrops and gift cards are one-shot — add a new row under a new name) ·{' '}
+                    {admin.changes.fixed.join(' · ')}
+                  </div>
+                )}
+              </div>
+            )}
             {admin.progress && (
               <div className="max-w-2xl border-l-2 border-[#4a9eff]/55 bg-[#080b10]/70 px-4 py-3">
                 <div className="flex items-center justify-between gap-4 text-[8px] tracking-[0.1em] uppercase">
@@ -292,13 +341,13 @@ export const PublishPage = () => {
         </Step>
 
         <Step
-          body="Permanently closes every content authoring door. There is no unseal and no recovery transaction."
+          body="Permanently freezes every content door — spells, mobs, worlds, boards, items, recipes, supply. There is no unfreeze and no recovery transaction."
           number="06"
           state={sealed ? 'permanent' : complete ? 'available' : 'locked'}
-          title="Seal content forever"
+          title="Freeze content forever"
         >
           {sealed ? (
-            <span className="text-[9px] tracking-[0.12em] text-[#5ecf8d] uppercase">✓ Content authority removed</span>
+            <span className="text-[9px] tracking-[0.12em] text-[#5ecf8d] uppercase">✓ Content frozen forever</span>
           ) : !admin.seal_armed ? (
             <button
               className={`${action_class} border-[#ff5a8b]/30 text-[#ff8caa]`}
@@ -306,7 +355,7 @@ export const PublishPage = () => {
               onClick={() => dispatch_app({ type: 'admin/seal_armed', armed: true })}
               type="button"
             >
-              Arm permanent seal
+              Arm permanent freeze
             </button>
           ) : (
             <button
@@ -315,7 +364,7 @@ export const PublishPage = () => {
               onClick={() => dispatch_app({ type: 'admin/seal' })}
               type="button"
             >
-              Seal content permanently
+              Freeze content permanently
             </button>
           )}
         </Step>

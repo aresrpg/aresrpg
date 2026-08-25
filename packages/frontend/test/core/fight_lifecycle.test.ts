@@ -34,6 +34,13 @@ test('a zero-gas too-soon refusal requeues, while an executed failure never retr
       new Error('[sdk] dry run failed — transaction NOT submitted (zero gas): MoveAbort, abort code: 1724')
     )
   ).toBeTrue()
+  expect(
+    turn_too_soon_refusal(
+      new Error(
+        "Transaction resolution failed: MoveAbort in 2nd command, abort code: 1724, in '0xgame::fight::end_turn'"
+      )
+    )
+  ).toBeTrue()
   expect(turn_too_soon_refusal(new Error('[sdk] transaction 0xdigest failed on-chain: abort code: 1724'))).toBeFalse()
 
   let state = initial_app_state(settings)

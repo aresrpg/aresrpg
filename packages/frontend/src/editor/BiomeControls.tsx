@@ -4,8 +4,6 @@
 import { MATERIAL_PRESETS, STRUCTURE_PACKS, STRUCTURE_TYPES, landscape_height, type WorldRecipe } from '@aresrpg/engine'
 import { useEffect, useRef, useState } from 'react'
 
-import { item_icon, mob_icon } from '../content/assets.ts'
-
 import { move_spline_knot } from './biome_editor.ts'
 import type { JsonPath, JsonValue } from './seed_editor.ts'
 
@@ -126,6 +124,7 @@ export const SplineEditor = ({
   disabled = false,
   x_domain,
   y_domain,
+  y_value_domain,
 }: Readonly<{
   name: string
   knots: readonly (readonly [number, number])[]
@@ -137,6 +136,7 @@ export const SplineEditor = ({
   disabled?: boolean
   x_domain?: readonly [number, number]
   y_domain?: readonly [number, number]
+  y_value_domain?: readonly [number, number]
 }>) => {
   const [dragging, set_dragging] = useState<number | null>(null)
   const [draft_knots, set_draft_knots] = useState(knots)
@@ -169,6 +169,7 @@ export const SplineEditor = ({
     Math.min(...draft_knots.map(([, y]) => y)),
     Math.max(...draft_knots.map(([, y]) => y)),
   ]
+  const [value_y_min, value_y_max] = y_value_domain ?? [y_min, y_max]
   const clamp = (value: number, minimum: number, maximum: number): number => Math.max(minimum, Math.min(maximum, value))
   const to_x = (x: number): number => 12 + ((x - x_min) / Math.max(0.0001, x_max - x_min)) * (width - 24)
   const to_y = (y: number): number => height - 12 - ((y - y_min) / Math.max(0.0001, y_max - y_min)) * (height - 24)
@@ -182,7 +183,7 @@ export const SplineEditor = ({
     const py = ((client_y - bounds.top) / bounds.height) * height
     return [
       clamp(x_min + ((px - 12) / (width - 24)) * (x_max - x_min), x_min, x_max),
-      clamp(y_min + ((height - 12 - py) / (height - 24)) * (y_max - y_min), y_min, y_max),
+      clamp(y_min + ((height - 12 - py) / (height - 24)) * (y_max - y_min), value_y_min, value_y_max),
     ]
   }
   const curve = Array.from({ length: 121 }, (_, index) => {
@@ -240,6 +241,12 @@ export const SplineEditor = ({
         preserveAspectRatio={fill ? 'none' : undefined}
         viewBox={`0 0 ${width} ${height}`}
       >
+        <text fill="#555a64" fontSize="8" x="2" y="10">
+          {y_max}
+        </text>
+        <text fill="#555a64" fontSize="8" x="2" y={height - 2}>
+          {y_min}
+        </text>
         <polyline fill="none" points={curve} stroke="#c8963c" strokeWidth="2" vectorEffect="non-scaling-stroke" />
         {draft_knots.map(([x, y], index) => (
           <path
@@ -304,169 +311,4 @@ export const SplineEditor = ({
   )
 }
 
-const BiomeChips = ({
-  names,
-  selected,
-  change,
-}: Readonly<{ names: readonly string[]; selected: readonly string[]; change: (value: readonly string[]) => void }>) => (
-  <div className="flex flex-wrap gap-1">
-    {names.map((name) => (
-      <button
-        className={`h-6 border px-2 text-[7px] uppercase ${selected.includes(name) ? 'border-[#4a9eff]/45 bg-[#4a9eff]/10 text-[#8fc4ff]' : 'border-white/8 text-[#626670]'}`}
-        key={name}
-        onClick={() =>
-          change(selected.includes(name) ? selected.filter((value) => value !== name) : [...selected, name])
-        }
-        type="button"
-      >
-        {name}
-      </button>
-    ))}
-  </div>
-)
-
-const PopulationGroup = ({
-  kind,
-  rows,
-  biome_names,
-  change,
-}: Readonly<{
-  kind: 'mobs' | 'resources'
-  rows: readonly JsonValue[]
-  biome_names: readonly string[]
-  change: (path: JsonPath, value: JsonValue) => void
-}>) => {
-  const identity = kind === 'mobs' ? 'mob_type' : 'item_type'
-  const add = (): void =>
-    change(
-      [kind],
-      [
-        ...rows,
-        kind === 'mobs'
-          ? { mob_type: '', weight_bp: 100, biomes: [] }
-          : { item_type: '', job: 'FARMER', tier: 1, protector: '', rare_item_type: '', biomes: [] },
-      ]
-    )
-  return (
-    <section className="space-y-2">
-      <div className="flex items-center justify-between">
-        <div>
-          <h3 className="text-[9px] tracking-[0.15em] text-[#c8963c] uppercase">{kind}</h3>
-          <p className="mt-1 text-[7px] text-[#626670]">Assign each entry directly to one or more biome pools.</p>
-        </div>
-        <button className={button_class} onClick={add} type="button">
-          + Add
-        </button>
-      </div>
-      {rows.map((value, index) => {
-        const row = as_record(value)
-        if (!row) return null
-        const id = typeof row[identity] === 'string' ? row[identity] : ''
-        const biomes = Array.isArray(row.biomes)
-          ? row.biomes.filter((name): name is string => typeof name === 'string')
-          : []
-        const icon = kind === 'mobs' ? mob_icon(id) : item_icon(id)
-        return (
-          <div
-            className="grid grid-cols-[40px_minmax(0,1fr)_auto] items-start gap-2 border border-white/8 bg-black/15 p-2"
-            key={`${id}-${index}`}
-          >
-            <span className="grid size-10 place-items-center border border-white/8 bg-black/30">
-              {icon ? (
-                <img alt="" className="size-full object-contain p-1" src={icon} />
-              ) : (
-                <small className="text-[6px] text-[#555b66]">NO ICON</small>
-              )}
-            </span>
-            <div className="flex flex-wrap gap-1">
-              <input
-                className={`${input_class} w-48 max-w-full`}
-                onChange={(event) => change([kind, index, identity], event.target.value)}
-                value={id}
-              />
-              {kind === 'mobs' ? (
-                <input
-                  className={`${input_class} w-24`}
-                  onChange={(event) => change([kind, index, 'weight_bp'], Number(event.target.value))}
-                  title="Spawn weight (basis points)"
-                  type="number"
-                  value={typeof row.weight_bp === 'number' ? row.weight_bp : 0}
-                />
-              ) : (
-                <>
-                  <input
-                    className={`${input_class} w-28`}
-                    onChange={(event) => change([kind, index, 'job'], event.target.value)}
-                    value={typeof row.job === 'string' ? row.job : ''}
-                  />
-                  <input
-                    className={`${input_class} w-16`}
-                    onChange={(event) => change([kind, index, 'tier'], Number(event.target.value))}
-                    type="number"
-                    value={typeof row.tier === 'number' ? row.tier : 1}
-                  />
-                  <input
-                    className={`${input_class} w-44`}
-                    onChange={(event) => change([kind, index, 'protector'], event.target.value)}
-                    placeholder="protector"
-                    value={typeof row.protector === 'string' ? row.protector : ''}
-                  />
-                  <input
-                    className={`${input_class} w-44`}
-                    onChange={(event) => change([kind, index, 'rare_item_type'], event.target.value)}
-                    placeholder="rare item"
-                    value={typeof row.rare_item_type === 'string' ? row.rare_item_type : ''}
-                  />
-                </>
-              )}
-            </div>
-            <button
-              className={button_class}
-              onClick={() =>
-                change(
-                  [kind],
-                  rows.filter((_, row_index) => row_index !== index)
-                )
-              }
-              type="button"
-            >
-              Remove
-            </button>
-            <div className="col-span-3">
-              <BiomeChips
-                change={(next) => change([kind, index, 'biomes'], next)}
-                names={biome_names}
-                selected={biomes}
-              />
-            </div>
-          </div>
-        )
-      })}
-    </section>
-  )
-}
-
-export const PopulationEditor = ({
-  world,
-  biome_names,
-  change,
-}: Readonly<{
-  world: Readonly<Record<string, JsonValue>>
-  biome_names: readonly string[]
-  change: (path: JsonPath, value: JsonValue) => void
-}>) => (
-  <div className="space-y-6">
-    <PopulationGroup
-      biome_names={biome_names}
-      change={change}
-      kind="mobs"
-      rows={Array.isArray(world.mobs) ? world.mobs : []}
-    />
-    <PopulationGroup
-      biome_names={biome_names}
-      change={change}
-      kind="resources"
-      rows={Array.isArray(world.resources) ? world.resources : []}
-    />
-  </div>
-)
+export { PopulationEditor } from './PopulationEditor.tsx'

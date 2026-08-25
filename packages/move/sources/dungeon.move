@@ -26,6 +26,7 @@ use aresrpg::{
   world::{Self, World},
   zone,
 };
+use aresrpg_seed::{board_catalog::BoardCatalog, world_content::{Self, WorldContent}};
 use aresrpg_math::{prng, world_map};
 use std::string::String;
 use sui::{clock::Clock, dynamic_field as dfield, event, kiosk::{Kiosk, KioskOwnerCap}, transfer_policy::TransferPolicy};
@@ -70,6 +71,7 @@ public struct DungeonEnded has copy, drop { character: ID, world: String, room: 
 /// or give-up. Does NOT start a fight (the client shows a staging room with the mob group).
 public(package) fun enter(
   w: &World,
+  wc: &WorldContent,
   protected_item: &AresRPG_TransferPolicy<Item>,
   kiosk: &mut Kiosk,
   cap: &KioskOwnerCap,
@@ -81,13 +83,13 @@ public(package) fun enter(
   clock: &Clock,
   ctx: &mut TxContext,
 ) {
-  let (present, px, pz) = zone::portal_of(w, zx, zz);
+  let (present, px, pz) = zone::portal_of(w, wc, zx, zz);
   assert!(present, ENoPortal);
   assert!(!has_run(kiosk.borrow(cap, character_id)), EAlreadyInRun);
 
   // the burned item must be THIS world's dungeon key (its item_type pins it exactly)
   let key_type = { let it: &Item = kiosk.borrow(cap, key_id); it.item_type() };
-  assert!(world_map::dungeon_key(world::content(w)) == option::some(key_type), EWrongKey);
+  assert!(world_map::dungeon_key(world_content::data(wc)) == option::some(key_type), EWrongKey);
   item::burn(kiosk, cap, protected_item, key_id, 1, ctx);
 
   let chr: &mut Character = kiosk.borrow_mut(cap, character_id);
@@ -105,11 +107,13 @@ public(package) fun enter(
 /// mobs, then `launch`. No travel proof (you are staged at the portal, rooted).
 public(package) fun engage_room(
   w: &World,
+  wc: &WorldContent,
   protected: &AresRPG_TransferPolicy<Character>,
   kiosk: &mut Kiosk,
   cap: &KioskOwnerCap,
   character_id: ID,
   access: u8,
+  catalog: &BoardCatalog,
   clock: &Clock,
   ctx: &mut TxContext,
 ): FightBuild {
@@ -117,7 +121,7 @@ public(package) fun engage_room(
   assert!(rworld == w.name(), EWrongWorld);
   // the board is DERIVED from the run's committed seed + room — unpredictable, not caller-chosen
   let board_seed = prng::mix(seed, room);
-  fight::dungeon_build(protected, kiosk, cap, character_id, w, x, z, board_seed, room, access, clock, ctx)
+  fight::dungeon_build(protected, kiosk, cap, character_id, w, wc, x, z, board_seed, room, access, catalog, clock, ctx)
 }
 
 /// Join a PUBLIC room fight whose room matches your run (your key at the same room). Reuses
@@ -152,8 +156,8 @@ public(package) fun join_room_grouped(
 
 // gate_join
 /// The joiner's run must be the same DUNGEON (world) and the same ROOM as the fight — the
-/// portal is only the entrance (owner 2026-08-11: the dungeon is the same for every portal;
-/// rooms are fake, coord-less, all same-room players converge whichever portal they took).
+/// portal is only the entrance; rooms are fake and coord-less, so the chain permits same-room
+/// players to converge whichever portal they took.
 fun gj(fight: &Fight, chr: &Character) {
   let (rworld, room, _, _, _) = rr(chr);
   assert!(fight::dungeon_room_of(fight) == option::some(room), EWrongRoom);
@@ -166,27 +170,31 @@ fun gj(fight: &Fight, chr: &Character) {
 /// ADVANCE the run (won and more rooms remain — re-root, next staging) or END it (won the
 /// last room, or lost). The key is already gone; ending just drops the run and unroots.
 public(package) fun settle_room(
-  w: &World,
+  wc: &WorldContent,
   fight: &mut Fight,
   fighter_idx: u64,
   kiosk: &mut Kiosk,
   cap: &KioskOwnerCap,
   policy: &TransferPolicy<Character>,
+  item_policy: &TransferPolicy<item::Item>,
+  plan: vector<item::PM>,
   gen: &mut sui::random::RandomGenerator,
   clock: &Clock,
-  ctx: &TxContext,
+  ctx: &mut TxContext,
 ) {
   // the run to advance is DERIVED from the settled seat, and the fight must be a real dungeon
   // room — never a free character id pointed at another character's run (audit 2026-08-11).
   let tag_room = dt(fight);
+  let fight_world = fight::fight_world(fight);
+  assert!(world_content::name(wc) == fight_world, EWrongWorld);
   let character_id = fight::fighter_character(fight, fighter_idx);
   let won = fight::fighter_won(fight, fighter_idx);
-  fight::settle(fight, fighter_idx, kiosk, cap, policy, gen, clock, ctx);
+  fight::settle(fight, fighter_idx, kiosk, cap, policy, item_policy, plan, gen, clock, ctx);
 
   let chr: &mut Character = kiosk.borrow_mut(cap, character_id);
   let (rworld, room, x, z, seed) = rr(chr);
-  assert!(rworld == w.name() && room == tag_room, EWrongRoom);
-  if (won && room < world_map::dungeon_room_count(world::content(w))) {
+  assert!(rworld == fight_world && room == tag_room, EWrongRoom);
+  if (won && room < world_map::dungeon_room_count(world_content::data(wc))) {
     wr(chr, DungeonRun { world: rworld, room: room + 1, x, z, seed }); // seed persists
     world::delay_checkpoint(chr, ROOT_BETWEEN_ROOMS_MS, clock); // staged for the next room
     event::emit(DungeonRoomCleared { character: character_id, world: rworld, room });

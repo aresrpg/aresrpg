@@ -19,12 +19,13 @@ const settings = Object.freeze({
   music_enabled: true,
   render_distance: null,
 } as const)
+const settled_boundary = Object.freeze({ error: null, awaiting_turn_witness: false })
 
 // ── the remote checkpoint, wire-shaped (numbers + decimal strings, never bigint) ────────────
 
 const raw_fighter = (character: string, owner: string, team: number, cell: number) => ({
   team,
-  kind: { type: 'player', character, owner },
+  kind: { type: 'player', character, owner, level: 10n },
   cell,
   ready: true,
   dead: false,
@@ -255,7 +256,7 @@ describe('the remote fight fold', () => {
   test('selecting another owned character in the same fight keeps that board mounted', () => {
     const active = drive_fight_state('0xme')
     const checkpoint = structuredClone(active.fight.checkpoint!)
-    checkpoint.contract.fighters[1]!.kind = { type: 'player', character: '0xb', owner: '0xme' }
+    checkpoint.contract.fighters[1]!.kind = { type: 'player', character: '0xb', owner: '0xme', level: 10n }
     const state = reduce_app_state(
       {
         ...active,
@@ -277,7 +278,7 @@ describe('the remote fight fold', () => {
   test('releasing one owned seat preserves the shared fight for another owned character', () => {
     const active = drive_fight_state('0xme')
     const checkpoint = structuredClone(active.fight.checkpoint!)
-    checkpoint.contract.fighters[1]!.kind = { type: 'player', character: '0xb', owner: '0xme' }
+    checkpoint.contract.fighters[1]!.kind = { type: 'player', character: '0xb', owner: '0xme', level: 10n }
     const shared = {
       ...active,
       fight: { ...active.fight, checkpoint, cached: { [checkpoint.contract.id]: checkpoint } },
@@ -300,7 +301,7 @@ describe('the remote fight fold', () => {
     const active = drive_fight_state('0xme')
     const other = structuredClone(active.fight.checkpoint!)
     other.contract.id = '0xf2'
-    other.contract.fighters[0]!.kind = { type: 'player', character: '0xb', owner: '0xme' }
+    other.contract.fighters[0]!.kind = { type: 'player', character: '0xb', owner: '0xme', level: 10n }
     const cached = reduce_app_state(active, { type: 'fight/cached', checkpoint: other })
     const state = reduce_app_state(
       {
@@ -329,14 +330,14 @@ describe('the remote fight fold', () => {
         zone_ids: [],
         events: [{ type: 'turn_switched', payload: { from: 0n, to: 1n, round: 1n, skipped: [], reason: 'test' } }],
         presentation_batch: batch,
-        error: null,
+        ...settled_boundary,
       })
     }
     reconcile(1)
     reconcile(2)
 
     expect(state.fight.presentations.map(({ batch }) => batch)).toEqual([1, 2])
-    state = reduce_app_state(state, { type: 'fight/presented', presentation_batch: 1 })
+    state = reduce_app_state(state, { type: 'fight/presented', presentation: state.fight.presentations[0]! })
     expect(state.fight.presentations.map(({ batch }) => batch)).toEqual([2])
   })
 
@@ -355,7 +356,7 @@ describe('the remote fight fold', () => {
       zone_ids: [],
       events: [],
       presentation_batch: 1,
-      error: null,
+      ...settled_boundary,
     })
     expect(state.fight.end_turn_queued).toBeTrue()
 
@@ -368,7 +369,7 @@ describe('the remote fight fold', () => {
       zone_ids: [],
       events: [],
       presentation_batch: 1,
-      error: null,
+      ...settled_boundary,
     })
     expect(state.fight.end_turn_queued).toBeFalse()
   })
@@ -405,7 +406,7 @@ describe('the remote fight fold', () => {
       zone_ids: [],
       events: [],
       presentation_batch: 1,
-      error: null,
+      ...settled_boundary,
     })
     expect(state.fight.end_turn_submitted).toBeTrue()
 
@@ -418,7 +419,7 @@ describe('the remote fight fold', () => {
       zone_ids: [],
       events: [],
       presentation_batch: 1,
-      error: null,
+      ...settled_boundary,
     })
     expect(state.fight.end_turn_submitted).toBeFalse()
   })

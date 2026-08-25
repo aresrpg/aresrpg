@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
-import { Cat, Check, Crown, Gift, Loader2, Lock, Shirt, Sparkles, Star, type LucideIcon } from 'lucide-react'
+import { Cat, Check, Gift, Loader2, Lock, Shirt, Sparkles, Star, type LucideIcon } from 'lucide-react'
 import { useState } from 'react'
 
 import { content_catalog } from '../content/catalog.ts'
@@ -15,7 +15,6 @@ import { toast } from '../toast.ts'
 
 const glyphs: Readonly<Record<string, LucideIcon>> = Object.freeze({
   pet_glb: Cat,
-  cosmetic: Crown,
   title_relic: Star,
   outfit: Shirt,
 })
@@ -84,7 +83,7 @@ export default function AirdropPage({ copy, session }: Readonly<{ copy: AppCopy;
   }
 
   return (
-    <section className="pointer-events-auto flex min-h-full flex-1 flex-col overflow-hidden border border-border bg-[#0a0a0f]/97">
+    <section className="pointer-events-auto flex min-h-full flex-1 flex-col overflow-hidden border border-border bg-bg/97">
       <header className="flex shrink-0 items-end justify-between gap-4 border-b border-border px-6 pt-4 pb-3">
         <div className="flex min-w-0 items-baseline gap-3.5">
           <h1 className="inline-flex items-center gap-2 bg-[linear-gradient(135deg,#f5d0a9,#c8963c,#f0c474)] bg-clip-text text-[12px] font-semibold tracking-[0.3em] text-transparent uppercase">

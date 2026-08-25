@@ -17,17 +17,18 @@
 /// levels come off the immutable `job_xp` curve.
 module aresrpg::gathering;
 
+use aresrpg_seed::item_rows::{Self, ItemTemplate};
 use aresrpg::{
   character::Character,
   equipment,
   fight,
-  item::{Self, Item, ItemTemplate},
-  mob_template::MobTemplate,
+  item::{Self, Item},
   progression,
   protected_policy::AresRPG_TransferPolicy,
   world::{Self, World},
   zone,
 };
+use aresrpg_seed::{mob_rows::MobTemplate, spell_rows::SpellTemplate, board_catalog::BoardCatalog, world_content::{Self, WorldContent}};
 use aresrpg_math::{job_xp, mob_data, world_map};
 use std::string::String;
 use sui::{
@@ -101,6 +102,7 @@ public struct RareGathered has copy, drop { world: String, x: u32, z: u32, gathe
 
 public(package) fun gather(
   w: &mut World,
+  wc: &WorldContent,
   kiosk: &mut Kiosk,
   cap: &KioskOwnerCap,
   character_id: ID,
@@ -117,10 +119,10 @@ public(package) fun gather(
   ctx: &mut TxContext,
 ) {
   // The live pack (a read — remaining nodes asserted) and its authored row.
-  let pack = zone::resource_pack_at(w, zx, zz, pack_index);
+  let pack = zone::resource_pack_at(w, wc, zx, zz, pack_index);
   let item_type = pack.pack_item_type();
-  let row = world_map::resource_row_of(world::content(w), item_type);
-  assert!(item::template_type(template) == item_type, ETemplateMismatch);
+  let row = world_map::resource_row_of(world_content::data(wc), item_type);
+  assert!(item_rows::template_type(template) == item_type, ETemplateMismatch);
 
   // Gates on the character, then the job-xp write — all refusals before any state moves.
   let (quantity, gained_xp, protector) = {
@@ -144,8 +146,8 @@ public(package) fun gather(
     // itself spawns in `resolve_ambush` — a later tx with nothing left to re-roll.
     let ambush_rolled = gen.generate_u64_in_range(0, 9999) < PROTECTOR_BP;
     let protector = ambush_rolled && !row.resource_row_protector().is_empty();
-    let floor = zone::level_floor(zx, zz);
-    let scalar = floor + gen.generate_u64_in_range(0, 100 - floor);
+    let (level_lo, level_hi) = zone::level_bounds(zx, zz);
+    let scalar = level_lo + gen.generate_u64_in_range(0, level_hi - level_lo);
     let board_seed = gen.generate_u64();
     let hp = progression::touch(chr, clock);
     wv(chr, PendingAmbush {
@@ -168,13 +170,13 @@ public(package) fun gather(
   };
 
   // WRITES: one node leaves the pack, the yield lands in the kiosk (merged or fresh).
-  zone::consume_resource_node(w, zx, zz, pack_index);
+  zone::consume_resource_node(w, wc, zx, zz, pack_index);
   item::deposit(kiosk, cap, item_policy, existing, item::mint(template, quantity as u32, gen, ctx));
 
   // GOLDEN-GATHER: identity asserted BEFORE the draw — a won jackpot always mints.
   let rare = row.resource_row_rare();
   if (!rare.is_empty()) {
-    assert!(item::template_type(rare_template) == rare, ERareMismatch);
+    assert!(item_rows::template_type(rare_template) == rare, ERareMismatch);
     if (gen.generate_u64_in_range(0, 9999) < RARE_BP) {
       item::deposit(kiosk, cap, item_policy, existing_rare, item::mint(rare_template, 1, gen, ctx));
       event::emit(RareGathered { world: w.name(), x: pack.pack_x(), z: pack.pack_z(), gatherer: ctx.sender(), item_type, rare_item_type: rare });
@@ -204,6 +206,7 @@ public(package) fun resolve_ambush(
   cap: &KioskOwnerCap,
   character_id: ID,
   protector_template: &MobTemplate,
+  catalog: &BoardCatalog,
   clock: &Clock,
   ctx: &mut TxContext,
 ) {
@@ -231,6 +234,7 @@ public(package) fun resolve_ambush(
     verdict.scalar as u64,
     verdict.board_seed,
     verdict.hp,
+    catalog,
     clock,
     ctx,
   );

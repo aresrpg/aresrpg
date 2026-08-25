@@ -16,11 +16,12 @@ import {
   SPEED_BUDGET_BLOCKS_PER_SECOND,
   PET_SPEED_MULTIPLIER,
   VISIBLE_SLOTS,
+  type CharacterRow,
   type VisibleSlot,
 } from '@aresrpg/protocol'
 
 import { channels, mesh, type EventEnvelope, type MeshFact } from '../protocol.ts'
-import { mob_groups, resource_packs, world_population } from '../zone_spawns.ts'
+import { dungeon_portal, mob_groups, resource_packs, world_population } from '../zone_spawns.ts'
 import { get_owned_character } from '../reads/get_owned_character.ts'
 import { get_friends } from '../reads/get_friends.ts'
 import { get_zones } from '../reads/get_zones.ts'
@@ -81,6 +82,7 @@ export default {
             fight: action.fight,
             fight_seat: action.fight_seat,
             active_fighter: null,
+            dungeon_run: action.dungeon_run,
           },
         },
         friends: action.friends,
@@ -91,7 +93,7 @@ export default {
         Object.fromEntries(
           action.characters.map((character) => [
             character.id,
-            `${character.world ?? ''}:${character.checkpoint_world ?? ''}:${character.at_ms ?? 0}:${character.custody}`,
+            `${character.world ?? ''}:${character.checkpoint_world ?? ''}:${character.at_ms ?? 0}:${character.custody}:${JSON.stringify(character.dungeon_run ?? null)}`,
           ])
         )
       )
@@ -230,8 +232,8 @@ export default {
       }
       if (fact.kind === 'who') {
         // a later joiner probes the zone it now tracks — only a player STANDING there answers
-        Object.values(get_state().characters).forEach(({ presence: me, fight }) => {
-          if (fight) return
+        Object.values(get_state().characters).forEach(({ presence: me, fight, dungeon_run }) => {
+          if (fight || dungeon_run) return
           if (me.world !== fact.world) return
           const my_zone = zone_of(me.x, me.z)
           if (my_zone.zx !== fact.zx || my_zone.zz !== fact.zz) return
@@ -257,6 +259,7 @@ export default {
         zz,
         mobs: [...mob_groups(population, zx, zz, BigInt(seed))],
         resources: [...resource_packs(population, zx, zz, BigInt(seed))],
+        portal: dungeon_portal(population, zx, zz, BigInt(seed)),
       })
     }
 
@@ -488,6 +491,7 @@ export default {
           party,
           fight: fight?.id ?? null,
           fight_seat: fight?.seat ?? null,
+          dungeon_run: (character.dungeon_run as CharacterRow['dungeon_run']) ?? null,
           // THE CHECKPOINT'S OWN TIMESTAMP, never the tracking-request wall-clock (chain travel_ok
           // semantics): the travel budget accrues from the last PROVEN position — a player
           // legitimately far off an old anchor must not read as a speed hack on first move
@@ -504,7 +508,7 @@ export default {
 
     events.on('packet/position', (action: Extract<PlayerAction, { type: 'packet/position' }>) => {
       const tracked = get_state().characters[action.character_id]
-      if (!tracked || tracked.fight) return
+      if (!tracked || tracked.fight || tracked.dungeon_run) return
       const { presence: character, move_anchor } = tracked
       const now = Date.now()
       // THE AUTHORED SPEED LAW as a token bucket: time banks travel allowance (uncapped
@@ -552,6 +556,19 @@ export default {
         const current = current_tracked?.presence
         if (before_tracked === current_tracked) return
         if (before && current && same_mount(before, current)) {
+          if (!before_tracked.dungeon_run && current_tracked.dungeon_run) {
+            unmount(before)
+            send({ type: 'packet/tracked_zones', character_id, world: current.world, zones: [] })
+            return
+          }
+          if (before_tracked.dungeon_run && !current_tracked.dungeon_run) {
+            void mount(current, !current_tracked.fight).catch((error: Error) => {
+              log.error({ address, character_id, error: error.message }, 'world remount failed')
+              send({ type: 'packet/error', reason: 'world remount failed' })
+            })
+            return
+          }
+          if (current_tracked.dungeon_run) return
           if (!before_tracked.fight && current_tracked.fight) leave(before)
           else if (before_tracked.fight && !current_tracked.fight) appear(current)
           else if (!current_tracked.fight) move(before, current)
@@ -564,7 +581,7 @@ export default {
           return
         }
         if (before) unmount(before)
-        if (current)
+        if (current && !current_tracked.dungeon_run)
           void mount(current, !current_tracked.fight).catch((error: Error) => {
             log.error({ address, character_id, error: error.message }, 'world mount failed')
             send({ type: 'packet/error', reason: 'world mount failed' })

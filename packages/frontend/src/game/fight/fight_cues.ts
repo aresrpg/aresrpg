@@ -451,6 +451,17 @@ export const project_fight_cues = ({
       )
       return
     }
+    if (event.type === 'invisibility_changed') {
+      cues.push(
+        Object.freeze({
+          id,
+          type: 'visibility',
+          entity_id: entity_id(checkpoint, event.payload.fighter),
+          invisible: event.payload.invisible,
+        })
+      )
+      return
+    }
     if (event.type === 'trap_triggered' || event.type === 'glyph_triggered') {
       const segment = zone_segment(events, index)
       const damage_targets = new Set(affected_seats(segment))

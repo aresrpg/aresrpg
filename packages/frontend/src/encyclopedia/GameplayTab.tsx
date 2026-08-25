@@ -2,6 +2,7 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
 import { max_level, xp_for_level } from '@aresrpg/immutable'
+import { RETRO_GROUP_XP_TENTHS } from '@aresrpg/fight'
 import { CONTRACT_CONSTANTS } from '@aresrpg/fight/move_contract'
 import { Activity, Coins, Crown, DoorOpen, Sparkles, Swords, TrendingUp, Users, Zap } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
@@ -135,7 +136,9 @@ export const GameplayTab = ({ text }: Readonly<{ text: EncyclopediaText }>) => {
             <Text>{text('gameplay.blocking_desc')}</Text>
             <Subheading>{text('gameplay.resistance')}</Subheading>
             <Text>{text('gameplay.resistance_desc')}</Text>
-            <Formula>D₂ = floor(D × max(0, 100 − RES) / 100)</Formula>
+            <Formula>D₂ = floor(D × (100 − min(RES, 50)) / 100)</Formula>
+            <Subheading>{text('gameplay.mob_level_bands')}</Subheading>
+            <Text>{text('gameplay.mob_level_bands_desc')}</Text>
             <Subheading>{text('gameplay.life_steal')}</Subheading>
             <Text>{text('gameplay.life_steal_desc')}</Text>
             <Formula>H = floor(ΔHP / 2)</Formula>
@@ -189,6 +192,9 @@ export const GameplayTab = ({ text }: Readonly<{ text: EncyclopediaText }>) => {
             <Text>{text('gameplay.archimobs_desc')}</Text>
             <Subheading>{text('gameplay.chance_loot')}</Subheading>
             <Text>{text('gameplay.chance_loot_desc')}</Text>
+            <Formula>drop = min(100%, authored × mob band × (600 + average team Chance) / 600)</Formula>
+            <Subheading>{text('gameplay.mob_loot_band')}</Subheading>
+            <Text>{text('gameplay.mob_loot_band_desc')}</Text>
           </WikiSection>
 
           <WikiSection id="groups" title={text('gameplay.section_groups')}>
@@ -196,6 +202,14 @@ export const GameplayTab = ({ text }: Readonly<{ text: EncyclopediaText }>) => {
             <Text>{text('gameplay.groups_desc', { max: 6 })}</Text>
             <Subheading>{text('gameplay.groups_xp')}</Subheading>
             <Text>{text('gameplay.groups_xp_desc')}</Text>
+            <Formula>
+              XP = base-XP pool × party coefficient × level balance × player level / party level × (600 + WIS) / 600
+            </Formula>
+            <div className="grid grid-cols-3 gap-1 sm:grid-cols-6">
+              {RETRO_GROUP_XP_TENTHS.map((coefficient, index) => (
+                <Fact key={String(coefficient)} label={String(index + 1)} value={`×${Number(coefficient) / 10}`} />
+              ))}
+            </div>
             <Subheading>{text('gameplay.groups_loot')}</Subheading>
             <Text>{text('gameplay.groups_loot_desc')}</Text>
           </WikiSection>

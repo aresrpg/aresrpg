@@ -20,7 +20,7 @@ test('game state subscribes before loading the Version snapshot and then follows
     },
     pubsub: {
       emitter,
-      subscribe: async () => void calls.push('subscribe'),
+      subscribe: async (channel) => void calls.push(`subscribe ${channel}`),
       unsubscribe: async () => {},
       indexed_checkpoint: async () => null,
       sales_history: async () => [],
@@ -33,7 +33,7 @@ test('game state subscribes before loading the Version snapshot and then follows
   await game_state.start()
   emitter.emit('evt:game', { type: 'GameStateChanged', data: { frozen: true } })
 
-  expect(calls).toEqual(['subscribe', 'read'])
+  expect(calls).toEqual(['subscribe evt:game', 'read'])
   expect(game_state.get()).toBeTrue()
   expect(seen).toEqual([false, true])
 })

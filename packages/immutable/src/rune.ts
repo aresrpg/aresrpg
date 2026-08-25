@@ -18,6 +18,16 @@ const rune_amounts = Object.freeze({
   ra: Object.freeze([30, 10, 10, 10, 10, 10, 0, 0, 0, 0, 0, 10, 10, 10, 10]),
 } satisfies Readonly<Record<RuneTier, readonly number[]>>)
 
+export const rune_weight_scale = 20
+const rune_unit_weights_scaled = Object.freeze([5, 60, 20, 20, 20, 20, 1020, 1800, 2000, 600, 400, 80, 80, 80, 80])
+
+export const rune_unit_weight = (stat: StatName): number =>
+  rune_unit_weights_scaled[stat_names.indexOf(stat)]! / rune_weight_scale
+
+export const rune_unit_weights = Object.freeze(
+  Object.fromEntries(stat_names.map((stat) => [stat, rune_unit_weight(stat)])) as Record<StatName, number>
+)
+
 /** Hard per-item application cap (0 = uncapped) — rune_catalog.move MAX_APPS. */
 const rune_apps_caps = Object.freeze([0, 0, 0, 0, 0, 0, 1, 1, 1, 10, 0, 0, 0, 0, 0])
 

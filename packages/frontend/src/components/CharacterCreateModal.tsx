@@ -127,7 +127,7 @@ export const CharacterCreateModal = ({
   return (
     <section className="absolute inset-0 z-[160] grid place-items-center bg-[#050508]/72 p-5 backdrop-blur-lg">
       <form
-        className="max-h-[92dvh] w-full max-w-5xl overflow-auto border border-white/10 border-t-[#c8963c] bg-[#0d0d14]/95 p-6 shadow-[0_26px_90px_rgba(0,0,0,0.58)]"
+        className="max-h-[92dvh] w-full max-w-5xl overflow-auto border border-white/12 border-t-[#c8963c] bg-[#181c1f]/97 p-6 shadow-[0_26px_90px_rgba(0,0,0,0.52)]"
         onSubmit={submit}
       >
         <h2 className="text-[17px] font-bold tracking-[0.14em] uppercase">{copy.create_title}</h2>

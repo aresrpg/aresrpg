@@ -2,7 +2,7 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 // THE PACK CARD — what a mob group says when you walk up to it. A group is a UNIT: the chain
 // engages it whole, so it gets ONE card listing its members rather than a tag per body. The
-// engine owns the element's position (a CSS2D crown over the pack's first body, riding the
+// engine owns the element's position (a CSS2D crown over a mob pack or resource pack, riding the
 // frame's own camera pass); this component only portals the content in.
 //
 // A MEMBER'S LEVEL IS NOT ON THE WIRE. The chain draws a `level_scalar` (0..100) per member and
@@ -17,6 +17,7 @@ import { createPortal } from 'react-dom'
 import { chain_to_client_coordinate } from '@aresrpg/immutable'
 
 import { content_catalog } from '../content/catalog.ts'
+import { mob_level_from_scalar } from '../content/mob_levels.ts'
 import { useNametags } from '../game/core/nametag_feed.ts'
 import { dispatch_app, useAppStore, type AppState } from '../store.ts'
 import type { AppCopy } from '../i18n/copy.ts'
@@ -26,13 +27,15 @@ import { read_pose } from '../game/core/pose_feed.ts'
 import { gather_gate } from '../game/gather_gate.ts'
 import { parse_resource_node_id, resource_seats } from '../game/resource_nodes.ts'
 import { selected_character } from '../modules/session.ts'
+import { read_dungeon_portal_prompt } from '../game/core/dungeon_portal_feed.ts'
 
 import { NametagCard, type NametagLine } from './NametagCard.tsx'
 import { PromptKey, split_key_template } from './PromptChip.tsx'
 
+const SPAWN_INTERACTION_RANGE_BLOCKS = 15
+
 /** The chain's own scalar → level arithmetic (fight.move::mf, mirrored in @aresrpg/fight). */
-export const member_level = (level_min: number, level_max: number, scalar: number): number =>
-  level_min + Math.floor(((level_max - level_min) * scalar) / 100)
+export const member_level = mob_level_from_scalar
 
 /** The closest tagged pack to the player — E's one target. Ties break on the id so the choice
  *  is stable frame to frame rather than flickering between two equidistant packs. */
@@ -47,7 +50,8 @@ const nearest_tagged_group = (ids: readonly string[], world: WorldState): string
         if (!group) return []
         const x = chain_to_client_coordinate(group.x)
         const z = chain_to_client_coordinate(group.z)
-        return [{ id, distance: Math.hypot(x - own.x, z - own.z) }]
+        const distance = Math.hypot(x - own.x, z - own.z)
+        return distance <= SPAWN_INTERACTION_RANGE_BLOCKS ? [{ id, distance }] : []
       })
       .toSorted((a, b) => a.distance - b.distance || a.id.localeCompare(b.id))
       .at(0)?.id ?? null
@@ -78,7 +82,8 @@ const nearest_tagged_resource = (ids: readonly string[], state: AppState): strin
         if (!row) return []
         const x = chain_to_client_coordinate(row.pack.x) + row.seat.dx
         const z = chain_to_client_coordinate(row.pack.z) + row.seat.dz
-        return [{ id, distance: Math.hypot(x - own.x, z - own.z) }]
+        const distance = Math.hypot(x - own.x, z - own.z)
+        return distance <= SPAWN_INTERACTION_RANGE_BLOCKS ? [{ id, distance }] : []
       })
       .toSorted((a, b) => a.distance - b.distance || a.id.localeCompare(b.id))
       .at(0)?.id ?? null
@@ -118,22 +123,24 @@ export const SpawnNametag = ({ copy }: Readonly<{ copy: AppCopy }>) => {
   const state = useAppStore((value) => value)
   const { world } = state
   const text = copy_text(copy.world_hud)
-  // The tagged packs are exactly the packs in range (the spawn layer gates the tag on the same
-  // 15 blocks), so "the pack E acts on" is the nearest one wearing a card — the pixels and the
-  // key can never point at different groups.
+  // Names advertise packs from afar, while E remains a close interaction. The target is the
+  // nearest tagged spawn still inside that smaller action radius.
   const ids = Object.keys(spawns)
   const mob_target = nearest_tagged_group(ids, world)
   const resource_target = nearest_tagged_resource(ids, state)
-  const target = selected_character(state.session)?.ambush
-    ? null
-    : ([mob_target, resource_target]
-        .filter((id): id is string => id !== null)
-        .sort((a, b) => tagged_distance(a, state) - tagged_distance(b, state) || a.localeCompare(b))[0] ?? null)
+  const selected = selected_character(state.session)
+  const target =
+    selected?.ambush || state.world.gathering?.character_id === selected?.id
+      ? null
+      : ([mob_target, resource_target]
+          .filter((id): id is string => id !== null)
+          .sort((a, b) => tagged_distance(a, state) - tagged_distance(b, state) || a.localeCompare(b))[0] ?? null)
 
   useEffect(() => {
     if (!target) return
     const on_key = (event: KeyboardEvent): void => {
       if (event.code !== 'KeyE' || event.repeat) return
+      if (read_dungeon_portal_prompt().focused_id) return
       const focus = event.target as HTMLElement | null
       if (focus?.isContentEditable || ['INPUT', 'TEXTAREA'].includes(focus?.tagName ?? '')) return
       event.preventDefault()
@@ -156,6 +163,7 @@ export const SpawnNametag = ({ copy }: Readonly<{ copy: AppCopy }>) => {
           if (!row?.character) return null
           const item_name = content_catalog.item(row.pack.item_type)?.item.name ?? row.pack.item_type
           const gate = gather_gate(row.character, row.resource)
+          const interactive = target === spawn_id
           const requirement = gate.ok
             ? text('resource_press_collect', { name: item_name })
             : gate.reason === 'level'
@@ -166,21 +174,25 @@ export const SpawnNametag = ({ copy }: Readonly<{ copy: AppCopy }>) => {
             <NametagCard
               name={item_name}
               tone={gate.ok ? 'gold' : 'muted'}
-              lines={[
-                {
-                  key: 'press',
-                  muted: !gate.ok,
-                  text: gate.ok ? (
-                    <span className="inline-flex items-center gap-1.5">
-                      {before?.trim()}
-                      <PromptKey label="E" />
-                      {after?.trim()}
-                    </span>
-                  ) : (
-                    requirement
-                  ),
-                },
-              ]}
+              lines={
+                interactive
+                  ? [
+                      {
+                        key: 'press',
+                        muted: !gate.ok,
+                        text: gate.ok ? (
+                          <span className="inline-flex items-center gap-1.5">
+                            {before?.trim()}
+                            <PromptKey label="E" />
+                            {after?.trim()}
+                          </span>
+                        ) : (
+                          requirement
+                        ),
+                      },
+                    ]
+                  : []
+              }
             />,
             element,
             spawn_id
@@ -197,16 +209,20 @@ export const SpawnNametag = ({ copy }: Readonly<{ copy: AppCopy }>) => {
               ...group.members.map(({ mob_type, level_scalar }, index) =>
                 member_line(mob_type, level_scalar, index, text('spawn_unknown_mob'))
               ),
-              {
-                key: 'press',
-                text: (
-                  <span className="inline-flex items-center gap-1.5">
-                    {before?.trim()}
-                    <PromptKey label="E" />
-                    {after?.trim()}
-                  </span>
-                ),
-              },
+              ...(target === spawn_id
+                ? [
+                    {
+                      key: 'press',
+                      text: (
+                        <span className="inline-flex items-center gap-1.5">
+                          {before?.trim()}
+                          <PromptKey label="E" />
+                          {after?.trim()}
+                        </span>
+                      ),
+                    },
+                  ]
+                : []),
             ]}
           />,
           element,

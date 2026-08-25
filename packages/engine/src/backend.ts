@@ -14,6 +14,8 @@ import type {
   FightBoardRender,
   FightSwordMarker,
   ResourceNodeMarker,
+  DungeonPortalMarker,
+  DungeonStageRender,
   RenderChunkRequest,
   Vec3,
 } from './types.ts'
@@ -36,6 +38,8 @@ export type EngineBackend = Readonly<{
   set_resource_node_label: (id: string, element: HTMLElement | null) => void
   /** the star-gate approach tooltip — anchored at the world origin's fixed dressing point */
   set_portal_label: (element: HTMLElement | null) => void
+  set_dungeon_portals: (markers: readonly DungeonPortalMarker[]) => void
+  set_dungeon_stage: (stage: DungeonStageRender | null) => void
   animate_entity: (motion: EntityPathMotion) => Promise<boolean>
   play_fight_cue: (cue: FightPresentationCue) => Promise<boolean>
   play_jump_puff: (position: Vec3) => void

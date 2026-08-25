@@ -9,7 +9,7 @@
 
 import { useMemo, useState } from 'react'
 import type { CharacterEquipmentSlot } from '@aresrpg/immutable'
-import { cosmetic_item_categories, item_stat_center, stat_names } from '@aresrpg/immutable'
+import { item_stat_center, stat_names } from '@aresrpg/immutable'
 import type { CharacterRow, ItemRow } from '@aresrpg/protocol'
 
 import { EquipmentDoll } from '../components/EquipmentDoll.tsx'
@@ -33,11 +33,10 @@ import {
 } from './equipment_stage.ts'
 import { InventoryActionOverlays, is_loot_box, type ItemMenuState } from './InventoryOverlays.tsx'
 
-const BAG_CATEGORIES = ['equipment', 'cosmetics', 'consumables', 'resources'] as const
+const BAG_CATEGORIES = ['equipment', 'consumables', 'resources'] as const
 type BagCategory = (typeof BAG_CATEGORIES)[number]
 
 const bag_category_of = (item: Readonly<ItemRow>): BagCategory => {
-  if ((cosmetic_item_categories as readonly string[]).includes(item.category)) return 'cosmetics'
   if (item.category === 'consumable') return 'consumables'
   if (item.category === 'resource' || item.category === 'rune' || item.category === 'key') return 'resources'
   return 'equipment'
@@ -93,7 +92,6 @@ export default function EquipmentTab({
     () =>
       bag.reduce((totals, item) => ({ ...totals, [bag_category_of(item)]: totals[bag_category_of(item)] + 1 }), {
         equipment: 0,
-        cosmetics: 0,
         consumables: 0,
         resources: 0,
       }),
@@ -202,7 +200,7 @@ export default function EquipmentTab({
       name: selected.name,
       category: selected.category,
       level: selected.level,
-      icon: item_icon(selected.item_type),
+      item_type: selected.item_type,
       stats: rolled ? { min: rolled, max: rolled } : seed?.stats,
       damages: (selected.damages ?? seed?.damages ?? []).map((line) => ({
         element: line.element,
@@ -297,7 +295,7 @@ export default function EquipmentTab({
             <ItemDetailView
               category={detail.category}
               damages={detail.damages}
-              icon={detail.icon}
+              item_type={detail.item_type}
               labels={{
                 characteristics: encyclopedia('characteristics'),
                 damages: encyclopedia('damages'),

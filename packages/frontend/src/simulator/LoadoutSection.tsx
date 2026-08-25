@@ -63,7 +63,9 @@ export const LoadoutSection = ({
   )
   return (
     <>
-      <EquipmentDoll item_for={item_for} open={set_picking} />
+      <div data-fight-lab-equipment="">
+        <EquipmentDoll item_for={item_for} open={set_picking} />
+      </div>
       {picking && (
         <SearchPickerModal
           copy={picker_copy}
@@ -85,7 +87,7 @@ export const LoadoutSection = ({
                 <ItemDetailView
                   category={item.category}
                   damages={item.damages ?? []}
-                  icon={item_icon(item.item_type)}
+                  item_type={item.item_type}
                   labels={{
                     characteristics: encyclopedia('characteristics'),
                     damages: encyclopedia('damages'),

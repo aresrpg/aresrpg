@@ -10,6 +10,7 @@
     "./gathering": "./src/gathering.ts",
     "./identity": "./src/identity.ts",
     "./item_power": "./src/item_power.ts",
+    "./mob_power": "./src/mob_power.ts",
     "./pet": "./src/pet.ts",
     "./rune": "./src/rune.ts",
     "./world": "./src/world.ts"

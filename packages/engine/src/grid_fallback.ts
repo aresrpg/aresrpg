@@ -114,6 +114,8 @@ export const create_grid_fallback = (
     set_resource_node_label: resource_nodes.set_label,
     // the retrowave fallback has no world dressing — there is no gate to label
     set_portal_label: () => {},
+    set_dungeon_portals: () => {},
+    set_dungeon_stage: () => {},
     animate_entity: entities.animate,
     play_fight_cue: fight_presentation.play,
     play_jump_puff: effects.play_jump_puff,

@@ -14,7 +14,7 @@ import { type Graph, type Node } from '../graph.ts'
 import { stats_record_of } from './stat_block.ts'
 
 type MachineFighter = {
-  kind: { player?: { character: string; owner: string }; mob?: Record<string, unknown> }
+  kind: { player?: { character: string; owner: string; level: number }; mob?: Record<string, unknown> }
 } & Record<string, unknown>
 
 /** graph storage form → fight-core decode form (the only reshape this read performs) */
@@ -95,6 +95,8 @@ export async function get_fight_checkpoint(
     round: fight.round,
     turn_seed: fight.turn_seed,
     placement_ms: fight.placement_ms,
+    started_ms: fight.started_ms ?? null,
+    ended_ms: fight.ended_ms ?? null,
     turn_started_ms: fight.turn_started_ms,
   }
   const players = Object.fromEntries(

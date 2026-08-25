@@ -8,20 +8,33 @@ import { craft_job_of } from '@aresrpg/immutable'
 import { item_icon, mob_icon, spell_icon } from '../content/assets.ts'
 import { item_detail_icon } from '../content/item_detail_assets.ts'
 import type { SeedSpell } from '../content/catalog.ts'
+import { FacetRail, type FacetOption } from '../components/FacetRail.tsx'
 import { SpellCard } from '../encyclopedia/SpellCard.tsx'
 import { dispatch_app, useAppStore } from '../store.ts'
-import { item_category_colors } from '../visual_identity.ts'
+import { element_colors, item_category_colors } from '../visual_identity.ts'
 
 import { ContentEntityEditor } from './ContentEntityEditor.tsx'
 import { titleize_field } from './ContentFields.tsx'
-import type { SeedFileDraft } from './editor_state.ts'
+import { SpellAutosaveBoundary } from './SpellAutosaveBoundary.tsx'
+import type { SeedEditorStatus, SeedFileDraft } from './editor_state.ts'
 import {
   content_navigation_domains,
+  content_category_for_filter,
+  content_page_columns,
+  content_result_columns,
   content_row_category,
-  content_row_level,
+  content_row_level_label,
+  content_types_for_domain,
   filter_content_rows,
   find_selected_row,
   item_category_rows,
+  item_gatherable_job_rows,
+  item_mob_family_rows,
+  item_reference_filter_rows,
+  item_recipe_job_rows,
+  item_types_for_filter,
+  mob_filter_rows,
+  mob_types_for_protector_visibility,
   order_content_rows,
   reordered_spell_levels,
   row_address,
@@ -37,7 +50,6 @@ import {
   type JsonValue,
   type SeedEntityRow,
 } from './seed_editor.ts'
-
 const item_recipe_binding = (
   selected: SeedEntityRow | undefined,
   recipes_file: SeedFileDraft | undefined
@@ -47,7 +59,6 @@ const item_recipe_binding = (
   const recipe_row = recipe_rows.find(({ id }) => id === selected.id)
   const replace_file = (value: JsonValue): void =>
     dispatch_app({ type: 'editor/value_changed', domain: 'recipes', path: [], value })
-
   return Object.freeze({
     value: recipe_row?.value ?? null,
     change: (path: JsonPath, value: JsonValue): void => {
@@ -96,7 +107,6 @@ const item_recipe_binding = (
     },
   })
 }
-
 const domain_icons: Readonly<Record<string, LucideIcon>> = Object.freeze({
   airdrop: Gift,
   items: Package,
@@ -105,14 +115,12 @@ const domain_icons: Readonly<Record<string, LucideIcon>> = Object.freeze({
   spells: Sparkles,
   structure_packs: Trees,
 })
-
 const icon_url = (reference: EntityAssetReference | null, detail = false): string | null => {
   if (!reference) return null
   if (reference.kind === 'item') return detail ? item_detail_icon(reference.id) : item_icon(reference.id)
   if (reference.kind === 'mob') return mob_icon(reference.id)
   return spell_icon(reference.classe, reference.name)
 }
-
 const EntityIcon = ({
   reference,
   detail = false,
@@ -130,57 +138,79 @@ const EntityIcon = ({
     </div>
   )
 }
+const ProtectorVisibilityToggle = ({
+  visible,
+  hidden,
+  label,
+  change,
+}: Readonly<{ visible: boolean; hidden: boolean; label: string; change: (hidden: boolean) => void }>) =>
+  visible ? (
+    <label className="flex cursor-pointer items-center gap-1.5 text-[8px] tracking-[0.08em] text-[#858b98] uppercase hover:text-[#d8d4cc]">
+      <input
+        checked={hidden}
+        className="size-3 accent-[#c8963c]"
+        onChange={(event) => change(event.target.checked)}
+        type="checkbox"
+      />
+      {label}
+    </label>
+  ) : null
+const mob_facet_options = (rows: ReturnType<typeof mob_filter_rows>): readonly FacetOption[] =>
+  rows.map((row, index) => {
+    const previous = rows[index - 1]
+    const section =
+      row.kind === 'world' && previous?.kind !== 'world' && previous?.kind !== 'biome'
+        ? 'Worlds'
+        : row.kind === 'family' && previous?.kind !== 'family'
+          ? 'Families'
+          : row.kind === 'element' && previous?.kind !== 'element'
+            ? 'Elements'
+            : row.kind === 'protector' && previous?.kind !== 'protector'
+              ? 'Protectors'
+              : undefined
+    const label =
+      row.kind === 'protector'
+        ? `Protector ${titleize_field(row.id)}`
+        : row.kind === 'biome'
+          ? titleize_field(row.id.slice(row.id.indexOf(':') + 1))
+          : titleize_field(row.id)
+    return Object.freeze({
+      value: `${row.kind}:${row.id}`,
+      label,
+      count: row.count,
+      color: row.kind === 'element' ? element_colors[row.id] : row.kind === 'protector' ? '#65c993' : undefined,
+      section,
+      indent: row.kind === 'biome',
+    })
+  })
 
-type FacetOption = Readonly<{ value: string; label: string; count: number; color?: string }>
+const mob_types_for_filter = (
+  filter: string | null,
+  rows: ReturnType<typeof mob_filter_rows>
+): ReadonlySet<string> | null => {
+  if (!filter) return null
+  const selected = rows.find((row) => `${row.kind}:${row.id}` === filter)
+  return new Set(selected?.mob_types ?? [])
+}
 
-const FacetColumn = ({
-  all_label,
-  options,
-  selected,
-  total,
-  on_select,
-}: Readonly<{
-  all_label: string
-  options: readonly FacetOption[]
-  selected: string | null
-  total: number
-  on_select: (value: string | null) => void
-}>) => (
-  <aside className="min-h-0 overflow-y-auto border-r border-white/8 bg-black/[0.04] py-3">
-    <button
-      className={`flex w-full items-center justify-between border-l-2 px-3 py-2 text-left text-[8px] uppercase ${
-        selected === null
-          ? 'border-[#c8963c] bg-[#c8963c]/7 text-[#efbd45]'
-          : 'border-transparent text-[#747883] hover:bg-white/[0.025] hover:text-[#d8d3ca]'
-      }`}
-      onClick={() => on_select(null)}
-      type="button"
-    >
-      <span>{all_label}</span>
-      <span className="tabular-nums opacity-55">{total}</span>
-    </button>
-    {options.map(({ value, label, count, color }) => (
-      <button
-        className={`flex w-full items-center justify-between border-l-2 px-3 py-2 text-left text-[8px] uppercase ${
-          selected === value
-            ? 'bg-white/[0.035] text-[#e8e4dc]'
-            : 'border-transparent text-[#747883] hover:bg-white/[0.025] hover:text-[#d8d3ca]'
-        }`}
-        key={value}
-        onClick={() => on_select(value)}
-        style={selected === value ? { borderColor: color ?? '#777b86' } : undefined}
-        type="button"
-      >
-        <span className="truncate">{label}</span>
-        <span className="tabular-nums opacity-55">{count}</span>
-      </button>
-    ))}
-  </aside>
-)
-
-export const ContentPage = () => {
+const content_gate = (status: SeedEditorStatus): Readonly<{ class_name: string; message: string }> | null => {
+  if (status === 'loading' || status === 'idle')
+    return Object.freeze({
+      class_name: 'grid flex-1 place-items-center text-[9px] tracking-[0.18em] text-[#c8963c] uppercase',
+      message: 'Loading seed files…',
+    })
+  if (status === 'unavailable')
+    return Object.freeze({
+      class_name: 'grid flex-1 place-items-center p-8 text-center text-[10px] leading-6 text-[#777b86]',
+      message: 'File editing is available only from the local Vite development server. Production has no write door.',
+    })
+  return null
+}
+export const ContentPage = ({ text }: Readonly<{ text: Readonly<Record<string, string>> }>) => {
   const editor = useAppStore((state) => state.editor)
-  const [item_category, set_item_category] = useState<string | null>(null)
+  const [item_filter, set_item_filter] = useState<string | null>(null)
+  const [mob_filter, set_mob_filter] = useState<string | null>(null)
+  const [hide_protectors, set_hide_protectors] = useState(false)
   const [spell_classe, set_spell_classe] = useState<string | null>(null)
   const [drag_from, set_drag_from] = useState<number | null>(null)
   const [drag_over, set_drag_over] = useState<number | null>(null)
@@ -190,32 +220,62 @@ export const ContentPage = () => {
     [editor.domain, file]
   )
   const categories = useMemo(() => (editor.domain === 'items' ? item_category_rows(rows) : []), [editor.domain, rows])
+  const recipe_rows = useMemo(
+    () => (editor.files.recipes ? entity_rows('recipes', editor.files.recipes.value) : []),
+    [editor.files.recipes]
+  )
+  const recipe_jobs = useMemo(
+    () => (editor.domain === 'items' ? item_recipe_job_rows(rows, recipe_rows) : []),
+    [editor.domain, recipe_rows, rows]
+  )
+  const world_rows = useMemo(
+    () => (editor.files.worlds ? entity_rows('worlds', editor.files.worlds.value) : []),
+    [editor.files.worlds]
+  )
+  const gatherable_jobs = useMemo(
+    () => (editor.domain === 'items' ? item_gatherable_job_rows(rows, world_rows) : []),
+    [editor.domain, rows, world_rows]
+  )
+  const item_mob_rows = useMemo(
+    () => (editor.files.mobs ? entity_rows('mobs', editor.files.mobs.value) : []),
+    [editor.files.mobs]
+  )
+  const item_mob_families = useMemo(
+    () => (editor.domain === 'items' ? item_mob_family_rows(rows, item_mob_rows) : []),
+    [editor.domain, item_mob_rows, rows]
+  )
+  const item_reference_filters = item_reference_filter_rows(rows, item_mob_rows, world_rows)
+  const mob_facets = useMemo(
+    () => (editor.domain === 'mobs' ? mob_filter_rows(rows, world_rows) : []),
+    [editor.domain, rows, world_rows]
+  )
   const classes = useMemo(() => (editor.domain === 'spells' ? spell_class_rows(rows) : []), [editor.domain, rows])
+  const selected_item_types = useMemo(
+    () => item_types_for_filter(item_filter, recipe_jobs, gatherable_jobs, item_mob_families),
+    [gatherable_jobs, item_filter, item_mob_families, recipe_jobs]
+  )
+  const selected_mob_types = useMemo(() => mob_types_for_filter(mob_filter, mob_facets), [mob_facets, mob_filter])
+  const visible_mob_types = useMemo(
+    () =>
+      editor.domain === 'mobs'
+        ? mob_types_for_protector_visibility(rows, selected_mob_types, hide_protectors)
+        : selected_mob_types,
+    [editor.domain, hide_protectors, rows, selected_mob_types]
+  )
   const filtered = useMemo(
     () =>
       filter_content_rows(
         rows,
         editor.query,
-        editor.domain === 'items' ? item_category : null,
-        editor.domain === 'spells' ? spell_classe : null
+        content_category_for_filter(editor.domain, item_filter),
+        editor.domain === 'spells' ? spell_classe : null,
+        content_types_for_domain(editor.domain, selected_item_types, visible_mob_types)
       ),
-    [editor.domain, editor.query, item_category, spell_classe, rows]
+    [editor.domain, editor.query, item_filter, selected_item_types, spell_classe, rows, visible_mob_types]
   )
   const selected = find_selected_row(filtered, editor.entity_id) ?? filtered[0]
-
-  if (editor.status === 'loading' || editor.status === 'idle')
-    return (
-      <div className="grid flex-1 place-items-center text-[9px] tracking-[0.18em] text-[#c8963c] uppercase">
-        Loading seed files…
-      </div>
-    )
-  if (editor.status === 'unavailable')
-    return (
-      <div className="grid flex-1 place-items-center p-8 text-center text-[10px] leading-6 text-[#777b86]">
-        File editing is available only from the local Vite development server. Production intentionally has no write
-        door.
-      </div>
-    )
+  const gate = content_gate(editor.status)
+  if (gate) return <div className={gate.class_name}>{gate.message}</div>
   if (!file)
     return (
       <div className="grid flex-1 place-items-center text-[10px] text-[#ff8caa]">
@@ -226,6 +286,9 @@ export const ContentPage = () => {
   const replace = (relative_path: JsonPath, value: JsonValue): void => {
     if (!selected) return
     if (is_readonly_seed_path(editor.domain, relative_path)) return
+    const selected_address = row_address(selected)
+    if (editor.entity_id !== selected_address)
+      dispatch_app({ type: 'editor/entity_selected', entity_id: selected_address })
     dispatch_app({
       type: 'editor/value_changed',
       domain: editor.domain,
@@ -233,8 +296,6 @@ export const ContentPage = () => {
       value,
     })
   }
-  // the ladder is only what the eye sees when exactly one class is listed unfiltered — reordering
-  // a partial list would re-stamp levels the user never saw
   const ladder_reorder = editor.domain === 'spells' && !!spell_classe && editor.query.trim() === ''
   const drop_spell = (to: number): void => {
     const from = drag_from
@@ -256,20 +317,16 @@ export const ContentPage = () => {
         })
       ),
     })
-    dispatch_app({ type: 'editor/save', domain: 'spells' })
   }
   const selected_asset = selected ? entity_asset_reference(editor.domain, selected.value) : null
   const item_recipe = item_recipe_binding(editor.domain === 'items' ? selected : undefined, editor.files.recipes)
 
   return (
     <div
-      className={`grid min-h-0 flex-1 overflow-hidden ${
-        editor.domain === 'items' || editor.domain === 'spells'
-          ? 'grid-cols-[140px_150px_250px_minmax(420px,1fr)] max-xl:grid-cols-[120px_130px_210px_minmax(360px,1fr)]'
-          : 'grid-cols-[150px_260px_minmax(420px,1fr)] max-xl:grid-cols-[130px_220px_minmax(360px,1fr)]'
-      }`}
+      className={`grid min-h-0 flex-1 overflow-hidden bg-[#0b0d0e] ${content_page_columns(editor.domain)}`}
+      data-content-editor-shell=""
     >
-      <nav className="overflow-y-auto border-r border-white/8 bg-black/10 py-3">
+      <nav className="overflow-y-auto border-r border-white/10 bg-[#101315] py-3">
         {content_navigation_domains.map((domain) => {
           const domain_file = editor.files[domain.id]
           const count = domain_file ? entity_rows(domain.id, domain_file.value).length : 0
@@ -279,7 +336,7 @@ export const ContentPage = () => {
               className={`flex w-full items-center justify-between border-l-2 px-3 py-2.5 text-left text-[9px] uppercase ${
                 editor.domain === domain.id
                   ? 'border-[#c8963c] bg-[#c8963c]/7 text-[#c8963c]'
-                  : 'border-transparent text-[#747883] hover:bg-white/[0.025] hover:text-[#d8d3ca]'
+                  : 'border-transparent text-[#858b98] hover:bg-white/[0.045] hover:text-[#e6e2da]'
               }`}
               key={domain.id}
               onClick={() => dispatch_app({ type: 'editor/domain_selected', domain: domain.id })}
@@ -289,7 +346,7 @@ export const ContentPage = () => {
                 <DomainIcon size={12} strokeWidth={1.5} />
                 {domain.label}
               </span>
-              <span className={domain_file?.dirty ? 'text-[#ffca57]' : 'text-[#555963]'}>
+              <span className={domain_file?.dirty ? 'text-[#ffca57]' : 'text-[#6d7382]'}>
                 {domain_file?.dirty ? '●' : count}
               </span>
             </button>
@@ -298,25 +355,48 @@ export const ContentPage = () => {
       </nav>
 
       {editor.domain === 'items' && (
-        <FacetColumn
+        <FacetRail
           all_label="All items"
           on_select={(value) => {
-            set_item_category(value)
+            set_item_filter(value)
             dispatch_app({ type: 'editor/entity_selected', entity_id: null })
           }}
-          options={categories.map(({ category, count }) => ({
-            color: item_category_colors[category],
-            count,
-            label: titleize_field(category),
-            value: category,
-          }))}
-          selected={item_category}
+          options={[
+            ...categories.map(({ category, count }) => ({
+              color: item_category_colors[category],
+              count,
+              label: titleize_field(category),
+              value: `category:${category}`,
+            })),
+            ...recipe_jobs.map(({ job, count }, index) => ({
+              color: '#65c993',
+              count,
+              label: `Crafts ${titleize_field(job)}`,
+              section: index === 0 ? 'Recipe outputs' : undefined,
+              value: `craft:${job}`,
+            })),
+            ...gatherable_jobs.map(({ job, count }, index) => ({
+              color: '#4a9eff',
+              count,
+              label: `Gatherables ${titleize_field(job)}`,
+              section: index === 0 ? 'Gatherables' : undefined,
+              value: `gather:${job}`,
+            })),
+            ...item_mob_families.map(({ family, count }, index) => ({
+              color: '#e8b44f',
+              count,
+              label: titleize_field(family),
+              section: index === 0 ? 'Mob resources' : undefined,
+              value: `mob-family:${family}`,
+            })),
+          ]}
+          selected={item_filter}
           total={rows.length}
         />
       )}
 
       {editor.domain === 'spells' && (
-        <FacetColumn
+        <FacetRail
           all_label="All spells"
           on_select={(value) => {
             set_spell_classe(value)
@@ -328,26 +408,54 @@ export const ContentPage = () => {
         />
       )}
 
-      <aside className="flex min-h-0 flex-col border-r border-white/8 bg-black/[0.06]">
-        <div className="border-b border-white/8 p-3">
+      {editor.domain === 'mobs' && (
+        <FacetRail
+          all_label="All mobs"
+          on_select={(value) => {
+            set_mob_filter(value)
+            dispatch_app({ type: 'editor/entity_selected', entity_id: null })
+          }}
+          options={mob_facet_options(mob_facets)}
+          selected={mob_filter}
+          total={rows.length}
+        />
+      )}
+
+      <aside className="flex min-h-0 flex-col border-r border-white/10 bg-[#181c1f]">
+        <div className="border-b border-white/10 bg-[#1e2327] p-3">
           <input
-            className="h-8 w-full border border-white/10 bg-black/25 px-2 text-[9px] text-[#d8d3ca] outline-none focus:border-[#4a9eff]/50"
+            className="h-8 w-full border border-white/14 bg-[#0d1012] px-2 text-[9px] text-[#e3dfd7] outline-none focus:border-[#4a9eff]/60"
             onChange={(event) => dispatch_app({ type: 'editor/query_changed', query: event.target.value })}
             placeholder="Search…"
             value={editor.query}
           />
-          <p className="mt-2 text-[8px] text-[#5f636d]">
-            {filtered.length.toLocaleString()} rows
-            {ladder_reorder && <span className="text-[#626670]"> · drag to move a spell up the unlock ladder</span>}
-          </p>
+          <div className="mt-2 flex min-h-4 items-center justify-between gap-3">
+            <p className="text-[8px] text-[#5f636d]">
+              {filtered.length.toLocaleString()} rows
+              {ladder_reorder && <span className="text-[#626670]"> · drag to move a spell up the unlock ladder</span>}
+            </p>
+            <ProtectorVisibilityToggle
+              change={(hidden) => {
+                set_hide_protectors(hidden)
+                dispatch_app({ type: 'editor/entity_selected', entity_id: null })
+              }}
+              hidden={hide_protectors}
+              label={text.hide_protectors}
+              visible={editor.domain === 'mobs'}
+            />
+          </div>
         </div>
-        <div className="min-h-0 flex-1 overflow-y-auto py-1">
+        <div
+          className={`min-h-0 flex-1 overflow-y-auto py-1 ${
+            content_result_columns(editor.domain) === 2 ? 'grid grid-cols-2 content-start' : ''
+          }`}
+        >
           {filtered.map((row, index) => (
             <button
               className={`flex w-full items-center gap-2 border-l-2 px-2 py-1.5 text-left text-[9px] ${
                 selected && row_address(selected) === row_address(row)
                   ? 'border-[#4a9eff] bg-[#4a9eff]/6 text-[#b9d8ff]'
-                  : 'border-transparent text-[#858994] hover:bg-white/[0.025] hover:text-[#d8d3ca]'
+                  : 'border-transparent text-[#969ba7] hover:bg-white/[0.045] hover:text-[#ebe7df]'
               } ${ladder_reorder ? 'cursor-grab active:cursor-grabbing' : ''} ${
                 drag_from === index ? 'opacity-40' : ''
               } ${
@@ -369,7 +477,6 @@ export const ContentPage = () => {
                 event.preventDefault()
                 set_drag_over(index)
               }}
-              // Firefox refuses a drag without payload
               onDragStart={(event) => {
                 event.dataTransfer.setData('text/plain', String(index))
                 set_drag_from(index)
@@ -383,9 +490,9 @@ export const ContentPage = () => {
             >
               <EntityIcon reference={entity_asset_reference(editor.domain, row.value)} />
               <span className="min-w-0 flex-1 truncate">{row.label}</span>
-              {content_row_level(editor.domain, row) !== null && (
+              {content_row_level_label(editor.domain, row) !== null && (
                 <span className="shrink-0 text-[7px] text-[#626670] uppercase">
-                  Lv. {content_row_level(editor.domain, row)}
+                  {content_row_level_label(editor.domain, row)}
                 </span>
               )}
             </button>
@@ -393,8 +500,8 @@ export const ContentPage = () => {
         </div>
       </aside>
 
-      <main className="min-h-0 overflow-y-auto p-4">
-        <header className="sticky top-0 z-[2] -mx-4 -mt-4 mb-4 flex items-center justify-between gap-3 border-b border-white/8 bg-[#0d0d14]/96 px-4 py-3 backdrop-blur-lg">
+      <main className="min-h-0 overflow-y-auto bg-[#1e2327] p-4">
+        <header className="sticky top-0 z-[2] -mx-4 -mt-4 mb-4 flex items-center justify-between gap-3 border-b border-white/12 bg-[#242a2f]/96 px-4 py-3 shadow-[0_8px_24px_rgba(0,0,0,0.16)] backdrop-blur-lg">
           <div className="flex min-w-0 items-center gap-3">
             {selected && <EntityIcon detail reference={selected_asset} />}
             <div className="min-w-0">
@@ -424,33 +531,39 @@ export const ContentPage = () => {
             </p>
           </div>
         </header>
-        {editor.error && (
-          <div className="mb-4 whitespace-pre-wrap border border-[#ff5a8b]/30 bg-[#ff5a8b]/6 p-3 text-[9px] leading-5 text-[#ff8caa]">
-            {editor.error}
-          </div>
-        )}
+        <div className="mb-4 h-[68px] shrink-0" data-editor-error-lane="">
+          {editor.error && (
+            <div className="h-full overflow-y-auto whitespace-pre-wrap border border-[#ff5a8b]/30 bg-[#ff5a8b]/6 p-3 text-[9px] leading-5 text-[#ff8caa]">
+              {editor.error}
+            </div>
+          )}
+        </div>
         {selected && (
           <div className="space-y-4">
             {editor.domain === 'spells' ? (
-              <SpellCard
-                edit={
-                  editor.status === 'ready'
-                    ? {
-                        change: replace,
-                        save: () => dispatch_app({ type: 'editor/save', domain: editor.domain }),
-                      }
-                    : undefined
-                }
-                key={row_address(selected)}
-                spell={selected.value as unknown as SeedSpell}
-              />
+              <SpellAutosaveBoundary>
+                <SpellCard
+                  edit={
+                    editor.status === 'ready'
+                      ? {
+                          change: replace,
+                          save: () => undefined,
+                        }
+                      : undefined
+                  }
+                  key={row_address(selected)}
+                  spell={selected.value as unknown as SeedSpell}
+                />
+              </SpellAutosaveBoundary>
             ) : (
               <ContentEntityEditor
                 domain={editor.domain}
                 is_readonly={(path) => is_readonly_seed_path(editor.domain, path)}
                 key={row_address(selected)}
+                mob_templates={editor.domain === 'mobs' && Array.isArray(file.value) ? file.value : undefined}
                 on_change={replace}
                 item_recipe={item_recipe}
+                item_filters={item_reference_filters}
                 save={() => dispatch_app({ type: 'editor/save', domain: editor.domain })}
                 value={selected.value}
               />

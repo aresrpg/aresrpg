@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-/// CONSUMABLES — one typed effect frozen on every consumable template. Character effects burn
-/// one kiosk-locked unit and resolve immediately. Loot boxes share the same authored type but
-/// open through `loot_box`, which preserves its terminal-randomness claim flow.
+/// CONSUMABLES — stackable behavior is LIVE content: every unit of one template adopts that
+/// template's current effect, so split and merge remain amount-only. Loot boxes use the same
+/// authority through their own terminal-randomness flow.
 ///
 /// A consumable can't be used mid-fight BY CONSTRUCTION: fight custody means the character is
 /// not in the kiosk, so there is nothing for `borrow_mut` to reach.
@@ -10,66 +10,20 @@ module aresrpg::consumable;
 
 use aresrpg::{
   character::{Self, Character},
-  item::{Self, Item, ItemTemplate},
+  item::{Self, Item},
   progression,
   protected_policy::AresRPG_TransferPolicy,
   world,
 };
-use sui::{clock::Clock, dynamic_field as dfield, kiosk::{Kiosk, KioskOwnerCap}};
+use aresrpg_math::consumable_effect;
+use aresrpg_seed::item_rows::{Self, ItemTemplate};
+use sui::{clock::Clock, kiosk::{Kiosk, KioskOwnerCap}};
 
 const ENotConsumable: u64 = 2601; // the burned stack is not a consumable
-const ETemplateMismatch: u64 = 2602; // the passed template is not the item's template
 const ERooted: u64 = 2603; // a gather-time root or a fired ambush verdict is holding you
 const ELootBox: u64 = 2604; // loot boxes open through `loot_box`, never the plain consume door
-const EZeroHeal: u64 = 2605; // a heal consumable must change state
 
-public struct EffectKey() has copy, drop, store;
-
-public enum Effect has copy, drop, store {
-  Heal(u32),
-  ResetStats,
-  ResetSpells,
-  Recall,
-  LootBox,
-}
-
-// set_effect
-fun se(template: &mut ItemTemplate, effect: Effect) {
-  assert!(item::template_category(template) == b"consumable".to_string(), ENotConsumable);
-  dfield::add(item::tu(template), EffectKey(), effect);
-}
-
-public(package) fun set_heal(template: &mut ItemTemplate, amount: u32) {
-  assert!(amount > 0, EZeroHeal);
-  se(template, Effect::Heal(amount));
-}
-
-public(package) fun srs(template: &mut ItemTemplate) {
-  se(template, Effect::ResetStats);
-}
-
-public(package) fun srp(template: &mut ItemTemplate) {
-  se(template, Effect::ResetSpells);
-}
-
-public(package) fun set_recall(template: &mut ItemTemplate) {
-  se(template, Effect::Recall);
-}
-
-public(package) fun set_loot_box(template: &mut ItemTemplate) {
-  se(template, Effect::LootBox);
-}
-
-public(package) fun is_loot_box(template: &ItemTemplate): bool {
-  if (item::template_category(template) != b"consumable".to_string()) return false;
-  let effect: &Effect = dfield::borrow(item::tuid(template), EffectKey());
-  match (effect) {
-    Effect::LootBox => true,
-    _ => false,
-  }
-}
-
-/// Use one unit of `item_id` on the character: burn it, read the template's effect, apply.
+/// Use one unit of `item_id` on the character through its current template effect.
 public(package) fun consume(
   kiosk: &mut Kiosk,
   cap: &KioskOwnerCap,
@@ -83,18 +37,20 @@ public(package) fun consume(
   // a rooted character (gather-time OR a fired protector verdict) is occupied — no acting,
   // so a recall potion can never wipe the root and dodge the ambush.
   assert!(!world::is_rooted(kiosk.borrow(cap, character_id), clock), ERooted);
-  // the passed template must be the item's own — the effect is read off it
-  assert!({ let it: &Item = kiosk.borrow(cap, item_id); it.template() } == object::id(template), ETemplateMismatch);
+  let held_template = { let it: &Item = kiosk.borrow(cap, item_id); it.template() };
+  assert!(held_template == item_rows::template_id(template), ENotConsumable);
+  let effect = item_rows::consumable_effect(template);
+  assert!(effect.is_some(), ENotConsumable);
+  let effect = effect.destroy_some();
+  assert!(!consumable_effect::is_loot_box(&effect), ELootBox);
   let category = item::burn(kiosk, cap, protected_item, item_id, 1, ctx);
   assert!(category == b"consumable".to_string(), ENotConsumable);
 
-  let effect: Effect = *dfield::borrow(item::tuid(template), EffectKey());
   let chr: &mut Character = kiosk.borrow_mut(cap, character_id);
-  match (effect) {
-    Effect::Heal(amount) => progression::heal(chr, amount as u64, clock),
-    Effect::ResetStats => character::reset_stats(chr),
-    Effect::ResetSpells => progression::reset_spells(chr),
-    Effect::Recall => world::teleport_center(chr, clock),
-    Effect::LootBox => abort ELootBox,
-  };
+  let heal = consumable_effect::heal_amount(&effect);
+  if (heal.is_some()) progression::heal(chr, heal.destroy_some() as u64, clock)
+  else if (consumable_effect::is_reset_stats(&effect)) character::reset_stats(chr)
+  else if (consumable_effect::is_reset_spells(&effect)) progression::reset_spells(chr)
+  else if (consumable_effect::is_recall(&effect)) world::teleport_center(chr, clock)
+  else abort ELootBox
 }

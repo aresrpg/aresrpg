@@ -4,9 +4,9 @@
 /// randomness — shop items never carry stats, so everything mints through `mint_plain`
 /// (which refuses ranged templates mechanically):
 ///
-///   SALE — a seed-minted shared vending machine, never modified after birth (no
-///   pause, no price knob, no window — sales are frozen content like everything else);
-///   only `supply` counts down. Exact payment × quantity → `@treasury`.
+///   SALE — a seed-minted shared vending machine whose price and enabled state are living;
+///   only finite `supply` counts down and is never replenished. Exact payment × quantity →
+///   `@treasury`.
 ///
 ///   AIRDROP — a shared whitelist snapshotted at the seeding: each listed address claims
 ///   ONCE (claiming REMOVES the address — once-only by deletion, and the last claim
@@ -25,7 +25,9 @@
 /// (exclusive listings for gifts) under the seed-installed royalty rule.
 module aresrpg::shop;
 
-use aresrpg::item::{Self, Item, ItemTemplate, TemplateRegistry};
+use aresrpg_control::admin::AdminCap;
+use aresrpg_seed::{item_rows::{Self, ItemTemplate}, registry::{Self, Registry}};
+use aresrpg::item::{Self, Item};
 use std::string::String;
 use sui::{
   coin::Coin,
@@ -44,6 +46,7 @@ const EWrongPayment: u64 = 2402; // buy: payment must be exactly price × quanti
 const ESoldOut: u64 = 2403; // buy: the batch exceeds the sale's remaining supply
 const EZeroQuantity: u64 = 2404;
 const ENotWhitelisted: u64 = 2405; // claim: the sender is not (or no longer) on the list
+const ESaleDisabled: u64 = 2406;
 
 // ╔════════════════ [ Types ] ════════════════════════════════════════════════ ]
 
@@ -52,14 +55,15 @@ public struct SaleKey(String) has copy, drop, store;
 public struct AirdropKey(String) has copy, drop, store;
 public struct GiftcardKey(String) has copy, drop, store;
 
-/// The seed-minted vending machine: one item type, one price, a finite supply. No
-/// admin door ever touches it again — `supply` is the only field that moves.
+/// The vending machine: supply policy is immutable; price and enabled state are living content.
 public struct Sale has key {
   id: UID,
   item_type: String,
   template: ID,
   price: u64, // MIST per unit
-  supply: u64, // remaining units; the seeding authors the total
+  supply: u64, // remaining finite units; zero for infinite
+  infinite: bool,
+  enabled: bool,
 }
 
 /// A seeded airdrop: the whitelist is the full claim state — an address leaves on claim.
@@ -100,35 +104,59 @@ public struct GiftcardRedeemed has copy, drop { giftcard: ID, redeemer: address 
 
 // ╔════════════════ [ Seeding (seed.move gates) + admin creation ] ═══════════ ]
 
-/// Mint + share a sale at its item-type-derived address — the seeding's door; the seal
-/// closes it with the rest. Shared (a frozen object could not count supply down), immutable
-/// by door-absence like the World's content.
-public(package) fun new_sale(
-  registry: &mut TemplateRegistry,
-  item_type: String,
-  template: ID,
+/// Mint + share a sale at its item-type-derived address — a LIVING supply door (owner ruling
+/// 2026-08-23): AdminCap-gated forever, closed only by the one `freeze_forever` (the door
+/// claims and bumps through the seed registry, so the endgame flag shuts it with everything
+/// else). Shared, never frozen — a frozen object could not count supply down.
+public fun new_sale(
+  cap: &AdminCap,
+  root: &mut Registry,
+  template: &ItemTemplate,
   price: u64,
   supply: u64,
+  infinite: bool,
+  enabled: bool,
+  ctx: &TxContext,
 ) {
-  assert!(supply >= 1, EZeroQuantity);
+  assert!(infinite || supply >= 1, EZeroQuantity);
+  let item_type = item_rows::template_type(template);
   transfer::share_object(Sale {
-    id: derived_object::claim(item::ru(registry), SaleKey(item_type)),
+    id: derived_object::claim(registry::uid_mut(cap, root, ctx), SaleKey(item_type)),
     item_type,
-    template,
+    template: item_rows::template_id(template),
     price,
-    supply,
+    supply: if (infinite) 0 else supply,
+    infinite,
+    enabled,
   });
+  registry::bump(cap, root, b"sales".to_string(), item_rows::template_type(template), ctx);
+}
+
+/// Reprice or retire a sale without changing its finite/infinite supply policy.
+public fun set_sale(
+  cap: &AdminCap,
+  root: &mut Registry,
+  sale: &mut Sale,
+  price: u64,
+  enabled: bool,
+  ctx: &TxContext,
+) {
+  sale.price = price;
+  sale.enabled = enabled;
+  registry::bump(cap, root, b"sales".to_string(), sale.item_type, ctx);
 }
 
 /// Open an airdrop over a snapshotted whitelist — a seeding door, sealed with the rest.
 /// The set-build aborts on any duplicate address: a list that could double-claim never
 /// reaches the chain.
-public(package) fun new_airdrop(
-  registry: &mut TemplateRegistry,
+public fun new_airdrop(
+  cap: &AdminCap,
+  root: &mut Registry,
   drop_id: String,
-  template: ID,
+  template: &ItemTemplate,
   amount_each: u32,
   whitelist: vector<address>,
+  ctx: &TxContext,
 ) {
   assert!(amount_each >= 1 && !whitelist.is_empty(), EZeroQuantity);
   let mut set = vec_set::empty();
@@ -137,36 +165,42 @@ public(package) fun new_airdrop(
     set.insert(whitelist[i]); // aborts on a duplicate — VecSet law
     i = i + 1;
   };
+  let template_id = item_rows::template_id(template);
   let drop = Airdrop {
-    id: derived_object::claim(item::ru(registry), AirdropKey(drop_id)),
+    id: derived_object::claim(registry::uid_mut(cap, root, ctx), AirdropKey(drop_id)),
     drop_id,
-    template,
+    template: template_id,
     amount_each,
     whitelist: set,
   };
   event::emit(AirdropCreated {
     airdrop: drop.id.to_inner(),
-    template,
+    template: template_id,
     addresses: drop.whitelist.length(),
   });
+  registry::bump(cap, root, b"airdrops".to_string(), drop.drop_id, ctx);
   transfer::share_object(drop);
 }
 
 /// Mint a giftcard voucher and RETURN it — the seeding PTB routes it (held for later
 /// zksend links, direct sends); the object's `store` makes it portable anywhere.
-public(package) fun new_giftcard(
-  registry: &mut TemplateRegistry,
+public fun new_giftcard(
+  cap: &AdminCap,
+  root: &mut Registry,
   card_id: String,
-  template: ID,
+  template: &ItemTemplate,
   amount: u32,
+  ctx: &TxContext,
 ): Giftcard {
   assert!(amount >= 1, EZeroQuantity);
+  let template_id = item_rows::template_id(template);
   let card = Giftcard {
-    id: derived_object::claim(item::ru(registry), GiftcardKey(card_id)),
-    template,
+    id: derived_object::claim(registry::uid_mut(cap, root, ctx), GiftcardKey(card_id)),
+    template: template_id,
     amount,
   };
-  event::emit(GiftcardMinted { giftcard: card.id.to_inner(), template, amount });
+  event::emit(GiftcardMinted { giftcard: card.id.to_inner(), template: template_id, amount });
+  registry::bump(cap, root, b"giftcards".to_string(), card_id, ctx);
   card
 }
 
@@ -187,12 +221,13 @@ public(package) fun buy(
   ctx: &mut TxContext,
 ) {
   assert!(object::id(template) == sale.template, EWrongTemplate);
+  assert!(sale.enabled, ESaleDisabled);
   assert!(quantity >= 1, EZeroQuantity);
-  assert!((quantity as u64) <= sale.supply, ESoldOut);
+  if (!sale.infinite) assert!((quantity as u64) <= sale.supply, ESoldOut);
   let total = sale.price * (quantity as u64);
   assert!(payment.value() == total, EWrongPayment);
   transfer::public_transfer(payment, @treasury);
-  sale.supply = sale.supply - (quantity as u64);
+  if (!sale.infinite) sale.supply = sale.supply - (quantity as u64);
   item::deposit(kiosk, cap, policy, existing, item::mp(template, quantity, ctx));
   event::emit(SaleBought {
     sale: sale.id.to_inner(),

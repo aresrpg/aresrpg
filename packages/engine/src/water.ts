@@ -42,6 +42,7 @@ import type { CompiledMaterials } from './world_materials.ts'
 type AnalyticSky = Pick<ReturnType<typeof create_sky_node>, 'sample_sky_dome' | 'sun_direction'>
 
 export type Water = Readonly<{
+  set_visible: (visible: boolean) => void
   set_focus: (x: number, z: number) => void
   set_quality: (quality: EngineQuality) => void
   dispose: () => void
@@ -265,7 +266,7 @@ export const create_water = ({
   palette: LiquidPalette
 }>): Water => {
   if (world.recipe.liquid === undefined)
-    return Object.freeze({ set_focus: () => {}, set_quality: () => {}, dispose: () => {} })
+    return Object.freeze({ set_focus: () => {}, set_quality: () => {}, set_visible: () => {}, dispose: () => {} })
   const { materials } = world
 
   // One transparent draw owns the block-scale inner water and coarse horizon. Its bed attributes cover
@@ -303,6 +304,8 @@ export const create_water = ({
   let focus_x = 0
   let focus_z = 0
   let disposed = false
+  let visible = true
+  let sampled = false
 
   // Same contract as far_terrain: ONE job in flight, the newest focus dispatched when it
   // answers. Without the gate every camera step posted a fresh sample and the worker ate a
@@ -335,7 +338,8 @@ export const create_water = ({
     surface_geometry.getAttribute('bed_material_id').needsUpdate = true
     surface.position.set(data.center[0], world.recipe.sea_level + 0.04, data.center[1])
     surface.updateMatrix()
-    surface.visible = true
+    sampled = true
+    surface.visible = visible
   })
   const request = (): void => {
     request_id += 1
@@ -344,6 +348,10 @@ export const create_water = ({
   request()
 
   return Object.freeze({
+    set_visible: (next: boolean) => {
+      visible = next
+      surface.visible = next && sampled
+    },
     set_focus: (x: number, z: number) => {
       const next_x = Math.round(x / FOCUS_SNAP) * FOCUS_SNAP
       const next_z = Math.round(z / FOCUS_SNAP) * FOCUS_SNAP

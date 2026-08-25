@@ -115,6 +115,7 @@ const build_geometry = (chunk: RenderedChunk, instances: readonly ScatterInstanc
 }
 
 export type ScatterLayer = Readonly<{
+  set_visible: (visible: boolean) => void
   add: (chunk: RenderedChunk, instances: readonly ScatterInstance[]) => void
   remove: (key: string) => void
   set_flatten_active: (active: boolean) => void
@@ -128,6 +129,11 @@ export const create_scatter_layer = ({
   const group = new Group()
   scene.add(group)
   const meshes = new Map<string, Mesh>()
+  let visible = true
+  let flatten_active = false
+  const sync_visibility = (): void => {
+    group.visible = visible && !flatten_active
+  }
   const material = new MeshStandardNodeMaterial({ side: DoubleSide, roughness: 0.9, metalness: 0 })
   // The clutter's color follows the SAME macro climate field the ground uses — living kinds
   // (tint attribute 1) shift with dry/lush regions exactly like the surface they grow from.
@@ -157,6 +163,10 @@ export const create_scatter_layer = ({
     mesh.geometry.dispose()
   }
   return Object.freeze({
+    set_visible: (next: boolean) => {
+      visible = next
+      sync_visibility()
+    },
     add: (chunk: RenderedChunk, instances: readonly ScatterInstance[]) => {
       // A chunk re-rendered at a coarser lod sheds its clutter (walking away demotes near→mid).
       if (chunk.lod !== 'near') {
@@ -175,7 +185,8 @@ export const create_scatter_layer = ({
     },
     remove,
     set_flatten_active: (active: boolean) => {
-      group.visible = !active
+      flatten_active = active
+      sync_visibility()
     },
     dispose: () => {
       meshes.forEach((mesh) => mesh.geometry.dispose())

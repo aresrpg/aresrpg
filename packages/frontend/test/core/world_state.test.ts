@@ -6,12 +6,19 @@ import type { PresenceRow, ServerPacket } from '@aresrpg/protocol'
 
 import world, {
   engage_sword_markers,
+  dungeon_portal_markers,
   initial_world_state,
   live_spawns,
   spawn_markers,
   zone_key,
 } from '../../src/modules/world.ts'
-import { sword_fights } from '../../src/modules/world_engage.ts'
+import { engage_conflict_refusal, new_pending_engages, sword_fights } from '../../src/modules/world_engage.ts'
+import {
+  automatic_authoritative_ambush_input,
+  automatic_ambush_input,
+  selected_world_action_lock,
+  selected_world_ambush,
+} from '../../src/modules/world_gather.ts'
 import { initial_app_state } from '../../src/store.ts'
 import type { GameSettings } from '../../src/game/core/settings.ts'
 
@@ -94,6 +101,102 @@ test('packet/zones is the ONE door for a zone changing — rows merge and land w
   expect(state.zones[zone_key('overworld', 9, 9)]?.seed).toBe('1')
 })
 
+test('gathering stays locked through its receipt and adopts the chain checkpoint deadline', () => {
+  let state = app_state()
+  state = world.reduce!(state, {
+    type: 'world/gather_started',
+    gathering: {
+      character_id: '0xc',
+      item_type: 'ivory_shrooms',
+      protector: 'protector_ivory_gaia',
+      started_at_ms: 1_000,
+      duration_ms: 12_000,
+      ends_at_ms: 13_000,
+      confirmed: false,
+      authoritative: false,
+      ambushed: false,
+      quantity: null,
+    },
+  })
+  expect(
+    selected_world_action_lock({
+      ...state,
+      session: { ...state.session, characters: [{ id: '0xc' }] },
+    } as never)
+  ).toEqual({ character_id: '0xc', animation: 'gather' })
+  state = world.reduce!(state, {
+    type: 'world/gather_confirmed',
+    character_id: '0xc',
+    fallback_ends_at_ms: 14_500,
+    ambushed: false,
+    quantity: 7,
+  })
+  expect(state.world.gathering).toMatchObject({ confirmed: true, ends_at_ms: 14_500, authoritative: false })
+
+  state = world.reduce!(state, {
+    type: 'server/packet',
+    packet: { type: 'packet/characters', characters: [{ id: '0xc', at_ms: 13_420 }] } as never,
+  })
+  expect(state.world.gathering).toMatchObject({ ends_at_ms: 13_420, authoritative: true })
+
+  state = world.reduce!(state, { type: 'world/gather_finished', character_id: '0xc', ends_at_ms: 14_500 })
+  expect(state.world.gathering).not.toBeNull()
+  state = world.reduce!(state, { type: 'world/gather_finished', character_id: '0xc', ends_at_ms: 13_420 })
+  expect(state.world.gathering).toBeNull()
+})
+
+test('an ambush receipt replaces gathering animation and automatically resolves the protector', () => {
+  let state = app_state()
+  state = world.reduce!(state, {
+    type: 'world/gather_started',
+    gathering: {
+      character_id: '0xc',
+      item_type: 'wheat',
+      protector: 'protector_wheat_bricheton',
+      started_at_ms: 1_000,
+      duration_ms: 12_000,
+      ends_at_ms: 13_000,
+      confirmed: false,
+      authoritative: false,
+      ambushed: false,
+      quantity: null,
+    },
+  })
+  state = world.reduce!(state, {
+    type: 'server/packet',
+    packet: {
+      type: 'packet/characters',
+      characters: [{ id: '0xc', ambush: { protector: 'protector_wheat_bricheton' } }],
+    } as never,
+  })
+  expect(state.world.gathering).toMatchObject({ ambushed: true, quantity: null })
+  state = world.reduce!(state, {
+    type: 'world/gather_confirmed',
+    character_id: '0xc',
+    fallback_ends_at_ms: 14_000,
+    ambushed: true,
+    quantity: 1,
+  })
+  const selected = {
+    ...state,
+    session: { ...state.session, characters: [{ id: '0xc' }] },
+  } as never
+
+  expect(selected_world_ambush(selected)).toBe('protector_wheat_bricheton')
+  expect(selected_world_action_lock(selected)).toEqual({ character_id: '0xc', animation: null })
+  expect(automatic_ambush_input(state.world.gathering)).toEqual({ type: 'world/resolve_ambush' })
+
+  const refreshed = {
+    ...state,
+    world: { ...state.world, gathering: null },
+    session: {
+      ...state.session,
+      characters: [{ id: '0xc', ambush: { protector: 'protector_wheat_bricheton' } }],
+    },
+  } as never
+  expect(automatic_authoritative_ambush_input(refreshed)).toEqual({ type: 'world/resolve_ambush' })
+})
+
 test('players appear, move by id, and leave — a move for an unknown player is dropped', () => {
   const state = fold([
     tracked('overworld', [{ zx: 0, zz: 0 }]),
@@ -157,6 +260,7 @@ const POPULATED_ZONE: readonly ServerPacket[] = [
       { index: 3, x: 49_710, z: 50_210, members: [{ mob_type: 'razkin', level_scalar: 60 }] },
     ],
     resources: [{ index: 0, x: 49_800, z: 50_180, item_type: 'green_mushroom', nodes: 3 }],
+    portal: null,
   },
 ]
 
@@ -171,6 +275,24 @@ test('zone spawns fold by zone and project to client-space markers', () => {
   expect(resource).toMatchObject({ x: -200, z: 180, item_type: 'green_mushroom' })
 })
 
+test('dungeon portals project from the zone population into client-space markers', () => {
+  const packets = POPULATED_ZONE.map((packet) =>
+    packet.type === 'packet/zone_spawns' ? { ...packet, portal: { x: 49_900, z: 50_300 } } : packet
+  ) as readonly ServerPacket[]
+  const state = fold(packets)
+
+  expect(dungeon_portal_markers(state, 'overworld')).toEqual([
+    {
+      id: 'dungeon:overworld:97:98:s7',
+      world: 'overworld',
+      x: -100,
+      z: 300,
+      zx: 97,
+      zz: 98,
+    },
+  ])
+})
+
 test('engage hides the mob and plants a reversible sword before the transaction settles', () => {
   const loaded = POPULATED_ZONE.reduce(
     (state, packet) => world.reduce!(state, { type: 'server/packet', packet }),
@@ -178,8 +300,11 @@ test('engage hides the mob and plants a reversible sword before the transaction 
   )
   const group = 'overworld:97:98:s7:m2'
   const pending = world.reduce!(loaded, { type: 'world/engage', group, started_at_ms: 12_345 })
+  const duplicate = world.reduce!(pending, { type: 'world/engage', group, started_at_ms: 12_346 })
 
   expect(spawn_markers(pending.world).some(({ spawn_id }) => spawn_id === group)).toBe(false)
+  expect(new_pending_engages(pending.world, loaded.world).map(({ group }) => group)).toEqual([group])
+  expect(new_pending_engages(duplicate.world, pending.world)).toEqual([])
   expect(engage_sword_markers(pending.world)).toEqual([
     { id: `engage:${group}`, x: -300, z: 200, placement_ms: 12_345 },
   ])
@@ -201,6 +326,17 @@ test('engage hides the mob and plants a reversible sword before the transaction 
   const rejected = world.reduce!(pending, { type: 'world/engage_failed', group })
   expect(spawn_markers(rejected.world).some(({ spawn_id }) => spawn_id === group)).toBe(true)
   expect(engage_sword_markers(rejected.world)).toEqual([])
+})
+
+test('an encoded stale-object engage race becomes a clean conflict', () => {
+  expect(
+    engage_conflict_refusal(
+      new Error(
+        'Transaction%20is%20rejected%20as%20invalid.%20Transaction%20needs%20to%20be%20rebuilt%20because%20object%200xf00%20is%20unavailable%20for%20consumption,%20current%20version:%200x2'
+      )
+    )
+  ).toBeTrue()
+  expect(engage_conflict_refusal(new Error('MoveAbort abort code: 1724'))).toBeFalse()
 })
 
 test('consumption arrives as the zone row alone and retires what it took', () => {

@@ -13,8 +13,8 @@ import { get_fight_resolutions } from '../src/reads/get_fight_resolutions.ts'
 
 describe('shape_character', () => {
   test('job keys are restored to the shared UPPERCASE vocabulary', () => {
-    const shaped = shape_character({ id: '0xchar', job_sword_smith: '1200', job_farmer: '80' })
-    expect(shaped.jobs).toEqual({ SWORD_SMITH: '1200', FARMER: '80' })
+    const shaped = shape_character({ id: '0xchar', job_forger: '1200', job_farmer: '80' })
+    expect(shaped.jobs).toEqual({ FORGER: '1200', FARMER: '80' })
   })
 
   test('decodes a fired protector verdict from the graph JSON property', () => {
@@ -24,6 +24,15 @@ describe('shape_character', () => {
         ambush: '{"protector":"protector_quartz","x":4,"z":7,"scalar":22,"board_seed":"9","hp":"30"}',
       }).ambush
     ).toEqual({ protector: 'protector_quartz', x: 4, z: 7, scalar: 22, board_seed: '9', hp: '30' })
+  })
+
+  test('decodes the dungeon run identity without exposing its random seed', () => {
+    expect(
+      shape_character({
+        id: '0xchar',
+        dungeon_run: '{"world":"nauvis","room":"2","x":1536,"z":2048,"seed":"99"}',
+      }).dungeon_run
+    ).toEqual({ world: 'nauvis', room: 2, x: 1536, z: 2048 })
   })
 
   test('folded_stats becomes a named record; spells parse from their JSON string', () => {
@@ -61,12 +70,15 @@ test('RESULT_FOR rows preserve the exact stranded loot needed after reconnect', 
     read: async () => [
       {
         fight: '0xf1',
+        world: 'astral',
+        dungeon: 2,
         winner: 0,
         fighter: 2,
         character: '0xc1',
         team: 0,
         dead: false,
         settled: true,
+        loot_types: '["silk","fang"]',
         drops: '[{"item_type":"silk","qty":3}]',
         level: 3,
         experience: '271',
@@ -77,12 +89,15 @@ test('RESULT_FOR rows preserve the exact stranded loot needed after reconnect', 
   expect(await get_fight_resolutions(graph, { address: '0xme' })).toEqual([
     {
       fight: '0xf1',
+      world: 'astral',
+      dungeon: 2,
       winner: 0,
       fighter: 2,
       character: '0xc1',
       team: 0,
       dead: false,
       settled: true,
+      loot_types: ['silk', 'fang'],
       drops: [{ item_type: 'silk', qty: 3 }],
       level: 3,
       experience: '271',

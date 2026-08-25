@@ -24,7 +24,20 @@ const wire = () => {
         return [{ character_id: params?.character_id, name: 'nox', owner: '0xowner' }]
       if (cypher.includes(':FRIEND')) return [{ address: '0xpal', characters: ['nyx'] }]
       if (cypher.includes('HOLDS_CLAIM') || cypher.includes('HOLDS_VOUCHER')) return []
-      if (cypher.includes('MATCH (s:Sale)')) return [{ sale: { properties: { item_type: 'berserk', supply: '76' } } }]
+      if (cypher.includes('MATCH (s:Sale)'))
+        return [
+          {
+            sale: {
+              properties: {
+                item_type: 'berserk',
+                price: '220000000000',
+                supply: '76',
+                infinite: false,
+                enabled: true,
+              },
+            },
+          },
+        ]
       if (cypher.includes('MATCH (a:Airdrop)'))
         return [
           {
@@ -109,7 +122,7 @@ describe('the player harness (push model)', () => {
     expect(types.indexOf('packet/listings')).toBeLessThan(types.indexOf('packet/characters'))
     expect(sent.find((packet) => packet.type === 'packet/shop_state')).toEqual({
       type: 'packet/shop_state',
-      sales: [{ item_type: 'berserk', supply: '76' }],
+      sales: [{ item_type: 'berserk', price: '220000000000', supply: '76', infinite: false, enabled: true }],
       airdrops: [{ drop_id: 'founders', eligible: true, eligible_count: 2 }],
     })
   })

@@ -30,7 +30,7 @@ public fun mint_and_share<T>(publisher: &Publisher, ctx: &mut TxContext) {
 
 /// Pull a locked object out of a kiosk, royalty-safe by construction (zero-price self-purchase
 /// against the ruleless policy). The kiosk owner's cap proves consent.
-public(package) fun x<T: key + store>(
+public(package) fun extract_from_kiosk<T: key + store>(
   self: &AresRPG_TransferPolicy<T>,
   kiosk: &mut Kiosk,
   cap: &KioskOwnerCap,

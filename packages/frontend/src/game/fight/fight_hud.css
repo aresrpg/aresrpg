@@ -79,6 +79,117 @@
   pointer-events: auto;
 }
 
+.fight-hud__turn-card {
+  --turn-accent: #4a9eff;
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  z-index: 8;
+  display: grid;
+  width: min(540px, calc(100vw - 24px));
+  height: 230px;
+  grid-template-columns: 56% 44%;
+  overflow: visible;
+  border: 0;
+  background: transparent;
+  color: var(--fh-ink);
+  box-shadow: none;
+  pointer-events: none;
+  will-change: transform, opacity;
+  animation: fight-hud-turn-card 1.9s both;
+}
+
+.fight-hud__turn-card.enemy {
+  --turn-accent: #f87171;
+}
+
+.fight-hud__turn-card-portrait {
+  position: relative;
+  display: grid;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  place-items: center;
+  border: 1px solid color-mix(in srgb, var(--turn-accent) 55%, #c8963c);
+  border-bottom-width: 2px;
+  background:
+    radial-gradient(circle at 50% 44%, rgba(255, 255, 255, 0.42), transparent 58%),
+    linear-gradient(145deg, #d4ceb4, #96927d);
+  color: #272a2b;
+}
+
+.fight-hud__turn-card-portrait img {
+  display: block;
+  width: auto;
+  height: auto;
+  max-width: calc(100% - 32px);
+  max-height: calc(100% - 32px);
+  object-fit: contain;
+  object-position: center;
+  filter: drop-shadow(0 12px 16px rgba(0, 0, 0, 0.42));
+}
+
+.fight-hud__turn-card-portrait svg {
+  width: 46%;
+  height: 46%;
+  filter: drop-shadow(0 8px 10px rgba(0, 0, 0, 0.24));
+}
+
+.fight-hud__turn-card-body {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  justify-content: flex-start;
+  gap: 9px;
+  padding: 0 0 0 12px;
+}
+
+.fight-hud__turn-card-body strong {
+  display: block;
+  overflow: hidden;
+  border-left: 4px solid var(--turn-accent);
+  background: rgba(232, 228, 220, 0.94);
+  padding: 11px 14px;
+  color: #17191a;
+  font-size: 21px;
+  line-height: 1.1;
+  letter-spacing: 0.035em;
+  text-overflow: ellipsis;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.8);
+  text-transform: uppercase;
+  white-space: nowrap;
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.34);
+}
+
+.fight-hud__turn-card-body span {
+  display: block;
+  border-left: 4px solid var(--fh-gold);
+  background: rgba(7, 9, 10, 0.78);
+  padding: 9px 14px;
+  color: var(--fh-gold);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  box-shadow: 0 9px 20px rgba(0, 0, 0, 0.32);
+}
+
+@keyframes fight-hud-turn-card {
+  0% {
+    transform: translateX(-104%);
+    opacity: 0;
+  }
+  9.5%,
+  83% {
+    transform: translateX(0);
+    opacity: 1;
+  }
+  100% {
+    transform: translateX(-104%);
+    opacity: 0;
+  }
+}
+
 .fight-hud__turns {
   position: absolute;
   top: 70px;
@@ -150,11 +261,18 @@
   width: 40px;
   height: 40px;
   flex: none;
+  overflow: hidden;
   place-items: center;
   border: 2px solid #4a9eff88;
   background: linear-gradient(150deg, #14141c, #0a0a0f);
   font-size: 20px;
   font-weight: 700;
+}
+
+.fight-hud__portrait img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
 }
 
 .fight-hud__turn.enemy .fight-hud__portrait {
@@ -331,25 +449,49 @@
   gap: 8px;
 }
 
-.fight-hud__overworld-vitals {
+.fight-hud__bar--overworld {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 8px;
+}
+
+.fight-hud__overworld-row {
+  display: flex;
+  align-items: stretch;
+  gap: 12px;
 }
 
 .fight-hud__experience {
+  position: relative;
   width: 100%;
-  height: 6px;
+  height: 14px;
   overflow: hidden;
   border-radius: 4px;
-  background: rgba(0, 0, 0, 0.5);
+  border: 1px solid rgba(245, 158, 11, 0.28);
+  background: rgba(0, 0, 0, 0.58);
 }
 
-.fight-hud__experience > span {
+.fight-hud__experience-fill {
+  position: absolute;
+  inset: 0 auto 0 0;
   display: block;
   height: 100%;
-  background: linear-gradient(90deg, #7a8f1f, #d4e157);
+  background: linear-gradient(90deg, #8f3f0a, #f59e0b);
   transition: width 220ms ease;
+}
+
+.fight-hud__experience-amount {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  height: 100%;
+  place-items: center;
+  color: #ffd39a;
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  line-height: 1;
+  text-shadow: 0 1px 2px #000;
 }
 
 .fight-hud__hp-gem {
@@ -378,8 +520,20 @@
 
 .fight-hud__hp-gem > i {
   inset: 1px;
-  background: conic-gradient(from -30deg, #ffc7c7, #e2453f, #a3282a, #6b1414, #8f1f22, #d43e3e, #ffc7c7);
+  overflow: hidden;
+  background: linear-gradient(180deg, #261012, #110708);
   box-shadow: inset 0 0 0 2px #200808;
+}
+
+.fight-hud__hp-gem > i::after {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  height: var(--hp-percent);
+  background: linear-gradient(180deg, #ff9898, #e2453f 34%, #a3282a 72%, #6b1414);
+  content: '';
+  transition: height 220ms ease;
 }
 
 .fight-hud__hp-gem > span {
@@ -628,12 +782,40 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .fight-hud__turn-card {
+    animation: fight-hud-turn-card-reduced 1.7s ease-out both;
+  }
   .fight-hud__spell-shell.critical::before {
     animation: none;
   }
 }
 
+@keyframes fight-hud-turn-card-reduced {
+  0%,
+  100% {
+    opacity: 0;
+  }
+  8%,
+  82% {
+    opacity: 1;
+  }
+}
+
 @media (max-width: 900px) {
+  .fight-hud__turn-card {
+    top: 8px;
+    left: 8px;
+    width: min(420px, calc(100vw - 12px));
+    height: 180px;
+  }
+  .fight-hud__turn-card-body strong {
+    padding: 9px 11px;
+    font-size: 19px;
+  }
+  .fight-hud__turn-card-body span {
+    padding: 7px 11px;
+    font-size: 11px;
+  }
   .fight-hud__turns {
     width: 190px;
   }

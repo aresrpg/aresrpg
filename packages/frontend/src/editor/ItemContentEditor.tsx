@@ -10,6 +10,7 @@ import { as_record, button_class, NumberField, SelectField, SheetSection, string
 import { ItemPowerPanel } from './ItemPowerPanel.tsx'
 import { ItemRecipeEditor, type ItemRecipeBinding } from './ItemRecipeEditor.tsx'
 import { ItemReferencePicker } from './ItemReferencePicker.tsx'
+import type { ItemReferenceFilterRow } from './content_list.ts'
 import { JsonEditor } from './JsonEditor.tsx'
 import type { JsonPath, JsonValue } from './seed_editor.ts'
 
@@ -18,6 +19,7 @@ type EditorProps = Readonly<{
   on_change: (path: JsonPath, value: JsonValue) => void
   is_readonly: (path: JsonPath) => boolean
   item_recipe?: ItemRecipeBinding
+  item_filters?: readonly ItemReferenceFilterRow[]
   save?: () => void
 }>
 
@@ -223,7 +225,7 @@ const ConsumableEditor = ({
   )
 }
 
-export const ItemContentEditor = ({ value, on_change, is_readonly, item_recipe, save }: EditorProps) => {
+export const ItemContentEditor = ({ value, on_change, is_readonly, item_recipe, item_filters, save }: EditorProps) => {
   const item = as_record(value)
   if (!item) return null
   const category = string_value(item.category)
@@ -257,7 +259,7 @@ export const ItemContentEditor = ({ value, on_change, is_readonly, item_recipe, 
         category={category}
         damages={detail_damages(item)}
         edit={{ change: edit_item, save: save ?? (() => undefined) }}
-        icon={item_icon(string_value(item.item_type))}
+        item_type={string_value(item.item_type)}
         labels={{ characteristics: 'Characteristics', damages: 'damages', level_short: `Lv. ${level}`, range_to: 'to' }}
         level={level}
         name={string_value(item.name)}
@@ -266,7 +268,7 @@ export const ItemContentEditor = ({ value, on_change, is_readonly, item_recipe, 
       />
       {category === 'pet' && <PetFoodsEditor item={item} on_change={on_change} />}
       <ConsumableEditor item={item} on_change={on_change} />
-      {item_recipe && <ItemRecipeEditor category={category} recipe={item_recipe} />}
+      {item_recipe && <ItemRecipeEditor category={category} filter_rows={item_filters} recipe={item_recipe} />}
       {Object.keys(unknown).length > 0 && (
         <SheetSection title="Additional authored fields">
           <JsonEditor is_readonly={is_readonly} on_change={on_change} value={unknown} />

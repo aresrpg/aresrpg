@@ -86,7 +86,6 @@ mod tests {
         ("gathering", "AmbushKey"),
         ("item", "StatsKey"),
         ("item", "DamagesKey"),
-        ("item", "SealedKey"),
         ("forgemagie", "ForgeKey"),
         ("pet", "FeedKey"),
         // events (the routed table's layouts)
@@ -127,31 +126,31 @@ mod tests {
         ("shop", "GiftcardMinted"),
         ("shop", "GiftcardRedeemed"),
         ("crafting", "Crafted"),
-        ("crafting", "RecipeCreated"),
         ("forgemagie", "RuneScribed"),
         ("forgemagie", "GearCrushed"),
         ("pet", "PetFed"),
-        ("item", "TemplateCreated"),
-        ("mob_template", "MobTemplateCreated"),
-        ("spell_template", "SpellCreated"),
         ("loot_box", "LootTableSet"),
         ("loot_box", "LootBoxOpened"),
         ("loot_box", "LootClaimed"),
     ];
 
     /// Math-package value types embedded in game objects.
+    /// Seed-package (living content) datatypes the projection reads — the SECOND origin.
+    const SEED: &[(&str, &str)] = &[
+        // events
+        ("mob_rows", "MobTemplateCreated"),
+        ("spell_rows", "SpellCreated"),
+        ("item_rows", "TemplateCreated"),
+        ("recipe_rows", "RecipeCreated"),
+        ("registry", "ContentWritten"),
+    ];
+
     const MATH: &[(&str, &str)] = &[
         ("item_stats", "ItemStatistics"),
         ("item_damages", "ItemDamages"),
         ("combat_grid", "GridSpec"),
         ("spell_effect", "Effect"),
         ("spell_effect", "SpellLevel"),
-        ("world_map", "WorldContent"),
-        ("world_map", "BiomeMap"),
-        ("world_map", "MobRow"),
-        ("world_map", "ResourceRow"),
-        ("world_map", "DungeonRoom"),
-        ("world_map", "RoomMob"),
         ("mob_data", "LootEntry"),
     ];
 
@@ -159,7 +158,9 @@ mod tests {
     /// reason. `world::WorldCreated` fires once per world at seeding time, before
     /// any player can be watching, and the World object's own projection carries
     /// everything the event would have said.
-    const DEFERRED_EVENTS: &[(&str, &str)] = &[("world", "WorldCreated")];
+    const DEFERRED_EVENTS: &[(&str, &str)] = &[
+        ("world", "WorldCreated"),
+    ];
 
     fn repo_root() -> PathBuf {
         Path::new(env!("CARGO_MANIFEST_DIR"))
@@ -204,7 +205,11 @@ mod tests {
     fn game_package_keeps_publish_headroom() {
         // The testnet dry run rejected 96,111 raw bytes as a 103,109-byte package object.
         // Keeping raw bytecode below 95 KB leaves room for Sui's linkage/type-origin metadata.
-        const MAX_GAME_BYTECODE_BYTES: u64 = 95_000;
+        // 96_000 (2026-08-23): the living-content split moved the template rows to the seed
+        // package and the freed bytes paid for DEOBFUSCATION (89 compressed fight/item/
+        // character names restored, +863B) — core sits at ~91.1KB with ~4.9KB slack here
+        // and >11KB to Sui's 102,400-byte object limit.
+        const MAX_GAME_BYTECODE_BYTES: u64 = 96_000;
 
         let root = repo_root();
         let install_dir =
@@ -413,6 +418,8 @@ mod tests {
         let game = load_modules(&root.join("packages/move/build/aresrpg/bytecode_modules"));
         let math =
             load_modules(&root.join("packages/move-math/build/aresrpg_math/bytecode_modules"));
+        let seed =
+            load_modules(&root.join("packages/seed/build/aresrpg_seed/bytecode_modules"));
 
         let mut snapshot = String::from(
             "# Move layout snapshot — REGENERATE DELIBERATELY with `UPDATE_LAYOUTS=1 cargo test`\n\
@@ -423,6 +430,9 @@ mod tests {
         }
         for (module, datatype) in MATH {
             writeln!(snapshot, "{}", layout_line(&math, module, datatype)).unwrap();
+        }
+        for (module, datatype) in SEED {
+            writeln!(snapshot, "{}", layout_line(&seed, module, datatype)).unwrap();
         }
 
         let path = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/layout_snapshot.txt");
@@ -456,8 +466,11 @@ mod tests {
 
     #[test]
     fn every_emitted_move_event_is_routed_or_deferred() {
-        let sources = repo_root().join("packages/move/sources");
         let mut emitted: Vec<(String, String)> = vec![];
+        for sources in [
+            repo_root().join("packages/move/sources"),
+            repo_root().join("packages/seed/sources"),
+        ] {
         for entry in std::fs::read_dir(&sources).expect("listing move sources") {
             let path = entry.expect("dir entry").path();
             if path.extension().is_none_or(|e| e != "move") {
@@ -469,6 +482,7 @@ mod tests {
                 .find_map(|line| {
                     line.trim()
                         .strip_prefix("module aresrpg::")
+                        .or_else(|| line.trim().strip_prefix("module aresrpg_seed::"))
                         .map(|rest| rest.trim_end_matches(';').to_string())
                 })
                 .unwrap_or_else(|| panic!("no module decl in {}", path.display()));
@@ -487,6 +501,7 @@ mod tests {
                 );
                 emitted.push((module.clone(), name));
             }
+        }
         }
         assert!(!emitted.is_empty(), "no events found — wrong sources path?");
 
@@ -580,8 +595,12 @@ mod tests {
     #[test]
     fn every_event_mirror_matches_the_compiled_field_order() {
         let game = load_modules(&repo_root().join("packages/move/build/aresrpg/bytecode_modules"));
+        let seed =
+            load_modules(&repo_root().join("packages/seed/build/aresrpg_seed/bytecode_modules"));
         for (module, name, mirrored) in crate::events::ROUTED_FIELDS {
-            let declared = declared_fields(&game, module, name);
+            // content events live in the seed package since the living-content split
+            let build = if SEED.iter().any(|(m, _)| m == module) { &seed } else { &game };
+            let declared = declared_fields(build, module, name);
             let mirror = mirrored
                 .iter()
                 .map(|(field, ty)| format!("{field}: {}", rust_as_move(ty, module)))
@@ -600,8 +619,9 @@ mod tests {
     fn every_routed_event_layout_is_pinned() {
         for (module, name) in crate::events::ROUTED {
             assert!(
-                GAME.iter().any(|(m, n)| m == module && n == name),
-                "`{module}::{name}` is routed (events.rs) but absent from the GAME manifest — \
+                GAME.iter().any(|(m, n)| m == module && n == name)
+                    || SEED.iter().any(|(m, n)| m == module && n == name),
+                "`{module}::{name}` is routed (events.rs) but absent from the GAME/SEED manifests — \
                  its layout is unpinned, so a Move field change would red nothing. Add the row \
                  and regenerate with `UPDATE_LAYOUTS=1 cargo test`"
             );

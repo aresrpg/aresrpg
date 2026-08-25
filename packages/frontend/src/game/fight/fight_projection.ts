@@ -63,6 +63,7 @@ export type FightFighterView = Readonly<{
   name: string
   level: bigint
   character_id: string | null
+  mob_type: string | null
   owned: boolean
   active: boolean
   dead: boolean
@@ -90,8 +91,6 @@ export type FightView = Readonly<{
   ready_starts_fight: boolean
   /** the 45-second force-pass matters only when another human can invoke it */
   show_turn_timer: boolean
-  /** exactly one human with a real opposing side: safe to auto-submit the 60s start */
-  solo_human_fight: boolean
 }>
 
 export type FightFighterDisplay = Readonly<{ seat: number; hp: string; dead: boolean }>
@@ -219,6 +218,7 @@ export const select_fight_view = ({
           ? fighter.kind.snapshot.level
           : (checkpoint.sources.players[fighter.kind.character]?.level ?? 1n),
       character_id,
+      mob_type: fighter.kind.type === 'mob' ? fighter.kind.snapshot.mob_type : null,
       owned: fighter.kind.type === 'player' && fighter.kind.owner === owner,
       active: seat === active_seat,
       dead: fighter.dead,
@@ -258,9 +258,5 @@ export const select_fight_view = ({
     sides_manned: living_count(contract.fighters, 0n) > 0n && living_count(contract.fighters, 1n) > 0n,
     ready_starts_fight: phase === 'placement' && focus !== null && players_ready_after(contract.fighters, focus),
     show_turn_timer: contract.fighters.filter((fighter) => fighter.kind.type === 'player').length > 1,
-    solo_human_fight:
-      contract.fighters.filter((fighter) => fighter.kind.type === 'player').length === 1 &&
-      living_count(contract.fighters, 0n) > 0n &&
-      living_count(contract.fighters, 1n) > 0n,
   })
 }

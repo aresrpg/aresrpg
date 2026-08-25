@@ -3,12 +3,24 @@
 
 import { describe, expect, test } from 'bun:test'
 
-import { content_catalog } from '../../src/content/catalog.ts'
+import type { SeedItem } from '../../src/content/catalog.ts'
 import { loot_box_odds, purchase_limit, shop_section } from '../../src/shop/model.ts'
 
 describe('shop projection', () => {
   test('derives sections and loot odds from the shared seed catalog', () => {
-    const box = content_catalog.item('pet_lootbox')!.item
+    const box = {
+      item_type: 'test_box',
+      name: 'Test Box',
+      category: 'consumable',
+      level: 1,
+      consumable: {
+        type: 'loot_box',
+        rewards: [
+          { item_type: 'first', weight: 1, amount: 1 },
+          { item_type: 'second', weight: 3, amount: 1 },
+        ],
+      },
+    } as const satisfies SeedItem
     expect(shop_section(box)).toBe('pet_box')
     expect(loot_box_odds(box).reduce((sum, { percent }) => sum + percent, 0)).toBeCloseTo(100)
   })

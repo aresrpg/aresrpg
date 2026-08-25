@@ -41,13 +41,19 @@ export default function ShopPage({
   const listings = useAppStore(({ marketplace }) => marketplace.own_listings)
 
   const sales = useMemo(() => {
-    const supply = new Map(session.shop?.sales.map((sale) => [sale.item_type, sale.supply]) ?? [])
-    return authored_sales.map((sale) =>
-      Object.freeze({
-        ...sale,
-        stock: Math.max(0, Number(supply.get(sale.item_type) ?? 0)),
-      })
-    )
+    const live = new Map(session.shop?.sales.map((sale) => [sale.item_type, sale]) ?? [])
+    return authored_sales.flatMap((sale) => {
+      const state = live.get(sale.item_type)
+      if (!state?.enabled) return []
+      return [
+        Object.freeze({
+          ...sale,
+          price: Number(BigInt(state.price)) / 1_000_000_000,
+          infinite: state.infinite,
+          stock: state.infinite ? Number.MAX_SAFE_INTEGER : Math.max(0, Number(state.supply)),
+        }),
+      ]
+    })
   }, [session.shop])
   const sections = SHOP_SECTION_ORDER.flatMap((section) => {
     const rows = sales.filter(({ item }) => shop_section(item) === section).sort((a, b) => a.price - b.price)
@@ -98,7 +104,7 @@ export default function ShopPage({
   }
 
   return (
-    <section className="pointer-events-auto min-h-full flex-1 overflow-y-auto border border-border bg-[#0a0a0f]/97 p-3 lg:p-8">
+    <section className="pointer-events-auto min-h-full flex-1 overflow-y-auto border border-border bg-bg/97 p-3 lg:p-8">
       <header className="mb-6">
         <div className="text-[8px] tracking-[0.3em] text-gold uppercase">{t('subtitle')}</div>
         <div className="mt-1 flex items-end justify-between gap-4">

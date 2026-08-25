@@ -4,13 +4,14 @@
 import { readFileSync } from 'node:fs'
 
 import { create_character_source, create_fight, fight_path_to, reachable_fight_cells } from '@aresrpg/fight'
-import { AREA_SHAPES } from '@aresrpg/fight/move_contract'
+import { AREA_SHAPES, EFFECT_KINDS } from '@aresrpg/fight/move_contract'
 import { expect, test } from 'bun:test'
 
 import {
   fight_visual_checkpoint,
   fight_visual_checkpoint_after_cue,
   fight_range_seat,
+  fight_viewer_team,
   fight_zone_visual_state,
   project_fight_overlays,
 } from '../../../src/game/fight/fight_overlays.ts'
@@ -64,6 +65,30 @@ test('hovered fighters temporarily own the displayed MP range', () => {
   expect(fight_range_seat(0n, 1n)).toBe(1n)
   expect(fight_range_seat(0n, null)).toBe(0n)
   expect(fight_range_seat(null, 1n)).toBe(1n)
+})
+
+test('a local fight viewer derives its team without a selected character filter', () => {
+  const state = checkpoint()
+
+  expect(fight_viewer_team(state, 'local', null)).toBe(0n)
+  expect(fight_viewer_team(state, 'local', 'mine')).toBe(0n)
+  expect(fight_viewer_team(state, 'local', 'other')).toBeNull()
+  expect(fight_viewer_team(state, null, null)).toBeNull()
+})
+
+test('an ordered visibility cue reveals the fighter before the following action', () => {
+  const state = checkpoint()
+  state.contract.fighters[0]!.effects = [
+    { kind: EFFECT_KINDS.invis, element: '', value: 0n, turns_left: 0n, source: 0n, stat: 0n },
+  ]
+  const revealed = fight_visual_checkpoint_after_cue(
+    state,
+    { id: 'reveal', type: 'visibility', entity_id: 'fight_character_0', invisible: false },
+    'start'
+  )
+
+  expect(revealed.contract.fighters[0]?.effects).toEqual([])
+  expect(state.contract.fighters[0]?.effects).toHaveLength(1)
 })
 
 test('another fighter range does not mix with the active fighter path', () => {
@@ -205,7 +230,7 @@ test('persistent board truth exposes owned traps and public glyphs through engin
     spell_cells: null,
     spell_hover_area: [],
     hovered_spell_targetable: false,
-    viewer_team: 0n,
+    viewer_team: fight_viewer_team(state, 'local', null),
     zone_ids: ['zone:ally', 'zone:enemy', 'zone:glyph'],
   })
 
@@ -291,6 +316,7 @@ test('unpresented events retain the previous visual checkpoint until their cue b
   expect(fight_visual_checkpoint(before, after, false)).toBe(after)
   const layer = readFileSync(new URL('../../../src/game/fight/FightLayer.tsx', import.meta.url), 'utf8')
   expect(layer).toContain('fight_visual_checkpoint(presented_checkpoint, checkpoint, presentation_queued)')
+  expect(layer).toContain('fight.presentations.length > 0 || fight.awaiting_turn_witness')
 })
 
 test('a trap placement advances persistent zones when its presentation beat completes', () => {

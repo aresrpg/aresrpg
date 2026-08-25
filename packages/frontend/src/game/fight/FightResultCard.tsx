@@ -9,14 +9,17 @@ import { item_icon, spell_icon } from '../../content/assets.ts'
 import { content_catalog, titleize } from '../../content/catalog.ts'
 import type { AppCopy } from '../../i18n/copy.ts'
 import {
+  compact_xp,
   fight_result_available,
   fight_result_complete,
   fight_result_surface,
+  format_fight_duration,
   result_participant_shows_progress,
   result_xp_progress,
   type ResultParticipant,
 } from '../../modules/fight_result.ts'
 import { dispatch_app, useAppStore } from '../../store.ts'
+import { format_sui } from '../../wallet_amount.ts'
 import { play_procedural_cue } from '../audio/procedural_cues.ts'
 
 import './fight_result.css'
@@ -52,23 +55,27 @@ const ResultRow = ({
             <span className="fe-xp__base" style={{ width: `${base_percent}%` }} />
             <span className="fe-xp__gain" style={{ left: `${base_percent}%`, width: `${gained_percent}%` }} />
           </div>
-          <span className="fe-xp-next">
-            {span === 0 ? 'MAX' : `${into.toLocaleString()} / ${span.toLocaleString()} XP`}
-          </span>
-          <span className="fe-gain">+{participant.xp_awarded.toLocaleString()} XP</span>
+          <span className="fe-xp-next">{span === 0 ? 'MAX' : `${compact_xp(into)} / ${compact_xp(span)} XP`}</span>
+          <span className="fe-gain">+{compact_xp(participant.xp_awarded)} XP</span>
         </>
       )}
       <div className="fe-tiles">
-        {participant.loot.slice(0, 8).map((loot) => (
-          <div className="fe-tile" key={loot.item_type} title={loot.item_type.replaceAll('_', ' ')}>
-            {item_icon(loot.item_type) ? (
-              <img alt="" className="item-icon" src={item_icon(loot.item_type)!} />
-            ) : (
-              <span className="fe-tile__letter">{initial(loot.item_type)}</span>
-            )}
-            <span className="fe-tile__qty">×{loot.qty}</span>
-          </div>
-        ))}
+        {participant.loot.slice(0, 8).map((loot) => {
+          const item_name = content_catalog.item(loot.item_type)?.item.name ?? titleize(loot.item_type)
+          return (
+            <div aria-label={item_name} className="fe-tile" key={loot.item_type}>
+              {item_icon(loot.item_type) ? (
+                <img alt="" className="item-icon" src={item_icon(loot.item_type)!} />
+              ) : (
+                <span className="fe-tile__letter">{initial(loot.item_type)}</span>
+              )}
+              <span className="fe-tile__qty">×{loot.qty}</span>
+              <span className="fe-tile__tooltip" role="tooltip">
+                {item_name}
+              </span>
+            </div>
+          )
+        })}
       </div>
     </div>
   )
@@ -108,6 +115,19 @@ export const FightResultCard = ({ copy }: Readonly<{ copy: AppCopy }>) => {
         </div>
         <div className="fe-divider" aria-hidden="true">
           ◇
+        </div>
+        <div className="fe-facts">
+          <div className="fe-fact">
+            <span>{text_of(copy, 'result_duration')}</span>
+            <b>{result.duration_ms === null ? '—' : format_fight_duration(result.duration_ms)}</b>
+          </div>
+          <div className="fe-fact">
+            <span>{text_of(copy, 'result_gas_spent')}</span>
+            <b>
+              {result.gas_spent_mist < 0n ? '-' : ''}
+              {format_sui(result.gas_spent_mist < 0n ? -result.gas_spent_mist : result.gas_spent_mist, 2)} SUI
+            </b>
+          </div>
         </div>
         <div className="fe-sec">
           <div className="fe-lbl">
@@ -163,22 +183,40 @@ export const FightLevelUpCard = ({ copy }: Readonly<{ copy: AppCopy }>) => {
   const levels_gained = own.level_after - own.level_before
   const character = characters.find(({ id }) => id === own.character_id)
   const classe = character?.classe ?? ''
+  const class_name = classe ? titleize(classe) : own.name
+  const class_title = classe ? copy.simulator_page[`class_${classe}_title`] : null
   const unlocked_spell = content_catalog.spells
     .filter(
       (spell) =>
         spell.classe === classe && spell.unlock_level > own.level_before && spell.unlock_level <= own.level_after
     )
     .toSorted((left, right) => right.unlock_level - left.unlock_level)[0]
+  const unlocked_worlds = content_catalog.worlds.filter(
+    ({ entry_level }) => entry_level > own.level_before && entry_level <= own.level_after
+  )
   const acknowledge = (): void => dispatch_app({ type: 'fight_result/level_acknowledged' })
+  const allocate = (): void => {
+    acknowledge()
+    if (own.character_id) dispatch_app({ type: 'character/select', character_id: own.character_id })
+    dispatch_app({ type: 'path/open', pathname: '/characters/stats' })
+  }
   return (
     <section className="lvlup-stage" aria-label={text_of(copy, 'level_up_title')} aria-modal="true" role="dialog">
       <div className="result result--fe result--level-up radiant">
         <svg aria-hidden="true" height="0" width="0">
           <defs>
             <symbol id="fight-level-filigree" viewBox="0 0 64 64">
-              <path d="M6 48V16Q6 6 16 6h32" fill="none" stroke="currentColor" strokeLinecap="round" />
-              <path d="M6 30q13 0 13-13Q19 6 6 6" fill="none" opacity="0.7" stroke="currentColor" />
+              <path
+                d="M6 48 6 16Q6 6 16 6h32"
+                fill="none"
+                stroke="currentColor"
+                strokeLinecap="round"
+                strokeWidth="1.15"
+              />
+              <path d="M6 30q13 0 13-13Q19 6 6 6" fill="none" opacity="0.7" stroke="currentColor" strokeWidth="0.9" />
               <path d="m6 1 5 5-5 5-5-5Z" fill="currentColor" />
+              <circle cx="48" cy="6" fill="currentColor" r="1.7" />
+              <circle cx="6" cy="48" fill="currentColor" r="1.7" />
             </symbol>
           </defs>
         </svg>
@@ -192,18 +230,19 @@ export const FightLevelUpCard = ({ copy }: Readonly<{ copy: AppCopy }>) => {
           <div aria-hidden="true" className="rad-rays" />
           <div aria-hidden="true" className="rad-glow" />
           {[
-            ['-168px', '-108px'],
-            ['172px', '-96px'],
-            ['198px', '-4px'],
-            ['-196px', '20px'],
-            ['-120px', '138px'],
-            ['130px', '148px'],
-          ].map(([x, y], index) => (
+            ['-168px', '-108px', '420ms'],
+            ['172px', '-96px', '460ms'],
+            ['198px', '-4px', '500ms'],
+            ['-196px', '20px', '540ms'],
+            ['-120px', '138px', '460ms'],
+            ['130px', '148px', '500ms'],
+            ['4px', '-172px', '580ms'],
+          ].map(([x, y, delay], index) => (
             <span
               aria-hidden="true"
               className={`rad-spark${index % 2 ? ' rad-spark--em' : ''}`}
               key={`${x}:${y}`}
-              style={{ '--x': x, '--y': y, '--d': `${420 + index * 35}ms` } as CSSProperties}
+              style={{ '--x': x, '--y': y, '--d': delay } as CSSProperties}
             />
           ))}
           <div className="rad-numwrap">
@@ -213,16 +252,23 @@ export const FightLevelUpCard = ({ copy }: Readonly<{ copy: AppCopy }>) => {
             </div>
           </div>
         </div>
-        <div className="lvlcap">{classe ? titleize(classe) : own.name}</div>
+        <div className="lvlcap">
+          {class_name}
+          {class_title && class_title !== class_name ? ` · ${class_title}` : ''}
+        </div>
         <hr className="lvl-hr" />
         <div className="lvl-rewards">
           <div className="lvl-reward">
-            <span aria-hidden="true">✦</span>
+            <svg aria-hidden="true" className="lvl-reward__icon" fill="currentColor" viewBox="0 0 24 24">
+              <path d="m12 2 2.6 6.9L21 10l-5.2 4.2 1.8 6.8-5.6-3.9L6.4 21l1.8-6.8L3 10l6.4-1.1Z" />
+            </svg>
             <b>+{levels_gained * 5}</b>
             <small>{text_of(copy, 'level_up_stat_points')}</small>
           </div>
           <div className="lvl-reward">
-            <span aria-hidden="true">✧</span>
+            <svg aria-hidden="true" className="lvl-reward__icon" fill="currentColor" viewBox="0 0 24 24">
+              <path d="m12 2 1.6 5.4L19 9l-5.4 1.6L12 16l-1.6-5.4L5 9l5.4-1.6Z" />
+            </svg>
             <b>+{levels_gained}</b>
             <small>{text_of(copy, 'level_up_spell_points')}</small>
           </div>
@@ -239,13 +285,32 @@ export const FightLevelUpCard = ({ copy }: Readonly<{ copy: AppCopy }>) => {
             <div>
               <small>{text_of(copy, 'level_up_new_spell')}</small>
               <strong>{unlocked_spell.name}</strong>
+              <span className="lvl-unlock__meta">{titleize(unlocked_spell.classe)}</span>
             </div>
             <b>{unlocked_spell.levels[0]?.ap_cost ?? 0} AP</b>
           </div>
         )}
+        {unlocked_worlds.length > 0 && (
+          <div className="lvl-unlock">
+            <div className="lvl-unlock__well">
+              <svg aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.7" viewBox="0 0 24 24">
+                <circle cx="12" cy="12" r="9" />
+                <path d="M3 12h18M12 3c2.6 2.7 2.6 15.3 0 18M12 3c-2.6 2.7-2.6 15.3 0 18" />
+              </svg>
+            </div>
+            <div>
+              <small>{text_of(copy, 'level_up_new_worlds')}</small>
+              <strong>{unlocked_worlds.map(({ world }) => titleize(world)).join(' · ')}</strong>
+              <span className="lvl-unlock__meta">{text_of(copy, 'level_up_worlds_note')}</span>
+            </div>
+          </div>
+        )}
         <div className="fe-cta lvl-cta">
-          <button onClick={acknowledge} type="button">
-            {text_of(copy, 'level_up_continue')}
+          <button className="lvl-cta__allocate" onClick={allocate} type="button">
+            {text_of(copy, 'level_up_allocate')}
+          </button>
+          <button className="lvl-cta__later" onClick={acknowledge} type="button">
+            {text_of(copy, 'level_up_later')}
           </button>
         </div>
       </div>

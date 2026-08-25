@@ -15,7 +15,7 @@
 import type { EntityRender } from '@aresrpg/engine'
 import { mulberry } from '@aresrpg/engine'
 
-import { mob_entity } from './mob_entities.ts'
+import { mob_entity, mob_model_scalar_for_roll } from './mob_entities.ts'
 import {
   group_label_anchor,
   seated_group_ring,
@@ -28,8 +28,8 @@ import { rendered_groups, type WorldMobGroup } from './core/spawn_residency.ts'
 import { publish_spawn_tag } from './core/nametag_feed.ts'
 import { read_pose } from './core/pose_feed.ts'
 
-/** The pack's card shows within this range (the player nametag law, same number). */
-const TAG_RANGE_BLOCKS = 15
+/** Packs advertise themselves before their bodies fill the screen; E still selects the nearest card. */
+export const MOB_TAG_RANGE_BLOCKS = 50
 /** A member this far away freezes its mixer on the idle pose — animation costs nothing far off. */
 const ANIMATION_RANGE_BLOCKS = 60
 
@@ -43,6 +43,7 @@ type MemberSlot = {
   /** the entity id — `${group}:${ordinal}`, stable so the engine keeps the loaded model */
   id: string
   mob_type: string
+  model_level_scalar: number
   wander: WanderState
   random: () => number
   /** ground height under the member, re-sampled as it ambles across columns */
@@ -59,10 +60,12 @@ type GroupSlot = {
 export const create_spawn_renderer = ({
   submit,
   ground_height,
+  entity_height,
   label,
 }: Readonly<{
   submit: (entities: readonly EntityRender[]) => void
   ground_height: (x: number, z: number) => number
+  entity_height: (id: string) => number | null
   label: (group_id: string, element: HTMLElement | null, position: readonly [number, number, number] | null) => void
 }>) => {
   const groups = new Map<string, GroupSlot>()
@@ -82,6 +85,10 @@ export const create_spawn_renderer = ({
       return {
         id: `${row.id}:${ordinal}`,
         mob_type: row.members[ordinal]!.mob_type,
+        model_level_scalar: mob_model_scalar_for_roll(
+          row.members[ordinal]!.mob_type,
+          row.members[ordinal]!.level_scalar
+        ),
         wander: start_wander(anchor, random),
         random,
         y: ground_height(anchor.x, anchor.z),
@@ -94,9 +101,16 @@ export const create_spawn_renderer = ({
     const slot = groups.get(group_id)
     const own = read_pose()
     const anchor = slot
-      ? group_label_anchor(slot.members.map((member) => ({ x: member.wander.x, y: member.y, z: member.wander.z })))
+      ? group_label_anchor(
+          slot.members.map((member) => ({
+            x: member.wander.x,
+            y: member.y,
+            z: member.wander.z,
+            height: entity_height(member.id),
+          }))
+        )
       : null
-    const within = !!slot && !!own && !!anchor && Math.hypot(anchor.x - own.x, anchor.z - own.z) <= TAG_RANGE_BLOCKS
+    const within = !!slot && !!own && !!anchor && Math.hypot(anchor.x - own.x, anchor.z - own.z) <= MOB_TAG_RANGE_BLOCKS
     const attached = tagged.get(group_id) ?? null
     if (within && anchor) {
       const div = attached ?? (typeof document === 'undefined' ? null : document.createElement('div'))
@@ -136,6 +150,7 @@ export const create_spawn_renderer = ({
             position: Object.freeze([member.wander.x, member.y, member.wander.z] as const),
           }),
           facing: Object.freeze({ kind: 'yaw' as const, yaw: member.wander.yaw }),
+          level_scalar: member.model_level_scalar,
         })
         return entity
           ? [

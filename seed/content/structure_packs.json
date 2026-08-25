@@ -779,6 +779,162 @@
         }
       ]
     },
+    "nauvis_plains_trees": {
+      "category": "trees",
+      "spacing": 28,
+      "density_bp": 3500,
+      "max_slope": 2,
+      "bury": 0,
+      "types": [
+        {
+          "type": "grassland_big_tree_g1",
+          "weight": 2
+        },
+        {
+          "type": "grassland_big_tree_g2",
+          "weight": 2
+        },
+        {
+          "type": "grassland_birch_g1",
+          "weight": 4
+        },
+        {
+          "type": "grassland_birch_g2",
+          "weight": 4
+        },
+        {
+          "type": "grassland_birch_g3",
+          "weight": 4
+        },
+        {
+          "type": "grassland_birch_g4",
+          "weight": 4
+        },
+        {
+          "type": "grassland_tree_g1",
+          "weight": 4
+        },
+        {
+          "type": "grassland_tree_g2",
+          "weight": 4
+        },
+        {
+          "type": "grassland_tree_g3",
+          "weight": 4
+        },
+        {
+          "type": "grassland_tree_g4",
+          "weight": 4
+        }
+      ]
+    },
+    "nauvis_highland_trees": {
+      "category": "trees",
+      "spacing": 20,
+      "density_bp": 2500,
+      "max_slope": 2,
+      "bury": 0,
+      "types": [
+        {
+          "type": "taiga_normal_chene_g1",
+          "weight": 4
+        },
+        {
+          "type": "taiga_normal_chene_g2",
+          "weight": 4
+        },
+        {
+          "type": "taiga_normal_chene_g3",
+          "weight": 4
+        },
+        {
+          "type": "taiga_tree_g1",
+          "weight": 4
+        },
+        {
+          "type": "taiga_tree_g2",
+          "weight": 4
+        },
+        {
+          "type": "taiga_tree_g3",
+          "weight": 4
+        }
+      ]
+    },
+    "nauvis_rainforest_rocks": {
+      "category": "rocks",
+      "spacing": 16,
+      "density_bp": 1800,
+      "max_slope": 6,
+      "bury": 1,
+      "types": [
+        {
+          "type": "tropical_big_rock_g1",
+          "weight": 8
+        },
+        {
+          "type": "tropical_big_rock_g2",
+          "weight": 8
+        },
+        {
+          "type": "tropical_big_rock_g3",
+          "weight": 8
+        },
+        {
+          "type": "tropical_big_rock_g4",
+          "weight": 8
+        }
+      ]
+    },
+    "nauvis_desert_scrub": {
+      "category": "trees",
+      "spacing": 18,
+      "density_bp": 3500,
+      "max_slope": 2,
+      "bury": 0,
+      "types": [
+        {
+          "type": "desert_dead_tree_g1",
+          "weight": 4
+        },
+        {
+          "type": "desert_dead_tree_g2",
+          "weight": 4
+        },
+        {
+          "type": "desert_dead_tree_g3",
+          "weight": 4
+        },
+        {
+          "type": "desert_dead_tree_g4",
+          "weight": 4
+        },
+        {
+          "type": "desert_tree_g1",
+          "weight": 4
+        },
+        {
+          "type": "desert_tree_g2",
+          "weight": 4
+        },
+        {
+          "type": "desert_tree_g3",
+          "weight": 4
+        },
+        {
+          "type": "desert_tree_g4",
+          "weight": 4
+        },
+        {
+          "type": "desert_tree_g5",
+          "weight": 4
+        },
+        {
+          "type": "desert_tree_g6",
+          "weight": 4
+        }
+      ]
+    },
     "temperate_ruins": {
       "category": "ruins",
       "spacing": 320,

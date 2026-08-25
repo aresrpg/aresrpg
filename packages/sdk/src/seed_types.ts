@@ -72,6 +72,8 @@ export type SeedSpell = Readonly<{
 export type SeedMob = Readonly<{
   mob_type: string
   name: string
+  /** Authored taxonomy only; family placement and filters derive from seed content, not chain state. */
+  family: string
   element: ElementName
   role: string
   level_min: number
@@ -95,6 +97,7 @@ export type SeedRecipe = Readonly<{
 
 export type SeedWorld = Readonly<{
   world: string
+  entry_level: number
   terrain?: Readonly<{ biomes: readonly Readonly<{ name: string }>[] }>
   mobs:
     | readonly Readonly<{ mob_type: string; weight_bp: number; biomes: readonly string[] }>[]
@@ -109,8 +112,20 @@ export type SeedWorld = Readonly<{
   }>[]
   dungeon: Readonly<{
     key: string
-    rooms: readonly (readonly Readonly<{ mob_type: string; level_scalar: number }>[])[]
+    rooms: readonly (readonly Readonly<{ mob_type: string }>[])[]
   }>
+}>
+
+/** One authored fight board — a row of seed/content/fight_boards.json. Boards live at an
+ * INDEX in the shared catalog (no per-board object), so the sync ledger is their identity. */
+export type SeedBoard = Readonly<{
+  width: number
+  height: number
+  shape_mask: readonly string[]
+  obstacles: readonly number[]
+  holes: readonly number[]
+  start_cells_a: readonly number[]
+  start_cells_b: readonly number[]
 }>
 
 export type SeedBiomeMap = Readonly<{
@@ -127,19 +142,25 @@ export type SeedContent = Readonly<{
   mobs: readonly SeedMob[]
   recipes: readonly SeedRecipe[]
   worlds: readonly SeedWorld[]
-  shop: Readonly<{ sales: readonly Readonly<{ item_type: string; price: number; supply: number }>[] }>
+  shop: Readonly<{
+    sales: readonly Readonly<{ item_type: string; price: number; supply: number | null; enabled?: boolean }>[]
+  }>
   airdrop: Readonly<{
     drops: readonly Readonly<{ id: string; item_type: string; amount_each: number; whitelist: readonly string[] }>[]
     giftcards: readonly Readonly<{ id: string; item_type: string; amount: number; custody: string }>[]
   }>
   biome_maps: readonly SeedBiomeMap[]
+  boards: readonly SeedBoard[]
 }>
 
-export type SeedPhase = 'items' | 'loot_boxes' | 'spells' | 'mobs' | 'recipes' | 'sales' | 'worlds' | 'supply'
+export type SeedPhase =
+  'items' | 'loot_boxes' | 'spells' | 'mobs' | 'recipes' | 'sales' | 'worlds' | 'boards' | 'supply'
 
 export type SeedBuildContext = Readonly<{
+  /** the control package's one AdminCap — every content door writes through it */
   admin_cap: Resolvable
-  worlds: Readonly<Record<string, Resolvable>>
+  /** the seed package's Registry root (revision + freeze + derivation parent) */
+  content_root: Resolvable
 }>
 
 export type SeedBatch = Readonly<{
@@ -152,5 +173,4 @@ export type SeedBatch = Readonly<{
 
 export type SeedPlan = Readonly<{
   batches: readonly SeedBatch[]
-  seal_id: string
 }>

@@ -32,6 +32,7 @@ import {
 } from 'three/tsl'
 
 import { create_night_sky_node } from '../night_sky.ts'
+import { DISTANCE_HAZE_MAX, DISTANCE_HAZE_POWER } from '../../distance_fog.ts'
 import { HEIGHT_FOG } from '../../height_fog.ts'
 import { SUN_DISC_COS } from '../sky_node.ts'
 import {
@@ -113,6 +114,7 @@ export const MOON_DISC_RADIANCE = 1.55
  *   planet orbits, star density — night_sky.js); defaults to the master seed there.
  * @param {*} [opts.sun_direction] a shared `uniform(vec3)` world sun direction (share sky_node's so tod drives it).
  * @param {[number,number,number]} [opts.cool_tilt] the shared deep-blue haze tilt (renderer.js FOG_COOL_TILT).
+ * @param {{near:number,far:number}} [opts.distance_fog] terminal haze range in world metres.
  * @param {Partial<import('./atmosphere_params.js').AtmosphereParams>} [opts.params] atmosphere overrides on Earth defaults.
  * @param {boolean} [opts.rebuild_on_rotate] false disables only orientation-triggered aerial-volume rebuilds.
  * @param {() => void} [opts.on_aerial_dispatch] hitch-probe hook immediately before an aerial compute.
@@ -124,6 +126,7 @@ export type HillaireSkyOptions = Readonly<{
   seed?: string | number
   sun_direction?: VectorUniform
   cool_tilt?: readonly [number, number, number]
+  distance_fog?: Readonly<{ near: number; far: number }>
   params?: Partial<AtmosphereParams>
   rebuild_on_rotate?: boolean
   on_aerial_dispatch?: () => void
@@ -189,6 +192,8 @@ export function create_hillaire_sky(opts: HillaireSkyOptions = {}) {
     // near-no-op there). World units (≈m). Live-tunable via __hillaire.art.near_fog_{start,full}.
     near_fog_start: uniform(40),
     near_fog_full: uniform(150),
+    distance_fog_near: uniform(opts.distance_fog?.near ?? 500),
+    distance_fog_far: uniform(opts.distance_fog?.far ?? 1750),
     height_base_y: uniform(0),
     height_humidity: uniform(0.5),
     height_density: uniform(opts.tier === 'high' ? HEIGHT_FOG.density : 0),
@@ -333,7 +338,16 @@ export function create_hillaire_sky(opts: HillaireSkyOptions = {}) {
     .sub(exp(height_amount.negate()))
     .mul(smoothstep(HEIGHT_FOG.near_clear, HEIGHT_FOG.full_distance, frag_len))
     .min(A.height_max)
-  const fog_node = /** @type {*} */ fog(fog_color, fog_factor.max(height_factor))
+  // The physical Earth atmosphere is deliberately subtle over a two-kilometre game vista. A
+  // back-loaded terminal extinction closes only the final quality-profile band, hiding the
+  // finite far shell without turning the middle distance into a flat fog wall. All layers share
+  // the physical in-scatter color and compose as independent transmittances.
+  const distance_progress = smoothstep(A.distance_fog_near, A.distance_fog_far, frag_len)
+  const distance_factor = pow(distance_progress, float(DISTANCE_HAZE_POWER)).mul(DISTANCE_HAZE_MAX)
+  const combined_factor = float(1).sub(
+    float(1).sub(fog_factor).mul(float(1).sub(height_factor)).mul(float(1).sub(distance_factor))
+  )
+  const fog_node = /** @type {*} */ fog(fog_color, combined_factor)
 
   // ── param writer (set_atmosphere_params + mood crossfade feed) ─────────────────────────────────────
   const write_uniforms = () => {

@@ -87,15 +87,7 @@ const empty_array_row = (key: string): JsonValue => {
       crit_effects: Object.freeze([]),
     })
   if (key === 'mobs') return Object.freeze({ mob_type: '', weight_bp: 1, biomes: Object.freeze([]) })
-  if (key === 'resources')
-    return Object.freeze({
-      item_type: '',
-      job: 'FARMER',
-      tier: 1,
-      protector: '',
-      rare_item_type: '',
-      biomes: Object.freeze([]),
-    })
+  if (key === 'resources') return Object.freeze({ item_type: '', biomes: Object.freeze([]) })
   if (key === 'whitelist' || key === 'biomes') return ''
   if (key === 'rooms') return Object.freeze([])
   return null
@@ -247,7 +239,7 @@ const StatsEditor = ({
             <span className={`size-2 ${stat_color(stat)}`} />
             <span className="text-[8px] tracking-[0.1em] text-[#a7aab2] uppercase">{humanize(stat)}</span>
             <span className="ml-auto border border-white/7 bg-white/[0.025] px-1.5 py-0.5 text-[7px] tabular-nums text-[#777d88]">
-              {item_stat_weight(stat, typeof maximum[stat] === 'number' ? maximum[stat] : 0)} UPU
+              {item_stat_weight(stat, typeof maximum[stat] === 'number' ? maximum[stat] : 0)} weight
             </span>
           </div>
           <div className="flex items-center gap-2">

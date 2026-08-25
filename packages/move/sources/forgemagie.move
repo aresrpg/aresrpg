@@ -22,9 +22,10 @@
 ///     emptied claim.
 module aresrpg::forgemagie;
 
+use aresrpg_seed::item_rows::{Self, ItemTemplate};
 use aresrpg::{
   character::Character,
-  item::{Self, Item, ItemTemplate},
+  item::{Self, Item},
   progression,
   protected_policy::AresRPG_TransferPolicy,
 };
@@ -63,7 +64,7 @@ const ENoStats: u64 = 2710; // crush: a gear item carries no rolled block
 /// + per-stat successful-application counts (the hard caps: range/movement/action 1, Cri 10).
 public struct ForgeState has copy, drop, store {
   puits: u64,
-  apps: vector<u8>, // length 17, indexed by catalog stat id
+  apps: vector<u8>, // length 15, indexed by catalog stat id
 }
 
 public struct ForgeKey() has copy, drop, store;
@@ -119,7 +120,7 @@ public(package) fun scribe(
   let (rune_stat, rune_tier) = cat::rune_of(rune_type);
 
   // the forgery job from the gear's category — a pure GATE at 70 (no odds scaling)
-  let job = fj(item::template_category(gear_template));
+  let job = fj(item_rows::template_category(gear_template));
   {
     let chr: &Character = kiosk.borrow(cap, character_id);
     assert!(progression::job_level_of(chr, job) >= RUNE_UNLOCK_LEVEL, EScribeLocked);
@@ -134,7 +135,7 @@ public(package) fun scribe(
 
   let (outcome, applied_value, lost_stat, lost_amount, new_puits, xp) = {
     let gear: &mut Item = kiosk.borrow_mut(cap, gear_id);
-    assert!(item::template(gear) == item::template_id(gear_template), EWrongItem);
+    assert!(item::template(gear) == item_rows::template_id(gear_template), EWrongItem);
     assert!(item::has_stats(gear), EWrongItem);
     let stats = item::stats(gear);
     efs(gear);
@@ -145,7 +146,7 @@ public(package) fun scribe(
     let mut rng = prng::rng_seed(seed);
     let res = forge::apply_rune(
       stats.to_raw(),
-      item::template_max_stats(gear_template).to_raw(),
+      item_rows::stats_max(gear_template).to_raw(),
       rune_stat, rune_value, rune_weight, FORGE_LEVEL, state.puits, &mut rng,
     );
 
@@ -223,7 +224,7 @@ public(package) fun redeem_rune(
   ctx: &mut TxContext,
 ) {
   er1(claim); // deterministic first-touch reveal off the committed seed
-  let (stat, tier) = cat::rune_of(item::template_type(template));
+  let (stat, tier) = cat::rune_of(item_rows::template_type(template));
   let idx = (stat as u64) * 3 + (tier as u64) - 1;
   let qty = claim.owed[idx];
   if (qty == 0) return;
@@ -245,7 +246,7 @@ public(package) fun discard_claim(mut claim: CrushClaim) {
 
 // forgery_job
 /// The gear's forgery job = the SAME job that crafts it — read from the ONE hardcoded map in
-/// `item::craft_job_of` (shared with crafting, so a longsword is `SWORD_SMITH` for both, no drift).
+/// `item::craft_job_of` (shared with crafting, so a sword is `FORGER` for both, no drift).
 /// Only craftable gear is forgeable; a category with no job aborts. (A non-gear category that DOES
 /// carry a job, e.g. `key`, still fails scribe later on `has_stats` — keys carry no rolled block.)
 fun fj(category: String): String {

@@ -140,7 +140,12 @@ const normalize_fighter = (input: unknown): Fighter => {
     kind:
       kind.type === 'mob'
         ? { type: 'mob', snapshot: normalize_mob(kind.snapshot) }
-        : { type: 'player', character: String(kind.character), owner: String(kind.owner) },
+        : {
+            type: 'player',
+            character: String(kind.character),
+            owner: String(kind.owner),
+            level: as_bigint(kind.level, 'fighter.kind.level'),
+          },
     cell: as_bigint(fighter.cell, 'fighter.cell'),
     ready: Boolean(fighter.ready),
     dead: Boolean(fighter.dead),
@@ -221,6 +226,14 @@ export const normalize_contract = (input: unknown): FightContract | null => {
       return { spell: String(row.spell), target: as_bigint(row.target, 'turn_cast.target') }
     }),
     placement_ms: as_bigint(contract.placement_ms ?? 0, 'fight.placement_ms'),
+    started_ms:
+      contract.started_ms === null || contract.started_ms === undefined
+        ? null
+        : as_bigint(contract.started_ms, 'fight.started_ms'),
+    ended_ms:
+      contract.ended_ms === null || contract.ended_ms === undefined
+        ? null
+        : as_bigint(contract.ended_ms, 'fight.ended_ms'),
     turn_started_ms: as_bigint(contract.turn_started_ms ?? 0, 'fight.turn_started_ms'),
   }
 }

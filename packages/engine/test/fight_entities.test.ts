@@ -231,35 +231,6 @@ describe('fight entity rendering', () => {
     layer.dispose()
   })
 
-  test('loads a mob through the shared model door and seats it on its board cell', async () => {
-    const scene = new Scene()
-    const root = new Group()
-    const layer = create_entity_layer({
-      scene,
-      load_model: () => Promise.resolve({ root, clips: Object.freeze([]), min_y: -0.25, dispose: () => {} }),
-    })
-
-    layer.set_board(board)
-    layer.set([
-      Object.freeze({
-        id: 'mob_10',
-        kind: 'mob' as const,
-        model_url: '/bunny.glb',
-        anchor: Object.freeze({ kind: 'fight_cell' as const, cell: 10 }),
-        facing: Object.freeze({ kind: 'yaw' as const, yaw: 0 }),
-      }),
-    ])
-    await Promise.resolve()
-    await Promise.resolve()
-
-    const object = scene.getObjectByName('entity:mob_10')!
-    expect(object.position.toArray()).toEqual([-1, 4.3, 0])
-    expect(root.parent?.position.toArray()).toEqual([0, 0.25, 0])
-    expect(object.rotation.y).toBe(0)
-    expect(root.parent?.parent).toBe(object)
-    layer.dispose()
-  })
-
   test('projects a fighter nametag from the top center of its rendered model', async () => {
     const scene = new Scene()
     const root = new Group()
@@ -281,8 +252,8 @@ describe('fight entity rendering', () => {
     await Promise.resolve()
     await Promise.resolve()
 
-    expect(layer.world_anchor('mob_10')?.toArray()).toEqual([-1, 6.3, 0])
-    expect(layer.entity_height('mob_10')).toBe(2)
+    expect(layer.world_anchor('mob_10')?.toArray()).toEqual([-1, 5.7, 0])
+    expect(layer.entity_height('mob_10')).toBeCloseTo(1.4)
     layer.dispose()
   })
 

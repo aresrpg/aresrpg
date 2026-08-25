@@ -1,0 +1,21 @@
+[package]
+name = "aresrpg_seed"
+edition = "2024"
+license = "LicenseRef-AresRPG-Source-Available"
+authors = ["Sceat"]
+
+[dependencies]
+aresrpg_control = { local = "../control" }
+# Content TYPES + their validation live in math (mob_data, world_map, combat_grid…); this
+# package owns content OBJECT identity and the admin doors that write it.
+aresrpg_math = { local = "../move-math" }
+
+[addresses]
+aresrpg_seed = "0x0"
+
+# The game's LIVING CONTENT layer (owner 2026-08-23): every seeded fact — mobs, spells,
+# items, recipes, worlds, fight boards — lives here as shared objects behind AdminCap
+# doors, rebalanceable at any time until the one irreversible `freeze_forever`. Core
+# (aresrpg) depends on this package and reads content as DATA through dumb accessors —
+# never logic across the boundary (Sui pins a dependent's code version). One door shape,
+# stamped per domain; the registry root is the single revision + freeze home.

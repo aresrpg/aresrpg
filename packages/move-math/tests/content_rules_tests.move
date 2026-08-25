@@ -6,7 +6,7 @@
 #[test_only]
 module aresrpg_math::content_rules_tests;
 
-use aresrpg_math::content_rules;
+use aresrpg_math::{combat_grid, content_rules, item_damages, spell_effect, weapon};
 
 #[test]
 fun printable_ascii_names_pass() {
@@ -34,4 +34,54 @@ fun pet_food_is_not_a_category_and_rune_keeps_its_twin_law() {
   let foods = vector[b"wheat".to_string(), b"quartz".to_string()];
   assert!(content_rules::pet_accepts(&foods, &b"quartz".to_string()));
   assert!(!content_rules::pet_accepts(&foods, &b"aloe_vera".to_string()));
+}
+
+#[test]
+fun curated_equipment_jobs_and_slots_are_exact() {
+  assert!(content_rules::is_category(&b"sword".to_string()));
+  assert!(content_rules::is_category(&b"hat".to_string()));
+  assert!(!content_rules::is_category(&b"longsword".to_string()));
+  assert!(!content_rules::is_category(&b"helmet".to_string()));
+  assert!(!content_rules::is_slot(&b"chestplate".to_string()));
+  assert!(content_rules::category_fits(&b"weapon".to_string(), &b"spear".to_string()));
+  assert!(content_rules::category_fits(&b"cloak".to_string(), &b"cloak".to_string()));
+  assert!(content_rules::craft_job_of(&b"axe".to_string()) == option::some(b"FORGER".to_string()));
+  assert!(content_rules::craft_job_of(&b"bow".to_string()) == option::some(b"CARVER".to_string()));
+  assert!(content_rules::craft_job_of(&b"hat".to_string()) == option::some(b"TAILOR".to_string()));
+}
+
+#[test]
+fun every_class_has_the_authored_five_family_affinity() {
+  assert!(weapon::affinity_of(&b"yajin".to_string(), &b"daggers".to_string()));
+  assert!(weapon::affinity_of(&b"senshi".to_string(), &b"sword".to_string()));
+  assert!(weapon::affinity_of(&b"yogan".to_string(), &b"bow".to_string()));
+  assert!(weapon::affinity_of(&b"mori".to_string(), &b"spear".to_string()));
+  assert!(weapon::affinity_of(&b"shugo".to_string(), &b"spear".to_string()));
+  assert!(weapon::affinity_of(&b"tomoda".to_string(), &b"spear".to_string()));
+  assert!(weapon::affinity_of(&b"rojin".to_string(), &b"daggers".to_string()));
+  assert!(weapon::affinity_of(&b"tokei".to_string(), &b"axe".to_string()));
+  assert!(weapon::affinity_of(&b"asobi".to_string(), &b"sword".to_string()));
+  assert!(weapon::affinity_of(&b"iyashi".to_string(), &b"bow".to_string()));
+  assert!(weapon::affinity_of(&b"ikari".to_string(), &b"axe".to_string()));
+  assert!(weapon::affinity_of(&b"shusen".to_string(), &b"axe".to_string()));
+  assert!(!weapon::affinity_of(&b"senshi".to_string(), &b"axe".to_string()));
+}
+
+#[test]
+fun weapon_areas_are_the_five_authored_shapes() {
+  let lines = vector[item_damages::new(1, 1, b"melee".to_string(), b"earth".to_string())];
+  let sword = spell_effect::effects(&weapon::strike_of(&b"sword".to_string(), &lines, false));
+  let daggers = spell_effect::effects(&weapon::strike_of(&b"daggers".to_string(), &lines, false));
+  let spear = spell_effect::effects(&weapon::strike_of(&b"spear".to_string(), &lines, false));
+  let axe = spell_effect::effects(&weapon::strike_of(&b"axe".to_string(), &lines, false));
+  let bow = spell_effect::effects(&weapon::strike_of(&b"bow".to_string(), &lines, false));
+
+  assert!(spell_effect::area_shape(&sword[0]) == spell_effect::shape_point());
+  assert!(spell_effect::area_shape(&daggers[0]) == spell_effect::shape_point());
+  assert!(spell_effect::area_shape(&bow[0]) == spell_effect::shape_point());
+  assert!(spell_effect::area_shape(&spear[0]) == spell_effect::shape_tbar());
+  assert!(spell_effect::area_size(&spear[0]) == 1);
+  assert!(spell_effect::area_shape(&axe[0]) == spell_effect::shape_tbar());
+  assert!(spell_effect::area_size(&axe[0]) == 1);
+  assert!(combat_grid::zone_cells(spell_effect::shape_tbar(), 1, 41, 40).length() == 3);
 }

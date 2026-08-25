@@ -38,6 +38,19 @@ describe('rolling gas spend', () => {
     expect(ledger.spent_24h()).toBe(0n)
   })
 
+  test('attributes one executed receipt to its fight without duplicating the wallet total', () => {
+    const ledger = create_gas_ledger({ address: '0xA', network: 'testnet', storage: storage() })
+    const landed = receipt('fight-turn')
+
+    ledger.record(landed)
+    ledger.tag(landed, 'fight:0xf1')
+    ledger.tag(landed, 'fight:0xf1')
+
+    expect(ledger.spent_24h()).toBe(10n)
+    expect(ledger.spent_24h('fight:0xf1')).toBe(10n)
+    expect(ledger.spent_24h('fight:0xf2')).toBe(0n)
+  })
+
   test('treats unavailable storage and malformed receipts as display-only failures', () => {
     const broken = {
       getItem: () => {
@@ -53,5 +66,10 @@ describe('rolling gas spend', () => {
     const ledger = create_gas_ledger({ address: '0xA', network: 'testnet', storage: broken })
     expect(() => ledger.record({ digest: 'bad', effects: { gasUsed: { computationCost: 'wat' } } })).not.toThrow()
     expect(ledger.spent_24h()).toBe(0n)
+
+    const memory = create_gas_ledger({ address: '0xA', network: 'testnet', storage: null })
+    memory.record(receipt('memory'))
+    memory.tag(receipt('memory'), 'fight:0xf1')
+    expect(memory.spent_24h('fight:0xf1')).toBe(10n)
   })
 })

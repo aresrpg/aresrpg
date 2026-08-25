@@ -115,12 +115,12 @@ describe('the wire contract', () => {
       parse_client_packet(
         JSON.stringify({
           type: 'packet/market_observe',
-          observation: { categories: ['sword', 'sword', 'helmet'], characters: false },
+          observation: { categories: ['sword', 'sword', 'hat'], characters: false },
         })
       )
     ).toEqual({
       type: 'packet/market_observe',
-      observation: { categories: ['sword', 'helmet'], characters: false },
+      observation: { categories: ['sword', 'hat'], characters: false },
     })
     expect(() => parse_client_packet(JSON.stringify({ type: 'packet/market_observe', observation: 7 }))).toThrow(
       /observation/

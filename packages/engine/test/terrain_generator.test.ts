@@ -109,6 +109,18 @@ describe('terrain generation', () => {
     expect(surface_chunk_layers(floor, 0, 0)).toEqual([0])
   })
 
+  test('plans the voxel below a surface on an exact chunk boundary', () => {
+    const boundary = compile_world_recipe({
+      ...WORLD.recipe,
+      biomes: WORLD.recipe.biomes.map((biome) => ({
+        ...biome,
+        landscape: biome.landscape.map((knot) => ({ ...knot, y: CHUNK_EDGE })),
+      })),
+    })
+
+    expect(surface_chunk_layers(boundary, 0, 0)).toEqual([0])
+  })
+
   test('terrain and its neighbour halo are deterministic', () => {
     const request = { key: '-2:0:5', coordinate: { x: -2, y: 0, z: 5 }, lod: 'mid' as const }
     const first = generate_chunk(WORLD, request)
@@ -217,9 +229,9 @@ describe('terrain streaming', () => {
     planner.dispose()
   })
 
-  test('the shared terrain pool fits First Shore high-quality residency with movement headroom', () => {
-    const first_world = worlds.find(({ world }) => world === '01_first_shore')
-    if (!first_world) throw new Error('First Shore is missing')
+  test('the shared terrain pool fits Nauvis high-quality residency with movement headroom', () => {
+    const first_world = worlds.find(({ world }) => world === 'nauvis')
+    if (!first_world) throw new Error('Nauvis is missing')
     const compiled = compile_world_recipe(parse_world_recipe(first_world.terrain))
     const radius = get_quality_profile('high').chunks.far_radius
     let required_slots = 0

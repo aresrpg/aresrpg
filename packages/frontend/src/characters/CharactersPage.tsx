@@ -7,10 +7,10 @@
 // Tab bodies are keyed by character id so switching characters remounts them fresh,
 // dropping any staged (uncommitted) equipment or stat edits — the old drawer's law.
 
-import { lazy, Suspense, useState } from 'react'
+import { lazy, Suspense } from 'react'
 
 import { copy_text, type AppCopy } from '../i18n/copy.ts'
-import { useAppStore } from '../store.ts'
+import { dispatch_app, useAppStore } from '../store.ts'
 
 // the doll/rows/stat-row primitives every character surface shares (one home)
 import '../components/character_surfaces.css'
@@ -25,16 +25,24 @@ const RuneforgeTab = lazy(() => import('./RuneforgeTab.tsx'))
 const DETAIL_TABS = ['equipment', 'stats', 'spells', 'jobs', 'runeforge'] as const
 type DetailTab = (typeof DETAIL_TABS)[number]
 
+export const character_detail_tab = (pathname: string): DetailTab => {
+  const tab = pathname.split('?')[0]?.split('#')[0]?.split('/').filter(Boolean)[1]
+  return DETAIL_TABS.find((candidate) => candidate === tab) ?? 'equipment'
+}
+
+export const character_detail_path = (tab: DetailTab): string => `/characters/${tab}`
+
 export default function CharactersPage({ copy }: Readonly<{ copy: AppCopy }>) {
   const t = copy_text(copy.characters_page)
   const character = useAppStore(({ session }) =>
     session.characters.find(({ id }) => id === session.selected_character_id)
   )
   const roster_loaded = useAppStore(({ session }) => session.roster_loaded)
-  const [tab, set_tab] = useState<DetailTab>('equipment')
+  const pathname = useAppStore(({ navigation }) => navigation.pathname)
+  const tab = character_detail_tab(pathname)
 
   return (
-    <section className="gw-tab pointer-events-auto flex min-h-full min-w-0 flex-1 flex-col border border-border bg-[#0a0a0f]/97">
+    <section className="gw-tab pointer-events-auto flex min-h-full min-w-0 flex-1 flex-col border border-border bg-bg/97">
       <nav aria-label={copy.characters} className="flex shrink-0 items-stretch border-b border-border">
         {DETAIL_TABS.map((key) => {
           const active = key === tab
@@ -45,7 +53,7 @@ export default function CharactersPage({ copy }: Readonly<{ copy: AppCopy }>) {
               }`}
               data-character-detail-tab={key}
               key={key}
-              onClick={() => set_tab(key)}
+              onClick={() => dispatch_app({ type: 'path/open', pathname: character_detail_path(key) })}
               type="button"
             >
               {t(`tab_${key}`)}

@@ -12,9 +12,18 @@ import type { KioskOwnerCap } from '@mysten/kiosk'
 
 import type { SDK } from './client.ts'
 import { created_object_id, receipt_digest, receipt_event } from './cache.ts'
-import { seed_registry, world_ref } from './client.ts'
+import { living_content } from './client.ts'
 import { create_kiosk_runner, type KioskCapLoader, type KioskCustody } from './kiosk_runner.ts'
-import { item_template_id, mob_template_id, recipe_id, spell_template_id } from './seed_ids.ts'
+import { created_fight_id, type FightCreatedReceipt } from './fight.ts'
+import {
+  board_catalog_id,
+  item_template_id,
+  mob_template_id,
+  recipe_id,
+  spell_template_id,
+  world_content_id,
+  world_id,
+} from './seed_ids.ts'
 
 type GameSdk = ReturnType<typeof SDK>
 
@@ -104,8 +113,8 @@ export const character_actions = (sdk: GameSdk, { kiosk_cap }: CharacterActionsC
       spell: string
       custody?: KioskCustody
     }): Promise<CharacterReceipt> => {
-      const { registry, package_id } = seed_registry(sdk, 'Character transaction')
-      const template = spell_template_id(registry, package_id, spell)
+      const { content_root, seed_package_original } = living_content(sdk, 'Spell transaction')
+      const template = spell_template_id(content_root, seed_package_original, spell)
       await sdk.hydrate_unknown([template])
       const receipt = await with_kiosk(
         (tx, kiosk, cap) => sdk.doors.raise_spell(tx, { kiosk, cap, character_id, spell: template }),
@@ -114,7 +123,7 @@ export const character_actions = (sdk: GameSdk, { kiosk_cap }: CharacterActionsC
       return { digest: receipt_digest(receipt) }
     },
 
-    /** Drink/use one consumable unit on the character. */
+    /** Drink/use one consumable unit through its template's current live effect. */
     use_consumable: async ({
       character_id,
       item_id,
@@ -126,8 +135,8 @@ export const character_actions = (sdk: GameSdk, { kiosk_cap }: CharacterActionsC
       item_type: string
       custody?: KioskCustody
     }): Promise<CharacterReceipt> => {
-      const { registry } = seed_registry(sdk, 'Character transaction')
-      const template = item_template_id(registry, item_type)
+      const { content_root, seed_package_original } = living_content(sdk, 'Character transaction')
+      const template = item_template_id(content_root, seed_package_original, item_type)
       await sdk.hydrate_unknown([template])
       const receipt = await with_kiosk(
         (tx, kiosk, cap) => sdk.doors.use_consumable(tx, { kiosk, cap, character_id, item_id, template }),
@@ -151,8 +160,8 @@ export const character_actions = (sdk: GameSdk, { kiosk_cap }: CharacterActionsC
       rune_item_id: string
       custody?: KioskCustody
     }): Promise<ScribeOutcome> => {
-      const { registry } = seed_registry(sdk, 'Character transaction')
-      const gear_template = item_template_id(registry, gear_item_type)
+      const { content_root, seed_package_original } = living_content(sdk, 'Character transaction')
+      const gear_template = item_template_id(content_root, seed_package_original, gear_item_type)
       await sdk.hydrate_unknown([gear_template])
       const receipt = await with_terminal_kiosk(
         (tx, kiosk, personal) =>
@@ -186,8 +195,8 @@ export const character_actions = (sdk: GameSdk, { kiosk_cap }: CharacterActionsC
       food_id: string
       custody?: KioskCustody
     }): Promise<CharacterReceipt> => {
-      const { registry } = seed_registry(sdk, 'Character transaction')
-      const pet_template = item_template_id(registry, pet_item_type)
+      const { content_root, seed_package_original } = living_content(sdk, 'Character transaction')
+      const pet_template = item_template_id(content_root, seed_package_original, pet_item_type)
       await sdk.hydrate_unknown([pet_template])
       const receipt = await with_kiosk(
         (tx, kiosk, cap) => sdk.doors.feed_kiosk_pet(tx, { kiosk, cap, pet_template, pet_id, food_id }),
@@ -208,8 +217,8 @@ export const character_actions = (sdk: GameSdk, { kiosk_cap }: CharacterActionsC
       box_item_type: string
       custody?: KioskCustody
     }): Promise<Readonly<{ digest: string; claim_id: string; rolled_template: string; amount: number }>> => {
-      const { registry } = seed_registry(sdk, 'Character transaction')
-      const box_template = item_template_id(registry, box_item_type)
+      const { content_root, seed_package_original } = living_content(sdk, 'Character transaction')
+      const box_template = item_template_id(content_root, seed_package_original, box_item_type)
       await sdk.hydrate_unknown([box_template])
       const receipt = await with_terminal_kiosk(
         (tx, kiosk, personal) => sdk.doors.open_loot_box(tx, { kiosk, personal, box_item_id, box_template }),
@@ -238,8 +247,8 @@ export const character_actions = (sdk: GameSdk, { kiosk_cap }: CharacterActionsC
       existing: string | null
       custody?: KioskCustody
     }): Promise<Readonly<{ digest: string }>> => {
-      const { registry } = seed_registry(sdk, 'Character transaction')
-      const template = item_template_id(registry, rolled_item_type)
+      const { content_root, seed_package_original } = living_content(sdk, 'Character transaction')
+      const template = item_template_id(content_root, seed_package_original, rolled_item_type)
       await sdk.hydrate_unknown([claim_id, template])
       const receipt = await with_terminal_kiosk(
         (tx, kiosk, personal) =>
@@ -281,8 +290,8 @@ export const character_actions = (sdk: GameSdk, { kiosk_cap }: CharacterActionsC
       custody?: KioskCustody
     }): Promise<Readonly<{ digest: string }>> => {
       if (!runes.length) throw new Error('The rune roster is empty')
-      const { registry } = seed_registry(sdk, 'Character transaction')
-      const templates = runes.map(({ item_type }) => item_template_id(registry, item_type))
+      const { content_root, seed_package_original } = living_content(sdk, 'Character transaction')
+      const templates = runes.map(({ item_type }) => item_template_id(content_root, seed_package_original, item_type))
       await sdk.hydrate_unknown([claim_id, ...templates])
       const receipt = await with_kiosk(
         (tx, kiosk, cap) => {
@@ -313,9 +322,9 @@ export const character_actions = (sdk: GameSdk, { kiosk_cap }: CharacterActionsC
       custody?: KioskCustody
     }): Promise<Readonly<{ digest: string; success: boolean; job_xp_gained: number }>> => {
       if (!input_item_ids.length) throw new Error('The craft has no ingredients')
-      const { registry, package_id } = seed_registry(sdk, 'Character transaction')
-      const recipe = recipe_id(registry, package_id, output_type)
-      const output_template = item_template_id(registry, output_type)
+      const { content_root, seed_package_original } = living_content(sdk, 'Character transaction')
+      const recipe = recipe_id(content_root, seed_package_original, output_type)
+      const output_template = item_template_id(content_root, seed_package_original, output_type)
       await sdk.hydrate_unknown([recipe, output_template])
       const receipt = await with_terminal_kiosk(
         (tx, kiosk, personal) =>
@@ -362,8 +371,11 @@ export const character_actions = (sdk: GameSdk, { kiosk_cap }: CharacterActionsC
     }): Promise<
       Readonly<{ digest: string; joined: Readonly<{ world: string; x: number; z: number; first_join: boolean }> }>
     > => {
+      const { content_root, seed_package_original } = living_content(sdk, 'Travel transaction')
+      const destination = world_content_id(content_root, seed_package_original, world)
+      await sdk.hydrate_unknown([destination])
       const receipt = await with_kiosk(
-        (tx, kiosk, cap) => sdk.doors.join_world(tx, { kiosk, cap, character_id, world }),
+        (tx, kiosk, cap) => sdk.doors.join_world(tx, { kiosk, cap, character_id, destination }),
         { custody }
       )
       const event = receipt_event(receipt, '::world::WorldJoined')
@@ -397,7 +409,11 @@ export const character_actions = (sdk: GameSdk, { kiosk_cap }: CharacterActionsC
       z: number
       custody?: KioskCustody
     }): Promise<CharacterReceipt> => {
-      const w = world_ref(sdk.pins, world)
+      const { content_root, seed_package_original } = living_content(sdk, 'World transaction')
+      const game_original = sdk.game_type_package
+      if (!game_original) throw new Error('World transaction unavailable: pins.json has no original game package')
+      const w = world_id(content_root, game_original, world)
+      await sdk.hydrate_unknown([w])
       const receipt = await with_terminal_kiosk(
         (tx, kiosk, personal) => sdk.doors.search_zone(tx, { kiosk, personal, character_id, x, z, w }),
         { custody }
@@ -437,16 +453,22 @@ export const character_actions = (sdk: GameSdk, { kiosk_cap }: CharacterActionsC
       existing_rare: string | null
       custody?: KioskCustody
     }): Promise<Readonly<{ digest: string; quantity: number; ambushed: boolean }>> => {
-      const { registry } = seed_registry(sdk, 'Character transaction')
-      const template = item_template_id(registry, item_type)
+      const { content_root, seed_package_original } = living_content(sdk, 'Character transaction')
+      const template = item_template_id(content_root, seed_package_original, item_type)
       // no link = the base template again (gathering.move asserts identity before any draw)
-      const rare_template = rare_item_type ? item_template_id(registry, rare_item_type) : template
-      const w = world_ref(sdk.pins, world)
-      await sdk.hydrate_unknown([template, rare_template])
+      const rare_template = rare_item_type
+        ? item_template_id(content_root, seed_package_original, rare_item_type)
+        : template
+      const game_original = sdk.game_type_package
+      if (!game_original) throw new Error('Character transaction unavailable: pins.json has no original game package')
+      const w = world_id(content_root, game_original, world)
+      const wc = world_content_id(content_root, seed_package_original, world)
+      await sdk.hydrate_unknown([template, rare_template, w, wc])
       const receipt = await with_terminal_kiosk(
         (tx, kiosk, personal) =>
           sdk.doors.gather(tx, {
             w,
+            wc,
             kiosk,
             personal,
             character_id,
@@ -481,15 +503,16 @@ export const character_actions = (sdk: GameSdk, { kiosk_cap }: CharacterActionsC
       character_id: string
       protector_mob_type: string
       custody?: KioskCustody
-    }): Promise<CharacterReceipt> => {
-      const { registry, package_id } = seed_registry(sdk, 'Character transaction')
-      const protector_template = mob_template_id(registry, package_id, protector_mob_type)
-      await sdk.hydrate_unknown([protector_template])
+    }): Promise<FightCreatedReceipt> => {
+      const { content_root, seed_package_original } = living_content(sdk, 'Ambush transaction')
+      const protector_template = mob_template_id(content_root, seed_package_original, protector_mob_type)
+      const catalog = board_catalog_id(content_root, seed_package_original)
+      await sdk.hydrate_unknown([protector_template, catalog])
       const receipt = await with_kiosk(
-        (tx, kiosk, cap) => sdk.doors.resolve_ambush(tx, { kiosk, cap, character_id, protector_template }),
+        (tx, kiosk, cap) => sdk.doors.resolve_ambush(tx, { kiosk, cap, character_id, protector_template, catalog }),
         { custody }
       )
-      return Object.freeze({ digest: receipt_digest(receipt) })
+      return Object.freeze({ digest: receipt_digest(receipt), fight: created_fight_id(receipt) })
     },
   }
 }

@@ -4,7 +4,7 @@
 import { ChevronLeft, ChevronRight, Search } from 'lucide-react'
 import type { ReactNode } from 'react'
 
-export const PANEL = 'border border-white/8 bg-[#0d0d14]/94 shadow-[0_18px_50px_rgba(0,0,0,0.28)]'
+export const PANEL = 'border border-white/11 bg-[#181c1f]/96 shadow-[0_18px_50px_rgba(0,0,0,0.24)]'
 
 export const encyclopedia_layout = Object.freeze({
   body: 'flex min-h-0 flex-1 flex-col',

@@ -12,6 +12,8 @@ import {
   SRGBColorSpace,
 } from 'three'
 
+import { STONE_COLOR } from './fight_board_rocks.ts'
+
 export const BOARD_CELL_FLOOR = 0
 export const BOARD_CELL_OBSTACLE = 1
 export const BOARD_CELL_HOLE = 2
@@ -41,6 +43,8 @@ const is_slab = (mask: BoardMask, width: number, height: number, x: number, y: n
   const cell = read_board_cell(mask, x, y, width, height)
   return cell === BOARD_CELL_FLOOR || cell === BOARD_CELL_OBSTACLE
 }
+
+const STONE_RGB = [(STONE_COLOR >> 16) & 0xff, (STONE_COLOR >> 8) & 0xff, STONE_COLOR & 0xff] as const
 
 const board_seed = (mask: BoardMask, width: number, height: number): number => {
   let hash = 0x811c9dc5
@@ -83,6 +87,8 @@ export const bake_fight_board_surface = (mask: BoardMask, width: number, height:
   const texture_height = height * px
   const data = new Uint8Array(texture_width * texture_height * 4)
   const slab_at = (x: number, y: number): boolean => is_slab(mask, width, height, x, y)
+  // wear (cracks, footpath, tufts) belongs to walked pavement — never to the stone formations
+  const floor_at = (x: number, y: number): boolean => read_board_cell(mask, x, y, width, height) === BOARD_CELL_FLOOR
 
   for (let y = 0; y < texture_height; y += 1) {
     const cell_y = Math.floor(y / px)
@@ -90,6 +96,17 @@ export const bake_fight_board_surface = (mask: BoardMask, width: number, height:
     for (let x = 0; x < texture_width; x += 1) {
       const cell_x = Math.floor(x / px)
       const local_x = x - cell_x * px
+      // an obstacle cell wears the stone color edge to edge — no checker, no seams: the tile and
+      // the formation standing on it read as one block
+      if (read_board_cell(mask, cell_x, cell_y, width, height) === BOARD_CELL_OBSTACLE) {
+        const stone_grain = 0.9 + hash2(seed ^ 0x51ed, x, y) * 0.08
+        const offset = (x + y * texture_width) * 4
+        data[offset] = Math.min(255, STONE_RGB[0] * stone_grain)
+        data[offset + 1] = Math.min(255, STONE_RGB[1] * stone_grain)
+        data[offset + 2] = Math.min(255, STONE_RGB[2] * stone_grain)
+        data[offset + 3] = 255
+        continue
+      }
       const pick = hash2(seed, cell_x, cell_y)
       const base = pick < 0.5 ? TONE_LIGHT : pick < 0.82 ? TONE_MID : TONE_GRAY
       const patch = 0.92 + patch_noise(seed ^ 0x9e37, cell_x * 0.35 + x / (px * 6), cell_y * 0.35 + y / (px * 6)) * 0.14
@@ -128,7 +145,7 @@ export const bake_fight_board_surface = (mask: BoardMask, width: number, height:
 
   for (let cell_y = 0; cell_y < height; cell_y += 1)
     for (let cell_x = 0; cell_x < width; cell_x += 1) {
-      if (!slab_at(cell_x, cell_y) || hash2(seed ^ 0xc4ac, cell_x, cell_y) >= 0.1) continue
+      if (!floor_at(cell_x, cell_y) || hash2(seed ^ 0xc4ac, cell_x, cell_y) >= 0.1) continue
       let vertex_x = cell_x * px + 4 + Math.floor(hash2(seed ^ 0x11, cell_x, cell_y) * (px - 8))
       let vertex_y = cell_y * px + 2
       let direction = hash2(seed ^ 0x22, cell_x, cell_y) * 0.8 - 0.4
@@ -144,7 +161,7 @@ export const bake_fight_board_surface = (mask: BoardMask, width: number, height:
 
   const slab_cells: [number, number][] = []
   for (let cell_y = 0; cell_y < height; cell_y += 1)
-    for (let cell_x = 0; cell_x < width; cell_x += 1) if (slab_at(cell_x, cell_y)) slab_cells.push([cell_x, cell_y])
+    for (let cell_x = 0; cell_x < width; cell_x += 1) if (floor_at(cell_x, cell_y)) slab_cells.push([cell_x, cell_y])
   const start = slab_cells[Math.floor(hash2(seed ^ 0x55, 1, 1) * slab_cells.length)]
   if (slab_cells.length > 4 && start) {
     let end = start
@@ -166,7 +183,7 @@ export const bake_fight_board_surface = (mask: BoardMask, width: number, height:
       const side = step % 2 === 0 ? 3 : -3
       const foot_x = Math.round(start_x + dx * step + normal_x * side + (hash2(seed ^ 0x66, step, 0) - 0.5) * 3)
       const foot_y = Math.round(start_y + dy * step + normal_y * side + (hash2(seed ^ 0x77, step, 1) - 0.5) * 3)
-      if (!slab_at(Math.floor(foot_x / px), Math.floor(foot_y / px))) continue
+      if (!floor_at(Math.floor(foot_x / px), Math.floor(foot_y / px))) continue
       for (let oy = -2; oy <= 3; oy += 1) for (let ox = -2; ox <= 2; ox += 1) stain(foot_x + ox, foot_y + oy, 0.84)
     }
   }
@@ -175,10 +192,10 @@ export const bake_fight_board_surface = (mask: BoardMask, width: number, height:
     for (let cell_x = 1; cell_x < width; cell_x += 1) {
       if (
         !(
-          slab_at(cell_x, cell_y) &&
-          slab_at(cell_x - 1, cell_y) &&
-          slab_at(cell_x, cell_y - 1) &&
-          slab_at(cell_x - 1, cell_y - 1)
+          floor_at(cell_x, cell_y) &&
+          floor_at(cell_x - 1, cell_y) &&
+          floor_at(cell_x, cell_y - 1) &&
+          floor_at(cell_x - 1, cell_y - 1)
         ) ||
         hash2(seed ^ 0x88, cell_x, cell_y) >= 0.05
       )
@@ -300,8 +317,9 @@ export const build_fight_board_pits = (
   const indices: number[] = []
   const top_y = origin.y + BOARD_FLOOR_THICKNESS
   const bottom_y = top_y - BOARD_HOLE_DEPTH
-  const top_color = new Color(0x2c2d31)
-  const bottom_color = new Color(0x040506)
+  // a water basin, not a void: submerged earth walls and bed, read through the water surface
+  const top_color = new Color(0x3d5548)
+  const bottom_color = new Color(0x24382f)
   const vertex = (x: number, y: number, z: number, nx: number, ny: number, nz: number): number => {
     const color = y === top_y ? top_color : bottom_color
     positions.push(x, y, z)
@@ -350,4 +368,110 @@ export const build_fight_board_pits = (
   geometry.setAttribute('color', new BufferAttribute(new Float32Array(colors), 3))
   geometry.setIndex(indices)
   return geometry
+}
+
+/** how far below the walkable floor the water surface rests */
+export const BOARD_WATER_DROP = 0.22
+
+/** One flat sheet over every hole cell — the water surface of the basin, uv-mapped to the
+ * board-spanning water bake so shore foam lands exactly on the basin's rim. */
+export const build_fight_board_water = (
+  mask: BoardMask,
+  width: number,
+  height: number,
+  cell_size: number,
+  origin: BoardOrigin
+): BufferGeometry => {
+  const positions: number[] = []
+  const uvs: number[] = []
+  const water_y = origin.y + BOARD_FLOOR_THICKNESS - BOARD_WATER_DROP
+  for (let cell_y = 0; cell_y < height; cell_y += 1)
+    for (let cell_x = 0; cell_x < width; cell_x += 1) {
+      if (read_board_cell(mask, cell_x, cell_y, width, height) !== BOARD_CELL_HOLE) continue
+      const x0 = origin.x + cell_x * cell_size
+      const x1 = x0 + cell_size
+      const z0 = origin.z + cell_y * cell_size
+      const z1 = z0 + cell_size
+      const u0 = cell_x / width
+      const u1 = (cell_x + 1) / width
+      const v0 = cell_y / height
+      const v1 = (cell_y + 1) / height
+      positions.push(
+        x0,
+        water_y,
+        z0,
+        x0,
+        water_y,
+        z1,
+        x1,
+        water_y,
+        z1,
+        x0,
+        water_y,
+        z0,
+        x1,
+        water_y,
+        z1,
+        x1,
+        water_y,
+        z0
+      )
+      uvs.push(u0, v0, u0, v1, u1, v1, u0, v0, u1, v1, u1, v0)
+    }
+  const geometry = new BufferGeometry()
+  geometry.setAttribute('position', new BufferAttribute(new Float32Array(positions), 3))
+  geometry.setAttribute('uv', new BufferAttribute(new Float32Array(uvs), 2))
+  geometry.computeVertexNormals()
+  return geometry
+}
+
+/** The basin's water bake: deep still blue, ripple bands, and a foam rim wherever the water
+ * meets a wall. Opaque on purpose — the basin must swallow whatever the world grows under it. */
+export const bake_fight_board_water_surface = (mask: BoardMask, width: number, height: number): DataTexture => {
+  const seed = board_seed(mask, width, height) ^ 0x77a1
+  const px = Math.max(16, Math.min(PX_PER_CELL, Math.floor(2048 / Math.max(width, height))))
+  const texture_width = width * px
+  const texture_height = height * px
+  const data = new Uint8Array(texture_width * texture_height * 4)
+  const DEEP = [0x2c, 0x64, 0x8c] as const
+  const hole_at = (x: number, y: number): boolean => read_board_cell(mask, x, y, width, height) === BOARD_CELL_HOLE
+  for (let y = 0; y < texture_height; y += 1) {
+    const cell_y = Math.floor(y / px)
+    for (let x = 0; x < texture_width; x += 1) {
+      const cell_x = Math.floor(x / px)
+      const offset = (x + y * texture_width) * 4
+      if (!hole_at(cell_x, cell_y)) {
+        data[offset + 3] = 255
+        continue
+      }
+      // still-water ripple bands: two slow interfering waves warped by patch noise
+      const warp = patch_noise(seed, x / (px * 1.6), y / (px * 1.6)) * 6
+      const bands = Math.sin((x + y) * 0.11 + warp) * 0.5 + Math.sin((x - y * 0.7) * 0.07 + warp * 0.6) * 0.5
+      const ripple = 1 + Math.max(0, bands - 0.55) * 0.5
+      // foam rim: distance in texels to the nearest non-water neighbour cell
+      const local_x = x - cell_x * px
+      const local_y = y - cell_y * px
+      const rim = Math.min(
+        hole_at(cell_x - 1, cell_y) ? px : local_x,
+        hole_at(cell_x + 1, cell_y) ? px : px - 1 - local_x,
+        hole_at(cell_x, cell_y - 1) ? px : local_y,
+        hole_at(cell_x, cell_y + 1) ? px : px - 1 - local_y
+      )
+      const foam_band = px * 0.09
+      const foam = rim < foam_band && hash2(seed ^ 0x3f, x, y) < 0.85 ? 1 + (1 - rim / foam_band) * 1.1 : 1
+      const brightness = ripple * foam
+      data[offset] = Math.min(255, DEEP[0] * brightness)
+      data[offset + 1] = Math.min(255, DEEP[1] * brightness)
+      data[offset + 2] = Math.min(255, DEEP[2] * brightness)
+      data[offset + 3] = 255
+    }
+  }
+  const texture = new DataTexture(data, texture_width, texture_height)
+  texture.colorSpace = SRGBColorSpace
+  texture.magFilter = LinearFilter
+  texture.minFilter = LinearMipmapLinearFilter
+  texture.generateMipmaps = true
+  texture.anisotropy = 8
+  texture.needsUpdate = true
+  return texture
 }

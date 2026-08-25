@@ -13,12 +13,18 @@ import './minimap.css'
 import { titleize } from '../../content/catalog.ts'
 import { world_terrain } from '../../content/worlds.ts'
 import { copy_text, type AppCopy } from '../../i18n/copy.ts'
-import { spawn_markers, zone_key } from '../../modules/world.ts'
+import { dungeon_portal_markers, spawn_markers, zone_key } from '../../modules/world.ts'
 import { useAppStore } from '../../store.ts'
 import { useWorldPose } from '../core/pose_feed.ts'
 
 import { camera_heading } from './compass_math.ts'
-import { draw_players, draw_self_arrow, draw_spawn_markers, draw_zone_layer } from './map_layers.ts'
+import {
+  draw_dungeon_portal_markers,
+  draw_players,
+  draw_self_arrow,
+  draw_spawn_markers,
+  draw_zone_layer,
+} from './map_layers.ts'
 import {
   VIEW_RADIUS_BLOCKS,
   paint_relief,
@@ -94,6 +100,7 @@ export const Minimap = ({ copy }: Readonly<{ copy: AppCopy }>) => {
     paint_relief(context, grid, SIZE)
     draw_zone_layer(context, view, (zx, zz) => (world_name ? zone_key(world_name, zx, zz) in world_state.zones : false))
     draw_spawn_markers(context, view, spawn_markers(world_state))
+    draw_dungeon_portal_markers(context, view, dungeon_portal_markers(world_state, world_name))
     draw_players(context, view, Object.values(world_state.players))
     draw_self_arrow(context, view, pose.x, pose.z, camera_heading(pose.yaw))
   }, [pose, compiled, world_state, world_name])

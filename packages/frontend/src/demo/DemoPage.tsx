@@ -3,16 +3,18 @@
 // Public composition lab. It owns controls only; every rendered fact crosses a production boundary.
 import type { EngineQuality, EngineStatus } from '@aresrpg/engine'
 import { class_names } from '@aresrpg/immutable'
-import { Boxes, FlaskConical, Mountain, Package, RotateCcw, Swords, UserRound, UsersRound } from 'lucide-react'
+import { Boxes, FlaskConical, Grid2X2, Mountain, Package, RotateCcw, Swords, UserRound, UsersRound } from 'lucide-react'
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react'
 
 import { FpsPanel } from '../components/FpsPanel.tsx'
+import { fight_lab_surface } from '../components/app_layout.ts'
 import { HudPanel } from '../components/ui/HudPanel.tsx'
 import { content_catalog, titleize, type SeedWorld } from '../content/catalog.ts'
 import { worlds_source } from '../content/worlds.ts'
 import { load_pet_companion } from '../content/pet_models.ts'
-import { worn_cosmetic_options } from '../content/worn_cosmetics.ts'
+import { worn_equipment_options } from '../content/worn_equipment.ts'
 import { create_world } from '../game/core/world.ts'
+import type { SceneHandle } from '../game/core/scene_feed.ts'
 import { WorldStage } from '../game/core/WorldStage.tsx'
 import { load_character_appearance } from '../game/character_entities.ts'
 import { FightLayer } from '../game/fight/FightLayer.tsx'
@@ -20,6 +22,8 @@ import { mob_entities } from '../game/mob_entities.ts'
 import type { AppCopy } from '../i18n/copy.ts'
 import { dispatch_app, useAppStore } from '../store.ts'
 import SimulatorPage from '../simulator/SimulatorPage.tsx'
+
+import { BoardGallery } from './BoardGallery.tsx'
 
 // The seed editors ship only in the dev bundle: the /__seed doors exist only on the local Vite
 // process, so production emits no editor chunks at all (the DEV check is static).
@@ -30,11 +34,17 @@ const BiomePage = import.meta.env.DEV
   ? lazy(() => import('../editor/BiomePage.tsx').then((m) => ({ default: m.BiomePage })))
   : (): null => null
 
-type DemoView = 'world' | 'fight' | 'content' | 'biomes'
+type DemoView = 'world' | 'fight' | 'boards' | 'content' | 'biomes'
 const DEMO_VIEWS: readonly DemoView[] = Object.freeze(
-  import.meta.env.DEV ? ['world', 'fight', 'content', 'biomes'] : ['world', 'fight']
+  import.meta.env.DEV ? ['world', 'fight', 'boards', 'content', 'biomes'] : ['world', 'fight', 'boards']
 )
-const VIEW_ICONS = Object.freeze({ world: FlaskConical, fight: Swords, content: Package, biomes: Mountain })
+const VIEW_ICONS = Object.freeze({
+  world: FlaskConical,
+  fight: Swords,
+  boards: Grid2X2,
+  content: Package,
+  biomes: Mountain,
+})
 const initial_view = (): DemoView => {
   const hash = globalThis.location.hash.slice(1)
   return (DEMO_VIEWS as readonly string[]).includes(hash) ? (hash as DemoView) : 'world'
@@ -45,7 +55,7 @@ const renderable_worlds = Object.freeze(content_catalog.worlds.filter(({ terrain
 const initial_world = renderable_worlds[0] ?? null
 const initial_mob = initial_world?.mobs[0]?.mob_type ?? content_catalog.mobs[0]?.mob_type ?? ''
 const DEFAULT_COLORS = Object.freeze(['#f3eadb', '#2f8fe8', '#d9af57'] as const)
-const { hats, cloaks } = worn_cosmetic_options
+const { hats, cloaks } = worn_equipment_options
 const pets = Object.freeze(content_catalog.items.filter(({ category }) => category === 'pet'))
 
 const field_class =
@@ -53,6 +63,11 @@ const field_class =
 const label_class = 'grid gap-1.5 text-[7px] tracking-[0.16em] text-[#777b86] uppercase'
 const button_class =
   'flex h-9 cursor-pointer items-center justify-center gap-2 border border-[#4a9eff]/30 bg-[#4a9eff]/7 px-3 text-[8px] tracking-[0.14em] text-[#67adff] uppercase hover:border-[#4a9eff]/60 disabled:cursor-not-allowed disabled:opacity-30'
+
+const FightLabSurface = ({ copy, scene }: Readonly<{ copy: AppCopy; scene: SceneHandle }>) => {
+  const surface = fight_lab_surface(useAppStore((state) => state.fight.mounted))
+  return surface === 'fight' ? <FightLayer copy={copy} scene={scene} /> : <SimulatorPage copy={copy} scene={scene} />
+}
 
 const world_mob_rows = (world: SeedWorld | null) =>
   Object.freeze(
@@ -156,7 +171,7 @@ const WorldLab = ({ active, copy }: Readonly<{ active: boolean; copy: AppCopy }>
   }, [character_enabled, classe, cloak, colors, hat, male, world_api])
 
   // handing over control spawns at the camera's current focus — never a hardcoded origin;
-  // cosmetic re-renders keep the character exactly where it stands
+  // worn-equipment re-renders keep the character exactly where it stands
   useEffect(() => {
     if (!world_api || !character_enabled) return
     world_api.point_at(world_api.camera_focus())
@@ -465,14 +480,14 @@ export const DemoPage = ({ copy }: Readonly<{ copy: AppCopy }>) => {
   // the seed corpus loads on first editor-tab open, never on a plain lab visit (reducer ignores
   // the input unless the editor is still idle)
   useEffect(() => {
-    if (view === 'content' || view === 'biomes') dispatch_app({ type: 'editor/load' })
+    if (view === 'boards' || view === 'content' || view === 'biomes') dispatch_app({ type: 'editor/load' })
   }, [view])
   // Seed saves no longer full-reload (the vite plugin suppresses the JSON invalidation and sends
   // this event instead): while editing, the editor state IS the fresh truth; the reload is owed
   // only when a lab tab needs the rebuilt seed imports — deferred to the next tab switch.
   useEffect(() => {
     const on_seed_changed = (): void => {
-      const editing = globalThis.location.hash === '#content' || globalThis.location.hash === '#biomes'
+      const editing = ['#boards', '#content', '#biomes'].includes(globalThis.location.hash)
       if (editing) {
         // eslint-disable-next-line functional/immutable-data -- a React ref is the sanctioned mutable cell
         seed_changed.current = true
@@ -486,7 +501,7 @@ export const DemoPage = ({ copy }: Readonly<{ copy: AppCopy }>) => {
   // the hash survives any reload — you land back on your tab
   const select_view = (next: DemoView): void => {
     globalThis.history.replaceState(null, '', `#${next}`)
-    if (seed_changed.current && next !== 'content' && next !== 'biomes') {
+    if (seed_changed.current && next !== 'boards' && next !== 'content' && next !== 'biomes') {
       globalThis.location.reload()
       return
     }
@@ -497,9 +512,11 @@ export const DemoPage = ({ copy }: Readonly<{ copy: AppCopy }>) => {
       ? text.world_lab
       : candidate === 'fight'
         ? text.fight_lab
-        : candidate === 'content'
-          ? 'Content'
-          : 'Biomes'
+        : candidate === 'boards'
+          ? text.fight_board
+          : candidate === 'content'
+            ? 'Content'
+            : 'Biomes'
 
   return (
     <main className="fixed inset-0 overflow-hidden bg-[#08090e] font-mono text-[#e8e4dc]">
@@ -509,19 +526,16 @@ export const DemoPage = ({ copy }: Readonly<{ copy: AppCopy }>) => {
       {view === 'fight' && (
         <section className="absolute inset-0">
           {/* ONE stage, handed to both children. The setup board and any live fight draw into
-              the SAME world, and neither can reach the biome lab's. */}
+              the SAME world, and neither can reach the biome lab's. Exactly one surface owns
+              its board and canvas listeners at a time. */}
           <WorldStage quality={quality} terrain={worlds_source[0]?.terrain}>
-            {(scene) => (
-              <>
-                <SimulatorPage copy={copy} scene={scene} />
-                <FightLayer copy={copy} scene={scene} />
-              </>
-            )}
+            {(scene) => <FightLabSurface copy={copy} scene={scene} />}
           </WorldStage>
         </section>
       )}
+      {view === 'boards' && <BoardGallery text={text} />}
       {import.meta.env.DEV && (view === 'content' || view === 'biomes') && (
-        <section className="absolute inset-0 flex flex-col bg-[#0d0d14] pt-14">
+        <section className="absolute inset-0 flex flex-col bg-[#0b0d0e] pt-14">
           <Suspense
             fallback={
               <div className="grid flex-1 place-items-center text-[9px] tracking-[0.18em] text-[#c8963c] uppercase">
@@ -529,7 +543,7 @@ export const DemoPage = ({ copy }: Readonly<{ copy: AppCopy }>) => {
               </div>
             }
           >
-            {view === 'content' ? <ContentPage /> : <BiomePage />}
+            {view === 'content' ? <ContentPage text={text} /> : <BiomePage />}
           </Suspense>
         </section>
       )}

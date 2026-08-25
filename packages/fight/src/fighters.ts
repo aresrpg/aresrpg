@@ -4,7 +4,7 @@
 // Fighter access and writes mirror fight.move's single branch and single death door.
 
 import { CHANNELS, CONTRACT_CONSTANTS, EFFECT_KINDS } from './move_contract.gen.ts'
-import { level_penalty_bp, xp_for_player } from './fight_math.ts'
+import { xp_for_player } from './fight_math.ts'
 import { add_effect_id, effect_id_at, emit } from './runtime.ts'
 import type {
   FightRuntime,
@@ -118,16 +118,34 @@ export const xp_award_of = (checkpoint: FightReadState, seat: bigint): bigint =>
   const fighter = checkpoint.contract.fighters[Number(seat)]
   if (!fighter || fighter.kind.type !== 'player' || checkpoint.contract.winner !== fighter.team) return 0n
   const sheet = sheet_of(checkpoint, seat)
-  const penalized = checkpoint.contract.fighters.reduce((total, enemy) => {
-    if (enemy.team === fighter.team || !is_mob(enemy)) return total
-    return total + (enemy.kind.snapshot.xp * level_penalty_bp(enemy.kind.snapshot.level, sheet.level)) / 10_000n
-  }, 0n)
-  const members = BigInt(
-    checkpoint.contract.fighters.filter(
-      (member) => member.team === fighter.team && member.kind.type === 'player' && !member.forfeited
-    ).length
+  const players = checkpoint.contract.fighters.filter(
+    (member): member is PlayerFighter =>
+      member.team === fighter.team && member.kind.type === 'player' && !member.forfeited
   )
-  return xp_for_player(penalized, sheet.wisdom, members)
+  const mobs = checkpoint.contract.fighters.filter(
+    (enemy): enemy is MobFighter => enemy.team !== fighter.team && enemy.kind.type === 'mob'
+  )
+  const player_total_level = players.reduce((total, player) => total + player.kind.level, 0n)
+  const highest_player_level = players.reduce(
+    (highest, player) => (player.kind.level > highest ? player.kind.level : highest),
+    0n
+  )
+  const eligible_players = BigInt(players.filter((player) => player.kind.level * 3n >= highest_player_level).length)
+  const base_xp = mobs.reduce((total, mob) => total + mob.kind.snapshot.xp, 0n)
+  const mob_total_level = mobs.reduce((total, mob) => total + mob.kind.snapshot.level, 0n)
+  const highest_mob_level = mobs.reduce(
+    (highest, mob) => (mob.kind.snapshot.level > highest ? mob.kind.snapshot.level : highest),
+    0n
+  )
+  return xp_for_player(
+    base_xp,
+    sheet.wisdom,
+    fighter.kind.level,
+    player_total_level,
+    mob_total_level,
+    highest_mob_level,
+    eligible_players
+  )
 }
 
 export const effective_stat = (runtime: FightRuntime, seat: bigint, stat: bigint): bigint => {

@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-// Extracted shared picker used by simulator characters, mobs, equipment, relics, and cosmetics.
+// Extracted shared picker used by simulator characters, mobs, equipment, and relics.
 /* eslint-disable functional/immutable-data, functional/prefer-immutable-types -- React refs and DOM events are mutable lifecycle boundaries. */
 
 import { Package, Search, X } from 'lucide-react'
@@ -16,6 +16,14 @@ export type PickerItem = Readonly<{
   icon?: string | null
   is_new?: boolean
   tags?: readonly string[]
+  facets?: readonly string[]
+}>
+
+export type PickerFacet = Readonly<{
+  id: string
+  label: string
+  section?: string
+  parent?: string
 }>
 
 export type PickerCopy = Readonly<{
@@ -42,7 +50,7 @@ export const filter_picker_items = ({
 }>): readonly PickerItem[] => {
   const query = search.trim().toLowerCase()
   return items.filter((item) => {
-    if (category && item.category !== category) return false
+    if (category && item.category !== category && !item.facets?.includes(category)) return false
     if (
       query &&
       ![item.id, item.label, item.sublabel ?? '', ...(item.tags ?? [])].some((value) =>
@@ -88,6 +96,7 @@ export const SearchPickerModal = ({
   pills = [],
   render_tooltip,
   empty_label,
+  facets = [],
   locked_ids,
 }: Readonly<{
   copy: PickerCopy
@@ -99,6 +108,7 @@ export const SearchPickerModal = ({
   pills?: readonly string[]
   render_tooltip?: (id: string) => ReactNode | null
   empty_label?: string
+  facets?: readonly PickerFacet[]
   /** rows that render greyed and refuse selection (e.g. worlds above the character's level) */
   locked_ids?: ReadonlySet<string>
 }>) => {
@@ -112,18 +122,23 @@ export const SearchPickerModal = ({
   const press_read = useRef(false)
   const [hovered_id, set_hovered_id] = useState<string | null>(null)
   const [tooltip_position, set_tooltip_position] = useState<Readonly<{ x: number; y: number }>>({ x: 0, y: 0 })
-  const categories = useMemo(
-    () =>
-      Object.freeze(
-        Object.entries(
-          items.reduce<Record<string, number>>((counts, item) => {
-            if (!item.category) return counts
-            return { ...counts, [item.category]: (counts[item.category] ?? 0) + 1 }
-          }, {})
-        )
-      ),
-    [items]
-  )
+  const categories = useMemo<readonly Readonly<PickerFacet & { count: number }>[]>(() => {
+    if (facets.length > 0)
+      return Object.freeze(
+        facets.flatMap((facet) => {
+          const count = items.filter((item) => item.category === facet.id || item.facets?.includes(facet.id)).length
+          return count > 0 ? [Object.freeze({ ...facet, count })] : []
+        })
+      )
+    return Object.freeze(
+      Object.entries(
+        items.reduce<Record<string, number>>((counts, item) => {
+          if (!item.category) return counts
+          return { ...counts, [item.category]: (counts[item.category] ?? 0) + 1 }
+        }, {})
+      ).map(([id, count]) => Object.freeze({ id, label: id, count }))
+    )
+  }, [facets, items])
   const filtered = useMemo(
     () => filter_picker_items({ items, search, category, pills: active_pills }),
     [items, search, category, active_pills]
@@ -205,18 +220,28 @@ export const SearchPickerModal = ({
         <div className="flex min-h-0 flex-1">
           {categories.length > 0 && (
             <nav className="w-48 shrink-0 overflow-y-auto border-r border-[#1e1e2e]">
-              {[
-                [null, copy.all, items.length] as const,
-                ...categories.map(([name, count]) => [name, name, count] as const),
-              ].map(([id, label, count]) => (
-                <button
-                  className={`block w-full cursor-pointer border-l-2 px-3 py-2 text-left text-[10px] tracking-[0.15em] uppercase ${category === id ? 'border-[#c8963c] bg-[#c8963c]/5 text-[#c8963c]' : 'border-transparent text-[#e8e4dc] hover:bg-[#c8963c]/5'}`}
-                  key={id ?? 'all'}
-                  onClick={() => set_category(id)}
-                  type="button"
-                >
-                  {label} <span className="ml-1 text-[#6b7280]">({count})</span>
-                </button>
+              <button
+                className={`block w-full cursor-pointer border-l-2 px-3 py-2 text-left text-[10px] tracking-[0.15em] uppercase ${category === null ? 'border-[#c8963c] bg-[#c8963c]/5 text-[#c8963c]' : 'border-transparent text-[#e8e4dc] hover:bg-[#c8963c]/5'}`}
+                onClick={() => set_category(null)}
+                type="button"
+              >
+                {copy.all} <span className="ml-1 text-[#6b7280]">({items.length})</span>
+              </button>
+              {categories.map(({ id, label, count, section, parent }) => (
+                <div key={id}>
+                  {section && (
+                    <p className="border-t border-white/6 px-3 pt-3 pb-1 text-[7px] tracking-[0.18em] text-[#555b66] uppercase first:border-t-0">
+                      {section}
+                    </p>
+                  )}
+                  <button
+                    className={`block w-full cursor-pointer border-l-2 py-2 pr-3 text-left text-[10px] tracking-[0.15em] uppercase ${parent ? 'pl-6' : 'pl-3'} ${category === id ? 'border-[#c8963c] bg-[#c8963c]/5 text-[#c8963c]' : 'border-transparent text-[#e8e4dc] hover:bg-[#c8963c]/5'}`}
+                    onClick={() => set_category(id)}
+                    type="button"
+                  >
+                    {label} <span className="ml-1 text-[#6b7280]">({count})</span>
+                  </button>
+                </div>
               ))}
             </nav>
           )}

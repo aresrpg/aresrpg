@@ -1,31 +1,30 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-/// CRAFTING — frozen recipes + the single-transaction craft (reference formulas ported
+/// CRAFTING — living recipes + the single-transaction craft (reference formulas ported
 /// verbatim from the legacy Move port's citations, CraftingFormulas.java):
 ///   ① KNOWLEDGE GATE — `required_level` DERIVES from the ingredient-slot count
-///     (`n ≤ 2 → 1`, else `min(100, ceil((n−2)×99/8) + 1)`), never authored by hand — a
-///     recipe can never under-gate itself.
+///     (2 slots at level 1, then 3/4/5/6/7/8 at 10/20/40/60/80/100), never authored by
+///     hand — a recipe can never under-gate itself or exceed Retro's eight-slot maximum.
 ///   ② SUCCESS — `min(9900, 5000 + (level−1)×50)` bp: 50% at job level 1, +0.5%/level,
 ///     capped 99%. Rolled off fresh `&Random`.
 ///   ③ FAILURE — the ingredients STILL burn; only the output is withheld. Deterministic
 ///     refusals (wrong output, unknown/short/redundant ingredient, under-level) abort the
 ///     WHOLE tx BEFORE the roll — a wrong client never reaches the dice.
-///   ④ JOB XP — credited on EVERY attempt: XP derives from distinct ingredient slots, then
-///     receives the recipe-level decay
-///     (full until the next slot tier, linear to 0 over +30 once out-leveled).
+///   ④ JOB XP — credited on EVERY attempt: XP derives from distinct ingredient slots. A
+///     recipe four or more slots below the crafter's current capacity grants no XP.
 ///
-/// A RECIPE IS FROZEN SEED CONTENT (owner 2026-08-10) — not an admin object: minted in
-/// the seeding at an address derived from its OUTPUT item type, then frozen forever
-/// with the rest of the corpus. The exact-ingredient shape is the security boundary: the
+/// A recipe lives at an address derived from its OUTPUT item type and can be rebalanced or
+/// retired until the one permanent content freeze. The exact-ingredient shape is the security boundary: the
 /// output is the recipe's own pinned template — nobody crafts a richer item than authored.
 /// A LARGER input stack burns only what the recipe needs — the remainder never leaves the
 /// kiosk (`item::burn`, the one amount-aware destroy door).
 /// Commissions (craft-for-others) are CUT (owner 2026-08-10) — the artisan feature is dead.
 module aresrpg::crafting;
 
+use aresrpg_seed::{item_rows::{Self, ItemTemplate}, recipe_rows::{Self, Recipe}};
 use aresrpg::{
   character::Character,
-  item::{Self, Item, ItemTemplate, TemplateRegistry},
+  item::{Self, Item},
   progression,
   protected_policy::AresRPG_TransferPolicy,
 };
@@ -46,26 +45,10 @@ const EUnknownIngredient: u64 = 2302; // craft: a consumed item's template is no
 const ERedundantInput: u64 = 2303; // craft: this ingredient is already fully supplied
 const EMissingIngredient: u64 = 2304; // craft: an ingredient is missing or short
 const EUnderLevel: u64 = 2305; // craft: job level below the recipe's knowledge gate (①)
+const ERecipeRetired: u64 = 2306;
 // ╔════════════════ [ Types ] ════════════════════════════════════════════════ ]
 
-/// Keys a recipe's derived address by its OUTPUT item type — one recipe per output, the
-/// client derives it offline like every template.
-public struct RecipeKey(String) has copy, drop, store;
-
-/// A frozen recipe. Knowledge and XP both derive from the distinct ingredient-slot count.
-/// Every successful craft mints exactly one output; neither derived fact is authored or stored.
-public struct Recipe has key {
-  id: UID,
-  data: RecipeData,
-}
-
-public struct RecipeCreated has copy, drop {
-  recipe: ID,
-  output_template: ID,
-  input_count: u64,
-  job: String,
-  required_level: u64,
-}
+// ╔════════════════ [ The craft door ] ═══════════════════════════════════════ ]
 
 /// Success tells consumers whether the fixed one-item output was minted.
 public struct Crafted has copy, drop {
@@ -75,41 +58,6 @@ public struct Crafted has copy, drop {
   success: bool,
   job_xp_gained: u64,
 }
-
-// ╔════════════════ [ Seeding authoring (seed.move gates, then calls) ] ══════ ]
-
-/// Mint a recipe at its output-type-derived address. `input_templates[i]` needs
-/// `input_quantities[i]` units (distinct templates by authoring convention). Key-only —
-/// `freeze_recipe` is its single exit; the seal closes this door with the rest.
-public(package) fun new_recipe(
-  registry: &mut TemplateRegistry,
-  output_type: String,
-  output_template: ID,
-  input_templates: vector<ID>,
-  input_quantities: vector<u64>,
-  job: String,
-): Recipe {
-  let data = recipe_data::new(output_template, input_templates, input_quantities, job);
-  let n = recipe_data::input_count(&data);
-  let recipe = Recipe {
-    id: derived_object::claim(item::ru(registry), RecipeKey(output_type)),
-    data,
-  };
-  event::emit(RecipeCreated {
-    recipe: recipe.id.to_inner(),
-    output_template,
-    input_count: n,
-    job: recipe_data::job(&recipe.data),
-    required_level: recipe_data::required_level(&recipe.data),
-  });
-  recipe
-}
-
-public(package) fun freeze_recipe(recipe: Recipe) {
-  transfer::freeze_object(recipe);
-}
-
-// ╔════════════════ [ The craft door ] ═══════════════════════════════════════ ]
 
 /// Craft for the signer: gate (①), burn the exact ingredient tally (③ — deterministic
 /// refusals first), roll (②), mint-on-success through the no-dust deposit, credit the job
@@ -127,24 +75,25 @@ public(package) fun craft(
   gen: &mut RandomGenerator,
   ctx: &mut TxContext,
 ) {
-  assert!(object::id(output_template) == recipe_data::output_template(&recipe.data), EWrongOutput);
+  assert!(recipe_rows::is_active(recipe), ERecipeRetired);
+  assert!(object::id(output_template) == recipe_data::output_template(recipe_rows::data(recipe)), EWrongOutput);
   // the job that gates and earns is DERIVED from the output's category (owner 2026-08-11: a
-  // longsword is SWORD_SMITH, hardcoded, never seed-authored) — falling back to the recipe's
+  // sword is FORGER, hardcoded, never seed-authored) — falling back to the recipe's
   // authored job only where the category can't name one (consumables: alchemist vs baker).
-  let category = item::template_category(output_template);
-  let job = content_rules::craft_job_of(&category).destroy_with_default(recipe_data::job(&recipe.data));
+  let category = item_rows::template_category(output_template);
+  let job = content_rules::craft_job_of(&category).destroy_with_default(recipe_data::job(recipe_rows::data(recipe)));
   let crafter_level = {
     let chr: &Character = kiosk.borrow(cap, character_id);
     progression::job_level_of(chr, job)
   };
-  assert!(crafter_level >= recipe_data::required_level(&recipe.data), EUnderLevel); // ①
+  assert!(crafter_level >= recipe_data::required_level(recipe_rows::data(recipe)), EUnderLevel); // ①
 
   // ③ CONSUME — every abort in here fires BEFORE the roll. remaining[j] = units still owed.
-  let n = recipe_data::input_count(&recipe.data);
+  let n = recipe_data::input_count(recipe_rows::data(recipe));
   let mut remaining = vector[];
   let mut j = 0;
   while (j < n) {
-    remaining.push_back(recipe_data::input_quantity(&recipe.data, j));
+    remaining.push_back(recipe_data::input_quantity(recipe_rows::data(recipe), j));
     j = j + 1;
   };
   let mut i = 0;
@@ -154,7 +103,7 @@ public(package) fun craft(
       let stack: &Item = kiosk.borrow(cap, id);
       (item::template(stack), item::amount(stack) as u64)
     };
-    let k = recipe_data::ingredient_index(&recipe.data, template);
+    let k = recipe_data::ingredient_index(recipe_rows::data(recipe), template);
     assert!(k.is_some(), EUnknownIngredient);
     let k = k.destroy_some();
     let need = remaining[k];
@@ -180,7 +129,7 @@ public(package) fun craft(
   };
 
   // ④ xp on every attempt
-  let gained_xp = job_xp::decayed_craft_xp(job_xp::craft_xp(n), n, crafter_level);
+  let gained_xp = job_xp::craft_xp_at_level(n, crafter_level);
   {
     let chr: &mut Character = kiosk.borrow_mut(cap, character_id);
     progression::bank_job_xp(chr, job, gained_xp);
@@ -188,7 +137,7 @@ public(package) fun craft(
   event::emit(Crafted {
     recipe: object::id(recipe),
     crafter: ctx.sender(),
-    output_template: recipe_data::output_template(&recipe.data),
+    output_template: recipe_data::output_template(recipe_rows::data(recipe)),
     success,
     job_xp_gained: gained_xp,
   });

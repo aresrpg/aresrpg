@@ -4,7 +4,7 @@
 import { create_world_preview, type WorldPreview, type WorldRecipe } from '@aresrpg/engine'
 import { useEffect, useMemo, useRef, useState } from 'react'
 
-import { biome_preview, first_biome_land } from './biome_editor.ts'
+import { biome_map_color, biome_preview } from './biome_editor.ts'
 
 /* eslint-disable functional/immutable-data -- Canvas buffers and refs are mutable browser effect boundaries. */
 
@@ -180,8 +180,7 @@ export const BiomeMap = ({
     const image = context.createImageData(preview.side, preview.side)
     preview.cells.forEach((biome_index, index) => {
       const biome = recipe.biomes[biome_index]
-      const land = first_biome_land(biome)
-      const color = land ? (recipe.materials[land.surface]?.color ?? '#000000') : '#000000'
+      const color = biome ? biome_map_color(recipe, biome) : '#000000'
       const rgb = Number.parseInt(color.slice(1), 16)
       image.data[index * 4] = (rgb >> 16) & 0xff
       image.data[index * 4 + 1] = (rgb >> 8) & 0xff
@@ -258,10 +257,7 @@ export const BiomeCoverage = ({
       <div className="grid gap-1.5 sm:grid-cols-2">
         {recipe.biomes.map((biome, index) => (
           <div className="grid grid-cols-[10px_1fr_auto] items-center gap-2 text-[8px]" key={biome.name}>
-            <span
-              className="size-2.5"
-              style={{ backgroundColor: recipe.materials[first_biome_land(biome)?.surface ?? '']?.color }}
-            />
+            <span className="size-2.5" style={{ backgroundColor: biome_map_color(recipe, biome) }} />
             <span className="truncate">
               {biome.name}{' '}
               <small className="text-[#5f636d]">

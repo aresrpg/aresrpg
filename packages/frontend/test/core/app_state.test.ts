@@ -7,7 +7,10 @@ import { DEFAULT_ADMIN_ADDRESS, type CharacterRow } from '@aresrpg/protocol'
 import type { AuthSession } from '../../src/auth.ts'
 import {
   PACKAGE_PROPAGATION_MS,
-  package_upgrade_steps,
+  can_reuse_core_artifact,
+  dependency_artifact_changed,
+  deployment_compile_target,
+  republish_needs_seed_cleanup,
   wait_for_package_propagation,
 } from '../../src/admin/admin_deployment.ts'
 import { initial_app_state, reduce_app_state } from '../../src/store.ts'
@@ -31,6 +34,7 @@ const auth_session = (address = '0xowner'): AuthSession =>
     create_character: async () => ({ digest: '', character_id: '' }),
     // action namespaces are never exercised by these reducer/DOM tests
     fight: {} as never,
+    dungeon: {} as never,
     character: {} as never,
     marketplace: {} as never,
     stacks: {} as never,
@@ -85,19 +89,66 @@ const character = (id: string): CharacterRow => ({
 })
 
 describe('app state', () => {
+  test('republish skips seed-session cleanup until a Registry and central authority exist', () => {
+    expect(republish_needs_seed_cleanup(null)).toBeFalse()
+    expect(
+      republish_needs_seed_cleanup({
+        control_package: '0xcontrol',
+        admin_cap: '0xadmin',
+        seed_package: '0xseed',
+        content_root: { id: null, shared_version: null },
+      } as never)
+    ).toBeFalse()
+    expect(
+      republish_needs_seed_cleanup({
+        control_package: '0xcontrol',
+        admin_cap: '0xadmin',
+        seed_package: '0xseed',
+        content_root: { id: '0xroot', shared_version: '1' },
+      } as never)
+    ).toBeTrue()
+  })
+
+  test('a selective republish compiles math before any consumer of its published ABI', () => {
+    expect(deployment_compile_target(null)).toBe('math')
+    expect(
+      deployment_compile_target({
+        math_package: '0xmath',
+        math_upgrade_cap: '0xmathcap',
+        control_package: '0xcontrol',
+        control_upgrade_cap: '0xcontrolcap',
+        seed_package: '0xseed',
+        seed_upgrade_cap: '0xseedcap',
+      } as never)
+    ).toBe('math')
+  })
+
+  test('a retained dependency without the matching artifact fingerprint must republish', () => {
+    const artifact = { package_name: 'aresrpg_math', digest: [0x01, 0xab], modules: [], dependencies: [] } as const
+    expect(dependency_artifact_changed(null, artifact)).toBeTrue()
+    expect(dependency_artifact_changed('deadbeef', artifact)).toBeTrue()
+    expect(dependency_artifact_changed('01ab', artifact)).toBeFalse()
+  })
+
+  test('a dependency republication invalidates a previously compiled core artifact', () => {
+    const artifact = { package_name: 'aresrpg', digest: [], modules: [], dependencies: [] } as const
+    expect(can_reuse_core_artifact(artifact, false)).toBeTrue()
+    expect(can_reuse_core_artifact(artifact, true)).toBeFalse()
+  })
+
   test('receipt-derived shop facts survive routed page changes without a transaction reducer', () => {
     const loaded = reduce_app_state(connect(), {
       type: 'server/packet',
       packet: {
         type: 'packet/shop_state',
-        sales: [{ item_type: 'pet_lootbox', supply: '8' }],
+        sales: [{ item_type: 'pet_lootbox', price: '1000000000', supply: '8', infinite: false, enabled: true }],
         airdrops: [{ drop_id: 'founders', eligible: true, eligible_count: 2 }],
       },
     })
     const bought = reduce_app_state(loaded, { type: 'shop/purchased', item_type: 'pet_lootbox', quantity: 2 })
     const claimed = reduce_app_state(bought, { type: 'airdrop/claimed', drop_id: 'founders' })
     expect(claimed.session.shop).toEqual({
-      sales: [{ item_type: 'pet_lootbox', supply: '6' }],
+      sales: [{ item_type: 'pet_lootbox', price: '1000000000', supply: '6', infinite: false, enabled: true }],
       airdrops: [{ drop_id: 'founders', eligible: false, eligible_count: 1 }],
     })
   })
@@ -210,7 +261,6 @@ describe('app state', () => {
             { id: 'items:0', phase: 'items', state: 'ready', targets: 10, missing_dependencies: [] },
             { id: 'items:1', phase: 'items', state: 'pending', targets: 10, missing_dependencies: [] },
           ],
-          sealed: false,
         },
       })
 
@@ -225,7 +275,7 @@ describe('app state', () => {
         reduce_app_state(executing, {
           type: 'admin/batch_succeeded',
           batch: 'items:1',
-          snapshot: { batches: [], sealed: false },
+          snapshot: { batches: [] },
         })
       ).toBe(executing)
     }
@@ -273,16 +323,20 @@ describe('app state', () => {
           math_package: '0xmath',
           upgrade_cap: '0xupgrade',
           math_upgrade_cap: '0xmathupgrade',
-          admin_cap: '0xadmin',
           publisher: '0xpublisher',
           version: { id: '0xversion', shared_version: '1' },
-          template_registry: { id: '0xtemplates', shared_version: '1' },
           loot_registry: { id: '0xloot', shared_version: '1' },
-          worlds: { shore: { id: '0xworld', shared_version: '1' } },
         },
       })
 
-      expect(loaded.admin.config).toEqual({ admin_cap: '0xadmin', worlds: { shore: '0xworld' } })
+      expect(loaded.admin.config).toEqual({
+        admin_cap: '',
+        content_root: '',
+        upgrade_caps: [
+          { cap: '0xmathupgrade', package: '0xmath' },
+          { cap: '0xupgrade', package: '0xpackage' },
+        ],
+      })
       expect(loaded.admin.deployment.status).toBe('ready')
     }
 
@@ -315,7 +369,6 @@ describe('app state', () => {
               character_policy: { id: '0xcharacterpolicy', shared_version: '1' },
               item_protected_policy: { id: '0xitemprotected', shared_version: '1' },
               character_protected_policy: { id: '0xcharacterprotected', shared_version: '1' },
-              worlds: {},
             },
           },
         },
@@ -327,20 +380,12 @@ describe('app state', () => {
       const republished = reduce_app_state(resetting, {
         type: 'admin/contracts_republished',
         revision: 'two',
-        pins: { ...ready.admin.deployment.pins!, package: null, worlds: {} },
+        pins: { ...ready.admin.deployment.pins!, package: null },
       })
       expect(resetting.admin.deployment.status).toBe('resetting')
       expect(republished.admin.snapshot).toBeNull()
       expect(republished.admin.cleanup).toBe('unknown')
       expect(republished.admin.deployment.pins?.package).toBeNull()
-    }
-
-    // contract upgrade retries resume from UpgradeCap chain versions
-    {
-      expect(package_upgrade_steps(1, 1, 1)).toEqual({ target_version: 2, upgrade_math: true, upgrade_game: true })
-      expect(package_upgrade_steps(1, 2, 1)).toEqual({ target_version: 2, upgrade_math: false, upgrade_game: true })
-      expect(package_upgrade_steps(1, 2, 2)).toEqual({ target_version: 2, upgrade_math: false, upgrade_game: false })
-      expect(() => package_upgrade_steps(1, 1, 2)).toThrow('cannot be newer')
     }
 
     // publish all is one guarded resumable operation
@@ -369,7 +414,6 @@ describe('app state', () => {
       const inspected = reduce_app_state(progressing, {
         type: 'admin/refreshed',
         snapshot: {
-          sealed: false,
           batches: [{ id: 'items:0', phase: 'items', state: 'complete', targets: 2, missing_dependencies: [] }],
         },
       })

@@ -128,6 +128,40 @@ test('a chatiment trigger logs its per-trigger delta once, not the folded total'
   expect(lines[0]!.values.delta).toMatchObject({ text: '+2' })
 })
 
+test('non-stat effects never interpret their unused channel zero as strength', () => {
+  const state = checkpoint()
+  const events: readonly FightEvent[] = [
+    {
+      type: 'effect_applied',
+      payload: {
+        target: 1n,
+        effect_id: 'shield',
+        kind: 14n,
+        channel: 0n,
+        element: '',
+        value: 3n,
+        turns: 2n,
+        source: 0n,
+      },
+    },
+    {
+      type: 'effect_applied',
+      payload: {
+        target: 1n,
+        effect_id: 'stance',
+        kind: 7n,
+        channel: 0n,
+        element: '',
+        value: 3n,
+        turns: 3n,
+        source: 1n,
+      },
+    },
+  ]
+
+  expect(project_fight_chat_lines(state, events, '1', name_of)).toEqual([])
+})
+
 test('chat tokens localize the template live and color each value', () => {
   const state = checkpoint()
   const [line] = project_fight_chat_lines(

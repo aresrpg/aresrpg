@@ -83,9 +83,13 @@ const SLIDE_MS_PER_CELL = 110
 // stride always matches the real travel speed — feet never slide, whatever the gait pace.
 const GAIT_CLIP_REFERENCE_MS = Object.freeze({ walk: WALK_MS_PER_CELL, run: 300 })
 const FIGHT_CHARACTER_SCALE = 0.7
+const FIGHT_MOB_SCALE = 0.7
 
 export const character_entity_scale = (anchor: EntityRender['anchor']['kind']): number =>
   anchor === 'fight_cell' ? FIGHT_CHARACTER_SCALE : 1
+
+export const mob_entity_scale = (level_scalar: number, anchor: EntityRender['anchor']['kind'] = 'world'): number =>
+  (anchor === 'fight_cell' ? FIGHT_MOB_SCALE : 1) * (0.8 + (Math.max(0, Math.min(100, level_scalar)) * 0.4) / 100)
 
 type EntityLocomotion = CharacterAnimationName
 type EntityAnimation = EntityLocomotion | 'ATTACK' | 'BUFF' | 'DEATH'
@@ -168,7 +172,7 @@ export const cardinal_target_yaw = (from: Readonly<Vector3>, target: Readonly<Ve
 }
 
 const appearance_key_of = (spec: EntityRender): string =>
-  spec.kind === 'mob' ? `mob:${spec.model_url}` : `character:${JSON.stringify(spec.appearance)}`
+  spec.kind === 'mob' ? `mob:${spec.model_url}:${spec.variant ?? ''}` : `character:${JSON.stringify(spec.appearance)}`
 
 const facing_yaw = (
   spec: Readonly<EntityRender>,
@@ -211,7 +215,11 @@ export const create_entity_layer = ({
     const root = entity.object
     if (!root || !entity.model) return
     const { anchor } = entity.spec
-    root.scale.setScalar(entity.spec.kind === 'character' ? character_entity_scale(anchor.kind) : 1)
+    root.scale.setScalar(
+      entity.spec.kind === 'character'
+        ? character_entity_scale(anchor.kind)
+        : mob_entity_scale(entity.spec.level_scalar ?? 50, anchor.kind)
+    )
     if (anchor.kind === 'world') {
       const [x, y, z] = anchor.position
       root.visible = entity.spec.visible !== false

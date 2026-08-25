@@ -8,7 +8,8 @@
 /// never exists outside a fight.
 module aresrpg::progression;
 
-use aresrpg::{character::{Self, Character}, equipment, spell_template::SpellTemplate};
+use aresrpg::{character::{Self, Character}, equipment};
+use aresrpg_seed::spell_rows::SpellTemplate;
 use aresrpg_math::{item_stats, job_xp};
 use std::string::String;
 use sui::{clock::Clock, dynamic_field as dfield, vec_map::{Self, VecMap}};

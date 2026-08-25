@@ -5,6 +5,7 @@
 module aresrpg::zone;
 
 use aresrpg::{character::Character, world::{Self, World}};
+use aresrpg_seed::world_content::{Self, WorldContent};
 use aresrpg_math::{world_map, zone_math::{Self, MobGroup, ResourcePack}};
 use std::string::String;
 use sui::{clock::Clock, dynamic_field as dfield, event, random::RandomGenerator};
@@ -59,11 +60,12 @@ public(package) fun search(
   event::emit(ZoneSearched { world: current, zx, zz, seed, fresh });
 }
 
-public fun mob_groups(world_object: &World, zx: u32, zz: u32): vector<MobGroup> {
+public fun mob_groups(world_object: &World, wc: &WorldContent, zx: u32, zz: u32): vector<MobGroup> {
+  cw(world_object, wc);
   let zone = lz(world_object, zx, zz);
   zone_math::mob_groups(
-    world_map::mobs(world::content(world_object)),
-    world_map::biome_map(world::content(world_object)),
+    world_map::mobs(world_content::data(wc)),
+    world_map::biome_map(world_content::data(wc)),
     zx,
     zz,
     zone.seed,
@@ -79,11 +81,12 @@ public(package) fun consume_mob_group(world_object: &mut World, zx: u32, zz: u32
   zone.mob_taken = zone.mob_taken | bit;
 }
 
-public fun resource_pack_at(world_object: &World, zx: u32, zz: u32, index: u64): ResourcePack {
+public fun resource_pack_at(world_object: &World, wc: &WorldContent, zx: u32, zz: u32, index: u64): ResourcePack {
+  cw(world_object, wc);
   let zone = lz(world_object, zx, zz);
   zone_math::resource_pack_at(
-    world_map::resources(world::content(world_object)),
-    world_map::biome_map(world::content(world_object)),
+    world_map::resources(world_content::data(wc)),
+    world_map::biome_map(world_content::data(wc)),
     zx,
     zz,
     zone.seed,
@@ -92,11 +95,12 @@ public fun resource_pack_at(world_object: &World, zx: u32, zz: u32, index: u64):
   )
 }
 
-public(package) fun consume_resource_node(world_object: &mut World, zx: u32, zz: u32, index: u64) {
+public(package) fun consume_resource_node(world_object: &mut World, wc: &WorldContent, zx: u32, zz: u32, index: u64) {
+  cw(world_object, wc);
   let zone_read = lz(world_object, zx, zz);
   let total = zone_math::total_resource_nodes(
-    world_map::resources(world::content(world_object)),
-    world_map::biome_map(world::content(world_object)),
+    world_map::resources(world_content::data(wc)),
+    world_map::biome_map(world_content::data(wc)),
     zx,
     zz,
     zone_read.seed,
@@ -113,16 +117,23 @@ public fun seed_of(world_object: &World, zx: u32, zz: u32): u64 {
   lz(world_object, zx, zz).seed
 }
 
-public fun portal_of(world_object: &World, zx: u32, zz: u32): (bool, u32, u32) {
+public fun portal_of(world_object: &World, wc: &WorldContent, zx: u32, zz: u32): (bool, u32, u32) {
+  cw(world_object, wc);
   zone_math::portal_of(
-    world_map::dungeon_room_count(world::content(world_object)) > 0,
+    world_map::dungeon_room_count(world_content::data(wc)) > 0,
     seed_of(world_object, zx, zz),
     zx,
     zz,
   )
 }
 
-public fun level_floor(zx: u32, zz: u32): u64 { zone_math::level_floor(zx, zz) }
+public fun level_bounds(zx: u32, zz: u32): (u64, u64) { zone_math::level_bounds(zx, zz) }
+
+// check_world
+/// Content from one world must never resolve another's spawns — the seam's one assert.
+fun cw(world_object: &World, wc: &WorldContent) {
+  assert!(world_content::name(wc) == world_object.name(), EWrongWorld);
+}
 
 // live_zone
 fun lz(world_object: &World, zx: u32, zz: u32): Zone {

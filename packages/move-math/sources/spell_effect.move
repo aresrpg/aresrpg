@@ -55,6 +55,8 @@ const SHAPE_COUNT: u8 = 10;
 
 /// Target filters: 0 none · 1 not_team · 2 not_self · 3 not_enemy · 4 only_caster
 const FILTER_COUNT: u8 = 5;
+const FILTER_NOT_ENEMY: u8 = 3;
+const FILTER_ONLY_CASTER: u8 = 4;
 
 // ╔════════════════ [ Types ] ════════════════════════════════════════════════ ]
 
@@ -268,6 +270,37 @@ public fun has_heal(l: &SpellLevel): bool {
     i = i + 1;
   };
   false
+}
+
+fun rows_aim_only_at_allies(rows: &vector<Effect>): bool {
+  let mut i = 0;
+  while (i < rows.length()) {
+    let filter = rows[i].target_filter;
+    if (filter != FILTER_NOT_ENEMY && filter != FILTER_ONLY_CASTER) return false;
+    i = i + 1;
+  };
+  true
+}
+
+fun rows_aim_only_at_caster(rows: &vector<Effect>): bool {
+  let mut i = 0;
+  while (i < rows.length()) {
+    if (rows[i].target_filter != FILTER_ONLY_CASTER) return false;
+    i = i + 1;
+  };
+  true
+}
+
+/// Mob-brain intent derives from every possible effect branch. Mixed ally/enemy rows keep
+/// the default enemy anchor; a purely supportive book aims only within its own team.
+public fun aims_only_at_allies(l: &SpellLevel): bool {
+  let has_rows = !l.effects.is_empty() || !l.crit_effects.is_empty();
+  has_rows && rows_aim_only_at_allies(&l.effects) && rows_aim_only_at_allies(&l.crit_effects)
+}
+
+public fun aims_only_at_caster(l: &SpellLevel): bool {
+  let has_rows = !l.effects.is_empty() || !l.crit_effects.is_empty();
+  has_rows && rows_aim_only_at_caster(&l.effects) && rows_aim_only_at_caster(&l.crit_effects)
 }
 
 public fun element(e: &Effect): String { e.element }

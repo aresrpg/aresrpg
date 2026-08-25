@@ -9,6 +9,7 @@ module aresrpg_math::job_xp;
 use std::string::String;
 
 const MAX_LEVEL: u64 = 100;
+const MAX_CRAFT_INGREDIENTS: u64 = 8;
 
 /// Index i = the TOTAL job xp required to REACH job level i (index 0 unused, index 1 =
 /// level 1 = 0 xp; index 100 = level 100).
@@ -141,6 +142,8 @@ public fun tier_to_level(tier: u64): u64 {
 
 public fun max_level(): u64 { MAX_LEVEL }
 
+public fun max_craft_ingredients(): u64 { MAX_CRAFT_INGREDIENTS }
+
 public fun craft_success_bp(level: u64): u64 {
   let basis_points = 5_000 + (level - 1) * 50;
   if (basis_points > 9_900) 9_900 else basis_points
@@ -148,8 +151,22 @@ public fun craft_success_bp(level: u64): u64 {
 
 public fun craft_required_level(ingredient_count: u64): u64 {
   if (ingredient_count <= 2) return 1;
-  let level = ((ingredient_count - 2) * 99 + 7) / 8 + 1;
-  if (level > MAX_LEVEL) MAX_LEVEL else level
+  if (ingredient_count == 3) return 10;
+  if (ingredient_count == 4) return 20;
+  if (ingredient_count == 5) return 40;
+  if (ingredient_count == 6) return 60;
+  if (ingredient_count == 7) return 80;
+  100
+}
+
+public fun craft_slot_capacity(level: u64): u64 {
+  if (level < 10) return 2;
+  if (level < 20) return 3;
+  if (level < 40) return 4;
+  if (level < 60) return 5;
+  if (level < 80) return 6;
+  if (level < 100) return 7;
+  MAX_CRAFT_INGREDIENTS
 }
 
 public fun craft_xp(ingredient_count: u64): u64 {
@@ -162,15 +179,9 @@ public fun craft_xp(ingredient_count: u64): u64 {
   else 1_000
 }
 
-public fun decayed_craft_xp(base_xp: u64, ingredient_count: u64, crafter_level: u64): u64 {
-  let recipe_level = craft_required_level(ingredient_count);
-  let zero_at = recipe_level + 30;
-  let decay_start = craft_required_level(ingredient_count + 1);
-  if (decay_start >= zero_at) {
-    if (crafter_level >= zero_at) 0 else base_xp
-  } else if (crafter_level <= decay_start) base_xp
-  else if (crafter_level >= zero_at) 0
-  else base_xp * (zero_at - crafter_level) / (zero_at - decay_start)
+public fun craft_xp_at_level(ingredient_count: u64, crafter_level: u64): u64 {
+  if (ingredient_count + 3 < craft_slot_capacity(crafter_level)) 0
+  else craft_xp(ingredient_count)
 }
 
 public fun gathering_tool(job: &String): String {

@@ -16,6 +16,7 @@ import { explorer_object_url } from '../explorer.ts'
 import { PET_MAX_FEEDS } from '../game/character_stats.ts'
 import { item_icon } from '../content/assets.ts'
 import { encyclopedia_catalog } from '../content/catalog.ts'
+import { item_detail_icon } from '../content/item_detail_assets.ts'
 import { copy_text, type AppCopy } from '../i18n/copy.ts'
 import { dispatch_app, useAppStore } from '../store.ts'
 import { toast } from '../toast.ts'
@@ -70,8 +71,8 @@ const FeedPetModal = ({ pet, copy, close }: Readonly<{ pet: Readonly<ItemRow>; c
     <ModalFrame close={close} close_label={copy.wallet_close} label={t('feed_title')}>
       <div className="flex flex-col gap-4 p-6">
         <div className="flex items-center gap-3">
-          {item_icon(pet.item_type) && (
-            <img alt="" className="size-12 object-contain" src={item_icon(pet.item_type)!} />
+          {item_detail_icon(pet.item_type) && (
+            <img alt="" className="size-12 object-contain" src={item_detail_icon(pet.item_type)!} />
           )}
           <div className="min-w-0 flex-1">
             <div className="truncate text-[11px] font-semibold tracking-[0.12em] text-text uppercase">{pet.name}</div>

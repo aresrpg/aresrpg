@@ -11,7 +11,7 @@ import { read_pose } from './core/pose_feed.ts'
 const LOAD_RANGE_BLOCKS = 90
 const DESPAWN_RANGE_BLOCKS = 120
 const PATCH_BUDGET = 48
-const TAG_RANGE_BLOCKS = 6
+export const RESOURCE_TAG_RANGE_BLOCKS = 50
 
 export type WorldResourcePack = Readonly<{
   id: string
@@ -30,6 +30,20 @@ export const parse_resource_node_id = (id: string): Readonly<{ pack_id: string; 
   const ordinal = Number(id.slice(cut + 2))
   return cut >= 0 && Number.isInteger(ordinal) && ordinal >= 0 ? { pack_id: id.slice(0, cut), ordinal } : null
 }
+
+/** One chain pack gets one card at its permanent central seat. Decorative seats must never
+ * each project the same action: their screen-space separation made the card appear to orbit
+ * the resource as the camera turned. */
+export const resource_tag_ids = (
+  markers: readonly ResourceNodeMarker[],
+  own: Readonly<{ x: number; z: number }>,
+  range = RESOURCE_TAG_RANGE_BLOCKS
+): readonly string[] =>
+  Object.freeze(
+    markers
+      .filter(({ id, x, z }) => parse_resource_node_id(id)?.ordinal === 0 && Math.hypot(x - own.x, z - own.z) <= range)
+      .map(({ id }) => id)
+  )
 
 /** Grid-adjacent seats, rotated per pack. Low ordinals survive consumption, so one gathered
  * node removes only the patch's outermost visual seat. */
@@ -67,6 +81,28 @@ export const resident_resource_packs = (
     .slice(0, PATCH_BUDGET)
     .map(({ row }) => row)
 
+export const resource_markers = (
+  packs: readonly WorldResourcePack[],
+  ground_height: (x: number, z: number) => number
+): readonly ResourceNodeMarker[] =>
+  Object.freeze(
+    packs.flatMap((pack) =>
+      resource_seats(pack.id, pack.nodes).map(({ dx, dz }, ordinal) => {
+        const x = pack.x + dx
+        const z = pack.z + dz
+        return Object.freeze({
+          id: resource_node_id(pack.id, ordinal),
+          x,
+          y: ground_height(x, z),
+          z,
+          item_type: pack.item_type,
+          job: pack.job,
+          tier: pack.tier,
+        })
+      })
+    )
+  )
+
 export const create_resource_renderer = ({
   submit,
   ground_height,
@@ -88,31 +124,13 @@ export const create_resource_renderer = ({
   }
 
   const build = (): void => {
-    markers = Object.freeze(
-      [...placed.values()].flatMap((pack) =>
-        resource_seats(pack.id, pack.nodes).map(({ dx, dz }, ordinal) => {
-          const x = pack.x + dx
-          const z = pack.z + dz
-          return Object.freeze({
-            id: resource_node_id(pack.id, ordinal),
-            x,
-            y: ground_height(x, z),
-            z,
-            item_type: pack.item_type,
-            job: pack.job,
-            tier: pack.tier,
-          })
-        })
-      )
-    )
+    markers = resource_markers([...placed.values()], ground_height)
     submit(markers)
   }
 
   const sync_tags = (): void => {
     const own = read_pose()
-    const wanted = new Set(
-      own ? markers.filter(({ x, z }) => Math.hypot(x - own.x, z - own.z) <= TAG_RANGE_BLOCKS).map(({ id }) => id) : []
-    )
+    const wanted = new Set(own ? resource_tag_ids(markers, own) : [])
     for (const id of [...tagged]) if (!wanted.has(id)) clear_tag(id)
     for (const id of wanted) {
       if (tagged.has(id) || typeof document === 'undefined') continue

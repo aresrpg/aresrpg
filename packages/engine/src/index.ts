@@ -3,7 +3,7 @@
 
 export { create_engine } from './renderer.ts'
 export { create_character_preview } from './character_preview.ts'
-export { fight_path_gait } from './entities.ts'
+export { fight_path_gait, mob_entity_scale } from './entities.ts'
 export { fight_placement_blobs } from './fight_blobs.ts'
 export { fight_blob_preset } from './fight_blob_presets.ts'
 export type { FightBlobPreset } from './fight_blob_presets.ts'
@@ -19,6 +19,7 @@ export { CHUNK_EDGE } from './voxel_data.ts'
 export { CELESTIAL_CYCLE_MS, DAY_FRAC } from './sky/celestial_motion.ts'
 export { MATERIAL_PRESETS, material_pattern } from './material_presets.ts'
 export { create_world_preview } from './world_preview.ts'
+export { preload_mob_model } from './mob_model.ts'
 export { create_terrain_planner } from './terrain_planner.ts'
 export { structure_voxels } from './structure_placement.ts'
 export { STRUCTURE_PACKS, STRUCTURE_TYPES } from './structures.ts'
@@ -52,6 +53,8 @@ export type {
   ChunkCoordinate,
   ChunkLod,
   ChunkRenderOutcome,
+  DungeonPortalMarker,
+  DungeonStageRender,
   CharacterAppearanceRender,
   CharacterAnimationName,
   CharacterAnimationRender,

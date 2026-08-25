@@ -9,15 +9,16 @@ const id = (value: number) => `0x${String(value).padStart(64, '0')}`
 
 test('a drafted turn executes in order inside one transaction', async () => {
   const calls: string[] = []
+  const gas_scopes: (string | undefined)[] = []
   let executions = 0
   const sdk = {
-    pins: { template_registry: id(1) },
+    pins: { template_registry: id(1), seed_package_original: id(3), content_root: { id: id(4), shared_version: '1' } },
     game_type_package: id(2),
     tx: () => ({}),
-    hydrate_required: async () => undefined,
     hydrate_unknown: async () => undefined,
-    execute: async () => {
+    execute: async (_transaction: unknown, options?: { gas_scope?: string }) => {
       executions += 1
+      gas_scopes.push(options?.gas_scope)
       return {
         Transaction: {
           digest: 'turn',
@@ -48,6 +49,7 @@ test('a drafted turn executes in order inside one transaction', async () => {
 
   expect(calls).toEqual(['move', 'cast', 'strike', 'end'])
   expect(executions).toBe(1)
+  expect(gas_scopes).toEqual([`fight:${id(3)}`])
   expect(receipt).toEqual({
     digest: 'turn',
     turn_witnesses: [

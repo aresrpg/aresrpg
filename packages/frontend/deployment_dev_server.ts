@@ -106,6 +106,8 @@ export const create_contract_build_service = ({
   run = execute,
 }: Readonly<{ repo_dir: string; run?: Execute }>) => {
   const math_dir = join(repo_dir, 'packages', 'move-math')
+  const control_dir = join(repo_dir, 'packages', 'control')
+  const seed_dir = join(repo_dir, 'packages', 'seed')
   const game_dir = join(repo_dir, 'packages', 'move')
   const version_path = join(game_dir, 'sources', 'version.move')
   const chain_identifier = async (network: Network): Promise<string> => {
@@ -178,9 +180,29 @@ export const create_contract_build_service = ({
       math ? [{ path: math_dir, publication: math }] : []
     )
   }
+  const compile_control = async (network: Network, control?: PackagePublication): Promise<ContractArtifact> =>
+    compile_with_publications(
+      network,
+      control_dir,
+      'aresrpg_control',
+      control ? [{ path: control_dir, publication: control }] : []
+    )
+  const compile_seed = async (
+    network: Network,
+    math: PackagePublication,
+    control: PackagePublication,
+    seed?: PackagePublication
+  ): Promise<ContractArtifact> =>
+    compile_with_publications(network, seed_dir, 'aresrpg_seed', [
+      { path: math_dir, publication: math },
+      { path: control_dir, publication: control },
+      ...(seed ? [{ path: seed_dir, publication: seed }] : []),
+    ])
   const compile_game = async (
     network: Network,
     math: PackagePublication,
+    control: PackagePublication,
+    seed: PackagePublication,
     game?: PackagePublication
   ): Promise<ContractArtifact> => {
     const chain_id = await chain_identifier(network)
@@ -210,6 +232,8 @@ export const create_contract_build_service = ({
     const kiosk = Object.freeze({ package: kiosk_package, original_package: kiosk_original, upgrade_cap: '' })
     return compile_with_publications(network, game_dir, 'aresrpg', [
       { path: math_dir, publication: math },
+      { path: control_dir, publication: control },
+      { path: seed_dir, publication: seed },
       { path: kiosk_path, publication: kiosk, version: kiosk_version },
       ...(game ? [{ path: game_dir, publication: game }] : []),
     ])
@@ -228,10 +252,59 @@ export const create_contract_build_service = ({
     }
     return next.version
   }
-  return Object.freeze({ compile_math, compile_game, prepare_upgrade })
+  return Object.freeze({ compile_math, compile_control, compile_seed, compile_game, prepare_upgrade })
 }
 
 type PinsFile = Readonly<Record<Network, Readonly<Record<string, unknown>>>>
+type SeedLedger = Readonly<Record<string, unknown>>
+
+const without_seed_ledgers = (pins: PinsFile): PinsFile =>
+  Object.freeze(
+    Object.fromEntries(
+      Object.entries(pins).map(([network, values]) => {
+        const { seed_addresses: _seed_addresses, seed_ledgers: _seed_ledgers, ...deployment } = values
+        return [network, deployment]
+      })
+    ) as Record<Network, Readonly<Record<string, unknown>>>
+  )
+
+/** Content-address writes must not invalidate a package-operation compare-and-swap. */
+export const deployment_revision_of_pins = (pins: PinsFile): string =>
+  revision_of(JSON.stringify(without_seed_ledgers(pins)))
+
+export const seed_ledger_from_pins = (pins: PinsFile, network: Network, content_root: string): SeedLedger => {
+  const ledgers = pins[network].seed_ledgers
+  if (!ledgers || typeof ledgers !== 'object' || Array.isArray(ledgers)) return Object.freeze({})
+  const ledger = Reflect.get(ledgers, content_root)
+  return ledger && typeof ledger === 'object' && !Array.isArray(ledger)
+    ? Object.freeze(ledger as Record<string, unknown>)
+    : Object.freeze({})
+}
+
+export const merge_seed_ledger_pins = (
+  pins: PinsFile,
+  network: Network,
+  content_root: string,
+  ledger: SeedLedger,
+  addresses: Readonly<Record<string, string>> = Object.freeze({})
+): PinsFile => {
+  const current = pins[network].seed_ledgers
+  const ledgers = current && typeof current === 'object' && !Array.isArray(current) ? current : {}
+  const current_books = pins[network].seed_addresses
+  const books = current_books && typeof current_books === 'object' && !Array.isArray(current_books) ? current_books : {}
+  const current_book = Reflect.get(books, content_root)
+  return merge_deployment_pins(pins, network, {
+    seed_ledgers: Object.freeze({ ...ledgers, [content_root]: Object.freeze({ ...ledger }) }),
+    seed_addresses: Object.freeze({
+      ...books,
+      [content_root]: Object.freeze({
+        ...(current_book && typeof current_book === 'object' && !Array.isArray(current_book) ? current_book : {}),
+        ...addresses,
+      }),
+    }),
+  })
+}
+
 export const merge_deployment_pins = (
   pins: PinsFile,
   network: Network,
@@ -239,31 +312,31 @@ export const merge_deployment_pins = (
 ): PinsFile => Object.freeze({ ...pins, [network]: Object.freeze({ ...pins[network], ...patch }) })
 
 const empty_shared_pin = Object.freeze({ id: null, shared_version: null })
-const empty_deployment = Object.freeze({
-  package: null,
-  package_original: null,
-  kiosk_package: null,
-  math_package: null,
-  math_package_original: null,
-  upgrade_cap: null,
-  math_upgrade_cap: null,
-  admin_cap: null,
-  publisher: null,
-  item_publisher: null,
-  character_publisher: null,
-  version: empty_shared_pin,
-  template_registry: empty_shared_pin,
-  loot_registry: empty_shared_pin,
-  name_registry: empty_shared_pin,
-  friend_registry: empty_shared_pin,
-  item_policy: empty_shared_pin,
-  character_policy: empty_shared_pin,
-  item_protected_policy: empty_shared_pin,
-  character_protected_policy: empty_shared_pin,
-  worlds: Object.freeze({}),
-})
-export const reset_deployment_pins = (pins: PinsFile, network: Network): PinsFile =>
-  Object.freeze({ ...pins, [network]: empty_deployment })
+export const reset_deployment_pins = (pins: PinsFile, network: Network): PinsFile => {
+  const { worlds: _obsolete_world_pins, ...retained } = pins[network]
+  return Object.freeze({
+    ...pins,
+    [network]: Object.freeze({
+      ...retained,
+      package: null,
+      package_original: null,
+      package_artifact_digest: null,
+      kiosk_package: null,
+      upgrade_cap: null,
+      publisher: null,
+      item_publisher: null,
+      character_publisher: null,
+      version: empty_shared_pin,
+      loot_registry: empty_shared_pin,
+      name_registry: empty_shared_pin,
+      friend_registry: empty_shared_pin,
+      item_policy: empty_shared_pin,
+      character_policy: empty_shared_pin,
+      item_protected_policy: empty_shared_pin,
+      character_protected_policy: empty_shared_pin,
+    }),
+  })
+}
 
 const response_json = (response: import('node:http').ServerResponse, status: number, body: unknown): void => {
   response.writeHead(status, { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' })
@@ -307,7 +380,8 @@ export const deployment_dev_plugin = ({ repo_dir }: Readonly<{ repo_dir: string 
   const builds = create_contract_build_service({ repo_dir })
   const read_pins = async () => {
     const source = await readFile(pins_path, 'utf8')
-    return Object.freeze({ source, revision: revision_of(source), value: JSON.parse(source) as PinsFile })
+    const value = JSON.parse(source) as PinsFile
+    return Object.freeze({ revision: deployment_revision_of_pins(value), value })
   }
   const write_pins = async (value: PinsFile) => {
     const source = `${JSON.stringify(value, null, 2)}\n`
@@ -318,14 +392,89 @@ export const deployment_dev_plugin = ({ repo_dir }: Readonly<{ repo_dir: string 
     } finally {
       await unlink(temporary).catch(() => undefined)
     }
-    return { pins: value, revision: revision_of(source) }
+    return { pins: value, revision: deployment_revision_of_pins(value) }
+  }
+  let pin_writes: Promise<unknown> = Promise.resolve()
+  const update_pins = (
+    expected_revision: string | null,
+    update: (current: PinsFile) => PinsFile
+  ): Promise<Readonly<{ pins: PinsFile; revision: string }>> => {
+    const operation = pin_writes.then(async () => {
+      const current = await read_pins()
+      if (expected_revision !== null && current.revision !== expected_revision)
+        throw new Error('pins.json changed; reload before publishing')
+      return write_pins(update(current.value))
+    })
+    pin_writes = operation.then(
+      () => undefined,
+      () => undefined
+    )
+    return operation
   }
   return {
     name: 'aresrpg-deployment-admin',
-    handleHotUpdate: ({ file }) => ([pins_path, version_path].includes(file) ? [] : undefined),
+    hotUpdate({ file }) {
+      return [pins_path, version_path].includes(file) ? [] : undefined
+    },
     configureServer: (server) => {
       server.middlewares.use((request, response, next) => {
         const url = new URL(request.url ?? '/', `http://${request.headers.host ?? 'localhost'}`)
+        // Every published content address and its last authored fingerprint live in pins.json,
+        // namespaced by Registry root. This is durable deployment state, not a disposable cache.
+        if (url.pathname === '/__admin/seed-ledger') {
+          if (request.method === 'GET') {
+            const network = url.searchParams.get('network')
+            const content_root = String(url.searchParams.get('content_root'))
+            if (!is_network(network) || !is_object_id(content_root)) {
+              response_json(response, 400, { error: 'A valid network and content root are required' })
+              return
+            }
+            void read_pins().then(
+              ({ value }) =>
+                response_json(response, 200, { ledger: seed_ledger_from_pins(value, network, content_root) }),
+              (error) => response_json(response, 500, { error: error instanceof Error ? error.message : String(error) })
+            )
+            return
+          }
+          const ledger_origin = !request.headers.origin || new URL(request.headers.origin).host === request.headers.host
+          if (request.method !== 'PUT' || !ledger_origin || request.headers['x-aresrpg-admin-token'] !== token) {
+            response_json(response, 403, { error: 'The local deployment token or origin is invalid' })
+            return
+          }
+          void read_json(request)
+            .then(async (body: Record<string, unknown>) => {
+              if (
+                !is_network(body.network) ||
+                !is_object_id(body.content_root) ||
+                !body.ledger ||
+                typeof body.ledger !== 'object' ||
+                Array.isArray(body.ledger) ||
+                !body.addresses ||
+                typeof body.addresses !== 'object' ||
+                Array.isArray(body.addresses) ||
+                !Object.entries(body.addresses).every(
+                  ([address, label]) => is_object_id(address) && typeof label === 'string'
+                )
+              )
+                throw new TypeError('A valid network, content root, ledger, and address book are required')
+              const { network, content_root, ledger, addresses } = body as Readonly<{
+                network: Network
+                content_root: string
+                ledger: SeedLedger
+                addresses: Record<string, string>
+              }>
+              const saved = await update_pins(null, (current) =>
+                merge_seed_ledger_pins(current, network, content_root, ledger, addresses)
+              )
+              return { ledger, revision: saved.revision }
+            })
+            .then(
+              (body: unknown) => response_json(response, 200, body),
+              (error: unknown) =>
+                response_json(response, 409, { error: error instanceof Error ? error.message : String(error) })
+            )
+          return
+        }
         if (url.pathname !== '/__admin/deployment') return next()
         if (request.method === 'GET') {
           void read_pins().then(
@@ -342,14 +491,47 @@ export const deployment_dev_plugin = ({ repo_dir }: Readonly<{ repo_dir: string 
         void read_json(request)
           .then(async (body) => {
             if (!is_network(body.network)) throw new TypeError('A valid deployment network is required')
+            const { network } = body as Readonly<{ network: Network }>
             if (request.method === 'POST' && body.action === 'compile_math')
               return { artifact: await builds.compile_math(body.network) }
             if (request.method === 'POST' && body.action === 'compile_math_upgrade') {
               const math = parse_publication(body.math)
               return { artifact: await builds.compile_math(body.network, math) }
             }
+            if (request.method === 'POST' && body.action === 'compile_control')
+              return { artifact: await builds.compile_control(body.network) }
+            if (request.method === 'POST' && body.action === 'compile_control_upgrade')
+              return {
+                artifact: await builds.compile_control(body.network, parse_publication(body.control)),
+              }
+            if (request.method === 'POST' && body.action === 'compile_seed') {
+              return {
+                artifact: await builds.compile_seed(
+                  body.network,
+                  parse_publication(body.math),
+                  parse_publication(body.control)
+                ),
+              }
+            }
+            if (request.method === 'POST' && body.action === 'compile_seed_upgrade') {
+              return {
+                artifact: await builds.compile_seed(
+                  body.network,
+                  parse_publication(body.math),
+                  parse_publication(body.control),
+                  parse_publication(body.seed)
+                ),
+              }
+            }
             if (request.method === 'POST' && body.action === 'compile_game') {
-              return { artifact: await builds.compile_game(body.network, parse_publication(body.math)) }
+              return {
+                artifact: await builds.compile_game(
+                  body.network,
+                  parse_publication(body.math),
+                  parse_publication(body.control),
+                  parse_publication(body.seed)
+                ),
+              }
             }
             if (request.method === 'POST' && body.action === 'compile_game_upgrade') {
               if (!Number.isSafeInteger(body.current_version) || Number(body.current_version) < 1)
@@ -359,24 +541,34 @@ export const deployment_dev_plugin = ({ repo_dir }: Readonly<{ repo_dir: string 
                 artifact: await builds.compile_game(
                   body.network,
                   parse_publication(body.math),
+                  parse_publication(body.control),
+                  parse_publication(body.seed),
                   parse_publication(body.game)
                 ),
                 version,
               }
             }
+            if (request.method === 'POST' && body.action === 'compile_game_probe') {
+              return {
+                artifact: await builds.compile_game(
+                  body.network,
+                  parse_publication(body.math),
+                  parse_publication(body.control),
+                  parse_publication(body.seed),
+                  parse_publication(body.game)
+                ),
+              }
+            }
             if (request.method === 'POST' && body.action === 'reset') {
               if (typeof body.revision !== 'string') throw new TypeError('A pin revision is required')
-              const current = await read_pins()
-              if (current.revision !== body.revision) throw new Error('pins.json changed; reload before republishing')
-              return write_pins(reset_deployment_pins(current.value, body.network))
+              return update_pins(body.revision, (current) => reset_deployment_pins(current, network))
             }
             if (request.method !== 'PUT') throw new TypeError('Unknown deployment operation')
             if (typeof body.revision !== 'string' || !body.patch || typeof body.patch !== 'object')
               throw new TypeError('A pin revision and patch are required')
-            const current = await read_pins()
-            if (current.revision !== body.revision) throw new Error('pins.json changed; reload before publishing')
-            const next_pins = merge_deployment_pins(current.value, body.network, body.patch as Record<string, unknown>)
-            return write_pins(next_pins)
+            return update_pins(body.revision, (current) =>
+              merge_deployment_pins(current, network, body.patch as Record<string, unknown>)
+            )
           })
           .then(
             (body) => response_json(response, 200, body),

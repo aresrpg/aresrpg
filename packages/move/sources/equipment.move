@@ -7,8 +7,8 @@
 /// unreachable in-transaction; legacy's server read off-chain, our chain cannot). The record
 /// cannot drift: the item is immobile while equipped and its stats immutable.
 ///
-/// 18 combat slots (weapon · tool · helmet · chestplate · belt · gauntlets · pants · boots ·
-/// amulet · left_ring · right_ring · pet · relic_1..6) + 3 cosmetic (title · hat · cloak).
+/// 17 equipment slots: weapon · tool · hat · cloak · belt · boots · amulet · left_ring ·
+/// right_ring · pet · title · relic_1..6.
 module aresrpg::equipment;
 
 use aresrpg::{character::{Self, Character}, item::{Self, Item}};

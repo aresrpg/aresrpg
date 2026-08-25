@@ -3,15 +3,14 @@
 
 import { describe, expect, test } from 'bun:test'
 
-import { content_catalog } from '../../src/content/catalog.ts'
 import { pet_locomotion_of, pet_seat_height, pet_vertical_offset } from '../../src/game/core/pet_locomotion.ts'
 
 describe('pet locomotion', () => {
   test('uses authored families instead of guessing from item names', () => {
-    expect(pet_locomotion_of(content_catalog.item('pet_cryofin')!.item)).toBe('swim')
-    expect(pet_locomotion_of(content_catalog.item('pet_velkarion_wyrmling')!.item)).toBe('fly')
-    expect(pet_locomotion_of(content_catalog.item('pet_dragon_gaia')!.item)).toBe('walk')
-    expect(pet_locomotion_of(content_catalog.item('pet_siluri')!.item)).toBe('walk')
+    expect(pet_locomotion_of({ pet_movement: 'swim' })).toBe('swim')
+    expect(pet_locomotion_of({ pet_movement: 'fly' })).toBe('fly')
+    expect(pet_locomotion_of({ pet_movement: 'walk' })).toBe('walk')
+    expect(pet_locomotion_of({})).toBe('walk')
   })
 
   test('never mirrors the owner jump: walkers stay grounded, swim/fly hover on their own clock', () => {

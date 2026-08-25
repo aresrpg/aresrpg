@@ -4,7 +4,6 @@
 
 import {
   CARDINAL_DIRECTIONS,
-  GRID_CELLS,
   away_dir,
   bfs_distance_field,
   in_grid,
@@ -183,14 +182,27 @@ export const walk_toward = (
   const walls = wall_mask(runtime, runner)
   const start = runtime.contract.fighters[Number(runner)].cell
   if (start === target) return runtime
-  const field = bfs_distance_field(target, walls, GRID_CELLS)
+  // callers guarantee the target is reachable within MP — the flood never fills the board
+  const field = bfs_distance_field(target, walls, runtime.contract.fighters[Number(runner)].mp)
   if (field[Number(start)] > runtime.contract.fighters[Number(runner)].mp)
     return fail(runtime, 'no_path', { runner, target })
+  return walk_down(runtime, runner, field, on_enter)
+}
+
+/** Step DOWN a distance field until it bottoms out (0 = arrived) or the budget ends —
+ * tackles, traps, and the staleness law ride every step. Shared by the exact walker
+ * (destination field) and the rusher (approach field). Twin of aresrpg_math `wd`. */
+export const walk_down = (
+  runtime: FightRuntime,
+  runner: bigint,
+  field: bigint[],
+  on_enter: EnterHandler
+): FightRuntime => {
   let beaten: bigint[] = []
   while (true) {
     const fighter = runtime.contract.fighters[Number(runner)]
     const current = fighter.cell
-    if (current === target || fighter.mp === 0n) return runtime
+    if (field[Number(current)] === 0n || fighter.mp === 0n) return runtime
     beaten = tackle_departure(runtime, runner, current, beaten)
     if (fighter.mp === 0n) return runtime
     const next = best_step(current, field)

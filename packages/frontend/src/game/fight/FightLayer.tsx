@@ -4,7 +4,7 @@
 // The one mounted fight surface. Pages create fights; this game layer renders every active
 // checkpoint with the shared engine and, beside it, the shared HUD.
 
-import type { EntityRender, FightPresentationCue } from '@aresrpg/engine'
+import type { CharacterEntityRender, FightPresentationCue } from '@aresrpg/engine'
 import {
   fight_path_to,
   movement_points_of,
@@ -22,18 +22,21 @@ import { RotateCcw } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 
 import { encyclopedia_catalog } from '../../content/catalog.ts'
+import { mob_icon } from '../../content/assets.ts'
 import type { AppCopy } from '../../i18n/copy.ts'
 import type { SceneHandle } from '../core/scene_feed.ts'
 import { dispatch_app, useAppStore } from '../../store.ts'
 
 import { create_fight_audio_observer, play_fight_turn_start, preload_fight_sounds } from '../audio/fight_audio.ts'
 import { character_render_source } from '../character_entities.ts'
+import { fight_character_entities_from_loaded, load_fight_character_entities } from './character_entities.ts'
 import { fight_character_entity_sources, type FightCharacterAppearance } from './character_entity_sources.ts'
 import { project_fight_cues } from './fight_cues.ts'
 import {
   fight_visual_checkpoint,
   fight_visual_checkpoint_after_cue,
   fight_range_seat,
+  fight_viewer_team,
   fight_zone_visual_state,
   project_fight_overlays,
   type FightZoneVisualState,
@@ -43,6 +46,7 @@ import { FightViewport } from './FightViewport.tsx'
 import { FightHud } from './FightHud.tsx'
 import { presented_turn_after_cue, presented_turn_after_queue, type FightActionSelection } from './fight_projection.ts'
 import { fight_mob_entity_sources, type FightMobRenderSource } from './mob_entity_sources.ts'
+import { fight_mob_entities } from './mob_entities.ts'
 import { FightTargetPreviews, type FightTargetPreviewView } from './FightTargetPreviews.tsx'
 
 const zone_visual_state = (
@@ -50,22 +54,14 @@ const zone_visual_state = (
   zone_ids: readonly string[]
 ): FightZoneVisualState | null => (checkpoint ? Object.freeze({ checkpoint, zone_ids }) : null)
 
-const viewer_team_of = (
-  checkpoint: Readonly<HydratedFightCheckpoint> | null,
-  owner: string | null,
-  character_id: string | null
-): bigint | null =>
-  checkpoint?.contract.fighters.find(
-    (fighter) =>
-      fighter.kind.type === 'player' && fighter.kind.owner === owner && fighter.kind.character === character_id
-  )?.team ?? null
-
 export const FightLayer = ({ copy, scene }: Readonly<{ copy: AppCopy; scene: SceneHandle }>) => {
   const fight = useAppStore((state) => state.fight)
   const simulator = useAppStore((state) => state.simulator)
   const session = useAppStore((state) => state.session)
   const quality = useAppStore((state) => state.settings.quality)
-  const [entities, set_entities] = useState<readonly EntityRender[]>(Object.freeze([]))
+  const [loaded_characters, set_loaded_characters] = useState<
+    Readonly<{ fight: string | null; entities: readonly CharacterEntityRender[] }>
+  >(Object.freeze({ fight: null, entities: Object.freeze([]) }))
   const fight_audio = useMemo(create_fight_audio_observer, [])
   const [hovered_seat, set_hovered_seat] = useState<bigint | null>(null)
   const [hovered_cell, set_hovered_cell] = useState<bigint | null>(null)
@@ -85,7 +81,7 @@ export const FightLayer = ({ copy, scene }: Readonly<{ copy: AppCopy; scene: Sce
   const [presented_checkpoint, set_presented_checkpoint] = useState<HydratedFightCheckpoint | null>(checkpoint)
   const canonical_zone_state = zone_visual_state(checkpoint, fight.zone_ids)
   const [presented_zone_state, set_presented_zone_state] = useState<FightZoneVisualState | null>(canonical_zone_state)
-  const presentation_queued = fight.presentations.length > 0
+  const presentation_queued = fight.presentations.length > 0 || fight.awaiting_turn_witness
   const render_checkpoint = fight_visual_checkpoint(presented_checkpoint, checkpoint, presentation_queued)
   const display_fighters = useMemo(
     () =>
@@ -99,7 +95,7 @@ export const FightLayer = ({ copy, scene }: Readonly<{ copy: AppCopy; scene: Sce
   const zone_render_state = presentation_queued ? (presented_zone_state ?? canonical_zone_state) : canonical_zone_state
   const owner = fight.mode === 'local' ? 'local' : (session.wallet?.address ?? null)
   const selected_character_id = fight.mode === 'remote' ? session.selected_character_id : null
-  const viewer_team = viewer_team_of(checkpoint, owner, selected_character_id)
+  const viewer_team = fight_viewer_team(checkpoint, owner, selected_character_id)
   // the viewer's own fighters — the turn-start sound rings only for them
   const owned_entity_ids = useMemo(
     () =>
@@ -125,7 +121,7 @@ export const FightLayer = ({ copy, scene }: Readonly<{ copy: AppCopy; scene: Sce
         : Object.freeze([]),
     [presentation]
   )
-  const presentation_pending = presentation_active || fight.presentations.length > 0
+  const presentation_pending = presentation_active || presentation_queued
   const actions_locked = presentation_pending || fight.transaction_pending
   const appearances = useMemo<readonly FightCharacterAppearance[]>(
     () => Object.freeze([...simulator.characters, ...session.characters.map(character_render_source)]),
@@ -138,6 +134,13 @@ export const FightLayer = ({ copy, scene }: Readonly<{ copy: AppCopy; scene: Sce
         : Object.freeze([]),
     [appearances, render_checkpoint, viewer_team]
   )
+  // Participants and their equipment are immutable under a fight id. Loading from this stable
+  // slice keeps cell-by-cell presentation out of the asynchronous asset boundary.
+  const character_appearance_sources = useMemo(
+    () => (checkpoint ? fight_character_entity_sources(checkpoint, appearances, viewer_team) : Object.freeze([])),
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- only appearance identity may reload models; cells are live projection.
+    [appearances, checkpoint?.contract.id, viewer_team]
+  )
   const character_voices = useMemo(
     () => Object.freeze(Object.fromEntries(character_sources.map(({ id, male }) => [id, male]))),
     [character_sources]
@@ -146,6 +149,14 @@ export const FightLayer = ({ copy, scene }: Readonly<{ copy: AppCopy; scene: Sce
     () => (render_checkpoint ? fight_mob_entity_sources(render_checkpoint, viewer_team) : Object.freeze([])),
     [render_checkpoint, viewer_team]
   )
+  const entities = useMemo(() => {
+    const loaded_character_entities =
+      loaded_characters.fight === render_checkpoint?.contract.id ? loaded_characters.entities : Object.freeze([])
+    return Object.freeze([
+      ...fight_character_entities_from_loaded(character_sources, loaded_character_entities),
+      ...fight_mob_entities(mob_sources),
+    ])
+  }, [character_sources, loaded_characters, mob_sources, render_checkpoint?.contract.id])
   const active_seat = checkpoint?.contract.queue[Number(checkpoint.contract.turn_ptr)] ?? null
   const active_fighter = active_seat === null ? null : checkpoint?.contract.fighters[Number(active_seat)]
   const owned_active_seat =
@@ -316,16 +327,13 @@ export const FightLayer = ({ copy, scene }: Readonly<{ copy: AppCopy; scene: Sce
   )
 
   useEffect(() => {
-    set_presented_checkpoint((presented) =>
-      fight_visual_checkpoint(presented, checkpoint, fight.presentations.length > 0)
-    )
+    set_presented_checkpoint((presented) => fight_visual_checkpoint(presented, checkpoint, presentation_queued))
     set_presented_zone_state((presented) => {
       if (!checkpoint) return null
-      if (fight.presentations.length > 0 && presented?.checkpoint.contract.id === checkpoint.contract.id)
-        return presented
+      if (presentation_queued && presented?.checkpoint.contract.id === checkpoint.contract.id) return presented
       return Object.freeze({ checkpoint, zone_ids: Object.freeze([...fight.zone_ids]) })
     })
-  }, [checkpoint, fight.presentations.length, fight.zone_ids])
+  }, [checkpoint, fight.zone_ids, presentation_queued])
 
   useEffect(() => {
     set_selected_action(null)
@@ -333,12 +341,12 @@ export const FightLayer = ({ copy, scene }: Readonly<{ copy: AppCopy; scene: Sce
 
   useEffect(() => {
     if (!presentation || presentation_cues.length > 0) return
-    dispatch_app({ type: 'fight/presented', presentation_batch: presentation.batch })
+    dispatch_app({ type: 'fight/presented', presentation })
   }, [presentation, presentation_cues.length])
 
   useEffect(() => {
-    set_presented_turn_seat((seat) => presented_turn_after_queue(seat, fight.presentations.length))
-  }, [fight.presentations.length])
+    set_presented_turn_seat((seat) => presented_turn_after_queue(seat, presentation_queued ? 1 : 0))
+  }, [presentation_queued])
 
   useEffect(() => {
     if (!own_turn_key || presentation_pending || fight.presentations.length > 0 || chimed_turn === own_turn_key) return
@@ -356,24 +364,20 @@ export const FightLayer = ({ copy, scene }: Readonly<{ copy: AppCopy; scene: Sce
 
   useEffect(() => {
     let current = true
-    void Promise.all([
-      import('./character_entities.ts').then(({ load_fight_character_entities }) =>
-        load_fight_character_entities(character_sources)
-      ),
-      import('./mob_entities.ts').then(({ fight_mob_entities }) => fight_mob_entities(mob_sources)),
-    ]).then(
-      ([characters, mobs]) => {
-        if (current) set_entities(Object.freeze([...characters, ...mobs]))
+    const fight_id = checkpoint?.contract.id ?? null
+    void load_fight_character_entities(character_appearance_sources).then(
+      (characters) => {
+        if (current) set_loaded_characters(Object.freeze({ fight: fight_id, entities: characters }))
       },
       (error: unknown) => {
-        console.error('Failed to resolve fight entity models.', error)
-        if (current) set_entities(Object.freeze([]))
+        console.error('Failed to resolve fight character models.', error)
+        if (current) set_loaded_characters(Object.freeze({ fight: fight_id, entities: Object.freeze([]) }))
       }
     )
     return () => {
       current = false
     }
-  }, [character_sources, mob_sources])
+  }, [character_appearance_sources, checkpoint?.contract.id])
 
   const world_anchor = useMemo(
     () =>
@@ -453,7 +457,7 @@ export const FightLayer = ({ copy, scene }: Readonly<{ copy: AppCopy; scene: Sce
                 batch: presentation.batch,
                 cues: presentation_cues,
                 presented: () => {
-                  dispatch_app({ type: 'fight/presented', presentation_batch: presentation.batch })
+                  dispatch_app({ type: 'fight/presented', presentation })
                 },
               })
             : null
@@ -532,6 +536,8 @@ export const FightLayer = ({ copy, scene }: Readonly<{ copy: AppCopy; scene: Sce
         copy={copy}
         display_fighters={display_fighters}
         focus_fighter={set_hovered_seat}
+        mob_icon_for={mob_icon}
+        presentation_queued={presentation_queued}
         presented_turn_seat={presented_turn_seat}
         select_action={set_selected_action}
         selected_action={selected_action}

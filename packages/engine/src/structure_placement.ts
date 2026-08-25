@@ -104,6 +104,7 @@ const compute_candidate = (
   if (pack.category === 'trees' && grove_value(world, pack, x, z) < 0.2) return null
   const column = sample_world_column(world, x, z)
   if (!pack.biomes.includes(column.biome.name)) return null
+  if (pack.category === 'trees' && column.surface_y < world.recipe.sea_level) return null
   const type = weighted_type(pack, hash_position(world.decoration_seed, pack.name, cell_x, cell_z, 0xfd7046c5))
   const rotation = (hash_position(world.decoration_seed, pack.name, cell_x, cell_z, 0xb55a4f09) & 3) as 0 | 1 | 2 | 3
   const provisional = placement_bounds(type, [x, column.surface_y - pack.bury, z], rotation)
@@ -114,6 +115,7 @@ const compute_candidate = (
     sample_world_column(world, provisional.min_x, provisional.max_z).surface_y,
     sample_world_column(world, provisional.max_x, provisional.max_z).surface_y,
   ]
+  if (pack.category === 'trees' && Math.min(...heights) < world.recipe.sea_level) return null
   if (Math.max(...heights) - Math.min(...heights) > pack.max_slope) return null
   const origin = [x, Math.min(...heights) - pack.bury, z] as const
   const bounds = placement_bounds(type, origin, rotation)

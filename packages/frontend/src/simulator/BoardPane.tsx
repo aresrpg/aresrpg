@@ -13,6 +13,7 @@ import {
   type FightCharacterRenderSource,
 } from '../game/fight/character_entities.ts'
 import { fight_mob_entities } from '../game/fight/mob_entities.ts'
+import { mob_model_scalar_for_level } from '../game/mob_entities.ts'
 import type { FightMobRenderSource } from '../game/fight/mob_entity_sources.ts'
 import type { AppCopy } from '../i18n/copy.ts'
 import { simulator_board } from '../modules/simulator.ts'
@@ -47,7 +48,13 @@ export const SimulatorBoardPane = ({
     () =>
       Object.freeze(
         Object.entries(simulator.mob_placements).map(([cell, placement]) =>
-          Object.freeze({ id: `sim_mob_${cell}`, mob_type: placement.mob_type, cell: Number(cell), side: 'b' })
+          Object.freeze({
+            id: `sim_mob_${cell}`,
+            mob_type: placement.mob_type,
+            cell: Number(cell),
+            side: 'b',
+            level_scalar: mob_model_scalar_for_level(placement.mob_type, placement.level),
+          })
         )
       ),
     [simulator.mob_placements]

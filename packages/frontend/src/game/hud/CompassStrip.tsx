@@ -10,7 +10,7 @@
 
 import { DAY_FRAC } from '@aresrpg/engine'
 import { client_to_chain_coordinate, world_center } from '@aresrpg/immutable'
-import { ZONE_SIZE, zone_of } from '@aresrpg/protocol'
+import { ZONE_RESEARCH_TTL_MS, ZONE_SIZE, zone_of } from '@aresrpg/protocol'
 import type { CSSProperties } from 'react'
 
 import './compass_strip.css'
@@ -49,7 +49,9 @@ export const CompassStrip = ({ copy }: Readonly<{ copy: AppCopy }>) => {
   const cell = chain.x >= 0 && chain.z >= 0 ? zone_of(chain.x, chain.z) : null
   const zone_row = cell && world_name ? (zones[zone_key(world_name, cell.zx, cell.zz)] ?? null) : null
   const discovered = zone_row !== null
-  const searchable = Boolean(cell && world_name && !discovered)
+  const searchable = Boolean(
+    cell && world_name && (!zone_row || Date.now() >= zone_row.searched_at_ms + ZONE_RESEARCH_TTL_MS)
+  )
 
   const heading = camera_heading(pose.yaw)
   const marks = CARDINALS.map((cardinal) => ({

@@ -2,7 +2,7 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 // Local fight birth inputs only. Once Start is pressed, @aresrpg/fight owns all combat truth.
 
-import { generate_board, type FightBoard } from '@aresrpg/fight'
+import { type FightBoard } from '@aresrpg/fight'
 import {
   character_equipment_slots,
   characteristic_names,
@@ -11,6 +11,7 @@ import {
   type CharacteristicName,
 } from '@aresrpg/immutable'
 
+import fight_boards from '../../../../seed/content/fight_boards.json'
 import { browser_simulator_roster_storage, install_simulator_roster_persistence } from '../simulator/persistence.ts'
 import type { AppInput, AppModule, AppState } from '../store.ts'
 
@@ -90,7 +91,21 @@ export const initial_simulator_state = (): SimulatorState =>
     mob_placements: Object.freeze({}),
   })
 
-export const simulator_board = (state: Readonly<SimulatorState>): FightBoard => generate_board(state.seed)
+/** One authored board by entropy — the exact pick rule the chain's catalog uses; the UI
+ * grid and the engine setup both read THIS, never a second derivation. */
+export const simulator_board = (state: Readonly<SimulatorState>): FightBoard => {
+  const rows = fight_boards.boards
+  const row = rows[Number(state.seed % BigInt(rows.length))]!
+  return {
+    width: BigInt(row.width),
+    height: BigInt(row.height),
+    shape_mask: row.shape_mask.map(BigInt),
+    obstacles: row.obstacles.map(BigInt),
+    holes: row.holes.map(BigInt),
+    start_cells_a: row.start_cells_a.map(BigInt),
+    start_cells_b: row.start_cells_b.map(BigInt),
+  }
+}
 
 const is_start_cell = (cells: readonly bigint[], cell: bigint): boolean => cells.includes(cell)
 

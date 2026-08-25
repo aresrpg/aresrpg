@@ -26,6 +26,7 @@ export const channels = {
   /** one zone's indexer facts (fights, gathers, zone re-rolls) — a pod subscribes exactly the
    *  zones its players track; presence spam never rides a world-global wire */
   zone: (world: string, zx: number, zz: number) => `evt:zone:${world}:${zx}:${zz}`,
+  dungeon: (world: string, x: number, z: number) => `evt:dungeon:${world}:${x}:${z}`,
   fight: (id: string) => `evt:fight:${id}`,
   party: (id: string) => `evt:party:${id}`,
   trade: (id: string) => `evt:trade:${id}`,

@@ -4,6 +4,7 @@
 import { expect, test } from 'bun:test'
 
 import { rendered_groups, type WorldMobGroup } from '../../src/game/core/spawn_residency.ts'
+import { MOB_TAG_RANGE_BLOCKS } from '../../src/game/spawn_entities.ts'
 
 const group = (id: string, x: number): WorldMobGroup =>
   Object.freeze({ id, x, z: 0, members: Object.freeze([{ mob_type: 'wooling', level_scalar: 1 }]) })
@@ -13,4 +14,8 @@ test('all tracked groups exist, while only groups under one hundred blocks rende
 
   expect(rendered_groups(tracked, { x: 0, z: 0 }).map(({ id }) => id)).toEqual(['near'])
   expect(rendered_groups(tracked, { x: 260, z: 0 }).map(({ id }) => id)).toEqual(['far'])
+})
+
+test('mob packs advertise their nametag from fifty blocks', () => {
+  expect(MOB_TAG_RANGE_BLOCKS).toBe(50)
 })

@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-/* eslint-disable max-lines -- the SDK client remains the single Sui read boundary pending a behavior-neutral extraction. */
 // The SDK factory — WRITE-ONLY: it composes PTBs whose game-object inputs are PRE-RESOLVED.
 // It never reads game state (reads are the indexer's job) and carries zero content. Pins come
 // from the ONE committed repo-root pins.json. `hydrate()` seeds game refs; the Sui core client
@@ -42,49 +41,28 @@ export * from './cache.ts'
 export * from './gas.ts'
 
 export type SharedPin = { id: string | null; shared_version: string | null }
-export type Pins = Record<string, SharedPin | string | null | undefined | Readonly<Record<string, SharedPin>>> & {
+export type Pins = Readonly<Record<string, unknown>> & {
   package?: string | null
+  math_package?: string | null
+  seed_package?: string | null
 }
 
-/**
- * The two addresses every SEED-DERIVED id needs: the template registry it hangs off, and the
- * package that NAMES the key's type.
- *
- * That second one is `game_type_package`, never `pins.package`. A derived object id is computed
- * from a type tag, and on Sui a type is named by its FIRST-publish address forever, while
- * `pins.package` follows the latest upgrade and is a move-call target only. Deriving with the
- * upgraded address produces ids that have never existed — after the 2026-08-22 upgrade every mob
- * template, spell, recipe and sale id did exactly that, and engaging a mob died on an unresolved
- * object rather than anything about mobs.
- */
-export const seed_registry = (
-  sdk: Readonly<{ pins: Pins; game_type_package: string | null }>,
+/** The living-content derivation pair: the registry ROOT object id + the seed package's
+ * ORIGINAL id — every content address (mob/spell templates, world content, the board
+ * catalog) derives from these two. The ORIGINAL, never `pins.seed_package`: a derived object
+ * id is computed from a type tag, and on Sui a type is named by its FIRST-publish address
+ * forever, while the latest id is a move-call target only (2026-08-22: deriving with the
+ * upgraded address produced ids that never existed — every mob engage died unresolved). */
+export const living_content = (
+  sdk: Readonly<{ pins: Pins }>,
   what: string
-): Readonly<{ registry: string; package_id: string }> => {
-  const registry = sdk.pins.template_registry
-  const id = typeof registry === 'object' && registry !== null ? Reflect.get(registry, 'id') : registry
-  const package_id = sdk.game_type_package
-  if (typeof id !== 'string' || typeof package_id !== 'string')
-    throw new Error(`${what} unavailable: pins.json has no template registry for this network.`)
-  return Object.freeze({ registry: id, package_id })
-}
-
-/**
- * The shared `World` object a world NAME stands for. The app knows a world the way players and
- * content do — by its authored name — while every world door takes `&mut World`, an object. This
- * is the ONE translation between the two, and it lives here because pins.json is the SDK's
- * business alone (2026-08-22: passing the name through handed Sui "01_first_shore" as an address
- * and every world action died on "Unable to parse Address").
- *
- * The pin carries a full shared ref, so nothing needs hydrating — and a world the pins do not
- * carry throws HERE, naming itself, rather than composing a transaction that cannot execute.
- */
-export const world_ref = (pins: Pins, world: string): Readonly<{ objectId: string; initialSharedVersion: string }> => {
-  const { worlds } = pins
-  const entry = typeof worlds === 'object' && worlds !== null ? Reflect.get(worlds, world) : undefined
-  if (!is_shared_pin(entry))
-    throw new Error(`[sdk] unknown world "${world}" — pins.json carries no World object for it on this network`)
-  return Object.freeze({ objectId: String(entry.id), initialSharedVersion: String(entry.shared_version) })
+): Readonly<{ content_root: string; seed_package_original: string }> => {
+  const root = sdk.pins.content_root
+  const root_id = typeof root === 'object' && root !== null ? Reflect.get(root, 'id') : null
+  const original = sdk.pins.seed_package_original
+  if (typeof root_id !== 'string' || typeof original !== 'string')
+    throw new Error(`${what} unavailable: pins.json has no living-content ids for this network.`)
+  return Object.freeze({ content_root: root_id, seed_package_original: original })
 }
 
 const is_shared_pin = (value: unknown): value is Readonly<{ id: string; shared_version: string }> =>
@@ -398,68 +376,12 @@ export function SDK({
     return cache
   }
 
-  /** Wait until this client's read node can see every receipt-fresh owned version already in
-   * cache. A load-balanced node may briefly report the previous version; composing our newer
-   * ref against that node fails before submission with "provided version doesn't match". */
-  const hydrate_owned_current = async (ids: readonly string[]) => {
-    const wanted = [...new Set(ids)].map((id) => {
-      const object_id = normalizeSuiObjectId(id)
-      return Object.freeze({ object_id, minimum: owned_ref(cache, object_id)?.version ?? null })
-    })
-    for (let attempt = 0; attempt < 12; attempt += 1) {
-      const { objects } = await sui_client.core.getObjects({ objectIds: wanted.map(({ object_id }) => object_id) })
-      objects.forEach((row) => absorb_object(cache, row))
-      const current = new Map(
-        objects.flatMap((row) => (row.objectId ? [[normalizeSuiObjectId(row.objectId), row]] : []))
-      )
-      const behind = wanted.filter(({ object_id, minimum }) => {
-        const row = current.get(object_id)
-        return !row?.version || (minimum !== null && BigInt(row.version) < BigInt(minimum))
-      })
-      if (behind.length === 0) return cache
-      await new Promise<void>((resolve) => setTimeout(resolve, 250))
-    }
-    throw new Error(
-      `[sdk] owned object node lag did not settle: ${wanted.map(({ object_id }) => object_id).join(', ')}`
-    )
-  }
-
   /** Fetch only the ids the cache does not already know — shared objects keep their initial
    *  version for life, so a known ref is never worth a second network read. Absence is DATA
    *  here: callers that merely ask whether an object exists yet get their answer, not a throw. */
   const hydrate_unknown = async (ids: readonly string[]) => {
     const unknown = unresolved_ids([...new Set(ids)])
     if (unknown.length) await hydrate_objects(unknown)
-    return cache
-  }
-
-  /** READ-AFTER-WRITE (2026-08-21, the duel join): a peer hands us an object id the moment
-   *  THEIR transaction commits, and our fullnode can still be a checkpoint behind — the fetch
-   *  comes back empty, absorbs nothing, says nothing, and the failure surfaces later as
-   *  "hydrate it first" about an object we HAD just hydrated. For an id that MUST exist, a
-   *  short bounded wait covers the lag; past it, the id that never arrived throws here,
-   *  naming itself. Ids whose absence is a legitimate answer use `hydrate_unknown`. */
-  const HYDRATE_WAITS_MS = Object.freeze([150, 400, 900, 1_800])
-  const hydrate_required = async (ids: readonly string[]) => {
-    const wanted = [...new Set(ids)]
-    await hydrate_unknown(wanted)
-    // a node that is behind can also fail the read itself — that failure is carried, not
-    // swallowed: it becomes the reason in the throw if the object never shows up
-    let last_failure: unknown = null
-    for (const wait_ms of HYDRATE_WAITS_MS) {
-      if (!unresolved_ids(wanted).length) return cache
-      await new Promise((resolve) => setTimeout(resolve, wait_ms))
-      last_failure = await hydrate_objects(unresolved_ids(wanted)).then(
-        () => null,
-        (error: unknown) => error
-      )
-    }
-    const missing = unresolved_ids(wanted)
-    if (missing.length)
-      throw new Error(
-        `[sdk] the chain never showed ${missing.join(', ')} — it does not exist, or this node is still behind` +
-          (last_failure ? ` (last read failed: ${String(last_failure)})` : '')
-      )
     return cache
   }
 
@@ -513,7 +435,7 @@ export function SDK({
   const execute_signed = async (
     bytes: string | Uint8Array,
     signature: string,
-    { include }: { include?: object } = {}
+    { include, gas_scope }: { include?: object; gas_scope?: string } = {}
   ) => {
     const raw = typeof bytes === 'string' ? fromBase64(bytes) : bytes
     const receipt = await sui_client.core.executeTransaction({
@@ -522,6 +444,7 @@ export function SDK({
       include: { effects: true, events: true, ...include },
     })
     gas_ledger.record(receipt)
+    if (gas_scope) gas_ledger.tag(receipt, gas_scope)
     if (sender) balance.invalidate(sender)
     if (receipt?.$kind === 'FailedTransaction') {
       absorb_receipt(cache, receipt) // owned game objects the failed tx still touched stay fresh
@@ -543,7 +466,11 @@ export function SDK({
 
   const execute_now = async (
     tx: Transaction,
-    { budget = gas_budget, include }: { budget?: bigint | 'estimate'; include?: object } = {}
+    {
+      budget = gas_budget,
+      include,
+      gas_scope,
+    }: { budget?: bigint | 'estimate'; include?: object; gas_scope?: string } = {}
   ) => {
     if (!sender) throw new Error('[sdk] execute needs an address')
     await prepare_transaction(tx, sender, { budget })
@@ -560,12 +487,12 @@ export function SDK({
     const signed = signer ? await tx.sign({ signer }) : sign_transaction ? await sign_transaction(tx) : null
     if (!signed) throw new Error('[sdk] execute needs a signer')
     const { bytes, signature } = signed
-    return execute_signed(bytes, signature, { include })
+    return execute_signed(bytes, signature, { include, gas_scope })
   }
 
   const execute = (
     tx: Transaction,
-    options: Readonly<{ budget?: bigint | 'estimate'; include?: object }> = {}
+    options: Readonly<{ budget?: bigint | 'estimate'; include?: object; gas_scope?: string }> = {}
   ): Promise<Receipt> => {
     const submitted = execution_tail.then(
       () => execute_now(tx, options),
@@ -612,9 +539,7 @@ export function SDK({
     sui_client,
     hydrate,
     hydrate_objects,
-    hydrate_owned_current,
     hydrate_unknown,
-    hydrate_required,
     // lookup by the DEFINING package (the default client) — see the lineage-split note above
     get_owned_kiosks: (address: string) => kiosk_client.getOwnedKiosks({ address }),
     get_owned_transfer_policies: (address: string) => kiosk_client.getOwnedTransferPolicies({ address }),
@@ -650,6 +575,7 @@ export function SDK({
       return balance.read(sender)
     },
     gas_spent_24h: gas_ledger.spent_24h,
+    tag_gas: gas_ledger.tag,
     with_kiosk,
     with_owner_kiosk: <T>(tx: Transaction, cap: KioskOwnerCap | null, compose: Parameters<typeof with_kiosk<T>>[3]) => {
       if (!cap) throw new Error('No owned kiosk cap is available for this transaction.')

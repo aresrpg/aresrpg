@@ -14,19 +14,20 @@ import { loot_box_odds } from './model.ts'
 export type ShopCardSale = Readonly<{
   item_type: string
   price: number
-  supply: number
+  supply: number | null
   stock: number
+  infinite: boolean
   item: SeedItem
 }>
 
 const Supply = ({ sale, t }: Readonly<{ sale: ShopCardSale; t: CopyText }>) => {
-  const percent = Math.max(0, Math.min(100, (sale.stock / sale.supply) * 100))
+  if (sale.infinite) return <div className="text-[8px] tracking-[0.08em] text-muted uppercase">∞</div>
+  const supply = sale.supply ?? 0
+  const percent = supply === 0 ? 0 : Math.max(0, Math.min(100, (sale.stock / supply) * 100))
   return (
     <div>
       <div className="mb-1.5 flex justify-between text-[8px] tracking-[0.08em] text-muted uppercase">
-        <span>
-          {t('remaining_of_cap', { remaining: sale.stock.toLocaleString(), cap: sale.supply.toLocaleString() })}
-        </span>
+        <span>{t('remaining_of_cap', { remaining: sale.stock.toLocaleString(), cap: supply.toLocaleString() })}</span>
         <span>{Math.round(percent)}%</span>
       </div>
       <div className="h-1 overflow-hidden bg-white/8">
@@ -69,7 +70,7 @@ const Acquire = ({
 )
 
 const Case = ({ item, open_detail }: Readonly<{ item: SeedItem; open_detail: () => void }>) => {
-  const icon = item_detail_icon(item.item_type) ?? item_icon(item.item_type)
+  const icon = item_detail_icon(item.item_type)
   return (
     <button
       aria-label={item.name}

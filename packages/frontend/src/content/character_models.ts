@@ -2,9 +2,12 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 // Seed model URLs and the exact legacy class/gender table. Render policy remains inside @aresrpg/engine.
 
-import { character_model_basenames, cosmetic_model_of as resolve_cosmetic_model } from './character_model_catalog.ts'
+import {
+  character_model_basenames,
+  worn_equipment_model_of as resolve_equipment_model,
+} from './character_model_catalog.ts'
 
-export { character_model_basenames, resolve_cosmetic_variant } from './character_model_catalog.ts'
+export { character_model_basenames } from './character_model_catalog.ts'
 
 type WornItem = Readonly<{ item_type: string; category: string }>
 
@@ -12,7 +15,7 @@ const character_modules = import.meta.glob('../../../../seed/models/characters/*
   import: 'default',
   query: '?url',
 }) as Readonly<Record<string, () => Promise<string>>>
-const cosmetic_modules = import.meta.glob('../../../../seed/models/cosmetics/*.glb', {
+const equipment_modules = import.meta.glob('../../../../seed/models/equipment/*.glb', {
   import: 'default',
   query: '?url',
 }) as Readonly<Record<string, () => Promise<string>>>
@@ -28,8 +31,8 @@ const index_loaders = (
   Object.freeze(Object.fromEntries(Object.entries(modules).map(([path, load]) => [basename_of(path), load])))
 
 const character_loaders = index_loaders(character_modules)
-const cosmetic_loaders = index_loaders(cosmetic_modules)
-const cosmetic_basenames = new Set(Object.keys(cosmetic_loaders))
+const equipment_loaders = index_loaders(equipment_modules)
+const equipment_basenames = new Set(Object.keys(equipment_loaders))
 
 export const load_character_model_urls = async (
   classe: string,
@@ -42,16 +45,16 @@ export const load_character_model_urls = async (
   return Object.freeze({ body_url, hair_url })
 }
 
-export const cosmetic_model_of = (
+export const worn_equipment_model_of = (
   item: WornItem,
-  available: ReadonlySet<string> = cosmetic_basenames
-): Readonly<{ basename: string; variant: string | null }> | null => resolve_cosmetic_model(item, available)
+  available: ReadonlySet<string> = equipment_basenames
+): Readonly<{ basename: string; variant: string | null }> | null => resolve_equipment_model(item, available)
 
-export const load_cosmetic_model_url = async (
+export const load_worn_equipment_model_url = async (
   item: WornItem
 ): Promise<Readonly<{ url: string; variant: string | null }> | null> => {
-  const model = cosmetic_model_of(item)
-  const load = model ? cosmetic_loaders[model.basename] : undefined
+  const model = worn_equipment_model_of(item)
+  const load = model ? equipment_loaders[model.basename] : undefined
   if (!model || !load) return null
   return Object.freeze({ url: await load(), variant: model.variant })
 }

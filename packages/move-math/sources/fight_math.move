@@ -118,7 +118,42 @@ public fun roll_effect_value(effect: &Effect, state: &mut u64): u64 {
 
 public fun band_scaled(base: u64, min_level: u64, max_level: u64, level: u64): u64 {
   if (max_level == min_level) return base;
-  base * 7 * ((max_level - min_level) + (level - min_level)) / (10 * (max_level - min_level))
+  let span = max_level - min_level;
+  base * (6 * span + 10 * (level - min_level)) / (10 * span)
+}
+
+/// Scale a SHIFT-centered resistance around neutral. Positive resistance follows the mob's
+/// 60%→160% power curve. A weakness reverses that magnitude curve (160%→60%), so a stronger
+/// mob always has a less severe negative resistance. Negative deviations saturate at encoded
+/// zero because snapshots use unsigned integers.
+public fun centered_band_scaled(value: u64, center: u64, min_level: u64, max_level: u64, level: u64): u64 {
+  if (value >= center) center + band_scaled(value - center, min_level, max_level, level)
+  else {
+    let scaled = if (max_level == min_level) center - value else {
+      let span = max_level - min_level;
+      (center - value) * (16 * span - 10 * (level - min_level)) / (10 * span)
+    };
+    if (scaled >= center) 0 else center - scaled
+  }
+}
+
+/// An authored mob drop chance is its band midpoint: 80% at minimum level and 120% at
+/// maximum level. A resolved chance remains basis points and never exceeds guaranteed.
+public fun mob_loot_chance_scaled(base_bp: u64, min_level: u64, max_level: u64, level: u64): u64 {
+  if (max_level == min_level) return base_bp;
+  let span = max_level - min_level;
+  let scaled = base_bp * (8 * span + 4 * (level - min_level)) / (10 * span);
+  if (scaled > CRIT_SCALE) CRIT_SCALE else scaled
+}
+
+/// Mob AP/MP keep their authored minimum and reach 130% at band maximum. Pools are discrete,
+/// so round to the nearest point instead of silently truncating common 6 AP / 3 MP bands.
+public fun mob_pool_scaled(base: u64, min_level: u64, max_level: u64, level: u64): u64 {
+  if (max_level == min_level) return base;
+  let span = max_level - min_level;
+  let denominator = 10 * span;
+  let numerator = base * (10 * span + 3 * (level - min_level));
+  (numerator + denominator / 2) / denominator
 }
 
 public fun apply_centered_shift(base: u64, centered: u64, center: u64): u64 {
@@ -277,43 +312,45 @@ public fun remove_points(
   (state, removed)
 }
 
-// ╔════════════════ [ XP — the hytale sweet-spot law + the group bonus ] ═════ ]
+// ╔════════════════ [ XP — Dofus Retro group balance and proportional split ] ═ ]
 
-const XP_PENALTY_GAPS: vector<u64> = vector[0, 3, 5, 7, 9, 13]; // scaled by spot/7
-const XP_PENALTY_MULTS_BP: vector<u64> = vector[10000, 8000, 6000, 4000, 1000, 0];
+// Exact Retro coefficients through Ares's six-seat party cap, stored in tenths.
+const RETRO_GROUP_XP_TENTHS: vector<u64> = vector[10, 11, 15, 23, 31, 36];
 
-/// The sweet spot widens with level: `max(2, level × 33/100)`.
-public fun sweet_spot(player_level: u64): u64 {
-  let spot = player_level * 33 / 100;
-  if (spot < 2) 2 else spot
+public fun retro_group_coefficient_tenths(eligible_players: u64): u64 {
+  if (eligible_players == 0) return 0;
+  let coefficients = RETRO_GROUP_XP_TENTHS;
+  let last = coefficients.length() - 1;
+  coefficients[if (eligible_players - 1 < last) eligible_players - 1 else last]
 }
 
-/// XP multiplier (basis points) by level gap — SYMMETRIC piecewise fade past the sweet spot.
-/// Integer lerp in spot-scaled space (the hytale curve, exact shape).
-public fun level_penalty_bp(mob_level: u64, player_level: u64): u64 {
-  let gap = if (mob_level >= player_level) mob_level - player_level else player_level - mob_level;
-  let spot = sweet_spot(player_level);
-  if (gap <= spot) return 10000;
-  let over7 = (gap - spot) * 7; // work ×7 so breakpoints scale by spot without division loss
-  let gaps = XP_PENALTY_GAPS;
-  let mults = XP_PENALTY_MULTS_BP;
-  let max7 = gaps[gaps.length() - 1] * spot;
-  if (over7 >= max7) return 0;
-  let mut i = 0;
-  while (i < gaps.length() - 1) {
-    let lo = gaps[i] * spot;
-    let hi = gaps[i + 1] * spot;
-    if (over7 <= hi) {
-      return mults[i] - (over7 - lo) * (mults[i] - mults[i + 1]) / (hi - lo)
-    };
-    i = i + 1;
+/// Dofus Retro: total mob base XP × eligible-party coefficient, group-level balance, the
+/// player's level share, then Ares's established Wisdom scale (+1% per 6 Wisdom).
+public fun xp_for_player(
+  base_xp: u64,
+  wisdom: u64,
+  player_level: u64,
+  player_total_level: u64,
+  mob_total_level: u64,
+  highest_mob_level: u64,
+  eligible_players: u64,
+): u64 {
+  if (
+    base_xp == 0 || player_level == 0 || player_total_level == 0 ||
+    mob_total_level == 0 || highest_mob_level == 0 || eligible_players == 0
+  ) return 0;
+
+  let mut group_xp = base_xp * retro_group_coefficient_tenths(eligible_players) / 10;
+  if (mob_total_level > player_total_level + 10) {
+    group_xp = group_xp * (player_total_level + 10) / mob_total_level;
   };
-  0
-}
+  if (player_total_level > mob_total_level + 5) {
+    group_xp = group_xp * mob_total_level / player_total_level;
+  };
+  // Retro's anti-power-leveling gate: the party cannot dwarf the highest monster by >2.5×.
+  if (player_total_level * 2 > highest_mob_level * 5) {
+    group_xp = group_xp * (highest_mob_level * 5) / (player_total_level * 2);
+  };
 
-/// One player's final xp: the per-mob-penalized sum × wisdom (+1% per 6) × the group bonus
-/// (+20% total per extra member) ÷ members. 2 players keep 60% each, 6 keep 33%.
-public fun xp_for_player(penalized_sum: u64, wisdom: u64, members: u64): u64 {
-  if (members == 0) return 0;
-  penalized_sum * (600 + wisdom) / 600 * (100 + 20 * (members - 1)) / 100 / members
+  group_xp * player_level / player_total_level * (600 + wisdom) / 600
 }

@@ -19,7 +19,9 @@ type FightTransactionReceipt = Readonly<{
 
 export const turn_too_soon_refusal = (error: unknown): boolean => {
   const message = error instanceof Error ? error.message : String(error)
-  return message.includes('transaction NOT submitted') && /abort code:\s*1724/i.test(message)
+  const refused_before_submission =
+    message.includes('transaction NOT submitted') || /transaction resolution failed/i.test(message)
+  return refused_before_submission && /abort code:\s*1724/i.test(message)
 }
 
 const turn_action = (input: Readonly<FightInput>): TurnAction | null => {
@@ -108,14 +110,16 @@ const observe: NonNullable<AppModule['observe']> = ({ events, dispatch, get_stat
 
     const row = state.session.characters.find(({ id }) => id === state.session.selected_character_id)
     const custody = row ? { kiosk: row.kiosk, kiosk_cap: row.kiosk_cap } : undefined
-    const transaction =
+    const transaction: Promise<FightTransactionReceipt> | null =
       input.type === 'end_turn'
         ? wallet.fight.commit_turn({
             fight,
             actions: Object.freeze([...(buffered?.fight === fight ? buffered.actions : [])]),
             ended: checkpoint.contract.ended,
           })
-        : immediate_transaction(fight, input, wallet.fight, checkpoint, custody)
+        : input.type === 'forfeit' && checkpoint.contract.dungeon !== null
+          ? wallet.dungeon.give_up_fight({ fight, fighter_idx: input.fighter, custody })
+          : immediate_transaction(fight, input, wallet.fight, checkpoint, custody)
     if (!transaction) return
     const submitted_buffer = input.type === 'end_turn' ? buffered : null
     if (input.type === 'forfeit') clear_buffer()

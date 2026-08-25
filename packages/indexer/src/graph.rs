@@ -5,9 +5,9 @@
 //! One checkpoint's views in, an ORDERED list of Cypher statements out; no
 //! store reads, ever. The laws this file carries (README):
 //!
-//! * **Objects are the sole writers** — every statement here derives from an
-//!   output object, a custody fact, or a pre-state delete view. The one
-//!   exception, `:Market`, takes stamps computed by `publish.rs`.
+//! * **Objects are the primary writers** — every statement here derives from an
+//!   output object, custody fact, or pre-state delete view. `:Market` prices and Fight lifecycle
+//!   clocks are event-envelope facts computed by `publish.rs`.
 //! * **Per-property writes** — each decoded source SETs exactly its own
 //!   properties over a `MERGE` skeleton; nothing ever replaces a whole node.
 //! * **One ownership edge per object** — custody writes DELETE the standing
@@ -19,9 +19,12 @@
 //!   matches nothing (this still keeps ceremony-template DFs out of the item space).
 //! * **Strings ≥ 2⁵³** — seeds, bitmasks, MIST are string properties.
 //!
-//! Statement order per checkpoint: nodes (tx order) → custody edges → fight
-//! seat-team fixups → deletes → market stamps. An object created and deleted
-//! in one checkpoint ends deleted; replay converges to the same final state.
+//! Statement order per checkpoint: nodes (tx order) → dynamic fields (tx order) → custody
+//! edges → fight seat-team fixups → deletes → market stamps. Fields run after nodes because
+//! relationship fields may name a node born in the same checkpoint. An object created and
+//! deleted in one checkpoint ends deleted; replay converges to the same final state.
+
+use std::collections::BTreeSet;
 
 use serde_json::{json, Value};
 
@@ -37,6 +40,14 @@ pub struct MarketStamp {
     pub ts_ms: u64,
 }
 
+/// A lifecycle timestamp derived from the checkpoint envelope of FightStarted/FightEnded.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct FightLifecycleStamp {
+    pub fight: String,
+    pub started: bool,
+    pub ts_ms: u64,
+}
+
 /// Everything one checkpoint gives the projection.
 pub struct CheckpointView<'a> {
     pub ckpt: u64,
@@ -47,6 +58,7 @@ pub struct CheckpointView<'a> {
     pub deleted: &'a [ObjView<'a>],
     pub custody: &'a [Custody],
     pub market: &'a [MarketStamp],
+    pub fight_lifecycle: &'a [FightLifecycleStamp],
 }
 
 /// Project one checkpoint into Cypher statements.
@@ -57,7 +69,18 @@ pub struct CheckpointView<'a> {
 /// unprojected state (the no-silent-failures law).
 pub fn project(view: &CheckpointView<'_>, game: &str) -> anyhow::Result<Vec<String>> {
     let mut cypher = vec![];
-    for output in view.outputs {
+    for output in view
+        .outputs
+        .iter()
+        .filter(|output| field_key(output.type_key).is_none())
+    {
+        emit_object(&mut cypher, output, view, game)?;
+    }
+    for output in view
+        .outputs
+        .iter()
+        .filter(|output| field_key(output.type_key).is_some())
+    {
         emit_object(&mut cypher, output, view, game)?;
     }
     for fact in view.custody {
@@ -76,6 +99,18 @@ pub fn project(view: &CheckpointView<'_>, game: &str) -> anyhow::Result<Vec<Stri
             p = q(&stamp.price_per_unit_mist.to_string()),
             ts = stamp.ts_ms,
             ckpt = view.ckpt,
+        ));
+    }
+    for stamp in view.fight_lifecycle {
+        cypher.push(format!(
+            "MATCH (f:Fight {{id: {fight}}}) SET f.{field} = {ts}",
+            fight = q(&stamp.fight),
+            field = if stamp.started {
+                "started_ms"
+            } else {
+                "ended_ms"
+            },
+            ts = stamp.ts_ms,
         ));
     }
     Ok(cypher)
@@ -339,6 +374,8 @@ fn emit_object(
                 format!("v.template = {}", q_id(&s.template)),
                 format!("v.price = {}", q(&s.price.to_string())),
                 format!("v.supply = {}", q(&s.supply.to_string())),
+                format!("v.infinite = {}", s.infinite),
+                format!("v.enabled = {}", s.enabled),
             ],
         );
         return Ok(());
@@ -537,7 +574,7 @@ fn emit_field(
         let f = decode::from_bytes::<Field<decode::JobXpKey, u64>>(o.bytes)
             .map_err(|e| drift(key, o.id, e))?;
         // one flat prop per job — jobs are separate DFs, so a map prop would
-        // need read-modify-write; the 15 slugs are hardcoded law.
+        // need read-modify-write; the 11 slugs are immutable vocabulary.
         let slug: String = f
             .name
             .0
@@ -676,7 +713,7 @@ fn emit_field(
         let f = decode::from_bytes::<Field<MarkerKey, decode::DungeonRun>>(o.bytes)
             .map_err(|e| drift(key, o.id, e))?;
         let run = json!({
-            "world": f.value.world,
+            "world": f.value.world.clone(),
             "room": f.value.room.to_string(),
             "x": f.value.x,
             "z": f.value.z,
@@ -688,7 +725,14 @@ fn emit_field(
             "Character",
             &parent,
             ckpt,
-            &[format!("v.dungeon_run = {}", q_json(&run))],
+            &[
+                format!("v.dungeon_run = {}", q_json(&run)),
+                format!("v.dungeon_world = {}", q(&f.value.world)),
+                format!("v.dungeon_room = {}", f.value.room),
+                format!("v.dungeon_x = {}", f.value.x),
+                format!("v.dungeon_z = {}", f.value.z),
+                format!("v.dungeon_seed = {}", q(&f.value.seed.to_string())),
+            ],
         );
         return Ok(());
     }
@@ -839,14 +883,6 @@ fn emit_field(
         return Ok(());
     }
 
-    // ── the registry seal ──
-    if key == game_key(game, "item::SealedKey") {
-        cypher.push(format!(
-            "MERGE (m:Meta {{id: 'meta'}}) SET m.sealed = true, m.ckpt = {ckpt}"
-        ));
-        return Ok(());
-    }
-
     // ── native kiosk listing DF → LISTED_IN edge ──
     if key == format!("{SUI_FRAMEWORK}::kiosk::Listing") {
         let OwnerKind::Object(kiosk) = o.owner else {
@@ -930,17 +966,19 @@ fn emit_fight(cypher: &mut Vec<String>, o: &ObjView<'_>, ckpt: u64) -> anyhow::R
             format!("v.machine = {}", q_json(&fight_machine(&f))),
         ],
     );
-    // Durable post-fight work. FIGHTER remains custody and disappears when settlement returns
-    // the character; RESULT_FOR deliberately survives that move until the seat has settled and
-    // every rolled drop has been claimed. Rebuilding the complete edge set from the Fight output
-    // makes reconnect recovery latest-wins and idempotent.
+    // Durable post-fight work. It exists before the player's one atomic settlement and vanishes
+    // from the output that returns the character and clears every assigned drop. Rebuilding the
+    // complete edge set makes reconnect recovery latest-wins and idempotent.
     cypher.push(format!(
         "MATCH (f:Fight {{id: {}}}) OPTIONAL MATCH (f)-[r:RESULT_FOR]->() DELETE r",
         q_id(&f.id)
     ));
     if f.ended {
         for (seat, fighter) in f.fighters.iter().enumerate() {
-            let decode::FighterKind::Player { character, owner } = &fighter.kind else {
+            let decode::FighterKind::Player {
+                character, owner, ..
+            } = &fighter.kind
+            else {
                 continue;
             };
             if fighter.settled && fighter.drops.is_empty() {
@@ -951,16 +989,34 @@ fn emit_fight(cypher: &mut Vec<String>, o: &ObjView<'_>, ckpt: u64) -> anyhow::R
                 .iter()
                 .map(|drop| json!({ "item_type": drop.item_type, "qty": drop.qty }))
                 .collect::<Vec<_>>());
+            let loot_types = if f.winner == Some(fighter.team) {
+                json!(f
+                    .fighters
+                    .iter()
+                    .filter(|candidate| candidate.team != fighter.team)
+                    .flat_map(|candidate| match &candidate.kind {
+                        decode::FighterKind::Mob(snapshot) => snapshot
+                            .loot
+                            .iter()
+                            .map(|row| row.item_type.clone())
+                            .collect::<Vec<_>>(),
+                        decode::FighterKind::Player { .. } => vec![],
+                    })
+                    .collect::<BTreeSet<_>>())
+            } else {
+                json!([])
+            };
             cypher.push(format!(
                 "MATCH (f:Fight {{id: {fight}}}) MERGE (u:User {{address: {owner}}}) \
                  CREATE (f)-[:RESULT_FOR {{seat: {seat}, character: {character}, team: {team}, \
-                 dead: {dead}, settled: {settled}, drops: {drops}}}]->(u)",
+                 dead: {dead}, settled: {settled}, loot_types: {loot_types}, drops: {drops}}}]->(u)",
                 fight = q_id(&f.id),
                 owner = q(&owner.hex()),
                 character = q(&character.hex()),
                 team = fighter.team,
                 dead = fighter.dead,
                 settled = fighter.settled,
+                loot_types = q_json(&loot_types),
                 drops = q_json(&drops),
             ));
         }
@@ -997,8 +1053,12 @@ fn fight_machine(f: &decode::Fight) -> Value {
 
 fn fighter_json(fighter: &decode::Fighter) -> Value {
     let kind = match &fighter.kind {
-        decode::FighterKind::Player { character, owner } => json!({
-            "player": { "character": character.hex(), "owner": owner.hex() },
+        decode::FighterKind::Player {
+            character,
+            owner,
+            level,
+        } => json!({
+            "player": { "character": character.hex(), "owner": owner.hex(), "level": level },
         }),
         decode::FighterKind::Mob(m) => json!({
             "mob": {
@@ -1117,7 +1177,10 @@ fn emit_fight_seat_teams(
     let f =
         decode::from_bytes::<decode::Fight>(o.bytes).map_err(|e| drift("fight::Fight", o.id, e))?;
     for (seat, fighter) in f.fighters.iter().enumerate() {
-        if let decode::FighterKind::Player { character, owner } = &fighter.kind {
+        if let decode::FighterKind::Player {
+            character, owner, ..
+        } = &fighter.kind
+        {
             cypher.push(format!(
                 "MATCH (:Fight {{id: {id}}})-[r:FIGHTER {{seat: {seat}}}]->() SET r.team = {team}",
                 id = q_id(&f.id),
@@ -1311,7 +1374,8 @@ fn emit_delete(cypher: &mut Vec<String>, gone: &ObjView<'_>, game: &str) -> anyh
         if key == game_key(game, "dungeon::DungeonRunKey") {
             if let OwnerKind::Object(character) = gone.owner {
                 cypher.push(format!(
-                    "MATCH (c:Character {{id: {id}}}) SET c.dungeon_run = NULL",
+                    "MATCH (c:Character {{id: {id}}}) SET c.dungeon_run = NULL, c.dungeon_world = NULL, \
+                     c.dungeon_room = NULL, c.dungeon_x = NULL, c.dungeon_z = NULL, c.dungeon_seed = NULL",
                     id = q_id(&character),
                 ));
             }
@@ -1362,6 +1426,7 @@ mod tests {
             deleted,
             custody,
             market: &[],
+            fight_lifecycle: &[],
         }
     }
 
@@ -1489,23 +1554,11 @@ mod tests {
         assert!(hp_write.contains("v.hp_ms = 5"));
     }
 
-    /// A World with no content — enough to carry its NAME, which is all a zone needs from it.
+    /// A World is id + NAME — all a zone needs from it (slim by law, Lever 2).
     fn world_bytes(name: &str) -> Vec<u8> {
         bcs::to_bytes(&decode::World {
             id: Id([1; 32]),
             name: name.into(),
-            content: decode::WorldContent {
-                mobs: vec![],
-                resources: vec![],
-                dungeon_key: None,
-                dungeon_rooms: vec![],
-                biome_map: decode::BiomeMap {
-                    zone_x0: 0,
-                    zone_z0: 0,
-                    side: 0,
-                    cells: vec![],
-                },
-            },
         })
         .unwrap()
     }
@@ -1667,6 +1720,65 @@ mod tests {
     }
 
     #[test]
+    fn a_new_split_lot_exists_before_its_listing_edge_is_created() {
+        let item_id = Id([5; 32]);
+        let listing = bcs::to_bytes(&Field {
+            id: Id([9; 32]),
+            name: crate::decode::KioskListingKey {
+                id: item_id,
+                is_exclusive: false,
+            },
+            value: 1_000u64,
+        })
+        .unwrap();
+        let listing_key = format!("{}::kiosk::Listing", crate::ownership::SUI_FRAMEWORK);
+        let listing_ty = t(
+            crate::ownership::SUI_FRAMEWORK,
+            "dynamic_field",
+            "Field",
+            &[&listing_key, "u64"],
+        );
+        let item = bcs::to_bytes(&crate::decode::Item {
+            id: item_id,
+            template: Id([4; 32]),
+            name: "Wool".into(),
+            item_type: "wooling_wool".into(),
+            category: "resource".into(),
+            level: 1,
+            amount: 10,
+        })
+        .unwrap();
+        let item_ty = t(GAME, "item", "Item", &[]);
+        // Sui may return the listing field before the split Item it names.
+        let outputs = [
+            ObjView {
+                id: Id([9; 32]),
+                owner: OwnerKind::Object(Id([2; 32])),
+                type_key: &listing_ty,
+                bytes: &listing,
+            },
+            ObjView {
+                id: item_id,
+                owner: OwnerKind::Object(Id([2; 32])),
+                type_key: &item_ty,
+                bytes: &item,
+            },
+        ];
+
+        let cypher = project(&view(&outputs, &[], &[]), GAME).unwrap();
+        let item_write = cypher
+            .iter()
+            .position(|statement| statement.starts_with("MERGE (v:Item"))
+            .unwrap();
+        let listing_write = cypher
+            .iter()
+            .position(|statement| statement.contains("CREATE (o)-[:LISTED_IN"))
+            .unwrap();
+
+        assert!(item_write < listing_write);
+    }
+
+    #[test]
     fn market_stamp_is_latest_wins_set() {
         let stamps = [MarketStamp {
             item_type: "wooling_wool".into(),
@@ -1680,11 +1792,41 @@ mod tests {
             deleted: &[],
             custody: &[],
             market: &stamps,
+            fight_lifecycle: &[],
         };
         let cypher = project(&v, GAME).unwrap();
         assert_eq!(cypher.len(), 1);
         assert!(cypher[0].contains("MERGE (m:Market {item_type: 'wooling_wool'})"));
         assert!(cypher[0].contains("m.last_sale_mist = '15000000'"));
+    }
+
+    #[test]
+    fn fight_lifecycle_events_persist_the_checkpoint_clock() {
+        let stamps = [
+            FightLifecycleStamp {
+                fight: "0xf1".into(),
+                started: true,
+                ts_ms: 10_000,
+            },
+            FightLifecycleStamp {
+                fight: "0xf1".into(),
+                started: false,
+                ts_ms: 135_000,
+            },
+        ];
+        let v = CheckpointView {
+            ckpt: 100,
+            ts_ms: 135_000,
+            outputs: &[],
+            deleted: &[],
+            custody: &[],
+            market: &[],
+            fight_lifecycle: &stamps,
+        };
+
+        let cypher = project(&v, GAME).unwrap();
+        assert!(cypher[0].contains("f.started_ms = 10000"));
+        assert!(cypher[1].contains("f.ended_ms = 135000"));
     }
 
     #[test]

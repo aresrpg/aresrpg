@@ -24,6 +24,11 @@ import { selected_character } from './session.ts'
 
 export type DuelInput = Readonly<{ type: 'duel/challenged'; character_id: string; name: string }>
 
+export const duel_accept_was_canceled = (error: unknown): boolean => {
+  const message = error instanceof Error ? error.message : String(error)
+  return /abort code:\s*1706/i.test(message) && message.includes('::fight::jg')
+}
+
 /** The fights whose reserved seat names OUR character — the invitations, as a derivation. */
 export const duels_awaiting = (state: AppState): readonly FightRow[] => {
   const own = state.session.selected_character_id
@@ -102,7 +107,16 @@ const observe: NonNullable<AppModule['observe']> = ({ events, get_state, dispatc
           })
           .catch((error: unknown) => {
             dispatch({ type: 'fight/watch', fight: null })
-            toast.add(error)
+            if (!duel_accept_was_canceled(error)) {
+              toast.add(error)
+              return
+            }
+            toast.add(
+              text('duel_canceled_afraid', {
+                name: challenger?.name ?? text('duel_unknown_challenger'),
+              }),
+              'info'
+            )
           })
       }
       shown.set(

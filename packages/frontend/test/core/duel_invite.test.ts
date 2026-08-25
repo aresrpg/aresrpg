@@ -7,7 +7,7 @@
 
 import { describe, expect, test } from 'bun:test'
 
-import { duels_awaiting } from '../../src/modules/duel.ts'
+import { duel_accept_was_canceled, duels_awaiting } from '../../src/modules/duel.ts'
 import { initial_app_state, reduce_app_state, type AppInput, type AppState } from '../../src/store.ts'
 
 const settings = Object.freeze({
@@ -80,4 +80,14 @@ describe('the duel invitation', () => {
     const state = fold(initial_app_state(settings), born('0xf1', '0xme'))
     expect(duels_awaiting(state)).toEqual([])
   })
+})
+
+test('only a join placement abort classifies the accept race as a canceled duel', () => {
+  expect(
+    duel_accept_was_canceled(
+      new Error("MoveAbort in 2nd command, abort code: 1706, in '0xgame::fight::jg' (instruction 7)")
+    )
+  ).toBeTrue()
+  expect(duel_accept_was_canceled(new Error("abort code: 1706, in '0xgame::fight::aa'"))).toBeFalse()
+  expect(duel_accept_was_canceled(new Error("abort code: 1724, in '0xgame::fight::jg'"))).toBeFalse()
 })

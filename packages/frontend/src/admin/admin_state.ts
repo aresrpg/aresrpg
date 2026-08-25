@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
-import type { SeedAdminConfig, SeedAdminSnapshot } from '@aresrpg/sdk/seed-admin'
+import type { SeedAdminConfig, SeedAdminSnapshot, SeedLedger } from '@aresrpg/sdk/seed-admin'
 import type { ContractArtifact } from '@aresrpg/sdk/deployment-admin'
 
 import type { AuthSession } from '../auth.ts'
@@ -40,20 +40,35 @@ export type DeploymentPins = Readonly<{
   kiosk_package?: string | null
   math_package: string | null
   math_package_original?: string | null
+  math_artifact_digest?: string | null
   upgrade_cap: string | null
   math_upgrade_cap: string | null
-  admin_cap: string | null
+  /** the control package's one application authority, reused by seed and core. */
+  admin_cap?: string | null
+  control_package?: string | null
+  control_package_original?: string | null
+  control_upgrade_cap?: string | null
+  control_artifact_digest?: string | null
+  seed_package?: string | null
+  seed_package_original?: string | null
+  seed_upgrade_cap?: string | null
+  seed_artifact_digest?: string | null
+  package_artifact_digest?: string | null
+  content_root?: Readonly<{ id: string | null; shared_version: string | null }>
+  /** Registry root -> every seeded address and its last authored identity facts. */
+  seed_ledgers?: Readonly<Record<string, SeedLedger>>
+  /** Registry root -> address -> human-readable content identity; historical rows are retained. */
+  seed_addresses?: Readonly<Record<string, Readonly<Record<string, string>>>>
+  board_catalog?: Readonly<{ id: string | null; shared_version: string | null }>
   publisher: string | null
   item_publisher?: string | null
   character_publisher?: string | null
   version: Readonly<{ id: string | null; shared_version: string | null }>
-  template_registry: Readonly<{ id: string | null; shared_version: string | null }>
   loot_registry: Readonly<{ id: string | null; shared_version: string | null }>
   item_policy?: Readonly<{ id: string | null; shared_version: string | null }>
   character_policy?: Readonly<{ id: string | null; shared_version: string | null }>
   item_protected_policy?: Readonly<{ id: string | null; shared_version: string | null }>
   character_protected_policy?: Readonly<{ id: string | null; shared_version: string | null }>
-  worlds: Readonly<Record<string, Readonly<{ id: string; shared_version: string }>>>
 }>
 export type AdminDeploymentState = Readonly<{
   status:
@@ -86,12 +101,24 @@ export type AdminState = Readonly<{
   snapshot: SeedAdminSnapshot | null
   status: AdminStatus
   operation: Readonly<
-    { type: 'batch'; batch: string } | { type: 'all' } | { type: 'release' } | { type: 'seal' }
+    { type: 'batch'; batch: string } | { type: 'all' } | { type: 'release' } | { type: 'seal' } | { type: 'changes' }
   > | null
   progress: AdminProgress | null
   cleanup: 'unknown' | 'needed' | 'closed'
   log: readonly AdminLogEntry[]
+  /** the check-changes result: what the JSON files add, change, or drop vs the chain */
+  changes: Readonly<{
+    new_count: number
+    changed: readonly string[]
+    board_removals: readonly string[]
+    removed: readonly string[]
+    fixed: readonly string[]
+    unchanged: number
+    errors: readonly string[]
+  }> | null
   seal_armed: boolean
+  /** chain truth of the permanent freeze — read at every seed check, set after executing it */
+  frozen: boolean
   error: string | null
 }>
 
@@ -141,6 +168,10 @@ export type AdminInput =
   | Readonly<{ type: 'admin/release' }>
   | Readonly<{ type: 'admin/released' }>
   | Readonly<{ type: 'admin/batch_succeeded'; batch: string; snapshot: SeedAdminSnapshot }>
+  | Readonly<{ type: 'admin/changes_checked'; changes: NonNullable<AdminState['changes']> }>
+  | Readonly<{ type: 'admin/frozen_discovered'; frozen: boolean }>
+  | Readonly<{ type: 'admin/apply_changes' }>
+  | Readonly<{ type: 'admin/changes_applied'; changes: NonNullable<AdminState['changes']> }>
   | Readonly<{ type: 'admin/seal_armed'; armed: boolean }>
   | Readonly<{ type: 'admin/seal' }>
   | Readonly<{ type: 'admin/sealed'; snapshot: SeedAdminSnapshot }>
@@ -171,13 +202,15 @@ export const initial_admin_state = (): AdminState =>
       republish_armed: false,
       error: null,
     }),
-    config: Object.freeze({ admin_cap: '', worlds: Object.freeze({}) }),
+    config: Object.freeze({ admin_cap: '', content_root: '' }),
     snapshot: null,
     status: 'idle',
     operation: null,
     progress: null,
     cleanup: 'unknown',
     log: Object.freeze([]),
+    changes: null,
     seal_armed: false,
+    frozen: false,
     error: null,
   })

@@ -8,12 +8,15 @@ import {
   Vector3,
   type AnimationClip,
   type Material,
+  type Mesh,
   type Object3D,
+  type SkinnedMesh,
   type Texture,
 } from 'three'
 import { clone as clone_skinned } from 'three/addons/utils/SkeletonUtils.js'
 
 import { load_gltf_source } from './gltf_loader.ts'
+import { apply_gltf_variant } from './gltf_variant.ts'
 import { prepare_pixel_texture } from './model_texture.ts'
 
 export type MobModel = Readonly<{
@@ -31,9 +34,6 @@ type RenderMaterial = Material & {
   emissiveIntensity?: number
 }
 
-const GLB_UNITS_TO_BLOCKS = 0.5
-const MOB_MIN_HEIGHT = 0.35
-const MOB_MAX_HEIGHT = 3.2
 const MOB_EMISSIVE_FLOOR = 0.3
 const material_rows = (material: Material | Material[]): readonly Material[] =>
   Array.isArray(material) ? material : [material]
@@ -72,19 +72,29 @@ export const prepare_mob_model_root = (root: Object3D, clips: readonly Animation
   if (idle) {
     const reference_pose = new AnimationMixer(root)
     reference_pose.clipAction(idle).play()
-    reference_pose.setTime(0)
+    // Several inherited GLBs have a malformed bind pose at t=0. Sample the authored idle itself,
+    // where the creature actually stands, so off-centre rigs still land on their feet.
+    reference_pose.setTime(idle.duration / 2)
   }
   root.scale.setScalar(1)
   root.updateWorldMatrix(true, true)
-  const raw_height = new Box3().setFromObject(root).getSize(new Vector3()).y
-  const measured_height = raw_height > 0.05 ? raw_height : 1
-  const intrinsic_height = measured_height * GLB_UNITS_TO_BLOCKS
-  const final_height = Math.min(MOB_MAX_HEIGHT, Math.max(MOB_MIN_HEIGHT, intrinsic_height))
-  if (final_height !== intrinsic_height)
-    console.warn(
-      `[mob_model] "${label}" height ${intrinsic_height.toFixed(2)} was clamped to ${final_height.toFixed(2)}`
-    )
-  root.scale.setScalar(final_height / measured_height)
+  const bounds = new Box3()
+  root.traverse((object) => {
+    const skinned = object as SkinnedMesh
+    if (skinned.isSkinnedMesh) {
+      skinned.computeBoundingBox()
+      bounds.union(skinned.boundingBox.clone().applyMatrix4(skinned.matrixWorld))
+      return
+    }
+    const mesh = object as Mesh
+    if (!mesh.isMesh) return
+    if (!mesh.geometry.boundingBox) mesh.geometry.computeBoundingBox()
+    if (mesh.geometry.boundingBox) bounds.union(mesh.geometry.boundingBox.clone().applyMatrix4(mesh.matrixWorld))
+  })
+  if (bounds.isEmpty()) console.warn(`[mob_model] "${label}" has no measurable idle-pose bounds`)
+  // Creature GLBs already author meaningful relative sizes: spiders are short, skeletons are
+  // tall, sheep are squat. Preserve those proportions; the entity layer adds only context and
+  // level scaling. Flattening every species to one height made small fauna character-sized.
   root.traverse((object) => {
     const mesh = object as Object3D & {
       isMesh?: boolean
@@ -99,13 +109,13 @@ export const prepare_mob_model_root = (root: Object3D, clips: readonly Animation
     mesh.frustumCulled = false
     material_rows(mesh.material).forEach((material) => prepare_material(material as RenderMaterial))
   })
-  root.updateWorldMatrix(true, true)
-  return new Box3().setFromObject(root).min.y
+  return bounds.isEmpty() ? 0 : bounds.min.y
 }
 
-export const create_mob_model = async (url: string, label = url): Promise<MobModel> => {
+export const create_mob_model = async (url: string, label = url, variant: string | null = null): Promise<MobModel> => {
   const gltf = await load_gltf_source(url)
   const root = clone_skinned(gltf.scene)
+  await apply_gltf_variant(gltf, root, variant)
   const materials = clone_materials(root)
   const min_y = prepare_mob_model_root(root, gltf.animations, label)
   let disposed = false
@@ -123,4 +133,9 @@ export const create_mob_model = async (url: string, label = url): Promise<MobMod
       materials.forEach((material) => material.dispose())
     },
   })
+}
+
+/** Warm the shared parsed-GLB cache without constructing a scene instance. */
+export const preload_mob_model = (url: string): void => {
+  void load_gltf_source(url).catch((error: unknown) => console.error(`Failed to preload mob model ${url}.`, error))
 }

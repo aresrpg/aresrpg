@@ -5,9 +5,9 @@
 /// `admin_freeze` (version 0) is the emergency brake: it stops every public door at once.
 module aresrpg::version;
 
-use aresrpg::admin::AdminCap;
+use aresrpg_control::admin::AdminCap;
 
-const PACKAGE_VERSION: u64 = 4;
+const PACKAGE_VERSION: u64 = 5;
 
 const EVersionMismatch: u64 = 601;
 

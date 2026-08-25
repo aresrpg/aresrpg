@@ -20,37 +20,117 @@ const ITEM_STAT_CENTER = 32_768n
 const BASE_HP = BigInt(CONTRACT_CONSTANTS.base_hp)
 const HP_PER_LEVEL = BigInt(CONTRACT_CONSTANTS.hp_per_level)
 
-const band_scaled = (base: bigint, low: bigint, high: bigint, level: bigint): bigint =>
-  high === low ? base : (base * 7n * (high - low + (level - low))) / (10n * (high - low))
+export const mob_band_scaled = (base: bigint, low: bigint, high: bigint, level: bigint): bigint => {
+  if (high === low) return base
+  const span = high - low
+  return (base * (6n * span + 10n * (level - low))) / (10n * span)
+}
+
+export const mob_centered_band_scaled = (
+  value: bigint,
+  center: bigint,
+  low: bigint,
+  high: bigint,
+  level: bigint
+): bigint => {
+  if (value >= center) return center + mob_band_scaled(value - center, low, high, level)
+  if (high === low) return value
+  const span = high - low
+  const scaled = ((center - value) * (16n * span - 10n * (level - low))) / (10n * span)
+  return scaled >= center ? 0n : center - scaled
+}
+
+export const mob_loot_chance_scaled = (base_bp: bigint, low: bigint, high: bigint, level: bigint): bigint => {
+  if (high === low) return base_bp
+  const span = high - low
+  const scaled = (base_bp * (8n * span + 4n * (level - low))) / (10n * span)
+  return scaled > 10_000n ? 10_000n : scaled
+}
+
+export const mob_pool_scaled = (base: bigint, low: bigint, high: bigint, level: bigint): bigint => {
+  if (high === low) return base
+  const span = high - low
+  const denominator = 10n * span
+  const numerator = base * (10n * span + 3n * (level - low))
+  return (numerator + denominator / 2n) / denominator
+}
+
+const scalable_mob_effect = (kind: bigint): boolean => kind <= 7n || kind === 14n || kind === 15n
+
+const scale_mob_effect = (
+  effect: MobTemplateSource['spells'][number]['level']['effects'][number],
+  low: bigint,
+  high: bigint,
+  level: bigint
+) =>
+  scalable_mob_effect(effect.kind)
+    ? {
+        ...effect,
+        value: mob_band_scaled(effect.value, low, high, level),
+        value_max: mob_band_scaled(effect.value_max, low, high, level),
+      }
+    : effect
+
+const scale_mob_spell_level = (
+  spell_level: MobTemplateSource['spells'][number]['level'],
+  low: bigint,
+  high: bigint,
+  level: bigint
+) => ({
+  ...spell_level,
+  effects: spell_level.effects.map((effect) => scale_mob_effect(effect, low, high, level)),
+  crit_effects: spell_level.crit_effects.map((effect) => scale_mob_effect(effect, low, high, level)),
+})
 
 export const create_mob_snapshot = (template: MobTemplateSource, scalar: bigint): MobSnapshot => {
   const level = template.level_min + ((template.level_max - template.level_min) * scalar) / 100n
-  const kit = template.spells.map((spell) => {
-    const count = BigInt(spell.levels.length)
-    const raw =
-      template.level_max === template.level_min
-        ? count - 1n
-        : ((level - template.level_min) * count) / (template.level_max - template.level_min + 1n)
-    const index = raw >= count ? count - 1n : raw
-    const selected = spell.levels[Number(index)]
-    if (!selected) throw new Error(`mob template ${template.mob_type} spell ${spell.name} has no levels`)
-    return { name: spell.name, ordinal: index + 1n, level: selected }
-  })
+  const kit = template.spells.map((spell) => ({
+    name: spell.name,
+    ordinal: 1n,
+    level: scale_mob_spell_level(spell.level, template.level_min, template.level_max, level),
+  }))
   return {
     mob_type: template.mob_type,
     level,
-    max_hp: band_scaled(template.hp, template.level_min, template.level_max, level),
-    ap: template.ap,
-    mp: template.mp,
-    agility: template.agility,
-    wisdom: template.wisdom,
-    earth_res: template.earth_res,
-    fire_res: template.fire_res,
-    water_res: template.water_res,
-    air_res: template.air_res,
+    max_hp: mob_band_scaled(template.hp, template.level_min, template.level_max, level),
+    ap: mob_pool_scaled(template.ap, template.level_min, template.level_max, level),
+    mp: mob_pool_scaled(template.mp, template.level_min, template.level_max, level),
+    agility: mob_band_scaled(template.agility, template.level_min, template.level_max, level),
+    wisdom: mob_band_scaled(template.wisdom, template.level_min, template.level_max, level),
+    earth_res: mob_centered_band_scaled(
+      template.earth_res,
+      ITEM_STAT_CENTER,
+      template.level_min,
+      template.level_max,
+      level
+    ),
+    fire_res: mob_centered_band_scaled(
+      template.fire_res,
+      ITEM_STAT_CENTER,
+      template.level_min,
+      template.level_max,
+      level
+    ),
+    water_res: mob_centered_band_scaled(
+      template.water_res,
+      ITEM_STAT_CENTER,
+      template.level_min,
+      template.level_max,
+      level
+    ),
+    air_res: mob_centered_band_scaled(
+      template.air_res,
+      ITEM_STAT_CENTER,
+      template.level_min,
+      template.level_max,
+      level
+    ),
     kit,
-    xp: band_scaled(template.xp, template.level_min, template.level_max, level),
-    loot: template.loot,
+    xp: mob_band_scaled(template.xp, template.level_min, template.level_max, level),
+    loot: template.loot.map((row) => ({
+      ...row,
+      chance_bp: mob_loot_chance_scaled(row.chance_bp, template.level_min, template.level_max, level),
+    })),
   }
 }
 
@@ -121,12 +201,13 @@ export const create_fight_state = ({
   x = 0n,
   z = 0n,
   board_seed = 1n,
+  board: authored_board,
   players,
   mobs,
   spells = {},
   placement_ms = 0n,
 }: FightSetup): HydratedFightCheckpoint => {
-  const board = generate_board(board_seed)
+  const board = authored_board ?? generate_board(board_seed)
   const used_cells = new Set<bigint>()
   const start_cell = (team: bigint, explicit: bigint | undefined): bigint => {
     if (explicit !== undefined) {
@@ -144,7 +225,7 @@ export const create_fight_state = ({
   const fighters = [
     ...players.map((player) => ({
       team: BigInt(player.team ?? 0),
-      kind: { type: 'player' as const, character: player.character, owner: player.owner },
+      kind: { type: 'player' as const, character: player.character, owner: player.owner, level: player.source.level },
       cell: start_cell(BigInt(player.team ?? 0), player.cell),
       ready: Boolean(player.ready),
       dead: false,
@@ -207,6 +288,8 @@ export const create_fight_state = ({
       turn_slot: 0n,
       turn_casts: [],
       placement_ms,
+      started_ms: null,
+      ended_ms: null,
       turn_started_ms: 0n,
     },
     sources,

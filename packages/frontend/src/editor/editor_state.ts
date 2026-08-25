@@ -20,6 +20,7 @@ export type SeedEditorState = Readonly<{
   // the selected row's address (its JSON path joined) — stable across identity renames
   entity_id: string | null
   query: string
+  focused_domain: SeedDomain | null
   saving_domain: SeedDomain | null
   validation: SeedValidationReport | null
   error: string | null
@@ -37,6 +38,7 @@ export type EditorInput =
   | Readonly<{ type: 'editor/domain_selected'; domain: SeedDomain }>
   | Readonly<{ type: 'editor/entity_selected'; entity_id: string | null }>
   | Readonly<{ type: 'editor/query_changed'; query: string }>
+  | Readonly<{ type: 'editor/focus_changed'; domain: SeedDomain; focused: boolean }>
   | Readonly<{ type: 'editor/value_changed'; domain: SeedDomain; path: JsonPath; value: JsonValue }>
   | Readonly<{ type: 'editor/save'; domain: SeedDomain }>
   | Readonly<{
@@ -57,6 +59,7 @@ export const initial_editor_state = (): SeedEditorState =>
     domain: 'items',
     entity_id: null,
     query: '',
+    focused_domain: null,
     saving_domain: null,
     validation: null,
     error: null,

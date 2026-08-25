@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
+import { model_variant_identity } from '@aresrpg/immutable'
+
 export type CharacterModelBasenames = Readonly<{ body: string; hair?: string }>
 type WornItem = Readonly<{ item_type: string; category: string }>
 
@@ -31,26 +33,10 @@ const CHARACTER_MODELS: Readonly<
 export const character_model_basenames = (classe: string, male: boolean): CharacterModelBasenames =>
   CHARACTER_MODELS[classe.toLowerCase()]?.[male ? 'male' : 'female'] ?? SENSHI_MODELS[male ? 'male' : 'female']
 
-export const resolve_cosmetic_variant = (item_type: string, basename: string): string | null => {
-  if (item_type === basename) return basename === 'capuche_bara' ? 'base' : null
-  const prefix = `${basename}_`
-  if (!item_type.startsWith(prefix)) return null
-  const variant = item_type.slice(prefix.length)
-  if (basename === 'capuche_bara' && variant === 'wisdom') return 'moonstone'
-  return variant || null
-}
-
-export const cosmetic_model_of = (
+export const worn_equipment_model_of = (
   item: WornItem,
   available: ReadonlySet<string>
 ): Readonly<{ basename: string; variant: string | null }> | null => {
   if (item.category !== 'hat' && item.category !== 'cloak') return null
-  const [basename] = [...available]
-    .filter((candidate) => item.item_type === candidate || item.item_type.startsWith(`${candidate}_`))
-    .toSorted((left, right) => right.length - left.length)
-  if (!basename) return null
-  return Object.freeze({
-    basename,
-    variant: resolve_cosmetic_variant(item.item_type, basename),
-  })
+  return model_variant_identity(item.item_type, [...available])
 }

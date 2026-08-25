@@ -93,6 +93,9 @@ const is_saved_position = (value: unknown): value is SavedPosition => {
 
 const same_anchor = (a: ChainAnchor, b: ChainAnchor): boolean => a.x === b.x && a.z === b.z && a.at_ms === b.at_ms
 
+export const chain_anchor_changed = (before: ChainAnchor | null, current: ChainAnchor | null): boolean =>
+  before === null ? current !== null : current === null || !same_anchor(before, current)
+
 /** The resume arbiter: the saved pose wins only while it explains itself against the current
  *  chain anchor; otherwise the caller falls back to the checkpoint. Pure — tested directly. */
 export const resume_position = (
@@ -103,6 +106,9 @@ export const resume_position = (
   if (!saved || !chain_anchor) return null
   if (!same_anchor(saved.anchor, chain_anchor)) return null
   if (now - saved.saved_at > MAX_AGE_MS) return null
+  // A future checkpoint is a chain root (gathering/ambush): its movement budget is exactly
+  // zero, so an offset cached pose cannot possibly explain itself even under the same anchor id.
+  if (chain_anchor.at_ms > now && (saved.x !== chain_anchor.x || saved.z !== chain_anchor.z)) return null
   return Object.freeze({ x: saved.x, y: saved.y, z: saved.z })
 }
 

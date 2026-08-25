@@ -29,7 +29,7 @@ import prettier from 'prettier'
  * @typedef {{ kind: 'skip' | 'clock' | 'random' }
  *   | { kind: 'pin', pin: string, mutable?: boolean }
  *   | { kind: 'pure' | 'pure_option' | 'pure_vector', helper: string }
- *   | { kind: 'move_vector', type: string }
+ *   | { kind: 'move_value' | 'move_vector', type: string }
  *   | { kind: 'receiving', type: string }
  *   | { kind: 'object', type: string, mutable: boolean }} DoorStrategy
  * @typedef {{ name: string, type: string, strategy: DoorStrategy }} DoorParam
@@ -86,6 +86,7 @@ const TYPE_MAP = {
 }
 
 const MOVE_VALUE_TYPES = Object.freeze({
+  PM: { type_package: 'game_type_package', module: 'item' },
   ItemDamages: { type_package: 'math_type_package', module: 'item_damages' },
   Effect: { type_package: 'math_type_package', module: 'spell_effect' },
   SpellLevel: { type_package: 'math_type_package', module: 'spell_effect' },
@@ -107,6 +108,7 @@ const strategy_of = (type) => {
       throw new Error(`generate_doors: unknown Move vector value type "${value_type}" — map its defining module`)
     return { kind: 'move_vector', type: value_type }
   }
+  if (MOVE_VALUE_TYPES[type]) return { kind: 'move_value', type }
   if (/^Receiving</.test(type)) return { kind: 'receiving', type }
   // A caller object: by reference (&mut Fight, &ItemTemplate…) or by value (Fight, Coin<SUI>,
   // CrushClaim, FightBuild…). Mutability drives the sharedObjectRef flag: `&T` is the only
@@ -165,6 +167,8 @@ const arg_expr = ({ name, strategy }) => {
       // type arguments name types by their DEFINING package — never the latest upgrade target
       return `tx.makeMoveVec({ type: \`\${ctx.${value.type_package}}::${value.module}::${strategy.type}\`, elements: [...args.${name}] })`
     }
+    case 'move_value':
+      return `args.${name}`
     case 'receiving':
       return `ctx.receiving(tx, args.${name})`
     case 'object':
@@ -197,6 +201,8 @@ const arg_type = ({ strategy }) => {
       return `readonly (${pure_type[strategy.helper]})[]`
     case 'move_vector':
       return 'readonly TransactionObjectArgument[]'
+    case 'move_value':
+      return 'TransactionObjectArgument'
     case 'receiving':
     case 'object':
       return 'Resolvable'
@@ -208,7 +214,9 @@ const arg_type = ({ strategy }) => {
 /** Emit the doors module text. Deterministic: same source in, same bytes out. */
 /** @param {readonly Door[]} doors */
 export function emit_doors(doors, { source = 'packages/move/sources/api.move', description = 'api.move doors' } = {}) {
-  const value_vector_import = doors.some((door) => door.params.some(({ strategy }) => strategy.kind === 'move_vector'))
+  const value_vector_import = doors.some((door) =>
+    door.params.some(({ strategy }) => strategy.kind === 'move_vector' || strategy.kind === 'move_value')
+  )
     ? ', TransactionObjectArgument'
     : ''
   const header = `// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available

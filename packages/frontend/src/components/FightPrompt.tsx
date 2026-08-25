@@ -1,30 +1,58 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved.
-// The fight sword's surface voice: the chip floating over the focused marker (lock / press-F
-// tag) and the join/spectate modal both live here. Opening the modal ARMS the server-side
+// The fight sword's surface voice: public marker nametags and the close-range join/spectate
+// modal both live here. Opening the modal ARMS the server-side
 // watch (packet/spectate) so the roster hydrates and updates live; joining or spectating is
 // then only a frontend commit over a stream that is already flowing.
 
 /* eslint-disable functional/immutable-data, functional/prefer-immutable-types -- React refs and lifecycle events are mutable platform boundaries. */
-import { Lock, Swords } from 'lucide-react'
+import { Lock, Swords, UserRound } from 'lucide-react'
+import type { ReactNode } from 'react'
 import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 
 import { content_catalog } from '../content/catalog.ts'
+import { mob_icon } from '../content/assets.ts'
 import type { AppCopy } from '../i18n/copy.ts'
 import { useFightPrompt } from '../game/core/fight_prompt_feed.ts'
 import { dispatch_app, useAppStore } from '../store.ts'
 import { selected_character } from '../modules/session.ts'
 
 import { ModalFrame } from './ModalFrame.tsx'
-import { PromptChip, PromptKey, split_key_template } from './PromptChip.tsx'
+import { NametagCard } from './NametagCard.tsx'
+import { PromptKey, split_key_template } from './PromptChip.tsx'
 
-const ACCESS_GROUP = 1
+const ACCESS_INVITED = 2
+const ACCESS_UNSET = 255
 const PLACEMENT_WINDOW_MS = 60_000
 
-/** both sides group-sealed: bystanders can never take a seat — the lock's own rule */
-const locked_fight = (access_a: number, access_b: number): boolean =>
-  access_a === ACCESS_GROUP && access_b === ACCESS_GROUP
+type FightAccess = Readonly<{
+  phase: string
+  access_a: bigint | number
+  access_b: bigint | number
+  opener_a: string | null
+  opener_b: string | null
+}>
+
+export const fight_prompt_action = (phase: string): 'join' | 'spectate' => (phase === 'placement' ? 'join' : 'spectate')
+
+export const fight_joinable_teams = (fight: FightAccess, character_id: string | null): readonly number[] => {
+  if (fight.phase !== 'placement') return Object.freeze([])
+  const eligible = (access: bigint | number, opener: string | null): boolean => {
+    const normalized_access = Number(access)
+    return (
+      normalized_access === 0 ||
+      normalized_access === ACCESS_UNSET ||
+      (normalized_access === ACCESS_INVITED && opener === character_id)
+    )
+  }
+  return Object.freeze(
+    [
+      [fight.access_a, fight.opener_a],
+      [fight.access_b, fight.opener_b],
+    ].flatMap(([access, opener], team) => (eligible(access as bigint | number, opener as string | null) ? [team] : []))
+  )
+}
 
 const elapsed_label = (from_ms: number): string => {
   const seconds = Math.max(0, Math.floor((Date.now() - from_ms) / 1000))
@@ -33,15 +61,15 @@ const elapsed_label = (from_ms: number): string => {
 
 export const FightPrompt = ({ copy }: Readonly<{ copy: AppCopy }>) => {
   const prompt = useFightPrompt()
-  const fight = useAppStore((state) => (prompt.focused_id ? (state.world.fights[prompt.focused_id] ?? null) : null))
+  const fights = useAppStore((state) => state.world.fights)
+  const fight = prompt.focused_id ? (fights[prompt.focused_id] ?? null) : null
   const [open_id, set_open_id] = useState<string | null>(null)
 
-  // KeyF commits on the focused sword: placement opens the join modal, active the spectate one.
-  // A group-sealed fight has no seat for you — the lock means it.
+  // The sword is public world discovery. Access decides which buttons work inside the modal;
+  // it never suppresses the nametag or the interaction that explains the fight.
   useEffect(() => {
     const on_key = (event: KeyboardEvent): void => {
       if (event.code !== 'KeyF' || event.repeat || !prompt.focused_id || open_id || !fight) return
-      if (locked_fight(fight.access_a, fight.access_b)) return
       event.preventDefault()
       set_open_id(prompt.focused_id)
     }
@@ -49,57 +77,70 @@ export const FightPrompt = ({ copy }: Readonly<{ copy: AppCopy }>) => {
     return () => globalThis.removeEventListener('keydown', on_key)
   }, [fight, open_id, prompt.focused_id])
 
-  if (!prompt.root) return null
-  const locked = !fight || locked_fight(fight.access_a, fight.access_b)
-  const spectate_only = !fight || fight.phase !== 'placement'
-  const template = locked
-    ? copy.world_hud.fight_locked
-    : spectate_only
-      ? copy.world_hud.fight_press_spectate
-      : copy.world_hud.fight_press_join
-  const [before, after] = split_key_template(template)
   return (
     <>
-      {createPortal(
-        <PromptChip>
-          {locked ? (
-            <Lock className="text-[#ffca57]" size={13} />
-          ) : (
-            <>
-              {before?.trim()}
-              <PromptKey label="F" />
-              {after?.trim()}
-            </>
-          )}
-        </PromptChip>,
-        prompt.root
-      )}
+      {Object.entries(prompt.roots).map(([fight_id, root]) => {
+        const row = fights[fight_id]
+        if (!row) return null
+        const action = fight_prompt_action(row.phase)
+        const interactive = prompt.focused_id === fight_id
+        const template = action === 'spectate' ? copy.world_hud.fight_press_spectate : copy.world_hud.fight_press_join
+        const [before, after] = split_key_template(template)
+        return createPortal(
+          <NametagCard
+            lines={
+              interactive
+                ? [
+                    {
+                      key: 'press',
+                      text: (
+                        <span className="inline-flex items-center gap-1.5">
+                          {before?.trim()}
+                          <PromptKey label="F" />
+                          {after?.trim()}
+                        </span>
+                      ),
+                    },
+                  ]
+                : []
+            }
+            name={action === 'spectate' ? copy.world_hud.fight_spectate_title : copy.world_hud.fight_join_title}
+          />,
+          root,
+          fight_id
+        )
+      })}
       {open_id ? <FightModal close={() => set_open_id(null)} copy={copy} fight_id={open_id} /> : null}
     </>
   )
 }
 
+type FightRosterFighter = Readonly<{
+  kind: Readonly<{
+    type: string
+    character?: string
+    owner?: string
+    snapshot?: Readonly<{ mob_type?: string; level?: bigint | number }>
+  }>
+  team: bigint | number
+}>
+type FightPlayers = Readonly<Record<string, Readonly<{ name?: string; level?: bigint | number }>>>
+
 /** One roster side's seats — players resolve names off the checkpoint's source map, mobs off
  *  the seed catalog; a raw id never reaches the screen. */
 const TeamColumn = ({
+  action,
   empty_label,
   fighters,
   label,
   players,
   unknown_name,
 }: Readonly<{
+  action: ReactNode
   empty_label: string
-  fighters: readonly {
-    kind: {
-      type: string
-      character?: string
-      owner?: string
-      snapshot?: { mob_type?: string; level?: bigint | number }
-    }
-    team: bigint | number
-  }[]
+  fighters: readonly FightRosterFighter[]
   label: string
-  players: Readonly<Record<string, Readonly<{ name?: string; level?: bigint | number }>>>
+  players: FightPlayers
   unknown_name: string
 }>) => (
   <div className="grid content-start gap-2">
@@ -111,12 +152,21 @@ const TeamColumn = ({
       const mob = fighter.kind.type === 'mob' ? fighter.kind.snapshot : null
       const name = player?.name ?? (mob?.mob_type ? content_catalog.mob(mob.mob_type)?.mob.name : null) ?? unknown_name
       const level = player?.level ?? mob?.level ?? 0
+      const portrait = mob?.mob_type ? mob_icon(mob.mob_type) : null
       return (
         <div
-          className="flex items-center justify-between gap-2 border border-white/8 bg-black/25 px-2 py-1.5"
+          className="flex min-h-12 items-center gap-2 border border-white/8 bg-black/25 p-1.5"
+          data-fight-fighter={fighter.kind.type}
           key={`${name}-${index}`}
         >
-          <span className="truncate font-mono text-[10px] text-[#d8d3ca]">{name}</span>
+          <span className="grid size-9 shrink-0 place-items-center overflow-hidden border border-white/10 bg-[#111519] text-[#777b86]">
+            {portrait ? (
+              <img alt="" className="size-full object-contain" src={portrait} />
+            ) : (
+              <UserRound aria-hidden="true" size={19} strokeWidth={1.3} />
+            )}
+          </span>
+          <span className="min-w-0 flex-1 truncate font-mono text-[10px] text-[#d8d3ca]">{name}</span>
           <span className="shrink-0 font-mono text-[8px] tracking-[0.1em] text-[#777b86] uppercase">
             LV {String(level)}
           </span>
@@ -126,7 +176,79 @@ const TeamColumn = ({
     {fighters.length === 0 && (
       <p className="py-2 text-center font-mono text-[9px] text-[#555b66] uppercase">{empty_label}</p>
     )}
+    {action}
   </div>
+)
+
+export const FightTeams = ({
+  action_a,
+  action_b,
+  empty_label,
+  label_a,
+  label_b,
+  players,
+  team_a,
+  team_b,
+  unknown_name,
+}: Readonly<{
+  action_a: ReactNode
+  action_b: ReactNode
+  empty_label: string
+  label_a: string
+  label_b: string
+  players: FightPlayers
+  team_a: readonly FightRosterFighter[]
+  team_b: readonly FightRosterFighter[]
+  unknown_name: string
+}>) => (
+  <div className="grid grid-cols-[1fr_auto_1fr] items-stretch gap-3" data-fight-roster="">
+    <TeamColumn
+      action={action_a}
+      empty_label={empty_label}
+      fighters={team_a}
+      label={label_a}
+      players={players}
+      unknown_name={unknown_name}
+    />
+    <div className="grid place-items-center font-mono text-xs tracking-[0.2em] text-[#c8963c]/70">VS</div>
+    <TeamColumn
+      action={action_b}
+      empty_label={empty_label}
+      fighters={team_b}
+      label={label_b}
+      players={players}
+      unknown_name={unknown_name}
+    />
+  </div>
+)
+
+const JoinButton = ({
+  enabled,
+  locked,
+  on_join,
+  text,
+  team,
+}: Readonly<{
+  enabled: boolean
+  locked: boolean
+  on_join: () => void
+  text: AppCopy['world_hud']
+  team: 0 | 1
+}>) => (
+  <button
+    className={`mt-auto flex h-10 items-center justify-center gap-2 border font-mono text-[10px] tracking-[0.16em] uppercase transition ${
+      team === 0
+        ? 'border-[#c8963c]/40 bg-[#c8963c]/8 text-[#e0b86b] enabled:hover:border-[#c8963c] enabled:hover:bg-[#c8963c]/14'
+        : 'border-[#4a9eff]/40 bg-[#4a9eff]/8 text-[#67adff] enabled:hover:border-[#4a9eff] enabled:hover:bg-[#4a9eff]/14'
+    } enabled:cursor-pointer disabled:cursor-not-allowed disabled:opacity-35`}
+    disabled={!enabled}
+    onClick={on_join}
+    title={locked ? text.fight_locked : undefined}
+    type="button"
+  >
+    {locked && <Lock size={12} />}
+    {text.fight_join_button}
+  </button>
 )
 
 /** The join/spectate modal — renders the LIVE roster off the armed watch's hydration. */
@@ -161,31 +283,32 @@ const FightModal = ({ close, copy, fight_id }: Readonly<{ close: () => void; cop
 
   if (!row) return null
   const checkpoint = session.checkpoint?.contract.id === fight_id ? session.checkpoint : null
-  const fighters = (checkpoint?.contract.fighters ?? []) as unknown as readonly {
-    kind: {
-      type: string
-      character?: string
-      owner?: string
-      snapshot?: { mob_type?: string; level?: bigint | number }
-    }
-    team: bigint | number
-  }[]
-  const players = (checkpoint?.sources.players ?? {}) as Readonly<
-    Record<string, Readonly<{ name?: string; level?: bigint | number }>>
-  >
+  const fighters = (checkpoint?.contract.fighters ?? []) as unknown as readonly FightRosterFighter[]
+  const players = (checkpoint?.sources.players ?? {}) as FightPlayers
   // exact when this socket witnessed the start; otherwise the window's expiry is the estimate
   const started_ms = session.started_at_ms ?? Number(row.placement_ms) + PLACEMENT_WINDOW_MS
   const text = copy.world_hud
 
-  const team_a = fighters.filter((fighter) => fighter.team === 0)
-  const team_b = fighters.filter((fighter) => fighter.team === 1)
-  const pvm = team_a.length > 0 && team_b.every((fighter) => fighter.kind.type === 'mob')
+  const team_a = fighters.filter((fighter) => Number(fighter.team) === 0)
+  const team_b = fighters.filter((fighter) => Number(fighter.team) === 1)
   // the armed stream's contract carries the REAL access — the fight_created row invents UNSET
   // until a snapshot corrects it, so chain truth wins the moment it exists
-  const contract_access = checkpoint?.contract as { access_a?: number; access_b?: number } | undefined
-  const access_a = contract_access?.access_a ?? row.access_a
-  const access_b = contract_access?.access_b ?? row.access_b
-  const can_join = row.phase === 'placement' && !!wallet && !!selected_character_id && !locked_fight(access_a, access_b)
+  const access_a = checkpoint?.contract.access_a ?? row.access_a
+  const access_b = checkpoint?.contract.access_b ?? row.access_b
+  const admitted_teams = fight_joinable_teams({ ...row, access_a, access_b }, selected_character_id)
+  const already_seated = fighters.some(
+    (fighter) => fighter.kind.type === 'player' && fighter.kind.character === selected_character_id
+  )
+  const team_has_room = (team: 0 | 1): boolean => {
+    if (!checkpoint) return false
+    const side = team === 0 ? team_a : team_b
+    const starts = team === 0 ? checkpoint.contract.board.start_cells_a : checkpoint.contract.board.start_cells_b
+    return !side.some((fighter) => fighter.kind.type === 'mob') && side.length < starts.length
+  }
+  const joinable_teams = admitted_teams.filter(
+    (team): team is 0 | 1 => !already_seated && (team === 0 || team === 1) && team_has_room(team)
+  )
+  const can_submit = !!wallet && !!selected_character_id && !!checkpoint
 
   const join = (team: number): void => {
     if (!wallet || !selected_character_id) return
@@ -212,6 +335,7 @@ const FightModal = ({ close, copy, fight_id }: Readonly<{ close: () => void; cop
       close={close}
       close_label={text.fight_close}
       label={row.phase === 'placement' ? text.fight_join_title : text.fight_spectate_title}
+      max_width="max-w-2xl"
     >
       <div className="grid gap-4 p-6">
         <header className="flex items-center gap-3">
@@ -228,47 +352,40 @@ const FightModal = ({ close, copy, fight_id }: Readonly<{ close: () => void; cop
           </div>
         </header>
 
-        <div className="grid grid-cols-[1fr_auto_1fr] items-stretch gap-3">
-          <TeamColumn
-            empty_label={text.fight_empty_side}
-            fighters={team_a}
-            label={text.fight_side_a}
-            players={players}
-            unknown_name={text.fight_unknown}
-          />
-          <div className="grid place-items-center font-mono text-xs tracking-[0.2em] text-[#c8963c]/70">VS</div>
-          <TeamColumn
-            empty_label={text.fight_empty_side}
-            fighters={team_b}
-            label={text.fight_side_b}
-            players={players}
-            unknown_name={text.fight_unknown}
-          />
-        </div>
+        <FightTeams
+          action_a={
+            row.phase === 'placement' ? (
+              <JoinButton
+                enabled={can_submit && joinable_teams.includes(0)}
+                locked={!!checkpoint && !joinable_teams.includes(0)}
+                on_join={() => join(0)}
+                team={0}
+                text={text}
+              />
+            ) : null
+          }
+          action_b={
+            row.phase === 'placement' ? (
+              <JoinButton
+                enabled={can_submit && joinable_teams.includes(1)}
+                locked={!!checkpoint && !joinable_teams.includes(1)}
+                on_join={() => join(1)}
+                team={1}
+                text={text}
+              />
+            ) : null
+          }
+          empty_label={text.fight_empty_side}
+          label_a={text.fight_side_a}
+          label_b={text.fight_side_b}
+          players={players}
+          team_a={team_a}
+          team_b={team_b}
+          unknown_name={text.fight_unknown}
+        />
 
         <footer className="grid gap-2">
-          {row.phase === 'placement' ? (
-            can_join && (
-              <div className={`grid ${!pvm ? 'grid-cols-2' : ''} gap-2`}>
-                <button
-                  className="h-10 cursor-pointer border border-[#c8963c]/40 bg-[#c8963c]/8 font-mono text-[10px] tracking-[0.16em] text-[#e0b86b] uppercase transition hover:border-[#c8963c] hover:bg-[#c8963c]/14"
-                  onClick={() => join(0)}
-                  type="button"
-                >
-                  {text.fight_join_button}
-                </button>
-                {!pvm && (
-                  <button
-                    className="h-10 cursor-pointer border border-[#4a9eff]/40 bg-[#4a9eff]/8 font-mono text-[10px] tracking-[0.16em] text-[#67adff] uppercase transition hover:border-[#4a9eff] hover:bg-[#4a9eff]/14"
-                    onClick={() => join(1)}
-                    type="button"
-                  >
-                    {text.fight_join_button}
-                  </button>
-                )}
-              </div>
-            )
-          ) : (
+          {row.phase !== 'placement' ? (
             <button
               className="h-10 cursor-pointer border border-[#4a9eff]/40 bg-[#4a9eff]/8 font-mono text-[10px] tracking-[0.16em] text-[#67adff] uppercase transition hover:border-[#4a9eff] hover:bg-[#4a9eff]/14"
               onClick={spectate}
@@ -276,7 +393,7 @@ const FightModal = ({ close, copy, fight_id }: Readonly<{ close: () => void; cop
             >
               {text.fight_spectate_button}
             </button>
-          )}
+          ) : null}
           {!wallet && (
             <p className="text-center font-mono text-[8px] tracking-[0.12em] text-[#777b86] uppercase">
               {text.fight_wallet_hint}

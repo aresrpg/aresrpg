@@ -4,15 +4,15 @@
 @import 'tailwindcss';
 
 @theme {
-  --color-bg: #0a0a0f;
-  --color-surface: #12121a;
-  --color-border: #1e1e2e;
+  --color-bg: #0b0d0e;
+  --color-surface: #181c1f;
+  --color-border: #2b3237;
   --color-gold: #c8963c;
   --color-gold-light: #f5d0a9;
   --color-gold-dark: #8b6914;
   --color-cyan: #4a9eff;
   --color-text: #e8e4dc;
-  --color-muted: #6b7280;
+  --color-muted: #899097;
 }
 
 :root {
@@ -20,6 +20,16 @@
   --safe-right: env(safe-area-inset-right, 0px);
   --safe-bottom: env(safe-area-inset-bottom, 0px);
   --safe-left: env(safe-area-inset-left, 0px);
+}
+
+/* Authoring is information-dense: nested sheets need visible depth, not four copies of black. */
+[data-content-editor-shell] :is(input, select, textarea) {
+  border-color: rgba(255, 255, 255, 0.14);
+  background-color: #0d1012;
+}
+
+[data-content-editor-shell] :is(input, select, textarea):focus {
+  background-color: #121619;
 }
 
 @keyframes slide-in {

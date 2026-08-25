@@ -1,8 +1,19 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
-import { BIOME_SLOTS, parse_world_recipe, type BiomeSlot, type WorldRecipe } from '@aresrpg/engine'
-import { Boxes, ChevronDown, ChevronUp, Dna, Globe2, Layers3, Map as MapIcon, Mountain, TreePine } from 'lucide-react'
+import { BIOME_SLOTS, parse_world_recipe, type WorldRecipe } from '@aresrpg/engine'
+import {
+  Boxes,
+  ChevronDown,
+  ChevronUp,
+  Dna,
+  DoorOpen,
+  Globe2,
+  Layers3,
+  Map as MapIcon,
+  Mountain,
+  TreePine,
+} from 'lucide-react'
 import { useMemo, useState, type ComponentType } from 'react'
 
 import { dispatch_app, useAppStore } from '../store.ts'
@@ -10,8 +21,11 @@ import { dispatch_app, useAppStore } from '../store.ts'
 import { BiomeAtmosphere } from './BiomeAtmosphere.tsx'
 import { MaterialEditor, PopulationEditor, SplineEditor } from './BiomeControls.tsx'
 import { BiomeCoverage, BiomeMap, TerrainPreview } from './BiomePreviews.tsx'
+import { ClimateSlots, type LandscapeSelection } from './ClimateSlots.tsx'
+import { DungeonEditor } from './DungeonEditor.tsx'
 import { LiveTerrainPreview } from './LiveTerrainPreview.tsx'
-import { first_biome_land, move_spline_knot, sample_biome_cell, world_height_domain } from './biome_editor.ts'
+import { move_spline_knot, sample_biome_cell, world_height_domain, world_height_graph_domain } from './biome_editor.ts'
+import { mob_filter_rows } from './content_list.ts'
 import { entity_rows, type JsonPath, type JsonValue } from './seed_editor.ts'
 
 const action_class =
@@ -25,7 +39,7 @@ const record = (value: JsonValue | undefined): Readonly<Record<string, JsonValue
     ? (value as Readonly<Record<string, JsonValue>>)
     : null
 
-type BiomeTab = 'landscape' | 'materials' | 'atmosphere' | 'population'
+type BiomeTab = 'landscape' | 'materials' | 'atmosphere' | 'population' | 'dungeon'
 type PreviewMode = 'live' | 'height' | 'map'
 const tabs: readonly Readonly<{ id: BiomeTab; label: string; help: string; icon: ComponentType<{ size?: number }> }>[] =
   Object.freeze([
@@ -38,11 +52,9 @@ const tabs: readonly Readonly<{ id: BiomeTab; label: string; help: string; icon:
       icon: TreePine,
     },
     { id: 'population', label: 'Population', help: 'Assign mobs and resources to biome pools.', icon: Boxes },
+    { id: 'dungeon', label: 'Dungeon', help: 'Author the key and ordered room compositions.', icon: DoorOpen },
   ])
 
-const bands = ['low', 'mid', 'high'] as const
-const band_label = Object.freeze({ low: 'Cold', mid: 'Temperate', high: 'Hot' })
-const humidity_label = Object.freeze({ low: 'Dry', mid: 'Moderate', high: 'Wet' })
 const roles = ['surface', 'subsurface', 'filler'] as const
 
 type ReplaceTerrain = (path: JsonPath, value: JsonValue) => void
@@ -71,68 +83,6 @@ const PreviewSurface = ({
   return null
 }
 
-const ClimateSlots = ({
-  recipe,
-  selected,
-  select,
-  replace,
-}: Readonly<{
-  recipe: WorldRecipe
-  selected: BiomeSlot
-  select: (slot: BiomeSlot) => void
-  replace: ReplaceTerrain
-}>) => (
-  <section>
-    <div className="mb-1.5 grid grid-cols-[3.5rem_repeat(3,minmax(0,1fr))] gap-1">
-      <span />
-      {bands.map((band) => (
-        <span className="text-center text-[6px] tracking-[0.1em] text-[#777b86] uppercase" key={band}>
-          {humidity_label[band]}
-        </span>
-      ))}
-      {bands.map((temperature) => (
-        <div className="contents" key={temperature}>
-          <span className="self-center text-[6px] tracking-[0.08em] text-[#777b86] uppercase">
-            {band_label[temperature]}
-          </span>
-          {bands.map((humidity) => {
-            const slot = `${temperature}_${humidity}` as BiomeSlot
-            const biome_name = recipe.biome_slots[slot]
-            const biome = recipe.biomes.find(({ name }) => name === biome_name)!
-            const color = recipe.materials[first_biome_land(biome)?.surface ?? '']?.color ?? '#777777'
-            return (
-              <label
-                className={`relative flex h-8 min-w-0 items-center border bg-black/25 pl-2 ${selected === slot ? 'border-[#efbd45]/70' : 'border-white/9'}`}
-                key={slot}
-                onPointerDown={() => select(slot)}
-                style={{ borderTopColor: color }}
-              >
-                <span className="mr-1.5 size-2 shrink-0" style={{ backgroundColor: color }} />
-                <select
-                  aria-label={`${band_label[temperature]} ${humidity_label[humidity]} biome`}
-                  className="min-w-0 flex-1 bg-transparent pr-1 text-[7px] text-[#d8d4cb] outline-none"
-                  onChange={(event) => {
-                    select(slot)
-                    replace(['terrain', 'biome_slots', slot], event.target.value)
-                  }}
-                  value={biome_name}
-                >
-                  {recipe.biomes.map(({ name }) => (
-                    <option className="bg-[#090a10]" key={name} value={name}>
-                      {name}
-                    </option>
-                  ))}
-                </select>
-              </label>
-            )
-          })}
-        </div>
-      ))}
-    </div>
-    <p className="text-[6px] leading-3 text-[#5f636d]">Temperature ↓ · humidity → · neighboring slots blend.</p>
-  </section>
-)
-
 const LandscapeControls = ({
   recipe,
   replace,
@@ -144,9 +94,10 @@ const LandscapeControls = ({
   preview_busy: boolean
   begin_preview_update: () => void
 }>) => {
-  const [selected_slot, set_selected_slot] = useState<BiomeSlot>('mid_mid')
+  const [selected_slot, set_selected_slot] = useState<LandscapeSelection>('mid_mid')
   const [selected_point, set_selected_point] = useState(0)
-  const biome_name = recipe.biome_slots[selected_slot]
+  const biome_name =
+    selected_slot === 'ocean' ? (recipe.ocean?.biome ?? recipe.biome_slots.mid_mid) : recipe.biome_slots[selected_slot]
   const biome_index = recipe.biomes.findIndex(({ name }) => name === biome_name)
   const biome = recipe.biomes[biome_index]!
   const point_index = Math.min(selected_point, biome.landscape.length - 1)
@@ -203,7 +154,8 @@ const LandscapeControls = ({
         select={set_selected_point}
         selected={point_index}
         x_domain={[0, 1]}
-        y_domain={world_height_domain()}
+        y_domain={world_height_graph_domain()}
+        y_value_domain={world_height_domain()}
       />
       <section className="shrink-0 border-l-2 border-[#efbd45]/55 bg-black/22 px-2.5 py-2">
         <div className="mb-2 flex items-end justify-between gap-2">
@@ -381,6 +333,10 @@ export const BiomePage = () => {
   const editor = useAppStore((state) => state.editor)
   const file = editor.files.worlds
   const worlds = useMemo(() => (file ? entity_rows('worlds', file.value) : []), [file])
+  const mob_filters = useMemo(
+    () => mob_filter_rows(entity_rows('mobs', editor.files.mobs?.value), worlds),
+    [editor.files.mobs, worlds]
+  )
   const terrain_worlds = worlds.filter(({ value }) => record(value)?.terrain)
   const selected = terrain_worlds.find(({ id }) => id === editor.entity_id) ?? terrain_worlds[0]
   const world = record(selected?.value)
@@ -505,7 +461,7 @@ export const BiomePage = () => {
           type="button"
         >
           <ChevronDown className="-rotate-90" size={13} />
-          Edit terrain
+          Edit world
         </button>
       )}
 
@@ -513,7 +469,7 @@ export const BiomePage = () => {
         <aside className="absolute bottom-3 right-3 top-17 z-30 flex w-[min(440px,calc(100%-24px))] flex-col overflow-hidden border border-white/10 bg-[#0a0b11]/92 shadow-2xl backdrop-blur-md">
           <div className="flex shrink-0 items-center justify-between border-b border-white/8 px-3 py-2">
             <div>
-              <strong className="text-[9px] tracking-[0.15em] text-[#e0b86b] uppercase">Live terrain editor</strong>
+              <strong className="text-[9px] tracking-[0.15em] text-[#e0b86b] uppercase">World editor</strong>
               <p className="mt-0.5 text-[7px] text-[#6f747e]">
                 {active_tab.help} Live Engine is the real game renderer; 3D Height is the fast sampler.
               </p>
@@ -532,7 +488,7 @@ export const BiomePage = () => {
               <ChevronUp className="rotate-90" size={14} />
             </button>
           </div>
-          <nav className="grid shrink-0 grid-cols-4 border-b border-white/8 bg-black/15">
+          <nav className="grid shrink-0 grid-cols-5 border-b border-white/8 bg-black/15">
             {tabs.map(({ id, label, icon: Icon }) => (
               <button
                 className={`flex h-10 items-center justify-center gap-1.5 border-b-2 text-[7px] tracking-[0.1em] uppercase ${tab === id ? 'border-[#c8963c] bg-[#c8963c]/7 text-[#e0b86b]' : 'border-transparent text-[#747883] hover:text-[#d8d3ca]'}`}
@@ -569,6 +525,7 @@ export const BiomePage = () => {
             {tab === 'population' && (
               <PopulationEditor biome_names={recipe.biomes.map(({ name }) => name)} change={replace} world={world} />
             )}
+            {tab === 'dungeon' && <DungeonEditor change={replace} mob_filters={mob_filters} world={world} />}
           </div>
         </aside>
       )}

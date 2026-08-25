@@ -15,16 +15,122 @@ export const SEED_DOORS_OUT_PATH = join(root, 'src/seed_doors.gen.ts')
 export const SEED_CONTRACT_OUT_PATH = join(root, 'src/seed_contract.gen.ts')
 
 const modules = [
+  // Core's LIVING supply + loot-pool doors (they claim/bump through the seed registry —
+  // the freeze_forever flag closes them with all content).
   {
-    path: join(root, '../move/sources/seed.move'),
-    module: 'seed',
+    path: join(root, '../move/sources/world.move'),
+    module: 'world',
     package_key: 'package',
+    selected: { create: 'create_world' },
+  },
+  {
+    path: join(root, '../move/sources/shop.move'),
+    module: 'shop',
+    package_key: 'package',
+    selected: {
+      new_sale: 'new_sale',
+      set_sale: 'set_sale',
+      new_airdrop: 'new_airdrop',
+      new_giftcard: 'new_giftcard',
+    },
+  },
+  {
+    path: join(root, '../move/sources/loot_box.move'),
+    module: 'loot_box',
+    package_key: 'package',
+    selected: { add_loot_reward: 'add_loot_reward', clear_loot_table: 'clear_loot_table' },
+  },
+  // The living-content layer (owner 2026-08-23): world content + fight boards live in the
+  // seed PACKAGE behind AdminCap doors — the ceremony and every later rebalance compose these.
+  {
+    path: join(root, '../seed/sources/world_content.move'),
+    module: 'world_content',
+    package_key: 'seed_package',
+    selected: {
+      create: 'create',
+      share: 'share',
+      set_entry_level: 'set_entry_level',
+      set_mobs: 'set_mobs',
+      set_biome_window: 'set_biome_window',
+      append_biome_cells: 'append_biome_cells',
+      clear_biome_map: 'clear_biome_map',
+      set_resources: 'set_resources',
+      set_dungeon_key: 'set_dungeon_key',
+      set_dungeon_rooms: 'set_dungeon_rooms',
+    },
+  },
+  {
+    path: join(root, '../seed/sources/mob_rows.move'),
+    module: 'mob_rows',
+    package_key: 'seed_package',
+    selected: { add_mob: 'add_mob', overwrite_mob: 'overwrite_mob' },
+  },
+  {
+    path: join(root, '../seed/sources/spell_rows.move'),
+    module: 'spell_rows',
+    package_key: 'seed_package',
+    selected: { add_spell: 'add_spell', overwrite_spell: 'overwrite_spell' },
+  },
+  {
+    path: join(root, '../seed/sources/item_rows.move'),
+    module: 'item_rows',
+    package_key: 'seed_package',
+    selected: {
+      add_item: 'add_item',
+      share_item: 'share_item',
+      overwrite_item: 'overwrite_item',
+      set_stats: 'set_stats',
+      clear_stats: 'clear_stats',
+      set_damages: 'set_damages',
+      clear_damages: 'clear_damages',
+      set_effect: 'set_effect',
+      clear_effect: 'clear_effect',
+    },
+  },
+  {
+    path: join(root, '../seed/sources/recipe_rows.move'),
+    module: 'recipe_rows',
+    package_key: 'seed_package',
+    selected: {
+      add_recipe: 'add_recipe',
+      overwrite_recipe: 'overwrite_recipe',
+      retire_recipe: 'retire_recipe',
+    },
+  },
+  {
+    path: join(root, '../seed/sources/board_catalog.move'),
+    module: 'board_catalog',
+    package_key: 'seed_package',
+    selected: {
+      create_catalog: 'create_catalog',
+      add_board: 'add_board',
+      replace_board: 'replace_board',
+      remove_last_board: 'remove_last_board',
+    },
+  },
+  {
+    path: join(root, '../seed/sources/registry.move'),
+    module: 'registry',
+    package_key: 'seed_package',
+    selected: { freeze_forever: 'freeze_forever' },
   },
   {
     path: join(root, '../move-math/sources/item_stats.move'),
     module: 'item_stats',
     package_key: 'math_package',
     selected: { new: 'new_item_stats' },
+  },
+  {
+    path: join(root, '../move-math/sources/consumable_effect.move'),
+    module: 'consumable_effect',
+    package_key: 'math_package',
+    selected: {
+      heal: 'consumable_heal',
+      reset_stats: 'consumable_reset_stats',
+      reset_spells: 'consumable_reset_spells',
+      recall: 'consumable_recall',
+      loot_box: 'consumable_loot_box',
+    },
   },
   {
     path: join(root, '../move-math/sources/item_damages.move'),
@@ -42,7 +148,17 @@ const modules = [
     path: join(root, '../move-math/sources/mob_data.move'),
     module: 'mob_data',
     package_key: 'math_package',
-    selected: { new_loot_entry: 'new_mob_loot_entry', new_mob_spell: 'new_mob_spell' },
+    selected: {
+      new_loot_entry: 'new_mob_loot_entry',
+      new_mob_spell: 'new_mob_spell',
+      new_mob_data: 'new_mob_data',
+    },
+  },
+  {
+    path: join(root, '../move-math/sources/combat_grid.move'),
+    module: 'combat_grid',
+    package_key: 'math_package',
+    selected: { grid_spec: 'new_grid_spec' },
   },
   {
     path: join(root, '../move-math/sources/world_map.move'),
@@ -72,14 +188,21 @@ export const seed_doors = () =>
 
 export const generate_seed_doors = () =>
   generate_projected_doors(seed_doors(), SEED_DOORS_OUT_PATH, {
-    source: 'seed.move and its Move value constructors',
+    source: 'the living content doors and their Move value constructors',
     description: 'seeding door',
   })
 
-const key_sources = ['seed', 'mob_template', 'spell_template', 'crafting', 'shop'].map((module) => ({
-  module,
-  path: join(root, `../move/sources/${module}.move`),
-}))
+const key_sources = [
+  ...['shop', 'world'].map((module) => ({
+    module,
+    path: join(root, `../move/sources/${module}.move`),
+  })),
+  // living-content key types (the seed PACKAGE — derivations anchor on the registry root)
+  ...['item_rows', 'mob_rows', 'spell_rows', 'recipe_rows', 'world_content', 'board_catalog'].map((module) => ({
+    module,
+    path: join(root, `../seed/sources/${module}.move`),
+  })),
+]
 
 export const seed_string_keys = () =>
   key_sources.flatMap(({ path, module }) =>

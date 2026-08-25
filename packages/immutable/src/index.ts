@@ -4,10 +4,14 @@
 export {
   experience_curve,
   experience_progress,
+  craft_max_ingredients,
   craft_required_level,
+  craft_slot_capacity,
   craft_success_percent,
+  craft_xp_at_level,
   craft_xp_from_ingredient_count,
   gather_quantity_bounds,
+  gather_time_ms,
   gather_xp,
   job_experience_curve,
   job_level_from_xp,
@@ -18,9 +22,21 @@ export {
   tier_unlock_level,
   xp_for_level,
 } from './experience.ts'
+export { MODEL_VARIANT_SEPARATOR, model_variant_identity, type ModelVariantIdentity } from './model_variant.ts'
+export {
+  gatherable_catalog,
+  gatherable_item_types,
+  gatherable_of,
+  protector_level_range,
+  type Gatherable,
+  type GatheringJob,
+  type ProtectorLevelRange,
+} from './gathering.ts'
 export {
   characteristic_names,
   class_names,
+  class_spell_shape_errors,
+  class_spell_unlocks,
   is_class_name,
   is_job_slug,
   is_stat_name,
@@ -35,21 +51,38 @@ export {
   type StatName,
 } from './identity.ts'
 export { pet_max_feeds } from './pet.ts'
-export { rune_effect, rune_max_apps, type RuneEffect, type RuneTier } from './rune.ts'
 export {
+  rune_effect,
+  rune_max_apps,
+  rune_unit_weight,
+  rune_unit_weights,
+  rune_weight_scale,
+  type RuneEffect,
+  type RuneTier,
+} from './rune.ts'
+export {
+  dofus_weapon_damage_envelope,
   item_budget_envelope,
+  item_budget_standing,
   item_budget_stat_weight,
   item_budget_stat_weights,
-  item_damage_line_weight,
   type ItemBudgetEnvelope,
+  type ItemBudgetStanding,
+  type WeaponDamageEnvelope,
 } from './item_power.ts'
+export {
+  dofus_mob_power_envelope,
+  mob_power_cohort_of_role,
+  type MobPowerBand,
+  type MobPowerCohort,
+  type MobPowerEnvelope,
+} from './mob_power.ts'
 export {
   character_consumable_types,
   craft_job_of,
   accessory_categories,
   armor_categories,
   consumable_types,
-  cosmetic_item_categories,
   element_names,
   equipment_categories,
   item_categories,
@@ -69,19 +102,10 @@ export {
   type ItemCategory,
   type WeaponCategory,
 } from './item.ts'
-export {
-  chain_to_client_coordinate,
-  client_to_chain_coordinate,
-  world_center,
-  world_entry_level,
-  world_size,
-  WORLD_GATES,
-  type WorldGate,
-} from './world.ts'
+export { chain_to_client_coordinate, client_to_chain_coordinate, world_center, world_size } from './world.ts'
 export {
   character_equipment_slots,
   combat_equipment_slots,
-  cosmetic_slots,
   equipment_slot_accepts,
   relic_slots,
   rig_slots,

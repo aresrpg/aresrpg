@@ -4,21 +4,33 @@
 
 import { indexed_asset_key, spell_asset_key } from './asset_keys.ts'
 
-const item_modules = import.meta.glob(
-  ['../../../../seed/icons/items/*.{png,webp,jpg,jpeg}', '!../../../../seed/icons/items/*_hd.{png,webp,jpg,jpeg}'],
-  { eager: true, import: 'default', query: '?url' }
-) as Readonly<Record<string, string>>
+const item_modules: Readonly<Record<string, string>> =
+  typeof Bun === 'undefined'
+    ? (import.meta.glob(
+        [
+          '../../../../seed/icons/items/*.{png,webp,jpg,jpeg}',
+          '!../../../../seed/icons/items/*_hd.{png,webp,jpg,jpeg}',
+        ],
+        { eager: true, import: 'default', query: '?url' }
+      ) as Readonly<Record<string, string>>)
+    : Object.freeze({})
 
-const mob_modules = import.meta.glob(
-  ['../../../../seed/icons/mobs/*.{png,webp,jpg,jpeg}', '!../../../../seed/icons/mobs/*_hd.{png,webp,jpg,jpeg}'],
-  { eager: true, import: 'default', query: '?url' }
-) as Readonly<Record<string, string>>
+const mob_modules: Readonly<Record<string, string>> =
+  typeof Bun === 'undefined'
+    ? (import.meta.glob(
+        ['../../../../seed/icons/mobs/*.{png,webp,jpg,jpeg}', '!../../../../seed/icons/mobs/*_hd.{png,webp,jpg,jpeg}'],
+        { eager: true, import: 'default', query: '?url' }
+      ) as Readonly<Record<string, string>>)
+    : Object.freeze({})
 
-const spell_modules = import.meta.glob('../../../../seed/icons/spells/*.{png,webp,jpg,jpeg}', {
-  eager: true,
-  import: 'default',
-  query: '?url',
-}) as Readonly<Record<string, string>>
+const spell_modules: Readonly<Record<string, string>> =
+  typeof Bun === 'undefined'
+    ? (import.meta.glob('../../../../seed/icons/spells/*.{png,webp,jpg,jpeg}', {
+        eager: true,
+        import: 'default',
+        query: '?url',
+      }) as Readonly<Record<string, string>>)
+    : Object.freeze({})
 
 const asset_key = (path: string): string =>
   path
@@ -36,8 +48,20 @@ const mob_assets = index_assets(mob_modules)
 const spell_assets = Object.freeze(
   Object.fromEntries(Object.entries(index_assets(spell_modules)).map(([key, url]) => [indexed_asset_key(key), url]))
 )
+const DEV_SEED_ICON_ROOT = '/__seed/assets/'
+const development = typeof Bun === 'undefined' && import.meta.env.DEV
 
-export const item_icon = (item_type: string): string | null => item_assets[item_type] ?? null
-export const mob_icon = (mob_type: string): string | null => mob_assets[mob_type] ?? null
+export const item_icon = (item_type: string): string | null =>
+  !item_type
+    ? null
+    : development
+      ? `${DEV_SEED_ICON_ROOT}items/${encodeURIComponent(item_type)}.png`
+      : (item_assets[item_type] ?? null)
+export const mob_icon = (mob_type: string): string | null =>
+  !mob_type
+    ? null
+    : development
+      ? `${DEV_SEED_ICON_ROOT}mobs/${encodeURIComponent(mob_type)}.png`
+      : (mob_assets[mob_type] ?? null)
 export const spell_icon = (classe: string, name: string): string | null =>
   spell_assets[spell_asset_key(classe, name)] ?? null

@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
-export type SeedDomain = 'airdrop' | 'items' | 'mobs' | 'recipes' | 'shop' | 'spells' | 'structure_packs' | 'worlds'
+export type SeedDomain =
+  'airdrop' | 'fight_boards' | 'items' | 'mobs' | 'recipes' | 'shop' | 'spells' | 'structure_packs' | 'worlds'
 export type JsonPrimitive = string | number | boolean | null
 export type JsonValue = JsonPrimitive | readonly JsonValue[] | Readonly<{ [key: string]: JsonValue }>
 export type JsonPath = readonly (string | number)[]
@@ -20,6 +21,7 @@ export type EntityAssetReference =
 
 export const seed_content_domains = Object.freeze([
   Object.freeze({ id: 'airdrop', file: 'airdrop.json', label: 'Airdrop' }),
+  Object.freeze({ id: 'fight_boards', file: 'fight_boards.json', label: 'Fight boards' }),
   Object.freeze({ id: 'items', file: 'items.json', label: 'Items' }),
   Object.freeze({ id: 'mobs', file: 'mobs.json', label: 'Mobs' }),
   Object.freeze({ id: 'recipes', file: 'recipes.json', label: 'Recipes' }),
@@ -64,7 +66,8 @@ const string_field = (value: Readonly<Record<string, JsonValue>>, key: string): 
   typeof value[key] === 'string' && value[key].length > 0 ? value[key] : null
 
 export const is_readonly_seed_path = (domain: SeedDomain, path: JsonPath): boolean =>
-  domain === 'items' && path.length === 1 && path[0] === 'item_type'
+  (domain === 'items' && path.length === 1 && (path[0] === 'item_type' || path[0] === 'category')) ||
+  (domain === 'mobs' && path.length === 1 && path[0] === 'mob_type')
 
 export const entity_asset_reference = (domain: SeedDomain, value: JsonValue): EntityAssetReference | null => {
   const object = as_object(value)

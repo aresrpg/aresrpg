@@ -26,7 +26,6 @@ import { gas_mist_from_receipt } from './gas.ts'
 import { SDK, type Pins, type SuiTransport } from './client.ts'
 import type { SeedAdminConfig, SeedAdminSession } from './seed_admin.ts'
 import type { SeedContent } from './seed.ts'
-import type { SeedSessionRecord, SeedSessionStore } from './seed_session.ts'
 import { sui_transfer_ptb } from './sui_transfer.ts'
 import type { MarketplaceRoyalty } from './marketplace_admin.ts'
 import { marketplace_actions, type MarketplaceActions } from './marketplace.ts'
@@ -35,13 +34,13 @@ import { trade_actions, trade_create, type TradeActions } from './trade.ts'
 import type { AirdropClaim, ShopPurchase } from './shop.ts'
 import { character_actions, type CharacterActions } from './character_actions.ts'
 import { fight_actions, type FightActions } from './fight.ts'
+import { dungeon_actions, type DungeonActions } from './dungeon.ts'
 import { receipt_digest, receipt_digest_or_null, type Receipt } from './cache.ts'
 import { create_personal_kiosk_runner } from './ptb.ts'
 import {
   create_deployment_bootstrap_transaction,
   create_package_publish_transaction,
   create_package_upgrade_transaction,
-  project_package_id,
   DISPLAY_REGISTRY_ID,
   type ContractArtifact,
   type GameDeployment,
@@ -49,6 +48,7 @@ import {
 
 export type { CharacterActions } from './character_actions.ts'
 export type { FightActions } from './fight.ts'
+export type { DungeonActions } from './dungeon.ts'
 
 export type AuthSession = Readonly<{
   address: string
@@ -58,9 +58,13 @@ export type AuthSession = Readonly<{
   gas_spent_24h: () => bigint
   derive_character_id: (name: string) => string
   is_character_name_claimed: (name: string) => Promise<boolean>
-  create_character: (character: CharacterCreateInput) => Promise<Readonly<{ digest: string; character_id: string }>>
+  create_character: (
+    character: CharacterCreateInput,
+    first_world: string
+  ) => Promise<Readonly<{ digest: string; character_id: string }>>
   /** the remote-fight chain hand — duels and PvM share it (local vs remote is the ONLY split) */
   fight: FightActions
+  dungeon: DungeonActions
   /** the character-upkeep chain hand — equipment, stats, spells, consumables, runes */
   character: CharacterActions
   marketplace: MarketplaceActions
@@ -139,51 +143,6 @@ const installed_wallets = (): readonly Wallet[] =>
         isWalletWithRequiredFeatureSet(wallet, ['sui:signPersonalMessage', 'sui:signTransaction'])
     )
 
-const seed_session_storage_key = (network: string, owner: string): string =>
-  `aresrpg_admin_seed_session:${network}:${owner.toLowerCase()}`
-
-/** The browser store for the seed session record — every failure THROWS: this record is the
- *  only recovery channel for a signer holding real SUI and a live capability, so "could not
- *  persist" must stop the ceremony, never warn past it. */
-const browser_seed_session_store = (key: string): SeedSessionStore => ({
-  read: () => {
-    const storage = globalThis.localStorage
-    if (!storage) return null
-    const source = storage.getItem(key)
-    if (!source) return null
-    const value = JSON.parse(source) as Partial<SeedSessionRecord>
-    if (
-      typeof value.secret !== 'string' ||
-      typeof value.epoch !== 'string' ||
-      typeof value.network !== 'string' ||
-      typeof value.owner !== 'string' ||
-      typeof value.package !== 'string'
-    )
-      throw new Error(
-        `The stored seed session record at "${key}" is corrupt — an earlier session may be orphaned. ` +
-          'Recover it manually before authorizing a new one.'
-      )
-    return Object.freeze({
-      secret: value.secret,
-      admin_cap: typeof value.admin_cap === 'string' ? value.admin_cap : null,
-      epoch: value.epoch,
-      network: value.network,
-      owner: value.owner,
-      package: value.package,
-    })
-  },
-  write: (record) => {
-    const storage = globalThis.localStorage
-    if (!storage) throw new Error('No browser storage is available to hold the seed session record.')
-    storage.setItem(key, JSON.stringify(record))
-  },
-  clear: () => {
-    const storage = globalThis.localStorage
-    if (!storage) return
-    storage.removeItem(key)
-    if (storage.getItem(key) !== null) throw new Error('The temporary signer record remains present')
-  },
-})
 const request_wallet_accounts = async (wallet: Wallet, silent = false): Promise<readonly WalletAccount[]> => {
   const connect_feature = wallet.features['standard:connect'] as {
     connect: (options?: { silent?: boolean }) => Promise<{ accounts: readonly WalletAccount[] }>
@@ -299,17 +258,19 @@ const create_wallet_session = (
       return objects.some((object) => !(object instanceof Error) && object.objectId === claim_id)
     },
     fight: fight_actions(sdk, { kiosk_cap }),
+    dungeon: dungeon_actions(sdk, { kiosk_cap }),
     character: character_actions(sdk, { kiosk_cap }),
     marketplace: marketplace_actions(sdk, { address: account.address, kiosk_cap }),
     stacks: stack_actions(sdk, { kiosk_cap }),
     create_trade: (counterparty) => trade_create(sdk, { address: account.address, counterparty }),
     trade: (trade) => trade_actions(sdk, { trade, address: account.address, kiosk_cap }),
-    create_character: (character) =>
+    create_character: (character, first_world) =>
       personal_kiosk_action(async (kiosk_cap) => {
-        const { kiosk_cap: settled_kiosk_cap, ...receipt } = await character_create(sdk, {
-          ...character,
-          kiosk_cap,
-        })
+        const { kiosk_cap: settled_kiosk_cap, ...receipt } = await character_create(
+          sdk,
+          { ...character, kiosk_cap },
+          first_world
+        )
         return Object.freeze({ value: Object.freeze(receipt), kiosk_cap: settled_kiosk_cap })
       }),
     resolve_suins_address: async (name: string) => {
@@ -376,7 +337,7 @@ const create_wallet_session = (
     },
     create_seed_admin: async (content, config, current_pins = sdk.pins) => {
       const { create_seed_admin } = await import('./seed_admin.ts')
-      const { create_seed_session } = await import('./seed_session.ts')
+      const { browser_seed_session_store, create_seed_session } = await import('./seed_session.ts')
       const seed_sdk =
         current_pins === sdk.pins
           ? SDK({
@@ -398,17 +359,17 @@ const create_wallet_session = (
               gas_budget: 'estimate',
             })
       const super_session = await create_seed_admin({ sdk: seed_sdk, content, config })
-      const package_id = seed_sdk.pins.package
-      if (typeof package_id !== 'string' || !package_id)
-        throw new Error('The seed session needs a published game package in pins.json')
+      const { control_package } = seed_sdk.pins
+      if (typeof control_package !== 'string' || !control_package)
+        throw new Error('The seed session needs a published control package in pins.json')
       let delegated: SeedAdminSession | null = null
       const session = create_seed_session({
-        store: browser_seed_session_store(seed_session_storage_key(network, account.address)),
+        store: browser_seed_session_store(network, account.address),
         super_sdk: seed_sdk,
         super_admin_cap: config.admin_cap,
         network,
         owner: account.address,
-        package_id,
+        package_id: control_package,
         build_session_sdk: (keypair) =>
           SDK({
             client: resolution_client as unknown as SuiTransport,
@@ -439,7 +400,13 @@ const create_wallet_session = (
       return Object.freeze({
         refresh: super_session.refresh,
         execute: async (batch) => (await delegated_session()).execute(batch),
-        seal: super_session.seal,
+        check_changes: super_session.check_changes,
+        address_book: super_session.address_book,
+        read_frozen: super_session.read_frozen,
+        // rewrites are bulk work like batches — they run on the funded temporary signer
+        apply_changes: async (ledger) => (await delegated_session()).apply_changes(ledger),
+        created_ledger: super_session.created_ledger,
+        freeze_forever: super_session.freeze_forever,
         release,
       })
     },
@@ -448,9 +415,6 @@ const create_wallet_session = (
         budget: 'estimate',
         include: { objectTypes: true },
       })
-      // a package this session just created is not readable on every node yet — the caller's
-      // NEXT transaction targets it, so the wait belongs here (read-after-write, 2026-08-21)
-      await sdk.hydrate_required([project_package_id(receipt)])
       return Object.freeze({ receipt })
     },
     upgrade_contract: async ({ artifact, upgrade_cap }) => {
@@ -460,11 +424,6 @@ const create_wallet_session = (
         create_package_upgrade_transaction({ sdk, artifact, package: package_id, upgrade_cap, policy }),
         { budget: 'estimate', include: { objectTypes: true } }
       )
-      // THE UPGRADE'S OWN LAG (2026-08-22): the version activation that follows targets the
-      // package this transaction just wrote, and our fullnode is a load balancer — the node
-      // that answers the next dry run may not have it yet, which reads as a flat
-      // "Object <package> not found" mid-ceremony. An upgrade returns READABLE or it throws.
-      await sdk.hydrate_required([project_package_id(receipt)])
       return Object.freeze({ receipt })
     },
     read_package_upgrade,

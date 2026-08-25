@@ -3,7 +3,13 @@
 
 import { describe, expect, test } from 'bun:test'
 
-import { API_FIGHT_DOORS, INTEGER_WIDTHS, MOVE_SOURCES, STRUCT_SCHEMAS } from '../src/move_contract.gen.ts'
+import {
+  API_FIGHT_DOORS,
+  CONTRACT_CONSTANTS,
+  INTEGER_WIDTHS,
+  MOVE_SOURCES,
+  STRUCT_SCHEMAS,
+} from '../src/move_contract.gen.ts'
 
 describe('Move contract generation', () => {
   test('projects every field from compact one-line Move structs', () => {
@@ -48,11 +54,16 @@ describe('Move contract generation', () => {
       expect.arrayContaining([
         'packages/move/sources/character.move',
         'packages/move/sources/equipment.move',
-        'packages/move/sources/mob_template.move',
-        'packages/move/sources/spell_template.move',
+        'packages/move/sources/forgemagie.move',
+        'packages/seed/sources/mob_rows.move',
+        'packages/seed/sources/spell_rows.move',
         'packages/move-math/sources/item_damages.move',
       ])
     )
+  })
+
+  test('projects the temporary level-one forgemagie gate from Move', () => {
+    expect(CONTRACT_CONSTANTS.rune_unlock_level).toBe(1n)
   })
 
   test('preserves the steered movement path as vector<u64>', () => {

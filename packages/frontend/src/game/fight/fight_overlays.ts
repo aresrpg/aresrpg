@@ -4,6 +4,7 @@
 
 import { fight_blob_preset, type FightBlobSpec, type FightPresentationCue } from '@aresrpg/engine'
 import { board_zone_cells, fight_path_to, type HydratedFightCheckpoint, type SpellCellProjection } from '@aresrpg/fight'
+import { EFFECT_KINDS } from '@aresrpg/fight/move_contract'
 
 export type FightBlobOverlay = Readonly<{ id: string; blob: FightBlobSpec }>
 export type FightZoneVisualState = Readonly<{
@@ -13,6 +14,18 @@ export type FightZoneVisualState = Readonly<{
 
 export const fight_range_seat = (owned_active_seat: bigint | null, hovered_seat: bigint | null): bigint | null =>
   hovered_seat ?? owned_active_seat
+
+export const fight_viewer_team = (
+  checkpoint: Readonly<HydratedFightCheckpoint> | null,
+  owner: string | null,
+  character_id: string | null
+): bigint | null =>
+  checkpoint?.contract.fighters.find(
+    (fighter) =>
+      fighter.kind.type === 'player' &&
+      fighter.kind.owner === owner &&
+      (character_id === null || fighter.kind.character === character_id)
+  )?.team ?? null
 
 export const fight_visual_checkpoint = (
   presented: Readonly<HydratedFightCheckpoint> | null,
@@ -36,6 +49,35 @@ export const fight_visual_checkpoint_after_cue = (
   cue: Readonly<FightPresentationCue>,
   phase: 'start' | 'complete'
 ): HydratedFightCheckpoint => {
+  if (cue.type === 'visibility' && phase === 'start') {
+    const seat = fighter_seat_of(cue.entity_id)
+    const fighter = seat === null ? null : checkpoint.contract.fighters[seat]
+    if (seat === null || !fighter) return checkpoint
+    const invisible = fighter.effects.some(({ kind }) => kind === EFFECT_KINDS.invis)
+    if (invisible === cue.invisible) return checkpoint
+    const effects: typeof fighter.effects = cue.invisible
+      ? [
+          ...fighter.effects,
+          Object.freeze({
+            kind: EFFECT_KINDS.invis,
+            element: '',
+            value: 0n,
+            turns_left: 0n,
+            source: BigInt(seat),
+            stat: 0n,
+          }),
+        ]
+      : fighter.effects.filter(({ kind }) => kind !== EFFECT_KINDS.invis)
+    return Object.freeze({
+      ...checkpoint,
+      contract: Object.freeze({
+        ...checkpoint.contract,
+        fighters: checkpoint.contract.fighters.map((candidate, index) =>
+          index === seat ? Object.freeze({ ...fighter, effects }) : candidate
+        ),
+      }),
+    })
+  }
   if (phase !== 'complete') return checkpoint
   const entity_id =
     cue.type === 'damage' || cue.type === 'heal'

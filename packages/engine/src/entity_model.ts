@@ -15,4 +15,6 @@ export type EntityModel = Readonly<{
 }>
 
 export const create_entity_model = (spec: EntityRender): Promise<EntityModel> =>
-  spec.kind === 'mob' ? create_mob_model(spec.model_url, spec.id) : create_character_model(spec.appearance)
+  spec.kind === 'mob'
+    ? create_mob_model(spec.model_url, spec.id, spec.variant ?? null)
+    : create_character_model(spec.appearance)

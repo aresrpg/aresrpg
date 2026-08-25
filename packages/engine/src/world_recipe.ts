@@ -40,6 +40,7 @@ export type WorldBiome = Readonly<{
   landscape: readonly LandscapeKnot[]
   structure_packs?: readonly string[]
 }>
+export type WorldOcean = Readonly<{ biome: string; ground_max: number }>
 export type WorldRecipe = Readonly<{
   seed: string
   sea_level: number
@@ -47,6 +48,7 @@ export type WorldRecipe = Readonly<{
   materials: Readonly<Record<string, WorldMaterial>>
   biome_slots: Readonly<Record<BiomeSlot, string>>
   biomes: readonly WorldBiome[]
+  ocean?: WorldOcean
 }>
 
 export type SampledClimate = Readonly<{
@@ -66,6 +68,7 @@ export type CompiledWorld = Readonly<{
   sample_ridges: (x: number, z: number) => number
   biomes: readonly CompiledBiome[]
   slots: Readonly<Record<BiomeSlot, CompiledBiome>>
+  ocean: Readonly<{ biome: CompiledBiome; ground_max: number }> | null
 }>
 export type WorldColumn = Readonly<{
   surface_y: number
@@ -158,6 +161,23 @@ const validate_slots = (value: unknown, biomes: unknown): readonly string[] => {
   )
 }
 
+const validate_ocean = (value: unknown, biomes: unknown, slots: unknown): readonly string[] => {
+  if (value === undefined) return []
+  const ocean = record(value)
+  if (!ocean) return ['ocean must define biome and ground_max']
+  const errors: string[] = []
+  if (Object.keys(ocean).sort().join(',') !== 'biome,ground_max')
+    errors.push('ocean must define exactly biome and ground_max')
+  const names = new Set(Array.isArray(biomes) ? biomes.map((biome) => record(biome)?.name) : [])
+  if (typeof ocean.biome !== 'string' || !names.has(ocean.biome))
+    errors.push('ocean.biome must reference an authored biome')
+  if (!finite(ocean.ground_max) || ocean.ground_max <= 0 || ocean.ground_max >= 1)
+    errors.push('ocean.ground_max must be between 0 and 1')
+  if (record(slots) && Object.values(slots as Readonly<Record<string, unknown>>).includes(ocean.biome))
+    errors.push('ocean biome is selected by ground and must not occupy a climate slot')
+  return errors
+}
+
 export const validate_world_recipe = (recipe: unknown): Readonly<{ ok: boolean; errors: readonly string[] }> => {
   const candidate = record(recipe)
   if (!candidate) return { ok: false, errors: ['recipe must be an object'] }
@@ -172,6 +192,7 @@ export const validate_world_recipe = (recipe: unknown): Readonly<{ ok: boolean; 
     if (removed in candidate) errors.push(`${removed} is engine-owned and must not be authored`)
   errors.push(...validate_biomes(candidate.biomes, candidate.materials))
   errors.push(...validate_slots(candidate.biome_slots, candidate.biomes))
+  errors.push(...validate_ocean(candidate.ocean, candidate.biomes, candidate.biome_slots))
   return { ok: errors.length === 0, errors }
 }
 
@@ -261,6 +282,9 @@ export const compile_world_recipe = (
     (result, slot) => ({ ...result, [slot]: by_name[recipe.biome_slots[slot]]! }),
     {} as Record<BiomeSlot, CompiledBiome>
   )
+  const ocean = recipe.ocean
+    ? Object.freeze({ biome: by_name[recipe.ocean.biome]!, ground_max: recipe.ocean.ground_max })
+    : null
   const temperature = create_fbm_sampler(derive_sub_seed(recipe.seed, 'temperature'), CLIMATE_FIELDS.temperature)
   const humidity = create_fbm_sampler(derive_sub_seed(recipe.seed, 'humidity'), CLIMATE_FIELDS.humidity)
   const ground_noise = create_fbm_sampler(derive_sub_seed(recipe.seed, 'ground'), {
@@ -301,6 +325,7 @@ export const compile_world_recipe = (
       : Object.freeze({ packs: Object.freeze([]), max_footprint: 0 }),
     biomes: Object.freeze(biomes),
     slots: Object.freeze(slots),
+    ocean,
     sample_climate: (x, z) => ({
       temperature: balance_climate(temperature(x, z)),
       humidity: balance_climate(humidity(x, z)),
@@ -341,17 +366,27 @@ export const sample_world_column = (world: CompiledWorld, x: number, z: number):
 
 const sample_column_uncached = (world: CompiledWorld, x: number, z: number): WorldColumn => {
   const climate = world.sample_climate(x, z)
-  const influences = biome_influences(world, climate)
-  const [{ biome }] = influences
+  const influences =
+    world.ocean && climate.ground < world.ocean.ground_max
+      ? [Object.freeze({ biome: world.ocean.biome, weight: 1 })]
+      : biome_influences(world, climate)
+  const [{ biome: terrain_biome }] = influences
   const authored_height = influences.reduce(
     (sum, influence) => sum + influence.weight * landscape_height(influence.biome.height_points, climate.ground),
     0
   )
-  const mountain = Math.max(0, Math.min(1, (climate.ground - 0.32) / 0.5))
-  const detail = (climate.amplitude - 0.5) * 12 * mountain + (world.sample_ridges(x, z) - 0.5) * 48 * mountain
+  const mountain_relief = Math.max(0, authored_height - world.recipe.sea_level - 32)
+  const ruggedness_input = Math.min(1, mountain_relief / 160)
+  const ruggedness = ruggedness_input * ruggedness_input * (3 - 2 * ruggedness_input)
+  // Folded simplex averages near 0.44. Relief scaling carves tall masses around their authored
+  // mean, while the 32-block foothill dead zone keeps ordinary terrain calm.
+  const ridge_carving = (world.sample_ridges(x, z) - 0.44) * mountain_relief * 0.75 * ruggedness
+  const detail = (climate.amplitude - 0.5) * 12 * ruggedness + ridge_carving
+  const surface_y = Math.max(1, Math.min(MAX_SURFACE_Y, Math.floor(authored_height + detail + Number.EPSILON * 64)))
+  const biome = world.ocean && surface_y < world.recipe.sea_level ? world.ocean.biome : terrain_biome
   const land = land_at(biome, climate.ground, climate.transition)
   return {
-    surface_y: Math.max(1, Math.min(MAX_SURFACE_Y, Math.floor(authored_height + detail + Number.EPSILON * 64))),
+    surface_y,
     climate,
     biome,
     land,

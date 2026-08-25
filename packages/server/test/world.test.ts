@@ -12,7 +12,7 @@ import type { ServerPacket } from '@aresrpg/protocol'
 import { create_player } from '../src/player.ts'
 import type { Pubsub } from '../src/pubsub_bus.ts'
 
-const make_character = ({ pet = false, id = '0xabc', x = 100, z = 100 } = {}) => ({
+const make_character = ({ pet = false, id = '0xabc', x = 100, z = 100, dungeon_run = null as string | null } = {}) => ({
   properties: {
     id,
     pet,
@@ -31,6 +31,7 @@ const make_character = ({ pet = false, id = '0xabc', x = 100, z = 100 } = {}) =>
     at_ms: Date.now() - 60_000,
     spells: '{}',
     spell_points_spent: 0,
+    ...(dungeon_run ? { dungeon_run } : {}),
   },
 })
 const character = make_character()
@@ -41,6 +42,7 @@ type WireOptions = Readonly<{
   friends?: string[]
   character_ids?: string[]
   shared_pubsub?: Pubsub
+  dungeon_run?: string | null
 }>
 type TestPubsub = Pubsub & Readonly<{ emitter: EventEmitter }>
 
@@ -50,6 +52,7 @@ const wire = ({
   friends = [] as string[],
   character_ids = ['0xabc', '0xdef'],
   shared_pubsub,
+  dungeon_run = null,
 }: WireOptions = {}) => {
   const sent: ServerPacket[] = []
   const dropped: string[] = []
@@ -67,6 +70,7 @@ const wire = ({
                   pet,
                   id: String(params?.character_id ?? '0xabc'),
                   x: String(params?.character_id) === character_ids[1] ? 700 : 100,
+                  dungeon_run,
                 }),
                 held_kiosk: '0xk',
                 kiosk: '0xk',
@@ -80,7 +84,7 @@ const wire = ({
       if (cypher.includes('[:HOLDS]->(c:Character)'))
         return owns
           ? character_ids.map((id, index) => ({
-              character: make_character({ id, x: index === 1 ? 700 : 100 }),
+              character: make_character({ id, x: index === 1 ? 700 : 100, dungeon_run }),
               kiosk_node: { properties: { id: '0xk' } },
               equipment: [],
             }))
@@ -90,6 +94,8 @@ const wire = ({
       if (cypher.includes('HOLDS_CLAIM') || cypher.includes('HOLDS_VOUCHER') || cypher.includes('CAN_BUY')) return []
       if (cypher.includes('LISTED_IN')) return []
       if (cypher.includes(':Zone')) return [{ zone: { properties: { world: 'overworld', zx: 0, zz: 0, seed: '7' } } }]
+      if (cypher.includes('dungeon_world') && cypher.includes('RETURN c.id'))
+        return [{ character_id: '0xabc', name: 'nox', level: 10, room: 1 }]
       if (cypher.includes(':Fight')) return []
       return [{ character, kiosk: '0xk', equipment: [], item: { properties: {} }, label: 'User', count: 1 }]
     },
@@ -188,6 +194,44 @@ describe('the world module', () => {
       JSON.stringify({ type: 'packet/position', character_id: '0xdef', x: 701, y: 0, z: 100, riding: false })
     )
     expect(published.some(({ payload }) => payload.kind === 'move' && payload.character_id === '0xdef')).toBeFalse()
+  })
+
+  test('a dungeon character leaves world presence, ignores movement, and receives only its lobby', async () => {
+    const dungeon_run = '{"world":"overworld","room":"1","x":120,"z":140,"seed":"9"}'
+    const { sent, ws, graph, pubsub, published, dropped } = wire({ dungeon_run, character_ids: ['0xabc'] })
+    const player = create_player({ ws, address: '0xme', admin: false, graph, pubsub })
+    await flush()
+    player.on_message(JSON.stringify({ type: 'packet/track_character', character_id: '0xabc', tracked: true }))
+    await flush()
+    await flush()
+
+    expect(sent.some(({ type }) => type === 'packet/tracked_zones')).toBeFalse()
+    expect(sent).toContainEqual({
+      type: 'packet/dungeon_lobby',
+      lobby: {
+        world: 'overworld',
+        x: 120,
+        z: 140,
+        players: [{ character_id: '0xabc', name: 'nox', level: 10, room: 1 }],
+        fights: [],
+      },
+    })
+    pubsub.emitter.emit('evt:dungeon:overworld:120:140', {
+      ckpt: 2,
+      tx: 0,
+      evt: 0,
+      ts_ms: Date.now(),
+      type: 'DungeonLobbyChanged',
+      data: { world: 'overworld', x: 120, z: 140 },
+    })
+    await flush()
+    expect(sent.filter(({ type }) => type === 'packet/dungeon_lobby')).toHaveLength(2)
+    published.length = 0
+    player.on_message(
+      JSON.stringify({ type: 'packet/position', character_id: '0xabc', x: 130, y: 0, z: 140, riding: false })
+    )
+    expect(published).toEqual([])
+    expect(dropped).toEqual([])
   })
 
   test('two accounts receive each other symmetrically across presence, movement, and world chat', async () => {

@@ -8,9 +8,11 @@ import { bcs } from '@mysten/sui/bcs'
 import { deriveDynamicFieldID, deriveObjectID } from '@mysten/sui/utils'
 
 import { SDK } from './client.ts'
+import { living_content } from './client.ts'
 import { receipt_digest, receipt_event } from './cache.ts'
 import { normalize_character_name } from './character_name.ts'
 import { CHARACTER_PRICE_MIST } from './character_price.ts'
+import { world_content_id } from './seed_ids.ts'
 
 export type { KioskOwnerCap } from '@mysten/kiosk'
 export {
@@ -57,9 +59,13 @@ export type CharacterCreateInput = Readonly<Omit<CharacterCreateCtx, 'kiosk_cap'
  *  invent: the server streams it (the indexer routes the event to the owner's channel). */
 export const character_create = async (
   sdk: GameSdk,
-  { name, classe, male, color_1, color_2, color_3, kiosk_cap }: CharacterCreateCtx
+  { name, classe, male, color_1, color_2, color_3, kiosk_cap }: CharacterCreateCtx,
+  first_world: string
 ): Promise<{ digest: string; character_id: string; kiosk_cap: KioskOwnerCap }> => {
   const normalized_name = normalize_character_name(name)
+  const { content_root, seed_package_original } = living_content(sdk, 'Character creation')
+  const first_world_content = world_content_id(content_root, seed_package_original, first_world)
+  await sdk.hydrate_unknown([first_world_content])
   const tx = sdk.tx()
   sdk.with_personal_kiosk(tx, kiosk_cap, (kiosk, cap) => {
     sdk.doors.create_character(tx, {
@@ -72,6 +78,7 @@ export const character_create = async (
       color_1,
       color_2,
       color_3,
+      first_world: first_world_content,
     })
   })
   const { receipt, kiosk_cap: settled_kiosk_cap } = await sdk.execute_personal_kiosk(tx, kiosk_cap)

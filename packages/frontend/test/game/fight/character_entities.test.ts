@@ -5,13 +5,45 @@ import { describe, expect, test } from 'bun:test'
 import { create_character_source, create_fight } from '@aresrpg/fight'
 import { EFFECT_KINDS } from '@aresrpg/fight/move_contract'
 
+import { encyclopedia_catalog } from '../../../src/content/catalog.ts'
 import {
   character_entity_sources,
   fight_character_entity_sources,
 } from '../../../src/game/fight/character_entity_sources.ts'
+import { fight_character_entities_from_loaded } from '../../../src/game/fight/character_entities.ts'
 import { fight_mob_entity_sources } from '../../../src/game/fight/mob_entity_sources.ts'
+import { mob_model_scalar_for_roll } from '../../../src/game/mob_entities.ts'
 
 describe('fight character projection', () => {
+  test('reprojects a new cell synchronously from an already-loaded appearance', () => {
+    const appearance = {
+      body_url: '/body.glb',
+      hair_url: '/hair.glb',
+      colors: ['#111111', '#222222', '#333333'],
+      worn: { head: null, back: null },
+    } as const
+    const source = {
+      id: 'fight_character_0',
+      classe: 'senshi',
+      male: true,
+      colors: appearance.colors,
+      loadout: {},
+      cell: 9,
+      side: 'a',
+    } as const
+    const loaded = [
+      {
+        id: source.id,
+        kind: 'character',
+        appearance,
+        anchor: { kind: 'fight_cell', cell: 1 },
+        facing: { kind: 'fight_opponents', side: 'a' },
+      },
+    ] as const
+
+    expect(fight_character_entities_from_loaded([source], loaded)[0]?.anchor).toEqual({ kind: 'fight_cell', cell: 9 })
+  })
+
   test('projects every seat — placed simulator characters and checkpoint players alike', () => {
     const characters = Object.freeze([
       Object.freeze({
@@ -101,5 +133,30 @@ describe('fight character projection', () => {
 
     expect(fight_character_entity_sources(checkpoint, [])).toEqual([])
     expect(fight_mob_entity_sources(checkpoint)).toEqual([])
+  })
+
+  test('world rolls and fight snapshots project the same mob model size band', () => {
+    const mob = encyclopedia_catalog.mobs[0]!
+    const source = create_character_source({ classe: 'senshi', level: 1n })
+    const checkpoint = structuredClone(
+      create_fight({
+        mode: 'local',
+        setup: { players: [{ character: 'mine', owner: 'local', team: 0n, hp: 55n, source }], mobs: [] },
+      }).state()
+    )
+    checkpoint.contract.fighters[0]!.kind = {
+      type: 'mob',
+      snapshot: { mob_type: mob.mob_type, level: BigInt(mob.level_min) },
+    } as never
+
+    const fixed = mob.level_min === mob.level_max
+    expect(mob_model_scalar_for_roll(mob.mob_type, 0)).toBe(fixed ? 50 : 0)
+    expect(mob_model_scalar_for_roll(mob.mob_type, 100)).toBe(fixed ? 50 : 100)
+    expect(fight_mob_entity_sources(checkpoint)[0]?.level_scalar).toBe(fixed ? 50 : 0)
+    checkpoint.contract.fighters[0]!.kind = {
+      type: 'mob',
+      snapshot: { mob_type: mob.mob_type, level: BigInt(mob.level_max) },
+    } as never
+    expect(fight_mob_entity_sources(checkpoint)[0]?.level_scalar).toBe(fixed ? 50 : 100)
   })
 })

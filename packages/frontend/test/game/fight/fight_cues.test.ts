@@ -62,6 +62,19 @@ const checkpoint = () =>
   })
 
 describe('fight presentation cues', () => {
+  test('invisibility expiry is presented before the next mob can act', () => {
+    const state = checkpoint()
+    const events: readonly FightEvent[] = [
+      { type: 'invisibility_changed', payload: { fighter: 0n, invisible: false, reason: 'expired' } },
+      { type: 'turn_switched', payload: { from: 0n, to: 1n, round: 1n, skipped: [], reason: 'end_turn' } },
+    ]
+
+    expect(project_fight_cues({ checkpoint: state, events, batch: 1 }).map(({ type }) => type)).toEqual([
+      'visibility',
+      'turn',
+    ])
+  })
+
   test('projects one ordered immutable batch without re-resolving its cast results', () => {
     const state = checkpoint()
     const target_cell = state.contract.fighters[1]!.cell

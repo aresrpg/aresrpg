@@ -24,6 +24,7 @@ export type FightResult = {
 export type Fight = {
   state: () => HydratedFightCheckpoint
   zone_ids: () => readonly string[]
+  awaiting_witness: () => boolean
   apply: (input: FightInput) => FightResult
   reset_turn: () => FightResult
   transform: (inputs: Iterable<FightInput>) => Generator<FightEvent, void, void>
@@ -160,6 +161,7 @@ export const create_fight = ({
   return Object.freeze({
     state: snapshot,
     zone_ids: () => Object.freeze([...render_ids.zones]),
+    awaiting_witness: () => pending_turn !== null,
     apply,
     reset_turn: () => {
       if (mode !== 'local')

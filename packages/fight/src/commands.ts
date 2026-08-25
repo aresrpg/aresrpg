@@ -8,7 +8,7 @@ import { CONTRACT_CONSTANTS } from './move_contract.gen.ts'
 import { walk_path } from './movement.ts'
 import { emit, fail } from './runtime.ts'
 import { run_until_player, weave } from './turns.ts'
-import { tick_cooldowns } from './turn_effects.ts'
+import { tick_cooldowns, tick_turn_end } from './turn_effects.ts'
 import { drop_owned_zones, on_enter } from './zones.ts'
 import { resolve_rows } from './effects.ts'
 import { strike_of } from './weapon.ts'
@@ -81,7 +81,7 @@ const join = (runtime: FightRuntime, action: JoinAction): FightRuntime => {
   }
   runtime.contract.fighters.push({
     team: action.team,
-    kind: { type: 'player', character: action.character, owner: action.owner },
+    kind: { type: 'player', character: action.character, owner: action.owner, level: action.source.level },
     cell,
     ready: false,
     dead: false,
@@ -207,10 +207,12 @@ const boundary = (runtime: FightRuntime, action: BoundaryAction, options: Comman
     if (actor !== action.fighter || !assert_actor(runtime, action.fighter)) return fail(runtime, 'not_your_fighter')
     if (options.observed_ms! < runtime.contract.turn_started_ms + CONTRACT_CONSTANTS.turn_min_ms)
       return fail(runtime, 'too_soon')
+    tick_turn_end(runtime, actor)
     tick_cooldowns(runtime, actor)
   } else if (!runtime.contract.fighters[Number(actor)].dead) {
     if (options.observed_ms! < runtime.contract.turn_started_ms + CONTRACT_CONSTANTS.turn_max_ms)
       return fail(runtime, 'too_soon')
+    tick_turn_end(runtime, actor)
     tick_cooldowns(runtime, actor)
   }
   return run_until_player({

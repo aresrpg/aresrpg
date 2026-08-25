@@ -3,11 +3,12 @@
 // The admin publisher's one adapter from authored seed JSON to the SDK writer schema.
 
 import { parse_world_recipe, sample_biome_grid } from '@aresrpg/engine'
-import { world_center, world_size } from '@aresrpg/immutable'
+import { gatherable_of, world_center, world_size } from '@aresrpg/immutable'
 import { ZONE_SIZE } from '@aresrpg/protocol'
 import type { SeedContent } from '@aresrpg/sdk/seed'
 
 import airdrop_source from '../../../../seed/content/airdrop.json'
+import boards_source from '../../../../seed/content/fight_boards.json'
 import items_source from '../../../../seed/content/items.json'
 import mobs_source from '../../../../seed/content/mobs.json'
 import recipes_source from '../../../../seed/content/recipes.json'
@@ -33,20 +34,42 @@ const biome_maps: SeedContent['biome_maps'] = worlds_source.flatMap((world) => {
   ]
 })
 
+// Family is editor-only taxonomy. Strip it at the SDK boundary so changing a filter label
+// cannot fingerprint or rewrite a chain MobTemplate.
+const chain_mobs = Object.freeze(
+  mobs_source.map((mob) => Object.freeze(Object.fromEntries(Object.entries(mob).filter(([key]) => key !== 'family'))))
+)
+
+const chain_worlds = Object.freeze(
+  worlds_source.map((world) =>
+    Object.freeze({
+      ...world,
+      resources: Object.freeze(
+        world.resources.map((resource) => {
+          const gatherable = gatherable_of(resource.item_type)
+          if (!gatherable) throw new Error(`Unknown gatherable ${resource.item_type} in ${world.world}`)
+          return Object.freeze({ ...gatherable, biomes: Object.freeze(resource.biomes) })
+        })
+      ),
+    })
+  )
+)
+
 const authored_content = Object.freeze({
   items: items_source,
   spells: spells_source,
-  mobs: mobs_source,
+  mobs: chain_mobs,
   recipes: recipes_source,
-  worlds: worlds_source,
+  worlds: chain_worlds,
   shop: shop_source,
   airdrop: Object.freeze({
     drops: airdrop_source.drops,
     giftcards: airdrop_source.giftcards,
   }),
   biome_maps: Object.freeze(biome_maps),
+  boards: boards_source.boards,
 })
 
 // TypeScript widens JSON strings, so it cannot retain the immutable unions. The repository seed
-// gate validates these exact seven imports before the bundle can ship; this is their one typed edge.
+// gate validates these exact eight imports before the bundle can ship; this is their one typed edge.
 export const seed_content = authored_content as unknown as SeedContent

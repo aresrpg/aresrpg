@@ -20,8 +20,9 @@ const source_paths = [
   'packages/move/sources/api.move',
   'packages/move/sources/character.move',
   'packages/move/sources/equipment.move',
-  'packages/move/sources/mob_template.move',
-  'packages/move/sources/spell_template.move',
+  'packages/move/sources/forgemagie.move',
+  'packages/seed/sources/mob_rows.move',
+  'packages/seed/sources/spell_rows.move',
   'packages/move/sources/progression.move',
   'packages/move-math/sources/prng.move',
   'packages/move-math/sources/fight_math.move',
@@ -177,7 +178,7 @@ const target_filters = (source) => {
 
 const weapon_physics = (source) => {
   const rows = [...source.matchAll(/\*category == b"([^"]+)"\.to_string\(\)\) \(([^)]+)\)/g)]
-  if (rows.length !== 11) throw new Error(`generate_move_contract: expected 11 weapon rows, got ${rows.length}`)
+  if (rows.length !== 5) throw new Error(`generate_move_contract: expected 5 weapon rows, got ${rows.length}`)
   return Object.fromEntries(
     rows.map(([, category, raw]) => {
       const [crit_1_in, ap, reach, range_min, modifiable_range, line_launch, area_shape, area_size] = raw
@@ -241,6 +242,7 @@ const source_hash = createHash('sha256')
 const fight = sources['packages/move/sources/fight.move']
 const api = sources['packages/move/sources/api.move']
 const progression = sources['packages/move/sources/progression.move']
+const forgemagie = sources['packages/move/sources/forgemagie.move']
 const combat_grid = sources['packages/move-math/sources/combat_grid.move']
 const spell_effect = sources['packages/move-math/sources/spell_effect.move']
 const item_stats = sources['packages/move-math/sources/item_stats.move']
@@ -282,6 +284,7 @@ const integer_widths = Object.fromEntries(
 
 const contract_constants = {
   ...selected_constants(fight, ['BASE_AP', 'BASE_MP', 'PLACEMENT_FORCE_MS', 'TURN_MIN_MS', 'TURN_MAX_MS', 'NO_TARGET']),
+  ...selected_constants(forgemagie, ['RUNE_UNLOCK_LEVEL']),
   ...selected_constants(combat_grid, [
     'GRID_W',
     'GRID_H',

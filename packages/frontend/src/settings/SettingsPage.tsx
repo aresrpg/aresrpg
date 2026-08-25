@@ -44,7 +44,7 @@ export default function SettingsPage({ copy, settings }: Readonly<{ copy: AppCop
   )
 
   return (
-    <section className="pointer-events-auto min-h-full flex-1 overflow-y-auto border border-border bg-[#0a0a0f]/97 p-3 lg:p-8">
+    <section className="pointer-events-auto min-h-full flex-1 overflow-y-auto border border-border bg-bg/97 p-3 lg:p-8">
       <header className="mb-4 flex items-center gap-2.5 lg:mb-8">
         <SettingsIcon className="text-gold opacity-60" size={14} />
         <div>

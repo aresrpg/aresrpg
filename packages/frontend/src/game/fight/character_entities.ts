@@ -26,6 +26,32 @@ const resolved_character_entity = async (source: FightCharacterRenderSource): Pr
   })
 }
 
+/** Cell and visibility are live fight truth; appearance is immutable for the fight. Reproject
+ * those live fields synchronously so a late appearance promise can never restore an old cell. */
+export const fight_character_entities_from_loaded = (
+  sources: readonly FightCharacterRenderSource[],
+  loaded: readonly CharacterEntityRender[]
+): readonly CharacterEntityRender[] => {
+  const appearances = new Map(loaded.map(({ id, appearance }) => [id, appearance]))
+  return Object.freeze(
+    sources.flatMap((source) => {
+      const appearance = appearances.get(source.id)
+      return appearance
+        ? [
+            Object.freeze({
+              id: source.id,
+              kind: 'character' as const,
+              appearance,
+              anchor: Object.freeze({ kind: 'fight_cell' as const, cell: source.cell }),
+              facing: Object.freeze({ kind: 'fight_opponents' as const, side: source.side }),
+              ...(source.visual_effect ? { visual_effect: source.visual_effect } : {}),
+            }),
+          ]
+        : []
+    })
+  )
+}
+
 export const load_fight_character_entities = async (
   sources: readonly FightCharacterRenderSource[]
 ): Promise<readonly CharacterEntityRender[]> => Object.freeze(await Promise.all(sources.map(resolved_character_entity)))

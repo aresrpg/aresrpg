@@ -264,15 +264,17 @@ events! {
     loot_box::LootClaimed { box_template: Id, rolled_template: Id, amount: u32, opener: Addr }
         => |_: &LootClaimed| "evt:economy".to_string(),
 
-    // ── content (seeding-time, then silent forever) ──
-    item::TemplateCreated { template: Id, item_type: String }
+    // ── living content ──
+    item_rows::TemplateCreated { template: Id, item_type: String }
         => |_: &TemplateCreated| "evt:content".to_string(),
-    mob_template::MobTemplateCreated { template: Id, mob_type: String }
+    mob_rows::MobTemplateCreated { template: Id, mob_type: String }
         => |_: &MobTemplateCreated| "evt:content".to_string(),
-    spell_template::SpellCreated { template: Id, name: String, classe: String }
+    spell_rows::SpellCreated { template: Id, name: String, classe: String }
         => |_: &SpellCreated| "evt:content".to_string(),
-    crafting::RecipeCreated { recipe: Id, output_template: Id, input_count: u64, job: String, required_level: u64 }
+    recipe_rows::RecipeCreated { recipe: Id, output_template: Id, input_count: u64, job: String, required_level: u64 }
         => |_: &RecipeCreated| "evt:content".to_string(),
+    registry::ContentWritten { domain: String, key: String, revision: u64 }
+        => |_: &ContentWritten| "evt:content".to_string(),
     loot_box::LootTableSet { box_template: Id, rows: u64, weight_sum: u64 }
         => |_: &LootTableSet| "evt:content".to_string(),
 }

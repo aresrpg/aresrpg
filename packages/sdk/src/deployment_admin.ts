@@ -10,7 +10,7 @@ import { receipt_events, type Receipt } from './cache.ts'
 import type { Sdk } from './client.ts'
 
 export type ContractArtifact = Readonly<{
-  package_name: 'aresrpg_math' | 'aresrpg'
+  package_name: 'aresrpg_math' | 'aresrpg_control' | 'aresrpg_seed' | 'aresrpg'
   digest: readonly number[]
   modules: readonly string[]
   dependencies: readonly string[]
@@ -25,18 +25,27 @@ export type SharedDeploymentPin = Readonly<{ id: string; shared_version: string 
 export type GameDeployment = Readonly<{
   package: string
   kiosk_package: string
-  admin_cap: string
   publisher: string
   item_publisher: string
   character_publisher: string
   version: SharedDeploymentPin
-  template_registry: SharedDeploymentPin
   loot_registry?: SharedDeploymentPin
   name_registry?: SharedDeploymentPin
   friend_registry?: SharedDeploymentPin
-  worlds: Readonly<Record<string, SharedDeploymentPin>>
 }>
 export type MathDeployment = Readonly<{ package: string; upgrade_cap: string }>
+/** The one application-authority package: every AresRPG package imports this AdminCap type. */
+export type ControlDeployment = Readonly<{
+  package: string
+  upgrade_cap: string
+  admin_cap: string
+}>
+/** The seed package's publish yield: the shared Registry root every content address derives under. */
+export type SeedDeployment = Readonly<{
+  package: string
+  upgrade_cap: string
+  content_root: SharedDeploymentPin
+}>
 export type BootstrapDeployment = Readonly<{
   item_policy: SharedDeploymentPin
   character_policy: SharedDeploymentPin
@@ -200,9 +209,23 @@ export const project_math_deployment = (receipt: DeploymentReceipt): MathDeploym
     upgrade_cap: id_of_type(receipt, '::package::UpgradeCap'),
   })
 
-export const project_kiosk_package = (artifact: ContractArtifact, math_package: string): string => {
+export const project_control_deployment = (receipt: DeploymentReceipt): ControlDeployment =>
+  Object.freeze({
+    package: project_package_id(receipt),
+    upgrade_cap: id_of_type(receipt, '::package::UpgradeCap'),
+    admin_cap: id_of_type(receipt, '::admin::AdminCap'),
+  })
+
+export const project_seed_deployment = (receipt: DeploymentReceipt): SeedDeployment =>
+  Object.freeze({
+    package: project_package_id(receipt),
+    upgrade_cap: id_of_type(receipt, '::package::UpgradeCap'),
+    content_root: shared_pin(receipt, id_of_type(receipt, '::registry::Registry')),
+  })
+
+export const project_kiosk_package = (artifact: ContractArtifact, local_packages: readonly string[]): string => {
   const canonical_id = (value: string) => normalizeSuiObjectId(value)
-  const excluded = new Set(['0x1', '0x2', math_package].map(canonical_id))
+  const excluded = new Set(['0x1', '0x2', ...local_packages].map(canonical_id))
   const candidates = artifact.dependencies.map(canonical_id).filter((dependency) => !excluded.has(dependency))
   if (candidates.length !== 1) throw new Error('Game artifact did not contain exactly one Kiosk dependency')
   return candidates[0]!
@@ -231,35 +254,22 @@ export const project_game_deployment = ({
 }: Readonly<{ receipt: DeploymentReceipt; kiosk_package: string }>): GameDeployment => {
   const package_id = project_package_id(receipt)
   const version_id = id_of_type(receipt, '::version::Version')
-  const template_registry_id = id_of_type(receipt, '::item::TemplateRegistry')
   const optional_shared = (suffix: string): SharedDeploymentPin | undefined => {
     const id = type_entries(receipt).find(([, type]) => type.endsWith(suffix))?.[0]
     return id ? shared_pin(receipt, id) : undefined
   }
-  const worlds = Object.freeze(
-    Object.fromEntries(
-      receipt_events(receipt, '::world::WorldCreated').flatMap((event) => {
-        if (typeof event.name !== 'string' || typeof event.world !== 'string') return []
-        return [[event.name, shared_pin(receipt, event.world)] as const]
-      })
-    )
-  )
-  if (!Object.keys(worlds).length) throw new Error('Publication receipt did not contain created worlds')
   // Sui validates Publisher capabilities against a type's package, not its witness module.
   // The receipt type map is finality data; unlike an immediate object-content read, it cannot lag.
   const publisher = id_of_type(receipt, '::package::Publisher')
   return Object.freeze({
     package: package_id,
     kiosk_package,
-    admin_cap: id_of_type(receipt, '::admin::AdminCap'),
     publisher,
     item_publisher: publisher,
     character_publisher: publisher,
     version: shared_pin(receipt, version_id),
-    template_registry: shared_pin(receipt, template_registry_id),
     loot_registry: optional_shared('::loot_box::LootRegistry'),
     name_registry: optional_shared('::character::NameRegistry'),
     friend_registry: optional_shared('::friends::FriendRegistry'),
-    worlds,
   })
 }

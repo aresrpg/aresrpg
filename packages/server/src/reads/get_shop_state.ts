@@ -16,7 +16,13 @@ export async function get_shop_state(graph: Graph, { address }: { address: strin
   return {
     sales: sale_rows.map(({ sale }) => {
       const properties = properties_of(sale as Node)
-      return { item_type: String(properties.item_type), supply: String(properties.supply) }
+      return {
+        item_type: String(properties.item_type),
+        price: String(properties.price),
+        supply: String(properties.supply),
+        infinite: properties.infinite === true,
+        enabled: properties.enabled !== false,
+      }
     }),
     airdrops: airdrop_rows.map(({ airdrop }) => {
       const properties = properties_of(airdrop as Node)

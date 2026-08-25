@@ -33,11 +33,13 @@ export const MAX_NON_STACKABLE_PURCHASE_QUANTITY = 400
 
 const published_ids = (sdk: Sdk) => {
   const package_id = sdk.game_type_package
-  const registry = sdk.pins.template_registry
   if (typeof package_id !== 'string' || !package_id) throw new Error('The game package is not published.')
-  const registry_id = typeof registry === 'object' && registry !== null ? Reflect.get(registry, 'id') : null
-  if (typeof registry_id !== 'string' || !registry_id) throw new Error('The item registry is not published.')
-  return Object.freeze({ package_id, registry_id })
+  const root = sdk.pins.content_root
+  const content_root = typeof root === 'object' && root !== null ? Reflect.get(root, 'id') : null
+  const seed_original = sdk.pins.seed_package_original
+  if (typeof content_root !== 'string' || typeof seed_original !== 'string')
+    throw new Error('The living-content registry is not published.')
+  return Object.freeze({ package_id, content_root, seed_package_original: seed_original })
 }
 
 export const buy_shop_item = async (
@@ -51,9 +53,9 @@ export const buy_shop_item = async (
   if (!item_is_stackable(purchase.category) && purchase.quantity > MAX_NON_STACKABLE_PURCHASE_QUANTITY)
     throw new Error(`A non-stackable purchase can contain at most ${MAX_NON_STACKABLE_PURCHASE_QUANTITY} items.`)
 
-  const { package_id, registry_id } = published_ids(sdk)
-  const sale = sale_id(registry_id, package_id, purchase.item_type)
-  const template = item_template_id(registry_id, purchase.item_type)
+  const { package_id, content_root, seed_package_original } = published_ids(sdk)
+  const sale = sale_id(content_root, package_id, purchase.item_type)
+  const template = item_template_id(content_root, seed_package_original, purchase.item_type)
   await sdk.hydrate_unknown([sale, template])
   const tx = sdk.tx()
   sdk.with_personal_kiosk(tx, kiosk_cap, (kiosk, cap) => {
@@ -84,9 +86,9 @@ export const claim_airdrop = async (
   kiosk_cap: KioskOwnerCap | null,
   claim: AirdropClaim
 ): Promise<Readonly<{ digest: string; kiosk_cap: KioskOwnerCap }>> => {
-  const { package_id, registry_id } = published_ids(sdk)
-  const drop = airdrop_id(registry_id, package_id, claim.drop_id)
-  const template = item_template_id(registry_id, claim.item_type)
+  const { package_id, content_root, seed_package_original } = published_ids(sdk)
+  const drop = airdrop_id(content_root, package_id, claim.drop_id)
+  const template = item_template_id(content_root, seed_package_original, claim.item_type)
   await sdk.hydrate_unknown([drop, template])
   const tx = sdk.tx()
   sdk.with_personal_kiosk(tx, kiosk_cap, (kiosk, cap) => {

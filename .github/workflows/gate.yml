@@ -76,6 +76,8 @@ jobs:
           sparse-checkout: |
             packages/move
             packages/move-math
+            packages/control
+            packages/seed
       - name: sui version pin
         id: sui_version
         # Pinned release (brew left the runner image, 2026-08-19). Bump deliberately with the
@@ -100,10 +102,23 @@ jobs:
         run: |
           sui move build --path packages/move-math
           sui move test --path packages/move-math
+      - name: seed — build + test
+        run: |
+          sui move build --path packages/control
+          sui move test --path packages/control
+          sui move build --path packages/seed
+          sui move test --path packages/seed
       - name: move — build + test
         run: |
           sui move build --path packages/move
           sui move test --path packages/move
+      - name: move — gas ratchet
+        # The ÷10 plan's micro-ratchet: one complete three-mob wave runs under its own
+        # unit-test gas ceiling. It guards instruction growth; executed receipt benchmarks
+        # separately own transaction floors, storage, and rebates. A fight-path inflation reds HERE
+        # before it reaches a player. The ceiling only ratchets DOWN.
+        run: |
+          sui move test --path packages/move one_three_mob_wave --gas-limit 120000000 --statistics
   tests_indexer:
     # The chain projectionist's suite + the Move↔indexer parity gates (packages/indexer/
     # src/gates.rs): the layout snapshot and the event census read the COMPILED Move build,
@@ -119,6 +134,8 @@ jobs:
           sparse-checkout: |
             packages/move
             packages/move-math
+            packages/control
+            packages/seed
             packages/indexer
       - name: sui version pin
         id: sui_version
@@ -143,6 +160,8 @@ jobs:
       - name: compile the Move packages (the parity gates' ground truth)
         run: |
           sui move build --path packages/move-math
+          sui move build --path packages/control
+          sui move build --path packages/seed
           sui move build --path packages/move
       - name: cache cargo
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0

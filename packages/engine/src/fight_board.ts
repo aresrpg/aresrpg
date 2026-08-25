@@ -2,22 +2,15 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 // Shared tactical substrate and picking for simulator, world fights, duels, and kolizeum.
 import {
-  Color,
   Group,
-  InstancedMesh,
-  Matrix4,
   Mesh,
   MeshStandardMaterial,
-  Quaternion,
-  StaticDrawUsage,
   Vector3,
   WebGPUCoordinateSystem,
   type Camera,
-  type BufferGeometry,
   type Material,
   type Scene,
 } from 'three'
-import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js'
 
 import {
   BOARD_CELL_FLOOR,
@@ -26,9 +19,12 @@ import {
   BOARD_CELL_VOID,
   BOARD_FLOOR_THICKNESS,
   bake_fight_board_surface,
+  bake_fight_board_water_surface,
   build_fight_board_pits,
   build_fight_board_slab,
+  build_fight_board_water,
 } from './fight_board_surface.ts'
+import { bake_stone_texture, build_obstacle_rocks } from './fight_board_rocks.ts'
 import { create_fight_blob_layer } from './fight_blobs.ts'
 import type { FightBoardRender, FightBoardRenderCell } from './types.ts'
 
@@ -81,10 +77,6 @@ type BoardResources = Readonly<{
   textures: readonly { dispose: () => void }[]
 }>
 
-const OBSTACLE_HEIGHT_RATIO = 0.58
-const OBSTACLE_INSET = 0.14
-const OBSTACLE_TONES = Object.freeze([0x847a5e, 0x746c56, 0x94886a])
-
 const board_mask = (board: Readonly<FightBoardRender>): Uint8Array => {
   const mask = new Uint8Array(board.width * board.height).fill(BOARD_CELL_VOID)
   board.cells.forEach((cell) => {
@@ -93,13 +85,6 @@ const board_mask = (board: Readonly<FightBoardRender>): Uint8Array => {
     mask[cell.x + cell.y * board.width] = value
   })
   return mask
-}
-
-const cell_hash = (x: number, y: number): number => {
-  let value = (x | 0) * 374761393 + (y | 0) * 668265263
-  value = Math.imul(value ^ (value >>> 13), 1274126177)
-  value ^= value >>> 16
-  return (value >>> 0) / 4294967296
 }
 
 export const create_fight_board_layer = ({
@@ -114,10 +99,6 @@ export const create_fight_board_layer = ({
   const near_point = new Vector3()
   const far_point = new Vector3()
   const ray_direction = new Vector3()
-  const quaternion = new Quaternion()
-  const position = new Vector3()
-  const scale = new Vector3()
-  const matrix = new Matrix4()
   let board: FightBoardRender | null = null
   let pick_cells: Readonly<Record<number, number>> | null = null
   let resources: BoardResources | null = null
@@ -129,31 +110,6 @@ export const create_fight_board_layer = ({
     resources?.textures.forEach((texture) => texture.dispose())
     resources = null
     pick_cells = null
-  }
-
-  const build_instances = (
-    geometry: BufferGeometry | RoundedBoxGeometry,
-    material: Material,
-    rows: readonly FightBoardRenderCell[],
-    dimensions: readonly [number, number, number],
-    y: (cell: Readonly<FightBoardRenderCell>) => number
-  ): InstancedMesh => {
-    const mesh = new InstancedMesh(geometry, material, Math.max(1, rows.length))
-    mesh.instanceMatrix.setUsage(StaticDrawUsage)
-    rows.forEach((cell, index) => {
-      position.set(
-        board!.origin.x + (cell.x + 0.5) * board!.cell_size,
-        y(cell),
-        board!.origin.z + (cell.y + 0.5) * board!.cell_size
-      )
-      scale.set(...dimensions)
-      matrix.compose(position, quaternion, scale)
-      mesh.setMatrixAt(index, matrix)
-    })
-    mesh.count = rows.length
-    mesh.instanceMatrix.needsUpdate = true
-    mesh.frustumCulled = false
-    return mesh
   }
 
   const set = (next: FightBoardRender | null): void => {
@@ -176,29 +132,22 @@ export const create_fight_board_layer = ({
     slab.frustumCulled = false
 
     const obstacle_rows = next.cells.filter(({ kind }) => kind === 'obstacle')
-    const obstacle_height = next.cell_size * OBSTACLE_HEIGHT_RATIO
-    const obstacle_geometry = new RoundedBoxGeometry(
-      next.cell_size - OBSTACLE_INSET,
-      obstacle_height,
-      next.cell_size - OBSTACLE_INSET,
-      1,
-      next.cell_size * 0.06
-    )
-    obstacle_geometry.translate(0, obstacle_height / 2, 0)
-    const obstacle_material = new MeshStandardMaterial({ vertexColors: true, roughness: 0.85, metalness: 0 })
-    const obstacles = build_instances(
-      obstacle_geometry,
-      obstacle_material,
-      obstacle_rows,
-      [1, 1, 1],
-      () => next.origin.y + BOARD_FLOOR_THICKNESS
-    )
-    const obstacle_color = new Color()
-    obstacle_rows.forEach((cell, index) => {
-      const tone = OBSTACLE_TONES[Math.floor(cell_hash(cell.x, cell.y) * OBSTACLE_TONES.length)] ?? OBSTACLE_TONES[0]
-      obstacles.setColorAt(index, obstacle_color.set(tone))
+    const obstacle_geometry = build_obstacle_rocks({
+      cells: obstacle_rows,
+      cell_size: next.cell_size,
+      origin: { x: next.origin.x, z: next.origin.z },
+      floor_y: next.origin.y + BOARD_FLOOR_THICKNESS,
     })
-    if (obstacles.instanceColor) obstacles.instanceColor.needsUpdate = true
+    const stone_texture = bake_stone_texture()
+    const obstacle_material = new MeshStandardMaterial({
+      map: stone_texture,
+      vertexColors: true,
+      roughness: 0.92,
+      metalness: 0,
+      flatShading: true,
+    })
+    const obstacles = new Mesh(obstacle_geometry, obstacle_material)
+    obstacles.frustumCulled = false
     obstacles.name = 'board_obstacle'
     // Large exploration shadow maps quantize this small static geometry while the fight camera moves.
     // The blocker material still carries its shape; excluding it from that map removes the visible shimmer.
@@ -218,17 +167,30 @@ export const create_fight_board_layer = ({
     holes.name = 'board_hole'
     holes.receiveShadow = true
 
+    // a hole is water: an OPAQUE still sheet just under the paving — the basin swallows whatever
+    // terrain or herbs the world grows beneath it instead of letting them show through
+    const water_geometry = build_fight_board_water(mask, next.width, next.height, next.cell_size, next.origin)
+    const water_texture = bake_fight_board_water_surface(mask, next.width, next.height)
+    const water_material = new MeshStandardMaterial({
+      map: water_texture,
+      roughness: 0.14,
+      metalness: 0,
+    })
+    const water = new Mesh(water_geometry, water_material)
+    water.frustumCulled = false
+    water.name = 'board_water'
+
     pick_cells = Object.freeze(
       Object.fromEntries(
         next.cells.flatMap(({ cell, kind, x, y }) => (kind === 'hole' ? [] : [[x + y * next.width, cell]]))
       )
     )
 
-    group.add(slab, obstacles, holes)
+    group.add(slab, obstacles, holes, water)
     resources = Object.freeze({
-      geometries: Object.freeze([slab_geometry, obstacle_geometry, hole_geometry]),
-      materials: Object.freeze([slab_top, slab_side, obstacle_material, hole_material]),
-      textures: Object.freeze([surface_texture]),
+      geometries: Object.freeze([slab_geometry, obstacle_geometry, hole_geometry, water_geometry]),
+      materials: Object.freeze([slab_top, slab_side, obstacle_material, hole_material, water_material]),
+      textures: Object.freeze([surface_texture, stone_texture, water_texture]),
     })
   }
 

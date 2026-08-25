@@ -30,8 +30,8 @@ export type FightSwordMarker = Readonly<{
   /** the chain's placement birth wall-clock (ms epoch) */
   placement_ms: number
 }>
-/** One visual gather block. `job` and `tier` are immutable authored resource facts used only
- * to select its procedural silhouette and palette; `id` is the patch+ordinal interaction key. */
+/** One visual gather block. Resource identity selects its recognizable procedural silhouette;
+ * job+tier supplies the family fallback. `id` is the patch+ordinal interaction key. */
 export type ResourceNodeMarker = Readonly<{
   id: string
   x: number
@@ -41,6 +41,8 @@ export type ResourceNodeMarker = Readonly<{
   job: string
   tier: number
 }>
+export type DungeonPortalMarker = Readonly<{ id: string; x: number; z: number }>
+export type DungeonStageRender = Readonly<{ x: number; y: number; z: number }>
 export type EntityFacing =
   Readonly<{ kind: 'yaw'; yaw: number }> | Readonly<{ kind: 'fight_opponents'; side: FightSide }>
 export type EntityVisualEffect = Readonly<{ kind: 'invisibility' }>
@@ -57,6 +59,8 @@ export type MobEntityRender = Readonly<{
   id: string
   kind: 'mob'
   model_url: string
+  variant?: string | null
+  level_scalar?: number
   anchor: EntityAnchor
   facing: EntityFacing
   animation?: CharacterAnimationRender
@@ -291,6 +295,12 @@ export type FightPresentationCue =
     }>
   | Readonly<{
       id: string
+      type: 'visibility'
+      entity_id: string
+      invisible: boolean
+    }>
+  | Readonly<{
+      id: string
       type: 'turn'
       entity_id: string
       // minimum on-screen duration of THIS turn before the next turn cue may play
@@ -335,6 +345,8 @@ export type Engine = Readonly<{
   set_resource_node_label: (id: string, element: HTMLElement | null) => void
   /** float the approach tooltip at the star gate (a fixed world-origin anchor); null detaches */
   set_portal_label: (element: HTMLElement | null) => void
+  set_dungeon_portals: (markers: readonly DungeonPortalMarker[]) => void
+  set_dungeon_stage: (stage: DungeonStageRender | null) => void
   animate_entity: (motion: EntityPathMotion) => Promise<boolean>
   play_fight_cue: (cue: FightPresentationCue) => Promise<boolean>
   play_jump_puff: (position: Vec3) => void

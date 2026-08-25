@@ -1,18 +1,18 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
-import { craft_job_of, craft_xp_from_ingredient_count, job_slugs } from '@aresrpg/immutable'
-
 import {
-  as_record,
-  button_class,
-  FieldLabel,
-  SelectField,
-  SheetSection,
-  string_value,
-  titleize_field,
-} from './ContentFields.tsx'
+  craft_job_of,
+  craft_max_ingredients,
+  craft_required_level,
+  craft_xp_from_ingredient_count,
+  job_slugs,
+} from '@aresrpg/immutable'
+import { Minus, Plus, X } from 'lucide-react'
+
+import { as_record, button_class, SheetSection, string_value, titleize_field } from './ContentFields.tsx'
 import { ItemReferencePicker } from './ItemReferencePicker.tsx'
+import type { ItemReferenceFilterRow } from './content_list.ts'
 import type { JsonPath, JsonValue } from './seed_editor.ts'
 
 export type ItemRecipeBinding = Readonly<{
@@ -23,7 +23,18 @@ export type ItemRecipeBinding = Readonly<{
   remove: () => void
 }>
 
-export const ItemRecipeEditor = ({ category, recipe }: Readonly<{ category: string; recipe: ItemRecipeBinding }>) => {
+const icon_button =
+  'grid size-7 shrink-0 cursor-pointer place-items-center text-[#737985] transition hover:text-[#d8d3ca] disabled:cursor-not-allowed disabled:opacity-20'
+
+export const ItemRecipeEditor = ({
+  category,
+  recipe,
+  filter_rows,
+}: Readonly<{
+  category: string
+  recipe: ItemRecipeBinding
+  filter_rows?: readonly ItemReferenceFilterRow[]
+}>) => {
   const value = as_record(recipe.value ?? undefined)
   if (!value)
     return (
@@ -37,6 +48,10 @@ export const ItemRecipeEditor = ({ category, recipe }: Readonly<{ category: stri
   const inputs = as_record(value.inputs) ?? Object.freeze({})
   const ingredients = Object.entries(inputs)
   const derived_job = craft_job_of(category)
+  const job = derived_job ?? string_value(value.job)
+  const required_level = craft_required_level(ingredients.length)
+  const excluded_types = (except = ''): ReadonlySet<string> =>
+    new Set(ingredients.map(([item_type]) => item_type).filter((item_type) => item_type !== except))
   const replace_ingredient = (current_type: string, next_type: string, amount: number): void =>
     recipe.change(
       ['inputs'],
@@ -58,67 +73,129 @@ export const ItemRecipeEditor = ({ category, recipe }: Readonly<{ category: stri
 
   return (
     <SheetSection accent="#65c993" note="This separate recipes.json row produces the current item." title="Recipe">
-      <div className="space-y-3" data-item-recipe="">
-        <div className="flex flex-wrap items-end gap-3">
+      <div className="space-y-2" data-item-recipe="">
+        <div className="flex flex-wrap items-center gap-x-5 gap-y-2 border-b border-white/9 pb-3 text-[8px]">
           {derived_job ? (
-            <div>
-              <FieldLabel label="Profession" />
-              <div className="grid h-8 min-w-44 place-items-center border border-white/8 bg-white/[0.02] px-3 text-[9px] tracking-[0.1em] text-[#65c993] uppercase">
-                {titleize_field(derived_job)}
-              </div>
-            </div>
+            <span className="tracking-[0.12em] text-[#65c993] uppercase">{titleize_field(derived_job)}</span>
           ) : (
-            <SelectField
-              change={(next) => recipe.change(['job'], next)}
-              label="Profession"
-              options={job_slugs}
-              value={string_value(value.job)}
-            />
+            <label className="flex items-center gap-2">
+              <span className="tracking-[0.12em] text-[#737883] uppercase">Profession</span>
+              <select
+                aria-label="Profession"
+                className="border-b border-white/15 bg-transparent py-1 text-[9px] text-[#d8d3ca] outline-none focus:border-[#65c993]/60"
+                onChange={(event) => recipe.change(['job'], event.target.value)}
+                value={job}
+              >
+                {!job_slugs.includes(job as (typeof job_slugs)[number]) && <option value={job}>{job || 'None'}</option>}
+                {job_slugs.map((option) => (
+                  <option className="bg-[#090a10]" key={option} value={option}>
+                    {titleize_field(option)}
+                  </option>
+                ))}
+              </select>
+            </label>
           )}
-          <div className="border border-[#4a9eff]/25 bg-[#4a9eff]/5 px-3 py-2">
-            <p className="text-[7px] tracking-[0.12em] text-[#737883] uppercase">Craft XP</p>
-            <p className="mt-1 text-[10px] tabular-nums text-[#67adff]">
+          <span className="text-[#8a909b]">
+            Requires{' '}
+            <strong className="font-normal text-[#d8c17d]">
+              {titleize_field(job)} Lv. {required_level}
+            </strong>
+          </span>
+          <span className="text-[#737985]">
+            Craft XP{' '}
+            <strong className="font-normal text-[#67adff]">
               {craft_xp_from_ingredient_count(ingredients.length).toLocaleString()}
-            </p>
-          </div>
-          <div className="ml-auto flex items-center gap-2">
-            <button className={button_class} onClick={recipe.remove} type="button">
-              Remove recipe
-            </button>
-          </div>
+            </strong>
+          </span>
+          <span className="text-[#737985]">
+            {ingredients.length} / {craft_max_ingredients} ingredients
+          </span>
+          <button
+            aria-label="Remove recipe"
+            className="ml-auto grid size-7 cursor-pointer place-items-center text-[#9a5367] transition hover:text-[#ff6f98]"
+            onClick={recipe.remove}
+            title="Remove recipe"
+            type="button"
+          >
+            <X size={14} strokeWidth={1.7} />
+          </button>
         </div>
-        <div className="grid gap-2 xl:grid-cols-2">
-          {ingredients.map(([item_type, quantity]) => (
-            <div className="flex min-w-0 items-center gap-2" key={item_type}>
+
+        <div>
+          {ingredients.map(([item_type, quantity], index) => {
+            const amount = typeof quantity === 'number' ? quantity : 1
+            return (
+              <div
+                className="group flex min-w-0 items-center border-b border-white/7 transition-colors hover:bg-white/[0.015]"
+                data-recipe-ingredient-row=""
+                key={item_type}
+              >
+                <span className="w-7 shrink-0 text-center text-[7px] tabular-nums text-[#4f5560]">{index + 1}</span>
+                <ItemReferencePicker
+                  class_name="flex-1 !h-12 !border-0 !bg-transparent !px-1 hover:!border-0"
+                  excluded={excluded_types(item_type)}
+                  filter_rows={filter_rows}
+                  label="ingredient"
+                  select={(next_type) => replace_ingredient(item_type, next_type, amount)}
+                  value={item_type}
+                />
+                <span className="w-20 shrink-0 text-right text-[7px] tracking-[0.08em] text-[#666d78] uppercase">
+                  Job Lv. {craft_required_level(index + 1)}
+                </span>
+                <div className="ml-3 flex shrink-0 items-center" aria-label={`${item_type} quantity`}>
+                  <button
+                    aria-label="Decrease ingredient quantity"
+                    className={icon_button}
+                    disabled={amount <= 1}
+                    onClick={() => replace_ingredient(item_type, item_type, Math.max(1, amount - 1))}
+                    type="button"
+                  >
+                    <Minus size={12} strokeWidth={1.5} />
+                  </button>
+                  <span className="w-10 text-center text-[10px] tabular-nums text-[#d8d3ca]">×{amount}</span>
+                  <button
+                    aria-label="Increase ingredient quantity"
+                    className={icon_button}
+                    onClick={() => replace_ingredient(item_type, item_type, amount + 1)}
+                    type="button"
+                  >
+                    <Plus size={12} strokeWidth={1.5} />
+                  </button>
+                </div>
+                <button
+                  aria-label="Remove ingredient"
+                  className="ml-2 grid size-8 shrink-0 cursor-pointer place-items-center text-[#873f55] transition hover:text-[#ff5a8b]"
+                  onClick={() => remove_ingredient(item_type)}
+                  title="Remove ingredient"
+                  type="button"
+                >
+                  <X size={13} strokeWidth={1.7} />
+                </button>
+              </div>
+            )
+          })}
+
+          {ingredients.length < craft_max_ingredients && (
+            <div
+              className="flex min-w-0 items-center border-b border-dashed border-white/7 text-[#68707b] transition-colors hover:bg-white/[0.015]"
+              data-recipe-ingredient-placeholder=""
+            >
+              <span className="w-7 shrink-0 text-center text-[7px] tabular-nums text-[#414751]">
+                {ingredients.length + 1}
+              </span>
               <ItemReferencePicker
-                class_name="min-w-0 flex-1"
-                excluded={new Set(ingredients.map(([type]) => type).filter((type) => type !== item_type))}
+                class_name="flex-1 !h-12 !border-0 !bg-transparent !px-1 hover:!border-0"
+                empty_sublabel={`Next slot · job Lv. ${craft_required_level(ingredients.length + 1)}`}
+                excluded={excluded_types()}
+                filter_rows={filter_rows}
                 label="ingredient"
-                select={(next_type) =>
-                  replace_ingredient(item_type, next_type, typeof quantity === 'number' ? quantity : 1)
-                }
-                value={item_type}
+                placeholder="Add ingredient"
+                select={(item_type) => recipe.change(['inputs'], Object.freeze({ ...inputs, [item_type]: 1 }))}
+                value=""
               />
-              <input
-                aria-label={`${item_type} quantity`}
-                className="h-10 w-16 border border-white/10 bg-[#090a10] px-2 text-right text-[10px] tabular-nums outline-none focus:border-[#4a9eff]/60"
-                min={1}
-                onChange={(event) => replace_ingredient(item_type, item_type, Number(event.target.value))}
-                type="number"
-                value={typeof quantity === 'number' ? quantity : 1}
-              />
-              <button className={button_class} onClick={() => remove_ingredient(item_type)} type="button">
-                Remove
-              </button>
             </div>
-          ))}
+          )}
         </div>
-        <ItemReferencePicker
-          excluded={new Set(ingredients.map(([item_type]) => item_type))}
-          label="ingredient"
-          select={(item_type) => recipe.change(['inputs'], Object.freeze({ ...inputs, [item_type]: 1 }))}
-          value=""
-        />
       </div>
     </SheetSection>
   )

@@ -16,7 +16,7 @@ import { fight_placement_blobs } from '@aresrpg/engine'
 import { project_board_cells, type FightBoard } from '@aresrpg/fight'
 import { useEffect, useMemo, useRef } from 'react'
 
-import { claim_scene_entities, submit_scene_entities, type SceneHandle } from '../core/scene_feed.ts'
+import { claim_scene_entities, type SceneHandle } from '../core/scene_feed.ts'
 import { create_fight_presenter } from './fight_presenter.ts'
 import type { FightBlobOverlay } from './fight_overlays.ts'
 import type { FightCuePhase } from './fight_presenter.ts'
@@ -63,7 +63,10 @@ const scene_fight_view = (scene: SceneHandle) => {
   claim_scene_entities('fight')
   return Object.freeze({
     set_board: (board: FightBoardRender) => scene.show_fight_board(board),
-    set_entities: (entities: readonly EntityRender[]) => submit_scene_entities('fight', entities),
+    // entities draw into the scene THIS viewport was handed — the claim above only silences the
+    // game world's other source. A stage world (the demo lab) is not the published scene, so a
+    // feed-routed write would land in the void while the board mounts here.
+    set_entities: (entities: readonly EntityRender[]) => scene.set_entities(entities),
     animate_entity: scene.animate_entity,
     play_fight_cue: scene.play_fight_cue,
     project_entity: scene.project_entity,
@@ -73,6 +76,7 @@ const scene_fight_view = (scene: SceneHandle) => {
     pick_cell: scene.pick_fight_cell,
     dispose: (): void => {
       scene.show_fight_board(null)
+      scene.set_entities(Object.freeze([]))
       claim_scene_entities('world')
     },
   })

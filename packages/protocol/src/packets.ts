@@ -74,7 +74,7 @@ export type CharacterRow = {
   spells: Record<string, number>
   /** unspent SPELL points — a chain field like available_points (1 granted per level from 2) */
   available_spell_points: number
-  /** job xp by slug (the 15 job slugs are immutable-module law) */
+  /** job xp by slug (the 11 job slugs are immutable-module law) */
   jobs: Record<string, string>
   /** the world the character currently stands in, if joined */
   world?: string
@@ -95,6 +95,8 @@ export type CharacterRow = {
     board_seed: string
     hp: string
   }>
+  /** Live dungeon staging identity. Presence and zone tracking stop while this exists. */
+  dungeon_run?: Readonly<{ world: string; room: number; x: number; z: number }>
   /** the chain's own equipment fold (FoldedKey DF), stat_names order, RAW centered values —
    *  absent while the character never equipped anything (fold neutral) */
   folded_stats?: Record<string, number>
@@ -149,6 +151,9 @@ export type ResourcePackRow = {
   nodes: number
 }
 
+/** One dungeon entrance derived from a searched zone's seed; chain-space coordinates. */
+export type DungeonPortalRow = { x: number; z: number }
+
 /** A live fight marker in the world — enough to render and approach; details come on watch.
  *  `placement_ms` is the chain's birth wall-clock (u64 as string): it drives the join-window
  *  clock every surface derives (the sword's sink, join/spectate gating). */
@@ -168,6 +173,30 @@ export type FightRow = {
   managed: boolean
   wagered: boolean
   placement_ms: string
+}
+
+export type DungeonLobbyPlayerRow = {
+  character_id: string
+  name: string
+  level: number
+  room: number
+}
+
+export type DungeonLobbyFightRow = {
+  id: string
+  room: number
+  phase: string
+  access: number
+  opener: string | null
+  players: readonly DungeonLobbyPlayerRow[]
+}
+
+export type DungeonLobbyRow = {
+  world: string
+  x: number
+  z: number
+  players: readonly DungeonLobbyPlayerRow[]
+  fights: readonly DungeonLobbyFightRow[]
 }
 
 /** One fighter's replay source — the chain numbers @aresrpg/fight needs for a player seat:
@@ -307,6 +336,8 @@ export type ClaimRow = { id: string; kind: 'crush' | 'box'; rolled_template?: st
  *  still owed; disappearance is the chain proof that the seat is completely reconciled. */
 export type FightResolutionRow = {
   fight: string
+  world: string
+  dungeon: number | null
   fighter: number
   character: string
   team: number
@@ -315,11 +346,19 @@ export type FightResolutionRow = {
   settled: boolean
   level: number
   experience: string
+  /** Every immutable template the terminal settlement may need after rolling enemy tables. */
+  loot_types: string[]
   drops: { item_type: string; qty: number }[]
 }
 
-/** Mutable shop state. Authored names, prices, art, and initial caps stay in seed/. */
-export type ShopSaleState = Readonly<{ item_type: string; supply: string }>
+/** Mutable shop state. Presentation and immutable supply policy remain authored in seed/. */
+export type ShopSaleState = Readonly<{
+  item_type: string
+  price: string
+  supply: string
+  infinite: boolean
+  enabled: boolean
+}>
 export type AirdropState = Readonly<{
   drop_id: string
   eligible: boolean
@@ -329,6 +368,8 @@ export type ShopState = Readonly<{ sales: readonly ShopSaleState[]; airdrops: re
 
 /** Zones are 512-block squares (zone.move ZONE_SIZE) — the tracking unit for everything. */
 export const ZONE_SIZE = 512
+/** zone.move RESEARCH_TTL_MS — after this age Search draws a fresh seed and resets consumption. */
+export const ZONE_RESEARCH_TTL_MS = 7_200_000
 export const zone_of = (x: number, z: number) => ({ zx: Math.floor(x / ZONE_SIZE), zz: Math.floor(z / ZONE_SIZE) })
 
 /** What a zone's consumption state says about its population. The wire carries the two facts
@@ -472,7 +513,16 @@ export type ServerPackets = {
    *  What is still ALIVE derives from the zone's own `mob_taken`/`res_taken`, which ride
    *  `packet/zones` — one home for a zone's mutable state, ~200 bytes per change instead of
    *  the whole population. */
-  'packet/zone_spawns': { world: string; zx: number; zz: number; mobs: MobGroupRow[]; resources: ResourcePackRow[] }
+  'packet/zone_spawns': {
+    world: string
+    zx: number
+    zz: number
+    mobs: MobGroupRow[]
+    resources: ResourcePackRow[]
+    portal: DungeonPortalRow | null
+  }
+  /** One portal-scoped dungeon lobby; refreshed from graph truth on run/fight writes. */
+  'packet/dungeon_lobby': { lobby: DungeonLobbyRow }
 
   // ── the presence mesh (other players in tracked zones) ──
   'packet/player_appeared': { player: PresenceRow }
@@ -535,7 +585,7 @@ export type ServerPackets = {
   'packet/listing_sold': { object: string; price_mist: string }
 
   // ── primary shop stream (other players' transactions only) ──
-  'packet/shop_supply': ShopSaleState
+  'packet/shop_supply': { item_type: string; supply: string }
   'packet/airdrop_remaining': { drop_id: string; eligible_count: number }
 
   // ── kolizeum stream ──
@@ -600,6 +650,7 @@ export const WORLD_PACKETS = [
   'packet/party_left',
   'packet/fight_created',
   'packet/fight_phase',
+  'packet/dungeon_lobby',
 ] as const
 
 export const FIGHT_PACKETS = [

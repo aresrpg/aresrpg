@@ -67,6 +67,27 @@ export const remove_pending_engage = (world: WorldState, group: string): WorldSt
       })
     : world
 
+export const new_pending_engages = (current: WorldState, previous: WorldState): readonly PendingEngage[] =>
+  Object.freeze(Object.values(current.pending_engages).filter(({ group }) => !(group in previous.pending_engages)))
+
+const decoded_error = (error: unknown): string => {
+  let message = error instanceof Error ? error.message : String(error)
+  for (let pass = 0; pass < 2; pass += 1) {
+    const decoded = message.replace(/%([\dA-F]{2})/gi, (_, hex: string) =>
+      String.fromCharCode(Number.parseInt(hex, 16))
+    )
+    if (decoded === message) break
+    message = decoded
+  }
+  return message
+}
+
+/** Validator-level stale-object conflicts are pre-execution race verdicts, not useful player copy. */
+export const engage_conflict_refusal = (error: unknown): boolean => {
+  const message = decoded_error(error)
+  return /unavailable for consumption/i.test(message) && /current version/i.test(message)
+}
+
 export const engage_sword_markers = (
   world: WorldState
 ): readonly Readonly<{ id: string; x: number; z: number; placement_ms: number }>[] =>

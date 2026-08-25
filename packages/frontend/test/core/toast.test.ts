@@ -42,4 +42,19 @@ describe('app toast effects', () => {
     expect(TOAST_CONTAINER_CLASS).toContain('right-[max(1rem,var(--safe-right))]')
     expect(toast_glass_class).toContain('animate-[slide-in_0.3s_ease-out]')
   })
+
+  test('a completed pending toast may carry the gathered item icon', () => {
+    const events: unknown[] = []
+    const unsubscribe = toast.subscribe((event) => events.push(event))
+    const pending = toast.loading('Gathering…')
+    pending.success('Gathered 2 × Ivory Shrooms', '/item/ivory_shrooms.png')
+    const shown = events.at(-1) as Readonly<{ type: 'show'; toast: Toast }>
+
+    expect(shown.toast).toMatchObject({
+      message: 'Gathered 2 × Ivory Shrooms',
+      icon: '/item/ivory_shrooms.png',
+      type: 'success',
+    })
+    unsubscribe()
+  })
 })

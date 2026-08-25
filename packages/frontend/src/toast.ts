@@ -15,6 +15,8 @@ export type Toast = Readonly<{
   id: string
   message: string
   type: ToastType
+  /** Optional authored art for concrete rewards; status chrome remains the fallback. */
+  icon?: string
   /** inline buttons on the toast's own line — the toast grows, never stacks (owner 2026-08-21) */
   actions?: readonly ToastAction[]
   persistent?: boolean
@@ -79,15 +81,15 @@ export const toast = Object.freeze({
   loading: (message: string) => {
     const id = crypto.randomUUID()
     show(Object.freeze({ id, message, type: 'pending', persistent: true }))
-    const finish = (next: unknown, type: 'error' | 'success'): void => {
+    const finish = (next: unknown, type: 'error' | 'success', icon?: string): void => {
       notice_gas_empty(type, message_of(next))
-      show(Object.freeze({ id, message: translated(type, message_of(next)), type }))
-      setTimeout(() => remove(id), type === 'success' ? 1_400 : 5_000)
+      show(Object.freeze({ id, message: translated(type, message_of(next)), type, ...(icon ? { icon } : {}) }))
+      setTimeout(() => remove(id), type === 'success' ? (icon ? 3_000 : 1_400) : 5_000)
     }
     return Object.freeze({
       dismiss: () => remove(id),
       error: (error: unknown) => finish(error, 'error'),
-      success: (success: string) => finish(success, 'success'),
+      success: (success: string, icon?: string) => finish(success, 'success', icon),
     })
   },
 })

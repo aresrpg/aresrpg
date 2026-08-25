@@ -2,9 +2,10 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
 import { describe, expect, test } from 'bun:test'
-import { craft_job_of } from '@aresrpg/immutable'
+import { craft_job_of, gatherable_catalog } from '@aresrpg/immutable'
 
 import airdrop from '../../../../seed/content/airdrop.json'
+import fight_boards from '../../../../seed/content/fight_boards.json'
 import items from '../../../../seed/content/items.json'
 import mobs from '../../../../seed/content/mobs.json'
 import recipes from '../../../../seed/content/recipes.json'
@@ -12,7 +13,12 @@ import shop from '../../../../seed/content/shop.json'
 import spells from '../../../../seed/content/spells.json'
 import structure_packs from '../../../../seed/content/structure_packs.json'
 import worlds from '../../../../seed/content/worlds.json'
-import { item_power_summary, item_upu_budget } from '../../src/editor/item_power.ts'
+import { item_power_budget, item_power_summary } from '../../src/editor/item_power.ts'
+import {
+  editor_autosave_delay_ms,
+  editor_domain_autosave_ready,
+  editor_domain_saveable,
+} from '../../src/modules/editor.ts'
 import {
   seed_content_domains,
   editable_json_paths,
@@ -23,8 +29,7 @@ import {
   type JsonValue,
 } from '../../src/editor/seed_editor.ts'
 
-const corpus = Object.freeze({ airdrop, items, mobs, recipes, shop, spells, structure_packs, worlds })
-
+const corpus = Object.freeze({ airdrop, fight_boards, items, mobs, recipes, shop, spells, structure_packs, worlds })
 const leaf_paths = (value: unknown, path: readonly (string | number)[] = []): readonly string[] => {
   if (value === null || typeof value !== 'object') return [path.join('.')]
   return Object.entries(value).flatMap(([key, child]) =>
@@ -33,6 +38,37 @@ const leaf_paths = (value: unknown, path: readonly (string | number)[] = []): re
 }
 
 describe('seed editor model', () => {
+  test('debounces board strokes separately from text fields', () => {
+    const [first_board] = fight_boards.boards
+    if (!first_board) throw new TypeError('fight board fixture is empty')
+    expect(editor_autosave_delay_ms('fight_boards')).toBe(500)
+    expect(editor_autosave_delay_ms('items')).toBe(800)
+    expect(editor_autosave_delay_ms('spells')).toBe(5_000)
+    expect(editor_domain_autosave_ready('spells', 'spells')).toBeFalse()
+    expect(editor_domain_autosave_ready('spells', null)).toBeTrue()
+    expect(editor_domain_autosave_ready('items', 'spells')).toBeTrue()
+    expect(
+      editor_domain_saveable('mobs', [
+        { mob_type: 'draft', spells: [{ name: 'New spell', levels: [{ effects: [], crit_effects: [] }] }] },
+      ])
+    ).toBeFalse()
+    expect(
+      editor_domain_saveable('mobs', [
+        {
+          mob_type: 'draft',
+          spells: [{ name: 'New spell', levels: [{ effects: [{ kind: 0 }], crit_effects: [] }] }],
+        },
+      ])
+    ).toBeTrue()
+    expect(editor_domain_saveable('fight_boards', fight_boards)).toBeTrue()
+    expect(
+      editor_domain_saveable('fight_boards', {
+        ...fight_boards,
+        boards: [{ ...first_board, start_cells_a: [] }],
+      })
+    ).toBeFalse()
+  })
+
   test('covers every authored seed file and every JSON leaf', () => {
     expect(seed_content_domains.map(({ id }) => String(id))).toEqual(Object.keys(corpus))
     for (const domain of seed_content_domains) {
@@ -42,14 +78,40 @@ describe('seed editor model', () => {
   })
 
   test('projects stable entity rows for every domain', () => {
-    expect(entity_rows('items', items)).toHaveLength(1980)
-    expect(entity_rows('mobs', mobs)).toHaveLength(383)
+    expect(entity_rows('items', items)).toHaveLength(196)
+    expect(entity_rows('mobs', mobs)).toHaveLength(55)
     expect(entity_rows('spells', spells)).toHaveLength(240)
-    expect(entity_rows('recipes', recipes)).toHaveLength(1477)
-    expect(entity_rows('worlds', worlds)).toHaveLength(20)
-    expect(entity_rows('shop', shop)).toHaveLength(36)
-    expect(entity_rows('airdrop', airdrop).length).toBeGreaterThan(0)
+    expect(entity_rows('recipes', recipes)).toHaveLength(recipes.length)
+    expect(entity_rows('worlds', worlds)).toHaveLength(2)
+    expect(entity_rows('shop', shop)).toHaveLength(0)
+    expect(entity_rows('airdrop', airdrop)).toHaveLength(0)
     expect(entity_rows('items', items)[0]?.label).toBe(items[0].name)
+  })
+
+  test('keeps the boss and archimobs outside the ordinary Nauvis roster', () => {
+    const protectors = new Set(gatherable_catalog.map(({ protector }) => protector))
+    const curated_mobs = mobs.filter(({ mob_type }) => !protectors.has(mob_type))
+    const nauvis = worlds.find(({ world }) => world === 'nauvis')
+
+    expect(curated_mobs.filter(({ role }) => role === 'normal')).toHaveLength(18)
+    expect(curated_mobs.filter(({ role }) => role === 'boss')).toHaveLength(1)
+    expect(curated_mobs.filter(({ role }) => role === 'archi')).toHaveLength(3)
+    expect(nauvis?.mobs).toHaveLength(18)
+    expect(
+      nauvis?.mobs.every(({ mob_type }) =>
+        curated_mobs.some((mob) => mob.role === 'normal' && mob.mob_type === mob_type)
+      )
+    ).toBeTrue()
+  })
+
+  test('Nauvis owns the Key of the Tangled Aftermath', () => {
+    expect(items.find(({ item_type }) => item_type === 'key_of_tangled_aftermath')).toEqual({
+      item_type: 'key_of_tangled_aftermath',
+      name: 'Key of the Tangled Aftermath',
+      category: 'key',
+      level: 1,
+    })
+    expect(worlds.find(({ world }) => world === 'nauvis')?.dungeon.key).toBe('key_of_tangled_aftermath')
   })
 
   test('recipes author ingredients, never derived XP or output quantity', () => {
@@ -64,6 +126,11 @@ describe('seed editor model', () => {
           : Object.hasOwn(recipe, 'job')
       )
     ).toBe(true)
+  })
+
+  test('player spells keep six levels while mob spells author exactly one', () => {
+    expect(spells.every((spell) => spell.levels.length === 6)).toBeTrue()
+    expect(mobs.flatMap((mob) => mob.spells).every((spell) => spell.levels.length === 1)).toBeTrue()
   })
 
   test('updates deeply without mutating or dropping unknown siblings', () => {
@@ -84,10 +151,12 @@ describe('seed editor model', () => {
     )
   })
 
-  test('locks only an item identity, not item references in other content', () => {
+  test('locks item identity and category, not item references in other content', () => {
     expect(is_readonly_seed_path('items', ['item_type'])).toBe(true)
+    expect(is_readonly_seed_path('items', ['category'])).toBe(true)
     expect(is_readonly_seed_path('items', ['loot', 0, 'item_type'])).toBe(false)
     expect(is_readonly_seed_path('mobs', ['loot', 0, 'item_type'])).toBe(false)
+    expect(is_readonly_seed_path('mobs', ['mob_type'])).toBe(true)
   })
 
   test('derives the relevant icon identity for authored entities', () => {
@@ -96,7 +165,10 @@ describe('seed editor model', () => {
       id: items[0].item_type,
     })
     expect(entity_asset_reference('mobs', mobs[0])).toEqual({ kind: 'mob', id: mobs[0].mob_type })
-    expect(entity_asset_reference('recipes', recipes[0])).toEqual({ kind: 'item', id: recipes[0].output_type })
+    expect(entity_asset_reference('recipes', recipes[0] as unknown as JsonValue)).toEqual({
+      kind: 'item',
+      id: recipes[0].output_type,
+    })
     expect(entity_asset_reference('spells', spells[0])).toEqual({
       kind: 'spell',
       classe: spells[0].classe,
@@ -104,22 +176,34 @@ describe('seed editor model', () => {
     })
   })
 
-  test('uses the Dofus donor-fitted curve, weights, and variance bands', () => {
-    expect(item_upu_budget(80)).toBe(663)
-    expect(item_upu_budget(105)).toBe(945)
-    expect(item_upu_budget(195)).toBe(2083)
-    const power = item_power_summary(items[0] as unknown as JsonValue)
+  test('uses exact Retro rune power and nearby real-item cohorts', () => {
+    expect(item_power_budget(1)).toBe(3.75)
+    expect(item_power_budget(60)).toBe(120)
+    const tool = items.find(({ item_type }) => item_type === 'arcanite_hoe')!
+    const power = item_power_summary(tool as unknown as JsonValue)
     expect(power).toMatchObject({
-      budget: 663,
-      p10: 412,
-      p90: 1453,
-      stat_weight: 201,
-      damage_weight: 70,
-      total_weight: 271,
+      median: 120,
+      p10: 32.5,
+      p90: 230,
+      corpus_max: 400,
+      stat_power: 180,
+      sample_count: 141,
     })
-    expect(power?.score).toBe(41)
-    expect(power?.status).toBe('weak')
+    expect(power?.percentile).toBeGreaterThan(0)
+    expect(power?.status).toBe('balanced')
+    const basic = items.find(({ item_type }) => item_type === 'basic_pickaxe')!
+    expect(item_power_summary(basic as unknown as JsonValue)?.comparison).toBe('all gear')
     const resource = items.find(({ category }) => category === 'resource')!
     expect(item_power_summary(resource as unknown as JsonValue)).toBeNull()
+
+    const weapon = item_power_summary({
+      level: 50,
+      category: 'sword',
+      damages: [{ damage_type: 'weapon', element: 'earth', from: 10, to: 20 }],
+    })
+    expect(weapon).toMatchObject({
+      stat_power: 0,
+      weapon: { average_per_ap: 3, maximum_per_ap: 4 },
+    })
   })
 })

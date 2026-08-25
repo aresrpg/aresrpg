@@ -24,10 +24,7 @@ export const apply_pool_effects = (runtime: FightRuntime, fighter: bigint): void
 export const tick_turn_start = (runtime: FightRuntime, fighter: bigint): void => {
   const target = runtime.contract.fighters[Number(fighter)]
   const rows = [...target.effects]
-  const row_ids = [...runtime.render_ids.effects[Number(fighter)]]
-  const kept: ActiveEffect[] = []
-  const kept_ids: string[] = []
-  rows.forEach((row, index) => {
+  rows.forEach((row) => {
     if (row.stat === STATS.hp && (row.kind === KINDS.remove || row.kind === KINDS.steal)) {
       hit(runtime, {
         target: fighter,
@@ -45,26 +42,37 @@ export const tick_turn_start = (runtime: FightRuntime, fighter: bigint): void =>
         cause: 'regeneration',
       })
     }
-    if (row.turns_left > 1n) {
-      kept.push({ ...row, turns_left: row.turns_left - 1n })
-      kept_ids.push(row_ids[index])
-    } else {
-      emit(runtime, 'effect_expired', {
-        target: fighter,
-        effect_id: effect_id_at(runtime, fighter, index),
-        kind: row.kind,
-        channel: row.stat,
-      })
-      if (row.kind === KINDS.invis)
-        emit(runtime, 'invisibility_changed', { fighter, invisible: false, reason: 'expired' })
-    }
   })
-  const born_during_tick = target.effects.slice(rows.length)
-  const born_ids = runtime.render_ids.effects[Number(fighter)].slice(rows.length)
-  target.effects = [...kept, ...born_during_tick]
-  runtime.render_ids.effects[Number(fighter)] = [...kept_ids, ...born_ids]
   if (!runtime.contract.ended) fire_glyphs_under(runtime, fighter, resolve_rows)
   tick_board_zones(runtime, fighter)
+}
+
+/** Duration includes the current turn. A row cast during this turn steps from 2 → 1 when the
+ * turn closes, remains active through the next turn, then expires at that turn's close. */
+export const tick_turn_end = (runtime: FightRuntime, fighter: bigint): void => {
+  const target = runtime.contract.fighters[Number(fighter)]
+  const rows = [...target.effects]
+  const row_ids = [...runtime.render_ids.effects[Number(fighter)]]
+  const kept: ActiveEffect[] = []
+  const kept_ids: string[] = []
+  rows.forEach((row, index) => {
+    const turns_left = row.turns_left > 0n ? row.turns_left - 1n : 0n
+    if (turns_left > 0n) {
+      kept.push({ ...row, turns_left })
+      kept_ids.push(row_ids[index])
+      return
+    }
+    emit(runtime, 'effect_expired', {
+      target: fighter,
+      effect_id: effect_id_at(runtime, fighter, index),
+      kind: row.kind,
+      channel: row.stat,
+    })
+    if (row.kind === KINDS.invis)
+      emit(runtime, 'invisibility_changed', { fighter, invisible: false, reason: 'expired' })
+  })
+  target.effects = kept
+  runtime.render_ids.effects[Number(fighter)] = kept_ids
 }
 
 export const tick_cooldowns = (runtime: FightRuntime, fighter: bigint): void => {

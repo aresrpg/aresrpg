@@ -10,13 +10,13 @@ mock.module('../../src/content/assets.ts', () => ({
   spell_icon: () => null,
 }))
 
-test('mob detail retains icon stats, horizontal spell tabs, loot odds, and world rows', async () => {
+test('protector detail retains icon stats, horizontal spell tabs, and its resource world', async () => {
   const { MobsTab } = await import('../../src/encyclopedia/MobsTab.tsx')
   const html = renderToStaticMarkup(
     <MobsTab
       select_item={() => undefined}
       select_mob={() => undefined}
-      selected_id="wooligan"
+      selected_id="protector_aloe_gaia"
       select_world={() => undefined}
       text={(key) => key}
     />
@@ -26,8 +26,14 @@ test('mob detail retains icon stats, horizontal spell tabs, loot odds, and world
     expect(html).toContain(`data-mob-stat-icon="${stat}"`)
   expect(html).toContain('data-mob-spell-tabs=""')
   expect(html).toContain('role="tablist"')
-  expect(html).toContain('Head Butt')
-  expect(html).toContain('Bull Rush')
+  expect(html).toContain('Warding Strike')
+  expect(html).toContain('Riptide')
   expect(html).toContain('data-mob-loot-progress=""')
   expect(html).toContain('data-mob-found-in=""')
+  expect(html.match(/data-facet-rail=""/g)).toHaveLength(1)
+  expect(html).toContain('data-facet-option="world:nauvis"')
+  expect(html).toContain('data-facet-option="biome:nauvis:plains"')
+  expect(html).toContain('data-facet-option="family:fuwa"')
+  expect(html).toContain('data-facet-option="element:earth"')
+  expect(html).not.toContain('<select data-mob-filter')
 })

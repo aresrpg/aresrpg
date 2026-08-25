@@ -6,7 +6,7 @@
 // an optional DOM element slot floating above it (the prompt/lock tag), positioned by the
 // SAME CSS2D pass the entity labels use.
 
-import { Object3D, type Scene } from 'three'
+import { Box3, Object3D, type Scene } from 'three'
 import { CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js'
 
 import { load_gltf_source } from './gltf_loader.ts'
@@ -22,6 +22,11 @@ const INTRO_MS = 2_000
 const GROW_MS = 500
 const START_SCALE = 0.1
 const PLANT_SCALE = 2.5
+const LABEL_WORLD_HEIGHT = 3
+
+export const FIGHT_SWORD_TILT = Object.freeze({ x: 0.035, z: -0.09 })
+export const fight_sword_plant_height = (minimum_y: number, maximum_y: number): number => -(minimum_y + maximum_y) / 2
+export const fight_sword_label_offset = (scale: number): number => LABEL_WORLD_HEIGHT / Math.max(scale, 0.001)
 
 const clamp01 = (value: number): number => Math.min(1, Math.max(0, value))
 const ease_out_quad = (t: number): number => t * (2 - t)
@@ -34,12 +39,13 @@ export const fight_swords_visible = (board_active: boolean): boolean => !board_a
 export const fight_sword_frame = (
   placement_ms: number,
   spawned_ms: number,
-  now_ms: number
+  now_ms: number,
+  terminal_height = HANDLE_HEIGHT
 ): Readonly<{ height: number; scale: number; yaw: number; impacted: boolean }> => {
   const elapsed = Math.max(0, now_ms - spawned_ms)
   const placement_age = Math.max(0, spawned_ms - placement_ms)
   const time_left = Math.max(0, WINDOW_MS - placement_age)
-  const target = EXPOSED_HEIGHT - clamp01(placement_age / WINDOW_MS) * (EXPOSED_HEIGHT - HANDLE_HEIGHT)
+  const target = EXPOSED_HEIGHT - clamp01(placement_age / WINDOW_MS) * (EXPOSED_HEIGHT - terminal_height)
   const grow = clamp01(elapsed / GROW_MS)
   const scale = START_SCALE + (PLANT_SCALE - START_SCALE) * ease_out_quad(grow)
   if (elapsed <= GROW_MS) return Object.freeze({ height: SKY_HEIGHT, scale, yaw: 0, impacted: false })
@@ -53,7 +59,7 @@ export const fight_sword_frame = (
     })
   const sink = clamp01((elapsed - INTRO_MS) / Math.max(1, time_left))
   return Object.freeze({
-    height: target + (HANDLE_HEIGHT - target) * sink,
+    height: target + (terminal_height - target) * sink,
     scale,
     yaw: Math.PI * 2,
     impacted: true,
@@ -82,9 +88,18 @@ export const create_fight_sword_layer = ({
   const impact_audio = typeof Audio === 'undefined' ? null : new Audio(impact_sound_url)
   if (impact_audio) impact_audio.preload = 'auto'
   let template: Object3D | null = null
+  let plant_height = HANDLE_HEIGHT
   void load_gltf_source(url)
     .then((gltf) => {
       template = gltf.scene
+      const measuring_root = new Object3D()
+      const measuring_inner = template.clone(true)
+      measuring_inner.rotation.x = Math.PI
+      measuring_root.add(measuring_inner)
+      measuring_root.scale.setScalar(PLANT_SCALE)
+      measuring_root.updateWorldMatrix(true, true)
+      const bounds = new Box3().setFromObject(measuring_root)
+      if (!bounds.isEmpty()) plant_height = fight_sword_plant_height(bounds.min.y, bounds.max.y)
       // late arrival: markers registered before the model may now materialize
       planted.forEach(({ root }) => rebuild(root))
     })
@@ -135,7 +150,7 @@ export const create_fight_sword_layer = ({
     }
     if (!element) return
     const label = new CSS2DObject(element)
-    label.position.set(0, PLANT_SCALE * 2, 0) // clears the standing sword's crown
+    label.position.set(0, fight_sword_label_offset(entry.root.scale.y), 0)
     entry.root.add(label)
     planted.set(id, { ...entry, label })
   }
@@ -145,16 +160,22 @@ export const create_fight_sword_layer = ({
     const now_ms = Date.now()
     planted.forEach((entry, id) => {
       const { root, marker } = entry
-      const { height, scale, yaw, impacted } = fight_sword_frame(marker.placement_ms, entry.spawned_ms, now_ms)
+      const { height, scale, yaw, impacted } = fight_sword_frame(
+        marker.placement_ms,
+        entry.spawned_ms,
+        now_ms,
+        plant_height
+      )
       root.position.set(marker.x, marker.y + height, marker.z)
       root.scale.setScalar(Math.max(scale, 0.001))
+      entry.label?.position.set(0, fight_sword_label_offset(scale), 0)
       root.rotation.y = yaw
       if (!impacted) {
         root.rotation.x = Math.random() * 0.02 - 0.01
         root.rotation.z += Math.random() * 0.02 - 0.01
       } else {
-        root.rotation.x = 0
-        root.rotation.z = 0
+        root.rotation.x = FIGHT_SWORD_TILT.x
+        root.rotation.z = FIGHT_SWORD_TILT.z
       }
       if (impacted && !entry.impacted) {
         impact?.([marker.x, marker.y, marker.z])

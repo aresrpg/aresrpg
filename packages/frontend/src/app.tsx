@@ -18,11 +18,14 @@ import { Chat } from './components/Chat.tsx'
 import { CompassStrip } from './game/hud/CompassStrip.tsx'
 import { Minimap } from './game/hud/Minimap.tsx'
 import { OverworldVitals } from './game/hud/OverworldVitals.tsx'
+import { GatherProgress } from './game/hud/GatherProgress.tsx'
 import { BiomeMusic } from './game/audio/BiomeMusic.tsx'
 import { MountPrompt } from './components/MountPrompt.tsx'
 import { PortalPrompt } from './components/PortalPrompt.tsx'
 import { TravelModal } from './components/TravelModal.tsx'
 import { FightPrompt } from './components/FightPrompt.tsx'
+import { DungeonPortalPrompt } from './components/DungeonPortalPrompt.tsx'
+import { DungeonLobby } from './components/DungeonLobby.tsx'
 import { PlayerNametag } from './components/PlayerNametag.tsx'
 import { ZonePrompt } from './components/ZonePrompt.tsx'
 import { SpawnNametag } from './components/SpawnNametag.tsx'
@@ -32,6 +35,7 @@ import { FpsPanel } from './components/FpsPanel.tsx'
 import { Toasts } from './components/Toasts.tsx'
 import { HUD_PANEL_CLASS, HudPanel } from './components/ui/HudPanel.tsx'
 import { dispatch_app, useAppStore } from './store.ts'
+import { worlds_source } from './content/worlds.ts'
 import { env } from './env.ts'
 import type { AppCopy } from './i18n/copy.ts'
 import type { Locale } from './i18n/locale.ts'
@@ -208,6 +212,9 @@ export function App() {
   const copy = useAppStore((state) => state.copy)
   const engine_status = useAppStore((state) => state.engine)
   const fight_active = useAppStore((state) => state.fight.mode !== null && state.fight.mounted)
+  const dungeon_active = session.characters.some(
+    ({ id, dungeon_run }) => id === session.selected_character_id && dungeon_run !== undefined
+  )
   const { wallet } = session
   const [show_wallets, set_show_wallets] = useState(false)
   const [graphics_notice_dismissed, set_graphics_notice_dismissed] = useState(false)
@@ -253,7 +260,9 @@ export function App() {
       if (session.characters.length >= MAX_TRACKED_CHARACTERS) return
       const pending = toast.loading(copy?.creating_character ?? 'Creating character…')
       try {
-        await wallet.create_character(character)
+        const first_world = worlds_source[0]?.world
+        if (!first_world) throw new Error('No authored world is available')
+        await wallet.create_character(character, first_world)
         pending.success(copy?.character_created ?? 'Character created')
         dispatch_app({ type: 'dialog/open', dialog: null })
         dispatch_app({ type: 'wallet/refresh' })
@@ -266,9 +275,10 @@ export function App() {
   )
   const sui_insufficient =
     session.sui_balance_mist !== null && session.sui_balance_mist < CHARACTER_PRICE_MIST + CREATE_GAS_MARGIN_MIST
-  const show_graphics_notice =
-    engine_status.state === 'failed' || (engine_status.state === 'degraded' && !graphics_notice_dismissed)
   const world_unavailable = engine_status.issue?.code === 'world_unavailable'
+  const show_graphics_notice =
+    (engine_status.state === 'failed' && !world_unavailable) ||
+    (!graphics_notice_dismissed && (world_unavailable || engine_status.state === 'degraded'))
   const loading_universe = session.auth_status === 'connecting' || (in_app && !session.roster_loaded)
   if (!copy) return <main className="fixed inset-0 bg-[#0a0a0f]" />
 
@@ -285,11 +295,12 @@ export function App() {
         <BiomeMusic />
         <canvas ref={attach_canvas} className="absolute inset-0 size-full touch-none" />
 
-        {in_app && navigation.page === 'world' && !fight_active && (
+        {in_app && navigation.page === 'world' && !fight_active && !dungeon_active && (
           <div className={`${CANVAS_OVERLAY_CLASS} z-[105]`}>
             <PlayerContextMenu copy={copy} />
             <MountPrompt copy={copy} />
             <FightPrompt copy={copy} />
+            <DungeonPortalPrompt copy={copy} />
             <PortalPrompt copy={copy} />
             <PlayerNametag />
             <SpawnNametag copy={copy} />
@@ -298,9 +309,15 @@ export function App() {
             <ZonePrompt copy={copy} />
             <Minimap copy={copy} />
             <OverworldVitals />
+            <GatherProgress copy={copy} />
             <div className="gw-worldchat">
               <Chat text={{ ...copy.simulator_page, ...copy.fight_hud }} />
             </div>
+          </div>
+        )}
+        {in_app && navigation.page === 'world' && !fight_active && dungeon_active && (
+          <div className={`${CANVAS_OVERLAY_CLASS} z-[105]`}>
+            <DungeonLobby copy={copy} />
           </div>
         )}
         <div className={`${CANVAS_OVERLAY_CLASS} z-[110]`}>
@@ -371,7 +388,7 @@ export function App() {
                 {/Chrome|Chromium|Edg/.test(navigator.userAgent) ? copy.chrome : copy.other}
               </p>
             )}
-            {engine_status.state === 'degraded' && (
+            {(world_unavailable || engine_status.state === 'degraded') && (
               <button
                 className="mt-5 h-10 w-full cursor-pointer border border-[#4a9eff]/40 bg-[#4a9eff]/8 text-[10px] tracking-[0.18em] text-[#67adff] uppercase"
                 onClick={() => set_graphics_notice_dismissed(true)}

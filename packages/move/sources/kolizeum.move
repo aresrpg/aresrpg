@@ -28,6 +28,7 @@ use aresrpg::{
   protected_policy::AresRPG_TransferPolicy,
   world,
 };
+use aresrpg_seed::board_catalog::BoardCatalog;
 use sui::{
   balance::Balance,
   clock::Clock,
@@ -91,6 +92,7 @@ public(package) fun create(
   cap: &KioskOwnerCap,
   character_id: ID,
   board_seed: u64,
+  catalog: &BoardCatalog,
   clock: &Clock,
   ctx: &mut TxContext,
 ) {
@@ -99,7 +101,7 @@ public(package) fun create(
   gc(kiosk, cap, character_id, level_min, level_max, clock);
 
   let pledge = pledge_coin.value();
-  let fight_id = fight::kolizeum_birth(protected, kiosk, cap, character_id, board_seed, access, clock, ctx);
+  let fight_id = fight::kolizeum_birth(protected, kiosk, cap, character_id, board_seed, access, catalog, clock, ctx);
   let lobby = Kolizeum {
     id: object::new(ctx),
     pot: pledge_coin.into_balance(),
@@ -158,7 +160,6 @@ public(package) fun settle(
   kiosk: &mut Kiosk,
   cap: &KioskOwnerCap,
   policy: &TransferPolicy<Character>,
-  gen: &mut RandomGenerator,
   clock: &Clock,
   ctx: &mut TxContext,
 ) {
@@ -170,7 +171,7 @@ public(package) fun settle(
       event::emit(KolizeumPaid { kolizeum: lobby.id.to_inner(), winner: ctx.sender(), amount: share });
     };
   };
-  fight::settle(fight, fighter_idx, kiosk, cap, policy, gen, clock, ctx);
+  fight::settle_pvp(fight, fighter_idx, kiosk, cap, policy, clock, ctx);
 }
 
 /// Leave BEFORE the fight starts — a full pledge refund (no cut was taken). After start, the

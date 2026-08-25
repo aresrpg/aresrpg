@@ -73,12 +73,28 @@ const RECIPE = {
   ],
 } as const satisfies WorldRecipe
 
+const OCEAN_RECIPE = {
+  ...RECIPE,
+  ocean: { biome: 'ocean', ground_max: 0.25 },
+  biomes: [
+    ...RECIPE.biomes,
+    {
+      name: 'ocean',
+      landscape: [
+        { x: 0, y: 2, land: shore_land },
+        { x: 1, y: 7 },
+      ],
+    },
+  ],
+} as const satisfies WorldRecipe
+
 const controlled_world = (
   recipe: WorldRecipe,
-  climate: ReturnType<ReturnType<typeof compile_world_recipe>['sample_climate']>
+  climate: ReturnType<ReturnType<typeof compile_world_recipe>['sample_climate']>,
+  ridge = 0.5
 ) => {
   const world = compile_world_recipe(recipe)
-  return { ...world, sample_climate: () => climate, sample_ridges: () => 0.5 }
+  return { ...world, sample_climate: () => climate, sample_ridges: () => ridge }
 }
 
 describe('world recipes', () => {
@@ -174,6 +190,27 @@ describe('world recipes', () => {
     expect(sample_world_column(world, 0, 0).surface_y).toBe(25)
   })
 
+  test('selects a real ocean biome from ground before land climate', () => {
+    const ocean = controlled_world(OCEAN_RECIPE, {
+      temperature: 0.5,
+      humidity: 0.5,
+      ground: 0.2,
+      amplitude: 0.5,
+      transition: 0.5,
+    })
+    const land = controlled_world(OCEAN_RECIPE, {
+      temperature: 0.5,
+      humidity: 0.5,
+      ground: 0.4,
+      amplitude: 0.5,
+      transition: 0.5,
+    })
+
+    expect(sample_world_column(ocean, 0, 0).biome.name).toBe('ocean')
+    expect(sample_world_column(ocean, 0, 0).surface_y).toBeLessThan(OCEAN_RECIPE.sea_level)
+    expect(sample_world_column(land, 0, 0).biome.name).toBe('meadow')
+  })
+
   test('uses one absolute 384-block height domain and clamps procedural detail inside it', () => {
     expect(WORLD_HEIGHT).toBe(384)
     expect(MAX_SURFACE_Y).toBe(383)
@@ -201,6 +238,26 @@ describe('world recipes', () => {
 
     expect(sample_world_column(low, 0, 0).surface_y).toBeGreaterThanOrEqual(1)
     expect(sample_world_column(high, 0, 0).surface_y).toBe(MAX_SURFACE_Y)
+  })
+
+  test('ridge carving scales with mountain relief without roughening lowlands', () => {
+    const climate = { temperature: 0.5, humidity: 0.5, ground: 1, amplitude: 0.5, transition: 0.5 }
+    const ridge_range = (height: number) => {
+      const recipe = {
+        ...RECIPE,
+        sea_level: 60,
+        biomes: RECIPE.biomes.map((biome) => ({
+          ...biome,
+          landscape: biome.landscape.map((knot) => ({ ...knot, y: height })),
+        })),
+      } satisfies WorldRecipe
+      const valley = sample_world_column(controlled_world(recipe, climate, 0), 0, 0).surface_y
+      const crest = sample_world_column(controlled_world(recipe, climate, 1), 0, 0).surface_y
+      return crest - valley
+    }
+
+    expect(ridge_range(90)).toBeLessThanOrEqual(12)
+    expect(ridge_range(260)).toBeGreaterThanOrEqual(120)
   })
 
   test('selects block strata from a landscape threshold with real variance', () => {

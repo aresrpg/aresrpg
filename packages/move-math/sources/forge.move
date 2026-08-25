@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 /// FORGE — the rune math. Two lanes, both PURE (no objects, no events, no `sui::random` — rng
-/// threads as `&mut u64` per `prng`; stats arrive as a raw `vector<u64>` of length 17, index =
+/// threads as `&mut u64` per `prng`; stats arrive as a raw `vector<u64>` of length 15, index =
 /// `rune_catalog` stat id, magnitudes above centre):
 ///
 ///   • SCRIBE (`apply_rune`) — a VERBATIM port of the sealed 1.29 `applyRune` closed form. Three
@@ -18,7 +18,7 @@
 ///     then a per-rune tier roll. No coefficient, no bracket, no shared state.
 ///
 /// FIXED-POINT: rates in [0,1] are `u64` ×`RATE_SCALE` (1e6). Puits / weight / stat math is
-/// INTEGER in the ×5 weight domain (`rune_catalog::weight_scale`) so puits never goes fractional.
+/// INTEGER in the ×20 weight domain (`rune_catalog::weight_scale`) so puits stays exact.
 module aresrpg_math::forge;
 
 use aresrpg_math::{prng, rune_catalog as cat};
@@ -42,9 +42,9 @@ const CRIT_RATIO_MAX: u64 = 700_000; // 0.70
 const CRIT_CHANCE_MIN: u64 = 10_000; // 0.01
 const CRIT_CHANCE_MAX: u64 = 600_000; // 0.60
 
-/// `MAX_STAT_WEIGHT` (101) in the ×5 domain: the gain hard-cap is `templateMax + floor(505/(unit×5))`
-/// ≡ the 1.29 `templateMax + floor(101/unit)` exactly for every catalog row (505 = 101×5).
-const MAX_STAT_WEIGHT_SCALED: u64 = 505;
+/// `MAX_STAT_WEIGHT` (101) in the ×20 domain: the gain hard-cap is
+/// `templateMax + floor(2020/(unit×20))` ≡ `templateMax + floor(101/unit)`.
+const MAX_STAT_WEIGHT_SCALED: u64 = 2_020;
 
 /// OURS (owner 2026-08-11): crushing is LOSSY — the rune pool is `CRUSH_KEEP_NUM/CRUSH_KEEP_DEN`
 /// of the stat's points (currently 1/4 ≈ a quarter back, always less than the item). One knob.
@@ -57,14 +57,14 @@ const OUTCOME_CS: u8 = 0; // CRITICAL_SUCCESS — rune passes, no loss, puits un
 const OUTCOME_NS: u8 = 1; // NEUTRAL_SUCCESS — rune passes, weight balanced (puits/loss)
 const OUTCOME_CF: u8 = 2; // CRITICAL_FAILURE — rune fails, weight lost (puits/loss)
 
-const NO_STAT: u8 = 255; // "no stat" sentinel (valid ids are 0..16)
+const NO_STAT: u8 = 255; // "no stat" sentinel (valid ids are 0..14)
 
-const EBadLen: u64 = 1; // a stat vector was not exactly 17 long
+const EBadLen: u64 = 1; // a stat vector was not exactly 15 long
 const EZeroDen: u64 = 2; // stochastic_round: division by zero
 
 // ╔════════════════ [ IO structs (copy/drop — pure data, never stored) ] ════ ]
 
-/// The result of one rune application. `new_stats` = the full 17-field raw block after the rune.
+/// The result of one rune application. `new_stats` = the full 15-field raw block after the rune.
 /// `lost_stat == NO_STAT` ⇒ nothing was destroyed (puits absorbed it, or CS).
 public struct ForgeResult has copy, drop {
   outcome: u8,
@@ -86,7 +86,7 @@ public struct StatLoss has copy, drop {
 
 // ╔════════════════ [ SCRIBE — applyRune (verbatim) ] ═══════════════════════ ]
 
-/// Apply one rune to `current` (17 raw magnitudes) against `template_max` (17 raw maxes).
+/// Apply one rune to `current` (15 raw magnitudes) against `template_max` (15 raw maxes).
 /// `rune_value` / `rune_weight` come from `rune_catalog`; `runic_level` is the scribe job level
 /// (≥1); `current_puits` the item's sink balance; `rng` the threaded prng. Does NOT mutate inputs.
 public fun apply_rune(
@@ -218,7 +218,7 @@ public fun select_stat_to_reduce(
 }
 
 /// The scribe gain hard-cap: `min(current + value, templateMax + floor(101 / unitWeight))`,
-/// computed in the ×5 domain (exact equivalence). Applies on CS and NS.
+/// computed in the ×20 domain (exact equivalence). Applies on CS and NS.
 public fun gain_capped(current: u64, value: u64, template_max: u64, stat: u8): u64 {
   let cap = template_max + MAX_STAT_WEIGHT_SCALED / cat::stat_unit_weight(stat);
   let nv = current + value;
@@ -226,7 +226,7 @@ public fun gain_capped(current: u64, value: u64, template_max: u64, stat: u8): u
 }
 
 /// XP for a successful rune application: `max(1, floor(weight · (1 + itemLevel/50) · tierMult))`,
-/// tierMult = 2 for Ra else 1. `rune_weight` arrives ×5; the integer form divides the scale out.
+/// tierMult = 2 for Ra else 1. `rune_weight` arrives ×20; the integer form divides the scale out.
 public fun compute_xp(tier: u8, rune_weight: u64, item_level: u64): u64 {
   let tier_mult = if (tier >= cat::tier_ra()) 2 else 1;
   let xp = rune_weight * (50 + item_level) * tier_mult / (50 * cat::weight_scale());

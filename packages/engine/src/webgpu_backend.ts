@@ -22,6 +22,7 @@ import type { EngineBackend } from './backend.ts'
 import { create_clouds } from './clouds.ts'
 import { create_far_terrain } from './far_terrain.ts'
 import { create_fight_board_layer } from './fight_board.ts'
+import { BOARD_WATER_DROP } from './fight_board_surface.ts'
 import { create_fight_sword_layer, fight_swords_visible } from './fight_swords.ts'
 import { create_entity_layer } from './entities.ts'
 import { create_entity_label_layer } from './entity_labels.ts'
@@ -35,6 +36,8 @@ import { create_mesh_pool } from './mesh_pool.ts'
 import { create_lantern } from './lantern.ts'
 import { liquid_palette } from './liquid_palette.ts'
 import { create_portal } from './portal.ts'
+import { create_dungeon_portals } from './dungeon_portals.ts'
+import { create_dungeon_stage } from './dungeon_stage.ts'
 import { get_quality_profile, quality_pixel_ratio } from './quality.ts'
 import type { ScatterInstance } from './scatter.ts'
 import { create_scatter_layer } from './scatter_layer.ts'
@@ -104,6 +107,9 @@ export const create_webgpu_backend = async (
   const sun = new DirectionalLight(0xfff2dd, 3)
   const back_fill = new DirectionalLight(0xffd6a8, 1.35)
   const hemisphere = new HemisphereLight(0xbcb2a0, 0x977f56, 0.9)
+  // Terrain shadows use a layer-1 mesh with their own bounded indirect list; the main camera
+  // remains layer 0 and never draws that duplicate.
+  sun.shadow.camera.layers.enable(1)
   const analytic_sky = create_sky_node({ seed: world.seed })
   const compiled_world = compile_world_recipe(world, { structures: false })
   const liquid_material =
@@ -160,6 +166,8 @@ export const create_webgpu_backend = async (
   })
   // the star gate — world dressing at client 0;0; a fight-only scene has no ground to stand it on
   const portal = presentation === 'world' ? create_portal({ scene, world: compiled_world }) : null
+  const dungeon_portals = create_dungeon_portals({ scene, world: compiled_world })
+  const dungeon_stage = create_dungeon_stage({ scene })
   // Water state for the frame passes: the tint is per-pixel (the underwater pass reads the sea
   // plane itself), so the CPU only answers "does this world have water right now" — a world
   // without a liquid material, or a flattened one, has none — plus the eye's own submerged
@@ -203,7 +211,9 @@ export const create_webgpu_backend = async (
   let disposed = false
   let shadow_center_x = Number.NaN
   let shadow_center_z = Number.NaN
+  let shadow_extent = 0
   let has_dynamic_entities = false
+  let dungeon_stage_active = false
   const last_shadow_direction = new Vector3()
 
   const settle_chunk = (key: string, revision: number, outcome: ChunkRenderOutcome): void => {
@@ -268,11 +278,13 @@ export const create_webgpu_backend = async (
     }
     let replacement: ReturnType<typeof create_hillaire_sky> | null = null
     try {
+      const profile = get_quality_profile(next)
       replacement = create_hillaire_sky({
-        tier: next,
+        tier: profile.sky,
         seed: world.seed,
         sun_direction: analytic_sky.sun_direction,
         cool_tilt: FOG_COOL_TILT,
+        distance_fog: profile.fog,
       })
       await replacement.bake(renderer)
       if (disposed || revision !== sky_revision) {
@@ -307,7 +319,7 @@ export const create_webgpu_backend = async (
     renderer.shadowMap.type = profile.shadows.kind === 'soft' ? PCFSoftShadowMap : PCFShadowMap
     sun.shadow.mapSize.set(profile.shadows.map_size || 1, profile.shadows.map_size || 1)
     sun.castShadow = profile.shadows.kind !== 'none'
-    const shadow_extent = profile.chunks.near_radius * 32 + 24
+    shadow_extent = profile.chunks.near_radius * 32 + 24
     sun.shadow.camera.left = -shadow_extent
     sun.shadow.camera.right = shadow_extent
     sun.shadow.camera.top = shadow_extent
@@ -439,7 +451,7 @@ export const create_webgpu_backend = async (
     if (presentation === 'world') {
       const camera_column = sample_world_column(compiled_world, camera.position.x, camera.position.z)
       const surface_plane =
-        water_world === null || flatten.flattened()
+        dungeon_stage_active || water_world === null || flatten.flattened()
           ? null
           : camera_column.surface_y < world.sea_level
             ? world.sea_level
@@ -469,7 +481,9 @@ export const create_webgpu_backend = async (
       if (projected)
         board_occlusion.set_frame({
           ...projected,
-          floor_y: board_footprint.center[1],
+          // the clear floor sits at the WATER level, not the tile line: terrain and herbs the
+          // world grows inside a basin must dissolve too, not only what pokes above the paving
+          floor_y: board_footprint.center[1] - BOARD_WATER_DROP,
           center_xz: [board_footprint.center[0], board_footprint.center[2]],
           radius: Math.hypot(board_footprint.half_x, board_footprint.half_z),
           clear_half: [board_footprint.half_x + 1, board_footprint.half_z + 1],
@@ -477,16 +491,21 @@ export const create_webgpu_backend = async (
     }
     entities.tick(now)
     effects.tick(now)
-    const show_resource_nodes = should_show_resource_nodes({
-      terrain_presented,
-      flattened: flatten.flattened(),
-      board_active: board_footprint !== null,
-    })
+    const show_resource_nodes =
+      !dungeon_stage_active &&
+      should_show_resource_nodes({
+        terrain_presented,
+        flattened: flatten.flattened(),
+        board_active: board_footprint !== null,
+      })
     if (show_resource_nodes !== resource_nodes_visible) {
       resource_nodes_visible = show_resource_nodes
       resource_nodes.set_visible(show_resource_nodes)
     }
-    if (terrain_presented) portal?.tick(camera.position.x, camera.position.y, camera.position.z)
+    if (terrain_presented) {
+      portal?.tick(camera.position.x, camera.position.y, camera.position.z)
+      dungeon_portals.tick(now, camera.position.x, camera.position.y, camera.position.z)
+    }
     fight_swords?.tick(now)
     if (has_dynamic_entities && sun.castShadow && sun.shadow.intensity > 0) sun.shadow.needsUpdate = true
     const shock = Math.max(0, 1 - (now - shock_at) / CRIT_SHOCK_MS)
@@ -590,6 +609,13 @@ export const create_webgpu_backend = async (
         apply_sky_lighting(true)
         sun.shadow.needsUpdate = true
       }
+      const shadow_camera = sun.castShadow && sun.shadow.intensity > 0 ? sun.shadow.camera : null
+      if (shadow_camera) {
+        sun.updateMatrixWorld()
+        sun.target.updateMatrixWorld()
+        sun.shadow.updateMatrices(sun)
+      }
+      terrain.set_view(camera, shadow_camera)
       far_terrain.set_focus(target[0], target[2])
       clouds.set_focus(target[0], target[2])
       water.set_focus(target[0], target[2])
@@ -614,17 +640,21 @@ export const create_webgpu_backend = async (
       if (flatten.set(amount)) sun.shadow.needsUpdate = true
       terrain.set_flatten_active(flat_terrain_amount(amount) > 0)
       scatter.set_flatten_active(flat_terrain_amount(amount) > 0)
-      resource_nodes_visible = should_show_resource_nodes({
-        terrain_presented,
-        flattened: flat_terrain_amount(amount) > 0,
-        board_active: board_footprint !== null,
-      })
+      resource_nodes_visible =
+        !dungeon_stage_active &&
+        should_show_resource_nodes({
+          terrain_presented,
+          flattened: flat_terrain_amount(amount) > 0,
+          board_active: board_footprint !== null,
+        })
       resource_nodes.set_visible(resource_nodes_visible)
       portal?.set_flatten(amount)
+      dungeon_portals.set_flatten(amount)
     },
     set_fight_board: (board) => {
       fight_board.set(board)
-      portal?.set_active(board === null)
+      portal?.set_active(board === null && !dungeon_stage_active)
+      dungeon_portals.set_active(board === null && !dungeon_stage_active)
       // the peephole arms with the board and remembers its footprint; disarming restores the
       // fast terrain material, so the discard never survives the fight
       board_footprint = board
@@ -640,12 +670,14 @@ export const create_webgpu_backend = async (
         : null
       board_occlusion.set_active(board !== null)
       terrain.set_occlusion_active(board !== null)
-      fight_swords?.set_visible(fight_swords_visible(board !== null))
-      resource_nodes_visible = should_show_resource_nodes({
-        terrain_presented,
-        flattened: flatten.flattened(),
-        board_active: board_footprint !== null,
-      })
+      fight_swords?.set_visible(fight_swords_visible(board !== null) && !dungeon_stage_active)
+      resource_nodes_visible =
+        !dungeon_stage_active &&
+        should_show_resource_nodes({
+          terrain_presented,
+          flattened: flatten.flattened(),
+          board_active: board_footprint !== null,
+        })
       resource_nodes.set_visible(resource_nodes_visible)
       entities.set_board(board)
     },
@@ -661,7 +693,7 @@ export const create_webgpu_backend = async (
         impact_sound_url,
         impact: effects.play_sword_impact,
       })
-      fight_swords.set_visible(fight_swords_visible(board_footprint !== null))
+      fight_swords.set_visible(fight_swords_visible(board_footprint !== null) && !dungeon_stage_active)
       fight_swords.set_markers(markers)
     },
     set_fight_sword_label: (id, element) => fight_swords?.set_label(id, element),
@@ -670,6 +702,27 @@ export const create_webgpu_backend = async (
     set_portal_label: (element) => {
       // the anchor is a GETTER — the gate's ground rides the flatten projection, so must its tag
       if (portal) entity_labels.set_static('portal', element, portal.label_anchor)
+    },
+    set_dungeon_portals: dungeon_portals.set_markers,
+    set_dungeon_stage: (stage) => {
+      dungeon_stage_active = stage !== null
+      dungeon_stage.set(stage)
+      terrain.set_visible(!dungeon_stage_active)
+      far_terrain.set_visible(!dungeon_stage_active)
+      scatter.set_visible(!dungeon_stage_active)
+      water.set_visible(!dungeon_stage_active)
+      portal?.set_active(!dungeon_stage_active && board_footprint === null)
+      dungeon_portals.set_active(!dungeon_stage_active && board_footprint === null)
+      fight_swords?.set_visible(!dungeon_stage_active && board_footprint === null)
+      resource_nodes_visible =
+        !dungeon_stage_active &&
+        should_show_resource_nodes({
+          terrain_presented,
+          flattened: flatten.flattened(),
+          board_active: board_footprint !== null,
+        })
+      resource_nodes.set_visible(resource_nodes_visible)
+      sun.shadow.needsUpdate = true
     },
     animate_entity: entities.animate,
     play_fight_cue: fight_presentation.play,
@@ -743,6 +796,8 @@ export const create_webgpu_backend = async (
       clouds.dispose()
       water.dispose()
       portal?.dispose()
+      dungeon_portals.dispose()
+      dungeon_stage.dispose()
       fight_board.dispose()
       effects.dispose()
       entities.dispose()

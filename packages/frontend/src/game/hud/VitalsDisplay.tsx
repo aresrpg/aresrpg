@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
-import { useState } from 'react'
+import { useState, type CSSProperties } from 'react'
 
-const percent = (value: bigint, maximum: bigint): number =>
+export const vital_percent = (value: bigint, maximum: bigint): number =>
   maximum <= 0n ? 0 : Math.max(0, Math.min(100, Number((value * 10_000n) / maximum) / 100))
 
 const StatGem = ({ kind, value }: Readonly<{ kind: 'ap' | 'mp'; value: bigint }>) => (
@@ -28,9 +28,9 @@ export const VitalsDisplay = ({
         title={`${hp} / ${max_hp} HP`}
         type="button"
       >
-        <i />
+        <i aria-hidden="true" style={{ '--hp-percent': `${vital_percent(hp, max_hp)}%` } as CSSProperties} />
         {percent_visible ? (
-          <span>{Math.round(percent(hp, max_hp))}%</span>
+          <span>{Math.round(vital_percent(hp, max_hp))}%</span>
         ) : (
           <span>
             {hp.toString()}

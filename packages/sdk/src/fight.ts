@@ -6,10 +6,17 @@
 // witnesses for immediate deterministic presentation; the final state still reconciles from
 // the indexer → server stream.
 
-import { SDK, seed_registry, world_ref } from './client.ts'
+import { SDK, living_content } from './client.ts'
 import { receipt_digest, receipt_event, receipt_events, type Receipt } from './cache.ts'
 import { create_kiosk_runner, type KioskCapLoader, type KioskCustody } from './kiosk_runner.ts'
-import { item_template_id, spell_template_id, mob_template_id } from './seed_ids.ts'
+import {
+  board_catalog_id,
+  item_template_id,
+  spell_template_id,
+  mob_template_id,
+  world_content_id,
+  world_id,
+} from './seed_ids.ts'
 
 type GameSdk = ReturnType<typeof SDK>
 
@@ -21,7 +28,7 @@ export type FightTurnAction =
   | Readonly<{ type: 'cast'; fighter_idx: bigint; spell: string; target_cell: bigint }>
   | Readonly<{ type: 'strike'; fighter_idx: bigint; target_cell: bigint }>
 
-const created_fight_id = (receipt: Receipt): string => {
+export const created_fight_id = (receipt: Receipt): string => {
   const id = receipt_event(receipt, '::fight::FightCreated')?.fight
   if (typeof id !== 'string')
     throw new Error('The create receipt did not expose its FightCreated id; the fight was not guessed locally.')
@@ -44,19 +51,20 @@ export type FightActionsCtx = {
 
 /** The builder: every remote-fight chain action, duel and PvM alike. */
 export const fight_actions = (sdk: GameSdk, { kiosk_cap }: FightActionsCtx) => {
-  const submit = async (compose: (tx: ReturnType<GameSdk['tx']>) => void): Promise<FightReceipt> => {
+  const scope_of = (fight: string): string => `fight:${fight}`
+  const project_receipt = (receipt: Receipt): FightReceipt => ({ digest: receipt_digest(receipt) })
+  const submit = async (fight: string, compose: (tx: ReturnType<GameSdk['tx']>) => void): Promise<FightReceipt> => {
     const tx = sdk.tx()
     compose(tx)
-    const receipt = await sdk.execute(tx)
-    return { digest: receipt_digest(receipt) }
+    const receipt = await sdk.execute(tx, { gas_scope: scope_of(fight) })
+    return project_receipt(receipt)
   }
 
   const { with_kiosk, with_terminal_kiosk } = create_kiosk_runner(sdk, kiosk_cap)
 
-  /** A shared Fight id becomes resolvable once — shared refs are stable for life. A duel's
-   *  acceptor learns the id from the challenger the instant their transaction lands, so this
-   *  WAITS for the node to catch up rather than failing on a fight that provably exists. */
-  const hydrate_fight = (fight: string) => sdk.hydrate_required([fight])
+  /** External fight ids get one explicit read. Own fights already reconstruct their shared ref
+   *  from the creation receipt; neither path polls a load-balanced node. */
+  const hydrate_fight = (fight: string) => sdk.hydrate_unknown([fight])
 
   return {
     /** Open a duel at the caller's proven spot; side B is RESERVED for `target` — the
@@ -78,12 +86,18 @@ export const fight_actions = (sdk: GameSdk, { kiosk_cap }: FightActionsCtx) => {
       z: number
       access?: number
     }): Promise<FightCreatedReceipt> => {
+      const { content_root, seed_package_original } = living_content(sdk, 'Fight transaction')
+      const catalog = board_catalog_id(content_root, seed_package_original)
+      await sdk.hydrate_unknown([catalog])
       // TERMINAL (&Random) door — the reference borrow keeps it the last command
       const receipt = await with_terminal_kiosk(
-        (tx, kiosk, personal) => sdk.doors.challenge_duel(tx, { kiosk, personal, character_id, target, x, z, access }),
+        (tx, kiosk, personal) =>
+          sdk.doors.challenge_duel(tx, { kiosk, personal, character_id, target, x, z, access, catalog }),
         { custody }
       )
-      return { digest: receipt_digest(receipt), fight: created_fight_id(receipt) }
+      const fight = created_fight_id(receipt)
+      sdk.tag_gas?.(receipt, scope_of(fight))
+      return { digest: receipt_digest(receipt), fight }
     },
 
     /** Engage a roaming mob group (PvM): engage → add every mob → launch, one transaction. */
@@ -106,13 +120,28 @@ export const fight_actions = (sdk: GameSdk, { kiosk_cap }: FightActionsCtx) => {
       access?: number
       custody?: KioskCustody
     }): Promise<FightCreatedReceipt> => {
-      const { registry, package_id } = seed_registry(sdk, 'Fight transaction')
-      const templates = mob_types.map((mob_type) => mob_template_id(registry, package_id, mob_type))
-      const w = world_ref(sdk.pins, world)
-      await sdk.hydrate_unknown(templates)
+      const { content_root, seed_package_original } = living_content(sdk, 'Fight transaction')
+      const templates = mob_types.map((mob_type) => mob_template_id(content_root, seed_package_original, mob_type))
+      const catalog = board_catalog_id(content_root, seed_package_original)
+      const game_original = sdk.game_type_package
+      if (!game_original) throw new Error('Fight transaction unavailable: pins.json has no original game package')
+      const w = world_id(content_root, game_original, world)
+      const wc = world_content_id(content_root, seed_package_original, world)
+      await sdk.hydrate_unknown([...templates, catalog, w, wc])
       const receipt = await with_kiosk(
         (tx, kiosk, cap) => {
-          const build = sdk.doors.engage_fight(tx, { kiosk, cap, character_id, w, zx, zz, group_index, access })
+          const build = sdk.doors.engage_fight(tx, {
+            kiosk,
+            cap,
+            character_id,
+            w,
+            wc,
+            zx,
+            zz,
+            group_index,
+            access,
+            catalog,
+          })
           const grown = templates.reduce(
             (potato, template) => sdk.doors.add_fight_mob(tx, { build: potato, template }),
             build
@@ -121,7 +150,9 @@ export const fight_actions = (sdk: GameSdk, { kiosk_cap }: FightActionsCtx) => {
         },
         { custody }
       )
-      return { digest: receipt_digest(receipt), fight: created_fight_id(receipt) }
+      const fight = created_fight_id(receipt)
+      sdk.tag_gas?.(receipt, scope_of(fight))
+      return { digest: receipt_digest(receipt), fight }
     },
 
     join: async ({
@@ -140,14 +171,14 @@ export const fight_actions = (sdk: GameSdk, { kiosk_cap }: FightActionsCtx) => {
       await hydrate_fight(fight)
       const receipt = await with_kiosk(
         (tx, kiosk, cap) => sdk.doors.join_fight(tx, { f: fight, kiosk, cap, character_id, team, access }),
-        { custody }
+        { custody, gas_scope: scope_of(fight) }
       )
-      return { digest: receipt_digest(receipt) }
+      return project_receipt(receipt)
     },
 
     place: async ({ fight, fighter_idx, cell }: { fight: string; fighter_idx: bigint; cell: bigint }) => {
       await hydrate_fight(fight)
-      return submit((tx) => sdk.doors.place_fighter(tx, { f: fight, fighter_idx, cell }))
+      return submit(fight, (tx) => sdk.doors.place_fighter(tx, { f: fight, fighter_idx, cell }))
     },
 
     /** The LAST seat's ready starts the fight in the same transaction (`and_start`) — the
@@ -162,7 +193,7 @@ export const fight_actions = (sdk: GameSdk, { kiosk_cap }: FightActionsCtx) => {
       and_start?: boolean
     }) => {
       await hydrate_fight(fight)
-      return submit((tx) => {
+      return submit(fight, (tx) => {
         sdk.doors.ready_fighter(tx, { f: fight, fighter_idx })
         if (and_start) sdk.doors.start_fight(tx, { f: fight })
       })
@@ -170,7 +201,7 @@ export const fight_actions = (sdk: GameSdk, { kiosk_cap }: FightActionsCtx) => {
 
     start: async ({ fight }: { fight: string }) => {
       await hydrate_fight(fight)
-      return submit((tx) => sdk.doors.start_fight(tx, { f: fight }))
+      return submit(fight, (tx) => sdk.doors.start_fight(tx, { f: fight }))
     },
 
     /** One staged turn becomes one PTB. A lethal action is already its terminal boundary. */
@@ -183,10 +214,12 @@ export const fight_actions = (sdk: GameSdk, { kiosk_cap }: FightActionsCtx) => {
       actions: readonly FightTurnAction[]
       ended?: boolean
     }) => {
-      const { registry, package_id } = seed_registry(sdk, 'Fight transaction')
+      const { content_root, seed_package_original } = living_content(sdk, 'Fight transaction')
       const spell_templates = new Map(
         actions.flatMap((action) =>
-          action.type === 'cast' ? [[action.spell, spell_template_id(registry, package_id, action.spell)] as const] : []
+          action.type === 'cast'
+            ? [[action.spell, spell_template_id(content_root, seed_package_original, action.spell)] as const]
+            : []
         )
       )
       await hydrate_fight(fight)
@@ -204,7 +237,7 @@ export const fight_actions = (sdk: GameSdk, { kiosk_cap }: FightActionsCtx) => {
         else sdk.doors.weapon_strike(tx, { f: fight, fighter_idx: action.fighter_idx, target_cell: action.target_cell })
       })
       if (!ended) sdk.doors.end_fight_turn(tx, { f: fight })
-      const receipt = await sdk.execute(tx)
+      const receipt = await sdk.execute(tx, { gas_scope: scope_of(fight) })
       return Object.freeze({
         digest: receipt_digest(receipt),
         turn_witnesses: turn_witnesses(receipt),
@@ -213,7 +246,7 @@ export const fight_actions = (sdk: GameSdk, { kiosk_cap }: FightActionsCtx) => {
 
     crank: async ({ fight }: { fight: string }) => {
       await hydrate_fight(fight)
-      return submit((tx) => sdk.doors.crank_fight(tx, { f: fight }))
+      return submit(fight, (tx) => sdk.doors.crank_fight(tx, { f: fight }))
     },
 
     forfeit: async ({
@@ -228,61 +261,46 @@ export const fight_actions = (sdk: GameSdk, { kiosk_cap }: FightActionsCtx) => {
       await hydrate_fight(fight)
       const receipt = await with_kiosk(
         (tx, kiosk, cap) => sdk.doors.forfeit_fight(tx, { f: fight, fighter_idx, kiosk, cap }),
-        { custody }
+        { custody, gas_scope: scope_of(fight) }
       )
-      return { digest: receipt_digest(receipt) }
+      return project_receipt(receipt)
     },
 
     settle: async ({
       fight,
       fighter_idx,
+      loot: requested_loot,
       custody,
     }: {
       fight: string
       fighter_idx: bigint
+      loot: readonly Readonly<{ item_type: string; existing: string | null }>[]
       custody?: KioskCustody
     }): Promise<FightReceipt> => {
-      await hydrate_fight(fight)
-      // TERMINAL (&Random) door — the reference borrow keeps it the last command
+      const { content_root, seed_package_original } = living_content(sdk, 'Fight settlement')
+      const loot = [...new Map(requested_loot.map((row) => [row.item_type, row])).values()]
+      const templates = loot.map(({ item_type }) => item_template_id(content_root, seed_package_original, item_type))
+      await sdk.hydrate_unknown([fight, ...templates])
       const receipt = await with_terminal_kiosk(
-        (tx, kiosk, personal) => sdk.doors.settle_fight(tx, { f: fight, fighter_idx, kiosk, personal }),
-        { custody }
+        (tx, kiosk, personal) => {
+          const plan = loot.map(({ existing }, index) =>
+            sdk.doors.prepare_fight_loot(tx, { template: templates[index]!, existing })
+          )
+          sdk.doors.settle_fight(tx, { f: fight, fighter_idx, plan, kiosk, personal })
+        },
+        { custody, gas_scope: scope_of(fight) }
       )
-      return { digest: receipt_digest(receipt) }
+      return project_receipt(receipt)
     },
 
-    /** Claim every rolled row of one item type. The Move door consumes duplicate rows in one
-     *  transaction, so the result card and inventory never need an intermediate refresh. */
-    claim_drop: async ({
-      fight,
-      fighter_idx,
-      item_type,
-      existing,
-      custody,
-    }: {
-      fight: string
-      fighter_idx: bigint
-      item_type: string
-      existing: string | null
-      custody?: KioskCustody
-    }): Promise<FightReceipt> => {
-      const { registry } = seed_registry(sdk, 'Fight loot claim')
-      const template = item_template_id(registry, item_type)
-      await sdk.hydrate_unknown([fight, template])
-      const receipt = await with_terminal_kiosk(
-        (tx, kiosk, personal) =>
-          sdk.doors.claim_fight_drop(tx, {
-            f: fight,
-            fighter_idx,
-            template,
-            existing,
-            kiosk,
-            personal,
-          }),
-        { custody }
-      )
-      return { digest: receipt_digest(receipt) }
+    /** Reclaim a spent fight's storage deposit — fired by the LAST settler once the roster
+     *  shows every seat settled; the rebate lands on the closer's gas coin. A lost race
+     *  against another closer aborts and costs only the transaction floor. */
+    close: async ({ fight }: { fight: string }): Promise<FightReceipt> => {
+      await hydrate_fight(fight)
+      return submit(fight, (tx) => sdk.doors.close_fight(tx, { f: fight }))
     },
+    gas_spent: (fight: string): bigint => sdk.gas_spent_24h?.(scope_of(fight)) ?? 0n,
   }
 }
 

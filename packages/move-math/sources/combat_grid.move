@@ -4,9 +4,10 @@
 /// 2026-08-09: fights know no diagonal distance). Cell = y*GRID_W + x over a fixed 20×19
 /// encoding stride; the playable region is a bitmask shape. Owns: cells, masks, BFS pathing,
 /// the 1.29 shadow-casting line of sight (proven verdict-equivalent to the reference over
-/// 166,983 triples), spell-zone enumeration, push/pull stepping, and the deterministic board
-/// GENERATOR (seed → shape + obstacles + holes + 6 start cells per side). The client twin
-/// derives the identical board from the same seed — nothing about a board is ever stored.
+/// 166,983 triples), spell-zone enumeration, push/pull stepping, and `grid_spec` — the one
+/// constructor authored boards enter through (boards are CONTENT since 2026-08-23: authored
+/// offline, proven by the seed validator, published to the catalog, COPIED into each Fight).
+/// The old on-chain generator survives as test-only fixture machinery; it never ships.
 module aresrpg_math::combat_grid;
 
 use aresrpg_math::{prng, spell_effect};
@@ -19,27 +20,44 @@ const GRID_CELLS: u64 = GRID_W * GRID_H; // 380 — cell-index bound + shape-mas
 const MASK_WORDS: u64 = (GRID_CELLS + 63) / 64; // 6 u64 words, one bit per cell, row-major
 
 // Board-generation dials (owner 2026-08-09: more blockers than the old boards, multi-cell).
+#[test_only]
 const MIN_W: u64 = 7;
+#[test_only]
 const MAX_W: u64 = 17;
+#[test_only]
 const MIN_H: u64 = 7;
+#[test_only]
 const MAX_H: u64 = 19;
 const START_CELLS: u64 = 6; // per side — the team cap, one start cell per fighter
+#[test_only]
 const OBS_MIN: u64 = 3;
+#[test_only]
 const OBS_MAX: u64 = 8;
+#[test_only]
 const HOLE_MIN: u64 = 2;
+#[test_only]
 const HOLE_MAX: u64 = 6;
+#[test_only]
 const BLOCKER_MAX_LEN: u64 = 3; // a blocker is a straight run of 1..3 cells
+#[test_only]
 const N_SHAPES: u64 = 4; // BLOB / ROUNDED / ELLIPSE / CROSS
+#[test_only]
 const VARIANT_MIX: u64 = 0x9E3779B1; // golden-ratio odd constant — de-correlates a reuse variant
 
 // Board outline codes (internal generation vocabulary — distinct from spell zones).
+#[test_only]
 const SHAPE_ROUNDED: u8 = 1;
+#[test_only]
 const SHAPE_ELLIPSE: u8 = 2;
+#[test_only]
 const SHAPE_CROSS: u8 = 3;
+#[test_only]
 const SHAPE_BLOB: u8 = 4;
 
 /// Direction codes: 0=+x · 1=-x · 2=+y · 3=-y · 255 = none.
 const DIR_NONE: u8 = 255;
+
+const EBadBoard: u64 = 1101; // grid_spec: an authored board violates the cheap sanity floor
 
 fun abs_diff(a: u64, b: u64): u64 { if (a > b) a - b else b - a }
 
@@ -59,7 +77,7 @@ public fun manhattan(a: u64, b: u64): u64 {
 }
 
 /// Do two cells share a row or a column? The linearity gate (`line_launch` spells, the
-/// spellbook's line-only strike).
+/// line-only strikes).
 public fun same_line(a: u64, b: u64): bool { cell_x(a) == cell_x(b) || cell_y(a) == cell_y(b) }
 
 // ╔════════════════ [ Bitmasks — O(1) membership for walls and shapes ] ══════ ]
@@ -190,39 +208,39 @@ public fun bfs_distance_field(target: u64, wall_mask: &vector<u64>, max_steps: u
 /// The sentinel `bfs_path_cost` returns when no path within budget exists.
 public fun path_unreachable(): u64 { GRID_CELLS }
 
-/// The cell a mob lands on rushing `target` with a `budget`-step dash around `wall_mask`:
-/// among every reachable cell except the target's own, the one minimizing (Manhattan distance,
-/// then path cost, then cell index). `start` is always a candidate — a walled-in mob holds.
-public fun bfs_best_toward(start: u64, target: u64, wall_mask: &vector<u64>, budget: u64): u64 {
-  if (!in_grid(start)) return start;
-  let mut best = start;
-  let mut best_dist = manhattan(start, target);
-  let mut best_cost = 0;
-  let mut visited = empty_mask();
-  mask_set(&mut visited, start);
-  let mut frontier = vector[start];
-  let mut cost = 0;
-  while (cost < budget && !frontier.is_empty()) {
-    cost = cost + 1;
+/// The APPROACH FIELD to `target`: distances to the nearest of the target's open flanks
+/// (its in-grid, unwalled neighbours — the target's own cell is usually a body and thus a
+/// wall). One flood answers "which way around" for the whole board, so a rusher just walks
+/// DOWN it; the flood stops early once `until` (the rusher's cell) is assigned. A sealed
+/// target has no open flank — everything reads `path_unreachable()` and the rusher holds.
+public fun approach_field(target: u64, wall_mask: &vector<u64>, until: u64): vector<u64> {
+  let mut field = vector[];
+  let mut i = 0;
+  while (i < GRID_CELLS) { field.push_back(GRID_CELLS); i = i + 1; };
+  let flanks = neighbours(target);
+  let mut frontier = vector[];
+  let mut j = 0;
+  while (j < flanks.length()) {
+    let f = flanks[j];
+    if (!mask_get(wall_mask, f)) {
+      *&mut field[f] = 0;
+      frontier.push_back(f);
+    };
+    j = j + 1;
+  };
+  let mut steps = 0;
+  while (!frontier.is_empty() && field[until] == GRID_CELLS) {
+    steps = steps + 1;
     let mut next = vector[];
     let mut j = 0;
-    let fl = frontier.length();
-    while (j < fl) {
+    while (j < frontier.length()) {
       let nbrs = neighbours(frontier[j]);
       let mut k = 0;
       while (k < nbrs.length()) {
         let n = nbrs[k];
-        if (!mask_get(&visited, n) && !mask_get(wall_mask, n)) {
-          mask_set(&mut visited, n);
+        if (field[n] == GRID_CELLS && !mask_get(wall_mask, n)) {
+          *&mut field[n] = steps;
           next.push_back(n);
-          if (n != target) {
-            let d = manhattan(n, target);
-            if (d < best_dist || (d == best_dist && cost < best_cost) || (d == best_dist && cost == best_cost && n < best)) {
-              best = n;
-              best_dist = d;
-              best_cost = cost;
-            };
-          };
         };
         k = k + 1;
       };
@@ -230,7 +248,7 @@ public fun bfs_best_toward(start: u64, target: u64, wall_mask: &vector<u64>, bud
     };
     frontier = next;
   };
-  best
+  field
 }
 
 /// The cell a mob should stand on to CAST a `[range_min, range_max]` (LOS-aware) spell at
@@ -419,12 +437,32 @@ public fun zone_cells(shape: u8, size: u64, anchor: u64, caster: u64): vector<u6
   if (shape == spell_effect::shape_tbar()) return tbar_cells(anchor, caster, size);
   if (shape == spell_effect::shape_podium()) return podium_cells(anchor, caster, size);
   if (shape == spell_effect::shape_cone()) return cone_cells(anchor, caster, size);
-  // circle / cross / ring / allmap / blob — scan the board.
+  // allmap is the ONE shape a box would silently amputate — it keeps the board scan.
   let mut out = vector[];
-  let mut c = 0;
-  while (c < GRID_CELLS) {
-    if (in_zone(shape, size, anchor, c)) out.push_back(c);
-    c = c + 1;
+  if (shape == spell_effect::shape_allmap()) {
+    let mut c = 0;
+    while (c < GRID_CELLS) {
+      if (in_zone(shape, size, anchor, c)) out.push_back(c);
+      c = c + 1;
+    };
+    return out
+  };
+  // circle / cross / ring / blob live inside the anchor's ±size box — scan that, not 380.
+  let ax = cell_x(anchor);
+  let ay = cell_y(anchor);
+  let x0 = if (ax > size) ax - size else 0;
+  let y0 = if (ay > size) ay - size else 0;
+  let x1 = if (ax + size < GRID_W - 1) ax + size else GRID_W - 1;
+  let y1 = if (ay + size < GRID_H - 1) ay + size else GRID_H - 1;
+  let mut y = y0;
+  while (y <= y1) {
+    let mut x = x0;
+    while (x <= x1) {
+      let c = encode(x, y);
+      if (in_zone(shape, size, anchor, c)) out.push_back(c);
+      x = x + 1;
+    };
+    y = y + 1;
   };
   out
 }
@@ -446,7 +484,7 @@ fun tbar_cells(anchor: u64, caster: u64, size: u64): vector<u64> {
   out
 }
 
-/// PODIUM (battleaxe / mace): the tbar arc at `anchor` PLUS one cell beyond along the strike
+/// PODIUM: the tbar arc at `anchor` PLUS one cell beyond along the strike
 /// axis. At size 1 it touches exactly 4 cells.
 fun podium_cells(anchor: u64, caster: u64, size: u64): vector<u64> {
   let mut out = tbar_cells(anchor, caster, size);
@@ -524,10 +562,75 @@ public fun start_cells_a(g: &GridSpec): vector<u64> { g.start_cells_a }
 
 public fun start_cells_b(g: &GridSpec): vector<u64> { g.start_cells_b }
 
+/// The AUTHORED-board constructor — the board catalog's one door into GridSpec (fields are
+/// module-private; nothing else builds one). Sanity here is the cheap floor: bounds, mask
+/// shape, live start bands, blockers on-mask; the deep proof (full connectivity) lives in
+/// the off-chain seed validator, which every catalog write passes through first.
+public fun grid_spec(
+  width: u64,
+  height: u64,
+  shape_mask: vector<u64>,
+  obstacles: vector<u64>,
+  holes: vector<u64>,
+  start_cells_a: vector<u64>,
+  start_cells_b: vector<u64>,
+): GridSpec {
+  assert!(width >= 1 && width <= GRID_W && height >= 1 && height <= GRID_H, EBadBoard);
+  assert!(shape_mask.length() == MASK_WORDS, EBadBoard);
+  assert!(start_cells_a.length() == START_CELLS, EBadBoard);
+  assert!(start_cells_b.length() == START_CELLS, EBadBoard);
+  aos(&shape_mask, &obstacles);
+  aos(&shape_mask, &holes);
+  let mut blockers = obstacles;
+  blockers.append(holes);
+  let blocked = mask_from_cells(&blockers);
+  aof(&shape_mask, &blocked, &start_cells_a);
+  aof(&shape_mask, &blocked, &start_cells_b);
+  assert_unique_starts(&start_cells_a, &start_cells_b);
+  GridSpec { width, height, shape_mask, obstacles, holes, start_cells_a, start_cells_b }
+}
+
+fun assert_unique_starts(a: &vector<u64>, b: &vector<u64>) {
+  let mut i = 0;
+  while (i < a.length()) {
+    let mut j = i + 1;
+    while (j < a.length()) { assert!(a[i] != a[j], EBadBoard); j = j + 1; };
+    let mut k = 0;
+    while (k < b.length()) { assert!(a[i] != b[k], EBadBoard); k = k + 1; };
+    i = i + 1;
+  };
+  let mut x = 0;
+  while (x < b.length()) {
+    let mut y = x + 1;
+    while (y < b.length()) { assert!(b[x] != b[y], EBadBoard); y = y + 1; };
+    x = x + 1;
+  };
+}
+
+// assert_on_shape
+fun aos(shape: &vector<u64>, cells: &vector<u64>) {
+  let mut i = 0;
+  while (i < cells.length()) {
+    assert!(in_grid(cells[i]) && mask_get(shape, cells[i]), EBadBoard);
+    i = i + 1;
+  };
+}
+
+// assert_open_footing — a start cell is on-shape AND unblocked
+fun aof(shape: &vector<u64>, blocked: &vector<u64>, cells: &vector<u64>) {
+  aos(shape, cells);
+  let mut i = 0;
+  while (i < cells.length()) {
+    assert!(!mask_get(blocked, cells[i]), EBadBoard);
+    i = i + 1;
+  };
+}
+
 /// Deterministically generate a board from `(board_seed, variant)` — world fights pass
 /// variant 0; dungeons their room index. The DRAW ORDER is the cross-language contract:
 /// width · height · outline (+ its params) · obstacles (count, then per blocker len/dir/anchor)
 /// · holes (same) · starts. Never reorder a draw without mirroring the client twin.
+#[test_only]
 public fun generate(board_seed: u64, variant: u64): GridSpec {
   let mut s = prng::rng_seed(board_seed ^ (((variant + 1) * VARIANT_MIX) & 0xFFFFFFFF));
 
@@ -555,6 +658,7 @@ public fun generate(board_seed: u64, variant: u64): GridSpec {
   GridSpec { width, height, shape_mask: mask, obstacles, holes, start_cells_a, start_cells_b }
 }
 
+#[test_only]
 fun build_shape(mut s: u64, shape_code: u8, width: u64, height: u64): (u64, vector<u64>) {
   if (shape_code == SHAPE_ELLIPSE) {
     (s, ellipse_mask(width, height))
@@ -578,15 +682,18 @@ fun build_shape(mut s: u64, shape_code: u8, width: u64, height: u64): (u64, vect
   }
 }
 
+#[test_only]
 fun min_u64(a: u64, b: u64): u64 { if (a < b) a else b }
 
 /// Fill row `y`'s cells `x ∈ [lo, hi)` — the single-contiguous-run primitive every outline uses.
+#[test_only]
 fun fill_row(mask: &mut vector<u64>, y: u64, lo: u64, hi: u64) {
   let end = if (hi > GRID_W) GRID_W else hi;
   let mut x = lo;
   while (x < end) { mask_set(mask, encode(x, y)); x = x + 1; };
 }
 
+#[test_only]
 fun rect_mask(w: u64, h: u64): vector<u64> {
   let mut m = empty_mask();
   let mut y = 0;
@@ -596,6 +703,7 @@ fun rect_mask(w: u64, h: u64): vector<u64> {
 
 /// The filled axis-aligned ellipse in `[0,w) × [0,h)` — `(2Δx)²h² + (2Δy)²w² ≤ (wh)²` in
 /// doubled coordinates (integral center, u64-safe).
+#[test_only]
 fun ellipse_mask(w: u64, h: u64): vector<u64> {
   let mut m = empty_mask();
   let cx2 = w - 1;
@@ -623,6 +731,7 @@ fun ellipse_mask(w: u64, h: u64): vector<u64> {
 }
 
 /// RECT with four corners bevelled by a quarter-arc of radius `r` (r ≤ min(w,h)/3).
+#[test_only]
 fun rounded_mask(w: u64, h: u64, r: u64): vector<u64> {
   if (r == 0) return rect_mask(w, h);
   let mut m = empty_mask();
@@ -637,6 +746,7 @@ fun rounded_mask(w: u64, h: u64, r: u64): vector<u64> {
 
 /// Cells a quarter-arc corner of radius `r` cuts from one end of row `y` — 0 outside the
 /// corner bands; a contiguous prefix inside (dx² + dy² > (r-1)² ⇒ cut), so rows stay one run.
+#[test_only]
 fun corner_cut(r: u64, y: u64, h: u64, top: bool): u64 {
   if (r == 0) return 0;
   let in_band = if (top) y < r else y >= h - r;
@@ -655,6 +765,7 @@ fun corner_cut(r: u64, y: u64, h: u64, top: bool): u64 {
 
 /// A rounded rectangle with FOUR independent corner radii — asymmetric, organic outlines.
 /// Left inset = max(top-left, bottom-left) cut per row (the bands are disjoint), same right.
+#[test_only]
 fun blob_mask(w: u64, h: u64, r_tl: u64, r_tr: u64, r_bl: u64, r_br: u64): vector<u64> {
   let mut m = empty_mask();
   let mut y = 0;
@@ -673,6 +784,7 @@ fun blob_mask(w: u64, h: u64, r_tl: u64, r_tr: u64, r_bl: u64, r_br: u64): vecto
 
 /// A plus: horizontal bar rows `[ry0,ry1)` × full width ∪ vertical bar cols `[cx0,cx1)` ×
 /// full height. Both bars ≥3 thick and centered.
+#[test_only]
 fun cross_outline(w: u64, h: u64, ry0: u64, ry1: u64, cx0: u64, cx1: u64): vector<u64> {
   let mut m = empty_mask();
   let mut y = 0;
@@ -684,6 +796,7 @@ fun cross_outline(w: u64, h: u64, ry0: u64, ry1: u64, cx0: u64, cx1: u64): vecto
 }
 
 /// Every cell whose full 8-ring is on-mask (≥1 inside the rim) — the legal blocker anchors.
+#[test_only]
 fun ring_safe_cells(mask: &vector<u64>): vector<u64> {
   let mut out = vector[];
   let mut c = 0;
@@ -696,6 +809,7 @@ fun ring_safe_cells(mask: &vector<u64>): vector<u64> {
 
 /// Is `cell` on-mask with its whole 8-ring on-mask? Guards edge pockets — a blocker never
 /// seals a boundary passage.
+#[test_only]
 fun ring_on_mask(mask: &vector<u64>, cell: u64): bool {
   if (!mask_get(mask, cell)) return false;
   let x = cell_x(cell);
@@ -716,6 +830,7 @@ fun ring_on_mask(mask: &vector<u64>, cell: u64): bool {
 /// May a straight run of blocker `cells` be committed? Every cell ring-safe AND no already-
 /// committed blocked cell within king distance 1 of any member (the isolation the
 /// connectivity-by-construction proof rides on; the run's own members are exempt).
+#[test_only]
 fun group_placeable(mask: &vector<u64>, blocked: &vector<u64>, cells: &vector<u64>): bool {
   let n = cells.length();
   let bn = blocked.length();
@@ -737,6 +852,7 @@ fun group_placeable(mask: &vector<u64>, blocked: &vector<u64>, cells: &vector<u6
 /// Place `count` blockers, each a straight run of 1..BLOCKER_MAX_LEN cells (drawn per
 /// blocker: length, then axis, then a rotating anchor probe over `anchors`). A run that fits
 /// nowhere retries at length 1; a board with no room left stops early.
+#[test_only]
 fun place_blockers(mut s: u64, mask: &vector<u64>, anchors: &vector<u64>, blocked: &mut vector<u64>, count: u64): u64 {
   let n = anchors.length();
   if (n == 0) return s;
@@ -755,6 +871,7 @@ fun place_blockers(mut s: u64, mask: &vector<u64>, anchors: &vector<u64>, blocke
 
 /// Rotating probe: from `idx0`, the first anchor whose straight run of `len` cells (stepping
 /// `step`) is placeable gets committed. Returns whether a run landed.
+#[test_only]
 fun probe_run(mask: &vector<u64>, anchors: &vector<u64>, blocked: &mut vector<u64>, idx0: u64, len: u64, step: u64): bool {
   let n = anchors.length();
   let mut j = 0;
@@ -775,6 +892,7 @@ fun probe_run(mask: &vector<u64>, anchors: &vector<u64>, blocked: &mut vector<u6
   false
 }
 
+#[test_only]
 fun open_cells(mask: &vector<u64>, blocked: &vector<u64>): vector<u64> {
   let mut out = vector[];
   let mut c = 0;
@@ -787,6 +905,7 @@ fun open_cells(mask: &vector<u64>, blocked: &vector<u64>): vector<u64> {
 
 /// 6 start cells from one band: the near rows for team A (`from_top`), the far rows for B —
 /// the first/last open cells in row-major order, skipping the other side's picks.
+#[test_only]
 fun pick_starts(pool: &vector<u64>, from_top: bool, used: &vector<u64>): vector<u64> {
   let mut out = vector[];
   let n = pool.length();
@@ -799,6 +918,7 @@ fun pick_starts(pool: &vector<u64>, from_top: bool, used: &vector<u64>): vector<
   out
 }
 
+#[test_only]
 fun split_at(v: &vector<u64>, at: u64): (vector<u64>, vector<u64>) {
   let mut head = vector[];
   let mut tail = vector[];

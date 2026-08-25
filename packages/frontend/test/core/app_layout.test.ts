@@ -5,6 +5,7 @@ import { describe, expect, test } from 'bun:test'
 
 import {
   CANVAS_OVERLAY_CLASS,
+  fight_lab_surface,
   fight_surface_visible,
   WORLD_FRAME_LAYER,
   world_frame_visibility,
@@ -25,6 +26,11 @@ describe('app layout', () => {
     expect(fight_surface_visible('world', true)).toBeTrue()
     expect(fight_surface_visible('characters', true)).toBeFalse()
     expect(fight_surface_visible('world', false)).toBeFalse()
+  })
+
+  test('the fight lab mounts exactly one canvas surface across the fight lifecycle', () => {
+    expect(fight_lab_surface(false)).toBe('setup')
+    expect(fight_lab_surface(true)).toBe('fight')
   })
 
   test('canvas overlays inherit one padded frame', () => {

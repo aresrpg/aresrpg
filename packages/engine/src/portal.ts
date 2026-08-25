@@ -27,6 +27,39 @@ const EMISSION_COLOR = [0.961, 0.592, 0.078] as const
 /** AgX tone mapping compresses brights — the reference's raw output needs this to stay molten */
 const GAIN = 1.9
 
+export const create_portal_material = ({
+  radius,
+  emission_color,
+  gain = GAIN,
+}: Readonly<{ radius: number; emission_color: readonly [number, number, number]; gain?: number }>) => {
+  const uv = positionLocal.xy.div(radius)
+  const dir = vec3(uv.x, uv.y, float(0.5)).normalize()
+  const spun = dir.z.sub(time.mul(0.2))
+  const angle = uv.length().max(1e-4).log().div(Math.LN2).negate()
+  const cos_a = angle.cos()
+  const sin_a = angle.sin()
+  const rotated = vec3(dir.x.mul(cos_a).sub(dir.y.mul(sin_a)), dir.x.mul(sin_a).add(dir.y.mul(cos_a)), spun)
+  const noise = mx_fractal_noise_vec3(rotated.mul(FREQUENCY), OCTAVES, 2, 0.5).add(DISTORTION)
+  const glow_field = noise
+    .mul(2)
+    .sub(0.1)
+    .mul(0.188)
+    .add(vec3(uv.x, uv.y, 0))
+  const strength = float(0.77).sub(glow_field.length()).mul(4.2)
+  const emission = vec3(...emission_color).mul(strength.mul(0.4))
+  const fracture = noise.add(0.32).normalize()
+  const fac = uv.length().sub(fracture.x.max(fracture.y).max(fracture.z)).add(0.1).mul(3.0)
+  const color = mix(emission, vec3(fac), fac.add(1.2))
+  const rim = smoothstep(0.86, 1.0, uv.length()).oneMinus()
+  const white_wash = fac.add(1.2).clamp(0, 1)
+  const material = new MeshBasicNodeMaterial({ transparent: true, depthWrite: false, side: DoubleSide })
+  material.colorNode = color.mul(gain)
+  material.opacityNode = rim.mul(white_wash.oneMinus())
+  material.alphaTest = 0.02
+  material.fog = true
+  return material
+}
+
 export type Portal = Readonly<{
   /** where the approach tooltip anchors (a fixed point above the disc's crown) */
   label_anchor: () => Vector3
@@ -50,37 +83,7 @@ export const create_portal = ({
   let center_y = base_y + PORTAL_RADIUS * (1 - 2 * SUNK_FRACTION)
   let active = true
 
-  // ── the swirl (reference math, one pass) ──
-  const uv = positionLocal.xy.div(PORTAL_RADIUS)
-  const dir = vec3(uv.x, uv.y, float(0.5)).normalize()
-  const spun = dir.z.sub(time.mul(0.2))
-  // angle = -log2(|uv|); the epsilon keeps the exact-center pixel off log(0)
-  const angle = uv.length().max(1e-4).log().div(Math.LN2).negate()
-  const cos_a = angle.cos()
-  const sin_a = angle.sin()
-  const rotated = vec3(dir.x.mul(cos_a).sub(dir.y.mul(sin_a)), dir.x.mul(sin_a).add(dir.y.mul(cos_a)), spun)
-  const noise = mx_fractal_noise_vec3(rotated.mul(FREQUENCY), OCTAVES, 2, 0.5).add(DISTORTION)
-  const glow_field = noise
-    .mul(2)
-    .sub(0.1)
-    .mul(0.188)
-    .add(vec3(uv.x, uv.y, 0))
-  const strength = float(0.77).sub(glow_field.length()).mul(4.2)
-  const emission = vec3(...EMISSION_COLOR).mul(strength.mul(0.4))
-  const fracture = noise.add(0.32).normalize()
-  const fac = uv.length().sub(fracture.x.max(fracture.y).max(fracture.z)).add(0.1).mul(3.0)
-  const color = mix(emission, vec3(fac), fac.add(1.2))
-
-  const rim = smoothstep(0.86, 1.0, uv.length()).oneMinus()
-  // wherever the white `fac` layer wins the mix, the disc opens a hole — only the molten
-  // emission and the dark smoke arms stay solid
-  const white_wash = fac.add(1.2).clamp(0, 1)
-
-  const material = new MeshBasicNodeMaterial({ transparent: true, depthWrite: false, side: DoubleSide })
-  material.colorNode = color.mul(GAIN)
-  material.opacityNode = rim.mul(white_wash.oneMinus())
-  material.alphaTest = 0.02
-  material.fog = true
+  const material = create_portal_material({ radius: PORTAL_RADIUS, emission_color: EMISSION_COLOR })
 
   const geometry = new CircleGeometry(PORTAL_RADIUS, 64)
   const disc = new Mesh(geometry, material)

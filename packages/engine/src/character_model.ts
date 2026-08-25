@@ -15,11 +15,11 @@ import {
   type Object3D,
   type Texture,
 } from 'three'
-import type { GLTF } from 'three/addons/loaders/GLTFLoader.js'
 import { clone as clone_skinned } from 'three/addons/utils/SkeletonUtils.js'
 
 import type { EntityModel } from './entity_model.ts'
 import { load_gltf_source } from './gltf_loader.ts'
+import { apply_gltf_variant } from './gltf_variant.ts'
 import type { CharacterAppearanceRender, WornModelRender } from './types.ts'
 
 type ModelMaterial = Material & {
@@ -226,47 +226,10 @@ const prepare_character = (root: Object3D): number => {
   return new Box3().setFromObject(root).min.y
 }
 
-const apply_material_variant = async (gltf: GLTF, root: Object3D, variant: string | null): Promise<void> => {
-  if (!variant) return
-  const json = gltf.parser.json as Readonly<{
-    extensions?: Readonly<{ KHR_materials_variants?: Readonly<{ variants?: readonly Readonly<{ name?: string }>[] }> }>
-  }>
-  const variants = json.extensions?.KHR_materials_variants?.variants ?? []
-  const variant_index = variants.findIndex(({ name }) => name === variant)
-  if (variant_index < 0) {
-    console.warn(`Cosmetic variant ${variant} is absent from its GLB.`)
-    return
-  }
-  const changes: Promise<void>[] = []
-  root.traverse((object) => {
-    const mesh = object as Object3D & {
-      isMesh?: boolean
-      material?: Material | Material[]
-      userData: Readonly<{
-        gltfExtensions?: Readonly<{
-          KHR_materials_variants?: Readonly<{
-            mappings?: readonly Readonly<{ variants?: readonly number[]; material?: number }>[]
-          }>
-        }>
-      }>
-    }
-    if (!mesh.isMesh) return
-    const mappings = mesh.userData.gltfExtensions?.KHR_materials_variants?.mappings ?? []
-    const mapping = mappings.find(({ variants: indexes }) => indexes?.includes(variant_index))
-    if (mapping?.material === undefined) return
-    changes.push(
-      gltf.parser.getDependency('material', mapping.material).then((material: Material) => {
-        mesh.material = material
-      })
-    )
-  })
-  await Promise.all(changes)
-}
-
 const load_part = async (spec: WornModelRender): Promise<LoadedPart> => {
   const gltf = await load_gltf_source(spec.url)
   const root = clone_skinned(gltf.scene)
-  await apply_material_variant(gltf, root, spec.variant)
+  await apply_gltf_variant(gltf, root, spec.variant)
   const materials = clone_materials(root)
   root.traverse((object) => {
     const mesh = object as Object3D & {
@@ -360,7 +323,7 @@ export const create_character_model = async (appearance: CharacterAppearanceRend
       owned_materials.push(...part.materials)
       mount_character_part({ body: root, part: part.root, slot, hair })
     } catch (error) {
-      console.warn(`Failed to attach ${slot} cosmetic ${spec.url}.`, error)
+      console.warn(`Failed to attach ${slot} equipment ${spec.url}.`, error)
     }
   }
   await Promise.all([attach('head', appearance.worn.head), attach('back', appearance.worn.back)])

@@ -61,13 +61,16 @@ test('the shared spell card keeps its read layout at every size and opens on the
   expect(html).toContain('data-spell-effect-field="effect kind"')
   expect(html).toContain('data-spell-effect-field="effect power"')
   expect(html).toContain('data-spell-effect-field="target"')
+  expect(html).toContain('data-spell-effect-field="area"')
+  expect(html).not.toContain('data-spell-effect-field="duration"')
+  expect(html).toContain('data-spell-add-critical-for=""')
   expect(html).toContain('(any target)')
   expect(html).toContain('data-spell-ap-cost="5"')
   expect(html).toContain('data-spell-level-tabs=""')
   expect(html).toContain('data-spell-effects=""')
   expect(html).toContain('Casts / turn')
   expect(html).not.toContain('Unlocks at')
-  expect(html).not.toContain('Point')
+  expect(html).toContain('Point')
   expect(html).not.toContain('<input')
   expect(html).not.toContain('<select')
   expect(html).not.toContain('data-spell-edit=')
@@ -102,6 +105,56 @@ test('the shared spell card keeps its read layout at every size and opens on the
   expect(small_html).not.toContain('data-spell-ap-cost=')
   expect(small_html).not.toContain('Casts / turn')
   expect(small_html).not.toContain('Cooldown')
+})
+
+test('an aligned critical effect stays editable even while it matches its normal row', async () => {
+  const { SpellCard } = await import('../../src/encyclopedia/SpellCard.tsx')
+  const with_critical = {
+    ...spell,
+    levels: [{ ...base_level, crit_effects: [{ ...base_effect }] }],
+  } as unknown as SeedSpell
+  const html = renderToStaticMarkup(
+    <SpellCard edit={{ change: () => undefined, save: () => undefined }} spell={with_critical} />
+  )
+
+  expect(html).toContain('data-spell-effect-field="critical effect"')
+  expect(html).toContain('>Same</span>')
+  expect(html).not.toContain('data-spell-add-critical-for=""')
+})
+
+test('an empty editable spell can bootstrap normal and critical effects', async () => {
+  const { SpellCard } = await import('../../src/encyclopedia/SpellCard.tsx')
+  const empty = {
+    ...spell,
+    levels: spell.levels.map((level) => ({ ...level, effects: [], crit_effects: [] })),
+  } as unknown as SeedSpell
+  const html = renderToStaticMarkup(
+    <SpellCard edit={{ change: () => undefined, save: () => undefined }} spell={empty} />
+  )
+
+  expect(html).toContain('data-spell-add-effect=""')
+  expect(html).toContain('data-spell-add-critical-effect=""')
+})
+
+test('optional duration and guaranteed chance remain editable at their zero/default values', async () => {
+  const { SpellCard } = await import('../../src/encyclopedia/SpellCard.tsx')
+  const editable = {
+    ...spell,
+    levels: [
+      {
+        ...base_level,
+        effects: [{ ...base_effect, kind: 4, turns: 0, chance_bp: 10_000 }],
+      },
+    ],
+  } as unknown as SeedSpell
+  const html = renderToStaticMarkup(
+    <SpellCard edit={{ change: () => undefined, save: () => undefined }} spell={editable} />
+  )
+
+  expect(html).toContain('data-spell-effect-field="duration"')
+  expect(html).toContain('>Instant</button>')
+  expect(html).toContain('data-spell-effect-field="chance"')
+  expect(html).toContain('· 100%')
 })
 
 test('the class spell list owns unlock order and keeps unlock levels outside the card header', async () => {

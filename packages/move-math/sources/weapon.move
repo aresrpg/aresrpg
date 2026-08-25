@@ -37,7 +37,7 @@ public fun strike_of(category: &String, lines: &vector<ItemDamages>, affinity: b
     reach,
     rext, // modifiable_range: the bow's range-stat extension
     true, // line_of_sight: every weapon sees its target
-    line_only, // the spellbook aims down a straight line
+    line_only,
     false, // a strike aims at fighters
     0, // casts_per_turn: unlimited — while AP lasts
     0,
@@ -51,37 +51,31 @@ public fun strike_of(category: &String, lines: &vector<ItemDamages>, affinity: b
 /// Family → (crit_1_in, ap, reach, range_min, range_extends, line_only, zone_shape, zone_size).
 /// Owner-corrected 2026-08-10; unknown categories get the unarmed physics.
 fun physics_of(category: &String): (u16, u8, u8, u8, bool, bool, u8, u8) {
-  if (*category == b"longsword".to_string()) (100, 6, 1, 1, false, false, 3, 1)
-  else if (*category == b"daggers".to_string()) (30, 3, 1, 1, false, false, 0, 0)
-  else if (*category == b"battleaxe".to_string()) (100, 6, 1, 1, false, false, 8, 1)
+  if (*category == b"daggers".to_string()) (30, 3, 1, 1, false, false, 0, 0)
   else if (*category == b"spear".to_string()) (70, 4, 1, 1, false, false, 4, 1)
-  else if (*category == b"staff".to_string()) (70, 4, 1, 1, false, false, 4, 1)
-  else if (*category == b"spellbook".to_string()) (80, 3, 5, 1, false, true, 0, 0)
   else if (*category == b"bow".to_string()) (60, 4, 6, 2, true, false, 0, 0)
-  else if (*category == b"axe".to_string()) (55, 5, 1, 1, false, false, 0, 0)
-  else if (*category == b"mace".to_string()) (70, 4, 1, 1, false, false, 8, 1)
-  else if (*category == b"club".to_string()) (60, 4, 1, 1, false, false, 3, 1)
+  else if (*category == b"axe".to_string()) (55, 5, 1, 1, false, false, 4, 1)
   else if (*category == b"sword".to_string()) (50, 5, 1, 1, false, false, 0, 0)
   else (100, 4, 1, 1, false, false, 0, 0) // bare hands
 }
 
 /// The own-class affinity table (legacy law: any class wields any weapon; wielding your
-/// DESIGNED family grants the +10%). Two staff classes — tokei and iyashi.
+/// DESIGNED family grants the +10%).
 public fun affinity_of(classe: &String, category: &String): bool {
   let c = *classe;
   let f = *category;
-  (c == b"senshi".to_string() && f == b"longsword".to_string()) ||
+  (c == b"senshi".to_string() && f == b"sword".to_string()) ||
   (c == b"yajin".to_string() && f == b"daggers".to_string()) ||
-  (c == b"ikari".to_string() && f == b"battleaxe".to_string()) ||
+  (c == b"ikari".to_string() && f == b"axe".to_string()) ||
   (c == b"mori".to_string() && f == b"spear".to_string()) ||
-  (c == b"tokei".to_string() && f == b"staff".to_string()) ||
-  (c == b"shugo".to_string() && f == b"spellbook".to_string()) ||
+  (c == b"tokei".to_string() && f == b"axe".to_string()) ||
+  (c == b"shugo".to_string() && f == b"spear".to_string()) ||
   (c == b"yogan".to_string() && f == b"bow".to_string()) ||
-  (c == b"rojin".to_string() && f == b"axe".to_string()) ||
-  (c == b"shusen".to_string() && f == b"mace".to_string()) ||
-  (c == b"tomoda".to_string() && f == b"club".to_string()) ||
+  (c == b"rojin".to_string() && f == b"daggers".to_string()) ||
+  (c == b"shusen".to_string() && f == b"axe".to_string()) ||
+  (c == b"tomoda".to_string() && f == b"spear".to_string()) ||
   (c == b"asobi".to_string() && f == b"sword".to_string()) ||
-  (c == b"iyashi".to_string() && f == b"staff".to_string())
+  (c == b"iyashi".to_string() && f == b"bow".to_string())
 }
 
 /// Bare hands: one fixed earth line over the fallback physics row (its one home), never

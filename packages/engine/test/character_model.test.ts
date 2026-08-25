@@ -4,7 +4,17 @@
 import { readFileSync } from 'node:fs'
 
 import { describe, expect, test } from 'bun:test'
-import { AnimationClip, Bone, BoxGeometry, Group, Mesh, MeshBasicMaterial, VectorKeyframeTrack } from 'three'
+import {
+  AnimationClip,
+  Bone,
+  Box3,
+  BoxGeometry,
+  Group,
+  Mesh,
+  MeshBasicMaterial,
+  Vector3,
+  VectorKeyframeTrack,
+} from 'three'
 
 import { compose_pixels, find_character_bone, mount_character_part } from '../src/character_model.ts'
 import { prepare_mob_model_root } from '../src/mob_model.ts'
@@ -85,6 +95,20 @@ describe('mob model preparation', () => {
     const min_y = prepare_mob_model_root(root, [idle], 'offset fixture')
 
     expect(body.position.y).toBe(0)
-    expect(min_y).toBeCloseTo(-0.25)
+    expect(min_y).toBeCloseTo(-0.5)
+    expect(new Box3().setFromObject(root).getSize(new Vector3()).y).toBeCloseTo(1)
+  })
+
+  test('preserves authored creature proportions instead of forcing every species to one height', () => {
+    const short = new Group()
+    short.add(new Mesh(new BoxGeometry(1, 0.2, 1), new MeshBasicMaterial()))
+    const tall = new Group()
+    tall.add(new Mesh(new BoxGeometry(1, 10, 1), new MeshBasicMaterial()))
+
+    prepare_mob_model_root(short, [], 'short fixture')
+    prepare_mob_model_root(tall, [], 'tall fixture')
+
+    expect(new Box3().setFromObject(short).getSize(new Vector3()).y).toBeCloseTo(0.2)
+    expect(new Box3().setFromObject(tall).getSize(new Vector3()).y).toBeCloseTo(10)
   })
 })

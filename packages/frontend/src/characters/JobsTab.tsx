@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 // JOBS — the canon professions drawer, markup and classes ported from the proven Jobs panel
-// (jobs.css, verbatim): the LEFT rail groups the 15 jobs by category with per-job level
+// (jobs.css, verbatim): the LEFT rail groups the 11 jobs by category with per-job level
 // chips (job xp is chain truth on the CharacterRow); the RIGHT detail shows the job head +
 // xp bar, the gathering 11-tier resource table, and ALL recipes grouped Unlocked/Locked.
 // Clicking a resource or recipe opens the shared ItemDetailView in the right-section — and
@@ -134,7 +134,7 @@ const CraftControls = ({
   const required = recipe_required_level(recipe)
   const level_ok = level >= required
   const affordable = rows.every(({ enough }) => enough)
-  const can_craft = level_ok && affordable && !pending
+  const can_craft = !!wallet && level_ok && affordable && !pending
   const success_chance = craft_success_percent(level)
   const output = encyclopedia_catalog.item(recipe.output_type)?.item
 
@@ -426,7 +426,7 @@ export default function JobsTab({ character, copy }: Readonly<{ character: Reado
                 <ItemDetailView
                   category={selected_seed.category}
                   damages={(selected_seed.damages ?? []).map((line) => ({ ...line }))}
-                  icon={item_icon(selected_seed.item_type)}
+                  item_type={selected_seed.item_type}
                   labels={{
                     characteristics: encyclopedia('characteristics'),
                     damages: encyclopedia('damages'),
