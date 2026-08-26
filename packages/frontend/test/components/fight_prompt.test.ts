@@ -4,7 +4,12 @@
 import { expect, test } from 'bun:test'
 import { renderToStaticMarkup } from 'react-dom/server'
 
-import { FightTeams, fight_joinable_teams, fight_prompt_action } from '../../src/components/FightPrompt.tsx'
+import {
+  FightTeams,
+  fight_joinable_teams,
+  fight_prompt_action,
+  fight_prompt_checkpoint,
+} from '../../src/components/FightPrompt.tsx'
 import { fight_prompt_targets } from '../../src/game/core/fight_prompt_feed.ts'
 
 const duel = {
@@ -25,6 +30,13 @@ test('an active sword always opens spectating', () => {
   expect(fight_prompt_action('active')).toBe('spectate')
 })
 
+test('the F modal resolves its own fight cache after another character is selected', () => {
+  const checkpoint = { contract: { id: '0xf1' } } as never
+  expect(fight_prompt_checkpoint({ checkpoint: null, cached: { '0xf1': checkpoint } } as never, '0xf1')).toBe(
+    checkpoint
+  )
+})
+
 test('normalized checkpoint integers preserve the same side admission rules', () => {
   expect(
     fight_joinable_teams(
@@ -36,6 +48,12 @@ test('normalized checkpoint integers preserve the same side admission rules', ()
       '0xtarget'
     )
   ).toEqual([1])
+})
+
+test('a group side admits only characters whose party contains its opener', () => {
+  const group = { phase: 'placement', access_a: 1, access_b: 0, opener_a: '0xleader', opener_b: null }
+  expect(fight_joinable_teams(group, '0xmember', ['0xleader', '0xmember'])).toEqual([0, 1])
+  expect(fight_joinable_teams(group, '0xstranger')).toEqual([1])
 })
 
 test('fight swords advertise at fifty blocks but become interactive only from nearby', () => {

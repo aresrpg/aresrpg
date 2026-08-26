@@ -7,6 +7,7 @@ import {
   allocate_stack_amount,
   available_item_stacks,
   coalesced_stack_groups,
+  encumbered_asset_ids,
   stack_merge_target,
 } from '../../src/inventory_stacks.ts'
 
@@ -20,25 +21,21 @@ const stack = (id: string, amount: number, category = 'resource', kiosk = '0xk')
   kiosk,
 })
 
-const listing = (id: string) => ({ id }) as never
-
 describe('inventory stack selection', () => {
   test('new yields merge into the largest unlisted stack', () => {
     const inventory = [stack('small', 3), stack('listed', 100), stack('large', 20)]
-    expect(stack_merge_target(inventory, [listing('listed')], 'wool')).toBe('large')
-    expect(available_item_stacks(inventory, [listing('listed')], 'wool').map(({ id }) => id)).toEqual([
-      'large',
-      'small',
-    ])
+    const encumbered = new Set(['listed'])
+    expect(stack_merge_target(inventory, encumbered, 'wool')).toBe('large')
+    expect(available_item_stacks(inventory, encumbered, 'wool').map(({ id }) => id)).toEqual(['large', 'small'])
   })
 
   test('non-stackable items never become merge targets', () => {
-    expect(stack_merge_target([stack('gear', 1, 'sword')], [], 'wool')).toBeNull()
+    expect(stack_merge_target([stack('gear', 1, 'sword')], new Set(), 'wool')).toBeNull()
   })
 
   test('a transaction targets only stacks inside its selected kiosk', () => {
     const inventory = [stack('other', 100, 'resource', '0xother'), stack('mine', 2, 'resource', '0xmine')]
-    expect(stack_merge_target(inventory, [], 'wool', '0xmine')).toBe('mine')
+    expect(stack_merge_target(inventory, new Set(), 'wool', '0xmine')).toBe('mine')
   })
 
   test('recipe burns cover one requirement across several unlocked stacks exactly', () => {
@@ -50,8 +47,16 @@ describe('inventory stack selection', () => {
   })
 
   test('split fragments present as one merge plan per item type and kiosk', () => {
-    expect(coalesced_stack_groups([stack('a', 3), stack('b', 5)], [])).toEqual([
+    expect(coalesced_stack_groups([stack('a', 3), stack('b', 5)], new Set())).toEqual([
       { target: stack('b', 5), total_amount: 8, source_ids: ['a'] },
     ])
+  })
+
+  test('market listings and every trade offer share one encumbrance rule', () => {
+    const encumbered = encumbered_asset_ids(
+      [{ id: 'listed' } as never],
+      [{ caps_a: [{ object: 'offered' }], caps_b: [{ object: 'claimed' }] } as never]
+    )
+    expect([...encumbered].sort()).toEqual(['claimed', 'listed', 'offered'])
   })
 })

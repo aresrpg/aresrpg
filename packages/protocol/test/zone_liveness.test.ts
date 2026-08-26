@@ -12,6 +12,7 @@ import { describe, expect, test } from 'bun:test'
 import {
   live_mob_groups,
   live_resource_packs,
+  travel_proof_ready,
   ZONE_RESEARCH_TTL_MS,
   type MobGroupRow,
   type ResourcePackRow,
@@ -92,5 +93,39 @@ describe('a zone joins its population with its consumption', () => {
     live_resource_packs(packs, { mob_taken: '0', res_taken: [4] })
 
     expect(packs).toEqual(snapshot)
+  })
+})
+
+describe('the client travel gate mirrors the chain proof', () => {
+  const proof = (overrides: Partial<Parameters<typeof travel_proof_ready>[0]> = {}) =>
+    travel_proof_ready({
+      from_x: 0,
+      from_z: 0,
+      from_ms: 0,
+      pet_at_start: false,
+      to_x: 0,
+      to_z: 0,
+      now_ms: 1_000,
+      pet_now: false,
+      ...overrides,
+    })
+
+  test('uses the same floored Euclidean budget as Move', () => {
+    expect(proof({ to_x: 11 })).toBeTrue()
+    expect(proof({ to_x: 12 })).toBeFalse()
+    expect(proof({ to_x: 7, to_z: 8 })).toBeTrue()
+    expect(proof({ to_x: 8, to_z: 8 })).toBeFalse()
+  })
+
+  test('grants pet speed only when both ends of the checkpoint leg have a pet', () => {
+    expect(proof({ pet_at_start: true, pet_now: true, to_x: 17 })).toBeTrue()
+    expect(proof({ pet_at_start: true, pet_now: true, to_x: 18 })).toBeFalse()
+    expect(proof({ pet_at_start: false, pet_now: true, to_x: 17 })).toBeFalse()
+    expect(proof({ pet_at_start: true, pet_now: false, to_x: 17 })).toBeFalse()
+  })
+
+  test('refuses a future or malformed checkpoint instead of guessing', () => {
+    expect(proof({ from_ms: 1_001 })).toBeFalse()
+    expect(proof({ from_x: Number.NaN })).toBeFalse()
   })
 })

@@ -35,6 +35,9 @@ import type { AirdropClaim, ShopPurchase } from './shop.ts'
 import { character_actions, type CharacterActions } from './character_actions.ts'
 import { fight_actions, type FightActions } from './fight.ts'
 import { dungeon_actions, type DungeonActions } from './dungeon.ts'
+import { kolizeum_actions, type KolizeumActions } from './kolizeum.ts'
+import { friends_actions, type FriendsActions } from './friends.ts'
+import { party_actions, type PartyActions } from './party.ts'
 import { receipt_digest, receipt_digest_or_null, type Receipt } from './cache.ts'
 import { create_personal_kiosk_runner } from './ptb.ts'
 import {
@@ -49,6 +52,9 @@ import {
 export type { CharacterActions } from './character_actions.ts'
 export type { FightActions } from './fight.ts'
 export type { DungeonActions } from './dungeon.ts'
+export type { KolizeumActions } from './kolizeum.ts'
+export type { FriendsActions } from './friends.ts'
+export type { PartyActions } from './party.ts'
 
 export type AuthSession = Readonly<{
   address: string
@@ -65,6 +71,9 @@ export type AuthSession = Readonly<{
   /** the remote-fight chain hand — duels and PvM share it (local vs remote is the ONLY split) */
   fight: FightActions
   dungeon: DungeonActions
+  kolizeum: KolizeumActions
+  friends: FriendsActions
+  party: PartyActions
   /** the character-upkeep chain hand — equipment, stats, spells, consumables, runes */
   character: CharacterActions
   marketplace: MarketplaceActions
@@ -259,6 +268,9 @@ const create_wallet_session = (
     },
     fight: fight_actions(sdk, { kiosk_cap }),
     dungeon: dungeon_actions(sdk, { kiosk_cap }),
+    kolizeum: kolizeum_actions(sdk, { kiosk_cap, address: account.address }),
+    friends: friends_actions(sdk, { address: account.address }),
+    party: party_actions(sdk, { kiosk_cap }),
     character: character_actions(sdk, { kiosk_cap }),
     marketplace: marketplace_actions(sdk, { address: account.address, kiosk_cap }),
     stacks: stack_actions(sdk, { kiosk_cap }),
@@ -428,10 +440,29 @@ const create_wallet_session = (
     },
     read_package_upgrade,
     bootstrap_deployment: async (deployment) => {
-      await sdk.hydrate([deployment.publisher, DISPLAY_REGISTRY_ID])
-      return sdk.execute(
+      // A fresh publish changes the game package identity before pins.json can be reloaded.
+      // Bootstrap must therefore own a deployment-bound cache/context; reusing the login SDK
+      // lets an old package pin leak into post-publish resolution.
+      const bootstrap_sdk = SDK({
+        client: resolution_client as unknown as SuiTransport,
+        address: account.address,
+        network,
+        sign_transaction,
+        pins: {
+          ...sdk.pins,
+          package: deployment.package,
+          package_original: deployment.package,
+          kiosk_package: deployment.kiosk_package,
+          version: deployment.version,
+          loot_registry: deployment.loot_registry,
+          name_registry: deployment.name_registry,
+          friend_registry: deployment.friend_registry,
+        },
+      })
+      await bootstrap_sdk.hydrate([deployment.publisher, DISPLAY_REGISTRY_ID])
+      return bootstrap_sdk.execute(
         await create_deployment_bootstrap_transaction({
-          sdk,
+          sdk: bootstrap_sdk,
           package_id: deployment.package,
           kiosk_package: deployment.kiosk_package,
           publisher: deployment.publisher,

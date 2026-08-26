@@ -9,12 +9,19 @@ import {
   weapon_categories,
   type ItemCategory,
 } from '@aresrpg/immutable'
-import type { ListingRow, MarketObservation, MarketSaleRow, ServerPacket } from '@aresrpg/protocol'
+import {
+  MAX_TRACKED_CHARACTERS,
+  type ListingRow,
+  type MarketCounts,
+  type MarketObservation,
+  type MarketSaleRow,
+  type ServerPacket,
+} from '@aresrpg/protocol'
 
 import type { AppInput, AppModule, AppState } from '../store.ts'
 import { toast } from '../toast.ts'
 import { copy_text } from '../i18n/copy.ts'
-import { stack_merge_target_row } from '../inventory_stacks.ts'
+import { encumbered_asset_ids, stack_merge_target_row } from '../inventory_stacks.ts'
 
 export const MARKET_GROUPS = ['EQUIPMENT', 'PETS', 'RUNES', 'CONSUMABLE', 'RESOURCES', 'CHARACTERS'] as const
 export type MarketGroup = (typeof MARKET_GROUPS)[number]
@@ -45,8 +52,17 @@ export const market_observation = (group: MarketGroup): MarketObservation =>
     characters: group === 'CHARACTERS',
   })
 
+export const market_group_count = (group: MarketGroup, counts: Readonly<MarketCounts>, lower_bound = 0): number => {
+  const observation = market_observation(group)
+  const aggregate = observation.characters
+    ? counts.characters
+    : observation.categories.reduce((total, category) => total + (counts.categories[category] ?? 0), 0)
+  return Math.max(aggregate, lower_bound)
+}
+
 export type MarketplaceState = Readonly<{
   group: MarketGroup
+  counts: MarketCounts
   observation: MarketObservation | null
   listings: readonly ListingRow[]
   own_listings: readonly ListingRow[]
@@ -74,6 +90,7 @@ export type MarketplaceInput =
 export const initial_marketplace_state = (): MarketplaceState =>
   Object.freeze({
     group: 'EQUIPMENT',
+    counts: Object.freeze({ categories: Object.freeze({}), characters: 0 }),
     observation: null,
     listings: [],
     own_listings: [],
@@ -113,6 +130,7 @@ const fold_packet = (
     return same_observation(market.observation, packet.observation)
       ? Object.freeze({ ...market, listings: Object.freeze(packet.listings) })
       : market
+  if (packet.type === 'packet/market_counts') return Object.freeze({ ...market, counts: packet.counts })
   if (packet.type === 'packet/market_history')
     return Object.freeze({
       ...market,
@@ -226,7 +244,7 @@ const observe = ({ events, dispatch, get_state }: Parameters<NonNullable<AppModu
       (operation === 'buy' || operation === 'delist') && listing.item_type
         ? stack_merge_target_row(
             state.session.inventory,
-            state.marketplace.own_listings,
+            encumbered_asset_ids(state.marketplace.own_listings, state.trade.rows),
             listing.item_type,
             operation === 'delist' ? listing.kiosk : undefined
           )
@@ -265,7 +283,14 @@ const observe = ({ events, dispatch, get_state }: Parameters<NonNullable<AppModu
     if (action) execute('delist', listing, action)
   })
   events.on('market/buy_requested', ({ listing }) => {
-    const action = get_state().session.wallet?.marketplace.buy
+    const state = get_state()
+    // the roster caps at 6 playable characters — a 7th would land in the kiosk unseen
+    if (listing.kind === 'character' && state.session.characters.length >= MAX_TRACKED_CHARACTERS) {
+      const reason = copy_text(state.copy?.marketplace_page ?? {})('character_roster_full')
+      toast.add(reason, 'error')
+      return dispatch({ type: 'market/write_failed', error: reason })
+    }
+    const action = state.session.wallet?.marketplace.buy
     if (action) execute('buy', listing, action)
   })
   events.on('market/collect_requested', () => {

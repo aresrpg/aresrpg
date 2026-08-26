@@ -4,7 +4,7 @@
 import type { ComponentPropsWithoutRef } from 'react'
 
 export const HUD_PANEL_CLASS =
-  'rounded-[5px] border border-white/13 bg-[#101315]/91 shadow-[0_10px_28px_rgba(0,0,0,0.22)] backdrop-blur-lg'
+  'rounded-[5px] border border-border bg-surface-low/91 shadow-[0_10px_28px_rgba(0,0,0,0.22)] backdrop-blur-lg'
 
 type HudPanelProps = Readonly<ComponentPropsWithoutRef<'div'>>
 

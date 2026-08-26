@@ -5,7 +5,7 @@ import { expect, test } from 'bun:test'
 import { renderToStaticMarkup } from 'react-dom/server'
 
 import { FightTargetPreviews } from '../../../src/game/fight/FightTargetPreviews.tsx'
-import { FightEffectLines } from '../../../src/game/fight/FightEffectLines.tsx'
+import { active_effect_lines, FightEffectLines } from '../../../src/game/fight/FightEffectLines.tsx'
 
 test('spell aiming restores the fighter nametag with exact resolved HP and status previews', () => {
   const html = renderToStaticMarkup(
@@ -87,4 +87,32 @@ test('the compact turn status names a state and keeps the legacy damage-over-tim
 
   expect(poison).toBe('6 damages (2 turns)')
   expect(poison).not.toContain('Deals')
+})
+
+test('turn-card effects collapse storage rows into totals with compact expiry ranges', () => {
+  const html = renderToStaticMarkup(
+    <FightEffectLines
+      effects={active_effect_lines([
+        { kind: 7n, element: '', value: 60n, turns_left: 5n, source: 0n, stat: 0n },
+        { kind: 4n, element: '', value: 25n, turns_left: 3n, source: 0n, stat: 0n },
+        { kind: 4n, element: '', value: 21n, turns_left: 4n, source: 0n, stat: 0n },
+        { kind: 4n, element: '', value: 25n, turns_left: 5n, source: 0n, stat: 0n },
+        { kind: 4n, element: '', value: 5n, turns_left: 2n, source: 0n, stat: 3n },
+        { kind: 4n, element: '', value: 5n, turns_left: 2n, source: 1n, stat: 3n },
+        { kind: 4n, element: '', value: 5n, turns_left: 3n, source: 0n, stat: 3n },
+      ])}
+    />
+  )
+  const text = html
+    .replaceAll(/<[^>]+>/g, '')
+    .replaceAll(/\s+/g, ' ')
+    .trim()
+
+  expect(text).toContain('CHÂTIMENT · 60 STR/TURN · 5T')
+  expect(text).toContain('+71 Strength (3–5T)')
+  expect(text).toContain('+15 Agility (2–3T)')
+  expect(html).toContain('+25 / 3T · +21 / 4T · +25 / 5T')
+  expect(html).toContain('+10 / 2T · +5 / 3T')
+  expect(text).not.toContain('Gains up to')
+  expect(text).not.toContain('+25 Strength')
 })

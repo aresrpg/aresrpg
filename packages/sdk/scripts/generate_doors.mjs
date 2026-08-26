@@ -67,6 +67,7 @@ const TYPE_MAP = {
   '&TemplateRegistry': { kind: 'pin', pin: 'template_registry' },
   '&mut TemplateRegistry': { kind: 'pin', pin: 'template_registry', mutable: true },
   '&mut FriendRegistry': { kind: 'pin', pin: 'friend_registry', mutable: true },
+  '&FriendRegistry': { kind: 'pin', pin: 'friend_registry', mutable: false },
   ID: { kind: 'pure', helper: 'id' },
   address: { kind: 'pure', helper: 'address' },
   bool: { kind: 'pure', helper: 'bool' },

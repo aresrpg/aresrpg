@@ -12,16 +12,22 @@ export const FpsPanel = ({
   active,
   quality,
   flattened,
+  fight_access,
+  party_available,
   copy,
   change_quality,
   toggle_flattened,
+  toggle_fight_access,
 }: Readonly<{
   active: boolean
   quality: EngineQuality
   flattened: boolean
+  fight_access: 0 | 1 | null
+  party_available: boolean
   copy: AppCopy
   change_quality: (quality: EngineQuality) => void
   toggle_flattened: () => void
+  toggle_fight_access: () => void
 }>) => {
   const [fps, set_fps] = useState<number | null>(null)
 
@@ -48,7 +54,7 @@ export const FpsPanel = ({
   }, [active])
 
   return (
-    <HudPanel className="pointer-events-auto flex w-fit items-stretch text-[8px] tracking-[0.14em] uppercase">
+    <HudPanel className="pointer-events-auto flex w-fit items-stretch overflow-hidden !rounded-[9px] text-[8px] tracking-[0.14em] uppercase">
       <div className="flex items-center gap-1.5 px-2 py-1.5">
         <span className="text-[#8d9099]">FPS</span>
         <output className="min-w-4 text-right text-[#67adff] tabular-nums">{fps ?? '—'}</output>
@@ -60,7 +66,7 @@ export const FpsPanel = ({
         onChange={(event) => change_quality(event.target.value as EngineQuality)}
       >
         {QUALITY_OPTIONS.map((option) => (
-          <option className="bg-[#0a0a0f]" key={option} value={option}>
+          <option className="bg-bg" key={option} value={option}>
             {copy[option]}
           </option>
         ))}
@@ -85,6 +91,31 @@ export const FpsPanel = ({
           />
         </span>
       </button>
+      {fight_access !== null && (
+        <button
+          aria-label={copy.world_hud[fight_access === 1 ? 'dungeon_group' : 'dungeon_public']}
+          aria-pressed={fight_access === 1}
+          className="flex cursor-pointer items-center gap-2 border-l border-white/10 px-2 text-[#c8963c] disabled:cursor-not-allowed disabled:opacity-35"
+          data-fight-access=""
+          disabled={!party_available}
+          onClick={toggle_fight_access}
+          type="button"
+        >
+          {copy.world_hud[fight_access === 1 ? 'dungeon_group' : 'dungeon_public']}
+          <span
+            aria-hidden="true"
+            className={`relative h-3 w-6 rounded-full border transition-colors duration-200 ${
+              fight_access === 1 ? 'border-[#c8963c]/70 bg-[#c8963c]/25' : 'border-white/15 bg-white/5'
+            }`}
+          >
+            <span
+              className={`absolute top-0.5 size-1.5 rounded-full transition-all duration-200 ${
+                fight_access === 1 ? 'left-3.5 bg-[#efbd45] shadow-[0_0_7px_#c8963c]' : 'left-0.5 bg-white/35'
+              }`}
+            />
+          </span>
+        </button>
+      )}
     </HudPanel>
   )
 }

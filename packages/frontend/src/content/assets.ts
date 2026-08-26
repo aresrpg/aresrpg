@@ -2,7 +2,7 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 // One icon index shared by every frontend feature.
 
-import { indexed_asset_key, spell_asset_key } from './asset_keys.ts'
+import { indexed_asset_key, spell_asset_basename, spell_asset_key } from './asset_keys.ts'
 
 const item_modules: Readonly<Record<string, string>> =
   typeof Bun === 'undefined'
@@ -64,4 +64,8 @@ export const mob_icon = (mob_type: string): string | null =>
       ? `${DEV_SEED_ICON_ROOT}mobs/${encodeURIComponent(mob_type)}.png`
       : (mob_assets[mob_type] ?? null)
 export const spell_icon = (classe: string, name: string): string | null =>
-  spell_assets[spell_asset_key(classe, name)] ?? null
+  !classe
+    ? null
+    : development
+      ? `${DEV_SEED_ICON_ROOT}spells/${encodeURIComponent(spell_asset_basename(classe, name))}.webp`
+      : (spell_assets[spell_asset_key(classe, name)] ?? null)

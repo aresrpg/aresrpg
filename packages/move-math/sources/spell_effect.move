@@ -21,6 +21,7 @@ const EBadChance: u64 = 1406; // chance above 100%
 const EBadLevel: u64 = 1407; // new_spell_level: range out of order, or crit quotation of 1
 const EBadStat: u64 = 1408; // stat id addresses the wrong channel for the effect kind
 const EBadTurns: u64 = 1409; // instantaneous/timed kind carries the wrong duration class
+const CHATIMENT_TURNS: u8 = 5;
 
 /// The effect kinds — the sealed list (owner 2026-08-09; collapsed 2026-08-12 "optimize for
 /// deletion": every number-changing kind is one of THREE channelled kinds — add / remove /
@@ -34,8 +35,8 @@ const EBadTurns: u64 = 1409; // instantaneous/timed kind carries the wrong durat
 const KIND_COUNT: u8 = 20;
 // 0 damage · 1 percent_life_damage · 2 caster_damage · 3 punishment_damage ·
 // 4 add · 5 remove · 6 steal (remove on the target + the same as add on the caster) ·
-// 7 chatiment (a stance row: while it lives, each real hp hit the holder TAKES pushes an add
-//   row of this channel/value whose life mirrors the stance's remaining turns — the Sacrier) ·
+// 7 chatiment (a five-turn stance: real hp lost becomes this channel up to `value` per active
+//   fighter turn; each turn's folded bonus lasts five affected turns — Ikari) ·
 // 8 push · 9 pull · 10 teleport · 11 swap_positions · 12 place_trap · 13 place_glyph ·
 // 14 reduce_damage · 15 reflect_damage · 16 dispel (removes ALL effect rows, whatever they
 // are) · 17 invisibility · 18 return_spell (bounces only casts of level ≤ its own cast level;
@@ -121,7 +122,7 @@ public fun new_effect(
   //   remove(hp) needs turns ≥ 1 (instant hp removal is the damage kinds' job);
   //   remove/steal on hp carry the element (the resist/amplify math needs one); add(hp) — a
   //   heal — carries none (heals amplify off intelligence, 1.29);
-  //   chatiment (7) grants STATS on being hit: channels 0..5 or 8..10, lasting (turns ≥ 1),
+  //   chatiment (7) grants STATS from hp lost: channels 0..5 or 8..10, exactly five turns,
   //   element empty (the Toll's element lives in its damage rider, not the stance).
   if (kind == 4 || kind == 5 || kind == 6) {
     assert!(stat < CHANNEL_COUNT, EBadStat);
@@ -133,7 +134,7 @@ public fun new_effect(
   };
   if (kind == 7) {
     assert!(stat <= 5 || (stat >= 8 && stat <= 10), EBadStat);
-    assert!(turns >= 1, EBadStat);
+    assert!(turns == CHATIMENT_TURNS, EBadTurns);
     assert!(element.is_empty(), EBadElement);
   };
   Effect { kind, element, value, value_max, area_shape, area_size, target_filter, chance_bp, turns, stat }
@@ -318,6 +319,8 @@ public fun target_filter(e: &Effect): u8 { e.target_filter }
 public fun chance_bp(e: &Effect): u16 { e.chance_bp }
 
 public fun turns(e: &Effect): u8 { e.turns }
+
+public fun chatiment_turns(): u8 { CHATIMENT_TURNS }
 
 public fun stat(e: &Effect): u8 { e.stat }
 

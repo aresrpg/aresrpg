@@ -20,7 +20,57 @@ const source_files = async (directory: string): Promise<readonly string[]> =>
     )
   ).flat()
 
+const presentation_files = async (directory: string): Promise<readonly string[]> =>
+  (
+    await Promise.all(
+      (await readdir(directory, { withFileTypes: true })).map((entry) => {
+        const path = resolve(directory, entry.name)
+        if (entry.isDirectory()) return presentation_files(path)
+        return /\.(?:css|ts|tsx)$/.test(entry.name) ? [path] : []
+      })
+    )
+  ).flat()
+
 describe('frontend source boundaries', () => {
+  test('the shared surface palette has one literal home', async () => {
+    const token_file = resolve(source_root, 'tailwind.css')
+    const env_file = resolve(source_root, 'env.ts')
+    const tokens = await readFile(token_file, 'utf8')
+    const palette = ['bg', 'surface-low', 'surface', 'surface-high', 'surface-raised', 'border'].map((name) => {
+      const value = new RegExp(`--color-${name}:\\s*(#[0-9a-fA-F]{6})`).exec(tokens)?.[1]
+      if (!value) throw new Error(`Missing --color-${name} in tailwind.css`)
+      return value.toLowerCase()
+    })
+    const violations = (
+      await Promise.all(
+        (await presentation_files(source_root))
+          .filter((file) => file !== token_file && file !== env_file)
+          .map(async (file) => {
+            const source = (await readFile(file, 'utf8')).toLowerCase()
+            return palette.some((color) => source.includes(color)) ? [file] : []
+          })
+      )
+    ).flat()
+    const local_surface_violations = (
+      await Promise.all(
+        (await source_files(source_root)).map(async (file) => {
+          const source = await readFile(file, 'utf8')
+          return [...source.matchAll(/bg-\[#([0-9a-fA-F]{6})\]/g)].flatMap((match) => {
+            const color = match[1]!
+            const channels = [0, 2, 4].map((offset) => Number.parseInt(color.slice(offset, offset + 2), 16))
+            const neutral_dark = Math.max(...channels) < 48 && Math.max(...channels) - Math.min(...channels) <= 12
+            const board_cell_art = file.endsWith('/demo/BoardGallery.tsx') && color.toLowerCase() === '171b22'
+            return neutral_dark && !board_cell_art ? [`${file}:#${color}`] : []
+          })
+        })
+      )
+    ).flat()
+    const env = await readFile(env_file, 'utf8')
+    expect(env).toContain(`theme_color: '${palette[0]}'`)
+    expect(violations).toEqual([])
+    expect(local_surface_violations).toEqual([])
+  })
+
   test('active source imports neither deprecated code nor Sui plumbing', async () => {
     const violations = (
       await Promise.all(

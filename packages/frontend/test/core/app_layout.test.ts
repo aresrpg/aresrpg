@@ -16,15 +16,18 @@ describe('app layout', () => {
     expect(WORLD_FRAME_LAYER).toBe('z-0')
   })
 
-  test('shows the persistent canvas only on the world page', () => {
+  test('shows the persistent canvas on the world and for a Kolizeum fight takeover', () => {
     expect(world_frame_visibility('world')).toContain('visible')
     expect(world_frame_visibility('encyclopedia')).toContain('invisible')
     expect(world_frame_visibility('characters')).toContain('invisible')
+    expect(world_frame_visibility('kolizeum', false)).toContain('invisible')
+    expect(world_frame_visibility('kolizeum', true)).toContain('visible')
   })
 
-  test('a hydrated fight renders only on the world page', () => {
+  test('a hydrated fight renders on the world or Kolizeum route', () => {
     expect(fight_surface_visible('world', true)).toBeTrue()
     expect(fight_surface_visible('characters', true)).toBeFalse()
+    expect(fight_surface_visible('kolizeum', true)).toBeTrue()
     expect(fight_surface_visible('world', false)).toBeFalse()
   })
 

@@ -19,6 +19,8 @@ import { SessionReplacedModal } from './SessionReplacedModal.tsx'
 import { Sidebar } from './Sidebar.tsx'
 import { ConnectionCard, DiscordCard, LanguageCard } from './SidebarCards.tsx'
 import { WalletCard } from './WalletCard.tsx'
+import { TradeInbox } from './TradeInbox.tsx'
+import { PartyInviteCard } from './PartyFrame.tsx'
 
 const EncyclopediaPage = lazy(() => import('../encyclopedia/EncyclopediaPage.tsx'))
 const AdminPage = lazy(() => import('../admin/AdminPage.tsx'))
@@ -27,9 +29,10 @@ const AirdropPage = lazy(() => import('../airdrop/AirdropPage.tsx'))
 const SettingsPage = lazy(() => import('../settings/SettingsPage.tsx'))
 const CharactersPage = lazy(() => import('../characters/CharactersPage.tsx'))
 const MarketplacePage = lazy(() => import('../marketplace/MarketplacePage.tsx'))
+const KolizeumPage = lazy(() => import('../kolizeum/KolizeumPage.tsx'))
 
 const PageFallback = ({ label }: Readonly<{ label: string }>) => (
-  <section className="pointer-events-auto z-[12] grid min-h-full flex-1 place-items-center border border-white/8 bg-[#111119]/96 text-[9px] tracking-[0.18em] text-[#c8963c] uppercase">
+  <section className="pointer-events-auto z-[12] grid min-h-full flex-1 place-items-center border border-white/8 bg-surface-low/96 text-[9px] tracking-[0.18em] text-[#c8963c] uppercase">
     {label}
   </section>
 )
@@ -42,6 +45,7 @@ const RoutedPage = memo(
     pathname,
     session,
     settings,
+    fight_mounted,
     open_path,
   }: Readonly<{
     copy: AppCopy
@@ -50,6 +54,7 @@ const RoutedPage = memo(
     pathname: string
     session: SessionState
     settings: GameSettings
+    fight_mounted: boolean
     open_path: (pathname: string) => void
   }>) => (
     <>
@@ -88,6 +93,11 @@ const RoutedPage = memo(
           <MarketplacePage copy={copy} locale={locale} />
         </Suspense>
       )}
+      {page === 'kolizeum' && !fight_mounted && (
+        <Suspense fallback={<PageFallback label={copy.loading_universe} />}>
+          <KolizeumPage copy={copy} />
+        </Suspense>
+      )}
       {page !== 'world' &&
         page !== 'encyclopedia' &&
         page !== 'admin' &&
@@ -95,8 +105,9 @@ const RoutedPage = memo(
         page !== 'airdrop' &&
         page !== 'settings' &&
         page !== 'characters' &&
-        page !== 'marketplace' && (
-          <section className="pointer-events-auto z-[12] grid min-h-full min-w-0 flex-1 place-items-center border border-white/8 bg-[#111119]/96 text-center shadow-[0_18px_60px_rgba(0,0,0,0.35)] backdrop-blur-xl">
+        page !== 'marketplace' &&
+        page !== 'kolizeum' && (
+          <section className="pointer-events-auto z-[12] grid min-h-full min-w-0 flex-1 place-items-center border border-white/8 bg-surface-low/96 text-center shadow-[0_18px_60px_rgba(0,0,0,0.35)] backdrop-blur-xl">
             <div>
               <p className="text-[8px] tracking-[0.26em] text-[#c8963c] uppercase">{copy[page]}</p>
               <h2 className="mt-3 text-base font-semibold">{copy.page_pending_title}</h2>
@@ -114,8 +125,13 @@ const RoutedPage = memo(
 const GameFightLayer = ({ copy, page }: Readonly<{ copy: AppCopy; page: Page }>) => {
   const scene = useSyncExternalStore(subscribe_scene, read_scene, () => null)
   const mounted = useAppStore((state) => state.fight.mounted)
+  const environment_key = useAppStore(
+    (state) => `${state.session.selected_character_id ?? 'local'}:${state.fight.checkpoint?.contract.id ?? 'loading'}`
+  )
   // a previewing modal hydrates the session without mounting the board — mounting is the COMMIT
-  return scene && fight_surface_visible(page, mounted) ? <FightLayer copy={copy} scene={scene} /> : null
+  return scene && fight_surface_visible(page, mounted) ? (
+    <FightLayer key={environment_key} copy={copy} scene={scene} />
+  ) : null
 }
 
 export const AppShell = ({
@@ -147,8 +163,10 @@ export const AppShell = ({
   open_path: (pathname: string) => void
   select_character: (character_id: string) => void
 }>) => {
+  const fight_mounted = useAppStore((state) => state.fight.mounted)
   return (
     <div className="pointer-events-none fixed inset-0 z-[10] flex h-dvh flex-col gap-3 overflow-hidden p-3">
+      <PartyInviteCard copy={copy} />
       {session.link_status === 'replaced' && <SessionReplacedModal copy={copy} />}
       {session.game_frozen === true && (
         <aside
@@ -194,6 +212,7 @@ export const AppShell = ({
             />
           )}
           <div className="relative flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto">
+            <TradeInbox copy={copy} />
             <RoutedPage
               copy={copy}
               locale={locale}
@@ -202,6 +221,7 @@ export const AppShell = ({
               pathname={pathname}
               session={session}
               settings={settings}
+              fight_mounted={fight_mounted}
             />
             <GameFightLayer copy={copy} page={page} />
           </div>

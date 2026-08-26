@@ -29,9 +29,9 @@ import { mob_filter_rows } from './content_list.ts'
 import { entity_rows, type JsonPath, type JsonValue } from './seed_editor.ts'
 
 const action_class =
-  'h-8 cursor-pointer border border-[#4a9eff]/35 bg-[#07101b]/80 px-3 text-[8px] tracking-[0.14em] text-[#67adff] uppercase hover:border-[#4a9eff]/65 disabled:cursor-not-allowed disabled:opacity-35'
+  'h-8 cursor-pointer border border-[#4a9eff]/35 bg-cyan/8 px-3 text-[8px] tracking-[0.14em] text-[#67adff] uppercase hover:border-[#4a9eff]/65 disabled:cursor-not-allowed disabled:opacity-35'
 const input_class =
-  'h-7 border border-white/12 bg-[#090a10] px-2 text-[8px] text-[#dedad2] outline-none focus:border-[#4a9eff]/60'
+  'h-7 border border-white/12 bg-bg px-2 text-[8px] text-[#dedad2] outline-none focus:border-[#4a9eff]/60'
 const micro_label = 'block text-[7px] tracking-[0.1em] text-[#6f747e] uppercase'
 
 const record = (value: JsonValue | undefined): Readonly<Record<string, JsonValue>> | null =>
@@ -238,7 +238,7 @@ const LandscapeControls = ({
               <label className="min-w-0" key={role}>
                 <span className={micro_label}>{role}</span>
                 <span
-                  className="mt-1 flex h-8 min-w-0 items-center border bg-[#090a10] px-1.5"
+                  className="mt-1 flex h-8 min-w-0 items-center border bg-bg px-1.5"
                   style={{ borderColor: `${material?.color ?? '#777777'}88` }}
                 >
                   <input
@@ -254,7 +254,7 @@ const LandscapeControls = ({
                     value={material_name}
                   >
                     {Object.entries(recipe.materials).map(([name, candidate]) => (
-                      <option className="bg-[#090a10]" key={name} value={name}>
+                      <option className="bg-bg" key={name} value={name}>
                         {candidate.color} · {name}
                       </option>
                     ))}
@@ -318,7 +318,7 @@ const WorldAndMaterials = ({ recipe, replace }: Readonly<{ recipe: WorldRecipe; 
         >
           <option value="">none</option>
           {Object.keys(recipe.materials).map((name) => (
-            <option className="bg-[#090a10]" key={name} value={name}>
+            <option className="bg-bg" key={name} value={name}>
               {name}
             </option>
           ))}
@@ -369,8 +369,8 @@ export const BiomePage = () => {
   const active_tab = tabs.find(({ id }) => id === tab)!
 
   return (
-    <div className="relative flex min-h-0 flex-1 overflow-hidden bg-[#07090d]">
-      <header className="absolute inset-x-0 top-0 z-30 flex h-14 items-center justify-between gap-3 border-b border-white/8 bg-[#0b0c12]/92 px-4 backdrop-blur-md">
+    <div className="relative flex min-h-0 flex-1 overflow-hidden bg-bg">
+      <header className="absolute inset-x-0 top-0 z-30 flex h-14 items-center justify-between gap-3 border-b border-white/8 bg-surface-low/92 px-4 backdrop-blur-md">
         <div className="flex min-w-0 items-center gap-3">
           <select
             className="h-8 max-w-48 border border-white/10 bg-black/35 px-3 text-[9px]"
@@ -378,7 +378,7 @@ export const BiomePage = () => {
             value={selected.id}
           >
             {terrain_worlds.map(({ id, label }) => (
-              <option className="bg-[#0a0a0f]" key={id} value={id}>
+              <option className="bg-bg" key={id} value={id}>
                 {label}
               </option>
             ))}
@@ -439,7 +439,7 @@ export const BiomePage = () => {
 
       {recipe && (
         <details
-          className="absolute left-3 top-17 z-20 w-80 max-w-[calc(100%-24px)] border border-white/10 bg-[#080a10]/88 shadow-2xl backdrop-blur-md"
+          className="absolute left-3 top-17 z-20 w-80 max-w-[calc(100%-24px)] border border-white/10 bg-bg/88 shadow-2xl backdrop-blur-md"
           open
         >
           <summary className="cursor-pointer list-none px-3 py-2 text-[8px] tracking-[0.14em] text-[#9ea4ae] uppercase marker:hidden">
@@ -456,7 +456,7 @@ export const BiomePage = () => {
 
       {recipe && !panel_open && (
         <button
-          className="absolute right-3 top-17 z-30 flex h-9 items-center gap-2 border border-[#c8963c]/35 bg-[#0a0b11]/92 px-3 text-[8px] tracking-[0.12em] text-[#e0b86b] uppercase shadow-xl backdrop-blur-md"
+          className="absolute right-3 top-17 z-30 flex h-9 items-center gap-2 border border-[#c8963c]/35 bg-surface-low/92 px-3 text-[8px] tracking-[0.12em] text-[#e0b86b] uppercase shadow-xl backdrop-blur-md"
           onClick={() => set_panel_open(true)}
           type="button"
         >
@@ -466,7 +466,7 @@ export const BiomePage = () => {
       )}
 
       {recipe && panel_open && (
-        <aside className="absolute bottom-3 right-3 top-17 z-30 flex w-[min(440px,calc(100%-24px))] flex-col overflow-hidden border border-white/10 bg-[#0a0b11]/92 shadow-2xl backdrop-blur-md">
+        <aside className="absolute bottom-3 right-3 top-17 z-30 flex w-[min(440px,calc(100%-24px))] flex-col overflow-hidden border border-white/10 bg-surface-low/92 shadow-2xl backdrop-blur-md">
           <div className="flex shrink-0 items-center justify-between border-b border-white/8 px-3 py-2">
             <div>
               <strong className="text-[9px] tracking-[0.15em] text-[#e0b86b] uppercase">World editor</strong>

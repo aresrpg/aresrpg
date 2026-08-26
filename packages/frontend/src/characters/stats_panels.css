@@ -278,6 +278,13 @@
   margin-right: var(--s-1);
 }
 
+.stats__prow-allocation {
+  display: flex;
+  min-width: 88px;
+  flex-flow: column nowrap;
+  align-items: flex-end;
+}
+
 /* equipment contribution — the house accent softened into secondary ink. */
 .stats__prow-bonus {
   color: color-mix(in srgb, var(--accent) 42%, var(--fg-muted));
@@ -332,7 +339,7 @@
 }
 
 .stats .stats__step--add.btn-gold {
-  color: #0a0a0f;
+  color: var(--color-bg);
   background: linear-gradient(135deg, var(--color-gold-dark), var(--color-gold), var(--color-gold-dark));
   border: none;
   box-shadow:

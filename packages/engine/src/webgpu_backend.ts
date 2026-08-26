@@ -163,6 +163,7 @@ export const create_webgpu_backend = async (
     clouds,
     world: compiled_world,
     palette: water_palette,
+    board_occlusion,
   })
   // the star gate — world dressing at client 0;0; a fight-only scene has no ground to stand it on
   const portal = presentation === 'world' ? create_portal({ scene, world: compiled_world }) : null
@@ -461,7 +462,11 @@ export const create_webgpu_backend = async (
       hillaire?.set_ground_haze(camera_column.surface_y, humidity)
       lantern.tick(now)
       was_submerged = is_submerged(camera.position.y, surface_plane, was_submerged)
-      frame_renderer.set_underwater({ submerged: was_submerged, dt: delta_seconds })
+      frame_renderer.set_underwater({
+        submerged: was_submerged,
+        suppressed: board_footprint !== null,
+        dt: delta_seconds,
+      })
       hillaire?.tick(renderer, camera, delta_seconds)
     }
     fight_board.tick(now)
@@ -698,7 +703,8 @@ export const create_webgpu_backend = async (
     },
     set_fight_sword_label: (id, element) => fight_swords?.set_label(id, element),
     set_resource_nodes: resource_nodes.set_markers,
-    set_resource_node_label: resource_nodes.set_label,
+    set_resource_node_label: (id, element) =>
+      entity_labels.set_static(`resource:${id}`, element, () => resource_nodes.label_anchor(id)),
     set_portal_label: (element) => {
       // the anchor is a GETTER — the gate's ground rides the flatten projection, so must its tag
       if (portal) entity_labels.set_static('portal', element, portal.label_anchor)

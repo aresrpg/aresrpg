@@ -1,0 +1,65 @@
+# SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+# © 2026 Sceat — All rights reserved. See LICENSE.
+
+name: aresrpg-local
+
+services:
+  falkordb:
+    image: falkordb/falkordb@sha256:05b3645c78c881a967c7d6b6ab4a8a2f461caf42962d38274aa116658195ad3d
+    container_name: aresrpg-falkordb
+    environment:
+      FALKORDB_ARGS: MAX_QUEUED_QUERIES 25 TIMEOUT 1000 RESULTSET_SIZE 10000
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 1s
+      timeout: 2s
+      retries: 30
+    ports:
+      - '127.0.0.1:6379:6379'
+    networks: [aresrpg-local]
+
+  indexer:
+    image: aresrpg-indexer:local
+    build:
+      context: packages/indexer
+    container_name: aresrpg-indexer
+    environment:
+      PACKAGE_ORIGINAL: ${PACKAGE_ORIGINAL:?PACKAGE_ORIGINAL is required}
+      PACKAGE_LATEST: ${PACKAGE_LATEST:?PACKAGE_LATEST is required}
+      SEED_PACKAGE_ORIGINAL: ${SEED_PACKAGE_ORIGINAL:?SEED_PACKAGE_ORIGINAL is required}
+      REDIS_URL: redis://aresrpg-falkordb:6379
+      REMOTE_STORE_URL: https://checkpoints.testnet.sui.io
+      GRAPHQL_URL: https://graphql.testnet.sui.io/graphql
+      INGEST_MAX_CONCURRENCY: '16'
+      RUST_LOG: info
+    depends_on:
+      falkordb:
+        condition: service_healthy
+    networks: [aresrpg-local]
+
+  server:
+    image: aresrpg-server:local
+    build:
+      context: .
+      dockerfile: packages/server/Dockerfile
+    container_name: aresrpg-server
+    environment:
+      GRAPH_URL: redis://aresrpg-falkordb:6379
+      MESH_REDIS_URL: redis://aresrpg-falkordb:6379
+      GRAPH_NAME: aresrpg
+      SUI_NETWORK: ${SUI_NETWORK:-testnet}
+      SUI_RPC_URL: https://fullnode.testnet.sui.io:443
+      PORT: '9800'
+      ALLOWED_ORIGINS: http://localhost:5173,https://aresrpg.world
+    depends_on:
+      falkordb:
+        condition: service_healthy
+      indexer:
+        condition: service_started
+    ports:
+      - '127.0.0.1:9800:9800'
+    networks: [aresrpg-local]
+
+networks:
+  aresrpg-local:
+    name: aresrpg-local

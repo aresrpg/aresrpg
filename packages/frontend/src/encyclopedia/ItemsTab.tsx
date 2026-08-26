@@ -174,7 +174,7 @@ export const ItemsTab = ({
           {text('showing_count', { count: filtered.length, total: encyclopedia_catalog.items.length })}
         </span>
         <select
-          className="h-9 min-w-[110px] cursor-pointer border border-[#1e1e2e] bg-[#0a0a0f]/55 px-2 text-[9px] text-[#9da0a9] uppercase"
+          className="h-9 min-w-[110px] cursor-pointer border border-border bg-bg/55 px-2 text-[9px] text-[#9da0a9] uppercase"
           onChange={(event) => set_sort(event.target.value)}
           value={sort}
         >
@@ -201,7 +201,7 @@ export const ItemsTab = ({
       <div className="flex items-center gap-1.5">
         <span className="text-[8px] tracking-[0.15em] text-[#6b7280] uppercase">LVL</span>
         <input
-          className="h-8 w-13 border border-[#1e1e2e] bg-[#0a0a0f]/55 px-2 text-center text-[9px] outline-none"
+          className="h-8 w-13 border border-border bg-bg/55 px-2 text-center text-[9px] outline-none"
           min="0"
           onChange={(event) => set_minimum_level(event.target.value)}
           placeholder="MIN"
@@ -210,7 +210,7 @@ export const ItemsTab = ({
         />
         <span className="text-[8px] text-[#6b7280]">–</span>
         <input
-          className="h-8 w-13 border border-[#1e1e2e] bg-[#0a0a0f]/55 px-2 text-center text-[9px] outline-none"
+          className="h-8 w-13 border border-border bg-bg/55 px-2 text-center text-[9px] outline-none"
           min="0"
           onChange={(event) => set_maximum_level(event.target.value)}
           placeholder="MAX"
@@ -222,7 +222,7 @@ export const ItemsTab = ({
   )
 
   const type_rail = subcategories.length > 1 && (
-    <nav className="w-40 shrink-0 overflow-y-auto border-r border-[#1e1e2e]">
+    <nav className="w-40 shrink-0 overflow-y-auto border-r border-border">
       {subcategories.map(({ type, count }, index) => {
         const active = type === subcategory
         return (
@@ -438,7 +438,7 @@ export const ItemsTab = ({
             <div className="flex flex-col gap-2">
               {detail.dropped_by.map(({ mob, drop }, index) => (
                 <button
-                  className="flex cursor-pointer items-center justify-between border border-[#1e1e2e] border-l-2 border-l-[#c8963c]/40 px-3 py-2.5 text-left hover:border-[#c8963c]/25 hover:border-l-[#c8963c] hover:bg-[#c8963c]/8 hover:shadow-[0_0_12px_rgba(200,150,60,0.1)]"
+                  className="flex cursor-pointer items-center justify-between border border-border border-l-2 border-l-[#c8963c]/40 px-3 py-2.5 text-left hover:border-[#c8963c]/25 hover:border-l-[#c8963c] hover:bg-[#c8963c]/8 hover:shadow-[0_0_12px_rgba(200,150,60,0.1)]"
                   key={mob.mob_type}
                   onClick={() => select_mob(mob.mob_type)}
                   style={{ background: index % 2 === 0 ? 'rgba(255,255,255,0.03)' : 'rgba(255,255,255,0.015)' }}

@@ -160,8 +160,28 @@ public(package) fun join_room_grouped(
 /// players to converge whichever portal they took.
 fun gj(fight: &Fight, chr: &Character) {
   let (rworld, room, _, _, _) = rr(chr);
-  assert!(fight::dungeon_room_of(fight) == option::some(room), EWrongRoom);
-  assert!(fight::fight_world(fight) == rworld, EWrongWorld);
+  gate_join_scope(fight::fight_world(fight), fight::dungeon_room_of(fight), rworld, room);
+}
+
+fun gate_join_scope(fight_world: String, fight_room: Option<u64>, run_world: String, run_room: u64) {
+  assert!(fight_room == option::some(run_room), EWrongRoom);
+  assert!(fight_world == run_world, EWrongWorld);
+}
+
+/// Test seam over the production join scope. Coordinates are accepted only to prove they are
+/// deliberately irrelevant: the chain dungeon is WORLD + ROOM, never the entry portal.
+#[test_only]
+public(package) fun join_scope_for_testing(
+  fight_world: String,
+  fight_room: u64,
+  _fight_x: u32,
+  _fight_z: u32,
+  run_world: String,
+  run_room: u64,
+  _run_x: u32,
+  _run_z: u32,
+) {
+  gate_join_scope(fight_world, option::some(fight_room), run_world, run_room);
 }
 
 // ╔════════════════ [ Settle / give up ] ═════════════════════════════════════ ]
@@ -202,6 +222,26 @@ public(package) fun settle_room(
     er(chr, clock);
     event::emit(DungeonEnded { character: character_id, world: rworld, room, won });
   };
+}
+
+/// Final room settler variant: validate the remaining roster before the Random door, perform
+/// the normal run transition, then destroy the Fight inside the same transaction.
+public(package) fun settle_last_room(
+  wc: &WorldContent,
+  mut fight: Fight,
+  fighter_idx: u64,
+  kiosk: &mut Kiosk,
+  cap: &KioskOwnerCap,
+  policy: &TransferPolicy<Character>,
+  item_policy: &TransferPolicy<item::Item>,
+  plan: vector<item::PM>,
+  gen: &mut sui::random::RandomGenerator,
+  clock: &Clock,
+  ctx: &mut TxContext,
+) {
+  fight::assert_last_settler(&fight, fighter_idx, ctx);
+  settle_room(wc, &mut fight, fighter_idx, kiosk, cap, policy, item_policy, plan, gen, clock, ctx);
+  fight::close(fight, ctx);
 }
 
 /// Give up the current room mid-fight: forfeit (character → kiosk at 1 hp) and END the run.

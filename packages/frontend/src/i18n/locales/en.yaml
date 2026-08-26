@@ -52,6 +52,7 @@ indexing_lag_warning: Actions in the game can lag behind
 game_frozen: The game is currently frozen. Check Discord for more information.
 gas_budget_toast: This action was too heavy for the network fee we reserve. It was not executed and cost you nothing — please report it.
 game_paused_toast: The game is paused for an update. Your action was not executed — try again in a few minutes.
+movement_sync_toast: Your position is still syncing. Keep moving normally, then try again in a moment.
 network_testnet: TESTNET
 page_pending_title: This page is being rebuilt
 page_pending_body: Its place remains visible while we restore it cleanly.
@@ -63,6 +64,7 @@ create_character: Create character
 create_title: Create your character
 create_lead: Pick a class, choose your colors, and name your character. The world is already live behind you.
 class_label: Class
+view_class_spells: See the spells for that class
 sex_label: Sex
 appearance_label: Appearance · 3 colors
 name_label: Name
@@ -90,6 +92,86 @@ wallet_send_pending: Sending SUI…
 wallet_send_success: SUI sent
 wallet_send_failed: The SUI transfer failed
 wallet_close: Close
+kolizeum_page:
+  title: Kolizeum — War Table
+  tagline: winners split 90% of the pot · 10% platform cut
+  tab_open: Open lobbies
+  tab_mine: My lobbies
+  col_format: Format
+  col_access: Access
+  col_status: Status
+  col_pledge: Pledge
+  col_full_pot: Full pot
+  col_creator: Creator
+  access_public: Public
+  access_friends: Friends
+  status_open: Open
+  status_started: Started
+  status_settling: Settling
+  empty: No lobbies
+  selected: Selected lobby
+  side_a: Side A
+  side_b: Side B
+  total_pot: Current pot
+  free: Free
+  join_a: Join side A
+  join_b: Join side B
+  create_title: Create a lobby
+  form_format: Format
+  form_access: Access
+  form_pledge: Pledge per player (SUI)
+  form_max_diff: Max level difference
+  form_character: As character
+  no_character: No idle character available
+  full_pot_summary: Full {{format}} pot = {{pot}} SUI · 90% goes to winners
+  create_cta: Create lobby
+friends_panel:
+  title: Friends
+  observed: Observed nearby
+  unseen: Not currently observed
+  none_observed: No friends observed nearby
+  empty: No friends yet
+  placeholder: Name, SuiNS, or 0x address
+  add: Add friend
+  remove: Remove
+  remove_title: Remove friend
+  remove_body: Remove {{name}} from your friend list?
+  error_no_suins: No SuiNS address matches {{name}}.
+  error_target: Enter a character name, SuiNS name, or complete Sui address.
+  error_self: You cannot add yourself.
+  error_duplicate: This player is already in your friend list.
+  cancel: Cancel
+party_panel:
+  title: Party
+  adventurer: Adventurer
+  invited_by: '{{name}} invited you'
+  accept: Accept
+  decline: Decline
+  leader: Leader
+  leave: Leave
+  disband: Disband
+  kick: Kick
+  rescind: Cancel invitation
+  invite_owned: Invite own character
+trade_panel:
+  inbox: Trades
+  close: Close
+  title: Player trade
+  locked: Locked · claims are permanent
+  negotiating: Negotiating · every change resets acceptance
+  your_offer: Your offer
+  their_offer: Their offer
+  accepted: Accepted
+  reviewing: Reviewing
+  add_item: Add item
+  add_character: Add character
+  sui: Add SUI
+  withdraw: Withdraw
+  withdraw_sui: Withdraw my SUI
+  accept: Accept this version
+  claim: Claim
+  claim_sui: Claim {{amount}} SUI
+  finish: Finish trade
 world_hud:
   compass_label: Compass
   zone: ZONE
@@ -104,6 +186,7 @@ world_hud:
   biome: Biome
   world_map: World map
   menu_group: Invite to group
+  menu_friend: Add friend
   menu_trade: Trade
   menu_message: Send a message
   mount_prompt: 'Press {{key}} to mount'
@@ -174,7 +257,8 @@ world_hud:
   zone_reroll_title: 'Zone ready to renew'
   zone_press_reroll: 'Press {{key}} to reroll the zone'
   zone_searching: 'Scouting the zone…'
-  zone_searched_toast: 'The zone gives up its secrets'
+  zone_revealed: 'Zone revealed'
+  zone_coordinates: 'Sector {{zx}} · {{zz}}'
   zone_mobs_found: '{{count}} mobs found'
   zone_resources_found: '{{count}} resources found'
   zone_dungeon_spotted: 'Dungeon spotted'
@@ -297,6 +381,7 @@ marketplace_page:
   delist_success: Listing removed
   buy_pending: Buying listing…
   buy_success: Purchase complete
+  character_roster_full: A 7th character cannot join your roster — 6 is the cap
   collect_pending: Collecting marketplace proceeds…
   collect_success: Marketplace proceeds collected
 shop_page:
@@ -427,7 +512,7 @@ simulator_page:
   spell_level: Level of {name}
   spell_level_option: 'Lv {level} · {cost} pts'
   class_shugo_title: Guardian
-  class_tomoda_title: Tomoda
+  class_tomoda_title: Beastmaster
   class_rojin_title: Prospector
   class_yajin_title: Assassin
   class_tokei_title: Chronomancer
@@ -452,7 +537,7 @@ simulator_page:
   spell_unlock: Unlocks {level}
   reset: Reset
   delete_confirm: Confirm delete
-  class_change_hint: Changing class resets invested spell levels
+  class_change_hint: Changing class resets natural stats and invested spell levels
   spells_unavailable: No spells are unlocked at this level
   save_character: Save character
   equipment: Equipment and relics
@@ -542,6 +627,7 @@ fight_hud:
   unit_turns: turns
   chat_title: Chat
   chat_tab_general: General
+  chat_tab_party: Party
   chat_tab_combat: Combat
   chat_placeholder: Say something…
   chat_you: You
@@ -558,6 +644,9 @@ fight_hud:
   result_survived: Survived
   result_collecting: Collecting loot…
   result_continue: Continue
+  result_close: Close
+  fight_finalize_pending: Fight cleanup is ready.
+  fight_finalize_button: Finalize
   result_retry: Retry
   level_up_title: Level up
   level_up_reached: Level reached
@@ -848,6 +937,8 @@ encyclopedia_page:
     life_steal: LIFE STEAL
     life_steal_desc: "Drain spell effects deal damage and heal the caster for half of the health the target actually loses. Only a player's drain heals: a mob casting the same spell deals its damage and heals nothing."
     life_steal_note: Damage runs through the standard damage formula first, then the caster heals for half of the health the intended target actually lost — a hit redirected onto another fighter, or one the target converts into healing, steals nothing back.
+    chatiment: CHÂTIMENT
+    chatiment_desc: Châtiment converts actual nonlethal HP lost into its characteristic. Each active fighter turn has its own cap; later turns stack as separate five-turn bonuses. Mob damage feeds fully. Player-sourced damage and its cap are halved. Ares does not use erosion.
     healing: HEALING
     healing_desc: Heals apply the spell's authored base value, scaled up by a percentage of your Intelligence, plus a flat Heal bonus from gear and buffs. Healing is capped at the target's maximum health.
     healing_intel_value: +1% healing per Intelligence point
@@ -859,6 +950,7 @@ encyclopedia_page:
     points_per_level: POINTS PER LEVEL
     stat_points: Stat points
     stat_points_value: '{{n}} per level'
+    stat_costs_desc: Characteristic costs depend on class and current natural value. See each class page for its complete ladder.
     spell_points: Spell points
     spell_points_value: '{{n}} per level'
     xp_milestones: XP MILESTONES
@@ -909,7 +1001,7 @@ encyclopedia_page:
     role_archer: Archer
     role_prospector: Prospector
     role_brawler: Brawler
-    role_tomoda: Tomoda
+    role_tomoda: Beastmaster
     role_gambler: Gambler
     role_healer: Healer
     weapon_daggers: Daggers
@@ -1019,6 +1111,10 @@ encyclopedia_page:
   unlimited: UNLIMITED
   cooldown: COOLDOWN
   cooldown_none: NONE
+  characteristic_costs: Characteristic costs
+  characteristic_costs_desc: Natural points follow this class ladder. Equipment does not change the cost.
+  characteristic_cost_band: '{{cost}} pts → +{{gain}} · ≤{{cap}}'
+  characteristic_cost_unlimited: '{{cost}} pts → +{{gain}} · unlimited'
   turns_value: '{{n}} TURNS'
   targeting: TARGETING
   effect_zone: AREA OF EFFECT
@@ -1392,6 +1488,7 @@ characters_page:
     add_point: 'Add a point to {{stat}}'
     remove_point: 'Remove a point from {{stat}}'
     tx_pending: 'Assigning…'
+    point_cost: '{{cost}} pts → +{{gain}}'
     tx_success: 'Stat points assigned'
   spells:
     range_modifiable: 'Modifiable range'

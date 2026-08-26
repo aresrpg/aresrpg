@@ -45,7 +45,7 @@ const known_keys = new Set([
 ])
 
 const detail_input_class =
-  'h-8 border border-white/12 bg-[#090a10] px-2 text-[10px] text-[#e8e4dc] outline-none focus:border-[#c8963c]/60'
+  'h-8 border border-white/12 bg-bg px-2 text-[10px] text-[#e8e4dc] outline-none focus:border-[#c8963c]/60'
 
 const StatRange = ({ label, value }: Readonly<{ label: string; value: number }>) => (
   <div className="border border-white/8 bg-black/15 px-3 py-2 text-center">
@@ -159,7 +159,7 @@ const Resistances = ({
               {titleize_field(element)}
             </span>
             <input
-              className="h-7 w-20 border border-white/10 bg-[#090a10] px-2 text-right text-[10px] tabular-nums"
+              className="h-7 w-20 border border-white/10 bg-bg px-2 text-right text-[10px] tabular-nums"
               onChange={(event) => on_change(['resistances', element], Number(event.target.value) + item_stat_center)}
               type="number"
               value={value}
@@ -320,7 +320,7 @@ const LootEditor = ({
                 <span className="flex items-center gap-1">
                   <input
                     aria-label="Drop chance"
-                    className="h-7 w-16 border border-white/10 bg-[#090a10] px-2 text-right text-[9px]"
+                    className="h-7 w-16 border border-white/10 bg-bg px-2 text-right text-[9px]"
                     onChange={(event) =>
                       on_change(['loot', index, 'chance_bp'], Math.round(Number(event.target.value) * 100))
                     }
@@ -340,7 +340,7 @@ const LootEditor = ({
               </label>
               <input
                 aria-label="Minimum quantity"
-                className="h-7 w-full border border-white/10 bg-[#090a10] px-2 text-right text-[9px]"
+                className="h-7 w-full border border-white/10 bg-bg px-2 text-right text-[9px]"
                 onChange={(event) => on_change(['loot', index, 'min_qty'], Number(event.target.value))}
                 type="number"
                 value={typeof row.min_qty === 'number' ? row.min_qty : 0}
@@ -348,7 +348,7 @@ const LootEditor = ({
               <span className="text-[7px] text-[#555b66] uppercase">to</span>
               <input
                 aria-label="Maximum quantity"
-                className="h-7 w-full border border-white/10 bg-[#090a10] px-2 text-right text-[9px]"
+                className="h-7 w-full border border-white/10 bg-bg px-2 text-right text-[9px]"
                 onChange={(event) => on_change(['loot', index, 'max_qty'], Number(event.target.value))}
                 type="number"
                 value={typeof row.max_qty === 'number' ? row.max_qty : 0}

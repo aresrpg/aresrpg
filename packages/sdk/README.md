@@ -30,8 +30,9 @@ import { SDK } from '@aresrpg/sdk'
 const sdk = SDK({ client, signer })
 await sdk.hydrate([kiosk, cap]) // once per session
 
-// one-shot — sub-second: build (0 RPC) → signAndExecute (1 RPC) → receipt
-const receipt = await sdk.call.raise_stat({ kiosk, cap, character_id, stat: 'strength', amount: 5 })
+// one-shot: build → dry-run exact unsigned bytes → sign → execute → receipt
+// `points` is exact capital spent; Move derives the whole natural-stat gain.
+const receipt = await sdk.call.raise_stat({ kiosk, cap, character_id, stat: 'strength', points: 5 })
 
 // composed PTB (hot potatoes chain through returned results)
 const tx = sdk.tx()
@@ -41,9 +42,10 @@ sdk.doors.launch_fight(tx, { build })
 await sdk.execute(tx)
 ```
 
-- `sdk.execute(tx)` sets sender/gas offline, signs, executes (`showEffects + showObjectChanges +
-showEvents`), **throws on a failed status** (a digest exists = gas burned — never auto-retry),
-  absorbs the receipt into the cache, and returns the receipt for client prediction.
+- `sdk.execute(tx)` resolves sender/gas, dry-runs the exact unsigned bytes, signs only a green
+  transaction, executes once, logs digest plus net gas, **throws on any failed status** (a digest
+  exists = gas burned — never auto-retry), absorbs the receipt into the cache, and returns it for
+  client prediction.
 - `sdk.with_kiosk(tx, kiosk_client, cap, (kiosk, kiosk_cap) => …)` — kiosk composition through
   the official `@mysten/kiosk` `KioskTransaction` (`cap` from `getOwnedKiosks`, fetched once per
   session): a personal cap is borrowed/returned automatically; doors take the bare

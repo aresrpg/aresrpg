@@ -8,6 +8,7 @@
 #[test_only]
 module aresrpg::dungeon_rebalance_tests;
 
+use aresrpg::{dungeon};
 use aresrpg_math::world_map;
 
 fun room(mob_type: vector<u8>): world_map::DungeonRoom {
@@ -18,6 +19,14 @@ fun three_room_content(): world_map::WorldContent {
   let mut content = world_map::empty_world_content();
   world_map::set_dungeon_rooms(&mut content, vector[room(b"frog"), room(b"frog"), room(b"boss")]);
   content
+}
+
+#[test]
+fun same_world_room_join_scope_ignores_the_entry_portal() {
+  dungeon::join_scope_for_testing(
+    b"nauvis".to_string(), 2, 100, 200,
+    b"nauvis".to_string(), 2, 9_000, 8_000,
+  );
 }
 
 #[test]

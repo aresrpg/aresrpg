@@ -30,7 +30,12 @@ import { item_icon } from '../content/assets.ts'
 import { encyclopedia_catalog, titleize, type SeedRecipe } from '../content/catalog.ts'
 import { encyclopedia_text } from '../encyclopedia/copy.ts'
 import { copy_text, type AppCopy, type CopyText } from '../i18n/copy.ts'
-import { allocate_stack_amount, available_item_stacks, stack_merge_target } from '../inventory_stacks.ts'
+import {
+  allocate_stack_amount,
+  available_item_stacks,
+  encumbered_asset_ids,
+  stack_merge_target,
+} from '../inventory_stacks.ts'
 import { dispatch_app, useAppStore } from '../store.ts'
 import { toast } from '../toast.ts'
 
@@ -118,10 +123,12 @@ const CraftControls = ({
   const wallet = useAppStore(({ session }) => session.wallet)
   const inventory = useAppStore(({ session }) => session.inventory)
   const listings = useAppStore(({ marketplace }) => marketplace.own_listings)
+  const trades = useAppStore(({ trade }) => trade.rows)
+  const encumbered = encumbered_asset_ids(listings, trades)
   const [pending, set_pending] = useState(false)
 
   const rows = Object.entries(recipe.inputs).map(([item_type, need]) => {
-    const stacks = available_item_stacks(inventory, listings, item_type, character.kiosk)
+    const stacks = available_item_stacks(inventory, encumbered, item_type, character.kiosk)
     const allocation = allocate_stack_amount(stacks, need)
     return {
       item_type,
@@ -143,7 +150,7 @@ const CraftControls = ({
     set_pending(true)
     const name = output?.name ?? titleize(recipe.output_type)
     const pending_toast = toast.loading(t('jobs.craft.craft_tooltip', { name }))
-    const existing = stack_merge_target(inventory, listings, recipe.output_type, character.kiosk)
+    const existing = stack_merge_target(inventory, encumbered, recipe.output_type, character.kiosk)
     void wallet.character
       .craft({
         character_id: character.id,

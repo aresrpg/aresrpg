@@ -6,13 +6,14 @@ import { DEFAULT_ADMIN_ADDRESS, type CharacterRow } from '@aresrpg/protocol'
 
 import type { AuthSession } from '../../src/auth.ts'
 import {
-  PACKAGE_PROPAGATION_MS,
   can_reuse_core_artifact,
   dependency_artifact_changed,
+  deployment_can_publish,
   deployment_compile_target,
   republish_needs_seed_cleanup,
-  wait_for_package_propagation,
 } from '../../src/admin/admin_deployment.ts'
+import { RPC_PROPAGATION_MS, wait_for_rpc_propagation } from '../../src/rpc_propagation.ts'
+import { settle_seed_cleanup } from '../../src/modules/admin.ts'
 import { initial_app_state, reduce_app_state } from '../../src/store.ts'
 
 const settings = Object.freeze({
@@ -35,6 +36,9 @@ const auth_session = (address = '0xowner'): AuthSession =>
     // action namespaces are never exercised by these reducer/DOM tests
     fight: {} as never,
     dungeon: {} as never,
+    kolizeum: {} as never,
+    friends: {} as never,
+    party: {} as never,
     character: {} as never,
     marketplace: {} as never,
     stacks: {} as never,
@@ -134,6 +138,36 @@ describe('app state', () => {
     const artifact = { package_name: 'aresrpg', digest: [], modules: [], dependencies: [] } as const
     expect(can_reuse_core_artifact(artifact, false)).toBeTrue()
     expect(can_reuse_core_artifact(artifact, true)).toBeFalse()
+  })
+
+  test('a game package published before bootstrap can resume without its in-memory artifact', () => {
+    const base = create_state()
+    const resumable = {
+      ...base,
+      admin: {
+        ...base.admin,
+        deployment: {
+          ...base.admin.deployment,
+          status: 'ready' as const,
+          artifact: null,
+          pins: {
+            package: '0xpackage',
+            math_package: null,
+            upgrade_cap: null,
+            math_upgrade_cap: null,
+            publisher: null,
+            version: { id: null, shared_version: null },
+            loot_registry: { id: null, shared_version: null },
+          },
+        },
+      },
+    }
+
+    expect(deployment_can_publish(resumable.admin.deployment)).toBeTrue()
+    expect(reduce_app_state(resumable, { type: 'admin/contracts_publish' }).admin.deployment).toMatchObject({
+      status: 'publishing',
+      operation: 'publish',
+    })
   })
 
   test('receipt-derived shop facts survive routed page changes without a transaction reducer', () => {
@@ -454,8 +488,17 @@ describe('app state', () => {
 
   test('package upgrades wait before the next RPC node must resolve the new package', async () => {
     const waits: number[] = []
-    await wait_for_package_propagation(async (milliseconds) => void waits.push(milliseconds))
-    expect(waits).toEqual([PACKAGE_PROPAGATION_MS])
+    await wait_for_rpc_propagation(async (milliseconds) => void waits.push(milliseconds))
+    expect(waits).toEqual([RPC_PROPAGATION_MS])
+  })
+
+  test('automatic seed cleanup waits for the final write before draining its gas coin', async () => {
+    const order: string[] = []
+    await settle_seed_cleanup(
+      async () => void order.push('release'),
+      async () => void order.push('propagated')
+    )
+    expect(order).toEqual(['propagated', 'release'])
   })
 })
 

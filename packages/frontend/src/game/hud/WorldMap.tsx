@@ -113,7 +113,7 @@ export const WorldMap = ({
       (zx, zz) => (world_name ? zone_key(world_name, zx, zz) in world_state.zones : false),
       true
     )
-    draw_spawn_markers(context, view, spawn_markers(world_state))
+    draw_spawn_markers(context, view, spawn_markers(world_state, world_name))
     draw_dungeon_portal_markers(context, view, dungeon_portal_markers(world_state, world_name))
     draw_players(context, view, Object.values(world_state.players))
     draw_self_arrow(context, view, pose.x, pose.z, camera_heading(pose.yaw))

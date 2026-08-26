@@ -18,7 +18,7 @@ import { env } from '../env.ts'
 import { toast } from '../toast.ts'
 import type { AppModule } from '../store.ts'
 import { is_rune } from '../characters/forge_eligibility.ts'
-import { stack_merge_target } from '../inventory_stacks.ts'
+import { encumbered_asset_ids, stack_merge_target } from '../inventory_stacks.ts'
 
 const RETRY_COOLDOWN_MS = 30_000
 /** the indexer projects a yield a beat after finality — one per-item request covers it */
@@ -69,11 +69,12 @@ const observe: NonNullable<AppModule['observe']> = ({ events, dispatch, get_stat
     const kiosk = state.session.characters[0]?.kiosk ?? inventory[0]?.kiosk
     const character = state.session.characters.find((row) => row.kiosk === kiosk)
     const custody = kiosk ? { kiosk, kiosk_cap: character?.kiosk_cap } : undefined
+    const encumbered = encumbered_asset_ids(state.marketplace.own_listings, state.trade.rows)
     if (claim.kind === 'box') {
       const rolled_item_type = claim.rolled_template ? rolled_item_types().get(claim.rolled_template) : null
       if (!rolled_item_type)
         throw new Error(`The rolled template ${claim.rolled_template} is not in the authored catalog`)
-      const existing = stack_merge_target(inventory, state.marketplace.own_listings, rolled_item_type, kiosk)
+      const existing = stack_merge_target(inventory, encumbered, rolled_item_type, kiosk)
       // the yield's CONTENTS stream from the server (ItemWritten — projection-driven);
       // the receipt only settles the claim locally
       await wallet.character.claim_loot({ claim_id: claim.id, rolled_item_type, existing, custody })
@@ -84,7 +85,7 @@ const observe: NonNullable<AppModule['observe']> = ({ events, dispatch, get_stat
       .filter((item) => item.category === 'rune')
       .map(({ item_type }) => ({
         item_type,
-        existing: stack_merge_target(inventory.filter(is_rune), state.marketplace.own_listings, item_type, kiosk),
+        existing: stack_merge_target(inventory.filter(is_rune), encumbered, item_type, kiosk),
       }))
     await wallet.character.redeem_crush({ claim_id: claim.id, runes, custody })
     dispatch({ type: 'inventory/claim_settled', claim_id: claim.id })

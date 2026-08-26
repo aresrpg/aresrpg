@@ -94,33 +94,39 @@ export const live_spawns = (
 
 /** Mob/resource spawn markers of the tracked zones, in CLIENT space — the LIVE population of
  *  each (the zone_math twin runs server-side, never here). */
-export const spawn_markers = (world: WorldState): readonly SpawnMarker[] =>
-  Object.keys(world.spawns).flatMap((key) => {
-    const population = live_spawns(world, key)
-    const seed = world.zones[key]?.seed
-    if (!seed) return []
-    const [, zx = '0', zz = '0'] = key.split(':')
-    return [
-      ...population.mobs.map((group) => ({
-        kind: 'mob' as const,
-        spawn_id: mob_group_id(key, seed, group.index),
-        x: chain_to_client_coordinate(group.x),
-        z: chain_to_client_coordinate(group.z),
-        zx: Number(zx),
-        zz: Number(zz),
-        size: group.members.length,
-      })),
-      ...population.resources.map((pack) => ({
-        kind: 'resource' as const,
-        spawn_id: resource_pack_id(key, seed, pack.index),
-        x: chain_to_client_coordinate(pack.x),
-        z: chain_to_client_coordinate(pack.z),
-        zx: Number(zx),
-        zz: Number(zz),
-        item_type: pack.item_type,
-      })),
-    ]
-  })
+export const spawn_markers = (
+  world: WorldState,
+  selected_world: string | null = world.tracked_world
+): readonly SpawnMarker[] =>
+  selected_world
+    ? Object.keys(world.spawns).flatMap((key) => {
+        if (!key.startsWith(`${selected_world}:`)) return []
+        const population = live_spawns(world, key)
+        const seed = world.zones[key]?.seed
+        if (!seed) return []
+        const [, zx = '0', zz = '0'] = key.split(':')
+        return [
+          ...population.mobs.map((group) => ({
+            kind: 'mob' as const,
+            spawn_id: mob_group_id(key, seed, group.index),
+            x: chain_to_client_coordinate(group.x),
+            z: chain_to_client_coordinate(group.z),
+            zx: Number(zx),
+            zz: Number(zz),
+            size: group.members.length,
+          })),
+          ...population.resources.map((pack) => ({
+            kind: 'resource' as const,
+            spawn_id: resource_pack_id(key, seed, pack.index),
+            x: chain_to_client_coordinate(pack.x),
+            z: chain_to_client_coordinate(pack.z),
+            zx: Number(zx),
+            zz: Number(zz),
+            item_type: pack.item_type,
+          })),
+        ]
+      })
+    : Object.freeze([])
 
 export const dungeon_portal_markers = (
   world: WorldState,

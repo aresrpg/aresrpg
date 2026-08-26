@@ -12,11 +12,13 @@ import { ModalFrame } from '../../components/ModalFrame.tsx'
 import { content_catalog } from '../../content/catalog.ts'
 import type { AppCopy } from '../../i18n/copy.ts'
 import { dispatch_app, useAppStore } from '../../store.ts'
+import { END_TURN_SUBMIT_GUARD_MS } from '../../modules/fight_lifecycle.ts'
 import { ActionSlots } from '../hud/ActionSlots.tsx'
 import { VitalsDisplay } from '../hud/VitalsDisplay.tsx'
 
 import {
   select_fight_view,
+  fight_turn_key,
   fight_view_with_display,
   turn_seconds_remaining,
   type FightActionSelection,
@@ -25,7 +27,7 @@ import {
   type FightSpellView,
 } from './fight_projection.ts'
 import { FightTimeline, type MobIconLookup } from './FightTimeline.tsx'
-import { fight_turn_card_after_observation, FightTurnCard } from './FightTurnCard.tsx'
+import { fight_turn_card_view, FightTurnCard, type FightTurnAnnouncement } from './FightTurnCard.tsx'
 import { Chat } from '../../components/Chat.tsx'
 import './fight_hud.css'
 
@@ -34,9 +36,10 @@ const LazyFightSpell = lazy(() => import('./FightSpell.tsx').then(({ FightSpell 
 const template = (source: string, values: Readonly<Record<string, string | number>>): string =>
   Object.entries(values).reduce((text, [key, value]) => text.replaceAll(`{${key}}`, String(value)), source)
 
-const submit_end_turn = (fighter: bigint): void =>
+const submit_end_turn = (fight: string | null, fighter: bigint): void =>
   dispatch_app({
     type: 'fight/input',
+    fight,
     origin: 'local',
     input: { type: 'end_turn', fighter, observed_ms: BigInt(Date.now()) },
   })
@@ -106,8 +109,6 @@ const FightVitals = ({
 
 // 6px is the radius this HUD's own controls carry (`.fight-hud__controls button`)
 const BANNER_BUTTON = 'mt-1 rounded-[6px] px-4 py-1.5 text-[10px] tracking-[0.14em]'
-const END_TURN_SUBMIT_GUARD_MS = 500
-
 export const end_turn_wait_ms = (observed_at_ms: number, now_ms: number): number =>
   Math.max(0, observed_at_ms + Number(CONTRACT_CONSTANTS.turn_min_ms) + END_TURN_SUBMIT_GUARD_MS - now_ms)
 
@@ -218,6 +219,7 @@ export const FightHud = ({
   actions_locked,
   presentation_queued = false,
   presented_turn_seat = null,
+  turn_announcement = null,
   mob_icon_for,
 }: Readonly<{
   copy: AppCopy
@@ -231,6 +233,7 @@ export const FightHud = ({
   // the seat whose TURN CUE is currently presented: the timeline card follows the played
   // cues (mob turns hold their floor), never the canonical head that reconciles instantly
   presented_turn_seat?: bigint | null
+  turn_announcement?: FightTurnAnnouncement | null
 }>) => {
   const fight = useAppStore((state) => state.fight)
   const session = useAppStore((state) => state.session)
@@ -267,35 +270,13 @@ export const FightHud = ({
     () => (canonical_view ? fight_view_with_display(canonical_view, display_fighters) : null),
     [canonical_view, display_fighters]
   )
-  const turn_key =
-    fight.checkpoint && view && view.active_seat !== null
-      ? `${fight.checkpoint.contract.id}:${view.active_seat}:${fight.checkpoint.contract.turn_started_ms}`
-      : null
-  const [turn_card, set_turn_card] = useState(() =>
-    fight_turn_card_after_observation(
-      null,
-      view?.timeline ?? Object.freeze([]),
-      presented_turn_seat,
-      turn_key,
-      presentation_queued
-    )
-  )
+  const turn_key = fight.checkpoint && view ? fight_turn_key(fight.checkpoint.contract, view.active_seat) : null
+  const displayed_turn_card = fight_turn_card_view(view?.timeline ?? Object.freeze([]), turn_announcement)
   const [observed_turn, set_observed_turn] = useState(() => ({ key: turn_key, at_ms: performance.now() }))
   const crank_hidden = crank_prompt_hidden(crank_attempt, turn_key, fight.restore_serial)
   useEffect(() => {
     if (observed_turn.key !== turn_key) set_observed_turn({ key: turn_key, at_ms: performance.now() })
   }, [observed_turn.key, turn_key])
-  useEffect(() => {
-    set_turn_card((current) =>
-      fight_turn_card_after_observation(
-        current,
-        view?.timeline ?? Object.freeze([]),
-        presented_turn_seat,
-        turn_key,
-        presentation_queued
-      )
-    )
-  }, [presentation_queued, presented_turn_seat, turn_key, view?.timeline])
   useEffect(() => {
     if (crank_attempt && !crank_hidden) set_crank_attempt(null)
   }, [crank_attempt, crank_hidden])
@@ -349,26 +330,15 @@ export const FightHud = ({
     return () => globalThis.removeEventListener('keydown', keydown)
   }, [actions_locked, select_action, selected_action, view])
 
-  useEffect(() => {
-    if (
-      !fight.end_turn_queued ||
-      !fight.checkpoint ||
-      !view?.can_end_turn ||
-      !view.selected ||
-      !min_turn_ready ||
-      actions_locked
-    )
-      return
-    submit_end_turn(view.selected.seat)
-    dispatch_app({ type: 'fight/end_turn_queued', fight: fight.checkpoint.contract.id, queued: false })
-  }, [actions_locked, fight.checkpoint, fight.end_turn_queued, min_turn_ready, view])
-
   if (!view || !fight.checkpoint) return null
+  const fight_id = fight.checkpoint.contract.id
+  const command_fight = fight.mode === 'remote' ? fight_id : null
   if (view.phase === 'placement') {
     const own_seat = view.selected?.seat
     const own_ready =
       fight.mode === 'remote' && own_seat !== undefined
-        ? (fight.checkpoint.contract.fighters[Number(own_seat)]?.ready ?? false)
+        ? (fight.checkpoint.contract.fighters[Number(own_seat)]?.ready ?? false) ||
+          fight.ready_submitted_seat === Number(own_seat)
         : null
     // the `--fh-*` palette, the mono face and the card's own chrome are all declared on
     // `.fight-hud`; a banner rendered outside it inherits nothing and reads as bare text
@@ -380,17 +350,28 @@ export const FightHud = ({
           on_force_start={() =>
             dispatch_app({
               type: 'fight/input',
+              fight: command_fight,
               origin: 'local',
               input: { type: 'start', observed_ms: BigInt(Date.now()) },
             })
           }
           on_forfeit={() =>
             own_seat !== undefined &&
-            dispatch_app({ type: 'fight/input', origin: 'local', input: { type: 'forfeit', fighter: own_seat } })
+            dispatch_app({
+              type: 'fight/input',
+              fight: command_fight,
+              origin: 'local',
+              input: { type: 'forfeit', fighter: own_seat },
+            })
           }
           on_ready={() =>
             own_seat !== undefined &&
-            dispatch_app({ type: 'fight/input', origin: 'local', input: { type: 'ready', fighter: own_seat } })
+            dispatch_app({
+              type: 'fight/input',
+              fight: command_fight,
+              origin: 'local',
+              input: { type: 'ready', fighter: own_seat },
+            })
           }
           ready={own_ready}
           starting={Boolean(own_ready && view.ready_starts_fight)}
@@ -406,30 +387,31 @@ export const FightHud = ({
   const queue_or_end_turn = (): void => {
     if (fight.transaction_pending || fight.end_turn_queued || fight.end_turn_submitted) return
     if (actions_locked || !min_turn_ready) {
-      dispatch_app({ type: 'fight/end_turn_queued', fight: fight.checkpoint!.contract.id, queued: true })
+      dispatch_app({ type: 'fight/end_turn_queued', fight: fight_id, queued: true })
       return
     }
-    submit_end_turn(selected.seat)
+    submit_end_turn(command_fight, selected.seat)
   }
   const forfeit = (): void => {
     set_forfeit_open(false)
     dispatch_app({
       type: 'fight/input',
+      fight: command_fight,
       origin: 'local',
       input: { type: 'forfeit', fighter: selected.seat },
     })
   }
   const reset_turn = (): void => {
     select_action(null)
-    dispatch_app({ type: 'fight/reset_turn' })
+    dispatch_app({ type: 'fight/reset_turn', fight: command_fight })
   }
   return (
     <div className="fight-hud">
-      {turn_card && (
+      {displayed_turn_card && (
         <FightTurnCard
-          fighter={turn_card.fighter}
-          key={turn_card.key}
-          level_label={template(copy.simulator_page.level, { level: turn_card.fighter.level.toString() })}
+          fighter={displayed_turn_card.fighter}
+          key={displayed_turn_card.key}
+          level_label={template(copy.simulator_page.level, { level: displayed_turn_card.fighter.level.toString() })}
           mob_icon_for={mob_icon_for}
         />
       )}
@@ -442,6 +424,7 @@ export const FightHud = ({
             set_crank_attempt(Object.freeze({ turn_key, restore_serial: fight.restore_serial }))
             dispatch_app({
               type: 'fight/input',
+              fight: command_fight,
               origin: 'local',
               input: { type: 'crank', observed_ms: BigInt(Date.now()) },
             })
@@ -467,6 +450,7 @@ export const FightHud = ({
         }
       />
       <Chat
+        fight={fight_id}
         names={Object.fromEntries(view.timeline.map(({ seat, name }) => [Number(seat), name]))}
         // stat_* display names live in ONE home (simulator_page, stat_name's section) — the
         // chat resolves them through this merge instead of carrying duplicate rows

@@ -33,7 +33,7 @@ const SimulatorPage = ({ copy, scene }: Readonly<{ copy: AppCopy; scene: SceneHa
     // canvas underneath — an opaque shell here would hide the very world the board stands in,
     // and would eat the camera's wheel/drag before they reach the canvas.
     <section className="pointer-events-none relative flex min-h-full flex-1 flex-col overflow-hidden">
-      <header className="pointer-events-auto z-10 flex h-14 shrink-0 items-center gap-4 border-b border-white/8 bg-[#111119]/94 px-5">
+      <header className="pointer-events-auto z-10 flex h-14 shrink-0 items-center gap-4 border-b border-white/8 bg-surface-low/94 px-5">
         <Swords aria-hidden="true" className="text-[#c8963c]" size={15} />
         <div className="min-w-0 flex-1">
           <h1 className="text-[11px] font-semibold tracking-[0.18em] uppercase">{text.title}</h1>
@@ -52,7 +52,7 @@ const SimulatorPage = ({ copy, scene }: Readonly<{ copy: AppCopy; scene: SceneHa
       </header>
 
       <div className="grid min-h-0 flex-1 grid-cols-[240px_minmax(0,1fr)]">
-        <aside className="pointer-events-auto flex min-h-0 flex-col border-r border-white/11 bg-[#181c1f]/95">
+        <aside className="pointer-events-auto flex min-h-0 flex-col border-r border-border bg-surface/95">
           <header className="flex items-center gap-2 border-b border-white/8 px-3 py-3">
             <h2 className="min-w-0 flex-1 text-[9px] tracking-[0.2em] text-[#67adff] uppercase">{text.characters}</h2>
             <button
@@ -175,7 +175,7 @@ const SimulatorPage = ({ copy, scene }: Readonly<{ copy: AppCopy; scene: SceneHa
                   setup: simulator_fight_setup(simulator),
                   seed: simulator.seed,
                 })
-                dispatch_app({ type: 'fight/input', input: { type: 'start' }, origin: 'local' })
+                dispatch_app({ type: 'fight/input', fight: null, input: { type: 'start' }, origin: 'local' })
               }}
               type="button"
             >

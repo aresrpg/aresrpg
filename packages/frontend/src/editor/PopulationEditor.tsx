@@ -56,7 +56,7 @@ const InlineNumber = ({
     <input
       aria-label={label}
       autoFocus
-      className="h-7 w-16 border border-white/10 bg-[#090a10] px-1.5 text-right text-[8px] tabular-nums outline-none focus:border-[#4a9eff]/60"
+      className="h-7 w-16 border border-white/10 bg-bg px-1.5 text-right text-[8px] tabular-nums outline-none focus:border-[#4a9eff]/60"
       max={maximum}
       min={minimum}
       onBlur={() => set_editing(false)}

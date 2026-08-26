@@ -35,10 +35,10 @@ const CELL_KINDS = Object.freeze([
   'start_b',
 ] as const satisfies readonly BoardCellKind[])
 const cell_styles: Readonly<Record<BoardCellKind, string>> = Object.freeze({
-  void: 'border-dashed border-white/8 bg-[#08090e]',
+  void: 'border-dashed border-white/8 bg-bg',
   floor: 'border-white/12 bg-[#171b22]',
   obstacle: 'border-[#9f7a4e]/45 bg-[#5d4830]',
-  hole: 'border-[#56606e]/45 bg-[#030407] shadow-[inset_0_0_8px_#000]',
+  hole: 'border-[#56606e]/45 bg-black shadow-[inset_0_0_8px_#000]',
   start_a: 'border-[#5fb9ff]/55 bg-[#2b8fdb]',
   start_b: 'border-[#ff7696]/55 bg-[#b13f5d]',
 })
@@ -60,7 +60,7 @@ const cell_label = (text: AppCopy['demo_page'], kind: BoardCellKind): string =>
 const BoardPreview = ({ board }: Readonly<{ board: AuthoredBoard }>) => (
   <svg
     aria-hidden
-    className="block aspect-square w-full bg-[#05070a]"
+    className="block aspect-square w-full bg-bg"
     viewBox={`0 0 ${board.width * PREVIEW_CELL} ${board.height * PREVIEW_CELL}`}
   >
     {Array.from({ length: board.height * BOARD_GRID_WIDTH }, (_, cell) => {
@@ -154,7 +154,7 @@ export const BoardEditor = ({
 
   return (
     <div className="mx-auto flex min-h-full max-w-7xl flex-col gap-4">
-      <header className="flex flex-wrap items-center justify-between gap-3 border border-white/10 bg-[#0c0f14] p-3">
+      <header className="flex flex-wrap items-center justify-between gap-3 border border-white/10 bg-surface-low p-3">
         <div className="flex items-center gap-2">
           <button
             className="flex h-9 cursor-pointer items-center gap-2 border border-white/10 px-3 text-[8px] tracking-[0.14em] text-[#9096a0] uppercase hover:border-white/25 hover:text-[#e8e4dc] disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:border-white/10 disabled:hover:text-[#9096a0]"
@@ -208,7 +208,7 @@ export const BoardEditor = ({
       </div>
 
       <div className="grid flex-1 gap-4 lg:grid-cols-[180px_minmax(0,1fr)]">
-        <aside className="h-fit border border-white/10 bg-[#0c0f14] p-3">
+        <aside className="h-fit border border-white/10 bg-surface-low p-3">
           <p className="mb-2 text-[7px] tracking-[0.16em] text-[#626975] uppercase">{text.board_cell_type}</p>
           <div className="grid gap-1.5">
             {CELL_KINDS.map((kind) => (
@@ -230,7 +230,7 @@ export const BoardEditor = ({
           </div>
         </aside>
 
-        <div className="h-[calc(100vh-300px)] min-h-[240px] overflow-hidden border border-white/10 bg-[#05070a] p-4 sm:p-8">
+        <div className="h-[calc(100vh-300px)] min-h-[240px] overflow-hidden border border-white/10 bg-bg p-4 sm:p-8">
           <div className="grid size-full place-items-center" ref={set_board_view}>
             <div
               className="grid touch-none select-none bg-white/5"
@@ -311,7 +311,7 @@ export const BoardGallery = ({ text }: Readonly<{ text: AppCopy['demo_page'] }>)
   }
 
   return (
-    <section className="absolute inset-0 overflow-y-auto bg-[#08090e] px-6 pt-20 pb-10">
+    <section className="absolute inset-0 overflow-y-auto bg-bg px-6 pt-20 pb-10">
       {selected_board && selected_index !== null ? (
         <BoardEditor
           board={selected_board}
@@ -356,7 +356,7 @@ export const BoardGallery = ({ text }: Readonly<{ text: AppCopy['demo_page'] }>)
           )}
           <div className="grid grid-cols-[repeat(auto-fill,minmax(180px,1fr))] gap-4">
             {boards.map((board, index) => (
-              <article className="border border-white/10 bg-[#0c0f14] p-2" key={index}>
+              <article className="border border-white/10 bg-surface-low p-2" key={index}>
                 <button
                   className="block w-full cursor-pointer text-left hover:brightness-125"
                   onClick={() => set_selected_index(index)}

@@ -28,7 +28,19 @@ const settings: GameSettings = Object.freeze({
 })
 
 const character = (world: string | undefined): CharacterRow =>
-  ({ id: '0xc1', name: 'Aiden', world, jobs: {}, spells: {} }) as unknown as CharacterRow
+  ({
+    id: '0xc1',
+    name: 'Aiden',
+    world,
+    checkpoint_world: world,
+    x: world_center,
+    z: world_center,
+    at_ms: 0,
+    pet: false,
+    equipment: [],
+    jobs: {},
+    spells: {},
+  }) as unknown as CharacterRow
 
 /** The pose feed throttles to one publish per 50ms — a null clears the gate, so a test that
  *  moves the character twice in one tick must step through it rather than fight it. */
@@ -69,6 +81,16 @@ describe('a zone is searchable before discovery and after the chain reroll TTL',
       z: world_center,
       kind: 'discover',
       previous_searched_at_ms: null,
+    })
+  })
+
+  test('a zone search is offered only when the chain checkpoint can prove the current walk', () => {
+    at(100, 0)
+
+    expect(searchable_zone(standing('01_first_shore'), 1_000)).toBeNull()
+    expect(searchable_zone(standing('01_first_shore'), 9_000)).toMatchObject({
+      x: world_center + 100,
+      z: world_center,
     })
   })
 
@@ -150,6 +172,9 @@ describe('a zone is searchable before discovery and after the chain reroll TTL',
 
     // past the world's low edge the chain has no zone at all — coordinates are unsigned
     at(-world_center - 10, 0)
+    expect(searchable_zone(standing('01_first_shore'))).toBeNull()
+
+    at(world_center + 10, 0)
     expect(searchable_zone(standing('01_first_shore'))).toBeNull()
 
     // before the walker's first frame there is no proven position to search from

@@ -33,3 +33,7 @@ fun teleport_rejects_duration() { effect(10, 1) }
 #[test]
 #[expected_failure(abort_code = EBadTurns, location = aresrpg_math::spell_effect)]
 fun dispel_rejects_duration() { effect(16, 1) }
+
+#[test]
+#[expected_failure(abort_code = EBadTurns, location = aresrpg_math::spell_effect)]
+fun chatiment_rejects_a_non_retro_duration() { effect(7, 4) }

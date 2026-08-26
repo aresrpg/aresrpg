@@ -114,6 +114,7 @@ export const FightViewport = ({
   on_presentation_cue?: (cue: FightPresentationCue, phase: FightCuePhase) => void
   on_presentation_active?: (active: boolean) => void
   presentation_request?: Readonly<{
+    fight: string
     batch: number
     cues: readonly FightPresentationCue[]
     presented: () => void
@@ -271,7 +272,7 @@ export const FightViewport = ({
     return () => {
       current = false
     }
-  }, [presentation_request?.batch])
+  }, [presentation_request?.fight, presentation_request?.batch])
 
   useEffect(() => {
     const ids = tracked_ids ? tracked_ids.split('\u0000') : []

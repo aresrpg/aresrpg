@@ -323,10 +323,10 @@ export const ContentPage = ({ text }: Readonly<{ text: Readonly<Record<string, s
 
   return (
     <div
-      className={`grid min-h-0 flex-1 overflow-hidden bg-[#0b0d0e] ${content_page_columns(editor.domain)}`}
+      className={`grid min-h-0 flex-1 overflow-hidden bg-bg ${content_page_columns(editor.domain)}`}
       data-content-editor-shell=""
     >
-      <nav className="overflow-y-auto border-r border-white/10 bg-[#101315] py-3">
+      <nav className="overflow-y-auto border-r border-white/10 bg-surface-low py-3">
         {content_navigation_domains.map((domain) => {
           const domain_file = editor.files[domain.id]
           const count = domain_file ? entity_rows(domain.id, domain_file.value).length : 0
@@ -421,10 +421,10 @@ export const ContentPage = ({ text }: Readonly<{ text: Readonly<Record<string, s
         />
       )}
 
-      <aside className="flex min-h-0 flex-col border-r border-white/10 bg-[#181c1f]">
-        <div className="border-b border-white/10 bg-[#1e2327] p-3">
+      <aside className="flex min-h-0 flex-col border-r border-white/10 bg-surface">
+        <div className="border-b border-white/10 bg-surface-high p-3">
           <input
-            className="h-8 w-full border border-white/14 bg-[#0d1012] px-2 text-[9px] text-[#e3dfd7] outline-none focus:border-[#4a9eff]/60"
+            className="h-8 w-full border border-white/14 bg-bg px-2 text-[9px] text-[#e3dfd7] outline-none focus:border-[#4a9eff]/60"
             onChange={(event) => dispatch_app({ type: 'editor/query_changed', query: event.target.value })}
             placeholder="Search…"
             value={editor.query}
@@ -500,8 +500,8 @@ export const ContentPage = ({ text }: Readonly<{ text: Readonly<Record<string, s
         </div>
       </aside>
 
-      <main className="min-h-0 overflow-y-auto bg-[#1e2327] p-4">
-        <header className="sticky top-0 z-[2] -mx-4 -mt-4 mb-4 flex items-center justify-between gap-3 border-b border-white/12 bg-[#242a2f]/96 px-4 py-3 shadow-[0_8px_24px_rgba(0,0,0,0.16)] backdrop-blur-lg">
+      <main className="min-h-0 overflow-y-auto bg-surface-high p-4">
+        <header className="sticky top-0 z-[2] -mx-4 -mt-4 mb-4 flex items-center justify-between gap-3 border-b border-white/12 bg-surface-raised/96 px-4 py-3 shadow-[0_8px_24px_rgba(0,0,0,0.16)] backdrop-blur-lg">
           <div className="flex min-w-0 items-center gap-3">
             {selected && <EntityIcon detail reference={selected_asset} />}
             <div className="min-w-0">

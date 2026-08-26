@@ -111,7 +111,8 @@ export const create_grid_fallback = (
     },
     set_fight_sword_label: (id, element) => fight_swords?.set_label(id, element),
     set_resource_nodes: resource_nodes.set_markers,
-    set_resource_node_label: resource_nodes.set_label,
+    set_resource_node_label: (id, element) =>
+      entity_labels.set_static(`resource:${id}`, element, () => resource_nodes.label_anchor(id)),
     // the retrowave fallback has no world dressing — there is no gate to label
     set_portal_label: () => {},
     set_dungeon_portals: () => {},

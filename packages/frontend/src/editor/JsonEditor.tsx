@@ -7,7 +7,7 @@ import { item_stat_weight } from './item_power.ts'
 import type { JsonPath, JsonValue } from './seed_editor.ts'
 
 const base_input =
-  'h-8 border border-white/12 bg-[#090a10] px-2 text-[10px] text-[#e3dfd7] outline-none transition-colors focus:border-[#4a9eff]/70 disabled:cursor-not-allowed disabled:border-white/5 disabled:bg-white/[0.025] disabled:text-[#737781]'
+  'h-8 border border-white/12 bg-bg px-2 text-[10px] text-[#e3dfd7] outline-none transition-colors focus:border-[#4a9eff]/70 disabled:cursor-not-allowed disabled:border-white/5 disabled:bg-white/[0.025] disabled:text-[#737781]'
 const small_button =
   'h-7 cursor-pointer border border-white/12 bg-white/[0.035] px-2 text-[8px] tracking-[0.12em] text-[#9da1ab] uppercase hover:border-[#c8963c]/50 hover:text-[#efbd45]'
 const never_readonly = (): boolean => false
@@ -157,7 +157,7 @@ const PrimitiveEditor = ({
         >
           {!options.includes(value) && <option value={value}>{value}</option>}
           {options.map((option) => (
-            <option className="bg-[#0a0a0f]" key={option} value={option}>
+            <option className="bg-bg" key={option} value={option}>
               {option || 'none'}
             </option>
           ))}
@@ -185,7 +185,7 @@ const PrimitiveEditor = ({
     )
   return value.length > 100 ? (
     <textarea
-      className="min-h-20 w-full max-w-3xl resize-y border border-white/12 bg-[#090a10] p-2 text-[10px] leading-5 text-[#e3dfd7] outline-none focus:border-[#4a9eff]/70 disabled:opacity-55"
+      className="min-h-20 w-full max-w-3xl resize-y border border-white/12 bg-bg p-2 text-[10px] leading-5 text-[#e3dfd7] outline-none focus:border-[#4a9eff]/70 disabled:opacity-55"
       disabled={read_only}
       onChange={(event) => on_change(event.target.value)}
       value={value}
@@ -234,7 +234,7 @@ const StatsEditor = ({
   return (
     <div className="grid gap-px overflow-hidden border border-white/8 bg-white/8 sm:grid-cols-2 xl:grid-cols-3">
       {stats.map((stat) => (
-        <div className="bg-[#0b0c12] p-2.5" key={stat}>
+        <div className="bg-surface-low p-2.5" key={stat}>
           <div className="mb-2 flex items-center gap-2">
             <span className={`size-2 ${stat_color(stat)}`} />
             <span className="text-[8px] tracking-[0.1em] text-[#a7aab2] uppercase">{humanize(stat)}</span>
@@ -493,7 +493,7 @@ export const JsonEditor = ({
     return (
       <div className="space-y-2">
         {value.map((row, index) => (
-          <div className="border border-white/9 bg-[#090a10]" key={`${path.join('.')}-${index}`}>
+          <div className="border border-white/9 bg-bg" key={`${path.join('.')}-${index}`}>
             <div className="flex items-center justify-between gap-2 border-b border-white/7 px-2.5 py-2">
               <span className="text-[8px] tracking-[0.12em] text-[#7f8490] uppercase">
                 {array_row_label(field_key, index)}

@@ -7,7 +7,7 @@
 ///   • SCRIBE (`scribe`) — apply ONE rune to a kiosk-held gear item. The rune is a stackable
 ///     item whose `item_type` maps to its catalog coords (`rune_of`); exactly 1 unit burns
 ///     BEFORE the roll (identical write-set every outcome). Gate: the gear's CATEGORY names its
-///     forgery job (owner: "its category defines the job to scribe"); that job must be ≥ 70. The
+///     forgery job (owner: "its category defines the job to scribe"); that job must be ≥ 1 while testing. The
 ///     3-outcome puits gamble runs off `apply_rune`; the new rolled block + the per-item
 ///     `ForgeState` DF (puits + application counts) are written; job xp banks on the forgery job.
 ///
@@ -41,17 +41,17 @@ use sui::{
 
 // ╔════════════════ [ Constants ] ════════════════════════════════════════════ ]
 
-/// The unlock: a rune scribes only if the gear's forgery job has reached level 70.
-const RUNE_UNLOCK_LEVEL: u64 = 70;
-/// Forgemagie has NO progression (owner 2026-08-11): the craft job only GATES at 70, it never
+/// Temporary test unlock: restore the production mastery gate after the character flow pass.
+const RUNE_UNLOCK_LEVEL: u64 = 1;
+/// Forgemagie has NO progression (owner 2026-08-11): the craft job only gates access, it never
 /// improves the odds. The ported `apply_rune` takes a runic level (Dofus fed the forgemage's own
-/// level), so we PIN it at the unlock threshold — everyone scribes at qualified-master competence,
+/// level), so we PIN it at the production mastery level — everyone scribes at qualified-master competence,
 /// a FLAT gamble driven by proximity to the template max + the item's puits. Dofus-faithful rates.
 const FORGE_LEVEL: u64 = 70;
 /// One application counter per stat id (`rune_catalog::stat_count`).
 const APPS_LEN: u64 = 15;
 
-const EScribeLocked: u64 = 2701; // scribe: the gear's forgery job is below level 70
+const EScribeLocked: u64 = 2701; // scribe: the gear's forgery job is below the current unlock
 const EMaxApps: u64 = 2703; // scribe: this rune's per-item application cap is reached
 const EWrongItem: u64 = 2704; // scribe: gear/template mismatch, or the gear carries no rolled block
 const ENotForgeable: u64 = 2705; // the item's category has no forgery job (not gear)
@@ -119,7 +119,7 @@ public(package) fun scribe(
   let rune_type = { let r: &Item = kiosk.borrow(cap, rune_item_id); r.item_type() };
   let (rune_stat, rune_tier) = cat::rune_of(rune_type);
 
-  // the forgery job from the gear's category — a pure GATE at 70 (no odds scaling)
+  // the forgery job from the gear's category — a pure gate (no odds scaling)
   let job = fj(item_rows::template_category(gear_template));
   {
     let chr: &Character = kiosk.borrow(cap, character_id);

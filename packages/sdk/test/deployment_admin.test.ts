@@ -127,7 +127,7 @@ describe('deployment admin', () => {
   test('bootstraps every post-publish object in one PTB without a Move wrapper', async () => {
     const sdk = SDK({
       address: id('9'),
-      pins: { package: id('1') } satisfies Pins,
+      pins: { package: id('0') } satisfies Pins,
       client: {
         core: {
           resolveTransactionPlugin: () => resolve_transaction,
@@ -173,6 +173,7 @@ describe('deployment admin', () => {
       'lot_rule::add',
       'naked_rule::add',
     ])
+    expect(calls.some(({ package: called_package }) => called_package === id('0'))).toBeFalse()
     expect(
       calls
         .filter(({ module }) => ['royalty_rule', 'personal_kiosk_rule', 'kiosk_lock_rule'].includes(module))

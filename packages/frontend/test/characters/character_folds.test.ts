@@ -142,17 +142,24 @@ describe('character receipt folds', () => {
     ])
   })
 
-  test('stat fold raises the six characteristics and spends the pool', () => {
-    const state = seeded_state([character()], [])
+  test('stat fold mirrors class costs across a boundary and Ikari double vitality', () => {
+    const state = seeded_state([character({ intelligence: 19 })], [])
     const next = reduce_app_state(state, {
       type: 'character/stats_raised',
       character_id: '0xchar',
-      allocation: { vitality: 3, strength: 2 },
+      spending: { intelligence: 3 },
     })
     const row = next.session.characters[0]!
-    expect(row.vitality).toBe(13)
-    expect(row.strength).toBe(7)
-    expect(row.available_points).toBe(7)
+    expect(row.intelligence).toBe(21)
+    expect(row.available_points).toBe(9)
+
+    const ikari = reduce_app_state(seeded_state([character({ classe: 'ikari', vitality: 0 })], []), {
+      type: 'character/stats_raised',
+      character_id: '0xchar',
+      spending: { vitality: 3 },
+    }).session.characters[0]!
+    expect(ikari.vitality).toBe(6)
+    expect(ikari.available_points).toBe(9)
   })
 
   test('spell fold costs the CURRENT level (n → n+1 costs n, progression.move law)', () => {
@@ -206,7 +213,7 @@ describe('character receipt folds', () => {
     })
     const after_stats = stats_reset.session.characters[0]!
     expect(after_stats.vitality).toBe(0)
-    expect(after_stats.available_points).toBe(12 + 15)
+    expect(after_stats.available_points).toBe(45)
     const spells_reset = reduce_app_state(state, {
       type: 'character/consumed',
       character_id: '0xchar',

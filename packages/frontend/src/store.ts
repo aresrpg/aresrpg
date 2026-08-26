@@ -36,6 +36,10 @@ import marketplace, {
   type MarketplaceState,
 } from './modules/marketplace.ts'
 import dungeon, { initial_dungeon_state, type DungeonInput, type DungeonState } from './modules/dungeon.ts'
+import kolizeum, { initial_kolizeum_state, type KolizeumInput, type KolizeumState } from './modules/kolizeum.ts'
+import friends, { initial_friends_state, type FriendsInput, type FriendsState } from './modules/friends.ts'
+import party, { initial_party_state, type PartyInput, type PartyState } from './modules/party.ts'
+import trade, { initial_trade_state, type TradeInput, type TradeState } from './modules/trade.ts'
 
 export type AppState = Readonly<{
   session: SessionState
@@ -53,6 +57,10 @@ export type AppState = Readonly<{
   world: WorldState
   marketplace: MarketplaceState
   dungeon: DungeonState
+  kolizeum: KolizeumState
+  friends: FriendsState
+  party: PartyState
+  trade: TradeState
 }>
 
 export type AppInput =
@@ -71,6 +79,10 @@ export type AppInput =
   | DuelInput
   | MarketplaceInput
   | DungeonInput
+  | KolizeumInput
+  | FriendsInput
+  | PartyInput
+  | TradeInput
 
 type EventArguments = {
   [K in AppInput['type']]: [Extract<AppInput, { type: K }>]
@@ -111,6 +123,10 @@ const MODULES = Object.freeze([
   claims,
   marketplace,
   dungeon,
+  kolizeum,
+  friends,
+  party,
+  trade,
 ]) satisfies readonly AppModule[]
 
 export type AppModuleName = (typeof MODULES)[number]['name']
@@ -135,6 +151,10 @@ export const initial_app_state = (settings_state: GameSettings): AppState =>
     world: initial_world_state(),
     marketplace: initial_marketplace_state(),
     dungeon: initial_dungeon_state(),
+    kolizeum: initial_kolizeum_state(),
+    friends: initial_friends_state(),
+    party: initial_party_state(),
+    trade: initial_trade_state(),
   })
 
 const create_events = () => {
@@ -154,7 +174,7 @@ const create_events = () => {
   })
 }
 
-const create_app = () => {
+export const create_app = () => {
   const default_settings = Object.freeze({
     quality: 'medium',
     flat_mode: false,
@@ -165,14 +185,28 @@ const create_app = () => {
   let active_observers: AbortController | null = null
   const store = createStore<AppState>(() => state)
   const events = create_events()
+  let input_queue: readonly AppInput[] = []
+  let reducing = false
 
   const dispatch = (input: AppInput): void => {
-    const previous = state
-    const next = reduce_app_state(previous, input)
-    state = next
-    if (next !== previous) store.setState(next, true)
-    events.emit(input.type, input as never)
-    if (next !== previous) events.emit('STATE_UPDATED', next, previous)
+    input_queue = Object.freeze([...input_queue, input])
+    if (reducing) return
+    reducing = true
+    try {
+      while (input_queue.length > 0) {
+        const [next_input, ...remaining] = input_queue
+        input_queue = Object.freeze(remaining)
+        if (!next_input) continue
+        const previous = state
+        const next = reduce_app_state(previous, next_input)
+        state = next
+        if (next !== previous) store.setState(next, true)
+        events.emit(next_input.type, next_input as never)
+        if (next !== previous) events.emit('STATE_UPDATED', next, previous)
+      }
+    } finally {
+      reducing = false
+    }
   }
 
   return Object.freeze({

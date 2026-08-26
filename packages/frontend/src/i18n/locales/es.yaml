@@ -52,6 +52,7 @@ indexing_lag_warning: Las acciones del juego pueden aparecer con retraso
 game_frozen: El juego está actualmente congelado. Consulta Discord para más información.
 gas_budget_toast: Esta acción superó la tarifa de red que reservamos. No se ejecutó y no te costó nada — por favor, repórtalo.
 game_paused_toast: El juego está en pausa por una actualización. Tu acción no se ejecutó — inténtalo de nuevo en unos minutos.
+movement_sync_toast: Tu posición aún se está sincronizando. Sigue moviéndote con normalidad e inténtalo de nuevo en un momento.
 network_testnet: TESTNET
 page_pending_title: Esta página se está reconstruyendo
 page_pending_body: Su lugar sigue visible mientras la restauramos de forma limpia.
@@ -63,6 +64,7 @@ create_character: Crear personaje
 create_title: Crea tu personaje
 create_lead: Elige una clase, tus colores y un nombre. El mundo ya está vivo tras de ti.
 class_label: Clase
+view_class_spells: Ver los hechizos de esta clase
 sex_label: Sexo
 appearance_label: Apariencia · 3 colores
 name_label: Nombre
@@ -90,6 +92,86 @@ wallet_send_pending: Enviando SUI…
 wallet_send_success: SUI enviado
 wallet_send_failed: La transferencia de SUI ha fallado
 wallet_close: Cerrar
+kolizeum_page:
+  title: Kolizeum — Mesa de guerra
+  tagline: los ganadores reparten el 90 % del pozo · comisión del 10 %
+  tab_open: Salas abiertas
+  tab_mine: Mis salas
+  col_format: Formato
+  col_access: Acceso
+  col_status: Estado
+  col_pledge: Apuesta
+  col_full_pot: Pozo completo
+  col_creator: Creador
+  access_public: Pública
+  access_friends: Amigos
+  status_open: Abierta
+  status_started: En curso
+  status_settling: Liquidando
+  empty: Sin salas
+  selected: Sala seleccionada
+  side_a: Lado A
+  side_b: Lado B
+  total_pot: Pozo actual
+  free: Gratis
+  join_a: Unirse al lado A
+  join_b: Unirse al lado B
+  create_title: Crear sala
+  form_format: Formato
+  form_access: Acceso
+  form_pledge: Apuesta por jugador (SUI)
+  form_max_diff: Diferencia de nivel máx.
+  form_character: Con el personaje
+  no_character: Sin personaje disponible
+  full_pot_summary: Pozo {{format}} completo = {{pot}} SUI · 90 % para los ganadores
+  create_cta: Crear sala
+friends_panel:
+  title: Amigos
+  observed: Observado cerca
+  unseen: No observado actualmente
+  none_observed: Ningún amigo observado cerca
+  empty: Aún no hay amigos
+  placeholder: Nombre, SuiNS o dirección 0x
+  add: Añadir amigo
+  remove: Eliminar
+  remove_title: Eliminar amigo
+  remove_body: ¿Eliminar a {{name}} de tu lista de amigos?
+  error_no_suins: Ninguna dirección SuiNS coincide con {{name}}.
+  error_target: Introduce un personaje, nombre SuiNS o dirección Sui completa.
+  error_self: No puedes añadirte a ti mismo.
+  error_duplicate: Este jugador ya está en tu lista de amigos.
+  cancel: Cancelar
+party_panel:
+  title: Grupo
+  adventurer: Aventurero
+  invited_by: '{{name}} te ha invitado'
+  accept: Aceptar
+  decline: Rechazar
+  leader: Líder
+  leave: Salir
+  disband: Disolver
+  kick: Expulsar
+  rescind: Cancelar invitación
+  invite_owned: Invitar personaje propio
+trade_panel:
+  inbox: Intercambios
+  close: Cerrar
+  title: Intercambio entre jugadores
+  locked: Bloqueado · reclamaciones permanentes
+  negotiating: Negociando · cada cambio reinicia la aceptación
+  your_offer: Tu oferta
+  their_offer: Su oferta
+  accepted: Aceptado
+  reviewing: Revisando
+  add_item: Añadir objeto
+  add_character: Añadir personaje
+  sui: Añadir SUI
+  withdraw: Retirar
+  withdraw_sui: Retirar mis SUI
+  accept: Aceptar esta versión
+  claim: Reclamar
+  claim_sui: Reclamar {{amount}} SUI
+  finish: Finalizar intercambio
 world_hud:
   compass_label: Brújula
   zone: ZONA
@@ -104,6 +186,7 @@ world_hud:
   biome: Bioma
   world_map: Mapa del mundo
   menu_group: Invitar al grupo
+  menu_friend: Añadir amigo
   menu_trade: Comerciar
   menu_message: Enviar un mensaje
   mount_prompt: 'Pulsa {{key}} para montar'
@@ -174,7 +257,8 @@ world_hud:
   zone_reroll_title: 'Zona lista para renovarse'
   zone_press_reroll: 'Pulsa {{key}} para regenerar la zona'
   zone_searching: 'Explorando la zona…'
-  zone_searched_toast: 'La zona revela sus secretos'
+  zone_revealed: 'Zona revelada'
+  zone_coordinates: 'Sector {{zx}} · {{zz}}'
   zone_mobs_found: '{{count}} monstruos encontrados'
   zone_resources_found: '{{count}} recursos encontrados'
   zone_dungeon_spotted: 'Mazmorra avistada'
@@ -297,6 +381,7 @@ marketplace_page:
   delist_success: Anuncio retirado
   buy_pending: Comprando…
   buy_success: Compra completada
+  character_roster_full: Un 7.º personaje no cabe en tu plantilla — el límite es 6
   collect_pending: Recogiendo ingresos…
   collect_success: Ingresos recogidos
 shop_page:
@@ -427,7 +512,7 @@ simulator_page:
   spell_level: Nivel de {name}
   spell_level_option: 'Nv {level} · {cost} pts'
   class_shugo_title: Guardián
-  class_tomoda_title: Tomoda
+  class_tomoda_title: Maestro de bestias
   class_rojin_title: Prospector
   class_yajin_title: Asesino
   class_tokei_title: Cronomante
@@ -452,7 +537,7 @@ simulator_page:
   spell_unlock: Se desbloquea en {level}
   reset: Restablecer
   delete_confirm: Confirmar eliminación
-  class_change_hint: Cambiar de clase restablece los niveles de hechizo invertidos
+  class_change_hint: Cambiar de clase restablece las características naturales y los niveles de hechizo invertidos
   spells_unavailable: No hay hechizos desbloqueados en este nivel
   save_character: Guardar personaje
   equipment: Equipo, reliquias y cosméticos
@@ -542,6 +627,7 @@ fight_hud:
   unit_turns: turnos
   chat_title: Chat
   chat_tab_general: General
+  chat_tab_party: Grupo
   chat_tab_combat: Combate
   chat_placeholder: Di algo…
   chat_you: Tú
@@ -558,6 +644,9 @@ fight_hud:
   result_survived: Sobrevivió
   result_collecting: Recogiendo botín…
   result_continue: Continuar
+  result_close: Cerrar
+  fight_finalize_pending: El combate está listo para finalizar.
+  fight_finalize_button: Finalizar
   result_retry: Reintentar
   level_up_title: Subida de nivel
   level_up_reached: Nivel alcanzado
@@ -813,6 +902,8 @@ encyclopedia_page:
     life_steal: ROBO DE VIDA
     life_steal_desc: 'Los efectos de hechizo de drenaje infligen daño y curan al lanzador la mitad de la vida que el objetivo pierde realmente. Solo el drenaje de un jugador cura: un mob que lanza el mismo hechizo inflige su daño y no se cura nada.'
     life_steal_note: El daño pasa primero por la fórmula de daño estándar, luego el lanzador se cura la mitad de la vida que el objetivo previsto perdió realmente — un golpe redirigido a otro combatiente, o convertido en curación por el objetivo, no devuelve nada.
+    chatiment: CASTIGO
+    chatiment_desc: Castigo convierte los PdV no letales realmente perdidos en su característica. Cada turno de combatiente activo tiene su propio límite; los turnos posteriores crean bonificaciones separadas de cinco turnos. El daño de monstruos cuenta por completo. El daño procedente de jugadores y su límite se reducen a la mitad. Ares no utiliza erosión.
     healing: CURACIÓN
     healing_desc: Las curaciones aplican el valor base del hechizo, escalado por un porcentaje de tu Inteligencia, más un bono de Curación fijo del equipo y las mejoras. La curación está limitada a los PV máximos del objetivo.
     healing_intel_value: +1% de curación por punto de Inteligencia
@@ -824,6 +915,7 @@ encyclopedia_page:
     points_per_level: PUNTOS POR NIVEL
     stat_points: Puntos de stat
     stat_points_value: '{{n}} por nivel'
+    stat_costs_desc: El coste depende de la clase y del valor natural actual. La página de cada clase muestra la escala completa.
     spell_points: Puntos de hechizo
     spell_points_value: '{{n}} por nivel'
     xp_milestones: HITOS DE XP
@@ -874,7 +966,7 @@ encyclopedia_page:
     role_archer: Arquero
     role_prospector: Prospector
     role_brawler: Luchador
-    role_tomoda: Tomoda
+    role_tomoda: Maestro de bestias
     role_gambler: Apostador
     role_healer: Sanador
     weapon_daggers: Dagas
@@ -1021,6 +1113,10 @@ encyclopedia_page:
   unlimited: ILIMITADO
   cooldown: REUTILIZACIÓN
   cooldown_none: NINGUNA
+  characteristic_costs: Costes de características
+  characteristic_costs_desc: Los puntos naturales siguen la escala de esta clase. El equipo no cambia el coste.
+  characteristic_cost_band: '{{cost}} pts → +{{gain}} · ≤{{cap}}'
+  characteristic_cost_unlimited: '{{cost}} pts → +{{gain}} · sin límite'
   turns_value: '{{n}} TURNOS'
   targeting: OBJETIVO
   effect_zone: ÁREA DE EFECTO
@@ -1389,6 +1485,7 @@ characters_page:
     add_point: 'Añadir un punto a {{stat}}'
     remove_point: 'Quitar un punto de {{stat}}'
     tx_pending: 'Asignando…'
+    point_cost: '{{cost}} pts → +{{gain}}'
     tx_success: 'Puntos de características asignados'
   spells:
     range_modifiable: 'Alcance modificable'

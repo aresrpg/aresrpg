@@ -1,0 +1,114 @@
+/* SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available */
+/* © 2026 Sceat — All rights reserved. See LICENSE. */
+
+.party-frame {
+  pointer-events: auto;
+  position: absolute;
+  top: 238px;
+  left: 16px;
+  width: 205px;
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+  border-radius: 9px;
+  background: rgba(10, 10, 15, 0.9);
+  box-shadow: 0 14px 36px rgba(0, 0, 0, 0.35);
+}
+.party-frame > header {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 7px 9px;
+  border-bottom: 1px solid var(--color-border);
+}
+.party-frame > header span {
+  flex: 1;
+  color: var(--color-cyan);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+.party-frame > header small {
+  color: var(--color-muted);
+  font-size: 8px;
+}
+.party-frame > header button {
+  border: 1px solid rgba(255, 90, 111, 0.24);
+  border-radius: 5px;
+  background: rgba(255, 90, 111, 0.06);
+  padding: 3px 6px;
+  color: #b97985;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 7px;
+  letter-spacing: 0.08em;
+  line-height: 1;
+  text-transform: uppercase;
+}
+.party-frame > header button:hover {
+  color: #ff5a6f;
+}
+.party-frame__member {
+  display: grid;
+  grid-template-columns: 14px minmax(0, 1fr) 18px;
+  align-items: center;
+  gap: 5px;
+  padding: 7px 9px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+.party-frame__member.is-selected {
+  background: rgba(74, 158, 255, 0.07);
+}
+.party-frame__member.is-invited {
+  opacity: 0.5;
+}
+.party-frame__member svg {
+  color: var(--color-gold);
+}
+.party-frame__member b {
+  overflow: hidden;
+  color: #d6d1c8;
+  font-size: 9px;
+  font-weight: 400;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.party-frame__member button {
+  display: grid;
+  width: 18px;
+  height: 18px;
+  place-items: center;
+  border: 0;
+  background: transparent;
+  color: #666b72;
+  cursor: pointer;
+}
+.party-frame__member button:hover {
+  color: #ff5a6f;
+}
+.party-invite-card {
+  pointer-events: auto;
+  position: fixed;
+  z-index: 160;
+  top: 60px;
+  left: 50%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transform: translateX(-50%);
+  overflow: hidden;
+  border: 1px solid rgba(74, 158, 255, 0.35);
+  border-radius: 9px;
+  background: rgba(10, 10, 15, 0.94);
+  padding: 8px 10px;
+  box-shadow: 0 14px 36px rgba(0, 0, 0, 0.4);
+}
+.party-invite-card span {
+  color: #d6d1c8;
+  font-size: 9px;
+}
+.party-invite-card button {
+  padding: 6px 9px;
+  font-size: 8px;
+  letter-spacing: 0.12em;
+}

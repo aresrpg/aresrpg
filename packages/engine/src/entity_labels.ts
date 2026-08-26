@@ -28,7 +28,7 @@ export const create_entity_label_layer = ({
   const statics = new Map<string, CSS2DObject>()
   /** static tags track LIVE anchors — a fixed world point goes stale the moment the world
    *  itself moves under it (the flatten projection), so anchors are getters, re-read per frame */
-  const static_anchors = new Map<string, () => Vector3>()
+  const static_anchors = new Map<string, () => Vector3 | null>()
 
   return Object.freeze({
     /** attach (or replace) the DOM element floating over an entity; null detaches */
@@ -46,11 +46,13 @@ export const create_entity_label_layer = ({
     },
     /** attach a DOM element at a world position that may MOVE (a getter re-read every frame —
      *  the flatten projection drags anchors around); null detaches */
-    set_static: (id: string, element: HTMLElement | null, anchor: (() => Vector3) | Vector3): void => {
+    set_static: (id: string, element: HTMLElement | null, anchor: (() => Vector3 | null) | Vector3): void => {
       const existing = statics.get(id)
       const read_anchor = typeof anchor === 'function' ? anchor : () => anchor
       if (existing?.element === element) {
-        existing.position.copy(read_anchor())
+        const next = read_anchor()
+        existing.visible = next !== null
+        if (next) existing.position.copy(next)
         static_anchors.set(id, read_anchor)
         return
       }
@@ -61,7 +63,9 @@ export const create_entity_label_layer = ({
       }
       if (!element) return
       const label = new CSS2DObject(element)
-      label.position.copy(read_anchor())
+      const next = read_anchor()
+      label.visible = next !== null
+      if (next) label.position.copy(next)
       statics.set(id, label)
       static_anchors.set(id, read_anchor)
       scene.add(label)
@@ -76,6 +80,7 @@ export const create_entity_label_layer = ({
       })
       statics.forEach((label, id) => {
         const anchor = static_anchors.get(id)?.()
+        label.visible = anchor !== null && anchor !== undefined
         if (anchor) label.position.copy(anchor)
       })
       renderer.render(scene, camera)

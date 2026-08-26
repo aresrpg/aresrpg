@@ -55,14 +55,21 @@ describe('development seed file service', () => {
     const directory = await fixture()
     const mob_dir = join(directory, 'seed', 'icons', 'mobs')
     const item_dir = join(directory, 'seed', 'icons', 'items')
-    await Promise.all([mkdir(mob_dir, { recursive: true }), mkdir(item_dir, { recursive: true })])
+    const spell_dir = join(directory, 'seed', 'icons', 'spells')
+    await Promise.all([
+      mkdir(mob_dir, { recursive: true }),
+      mkdir(item_dir, { recursive: true }),
+      mkdir(spell_dir, { recursive: true }),
+    ])
     await Promise.all([
       writeFile(join(mob_dir, 'new_mob.png'), Buffer.from([1, 2, 3])),
       writeFile(join(item_dir, 'new_item.png'), Buffer.from([4, 5, 6])),
+      writeFile(join(spell_dir, 'yogan_adder_shaft.webp'), Buffer.from([7, 8, 9])),
     ])
 
     expect(await read_seed_icon(directory, 'mobs', 'new_mob')).toEqual(Buffer.from([1, 2, 3]))
     expect(await read_seed_icon(directory, 'items', 'new_item')).toEqual(Buffer.from([4, 5, 6]))
+    expect(await read_seed_icon(directory, 'spells', 'yogan_adder_shaft')).toEqual(Buffer.from([7, 8, 9]))
     expect(await read_seed_icon(directory, 'mobs', '../pins')).toBeNull()
     expect(await read_seed_icon(directory, 'mobs', 'missing')).toBeNull()
   })

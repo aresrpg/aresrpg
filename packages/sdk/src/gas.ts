@@ -24,15 +24,47 @@ const gas_used_of = (receipt: Receipt) =>
   receipt.effects?.gasUsed ??
   null
 
-export const gas_mist_from_receipt = (receipt: Receipt): bigint | null => {
+const gas_summary_from_receipt = (receipt: Receipt) => {
   const gas = gas_used_of(receipt)
   if (!gas) return null
   try {
-    return BigInt(gas.computationCost ?? 0) + BigInt(gas.storageCost ?? 0) - BigInt(gas.storageRebate ?? 0)
+    const computation = BigInt(gas.computationCost ?? 0)
+    const storage = BigInt(gas.storageCost ?? 0)
+    const rebate = BigInt(gas.storageRebate ?? 0)
+    return Object.freeze({ computation, storage, rebate, net: computation + storage - rebate })
   } catch (error) {
     console.warn('A transaction receipt carried invalid gas values.', error)
     return null
   }
+}
+
+export const gas_mist_from_receipt = (receipt: Receipt): bigint | null => gas_summary_from_receipt(receipt)?.net ?? null
+
+const sui_from_mist = (mist: bigint): string => {
+  const negative = mist < 0n
+  const absolute = negative ? -mist : mist
+  const fraction = String(absolute % 1_000_000_000n)
+    .padStart(9, '0')
+    .replace(/0+$/, '')
+  return `${negative ? '-' : ''}${absolute / 1_000_000_000n}${fraction ? `.${fraction}` : ''}`
+}
+
+export const log_transaction_receipt = (receipt: Receipt): void => {
+  const digest = receipt_digest_or_null(receipt)
+  const gas = gas_summary_from_receipt(receipt)
+  if (!digest || !gas) return
+  const failed =
+    receipt.$kind === 'FailedTransaction' ||
+    receipt.FailedTransaction !== undefined ||
+    receipt.Transaction?.effects?.status?.success === false ||
+    receipt.effects?.status?.success === false
+  console.log('%c tx ', 'color:#ff5a8b;font-weight:700', digest, `${sui_from_mist(gas.net)} SUI`, {
+    status: failed ? 'failed' : 'success',
+    net_sui: sui_from_mist(gas.net),
+    computation_sui: sui_from_mist(gas.computation),
+    storage_sui: sui_from_mist(gas.storage),
+    rebate_sui: sui_from_mist(gas.rebate),
+  })
 }
 
 const valid_entries = (value: unknown, cutoff: number): readonly Entry[] => {

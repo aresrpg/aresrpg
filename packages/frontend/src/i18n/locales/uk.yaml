@@ -52,6 +52,7 @@ indexing_lag_warning: Дії в грі можуть відображатися �
 game_frozen: Гру наразі заморожено. Докладнішу інформацію дивіться в Discord.
 gas_budget_toast: Ця дія перевищила зарезервовану мережеву комісію. Її не виконано, і вона нічого вам не коштувала — будь ласка, повідомте про це.
 game_paused_toast: Гру призупинено для оновлення. Вашу дію не виконано — спробуйте ще раз за кілька хвилин.
+movement_sync_toast: Ваша позиція ще синхронізується. Рухайтеся як звичайно та спробуйте ще раз за мить.
 network_testnet: TESTNET
 page_pending_title: Ця сторінка відновлюється
 page_pending_body: Її місце залишається видимим, поки ми чисто її відновлюємо.
@@ -63,6 +64,7 @@ create_character: Створити персонажа
 create_title: Створіть свого персонажа
 create_lead: Оберіть клас, кольори та ім’я. Світ уже живе позаду.
 class_label: Клас
+view_class_spells: Переглянути заклинання цього класу
 sex_label: Стать
 appearance_label: Зовнішність · 3 кольори
 name_label: Ім’я
@@ -90,6 +92,86 @@ wallet_send_pending: Надсилання SUI…
 wallet_send_success: SUI надіслано
 wallet_send_failed: Не вдалося надіслати SUI
 wallet_close: Закрити
+kolizeum_page:
+  title: Колізеум — Воєнний стіл
+  tagline: переможці ділять 90% банку · комісія 10%
+  tab_open: Відкриті лобі
+  tab_mine: Мої лобі
+  col_format: Формат
+  col_access: Доступ
+  col_status: Стан
+  col_pledge: Ставка
+  col_full_pot: Повний банк
+  col_creator: Творець
+  access_public: Публічне
+  access_friends: Друзі
+  status_open: Відкрите
+  status_started: Триває
+  status_settling: Розрахунок
+  empty: Лобі немає
+  selected: Вибране лобі
+  side_a: Сторона A
+  side_b: Сторона B
+  total_pot: Поточний банк
+  free: Безкоштовно
+  join_a: Приєднатися до сторони A
+  join_b: Приєднатися до сторони B
+  create_title: Створити лобі
+  form_format: Формат
+  form_access: Доступ
+  form_pledge: Ставка на гравця (SUI)
+  form_max_diff: Макс. різниця рівнів
+  form_character: Персонажем
+  no_character: Немає вільного персонажа
+  full_pot_summary: Повний банк {{format}} = {{pot}} SUI · 90% переможцям
+  create_cta: Створити лобі
+friends_panel:
+  title: Друзі
+  observed: Помічено поруч
+  unseen: Зараз не помічено
+  none_observed: Друзів поруч не помічено
+  empty: Друзів поки немає
+  placeholder: Ім'я, SuiNS або адреса 0x
+  add: Додати друга
+  remove: Видалити
+  remove_title: Видалити друга
+  remove_body: Видалити {{name}} зі списку друзів?
+  error_no_suins: Адресу SuiNS для {{name}} не знайдено.
+  error_target: Введіть персонажа, ім'я SuiNS або повну адресу Sui.
+  error_self: Не можна додати себе.
+  error_duplicate: Цей гравець уже у списку друзів.
+  cancel: Скасувати
+party_panel:
+  title: Група
+  adventurer: Мандрівник
+  invited_by: '{{name}} запрошує вас'
+  accept: Прийняти
+  decline: Відхилити
+  leader: Лідер
+  leave: Вийти
+  disband: Розпустити
+  kick: Виключити
+  rescind: Скасувати запрошення
+  invite_owned: Запросити свого персонажа
+trade_panel:
+  inbox: Обміни
+  close: Закрити
+  title: Обмін між гравцями
+  locked: Заблоковано · отримання безстрокове
+  negotiating: Переговори · кожна зміна скидає згоду
+  your_offer: Ваша пропозиція
+  their_offer: Їхня пропозиція
+  accepted: Прийнято
+  reviewing: Перевіряється
+  add_item: Додати предмет
+  add_character: Додати персонажа
+  sui: Додати SUI
+  withdraw: Забрати
+  withdraw_sui: Забрати мої SUI
+  accept: Прийняти цю версію
+  claim: Отримати
+  claim_sui: Отримати {{amount}} SUI
+  finish: Завершити обмін
 world_hud:
   compass_label: Компас
   zone: ЗОНА
@@ -104,6 +186,7 @@ world_hud:
   biome: Біом
   world_map: Карта світу
   menu_group: Запросити до групи
+  menu_friend: Додати друга
   menu_trade: Торгувати
   menu_message: Надіслати повідомлення
   mount_prompt: 'Натисніть {{key}}, щоб осідлати'
@@ -174,7 +257,8 @@ world_hud:
   zone_reroll_title: 'Зону можна оновити'
   zone_press_reroll: 'Натисніть {{key}}, щоб оновити зону'
   zone_searching: 'Дослідження зони…'
-  zone_searched_toast: 'Зона розкриває свої таємниці'
+  zone_revealed: 'Зону розвідано'
+  zone_coordinates: 'Сектор {{zx}} · {{zz}}'
   zone_mobs_found: 'Знайдено мобів: {{count}}'
   zone_resources_found: 'Знайдено ресурсів: {{count}}'
   zone_dungeon_spotted: 'Виявлено підземелля'
@@ -297,6 +381,7 @@ marketplace_page:
   delist_success: Оголошення знято
   buy_pending: Купівля…
   buy_success: Купівлю завершено
+  character_roster_full: Сьомий персонаж не поміститься у ваш список — межа 6
   collect_pending: Отримання виручки…
   collect_success: Виручку отримано
 shop_page:
@@ -427,7 +512,7 @@ simulator_page:
   spell_level: Рівень {name}
   spell_level_option: 'Рів {level} · {cost} оч'
   class_shugo_title: Вартовий
-  class_tomoda_title: Tomoda
+  class_tomoda_title: Повелитель звірів
   class_rojin_title: Шукач
   class_yajin_title: Асасин
   class_tokei_title: Хрономант
@@ -452,7 +537,7 @@ simulator_page:
   spell_unlock: Відкривається на рівні {level}
   reset: Скинути
   delete_confirm: Підтвердити видалення
-  class_change_hint: Зміна класу скидає вкладені рівні заклинань
+  class_change_hint: Зміна класу скидає природні характеристики та вкладені рівні заклинань
   spells_unavailable: На цьому рівні немає відкритих заклинань
   save_character: Зберегти персонажа
   equipment: Спорядження, реліквії та косметика
@@ -542,6 +627,7 @@ fight_hud:
   unit_turns: ходи
   chat_title: Чат
   chat_tab_general: Загальний
+  chat_tab_party: Група
   chat_tab_combat: Бій
   chat_placeholder: Скажіть щось…
   chat_you: Ви
@@ -558,6 +644,9 @@ fight_hud:
   result_survived: Вижив
   result_collecting: Збираємо здобич…
   result_continue: Продовжити
+  result_close: Закрити
+  fight_finalize_pending: Бій готовий до завершення.
+  fight_finalize_button: Завершити
   result_retry: Спробувати знову
   level_up_title: Новий рівень
   level_up_reached: Досягнуто рівня
@@ -811,6 +900,8 @@ encyclopedia_page:
     life_steal: КРАДІЖКА ЖИТТЯ
     life_steal_desc: "Ефекти заклинань висмоктування завдають шкоди та зцілюють заклинача на половину здоров'я, яке ціль справді втратила. Зцілює лише висмоктування гравця: монстр, що читає те саме заклинання, завдає шкоди й не зцілюється."
     life_steal_note: Шкода спершу проходить через стандартну формулу шкоди, потім заклинач зцілюється на половину здоров'я, яке справді втратила призначена ціль — удар, перенаправлений на іншого бійця, або перетворений ціллю на зцілення, не повертає нічого.
+    chatiment: ПОКАРАННЯ
+    chatiment_desc: Покарання перетворює фактично втрачені нелетальні ОЗ на відповідну характеристику. Кожен хід активного бійця має власну межу; наступні ходи створюють окремі бонуси на п'ять ходів. Шкода від мобів враховується повністю. Шкода від гравця та її межа зменшуються вдвічі. В Ares немає ерозії.
     healing: ЗЦІЛЕННЯ
     healing_desc: Зцілення застосовує базове значення заклинання, збільшене на відсоток вашого Інтелекту, плюс фіксований бонус Зцілення від спорядження та бафів. Зцілення обмежене максимальним здоров'ям цілі.
     healing_intel_value: +1% зцілення за кожну одиницю Інтелекту
@@ -822,6 +913,7 @@ encyclopedia_page:
     points_per_level: ОЧКИ ЗА РІВЕНЬ
     stat_points: Очки статів
     stat_points_value: '{{n}} за рівень'
+    stat_costs_desc: Вартість залежить від класу та поточного природного значення. Сторінка класу показує всю шкалу.
     spell_points: Очки заклинань
     spell_points_value: '{{n}} за рівень'
     xp_milestones: ВІХИ XP
@@ -872,7 +964,7 @@ encyclopedia_page:
     role_archer: Лучник
     role_prospector: Шукач
     role_brawler: Бійець
-    role_tomoda: Tomoda
+    role_tomoda: Повелитель звірів
     role_gambler: Гравець
     role_healer: Цілитель
     weapon_daggers: Кинджали
@@ -1019,6 +1111,10 @@ encyclopedia_page:
   unlimited: НЕОБМЕЖЕНО
   cooldown: ПЕРЕЗАРЯДКА
   cooldown_none: НЕМАЄ
+  characteristic_costs: Вартість характеристик
+  characteristic_costs_desc: Природні очки використовують шкалу цього класу. Спорядження не змінює вартість.
+  characteristic_cost_band: '{{cost}} оч. → +{{gain}} · ≤{{cap}}'
+  characteristic_cost_unlimited: '{{cost}} оч. → +{{gain}} · без обмежень'
   turns_value: '{{n}} ХОДІВ'
   targeting: НАЦІЛЮВАННЯ
   effect_zone: ЗОНА ДІЇ
@@ -1387,6 +1483,7 @@ characters_page:
     add_point: 'Збільшити {{stat}} на одне очко'
     remove_point: 'Зменшити {{stat}} на одне очко'
     tx_pending: 'Розподіл…'
+    point_cost: '{{cost}} оч. → +{{gain}}'
     tx_success: 'Очки характеристик розподілено'
   spells:
     range_modifiable: 'Змінна дальність'

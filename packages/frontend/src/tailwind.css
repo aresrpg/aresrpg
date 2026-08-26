@@ -4,9 +4,12 @@
 @import 'tailwindcss';
 
 @theme {
-  --color-bg: #0b0d0e;
-  --color-surface: #181c1f;
-  --color-border: #2b3237;
+  --color-bg: #0a0a0f;
+  --color-surface-low: #0f0f16;
+  --color-surface: #12121a;
+  --color-surface-high: #171720;
+  --color-surface-raised: #1b1b25;
+  --color-border: #1e1e2e;
   --color-gold: #c8963c;
   --color-gold-light: #f5d0a9;
   --color-gold-dark: #8b6914;
@@ -25,11 +28,11 @@
 /* Authoring is information-dense: nested sheets need visible depth, not four copies of black. */
 [data-content-editor-shell] :is(input, select, textarea) {
   border-color: rgba(255, 255, 255, 0.14);
-  background-color: #0d1012;
+  background-color: var(--color-bg);
 }
 
 [data-content-editor-shell] :is(input, select, textarea):focus {
-  background-color: #121619;
+  background-color: var(--color-surface-low);
 }
 
 @keyframes slide-in {

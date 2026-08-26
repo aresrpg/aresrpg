@@ -8,9 +8,9 @@
 
 import { channels, type EventEnvelope } from '../protocol.ts'
 import { get_market_history } from '../reads/get_market_history.ts'
-import { get_market_listing, get_market_slice } from '../reads/get_market_slice.ts'
-import { get_characters } from '../reads/get_characters.ts'
+import { get_market_counts, get_market_listing, get_market_slice } from '../reads/get_market_slice.ts'
 import { get_kiosks } from '../reads/get_user_economy.ts'
+import { latest_keyed_reader, latest_reader } from '../latest_read.ts'
 import logger from '../logger.ts'
 import type { PlayerModule, PlayerState } from '../player.ts'
 
@@ -25,7 +25,7 @@ export default {
     return state
   },
 
-  observe: ({ pubsub, graph, events, send, address, get_state, dispatch, signal }) => {
+  observe: ({ pubsub, graph, events, send, address, get_state, signal }) => {
     /** the user's kiosk ids — the "is this sale MINE" test (loaded once; kiosks are for life) */
     const mine = new Set<string>()
     void get_kiosks(graph, { address })
@@ -34,14 +34,23 @@ export default {
       })
       .catch((error: Error) => log.warn({ address, error: error.message }, 'kiosk census failed'))
 
+    const read_latest_counts = latest_reader(
+      () => get_market_counts(graph),
+      (counts) => send({ type: 'packet/market_counts', counts })
+    )
+    const push_counts = (): void => {
+      void read_latest_counts().catch((error: Error) =>
+        log.warn({ error: error.message }, 'market counts refresh failed')
+      )
+    }
+
     const forward_economy = (payload: EventEnvelope) => {
       const observed = get_state().market_observation
+      if (observed && ['MarketListed', 'MarketDelisted', 'MarketPurchased'].includes(payload.type)) push_counts()
       if (payload.type === 'MarketPurchased') {
-        const { kiosk, object, buyer, kind, price_mist } = payload.data as {
+        const { kiosk, object, price_mist } = payload.data as {
           kiosk: string
           object: string
-          buyer: string
-          kind: 'item' | 'character'
           price_mist: string
         }
         if (mine.has(kiosk)) {
@@ -50,13 +59,6 @@ export default {
             .then((history) => send({ type: 'packet/market_history', ...history }))
             .catch((error: Error) => log.warn({ address, error: error.message }, 'market history refresh failed'))
         }
-        if (kind === 'character' && (buyer === address || mine.has(kiosk)))
-          void get_characters(graph, { address })
-            .then((characters) => {
-              dispatch({ type: 'action/character_roster', characters })
-              send({ type: 'packet/characters', characters })
-            })
-            .catch((error: Error) => log.warn({ address, error: error.message }, 'market character roster failed'))
         return
       }
       if (!observed) return
@@ -85,6 +87,7 @@ export default {
     events.on('STATE_UPDATED', (state: PlayerState, previous: PlayerState) => {
       if (state.market_observation === previous.market_observation || !state.market_observation) return
       const observation = state.market_observation
+      push_counts()
       void Promise.all([get_market_slice(graph, { observation }), get_market_history(graph, pubsub.graph, { address })])
         .then(([listings, history]) => {
           send({ type: 'packet/market_slice', observation, listings })

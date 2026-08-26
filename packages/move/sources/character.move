@@ -2,7 +2,7 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 module aresrpg::character;
 
-use aresrpg_math::content_rules;
+use aresrpg_math::{characteristic_costs, content_rules};
 use kiosk::personal_kiosk;
 use std::string::String;
 use sui::{
@@ -20,6 +20,7 @@ use sui::{
 const ENoPoints: u64 = 106; // raise_stat: not enough available points
 const EUnknownStat: u64 = 107; // raise_stat: not one of the six characteristics
 const ENotPersonalKiosk: u64 = 108; // custody: a character must live in a PERSONAL kiosk
+const EInvalidSpend: u64 = 109; // raise_stat: points leave an unusable remainder
 const ENameInvalid: u64 = 102;
 const EInvalidClasse: u64 = 103;
 const EInvalidColor: u64 = 104;
@@ -54,7 +55,7 @@ public struct Character has key, store {
   color_1: u32,
   color_2: u32,
   color_3: u32,
-  // ── allocated characteristics (legacy shape): 5 points per level, spent 1:1 ──
+  // ── natural characteristics: 5 capital per level, spent on the class's Retro ladder ──
   vitality: u16,
   wisdom: u16,
   strength: u16,
@@ -219,11 +220,10 @@ public(package) fun add_experience(self: &mut Character, experience: u64) {
   };
 }
 
-/// RESET STAT POINTS (the consumable): refund every allocated characteristic back into the
-/// pool and zero the six. Gear-folded stats are untouched — only the ALLOCATED points return.
+/// RESET STAT POINTS: every level-granted capital point returns. Deriving the pool from level
+/// also migrates characters who allocated under the retired 1:1 law without over-refunding.
 public(package) fun reset_stats(self: &mut Character) {
-  let refund = self.vitality + self.wisdom + self.strength + self.intelligence + self.chance + self.agility;
-  self.available_points = self.available_points + refund;
+  self.available_points = (self.level - 1) * 5;
   self.vitality = 0;
   self.wisdom = 0;
   self.strength = 0;
@@ -232,17 +232,28 @@ public(package) fun reset_stats(self: &mut Character) {
   self.agility = 0;
 }
 
-/// Spend available points 1:1 into one of the six characteristics.
-public(package) fun raise_stat(self: &mut Character, stat: String, amount: u16) {
-  assert!(self.available_points >= amount, ENoPoints);
-  self.available_points = self.available_points - amount;
-  if (stat == b"vitality".to_string()) { self.vitality = self.vitality + amount }
-  else if (stat == b"wisdom".to_string()) { self.wisdom = self.wisdom + amount }
-  else if (stat == b"strength".to_string()) { self.strength = self.strength + amount }
-  else if (stat == b"intelligence".to_string()) { self.intelligence = self.intelligence + amount }
-  else if (stat == b"chance".to_string()) { self.chance = self.chance + amount }
-  else if (stat == b"agility".to_string()) { self.agility = self.agility + amount }
-  else abort EUnknownStat
+/// Spend exactly `points` from the available capital pool. Costs are priced against each
+/// preceding natural value; a remainder that cannot buy a whole point is rejected atomically.
+public(package) fun raise_stat(self: &mut Character, stat: String, points: u16) {
+  assert!(points > 0, EInvalidSpend);
+  assert!(points <= self.available_points, ENoPoints);
+  let current = if (stat == b"vitality".to_string()) self.vitality
+  else if (stat == b"wisdom".to_string()) self.wisdom
+  else if (stat == b"strength".to_string()) self.strength
+  else if (stat == b"intelligence".to_string()) self.intelligence
+  else if (stat == b"chance".to_string()) self.chance
+  else if (stat == b"agility".to_string()) self.agility
+  else abort EUnknownStat;
+  let (spent, gain) = characteristic_costs::gain_for_points(&self.classe, &stat, current, points);
+  assert!(spent == (points as u32), EInvalidSpend);
+  self.available_points = self.available_points - points;
+  let gain = gain as u16;
+  if (stat == b"vitality".to_string()) { self.vitality = self.vitality + gain }
+  else if (stat == b"wisdom".to_string()) { self.wisdom = self.wisdom + gain }
+  else if (stat == b"strength".to_string()) { self.strength = self.strength + gain }
+  else if (stat == b"intelligence".to_string()) { self.intelligence = self.intelligence + gain }
+  else if (stat == b"chance".to_string()) { self.chance = self.chance + gain }
+  else { self.agility = self.agility + gain }
 }
 
 /// Unpack primitive — the guarded delete door lives downstream. The derived-name claim remains,
@@ -275,6 +286,17 @@ public fun test_derived_address(registry: &NameRegistry, name: String): address 
 #[test_only]
 public fun test_claim_name(registry: &mut NameRegistry, name: String): UID {
   derived_object::claim(&mut registry.id, name)
+}
+
+#[test_only]
+public fun test_character(classe: String, level: u16, available_points: u16, ctx: &mut TxContext): Character {
+  vc(classe);
+  Character {
+    id: object::new(ctx), name: b"tester".to_string(), classe, sex: b"male".to_string(),
+    experience: 0, level, color_1: 0, color_2: 0, color_3: 0,
+    vitality: 0, wisdom: 0, strength: 0, intelligence: 0, chance: 0, agility: 0,
+    available_points, available_spell_points: 0,
+  }
 }
 
 #[test_only]

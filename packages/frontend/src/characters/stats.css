@@ -24,7 +24,7 @@
 }
 
 .hud-root .stats__assign-btn.btn-gold {
-  color: #0a0a0f;
+  color: var(--color-bg);
   background: linear-gradient(135deg, var(--color-gold-dark), var(--color-gold), var(--color-gold-dark));
   border: none;
   box-shadow:

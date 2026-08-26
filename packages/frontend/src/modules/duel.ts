@@ -71,7 +71,7 @@ const observe: NonNullable<AppModule['observe']> = ({ events, get_state, dispatc
         x: Math.round(client_to_chain_coordinate(pose.x)),
         z: Math.round(client_to_chain_coordinate(pose.z)),
       })
-      .then(({ fight }) => dispatch({ type: 'fight/watch', fight }))
+      .then(({ fight }) => dispatch({ type: 'fight/watch', character_id: selected_character_id, fight }))
       .catch((error: unknown) => toast.add(error))
   })
 
@@ -96,7 +96,7 @@ const observe: NonNullable<AppModule['observe']> = ({ events, get_state, dispatc
         const current = get_state()
         const { wallet, selected_character_id } = current.session
         if (!wallet || !selected_character_id) return
-        dispatch({ type: 'fight/watch', fight: fight.id })
+        dispatch({ type: 'fight/watch', character_id: selected_character_id, fight: fight.id })
         void wallet.fight
           .join({
             fight: fight.id,
@@ -106,7 +106,7 @@ const observe: NonNullable<AppModule['observe']> = ({ events, get_state, dispatc
             access: 1,
           })
           .catch((error: unknown) => {
-            dispatch({ type: 'fight/watch', fight: null })
+            dispatch({ type: 'fight/watch', character_id: selected_character_id, fight: null })
             if (!duel_accept_was_canceled(error)) {
               toast.add(error)
               return

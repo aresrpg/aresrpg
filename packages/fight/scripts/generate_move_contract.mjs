@@ -284,6 +284,7 @@ const integer_widths = Object.fromEntries(
 
 const contract_constants = {
   ...selected_constants(fight, ['BASE_AP', 'BASE_MP', 'PLACEMENT_FORCE_MS', 'TURN_MIN_MS', 'TURN_MAX_MS', 'NO_TARGET']),
+  ...selected_constants(spell_effect, ['CHATIMENT_TURNS']),
   ...selected_constants(forgemagie, ['RUNE_UNLOCK_LEVEL']),
   ...selected_constants(combat_grid, [
     'GRID_W',

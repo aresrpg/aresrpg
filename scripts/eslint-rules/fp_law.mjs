@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-// scripts/eslint-rules/fp_law.mjs — THE FP-LAW TRIPWIRES (docs/CODE_LAW.md).
+// scripts/eslint-rules/fp_law.mjs — THE FP-LAW TRIPWIRES (.claude/rules/code-law.md).
 //
 // Three lexical rules the mature plugins cannot express without typed linting (the root lint runs
-// untyped — see eslint.config.js), each mapped to a law in docs/CODE_LAW.md:
+// untyped — see eslint.config.js), each mapped to a law in .claude/rules/code-law.md:
 //
 //   fp-law/snake-case               — L-N1: dev-chosen names are snake_case (house law; camelCase
 //                                     is only ever a library's name, never a declaration choice).
@@ -128,12 +128,12 @@ const snake_case = {
     type: 'suggestion',
     docs: {
       description:
-        'dev-chosen bindings are snake_case (docs/CODE_LAW.md L-N1) — camelCase is a library name, not a declaration choice',
+        'dev-chosen bindings are snake_case (.claude/rules/code-law.md L-N1) — camelCase is a library name, not a declaration choice',
     },
     schema: allow_schema,
     messages: {
       camel:
-        '`{{name}}` is camelCase — dev-chosen bindings are snake_case (docs/CODE_LAW.md L-N1). ' +
+        '`{{name}}` is camelCase — dev-chosen bindings are snake_case (.claude/rules/code-law.md L-N1). ' +
         'Rename, or destructure without an alias if this is a library field.',
     },
   },
@@ -214,17 +214,17 @@ const no_mutating_methods = {
     type: 'problem',
     docs: {
       description:
-        'no mutation of shared state or parameters (docs/CODE_LAW.md L-I1/L-I2) — mutate only what THIS function just created',
+        'no mutation of shared state or parameters (.claude/rules/code-law.md L-I1/L-I2) — mutate only what THIS function just created',
     },
     schema: allow_schema,
     messages: {
       mutation:
         '`{{text}}` mutates a value this function did not create — "mutation hides change; hidden change ' +
-        'manifests chaos" (docs/CODE_LAW.md L-I1). Copy first (spread / toSorted / toReversed / toSpliced / with), ' +
+        'manifests chaos" (.claude/rules/code-law.md L-I1). Copy first (spread / toSorted / toReversed / toSpliced / with), ' +
         'or build the value where it is born.',
       paramMutation:
         "`{{text}}` mutates a function parameter — the caller's value is not yours to change " +
-        '(docs/CODE_LAW.md L-I2). Return a new value instead.',
+        '(.claude/rules/code-law.md L-I2). Return a new value instead.',
     },
   },
   create(context) {
@@ -232,7 +232,7 @@ const no_mutating_methods = {
     const source_code = context.sourceCode
 
     /** Is `identifier` a reduce-accumulator? (first param of a `.reduce()/.reduceRight()` callback —
-     *  fold-local accumulation is CONSTRUCTION, docs/CODE_LAW.md L-I3.) */
+     *  fold-local accumulation is CONSTRUCTION, .claude/rules/code-law.md L-I3.) */
     const is_reduce_accumulator = (variable) => {
       const definition = variable?.defs?.[0]
       if (definition?.type !== 'Parameter') return false
@@ -337,12 +337,12 @@ const no_module_scope_effects = {
     type: 'problem',
     docs: {
       description:
-        'importing a module must be pure (docs/CODE_LAW.md L-P3) — timers/network/listeners/DOM fire from the app edge, not from module load',
+        'importing a module must be pure (.claude/rules/code-law.md L-P3) — timers/network/listeners/DOM fire from the app edge, not from module load',
     },
     schema: allow_schema,
     messages: {
       moduleEffect:
-        '`{{text}}` runs at module load — importing a module must be pure (docs/CODE_LAW.md L-P3). ' +
+        '`{{text}}` runs at module load — importing a module must be pure (.claude/rules/code-law.md L-P3). ' +
         'Export a function and let the app edge (entry file / lifecycle hook) invoke the effect.',
     },
   },

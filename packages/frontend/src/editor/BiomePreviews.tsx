@@ -94,7 +94,7 @@ export const TerrainPreview = ({
   }, [selected?.x, selected?.z])
 
   return (
-    <div className="absolute inset-0 bg-[#0b1017]">
+    <div className="absolute inset-0 bg-surface-low">
       <canvas
         className="size-full touch-none cursor-grab active:cursor-grabbing"
         onContextMenu={(event) => event.preventDefault()}
@@ -125,10 +125,10 @@ export const TerrainPreview = ({
         onWheel={(event) => preview.current?.zoom(event.deltaY)}
         ref={canvas}
       />
-      <span className="pointer-events-none absolute bottom-3 right-3 border border-white/8 bg-[#080a10]/82 px-3 py-2 text-[7px] tracking-[0.12em] text-[#8a909b] uppercase">
+      <span className="pointer-events-none absolute bottom-3 right-3 border border-white/8 bg-bg/82 px-3 py-2 text-[7px] tracking-[0.12em] text-[#8a909b] uppercase">
         Left-drag orbit · Right-drag pan · Scroll zoom
       </span>
-      <label className="absolute bottom-3 left-3 w-64 border border-white/10 bg-[#080a10]/88 px-3 py-2 backdrop-blur-sm">
+      <label className="absolute bottom-3 left-3 w-64 border border-white/10 bg-bg/88 px-3 py-2 backdrop-blur-sm">
         <span className="mb-1.5 flex items-center justify-between text-[7px] tracking-[0.1em] uppercase">
           <span className="text-[#858b96]">Exact voxel field</span>
           <strong className="tabular-nums text-[#efbd45]">
@@ -199,7 +199,7 @@ export const BiomeMap = ({
     }
   }, [preview, recipe, selected])
   return (
-    <div className="absolute inset-0 grid place-items-center overflow-hidden bg-[#07090d] p-10">
+    <div className="absolute inset-0 grid place-items-center overflow-hidden bg-bg p-10">
       <canvas
         className="aspect-square h-full max-h-full w-auto max-w-full cursor-crosshair border border-white/10 bg-black [image-rendering:pixelated]"
         onPointerDown={(event) => {
@@ -217,7 +217,7 @@ export const BiomeMap = ({
         }}
         ref={canvas}
       />
-      <span className="pointer-events-none absolute bottom-3 right-3 border border-white/8 bg-[#080a10]/82 px-3 py-2 text-[7px] tracking-[0.12em] text-[#8a909b] uppercase">
+      <span className="pointer-events-none absolute bottom-3 right-3 border border-white/8 bg-bg/82 px-3 py-2 text-[7px] tracking-[0.12em] text-[#8a909b] uppercase">
         Click a zone to focus the height preview · 196² authored zones
       </span>
     </div>

@@ -10,7 +10,10 @@ import { create_portal_material } from './portal.ts'
 import type { DungeonPortalMarker } from './types.ts'
 import { sample_world_column, type CompiledWorld } from './world_recipe.ts'
 
-const RADIUS = 3.4
+const RADIUS = 6.8
+const LABEL_LIFT = 0.5
+/** Portal root sits at 0.2R and its crown at another R; the tag clears that crown modestly. */
+export const DUNGEON_PORTAL_LABEL_HEIGHT = RADIUS * 1.2 + LABEL_LIFT
 const CULL_RANGE_SQUARED = 120 * 120
 const PARTICLES = 22
 const BLUE = [0.08, 0.48, 1] as const

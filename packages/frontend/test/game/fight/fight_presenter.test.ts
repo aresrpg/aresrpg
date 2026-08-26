@@ -6,7 +6,12 @@ import type { FightPresentationCue } from '@aresrpg/engine'
 
 import { create_fight_presenter } from '../../../src/game/fight/fight_presenter.ts'
 
-const turn = (id: string): FightPresentationCue => ({ id, type: 'turn', entity_id: 'fight_character_0' })
+const turn = (id: string): FightPresentationCue => ({
+  id,
+  type: 'turn',
+  entity_id: 'fight_character_0',
+  turn_key: `fight:turn:${id}:0`,
+})
 
 describe('fight presenter', () => {
   test('plays batches through one strict queue and observes their real completion order', async () => {

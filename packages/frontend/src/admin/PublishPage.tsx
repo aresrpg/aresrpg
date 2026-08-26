@@ -5,6 +5,7 @@ import { next_seed_batch } from '@aresrpg/sdk/seed-admin'
 
 import { dispatch_app, useAppStore } from '../store.ts'
 
+import { deployment_can_publish } from './admin_deployment.ts'
 import { DeploymentTerminal } from './DeploymentTerminal.tsx'
 
 const action_class =
@@ -74,7 +75,8 @@ export const PublishPage = () => {
             </p>
           </div>
           <span className="text-[8px] tracking-[0.14em] text-[#67adff] uppercase">
-            {deployment.network ?? '—'} · {published ? 'deployed' : 'not deployed'}
+            {deployment.network ?? '—'} ·{' '}
+            {published ? 'deployed' : contract_published ? 'bootstrap required' : 'not deployed'}
           </span>
         </div>
       </header>
@@ -124,7 +126,7 @@ export const PublishPage = () => {
           ) : (
             <button
               className={`${action_class} border-[#c8963c]/45 bg-gradient-to-r from-[#c8963c]/14 to-[#4a9eff]/8 text-[#efbd45]`}
-              disabled={deploy_busy || !deployment.artifact || !wallet}
+              disabled={deploy_busy || !deployment_can_publish(deployment) || !wallet}
               onClick={() => dispatch_app({ type: 'admin/contracts_publish' })}
               type="button"
             >
@@ -279,7 +281,7 @@ export const PublishPage = () => {
               )}
             </div>
             {admin.changes && (
-              <div className="max-w-2xl space-y-2 border-l-2 border-white/12 bg-[#080b10]/70 px-4 py-3 text-[8px]">
+              <div className="max-w-2xl space-y-2 border-l-2 border-white/12 bg-bg/70 px-4 py-3 text-[8px]">
                 <div className="flex flex-wrap gap-4 tracking-[0.1em] uppercase">
                   <span className="text-[#72b5ff]">{admin.changes.new_count} new</span>
                   <span className="text-[#efbd45]">{admin.changes.changed.length} changed</span>
@@ -315,7 +317,7 @@ export const PublishPage = () => {
               </div>
             )}
             {admin.progress && (
-              <div className="max-w-2xl border-l-2 border-[#4a9eff]/55 bg-[#080b10]/70 px-4 py-3">
+              <div className="max-w-2xl border-l-2 border-[#4a9eff]/55 bg-bg/70 px-4 py-3">
                 <div className="flex items-center justify-between gap-4 text-[8px] tracking-[0.1em] uppercase">
                   <span className="text-[#8fbce9]">
                     {admin.progress.phase}

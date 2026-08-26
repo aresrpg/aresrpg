@@ -46,7 +46,7 @@ const checkpoint = () =>
     spells: {},
   })
 
-const name_of = (seat: bigint): string => (seat === 0n ? 'Cra' : 'Wabbit')
+const name_of = (seat: bigint): string => (seat === 0n ? 'Yogan' : 'Wabbit')
 
 test('the log speaks casts, merged reductions, returns, and stat changes — never turns or costs', () => {
   const state = checkpoint()

@@ -18,6 +18,7 @@ export const sword_fights = (fights: Readonly<Record<string, FightRow>>, world: 
 export const begin_pending_engage = (
   world: WorldState,
   group: string,
+  access: 0 | 1,
   started_at_ms: number,
   found: Readonly<{ key: string; index: number }> | null
 ): WorldState => {
@@ -36,6 +37,7 @@ export const begin_pending_engage = (
     z: chain_to_client_coordinate(row.z),
     members: Object.freeze(row.members),
     started_at_ms,
+    access,
     fight: null,
   }) satisfies PendingEngage
   return Object.freeze({

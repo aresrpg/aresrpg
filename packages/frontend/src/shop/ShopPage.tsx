@@ -8,7 +8,7 @@ import { AddFundsModal } from '../components/AddFundsModal.tsx'
 import { content_catalog, type SeedItem } from '../content/catalog.ts'
 import { copy_text, type AppCopy } from '../i18n/copy.ts'
 import type { SessionState } from '../modules/session.ts'
-import { stack_merge_target_row } from '../inventory_stacks.ts'
+import { encumbered_asset_ids, stack_merge_target_row } from '../inventory_stacks.ts'
 import { dispatch_app, useAppStore } from '../store.ts'
 import { toast } from '../toast.ts'
 import { format_sui } from '../wallet_amount.ts'
@@ -39,6 +39,7 @@ export default function ShopPage({
   const [success, set_success] = useState<SeedItem | null>(null)
   const [show_funds, set_show_funds] = useState(false)
   const listings = useAppStore(({ marketplace }) => marketplace.own_listings)
+  const trades = useAppStore(({ trade }) => trade.rows)
 
   const sales = useMemo(() => {
     const live = new Map(session.shop?.sales.map((sale) => [sale.item_type, sale]) ?? [])
@@ -81,7 +82,7 @@ export default function ShopPage({
     set_selected(null)
     set_busy(sale.item_type)
     const pending = toast.loading(t('buy_pending'))
-    const existing = stack_merge_target_row(session.inventory, listings, sale.item_type)
+    const existing = stack_merge_target_row(session.inventory, encumbered_asset_ids(listings, trades), sale.item_type)
     void wallet
       .buy_shop_item({
         item_type: sale.item_type,

@@ -10,7 +10,7 @@ import type { CopyText } from '../i18n/copy.ts'
 import { dispatch_app, useAppStore } from '../store.ts'
 import { format_sui } from '../wallet_amount.ts'
 
-import { short_address } from './marketplace_model.tsx'
+import { short_address, SuiUnit } from './marketplace_model.tsx'
 
 const PAGE = 30
 const relative_time = (at_ms: number, locale: string): string => {
@@ -31,26 +31,26 @@ export const HistoryPanel = ({ locale, text }: Readonly<{ locale: string; text: 
   )
   const rows = market.history.slice(0, limit)
   return (
-    <div className="mx-auto flex min-h-0 w-full max-w-[1200px] flex-1 flex-col overflow-y-auto">
+    <div className="mx-auto flex min-h-0 w-full max-w-[1200px] flex-1 flex-col overflow-y-auto bg-surface-high">
       <div className="flex flex-wrap items-center gap-4 px-4 py-4">
-        <div className="min-w-[260px] border border-white/9 bg-[linear-gradient(135deg,rgba(255,255,255,0.06),rgba(255,255,255,0.02))] px-5 py-4">
+        <div className="min-w-[260px] rounded-[5px] border border-border bg-surface px-5 py-4 shadow-[0_10px_28px_rgba(0,0,0,0.16)]">
           <p className="text-[8px] tracking-[0.22em] text-[#777b86] uppercase">{text('revenue_30d')}</p>
-          <p className="mt-2 text-[30px] font-semibold leading-none text-[#c8963c] tabular-nums">
-            {format_sui(BigInt(market.revenue_30d_mist), 2)} <small className="text-[14px]">SUI</small>
+          <p className="mt-2 inline-flex items-center gap-2 text-[30px] font-semibold leading-none text-[#c8963c] tabular-nums">
+            {format_sui(BigInt(market.revenue_30d_mist), 2)} <SuiUnit size={17} />
           </p>
           <p className="mt-2 text-[9px] tracking-[0.12em] text-[#777b86] uppercase">
             {text('sales_count', { count: market.history_total })}
           </p>
         </div>
         {profits > 0n && (
-          <div className="min-w-[260px] border border-[#c8963c]/35 bg-[#c8963c]/7 px-5 py-4">
+          <div className="min-w-[260px] rounded-[5px] border border-[#c8963c]/35 bg-surface px-5 py-4 shadow-[0_10px_28px_rgba(0,0,0,0.16)]">
             <p className="flex items-center gap-1.5 text-[8px] tracking-[0.22em] text-[#777b86] uppercase">
               <Coins size={10} className="text-[#c8963c]" />
               {text('unclaimed')}
             </p>
             <div className="mt-2 flex items-center justify-between gap-4">
-              <strong className="text-[22px] text-[#c8963c] tabular-nums">
-                {format_sui(profits, 2)} <small className="text-[12px]">SUI</small>
+              <strong className="inline-flex items-center gap-1.5 text-[22px] text-[#c8963c] tabular-nums">
+                {format_sui(profits, 2)} <SuiUnit size={14} />
               </strong>
               <button
                 className="h-9 cursor-pointer border border-[#c8963c]/50 bg-[#c8963c]/10 px-4 text-[9px] tracking-[0.15em] text-[#c8963c] uppercase disabled:opacity-40"
@@ -72,8 +72,8 @@ export const HistoryPanel = ({ locale, text }: Readonly<{ locale: string; text: 
           </span>
         </div>
       ) : (
-        <div className="border-t border-[#1e1e2e]">
-          <div className="grid grid-cols-[1.6fr_100px_120px_1fr] gap-3 px-3 py-2 text-[8px] tracking-[0.16em] text-[#6b7280] uppercase">
+        <div className="border-t border-border bg-surface">
+          <div className="grid grid-cols-[minmax(140px,1.6fr)_80px_minmax(90px,120px)_minmax(100px,1fr)] gap-3 px-3 py-2 text-[8px] tracking-[0.16em] text-[#6b7280] uppercase">
             <span>{text('item')}</span>
             <span>{text('date')}</span>
             <span className="text-right">{text('price')}</span>
@@ -84,7 +84,7 @@ export const HistoryPanel = ({ locale, text }: Readonly<{ locale: string; text: 
             const icon = row.item_type ? item_icon(row.item_type) : null
             return (
               <div
-                className={`grid grid-cols-[1.6fr_100px_120px_1fr] items-center gap-3 border-b border-[#1e1e2e] px-3 py-2 ${index % 2 ? 'bg-white/[0.018]' : ''}`}
+                className={`grid grid-cols-[minmax(140px,1.6fr)_80px_minmax(90px,120px)_minmax(100px,1fr)] items-center gap-3 border-b border-white/7 px-3 py-2 ${index % 2 ? 'bg-white/[0.018]' : ''}`}
                 key={`${row.object}:${row.ts_ms}`}
               >
                 <div className="flex min-w-0 items-center gap-2.5">
@@ -99,7 +99,9 @@ export const HistoryPanel = ({ locale, text }: Readonly<{ locale: string; text: 
                   </span>
                 </div>
                 <span className="text-[9px] text-[#777b86] uppercase">{relative_time(row.ts_ms, locale)}</span>
-                <span className="text-right text-[11px] tabular-nums">{format_sui(BigInt(row.price_mist), 2)} SUI</span>
+                <span className="inline-flex max-w-full items-center justify-end gap-1 truncate whitespace-nowrap text-right text-[11px] tabular-nums">
+                  {format_sui(BigInt(row.price_mist), 2)} <SuiUnit />
+                </span>
                 <span className="truncate text-[10px] tracking-[0.06em] text-[#67adff]">
                   {short_address(row.counterparty)}
                 </span>

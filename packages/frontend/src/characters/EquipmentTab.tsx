@@ -19,6 +19,7 @@ import { encyclopedia_catalog, titleize } from '../content/catalog.ts'
 import { encyclopedia_text } from '../encyclopedia/copy.ts'
 import { character_max_hp, fold_equipment_stats, projected_hp } from '../game/character_stats.ts'
 import { copy_text, stat_name, type AppCopy } from '../i18n/copy.ts'
+import { encumbered_asset_ids } from '../inventory_stacks.ts'
 import { dispatch_app, useAppStore } from '../store.ts'
 import { toast } from '../toast.ts'
 
@@ -53,6 +54,7 @@ export default function EquipmentTab({
   const wallet = useAppStore(({ session }) => session.wallet)
   const all_inventory = useAppStore(({ session }) => session.inventory)
   const listings = useAppStore(({ marketplace }) => marketplace.own_listings)
+  const trades = useAppStore(({ trade }) => trade.rows)
   const inventory = useMemo(
     () => all_inventory.filter(({ kiosk }) => kiosk === character.kiosk),
     [all_inventory, character.kiosk]
@@ -69,7 +71,7 @@ export default function EquipmentTab({
   const equipment = staged ?? real
   const changes = useMemo(() => equipment_change_set(equipment, real), [equipment, real])
   const dirty = changes.to_equip.length > 0 || changes.to_unequip.length > 0
-  const listed_ids = useMemo(() => new Set(listings.map(({ id }) => id)), [listings])
+  const listed_ids = useMemo(() => encumbered_asset_ids(listings, trades), [listings, trades])
   const staged_ids = useMemo(
     () => new Set(Object.values(equipment).flatMap((item) => (item ? [item.id] : []))),
     [equipment]

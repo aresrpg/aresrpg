@@ -23,6 +23,7 @@ module aresrpg::kolizeum;
 
 use aresrpg::{
   character::{Self, Character},
+  dungeon,
   fight::{Self, Fight},
   friends::{Self, FriendList},
   protected_policy::AresRPG_TransferPolicy,
@@ -38,7 +39,7 @@ use sui::{
   random::RandomGenerator,
   sui::SUI,
   transfer_policy::TransferPolicy,
-  vec_set::VecSet,
+  vec_set::{Self, VecSet},
 };
 
 // ╔════════════════ [ Constants ] ════════════════════════════════════════════ ]
@@ -100,6 +101,11 @@ public(package) fun create(
   assert!(level_min <= level_max, ELevelOutOfRange);
   gc(kiosk, cap, character_id, level_min, level_max, clock);
 
+  let mut allowed = allowed;
+  if (allowed.is_some()) {
+    let entries = allowed.borrow_mut();
+    if (!entries.contains(&ctx.sender())) entries.insert(ctx.sender());
+  };
   let pledge = pledge_coin.value();
   let fight_id = fight::kolizeum_birth(protected, kiosk, cap, character_id, board_seed, access, catalog, clock, ctx);
   let lobby = Kolizeum {
@@ -174,6 +180,26 @@ public(package) fun settle(
   fight::settle_pvp(fight, fighter_idx, kiosk, cap, policy, clock, ctx);
 }
 
+/// Final ended-fight participant: payout, character return, Fight deletion, and lobby
+/// deletion are one transaction. Non-final callers use ordinary `settle`.
+public(package) fun settle_last(
+  mut lobby: Kolizeum,
+  mut fight: Fight,
+  fighter_idx: u64,
+  kiosk: &mut Kiosk,
+  cap: &KioskOwnerCap,
+  policy: &TransferPolicy<Character>,
+  clock: &Clock,
+  ctx: &mut TxContext,
+) {
+  fight::assert_last_settler(&fight, fighter_idx, ctx);
+  // the lobby/fight pairing (EWrongFight) is asserted inside `settle`
+  settle(&mut lobby, &mut fight, fighter_idx, kiosk, cap, policy, clock, ctx);
+  assert!(lobby.pot.value() == 0, ENotEmpty);
+  fight::close(fight, ctx);
+  destroy_empty(lobby);
+}
+
 /// Leave BEFORE the fight starts — a full pledge refund (no cut was taken). After start, the
 /// only exit is losing the fight (settle).
 public(package) fun exit(
@@ -192,6 +218,26 @@ public(package) fun exit(
   fight::forfeit(fight, fighter_idx, kiosk, cap, policy, clock, ctx);
 }
 
+/// Final placement participant: refund and return the character, then consume both empty
+/// managed objects. Other participants exit through `exit` independently.
+public(package) fun exit_last(
+  mut lobby: Kolizeum,
+  mut fight: Fight,
+  fighter_idx: u64,
+  kiosk: &mut Kiosk,
+  cap: &KioskOwnerCap,
+  policy: &TransferPolicy<Character>,
+  clock: &Clock,
+  ctx: &mut TxContext,
+) {
+  fight::assert_last_live_player(&fight, fighter_idx, ctx);
+  // the lobby/fight pairing (EWrongFight) is asserted inside `exit`
+  exit(&mut lobby, &mut fight, fighter_idx, kiosk, cap, policy, clock, ctx);
+  assert!(lobby.pot.value() == 0, ENotEmpty);
+  fight::close(fight, ctx);
+  destroy_empty(lobby);
+}
+
 /// Forfeit a STARTED fight — leave and abandon all claim to the pot (no refund; that is `exit`,
 /// placement-only). The stalemate escape (owner 2026-08-11): nobody is ever stuck — a leaver
 /// empties their seat, the other side wins, `settle` pays the pot; the forfeited pledge stays in
@@ -206,12 +252,25 @@ public(package) fun forfeit(
   ctx: &TxContext,
 ) {
   assert!(fight::is_wagered(fight), ENotWagered);
+  assert!(!fight::in_placement(fight), EWrongFight);
   fight::forfeit(fight, fighter_idx, kiosk, cap, policy, clock, ctx);
 }
 
-/// Delete the empty husk once the pot is paid out (or fully refunded).
-public(package) fun sweep(lobby: Kolizeum) {
+#[test_only]
+public(package) fun assert_forfeit_phase_for_testing(placement: bool) {
+  assert!(!placement, EWrongFight);
+}
+
+/// Recovery for an already-settled managed fight. Both linked objects are consumed together;
+/// pot-only public sweeping is intentionally impossible.
+public(package) fun close(lobby: Kolizeum, fight: Fight, ctx: &TxContext) {
+  assert!(object::id(&fight) == lobby.fight, EWrongFight);
   assert!(lobby.pot.value() == 0, ENotEmpty);
+  fight::close(fight, ctx);
+  destroy_empty(lobby);
+}
+
+fun destroy_empty(lobby: Kolizeum) {
   let Kolizeum { id, pot, .. } = lobby;
   pot.destroy_zero();
   id.delete();
@@ -228,4 +287,20 @@ fun gc(kiosk: &Kiosk, cap: &KioskOwnerCap, character_id: ID, level_min: u16, lev
   let lvl = chr.level();
   assert!(lvl >= level_min && lvl <= level_max, ELevelOutOfRange);
   assert!(!world::is_rooted(chr, clock), ERooted);
+  assert!(!dungeon::has_run(chr), ERooted);
+}
+
+#[test_only]
+public(package) fun creator_allowed_for_testing(initial: vector<address>, creator: address): bool {
+  let mut entries = vec_set::empty();
+  let mut i = 0;
+  while (i < initial.length()) {
+    let entry = initial[i];
+    if (!entries.contains(&entry)) entries.insert(entry);
+    i = i + 1;
+  };
+  let mut allowed = option::some(entries);
+  let frozen = allowed.borrow_mut();
+  if (!frozen.contains(&creator)) frozen.insert(creator);
+  allowed.borrow().contains(&creator)
 }

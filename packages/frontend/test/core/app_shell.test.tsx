@@ -5,7 +5,8 @@ import { expect, test } from 'bun:test'
 import { renderToStaticMarkup } from 'react-dom/server'
 
 import { AppShell } from '../../src/components/AppShell.tsx'
-import { CharacterTabs } from '../../src/components/CharacterTabs.tsx'
+import { CharacterTabs, character_tab_invite_enabled } from '../../src/components/CharacterTabs.tsx'
+import { owned_party_invite_view } from '../../src/modules/party.ts'
 import { Sidebar } from '../../src/components/Sidebar.tsx'
 import { ConnectionCard, indexing_health_tone } from '../../src/components/SidebarCards.tsx'
 import type { AuthSession } from '../../src/auth.ts'
@@ -26,6 +27,9 @@ test('the account card sits below navigation and above language with row actions
     // action namespaces are never exercised by these reducer/DOM tests
     fight: {} as never,
     dungeon: {} as never,
+    kolizeum: {} as never,
+    friends: {} as never,
+    party: {} as never,
     character: {} as never,
     marketplace: {} as never,
     stacks: {} as never,
@@ -83,7 +87,7 @@ test('the account card sits below navigation and above language with row actions
   expect(html).toContain('TESTNET')
   expect(html).toContain('class="flex flex-col gap-1"')
   expect(html).not.toContain('data-page="simulator"')
-  for (const page of ['shop', 'airdrop', 'settings']) {
+  for (const page of ['shop', 'airdrop', 'kolizeum', 'settings']) {
     const button = html.match(new RegExp(`<button[^>]*data-page="${page}"[^>]*>`))?.[0]
     expect(button).toBeDefined()
     expect(button).not.toContain('disabled')
@@ -246,6 +250,16 @@ test('the character tab strip lives on character-scoped pages and selects throug
     />
   )
   expect(capped).not.toContain('data-character-tab-create')
+})
+
+test('a character tab may invite another owned kiosk character, never itself', () => {
+  const characters = [
+    { id: '0xa', custody: 'kiosk', name: 'A' },
+    { id: '0xb', custody: 'kiosk', name: 'B' },
+  ] as never
+  const view = owned_party_invite_view(characters, '0xa', {}, null)
+  expect(character_tab_invite_enabled('0xa', view)).toBeFalse()
+  expect(character_tab_invite_enabled('0xb', view)).toBeTrue()
 })
 
 test('a replaced link renders red with its own label and never as reconnecting', async () => {

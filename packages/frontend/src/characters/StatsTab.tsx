@@ -8,7 +8,15 @@
 // Confirm composes ONE raise_stats transaction whose proven receipt folds in the reducer.
 
 import { useState } from 'react'
-import { characteristic_names, experience_progress, type CharacteristicName } from '@aresrpg/immutable'
+import {
+  characteristic_allocation_quote,
+  characteristic_cost_step,
+  characteristic_names,
+  experience_progress,
+  is_class_name,
+  type CharacteristicName,
+  type CharacteristicValues,
+} from '@aresrpg/immutable'
 import type { CharacterRow } from '@aresrpg/protocol'
 
 import action_icon from '../assets/statistics/action.png'
@@ -56,11 +64,15 @@ export default function StatsTab({ character, copy }: Readonly<{ character: Read
   const [alloc, set_alloc] = useState(empty_allocation)
   const [pending_tx, set_pending_tx] = useState(false)
 
-  const staged_total = characteristic_names.reduce((total, stat) => total + alloc[stat], 0)
-  const remaining = Math.max(0, character.available_points - staged_total)
-  const has_pending = staged_total > 0
-  const can_confirm = !!wallet && has_pending && staged_total <= character.available_points && !pending_tx
-  const can_upgrade = remaining > 0 && !pending_tx
+  const classe = is_class_name(character.classe) ? character.classe : null
+  const current = Object.fromEntries(
+    characteristic_names.map((stat) => [stat, character[stat]])
+  ) as CharacteristicValues
+  const quote = classe ? characteristic_allocation_quote(classe, current, alloc) : null
+  const staged_clicks = characteristic_names.reduce((total, stat) => total + alloc[stat], 0)
+  const remaining = Math.max(0, character.available_points - (quote?.cost ?? 0))
+  const has_pending = staged_clicks > 0
+  const can_confirm = !!wallet && has_pending && !!quote && quote.cost <= character.available_points && !pending_tx
 
   const experience = Number(character.experience)
   const { level, into, span, percent } = experience_progress(experience)
@@ -70,17 +82,17 @@ export default function StatsTab({ character, copy }: Readonly<{ character: Read
 
   const confirm = (): void => {
     if (!can_confirm || !wallet) return
-    const staged = { ...alloc }
+    const spending = { ...quote!.costs }
     set_pending_tx(true)
     const pending = toast.loading(t('stats.tx_pending'))
     void wallet.character
       .raise_stats({
         character_id: character.id,
-        allocation: staged,
+        spending,
         custody: { kiosk: character.kiosk, kiosk_cap: character.kiosk_cap },
       })
       .then(() => {
-        dispatch_app({ type: 'character/stats_raised', character_id: character.id, allocation: staged })
+        dispatch_app({ type: 'character/stats_raised', character_id: character.id, spending })
         set_alloc(empty_allocation())
         pending.success(t('stats.tx_success'))
       })
@@ -167,22 +179,35 @@ export default function StatsTab({ character, copy }: Readonly<{ character: Read
           {characteristic_names.map((stat) => {
             const label = t(`stat.${stat}`)
             const base = character[stat]
-            const pending = alloc[stat]
+            const pending_clicks = alloc[stat]
+            const pending_gain = quote?.gains[stat] ?? 0
             const bonus = equipment_bonus(character, stat)
             const signed_bonus = bonus > 0 ? `+${bonus}` : String(bonus)
+            const step = classe ? characteristic_cost_step(classe, stat, base + pending_gain) : null
+            const next_quote = classe
+              ? characteristic_allocation_quote(classe, current, { ...alloc, [stat]: pending_clicks + 1 })
+              : null
+            const can_add = !!next_quote && next_quote.cost <= character.available_points && !pending_tx
             return (
               <div className="stats__prow" key={stat}>
                 <StatIdentity description={t(`stats.description.${stat}`)} label={label} stat={stat} />
-                <span className="stats__prow-value hud-num">
-                  {base}
-                  {bonus !== 0 && <span className="stats__prow-bonus"> ({signed_bonus})</span>}
-                  {pending > 0 && <span className="stats__prow-pending"> +{pending}</span>}
+                <span className="stats__prow-allocation">
+                  {step && (
+                    <span className="stats__prow-cost">
+                      {t('stats.point_cost', { cost: step.cost, gain: step.gain })}
+                    </span>
+                  )}
+                  <span className="stats__prow-value hud-num">
+                    {base}
+                    {bonus !== 0 && <span className="stats__prow-bonus"> ({signed_bonus})</span>}
+                    {pending_gain > 0 && <span className="stats__prow-pending"> +{pending_gain}</span>}
+                  </span>
                 </span>
                 <button
                   aria-label={t('stats.remove_point', { stat: label })}
                   className="stats__step btn-outline"
-                  disabled={pending <= 0 || pending_tx}
-                  onClick={() => set_alloc({ ...alloc, [stat]: Math.max(0, pending - 1) })}
+                  disabled={pending_clicks <= 0 || pending_tx}
+                  onClick={() => set_alloc({ ...alloc, [stat]: Math.max(0, pending_clicks - 1) })}
                   type="button"
                 >
                   −
@@ -190,8 +215,8 @@ export default function StatsTab({ character, copy }: Readonly<{ character: Read
                 <button
                   aria-label={t('stats.add_point', { stat: label })}
                   className="stats__step stats__step--add btn-gold"
-                  disabled={!can_upgrade}
-                  onClick={() => set_alloc({ ...alloc, [stat]: pending + 1 })}
+                  disabled={!can_add}
+                  onClick={() => set_alloc({ ...alloc, [stat]: pending_clicks + 1 })}
                   type="button"
                 >
                   +

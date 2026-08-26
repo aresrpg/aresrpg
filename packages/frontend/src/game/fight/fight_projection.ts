@@ -13,6 +13,7 @@ import {
   weapon_level_of,
   type ActiveEffect,
   type Fighter,
+  type FightContract,
   type FightMode,
   type HydratedFightCheckpoint,
   type SpellLevel,
@@ -24,21 +25,13 @@ import type { FightPresentationCue } from '@aresrpg/engine'
 export const turn_seconds_remaining = (turn_started_ms: bigint, now: number): number =>
   Math.max(0, Math.ceil((Number(turn_started_ms + CONTRACT_CONSTANTS.turn_max_ms) - now) / 1_000))
 
-export const presented_turn_after_cue = (
-  current: bigint | null,
-  cue: Readonly<FightPresentationCue>,
-  phase: 'start' | 'complete'
-): bigint | null => {
-  if (cue.type !== 'turn') return current
-  const seat = Number(cue.entity_id.split('_').at(-1))
-  if (!Number.isInteger(seat)) return current
-  // Completion of the TURN cue is not completion of the turn: the presenter holds the card until
-  // the next turn cue while movement/casts play. The whole presentation batch clears it.
-  return phase === 'start' ? BigInt(seat) : current
-}
-
-export const presented_turn_after_queue = (current: bigint | null, queued_batches: number): bigint | null =>
-  queued_batches > 0 ? current : null
+/** Stable across a local prediction and its later chain checkpoint. Wall-clock timestamps are
+ * accounting facts, not turn identity: the two clocks can legitimately differ. */
+export const fight_turn_key = (
+  contract: Readonly<Pick<FightContract, 'id' | 'round' | 'turn_ptr'>>,
+  active_seat: bigint | null
+): string | null =>
+  active_seat === null ? null : `${contract.id}:${contract.round}:${contract.turn_ptr}:${active_seat}`
 
 export type FightSpellView = Readonly<{
   name: string

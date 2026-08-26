@@ -5,7 +5,7 @@
 
 import { describe, expect, test } from 'bun:test'
 
-import { GRID_CELLS, mask_get } from '../src/combat_grid.ts'
+import { GRID_CELLS, mask_from_cells, mask_get } from '../src/combat_grid.ts'
 import { deal } from '../src/damage.ts'
 import { resolve_rows } from '../src/effects.ts'
 import { KINDS, STATS, sheet_of } from '../src/fighters.ts'
@@ -274,6 +274,38 @@ describe('fight turn effects', () => {
         .filter(({ type }) => ['trap_triggered', 'zone_removed', 'damage_number', 'fighter_moved'].includes(type))
         .map(({ type }) => type)
     ).toEqual(['trap_triggered', 'zone_removed', 'damage_number', 'trap_triggered', 'zone_removed', 'fighter_moved'])
+  })
+
+  test('a level-two three-cell wall slam deals the Retro 24 damage floor', () => {
+    const checkpoint = structuredClone(create_fixture().checkpoint)
+    const caster = checkpoint.contract.fighters[0]!
+    if (caster.kind.type !== 'player') throw new Error('fixture caster must be a player')
+    caster.kind.level = 2n
+    checkpoint.sources.players[caster.kind.character]!.level = 2n
+    caster.cell = 100n
+    const target = checkpoint.contract.fighters[1]!
+    target.cell = 101n
+    target.hp = 100n
+    checkpoint.contract.closed = mask_from_cells([102n])
+    const runtime = create_runtime(checkpoint)
+
+    resolve_rows({
+      runtime,
+      caster: 0n,
+      sheet: sheet_of(runtime, 0n),
+      rows: [{ ...push_row(3n), area_shape: 0n, area_size: 0n }],
+      anchor: target.cell,
+      origin: caster.cell,
+      cursor: { state: 1n },
+      cast_level: 1n,
+      cause: 'spell',
+    })
+
+    expect(runtime.contract.fighters[1]!.cell).toBe(101n)
+    expect(runtime.contract.fighters[1]!.hp).toBe(76n)
+    expect(runtime.render_actions).toContainEqual(
+      expect.objectContaining({ type: 'push_collided', payload: expect.objectContaining({ damage: 24n }) })
+    )
   })
 
   test('elemental shields scale from their matching caster characteristic without raw damage', () => {

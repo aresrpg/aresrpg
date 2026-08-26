@@ -48,8 +48,8 @@ export const EncyclopediaPage = ({
   const text = useMemo(() => encyclopedia_text(copy), [copy])
   const view = route_view(pathname)
   return (
-    <section className="pointer-events-auto z-[12] flex h-full min-h-0 flex-1 flex-col bg-[#12121a]/50 [&_button:not(:disabled)]:cursor-pointer">
-      <nav className="flex shrink-0 items-center gap-1 overflow-x-auto border-b border-[#1e1e2e] px-4 py-3 [&>*]:shrink-0">
+    <section className="pointer-events-auto z-[12] flex h-full min-h-0 flex-1 flex-col bg-surface/50 [&_button:not(:disabled)]:cursor-pointer">
+      <nav className="flex shrink-0 items-center gap-1 overflow-x-auto border-b border-border px-4 py-3 [&>*]:shrink-0">
         {TABS.map((tab) => (
           <button
             className={category_pill(view.tab === tab.id)}

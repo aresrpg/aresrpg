@@ -211,8 +211,8 @@ export const MobsTab = ({
         </Section>
         {detail.mob.spells.length > 0 && (
           <Section title={text('mob_spells')}>
-            <div className="border border-[#1e1e2e]" data-mob-spell-tabs="">
-              <div className="flex min-w-0 overflow-x-auto border-b border-[#1e1e2e] bg-black/15" role="tablist">
+            <div className="border border-border" data-mob-spell-tabs="">
+              <div className="flex min-w-0 overflow-x-auto border-b border-border bg-black/15" role="tablist">
                 {detail.mob.spells.map((spell, index) => (
                   <button
                     aria-selected={index === spell_index}
@@ -343,7 +343,7 @@ export const MobsTab = ({
               {text('showing_mobs', { count: filtered.length, total: encyclopedia_catalog.mobs.length })}
             </span>
             <select
-              className="h-9 min-w-[110px] border border-[#1e1e2e] bg-[#0a0a0f]/55 px-2 text-[9px] text-[#9da0a9] uppercase"
+              className="h-9 min-w-[110px] border border-border bg-bg/55 px-2 text-[9px] text-[#9da0a9] uppercase"
               onChange={(event) => set_sort(event.target.value)}
               value={sort}
             >

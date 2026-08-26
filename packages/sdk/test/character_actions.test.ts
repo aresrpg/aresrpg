@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-// The character builder's receipt law and its local fold — the fold restates character.move's
-// exact arithmetic (1 point spent per stat point, character.move raise_stat), so this test is
-// the client half of that twin.
+// The character builder's receipt law: exact capital spending reaches character.move unchanged,
+// so SDK composition never invents natural stat gains.
 
 import { describe, expect, test } from 'bun:test'
 import { Ed25519Keypair } from '@mysten/sui/keypairs/ed25519'
@@ -110,12 +109,13 @@ const game = (receipt: () => Receipt = () => ({ $kind: 'Transaction', Transactio
 describe('the character builder', () => {
   test('every action can resolve the exact projected kiosk instead of an implicit first cap', async () => {
     let requested: string | undefined
+    const raised: Record<string, unknown>[] = []
     const sdk = {
       tx: () => ({}),
       with_owner_kiosk: (_tx: unknown, _cap: unknown, compose: (kiosk: string, cap: unknown) => void) =>
         compose('projected_kiosk', {}),
       execute: async () => ({ $kind: 'Transaction', Transaction: { digest } }) as unknown as Receipt,
-      doors: { raise_stat: () => {} },
+      doors: { raise_stat: (_tx: unknown, args: Record<string, unknown>) => raised.push(args) },
     }
     const actions = gate_actions(sdk as never, {
       kiosk_cap: async (kiosk) => {
@@ -125,10 +125,11 @@ describe('the character builder', () => {
     })
     await actions.raise_stats({
       character_id: id(20),
-      allocation: { strength: 1 },
+      spending: { strength: 2 },
       custody: { kiosk: id(99) },
     })
     expect(requested).toBe(id(99))
+    expect(raised).toEqual([expect.objectContaining({ character_id: id(20), stat: 'strength', points: 2 })])
   })
 
   test('create refuses to invent the character id when the receipt carries no CharacterCreated', async () => {
@@ -483,14 +484,25 @@ describe('the character builder', () => {
         },
         settle_fight: (_tx: unknown, input: Record<string, unknown>) =>
           void calls.push({ door: 'settle', args: input }),
+        settle_last_fight: (_tx: unknown, input: Record<string, unknown>) =>
+          void calls.push({ door: 'settle_last', args: input }),
       }),
       hydrate_unknown: async (ids: readonly string[]) => void hydrated.push([...ids]),
       execute: async () => {
         executions += 1
-        return { $kind: 'Transaction', Transaction: { digest } } as unknown as Receipt
+        return {
+          $kind: 'Transaction',
+          Transaction: {
+            digest,
+            events: [
+              { type: `${id(1)}::fight::FightClosable`, json: { fight: id(40) } },
+              { type: `${id(1)}::fight::FightClosed`, json: { fight: id(40) } },
+            ],
+          },
+        } as unknown as Receipt
       },
     }
-    await fight_actions(sdk as never, { kiosk_cap: async () => kiosk_cap }).settle({
+    const result = await fight_actions(sdk as never, { kiosk_cap: async () => kiosk_cap }).settle({
       fight: id(40),
       fighter_idx: 2n,
       loot: [
@@ -501,7 +513,7 @@ describe('the character builder', () => {
       custody: { kiosk: kiosk_cap.kioskId, kiosk_cap: kiosk_cap.objectId },
     })
     expect(executions).toBe(1)
-    expect(calls.map(({ door }) => door)).toEqual(['prepare', 'prepare', 'settle'])
+    expect(calls.map(({ door }) => door)).toEqual(['prepare', 'prepare', 'settle_last'])
     expect(calls[2]?.args).toMatchObject({
       f: id(40),
       fighter_idx: 2n,
@@ -510,6 +522,36 @@ describe('the character builder', () => {
       personal: kiosk_cap.objectId,
     })
     expect(hydrated).toHaveLength(2)
+    expect(result.closable).toBeTrue()
+    expect(result.closed).toBeTrue()
     expect(sdk).not.toHaveProperty('hydrate_owned_current')
+  })
+
+  test('a non-final settlement falls back only after the atomic probe is refused before signing', async () => {
+    const calls: string[] = []
+    let executions = 0
+    const sdk = {
+      ...terminal_sdk({
+        prepare_fight_loot: () => 'prepared',
+        settle_last_fight: () => void calls.push('last'),
+        settle_fight: () => void calls.push('ordinary'),
+      }),
+      execute: async () => {
+        executions += 1
+        if (executions === 1)
+          throw new Error("Transaction resolution failed: MoveAbort abort code: 1729 in '0x1::fight::settle_last'")
+        return { $kind: 'Transaction', Transaction: { digest, events: [] } } as unknown as Receipt
+      },
+    }
+    const result = await fight_actions(sdk as never, { kiosk_cap: async () => kiosk_cap }).settle({
+      fight: id(40),
+      fighter_idx: 0n,
+      loot: [{ item_type: 'silk', existing: null }],
+      custody: { kiosk: kiosk_cap.kioskId, kiosk_cap: kiosk_cap.objectId },
+    })
+
+    expect(calls).toEqual(['last', 'ordinary'])
+    expect(executions).toBe(2)
+    expect(result).toMatchObject({ digest, closed: false })
   })
 })

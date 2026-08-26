@@ -18,7 +18,6 @@ import {
   type Scene,
 } from 'three'
 import { MeshStandardNodeMaterial } from 'three/webgpu'
-import { CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js'
 
 import { flora_cluster } from './nature/flora_cluster.ts'
 import { grain_stalk } from './nature/grain_stalk.ts'
@@ -180,7 +179,6 @@ const material_for = (
 export const create_resource_node_layer = ({ scene, wind = false }: Readonly<{ scene: Scene; wind?: boolean }>) => {
   const meshes = new Map<string, InstancedMesh>()
   const anchors = new Map<string, Object3D>()
-  const labels = new Map<string, CSS2DObject>()
   let markers = new Map<string, ResourceNodeMarker>()
   // The backend reveals resource dressing only after its first terrain frame has presented.
   let visible = false
@@ -201,7 +199,6 @@ export const create_resource_node_layer = ({ scene, wind = false }: Readonly<{ s
       if (!wanted.has(id)) {
         scene.remove(anchor)
         anchors.delete(id)
-        labels.delete(id)
       }
     markers = new Map(next.map((marker) => [marker.id, marker]))
     const buckets = new Map<string, ResourceNodeMarker[]>()
@@ -248,21 +245,11 @@ export const create_resource_node_layer = ({ scene, wind = false }: Readonly<{ s
     })
   }
 
-  const set_label = (id: string, element: HTMLElement | null): void => {
-    const anchor = anchors.get(id)
-    if (!anchor || !markers.has(id)) return
-    const previous = labels.get(id)
-    if (previous) anchor.remove(previous)
-    labels.delete(id)
-    if (!element) return
-    const label = new CSS2DObject(element)
-    anchor.add(label)
-    labels.set(id, label)
-  }
-
   return Object.freeze({
     set_markers,
-    set_label,
+    /** The shared CSS2D layer reads this invisible world point every render. */
+    label_anchor: (id: string): Vector3 | null =>
+      visible && markers.has(id) ? (anchors.get(id)?.position ?? null) : null,
     set_visible: (next: boolean) => {
       visible = next
       meshes.forEach((mesh) => (mesh.visible = next))
@@ -272,7 +259,6 @@ export const create_resource_node_layer = ({ scene, wind = false }: Readonly<{ s
       clear_meshes()
       anchors.forEach((anchor) => scene.remove(anchor))
       anchors.clear()
-      labels.clear()
       markers.clear()
     },
   })

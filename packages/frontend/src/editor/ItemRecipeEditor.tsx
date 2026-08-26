@@ -88,7 +88,7 @@ export const ItemRecipeEditor = ({
               >
                 {!job_slugs.includes(job as (typeof job_slugs)[number]) && <option value={job}>{job || 'None'}</option>}
                 {job_slugs.map((option) => (
-                  <option className="bg-[#090a10]" key={option} value={option}>
+                  <option className="bg-bg" key={option} value={option}>
                     {titleize_field(option)}
                   </option>
                 ))}

@@ -71,7 +71,7 @@ export const is_job_slug = (slug: string): boolean => (job_slugs as readonly str
 
 export const is_stat_name = (name: string): name is StatName => (stat_names as readonly string[]).includes(name)
 
-export const is_class_name = (name: string): boolean => (class_names as readonly string[]).includes(name)
+export const is_class_name = (name: string): name is ClassName => (class_names as readonly string[]).includes(name)
 
 /** THE CLASS SPELL LAW (owner 2026-08-24): every class has EXACTLY these twenty unlock
  * levels — three spells at level 1, then the Dofus 1.29 ladder. Which spell takes which

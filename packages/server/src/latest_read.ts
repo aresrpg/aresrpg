@@ -12,3 +12,14 @@ export const latest_keyed_reader = <T>(read: (key: string) => Promise<T>, delive
     })
   }
 }
+
+export const latest_reader = <T>(read: () => Promise<T>, deliver: (value: T) => void) => {
+  let generation = 0
+  return (): Promise<void> => {
+    generation += 1
+    const current = generation
+    return read().then((value) => {
+      if (generation === current) deliver(value)
+    })
+  }
+}

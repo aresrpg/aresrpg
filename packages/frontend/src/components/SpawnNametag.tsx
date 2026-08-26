@@ -12,7 +12,7 @@
 // here is the level that will stand on the board, not an estimate of it.
 
 /* eslint-disable functional/prefer-immutable-types -- React lifecycle boundary. */
-import { useEffect } from 'react'
+import { useEffect, useSyncExternalStore } from 'react'
 import { createPortal } from 'react-dom'
 import { chain_to_client_coordinate } from '@aresrpg/immutable'
 
@@ -23,7 +23,8 @@ import { dispatch_app, useAppStore, type AppState } from '../store.ts'
 import type { AppCopy } from '../i18n/copy.ts'
 import { copy_text } from '../i18n/copy.ts'
 import { live_spawns, parse_mob_group_id, parse_resource_pack_id, type WorldState } from '../modules/world.ts'
-import { read_pose } from '../game/core/pose_feed.ts'
+import { selected_party } from '../modules/party.ts'
+import { read_pose, subscribe_pose, type WorldPose } from '../game/core/pose_feed.ts'
 import { gather_gate } from '../game/gather_gate.ts'
 import { parse_resource_node_id, resource_seats } from '../game/resource_nodes.ts'
 import { selected_character } from '../modules/session.ts'
@@ -34,29 +35,35 @@ import { PromptKey, split_key_template } from './PromptChip.tsx'
 
 const SPAWN_INTERACTION_RANGE_BLOCKS = 15
 
+type InteractionCandidate = Readonly<{ id: string; x: number; z: number }>
+type InteractionPose = Readonly<Pick<WorldPose, 'x' | 'z'>>
+
+export const nearest_interaction_id = (
+  candidates: readonly InteractionCandidate[],
+  own: InteractionPose | null,
+  range = SPAWN_INTERACTION_RANGE_BLOCKS
+): string | null =>
+  own
+    ? (candidates
+        .map((candidate) => ({ ...candidate, distance: Math.hypot(candidate.x - own.x, candidate.z - own.z) }))
+        .filter(({ distance }) => distance <= range)
+        .toSorted((left, right) => left.distance - right.distance || left.id.localeCompare(right.id))[0]?.id ?? null)
+    : null
+
 /** The chain's own scalar → level arithmetic (fight.move::mf, mirrored in @aresrpg/fight). */
 export const member_level = mob_level_from_scalar
 
 /** The closest tagged pack to the player — E's one target. Ties break on the id so the choice
  *  is stable frame to frame rather than flickering between two equidistant packs. */
-const nearest_tagged_group = (ids: readonly string[], world: WorldState): string | null => {
-  const own = read_pose()
-  if (!own) return null
-  return (
-    ids
-      .flatMap((id) => {
-        const found = parse_mob_group_id(id)
-        const group = found ? live_spawns(world, found.key).mobs.find(({ index }) => index === found.index) : null
-        if (!group) return []
-        const x = chain_to_client_coordinate(group.x)
-        const z = chain_to_client_coordinate(group.z)
-        const distance = Math.hypot(x - own.x, z - own.z)
-        return distance <= SPAWN_INTERACTION_RANGE_BLOCKS ? [{ id, distance }] : []
-      })
-      .toSorted((a, b) => a.distance - b.distance || a.id.localeCompare(b.id))
-      .at(0)?.id ?? null
+const nearest_tagged_group = (ids: readonly string[], world: WorldState, own: InteractionPose | null): string | null =>
+  nearest_interaction_id(
+    ids.flatMap((id) => {
+      const found = parse_mob_group_id(id)
+      const group = found ? live_spawns(world, found.key).mobs.find(({ index }) => index === found.index) : null
+      return group ? [{ id, x: chain_to_client_coordinate(group.x), z: chain_to_client_coordinate(group.z) }] : []
+    }),
+    own
   )
-}
 
 const resource_at = (id: string, state: AppState) => {
   const node = parse_resource_node_id(id)
@@ -72,26 +79,24 @@ const resource_at = (id: string, state: AppState) => {
   return node && found && pack && resource && seat ? { node, found, pack, resource, seat, character } : null
 }
 
-const nearest_tagged_resource = (ids: readonly string[], state: AppState): string | null => {
-  const own = read_pose()
-  if (!own) return null
-  return (
-    ids
-      .flatMap((id) => {
-        const row = resource_at(id, state)
-        if (!row) return []
-        const x = chain_to_client_coordinate(row.pack.x) + row.seat.dx
-        const z = chain_to_client_coordinate(row.pack.z) + row.seat.dz
-        const distance = Math.hypot(x - own.x, z - own.z)
-        return distance <= SPAWN_INTERACTION_RANGE_BLOCKS ? [{ id, distance }] : []
-      })
-      .toSorted((a, b) => a.distance - b.distance || a.id.localeCompare(b.id))
-      .at(0)?.id ?? null
+const nearest_tagged_resource = (ids: readonly string[], state: AppState, own: InteractionPose | null): string | null =>
+  nearest_interaction_id(
+    ids.flatMap((id) => {
+      const row = resource_at(id, state)
+      return row
+        ? [
+            {
+              id,
+              x: chain_to_client_coordinate(row.pack.x) + row.seat.dx,
+              z: chain_to_client_coordinate(row.pack.z) + row.seat.dz,
+            },
+          ]
+        : []
+    }),
+    own
   )
-}
 
-const tagged_distance = (id: string, state: AppState): number => {
-  const own = read_pose()
+const tagged_distance = (id: string, state: AppState, own: InteractionPose | null): number => {
   if (!own) return Number.POSITIVE_INFINITY
   const resource = resource_at(id, state)
   if (resource) {
@@ -105,6 +110,29 @@ const tagged_distance = (id: string, state: AppState): number => {
     ? Math.hypot(chain_to_client_coordinate(group.x) - own.x, chain_to_client_coordinate(group.z) - own.z)
     : Number.POSITIVE_INFINITY
 }
+
+const interaction_target = (ids: readonly string[], state: AppState, own: InteractionPose | null): string | null => {
+  const selected = selected_character(state.session)
+  if (selected?.ambush || state.world.gathering?.character_id === selected?.id) return null
+  const mob = nearest_tagged_group(ids, state.world, own)
+  const resource = nearest_tagged_resource(ids, state, own)
+  return (
+    [mob, resource]
+      .filter((id): id is string => id !== null)
+      .toSorted(
+        (left, right) =>
+          tagged_distance(left, state, own) - tagged_distance(right, state, own) || left.localeCompare(right)
+      )[0] ?? null
+  )
+}
+
+/** Pose events arrive at 20 Hz, but React only rerenders when the selected id actually changes. */
+const useInteractionTarget = (ids: readonly string[], state: AppState): string | null =>
+  useSyncExternalStore(
+    subscribe_pose,
+    () => interaction_target(ids, state, read_pose()),
+    () => null
+  )
 
 /** One member row: its species and the exact level it will bring to the board. */
 const member_line = (mob_type: string, scalar: number, index: number, unknown: string): NametagLine => {
@@ -126,33 +154,33 @@ export const SpawnNametag = ({ copy }: Readonly<{ copy: AppCopy }>) => {
   // Names advertise packs from afar, while E remains a close interaction. The target is the
   // nearest tagged spawn still inside that smaller action radius.
   const ids = Object.keys(spawns)
-  const mob_target = nearest_tagged_group(ids, world)
-  const resource_target = nearest_tagged_resource(ids, state)
-  const selected = selected_character(state.session)
-  const target =
-    selected?.ambush || state.world.gathering?.character_id === selected?.id
-      ? null
-      : ([mob_target, resource_target]
-          .filter((id): id is string => id !== null)
-          .sort((a, b) => tagged_distance(a, state) - tagged_distance(b, state) || a.localeCompare(b))[0] ?? null)
+  const target = useInteractionTarget(ids, state)
+  const has_party = selected_party(state) !== null
+  const effective_access = has_party ? world.fight_access : 0
 
   useEffect(() => {
-    if (!target) return
     const on_key = (event: KeyboardEvent): void => {
       if (event.code !== 'KeyE' || event.repeat) return
       if (read_dungeon_portal_prompt().focused_id) return
       const focus = event.target as HTMLElement | null
       if (focus?.isContentEditable || ['INPUT', 'TEXTAREA'].includes(focus?.tagName ?? '')) return
+      const current_target = interaction_target(Object.keys(spawns), state, read_pose())
+      if (!current_target) return
       event.preventDefault()
-      const resource = resource_at(target, state)
+      const resource = resource_at(current_target, state)
       if (resource?.character && gather_gate(resource.character, resource.resource).ok)
-        dispatch_app({ type: 'world/gather', node: target })
-      else if (parse_mob_group_id(target))
-        dispatch_app({ type: 'world/engage', group: target, started_at_ms: Date.now() })
+        dispatch_app({ type: 'world/gather', node: current_target })
+      else if (parse_mob_group_id(current_target))
+        dispatch_app({
+          type: 'world/engage',
+          group: current_target,
+          access: effective_access,
+          started_at_ms: Date.now(),
+        })
     }
     globalThis.addEventListener('keydown', on_key)
     return () => globalThis.removeEventListener('keydown', on_key)
-  }, [state, target])
+  }, [effective_access, has_party, spawns, state])
 
   return (
     <>

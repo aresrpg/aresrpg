@@ -384,8 +384,13 @@ describe('fight presentation cues', () => {
 
     const cues = project_fight_cues({ checkpoint: state, events, batch: 4 })
 
-    expect(cues[0]).toMatchObject({ type: 'turn', entity_id: 'fight_mob_1', min_ms: 3000 })
-    expect(cues[1]).toMatchObject({ type: 'turn', entity_id: 'fight_character_0' })
+    expect(cues[0]).toMatchObject({
+      type: 'turn',
+      entity_id: 'fight_mob_1',
+      turn_key: '0xf1:turn:1:1',
+      min_ms: 3000,
+    })
+    expect(cues[1]).toMatchObject({ type: 'turn', entity_id: 'fight_character_0', turn_key: '0xf1:turn:2:0' })
     expect(cues[1] && 'min_ms' in cues[1] ? cues[1].min_ms : undefined).toBeUndefined()
   })
 

@@ -15,7 +15,7 @@ export const split_key_template = (template: string): readonly [string, string] 
 
 export const PromptChip = ({ children }: Readonly<{ children: ReactNode }>) => (
   <div className="pointer-events-none -translate-y-full">
-    <div className="flex items-center gap-1.5 rounded-xl border border-white/12 bg-[#0a0a0f]/82 px-3 py-1.5 text-[10px] tracking-[0.18em] whitespace-nowrap text-[#e8e4dc] uppercase shadow-[0_4px_18px_rgba(0,0,0,0.45)] backdrop-blur-md">
+    <div className="flex items-center gap-1.5 rounded-xl border border-white/12 bg-bg/82 px-3 py-1.5 text-[10px] tracking-[0.18em] whitespace-nowrap text-[#e8e4dc] uppercase shadow-[0_4px_18px_rgba(0,0,0,0.45)] backdrop-blur-md">
       {children}
     </div>
   </div>

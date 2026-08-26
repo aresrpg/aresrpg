@@ -9,7 +9,7 @@ import { item_detail_icon } from '../content/item_detail_assets.ts'
 import { env } from '../env.ts'
 import { copy_text, type AppCopy, type CopyText } from '../i18n/copy.ts'
 import type { SessionState } from '../modules/session.ts'
-import { stack_merge_target_row } from '../inventory_stacks.ts'
+import { encumbered_asset_ids, stack_merge_target_row } from '../inventory_stacks.ts'
 import { dispatch_app, useAppStore } from '../store.ts'
 import { toast } from '../toast.ts'
 
@@ -58,13 +58,14 @@ export default function AirdropPage({ copy, session }: Readonly<{ copy: AppCopy;
   const [busy, set_busy] = useState<string | null>(null)
   const address = session.wallet?.address ?? null
   const listings = useAppStore(({ marketplace }) => marketplace.own_listings)
+  const trades = useAppStore(({ trade }) => trade.rows)
 
   const claim = (drop: (typeof content_catalog.airdrop.drops)[number]): void => {
     const { wallet } = session
     if (!wallet || busy || !drop.item) return
     set_busy(drop.id)
     const pending = toast.loading(t('pending_claim'))
-    const existing = stack_merge_target_row(session.inventory, listings, drop.item_type)
+    const existing = stack_merge_target_row(session.inventory, encumbered_asset_ids(listings, trades), drop.item_type)
     void wallet
       .claim_airdrop({
         drop_id: drop.id,

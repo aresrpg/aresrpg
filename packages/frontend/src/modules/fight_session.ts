@@ -107,6 +107,10 @@ export const create_fight_session = ({
       reconcile_runtime(runtime.state(), Object.freeze([]), null)
       return true
     },
+    acknowledge: (batch: number): void => {
+      if (!current || current.presentation_batch !== batch) return
+      current = Object.freeze({ ...current, events: Object.freeze([]) })
+    },
     close: (): void => {
       runtime = null
       mode = null

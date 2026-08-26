@@ -5,7 +5,9 @@ import { describe, expect, test } from 'bun:test'
 
 import { GRID_CELLS, mask_get, neighbours } from '../src/combat_grid.ts'
 import { create_fight } from '../src/fight.ts'
-import { KINDS, STATS } from '../src/fighters.ts'
+import { hit, KINDS, STATS } from '../src/fighters.ts'
+import { create_runtime } from '../src/runtime.ts'
+import { tick_turn_end } from '../src/turn_effects.ts'
 import type { BoardZone, HydratedFightCheckpoint, SpellEffect, SpellLevel } from '../src/types.ts'
 
 import { create_fixture } from './helpers.ts'
@@ -233,34 +235,51 @@ describe('board-zone placement', () => {
     expect(heal.payload.amount).toBe(damage.payload.amount / 2n)
   })
 
-  test('a chatiment folds its triggers into one standing gain row', () => {
+  test('a chatiment gains damage up to its cap once per active fighter turn', () => {
     const checkpoint = structuredClone(create_fixture().checkpoint)
-    checkpoint.contract.fighters[1]!.effects.push({
+    checkpoint.contract.fighters[0]!.effects.push({
       kind: KINDS.chatiment,
       element: '',
-      value: 2n,
-      turns_left: 3n,
+      value: 60n,
+      turns_left: 5n,
       source: 1n,
       stat: STATS.strength,
     })
-    const fight = started_fight(checkpoint)
-    const target_cell = checkpoint.contract.fighters[1]!.cell
+    checkpoint.contract.fighters[0]!.hp = 300n
+    checkpoint.contract.queue = [1n, 0n]
+    const runtime = create_runtime(checkpoint)
 
-    const first = fight.apply({ type: 'cast_spell', fighter: 0n, spell: 'slash', target_cell })
-    const second = fight.apply({ type: 'cast_spell', fighter: 0n, spell: 'slash', target_cell })
-
-    expect(first.error).toBeNull()
-    expect(second.error).toBeNull()
-    const gains = second.state.contract.fighters[1]!.effects.filter(
+    hit(runtime, { target: 0n, amount: 40n, source: 1n, cause: 'test' })
+    hit(runtime, { target: 0n, amount: 40n, source: 1n, cause: 'test' })
+    let gains = runtime.contract.fighters[0]!.effects.filter(
       ({ kind, stat }) => kind === KINDS.add && stat === STATS.strength
     )
     expect(gains).toHaveLength(1)
-    expect(gains[0]!.value).toBe(4n)
-    // both triggers reference the SAME standing row
-    const applied = [...first.events, ...second.events].filter(({ type }) => type === 'effect_applied')
-    expect(new Set(applied.map((event) => (event.type === 'effect_applied' ? event.payload.effect_id : ''))).size).toBe(
-      1
+    expect(gains[0]!.value).toBe(60n)
+
+    runtime.contract.fighters[1]!.kind = { type: 'player', character: '0xc2', owner: '0xa2', level: 10n }
+    runtime.contract.turn_ptr = 1n
+    hit(runtime, { target: 0n, amount: 40n, source: 1n, cause: 'test' })
+    hit(runtime, { target: 0n, amount: 40n, source: 1n, cause: 'test' })
+    gains = runtime.contract.fighters[0]!.effects.filter(
+      ({ kind, stat }) => kind === KINDS.add && stat === STATS.strength
     )
+    expect(gains.map(({ value }) => value)).toEqual([60n, 30n])
+    expect(gains.every(({ turns_left }) => turns_left === 5n)).toBe(true)
+
+    // Every damage trigger in one active turn references the same folded bonus row.
+    const applied = runtime.render_actions.filter(({ type }) => type === 'effect_applied')
+    expect(new Set(applied.map((event) => (event.type === 'effect_applied' ? event.payload.effect_id : ''))).size).toBe(
+      2
+    )
+
+    tick_turn_end(runtime, 0n)
+    tick_turn_end(runtime, 0n)
+    tick_turn_end(runtime, 0n)
+    tick_turn_end(runtime, 0n)
+    expect(runtime.contract.fighters[0]!.effects.filter(({ kind }) => kind === KINDS.add)).toHaveLength(2)
+    tick_turn_end(runtime, 0n)
+    expect(runtime.contract.fighters[0]!.effects.filter(({ kind }) => kind === KINDS.add)).toHaveLength(0)
   })
 
   test('a second mob skips a claimed glyph center and tries its next spell', () => {

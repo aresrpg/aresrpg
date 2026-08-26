@@ -303,6 +303,8 @@ export type FightPresentationCue =
       id: string
       type: 'turn'
       entity_id: string
+      /** Logical fight turn identity; stable across receipt prediction and indexed replay. */
+      turn_key: string
       // minimum on-screen duration of THIS turn before the next turn cue may play
       // (the chain's per-mob turn floor, projected by the game side)
       min_ms?: number

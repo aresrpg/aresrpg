@@ -11,21 +11,34 @@ import type { AppInput, AppModule, AppState } from '../store.ts'
 
 const MAX_LINES = 100
 
-export type ChatChannel = 'combat' | 'general'
+export type ChatChannel = 'combat' | 'general' | 'party'
 
 // One colored token. `cls` picks the palette class (chat.css); `seat` marks a fighter
 // reference so the renderer prefers the live fight name over the baked fallback text;
 // `copy_key` marks a localizable token the renderer resolves from the locale copy.
-export type ChatLineValue = Readonly<{ text: string; cls?: string; seat?: number; copy_key?: string }>
+export type ChatLineValue = Readonly<{
+  text: string
+  cls?: string
+  seat?: number
+  copy_key?: string
+  /** address provenance for social actions on a spoken player name */
+  owner?: string
+}>
 
-export type ChatLine = Readonly<{
+type ChatLineContent = Readonly<{
   id: string
-  channel: ChatChannel
   // template key into the locale copy (fight_hud section); plain template text renders as
   // connective tokens, each {placeholder} renders as its value's colored token
   key: string
   values: Readonly<Record<string, ChatLineValue>>
 }>
+
+export type ChatLine = ChatLineContent &
+  Readonly<
+    | { channel: 'combat'; fight: string; party?: never }
+    | { channel: 'general'; fight?: never; party?: never }
+    | { channel: 'party'; party: string; fight?: never }
+  >
 
 export type ChatState = Readonly<{ lines: readonly ChatLine[] }>
 
@@ -33,9 +46,15 @@ export type ChatInput =
   | Readonly<{ type: 'chat/line'; line: ChatLine; replaces?: string }>
   // the outbound door — the reducer ignores it (the local echo is its own chat/line from the
   // speaker's edge); the session module owns the link and forwards the text as packet/chat
-  | Readonly<{ type: 'chat/speak'; text: string }>
+  | Readonly<{ type: 'chat/speak'; channel: 'general' | 'party'; text: string }>
 
 export const initial_chat_state = (): ChatState => Object.freeze({ lines: Object.freeze([]) })
+
+export const chat_line_in_fight = (line: Readonly<ChatLine>, fight: string | undefined): boolean =>
+  line.channel !== 'combat' || (fight !== undefined && line.fight === fight)
+
+export const chat_line_in_party = (line: Readonly<ChatLine>, party: string | undefined): boolean =>
+  line.channel !== 'party' || (party !== undefined && line.party === party)
 
 const reduce = (state: AppState, input: AppInput): AppState => {
   if (input.type !== 'chat/line') return state
@@ -64,18 +83,21 @@ const reduce = (state: AppState, input: AppInput): AppState => {
 const observe: NonNullable<AppModule['observe']> = ({ events, dispatch }) => {
   events.on('server/packet', ({ packet }) => {
     if (packet.type !== 'packet/chat_message') return
-    dispatch({
-      type: 'chat/line',
-      line: Object.freeze({
-        id: `wire:${Date.now()}:${Math.random().toString(36).slice(2, 7)}`,
-        channel: 'general' as const,
-        key: 'chat_line',
-        values: Object.freeze({
-          name: Object.freeze({ text: packet.character, cls: 'name' }),
-          message: Object.freeze({ text: packet.text, cls: 'says' }),
-        }),
+    const channel = packet.channel === 'party' ? ('party' as const) : ('general' as const)
+    if (channel === 'party' && !packet.scope) return
+    const content = {
+      id: `wire:${Date.now()}:${Math.random().toString(36).slice(2, 7)}`,
+      key: 'chat_line',
+      values: Object.freeze({
+        name: Object.freeze({ text: packet.character, cls: 'name', owner: packet.from }),
+        message: Object.freeze({ text: packet.text, cls: 'says' }),
       }),
-    })
+    }
+    const line: ChatLine =
+      channel === 'party'
+        ? Object.freeze({ ...content, channel, party: packet.scope! })
+        : Object.freeze({ ...content, channel })
+    dispatch({ type: 'chat/line', line })
   })
 }
 

@@ -269,14 +269,14 @@ public fun tackle_losses(ap: u64, mp: u64, num: u64, den: u64): (u64, u64) {
   ((ap * lost + den - 1) / den, (mp * lost + den - 1) / den)
 }
 
-// ╔════════════════ [ Push collision (§B, level-scaled, fixed coef) ] ════════ ]
+// ╔════════════════ [ Push collision (Retro 1.27/1.29) ] ════════════════════ ]
 
-/// Collision damage when a push is BLOCKED: `max(12·level/50, 1) × cells_blocked`, damages the
-/// pushed target only. Unblocked push ⇒ 0.
-public fun push_collision_damage(caster_level: u64, cells_blocked: u64): u64 {
+/// `floor((8 + R·pusher_level/50) × cells_blocked)`, where R is 1..8. Ares has no dedicated
+/// push-damage or push-resistance stats, so their Retro terms are both zero.
+public fun push_collision_damage(caster_level: u64, cells_blocked: u64, roll: u64): u64 {
   if (cells_blocked == 0) return 0;
-  let per_cell = { let raw = 12 * caster_level / 50; if (raw < 1) 1 else raw };
-  per_cell * cells_blocked
+  let retro_roll = roll % 8 + 1;
+  (400 + retro_roll * caster_level) * cells_blocked / 50
 }
 
 // ╔════════════════ [ AP/MP removal dodge (per-point; wisdom vs wisdom) ] ════ ]

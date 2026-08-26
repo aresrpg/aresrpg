@@ -1,7 +1,7 @@
 # CODE LAW — the FP constitution
 
 The law lint messages cite. Sources: **[MAG]** Professor Frisby's Mostly Adequate Guide (ch01–05,
-ch08) · **[CS]** Eric Elliott's Composing Software series · **[HOUSE]** CLAUDE.md conventions.
+ch08) · **[CS]** Eric Elliott's Composing Software series · **[HOUSE]** `AGENTS.md` conventions.
 Enforcement: an eslint rule id (layer: `scripts/eslint-rules/fp_law.config.mjs`) or **judgment**
 (reviewed, not mechanized). Severities are a ratchet: ERROR where the repo is clean, WARN where
 the census found mass — a cleaned domain gets promoted, never the reverse.
@@ -29,7 +29,7 @@ the census found mass — a cleaned domain gets promoted, never the reverse.
   a client redundantly (receipt + poll + relay), so an arrival-keyed effect double-fires. An
   observer folds ONE PROJECTED SLICE (a primitive copied by value) and acts only on a real delta;
   collections diff by ID SET. Events ENRICH a delta, they never TRIGGER one. → judgment + the
-  replay-idempotence property (`packages/fight/harness/replay_idempotence.js`).
+  replay/idempotence tests in the owning domain.
 
 ## Immutability
 
@@ -113,8 +113,8 @@ the census found mass — a cleaned domain gets promoted, never the reverse.
   `// eslint-disable-next-line <rule> -- reason` per line. Every disable carries its reason.
 - Burn-down protocol: clean a domain → flip it to **ERROR** with a `files` block in
   `scripts/eslint-rules/fp_law.config.mjs` / `typed_fp.config.mjs`.
-- The typed tier (`scripts/eslint-rules/typed_fp.config.mjs`): type-aware rules run wherever a
-  ts.Program covers the file (frontend + `/tsconfig.lint.json` surfaces). Not typed: engine,
-  scripts, sdk/sim/move (own pipelines by design).
+- The typed tier (`scripts/eslint-rules/typed_fp.config.mjs`): type-aware rules run on frontend
+  source plus the root `tsconfig.lint.json` e2e/dev surfaces. Other packages use their own
+  typecheck pipelines.
 - Tests/benches choreograph state: mutation-family rules are off there; naming, classes, and size
   laws still apply — and L-P5 deliberately stays ON.

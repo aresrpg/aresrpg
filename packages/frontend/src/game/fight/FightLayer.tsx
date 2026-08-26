@@ -44,7 +44,8 @@ import {
 import type { FightCuePhase } from './fight_presenter.ts'
 import { FightViewport } from './FightViewport.tsx'
 import { FightHud } from './FightHud.tsx'
-import { presented_turn_after_cue, presented_turn_after_queue, type FightActionSelection } from './fight_projection.ts'
+import { fight_turn_key, type FightActionSelection } from './fight_projection.ts'
+import { fight_turn_announcement_after_cue, type FightTurnAnnouncement } from './FightTurnCard.tsx'
 import { fight_mob_entity_sources, type FightMobRenderSource } from './mob_entity_sources.ts'
 import { fight_mob_entities } from './mob_entities.ts'
 import { FightTargetPreviews, type FightTargetPreviewView } from './FightTargetPreviews.tsx'
@@ -67,9 +68,9 @@ export const FightLayer = ({ copy, scene }: Readonly<{ copy: AppCopy; scene: Sce
   const [hovered_cell, set_hovered_cell] = useState<bigint | null>(null)
   const [selected_action, set_selected_action] = useState<FightActionSelection>(null)
   const [presentation_active, set_presentation_active] = useState(false)
-  // The card stays canonical through submission; after confirmation, PLAYED cues own it instead
-  // of the instantly reconciled canonical head.
-  const [presented_turn_seat, set_presented_turn_seat] = useState<bigint | null>(null)
+  // A profile card is born only from a played turn cue. Its structural key deduplicates the
+  // receipt prediction and later indexed replay of the same logical turn.
+  const [turn_announcement, set_turn_announcement] = useState<FightTurnAnnouncement | null>(null)
   const [crit_serial, set_crit_serial] = useState(0)
   const [restore_applied, set_restore_applied] = useState(0)
   const [chimed_turn, set_chimed_turn] = useState<string | null>(null)
@@ -77,11 +78,13 @@ export const FightLayer = ({ copy, scene }: Readonly<{ copy: AppCopy; scene: Sce
     Object.freeze({})
   )
   const checkpoint = fight.checkpoint
+  const command_fight = fight.mode === 'remote' ? (checkpoint?.contract.id ?? null) : null
   const presentation = fight.presentations[0] ?? null
   const [presented_checkpoint, set_presented_checkpoint] = useState<HydratedFightCheckpoint | null>(checkpoint)
   const canonical_zone_state = zone_visual_state(checkpoint, fight.zone_ids)
   const [presented_zone_state, set_presented_zone_state] = useState<FightZoneVisualState | null>(canonical_zone_state)
   const presentation_queued = fight.presentations.length > 0 || fight.awaiting_turn_witness
+  const presented_turn_seat = presentation_queued ? (turn_announcement?.seat ?? null) : null
   const render_checkpoint = fight_visual_checkpoint(presented_checkpoint, checkpoint, presentation_queued)
   const display_fighters = useMemo(
     () =>
@@ -170,10 +173,7 @@ export const FightLayer = ({ copy, scene }: Readonly<{ copy: AppCopy; scene: Sce
     !active_fighter.settled
       ? active_seat
       : null
-  const own_turn_key =
-    checkpoint && owned_active_seat !== null
-      ? `${checkpoint.contract.id}:${owned_active_seat}:${checkpoint.contract.turn_started_ms}`
-      : null
+  const own_turn_key = checkpoint ? fight_turn_key(checkpoint.contract, owned_active_seat) : null
   // placement: the own seat (any owned living fighter) may re-pick among its side's start cells
   const owned_placement_seat =
     checkpoint !== null && checkpoint.contract.round === 0n && !checkpoint.contract.ended
@@ -345,17 +345,13 @@ export const FightLayer = ({ copy, scene }: Readonly<{ copy: AppCopy; scene: Sce
   }, [presentation, presentation_cues.length])
 
   useEffect(() => {
-    set_presented_turn_seat((seat) => presented_turn_after_queue(seat, presentation_queued ? 1 : 0))
-  }, [presentation_queued])
-
-  useEffect(() => {
     if (!own_turn_key || presentation_pending || fight.presentations.length > 0 || chimed_turn === own_turn_key) return
     set_chimed_turn(own_turn_key)
     play_fight_turn_start()
   }, [chimed_turn, fight.presentations.length, own_turn_key, presentation_pending])
 
   useEffect(() => {
-    set_presented_turn_seat(null)
+    set_turn_announcement(null)
     set_crit_serial(0)
     if (checkpoint) preload_fight_sounds(checkpoint)
     // The fight ID owns immutable participants and authored kits; commands only clone the checkpoint.
@@ -398,7 +394,7 @@ export const FightLayer = ({ copy, scene }: Readonly<{ copy: AppCopy; scene: Sce
   useEffect(() => {
     if (fight.restore_serial === 0 || fight.restore_serial === restore_applied || !checkpoint) return
     set_restore_applied(fight.restore_serial)
-    set_presented_turn_seat(null)
+    set_turn_announcement(null)
     checkpoint.contract.fighters.forEach((fighter, seat) => {
       const entity_id = fighter.kind.type === 'mob' ? `fight_mob_${seat}` : `fight_character_${seat}`
       void scene.play_fight_cue({
@@ -443,7 +439,7 @@ export const FightLayer = ({ copy, scene }: Readonly<{ copy: AppCopy; scene: Sce
             set_chimed_turn(own_turn_key)
             play_fight_turn_start()
           }
-          set_presented_turn_seat((seat) => presented_turn_after_cue(seat, cue, phase))
+          set_turn_announcement((current) => fight_turn_announcement_after_cue(current, cue, phase))
           set_presented_checkpoint((presented) =>
             presented ? fight_visual_checkpoint_after_cue(presented, cue, phase) : presented
           )
@@ -454,6 +450,7 @@ export const FightLayer = ({ copy, scene }: Readonly<{ copy: AppCopy; scene: Sce
         presentation_request={
           presentation && presentation_cues.length > 0
             ? Object.freeze({
+                fight: presentation.checkpoint.contract.id,
                 batch: presentation.batch,
                 cues: presentation_cues,
                 presented: () => {
@@ -477,6 +474,7 @@ export const FightLayer = ({ copy, scene }: Readonly<{ copy: AppCopy; scene: Sce
             if (!me || me.ready || taken || !starts.includes(cell)) return
             dispatch_app({
               type: 'fight/input',
+              fight: command_fight,
               origin: 'local',
               input: { type: 'place', fighter: owned_placement_seat, cell },
             })
@@ -492,6 +490,7 @@ export const FightLayer = ({ copy, scene }: Readonly<{ copy: AppCopy; scene: Sce
             set_selected_action(null)
             dispatch_app({
               type: 'fight/input',
+              fight: command_fight,
               origin: 'local',
               input:
                 action.type === 'weapon'
@@ -509,6 +508,7 @@ export const FightLayer = ({ copy, scene }: Readonly<{ copy: AppCopy; scene: Sce
           if (!path || path.length === 0) return
           dispatch_app({
             type: 'fight/input',
+            fight: command_fight,
             origin: 'local',
             input: { type: 'move_to', fighter: owned_active_seat, path },
           })
@@ -539,13 +539,14 @@ export const FightLayer = ({ copy, scene }: Readonly<{ copy: AppCopy; scene: Sce
         mob_icon_for={mob_icon}
         presentation_queued={presentation_queued}
         presented_turn_seat={presented_turn_seat}
+        turn_announcement={turn_announcement}
         select_action={set_selected_action}
         selected_action={selected_action}
       />
       {fight.mode === 'local' && (
         <button
           className="absolute top-3 right-3 z-10 flex cursor-pointer items-center gap-2 border border-white/10 bg-black/55 px-3 py-2 text-[8px] tracking-[0.14em] text-[#a3a5ad] uppercase backdrop-blur hover:border-[#c8963c]/40 hover:text-[#c8963c]"
-          onClick={() => dispatch_app({ type: 'fight/closed' })}
+          onClick={() => dispatch_app({ type: 'fight/closed', fight: null })}
           type="button"
         >
           <RotateCcw size={12} /> {copy.simulator_page.back_to_setup}

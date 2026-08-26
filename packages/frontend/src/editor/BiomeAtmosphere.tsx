@@ -7,7 +7,7 @@ import { useState } from 'react'
 import type { JsonPath, JsonValue } from './seed_editor.ts'
 
 const input_class =
-  'h-7 border border-white/12 bg-[#090a10] px-2 text-[8px] text-[#dedad2] outline-none focus:border-[#4a9eff]/60'
+  'h-7 border border-white/12 bg-bg px-2 text-[8px] text-[#dedad2] outline-none focus:border-[#4a9eff]/60'
 const micro_label = 'block text-[7px] tracking-[0.1em] text-[#6f747e] uppercase'
 
 export const BiomeAtmosphere = ({
@@ -50,7 +50,7 @@ export const BiomeAtmosphere = ({
             value={biome.name}
           >
             {recipe.biomes.map(({ name }) => (
-              <option className="bg-[#090a10]" key={name} value={name}>
+              <option className="bg-bg" key={name} value={name}>
                 {name}
               </option>
             ))}

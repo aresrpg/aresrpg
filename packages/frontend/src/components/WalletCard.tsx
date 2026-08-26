@@ -39,10 +39,7 @@ export const WalletCard = ({
 
   return (
     <>
-      <section
-        className="flex w-[200px] flex-col gap-2.5 border border-white/9 bg-[#12121a]/80 p-3"
-        data-wallet-card=""
-      >
+      <section className="flex w-[200px] flex-col gap-2.5 border border-white/9 bg-surface/80 p-3" data-wallet-card="">
         <div className="flex items-center gap-2">
           <Wallet className="shrink-0 text-[#c8963c] opacity-60" size={12} />
           <span className="min-w-0 flex-1 truncate font-mono text-[10px] tracking-wide text-[#c8963c]">

@@ -65,12 +65,10 @@ export const draw_spawn_markers = (
     const { px, pz } = to_canvas(marker.x, marker.z, view.center_x, view.center_z, view.size, view.radius)
     if (px < 0 || pz < 0 || px > view.size || pz > view.size) continue
     if (marker.kind === 'mob') {
-      context.save()
-      context.translate(px, pz)
-      context.rotate(Math.PI / 4)
-      context.fillStyle = '#f87171'
-      context.fillRect(-3, -3, 6, 6)
-      context.restore()
+      context.fillStyle = '#ff6b6b'
+      context.beginPath()
+      context.arc(px, pz, 4.5, 0, Math.PI * 2)
+      context.fill()
     } else {
       context.fillStyle = '#c8963c'
       context.beginPath()

@@ -61,7 +61,9 @@ export const CompassStrip = ({ copy }: Readonly<{ copy: AppCopy }>) => {
 
   // Pip pipeline: raw bearing/dist → cap → cluster → label-thin (pure, compass_math) BEFORE any
   // strip projection, so a merged/dropped pip never even reaches strip_x.
-  const cell_spawns = cell ? spawn_markers(world_state).filter(({ zx, zz }) => zx === cell.zx && zz === cell.zz) : []
+  const cell_spawns = cell
+    ? spawn_markers(world_state, world_name).filter(({ zx, zz }) => zx === cell.zx && zz === cell.zz)
+    : []
   const pip_candidates = cell_spawns.map((spawn) => {
     const dx = spawn.x - pose.x
     const dz = spawn.z - pose.z

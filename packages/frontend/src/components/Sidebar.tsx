@@ -32,7 +32,7 @@ const NAVIGATION: readonly Readonly<{ page: Page; label: CopyStringKey; Icon: Lu
     { page: 'encyclopedia', label: 'encyclopedia', Icon: BookOpen, disabled: false },
     { page: 'marketplace', label: 'marketplace', Icon: Store, disabled: false },
     { page: 'airdrop', label: 'airdrop', Icon: Gift, disabled: false },
-    { page: 'kolizeum', label: 'kolizeum', Icon: Crosshair, disabled: true },
+    { page: 'kolizeum', label: 'kolizeum', Icon: Crosshair, disabled: false },
     { page: 'settings', label: 'settings', Icon: Settings, disabled: false },
     { page: 'admin', label: 'admin', Icon: ShieldCheck, disabled: false },
   ])
@@ -48,9 +48,9 @@ type SidebarProps = Readonly<{
 export const Sidebar = ({ copy, page, open_page, address, network }: SidebarProps) => (
   <aside
     data-app-sidebar=""
-    className="pointer-events-auto flex w-[200px] shrink-0 flex-col border border-[#1e1e2e] bg-[#12121a]/80"
+    className="pointer-events-auto flex w-[200px] shrink-0 flex-col border border-border bg-surface/80"
   >
-    <div className="flex items-center justify-center gap-2.5 border-b border-[#1e1e2e] py-5">
+    <div className="flex items-center justify-center gap-2.5 border-b border-border py-5">
       <img className="size-7 drop-shadow-[0_0_12px_rgba(200,150,60,0.3)]" src="/logo.png" alt="AresRPG" />
       <span className="flex flex-col items-start gap-1.5">
         <span className="bg-[linear-gradient(135deg,#fad9b3_0%,#d4a145_50%,#f0c474_100%)] bg-clip-text text-[11px] font-bold tracking-[0.3em] text-transparent uppercase">

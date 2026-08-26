@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-// scripts/eslint-rules/no_silent_failures.mjs — THE SILENT-FAILURE TRIPWIRE (docs/CODE_LAW.md L-D1,
+// scripts/eslint-rules/no_silent_failures.mjs — THE SILENT-FAILURE TRIPWIRE (.claude/rules/code-law.md L-D1,
 // Agent Standard #3 "no silent failure, ever").
 //
 // The class it catches: a failure handler that ERASES its failure — `.catch(() => undefined)`,
@@ -177,7 +177,7 @@ const no_swallowed_failure = {
       silentFailure:
         'this {{kind}} SWALLOWS the failure — it never throws, never reports, and never returns a failure value, ' +
         'so the break exists nowhere and every caller downstream reads a coerced success. ' +
-        'Instruments THROW, never coerce (docs/CODE_LAW.md L-D1): re-throw it, return it as data ' +
+        'Instruments THROW, never coerce (.claude/rules/code-law.md L-D1): re-throw it, return it as data ' +
         '(`{ ok: false, error }` / the caught error itself), or speak through a sanctioned channel ' +
         '(`report_error` · `game_log` · `console.error` · a player-facing toast).',
     },

@@ -120,10 +120,12 @@ export const tackle_losses = (ap: bigint, mp: bigint, numerator: bigint, denomin
   }
 }
 
-export const push_collision_damage = (caster_level: bigint, blocked_cells: bigint): bigint => {
+/** Retro 1.27/1.29 collision roll with Ares's absent push-damage/resistance terms equal to zero:
+ * `floor((8 + R * pusher_level / 50) * blocked_cells)`, R in 1..8. */
+export const push_collision_damage = (caster_level: bigint, blocked_cells: bigint, roll: bigint): bigint => {
   if (blocked_cells === 0n) return 0n
-  const raw = (12n * caster_level) / 50n
-  return (raw < 1n ? 1n : raw) * blocked_cells
+  const retro_roll = (roll % 8n) + 1n
+  return ((400n + retro_roll * caster_level) * blocked_cells) / 50n
 }
 
 export const point_removal_chance = ({

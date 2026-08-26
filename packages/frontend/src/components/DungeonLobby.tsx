@@ -9,9 +9,12 @@ import { mob_icon } from '../content/assets.ts'
 import { content_catalog } from '../content/catalog.ts'
 import type { AppCopy } from '../i18n/copy.ts'
 import { copy_text } from '../i18n/copy.ts'
-import { dungeon_lobby_key } from '../modules/dungeon.ts'
+import { dungeon_lobby_key, selected_dungeon_pending, selected_dungeon_run } from '../modules/dungeon.ts'
+import { selected_party } from '../modules/party.ts'
 import { selected_character } from '../modules/session.ts'
 import { dispatch_app, useAppStore } from '../store.ts'
+
+import { Chat } from './Chat.tsx'
 
 type RoomState = 'cleared' | 'current' | 'mysterious'
 export const dungeon_room_state = (room: number, current: number): RoomState =>
@@ -32,22 +35,25 @@ export const current_dungeon_room_players = (
 export const DungeonLobby = ({ copy }: Readonly<{ copy: AppCopy }>) => {
   const state = useAppStore((value) => value)
   const character = selected_character(state.session)
-  const run = character?.dungeon_run
+  const run = selected_dungeon_run(state)
   const authored = run ? content_catalog.world(run.world)?.dungeon : null
   const lobby = run ? state.dungeon.lobbies[dungeon_lobby_key(run)] : null
-  const party = character ? state.session.parties[character.id] : null
+  const party = selected_party(state)
   const party_members = party?.members.map(({ character_id }) => character_id) ?? []
   const [access, set_access] = useState<0 | 1>(0)
-  const [abandon_armed, set_abandon_armed] = useState(false)
+  const [abandon_armed_for, set_abandon_armed_for] = useState<string | null>(null)
   const text = copy_text(copy.world_hud)
   if (!character || !run || !authored) return null
   const room_fights = lobby?.fights.filter(({ room }) => room === run.room) ?? []
   const room_players = (room: number) => current_dungeon_room_players(lobby?.players ?? [], room, run.room)
   const current_players = room_players(run.room)
-  const { pending } = state.dungeon
+  const pending = selected_dungeon_pending(state)
 
   return (
-    <section className="pointer-events-auto absolute inset-[clamp(12px,3vw,42px)] flex flex-col overflow-hidden border border-[#466070]/50 border-t-[#67b8dc] bg-[linear-gradient(145deg,rgba(8,13,18,0.97),rgba(12,20,25,0.94))] shadow-[0_28px_100px_rgba(0,0,0,0.72),0_0_70px_rgba(43,145,190,0.10)]">
+    <section
+      className="pointer-events-auto absolute inset-[clamp(12px,3vw,42px)] flex flex-col overflow-hidden rounded-xl border border-[#466070]/50 border-t-[#67b8dc] bg-[linear-gradient(145deg,rgba(8,13,18,0.97),rgba(12,20,25,0.94))] shadow-[0_28px_100px_rgba(0,0,0,0.72),0_0_70px_rgba(43,145,190,0.10)]"
+      data-dungeon-expedition
+    >
       <header className="flex shrink-0 items-center gap-4 border-b border-white/8 px-6 py-4">
         <div className="grid size-12 place-items-center border border-[#67b8dc]/35 bg-[#67b8dc]/8">
           <DoorOpen className="text-[#67b8dc]" size={25} strokeWidth={1.3} />
@@ -63,83 +69,88 @@ export const DungeonLobby = ({ copy }: Readonly<{ copy: AppCopy }>) => {
         </div>
         <button
           className={`h-9 cursor-pointer border px-4 text-[8px] tracking-[0.16em] uppercase ${
-            abandon_armed
+            abandon_armed_for === character.id
               ? 'border-[#ff5a72]/55 bg-[#ff5a72]/10 text-[#ff8292]'
               : 'border-white/10 text-[#777f89] hover:border-[#ff5a72]/35 hover:text-[#ff8292]'
           }`}
           disabled={pending !== null}
           onClick={() => {
-            if (!abandon_armed) set_abandon_armed(true)
+            if (abandon_armed_for !== character.id) set_abandon_armed_for(character.id)
             else dispatch_app({ type: 'dungeon/abandon' })
           }}
           type="button"
         >
-          {abandon_armed ? text('dungeon_confirm_abandon') : text('dungeon_abandon')}
+          {abandon_armed_for === character.id ? text('dungeon_confirm_abandon') : text('dungeon_abandon')}
         </button>
       </header>
 
       <div className="grid min-h-0 flex-1 grid-cols-[minmax(250px,0.8fr)_minmax(360px,1.35fr)] gap-5 overflow-hidden p-5 max-[850px]:grid-cols-1 max-[850px]:overflow-y-auto">
-        <div className="min-h-0 overflow-y-auto pr-1">
-          <p className="mb-3 text-[8px] tracking-[0.22em] text-[#7c8790] uppercase">{text('dungeon_route')}</p>
-          <div className="grid gap-2">
-            {authored.rooms.map((mobs, index) => {
-              const room = index + 1
-              const status = dungeon_room_state(room, run.room)
-              const players = room_players(room)
-              return (
-                <article
-                  className={`relative overflow-hidden border p-3 ${
-                    status === 'current'
-                      ? 'border-[#67b8dc]/45 bg-[#67b8dc]/8'
-                      : status === 'cleared'
-                        ? 'border-[#4e9a72]/28 bg-[#4e9a72]/5'
-                        : 'border-white/7 bg-black/20'
-                  }`}
-                  key={room}
-                >
-                  <div className="flex items-center gap-3">
-                    <span
-                      className={`grid size-8 shrink-0 place-items-center border text-[10px] ${status === 'current' ? 'border-[#67b8dc]/50 text-[#8bd5f7]' : 'border-white/10 text-[#69717b]'}`}
-                    >
-                      {status === 'cleared' ? <Check size={14} /> : room}
-                    </span>
-                    <div className="min-w-0 flex-1">
-                      <p className="text-[9px] tracking-[0.16em] text-[#c9cbd0] uppercase">
-                        {status === 'mysterious'
-                          ? text('dungeon_mysterious_room')
-                          : text('dungeon_room').replace('{{room}}', String(room))}
-                      </p>
-                      <p className="mt-1 text-[8px] text-[#626b74]">
-                        {status === 'mysterious'
-                          ? text('dungeon_undiscovered')
-                          : text('dungeon_creatures').replace('{{count}}', String(mobs.length))}
-                      </p>
-                    </div>
-                    {players.length > 0 && (
-                      <span className="flex items-center gap-1 text-[8px] text-[#8fa2ad]">
-                        <UsersRound size={11} /> {players.length}
+        <div className="flex min-h-0 flex-col gap-3 overflow-hidden pr-1">
+          <div className="min-h-0 flex-1 overflow-y-auto">
+            <p className="mb-3 text-[8px] tracking-[0.22em] text-[#7c8790] uppercase">{text('dungeon_route')}</p>
+            <div className="grid gap-2">
+              {authored.rooms.map((mobs, index) => {
+                const room = index + 1
+                const status = dungeon_room_state(room, run.room)
+                const players = room_players(room)
+                return (
+                  <article
+                    className={`relative overflow-hidden rounded-md border p-3 ${
+                      status === 'current'
+                        ? 'border-[#67b8dc]/45 bg-[#67b8dc]/8'
+                        : status === 'cleared'
+                          ? 'border-[#4e9a72]/28 bg-[#4e9a72]/5'
+                          : 'border-white/7 bg-black/20'
+                    }`}
+                    key={room}
+                  >
+                    <div className="flex items-center gap-3">
+                      <span
+                        className={`grid size-8 shrink-0 place-items-center border text-[10px] ${status === 'current' ? 'border-[#67b8dc]/50 text-[#8bd5f7]' : 'border-white/10 text-[#69717b]'}`}
+                      >
+                        {status === 'cleared' ? <Check size={14} /> : room}
                       </span>
-                    )}
-                  </div>
-                  {status === 'current' && players.length > 0 && (
-                    <div className="mt-3 flex flex-wrap gap-1.5">
-                      {players.map((player) => (
-                        <span
-                          className="border border-white/8 bg-black/25 px-2 py-1 text-[7px] text-[#9ca4ab]"
-                          key={player.character_id}
-                        >
-                          {player.name} · LV {player.level}
+                      <div className="min-w-0 flex-1">
+                        <p className="text-[9px] tracking-[0.16em] text-[#c9cbd0] uppercase">
+                          {status === 'mysterious'
+                            ? text('dungeon_mysterious_room')
+                            : text('dungeon_room').replace('{{room}}', String(room))}
+                        </p>
+                        <p className="mt-1 text-[8px] text-[#626b74]">
+                          {status === 'mysterious'
+                            ? text('dungeon_undiscovered')
+                            : text('dungeon_creatures').replace('{{count}}', String(mobs.length))}
+                        </p>
+                      </div>
+                      {players.length > 0 && (
+                        <span className="flex items-center gap-1 text-[8px] text-[#8fa2ad]">
+                          <UsersRound size={11} /> {players.length}
                         </span>
-                      ))}
+                      )}
                     </div>
-                  )}
-                </article>
-              )
-            })}
+                    {status === 'current' && players.length > 0 && (
+                      <div className="mt-3 flex flex-wrap gap-1.5">
+                        {players.map((player) => (
+                          <span
+                            className="border border-white/8 bg-black/25 px-2 py-1 text-[7px] text-[#9ca4ab]"
+                            key={player.character_id}
+                          >
+                            {player.name} · LV {player.level}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </article>
+                )
+              })}
+            </div>
+          </div>
+          <div className="h-56 shrink-0 [&_.chat]:h-full [&_.chat]:overflow-hidden [&_.chat]:rounded-lg">
+            <Chat text={{ ...copy.simulator_page, ...copy.fight_hud }} />
           </div>
         </div>
 
-        <div className="flex min-h-0 flex-col overflow-hidden border border-white/8 bg-black/18">
+        <div className="flex min-h-0 flex-col overflow-hidden rounded-lg border border-white/8 bg-black/18">
           <div className="shrink-0 border-b border-white/8 p-4">
             <p className="text-[8px] tracking-[0.22em] text-[#67b8dc] uppercase">{text('dungeon_current_room')}</p>
             <div className="mt-3 flex min-h-20 gap-2 overflow-x-auto">
@@ -174,7 +185,7 @@ export const DungeonLobby = ({ copy }: Readonly<{ copy: AppCopy }>) => {
                 const joinable = dungeon_fight_joinable(fight, party_members)
                 return (
                   <article
-                    className="grid grid-cols-[1fr_auto] items-center gap-3 border border-white/8 bg-[#0c1116] p-3"
+                    className="grid grid-cols-[1fr_auto] items-center gap-3 border border-white/8 bg-surface-low p-3"
                     key={fight.id}
                   >
                     <div className="min-w-0">

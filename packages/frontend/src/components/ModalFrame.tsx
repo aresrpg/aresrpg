@@ -47,7 +47,7 @@ export const ModalFrame = ({
       <div
         aria-label={label}
         aria-modal="true"
-        className={`relative mx-4 max-h-[90vh] w-full ${max_width} overflow-y-auto ${soft ? 'rounded-xl bg-[#181c1f]/97' : 'bg-surface'}`}
+        className={`relative mx-4 max-h-[90vh] w-full ${max_width} overflow-y-auto ${soft ? 'rounded-xl bg-surface/97' : 'bg-surface'}`}
         role="dialog"
         style={{
           animation: 'modal-enter 0.3s ease-out',

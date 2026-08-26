@@ -6,6 +6,12 @@
 // session out.
 
 import type { CharacterRow, ClaimRow, ItemRow } from '@aresrpg/protocol'
+import {
+  characteristic_names,
+  characteristic_spending_quote,
+  is_class_name,
+  type CharacteristicValues,
+} from '@aresrpg/immutable'
 
 import { character_max_hp, fold_equipment_stats, projected_hp } from '../game/character_stats.ts'
 import type { AppInput } from '../store.ts'
@@ -60,16 +66,21 @@ export const fold_character_receipt = (session: SessionState, input: AppInput): 
   }
   if (input.type === 'character/stats_raised')
     return with_character(session, input.character_id, (character) => {
-      const spent = Object.values(input.allocation).reduce((total, amount) => total + Math.max(0, amount), 0)
+      if (!is_class_name(character.classe)) return character
+      const current = Object.fromEntries(
+        characteristic_names.map((stat) => [stat, character[stat]])
+      ) as CharacteristicValues
+      const quote = characteristic_spending_quote(character.classe, current, input.spending)
+      if (!quote) return character
       return Object.freeze({
         ...character,
-        vitality: character.vitality + (input.allocation.vitality ?? 0),
-        wisdom: character.wisdom + (input.allocation.wisdom ?? 0),
-        strength: character.strength + (input.allocation.strength ?? 0),
-        intelligence: character.intelligence + (input.allocation.intelligence ?? 0),
-        chance: character.chance + (input.allocation.chance ?? 0),
-        agility: character.agility + (input.allocation.agility ?? 0),
-        available_points: Math.max(0, character.available_points - spent),
+        vitality: character.vitality + quote.gains.vitality,
+        wisdom: character.wisdom + quote.gains.wisdom,
+        strength: character.strength + quote.gains.strength,
+        intelligence: character.intelligence + quote.gains.intelligence,
+        chance: character.chance + quote.gains.chance,
+        agility: character.agility + quote.gains.agility,
+        available_points: Math.max(0, character.available_points - quote.cost),
       })
     })
   if (input.type === 'character/spell_raised')
@@ -90,18 +101,11 @@ export const fold_character_receipt = (session: SessionState, input: AppInput): 
           hp: String(Math.min(character_max_hp(character), projected_hp(character, now) + input.heal)),
           hp_ms: now,
         })
-      // character.move reset_stats: every allocated point returns to the pool
+      // character.move reset_stats: the level-derived capital pool returns in full
       if (input.effect === 'reset_stats')
         return Object.freeze({
           ...character,
-          available_points:
-            character.available_points +
-            character.vitality +
-            character.wisdom +
-            character.strength +
-            character.intelligence +
-            character.chance +
-            character.agility,
+          available_points: Math.max(0, (character.level - 1) * 5),
           vitality: 0,
           wisdom: 0,
           strength: 0,

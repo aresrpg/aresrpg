@@ -45,10 +45,11 @@ fun range_removal_reduces_modifiable_authored_reach() {
 }
 
 #[test]
-fun a_chatiment_folds_its_triggers_into_one_gain_row() {
+fun a_chatiment_gains_damage_up_to_its_cap_once_per_active_fighter_turn() {
   let mut scenario = test_scenario::begin(OWNER);
-  // two 10-damage hits on a +2-strength stance: ONE standing gain row at 4, hp at 80
-  assert!(fight::chatiment_folds_for_testing(scenario.ctx()) == vector[1, 4, 80], 0);
+  // Mob damage 40 + 40 caps at 60; player damage feeds half and caps the next row at 30.
+  // Both five-turn gains survive four affected turn ends and expire on the fifth.
+  assert!(fight::chatiment_caps_for_testing(scenario.ctx()) == vector[2, 90, 140, 2, 0], 0);
   scenario.end();
 }
 

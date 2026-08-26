@@ -12,7 +12,7 @@ const bands = ['low', 'mid', 'high'] as const
 const band_label = Object.freeze({ low: 'Cold', mid: 'Temperate', high: 'Hot' })
 const humidity_label = Object.freeze({ low: 'Dry', mid: 'Moderate', high: 'Wet' })
 const input_class =
-  'h-7 border border-white/12 bg-[#090a10] px-2 text-[8px] text-[#dedad2] outline-none focus:border-[#4a9eff]/60'
+  'h-7 border border-white/12 bg-bg px-2 text-[8px] text-[#dedad2] outline-none focus:border-[#4a9eff]/60'
 
 export const ClimateSlots = ({
   recipe,
@@ -63,7 +63,7 @@ export const ClimateSlots = ({
                   {recipe.biomes
                     .filter(({ name }) => name !== recipe.ocean?.biome)
                     .map(({ name }) => (
-                      <option className="bg-[#090a10]" key={name} value={name}>
+                      <option className="bg-bg" key={name} value={name}>
                         {name}
                       </option>
                     ))}

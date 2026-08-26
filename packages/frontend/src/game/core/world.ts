@@ -5,6 +5,7 @@
 import {
   CHUNK_EDGE,
   CELESTIAL_CYCLE_MS,
+  DUNGEON_PORTAL_LABEL_HEIGHT,
   compile_world_recipe,
   create_flat_projection,
   create_engine,
@@ -424,13 +425,21 @@ export const create_world = ({
       if (!portal) continue
       const existing = dungeon_portal_labels.get(id)
       if (existing) {
-        engine.set_world_label(id, existing, [portal.x, projected_surface_y(portal.x, portal.z) + 5.2, portal.z])
+        engine.set_world_label(id, existing, [
+          portal.x,
+          projected_surface_y(portal.x, portal.z) + DUNGEON_PORTAL_LABEL_HEIGHT,
+          portal.z,
+        ])
         continue
       }
       if (typeof document === 'undefined') continue
       const element = document.createElement('div')
       dungeon_portal_labels.set(id, element)
-      engine.set_world_label(id, element, [portal.x, projected_surface_y(portal.x, portal.z) + 5.2, portal.z])
+      engine.set_world_label(id, element, [
+        portal.x,
+        projected_surface_y(portal.x, portal.z) + DUNGEON_PORTAL_LABEL_HEIGHT,
+        portal.z,
+      ])
       changed = true
     }
     focused_dungeon_portal_id = targets.focused_id

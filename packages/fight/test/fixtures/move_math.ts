@@ -22,11 +22,11 @@ export const MOVE_MATH_FIXTURE = Object.freeze({
     expected_removed: 2n,
     expected_state: 1_199_730_151n,
   },
-  push: {
-    caster_level: 50n,
-    blocked_cells: 3n,
-    expected: 36n,
-  },
+  push: [
+    { caster_level: 2n, blocked_cells: 3n, roll: 0n, expected: 24n },
+    { caster_level: 50n, blocked_cells: 3n, roll: 0n, expected: 27n },
+    { caster_level: 50n, blocked_cells: 3n, roll: 7n, expected: 48n },
+  ],
   // The fixed-point log driving crit. Recorded from the Move VM on 2026-08-21
   // (`sui move test` over `aresrpg_math::fight_math`), NOT from this twin — a
   // self-computed expectation would prove only that the twin agrees with itself.

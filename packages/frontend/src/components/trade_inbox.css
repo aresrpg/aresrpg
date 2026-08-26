@@ -1,0 +1,195 @@
+/* SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available */
+/* © 2026 Sceat — All rights reserved. See LICENSE. */
+.trade-inbox-button {
+  pointer-events: auto;
+  position: absolute;
+  top: 0;
+  right: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  border: 1px solid rgba(200, 150, 60, 0.3);
+  background: rgba(10, 10, 15, 0.92);
+  padding: 7px 10px;
+  color: var(--color-gold);
+  font: 8px inherit;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+.trade-inbox-button b {
+  color: var(--color-text);
+}
+.trade-modal {
+  padding: 26px;
+}
+.trade-list {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  margin-bottom: 16px;
+  border-bottom: 1px solid var(--color-border);
+  padding-bottom: 10px;
+}
+.trade-list button {
+  min-width: 150px;
+  border: 1px solid var(--color-border);
+  background: rgba(255, 255, 255, 0.025);
+  padding: 8px;
+  color: var(--color-muted);
+  text-align: left;
+  cursor: pointer;
+}
+.trade-list button.is-active {
+  border-color: rgba(200, 150, 60, 0.55);
+  color: var(--color-gold);
+}
+.trade-list :is(b, span) {
+  display: block;
+  overflow: hidden;
+  font-size: 8px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.trade-list span {
+  margin-top: 3px;
+  opacity: 0.7;
+}
+.trade-modal > header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 18px;
+  color: var(--color-gold);
+}
+.trade-modal h2 {
+  margin: 0;
+  font-size: 14px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+}
+.trade-modal p {
+  margin: 3px 0 0;
+  color: var(--color-muted);
+  font-size: 9px;
+  text-transform: uppercase;
+}
+.trade-sides {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+.trade-side {
+  min-height: 190px;
+  border: 1px solid rgba(224, 83, 58, 0.28);
+  background: rgba(224, 83, 58, 0.035);
+  padding: 12px;
+}
+.trade-side.is-own {
+  border-color: rgba(74, 158, 255, 0.3);
+  background: rgba(74, 158, 255, 0.035);
+}
+.trade-side > header {
+  display: flex;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--color-border);
+  padding-bottom: 8px;
+}
+.trade-side > header b {
+  font-size: 9px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+.trade-side > header span {
+  color: var(--color-muted);
+  font-size: 8px;
+  text-transform: uppercase;
+}
+.trade-side > strong {
+  display: block;
+  margin: 12px 0;
+  color: var(--color-gold);
+  font-size: 17px;
+  font-weight: 500;
+}
+.trade-cap {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 6px;
+  border: 1px solid var(--color-border);
+  margin-top: 4px;
+}
+.trade-cap > span {
+  color: var(--color-gold);
+}
+.trade-cap > b {
+  min-width: 0;
+  flex: 1;
+  overflow: hidden;
+  font-size: 9px;
+  font-weight: 400;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.trade-cap > small {
+  color: var(--color-muted);
+  font-size: 8px;
+  white-space: nowrap;
+}
+.trade-cap > button {
+  border: 0;
+  background: transparent;
+  color: #777b86;
+  cursor: pointer;
+}
+.trade-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 9px;
+  margin-top: 14px;
+  border-top: 1px solid var(--color-border);
+  padding-top: 13px;
+}
+.trade-controls label {
+  display: flex;
+  flex: 1;
+  min-width: 160px;
+  flex-direction: column;
+  gap: 5px;
+  color: var(--color-muted);
+  font-size: 8px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+.trade-controls label > span {
+  display: flex;
+}
+.trade-controls :is(select, input) {
+  min-width: 0;
+  flex: 1;
+  border: 1px solid var(--color-border);
+  background: var(--color-bg);
+  padding: 7px;
+  color: var(--color-text);
+  font: 9px inherit;
+}
+.trade-controls label button {
+  width: 30px;
+  border: 1px solid var(--color-border);
+  background: rgba(200, 150, 60, 0.08);
+  color: var(--color-gold);
+  cursor: pointer;
+}
+.trade-controls > button {
+  padding: 8px 12px;
+  font-size: 8px;
+  letter-spacing: 0.12em;
+}
+@media (max-width: 700px) {
+  .trade-sides {
+    grid-template-columns: 1fr;
+  }
+}

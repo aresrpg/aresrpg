@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-// The world's server-streamed surroundings: searched-zone rows and nearby players' live
-// positions. One reducer folds the packets; the compass and minimap render this slice.
+// The world's server-streamed surroundings; one reducer feeds the compass and minimap.
 
-import { chain_to_client_coordinate, client_to_chain_coordinate } from '@aresrpg/immutable'
+import { chain_to_client_coordinate, client_to_chain_coordinate, world_size } from '@aresrpg/immutable'
 import {
   live_mob_groups,
   live_resource_packs,
+  travel_proof_ready,
   ZONE_RESEARCH_TTL_MS,
   zone_of,
   type FightRow,
@@ -68,28 +68,31 @@ export type WorldState = Readonly<{
   all_players: Readonly<Record<string, PresenceRow>>
   all_spawns: Readonly<Record<string, ZonePopulation>>
   all_fights: Readonly<Record<string, FightRow>>
-  /** world owning the current server subscription window */
   tracked_world: string | null
   /** searched zones by `world:zx:zz` — presence of a row means DISCOVERED (seed drawn) */
   zones: Readonly<Record<string, ZoneRow>>
-  /** nearby players by character id — live positions ride packet/player_moved */
   players: Readonly<Record<string, PresenceRow>>
   /** tracked zones' SEED populations by `world:zx:zz` — server-derived (zone_math twin), with
    *  consumption NOT applied: it changes only when a zone re-rolls. What is still standing is
    *  this crossed with the zone row's bitmaps — always read it through `live_spawns`. */
   spawns: Readonly<Record<string, ZonePopulation>>
-  /** live fights in the tracked zones by fight id — the sword markers render this slice */
   fights: Readonly<Record<string, FightRow>>
-  /** reversible local prediction: hide the pressed group and plant the shared sword while its
-   * transaction/projection is pending. Canonical zone/fight state still decides the outcome. */
   pending_engages: Readonly<Record<string, PendingEngage>>
-  /** Zone-search prompts hidden immediately after their accepted key press. The key clears only
-   * when the projected row arrives or submission fails, so wallet latency cannot invite repeats. */
   pending_zone_searches: Readonly<Record<string, true>>
-  /** the right-clicked nearby player — the context menu renders while this holds a target */
+  fight_access: 0 | 1
   player_menu: PlayerMenu | null
   /** Optimistic immediately, then corrected to the chain checkpoint's future timestamp. */
   gathering: PendingGather | null
+  zone_reveal: ZoneReveal | null
+}>
+
+export type ZoneReveal = Readonly<{
+  id: string
+  zx: number
+  zz: number
+  mobs: number
+  resources: number
+  dungeon: boolean
 }>
 
 export type ZonePopulation = Readonly<{
@@ -109,12 +112,11 @@ export type PendingEngage = Readonly<{
   z: number
   members: readonly Readonly<{ mob_type: string; level_scalar: number }>[]
   started_at_ms: number
+  access: 0 | 1
   fight: string | null
 }>
 
-/** WHERE the menu was opened from decides what it may offer: a duel needs the two characters
- *  standing together (the chain proves the walk to the fight cell), and a name clicked in the
- *  chat log proves nothing about distance. Only the menu opened ON a body is a duel door. */
+/** Only a menu opened on a nearby body may offer a distance-proven duel. */
 export type PlayerMenu = Readonly<{
   character_id: string
   x: number
@@ -125,13 +127,15 @@ export type PlayerMenu = Readonly<{
 export type WorldInput =
   | Readonly<{ type: 'server/packet'; packet: Readonly<ServerPacket> }>
   | Readonly<{ type: 'world/player_menu'; menu: PlayerMenu | null }>
-  /** search the zone the character is STANDING in — the chain proves the walk, so there is no
-   *  cell to name here */
+  | Readonly<{ type: 'world/fight_access'; access: 0 | 1 }>
+  /** search the zone the character is standing in; the chain proves the walk */
   | Readonly<{ type: 'world/search_zone'; target: ZoneSearchTarget }>
   | Readonly<{ type: 'world/search_zone_failed'; key: string }>
   | Readonly<{ type: 'world/search_zone_confirmed'; key: string }>
+  | Readonly<{ type: 'world/zone_revealed'; reveal: ZoneReveal }>
+  | Readonly<{ type: 'world/zone_reveal_cleared'; id: string }>
   /** engage the mob group under the E prompt — `group` is a `mob_group_id` */
-  | Readonly<{ type: 'world/engage'; group: string; started_at_ms: number }>
+  | Readonly<{ type: 'world/engage'; group: string; access: 0 | 1; started_at_ms: number }>
   | Readonly<{ type: 'world/engage_submitted'; group: string; fight: string }>
   | Readonly<{ type: 'world/engage_failed'; group: string }>
   | Readonly<{ type: 'world/engage_confirmed'; group: string }>
@@ -153,8 +157,10 @@ export const initial_world_state = (): WorldState =>
     fights: {},
     pending_engages: {},
     pending_zone_searches: {},
+    fight_access: 0,
     player_menu: null,
     gathering: null,
+    zone_reveal: null,
   })
 
 const with_world = (state: AppState, world: WorldState): AppState => Object.freeze({ ...state, world })
@@ -277,6 +283,8 @@ const reduce = (state: AppState, input: AppInput): AppState => {
   if (input.type === 'auth/disconnected' || input.type === 'auth/rejected')
     return with_world(state, initial_world_state())
   if (input.type === 'character/select') return with_world(state, project_world_window(state.world, input.character_id))
+  if (input.type === 'world/fight_access')
+    return with_world(state, Object.freeze({ ...state.world, fight_access: input.access }))
   if (input.type === 'world/player_menu')
     return with_world(state, Object.freeze({ ...state.world, player_menu: input.menu }))
   if (input.type === 'world/search_zone')
@@ -301,8 +309,18 @@ const reduce = (state: AppState, input: AppInput): AppState => {
       })
     )
   }
+  if (input.type === 'world/zone_revealed')
+    return with_world(state, Object.freeze({ ...state.world, zone_reveal: input.reveal }))
+  if (input.type === 'world/zone_reveal_cleared' && state.world.zone_reveal?.id === input.id)
+    return with_world(state, Object.freeze({ ...state.world, zone_reveal: null }))
   if (input.type === 'world/engage') {
-    const next = begin_pending_engage(state.world, input.group, input.started_at_ms, parse_mob_group_id(input.group))
+    const next = begin_pending_engage(
+      state.world,
+      input.group,
+      input.access,
+      input.started_at_ms,
+      parse_mob_group_id(input.group)
+    )
     return next === state.world ? state : with_world(state, next)
   }
   if (input.type === 'world/engage_submitted') {
@@ -351,7 +369,23 @@ export const searchable_zone = (state: AppState, observed_at_ms = Date.now()): Z
   if (!character?.world || !pose) return null
   const x = Math.round(client_to_chain_coordinate(pose.x))
   const z = Math.round(client_to_chain_coordinate(pose.z))
-  if (x < 0 || z < 0) return null
+  if (x < 0 || z < 0 || x >= world_size || z >= world_size) return null
+  const { checkpoint_world, x: from_x, z: from_z, at_ms: from_ms } = character
+  if (checkpoint_world !== character.world || from_x === undefined || from_z === undefined || from_ms === undefined)
+    return null
+  if (
+    !travel_proof_ready({
+      from_x,
+      from_z,
+      from_ms,
+      pet_at_start: character.pet === true,
+      to_x: x,
+      to_z: z,
+      now_ms: observed_at_ms,
+      pet_now: character.equipment.some(({ slot }) => slot === 'pet'),
+    })
+  )
+    return null
   const { zx, zz } = zone_of(x, z)
   const key = zone_key(character.world, zx, zz)
   if (state.world.pending_zone_searches[key]) return null
@@ -401,6 +435,7 @@ const observe: NonNullable<AppModule['observe']> = (context) => {
    *  only burns gas. Zone keys and group ids never collide (a group id ends in `:mN`). */
   const in_flight = new Set<string>()
   observe_world_gather(context)
+  let reveal_timer: ReturnType<typeof setTimeout> | null = null
   /** transactions whose projected result is not visible yet — zone rows and fight boards use
    * the same observed-delta completion rule. */
   const awaiting = new Map<
@@ -473,20 +508,24 @@ const observe: NonNullable<AppModule['observe']> = (context) => {
   /** THE ARRIVAL DOOR: a transaction is done when its projected result is visible. */
   const settle_arrivals = (state: AppState): void => {
     if (awaiting.size === 0) return
-    const text = state.copy ? copy_text(state.copy.world_hud) : (value: string) => value
     for (const [key, awaited] of awaiting) {
       const population = state.world.spawns[key]
       if (zone_discovery_arrived(state.world.zones[key], population, awaited.previous_searched_at_ms)) {
         const summary = zone_discovery_summary(population)
-        const findings = [
-          text('zone_mobs_found', { count: summary.mobs }),
-          text('zone_resources_found', { count: summary.resources }),
-          ...(summary.dungeon ? [text('zone_dungeon_spotted')] : []),
-        ]
+        const zone = state.world.zones[key]!
+        const reveal = Object.freeze({
+          id: `${key}:${zone.seed}:${zone.searched_at_ms}`,
+          zx: zone.zx,
+          zz: zone.zz,
+          ...summary,
+        })
         settle(key, (pending) => {
           play_procedural_cue('discovery')
-          pending.success(`${text('zone_searched_toast')} · ${findings.join(' · ')}`)
+          pending.dismiss()
         })
+        dispatch({ type: 'world/zone_revealed', reveal })
+        if (reveal_timer) clearTimeout(reveal_timer)
+        reveal_timer = setTimeout(() => dispatch({ type: 'world/zone_reveal_cleared', id: reveal.id }), 2_500)
         dispatch({ type: 'world/search_zone_confirmed', key })
       } else if (state.fight.mounted && state.fight.checkpoint?.contract.id === key) {
         const pending = awaiting.get(key)
@@ -496,8 +535,7 @@ const observe: NonNullable<AppModule['observe']> = (context) => {
     }
   }
 
-  // ENGAGE — one newly-pending STATE row opens one transaction. A repeated key message produces
-  // no state delta, so it can never reach the wallet edge a second time.
+  // One newly-pending state row opens one transaction; repeats produce no delta.
   const submit_engage = (state: AppState, pending_engage: PendingEngage): void => {
     const { group } = pending_engage
     const { wallet, selected_character_id } = state.session
@@ -519,6 +557,7 @@ const observe: NonNullable<AppModule['observe']> = (context) => {
         zx: Number(zx),
         zz: Number(zz),
         group_index: pending_engage.index,
+        access: pending_engage.access,
         // the ROSTER the chain will seat, in the order it drew it — the members are the fight
         mob_types: pending_engage.members.map(({ mob_type }) => mob_type),
       })
@@ -551,6 +590,10 @@ const observe: NonNullable<AppModule['observe']> = (context) => {
     )
       settle_arrivals(state)
     new_pending_engages(state.world, previous.world).forEach((pending) => submit_engage(state, pending))
+  })
+  context.signal.addEventListener('abort', () => {
+    if (reveal_timer) clearTimeout(reveal_timer)
+    reveal_timer = null
   })
 }
 

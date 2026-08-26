@@ -128,7 +128,13 @@ export const project_fight_chat_lines = (
   name_of: NameOf
 ): readonly ChatLine[] => {
   const line = (index: number, key: string, values: Readonly<Record<string, ChatLineValue>>): ChatLine =>
-    Object.freeze({ id: `${checkpoint.contract.id}:${batch}:${index}`, channel: 'combat' as const, key, values })
+    Object.freeze({
+      id: `${checkpoint.contract.id}:${batch}:${index}`,
+      channel: 'combat' as const,
+      fight: checkpoint.contract.id,
+      key,
+      values,
+    })
   // fighters+channels whose LIVE pool already spoke in the current resolution segment
   let pool_logged = new Set<string>()
   return Object.freeze(

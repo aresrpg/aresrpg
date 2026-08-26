@@ -18,7 +18,7 @@ export type SpellCardEdit = Readonly<{
   save: () => void
 }>
 const field_class =
-  'h-7 border border-white/12 bg-[#090a10] px-1.5 text-[9px] text-[#e8e4dc] outline-none focus:border-[#c8963c]/60'
+  'h-7 border border-white/12 bg-bg px-1.5 text-[9px] text-[#e8e4dc] outline-none focus:border-[#c8963c]/60'
 const reverse = (values: Readonly<Record<string, bigint>>): Readonly<Record<number, string>> =>
   Object.freeze(Object.fromEntries(Object.entries(values).map(([name, value]) => [Number(value), name])))
 const effect_kinds = reverse(EFFECT_KINDS)
@@ -51,7 +51,8 @@ const timed_effect_kinds = Object.freeze([
   Number(EFFECT_KINDS.return),
   Number(EFFECT_KINDS.redirect),
 ])
-const duration_editable_for = (kind: number): boolean => !instant_effect_kinds.includes(kind)
+const duration_editable_for = (kind: number): boolean =>
+  kind !== Number(EFFECT_KINDS.chatiment) && !instant_effect_kinds.includes(kind)
 const blank_effect: SpellEffect = Object.freeze({
   kind: Number(EFFECT_KINDS.damage),
   element: 'earth',
@@ -161,7 +162,7 @@ const InlineEffectField = ({
     set_editing(false)
     edit?.save()
   }
-  if (!edit) return class_name ? <span className={class_name}>{display}</span> : display
+  if (!edit) return <span className={class_name || undefined}>{display}</span>
   if (editing)
     return (
       <span className={`inline-flex items-center gap-1 ${class_name}`} onBlur={finish}>
@@ -245,6 +246,8 @@ const effect_words = (
     return { action: 'Deals', suffix: 'damage', amount: true, stat: false }
   if (kind === 'remove') return { action: 'Removes', suffix: '', amount: true, stat: true }
   if (kind === 'steal') return { action: 'Steals', suffix: '', amount: true, stat: true }
+  if (kind === 'chatiment')
+    return { action: 'Gains up to', suffix: 'from damage received each turn', amount: true, stat: true }
   if (kind === 'reduce') return { action: 'Reduces damage by', suffix: '', amount: true, stat: false }
   if (kind === 'reflect') return { action: 'Reflects', suffix: 'damage', amount: true, stat: false }
   if (kind === 'push') return { action: 'Pushes', suffix: 'cells', amount: true, stat: false }
@@ -292,7 +295,8 @@ const CriticalEditor = ({ critical, update }: Readonly<{ critical: SpellEffect; 
     const next = Number(value)
     update('kind', next)
     if (instant_effect_kinds.includes(next) && critical.turns !== 0) update('turns', 0)
-    if (timed_effect_kinds.includes(next) && critical.turns === 0) update('turns', 1)
+    if (next === Number(EFFECT_KINDS.chatiment) && critical.turns !== 5) update('turns', 5)
+    else if (timed_effect_kinds.includes(next) && critical.turns === 0) update('turns', 1)
   }
   return (
     <>
@@ -369,7 +373,7 @@ export const spell_effect_line_view = (effect: SpellEffect, critical_only = fals
     pre: `${words.action}${words.amount ? ' ' : ''}`,
     value: words.amount ? `${effect_range(effect)}${effect_value_suffix(effect)}` : null,
     tone: color,
-    post: [words.suffix, words.stat ? titleize(channel) : '', target ? `(${target})` : '']
+    post: [words.stat ? titleize(channel) : '', words.suffix, target ? `(${target})` : '']
       .filter(Boolean)
       .map((part) => ` ${part}`)
       .join(''),
@@ -401,7 +405,8 @@ export const SpellEffectLine = ({
     const next = Number(value)
     update('kind', next)
     if (instant_effect_kinds.includes(next) && effect.turns !== 0) update('turns', 0)
-    if (timed_effect_kinds.includes(next) && effect.turns === 0) update('turns', 1)
+    if (next === Number(EFFECT_KINDS.chatiment) && effect.turns !== 5) update('turns', 5)
+    else if (timed_effect_kinds.includes(next) && effect.turns === 0) update('turns', 1)
   }
   const icon = identity ? (
     <img alt="" className="size-5 object-contain" src={identity.icon} title={identity.label} />
@@ -463,16 +468,6 @@ export const SpellEffectLine = ({
             label="effect power"
           />
         )}
-        {words.suffix && (
-          <InlineEffectField
-            display={words.suffix}
-            edit={edit}
-            editor={
-              <SelectField change={change_kind} label="Effect kind" options={effect_options} value={effect.kind} />
-            }
-            label="effect kind"
-          />
-        )}
         {words.stat && (
           <InlineEffectField
             display={titleize(channel)}
@@ -486,6 +481,16 @@ export const SpellEffectLine = ({
               />
             }
             label="stat"
+          />
+        )}
+        {words.suffix && (
+          <InlineEffectField
+            display={words.suffix}
+            edit={edit}
+            editor={
+              <SelectField change={change_kind} label="Effect kind" options={effect_options} value={effect.kind} />
+            }
+            label="effect kind"
           />
         )}
       </span>
@@ -527,7 +532,7 @@ export const SpellEffectLine = ({
         <InlineEffectField
           class_name={`text-[9px] font-semibold ${effect.turns > 0 ? 'text-[#d9b86c]' : 'text-[#777b86]'}`}
           display={effect.turns > 0 ? `for ${effect.turns} turn${effect.turns === 1 ? '' : 's'}` : 'Instant'}
-          edit={edit}
+          edit={duration_editable ? edit : undefined}
           editor={<NumberField change={(value) => update('turns', value)} label="Turns" value={effect.turns} />}
           label="duration"
         />

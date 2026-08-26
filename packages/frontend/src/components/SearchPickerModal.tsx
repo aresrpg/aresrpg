@@ -189,8 +189,8 @@ export const SearchPickerModal = ({
       }}
       role="presentation"
     >
-      <section className="flex h-[70vh] max-h-[700px] w-[70vw] max-w-[1000px] flex-col border border-[#1e1e2e] bg-[#12121a]">
-        <header className="flex shrink-0 items-center gap-3 border-b border-[#1e1e2e] px-4 py-3">
+      <section className="flex h-[70vh] max-h-[700px] w-[70vw] max-w-[1000px] flex-col border border-border bg-surface">
+        <header className="flex shrink-0 items-center gap-3 border-b border-border px-4 py-3">
           <Search className="shrink-0 text-[#6b7280]" size={14} />
           <input
             className="flex-1 bg-transparent font-mono text-[11px] tracking-[0.15em] text-[#e8e4dc] uppercase outline-none"
@@ -204,7 +204,7 @@ export const SearchPickerModal = ({
           </button>
         </header>
         {pills.length > 0 && (
-          <div className="flex shrink-0 flex-wrap gap-1 border-b border-[#1e1e2e] px-4 py-2">
+          <div className="flex shrink-0 flex-wrap gap-1 border-b border-border px-4 py-2">
             {pills.map((pill) => (
               <button
                 className={`cursor-pointer border px-1.5 py-0.5 text-[8px] uppercase ${active_pills.has(pill) ? 'border-[#c8963c] bg-[#c8963c]/10 text-[#c8963c]' : 'border-white/8 text-[#6b7280]'}`}
@@ -219,7 +219,7 @@ export const SearchPickerModal = ({
         )}
         <div className="flex min-h-0 flex-1">
           {categories.length > 0 && (
-            <nav className="w-48 shrink-0 overflow-y-auto border-r border-[#1e1e2e]">
+            <nav className="w-48 shrink-0 overflow-y-auto border-r border-border">
               <button
                 className={`block w-full cursor-pointer border-l-2 px-3 py-2 text-left text-[10px] tracking-[0.15em] uppercase ${category === null ? 'border-[#c8963c] bg-[#c8963c]/5 text-[#c8963c]' : 'border-transparent text-[#e8e4dc] hover:bg-[#c8963c]/5'}`}
                 onClick={() => set_category(null)}
@@ -338,7 +338,7 @@ export const SearchPickerModal = ({
             })}
           </div>
         </div>
-        <footer className="flex shrink-0 items-center justify-between border-t border-[#1e1e2e] px-4 py-2 text-[9px] tracking-wide uppercase">
+        <footer className="flex shrink-0 items-center justify-between border-t border-border px-4 py-2 text-[9px] tracking-wide uppercase">
           <span className="text-[#6b7280]">{copy.results(filtered.length, items.length)}</span>
           {selected_label && <span className="text-[#c8963c]">{copy.selected(selected_label)}</span>}
         </footer>

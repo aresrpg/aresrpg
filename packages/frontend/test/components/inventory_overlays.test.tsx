@@ -23,6 +23,7 @@ mock.module('../../src/store.ts', () => ({
     select({
       session: { inventory: [item], wallet: null },
       marketplace: { own_listings: [{ id: item.id }] },
+      trade: { rows: [] },
     }),
 }))
 mock.module('../../src/content/assets.ts', () => ({ item_icon: () => null }))

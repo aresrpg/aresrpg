@@ -115,7 +115,7 @@ export const ShopCard = ({
   const odds = loot_box_odds(sale.item)
   return (
     <article
-      className={`overflow-hidden border border-border bg-[#0d0d14]/92 shadow-[0_18px_45px_rgba(0,0,0,0.28)] ${odds.length ? 'lg:col-span-2 lg:grid lg:grid-cols-2' : ''} ${sale.stock === 0 ? 'opacity-55' : ''}`}
+      className={`overflow-hidden border border-border bg-surface-low/92 shadow-[0_18px_45px_rgba(0,0,0,0.28)] ${odds.length ? 'lg:col-span-2 lg:grid lg:grid-cols-2' : ''} ${sale.stock === 0 ? 'opacity-55' : ''}`}
     >
       <div>
         <Case item={sale.item} open_detail={open_detail} />

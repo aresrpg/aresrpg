@@ -9,8 +9,9 @@
 
 // ╔════════════════ [ 1. The indexer wire ] ═══════════════════════════════════ ]
 
-/** Every pub/sub payload is this envelope: idempotence rides (ckpt, tx, evt) — a consumer that
- *  folds the same triple twice folds a no-op. `type` is the Move event name, `data` its fields. */
+/** Every pub/sub payload carries checkpoint provenance. Real Move events have a unique
+ *  `(ckpt, tx, evt)` coordinate; synthetic object-write invalidations may share one because
+ *  consumers reread full latest-wins state instead of folding them as deltas. */
 export type EventEnvelope = {
   ckpt: number
   tx: number
@@ -29,7 +30,6 @@ export const channels = {
   dungeon: (world: string, x: number, z: number) => `evt:dungeon:${world}:${x}:${z}`,
   fight: (id: string) => `evt:fight:${id}`,
   party: (id: string) => `evt:party:${id}`,
-  trade: (id: string) => `evt:trade:${id}`,
   social: (address: string) => `evt:social:${address}`,
   kolizeum: 'evt:kolizeum',
   economy: 'evt:economy',
@@ -75,10 +75,9 @@ export type MeshFact =
 export type ChatFact = { address: string; character: string; text: string }
 
 /** What rides an `act:fight:` channel. */
-export type FightActionFact = {
-  address: string
-  action: import('@aresrpg/protocol').FightWireAction
-}
+export type FightActionFact =
+  | { kind: 'action'; address: string; action: import('@aresrpg/protocol').FightWireAction }
+  | { kind: 'resync'; address: string }
 
 // ╔════════════════ [ 2. The graph schema (indexer-written, read-only here) ] ═ ]
 
@@ -108,6 +107,7 @@ export const relations = {
   EQUIPS: ['Character', 'Item'], // props: { slot }
   FIGHTER: ['Fight', 'Character'], // props: { seat, team }
   RESULT_FOR: ['Fight', 'User'], // props: durable unsettled seat / unclaimed drops
+  CLOSABLE_FOR: ['Fight', 'User'], // participants allowed an explicit reconnect close retry
   MEMBER_OF: ['Character', 'Party'], // props: { order }
   FRIEND: ['User', 'User'],
   INVITED: ['Party', 'Character'],

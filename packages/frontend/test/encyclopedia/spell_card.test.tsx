@@ -166,6 +166,9 @@ test('the class spell list owns unlock order and keeps unlock levels outside the
 
   expect(unlock_levels.length).toBeGreaterThan(1)
   expect(unlock_levels).toEqual(unlock_levels.toSorted((left, right) => left - right))
+  expect(html).toContain('data-characteristic-costs=""')
+  expect(html).toContain('data-characteristic="intelligence"')
+  expect(html).toContain('data-cost="2" data-from="20"')
   const card_header = html.slice(html.indexOf('data-spell-detail-card'), html.indexOf('data-spell-level-tabs'))
   expect(card_header).not.toContain('Lv.')
 })
@@ -193,6 +196,12 @@ test('every effect kind reads as player prose, never as a raw stat row', async (
       effects: [{ ...base_effect, kind: 2, value: 11, value_max: 15, target_filter: 4 }],
       reads: ['Inflicts', 'damage on yourself'],
       never: ['(caster only)'],
+    },
+    {
+      why: 'chatiment names its damage-fed turn cap instead of pretending to add a flat stat',
+      effects: [{ ...base_effect, kind: 7, value: 140, value_max: 140, stat: 0, turns: 5, target_filter: 4 }],
+      reads: ['Gains up to', '140', 'Strength', 'from damage received each turn', 'for 5 turns'],
+      never: ['Chatiment 140', 'Adds 140'],
     },
     {
       why: 'timed HP removal reads as damage, and a critical row inherits the normal targeting',
@@ -252,4 +261,21 @@ test('every effect kind reads as player prose, never as a raw stat row', async (
     reads.forEach((prose) => expect(html, `${why} — reads "${prose}"`).toContain(prose))
     never.forEach((prose) => expect(html, `${why} — never "${prose}"`).not.toContain(prose))
   })
+})
+
+test('read-only effect fields remain separate flex items so chatiment prose keeps its gap', async () => {
+  const { SpellCard } = await import('../../src/encyclopedia/SpellCard.tsx')
+  const fixture = {
+    ...spell,
+    levels: [
+      {
+        ...base_level,
+        effects: [{ ...base_effect, kind: 7, value: 140, value_max: 140, stat: 0, turns: 5, target_filter: 4 }],
+      },
+    ],
+  } as unknown as SeedSpell
+
+  const html = renderToStaticMarkup(<SpellCard spell={fixture} text={() => ''} />)
+
+  expect(html).toContain('>Strength</span><span>from damage received each turn</span>')
 })

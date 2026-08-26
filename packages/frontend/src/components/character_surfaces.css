@@ -3,18 +3,18 @@
 /* Exact retained rules used by the tracked simulator modal and its shared HUD rows. */
 
 .gw-tab {
-  --bg: #0b0d0e;
-  --surface-1: #101315;
-  --surface-2: #181c1f;
-  --surface-3: #1e2327;
-  --steel: #1e1e2e;
+  --bg: var(--color-bg);
+  --surface-1: var(--color-surface-low);
+  --surface-2: var(--color-surface);
+  --surface-3: var(--color-surface-high);
+  --steel: var(--color-border);
   --slate: #2a2a3a;
   --fg: #e8e4dc;
   --fg-muted: #9a9488;
   --fg-faint: #6b7280;
   --accent: #c8963c;
   --accent-strong: #f5d0a9;
-  --accent-ink: #0a0a0f;
+  --accent-ink: var(--color-bg);
   --accent-dim: rgba(200, 150, 60, 0.14);
   --accent-glow: rgba(200, 150, 60, 0.35);
   --cyan: #4a9eff;
@@ -122,6 +122,13 @@
   font-size: 0.84rem;
 }
 
+.stats__prow-cost {
+  color: var(--fg-faint);
+  font-family: var(--font-mono);
+  font-size: 0.58rem;
+  white-space: nowrap;
+}
+
 .stats__prow-bonus {
   color: color-mix(in srgb, var(--accent) 42%, var(--fg-muted));
   font-size: 0.74rem;
@@ -168,7 +175,7 @@
   height: 40px;
   flex: none;
   border: 1px solid var(--color-border);
-  background: #05050a;
+  background: var(--color-bg);
   object-fit: cover;
 }
 

@@ -6,12 +6,14 @@ import { resolve } from 'node:path'
 
 import { describe, expect, test } from 'bun:test'
 
-import { indexed_asset_key, spell_asset_key } from '../../src/content/asset_keys.ts'
+import { indexed_asset_key, spell_asset_basename, spell_asset_key } from '../../src/content/asset_keys.ts'
+import { spell_icon } from '../../src/content/assets.ts'
 import { character_model_basenames, worn_equipment_model_of } from '../../src/content/character_model_catalog.ts'
 import { mob_model_identity } from '../../src/content/mob_models.ts'
 import { world_terrain, worlds_source } from '../../src/content/worlds.ts'
 import items_source from '../../../../seed/content/items.json'
 import mobs_source from '../../../../seed/content/mobs.json'
+import spells_source from '../../../../seed/content/spells.json'
 
 const seed = (...parts: readonly string[]) => resolve(import.meta.dir, '../../../../seed', ...parts)
 
@@ -182,7 +184,14 @@ describe('shipped content assets', () => {
   })
 
   test('spell icon identity ignores word-boundary underscores in seed filenames', () => {
-    expect(spell_asset_key('yogan', 'Sunpiercer')).toBe(indexed_asset_key('yogen_sun_piercer'))
+    expect(spell_asset_basename('yogan', 'Adder Shaft')).toBe('yogan_adder_shaft')
+    expect(spell_asset_key('yogan', 'Sunpiercer')).toBe(indexed_asset_key('yogan_sun_piercer'))
+    const spell_icons = basenames(seed('icons/spells'), '.webp')
+    expect(spells_source.every(({ classe, name }) => spell_icons.has(spell_asset_basename(classe, name)))).toBeTrue()
+  })
+
+  test('bare hands use the fight HUD fallback instead of a nonexistent spell image', () => {
+    expect(spell_icon('', 'Bare hands')).toBeNull()
   })
 
   test('world terrain resolves a named world exactly and falls back only when none is selected', () => {

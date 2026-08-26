@@ -923,6 +923,10 @@ fn emit_fight(cypher: &mut Vec<String>, o: &ObjView<'_>, ckpt: u64) -> anyhow::R
     } else {
         "active"
     };
+    let closable = f.ended
+        && f.fighters
+            .iter()
+            .all(|fighter| fighter.settled && fighter.drops.is_empty());
     merge_set(
         cypher,
         "Fight",
@@ -958,6 +962,7 @@ fn emit_fight(cypher: &mut Vec<String>, o: &ObjView<'_>, ckpt: u64) -> anyhow::R
                 None => "v.dungeon_room = NULL".to_string(),
             },
             format!("v.drops_rolled = {}", f.drops_rolled),
+            format!("v.closable = {closable}"),
             format!("v.turn_ptr = {}", f.turn_ptr),
             format!("v.round = {}", f.round),
             format!("v.turn_seed = {}", q(&f.turn_seed.to_string())),
@@ -966,6 +971,27 @@ fn emit_fight(cypher: &mut Vec<String>, o: &ObjView<'_>, ckpt: u64) -> anyhow::R
             format!("v.machine = {}", q_json(&fight_machine(&f))),
         ],
     );
+    cypher.push(format!(
+        "MATCH (f:Fight {{id: {}}}) OPTIONAL MATCH (f)-[r:CLOSABLE_FOR]->() DELETE r",
+        q_id(&f.id)
+    ));
+    if closable {
+        let closers = f
+            .fighters
+            .iter()
+            .filter_map(|fighter| match &fighter.kind {
+                decode::FighterKind::Player { owner, .. } => Some(owner.hex()),
+                decode::FighterKind::Mob(_) => None,
+            })
+            .collect::<BTreeSet<_>>();
+        for owner in closers {
+            cypher.push(format!(
+                "MATCH (f:Fight {{id: {fight}}}) MERGE (u:User {{address: {owner}}}) CREATE (f)-[:CLOSABLE_FOR]->(u)",
+                fight = q_id(&f.id),
+                owner = q(&owner),
+            ));
+        }
+    }
     // Durable post-fight work. It exists before the player's one atomic settlement and vanishes
     // from the output that returns the character and clears every assigned drop. Rebuilding the
     // complete edge set makes reconnect recovery latest-wins and idempotent.
@@ -1246,7 +1272,7 @@ fn emit_party(cypher: &mut Vec<String>, o: &ObjView<'_>, ckpt: u64) -> anyhow::R
         cypher.push(format!(
             "MATCH (p:Party {{id: {id}}}) MATCH (c:Character {{id: {c}}}) \
              CREATE (c)-[:MEMBER_OF {{order: {order}}}]->(p)",
-            c = q_id(&member.character),
+            c = q_id(member),
         ));
     }
     for invited in &p.pending {
@@ -1443,7 +1469,7 @@ mod tests {
         let chr = crate::decode::Character {
             id: Id([1; 32]),
             name: "aiden".into(),
-            classe: "sram".into(),
+            classe: "yajin".into(),
             sex: "male".into(),
             experience: 10,
             level: 2,
@@ -1518,7 +1544,7 @@ mod tests {
         let chr_bytes = bcs::to_bytes(&crate::decode::Character {
             id: Id([1; 32]),
             name: "a".into(),
-            classe: "sram".into(),
+            classe: "yajin".into(),
             sex: "male".into(),
             experience: 0,
             level: 1,

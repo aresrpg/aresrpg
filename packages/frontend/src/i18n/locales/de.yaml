@@ -52,6 +52,7 @@ indexing_lag_warning: Aktionen im Spiel können verzögert erscheinen
 game_frozen: Das Spiel ist derzeit eingefroren. Weitere Informationen findest du auf Discord.
 gas_budget_toast: Diese Aktion war zu schwer für die reservierte Netzwerkgebühr. Sie wurde nicht ausgeführt und hat dich nichts gekostet — bitte melde es.
 game_paused_toast: Das Spiel ist für ein Update pausiert. Deine Aktion wurde nicht ausgeführt — versuche es in ein paar Minuten erneut.
+movement_sync_toast: Deine Position wird noch synchronisiert. Bewege dich normal weiter und versuche es gleich noch einmal.
 network_testnet: TESTNET
 page_pending_title: Diese Seite wird neu aufgebaut
 page_pending_body: Ihr Platz bleibt sichtbar, während wir sie sauber wiederherstellen.
@@ -63,6 +64,7 @@ create_character: Charakter erstellen
 create_title: Erstelle deinen Charakter
 create_lead: Wähle eine Klasse, deine Farben und einen Namen. Die Welt lebt bereits hinter dir.
 class_label: Klasse
+view_class_spells: Zauber dieser Klasse ansehen
 sex_label: Geschlecht
 appearance_label: Aussehen · 3 Farben
 name_label: Name
@@ -90,6 +92,86 @@ wallet_send_pending: SUI wird gesendet…
 wallet_send_success: SUI gesendet
 wallet_send_failed: Die SUI-Übertragung ist fehlgeschlagen
 wallet_close: Schließen
+kolizeum_page:
+  title: Kolizeum — Kriegstisch
+  tagline: Gewinner teilen 90 % des Pots · 10 % Gebühr
+  tab_open: Offene Lobbys
+  tab_mine: Meine Lobbys
+  col_format: Format
+  col_access: Zugang
+  col_status: Status
+  col_pledge: Einsatz
+  col_full_pot: Voller Pot
+  col_creator: Ersteller
+  access_public: Öffentlich
+  access_friends: Freunde
+  status_open: Offen
+  status_started: Läuft
+  status_settling: Abrechnung
+  empty: Keine Lobbys
+  selected: Ausgewählte Lobby
+  side_a: Seite A
+  side_b: Seite B
+  total_pot: Aktueller Pot
+  free: Kostenlos
+  join_a: Seite A beitreten
+  join_b: Seite B beitreten
+  create_title: Lobby erstellen
+  form_format: Format
+  form_access: Zugang
+  form_pledge: Einsatz pro Spieler (SUI)
+  form_max_diff: Max. Stufenunterschied
+  form_character: Als Charakter
+  no_character: Kein freier Charakter
+  full_pot_summary: Voller {{format}}-Pot = {{pot}} SUI · 90 % an die Gewinner
+  create_cta: Lobby erstellen
+friends_panel:
+  title: Freunde
+  observed: In der Nähe gesehen
+  unseen: Derzeit nicht gesehen
+  none_observed: Keine Freunde in der Nähe gesehen
+  empty: Noch keine Freunde
+  placeholder: Name, SuiNS oder 0x-Adresse
+  add: Freund hinzufügen
+  remove: Entfernen
+  remove_title: Freund entfernen
+  remove_body: '{{name}} aus deiner Freundesliste entfernen?'
+  error_no_suins: Keine SuiNS-Adresse entspricht {{name}}.
+  error_target: Gib einen Charakter, SuiNS-Namen oder eine vollständige Sui-Adresse ein.
+  error_self: Du kannst dich nicht selbst hinzufügen.
+  error_duplicate: Dieser Spieler ist bereits in deiner Freundesliste.
+  cancel: Abbrechen
+party_panel:
+  title: Gruppe
+  adventurer: Abenteurer
+  invited_by: '{{name}} hat dich eingeladen'
+  accept: Annehmen
+  decline: Ablehnen
+  leader: Anführer
+  leave: Verlassen
+  disband: Auflösen
+  kick: Entfernen
+  rescind: Einladung zurückziehen
+  invite_owned: Eigenen Charakter einladen
+trade_panel:
+  inbox: Handel
+  close: Schließen
+  title: Spielerhandel
+  locked: Gesperrt · Ansprüche bleiben bestehen
+  negotiating: Verhandlung · jede Änderung setzt Zusagen zurück
+  your_offer: Dein Angebot
+  their_offer: Gegenangebot
+  accepted: Akzeptiert
+  reviewing: Prüft
+  add_item: Gegenstand hinzufügen
+  add_character: Charakter hinzufügen
+  sui: SUI hinzufügen
+  withdraw: Zurücknehmen
+  withdraw_sui: Meine SUI zurücknehmen
+  accept: Diese Version akzeptieren
+  claim: Beanspruchen
+  claim_sui: '{{amount}} SUI beanspruchen'
+  finish: Handel abschließen
 world_hud:
   compass_label: Kompass
   zone: ZONE
@@ -104,6 +186,7 @@ world_hud:
   biome: Biom
   world_map: Weltkarte
   menu_group: In die Gruppe einladen
+  menu_friend: Freund hinzufügen
   menu_trade: Handeln
   menu_message: Nachricht senden
   mount_prompt: 'Drücke {{key}} zum Aufsteigen'
@@ -174,7 +257,8 @@ world_hud:
   zone_reroll_title: 'Zone kann erneuert werden'
   zone_press_reroll: 'Drücke {{key}}, um die Zone neu zu würfeln'
   zone_searching: 'Zone wird erkundet…'
-  zone_searched_toast: 'Die Zone gibt ihre Geheimnisse preis'
+  zone_revealed: 'Zone aufgedeckt'
+  zone_coordinates: 'Sektor {{zx}} · {{zz}}'
   zone_mobs_found: '{{count}} Monster gefunden'
   zone_resources_found: '{{count}} Ressourcen gefunden'
   zone_dungeon_spotted: 'Dungeon entdeckt'
@@ -297,6 +381,7 @@ marketplace_page:
   delist_success: Angebot entfernt
   buy_pending: Angebot wird gekauft…
   buy_success: Kauf abgeschlossen
+  character_roster_full: Ein 7. Charakter passt nicht in deine Liste — 6 ist das Maximum
   collect_pending: Erlöse werden abgeholt…
   collect_success: Erlöse abgeholt
 shop_page:
@@ -427,7 +512,7 @@ simulator_page:
   spell_level: Stufe von {name}
   spell_level_option: 'Stufe {level} · {cost} Pkt'
   class_shugo_title: Hüter
-  class_tomoda_title: Tomoda
+  class_tomoda_title: Bestienmeister
   class_rojin_title: Schürfer
   class_yajin_title: Assassine
   class_tokei_title: Chronomant
@@ -452,7 +537,7 @@ simulator_page:
   spell_unlock: Freischaltung {level}
   reset: Zurücksetzen
   delete_confirm: Löschen bestätigen
-  class_change_hint: Ein Klassenwechsel setzt investierte Zauberstufen zurück
+  class_change_hint: Ein Klassenwechsel setzt natürliche Attribute und investierte Zauberstufen zurück
   spells_unavailable: Auf dieser Stufe sind keine Zauber freigeschaltet
   save_character: Charakter speichern
   equipment: Ausrüstung, Relikte und Kosmetik
@@ -542,6 +627,7 @@ fight_hud:
   unit_turns: Züge
   chat_title: Chat
   chat_tab_general: Allgemein
+  chat_tab_party: Gruppe
   chat_tab_combat: Kampf
   chat_placeholder: Sag etwas…
   chat_you: Du
@@ -558,6 +644,9 @@ fight_hud:
   result_survived: Überlebt
   result_collecting: Beute wird eingesammelt…
   result_continue: Weiter
+  result_close: Schließen
+  fight_finalize_pending: Der Kampf kann abgeschlossen werden.
+  fight_finalize_button: Abschließen
   result_retry: Erneut versuchen
   level_up_title: Stufenaufstieg
   level_up_reached: Stufe erreicht
@@ -813,6 +902,8 @@ encyclopedia_page:
     life_steal: LEBENSRAUB
     life_steal_desc: 'Drain-Zaubereffekte verursachen Schaden und heilen den Wirker um die Hälfte der Lebenspunkte, die das Ziel tatsächlich verliert. Nur der Drain eines Spielers heilt: Ein Monster, das denselben Zauber wirkt, verursacht seinen Schaden und heilt sich nicht.'
     life_steal_note: Der Schaden durchläuft zuerst die Standard-Schadensformel, dann heilt sich der Wirker um die Hälfte der Lebenspunkte, die das vorgesehene Ziel tatsächlich verloren hat — ein auf einen anderen Kämpfer umgeleiteter Treffer, oder einer, den das Ziel in Heilung umwandelt, gibt nichts zurück.
+    chatiment: CHÂTIMENT
+    chatiment_desc: Châtiment wandelt tatsächlich verlorene, nicht tödliche LP in die angegebene Eigenschaft um. Jeder aktive Kämpferzug hat eine eigene Obergrenze; spätere Züge erzeugen getrennte Boni für fünf Züge. Monsterschaden zählt vollständig. Von Spielern verursachter Schaden und seine Obergrenze werden halbiert. Ares verwendet keine Erosion.
     healing: HEILUNG
     healing_desc: Heilungen wenden den festgelegten Basiswert des Zaubers an, hochskaliert um einen Prozentsatz deiner Intelligenz, plus einen festen Heilbonus durch Ausrüstung und Buffs. Die Heilung ist auf die maximalen LP des Ziels begrenzt.
     healing_intel_value: +1% Heilung pro Intelligenz-Punkt
@@ -824,6 +915,7 @@ encyclopedia_page:
     points_per_level: PUNKTE PRO LEVEL
     stat_points: Stat-Punkte
     stat_points_value: '{{n}} pro Level'
+    stat_costs_desc: Die Kosten hängen von Klasse und aktuellem natürlichem Wert ab. Die Klassenseite zeigt die vollständige Leiter.
     spell_points: Zauberpunkte
     spell_points_value: '{{n}} pro Level'
     xp_milestones: EP-MEILENSTEINE
@@ -874,7 +966,7 @@ encyclopedia_page:
     role_archer: Bogenschütze
     role_prospector: Schürfer
     role_brawler: Raufbold
-    role_tomoda: Tomoda
+    role_tomoda: Bestienmeister
     role_gambler: Spieler
     role_healer: Heiler
     weapon_daggers: Dolche
@@ -1021,6 +1113,10 @@ encyclopedia_page:
   unlimited: UNBEGRENZT
   cooldown: ABKLINGZEIT
   cooldown_none: KEINE
+  characteristic_costs: Attributkosten
+  characteristic_costs_desc: Natürliche Punkte folgen der Leiter dieser Klasse. Ausrüstung ändert die Kosten nicht.
+  characteristic_cost_band: '{{cost}} Pkt. → +{{gain}} · ≤{{cap}}'
+  characteristic_cost_unlimited: '{{cost}} Pkt. → +{{gain}} · unbegrenzt'
   turns_value: '{{n}} RUNDEN'
   targeting: ZIELERFASSUNG
   effect_zone: WIRKUNGSBEREICH
@@ -1389,6 +1485,7 @@ characters_page:
     add_point: '{{stat}} um einen Punkt erhöhen'
     remove_point: '{{stat}} um einen Punkt verringern'
     tx_pending: 'Verteilen…'
+    point_cost: '{{cost}} Pkt. → +{{gain}}'
     tx_success: 'Stat-Punkte verteilt'
   spells:
     range_modifiable: 'Veränderbare Reichweite'

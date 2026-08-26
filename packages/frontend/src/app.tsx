@@ -28,6 +28,7 @@ import { DungeonPortalPrompt } from './components/DungeonPortalPrompt.tsx'
 import { DungeonLobby } from './components/DungeonLobby.tsx'
 import { PlayerNametag } from './components/PlayerNametag.tsx'
 import { ZonePrompt } from './components/ZonePrompt.tsx'
+import { ZoneRevealBanner } from './components/ZoneRevealBanner.tsx'
 import { SpawnNametag } from './components/SpawnNametag.tsx'
 import { AmbushPrompt } from './components/AmbushPrompt.tsx'
 import { PlayerContextMenu } from './components/PlayerContextMenu.tsx'
@@ -40,9 +41,13 @@ import { env } from './env.ts'
 import type { AppCopy } from './i18n/copy.ts'
 import type { Locale } from './i18n/locale.ts'
 import type { Page } from './modules/navigation.ts'
+import { selected_dungeon_run } from './modules/dungeon.ts'
+import { selected_party } from './modules/party.ts'
 import { toast } from './toast.ts'
 import { format_sui } from './wallet_amount.ts'
 import { FightLevelUpCard, FightResultCard } from './game/fight/FightResultCard.tsx'
+import { FriendsPanel } from './components/FriendsPanel.tsx'
+import { PartyFrame } from './components/PartyFrame.tsx'
 
 // Creation moves CHARACTER_PRICE_MIST on-chain and burns gas on top — the margin keeps the
 // gate honest for the whole transaction, not just the price.
@@ -95,7 +100,7 @@ const Login = ({
 
   return (
     <>
-      <div className="fixed inset-0 z-2 bg-[#0a0a0f]/50 backdrop-blur-[7px]" />
+      <div className="fixed inset-0 z-2 bg-bg/50 backdrop-blur-[7px]" />
       <section className="fixed top-1/2 left-1/2 z-3 flex w-[min(384px,calc(100vw-32px))] -translate-1/2 flex-col items-center gap-[27px] rounded-[5px] border border-white/9 bg-[linear-gradient(135deg,rgba(18,18,26,0.92),rgba(10,10,15,0.82))] px-9 py-10 shadow-[0_18px_60px_rgba(0,0,0,0.45),inset_0_1px_rgba(255,255,255,0.05)] backdrop-blur-3xl max-[600px]:px-6 max-[600px]:py-8">
         <img className="size-[72px] drop-shadow-[0_0_20px_rgba(200,150,60,0.3)]" src="/logo.png" alt="AresRPG" />
         <div className="text-center">
@@ -166,8 +171,8 @@ const Welcome = ({
     })
   }
   return (
-    <section className="absolute inset-0 z-[140] grid place-items-center bg-[#050508]/34 p-5 backdrop-blur-[3px]">
-      <div className="w-full max-w-xl border border-white/10 border-t-[#c8963c] bg-[#0a0a0f]/94 p-8 shadow-[0_24px_80px_rgba(0,0,0,0.55)]">
+    <section className="absolute inset-0 z-[140] grid place-items-center bg-bg/34 p-5 backdrop-blur-[3px]">
+      <div className="w-full max-w-xl border border-white/10 border-t-[#c8963c] bg-bg/94 p-8 shadow-[0_24px_80px_rgba(0,0,0,0.55)]">
         <p className="mb-3 text-[8px] tracking-[0.28em] text-[#c8963c] uppercase">AresRPG</p>
         <h2 className="text-xl font-semibold tracking-[0.06em]">{copy.welcome_title}</h2>
         <p className="mt-4 text-[11px] leading-6 text-[#9da0a9]">{copy.welcome_body}</p>
@@ -211,10 +216,17 @@ export function App() {
   const locale = useAppStore((state) => state.locale)
   const copy = useAppStore((state) => state.copy)
   const engine_status = useAppStore((state) => state.engine)
-  const fight_active = useAppStore((state) => state.fight.mode !== null && state.fight.mounted)
-  const dungeon_active = session.characters.some(
-    ({ id, dungeon_run }) => id === session.selected_character_id && dungeon_run !== undefined
-  )
+  const fight_active = useAppStore((state) => {
+    const character = state.session.characters.find(({ id }) => id === state.session.selected_character_id)
+    return (
+      state.fight.mounted ||
+      !!character?.active_fight ||
+      !!state.fight.spectating_by_character[state.session.selected_character_id ?? '']
+    )
+  })
+  const dungeon_active = useAppStore((state) => selected_dungeon_run(state) !== null)
+  const fight_access = useAppStore((state) => state.world.fight_access)
+  const party_available = useAppStore((state) => selected_party(state) !== null)
   const { wallet } = session
   const [show_wallets, set_show_wallets] = useState(false)
   const [graphics_notice_dismissed, set_graphics_notice_dismissed] = useState(false)
@@ -280,13 +292,13 @@ export function App() {
     (engine_status.state === 'failed' && !world_unavailable) ||
     (!graphics_notice_dismissed && (world_unavailable || engine_status.state === 'degraded'))
   const loading_universe = session.auth_status === 'connecting' || (in_app && !session.roster_loaded)
-  if (!copy) return <main className="fixed inset-0 bg-[#0a0a0f]" />
+  if (!copy) return <main className="fixed inset-0 bg-bg" />
 
   return (
-    <main className="fixed inset-0 overflow-hidden bg-[#0a0a0f] font-mono text-[#e8e4dc]">
+    <main className="fixed inset-0 overflow-hidden bg-bg font-mono text-[#e8e4dc]">
       <div
-        aria-hidden={navigation.page !== 'world'}
-        className={`fixed overflow-hidden transition-opacity duration-150 ${WORLD_FRAME_LAYER} ${world_frame_visibility(navigation.page)} ${
+        aria-hidden={navigation.page !== 'world' && !(navigation.page === 'kolizeum' && fight_active)}
+        className={`fixed overflow-hidden transition-opacity duration-150 ${WORLD_FRAME_LAYER} ${world_frame_visibility(navigation.page, fight_active)} ${
           in_app
             ? 'top-[46px] right-3 bottom-3 left-[224px] rounded-[14px] shadow-[0_18px_50px_rgba(0,0,0,0.55),0_0_0_1px_rgba(255,255,255,0.06),inset_0_0_0_1px_rgba(255,255,255,0.04)]'
             : 'inset-0'
@@ -298,6 +310,7 @@ export function App() {
         {in_app && navigation.page === 'world' && !fight_active && !dungeon_active && (
           <div className={`${CANVAS_OVERLAY_CLASS} z-[105]`}>
             <PlayerContextMenu copy={copy} />
+            <PartyFrame copy={copy} />
             <MountPrompt copy={copy} />
             <FightPrompt copy={copy} />
             <DungeonPortalPrompt copy={copy} />
@@ -307,6 +320,7 @@ export function App() {
             <AmbushPrompt copy={copy} />
             <CompassStrip copy={copy} />
             <ZonePrompt copy={copy} />
+            <ZoneRevealBanner copy={copy} />
             <Minimap copy={copy} />
             <OverworldVitals />
             <GatherProgress copy={copy} />
@@ -317,22 +331,31 @@ export function App() {
         )}
         {in_app && navigation.page === 'world' && !fight_active && dungeon_active && (
           <div className={`${CANVAS_OVERLAY_CLASS} z-[105]`}>
-            <DungeonLobby copy={copy} />
+            <DungeonLobby key={session.selected_character_id} copy={copy} />
+            <PartyFrame copy={copy} />
           </div>
         )}
         <div className={`${CANVAS_OVERLAY_CLASS} z-[110]`}>
-          <FpsPanel
-            active={navigation.page === 'world'}
-            change_quality={change_quality}
-            copy={copy}
-            flattened={settings.flat_mode}
-            quality={settings.quality}
-            toggle_flattened={toggle_flattened}
-          />
+          <div className="flex w-fit flex-col items-start gap-2">
+            <FpsPanel
+              active={navigation.page === 'world'}
+              change_quality={change_quality}
+              copy={copy}
+              fight_access={party_available ? fight_access : 0}
+              flattened={settings.flat_mode}
+              party_available={party_available}
+              quality={settings.quality}
+              toggle_fight_access={() =>
+                dispatch_app({ type: 'world/fight_access', access: fight_access === 0 ? 1 : 0 })
+              }
+              toggle_flattened={toggle_flattened}
+            />
+            {in_app && navigation.page === 'world' && !fight_active && <FriendsPanel copy={copy} />}
+          </div>
         </div>
 
         {loading_universe && (
-          <div className={`${CANVAS_OVERLAY_CLASS} z-[130] bg-[#040509]/35 backdrop-blur-[9px]`}>
+          <div className={`${CANVAS_OVERLAY_CLASS} z-[130] bg-bg/35 backdrop-blur-[9px]`}>
             <div className="absolute inset-0 grid place-items-center">
               <ThinkingOrb aria-label={copy.loading_universe} size={64} state="connecting" theme="dark" />
             </div>
@@ -355,19 +378,25 @@ export function App() {
           warning={copy.out_of_sui_body}
         />
       )}
-      {in_app && navigation.dialog === 'character_create' && session.characters.length < MAX_TRACKED_CHARACTERS && (
-        <CharacterCreateModal
-          cancel={() =>
-            dispatch_app({ type: 'dialog/open', dialog: session.characters.length === 0 ? 'welcome' : null })
-          }
-          copy={copy}
-          create={create_character}
-          insufficient={sui_insufficient}
-        />
-      )}
+      {in_app &&
+        navigation.page === 'world' &&
+        navigation.dialog === 'character_create' &&
+        session.characters.length < MAX_TRACKED_CHARACTERS && (
+          <CharacterCreateModal
+            cancel={() =>
+              dispatch_app({ type: 'dialog/open', dialog: session.characters.length === 0 ? 'welcome' : null })
+            }
+            copy={copy}
+            create={create_character}
+            insufficient={sui_insufficient}
+            view_spells={(classe) => {
+              open_path(`/encyclopedia/classes/${encodeURIComponent(classe)}`)
+            }}
+          />
+        )}
       {in_app && navigation.dialog === 'travel' && <TravelModal copy={copy} />}
       <Toasts />
-      {in_app && navigation.page === 'world' && (
+      {in_app && (navigation.page === 'world' || navigation.page === 'kolizeum') && (
         <>
           <FightResultCard copy={copy} />
           <FightLevelUpCard copy={copy} />
@@ -375,8 +404,8 @@ export function App() {
       )}
 
       {show_graphics_notice && (
-        <section className="fixed inset-0 z-[200] grid place-items-center bg-[#050508]/88 p-5 backdrop-blur-lg">
-          <div className="w-full max-w-lg border border-[#ff5a8b]/35 bg-[#0a0a0f] p-7 shadow-[0_0_80px_rgba(255,27,141,0.12)]">
+        <section className="fixed inset-0 z-[200] grid place-items-center bg-bg/88 p-5 backdrop-blur-lg">
+          <div className="w-full max-w-lg border border-[#ff5a8b]/35 bg-bg p-7 shadow-[0_0_80px_rgba(255,27,141,0.12)]">
             <h2 className="mb-4 text-base font-semibold text-[#e8e4dc]">
               {world_unavailable ? copy.world_unavailable_title : copy.title}
             </h2>

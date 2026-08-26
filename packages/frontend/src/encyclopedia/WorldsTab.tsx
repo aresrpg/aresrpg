@@ -169,7 +169,7 @@ export const WorldsTab = ({
             <div className="mt-2 flex flex-wrap gap-1">
               {Object.entries(detail.terrain.materials).map(([name, material]) => (
                 <span
-                  className="flex items-center gap-2 border border-[#1e1e2e] px-2 py-1.5 text-[8px] text-[#9da0a9]"
+                  className="flex items-center gap-2 border border-border px-2 py-1.5 text-[8px] text-[#9da0a9]"
                   key={name}
                 >
                   <span className="size-2" style={{ backgroundColor: material.color }} />
@@ -187,7 +187,7 @@ export const WorldsTab = ({
             />
             <div className="mt-2 grid gap-2 sm:grid-cols-2">
               {detail.dungeon.rooms.map((room, index) => (
-                <div className="border border-[#1e1e2e] bg-white/2 p-3" key={index}>
+                <div className="border border-border bg-white/2 p-3" key={index}>
                   <p className="mb-2 text-[8px] tracking-[0.15em] text-[#c8963c] uppercase">
                     {text('world_dungeon_room', { n: index + 1 })}
                   </p>
@@ -219,7 +219,7 @@ export const WorldsTab = ({
               {text('showing_count', { count: worlds.length, total: encyclopedia_catalog.worlds.length })}
             </span>
             <select
-              className="h-9 min-w-[110px] border border-[#1e1e2e] bg-[#0a0a0f]/55 px-2 text-[9px] text-[#9da0a9] uppercase"
+              className="h-9 min-w-[110px] border border-border bg-bg/55 px-2 text-[9px] text-[#9da0a9] uppercase"
               onChange={(event) => set_sort(event.target.value as 'band_asc' | 'name_asc')}
               value={sort}
             >

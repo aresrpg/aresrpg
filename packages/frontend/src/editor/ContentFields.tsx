@@ -6,7 +6,7 @@ import type { ReactNode } from 'react'
 import type { JsonValue } from './seed_editor.ts'
 
 export const input_class =
-  'h-8 border border-white/12 bg-[#090a10] px-2 text-[10px] text-[#e3dfd7] outline-none focus:border-[#4a9eff]/70 disabled:cursor-not-allowed disabled:opacity-45'
+  'h-8 border border-white/12 bg-bg px-2 text-[10px] text-[#e3dfd7] outline-none focus:border-[#4a9eff]/70 disabled:cursor-not-allowed disabled:opacity-45'
 
 export const button_class =
   'h-7 cursor-pointer border border-white/12 bg-white/[0.025] px-2 text-[8px] tracking-[0.12em] text-[#8c919c] uppercase hover:border-[#c8963c]/50 hover:text-[#efbd45] disabled:cursor-not-allowed disabled:opacity-35'
@@ -137,7 +137,7 @@ export const SelectField = ({
     >
       {!options.includes(value) && <option value={value}>{value || 'None'}</option>}
       {options.map((option) => (
-        <option className="bg-[#090a10]" key={option} value={option}>
+        <option className="bg-bg" key={option} value={option}>
           {titleize_field(option) || 'None'}
         </option>
       ))}

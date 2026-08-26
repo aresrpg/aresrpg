@@ -3,7 +3,12 @@
 
 import { describe, expect, test } from 'bun:test'
 
-import { create_login_response, is_session_takeover_close, is_terminal_auth_close } from '../src/server_link.ts'
+import {
+  application_packet_sendable,
+  create_login_response,
+  is_session_takeover_close,
+  is_terminal_auth_close,
+} from '../src/server_link.ts'
 
 describe('server authentication link', () => {
   test('signs the server challenge on the socket that issued it', async () => {
@@ -20,9 +25,16 @@ describe('server authentication link', () => {
     expect(response).toEqual({ type: 'packet/signature_response', bytes: 'aresrpg::fresh', signature: 'proof' })
   })
 
+  test('application packets cannot enter the socket before challenge acceptance', () => {
+    expect(application_packet_sendable(false, 1)).toBeFalse()
+    expect(application_packet_sendable(true, 0)).toBeFalse()
+    expect(application_packet_sendable(true, 1)).toBeTrue()
+  })
+
   test('expires remembered auth only for admission failures', () => {
     expect(is_terminal_auth_close(1008, 'INVALID_SIGNATURE')).toBeTrue()
-    expect(is_terminal_auth_close(1008, 'SIGNATURE_TIMEOUT')).toBeTrue()
+    expect(is_terminal_auth_close(1008, 'INVALID_PACKET')).toBeTrue()
+    expect(is_terminal_auth_close(1008, 'SIGNATURE_TIMEOUT')).toBeFalse()
     expect(is_terminal_auth_close(1008, 'SERVER_FULL')).toBeFalse()
     expect(is_terminal_auth_close(1006, '')).toBeFalse()
   })

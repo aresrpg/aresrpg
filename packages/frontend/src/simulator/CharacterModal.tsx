@@ -3,7 +3,14 @@
 // The tracked simulator character modal. Only its state and catalog doors changed during the frontend rebuild.
 
 import { EFFECT_KINDS } from '@aresrpg/fight/move_contract'
-import { class_names, max_level, stat_names } from '@aresrpg/immutable'
+import {
+  characteristic_cost_step,
+  characteristic_values_cost,
+  class_names,
+  is_class_name,
+  max_level,
+  stat_names,
+} from '@aresrpg/immutable'
 import { RotateCcw, Trash2 } from 'lucide-react'
 import { useMemo, useState } from 'react'
 
@@ -12,7 +19,7 @@ import { SpellRow } from '../components/SpellRow.tsx'
 import { StatIdentity } from '../components/StatIdentity.tsx'
 import { spell_icon } from '../content/assets.ts'
 import { encyclopedia_catalog, titleize, type SeedSpell } from '../content/catalog.ts'
-import { stat_name, type AppCopy } from '../i18n/copy.ts'
+import { copy_text, stat_name, type AppCopy } from '../i18n/copy.ts'
 import { element_colors } from '../visual_identity.ts'
 import {
   CHARACTER_STATS,
@@ -44,7 +51,7 @@ const damaging_effects = new Set(
 const template = (source: string, values: Readonly<Record<string, string | number>>): string =>
   Object.entries(values).reduce((text, [key, value]) => text.replaceAll(`{${key}}`, String(value)), source)
 
-const class_display = (classe: string): string => (classe === 'yogan' ? 'Yogen' : titleize(classe))
+const class_display = titleize
 
 function Label({ text }: Readonly<{ text: string }>) {
   return <span className={`${micro} font-semibold text-muted`}>{text}</span>
@@ -153,8 +160,18 @@ const equipment_stats = (character: Readonly<SimulatorCharacter>): Readonly<Reco
 
 function StatEditor({ character, copy }: Readonly<{ character: SimulatorCharacter; copy: AppCopy }>) {
   const text = copy.simulator_page
+  const character_text = copy_text(copy.characters_page)
   const budget = stat_budget(character.level)
-  const spent = CHARACTER_STATS.reduce((total, stat) => total + character[stat], 0)
+  const classe = is_class_name(character.classe) ? character.classe : null
+  const spent = classe
+    ? (characteristic_values_cost(
+        classe,
+        Object.fromEntries(CHARACTER_STATS.map((stat) => [stat, character[stat]])) as Record<
+          (typeof CHARACTER_STATS)[number],
+          number
+        >
+      ) ?? budget)
+    : budget
   const bonuses = equipment_stats(character)
 
   return (
@@ -169,16 +186,23 @@ function StatEditor({ character, copy }: Readonly<{ character: SimulatorCharacte
       <div>
         {CHARACTER_STATS.map((stat) => {
           const bonus = bonuses[stat] ?? 0
+          const step = classe ? characteristic_cost_step(classe, stat, character[stat]) : null
           return (
             <div className="stats__prow" key={stat}>
               <StatIdentity label={stat_name(copy, stat)} stat={stat} />
+              {step && (
+                <span className="stats__prow-cost">
+                  {character_text('stats.point_cost', { cost: step.cost, gain: step.gain })}
+                </span>
+              )}
               <input
                 type="number"
                 aria-label={stat_name(copy, stat)}
                 className="template-input w-16 text-right"
                 value={character[stat]}
                 min={0}
-                max={budget}
+                max={stat === 'vitality' && classe === 'ikari' ? budget * 2 : budget}
+                step={step?.gain ?? 1}
                 onChange={(event) =>
                   dispatch_app({
                     type: 'simulator/stat_set',

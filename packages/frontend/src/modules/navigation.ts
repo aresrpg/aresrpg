@@ -57,6 +57,9 @@ export const pathname_for_page = (page: Page): string =>
 
 export const is_world_page = (page: Page): boolean => page === 'world'
 
+/** The pages able to host the mounted fight board (the arena route shares the world's board). */
+export const is_fight_board_page = (page: Page): boolean => is_world_page(page) || page === 'kolizeum'
+
 const reduce = (state: AppState, input: AppInput): AppState => {
   if (input.type === 'page/open') {
     if (input.page === 'admin' && !is_admin_address(state.session.wallet?.address ?? null)) return state

@@ -13,8 +13,9 @@ a disclosure date is agreed with you.
 
 ## Scope
 
-This repository is the client, the voxel engine, the deterministic combat sim, the Sui Move
-contracts, the SDK, and the keyless read layer — a report can concern any of those, including:
+This repository is the frontend, voxel engine, deterministic combat twin, Sui Move contracts,
+SDK, protocol, indexer, realtime server, deployment tooling, and authored content. A report can
+concern any executable surface, including:
 
 - A transaction or Move module that lets state change in a way it shouldn't (fund loss,
   unauthorized item/character mutation, bypassing an access check).
@@ -22,9 +23,8 @@ contracts, the SDK, and the keyless read layer — a report can concern any of t
   authoritative.
 - A dependency vulnerability that is actually reachable from this codebase.
 
-Game content and balance (items, mobs, spell numbers) live in a separate, private repository and
-are out of scope for this policy — a game-design concern is a public issue here, a security
-concern about the code that runs it is not.
+Balance disagreements are not security issues. A content-validation or publication flaw that
+enables unauthorized state, value, or code execution is in scope.
 
 ## What to include
 

@@ -59,7 +59,7 @@ describe('shared character rendering', () => {
           character_id: '0xnearby',
           world: 'overworld',
           owner: '0xowner',
-          name: 'Cra',
+          name: 'Yogan',
           classe: 'senshi',
           sex: 'female',
           level: 12,

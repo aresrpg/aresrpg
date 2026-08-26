@@ -13,6 +13,7 @@ import {
 } from '../admin/admin_state.ts'
 import { observe_admin_wallet, reduce_admin_wallet } from '../admin/admin_wallet.ts'
 import { observe_admin_deployment, reduce_admin_deployment } from '../admin/admin_deployment.ts'
+import { wait_for_rpc_propagation } from '../rpc_propagation.ts'
 import type { AppInput, AppModule, AppState } from '../store.ts'
 
 export { initial_admin_state }
@@ -22,6 +23,16 @@ const with_admin = (state: AppState, admin: AdminState): AppState => Object.free
 
 const can_execute = (admin: AdminState, batch: string): boolean =>
   admin.status === 'ready' && next_seed_batch(admin.snapshot)?.id === batch
+
+/** The final seed write may be certified before the resolver sees its gas-coin version. */
+export const settle_seed_cleanup = async (
+  release: (() => Promise<void>) | undefined,
+  wait: () => Promise<void> = wait_for_rpc_propagation
+): Promise<void> => {
+  if (!release) return
+  await wait()
+  await release()
+}
 
 const can_seal = (admin: AdminState): boolean =>
   admin.status === 'ready' &&
@@ -410,7 +421,7 @@ const observe = ({ events, dispatch, signal, get_state }: Parameters<NonNullable
           progress: { phase: 'cleanup', current: 0, total: 1, label: null },
         })
         log('Returning unused temporary seed-session gas…')
-        await active.release?.()
+        await settle_seed_cleanup(active.release)
         log('All content is published, up to date with the files, and the temporary session is closed.', 'success')
         dispatch({ type: 'admin/publish_all_succeeded', snapshot })
       })().catch(failed)

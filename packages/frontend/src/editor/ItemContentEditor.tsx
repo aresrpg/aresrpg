@@ -169,7 +169,7 @@ const ConsumableEditor = ({
                 </span>
                 <input
                   aria-label="Reward item"
-                  className="h-7 min-w-0 border border-white/10 bg-[#090a10] px-2 text-[9px]"
+                  className="h-7 min-w-0 border border-white/10 bg-bg px-2 text-[9px]"
                   onChange={(event) => on_change(['consumable', 'rewards', index, 'item_type'], event.target.value)}
                   value={item_type}
                 />
@@ -177,7 +177,7 @@ const ConsumableEditor = ({
                   Weight
                   <input
                     aria-label="Reward weight"
-                    className="h-7 w-12 border border-white/10 bg-[#090a10] px-1 text-right text-[9px]"
+                    className="h-7 w-12 border border-white/10 bg-bg px-1 text-right text-[9px]"
                     onChange={(event) =>
                       on_change(['consumable', 'rewards', index, 'weight'], Number(event.target.value))
                     }
@@ -189,7 +189,7 @@ const ConsumableEditor = ({
                   ×
                   <input
                     aria-label="Reward amount"
-                    className="h-7 w-14 border border-white/10 bg-[#090a10] px-1 text-right text-[9px]"
+                    className="h-7 w-14 border border-white/10 bg-bg px-1 text-right text-[9px]"
                     onChange={(event) =>
                       on_change(['consumable', 'rewards', index, 'amount'], Number(event.target.value))
                     }

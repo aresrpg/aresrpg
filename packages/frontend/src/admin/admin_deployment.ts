@@ -7,6 +7,7 @@ import { receipt_digest } from '@aresrpg/sdk/cache'
 import type { SeedAdminConfig } from '@aresrpg/sdk/seed-admin'
 
 import { env } from '../env.ts'
+import { wait_for_rpc_propagation } from '../rpc_propagation.ts'
 import type { AppInput, AppModule } from '../store.ts'
 
 import type { AdminDeploymentState, AdminState, DeploymentPins } from './admin_state.ts'
@@ -49,6 +50,12 @@ const deployment_bootstrapped = (pins: DeploymentPins | null): boolean =>
   !!pins.item_protected_policy?.id &&
   !!pins.character_protected_policy?.id
 
+/** Publishing can start from a compiled artifact or resume from receipt-derived game pins. */
+export const deployment_can_publish = (deployment: AdminDeploymentState): boolean =>
+  ['ready', 'failed'].includes(deployment.status) &&
+  !deployment_bootstrapped(deployment.pins) &&
+  (!!deployment.pins?.package || !!deployment.artifact)
+
 /** A blank or partially published deployment owns no temporary seed session to release. */
 export const republish_needs_seed_cleanup = (pins: DeploymentPins | null): boolean =>
   !!pins?.control_package && !!pins.admin_cap && !!pins.seed_package && !!pins.content_root?.id
@@ -70,15 +77,6 @@ const game_from_pins = (pins: DeploymentPins): GameDeployment => {
     version: { id: pins.version.id, shared_version: pins.version.shared_version },
   })
 }
-
-/** Upgrade finality and package availability can reach different RPC nodes at different times.
- * The dependent transaction targets the new package, so wait briefly without retrying a
- * transaction that may already have executed. */
-export const PACKAGE_PROPAGATION_MS = 6_000
-export const wait_for_package_propagation = (
-  wait: (milliseconds: number) => Promise<void> = (milliseconds) =>
-    new Promise((resolve) => setTimeout(resolve, milliseconds))
-): Promise<void> => wait(PACKAGE_PROPAGATION_MS)
 
 // eslint-disable-next-line complexity -- The reducer routes one discriminated deployment lifecycle without nested effects.
 export const reduce_admin_deployment = (admin: AdminState, input: AppInput): AdminState | null => {
@@ -108,12 +106,7 @@ export const reduce_admin_deployment = (admin: AdminState, input: AppInput): Adm
     return update(
       Object.freeze({ ...admin.deployment, status: 'ready', artifact: input.artifact, operation: null, error: null })
     )
-  if (
-    input.type === 'admin/contracts_publish' &&
-    admin.deployment.status === 'ready' &&
-    !deployment_bootstrapped(admin.deployment.pins) &&
-    !!admin.deployment.artifact
-  )
+  if (input.type === 'admin/contracts_publish' && deployment_can_publish(admin.deployment))
     return update(Object.freeze({ ...admin.deployment, status: 'publishing', operation: 'publish', error: null }))
   if (input.type === 'admin/contracts_published' && admin.deployment.operation === 'publish')
     return update(
@@ -340,7 +333,7 @@ export const observe_admin_deployment = ({
               math = Object.freeze({ ...published, original_package: published.package })
               dependency_changed = true
               log(`Math package republished · ${receipt_digest(result.receipt)}`, 'success')
-              await wait_for_package_propagation()
+              await wait_for_rpc_propagation()
               await save({
                 math_package: math.package,
                 math_package_original: math.package,
@@ -396,7 +389,7 @@ export const observe_admin_deployment = ({
               })
               dependency_changed = true
               log(`Control package republished · ${receipt_digest(result.receipt)}`, 'success')
-              await wait_for_package_propagation()
+              await wait_for_rpc_propagation()
               await save({
                 control_package: control.package,
                 control_package_original: control.package,
@@ -453,7 +446,7 @@ export const observe_admin_deployment = ({
               })
               dependency_changed = true
               log(`Seed package republished · ${receipt_digest(result.receipt)}`, 'success')
-              await wait_for_package_propagation()
+              await wait_for_rpc_propagation()
               await save({
                 seed_package: seed.package,
                 seed_package_original: seed.package,
@@ -479,6 +472,7 @@ export const observe_admin_deployment = ({
             game = project_game_deployment({ ...game_result, kiosk_package })
             const game_package = project_math_deployment(game_result.receipt)
             log(`Game package published · ${receipt_digest(game_result.receipt)}`, 'success')
+            await wait_for_rpc_propagation()
             await save({
               package: game.package,
               package_original: game.package,
@@ -589,7 +583,7 @@ export const observe_admin_deployment = ({
           math_package = project_package_id(math_result.receipt)
           log(`Math package upgraded · ${receipt_digest(math_result.receipt)}`, 'success')
           log('Waiting for the math package to propagate across RPC nodes…')
-          await wait_for_package_propagation()
+          await wait_for_rpc_propagation()
           saved = await save({
             math_package,
             math_package_original: math_original,
@@ -616,7 +610,7 @@ export const observe_admin_deployment = ({
           })
           control_package = project_package_id(result.receipt)
           log(`Control package upgraded · ${receipt_digest(result.receipt)}`, 'success')
-          await wait_for_package_propagation()
+          await wait_for_rpc_propagation()
           saved = await save({
             control_package,
             control_package_original: control_original,
@@ -653,7 +647,7 @@ export const observe_admin_deployment = ({
           const result = await connected.upgrade_contract({ artifact: seed_artifact, upgrade_cap: seed_upgrade_cap })
           seed_package = project_package_id(result.receipt)
           log(`Seed package upgraded · ${receipt_digest(result.receipt)}`, 'success')
-          await wait_for_package_propagation()
+          await wait_for_rpc_propagation()
           saved = await save({
             seed_package,
             seed_package_original: seed_original,
@@ -699,7 +693,7 @@ export const observe_admin_deployment = ({
             package_original: game_original,
             package_artifact_digest: artifact_digest(game_artifact),
           })
-          await wait_for_package_propagation()
+          await wait_for_rpc_propagation()
           log('Activating the new game version; confirm the wallet transaction…')
           const activation = await connected.set_game_paused({ package_id, version, admin_cap, paused: false })
           log(`Game version activated · ${activation.digest}`, 'success')

@@ -308,6 +308,7 @@ const apply_to = ({ runtime, caster, sheet, row, target, origin, cursor, cast_le
       cells: row.value,
       push: row.kind === KINDS.push,
       origin,
+      cursor,
       on_enter: (next_runtime, fighter, from) => on_enter(next_runtime, fighter, from, resolve_rows),
     })
   } else if (row.kind === KINDS.return) {

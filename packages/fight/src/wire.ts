@@ -5,7 +5,7 @@
 
 import type { FightCommandInput, FightInput, TurnWitness } from './fight.ts'
 
-type StreamedActionType = 'place' | 'ready' | 'move_to' | 'cast_spell' | 'weapon_strike' | 'end_turn' | 'forfeit'
+type StreamedActionType = 'move_to' | 'cast_spell' | 'weapon_strike'
 
 export type FightStreamInput = Extract<FightCommandInput, { type: StreamedActionType }>
 
@@ -14,13 +14,9 @@ type WireTiming = Readonly<{ observed_ms?: string; turn_witnesses?: readonly Wir
 
 export type FightWireAction = WireTiming &
   (
-    | Readonly<{ type: 'place'; fighter: string; cell: string }>
-    | Readonly<{ type: 'ready'; fighter: string }>
     | Readonly<{ type: 'move_to'; fighter: string; path: readonly string[] }>
     | Readonly<{ type: 'cast_spell'; fighter: string; spell: string; target_cell: string }>
     | Readonly<{ type: 'weapon_strike'; fighter: string; target_cell: string }>
-    | Readonly<{ type: 'end_turn'; fighter: string }>
-    | Readonly<{ type: 'forfeit'; fighter: string }>
   )
 
 const as_record = (value: unknown): Readonly<Record<string, unknown>> => {
@@ -51,18 +47,9 @@ const encode_timing = (input: FightCommandInput): WireTiming =>
   })
 
 export const encode_fight_action = (input: FightInput): FightWireAction => {
-  if (input.type === 'turn_seed' || input.type === 'join' || input.type === 'start' || input.type === 'crank')
+  if (input.type !== 'move_to' && input.type !== 'cast_spell' && input.type !== 'weapon_strike')
     throw new Error(`fight action ${input.type} is not streamable`)
   const timing = encode_timing(input)
-  if (input.type === 'place')
-    return Object.freeze({
-      ...timing,
-      type: input.type,
-      fighter: input.fighter.toString(),
-      cell: input.cell.toString(),
-    })
-  if (input.type === 'ready' || input.type === 'end_turn' || input.type === 'forfeit')
-    return Object.freeze({ ...timing, type: input.type, fighter: input.fighter.toString() })
   if (input.type === 'move_to')
     return Object.freeze({
       ...timing,
@@ -87,9 +74,9 @@ export const encode_fight_action = (input: FightInput): FightWireAction => {
 }
 
 export const fight_action_to_wire = (input: FightInput): FightWireAction | null =>
-  input.type === 'turn_seed' || input.type === 'join' || input.type === 'start' || input.type === 'crank'
-    ? null
-    : encode_fight_action(input)
+  input.type === 'move_to' || input.type === 'cast_spell' || input.type === 'weapon_strike'
+    ? encode_fight_action(input)
+    : null
 
 const decode_witnesses = (value: unknown): readonly TurnWitness[] | undefined => {
   if (value === undefined) return undefined
@@ -116,9 +103,6 @@ export const decode_fight_action = (value: unknown): FightStreamInput => {
   const { type } = action
   const timing = decode_timing(action)
   const fighter = BigInt(as_decimal(action.fighter, 'fighter'))
-  if (type === 'place')
-    return Object.freeze({ ...timing, type, fighter, cell: BigInt(as_decimal(action.cell, 'cell')) })
-  if (type === 'ready' || type === 'end_turn' || type === 'forfeit') return Object.freeze({ ...timing, type, fighter })
   if (type === 'move_to') {
     if (!Array.isArray(action.path) || action.path.length > 380) throw new Error('fight action path must be an array')
     return Object.freeze({

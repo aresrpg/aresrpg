@@ -82,6 +82,7 @@ const ENoPath: u64 = 1725; // move: target unreachable within MP
 const EBadTeam: u64 = 1726; // join: not a joinable player side, or a bad team/access value
 const EGroupOnly: u64 = 1727; // join: the side is group-gated (party membership arrives with social)
 const ENotAMob: u64 = 1728; // internal: a mob accessor called on a player fighter
+const ENotLastSettler: u64 = 1729; // atomic settle+close: another seat still owes settlement/loot
 
 const ACCESS_PUBLIC: u8 = 0; // anyone joins the side
 const ACCESS_GROUP: u8 = 1; // only the side-opener's party joins (check lands with social)
@@ -310,6 +311,8 @@ public struct FightStarted has copy, drop { fight: ID, world: String, x: u32, z:
 /// Carries the anchor so the zone channel can despawn the sword marker the moment a fight
 /// ends — standing bystanders never re-pull the fights list.
 public struct FightEnded has copy, drop { fight: ID, world: String, x: u32, z: u32, winner: Option<u8> }
+public struct FightClosable has copy, drop { fight: ID }
+public struct FightClosed has copy, drop { fight: ID }
 /// One intermediate turn consumed `seed`. The resting player's seed persists on `Fight`; every
 /// actor the machine advances past needs this receipt witness, including a player killed by a
 /// randomized turn-start effect before control could return to the client.
@@ -683,8 +686,8 @@ public(package) fun join_grouped(
   assert!(side_access == ACCESS_GROUP, EGroupOnly);
   let opener = if (team == 0) &fight.opener_a else &fight.opener_b;
   assert!(opener.is_some(), EBadTeam);
-  assert!(party::is_member(shared_party, *opener.borrow()), EGroupOnly);
-  assert!(party::is_member(shared_party, character_id), EGroupOnly);
+  assert!(party::m(shared_party, *opener.borrow()), EGroupOnly);
+  assert!(party::m(shared_party, character_id), EGroupOnly);
   admit(fight, protected, kiosk, cap, character_id, team, travel, clock, ctx);
 }
 
@@ -938,6 +941,61 @@ public(package) fun settle(
   };
   settle_seat(fight, fighter_idx, kiosk, cap, policy, clock);
   claim_all(fight, fighter_idx, plan, kiosk, cap, item_policy, gen, ctx);
+  emit_closable(fight);
+}
+
+/// The terminal fast path: only the final unsettled player may enter, so settlement and
+/// storage reclamation share one consensus transaction and no second RPC must observe it.
+public(package) fun settle_last(
+  mut fight: Fight,
+  fighter_idx: u64,
+  kiosk: &mut Kiosk,
+  cap: &KioskOwnerCap,
+  policy: &TransferPolicy<Character>,
+  item_policy: &TransferPolicy<Item>,
+  plan: vector<PM>,
+  gen: &mut RandomGenerator,
+  clock: &Clock,
+  ctx: &mut TxContext,
+) {
+  assert_last_settler(&fight, fighter_idx, ctx);
+  settle(&mut fight, fighter_idx, kiosk, cap, policy, item_policy, plan, gen, clock, ctx);
+  close(fight, ctx);
+}
+
+public(package) fun assert_last_settler(fight: &Fight, fighter_idx: u64, ctx: &TxContext) {
+  assert!(fight.ended, ENotEnded);
+  assert_fighter_control(fight, fighter_idx, ctx);
+  let mut i = 0;
+  while (i < fight.fighters.length()) {
+    if (i != fighter_idx)
+      assert!(fight.fighters[i].settled && fight.fighters[i].drops.is_empty(), ENotLastSettler);
+    i = i + 1;
+  };
+}
+
+/// Placement-only twin used by managed exits: the caller is still live, while every other
+/// player seat has already left. Historical settled rows do not block the final cleanup.
+public(package) fun assert_last_live_player(fight: &Fight, fighter_idx: u64, ctx: &TxContext) {
+  assert!(is_placement(fight), ENotPlacement);
+  assert_fighter_control(fight, fighter_idx, ctx);
+  assert!(!fight.fighters[fighter_idx].settled, EAlreadySettled);
+  let mut i = 0;
+  while (i < fight.fighters.length()) {
+    if (i != fighter_idx && !is_mob(&fight.fighters[i]))
+      assert!(fight.fighters[i].settled, ENotLastSettler);
+    i = i + 1;
+  };
+}
+
+fun emit_closable(fight: &Fight) {
+  if (!fight.ended) return;
+  let mut i = 0;
+  while (i < fight.fighters.length()) {
+    if (!fight.fighters[i].settled || !fight.fighters[i].drops.is_empty()) return;
+    i = i + 1;
+  };
+  event::emit(FightClosable { fight: fight.id.to_inner() });
 }
 
 /// Destroy a fully-settled fight — the closer's gas coin collects the storage rebate. Any
@@ -959,6 +1017,7 @@ public(package) fun close(fight: Fight, ctx: &TxContext) {
     i = i + 1;
   };
   assert!(participant, ENotYourFighter);
+  event::emit(FightClosed { fight: fight.id.to_inner() });
   let Fight { id, .. } = fight;
   id.delete();
 }
@@ -976,6 +1035,7 @@ public(package) fun settle_pvp(
   assert!(fight.ended, ENotEnded);
   assert_fighter_control(fight, fighter_idx, ctx);
   settle_seat(fight, fighter_idx, kiosk, cap, policy, clock);
+  emit_closable(fight);
 }
 
 fun settle_seat(
@@ -1596,10 +1656,10 @@ fun strike_of(fight: &Fight, i: u64): SpellLevel {
 
 /// Damage lands: hp floors at 0, death routes through the one kill door. An ended fight
 /// absorbs nothing further (a reflect after the wipe must not bite). A survivor's CHATIMENT
-/// stances fire here — the ONE door every real hp loss walks through, so the Sacrier trigger
-/// can never be bypassed: each stance pushes an add row of its channel whose life mirrors the
-/// stance's own remaining turns.
-fun hit(fight: &mut Fight, i: u64, amount: u64) {
+/// stances fire here — the ONE door every real hp loss walks through, so the Ikari trigger
+/// can never be bypassed. Damage feeds its stat up to the sum of same-stat stance caps once per
+/// active-fighter turn; that turn's folded bonus then lives for five turns.
+fun hit(fight: &mut Fight, i: u64, amount: u64, source: u64) {
   if (fight.fighters[i].dead || fight.ended || amount == 0) return;
   let hp = fight.fighters[i].hp;
   if (amount >= hp) {
@@ -1607,35 +1667,72 @@ fun hit(fight: &mut Fight, i: u64, amount: u64) {
   } else {
     *&mut fight.fighters[i].hp = hp - amount;
     let count = fight.fighters[i].effects.length(); // gains land past `count`; never re-scanned
+    let turn_owner = fight.queue[fight.turn_ptr];
+    let bonus_turns = spell_effect::chatiment_turns() as u64;
+    let from_player = !is_mob(&fight.fighters[source]);
+    let fed_damage = if (from_player) amount / 2 else amount;
     let mut k = 0;
     while (k < count) {
       let row = fight.fighters[i].effects[k];
       if (row.kind == K_CHATIMENT) {
-        // The stance's accrued bonus is ONE fact: fold each trigger into the standing gain
-        // row (same channel, element, source, and decay); create it only on the first trigger.
-        let len = fight.fighters[i].effects.length();
-        let mut g = 0;
-        let mut merged = false;
-        while (g < len && !merged) {
-          let gain = &mut fight.fighters[i].effects[g];
-          if (
-            gain.kind == K_ADD && gain.stat == row.stat && gain.element == row.element
-              && gain.source == row.source && gain.turns_left == row.turns_left
-          ) {
-            gain.value = gain.value + row.value;
-            merged = true;
-          };
-          g = g + 1;
+        // Process each stat/element group once. Identical stances add their caps, but one hit
+        // contributes its landed damage only once (Retro's anti-multiplication rule).
+        let mut duplicate = false;
+        let mut p = 0;
+        while (p < k && !duplicate) {
+          let previous = &fight.fighters[i].effects[p];
+          duplicate = previous.kind == K_CHATIMENT && previous.stat == row.stat && previous.element == row.element;
+          p = p + 1;
         };
-        if (!merged) {
-          fight.fighters[i].effects.push_back(ActiveEffect {
-            kind: K_ADD,
-            element: row.element,
-            value: row.value,
-            turns_left: row.turns_left,
-            source: row.source,
-            stat: row.stat,
-          });
+        if (!duplicate) {
+          let mut cap = 0;
+          let mut s = k;
+          while (s < count) {
+            let stance = &fight.fighters[i].effects[s];
+            if (stance.kind == K_CHATIMENT && stance.stat == row.stat && stance.element == row.element)
+              cap = cap + stance.value;
+            s = s + 1;
+          };
+
+          let len = fight.fighters[i].effects.length();
+          let mut accrued = 0;
+          let mut g = 0;
+          while (g < len && accrued == 0) {
+            let gain = &fight.fighters[i].effects[g];
+            if (
+              gain.kind == K_ADD && gain.stat == row.stat && gain.element == row.element
+                && gain.source == turn_owner && gain.turns_left == bonus_turns
+            ) accrued = gain.value;
+            g = g + 1;
+          };
+          if (from_player) cap = cap / 2;
+          let available = fight_math::sat_sub(cap, accrued);
+          let gained = if (fed_damage < available) fed_damage else available;
+          if (gained > 0) {
+            g = 0;
+            let mut merged = false;
+            while (g < len && !merged) {
+              let gain = &mut fight.fighters[i].effects[g];
+              if (
+                gain.kind == K_ADD && gain.stat == row.stat && gain.element == row.element
+                  && gain.source == turn_owner && gain.turns_left == bonus_turns
+              ) {
+                gain.value = gain.value + gained;
+                merged = true;
+              };
+              g = g + 1;
+            };
+            if (!merged) {
+              fight.fighters[i].effects.push_back(ActiveEffect {
+                kind: K_ADD,
+                element: row.element,
+                value: gained,
+                turns_left: bonus_turns,
+                source: turn_owner,
+                stat: row.stat,
+              });
+            };
+          };
         };
       };
       k = k + 1;
@@ -1726,7 +1823,8 @@ fun tick_turn_start(fight: &mut Fight, fighter_idx: u64) {
   while (i < rows.length()) {
     let row = &rows[i];
     // hp rows tick: a lasting remove is the dot, a lasting add is the regen
-    if (row.stat == STAT_HP && (row.kind == K_REMOVE || row.kind == K_STEAL)) hit(fight, fighter_idx, row.value);
+    if (row.stat == STAT_HP && (row.kind == K_REMOVE || row.kind == K_STEAL))
+      hit(fight, fighter_idx, row.value, row.source);
     if (row.stat == STAT_HP && row.kind == K_ADD) heal_seat(fight, fighter_idx, row.value);
     i = i + 1;
   };
@@ -2259,14 +2357,14 @@ fun apply_to(fight: &mut Fight, caster: u64, sheet: &Sheet, row: &Effect, target
   } else if (kind == K_PCT_LIFE) {
     let base = max_hp_of(fight, target) * fight_math::roll_effect_value(row, estate) / 100;
     let damage = fight_math::resist(base, resistance_of(fight, target, &element), item_stats::shift() as u64);
-    hit(fight, target, damage);
+    hit(fight, target, damage, caster);
   } else if (kind == K_CASTER_DAMAGE) {
     let damage = fight_math::resist(
       fight_math::roll_effect_value(row, estate),
       resistance_of(fight, caster, &element),
       item_stats::shift() as u64,
     );
-    hit(fight, caster, damage);
+    hit(fight, caster, damage, caster);
   } else if (kind == K_PUNISHMENT) {
     let base = fight_math::punishment_base(
       fight_math::roll_effect_value(row, estate),
@@ -2347,7 +2445,7 @@ fun apply_to(fight: &mut Fight, caster: u64, sheet: &Sheet, row: &Effect, target
     // the stance row — value/channel carried verbatim; hit() is the trigger
     push_row(fight, target, row, caster, value);
   } else if (kind == K_PUSH || kind == K_PULL) {
-    displace(fight, sheet, target, value, kind == K_PUSH, origin);
+    displace(fight, sheet, caster, target, value, kind == K_PUSH, origin, estate);
   } else if (kind == K_RETURN) {
     // the return THRESHOLD is the level this return spell was cast at — it bounces only
     // incoming casts of level in [1, threshold]; level 0 (strike/trap) and level 6 never return
@@ -2413,10 +2511,10 @@ fun deal(fight: &mut Fight, caster: u64, sheet: &Sheet, target: u64, element: &S
   };
 
   let pre_hit_hp = fight.fighters[final_target].hp;
-  hit(fight, final_target, damage);
+  hit(fight, final_target, damage, caster);
   if (final_target == target) {
     let reflect = sum_rows(fight, target, K_REFLECT, STAT_ANY);
-    if (reflect > 0 && caster != target) hit(fight, caster, reflect);
+    if (reflect > 0 && caster != target) hit(fight, caster, reflect, target);
   };
   // life steal heals only off hp the ORIGINAL target actually LOST — overkill is not food
   // (audit 2026-08-10: returning the computed damage let a 100-damage hit on a 1-hp target
@@ -2459,7 +2557,16 @@ fun contest_points(fight: &Fight, sheet: &Sheet, target: u64, row: &Effect, esta
 /// Push (away from `origin`) or pull (toward it), cell by cell. A wall, hole, body or edge
 /// stops it; a BLOCKED push charges collision damage for every undone cell. A pull never
 /// lands on the pivot.
-fun displace(fight: &mut Fight, sheet: &Sheet, target: u64, cells: u64, push: bool, origin: u64) {
+fun displace(
+  fight: &mut Fight,
+  sheet: &Sheet,
+  source: u64,
+  target: u64,
+  cells: u64,
+  push: bool,
+  origin: u64,
+  estate: &mut u64,
+) {
   let pivot = origin;
   let started_at = fight.fighters[target].cell;
   let dir = if (push) combat_grid::away_dir(pivot, started_at)
@@ -2483,7 +2590,7 @@ fun displace(fight: &mut Fight, sheet: &Sheet, target: u64, cells: u64, push: bo
   // a push that SLAMMED into an obstacle with cells to spare takes collision damage for the undone
   // cells; a trap-stop or a completed slide does not.
   if (push && blocked && remaining > 0) {
-    hit(fight, target, fight_math::push_collision_damage(sheet.level, remaining));
+    hit(fight, target, fight_math::push_collision_damage(sheet.level, remaining, prng::draw(estate)), source);
   };
 }
 
@@ -3537,7 +3644,7 @@ public(package) fun range_removal_reaches_authored_max_for_testing(ctx: &mut TxC
 }
 
 #[test_only]
-public(package) fun chatiment_folds_for_testing(ctx: &mut TxContext): vector<u64> {
+public(package) fun chatiment_caps_for_testing(ctx: &mut TxContext): vector<u64> {
   let board = combat_grid::generate(1, 0);
   let mut fight = Fight {
     id: object::new(ctx), world: b"chatiment_fold_test".to_string(), x: 0, z: 0,
@@ -3553,11 +3660,18 @@ public(package) fun chatiment_folds_for_testing(ctx: &mut TxContext): vector<u64
     drops_rolled: false, turn_seed: 1, turn_slot: 0, turn_casts: vector[],
     placement_ms: 0, turn_started_ms: 0,
   };
+  fight.fighters[1].hp = 300;
   fight.fighters[1].effects.push_back(ActiveEffect {
-    kind: K_CHATIMENT, element: b"".to_string(), value: 2, turns_left: 3, source: 1, stat: STAT_STRENGTH,
+    kind: K_CHATIMENT, element: b"".to_string(), value: 60, turns_left: 5, source: 1, stat: STAT_STRENGTH,
   });
-  hit(&mut fight, 1, 10);
-  hit(&mut fight, 1, 10);
+  hit(&mut fight, 1, 40, 0);
+  hit(&mut fight, 1, 40, 0);
+  fight.fighters[0].kind = FighterKind::Player {
+    character: object::id_from_address(@0xC0FFEE), owner: @0xA11CE, level: 1,
+  };
+  fight.turn_ptr = 1;
+  hit(&mut fight, 1, 40, 0);
+  hit(&mut fight, 1, 40, 0);
   let rows = &fight.fighters[1].effects;
   let mut gains = 0;
   let mut gain_value = 0;
@@ -3565,11 +3679,29 @@ public(package) fun chatiment_folds_for_testing(ctx: &mut TxContext): vector<u64
   while (i < rows.length()) {
     if (rows[i].kind == K_ADD && rows[i].stat == STAT_STRENGTH) {
       gains = gains + 1;
-      gain_value = rows[i].value;
+      gain_value = gain_value + rows[i].value;
     };
     i = i + 1;
   };
-  let answer = vector[gains, gain_value, fight.fighters[1].hp];
+  let mut turns = 0u64;
+  while (turns < 4) {
+    tick_turn_end(&mut fight, 1);
+    turns = turns + 1;
+  };
+  let mut after_four = 0;
+  i = 0;
+  while (i < fight.fighters[1].effects.length()) {
+    if (fight.fighters[1].effects[i].kind == K_ADD) after_four = after_four + 1;
+    i = i + 1;
+  };
+  tick_turn_end(&mut fight, 1);
+  let mut after_five = 0;
+  i = 0;
+  while (i < fight.fighters[1].effects.length()) {
+    if (fight.fighters[1].effects[i].kind == K_ADD) after_five = after_five + 1;
+    i = i + 1;
+  };
+  let answer = vector[gains, gain_value, fight.fighters[1].hp, after_four, after_five];
   let Fight { id, .. } = fight;
   id.delete();
   answer
@@ -3914,4 +4046,96 @@ public(package) fun close_for_testing(owner: address, settled: bool, ctx: &mut T
     turn_started_ms: 0,
   };
   close(fight, ctx);
+}
+
+#[test_only]
+public(package) fun assert_last_settler_for_testing(
+  owner: address,
+  other_settled: bool,
+  ctx: &mut TxContext,
+) {
+  let board = combat_grid::generate(1, 0);
+  let mut current = fighter_for_placement_test(0, board.start_cells_a()[0], 6);
+  current.kind = FighterKind::Player { character: object::id_from_address(@0xC0FFEE), owner, level: 1 };
+  current.settled = false;
+  let mut other = fighter_for_placement_test(1, board.start_cells_b()[0], 6);
+  other.kind = FighterKind::Player { character: object::id_from_address(@0xBAD), owner: @0xBEEF, level: 1 };
+  *&mut other.settled = other_settled;
+  let fight = Fight {
+    id: object::new(ctx),
+    world: b"last_settler_probe".to_string(),
+    x: 0,
+    z: 0,
+    closed: combat_grid::closed_mask(&board),
+    board,
+    access_a: ACCESS_UNSET,
+    access_b: ACCESS_UNSET,
+    opener_a: option::none(),
+    opener_b: option::none(),
+    fighters: vector[current, other],
+    zones: vector[],
+    queue: vector[0, 1],
+    turn_ptr: 0,
+    round: 1,
+    ended: true,
+    winner: option::some(0),
+    dungeon: option::none(),
+    managed: false,
+    wagered: false,
+    drops_rolled: true,
+    turn_seed: 1,
+    turn_slot: 0,
+    turn_casts: vector[],
+    placement_ms: 0,
+    turn_started_ms: 0,
+  };
+  assert_last_settler(&fight, 0, ctx);
+  let Fight { id, .. } = fight;
+  id.delete();
+}
+
+#[test_only]
+public(package) fun assert_last_live_player_for_testing(
+  owner: address,
+  other_settled: bool,
+  ctx: &mut TxContext,
+) {
+  let board = combat_grid::generate(1, 0);
+  let mut current = fighter_for_placement_test(0, board.start_cells_a()[0], 6);
+  current.kind = FighterKind::Player { character: object::id_from_address(@0xC0FFEE), owner, level: 1 };
+  current.settled = false;
+  let mut other = fighter_for_placement_test(1, board.start_cells_b()[0], 6);
+  other.kind = FighterKind::Player { character: object::id_from_address(@0xBAD), owner: @0xBEEF, level: 1 };
+  *&mut other.settled = other_settled;
+  let fight = Fight {
+    id: object::new(ctx),
+    world: b"last_exit_probe".to_string(),
+    x: 0,
+    z: 0,
+    closed: combat_grid::closed_mask(&board),
+    board,
+    access_a: ACCESS_UNSET,
+    access_b: ACCESS_UNSET,
+    opener_a: option::none(),
+    opener_b: option::none(),
+    fighters: vector[current, other],
+    zones: vector[],
+    queue: vector[],
+    turn_ptr: 0,
+    round: 0,
+    ended: false,
+    winner: option::none(),
+    dungeon: option::none(),
+    managed: true,
+    wagered: true,
+    drops_rolled: true,
+    turn_seed: 1,
+    turn_slot: 0,
+    turn_casts: vector[],
+    placement_ms: 0,
+    turn_started_ms: 0,
+  };
+  assert_last_live_player(&fight, 0, ctx);
+  let Fight { id, .. } = fight;
+  id.delete();
 }

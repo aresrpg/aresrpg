@@ -113,7 +113,7 @@ export const ItemReferencePicker = ({
     <>
       <button
         aria-label={`Choose ${label}`}
-        className={`flex h-10 min-w-0 items-center gap-2 border border-white/10 bg-[#090a10] px-2 text-left hover:border-[#c8963c]/45 ${class_name}`}
+        className={`flex h-10 min-w-0 items-center gap-2 border border-white/10 bg-bg px-2 text-left hover:border-[#c8963c]/45 ${class_name}`}
         data-item-reference-picker={label}
         onClick={() => set_open(true)}
         type="button"

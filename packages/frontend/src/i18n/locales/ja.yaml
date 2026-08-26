@@ -52,6 +52,7 @@ indexing_lag_warning: ゲーム内の操作が遅れて反映される場合が�
 game_frozen: 現在ゲームは凍結されています。詳しくはDiscordをご確認ください。
 gas_budget_toast: このアクションは確保しているネットワーク手数料を超えました。実行されておらず、費用もかかっていません。ご報告ください。
 game_paused_toast: アップデートのためゲームは一時停止中です。アクションは実行されませんでした。数分後にもう一度お試しください。
+movement_sync_toast: 位置情報を同期しています。通常どおり移動し、少し待ってからもう一度お試しください。
 network_testnet: TESTNET
 page_pending_title: このページは再構築中です
 page_pending_body: 正しく復元する間も、この場所は表示し続けます。
@@ -63,6 +64,7 @@ create_character: キャラクター作成
 create_title: キャラクターを作成
 create_lead: クラス、色、名前を選んでください。背景では世界がすでに動いています。
 class_label: クラス
+view_class_spells: このクラスのスペルを見る
 sex_label: 性別
 appearance_label: 外観 · 3 色
 name_label: 名前
@@ -90,6 +92,86 @@ wallet_send_pending: SUI を送信中…
 wallet_send_success: SUI を送信しました
 wallet_send_failed: SUI の送信に失敗しました
 wallet_close: 閉じる
+kolizeum_page:
+  title: コリゼウム — 作戦卓
+  tagline: 勝者がポットの90%を分配 · 手数料10%
+  tab_open: 公開ロビー
+  tab_mine: 自分のロビー
+  col_format: 形式
+  col_access: 参加
+  col_status: 状態
+  col_pledge: 賭け金
+  col_full_pot: 満額ポット
+  col_creator: 作成者
+  access_public: 公開
+  access_friends: フレンド
+  status_open: 募集中
+  status_started: 進行中
+  status_settling: 精算中
+  empty: ロビーはありません
+  selected: 選択中のロビー
+  side_a: Aサイド
+  side_b: Bサイド
+  total_pot: 現在のポット
+  free: 無料
+  join_a: Aサイドに参加
+  join_b: Bサイドに参加
+  create_title: ロビー作成
+  form_format: 形式
+  form_access: 参加範囲
+  form_pledge: 1人あたりの賭け金（SUI）
+  form_max_diff: 最大レベル差
+  form_character: 使用キャラクター
+  no_character: 利用可能なキャラクターがいません
+  full_pot_summary: '{{format}}満額ポット = {{pot}} SUI · 勝者に90%'
+  create_cta: ロビーを作成
+friends_panel:
+  title: フレンド
+  observed: 近くで確認
+  unseen: 現在は未確認
+  none_observed: 近くにフレンドはいません
+  empty: まだフレンドはいません
+  placeholder: 名前、SuiNS、または0xアドレス
+  add: フレンド追加
+  remove: 削除
+  remove_title: フレンドを削除
+  remove_body: '{{name}}をフレンドリストから削除しますか？'
+  error_no_suins: '{{name}}に一致するSuiNSアドレスがありません。'
+  error_target: キャラクター名、SuiNS名、または完全なSuiアドレスを入力してください。
+  error_self: 自分自身は追加できません。
+  error_duplicate: このプレイヤーはすでにフレンドです。
+  cancel: キャンセル
+party_panel:
+  title: パーティー
+  adventurer: 冒険者
+  invited_by: '{{name}}から招待されました'
+  accept: 承認
+  decline: 辞退
+  leader: リーダー
+  leave: 脱退
+  disband: 解散
+  kick: 除名
+  rescind: 招待を取り消す
+  invite_owned: 所有キャラクターを招待
+trade_panel:
+  inbox: 取引
+  close: 閉じる
+  title: プレイヤー取引
+  locked: ロック済み · 受取期限なし
+  negotiating: 交渉中 · 変更すると承認が解除されます
+  your_offer: あなたの提示
+  their_offer: 相手の提示
+  accepted: 承認済み
+  reviewing: 確認中
+  add_item: アイテムを追加
+  add_character: キャラクターを追加
+  sui: SUIを追加
+  withdraw: 取り戻す
+  withdraw_sui: 自分のSUIを取り戻す
+  accept: この内容を承認
+  claim: 受け取る
+  claim_sui: '{{amount}} SUIを受け取る'
+  finish: 取引を完了
 world_hud:
   compass_label: コンパス
   zone: ゾーン
@@ -104,6 +186,7 @@ world_hud:
   biome: バイオーム
   world_map: ワールドマップ
   menu_group: グループに招待
+  menu_friend: フレンド追加
   menu_trade: 取引
   menu_message: メッセージを送る
   mount_prompt: '{{key}} で騎乗'
@@ -174,7 +257,8 @@ world_hud:
   zone_reroll_title: 'ゾーンを更新できます'
   zone_press_reroll: '{{key}} を押してゾーンを再生成'
   zone_searching: 'ゾーンを探索中…'
-  zone_searched_toast: 'ゾーンが秘密を明かした'
+  zone_revealed: 'ゾーンを発見'
+  zone_coordinates: 'セクター {{zx}} · {{zz}}'
   zone_mobs_found: 'モンスター {{count}} 体を発見'
   zone_resources_found: '資源 {{count}} 個を発見'
   zone_dungeon_spotted: 'ダンジョンを発見'
@@ -297,6 +381,7 @@ marketplace_page:
   delist_success: 出品を取り下げました
   buy_pending: 購入中…
   buy_success: 購入完了
+  character_roster_full: 7人目のキャラクターは追加できません — 上限は6人です
   collect_pending: 売上を回収中…
   collect_success: 売上を回収しました
 shop_page:
@@ -427,7 +512,7 @@ simulator_page:
   spell_level: '{name} のレベル'
   spell_level_option: 'Lv {level} · {cost} PT'
   class_shugo_title: 守護者
-  class_tomoda_title: Tomoda
+  class_tomoda_title: 獣使い
   class_rojin_title: 採掘師
   class_yajin_title: 暗殺者
   class_tokei_title: 時術師
@@ -452,7 +537,7 @@ simulator_page:
   spell_unlock: レベル{level}で解放
   reset: リセット
   delete_confirm: 削除を確認
-  class_change_hint: クラスを変更すると割り振ったスペルレベルがリセットされます
+  class_change_hint: クラスを変更すると基礎特性と割り振ったスペルレベルがリセットされます
   spells_unavailable: このレベルで解放されているスペルはありません
   save_character: キャラクターを保存
   equipment: 装備・レリック・コスメ
@@ -542,6 +627,7 @@ fight_hud:
   unit_turns: ターン
   chat_title: チャット
   chat_tab_general: 一般
+  chat_tab_party: パーティー
   chat_tab_combat: 戦闘
   chat_placeholder: メッセージを入力…
   chat_you: あなた
@@ -558,6 +644,9 @@ fight_hud:
   result_survived: 生存
   result_collecting: 戦利品を回収中…
   result_continue: 続ける
+  result_close: 閉じる
+  fight_finalize_pending: 戦闘の後処理を完了できます。
+  fight_finalize_button: 完了する
   result_retry: 再試行
   level_up_title: レベルアップ
   level_up_reached: レベル到達
@@ -787,6 +876,8 @@ encyclopedia_page:
     life_steal: ライフスティール
     life_steal_desc: ドレイン呪文の効果はダメージを与え、対象が実際に失った体力の半分だけ詠唱者を回復します。回復するのはプレイヤーのドレインだけで、同じ呪文を唱えたモブはダメージを与えるだけで回復しません。
     life_steal_note: ダメージはまず標準のダメージ計算式を通り、その後詠唱者は本来の対象が実際に失った体力の半分を回復します。他の戦闘員へ転嫁された攻撃や、対象が回復に変換した攻撃では何も奪えません。
+    chatiment: チャティマン
+    chatiment_desc: チャティマンは、致死に至らず実際に失ったHPを対応する能力値へ変換します。行動中の戦闘者のターンごとに上限があり、後のターンのボーナスは別々に5ターン持続します。モンスター由来のダメージは全量、プレイヤー由来のダメージと上限は半分です。Aresではエロージョンを使用しません。
     healing: 回復
     healing_desc: 回復は呪文の基礎値に、知力の割合分を上乗せし、さらに装備やバフからの固定回復ボーナスを加えて適用されます。回復は対象の最大HPが上限です。
     healing_intel_value: 知力1につき回復+1%
@@ -798,6 +889,7 @@ encyclopedia_page:
     points_per_level: レベルあたりのポイント
     stat_points: ステータスポイント
     stat_points_value: レベルあたり{{n}}
+    stat_costs_desc: コストはクラスと現在の基礎値で決まります。各クラスページで全段階を確認できます。
     spell_points: スペルポイント
     spell_points_value: レベルあたり{{n}}
     xp_milestones: XPマイルストーン
@@ -848,7 +940,7 @@ encyclopedia_page:
     role_archer: アーチャー
     role_prospector: プロスペクター
     role_brawler: ブロウラー
-    role_tomoda: Tomoda
+    role_tomoda: 獣使い
     role_gambler: ギャンブラー
     role_healer: ヒーラー
     weapon_daggers: ダガー
@@ -995,6 +1087,10 @@ encyclopedia_page:
   unlimited: 無制限
   cooldown: クールダウン
   cooldown_none: なし
+  characteristic_costs: 特性コスト
+  characteristic_costs_desc: 基礎ポイントはクラス固有の段階に従います。装備はコストに影響しません。
+  characteristic_cost_band: '{{cost}} pt → +{{gain}} · ≤{{cap}}'
+  characteristic_cost_unlimited: '{{cost}} pt → +{{gain}} · 上限なし'
   turns_value: '{{n}}ターン'
   targeting: 対象指定
   effect_zone: 効果範囲
@@ -1363,6 +1459,7 @@ characters_page:
     add_point: '{{stat}}に1ポイント追加'
     remove_point: '{{stat}}から1ポイント減らす'
     tx_pending: '割り振り中…'
+    point_cost: '{{cost}} pt → +{{gain}}'
     tx_success: 'ステータスポイントを割り振りました'
   spells:
     range_modifiable: '射程変更可'

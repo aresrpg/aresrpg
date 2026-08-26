@@ -1,15 +1,7 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-// THE WORLD MODULE (the legacy synchronizer, ported to zones). Split per the reducer law:
-//   reduce — PURE: folds validated per-character tracking / movement / equipment / close.
-//   events.on('packet/…') — the VALIDATION door: embody proves ownership at the read, position
-//               proves the authored speed budget; what survives re-enters as an action dispatch.
-//   events.on('STATE_UPDATED') — the EFFECT door: mounts/unmounts/moves read off the DELTA — the
-//               tracked SPIRAL of zones (zone.move's 512-block squares) re-centers, presence
-//               facts publish on ephemeral `pos:` mesh channels (published, never stored). The
-//               mesh carries OFF-CHAIN facts only (owner law); a VISIBLE player's on-chain
-//               equips arrive by forwarding THEIR evt:character stream, never re-broadcast.
-//               A physically impossible move is a hacker: the connection drops, no negotiation.
+// Pure reducers own tracking state; validated packets and state deltas own effects.
+// Presence stays ephemeral, and impossible movement drops the connection.
 
 import {
   zone_of,
@@ -23,26 +15,24 @@ import {
 import { channels, mesh, type EventEnvelope, type MeshFact } from '../protocol.ts'
 import { dungeon_portal, mob_groups, resource_packs, world_population } from '../zone_spawns.ts'
 import { get_owned_character } from '../reads/get_owned_character.ts'
-import { get_friends } from '../reads/get_friends.ts'
 import { get_zones } from '../reads/get_zones.ts'
 import { get_world_fights } from '../reads/get_world_fights.ts'
 import { get_fight } from '../reads/get_fight.ts'
 import { get_item } from '../reads/get_item.ts'
 import { get_characters } from '../reads/get_characters.ts'
+import { refreshed_world_anchor } from '../world_anchor.ts'
 import logger from '../logger.ts'
 import type { PlayerModule, PlayerContext, PlayerAction, PlayerState, Embodied } from '../player.ts'
 import { create_watcher } from '../pubsub_bus.ts'
 
 const log = logger(import.meta)
 
-/** Tracked radius in zones around the player — 3×3 of 512-block squares. */
 const TRACKING_RADIUS = 1
 /** The travel bucket banks at most this much time — the burst allowance between packets.
  *  (2026-08-20: pricing each packet against a re-anchored wall clock dropped legal walks —
  *  a network stall flushes buffered positions in ONE millisecond, and a zero-second window
  *  reads any step as infinite speed. A bucket spends distance against banked time instead.) */
 const BUDGET_CAP_S = 1
-/** Physics-transient allowance on top of the authored budget (jump arcs, terrain snaps). */
 const TRANSIENT_SLACK_BLOCKS = 3
 /** Visible-player ceiling per connection (owner 2026-08-12): crowded zones never bloat the
  *  client — the cap drops strangers past 100, FRIENDS always pass. A capped-out stranger
@@ -71,13 +61,14 @@ export default {
   reduce: (state, action) => {
     if (action.type === 'action/track_character') {
       if (!state.allowed_characters.has(action.character.character_id)) return state
+      const existing = state.characters[action.character.character_id]
+      const refreshed = refreshed_world_anchor(existing, action.character, action.at_ms)
       return {
         ...state,
         characters: {
           ...state.characters,
           [action.character.character_id]: {
-            presence: action.character,
-            move_anchor: { x: action.character.x, z: action.character.z, at_ms: action.at_ms, blocks: 0 },
+            ...refreshed,
             party: action.party,
             fight: action.fight,
             fight_seat: action.fight_seat,
@@ -85,7 +76,6 @@ export default {
             dungeon_run: action.dungeon_run,
           },
         },
-        friends: action.friends,
       }
     }
     if (action.type === 'action/character_roster') {
@@ -102,6 +92,13 @@ export default {
         ...state,
         allowed_characters: character_ids,
         character_signatures: signatures,
+        roster_fights: Object.freeze(
+          Object.fromEntries(
+            action.characters.flatMap((character) =>
+              character.active_fight ? [[character.id, character.active_fight.id] as const] : []
+            )
+          )
+        ),
         characters: Object.fromEntries(
           Object.entries(state.characters).filter(([character_id]) => character_ids.has(character_id))
         ),
@@ -159,6 +156,21 @@ export default {
     const seeds = new Map<string, string>()
     /** One tracking window per owned character; subscriptions are the union of these sets. */
     const windows = new Map<string, Readonly<{ world: string; zones: readonly { zx: number; zz: number }[] }>>()
+    events.on('action/friends', () => {
+      const probes = new Set(
+        [...windows.values()].flatMap(({ world, zones }) => zones.map(({ zx, zz }) => `${world}:${zx}:${zz}`))
+      )
+      probes.forEach((key) => {
+        const [world = '', zx = '0', zz = '0'] = key.split(':')
+        void pubsub.mesh.publish(mesh.pos(world, Number(zx), Number(zz)), {
+          kind: 'who',
+          address,
+          world,
+          zx: Number(zx),
+          zz: Number(zz),
+        })
+      })
+    })
 
     /** A VISIBLE player's own chain stream — their visible-slot equips forward as packets. */
     const forward_visible_equipment = (payload: EventEnvelope) => {
@@ -284,9 +296,6 @@ export default {
      *  NOTHING rides a world-global channel anymore: presence is zone-scoped by law. */
     const forward_zone_event = (payload: EventEnvelope) => {
       if (payload.type === 'FightCreated') {
-        // the event is the TRIGGER, the graph is the truth: the projection already wrote this
-        // fight's node (pipeline.rs orders graph writes before publishes), so the marker ships
-        // as the same projected row the zone snapshot carries — the client never fills a gap.
         const { fight, world: w, x, z } = payload.data as { fight: string; world: string; x: number; z: number }
         void get_fight(graph, { fight_id: fight })
           .then(([row]) => row && send({ type: 'packet/fight_created', fight: row }))
@@ -312,11 +321,6 @@ export default {
       }
       if (payload.type === 'ResourceGathered') {
         const { world: w, gatherer } = payload.data as { world: string; gatherer: string }
-        // No gather-result packet: ItemWritten streams base and rare stacks through player_items;
-        // packet/zones carries consumption; the roster below carries job XP and the verdict.
-        // Re-sending the receipt's quantity would create a fourth, duplicate fold path.
-        // The same checkpoint writes job xp and the gas-uniform ambush verdict. A fired verdict
-        // roots the character until its projected row tells the owner which protector to face.
         if (gatherer === address)
           void get_characters(graph, { address })
             .then((characters) => {
@@ -465,7 +469,6 @@ export default {
         const { character, visuals, party, fight } = owned
         const world = (character.world ?? character.checkpoint_world ?? null) as string | null
         if (!world) return // never joined a world yet — nothing to mount
-        const friends = new Set((await get_friends(graph, { address })).map((friend) => friend.address as string))
         if (generation !== tracking_generations.get(character_id) || !get_state().allowed_characters.has(character_id))
           return
         dispatch({
@@ -487,7 +490,6 @@ export default {
             riding: false,
             world,
           },
-          friends,
           party,
           fight: fight?.id ?? null,
           fight_seat: fight?.seat ?? null,
@@ -498,7 +500,6 @@ export default {
           // (2026-08-19: that misread drop-looped every session into load-snapshot spam).
           at_ms: (character.at_ms as number) ?? 0,
         })
-        send({ type: 'packet/character_tracked', character_id: character.id as string, fight: fight?.id ?? null })
       })().catch((error: Error) => {
         if (generation !== tracking_generations.get(character_id)) return
         log.error({ address, error: error.message }, 'character tracking failed')
@@ -506,6 +507,9 @@ export default {
       })
     }
 
+    events.on('action/character_watch_ready', ({ character_id }: { character_id: string }) => {
+      track_character(character_id, true)
+    })
     events.on('packet/position', (action: Extract<PlayerAction, { type: 'packet/position' }>) => {
       const tracked = get_state().characters[action.character_id]
       if (!tracked || tracked.fight || tracked.dungeon_run) return

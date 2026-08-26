@@ -59,7 +59,7 @@ const { hats, cloaks } = worn_equipment_options
 const pets = Object.freeze(content_catalog.items.filter(({ category }) => category === 'pet'))
 
 const field_class =
-  'h-9 min-w-0 border border-white/10 bg-[#08090e] px-2 text-[9px] text-[#d5d2cb] outline-none focus:border-[#4a9eff]/45'
+  'h-9 min-w-0 border border-white/10 bg-bg px-2 text-[9px] text-[#d5d2cb] outline-none focus:border-[#4a9eff]/45'
 const label_class = 'grid gap-1.5 text-[7px] tracking-[0.16em] text-[#777b86] uppercase'
 const button_class =
   'flex h-9 cursor-pointer items-center justify-center gap-2 border border-[#4a9eff]/30 bg-[#4a9eff]/7 px-3 text-[8px] tracking-[0.14em] text-[#67adff] uppercase hover:border-[#4a9eff]/60 disabled:cursor-not-allowed disabled:opacity-30'
@@ -252,8 +252,11 @@ const WorldLab = ({ active, copy }: Readonly<{ active: boolean; copy: AppCopy }>
           active={active}
           change_quality={change_quality}
           copy={copy}
+          fight_access={null}
           flattened={settings.flat_mode}
+          party_available={false}
           quality={settings.quality}
+          toggle_fight_access={() => undefined}
           toggle_flattened={toggle_flattened}
         />
         <HudPanel className="pointer-events-auto absolute top-3 right-3 flex max-h-[calc(100%-24px)] w-[270px] flex-col overflow-y-auto p-3">
@@ -450,7 +453,7 @@ const WorldLab = ({ active, copy }: Readonly<{ active: boolean; copy: AppCopy }>
         </HudPanel>
         {character_enabled && pet ? (
           <button
-            className="pointer-events-auto absolute bottom-24 left-1/2 flex -translate-x-1/2 cursor-pointer items-center gap-2 border border-[#c8963c]/35 bg-[linear-gradient(165deg,#12121a,#0a0a0f)] px-3.5 py-2 font-mono text-[9px] tracking-[0.18em] uppercase shadow-[0_0_0_1px_rgba(200,150,60,0.08)] transition hover:border-[#c8963c] hover:shadow-[0_0_20px_rgba(200,150,60,0.35)]"
+            className="pointer-events-auto absolute bottom-24 left-1/2 flex -translate-x-1/2 cursor-pointer items-center gap-2 border border-[#c8963c]/35 bg-[linear-gradient(165deg,var(--color-surface),var(--color-bg))] px-3.5 py-2 font-mono text-[9px] tracking-[0.18em] uppercase shadow-[0_0_0_1px_rgba(200,150,60,0.08)] transition hover:border-[#c8963c] hover:shadow-[0_0_20px_rgba(200,150,60,0.35)]"
             onClick={() => {
               world_api?.set_riding(!riding)
               set_riding(world_api?.riding() ?? false)
@@ -519,7 +522,7 @@ export const DemoPage = ({ copy }: Readonly<{ copy: AppCopy }>) => {
             : 'Biomes'
 
   return (
-    <main className="fixed inset-0 overflow-hidden bg-[#08090e] font-mono text-[#e8e4dc]">
+    <main className="fixed inset-0 overflow-hidden bg-bg font-mono text-[#e8e4dc]">
       <WorldLab active={view === 'world'} copy={copy} />
       {/* UNMOUNTED, not merely hidden: a surface you cannot see must not exist, and a mounted
           one would keep a whole world alive behind the tab you are actually looking at. */}
@@ -535,7 +538,7 @@ export const DemoPage = ({ copy }: Readonly<{ copy: AppCopy }>) => {
       )}
       {view === 'boards' && <BoardGallery text={text} />}
       {import.meta.env.DEV && (view === 'content' || view === 'biomes') && (
-        <section className="absolute inset-0 flex flex-col bg-[#0b0d0e] pt-14">
+        <section className="absolute inset-0 flex flex-col bg-bg pt-14">
           <Suspense
             fallback={
               <div className="grid flex-1 place-items-center text-[9px] tracking-[0.18em] text-[#c8963c] uppercase">

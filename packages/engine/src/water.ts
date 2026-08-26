@@ -30,6 +30,7 @@ import {
 import type { Node } from 'three/webgpu'
 
 import type { Clouds } from './clouds.ts'
+import { occlusion_fade_node, type BoardOcclusion } from './board_occlusion.ts'
 import type { FlattenUniform } from './flatten.ts'
 import type { LiquidPalette } from './liquid_palette.ts'
 import type { create_sky_node } from './sky/sky_node.ts'
@@ -123,7 +124,8 @@ const build_material = (
   clouds: Clouds,
   materials: CompiledMaterials,
   palette: LiquidPalette,
-  bed: Readonly<{ height: Node<'float'>; material_id: Node<'uint'> }>
+  bed: Readonly<{ height: Node<'float'>; material_id: Node<'uint'> }>,
+  board_occlusion: BoardOcclusion
 ): MeshBasicNodeMaterial => {
   // DoubleSide: the surface is seen from BELOW when diving, and the sampled grid's winding
   // must never decide visibility (the 2026-08-15 invisible-water bug was backface culling).
@@ -132,7 +134,10 @@ const build_material = (
   if (quality === 'low') {
     const depth = max(positionWorld.y.sub(bed_height), 0)
     material.colorNode = mix(vec3(...palette.shallow), vec3(...palette.body), smoothstep(0.5, 4, depth))
-    material.opacityNode = smoothstep(0, 1, depth).mul(0.78).mul(flatten.water_visibility)
+    material.opacityNode = smoothstep(0, 1, depth)
+      .mul(0.78)
+      .mul(flatten.water_visibility)
+      .mul(occlusion_fade_node(board_occlusion))
     material.alphaTest = 0.02
     material.fog = true
     return material
@@ -242,7 +247,7 @@ const build_material = (
     foam.mul(0.72)
   )
   // Water exits during the first projection phase; terrain does not move until it is gone.
-  material.opacityNode = alpha.mul(flatten.water_visibility)
+  material.opacityNode = alpha.mul(flatten.water_visibility).mul(occlusion_fade_node(board_occlusion))
   material.alphaTest = 0.02
   material.fog = true
   return material
@@ -256,6 +261,7 @@ export const create_water = ({
   clouds,
   world,
   palette,
+  board_occlusion,
 }: Readonly<{
   scene: Scene
   quality: EngineQuality
@@ -264,6 +270,7 @@ export const create_water = ({
   clouds: Clouds
   world: CompiledWorld
   palette: LiquidPalette
+  board_occlusion: BoardOcclusion
 }>): Water => {
   if (world.recipe.liquid === undefined)
     return Object.freeze({ set_focus: () => {}, set_quality: () => {}, set_visible: () => {}, dispose: () => {} })
@@ -285,9 +292,9 @@ export const create_water = ({
     material_id: uint(attribute('bed_material_id', 'float' as const)),
   })
   const surface_materials = Object.freeze({
-    low: build_material('low', flatten, sky, clouds, materials, palette, bed),
-    medium: build_material('medium', flatten, sky, clouds, materials, palette, bed),
-    high: build_material('high', flatten, sky, clouds, materials, palette, bed),
+    low: build_material('low', flatten, sky, clouds, materials, palette, bed, board_occlusion),
+    medium: build_material('medium', flatten, sky, clouds, materials, palette, bed, board_occlusion),
+    high: build_material('high', flatten, sky, clouds, materials, palette, bed, board_occlusion),
   })
   const surface = new Mesh(surface_geometry, surface_materials[quality])
   surface.frustumCulled = false

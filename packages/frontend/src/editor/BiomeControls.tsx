@@ -10,7 +10,7 @@ import type { JsonPath, JsonValue } from './seed_editor.ts'
 /* eslint-disable functional/immutable-data -- Pointer-drag drafts are local UI effect boundaries. */
 
 const input_class =
-  'h-8 border border-white/12 bg-[#090a10] px-2 text-[9px] text-[#dedad2] outline-none focus:border-[#4a9eff]/60'
+  'h-8 border border-white/12 bg-bg px-2 text-[9px] text-[#dedad2] outline-none focus:border-[#4a9eff]/60'
 const button_class =
   'h-7 border border-white/12 px-2 text-[8px] tracking-[0.12em] text-[#858994] uppercase hover:border-[#c8963c]/50 hover:text-[#efbd45] disabled:opacity-30'
 const as_record = (value: JsonValue | undefined): Readonly<Record<string, JsonValue>> | null =>
@@ -65,13 +65,13 @@ export const MaterialEditor = ({
             </strong>
             <input
               aria-label={`${name} hex color`}
-              className="h-7 min-w-0 border border-white/10 bg-[#090a10] px-1.5 text-[7px] text-[#aaaeb6] outline-none focus:border-[#4a9eff]/60"
+              className="h-7 min-w-0 border border-white/10 bg-bg px-1.5 text-[7px] text-[#aaaeb6] outline-none focus:border-[#4a9eff]/60"
               onChange={(event) => change([name, 'color'], event.target.value)}
               value={material.color}
             />
             <select
               aria-label={`${name} surface preset`}
-              className="h-7 min-w-0 border border-white/10 bg-[#090a10] px-1.5 text-[7px] outline-none"
+              className="h-7 min-w-0 border border-white/10 bg-bg px-1.5 text-[7px] outline-none"
               onChange={(event) => change([name, 'preset'], event.target.value)}
               value={material.preset}
             >
@@ -225,7 +225,7 @@ export const SplineEditor = ({
       </div>
       <svg
         aria-disabled={disabled}
-        className={`w-full touch-none border border-white/6 bg-[#08080d] ${fill ? 'min-h-40 flex-1' : ''} ${disabled ? 'pointer-events-none cursor-wait opacity-55' : ''}`}
+        className={`w-full touch-none border border-white/6 bg-bg ${fill ? 'min-h-40 flex-1' : ''} ${disabled ? 'pointer-events-none cursor-wait opacity-55' : ''}`}
         onPointerMove={(event) =>
           dragging === null ||
           preview_drag(

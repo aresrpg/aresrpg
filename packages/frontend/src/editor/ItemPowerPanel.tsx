@@ -90,11 +90,11 @@ export const ItemPowerPanel = ({ value }: Readonly<{ value: JsonValue }>) => {
 
       <div className="mt-3 grid grid-cols-[1fr_auto] items-center gap-4">
         <div className="grid grid-cols-2 gap-px bg-white/8">
-          <div className="bg-[#0b0c12] px-2 py-2 text-center">
+          <div className="bg-surface-low px-2 py-2 text-center">
             <p className="text-[7px] tracking-[0.14em] text-[#a78bfa] uppercase">Authored max power</p>
             <p className="mt-1 text-[9px] tabular-nums text-[#9da1ab]">{power.stat_power}</p>
           </div>
-          <div className="bg-[#0b0c12] px-2 py-2 text-center">
+          <div className="bg-surface-low px-2 py-2 text-center">
             <p className="text-[7px] tracking-[0.14em] text-[#c8963c] uppercase">Retro max-roll median</p>
             <p className="mt-1 text-[9px] tabular-nums text-[#d5d0c8]">{power.median}</p>
           </div>

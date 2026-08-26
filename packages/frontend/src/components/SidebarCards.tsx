@@ -29,7 +29,7 @@ export const LanguageCard = ({
         {current}
       </button>
       {open && (
-        <div className="absolute right-0 bottom-full left-0 z-10 mb-1 flex flex-col border border-[#1e1e2e] bg-[#12121a]">
+        <div className="absolute right-0 bottom-full left-0 z-10 mb-1 flex flex-col border border-border bg-surface">
           {LOCALES.map(({ code, native }) => (
             <button
               className={`cursor-pointer px-3 py-1.5 text-left text-[9px] tracking-[0.15em] uppercase transition-colors ${

@@ -2,6 +2,7 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
 import { useState } from 'react'
+import { characteristic_ladders, characteristic_names, is_class_name } from '@aresrpg/immutable'
 
 import { spell_icon } from '../content/assets.ts'
 import { encyclopedia_catalog, titleize } from '../content/catalog.ts'
@@ -21,6 +22,7 @@ export const ClassesTab = ({
 }>) => {
   const [spell_name, set_spell_name] = useState<string | null>(null)
   const detail = selected_id ? encyclopedia_catalog.class(selected_id) : null
+  const classe = detail && is_class_name(detail.id) ? detail.id : null
   const spells = detail?.spells.toSorted(
     (left, right) => left.unlock_level - right.unlock_level || left.name.localeCompare(right.name)
   )
@@ -31,7 +33,7 @@ export const ClassesTab = ({
   }
   return (
     <div className="flex min-h-0 flex-1">
-      <aside className="w-[300px] shrink-0 overflow-y-auto border-r border-[#1e1e2e]">
+      <aside className="w-[300px] shrink-0 overflow-y-auto border-r border-border">
         {encyclopedia_catalog.classes.map((row, index) => {
           const active = selected_id === row.id
           return (
@@ -65,8 +67,50 @@ export const ClassesTab = ({
                 {text('spells_count', { count: detail.spells.length })}
               </p>
             </header>
-            <div className="flex min-h-[420px] border border-[#1e1e2e] bg-black/10">
-              <div className="w-48 shrink-0 border-r border-[#1e1e2e] py-1">
+            {classe && (
+              <section className="border border-border bg-black/10" data-characteristic-costs="">
+                <div className="border-b border-border px-3 py-2">
+                  <h3 className="text-[9px] tracking-[0.18em] text-[#c8963c] uppercase">
+                    {text('characteristic_costs')}
+                  </h3>
+                  <p className="mt-1 text-[8px] text-[#777b86]">{text('characteristic_costs_desc')}</p>
+                </div>
+                <div>
+                  {characteristic_names.map((stat) => (
+                    <div
+                      className="grid grid-cols-[130px_1fr] gap-3 border-b border-border/60 px-3 py-2 last:border-b-0"
+                      data-characteristic={stat}
+                      key={stat}
+                    >
+                      <span className="text-[8px] tracking-[0.12em] text-[#b7bbc4] uppercase">
+                        {text(`gameplay.stat_${stat}`)}
+                      </span>
+                      <span className="flex flex-wrap gap-1.5">
+                        {characteristic_ladders[classe][stat].map((step, index, rows) => {
+                          const cap = rows[index + 1]?.from
+                          return (
+                            <span
+                              className="border border-white/8 bg-white/3 px-2 py-1 text-[7px] text-[#9298a3]"
+                              data-cost={step.cost}
+                              data-from={step.from}
+                              key={step.from}
+                            >
+                              {text(cap === undefined ? 'characteristic_cost_unlimited' : 'characteristic_cost_band', {
+                                cost: step.cost,
+                                gain: step.gain,
+                                cap: cap ?? 0,
+                              })}
+                            </span>
+                          )
+                        })}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            )}
+            <div className="flex min-h-[420px] border border-border bg-black/10">
+              <div className="w-48 shrink-0 border-r border-border py-1">
                 {spells?.map((row) => {
                   const active = spell?.name === row.name
                   return (

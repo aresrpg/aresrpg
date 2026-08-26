@@ -4,12 +4,12 @@
 import { ChevronLeft, ChevronRight, Search } from 'lucide-react'
 import type { ReactNode } from 'react'
 
-export const PANEL = 'border border-white/11 bg-[#181c1f]/96 shadow-[0_18px_50px_rgba(0,0,0,0.24)]'
+export const PANEL = 'border border-border bg-surface/96 shadow-[0_18px_50px_rgba(0,0,0,0.24)]'
 
 export const encyclopedia_layout = Object.freeze({
   body: 'flex min-h-0 flex-1 flex-col',
-  detail: 'flex-[3] min-w-[380px] overflow-y-auto border-l border-[#1e1e2e]',
-  filters: 'flex shrink-0 flex-col gap-2 border-b border-[#1e1e2e] p-3',
+  detail: 'flex-[3] min-w-[380px] overflow-y-auto border-l border-border',
+  filters: 'flex shrink-0 flex-col gap-2 border-b border-border p-3',
   list: 'min-h-0 flex-1 overflow-y-auto',
   empty: 'flex h-full flex-col items-center justify-center gap-3 py-16 text-[#6b7280]',
 })
@@ -24,7 +24,7 @@ export const SearchField = ({
   placeholder,
   change,
 }: Readonly<{ value: string; placeholder: string; change: (value: string) => void }>) => (
-  <label className="relative flex h-9 items-center border border-[#1e1e2e] bg-[#0a0a0f]/55 text-[#6b7280] focus-within:border-[#c8963c]/45">
+  <label className="relative flex h-9 items-center border border-border bg-bg/55 text-[#6b7280] focus-within:border-[#c8963c]/45">
     <Search aria-hidden="true" className="pointer-events-none absolute left-3 opacity-30" size={14} />
     <input
       className="size-full min-w-0 bg-transparent pr-3 pl-9 text-[9px] tracking-[0.15em] text-[#e8e4dc] uppercase outline-none placeholder:text-[#6b7280]/60"
@@ -97,7 +97,7 @@ export const EntityGrid = ({ children }: Readonly<{ children: ReactNode }>) => (
 
 export const Section = ({ title, children }: Readonly<{ title: string; children: ReactNode }>) => (
   <section className="space-y-2">
-    <h3 className="border-b border-[#1e1e2e] pb-1.5 text-[9px] font-semibold tracking-[0.2em] text-[#6b7280] uppercase">
+    <h3 className="border-b border-border pb-1.5 text-[9px] font-semibold tracking-[0.2em] text-[#6b7280] uppercase">
       {title}
     </h3>
     {children}
@@ -105,7 +105,7 @@ export const Section = ({ title, children }: Readonly<{ title: string; children:
 )
 
 export const Fact = ({ label, value, color }: Readonly<{ label: string; value: ReactNode; color?: string }>) => (
-  <div className="flex min-h-8 items-center justify-between gap-3 border border-[#1e1e2e] bg-white/2 px-2.5 py-1.5">
+  <div className="flex min-h-8 items-center justify-between gap-3 border border-border bg-white/2 px-2.5 py-1.5">
     <span className="text-[8px] tracking-[0.12em] text-[#6b7280] uppercase">{label}</span>
     <span className="text-right text-[10px] text-[#e8e4dc]" style={color ? { color } : undefined}>
       {value}
@@ -115,7 +115,7 @@ export const Fact = ({ label, value, color }: Readonly<{ label: string; value: R
 
 export const LinkChip = ({ children, select }: Readonly<{ children: ReactNode; select: () => void }>) => (
   <button
-    className="cursor-pointer border border-[#1e1e2e] bg-white/2 px-2 py-1.5 text-left text-[9px] text-[#e8e4dc] hover:border-[#c8963c]/35 hover:text-[#c8963c]"
+    className="cursor-pointer border border-border bg-white/2 px-2 py-1.5 text-left text-[9px] text-[#e8e4dc] hover:border-[#c8963c]/35 hover:text-[#c8963c]"
     onClick={select}
     type="button"
   >

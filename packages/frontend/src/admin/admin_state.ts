@@ -65,6 +65,8 @@ export type DeploymentPins = Readonly<{
   character_publisher?: string | null
   version: Readonly<{ id: string | null; shared_version: string | null }>
   loot_registry: Readonly<{ id: string | null; shared_version: string | null }>
+  name_registry?: Readonly<{ id: string | null; shared_version: string | null }>
+  friend_registry?: Readonly<{ id: string | null; shared_version: string | null }>
   item_policy?: Readonly<{ id: string | null; shared_version: string | null }>
   character_policy?: Readonly<{ id: string | null; shared_version: string | null }>
   item_protected_policy?: Readonly<{ id: string | null; shared_version: string | null }>

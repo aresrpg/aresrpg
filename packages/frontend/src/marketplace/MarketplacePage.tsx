@@ -24,20 +24,20 @@ export default function MarketplacePage({ copy, locale }: Readonly<{ copy: AppCo
     dispatch_app({ type: 'market/group_selected', group })
   }, [group])
   return (
-    <section className="pointer-events-auto relative flex min-h-full min-w-0 flex-1 flex-col overflow-hidden border border-[#1e1e2e] bg-[#12121a]/95 shadow-[0_0_60px_rgba(0,0,0,0.5)] backdrop-blur-2xl">
+    <section className="pointer-events-auto relative flex min-h-full min-w-0 flex-1 flex-col overflow-hidden border border-border bg-surface/98 shadow-[0_18px_50px_rgba(0,0,0,0.24)]">
       <i className="pointer-events-none absolute top-1 left-1 size-3 border-t border-l border-[#c8963c]/45" />
       <i className="pointer-events-none absolute top-1 right-1 size-3 border-t border-r border-[#c8963c]/45" />
       <i className="pointer-events-none absolute bottom-1 left-1 size-3 border-b border-l border-[#c8963c]/45" />
       <i className="pointer-events-none absolute right-1 bottom-1 size-3 border-r border-b border-[#c8963c]/45" />
-      <header className="shrink-0 border-b border-[#1e1e2e] px-5 pt-4 pb-2 text-center">
+      <header className="shrink-0 border-b border-border bg-surface-high px-5 pt-4 pb-2 text-center">
         <div className="flex items-baseline justify-center gap-4">
           <h2 className="text-[12px] font-semibold tracking-[0.4em] text-[#c8963c] uppercase">{text('title')}</h2>
           <span className="text-[9px] tracking-[0.14em] text-[#777b86] uppercase">{text('subtitle')}</span>
         </div>
         <div className="mx-auto mt-2 h-px w-52 bg-[linear-gradient(90deg,transparent,rgba(200,150,60,.5),transparent)]" />
       </header>
-      <div className="shrink-0 overflow-x-auto border-b border-[#1e1e2e] px-6 py-3">
-        <div className="relative mx-auto grid max-w-xl grid-cols-3 border border-white/8 bg-black/20">
+      <div className="shrink-0 overflow-x-auto border-b border-border bg-surface px-6 py-3">
+        <div className="relative mx-auto grid max-w-xl grid-cols-3 border border-border bg-surface-low">
           {tabs.map((name) => (
             <button
               aria-selected={tab === name}

@@ -9,6 +9,7 @@
 // facts this player's own transactions did not cause.
 
 import type { KioskOwnerCap } from '@mysten/kiosk'
+import type { CharacteristicName } from '@aresrpg/immutable'
 
 import type { SDK } from './client.ts'
 import { created_object_id, receipt_digest, receipt_event } from './cache.ts'
@@ -82,21 +83,21 @@ export const character_actions = (sdk: GameSdk, { kiosk_cap }: CharacterActionsC
       return { digest: receipt_digest(receipt) }
     },
 
-    /** Spend stat points: one raise_stat call per staged characteristic, ONE transaction. */
+    /** Spend exact capital: one class-priced characteristic row per Move call, ONE transaction. */
     raise_stats: async ({
       character_id,
-      allocation,
+      spending,
       custody,
     }: {
       character_id: string
-      allocation: Readonly<Record<string, number>>
+      spending: Readonly<Partial<Record<CharacteristicName, number>>>
       custody?: KioskCustody
     }): Promise<CharacterReceipt> => {
-      const rows = Object.entries(allocation).filter(([, amount]) => Number.isSafeInteger(amount) && amount > 0)
+      const rows = Object.entries(spending).filter(([, points]) => Number.isSafeInteger(points) && points > 0)
       if (!rows.length) throw new Error('The stat allocation is empty')
       const receipt = await with_kiosk(
         (tx, kiosk, cap) => {
-          for (const [stat, amount] of rows) sdk.doors.raise_stat(tx, { kiosk, cap, character_id, stat, amount })
+          for (const [stat, points] of rows) sdk.doors.raise_stat(tx, { kiosk, cap, character_id, stat, points })
         },
         { custody }
       )

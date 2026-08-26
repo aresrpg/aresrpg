@@ -21,7 +21,7 @@ const world_with_mobs = {
   mobs: [{ mob_type: 'protector_wheat_bricheton', weight_bp: 10_000n, biomes: [...Array(9).keys()] }],
 } as never
 const CENTER_ZONE = { zx: 97, zz: 97 } // center starter zone, authored plains — level floor 0 territory
-const OCEAN_ZONE = { zx: 100, zz: 90 }
+const OCEAN_ZONE = { zx: 88, zz: 85 }
 
 test('Nauvis exposes its exact hand-authored roaming roster', () => {
   expect(world.mobs).toHaveLength(18)
@@ -33,6 +33,12 @@ test('Nauvis exposes its exact hand-authored roaming roster', () => {
 test('the ocean biome generates neither mobs nor resource packs', () => {
   expect(mob_groups(world, OCEAN_ZONE.zx, OCEAN_ZONE.zz, 1n)).toEqual([])
   expect(resource_packs(world, OCEAN_ZONE.zx, OCEAN_ZONE.zz, 1n)).toEqual([])
+})
+
+test('a small ocean pocket cannot empty a land-majority zone', () => {
+  // Player-reported relative zone 0,4: its center is submerged, but 69% of its surface is plains.
+  expect(mob_groups(world, 97, 101, 3_904_461_295n)).not.toEqual([])
+  expect(resource_packs(world, 97, 101, 3_904_461_295n)).not.toEqual([])
 })
 
 test('the population derives deterministically from the zone seed', () => {

@@ -18,6 +18,7 @@ const BACKOFF_CAP_MS = 30_000
 const VIOLATION_RETRY_MS = 60_000
 const LATENCY_INTERVAL_MS = 5_000
 const PACKET_COLORS = Object.freeze({ in: '#3fb950', out: '#58a6ff' })
+const WEBSOCKET_OPEN = 1
 
 const clock_ms = (): number => globalThis.performance?.now() ?? Date.now()
 
@@ -48,10 +49,13 @@ type ServerLinkOptions = Readonly<{
   dispatch: (input: AppInput) => void
 }>
 
-const AUTH_REJECTION_REASONS = new Set(['INVALID_SIGNATURE', 'INVALID_PACKET', 'SIGNATURE_TIMEOUT'])
+const AUTH_REJECTION_REASONS = new Set(['INVALID_SIGNATURE', 'INVALID_PACKET'])
 
 export const is_terminal_auth_close = (code: number, reason: string): boolean =>
   code === 1008 && AUTH_REJECTION_REASONS.has(reason)
+
+export const application_packet_sendable = (accepted: boolean, ready_state: number): boolean =>
+  accepted && ready_state === WEBSOCKET_OPEN
 
 /** the server seats one socket per address — the evicted one is told, and never fights back */
 export const is_session_takeover_close = (code: number, reason: string): boolean =>
@@ -67,6 +71,7 @@ export const create_login_response = async (
 
 export const connect_server = ({ session, dispatch }: ServerLinkOptions): ServerLink => {
   let socket: WebSocket | null = null
+  let accepted = false
   let retry_timer: ReturnType<typeof setTimeout> | null = null
   let disposed = false
   let retry_ms = BACKOFF_START_MS
@@ -112,6 +117,7 @@ export const connect_server = ({ session, dispatch }: ServerLinkOptions): Server
       if (disposed) return
       const next = new WebSocket(url)
       socket = next
+      accepted = false
       next.addEventListener('open', () => {
         retry_ms = BACKOFF_START_MS
       })
@@ -134,10 +140,14 @@ export const connect_server = ({ session, dispatch }: ServerLinkOptions): Server
               })
               .catch((error) => {
                 console.error('Server identity proof failed.', error)
-                if (!disposed && socket === next) dispatch({ type: 'link/rejected', reason: 'INVALID_SIGNATURE' })
+                // A hidden/browser-switched tab may interrupt its local wallet signer. No proof
+                // reached the server, so this is reconnectable transport failure—not evidence
+                // that the remembered wallet is invalid.
+                if (!disposed && socket === next) next.close(1000, 'PROOF_INTERRUPTED')
               })
             return
           }
+          if (packet.type === 'packet/connection_accepted') accepted = true
           dispatch({ type: 'server/packet', packet })
           if (packet.type === 'packet/connection_accepted') start_latency()
         } catch (error) {
@@ -147,6 +157,7 @@ export const connect_server = ({ session, dispatch }: ServerLinkOptions): Server
       next.addEventListener('close', ({ code, reason }) => {
         if (disposed || socket !== next) return
         socket = null
+        accepted = false
         stop_latency()
         if (is_terminal_auth_close(code, reason)) {
           dispatch({ type: 'link/rejected', reason })
@@ -184,7 +195,7 @@ export const connect_server = ({ session, dispatch }: ServerLinkOptions): Server
   void open()
   return Object.freeze({
     send: (packet: Readonly<ClientPacket>): boolean => {
-      if (socket?.readyState !== WebSocket.OPEN) return false
+      if (!socket || !application_packet_sendable(accepted, socket.readyState)) return false
       send(socket, packet)
       return true
     },
@@ -195,6 +206,7 @@ export const connect_server = ({ session, dispatch }: ServerLinkOptions): Server
       retry_timer = null
       socket?.close(1000, 'CLIENT_CLOSED')
       socket = null
+      accepted = false
     },
   })
 }

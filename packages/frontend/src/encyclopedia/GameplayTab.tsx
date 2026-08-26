@@ -49,7 +49,7 @@ const Subheading = ({ children }: Readonly<{ children: React.ReactNode }>) => (
   <h3 className="pt-2 text-[9px] font-semibold tracking-[0.18em] text-[#d6d1c8] uppercase">{children}</h3>
 )
 const Formula = ({ children }: Readonly<{ children: React.ReactNode }>) => (
-  <div className="border border-[#1e1e2e] bg-white/3 px-3 py-2 font-mono text-[9px] tracking-wide text-[#c8963c]/80">
+  <div className="border border-border bg-white/3 px-3 py-2 font-mono text-[9px] tracking-wide text-[#c8963c]/80">
     {children}
   </div>
 )
@@ -80,8 +80,8 @@ export const GameplayTab = ({ text }: Readonly<{ text: EncyclopediaText }>) => {
 
   return (
     <div className="flex min-h-0 flex-1 overflow-hidden max-[760px]:flex-col">
-      <aside className="flex w-[300px] min-w-[300px] flex-col border-r border-[#1e1e2e] max-[760px]:w-full max-[760px]:min-w-0 max-[760px]:border-r-0 max-[760px]:border-b">
-        <div className="border-b border-[#1e1e2e] px-3 py-3 max-[760px]:hidden">
+      <aside className="flex w-[300px] min-w-[300px] flex-col border-r border-border max-[760px]:w-full max-[760px]:min-w-0 max-[760px]:border-r-0 max-[760px]:border-b">
+        <div className="border-b border-border px-3 py-3 max-[760px]:hidden">
           <span className="text-[9px] tracking-[0.25em] text-[#6b7280] uppercase">
             {text('gameplay.game_mechanics')}
           </span>
@@ -94,7 +94,7 @@ export const GameplayTab = ({ text }: Readonly<{ text: EncyclopediaText }>) => {
                 className={`flex w-full cursor-pointer items-center gap-2 border-l-2 px-3 py-2.5 text-left transition-colors max-[760px]:w-auto max-[760px]:shrink-0 max-[760px]:border ${
                   active
                     ? 'border-l-[#c8963c] bg-[#c8963c]/8 text-[#c8963c] max-[760px]:border-[#c8963c]/30'
-                    : 'border-l-transparent text-[#6b7280] hover:bg-white/4 hover:text-[#e8e4dc] max-[760px]:border-[#1e1e2e]'
+                    : 'border-l-transparent text-[#6b7280] hover:bg-white/4 hover:text-[#e8e4dc] max-[760px]:border-border'
                 }`}
                 key={id}
                 onClick={() => go(id)}
@@ -143,6 +143,9 @@ export const GameplayTab = ({ text }: Readonly<{ text: EncyclopediaText }>) => {
             <Text>{text('gameplay.life_steal_desc')}</Text>
             <Formula>H = floor(ΔHP / 2)</Formula>
             <Text>{text('gameplay.life_steal_note')}</Text>
+            <Subheading>{text('gameplay.chatiment')}</Subheading>
+            <Text>{text('gameplay.chatiment_desc')}</Text>
+            <Formula>G = min(ΔHP × S, CAP × S − Gturn) · S = 1 mob, ½ player</Formula>
             <Subheading>{text('gameplay.healing')}</Subheading>
             <Text>{text('gameplay.healing_desc')}</Text>
             <Formula>H = B × (100 + INT) / 100 + H₊</Formula>
@@ -154,6 +157,7 @@ export const GameplayTab = ({ text }: Readonly<{ text: EncyclopediaText }>) => {
               <Fact label={text('gameplay.stat_points')} value={text('gameplay.stat_points_value', { n: 5 })} />
               <Fact label={text('gameplay.spell_points')} value={text('gameplay.spell_points_value', { n: 1 })} />
             </div>
+            <Text>{text('gameplay.stat_costs_desc')}</Text>
             <Subheading>{text('gameplay.xp_milestones')}</Subheading>
             <div className="grid gap-1 sm:grid-cols-3">
               {[10, 50, 100].map((level) => (

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-// Durable post-fight work. RESULT_FOR is projected before the one atomic settlement; its
-// disappearance proves character return and every assigned loot deposit completed together.
+// Durable recovery only. Live clients settle from their terminal checkpoint and receipt;
+// RESULT_FOR lets a reconnect rebuild the same transaction after either of those was lost.
 
 import type { FightResolutionRow } from '@aresrpg/protocol'
 
@@ -13,25 +13,25 @@ export async function get_fight_resolutions(
 ): Promise<FightResolutionRow[]> {
   const rows = await graph.read(
     `MATCH (f:Fight)-[r:RESULT_FOR]->(:User {address: $address})
-     OPTIONAL MATCH (c:Character) WHERE c.id = r.character
+     OPTIONAL MATCH (k:Kolizeum {fight_id: f.id})
      RETURN f.id AS fight, f.world AS world, f.dungeon_room AS dungeon, f.winner AS winner,
+            k.id AS kolizeum,
             r.seat AS fighter, r.character AS character,
             r.team AS team, r.dead AS dead, r.settled AS settled,
-            r.loot_types AS loot_types, r.drops AS drops, c.level AS level, c.experience AS experience`,
+            r.loot_types AS loot_types, r.drops AS drops`,
     { address }
   )
   return rows.map((row) => ({
     fight: String(row.fight),
     world: String(row.world),
     dungeon: row.dungeon === null || row.dungeon === undefined ? null : Number(row.dungeon),
+    kolizeum: typeof row.kolizeum === 'string' ? row.kolizeum : null,
     fighter: Number(row.fighter),
     character: String(row.character),
     team: Number(row.team),
     winner: row.winner === null || row.winner === undefined ? null : Number(row.winner),
     dead: Boolean(row.dead),
     settled: Boolean(row.settled),
-    level: Number(row.level ?? 1),
-    experience: String(row.experience ?? 0),
     loot_types: typeof row.loot_types === 'string' ? JSON.parse(row.loot_types) : [],
     drops: typeof row.drops === 'string' ? JSON.parse(row.drops) : [],
   }))

@@ -24,7 +24,7 @@ const kiosk = { properties: { id: '0xk', personal_cap: '0xcap' } }
 const graph_of = (held: GraphRow[], seated: GraphRow[]): Graph => ({
   read: async (query: string) => {
     if (query.includes('[:HOLDS]->(c:Character)')) return held
-    if (query.includes('[:FIGHTER]->(c:Character {owner:')) return seated
+    if (query.includes(':FIGHTER]->(c:Character {owner:')) return seated
     throw new Error(`unexpected query: ${query}`)
   },
   close: async () => undefined,
@@ -35,9 +35,19 @@ describe('the roster', () => {
     // THE DUEL INCIDENT (2026-08-21): a seat severs the kiosk HOLDS edge, so a roster built
     // from custody alone returned NOTHING — the client dropped its selection, showed an empty
     // character list, and could no longer embody the character, let alone leave the fight.
-    const graph = graph_of([], [{ character: character('0xseated'), kiosk_node: kiosk, equipment: [] }])
+    const graph = graph_of(
+      [],
+      [
+        {
+          character: character('0xseated'),
+          kiosk_node: kiosk,
+          equipment: [],
+          active_fight: { id: '0xf1', seat: 2 },
+        },
+      ]
+    )
     expect(await get_characters(graph, { address: '0xme' })).toMatchObject([
-      { id: '0xseated', kiosk: '0xk', kiosk_cap: '0xcap' },
+      { id: '0xseated', kiosk: '0xk', kiosk_cap: '0xcap', active_fight: { id: '0xf1', seat: 2 } },
     ])
   })
 

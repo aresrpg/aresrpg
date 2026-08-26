@@ -13,7 +13,7 @@ import { play_procedural_cue } from '../game/audio/procedural_cues.ts'
 import { gather_gate } from '../game/gather_gate.ts'
 import { parse_resource_node_id } from '../game/resource_nodes.ts'
 import { copy_text } from '../i18n/copy.ts'
-import { stack_merge_target } from '../inventory_stacks.ts'
+import { encumbered_asset_ids, stack_merge_target } from '../inventory_stacks.ts'
 import type { AppContext, AppState } from '../store.ts'
 import { toast } from '../toast.ts'
 
@@ -176,15 +176,11 @@ export const observe_world_gather = ({ events, get_state, dispatch, signal }: Ap
       : null
     if (!pack || !resource || !gather_gate(character, resource).ok) return
     const [, zx = '0', zz = '0'] = found.key.split(':')
-    const existing = stack_merge_target(
-      state.session.inventory,
-      state.marketplace.own_listings,
-      pack.item_type,
-      character.kiosk
-    )
+    const encumbered = encumbered_asset_ids(state.marketplace.own_listings, state.trade.rows)
+    const existing = stack_merge_target(state.session.inventory, encumbered, pack.item_type, character.kiosk)
     const rare_item_type = resource.rare_item_type || null
     const existing_rare = rare_item_type
-      ? stack_merge_target(state.session.inventory, state.marketplace.own_listings, rare_item_type, character.kiosk)
+      ? stack_merge_target(state.session.inventory, encumbered, rare_item_type, character.kiosk)
       : null
     const job_level = job_level_from_xp(Number(character.jobs[resource.job] ?? 0))
     const duration_ms = gather_time_ms(job_level)
@@ -280,7 +276,7 @@ export const observe_world_gather = ({ events, get_state, dispatch, signal }: Ap
       })
       .then(({ fight }) => {
         notice.dismiss()
-        dispatch({ type: 'fight/watch', fight })
+        dispatch({ type: 'fight/watch', character_id: character.id, fight })
         const { gathering } = get_state().world
         if (gathering?.character_id === character.id)
           dispatch({ type: 'world/gather_finished', character_id: character.id, ends_at_ms: gathering.ends_at_ms })

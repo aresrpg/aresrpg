@@ -190,6 +190,10 @@ events! {
         => |e: &TurnSeedUsed| format!("evt:fight:{}", e.fight.hex()),
     fight::FightEnded { fight: Id, world: String, x: u32, z: u32, winner: Option<u8> }
         => |e: &FightEnded| format!("evt:fight:{}", e.fight.hex()),
+    fight::FightClosable { fight: Id }
+        => |e: &FightClosable| format!("evt:fight:{}", e.fight.hex()),
+    fight::FightClosed { fight: Id }
+        => |e: &FightClosed| format!("evt:fight:{}", e.fight.hex()),
     fight::DropsRolled { fight: Id, fighter: u64, drops: Vec<RolledDrop> }
         => |e: &DropsRolled| format!("evt:fight:{}", e.fight.hex()),
 
@@ -201,36 +205,8 @@ events! {
     gathering::RareGathered { world: String, x: u32, z: u32, gatherer: Addr, item_type: String, rare_item_type: String }
         => |e: &RareGathered| zone_topic(&e.world, e.x, e.z),
 
-    // ── social ──
-    party::PartyCreated { party: Id, character: Id }
-        => |e: &PartyCreated| format!("evt:party:{}", e.party.hex()),
-    // routed to the INVITED character's own channel — the invitee is not a
-    // member yet, so the party channel would never reach them
-    party::PartyInvited { party: Id, character: Id }
-        => |e: &PartyInvited| format!("evt:character:{}", e.character.hex()),
-    party::PartyJoined { party: Id, character: Id }
-        => |e: &PartyJoined| format!("evt:party:{}", e.party.hex()),
-    party::PartyLeft { party: Id, character: Id }
-        => |e: &PartyLeft| format!("evt:party:{}", e.party.hex()),
-    friends::FriendListCreated { list: Id, owner: Addr }
-        => |e: &FriendListCreated| format!("evt:social:{}", e.owner.hex()),
-    friends::FriendAdded { list: Id, who: Addr }
-        => |e: &FriendAdded| format!("evt:social:{}", e.who.hex()),
-    friends::FriendRemoved { list: Id, who: Addr }
-        => |e: &FriendRemoved| format!("evt:social:{}", e.who.hex()),
-
-    // ── trade (the p2p escrow — TradeCreated reaches BOTH parties: the route below
-    //    lands on the counterparty, publish.rs mirrors it to the creator) ──
-    trade::TradeCreated { trade: Id, a: Addr, b: Addr }
-        => |e: &TradeCreated| format!("evt:social:{}", e.b.hex()),
-    trade::TradeChanged { trade: Id, version: u64 }
-        => |e: &TradeChanged| format!("evt:trade:{}", e.trade.hex()),
-    trade::TradeAccepted { trade: Id, who: Addr }
-        => |e: &TradeAccepted| format!("evt:trade:{}", e.trade.hex()),
-    trade::TradeLocked { trade: Id }
-        => |e: &TradeLocked| format!("evt:trade:{}", e.trade.hex()),
-    trade::TradeDestroyed { trade: Id }
-        => |e: &TradeDestroyed| format!("evt:trade:{}", e.trade.hex()),
+    // Friends, parties, and trades publish from object writes in publish.rs. Their full
+    // objects already carry the state needed to invalidate every relevant projection.
 
     // ── kolizeum ──
     kolizeum::KolizeumCreated { kolizeum: Id, fight: Id, pledge: u64, format: u64 }
@@ -317,7 +293,7 @@ mod tests {
             character: [1; 32],
             owner: [7; 32],
             name: "aiden".into(),
-            classe: "sram".into(),
+            classe: "yajin".into(),
         })
         .unwrap();
         let routed = route("character", "CharacterCreated", &bytes)

@@ -53,7 +53,7 @@ export const item_stat_display_range = ({ minimum, maximum }: ItemStatRow): read
   minimum < 0 && maximum < 0 ? [maximum, minimum] : [minimum, maximum]
 
 const input_class =
-  'h-8 border border-white/12 bg-[#090a10] px-2 text-[10px] text-[#e8e4dc] outline-none focus:border-[#c8963c]/60'
+  'h-8 border border-white/12 bg-bg px-2 text-[10px] text-[#e8e4dc] outline-none focus:border-[#c8963c]/60'
 const action_class =
   'h-7 border border-white/12 bg-white/[0.025] px-2 text-[8px] tracking-[0.12em] text-[#8c919c] uppercase hover:border-[#c8963c]/50 hover:text-[#efbd45]'
 

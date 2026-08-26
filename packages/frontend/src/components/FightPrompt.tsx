@@ -17,11 +17,14 @@ import type { AppCopy } from '../i18n/copy.ts'
 import { useFightPrompt } from '../game/core/fight_prompt_feed.ts'
 import { dispatch_app, useAppStore } from '../store.ts'
 import { selected_character } from '../modules/session.ts'
+import type { FightSessionState } from '../modules/fight.ts'
+import { selected_party } from '../modules/party.ts'
 
 import { ModalFrame } from './ModalFrame.tsx'
 import { NametagCard } from './NametagCard.tsx'
 import { PromptKey, split_key_template } from './PromptChip.tsx'
 
+const ACCESS_GROUP = 1
 const ACCESS_INVITED = 2
 const ACCESS_UNSET = 255
 const PLACEMENT_WINDOW_MS = 60_000
@@ -36,13 +39,25 @@ type FightAccess = Readonly<{
 
 export const fight_prompt_action = (phase: string): 'join' | 'spectate' => (phase === 'placement' ? 'join' : 'spectate')
 
-export const fight_joinable_teams = (fight: FightAccess, character_id: string | null): readonly number[] => {
+export const fight_prompt_checkpoint = (session: Pick<FightSessionState, 'checkpoint' | 'cached'>, fight_id: string) =>
+  session.checkpoint?.contract.id === fight_id ? session.checkpoint : (session.cached[fight_id] ?? null)
+
+export const fight_joinable_teams = (
+  fight: FightAccess,
+  character_id: string | null,
+  party_members: readonly string[] = []
+): readonly number[] => {
   if (fight.phase !== 'placement') return Object.freeze([])
   const eligible = (access: bigint | number, opener: string | null): boolean => {
     const normalized_access = Number(access)
     return (
       normalized_access === 0 ||
       normalized_access === ACCESS_UNSET ||
+      (normalized_access === ACCESS_GROUP &&
+        opener !== null &&
+        character_id !== null &&
+        party_members.includes(opener) &&
+        party_members.includes(character_id)) ||
       (normalized_access === ACCESS_INVITED && opener === character_id)
     )
   }
@@ -62,6 +77,7 @@ const elapsed_label = (from_ms: number): string => {
 export const FightPrompt = ({ copy }: Readonly<{ copy: AppCopy }>) => {
   const prompt = useFightPrompt()
   const fights = useAppStore((state) => state.world.fights)
+  const selected_character_id = useAppStore((state) => state.session.selected_character_id)
   const fight = prompt.focused_id ? (fights[prompt.focused_id] ?? null) : null
   const [open_id, set_open_id] = useState<string | null>(null)
 
@@ -110,7 +126,14 @@ export const FightPrompt = ({ copy }: Readonly<{ copy: AppCopy }>) => {
           fight_id
         )
       })}
-      {open_id ? <FightModal close={() => set_open_id(null)} copy={copy} fight_id={open_id} /> : null}
+      {open_id ? (
+        <FightModal
+          key={`${selected_character_id ?? 'none'}:${open_id}`}
+          close={() => set_open_id(null)}
+          copy={copy}
+          fight_id={open_id}
+        />
+      ) : null}
     </>
   )
 }
@@ -159,7 +182,7 @@ const TeamColumn = ({
           data-fight-fighter={fighter.kind.type}
           key={`${name}-${index}`}
         >
-          <span className="grid size-9 shrink-0 place-items-center overflow-hidden border border-white/10 bg-[#111519] text-[#777b86]">
+          <span className="grid size-9 shrink-0 place-items-center overflow-hidden border border-white/10 bg-surface-high text-[#777b86]">
             {portrait ? (
               <img alt="" className="size-full object-contain" src={portrait} />
             ) : (
@@ -258,6 +281,7 @@ const FightModal = ({ close, copy, fight_id }: Readonly<{ close: () => void; cop
   const wallet = useAppStore((state) => state.session.wallet)
   const selected_character_id = useAppStore((state) => state.session.selected_character_id)
   const own_row = useAppStore((state) => selected_character(state.session))
+  const party = useAppStore(selected_party)
   const [, force_tick] = useState(0)
   // a COMMIT (join/spectate) hands the session over to the board — the teardown below must not
   // then disarm the very stream the committed surface lives on
@@ -265,15 +289,17 @@ const FightModal = ({ close, copy, fight_id }: Readonly<{ close: () => void; cop
 
   // arm on open, disarm on close — the stream IS the data
   useEffect(() => {
-    dispatch_app({ type: 'fight/watch', fight: fight_id })
+    if (selected_character_id)
+      dispatch_app({ type: 'fight/watch', character_id: selected_character_id, fight: fight_id })
     return () => {
-      if (!committed.current) {
-        dispatch_app({ type: 'fight/watch', fight: null })
-        dispatch_app({ type: 'fight/mounted', mounted: false })
-        dispatch_app({ type: 'fight/closed' })
-      }
+      if (!selected_character_id) return
+      dispatch_app(
+        committed.current
+          ? { type: 'fight/watch', character_id: selected_character_id, fight: null }
+          : { type: 'fight/preview_closed', character_id: selected_character_id, fight: fight_id }
+      )
     }
-  }, [fight_id])
+  }, [fight_id, selected_character_id])
 
   // the elapsed clock ticks even when no packet lands
   useEffect(() => {
@@ -282,7 +308,14 @@ const FightModal = ({ close, copy, fight_id }: Readonly<{ close: () => void; cop
   }, [])
 
   if (!row) return null
-  const checkpoint = session.checkpoint?.contract.id === fight_id ? session.checkpoint : null
+  const checkpoint = fight_prompt_checkpoint(session, fight_id)
+  const phase = checkpoint
+    ? checkpoint.contract.ended
+      ? 'ended'
+      : checkpoint.contract.round === 0n
+        ? 'placement'
+        : 'active'
+    : row.phase
   const fighters = (checkpoint?.contract.fighters ?? []) as unknown as readonly FightRosterFighter[]
   const players = (checkpoint?.sources.players ?? {}) as FightPlayers
   // exact when this socket witnessed the start; otherwise the window's expiry is the estimate
@@ -295,7 +328,11 @@ const FightModal = ({ close, copy, fight_id }: Readonly<{ close: () => void; cop
   // until a snapshot corrects it, so chain truth wins the moment it exists
   const access_a = checkpoint?.contract.access_a ?? row.access_a
   const access_b = checkpoint?.contract.access_b ?? row.access_b
-  const admitted_teams = fight_joinable_teams({ ...row, access_a, access_b }, selected_character_id)
+  const admitted_teams = fight_joinable_teams(
+    { ...row, access_a, access_b },
+    selected_character_id,
+    party?.members.map(({ character_id }) => character_id) ?? []
+  )
   const already_seated = fighters.some(
     (fighter) => fighter.kind.type === 'player' && fighter.kind.character === selected_character_id
   )
@@ -313,8 +350,16 @@ const FightModal = ({ close, copy, fight_id }: Readonly<{ close: () => void; cop
   const join = (team: number): void => {
     if (!wallet || !selected_character_id) return
     const custody = own_row ? { kiosk: own_row.kiosk, kiosk_cap: own_row.kiosk_cap } : undefined
+    const grouped = Number(team === 0 ? access_a : access_b) === ACCESS_GROUP
     void wallet.fight
-      .join({ fight: fight_id, character_id: selected_character_id, custody, team, access: 1 })
+      .join({
+        fight: fight_id,
+        character_id: selected_character_id,
+        custody,
+        team,
+        access: 0,
+        ...(grouped && party ? { party: party.id } : {}),
+      })
       .then(() => {
         // no mount dispatch: the seat we just took mounts the board on its own checkpoint
         // (fight.ts derives it). This click only hands the armed stream over to the board.
@@ -325,8 +370,9 @@ const FightModal = ({ close, copy, fight_id }: Readonly<{ close: () => void; cop
   }
 
   const spectate = (): void => {
+    if (!selected_character_id || !checkpoint) return
     committed.current = true
-    dispatch_app({ type: 'fight/mounted', mounted: true })
+    dispatch_app({ type: 'fight/spectating', character_id: selected_character_id, fight: fight_id })
     close()
   }
 
@@ -334,7 +380,7 @@ const FightModal = ({ close, copy, fight_id }: Readonly<{ close: () => void; cop
     <ModalFrame
       close={close}
       close_label={text.fight_close}
-      label={row.phase === 'placement' ? text.fight_join_title : text.fight_spectate_title}
+      label={phase === 'placement' ? text.fight_join_title : text.fight_spectate_title}
       max_width="max-w-2xl"
     >
       <div className="grid gap-4 p-6">
@@ -342,52 +388,62 @@ const FightModal = ({ close, copy, fight_id }: Readonly<{ close: () => void; cop
           <Swords className="text-[#c8963c]" size={18} />
           <div>
             <h2 className="font-mono text-sm tracking-[0.16em] text-[#e8e4dc] uppercase">
-              {row.phase === 'placement' ? text.fight_join_title : text.fight_spectate_title}
+              {phase === 'placement' ? text.fight_join_title : text.fight_spectate_title}
             </h2>
             <p className="mt-1 font-mono text-[9px] tracking-[0.14em] text-[#777b86] uppercase">
-              {row.phase === 'active'
+              {phase === 'active'
                 ? `${text.fight_started_ago} ${elapsed_label(started_ms)}`
                 : `${text.fight_placement} · ${Math.max(0, Math.ceil((Number(row.placement_ms) + PLACEMENT_WINDOW_MS - Date.now()) / 1000))}s`}
             </p>
           </div>
         </header>
 
-        <FightTeams
-          action_a={
-            row.phase === 'placement' ? (
-              <JoinButton
-                enabled={can_submit && joinable_teams.includes(0)}
-                locked={!!checkpoint && !joinable_teams.includes(0)}
-                on_join={() => join(0)}
-                team={0}
-                text={text}
-              />
-            ) : null
-          }
-          action_b={
-            row.phase === 'placement' ? (
-              <JoinButton
-                enabled={can_submit && joinable_teams.includes(1)}
-                locked={!!checkpoint && !joinable_teams.includes(1)}
-                on_join={() => join(1)}
-                team={1}
-                text={text}
-              />
-            ) : null
-          }
-          empty_label={text.fight_empty_side}
-          label_a={text.fight_side_a}
-          label_b={text.fight_side_b}
-          players={players}
-          team_a={team_a}
-          team_b={team_b}
-          unknown_name={text.fight_unknown}
-        />
+        {checkpoint ? (
+          <FightTeams
+            action_a={
+              phase === 'placement' ? (
+                <JoinButton
+                  enabled={can_submit && joinable_teams.includes(0)}
+                  locked={!joinable_teams.includes(0)}
+                  on_join={() => join(0)}
+                  team={0}
+                  text={text}
+                />
+              ) : null
+            }
+            action_b={
+              phase === 'placement' ? (
+                <JoinButton
+                  enabled={can_submit && joinable_teams.includes(1)}
+                  locked={!joinable_teams.includes(1)}
+                  on_join={() => join(1)}
+                  team={1}
+                  text={text}
+                />
+              ) : null
+            }
+            empty_label={text.fight_empty_side}
+            label_a={text.fight_side_a}
+            label_b={text.fight_side_b}
+            players={players}
+            team_a={team_a}
+            team_b={team_b}
+            unknown_name={text.fight_unknown}
+          />
+        ) : (
+          <div
+            className="grid min-h-32 place-items-center border border-white/8 bg-black/20 font-mono text-[9px] tracking-[0.16em] text-[#777b86] uppercase"
+            data-fight-roster-loading=""
+          >
+            {copy.loading_universe}
+          </div>
+        )}
 
         <footer className="grid gap-2">
-          {row.phase !== 'placement' ? (
+          {phase !== 'placement' ? (
             <button
-              className="h-10 cursor-pointer border border-[#4a9eff]/40 bg-[#4a9eff]/8 font-mono text-[10px] tracking-[0.16em] text-[#67adff] uppercase transition hover:border-[#4a9eff] hover:bg-[#4a9eff]/14"
+              className="h-10 cursor-pointer border border-[#4a9eff]/40 bg-[#4a9eff]/8 font-mono text-[10px] tracking-[0.16em] text-[#67adff] uppercase transition hover:border-[#4a9eff] hover:bg-[#4a9eff]/14 disabled:cursor-wait disabled:opacity-35"
+              disabled={!checkpoint}
               onClick={spectate}
               type="button"
             >

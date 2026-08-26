@@ -1,0 +1,202 @@
+/* SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available */
+/* © 2026 Sceat — All rights reserved. See LICENSE. */
+
+.friends-manager {
+  padding: 28px;
+}
+.friends-manager > header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: #67adff;
+}
+.friends-manager > header h2 {
+  margin: 0;
+  color: var(--color-text);
+  font-size: 14px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+.friends-manager > header p {
+  margin: 3px 0 0;
+  color: var(--color-muted);
+  font-size: 9px;
+}
+.friends-manager__add {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 22px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.2);
+  padding-left: 12px;
+  color: var(--color-muted);
+}
+.friends-manager__add input {
+  min-width: 0;
+  flex: 1;
+  border: 0;
+  background: transparent;
+  padding: 11px 0;
+  color: var(--color-text);
+  font: 10px inherit;
+  outline: none;
+}
+.friends-manager__add button {
+  display: flex;
+  align-self: stretch;
+  align-items: center;
+  gap: 6px;
+  border: 0;
+  border-left: 1px solid rgba(255, 255, 255, 0.09);
+  background: rgba(74, 158, 255, 0.08);
+  padding: 0 14px;
+  color: #67adff;
+  cursor: pointer;
+  font-size: 8px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+.friends-manager__add button:disabled {
+  cursor: not-allowed;
+  opacity: 0.35;
+}
+.friends-manager__rows {
+  display: grid;
+  max-height: 360px;
+  gap: 6px;
+  margin-top: 14px;
+  overflow-y: auto;
+}
+.friends-manager__rows > p {
+  margin: 0;
+  border: 1px dashed rgba(255, 255, 255, 0.09);
+  border-radius: 8px;
+  padding: 34px 12px;
+  color: var(--color-muted);
+  font-size: 9px;
+  letter-spacing: 0.14em;
+  text-align: center;
+  text-transform: uppercase;
+}
+.friends-manager__rows article {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.025);
+  padding: 10px 12px;
+}
+.friends-manager__rows article > i {
+  width: 7px;
+  height: 7px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: #4ec97a;
+  box-shadow: 0 0 8px rgba(78, 201, 122, 0.55);
+}
+.friends-manager__rows article.is-unseen > i {
+  background: #555b63;
+  box-shadow: none;
+}
+.friends-manager__rows article > div {
+  min-width: 0;
+  flex: 1;
+}
+.friends-manager__rows strong,
+.friends-manager__rows span {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.friends-manager__rows strong {
+  color: #ded9d0;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+}
+.friends-manager__rows span {
+  margin-top: 3px;
+  color: var(--color-muted);
+  font-size: 8px;
+}
+.friends-manager__rows article > button {
+  display: grid;
+  width: 28px;
+  height: 28px;
+  place-items: center;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: #5d626d;
+  cursor: pointer;
+}
+.friends-manager__rows article > button:hover {
+  background: rgba(255, 90, 111, 0.08);
+  color: #ff667c;
+}
+.friends-manager__owned {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 6px;
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid rgba(255, 255, 255, 0.07);
+}
+.friends-manager__owned h3 {
+  grid-column: 1 / -1;
+  margin: 0 0 2px;
+  color: #777d87;
+  font-size: 8px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+.friends-manager__owned button {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 7px;
+  background: rgba(255, 255, 255, 0.025);
+  padding: 9px 10px;
+  color: #d6d1c8;
+  cursor: pointer;
+  font: 9px inherit;
+}
+.friends-manager__owned button:hover {
+  border-color: rgba(74, 158, 255, 0.4);
+  color: #67adff;
+}
+.friends-manager__owned button:disabled {
+  cursor: not-allowed;
+  opacity: 0.35;
+}
+.friends-panel__confirm {
+  padding: 28px;
+}
+.friends-panel__confirm h2 {
+  margin: 0 0 10px;
+  color: var(--color-gold);
+  font-size: 13px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+.friends-panel__confirm p {
+  color: var(--color-muted);
+  font-size: 10px;
+  line-height: 1.7;
+}
+.friends-panel__confirm > div {
+  display: flex;
+  gap: 8px;
+  margin-top: 20px;
+}
+.friends-panel__confirm button {
+  flex: 1;
+  padding: 9px;
+  font-size: 9px;
+  letter-spacing: 0.14em;
+}

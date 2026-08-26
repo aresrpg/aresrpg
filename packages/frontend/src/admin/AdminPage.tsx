@@ -16,7 +16,7 @@ const TABS: readonly Readonly<{ id: AdminView; label: string }>[] = Object.freez
 const AdminPage = ({ copy }: Readonly<{ copy: Readonly<Record<string, string>> }>) => {
   const admin = useAppStore((state) => state.admin)
   return (
-    <section className="pointer-events-auto z-[12] flex h-full min-h-0 flex-1 flex-col overflow-hidden border border-white/11 bg-[#181c1f]/98">
+    <section className="pointer-events-auto z-[12] flex h-full min-h-0 flex-1 flex-col overflow-hidden border border-border bg-surface/98">
       <nav className="flex shrink-0 items-center gap-1 overflow-x-auto border-b border-white/8 px-4 py-3">
         {TABS.map((tab) => (
           <button

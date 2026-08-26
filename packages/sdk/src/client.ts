@@ -32,7 +32,7 @@ import {
 } from './cache.ts'
 import { create_balance_cache } from './balance.ts'
 import { coin_of, receipt_personal_kiosk_cap, with_kiosk, with_personal_kiosk } from './ptb.ts'
-import { create_gas_ledger } from './gas.ts'
+import { create_gas_ledger, log_transaction_receipt } from './gas.ts'
 
 export { doors }
 export { DOORS } from './doors.gen.ts'
@@ -443,12 +443,14 @@ export function SDK({
       signatures: [signature],
       include: { effects: true, events: true, ...include },
     })
+    log_transaction_receipt(receipt)
     gas_ledger.record(receipt)
     if (gas_scope) gas_ledger.tag(receipt, gas_scope)
     if (sender) balance.invalidate(sender)
-    if (receipt?.$kind === 'FailedTransaction') {
+    const failure = failure_of(receipt)
+    if (failure !== null) {
       absorb_receipt(cache, receipt) // owned game objects the failed tx still touched stay fresh
-      throw new Error(`[sdk] transaction ${receipt_digest(receipt)} failed on-chain: ${failure_of(receipt)}`)
+      throw new Error(`[sdk] transaction ${receipt_digest(receipt)} failed on-chain: ${failure}`)
     }
     absorb_receipt(cache, receipt)
     return receipt

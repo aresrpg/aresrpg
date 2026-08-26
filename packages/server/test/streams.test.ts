@@ -4,181 +4,11 @@
 // disarmed by the chain), market observation (state-fold → push), the self stream's party
 // invite, and the cluster heartbeat packet.
 
-import { EventEmitter } from 'node:events'
-
 import { describe, expect, test } from 'bun:test'
-import type { ServerPacket } from '@aresrpg/protocol'
 
 import { create_player } from '../src/player.ts'
 
-const character = {
-  properties: {
-    id: '0xabc',
-    name: 'nox',
-    classe: 'senshi',
-    sex: 'male',
-    level: 10,
-    color_1: 1,
-    color_2: 2,
-    color_3: 3,
-    world: 'overworld',
-    x: 100,
-    z: 100,
-    spells: '{}',
-    spell_points_spent: 0,
-  },
-}
-
-const fight_node = {
-  properties: {
-    id: '0xf1',
-    world: 'overworld',
-    x: 120,
-    z: 120,
-    phase: 'placement',
-    access_a: 0,
-    access_b: 0,
-    managed: false,
-    wagered: false,
-    winner: null,
-    dungeon_room: null,
-    drops_rolled: false,
-    turn_ptr: 0,
-    round: 0,
-    turn_seed: '0',
-    placement_ms: 0,
-    turn_started_ms: 0,
-    // the indexer's machine document (graph.rs fight_machine) — the replayable blob
-    machine: JSON.stringify({
-      board: {
-        width: 8,
-        height: 8,
-        shape_mask: ['0'],
-        obstacles: [],
-        holes: [],
-        start_cells_a: [1],
-        start_cells_b: [62],
-      },
-      closed: [],
-      opener_a: '0xabc',
-      opener_b: null,
-      queue: [],
-      turn_slot: 0,
-      turn_casts: [],
-      zones: [],
-      fighters: [
-        {
-          team: 0,
-          kind: { player: { character: '0xabc', owner: '0xme', level: 10 } },
-          cell: 1,
-          ready: false,
-          dead: false,
-          settled: false,
-          forfeited: false,
-          hp: 100,
-          ap: 6,
-          mp: 3,
-          drops: [],
-          effects: [],
-          cooldowns: [],
-        },
-      ],
-    }),
-  },
-}
-
-/** `seated` puts the character in a fight BEFORE the connection exists — the custody the
- *  embody read must find (a reconnect mid-fight, or the creator seated at the fight's birth). */
-const wire = ({ seated = false, fight = fight_node } = {}) => {
-  const sent: ServerPacket[] = []
-  const ws = {
-    send: (raw: string) => sent.push(JSON.parse(raw)),
-    close: () => {},
-  }
-  const graph = {
-    read: async (cypher: string, _params?: Record<string, unknown>) => {
-      if (cypher.includes(':Fight {id:')) return [{ fight }]
-      if (cypher.includes('WHERE c.id IN')) return [{ character, weapon: null }]
-      if (cypher.includes(':Fight {world:')) return []
-      // seated: the kiosk's HOLDS edge is severed by law, so custody proves nothing and the
-      // embody gate must read the seat out of the fight's machine document instead
-      if (cypher.includes(':Character {id:'))
-        return [
-          {
-            character,
-            held_kiosk: seated ? null : '0xk',
-            kiosk: '0xk',
-            fight: seated ? fight : null,
-            party: null,
-            worn: [],
-          },
-        ]
-      if (cypher.includes(':FRIEND')) return []
-      if (cypher.includes('RESULT_FOR')) return []
-      if (cypher.includes('[:HOLDS]->(i:Item)')) return []
-      if (cypher.includes('HOLDS_CLAIM') || cypher.includes('HOLDS_VOUCHER')) return []
-      if (cypher.includes('MATCH (s:Sale)') || cypher.includes('MATCH (a:Airdrop)')) return []
-      if (cypher.includes(':Trade {id:'))
-        return [
-          {
-            trade: {
-              properties: {
-                id: '0xt1',
-                a: '0xme',
-                b: '0xher',
-                version: 2,
-                accept_a: false,
-                accept_b: false,
-                locked: false,
-                sui_a: '0',
-                sui_b: '1000',
-                caps_a: '[]',
-                caps_b: '[]',
-              },
-            },
-          },
-        ]
-      if (cypher.includes(':Trade')) return []
-      if (cypher.includes('LISTED_IN')) return []
-      if (cypher.includes(':Zone')) return []
-      if (cypher.includes(':Item {id:'))
-        return [
-          {
-            item: {
-              properties: { id: '0xi1', name: 'hat', item_type: 'straw_hat', category: 'hat', level: 3, amount: 1 },
-            },
-          },
-        ]
-      return [{ character, kiosk: '0xk', equipment: [], label: 'User', count: 1 }]
-    },
-    close: async () => {},
-  }
-  const emitter = new EventEmitter()
-  const published: { channel: string; payload: any }[] = []
-  const bus = {
-    emitter,
-    subscribe: async () => {},
-    unsubscribe: async () => {},
-    publish: async (channel: string, payload: unknown) => {
-      published.push({ channel, payload })
-      emitter.emit(channel, payload)
-    },
-    close: () => {},
-  }
-  const pubsub = {
-    emitter,
-    graph: { ...bus, indexed_checkpoint: async () => 1, sales_history: async () => [] },
-    mesh: { ...bus, heartbeat: async () => {}, cluster_online: async () => 7 },
-  }
-  return { sent, ws, graph, pubsub, published }
-}
-
-const flush = () => new Promise((resolve) => setTimeout(resolve, 0))
-
-const embody = async (player: { on_message: (raw: string) => void }) => {
-  player.on_message(JSON.stringify({ type: 'packet/track_character', character_id: '0xabc', tracked: true }))
-  await flush()
-}
+import { embody, fight_node, flush, wire } from './helpers/stream_wire.ts'
 
 describe('chat', () => {
   test('chat rides the WORLD channel and forwards to bystanders; the flood gate refuses a burst', async () => {
@@ -195,6 +25,7 @@ describe('chat', () => {
     expect(sent.find((packet) => packet.type === 'packet/chat_message')).toEqual({
       type: 'packet/chat_message',
       channel: 'world',
+      scope: null,
       from: '0xher',
       character: 'nyx',
       text: 'hey',
@@ -215,6 +46,7 @@ describe('chat', () => {
     expect(sent.find((packet) => packet.type === 'packet/chat_message')).toEqual({
       type: 'packet/chat_message',
       channel: 'whisper',
+      scope: null,
       from: '0xpal',
       character: 'nyx',
       text: 'yo',
@@ -230,9 +62,65 @@ describe('chat', () => {
     expect(sent.find((packet) => packet.type === 'packet/error' && packet.reason === 'no party')).toBeTruthy()
     expect(published.filter(({ channel }) => channel.startsWith('chat:party'))).toHaveLength(0)
   })
+
+  test('party chat stays scoped to the acting character party', async () => {
+    const { sent, ws, graph, pubsub, published } = wire()
+    const player = create_player({ ws, address: '0xme', admin: false, graph, pubsub })
+    await flush()
+    await embody(player)
+    player.dispatch({ type: 'action/party', character_id: '0xabc', party: '0xp' })
+    await flush()
+    player.on_message(JSON.stringify({ type: 'packet/chat_party', character_id: '0xabc', text: 'ready' }))
+    expect(published.some(({ channel }) => channel === 'chat:party:0xp')).toBeTrue()
+    pubsub.emitter.emit('chat:party:0xp', { address: '0xher', character: 'nyx', text: 'go' })
+    expect(sent.find((packet) => packet.type === 'packet/chat_message' && packet.channel === 'party')).toEqual({
+      type: 'packet/chat_message',
+      channel: 'party',
+      scope: '0xp',
+      from: '0xher',
+      character: 'nyx',
+      text: 'go',
+    })
+  })
 })
 
 describe('the fight watch', () => {
+  test('arming a character watch closes the initial durable-resolution snapshot gap', async () => {
+    const { sent, ws, graph, pubsub } = wire()
+    create_player({ ws, address: '0xme', admin: false, graph, pubsub })
+    await flush()
+    await flush()
+    expect(sent.filter((packet) => packet.type === 'packet/fight_resolutions').length).toBeGreaterThanOrEqual(2)
+  })
+
+  test('CharacterHeld forwards the freshly projected Character fields', async () => {
+    const { sent, ws, graph, pubsub } = wire()
+    create_player({ ws, address: '0xme', admin: false, graph, pubsub })
+    await flush()
+    const before = sent.filter((packet) => packet.type === 'packet/characters').length
+    pubsub.emitter.emit('evt:character:0xabc', {
+      type: 'CharacterHeld',
+      data: { character: '0xabc', kiosk: '0xk' },
+    })
+    await flush()
+    const rosters = sent.filter((packet) => packet.type === 'packet/characters')
+    expect(rosters).toHaveLength(before + 1)
+    expect(rosters.at(-1)?.characters.some(({ id, level }) => id === '0xabc' && level === 10)).toBeTrue()
+  })
+
+  test('a newly purchased character refreshes from the buyer social door', async () => {
+    const { sent, ws, graph, pubsub } = wire()
+    create_player({ ws, address: '0xme', admin: false, graph, pubsub })
+    await flush()
+    const before = sent.filter((packet) => packet.type === 'packet/characters').length
+    pubsub.emitter.emit('evt:social:0xme', {
+      type: 'CharacterHeld',
+      data: { character: '0xnew', kiosk: '0xk' },
+    })
+    await flush()
+    expect(sent.filter((packet) => packet.type === 'packet/characters')).toHaveLength(before + 1)
+  })
+
   test('CharacterSeated arms the watch and FightEnded keeps it through settlement', async () => {
     const { sent, ws, graph, pubsub } = wire()
     const player = create_player({ ws, address: '0xme', admin: false, graph, pubsub })
@@ -295,14 +183,27 @@ describe('the fight watch', () => {
       fight: '0xf1',
       seats: { '0xabc': 0 },
     })
+    const before = sent.filter((packet) => packet.type === 'packet/fight_state').length
+    player.on_message(JSON.stringify({ type: 'packet/spectate', character_id: '0xabc', fight: '0xf1' }))
+    await flush()
+    expect(sent.filter((packet) => packet.type === 'packet/fight_state')).toHaveLength(before + 1)
   })
 
   test('only the owned seat relays — a spectator may watch but never speak for a fighter', async () => {
-    const { sent, ws, graph, pubsub, published } = wire()
+    const machine = JSON.parse(String(fight_node.properties.machine))
+    const active_fight = {
+      properties: {
+        ...fight_node.properties,
+        phase: 'active',
+        round: 1,
+        machine: JSON.stringify({ ...machine, queue: [0] }),
+      },
+    }
+    const { sent, ws, graph, pubsub, published } = wire({ fight: active_fight })
     const player = create_player({ ws, address: '0xme', admin: false, graph, pubsub })
     await flush()
     await embody(player)
-    const action = { type: 'ready', fighter: '0' } as const
+    const action = { type: 'move_to', fighter: '0', path: ['1'] } as const
     player.on_message(JSON.stringify({ type: 'packet/fight_action', fight: '0xf1', action }))
     expect(sent.find((packet) => packet.type === 'packet/error' && packet.reason === 'not in this fight')).toBeTruthy()
     pubsub.emitter.emit('evt:character:0xabc', {
@@ -314,7 +215,7 @@ describe('the fight watch', () => {
     player.on_message(JSON.stringify({ type: 'packet/fight_action', fight: '0xf1', action }))
     expect(published.some(({ channel }) => channel === 'act:fight:0xf1')).toBe(true)
     // another fighter's intent forwards; the own echo is silent
-    pubsub.emitter.emit('act:fight:0xf1', { address: '0xfoe', action })
+    pubsub.emitter.emit('act:fight:0xf1', { kind: 'action', address: '0xfoe', action })
     expect(sent.find((packet) => packet.type === 'packet/fight_action')).toEqual({
       type: 'packet/fight_action',
       fight: '0xf1',
@@ -443,6 +344,10 @@ describe('market + self stream + heartbeat', () => {
     expect(sent.find((packet) => packet.type === 'packet/market_slice')).toMatchObject({
       observation: { categories: ['hat'], characters: false },
     })
+    expect(sent.find((packet) => packet.type === 'packet/market_counts')).toEqual({
+      type: 'packet/market_counts',
+      counts: { categories: {}, characters: 0 },
+    })
     pubsub.emitter.emit('evt:economy', {
       type: 'MarketPurchased',
       data: { kiosk: '0xk', object: '0xi9', buyer: '0xother', kind: 'item', price_mist: '5000' },
@@ -458,7 +363,8 @@ describe('market + self stream + heartbeat', () => {
       data: { kiosk: '0xother-kiosk', object: '0xc9', buyer: '0xme', kind: 'character', price_mist: '5000' },
     })
     await flush()
-    expect(sent.filter((packet) => packet.type === 'packet/characters')).toHaveLength(roster_packets + 1)
+    // custody, not sale analysis, owns both marketplace and Trade character roster refreshes
+    expect(sent.filter((packet) => packet.type === 'packet/characters')).toHaveLength(roster_packets)
   })
 
   test('a party invite naming my character forwards from the self stream', async () => {
@@ -466,36 +372,29 @@ describe('market + self stream + heartbeat', () => {
     const player = create_player({ ws, address: '0xme', admin: false, graph, pubsub })
     await flush()
     await embody(player)
-    pubsub.emitter.emit('evt:character:0xabc', { type: 'PartyInvited', data: { party: '0xp1', character: '0xabc' } })
-    expect(sent.find((packet) => packet.type === 'packet/party_invited')).toEqual({
-      type: 'packet/party_invited',
-      party: '0xp1',
-      character: '0xabc',
+    pubsub.emitter.emit('evt:character:0xabc', {
+      type: 'PartyInvitesChanged',
+      data: { party: '0xp1', character: '0xabc' },
+    })
+    await flush()
+    expect(sent.filter((packet) => packet.type === 'packet/party_invites').at(-1)).toEqual({
+      type: 'packet/party_invites',
+      character_id: '0xabc',
+      parties: [],
     })
   })
 
-  test('a trade birth arms the stream; changes re-push the row; destroy disarms', async () => {
+  test('every trade write reconciles the same bounded address roster', async () => {
     const { sent, ws, graph, pubsub } = wire()
     create_player({ ws, address: '0xme', admin: false, graph, pubsub })
     await flush()
-    pubsub.emitter.emit('evt:social:0xme', { type: 'TradeCreated', data: { trade: '0xt1', a: '0xme', b: '0xher' } })
+    const before = sent.filter((packet) => packet.type === 'packet/trades').length
+    pubsub.emitter.emit('evt:social:0xme', { type: 'TradeChanged', data: { trade: '0xt1' } })
     await flush()
-    const pushed = sent.filter((packet) => packet.type === 'packet/trade')
-    expect(pushed).toHaveLength(1)
-    expect((pushed[0] as { trade: { id: string; sui_b: string } }).trade).toMatchObject({ id: '0xt1', sui_b: '1000' })
-    pubsub.emitter.emit('evt:trade:0xt1', { type: 'TradeChanged', data: { trade: '0xt1', version: '3' } })
+    expect(sent.filter((packet) => packet.type === 'packet/trades')).toHaveLength(before + 1)
+    pubsub.emitter.emit('evt:social:0xme', { type: 'TradeDestroyed', data: { trade: '0xt1' } })
     await flush()
-    expect(sent.filter((packet) => packet.type === 'packet/trade')).toHaveLength(2)
-    pubsub.emitter.emit('evt:trade:0xt1', { type: 'TradeDestroyed', data: { trade: '0xt1' } })
-    await flush()
-    expect(sent.find((packet) => packet.type === 'packet/trade_destroyed')).toEqual({
-      type: 'packet/trade_destroyed',
-      trade: '0xt1',
-    })
-    // disarmed: further facts stay silent
-    pubsub.emitter.emit('evt:trade:0xt1', { type: 'TradeChanged', data: { trade: '0xt1', version: '4' } })
-    await flush()
-    expect(sent.filter((packet) => packet.type === 'packet/trade')).toHaveLength(2)
+    expect(sent.filter((packet) => packet.type === 'packet/trades')).toHaveLength(before + 2)
   })
 
   test('the heartbeat pushes the cluster-wide count', async () => {

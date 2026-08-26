@@ -43,7 +43,7 @@ const presence = (character_id: string, x: number, z: number): PresenceRow => ({
   character_id,
   world: 'overworld',
   owner: '0xowner',
-  name: 'Cra',
+  name: 'Yogan',
   classe: 'senshi',
   sex: 'male',
   level: 3,
@@ -207,7 +207,7 @@ test('players appear, move by id, and leave — a move for an unknown player is 
     { type: 'packet/player_left', character_id: '0xc2' },
   ])
 
-  expect(state.players['0xc1']).toMatchObject({ x: 11, z: 12, name: 'Cra' })
+  expect(state.players['0xc1']).toMatchObject({ x: 11, z: 12, name: 'Yogan' })
   expect(state.players['0xghost']).toBeUndefined()
   expect(state.players['0xc2']).toBeUndefined()
 })
@@ -275,6 +275,42 @@ test('zone spawns fold by zone and project to client-space markers', () => {
   expect(resource).toMatchObject({ x: -200, z: 180, item_type: 'green_mushroom' })
 })
 
+test('spawn markers never leak retained discoveries from another world', () => {
+  const overworld = fold(POPULATED_ZONE)
+  const stale_key = zone_key('nauvis', 97, 98)
+  const current_key = zone_key('yakutia', 97, 98)
+  const retained = {
+    ...overworld,
+    tracked_world: 'yakutia',
+    zones: {
+      [stale_key]: { ...overworld.zones[zone_key('overworld', 97, 98)]!, world: 'nauvis' },
+      [current_key]: { ...overworld.zones[zone_key('overworld', 97, 98)]!, world: 'yakutia' },
+    },
+    spawns: {
+      [stale_key]: overworld.spawns[zone_key('overworld', 97, 98)]!,
+      [current_key]: overworld.spawns[zone_key('overworld', 97, 98)]!,
+    },
+  }
+
+  expect(spawn_markers(retained, 'yakutia')).toHaveLength(3)
+  expect(spawn_markers(retained, 'yakutia').every(({ spawn_id }) => spawn_id.startsWith('yakutia:'))).toBeTrue()
+})
+
+test('only the matching reveal timer may clear the current zone discovery', () => {
+  const first = { id: 'first', zx: 97, zz: 98, mobs: 2, resources: 3, dungeon: false }
+  const second = { id: 'second', zx: 98, zz: 98, mobs: 4, resources: 5, dungeon: true }
+  const revealed = world.reduce!(app_state(), { type: 'world/zone_revealed', reveal: first })
+  const replaced = world.reduce!(revealed, { type: 'world/zone_revealed', reveal: second })
+
+  expect(world.reduce!(replaced, { type: 'world/zone_reveal_cleared', id: first.id }).world.zone_reveal).toEqual(second)
+  expect(world.reduce!(replaced, { type: 'world/zone_reveal_cleared', id: second.id }).world.zone_reveal).toBeNull()
+})
+
+test('the HUD owns one explicit public-or-party engage preference', () => {
+  const state = world.reduce!(app_state(), { type: 'world/fight_access', access: 1 })
+  expect(state.world.fight_access).toBe(1)
+})
+
 test('dungeon portals project from the zone population into client-space markers', () => {
   const packets = POPULATED_ZONE.map((packet) =>
     packet.type === 'packet/zone_spawns' ? { ...packet, portal: { x: 49_900, z: 50_300 } } : packet
@@ -299,11 +335,12 @@ test('engage hides the mob and plants a reversible sword before the transaction 
     app_state()
   )
   const group = 'overworld:97:98:s7:m2'
-  const pending = world.reduce!(loaded, { type: 'world/engage', group, started_at_ms: 12_345 })
-  const duplicate = world.reduce!(pending, { type: 'world/engage', group, started_at_ms: 12_346 })
+  const pending = world.reduce!(loaded, { type: 'world/engage', group, access: 0, started_at_ms: 12_345 })
+  const duplicate = world.reduce!(pending, { type: 'world/engage', group, access: 1, started_at_ms: 12_346 })
 
   expect(spawn_markers(pending.world).some(({ spawn_id }) => spawn_id === group)).toBe(false)
   expect(new_pending_engages(pending.world, loaded.world).map(({ group }) => group)).toEqual([group])
+  expect(pending.world.pending_engages[group]?.access).toBe(0)
   expect(new_pending_engages(duplicate.world, pending.world)).toEqual([])
   expect(engage_sword_markers(pending.world)).toEqual([
     { id: `engage:${group}`, x: -300, z: 200, placement_ms: 12_345 },

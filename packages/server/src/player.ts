@@ -39,6 +39,7 @@ import player_market from './modules/player_market.ts'
 import player_shop from './modules/player_shop.ts'
 import player_trade from './modules/player_trade.ts'
 import player_kolizeum from './modules/player_kolizeum.ts'
+import player_friends from './modules/player_friends.ts'
 import player_admin from './modules/player_admin.ts'
 import player_requests from './modules/player_requests.ts'
 import { create_request_limiter, type RequestLimiter } from './request_limiter.ts'
@@ -64,7 +65,6 @@ export type PlayerAction =
   | {
       type: 'action/track_character'
       character: Embodied
-      friends: ReadonlySet<string>
       party: string | null
       fight: string | null
       fight_seat: number | null
@@ -92,7 +92,11 @@ export type PlayerAction =
       active_fighter?: number | null
     }
   | { type: 'action/party'; character_id: string; party: string | null }
+  | { type: 'action/friends'; friends: readonly string[] }
+  | { type: 'action/character_watch_ready'; character_id: string }
+  | { type: 'action/party_invites_changed'; character_id: string }
   | { type: 'action/spectate'; character_id: string; fight: string | null }
+  | { type: 'action/fight_preview'; character_id: string; fight: string | null }
   | { type: 'close' }
 
 export type PlayerState = {
@@ -102,10 +106,11 @@ export type PlayerState = {
   allowed_characters: ReadonlySet<string>
   /** Chain-anchor signatures decide which server-managed track needs refreshing. */
   character_signatures: Readonly<Record<string, string>>
+  roster_fights: Readonly<Record<string, string>>
   /** friend addresses — address-wide visibility-cap bypass */
   friends: ReadonlySet<string>
-  /** Optional spectator watch, explicitly anchored to one owned character. */
-  spectating: Readonly<{ character_id: string; fight: string }> | null
+  spectating: Readonly<Record<string, string>>
+  fight_previews: Readonly<Record<string, string>>
   /** the marketplace category window under observation */
   market_observation: MarketObservation | null
 }
@@ -151,6 +156,7 @@ const MODULES: PlayerModule[] = [
   player_load,
   player_info,
   player_events,
+  player_friends,
   player_world,
   player_dungeon,
   player_chat,
@@ -170,6 +176,8 @@ const MODULES: PlayerModule[] = [
  *  loose enough — never per-module sprinkling). */
 const READ_PACKETS = new Set<string>([
   'packet/spectate',
+  'packet/fight_preview',
+  'packet/fight_resync',
   'packet/market_observe',
   'packet/character_owner_request',
   'packet/admin_request',
@@ -179,8 +187,10 @@ const INITIAL_STATE = (): PlayerState => ({
   characters: {},
   allowed_characters: new Set(),
   character_signatures: {},
+  roster_fights: {},
   friends: new Set(),
-  spectating: null,
+  spectating: {},
+  fight_previews: {},
   market_observation: null,
 })
 

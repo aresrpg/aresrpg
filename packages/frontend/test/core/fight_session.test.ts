@@ -10,10 +10,12 @@ import {
   reachable_fight_cells,
 } from '@aresrpg/fight'
 
-import { create_fight_session, fight_should_close } from '../../src/modules/fight.ts'
+import fight_module, { create_fight_session, fight_should_close } from '../../src/modules/fight.ts'
+import fight_chain from '../../src/modules/fight_chain.ts'
 import { initial_simulator_state, reduce_simulator_state, simulator_board } from '../../src/modules/simulator.ts'
 import { simulator_fight_setup } from '../../src/simulator/fight_setup.ts'
 import { content_catalog } from '../../src/content/catalog.ts'
+import { initial_app_state, reduce_app_state, type AppInput, type AppState } from '../../src/store.ts'
 
 const ready_setup = () => {
   const mob = content_catalog.mobs[0]!
@@ -54,6 +56,47 @@ const ready_setup = () => {
 }
 
 describe('fight session owner', () => {
+  test('local commands and reset stay inside the Fight Lab', () => {
+    const listeners = new Map<string, ((input: AppInput) => void)[]>()
+    const wallet_calls: unknown[] = []
+    const base = initial_app_state({ quality: 'medium', flat_mode: false, music_enabled: true, render_distance: null })
+    let state: AppState = {
+      ...base,
+      session: {
+        ...base.session,
+        wallet: { address: '0xme', fight: { commit_turn: (input: unknown) => void wallet_calls.push(input) } } as never,
+      },
+    }
+    const emit = (input: AppInput): void => {
+      state = reduce_app_state(state, input)
+      listeners.get(input.type)?.forEach((listener) => listener(input))
+    }
+    const context = {
+      events: {
+        on: (name: string, listener: (input: AppInput) => void) =>
+          listeners.set(name, [...(listeners.get(name) ?? []), listener]),
+      },
+      signal: new AbortController().signal,
+      get_state: () => state,
+      dispatch: emit,
+    }
+    fight_module.observe?.(context as never)
+    fight_chain.observe?.(context as never)
+    const simulator = ready_setup()
+    emit({ type: 'fight/opened', mode: 'local', setup: simulator_fight_setup(simulator), seed: simulator.seed })
+    emit({ type: 'fight/input', fight: null, origin: 'local', input: { type: 'start' } })
+    const started = state.fight.checkpoint!
+    const fighter = started.contract.queue[Number(started.contract.turn_ptr)]!
+    const origin = started.contract.fighters[Number(fighter)]!.cell
+    const target = reachable_fight_cells(started, fighter).find((cell) => cell !== origin)!
+    const path = fight_path_to(started, fighter, target)!
+    emit({ type: 'fight/input', fight: null, origin: 'local', input: { type: 'move_to', fighter, path } })
+    expect(state.fight.checkpoint?.contract.fighters[Number(fighter)]?.cell).toBe(target)
+    emit({ type: 'fight/reset_turn', fight: null })
+    expect(state.fight.checkpoint?.contract.fighters[Number(fighter)]?.cell).toBe(origin)
+    expect(wallet_calls).toEqual([])
+  })
+
   test('mounts placement without starting, then retains one runtime across commands', () => {
     const reconciled: unknown[] = []
     let now = 60_000n
@@ -119,7 +162,7 @@ describe('fight session owner', () => {
     local.apply({ type: 'start' })
     streamed.apply({ type: 'start' })
     const fighter = local.state()!.checkpoint.contract.queue[0]!
-    const action = Object.freeze({ type: 'forfeit' as const, fighter })
+    const action = Object.freeze({ type: 'move_to' as const, fighter, path: Object.freeze([]) })
 
     local.apply(action)
     streamed.apply(decode_fight_action(encode_fight_action(action)))

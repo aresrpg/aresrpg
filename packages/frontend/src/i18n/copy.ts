@@ -60,6 +60,7 @@ export type AppCopy = Readonly<{
   game_frozen: string
   gas_budget_toast: string
   game_paused_toast: string
+  movement_sync_toast: string
   network_testnet: string
   page_pending_title: string
   page_pending_body: string
@@ -72,6 +73,7 @@ export type AppCopy = Readonly<{
   create_title: string
   create_lead: string
   class_label: string
+  view_class_spells: string
   sex_label: string
   appearance_label: string
   name_label: string
@@ -108,6 +110,10 @@ export type AppCopy = Readonly<{
   shop_page: Readonly<Record<string, unknown>>
   airdrop_page: Readonly<Record<string, unknown>>
   marketplace_page: Readonly<Record<string, unknown>>
+  kolizeum_page: Readonly<Record<string, string>>
+  friends_panel: Readonly<Record<string, string>>
+  party_panel: Readonly<Record<string, string>>
+  trade_panel: Readonly<Record<string, string>>
   characters_page: Readonly<Record<string, unknown>>
   settings_page: Readonly<Record<string, string>>
   demo_page: Readonly<Record<string, string>>

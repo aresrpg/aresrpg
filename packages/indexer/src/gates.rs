@@ -63,7 +63,6 @@ mod tests {
         ("progression", "Hp"),
         ("forgemagie", "ForgeState"),
         ("pet", "FeedState"),
-        ("party", "Member"),
         ("fight", "Fighter"),
         ("fight", "FighterKind"),
         ("fight", "MobSnapshot"),
@@ -102,22 +101,12 @@ mod tests {
         ("fight", "FightStarted"),
         ("fight", "TurnSeedUsed"),
         ("fight", "FightEnded"),
+        ("fight", "FightClosable"),
+        ("fight", "FightClosed"),
         ("fight", "DropsRolled"),
         ("zone", "ZoneSearched"),
         ("gathering", "ResourceGathered"),
         ("gathering", "RareGathered"),
-        ("party", "PartyCreated"),
-        ("party", "PartyInvited"),
-        ("party", "PartyJoined"),
-        ("party", "PartyLeft"),
-        ("friends", "FriendListCreated"),
-        ("friends", "FriendAdded"),
-        ("friends", "FriendRemoved"),
-        ("trade", "TradeCreated"),
-        ("trade", "TradeChanged"),
-        ("trade", "TradeAccepted"),
-        ("trade", "TradeLocked"),
-        ("trade", "TradeDestroyed"),
         ("kolizeum", "KolizeumCreated"),
         ("kolizeum", "KolizeumPaid"),
         ("shop", "SaleBought"),
@@ -158,9 +147,7 @@ mod tests {
     /// reason. `world::WorldCreated` fires once per world at seeding time, before
     /// any player can be watching, and the World object's own projection carries
     /// everything the event would have said.
-    const DEFERRED_EVENTS: &[(&str, &str)] = &[
-        ("world", "WorldCreated"),
-    ];
+    const DEFERRED_EVENTS: &[(&str, &str)] = &[("world", "WorldCreated")];
 
     fn repo_root() -> PathBuf {
         Path::new(env!("CARGO_MANIFEST_DIR"))
@@ -418,8 +405,7 @@ mod tests {
         let game = load_modules(&root.join("packages/move/build/aresrpg/bytecode_modules"));
         let math =
             load_modules(&root.join("packages/move-math/build/aresrpg_math/bytecode_modules"));
-        let seed =
-            load_modules(&root.join("packages/seed/build/aresrpg_seed/bytecode_modules"));
+        let seed = load_modules(&root.join("packages/seed/build/aresrpg_seed/bytecode_modules"));
 
         let mut snapshot = String::from(
             "# Move layout snapshot — REGENERATE DELIBERATELY with `UPDATE_LAYOUTS=1 cargo test`\n\
@@ -471,37 +457,37 @@ mod tests {
             repo_root().join("packages/move/sources"),
             repo_root().join("packages/seed/sources"),
         ] {
-        for entry in std::fs::read_dir(&sources).expect("listing move sources") {
-            let path = entry.expect("dir entry").path();
-            if path.extension().is_none_or(|e| e != "move") {
-                continue;
+            for entry in std::fs::read_dir(&sources).expect("listing move sources") {
+                let path = entry.expect("dir entry").path();
+                if path.extension().is_none_or(|e| e != "move") {
+                    continue;
+                }
+                let text = std::fs::read_to_string(&path).expect("reading move source");
+                let module = text
+                    .lines()
+                    .find_map(|line| {
+                        line.trim()
+                            .strip_prefix("module aresrpg::")
+                            .or_else(|| line.trim().strip_prefix("module aresrpg_seed::"))
+                            .map(|rest| rest.trim_end_matches(';').to_string())
+                    })
+                    .unwrap_or_else(|| panic!("no module decl in {}", path.display()));
+                let mut rest = text.as_str();
+                while let Some(at) = rest.find("event::emit(") {
+                    rest = &rest[at + "event::emit(".len()..];
+                    let name: String = rest
+                        .trim_start()
+                        .chars()
+                        .take_while(|c| c.is_ascii_alphanumeric() || *c == '_')
+                        .collect();
+                    assert!(
+                        !name.is_empty(),
+                        "unparseable event::emit in {}",
+                        path.display()
+                    );
+                    emitted.push((module.clone(), name));
+                }
             }
-            let text = std::fs::read_to_string(&path).expect("reading move source");
-            let module = text
-                .lines()
-                .find_map(|line| {
-                    line.trim()
-                        .strip_prefix("module aresrpg::")
-                        .or_else(|| line.trim().strip_prefix("module aresrpg_seed::"))
-                        .map(|rest| rest.trim_end_matches(';').to_string())
-                })
-                .unwrap_or_else(|| panic!("no module decl in {}", path.display()));
-            let mut rest = text.as_str();
-            while let Some(at) = rest.find("event::emit(") {
-                rest = &rest[at + "event::emit(".len()..];
-                let name: String = rest
-                    .trim_start()
-                    .chars()
-                    .take_while(|c| c.is_ascii_alphanumeric() || *c == '_')
-                    .collect();
-                assert!(
-                    !name.is_empty(),
-                    "unparseable event::emit in {}",
-                    path.display()
-                );
-                emitted.push((module.clone(), name));
-            }
-        }
         }
         assert!(!emitted.is_empty(), "no events found — wrong sources path?");
 
@@ -599,7 +585,11 @@ mod tests {
             load_modules(&repo_root().join("packages/seed/build/aresrpg_seed/bytecode_modules"));
         for (module, name, mirrored) in crate::events::ROUTED_FIELDS {
             // content events live in the seed package since the living-content split
-            let build = if SEED.iter().any(|(m, _)| m == module) { &seed } else { &game };
+            let build = if SEED.iter().any(|(m, _)| m == module) {
+                &seed
+            } else {
+                &game
+            };
             let declared = declared_fields(build, module, name);
             let mirror = mirrored
                 .iter()
@@ -626,5 +616,56 @@ mod tests {
                  and regenerate with `UPDATE_LAYOUTS=1 cargo test`"
             );
         }
+    }
+
+    /// A `PurchaseCap` handed to an arbitrary caller can be transferred or burned, permanently
+    /// locking the exclusively-listed asset (the 2026-08-26 trade audit). Only the two withdraw
+    /// doors may return one — they hand the CALLER their OWN cap back, so raw misuse strands
+    /// only the caller's own asset. Any new public/entry door returning a cap must be argued
+    /// here before it ships.
+    #[test]
+    fn only_the_own_cap_withdraw_doors_return_a_purchase_cap() {
+        const ALLOWED: &[&str] = &["trade_take_i", "trade_take_c"];
+        let sources = repo_root().join("packages/move/sources");
+        let mut leaks = vec![];
+        for entry in std::fs::read_dir(&sources).expect("listing move sources") {
+            let path = entry.expect("dir entry").path();
+            if path.extension().is_none_or(|e| e != "move") {
+                continue;
+            }
+            let text = std::fs::read_to_string(&path).expect("reading move source");
+            // Split on public/entry declarations; `public(package)` is internal and exempt.
+            let mut rest = text.as_str();
+            while let Some(at) = rest
+                .find("public fun ")
+                .map(|i| (i, 11))
+                .or_else(|| rest.find("entry fun ").map(|i| (i, 10)))
+            {
+                let (index, keyword_len) = at;
+                rest = &rest[index + keyword_len..];
+                let name: String = rest
+                    .chars()
+                    .take_while(|c| c.is_ascii_alphanumeric() || *c == '_')
+                    .collect();
+                // the signature ends at the body brace; returns sit between `)` and `{`
+                let Some(body) = rest.find('{') else { break };
+                let signature = &rest[..body];
+                if signature.contains("PurchaseCap")
+                    && signature
+                        .rsplit(')')
+                        .next()
+                        .is_some_and(|ret| ret.contains("PurchaseCap"))
+                    && !ALLOWED.contains(&name.as_str())
+                {
+                    leaks.push(format!("{}::{name}", path.display()));
+                }
+            }
+        }
+        assert!(
+            leaks.is_empty(),
+            "PURCHASE-CAP LEAK — these public doors return a PurchaseCap an attacker can burn \
+             to permanently lock the listed asset: {leaks:?}. Consume the cap inside the door \
+             (purchase_with_cap) and return the asset + TransferRequest instead."
+        );
     }
 }

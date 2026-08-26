@@ -68,7 +68,7 @@ export const MobModal = ({ cell, close, copy }: Readonly<{ cell: bigint; close: 
           <label className="text-[8px] tracking-[0.16em] text-[#6b7280] uppercase">
             {template(text.level, { level: placement.level })}
             <select
-              className="mt-2 block h-9 w-24 border border-white/10 bg-[#0a0a0f] px-2 text-[10px] text-[#e8e4dc]"
+              className="mt-2 block h-9 w-24 border border-white/10 bg-bg px-2 text-[10px] text-[#e8e4dc]"
               onChange={(event) =>
                 dispatch_app({
                   type: 'simulator/mob_placed',

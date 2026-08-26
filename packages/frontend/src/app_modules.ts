@@ -33,6 +33,10 @@ export const PLAYER_APP_MODULES = Object.freeze([
   // unarmed world module leaves the discovery prompt pressing a key that does nothing at all
   'world',
   'dungeon',
+  'kolizeum',
+  'friends',
+  'party',
+  'trade',
   'marketplace',
 ]) satisfies readonly AppModuleName[]
 

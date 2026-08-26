@@ -45,5 +45,5 @@ void register_service_worker()
   .then(boot)
   .catch((error: unknown) => {
     console.error('The application failed to boot.', error)
-    root.render(<main className="fixed inset-0 bg-[#0a0a0f]" />)
+    root.render(<main className="fixed inset-0 bg-bg" />)
   })

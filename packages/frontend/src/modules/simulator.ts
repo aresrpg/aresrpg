@@ -5,10 +5,14 @@
 import { type FightBoard } from '@aresrpg/fight'
 import {
   character_equipment_slots,
+  characteristic_value_cost,
+  characteristic_values_cost,
   characteristic_names,
   is_class_name,
   max_level,
+  type ClassName,
   type CharacteristicName,
+  type CharacteristicValues,
 } from '@aresrpg/immutable'
 
 import fight_boards from '../../../../seed/content/fight_boards.json'
@@ -129,10 +133,12 @@ const equipment_slots = new Set<string>(character_equipment_slots)
 export const valid_simulator_character = (character: Readonly<SimulatorCharacter>): boolean => {
   const stats = CHARACTER_STATS.map((stat) => character[stat])
   const spell_levels = Object.values(character.spell_levels)
+  const classe = is_class_name(character.classe) ? character.classe : null
+  const spent = classe ? characteristic_values_cost(classe, character_stat_values(character)) : null
   return (
     character.id.trim().length > 0 &&
     character.name.trim().length > 0 &&
-    is_class_name(character.classe) &&
+    classe !== null &&
     typeof character.male === 'boolean' &&
     character.colors.length === 3 &&
     character.colors.every(is_hex_color) &&
@@ -140,7 +146,8 @@ export const valid_simulator_character = (character: Readonly<SimulatorCharacter
     character.level >= 1 &&
     character.level <= max_level &&
     stats.every((value) => Number.isInteger(value) && value >= 0) &&
-    stats.reduce((total, value) => total + value, 0) <= stat_budget(character.level) &&
+    spent !== null &&
+    spent <= stat_budget(character.level) &&
     spell_levels.every((level) => Number.isInteger(level) && level >= 1) &&
     spell_levels.reduce((total, level) => total + spell_point_cost(level), 0) <= spell_budget(character.level) &&
     Object.entries(character.loadout).every(
@@ -195,7 +202,8 @@ export const decode_simulator_character = (value: unknown): SimulatorCharacter |
     spell_levels: number_record(row.spell_levels),
     loadout: string_record(row.loadout),
   })
-  return valid_simulator_character(character) ? character : null
+  const fitted = refit_character(character)
+  return valid_simulator_character(fitted) ? fitted : null
 }
 
 const clamp_int = (value: number, min: number, max: number): number =>
@@ -206,15 +214,32 @@ const character_stat_values = (character: Readonly<SimulatorCharacter>): Readonl
     Object.fromEntries(CHARACTER_STATS.map((stat) => [stat, character[stat]])) as Record<CharacterStat, number>
   )
 
+const empty_character_stats = (): Readonly<Record<CharacterStat, number>> =>
+  Object.freeze(Object.fromEntries(CHARACTER_STATS.map((stat) => [stat, 0])) as Record<CharacterStat, number>)
+
+const affordable_stat_value = (classe: ClassName, stat: CharacterStat, wanted: number, budget: number): number => {
+  let value = clamp_int(wanted, 0, stat === 'vitality' && classe === 'ikari' ? budget * 2 : budget)
+  while (value > 0) {
+    const cost = characteristic_value_cost(classe, stat, value)
+    if (cost !== null && cost <= budget) return value
+    value -= 1
+  }
+  return 0
+}
+
 const fit_stats = (
-  stats: Readonly<Record<CharacterStat, number>>,
+  classe: ClassName,
+  stats: CharacteristicValues,
   budget: number
 ): Readonly<Record<CharacterStat, number>> => {
-  const spent = CHARACTER_STATS.reduce((total, stat) => total + stats[stat], 0)
-  if (spent <= budget) return stats
+  let left = budget
   return Object.freeze(
     Object.fromEntries(
-      CHARACTER_STATS.map((stat) => [stat, spent === 0 ? 0 : Math.floor((stats[stat] * budget) / spent)])
+      CHARACTER_STATS.map((stat) => {
+        const value = affordable_stat_value(classe, stat, stats[stat], left)
+        left -= characteristic_value_cost(classe, stat, value) ?? 0
+        return [stat, value]
+      })
     ) as Record<CharacterStat, number>
   )
 }
@@ -244,7 +269,8 @@ const fit_spells = (
 }
 
 const refit_character = (character: Readonly<SimulatorCharacter>): SimulatorCharacter => {
-  const stats = fit_stats(character_stat_values(character), stat_budget(character.level))
+  if (!is_class_name(character.classe)) return character
+  const stats = fit_stats(character.classe, character_stat_values(character), stat_budget(character.level))
   return Object.freeze({
     ...character,
     ...stats,
@@ -356,7 +382,12 @@ export const reduce_simulator_state = (
     return map_character(state, input.character_id, (character) =>
       character.classe === input.classe
         ? character
-        : Object.freeze({ ...character, classe: input.classe, spell_levels: Object.freeze({}) })
+        : Object.freeze({
+            ...character,
+            ...empty_character_stats(),
+            classe: input.classe,
+            spell_levels: Object.freeze({}),
+          })
     )
   }
   if (input.type === 'simulator/character_sex_set')
@@ -367,16 +398,27 @@ export const reduce_simulator_state = (
     )
   if (input.type === 'simulator/stat_set')
     return map_character(state, input.character_id, (character) => {
+      if (!is_class_name(character.classe)) return character
+      const { classe } = character
       const stats = character_stat_values(character)
-      const others = CHARACTER_STATS.reduce((total, stat) => total + (stat === input.stat ? 0 : stats[stat]), 0)
+      const others = CHARACTER_STATS.reduce(
+        (total, stat) =>
+          total + (stat === input.stat ? 0 : (characteristic_value_cost(classe, stat, stats[stat]) ?? 0)),
+        0
+      )
       return Object.freeze({
         ...character,
-        [input.stat]: clamp_int(input.value, 0, Math.max(0, stat_budget(character.level) - others)),
+        [input.stat]: affordable_stat_value(
+          classe,
+          input.stat,
+          input.value,
+          Math.max(0, stat_budget(character.level) - others)
+        ),
       })
     })
   if (input.type === 'simulator/stats_reset')
     return map_character(state, input.character_id, (character) =>
-      Object.freeze({ ...character, ...Object.fromEntries(CHARACTER_STATS.map((stat) => [stat, 0])) })
+      Object.freeze({ ...character, ...empty_character_stats() })
     )
   if (input.type === 'simulator/spell_level_set')
     return map_character(state, input.character_id, (character) => {

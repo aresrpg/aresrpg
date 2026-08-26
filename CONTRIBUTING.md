@@ -91,8 +91,8 @@ previous tag's deployment — no revert commit, no re-promotion needed. Diff two
 
 ## The quality bar
 
-- `.claude/rules/craft.md` + `.claude/rules/code-law.md` are the operating rules — pure functions,
-  snake_case, no classes, immutability by default, effects at the edges.
+- `ARCHITECTURE.md` owns the system model; `AGENTS.md` owns the working agreement;
+  `.claude/rules/code-law.md` explains the executable TypeScript law.
 - **RED-FIRST**: a bug fix's first artifact is a failing test reproducing it; the PR carries
   both runs.
 - Every player-facing string ships in all six locales in the same commit.
@@ -100,9 +100,9 @@ previous tag's deployment — no revert commit, no re-promotion needed. Diff two
 
 ## Scope
 
-Welcome: client bugs, performance, UX, engine work, docs. Game content and balance are not
-part of this repository — proposals touching them start as issues (design conversations,
-not PRs).
+Welcome: client bugs, performance, UX, engine work, contracts, server/indexer work, docs, and
+authored content. Content identity and balance changes start as issues because published rows can
+affect live objects and fights; follow `CONTENT_UPGRADES.md` before implementation.
 
 ## License
 

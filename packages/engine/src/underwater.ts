@@ -65,6 +65,13 @@ export const is_submerged = (
  * the ambient camera accessors cannot be used inside a post graph. */
 export type SceneView = Readonly<{ ray: Node<'vec3'>; eye_y: Node<'float'> }>
 
+export type UnderwaterFrameState = Readonly<{ submerged: boolean; suppressed?: boolean; dt: number }>
+
+/** A mounted fight board is a tactical presentation layer above world water. The physical eye
+ * may remain submerged, but neither per-pixel immersion nor refraction belongs on that layer. */
+export const underwater_effect_active = (state: Pick<UnderwaterFrameState, 'submerged' | 'suppressed'>): boolean =>
+  state.submerged && state.suppressed !== true
+
 export type UnderwaterPass = Readonly<{
   /** Wraps the scene-sample uv with the gated time-driven wobble; identity when dry. */
   warp_uv: (uv_node: Node<'vec2'>) => Node<'vec2'>
@@ -75,7 +82,7 @@ export type UnderwaterPass = Readonly<{
   apply: (col: Node<'vec3'>, frag_dist: Node<'float'>, view: SceneView) => Node<'vec3'>
   /** Per-frame CPU push of the eye's hysteresis state + a clock tick. Only the screen warp and
    * the droplet exit edge need it — the tint is per-pixel and needs no flag. */
-  update: (state: Readonly<{ submerged: boolean; dt: number }>) => void
+  update: (state: UnderwaterFrameState) => void
   /** True for the one update() call in which the eye crossed below→above — the lens-water
    * droplet trigger's edge (droplets on EXIT only, never on entry). */
   just_exited: () => boolean
@@ -93,6 +100,7 @@ export const create_underwater_pass = ({
   palette: LiquidPalette
 }>): UnderwaterPass => {
   const u_active = uniform(0)
+  const u_enabled = uniform(1)
   const u_time = uniform(0)
   // Live uniform gated to 0 on low (tint-only tier) — the single graph serves every tier.
   const u_warp_amp = uniform(quality === 'low' ? 0 : UNDERWATER.warp_amp)
@@ -132,7 +140,8 @@ export const create_underwater_pass = ({
     const through_water = frag_dist.mul(submerged_fraction)
     // Add the vertical column ABOVE the fragment: the light that lit it came down through the
     // water first, so a deep bed is dim and blue even when the eye is a metre away.
-    const path = through_water.add(max(water_level.sub(frag_y), float(0))).mul(water_gate)
+    const immersion_gate = water_gate.mul(u_enabled)
+    const path = through_water.add(max(water_level.sub(frag_y), float(0))).mul(immersion_gate)
     const absorb = vec3(
       exp(path.mul(-UNDERWATER.absorption[0]!)),
       exp(path.mul(-UNDERWATER.absorption[1]!)),
@@ -140,7 +149,7 @@ export const create_underwater_pass = ({
     )
     const inscatter = float(1).sub(exp(path.div(float(UNDERWATER.visibility_m)).negate()))
     // Depth darken: the frame dims with the EYE's depth, floored so the bed stays legible.
-    const eye_depth = max(water_level.sub(eye_y), float(0)).mul(water_gate)
+    const eye_depth = max(water_level.sub(eye_y), float(0)).mul(immersion_gate)
     const darken = float(1).sub(
       eye_depth
         .div(float(UNDERWATER.darken_depth_m))
@@ -153,14 +162,16 @@ export const create_underwater_pass = ({
   // Lens-water trigger: latched by update(), polled via just_exited(). Starts false — a camera
   // that boots already submerged is an entry, never a false exit.
   let exited_this_call = false
-  let active = false
+  let was_submerged = false
 
-  const update: UnderwaterPass['update'] = ({ submerged, dt }) => {
-    exited_this_call = active && !submerged
-    active = submerged
-    u_active.value = submerged ? 1 : 0
+  const update: UnderwaterPass['update'] = ({ submerged, suppressed = false, dt }) => {
+    const effect_active = underwater_effect_active({ submerged, suppressed })
+    exited_this_call = was_submerged && !submerged && !suppressed
+    was_submerged = submerged
+    u_enabled.value = suppressed ? 0 : 1
+    u_active.value = effect_active ? 1 : 0
     // Advance the warp clock only while submerged — re-entry starts from a settled wobble.
-    if (submerged && Number.isFinite(dt)) u_time.value += dt
+    if (effect_active && Number.isFinite(dt)) u_time.value += dt
   }
 
   return Object.freeze({ warp_uv, apply, update, just_exited: () => exited_this_call })

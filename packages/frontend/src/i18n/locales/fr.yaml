@@ -52,6 +52,7 @@ indexing_lag_warning: Les actions en jeu peuvent apparaître en retard
 game_frozen: Le jeu est actuellement gelé. Consultez Discord pour plus d’informations.
 gas_budget_toast: Cette action dépassait les frais de réseau que nous réservons. Elle n’a pas été exécutée et ne vous a rien coûté — merci de le signaler.
 game_paused_toast: Le jeu est en pause pour une mise à jour. Votre action n’a pas été exécutée — réessayez dans quelques minutes.
+movement_sync_toast: Votre position est encore en cours de synchronisation. Continuez à avancer normalement, puis réessayez dans un instant.
 network_testnet: TESTNET
 page_pending_title: Cette page est en reconstruction
 page_pending_body: Sa place reste visible pendant que nous la restaurons proprement.
@@ -63,6 +64,7 @@ create_character: Créer un personnage
 create_title: Créez votre personnage
 create_lead: Choisissez une classe, vos couleurs et un nom. Le monde vit déjà derrière vous.
 class_label: Classe
+view_class_spells: Voir les sorts de cette classe
 sex_label: Sexe
 appearance_label: Apparence · 3 couleurs
 name_label: Nom
@@ -90,6 +92,86 @@ wallet_send_pending: Envoi des SUI…
 wallet_send_success: SUI envoyés
 wallet_send_failed: Le transfert de SUI a échoué
 wallet_close: Fermer
+kolizeum_page:
+  title: Kolizeum — Table de guerre
+  tagline: les vainqueurs partagent 90 % du pot · commission de 10 %
+  tab_open: Salons ouverts
+  tab_mine: Mes salons
+  col_format: Format
+  col_access: Accès
+  col_status: Statut
+  col_pledge: Mise
+  col_full_pot: Pot complet
+  col_creator: Créateur
+  access_public: Public
+  access_friends: Amis
+  status_open: Ouvert
+  status_started: En cours
+  status_settling: Règlement
+  empty: Aucun salon
+  selected: Salon sélectionné
+  side_a: Camp A
+  side_b: Camp B
+  total_pot: Pot actuel
+  free: Gratuit
+  join_a: Rejoindre le camp A
+  join_b: Rejoindre le camp B
+  create_title: Créer un salon
+  form_format: Format
+  form_access: Accès
+  form_pledge: Mise par joueur (SUI)
+  form_max_diff: Écart de niveau max
+  form_character: Avec le personnage
+  no_character: Aucun personnage disponible
+  full_pot_summary: Pot {{format}} complet = {{pot}} SUI · 90 % aux vainqueurs
+  create_cta: Créer le salon
+friends_panel:
+  title: Amis
+  observed: Observé à proximité
+  unseen: Pas observé actuellement
+  none_observed: Aucun ami observé à proximité
+  empty: Aucun ami pour le moment
+  placeholder: Nom, SuiNS ou adresse 0x
+  add: Ajouter un ami
+  remove: Retirer
+  remove_title: Retirer un ami
+  remove_body: Retirer {{name}} de votre liste d'amis ?
+  error_no_suins: Aucune adresse SuiNS ne correspond à {{name}}.
+  error_target: Saisissez un personnage, un nom SuiNS ou une adresse Sui complète.
+  error_self: Vous ne pouvez pas vous ajouter.
+  error_duplicate: Ce joueur est déjà dans votre liste d'amis.
+  cancel: Annuler
+party_panel:
+  title: Groupe
+  adventurer: Aventurier
+  invited_by: '{{name}} vous invite'
+  accept: Accepter
+  decline: Refuser
+  leader: Chef
+  leave: Quitter
+  disband: Dissoudre
+  kick: Exclure
+  rescind: Annuler l’invitation
+  invite_owned: Inviter ce personnage
+trade_panel:
+  inbox: Échanges
+  close: Fermer
+  title: Échange entre joueurs
+  locked: Verrouillé · réclamations permanentes
+  negotiating: Négociation · chaque changement annule les accords
+  your_offer: Votre offre
+  their_offer: Leur offre
+  accepted: Accepté
+  reviewing: En révision
+  add_item: Ajouter un objet
+  add_character: Ajouter un personnage
+  sui: Ajouter des SUI
+  withdraw: Retirer
+  withdraw_sui: Retirer mes SUI
+  accept: Accepter cette version
+  claim: Réclamer
+  claim_sui: Réclamer {{amount}} SUI
+  finish: Terminer l'échange
 world_hud:
   compass_label: Boussole
   zone: ZONE
@@ -104,6 +186,7 @@ world_hud:
   biome: Biome
   world_map: Carte du monde
   menu_group: Inviter dans le groupe
+  menu_friend: Ajouter aux amis
   menu_trade: Échanger
   menu_message: Envoyer un message
   mount_prompt: 'Appuyez sur {{key}} pour monter'
@@ -174,7 +257,8 @@ world_hud:
   zone_reroll_title: 'Zone prête à renouveler'
   zone_press_reroll: 'Appuyez sur {{key}} pour relancer la zone'
   zone_searching: 'Exploration de la zone…'
-  zone_searched_toast: 'La zone livre ses secrets'
+  zone_revealed: 'Zone révélée'
+  zone_coordinates: 'Secteur {{zx}} · {{zz}}'
   zone_mobs_found: '{{count}} monstres trouvés'
   zone_resources_found: '{{count}} ressources trouvées'
   zone_dungeon_spotted: 'Donjon repéré'
@@ -297,6 +381,7 @@ marketplace_page:
   delist_success: Annonce retirée
   buy_pending: Achat en cours…
   buy_success: Achat terminé
+  character_roster_full: Un 7e personnage ne peut pas rejoindre votre effectif — la limite est de 6
   collect_pending: Retrait des revenus…
   collect_success: Revenus retirés
 shop_page:
@@ -427,7 +512,7 @@ simulator_page:
   spell_level: Niveau de {name}
   spell_level_option: 'Niv {level} · {cost} pts'
   class_shugo_title: Gardien
-  class_tomoda_title: Tomoda
+  class_tomoda_title: Maître des bêtes
   class_rojin_title: Prospecteur
   class_yajin_title: Assassin
   class_tokei_title: Chronomancien
@@ -452,7 +537,7 @@ simulator_page:
   spell_unlock: Débloqué au niveau {level}
   reset: Réinitialiser
   delete_confirm: Confirmer la suppression
-  class_change_hint: Changer de classe réinitialise les niveaux de sorts investis
+  class_change_hint: Changer de classe réinitialise les caractéristiques naturelles et les niveaux de sorts investis
   spells_unavailable: Aucun sort n'est débloqué à ce niveau
   save_character: Enregistrer le personnage
   equipment: Équipement, reliques et cosmétiques
@@ -542,6 +627,7 @@ fight_hud:
   unit_turns: tours
   chat_title: Chat
   chat_tab_general: Général
+  chat_tab_party: Groupe
   chat_tab_combat: Combat
   chat_placeholder: Dites quelque chose…
   chat_you: Vous
@@ -558,6 +644,9 @@ fight_hud:
   result_survived: Survivant
   result_collecting: Récupération du butin…
   result_continue: Continuer
+  result_close: Fermer
+  fight_finalize_pending: Le nettoyage du combat est prêt.
+  fight_finalize_button: Finaliser
   result_retry: Réessayer
   level_up_title: Niveau supérieur
   level_up_reached: Niveau atteint
@@ -818,6 +907,8 @@ encyclopedia_page:
     life_steal: VOL DE VIE
     life_steal_desc: "Les effets de sort de drain infligent des dégâts et soignent le lanceur de la moitié des points de vie réellement perdus par la cible. Seul le drain d'un joueur soigne : un monstre lançant le même sort inflige ses dégâts et ne se soigne pas."
     life_steal_note: Les dégâts passent d'abord par la formule standard, puis le lanceur récupère la moitié des points de vie réellement perdus par la cible visée — un coup redirigé sur un autre combattant, ou converti en soin par la cible, ne rend rien.
+    chatiment: CHÂTIMENT
+    chatiment_desc: Un Châtiment convertit les points de vie non létaux réellement perdus dans sa caractéristique. Chaque tour de combattant actif possède son propre plafond ; les tours suivants créent des bonus séparés de cinq tours. Les dégâts des monstres comptent entièrement. Les dégâts provenant d'un joueur et leur plafond sont divisés par deux. Ares n'utilise pas l'érosion.
     healing: SOIN
     healing_desc: Les soins appliquent la valeur de base du sort, augmentée d'un pourcentage de votre Intelligence, plus un bonus de Soin fixe venant de l'équipement et des buffs. Le soin est plafonné aux PV maximum de la cible.
     healing_intel_value: +1% de soin par point d'Intelligence
@@ -829,6 +920,7 @@ encyclopedia_page:
     points_per_level: POINTS PAR NIVEAU
     stat_points: Points de stat
     stat_points_value: '{{n}} par niveau'
+    stat_costs_desc: Le coût dépend de la classe et de la valeur naturelle actuelle. Chaque page de classe affiche tous ses paliers.
     spell_points: Points de sort
     spell_points_value: '{{n}} par niveau'
     xp_milestones: PALIERS D'XP
@@ -879,7 +971,7 @@ encyclopedia_page:
     role_archer: Archer
     role_prospector: Prospecteur
     role_brawler: Bagarreur
-    role_tomoda: Tomoda
+    role_tomoda: Maître des bêtes
     role_gambler: Flambeur
     role_healer: Soigneur
     weapon_daggers: Dagues
@@ -1026,6 +1118,10 @@ encyclopedia_page:
   unlimited: ILLIMITÉ
   cooldown: RECHARGE
   cooldown_none: AUCUNE
+  characteristic_costs: Coût des caractéristiques
+  characteristic_costs_desc: Les points naturels suivent le palier de cette classe. L’équipement ne change pas le coût.
+  characteristic_cost_band: '{{cost}} pts → +{{gain}} · ≤{{cap}}'
+  characteristic_cost_unlimited: '{{cost}} pts → +{{gain}} · sans limite'
   turns_value: '{{n}} TOURS'
   targeting: CIBLAGE
   effect_zone: ZONE D'EFFET
@@ -1394,6 +1490,7 @@ characters_page:
     add_point: 'Ajouter un point à {{stat}}'
     remove_point: 'Retirer un point de {{stat}}'
     tx_pending: 'Attribution…'
+    point_cost: '{{cost}} pts → +{{gain}}'
     tx_success: 'Points de caractéristiques attribués'
   spells:
     range_modifiable: 'Portée modifiable'

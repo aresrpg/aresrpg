@@ -85,7 +85,7 @@ export const StructurePackEditor = ({
                 <label className="min-w-0">
                   <span className="mb-1 block text-[7px] tracking-[0.12em] text-[#737883] uppercase">Type</span>
                   <select
-                    className="h-8 w-full min-w-0 border border-white/12 bg-[#090a10] px-2 text-[8px] outline-none focus:border-[#4a9eff]/70"
+                    className="h-8 w-full min-w-0 border border-white/12 bg-bg px-2 text-[8px] outline-none focus:border-[#4a9eff]/70"
                     onChange={(event) =>
                       replace_rows(
                         rows.map((candidate, row_index) =>
@@ -98,7 +98,7 @@ export const StructurePackEditor = ({
                     value={type}
                   >
                     {type_names.map((name) => (
-                      <option className="bg-[#090a10]" key={name} value={name}>
+                      <option className="bg-bg" key={name} value={name}>
                         {name}
                       </option>
                     ))}

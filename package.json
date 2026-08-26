@@ -11,10 +11,11 @@
     "dev:app": "bun run --cwd packages/frontend dev --host 127.0.0.1 --port 5173 --strictPort",
     "dev:frontend": "bun run dev:app",
     "dev": "bun run dev:app",
+    "repin:local": "bun scripts/repin_local.mjs",
     "lint": "NODE_OPTIONS=--max-old-space-size=6144 eslint . --max-warnings 0 && prettier . --check",
     "typecheck": "bun run --cwd packages/engine typecheck && bun run --cwd packages/protocol typecheck && bun run --cwd packages/sdk typecheck && bun run --cwd packages/server typecheck && bun run --cwd packages/fight typecheck && bun run --cwd packages/frontend typecheck",
     "format": "prettier . --write && eslint . --fix",
-    "test": "bun run --filter '*' test && bun test scripts/eslint-rules && node scripts/assert_seed_validation.mjs"
+    "test": "bun run --filter '*' test && bun test scripts && node scripts/assert_seed_validation.mjs"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

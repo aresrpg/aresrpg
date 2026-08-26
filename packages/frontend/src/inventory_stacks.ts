@@ -3,44 +3,52 @@
 // One selector for amount-bearing inventory. Listed stacks are never mutable merge/burn targets.
 
 import { item_is_stackable } from '@aresrpg/immutable'
-import type { ItemRow, ListingRow } from '@aresrpg/protocol'
+import type { ItemRow, ListingRow, TradeRow } from '@aresrpg/protocol'
+
+export const encumbered_asset_ids = (
+  listings: readonly Readonly<ListingRow>[],
+  trades: readonly Readonly<TradeRow>[]
+): ReadonlySet<string> =>
+  new Set([
+    ...listings.map(({ id }) => id),
+    ...trades.flatMap(({ caps_a, caps_b }) => [...caps_a, ...caps_b].map(({ object }) => object)),
+  ])
 
 export const available_item_stacks = (
   inventory: readonly Readonly<ItemRow>[],
-  listings: readonly Readonly<ListingRow>[],
+  encumbered: ReadonlySet<string>,
   item_type: string,
   kiosk?: string
 ): readonly Readonly<ItemRow>[] => {
-  const listed = new Set(listings.map(({ id }) => id))
   return inventory
-    .filter((row) => row.item_type === item_type && (!kiosk || row.kiosk === kiosk) && !listed.has(row.id))
+    .filter((row) => row.item_type === item_type && (!kiosk || row.kiosk === kiosk) && !encumbered.has(row.id))
     .toSorted((left, right) => right.amount - left.amount || left.id.localeCompare(right.id))
 }
 
 /** The largest unlocked stack absorbs new minted units. Null means the mint must lock a new object. */
 export const stack_merge_target = (
   inventory: readonly Readonly<ItemRow>[],
-  listings: readonly Readonly<ListingRow>[],
+  encumbered: ReadonlySet<string>,
   item_type: string,
   kiosk?: string
 ): string | null => {
-  const target = stack_merge_target_row(inventory, listings, item_type, kiosk)
+  const target = stack_merge_target_row(inventory, encumbered, item_type, kiosk)
   return target?.id ?? null
 }
 
 export const stack_merge_target_row = (
   inventory: readonly Readonly<ItemRow>[],
-  listings: readonly Readonly<ListingRow>[],
+  encumbered: ReadonlySet<string>,
   item_type: string,
   kiosk?: string
 ): Readonly<ItemRow> | null => {
-  const [target] = available_item_stacks(inventory, listings, item_type, kiosk)
+  const [target] = available_item_stacks(inventory, encumbered, item_type, kiosk)
   return target && item_is_stackable(target.category) ? target : null
 }
 
 export const coalesced_stack_groups = (
   inventory: readonly Readonly<ItemRow>[],
-  listings: readonly Readonly<ListingRow>[]
+  encumbered: ReadonlySet<string>
 ): readonly Readonly<{
   target: Readonly<ItemRow>
   total_amount: number
@@ -54,7 +62,7 @@ export const coalesced_stack_groups = (
   }
   return Object.freeze(
     [...groups.values()].flatMap((rows) => {
-      const available = available_item_stacks(rows, listings, rows[0]!.item_type, rows[0]!.kiosk)
+      const available = available_item_stacks(rows, encumbered, rows[0]!.item_type, rows[0]!.kiosk)
       const [target, ...sources] = available
       return target
         ? [

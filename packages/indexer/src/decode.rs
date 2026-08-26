@@ -478,14 +478,8 @@ pub struct FighterKey(pub u64);
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Party {
     pub id: Id,
-    pub members: Vec<Member>,
+    pub members: Vec<Id>,
     pub pending: Vec<Id>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct Member {
-    pub character: Id,
-    pub owner: Addr,
 }
 
 /// `friends::FriendList` — a soulbound, DIRECTED whitelist.

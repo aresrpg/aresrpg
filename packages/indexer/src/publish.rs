@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-//! The live wire + the money analysis — events → pub/sub, sales, market. PURE.
+//! The live wire + the money analysis — events/object writes → pub/sub, sales, market. PURE.
 //!
 //! Per transaction: route every game event to its channel (`events.rs` owns the
 //! table), then run the SALE ANALYSIS the graph never sees:
@@ -95,7 +95,11 @@ pub fn analyze(
     for tx in txs {
         route_game_events(&mut wire, ckpt, ts_ms, tx, game, seed)?;
         route_game_state(&mut wire, ckpt, ts_ms, tx, game)?;
+        route_friend_writes(&mut wire, ckpt, ts_ms, tx, game)?;
+        route_party_writes(&mut wire, ckpt, ts_ms, tx, game)?;
+        route_trade_writes(&mut wire, ckpt, ts_ms, tx, game)?;
         route_dungeon_writes(&mut wire, ckpt, ts_ms, tx, game)?;
+        route_kolizeum_writes(&mut wire, ckpt, ts_ms, tx, game)?;
         route_fight_writes(&mut wire, ckpt, ts_ms, tx, game)?;
         route_item_writes(&mut wire, ckpt, ts_ms, tx, game)?;
         analyze_kiosk_market(&mut wire, ckpt, ts_ms, tx, game)?;
@@ -103,6 +107,288 @@ pub fn analyze(
         analyze_shop_sales(&mut wire, ckpt, ts_ms, tx, game)?;
     }
     Ok(wire)
+}
+
+fn is_core(view: &ObjView<'_>, game: &str, module: &str, name: &str) -> bool {
+    view.type_key.package == game && view.type_key.module == module && view.type_key.name == name
+}
+
+fn route_friend_writes(
+    wire: &mut Wire,
+    ckpt: u64,
+    ts_ms: u64,
+    tx: &TxView<'_>,
+    game: &str,
+) -> anyhow::Result<()> {
+    for (index, output) in tx.outputs.iter().enumerate() {
+        if !is_core(output, game, "friends", "FriendList") {
+            continue;
+        }
+        let list = decode::from_bytes::<decode::FriendList>(output.bytes).map_err(|error| {
+            anyhow::anyhow!(
+                "layout drift: friends::FriendList {} failed decode: {error}",
+                output.id.hex()
+            )
+        })?;
+        wire.publications.push(Publication {
+            channel: format!("evt:social:{}", list.owner.hex()),
+            payload: envelope(
+                ckpt,
+                tx.tx_index,
+                index as u64,
+                ts_ms,
+                "FriendListChanged",
+                json!({}),
+            ),
+        });
+    }
+    Ok(())
+}
+
+fn route_party_writes(
+    wire: &mut Wire,
+    ckpt: u64,
+    ts_ms: u64,
+    tx: &TxView<'_>,
+    game: &str,
+) -> anyhow::Result<()> {
+    let outputs = tx
+        .outputs
+        .iter()
+        .filter(|view| is_core(view, game, "party", "Party"))
+        .map(|view| (view.id, view))
+        .collect::<std::collections::HashMap<_, _>>();
+    let inputs = tx
+        .inputs
+        .iter()
+        .filter(|view| is_core(view, game, "party", "Party"))
+        .map(|view| (view.id, view))
+        .collect::<std::collections::HashMap<_, _>>();
+    let mut ids = inputs
+        .keys()
+        .chain(outputs.keys())
+        .copied()
+        .collect::<Vec<_>>();
+    ids.sort_by_key(Id::hex);
+    ids.dedup();
+    for (index, id) in ids.into_iter().enumerate() {
+        let before = inputs
+            .get(&id)
+            .map(|view| decode::from_bytes::<decode::Party>(view.bytes))
+            .transpose()
+            .map_err(|error| {
+                anyhow::anyhow!(
+                    "layout drift: party::Party {} failed decode: {error}",
+                    id.hex()
+                )
+            })?;
+        let after = outputs
+            .get(&id)
+            .map(|view| decode::from_bytes::<decode::Party>(view.bytes))
+            .transpose()
+            .map_err(|error| {
+                anyhow::anyhow!(
+                    "layout drift: party::Party {} failed decode: {error}",
+                    id.hex()
+                )
+            })?;
+        let before_members = before
+            .as_ref()
+            .map(|party| {
+                party
+                    .members
+                    .iter()
+                    .copied()
+                    .collect::<std::collections::HashSet<_>>()
+            })
+            .unwrap_or_default();
+        let after_members = after
+            .as_ref()
+            .map(|party| {
+                party
+                    .members
+                    .iter()
+                    .copied()
+                    .collect::<std::collections::HashSet<_>>()
+            })
+            .unwrap_or_default();
+        let before_pending = before
+            .as_ref()
+            .map(|party| {
+                party
+                    .pending
+                    .iter()
+                    .copied()
+                    .collect::<std::collections::HashSet<_>>()
+            })
+            .unwrap_or_default();
+        let after_pending = after
+            .as_ref()
+            .map(|party| {
+                party
+                    .pending
+                    .iter()
+                    .copied()
+                    .collect::<std::collections::HashSet<_>>()
+            })
+            .unwrap_or_default();
+        let publish = |wire: &mut Wire, kind: &str, character: Id| {
+            let payload = envelope(
+                ckpt,
+                tx.tx_index,
+                index as u64,
+                ts_ms,
+                kind,
+                json!({ "party": id.hex(), "character": character.hex() }),
+            );
+            wire.publications.push(Publication {
+                channel: format!("evt:party:{}", id.hex()),
+                payload: payload.clone(),
+            });
+            wire.publications.push(Publication {
+                channel: format!("evt:character:{}", character.hex()),
+                payload,
+            });
+        };
+        for character in after_members.difference(&before_members) {
+            publish(wire, "PartyJoined", *character);
+        }
+        for character in before_members.difference(&after_members) {
+            publish(wire, "PartyLeft", *character);
+        }
+        let mut invite_notifications = before_pending
+            .symmetric_difference(&after_pending)
+            .copied()
+            .collect::<std::collections::HashSet<_>>();
+        if before_members != after_members {
+            invite_notifications.extend(after_pending.iter().copied());
+        }
+        for character in invite_notifications {
+            publish(wire, "PartyInvitesChanged", character);
+        }
+    }
+    Ok(())
+}
+
+fn route_trade_writes(
+    wire: &mut Wire,
+    ckpt: u64,
+    ts_ms: u64,
+    tx: &TxView<'_>,
+    game: &str,
+) -> anyhow::Result<()> {
+    let output_ids = tx
+        .outputs
+        .iter()
+        .filter(|output| is_core(output, game, "trade", "Trade"))
+        .map(|output| output.id)
+        .collect::<std::collections::HashSet<_>>();
+    for (index, output) in tx.outputs.iter().enumerate() {
+        if !is_core(output, game, "trade", "Trade") {
+            continue;
+        }
+        let trade = decode::from_bytes::<decode::Trade>(output.bytes).map_err(|error| {
+            anyhow::anyhow!(
+                "layout drift: trade::Trade {} failed decode: {error}",
+                output.id.hex()
+            )
+        })?;
+        let payload = envelope(
+            ckpt,
+            tx.tx_index,
+            index as u64,
+            ts_ms,
+            "TradeChanged",
+            json!({ "trade": output.id.hex() }),
+        );
+        for address in std::collections::HashSet::from([trade.a, trade.b]) {
+            wire.publications.push(Publication {
+                channel: format!("evt:social:{}", address.hex()),
+                payload: payload.clone(),
+            });
+        }
+    }
+    for (index, input) in tx.inputs.iter().enumerate() {
+        if !is_core(input, game, "trade", "Trade") || output_ids.contains(&input.id) {
+            continue;
+        }
+        let trade = decode::from_bytes::<decode::Trade>(input.bytes).map_err(|error| {
+            anyhow::anyhow!(
+                "layout drift: trade::Trade {} failed decode: {error}",
+                input.id.hex()
+            )
+        })?;
+        let payload = envelope(
+            ckpt,
+            tx.tx_index,
+            index as u64,
+            ts_ms,
+            "TradeDestroyed",
+            json!({ "trade": input.id.hex() }),
+        );
+        for address in std::collections::HashSet::from([trade.a, trade.b]) {
+            wire.publications.push(Publication {
+                channel: format!("evt:social:{}", address.hex()),
+                payload: payload.clone(),
+            });
+        }
+    }
+    Ok(())
+}
+
+/// The War Table is a live directory. Refresh only when its structural facts change: a
+/// lobby write/delete, a wagered fight ending, or a wagered fighter leaving.
+fn route_kolizeum_writes(
+    wire: &mut Wire,
+    ckpt: u64,
+    ts_ms: u64,
+    tx: &TxView<'_>,
+    game: &str,
+) -> anyhow::Result<()> {
+    let output_ids = tx
+        .outputs
+        .iter()
+        .map(|output| output.id)
+        .collect::<std::collections::HashSet<_>>();
+    let lobby_changed = tx.outputs.iter().any(|output| {
+        output.type_key.package == game
+            && output.type_key.module == "kolizeum"
+            && output.type_key.name == "Kolizeum"
+    }) || tx.inputs.iter().any(|input| {
+        input.type_key.package == game
+            && input.type_key.module == "kolizeum"
+            && input.type_key.name == "Kolizeum"
+            && !output_ids.contains(&input.id)
+    });
+    let forfeited = tx.events.iter().any(|event| {
+        event.package == game && event.module == "fight" && event.name == "FighterForfeited"
+    });
+    let fight_changed =
+        tx.outputs
+            .iter()
+            .try_fold(false, |changed, output| -> anyhow::Result<bool> {
+                if changed
+                    || output.type_key.package != game
+                    || output.type_key.module != "fight"
+                    || output.type_key.name != "Fight"
+                {
+                    return Ok(changed);
+                }
+                let fight = decode::from_bytes::<decode::Fight>(output.bytes).map_err(|error| {
+                    anyhow::anyhow!(
+                        "layout drift: fight::Fight {} failed decode: {error}",
+                        output.id.hex()
+                    )
+                })?;
+                Ok(fight.wagered && (fight.ended || forfeited))
+            })?;
+    if lobby_changed || fight_changed {
+        wire.publications.push(Publication {
+            channel: "evt:kolizeum".to_string(),
+            payload: envelope(ckpt, tx.tx_index, 0, ts_ms, "KolizeumChanged", json!({})),
+        });
+    }
+    Ok(())
 }
 
 /// Every Fight write reconciles the optimistic live stream. Turn events carry animation
@@ -335,13 +621,14 @@ fn route_item_writes(
 /// precedent): one mechanism for every custody move, whichever door caused it.
 pub fn route_character_custody(wire: &mut Wire, ckpt: u64, ts_ms: u64, custody: &[Custody]) {
     for (index, fact) in custody.iter().enumerate() {
-        let (character, kind, data) = match fact {
+        let (character, owner, kind, data) = match fact {
             Custody::FightSeats {
                 fight,
                 seat,
                 character,
             } => (
                 character,
+                None,
                 "CharacterSeated",
                 json!({
                     "fight": fight.hex(),
@@ -353,18 +640,26 @@ pub fn route_character_custody(wire: &mut Wire, ckpt: u64, ts_ms: u64, custody: 
                 kiosk,
                 object,
                 label: "Character",
-                ..
+                owner,
             } => (
                 object,
+                *owner,
                 "CharacterHeld",
                 json!({ "character": object.hex(), "kiosk": kiosk.hex() }),
             ),
             _ => continue,
         };
+        let payload = envelope(ckpt, 0, index as u64, ts_ms, kind, data);
         wire.publications.push(Publication {
             channel: format!("evt:character:{}", character.hex()),
-            payload: envelope(ckpt, 0, index as u64, ts_ms, kind, data),
+            payload: payload.clone(),
         });
+        if let Some(owner) = owner {
+            wire.publications.push(Publication {
+                channel: format!("evt:social:{}", owner.hex()),
+                payload,
+            });
+        }
     }
 }
 
@@ -415,28 +710,6 @@ fn route_game_events(
             routed.kind,
             routed.data.clone(),
         );
-        // party membership MIRROR: joins/leaves route to the party channel for the
-        // members, but the AFFECTED character's own realtime connection watches only
-        // its character channel (it cannot watch a party it doesn't know it joined) —
-        // so the same envelope lands on both.
-        if routed.kind == "PartyJoined" || routed.kind == "PartyLeft" {
-            if let Some(character) = routed.data["character"].as_str() {
-                wire.publications.push(Publication {
-                    channel: format!("evt:character:{character}"),
-                    payload: payload.clone(),
-                });
-            }
-        }
-        // trade-birth MIRROR: the route lands on the counterparty's social channel;
-        // the CREATOR's connection must arm the same watch — same envelope, both doors.
-        if routed.kind == "TradeCreated" {
-            if let Some(creator) = routed.data["a"].as_str() {
-                wire.publications.push(Publication {
-                    channel: format!("evt:social:{creator}"),
-                    payload: payload.clone(),
-                });
-            }
-        }
         // fight-phase MIRROR: the roster's watchers hear starts/ends on the fight channel,
         // but the ZONE's bystanders (sword markers) need the same facts — the events carry
         // their anchor precisely for this fan-out.
@@ -463,10 +736,14 @@ fn route_game_events(
                 }
             }
         }
-        wire.publications.push(Publication {
-            channel: routed.topic,
-            payload,
-        });
+        // Kolizeum events are receipt facts. The directory publishes one coalesced invalidation
+        // from object/fight writes below instead of rereading once per event plus once per write.
+        if routed.topic != "evt:kolizeum" {
+            wire.publications.push(Publication {
+                channel: routed.topic,
+                payload,
+            });
+        }
     }
     Ok(())
 }
@@ -865,6 +1142,68 @@ mod tests {
             },
         })
         .unwrap()
+    }
+
+    #[test]
+    fn a_kolizeum_write_and_its_receipt_event_emit_one_directory_invalidation() {
+        #[derive(serde::Serialize)]
+        struct Created {
+            kolizeum: Id,
+            fight: Id,
+            pledge: u64,
+            format: u64,
+        }
+        let lobby_type = ty(GAME, "kolizeum", "Kolizeum");
+        let lobby_bytes = bcs::to_bytes(&crate::decode::Kolizeum {
+            id: Id([31; 32]),
+            pot: crate::decode::Balance { value: 10 },
+            pledge: 10,
+            fight: Id([32; 32]),
+            format: 3,
+            level_min: 1,
+            level_max: 50,
+            allowed: None,
+        })
+        .unwrap();
+        let lobby = ObjView {
+            id: Id([31; 32]),
+            owner: OwnerKind::Shared,
+            type_key: &lobby_type,
+            bytes: &lobby_bytes,
+        };
+        let event_bytes = bcs::to_bytes(&Created {
+            kolizeum: Id([31; 32]),
+            fight: Id([32; 32]),
+            pledge: 10,
+            format: 3,
+        })
+        .unwrap();
+        let event = EventView {
+            package: GAME,
+            module: "kolizeum",
+            name: "KolizeumCreated",
+            type_params: &[],
+            bytes: &event_bytes,
+            index: 0,
+        };
+        let tx = TxView {
+            tx_index: 2,
+            sender: Addr([7; 32]),
+            move_calls: &[],
+            events: std::slice::from_ref(&event),
+            inputs: &[],
+            outputs: std::slice::from_ref(&lobby),
+        };
+
+        let wire = analyze(60, 4_000, &[tx], GAME, SEED).unwrap();
+        let directory = wire
+            .publications
+            .iter()
+            .filter(|publication| publication.channel == "evt:kolizeum")
+            .collect::<Vec<_>>();
+        assert_eq!(directory.len(), 1);
+        let payload: serde_json::Value = serde_json::from_str(&directory[0].payload).unwrap();
+        assert_eq!(payload["type"], "KolizeumChanged");
     }
 
     #[test]
@@ -1389,34 +1728,35 @@ mod tests {
     }
 
     #[test]
-    fn trade_created_lands_on_both_parties_social_doors() {
-        #[derive(serde::Serialize)]
-        struct Wire {
-            trade: [u8; 32],
-            a: [u8; 32],
-            b: [u8; 32],
-        }
-        let bytes = bcs::to_bytes(&Wire {
-            trade: [1; 32],
-            a: [7; 32],
-            b: [9; 32],
+    fn every_trade_write_lands_on_both_parties_social_doors() {
+        let bytes = bcs::to_bytes(&crate::decode::Trade {
+            id: Id([1; 32]),
+            a: Addr([7; 32]),
+            b: Addr([9; 32]),
+            version: 0,
+            accept_a: false,
+            accept_b: false,
+            locked: false,
+            sui_a: crate::decode::Balance { value: 0 },
+            sui_b: crate::decode::Balance { value: 0 },
+            caps_a: vec![],
+            caps_b: vec![],
         })
         .unwrap();
-        let events = [EventView {
-            package: GAME,
-            module: "trade",
-            name: "TradeCreated",
-            type_params: &[],
+        let trade_type = ty(GAME, "trade", "Trade");
+        let outputs = [ObjView {
+            id: Id([1; 32]),
+            owner: OwnerKind::Shared,
+            type_key: &trade_type,
             bytes: &bytes,
-            index: 0,
         }];
         let tx = TxView {
             tx_index: 0,
             sender: Addr([7; 32]),
             move_calls: &[],
-            events: &events,
+            events: &[],
             inputs: &[],
-            outputs: &[],
+            outputs: &outputs,
         };
         let wire = analyze(1, 1, &[tx], GAME, SEED).unwrap();
         let channels: Vec<_> = wire
@@ -1427,6 +1767,70 @@ mod tests {
         assert!(channels.contains(&format!("evt:social:0x{}", "09".repeat(32)).as_str()));
         assert!(channels.contains(&format!("evt:social:0x{}", "07".repeat(32)).as_str()));
         assert_eq!(wire.publications.len(), 2);
+        assert!(wire
+            .publications
+            .iter()
+            .all(|row| row.payload.contains("TradeChanged")));
+    }
+
+    #[test]
+    fn social_object_writes_publish_full_state_invalidations() {
+        let friend_type = ty(GAME, "friends", "FriendList");
+        let friend_bytes = bcs::to_bytes(&crate::decode::FriendList {
+            id: Id([2; 32]),
+            owner: Addr([7; 32]),
+            friends: crate::decode::VecSet {
+                contents: vec![Addr([9; 32])],
+            },
+        })
+        .unwrap();
+        let friend = ObjView {
+            id: Id([2; 32]),
+            owner: OwnerKind::Address(Addr([7; 32])),
+            type_key: &friend_type,
+            bytes: &friend_bytes,
+        };
+        let party_type = ty(GAME, "party", "Party");
+        let party_bytes = bcs::to_bytes(&crate::decode::Party {
+            id: Id([3; 32]),
+            members: vec![Id([4; 32])],
+            pending: vec![Id([5; 32])],
+        })
+        .unwrap();
+        let party = ObjView {
+            id: Id([3; 32]),
+            owner: OwnerKind::Shared,
+            type_key: &party_type,
+            bytes: &party_bytes,
+        };
+        let outputs = [friend, party];
+        let tx = TxView {
+            tx_index: 0,
+            sender: Addr([7; 32]),
+            move_calls: &[],
+            events: &[],
+            inputs: &[],
+            outputs: &outputs,
+        };
+        let wire = analyze(1, 1, &[tx], GAME, SEED).unwrap();
+        let channels = wire
+            .publications
+            .iter()
+            .map(|row| row.channel.as_str())
+            .collect::<Vec<_>>();
+        assert!(channels.contains(&format!("evt:social:0x{}", "07".repeat(32)).as_str()));
+        assert!(channels.contains(&format!("evt:character:0x{}", "04".repeat(32)).as_str()));
+        assert!(channels.contains(&format!("evt:character:0x{}", "05".repeat(32)).as_str()));
+        let kinds = wire
+            .publications
+            .iter()
+            .map(|row| {
+                serde_json::from_str::<serde_json::Value>(&row.payload).unwrap()["type"].clone()
+            })
+            .collect::<Vec<_>>();
+        assert!(kinds.contains(&json!("FriendListChanged")));
+        assert!(kinds.contains(&json!("PartyJoined")));
+        assert!(kinds.contains(&json!("PartyInvitesChanged")));
     }
 
     #[test]
@@ -1565,6 +1969,24 @@ mod tests {
             serde_json::from_str(&wire.publications[0].payload).unwrap();
         assert_eq!(payload["type"], "CharacterHeld");
         assert_eq!(payload["data"]["kiosk"], format!("0x{}", "02".repeat(32)));
+    }
+
+    #[test]
+    fn a_character_transfer_reaches_the_new_kiosk_owner() {
+        let custody = [Custody::KioskHolds {
+            kiosk: Id([2; 32]),
+            object: Id([5; 32]),
+            label: "Character",
+            owner: Some(Addr([8; 32])),
+        }];
+        let mut wire = Wire::default();
+        route_character_custody(&mut wire, 7, 42, &custody);
+        assert_eq!(wire.publications.len(), 2);
+        assert_eq!(
+            wire.publications[1].channel,
+            format!("evt:social:0x{}", "08".repeat(32))
+        );
+        assert!(wire.publications[1].payload.contains("CharacterHeld"));
     }
 
     #[test]

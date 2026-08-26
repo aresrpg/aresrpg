@@ -19,7 +19,7 @@ export const DeploymentTerminal = ({ entries }: Readonly<{ entries: readonly Adm
   }, [entries])
 
   return (
-    <section className="mx-auto mt-6 max-w-6xl border border-white/9 bg-[#07080b]/85 shadow-[inset_0_1px_rgba(255,255,255,0.025)]">
+    <section className="mx-auto mt-6 max-w-6xl border border-white/9 bg-bg/85 shadow-[inset_0_1px_rgba(255,255,255,0.025)]">
       <header className="flex items-center justify-between border-b border-white/8 px-4 py-3">
         <span className="text-[8px] tracking-[0.2em] text-[#8d939d] uppercase">Deployment log</span>
         <span className="h-1.5 w-1.5 bg-[#62ce91] shadow-[0_0_9px_rgba(98,206,145,0.7)]" />

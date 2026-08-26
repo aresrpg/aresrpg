@@ -87,11 +87,13 @@ export const CharacterCreateModal = ({
   cancel,
   create,
   insufficient,
+  view_spells,
 }: Readonly<{
   copy: AppCopy
   cancel: () => void
   create: (input: CharacterCreateInput) => Promise<void>
   insufficient: boolean
+  view_spells: (classe: string) => void
 }>) => {
   const [identity, set_identity] = useState<CharacterIdentity>(DEFAULT_IDENTITY)
   const [submitting, set_submitting] = useState(false)
@@ -125,9 +127,9 @@ export const CharacterCreateModal = ({
   }
 
   return (
-    <section className="absolute inset-0 z-[160] grid place-items-center bg-[#050508]/72 p-5 backdrop-blur-lg">
+    <section className="absolute inset-0 z-[160] grid place-items-center bg-bg/72 p-5 backdrop-blur-lg">
       <form
-        className="max-h-[92dvh] w-full max-w-5xl overflow-auto border border-white/12 border-t-[#c8963c] bg-[#181c1f]/97 p-6 shadow-[0_26px_90px_rgba(0,0,0,0.52)]"
+        className="max-h-[92dvh] w-full max-w-5xl overflow-auto border border-border border-t-[#c8963c] bg-surface/97 p-6 shadow-[0_26px_90px_rgba(0,0,0,0.52)]"
         onSubmit={submit}
       >
         <h2 className="text-[17px] font-bold tracking-[0.14em] uppercase">{copy.create_title}</h2>
@@ -135,8 +137,11 @@ export const CharacterCreateModal = ({
         <div className="mt-6 grid gap-6 lg:grid-cols-[0.8fr_1.2fr]">
           <div className="relative grid min-h-80 place-items-center overflow-hidden border border-white/8 bg-[radial-gradient(circle_at_50%_42%,rgba(200,150,60,0.12),transparent_58%)]">
             <CharacterPreviewCanvas identity={identity} />
-            <div className="pointer-events-none absolute bottom-5 left-0 w-full text-center text-[12px] tracking-[0.25em] uppercase">
-              {identity.classe}
+            <div className="pointer-events-none absolute bottom-5 left-0 w-full text-center uppercase">
+              <div className="text-[12px] tracking-[0.25em]">{identity.classe}</div>
+              <div className="mt-1 text-[8px] tracking-[0.18em] text-[#858994]">
+                {copy.simulator_page[`class_${identity.classe}_title`]}
+              </div>
             </div>
           </div>
           <div className="space-y-5">
@@ -145,7 +150,7 @@ export const CharacterCreateModal = ({
               <div className="grid grid-cols-3 gap-1.5 sm:grid-cols-4">
                 {class_names.map((classe) => (
                   <button
-                    className={`h-10 cursor-pointer border text-[9px] tracking-[0.12em] uppercase ${
+                    className={`flex h-12 cursor-pointer flex-col items-center justify-center border uppercase ${
                       identity.classe === classe
                         ? 'border-[#4a9eff]/55 bg-[#4a9eff]/10 text-[#67adff]'
                         : 'border-white/8 bg-white/2 text-[#8d9099] hover:border-white/15'
@@ -154,10 +159,21 @@ export const CharacterCreateModal = ({
                     onClick={() => set_identity(Object.freeze({ ...identity, classe }))}
                     type="button"
                   >
-                    {classe}
+                    <span className="text-[9px] tracking-[0.12em]">{classe}</span>
+                    <span className="mt-0.5 text-[7px] tracking-[0.08em] text-[#666b76]">
+                      {copy.simulator_page[`class_${classe}_title`]}
+                    </span>
                   </button>
                 ))}
               </div>
+              <button
+                className="mt-2 h-9 w-full cursor-pointer border border-[#4a9eff]/25 bg-[#4a9eff]/5 text-[8px] tracking-[0.14em] text-[#67adff] uppercase hover:border-[#4a9eff]/55 hover:bg-[#4a9eff]/10"
+                data-class-spells-link=""
+                onClick={() => view_spells(identity.classe)}
+                type="button"
+              >
+                {copy.view_class_spells}
+              </button>
             </fieldset>
             <fieldset>
               <legend className="mb-2 text-[9px] tracking-[0.18em] text-[#777b86] uppercase">{copy.sex_label}</legend>

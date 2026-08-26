@@ -1,19 +1,9 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-/* eslint-disable max-lines -- authentication, websocket lifecycle, and its reducer remain one session boundary. */
 
-import type {
-  AirdropState,
-  CharacterRow,
-  ClaimRow,
-  ItemRow,
-  PartyRow,
-  ServerPacket,
-  ShopState,
-  TradeRow,
-} from '@aresrpg/protocol'
+import type { AirdropState, CharacterRow, ClaimRow, ItemRow, ServerPacket, ShopState } from '@aresrpg/protocol'
 import { fight_action_to_wire } from '@aresrpg/fight'
-import { client_to_chain_coordinate } from '@aresrpg/immutable'
+import { client_to_chain_coordinate, type CharacteristicName } from '@aresrpg/immutable'
 
 import type { Auth, AuthSession } from '../auth.ts'
 import {
@@ -31,6 +21,7 @@ import type { AppInput, AppModule, AppState } from '../store.ts'
 import { toast } from '../toast.ts'
 
 import { fold_character_receipt } from './character_folds.ts'
+import { fight_environment } from './fight.ts'
 import { observe_failure_toasts } from './session_toasts.ts'
 
 export type AuthStatus = 'idle' | 'connecting' | 'authenticated'
@@ -51,11 +42,8 @@ export type SessionState = Readonly<{
   roster_loaded: boolean
   characters: readonly CharacterRow[]
   inventory: readonly ItemRow[]
-  friends: readonly string[]
   claims: readonly ClaimRow[]
   giftcards: readonly { id: string; template: string; amount: number }[]
-  trades: readonly TradeRow[]
-  parties: Readonly<Record<string, PartyRow | null>>
   selected_character_id: string | null
   online: number | null
   auth_ready: boolean
@@ -93,7 +81,11 @@ export type SessionInput =
       equipped: readonly Readonly<{ slot: string; item_id: string }>[]
       unequipped: readonly Readonly<{ slot: string; item_id: string }>[]
     }>
-  | Readonly<{ type: 'character/stats_raised'; character_id: string; allocation: Readonly<Record<string, number>> }>
+  | Readonly<{
+      type: 'character/stats_raised'
+      character_id: string
+      spending: Readonly<Partial<Record<CharacteristicName, number>>>
+    }>
   | Readonly<{ type: 'character/spell_raised'; character_id: string; spell: string }>
   | Readonly<{
       type: 'character/consumed'
@@ -144,11 +136,8 @@ export const initial_session_state = (): SessionState =>
     roster_loaded: false,
     characters: [],
     inventory: [],
-    friends: [],
     claims: [],
     giftcards: [],
-    trades: [],
-    parties: Object.freeze({}),
     selected_character_id: read_selected_character(),
     online: null,
     auth_ready: false,
@@ -219,15 +208,8 @@ const fold_packet = (session: SessionState, packet: Readonly<ServerPacket>): Ses
           : [...session.inventory, packet.item]
       ),
     })
-  if (packet.type === 'packet/friends') return Object.freeze({ ...session, friends: packet.friends })
   if (packet.type === 'packet/claims') return Object.freeze({ ...session, claims: packet.claims })
   if (packet.type === 'packet/giftcards') return Object.freeze({ ...session, giftcards: packet.giftcards })
-  if (packet.type === 'packet/trades') return Object.freeze({ ...session, trades: packet.trades })
-  if (packet.type === 'packet/party')
-    return Object.freeze({
-      ...session,
-      parties: Object.freeze({ ...session.parties, [packet.character_id]: packet.party }),
-    })
   if (packet.type === 'packet/shop_state')
     return Object.freeze({
       ...session,
@@ -236,19 +218,6 @@ const fold_packet = (session: SessionState, packet: Readonly<ServerPacket>): Ses
   if (packet.type === 'packet/shop_supply') return with_sale_supply(session, packet.item_type, packet.supply)
   if (packet.type === 'packet/airdrop_remaining')
     return with_airdrop(session, packet.drop_id, (airdrop) => ({ ...airdrop, eligible_count: packet.eligible_count }))
-  if (packet.type === 'packet/friend_added')
-    return session.friends.includes(packet.who)
-      ? session
-      : Object.freeze({ ...session, friends: Object.freeze([...session.friends, packet.who]) })
-  if (packet.type === 'packet/friend_removed')
-    return Object.freeze({ ...session, friends: session.friends.filter((address) => address !== packet.who) })
-  if (packet.type === 'packet/trade')
-    return Object.freeze({
-      ...session,
-      trades: Object.freeze([...session.trades.filter(({ id }) => id !== packet.trade.id), packet.trade]),
-    })
-  if (packet.type === 'packet/trade_destroyed')
-    return Object.freeze({ ...session, trades: session.trades.filter(({ id }) => id !== packet.trade) })
   if (packet.type === 'packet/error')
     return packet.id === undefined ? Object.freeze({ ...session, link_error: packet.reason }) : session
   return session
@@ -500,15 +469,22 @@ const observe = ({ events, dispatch, signal, get_state }: Parameters<NonNullable
       return
     }
   })
-  // world chat rides the link; the local echo is the speaker's own chat line
-  events.on('chat/speak', ({ text }) => {
+  events.on('chat/speak', ({ channel, text }) => {
     const character_id = get_state().session.selected_character_id
-    if (character_id) link?.send({ type: 'packet/chat', character_id, text })
+    if (character_id)
+      link?.send(
+        channel === 'party'
+          ? { type: 'packet/chat_party', character_id, text }
+          : { type: 'packet/chat', character_id, text }
+      )
   })
   // a fight watch arms the server-side stream (roster + lifecycle) while a modal stands open
-  events.on('fight/watch', ({ fight }) => {
-    const character_id = get_state().session.selected_character_id
-    if (character_id) link?.send({ type: 'packet/spectate', character_id, fight })
+  events.on('fight/watch', ({ character_id, fight }) => {
+    link?.send({ type: 'packet/fight_preview', character_id, fight })
+  })
+  events.on('fight/resync', ({ fight }) => link?.send({ type: 'packet/fight_resync', fight }))
+  events.on('fight/spectating', ({ character_id, fight }) => {
+    link?.send({ type: 'packet/spectate', character_id, fight })
   })
   events.on('character/select', ({ character_id }) => remember_selected_character(character_id))
   observe_failure_toasts({ events, dispatch, get_state, signal })
@@ -530,6 +506,14 @@ const observe = ({ events, dispatch, signal, get_state }: Parameters<NonNullable
   }
   events.on('STATE_UPDATED', (state, previous) => {
     sync_market_subscription(state, previous)
+    if (state.session.link_status === 'ready' && previous.session.link_status !== 'ready')
+      Object.entries(state.fight.spectating_by_character).forEach(([character_id, fight]) =>
+        link?.send({ type: 'packet/spectate', character_id, fight })
+      )
+    Object.entries(previous.fight.spectating_by_character).forEach(([character_id, fight]) => {
+      if (state.fight.spectating_by_character[character_id] === fight) return
+      link?.send({ type: 'packet/spectate', character_id, fight: null })
+    })
     if (state.session.auth_request !== previous.session.auth_request) {
       const request = state.session.auth_request
       if (request === 'restore' && auth) {
@@ -595,21 +579,14 @@ const observe = ({ events, dispatch, signal, get_state }: Parameters<NonNullable
   })
   signal.addEventListener('abort', unsubscribe_pose)
 
-  events.on('fight/input', ({ input, origin }) => {
+  events.on('fight/input', ({ fight, input, origin }) => {
     const state = get_state()
     // The courtesy lane carries the drafted move/cast/strike only. End Turn is the PTB commit
     // boundary; relaying it early would hand peers a turn the chain has not accepted yet.
     if (input.type === 'end_turn') return
     const action = fight_action_to_wire(input)
-    if (
-      origin !== 'local' ||
-      state.fight.mode !== 'remote' ||
-      state.fight.transaction_pending ||
-      !state.fight.checkpoint ||
-      !action
-    )
-      return
-    link?.send({ type: 'packet/fight_action', fight: state.fight.checkpoint.contract.id, action })
+    if (origin !== 'local' || !fight || fight_environment(state.fight, fight).transaction_pending || !action) return
+    link?.send({ type: 'packet/fight_action', fight, action })
   })
   signal.addEventListener('abort', () => {
     clearInterval(balance_timer)

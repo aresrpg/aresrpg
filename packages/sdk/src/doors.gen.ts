@@ -169,12 +169,12 @@ export const search_zone = (
  * @arg cap — &KioskOwnerCap
  * @arg character_id — ID
  * @arg stat — String
- * @arg amount — u16
+ * @arg points — u16
  */
 export const raise_stat = (
   tx: Transaction,
   ctx: DoorCtx,
-  args: { kiosk: Resolvable; cap: Resolvable; character_id: string; stat: string; amount: number }
+  args: { kiosk: Resolvable; cap: Resolvable; character_id: string; stat: string; points: number }
 ) =>
   tx.moveCall({
     target: `${ctx.pins.package}::api::raise_stat`,
@@ -183,7 +183,7 @@ export const raise_stat = (
       ctx.obj(tx, args.cap, false),
       ctx.pure.id(tx, args.character_id),
       ctx.pure.string(tx, args.stat),
-      ctx.pure.u16(tx, args.amount),
+      ctx.pure.u16(tx, args.points),
       ctx.pin(tx, 'version', false),
     ],
   })
@@ -304,6 +304,7 @@ export const delete_character = (
   tx.moveCall({
     target: `${ctx.pins.package}::api::delete_character`,
     arguments: [
+      ctx.pin(tx, 'friend_registry', false),
       ctx.obj(tx, args.kiosk, true),
       ctx.obj(tx, args.cap, false),
       ctx.pure.id(tx, args.character_id),
@@ -695,6 +696,41 @@ export const settle_fight = (
   })
 
 /**
+ * `api::settle_last_fight` — TERMINAL (&Random): last command of its transaction.
+ * @arg f — Fight
+ * @arg fighter_idx — u64
+ * @arg plan — vector<PM>
+ * @arg kiosk — &mut Kiosk
+ * @arg personal — &PersonalKioskCap
+ */
+export const settle_last_fight = (
+  tx: Transaction,
+  ctx: DoorCtx,
+  args: {
+    f: Resolvable
+    fighter_idx: bigint | number | string
+    plan: readonly TransactionObjectArgument[]
+    kiosk: Resolvable
+    personal: Resolvable
+  }
+) =>
+  tx.moveCall({
+    target: `${ctx.pins.package}::api::settle_last_fight`,
+    arguments: [
+      ctx.obj(tx, args.f, true),
+      ctx.pure.u64(tx, args.fighter_idx),
+      tx.makeMoveVec({ type: `${ctx.game_type_package}::item::PM`, elements: [...args.plan] }),
+      ctx.obj(tx, args.kiosk, true),
+      ctx.obj(tx, args.personal, false),
+      ctx.pin(tx, 'character_policy', false),
+      ctx.pin(tx, 'item_policy', false),
+      tx.object.random(),
+      ctx.pin(tx, 'version', false),
+      tx.object.clock(),
+    ],
+  })
+
+/**
  * `api::close_fight`
  * @arg f — Fight
  */
@@ -718,6 +754,7 @@ export const create_party = (
   tx.moveCall({
     target: `${ctx.pins.package}::api::create_party`,
     arguments: [
+      ctx.pin(tx, 'friend_registry', true),
       ctx.obj(tx, args.kiosk, false),
       ctx.obj(tx, args.cap, false),
       ctx.pure.id(tx, args.character_id),
@@ -726,26 +763,35 @@ export const create_party = (
   })
 
 /**
- * `api::party_invite`
+ * `api::party_invitation`
  * @arg p — &mut Party
  * @arg kiosk — &Kiosk
  * @arg cap — &KioskOwnerCap
- * @arg leader_id — ID
+ * @arg actor_id — ID
  * @arg invited_character — ID
+ * @arg present — bool
  */
-export const party_invite = (
+export const party_invitation = (
   tx: Transaction,
   ctx: DoorCtx,
-  args: { p: Resolvable; kiosk: Resolvable; cap: Resolvable; leader_id: string; invited_character: string }
+  args: {
+    p: Resolvable
+    kiosk: Resolvable
+    cap: Resolvable
+    actor_id: string
+    invited_character: string
+    present: boolean
+  }
 ) =>
   tx.moveCall({
-    target: `${ctx.pins.package}::api::party_invite`,
+    target: `${ctx.pins.package}::api::party_invitation`,
     arguments: [
       ctx.obj(tx, args.p, true),
       ctx.obj(tx, args.kiosk, false),
       ctx.obj(tx, args.cap, false),
-      ctx.pure.id(tx, args.leader_id),
+      ctx.pure.id(tx, args.actor_id),
       ctx.pure.id(tx, args.invited_character),
+      ctx.pure.bool(tx, args.present),
       ctx.pin(tx, 'version', false),
     ],
   })
@@ -765,58 +811,11 @@ export const party_accept = (
   tx.moveCall({
     target: `${ctx.pins.package}::api::party_accept`,
     arguments: [
+      ctx.pin(tx, 'friend_registry', true),
       ctx.obj(tx, args.p, true),
       ctx.obj(tx, args.kiosk, false),
       ctx.obj(tx, args.cap, false),
       ctx.pure.id(tx, args.character_id),
-      ctx.pin(tx, 'version', false),
-    ],
-  })
-
-/**
- * `api::party_decline`
- * @arg p — &mut Party
- * @arg kiosk — &Kiosk
- * @arg cap — &KioskOwnerCap
- * @arg character_id — ID
- */
-export const party_decline = (
-  tx: Transaction,
-  ctx: DoorCtx,
-  args: { p: Resolvable; kiosk: Resolvable; cap: Resolvable; character_id: string }
-) =>
-  tx.moveCall({
-    target: `${ctx.pins.package}::api::party_decline`,
-    arguments: [
-      ctx.obj(tx, args.p, true),
-      ctx.obj(tx, args.kiosk, false),
-      ctx.obj(tx, args.cap, false),
-      ctx.pure.id(tx, args.character_id),
-      ctx.pin(tx, 'version', false),
-    ],
-  })
-
-/**
- * `api::party_rescind`
- * @arg p — &mut Party
- * @arg kiosk — &Kiosk
- * @arg cap — &KioskOwnerCap
- * @arg leader_id — ID
- * @arg invited_character — ID
- */
-export const party_rescind = (
-  tx: Transaction,
-  ctx: DoorCtx,
-  args: { p: Resolvable; kiosk: Resolvable; cap: Resolvable; leader_id: string; invited_character: string }
-) =>
-  tx.moveCall({
-    target: `${ctx.pins.package}::api::party_rescind`,
-    arguments: [
-      ctx.obj(tx, args.p, true),
-      ctx.obj(tx, args.kiosk, false),
-      ctx.obj(tx, args.cap, false),
-      ctx.pure.id(tx, args.leader_id),
-      ctx.pure.id(tx, args.invited_character),
       ctx.pin(tx, 'version', false),
     ],
   })
@@ -836,6 +835,7 @@ export const party_leave = (
   tx.moveCall({
     target: `${ctx.pins.package}::api::party_leave`,
     arguments: [
+      ctx.pin(tx, 'friend_registry', true),
       ctx.obj(tx, args.p, true),
       ctx.obj(tx, args.kiosk, false),
       ctx.obj(tx, args.cap, false),
@@ -860,6 +860,7 @@ export const party_kick = (
   tx.moveCall({
     target: `${ctx.pins.package}::api::party_kick`,
     arguments: [
+      ctx.pin(tx, 'friend_registry', true),
       ctx.obj(tx, args.p, true),
       ctx.obj(tx, args.kiosk, false),
       ctx.obj(tx, args.cap, false),
@@ -884,6 +885,7 @@ export const party_disband = (
   tx.moveCall({
     target: `${ctx.pins.package}::api::party_disband`,
     arguments: [
+      ctx.pin(tx, 'friend_registry', true),
       ctx.obj(tx, args.p, true),
       ctx.obj(tx, args.kiosk, false),
       ctx.obj(tx, args.cap, false),
@@ -1506,6 +1508,44 @@ export const settle_dungeon_room = (
   })
 
 /**
+ * `api::settle_last_dungeon_room` — TERMINAL (&Random): last command of its transaction.
+ * @arg wc — &WorldContent
+ * @arg f — Fight
+ * @arg fighter_idx — u64
+ * @arg plan — vector<PM>
+ * @arg kiosk — &mut Kiosk
+ * @arg personal — &PersonalKioskCap
+ */
+export const settle_last_dungeon_room = (
+  tx: Transaction,
+  ctx: DoorCtx,
+  args: {
+    wc: Resolvable
+    f: Resolvable
+    fighter_idx: bigint | number | string
+    plan: readonly TransactionObjectArgument[]
+    kiosk: Resolvable
+    personal: Resolvable
+  }
+) =>
+  tx.moveCall({
+    target: `${ctx.pins.package}::api::settle_last_dungeon_room`,
+    arguments: [
+      ctx.obj(tx, args.wc, false),
+      ctx.obj(tx, args.f, true),
+      ctx.pure.u64(tx, args.fighter_idx),
+      tx.makeMoveVec({ type: `${ctx.game_type_package}::item::PM`, elements: [...args.plan] }),
+      ctx.obj(tx, args.kiosk, true),
+      ctx.obj(tx, args.personal, false),
+      ctx.pin(tx, 'character_policy', false),
+      ctx.pin(tx, 'item_policy', false),
+      tx.object.random(),
+      ctx.pin(tx, 'version', false),
+      tx.object.clock(),
+    ],
+  })
+
+/**
  * `api::give_up_dungeon_room`
  * @arg f — &mut Fight
  * @arg fighter_idx — u64
@@ -1737,6 +1777,39 @@ export const settle_kolizeum = (
   })
 
 /**
+ * `api::settle_last_kolizeum`
+ * @arg lobby — Kolizeum
+ * @arg f — Fight
+ * @arg fighter_idx — u64
+ * @arg kiosk — &mut Kiosk
+ * @arg personal — &PersonalKioskCap
+ */
+export const settle_last_kolizeum = (
+  tx: Transaction,
+  ctx: DoorCtx,
+  args: {
+    lobby: Resolvable
+    f: Resolvable
+    fighter_idx: bigint | number | string
+    kiosk: Resolvable
+    personal: Resolvable
+  }
+) =>
+  tx.moveCall({
+    target: `${ctx.pins.package}::api::settle_last_kolizeum`,
+    arguments: [
+      ctx.obj(tx, args.lobby, true),
+      ctx.obj(tx, args.f, true),
+      ctx.pure.u64(tx, args.fighter_idx),
+      ctx.obj(tx, args.kiosk, true),
+      ctx.obj(tx, args.personal, false),
+      ctx.pin(tx, 'character_policy', false),
+      ctx.pin(tx, 'version', false),
+      tx.object.clock(),
+    ],
+  })
+
+/**
  * `api::exit_kolizeum`
  * @arg lobby — &mut Kolizeum
  * @arg f — &mut Fight
@@ -1751,6 +1824,33 @@ export const exit_kolizeum = (
 ) =>
   tx.moveCall({
     target: `${ctx.pins.package}::api::exit_kolizeum`,
+    arguments: [
+      ctx.obj(tx, args.lobby, true),
+      ctx.obj(tx, args.f, true),
+      ctx.pure.u64(tx, args.fighter_idx),
+      ctx.obj(tx, args.kiosk, true),
+      ctx.obj(tx, args.cap, false),
+      ctx.pin(tx, 'character_policy', false),
+      ctx.pin(tx, 'version', false),
+      tx.object.clock(),
+    ],
+  })
+
+/**
+ * `api::exit_last_kolizeum`
+ * @arg lobby — Kolizeum
+ * @arg f — Fight
+ * @arg fighter_idx — u64
+ * @arg kiosk — &mut Kiosk
+ * @arg cap — &KioskOwnerCap
+ */
+export const exit_last_kolizeum = (
+  tx: Transaction,
+  ctx: DoorCtx,
+  args: { lobby: Resolvable; f: Resolvable; fighter_idx: bigint | number | string; kiosk: Resolvable; cap: Resolvable }
+) =>
+  tx.moveCall({
+    target: `${ctx.pins.package}::api::exit_last_kolizeum`,
     arguments: [
       ctx.obj(tx, args.lobby, true),
       ctx.obj(tx, args.f, true),
@@ -1789,45 +1889,41 @@ export const forfeit_kolizeum = (
   })
 
 /**
- * `api::sweep_kolizeum`
+ * `api::close_kolizeum`
  * @arg lobby — Kolizeum
+ * @arg f — Fight
  */
-export const sweep_kolizeum = (tx: Transaction, ctx: DoorCtx, args: { lobby: Resolvable }) =>
+export const close_kolizeum = (tx: Transaction, ctx: DoorCtx, args: { lobby: Resolvable; f: Resolvable }) =>
   tx.moveCall({
-    target: `${ctx.pins.package}::api::sweep_kolizeum`,
-    arguments: [ctx.obj(tx, args.lobby, true), ctx.pin(tx, 'version', false)],
+    target: `${ctx.pins.package}::api::close_kolizeum`,
+    arguments: [ctx.obj(tx, args.lobby, true), ctx.obj(tx, args.f, true), ctx.pin(tx, 'version', false)],
   })
 
 /**
  * `api::create_friend_list`
- * (no caller arguments)
+ * @arg first — address
  */
-export const create_friend_list = (tx: Transaction, ctx: DoorCtx, args: Record<string, never>) =>
+export const create_friend_list = (tx: Transaction, ctx: DoorCtx, args: { first: string }) =>
   tx.moveCall({
     target: `${ctx.pins.package}::api::create_friend_list`,
-    arguments: [ctx.pin(tx, 'friend_registry', true), ctx.pin(tx, 'version', false)],
+    arguments: [ctx.pin(tx, 'friend_registry', true), ctx.pure.address(tx, args.first), ctx.pin(tx, 'version', false)],
   })
 
 /**
- * `api::add_friend`
+ * `api::set_friend`
  * @arg list — &mut FriendList
  * @arg addr — address
+ * @arg present — bool
  */
-export const add_friend = (tx: Transaction, ctx: DoorCtx, args: { list: Resolvable; addr: string }) =>
+export const set_friend = (tx: Transaction, ctx: DoorCtx, args: { list: Resolvable; addr: string; present: boolean }) =>
   tx.moveCall({
-    target: `${ctx.pins.package}::api::add_friend`,
-    arguments: [ctx.obj(tx, args.list, true), ctx.pure.address(tx, args.addr), ctx.pin(tx, 'version', false)],
-  })
-
-/**
- * `api::remove_friend`
- * @arg list — &mut FriendList
- * @arg addr — address
- */
-export const remove_friend = (tx: Transaction, ctx: DoorCtx, args: { list: Resolvable; addr: string }) =>
-  tx.moveCall({
-    target: `${ctx.pins.package}::api::remove_friend`,
-    arguments: [ctx.obj(tx, args.list, true), ctx.pure.address(tx, args.addr), ctx.pin(tx, 'version', false)],
+    target: `${ctx.pins.package}::api::set_friend`,
+    arguments: [
+      ctx.obj(tx, args.list, true),
+      ctx.pure.address(tx, args.addr),
+      ctx.pure.bool(tx, args.present),
+      ctx.pin(tx, 'version', false),
+    ],
   })
 
 /**
@@ -1841,30 +1937,30 @@ export const trade_create = (tx: Transaction, ctx: DoorCtx, args: { counterparty
   })
 
 /**
- * `api::trade_deposit_item_cap`
+ * `api::trade_put_i`
  * @arg t — &mut Trade
  * @arg cap — PurchaseCap<Item>
  */
-export const trade_deposit_item_cap = (tx: Transaction, ctx: DoorCtx, args: { t: Resolvable; cap: Resolvable }) =>
+export const trade_put_i = (tx: Transaction, ctx: DoorCtx, args: { t: Resolvable; cap: Resolvable }) =>
   tx.moveCall({
-    target: `${ctx.pins.package}::api::trade_deposit_item_cap`,
+    target: `${ctx.pins.package}::api::trade_put_i`,
     arguments: [ctx.obj(tx, args.t, true), ctx.obj(tx, args.cap, true), ctx.pin(tx, 'version', false)],
   })
 
 /**
- * `api::trade_deposit_character_cap`
+ * `api::trade_put_c`
  * @arg t — &mut Trade
  * @arg cap — PurchaseCap<Character>
  * @arg kiosk — &Kiosk
  * @arg kiosk_cap — &KioskOwnerCap
  */
-export const trade_deposit_character_cap = (
+export const trade_put_c = (
   tx: Transaction,
   ctx: DoorCtx,
   args: { t: Resolvable; cap: Resolvable; kiosk: Resolvable; kiosk_cap: Resolvable }
 ) =>
   tx.moveCall({
-    target: `${ctx.pins.package}::api::trade_deposit_character_cap`,
+    target: `${ctx.pins.package}::api::trade_put_c`,
     arguments: [
       ctx.obj(tx, args.t, true),
       ctx.obj(tx, args.cap, true),
@@ -1875,50 +1971,50 @@ export const trade_deposit_character_cap = (
   })
 
 /**
- * `api::trade_withdraw_item_cap`
+ * `api::trade_take_i`
  * @arg t — &mut Trade
  * @arg item — ID
  */
-export const trade_withdraw_item_cap = (tx: Transaction, ctx: DoorCtx, args: { t: Resolvable; item: string }) =>
+export const trade_take_i = (tx: Transaction, ctx: DoorCtx, args: { t: Resolvable; item: string }) =>
   tx.moveCall({
-    target: `${ctx.pins.package}::api::trade_withdraw_item_cap`,
+    target: `${ctx.pins.package}::api::trade_take_i`,
     arguments: [ctx.obj(tx, args.t, true), ctx.pure.id(tx, args.item), ctx.pin(tx, 'version', false)],
   })
 
 /**
- * `api::trade_withdraw_character_cap`
+ * `api::trade_take_c`
  * @arg t — &mut Trade
  * @arg item — ID
  */
-export const trade_withdraw_character_cap = (tx: Transaction, ctx: DoorCtx, args: { t: Resolvable; item: string }) =>
+export const trade_take_c = (tx: Transaction, ctx: DoorCtx, args: { t: Resolvable; item: string }) =>
   tx.moveCall({
-    target: `${ctx.pins.package}::api::trade_withdraw_character_cap`,
+    target: `${ctx.pins.package}::api::trade_take_c`,
     arguments: [ctx.obj(tx, args.t, true), ctx.pure.id(tx, args.item), ctx.pin(tx, 'version', false)],
   })
 
 /**
- * `api::trade_deposit_sui`
+ * `api::trade_put_s`
  * @arg t — &mut Trade
  * @arg coin — Coin<SUI>
  */
-export const trade_deposit_sui = (tx: Transaction, ctx: DoorCtx, args: { t: Resolvable; coin: Resolvable }) =>
+export const trade_put_s = (tx: Transaction, ctx: DoorCtx, args: { t: Resolvable; coin: Resolvable }) =>
   tx.moveCall({
-    target: `${ctx.pins.package}::api::trade_deposit_sui`,
+    target: `${ctx.pins.package}::api::trade_put_s`,
     arguments: [ctx.obj(tx, args.t, true), ctx.obj(tx, args.coin, true), ctx.pin(tx, 'version', false)],
   })
 
 /**
- * `api::trade_withdraw_sui`
+ * `api::trade_take_s`
  * @arg t — &mut Trade
  * @arg amount — u64
  */
-export const trade_withdraw_sui = (
+export const trade_take_s = (
   tx: Transaction,
   ctx: DoorCtx,
   args: { t: Resolvable; amount: bigint | number | string }
 ) =>
   tx.moveCall({
-    target: `${ctx.pins.package}::api::trade_withdraw_sui`,
+    target: `${ctx.pins.package}::api::trade_take_s`,
     arguments: [ctx.obj(tx, args.t, true), ctx.pure.u64(tx, args.amount), ctx.pin(tx, 'version', false)],
   })
 
@@ -1938,34 +2034,46 @@ export const trade_accept = (
   })
 
 /**
- * `api::trade_claim_item_cap`
+ * `api::trade_get_i`
  * @arg t — &mut Trade
  * @arg item — ID
+ * @arg source — &mut Kiosk
  */
-export const trade_claim_item_cap = (tx: Transaction, ctx: DoorCtx, args: { t: Resolvable; item: string }) =>
+export const trade_get_i = (tx: Transaction, ctx: DoorCtx, args: { t: Resolvable; item: string; source: Resolvable }) =>
   tx.moveCall({
-    target: `${ctx.pins.package}::api::trade_claim_item_cap`,
-    arguments: [ctx.obj(tx, args.t, true), ctx.pure.id(tx, args.item), ctx.pin(tx, 'version', false)],
+    target: `${ctx.pins.package}::api::trade_get_i`,
+    arguments: [
+      ctx.obj(tx, args.t, true),
+      ctx.pure.id(tx, args.item),
+      ctx.obj(tx, args.source, true),
+      ctx.pin(tx, 'version', false),
+    ],
   })
 
 /**
- * `api::trade_claim_character_cap`
+ * `api::trade_get_c`
  * @arg t — &mut Trade
  * @arg item — ID
+ * @arg source — &mut Kiosk
  */
-export const trade_claim_character_cap = (tx: Transaction, ctx: DoorCtx, args: { t: Resolvable; item: string }) =>
+export const trade_get_c = (tx: Transaction, ctx: DoorCtx, args: { t: Resolvable; item: string; source: Resolvable }) =>
   tx.moveCall({
-    target: `${ctx.pins.package}::api::trade_claim_character_cap`,
-    arguments: [ctx.obj(tx, args.t, true), ctx.pure.id(tx, args.item), ctx.pin(tx, 'version', false)],
+    target: `${ctx.pins.package}::api::trade_get_c`,
+    arguments: [
+      ctx.obj(tx, args.t, true),
+      ctx.pure.id(tx, args.item),
+      ctx.obj(tx, args.source, true),
+      ctx.pin(tx, 'version', false),
+    ],
   })
 
 /**
- * `api::trade_claim_sui`
+ * `api::trade_get_s`
  * @arg t — &mut Trade
  */
-export const trade_claim_sui = (tx: Transaction, ctx: DoorCtx, args: { t: Resolvable }) =>
+export const trade_get_s = (tx: Transaction, ctx: DoorCtx, args: { t: Resolvable }) =>
   tx.moveCall({
-    target: `${ctx.pins.package}::api::trade_claim_sui`,
+    target: `${ctx.pins.package}::api::trade_get_s`,
     arguments: [ctx.obj(tx, args.t, true), ctx.pin(tx, 'version', false)],
   })
 
@@ -1989,7 +2097,7 @@ export const DOORS = {
   },
   join_world: { params: ['kiosk', 'cap', 'character_id', 'destination'], terminal: false },
   search_zone: { params: ['kiosk', 'personal', 'character_id', 'x', 'z', 'w'], terminal: true },
-  raise_stat: { params: ['kiosk', 'cap', 'character_id', 'stat', 'amount'], terminal: false },
+  raise_stat: { params: ['kiosk', 'cap', 'character_id', 'stat', 'points'], terminal: false },
   raise_spell: { params: ['kiosk', 'cap', 'character_id', 'spell'], terminal: false },
   equip_item: { params: ['kiosk', 'cap', 'character_id', 'slot', 'item_id'], terminal: false },
   unequip_item: { params: ['kiosk', 'cap', 'character_id', 'slot', 'receiving'], terminal: false },
@@ -2018,12 +2126,11 @@ export const DOORS = {
   forfeit_fight: { params: ['f', 'fighter_idx', 'kiosk', 'cap'], terminal: false },
   prepare_fight_loot: { params: ['template', 'existing'], terminal: false },
   settle_fight: { params: ['f', 'fighter_idx', 'plan', 'kiosk', 'personal'], terminal: true },
+  settle_last_fight: { params: ['f', 'fighter_idx', 'plan', 'kiosk', 'personal'], terminal: true },
   close_fight: { params: ['f'], terminal: false },
   create_party: { params: ['kiosk', 'cap', 'character_id'], terminal: false },
-  party_invite: { params: ['p', 'kiosk', 'cap', 'leader_id', 'invited_character'], terminal: false },
+  party_invitation: { params: ['p', 'kiosk', 'cap', 'actor_id', 'invited_character', 'present'], terminal: false },
   party_accept: { params: ['p', 'kiosk', 'cap', 'character_id'], terminal: false },
-  party_decline: { params: ['p', 'kiosk', 'cap', 'character_id'], terminal: false },
-  party_rescind: { params: ['p', 'kiosk', 'cap', 'leader_id', 'invited_character'], terminal: false },
   party_leave: { params: ['p', 'kiosk', 'cap', 'character_id'], terminal: false },
   party_kick: { params: ['p', 'kiosk', 'cap', 'leader_id', 'target_character'], terminal: false },
   party_disband: { params: ['p', 'kiosk', 'cap', 'leader_id'], terminal: false },
@@ -2068,6 +2175,7 @@ export const DOORS = {
   join_dungeon_room: { params: ['f', 'kiosk', 'cap', 'character_id'], terminal: false },
   join_dungeon_room_grouped: { params: ['f', 'kiosk', 'cap', 'character_id', 'shared_party'], terminal: false },
   settle_dungeon_room: { params: ['wc', 'f', 'fighter_idx', 'plan', 'kiosk', 'personal'], terminal: true },
+  settle_last_dungeon_room: { params: ['wc', 'f', 'fighter_idx', 'plan', 'kiosk', 'personal'], terminal: true },
   give_up_dungeon_room: { params: ['f', 'fighter_idx', 'kiosk', 'cap'], terminal: false },
   abandon_dungeon_run: { params: ['kiosk', 'cap', 'character_id'], terminal: false },
   create_kolizeum: {
@@ -2092,22 +2200,23 @@ export const DOORS = {
   join_kolizeum: { params: ['lobby', 'f', 'pledge', 'side', 'kiosk', 'cap', 'character_id'], terminal: false },
   start_kolizeum: { params: ['lobby', 'f'], terminal: true },
   settle_kolizeum: { params: ['lobby', 'f', 'fighter_idx', 'kiosk', 'personal'], terminal: false },
+  settle_last_kolizeum: { params: ['lobby', 'f', 'fighter_idx', 'kiosk', 'personal'], terminal: false },
   exit_kolizeum: { params: ['lobby', 'f', 'fighter_idx', 'kiosk', 'cap'], terminal: false },
+  exit_last_kolizeum: { params: ['lobby', 'f', 'fighter_idx', 'kiosk', 'cap'], terminal: false },
   forfeit_kolizeum: { params: ['f', 'fighter_idx', 'kiosk', 'cap'], terminal: false },
-  sweep_kolizeum: { params: ['lobby'], terminal: false },
-  create_friend_list: { params: [], terminal: false },
-  add_friend: { params: ['list', 'addr'], terminal: false },
-  remove_friend: { params: ['list', 'addr'], terminal: false },
+  close_kolizeum: { params: ['lobby', 'f'], terminal: false },
+  create_friend_list: { params: ['first'], terminal: false },
+  set_friend: { params: ['list', 'addr', 'present'], terminal: false },
   trade_create: { params: ['counterparty'], terminal: false },
-  trade_deposit_item_cap: { params: ['t', 'cap'], terminal: false },
-  trade_deposit_character_cap: { params: ['t', 'cap', 'kiosk', 'kiosk_cap'], terminal: false },
-  trade_withdraw_item_cap: { params: ['t', 'item'], terminal: false },
-  trade_withdraw_character_cap: { params: ['t', 'item'], terminal: false },
-  trade_deposit_sui: { params: ['t', 'coin'], terminal: false },
-  trade_withdraw_sui: { params: ['t', 'amount'], terminal: false },
+  trade_put_i: { params: ['t', 'cap'], terminal: false },
+  trade_put_c: { params: ['t', 'cap', 'kiosk', 'kiosk_cap'], terminal: false },
+  trade_take_i: { params: ['t', 'item'], terminal: false },
+  trade_take_c: { params: ['t', 'item'], terminal: false },
+  trade_put_s: { params: ['t', 'coin'], terminal: false },
+  trade_take_s: { params: ['t', 'amount'], terminal: false },
   trade_accept: { params: ['t', 'seen_version'], terminal: false },
-  trade_claim_item_cap: { params: ['t', 'item'], terminal: false },
-  trade_claim_character_cap: { params: ['t', 'item'], terminal: false },
-  trade_claim_sui: { params: ['t'], terminal: false },
+  trade_get_i: { params: ['t', 'item', 'source'], terminal: false },
+  trade_get_c: { params: ['t', 'item', 'source'], terminal: false },
+  trade_get_s: { params: ['t'], terminal: false },
   trade_destroy: { params: ['t'], terminal: false },
 }

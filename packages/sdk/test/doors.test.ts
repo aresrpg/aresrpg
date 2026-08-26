@@ -92,17 +92,17 @@ describe('generated doors through the bound resolver', () => {
     const sdk = game()
     const tx = sdk.tx()
     expect(() =>
-      sdk.doors.raise_stat(tx, { kiosk: id(11), cap: id(13), character_id: id(13), stat: 'strength', amount: 5 })
+      sdk.doors.raise_stat(tx, { kiosk: id(11), cap: id(13), character_id: id(13), stat: 'strength', points: 5 })
     ).not.toThrow()
     expect(() =>
-      sdk.doors.raise_stat(tx, { kiosk: id(77), cap: id(13), character_id: id(13), stat: 'strength', amount: 5 })
+      sdk.doors.raise_stat(tx, { kiosk: id(77), cap: id(13), character_id: id(13), stat: 'strength', points: 5 })
     ).toThrow(/unresolved object/)
   })
 
   test('shared vs owned resolution takes the right ref shape', () => {
     const sdk = game()
     const tx = sdk.tx()
-    sdk.doors.raise_stat(tx, { kiosk: id(11), cap: id(13), character_id: id(13), stat: 'strength', amount: 5 })
+    sdk.doors.raise_stat(tx, { kiosk: id(11), cap: id(13), character_id: id(13), stat: 'strength', points: 5 })
     const inputs = inputs_of(tx)
     const kinds = inputs.flatMap((i) => ('Object' in i && i.Object ? [Object.keys(i.Object)[0]] : []))
     expect(kinds).toContain('SharedObject') // the kiosk + the version pin
@@ -139,7 +139,7 @@ describe('generated doors through the bound resolver', () => {
     absorb_receipt(sdk.cache, { effects: { changedObjects: [shared(id(11)), owned(id(13))] } })
     const tx = sdk.tx()
     expect(() =>
-      sdk.doors.raise_stat(tx, { kiosk: id(11), cap: id(13), character_id: id(13), stat: 'strength', amount: 5 })
+      sdk.doors.raise_stat(tx, { kiosk: id(11), cap: id(13), character_id: id(13), stat: 'strength', points: 5 })
     ).toThrow(/missing pin "version"/)
   })
 

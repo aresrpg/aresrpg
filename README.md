@@ -3,15 +3,12 @@
 </p>
 <h1 align=center>AresRPG</h1>
 <p align=center>
-  <img src="https://img.shields.io/badge/Made%20with-Javascript-%23f7df1e?style=for-the-badge" alt="fully in javascript"/>
+  <img src="https://img.shields.io/badge/Made%20with-TypeScript-%233178c6?style=for-the-badge" alt="built with TypeScript"/>
   <a href="https://discord.gg/aresrpg">
     <img src="https://img.shields.io/discord/265104803531587584.svg?logo=discord&style=for-the-badge&color=2ECC71" alt="Chat"/>
   </a>
 </p>
 <h3 align=center>A fully on-chain voxel MMORPG on Sui</h3>
-
-<!-- DRAFT (repo-split scaffold 2026-07-20): becomes the public repo's README.md at cutover
-     (git@github.com:aresrpg/aresrpg.git, fresh history). The monorepo README stays live until then. -->
 
 AresRPG is a browser MMORPG where every character, item, fight and trade is a Sui object — the
 client is a renderer of chain truth, with zkLogin onboarding and player-paid transactions.
@@ -24,14 +21,19 @@ twin, SDK, indexer, server, protocol, immutable rules, and the authored seed cor
 ```bash
 bun install
 bun run dev            # frontend at localhost:5173
+bun run repin:local    # rebuild/reset/catch up the local indexer + server from testnet pins.json
 bun run lint           # eslint + prettier
 bun run test           # every package's unit tests — same command CI runs
 ```
 
+`repin:local` deletes only the disposable `aresrpg-local` FalkorDB projection. It waits for the
+fresh indexer to reach the checkpoint observed before reset, then starts the realtime server.
+
 ## Contributing
 
-Read `CLAUDE.md` (the house rules) and `DECISIONS.md` (the design truth) first. Contributions
-build AresRPG — proposals that fight the spec argue the spec change first, as an issue. Need
+Read [`ARCHITECTURE.md`](./ARCHITECTURE.md) for the current system, [`DECISIONS.md`](./DECISIONS.md)
+for active design rulings, and [`CONTRIBUTING.md`](./CONTRIBUTING.md) for the workflow. Changes to
+architecture argue the model first; implementation composes the approved owners and seams.
 
 ## License — source-available, in plain words
 
@@ -42,7 +44,4 @@ This is **source-available** software, developed in the open — not open-source
 contribute improvements back (a [CLA](./CLA.md) signature rides your first PR).
 **You may not:** redistribute the software or your modified version · re-host the game ·
 use it commercially. All commercial rights stay with the author. The AresRPG name and logo
-are not licensed (see TRADEMARK.md).
-
-something from the backend or content domains? Open an issue on that repo; this repo's backlog is
-its own issues.
+are not licensed.

@@ -3,7 +3,7 @@
 // One market category's live PUBLIC listings — the slice pushed when a player observes a
 // category (exclusive listings are private p2p offers; they never reach the browse surface).
 
-import type { ListingRow, MarketObservation } from '@aresrpg/protocol'
+import type { ListingRow, MarketCounts, MarketObservation } from '@aresrpg/protocol'
 
 import { type Graph, type Node } from '../graph.ts'
 
@@ -58,6 +58,23 @@ export async function get_market_slice(
         seller
       )
     )
+}
+
+export async function get_market_counts(graph: Graph): Promise<MarketCounts> {
+  const [items, characters] = await Promise.all([
+    graph.read(
+      `MATCH (:User)-[:OWNS]->(:Kiosk)<-[:LISTED_IN {exclusive: false}]-(asset:Item)
+       RETURN asset.category AS category, count(asset) AS count`
+    ),
+    graph.read(
+      `MATCH (:User)-[:OWNS]->(:Kiosk)<-[:LISTED_IN {exclusive: false}]-(asset:Character)
+       RETURN count(asset) AS count`
+    ),
+  ])
+  const categories = Object.fromEntries(
+    items.flatMap(({ category, count }) => (typeof category === 'string' ? [[category, Number(count)] as const] : []))
+  ) as MarketCounts['categories']
+  return Object.freeze({ categories: Object.freeze(categories), characters: Number(characters[0]?.count ?? 0) })
 }
 
 export async function get_market_listing(graph: Graph, { id }: { id: string }): Promise<ListingRow | null> {

@@ -9,8 +9,7 @@ import { describe, expect, test } from 'bun:test'
 import { renderToStaticMarkup } from 'react-dom/server'
 
 import {
-  presented_turn_after_cue,
-  presented_turn_after_queue,
+  fight_turn_key,
   fight_view_with_display,
   select_fight_view,
   turn_seconds_remaining,
@@ -18,7 +17,7 @@ import {
 import { crank_prompt_hidden, end_turn_wait_ms } from '../../../src/game/fight/FightHud.tsx'
 import { fight_portrait_source, FightTimeline } from '../../../src/game/fight/FightTimeline.tsx'
 import {
-  fight_turn_card_after_observation,
+  fight_turn_announcement_after_cue,
   fight_turn_card_view,
   FightTurnCard,
 } from '../../../src/game/fight/FightTurnCard.tsx'
@@ -186,27 +185,24 @@ describe('generic fight view', () => {
     expect(html).toContain('(1 turn)')
   })
 
-  test('the turn-start card follows the presented fighter and falls back for characters', () => {
+  test('the turn-start card follows only the played turn announcement', () => {
     const checkpoint = started_checkpoint()
     checkpoint.contract.fighters[2]!.kind = {
       type: 'mob',
       snapshot: { mob_type: 'aragne__fire', level: 45n, max_hp: 55n },
     } as never
     const view = select_fight_view({ checkpoint, mode: 'remote', owner: 'mine', names: { aragne__fire: 'Aragne' } })
-    const presented = fight_turn_card_view(view.timeline, 2n, 'fight:0:1000')
+    const presented = fight_turn_card_view(view.timeline, { key: 'fight:turn:1:2', seat: 2n })
 
-    expect(presented).toMatchObject({ key: 'fight:0:1000:2', fighter: { name: 'Aragne', level: 45n } })
-    const current = fight_turn_card_view(view.timeline, null, 'fight:0:1000')
-    expect(fight_turn_card_after_observation(current, view.timeline, null, 'fight:0:1000', true)).toBe(current)
-    expect(fight_turn_card_after_observation(null, view.timeline, null, 'fight:0:1000', true)).toBeNull()
-    expect(fight_turn_card_after_observation(current, view.timeline, 2n, 'fight:0:1000', true)).toEqual(presented)
+    expect(presented).toMatchObject({ key: 'fight:turn:1:2', fighter: { name: 'Aragne', level: 45n } })
+    expect(fight_turn_card_view(view.timeline, null)).toBeNull()
     expect(
       renderToStaticMarkup(
         FightTurnCard({ fighter: presented!.fighter, level_label: 'Level 45', mob_icon_for: () => '/mob.png' })
       )
     ).toContain('src="/mob.png"')
 
-    const character = fight_turn_card_view(view.timeline, null, 'fight:0:1001')
+    const character = fight_turn_card_view(view.timeline, { key: 'fight:turn:2:0', seat: 0n })
     expect(character?.fighter.character_id).not.toBeNull()
     expect(
       renderToStaticMarkup(
@@ -220,6 +216,19 @@ describe('generic fight view', () => {
     expect(card_rule).toContain('background: transparent')
     expect(card_rule).not.toContain('clip-path')
     expect(body_rule).toContain('justify-content: flex-start')
+  })
+
+  test('the same logical turn does not replay its card when chain time replaces predicted time', () => {
+    const predicted = started_checkpoint()
+    const canonical = structuredClone(predicted)
+    canonical.contract.turn_started_ms += 2_000n
+    const predicted_view = select_fight_view({ checkpoint: predicted, mode: 'remote', owner: 'mine', names: {} })
+    const canonical_view = select_fight_view({ checkpoint: canonical, mode: 'remote', owner: 'mine', names: {} })
+    const predicted_key = fight_turn_key(predicted.contract, predicted_view.active_seat)
+    const canonical_key = fight_turn_key(canonical.contract, canonical_view.active_seat)
+
+    expect(canonical_key).toBe(predicted_key)
+    expect(canonical_view.active_seat).toBe(predicted_view.active_seat)
   })
 
   test('a refreshed canonical own turn reconstructs its MP range without local history', () => {
@@ -293,15 +302,19 @@ describe('generic fight view', () => {
     expect(turn_seconds_remaining(10_000n, 55_001)).toBe(0)
   })
 
-  test('a presented mob turn card survives its cue while the turn actions play', () => {
-    const cue = { id: 'turn', type: 'turn', entity_id: 'fight_mob_1' } as const
-    expect(presented_turn_after_cue(null, cue, 'start')).toBe(1n)
-    expect(presented_turn_after_cue(1n, cue, 'complete')).toBe(1n)
-  })
+  test('the same structural turn cue can never announce its profile twice', () => {
+    const first_cue = {
+      id: 'receipt-batch',
+      type: 'turn',
+      entity_id: 'fight_mob_1',
+      turn_key: '0xf1:turn:2:1',
+    } as const
+    const duplicate_cue = { ...first_cue, id: 'indexed-batch' }
+    const announced = fight_turn_announcement_after_cue(null, first_cue, 'start')
 
-  test('a played mob card survives between queued presentation batches', () => {
-    expect(presented_turn_after_queue(1n, 1)).toBe(1n)
-    expect(presented_turn_after_queue(1n, 0)).toBeNull()
+    expect(announced).toEqual({ key: '0xf1:turn:2:1', seat: 1n })
+    expect(fight_turn_announcement_after_cue(announced, first_cue, 'complete')).toBe(announced)
+    expect(fight_turn_announcement_after_cue(announced, duplicate_cue, 'start')).toBe(announced)
   })
 
   test('presentation overrides fighter display without passing a BigInt checkpoint through React props', () => {

@@ -32,6 +32,14 @@ fun mob_bands_scale_from_sixty_to_one_sixty_percent() {
 }
 
 #[test]
+fun retro_push_collision_uses_level_seed_and_untravelled_cells() {
+  assert!(fight_math::push_collision_damage(2, 3, 0) == 24, 0);
+  assert!(fight_math::push_collision_damage(50, 3, 0) == 27, 1);
+  assert!(fight_math::push_collision_damage(50, 3, 7) == 48, 2);
+  assert!(fight_math::push_collision_damage(200, 0, 7) == 0, 3);
+}
+
+#[test]
 fun retro_fight_xp_balances_groups_then_splits_by_level() {
   assert!(fight_math::retro_group_coefficient_tenths(1) == 10, 0);
   assert!(fight_math::retro_group_coefficient_tenths(2) == 11, 1);

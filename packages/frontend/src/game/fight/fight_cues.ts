@@ -492,6 +492,7 @@ export const project_fight_cues = ({
           id,
           type: 'turn',
           entity_id: entity_id(checkpoint, event.payload.to),
+          turn_key: `${checkpoint.contract.id}:turn:${event.payload.round}:${event.payload.to}`,
           // a mob turn holds the card for the chain's own per-turn floor
           ...(mob ? { min_ms: Number(CONTRACT_CONSTANTS.turn_min_ms) } : {}),
         })

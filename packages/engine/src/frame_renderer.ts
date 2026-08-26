@@ -24,11 +24,11 @@ import { get_quality_profile, uses_world_post_processing } from './quality.ts'
 import type { create_sky_node } from './sky/sky_node.ts'
 import { create_sun_shafts } from './sun_shafts.ts'
 import type { EnginePresentation, EngineQuality } from './types.ts'
-import { create_underwater_pass, type UnderwaterPass } from './underwater.ts'
+import { create_underwater_pass, type UnderwaterFrameState, type UnderwaterPass } from './underwater.ts'
 
 type FramePipeline = Readonly<{
   render: () => void
-  set_underwater: (state: Readonly<{ submerged: boolean; dt: number }>) => void
+  set_underwater: (state: UnderwaterFrameState) => void
   dispose: () => void
 }>
 
@@ -156,7 +156,7 @@ const create_pipeline = (
       }
       pipeline.render()
     },
-    set_underwater: (state: Readonly<{ submerged: boolean; dt: number }>) => {
+    set_underwater: (state: UnderwaterFrameState) => {
       ;({ submerged } = state)
       underwater.update(state)
       // The droplets fire on the EXIT edge only — never on entry, never while submerged.

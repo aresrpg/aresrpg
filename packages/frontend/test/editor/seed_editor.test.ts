@@ -133,6 +133,22 @@ describe('seed editor model', () => {
     expect(mobs.flatMap((mob) => mob.spells).every((spell) => spell.levels.length === 1)).toBeTrue()
   })
 
+  test('Ikari chatiments author the Retro normal and critical turn caps', () => {
+    const names = new Set(['Blood Toll', 'Bloodletting', 'Reckless Toll', 'Whirling Toll'])
+    const chatiments = spells.filter(({ name }) => names.has(name))
+    const cap_ladder = (critical: boolean) =>
+      chatiments.map(({ levels }) =>
+        levels.map((level) => {
+          const effect = (critical ? level.crit_effects : level.effects).find(({ kind }) => kind === 7)
+          return effect?.value
+        })
+      )
+
+    expect(chatiments).toHaveLength(4)
+    expect(cap_ladder(false)).toEqual(Array.from({ length: 4 }, () => [60, 80, 100, 120, 140, 200]))
+    expect(cap_ladder(true)).toEqual(Array.from({ length: 4 }, () => [70, 90, 110, 130, 150, 220]))
+  })
+
   test('updates deeply without mutating or dropping unknown siblings', () => {
     const source = Object.freeze({ known: Object.freeze([{ value: 1, future: 'preserve' }]), sibling: true })
     const changed = replace_json_value(source, ['known', 0, 'value'], 2)

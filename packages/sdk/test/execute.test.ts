@@ -62,6 +62,7 @@ const resolve_gas =
 /** A fake CORE client: hydrate sources, a scriptable simulation verdict, an execution recorder. */
 const fake_client = ({
   simulate_ok,
+  execution_ok = true,
   execution_gate,
   failure_branch = 'FailedTransaction',
   failure_message = 'MoveAbort(2701) — scribe locked',
@@ -69,6 +70,7 @@ const fake_client = ({
   owned_versions = new Map<string, string[]>(),
 }: {
   simulate_ok: boolean
+  execution_ok?: boolean
   execution_gate?: Promise<void>
   /** what the simulated failure says — the SDK reads it to tell OUR budget from THEIR wallet */
   failure_message?: string
@@ -161,7 +163,13 @@ const fake_client = ({
           $kind: 'Transaction',
           Transaction: {
             digest: 'EXEC',
-            effects: { status: { success: true, error: null }, gasObject: gas_object, changedObjects: [gas_object] },
+            effects: {
+              status: execution_ok
+                ? { success: true, error: null }
+                : { success: false, error: { message: failure_message } },
+              gasObject: gas_object,
+              changedObjects: [gas_object],
+            },
           },
         }
       },
@@ -228,7 +236,7 @@ describe('the execute gate (core interface)', () => {
     const client = fake_client({ simulate_ok: false })
     const sdk = await game(client)
     await expect(
-      sdk.call.raise_stat({ kiosk: id(11), cap: id(13), character_id: id(13), stat: 'strength', amount: 5 })
+      sdk.call.raise_stat({ kiosk: id(11), cap: id(13), character_id: id(13), stat: 'strength', points: 5 })
     ).rejects.toThrow(/dry run failed.*NOT submitted.*scribe locked/)
     expect(client.calls.simulations).toBe(1)
     expect(client.calls.executions).toBe(0)
@@ -242,7 +250,7 @@ describe('the execute gate (core interface)', () => {
       cap: id(13),
       character_id: id(13),
       stat: 'strength',
-      amount: 5,
+      points: 5,
     })
     expect(receipt.Transaction?.digest).toBe('EXEC')
     expect(client.calls.simulations).toBe(1)
@@ -378,6 +386,16 @@ describe('the execute gate (core interface)', () => {
     await expect(sdk.execute(transaction)).rejects.toThrow(/NOT submitted.*scribe locked/)
     expect(signatures).toBe(0)
     expect(client.calls.executions).toBe(0)
+  })
+
+  test('an executed failure in the Transaction branch remains a failed action', async () => {
+    const client = fake_client({ simulate_ok: true, execution_ok: false })
+    const sdk = SDK({ client, signer, pins })
+    const transaction = sdk.tx()
+    transaction.transferObjects([transaction.gas], id(98))
+
+    await expect(sdk.execute(transaction)).rejects.toThrow(/transaction EXEC failed on-chain.*scribe locked/)
+    expect(client.calls.executions).toBe(1)
   })
 
   test('the executor serializes submissions that share its receipt-fed gas cache', async () => {

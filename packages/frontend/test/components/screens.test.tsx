@@ -2,6 +2,7 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
 import { expect, test } from 'bun:test'
+import { class_names } from '@aresrpg/immutable'
 import { renderToStaticMarkup } from 'react-dom/server'
 
 import { CharacterCreateModal, character_name_error_text } from '../../src/components/CharacterCreateModal.tsx'
@@ -20,7 +21,13 @@ test('each standalone screen exposes only its own surface', async () => {
 
   // Character creation reserves the model preview and carries no release-status copy.
   const create = renderToStaticMarkup(
-    <CharacterCreateModal cancel={() => undefined} copy={copy} create={async () => undefined} insufficient={false} />
+    <CharacterCreateModal
+      cancel={() => undefined}
+      copy={copy}
+      create={async () => undefined}
+      insufficient={false}
+      view_spells={() => undefined}
+    />
   )
 
   expect(create).toContain('data-character-preview=""')
@@ -30,6 +37,9 @@ test('each standalone screen exposes only its own surface', async () => {
   expect(create).not.toContain('next published game package')
   expect(create).toContain('1 SUI')
   expect(create).toContain(copy.character_price)
+  expect(create).toContain('data-class-spells-link=""')
+  expect(create).toContain('See the spells for that class')
+  class_names.forEach((classe) => expect(create).toContain(copy.simulator_page[`class_${classe}_title`]))
   expect(character_name_error_text(copy, '')).toBeNull()
   expect(character_name_error_text(copy, 'Sceat 6')).toBe(copy.name_invalid)
 

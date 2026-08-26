@@ -17,6 +17,8 @@ import {
 } from '../scripts/generate_doors.mjs'
 
 const api_source = readFileSync(API_MOVE_PATH, 'utf8')
+const party_source = readFileSync(new URL('../../move/sources/party.move', import.meta.url), 'utf8')
+const trade_source = readFileSync(new URL('../../move/sources/trade.move', import.meta.url), 'utf8')
 
 type ParsedDoor = ReturnType<typeof parse_doors>[number]
 
@@ -27,6 +29,21 @@ describe('door parsing (positive controls against the real api.move)', () => {
     const declared = [...api_source.matchAll(/^(?:public entry fun|public fun|entry fun) (\w+)/gm)].map((m) => m[1])
     expect(doors.map((d: ParsedDoor) => d.name).sort()).toEqual(declared.sort())
     expect(doors.length).toBeGreaterThanOrEqual(60) // the instrument reads, never returns empty
+  })
+
+  test('no public claim door releases the counterparty transferable PurchaseCap', () => {
+    expect(api_source).not.toMatch(/public fun trade_get_[ic][\s\S]*?\)\s*:\s*PurchaseCap</)
+  })
+
+  test('generic fight cleanup explicitly rejects wagered fights', () => {
+    const body = /entry fun close_fight[\s\S]*?\n}/.exec(api_source)?.[0] ?? ''
+    expect(body).toContain('!fight::is_wagered(&f)')
+  })
+
+  test('attacker-controlled social manifests have explicit chain bounds', () => {
+    expect(party_source).toContain('party.pending.length() < MAX_MEMBERS')
+    expect(trade_source).toContain('MAX_CAPS_PER_SIDE')
+    expect(trade_source).toContain('manifest.length() < MAX_CAPS_PER_SIDE')
   })
 
   test('&Random doors are flagged terminal, others are not', () => {
@@ -47,6 +64,7 @@ describe('door parsing (positive controls against the real api.move)', () => {
     expect(strategies.payment).toBe('object')
     expect(strategies.raw_name).toBe('pure')
     expect(strategies.ctx).toBe('skip')
+    expect(by_name.delete_character.params.find(({ name }) => name === 'registry')?.strategy.kind).toBe('pin')
     expect(
       Object.fromEntries(by_name.move_fighter.params.map((parameter) => [parameter.name, parameter.strategy.kind])).path
     ).toBe('pure_vector')

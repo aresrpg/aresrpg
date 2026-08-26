@@ -87,4 +87,5 @@ test('combat lines enter chat only after their presentation batch completes', ()
 
   emit({ type: 'fight/presented', presentation } as AppInput)
   expect(state.chat.lines.map(({ key }) => key)).toEqual(['log_lost'])
+  expect(state.chat.lines[0]?.fight).toBe('0xf1')
 })

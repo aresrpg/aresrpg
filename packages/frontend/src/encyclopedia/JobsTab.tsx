@@ -64,7 +64,7 @@ export const JobsTab = ({
   const CategoryIcon = category ? JOB_ICONS[category] : Hammer
 
   const job_list = (
-    <aside className="flex w-[300px] min-w-[300px] flex-col border-r border-[#1e1e2e] max-[760px]:w-full max-[760px]:min-w-0 max-[760px]:border-r-0">
+    <aside className="flex w-[300px] min-w-[300px] flex-col border-r border-border max-[760px]:w-full max-[760px]:min-w-0 max-[760px]:border-r-0">
       <div className="p-2">
         <SearchField change={set_search} placeholder={text('search_jobs')} value={search} />
       </div>
@@ -75,7 +75,7 @@ export const JobsTab = ({
           const Icon = JOB_ICONS[group]
           return (
             <section key={group}>
-              <div className="flex items-center gap-2 border-b border-[#1e1e2e] bg-white/2 px-3 py-2">
+              <div className="flex items-center gap-2 border-b border-border bg-white/2 px-3 py-2">
                 <Icon className="text-[#c8963c] opacity-50" size={10} />
                 <span className="text-[8px] font-semibold tracking-[0.2em] text-[#c8963c]/70 uppercase">
                   {text(`job_category.${group}`)}
@@ -85,7 +85,7 @@ export const JobsTab = ({
                 const active = selected_id === job.id
                 return (
                   <button
-                    className={`flex w-full cursor-pointer flex-col border-b border-l-2 border-b-[#1e1e2e]/50 px-3 py-2.5 text-left transition-colors ${
+                    className={`flex w-full cursor-pointer flex-col border-b border-l-2 border-b-border/50 px-3 py-2.5 text-left transition-colors ${
                       active ? 'border-l-[#c8963c] bg-[#c8963c]/10' : 'border-l-transparent hover:bg-white/3'
                     }`}
                     key={job.id}
@@ -140,7 +140,7 @@ export const JobsTab = ({
               <Divider />
               <SectionTitle>{text('gathering_tiers')}</SectionTitle>
               <div className="flex flex-col">
-                <div className="flex items-center border-b border-[#1e1e2e] bg-white/3 px-2 py-1.5">
+                <div className="flex items-center border-b border-border bg-white/3 px-2 py-1.5">
                   <span className="w-12 text-[8px] tracking-[0.15em] text-[#6b7280] uppercase">{text('tier')}</span>
                   <span className="w-16 text-[8px] tracking-[0.15em] text-[#6b7280] uppercase">
                     {text('required_level')}
@@ -162,7 +162,7 @@ export const JobsTab = ({
                     const rare = row.rare_item_type ? encyclopedia_catalog.item(row.rare_item_type)?.item : null
                     return (
                       <button
-                        className="flex cursor-pointer items-center border-b border-[#1e1e2e]/30 px-2 py-1.5 text-left hover:bg-white/2"
+                        className="flex cursor-pointer items-center border-b border-border/30 px-2 py-1.5 text-left hover:bg-white/2"
                         key={row.item_type}
                         onClick={() => select_item(row.item_type)}
                         type="button"
@@ -215,7 +215,7 @@ export const JobsTab = ({
     return (
       <div className="flex min-h-0 flex-1 max-[760px]:flex-col">
         <button
-          className="hidden items-center gap-2 border-b border-[#1e1e2e] px-3 py-2 text-[10px] tracking-[0.15em] text-[#6b7280] uppercase max-[760px]:flex"
+          className="hidden items-center gap-2 border-b border-border px-3 py-2 text-[10px] tracking-[0.15em] text-[#6b7280] uppercase max-[760px]:flex"
           onClick={() => select_job('')}
           type="button"
         >

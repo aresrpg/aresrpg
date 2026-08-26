@@ -15,10 +15,11 @@ export type EffectLineView = Readonly<{
   tone: string
   post: string
   meta: string | null
+  title?: string
 }>
 
 export const EffectLine = ({ view, compact = false }: Readonly<{ view: EffectLineView; compact?: boolean }>) => (
-  <div className={`fxl${compact ? ' fxl--compact' : ''}`}>
+  <div className={`fxl${compact ? ' fxl--compact' : ''}`} title={view.title}>
     {view.icon ? (
       <img alt="" aria-hidden="true" className="fxl__ic" draggable={false} src={view.icon} />
     ) : view.dot ? (

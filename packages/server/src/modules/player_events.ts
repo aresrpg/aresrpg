@@ -35,32 +35,34 @@ export default {
         send({ type: 'packet/characters', characters })
       }
     )
+    const read_latest_resolutions = latest_keyed_reader(
+      (owner) => get_fight_resolutions(graph, { address: owner }),
+      (_owner, resolutions) => send({ type: 'packet/fight_resolutions', resolutions })
+    )
     const refresh_roster = (): void => {
       void read_latest_roster(address).catch((error) =>
         log.error({ address, error: (error as Error).message }, 'roster refresh failed')
       )
     }
+    const refresh_resolutions = (): void => {
+      void read_latest_resolutions(address).catch((error) =>
+        log.error({ address, error: (error as Error).message }, 'fight resolution refresh failed')
+      )
+    }
 
     // the player's own social channel — friend facts + exclusive offers, as REAL packets
-    watch(channels.social(address), (payload: EventEnvelope) => {
-      if (payload.type === 'FriendAdded' || payload.type === 'FriendRemoved') {
-        const { list, who } = payload.data as { list: string; who: string }
-        if (payload.type === 'FriendAdded') send({ type: 'packet/friend_added', list, who })
-        else send({ type: 'packet/friend_removed', list, who })
-      }
+    void watch(channels.social(address), (payload: EventEnvelope) => {
       // a created character is chain-initialized state the receipt cannot carry — the
       // server streams the fresh roster the moment the indexer projects it
-      if (payload.type === 'CharacterCreated') {
+      if (payload.type === 'CharacterCreated' || payload.type === 'CharacterHeld') {
         refresh_roster()
       }
-    })
+    }).catch((error: Error) => log.error({ address, error: error.message }, 'social watch failed'))
 
     /** Every owned character's chain channel stays armed; selection is client presentation. */
     const forward_self = (tracked_character_id: string) => (payload: EventEnvelope) => {
-      if (payload.type === 'PartyInvited') {
-        const { party, character } = payload.data as { party: string; character: string }
-        send({ type: 'packet/party_invited', party, character })
-      }
+      if (payload.type === 'PartyInvitesChanged')
+        dispatch({ type: 'action/party_invites_changed', character_id: tracked_character_id })
       if (payload.type === 'PartyJoined') {
         const { party, character } = payload.data as { party: string; character: string }
         dispatch({ type: 'action/party', character_id: character, party })
@@ -90,11 +92,7 @@ export default {
       }
       if (payload.type === 'DungeonEntered' || payload.type === 'DungeonRoomCleared' || payload.type === 'DungeonEnded')
         refresh_roster()
-      if (payload.type === 'FightResolutionChanged' || payload.type === 'CharacterHeld') {
-        void get_fight_resolutions(graph, { address })
-          .then((resolutions) => send({ type: 'packet/fight_resolutions', resolutions }))
-          .catch((error) => log.error({ address, error: (error as Error).message }, 'fight resolution refresh failed'))
-      }
+      if (payload.type === 'FightResolutionChanged' || payload.type === 'CharacterHeld') refresh_resolutions()
       if (payload.type === 'ItemEquipped' || payload.type === 'ItemUnequipped') {
         const { slot, item } = payload.data as { slot: string; item: string }
         if (!is_visible_slot(slot)) return
@@ -119,7 +117,13 @@ export default {
       })
       current.forEach((character_id) => {
         if (!before.has(character_id))
-          watch(channels.character(character_id), forward_self(character_id) as (payload: never) => void)
+          void watch(channels.character(character_id), forward_self(character_id) as (payload: never) => void)
+            .then(() => {
+              refresh_roster()
+              refresh_resolutions()
+              dispatch({ type: 'action/character_watch_ready', character_id })
+            })
+            .catch((error: Error) => log.error({ character_id, error: error.message }, 'character watch failed'))
       })
     })
 

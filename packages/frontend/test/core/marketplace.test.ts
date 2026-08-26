@@ -3,8 +3,8 @@
 
 import { describe, expect, test } from 'bun:test'
 
-import { market_observation } from '../../src/modules/marketplace.ts'
-import { initial_app_state, reduce_app_state } from '../../src/store.ts'
+import marketplace_module, { market_group_count, market_observation } from '../../src/modules/marketplace.ts'
+import { initial_app_state, reduce_app_state, type AppInput } from '../../src/store.ts'
 
 const settings = Object.freeze({
   quality: 'medium',
@@ -32,6 +32,22 @@ describe('marketplace projection', () => {
     expect(market_observation('CHARACTERS')).toEqual({ categories: [], characters: true })
     expect(market_observation('EQUIPMENT').categories).toContain('sword')
     expect(market_observation('EQUIPMENT').categories).not.toContain('resource')
+  })
+
+  test('the browse rail counts every group from the aggregate market projection', () => {
+    const counts = { categories: { hat: 2, sword: 3, pet: 4, rune: 5, resource: 6 }, characters: 7 }
+    expect(market_group_count('EQUIPMENT', counts)).toBe(5)
+    expect(market_group_count('PETS', counts)).toBe(4)
+    expect(market_group_count('RUNES', counts)).toBe(5)
+    expect(market_group_count('CONSUMABLE', counts)).toBe(0)
+    expect(market_group_count('RESOURCES', counts)).toBe(6)
+    expect(market_group_count('CHARACTERS', counts)).toBe(7)
+    expect(market_group_count('RESOURCES', { categories: {}, characters: 0 }, 1)).toBe(1)
+    const state = reduce_app_state(initial_app_state(settings), {
+      type: 'server/packet',
+      packet: { type: 'packet/market_counts', counts },
+    })
+    expect(state.marketplace.counts).toEqual(counts)
   })
 
   test('a pushed slice is patched by live listing deltas without polling or a second store', () => {
@@ -90,5 +106,32 @@ describe('marketplace projection', () => {
     expect(reduce_app_state(state, { type: 'auth/disconnected' }).marketplace).toEqual(
       initial_app_state(settings).marketplace
     )
+  })
+
+  test('a full roster refuses a character purchase before any transaction leaves', () => {
+    const listeners = new Map<string, (payload: never) => void>()
+    const dispatched: AppInput[] = []
+    const bought: unknown[] = []
+    const base = initial_app_state(settings)
+    const state = {
+      ...base,
+      session: {
+        ...base.session,
+        characters: Array.from({ length: 6 }, (_, index) => ({ id: `0xc${index}` })),
+        wallet: { marketplace: { buy: (asset: unknown) => (bought.push(asset), Promise.resolve({ digest: '0x' })) } },
+      },
+    } as never
+    marketplace_module.observe?.({
+      events: { on: (name: string, listener: (payload: never) => void) => listeners.set(name, listener) },
+      signal: new AbortController().signal,
+      get_state: () => state,
+      dispatch: (input: AppInput) => dispatched.push(input),
+    } as never)
+    listeners.get('market/buy_requested')?.({
+      listing: { ...listing, kind: 'character', item_type: null, category: null },
+    } as never)
+
+    expect(bought).toHaveLength(0)
+    expect(dispatched).toMatchObject([{ type: 'market/write_failed' }])
   })
 })

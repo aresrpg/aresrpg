@@ -18,7 +18,7 @@ import {
   result_xp_progress,
   type ResultParticipant,
 } from '../../modules/fight_result.ts'
-import { dispatch_app, useAppStore } from '../../store.ts'
+import { dispatch_app, useAppStore, type AppState } from '../../store.ts'
 import { format_sui } from '../../wallet_amount.ts'
 import { play_procedural_cue } from '../audio/procedural_cues.ts'
 
@@ -26,6 +26,10 @@ import './fight_result.css'
 
 const text_of = (copy: AppCopy, key: string): string => copy.fight_hud[key] ?? key
 const initial = (name: string): string => name.trim()[0]?.toUpperCase() ?? '?'
+const selected_result = (state: AppState) => {
+  const character_id = state.session.selected_character_id
+  return character_id ? (state.fight_result.current_by_character[character_id] ?? null) : null
+}
 
 const ResultRow = ({
   participant,
@@ -82,27 +86,29 @@ const ResultRow = ({
 }
 
 export const FightResultCard = ({ copy }: Readonly<{ copy: AppCopy }>) => {
-  const result_state = useAppStore(({ fight_result }) => fight_result)
+  const result = useAppStore(selected_result)
   const fight = useAppStore((state) => state.fight)
-  const result = result_state.current
+  const selected_character_id = useAppStore((state) => state.session.selected_character_id)
   const available = !result || fight_result_available(fight, result.fight)
   const surface = result ? fight_result_surface(result) : null
-  const complete = fight_result_complete(result_state)
+  const complete = fight_result_complete(result)
+  const failed = result?.error !== null
   const own = !result || result.own_seat === null ? null : result.participants[result.own_seat]
   const victory = result ? (own ? result.winner === own.team : result.winner !== null) : false
   const fight_id = result?.fight ?? null
   useEffect(() => {
     if (fight_id && available && surface === 'result') play_procedural_cue(victory ? 'victory' : 'defeat')
   }, [available, fight_id, surface, victory])
-  if (!result || !available || !result.result_open) return null
+  if (!result || !available || surface !== 'result') return null
 
   const own_team = own?.team ?? result.winner ?? 0
   const party = result.participants.filter(({ team }) => team === own_team)
   const enemies = result.participants.filter(({ team }) => team !== own_team)
   const verdict = text_of(copy, victory ? 'result_victory' : 'result_defeat')
   const close = (): void => {
-    dispatch_app({ type: 'fight/watch', fight: null })
-    dispatch_app({ type: 'fight_result/closed' })
+    // A local-lab result has no roster seat; selection still names its result owner.
+    const character_id = own?.character_id ?? selected_character_id
+    if (character_id) dispatch_app({ type: 'fight_result/closed', character_id })
   }
   return (
     <section className="fe-stage" aria-label={verdict} aria-modal="true" role="dialog">
@@ -125,7 +131,7 @@ export const FightResultCard = ({ copy }: Readonly<{ copy: AppCopy }>) => {
             <span>{text_of(copy, 'result_gas_spent')}</span>
             <b>
               {result.gas_spent_mist < 0n ? '-' : ''}
-              {format_sui(result.gas_spent_mist < 0n ? -result.gas_spent_mist : result.gas_spent_mist, 2)} SUI
+              {format_sui(result.gas_spent_mist < 0n ? -result.gas_spent_mist : result.gas_spent_mist, 3)} SUI
             </b>
           </div>
         </div>
@@ -134,7 +140,7 @@ export const FightResultCard = ({ copy }: Readonly<{ copy: AppCopy }>) => {
             <span>{text_of(copy, 'result_party')}</span>
             <span>{party.length}</span>
           </div>
-          <div className={`fe-rows${party.length > 4 ? ' fe-rows--grid' : ''}`}>
+          <div className="fe-rows fe-rows--grid">
             {party.map((participant) => (
               <ResultRow defeated={false} enemy={false} key={participant.seat} participant={participant} />
             ))}
@@ -146,7 +152,7 @@ export const FightResultCard = ({ copy }: Readonly<{ copy: AppCopy }>) => {
               <span>{text_of(copy, 'result_enemies')}</span>
               <span>{enemies.length}</span>
             </div>
-            <div className={`fe-rows${enemies.length > 4 ? ' fe-rows--grid' : ''}`}>
+            <div className="fe-rows fe-rows--grid">
               {enemies.map((participant) => (
                 <ResultRow defeated={victory} enemy key={participant.seat} participant={participant} />
               ))}
@@ -156,14 +162,19 @@ export const FightResultCard = ({ copy }: Readonly<{ copy: AppCopy }>) => {
         {result.error && (
           <div className="fe-error">
             <span>{result.error}</span>
-            <button onClick={() => dispatch_app({ type: 'fight_result/retry' })} type="button">
+            <button
+              onClick={() =>
+                own?.character_id && dispatch_app({ type: 'fight_result/retry', character_id: own.character_id })
+              }
+              type="button"
+            >
               {text_of(copy, 'result_retry')}
             </button>
           </div>
         )}
         <div className="fe-cta">
-          <button disabled={!complete} onClick={close} type="button">
-            {text_of(copy, complete ? 'result_continue' : 'result_collecting')}
+          <button disabled={!complete && !failed} onClick={close} type="button">
+            {text_of(copy, failed ? 'result_close' : complete ? 'result_continue' : 'result_collecting')}
           </button>
         </div>
       </div>
@@ -172,10 +183,13 @@ export const FightResultCard = ({ copy }: Readonly<{ copy: AppCopy }>) => {
 }
 
 export const FightLevelUpCard = ({ copy }: Readonly<{ copy: AppCopy }>) => {
-  const result = useAppStore(({ fight_result }) => fight_result.current)
+  const result = useAppStore(selected_result)
+  const fight = useAppStore((state) => state.fight)
   const characters = useAppStore(({ session }) => session.characters)
   const own = result && result.own_seat !== null ? result.participants[result.own_seat] : null
-  const visible = Boolean(result?.level_up_open && own && own.level_after > own.level_before)
+  const visible = Boolean(
+    result?.level_up_open && fight_result_available(fight, result.fight) && own && own.level_after > own.level_before
+  )
   useEffect(() => {
     if (visible) play_procedural_cue('level_up')
   }, [result?.fight, own?.level_after, visible])
@@ -194,7 +208,9 @@ export const FightLevelUpCard = ({ copy }: Readonly<{ copy: AppCopy }>) => {
   const unlocked_worlds = content_catalog.worlds.filter(
     ({ entry_level }) => entry_level > own.level_before && entry_level <= own.level_after
   )
-  const acknowledge = (): void => dispatch_app({ type: 'fight_result/level_acknowledged' })
+  const acknowledge = (): void => {
+    if (own.character_id) dispatch_app({ type: 'fight_result/level_acknowledged', character_id: own.character_id })
+  }
   const allocate = (): void => {
     acknowledge()
     if (own.character_id) dispatch_app({ type: 'character/select', character_id: own.character_id })

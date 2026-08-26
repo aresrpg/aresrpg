@@ -87,7 +87,7 @@
   height: 8px;
   flex: none;
   background: rgba(255, 255, 255, 0.03);
-  border: 1px solid var(--color-border, #1e1e2e);
+  border: 1px solid var(--color-border);
   transition:
     background 0.15s ease,
     border-color 0.15s ease,
@@ -105,12 +105,33 @@
 }
 
 .chat > footer {
+  display: flex;
+  gap: 5px;
   border-top: 1px solid rgba(216, 201, 163, 0.12);
   padding: 4px 6px;
 }
 
+.chat__scope {
+  border: 1px solid rgba(216, 201, 163, 0.14);
+  background: rgba(255, 255, 255, 0.03);
+  padding: 0 7px;
+  color: var(--color-muted);
+  font: 8px inherit;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+.chat__scope.is-party {
+  border-color: rgba(200, 150, 60, 0.45);
+  color: var(--color-gold);
+}
+.chat__scope:disabled {
+  cursor: not-allowed;
+  opacity: 0.35;
+}
+
 .chat__input {
-  width: 100%;
+  min-width: 0;
+  flex: 1;
   border: 1px solid rgba(216, 201, 163, 0.14);
   background: rgba(255, 255, 255, 0.03);
   padding: 4px 7px;
@@ -206,7 +227,7 @@
   flex: 1;
   min-width: 0;
   background: rgba(6, 6, 12, 0.8);
-  border: 1px solid var(--color-border, #1e1e2e);
+  border: 1px solid var(--color-border);
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
   border-radius: 9px;

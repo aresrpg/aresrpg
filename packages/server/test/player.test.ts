@@ -53,7 +53,7 @@ const wire = () => {
         return [
           { character: { properties: { name: 'nox' } }, kiosk_node: { properties: { id: '0xk' } }, equipment: [] },
         ]
-      if (cypher.includes('[:FIGHTER]->(c:Character {owner:')) return []
+      if (cypher.includes(':FIGHTER]->(c:Character {owner:')) return []
       return [
         {
           character: { properties: { name: 'nox' } },
@@ -90,7 +90,7 @@ const flush = () => new Promise((resolve) => setTimeout(resolve, 0))
 
 describe('the player harness (push model)', () => {
   test('an authenticated ping returns the same transport probe id', () => {
-    const { sent, ws, graph, pubsub } = wire()
+    const { sent, ws, graph, pubsub, queries } = wire()
     const player = create_player({ ws, address: '0xme', admin: false, graph, pubsub })
 
     player.on_message(JSON.stringify({ type: 'packet/ping', id: 42 }))
@@ -128,12 +128,21 @@ describe('the player harness (push model)', () => {
   })
 
   test('his social channel streams without being asked — the server decides the watch', async () => {
-    const { sent, ws, graph, pubsub } = wire()
+    const { sent, ws, graph, pubsub, queries } = wire()
     create_player({ ws, address: '0xme', admin: false, graph, pubsub })
     await flush()
-    pubsub.emitter.emit('evt:social:0xme', { type: 'FriendAdded', ckpt: 1, data: { list: '0xl', who: '0xme' } })
-    const event = sent.find((packet) => packet.type === 'packet/friend_added')
-    expect(event).toEqual({ type: 'packet/friend_added', list: '0xl', who: '0xme' })
+    const before = queries.filter(({ cypher }) => cypher.includes(':FRIEND')).length
+    pubsub.emitter.emit('evt:social:0xme', {
+      type: 'FriendListChanged',
+      ckpt: 1,
+      data: { owner: '0xme' },
+    })
+    await flush()
+    expect(queries.filter(({ cypher }) => cypher.includes(':FRIEND'))).toHaveLength(before + 1)
+    expect(sent.filter((packet) => packet.type === 'packet/friends').at(-1)).toEqual({
+      type: 'packet/friends',
+      friends: [{ address: '0xpal', characters: ['nyx'] }],
+    })
   })
 
   test('a projected character creation pushes the fresh roster', async () => {
@@ -163,7 +172,7 @@ describe('the player harness (push model)', () => {
     await flush()
     player.on_close()
     const count = sent.length
-    pubsub.emitter.emit('evt:social:0xme', { type: 'FriendAdded', ckpt: 2, data: {} })
+    pubsub.emitter.emit('evt:social:0xme', { type: 'FriendListChanged', ckpt: 2, data: {} })
     expect(sent).toHaveLength(count)
   })
 

@@ -57,7 +57,12 @@ export async function get_fight_checkpoint(
   graph: Graph,
   { fight_id }: { fight_id: string }
 ): Promise<FightStateRow | null> {
-  const rows = await graph.read(`MATCH (f:Fight {id: $fight_id}) RETURN f AS fight`, { fight_id })
+  const rows = await graph.read(
+    `MATCH (f:Fight {id: $fight_id})
+     OPTIONAL MATCH (k:Kolizeum {fight_id: $fight_id})
+     RETURN f AS fight, k.id AS kolizeum`,
+    { fight_id }
+  )
   const [row] = rows
   if (!row?.fight) return null
   const fight = (row.fight as Exclude<Node, null | undefined>).properties
@@ -107,5 +112,5 @@ export async function get_fight_checkpoint(
         player_source_of(seat.character!.properties, seat.weapon?.properties ?? null),
       ])
   )
-  return { contract, players }
+  return { contract, players, kolizeum: typeof row.kolizeum === 'string' ? row.kolizeum : null }
 }

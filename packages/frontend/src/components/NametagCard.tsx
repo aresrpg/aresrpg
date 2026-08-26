@@ -26,7 +26,7 @@ export const NametagCard = ({
   return (
     <div className="pointer-events-none -translate-y-full">
       <div
-        className="relative flex flex-col items-center gap-0.5 rounded-lg border bg-[#0a0a0f]/85 px-3 py-1.5 text-center backdrop-blur-md"
+        className="relative flex flex-col items-center gap-0.5 rounded-lg border bg-bg/85 px-3 py-1.5 text-center backdrop-blur-md"
         style={{
           borderColor: tone === 'gold' ? 'rgba(200,150,60,0.25)' : 'rgba(120,124,134,0.22)',
           boxShadow: `${glow}, 0 4px 18px rgba(0,0,0,0.5)`,
@@ -39,7 +39,7 @@ export const NametagCard = ({
         <span className="absolute right-0 bottom-0 h-2 w-2 border-r border-b" style={{ borderColor: edge }} />
         {/* center diamond above the name */}
         <span
-          className="absolute -top-[5px] left-1/2 h-[7px] w-[7px] -translate-x-1/2 rotate-45 border bg-[#0a0a0f]"
+          className="absolute -top-[5px] left-1/2 h-[7px] w-[7px] -translate-x-1/2 rotate-45 border bg-bg"
           style={{ borderColor: tone === 'gold' ? 'rgba(200,150,60,0.80)' : 'rgba(120,124,134,0.6)' }}
         />
         {/* a card with no name is ALL list — a mob pack is its roster, and a "Pack of 3" header

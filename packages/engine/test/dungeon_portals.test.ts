@@ -3,7 +3,11 @@
 
 import { expect, test } from 'bun:test'
 
-import { portal_hum_gain } from '../src/dungeon_portals.ts'
+import { DUNGEON_PORTAL_LABEL_HEIGHT, portal_hum_gain } from '../src/dungeon_portals.ts'
+
+test('the dungeon tag clears the visible portal crown by only half a block', () => {
+  expect(DUNGEON_PORTAL_LABEL_HEIGHT).toBeCloseTo(8.66)
+})
 
 test('dungeon portal hum fades smoothly and stops outside its ambience radius', () => {
   expect(portal_hum_gain(0)).toBeCloseTo(0.055)

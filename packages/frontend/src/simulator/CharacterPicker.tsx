@@ -56,7 +56,7 @@ export const CharacterPicker = ({
     <div className="pointer-events-auto fixed inset-0 z-[9998]" onClick={close} role="presentation">
       <section
         aria-label={text.pick_character}
-        className="absolute flex max-h-80 w-[268px] flex-col overflow-y-auto border border-[#c8963c] bg-[#0c0c14] shadow-[0_0_24px_rgba(0,0,0,0.7)]"
+        className="absolute flex max-h-80 w-[268px] flex-col overflow-y-auto border border-[#c8963c] bg-surface-low shadow-[0_0_24px_rgba(0,0,0,0.7)]"
         onClick={(event) => event.stopPropagation()}
         role="dialog"
         style={position}

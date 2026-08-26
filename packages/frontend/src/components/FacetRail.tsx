@@ -26,7 +26,7 @@ export const FacetRail = ({
   class_name?: string
 }>) => (
   <aside
-    className={`${class_name} min-h-0 overflow-y-auto border-r border-white/10 bg-[#141719] py-3`}
+    className={`${class_name} min-h-0 overflow-y-auto border-r border-white/10 bg-surface py-3`}
     data-facet-rail=""
   >
     <button

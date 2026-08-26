@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-// The world module (synchronizer port): embody mounts the tracked spiral and pushes the world;
-// crossing a zone boundary re-centers and publishes presence on the mesh; an impossible move
-// drops the connection. Ownership is enforced at the read — a foreign character never mounts.
+// The world module mounts the tracked spiral, recenters presence at zone boundaries, rejects
+// impossible movement, and never mounts a character the indexed custody does not prove.
 
 import { EventEmitter } from 'node:events'
 
@@ -43,6 +42,7 @@ type WireOptions = Readonly<{
   character_ids?: string[]
   shared_pubsub?: Pubsub
   dungeon_run?: string | null
+  party_after_watch?: boolean
 }>
 type TestPubsub = Pubsub & Readonly<{ emitter: EventEmitter }>
 
@@ -53,33 +53,48 @@ const wire = ({
   character_ids = ['0xabc', '0xdef'],
   shared_pubsub,
   dungeon_run = null,
+  party_after_watch = false,
 }: WireOptions = {}) => {
   const sent: ServerPacket[] = []
   const dropped: string[] = []
+  const owned_reads = new Map<string, number>()
   const ws = {
     send: (raw: string) => sent.push(JSON.parse(raw)),
     close: (_c?: number, reason?: string) => dropped.push(reason ?? ''),
   }
   const graph = {
     read: async (cypher: string, params?: Record<string, unknown>) => {
-      if (cypher.includes(':Character {id:'))
+      if (cypher.includes('(p:Party)-[:INVITED]')) return []
+      if (cypher.includes(':Character {id:')) {
+        const character_id = String(params?.character_id ?? '0xabc')
+        const read = (owned_reads.get(character_id) ?? 0) + 1
+        owned_reads.set(character_id, read)
         return owns
           ? [
               {
                 character: make_character({
                   pet,
-                  id: String(params?.character_id ?? '0xabc'),
-                  x: String(params?.character_id) === character_ids[1] ? 700 : 100,
+                  id: character_id,
+                  x: character_id === character_ids[1] ? 700 : 100,
                   dungeon_run,
                 }),
                 held_kiosk: '0xk',
                 kiosk: '0xk',
                 fight: null,
-                party: null,
+                party: party_after_watch && read > 1 ? '0xp' : null,
                 worn: pet ? [{ slot: 'pet', item_type: 'bulbiflor' }] : [],
               },
             ]
           : []
+      }
+      if (cypher.includes('MATCH (p:Party {id:'))
+        return [
+          {
+            party: { properties: { id: '0xp' } },
+            members: [{ order: 0, character: { properties: { id: '0xabc', name: 'nox' } } }],
+            invited: [],
+          },
+        ]
       if (cypher.includes(':FRIEND')) return friends.map((friend) => ({ address: friend, characters: [] }))
       if (cypher.includes('[:HOLDS]->(c:Character)'))
         return owns
@@ -89,7 +104,7 @@ const wire = ({
               equipment: [],
             }))
           : []
-      if (cypher.includes('[:FIGHTER]->(c:Character {owner:')) return []
+      if (cypher.includes(':FIGHTER]->(c:Character {owner:')) return []
       if (cypher.includes('RESULT_FOR')) return []
       if (cypher.includes('HOLDS_CLAIM') || cypher.includes('HOLDS_VOUCHER') || cypher.includes('CAN_BUY')) return []
       if (cypher.includes('LISTED_IN')) return []
@@ -126,13 +141,24 @@ const wire = ({
 const flush = () => new Promise((resolve) => setTimeout(resolve, 0))
 
 describe('the world module', () => {
+  test('party membership is reread after the character channel becomes ready', async () => {
+    const { sent, ws, graph, pubsub } = wire({ party_after_watch: true, character_ids: ['0xabc'] })
+    create_player({ ws, address: '0xme', admin: false, graph, pubsub })
+    await flush()
+    await flush()
+    await flush()
+    expect(
+      sent.filter((packet) => packet.type === 'packet/party' && packet.character_id === '0xabc').at(-1)
+    ).toMatchObject({ party: { id: '0xp' } })
+  })
+
   test('embody mounts the spiral and pushes zones + an appearance on the mesh', async () => {
     const { sent, ws, graph, pubsub, published } = wire()
     const player = create_player({ ws, address: '0xme', admin: false, graph, pubsub })
     await flush()
     player.on_message(JSON.stringify({ type: 'packet/track_character', character_id: '0xabc', tracked: true }))
     await flush()
-    expect(sent).toContainEqual({ type: 'packet/character_tracked', character_id: '0xabc', fight: null })
+    expect(sent.some((packet) => packet.type === 'packet/tracked_zones' && packet.character_id === '0xabc')).toBeTrue()
     expect(sent.some((packet) => packet.type === 'packet/zones')).toBe(true)
     expect(published.some(({ payload }) => payload.kind === 'appear')).toBe(true)
   })
@@ -147,7 +173,7 @@ describe('the world module', () => {
     await flush()
 
     expect(
-      sent.flatMap((packet) => (packet.type === 'packet/character_tracked' ? [packet.character_id] : [])).sort()
+      sent.flatMap((packet) => (packet.type === 'packet/tracked_zones' ? [packet.character_id] : [])).sort()
     ).toEqual(['0xabc', '0xdef'])
     expect(
       sent.flatMap((packet) => (packet.type === 'packet/tracked_zones' ? [packet.character_id] : [])).sort()
@@ -312,7 +338,7 @@ describe('the world module', () => {
     await flush()
     player.on_message(JSON.stringify({ type: 'packet/track_character', character_id: '0xdead', tracked: true }))
     await flush()
-    expect(sent.find((packet) => packet.type === 'packet/character_tracked')).toBeUndefined()
+    expect(sent.find((packet) => packet.type === 'packet/tracked_zones')).toBeUndefined()
     expect(published.some(({ payload }) => payload.kind === 'appear')).toBe(false)
   })
 
@@ -546,7 +572,6 @@ describe('the world module', () => {
     await flush()
     player.on_message(JSON.stringify({ type: 'packet/track_character', character_id: '0xabc', tracked: true }))
     await flush()
-    // mounting probed every fresh zone (the join-later cure)
     const probes = published.filter(({ payload }) => payload.kind === 'who')
     expect(probes.length).toBeGreaterThan(0)
     published.length = 0

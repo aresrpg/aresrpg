@@ -47,6 +47,7 @@ test('a zero-gas too-soon refusal requeues, while an executed failure never retr
   state = { ...state, fight: { ...state.fight, checkpoint: { contract: { id: '0xf' } } as never } }
   state = reduce_app_state(state, {
     type: 'fight/input',
+    fight: '0xf',
     origin: 'local',
     input: { type: 'end_turn', fighter: 0n, observed_ms: 0n },
   })

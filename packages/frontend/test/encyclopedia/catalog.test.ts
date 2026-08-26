@@ -104,8 +104,7 @@ describe('local encyclopedia catalog', () => {
       )
     )
     const missing = encyclopedia_catalog.spells.flatMap(({ classe, name }) => {
-      const asset_class = classe === 'yogan' ? 'yogen' : classe
-      const key = `${asset_class}_${slug(name)}`.replaceAll('_', '')
+      const key = `${classe}_${slug(name)}`.replaceAll('_', '')
       return icons.has(key) ? [] : [name]
     })
 

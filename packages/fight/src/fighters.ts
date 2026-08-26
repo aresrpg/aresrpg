@@ -7,6 +7,7 @@ import { CHANNELS, CONTRACT_CONSTANTS, EFFECT_KINDS } from './move_contract.gen.
 import { xp_for_player } from './fight_math.ts'
 import { add_effect_id, effect_id_at, emit } from './runtime.ts'
 import type {
+  ActiveEffect,
   FightRuntime,
   FightSheet,
   Fighter,
@@ -324,39 +325,53 @@ export const hit = (
     kill_fighter(runtime, target, source, cause)
     return landed
   }
+  const bonus_turns = BigInt(CONTRACT_CONSTANTS.chatiment_turns)
   const stances = fighter.effects.filter((row) => row.kind === KINDS.chatiment)
-  stances.forEach((row) => {
-    // The stance's accrued bonus is ONE fact: fold each trigger into the standing gain row
-    // (same channel, element, source, and decay), creating it only on the first trigger.
+  const groups = stances.reduce<readonly { stance: ActiveEffect; cap: bigint }[]>((result, stance) => {
+    const existing = result.findIndex(({ stance: row }) => row.stat === stance.stat && row.element === stance.element)
+    if (existing < 0) return [...result, { stance, cap: stance.value }]
+    return result.map((group, index) => (index === existing ? { ...group, cap: group.cap + stance.value } : group))
+  }, [])
+  const from_player = !is_mob(runtime.contract.fighters[Number(source)])
+  const fed_damage = from_player ? landed / 2n : landed
+  const turn_owner = runtime.contract.queue[Number(runtime.contract.turn_ptr)]
+  groups.forEach(({ stance, cap }) => {
+    // Retro gains damage once per active-fighter turn. Same-effect stances add their caps,
+    // never their gain speed; each turn remains one five-turn standing bonus row.
     const standing = fighter.effects.findIndex(
       (gain) =>
         gain.kind === KINDS.add &&
-        gain.stat === row.stat &&
-        gain.element === row.element &&
-        gain.source === row.source &&
-        gain.turns_left === row.turns_left
+        gain.stat === stance.stat &&
+        gain.element === stance.element &&
+        gain.source === turn_owner &&
+        gain.turns_left === bonus_turns
     )
+    const effective_cap = from_player ? cap / 2n : cap
+    const accrued = standing < 0 ? 0n : fighter.effects[standing].value
+    const available = effective_cap > accrued ? effective_cap - accrued : 0n
+    const gained = fed_damage < available ? fed_damage : available
+    if (gained === 0n) return
     const effect =
       standing < 0
         ? {
             kind: KINDS.add,
-            element: row.element,
-            value: row.value,
-            turns_left: row.turns_left,
-            source: row.source,
-            stat: row.stat,
+            element: stance.element,
+            value: gained,
+            turns_left: bonus_turns,
+            source: turn_owner,
+            stat: stance.stat,
           }
-        : { ...fighter.effects[standing], value: fighter.effects[standing].value + row.value }
+        : { ...fighter.effects[standing], value: accrued + gained }
     if (standing < 0) fighter.effects.push(effect)
     else fighter.effects[standing] = effect
     const effect_id = standing < 0 ? add_effect_id(runtime, target) : effect_id_at(runtime, target, standing)
     emit(runtime, 'chatiment_triggered', {
       fighter: target,
-      stance_effect_id: effect_id_at(runtime, target, fighter.effects.indexOf(row)),
+      stance_effect_id: effect_id_at(runtime, target, fighter.effects.indexOf(stance)),
       added_effect_id: effect_id,
-      channel: row.stat,
-      value: row.value,
-      turns: row.turns_left,
+      channel: stance.stat,
+      value: gained,
+      turns: bonus_turns,
     })
     emit(runtime, 'effect_applied', {
       target,

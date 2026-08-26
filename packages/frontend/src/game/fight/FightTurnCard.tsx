@@ -2,35 +2,32 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
 import { UserRound } from 'lucide-react'
+import type { FightPresentationCue } from '@aresrpg/engine'
 
 import type { FightFighterView } from './fight_projection.ts'
 import { fight_portrait_source, type MobIconLookup } from './FightTimeline.tsx'
 
 export type FightTurnCardView = Readonly<{ key: string; fighter: FightFighterView }>
+export type FightTurnAnnouncement = Readonly<{ key: string; seat: bigint }>
+
+export const fight_turn_announcement_after_cue = (
+  current: FightTurnAnnouncement | null,
+  cue: Readonly<FightPresentationCue>,
+  phase: 'start' | 'complete'
+): FightTurnAnnouncement | null => {
+  if (cue.type !== 'turn' || phase !== 'start') return current
+  const seat = Number(cue.entity_id.split('_').at(-1))
+  if (!Number.isInteger(seat)) return current
+  return current?.key === cue.turn_key ? current : Object.freeze({ key: cue.turn_key, seat: BigInt(seat) })
+}
 
 export const fight_turn_card_view = (
   fighters: readonly FightFighterView[],
-  presented_turn_seat: bigint | null,
-  canonical_turn_key: string | null
+  announcement: FightTurnAnnouncement | null
 ): FightTurnCardView | null => {
-  if (canonical_turn_key === null) return null
-  const fighter =
-    presented_turn_seat === null
-      ? fighters.find(({ active }) => active)
-      : fighters.find(({ seat }) => seat === presented_turn_seat)
-  return fighter ? Object.freeze({ key: `${canonical_turn_key}:${fighter.seat}`, fighter }) : null
-}
-
-export const fight_turn_card_after_observation = (
-  current: FightTurnCardView | null,
-  fighters: readonly FightFighterView[],
-  presented_turn_seat: bigint | null,
-  canonical_turn_key: string | null,
-  presentation_queued: boolean
-): FightTurnCardView | null => {
-  if (presented_turn_seat === null && presentation_queued) return current
-  const next = fight_turn_card_view(fighters, presented_turn_seat, canonical_turn_key)
-  return next?.key === current?.key ? current : next
+  if (!announcement) return null
+  const fighter = fighters.find(({ seat }) => seat === announcement.seat)
+  return fighter ? Object.freeze({ key: announcement.key, fighter }) : null
 }
 
 export const FightTurnCard = ({

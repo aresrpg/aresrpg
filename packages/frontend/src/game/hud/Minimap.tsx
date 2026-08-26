@@ -99,7 +99,7 @@ export const Minimap = ({ copy }: Readonly<{ copy: AppCopy }>) => {
     const view = { center_x: grid.center_x, center_z: grid.center_z, size: SIZE, radius: VIEW_RADIUS_BLOCKS }
     paint_relief(context, grid, SIZE)
     draw_zone_layer(context, view, (zx, zz) => (world_name ? zone_key(world_name, zx, zz) in world_state.zones : false))
-    draw_spawn_markers(context, view, spawn_markers(world_state))
+    draw_spawn_markers(context, view, spawn_markers(world_state, world_name))
     draw_dungeon_portal_markers(context, view, dungeon_portal_markers(world_state, world_name))
     draw_players(context, view, Object.values(world_state.players))
     draw_self_arrow(context, view, pose.x, pose.z, camera_heading(pose.yaw))

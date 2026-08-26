@@ -45,7 +45,10 @@ export const shape_character = (props: Record<string, unknown>) => {
   }
 }
 
-const shape_row = ({ character, kiosk_node, equipment }: Record<string, unknown>, custody: CharacterRow['custody']) => {
+const shape_row = (
+  { character, kiosk_node, equipment, active_fight }: Record<string, unknown>,
+  custody: CharacterRow['custody']
+) => {
   const kiosk = (kiosk_node as Node)?.properties ?? {}
   return {
     ...shape_character((character as Exclude<Node, null | undefined>).properties),
@@ -56,6 +59,14 @@ const shape_row = ({ character, kiosk_node, equipment }: Record<string, unknown>
       .filter((entry) => entry.item)
       .map(({ slot, item }) => ({ slot, ...shape_item(item!.properties) })),
     custody,
+    ...(custody === 'fight' && active_fight && typeof active_fight === 'object'
+      ? {
+          active_fight: Object.freeze({
+            id: String(Reflect.get(active_fight, 'id')),
+            seat: Number(Reflect.get(active_fight, 'seat')),
+          }),
+        }
+      : {}),
   }
 }
 
@@ -74,12 +85,13 @@ export async function get_characters(graph: Graph, { address }: { address: strin
     // Its custody pair is the caller's own kiosk, the one it re-locks into when it leaves.
     graph.read(
       `
-      MATCH (:Fight)-[:FIGHTER]->(c:Character {owner: $address})
+      MATCH (f:Fight)-[s:FIGHTER]->(c:Character {owner: $address})
       OPTIONAL MATCH (c)-[e:EQUIPS]->(i:Item)
-      WITH c, collect({ slot: e.slot, item: i }) AS equipment
+      WITH c, f, s, collect({ slot: e.slot, item: i }) AS equipment
       OPTIONAL MATCH (:User {address: $address})-[:OWNS]->(k:Kiosk)
-      WITH c, equipment, collect(k) AS kiosks
-      RETURN c AS character, head(kiosks) AS kiosk_node, equipment`,
+      WITH c, f, s, equipment, collect(k) AS kiosks
+      RETURN c AS character, head(kiosks) AS kiosk_node, equipment,
+             { id: f.id, seat: s.seat } AS active_fight`,
       { address }
     ),
   ])

@@ -84,7 +84,7 @@ export const MobCoreStats = ({
                 {change && !derived ? (
                   <input
                     aria-label={label}
-                    className="h-7 w-full max-w-24 border border-white/10 bg-[#090a10] px-2 text-right text-[11px] font-semibold tabular-nums outline-none focus:border-[#4a9eff]/60"
+                    className="h-7 w-full max-w-24 border border-white/10 bg-bg px-2 text-right text-[11px] font-semibold tabular-nums outline-none focus:border-[#4a9eff]/60"
                     onChange={(event) => change(key, Number(event.target.value))}
                     style={{ color }}
                     type="number"

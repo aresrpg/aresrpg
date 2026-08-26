@@ -18,7 +18,7 @@ import { draw } from './prng.ts'
 import { push_collision_damage, tackle_contest, tackle_losses, tackle_seed } from './fight_math.ts'
 import { STATS, effective_stat, hit, spend_ap, spend_mp } from './fighters.ts'
 import { emit, fail } from './runtime.ts'
-import type { FightRuntime, FightSheet, HydratedFightCheckpoint } from './types.ts'
+import type { FightRuntime, FightSheet, HydratedFightCheckpoint, PrngCursor } from './types.ts'
 
 export type EnterHandler = (runtime: FightRuntime, fighter: bigint, from: bigint) => boolean
 
@@ -233,6 +233,7 @@ export const displace = ({
   cells,
   push,
   origin,
+  cursor,
   on_enter,
 }: {
   runtime: FightRuntime
@@ -242,6 +243,7 @@ export const displace = ({
   cells: bigint
   push: boolean
   origin: bigint
+  cursor: PrngCursor
   on_enter: EnterHandler
 }): void => {
   const direction = push
@@ -277,7 +279,7 @@ export const displace = ({
     if (trap_stopped || runtime.contract.fighters[Number(target)].dead) break
   }
   if (push && blocked && remaining > 0n && !trap_stopped) {
-    const damage = push_collision_damage(sheet.level, remaining)
+    const damage = push_collision_damage(sheet.level, remaining, draw(cursor))
     emit(runtime, 'push_collided', { source, target, blocked_cells: remaining, damage })
     hit(runtime, { target, amount: damage, source, cause: 'push_collision' })
   }

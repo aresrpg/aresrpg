@@ -38,8 +38,8 @@ describe('pinned Move math classes', () => {
   })
 
   test('blocked push collision', () => {
-    const row = MOVE_MATH_FIXTURE.push
-    expect(push_collision_damage(row.caster_level, row.blocked_cells)).toBe(row.expected)
+    for (const row of MOVE_MATH_FIXTURE.push)
+      expect(push_collision_damage(row.caster_level, row.blocked_cells, row.roll)).toBe(row.expected)
   })
 
   test('Retro XP balances the whole fight and splits by player level', () => {

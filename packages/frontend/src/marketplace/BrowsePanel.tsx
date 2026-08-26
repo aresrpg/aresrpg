@@ -3,12 +3,14 @@
 
 import { Search, Store } from 'lucide-react'
 import { useMemo, useState } from 'react'
-import { class_names } from '@aresrpg/immutable'
+import { class_names, item_is_stackable } from '@aresrpg/immutable'
+import { MAX_TRACKED_CHARACTERS, type ListingRow } from '@aresrpg/protocol'
 
 import { ItemDetailView } from '../components/ItemDetailView.tsx'
-import { content_catalog, titleize } from '../content/catalog.ts'
+import { ModalFrame } from '../components/ModalFrame.tsx'
+import { content_catalog } from '../content/catalog.ts'
 import type { CopyText } from '../i18n/copy.ts'
-import { MARKET_GROUPS, type MarketGroup } from '../modules/marketplace.ts'
+import { MARKET_GROUPS, market_group_count, market_observation, type MarketGroup } from '../modules/marketplace.ts'
 import { dispatch_app, useAppStore } from '../store.ts'
 import { format_sui } from '../wallet_amount.ts'
 
@@ -19,6 +21,7 @@ import {
   ListingIcon,
   listing_name,
   short_address,
+  SuiUnit,
 } from './marketplace_model.tsx'
 
 const group_key = (group: MarketGroup): string => `group_${group.toLowerCase()}`
@@ -46,11 +49,16 @@ export const BrowsePanel = ({ text }: Readonly<{ text: CopyText }>) => {
         (!character_class || listing.classe === character_class)
     )
   }, [character_class, listings, maximum_level, minimum_level])
-  const subcategories = useMemo(
-    () => [...new Set(listings.map(({ category }) => category).filter((value): value is string => !!value))].sort(),
-    [listings]
-  )
-  const active_subcategory = subcategories.includes(subcategory ?? '') ? subcategory : (subcategories[0] ?? null)
+  const subcategories = useMemo(() => {
+    if (market.group === 'CHARACTERS') return []
+    const authored = new Set<string>(content_catalog.items.map(({ category }) => category))
+    return market_observation(market.group).categories.filter(
+      (category) => authored.has(category) || (market.counts.categories[category] ?? 0) > 0
+    )
+  }, [market.counts.categories, market.group])
+  const active_subcategory = subcategories.some((category) => category === subcategory)
+    ? subcategory
+    : (subcategories[0] ?? null)
   const types = useMemo(() => {
     const query = search.trim().toLowerCase()
     const grouped = new Map<string, typeof listings>()
@@ -80,21 +88,23 @@ export const BrowsePanel = ({ text }: Readonly<{ text: CopyText }>) => {
   }
 
   return (
-    <div className="flex min-h-0 flex-1 overflow-hidden">
-      <aside className="flex w-36 shrink-0 flex-col border-r border-[#1e1e2e]">
-        <h3 className="border-b border-[#1e1e2e] px-4 py-3 text-[10px] font-semibold tracking-[0.25em] text-[#c8963c] uppercase">
+    <div className="flex min-h-0 flex-1 overflow-hidden bg-bg">
+      <aside className="flex w-36 shrink-0 flex-col border-r border-border bg-surface-low">
+        <h3 className="border-b border-white/10 px-4 py-3 text-[10px] font-semibold tracking-[0.25em] text-[#c8963c] uppercase">
           {text('browse')}
         </h3>
-        <nav className="min-h-0 overflow-y-auto">
+        <nav aria-label={text('browse')} className="min-h-0 overflow-y-auto" data-marketplace-general-categories>
           {MARKET_GROUPS.map((group) => (
             <button
-              className={`flex w-full cursor-pointer justify-between border-b border-[#1e1e2e] border-l-2 px-3 py-3 text-left text-[9px] tracking-[0.12em] uppercase ${market.group === group ? 'border-l-[#c8963c] bg-[#c8963c]/7 text-[#c8963c]' : 'border-l-transparent text-[#777b86] hover:text-[#e8e4dc]'}`}
+              className={`flex w-full cursor-pointer justify-between border-b border-white/7 border-l-2 px-3 py-2.5 text-left text-[9px] tracking-[0.12em] uppercase ${market.group === group ? 'border-l-[#c8963c] bg-[#c8963c]/7 text-[#efbd45]' : 'border-l-transparent text-[#858b98] hover:bg-white/[0.045] hover:text-[#e6e2da]'}`}
               key={group}
               onClick={() => select_group(group)}
               type="button"
             >
               <span>{text(group_key(group))}</span>
-              {market.group === group && <span>{listings.length}</span>}
+              <span className="text-[8px] tabular-nums text-[#626773]">
+                {market_group_count(group, market.counts, group === market.group ? listings.length : 0)}
+              </span>
             </button>
           ))}
         </nav>
@@ -102,12 +112,12 @@ export const BrowsePanel = ({ text }: Readonly<{ text: CopyText }>) => {
 
       {market.group === 'CHARACTERS' ? (
         <section className="flex min-h-0 flex-1 flex-col">
-          <div className="flex shrink-0 flex-wrap items-end gap-5 border-b border-[#1e1e2e] px-4 py-3">
+          <div className="flex shrink-0 flex-wrap items-end gap-5 border-b border-border bg-surface-high px-4 py-3">
             <label className="flex flex-col gap-1 text-[8px] tracking-[0.15em] text-[#6b7280] uppercase">
               {text('level')}
               <span className="flex items-center gap-1.5">
                 <input
-                  className="h-8 w-16 border border-white/10 bg-[#090a10] px-2 text-center text-[9px] outline-none"
+                  className="h-8 w-16 border border-white/10 bg-bg px-2 text-center text-[9px] outline-none"
                   inputMode="numeric"
                   onChange={(event) => set_minimum_level(event.target.value.replace(/\D/g, ''))}
                   placeholder="MIN"
@@ -115,7 +125,7 @@ export const BrowsePanel = ({ text }: Readonly<{ text: CopyText }>) => {
                 />
                 <span>–</span>
                 <input
-                  className="h-8 w-16 border border-white/10 bg-[#090a10] px-2 text-center text-[9px] outline-none"
+                  className="h-8 w-16 border border-white/10 bg-bg px-2 text-center text-[9px] outline-none"
                   inputMode="numeric"
                   onChange={(event) => set_maximum_level(event.target.value.replace(/\D/g, ''))}
                   placeholder="MAX"
@@ -162,10 +172,13 @@ export const BrowsePanel = ({ text }: Readonly<{ text: CopyText }>) => {
       ) : (
         <>
           {subcategories.length > 1 && (
-            <nav className="w-40 shrink-0 overflow-y-auto border-r border-[#1e1e2e]">
+            <nav
+              className="w-40 shrink-0 overflow-y-auto border-r border-border bg-surface py-1"
+              data-marketplace-item-types
+            >
               {subcategories.map((category) => (
                 <button
-                  className={`w-full cursor-pointer border-b border-[#1e1e2e] border-l-2 px-4 py-2.5 text-left text-[9px] tracking-[0.1em] uppercase ${category === active_subcategory ? 'border-l-[#c8963c] bg-[#c8963c]/7 text-[#c8963c]' : 'border-l-transparent text-[#777b86]'}`}
+                  className={`w-full cursor-pointer border-l-2 px-3 py-2 text-left text-[8px] tracking-[0.1em] uppercase ${category === active_subcategory ? 'border-l-[#c8963c] bg-white/[0.035] text-[#e8e4dc]' : 'border-l-transparent text-[#858b98] hover:bg-white/[0.045] hover:text-[#e6e2da]'}`}
                   key={category}
                   onClick={() => {
                     set_subcategory(category)
@@ -173,25 +186,38 @@ export const BrowsePanel = ({ text }: Readonly<{ text: CopyText }>) => {
                   }}
                   type="button"
                 >
-                  {category_name(category)}
+                  <span className="flex items-center justify-between gap-3">
+                    <span>{category_name(category)}</span>
+                    <span className="text-[8px] tabular-nums text-[#626773]">
+                      {Math.max(
+                        market.counts.categories[category] ?? 0,
+                        category === active_subcategory
+                          ? listings.filter((listing) => listing.category === category).length
+                          : 0
+                      )}
+                    </span>
+                  </span>
                 </button>
               ))}
             </nav>
           )}
-          <section className="flex w-56 shrink-0 flex-col border-r border-[#1e1e2e]">
-            <label className="flex items-center gap-2 border-b border-[#1e1e2e] px-3 py-2">
+          <section
+            className="flex w-56 shrink-0 flex-col border-r border-border bg-surface"
+            data-marketplace-item-type-column
+          >
+            <label className="flex items-center gap-2 border-b border-border bg-surface-high p-2">
               <Search size={12} className="text-[#555b66]" />
               <input
-                className="min-w-0 flex-1 bg-transparent text-[10px] outline-none placeholder:text-[#555b66]"
+                className="h-8 min-w-0 flex-1 border border-white/14 bg-bg px-2 text-[9px] text-[#e3dfd7] outline-none placeholder:text-[#555b66] focus:border-[#4a9eff]/60"
                 onChange={(event) => set_search(event.target.value)}
                 placeholder={text('search')}
                 value={search}
               />
             </label>
-            <div className="min-h-0 overflow-y-auto">
+            <div className="min-h-0 overflow-y-auto" data-marketplace-template-options>
               {types.map(([item_type, rows]) => (
                 <button
-                  className={`flex w-full cursor-pointer items-center gap-2 border-b border-[#1e1e2e] px-3 py-2 text-left ${item_type === active_type ? 'bg-[#c8963c]/7' : 'hover:bg-white/2'}`}
+                  className={`flex w-full cursor-pointer items-center gap-2 border-l-2 px-2 py-1.5 text-left text-[9px] ${item_type === active_type ? 'border-l-[#4a9eff] bg-[#4a9eff]/6 text-[#b9d8ff]' : 'border-l-transparent text-[#969ba7] hover:bg-white/[0.045] hover:text-[#ebe7df]'}`}
                   key={item_type}
                   onClick={() => {
                     set_selected_type(item_type)
@@ -203,7 +229,6 @@ export const BrowsePanel = ({ text }: Readonly<{ text: CopyText }>) => {
                   <span className="min-w-0 flex-1 truncate text-[10px] text-[#d8d4cc] uppercase">
                     {listing_name(rows[0]!)}
                   </span>
-                  <span className="text-[8px] text-[#6b7280]">{rows.length}</span>
                 </button>
               ))}
             </div>
@@ -212,58 +237,58 @@ export const BrowsePanel = ({ text }: Readonly<{ text: CopyText }>) => {
             {!selected ? (
               <Empty text={text('select_item')} />
             ) : (
-              <>
-                {item && (
-                  <div className="max-h-[48%] shrink-0 overflow-y-auto border-b border-[#1e1e2e] p-5">
-                    <ItemDetailView
-                      category={item.category}
-                      damages={item.damages ?? []}
-                      item_type={item.item_type}
-                      labels={{
-                        characteristics: text('characteristics'),
-                        damages: text('damages'),
-                        level_short: `LV. ${item.level}`,
-                        range_to: text('range_to'),
-                      }}
-                      level={item.level}
-                      name={item.name}
-                      stats={item.stats}
-                    />
-                  </div>
-                )}
-                <div className="flex items-center gap-4 border-b border-[#1e1e2e] bg-[#c8963c]/3 px-5 py-4">
-                  <ListingIcon listing={selected[1][0]!} size={52} />
+              <div className="flex min-h-0 flex-1 flex-col">
+                <div className="flex shrink-0 items-center gap-3 border-b border-border bg-surface-raised px-4 py-2.5 shadow-[0_8px_24px_rgba(0,0,0,0.16)]">
+                  <ListingIcon listing={selected[1][0]!} size={28} />
                   <div className="min-w-0 flex-1">
-                    <h3 className="truncate text-[13px] font-semibold tracking-[0.12em] text-[#e8e4dc] uppercase">
+                    <h3 className="truncate text-[10px] font-semibold tracking-[0.2em] text-[#e8e4dc] uppercase">
                       {item?.name ?? listing_name(selected[1][0]!)}
                     </h3>
-                    <p className="mt-1 text-[9px] tracking-[0.12em] text-[#777b86] uppercase">
-                      {category_name(item?.category ?? null)} · LV. {item?.level ?? selected[1][0]!.level} ·{' '}
-                      {text('listing_count', { count: asks.length })}
-                    </p>
                   </div>
-                  {item?.stats && (
-                    <span className="border border-[#c8963c]/25 px-3 py-1 text-[8px] tracking-[0.12em] text-[#c8963c] uppercase">
-                      {text('rolled_stats')}
+                  {(item?.level ?? selected[1][0]!.level) > 0 && (
+                    <span className="text-[8px] text-[#6b7280]">LV. {item?.level ?? selected[1][0]!.level}</span>
+                  )}
+                  {asks[0] && (
+                    <span className="inline-flex items-center gap-1.5 text-[10px] font-semibold tabular-nums text-[#f0c66c]">
+                      {format_sui(buyer_total(BigInt(asks[0].price_mist)), 2)} <SuiUnit />
                     </span>
                   )}
                 </div>
-                <div className="min-h-0 overflow-y-auto">
-                  {asks.map((listing, index) => (
-                    <AskRow
-                      address={address}
-                      balance={balance}
-                      confirm={confirm}
-                      index={index}
-                      key={listing.id}
-                      listing={listing}
-                      pending={market.pending}
-                      set_confirm={set_confirm}
-                      text={text}
-                    />
-                  ))}
+                <div className="min-h-0 flex-1 overflow-y-auto bg-surface-high p-4">
+                  <div className="flex min-h-full flex-col gap-4">
+                    {item && (
+                      <div className="rounded-[5px] border border-border bg-surface p-4 shadow-[0_10px_28px_rgba(0,0,0,0.16)]">
+                        <ItemDetailView
+                          category={item.category}
+                          damages={item.damages ?? []}
+                          item_type={item.item_type}
+                          labels={{
+                            characteristics: text('characteristics'),
+                            damages: text('damages'),
+                            level_short: `LV. ${item.level}`,
+                            range_to: text('range_to'),
+                          }}
+                          level={item.level}
+                          name={item.name}
+                          stats={item.stats}
+                        />
+                      </div>
+                    )}
+                    <div data-marketplace-listings>
+                      <CheapestLotMarket
+                        address={address}
+                        asks={asks}
+                        balance={balance}
+                        confirm={confirm}
+                        pending={market.pending}
+                        set_confirm={set_confirm}
+                        sizes={item_is_stackable(item?.category ?? selected[1][0]!.category ?? '') ? LOT_SIZES : [1]}
+                        text={text}
+                      />
+                    </div>
+                  </div>
                 </div>
-              </>
+              </div>
             )}
           </section>
         </>
@@ -281,6 +306,140 @@ const Empty = ({ text }: Readonly<{ text: string }>) => (
   </div>
 )
 
+const PurchaseConfirm = ({
+  close,
+  listing,
+  pending,
+  text,
+}: Readonly<{ close: () => void; listing: ListingRow; pending: string | null; text: CopyText }>) => {
+  const total = buyer_total(BigInt(listing.price_mist))
+  const roster_count = useAppStore(({ session }) => session.characters.length)
+  const roster_full = listing.kind === 'character' && roster_count >= MAX_TRACKED_CHARACTERS
+  return (
+    <ModalFrame close={close} close_label={text('cancel')} label={text('buy')} max_width="max-w-sm" soft>
+      <div className="p-6" data-marketplace-buy-confirm>
+        <p className="text-[8px] tracking-[0.2em] text-[#777b86] uppercase">{text('buy')}</p>
+        <h3 className="mt-2 text-[13px] font-semibold tracking-[0.14em] text-[#e8e4dc] uppercase">
+          {listing_name(listing)}
+        </h3>
+        <div className="mt-5 grid grid-cols-2 gap-px border border-white/8 bg-white/8 text-[8px] uppercase">
+          <div className="bg-surface-high p-3">
+            <span className="block tracking-[0.14em] text-[#646a75]">{text('lot_size')}</span>
+            <span className="mt-1 block text-[10px] text-[#c6c9cf]">×{listing.amount}</span>
+          </div>
+          <div className="bg-surface-high p-3 text-right">
+            <span className="block tracking-[0.14em] text-[#646a75]">{text('price')}</span>
+            <span className="mt-1 inline-flex items-center justify-end gap-1 text-[10px] tabular-nums text-[#c8963c]">
+              {format_sui(total, 2)} <SuiUnit />
+            </span>
+          </div>
+        </div>
+        {roster_full && (
+          <p className="mt-4 text-[8px] tracking-[0.14em] text-[#f85149] uppercase">{text('character_roster_full')}</p>
+        )}
+        <div className="mt-5 flex justify-end gap-2">
+          <button
+            className="h-9 cursor-pointer px-4 text-[8px] tracking-[0.14em] text-[#777b86] uppercase"
+            onClick={close}
+            type="button"
+          >
+            {text('cancel')}
+          </button>
+          <button
+            className="h-9 cursor-pointer border border-[#c8963c]/55 bg-[#c8963c]/10 px-5 text-[8px] tracking-[0.16em] text-[#c8963c] uppercase disabled:opacity-40"
+            disabled={!!pending || roster_full}
+            onClick={() => dispatch_app({ type: 'market/buy_requested', listing })}
+            type="button"
+          >
+            {text('pay')} · {format_sui(total, 2)} <SuiUnit />
+          </button>
+        </div>
+      </div>
+    </ModalFrame>
+  )
+}
+
+const LOT_SIZES = [1, 10, 100, 1000] as const
+
+const CheapestLotMarket = ({
+  address,
+  asks,
+  balance,
+  confirm,
+  pending,
+  set_confirm,
+  sizes,
+  text,
+}: Readonly<{
+  address: string | null
+  asks: readonly ListingRow[]
+  balance: bigint | null
+  confirm: string | null
+  pending: string | null
+  set_confirm: (id: string | null) => void
+  sizes: readonly number[]
+  text: CopyText
+}>) => {
+  const armed = asks.find(({ id }) => id === confirm) ?? null
+  return (
+    <div
+      className="mx-auto w-full max-w-[560px] overflow-hidden rounded-[5px] border border-border bg-surface shadow-[0_10px_28px_rgba(0,0,0,0.16)]"
+      data-marketplace-lot-market
+    >
+      <div className="grid grid-cols-[72px_minmax(100px,180px)_minmax(80px,110px)] items-center justify-center gap-4 border-b border-border bg-surface-high px-4 py-2 text-[8px] tracking-[0.16em] text-[#6d7382] uppercase">
+        <span>{text('lot_size')}</span>
+        <span>{text('price')}</span>
+        <span className="text-center">{text('buy')}</span>
+      </div>
+      <div className="divide-y divide-white/7">
+        {sizes.map((size, index) => {
+          const ask = asks.find(({ amount }) => amount === size) ?? null
+          const total = ask ? buyer_total(BigInt(ask.price_mist)) : null
+          const insufficient = total !== null && balance !== null && balance < total
+          const own = ask?.seller === address
+          const purchasable = !!ask && !own && !insufficient && !pending
+          return (
+            <div
+              className={`grid min-h-18 min-w-0 grid-cols-[72px_minmax(100px,180px)_minmax(80px,110px)] items-center justify-center gap-4 px-4 py-2 ${index % 2 ? 'bg-white/[0.018]' : ''}`}
+              data-marketplace-cheapest-lot={size}
+              data-marketplace-listing-row
+              key={size}
+            >
+              <div className="flex min-w-0 items-center justify-center">
+                <span className="text-[16px] font-semibold tracking-[0.08em] text-[#efbd45]">×{size}</span>
+              </div>
+              <div className="min-w-0 overflow-hidden">
+                <span
+                  className={`block truncate whitespace-nowrap text-[15px] font-semibold tabular-nums ${ask ? 'text-[#e8e4dc]' : 'text-[#5f636d]'}`}
+                >
+                  {total === null ? (
+                    '—'
+                  ) : (
+                    <span className="inline-flex items-center gap-1.5">
+                      {format_sui(total, 2)} <SuiUnit size={12} />
+                    </span>
+                  )}
+                </span>
+              </div>
+              <button
+                className="h-10 w-full min-w-0 cursor-pointer overflow-hidden border border-[#c8963c]/45 bg-[#c8963c]/8 px-3 text-ellipsis whitespace-nowrap text-[8px] font-semibold tracking-[0.13em] text-[#efbd45] uppercase hover:bg-[#c8963c]/13 disabled:cursor-not-allowed disabled:border-white/7 disabled:bg-transparent disabled:text-[#555b66]"
+                disabled={!purchasable}
+                onClick={() => {
+                  if (ask) set_confirm(ask.id)
+                }}
+                type="button"
+              >
+                {!ask ? '—' : own ? text('yours') : insufficient ? text('insufficient') : text('buy')}
+              </button>
+            </div>
+          )
+        })}
+      </div>
+      {armed && <PurchaseConfirm close={() => set_confirm(null)} listing={armed} pending={pending} text={text} />}
+    </div>
+  )
+}
+
 const AskRow = ({
   address,
   balance,
@@ -295,7 +454,7 @@ const AskRow = ({
   balance: bigint | null
   confirm: string | null
   index: number
-  listing: import('@aresrpg/protocol').ListingRow
+  listing: ListingRow
   pending: string | null
   set_confirm: (id: string | null) => void
   text: CopyText
@@ -304,52 +463,53 @@ const AskRow = ({
   const own = listing.seller === address
   const insufficient = balance !== null && balance < total
   const armed = confirm === listing.id
+  const purchasable = !own && !insufficient && !pending
   return (
-    <div
-      className={`flex items-center gap-3 border-b border-[#1e1e2e] px-4 py-2 ${index % 2 ? 'bg-white/[0.018]' : ''}`}
-    >
-      {listing.kind === 'character' && <ListingIcon listing={listing} size={34} />}
-      <div className="min-w-0 flex-1">
-        <p className="truncate text-[10px] text-[#e8e4dc]">
-          {listing.kind === 'character' ? listing.name : short_address(listing.seller)}
-        </p>
-        <p className="text-[8px] tracking-[0.1em] text-[#6b7280] uppercase">
-          {listing.kind === 'character'
-            ? `LV. ${listing.level} · ${listing.classe ?? '—'} · ${short_address(listing.seller)}`
-            : listing.amount > 1
-              ? `×${listing.amount}`
-              : text('seller')}
-        </p>
-      </div>
-      <span className="text-[11px] tabular-nums text-[#c8963c]">{format_sui(total, 2)} SUI</span>
-      {armed ? (
-        <>
-          <button
-            className="h-8 cursor-pointer border border-[#c8963c]/60 bg-[#c8963c]/10 px-3 text-[8px] tracking-[0.13em] text-[#c8963c] uppercase disabled:opacity-40"
-            disabled={!!pending || own || insufficient}
-            onClick={() => dispatch_app({ type: 'market/buy_requested', listing })}
-            type="button"
-          >
-            {text('pay')}
-          </button>
-          <button
-            className="h-8 cursor-pointer px-2 text-[8px] text-[#777b86] uppercase"
-            onClick={() => set_confirm(null)}
-            type="button"
-          >
-            {text('cancel')}
-          </button>
-        </>
-      ) : (
+    <>
+      <div
+        className={`flex min-w-0 items-center gap-2 border-b border-white/7 px-3 py-2 transition-colors ${armed ? 'bg-[#c8963c]/8' : index % 2 ? 'bg-white/[0.018]' : ''}`}
+        data-marketplace-listing-row
+        onClick={() => {
+          if (purchasable) set_confirm(listing.id)
+        }}
+        role="presentation"
+      >
+        <ListingIcon listing={listing} size={34} />
+        <div className="flex min-w-0 flex-[1_1_130px] flex-col">
+          <span className="text-[7px] tracking-[0.16em] text-[#555b66] uppercase">{text('seller')}</span>
+          <span className="truncate text-[9px] tracking-[0.08em] text-[#a2a6ae]">
+            {listing.kind === 'character' ? listing.name : short_address(listing.seller)}
+          </span>
+          {listing.kind === 'character' && (
+            <span className="truncate text-[7px] text-[#646a75]">
+              LV. {listing.level} · {listing.classe ?? '—'} · {short_address(listing.seller)}
+            </span>
+          )}
+        </div>
+        {listing.amount > 1 && (
+          <span className="shrink-0 text-[9px] tracking-[0.15em] text-[#777b86]">×{listing.amount}</span>
+        )}
+        <span className="min-w-2 flex-1" />
+        <div className="flex min-w-0 max-w-28 shrink flex-col items-end overflow-hidden">
+          <span className="text-[7px] tracking-[0.16em] text-[#555b66] uppercase">{text('price')}</span>
+          <span className="max-w-full truncate whitespace-nowrap text-[10px] tabular-nums text-[#c8963c]">
+            {format_sui(total, 2)} <SuiUnit />
+          </span>
+        </div>
         <button
-          className="h-8 cursor-pointer border border-[#4a9eff]/35 px-3 text-[8px] tracking-[0.13em] text-[#67adff] uppercase disabled:cursor-not-allowed disabled:opacity-35"
-          disabled={own || insufficient}
-          onClick={() => set_confirm(listing.id)}
+          aria-expanded={armed}
+          className="h-8 min-w-0 max-w-24 shrink cursor-pointer overflow-hidden border border-[#c8963c]/35 px-2 text-ellipsis whitespace-nowrap text-[8px] tracking-[0.12em] text-[#c8963c] uppercase disabled:cursor-not-allowed disabled:opacity-35"
+          disabled={!purchasable}
+          onClick={(event) => {
+            event.stopPropagation()
+            if (purchasable) set_confirm(listing.id)
+          }}
           type="button"
         >
           {own ? text('yours') : insufficient ? text('insufficient') : text('buy')}
         </button>
-      )}
-    </div>
+      </div>
+      {armed && <PurchaseConfirm close={() => set_confirm(null)} listing={listing} pending={pending} text={text} />}
+    </>
   )
 }

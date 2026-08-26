@@ -3,9 +3,9 @@
 // Dungeon writes are a thin coordinator over kiosk custody, living content, and normal fights.
 
 import { SDK, living_content } from './client.ts'
-import { receipt_digest } from './cache.ts'
+import { receipt_digest, receipt_event } from './cache.ts'
 import { create_kiosk_runner, type KioskCapLoader, type KioskCustody } from './kiosk_runner.ts'
-import { created_fight_id } from './fight.ts'
+import { created_fight_id, last_settler_refusal } from './fight.ts'
 import { board_catalog_id, item_template_id, mob_template_id, world_content_id, world_id } from './seed_ids.ts'
 
 type GameSdk = ReturnType<typeof SDK>
@@ -137,16 +137,27 @@ export const dungeon_actions = (sdk: GameSdk, { kiosk_cap }: DungeonActionsCtx) 
       const loot = [...new Map(requested_loot.map((row) => [row.item_type, row])).values()]
       const templates = loot.map(({ item_type }) => item_template_id(content_root, seed_package_original, item_type))
       await sdk.hydrate_unknown([fight, wc, ...templates])
-      const receipt = await with_terminal_kiosk(
-        (tx, kiosk, personal) => {
-          const plan = loot.map(({ existing }, index) =>
-            sdk.doors.prepare_fight_loot(tx, { template: templates[index]!, existing })
-          )
-          sdk.doors.settle_dungeon_room(tx, { wc, f: fight, fighter_idx, plan, kiosk, personal })
-        },
-        { custody, gas_scope: `fight:${fight}` }
-      )
-      return Object.freeze({ digest: receipt_digest(receipt) })
+      const execute_settlement = (last: boolean) =>
+        with_terminal_kiosk(
+          (tx, kiosk, personal) => {
+            const plan = loot.map(({ existing }, index) =>
+              sdk.doors.prepare_fight_loot(tx, { template: templates[index]!, existing })
+            )
+            const args = { wc, f: fight, fighter_idx, plan, kiosk, personal }
+            if (last) sdk.doors.settle_last_dungeon_room(tx, args)
+            else sdk.doors.settle_dungeon_room(tx, args)
+          },
+          { custody, gas_scope: `fight:${fight}` }
+        )
+      const receipt = await execute_settlement(true).catch((error: unknown) => {
+        if (!last_settler_refusal(error)) throw error
+        return execute_settlement(false)
+      })
+      return Object.freeze({
+        digest: receipt_digest(receipt),
+        closable: receipt_event(receipt, '::fight::FightClosable') !== null,
+        closed: receipt_event(receipt, '::fight::FightClosed') !== null,
+      })
     },
 
     give_up_fight: async ({

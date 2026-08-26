@@ -36,6 +36,10 @@ describe('the wire contract', () => {
       type: 'packet/ping',
       id: 8,
     })
+    expect(parse_client_packet(JSON.stringify({ type: 'packet/fight_resync', fight: '0xf1' }))).toEqual({
+      type: 'packet/fight_resync',
+      fight: '0xf1',
+    })
   })
 
   test('malformed intents throw, never coerce', () => {
@@ -53,6 +57,9 @@ describe('the wire contract', () => {
     )
     expect(() => parse_client_packet(JSON.stringify({ type: 'packet/admin_request', id: 1, kind: 'drop_db' }))).toThrow(
       /unknown admin kind/
+    )
+    expect(() => parse_client_packet(JSON.stringify({ type: 'packet/fight_resync', fight: 'nope' }))).toThrow(
+      /fight id/
     )
   })
 
@@ -81,8 +88,10 @@ describe('the wire contract', () => {
       'packet/chat_party',
       'packet/chat_whisper',
       'packet/fight_action',
+      'packet/fight_resync',
       'packet/market_observe',
       'packet/spectate',
+      'packet/fight_preview',
       'packet/character_owner_request',
       'packet/admin_request',
       'packet/ping',

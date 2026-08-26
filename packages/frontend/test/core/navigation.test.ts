@@ -26,7 +26,8 @@ describe('app navigation routes', () => {
     const state = initial_app_state(
       Object.freeze({ quality: 'medium', flat_mode: false, music_enabled: true, render_distance: null })
     )
-    const opened = reduce_app_state(state, { type: 'page/open', page: 'encyclopedia' })
+    const creating = reduce_app_state(state, { type: 'dialog/open', dialog: 'character_create' })
+    const opened = reduce_app_state(creating, { type: 'page/open', page: 'encyclopedia' })
     const selected = reduce_app_state(opened, { type: 'path/open', pathname: '/encyclopedia/items/aberrant_edge' })
     const returned = reduce_app_state(selected, { type: 'route/changed', pathname: '/' })
 
@@ -34,6 +35,7 @@ describe('app navigation routes', () => {
     expect(opened.navigation.pathname).toBe('/encyclopedia/items')
     expect(selected.navigation.pathname).toBe('/encyclopedia/items/aberrant_edge')
     expect(returned.navigation.page).toBe('world')
+    expect(returned.navigation.dialog).toBe('character_create')
   })
 
   test('waits for remembered authentication before consuming the initial admin route', async () => {

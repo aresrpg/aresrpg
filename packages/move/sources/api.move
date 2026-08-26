@@ -41,14 +41,13 @@ use sui::{
   random::Random,
   sui::SUI,
   transfer::Receiving,
-  transfer_policy::TransferPolicy,
+  transfer_policy::{TransferPolicy, TransferRequest},
 };
 
 const EDeleteWhileEquipped: u64 = 1101; // delete_character: unequip everything first
 const EDeleteWhileAmbushed: u64 = 1102; // delete_character: face the protector first
 const EManagedFight: u64 = 1103; // a managed fight (dungeon/kolizeum) joins/settles only through its module's doors
 const EDeleteWhileInDungeon: u64 = 1104; // delete_character: finish or abandon the run first
-const ENotOwnList: u64 = 1105; // create_kolizeum_friends: the FriendList is not the creator's own
 
 public fun split_stack(
   kiosk: &mut Kiosk,
@@ -157,18 +156,18 @@ entry fun search_zone(
   zone::search(chr, x, z, w, &mut gen, clock);
 }
 
-/// Spend level-up points into a characteristic (5 granted per level, spent 1:1).
+/// Spend exact available capital through the character class's characteristic ladder.
 public fun raise_stat(
   kiosk: &mut Kiosk,
   cap: &KioskOwnerCap,
   character_id: ID,
   stat: String,
-  amount: u16,
+  points: u16,
   version: &Version,
 ) {
   version.assert_latest();
   let chr: &mut Character = kiosk.borrow_mut(cap, character_id);
-  character::raise_stat(chr, stat, amount);
+  character::raise_stat(chr, stat, points);
 }
 
 /// Raise a spell one level (n → n+1 costs n points; 1 point granted per level from 2).
@@ -247,6 +246,7 @@ public fun feed_kiosk_pet(
 /// be equipped — a sent item would be orphaned player value; no FIRED protector verdict —
 /// death was the last dodge, audit 2026-08-10), then destroyed. Its derived name stays reserved.
 public fun delete_character(
+  registry: &FriendRegistry,
   kiosk: &mut Kiosk,
   cap: &KioskOwnerCap,
   character_id: ID,
@@ -255,6 +255,7 @@ public fun delete_character(
   ctx: &mut TxContext,
 ) {
   version.assert_latest();
+  party::af(registry, character_id);
   let chr: Character = protected.extract_from_kiosk(kiosk, cap, character_id, ctx);
   assert!(!equipment::has_any_equipped(&chr), EDeleteWhileEquipped);
   assert!(!gathering::has_fired_verdict(&chr), EDeleteWhileAmbushed);
@@ -466,11 +467,35 @@ entry fun settle_fight(
   fight::settle(f, fighter_idx, kiosk, cap, policy, item_policy, plan, &mut gen, clock, ctx);
 }
 
+/// Final participant variant: settle and reclaim storage atomically. The precondition runs
+/// before Random is opened, so a non-final caller may safely fall back without learning a roll.
+entry fun settle_last_fight(
+  f: Fight,
+  fighter_idx: u64,
+  plan: vector<PM>,
+  kiosk: &mut Kiosk,
+  personal: &PersonalKioskCap,
+  policy: &TransferPolicy<Character>,
+  item_policy: &TransferPolicy<Item>,
+  r: &Random,
+  version: &Version,
+  clock: &Clock,
+  ctx: &mut TxContext,
+) {
+  let cap = personal_kiosk::borrow(personal);
+  version.assert_latest();
+  assert!(!fight::is_managed(&f), EManagedFight);
+  fight::assert_last_settler(&f, fighter_idx, ctx);
+  let mut gen = r.new_generator(ctx);
+  fight::settle_last(f, fighter_idx, kiosk, cap, policy, item_policy, plan, &mut gen, clock, ctx);
+}
+
 /// Reclaim a spent fight's storage deposit — any of its players, once every seat settled.
 /// The rebate lands on the closer's gas coin; a lost race against another closer costs only
 /// the transaction floor.
 entry fun close_fight(f: Fight, version: &Version, ctx: &TxContext) {
   version.assert_latest();
+  assert!(!fight::is_wagered(&f), EManagedFight);
   fight::close(f, ctx);
 }
 
@@ -478,52 +503,40 @@ entry fun close_fight(f: Fight, version: &Version, ctx: &TxContext) {
 // Each door borrows the acting character out of the sender's kiosk (custody = the proof),
 // then hands the reference to party. A wallet may hold several characters, hence several slots.
 
-public fun create_party(kiosk: &Kiosk, cap: &KioskOwnerCap, character_id: ID, version: &Version, ctx: &mut TxContext) {
+public fun create_party(registry: &mut FriendRegistry, kiosk: &Kiosk, cap: &KioskOwnerCap, character_id: ID, version: &Version, ctx: &mut TxContext) {
   version.assert_latest();
   let chr: &Character = kiosk.borrow(cap, character_id);
-  party::create(chr, ctx);
+  party::create(registry, chr, ctx);
 }
 
-public fun party_invite(p: &mut Party, kiosk: &Kiosk, cap: &KioskOwnerCap, leader_id: ID, invited_character: ID, version: &Version) {
+public fun party_invitation(p: &mut Party, kiosk: &Kiosk, cap: &KioskOwnerCap, actor_id: ID, invited_character: ID, present: bool, version: &Version) {
   version.assert_latest();
-  let leader: &Character = kiosk.borrow(cap, leader_id);
-  party::invite(p, leader, invited_character);
+  let actor: &Character = kiosk.borrow(cap, actor_id);
+  party::i(p, actor, invited_character, present);
 }
 
-public fun party_accept(p: &mut Party, kiosk: &Kiosk, cap: &KioskOwnerCap, character_id: ID, version: &Version, ctx: &TxContext) {
-  version.assert_latest();
-  let chr: &Character = kiosk.borrow(cap, character_id);
-  party::accept(p, chr, ctx);
-}
-
-public fun party_decline(p: &mut Party, kiosk: &Kiosk, cap: &KioskOwnerCap, character_id: ID, version: &Version) {
+public fun party_accept(registry: &mut FriendRegistry, p: &mut Party, kiosk: &Kiosk, cap: &KioskOwnerCap, character_id: ID, version: &Version) {
   version.assert_latest();
   let chr: &Character = kiosk.borrow(cap, character_id);
-  party::decline(p, chr);
+  party::accept(registry, p, chr);
 }
 
-public fun party_rescind(p: &mut Party, kiosk: &Kiosk, cap: &KioskOwnerCap, leader_id: ID, invited_character: ID, version: &Version) {
-  version.assert_latest();
-  let leader: &Character = kiosk.borrow(cap, leader_id);
-  party::rescind(p, leader, invited_character);
-}
-
-public fun party_leave(p: &mut Party, kiosk: &Kiosk, cap: &KioskOwnerCap, character_id: ID, version: &Version) {
+public fun party_leave(registry: &mut FriendRegistry, p: &mut Party, kiosk: &Kiosk, cap: &KioskOwnerCap, character_id: ID, version: &Version) {
   version.assert_latest();
   let chr: &Character = kiosk.borrow(cap, character_id);
-  party::leave(p, chr);
+  party::leave(registry, p, chr);
 }
 
-public fun party_kick(p: &mut Party, kiosk: &Kiosk, cap: &KioskOwnerCap, leader_id: ID, target_character: ID, version: &Version) {
+public fun party_kick(registry: &mut FriendRegistry, p: &mut Party, kiosk: &Kiosk, cap: &KioskOwnerCap, leader_id: ID, target_character: ID, version: &Version) {
   version.assert_latest();
   let leader: &Character = kiosk.borrow(cap, leader_id);
-  party::kick(p, leader, target_character);
+  party::kick(registry, p, leader, target_character);
 }
 
-public fun party_disband(p: Party, kiosk: &Kiosk, cap: &KioskOwnerCap, leader_id: ID, version: &Version) {
+public fun party_disband(registry: &mut FriendRegistry, p: Party, kiosk: &Kiosk, cap: &KioskOwnerCap, leader_id: ID, version: &Version) {
   version.assert_latest();
   let leader: &Character = kiosk.borrow(cap, leader_id);
-  party::disband(p, leader);
+  party::disband(registry, p, leader);
 }
 
 /// Use one unit of a consumable on your character — heal, reset stat/spell points, or recall
@@ -935,6 +948,29 @@ entry fun settle_dungeon_room(
   dungeon::settle_room(wc, f, fighter_idx, kiosk, cap, policy, item_policy, plan, &mut gen, clock, ctx);
 }
 
+/// Final dungeon participant variant: run progression, loot settlement, and Fight deletion
+/// are one terminal transaction.
+entry fun settle_last_dungeon_room(
+  wc: &WorldContent,
+  f: Fight,
+  fighter_idx: u64,
+  plan: vector<PM>,
+  kiosk: &mut Kiosk,
+  personal: &PersonalKioskCap,
+  policy: &TransferPolicy<Character>,
+  item_policy: &TransferPolicy<Item>,
+  r: &Random,
+  version: &Version,
+  clock: &Clock,
+  ctx: &mut TxContext,
+) {
+  let cap = personal_kiosk::borrow(personal);
+  version.assert_latest();
+  fight::assert_last_settler(&f, fighter_idx, ctx);
+  let mut gen = r.new_generator(ctx);
+  dungeon::settle_last_room(wc, f, fighter_idx, kiosk, cap, policy, item_policy, plan, &mut gen, clock, ctx);
+}
+
 /// Give up the current room mid-fight — forfeit and end the run (the key is already gone).
 public fun give_up_dungeon_room(
   f: &mut Fight,
@@ -1009,9 +1045,8 @@ entry fun create_kolizeum_friends(
   // the packed cap unpacks HERE — a &Random door admits no PTB-side borrow (Sui law)
   let cap = personal_kiosk::borrow(personal);
   version.assert_latest();
-  assert!(friends::owner(list) == ctx.sender(), ENotOwnList); // snapshot only your OWN list
   let mut gen = r.new_generator(ctx);
-  let allowed = option::some(friends::snapshot(list));
+  let allowed = option::some(friends::s(list));
   kolizeum::create(pledge, format, level_min, level_max, access, allowed, protected, kiosk, cap, character_id, gen.generate_u64(), catalog, clock, ctx);
 }
 
@@ -1057,6 +1092,24 @@ public fun settle_kolizeum(
   kolizeum::settle(lobby, f, fighter_idx, kiosk, cap, policy, clock, ctx);
 }
 
+/// Final participant settlement — payout and both managed objects close atomically.
+public fun settle_last_kolizeum(
+  lobby: Kolizeum,
+  f: Fight,
+  fighter_idx: u64,
+  kiosk: &mut Kiosk,
+  personal: &PersonalKioskCap,
+  policy: &TransferPolicy<Character>,
+  version: &Version,
+  clock: &Clock,
+  ctx: &mut TxContext,
+) {
+  let cap = personal_kiosk::borrow(personal);
+  version.assert_latest();
+  // last-settler control is asserted inside kolizeum::settle_last
+  kolizeum::settle_last(lobby, f, fighter_idx, kiosk, cap, policy, clock, ctx);
+}
+
 /// Leave before the fight starts — full pledge refund.
 public fun exit_kolizeum(
   lobby: &mut Kolizeum,
@@ -1071,6 +1124,23 @@ public fun exit_kolizeum(
 ) {
   version.assert_latest();
   kolizeum::exit(lobby, f, fighter_idx, kiosk, cap, policy, clock, ctx);
+}
+
+/// Final placement exit — refund and both managed objects close atomically.
+public fun exit_last_kolizeum(
+  lobby: Kolizeum,
+  f: Fight,
+  fighter_idx: u64,
+  kiosk: &mut Kiosk,
+  cap: &KioskOwnerCap,
+  policy: &TransferPolicy<Character>,
+  version: &Version,
+  clock: &Clock,
+  ctx: &mut TxContext,
+) {
+  version.assert_latest();
+  // last-live-player control is asserted inside kolizeum::exit_last
+  kolizeum::exit_last(lobby, f, fighter_idx, kiosk, cap, policy, clock, ctx);
 }
 
 /// Forfeit a STARTED kolizeum fight — leave, abandoning the pot claim (the stalemate escape;
@@ -1089,29 +1159,24 @@ public fun forfeit_kolizeum(
   kolizeum::forfeit(f, fighter_idx, kiosk, cap, policy, clock, ctx);
 }
 
-/// Delete the empty kolizeum husk (pot fully paid or refunded).
-public fun sweep_kolizeum(lobby: Kolizeum, version: &Version) {
+/// Explicit recovery for legacy fully-settled managed pairs.
+public fun close_kolizeum(lobby: Kolizeum, f: Fight, version: &Version, ctx: &TxContext) {
   version.assert_latest();
-  kolizeum::sweep(lobby);
+  kolizeum::close(lobby, f, ctx);
 }
 
 // ╔════════════════ [ Friends ] ══════════════════════════════════════════════ ]
 // Address-bound self-signed whitelist — no custody proof needed, the doors only carry the
 // version gate. The list itself is soulbound (key-only) and owner-checked inside friends.
 
-public fun create_friend_list(registry: &mut FriendRegistry, version: &Version, ctx: &TxContext) {
+public fun create_friend_list(registry: &mut FriendRegistry, first: address, version: &Version, ctx: &TxContext) {
   version.assert_latest();
-  friends::create(registry, ctx);
+  friends::create(registry, first, ctx);
 }
 
-public fun add_friend(list: &mut FriendList, addr: address, version: &Version, ctx: &TxContext) {
+public fun set_friend(list: &mut FriendList, addr: address, present: bool, version: &Version, ctx: &TxContext) {
   version.assert_latest();
-  friends::add(list, addr, ctx);
-}
-
-public fun remove_friend(list: &mut FriendList, addr: address, version: &Version, ctx: &TxContext) {
-  version.assert_latest();
-  friends::remove(list, addr, ctx);
+  friends::set(list, addr, present, ctx);
 }
 
 // ╔════════════════ [ Trade — the p2p escrow ] ═══════════════════════════════ ]
@@ -1125,15 +1190,16 @@ public fun trade_create(counterparty: address, version: &Version, ctx: &mut TxCo
   trade::create(counterparty, ctx);
 }
 
-public fun trade_deposit_item_cap(t: &mut Trade, cap: PurchaseCap<Item>, version: &Version, ctx: &TxContext) {
+public fun trade_put_i(t: &mut Trade, cap: PurchaseCap<Item>, version: &Version, ctx: &TxContext) {
   version.assert_latest();
-  trade::deposit_cap(t, cap, ctx);
+  trade::pc(t, cap, ctx);
 }
 
-/// A character trades NAKED (naked_rule law): the fail-fast twin of the policy rule — an
-/// equipped character parked here would pass the lock and then abort every claim, locked
-/// forever. The depositor's own kiosk proves the state (immutable borrow works while listed).
-public fun trade_deposit_character_cap(
+/// A character trades NAKED and at sale level (naked_rule law): the fail-fast twin of the
+/// policy rule — a disqualified character parked here would pass the lock and then abort
+/// every claim, locked forever. The depositor's own kiosk proves the state (immutable borrow
+/// works while listed).
+public fun trade_put_c(
   t: &mut Trade,
   cap: PurchaseCap<Character>,
   kiosk: &Kiosk,
@@ -1143,66 +1209,74 @@ public fun trade_deposit_character_cap(
 ) {
   version.assert_latest();
   let chr: &Character = kiosk.borrow(kiosk_cap, sui::kiosk::purchase_cap_item(&cap));
-  naked_rule::assert_naked(chr);
-  trade::deposit_cap(t, cap, ctx);
+  naked_rule::assert_sellable(chr);
+  trade::pc(t, cap, ctx);
 }
 
-/// Chain `kiosk::return_purchase_cap` on the returned cap in the same PTB to unlist the item.
-public fun trade_withdraw_item_cap(t: &mut Trade, item: ID, version: &Version, ctx: &TxContext): PurchaseCap<Item> {
+/// Withdraw the caller's own offer. The SDK returns this cap to its source kiosk atomically.
+public fun trade_take_i(t: &mut Trade, item: ID, version: &Version, ctx: &TxContext): PurchaseCap<Item> {
   version.assert_latest();
-  trade::withdraw_cap(t, item, ctx)
+  trade::tc<Item>(t, item, ctx)
 }
 
-public fun trade_withdraw_character_cap(
+public fun trade_take_c(
   t: &mut Trade,
   item: ID,
   version: &Version,
   ctx: &TxContext,
 ): PurchaseCap<Character> {
   version.assert_latest();
-  trade::withdraw_cap(t, item, ctx)
+  trade::tc<Character>(t, item, ctx)
 }
 
-public fun trade_deposit_sui(t: &mut Trade, coin: Coin<SUI>, version: &Version, ctx: &TxContext) {
+public fun trade_put_s(t: &mut Trade, coin: Coin<SUI>, version: &Version, ctx: &TxContext) {
   version.assert_latest();
-  trade::deposit_sui(t, coin, ctx);
+  trade::ps(t, coin, ctx);
 }
 
-public fun trade_withdraw_sui(t: &mut Trade, amount: u64, version: &Version, ctx: &mut TxContext): Coin<SUI> {
+public fun trade_take_s(t: &mut Trade, amount: u64, version: &Version, ctx: &mut TxContext): Coin<SUI> {
   version.assert_latest();
-  trade::withdraw_sui(t, amount, ctx)
+  trade::ts(t, amount, ctx)
 }
 
 /// `seen_version` is the trade version the caller READ — a stale accept aborts (never lock
 /// on a state you did not see).
 public fun trade_accept(t: &mut Trade, seen_version: u64, version: &Version, ctx: &TxContext) {
   version.assert_latest();
-  trade::accept(t, seen_version, ctx);
+  trade::a(t, seen_version, ctx);
 }
 
-/// Post-lock: chain the 0-price `purchase_with_cap` + royalty floor + relock in the same PTB.
-public fun trade_claim_item_cap(t: &mut Trade, item: ID, version: &Version, ctx: &TxContext): PurchaseCap<Item> {
-  version.assert_latest();
-  trade::claim_cap(t, item, ctx)
-}
-
-public fun trade_claim_character_cap(
+/// Post-lock: consume the counterparty's cap inside this door. The returned TransferRequest
+/// is a hot potato, so the caller must resolve every policy rule and lock the asset atomically.
+public fun trade_get_i(
   t: &mut Trade,
   item: ID,
+  source: &mut Kiosk,
   version: &Version,
-  ctx: &TxContext,
-): PurchaseCap<Character> {
+  ctx: &mut TxContext,
+): (Item, TransferRequest<Item>) {
   version.assert_latest();
-  trade::claim_cap(t, item, ctx)
+  trade::gc<Item>(t, item, source, ctx)
 }
 
-public fun trade_claim_sui(t: &mut Trade, version: &Version, ctx: &mut TxContext): Coin<SUI> {
+public fun trade_get_c(
+  t: &mut Trade,
+  item: ID,
+  source: &mut Kiosk,
+  version: &Version,
+  ctx: &mut TxContext,
+): (Character, TransferRequest<Character>) {
   version.assert_latest();
-  trade::claim_sui(t, ctx)
+  trade::gc<Character>(t, item, source, ctx)
+}
+
+public fun trade_get_s(t: &mut Trade, version: &Version, ctx: &mut TxContext): Coin<SUI> {
+  version.assert_latest();
+  trade::gs(t, ctx)
 }
 
 /// Sweep a drained trade (either party, any phase once empty).
 public fun trade_destroy(t: Trade, version: &Version, ctx: &TxContext) {
   version.assert_latest();
-  trade::destroy(t, ctx);
+  trade::d(t, ctx);
 }

@@ -2,18 +2,18 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
 import { item_is_stackable } from '@aresrpg/immutable'
-import type { CharacterRow, ItemRow, ListingRow } from '@aresrpg/protocol'
+import { MIN_CHARACTER_SALE_LEVEL, type CharacterRow, type ItemRow, type ListingRow } from '@aresrpg/protocol'
 import { Package, Store, Tag } from 'lucide-react'
 import { useMemo, useState } from 'react'
 
 import { item_icon } from '../content/assets.ts'
 import { content_catalog } from '../content/catalog.ts'
 import type { CopyText } from '../i18n/copy.ts'
-import { coalesced_stack_groups } from '../inventory_stacks.ts'
+import { coalesced_stack_groups, encumbered_asset_ids } from '../inventory_stacks.ts'
 import { dispatch_app, useAppStore } from '../store.ts'
 import { format_sui, parse_sui_amount } from '../wallet_amount.ts'
 
-import { category_name, ListingIcon, listing_name } from './marketplace_model.tsx'
+import { category_name, ListingIcon, listing_name, SuiUnit } from './marketplace_model.tsx'
 
 type ItemSelection = Readonly<{
   kind: 'item'
@@ -55,12 +55,13 @@ const character_listing = (row: Readonly<CharacterRow>, address: string, price_m
 export const SellPanel = ({ text }: Readonly<{ text: CopyText }>) => {
   const session = useAppStore(({ session }) => session)
   const market = useAppStore(({ marketplace }) => marketplace)
+  const trades = useAppStore(({ trade }) => trade.rows)
   const [selected, set_selected] = useState<Selection | null>(null)
   const [price, set_price] = useState('')
   const [lot, set_lot] = useState(1)
-  const listed = new Set(market.own_listings.map(({ id }) => id))
-  const inventory = session.inventory.filter(({ id }) => !listed.has(id))
-  const stack_groups = coalesced_stack_groups(session.inventory, market.own_listings)
+  const encumbered = encumbered_asset_ids(market.own_listings, trades)
+  const inventory = session.inventory.filter(({ id }) => !encumbered.has(id))
+  const stack_groups = coalesced_stack_groups(session.inventory, encumbered)
   const items: readonly ItemSelection[] = [
     ...inventory
       .filter((row) => !item_is_stackable(row.category))
@@ -71,7 +72,7 @@ export const SellPanel = ({ text }: Readonly<{ text: CopyText }>) => {
   ]
   const characters = session.characters.filter(
     ({ id, equipment, level, custody }) =>
-      !listed.has(id) && custody !== 'fight' && equipment.length === 0 && level >= 30
+      !encumbered.has(id) && custody !== 'fight' && equipment.length === 0 && level >= MIN_CHARACTER_SALE_LEVEL
   )
   const parsed_price = parse_sui_amount(price)
   const stackable = selected?.kind === 'item' && item_is_stackable(selected.row.category)
@@ -104,8 +105,8 @@ export const SellPanel = ({ text }: Readonly<{ text: CopyText }>) => {
   }
 
   return (
-    <div className="flex min-h-0 flex-1 overflow-hidden">
-      <section className="flex w-[360px] shrink-0 flex-col border-r border-[#1e1e2e]">
+    <div className="flex min-h-0 flex-1 overflow-hidden bg-bg">
+      <section className="flex w-[360px] shrink-0 flex-col border-r border-border bg-surface">
         <PanelTitle>
           {text('your_listings')} {market.own_listings.length ? `(${market.own_listings.length})` : ''}
         </PanelTitle>
@@ -115,7 +116,7 @@ export const SellPanel = ({ text }: Readonly<{ text: CopyText }>) => {
           ) : (
             market.own_listings.map((listing, index) => (
               <div
-                className={`flex items-center gap-3 border-b border-[#1e1e2e] px-4 py-2 ${index % 2 ? 'bg-white/[0.018]' : ''}`}
+                className={`flex items-center gap-3 border-b border-white/7 px-4 py-2 ${index % 2 ? 'bg-white/[0.018]' : ''}`}
                 key={listing.id}
               >
                 <ListingIcon listing={listing} size={30} />
@@ -126,8 +127,8 @@ export const SellPanel = ({ text }: Readonly<{ text: CopyText }>) => {
                     {listing.amount > 1 ? ` · ×${listing.amount}` : ''}
                   </p>
                 </div>
-                <span className="text-[9px] tabular-nums text-[#c8963c]">
-                  {format_sui(BigInt(listing.price_mist), 2)} SUI
+                <span className="inline-flex items-center gap-1 text-[9px] tabular-nums text-[#c8963c]">
+                  {format_sui(BigInt(listing.price_mist), 2)} <SuiUnit />
                 </span>
                 <button
                   className="cursor-pointer border border-[#ff5a8b]/35 px-2 py-1 text-[8px] tracking-[0.12em] text-[#ff6fa8] uppercase disabled:opacity-40"
@@ -143,18 +144,18 @@ export const SellPanel = ({ text }: Readonly<{ text: CopyText }>) => {
         </div>
       </section>
 
-      <section className="flex w-[340px] shrink-0 flex-col border-r border-[#1e1e2e]">
+      <section className="flex w-[340px] shrink-0 flex-col border-r border-border bg-surface">
         <PanelTitle>{text('list_for_sale')}</PanelTitle>
         {!selected ? (
           <PanelEmpty icon="tag" text={text('select_to_list')} />
         ) : (
-          <div className="mx-4 border border-[#1e1e2e] bg-white/[0.018] p-4">
+          <div className="mx-4 rounded-[5px] border border-border bg-surface-high p-4">
             <SelectedCard selected={selected} />
             <label className="mt-4 block text-[8px] tracking-[0.18em] text-[#6b7280] uppercase">{text('price')}</label>
             <div className="mt-1 flex items-center gap-2">
               <input
                 autoFocus
-                className="h-10 min-w-0 flex-1 border border-white/10 bg-[#090a10] px-3 text-[12px] tracking-[0.1em] outline-none focus:border-[#c8963c]/60"
+                className="h-10 min-w-0 flex-1 border border-white/10 bg-bg px-3 text-[12px] tracking-[0.1em] outline-none focus:border-[#c8963c]/60"
                 inputMode="decimal"
                 onChange={(event) => set_price(event.target.value)}
                 onKeyDown={(event) => {
@@ -163,7 +164,9 @@ export const SellPanel = ({ text }: Readonly<{ text: CopyText }>) => {
                 placeholder="0.00"
                 value={price}
               />
-              <span className="text-[10px] font-semibold tracking-[0.18em] text-[#67adff]">SUI</span>
+              <span className="text-[10px] font-semibold tracking-[0.18em] text-[#67adff]">
+                <SuiUnit size={12} />
+              </span>
             </div>
             {stackable && (
               <div className="mt-3">
@@ -204,7 +207,7 @@ export const SellPanel = ({ text }: Readonly<{ text: CopyText }>) => {
         )}
       </section>
 
-      <section className="flex min-w-0 flex-1 flex-col">
+      <section className="flex min-w-0 flex-1 flex-col bg-surface-high">
         <PanelTitle>{text('inventory')}</PanelTitle>
         <div className="min-h-0 overflow-y-auto p-4">
           {characters.length > 0 && (
@@ -264,7 +267,7 @@ export const SellPanel = ({ text }: Readonly<{ text: CopyText }>) => {
 }
 
 const PanelTitle = ({ children }: Readonly<{ children: React.ReactNode }>) => (
-  <h3 className="shrink-0 px-4 py-3 text-[10px] font-semibold tracking-[0.24em] text-[#c8963c] uppercase">
+  <h3 className="shrink-0 border-b border-border bg-surface-high px-4 py-3 text-[10px] font-semibold tracking-[0.24em] text-[#c8963c] uppercase">
     {children}
   </h3>
 )

@@ -34,3 +34,33 @@ fun an_unsettled_seat_blocks_the_door() {
   fight::close_for_testing(PLAYER, false, scenario.ctx());
   abort 999
 }
+
+#[test]
+fun the_final_settler_is_accepted_before_the_atomic_random_door() {
+  let mut scenario = test_scenario::begin(PLAYER);
+  fight::assert_last_settler_for_testing(PLAYER, true, scenario.ctx());
+  scenario.end();
+}
+
+#[test]
+#[expected_failure(abort_code = 1729, location = aresrpg::fight)]
+fun another_unsettled_player_refuses_the_atomic_last_settlement() {
+  let mut scenario = test_scenario::begin(PLAYER);
+  fight::assert_last_settler_for_testing(PLAYER, false, scenario.ctx());
+  abort 999
+}
+
+#[test]
+fun the_only_live_placement_player_may_take_the_atomic_exit() {
+  let mut scenario = test_scenario::begin(PLAYER);
+  fight::assert_last_live_player_for_testing(PLAYER, true, scenario.ctx());
+  scenario.end();
+}
+
+#[test]
+#[expected_failure(abort_code = 1729, location = aresrpg::fight)]
+fun another_live_placement_player_refuses_the_atomic_exit() {
+  let mut scenario = test_scenario::begin(PLAYER);
+  fight::assert_last_live_player_for_testing(PLAYER, false, scenario.ctx());
+  abort 999
+}

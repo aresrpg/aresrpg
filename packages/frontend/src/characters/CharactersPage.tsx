@@ -77,7 +77,7 @@ export default function CharactersPage({ copy }: Readonly<{ copy: AppCopy }>) {
         >
           <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto" key={character.id}>
             {tab === 'equipment' && <EquipmentTab character={character} copy={copy} />}
-            {tab === 'stats' && <StatsTab character={character} copy={copy} />}
+            {tab === 'stats' && <StatsTab character={character} copy={copy} key={character.id} />}
             {tab === 'spells' && <SpellsTab character={character} copy={copy} />}
             {tab === 'jobs' && <JobsTab character={character} copy={copy} />}
             {tab === 'runeforge' && <RuneforgeTab character={character} copy={copy} />}

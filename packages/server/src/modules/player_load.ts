@@ -9,9 +9,9 @@
 
 import { get_characters } from '../reads/get_characters.ts'
 import { get_items } from '../reads/get_items.ts'
-import { get_friends } from '../reads/get_friends.ts'
 import { get_claims, get_giftcards, get_my_listings } from '../reads/get_user_economy.ts'
 import { get_fight_resolutions } from '../reads/get_fight_resolutions.ts'
+import { get_closable_fights } from '../reads/get_closable_fights.ts'
 import logger from '../logger.ts'
 import type { PlayerModule } from '../player.ts'
 
@@ -23,24 +23,24 @@ export default {
     const { graph, address, send, dispatch } = context
     void (async () => {
       try {
-        const [characters, items, friends, claims, giftcards, listings, resolutions] = await Promise.all([
+        const [characters, items, claims, giftcards, listings, resolutions, closable_fights] = await Promise.all([
           get_characters(graph, { address }),
           get_items(graph, { address }),
-          get_friends(graph, { address }),
           get_claims(graph, { address }),
           get_giftcards(graph, { address }),
           get_my_listings(graph, { address }),
           get_fight_resolutions(graph, { address }),
+          get_closable_fights(graph, { address }),
         ])
         // `packet/characters` is the client's READY barrier. Everything an immediate action
         // can reference must arrive first on this ordered socket, especially listing locks.
         dispatch({ type: 'action/character_roster', characters })
         send({ type: 'packet/inventory', items })
-        send({ type: 'packet/friends', friends: friends.map((friend) => friend.address as string) })
         send({ type: 'packet/claims', claims })
         send({ type: 'packet/giftcards', giftcards })
         send({ type: 'packet/listings', listings })
         send({ type: 'packet/fight_resolutions', resolutions })
+        send({ type: 'packet/closable_fights', fights: closable_fights })
         send({ type: 'packet/characters', characters })
       } catch (error) {
         log.error({ address, error: (error as Error).message }, 'load snapshot failed')

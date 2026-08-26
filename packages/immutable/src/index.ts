@@ -24,6 +24,18 @@ export {
 } from './experience.ts'
 export { MODEL_VARIANT_SEPARATOR, model_variant_identity, type ModelVariantIdentity } from './model_variant.ts'
 export {
+  characteristic_allocation_quote,
+  characteristic_cost_step,
+  characteristic_ladders,
+  characteristic_spending_quote,
+  characteristic_value_cost,
+  characteristic_values_cost,
+  type CharacteristicCostStep,
+  type CharacteristicLadder,
+  type CharacteristicQuote,
+  type CharacteristicValues,
+} from './characteristics.ts'
+export {
   gatherable_catalog,
   gatherable_item_types,
   gatherable_of,

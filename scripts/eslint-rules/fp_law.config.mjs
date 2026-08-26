@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-// scripts/eslint-rules/fp_law.config.mjs — THE FP-LAW LAYER (docs/CODE_LAW.md).
+// scripts/eslint-rules/fp_law.config.mjs — THE FP-LAW LAYER (.claude/rules/code-law.md).
 //
 // Importable flat-config layer, spread into eslint.config.js after the base blocks. Severity design
 // (census 2026-07-17, 7559 findings measured before wiring): ERROR where the repo is already clean
 // (a free ratchet), WARN where violations are mass (a burn-down, not an unrunnable red gate).
-// Every rule id maps to a law row in docs/CODE_LAW.md; the census + ranked worklist live in the
+// Every rule id maps to a row in .claude/rules/code-law.md; the census + ranked worklist live in the
 // FP_LAW lane report.
 //
 // Tiers:

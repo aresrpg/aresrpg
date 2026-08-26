@@ -24,7 +24,7 @@ type SpellCardSpell = Readonly<{
 }>
 
 const field_class =
-  'h-8 border border-white/12 bg-[#090a10] px-2 text-[10px] text-[#e8e4dc] outline-none focus:border-[#c8963c]/60'
+  'h-8 border border-white/12 bg-bg px-2 text-[10px] text-[#e8e4dc] outline-none focus:border-[#c8963c]/60'
 
 const english: EncyclopediaText = (key, values) => {
   const labels: Readonly<Record<string, string>> = Object.freeze({
@@ -173,7 +173,7 @@ const Rule = ({
   )
   return (
     <InlineField
-      class_name="flex min-h-10 w-full items-center justify-between gap-3 bg-[#111119] px-3"
+      class_name="flex min-h-10 w-full items-center justify-between gap-3 bg-surface-low px-3"
       display={content}
       edit={edit}
       editor={
@@ -195,7 +195,7 @@ const Rule = ({
 }
 
 const Constraint = ({ label, children }: Readonly<{ label: string; children: ReactNode }>) => (
-  <div className="flex min-h-10 items-center justify-between gap-3 bg-[#111119] px-3">
+  <div className="flex min-h-10 items-center justify-between gap-3 bg-surface-low px-3">
     <span className="text-[9px] text-[#858994]">{label}</span>
     <span className="text-[10px] font-semibold text-[#d8d3ca]">{children}</span>
   </div>
@@ -298,7 +298,7 @@ export const SpellCard = ({
           {spell.levels.map((_, index) => (
             <button
               aria-label={`Spell level ${index + 1}`}
-              className={`relative -mb-px h-9 min-w-12 border px-4 text-[9px] font-semibold ${index === safe_index ? 'z-[1] border-[#c8963c]/55 border-b-[#0d0d14] bg-[#0d0d14] text-[#e0b86b]' : 'border-transparent text-[#626670] hover:border-white/8 hover:text-[#aaa6a0]'}`}
+              className={`relative -mb-px h-9 min-w-12 border px-4 text-[9px] font-semibold ${index === safe_index ? 'z-[1] border-[#c8963c]/55 border-b-surface-low bg-surface-low text-[#e0b86b]' : 'border-transparent text-[#626670] hover:border-white/8 hover:text-[#aaa6a0]'}`}
               key={index}
               onClick={() => set_level_index(index)}
               type="button"

@@ -18,6 +18,7 @@ import { item_icon } from '../content/assets.ts'
 import { encyclopedia_catalog } from '../content/catalog.ts'
 import { item_detail_icon } from '../content/item_detail_assets.ts'
 import { copy_text, type AppCopy } from '../i18n/copy.ts'
+import { encumbered_asset_ids } from '../inventory_stacks.ts'
 import { dispatch_app, useAppStore } from '../store.ts'
 import { toast } from '../toast.ts'
 
@@ -178,6 +179,7 @@ export const InventoryActionOverlays = ({
   const wallet = useAppStore(({ session }) => session.wallet)
   const inventory = useAppStore(({ session }) => session.inventory)
   const listings = useAppStore(({ marketplace }) => marketplace.own_listings)
+  const trades = useAppStore(({ trade }) => trade.rows)
   const [feed_pet, set_feed_pet] = useState<ItemRow | null>(null)
   const [crush_target, set_crush_target] = useState<ItemRow | null>(null)
   const [destroy_target, set_destroy_target] = useState<ItemRow | null>(null)
@@ -189,7 +191,7 @@ export const InventoryActionOverlays = ({
     return () => globalThis.removeEventListener('click', close_menu)
   }, [menu, close_menu])
 
-  const listed = useMemo(() => new Set(listings.map(({ id }) => id)), [listings])
+  const listed = useMemo(() => encumbered_asset_ids(listings, trades), [listings, trades])
 
   const crush = (item: Readonly<ItemRow>): void => {
     if (!wallet || busy) return
@@ -243,7 +245,7 @@ export const InventoryActionOverlays = ({
     <>
       {menu && (
         <div
-          className="fixed z-[60] flex min-w-[150px] flex-col border border-border bg-[#0e0e16] shadow-[0_14px_40px_rgba(0,0,0,0.6)]"
+          className="fixed z-[60] flex min-w-[150px] flex-col border border-border bg-surface-low shadow-[0_14px_40px_rgba(0,0,0,0.6)]"
           style={{
             left: Math.min(menu.x, globalThis.innerWidth - 170),
             top: Math.min(menu.y, globalThis.innerHeight - (entries.length + 1) * 34 - 10),

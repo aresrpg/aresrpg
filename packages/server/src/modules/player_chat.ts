@@ -64,6 +64,7 @@ export default {
       send({
         type: 'packet/chat_message',
         channel: 'world',
+        scope: null,
         from: fact.address,
         character: fact.character,
         text: fact.text,
@@ -87,6 +88,7 @@ export default {
       send({
         type: 'packet/chat_message',
         channel: 'whisper',
+        scope: null,
         from: fact.address,
         character: fact.character,
         text: fact.text,

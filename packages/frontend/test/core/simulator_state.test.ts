@@ -151,7 +151,30 @@ describe('local fight simulator setup', () => {
     expect(character.id).toBe('sim_c1')
     expect(allocated.characters[0]?.vitality).toBe(5)
     expect(changed_class.characters[0]?.classe).toBe('shugo')
+    expect(changed_class.characters[0]?.vitality).toBe(0)
     expect(changed_class.characters[0]?.spell_levels).toEqual({})
+  })
+
+  test('the simulator enforces class costs and Ikari double-vitality reachability', () => {
+    const base = reduce_simulator_state(initial_simulator_state(), {
+      type: 'simulator/character_saved',
+      character: { ...local_character(), classe: 'ikari', level: 2 },
+    })
+    const vitality = reduce_simulator_state(base, {
+      type: 'simulator/stat_set',
+      character_id: 'local_senshi',
+      stat: 'vitality',
+      value: 99,
+    })
+    const strength = reduce_simulator_state(vitality, {
+      type: 'simulator/stat_set',
+      character_id: 'local_senshi',
+      stat: 'strength',
+      value: 1,
+    })
+
+    expect(vitality.characters[0]?.vitality).toBe(10)
+    expect(strength.characters[0]?.strength).toBe(0)
   })
 
   test('saves roster characters independently and removes their board placement with them', () => {
@@ -346,7 +369,7 @@ describe('local fight simulator setup', () => {
       dispatch: emit,
     })
     emit({ type: 'fight/opened', mode: 'local', setup: simulator_fight_setup(ready), seed: ready.seed })
-    emit({ type: 'fight/input', input: { type: 'start' }, origin: 'local' })
+    emit({ type: 'fight/input', fight: null, input: { type: 'start' }, origin: 'local' })
 
     expect(app_state.fight.mounted).toBeTrue()
     expect(app_state.fight.checkpoint?.contract.round).toBeGreaterThanOrEqual(1n)

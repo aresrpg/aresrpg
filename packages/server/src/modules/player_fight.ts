@@ -9,6 +9,7 @@ import { zone_of } from '@aresrpg/protocol'
 import { channels, mesh, type EventEnvelope, type FightActionFact } from '../protocol.ts'
 import { get_fight } from '../reads/get_fight.ts'
 import { get_fight_checkpoint } from '../reads/get_fight_checkpoint.ts'
+import { get_closable_fights } from '../reads/get_closable_fights.ts'
 import { latest_keyed_reader } from '../latest_read.ts'
 import logger from '../logger.ts'
 import type { PlayerModule, PlayerAction, PlayerState } from '../player.ts'
@@ -53,7 +54,22 @@ export default {
     if (action.type === 'action/spectate')
       return {
         ...state,
-        spectating: action.fight ? { character_id: action.character_id, fight: action.fight } : null,
+        spectating: Object.freeze({
+          ...Object.fromEntries(
+            Object.entries(state.spectating).filter(([character_id]) => character_id !== action.character_id)
+          ),
+          ...(action.fight ? { [action.character_id]: action.fight } : {}),
+        }),
+      }
+    if (action.type === 'action/fight_preview')
+      return {
+        ...state,
+        fight_previews: Object.freeze({
+          ...Object.fromEntries(
+            Object.entries(state.fight_previews).filter(([character_id]) => character_id !== action.character_id)
+          ),
+          ...(action.fight ? { [action.character_id]: action.fight } : {}),
+        }),
       }
     return state
   },
@@ -62,6 +78,7 @@ export default {
     const { pubsub, graph, events, send, address, dispatch, get_state, signal } = context
     const { watch, unwatch, watched } = create_watcher(pubsub)
     const fight_tails = new Map<string, Promise<void>>()
+    const observation_versions = new Map<string, number>()
     const enqueue_fight = (fight: string, work: () => Promise<void>): void => {
       const next = (fight_tails.get(fight) ?? Promise.resolve()).then(work)
       fight_tails.set(
@@ -112,6 +129,13 @@ export default {
       read_latest_state(fight_id).catch((error: Error) =>
         log.warn({ fight: fight_id, error: error.message }, 'fight state read failed')
       )
+    const fights_of = (value: PlayerState): Set<string> =>
+      new Set([
+        ...Object.values(value.characters).flatMap(({ fight }) => (fight ? [fight] : [])),
+        ...Object.values(value.roster_fights),
+        ...Object.values(value.spectating),
+        ...Object.values(value.fight_previews),
+      ])
 
     const forward_fight_event = (payload: EventEnvelope) => {
       if (payload.type === 'FighterJoined') {
@@ -153,9 +177,19 @@ export default {
         const { fight, winner } = payload.data as { fight: string; winner: number | null }
         send({ type: 'packet/fight_ended', fight, winner })
       }
+      if (payload.type === 'FightClosable')
+        void get_closable_fights(graph, { address })
+          .then((fights) => {
+            if (fights.length > 0) send({ type: 'packet/closable_fights', fights })
+          })
+          .catch((error: Error) => log.warn({ error: error.message }, 'closable fight read failed'))
     }
 
     const forward_fight_action = (fight: string) => (fact: FightActionFact) => {
+      if (fact.kind === 'resync') {
+        void push_state(fight)
+        return
+      }
       if (fact.address === address) return
       send({ type: 'packet/fight_action', fight, from: fact.address, action: fact.action })
     }
@@ -164,20 +198,31 @@ export default {
     // The same arm doubles as the join/spectate MODAL's live watch: opening the modal arms
     // the stream, so seat changes reach it while it stands open. One watch slot — a fighter
     // never replaces their own fight's stream with somebody else's.
-    events.on('packet/spectate', (action: Extract<PlayerAction, { type: 'packet/spectate' }>) => {
+    const observe_fight = (
+      action: Extract<PlayerAction, { type: 'packet/spectate' | 'packet/fight_preview' }>,
+      state_action: 'action/spectate' | 'action/fight_preview'
+    ): void => {
+      const observation_key = `${state_action}:${action.character_id}`
+      const version = (observation_versions.get(observation_key) ?? 0) + 1
+      observation_versions.set(observation_key, version)
       if (action.fight === null) {
-        dispatch({ type: 'action/spectate', character_id: action.character_id, fight: null })
+        dispatch({ type: state_action, character_id: action.character_id, fight: null })
         return
       }
       const tracked = get_state().characters[action.character_id]
       if (!tracked) return
-      const character = tracked.presence
       if (tracked.fight && tracked.fight !== action.fight) {
         send({ type: 'packet/error', reason: 'already watching a fight' })
         return
       }
       void get_fight(graph, { fight_id: action.fight })
         .then(([fight]) => {
+          if (observation_versions.get(observation_key) !== version) return
+          const current = get_state()
+          const latest = current.characters[action.character_id]
+          if (!latest || (latest.fight && latest.fight !== action.fight)) return
+          const already_watched = fights_of(current).has(action.fight!)
+          const character = latest.presence
           const nearby =
             fight &&
             fight.world === character.world &&
@@ -187,10 +232,13 @@ export default {
             send({ type: 'packet/error', reason: 'fight not nearby' })
             return
           }
-          dispatch({ type: 'action/spectate', character_id: action.character_id, fight: action.fight! })
+          dispatch({ type: state_action, character_id: action.character_id, fight: action.fight! })
+          if (already_watched) void push_state(action.fight!)
         })
         .catch((error: Error) => log.warn({ fight: action.fight, error: error.message }, 'spectate read failed'))
-    })
+    }
+    events.on('packet/spectate', (action) => observe_fight(action, 'action/spectate'))
+    events.on('packet/fight_preview', (action) => observe_fight(action, 'action/fight_preview'))
 
     // LIVE TURN INTENT — relayed to the other watchers of the same fight.
     // TODO(sim): once the simulation package lands, validate the action is LEGAL for the
@@ -204,26 +252,31 @@ export default {
       if (!tracked) {
         send({
           type: 'packet/error',
-          reason: state.spectating?.fight === action.fight ? 'not your fighter' : 'not in this fight',
+          reason: Object.values(state.spectating).includes(action.fight) ? 'not your fighter' : 'not in this fight',
         })
         return
       }
-      const placement_action = action.action.type === 'place' || action.action.type === 'ready'
-      const anytime_action = action.action.type === 'forfeit'
-      if (!placement_action && !anytime_action && fighter !== tracked.active_fighter) {
+      if (fighter !== tracked.active_fighter) {
         send({ type: 'packet/error', reason: 'not your turn' })
         return
       }
-      void pubsub.mesh.publish(mesh.fight_actions(action.fight), { address, action: action.action })
+      void pubsub.mesh.publish(mesh.fight_actions(action.fight), {
+        kind: 'action',
+        address,
+        action: action.action,
+      })
+    })
+    events.on('packet/fight_resync', (action: Extract<PlayerAction, { type: 'packet/fight_resync' }>) => {
+      const participant = Object.values(get_state().characters).some(({ fight }) => fight === action.fight)
+      if (!participant) {
+        send({ type: 'packet/error', reason: 'not in this fight' })
+        return
+      }
+      void pubsub.mesh.publish(mesh.fight_actions(action.fight), { kind: 'resync', address })
     })
 
     // Watch the union of every owned fight plus the optional spectator fight.
     events.on('STATE_UPDATED', (state: PlayerState, previous: PlayerState) => {
-      const fights_of = (value: PlayerState): Set<string> =>
-        new Set([
-          ...Object.values(value.characters).flatMap(({ fight }) => (fight ? [fight] : [])),
-          ...(value.spectating ? [value.spectating.fight] : []),
-        ])
       const before = fights_of(previous)
       const current = fights_of(state)
       before.forEach((fight) => {

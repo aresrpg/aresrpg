@@ -3,6 +3,8 @@
 
 import type { FightMode, HydratedFightCheckpoint } from '@aresrpg/fight'
 
+export const END_TURN_SUBMIT_GUARD_MS = 500
+
 type FightLifecycle = Readonly<{
   mode: FightMode | null
   checkpoint: HydratedFightCheckpoint | null

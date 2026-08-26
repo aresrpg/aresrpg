@@ -74,6 +74,17 @@ describe('resource node visuals', () => {
     layer.dispose()
   })
 
+  test('resource labels expose one stable world anchor to the shared per-frame label renderer', () => {
+    const scene = new Scene()
+    const layer = create_resource_node_layer({ scene })
+    layer.set_markers([{ id: 'wheat', x: 4, y: 7, z: 9, item_type: 'wheat', job: 'FARMER', tier: 1 }])
+    layer.set_visible(true)
+
+    expect(layer.label_anchor('wheat')?.toArray()).toEqual([4, 9.1, 9])
+    layer.set_visible(false)
+    expect(layer.label_anchor('wheat')).toBeNull()
+  })
+
   test('resource identity splits same-tier herbalists and ivory shrooms have grounded 3D caps', () => {
     const scene = new Scene()
     const layer = create_resource_node_layer({ scene, wind: true })
