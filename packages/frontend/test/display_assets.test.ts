@@ -44,3 +44,16 @@ test('the dev display route discovers HD item art added after server startup', a
     await rm(directory, { recursive: true, force: true })
   }
 })
+
+test('production SPA rewrites never capture stable Sui Display assets', async () => {
+  const config = JSON.parse(await Bun.file(new URL('../vercel.json', import.meta.url)).text()) as {
+    rewrites: readonly Readonly<{ source: string }>[]
+  }
+  const source = config.rewrites[0]?.source ?? ''
+  expect(source).toContain('item/')
+  expect(source).toContain('classe/')
+  const rewrite = new RegExp(`^${source}$`)
+  expect(rewrite.test('/item/cape_fuwa__white_hd.png')).toBeFalse()
+  expect(rewrite.test('/classe/yogan_male.jpg')).toBeFalse()
+  expect(rewrite.test('/encyclopedia/items')).toBeTrue()
+})
