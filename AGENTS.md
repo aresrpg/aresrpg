@@ -123,13 +123,12 @@ Before opening a PR, run `.claude/skills/review/SKILL.md` over the actual diff.
 
 ## Git and deployment
 
-- Main agents and ordinary subagents never stage, commit, push, branch, tag, or rewrite history for
-  the owner.
+- Agents never stage, branch, tag, or rewrite history for the owner.
 - Exception: when the owner explicitly invokes `$ship` or asks to ship already-staged work, the
-  dedicated `git_operator` may commit and push exactly that staged index under the `$ship` skill.
-  The invocation is the required authorization; do not request duplicate confirmation because of
-  the staged file count. A changed staged set, secret risk, failed hook, conflict, or destructive
-  recovery still stops the operation.
+  active agent may commit and push exactly that staged index under the `$ship` skill. The invocation
+  is the required authorization; execute directly without delegation or duplicate confirmation.
+  A changed staged set, secret risk, failed hook, conflict, or destructive recovery still stops the
+  operation.
 - Leave verified changes for owner review.
 - `edge` is integration; `master` receives only release promotion. Production, mainnet, permanent
   freeze, and deployment actions require explicit owner approval.
