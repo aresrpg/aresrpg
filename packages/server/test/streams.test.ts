@@ -16,21 +16,46 @@ describe('chat', () => {
     const player = create_player({ ws, address: '0xme', admin: false, graph, pubsub })
     await flush()
     await embody(player)
-    player.on_message(JSON.stringify({ type: 'packet/chat', character_id: '0xabc', text: 'gg' }))
+    player.on_message(
+      JSON.stringify({
+        type: 'packet/chat',
+        character_id: '0xabc',
+        parts: [
+          { kind: 'text', text: 'gg ' },
+          { kind: 'item', id: '0xhat', name: 'Fuwa Hat' },
+        ],
+      })
+    )
     const chat = published.find(({ channel }) => channel.startsWith('chat:world:'))
     expect(chat?.channel).toBe('chat:world:overworld')
-    expect(chat?.payload).toEqual({ address: '0xme', character: 'nox', text: 'gg' })
+    expect(chat?.payload).toEqual({
+      address: '0xme',
+      character_id: '0xabc',
+      character: 'nox',
+      parts: [
+        { kind: 'text', text: 'gg ' },
+        { kind: 'item', id: '0xhat', name: 'Fuwa Hat' },
+      ],
+    })
     // a bystander's line in the same world forwards as a world chat message
-    pubsub.emitter.emit('chat:world:overworld', { address: '0xher', character: 'nyx', text: 'hey' })
+    pubsub.emitter.emit('chat:world:overworld', {
+      address: '0xher',
+      character_id: '0xnyx',
+      character: 'nyx',
+      parts: [{ kind: 'text', text: 'hey' }],
+    })
     expect(sent.find((packet) => packet.type === 'packet/chat_message')).toEqual({
       type: 'packet/chat_message',
       channel: 'world',
       scope: null,
       from: '0xher',
+      character_id: '0xnyx',
       character: 'nyx',
-      text: 'hey',
+      parts: [{ kind: 'text', text: 'hey' }],
     })
-    player.on_message(JSON.stringify({ type: 'packet/chat', character_id: '0xabc', text: 'again' }))
+    player.on_message(
+      JSON.stringify({ type: 'packet/chat', character_id: '0xabc', parts: [{ kind: 'text', text: 'again' }] })
+    )
     expect(sent.find((packet) => packet.type === 'packet/error' && packet.reason === 'chat too fast')).toBeTruthy()
     expect(published.filter(({ channel }) => channel.startsWith('chat:world:'))).toHaveLength(1)
   })
@@ -40,16 +65,40 @@ describe('chat', () => {
     const player = create_player({ ws, address: '0xme', admin: false, graph, pubsub })
     await flush()
     await embody(player)
-    player.on_message(JSON.stringify({ type: 'packet/chat_whisper', character_id: '0xabc', to: '0xpal', text: 'psst' }))
-    expect(published.some(({ channel }) => channel === 'chat:user:0xpal')).toBe(true)
-    pubsub.emitter.emit('chat:user:0xme', { address: '0xpal', character: 'nyx', text: 'yo' })
+    player.on_message(
+      JSON.stringify({
+        type: 'packet/chat_whisper',
+        character_id: '0xabc',
+        to: '0xpal',
+        parts: [
+          { kind: 'text', text: 'psst ' },
+          { kind: 'position', world: 'overworld', x: 100, z: 100 },
+          { kind: 'text', text: ' Senshi Lvl 10 (0%)' },
+        ],
+      })
+    )
+    const whisper = published.find(({ channel }) => channel === 'chat:user:0xpal')
+    expect(whisper?.payload).toMatchObject({
+      parts: [
+        { kind: 'text', text: 'psst ' },
+        { kind: 'position', world: 'overworld', x: 100, z: 100 },
+        { kind: 'text', text: ' Senshi Lvl 10 (0%)' },
+      ],
+    })
+    pubsub.emitter.emit('chat:user:0xme', {
+      address: '0xpal',
+      character_id: '0xnyx',
+      character: 'nyx',
+      parts: [{ kind: 'text', text: 'yo' }],
+    })
     expect(sent.find((packet) => packet.type === 'packet/chat_message')).toEqual({
       type: 'packet/chat_message',
       channel: 'whisper',
       scope: null,
       from: '0xpal',
+      character_id: '0xnyx',
       character: 'nyx',
-      text: 'yo',
+      parts: [{ kind: 'text', text: 'yo' }],
     })
   })
 
@@ -58,7 +107,9 @@ describe('chat', () => {
     const player = create_player({ ws, address: '0xme', admin: false, graph, pubsub })
     await flush()
     await embody(player)
-    player.on_message(JSON.stringify({ type: 'packet/chat_party', character_id: '0xabc', text: 'anyone?' }))
+    player.on_message(
+      JSON.stringify({ type: 'packet/chat_party', character_id: '0xabc', parts: [{ kind: 'text', text: 'anyone?' }] })
+    )
     expect(sent.find((packet) => packet.type === 'packet/error' && packet.reason === 'no party')).toBeTruthy()
     expect(published.filter(({ channel }) => channel.startsWith('chat:party'))).toHaveLength(0)
   })
@@ -70,16 +121,24 @@ describe('chat', () => {
     await embody(player)
     player.dispatch({ type: 'action/party', character_id: '0xabc', party: '0xp' })
     await flush()
-    player.on_message(JSON.stringify({ type: 'packet/chat_party', character_id: '0xabc', text: 'ready' }))
+    player.on_message(
+      JSON.stringify({ type: 'packet/chat_party', character_id: '0xabc', parts: [{ kind: 'text', text: 'ready' }] })
+    )
     expect(published.some(({ channel }) => channel === 'chat:party:0xp')).toBeTrue()
-    pubsub.emitter.emit('chat:party:0xp', { address: '0xher', character: 'nyx', text: 'go' })
+    pubsub.emitter.emit('chat:party:0xp', {
+      address: '0xher',
+      character_id: '0xnyx',
+      character: 'nyx',
+      parts: [{ kind: 'text', text: 'go' }],
+    })
     expect(sent.find((packet) => packet.type === 'packet/chat_message' && packet.channel === 'party')).toEqual({
       type: 'packet/chat_message',
       channel: 'party',
       scope: '0xp',
       from: '0xher',
+      character_id: '0xnyx',
       character: 'nyx',
-      text: 'go',
+      parts: [{ kind: 'text', text: 'go' }],
     })
   })
 })
@@ -87,7 +146,7 @@ describe('chat', () => {
 describe('the fight watch', () => {
   test('arming a character watch closes the initial durable-resolution snapshot gap', async () => {
     const { sent, ws, graph, pubsub } = wire()
-    create_player({ ws, address: '0xme', admin: false, graph, pubsub })
+    const player = create_player({ ws, address: '0xme', admin: false, graph, pubsub })
     await flush()
     await flush()
     expect(sent.filter((packet) => packet.type === 'packet/fight_resolutions').length).toBeGreaterThanOrEqual(2)
@@ -135,6 +194,12 @@ describe('the fight watch', () => {
     // arming pushed the live fight row with OUR seat
     const state = sent.find((packet) => packet.type === 'packet/fight_state')
     expect(state).toMatchObject({ type: 'packet/fight_state', seats: { '0xabc': 0 } })
+    expect(state?.state.players['0xabc']).toMatchObject({
+      sex: 'male',
+      color_1: 1,
+      color_2: 2,
+      color_3: 3,
+    })
     pubsub.emitter.emit('evt:fight:0xf1', { type: 'TurnSeedUsed', data: { fight: '0xf1', seat: '2', seed: '99' } })
     await flush()
     expect(sent.find((packet) => packet.type === 'packet/turn_seed')).toEqual({
@@ -164,6 +229,16 @@ describe('the fight watch', () => {
     pubsub.emitter.emit('evt:fight:0xf1', { type: 'TurnSeedUsed', data: { fight: '0xf1', seat: '3', seed: '1' } })
     await flush()
     expect(sent.filter((packet) => packet.type === 'packet/turn_seed')).toHaveLength(2)
+    const recovery_packets = sent.filter((packet) => packet.type === 'packet/closable_fights').length
+    pubsub.emitter.emit('evt:fight:0xf1', { type: 'FightClosable', data: { fight: '0xf1' } })
+    await flush()
+    expect(sent.filter((packet) => packet.type === 'packet/closable_fights')).toHaveLength(recovery_packets)
+    pubsub.emitter.emit('evt:fight:0xf1', { type: 'FightClosed', data: { fight: '0xf1' } })
+    await flush()
+    expect(sent.filter((packet) => packet.type === 'packet/closable_fights').at(-1)).toEqual({
+      type: 'packet/closable_fights',
+      fights: [],
+    })
   })
 
   test('a character seated in a fight embodies on its seat and lands back on the board', async () => {
@@ -349,21 +424,51 @@ describe('market + self stream + heartbeat', () => {
       counts: { categories: {}, characters: 0 },
     })
     pubsub.emitter.emit('evt:economy', {
+      ckpt: 10,
+      tx: 2,
+      evt: 3,
+      ts_ms: 1_000,
       type: 'MarketPurchased',
-      data: { kiosk: '0xk', object: '0xi9', buyer: '0xother', kind: 'item', price_mist: '5000' },
+      data: {
+        kiosk: '0xk',
+        seller: '0xme',
+        object: '0xi9',
+        buyer: '0xother',
+        kind: 'item',
+        name: 'Rune PA Fo',
+        item_type: 'rune_action_pa',
+        amount: 1,
+        price_mist: '5000',
+      },
     })
     expect(sent.find((packet) => packet.type === 'packet/listing_sold')).toEqual({
       type: 'packet/listing_sold',
-      object: '0xi9',
-      price_mist: '5000',
+      sale: {
+        id: '10:2:3',
+        object: '0xi9',
+        kind: 'item',
+        name: 'Rune PA Fo',
+        item_type: 'rune_action_pa',
+        amount: 1,
+        price_mist: '5000',
+        counterparty: '0xother',
+        ts_ms: 1_000,
+      },
     })
     const roster_packets = sent.filter((packet) => packet.type === 'packet/characters').length
     pubsub.emitter.emit('evt:economy', {
       type: 'MarketPurchased',
-      data: { kiosk: '0xother-kiosk', object: '0xc9', buyer: '0xme', kind: 'character', price_mist: '5000' },
+      data: {
+        kiosk: '0xother-kiosk',
+        seller: '0xother',
+        object: '0xc9',
+        buyer: '0xme',
+        kind: 'character',
+        price_mist: '5000',
+      },
     })
     await flush()
-    // custody, not sale analysis, owns both marketplace and Trade character roster refreshes
+    // custody, not sale analysis, owns marketplace character roster refreshes
     expect(sent.filter((packet) => packet.type === 'packet/characters')).toHaveLength(roster_packets)
   })
 
@@ -386,7 +491,7 @@ describe('market + self stream + heartbeat', () => {
 
   test('every trade write reconciles the same bounded address roster', async () => {
     const { sent, ws, graph, pubsub } = wire()
-    create_player({ ws, address: '0xme', admin: false, graph, pubsub })
+    const player = create_player({ ws, address: '0xme', admin: false, graph, pubsub })
     await flush()
     const before = sent.filter((packet) => packet.type === 'packet/trades').length
     pubsub.emitter.emit('evt:social:0xme', { type: 'TradeChanged', data: { trade: '0xt1' } })
@@ -394,6 +499,10 @@ describe('market + self stream + heartbeat', () => {
     expect(sent.filter((packet) => packet.type === 'packet/trades')).toHaveLength(before + 1)
     pubsub.emitter.emit('evt:social:0xme', { type: 'TradeDestroyed', data: { trade: '0xt1' } })
     await flush()
+    expect(sent.find((packet) => packet.type === 'packet/trade_destroyed')).toEqual({
+      type: 'packet/trade_destroyed',
+      trade: '0xt1',
+    })
     expect(sent.filter((packet) => packet.type === 'packet/trades')).toHaveLength(before + 2)
   })
 

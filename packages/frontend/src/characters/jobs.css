@@ -10,7 +10,7 @@
 
 .jobs {
   display: grid;
-  grid-template-columns: 248px 1fr;
+  grid-template-columns: minmax(390px, 420px) 1fr;
   gap: var(--s-4);
   /* T72: fill the tab body + stretch the columns so the PANELS own the scroll (one owner), not the page —
      kills the double scrollbar (was: panels scrolled AND the page overflowed past the viewport-magic cap). */
@@ -21,6 +21,7 @@
 
 /* ── LEFT: job list rail ───────────────────────────────────────────────────── */
 .jobs__list {
+  --jobs-adviser-width: 132px;
   display: flex;
   flex-direction: column;
   gap: var(--s-3);
@@ -44,6 +45,7 @@
   display: flex;
   align-items: center;
   gap: var(--s-2);
+  margin-left: calc(var(--jobs-adviser-width) + var(--s-2));
   padding: var(--s-1) 0 var(--s-2);
   font-size: 0.6rem;
   letter-spacing: 0.12em;
@@ -696,10 +698,18 @@
   border-top: 1px solid var(--hair);
 }
 
+.jobs__craft-bar[data-stackable-output='false'] {
+  justify-content: flex-end;
+}
+
 .jobs__craft-amount {
   display: flex;
   align-items: center;
   gap: var(--s-2);
+}
+
+.jobs__craft-amount[hidden] {
+  display: none;
 }
 
 .jobs__craft-amount-label {

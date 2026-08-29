@@ -3,13 +3,14 @@
 //! AresRPG indexer — the chain's one projectionist.
 //!
 //! Streams Sui checkpoints and projects the game's LIVE state into FalkorDB:
-//! graph (live truth), per-address sales zsets (the one history product), and
-//! pub/sub (the live wire). The ONLY writer of this Redis; everything it stores
+//! graph (live truth), analytics, per-address sales history, and pub/sub (the live wire).
+//! The ONLY writer of this Redis; everything it stores
 //! is a re-derivable cache of public chain truth. Contract: README.md.
 //!
 //! Config is TWO game-specific ids (original package + latest upgrade) — type
 //! origins and the start checkpoint derive from chain state at boot.
 
+mod analytics;
 mod boot;
 mod decode;
 mod events;
@@ -75,12 +76,6 @@ struct Args {
     #[arg(long, env = "SEED_PACKAGE_ORIGINAL")]
     seed_package_original: String,
 
-    /// Override the boot-derived start checkpoint (fresh pipelines only —
-    /// ignored once a watermark exists). Unset = derived from the original
-    /// package's publish transaction.
-    #[arg(long = "start-checkpoint", env = "FIRST_CHECKPOINT")]
-    start_checkpoint: Option<u64>,
-
     /// Official GraphQL endpoint for boot derivation (lineage + publish
     /// checkpoint). Mainnet: https://sui-mainnet.mystenlabs.com/graphql
     #[arg(
@@ -145,21 +140,22 @@ async fn main() -> Result<()> {
     // A RESUMING deploy (a watermark exists) never touches the network at boot
     // (README): lineage was validated when the store was fresh, and the store
     // itself is bound to its chain by the chain-id guard.
-    if !boot::has_watermark(&mut boot_conn).await? {
-        boot::validate_lineage(&args.graphql_url, &package_original, &package_latest)
-            .await
-            .context("validating package lineage")?;
-        if args.indexer.first_checkpoint.is_none() {
-            args.indexer.first_checkpoint = match args.start_checkpoint {
-                Some(explicit) => Some(explicit),
-                None => Some(
-                    boot::publish_checkpoint(&args.graphql_url, &package_original)
-                        .await
-                        .context("deriving the start checkpoint")?,
-                ),
-            };
-        }
+    let fresh = !boot::has_watermark(&mut boot_conn).await?;
+    if fresh {
+        args.indexer.first_checkpoint = Some(
+            boot::publish_checkpoint(&args.graphql_url, &package_original)
+                .await
+                .context("deriving the start checkpoint")?,
+        );
     }
+    let activity_lineage = boot::activity_lineage(
+        &mut boot_conn,
+        &args.graphql_url,
+        &package_original,
+        &package_latest,
+        fresh,
+    )
+    .await?;
 
     info!(
         redis_url = %redacted_url(&args.redis_url),
@@ -200,10 +196,15 @@ async fn main() -> Result<()> {
     .await
     .context("creating indexer")?;
 
-    // The ONE pipeline: objects → graph, events → pub/sub + sales zsets.
+    // The ONE pipeline: objects → graph; transactions/events → analytics, sales, and pub/sub.
     indexer
         .sequential_pipeline(
-            AresHandler::new(&package_original, &package_latest, &seed_package_original)?,
+            AresHandler::new(
+                &package_original,
+                &package_latest,
+                &seed_package_original,
+                &activity_lineage,
+            )?,
             // Explicit channel sizes: the framework defaults derive them from num_cpus/2,
             // which is 0 under a 1-CPU container limit — mpsc::channel(0) panics at boot
             // (2026-08-19, first k8s deploy). Sized for one sequential pipeline, not cores.

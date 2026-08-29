@@ -301,6 +301,19 @@ export type FightPresentationCue =
     }>
   | Readonly<{
       id: string
+      type: 'status'
+      entity_id: string
+      effects: readonly Readonly<{
+        kind: bigint
+        element: string
+        value: bigint
+        turns_left: bigint
+        source: bigint
+        stat: bigint
+      }>[]
+    }>
+  | Readonly<{
+      id: string
       type: 'turn'
       entity_id: string
       /** Logical fight turn identity; stable across receipt prediction and indexed replay. */

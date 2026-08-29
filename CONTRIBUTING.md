@@ -97,6 +97,14 @@ previous tag's deployment — no revert commit, no re-promotion needed. Diff two
   both runs.
 - Every player-facing string ships in all six locales in the same commit.
 - The gate (`.github/workflows/gate.yml`) is required and only ever grows.
+- Coverage is language-native and aggregate: Bun JS/TS 60% lines + 75% functions; Rust indexer 65%
+  LLVM lines; Move control/seed/math/game 60%/30%/30%/25%. Tests and generated JS/TS are excluded,
+  but no authored module is hidden. CI and pre-commit route each changed language through its gate;
+  `bun run coverage:all` runs the complete local set. Every lane targets more than 80%; meaningful
+  gains raise that lane's floor in the same change, and floors never decrease.
+- Cognitive/cyclomatic hotspots are exact-score ratchets. Run `bun run complexity:baseline` only
+  after reviewing a real reduction or accepting a new below-ceiling soft hotspot; it refuses score
+  increases and new functions above the 15/12 hard ceilings.
 
 ## Scope
 

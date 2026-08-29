@@ -16,13 +16,13 @@ import {
   Scene,
   SphereGeometry,
   Sprite,
+  SpriteMaterial,
   Vector3,
   type BufferGeometry,
 } from 'three'
-import { SpriteNodeMaterial } from 'three/webgpu'
-import { float, mix, sin, smoothstep, uniform, uv, vec3, vec4 } from 'three/tsl'
 
 import type { create_entity_layer } from './entities.ts'
+import { create_dust_texture } from './dust_texture.ts'
 import { create_fight_float_layer, type FightFloatKind } from './fight_floats.ts'
 import { create_fight_vfx_geometries, fight_vfx_appearance } from './fight_vfx_geometry.ts'
 import {
@@ -64,8 +64,7 @@ type RingEffect = Readonly<{
 type DustEffect = Readonly<{
   group: Group
   sprites: readonly Sprite[]
-  material: SpriteNodeMaterial
-  fade: ReturnType<typeof uniform>
+  material: SpriteMaterial
   center: Vector3
   seeds: readonly ParticleSeed[]
   started_at: number
@@ -118,6 +117,7 @@ export const create_transient_effects = ({ scene, entities }: Readonly<{ scene: 
   const particle_geometry = new SphereGeometry(0.11, 5, 4)
   const fight_geometries = create_fight_vfx_geometries()
   const ring_geometry = new RingGeometry(0.58, 0.76, 28)
+  const dust_texture = create_dust_texture()
   const particles: ParticleEffect[] = []
   const rings: RingEffect[] = []
   const dusts: DustEffect[] = []
@@ -198,21 +198,14 @@ export const create_transient_effects = ({ scene, entities }: Readonly<{ scene: 
   }
 
   const spawn_dust = (center: Vector3): void => {
-    const fade = uniform(0.6)
-    const smoke_material = new SpriteNodeMaterial()
-    smoke_material.transparent = true
-    smoke_material.depthWrite = false
-    smoke_material.toneMapped = false
-    smoke_material.blending = NormalBlending
-    const smoke_uv = uv()
-    const centered = smoke_uv.sub(0.5)
-    const radius = centered.length()
-    const billow = sin(smoke_uv.x.mul(19).add(smoke_uv.y.mul(23)))
-      .mul(0.045)
-      .add(sin(smoke_uv.x.mul(-31).add(smoke_uv.y.mul(13))).mul(0.025))
-    const body = float(1).sub(smoothstep(0.2, 0.52, radius.add(billow)))
-    const color = mix(vec3(0.4, 0.35, 0.29), vec3(0.64, 0.58, 0.47), body)
-    smoke_material.colorNode = vec4(color, body.mul(fade))
+    const smoke_material = new SpriteMaterial({
+      map: dust_texture,
+      transparent: true,
+      opacity: 0.6,
+      depthWrite: false,
+      toneMapped: false,
+      blending: NormalBlending,
+    })
     const group = new Group()
     const seeds = Object.freeze(Array.from({ length: 14 }, (_, index) => particle_seed(`jump_dust`, index)))
     const sprites = Object.freeze(
@@ -229,7 +222,6 @@ export const create_transient_effects = ({ scene, entities }: Readonly<{ scene: 
         group,
         sprites,
         material: smoke_material,
-        fade,
         center: center.clone(),
         seeds,
         started_at: previous_tick,
@@ -469,7 +461,7 @@ export const create_transient_effects = ({ scene, entities }: Readonly<{ scene: 
         const size_curve = progress < 0.5 ? 0.5 + progress : 1 - (progress - 0.5) * 0.3
         sprite.scale.setScalar((0.42 + seed.size * 0.38) * size_curve)
       })
-      effect.fade.value = progress < 0.5 ? 0.6 - progress * 0.2 : Math.max(0, 1 - progress) * 1
+      effect.material.opacity = progress < 0.5 ? 0.6 - progress * 0.2 : Math.max(0, 1 - progress)
       if (progress < 1) continue
       scene.remove(effect.group)
       effect.group.clear()
@@ -594,6 +586,7 @@ export const create_transient_effects = ({ scene, entities }: Readonly<{ scene: 
       particle_geometry.dispose()
       Object.values(fight_geometries).forEach((geometry) => geometry.dispose())
       ring_geometry.dispose()
+      dust_texture.dispose()
     },
   })
 }

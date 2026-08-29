@@ -112,12 +112,11 @@ public(package) fun prepare_plan(template: &ItemTemplate, existing: Option<ID>):
   }
 }
 
-/// Consume every rolled row of `wanted` through its authenticated blueprint. `count` is the
-/// number of non-stackable objects; `total` is the one stackable amount.
+/// Consume the exact rolled quantity of `wanted` through its authenticated blueprint. Stackable
+/// items become one combined stack; non-stackable items become `total` distinct rolled objects.
 public(package) fun deliver_drops(
   plan: &mut vector<PM>,
   wanted: &String,
-  count: u64,
   total: u32,
   kiosk: &mut Kiosk,
   cap: &KioskOwnerCap,
@@ -133,7 +132,7 @@ public(package) fun deliver_drops(
     deposit(kiosk, cap, policy, row.e, pm(&row, total, gen, ctx));
   } else {
     let mut n = 0;
-    while (n < count) {
+    while (n < total) {
       deposit(kiosk, cap, policy, option::none(), pm(&row, 1, gen, ctx));
       n = n + 1;
     };
@@ -331,3 +330,6 @@ public fun split_preserves_template_for_testing(ctx: &mut TxContext): bool {
   stack.destroy();
   preserved
 }
+
+#[test_only]
+public fun destroy_for_testing(item: Item) { item.destroy(); }

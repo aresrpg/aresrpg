@@ -3,7 +3,7 @@
 #[test_only]
 module aresrpg_math::rune_catalog_tests;
 
-use aresrpg_math::{forge, rune_catalog};
+use aresrpg_math::{forge, prng, rune_catalog};
 
 #[test]
 fun retro_unit_weights_are_exact_in_the_shared_scaled_domain() {
@@ -27,4 +27,18 @@ fun overmage_caps_keep_the_retro_101_weight_limit() {
   assert!(forge::gain_capped(100, 500, 100, 0) == 504); // 101 / 0.25 = 404 over
   assert!(forge::gain_capped(10, 10, 10, 9) == 13);     // 101 / 30 = 3 over
   assert!(forge::gain_capped(10, 100, 10, 11) == 35);   // 101 / 4 = 25 over
+}
+
+#[test]
+fun a_capped_success_reports_only_the_points_actually_added() {
+  let mut current = vector[503];
+  let mut maximum = vector[100];
+  while (current.length() < rune_catalog::stat_count()) current.push_back(0);
+  while (maximum.length() < rune_catalog::stat_count()) maximum.push_back(0);
+  // Seed 38 opens below the 1% critical-success floor for this overmage.
+  let mut rng = prng::rng_seed(38);
+  let result = forge::apply_rune(current, maximum, 0, 30, 160, 70, 0, &mut rng);
+  assert!(forge::outcome(&result) == forge::outcome_cs());
+  assert!(forge::new_stats(&result)[0] == 504);
+  assert!(forge::applied_value(&result) == 1);
 }

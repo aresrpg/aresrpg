@@ -18,12 +18,12 @@ export type PartyState = Readonly<{
 
 export type PartyInput =
   | Readonly<{ type: 'party/invite'; character_id: string; name: string }>
-  | Readonly<{ type: 'party/invite_owned'; character_id: string }>
   | Readonly<{ type: 'party/accept'; party: string }>
   | Readonly<{ type: 'party/decline'; party: string }>
   | Readonly<{ type: 'party/rescind'; character_id: string }>
   | Readonly<{ type: 'party/leave' }>
   | Readonly<{ type: 'party/kick'; character_id: string }>
+  | Readonly<{ type: 'party/follower_moved'; character_id: string; x: number; y: number; z: number }>
   | Readonly<{ type: 'party/pending'; character_id: string; operation: string | null }>
 
 export const initial_party_state = (): PartyState =>
@@ -40,11 +40,34 @@ export const selected_party = (state: Readonly<AppState>): PartyRow | null => {
   return party ? (state.party.by_id[party] ?? null) : null
 }
 
+const declined_party_of = (operation: string | undefined): string | null =>
+  operation?.startsWith('decline:') ? operation.slice('decline:'.length) : null
+
 export const selected_party_invitation = (state: Readonly<AppState>): PartyRow | null => {
-  const character_id = state.session.selected_character_id
-  const party = character_id ? state.party.invitation_ids_by_character[character_id]?.[0] : undefined
-  return party ? (state.party.by_id[party] ?? null) : null
+  const character_id = state.session.selected_character_id ?? ''
+  const party = state.party.party_by_character[character_id]
+    ? undefined
+    : state.party.invitation_ids_by_character[character_id]?.[0]
+  const declining = declined_party_of(state.party.pending_by_character[character_id])
+  return party && declining !== party ? (state.party.by_id[party] ?? null) : null
 }
+
+export const party_invite_allowed = (
+  party: Readonly<PartyRow> | null,
+  actor: string | null,
+  can_create = true
+): boolean => {
+  if (!actor) return false
+  if (!party) return can_create
+  return (
+    party.members.some(({ character_id }) => character_id === actor) &&
+    party.members.length < 6 &&
+    party.invited.length < 6
+  )
+}
+
+const selected_can_create_party = (characters: readonly Readonly<CharacterRow>[], selected: string | null): boolean =>
+  characters.some(({ id, custody }) => id === selected && custody === 'kiosk')
 
 export const owned_party_invite_view = (
   characters: readonly Readonly<CharacterRow>[],
@@ -59,17 +82,22 @@ export const owned_party_invite_view = (
     ({ id, custody }) =>
       id !== selected && custody === 'kiosk' && !memberships[id] && !members.has(id) && !invited.has(id)
   )
-  const enabled =
-    !!selected &&
-    (!party || leader === selected) &&
-    (party?.members.length ?? 1) < 6 &&
-    (party?.invited.length ?? 0) < 6
+  const enabled = party_invite_allowed(party, selected, selected_can_create_party(characters, selected))
   const capacity = Math.min(6 - (party?.members.length ?? 1), 6 - (party?.invited.length ?? 0))
   return Object.freeze({ candidates: Object.freeze(candidates.slice(0, Math.max(0, capacity))), enabled, leader })
 }
 
 const without_key = <T>(rows: Readonly<Record<string, T>>, key: string): Readonly<Record<string, T>> =>
   Object.freeze(Object.fromEntries(Object.entries(rows).filter(([id]) => id !== key)))
+
+const pending_after_invites = (
+  pending: Readonly<Record<string, string>>,
+  character_id: string,
+  parties: readonly Readonly<PartyRow>[]
+): Readonly<Record<string, string>> => {
+  const declining = declined_party_of(pending[character_id])
+  return declining && !parties.some(({ id }) => id === declining) ? without_key(pending, character_id) : pending
+}
 
 const retain_referenced = (
   by_id: Readonly<Record<string, PartyRow>>,
@@ -83,6 +111,114 @@ const retain_referenced = (
   return Object.freeze(Object.fromEntries(Object.entries(by_id).filter(([id]) => referenced.has(id))))
 }
 
+type PartyPacket = Extract<AppInput, { type: 'server/packet' }>['packet'] & { type: 'packet/party' }
+
+const memberships_after_party = (
+  memberships: Readonly<Record<string, string>>,
+  packet: PartyPacket
+): Readonly<Record<string, string>> =>
+  packet.party
+    ? Object.freeze({ ...memberships, [packet.character_id]: packet.party.id })
+    : without_key(memberships, packet.character_id)
+
+const parties_after_party = (
+  parties: Readonly<Record<string, PartyRow>>,
+  packet: PartyPacket
+): Readonly<Record<string, PartyRow>> =>
+  packet.party ? Object.freeze({ ...parties, [packet.party.id]: packet.party }) : parties
+
+const pending_after_party = (
+  pending: Readonly<Record<string, string>>,
+  packet: PartyPacket
+): Readonly<Record<string, string>> => {
+  const operation = pending[packet.character_id]
+  return operation && party_operation_reconciled(operation, packet.party)
+    ? without_key(pending, packet.character_id)
+    : pending
+}
+
+const party_has = (
+  party: Readonly<PartyRow> | null,
+  target: string | undefined,
+  field: 'members' | 'invited'
+): boolean => !!target && !!party?.[field].some(({ character_id }) => character_id === target)
+const party_lacks = (
+  party: Readonly<PartyRow> | null,
+  target: string | undefined,
+  field: 'members' | 'invited'
+): boolean => !!party && !!target && !party_has(party, target, field)
+
+const party_operation_reconciled = (operation: string, party: Readonly<PartyRow> | null): boolean => {
+  const [kind, target] = operation.split(':')
+  switch (kind) {
+    case 'leave':
+      return party === null
+    case 'accept':
+      return party?.id === target
+    case 'invite':
+      return party_has(party, target, 'invited')
+    case 'rescind':
+      return party_lacks(party, target, 'invited')
+    case 'kick':
+      return party_lacks(party, target, 'members')
+    default:
+      return false
+  }
+}
+
+const fold_party_packet = (state: Readonly<AppState>, packet: PartyPacket): AppState => {
+  const party_by_character = memberships_after_party(state.party.party_by_character, packet)
+  const by_id = parties_after_party(state.party.by_id, packet)
+  const pending_by_character = pending_after_party(state.party.pending_by_character, packet)
+  return Object.freeze({
+    ...state,
+    party: Object.freeze({
+      ...state.party,
+      party_by_character,
+      pending_by_character,
+      by_id: retain_referenced(by_id, party_by_character, state.party.invitation_ids_by_character),
+    }),
+  })
+}
+
+const fold_party_invites = (
+  state: Readonly<AppState>,
+  packet: Extract<AppInput, { type: 'server/packet' }>['packet'] & { type: 'packet/party_invites' }
+): AppState => {
+  const invitation_ids_by_character = Object.freeze({
+    ...state.party.invitation_ids_by_character,
+    [packet.character_id]: Object.freeze(packet.parties.map(({ id }) => id)),
+  })
+  const pending_by_character = pending_after_invites(
+    state.party.pending_by_character,
+    packet.character_id,
+    packet.parties
+  )
+  const by_id = Object.freeze(
+    Object.fromEntries([...Object.values(state.party.by_id), ...packet.parties].map((party) => [party.id, party]))
+  )
+  return Object.freeze({
+    ...state,
+    party: Object.freeze({
+      ...state.party,
+      invitation_ids_by_character,
+      pending_by_character,
+      by_id: retain_referenced(by_id, state.party.party_by_character, invitation_ids_by_character),
+    }),
+  })
+}
+
+const fold_pending = (state: Readonly<AppState>, character_id: string, operation: string | null): AppState =>
+  Object.freeze({
+    ...state,
+    party: Object.freeze({
+      ...state.party,
+      pending_by_character: operation
+        ? Object.freeze({ ...state.party.pending_by_character, [character_id]: operation })
+        : without_key(state.party.pending_by_character, character_id),
+    }),
+  })
+
 const reduce = (state: AppState, input: AppInput): AppState => {
   if (
     input.type === 'auth/disconnected' ||
@@ -90,56 +226,11 @@ const reduce = (state: AppState, input: AppInput): AppState => {
     (input.type === 'auth/connected' && state.session.wallet === input.session)
   )
     return Object.freeze({ ...state, party: initial_party_state() })
-  if (input.type === 'server/packet' && input.packet.type === 'packet/party') {
-    const party_by_character = input.packet.party
-      ? Object.freeze({ ...state.party.party_by_character, [input.packet.character_id]: input.packet.party.id })
-      : without_key(state.party.party_by_character, input.packet.character_id)
-    const by_id = input.packet.party
-      ? Object.freeze({ ...state.party.by_id, [input.packet.party.id]: input.packet.party })
-      : state.party.by_id
-    const pending_by_character =
-      !input.packet.party && state.party.pending_by_character[input.packet.character_id] === 'leave'
-        ? without_key(state.party.pending_by_character, input.packet.character_id)
-        : state.party.pending_by_character
-    return Object.freeze({
-      ...state,
-      party: Object.freeze({
-        ...state.party,
-        party_by_character,
-        pending_by_character,
-        by_id: retain_referenced(by_id, party_by_character, state.party.invitation_ids_by_character),
-      }),
-    })
-  }
-  if (input.type === 'server/packet' && input.packet.type === 'packet/party_invites') {
-    const invitation_ids_by_character = Object.freeze({
-      ...state.party.invitation_ids_by_character,
-      [input.packet.character_id]: Object.freeze(input.packet.parties.map(({ id }) => id)),
-    })
-    const by_id = Object.freeze(
-      Object.fromEntries(
-        [...Object.values(state.party.by_id), ...input.packet.parties].map((party) => [party.id, party])
-      )
-    )
-    return Object.freeze({
-      ...state,
-      party: Object.freeze({
-        ...state.party,
-        invitation_ids_by_character,
-        by_id: retain_referenced(by_id, state.party.party_by_character, invitation_ids_by_character),
-      }),
-    })
-  }
-  if (input.type === 'party/pending')
-    return Object.freeze({
-      ...state,
-      party: Object.freeze({
-        ...state.party,
-        pending_by_character: input.operation
-          ? Object.freeze({ ...state.party.pending_by_character, [input.character_id]: input.operation })
-          : without_key(state.party.pending_by_character, input.character_id),
-      }),
-    })
+  if (input.type === 'server/packet' && input.packet.type === 'packet/party')
+    return fold_party_packet(state, input.packet)
+  if (input.type === 'server/packet' && input.packet.type === 'packet/party_invites')
+    return fold_party_invites(state, input.packet)
+  if (input.type === 'party/pending') return fold_pending(state, input.character_id, input.operation)
   return state
 }
 
@@ -170,32 +261,19 @@ const observe: NonNullable<AppModule['observe']> = ({ events, get_state, dispatc
   }
   events.on('party/invite', ({ character_id: invited, name }) => {
     const state = get_state()
-    const leader = selected_character(state.session)
+    const actor = selected_character(state.session)
     const { wallet } = state.session
-    if (!leader || !wallet) return
-    run(leader.id, `invite:${invited}`, wallet, async () => {
-      const current = selected_party(get_state())
-      const created = current ? null : await wallet.party.create(leader)
-      if (get_state().session.wallet !== wallet) return created!
-      const party = current ?? created!.party
-      return wallet.party.invite(party, leader, { id: invited, name })
-    })
-  })
-  events.on('party/invite_owned', ({ character_id: invited }) => {
-    const state = get_state()
-    const leader = selected_character(state.session)
-    const target = state.session.characters.find(({ id }) => id === invited)
-    const { wallet } = state.session
-    if (!leader || !target || !wallet || target.custody !== 'kiosk' || state.party.party_by_character[target.id]) return
-    run(leader.id, `invite_owned:${invited}`, wallet, async () => {
-      const current = selected_party(get_state())
-      const created = current ? null : await wallet.party.create(leader)
-      if (get_state().session.wallet !== wallet) return created!
-      const party = current ?? created!.party
-      const invited_receipt = await wallet.party.invite(party, leader, { id: target.id, name: target.name })
-      if (get_state().session.wallet !== wallet) return invited_receipt
-      return wallet.party.accept(party.id, target)
-    })
+    if (!actor || !wallet || !party_invite_allowed(selected_party(state), actor.id, actor.custody !== 'fight')) return
+    run(
+      actor.id,
+      `invite:${invited}`,
+      wallet,
+      async () => {
+        const current = selected_party(get_state())
+        return wallet.party.invite(current, actor, { id: invited, name })
+      },
+      true
+    )
   })
   const answer = (party_id: string, accept: boolean): void => {
     const state = get_state()
@@ -203,8 +281,12 @@ const observe: NonNullable<AppModule['observe']> = ({ events, get_state, dispatc
     const { wallet } = state.session
     const invited = selected_party_invitation(state)?.id === party_id
     if (!character || !wallet || !invited || character.custody !== 'kiosk' || (accept && selected_party(state))) return
-    run(character.id, `${accept ? 'accept' : 'decline'}:${party_id}`, wallet, () =>
-      accept ? wallet.party.accept(party_id, character) : wallet.party.decline(party_id, character)
+    run(
+      character.id,
+      `${accept ? 'accept' : 'decline'}:${party_id}`,
+      wallet,
+      () => (accept ? wallet.party.accept(party_id, character) : wallet.party.decline(party_id, character)),
+      true
     )
   }
   events.on('party/accept', ({ party }) => answer(party, true))
@@ -215,7 +297,7 @@ const observe: NonNullable<AppModule['observe']> = ({ events, get_state, dispatc
     const { wallet } = state.session
     const party = selected_party(state)
     if (leader && wallet && party)
-      run(leader.id, `rescind:${character_id}`, wallet, () => wallet.party.rescind(party, leader, character_id))
+      run(leader.id, `rescind:${character_id}`, wallet, () => wallet.party.rescind(party, leader, character_id), true)
   })
   events.on('party/leave', () => {
     const state = get_state()
@@ -238,7 +320,7 @@ const observe: NonNullable<AppModule['observe']> = ({ events, get_state, dispatc
     const { wallet } = state.session
     const party = selected_party(state)
     if (leader && wallet && party)
-      run(leader.id, `kick:${character_id}`, wallet, () => wallet.party.kick(party, leader, character_id))
+      run(leader.id, `kick:${character_id}`, wallet, () => wallet.party.kick(party, leader, character_id), true)
   })
 }
 

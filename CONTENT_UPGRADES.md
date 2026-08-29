@@ -90,13 +90,19 @@ Package deployment follows the dependency graph:
 
 Upgrade only a package whose desired artifact changed. Reuse unchanged published dependencies.
 
-Republish compares packages in dependency order. It reuses byte-identical publications and freshly
-publishes changed packages. A changed dependency also republishes each dependent whose compiled
-artifact changes. Reusing seed preserves its Registry, content objects, and board catalog;
-republishing seed creates a new content lineage and a fresh address-ledger namespace in `pins.json`,
-keyed by the new content root. Historical namespaces remain available for lookup. Republishing core
-does not republish unchanged math, control, or seed. Compatibility is only a concern for the
-separate Upgrade action.
+Republish abandons every active package lineage, publishes fresh math, control, seed, and core
+packages in dependency order, and creates a fresh empty Registry. Historical content ledgers remain
+namespaced by their old Registry roots for audit and recovery, but no active package or content
+object is reused. Compatibility belongs only to Upgrade; Republish never attempts selective reuse.
+
+Refresh the local read stack with the ceremony that matches the chain change:
+
+- after a fresh package publication, run `bun run repin:local`; it replaces the disposable local
+  FalkorDB projection because the original package lineage may have changed;
+- after a compatible package upgrade, run `bun run reload:local`; it preserves FalkorDB and its
+  watermark, refuses a changed original package id, rebuilds both reader images, and restarts the
+  indexer and server immediately. The client blocks play while the cached index lag is unknown or
+  above 300 checkpoints and shows catch-up progress instead of hiding the server.
 
 ## Permanent freeze
 

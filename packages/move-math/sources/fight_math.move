@@ -325,7 +325,7 @@ public fun retro_group_coefficient_tenths(eligible_players: u64): u64 {
 }
 
 /// Dofus Retro: total mob base XP × eligible-party coefficient, group-level balance, the
-/// player's level share, then Ares's established Wisdom scale (+1% per 6 Wisdom).
+/// player's level share, then Retro's Wisdom scale (+1% per Wisdom).
 public fun xp_for_player(
   base_xp: u64,
   wisdom: u64,
@@ -352,5 +352,5 @@ public fun xp_for_player(
     group_xp = group_xp * (highest_mob_level * 5) / (player_total_level * 2);
   };
 
-  group_xp * player_level / player_total_level * (600 + wisdom) / 600
+  group_xp * player_level / player_total_level * (100 + wisdom) / 100
 }

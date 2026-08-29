@@ -43,10 +43,24 @@ test('each standalone screen exposes only its own surface', async () => {
   expect(character_name_error_text(copy, '')).toBeNull()
   expect(character_name_error_text(copy, 'Sceat 6')).toBe(copy.name_invalid)
 
+  const insufficient = renderToStaticMarkup(
+    <CharacterCreateModal
+      cancel={() => undefined}
+      copy={copy}
+      create={async () => undefined}
+      insufficient
+      view_spells={() => undefined}
+    />
+  )
+  expect(insufficient).toContain('You need at least 0.2 SUI left in your balance for fees.')
+  expect(insufficient).toMatch(/<button[^>]*disabled=""[^>]*type="submit"/)
+
   // Settings exposes only the music preference.
   const settings = renderToStaticMarkup(<SettingsPage copy={copy} settings={SETTINGS} />)
 
   expect(settings).toContain('Music')
+  expect(settings).toContain('Always craft from')
+  expect(settings).toContain('Crafting character')
   expect(settings).toContain('role="switch"')
   expect(settings).not.toContain(copy.quality)
   expect(settings).not.toContain(copy.flat_mode)

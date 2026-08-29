@@ -8,7 +8,7 @@ import { describe, expect, test } from 'bun:test'
 
 import {
   parse_doors,
-  generate,
+  generate_game_doors,
   generate_character_price,
   API_MOVE_PATH,
   DOORS_OUT_PATH,
@@ -19,6 +19,7 @@ import {
 const api_source = readFileSync(API_MOVE_PATH, 'utf8')
 const party_source = readFileSync(new URL('../../move/sources/party.move', import.meta.url), 'utf8')
 const trade_source = readFileSync(new URL('../../move/sources/trade.move', import.meta.url), 'utf8')
+const trade_state_source = readFileSync(new URL('../../move-math/sources/trade_state.move', import.meta.url), 'utf8')
 
 type ParsedDoor = ReturnType<typeof parse_doors>[number]
 
@@ -32,7 +33,7 @@ describe('door parsing (positive controls against the real api.move)', () => {
   })
 
   test('no public claim door releases the counterparty transferable PurchaseCap', () => {
-    expect(api_source).not.toMatch(/public fun trade_get_[ic][\s\S]*?\)\s*:\s*PurchaseCap</)
+    expect(api_source).not.toMatch(/public fun trade_get_[ic]\s*\([^)]*\)\s*:\s*PurchaseCap</)
   })
 
   test('generic fight cleanup explicitly rejects wagered fights', () => {
@@ -42,8 +43,8 @@ describe('door parsing (positive controls against the real api.move)', () => {
 
   test('attacker-controlled social manifests have explicit chain bounds', () => {
     expect(party_source).toContain('party.pending.length() < MAX_MEMBERS')
-    expect(trade_source).toContain('MAX_CAPS_PER_SIDE')
-    expect(trade_source).toContain('manifest.length() < MAX_CAPS_PER_SIDE')
+    expect(trade_state_source).toContain('MAX_CAPS_PER_SIDE')
+    expect(trade_state_source).toContain('length < MAX_CAPS_PER_SIDE')
   })
 
   test('&Random doors are flagged terminal, others are not', () => {
@@ -81,7 +82,7 @@ describe('door parsing (positive controls against the real api.move)', () => {
 
 describe('the regen-clean tooth (same-commit law)', () => {
   test('committed doors.gen.ts is byte-identical to a fresh generation over api.move', async () => {
-    expect(readFileSync(DOORS_OUT_PATH, 'utf8')).toBe(await generate(api_source))
+    expect(readFileSync(DOORS_OUT_PATH, 'utf8')).toBe(await generate_game_doors(api_source, trade_source))
   })
 
   test('the character price export is byte-identical to character.move', async () => {

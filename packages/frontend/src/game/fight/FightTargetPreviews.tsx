@@ -3,17 +3,69 @@
 // The legacy fight nametag, fed by exact disposable runs through the current fight resolver.
 
 import type { EntityScreenAnchor } from '@aresrpg/engine'
-import type { ActiveEffect } from '@aresrpg/fight'
+import {
+  FIGHT_ELEMENTS,
+  type ActiveEffect,
+  type FighterResistances,
+  type FightElement,
+  type SpellTargetPreview,
+} from '@aresrpg/fight'
 import { CHANNELS, EFFECT_KINDS } from '@aresrpg/fight/move_contract'
+import type { StatName } from '@aresrpg/immutable'
+import { Droplets, Flame, Mountain, Wind, type LucideIcon } from 'lucide-react'
+import type { CSSProperties } from 'react'
 
-import type { SpellTargetPreview } from '@aresrpg/fight'
-
+import { stat_name, type AppCopy } from '../../i18n/copy.ts'
+import { element_colors } from '../../visual_identity.ts'
 import { active_effect_lines, FightEffectLines, type FightEffectLineView } from './FightEffectLines.tsx'
 
 import './fight_target_previews.css'
 
 export type FightTargetPreviewView = SpellTargetPreview &
-  Readonly<{ active_effects: readonly ActiveEffect[]; allied: boolean; entity_id: string; name: string }>
+  Readonly<{
+    active_effects: readonly ActiveEffect[]
+    allied: boolean
+    entity_id: string
+    name: string
+    resistances: FighterResistances
+  }>
+
+const RESISTANCE_ICONS: Readonly<Record<FightElement, LucideIcon>> = Object.freeze({
+  earth: Mountain,
+  fire: Flame,
+  water: Droplets,
+  air: Wind,
+})
+const RESISTANCE_STATS: Readonly<Record<FightElement, StatName>> = Object.freeze({
+  earth: 'earth_resistance',
+  fire: 'fire_resistance',
+  water: 'water_resistance',
+  air: 'air_resistance',
+})
+
+const resistance_value = (value: bigint): string => `${value < 0n ? '−' : ''}${value < 0n ? -value : value}%`
+
+const FightResistanceRow = ({ copy, values }: Readonly<{ copy: AppCopy; values: FighterResistances }>) => (
+  <div className="ent-tt__resists" data-fight-resistances>
+    {FIGHT_ELEMENTS.map((element) => {
+      const Icon = RESISTANCE_ICONS[element]
+      const label = stat_name(copy, RESISTANCE_STATS[element])
+      return (
+        <span
+          aria-label={`${label}: ${resistance_value(values[element])}`}
+          className="ent-tt__resist"
+          data-element={element}
+          key={element}
+          style={{ '--resist-color': element_colors[element] } as CSSProperties}
+          title={label}
+        >
+          <Icon aria-hidden="true" size={11} strokeWidth={2} />
+          <span>{resistance_value(values[element])}</span>
+        </span>
+      )
+    })}
+  </div>
+)
 
 const delta = (before: bigint, after: bigint): string | null => {
   const difference = after - before
@@ -80,10 +132,12 @@ const preview_effect_lines = (target: Readonly<FightTargetPreviewView>): readonl
 
 export const FightTargetPreviews = ({
   anchors,
+  copy,
   critical,
   targets,
 }: Readonly<{
   anchors: Readonly<Record<string, EntityScreenAnchor>>
+  copy: AppCopy
   critical: boolean
   targets: readonly FightTargetPreviewView[]
 }>) => (
@@ -115,6 +169,7 @@ export const FightTargetPreviews = ({
               )
             </span>
           </div>
+          <FightResistanceRow copy={copy} values={target.resistances} />
           <FightEffectLines effects={active_effect_lines(target.active_effects)} />
           {preview_effects.length > 0 && (
             <div className="ent-tt__preview">

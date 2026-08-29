@@ -35,3 +35,15 @@ test('first add creates the derived list while later adds mutate that exact obje
   await actions.remove(id(20))
   expect(calls).toEqual(['create', 'add', 'remove'])
 })
+
+test('an unpublished game does not block wallet session construction', () => {
+  const actions = friends_actions(
+    {
+      pins: { friend_registry: { id: null, shared_version: null } },
+      game_type_package: null,
+    } as never,
+    { address: id(9) }
+  )
+
+  expect(() => actions.list).toThrow('defining package is missing')
+})

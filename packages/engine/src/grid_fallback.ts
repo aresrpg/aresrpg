@@ -1,6 +1,15 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-import { PerspectiveCamera, Scene, SRGBColorSpace, Vector3, WebGLRenderer } from 'three'
+import {
+  AgXToneMapping,
+  DirectionalLight,
+  HemisphereLight,
+  PerspectiveCamera,
+  Scene,
+  SRGBColorSpace,
+  Vector3,
+  WebGLRenderer,
+} from 'three'
 
 import { quality_pixel_ratio } from './quality.ts'
 import { create_hack_presentation } from './hack_presentation.ts'
@@ -13,7 +22,40 @@ import { create_fight_presentation } from './fight_presentation.ts'
 import { create_transient_effects } from './transient_effects.ts'
 import { project_screen_anchor } from './screen_projection.ts'
 import type { EngineBackend } from './backend.ts'
-import type { EnginePresentation, EngineQuality, Vec3 } from './types.ts'
+import type { EnginePresentation, EngineQuality, EntityRender, Vec3 } from './types.ts'
+
+type GridRendererDisplay = Pick<WebGLRenderer, 'outputColorSpace' | 'toneMapping' | 'toneMappingExposure'>
+
+export const configure_grid_renderer = (renderer: GridRendererDisplay): void => {
+  renderer.outputColorSpace = SRGBColorSpace
+  renderer.toneMapping = AgXToneMapping
+  renderer.toneMappingExposure = 1.1
+}
+
+export const add_grid_fallback_lights = (scene: Scene): (() => void) => {
+  const hemisphere = new HemisphereLight(0xd7dcff, 0x291448, 1.35)
+  const key = new DirectionalLight(0xffd8ec, 1.8)
+  key.position.set(6, 10, 8)
+  scene.add(hemisphere, key)
+  return () => scene.remove(hemisphere, key)
+}
+
+export const flatten_grid_entity = (entity: EntityRender): EntityRender =>
+  entity.anchor.kind === 'world'
+    ? Object.freeze({
+        ...entity,
+        anchor: Object.freeze({
+          kind: 'world' as const,
+          position: Object.freeze([entity.anchor.position[0], 0, entity.anchor.position[2]] as const),
+        }),
+      })
+    : entity
+
+export const flatten_grid_camera = (position: Vec3, target: Vec3): Readonly<{ position: Vec3; target: Vec3 }> =>
+  Object.freeze({
+    position: Object.freeze([position[0], position[1] - target[1], position[2]] as const),
+    target: Object.freeze([target[0], 0, target[2]] as const),
+  })
 
 export const create_grid_fallback = (
   canvas: HTMLCanvasElement,
@@ -21,8 +63,9 @@ export const create_grid_fallback = (
   presentation_mode: EnginePresentation = 'world'
 ): EngineBackend => {
   const renderer = new WebGLRenderer({ canvas, antialias: false, powerPreference: 'low-power' })
-  renderer.outputColorSpace = SRGBColorSpace
+  configure_grid_renderer(renderer)
   const scene = new Scene()
+  const remove_lights = add_grid_fallback_lights(scene)
   const camera = new PerspectiveCamera(70, 1, 0.1, 3000)
   const fight_board = create_fight_board_layer({ scene, camera, canvas })
   const entities = create_entity_layer({ scene })
@@ -33,7 +76,6 @@ export const create_grid_fallback = (
   const presentation = create_hack_presentation(scene)
   let fight_swords: ReturnType<typeof create_fight_sword_layer> | null = null
   let quality = initial_quality
-  let flattened = false
   let board_active = false
   let previous_frame = performance.now()
   let render_width = 0
@@ -75,30 +117,26 @@ export const create_grid_fallback = (
     kind: 'grid',
     render: draw,
     set_camera: (position: Vec3, target: Vec3, _projection = {}) => {
-      camera.position.set(...position)
-      camera.lookAt(...target)
+      const flat = flatten_grid_camera(position, target)
+      camera.position.set(...flat.position)
+      camera.lookAt(...flat.target)
     },
     set_character_anchor: () => {},
     set_quality: (next: EngineQuality) => {
       quality = next
     },
     set_time_of_day: () => {},
-    set_flatten_amount: (amount: number) => {
-      flattened = amount >= 1
-      resource_nodes.set_visible(resource_nodes_visible({ terrain_presented: true, flattened, board_active }))
-    },
+    set_flatten_amount: () =>
+      resource_nodes.set_visible(resource_nodes_visible({ terrain_presented: true, flattened: false, board_active })),
     set_fight_board: (board) => {
       board_active = board !== null
-      resource_nodes.set_visible(resource_nodes_visible({ terrain_presented: true, flattened, board_active }))
+      resource_nodes.set_visible(resource_nodes_visible({ terrain_presented: true, flattened: false, board_active }))
       fight_swords?.set_visible(fight_swords_visible(board_active))
-      fight_board.set(board)
-      entities.set_board(board)
+      const flat_board = board ? Object.freeze({ ...board, origin: Object.freeze({ ...board.origin, y: 0 }) }) : null
+      fight_board.set(flat_board)
+      entities.set_board(flat_board)
     },
-    set_entities: (next) => {
-      const ground_y = next.find(({ anchor }) => anchor.kind === 'world')?.anchor
-      if (ground_y?.kind === 'world') presentation.set_ground_y(ground_y.position[1])
-      entities.set(next)
-    },
+    set_entities: (next) => entities.set(Object.freeze(next.map(flatten_grid_entity))),
     set_fight_swords: (url, impact_sound_url, markers) => {
       fight_swords ??= create_fight_sword_layer({
         scene,
@@ -106,11 +144,13 @@ export const create_grid_fallback = (
         impact_sound_url,
         impact: effects.play_sword_impact,
       })
+      fight_swords.set_flatten(1)
       fight_swords.set_visible(fight_swords_visible(board_active))
       fight_swords.set_markers(markers)
     },
     set_fight_sword_label: (id, element) => fight_swords?.set_label(id, element),
-    set_resource_nodes: resource_nodes.set_markers,
+    set_resource_nodes: (markers) =>
+      resource_nodes.set_markers(Object.freeze(markers.map((marker) => Object.freeze({ ...marker, y: 0 })))),
     set_resource_node_label: (id, element) =>
       entity_labels.set_static(`resource:${id}`, element, () => resource_nodes.label_anchor(id)),
     // the retrowave fallback has no world dressing — there is no gate to label
@@ -145,7 +185,7 @@ export const create_grid_fallback = (
       far_ready: true,
       sky_ready: true,
     }),
-    flattened: () => flattened,
+    flattened: () => true,
     dispose: () => {
       entity_labels.dispose()
       fight_board.dispose()
@@ -153,6 +193,7 @@ export const create_grid_fallback = (
       resource_nodes.dispose()
       entities.dispose()
       presentation.dispose()
+      remove_lights()
       renderer.dispose()
     },
   })

@@ -5,6 +5,7 @@ import { useStore } from 'zustand'
 import { createStore } from 'zustand/vanilla'
 
 import type { GameSettings } from './game/core/settings.ts'
+import { CHAT_CHANNELS } from './game/core/chat_preferences.ts'
 import engine, { initial_engine_state, type EngineInput, type EngineState } from './modules/engine.ts'
 import fight, { initial_fight_session_state, type FightSessionInput, type FightSessionState } from './modules/fight.ts'
 import type { Locale } from './i18n/locale.ts'
@@ -39,7 +40,10 @@ import dungeon, { initial_dungeon_state, type DungeonInput, type DungeonState } 
 import kolizeum, { initial_kolizeum_state, type KolizeumInput, type KolizeumState } from './modules/kolizeum.ts'
 import friends, { initial_friends_state, type FriendsInput, type FriendsState } from './modules/friends.ts'
 import party, { initial_party_state, type PartyInput, type PartyState } from './modules/party.ts'
+import party_follow from './modules/party_follow.ts'
+import run_to, { initial_run_to_state, type RunToInput, type RunToState } from './modules/run_to.ts'
 import trade, { initial_trade_state, type TradeInput, type TradeState } from './modules/trade.ts'
+import runeforge, { initial_runeforge_state, type RuneforgeInput, type RuneforgeState } from './modules/runeforge.ts'
 
 export type AppState = Readonly<{
   session: SessionState
@@ -60,7 +64,9 @@ export type AppState = Readonly<{
   kolizeum: KolizeumState
   friends: FriendsState
   party: PartyState
+  run_to: RunToState
   trade: TradeState
+  runeforge: RuneforgeState
 }>
 
 export type AppInput =
@@ -82,7 +88,9 @@ export type AppInput =
   | KolizeumInput
   | FriendsInput
   | PartyInput
+  | RunToInput
   | TradeInput
+  | RuneforgeInput
 
 type EventArguments = {
   [K in AppInput['type']]: [Extract<AppInput, { type: K }>]
@@ -126,7 +134,10 @@ const MODULES = Object.freeze([
   kolizeum,
   friends,
   party,
+  run_to,
+  party_follow,
   trade,
+  runeforge,
 ]) satisfies readonly AppModule[]
 
 export type AppModuleName = (typeof MODULES)[number]['name']
@@ -154,7 +165,9 @@ export const initial_app_state = (settings_state: GameSettings): AppState =>
     kolizeum: initial_kolizeum_state(),
     friends: initial_friends_state(),
     party: initial_party_state(),
+    run_to: initial_run_to_state(),
     trade: initial_trade_state(),
+    runeforge: initial_runeforge_state(),
   })
 
 const create_events = () => {
@@ -179,7 +192,13 @@ export const create_app = () => {
     quality: 'medium',
     flat_mode: false,
     music_enabled: true,
+    follow_leader: false,
+    chat_visible_channels: CHAT_CHANNELS,
+    chat_speak_channel: 'general',
+    auto_switch_fighter: true,
+    placement_gas_warning_disabled: false,
     render_distance: null,
+    fight_access: 0,
   }) satisfies GameSettings
   let state = initial_app_state(default_settings)
   let active_observers: AbortController | null = null

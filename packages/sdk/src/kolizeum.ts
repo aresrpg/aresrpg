@@ -111,22 +111,9 @@ export const kolizeum_actions = (sdk: GameSdk, { kiosk_cap, address }: KolizeumA
       return Object.freeze({ digest: receipt_digest(receipt), fight })
     },
 
-    ready: async ({
-      kolizeum,
-      fight,
-      fighter_idx,
-      and_start,
-    }: {
-      kolizeum: string
-      fight: string
-      fighter_idx: bigint
-      and_start: boolean
-    }) => {
+    ready: async ({ kolizeum, fight, fighter_idx }: { kolizeum: string; fight: string; fighter_idx: bigint }) => {
       await sdk.hydrate_unknown([kolizeum, fight])
-      return boundary(fight, (tx) => {
-        sdk.doors.ready_fighter(tx, { f: fight, fighter_idx })
-        if (and_start) sdk.doors.start_kolizeum(tx, { lobby: kolizeum, f: fight })
-      })
+      return boundary(fight, (tx) => sdk.doors.ready_and_start_kolizeum(tx, { lobby: kolizeum, f: fight, fighter_idx }))
     },
 
     start: async ({ kolizeum, fight }: { kolizeum: string; fight: string }) => {

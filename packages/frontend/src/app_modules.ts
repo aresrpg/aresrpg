@@ -36,8 +36,11 @@ export const PLAYER_APP_MODULES = Object.freeze([
   'kolizeum',
   'friends',
   'party',
+  'run_to',
+  'party_follow',
   'trade',
   'marketplace',
+  'runeforge',
 ]) satisfies readonly AppModuleName[]
 
 export const DEMO_APP_MODULES = Object.freeze([

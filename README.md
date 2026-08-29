@@ -21,13 +21,18 @@ twin, SDK, indexer, server, protocol, immutable rules, and the authored seed cor
 ```bash
 bun install
 bun run dev            # frontend at localhost:5173
-bun run repin:local    # rebuild/reset/catch up the local indexer + server from testnet pins.json
+bun run repin:local    # fresh publish: reset/rebuild/catch up the local read stack
+bun run reload:local   # package upgrade: preserve FalkorDB and restart the local readers
 bun run lint           # eslint + prettier
 bun run test           # every package's unit tests — same command CI runs
 ```
 
-`repin:local` deletes only the disposable `aresrpg-local` FalkorDB projection. It waits for the
-fresh indexer to reach the checkpoint observed before reset, then starts the realtime server.
+`repin:local` deletes only the disposable `aresrpg-local` FalkorDB projection, then starts the
+database, indexer, and realtime server together.
+`reload:local` refuses a changed original package lineage, preserves the projection and watermark,
+rebuilds both reader images, and restarts them immediately with the latest package id. The client
+shows cached catch-up progress and blocks play only while indexing is unknown or over 300
+checkpoints behind.
 
 ## Contributing
 

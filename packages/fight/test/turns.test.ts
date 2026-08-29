@@ -120,3 +120,71 @@ test('a mob aims an ally-only raw-damage buff at its family ally instead of the 
   expect(runtime.contract.fighters[0]?.effects.some(({ stat }) => stat === STATS.raw_damage)).toBeFalse()
   expect(runtime.contract.fighters[2]?.effects.some(({ stat }) => stat === STATS.raw_damage)).toBeTrue()
 })
+
+const adjacent_damage_mob = (casts_per_turn: bigint) => {
+  const { checkpoint } = create_fixture()
+  const player = checkpoint.contract.fighters[0]!
+  const mob = checkpoint.contract.fighters[1]!
+  if (mob.kind.type !== 'mob') throw new Error('fixture mob changed')
+  player.cell = encode_cell(5n, 5n)
+  mob.cell = encode_cell(5n, 6n)
+  mob.ap = 8n
+  mob.mp = 0n
+  mob.kind.snapshot.kit = [
+    {
+      name: 'Repeat Bite',
+      ordinal: 1n,
+      level: {
+        ap_cost: 4n,
+        range_min: 1n,
+        range_max: 1n,
+        modifiable_range: false,
+        line_of_sight: true,
+        line_launch: false,
+        free_cell: false,
+        casts_per_turn,
+        casts_per_target: 0n,
+        cooldown_turns: 0n,
+        crit_1_in: 0n,
+        effects: [
+          {
+            kind: KINDS.damage,
+            element: 'earth',
+            value: 10n,
+            value_max: 10n,
+            area_shape: 0n,
+            area_size: 0n,
+            target_filter: 1n,
+            chance_bp: 10_000n,
+            turns: 0n,
+            stat: STATS.strength,
+          },
+        ],
+        crit_effects: [],
+      },
+    },
+  ]
+  return { checkpoint, player, mob }
+}
+
+test('a mob spends its remaining AP on repeated casts', () => {
+  const { checkpoint } = adjacent_damage_mob(0n)
+  const runtime = create_runtime(checkpoint)
+
+  mob_turn(runtime, 1n)
+
+  expect(runtime.contract.fighters[1]?.ap).toBe(0n)
+  expect(runtime.contract.fighters[0]?.hp).toBe(80n)
+  expect(runtime.contract.turn_casts).toHaveLength(2)
+})
+
+test('a mob respects an authored per-turn cast cap while AP remains', () => {
+  const { checkpoint } = adjacent_damage_mob(1n)
+  const runtime = create_runtime(checkpoint)
+
+  mob_turn(runtime, 1n)
+
+  expect(runtime.contract.fighters[1]?.ap).toBe(4n)
+  expect(runtime.contract.fighters[0]?.hp).toBe(90n)
+  expect(runtime.contract.turn_casts).toHaveLength(1)
+})

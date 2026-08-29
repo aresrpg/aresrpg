@@ -41,7 +41,7 @@ test('fight spell details display the fight-projected critical denominator', asy
     crit_effects: [],
   }
   const spell: FightSpellView = Object.freeze({
-    name: 'Cinder Shaft',
+    name: 'Burning Arrow',
     level: 1n,
     details,
     source: Object.freeze({ classe: 'yogan', unlock_level: 1n, levels: [details] }),
@@ -74,7 +74,7 @@ test('an unaffordable spell does not display the turn-critical border', async ()
     crit_effects: [],
   }
   const spell: FightSpellView = Object.freeze({
-    name: 'Cinder Shaft',
+    name: 'Burning Arrow',
     level: 1n,
     details,
     source: Object.freeze({ classe: 'yogan', unlock_level: 1n, levels: [details] }),
@@ -113,7 +113,7 @@ test('an affordable turn-critical spell marks its socket shell for shared hover-
     crit_effects: [effect],
   }
   const spell: FightSpellView = Object.freeze({
-    name: 'Cinder Shaft',
+    name: 'Burning Arrow',
     level: 1n,
     details,
     source: Object.freeze({ classe: 'yogan', unlock_level: 1n, levels: [details] }),

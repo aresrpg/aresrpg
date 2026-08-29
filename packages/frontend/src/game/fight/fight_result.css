@@ -1,7 +1,7 @@
 /* Locked fight-end vocabulary, ported from deprecated/game/screens/hud/result.css. */
 .fe-stage,
 .lvlup-stage {
-  position: fixed;
+  position: absolute;
   inset: 0;
   z-index: 180;
   display: grid;
@@ -18,7 +18,7 @@
 .result.result--fe {
   --fe-accent: #c8963c;
   position: relative;
-  width: min(980px, 96vw);
+  width: min(980px, 96%);
   max-height: 90vh;
   padding: 30px 32px 24px;
   overflow: auto;
@@ -29,6 +29,10 @@
   box-shadow:
     0 44px 120px rgba(0, 0, 0, 0.72),
     0 0 0 1px rgba(0, 0, 0, 0.6);
+}
+.result.result--fe:not(.result--level-up) {
+  max-height: calc(100% - 16px);
+  padding: 18px 24px 16px;
 }
 .result.result--fe.fe--loss {
   --fe-accent: #f87171;
@@ -76,7 +80,7 @@
 }
 .fe-title {
   position: relative;
-  font-size: 44px;
+  font-size: 34px;
   font-weight: 700;
   line-height: 1;
   letter-spacing: 0.06em;
@@ -93,14 +97,14 @@
   text-shadow: 0 0 20px rgba(248, 113, 113, 0.28);
 }
 .fe-sub {
-  margin-top: 9px;
-  font-size: 11px;
+  margin-top: 5px;
+  font-size: 9px;
   letter-spacing: 0.2em;
   color: #9aa4b2;
   text-transform: uppercase;
 }
 .fe-divider {
-  margin: 14px 0 6px;
+  margin: 8px 0 2px;
   font-size: 12px;
   letter-spacing: 0.3em;
   color: var(--fe-accent);
@@ -111,13 +115,13 @@
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 8px;
-  margin-top: 8px;
+  margin-top: 4px;
 }
 .fe-fact {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
-  padding: 8px 10px;
+  padding: 5px 8px;
   color: #6b7280;
   background: rgba(255, 255, 255, 0.025);
   border: 1px solid rgba(255, 255, 255, 0.05);
@@ -131,14 +135,17 @@
   font-variant-numeric: tabular-nums;
   letter-spacing: 0.06em;
 }
+.fe-fact--wager {
+  grid-column: 1 / -1;
+}
 .fe-sec {
-  margin-top: 14px;
+  margin-top: 7px;
 }
 .fe-lbl {
   display: flex;
   justify-content: space-between;
-  margin-bottom: 8px;
-  font-size: 10px;
+  margin-bottom: 3px;
+  font-size: 9px;
   letter-spacing: 0.16em;
   color: #6b7280;
   text-transform: uppercase;
@@ -146,19 +153,15 @@
 .fe-rows {
   display: flex;
   flex-direction: column;
-  gap: 5px;
-}
-.fe-rows--grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(420px, 100%), 1fr));
+  gap: 2px;
 }
 .fe-row {
   display: grid;
   grid-template-columns: minmax(90px, 0.8fr) minmax(90px, 1fr) max-content max-content minmax(0, 1.5fr);
-  gap: 12px;
+  gap: 8px;
   align-items: center;
-  min-height: 58px;
-  padding: 8px 12px;
+  min-height: 26px;
+  padding: 2px 8px;
   background: rgba(255, 255, 255, 0.04);
   border: 1px solid rgba(255, 255, 255, 0.06);
 }
@@ -183,7 +186,7 @@
 }
 .fe-row__nametext {
   overflow: hidden;
-  font-size: 12px;
+  font-size: 10px;
   font-weight: 600;
   color: #e8e4dc;
   letter-spacing: 0.04em;
@@ -193,14 +196,14 @@
 }
 .fe-row__meta {
   flex: none;
-  font-size: 9px;
+  font-size: 8px;
   letter-spacing: 0.06em;
   color: #6b7280;
   white-space: nowrap;
 }
 .fe-xp {
   position: relative;
-  height: 10px;
+  height: 8px;
   overflow: hidden;
   background: rgba(0, 0, 0, 0.5);
   border: 1px solid rgba(255, 255, 255, 0.08);
@@ -222,14 +225,14 @@
 }
 .fe-xp-next {
   color: #9aa4b2;
-  font-size: 10px;
+  font-size: 9px;
   font-variant-numeric: tabular-nums;
   text-align: right;
   white-space: nowrap;
 }
 .fe-gain {
   color: #fde047;
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
   text-align: right;
@@ -242,24 +245,25 @@
 .fe-tiles {
   display: flex;
   flex-wrap: nowrap;
-  gap: 8px;
+  gap: 4px;
   min-width: 0;
   overflow: visible;
-  padding: 3px 4px 5px;
+  padding: 1px 2px;
 }
 .fe-tile {
   position: relative;
   display: grid;
-  width: 42px;
-  height: 42px;
-  flex: 0 0 42px;
+  width: 24px;
+  height: 24px;
+  flex: 0 0 24px;
   place-items: center;
   background: rgba(255, 255, 255, 0.025);
   border: 1px solid rgba(255, 255, 255, 0.06);
 }
 .fe-tile .item-icon {
-  width: 32px;
-  height: 32px;
+  width: 28px;
+  max-width: none;
+  height: 28px;
   object-fit: contain;
 }
 .fe-tile__letter {
@@ -349,7 +353,7 @@
 }
 .lvlup-stage .result--level-up {
   --fe-accent: #c8963c;
-  width: min(540px, 92vw);
+  width: min(540px, 92%);
   overflow: hidden;
   text-align: center;
   background: linear-gradient(180deg, #0e0a07, #09070a);
@@ -691,9 +695,6 @@
 @media (max-width: 640px) {
   .result.result--fe {
     padding: 24px 18px 20px;
-  }
-  .fe-rows--grid {
-    grid-template-columns: 1fr;
   }
 }
 @media (prefers-reduced-motion: reduce) {

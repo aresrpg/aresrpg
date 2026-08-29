@@ -20,6 +20,10 @@ import type {
 
 type FightReadState = Readonly<Pick<HydratedFightCheckpoint, 'contract' | 'sources'>>
 
+export const FIGHT_ELEMENTS = Object.freeze(['earth', 'fire', 'water', 'air'] as const)
+export type FightElement = (typeof FIGHT_ELEMENTS)[number]
+export type FighterResistances = Readonly<Record<FightElement, bigint>>
+
 const SHIFT = BigInt(CONTRACT_CONSTANTS.item_stat_shift)
 const BASE_AP = BigInt(CONTRACT_CONSTANTS.base_ap)
 const BASE_MP = BigInt(CONTRACT_CONSTANTS.base_mp)
@@ -57,7 +61,9 @@ const sum_rows = (runtime: FightReadState, seat: bigint, kind: bigint, stat: big
 const row_adjusted = (runtime: FightReadState, seat: bigint, base: bigint, stat: bigint): bigint =>
   saturating_subtract(
     base + sum_rows(runtime, seat, KINDS.add, stat),
-    sum_rows(runtime, seat, KINDS.remove, stat) + sum_rows(runtime, seat, KINDS.steal, stat)
+    sum_rows(runtime, seat, KINDS.remove, stat) +
+      sum_rows(runtime, seat, KINDS.steal, stat) +
+      sum_rows(runtime, seat, KINDS.fixed_remove, stat)
   )
 
 export const sheet_of = (runtime: FightReadState, seat: bigint): FightSheet => {
@@ -205,7 +211,7 @@ const player_resistance = (source: PlayerSource, element: string): bigint => {
   return SHIFT
 }
 
-export const resistance_of = (runtime: FightRuntime, seat: bigint, element: string): bigint => {
+export const resistance_of = (runtime: FightReadState, seat: bigint, element: string): bigint => {
   const fighter = runtime.contract.fighters[Number(seat)]
   const base = is_mob(fighter)
     ? mob_resistance(mob_snapshot(fighter), element)
@@ -219,6 +225,13 @@ export const resistance_of = (runtime: FightRuntime, seat: bigint, element: stri
     .reduce((total, row) => total + row.value, 0n)
   return saturating_subtract(base + bonus, malus)
 }
+
+export const fighter_resistances = (runtime: FightReadState, seat: bigint): FighterResistances =>
+  Object.freeze(
+    Object.fromEntries(
+      FIGHT_ELEMENTS.map((element) => [element, resistance_of(runtime, seat, element) - SHIFT])
+    ) as Record<FightElement, bigint>
+  )
 
 const pool_change = (
   runtime: FightRuntime,

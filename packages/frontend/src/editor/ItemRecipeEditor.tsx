@@ -8,7 +8,7 @@ import {
   craft_xp_from_ingredient_count,
   job_slugs,
 } from '@aresrpg/immutable'
-import { Minus, Plus, X } from 'lucide-react'
+import { X } from 'lucide-react'
 
 import { as_record, button_class, SheetSection, string_value, titleize_field } from './ContentFields.tsx'
 import { ItemReferencePicker } from './ItemReferencePicker.tsx'
@@ -22,9 +22,6 @@ export type ItemRecipeBinding = Readonly<{
   create: () => void
   remove: () => void
 }>
-
-const icon_button =
-  'grid size-7 shrink-0 cursor-pointer place-items-center text-[#737985] transition hover:text-[#d8d3ca] disabled:cursor-not-allowed disabled:opacity-20'
 
 export const ItemRecipeEditor = ({
   category,
@@ -142,26 +139,21 @@ export const ItemRecipeEditor = ({
                 <span className="w-20 shrink-0 text-right text-[7px] tracking-[0.08em] text-[#666d78] uppercase">
                   Job Lv. {craft_required_level(index + 1)}
                 </span>
-                <div className="ml-3 flex shrink-0 items-center" aria-label={`${item_type} quantity`}>
-                  <button
-                    aria-label="Decrease ingredient quantity"
-                    className={icon_button}
-                    disabled={amount <= 1}
-                    onClick={() => replace_ingredient(item_type, item_type, Math.max(1, amount - 1))}
-                    type="button"
-                  >
-                    <Minus size={12} strokeWidth={1.5} />
-                  </button>
-                  <span className="w-10 text-center text-[10px] tabular-nums text-[#d8d3ca]">×{amount}</span>
-                  <button
-                    aria-label="Increase ingredient quantity"
-                    className={icon_button}
-                    onClick={() => replace_ingredient(item_type, item_type, amount + 1)}
-                    type="button"
-                  >
-                    <Plus size={12} strokeWidth={1.5} />
-                  </button>
-                </div>
+                <label className="ml-3 flex shrink-0 items-center gap-1 text-[10px] text-[#737985]">
+                  <span aria-hidden="true">×</span>
+                  <input
+                    aria-label={`${item_type} quantity`}
+                    className="h-7 w-16 border border-white/10 bg-bg px-2 text-right text-[10px] tabular-nums text-[#d8d3ca] outline-none focus:border-[#65c993]/60"
+                    min={1}
+                    onChange={(event) => {
+                      const next = Number(event.target.value)
+                      if (Number.isSafeInteger(next) && next >= 1) replace_ingredient(item_type, item_type, next)
+                    }}
+                    step={1}
+                    type="number"
+                    value={amount}
+                  />
+                </label>
                 <button
                   aria-label="Remove ingredient"
                   className="ml-2 grid size-8 shrink-0 cursor-pointer place-items-center text-[#873f55] transition hover:text-[#ff5a8b]"

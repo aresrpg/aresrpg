@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
-import { element_names, item_categories, stat_names } from '@aresrpg/immutable'
+import { element_names, item_categories, rune_effect, stat_names } from '@aresrpg/immutable'
 import { useState, type FocusEvent, type ReactNode } from 'react'
 
 import { item_detail_icon } from '../content/item_detail_assets.ts'
@@ -109,6 +109,28 @@ const StatIdentity = ({ stat }: Readonly<{ stat: string }>) => {
     </span>
   )
 }
+
+const RuneEffectLine = ({ item_type }: Readonly<{ item_type: string }>) => {
+  const rune = rune_effect(item_type)
+  if (!rune) return null
+  return (
+    <div className="flex min-h-9 items-center gap-2 px-2 text-[10px] tracking-wide" data-rune-effect="">
+      <StatIdentity stat={rune.stat} />
+      <span className="font-semibold tabular-nums" style={{ color: stat_colors[rune.stat] }}>
+        +{rune.amount}
+      </span>
+      <span className="min-w-0 flex-1 truncate" style={{ color: stat_colors[rune.stat] }}>
+        {titleize(rune.stat)}
+      </span>
+    </div>
+  )
+}
+
+const item_has_characteristics = (
+  item_type: string,
+  damages: readonly ItemDamage[],
+  stat_rows: readonly ItemStatRow[]
+): boolean => rune_effect(item_type) !== null || damages.length > 0 || stat_rows.length > 0
 
 const StatLine = ({
   edit,
@@ -323,7 +345,7 @@ export const ItemDetailView = ({
   const stat_rows = stats ? item_stat_rows(stats, Boolean(edit)) : []
   const defined_stats = stat_rows.filter(stat_is_defined)
   const undefined_stats = stat_rows.filter((row) => !stat_is_defined(row))
-  const has_characteristics = damages.length > 0 || stat_rows.length > 0
+  const has_characteristics = item_has_characteristics(item_type, damages, stat_rows)
 
   return (
     <div
@@ -423,6 +445,7 @@ export const ItemDetailView = ({
           <h3 className="text-[9px] font-semibold tracking-[0.25em] text-[#6b7280] uppercase">
             {labels.characteristics}
           </h3>
+          <RuneEffectLine item_type={item_type} />
           {(damages.length > 0 || allow_damage_add) && (
             <div className="flex flex-col gap-1" data-item-damages="">
               {damages.map((damage, index) => (

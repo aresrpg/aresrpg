@@ -29,12 +29,15 @@ const cohort_code: Readonly<Record<MobPowerCohort, number>> = Object.freeze({
   boss: 3,
 })
 export const mob_power_cohort_of_role = (role: string): MobPowerCohort =>
-  role === 'archi' ? 'archi' : role === 'protector' ? 'protector' : role === 'boss' ? 'boss' : 'regular'
+  role === 'archi' ? 'archi' : role === 'boss' ? 'boss' : 'regular'
 
-const nearest_grades = (level: number, cohort: MobPowerCohort, value_index?: number): readonly Grade[] => {
-  const rows = DOFUS_MOB_GRADES.filter(
+const cohort_grades = (cohort: MobPowerCohort, value_index?: number): readonly Grade[] =>
+  DOFUS_MOB_GRADES.filter(
     (grade) => grade[8] === cohort_code[cohort] && (value_index === undefined || grade[value_index]! >= 0)
   )
+
+const nearest_grades = (level: number, cohort: MobPowerCohort, value_index?: number): readonly Grade[] => {
+  const rows = cohort_grades(cohort, value_index)
   const exact = rows.filter(([donor_level]) => donor_level === level)
   if (exact.length > 0) return exact
   const distance = Math.min(...rows.map(([donor_level]) => Math.abs(donor_level - level)))
@@ -90,6 +93,11 @@ export const dofus_mob_power_envelope = (level: number, role = 'normal'): MobPow
     damage: band(output_rows, 10),
     ap: band(rows, 2),
     mp: band(rows, 3),
-    resistances: Object.freeze({ earth: band(rows, 4), fire: band(rows, 5), water: band(rows, 6), air: band(rows, 7) }),
+    resistances: Object.freeze({
+      earth: band(rows, 4),
+      fire: band(rows, 5),
+      water: band(rows, 6),
+      air: band(rows, 7),
+    }),
   })
 }

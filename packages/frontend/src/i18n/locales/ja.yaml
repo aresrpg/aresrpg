@@ -3,6 +3,10 @@ body: 完全なワールドには WebGPU が必要です。代わりに軽量グ
 fatal: このブラウザは WebGPU または WebGL のグラフィックコンテキストを作成できません。
 world_unavailable_title: ワールドを利用できません
 world_unavailable: このワールドにはまだ地形レシピがありません。
+mobile_unavailable_label: モバイルアクセス
+mobile_unavailable_title: AresRPGは現在、モバイル端末ではご利用いただけません
+mobile_unavailable_body: モバイル専用の体験を開発中です。それまでは、デスクトップのブラウザからワールドにアクセスしてください。
+mobile_unavailable_status: デスクトップ版はオンラインです
 chrome: Chrome または Edge を更新し、設定 → システムで「ハードウェア アクセラレーションが使用可能な場合は使用する」を有効にして再起動してください。
 other: ハードウェアアクセラレーションを有効にし、ブラウザとグラフィックドライバーを更新してからブラウザを再起動してください。
 continue: グリッドで続行
@@ -49,17 +53,26 @@ latency_unit: ms
 indexing_health: インデックス状態
 online_players: オンラインプレイヤー
 indexing_lag_warning: ゲーム内の操作が遅れて反映される場合があります
+indexing_block_title: ワールドを同期中
+indexing_block_body: チェーン履歴をインデックス中です。サーバーが安全なライブ範囲に達すると、ゲームプレイは自動的に解除されます。
+indexing_block_progress: 進捗
+indexing_block_remaining: 残りチェックポイント
+indexing_block_eta: 推定時間
+indexing_block_estimating: 計算中…
 game_frozen: 現在ゲームは凍結されています。詳しくはDiscordをご確認ください。
 gas_budget_toast: このアクションは確保しているネットワーク手数料を超えました。実行されておらず、費用もかかっていません。ご報告ください。
 game_paused_toast: アップデートのためゲームは一時停止中です。アクションは実行されませんでした。数分後にもう一度お試しください。
 movement_sync_toast: 位置情報を同期しています。通常どおり移動し、少し待ってからもう一度お試しください。
+fight_path_changed_toast: 移動を送信する前に盤面が変わりました。ターンを復元しました — もう一度お試しください。
+party_member_unavailable_toast: そのキャラクターはすでにパーティーに参加しています。
+fight_turn_already_forced_toast: すでに別の誰かがこのターンを強制終了しました。
 network_testnet: TESTNET
 page_pending_title: このページは再構築中です
 page_pending_body: 正しく復元する間も、この場所は表示し続けます。
 welcome_title: AresRPG へようこそ
 welcome_body: AresRPG は、プレイヤー主導の経済を持つ完全オンチェーン MMORPG です。最初のキャラクターを作り、世界に入ってモンスターと戦いましょう。
-welcome_need_sui: プレイには少額の SUI が必要です — すべてのアクションはオンチェーン取引で、最初のキャラクター作成には {{price}} SUI かかります。下のアドレスに SUI を入金して始めましょう。
-insufficient_sui: ウォレットの SUI が不足しています
+welcome_need_sui: プレイには少額の SUI が必要です — 最初のキャラクター作成には {{price}} SUI かかり、手数料のため残高に少なくとも {{fee}} SUI を残す必要があります。下のアドレスに SUI を入金して始めましょう。
+insufficient_sui: 手数料のため、残高に少なくとも {{fee}} SUI を残す必要があります。
 create_character: キャラクター作成
 create_title: キャラクターを作成
 create_lead: クラス、色、名前を選んでください。背景では世界がすでに動いています。
@@ -107,15 +120,20 @@ kolizeum_page:
   access_friends: フレンド
   status_open: 募集中
   status_started: 進行中
-  status_settling: 精算中
+  status_settling: バトル終了
   empty: ロビーはありません
   selected: 選択中のロビー
   side_a: Aサイド
   side_b: Bサイド
   total_pot: 現在のポット
+  settlement_remaining: 残りのエスクロー
+  paid_out: 支払済み
   free: 無料
   join_a: Aサイドに参加
   join_b: Bサイドに参加
+  join_confirm_title: コリゼウムの賭けを確認
+  join_confirm_body: '{{character}}は{{amount}} SUIを賭けて{{side}}に参加します。この取引で賭け金が確定します。'
+  join_confirm_cta: '{{amount}} SUIを賭ける · {{side}}に参加'
   create_title: ロビー作成
   form_format: 形式
   form_access: 参加範囲
@@ -144,7 +162,7 @@ friends_panel:
 party_panel:
   title: パーティー
   adventurer: 冒険者
-  invited_by: '{{name}}から招待されました'
+  invited_by: '{{name}} がグループへの参加に招待しました'
   accept: 承認
   decline: 辞退
   leader: リーダー
@@ -153,25 +171,51 @@ party_panel:
   kick: 除名
   rescind: 招待を取り消す
   invite_owned: 所有キャラクターを招待
+  follow_leader: リーダーを追従
+  run_to_position: 位置まで走る
+  run_to_started: '{{name}} の最新オンチェーン位置に向かって走っています。現在のリアルタイム位置とは異なる場合があります。'
+  run_to_started_position: リンクされた位置に向かって走っています。
+  run_to_progress: 位置へ移動中
+  run_to_position_wrong_world: リンクされた位置は現在のワールドにありません。
+  run_to_wrong_world: そのパーティーメンバーは現在のワールドにいません。
+  run_to_unavailable: そのパーティーメンバーのオンチェーン位置を取得できません。
 trade_panel:
-  inbox: 取引
   close: 閉じる
   title: プレイヤー取引
-  locked: ロック済み · 受取期限なし
-  negotiating: 交渉中 · 変更すると承認が解除されます
+  invite_sent: 取引招待を送信しました
+  invited_by: '{{name}}から取引に招待されました'
+  request_waiting: '{{name}}の承認を待っています'
+  accept_request: 承認
+  decline: 拒否
+  cancel_request: 招待を取り消す
+  trades: 取引
   your_offer: あなたの提示
   their_offer: 相手の提示
   accepted: 承認済み
   reviewing: 確認中
-  add_item: アイテムを追加
-  add_character: キャラクターを追加
-  sui: SUIを追加
-  withdraw: 取り戻す
-  withdraw_sui: 自分のSUIを取り戻す
-  accept: この内容を承認
-  claim: 受け取る
-  claim_sui: '{{amount}} SUIを受け取る'
-  finish: 取引を完了
+  remove_item: 提示から外す
+  drop_items: ここにアイテムをドロップ
+  empty_offer: 提示アイテムなし
+  offer_item_unavailable: 追加予定のアイテムが利用できなくなりました。提示内容を確認して、もう一度お試しください。
+  sui: 提示SUI
+  inventory: 所持品
+  drag_hint: ドラッグまたはダブルクリックで追加
+  amount_title: 数量を選択
+  amount_for: '{{name}} の数量'
+  amount_add: オファーに追加
+  amount_cancel: キャンセル
+  confirm_changes: 変更を確定
+  discard_changes: 変更を破棄
+  empty_inventory: 取引可能な資産なし
+  accept: 提示を承認
+  cancel: 取引を中止
+  accept_notice: 承認すると最終取引を許可します。受取資産{{count}}個のロイヤリティは{{amount}} SUIとガスです。
+  settle: 取引を完了
+  recover: 提示を回収
+  settle_notice: 残りの資産とSUIを1回の取引で受け取ります。
+  recover_notice: 提示全体を1回の取引で回収します。
+  waiting_counterparty: あなた側は完了しました。相手を待っています。
+  finalizing: 完了中…
 world_hud:
   compass_label: コンパス
   zone: ゾーン
@@ -189,6 +233,10 @@ world_hud:
   menu_friend: フレンド追加
   menu_trade: 取引
   menu_message: メッセージを送る
+  message_title: '{{name}} にメッセージ'
+  message_placeholder: プライベートメッセージを入力…
+  message_send: 送信
+  message_cancel: キャンセル
   mount_prompt: '{{key}} で騎乗'
   portal_prompt: '{{key}} を押して別のワールドへ移動'
   dungeon_portal: ダンジョンポータル
@@ -381,6 +429,7 @@ marketplace_page:
   delist_success: 出品を取り下げました
   buy_pending: 購入中…
   buy_success: 購入完了
+  sold_toast: '{{name}} {{amount}} を {{price}} で売却'
   character_roster_full: 7人目のキャラクターは追加できません — 上限は6人です
   collect_pending: 売上を回収中…
   collect_success: 売上を回収しました
@@ -448,6 +497,12 @@ settings_page:
   subtitle: 'AresRPGの設定'
   music_label: '音楽'
   music_hint: 'ワールドと戦闘の音楽を再生します。'
+  auto_switch_fighter_label: 操作キャラクター自動切替
+  auto_switch_fighter_hint: 所有キャラクターのターン開始時に自動で選択します。
+  always_craft_from_label: 常にこのキャラで製作
+  always_craft_from_hint: 職業タブとすべての製作を所有キャラクター1体に固定します。
+  always_craft_from_picker: 製作キャラクター
+  always_craft_from_none: 無効
   render_distance_label: 描画距離
   render_distance_hint: 周囲のワールドを読み込む範囲。広いほど負荷が上がります。
 admin_page:
@@ -490,6 +545,88 @@ admin_page:
   confirm_claim: 引き出しを確定
   disconnect_admin_wallet: 切断
   claim_digest: 引き出しトランザクション
+  range_24h: 24時間
+  range_7d: 7日
+  range_30d: 30日
+  range_90d: 90日
+  range_1y: 1年
+  overview_title: 概要
+  overview_body: プレイヤー活動と収益を、余計な監視情報なしで確認できます。
+  overview_unavailable: 概要を利用できません
+  loading_overview: 概要を読み込み中…
+  all_systems_current: すべてのシステムは最新です
+  checkpoint: チェックポイント
+  refresh: 更新
+  retry: 再試行
+  active_players: アクティブプレイヤー
+  active_players_bucket: バケットごとのアクティブプレイヤー
+  daily_active: デイリーアクティブプレイヤー
+  active_interval: 区間ごとのアクティブ
+  active_30d: 30日間アクティブプレイヤー
+  active_last_30d: 過去30日間のアクティブ
+  player_activity: プレイヤー活動
+  player_activity_body: 日次活動と移動30日リーチ
+  stickiness: DAU / 30日
+  online_players: オンラインプレイヤー
+  online_players_body: 認証済み接続の平均とピーク
+  online_now: オンラインプレイヤー
+  average: 平均
+  peak: ピーク
+  revenue: 収益
+  revenue_over_time: 収益の推移
+  revenue_over_time_body: ショップ収益とマーケットのロイヤリティ
+  shop: ショップ
+  shop_sales: ショップ売上
+  item_royalties: アイテムロイヤリティ
+  character_royalties: キャラクターロイヤリティ
+  game_transactions: ゲームトランザクション
+  game_transactions_over_time: トランザクションの推移
+  game_transactions_body: 成功したAresRPGトランザクションをPTBごとに1回カウント
+  today: 今日
+  selected_period: 選択期間
+  lifetime: 累計
+  average_order: 平均注文額
+  chart_revenue: 収益
+  chart_players: プレイヤー
+  chart_online: オンライン
+  bucket_15m: 15分区間
+  bucket_hour: 時間別区間
+  bucket_day: 日次区間
+  bucket_week: 週次区間
+  bucket_month: 月次区間
+  unique_addresses: ユニークアドレス
+  unique_addresses_body: AresRPGモジュール呼び出しに成功したアドレス
+  unique_addresses_over_time: ユニークアドレスの推移
+  successful_game_calls: ゲームモジュール呼び出し元
+  total_characters: キャラクター総数
+  current_characters: 現在のオンチェーンキャラクター
+  total_characters_body: 現在のオンチェーンCharacterオブジェクト
+  characters_over_time: キャラクター数の推移
+  revenue_30d: 30日間の収益
+  revenue_mtd: 月初来収益
+  last_30_days: 過去30日
+  calendar_month_to_date: 今月の月初来
+  recent_shop_sales: 最近のショップ売上
+  sales_history: ショップ売上履歴
+  sales_retention: 正確な取引詳細は90日間保持されます
+  view_all_sales: すべての売上を見る
+  buyer: 購入者
+  item: アイテム
+  quantity: 数量
+  unit_price: 単価
+  total: 合計
+  when: 日時
+  transaction: トランザクション
+  treasury: トレジャリー
+  treasury_body: 獲得収益とは分けて現在残高を表示します
+  available_balance: 利用可能残高
+  claim: 引き出す
+  close: 閉じる
+  loading: 読み込み中…
+  load_more: さらに読み込む
+  transactions: トランザクション
+  no_sales_history: この期間の売上はありません
+  end_of_history: 保持履歴の末尾
 simulator_page:
   title: 戦闘シミュレーター
   local_only: ローカル決定論セットアップ
@@ -584,6 +721,10 @@ fight_hud:
   turn_order: ターン順
   placement_title: 戦闘準備
   placement_hint: ファイターを配置して準備完了にしてください
+  placement_gas_title: ファイターをもう一度移動しますか？
+  placement_gas_body: マスを変更するたびにトランザクションが実行され、ガス代がかかります。不要な再配置は避けてください。
+  placement_gas_hide: 今後表示しない
+  placement_gas_confirm: それでも移動
   placement_ready: 準備完了
   placement_waiting: 他のプレイヤーを待っています…
   placement_starting: 戦闘を開始しています…
@@ -628,13 +769,21 @@ fight_hud:
   chat_title: チャット
   chat_tab_general: 一般
   chat_tab_party: パーティー
+  chat_tab_private: 個人
   chat_tab_combat: 戦闘
   chat_placeholder: メッセージを入力…
+  chat_fetching_item: オンチェーンのステータスを取得中…
+  chat_item_unavailable: このアイテムはオンチェーンで取得できません。
   chat_you: あなた
   chat_line: '{name}：{message}'
+  chat_party_line: '(party) {name}：{message}'
+  chat_whisper_to: '({name} へ) {message}'
   result_title: 戦闘結果
   result_duration: 戦闘時間
   result_gas_spent: ガス使用量
+  result_wager_won: 獲得SUI
+  result_wager_lost: 損失SUI
+  result_wager_even: 賭け結果
   result_party: 味方
   result_enemies: 敵
   result_victory: 勝利
@@ -984,20 +1133,20 @@ encyclopedia_page:
     success_rate: 成功率
     success_rate_desc: 成功はステータスが最大値にどれだけ近いかに依存します：0%付近では成功率~99%、最大付近では~50%、エキゾチックなステータスはレベルに関係なく~1%です。成功がクリティカル（損失なし）になるかニュートラル（ウェイトを支払う）になるかも同様に変動し、さらにジョブレベル1を超えるごとに小さな+0.2%が加わります。ジョブが扱えるアイテムレベルに上限はありません。
     puits: シンク（ピュイ）
-    puits_desc: UIに表示されるウェイトカウンターで、ステータス損失がルーンウェイトを超えたときに蓄積されます。他のステータスが影響を受ける前に将来の損失を吸収します。アイテムがフォルジュマジーワークベンチを離れるとリセットされます。
+    puits_desc: UIに表示されるウェイトカウンターで、ステータス損失がルーンウェイトを超えたときに蓄積されます。他のステータスが影響を受ける前に将来の損失を吸収します。アイテムに保持され、作業台や所有者が変わっても引き継がれます。
     over_maging: オーバーメイジ
     over_maging_desc: ステータスを自然な最大値以上に押し上げます。各ステータス行は101の追加ウェイトが上限です。オーバーメイジの最大値はステータスの単位ウェイトに依存します——体力（ウェイト0.25）のような軽いステータスは約404ポイント超過できますが、知恵（ウェイト3）のような重いステータスは約33ポイントしか超過できません。
     forgemagie_tips: ヒント
-    forgemagie_tips_desc: エキゾチック/オーバーメイジの場合：まず安いステータスを外してシンクを貯め、バッファがある状態で難しいステータスを通し、その後失ったステータスを戻す（最大値から遠いので簡単）。セッション中にアイテムを移動しないこと。シンクがリセットされます。オーバーメイジとエキゾチックのステータスは失敗時に最初に失われます。
+    forgemagie_tips_desc: エキゾチック/オーバーメイジの場合：まず安いステータスを外してシンクを貯め、バッファがある状態で難しいステータスを通し、その後失ったステータスを戻す（最大値から遠いので簡単）。オーバーメイジとエキゾチックのステータスは失敗時に最初に失われます。
     forgemagie_xp: 経験値
     forgemagie_xp_desc: 経験値は成功時のみ付与されます（クリティカルまたはニュートラル）。高レベルアイテムや重いルーンほど多くの経験値を獲得できます。Raルーンは BaやPaルーンの2倍の経験値を付与します。計算式：max(1, ルーンウェイト × (1 + アイテムレベル / 50) × ティア倍率)、Raの倍率は2、それ以外は1。
     action_points: アクションポイント（AP）
     movement_points: 移動ポイント（MP）
     critical_stat: クリティカル
     wisdom_xp: 知恵によるXPボーナス
-    wisdom_xp_desc: 知恵6ごとに獲得XPが1%増加します。知恵600で獲得XPは2倍になります。
+    wisdom_xp_desc: 有効中の効果を含む実効知恵1ポイントごとに獲得XPが1%増加します。実効知恵100で獲得XPは2倍になります。
     chance_loot: 幸運＆戦利品
-    chance_loot_desc: 勝利チームの平均幸運が、確定した各ドロップ率に乗算されます。平均幸運600で確率は2倍になります。ドロップ率は100%を超えません。
+    chance_loot_desc: 有効中の効果を含む勝利チームの平均幸運が、確定した各ドロップ率に乗算されます。平均幸運600で確率は2倍になります。ドロップ率は100%を超えません。
     mob_loot_band: モブレベルとドロップ率
     mob_loot_band_desc: 設定確率が中央値です。最低レベルのモブは80%、最高レベルは120%を使い、上限は100%です。固定レベルのモブは設定確率をそのまま使います。数量はモブレベルで変化しません。
   dropped_by: ドロップ元
@@ -1356,7 +1505,7 @@ characters_page:
   max: 最大
   resources: 素材
   back: 戻る
-  gate_note: 一時的に装備のクラフト職業レベル1が必要です
+  gate_note: 装備のクラフト職業レベル{{level}}が必要です
   detail_title: アイテム
   forge_title: 鍛冶台
   inventory_title: インベントリ
@@ -1368,10 +1517,14 @@ characters_page:
   one_rune_note: 1回の試行につきルーンを1つ消費します
   apply: ルーンを刻む
   scribing: 刻印中…
-  outcome_success: ルーンが定着しました
-  outcome_neutral: ルーンは不発でした — 変化なし
-  outcome_failure: ルーンが暴発しました — ステータスを失いました
-  requires_job: '{{job}}レベル1が必要です'
+  outcome_critical_success: クリティカル成功
+  outcome_neutral_success: ニュートラル成功
+  outcome_critical_failure: クリティカル失敗
+  runeforge_history: 履歴
+  runeforge_history_empty: ルーンを適用すると、このアイテムの履歴が始まります
+  runeforge_puits: プイ
+  runeforge_no_stat_change: ステータス変化なし
+  requires_job: '{{job}}レベル{{level}}が必要です'
   clear: 外す
   inspect_empty: 調べる装備を選んでください
   no_forge_gear: 鍛冶できる装備がバッグにありません
@@ -1381,6 +1534,7 @@ characters_page:
   menu_crush: 粉砕する
   menu_destroy: 破棄する
   menu_explorer: エクスプローラーで見る
+  menu_link_chat: チャットにリンク
   feed_title: ペットに餌をあげる
   feed_power_label: パワー
   feed_power: '{{count}} / {{max}}'
@@ -1396,6 +1550,8 @@ characters_page:
   crush_cta: 粉砕
   crush_pending: 粉砕中…
   crush_success: 装備を粉砕しました
+  crush_result_title: 粉砕結果
+  crush_result_empty: 次回に期待しましょう。
   destroy_title: アイテムを破棄
   destroy_confirm_body: '{{name}} ×{{amount}}を破棄しますか？取り消せません。'
   destroy_cta: 破棄
@@ -1519,6 +1675,9 @@ characters_page:
       consumable: '消耗品製作'
     recipes_fallback: 'レシピ'
     equipped: '装備中'
+    better_character: '{{name}}：{{job}} Lv {{level}}'
+    switch: '切替'
+    switch_to_character: '{{name}}に切り替える'
     table:
       tier: 'ティア'
       req_lvl: '必要Lv'
@@ -1536,12 +1695,13 @@ characters_page:
       ingredients_head: '材料'
       requires_level: '{{job}} Lv {{required}}が必要（現在Lv {{level}}）'
       not_enough: '材料が不足しています'
-      success_chance: '成功率'
-      craft_tooltip: '{{name}}を製作'
-      craft_button: '製作'
+      starting_chance: '開始時の成功率'
+      amount: '試行回数'
+      prepare_tooltip: '{{name}}を{{count}}回分準備'
+      craft_tooltip: '{{name}}を{{count}}回製作'
+      craft_button: '{{count}}回製作'
       crafting: '製作中…'
-      craft_success: '{{name}}を製作しました'
-      roll_failed: '{{name}}の製作ロールに失敗しました（成功率{{chance}}%）— 材料は消費されました'
+      craft_result: '{{attempts}}回中{{successes}}個の{{name}}を製作しました'
       locked_level: 'ロック中 · Lv {{level}}'
     detail:
       close_aria: 'アイテム詳細を閉じる'
@@ -1566,3 +1726,244 @@ characters_page:
     experience: '経験値'
     confirm: '確認'
     max: 'MAX'
+spell_names:
+  'Absorption': '吸収'
+  'Absorptive Arrow': '吸収の矢'
+  'Acceleration': '加速'
+  'Aggressive Brambles': '攻撃的な茨'
+  'Aggressive Glyph': '攻撃のグリフ'
+  'Alcoholic Breath': '酒気の息'
+  'All or Nothing': '全か無か'
+  'Chimeric Venom': 'キメラの毒'
+  'Animal Healing': '動物治療'
+  'Aqueous Armour': '水の鎧'
+  'Aqueous Vulnerability': '水の脆弱性'
+  'Art of Staff': '杖術'
+  "Asobi's Fate": 'アソビの運命'
+  "Asobi's Luck": 'アソビの幸運'
+  'Assault': '強襲'
+  'Atonement Arrow': '贖罪の矢'
+  'Attraction': '引き寄せ'
+  'Backlash': '反撃'
+  'Bamboo Milk': '竹乳'
+  "Bat's Eye": 'コウモリの目'
+  'Bear Cry': '熊の叫び'
+  'Blazing Fist': '燃える拳'
+  'Blazing Vulnerability': '火の脆弱性'
+  'Blinding Protection': '眩惑の守り'
+  'Blindness': '失明'
+  'Bloodthirsty Madness': '血に飢えた狂気'
+  'Blow': '吹き飛ばし'
+  'Bluff': 'ブラフ'
+  'Bold Punishment': '大胆の罰'
+  'Boozer': '酔態'
+  'Bow Skill': '弓術'
+  'Bramble': '茨'
+  'Bravery Guide': '勇気の導き'
+  'Bribery': '買収'
+  'Bubble': 'バブル'
+  'Burning Arrow': '燃焼の矢'
+  'Burning Glyph': '燃焼のグリフ'
+  'Bush Fire': '藪火'
+  'Celestial Sword': '天空の剣'
+  'Chakra Concentration': 'チャクラ集中'
+  'Chakra Impulse': 'チャクラ衝動'
+  'Hurl': 'Hurl'
+  'Claw of Ceangal': 'セアンガルの爪'
+  'Clock': '時計'
+  'Cloudy Attack': '雲の攻撃'
+  'Clover': 'クローバー'
+  'Clumsiness': '不器用'
+  'Coins Throwing': 'コイン投げ'
+  'Compulsion': '強制'
+  'Con': '詐欺'
+  'Concentration': '集中'
+  'Cooperation': '協力'
+  'Counter': '反撃'
+  'Critical Shooting': '会心射撃'
+  'Crow': 'カラス'
+  'Curative Word': '治癒の言葉'
+  'Cut': '切断'
+  'Dark Ray': '暗黒光線'
+  'Destructive Arrow': '破壊の矢'
+  'Destructive Sword': '破壊の剣'
+  'Deviousness': '狡猾'
+  'Devotion': '献身'
+  'Dissolution': '溶解'
+  'Distant Shooting': '遠距離射撃'
+  'Divine Sword': '神聖の剣'
+  'Dolly Sacrifice': '人形の生贄'
+  'Shadowstep': 'Shadowstep'
+  'Draining Word': '吸収の言葉'
+  'Earth Armour': '大地の鎧'
+  'Earth Vulnerability': '大地の脆弱性'
+  'Earthquake': '地震'
+  'Bloodstep': 'Bloodstep'
+  'Explosive Arrow': '爆発の矢'
+  'Explosive Flask': '爆発フラスコ'
+  'Fangs of Boowolf': 'ブウォルフの牙'
+  'Fear': '恐怖'
+  'Feline Leap': '猫の跳躍'
+  'Feline Movement': '猫の移動'
+  'Feline Spirit': '猫の魂'
+  'Flight': '飛翔'
+  'Blood Blade': 'Blood Blade'
+  'Forbidden Word': '禁断の言葉'
+  'Forced Punishment': '強制の罰'
+  'Fortune': '幸運'
+  'Bonding Word': 'Bonding Word'
+  'Frightening Word': '恐怖の言葉'
+  'Frostbite': '凍傷'
+  'Frozen Arrow': '氷結の矢'
+  'Fury': '憤怒'
+  'Ghostly Claw': '幽霊の爪'
+  'Ghostly Shovel': '幽霊シャベル'
+  'Glowing Armour': '灼熱の鎧'
+  'Glyph of Blindness': '失明のグリフ'
+  'Glyph of Silence': '沈黙のグリフ'
+  'Greed': '強欲'
+  'Hand': '針'
+  'Hangover': '二日酔い'
+  'Haziness': '霞'
+  'Heads or Tails': '表か裏か'
+  'Healing Word': '回復の言葉'
+  'High-Energy Shot': '高エネルギー射撃'
+  'Clockwork Pursuit': 'Clockwork Pursuit'
+  "Ikari's Foot": 'イカリの足'
+  'Immunity': '免疫'
+  'Increase': '増幅'
+  'Insidious Poison': '陰険な毒'
+  'Insolent Bramble': '不遜な茨'
+  'Intimidation': '威圧'
+  'Invisibility': '透明化'
+  'Invisibility of Others': '他者の透明化'
+  'Jump': '跳躍'
+  'Undertow': 'Undertow'
+  'Toxic Knowledge': 'Toxic Knowledge'
+  'Lashing Arrow': '足止めの矢'
+  'Lashing Claw': '足止めの爪'
+  'Lethal Attack': '致死攻撃'
+  'Lethal Trap': '致死の罠'
+  'Life Transfer': '生命転送'
+  'Lifting Word': '飛翔の言葉'
+  'Dead Weight': 'Dead Weight'
+  'Golden Fever': 'Golden Fever'
+  'Shovel Uprising': 'Shovel Uprising'
+  'Silent Mark': 'Silent Mark'
+  'Loss of Motivation': '意欲喪失'
+  'Magic Arrow': '魔法の矢'
+  'Manifold Bramble': '多重の茨'
+  'Mass Clumsiness': '集団不器用'
+  'Mass Trap': '集団の罠'
+  'Melancholy': '憂鬱'
+  'Mistake': '過失'
+  'Mound': '盛土'
+  'Mummification': 'ミイラ化'
+  'Mutilation': '切傷'
+  'Natural Attack': '自然攻撃'
+  'Blood Scent': 'Blood Scent'
+  'Nimble Punishment': '敏捷の罰'
+  'Pandatak': 'パンダタック'
+  'Pandiniuras': 'パンディニュラス'
+  "Pandora's Box": 'パンドラの箱'
+  'Paralyzing Arrow': '麻痺の矢'
+  'Paralyzing Glyph': '麻痺のグリフ'
+  'Paralyzing Poison': '麻痺毒'
+  'Paralyzing Trap': '麻痺の罠'
+  'Paralyzing Word': '麻痺の言葉'
+  'Read the Table': 'Read the Table'
+  'Plaguing Arrow': '疫病の矢'
+  'Playful Claw': '遊戯の爪'
+  'Poisoned Arrow': '毒の矢'
+  'Poisoned Trap': '毒の罠'
+  'Poisoned Wind': '毒の風'
+  'Power': '力'
+  'Powerful Shooting': '強力射撃'
+  'Pressure': '圧力'
+  'Preventing Word': '予防の言葉'
+  'Prime of Life': '生命の盛り'
+  'Mountain Punch': '山岳拳'
+  'Punishment': '処罰'
+  'Punitive Arrow': '懲罰の矢'
+  'Reducing Key': '縮小の鍵'
+  'Reflex': '反射神経'
+  'Regenerating Word': '再生の言葉'
+  'Rekop': 'レコップ'
+  'Repelling Trap': '反発の罠'
+  'Repercussion': '反動'
+  'Retreat Arrow': '後退の矢'
+  'Revitalising Word': '活性の言葉'
+  'Rough Tongue': 'ざらつく舌'
+  'Roulette': 'ルーレット'
+  'Sacrifice': '犠牲'
+  "Senshi's Sword": 'センシの剣'
+  "Senshi's Wrath": 'センシの怒り'
+  'Shovel Kiss': 'シャベルの口づけ'
+  'Shovel of Judgement': '裁きのシャベル'
+  'Shovel Throwing': 'シャベル投げ'
+  'Shriveling': '萎縮'
+  "Shugo's Shield": 'シュゴの盾'
+  "Shugo's Teleportation": 'シュゴのテレポーテーション'
+  'Slaughtering Shovel': '虐殺のシャベル'
+  'Slow Down': '減速'
+  'Slow Down Arrow': '減速の矢'
+  'Smell': '嗅覚'
+  'Soothing Bramble': '鎮静の茨'
+  'Spell Rebound': '呪文反射'
+  'Spirit Rift': 'Spirit Rift'
+  'Spiritual Punishment': '精神の罰'
+  'Rooted Guard': 'Rooted Guard'
+  'Stain': '汚染'
+  'Stimulating Word': '鼓舞の言葉'
+  'Strengthstorm': '力の嵐'
+  'Lucky Pounce': 'Lucky Pounce'
+  'Stampede': 'Stampede'
+  'Suppressing Roar': 'Suppressing Roar'
+  'Seismic Command': 'Seismic Command'
+  'Rending Pounce': 'Rending Pounce'
+  'Binding Howl': 'Binding Howl'
+  'Primal Cataclysm': 'Primal Cataclysm'
+  'Pack Totem': '群れのトーテム'
+  'Swap': '交換'
+  'Sword of Fate': '運命の剣'
+  'Sword of Judgement': '裁きの剣'
+  'Sylvan Power': '森の力'
+  'Tear': '涙'
+  'Temporal Dust': '時の塵'
+  'Terror': '恐怖'
+  'Root Snare': 'Root Snare'
+  'Reviving Spores': 'Reviving Spores'
+  'Maddening Spores': 'Maddening Spores'
+  'Sacrificial Bloom': 'Sacrificial Bloom'
+  'Overgrowth': 'Overgrowth'
+  'Time Theft': '時間泥棒'
+  'Toad': 'ヒキガエル'
+  'Temporal Dial': 'Temporal Dial'
+  "Tokei's Punch": 'トケイの拳'
+  "Tokei's Sandglass": 'トケイの砂時計'
+  "Tokei's Teleportation": 'トケイのテレポーテーション'
+  'Topkaj': 'トプカジ'
+  'Tormenting Arrow': '苦悶の矢'
+  'Transposition': '転位'
+  'Trap of Silence': '沈黙の罠'
+  'Tree': '樹木'
+  'Tricky Blow': '狡猾な一撃'
+  'Tricky Trap': '狡猾な罠'
+  'Truce': '休戦'
+  'Unsummoning': '召喚解除'
+  'Vampiric Word': '吸血の言葉'
+  'Vital Exchange': 'Vital Exchange'
+  'Second Wind': 'Second Wind'
+  'Wheel of Fortune': '幸運の輪'
+  'Whip': '鞭'
+  'Wild Grass': '野草'
+  'Wind Armour': '風の鎧'
+  'Wind Vulnerability': '風の脆弱性'
+  'Word of Altruism': '利他の言葉'
+  'Word of Recovery': '全快の言葉'
+  'Word of Sacrifice': '犠牲の言葉'
+  'Word of Silence': '沈黙の言葉'
+  'Word of Thorn': '棘の言葉'
+  'Word of Youth': '若さの言葉'
+  'Wounding Word': '負傷の言葉'
+  'Zatoishwan Stance': 'Zatoishwan Stance'

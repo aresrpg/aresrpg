@@ -5,7 +5,7 @@
 //! `process` is the IMPURE-EXTRACTION shell around the pure core: it lifts the
 //! framework's checkpoint into plain owned views (objects, deletes, events),
 //! then the pure modules decide everything — `ownership::resolve` the custody
-//! facts, `publish::analyze` the wire + sales + market, `graph::project` the
+//! facts, `publish::analyze` the wire + analytics + sales + market, `graph::project` the
 //! Cypher. `commit` executes the list verbatim. Every write is idempotent by
 //! construction (README, law 5), so a crash-replay of any batch converges.
 
@@ -16,11 +16,13 @@ use async_trait::async_trait;
 use sui_indexer_alt_framework::pipeline::{sequential::Handler, Processor};
 use sui_indexer_alt_framework::store::Store;
 use sui_indexer_alt_framework::types::effects::TransactionEffectsAPI;
+use sui_indexer_alt_framework::types::execution_status::ExecutionStatus;
 use sui_indexer_alt_framework::types::full_checkpoint_content::Checkpoint;
 use sui_indexer_alt_framework::types::object::{Object, Owner};
 use sui_indexer_alt_framework::types::transaction::{Command, TransactionData, TransactionKind};
 use sui_indexer_alt_framework::types::TypeTag;
 
+use crate::analytics::{self, ActivityFact, CharacterFact, MoneyFact, TransactionFact};
 use crate::decode::{Addr, Id};
 use crate::graph::{self, CheckpointView};
 use crate::ownership::{self, ObjView, OwnerKind, TypeKey};
@@ -46,6 +48,16 @@ pub enum Write {
         score: u64,
         member: String,
     },
+    /// One exact primary-shop row in the global 90-day admin ledger.
+    ShopSale { score: u64, member: String },
+    /// One replay-deduplicated exact-money contribution to both chart tiers.
+    Money(MoneyFact),
+    /// One successful game-package sender projected into every dashboard activity tier.
+    Activity(ActivityFact),
+    /// One checkpoint's successful game-package transaction count in every dashboard tier.
+    Transaction(TransactionFact),
+    /// One replay-safe live-character counter delta.
+    Character(CharacterFact),
     /// A live-wire event (`PUBLISH channel payload`).
     Publish { channel: String, payload: String },
     /// A plain bookkeeping key (`SET key value`).
@@ -56,6 +68,7 @@ pub enum Write {
 #[derive(Debug, Clone)]
 pub struct CheckpointWrites {
     pub sequence_number: u64,
+    pub timestamp_ms: u64,
     pub writes: Vec<Write>,
 }
 
@@ -72,14 +85,25 @@ pub struct AresHandler {
     /// supporting those requires matching every package id that introduced a type.
     #[allow(dead_code)]
     package_latest: String,
+    /// Every configured game call target known to this deployment. Original types still
+    /// identify objects; activity follows executable package versions.
+    game_packages: std::collections::HashSet<String>,
 }
 
 impl AresHandler {
-    pub fn new(package_original: &str, package_latest: &str, seed_original: &str) -> Result<Self> {
+    pub fn new(
+        package_original: &str,
+        package_latest: &str,
+        seed_original: &str,
+        game_packages: &[String],
+    ) -> Result<Self> {
+        let package_original = canonical(package_original)?;
+        let package_latest = canonical(package_latest)?;
         Ok(Self {
-            package_original: canonical(package_original)?,
+            game_packages: game_packages.iter().cloned().collect(),
+            package_original,
             seed_original: canonical(seed_original)?,
-            package_latest: canonical(package_latest)?,
+            package_latest,
         })
     }
 }
@@ -122,6 +146,8 @@ struct OwnedEvent {
 /// One transaction, lifted whole.
 struct OwnedTx {
     sender: Addr,
+    digest: String,
+    successful: bool,
     move_calls: Vec<String>,
     events: Vec<OwnedEvent>,
     inputs: Vec<OwnedObj>,
@@ -199,6 +225,66 @@ fn move_calls(data: &TransactionData) -> Vec<String> {
         .collect()
 }
 
+fn is_game_activity(
+    successful: bool,
+    calls: &[String],
+    game_packages: &std::collections::HashSet<String>,
+) -> bool {
+    successful
+        && calls.iter().any(|call| {
+            call.split_once("::")
+                .is_some_and(|(package, _)| game_packages.contains(package))
+        })
+}
+
+fn game_activity_txs<'a>(
+    txs: &'a [OwnedTx],
+    game_packages: &'a std::collections::HashSet<String>,
+) -> impl Iterator<Item = &'a OwnedTx> {
+    txs.iter()
+        .filter(|tx| is_game_activity(tx.successful, &tx.move_calls, game_packages))
+}
+
+fn is_character(obj: &OwnedObj, game: &str) -> bool {
+    obj.type_key.package == game
+        && obj.type_key.module == "character"
+        && obj.type_key.name == "Character"
+}
+
+fn character_facts(txs: &[OwnedTx], checkpoint: u64, ts_ms: u64, game: &str) -> Vec<CharacterFact> {
+    txs.iter()
+        .enumerate()
+        .flat_map(|(tx_index, tx)| {
+            let inputs = tx
+                .inputs
+                .iter()
+                .map(|obj| obj.id)
+                .collect::<std::collections::HashSet<_>>();
+            let created = tx
+                .outputs
+                .iter()
+                .filter(move |obj| is_character(obj, game) && !inputs.contains(&obj.id))
+                .map(|obj| (obj.id, true));
+            let deleted = tx
+                .deleted
+                .iter()
+                .filter(|obj| is_character(obj, game))
+                .map(|obj| (obj.id, false));
+            created
+                .chain(deleted)
+                .map(move |(character, present)| CharacterFact {
+                    coordinate: format!(
+                        "{checkpoint}:{tx_index}:{}:{}",
+                        character.hex(),
+                        u8::from(present)
+                    ),
+                    delta: if present { 1 } else { -1 },
+                    ts_ms,
+                })
+        })
+        .collect()
+}
+
 fn lift(checkpoint: &Checkpoint) -> Vec<OwnedTx> {
     let mut event_ordinal = 0u64;
     checkpoint
@@ -247,6 +333,8 @@ fn lift(checkpoint: &Checkpoint) -> Vec<OwnedTx> {
                 .collect();
             OwnedTx {
                 sender: Addr(addr32(tx.transaction.as_v1().sender.as_ref())),
+                digest: tx.transaction.digest().to_string(),
+                successful: matches!(tx.effects.status(), ExecutionStatus::Success),
                 move_calls: move_calls(&tx.transaction),
                 events,
                 inputs,
@@ -326,7 +414,15 @@ impl Processor for AresHandler {
                 outputs: &output_views[i],
             })
             .collect();
-        let mut wire = publish::analyze(ckpt, ts_ms, &tx_views, game, self.seed_original.as_str())?;
+        let digests = txs.iter().map(|tx| tx.digest.clone()).collect::<Vec<_>>();
+        let mut wire = publish::analyze_with_digests(
+            ckpt,
+            ts_ms,
+            &tx_views,
+            &digests,
+            game,
+            self.seed_original.as_str(),
+        )?;
         publish::route_character_custody(&mut wire, ckpt, ts_ms, &custody);
 
         // the graph: flat outputs + deletes, tx order
@@ -354,6 +450,33 @@ impl Processor for AresHandler {
                 member: row.member,
             });
         }
+        for row in wire.shop_sales {
+            writes.push(Write::ShopSale {
+                score: row.timestamp_ms,
+                member: row.member()?,
+            });
+        }
+        writes.extend(wire.money.into_iter().map(Write::Money));
+        let mut transaction_count = 0u64;
+        for tx in game_activity_txs(&txs, &self.game_packages) {
+            transaction_count += 1;
+            writes.push(Write::Activity(ActivityFact {
+                address: tx.sender,
+                ts_ms,
+            }));
+        }
+        if transaction_count > 0 {
+            writes.push(Write::Transaction(TransactionFact {
+                checkpoint: ckpt,
+                count: transaction_count,
+                ts_ms,
+            }));
+        }
+        writes.extend(
+            character_facts(&txs, ckpt, ts_ms, game)
+                .into_iter()
+                .map(Write::Character),
+        );
         for publication in wire.publications {
             writes.push(Write::Publish {
                 channel: publication.channel,
@@ -372,6 +495,7 @@ impl Processor for AresHandler {
         });
         Ok(vec![CheckpointWrites {
             sequence_number: ckpt,
+            timestamp_ms: ts_ms,
             writes,
         }])
     }
@@ -421,6 +545,95 @@ impl Handler for AresHandler {
                             .query_async(conn.connection())
                             .await?;
                     }
+                    Write::ShopSale { score, member } => {
+                        let _: () = redis::cmd("ZADD")
+                            .arg(analytics::SHOP_SALES_KEY)
+                            .arg(*score)
+                            .arg(member)
+                            .query_async(conn.connection())
+                            .await?;
+                    }
+                    Write::Money(fact) => {
+                        let bucket = analytics::bucket_day(fact.ts_ms);
+                        let key = analytics::series_key("money", "day", bucket);
+                        let _: () = redis::cmd("HSET")
+                            .arg(&key)
+                            .arg(&fact.coordinate)
+                            .arg(fact.value())
+                            .query_async(conn.connection())
+                            .await?;
+                    }
+                    Write::Activity(fact) => {
+                        let address = fact.address.hex();
+                        let buckets = analytics::activity_buckets(fact.ts_ms);
+                        for (tier, bucket, width, retention) in buckets {
+                            let key = analytics::series_key("active", tier, bucket);
+                            let _: () = redis::cmd("SADD")
+                                .arg(&key)
+                                .arg(&address)
+                                .query_async(conn.connection())
+                                .await?;
+                            let keep = if tier == "day" || tier == "week" || tier == "month" {
+                                analytics::DAILY_ACTIVITY_RETENTION_MS
+                            } else {
+                                retention
+                            };
+                            let _: () = redis::cmd("EXPIREAT")
+                                .arg(key)
+                                .arg(analytics::expiry_seconds(bucket, width, keep))
+                                .query_async(conn.connection())
+                                .await?;
+                        }
+                        let _: () = redis::cmd("ZADD")
+                            .arg(analytics::ADDRESS_FIRST_SEEN_KEY)
+                            .arg("NX")
+                            .arg(fact.ts_ms)
+                            .arg(address)
+                            .query_async(conn.connection())
+                            .await?;
+                    }
+                    Write::Transaction(fact) => {
+                        for (tier, bucket, width, retention) in
+                            analytics::activity_buckets(fact.ts_ms)
+                        {
+                            let key = analytics::series_key("transactions", tier, bucket);
+                            let _: () = redis::cmd("HSET")
+                                .arg(&key)
+                                .arg(fact.checkpoint)
+                                .arg(fact.count)
+                                .query_async(conn.connection())
+                                .await?;
+                            let keep = if tier == "day" || tier == "week" || tier == "month" {
+                                analytics::DAILY_ACTIVITY_RETENTION_MS
+                            } else {
+                                retention
+                            };
+                            let _: () = redis::cmd("EXPIREAT")
+                                .arg(key)
+                                .arg(analytics::expiry_seconds(bucket, width, keep))
+                                .query_async(conn.connection())
+                                .await?;
+                        }
+                    }
+                    Write::Character(fact) => {
+                        let bucket = analytics::bucket_day(fact.ts_ms);
+                        let key = analytics::series_key("characters", "day", bucket);
+                        let _: () = redis::cmd("HSET")
+                            .arg(&key)
+                            .arg(&fact.coordinate)
+                            .arg(fact.value())
+                            .query_async(conn.connection())
+                            .await?;
+                        let _: () = redis::cmd("EXPIREAT")
+                            .arg(key)
+                            .arg(analytics::expiry_seconds(
+                                bucket,
+                                analytics::DAY_MS,
+                                analytics::DAILY_ACTIVITY_RETENTION_MS,
+                            ))
+                            .query_async(conn.connection())
+                            .await?;
+                    }
                     Write::Publish { channel, payload } => {
                         let _: () = redis::cmd("PUBLISH")
                             .arg(channel)
@@ -440,6 +653,15 @@ impl Handler for AresHandler {
             }
         }
         if let Some(tip) = batch.last() {
+            let _: () = redis::cmd("ZREMRANGEBYSCORE")
+                .arg(analytics::SHOP_SALES_KEY)
+                .arg("-inf")
+                .arg(
+                    tip.timestamp_ms
+                        .saturating_sub(analytics::DETAIL_RETENTION_MS),
+                )
+                .query_async(conn.connection())
+                .await?;
             tracing::debug!(
                 checkpoint = tip.sequence_number,
                 batched = batch.len(),
@@ -465,5 +687,97 @@ mod tests {
         assert_eq!(canonical(&full.to_uppercase()).unwrap(), full);
         assert!(canonical("not-hex").is_err());
         assert!(canonical(&"f".repeat(65)).is_err());
+    }
+
+    #[test]
+    fn activity_requires_a_successful_call_into_the_game_lineage() {
+        let game = canonical("0xaa").unwrap();
+        let old_upgrade = canonical("0xbb").unwrap();
+        let packages = std::collections::HashSet::from([game.clone(), old_upgrade.clone()]);
+        let game_call = vec![format!("{game}::shop::buy")];
+        let multi_call = vec![
+            format!("{game}::kiosk::borrow"),
+            format!("{game}::shop::buy"),
+        ];
+        let old_call = vec![format!("{old_upgrade}::world::join")];
+        let foreign_call = vec![format!("{}::kiosk::purchase", canonical("0x2").unwrap())];
+        assert!(is_game_activity(true, &game_call, &packages));
+        assert!(is_game_activity(true, &multi_call, &packages));
+        assert!(is_game_activity(true, &old_call, &packages));
+        assert!(!is_game_activity(false, &game_call, &packages));
+        assert!(!is_game_activity(true, &foreign_call, &packages));
+    }
+
+    #[test]
+    fn a_multi_call_ptb_is_one_game_transaction() {
+        let game = canonical("0xaa").unwrap();
+        let packages = std::collections::HashSet::from([game.clone()]);
+        let tx = |successful: bool, move_calls: Vec<String>| OwnedTx {
+            sender: Addr([0; 32]),
+            digest: String::new(),
+            successful,
+            move_calls,
+            events: vec![],
+            inputs: vec![],
+            outputs: vec![],
+            deleted: vec![],
+        };
+        let txs = vec![
+            tx(
+                true,
+                vec![
+                    format!("{game}::kiosk::borrow"),
+                    format!("{game}::shop::buy"),
+                ],
+            ),
+            tx(false, vec![format!("{game}::shop::buy")]),
+            tx(
+                true,
+                vec![format!("{}::kiosk::purchase", canonical("0x2").unwrap())],
+            ),
+        ];
+
+        assert_eq!(game_activity_txs(&txs, &packages).count(), 1);
+    }
+
+    #[test]
+    fn character_totals_count_birth_and_deletion_but_not_custody_moves() {
+        let game = canonical("0xaa").unwrap();
+        let character = |byte: u8| OwnedObj {
+            id: Id([byte; 32]),
+            owner: OwnerKind::Shared,
+            type_key: TypeKey {
+                package: game.clone(),
+                module: "character".to_string(),
+                name: "Character".to_string(),
+                type_params: vec![],
+            },
+            bytes: vec![],
+        };
+        let tx = |inputs: Vec<OwnedObj>, outputs: Vec<OwnedObj>, deleted: Vec<OwnedObj>| OwnedTx {
+            sender: Addr([0; 32]),
+            digest: String::new(),
+            successful: true,
+            move_calls: vec![],
+            events: vec![],
+            inputs,
+            outputs,
+            deleted,
+        };
+        let moved = character(2);
+        let deleted = character(3);
+        let facts = character_facts(
+            &[
+                tx(vec![], vec![character(1)], vec![]),
+                tx(vec![clone_obj(&moved)], vec![moved], vec![]),
+                tx(vec![clone_obj(&deleted)], vec![], vec![deleted]),
+            ],
+            9,
+            10,
+            &game,
+        );
+        assert_eq!(facts.len(), 2);
+        assert_eq!(facts[0].delta, 1);
+        assert_eq!(facts[1].delta, -1);
     }
 }

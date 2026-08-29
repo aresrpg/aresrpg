@@ -91,6 +91,17 @@ test('an ordered visibility cue reveals the fighter before the following action'
   expect(state.contract.fighters[0]?.effects).toHaveLength(1)
 })
 
+test('an ordered status cue updates the card only when that cue starts', () => {
+  const state = checkpoint()
+  const effect = { kind: 4n, element: 'fire', value: 3n, turns_left: 2n, source: 1n, stat: 0n }
+  const cue = { id: 'status', type: 'status', entity_id: 'fight_character_0', effects: [effect] } as const
+
+  expect(fight_visual_checkpoint_after_cue(state, cue, 'complete')).toBe(state)
+  const presented = fight_visual_checkpoint_after_cue(state, cue, 'start')
+  expect(presented.contract.fighters[0]?.effects).toEqual([effect])
+  expect(state.contract.fighters[0]?.effects).toEqual([])
+})
+
 test('another fighter range does not mix with the active fighter path', () => {
   const state = checkpoint()
   const hovered_range = reachable_fight_cells(state, 1n, 3n)
@@ -262,6 +273,29 @@ test('the active team ring follows the turn being presented, including mobs and 
 
   expect(overlays.find(({ id }) => id === 'team:0')?.blob).toMatchObject({ opacity: 0.42 })
   expect(overlays.find(({ id }) => id === 'team:1')?.blob).toMatchObject({ opacity: 0.95, pulse: true })
+})
+
+test('an invisible fighter exposes no team ring cell', () => {
+  const state = checkpoint()
+  state.contract.fighters[1]!.effects = [
+    { kind: EFFECT_KINDS.invis, element: '', value: 1n, turns_left: 2n, source: 1n, stat: 0n },
+  ]
+  const overlays = project_fight_overlays({
+    checkpoint: state,
+    presentation_active: true,
+    presented_turn_seat: 1n,
+    hovered_cell: null,
+    owned_active_seat: null,
+    attack_selected: false,
+    movement_cells: [],
+    range_seat: null,
+    spell_cells: null,
+    spell_hover_area: [],
+    hovered_spell_targetable: false,
+  })
+
+  expect(overlays.find(({ id }) => id === 'team:0')).toBeDefined()
+  expect(overlays.find(({ id }) => id === 'team:1')).toBeUndefined()
 })
 
 test('the visual checkpoint marks damage, movement, and death only when each cue completes', () => {

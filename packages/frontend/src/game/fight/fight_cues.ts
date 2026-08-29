@@ -8,6 +8,8 @@
 import {
   player_max_hp,
   POOL_EFFECT_REASONS,
+  initial_effect_id,
+  type ActiveEffect,
   type FightEvent,
   type HydratedFightCheckpoint,
   type SpellEffect,
@@ -15,10 +17,25 @@ import {
 import { fight_path_gait, type FightCastStyle, type FightPresentationCue } from '@aresrpg/engine'
 import { CHANNELS, CONTRACT_CONSTANTS, EFFECT_KINDS } from '@aresrpg/fight/move_contract'
 
+import { trap_placement_visible } from './trap_visibility.ts'
+
 type CastEvent = Extract<FightEvent, Readonly<{ type: 'spell_cast' }>>
 
 const entity_id = (checkpoint: Readonly<HydratedFightCheckpoint>, seat: bigint): string =>
   checkpoint.contract.fighters[Number(seat)]?.kind.type === 'mob' ? `fight_mob_${seat}` : `fight_character_${seat}`
+
+const concealed_trap_placement = (
+  checkpoint: Readonly<HydratedFightCheckpoint>,
+  events: readonly FightEvent[],
+  event: Readonly<FightEvent>,
+  index: number,
+  viewer_team: bigint | null
+): boolean => {
+  if (event.type === 'trap_placed') return !trap_placement_visible(checkpoint, event.payload.owner, viewer_team)
+  if (event.type !== 'spell_cast') return false
+  const places_trap = cast_segment(events, index).some(({ type }) => type === 'trap_placed')
+  return places_trap && !trap_placement_visible(checkpoint, event.payload.caster, viewer_team)
+}
 
 const max_hp = (checkpoint: Readonly<HydratedFightCheckpoint>, seat: bigint): bigint | null => {
   const fighter = checkpoint.contract.fighters[Number(seat)]
@@ -150,6 +167,9 @@ const affected_status_seats = (events: readonly FightEvent[]): readonly bigint[]
 export const is_segment_boundary = (event_type: string): boolean =>
   ['spell_cast', 'trap_triggered', 'glyph_triggered', 'turn_switched'].includes(event_type)
 
+const pool_ledger_for = (event_type: string, current: ReadonlySet<string>): Set<string> =>
+  is_segment_boundary(event_type) ? new Set() : new Set(current)
+
 // One signed pool float per fighter+channel per resolution segment: a live change floats its
 // deltas; a lasting ap/mp row floats only when that channel's live pool did not move (an
 // inactive target prices the next refill and emits no ap_mp_change). `floated` is the
@@ -159,7 +179,7 @@ const pool_cue = (
   event: Readonly<FightEvent>,
   floated: ReadonlySet<string>,
   id: string
-): Readonly<{ cue: FightPresentationCue; keys: readonly string[] }> | null => {
+): Readonly<{ cues: readonly FightPresentationCue[]; keys: readonly string[] }> => {
   if (event.type === 'ap_mp_change' && POOL_EFFECT_REASONS.includes(event.payload.reason as never)) {
     const ap = Number(event.payload.ap_after - event.payload.ap_before)
     const mp = Number(event.payload.mp_after - event.payload.mp_before)
@@ -168,13 +188,15 @@ const pool_cue = (
         ...(ap === 0 ? [] : [`${event.payload.fighter}:${CHANNELS.ap}`]),
         ...(mp === 0 ? [] : [`${event.payload.fighter}:${CHANNELS.mp}`]),
       ]),
-      cue: Object.freeze({
-        id,
-        type: 'pool' as const,
-        entity_id: entity_id(checkpoint, event.payload.fighter),
-        ap,
-        mp,
-      }),
+      cues: Object.freeze([
+        Object.freeze({
+          id,
+          type: 'pool' as const,
+          entity_id: entity_id(checkpoint, event.payload.fighter),
+          ap,
+          mp,
+        }),
+      ]),
     })
   }
   if (
@@ -185,19 +207,81 @@ const pool_cue = (
     const signed = Number(event.payload.value) * (event.payload.kind === EFFECT_KINDS.add ? 1 : -1)
     return Object.freeze({
       keys: Object.freeze([`${event.payload.target}:${event.payload.channel}`]),
-      cue: Object.freeze({
-        id,
-        type: 'pool' as const,
-        entity_id: entity_id(checkpoint, event.payload.target),
-        ap: event.payload.channel === CHANNELS.ap ? signed : 0,
-        mp: event.payload.channel === CHANNELS.mp ? signed : 0,
-      }),
+      cues: Object.freeze([
+        Object.freeze({
+          id,
+          type: 'pool' as const,
+          entity_id: entity_id(checkpoint, event.payload.target),
+          ap: event.payload.channel === CHANNELS.ap ? signed : 0,
+          mp: event.payload.channel === CHANNELS.mp ? signed : 0,
+        }),
+      ]),
     })
   }
-  return null
+  return Object.freeze({ keys: Object.freeze([]), cues: Object.freeze([]) })
 }
 
 const cue_id = (fight: string, batch: number, index: number): string => `${fight}:${batch}:${index}`
+
+type EffectLedgerRow = Readonly<{ id: string; effect: ActiveEffect }>
+type EffectLedger = readonly (readonly EffectLedgerRow[])[]
+
+const initial_effect_ledger = (checkpoint: Readonly<HydratedFightCheckpoint>): EffectLedger =>
+  checkpoint.contract.fighters.map((fighter, seat) =>
+    Object.freeze(
+      fighter.effects.map((effect, index) =>
+        Object.freeze({ id: initial_effect_id(seat, index), effect: Object.freeze({ ...effect }) })
+      )
+    )
+  )
+
+const status_after_event = (
+  checkpoint: Readonly<HydratedFightCheckpoint>,
+  event: Readonly<FightEvent>,
+  ledger: EffectLedger,
+  id: string
+): Readonly<{ ledger: EffectLedger; cues: readonly FightPresentationCue[] }> => {
+  if (event.type !== 'effect_applied' && event.type !== 'effect_expired' && event.type !== 'effects_dispelled')
+    return Object.freeze({ ledger, cues: Object.freeze([]) })
+  const target = Number(event.payload.target)
+  if (!checkpoint.contract.fighters[target]) return Object.freeze({ ledger, cues: Object.freeze([]) })
+  const current = ledger[target] ?? Object.freeze([])
+  const effects =
+    event.type === 'effect_applied'
+      ? Object.freeze([
+          ...current,
+          Object.freeze({
+            id: event.payload.effect_id,
+            effect: Object.freeze({
+              kind: event.payload.kind,
+              element: event.payload.element,
+              value: event.payload.value,
+              turns_left: event.payload.turns,
+              source: event.payload.source,
+              stat: event.payload.channel,
+            }),
+          }),
+        ])
+      : Object.freeze(
+          current.filter((row) =>
+            event.type === 'effect_expired'
+              ? row.id !== event.payload.effect_id
+              : !event.payload.removed_effect_ids.includes(row.id)
+          )
+        )
+  const next_ledger = Object.freeze(ledger.map((rows, index) => (index === target ? effects : rows)))
+  return Object.freeze({
+    ledger: next_ledger,
+    cues: Object.freeze([
+      Object.freeze({
+        id: `${id}:status`,
+        type: 'status',
+        entity_id: entity_id(checkpoint, BigInt(target)),
+        effects: Object.freeze(effects.map(({ effect }) => effect)),
+      }),
+    ]),
+  })
+}
 
 const order_cast_displacement = (cues: readonly FightPresentationCue[]): readonly FightPresentationCue[] => {
   const ordered: FightPresentationCue[] = []
@@ -252,21 +336,27 @@ const assign_walk_mp = (cues: readonly FightPresentationCue[]): readonly FightPr
 
 export const project_fight_cues = ({
   checkpoint,
+  initial_checkpoint = checkpoint,
   events,
   batch,
+  viewer_team = null,
 }: Readonly<{
   checkpoint: HydratedFightCheckpoint
+  initial_checkpoint?: HydratedFightCheckpoint
   events: readonly FightEvent[]
   batch: number
+  viewer_team?: bigint | null
 }>): readonly FightPresentationCue[] => {
   const cues: FightPresentationCue[] = []
+  let effect_ledger = initial_effect_ledger(initial_checkpoint)
   let cast_critical = false
   // Fighters whose LIVE pool already floated in the current resolution segment — an active
   // target emits both the spend and the lasting row for one contested removal (one fact).
   let pool_floated = new Set<string>()
   events.forEach((event, index) => {
     const id = cue_id(checkpoint.contract.id, batch, index)
-    if (is_segment_boundary(event.type)) pool_floated = new Set()
+    pool_floated = pool_ledger_for(event.type, pool_floated)
+    if (concealed_trap_placement(checkpoint, events, event, index, viewer_team)) return
     if (event.type === 'spell_cast') {
       cast_critical = event.payload.critical
       const segment = cast_segment(events, index)
@@ -387,12 +477,13 @@ export const project_fight_cues = ({
       )
       return
     }
+    const status = status_after_event(checkpoint, event, effect_ledger, id)
+    effect_ledger = status.ledger
     const pool = pool_cue(checkpoint, event, pool_floated, id)
-    if (pool) {
-      pool.keys.forEach((key) => pool_floated.add(key))
-      cues.push(pool.cue)
-      return
-    }
+    pool.keys.forEach((key) => pool_floated.add(key))
+    const state_cues = Object.freeze([...pool.cues, ...status.cues])
+    cues.push(...state_cues)
+    if (state_cues.length) return
     if (event.type === 'damage_number') {
       cues.push(
         Object.freeze({

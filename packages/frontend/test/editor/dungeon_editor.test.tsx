@@ -17,7 +17,7 @@ mock.module('../../src/content/catalog.ts', () => ({
       { mob_type: 'boss', name: 'Boss', role: 'boss', element: 'fire', level_min: 20, level_max: 30 },
     ],
   },
-  titleize: (value: string) => value.replaceAll('_', ' '),
+  titleize: (value: string) => value.replaceAll('_', ' ').replace(/\b\w/g, (letter) => letter.toUpperCase()),
 }))
 
 const { DungeonEditor } = await import('../../src/editor/DungeonEditor.tsx')

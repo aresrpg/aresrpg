@@ -7,7 +7,7 @@ import { chunk_scatter } from '../src/scatter.ts'
 import type { StructurePlacement } from '../src/structure_placement.ts'
 import { BIOME_SLOTS, compile_world_recipe, sample_world_column, type WorldRecipe } from '../src/world_recipe.ts'
 
-const world_with = (surface_preset: 'grass' | 'ice', sea_level = 8) =>
+const world_with = (surface_preset: 'grass' | 'frozen_grass' | 'ice', sea_level = 8) =>
   compile_world_recipe({
     seed: 'scatter-test',
     sea_level,
@@ -60,6 +60,13 @@ describe('ground scatter', () => {
     const instances = [0, 32, 64].flatMap((x) => [...chunk_scatter(world, [x, 0, 0])])
     expect(instances.length).toBeGreaterThan(0)
     instances.forEach(({ kind }) => expect(kind).toBe('spike'))
+  })
+
+  test('frozen grass keeps vegetation out and grows only icy clutter', () => {
+    const world = world_with('frozen_grass')
+    const instances = [0, 32, 64].flatMap((x) => [...chunk_scatter(world, [x, 0, 0])])
+    expect(instances.length).toBeGreaterThan(0)
+    instances.forEach(({ kind }) => expect(['pebble', 'spike']).toContain(kind))
   })
 
   test('chunks that do not contain the surface stay bare', () => {

@@ -70,7 +70,6 @@ COPY --from=builder /usr/local/bin/aresrpg-indexer /usr/local/bin/aresrpg-indexe
 #   REMOTE_STORE_URL  (default https://checkpoints.testnet.sui.io)
 #   STREAMING_URL     (optional) — gRPC live primary; remote store is backfill
 #   GRAPHQL_URL       (default https://graphql.testnet.sui.io/graphql) — boot only
-#   FIRST_CHECKPOINT  (optional) — overrides the boot-derived start checkpoint
 #   RUST_LOG          (default info)
 ENV RUST_LOG=info
 

@@ -18,11 +18,15 @@ export {
   fight_result_complete,
   fight_result_surface,
   format_fight_duration,
+  kolizeum_wager_outcome,
   result_participant_shows_progress,
   result_xp_progress,
 } from './fight_result_view.ts'
 
 export type ResultLoot = Readonly<{ item_type: string; qty: number }>
+export const fight_experience_after = (experience: number, xp_awarded: number, settled: boolean): number =>
+  settled ? experience : experience + xp_awarded
+
 export type ResultParticipant = Readonly<{
   seat: number
   team: number
@@ -45,6 +49,8 @@ export type FightResult = Readonly<{
   fight: string
   dungeon: Readonly<{ world: string; room: number }> | null
   kolizeum: string | null
+  /** Immutable stake plus certified gross payout; absent for non-Kolizeum and recovery without terms. */
+  kolizeum_wager: Readonly<{ stake_mist: bigint; payout_mist: bigint | null }> | null
   winner: number | null
   duration_ms: number | null
   /** This wallet's net executed fight cost: computation + storage - rebate. */
@@ -81,7 +87,7 @@ export type FightResultInput =
   | Readonly<{ type: 'fight_result/gas_updated'; character_id: string; fight: string; gas_spent_mist: bigint }>
   | Readonly<{ type: 'fight_result/retry'; character_id: string }>
   | Readonly<{ type: 'fight_result/claim_failed'; character_id: string; fight: string; error: string }>
-  | Readonly<{ type: 'fight_result/settled'; character_id: string; fight: string }>
+  | Readonly<{ type: 'fight_result/settled'; character_id: string; fight: string; paid_mist: bigint | null }>
   | Readonly<{ type: 'fight_result/level_acknowledged'; character_id: string }>
   | Readonly<{ type: 'fight_result/closed'; character_id: string }>
   | Readonly<{ type: 'fight_result/close_succeeded'; fight: string }>
@@ -134,7 +140,7 @@ const participant_from = (
   const source = fighter.kind.type === 'player' ? checkpoint.sources.players[fighter.kind.character] : null
   const experience_before = Number(source?.experience ?? 0n)
   const xp_awarded = Number(xp_award_of(checkpoint, BigInt(seat)))
-  const experience_after = experience_before + xp_awarded
+  const experience_after = fight_experience_after(experience_before, xp_awarded, fighter.settled)
   return Object.freeze({
     seat,
     team: Number(fighter.team),
@@ -222,6 +228,28 @@ const progression_state = (
   })
 }
 
+const result_kolizeum = (
+  manager: Readonly<{ id: string; pledge_mist: bigint }> | undefined,
+  existing: FightResult | null,
+  forfeited: boolean
+): Readonly<{
+  kolizeum: string | null
+  kolizeum_wager: FightResult['kolizeum_wager']
+}> => {
+  const retained_kolizeum = existing ? existing.kolizeum : null
+  const retained_wager = existing ? existing.kolizeum_wager : null
+  if (!manager)
+    return Object.freeze({
+      kolizeum: retained_kolizeum,
+      kolizeum_wager: retained_wager,
+    })
+  if (retained_wager) return Object.freeze({ kolizeum: manager.id, kolizeum_wager: retained_wager })
+  return Object.freeze({
+    kolizeum: manager.id,
+    kolizeum_wager: Object.freeze({ stake_mist: manager.pledge_mist, payout_mist: forfeited ? 0n : null }),
+  })
+}
+
 const merge_checkpoint = (
   state: AppState,
   character_id: string,
@@ -239,10 +267,15 @@ const merge_checkpoint = (
   )
   const previous_own = existing?.own_seat === null ? null : existing?.participants[existing.own_seat ?? -1]
   const next_own = own_seat < 0 ? null : participants[own_seat]
+  const kolizeum_result = result_kolizeum(
+    state.fight.kolizeum_by_fight[checkpoint.contract.id],
+    existing,
+    next_own?.forfeited === true
+  )
   return Object.freeze({
     fight: checkpoint.contract.id,
     dungeon: projected_dungeon(checkpoint),
-    kolizeum: state.fight.kolizeum_by_fight[checkpoint.contract.id] ?? existing?.kolizeum ?? null,
+    ...kolizeum_result,
     winner: checkpoint.contract.winner === null ? null : Number(checkpoint.contract.winner),
     ...result_accounting(
       checkpoint.contract.started_ms,
@@ -298,6 +331,7 @@ const recover_result = (state: AppState, row: Readonly<FightResolutionRow>): Fig
     fight: row.fight,
     dungeon: fight_resolution_dungeon(row),
     kolizeum: row.kolizeum,
+    kolizeum_wager: null,
     winner: row.winner,
     duration_ms: null,
     gas_spent_mist: 0n,
@@ -418,9 +452,7 @@ const fold_packet = (state: AppState, packet: Readonly<ServerPacket>): AppState 
       ...state,
       fight_result: Object.freeze({
         ...state.fight_result,
-        closable_fights: Object.freeze([
-          ...new Map([...state.fight_result.closable_fights, ...packet.fights].map((row) => [row.fight, row])).values(),
-        ]),
+        closable_fights: Object.freeze([...packet.fights]),
       }),
     })
   if (packet.type === 'packet/fight_resolutions') return fold_resolutions(state, packet.resolutions)
@@ -518,6 +550,10 @@ const reduce = (state: AppState, input: AppInput): AppState => {
         ? result
         : Object.freeze({
             ...result,
+            kolizeum_wager:
+              input.paid_mist === null || !result.kolizeum_wager
+                ? result.kolizeum_wager
+                : Object.freeze({ ...result.kolizeum_wager, payout_mist: input.paid_mist }),
             settlement_confirmed: true,
             participants: Object.freeze(
               result.participants.map((participant, index) =>

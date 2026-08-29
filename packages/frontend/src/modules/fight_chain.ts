@@ -4,7 +4,7 @@
 // End Turn submits their ordered batch as one atomic PTB and owns the only rollback boundary.
 // Its receipt seeds presentation immediately; the streamed checkpoint remains authoritative.
 
-import { players_ready_after, type FightInput, type HydratedFightCheckpoint } from '@aresrpg/fight'
+import { type FightInput, type HydratedFightCheckpoint } from '@aresrpg/fight'
 import { CONTRACT_CONSTANTS } from '@aresrpg/fight/move_contract'
 import type { AuthSession, FightActions, KolizeumActions } from '@aresrpg/sdk/auth'
 
@@ -12,15 +12,17 @@ import type { AppModule } from '../store.ts'
 import { toast } from '../toast.ts'
 
 import { fight_environment } from './fight.ts'
-import { END_TURN_SUBMIT_GUARD_MS } from './fight_lifecycle.ts'
+import { END_TURN_SUBMIT_GUARD_MS, fight_turn_identity } from './fight_lifecycle.ts'
 
 type TurnAction = Parameters<FightActions['commit_turn']>[0]['actions'][number]
-type BufferedTurn = Readonly<{ fight: string; started_ms: bigint; actions: readonly TurnAction[] }>
+type BufferedTurn = Readonly<{ fight: string; turn: string; actions: readonly TurnAction[] }>
 type FightTransactionReceipt = Readonly<{
   digest: string
   turn_witnesses?: readonly Readonly<{ fighter: bigint; seed: bigint }>[]
   started?: boolean
 }>
+
+const manager_id = (manager: Readonly<{ id: string }> | undefined): string | null => manager?.id ?? null
 
 export const queued_end_turn = (
   state: Parameters<NonNullable<AppModule['reduce']>>[0],
@@ -33,7 +35,6 @@ export const queued_end_turn = (
     !environment?.end_turn_queued ||
     environment.end_turn_submitted ||
     environment.transaction_pending ||
-    environment.awaiting_turn_witness ||
     environment.canonical_ended ||
     !checkpoint ||
     checkpoint.contract.round === 0n
@@ -58,6 +59,9 @@ export const turn_too_soon_refusal = (error: unknown): boolean => {
     message.includes('transaction NOT submitted') || /transaction resolution failed/i.test(message)
   return refused_before_submission && /abort code:\s*1724/i.test(message)
 }
+
+export const end_turn_retry_delay_ms = (chain_delay_ms: number, retry_not_before_ms: number, now_ms: number): number =>
+  Math.max(chain_delay_ms, Math.max(0, retry_not_before_ms - now_ms))
 
 const turn_action = (input: Readonly<FightInput>): TurnAction | null => {
   if (input.type === 'move_to') return Object.freeze({ type: 'move', path: Object.freeze([...input.path]) })
@@ -84,11 +88,7 @@ const immediate_transaction = (
     case 'place':
       return actions.place({ fight, fighter_idx: input.fighter, cell: input.cell })
     case 'ready':
-      return actions.ready({
-        fight,
-        fighter_idx: input.fighter,
-        and_start: players_ready_after(checkpoint.contract.fighters, input.fighter),
-      })
+      return actions.ready({ fight, fighter_idx: input.fighter })
     case 'start':
       return actions.start({ fight })
     case 'crank':
@@ -115,7 +115,6 @@ const kolizeum_transaction = (
         kolizeum,
         fight,
         fighter_idx: input.fighter,
-        and_start: players_ready_after(checkpoint.contract.fighters, input.fighter),
       })
     case 'start':
       return actions.start({ kolizeum, fight })
@@ -158,6 +157,7 @@ const observe: NonNullable<AppModule['observe']> = ({ events, dispatch, get_stat
   const buffered = new Map<string, BufferedTurn>()
   const in_flight = new Set<string>()
   const queued_timers = new Map<string, ReturnType<typeof setTimeout>>()
+  const retry_not_before = new Map<string, number>()
   const clear_buffer = (fight?: string): void => {
     if (fight) buffered.delete(fight)
     else buffered.clear()
@@ -169,15 +169,18 @@ const observe: NonNullable<AppModule['observe']> = ({ events, dispatch, get_stat
   }
   const schedule_queued_turn = (fight: string): void => {
     clear_queued_timer(fight)
-    const queued = queued_end_turn(get_state(), fight, Date.now())
+    const now = Date.now()
+    const queued = queued_end_turn(get_state(), fight, now)
     if (!queued) return
-    if (queued.delay_ms > 0) {
+    const delay_ms = end_turn_retry_delay_ms(queued.delay_ms, retry_not_before.get(fight) ?? 0, now)
+    if (delay_ms > 0) {
       queued_timers.set(
         fight,
-        setTimeout(() => schedule_queued_turn(fight), queued.delay_ms)
+        setTimeout(() => schedule_queued_turn(fight), delay_ms)
       )
       return
     }
+    retry_not_before.delete(fight)
     dispatch({
       type: 'fight/input',
       fight,
@@ -192,8 +195,10 @@ const observe: NonNullable<AppModule['observe']> = ({ events, dispatch, get_stat
     const current = get_state().fight.cached[packet.fight]
     if (!current) return
     confirmed.set(packet.fight, current)
-    const draft = buffered.get(packet.fight)
-    if (draft && draft.started_ms !== current.contract.turn_started_ms) clear_buffer(packet.fight)
+    // Any full checkpoint replaces the runtime that authored this local draft. Keeping its
+    // paths would compose the next action from a different starting cell (spectator refresh →
+    // command two abort 1725), so authoritative replacement always invalidates the draft.
+    if (buffered.has(packet.fight)) clear_buffer(packet.fight)
   })
   events.on('fight/reset_turn', ({ fight }) => {
     if (fight) clear_buffer(fight)
@@ -203,6 +208,7 @@ const observe: NonNullable<AppModule['observe']> = ({ events, dispatch, get_stat
     if (fight) {
       clear_buffer(fight)
       clear_queued_timer(fight)
+      retry_not_before.delete(fight)
     }
   })
 
@@ -225,12 +231,13 @@ const observe: NonNullable<AppModule['observe']> = ({ events, dispatch, get_stat
     const action = turn_action(input)
     if (action) {
       const draft = buffered.get(fight)
-      const same_turn = draft?.started_ms === checkpoint.contract.turn_started_ms
+      const turn = fight_turn_identity(checkpoint.contract)
+      const same_turn = draft?.turn === turn
       buffered.set(
         fight,
         Object.freeze({
           fight,
-          started_ms: checkpoint.contract.turn_started_ms,
+          turn,
           actions: Object.freeze([...(same_turn ? draft.actions : []), action]),
         })
       )
@@ -241,7 +248,7 @@ const observe: NonNullable<AppModule['observe']> = ({ events, dispatch, get_stat
     const character_id = fighter?.kind.type === 'player' ? fighter.kind.character : null
     const row = state.session.characters.find(({ id }) => id === character_id)
     const custody = row ? { kiosk: row.kiosk, kiosk_cap: row.kiosk_cap } : undefined
-    const kolizeum = state.fight.kolizeum_by_fight[fight] ?? null
+    const kolizeum = manager_id(state.fight.kolizeum_by_fight[fight])
     const transaction = remote_transaction({
       fight,
       input,
@@ -260,6 +267,7 @@ const observe: NonNullable<AppModule['observe']> = ({ events, dispatch, get_stat
     let queue_after_refusal = false
     void transaction
       .then(({ turn_witnesses = [], started = false }) => {
+        retry_not_before.delete(fight)
         if (input.type === 'end_turn') clear_buffer(fight)
         if (input.type === 'ready' && started)
           dispatch({
@@ -275,14 +283,14 @@ const observe: NonNullable<AppModule['observe']> = ({ events, dispatch, get_stat
       })
       .catch((error: unknown) => {
         if (input.type === 'end_turn' && turn_too_soon_refusal(error)) {
-          // The rejected dry run produced no witness, but the optimistic runtime is already
-          // waiting for one. Restore the last indexed checkpoint before rearming the timer.
-          const rollback = confirmed.get(fight)
-          if (rollback) dispatch({ type: 'fight/restored', checkpoint: rollback })
-          if (submitted_buffer) buffered.set(fight, submitted_buffer)
+          // Nothing executed: cancel only the pending boundary, retaining movement/casts so
+          // the same draft can retry after a bounded backoff despite client clock skew.
+          dispatch({ type: 'fight/cancel_pending_turn', fight })
+          retry_not_before.set(fight, Date.now() + END_TURN_SUBMIT_GUARD_MS)
           queue_after_refusal = true
           return
         }
+        retry_not_before.delete(fight)
         if (input.type === 'end_turn') clear_buffer(fight)
         const rollback = confirmed.get(fight)
         if (rollback) dispatch({ type: 'fight/restored', checkpoint: rollback })

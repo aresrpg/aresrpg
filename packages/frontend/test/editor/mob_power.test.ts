@@ -94,7 +94,7 @@ test('mob power shows simple Retro averages beside exact Ares range endpoints', 
   })
 })
 
-test('a level-three protector reference uses level-three regular donors instead of level ten', () => {
+test('a protector reference uses ordinary same-level mob donors', () => {
   const protector = {
     ...(mob as unknown as Readonly<Record<string, unknown>>),
     role: 'protector',
@@ -104,10 +104,12 @@ test('a level-three protector reference uses level-three regular donors instead 
 
   expect(mob_power_summary(protector)?.retro).toMatchObject({
     level: 3,
-    requested_cohort: 'protector',
+    requested_cohort: 'regular',
     cohort: 'regular',
     donor_level_min: 3,
     donor_level_max: 3,
+    hp: 48,
+    xp: 704,
     damage: 9,
   })
 })

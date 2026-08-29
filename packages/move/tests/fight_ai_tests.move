@@ -85,3 +85,17 @@ fun an_ally_only_buff_targets_the_mob_ally_not_the_player() {
   assert!(fight::ally_buff_for_testing(scenario.ctx()) == vector[0, 1], 0);
   scenario.end();
 }
+
+#[test]
+fun a_mob_spends_remaining_ap_on_repeated_casts() {
+  let mut scenario = test_scenario::begin(OWNER);
+  assert!(fight::mob_multi_cast_for_testing(0, scenario.ctx()) == vector[0, 80, 2], 0);
+  scenario.end();
+}
+
+#[test]
+fun a_mob_respects_its_authored_per_turn_cast_cap() {
+  let mut scenario = test_scenario::begin(OWNER);
+  assert!(fight::mob_multi_cast_for_testing(1, scenario.ctx()) == vector[4, 90, 1], 0);
+  scenario.end();
+}

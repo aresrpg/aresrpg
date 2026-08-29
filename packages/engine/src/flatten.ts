@@ -8,6 +8,7 @@ const TRANSITION_SECONDS = 0.85
 const WATER_EXIT_END = 0.2
 
 export type FlatProjection = Readonly<{ amount: number; target: 0 | 1 }>
+export type RenderBackend = 'none' | 'initializing' | 'webgpu' | 'grid'
 export type FlattenUniform = Readonly<{
   amount: UniformNode<'float', number>
   water_visibility: UniformNode<'float', number>
@@ -16,6 +17,9 @@ export type FlattenUniform = Readonly<{
 }>
 
 const clamp_amount = (amount: number): number => Math.min(1, Math.max(0, amount))
+
+export const effective_flattened = (requested: boolean, backend: RenderBackend): boolean =>
+  requested || backend === 'grid'
 
 export const flat_terrain_amount = (progress: number): number =>
   clamp_amount((clamp_amount(progress) - WATER_EXIT_END) / (1 - WATER_EXIT_END))

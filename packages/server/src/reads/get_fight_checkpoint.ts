@@ -36,10 +36,29 @@ const weapon_of = (item: Record<string, unknown> | null): FightPlayerSourceRow['
   }
 }
 
-const player_source_of = (character: Record<string, unknown>, weapon: Record<string, unknown> | null) =>
+const item_type_of = (item: Record<string, unknown> | null): string | null =>
+  typeof item?.item_type === 'string' ? item.item_type : null
+
+const kolizeum_of = (node: Node): FightStateRow['kolizeum'] => {
+  const kolizeum = node?.properties
+  return kolizeum ? Object.freeze({ id: String(kolizeum.id), pledge_mist: String(kolizeum.pledge ?? 0) }) : null
+}
+
+const player_source_of = (
+  character: Record<string, unknown>,
+  weapon: Record<string, unknown> | null,
+  hat: Record<string, unknown> | null,
+  cloak: Record<string, unknown> | null
+) =>
   ({
     name: String(character.name),
     classe: String(character.classe),
+    sex: String(character.sex),
+    color_1: Number(character.color_1),
+    color_2: Number(character.color_2),
+    color_3: Number(character.color_3),
+    hat: item_type_of(hat),
+    cloak: item_type_of(cloak),
     level: Number(character.level),
     experience: String(character.experience ?? 0),
     vitality: Number(character.vitality),
@@ -60,7 +79,7 @@ export async function get_fight_checkpoint(
   const rows = await graph.read(
     `MATCH (f:Fight {id: $fight_id})
      OPTIONAL MATCH (k:Kolizeum {fight_id: $fight_id})
-     RETURN f AS fight, k.id AS kolizeum`,
+     RETURN f AS fight, k AS kolizeum`,
     { fight_id }
   )
   const [row] = rows
@@ -78,7 +97,9 @@ export async function get_fight_checkpoint(
     ? await graph.read(
         `MATCH (c:Character) WHERE c.id IN ${JSON.stringify(character_ids)}
          OPTIONAL MATCH (c)-[:EQUIPS {slot: 'weapon'}]->(w:Item)
-         RETURN c AS character, w AS weapon`
+         OPTIONAL MATCH (c)-[:EQUIPS {slot: 'hat'}]->(h:Item)
+         OPTIONAL MATCH (c)-[:EQUIPS {slot: 'cloak'}]->(cl:Item)
+         RETURN c AS character, w AS weapon, h AS hat, cl AS cloak`
       )
     : []
   const contract = {
@@ -105,12 +126,21 @@ export async function get_fight_checkpoint(
     turn_started_ms: fight.turn_started_ms,
   }
   const players = Object.fromEntries(
-    (seats as { character: Node; weapon: Node }[])
+    (seats as { character: Node; weapon: Node; hat: Node; cloak: Node }[])
       .filter((seat) => seat.character)
       .map((seat) => [
         seat.character!.properties.id as string,
-        player_source_of(seat.character!.properties, seat.weapon?.properties ?? null),
+        player_source_of(
+          seat.character!.properties,
+          seat.weapon?.properties ?? null,
+          seat.hat?.properties ?? null,
+          seat.cloak?.properties ?? null
+        ),
       ])
   )
-  return { contract, players, kolizeum: typeof row.kolizeum === 'string' ? row.kolizeum : null }
+  return {
+    contract,
+    players,
+    kolizeum: kolizeum_of(row.kolizeum as Node),
+  }
 }

@@ -43,3 +43,16 @@ public(package) fun extract_from_kiosk<T: key + store>(
   let (_item, _paid, _from) = self.transfer_policy.confirm_request(request);
   object
 }
+
+#[test_only]
+public fun for_testing<T>(publisher: &Publisher, ctx: &mut TxContext): AresRPG_TransferPolicy<T> {
+  let (transfer_policy, policy_cap) = transfer_policy::new<T>(publisher, ctx);
+  AresRPG_TransferPolicy { id: object::new(ctx), transfer_policy, policy_cap }
+}
+
+#[test_only]
+public fun destroy_for_testing<T>(policy: AresRPG_TransferPolicy<T>, ctx: &mut TxContext) {
+  let AresRPG_TransferPolicy { id, transfer_policy, policy_cap } = policy;
+  id.delete();
+  transfer_policy::destroy_and_withdraw(transfer_policy, policy_cap, ctx).into_balance().destroy_zero();
+}

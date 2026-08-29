@@ -275,7 +275,7 @@ describe('the character builder', () => {
       [
         {
           type: `${id(1)}::forgemagie::RuneScribed`,
-          json: { stat: 0, outcome: 1, applied_value: 3, lost_stat: 4, lost_amount: 2 },
+          json: { stat: 0, outcome: 1, applied_value: 3, lost_stat: 4, lost_amount: 2, new_puits: 7 },
         },
       ]
     )
@@ -297,13 +297,31 @@ describe('the character builder', () => {
       gear_template: item_template_id(id(61), id(60), 'straw_hat'),
       rune_item_id: id(22),
     })
-    expect(outcome).toMatchObject({ stat: 0, outcome: 1, applied_value: 3, lost_stat: 4, lost_amount: 2 })
+    expect(outcome).toMatchObject({
+      stat: 0,
+      outcome: 1,
+      applied_value: 3,
+      lost_stat: 4,
+      lost_amount: 2,
+      new_puits: 7,
+    })
   })
 
-  test('craft composes the terminal recipe door and projects success plus job XP', async () => {
+  test('craft composes one terminal batch and projects its aggregate receipt', async () => {
     let door_args: Record<string, unknown> | null = null
     const sdk = terminal_sdk({ craft: (_tx: unknown, args: Record<string, unknown>) => void (door_args = args) }, [
-      { type: `${id(1)}::crafting::Crafted`, json: { success: true, job_xp_gained: 25 } },
+      {
+        type: `${id(1)}::crafting::Crafted`,
+        json: {
+          recipe: recipe_id(id(61), id(60), 'wheat_flour'),
+          character: id(20),
+          crafter: id(70),
+          output_template: item_template_id(id(61), id(60), 'wheat_flour'),
+          attempts: 100,
+          successes: 63,
+          job_xp_gained: '2500',
+        },
+      },
     ])
     const actions = gate_actions(sdk as never, { kiosk_cap: async () => kiosk_cap })
 
@@ -312,6 +330,7 @@ describe('the character builder', () => {
       output_type: 'wheat_flour',
       input_item_ids: [id(31), id(32)],
       existing: id(33),
+      attempts: 100,
       custody: { kiosk: kiosk_cap.kioskId, kiosk_cap: kiosk_cap.objectId },
     })
 
@@ -323,8 +342,22 @@ describe('the character builder', () => {
       output_template: item_template_id(id(61), id(60), 'wheat_flour'),
       input_item_ids: [id(31), id(32)],
       existing: id(33),
+      attempts: 100,
     })
-    expect(outcome).toMatchObject({ success: true, job_xp_gained: 25 })
+    expect(outcome).toMatchObject({ attempts: 100, successes: 63, job_xp_gained: 2500 })
+  })
+
+  test('craft refuses a batch above the global cap before signing', async () => {
+    const actions = gate_actions(terminal_sdk({}) as never, { kiosk_cap: async () => kiosk_cap })
+    await expect(
+      actions.craft({
+        character_id: id(20),
+        output_type: 'wheat_flour',
+        input_item_ids: [id(31), id(32)],
+        existing: null,
+        attempts: 1_001,
+      })
+    ).rejects.toThrow('1 to 1000')
   })
 
   test('a world door receives the World OBJECT, never the world NAME', async () => {

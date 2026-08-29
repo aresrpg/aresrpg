@@ -3,10 +3,14 @@
 
 import { expect, test } from 'bun:test'
 
-import { DUNGEON_PORTAL_LABEL_HEIGHT, portal_hum_gain } from '../src/dungeon_portals.ts'
+import { DUNGEON_PORTAL_LABEL_HEIGHT, DUNGEON_PORTAL_ROOT_HEIGHT, portal_hum_gain } from '../src/dungeon_portals.ts'
 
-test('the dungeon tag clears the visible portal crown by only half a block', () => {
-  expect(DUNGEON_PORTAL_LABEL_HEIGHT).toBeCloseTo(8.66)
+test('the dungeon portal root stands two blocks above its former placement', () => {
+  expect(DUNGEON_PORTAL_ROOT_HEIGHT).toBeCloseTo(3.36)
+})
+
+test('the dungeon tag sits three blocks below its former crown clearance', () => {
+  expect(DUNGEON_PORTAL_LABEL_HEIGHT).toBeCloseTo(5.66)
 })
 
 test('dungeon portal hum fades smoothly and stops outside its ambience radius', () => {

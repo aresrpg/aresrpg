@@ -1,32 +1,24 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
-import { encumbered_asset_ids, stack_merge_target } from '../inventory_stacks.ts'
+import { coalesced_stack_groups, encumbered_asset_ids, stack_merge_target } from '../inventory_stacks.ts'
 import { toast } from '../toast.ts'
 import type { AppModule } from '../store.ts'
+import { retry_after_version_race } from '../transaction_guard.ts'
 
 import { fight_resolution_dungeon, fight_result_available } from './fight_result_view.ts'
 
 type Attempt = Readonly<{ latched: boolean }>
-const VERSION_RACE_RETRY_MS = 250
 
-export const object_version_refusal = (error: unknown): boolean => {
-  const message = error instanceof Error ? error.message : String(error)
-  return !message.includes('failed on-chain') && /provided version doesn't match/i.test(message)
-}
+export const settlement_needs_close = (receipt: unknown): boolean =>
+  typeof receipt === 'object' &&
+  receipt !== null &&
+  Reflect.get(receipt, 'closable') === true &&
+  Reflect.get(receipt, 'closed') !== true
 
-export const settle_after_version_race = async <T>(
-  transaction: () => Promise<T>,
-  wait: (milliseconds: number) => Promise<void> = (milliseconds) =>
-    new Promise((resolve) => setTimeout(resolve, milliseconds))
-): Promise<T> => {
-  try {
-    return await transaction()
-  } catch (error) {
-    if (!object_version_refusal(error)) throw error
-    await wait(VERSION_RACE_RETRY_MS)
-    return transaction()
-  }
+const kolizeum_payment = (kolizeum: string | null, receipt: unknown): bigint | null => {
+  if (!kolizeum || typeof receipt !== 'object' || receipt === null) return null
+  return BigInt(String(Reflect.get(receipt, 'paid_mist') ?? 0))
 }
 
 /** Settlement is a frontend effect boundary: live terminal truth starts immediately, while
@@ -38,7 +30,10 @@ const observe_with_wait = (
   const attempts = new Map<string, Attempt>()
   const closing = new Set<string>()
   const close_notices = new Map<string, () => void>()
+  const settled_kiosks = new Set<string>()
   let active: string | null = null
+  let normalizing_kiosk: string | null = null
+  let observed_inventory = get_state().session.inventory
   const close_once = (row: Readonly<{ fight: string; kolizeum: string | null }>): void => {
     const { fight } = row
     const { wallet } = get_state().session
@@ -67,6 +62,38 @@ const observe_with_wait = (
       onClick: () => close_once(row),
     })
     close_notices.set(fight, dismiss)
+  }
+
+  const normalize_settled_stacks = (): void => {
+    const state = get_state()
+    if (normalizing_kiosk || state.session.inventory === observed_inventory) return
+    observed_inventory = state.session.inventory
+    const { wallet } = state.session
+    if (!wallet) return
+    const encumbered = encumbered_asset_ids(state.marketplace.own_listings, state.trade.rows)
+    const duplicate_groups = coalesced_stack_groups(state.session.inventory, encumbered).filter(
+      ({ target, source_ids }) => settled_kiosks.has(target.kiosk) && source_ids.length > 0
+    )
+    const kiosk = duplicate_groups[0]?.target.kiosk
+    if (!kiosk) return
+    const plan = duplicate_groups
+      .filter(({ target }) => target.kiosk === kiosk)
+      .map(({ target, source_ids }) => Object.freeze({ kiosk, target_id: target.id, source_ids }))
+    normalizing_kiosk = kiosk
+    void wallet.stacks
+      .merge_many(plan)
+      .then(() => {
+        dispatch({ type: 'inventory/stacks_merged', groups: plan })
+        return true
+      })
+      .catch((error: unknown) => {
+        toast.add(error)
+        return false
+      })
+      .then((normalized) => {
+        normalizing_kiosk = null
+        if (normalized) normalize_settled_stacks()
+      })
   }
 
   const sweep = (): void => {
@@ -131,10 +158,18 @@ const observe_with_wait = (
               custody,
             })
           : wallet.fight.settle({ fight: pending.fight, fighter_idx: BigInt(pending.fighter), loot, custody })
-    void settle_after_version_race(transaction, wait)
-      .then(() => {
+    void retry_after_version_race(transaction, wait)
+      .then((receipt) => {
+        if (!pending.kolizeum) settled_kiosks.add(custody.kiosk)
         attempts.set(key, Object.freeze({ latched: true }))
-        dispatch({ type: 'fight_result/settled', character_id: pending.character, fight: pending.fight })
+        dispatch({
+          type: 'fight_result/settled',
+          character_id: pending.character,
+          fight: pending.fight,
+          paid_mist: kolizeum_payment(pending.kolizeum, receipt),
+        })
+        if (!pending.kolizeum && !pending.dungeon && settlement_needs_close(receipt))
+          close_once({ fight: pending.fight, kolizeum: null })
         return true
       })
       .catch((error: unknown) => {
@@ -181,8 +216,9 @@ const observe_with_wait = (
     sweep()
   })
   events.on('STATE_UPDATED', (state, previous) => {
-    if (state.fight_result.closable_fights !== previous.fight_result.closable_fights || state.copy !== previous.copy)
-      state.fight_result.closable_fights.forEach(offer_close)
+    if (state.fight_result.closable_fights !== previous.fight_result.closable_fights)
+      state.fight_result.closable_fights.forEach(close_once)
+    normalize_settled_stacks()
     if (
       state.fight !== previous.fight ||
       state.fight_result.resolutions !== previous.fight_result.resolutions ||

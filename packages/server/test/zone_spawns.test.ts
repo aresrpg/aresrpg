@@ -4,6 +4,8 @@
 // contract (every group and pack the chain draws is emitted, at its own index — consumption is
 // NOT applied here; `live_mob_groups`/`live_resource_packs` own that, sealed in protocol).
 
+import { readFileSync } from 'node:fs'
+
 import { expect, test } from 'bun:test'
 
 import {
@@ -22,6 +24,29 @@ const world_with_mobs = {
 } as never
 const CENTER_ZONE = { zx: 97, zz: 97 } // center starter zone, authored plains — level floor 0 territory
 const OCEAN_ZONE = { zx: 88, zz: 85 }
+
+test('every hand-mirrored zone constant matches Move', () => {
+  const move_source = readFileSync(new URL('../../move-math/sources/zone_math.move', import.meta.url), 'utf8')
+  const twin_source = readFileSync(new URL('../src/zone_spawns.ts', import.meta.url), 'utf8')
+  const names = [
+    'GROUPS_MIN',
+    'GROUPS_MAX',
+    'RES_PACKS_MIN',
+    'RES_PACKS_MAX',
+    'GROUP_SIZE_FULL_AT',
+    'GROUP_SIZE_AVG3_AT',
+    'LEVEL_RAMP_AT',
+    'LEVEL_LOW_CAP',
+    'LEVEL_HIGH_CAP',
+    'NODES_RAMP_AT',
+    'HOMOGENEOUS_BP',
+    'PORTAL_BP',
+  ]
+  const value = (source: string, name: string, move: boolean): string | null =>
+    new RegExp(`const ${name}${move ? ': u64' : ''} = ([\\d_]+)${move ? ';' : 'n'}`).exec(source)?.[1] ?? null
+
+  names.forEach((name) => expect(value(twin_source, name, false), name).toBe(value(move_source, name, true)))
+})
 
 test('Nauvis exposes its exact hand-authored roaming roster', () => {
   expect(world.mobs).toHaveLength(18)

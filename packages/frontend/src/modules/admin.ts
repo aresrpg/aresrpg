@@ -7,22 +7,49 @@ import { env } from '../env.ts'
 import {
   initial_admin_state,
   type AdminInput,
-  type AdminOverviewState,
+  type AdminSalesState,
   type AdminState,
   type AdminView,
 } from '../admin/admin_state.ts'
 import { observe_admin_wallet, reduce_admin_wallet } from '../admin/admin_wallet.ts'
 import { observe_admin_deployment, reduce_admin_deployment } from '../admin/admin_deployment.ts'
+import { reduce_admin_overview } from '../admin/admin_overview.ts'
 import { wait_for_rpc_propagation } from '../rpc_propagation.ts'
 import type { AppInput, AppModule, AppState } from '../store.ts'
 
 export { initial_admin_state }
 export type { AdminInput, AdminState, AdminView }
 
+export const admin_overview_ready_to_load = (state: Readonly<AppState>): boolean =>
+  state.navigation.page === 'admin' &&
+  state.session.link_status === 'ready' &&
+  state.admin.view === 'overview' &&
+  state.admin.overview.status === 'idle'
+export const admin_sales_ready_to_load = (state: Readonly<AppState>): boolean =>
+  state.navigation.page === 'admin' &&
+  state.session.link_status === 'ready' &&
+  state.admin.view === 'sales' &&
+  state.admin.sales.status === 'idle'
+const admin_dashboard_input = (state: Readonly<AppState>): AdminInput | null => {
+  if (admin_overview_ready_to_load(state)) return Object.freeze({ type: 'admin/overview_refresh' })
+  if (admin_sales_ready_to_load(state)) return Object.freeze({ type: 'admin/sales_refresh' })
+  return null
+}
+
 const with_admin = (state: AppState, admin: AdminState): AppState => Object.freeze({ ...state, admin })
 
 const can_execute = (admin: AdminState, batch: string): boolean =>
   admin.status === 'ready' && next_seed_batch(admin.snapshot)?.id === batch
+const can_publish_all = (admin: AdminState): boolean =>
+  admin.status === 'ready' &&
+  admin.changes !== null &&
+  admin.changes.errors.length === 0 &&
+  next_seed_batch(admin.snapshot)?.state === 'ready'
+
+const with_discovered_frozen = (admin: AdminState, frozen: boolean): AdminState =>
+  admin.status === 'loading'
+    ? Object.freeze({ ...admin, frozen, status: 'ready', progress: null })
+    : Object.freeze({ ...admin, frozen })
 
 /** The final seed write may be certified before the resolver sees its gas-coin version. */
 export const settle_seed_cleanup = async (
@@ -45,39 +72,88 @@ const can_seal = (admin: AdminState): boolean =>
   admin.changes.errors.length === 0 &&
   admin.snapshot?.batches.every(({ state }) => state === 'complete') === true
 
-const reduce_overview = (admin: AdminState, input: AppInput): AdminState | null => {
-  const update = (overview: AdminOverviewState): AdminState => Object.freeze({ ...admin, overview })
-  if (input.type === 'admin/overview_refresh' && admin.overview.status !== 'loading')
-    return update(Object.freeze({ ...admin.overview, status: 'loading', request_id: null, error: null }))
-  if (input.type === 'admin/overview_requested' && admin.overview.status === 'loading')
-    return update(Object.freeze({ ...admin.overview, request_id: input.request_id }))
+const with_sales = (admin: AdminState, sales: AdminSalesState): AdminState => Object.freeze({ ...admin, sales })
+
+const reduce_sales_command = (admin: AdminState, input: AppInput): AdminState | null => {
+  if (input.type === 'admin/sales_refresh' && admin.sales.status !== 'loading')
+    return with_sales(
+      admin,
+      Object.freeze({
+        ...admin.sales,
+        status: 'loading',
+        request_id: null,
+        rows: Object.freeze([]),
+        next_cursor: null,
+        error: null,
+      })
+    )
+  if (input.type === 'admin/sales_range_changed' && input.days !== admin.sales.range_days)
+    return with_sales(
+      admin,
+      Object.freeze({
+        status: 'loading',
+        request_id: null,
+        range_days: input.days,
+        rows: Object.freeze([]),
+        next_cursor: null,
+        error: null,
+      })
+    )
+  return null
+}
+
+const reduce_sales_loading = (admin: AdminState, input: AppInput): AdminState | null => {
+  if (
+    input.type === 'admin/sales_more' &&
+    ((admin.sales.status === 'ready' && admin.sales.next_cursor) || admin.sales.status === 'failed')
+  )
+    return with_sales(admin, Object.freeze({ ...admin.sales, status: 'loading', request_id: null, error: null }))
+  if (input.type === 'admin/sales_requested' && admin.sales.status === 'loading')
+    return with_sales(admin, Object.freeze({ ...admin.sales, request_id: input.request_id }))
+  return null
+}
+
+const sales_error = (admin: AdminState, input: AppInput): string | null => {
+  if (input.type === 'admin/sales_failed' && admin.sales.status === 'loading') return input.error
+  if (
+    input.type === 'server/packet' &&
+    input.packet.type === 'packet/error' &&
+    input.packet.id === admin.sales.request_id
+  )
+    return input.packet.reason
+  return null
+}
+
+const reduce_sales_packet = (admin: AdminState, input: AppInput): AdminState | null => {
   if (
     input.type === 'server/packet' &&
     input.packet.type === 'packet/admin_response' &&
-    input.packet.id === admin.overview.request_id
-  ) {
-    const { result } = input.packet
-    const counts =
-      result !== null && typeof result === 'object' && !Array.isArray(result)
-        ? Object.freeze(
-            Object.fromEntries(
-              Object.entries(result).filter((entry): entry is [string, number] => typeof entry[1] === 'number')
-            )
-          )
-        : Object.freeze({})
-    return update(Object.freeze({ status: 'ready', request_id: null, counts, error: null }))
-  }
-  const error =
-    input.type === 'admin/overview_failed' && admin.overview.status === 'loading'
-      ? input.error
-      : input.type === 'server/packet' &&
-          input.packet.type === 'packet/error' &&
-          input.packet.id === admin.overview.request_id
-        ? input.packet.reason
-        : null
-  return error
-    ? update(Object.freeze({ status: 'failed', request_id: null, counts: admin.overview.counts, error }))
-    : null
+    input.packet.kind === 'shop_sales' &&
+    input.packet.id === admin.sales.request_id
+  )
+    return with_sales(
+      admin,
+      Object.freeze({
+        ...admin.sales,
+        status: 'ready',
+        request_id: null,
+        rows: Object.freeze([...admin.sales.rows, ...input.packet.result.rows]),
+        next_cursor: input.packet.result.next_cursor,
+        error: null,
+      })
+    )
+  const error = sales_error(admin, input)
+  return error ? with_sales(admin, Object.freeze({ ...admin.sales, status: 'failed', request_id: null, error })) : null
+}
+
+const reduce_dashboard = (admin: AdminState, input: AppInput): AdminState | null => {
+  const overview = reduce_admin_overview(admin, input)
+  if (overview) return overview
+  const sales_command = reduce_sales_command(admin, input)
+  if (sales_command) return sales_command
+  const sales_loading = reduce_sales_loading(admin, input)
+  if (sales_loading) return sales_loading
+  return reduce_sales_packet(admin, input)
 }
 
 // eslint-disable-next-line complexity -- This root reducer only routes discriminated inputs to small domain reducers.
@@ -93,8 +169,8 @@ const reduce = (state: AppState, input: AppInput): AppState => {
   }
   if (input.type === 'admin/progress') return with_admin(state, Object.freeze({ ...admin, progress: input.progress }))
   if (input.type === 'admin/view_changed') return with_admin(state, Object.freeze({ ...admin, view: input.view }))
-  const overview = reduce_overview(admin, input)
-  if (overview) return with_admin(state, overview)
+  const dashboard = reduce_dashboard(admin, input)
+  if (dashboard) return with_admin(state, dashboard)
   const deployment = reduce_admin_deployment(admin, input)
   if (deployment) return with_admin(state, deployment)
   const wallet = reduce_admin_wallet(admin, input)
@@ -111,8 +187,6 @@ const reduce = (state: AppState, input: AppInput): AppState => {
       Object.freeze({
         ...admin,
         snapshot: input.snapshot,
-        status: 'ready',
-        progress: null,
         cleanup: complete && admin.cleanup !== 'closed' ? 'needed' : admin.cleanup,
         error: null,
       })
@@ -128,11 +202,7 @@ const reduce = (state: AppState, input: AppInput): AppState => {
         cleanup: 'needed',
       })
     )
-  if (
-    input.type === 'admin/publish_all' &&
-    admin.status === 'ready' &&
-    next_seed_batch(admin.snapshot)?.state === 'ready'
-  )
+  if (input.type === 'admin/publish_all' && can_publish_all(admin))
     return with_admin(
       state,
       Object.freeze({
@@ -194,8 +264,7 @@ const reduce = (state: AppState, input: AppInput): AppState => {
     )
   if (input.type === 'admin/changes_checked')
     return with_admin(state, Object.freeze({ ...admin, changes: input.changes }))
-  if (input.type === 'admin/frozen_discovered')
-    return with_admin(state, Object.freeze({ ...admin, frozen: input.frozen }))
+  if (input.type === 'admin/frozen_discovered') return with_admin(state, with_discovered_frozen(admin, input.frozen))
   if (
     input.type === 'admin/apply_changes' &&
     admin.status === 'ready' &&
@@ -283,12 +352,9 @@ const observe = ({ events, dispatch, signal, get_state }: Parameters<NonNullable
   events.on('auth/disconnected', invalidate_seed_session)
   events.on('auth/rejected', invalidate_seed_session)
   events.on('STATE_UPDATED', (state, previous) => {
-    if (
-      state.navigation.page === 'admin' &&
-      state.admin.view === 'overview' &&
-      state.admin.overview.status === 'idle'
-    ) {
-      dispatch({ type: 'admin/overview_refresh' })
+    const dashboard_input = admin_dashboard_input(state)
+    if (dashboard_input) {
+      dispatch(dashboard_input)
       return
     }
     if (state.admin.config !== previous.admin.config) {
@@ -326,6 +392,10 @@ const observe = ({ events, dispatch, signal, get_state }: Parameters<NonNullable
             'success'
           )
           dispatch({ type: 'admin/refreshed', snapshot })
+          dispatch({
+            type: 'admin/progress',
+            progress: { phase: 'inspection', current: 0, total: 0, label: 'files vs chain' },
+          })
           const view = await created.check_changes(await get_ledger())
           if (signal.aborted || request !== generation) return
           const summary = changes_summary(view)
@@ -364,8 +434,7 @@ const observe = ({ events, dispatch, signal, get_state }: Parameters<NonNullable
     }
     if (operation.type === 'batch') {
       log(`Publishing seed batch ${operation.batch}…`)
-      void active
-        .execute(operation.batch)
+      void (async () => active.execute(operation.batch, await get_ledger()))()
         .then(async (result) => {
           if (signal.aborted || request !== generation) return
           log(`Seed batch ${result.batch} published · ${result.digest}`, 'success')
@@ -375,6 +444,9 @@ const observe = ({ events, dispatch, signal, get_state }: Parameters<NonNullable
         .catch(failed)
     } else if (operation.type === 'all') {
       void (async () => {
+        const initial_changes = await active.check_changes(await get_ledger())
+        if (initial_changes.errors.length)
+          throw new Error(`Nothing was written — fix the files first: ${initial_changes.errors.join(' · ')}`)
         let snapshot = await active.refresh((progress) => {
           if (!signal.aborted && request === generation)
             dispatch({
@@ -402,7 +474,7 @@ const observe = ({ events, dispatch, signal, get_state }: Parameters<NonNullable
             },
           })
           log(`Publishing seed batch ${next.id}…`)
-          const result = await active.execute(next.id)
+          const result = await active.execute(next.id, await get_ledger())
           const { snapshot: updated_snapshot } = result
           snapshot = updated_snapshot
           log(`Seed batch ${result.batch} published · ${result.digest}`, 'success')

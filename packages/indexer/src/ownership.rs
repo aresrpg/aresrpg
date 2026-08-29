@@ -82,7 +82,7 @@ pub enum Custody {
         object: Id,
         label: &'static str,
         /// The kiosk's owner when the kiosk is co-present (it is at every
-        /// lock/place/trade) — keeps `Character.owner` fresh through custody.
+        /// lock/place/purchase) — keeps `Character.owner` fresh through custody.
         owner: Option<Addr>,
     },
     /// `(Fight)-[:FIGHTER {seat}]->(Character)` — fight custody.
@@ -164,7 +164,7 @@ pub fn resolve(objects: &[ObjView<'_>], game_package: &str) -> anyhow::Result<Ve
                     // wrapper key pins the child id — assert, never assume
                     if field.name.name.id == view.id {
                         // the kiosk's owner rides along when co-present (it is
-                        // at every lock/place/trade) → Character.owner freshness
+                        // at every lock/place/purchase) → Character.owner freshness
                         let owner = match by_id.get(&parent) {
                             Some(k) if is_native(k.type_key, "kiosk", "Kiosk") => Some(
                                 decode::from_bytes::<decode::Kiosk>(k.bytes)

@@ -51,8 +51,8 @@ fun retro_fight_xp_balances_groups_then_splits_by_level() {
   assert!(fight_math::xp_for_player(1_200, 0, 1, 1, 12, 12, 1) == 1_100, 7);
   assert!(fight_math::xp_for_player(1_200, 0, 20, 20, 12, 12, 1) == 720, 8);
   assert!(fight_math::xp_for_player(1_200, 0, 40, 40, 12, 12, 1) == 270, 9);
-  // Ares keeps its established Wisdom scale after the Retro group calculation.
-  assert!(fight_math::xp_for_player(1_000, 600, 12, 12, 12, 12, 1) == 2_000, 10);
+  // Retro applies one percent per Wisdom after the group calculation.
+  assert!(fight_math::xp_for_player(1_000, 100, 12, 12, 12, 12, 1) == 2_000, 10);
 }
 
 #[test]

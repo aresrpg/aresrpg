@@ -11,23 +11,20 @@ const enrich_caps = async (graph: Graph, ids: readonly string[]): Promise<Map<st
   if (ids.length === 0) return new Map()
   const rows = await graph.read(
     `MATCH (asset)-[:LISTED_IN {exclusive: true}]->(k:Kiosk)
-     WHERE asset.id IN ${JSON.stringify([...ids])} AND (asset:Item OR asset:Character)
-     RETURN asset, labels(asset) AS kinds, k.id AS kiosk`
+     WHERE asset.id IN ${JSON.stringify([...ids])} AND asset:Item
+     RETURN asset, k.id AS kiosk`
   )
   return new Map(
     rows.flatMap((row): [string, TradeCapRow][] => {
       if (!row.asset) return []
       const props = (row.asset as Exclude<Node, null | undefined>).properties
-      const kind = (row.kinds as string[]).includes('Character') ? ('character' as const) : ('item' as const)
       const cap = {
         object: String(props.id),
-        kind,
         name: String(props.name),
         level: Number(props.level),
-        amount: kind === 'item' ? Number(props.amount) : 1,
-        classe: kind === 'character' ? String(props.classe) : null,
-        item_type: kind === 'item' ? String(props.item_type) : null,
-        category: kind === 'item' ? String(props.category) : null,
+        amount: Number(props.amount),
+        item_type: String(props.item_type),
+        category: String(props.category),
         kiosk: String(row.kiosk),
       } satisfies TradeCapRow
       return [[cap.object, cap]]
@@ -49,10 +46,10 @@ const shape_trade = (props: Record<string, unknown>, caps: ReadonlyMap<string, T
     id: props.id as string,
     a: props.a as string,
     b: props.b as string,
-    version: Number(props.version),
+    phase: props.phase as TradeRow['phase'],
+    offer_revision: Number(props.offer_revision),
     accept_a: Boolean(props.accept_a),
     accept_b: Boolean(props.accept_b),
-    locked: Boolean(props.locked),
     sui_a: String(props.sui_a ?? '0'),
     sui_b: String(props.sui_b ?? '0'),
     caps_a: resolved('a'),
@@ -61,21 +58,21 @@ const shape_trade = (props: Record<string, unknown>, caps: ReadonlyMap<string, T
 }
 
 export async function get_trades(graph: Graph, { address }: { address: string }): Promise<TradeRow[]> {
-  const own_escrow = `(t.locked OR (t.a = $address AND (t.sui_a <> '0' OR t.caps_a <> '[]')) OR
-                       (t.b = $address AND (t.sui_b <> '0' OR t.caps_b <> '[]')))`
-  const [essential, requests] = await Promise.all([
+  const essential_filter = `(t.phase <> 'requested' OR t.sui_a <> '0' OR t.sui_b <> '0' OR
+                       t.caps_a <> '[]' OR t.caps_b <> '[]')`
+  const request_query = (side: 'a' | 'b') =>
+    `MATCH (t:Trade) WHERE t.${side} = $address AND NOT ${essential_filter}
+     RETURN t AS trade ORDER BY t.ckpt DESC, t.id DESC LIMIT 1`
+  const [essential_rows, incoming_request, outgoing_request] = await Promise.all([
     graph.read(
-      `MATCH (t:Trade) WHERE (t.a = $address OR t.b = $address) AND ${own_escrow}
+      `MATCH (t:Trade) WHERE (t.a = $address OR t.b = $address) AND ${essential_filter}
        RETURN t AS trade ORDER BY t.ckpt DESC`,
       { address }
     ),
-    graph.read(
-      `MATCH (t:Trade) WHERE (t.a = $address OR t.b = $address) AND NOT ${own_escrow}
-       RETURN t AS trade ORDER BY t.ckpt DESC LIMIT 50`,
-      { address }
-    ),
+    graph.read(request_query('b'), { address }),
+    graph.read(request_query('a'), { address }),
   ])
-  const props = [...essential, ...requests].flatMap(({ trade }) =>
+  const props = [...essential_rows, ...incoming_request, ...outgoing_request].flatMap(({ trade }) =>
     trade ? [(trade as Exclude<Node, null | undefined>).properties] : []
   )
   const ids = [...new Set(props.flatMap((row) => [...cap_ids(row, 'a'), ...cap_ids(row, 'b')]))]

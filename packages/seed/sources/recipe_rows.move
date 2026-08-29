@@ -14,6 +14,7 @@ use std::string::String;
 use sui::{derived_object, event};
 
 const DOMAIN: vector<u8> = b"recipes";
+const ERecipeRetired: u64 = 2306;
 
 /// Keys a recipe's derived address by its OUTPUT item type — one recipe per output.
 public struct RecipeKey(String) has copy, drop, store;
@@ -94,4 +95,31 @@ public fun retire_recipe(
 /// Core's read seam — a dumb accessor, nothing else crosses the boundary.
 public fun data(recipe: &Recipe): &RecipeData { &recipe.data }
 
+public fun active_data(recipe: &Recipe): &RecipeData {
+  assert!(recipe.active, ERecipeRetired);
+  &recipe.data
+}
+
 public fun is_active(recipe: &Recipe): bool { recipe.active }
+
+#[test_only]
+public fun recipe_for_testing(
+  output_template: ID,
+  input_templates: vector<ID>,
+  input_quantities: vector<u64>,
+  job: String,
+  ctx: &mut TxContext,
+): Recipe {
+  Recipe {
+    id: object::new(ctx),
+    output_type: b"test_output".to_string(),
+    data: recipe_data::new(output_template, input_templates, input_quantities, job),
+    active: true,
+  }
+}
+
+#[test_only]
+public fun destroy_for_testing(recipe: Recipe) {
+  let Recipe { id, .. } = recipe;
+  id.delete();
+}

@@ -5,7 +5,7 @@
 
 /* eslint-disable functional/immutable-data -- Web Audio nodes are mutable browser effect handles. */
 
-export type ProceduralCue = 'discovery' | 'gather' | 'level_up' | 'victory' | 'defeat'
+export type ProceduralCue = 'discovery' | 'gather' | 'sale' | 'level_up' | 'victory' | 'defeat'
 type Tone = Readonly<{
   frequency: number
   duration: number
@@ -24,6 +24,10 @@ export const PROCEDURAL_CUE_TONES: Readonly<Record<ProceduralCue, readonly Tone[
   gather: Object.freeze([
     { frequency: 523, duration: 0.12, delay: 0.02, gain: 0.12, type: 'triangle' as const },
     { frequency: 784, duration: 0.18, delay: 0.1, gain: 0.1, type: 'sine' as const, to: 1046 },
+  ]),
+  sale: Object.freeze([
+    { frequency: 880, duration: 0.09, delay: 0, gain: 0.09, type: 'sine' as const, to: 1175 },
+    { frequency: 1320, duration: 0.12, delay: 0.07, gain: 0.08, type: 'triangle' as const },
   ]),
   level_up: Object.freeze(
     [523, 659, 784, 1046].map((frequency, index) => ({

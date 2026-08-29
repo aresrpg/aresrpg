@@ -18,9 +18,18 @@
 // .tsx joined the net with the typed tier (2026-07-17 census: eqeqeq + prefer-arrow-callback still
 // 0 on .tsx — the ratchets extend; ~96 new warns, no-param-reassign 53 the largest). .jsx remains
 // out (F-1: its 15 stale react-hooks disable comments error on opt-in; janitor ticket).
-import functional from 'eslint-plugin-functional'
+import fs from 'node:fs'
+import { fileURLToPath } from 'node:url'
 
+import functional from 'eslint-plugin-functional'
+import sonarjs from 'eslint-plugin-sonarjs'
+
+import { create_complexity_gate } from './complexity_gate.mjs'
 import fp_law from './fp_law.mjs'
+
+const REPO_ROOT = fileURLToPath(new URL('../..', import.meta.url)).replace(/\/$/, '')
+const complexity_baseline = JSON.parse(fs.readFileSync(new URL('./complexity.baseline.json', import.meta.url), 'utf8'))
+const complexity_gate = create_complexity_gate({ sonarjs, baseline: complexity_baseline, repo_root: REPO_ROOT })
 
 // Module-load effect edges: entry files, workers (a worker IS its thread's entry), demos, benches,
 // dev/build tooling, CLI scripts. Everything else must be pure to import (L-P3).
@@ -49,7 +58,7 @@ export default [
   {
     // T1 — the base FP tier
     files: ['**/*.{js,jsx,ts,tsx,mjs,cjs}'],
-    plugins: { functional, 'fp-law': fp_law },
+    plugins: { functional, 'fp-law': fp_law, 'complexity-gate': complexity_gate },
     rules: {
       // ratchets — measured CLEAN repo-wide on 2026-07-17, never let them regress
       eqeqeq: ['error', 'smart'], // L-P2: sound equality keeps referential reasoning honest
@@ -63,8 +72,12 @@ export default [
           ignoreCodePattern: ['extends\\s+Error\\b', 'extends\\s+PhysicalLightingModel\\b'],
         },
       ],
-      complexity: ['warn', 30], // L-C3 ceiling; the law's target is far lower — see CODE_LAW.md
-      'max-depth': ['warn', 5], // L-C3
+      // The legacy ceiling keeps its existing reasoned inline waivers live. The exact-score gates
+      // below are the real ratchet and still observe those functions through their own rule IDs.
+      complexity: ['warn', 30],
+      'complexity-gate/cognitive': ['error', 10], // preferred ≤10, hard ≤15; exact inherited scores never rise
+      'complexity-gate/cyclomatic': 'error', // preferred ≤8, hard ≤12; exact inherited scores never rise
+      'max-depth': ['error', 4], // L-C3 hard ceiling; ordinary code stays at ≤3
       'max-lines': ['warn', { max: 600 }], // house law: files ≤600 LoC (CLAUDE.md Agent Standard #7)
     },
   },

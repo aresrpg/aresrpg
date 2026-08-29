@@ -81,6 +81,11 @@ export const create_fight_session = ({
       publish(runtime.apply(stamp_boundary(input, now)))
       return true
     },
+    cancel_pending_turn: (): boolean => {
+      if (!runtime) return false
+      publish(runtime.cancel_pending_turn())
+      return true
+    },
     reset_turn: (): boolean => {
       if (!runtime) return false
       publish(runtime.reset_turn())

@@ -10,6 +10,7 @@ import {
   fight_result_available,
   fight_result_surface,
   fight_result_complete,
+  fight_experience_after,
   format_fight_duration,
   merge_result_loot,
   next_fight_resolution_step,
@@ -17,20 +18,23 @@ import {
   type FightResultState,
 } from '../../src/modules/fight_result.ts'
 import fight_result_module from '../../src/modules/fight_result.ts'
-import {
-  create_fight_result_observer,
-  object_version_refusal,
-  settle_after_version_race,
-} from '../../src/modules/fight_result_observer.ts'
+import { create_fight_result_observer, settlement_needs_close } from '../../src/modules/fight_result_observer.ts'
 import { initial_app_state, type AppState } from '../../src/store.ts'
 import { toast, type Toast } from '../../src/toast.ts'
+import { pre_submission_version_race, retry_after_version_race } from '../../src/transaction_guard.ts'
 
 const observe_fight_results = create_fight_result_observer(async () => undefined)
+
+test('only a certified newly-closable settlement needs a follow-up close', () => {
+  expect(settlement_needs_close({ closable: true, closed: false })).toBeTrue()
+  expect(settlement_needs_close({ closable: true, closed: true })).toBeFalse()
+  expect(settlement_needs_close({ closable: false, closed: false })).toBeFalse()
+})
 
 test('settlement retries one zero-gas object-version race without delaying the normal path', async () => {
   const waits: number[] = []
   let attempts = 0
-  const settled = await settle_after_version_race(
+  const settled = await retry_after_version_race(
     async () => {
       attempts += 1
       if (attempts === 1) throw new Error("provided version doesn't match for object 0x1")
@@ -39,7 +43,7 @@ test('settlement retries one zero-gas object-version race without delaying the n
     async (milliseconds) => void waits.push(milliseconds)
   )
   expect({ attempts, settled, waits }).toEqual({ attempts: 2, settled: 'settled', waits: [250] })
-  expect(object_version_refusal(new Error('[sdk] transaction abc failed on-chain: version'))).toBeFalse()
+  expect(pre_submission_version_race(new Error('[sdk] transaction abc failed on-chain: version'))).toBeFalse()
 })
 
 test('an ended fight keeps its result and settlement behind the terminal presentation', () => {
@@ -76,6 +80,11 @@ test('the result receipt aggregates declarations once and never shrinks when cla
   expect(merge_result_loot(declared, [{ item_type: 'silk', qty: 2 }])).toEqual(declared)
 })
 
+test('a settled fighter source already includes its certified XP award', () => {
+  expect(fight_experience_after(800, 577, false)).toBe(1_377)
+  expect(fight_experience_after(1_377, 577, true)).toBe(1_377)
+})
+
 test('durable recovery collects settlement and every loot type through one transaction', () => {
   const row = {
     settled: false,
@@ -98,6 +107,7 @@ const result = (overrides: Partial<FightResult> = {}): FightResult =>
     fight: '0xf1',
     dungeon: null,
     kolizeum: null,
+    kolizeum_wager: null,
     winner: 0,
     duration_ms: 125_000,
     gas_spent_mist: 42n,
@@ -283,6 +293,7 @@ test('nonzero-seat recovery keeps array position separate from the chain fighter
     type: 'fight_result/settled',
     character_id: '0xc1',
     fight: '0xf1',
+    paid_mist: null,
   })
   expect(settled.fight_result.current_by_character['0xc1']?.participants[0]?.settled).toBeTrue()
 })
@@ -374,7 +385,7 @@ test('a failed settlement result may close without discarding its durable recove
   expect(state.fight_result.resolutions).toEqual([resolution])
 })
 
-test('durable closable recovery waits for an explicit player click', async () => {
+test('durable closable recovery closes automatically without a routine finalize toast', async () => {
   const listeners = new Map<string, ((input: never) => void)[]>()
   const close_calls: string[] = []
   const base = initial_app_state({ quality: 'medium', flat_mode: false, music_enabled: true, render_distance: null })
@@ -403,18 +414,21 @@ test('durable closable recovery waits for an explicit player click', async () =>
     type: 'server/packet',
     packet: { type: 'packet/closable_fights', fights: [{ fight: '0xf1', kolizeum: null }] },
   })
+  const cleared = fight_result_module.reduce!(with_closable, {
+    type: 'server/packet',
+    packet: { type: 'packet/closable_fights', fights: [] },
+  })
+  expect(cleared.fight_result.closable_fights).toEqual([])
   listeners
     .get('STATE_UPDATED')
     ?.forEach((listener) => (listener as unknown as (next: AppState, previous: AppState) => void)(with_closable, state))
-  expect(close_calls).toEqual([])
-  const action = (notice as Toast | null)?.actions?.[0]
-  action?.onClick()
   await Promise.resolve()
   expect(close_calls).toEqual(['0xf1'])
+  expect(notice).toBeNull()
   unsubscribe()
 })
 
-test('a successful settlement never launches a second close transaction', async () => {
+test('a successful final ordinary settlement closes its newly drained fight', async () => {
   const listeners = new Map<string, ((input: never) => void)[]>()
   const settlement_calls: string[] = []
   const close_calls: string[] = []
@@ -431,7 +445,7 @@ test('a successful settlement never launches a second close transaction', async 
         fight: {
           settle: async () => {
             settlement_calls.push('settle')
-            return { digest: 'settled', closable: true, closed: true }
+            return { digest: 'settled', closable: true, closed: false }
           },
           close: async () => {
             close_calls.push('close')
@@ -459,13 +473,19 @@ test('a successful settlement never launches a second close transaction', async 
   await new Promise((resolve) => setTimeout(resolve, 0))
 
   expect(settlement_calls).toEqual(['settle'])
-  expect(close_calls).toEqual([])
-  expect(dispatched).toContainEqual({ type: 'fight_result/settled', character_id: '0xc1', fight: '0xf1' })
+  expect(close_calls).toEqual(['close'])
+  expect(dispatched).toContainEqual({
+    type: 'fight_result/settled',
+    character_id: '0xc1',
+    fight: '0xf1',
+    paid_mist: null,
+  })
 })
 
 test('a wagered result settles through the Kolizeum escrow manager', async () => {
   const listeners = new Map<string, ((input: never) => void)[]>()
   const calls: unknown[] = []
+  const dispatched: unknown[] = []
   const base = initial_app_state({ quality: 'medium', flat_mode: false, music_enabled: true, render_distance: null })
   const current = result({ kolizeum: '0xk1', loot_types: [] })
   const state: AppState = {
@@ -496,7 +516,7 @@ test('a wagered result settles through the Kolizeum escrow manager', async () =>
     },
     signal: new AbortController().signal,
     get_state: () => state,
-    dispatch: () => undefined,
+    dispatch: (input) => void dispatched.push(input),
   })
   const previous = { ...state, fight_result: { ...state.fight_result, current_by_character: {} } }
   listeners
@@ -507,6 +527,12 @@ test('a wagered result settles through the Kolizeum escrow manager', async () =>
   expect(calls).toEqual([
     { kolizeum: '0xk1', fight: '0xf1', fighter_idx: 0n, custody: { kiosk: '0xk', kiosk_cap: '0xcap' } },
   ])
+  expect(dispatched).toContainEqual({
+    type: 'fight_result/settled',
+    character_id: '0xc1',
+    fight: '0xf1',
+    paid_mist: 9n,
+  })
 })
 
 test('a refused settlement waits for explicit Retry instead of reopening signing', async () => {

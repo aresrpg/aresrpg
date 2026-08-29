@@ -20,7 +20,6 @@ import { Sidebar } from './Sidebar.tsx'
 import { ConnectionCard, DiscordCard, LanguageCard } from './SidebarCards.tsx'
 import { WalletCard } from './WalletCard.tsx'
 import { TradeInbox } from './TradeInbox.tsx'
-import { PartyInviteCard } from './PartyFrame.tsx'
 
 const EncyclopediaPage = lazy(() => import('../encyclopedia/EncyclopediaPage.tsx'))
 const AdminPage = lazy(() => import('../admin/AdminPage.tsx'))
@@ -125,9 +124,7 @@ const RoutedPage = memo(
 const GameFightLayer = ({ copy, page }: Readonly<{ copy: AppCopy; page: Page }>) => {
   const scene = useSyncExternalStore(subscribe_scene, read_scene, () => null)
   const mounted = useAppStore((state) => state.fight.mounted)
-  const environment_key = useAppStore(
-    (state) => `${state.session.selected_character_id ?? 'local'}:${state.fight.checkpoint?.contract.id ?? 'loading'}`
-  )
+  const environment_key = useAppStore((state) => state.fight.checkpoint?.contract.id ?? 'loading')
   // a previewing modal hydrates the session without mounting the board — mounting is the COMMIT
   return scene && fight_surface_visible(page, mounted) ? (
     <FightLayer key={environment_key} copy={copy} scene={scene} />
@@ -166,7 +163,6 @@ export const AppShell = ({
   const fight_mounted = useAppStore((state) => state.fight.mounted)
   return (
     <div className="pointer-events-none fixed inset-0 z-[10] flex h-dvh flex-col gap-3 overflow-hidden p-3">
-      <PartyInviteCard copy={copy} />
       {session.link_status === 'replaced' && <SessionReplacedModal copy={copy} />}
       {session.game_frozen === true && (
         <aside

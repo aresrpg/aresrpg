@@ -1,14 +1,16 @@
 # AresRPG indexer
 
 The indexer is the chain's one projectionist and the only writer of its FalkorDB Redis. It streams
-Sui checkpoints through one sequential Rust pipeline and produces three rebuildable surfaces:
+Sui checkpoints through one sequential Rust pipeline and produces four rebuildable surfaces:
 
 1. The graph: current live state and relationships.
-2. Per-address sales ZSETs: the one bounded history product.
-3. `evt:*` pub/sub: post-projection change notifications.
+2. Per-address sales ZSETs: bounded player marketplace history.
+3. Analytics: exact activity membership, decimal money buckets, and 90-day primary-shop detail.
+4. `evt:*` pub/sub: post-projection change notifications.
 
-The central server is the only consumer. The indexer never owns gameplay authority or authored
-content. See the repository `ARCHITECTURE.md` for the complete system flow.
+One server stack consumes its own indexer. Any number of indexers may run independently around the
+world, each with a private disposable FalkorDB. The indexer never owns gameplay authority or
+authored content. See the repository `ARCHITECTURE.md` for the complete system flow.
 
 ## Configuration
 
@@ -26,18 +28,29 @@ resumes without a network-dependent boot query.
 | `REMOTE_STORE_URL` | HTTP checkpoint backfill/polling source |
 | `STREAMING_URL` | Optional live gRPC checkpoint source |
 | `GRAPHQL_URL` | Boot-only lineage and publication lookup |
-| `FIRST_CHECKPOINT` | Optional fresh-store override |
 | `INGEST_MAX_CONCURRENCY` | Checkpoint fetch ceiling |
 | `RUST_LOG` | Rust log filter |
 
 The store binds itself to the original package and chain. Starting it against another game or
 network refuses instead of mixing projections.
 
+Analytics has no migration or schema-version state. When its projection changes, destroy the local
+store and replay from the original publication checkpoint. Ordinary resumes remain network-free
+and append the configured latest package to the stored activity lineage.
+
 ## Storage laws
 
 - Output objects, dynamic fields, custody, and deleted pre-state are the graph writers.
-- Events feed pub/sub and sales history; realized market price is the sole event-derived graph
-  value because no object contains it.
+- Events feed pub/sub, sales history, and analytics; successful game-package calls feed activity.
+  Realized market price remains the sole event-derived graph value because no object contains it.
+- Exact money and Character lifecycle observations are written once to daily hashes under their
+  stable checkpoint coordinates. Replays overwrite the same fields. The server derives the five
+  visible chart intervals at read time, while the current Character total comes from graph nodes.
+- Successful callers use ordinary address sets for active-player ranges and one first-interaction
+  sorted-set entry for lifetime unique addresses. Successful game transaction volume uses one
+  numeric field per checkpoint in each visible bucket; replays overwrite that checkpoint's count.
+  There are no transaction digests, custom Lua, or analytics schema state.
+- Shop details prune by timestamp to 90 days. Server-mesh online samples are best effort and expire.
 - Every large integer and money value is stored as a decimal string.
 - Writers update only the properties they own; sparse dynamic-field outputs never replace a node.
 - Custody transitions replace the old edge and create the new edge in one checkpoint batch.
@@ -54,6 +67,7 @@ covered by server/indexer gates. Do not maintain another schema table here.
 ```text
 src/
 ├── main.rs       boot and sequential pipeline assembly
+├── analytics.rs  exact activity, money buckets, and primary-shop history
 ├── boot.rs       indexes, package binding, lineage, start checkpoint
 ├── pipeline.rs   checkpoint filtering and write-batch composition
 ├── decode.rs     BCS layout twins

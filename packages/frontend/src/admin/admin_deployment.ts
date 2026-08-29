@@ -15,6 +15,12 @@ import type { AdminDeploymentState, AdminState, DeploymentPins } from './admin_s
 const artifact_digest = (artifact: ContractArtifact): string =>
   artifact.digest.map((byte) => byte.toString(16).padStart(2, '0')).join('')
 
+const contract_artifact_from = (result: Readonly<Record<string, unknown>>, label: string): ContractArtifact => {
+  if (!result.artifact || typeof result.artifact !== 'object')
+    throw new Error(`The compiler returned no ${label} artifact`)
+  return result.artifact as ContractArtifact
+}
+
 export const dependency_artifact_changed = (
   stored_digest: string | null | undefined,
   artifact: ContractArtifact
@@ -24,6 +30,23 @@ export const can_reuse_core_artifact = (
   artifact: ContractArtifact | null,
   dependency_changed: boolean
 ): artifact is ContractArtifact => artifact?.package_name === 'aresrpg' && !dependency_changed
+
+export const game_upgrade_step = ({
+  artifact_changed,
+  current_version,
+  source_version,
+}: Readonly<{
+  artifact_changed: boolean
+  current_version: number
+  source_version: number
+}>): 'upgrade' | 'activate' | 'unchanged' => {
+  if (![current_version, source_version].every((version) => Number.isSafeInteger(version) && version >= 1))
+    throw new Error('Game package versions must be positive integers')
+  if (source_version < current_version)
+    throw new Error(`PACKAGE_VERSION ${source_version} is behind the published game version ${current_version}`)
+  if (artifact_changed) return 'upgrade'
+  return source_version > current_version ? 'activate' : 'unchanged'
+}
 
 const seed_config_from = (deployment: AdminDeploymentState): SeedAdminConfig =>
   Object.freeze({
@@ -562,9 +585,7 @@ export const observe_admin_deployment = ({
 
         const compiled_artifact = async (body: Readonly<Record<string, unknown>>, label: string) => {
           const result = await request('POST', body)
-          if (!result.artifact || typeof result.artifact !== 'object')
-            throw new Error(`The compiler returned no ${label} artifact`)
-          return result.artifact as ContractArtifact
+          return contract_artifact_from(result, label)
         }
 
         const math_artifact = await compiled_artifact(
@@ -657,18 +678,33 @@ export const observe_admin_deployment = ({
 
         const desired_seed = { ...seed_publication, package: seed_package }
         const game_publication = { package: package_id, original_package: game_original, upgrade_cap: game_upgrade_cap }
-        const game_probe = await compiled_artifact(
-          {
-            action: 'compile_game_probe',
-            math: math_publication,
-            control: control_publication,
-            seed: desired_seed,
-            game: game_publication,
+        const game_probe_result = await request('POST', {
+          action: 'compile_game_probe',
+          math: math_publication,
+          control: control_publication,
+          seed: desired_seed,
+          game: game_publication,
+        })
+        const game_probe = contract_artifact_from(game_probe_result, 'game probe')
+        const source_version = Number(game_probe_result.version)
+        const step = game_upgrade_step({
+          artifact_changed: artifact_digest(game_probe) !== pins.package_artifact_digest,
+          current_version,
+          source_version,
+        })
+        const activate_game = async (): Promise<void> => {
+          log('Activating the new game version; confirm the wallet transaction…')
+          const activation = await connected.set_game_paused({ package_id, version, admin_cap, paused: false })
+          log(`Game version activated · ${activation.digest}`, 'success')
+        }
+        const finish_existing = {
+          activate: async (): Promise<void> => {
+            log('Game package is unchanged; completing its pending version activation…')
+            await activate_game()
           },
-          'game probe'
-        )
-        const upgrade_game = artifact_digest(game_probe) !== pins.package_artifact_digest
-        if (upgrade_game) {
+          unchanged: async (): Promise<void> => log('Game package is unchanged.', 'success'),
+        }
+        if (step === 'upgrade') {
           log('Compiling the changed game package…')
           const game_artifact = await compiled_artifact(
             {
@@ -694,10 +730,8 @@ export const observe_admin_deployment = ({
             package_artifact_digest: artifact_digest(game_artifact),
           })
           await wait_for_rpc_propagation()
-          log('Activating the new game version; confirm the wallet transaction…')
-          const activation = await connected.set_game_paused({ package_id, version, admin_cap, paused: false })
-          log(`Game version activated · ${activation.digest}`, 'success')
-        } else log('Game package is unchanged.', 'success')
+          await activate_game()
+        } else await finish_existing[step]()
         const { network } = deployment
         if (!network) throw new Error('The deployment network is unavailable')
         const saved_pins = (saved.pins as Record<'testnet' | 'mainnet', DeploymentPins>)[network]
@@ -724,7 +758,7 @@ export const observe_admin_deployment = ({
         const { network } = deployment
         if (!network) throw new Error('The deployment network is unavailable')
         const pins = (saved.pins as Record<'testnet' | 'mainnet', DeploymentPins>)[network]
-        log('Core deployment pins cleared; unchanged math, control, and seed publications were retained.', 'success')
+        log('All active package and Registry pins cleared; historical content ledgers were retained.', 'success')
         log('Recreate the local FalkorDB/indexer before indexing the replacement package.')
         dispatch({ type: 'admin/contracts_republished', pins, revision: String(saved.revision) })
       })

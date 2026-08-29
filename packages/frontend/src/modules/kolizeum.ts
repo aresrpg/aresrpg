@@ -21,7 +21,7 @@ export type KolizeumInput =
       max_level_diff: number
       access: 'public' | 'friends'
     }>
-  | Readonly<{ type: 'kolizeum/join'; kolizeum: string; side: 0 | 1 }>
+  | Readonly<{ type: 'kolizeum/join'; kolizeum: string; side: 0 | 1; character_id: string }>
   | Readonly<{ type: 'kolizeum/pending'; character_id: string; operation: string | null }>
 
 export const initial_kolizeum_state = (): KolizeumState =>
@@ -107,9 +107,9 @@ const observe: NonNullable<AppModule['observe']> = ({ events, get_state, dispatc
     )
   })
 
-  events.on('kolizeum/join', ({ kolizeum, side }) => {
+  events.on('kolizeum/join', ({ kolizeum, side, character_id }) => {
     const state = get_state()
-    const character = selected_character(state.session)
+    const character = state.session.characters.find(({ id }) => id === character_id)
     const { wallet } = state.session
     const lobby = state.kolizeum.lobbies.find(({ id }) => id === kolizeum)
     if (

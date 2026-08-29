@@ -25,15 +25,15 @@ export const sample_biome_grid = (
   for (let row = 0; row < side; row += 1) {
     for (let column = 0; column < side; column += 1) {
       const counts = new Uint8Array(world.biomes.length)
-      for (let sample_row = 0; sample_row < CELL_SAMPLES_PER_AXIS; sample_row += 1) {
-        for (let sample_column = 0; sample_column < CELL_SAMPLES_PER_AXIS; sample_column += 1) {
-          const x = column * cell_size + ((sample_column + 0.5) * cell_size) / CELL_SAMPLES_PER_AXIS - world_center
-          const z = row * cell_size + ((sample_row + 0.5) * cell_size) / CELL_SAMPLES_PER_AXIS - world_center
-          const { biome } = sample_world_column(world, x, z)
-          const biome_id = world.biomes.indexOf(biome)
-          if (biome_id < 0) throw new Error(`Sampled biome "${biome.name}" is not part of its compiled world`)
-          counts[biome_id] += 1
-        }
+      for (let sample = 0; sample < CELL_SAMPLES_PER_AXIS ** 2; sample += 1) {
+        const sample_row = Math.floor(sample / CELL_SAMPLES_PER_AXIS)
+        const sample_column = sample % CELL_SAMPLES_PER_AXIS
+        const x = column * cell_size + ((sample_column + 0.5) * cell_size) / CELL_SAMPLES_PER_AXIS - world_center
+        const z = row * cell_size + ((sample_row + 0.5) * cell_size) / CELL_SAMPLES_PER_AXIS - world_center
+        const { biome } = sample_world_column(world, x, z)
+        const biome_id = world.biomes.indexOf(biome)
+        if (biome_id < 0) throw new Error(`Sampled biome "${biome.name}" is not part of its compiled world`)
+        counts[biome_id] += 1
       }
       const center = sample_world_column(
         world,

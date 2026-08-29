@@ -134,7 +134,7 @@ describe('seed editor model', () => {
   })
 
   test('Ikari chatiments author the Retro normal and critical turn caps', () => {
-    const names = new Set(['Blood Toll', 'Bloodletting', 'Reckless Toll', 'Whirling Toll'])
+    const names = new Set(['Forced Punishment', 'Bold Punishment', 'Spiritual Punishment', 'Nimble Punishment'])
     const chatiments = spells.filter(({ name }) => names.has(name))
     const cap_ladder = (critical: boolean) =>
       chatiments.map(({ levels }) =>

@@ -2,7 +2,7 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
 import { describe, expect, test } from 'bun:test'
-import { Group, Mesh, Scene, Sprite, Vector3 } from 'three'
+import { Group, Mesh, Scene, Sprite, SpriteMaterial, Vector3 } from 'three'
 
 import { create_transient_effects, type EffectAnchors } from '../src/transient_effects.ts'
 import { fight_vfx_magnitude } from '../src/fight_vfx_presets.ts'
@@ -159,6 +159,9 @@ describe('transient effects', () => {
     const smoke = scene.children.find((child): child is Group => child instanceof Group)
     expect(smoke?.children).toHaveLength(14)
     expect(smoke?.children.every((child) => child instanceof Sprite)).toBeTrue()
+    expect(
+      smoke?.children.every((child) => child instanceof Sprite && child.material instanceof SpriteMaterial)
+    ).toBeTrue()
     vfx.tick(651)
     expect(scene.children).toHaveLength(0)
 

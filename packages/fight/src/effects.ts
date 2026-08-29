@@ -30,6 +30,7 @@ import type {
   ActiveEffect,
   FightRuntime,
   FightSheet,
+  NumberRowInput,
   PrngCursor,
   ResolveRowsInput,
   SpellEffect,
@@ -180,14 +181,61 @@ const travel_order = (runtime: FightRuntime, targets: bigint[], pivot: bigint, p
     return ahead ? -1 : 1
   })
 
-type NumberRowInput = {
-  runtime: FightRuntime
-  caster: bigint
-  sheet: FightSheet
-  row: SpellEffect
-  target: bigint
-  cursor: PrngCursor
-  cast_level: bigint
+const apply_fixed_points = ({ runtime, caster, row, target }: NumberRowInput, active: boolean): boolean => {
+  if (row.kind !== KINDS.fixed_remove) return false
+  if (active) {
+    if (row.stat === STATS.ap) spend_ap(runtime, target, row.value, 'effect_remove', caster)
+    else spend_mp(runtime, target, row.value, 'effect_remove', caster)
+  }
+  if (!active || row.turns > 0n) push_row(runtime, target, row, caster, row.value)
+  emit(runtime, 'points_contested', {
+    source: caster,
+    target,
+    channel: row.stat,
+    attempted: row.value,
+    removed: row.value,
+    stolen: false,
+  })
+  return true
+}
+const apply_added_points = ({ runtime, caster, row, target }: NumberRowInput, active: boolean): boolean => {
+  if (row.kind !== KINDS.add) return false
+  if (active) {
+    if (row.stat === STATS.ap) add_ap(runtime, target, row.value, 'effect_grant', caster)
+    else add_mp(runtime, target, row.value, 'effect_grant', caster)
+  }
+  if (row.turns > 0n) push_row(runtime, target, row, caster, row.value)
+  return true
+}
+const apply_contested_points = (
+  { runtime, caster, sheet, row, target, cursor }: NumberRowInput,
+  active: boolean
+): void => {
+  const removed = contest_points(runtime, sheet, target, row, cursor)
+  emit(runtime, 'points_contested', {
+    source: caster,
+    target,
+    channel: row.stat,
+    attempted: row.value,
+    removed,
+    stolen: row.kind === KINDS.steal,
+  })
+  if (removed === 0n) return
+  if (active) {
+    if (row.stat === STATS.ap) spend_ap(runtime, target, removed, 'effect_remove', caster)
+    else spend_mp(runtime, target, removed, 'effect_remove', caster)
+  }
+  if (!active || row.turns > 0n) push_row(runtime, target, row, caster, removed)
+  if (row.kind !== KINDS.steal) return
+  if (row.stat === STATS.ap) add_ap(runtime, caster, removed, 'effect_steal', target)
+  else add_mp(runtime, caster, removed, 'effect_steal', target)
+}
+const apply_point_row = (input: NumberRowInput): void => {
+  const { runtime, target } = input
+  const active = runtime.contract.queue[Number(runtime.contract.turn_ptr)] === target
+  if (apply_added_points(input, active)) return
+  if (apply_fixed_points(input, active)) return
+  apply_contested_points(input, active)
 }
 
 const apply_number_row = ({ runtime, caster, sheet, row, target, cursor, cast_level }: NumberRowInput): void => {
@@ -219,34 +267,7 @@ const apply_number_row = ({ runtime, caster, sheet, row, target, cursor, cast_le
     return
   }
   if (channel === STATS.ap || channel === STATS.mp) {
-    const active = runtime.contract.queue[Number(runtime.contract.turn_ptr)] === target
-    if (row.kind === KINDS.add) {
-      if (active) {
-        if (channel === STATS.ap) add_ap(runtime, target, row.value, 'effect_grant', caster)
-        else add_mp(runtime, target, row.value, 'effect_grant', caster)
-      }
-      if (turns > 0n) push_row(runtime, target, row, caster, row.value)
-      return
-    }
-    const removed = contest_points(runtime, sheet, target, row, cursor)
-    emit(runtime, 'points_contested', {
-      source: caster,
-      target,
-      channel,
-      attempted: row.value,
-      removed,
-      stolen: row.kind === KINDS.steal,
-    })
-    if (removed === 0n) return
-    if (active) {
-      if (channel === STATS.ap) spend_ap(runtime, target, removed, 'effect_remove', caster)
-      else spend_mp(runtime, target, removed, 'effect_remove', caster)
-    }
-    if (!active || turns > 0n) push_row(runtime, target, row, caster, removed)
-    if (row.kind === KINDS.steal) {
-      if (channel === STATS.ap) add_ap(runtime, caster, removed, 'effect_steal', target)
-      else add_mp(runtime, caster, removed, 'effect_steal', target)
-    }
+    apply_point_row({ runtime, caster, sheet, row, target, cursor, cast_level })
     return
   }
   push_row(runtime, target, row, caster, row.value)
@@ -295,7 +316,7 @@ const apply_to = ({ runtime, caster, sheet, row, target, origin, cursor, cast_le
     })
   } else if (row.kind === KINDS.reduce) {
     push_row(runtime, target, row, caster, amplify_damage(row.value, primary_stat(row.element, sheet), 0n))
-  } else if ([KINDS.add, KINDS.remove, KINDS.steal].includes(row.kind)) {
+  } else if ([KINDS.add, KINDS.remove, KINDS.steal, KINDS.fixed_remove].includes(row.kind)) {
     apply_number_row({ runtime, caster, sheet, row, target, cursor, cast_level })
   } else if (row.kind === KINDS.chatiment) {
     push_row(runtime, target, row, caster, row.value)
@@ -436,7 +457,7 @@ const cast_legality = ({
     return Object.freeze({ ok: false, code: 'not_in_line' })
   if (level.line_of_sight && !line_of_sight(caster_cell, target_cell, sight_blockers(runtime, caster, target_cell)))
     return Object.freeze({ ok: false, code: 'no_line_of_sight' })
-  const occupant = visible_occupant(runtime, caster, target_cell)
+  const occupant = fighter_at(runtime, target_cell)
   if (level.casts_per_turn > 0n && casts_this_turn(runtime, name) >= level.casts_per_turn)
     return Object.freeze({ ok: false, code: 'cast_cap' })
   const ledger_target = occupant ?? NO_TARGET

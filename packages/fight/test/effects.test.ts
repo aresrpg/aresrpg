@@ -191,6 +191,27 @@ describe('board-zone placement', () => {
     expect(damaged.state.contract.fighters[0]!.effects.some(({ kind }) => kind === KINDS.invis)).toBeFalse()
   })
 
+  test('an invisible occupant still consumes the spell per-target cap', () => {
+    const checkpoint = structuredClone(create_fixture().checkpoint)
+    checkpoint.sources.spells.slash.levels[0]!.casts_per_target = 1n
+    checkpoint.contract.fighters[1]!.effects.push({
+      kind: KINDS.invis,
+      element: '',
+      value: 0n,
+      turns_left: 2n,
+      source: 1n,
+      stat: STATS.any,
+    })
+    const target_cell = checkpoint.contract.fighters[1]!.cell
+    const fight = started_fight(checkpoint)
+
+    const first = fight.apply({ type: 'cast_spell', fighter: 0n, spell: 'slash', target_cell })
+    const second = fight.apply({ type: 'cast_spell', fighter: 0n, spell: 'slash', target_cell })
+
+    expect(first.error).toBeNull()
+    expect(second.error?.code).toBe('target_cap')
+  })
+
   test('life steal drinks exactly half of what landed', () => {
     const checkpoint = structuredClone(create_fixture().checkpoint)
     checkpoint.sources.spells.drain = {

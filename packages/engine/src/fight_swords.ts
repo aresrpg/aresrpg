@@ -9,6 +9,7 @@
 import { Box3, Object3D, type Scene } from 'three'
 import { CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js'
 
+import { project_height } from './flatten.ts'
 import { load_gltf_source } from './gltf_loader.ts'
 import type { FightSwordMarker } from './types.ts'
 
@@ -27,6 +28,8 @@ const LABEL_WORLD_HEIGHT = 3
 export const FIGHT_SWORD_TILT = Object.freeze({ x: 0.035, z: -0.09 })
 export const fight_sword_plant_height = (minimum_y: number, maximum_y: number): number => -(minimum_y + maximum_y) / 2
 export const fight_sword_label_offset = (scale: number): number => LABEL_WORLD_HEIGHT / Math.max(scale, 0.001)
+export const fight_sword_ground_height = (source_y: number, flatten_amount: number): number =>
+  project_height(source_y, flatten_amount)
 
 const clamp01 = (value: number): number => Math.min(1, Math.max(0, value))
 const ease_out_quad = (t: number): number => t * (2 - t)
@@ -107,6 +110,7 @@ export const create_fight_sword_layer = ({
 
   const planted = new Map<string, Planted>()
   let visible = true
+  let flatten_amount = 0
 
   /** blade-down stance baked ONCE — no per-frame rotation theatrics */
   const rebuild = (root: Object3D): void => {
@@ -132,7 +136,7 @@ export const create_fight_sword_layer = ({
         continue
       }
       const root = new Object3D()
-      root.position.set(marker.x, marker.y, marker.z)
+      root.position.set(marker.x, fight_sword_ground_height(marker.y, flatten_amount), marker.z)
       root.visible = visible
       rebuild(root)
       scene.add(root)
@@ -166,7 +170,8 @@ export const create_fight_sword_layer = ({
         now_ms,
         plant_height
       )
-      root.position.set(marker.x, marker.y + height, marker.z)
+      const ground_y = fight_sword_ground_height(marker.y, flatten_amount)
+      root.position.set(marker.x, ground_y + height, marker.z)
       root.scale.setScalar(Math.max(scale, 0.001))
       entry.label?.position.set(0, fight_sword_label_offset(scale), 0)
       root.rotation.y = yaw
@@ -178,7 +183,7 @@ export const create_fight_sword_layer = ({
         root.rotation.z = FIGHT_SWORD_TILT.z
       }
       if (impacted && !entry.impacted) {
-        impact?.([marker.x, marker.y, marker.z])
+        impact?.([marker.x, ground_y, marker.z])
         if (impact_audio) {
           impact_audio.currentTime = 0
           void impact_audio.play().catch((error: unknown) => console.warn('Fight sword impact sound failed.', error))
@@ -198,6 +203,9 @@ export const create_fight_sword_layer = ({
   return Object.freeze({
     set_markers,
     set_label,
+    set_flatten: (amount: number) => {
+      flatten_amount = amount
+    },
     set_visible: (next: boolean) => {
       visible = next
       planted.forEach((entry, id) => {

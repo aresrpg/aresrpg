@@ -27,11 +27,21 @@ export {
   weapon_area_cells,
 } from './spell_turn_projection.ts'
 export type { SpellTurnProjection } from './spell_turn_projection.ts'
-export { living_count, movement_points_of, players_ready_after, xp_award_of, POOL_EFFECT_REASONS } from './fighters.ts'
+export {
+  fighter_resistances,
+  FIGHT_ELEMENTS,
+  living_count,
+  movement_points_of,
+  players_ready_after,
+  xp_award_of,
+  POOL_EFFECT_REASONS,
+} from './fighters.ts'
+export type { FighterResistances, FightElement } from './fighters.ts'
 export { weapon_level_of } from './weapon.ts'
 export { fight_path_to, reachable_fight_cells } from './movement.ts'
 export { board_zone_cells } from './zones.ts'
 export { RETRO_GROUP_XP_TENTHS } from './fight_math.ts'
+export { initial_effect_id } from './runtime.ts'
 export { decode_fight_action, encode_fight_action, fight_action_to_wire, parse_fight_wire_action } from './wire.ts'
 export { CONTRACT_CONSTANTS, MOVE_SOURCE_HASH } from './move_contract.gen.ts'
 export type { FightBoardCell, FightBoardCellKind } from './board.ts'

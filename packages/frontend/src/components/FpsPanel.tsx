@@ -12,6 +12,7 @@ export const FpsPanel = ({
   active,
   quality,
   flattened,
+  flatten_locked,
   fight_access,
   party_available,
   copy,
@@ -22,6 +23,7 @@ export const FpsPanel = ({
   active: boolean
   quality: EngineQuality
   flattened: boolean
+  flatten_locked: boolean
   fight_access: 0 | 1 | null
   party_available: boolean
   copy: AppCopy
@@ -57,7 +59,7 @@ export const FpsPanel = ({
     <HudPanel className="pointer-events-auto flex w-fit items-stretch overflow-hidden !rounded-[9px] text-[8px] tracking-[0.14em] uppercase">
       <div className="flex items-center gap-1.5 px-2 py-1.5">
         <span className="text-[#8d9099]">FPS</span>
-        <output className="min-w-4 text-right text-[#67adff] tabular-nums">{fps ?? '—'}</output>
+        <output className="w-6 text-right text-[#67adff] tabular-nums">{fps ?? '—'}</output>
       </div>
       <select
         aria-label={copy.quality}
@@ -74,8 +76,11 @@ export const FpsPanel = ({
       <button
         aria-label={copy.flat_mode}
         aria-pressed={flattened}
-        className="flex cursor-pointer items-center gap-2 border-l border-white/10 px-2 text-[#c8963c]"
+        className="flex cursor-pointer items-center gap-2 border-l border-white/10 px-2 text-[#c8963c] disabled:cursor-not-allowed disabled:opacity-60"
+        data-flat-locked={flatten_locked}
+        disabled={flatten_locked}
         onClick={toggle_flattened}
+        type="button"
       >
         FLAT
         <span

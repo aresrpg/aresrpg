@@ -10,9 +10,8 @@
 //!   (`packageVersionsAfter` — the endpoint renamed `packageVersions` away in
 //!   the 2026-08 schema); a typo'd or foreign id refuses to boot.
 //! * **start checkpoint** — the checkpoint containing the ORIGINAL package's
-//!   publish transaction. Consulted only when no watermark exists yet and no
-//!   `FIRST_CHECKPOINT` override is given; a resuming deploy never needs the
-//!   network at boot.
+//!   publish transaction. Consulted only when no watermark exists yet; a
+//!   resuming deploy never needs the network at boot.
 //!
 //! Also declares the graph INDEXES (idempotent — an already-indexed error is
 //! the success state).
@@ -65,30 +64,61 @@ fn publish_checkpoint_from(data: &Value, original: &str) -> Result<u64> {
         })
 }
 
-/// Refuse to boot unless `latest` is a version of the `original` package.
-pub async fn validate_lineage(url: &str, original: &str, latest: &str) -> Result<()> {
-    if original == latest {
-        return Ok(());
+/// Resolve every executable package version for activity attribution. A fresh store fetches
+/// the whole chain lineage once; later upgrades append their configured latest id locally, so
+/// ordinary resume keeps the network-free boot law.
+pub async fn activity_lineage(
+    conn: &mut MultiplexedConnection,
+    url: &str,
+    original: &str,
+    latest: &str,
+    fresh: bool,
+) -> Result<Vec<String>> {
+    const KEY: &str = "idx:package_lineage";
+    let stored: Option<String> = redis::cmd("GET")
+        .arg(KEY)
+        .query_async(conn)
+        .await
+        .context("reading activity package lineage")?;
+    let mut lineage = stored
+        .as_deref()
+        .map(serde_json::from_str::<Vec<String>>)
+        .transpose()
+        .context("decoding activity package lineage")?
+        .unwrap_or_default();
+    if fresh {
+        let data = graphql(
+            url,
+            &format!(
+                r#"{{ object(address: "{original}") {{
+                     asMovePackage {{ packageVersionsAfter {{ nodes {{ address }} }} }}
+                   }} }}"#
+            ),
+        )
+        .await?;
+        lineage = lineage_ids(&data, original)?;
+        if !lineage.iter().any(|id| id == latest) {
+            return Err(anyhow!(
+                "{latest} is not an upgrade of {original} — check the two ids"
+            ));
+        }
     }
-    let data = graphql(
-        url,
-        &format!(
-            r#"{{ object(address: "{original}") {{
-                 asMovePackage {{ packageVersionsAfter {{ nodes {{ address }} }} }}
-               }} }}"#
-        ),
-    )
-    .await?;
-    if !lineage_contains(&data, original, latest)? {
-        return Err(anyhow!(
-            "{latest} is not an upgrade of {original} — check the two ids"
-        ));
-    }
-    Ok(())
+    lineage.extend([original.to_string(), latest.to_string()]);
+    lineage.sort();
+    lineage.dedup();
+    let encoded = serde_json::to_string(&lineage)?;
+    let _: () = redis::cmd("SET")
+        .arg(KEY)
+        .arg(encoded)
+        .query_async(conn)
+        .await
+        .context("writing activity package lineage")?;
+    Ok(lineage)
 }
 
 /// Pure read of the lineage response: is `latest` among the versions published
 /// after `original`? (Querying from the ORIGINAL, "after" is every upgrade.)
+#[cfg(test)]
 fn lineage_contains(data: &Value, original: &str, latest: &str) -> Result<bool> {
     let versions = data["object"]["asMovePackage"]["packageVersionsAfter"]["nodes"]
         .as_array()
@@ -97,6 +127,17 @@ fn lineage_contains(data: &Value, original: &str, latest: &str) -> Result<bool> 
         .iter()
         .filter_map(|node| node["address"].as_str())
         .any(|address| address == latest))
+}
+
+fn lineage_ids(data: &Value, original: &str) -> Result<Vec<String>> {
+    let versions = data["object"]["asMovePackage"]["packageVersionsAfter"]["nodes"]
+        .as_array()
+        .ok_or_else(|| anyhow!("{original} is not a package on this network"))?;
+    Ok(versions
+        .iter()
+        .filter_map(|node| node["address"].as_str().map(str::to_string))
+        .chain(std::iter::once(original.to_string()))
+        .collect())
 }
 
 /// Does the pipeline already have a watermark? (A resuming deploy must never

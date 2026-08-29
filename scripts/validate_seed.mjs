@@ -89,11 +89,17 @@ const check_exact_keys = (where, value, expected) => {
   if (actual !== wanted) red('L-SHAPE', `${where} fields [${actual}] must be exactly [${wanted}]`)
 }
 
+const check_fixed_remove = (where, effect) => {
+  if (effect.kind !== 20) return
+  if (![6, 7].includes(effect.stat)) red('C-STAT', `${where}: fixed_remove only addresses AP or MP`)
+  if (effect.element !== '') red('C-ELEMENT', `${where}: fixed_remove carries no element`)
+}
+
 // ╔════ [ Effects and spell levels — spell_effect.move ] ═══════════════════════════════════ ]
 
 const check_effect = (where, effect) => {
-  if (!is_u(effect.kind, 8) || effect.kind >= 20)
-    red('C-KIND', `${where}: kind ${effect.kind} outside the sealed 0..19 (spell_effect.move KIND_COUNT)`)
+  if (!is_u(effect.kind, 8) || effect.kind >= 21)
+    red('C-KIND', `${where}: kind ${effect.kind} outside the sealed 0..20 (spell_effect.move KIND_COUNT)`)
   if (!is_u(effect.area_shape, 8) || effect.area_shape >= 10)
     red('C-SHAPE', `${where}: area_shape ${effect.area_shape} outside 0..9 (spell_effect.move:41)`)
   if (!is_u(effect.target_filter, 8) || effect.target_filter >= 5)
@@ -139,6 +145,7 @@ const check_effect = (where, effect) => {
     if (effect.turns < 1) red('C-STAT', `${where}: a reaction is a stance — turns ≥ 1 (EBadStat)`)
     if (effect.element !== '') red('C-ELEMENT', `${where}: a reaction carries no element`)
   }
+  check_fixed_remove(where, effect)
 }
 
 const check_level = (where, level) => {
@@ -447,14 +454,18 @@ for (const mob of mobs) {
   for (const spell of mob.spells) {
     if (spell.levels.length !== 1)
       red('M2-LEVELS', `${where}.${spell.name}: ${spell.levels.length} levels, every mob spell requires exactly 1`)
-    spell.levels.forEach((level, i) => check_level(`${where}.${spell.name}[${i}]`, level))
+    spell.levels.forEach((level, i) => {
+      check_level(`${where}.${spell.name}[${i}]`, level)
+      if (level.ap_cost < 1)
+        red('M2-MOB-AP', `${where}.${spell.name}[${i}]: mob spells cost at least 1 AP so AI turns terminate`)
+    })
   }
   if (mob.loot.length > 16)
     red('M2-LOOT', `${where}: ${mob.loot.length} loot rows, the cap is 16 (mob_template.move:108)`)
   for (const entry of mob.loot) {
     if (!is_u(entry.chance_bp, 16) || entry.chance_bp > 10000)
       red('M2-CHANCE', `${where}: loot chance_bp ${entry.chance_bp} above 100% (EInvalidChance)`)
-    if (!(entry.min_qty <= entry.max_qty && entry.max_qty > 0))
+    if (!(entry.min_qty > 0 && entry.min_qty <= entry.max_qty))
       red(
         'M2-QTY',
         `${where}: loot ${entry.item_type} qty ${entry.min_qty}..${entry.max_qty} (mob_template.move:75 EInvalidQty)`
@@ -655,9 +666,12 @@ for (const world of worlds) {
 // kits remain live content, author exactly one level, and may not carry dead buttons.
 {
   const dead_class = spells.filter((s) => s.levels.every((l) => !l.effects.length && !l.crit_effects.length))
-  const empty_class_levels = spells.reduce((n, s) => n + s.levels.filter((l) => !l.effects.length).length, 0)
+  const empty_class_levels = spells.reduce(
+    (n, s) => n + s.levels.filter((l) => !l.effects.length && !l.crit_effects.length).length,
+    0
+  )
   const empty_mob_kits = mobs.reduce(
-    (n, m) => n + m.spells.filter((s) => s.levels.some((l) => !l.effects.length)).length,
+    (n, m) => n + m.spells.filter((s) => s.levels.some((l) => !l.effects.length && !l.crit_effects.length)).length,
     0
   )
   if (dead_class.length || empty_class_levels)
@@ -719,10 +733,10 @@ for (const gatherable of gatherable_catalog) {
       )
   }
 }
-if (resource_rows.length !== 33 || unique_resources.size !== 33 || unique_rares.size !== 33 || protectors.size !== 33)
+if (resource_rows.length !== 18 || unique_resources.size !== 18 || unique_rares.size !== 33 || protectors.size !== 33)
   red(
     'CURATED-WORLDS',
-    `expected 33 placements / 33 base / 33 rare / 33 protector links, got ${resource_rows.length}/${unique_resources.size}/${unique_rares.size}/${protectors.size}`
+    `expected 18 obtainable placements / 18 obtainable base / 33 catalogued rare / 33 protector links, got ${resource_rows.length}/${unique_resources.size}/${unique_rares.size}/${protectors.size}`
   )
 const nauvis = worlds.find(({ world }) => world === 'nauvis')
 const yakutia = worlds.find(({ world }) => world === 'yakutia')
@@ -738,11 +752,21 @@ for (const job of ['FARMER', 'HERBALIST', 'MINER']) {
   const yakutia_tiers = tiers_in(yakutia)
   if (JSON.stringify(nauvis_tiers) !== JSON.stringify([1, 2, 3]))
     red('CURATED-RESOURCES', `nauvis ${job}: expected tiers 1,2,3, got ${nauvis_tiers}`)
-  if (JSON.stringify(yakutia_tiers) !== JSON.stringify([4, 5, 6, 7, 8, 9, 10, 11]))
-    red('CURATED-RESOURCES', `yakutia ${job}: expected tiers 4..11, got ${yakutia_tiers}`)
+  if (JSON.stringify(yakutia_tiers) !== JSON.stringify([4, 5, 6]))
+    red('CURATED-RESOURCES', `yakutia ${job}: expected tiers 4,5,6, got ${yakutia_tiers}`)
+  const unavailable_tiers = gatherable_catalog
+    .filter((row) => row.job === job && !unique_resources.has(row.item_type))
+    .map(({ tier }) => tier)
+    .toSorted((left, right) => left - right)
+  if (JSON.stringify(unavailable_tiers) !== JSON.stringify([7, 8, 9, 10, 11]))
+    red('CURATED-RESOURCES', `${job}: expected unavailable tiers 7..11, got ${unavailable_tiers}`)
 }
-if (yakutia?.resources.some(({ biomes }) => biomes.length > 0))
-  red('CURATED-RESOURCES', 'yakutia backup resources must remain unplaced')
+if (yakutia?.entry_level !== 20) red('CURATED-WORLDS', `yakutia: expected entry level 20, got ${yakutia?.entry_level}`)
+if (yakutia?.mobs.length) red('CURATED-WORLDS', `yakutia: expected no roaming mobs, got ${yakutia.mobs.length}`)
+if (yakutia?.dungeon.key || yakutia?.dungeon.rooms.length)
+  red('CURATED-WORLDS', 'yakutia: expected no dungeon mobs before its combat release')
+if (yakutia?.resources.some(({ biomes }) => biomes.length === 0))
+  red('CURATED-RESOURCES', 'yakutia obtainable resources must name at least one biome')
 const nauvis_resource_biomes = Object.fromEntries(nauvis?.resources.map(({ item_type, biomes }) => [item_type, biomes]))
 const expected_nauvis_resource_biomes = {
   wheat: ['plains'],

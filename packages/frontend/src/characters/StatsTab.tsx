@@ -35,6 +35,7 @@ import {
 import { copy_text, type AppCopy } from '../i18n/copy.ts'
 import { dispatch_app, useAppStore } from '../store.ts'
 import { toast } from '../toast.ts'
+import { run_direct_transaction } from '../transaction_guard.ts'
 
 import './stats.css'
 import './stats_panels.css'
@@ -83,14 +84,17 @@ export default function StatsTab({ character, copy }: Readonly<{ character: Read
   const confirm = (): void => {
     if (!can_confirm || !wallet) return
     const spending = { ...quote!.costs }
-    set_pending_tx(true)
-    const pending = toast.loading(t('stats.tx_pending'))
-    void wallet.character
-      .raise_stats({
+    const transaction = run_direct_transaction(() =>
+      wallet.character.raise_stats({
         character_id: character.id,
         spending,
         custody: { kiosk: character.kiosk, kiosk_cap: character.kiosk_cap },
       })
+    )
+    if (!transaction) return
+    set_pending_tx(true)
+    const pending = toast.loading(t('stats.tx_pending'))
+    void transaction
       .then(() => {
         dispatch_app({ type: 'character/stats_raised', character_id: character.id, spending })
         set_alloc(empty_allocation())

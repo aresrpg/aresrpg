@@ -120,8 +120,12 @@ const JOB_CURVE: vector<u64> = vector[
 /// Job level from total job xp — highest index whose threshold is ≤ xp; `mid = (low+high+1)/2`
 /// converges to the FLOOR level. Clamped at MAX_LEVEL.
 public fun level_from_xp(xp: u64): u64 {
-  if (xp == 0) return 1;
   let curve = JOB_CURVE;
+  level_in_curve(&curve, xp)
+}
+
+fun level_in_curve(curve: &vector<u64>, xp: u64): u64 {
+  if (xp == 0) return 1;
   if (xp >= *curve.borrow(MAX_LEVEL)) return MAX_LEVEL;
   let mut low = 1;
   let mut high = MAX_LEVEL;
@@ -141,6 +145,12 @@ public fun tier_to_level(tier: u64): u64 {
 }
 
 public fun max_level(): u64 { MAX_LEVEL }
+
+public fun level_and_next_xp(xp: u64): (u64, u64) {
+  let curve = JOB_CURVE;
+  let level = level_in_curve(&curve, xp);
+  (level, if (level == MAX_LEVEL) 0 else curve[level + 1])
+}
 
 public fun max_craft_ingredients(): u64 { MAX_CRAFT_INGREDIENTS }
 

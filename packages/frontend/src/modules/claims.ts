@@ -15,12 +15,14 @@ import { item_template_id } from '@aresrpg/sdk/seed-ids'
 import PINS from '../../../../pins.json' with { type: 'json' }
 import { encyclopedia_catalog } from '../content/catalog.ts'
 import { env } from '../env.ts'
+import { crush_results, projected_crush_items, type PendingCrushResult } from '../crush_result.ts'
 import { toast } from '../toast.ts'
 import type { AppModule } from '../store.ts'
 import { is_rune } from '../characters/forge_eligibility.ts'
 import { encumbered_asset_ids, stack_merge_target } from '../inventory_stacks.ts'
 
 const RETRY_COOLDOWN_MS = 30_000
+const wait = (delay_ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, delay_ms))
 /** the indexer projects a yield a beat after finality — one per-item request covers it */
 
 /** template id → item_type over the authored catalog — PURE derivation, zero chain reads. */
@@ -60,12 +62,25 @@ const is_executed_failure = (error: unknown): boolean =>
 
 const observe: NonNullable<AppModule['observe']> = ({ events, dispatch, get_state, signal }) => {
   const attempts = new Map<string, Attempt>()
-  const in_flight = new Set<string>()
+  const pending_crush_results = new Map<string, PendingCrushResult>()
+  let active_claim_id: string | null = null
 
-  const settle = async (claim: Readonly<ClaimRow>): Promise<void> => {
+  const publish_ready_crush_results = (): void => {
+    const { inventory } = get_state().session
+    for (const [claim_id, pending] of pending_crush_results) {
+      const items = projected_crush_items(pending, inventory)
+      if (items === null) continue
+      crush_results.publish(Object.freeze({ digest: pending.digest, items }))
+      pending_crush_results.delete(claim_id)
+      if (active_claim_id === claim_id) active_claim_id = null
+    }
+    if (!active_claim_id) sweep()
+  }
+
+  const settle = async (claim: Readonly<ClaimRow>): Promise<boolean> => {
     const state = get_state()
     const { wallet, inventory } = state.session
-    if (!wallet) return
+    if (!wallet) return false
     const kiosk = state.session.characters[0]?.kiosk ?? inventory[0]?.kiosk
     const character = state.session.characters.find((row) => row.kiosk === kiosk)
     const custody = kiosk ? { kiosk, kiosk_cap: character?.kiosk_cap } : undefined
@@ -79,7 +94,7 @@ const observe: NonNullable<AppModule['observe']> = ({ events, dispatch, get_stat
       // the receipt only settles the claim locally
       await wallet.character.claim_loot({ claim_id: claim.id, rolled_item_type, existing, custody })
       dispatch({ type: 'inventory/claim_settled', claim_id: claim.id })
-      return
+      return false
     }
     const runes = encyclopedia_catalog.items
       .filter((item) => item.category === 'rune')
@@ -87,33 +102,48 @@ const observe: NonNullable<AppModule['observe']> = ({ events, dispatch, get_stat
         item_type,
         existing: stack_merge_target(inventory.filter(is_rune), encumbered, item_type, kiosk),
       }))
-    await wallet.character.redeem_crush({ claim_id: claim.id, runes, custody })
+    const previous_amounts = Object.freeze(Object.fromEntries(inventory.map(({ id, amount }) => [id, amount])))
+    const { digest, item_ids } = await wallet.character.redeem_crush({
+      claim_id: claim.id,
+      runes,
+      custody,
+      pause: wait,
+    })
+    pending_crush_results.set(claim.id, Object.freeze({ digest, item_ids, previous_amounts }))
     dispatch({ type: 'inventory/claim_settled', claim_id: claim.id })
+    publish_ready_crush_results()
+    return true
   }
 
   const sweep = (): void => {
     const { session } = get_state()
-    if (!session.wallet || session.link_status !== 'ready') return
+    if (!session.wallet || session.link_status !== 'ready' || active_claim_id) return
     const now = Date.now()
-    for (const claim of session.claims) {
-      if (in_flight.has(claim.id)) continue
+    const claim = session.claims.find((candidate) => {
       // no attempt is recorded for an unready claim: the cooldown would otherwise swallow the
       // very stream that makes it settleable
-      if (!claim_is_settleable(claim)) continue
-      const attempt = attempts.get(claim.id)
-      if (attempt && (attempt.latched || now - attempt.tried_at_ms < RETRY_COOLDOWN_MS)) continue
-      in_flight.add(claim.id)
-      attempts.set(claim.id, Object.freeze({ tried_at_ms: now, latched: false }))
-      void settle(claim)
-        .catch((error: Readonly<Error>) => {
-          if (is_executed_failure(error)) attempts.set(claim.id, Object.freeze({ tried_at_ms: now, latched: true }))
-          toast.add(error)
-        })
-        .finally(() => in_flight.delete(claim.id))
-    }
+      if (!claim_is_settleable(candidate)) return false
+      const attempt = attempts.get(candidate.id)
+      return !attempt || (!attempt.latched && now - attempt.tried_at_ms >= RETRY_COOLDOWN_MS)
+    })
+    if (!claim) return
+    active_claim_id = claim.id
+    attempts.set(claim.id, Object.freeze({ tried_at_ms: now, latched: false }))
+    void settle(claim)
+      .then((awaiting_projection) => {
+        if (!awaiting_projection && active_claim_id === claim.id) active_claim_id = null
+      })
+      .catch((error: Readonly<Error>) => {
+        if (is_executed_failure(error)) attempts.set(claim.id, Object.freeze({ tried_at_ms: now, latched: true }))
+        if (claim.kind === 'crush') crush_results.fail(error)
+        toast.add(error)
+        if (active_claim_id === claim.id) active_claim_id = null
+      })
+      .finally(sweep)
   }
 
   events.on('STATE_UPDATED', (state, previous) => {
+    if (state.session.inventory !== previous.session.inventory) publish_ready_crush_results()
     if (state.session.claims !== previous.session.claims || state.session.link_status !== previous.session.link_status)
       sweep()
   })

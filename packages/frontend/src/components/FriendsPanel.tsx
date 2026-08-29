@@ -11,6 +11,7 @@ import { owned_party_invite_view, selected_party } from '../modules/party.ts'
 import { dispatch_app, useAppStore } from '../store.ts'
 
 import { ModalFrame } from './ModalFrame.tsx'
+import { PartyInviteCard } from './PartyFrame.tsx'
 import { HudPanel } from './ui/HudPanel.tsx'
 import './friends_panel.css'
 
@@ -62,6 +63,7 @@ export const FriendsPanel = ({ copy }: Readonly<{ copy: AppCopy }>) => {
           </span>
         </button>
       </HudPanel>
+      <PartyInviteCard copy={copy} />
 
       {open && (
         <ModalFrame
@@ -120,7 +122,9 @@ export const FriendsPanel = ({ copy }: Readonly<{ copy: AppCopy }>) => {
                   <button
                     disabled={!!party_pending || !selected_character_id}
                     key={character.id}
-                    onClick={() => dispatch_app({ type: 'party/invite_owned', character_id: character.id })}
+                    onClick={() =>
+                      dispatch_app({ type: 'party/invite', character_id: character.id, name: character.name })
+                    }
                     type="button"
                   >
                     <span>{character.name}</span>

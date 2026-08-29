@@ -3,6 +3,10 @@ body: El mundo completo necesita WebGPU. En su lugar se muestra una cuadrícula 
 fatal: Este navegador no puede crear un contexto gráfico WebGPU ni WebGL.
 world_unavailable_title: Mundo no disponible
 world_unavailable: Este mundo todavía no tiene una receta de terreno creada.
+mobile_unavailable_label: Acceso móvil
+mobile_unavailable_title: AresRPG aún no está disponible en dispositivos móviles
+mobile_unavailable_body: Estamos forjando una experiencia móvil dedicada. Por ahora, entra al mundo desde un navegador de escritorio.
+mobile_unavailable_status: Versión de escritorio en línea
 chrome: 'Chrome o Edge: actualiza el navegador, activa «Usar aceleración de gráficos cuando esté disponible» en Configuración → Sistema y reinícialo.'
 other: Activa la aceleración por hardware, actualiza el navegador y el controlador gráfico y reinicia el navegador.
 continue: Continuar con la cuadrícula
@@ -49,17 +53,26 @@ latency_unit: ms
 indexing_health: Estado del indexado
 online_players: Jugadores en línea
 indexing_lag_warning: Las acciones del juego pueden aparecer con retraso
+indexing_block_title: Sincronizando el mundo
+indexing_block_body: El historial de la cadena todavía se está indexando. El juego se desbloqueará automáticamente cuando el servidor alcance la ventana activa segura.
+indexing_block_progress: Progreso
+indexing_block_remaining: Puntos de control restantes
+indexing_block_eta: Tiempo estimado
+indexing_block_estimating: Calculando…
 game_frozen: El juego está actualmente congelado. Consulta Discord para más información.
 gas_budget_toast: Esta acción superó la tarifa de red que reservamos. No se ejecutó y no te costó nada — por favor, repórtalo.
 game_paused_toast: El juego está en pausa por una actualización. Tu acción no se ejecutó — inténtalo de nuevo en unos minutos.
 movement_sync_toast: Tu posición aún se está sincronizando. Sigue moviéndote con normalidad e inténtalo de nuevo en un momento.
+fight_path_changed_toast: El tablero cambió antes de enviar tu movimiento. Tu turno se restauró — inténtalo de nuevo.
+party_member_unavailable_toast: Ese personaje ya pertenece a un grupo.
+fight_turn_already_forced_toast: Alguien ya forzó el final de este turno.
 network_testnet: TESTNET
 page_pending_title: Esta página se está reconstruyendo
 page_pending_body: Su lugar sigue visible mientras la restauramos de forma limpia.
 welcome_title: Bienvenido a AresRPG
 welcome_body: AresRPG es un MMORPG totalmente on-chain con una economía dirigida por los jugadores. Crea tu primer personaje, entra en el mundo y encuentra monstruos que combatir.
-welcome_need_sui: Necesitas un poco de SUI para jugar — cada acción es una transacción on-chain, y tu primer personaje cuesta {{price}} SUI. Deposita algo de SUI en tu dirección de abajo para empezar.
-insufficient_sui: No hay suficiente SUI en tu monedero
+welcome_need_sui: Necesitas un poco de SUI para jugar — tu primer personaje cuesta {{price}} SUI, y debes conservar al menos {{fee}} SUI en tu saldo para las comisiones. Deposita algo de SUI en tu dirección de abajo para empezar.
+insufficient_sui: Debes conservar al menos {{fee}} SUI en tu saldo para las comisiones.
 create_character: Crear personaje
 create_title: Crea tu personaje
 create_lead: Elige una clase, tus colores y un nombre. El mundo ya está vivo tras de ti.
@@ -107,15 +120,20 @@ kolizeum_page:
   access_friends: Amigos
   status_open: Abierta
   status_started: En curso
-  status_settling: Liquidando
+  status_settling: Combate terminado
   empty: Sin salas
   selected: Sala seleccionada
   side_a: Lado A
   side_b: Lado B
   total_pot: Pozo actual
+  settlement_remaining: Depósito restante
+  paid_out: Pagado
   free: Gratis
   join_a: Unirse al lado A
   join_b: Unirse al lado B
+  join_confirm_title: Confirmar apuesta del Kolizeum
+  join_confirm_body: '{{character}} apostará {{amount}} SUI y se unirá a {{side}}. Esta transacción compromete la apuesta.'
+  join_confirm_cta: 'Apostar {{amount}} SUI · Unirse a {{side}}'
   create_title: Crear sala
   form_format: Formato
   form_access: Acceso
@@ -144,7 +162,7 @@ friends_panel:
 party_panel:
   title: Grupo
   adventurer: Aventurero
-  invited_by: '{{name}} te ha invitado'
+  invited_by: '{{name}} te invitó a unirte a su grupo'
   accept: Aceptar
   decline: Rechazar
   leader: Líder
@@ -153,25 +171,51 @@ party_panel:
   kick: Expulsar
   rescind: Cancelar invitación
   invite_owned: Invitar personaje propio
+  follow_leader: Seguir al líder
+  run_to_position: Correr a la posición
+  run_to_started: Estás corriendo hacia la última posición on-chain de {{name}}. Puede que no sea su posición actual.
+  run_to_started_position: Estás corriendo hacia la posición enlazada.
+  run_to_progress: Corriendo hacia la posición
+  run_to_position_wrong_world: La posición enlazada no está en tu mundo actual.
+  run_to_wrong_world: Ese miembro del grupo no está en tu mundo actual.
+  run_to_unavailable: La posición on-chain de ese miembro del grupo no está disponible.
 trade_panel:
-  inbox: Intercambios
   close: Cerrar
   title: Intercambio entre jugadores
-  locked: Bloqueado · reclamaciones permanentes
-  negotiating: Negociando · cada cambio reinicia la aceptación
+  invite_sent: Invitación de intercambio enviada
+  invited_by: '{{name}} te invitó a intercambiar'
+  request_waiting: Esperando que {{name}} acepte
+  accept_request: Aceptar
+  decline: Rechazar
+  cancel_request: Cancelar solicitud
+  trades: Intercambios
   your_offer: Tu oferta
   their_offer: Su oferta
   accepted: Aceptado
   reviewing: Revisando
-  add_item: Añadir objeto
-  add_character: Añadir personaje
-  sui: Añadir SUI
-  withdraw: Retirar
-  withdraw_sui: Retirar mis SUI
-  accept: Aceptar esta versión
-  claim: Reclamar
-  claim_sui: Reclamar {{amount}} SUI
-  finish: Finalizar intercambio
+  remove_item: Quitar de la oferta
+  drop_items: Suelta objetos aquí
+  empty_offer: No hay objetos ofrecidos
+  offer_item_unavailable: Uno de los objetos preparados ya no está disponible. Revisa tu oferta e inténtalo de nuevo.
+  sui: SUI ofrecido
+  inventory: Tu inventario
+  drag_hint: Arrastra o haz doble clic para añadir
+  amount_title: Elegir cantidad
+  amount_for: 'Cantidad de {{name}}'
+  amount_add: Añadir a la oferta
+  amount_cancel: Cancelar
+  confirm_changes: Confirmar cambios
+  discard_changes: Descartar cambios
+  empty_inventory: No hay bienes intercambiables
+  accept: Aceptar oferta
+  cancel: Cancelar intercambio
+  accept_notice: Aceptar autoriza una transacción final. {{count}} bienes entrantes cuestan {{amount}} SUI en regalías, más gas.
+  settle: Completar intercambio
+  recover: Recuperar oferta
+  settle_notice: Recibe todos los bienes y SUI restantes en una transacción.
+  recover_notice: Recupera toda tu oferta en una transacción.
+  waiting_counterparty: Tu lado está completo. Esperando al otro jugador.
+  finalizing: Finalizando…
 world_hud:
   compass_label: Brújula
   zone: ZONA
@@ -189,6 +233,10 @@ world_hud:
   menu_friend: Añadir amigo
   menu_trade: Comerciar
   menu_message: Enviar un mensaje
+  message_title: 'Mensaje para {{name}}'
+  message_placeholder: Escribe un mensaje privado…
+  message_send: Enviar
+  message_cancel: Cancelar
   mount_prompt: 'Pulsa {{key}} para montar'
   portal_prompt: 'Pulsa {{key}} para viajar a otro mundo'
   dungeon_portal: Portal de mazmorra
@@ -381,6 +429,7 @@ marketplace_page:
   delist_success: Anuncio retirado
   buy_pending: Comprando…
   buy_success: Compra completada
+  sold_toast: 'Vendido: {{amount}} {{name}} por {{price}}'
   character_roster_full: Un 7.º personaje no cabe en tu plantilla — el límite es 6
   collect_pending: Recogiendo ingresos…
   collect_success: Ingresos recogidos
@@ -448,6 +497,12 @@ settings_page:
   subtitle: 'Tus preferencias de AresRPG'
   music_label: 'Música'
   music_hint: 'Reproduce la música del mundo y de los combates.'
+  auto_switch_fighter_label: Cambio automático de luchador
+  auto_switch_fighter_hint: Selecciona automáticamente tu personaje cuando empieza su turno.
+  always_craft_from_label: Fabricar siempre con
+  always_craft_from_hint: Bloquea la pestaña Oficios y cada fabricación a un personaje propio.
+  always_craft_from_picker: Personaje artesano
+  always_craft_from_none: Desactivado
   render_distance_label: Distancia de renderizado
   render_distance_hint: Hasta dónde se carga el mundo a tu alrededor. Más lejos cuesta rendimiento.
 admin_page:
@@ -490,6 +545,88 @@ admin_page:
   confirm_claim: Confirmar retiro
   disconnect_admin_wallet: Desconectar
   claim_digest: Transacción de retiro
+  range_24h: 24 horas
+  range_7d: 7 días
+  range_30d: 30 días
+  range_90d: 90 días
+  range_1y: 1 año
+  overview_title: Resumen
+  overview_body: Actividad de jugadores e ingresos, sin ruido de sala de control.
+  overview_unavailable: Resumen no disponible
+  loading_overview: Cargando resumen…
+  all_systems_current: Todos los sistemas están actualizados
+  checkpoint: punto de control
+  refresh: Actualizar
+  retry: Reintentar
+  active_players: Jugadores activos
+  active_players_bucket: Jugadores activos por intervalo
+  daily_active: Jugadores activos diarios
+  active_interval: Activos por intervalo
+  active_30d: Jugadores activos en 30 días
+  active_last_30d: activos en los últimos 30 días
+  player_activity: Actividad de jugadores
+  player_activity_body: Actividad diaria y alcance móvil de 30 días
+  stickiness: DAU / 30D
+  online_players: Jugadores en línea
+  online_players_body: Conexiones autenticadas medias y máximas
+  online_now: Jugadores en línea
+  average: Media
+  peak: Pico
+  revenue: Ingresos
+  revenue_over_time: Ingresos a lo largo del tiempo
+  revenue_over_time_body: Ingresos de la tienda y regalías del mercado
+  shop: Tienda
+  shop_sales: Ventas de la tienda
+  item_royalties: Regalías de objetos
+  character_royalties: Regalías de personajes
+  game_transactions: Transacciones del juego
+  game_transactions_over_time: Transacciones a lo largo del tiempo
+  game_transactions_body: Transacciones exitosas de AresRPG, contadas una vez por PTB
+  today: Hoy
+  selected_period: Periodo seleccionado
+  lifetime: histórico
+  average_order: pedido medio
+  chart_revenue: Ingresos
+  chart_players: Jugadores
+  chart_online: En línea
+  bucket_15m: Intervalos de 15 minutos
+  bucket_hour: Intervalos horarios
+  bucket_day: Intervalos diarios
+  bucket_week: Intervalos semanales
+  bucket_month: Intervalos mensuales
+  unique_addresses: Direcciones únicas
+  unique_addresses_body: Direcciones con llamadas exitosas a módulos de AresRPG
+  unique_addresses_over_time: Direcciones únicas a lo largo del tiempo
+  successful_game_calls: Autores de llamadas a módulos del juego
+  total_characters: Personajes totales
+  current_characters: Personajes actuales en cadena
+  total_characters_body: Objetos Character actuales en cadena
+  characters_over_time: Personajes a lo largo del tiempo
+  revenue_30d: Ingresos de 30 días
+  revenue_mtd: Ingresos del mes hasta hoy
+  last_30_days: Últimos 30 días
+  calendar_month_to_date: Mes calendario hasta hoy
+  recent_shop_sales: Ventas recientes de la tienda
+  sales_history: Historial de ventas de la tienda
+  sales_retention: Los detalles exactos de las transacciones se conservan 90 días
+  view_all_sales: Ver todas las ventas
+  buyer: Comprador
+  item: Objeto
+  quantity: Cantidad
+  unit_price: Precio unitario
+  total: Total
+  when: Fecha
+  transaction: Transacción
+  treasury: Tesorería
+  treasury_body: Saldos actuales, separados de los ingresos obtenidos
+  available_balance: Saldo disponible
+  claim: Retirar
+  close: Cerrar
+  loading: Cargando…
+  load_more: Cargar más
+  transactions: transacciones
+  no_sales_history: No hay ventas en este periodo
+  end_of_history: Fin del historial conservado
 simulator_page:
   title: Simulador de combate
   local_only: Configuración local determinista
@@ -584,6 +721,10 @@ fight_hud:
   turn_order: Orden de turnos
   placement_title: Prepárate para el combate
   placement_hint: Coloca a tus luchadores y márcalos como listos
+  placement_gas_title: ¿Mover al luchador otra vez?
+  placement_gas_body: Cada cambio de celda ejecuta una transacción y pagas una comisión de gas. Evita cambiar la posición sin necesidad.
+  placement_gas_hide: No volver a mostrar
+  placement_gas_confirm: Mover de todos modos
   placement_ready: Listo
   placement_waiting: Esperando a los demás…
   placement_starting: Iniciando combate…
@@ -628,13 +769,21 @@ fight_hud:
   chat_title: Chat
   chat_tab_general: General
   chat_tab_party: Grupo
+  chat_tab_private: Privado
   chat_tab_combat: Combate
   chat_placeholder: Di algo…
+  chat_fetching_item: Obteniendo estadísticas on-chain…
+  chat_item_unavailable: Este objeto no está disponible on-chain.
   chat_you: Tú
   chat_line: '{name}: {message}'
+  chat_party_line: '(party) {name}: {message}'
+  chat_whisper_to: '(a {name}) {message}'
   result_title: Resultado del combate
   result_duration: Duración
   result_gas_spent: Gas gastado
+  result_wager_won: SUI ganados
+  result_wager_lost: SUI perdidos
+  result_wager_even: Resultado de apuesta
   result_party: Tu grupo
   result_enemies: Enemigos
   result_victory: Victoria
@@ -1010,20 +1159,20 @@ encyclopedia_page:
     success_rate: TASA DE ÉXITO
     success_rate_desc: 'El éxito depende de cuán cerca está la stat de su máximo: cerca del 0% es ~99% de éxito, cerca del máximo es ~50%, y las stats exóticas se quedan en ~1% sin importar el nivel. Que un éxito sea Crítico (sin pérdida) o Neutral (peso pagado) varía de la misma forma, más un pequeño +0,2% por nivel de oficio por encima de 1. No hay límite en qué nivel de objeto puede trabajar tu oficio.'
     puits: POZO (PUITS)
-    puits_desc: Un contador de peso, visible en la interfaz, que se acumula cuando las pérdidas de stats superan el peso de la runa. Absorbe pérdidas futuras antes de que otras stats se vean afectadas. Se reinicia cuando el objeto deja el banco de forgemagia.
+    puits_desc: Un contador de peso, visible en la interfaz, que se acumula cuando las pérdidas de stats superan el peso de la runa. Absorbe pérdidas futuras antes de que otras stats se vean afectadas. Persiste en el objeto y lo acompaña entre bancos y propietarios.
     over_maging: SOBRE-FORJA
     over_maging_desc: Lleva las stats por encima de su máximo natural. Cada línea de stat tiene un tope de 101 de peso extra. El máximo de sobre-forja depende del peso unitario de la stat — una stat ligera como la Vitalidad (peso 0,25) puede empujarse ~404 puntos de más, una pesada como la Sabiduría (peso 3) solo ~33.
     forgemagie_tips: CONSEJOS
-    forgemagie_tips_desc: 'Para exótico/over-mage: quita primero las stats baratas para acumular un gran pozo, luego pasa la stat difícil con el colchón, después vuelve a añadir las stats perdidas (fácil ya que están lejos del máximo). No muevas el objeto durante una sesión. El pozo se reinicia. Las stats exóticas y over-mageadas se pierden primero en caso de fallo.'
+    forgemagie_tips_desc: 'Para exótico/over-mage: quita primero las stats baratas para acumular un gran pozo, luego pasa la stat difícil con el colchón, después vuelve a añadir las stats perdidas (fácil ya que están lejos del máximo). Las stats exóticas y over-mageadas se pierden primero en caso de fallo.'
     forgemagie_xp: EXPERIENCIA
     forgemagie_xp_desc: 'La XP solo se otorga en éxito (Crítico o Neutral). Los objetos de mayor nivel y las runas más pesadas dan significativamente más XP. Las runas Ra otorgan el doble de XP comparado con las runas Ba y Pa. Fórmula: max(1, pesoRuna × (1 + nivelObjeto / 50) × multiplicadorTier) donde el multiplicador es 2 para Ra, 1 en otro caso.'
     action_points: PUNTOS DE ACCIÓN (PA)
     movement_points: PUNTOS DE MOVIMIENTO (PM)
     critical_stat: CRÍTICO
     wisdom_xp: BONO DE XP DE SABIDURÍA
-    wisdom_xp_desc: Cada 6 puntos de Sabiduría añaden un 1 % a la XP obtenida. Con 600 de Sabiduría obtienes el doble de XP.
+    wisdom_xp_desc: Cada punto de Sabiduría efectiva, incluidos los efectos activos, añade un 1 % a la XP obtenida. Con 100 de Sabiduría efectiva obtienes el doble de XP.
     chance_loot: SUERTE Y BOTÍN
-    chance_loot_desc: La Suerte media del equipo ganador multiplica cada probabilidad de drop resuelta. Con 600 de Suerte media, la probabilidad se duplica. Nunca puede superar el 100%.
+    chance_loot_desc: La Suerte efectiva media del equipo ganador, incluidos los efectos activos, multiplica cada probabilidad de drop resuelta. Con 600 de Suerte media, la probabilidad se duplica. Nunca puede superar el 100%.
     mob_loot_band: NIVEL DEL MOB Y DROP
     mob_loot_band_desc: La probabilidad definida es el punto medio. Un mob de nivel mínimo usa el 80% y uno de nivel máximo el 120%, con tope del 100%. Los mobs de nivel fijo usan exactamente la probabilidad definida. La cantidad no escala con el nivel.
   dropped_by: OBTENIDO DE
@@ -1382,7 +1531,7 @@ characters_page:
   max: Máx
   resources: Recursos
   back: Volver
-  gate_note: Requiere temporalmente el oficio de artesanía del objeto al nivel 1
+  gate_note: Requiere el oficio de artesanía del objeto al nivel {{level}}
   detail_title: Objeto
   forge_title: Forja
   inventory_title: Inventario
@@ -1394,10 +1543,14 @@ characters_page:
   one_rune_note: Se consume una runa por intento
   apply: Aplicar runa
   scribing: Grabando…
-  outcome_success: La runa funcionó
-  outcome_neutral: La runa falló — nada cambió
-  outcome_failure: La runa salió mal — se perdió una característica
-  requires_job: 'Requiere {{job}} nivel 1'
+  outcome_critical_success: Éxito crítico
+  outcome_neutral_success: Éxito neutro
+  outcome_critical_failure: Fallo crítico
+  runeforge_history: Historial
+  runeforge_history_empty: Aplica una runa para iniciar el historial de este objeto
+  runeforge_puits: Pozo
+  runeforge_no_stat_change: Ningún atributo cambió
+  requires_job: 'Requiere {{job}} nivel {{level}}'
   clear: Quitar
   inspect_empty: Elige una pieza de equipo para inspeccionar
   no_forge_gear: No hay equipo forjable en la bolsa
@@ -1407,6 +1560,7 @@ characters_page:
   menu_crush: Triturar
   menu_destroy: Destruir
   menu_explorer: Ver en el explorador
+  menu_link_chat: Enlazar en el chat
   feed_title: Alimentar mascota
   feed_power_label: Poder
   feed_power: '{{count}} / {{max}}'
@@ -1422,6 +1576,8 @@ characters_page:
   crush_cta: Triturar
   crush_pending: Triturando…
   crush_success: Equipo triturado
+  crush_result_title: Resultado del triturado
+  crush_result_empty: Más suerte la próxima vez.
   destroy_title: Destruir objeto
   destroy_confirm_body: '¿Destruir {{name}} ×{{amount}}? Esto no se puede deshacer.'
   destroy_cta: Destruir
@@ -1545,6 +1701,9 @@ characters_page:
       consumable: 'Artesanía de consumibles'
     recipes_fallback: 'Recetas'
     equipped: 'Equipado'
+    better_character: '{{name}} es {{job}} niv. {{level}}'
+    switch: 'Cambiar'
+    switch_to_character: 'Cambiar a {{name}}'
     table:
       tier: 'Nivel'
       req_lvl: 'Niv. req.'
@@ -1562,12 +1721,13 @@ characters_page:
       ingredients_head: 'Ingredientes'
       requires_level: 'Requiere {{job}} Nv {{required}} (estás en Nv {{level}})'
       not_enough: 'Ingredientes insuficientes'
-      success_chance: 'Probabilidad de éxito'
-      craft_tooltip: 'Fabricar {{name}}'
-      craft_button: 'Fabricar'
+      starting_chance: 'Probabilidad inicial'
+      amount: 'Intentos'
+      prepare_tooltip: 'Preparar {{count}} × {{name}}'
+      craft_tooltip: 'Fabricar {{count}} × {{name}}'
+      craft_button: 'Fabricar ×{{count}}'
       crafting: 'Fabricando…'
-      craft_success: '{{name}} fabricado'
-      roll_failed: 'La tirada de fabricación falló para {{name}} ({{chance}}% de probabilidad) — los ingredientes se consumieron'
+      craft_result: '{{successes}} / {{attempts}} {{name}} fabricados'
       locked_level: 'Bloqueado · Nv {{level}}'
     detail:
       close_aria: 'Cerrar detalle del objeto'
@@ -1592,3 +1752,244 @@ characters_page:
     experience: 'Experiencia'
     confirm: 'Confirmar'
     max: 'MAX'
+spell_names:
+  'Absorption': 'Absorción'
+  'Absorptive Arrow': 'Flecha Absorbente'
+  'Acceleration': 'Aceleración'
+  'Aggressive Brambles': 'Zarzas Agresivas'
+  'Aggressive Glyph': 'Glifo Agresivo'
+  'Alcoholic Breath': 'Soplido Alcoholizado'
+  'All or Nothing': 'Todo o Nada'
+  'Chimeric Venom': 'Veneno quimérico'
+  'Animal Healing': 'Curación Animal'
+  'Aqueous Armour': 'Armadura Acuosa'
+  'Aqueous Vulnerability': 'Vulnerabilidad Acuosa'
+  'Art of Staff': 'Ciencia del Palo'
+  "Asobi's Fate": 'Destino de Asobi'
+  "Asobi's Luck": 'Suerte de Asobi'
+  'Assault': 'Asalto'
+  'Atonement Arrow': 'Flecha de Expiación'
+  'Attraction': 'Atracción'
+  'Backlash': 'Puñalada'
+  'Bamboo Milk': 'Leche de Bambú'
+  "Bat's Eye": 'Ojo de Topo'
+  'Bear Cry': 'Grito del Oso'
+  'Blazing Fist': 'Puño Flamígero'
+  'Blazing Vulnerability': 'Vulnerabilidad Incandescente'
+  'Blinding Protection': 'Protección Cegadora'
+  'Blindness': 'Ceguera'
+  'Bloodthirsty Madness': 'Locura Sanguinaria'
+  'Blow': 'Soplido'
+  'Bluff': 'Farol'
+  'Bold Punishment': 'Castigo Osado'
+  'Boozer': 'Tranka'
+  'Bow Skill': 'Dominio del Arco'
+  'Bramble': 'Zarza'
+  'Bravery Guide': 'Guía de Valentía'
+  'Bribery': 'Corrupción'
+  'Bubble': 'Pompa'
+  'Burning Arrow': 'Flecha Flamígera'
+  'Burning Glyph': 'Glifo Flamígero'
+  'Bush Fire': 'Fuego Montés'
+  'Celestial Sword': 'Espada Celeste'
+  'Chakra Concentration': 'Concentración de Chakra'
+  'Chakra Impulse': 'Pulsión de Chakra'
+  'Hurl': 'Hurl'
+  'Claw of Ceangal': 'Garra de Ceangal'
+  'Clock': 'Reloj de Pared'
+  'Cloudy Attack': 'Ataque Nuboso'
+  'Clover': 'Trébol'
+  'Clumsiness': 'Torpeza'
+  'Coins Throwing': 'Lanzamiento de Monedas'
+  'Compulsion': 'Compulsión'
+  'Con': 'Estafa'
+  'Concentration': 'Concentración'
+  'Cooperation': 'Cooperación'
+  'Counter': 'Contra'
+  'Critical Shooting': 'Disparo Crítico'
+  'Crow': 'Cuervo'
+  'Curative Word': 'Palabra Curativa'
+  'Cut': 'Corte'
+  'Dark Ray': 'Rayo Oscuro'
+  'Destructive Arrow': 'Flecha Destructora'
+  'Destructive Sword': 'Espada Destructora'
+  'Deviousness': 'Engaño'
+  'Devotion': 'Devoción'
+  'Dissolution': 'Disolución'
+  'Distant Shooting': 'Disparo Lejano'
+  'Divine Sword': 'Espada Divina'
+  'Dolly Sacrifice': 'Sacrificio Muñequero'
+  'Shadowstep': 'Shadowstep'
+  'Draining Word': 'Palabra Drenaje'
+  'Earth Armour': 'Armadura Terrestre'
+  'Earth Vulnerability': 'Vulnerabilidad Terrestre'
+  'Earthquake': 'Temblor'
+  'Bloodstep': 'Bloodstep'
+  'Explosive Arrow': 'Flecha Explosiva'
+  'Explosive Flask': 'Frasco Explosivo'
+  'Fangs of Boowolf': 'Colmillos del Mediulubo'
+  'Fear': 'Miedo'
+  'Feline Leap': 'Salto del Felino'
+  'Feline Movement': 'Movimiento Felino'
+  'Feline Spirit': 'Espíritu Felino'
+  'Flight': 'Huída'
+  'Blood Blade': 'Blood Blade'
+  'Forbidden Word': 'Palabra Prohibida'
+  'Forced Punishment': 'Castigo Forzado'
+  'Fortune': 'Suerte'
+  'Bonding Word': 'Bonding Word'
+  'Frightening Word': 'Palabra de Pavor'
+  'Frostbite': 'Congelación'
+  'Frozen Arrow': 'Flecha Helada'
+  'Fury': 'Furia'
+  'Ghostly Claw': 'Garra Espectral'
+  'Ghostly Shovel': 'Pala Fantasmal'
+  'Glowing Armour': 'Armadura Incandescente'
+  'Glyph of Blindness': 'Glifo de Ceguera'
+  'Glyph of Silence': 'Glifo de Silencio'
+  'Greed': 'Codicia'
+  'Hand': 'Aguja'
+  'Hangover': 'Resaca'
+  'Haziness': 'Turbio'
+  'Heads or Tails': 'Cara o Cruz'
+  'Healing Word': 'Palabra Sanadora'
+  'High-Energy Shot': 'Chute Motivador'
+  'Clockwork Pursuit': 'Clockwork Pursuit'
+  "Ikari's Foot": 'Pie de Ikari'
+  'Immunity': 'Inmunidad'
+  'Increase': 'Amplificación'
+  'Insidious Poison': 'Veneno Insidioso'
+  'Insolent Bramble': 'Zarza Insolente'
+  'Intimidation': 'Intimidación'
+  'Invisibility': 'Invisibilidad'
+  'Invisibility of Others': 'Invisibilidad del Prójimo'
+  'Jump': 'Salto'
+  'Undertow': 'Undertow'
+  'Toxic Knowledge': 'Toxic Knowledge'
+  'Lashing Arrow': 'Flecha Azotadora'
+  'Lashing Claw': 'Garra Azotadora'
+  'Lethal Attack': 'Ataque Mortal'
+  'Lethal Trap': 'Trampa Mortal'
+  'Life Transfer': 'Transferencia de Vida'
+  'Lifting Word': 'Palabra de Vuelo'
+  'Dead Weight': 'Dead Weight'
+  'Golden Fever': 'Golden Fever'
+  'Shovel Uprising': 'Shovel Uprising'
+  'Silent Mark': 'Silent Mark'
+  'Loss of Motivation': 'Desmotivación'
+  'Magic Arrow': 'Flecha Mágica'
+  'Manifold Bramble': 'Zarzas Múltiples'
+  'Mass Clumsiness': 'Torpeza de Masas'
+  'Mass Trap': 'Trampa de Masas'
+  'Melancholy': 'Ola Marejadora'
+  'Mistake': 'Karadura'
+  'Mound': 'Terraplenado'
+  'Mummification': 'Momificación'
+  'Mutilation': 'Mutilación'
+  'Natural Attack': 'Ataque Natural'
+  'Blood Scent': 'Blood Scent'
+  'Nimble Punishment': 'Castigo Ágil'
+  'Pandatak': 'Pandatak'
+  'Pandiniuras': 'Pandenkulo'
+  "Pandora's Box": 'Caja de Pandora'
+  'Paralyzing Arrow': 'Flecha Inmovilizadora'
+  'Paralyzing Glyph': 'Glifo de Inmovilización'
+  'Paralyzing Poison': 'Veneno Paralizante'
+  'Paralyzing Trap': 'Trampa de Inmovilización'
+  'Paralyzing Word': 'Palabra de Inmovilización'
+  'Read the Table': 'Read the Table'
+  'Plaguing Arrow': 'Flecha Acosadora'
+  'Playful Claw': 'Garra Juguetona'
+  'Poisoned Arrow': 'Flecha Envenenada'
+  'Poisoned Trap': 'Trampa Envenenada'
+  'Poisoned Wind': 'Viento Envenenado'
+  'Power': 'Potencia'
+  'Powerful Shooting': 'Disparo Potente'
+  'Pressure': 'Presión'
+  'Preventing Word': 'Palabra de Prevención'
+  'Prime of Life': 'Madurez'
+  'Mountain Punch': 'Puño de montaña'
+  'Punishment': 'Castigo'
+  'Punitive Arrow': 'Flecha Castigadora'
+  'Reducing Key': 'Llave Reductora'
+  'Reflex': 'Reflejos'
+  'Regenerating Word': 'Regeneración'
+  'Rekop': 'Rekop'
+  'Repelling Trap': 'Trampa Repulsiva'
+  'Repercussion': 'Contragolpe'
+  'Retreat Arrow': 'Flecha de Retroceso'
+  'Revitalising Word': 'Palabra Revigorizante'
+  'Rough Tongue': 'Lengua Raspadora'
+  'Roulette': 'Ruleta'
+  'Sacrifice': 'Sacrificio'
+  "Senshi's Sword": 'Espada de Senshi'
+  "Senshi's Wrath": 'Ira de Senshi'
+  'Shovel Kiss': 'Jarabe de Pala'
+  'Shovel of Judgement': 'Pala del Juicio'
+  'Shovel Throwing': 'Lanzamiento de Pala'
+  'Shriveling': 'Marchitación'
+  "Shugo's Shield": 'Escudo de Shugo'
+  "Shugo's Teleportation": 'Teletransportación de Shugo'
+  'Slaughtering Shovel': 'Pala Masacrante'
+  'Slow Down': 'Ralentización'
+  'Slow Down Arrow': 'Flecha Ralentizante'
+  'Smell': 'Olfato'
+  'Soothing Bramble': 'Zarza Tranquilizadora'
+  'Spell Rebound': 'Reenvío de Hechizo'
+  'Spirit Rift': 'Spirit Rift'
+  'Spiritual Punishment': 'Castigo Espiritual'
+  'Rooted Guard': 'Rooted Guard'
+  'Stain': 'Deshonra'
+  'Stimulating Word': 'Palabra Estimulante'
+  'Strengthstorm': 'Tempestad de Potencia'
+  'Lucky Pounce': 'Lucky Pounce'
+  'Stampede': 'Stampede'
+  'Suppressing Roar': 'Suppressing Roar'
+  'Seismic Command': 'Seismic Command'
+  'Rending Pounce': 'Rending Pounce'
+  'Binding Howl': 'Binding Howl'
+  'Primal Cataclysm': 'Primal Cataclysm'
+  'Pack Totem': 'Tótem de la manada'
+  'Swap': 'Cambio'
+  'Sword of Fate': 'Espada del Destino'
+  'Sword of Judgement': 'Espada del Juicio'
+  'Sylvan Power': 'Potencia Silvestre'
+  'Tear': 'Lágrima'
+  'Temporal Dust': 'Polvo Temporal'
+  'Terror': 'Terror'
+  'Root Snare': 'Root Snare'
+  'Reviving Spores': 'Reviving Spores'
+  'Maddening Spores': 'Maddening Spores'
+  'Sacrificial Bloom': 'Sacrificial Bloom'
+  'Overgrowth': 'Overgrowth'
+  'Time Theft': 'Robo del Tiempo'
+  'Toad': 'Sapo'
+  'Temporal Dial': 'Temporal Dial'
+  "Tokei's Punch": 'Golpe de Tokei'
+  "Tokei's Sandglass": 'Reloj de Arena de Tokei'
+  "Tokei's Teleportation": 'Teletransportación de Tokei'
+  'Topkaj': 'Topkaj'
+  'Tormenting Arrow': 'Flecha Perseguidora'
+  'Transposition': 'Transposición'
+  'Trap of Silence': 'Trampa de Silencio'
+  'Tree': 'Árbol'
+  'Tricky Blow': 'Golpe Solapado'
+  'Tricky Trap': 'Trampa Solapada'
+  'Truce': 'Tregua'
+  'Unsummoning': 'Desinvocación'
+  'Vampiric Word': 'Palabra Vampírica'
+  'Vital Exchange': 'Vital Exchange'
+  'Second Wind': 'Second Wind'
+  'Wheel of Fortune': 'Rueda de la Fortuna'
+  'Whip': 'Látigo'
+  'Wild Grass': 'Hierba Loca'
+  'Wind Armour': 'Armadura Ventisca'
+  'Wind Vulnerability': 'Vulnerabilidad Ventosa'
+  'Word of Altruism': 'Palabra de Altruismo'
+  'Word of Recovery': 'Palabra de Reconstitución'
+  'Word of Sacrifice': 'Palabra de Sacrificio'
+  'Word of Silence': 'Palabra de Silencio'
+  'Word of Thorn': 'Palabra de Espina'
+  'Word of Youth': 'Disipar'
+  'Wounding Word': 'Palabra Hiriente'
+  'Zatoishwan Stance': 'Zatoishwan Stance'

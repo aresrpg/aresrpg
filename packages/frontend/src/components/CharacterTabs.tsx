@@ -12,7 +12,7 @@ import {
 } from 'react'
 
 import type { AppCopy } from '../i18n/copy.ts'
-import type { Page } from '../modules/navigation.ts'
+import { is_jobs_pathname, type Page } from '../modules/navigation.ts'
 import { owned_party_invite_view } from '../modules/party.ts'
 import { dispatch_app, useAppStore } from '../store.ts'
 
@@ -27,6 +27,12 @@ export const character_tab_invite_enabled = (
   character_id: string,
   invite_view: ReturnType<typeof owned_party_invite_view>
 ): boolean => invite_view.enabled && invite_view.candidates.some(({ id }) => id === character_id)
+
+export const character_tab_locked = (
+  pathname: string,
+  craft_character_id: string | null | undefined,
+  character_id: string
+): boolean => is_jobs_pathname(pathname) && !!craft_character_id && character_id !== craft_character_id
 
 /** The app-wide character selector: one tab per owned character, plus a create tab. Selecting
  *  a tab re-points every character-scoped surface (world embodiment, stats, gear, spells,
@@ -47,6 +53,8 @@ export const CharacterTabs = ({
   const party_by_character = useAppStore((state) => state.party.party_by_character)
   const parties = useAppStore((state) => state.party.by_id)
   const pending_by_character = useAppStore((state) => state.party.pending_by_character)
+  const pathname = useAppStore((state) => state.navigation.pathname)
+  const craft_character_id = useAppStore((state) => state.settings.always_craft_from_character_id)
   const [menu, set_menu] = useState<Readonly<{ character_id: string; x: number; y: number }> | null>(null)
   const party_id = selected_character_id ? party_by_character[selected_character_id] : undefined
   const party = party_id ? (parties[party_id] ?? null) : null
@@ -80,21 +88,26 @@ export const CharacterTabs = ({
       >
         {characters.map((character) => {
           const active = character.id === selected_character_id
+          const locked = character_tab_locked(pathname, craft_character_id, character.id)
           return (
             <button
               aria-pressed={active}
-              className={`flex min-w-0 max-w-52 shrink-0 cursor-pointer items-center gap-2.5 border-r border-border px-5 transition-colors duration-200 ${
+              className={`flex min-w-0 max-w-52 shrink-0 items-center gap-2.5 border-r border-border px-5 transition-colors duration-200 ${
+                locked ? 'cursor-not-allowed opacity-35' : 'cursor-pointer'
+              } ${
                 active
                   ? 'bg-[#c8963c]/8 text-[#e8c07a] shadow-[inset_0_-2px_0_0_#c8963c]'
                   : 'text-[#6b7280] hover:bg-[#c8963c]/5 hover:text-[#d6d1c8]'
               }`}
               data-character-tab={character.id}
+              disabled={locked}
               key={character.id}
               onClick={() => select_character(character.id)}
               onContextMenu={(event: Readonly<ReactMouseEvent<HTMLButtonElement>>) => {
                 event.preventDefault()
                 set_menu({ character_id: character.id, x: event.clientX, y: event.clientY })
               }}
+              title={locked ? copy.settings_page.always_craft_from_hint : undefined}
               type="button"
             >
               <span className="truncate text-[10px] tracking-[0.18em] uppercase">{character.name}</span>
@@ -129,7 +142,9 @@ export const CharacterTabs = ({
             className="w-full cursor-pointer rounded-[5px] px-3 py-2 text-left text-[#d6d1c8] hover:bg-[#4a9eff]/10 hover:text-[#67adff] disabled:cursor-not-allowed disabled:opacity-35"
             disabled={!can_invite || !!pending}
             onClick={() => {
-              if (can_invite) dispatch_app({ type: 'party/invite_owned', character_id: menu.character_id })
+              const target = characters.find(({ id }) => id === menu.character_id)
+              if (can_invite && target)
+                dispatch_app({ type: 'party/invite', character_id: target.id, name: target.name })
               set_menu(null)
             }}
             role="menuitem"

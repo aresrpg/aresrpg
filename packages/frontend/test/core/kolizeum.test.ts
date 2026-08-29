@@ -98,6 +98,12 @@ const placement_checkpoint = () => ({
     '0xa': {
       name: 'A',
       classe: 'senshi',
+      sex: 'male',
+      color_1: 0xffffff,
+      color_2: 0xd9af57,
+      color_3: 0x8b6539,
+      hat: null,
+      cloak: null,
       level: 10,
       experience: '0',
       vitality: 0,
@@ -113,6 +119,12 @@ const placement_checkpoint = () => ({
     '0xb': {
       name: 'B',
       classe: 'senshi',
+      sex: 'male',
+      color_1: 0xffffff,
+      color_2: 0xd9af57,
+      color_3: 0x8b6539,
+      hat: null,
+      cloak: null,
       level: 10,
       experience: '0',
       vitality: 0,
@@ -126,7 +138,7 @@ const placement_checkpoint = () => ({
       weapon: null,
     },
   },
-  kolizeum: '0xk1',
+  kolizeum: { id: '0xk1', pledge_mist: '1000000000' },
 })
 
 test('formats cap each side independently and zero-stake lobbies remain valid', () => {
@@ -180,8 +192,8 @@ test('a delayed join remains owned by its character and preserves the selected s
     dispatch: emit,
   })
   emit({ type: 'server/packet', packet: { type: 'packet/kolizeums', lobbies: [{ ...lobby, fighters: [] }] } })
-  emit({ type: 'kolizeum/join', kolizeum: lobby.id, side: 1 })
   emit({ type: 'character/select', character_id: '0xb' })
+  emit({ type: 'kolizeum/join', kolizeum: lobby.id, side: 1, character_id: '0xa' })
 
   expect(calls).toEqual([
     {
@@ -243,6 +255,8 @@ test('a wagered ready/start is routed through its Kolizeum manager', async () =>
   await Promise.resolve()
   await Promise.resolve()
 
-  expect(ready_calls).toEqual([{ kolizeum: '0xk1', fight: '0xf1', fighter_idx: 0n, and_start: true }])
-  expect(state.fight.kolizeum_by_fight).toEqual({ '0xf1': '0xk1' })
+  expect(ready_calls).toEqual([{ kolizeum: '0xk1', fight: '0xf1', fighter_idx: 0n }])
+  expect(state.fight.kolizeum_by_fight).toEqual({
+    '0xf1': { id: '0xk1', pledge_mist: 1_000_000_000n },
+  })
 })

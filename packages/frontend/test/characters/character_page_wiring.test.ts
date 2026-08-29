@@ -15,6 +15,7 @@ test('every character progression tab crosses the wallet action and proven recei
   const spells = source('SpellsTab.tsx')
   const jobs = source('JobsTab.tsx')
   const forge = source('RuneforgeTab.tsx')
+  const forge_eligibility = source('forge_eligibility.ts')
 
   for (const tab of ['stats', 'spells', 'jobs', 'runeforge']) expect(page).toContain(`tab === '${tab}'`)
 
@@ -23,10 +24,17 @@ test('every character progression tab crosses the wallet action and proven recei
   expect(spells).toContain('.raise_spell(')
   expect(spells).toContain("type: 'character/spell_raised'")
   expect(jobs).toContain('.craft(')
+  expect(jobs).toContain('.merge_many(')
+  expect(jobs.match(/retry_after_version_race/g)?.length).toBe(3)
+  expect(jobs).toContain("type: 'inventory/stacks_merged'")
   expect(jobs).toContain("type: 'character/crafted'")
+  expect(jobs).toContain("t('jobs.craft.starting_chance')")
   expect(forge).toContain('.scribe_rune(')
-  expect(forge).toContain("type: 'character/rune_scribed'")
-  expect(forge).toContain('CONTRACT_CONSTANTS.rune_unlock_level')
+  expect(forge).toContain("type: 'runeforge/scribed'")
+  expect(forge.match(/set_rune_id\(null\)/g)?.length).toBe(1)
+  expect(forge).toContain('history_by_gear')
+  expect(forge).toContain('RUNE_UNLOCK_LEVEL')
+  expect(forge_eligibility).toContain('CONTRACT_CONSTANTS.rune_unlock_level')
   expect(forge).not.toContain('const RUNE_UNLOCK_LEVEL')
 })
 

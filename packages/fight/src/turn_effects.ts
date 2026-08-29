@@ -8,13 +8,16 @@ import { fire_glyphs_under, tick_board_zones } from './zones.ts'
 import { resolve_rows } from './effects.ts'
 import type { ActiveEffect, FightRuntime } from './types.ts'
 
+const removes_points = (kind: bigint): boolean =>
+  kind === KINDS.remove || kind === KINDS.steal || kind === KINDS.fixed_remove
+
 export const apply_pool_effects = (runtime: FightRuntime, fighter: bigint): void => {
   const rows = [...runtime.contract.fighters[Number(fighter)].effects]
   rows.forEach((row) => {
     if (row.kind === KINDS.add) {
       if (row.stat === STATS.ap) add_ap(runtime, fighter, row.value, 'timed_pool', row.source)
       else if (row.stat === STATS.mp) add_mp(runtime, fighter, row.value, 'timed_pool', row.source)
-    } else if (row.kind === KINDS.remove || row.kind === KINDS.steal) {
+    } else if (removes_points(row.kind)) {
       if (row.stat === STATS.ap) spend_ap(runtime, fighter, row.value, 'timed_pool', row.source)
       else if (row.stat === STATS.mp) spend_mp(runtime, fighter, row.value, 'timed_pool', row.source)
     }

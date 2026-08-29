@@ -128,6 +128,7 @@ export const create_webgpu_backend = async (
   scene.backgroundNode = analytic_sky.background_node
 
   const flatten = create_flatten_uniform()
+  let flatten_amount = 0
   const clouds = create_clouds({ scene, quality: initial_quality, seed: world.seed, sky: analytic_sky })
   const board_occlusion = create_board_occlusion()
   let board_footprint: Readonly<{ center: readonly [number, number, number]; half_x: number; half_z: number }> | null =
@@ -642,6 +643,7 @@ export const create_webgpu_backend = async (
       apply_sky_lighting()
     },
     set_flatten_amount: (amount: number) => {
+      flatten_amount = amount
       if (flatten.set(amount)) sun.shadow.needsUpdate = true
       terrain.set_flatten_active(flat_terrain_amount(amount) > 0)
       scatter.set_flatten_active(flat_terrain_amount(amount) > 0)
@@ -655,6 +657,7 @@ export const create_webgpu_backend = async (
       resource_nodes.set_visible(resource_nodes_visible)
       portal?.set_flatten(amount)
       dungeon_portals.set_flatten(amount)
+      fight_swords?.set_flatten(amount)
     },
     set_fight_board: (board) => {
       fight_board.set(board)
@@ -698,6 +701,7 @@ export const create_webgpu_backend = async (
         impact_sound_url,
         impact: effects.play_sword_impact,
       })
+      fight_swords.set_flatten(flatten_amount)
       fight_swords.set_visible(fight_swords_visible(board_footprint !== null) && !dungeon_stage_active)
       fight_swords.set_markers(markers)
     },

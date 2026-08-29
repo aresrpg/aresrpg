@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 /* eslint-disable complexity, max-lines -- this exhaustive effect presenter keeps the effect-kind mapping in one visible home. */
-import { AREA_SHAPES, CHANNELS, EFFECT_KINDS, TARGET_FILTERS } from '@aresrpg/fight/move_contract'
+import { AREA_SHAPES, CHANNELS, CONTRACT_CONSTANTS, EFFECT_KINDS, TARGET_FILTERS } from '@aresrpg/fight/move_contract'
 import { element_names } from '@aresrpg/immutable'
-import { Crosshair, Footprints, Sparkles, Zap, type LucideIcon } from 'lucide-react'
+import { Crosshair, Footprints, Shield, Sparkles, Zap, type LucideIcon } from 'lucide-react'
 import { useState, type FocusEvent, type ReactNode } from 'react'
 
 import type { EffectLineView } from '../components/EffectLine.tsx'
@@ -30,6 +30,7 @@ const shape_options = Object.entries(AREA_SHAPES).map(([name, value]) => [titlei
 const target_options = Object.entries(TARGET_FILTERS).map(([name, value]) => [titleize(name), Number(value)] as const)
 const stat_options = Object.entries(CHANNELS).map(([name, value]) => [titleize(name), Number(value)] as const)
 const element_options = ['', ...element_names].map((value) => [value ? titleize(value) : 'None', value] as const)
+const CHATIMENT_TURNS = Number(CONTRACT_CONSTANTS.chatiment_turns)
 const instant_effect_kinds = Object.freeze([
   Number(EFFECT_KINDS.damage),
   Number(EFFECT_KINDS.pct_life),
@@ -51,6 +52,25 @@ const timed_effect_kinds = Object.freeze([
   Number(EFFECT_KINDS.return),
   Number(EFFECT_KINDS.redirect),
 ])
+const stat_effect_kinds = Object.freeze([
+  Number(EFFECT_KINDS.add),
+  Number(EFFECT_KINDS.remove),
+  Number(EFFECT_KINDS.steal),
+  Number(EFFECT_KINDS.chatiment),
+  Number(EFFECT_KINDS.fixed_remove),
+])
+const effect_channel = (effect: SpellEffect): string =>
+  stat_effect_kinds.includes(effect.kind) ? (channels[effect.stat] ?? '') : ''
+const universal_shield = (effect: SpellEffect): boolean =>
+  effect.kind === Number(EFFECT_KINDS.reduce) && effect.element === ''
+const effect_icon = (effect: SpellEffect, channel: string): LucideIcon | undefined =>
+  universal_shield(effect) ? Shield : channel_icons[channel]
+const effect_icon_title = (effect: SpellEffect, channel: string): string =>
+  universal_shield(effect) ? 'All elements' : titleize(channel)
+const element_options_for = (kind: string | undefined): readonly (readonly [string, string])[] =>
+  kind === 'reduce'
+    ? element_options.map(([label, value]) => [value === '' ? 'All elements' : label, value] as const)
+    : element_options
 const duration_editable_for = (kind: number): boolean =>
   kind !== Number(EFFECT_KINDS.chatiment) && !instant_effect_kinds.includes(kind)
 const blank_effect: SpellEffect = Object.freeze({
@@ -210,7 +230,7 @@ const AreaGlyph = ({ shape, size }: Readonly<{ shape: number; size: number }>) =
 }
 
 const effect_identity = (effect: SpellEffect): Readonly<{ icon: string; label: string; tint: string }> | null => {
-  const channel = channels[effect.stat]
+  const channel = effect_channel(effect)
   const identity = stat_identities[element_stats[effect.element] ?? channel]
   return identity
     ? Object.freeze({
@@ -229,6 +249,13 @@ const effect_range = ({ value, value_max }: SpellEffect): string =>
 const effect_value_suffix = (effect: SpellEffect): string =>
   effect_kinds[effect.kind] === 'pct_life' || channels[effect.stat] === 'resist' ? '%' : ''
 
+const remove_words = (kind: string): Readonly<{ action: string; suffix: string; amount: boolean; stat: boolean }> => ({
+  action: kind === 'fixed_remove' ? 'Removes (undodgeable)' : 'Removes',
+  suffix: '',
+  amount: true,
+  stat: true,
+})
+
 const effect_words = (
   effect: SpellEffect
 ): Readonly<{ action: string; suffix: string; amount: boolean; stat: boolean }> => {
@@ -244,7 +271,7 @@ const effect_words = (
   if (kind === 'add') return { action: 'Adds', suffix: '', amount: true, stat: true }
   if (kind === 'remove' && channels[effect.stat] === 'hp')
     return { action: 'Deals', suffix: 'damage', amount: true, stat: false }
-  if (kind === 'remove') return { action: 'Removes', suffix: '', amount: true, stat: true }
+  if (['remove', 'fixed_remove'].includes(kind)) return remove_words(kind)
   if (kind === 'steal') return { action: 'Steals', suffix: '', amount: true, stat: true }
   if (kind === 'chatiment')
     return { action: 'Gains up to', suffix: 'from damage received each turn', amount: true, stat: true }
@@ -295,7 +322,7 @@ const CriticalEditor = ({ critical, update }: Readonly<{ critical: SpellEffect; 
     const next = Number(value)
     update('kind', next)
     if (instant_effect_kinds.includes(next) && critical.turns !== 0) update('turns', 0)
-    if (next === Number(EFFECT_KINDS.chatiment) && critical.turns !== 5) update('turns', 5)
+    if (next === Number(EFFECT_KINDS.chatiment) && critical.turns !== CHATIMENT_TURNS) update('turns', CHATIMENT_TURNS)
     else if (timed_effect_kinds.includes(next) && critical.turns === 0) update('turns', 1)
   }
   return (
@@ -356,8 +383,8 @@ type SpellEffectLineProps = Readonly<{
 }>
 export const spell_effect_line_view = (effect: SpellEffect, critical_only = false): EffectLineView => {
   const identity = effect_identity(effect)
-  const channel = channels[effect.stat] ?? ''
-  const ChannelIcon = channel_icons[channel]
+  const channel = effect_channel(effect)
+  const ChannelIcon = effect_icon(effect, channel)
   const color = identity?.tint ?? stat_colors[channel] ?? effect_color(effect.element)
   const words = effect_words(effect)
   const kind = effect_kinds[effect.kind]
@@ -392,8 +419,8 @@ export const SpellEffectLine = ({
   add_critical,
 }: SpellEffectLineProps) => {
   const identity = effect_identity(effect)
-  const channel = channels[effect.stat] ?? ''
-  const ChannelIcon = channel_icons[channel]
+  const channel = effect_channel(effect)
+  const ChannelIcon = effect_icon(effect, channel)
   const color = identity?.tint ?? stat_colors[channel] ?? effect_color(effect.element)
   const words = effect_words(effect)
   const kind = effect_kinds[effect.kind]
@@ -405,13 +432,13 @@ export const SpellEffectLine = ({
     const next = Number(value)
     update('kind', next)
     if (instant_effect_kinds.includes(next) && effect.turns !== 0) update('turns', 0)
-    if (next === Number(EFFECT_KINDS.chatiment) && effect.turns !== 5) update('turns', 5)
+    if (next === Number(EFFECT_KINDS.chatiment) && effect.turns !== CHATIMENT_TURNS) update('turns', CHATIMENT_TURNS)
     else if (timed_effect_kinds.includes(next) && effect.turns === 0) update('turns', 1)
   }
   const icon = identity ? (
     <img alt="" className="size-5 object-contain" src={identity.icon} title={identity.label} />
   ) : ChannelIcon ? (
-    <span className="grid size-5 place-items-center" style={{ color }} title={titleize(channel)}>
+    <span className="grid size-5 place-items-center" style={{ color }} title={effect_icon_title(effect, channel)}>
       <ChannelIcon size={15} strokeWidth={1.6} />
     </span>
   ) : (
@@ -430,7 +457,7 @@ export const SpellEffectLine = ({
           <SelectField
             change={(value) => update('element', value)}
             label="Element"
-            options={element_options}
+            options={element_options_for(kind)}
             value={effect.element}
           />
         }

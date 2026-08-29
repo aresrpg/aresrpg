@@ -177,12 +177,12 @@ export default {
         const { fight, winner } = payload.data as { fight: string; winner: number | null }
         send({ type: 'packet/fight_ended', fight, winner })
       }
-      if (payload.type === 'FightClosable')
+      if (payload.type === 'FightClosed')
         void get_closable_fights(graph, { address })
           .then((fights) => {
-            if (fights.length > 0) send({ type: 'packet/closable_fights', fights })
+            send({ type: 'packet/closable_fights', fights })
           })
-          .catch((error: Error) => log.warn({ error: error.message }, 'closable fight read failed'))
+          .catch((error: Error) => log.warn({ error: error.message }, 'closed fight recovery refresh failed'))
     }
 
     const forward_fight_action = (fight: string) => (fact: FightActionFact) => {

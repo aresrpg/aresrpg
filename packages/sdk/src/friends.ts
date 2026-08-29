@@ -20,9 +20,11 @@ export const friend_list_id = (registry: string, type_package: string, owner: st
   deriveObjectID(registry, `${type_package}::friends::FriendKey`, bcs.Address.serialize(owner).toBytes())
 
 export const friends_actions = (sdk: GameSdk, { address }: Readonly<{ address: string }>) => {
-  const type_package = sdk.game_type_package
-  if (!type_package) throw new Error('Friend actions are unavailable: the defining package is missing.')
-  const list_id = () => friend_list_id(friend_registry(sdk), type_package, address)
+  const list_id = () => {
+    const type_package = sdk.game_type_package
+    if (!type_package) throw new Error('Friend actions are unavailable: the defining package is missing.')
+    return friend_list_id(friend_registry(sdk), type_package, address)
+  }
   const hydrate = async (): Promise<boolean> => {
     const list = list_id()
     await sdk.hydrate_unknown([list])

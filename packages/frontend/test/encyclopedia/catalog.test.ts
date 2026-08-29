@@ -34,7 +34,7 @@ describe('local encyclopedia catalog', () => {
       ['fuwa_hide', 4_000],
       ['fuwa_horn', 3_000],
       ['fuwa_eye', 3_000],
-      ['key_of_tangled_aftermath', 500],
+      ['key_of_tangled_aftermath', 200],
     ])
     expect(
       encyclopedia_catalog.mob('fuwa__black')?.loot.map(({ drop: { item_type, chance_bp } }) => [item_type, chance_bp])
@@ -43,7 +43,7 @@ describe('local encyclopedia catalog', () => {
       ['nifuwa_hide', 4_000],
       ['fuwa_horn', 4_000],
       ['fuwa_eye', 4_000],
-      ['key_of_tangled_aftermath', 500],
+      ['key_of_tangled_aftermath', 200],
     ])
     expect(
       encyclopedia_catalog.mob('fuwa__fukuo')?.loot.map(({ drop: { item_type, chance_bp } }) => [item_type, chance_bp])
@@ -52,6 +52,7 @@ describe('local encyclopedia catalog', () => {
       ['fuwa_horn', 8_000],
       ['fuwa_eye', 8_000],
       ['fukuo_tidal_horn', 10_000],
+      ['key_of_tangled_aftermath', 8_000],
     ])
   })
 
@@ -84,7 +85,9 @@ describe('local encyclopedia catalog', () => {
     expect(encyclopedia_catalog.classes).toHaveLength(12)
     expect(encyclopedia_catalog.classes.every(({ spells }) => spells.length > 0)).toBe(true)
     expect(encyclopedia_catalog.jobs).toHaveLength(11)
-    expect(encyclopedia_catalog.job('MINER')?.resources).toHaveLength(11)
+    expect(encyclopedia_catalog.job('FARMER')?.resources).toHaveLength(6)
+    expect(encyclopedia_catalog.job('HERBALIST')?.resources).toHaveLength(6)
+    expect(encyclopedia_catalog.job('MINER')?.resources).toHaveLength(6)
     expect(encyclopedia_catalog.job('FARMER')?.recipes).toHaveLength(11)
     expect(encyclopedia_catalog.job('HERBALIST')?.recipes).toHaveLength(11)
     expect(encyclopedia_catalog.job('MINER')?.recipes).toHaveLength(11)

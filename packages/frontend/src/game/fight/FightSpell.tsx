@@ -10,6 +10,7 @@ import type { FightSpellView } from './fight_projection.ts'
 
 const card_element = (element: string): '' | 'earth' | 'fire' | 'water' | 'air' =>
   element === 'earth' || element === 'fire' || element === 'water' || element === 'air' ? element : ''
+const displayed_name = (identity: string, display_name: string | undefined): string => display_name ?? identity
 
 const number_effect = (effect: Readonly<FightSpellView['details']['effects'][number]>) =>
   Object.freeze({
@@ -71,15 +72,18 @@ export const FightSpell = ({
   selected,
   select,
   fallback_icon,
+  display_name,
 }: Readonly<{
   spell: FightSpellView
   disabled: boolean
   selected: boolean
   select: () => void
   fallback_icon?: ReactNode
+  display_name?: string
 }>) => {
   const [detail_open, set_detail_open] = useState(false)
   const icon = spell_icon(spell.source.classe, spell.name)
+  const name = displayed_name(spell.name, display_name)
   const detail = fight_spell_detail(spell)
   const critical = spell.turn?.critical === true && !disabled
   const close_focus = (event: Readonly<FocusEvent<HTMLDivElement>>): void => {
@@ -95,7 +99,7 @@ export const FightSpell = ({
       onMouseLeave={() => set_detail_open(false)}
     >
       <button
-        aria-label={`${spell.name}, level ${spell.level}, ${spell.details.ap_cost} AP`}
+        aria-label={`${name}, level ${spell.level}, ${spell.details.ap_cost} AP`}
         aria-pressed={selected}
         className={`fight-hud__spell${disabled ? ' disabled' : ''}${selected ? ' selected' : ''}${critical ? ' critical' : ''}`}
         data-turn-critical={critical || undefined}
@@ -106,14 +110,20 @@ export const FightSpell = ({
         {icon ? (
           <img alt="" draggable={false} src={icon} />
         ) : (
-          <span>{fallback_icon ?? spell.name.slice(0, 1).toUpperCase()}</span>
+          <span>{fallback_icon ?? name.slice(0, 1).toUpperCase()}</span>
         )}
         <b>{spell.details.ap_cost.toString()}</b>
         {spell.cooldown > 0n && <em className="fight-hud__spell-cooldown">{spell.cooldown.toString()}</em>}
       </button>
       {detail_open && (
         <div className="fight-hud__spell-detail fight-hud__spell-detail--small">
-          <SpellCard initial_level={Number(spell.level)} key={`${spell.name}:${spell.level}`} small spell={detail} />
+          <SpellCard
+            display_name={name}
+            initial_level={Number(spell.level)}
+            key={`${spell.name}:${spell.level}`}
+            small
+            spell={detail}
+          />
         </div>
       )}
     </div>

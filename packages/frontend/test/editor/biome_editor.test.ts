@@ -9,13 +9,14 @@ import {
   sample_biome_grid,
   sample_world_column,
 } from '@aresrpg/engine'
-import { gatherable_of } from '@aresrpg/immutable'
+import { gatherable_catalog, gatherable_of } from '@aresrpg/immutable'
 
 import worlds from '../../../../seed/content/worlds.json'
 import mobs from '../../../../seed/content/mobs.json'
 import {
   biome_map_color,
   biome_preview,
+  dominant_biome_land,
   move_spline_knot,
   terrain_patch,
   world_height_domain,
@@ -87,7 +88,7 @@ test('Nauvis is the approved temperate land matrix with an elevation-selected oc
   })
 })
 
-test('Nauvis places gathering tiers 1–3 while Yakutia keeps the remaining backup rows', () => {
+test('Yakutia unlocks at level 20 with gathering tiers 4–6 and no ordinary combat population', () => {
   const nauvis = worlds.find(({ world }) => world === 'nauvis')!
   const yakutia = worlds.find(({ world }) => world === 'yakutia')!
   const tiers = (resources: typeof nauvis.resources, job: string) =>
@@ -95,12 +96,19 @@ test('Nauvis places gathering tiers 1–3 while Yakutia keeps the remaining back
       const gatherable = gatherable_of(item_type)
       return gatherable?.job === job ? [gatherable.tier] : []
     })
+  const obtainable = new Set([...nauvis.resources, ...yakutia.resources].map(({ item_type }) => item_type))
 
   for (const job of ['FARMER', 'HERBALIST', 'MINER']) {
     expect(tiers(nauvis.resources, job)).toEqual([1, 2, 3])
-    expect(tiers(yakutia.resources, job)).toEqual([4, 5, 6, 7, 8, 9, 10, 11])
+    expect(tiers(yakutia.resources, job)).toEqual([4, 5, 6])
+    expect(
+      gatherable_catalog.filter((row) => row.job === job && !obtainable.has(row.item_type)).map(({ tier }) => tier)
+    ).toEqual([7, 8, 9, 10, 11])
   }
-  expect(yakutia.resources.every(({ biomes }) => biomes.length === 0)).toBeTrue()
+  expect(yakutia.entry_level).toBe(20)
+  expect(yakutia.mobs).toEqual([])
+  expect(yakutia.dungeon).toEqual({ key: '', rooms: [] })
+  expect(yakutia.resources.every(({ biomes }) => biomes.length > 0)).toBeTrue()
   expect(
     [...nauvis.resources, ...yakutia.resources].every(
       (row) => Object.keys(row).toSorted().join() === 'biomes,item_type'
@@ -117,6 +125,49 @@ test('Nauvis places gathering tiers 1–3 while Yakutia keeps the remaining back
     ivory_shrooms: ['forest', 'rainforest'],
     jade: ['desert'],
   })
+})
+
+test('Yakutia has six materially diverse biomes and reads as a frozen world', () => {
+  const terrain = worlds.find(({ world }) => world === 'yakutia')?.terrain
+  if (!terrain) throw new Error('Yakutia terrain missing')
+  const names = terrain.biomes.map(({ name }) => name)
+  expect(names).toEqual(['taiga', 'black_ice', 'ice_peaks', 'blue_steppe', 'frostfen', 'caldera'])
+  expect(new Set(Object.values(terrain.biome_slots))).toEqual(new Set(names))
+  const frozen_surfaces = ['snow', 'ice', 'dark_ice', 'cold_blue_grass', 'frozen_stone']
+  expect(
+    terrain.biomes.filter((biome) => frozen_surfaces.includes(dominant_biome_land(biome)?.surface ?? '')).length
+  ).toBe(5)
+  for (const biome of terrain.biomes) {
+    expect(biome.landscape[0]?.x).toBe(0)
+    expect(biome.landscape[0]?.land).toBeDefined()
+    expect(biome.landscape.at(-1)?.x).toBe(1)
+    expect(biome.landscape.every((knot, index) => index === 0 || knot.x > biome.landscape[index - 1]!.x)).toBeTrue()
+  }
+
+  const world = compile_world_recipe(parse_world_recipe(terrain), { structures: false })
+  const side = 128
+  const spacing = 768
+  const columns = Array.from({ length: side * side }, (_, index) =>
+    sample_world_column(world, (index % side) * spacing - 49_152, Math.floor(index / side) * spacing - 49_152)
+  )
+  const count_by = (key: (column: (typeof columns)[number]) => string) =>
+    columns.reduce<Record<string, number>>((counts, column) => {
+      const value = key(column)
+      return { ...counts, [value]: (counts[value] ?? 0) + 1 }
+    }, {})
+  const biome_counts = count_by(({ biome }) => biome.name)
+  const surface_counts = Object.values(count_by(({ land }) => land.surface))
+  const frozen_share = columns.filter(({ land }) => frozen_surfaces.includes(land.surface)).length / columns.length
+  const heights = columns.map(({ surface_y }) => surface_y).sort((left, right) => left - right)
+
+  expect(Object.keys(biome_counts).toSorted()).toEqual(names.toSorted())
+  expect(Math.min(...Object.values(biome_counts)) / columns.length).toBeGreaterThanOrEqual(0.03)
+  expect(Math.max(...Object.values(biome_counts)) / columns.length).toBeLessThanOrEqual(0.4)
+  expect(surface_counts.filter((count) => count / columns.length >= 0.01)).toHaveLength(5)
+  expect(frozen_share).toBeGreaterThanOrEqual(0.65)
+  expect(heights[0]).toBeGreaterThan(terrain.sea_level)
+  expect(heights[Math.floor(heights.length * 0.95)]).toBeGreaterThanOrEqual(170)
+  expect(heights.at(-1)).toBeGreaterThanOrEqual(300)
 })
 
 test('Nauvis owns the exact curated roaming roster and keeps Araknomath as a boss', () => {

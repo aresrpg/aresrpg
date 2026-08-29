@@ -25,7 +25,7 @@ fun a_final_turn_buff_stays_visible_and_effective_until_that_turn_closes() {
 fun pool_removal_uses_the_next_pool_and_instant_active_removal_does_not_repeat() {
   let mut scenario = test_scenario::begin(OWNER);
   let result = fight::pool_removal_semantics_for_testing(scenario.ctx());
-  assert!(result == vector[1, 2, 4, 0], 0);
+  assert!(result == vector[1, 2, 4, 0, 0, 100, 0, 6], 0);
   scenario.end();
 }
 

@@ -209,5 +209,5 @@ export const xp_for_player = (
   if (player_total_level * 2n > highest_mob_level * 5n)
     group_xp = (group_xp * (highest_mob_level * 5n)) / (player_total_level * 2n)
 
-  return (((group_xp * player_level) / player_total_level) * (600n + wisdom)) / 600n
+  return (((group_xp * player_level) / player_total_level) * (100n + wisdom)) / 100n
 }

@@ -11,6 +11,7 @@ import { load_game_settings } from './game/core/settings.ts'
 import { load_locale } from './i18n/locale.ts'
 import { load_app_copy } from './i18n/copy.ts'
 import { register_service_worker } from './pwa.ts'
+import { MOBILE_VIEWPORT_QUERY, MobileUnavailableScreen } from './components/MobileUnavailableScreen.tsx'
 import './tailwind.css'
 
 const requested_quality = import.meta.env.DEV ? new URLSearchParams(globalThis.location.search).get('quality') : null
@@ -21,6 +22,15 @@ const root = createRoot(document.getElementById('root')!)
 const demo_route = globalThis.location.pathname.replace(/\/+$/, '') === '/demo'
 
 const boot = async (): Promise<void> => {
+  if (globalThis.matchMedia?.(MOBILE_VIEWPORT_QUERY).matches === true) {
+    const copy = await load_app_copy(locale)
+    root.render(
+      <StrictMode>
+        <MobileUnavailableScreen copy={copy} />
+      </StrictMode>
+    )
+    return
+  }
   if (demo_route) {
     const [{ DemoPage }, copy] = await Promise.all([import('./demo/DemoPage.tsx'), load_app_copy(locale)])
     dispatch_app({ type: 'locale/loaded', locale, copy })

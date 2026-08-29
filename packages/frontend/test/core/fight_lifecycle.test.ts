@@ -3,7 +3,7 @@
 
 import { expect, test } from 'bun:test'
 
-import { turn_too_soon_refusal } from '../../src/modules/fight_chain.ts'
+import { end_turn_retry_delay_ms, turn_too_soon_refusal } from '../../src/modules/fight_chain.ts'
 import { terminal_remote_draft_needs_commit } from '../../src/modules/fight_lifecycle.ts'
 import { initial_app_state, reduce_app_state } from '../../src/store.ts'
 
@@ -54,4 +54,9 @@ test('a zero-gas too-soon refusal requeues, while an executed failure never retr
   state = reduce_app_state(state, { type: 'fight/end_turn_queued', fight: '0xf', queued: true })
   expect(state.fight.end_turn_submitted).toBeFalse()
   expect(state.fight.end_turn_queued).toBeTrue()
+})
+
+test('a pre-submission refusal always waits before retrying despite client clock skew', () => {
+  expect(end_turn_retry_delay_ms(0, 10_500, 10_000)).toBe(500)
+  expect(end_turn_retry_delay_ms(2_000, 10_500, 10_000)).toBe(2_000)
 })

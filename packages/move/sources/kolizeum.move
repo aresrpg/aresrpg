@@ -146,6 +146,13 @@ public(package) fun join(
 
   lobby.pot.join(pledge_coin.into_balance());
   fight::join(fight, protected, kiosk, cap, character_id, side, 0, false, clock, ctx);
+  let placement_ms = placement_clock(
+    lobby.format,
+    fight::side_players(fight, 0),
+    fight::side_players(fight, 1),
+    clock.timestamp_ms(),
+  );
+  if (placement_ms != 0) fight::set_placement_clock(fight, placement_ms);
 }
 
 /// Begin the fight — takes the 10% platform cut to the treasury (once, off the full pot).
@@ -216,6 +223,7 @@ public(package) fun exit(
   assert!(fight::in_placement(fight), EWrongFight); // started fights settle, never exit
   transfer::public_transfer(coin::take(&mut lobby.pot, lobby.pledge, ctx), ctx.sender());
   fight::forfeit(fight, fighter_idx, kiosk, cap, policy, clock, ctx);
+  fight::set_placement_clock(fight, 0);
 }
 
 /// Final placement participant: refund and return the character, then consume both empty
@@ -274,6 +282,15 @@ fun destroy_empty(lobby: Kolizeum) {
   let Kolizeum { id, pot, .. } = lobby;
   pot.destroy_zero();
   id.delete();
+}
+
+fun placement_clock(format: u64, side_a: u64, side_b: u64, now: u64): u64 {
+  if (side_a == format && side_b == format) now else 0
+}
+
+#[test_only]
+public(package) fun placement_clock_for_testing(format: u64, side_a: u64, side_b: u64, now: u64): u64 {
+  placement_clock(format, side_a, side_b, now)
 }
 
 // ╔════════════════ [ Internals ] ════════════════════════════════════════════ ]

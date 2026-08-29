@@ -9,15 +9,17 @@ import { describe, expect, test } from 'bun:test'
 import { renderToStaticMarkup } from 'react-dom/server'
 
 import {
+  fight_fighter_name,
   fight_turn_key,
   fight_view_with_display,
   select_fight_view,
   turn_seconds_remaining,
 } from '../../../src/game/fight/fight_projection.ts'
-import { crank_prompt_hidden, end_turn_wait_ms } from '../../../src/game/fight/FightHud.tsx'
+import { crank_prompt_hidden, end_turn_intent, end_turn_wait_ms } from '../../../src/game/fight/FightHud.tsx'
 import { fight_portrait_source, FightTimeline } from '../../../src/game/fight/FightTimeline.tsx'
 import {
   fight_turn_announcement_after_cue,
+  fight_turn_announcement_after_submission,
   fight_turn_card_view,
   FightTurnCard,
 } from '../../../src/game/fight/FightTurnCard.tsx'
@@ -84,6 +86,20 @@ describe('generic fight view', () => {
     expect(end_turn_wait_ms(10_000, 13_500)).toBe(0)
   })
 
+  test('End Turn cannot queue while a turn card is advancing', () => {
+    const ready = {
+      can_end_turn: true,
+      actions_locked: false,
+      min_turn_ready: true,
+      end_turn_queued: false,
+      end_turn_submitted: false,
+      transaction_pending: false,
+    }
+    expect(end_turn_intent({ ...ready, actions_locked: true })).toBeNull()
+    expect(end_turn_intent({ ...ready, min_turn_ready: false })).toBe('queue')
+    expect(end_turn_intent(ready)).toBe('submit')
+  })
+
   test('the fight surface neither builds a world nor goes looking for one', () => {
     // The board is mounted INSIDE a live world (owner 2026-08-21). Two laws, both learned the
     // hard way: a second engine hides the very world it stands in, and a surface that can ASK
@@ -134,6 +150,7 @@ describe('generic fight view', () => {
     checkpoint.sources.players.theirs!.name = 'Enemy Name'
     const view = select_fight_view({ checkpoint, mode: 'remote', owner: 'mine', names: {} })
     expect(view.timeline.find(({ character_id }) => character_id === 'theirs')?.name).toBe('Enemy Name')
+    expect(fight_fighter_name(checkpoint, 2n, () => undefined)).toBe('Enemy Name')
   })
 
   test('mob turn cards retain their asset identity and resolve its authored portrait', () => {
@@ -251,6 +268,15 @@ describe('generic fight view', () => {
     expect(select_fight_view({ checkpoint, mode: 'local', owner: 'mine', names: {} }).placement_deadline_ms).toBeNull()
   })
 
+  test('an unarmed Kolizeum placement clock exposes no force-start deadline', () => {
+    const checkpoint = started_checkpoint()
+    checkpoint.contract.round = 0n
+    checkpoint.contract.queue = []
+    checkpoint.contract.placement_ms = 0n
+
+    expect(select_fight_view({ checkpoint, mode: 'remote', owner: 'mine', names: {} }).placement_deadline_ms).toBeNull()
+  })
+
   test('a challenge nobody accepted is unstartable, and its one seat can always leave', () => {
     // THE DUEL INCIDENT (2026-08-21): the challenger sat alone in placement while the HUD
     // offered "Force start" — a transaction the chain can only abort, because `fight::start`
@@ -293,6 +319,31 @@ describe('generic fight view', () => {
     expect(hud).not.toContain('auto_attempted')
   })
 
+  test('placement keeps the world chat SSOT mounted without fight CSS', () => {
+    const app = readFileSync(new URL('../../../src/app.tsx', import.meta.url), 'utf8')
+    const chat = readFileSync(new URL('../../../src/components/Chat.tsx', import.meta.url), 'utf8')
+    const hud = readFileSync(new URL('../../../src/game/fight/FightHud.tsx', import.meta.url), 'utf8')
+    const css = readFileSync(new URL('../../../src/game/fight/fight_hud.css', import.meta.url), 'utf8')
+    const placement = hud.slice(
+      hud.indexOf("if (view.phase === 'placement')"),
+      hud.indexOf("if (view.phase !== 'active'")
+    )
+
+    expect(app).toContain('<WorldChat copy={copy} />')
+    expect(chat).toContain('<div className="gw-worldchat">')
+    expect(hud).toContain('const chat = <WorldChat copy={copy} fight={fight_id} names={chat_names} />')
+    expect(placement).toContain('{chat}')
+    expect(css).not.toContain('.fight-hud .chat')
+  })
+
+  test('active chat and commands share the viewport width instead of overlapping', () => {
+    const css = readFileSync(new URL('../../../src/game/fight/fight_hud.css', import.meta.url), 'utf8')
+    expect(css).toContain('--fh-chat-width: min(38%, 440px)')
+    expect(css).toContain('.fight-hud > .gw-worldchat')
+    expect(css).toContain('left: calc(10px + var(--fh-chat-width) + var(--fh-lane-gap))')
+    expect(css).toContain('.fight-hud:not(.fight-hud--overworld) .fight-hud__bottom')
+  })
+
   test('the remote clock counts down from the chain 45-second window', () => {
     expect(
       select_fight_view({ checkpoint: started_checkpoint(), mode: 'remote', owner: 'mine', names: {} }).show_turn_timer
@@ -317,11 +368,18 @@ describe('generic fight view', () => {
     expect(fight_turn_announcement_after_cue(announced, duplicate_cue, 'start')).toBe(announced)
   })
 
+  test('submitting End Turn cannot resurrect the previous local turn announcement', () => {
+    const previous = { key: '0xf1:turn:1:0', seat: 0n }
+    expect(fight_turn_announcement_after_submission(previous, false)).toBe(previous)
+    expect(fight_turn_announcement_after_submission(previous, true)).toBeNull()
+  })
+
   test('presentation overrides fighter display without passing a BigInt checkpoint through React props', () => {
     const view = select_fight_view({ checkpoint: started_checkpoint(), mode: 'remote', owner: 'mine', names: {} })
-    const displayed = fight_view_with_display(view, [{ seat: 1, hp: '0', dead: true }])
+    const effect = { kind: EFFECT_KINDS.add, element: '', value: 2n, turns_left: 1n, source: 1n, stat: CHANNELS.ap }
+    const displayed = fight_view_with_display(view, [{ seat: 1, hp: '0', dead: true, effects: [effect] }])
 
-    expect(displayed.timeline.find(({ seat }) => seat === 1n)).toMatchObject({ hp: 0n, dead: true })
+    expect(displayed.timeline.find(({ seat }) => seat === 1n)).toMatchObject({ hp: 0n, dead: true, effects: [effect] })
     expect(displayed.timeline.find(({ seat }) => seat === 0n)).toEqual(view.timeline.find(({ seat }) => seat === 0n))
   })
 

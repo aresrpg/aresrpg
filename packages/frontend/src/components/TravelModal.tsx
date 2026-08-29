@@ -14,6 +14,7 @@ import type { AppCopy } from '../i18n/copy.ts'
 import { copy_text } from '../i18n/copy.ts'
 import { dispatch_app, useAppStore } from '../store.ts'
 import { toast } from '../toast.ts'
+import { run_direct_transaction } from '../transaction_guard.ts'
 
 import { ModalFrame } from './ModalFrame.tsx'
 
@@ -43,14 +44,17 @@ export const TravelModal = ({ copy }: Readonly<{ copy: AppCopy }>) => {
   const travel = (world: string): void => {
     if (!wallet || !character || travelling) return
     if (world === character.world) return close()
-    set_travelling(true)
-    const pending = toast.loading(text('travel_pending'))
-    void wallet.character
-      .join_world({
+    const transaction = run_direct_transaction(() =>
+      wallet.character.join_world({
         character_id: character.id,
         world,
         custody: { kiosk: character.kiosk, kiosk_cap: character.kiosk_cap },
       })
+    )
+    if (!transaction) return
+    set_travelling(true)
+    const pending = toast.loading(text('travel_pending'))
+    void transaction
       .then(({ joined }) => {
         dispatch_app({ type: 'character/world_joined', character_id: character.id, joined })
         pending.success(text('travel_success', { world: titleize(joined.world) }))

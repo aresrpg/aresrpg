@@ -48,5 +48,6 @@ test('every inventory NFT links its object ID, including chain-locked listings',
 
   expect(markup).toContain('href="https://testnet.suivision.xyz/object/0xitem"')
   expect(markup).toContain('See on explorer')
+  expect(markup).toContain('Link in chat')
   expect(markup).not.toContain('Destroy')
 })

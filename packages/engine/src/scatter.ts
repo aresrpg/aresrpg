@@ -41,6 +41,10 @@ const PRESET_RULES: Readonly<Record<MaterialPreset, readonly ScatterRule[]>> = O
     { kind: 'bush', chance_bp: 380, humidity_scaled: true },
     { kind: 'tuft', chance_bp: 3400, humidity_scaled: true },
   ],
+  frozen_grass: [
+    { kind: 'spike', chance_bp: 280 },
+    { kind: 'pebble', chance_bp: 220 },
+  ],
   earth: [
     { kind: 'mushroom', chance_bp: 200, humidity_scaled: true },
     { kind: 'twig', chance_bp: 260 },

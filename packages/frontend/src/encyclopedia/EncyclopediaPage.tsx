@@ -4,7 +4,7 @@
 import { useMemo } from 'react'
 
 import type { AppCopy } from '../i18n/copy.ts'
-import { stat_name } from '../i18n/copy.ts'
+import { spell_name, stat_name } from '../i18n/copy.ts'
 
 import { ClassesTab } from './ClassesTab.tsx'
 import { category_pill, encyclopedia_layout } from './components.tsx'
@@ -82,7 +82,12 @@ export const EncyclopediaPage = ({
           />
         )}
         {view.tab === 'classes' && (
-          <ClassesTab select_class={(id) => navigate(route('classes', id))} selected_id={view.id} text={text} />
+          <ClassesTab
+            select_class={(id) => navigate(route('classes', id))}
+            selected_id={view.id}
+            spell_name={(identity) => spell_name(copy, identity)}
+            text={text}
+          />
         )}
         {view.tab === 'jobs' && (
           <JobsTab

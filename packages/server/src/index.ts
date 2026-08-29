@@ -51,6 +51,8 @@ const HEARTBEAT_MS = 5_000
 setInterval(() => {
   void pubsub.mesh
     .heartbeat(SERVER_ID, connections.size)
+    .then(() => pubsub.mesh.cluster_online())
+    .then((online) => pubsub.mesh.record_online?.(online, Date.now()))
     .catch((error: Error) => log.warn({ error: error.message }, 'heartbeat failed'))
 }, HEARTBEAT_MS)
 

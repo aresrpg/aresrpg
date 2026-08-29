@@ -7,6 +7,25 @@ import { useEffect, useState } from 'react'
 
 import { TOAST_CONTAINER_CLASS, toast as toast_api, toast_glass_class, type Toast } from '../toast.ts'
 
+const PART_TONE_CLASS = Object.freeze({
+  default: '',
+  gold: 'text-[#e8b654]',
+  primary: 'text-[#e8e4dc]',
+  sui: 'text-[#67adff]',
+})
+
+const ToastMessage = ({ toast }: Readonly<{ toast: Toast }>) => (
+  <span className="min-w-0 flex-1 text-[11px] leading-relaxed tracking-wide break-words whitespace-pre-wrap">
+    {toast.parts
+      ? toast.parts.map((part, index) => (
+          <span className={PART_TONE_CLASS[part.tone]} key={`${index}:${part.text}`}>
+            {part.text}
+          </span>
+        ))
+      : toast.message}
+  </span>
+)
+
 export const Toasts = () => {
   const [toasts, set_toasts] = useState<readonly Toast[]>([])
   useEffect(
@@ -44,9 +63,7 @@ export const Toasts = () => {
             ) : toast.type === 'success' ? (
               <span className="shrink-0 text-[13px] leading-none">✓</span>
             ) : null}
-            <span className="min-w-0 flex-1 text-[11px] leading-relaxed tracking-wide break-words whitespace-pre-wrap">
-              {toast.message}
-            </span>
+            <ToastMessage toast={toast} />
             {toast.actions?.map((action) => (
               <button
                 className="shrink-0 cursor-pointer border border-[#c8963c]/45 px-3 py-1.5 font-mono text-[9px] leading-none font-semibold tracking-[0.15em] text-[#c8963c] uppercase hover:border-[#c8963c] hover:bg-[#c8963c]/10"

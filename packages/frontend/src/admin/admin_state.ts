@@ -3,6 +3,13 @@
 
 import type { SeedAdminConfig, SeedAdminSnapshot, SeedLedger } from '@aresrpg/sdk/seed-admin'
 import type { ContractArtifact } from '@aresrpg/sdk/deployment-admin'
+import type {
+  AdminOverviewResult,
+  AdminOverviewSection,
+  AdminOverviewSectionResult,
+  AdminRangeDays,
+  AdminShopSaleRow,
+} from '@aresrpg/protocol'
 
 import type { AuthSession } from '../auth.ts'
 
@@ -13,7 +20,7 @@ export type AdminProgress = Readonly<{
   total: number
   label: string | null
 }>
-export type AdminView = 'overview' | 'publish'
+export type AdminView = 'overview' | 'sales' | 'publish'
 export type AdminLogEntry = Readonly<{
   id: number
   tone: 'info' | 'success' | 'error'
@@ -22,7 +29,20 @@ export type AdminLogEntry = Readonly<{
 export type AdminOverviewState = Readonly<{
   status: 'idle' | 'loading' | 'ready' | 'failed'
   request_id: number | null
-  counts: Readonly<Record<string, number>>
+  ranges: Readonly<Record<AdminOverviewSection, AdminRangeDays>>
+  result: AdminOverviewResult | null
+  cache: Readonly<Record<string, AdminOverviewSectionResult>>
+  pending: Readonly<
+    Partial<Record<AdminOverviewSection, Readonly<{ days: AdminRangeDays; request_id: number | null }>>>
+  >
+  error: string | null
+}>
+export type AdminSalesState = Readonly<{
+  status: 'idle' | 'loading' | 'ready' | 'failed'
+  request_id: number | null
+  range_days: AdminRangeDays
+  rows: readonly AdminShopSaleRow[]
+  next_cursor: string | null
   error: string | null
 }>
 export type AdminWalletState = Readonly<{
@@ -97,6 +117,7 @@ export type AdminDeploymentState = Readonly<{
 export type AdminState = Readonly<{
   view: AdminView
   overview: AdminOverviewState
+  sales: AdminSalesState
   wallet: AdminWalletState
   deployment: AdminDeploymentState
   config: SeedAdminConfig
@@ -136,8 +157,20 @@ export type AdminInput =
   | Readonly<{ type: 'admin/wallet_failed'; error: string }>
   | Readonly<{ type: 'admin/view_changed'; view: AdminView }>
   | Readonly<{ type: 'admin/overview_refresh' }>
+  | Readonly<{
+      type: 'admin/overview_range_changed'
+      section: keyof AdminOverviewState['ranges']
+      days: AdminRangeDays
+    }>
   | Readonly<{ type: 'admin/overview_requested'; request_id: number }>
+  | Readonly<{ type: 'admin/overview_section_requested'; section: AdminOverviewSection; request_id: number }>
+  | Readonly<{ type: 'admin/overview_section_failed'; section: AdminOverviewSection; error: string }>
   | Readonly<{ type: 'admin/overview_failed'; error: string; request_id?: number }>
+  | Readonly<{ type: 'admin/sales_refresh' }>
+  | Readonly<{ type: 'admin/sales_range_changed'; days: AdminRangeDays }>
+  | Readonly<{ type: 'admin/sales_more' }>
+  | Readonly<{ type: 'admin/sales_requested'; request_id: number }>
+  | Readonly<{ type: 'admin/sales_failed'; error: string; request_id?: number }>
   | Readonly<{ type: 'admin/deployment_load' }>
   | Readonly<{
       type: 'admin/deployment_loaded'
@@ -182,7 +215,30 @@ export type AdminInput =
 export const initial_admin_state = (): AdminState =>
   Object.freeze({
     view: 'overview',
-    overview: Object.freeze({ status: 'idle', request_id: null, counts: Object.freeze({}), error: null }),
+    overview: Object.freeze({
+      status: 'idle',
+      request_id: null,
+      ranges: Object.freeze({
+        revenue: 30,
+        players: 30,
+        transactions: 30,
+        online: 1,
+        addresses: 30,
+        characters: 30,
+      }),
+      result: null,
+      cache: Object.freeze({}),
+      pending: Object.freeze({}),
+      error: null,
+    }),
+    sales: Object.freeze({
+      status: 'idle',
+      request_id: null,
+      range_days: 30,
+      rows: Object.freeze([]),
+      next_cursor: null,
+      error: null,
+    }),
     wallet: Object.freeze({
       status: 'loading',
       wallets: Object.freeze([]),

@@ -21,14 +21,22 @@ public fun add(policy: &mut TransferPolicy<Item>, cap: &TransferPolicyCap<Item>)
   transfer_policy::add_rule(LotRule {}, policy, cap, LotConfig {});
 }
 
-/// Buyer: prove the purchased stackable carries a legal lot. Unique items pass free.
+/// Buyer: paid marketplace sales use the four visible lots. A zero-price PurchaseCap is a
+/// private escrow transfer and may carry the exact stack amount both parties reviewed.
 public fun prove(purchased: &Item, request: &mut TransferRequest<Item>, version: &Version) {
   version.assert_latest();
   assert!(object::id(purchased) == transfer_policy::item(request), ELotWrongItem);
   let category = purchased.category();
   if (content_rules::is_stackable(&category)) {
     let amount = purchased.amount();
-    assert!(amount == 1 || amount == 10 || amount == 100 || amount == 1000, ELotInvalid);
+    assert!(valid_lot(amount, transfer_policy::paid(request)), ELotInvalid);
   };
   transfer_policy::add_receipt(LotRule {}, request);
 }
+
+fun valid_lot(amount: u32, paid: u64): bool {
+  paid == 0 || amount == 1 || amount == 10 || amount == 100 || amount == 1000
+}
+
+#[test_only]
+public(package) fun valid_lot_for_testing(amount: u32, paid: u64): bool { valid_lot(amount, paid) }

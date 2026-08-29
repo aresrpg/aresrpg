@@ -38,6 +38,7 @@ use aresrpg_math::{
   fight_math,
   item_stats,
   mob_data::{Self, LootEntry},
+  mob_scaling,
   prng,
   spell_effect::{Self, Effect, SpellLevel},
   weapon,
@@ -120,6 +121,7 @@ const K_DISPEL: u8 = 16;
 const K_INVIS: u8 = 17;
 const K_RETURN: u8 = 18;
 const K_REDIRECT: u8 = 19;
+const K_FIXED_REMOVE: u8 = 20;
 
 /// Stat ids for alter/steal/point rows (the authoring contract):
 /// 0 strength · 1 intelligence · 2 chance · 3 agility · 4 wisdom · 5 range · 6 AP · 7 MP.
@@ -490,7 +492,9 @@ fun share_new_fight(
     turn_seed: 0,
     turn_slot: 0,
     turn_casts: vector[],
-    placement_ms: clock.timestamp_ms(),
+    // A Kolizeum clock is armed by its manager only when both sides reach the authored
+    // format. Every other fight keeps its creation-time placement window.
+    placement_ms: if (wagered) 0 else clock.timestamp_ms(),
     turn_started_ms: 0,
   };
   let id = fight.id.to_inner();
@@ -769,25 +773,33 @@ public(package) fun place(fight: &mut Fight, fighter_idx: u64, cell: u64, ctx: &
   *&mut fight.fighters[fighter_idx].cell = cell;
 }
 
-public(package) fun ready(fight: &mut Fight, fighter_idx: u64, ctx: &TxContext) {
+public(package) fun ready(fight: &mut Fight, fighter_idx: u64, ctx: &TxContext): bool {
   assert!(is_placement(fight), ENotPlacement);
   assert_fighter_control(fight, fighter_idx, ctx);
   *&mut fight.fighters[fighter_idx].ready = true;
+  all_players_ready(fight)
+}
+
+fun all_players_ready(fight: &Fight): bool {
+  let mut i = 0;
+  while (i < fight.fighters.length()) {
+    let fighter = &fight.fighters[i];
+    if (!is_mob(fighter) && !fighter.dead && !fighter.ready) return false;
+    i = i + 1;
+  };
+  true
 }
 
 // ╔════════════════ [ Start — all ready, or anyone after the deadline ] ══════ ]
 
+fun placement_force_ready(placement_ms: u64, now: u64): bool {
+  placement_ms != 0 && now >= placement_ms + PLACEMENT_FORCE_MS
+}
+
 public(package) fun start(fight: &mut Fight, gen: &mut RandomGenerator, clock: &Clock) {
   assert!(is_placement(fight), ENotPlacement);
   let now = clock.timestamp_ms();
-  let mut ready = true;
-  let mut ready_index = 0;
-  while (ready_index < fight.fighters.length()) {
-    let fighter = &fight.fighters[ready_index];
-    if (!is_mob(fighter) && !fighter.dead && !fighter.ready) ready = false;
-    ready_index = ready_index + 1;
-  };
-  assert!(ready || now >= fight.placement_ms + PLACEMENT_FORCE_MS, ENotReady);
+  assert!(all_players_ready(fight) || placement_force_ready(fight.placement_ms, now), ENotReady);
   // nobody fights an empty side — a challenge nobody accepted exits via placement-forfeit
   assert!(living_count(fight, 0) >= 1 && living_count(fight, 1) >= 1, ENotReady);
   let mut teams = vector[];
@@ -1078,26 +1090,24 @@ fun claim_all(
   let drops = &mut fight.fighters[fighter_idx].drops;
   while (!drops.is_empty()) {
     let wanted = drops[0].item_type;
-    let (count, total) = take_matching_drops(drops, &wanted);
-    item::deliver_drops(&mut plan, &wanted, count, total, kiosk, cap, policy, gen, ctx);
+    let total = take_matching_drops(drops, &wanted);
+    item::deliver_drops(&mut plan, &wanted, total, kiosk, cap, policy, gen, ctx);
   };
 }
 
-/// Consume every row of one item type and return `(row count, total quantity)` so one settlement
-/// mints a single stack however many mobs contributed rows to its result-card tile.
-fun take_matching_drops(drops: &mut vector<RolledDrop>, wanted: &String): (u64, u32) {
-  let mut count: u64 = 0;
+/// Consume every row of one item type and return its exact total quantity. Stackable settlement
+/// mints one combined stack; non-stackable settlement mints that many distinct objects.
+fun take_matching_drops(drops: &mut vector<RolledDrop>, wanted: &String): u32 {
   let mut total: u32 = 0;
   let mut i = 0;
   while (i < drops.length()) {
     if (&drops[i].item_type == wanted) {
       let row = drops.remove(i);
-      count = count + 1;
       total = total + row.qty;
     }
     else i = i + 1;
   };
-  (count, total)
+  total
 }
 
 // ╔════════════════ [ Reads the dungeon composes on ] ════════════════════════ ]
@@ -1120,6 +1130,18 @@ public(package) fun fighter_character(fight: &Fight, fighter_idx: u64): ID {
   }
 }
 
+/// Party authority while the Character is held by this Fight. The expected id seals a stale
+/// client seat against silently acting as another controlled character in the same fight.
+public(package) fun assert_controlled_character(
+  fight: &Fight,
+  fighter_idx: u64,
+  expected_character: ID,
+  ctx: &TxContext,
+) {
+  let character = assert_fighter_owner(fight, fighter_idx, ctx);
+  assert!(!fight.fighters[fighter_idx].settled && character == expected_character, ENotYourFighter);
+}
+
 /// Is this fight externally managed (dungeon or kolizeum)? The raw api doors refuse it.
 public(package) fun is_managed(fight: &Fight): bool { fight.managed }
 
@@ -1127,6 +1149,17 @@ public(package) fun is_wagered(fight: &Fight): bool { fight.wagered }
 
 /// Live player count on a side — kolizeum caps joins at its format (1/3/6 per side).
 public(package) fun side_players(fight: &Fight, team: u8): u64 { player_count(fight, team) }
+
+/// Kolizeum alone controls its deferred placement clock: reaching full capacity arms it;
+/// dropping below capacity disarms it until the missing seat is filled again.
+public(package) fun set_placement_clock(fight: &mut Fight, placement_ms: u64) {
+  fight.placement_ms = placement_ms;
+}
+
+#[test_only]
+public(package) fun placement_force_ready_for_testing(placement_ms: u64, now: u64): bool {
+  placement_force_ready(placement_ms, now)
+}
 
 /// Still in placement (not started)? kolizeum `exit` refunds only before the fight begins.
 public(package) fun in_placement(fight: &Fight): bool { is_placement(fight) }
@@ -1215,19 +1248,9 @@ fun roll_and_split(fight: &mut Fight, first_settler: u64, gen: &mut RandomGenera
   };
   if (winners.is_empty()) return;
 
-  // chance = loot bonus (owner 2026-08-11): the team's AVERAGE chance scales the drop rate —
-  // 600 chance ⇒ ×2 (`(600 + chance) / 600`). One shared roll, so it rides the team average.
-  let team_chance = {
-    let shift = item_stats::shift() as u64;
-    let mut sum = 0;
-    let mut ci = 0;
-    while (ci < winners.length()) {
-      let chr = character_of(fight, winners[ci]);
-      sum = sum + fight_math::apply_centered_shift(chr.chance() as u64, equipment::folded(chr).chance() as u64, shift);
-      ci = ci + 1;
-    };
-    sum / winners.length()
-  };
+  // chance = loot bonus (owner 2026-08-11): average effective Chance includes active
+  // Chance rows but not damage-only Power. At 600 it doubles the team's one shared roll.
+  let team_chance = team_chance_of(fight, &winners);
 
   // gather enemy loot tables (value copies so the borrow ends before we mutate drops)
   let mut tables = vector[];
@@ -1269,6 +1292,19 @@ fun roll_and_split(fight: &mut Fight, first_settler: u64, gen: &mut RandomGenera
     event::emit(DropsRolled { fight: fight.id.to_inner(), fighter: idx, drops: fight.fighters[idx].drops });
     k = k + 1;
   };
+}
+
+fun team_chance_of(fight: &Fight, winners: &vector<u64>): u64 {
+  let shift = item_stats::shift() as u64;
+  let mut sum = 0;
+  let mut i = 0;
+  while (i < winners.length()) {
+    let chr = character_of(fight, winners[i]);
+    let base = fight_math::apply_centered_shift(chr.chance() as u64, equipment::folded(chr).chance() as u64, shift);
+    sum = sum + row_adjusted(fight, winners[i], base, STAT_CHANCE);
+    i = i + 1;
+  };
+  sum / winners.length()
 }
 
 // ╔════════════════ [ The end-of-fight law ] ═════════════════════════════════ ]
@@ -1315,9 +1351,16 @@ fun assert_actor(fight: &Fight, fighter_idx: u64, ctx: &TxContext) {
 }
 
 fun assert_fighter_control(fight: &Fight, fighter_idx: u64, ctx: &TxContext) {
+  let _ = assert_fighter_owner(fight, fighter_idx, ctx);
+}
+
+fun assert_fighter_owner(fight: &Fight, fighter_idx: u64, ctx: &TxContext): ID {
   assert!(fighter_idx < fight.fighters.length(), ENotYourFighter);
   match (&fight.fighters[fighter_idx].kind) {
-    FighterKind::Player { owner, .. } => assert!(*owner == ctx.sender(), ENotYourFighter),
+    FighterKind::Player { character, owner, .. } => {
+      assert!(*owner == ctx.sender(), ENotYourFighter);
+      *character
+    },
     FighterKind::Mob(_) => abort ENotYourFighter,
   }
 }
@@ -1391,7 +1434,7 @@ fun mob_fighter(template: &MobTemplate, scalar: u64, cell: u64): Fighter {
     kit.push_back(KitSpell {
       name: mob_data::spell_name(&authored[k]),
       ordinal: 1,
-      level: scale_mob_spell_level(&authored_level, lo, hi, level),
+      level: mob_scaling::spell_level(&authored_level, lo, hi, level),
     });
     k = k + 1;
   };
@@ -1411,7 +1454,7 @@ fun mob_fighter(template: &MobTemplate, scalar: u64, cell: u64): Fighter {
       air_res: fight_math::centered_band_scaled(mob_data::air_resistance(data) as u64, item_stats::shift() as u64, lo, hi, level),
       kit,
       xp: fight_math::band_scaled(mob_data::xp(data), lo, hi, level),
-      loot: scale_mob_loot(mob_data::loot(data), lo, hi, level),
+      loot: mob_scaling::loot(mob_data::loot(data), lo, hi, level),
     }),
     cell,
     ready: true,
@@ -1425,68 +1468,6 @@ fun mob_fighter(template: &MobTemplate, scalar: u64, cell: u64): Fighter {
     effects: vector[],
     cooldowns: vector[],
   }
-}
-
-fun scale_mob_loot(rows: vector<LootEntry>, lo: u64, hi: u64, level: u64): vector<LootEntry> {
-  let mut scaled = vector[];
-  let mut i = 0;
-  while (i < rows.length()) {
-    let row = &rows[i];
-    scaled.push_back(mob_data::new_loot_entry(
-      mob_data::loot_item_type(row),
-      fight_math::mob_loot_chance_scaled(mob_data::loot_chance_bp(row) as u64, lo, hi, level) as u16,
-      mob_data::loot_min_qty(row),
-      mob_data::loot_max_qty(row),
-    ));
-    i = i + 1;
-  };
-  scaled
-}
-
-fun scalable_mob_effect(kind: u8): bool { kind <= K_CHATIMENT || kind == K_REDUCE || kind == K_REFLECT }
-
-fun scaled_mob_effect_value(value: u32, lo: u64, hi: u64, level: u64): u32 {
-  let scaled = fight_math::band_scaled(value as u64, lo, hi, level);
-  if (scaled > 0xffff_ffff) 0xffff_ffff else scaled as u32
-}
-
-fun scale_mob_effect(effect: &Effect, lo: u64, hi: u64, level: u64): Effect {
-  let kind = effect.kind();
-  let scalable = scalable_mob_effect(kind);
-  spell_effect::new_effect(
-    kind,
-    effect.element(),
-    if (scalable) scaled_mob_effect_value(effect.value(), lo, hi, level) else effect.value(),
-    if (scalable) scaled_mob_effect_value(effect.value_max(), lo, hi, level) else effect.value_max(),
-    effect.area_shape(),
-    effect.area_size(),
-    effect.target_filter(),
-    effect.chance_bp(),
-    effect.turns(),
-    effect.stat(),
-  )
-}
-
-fun scale_mob_effects(effects: vector<Effect>, lo: u64, hi: u64, level: u64): vector<Effect> {
-  effects.map!(|effect| scale_mob_effect(&effect, lo, hi, level))
-}
-
-fun scale_mob_spell_level(authored: &SpellLevel, lo: u64, hi: u64, level: u64): SpellLevel {
-  spell_effect::new_spell_level(
-    authored.ap_cost(),
-    authored.range_min(),
-    authored.range_max(),
-    authored.modifiable_range(),
-    authored.line_of_sight(),
-    authored.line_launch(),
-    authored.free_cell(),
-    authored.casts_per_turn(),
-    authored.casts_per_target(),
-    authored.cooldown_turns(),
-    authored.crit_1_in(),
-    scale_mob_effects(authored.effects(), lo, hi, level),
-    scale_mob_effects(authored.crit_effects(), lo, hi, level),
-  )
 }
 
 // ╔════════════════ [ Derived fighter numbers (custody or snapshot — one branch) ] ]
@@ -1550,7 +1531,8 @@ fun sheet_of(fight: &Fight, i: u64): Sheet {
 /// One stat through the fighter's rows: alter adds, steal/weaken subtract, floored at zero.
 fun row_adjusted(fight: &Fight, fighter: u64, base: u64, stat: u8): u64 {
   let plus = sum_rows(fight, fighter, K_ADD, stat);
-  let minus = sum_rows(fight, fighter, K_REMOVE, stat) + sum_rows(fight, fighter, K_STEAL, stat);
+  let minus = sum_rows(fight, fighter, K_REMOVE, stat) + sum_rows(fight, fighter, K_STEAL, stat)
+    + sum_rows(fight, fighter, K_FIXED_REMOVE, stat);
   fight_math::sat_sub(base + plus, minus)
 }
 
@@ -1856,7 +1838,7 @@ fun apply_pools(fight: &mut Fight, fighter_idx: u64) {
     if (row.kind == K_ADD) {
       if (row.stat == STAT_AP) add_ap(fight, fighter_idx, row.value)
       else if (row.stat == STAT_MP) add_mp(fight, fighter_idx, row.value);
-    } else if (row.kind == K_REMOVE || row.kind == K_STEAL) {
+    } else if (row.kind == K_REMOVE || row.kind == K_STEAL || row.kind == K_FIXED_REMOVE) {
       if (row.stat == STAT_AP) spend_ap(fight, fighter_idx, row.value)
       else if (row.stat == STAT_MP) spend_mp(fight, fighter_idx, row.value);
     };
@@ -2022,18 +2004,34 @@ fun fighter_at(fight: &Fight, cell: u64): Option<u64> {
 
 // ╔════════════════ [ The mob brain — kit order is priority ] ════════════════ ]
 
-/// One mob turn: derive each spell's anchor side from its effect filters, walk into the first
-/// kit spell's cast band and fire; nothing castable → rush the nearest enemy.
-fun mob_turn(fight: &mut Fight, mob: u64) {
-  let enemy = nearest_enemy(fight, mob);
-  if (enemy.is_none()) {
-    let starts = if (fight.fighters[mob].team == 0) fight.board.start_cells_a()
-      else fight.board.start_cells_b();
-    if (!starts.is_empty()) rush_toward(fight, mob, starts[0]);
-    return
-  };
-  let enemy = enemy.destroy_some();
+const MOB_STEP_NONE: u8 = 0;
+const MOB_STEP_CAST: u8 = 1;
+const MOB_STEP_MOVED: u8 = 2;
 
+/// One mob turn: derive each spell's anchor side from its effect filters, walk into the first
+/// kit spell's cast band and keep firing while AP and authored cast caps allow; nothing
+/// castable → rush the nearest enemy. Zero-cost mob spells are ignored so the loop terminates.
+fun mob_turn(fight: &mut Fight, mob: u64) {
+  loop {
+    if (fight.ended || fight.fighters[mob].dead) return;
+    let enemy = nearest_enemy(fight, mob);
+    if (enemy.is_none()) {
+      let starts = if (fight.fighters[mob].team == 0) fight.board.start_cells_a()
+        else fight.board.start_cells_b();
+      if (!starts.is_empty()) rush_toward(fight, mob, starts[0]);
+      return
+    };
+    let enemy = enemy.destroy_some();
+    let step = mob_step(fight, mob, enemy);
+    if (step == MOB_STEP_CAST) continue;
+    if (step == MOB_STEP_MOVED) return;
+    let enemy_cell = fight.fighters[enemy].cell;
+    rush_toward(fight, mob, enemy_cell);
+    return
+  }
+}
+
+fun mob_step(fight: &mut Fight, mob: u64, enemy: u64): u8 {
   let kit = mob_snap(&fight.fighters[mob]).kit;
   let mut k = 0;
   while (k < kit.length()) {
@@ -2047,8 +2045,10 @@ fun mob_turn(fight: &mut Fight, mob: u64) {
       else if (ally_only && level.range_max() == 0) option::some(mob)
       else if (ally_only) nearest_ally(fight, mob)
       else option::some(enemy);
-    if (anchor_seat.is_some() && fight.fighters[mob].ap >= (level.ap_cost() as u64)
-      && cooldown_left(fight, mob, &name) == 0) {
+    if (anchor_seat.is_some() && level.ap_cost() > 0
+      && fight.fighters[mob].ap >= (level.ap_cost() as u64)
+      && cooldown_left(fight, mob, &name) == 0
+      && mob_cast_cap_available(fight, &name, &level, *anchor_seat.borrow())) {
       let target_seat = *anchor_seat.borrow();
       let anchor = fight.fighters[target_seat].cell;
       if (!place_level_ok(fight, &level, anchor)) {
@@ -2057,7 +2057,7 @@ fun mob_turn(fight: &mut Fight, mob: u64) {
       };
       if (mob_castable(fight, mob, &level, fight.fighters[mob].cell, anchor)) {
         mob_cast(fight, mob, &name, anchor);
-        return
+        return MOB_STEP_CAST
       };
       if (!heal && !caster_only
         // provably unreachable this turn (triangle inequality) — skip the flood entirely
@@ -2077,23 +2077,29 @@ fun mob_turn(fight: &mut Fight, mob: u64) {
         );
         if (cast_cell.is_some()) {
           walk_toward(fight, mob, cast_cell.destroy_some());
-          if (fight.ended || fight.fighters[mob].dead) return;
+          if (fight.ended || fight.fighters[mob].dead) return MOB_STEP_MOVED;
           let landed = fight.fighters[mob].cell;
           let aim = fight.fighters[target_seat].cell;
           if (place_level_ok(fight, &level, aim)
             && mob_castable(fight, mob, &level, landed, aim)
             && fight.fighters[mob].ap >= (level.ap_cost() as u64)) {
             mob_cast(fight, mob, &name, aim);
+            return MOB_STEP_CAST
           };
-          return
+          return MOB_STEP_MOVED
         };
       };
     };
     k = k + 1;
   };
-  // no spell fired and no band reachable — close the distance for next round
-  let enemy_cell = fight.fighters[enemy].cell;
-  rush_toward(fight, mob, enemy_cell);
+  MOB_STEP_NONE
+}
+
+fun mob_cast_cap_available(fight: &Fight, name: &String, level: &SpellLevel, target: u64): bool {
+  let per_turn = level.casts_per_turn() as u64;
+  if (per_turn > 0 && casts_this_turn(fight, name, option::none()) >= per_turn) return false;
+  let per_target = level.casts_per_target() as u64;
+  per_target == 0 || casts_this_turn(fight, name, option::some(target)) < per_target
 }
 
 /// ONE approach flood from the target's open flanks, walked down as far as MP allows — a
@@ -2222,8 +2228,9 @@ fun resolve(fight: &mut Fight, caster: u64, level: &SpellLevel, name: String, ta
     );
   };
 
-  // an invisible enemy cannot be aimed at directly — the cell reads empty to the caster
-  let occupant = visible_at(fight, caster, target_cell);
+  // Empty cells remain aimable, but a real occupant always owns the per-target accounting.
+  // Invisibility is presentation/aiming information, never a cast-cap bypass.
+  let occupant = fighter_at(fight, target_cell);
 
   let per_turn = level.casts_per_turn() as u64;
   if (per_turn > 0) assert!(casts_this_turn(fight, &name, option::none()) < per_turn, ECapReached);
@@ -2381,7 +2388,7 @@ fun apply_to(fight: &mut Fight, caster: u64, sheet: &Sheet, row: &Effect, target
       sheet.agility,
     );
     push_row(fight, target, row, caster, fight_math::amplify_damage(value, primary, 0));
-  } else if (kind == K_ADD || kind == K_REMOVE || kind == K_STEAL) {
+  } else if (kind == K_ADD || kind == K_REMOVE || kind == K_STEAL || kind == K_FIXED_REMOVE) {
     // ── the number algebra: one dispatch, the CHANNEL decides the door ──
     let channel = row.stat();
     if (channel == STAT_HP) {
@@ -2413,6 +2420,11 @@ fun apply_to(fight: &mut Fight, caster: u64, sheet: &Sheet, row: &Effect, target
           if (channel == STAT_AP) add_ap(fight, target, value) else add_mp(fight, target, value);
         };
         if (turns > 0) push_row(fight, target, row, caster, value);
+      } else if (kind == K_FIXED_REMOVE) {
+        if (fight.queue[fight.turn_ptr] == target) {
+          if (channel == STAT_AP) spend_ap(fight, target, value) else spend_mp(fight, target, value);
+        };
+        if (fight.queue[fight.turn_ptr] != target || turns > 0) push_row(fight, target, row, caster, value);
       } else {
         // removal contests dodge on LIVE points (owner law), instant and lasting alike
         let removed = contest_points(fight, sheet, target, row, estate);
@@ -2577,7 +2589,7 @@ fun displace(
     let cur = fight.fighters[target].cell;
     if (!push && combat_grid::manhattan(cur, pivot) <= 1) break; // a pull reached the pivot
     let next = combat_grid::step_cell(cur, dir);
-    if (next.is_none()) { blocked = true; break };
+    if (next.is_none()) { blocked = cur != pivot; break };
     let cell = next.destroy_some();
     if (!legal_cell(fight, cell) || fighter_at(fight, cell).is_some()) { blocked = true; break };
     *&mut fight.fighters[target].cell = cell;
@@ -2840,9 +2852,9 @@ public(package) fun mob_effect_scaling_for_testing(): vector<u32> {
   let push = spell_effect::new_effect(
     K_PUSH, b"".to_string(), 3, 3, spell_effect::shape_point(), 0, 1, 10_000, 0, 0,
   );
-  let low = scale_mob_effect(&damage, 10, 20, 10);
-  let high = scale_mob_effect(&damage, 10, 20, 20);
-  let geometric = scale_mob_effect(&push, 10, 20, 20);
+  let low = mob_scaling::effect(&damage, 10, 20, 10);
+  let high = mob_scaling::effect(&damage, 10, 20, 20);
+  let geometric = mob_scaling::effect(&push, 10, 20, 20);
   vector[low.value(), low.value_max(), high.value(), high.value_max(), geometric.value()]
 }
 
@@ -3005,7 +3017,11 @@ public(package) fun resolve_placement_for_testing(
 /// Test seam over the real cast resolver. A trap carries the same damage row as a direct
 /// strike, proving that placement stores it without consuming invisibility.
 #[test_only]
-public(package) fun invisible_after_damage_cast_for_testing(placement: bool, ctx: &mut TxContext): bool {
+public(package) fun invisible_after_damage_cast_for_testing(
+  placement: bool,
+  target_invisible: bool,
+  ctx: &mut TxContext,
+): bool {
   let board = combat_grid::generate(1, 0);
   let caster_cell = board.start_cells_a()[0];
   let target_cell = board.start_cells_b()[0];
@@ -3019,7 +3035,18 @@ public(package) fun invisible_after_damage_cast_for_testing(placement: bool, ctx
     stat: 0,
   });
   let mut fighters = vector[caster];
-  if (!placement) fighters.push_back(fighter_for_placement_test(1, target_cell, 0));
+  if (!placement) {
+    let mut target = fighter_for_placement_test(1, target_cell, 0);
+    if (target_invisible) target.effects.push_back(ActiveEffect {
+      kind: K_INVIS,
+      element: b"".to_string(),
+      value: 0,
+      turns_left: 2,
+      source: 1,
+      stat: 0,
+    });
+    fighters.push_back(target);
+  };
   let damage = spell_effect::new_effect(
     K_DAMAGE,
     b"earth".to_string(),
@@ -3047,7 +3074,7 @@ public(package) fun invisible_after_damage_cast_for_testing(placement: bool, ctx
   ));
   rows.push_back(damage);
   let level = spell_effect::new_spell_level(
-    2, 0, 40, false, false, false, false, 0, 0, 0, 0, rows, vector[],
+    2, 0, 40, false, false, false, false, 0, if (target_invisible) 1 else 0, 0, 0, rows, vector[],
   );
   let mut fight = Fight {
     id: object::new(ctx),
@@ -3078,6 +3105,7 @@ public(package) fun invisible_after_damage_cast_for_testing(placement: bool, ctx
     turn_started_ms: 0,
   };
   resolve(&mut fight, 0, &level, b"invisibility_test".to_string(), target_cell, 1);
+  if (target_invisible) resolve(&mut fight, 0, &level, b"invisibility_test".to_string(), target_cell, 1);
   let hidden = is_invisible(&fight, 0);
   let Fight { id, .. } = fight;
   id.delete();
@@ -3186,10 +3214,32 @@ public(package) fun covered_trap_fires_on_move_for_testing(ctx: &mut TxContext):
 }
 
 #[test_only]
-public(package) fun layered_traps_damage_before_push_for_testing(ctx: &mut TxContext): vector<u64> {
+public(package) fun layered_traps_damage_before_push_for_testing(on_anchor: bool, ctx: &mut TxContext): vector<u64> {
   let board = combat_grid::generate(1, 0);
   let start = combat_grid::encode(5, 5);
-  let target = start + 1;
+  let target = if (on_anchor) start else start + 1;
+  let mut zones = vector[BoardZone {
+    owner_fighter: 1,
+    trap: true,
+    shape: spell_effect::shape_circle(),
+    size: 1,
+    anchor: start,
+    turns_left: 0,
+    effects: vector[spell_effect::new_effect(
+      K_PUSH, b"".to_string(), 1, 1, spell_effect::shape_circle(), 1, 1, 10_000, 0, 0,
+    )],
+  }];
+  if (!on_anchor) zones.push_back(BoardZone {
+    owner_fighter: 1,
+    trap: true,
+    shape: spell_effect::shape_point(),
+    size: 0,
+    anchor: target,
+    turns_left: 0,
+    effects: vector[spell_effect::new_effect(
+      K_DAMAGE, b"earth".to_string(), 5, 5, spell_effect::shape_point(), 0, 1, 10_000, 0, 0,
+    )],
+  });
   let mut fight = Fight {
     id: object::new(ctx),
     world: b"layered_trap_test".to_string(),
@@ -3205,30 +3255,7 @@ public(package) fun layered_traps_damage_before_push_for_testing(ctx: &mut TxCon
       fighter_for_placement_test(0, target, 6),
       fighter_for_placement_test(1, combat_grid::encode(10, 15), 0),
     ],
-    zones: vector[
-      BoardZone {
-        owner_fighter: 1,
-        trap: true,
-        shape: spell_effect::shape_circle(),
-        size: 1,
-        anchor: start,
-        turns_left: 0,
-        effects: vector[spell_effect::new_effect(
-          K_PUSH, b"".to_string(), 1, 1, spell_effect::shape_circle(), 1, 1, 10_000, 0, 0,
-        )],
-      },
-      BoardZone {
-        owner_fighter: 1,
-        trap: true,
-        shape: spell_effect::shape_point(),
-        size: 0,
-        anchor: target,
-        turns_left: 0,
-        effects: vector[spell_effect::new_effect(
-          K_DAMAGE, b"earth".to_string(), 5, 5, spell_effect::shape_point(), 0, 1, 10_000, 0, 0,
-        )],
-      },
-    ],
+    zones,
     queue: vector[0],
     turn_ptr: 0,
     round: 1,
@@ -3245,7 +3272,7 @@ public(package) fun layered_traps_damage_before_push_for_testing(ctx: &mut TxCon
     turn_started_ms: 0,
   };
   on_enter(&mut fight, 0, start - 1);
-  let answer = vector[fight.fighters[0].hp, fight.fighters[0].cell, start + 2];
+  let answer = vector[fight.fighters[0].hp, fight.fighters[0].cell, if (on_anchor) start else start + 2];
   let Fight { id, .. } = fight;
   id.delete();
   answer
@@ -3333,7 +3360,7 @@ public(package) fun elemental_shield_scaling_for_testing(ctx: &mut TxContext): v
   vector[scaled, landed]
 }
 
-/// Bleeding Word's self-cost must not depend on the aimed ally sharing the caster's point area.
+/// Word of Sacrifice's self-cost must not depend on the aimed ally sharing the caster's point area.
 #[test_only]
 public(package) fun caster_only_cost_for_testing(ctx: &mut TxContext): vector<u64> {
   let board = combat_grid::generate(1, 0);
@@ -3480,7 +3507,30 @@ public(package) fun pool_removal_semantics_for_testing(ctx: &mut TxContext): vec
   );
   estate = 1;
   resolve_rows(&mut fight, 0, &sheet, &vector[instant], target_cell, caster_cell, &mut estate, 1);
-  let answer = vector[inactive_rows, inactive_value, fight.fighters[1].ap, fight.fighters[1].effects.length()];
+  let instant_ap = fight.fighters[1].ap;
+  let instant_rows = fight.fighters[1].effects.length();
+
+  fight.fighters[1].effects = vector[];
+  fight.fighters[1].ap = 6;
+  let fixed = spell_effect::new_effect(
+    K_FIXED_REMOVE, b"".to_string(), 100, 100, spell_effect::shape_point(), 0, 1, 10_000, 3, STAT_AP,
+  );
+  estate = 1;
+  resolve_rows(&mut fight, 0, &sheet, &vector[fixed], target_cell, caster_cell, &mut estate, 1);
+  let fixed_now = fight.fighters[1].ap;
+  let fixed_value = fight.fighters[1].effects[0].value;
+  tick_turn_end(&mut fight, 1);
+  fight.fighters[1].ap = BASE_AP;
+  apply_pools(&mut fight, 1);
+  let fixed_next = fight.fighters[1].ap;
+  tick_turn_end(&mut fight, 1);
+  tick_turn_end(&mut fight, 1);
+  fight.fighters[1].ap = BASE_AP;
+  apply_pools(&mut fight, 1);
+  let answer = vector[
+    inactive_rows, inactive_value, instant_ap, instant_rows,
+    fixed_now, fixed_value, fixed_next, fight.fighters[1].ap,
+  ];
   let Fight { id, .. } = fight;
   id.delete();
   answer
@@ -3524,28 +3574,136 @@ public(package) fun side_admission_for_testing(
 }
 
 #[test_only]
+public(package) fun party_authority_fight_for_testing(
+  chr: Character,
+  owner: address,
+  settled: bool,
+  ctx: &mut TxContext,
+): Fight {
+  let board = combat_grid::generate(1, 0);
+  let character_id = character::id(&chr);
+  let mut fighter = fighter_for_placement_test(0, board.start_cells_a()[0], 6);
+  fighter.kind = FighterKind::Player { character: character_id, owner, level: 1 };
+  fighter.settled = settled;
+  let mut fight = Fight {
+    id: object::new(ctx), world: b"party_authority_test".to_string(), x: 0, z: 0,
+    closed: combat_grid::closed_mask(&board), board,
+    access_a: ACCESS_UNSET, access_b: ACCESS_UNSET,
+    opener_a: option::none(), opener_b: option::none(),
+    fighters: vector[fighter], zones: vector[], queue: vector[0], turn_ptr: 0, round: 1,
+    ended: false, winner: option::none(), dungeon: option::none(), managed: false,
+    wagered: false, drops_rolled: false, turn_seed: 1, turn_slot: 0, turn_casts: vector[],
+    placement_ms: 0, turn_started_ms: 0,
+  };
+  dof::add(&mut fight.id, FighterKey(0), chr);
+  fight
+}
+
+#[test_only]
+public(package) fun mob_party_authority_fight_for_testing(ctx: &mut TxContext): Fight {
+  let board = combat_grid::generate(1, 0);
+  let mut fighter = fighter_for_placement_test(0, board.start_cells_a()[0], 6);
+  fighter.settled = false;
+  Fight {
+    id: object::new(ctx), world: b"party_authority_mob_test".to_string(), x: 0, z: 0,
+    closed: combat_grid::closed_mask(&board), board,
+    access_a: ACCESS_UNSET, access_b: ACCESS_UNSET,
+    opener_a: option::none(), opener_b: option::none(),
+    fighters: vector[fighter], zones: vector[], queue: vector[0], turn_ptr: 0, round: 1,
+    ended: false, winner: option::none(), dungeon: option::none(), managed: false,
+    wagered: false, drops_rolled: false, turn_seed: 1, turn_slot: 0, turn_casts: vector[],
+    placement_ms: 0, turn_started_ms: 0,
+  }
+}
+
+#[test_only]
+public(package) fun take_party_authority_character_for_testing(mut fight: Fight): Character {
+  let chr: Character = dof::remove(&mut fight.id, FighterKey(0));
+  let Fight { id, .. } = fight;
+  id.delete();
+  chr
+}
+
+#[test_only]
+public(package) fun destroy_party_authority_mob_fight_for_testing(fight: Fight) {
+  let Fight { id, .. } = fight;
+  id.delete();
+}
+
+#[test_only]
 public(package) fun matching_drops_for_testing(): vector<u32> {
   let mut drops = vector[
     RolledDrop { item_type: b"silk".to_string(), qty: 2 },
     RolledDrop { item_type: b"fang".to_string(), qty: 1 },
     RolledDrop { item_type: b"silk".to_string(), qty: 3 },
   ];
-  let (count, total) = take_matching_drops(&mut drops, &b"silk".to_string());
+  let total = take_matching_drops(&mut drops, &b"silk".to_string());
   assert!(drops.length() == 1 && drops[0].item_type == b"fang".to_string(), 0);
-  vector[count as u32, total]
+  vector[total]
+}
+
+#[test_only]
+public(package) fun three_mob_non_stackable_split_for_testing(): vector<u32> {
+  let mut first = vector[
+    RolledDrop { item_type: b"hat".to_string(), qty: 3 },
+    RolledDrop { item_type: b"hat".to_string(), qty: 3 },
+  ];
+  let mut second = vector[RolledDrop { item_type: b"hat".to_string(), qty: 3 }];
+  let first_total = take_matching_drops(&mut first, &b"hat".to_string());
+  let second_total = take_matching_drops(&mut second, &b"hat".to_string());
+  vector[first_total, second_total, first_total + second_total]
 }
 
 #[test_only]
 public(package) fun mob_loot_scaling_for_testing(): vector<u64> {
   let authored = vector[mob_data::new_loot_entry(b"fang".to_string(), 5_000, 1, 2)];
-  let low = scale_mob_loot(authored, 10, 20, 10);
-  let high = scale_mob_loot(authored, 10, 20, 20);
+  let low = mob_scaling::loot(authored, 10, 20, 10);
+  let high = mob_scaling::loot(authored, 10, 20, 20);
   vector[
     mob_data::loot_chance_bp(&low[0]) as u64,
     mob_data::loot_chance_bp(&high[0]) as u64,
     mob_data::loot_min_qty(&high[0]) as u64,
     mob_data::loot_max_qty(&high[0]) as u64,
   ]
+}
+
+#[test_only]
+public(package) fun active_chance_for_loot_for_testing(ctx: &mut TxContext): vector<u64> {
+  let board = combat_grid::generate(1, 0);
+  let chr = character::test_character(b"shugo".to_string(), 1, 0, ctx);
+  let mut player = fighter_for_placement_test(0, board.start_cells_a()[0], 6);
+  player.kind = FighterKind::Player { character: character::id(&chr), owner: ctx.sender(), level: 1 };
+  player.settled = false;
+  player.effects = vector[
+    ActiveEffect { kind: K_ADD, element: b"".to_string(), value: 600, turns_left: 1, source: 0, stat: STAT_CHANCE },
+    ActiveEffect { kind: K_ADD, element: b"".to_string(), value: 999, turns_left: 1, source: 0, stat: STAT_POWER },
+  ];
+  let mut fight = Fight {
+    id: object::new(ctx), world: b"loot_chance_test".to_string(), x: 0, z: 0,
+    closed: combat_grid::closed_mask(&board), board,
+    access_a: ACCESS_UNSET, access_b: ACCESS_UNSET,
+    opener_a: option::none(), opener_b: option::none(),
+    fighters: vector[player], zones: vector[], queue: vector[0], turn_ptr: 0, round: 1,
+    ended: true, winner: option::some(0), dungeon: option::none(), managed: false,
+    wagered: false, drops_rolled: false, turn_seed: 1, turn_slot: 0, turn_casts: vector[],
+    placement_ms: 0, turn_started_ms: 0,
+  };
+  dof::add(&mut fight.id, FighterKey(0), chr);
+  let winners = vector[0];
+  let boosted = team_chance_of(&fight, &winners);
+  fight.fighters[0].effects.push_back(ActiveEffect {
+    kind: K_REMOVE, element: b"".to_string(), value: 120, turns_left: 1, source: 0, stat: STAT_CHANCE,
+  });
+  let reduced = team_chance_of(&fight, &winners);
+  fight.fighters[0].effects.push_back(ActiveEffect {
+    kind: K_STEAL, element: b"".to_string(), value: 60, turns_left: 1, source: 0, stat: STAT_CHANCE,
+  });
+  let stolen = team_chance_of(&fight, &winners);
+  let chr: Character = dof::remove(&mut fight.id, FighterKey(0));
+  character::destroy(chr);
+  let Fight { id, .. } = fight;
+  id.delete();
+  vector[boosted, reduced, stolen]
 }
 
 #[test_only]
@@ -4002,6 +4160,54 @@ public(package) fun ally_buff_for_testing(ctx: &mut TxContext): vector<u64> {
   };
   mob_turn(&mut fight, 1);
   let answer = vector[fight.fighters[0].effects.length(), fight.fighters[2].effects.length()];
+  let Fight { id, .. } = fight;
+  id.delete();
+  answer
+}
+
+#[test_only]
+public(package) fun mob_multi_cast_for_testing(casts_per_turn: u8, ctx: &mut TxContext): vector<u64> {
+  let board = combat_grid::generate(1, 0);
+  let player_cell = board.start_cells_a()[0];
+  let mob_cell = board.start_cells_b()[0];
+  let attack = spell_effect::new_spell_level(
+    4, 1, 40, false, false, false, false, casts_per_turn, 0, 0, 0,
+    vector[spell_effect::new_effect(
+      K_DAMAGE, b"earth".to_string(), 10, 10, spell_effect::shape_point(), 0, 1, 10_000, 0, 0,
+    )],
+    vector[],
+  );
+  let mut mob = fighter_for_placement_test(1, mob_cell, 8);
+  mob.kind = FighterKind::Mob(MobSnapshot {
+    mob_type: b"repeat_bite".to_string(),
+    level: 1,
+    max_hp: 100,
+    ap: 8,
+    mp: 0,
+    agility: 0,
+    wisdom: 0,
+    earth_res: item_stats::shift() as u64,
+    fire_res: item_stats::shift() as u64,
+    water_res: item_stats::shift() as u64,
+    air_res: item_stats::shift() as u64,
+    kit: vector[KitSpell { name: b"Repeat Bite".to_string(), ordinal: 1, level: attack }],
+    xp: 0,
+    loot: vector[],
+  });
+  *&mut mob.mp = 0;
+  let mut fight = Fight {
+    id: object::new(ctx), world: b"mob_multi_cast_test".to_string(), x: 0, z: 0,
+    closed: combat_grid::closed_mask(&board), board,
+    access_a: ACCESS_UNSET, access_b: ACCESS_UNSET,
+    opener_a: option::none(), opener_b: option::none(),
+    fighters: vector[fighter_for_placement_test(0, player_cell, 6), mob],
+    zones: vector[], queue: vector[0, 1], turn_ptr: 1, round: 1, ended: false,
+    winner: option::none(), dungeon: option::none(), managed: false, wagered: false,
+    drops_rolled: false, turn_seed: 7, turn_slot: 0, turn_casts: vector[],
+    placement_ms: 0, turn_started_ms: 0,
+  };
+  mob_turn(&mut fight, 1);
+  let answer = vector[fight.fighters[1].ap, fight.fighters[0].hp, fight.turn_casts.length()];
   let Fight { id, .. } = fight;
   id.delete();
   answer

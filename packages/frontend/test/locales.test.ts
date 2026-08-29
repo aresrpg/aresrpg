@@ -12,6 +12,7 @@ import es from '../src/i18n/locales/es.yaml'
 import fr from '../src/i18n/locales/fr.yaml'
 import ja from '../src/i18n/locales/ja.yaml'
 import uk from '../src/i18n/locales/uk.yaml'
+import spells from '../../../seed/content/spells.json'
 
 const LOCALES = ['de', 'en', 'es', 'fr', 'ja', 'uk'] as const
 
@@ -46,4 +47,20 @@ test('authored copy names the universe and keeps item descriptions inside the lo
   expect(english.encyclopedia_page.item_descriptions.water).toBe('')
   expect(french.encyclopedia_page.item_descriptions.water).toBe('')
   expect(english.encyclopedia_page.item_descriptions).not.toHaveProperty('aberrant_edge')
+})
+
+test('every spell identity has one localized display name in all six locales', () => {
+  const identities = spells.map(({ name }) => name).toSorted()
+  for (const document of [de, en, es, fr, ja, uk]) {
+    const names = (document as unknown as { spell_names: Record<string, string> }).spell_names
+    expect(Object.keys(names).toSorted()).toEqual(identities)
+    expect(Object.values(names).every((name) => name.trim().length > 0)).toBeTrue()
+  }
+
+  expect((en as unknown as { spell_names: Record<string, string> }).spell_names["Senshi's Wrath"]).toBe(
+    "Senshi's Wrath"
+  )
+  expect((fr as unknown as { spell_names: Record<string, string> }).spell_names["Senshi's Wrath"]).toBe(
+    'Colère du Senshi'
+  )
 })

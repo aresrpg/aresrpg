@@ -1,9 +1,8 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 // THE ITEM STREAM — one door, projection-driven (owner ruling 2026-08-21): the indexer
-// publishes `ItemWritten` for EVERY projected game-Item write (mint, craft roll, scribe,
-// feed, trade claim — the object output is the trigger, no Move event required), and this
-// module re-reads the projected row and pushes it to the players whose kiosk holds it.
+// publishes projected game-Item writes and pre-state removals (mint, craft, burn, split,
+// transfer), and this module pushes the resulting row or deletion to the affected kiosk owner.
 // The client never REQUESTS item state — its receipt only unlocks the next action. The
 // pubsub envelope fires after the graph write of the same checkpoint, so the read never
 // races its own projection. Claims are the same pattern over their own events.
@@ -28,10 +27,11 @@ export default {
       })
       .catch((error: Error) => log.warn({ address, error: error.message }, 'kiosk census failed'))
 
-    const push_item = (id: string) =>
+    const push_item = (id: string, previous_holder?: string | null) =>
       get_item_row(graph, { id })
         .then((item) => {
           if (item && mine.has(item.kiosk)) send({ type: 'packet/item_updated', item })
+          else if (previous_holder && mine.has(previous_holder)) send({ type: 'packet/item_removed', item: id })
         })
         .catch((error: Error) => log.warn({ id, error: error.message }, 'item stream read failed'))
 
@@ -40,13 +40,20 @@ export default {
         .then((claims) => send({ type: 'packet/claims', claims }))
         .catch((error: Error) => log.warn({ address, error: error.message }, 'claims refresh failed'))
 
-    const forward_economy = (payload: EventEnvelope) => {
+    const forward_item_event = (payload: EventEnvelope): boolean => {
       if (payload.type === 'ItemWritten') {
-        // holder scoping happens at the read: get_item_row only matches kiosk-HELD items
-        // and `mine` filters to this player — an equipped or foreign write stays silent
-        void push_item(String((payload.data as { item: string }).item))
-        return
+        const { item, previous_holder } = payload.data as { item: string; previous_holder?: string | null }
+        void push_item(String(item), previous_holder)
+        return true
       }
+      if (payload.type !== 'ItemRemoved') return false
+      const { item, holder } = payload.data as { item: string; holder: string }
+      if (mine.has(holder)) send({ type: 'packet/item_removed', item })
+      return true
+    }
+
+    const forward_economy = (payload: EventEnvelope) => {
+      if (forward_item_event(payload)) return
       if (payload.type === 'LootBoxOpened') {
         if ((payload.data as { opener: string }).opener === address) void push_claims()
         return

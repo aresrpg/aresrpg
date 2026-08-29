@@ -25,6 +25,8 @@ export default {
       void refresh().catch((error: Error) => log.warn({ address, error: error.message }, 'trade roster read failed'))
     }
     const forward = (payload: EventEnvelope) => {
+      if (payload.type === 'TradeDestroyed' && typeof payload.data.trade === 'string')
+        send({ type: 'packet/trade_destroyed', trade: payload.data.trade })
       if (payload.type === 'TradeChanged' || payload.type === 'TradeDestroyed') reread()
     }
     void watch(channels.social(address), forward as (payload: never) => void)

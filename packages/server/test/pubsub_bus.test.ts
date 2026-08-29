@@ -26,6 +26,16 @@ const fake_redis = () => {
     scan: async () => ['0', []],
     mget: async () => [],
     zrevrange: async () => [],
+    zrange: async () => [],
+    zrevrangebyscore: async () => [],
+    zadd: record('zadd') as BusRedis['zadd'],
+    zcount: async () => 0,
+    zcard: async () => 0,
+    hgetall: async () => ({}),
+    hvals: async () => [],
+    expireat: record('expireat') as BusRedis['expireat'],
+    smembers: async () => [],
+    scard: async () => 0,
     disconnect: () => void calls.push(['disconnect']),
   }
   return { redis, emitter, calls }
@@ -92,9 +102,11 @@ test('a message fans out parsed, and the heartbeat writes the TTL presence key',
 
   subscriber.emitter.emit('message', 'chat:world:w1', JSON.stringify({ text: 'yo' }))
   await bus.heartbeat('pod-1', 3)
+  await bus.record_online?.(3, 1_800_000)
 
   expect(seen).toEqual([{ text: 'yo' }])
   expect(publisher.calls).toContainEqual(['setex', 'server:pod-1', '20', '3'])
+  expect(publisher.calls.filter(([name]) => name === 'zadd')).toHaveLength(5)
 })
 
 test('a refused watch rolls back completely so the next attempt really subscribes', async () => {
@@ -125,4 +137,40 @@ test('the graph bus reads the indexer checkpoint marker from ITS OWN redis', asy
   const bus = create_graph_bus({ subscriber: subscriber.redis, publisher: marked, on_lost: () => undefined })
 
   expect(await bus.indexed_checkpoint()).toBe(4242)
+})
+
+test('transaction bucket reads sum replay-safe checkpoint counts', async () => {
+  const subscriber = fake_redis()
+  const publisher = fake_redis()
+  const counted: BusRedis = { ...publisher.redis, hvals: async () => ['2', '3'] }
+  const bus = create_graph_bus({ subscriber: subscriber.redis, publisher: counted, on_lost: () => undefined })
+
+  expect(await bus.analytics_sums?.(['analytics:transactions:day:0'])).toEqual([5])
+})
+
+test('a malformed transaction checkpoint count fails instead of disappearing', async () => {
+  const subscriber = fake_redis()
+  const publisher = fake_redis()
+  const corrupt: BusRedis = { ...publisher.redis, hvals: async () => ['2', 'broken'] }
+  const bus = create_graph_bus({ subscriber: subscriber.redis, publisher: corrupt, on_lost: () => undefined })
+
+  await expect(bus.analytics_sums?.(['analytics:transactions:day:0'])).rejects.toThrow('invalid checkpoint count')
+})
+
+test('a malformed online sample never serializes as a null dashboard number', async () => {
+  const subscriber = fake_redis()
+  const publisher = fake_redis()
+  const corrupt: BusRedis = { ...publisher.redis, zrange: async () => ['1', 'broken'] }
+  const bus = create_mesh_bus({ subscriber: subscriber.redis, publisher: corrupt })
+
+  await expect(bus.online_samples?.(['analytics:online:day:0'])).rejects.toThrow('invalid sample')
+})
+
+test("online samples use ioredis's normalized ZRANGE scores", async () => {
+  const subscriber = fake_redis()
+  const publisher = fake_redis()
+  const normalized: BusRedis = { ...publisher.redis, zrange: async () => ['1787990400000', '1', '1787986800000', '2'] }
+  const bus = create_mesh_bus({ subscriber: subscriber.redis, publisher: normalized })
+
+  expect(await bus.online_samples?.(['analytics:online:day:1787961600000'])).toEqual([[1, 2]])
 })

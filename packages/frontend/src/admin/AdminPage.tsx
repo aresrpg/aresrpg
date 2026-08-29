@@ -2,42 +2,42 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
 import type { AdminView } from '../modules/admin.ts'
+import { category_pill } from '../encyclopedia/components.tsx'
 import { dispatch_app, useAppStore } from '../store.ts'
 
 import { OverviewPage } from './OverviewPage.tsx'
 import { AdminWalletControl } from './AdminWalletControl.tsx'
 import { PublishPage } from './PublishPage.tsx'
+import { SalesHistoryPage } from './SalesHistoryPage.tsx'
 
-const TABS: readonly Readonly<{ id: AdminView; label: string }>[] = Object.freeze([
-  { id: 'overview', label: 'Overview' },
-  { id: 'publish', label: 'Publish' },
+const TABS: readonly Readonly<{ id: AdminView; copy_key: string; fallback: string }>[] = Object.freeze([
+  { id: 'overview', copy_key: 'overview_title', fallback: 'Overview' },
+  { id: 'sales', copy_key: 'sales_history', fallback: 'Sales history' },
+  { id: 'publish', copy_key: 'title', fallback: 'Publish' },
 ])
 
 const AdminPage = ({ copy }: Readonly<{ copy: Readonly<Record<string, string>> }>) => {
-  const admin = useAppStore((state) => state.admin)
+  const view = useAppStore((state) => state.admin.view)
   return (
-    <section className="pointer-events-auto z-[12] flex h-full min-h-0 flex-1 flex-col overflow-hidden border border-border bg-surface/98">
-      <nav className="flex shrink-0 items-center gap-1 overflow-x-auto border-b border-white/8 px-4 py-3">
+    <section className="pointer-events-auto z-[12] flex h-full min-h-0 flex-1 flex-col overflow-hidden bg-surface/50 [&_button:not(:disabled)]:cursor-pointer">
+      <nav className="flex shrink-0 items-center gap-1 overflow-x-auto border-b border-border px-4 py-3 [&>*]:shrink-0">
         {TABS.map((tab) => (
           <button
-            className={`h-8 shrink-0 border px-4 text-[8px] tracking-[0.15em] uppercase ${
-              admin.view === tab.id
-                ? 'border-[#c8963c]/50 bg-[#c8963c]/8 text-[#efc15a]'
-                : 'border-transparent text-[#717580] hover:border-white/8 hover:text-[#d8d3ca]'
-            }`}
+            className={category_pill(view === tab.id)}
             key={tab.id}
             onClick={() => dispatch_app({ type: 'admin/view_changed', view: tab.id })}
             type="button"
           >
-            {tab.label}
+            {copy[tab.copy_key] || tab.fallback}
           </button>
         ))}
-        <div className="ml-auto flex shrink-0 items-center gap-3 pl-4 text-[8px] tracking-[0.12em] uppercase">
+        <div className="ml-auto flex shrink-0 items-center pl-4">
           <AdminWalletControl copy={copy} />
         </div>
       </nav>
-      {admin.view === 'overview' && <OverviewPage copy={copy} />}
-      {admin.view === 'publish' && <PublishPage />}
+      {view === 'overview' && <OverviewPage copy={copy} />}
+      {view === 'sales' && <SalesHistoryPage copy={copy} />}
+      {view === 'publish' && <PublishPage />}
     </section>
   )
 }

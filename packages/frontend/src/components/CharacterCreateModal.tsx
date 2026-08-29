@@ -9,8 +9,9 @@ import { CHARACTER_PRICE_MIST } from '@aresrpg/sdk/character-price'
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 
 import type { AppCopy } from '../i18n/copy.ts'
+import { character_creation_funding_text } from '../character_creation_funding.ts'
 import { format_sui } from '../wallet_amount.ts'
-import { toast } from '../toast.ts'
+import { run_direct_transaction } from '../transaction_guard.ts'
 
 type CharacterIdentity = Readonly<{
   name: string
@@ -109,21 +110,20 @@ export const CharacterCreateModal = ({
   const submit = (event: Readonly<FormEvent>): void => {
     event.preventDefault()
     if (!valid || submitting || insufficient) return
-    set_submitting(true)
     const [color_1, color_2, color_3] = identity.colors.map((color) => Number.parseInt(color.slice(1), 16))
-    void create({
-      name: identity.name,
-      classe: identity.classe,
-      male: identity.male,
-      color_1: color_1!,
-      color_2: color_2!,
-      color_3: color_3!,
-    })
-      .catch((error: unknown) => {
-        console.error('Character creation failed.', error)
-        toast.add(error)
+    const transaction = run_direct_transaction(() =>
+      create({
+        name: identity.name,
+        classe: identity.classe,
+        male: identity.male,
+        color_1: color_1!,
+        color_2: color_2!,
+        color_3: color_3!,
       })
-      .finally(() => set_submitting(false))
+    )
+    if (!transaction) return
+    set_submitting(true)
+    void transaction.catch((error: unknown) => error).finally(() => set_submitting(false))
   }
 
   return (
@@ -257,7 +257,7 @@ export const CharacterCreateModal = ({
             </div>
             {insufficient && (
               <div className="mt-1 text-[9px] tracking-[0.08em] text-[#ff667c]" role="alert">
-                {copy.insufficient_sui}
+                {character_creation_funding_text(copy.insufficient_sui)}
               </div>
             )}
           </div>

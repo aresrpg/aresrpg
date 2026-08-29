@@ -5,6 +5,7 @@ export const MATERIAL_PRESETS = Object.freeze([
   'stone',
   'earth',
   'grass',
+  'frozen_grass',
   'wood',
   'foliage',
   'sand',
@@ -188,6 +189,12 @@ export const MATERIAL_PRESET_DEFINITIONS = Object.freeze({
     roughness: 0.84,
     roughness_detail: 0.22,
     climate_tint: true,
+    pattern: grass_pattern,
+  }),
+  frozen_grass: Object.freeze({
+    roughness: 0.78,
+    roughness_detail: 0.16,
+    climate_tint: false,
     pattern: grass_pattern,
   }),
   wood: Object.freeze({

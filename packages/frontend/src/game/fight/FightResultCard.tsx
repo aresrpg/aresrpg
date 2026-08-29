@@ -7,15 +7,17 @@ import { useEffect, type CSSProperties } from 'react'
 
 import { item_icon, spell_icon } from '../../content/assets.ts'
 import { content_catalog, titleize } from '../../content/catalog.ts'
-import type { AppCopy } from '../../i18n/copy.ts'
+import { spell_name, type AppCopy } from '../../i18n/copy.ts'
 import {
   compact_xp,
   fight_result_available,
   fight_result_complete,
   fight_result_surface,
   format_fight_duration,
+  kolizeum_wager_outcome,
   result_participant_shows_progress,
   result_xp_progress,
+  type FightResult,
   type ResultParticipant,
 } from '../../modules/fight_result.ts'
 import { dispatch_app, useAppStore, type AppState } from '../../store.ts'
@@ -29,6 +31,22 @@ const initial = (name: string): string => name.trim()[0]?.toUpperCase() ?? '?'
 const selected_result = (state: AppState) => {
   const character_id = state.session.selected_character_id
   return character_id ? (state.fight_result.current_by_character[character_id] ?? null) : null
+}
+
+const WAGER_PREFIX = Object.freeze({ won: '+', lost: '-', even: '' })
+
+const WagerFact = ({ copy, wager }: Readonly<{ copy: AppCopy; wager: FightResult['kolizeum_wager'] }>) => {
+  const outcome = kolizeum_wager_outcome(wager)
+  if (!outcome) return null
+  return (
+    <div className="fe-fact fe-fact--wager">
+      <span>{text_of(copy, `result_wager_${outcome.kind}`)}</span>
+      <b>
+        {WAGER_PREFIX[outcome.kind]}
+        {format_sui(outcome.mist, 3)} SUI
+      </b>
+    </div>
+  )
 }
 
 const ResultRow = ({
@@ -134,13 +152,14 @@ export const FightResultCard = ({ copy }: Readonly<{ copy: AppCopy }>) => {
               {format_sui(result.gas_spent_mist < 0n ? -result.gas_spent_mist : result.gas_spent_mist, 3)} SUI
             </b>
           </div>
+          <WagerFact copy={copy} wager={result.kolizeum_wager} />
         </div>
         <div className="fe-sec">
           <div className="fe-lbl">
             <span>{text_of(copy, 'result_party')}</span>
             <span>{party.length}</span>
           </div>
-          <div className="fe-rows fe-rows--grid">
+          <div className="fe-rows">
             {party.map((participant) => (
               <ResultRow defeated={false} enemy={false} key={participant.seat} participant={participant} />
             ))}
@@ -152,7 +171,7 @@ export const FightResultCard = ({ copy }: Readonly<{ copy: AppCopy }>) => {
               <span>{text_of(copy, 'result_enemies')}</span>
               <span>{enemies.length}</span>
             </div>
-            <div className="fe-rows fe-rows--grid">
+            <div className="fe-rows">
               {enemies.map((participant) => (
                 <ResultRow defeated={victory} enemy key={participant.seat} participant={participant} />
               ))}
@@ -300,7 +319,7 @@ export const FightLevelUpCard = ({ copy }: Readonly<{ copy: AppCopy }>) => {
             </div>
             <div>
               <small>{text_of(copy, 'level_up_new_spell')}</small>
-              <strong>{unlocked_spell.name}</strong>
+              <strong>{spell_name(copy, unlocked_spell.name)}</strong>
               <span className="lvl-unlock__meta">{titleize(unlocked_spell.classe)}</span>
             </div>
             <b>{unlocked_spell.levels[0]?.ap_cost ?? 0} AP</b>

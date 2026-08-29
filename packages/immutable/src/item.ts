@@ -58,9 +58,16 @@ const craft_jobs_by_category: Readonly<Partial<Record<ItemCategory, JobSlug>>> =
 export const craft_job_of = (category: string): JobSlug | null =>
   is_item_category(category) ? (craft_jobs_by_category[category] ?? null) : null
 
-export const stackable_item_categories = Object.freeze(['consumable', 'resource', 'rune'] as const)
+export const stackable_item_categories = Object.freeze(['consumable', 'resource', 'rune', 'key'] as const)
 export const item_is_stackable = (category: string): boolean =>
   (stackable_item_categories as readonly string[]).includes(category)
+
+// Mirrors aresrpg::crafting's compiled hard caps. Stackable batches write at most one output
+// object; unique batches mint one object per success and therefore keep the lower gas bound.
+export const craft_stackable_batch_limit = 1_000
+export const craft_unique_batch_limit = 1
+export const craft_batch_limit = (category: string): number =>
+  item_is_stackable(category) ? craft_stackable_batch_limit : craft_unique_batch_limit
 
 export const element_names = Object.freeze(['earth', 'fire', 'water', 'air'] as const)
 export type ElementName = (typeof element_names)[number]

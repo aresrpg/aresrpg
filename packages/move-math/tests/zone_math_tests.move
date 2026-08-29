@@ -22,3 +22,13 @@ fun mob_level_bounds_move_from_minimum_to_the_upper_quarter() {
   assert!(zone_math::level_bounds_for_testing(20_000) == vector[75, 100], 2);
   assert!(zone_math::level_bounds_for_testing(50_000) == vector[75, 100], 3);
 }
+
+#[test]
+fun dungeon_portal_uses_the_production_ten_percent_rate() {
+  let (present, x, z) = zone_math::portal_of(true, 8, 3, 4);
+  assert!(present && x == 1_649 && z == 2_490, 0);
+  let (present, _, _) = zone_math::portal_of(true, 7, 3, 4);
+  assert!(!present, 1);
+  let (present, _, _) = zone_math::portal_of(false, 8, 3, 4);
+  assert!(!present, 2);
+}

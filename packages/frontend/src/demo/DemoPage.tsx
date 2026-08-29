@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 // Public composition lab. It owns controls only; every rendered fact crosses a production boundary.
-import type { EngineQuality, EngineStatus } from '@aresrpg/engine'
+import { effective_flattened, type EngineQuality, type EngineStatus } from '@aresrpg/engine'
 import { class_names } from '@aresrpg/immutable'
 import { Boxes, FlaskConical, Grid2X2, Mountain, Package, RotateCcw, Swords, UserRound, UsersRound } from 'lucide-react'
-import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 
 import { FpsPanel } from '../components/FpsPanel.tsx'
 import { fight_lab_surface } from '../components/app_layout.ts'
@@ -24,15 +24,7 @@ import { dispatch_app, useAppStore } from '../store.ts'
 import SimulatorPage from '../simulator/SimulatorPage.tsx'
 
 import { BoardGallery } from './BoardGallery.tsx'
-
-// The seed editors ship only in the dev bundle: the /__seed doors exist only on the local Vite
-// process, so production emits no editor chunks at all (the DEV check is static).
-const ContentPage = import.meta.env.DEV
-  ? lazy(() => import('../editor/ContentPage.tsx').then((m) => ({ default: m.ContentPage })))
-  : (): null => null
-const BiomePage = import.meta.env.DEV
-  ? lazy(() => import('../editor/BiomePage.tsx').then((m) => ({ default: m.BiomePage })))
-  : (): null => null
+import { DemoDevPage } from './DemoDevPage.tsx'
 
 type DemoView = 'world' | 'fight' | 'boards' | 'content' | 'biomes'
 const DEMO_VIEWS: readonly DemoView[] = Object.freeze(
@@ -46,7 +38,7 @@ const VIEW_ICONS = Object.freeze({
   biomes: Mountain,
 })
 const initial_view = (): DemoView => {
-  const hash = globalThis.location.hash.slice(1)
+  const [hash = ''] = globalThis.location.hash.slice(1).split('/')
   return (DEMO_VIEWS as readonly string[]).includes(hash) ? (hash as DemoView) : 'world'
 }
 type SpawnedGroup = Readonly<{ mob_type: string; amount: number; serial: number }>
@@ -253,7 +245,8 @@ const WorldLab = ({ active, copy }: Readonly<{ active: boolean; copy: AppCopy }>
           change_quality={change_quality}
           copy={copy}
           fight_access={null}
-          flattened={settings.flat_mode}
+          flatten_locked={status.backend === 'grid'}
+          flattened={effective_flattened(settings.flat_mode, status.backend)}
           party_available={false}
           quality={settings.quality}
           toggle_fight_access={() => undefined}
@@ -490,7 +483,7 @@ export const DemoPage = ({ copy }: Readonly<{ copy: AppCopy }>) => {
   // only when a lab tab needs the rebuilt seed imports — deferred to the next tab switch.
   useEffect(() => {
     const on_seed_changed = (): void => {
-      const editing = ['#boards', '#content', '#biomes'].includes(globalThis.location.hash)
+      const editing = ['#boards', '#content', '#biomes'].some((hash) => globalThis.location.hash.startsWith(hash))
       if (editing) {
         // eslint-disable-next-line functional/immutable-data -- a React ref is the sanctioned mutable cell
         seed_changed.current = true
@@ -511,15 +504,13 @@ export const DemoPage = ({ copy }: Readonly<{ copy: AppCopy }>) => {
     set_view(next)
   }
   const view_label = (candidate: DemoView): string =>
-    candidate === 'world'
-      ? text.world_lab
-      : candidate === 'fight'
-        ? text.fight_lab
-        : candidate === 'boards'
-          ? text.fight_board
-          : candidate === 'content'
-            ? 'Content'
-            : 'Biomes'
+    ({
+      world: text.world_lab,
+      fight: text.fight_lab,
+      boards: text.fight_board,
+      content: 'Content',
+      biomes: 'Biomes',
+    })[candidate]
 
   return (
     <main className="fixed inset-0 overflow-hidden bg-bg font-mono text-[#e8e4dc]">
@@ -537,19 +528,7 @@ export const DemoPage = ({ copy }: Readonly<{ copy: AppCopy }>) => {
         </section>
       )}
       {view === 'boards' && <BoardGallery text={text} />}
-      {import.meta.env.DEV && (view === 'content' || view === 'biomes') && (
-        <section className="absolute inset-0 flex flex-col bg-bg pt-14">
-          <Suspense
-            fallback={
-              <div className="grid flex-1 place-items-center text-[9px] tracking-[0.18em] text-[#c8963c] uppercase">
-                Loading seed files…
-              </div>
-            }
-          >
-            {view === 'content' ? <ContentPage text={text} /> : <BiomePage />}
-          </Suspense>
-        </section>
-      )}
+      <DemoDevPage text={text} view={view} />
       <HudPanel className="pointer-events-auto fixed top-3 left-1/2 z-50 flex -translate-x-1/2 overflow-hidden text-[8px] tracking-[0.16em] uppercase">
         {DEMO_VIEWS.map((candidate) => {
           const ViewIcon = VIEW_ICONS[candidate]

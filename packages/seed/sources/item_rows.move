@@ -215,3 +215,21 @@ public fun consumable_effect(template: &ItemTemplate): Option<Effect> {
   if (dfield::exists(&template.id, EffectKey())) option::some(*dfield::borrow(&template.id, EffectKey()))
   else option::none()
 }
+
+#[test_only]
+public fun template_for_testing(item_type: String, category: String, ctx: &mut TxContext): ItemTemplate {
+  ItemTemplate {
+    id: object::new(ctx),
+    name: item_type,
+    item_type,
+    category,
+    level: 1,
+    pet_foods: vector[],
+  }
+}
+
+#[test_only]
+public fun destroy_for_testing(template: ItemTemplate) {
+  let ItemTemplate { id, .. } = template;
+  id.delete();
+}

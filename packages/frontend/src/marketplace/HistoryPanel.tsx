@@ -13,6 +13,11 @@ import { format_sui } from '../wallet_amount.ts'
 import { short_address, SuiUnit } from './marketplace_model.tsx'
 
 const PAGE = 30
+const sale_name = (
+  row: Readonly<{ name: string | null; item_type: string | null; object: string }>,
+  catalog_name: string | undefined
+): string => catalog_name ?? row.name ?? (row.item_type ? titleize(row.item_type) : short_address(row.object))
+
 const relative_time = (at_ms: number, locale: string): string => {
   const diff = at_ms - Date.now()
   const abs = Math.abs(diff)
@@ -94,7 +99,7 @@ export const HistoryPanel = ({ locale, text }: Readonly<{ locale: string; text: 
                     <span className="grid size-8 place-items-center border border-white/10 text-[#c8963c]">◇</span>
                   )}
                   <span className="truncate text-[11px] tracking-[0.05em]">
-                    {item?.name ?? (row.item_type ? titleize(row.item_type) : short_address(row.object))}
+                    {sale_name(row, item?.name)}
                     {row.amount > 1 ? ` ×${row.amount}` : ''}
                   </span>
                 </div>

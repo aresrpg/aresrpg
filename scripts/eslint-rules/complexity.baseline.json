@@ -1,0 +1,1169 @@
+{
+  "version": 1,
+  "cognitive": {
+    "scripts/validate_seed.mjs": {
+      "check_effect": [37],
+      "check_loot_rewards": [14],
+      "fight_boards.forEach[0](board,i)": [41]
+    },
+    "scripts/extract_dofus_retro_mob_corpus.mjs": {
+      "interpret_data_actions": [20],
+      "pushed_values": [12]
+    },
+    "scripts/check_world_specs.ts": {
+      "lines.forEach[0](line,index)": [16]
+    },
+    "scripts/import_schematics.ts": {
+      "parse_nbt > payload": [14],
+      "structure_material": [24]
+    },
+    "scripts/generate_fight_boards.mjs": {
+      "fully_connected": [12]
+    },
+    "scripts/eslint-rules/no_silent_failures.mjs": {
+      "is_failure_value": [12],
+      "walk": [17]
+    },
+    "scripts/eslint-rules/fp_law.mjs": {
+      "create > check_pattern": [12],
+      "create > mutation_verdict": [11]
+    },
+    "scripts/eslint-rules/one_pipeline.mjs": {
+      "async_context_of": [27],
+      "collect_await_ends": [19]
+    },
+    "packages/fight/scripts/generate_move_contract.mjs": {
+      "split_top_level": [12]
+    },
+    "packages/fight/src/commands.ts": {
+      "join": [22]
+    },
+    "packages/fight/src/combat_grid.ts": {
+      "blocks": [11],
+      "cone_cells": [12],
+      "step_cell": [12],
+      "zone_cells": [18]
+    },
+    "packages/fight/src/board_gen.ts": {
+      "ellipse_mask": [16]
+    },
+    "packages/fight/src/damage.ts": {
+      "deal": [14]
+    },
+    "packages/fight/src/turns.ts": {
+      "run_until_player": [32]
+    },
+    "packages/fight/src/movement.ts": {
+      "displace": [13],
+      "walk_down": [11]
+    },
+    "packages/fight/src/fight.ts": {
+      "create_fight > apply": [13]
+    },
+    "packages/fight/src/board.ts": {
+      "project_board_cells > Array.from[1](_,index)": [11]
+    },
+    "packages/fight/src/effects.ts": {
+      "apply_number_row": [12],
+      "apply_to": [13],
+      "cast_legality": [16]
+    },
+    "packages/immutable/src/identity.ts": {
+      "class_spell_shape_errors": [11]
+    },
+    "packages/frontend/deployment_dev_server.ts": {
+      "deployment_dev_plugin > configureServer > server.middlewares.use[0](request,response,next)": [11],
+      "deployment_dev_plugin > configureServer > server.middlewares.use[0](request,response,next) > read_json(request) .then[0](body)": [
+        27
+      ]
+    },
+    "packages/frontend/seed_dev_server.ts": {
+      "seed_dev_plugin > configureServer > server.middlewares.use[0](request,response,next)": [12]
+    },
+    "packages/frontend/src/app.tsx": {
+      "App": [17]
+    },
+    "packages/frontend/src/marketplace/BrowsePanel.tsx": {
+      "BrowsePanel": [12],
+      "CheapestLotMarket > sizes.map[0](size,index)": [12]
+    },
+    "packages/frontend/src/admin/PublishPage.tsx": {
+      "PublishPage": [47]
+    },
+    "packages/frontend/src/admin/admin_deployment.ts": {
+      "observe_admin_deployment > events.on[1](state,previous)": [16],
+      "observe_admin_deployment > publish > import('@aresrpg/sdk/deployment-admin') .then[0]({ project_bootstrap_deployment, project_control_deployment, project_game_deployment, project_kiosk_package, project_math_deployment, project_seed_deployment, })": [
+        40
+      ],
+      "reduce_admin_deployment": [34]
+    },
+    "packages/frontend/src/admin/admin_wallet.ts": {
+      "observe_admin_wallet > events.on[1](state,previous)": [14],
+      "reduce_admin_wallet": [19]
+    },
+    "packages/frontend/src/admin/AdminWalletPanel.tsx": {
+      "AdminWalletPanel": [15]
+    },
+    "packages/frontend/src/game/fight/FightEffectLines.tsx": {
+      "compact_effect_line": [20]
+    },
+    "packages/frontend/src/game/fight/fight_cues.ts": {
+      "cast_style": [15],
+      "pool_cue": [15],
+      "project_fight_cues > events.forEach[0](event,index)": [41]
+    },
+    "packages/frontend/src/game/fight/FightHud.tsx": {
+      "FightHud": [21],
+      "FightHud > useEffect[0]() > keydown": [11]
+    },
+    "packages/frontend/src/game/fight/FightResultCard.tsx": {
+      "FightResultCard": [14]
+    },
+    "packages/frontend/src/game/fight/fight_overlays.ts": {
+      "fight_visual_checkpoint_after_cue": [16],
+      "fight_zone_visual_state": [12],
+      "project_fight_overlays": [15]
+    },
+    "packages/frontend/src/game/fight/fight_projection.ts": {
+      "select_fight_view": [11]
+    },
+    "packages/frontend/src/game/fight/fight_chat_lines.ts": {
+      "project_fight_chat_lines > events.flatMap[0](event,index)": [32],
+      "stat_change_values": [16]
+    },
+    "packages/frontend/src/game/fight/FightLayer.tsx": {
+      "FightLayer": [17],
+      "FightLayer > anonymous(cell)": [16]
+    },
+    "packages/frontend/src/game/core/cameras.ts": {
+      "create_follow_addon > frame": [21]
+    },
+    "packages/frontend/src/game/core/collision.ts": {
+      "resolve_movement": [25],
+      "try_corner_nudge": [14]
+    },
+    "packages/frontend/src/game/core/pet_follow.ts": {
+      "step_pet_follow": [31]
+    },
+    "packages/frontend/src/game/core/controller.ts": {
+      "classify_anim": [19],
+      "step_controller": [56]
+    },
+    "packages/frontend/src/game/core/world.ts": {
+      "create_world > on_key": [16],
+      "create_world > render_pet": [21],
+      "create_world > sync_dungeon_portal_labels": [13]
+    },
+    "packages/frontend/src/game/presence_entities.ts": {
+      "create_presence_renderer > build > [...slots.entries()].flatMap[0]([character_id, slot])": [21],
+      "create_presence_renderer > tick": [12],
+      "create_presence_renderer > update": [18]
+    },
+    "packages/frontend/src/game/audio/fight_audio.ts": {
+      "create_fight_audio_observer > anonymous(cue: FightPresentationCue,phase: FightCuePhase,character_voices: CharacterVoices)": [
+        36
+      ]
+    },
+    "packages/frontend/src/game/resource_nodes.ts": {
+      "create_resource_renderer > update": [12],
+      "resource_seats": [12]
+    },
+    "packages/frontend/src/game/spawn_entities.ts": {
+      "create_spawn_renderer > refresh": [13],
+      "create_spawn_renderer > sync_tag": [11],
+      "create_spawn_renderer > tick": [13]
+    },
+    "packages/frontend/src/game/hud/compass_math.ts": {
+      "cluster_pips": [18]
+    },
+    "packages/frontend/src/game/hud/CompassStrip.tsx": {
+      "CompassStrip": [16]
+    },
+    "packages/frontend/src/encyclopedia/ItemsTab.tsx": {
+      "ItemsTab": [18]
+    },
+    "packages/frontend/src/encyclopedia/MobsTab.tsx": {
+      "mob_facet_options > encyclopedia_catalog.mob_filters.map[0](row,index)": [11]
+    },
+    "packages/frontend/src/encyclopedia/SpellCardEffects.tsx": {
+      "effect_words": [23],
+      "spell_effect_line_view": [15],
+      "SpellEffectLine": [22]
+    },
+    "packages/frontend/src/components/Toasts.tsx": {
+      "Toasts > toasts.map[0](toast)": [12]
+    },
+    "packages/frontend/src/components/FightPrompt.tsx": {
+      "FightModal": [16]
+    },
+    "packages/frontend/src/components/SendSuiModal.tsx": {
+      "RecipientHint": [11],
+      "SendSuiModal": [14]
+    },
+    "packages/frontend/src/components/SpawnNametag.tsx": {
+      "SpawnNametag > Object.entries(spawns).map[0]([spawn_id, element])": [17]
+    },
+    "packages/frontend/src/components/SidebarCards.tsx": {
+      "ConnectionCard": [35]
+    },
+    "packages/frontend/src/components/SearchPickerModal.tsx": {
+      "SearchPickerModal > filtered.map[0](item)": [30]
+    },
+    "packages/frontend/src/characters/SpellsTab.tsx": {
+      "SpellsTab": [15]
+    },
+    "packages/frontend/src/characters/RuneforgeTab.tsx": {
+      "RuneforgeTab": [17]
+    },
+    "packages/frontend/src/modules/world_gather.ts": {
+      "observe_world_gather > events.on[1](state,previous)": [17]
+    },
+    "packages/frontend/src/modules/editor.ts": {
+      "reduce": [34]
+    },
+    "packages/frontend/src/modules/simulator.ts": {
+      "reduce_simulator_state": [34]
+    },
+    "packages/frontend/src/modules/fight_observer.ts": {
+      "observe_fights > events.on[1]({ fight: fight_id, input, origin })": [14],
+      "observe_fights > events.on[1]({ packet })": [27],
+      "observe_fights > events.on[1](state,previous)": [13]
+    },
+    "packages/frontend/src/modules/marketplace.ts": {
+      "market_observation": [15],
+      "reduce": [24]
+    },
+    "packages/frontend/src/modules/admin.ts": {
+      "observe > events.on[1](state,previous)": [15],
+      "reduce": [43]
+    },
+    "packages/frontend/src/modules/engine.ts": {
+      "observe > events.on[1](state,previous)": [11]
+    },
+    "packages/frontend/src/modules/session.ts": {
+      "fold_packet": [15],
+      "observe > events.on[1](state,previous)": [22],
+      "reduce": [26]
+    },
+    "packages/frontend/src/modules/fight.ts": {
+      "reduce": [27]
+    },
+    "packages/frontend/src/modules/fight_chain.ts": {
+      "observe: NonNullable<AppModule['observe']> > events.on[1]({ fight, input, origin })": [14]
+    },
+    "packages/frontend/src/modules/fight_result.ts": {
+      "reduce": [11]
+    },
+    "packages/frontend/src/modules/world.ts": {
+      "fold_union": [25],
+      "observe: NonNullable<AppModule['observe']> > settle_arrivals": [12],
+      "reduce": [28]
+    },
+    "packages/frontend/src/editor/ContentPage.tsx": {
+      "ContentPage": [17],
+      "mob_facet_options > rows.map[0](row,index)": [20]
+    },
+    "packages/frontend/src/editor/BiomePage.tsx": {
+      "BiomePage": [11]
+    },
+    "packages/frontend/src/editor/seed_editor.ts": {
+      "entity_asset_reference": [17],
+      "row_name": [23]
+    },
+    "packages/frontend/src/editor/JsonEditor.tsx": {
+      "Field": [11],
+      "PrimitiveEditor": [15]
+    },
+    "packages/frontend/src/editor/MobReferencePicker.tsx": {
+      "mob_picker_facets > filter_rows .filter((row) => row.kind !== 'protector' && row.mob_types.some((mob_type) => mob_types.has(mob_type))) .map[0](row)": [
+        12
+      ]
+    },
+    "packages/server/test/world.test.ts": {
+      "wire > read": [27]
+    },
+    "packages/server/test/helpers/stream_wire.ts": {
+      "wire > read": [20]
+    },
+    "packages/server/src/modules/player_world.ts": {
+      "observe > events.on[1](state: PlayerState,previous: PlayerState) > ids.forEach[0](character_id)": [24],
+      "observe > forward_presence > anonymous(fact: MeshFact)": [15],
+      "observe > forward_zone_event": [14],
+      "observe > track": [18],
+      "observe > unmount": [17],
+      "reduce": [13]
+    },
+    "packages/server/src/modules/player_fight.ts": {
+      "reduce": [19]
+    },
+    "packages/server/src/modules/player_events.ts": {
+      "observe > forward_self > anonymous(payload: EventEnvelope)": [12]
+    },
+    "packages/server/src/request_limiter.ts": {
+      "create_request_limiter > take": [18]
+    },
+    "packages/protocol/src/packets.ts": {
+      "parse_client_packet": [37]
+    },
+    "packages/sdk/scripts/e2e_admin_publish.ts": {
+      "main": [23]
+    },
+    "packages/sdk/src/marketplace.ts": {
+      "marketplace_actions > list": [15]
+    },
+    "packages/sdk/src/seed_session.ts": {
+      "create_seed_session > release": [13]
+    },
+    "packages/sdk/src/seed.ts": {
+      "validate_biome_maps": [15],
+      "world_batches > content.worlds.map[0](world,world_index) > build": [13]
+    },
+    "packages/sdk/src/cache.ts": {
+      "absorb_receipt": [15]
+    },
+    "packages/sdk/src/seed_sync.ts": {
+      "seed_sync_view": [43]
+    },
+    "packages/engine/test/greedy_mesher.test.ts": {
+      "describe[1]() > test[1]()": [20]
+    },
+    "packages/engine/src/far_worker.ts": {
+      "self.addEventListener[1]({ data }: MessageEvent<Request>)": [23]
+    },
+    "packages/engine/src/fight_blobs.ts": {
+      "create_fight_blob_layer > tick > visuals.forEach[0](visual,id)": [14],
+      "make_blob_texture": [24]
+    },
+    "packages/engine/src/sky/night_sky.ts": {
+      "create_night_sky_node": [28]
+    },
+    "packages/engine/src/world_preview.ts": {
+      "add_height_edge": [13]
+    },
+    "packages/engine/src/entities.ts": {
+      "create_entity_layer > beat": [22],
+      "create_entity_layer > mount": [16],
+      "create_entity_layer > play_clip": [12],
+      "create_entity_layer > tick > beats.forEach[0](beat,id)": [11]
+    },
+    "packages/engine/src/scatter.ts": {
+      "chunk_scatter": [31]
+    },
+    "packages/engine/src/voxel_data.ts": {
+      "pack_voxel_occupancy": [15]
+    },
+    "packages/engine/src/nature/herb_bush.ts": {
+      "herb_bush: SpriteBuilder": [18]
+    },
+    "packages/engine/src/webgpu_backend.ts": {
+      "create_webgpu_backend > drain_uploads": [20],
+      "create_webgpu_backend > draw": [20]
+    },
+    "packages/engine/src/biome_grid.ts": {
+      "sample_biome_grid": [13]
+    },
+    "packages/engine/src/fight_presentation.ts": {
+      "create_fight_presentation > play": [27]
+    },
+    "packages/engine/src/material_presets.ts": {
+      "seamless[0](x: number,y: number)": [14]
+    },
+    "packages/engine/src/fight_board_surface.ts": {
+      "bake_fight_board_surface": [82],
+      "bake_fight_board_water_surface": [22]
+    },
+    "packages/engine/src/resource_nodes.ts": {
+      "geometry_for": [13]
+    },
+    "packages/engine/src/entity_labels.ts": {
+      "create_entity_label_layer > set_static": [12]
+    },
+    "packages/engine/src/greedy_mesher.ts": {
+      "emit_direction": [62]
+    }
+  },
+  "cyclomatic": {
+    "scripts/validate_seed.mjs": {
+      "check_consumable": [10],
+      "check_effect": [34],
+      "check_loot_rewards": [12],
+      "fight_boards.forEach[0](board,i)": [36]
+    },
+    "scripts/extract_dofus_retro_mob_corpus.mjs": {
+      "interpret_data_actions": [19],
+      "pushed_values": [10]
+    },
+    "scripts/check_world_specs.ts": {
+      "lines.forEach[0](line,index)": [12]
+    },
+    "scripts/import_schematics.ts": {
+      "encode_runs": [9],
+      "generated_ruins > generated_type[1](x,y,z)": [16, 14],
+      "parse_nbt > payload": [14],
+      "structure_material": [23]
+    },
+    "scripts/generate_fight_boards.mjs": {
+      "fully_connected": [10]
+    },
+    "scripts/eslint-rules/no_silent_failures.mjs": {
+      "guard_branch_of": [9],
+      "is_failure_value": [15],
+      "walk": [13]
+    },
+    "scripts/eslint-rules/fp_law.mjs": {
+      "create > CallExpression": [9, 9],
+      "create > check_pattern": [12],
+      "create > is_reduce_accumulator": [12],
+      "create > mutation_verdict": [12],
+      "owning_function": [10]
+    },
+    "scripts/eslint-rules/complexity_gate.mjs": {
+      "local_function_label": [14]
+    },
+    "scripts/eslint-rules/one_pipeline.mjs": {
+      "async_context_of": [19],
+      "collect_await_ends": [15],
+      "writer_of": [16]
+    },
+    "packages/fight/test/spell_turn_projection.test.ts": {
+      "describe[1]() > test[1]()": [12]
+    },
+    "packages/fight/scripts/generate_move_contract.mjs": {
+      "split_top_level": [15]
+    },
+    "packages/fight/src/commands.ts": {
+      "apply_command": [12],
+      "boundary": [9],
+      "join": [17]
+    },
+    "packages/fight/src/combat_grid.ts": {
+      "blocks": [17],
+      "cone_cells": [9],
+      "step_cell": [9],
+      "zone_cells": [15]
+    },
+    "packages/fight/src/fight_math.ts": {
+      "xp_for_player": [10]
+    },
+    "packages/fight/src/board_gen.ts": {
+      "ring_on_mask": [9]
+    },
+    "packages/fight/src/spell_turn.ts": {
+      "spell_level_of": [11]
+    },
+    "packages/fight/src/damage.ts": {
+      "deal": [15]
+    },
+    "packages/fight/src/turns.ts": {
+      "run_until_player": [19]
+    },
+    "packages/fight/src/movement.ts": {
+      "displace": [15],
+      "walk_down": [9],
+      "walk_path": [9]
+    },
+    "packages/fight/src/fight.ts": {
+      "create_fight > apply": [13]
+    },
+    "packages/fight/src/normalize.ts": {
+      "as_bigint": [9],
+      "normalize_contract": [22],
+      "normalize_effect": [9],
+      "normalize_player": [13]
+    },
+    "packages/fight/src/fighters.ts": {
+      "hit > groups.forEach[0]({ stance, cap })": [9]
+    },
+    "packages/fight/src/create.ts": {
+      "create_character_source": [13],
+      "create_fight_state": [11]
+    },
+    "packages/fight/src/effects.ts": {
+      "apply_number_row": [11],
+      "apply_row": [10],
+      "apply_to": [13],
+      "cast_legality": [21]
+    },
+    "packages/immutable/src/characteristics.ts": {
+      "characteristic_spending_quote": [9],
+      "characteristic_value_cost": [9]
+    },
+    "packages/frontend/test/core/per_character_fight_runtime.test.ts": {
+      "test[1]()": [11]
+    },
+    "packages/frontend/test/core/source_boundaries.test.ts": {
+      "describe[1]() > test[1]() > documents.flatMap[0]({ file, parsed }) > visit": [10],
+      "describe[1]() > test[1]() > documents.forEach[0]({ file, parsed }) > parsed.forEachChild[0](node)": [9]
+    },
+    "packages/frontend/test/encyclopedia/catalog.test.ts": {
+      "describe[1]() > test[1]()": [9]
+    },
+    "packages/frontend/deployment_dev_server.ts": {
+      "deployment_dev_plugin > configureServer > server.middlewares.use[0](request,response,next)": [16],
+      "deployment_dev_plugin > configureServer > server.middlewares.use[0](request,response,next) > read_json(request) .then[0](body: Record<string, unknown>)": [
+        10
+      ],
+      "deployment_dev_plugin > configureServer > server.middlewares.use[0](request,response,next) > read_json(request) .then[0](body)": [
+        29
+      ],
+      "merge_seed_ledger_pins": [11]
+    },
+    "packages/frontend/seed_dev_server.ts": {
+      "seed_dev_plugin > configureServer > server.middlewares.use[0](request,response,next)": [15]
+    },
+    "packages/frontend/scripts/character_portrait_scene.ts": {
+      "render_portrait": [11]
+    },
+    "packages/frontend/scripts/render_character_portraits.ts": {
+      "configureServer > server.middlewares.use[0](request,response,next)": [12]
+    },
+    "packages/frontend/src/demo/DemoPage.tsx": {
+      "WorldLab": [10]
+    },
+    "packages/frontend/src/demo/BoardGallery.tsx": {
+      "BoardGallery": [18]
+    },
+    "packages/frontend/src/app.tsx": {
+      "App": [55],
+      "App > useCallback[0](character: CharacterCreateInput)": [10]
+    },
+    "packages/frontend/src/kolizeum/KolizeumPage.tsx": {
+      "KolizeumPage": [17]
+    },
+    "packages/frontend/src/marketplace/BrowsePanel.tsx": {
+      "AskRow": [13],
+      "BrowsePanel": [29],
+      "CheapestLotMarket > sizes.map[0](size,index)": [15]
+    },
+    "packages/frontend/src/marketplace/SellPanel.tsx": {
+      "SellPanel": [17],
+      "SellPanel > items.map[0](selection)": [9]
+    },
+    "packages/frontend/src/shop/model.ts": {
+      "shop_section": [10]
+    },
+    "packages/frontend/src/server_link.ts": {
+      "connect_server > open > next.addEventListener[1]({ data })": [10]
+    },
+    "packages/frontend/src/admin/PublishPage.tsx": {
+      "PublishPage": [103]
+    },
+    "packages/frontend/src/admin/admin_deployment.ts": {
+      "deployment_bootstrapped": [10],
+      "observe_admin_deployment > events.on[1](state,previous)": [18],
+      "observe_admin_deployment > publish > import('@aresrpg/sdk/deployment-admin') .then[0]({ project_bootstrap_deployment, project_control_deployment, project_game_deployment, project_kiosk_package, project_math_deployment, project_seed_deployment, })": [
+        46
+      ],
+      "observe_admin_deployment > upgrade": [17],
+      "reduce_admin_deployment": [41],
+      "seed_config_from": [14]
+    },
+    "packages/frontend/src/admin/AdminWalletControl.tsx": {
+      "AdminWalletControl": [13]
+    },
+    "packages/frontend/src/admin/admin_wallet.ts": {
+      "observe_admin_wallet > events.on[1](state,previous)": [24],
+      "reduce_admin_wallet": [21]
+    },
+    "packages/frontend/src/admin/AdminWalletPanel.tsx": {
+      "AdminWalletPanel": [18]
+    },
+    "packages/frontend/src/game/fight/FightEffectLines.tsx": {
+      "chatiment_stat": [10],
+      "compact_effect_line": [15]
+    },
+    "packages/frontend/src/game/fight/fight_cues.ts": {
+      "cast_rows": [13],
+      "cast_style": [16],
+      "pool_cue": [12],
+      "project_fight_cues > events.forEach[0](event,index)": [43]
+    },
+    "packages/frontend/src/game/fight/fight_presenter.ts": {
+      "create_fight_presenter > present_one": [10]
+    },
+    "packages/frontend/src/game/fight/FightSpell.tsx": {
+      "FightSpell": [12]
+    },
+    "packages/frontend/src/game/fight/FightHud.tsx": {
+      "FightHud": [46],
+      "FightHud > useEffect[0]() > keydown": [17],
+      "PlacementBanner": [17]
+    },
+    "packages/frontend/src/game/fight/FightResultCard.tsx": {
+      "FightLevelUpCard": [23],
+      "FightResultCard": [26]
+    },
+    "packages/frontend/src/game/fight/FightViewport.tsx": {
+      "FightViewport": [9]
+    },
+    "packages/frontend/src/game/fight/fight_overlays.ts": {
+      "fight_visual_checkpoint_after_cue": [18],
+      "fight_zone_visual_state": [12],
+      "project_fight_overlays": [24]
+    },
+    "packages/frontend/src/game/fight/fight_projection.ts": {
+      "select_fight_view": [21],
+      "select_fight_view > project": [12]
+    },
+    "packages/frontend/src/game/fight/fight_chat_lines.ts": {
+      "project_fight_chat_lines > events.flatMap[0](event,index)": [27],
+      "stat_change_values": [18]
+    },
+    "packages/frontend/src/game/fight/FightLayer.tsx": {
+      "FightLayer": [55],
+      "FightLayer > anonymous(cell)": [15],
+      "FightLayer > anonymous(cue: FightPresentationCue,phase: FightCuePhase)": [9],
+      "FightLayer > useMemo[0]()": [11]
+    },
+    "packages/frontend/src/game/core/cameras.ts": {
+      "create_follow_addon > frame": [21]
+    },
+    "packages/frontend/src/game/core/character.ts": {
+      "create_character_controller > set_input": [9]
+    },
+    "packages/frontend/src/game/core/settings.ts": {
+      "load_game_settings": [16]
+    },
+    "packages/frontend/src/game/core/position_store.ts": {
+      "resume_position": [9]
+    },
+    "packages/frontend/src/game/core/collision.ts": {
+      "eject_from_solid": [10],
+      "resolve_movement": [16]
+    },
+    "packages/frontend/src/game/core/pet_follow.ts": {
+      "step_pet_follow": [30]
+    },
+    "packages/frontend/src/game/core/controller.ts": {
+      "classify_anim": [14],
+      "step_controller": [37]
+    },
+    "packages/frontend/src/game/core/world.ts": {
+      "create_world": [12],
+      "create_world > on_key": [20],
+      "create_world > render_character": [16],
+      "create_world > render_pet": [17],
+      "create_world > set_action_lock": [9],
+      "create_world > sync_dungeon_portal_labels": [10],
+      "create_world > tick": [12]
+    },
+    "packages/frontend/src/game/presence_entities.ts": {
+      "create_presence_renderer > build > [...slots.entries()].flatMap[0]([character_id, slot])": [18],
+      "create_presence_renderer > tick": [14],
+      "create_presence_renderer > update": [25]
+    },
+    "packages/frontend/src/game/audio/fight_audio.ts": {
+      "create_fight_audio_observer > anonymous(cue: FightPresentationCue,phase: FightCuePhase,character_voices: CharacterVoices)": [
+        26
+      ]
+    },
+    "packages/frontend/src/game/audio/BiomeMusic.tsx": {
+      "BiomeMusic": [13]
+    },
+    "packages/frontend/src/game/resource_nodes.ts": {
+      "create_resource_renderer > update": [10]
+    },
+    "packages/frontend/src/game/spawn_entities.ts": {
+      "create_spawn_renderer > refresh": [11],
+      "create_spawn_renderer > sync_tag": [13]
+    },
+    "packages/frontend/src/game/hud/compass_math.ts": {
+      "cluster_pips": [13]
+    },
+    "packages/frontend/src/game/hud/CompassStrip.tsx": {
+      "CompassStrip": [19]
+    },
+    "packages/frontend/src/encyclopedia/ClassesTab.tsx": {
+      "ClassesTab": [12]
+    },
+    "packages/frontend/src/encyclopedia/WorldsTab.tsx": {
+      "WorldsTab": [15]
+    },
+    "packages/frontend/src/encyclopedia/ItemsTab.tsx": {
+      "ItemsTab": [30],
+      "ItemsTab > detail.item.consumable.rewards.map[0](reward,index,rewards)": [9]
+    },
+    "packages/frontend/src/encyclopedia/SpellCard.tsx": {
+      "SpellCard": [13]
+    },
+    "packages/frontend/src/encyclopedia/MobsTab.tsx": {
+      "mob_facet_options > encyclopedia_catalog.mob_filters.map[0](row,index)": [14],
+      "MobsTab": [12]
+    },
+    "packages/frontend/src/encyclopedia/SpellCardEffects.tsx": {
+      "critical_delta": [15],
+      "effect_words": [25],
+      "spell_effect_line_view": [20],
+      "SpellEffectLine": [44]
+    },
+    "packages/frontend/src/encyclopedia/JobsTab.tsx": {
+      "JobsTab": [9],
+      "JobsTab > detail.resources .toSorted((left, right) => left.row.tier - right.row.tier) .map[0]({ row, required_level })": [
+        9
+      ]
+    },
+    "packages/frontend/src/components/FpsPanel.tsx": {
+      "FpsPanel": [9]
+    },
+    "packages/frontend/src/components/TravelModal.tsx": {
+      "TravelModal > world_card_rows().map[0](world)": [11]
+    },
+    "packages/frontend/src/components/FightPrompt.tsx": {
+      "fight_joinable_teams > eligible": [9],
+      "FightModal": [26],
+      "TeamColumn > fighters.map[0](fighter,index)": [17]
+    },
+    "packages/frontend/src/components/MobCoreStats.tsx": {
+      "MobCoreStats > mob_stat_identities .filter(({ key, derived }) => !derived || typeof values[key] === 'number') .map[0]({ key, label: fallback_label, color, icon: Icon, image, derived, suffix = '', hint })": [
+        11
+      ]
+    },
+    "packages/frontend/src/components/SendModalShell.tsx": {
+      "SendModalShell": [9]
+    },
+    "packages/frontend/src/components/TradeDialog.tsx": {
+      "TradeDialog": [11]
+    },
+    "packages/frontend/src/components/DungeonLobby.tsx": {
+      "DungeonLobby": [18],
+      "DungeonLobby > authored.rooms.map[0](mobs,index)": [10]
+    },
+    "packages/frontend/src/components/SendSuiModal.tsx": {
+      "RecipientHint": [11],
+      "SendForm": [22],
+      "SendSuiModal": [12]
+    },
+    "packages/frontend/src/components/AppShell.tsx": {
+      "memo[0]({ copy, locale, page, pathname, session, settings, fight_mounted, open_path, }: Readonly<{ copy: AppCopy locale: Locale page: Page pathname: string session: SessionState settings: GameSettings fight_mounted: boolean open_path: (pathname: string) => void }>)": [
+        19
+      ]
+    },
+    "packages/frontend/src/components/DungeonPortalPrompt.tsx": {
+      "DungeonPortalPrompt": [11]
+    },
+    "packages/frontend/src/components/SpawnNametag.tsx": {
+      "resource_at": [16],
+      "SpawnNametag > Object.entries(spawns).map[0]([spawn_id, element])": [17],
+      "SpawnNametag > useEffect[0]() > on_key": [14]
+    },
+    "packages/frontend/src/components/NametagCard.tsx": {
+      "NametagCard": [11]
+    },
+    "packages/frontend/src/components/ItemDetailView.tsx": {
+      "ItemDetailView": [20],
+      "StatLine": [10]
+    },
+    "packages/frontend/src/components/EquipmentDoll.tsx": {
+      "EquipmentSlot": [14]
+    },
+    "packages/frontend/src/components/SidebarCards.tsx": {
+      "ConnectionCard": [25]
+    },
+    "packages/frontend/src/components/SearchPickerModal.tsx": {
+      "filter_picker_items > items.filter[0](item)": [12],
+      "SearchPickerModal": [13],
+      "SearchPickerModal > filtered.map[0](item)": [17]
+    },
+    "packages/frontend/src/components/CharacterTabs.tsx": {
+      "CharacterTabs": [9]
+    },
+    "packages/frontend/src/components/EffectLine.tsx": {
+      "EffectLine": [9]
+    },
+    "packages/frontend/src/components/SuiTransferResult.tsx": {
+      "failure_key": [9]
+    },
+    "packages/frontend/src/simulator/MobModal.tsx": {
+      "MobModal": [10]
+    },
+    "packages/frontend/src/simulator/CharacterModal.tsx": {
+      "spell_row_view": [13],
+      "StatEditor > CHARACTER_STATS.map[0](stat)": [10]
+    },
+    "packages/frontend/src/simulator/BoardPane.tsx": {
+      "SimulatorBoardPane > anonymous(cell,pointer)": [10]
+    },
+    "packages/frontend/src/env.ts": {
+      "resolve_env": [14]
+    },
+    "packages/frontend/src/characters/InventoryOverlays.tsx": {
+      "FeedPetModal": [11],
+      "InventoryActionOverlays": [11]
+    },
+    "packages/frontend/src/characters/EquipmentTab.tsx": {
+      "EquipmentTab": [9],
+      "EquipmentTab > useMemo[0]()": [10]
+    },
+    "packages/frontend/src/characters/StatsTab.tsx": {
+      "StatsTab": [13],
+      "StatsTab > characteristic_names.map[0](stat)": [12]
+    },
+    "packages/frontend/src/characters/SpellsTab.tsx": {
+      "SpellsTab": [21]
+    },
+    "packages/frontend/src/characters/RuneforgeTab.tsx": {
+      "RuneforgeTab": [21]
+    },
+    "packages/frontend/src/characters/JobsTab.tsx": {
+      "JobsTab": [24],
+      "JobsTab > detail.resources .toSorted((left, right) => left.row.tier - right.row.tier) .map[0]({ row, required_level })": [
+        9
+      ],
+      "JobsTab > recipe_cell": [9]
+    },
+    "packages/frontend/src/characters/BoxReveal.tsx": {
+      "BoxReveal": [19]
+    },
+    "packages/frontend/src/modules/party.ts": {
+      "observe: NonNullable<AppModule['observe']> > answer": [9],
+      "owned_party_invite_view": [12],
+      "reduce": [10]
+    },
+    "packages/frontend/src/modules/world_gather.ts": {
+      "observe_world_gather > complete_gather": [13],
+      "observe_world_gather > events.on[1]({ node })": [21],
+      "observe_world_gather > events.on[1](state,previous)": [10]
+    },
+    "packages/frontend/src/modules/kolizeum.ts": {
+      "observe: NonNullable<AppModule['observe']> > events.on[1]({ kolizeum, side, character_id })": [10]
+    },
+    "packages/frontend/src/modules/editor.ts": {
+      "mob_spell_drafts_complete > value.every[0](entry) > spells.every[0](spell)": [12],
+      "observe > events.on[1](state,previous)": [9],
+      "observe > load > fetch('/__seed/files', { cache: 'no-store' }) .then[0](response)": [9],
+      "reduce": [28]
+    },
+    "packages/frontend/src/modules/navigation.ts": {
+      "reduce": [12]
+    },
+    "packages/frontend/src/modules/simulator.ts": {
+      "decode_simulator_character": [12],
+      "reduce_simulator_state": [32],
+      "valid_simulator_character": [17]
+    },
+    "packages/frontend/src/modules/fight_observer.ts": {
+      "observe_fights > events.on[1]({ fight, input })": [11],
+      "observe_fights > events.on[1]({ fight: fight_id, input, origin })": [21],
+      "observe_fights > events.on[1]({ packet })": [26],
+      "observe_fights > events.on[1](state,previous)": [14],
+      "observe_fights > selected_fight_id": [10]
+    },
+    "packages/frontend/src/modules/marketplace.ts": {
+      "observe > execute": [12],
+      "reduce": [25]
+    },
+    "packages/frontend/src/modules/admin.ts": {
+      "can_seal": [10],
+      "observe > events.on[1](state,previous)": [15],
+      "observe > events.on[1](state,previous) > async () => { const ledger = await get_ledger() const { changes } = get_state().admin const count = (changes?.changed.length ?? 0) + (changes?.board_removals.length ?? 0) log(`Rewriting ${count} changed row${count === 1 ? '' : 's'} on chain…`) const result = await active.apply_changes(ledger) await put_ledger(result.ledger, await active.address_book()) for (const digest of result.digests) log(`Changes written · ${digest}`, 'success') if (signal.aborted || request !== generation) return log('Every changed row now matches its file.', 'success') dispatch({ type: 'admin/changes_applied', changes: changes_summary(result.view) }) }[-1]()": [
+        9
+      ],
+      "observe > events.on[1](state,previous) > import('../admin/seed_content.ts') .then(({ seed_content }) => connected.create_seed_admin(seed_content, state.admin.config, state.admin.deployment.pins ?? undefined) ) .then[0](created)": [
+        9
+      ],
+      "reduce": [61]
+    },
+    "packages/frontend/src/modules/engine.ts": {
+      "observe > events.on[1](state,previous)": [27],
+      "observe > hover_under_cursor": [9],
+      "observe > mount": [14]
+    },
+    "packages/frontend/src/modules/session.ts": {
+      "fold_packet": [16],
+      "observe > events.on[1](state,previous)": [18],
+      "reduce": [27]
+    },
+    "packages/frontend/src/modules/fight.ts": {
+      "close_fight_preview": [10],
+      "reconcile_fight": [22],
+      "reduce": [25],
+      "select_character_fight": [16]
+    },
+    "packages/frontend/src/modules/claims.ts": {
+      "observe: NonNullable<AppModule['observe']> > settle": [10]
+    },
+    "packages/frontend/src/modules/fight_chain.ts": {
+      "observe: NonNullable<AppModule['observe']> > events.on[1]({ fight, input, origin })": [25],
+      "queued_end_turn": [16]
+    },
+    "packages/frontend/src/modules/fight_result.ts": {
+      "fold_characters > Object.entries(state.fight_result.current_by_character).flatMap[0]([character_id, result])": [
+        11
+      ],
+      "fold_resolutions > [...known_characters].flatMap[0](character_id)": [15],
+      "merge_checkpoint": [19],
+      "participant_from": [16],
+      "progression_state": [19],
+      "reduce": [11]
+    },
+    "packages/frontend/src/modules/dungeon.ts": {
+      "dungeon_operation_reconciled": [10],
+      "observe: NonNullable<AppModule['observe']> > events.on[1]({ access })": [11],
+      "observe: NonNullable<AppModule['observe']> > events.on[1]({ fight })": [17],
+      "observe: NonNullable<AppModule['observe']> > events.on[1]({ portal })": [10]
+    },
+    "packages/frontend/src/modules/duel.ts": {
+      "observe: NonNullable<AppModule['observe']> > events.on[1](state,previous)": [10]
+    },
+    "packages/frontend/src/modules/friends.ts": {
+      "reduce": [11]
+    },
+    "packages/frontend/src/modules/world.ts": {
+      "fold_union": [19],
+      "observe: NonNullable<AppModule['observe']> > settle_arrivals": [9],
+      "observe: NonNullable<AppModule['observe']> > submit_engage": [9],
+      "reduce": [28],
+      "searchable_zone": [21]
+    },
+    "packages/frontend/src/airdrop/AirdropPage.tsx": {
+      "AirdropPage > content_catalog.airdrop.drops.map[0](drop)": [15]
+    },
+    "packages/frontend/src/editor/ItemReferencePicker.tsx": {
+      "ItemReferencePicker": [13]
+    },
+    "packages/frontend/src/editor/MobContentEditor.tsx": {
+      "MobContentEditor": [18],
+      "Resistances > Object.entries(resistances).map[0]([element, raw])": [9],
+      "same_family_spell_clones": [18]
+    },
+    "packages/frontend/src/editor/ItemContentEditor.tsx": {
+      "ItemContentEditor > edit_item": [11]
+    },
+    "packages/frontend/src/editor/ContentPage.tsx": {
+      "ContentPage": [30],
+      "ContentPage > filtered.map[0](row,index)": [9],
+      "mob_facet_options > rows.map[0](row,index)": [19]
+    },
+    "packages/frontend/src/editor/BiomeControls.tsx": {
+      "SplineEditor": [13]
+    },
+    "packages/frontend/src/editor/BiomePage.tsx": {
+      "BiomePage": [28],
+      "LandscapeControls": [14]
+    },
+    "packages/frontend/src/editor/seed_editor.ts": {
+      "entity_asset_reference": [14],
+      "replace_json_value": [10],
+      "row_name": [9]
+    },
+    "packages/frontend/src/editor/ItemRecipeEditor.tsx": {
+      "ItemRecipeEditor": [9]
+    },
+    "packages/frontend/src/editor/content_list.ts": {
+      "item_recipe_job_rows > recipe_rows.reduce[0](result,row)": [9],
+      "item_reference_filter_rows > world_rows.flatMap[0](world_row)": [14],
+      "item_types_for_filter": [13],
+      "mob_filter_rows > world_rows.map[0](world_row)": [10]
+    },
+    "packages/frontend/src/editor/mob_power.ts": {
+      "turn_damage > spells.flatMap[0](value)": [14]
+    },
+    "packages/frontend/src/editor/JsonEditor.tsx": {
+      "empty_array_row": [12],
+      "Field": [12],
+      "JsonEditor": [13],
+      "PrimitiveEditor": [16],
+      "stat_color": [11]
+    },
+    "packages/frontend/src/editor/biome_editor.ts": {
+      "terrain_patch > samples.map[0]({ column, row, x, z, sample },index)": [9]
+    },
+    "packages/frontend/src/editor/MobReferencePicker.tsx": {
+      "MobReferencePicker": [14]
+    },
+    "packages/frontend/src/editor/board_editor.ts": {
+      "board_catalog_errors > boards.flatMap[0](board,index)": [17]
+    },
+    "packages/server/test/world.test.ts": {
+      "wire": [9],
+      "wire > read": [25]
+    },
+    "packages/server/test/player.test.ts": {
+      "wire > read": [12]
+    },
+    "packages/server/test/helpers/stream_wire.ts": {
+      "wire > read": [21]
+    },
+    "packages/server/src/connection.ts": {
+      "create_authenticated_connection > on_message": [10]
+    },
+    "packages/server/src/reads/get_fight_checkpoint.ts": {
+      "get_fight_checkpoint": [11]
+    },
+    "packages/server/src/reads/get_kolizeums.ts": {
+      "get_kolizeums > decoded.map[0]({ kolizeum, fight, fighters })": [11],
+      "get_kolizeums > decoded.map[0]({ kolizeum, fight, fighters }) > fighters.flatMap[0](fighter,seat)": [10]
+    },
+    "packages/server/src/reads/get_owned_character.ts": {
+      "get_owned_character": [12]
+    },
+    "packages/server/src/reads/get_market_history.ts": {
+      "parse_sale": [10]
+    },
+    "packages/server/src/index.ts": {
+      "fetch": [14]
+    },
+    "packages/server/src/modules/player_world.ts": {
+      "observe > events.on[1](state: PlayerState,previous: PlayerState) > ids.forEach[0](character_id)": [22],
+      "observe > forward_presence > anonymous(fact: MeshFact)": [15],
+      "observe > forward_zone_event": [11],
+      "observe > track": [15],
+      "observe > track_character > async () => { const owned = await get_owned_character(graph, { address, character_id }) if (generation !== tracking_generations.get(character_id) || !get_state().allowed_characters.has(character_id)) return if (!owned) { send({ type: 'packet/error', reason: 'not your character' }) return } const { character, visuals, party, fight } = owned const world = (character.world ?? character.checkpoint_world ?? null) as string | null if (!world) return // never joined a world yet — nothing to mount if (generation !== tracking_generations.get(character_id) || !get_state().allowed_characters.has(character_id)) return dispatch({ type: 'action/track_character', character: { character_id: character.id as string, owner: address, name: character.name as string, classe: character.classe as string, sex: character.sex as string, level: character.level as number, color_1: character.color_1 as number, color_2: character.color_2 as number, color_3: character.color_3 as number, ...visuals, x: (character.x as number) ?? 0, y: 0, z: (character.z as number) ?? 0, riding: false, world, }, party, fight: fight?.id ?? null, fight_seat: fight?.seat ?? null, dungeon_run: (character.dungeon_run as CharacterRow['dungeon_run']) ?? null, // THE CHECKPOINT'S OWN TIMESTAMP, never the tracking-request wall-clock (chain travel_ok // semantics): the travel budget accrues from the last PROVEN position — a player // legitimately far off an old anchor must not read as a speed hack on first move // (2026-08-19: that misread drop-looped every session into load-snapshot spam). at_ms: (character.at_ms as number) ?? 0, }) }[-1]()": [
+        17
+      ],
+      "observe > unmount": [10],
+      "reduce": [10]
+    },
+    "packages/server/src/modules/player_fight.ts": {
+      "observe > forward_fight_event": [9],
+      "observe > observe_fight > get_fight(graph, { fight_id: action.fight }) .then[0]([fight])": [10],
+      "observe > project_authority": [9],
+      "reduce": [11]
+    },
+    "packages/server/src/modules/player_events.ts": {
+      "observe > forward_self > anonymous(payload: EventEnvelope)": [15]
+    },
+    "packages/server/src/request_limiter.ts": {
+      "create_request_limiter > take": [9]
+    },
+    "packages/protocol/src/packets.ts": {
+      "assert_bounded_json": [9],
+      "parse_client_packet": [36]
+    },
+    "packages/sdk/scripts/generate_doors.mjs": {
+      "arg_expr": [11]
+    },
+    "packages/sdk/scripts/e2e_admin_publish.ts": {
+      "main": [23],
+      "pins_from": [31]
+    },
+    "packages/sdk/src/seed_admin.ts": {
+      "assert_config": [11],
+      "create_seed_admin > execute": [13],
+      "project_temp_admin_cap": [10],
+      "verify_upgrade_cap_targets": [10]
+    },
+    "packages/sdk/src/marketplace.ts": {
+      "marketplace_actions > list": [22]
+    },
+    "packages/sdk/src/seed_session.ts": {
+      "browser_seed_session_store > read": [9],
+      "create_seed_session > ensure": [12],
+      "create_seed_session > release": [15]
+    },
+    "packages/sdk/src/seed.ts": {
+      "validate_biome_maps": [12],
+      "world_batches > content.worlds.map[0](world,world_index) > build": [11]
+    },
+    "packages/sdk/src/cache.ts": {
+      "absorb_receipt": [11],
+      "created_object_id": [9],
+      "receipt_events > visit": [10]
+    },
+    "packages/sdk/src/client.ts": {
+      "SDK": [14],
+      "SDK > failure_of": [18]
+    },
+    "packages/sdk/src/ptb.ts": {
+      "receipt_personal_kiosk_cap": [13]
+    },
+    "packages/sdk/src/seed_sync.ts": {
+      "seed_sync_view": [41]
+    },
+    "packages/sdk/src/gas.ts": {
+      "gas_used_of": [9],
+      "log_transaction_receipt": [12],
+      "valid_entries > value.flatMap[0](candidate)": [9]
+    },
+    "packages/sdk/src/auth.ts": {
+      "create_wallet_session > read_package_upgrade": [13]
+    },
+    "packages/engine/test/greedy_mesher.test.ts": {
+      "describe[1]() > test[1]()": [11]
+    },
+    "packages/engine/src/far_worker.ts": {
+      "self.addEventListener[1]({ data }: MessageEvent<Request>)": [12]
+    },
+    "packages/engine/src/fight_blobs.ts": {
+      "build_visual": [12],
+      "create_fight_blob_layer > tick > visuals.forEach[0](visual,id)": [12],
+      "make_blob_texture": [12]
+    },
+    "packages/engine/src/sky/hillaire/hillaire_sky.ts": {
+      "create_hillaire_sky": [10],
+      "create_hillaire_sky > tick": [13]
+    },
+    "packages/engine/src/sky/night_sky.ts": {
+      "create_night_sky_node": [32]
+    },
+    "packages/engine/src/world_preview.ts": {
+      "add_height_edge": [9],
+      "near_geometry > plan.near.forEach[0](column,index)": [9]
+    },
+    "packages/engine/src/entities.ts": {
+      "create_entity_layer > animate": [10],
+      "create_entity_layer > beat": [25],
+      "create_entity_layer > mount": [16],
+      "create_entity_layer > mount > load_model(spec).then[0](model)": [9],
+      "create_entity_layer > place": [12],
+      "create_entity_layer > play_clip": [19],
+      "create_entity_layer > tick > beats.forEach[0](beat,id)": [15]
+    },
+    "packages/engine/src/frame_renderer.ts": {
+      "create_pipeline": [14]
+    },
+    "packages/engine/src/character_preview.ts": {
+      "create_character_preview > set_appearance": [10]
+    },
+    "packages/engine/src/scatter.ts": {
+      "chunk_scatter": [15]
+    },
+    "packages/engine/src/voxel_data.ts": {
+      "pack_voxel_occupancy": [15]
+    },
+    "packages/engine/src/webgpu_backend.ts": {
+      "create_webgpu_backend": [11],
+      "create_webgpu_backend > drain_uploads": [13],
+      "create_webgpu_backend > draw": [24],
+      "create_webgpu_backend > set_camera": [9],
+      "create_webgpu_backend > use_sky_quality": [13]
+    },
+    "packages/engine/src/biome_grid.ts": {
+      "sample_biome_grid": [10]
+    },
+    "packages/engine/src/fight_presentation.ts": {
+      "create_fight_presentation > play": [22]
+    },
+    "packages/engine/src/world_recipe.ts": {
+      "validate_landscape > value.flatMap[0](candidate,index)": [13],
+      "validate_ocean": [12],
+      "validate_world_recipe": [12]
+    },
+    "packages/engine/src/fight_board.ts": {
+      "create_fight_board_layer > pick": [13]
+    },
+    "packages/engine/src/structure_placement.ts": {
+      "compute_candidate": [11]
+    },
+    "packages/engine/src/fight_vfx_geometry.ts": {
+      "fight_vfx_appearance": [11]
+    },
+    "packages/engine/src/fight_board_surface.ts": {
+      "bake_fight_board_surface": [51],
+      "bake_fight_board_water_surface": [10]
+    },
+    "packages/engine/src/resource_nodes.ts": {
+      "geometry_for": [11],
+      "resource_visual": [12]
+    },
+    "packages/engine/src/greedy_mesher.ts": {
+      "emit_direction": [21]
+    },
+    "packages/engine/src/fight_board_rocks.ts": {
+      "bake_stone_texture": [9]
+    },
+    "packages/engine/src/character_model.ts": {
+      "compose_pixels": [10]
+    }
+  }
+}

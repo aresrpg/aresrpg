@@ -3,8 +3,13 @@
 
 import { describe, expect, test } from 'bun:test'
 
-import marketplace_module, { market_group_count, market_observation } from '../../src/modules/marketplace.ts'
+import marketplace_module, {
+  market_group_count,
+  market_observation,
+  market_sale_notice,
+} from '../../src/modules/marketplace.ts'
 import { initial_app_state, reduce_app_state, type AppInput } from '../../src/store.ts'
+import { toast, type Toast } from '../../src/toast.ts'
 
 const settings = Object.freeze({
   quality: 'medium',
@@ -86,8 +91,10 @@ describe('marketplace projection', () => {
         type: 'packet/market_history',
         sales: [
           {
+            id: '1:2:3',
             object: '0xitem',
             kind: 'item',
+            name: 'Aberrant Edge',
             item_type: 'aberrant_edge',
             amount: 1,
             price_mist: '7',
@@ -106,6 +113,92 @@ describe('marketplace projection', () => {
     expect(reduce_app_state(state, { type: 'auth/disconnected' }).marketplace).toEqual(
       initial_app_state(settings).marketplace
     )
+  })
+
+  test('a sold packet removes the listing and prepends history immediately', () => {
+    const sale = {
+      id: '10:2:3',
+      object: listing.id,
+      kind: 'item' as const,
+      name: 'Rune PA Fo',
+      item_type: 'rune_action_pa',
+      amount: 1,
+      price_mist: '2000000000',
+      counterparty: '0xbuyer',
+      ts_ms: Date.now(),
+    }
+    const listed = reduce_app_state(initial_app_state(settings), {
+      type: 'server/packet',
+      packet: { type: 'packet/listings', listings: [listing] },
+    })
+    const sold = reduce_app_state(listed, { type: 'server/packet', packet: { type: 'packet/listing_sold', sale } })
+
+    expect(sold.marketplace.own_listings).toEqual([])
+    expect(sold.marketplace.history).toEqual([sale])
+    expect(sold.marketplace.history_total).toBe(1)
+    expect(sold.marketplace.revenue_30d_mist).toBe('2000000000')
+    expect(reduce_app_state(sold, { type: 'server/packet', packet: { type: 'packet/listing_sold', sale } })).toBe(sold)
+  })
+
+  test('sale notification localizes token order and keeps semantic colors', () => {
+    const notice = market_sale_notice(
+      {
+        id: '10:2:3',
+        object: '0xrune',
+        kind: 'item',
+        name: 'Rune PA Fo',
+        item_type: 'rune_action_pa',
+        amount: 1,
+        price_mist: '2000000000',
+        counterparty: '0xbuyer',
+        ts_ms: 1,
+      },
+      '{{name}} sold: {{price}} ({{amount}})'
+    )
+
+    expect(notice.message).toBe('Rune PA Fo sold: 2.00 SUI (×1)')
+    expect(notice.parts).toContainEqual({ text: 'Rune PA Fo', tone: 'primary' })
+    expect(notice.parts).toContainEqual({ text: '2.00 SUI', tone: 'sui' })
+  })
+
+  test('the pubsub sale packet emits one success toast when duplicated', () => {
+    const listeners = new Map<string, (payload: never) => void>()
+    const events: unknown[] = []
+    const base = initial_app_state(settings)
+    const state = {
+      ...base,
+      copy: { marketplace_page: { sold_toast: 'Sold {{amount}} {{name}} for {{price}}' } },
+    } as never
+    const unsubscribe = toast.subscribe((event) => events.push(event))
+    marketplace_module.observe?.({
+      events: { on: (name: string, listener: (payload: never) => void) => listeners.set(name, listener) },
+      signal: new AbortController().signal,
+      get_state: () => state,
+      dispatch: () => undefined,
+    } as never)
+    const packet = {
+      type: 'packet/listing_sold',
+      sale: {
+        id: '10:2:3',
+        object: '0xrune',
+        kind: 'item',
+        name: 'Rune PA Fo',
+        item_type: 'rune_action_pa',
+        amount: 1,
+        price_mist: '2000000000',
+        counterparty: '0xbuyer',
+        ts_ms: 1,
+      },
+    }
+    listeners.get('server/packet')?.({ packet } as never)
+    listeners.get('server/packet')?.({ packet } as never)
+    const shown = events.filter((event) => (event as { type: string }).type === 'show') as Readonly<
+      { type: 'show'; toast: Toast }[]
+    >
+
+    expect(shown).toHaveLength(1)
+    expect(shown[0]!.toast).toMatchObject({ message: 'Sold ×1 Rune PA Fo for 2.00 SUI', type: 'success' })
+    unsubscribe()
   })
 
   test('a full roster refuses a character purchase before any transaction leaves', () => {

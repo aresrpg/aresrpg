@@ -12,7 +12,7 @@ import {
   same_line,
 } from './combat_grid.ts'
 import { KINDS, STATS, base_ap_of, base_mp_of, is_mob, max_hp_of, mob_snapshot, set_pools } from './fighters.ts'
-import { placement_rows_castable, resolve_rows, resolve_spell, sight_blockers } from './effects.ts'
+import { casts_this_turn, placement_rows_castable, resolve_rows, resolve_spell, sight_blockers } from './effects.ts'
 import { walk_down, walk_toward, wall_mask } from './movement.ts'
 import { emit, fail } from './runtime.ts'
 import { apply_pool_effects, tick_cooldowns, tick_turn_end, tick_turn_start } from './turn_effects.ts'
@@ -137,79 +137,124 @@ const rush_toward = (runtime: FightRuntime, mob: bigint, target: bigint): FightR
   return walk_down(runtime, mob, field, enter)
 }
 
-export const mob_turn = (runtime: FightRuntime, mob: bigint): FightRuntime => {
-  const enemy = nearest_enemy(runtime, mob)
-  if (enemy === null) {
-    const fighter = runtime.contract.fighters[Number(mob)]
-    const starts = fighter.team === 0n ? runtime.contract.board.start_cells_a : runtime.contract.board.start_cells_b
-    const [anchor] = starts
-    return anchor === undefined ? runtime : rush_toward(runtime, mob, anchor)
+type MobStep = 'cast' | 'moved' | 'none'
+
+const spell_anchor_seat = (runtime: FightRuntime, mob: bigint, enemy: bigint, spell: KitSpell): bigint | null => {
+  if (aims_only_at_caster(spell.level)) return mob
+  if (has_heal(spell.level)) return wounded_ally(runtime, mob)
+  if (!aims_only_at_allies(spell.level)) return enemy
+  return spell.level.range_max === 0n ? mob : nearest_ally(runtime, mob)
+}
+
+const mob_cast_cap_available = (runtime: FightRuntime, spell: KitSpell, anchor_seat: bigint): boolean => {
+  const { casts_per_target, casts_per_turn } = spell.level
+  if (spell.level.ap_cost === 0n) return false
+  if (casts_per_turn > 0n && casts_this_turn(runtime, spell.name) >= casts_per_turn) return false
+  return casts_per_target === 0n || casts_this_turn(runtime, spell.name, anchor_seat) < casts_per_target
+}
+
+const cast_mob_spell = (runtime: FightRuntime, mob: bigint, spell: KitSpell, target_cell: bigint): void => {
+  resolve_spell({
+    runtime,
+    caster: mob,
+    level: spell.level,
+    name: spell.name,
+    target_cell,
+    cast_level: spell.ordinal,
+  })
+}
+
+const mob_active = (runtime: FightRuntime, mob: bigint): boolean =>
+  !runtime.contract.ended && !runtime.contract.fighters[Number(mob)].dead && runtime.error === null
+
+const can_approach_for_spell = (runtime: FightRuntime, mob: bigint, spell: KitSpell, anchor: bigint): boolean => {
+  if (has_heal(spell.level) || aims_only_at_caster(spell.level)) return false
+  const fighter = runtime.contract.fighters[Number(mob)]
+  return manhattan(fighter.cell, anchor) <= fighter.mp + spell.level.range_max
+}
+
+const can_cast_after_walk = (runtime: FightRuntime, mob: bigint, spell: KitSpell, aim: bigint): boolean => {
+  const fighter = runtime.contract.fighters[Number(mob)]
+  return (
+    placement_level_castable(runtime, spell.level, aim) &&
+    mob_castable(runtime, mob, spell.level, fighter.cell, aim) &&
+    fighter.ap >= spell.level.ap_cost
+  )
+}
+
+const approach_and_cast = (
+  runtime: FightRuntime,
+  mob: bigint,
+  spell: KitSpell,
+  anchor_seat: bigint,
+  anchor: bigint
+): MobStep => {
+  const fighter = runtime.contract.fighters[Number(mob)]
+  if (!can_approach_for_spell(runtime, mob, spell, anchor)) return 'none'
+  const cast_cell = bfs_cast_cell({
+    start: fighter.cell,
+    target: anchor,
+    wall_mask: wall_mask(runtime, mob),
+    budget: fighter.mp,
+    range_min: spell.level.range_min,
+    range_max: spell.level.range_max,
+    needs_los: spell.level.line_of_sight,
+    obstacles: sight_blockers(runtime, mob, anchor),
+  })
+  if (cast_cell === null) return 'none'
+  walk_toward(runtime, mob, cast_cell, enter)
+  if (!mob_active(runtime, mob)) return 'moved'
+  const aim = runtime.contract.fighters[Number(anchor_seat)].cell
+  if (!can_cast_after_walk(runtime, mob, spell, aim)) return 'moved'
+  cast_mob_spell(runtime, mob, spell, aim)
+  return 'cast'
+}
+
+const try_mob_spell = (runtime: FightRuntime, mob: bigint, enemy: bigint, spell: KitSpell): MobStep => {
+  const anchor_seat = spell_anchor_seat(runtime, mob, enemy, spell)
+  const fighter = runtime.contract.fighters[Number(mob)]
+  if (
+    anchor_seat === null ||
+    fighter.ap < spell.level.ap_cost ||
+    cooldown_left(runtime, mob, spell.name) > 0n ||
+    !mob_cast_cap_available(runtime, spell, anchor_seat)
+  )
+    return 'none'
+  const anchor = runtime.contract.fighters[Number(anchor_seat)].cell
+  if (!placement_level_castable(runtime, spell.level, anchor)) return 'none'
+  if (mob_castable(runtime, mob, spell.level, fighter.cell, anchor)) {
+    cast_mob_spell(runtime, mob, spell, anchor)
+    return 'cast'
   }
+  return approach_and_cast(runtime, mob, spell, anchor_seat, anchor)
+}
+
+const mob_step = (runtime: FightRuntime, mob: bigint, enemy: bigint): MobStep => {
   const { kit } = mob_snapshot(runtime.contract.fighters[Number(mob)] as MobFighter)
   for (const spell of kit as KitSpell[]) {
-    const heal = has_heal(spell.level)
-    const caster_only = aims_only_at_caster(spell.level)
-    const ally_only = aims_only_at_allies(spell.level)
-    const anchor_seat = caster_only
-      ? mob
-      : heal
-        ? wounded_ally(runtime, mob)
-        : ally_only && spell.level.range_max === 0n
-          ? mob
-          : ally_only
-            ? nearest_ally(runtime, mob)
-            : enemy
-    const fighter = runtime.contract.fighters[Number(mob)]
-    if (anchor_seat === null || fighter.ap < spell.level.ap_cost || cooldown_left(runtime, mob, spell.name) > 0n)
-      continue
-    const anchor = runtime.contract.fighters[Number(anchor_seat)].cell
-    if (!placement_level_castable(runtime, spell.level, anchor)) continue
-    if (mob_castable(runtime, mob, spell.level, fighter.cell, anchor)) {
-      resolve_spell({
-        runtime,
-        caster: mob,
-        level: spell.level,
-        name: spell.name,
-        target_cell: anchor,
-        cast_level: spell.ordinal,
-      })
-      return runtime
-    }
-    // provably unreachable this turn (triangle inequality) — skip the flood entirely
-    if (!heal && !caster_only && manhattan(fighter.cell, anchor) <= fighter.mp + spell.level.range_max) {
-      const cast_cell = bfs_cast_cell({
-        start: fighter.cell,
-        target: anchor,
-        wall_mask: wall_mask(runtime, mob),
-        budget: fighter.mp,
-        range_min: spell.level.range_min,
-        range_max: spell.level.range_max,
-        needs_los: spell.level.line_of_sight,
-        obstacles: sight_blockers(runtime, mob, anchor),
-      })
-      if (cast_cell !== null) {
-        walk_toward(runtime, mob, cast_cell, enter)
-        if (runtime.contract.ended || runtime.contract.fighters[Number(mob)].dead) return runtime
-        const landed = runtime.contract.fighters[Number(mob)].cell
-        const aim = runtime.contract.fighters[Number(anchor_seat)].cell
-        if (
-          placement_level_castable(runtime, spell.level, aim) &&
-          mob_castable(runtime, mob, spell.level, landed, aim) &&
-          runtime.contract.fighters[Number(mob)].ap >= spell.level.ap_cost
-        )
-          resolve_spell({
-            runtime,
-            caster: mob,
-            level: spell.level,
-            name: spell.name,
-            target_cell: aim,
-            cast_level: spell.ordinal,
-          })
-        return runtime
-      }
-    }
+    const result = try_mob_spell(runtime, mob, enemy, spell)
+    if (result !== 'none') return result
   }
-  return rush_toward(runtime, mob, runtime.contract.fighters[Number(enemy)].cell)
+  return 'none'
+}
+
+const search_start = (runtime: FightRuntime, mob: bigint): FightRuntime => {
+  const fighter = runtime.contract.fighters[Number(mob)]
+  const starts = fighter.team === 0n ? runtime.contract.board.start_cells_a : runtime.contract.board.start_cells_b
+  const [anchor] = starts
+  return anchor === undefined ? runtime : rush_toward(runtime, mob, anchor)
+}
+
+export const mob_turn = (runtime: FightRuntime, mob: bigint): FightRuntime => {
+  while (mob_active(runtime, mob)) {
+    const enemy = nearest_enemy(runtime, mob)
+    if (enemy === null) return search_start(runtime, mob)
+    const step = mob_step(runtime, mob, enemy)
+    if (step === 'cast') continue
+    if (step === 'moved') return runtime
+    return rush_toward(runtime, mob, runtime.contract.fighters[Number(enemy)].cell)
+  }
+  return runtime
 }
 
 const random_turn_start = (runtime: FightRuntime, actor: bigint): boolean => {

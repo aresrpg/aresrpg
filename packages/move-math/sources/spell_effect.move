@@ -32,7 +32,7 @@ const CHATIMENT_TURNS: u8 = 5;
 /// targeting RULE, not information hiding — chain data is public), summons, timed/stack/stance
 /// machinery, pool shields (2.0), erosion, critical_failure, reset_positions, geometric_push,
 /// damage_to_heal, forced_death, carry/throw (redesigned as pull/push).
-const KIND_COUNT: u8 = 20;
+const KIND_COUNT: u8 = 21;
 // 0 damage · 1 percent_life_damage · 2 caster_damage · 3 punishment_damage ·
 // 4 add · 5 remove · 6 steal (remove on the target + the same as add on the caster) ·
 // 7 chatiment (a five-turn stance: real hp lost becomes this channel up to `value` per active
@@ -40,7 +40,7 @@ const KIND_COUNT: u8 = 20;
 // 8 push · 9 pull · 10 teleport · 11 swap_positions · 12 place_trap · 13 place_glyph ·
 // 14 reduce_damage · 15 reflect_damage · 16 dispel (removes ALL effect rows, whatever they
 // are) · 17 invisibility · 18 return_spell (bounces only casts of level ≤ its own cast level;
-// a level-6 cast is never returnable) · 19 damage_redirect
+// a level-6 cast is never returnable) · 19 damage_redirect · 20 fixed_remove (undodgeable AP/MP)
 
 /// The channels the three number kinds (and chatiment) address through `stat`:
 /// 0 strength · 1 intelligence · 2 chance · 3 agility · 4 wisdom · 5 range · 6 AP · 7 MP ·
@@ -135,6 +135,10 @@ public fun new_effect(
   if (kind == 7) {
     assert!(stat <= 5 || (stat >= 8 && stat <= 10), EBadStat);
     assert!(turns == CHATIMENT_TURNS, EBadTurns);
+    assert!(element.is_empty(), EBadElement);
+  };
+  if (kind == 20) {
+    assert!(stat == 6 || stat == 7, EBadStat);
     assert!(element.is_empty(), EBadElement);
   };
   Effect { kind, element, value, value_max, area_shape, area_size, target_filter, chance_bp, turns, stat }

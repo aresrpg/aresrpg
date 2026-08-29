@@ -1,0 +1,51 @@
+/* SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available */
+/* © 2026 Sceat — All rights reserved. See LICENSE. */
+
+.jobs__list-entry {
+  display: grid;
+  grid-template-columns: var(--jobs-adviser-width) minmax(0, 1fr);
+  align-items: stretch;
+  gap: var(--s-2);
+}
+
+.jobs__alternate-slot {
+  display: flex;
+  min-width: 0;
+}
+
+.jobs__alternate {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 4px;
+  border: 1px solid rgba(200, 150, 60, 0.24);
+  background: rgba(200, 150, 60, 0.05);
+  padding: 5px 6px;
+}
+
+.jobs__alternate > span {
+  color: var(--fg-muted);
+  font-size: 0.49rem;
+  line-height: 1.35;
+}
+
+.jobs__alternate > button {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border: 0;
+  background: transparent;
+  padding: 0;
+  color: var(--accent);
+  cursor: pointer;
+  font: 0.49rem var(--font-mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.jobs__alternate > button:hover {
+  color: var(--fg);
+}

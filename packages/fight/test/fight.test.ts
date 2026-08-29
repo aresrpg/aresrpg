@@ -199,6 +199,27 @@ describe('fight API', () => {
     expect(fight.reset_turn().error?.code).toBe('local_mode_required')
   })
 
+  test('cancelling a refused remote boundary preserves its draft and permits a fresh boundary', () => {
+    const local = create_fight({ state: create_fixture().checkpoint, mode: 'local', seed: 91n })
+    const started = local.apply({ type: 'start', observed_ms: 60_000n }).state
+    const remote = create_fight({ state: started, mode: 'remote' })
+    const fighter = started.contract.queue[Number(started.contract.turn_ptr)]!
+    const target = reachable_fight_cells(started, fighter)[0]!
+    const path = fight_path_to(started, fighter, target)!
+    remote.apply({ type: 'move_to', fighter, path })
+    const drafted = remote.state()
+    remote.apply({ type: 'end_turn', fighter, observed_ms: 63_000n })
+    expect(remote.awaiting_witness()).toBeTrue()
+
+    expect(remote.cancel_pending_turn()).toEqual({ state: drafted, events: [], error: null })
+    expect(remote.awaiting_witness()).toBeFalse()
+    expect(remote.apply({ type: 'turn_seed', fighter: 1n, seed: 7n }).error?.code).toBe('unexpected_turn_seed')
+    expect(remote.state()).toEqual(drafted)
+
+    remote.apply({ type: 'end_turn', fighter, observed_ms: 63_500n })
+    expect(remote.awaiting_witness()).toBeTrue()
+  })
+
   test('streamed mob witnesses reproduce the local turn exactly', () => {
     const { checkpoint } = create_fixture()
     const local = create_fight({ state: checkpoint, mode: 'local', seed: 91n })

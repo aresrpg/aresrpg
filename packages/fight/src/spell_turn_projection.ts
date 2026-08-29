@@ -25,7 +25,7 @@ const rolls_value = (row: Readonly<SpellEffect>): boolean =>
   ([KINDS.add, KINDS.remove, KINDS.steal].includes(row.kind) && row.stat === STATS.hp)
 
 const target_dependent_roll = (row: Readonly<SpellEffect>): boolean =>
-  [KINDS.remove, KINDS.steal].includes(row.kind) && [STATS.ap, STATS.mp].includes(row.stat)
+  [KINDS.remove, KINDS.steal, KINDS.fixed_remove].includes(row.kind) && [STATS.ap, STATS.mp].includes(row.stat)
 
 const project_level_turn = (
   checkpoint: Readonly<HydratedFightCheckpoint>,

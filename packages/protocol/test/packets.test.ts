@@ -5,7 +5,7 @@
 
 import { describe, expect, test } from 'bun:test'
 
-import { parse_client_packet, parse_server_packet, CLIENT_PACKET_TYPES } from '../src/packets.ts'
+import { expand_chat_message, parse_client_packet, parse_server_packet, CLIENT_PACKET_TYPES } from '../src/packets.ts'
 
 describe('the wire contract', () => {
   test('declared intents parse with their exact shape', () => {
@@ -24,11 +24,42 @@ describe('the wire contract', () => {
       character_id: '0xabc',
       tracked: true,
     })
-    expect(parse_client_packet(JSON.stringify({ type: 'packet/admin_request', id: 1, kind: 'stats' }))).toEqual({
+    expect(
+      parse_client_packet(
+        JSON.stringify({
+          type: 'packet/admin_request',
+          id: 1,
+          kind: 'overview',
+          revenue_days: 30,
+          players_days: 7,
+          transactions_days: 30,
+          online_days: 1,
+          addresses_days: 30,
+          characters_days: 90,
+        })
+      )
+    ).toEqual({
       type: 'packet/admin_request',
       id: 1,
-      kind: 'stats',
+      kind: 'overview',
+      revenue_days: 30,
+      players_days: 7,
+      transactions_days: 30,
+      online_days: 1,
+      addresses_days: 30,
+      characters_days: 90,
     })
+    expect(
+      parse_client_packet(
+        JSON.stringify({
+          type: 'packet/admin_request',
+          id: 2,
+          kind: 'overview_section',
+          section: 'characters',
+          days: 90,
+        })
+      )
+    ).toEqual({ type: 'packet/admin_request', id: 2, kind: 'overview_section', section: 'characters', days: 90 })
     expect(
       parse_client_packet(JSON.stringify({ type: 'packet/character_owner_request', id: 7, character_id: '0xabc' }))
     ).toEqual({ type: 'packet/character_owner_request', id: 7, character_id: '0xabc' })
@@ -52,12 +83,41 @@ describe('the wire contract', () => {
     expect(() =>
       parse_client_packet(JSON.stringify({ type: 'packet/track_character', character_id: 'nope', tracked: true }))
     ).toThrow(/character_id/)
-    expect(() => parse_client_packet(JSON.stringify({ type: 'packet/admin_request', kind: 'stats' }))).toThrow(
-      /integer id/
-    )
-    expect(() => parse_client_packet(JSON.stringify({ type: 'packet/admin_request', id: 1, kind: 'drop_db' }))).toThrow(
-      /unknown admin kind/
-    )
+    expect(() =>
+      parse_client_packet(JSON.stringify({ type: 'packet/admin_request', kind: 'overview', days: 30 }))
+    ).toThrow(/integer id/)
+    expect(() =>
+      parse_client_packet(
+        JSON.stringify({
+          type: 'packet/admin_request',
+          id: 1,
+          kind: 'overview',
+          revenue_days: 12,
+          players_days: 30,
+          online_days: 1,
+        })
+      )
+    ).toThrow(/overview ranges/)
+    expect(() =>
+      parse_client_packet(
+        JSON.stringify({
+          type: 'packet/admin_request',
+          id: 1,
+          kind: 'overview',
+          revenue_days: '30',
+          players_days: 30,
+          online_days: 1,
+        })
+      )
+    ).toThrow(/overview ranges/)
+    expect(() =>
+      parse_client_packet(JSON.stringify({ type: 'packet/admin_request', id: 1, kind: 'drop_db', days: 30 }))
+    ).toThrow(/unknown admin kind/)
+    expect(() =>
+      parse_client_packet(
+        JSON.stringify({ type: 'packet/admin_request', id: 1, kind: 'shop_sales', days: 30, cursor: 'x'.repeat(65) })
+      )
+    ).toThrow(/bounded sales cursor/)
     expect(() => parse_client_packet(JSON.stringify({ type: 'packet/fight_resync', fight: 'nope' }))).toThrow(
       /fight id/
     )
@@ -99,20 +159,63 @@ describe('the wire contract', () => {
   })
 
   test('the chat door trims, bounds, and refuses emptiness', () => {
-    expect(parse_client_packet(JSON.stringify({ type: 'packet/chat', character_id: '0xc', text: '  gg  ' }))).toEqual({
+    expect(
+      parse_client_packet(
+        JSON.stringify({
+          type: 'packet/chat',
+          character_id: '0xc',
+          parts: [
+            { kind: 'text', text: 'gg ' },
+            { kind: 'item', id: '0xhat', name: 'Fuwa Hat' },
+          ],
+        })
+      )
+    ).toEqual({
       type: 'packet/chat',
       character_id: '0xc',
-      text: 'gg',
+      parts: [
+        { kind: 'text', text: 'gg ' },
+        { kind: 'item', id: '0xhat', name: 'Fuwa Hat' },
+      ],
     })
     expect(() =>
-      parse_client_packet(JSON.stringify({ type: 'packet/chat', character_id: '0xc', text: '   ' }))
+      parse_client_packet(
+        JSON.stringify({ type: 'packet/chat', character_id: '0xc', parts: [{ kind: 'text', text: '   ' }] })
+      )
     ).toThrow(/empty/)
     expect(() =>
-      parse_client_packet(JSON.stringify({ type: 'packet/chat', character_id: '0xc', text: 'x'.repeat(241) }))
+      parse_client_packet(
+        JSON.stringify({
+          type: 'packet/chat',
+          character_id: '0xc',
+          parts: [{ kind: 'text', text: 'x'.repeat(241) }],
+        })
+      )
     ).toThrow(/exceeds 240/)
     expect(() =>
-      parse_client_packet(JSON.stringify({ type: 'packet/chat_whisper', character_id: '0xc', to: 'bob', text: 'hi' }))
+      parse_client_packet(
+        JSON.stringify({
+          type: 'packet/chat_whisper',
+          character_id: '0xc',
+          to: 'bob',
+          parts: [{ kind: 'text', text: 'hi' }],
+        })
+      )
     ).toThrow(/target address/)
+  })
+
+  test('chat macros and linked items become structured immutable parts', () => {
+    expect(
+      expand_chat_message(
+        { text: 'Meet %pos% %xp% [Fuwa Hat]', items: [{ id: '0xhat', name: 'Fuwa Hat' }] },
+        { classe: 'shugo', level: 2, experience: '380', world: 'nauvis', x: 50_010, z: 49_990 }
+      )
+    ).toEqual([
+      { kind: 'text', text: 'Meet ' },
+      { kind: 'position', world: 'nauvis', x: 50_010, z: 49_990 },
+      { kind: 'text', text: ' Shugo Lvl 2 (50%) ' },
+      { kind: 'item', id: '0xhat', name: 'Fuwa Hat' },
+    ])
   })
 
   test('observe intents fold a value or null — anything else refused', () => {

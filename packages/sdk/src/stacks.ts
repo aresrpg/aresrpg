@@ -10,6 +10,22 @@ import type { Sdk } from './client.ts'
 
 type StackContext = Readonly<{ kiosk_cap: (kiosk_id?: string) => Promise<KioskOwnerCap | null> }>
 type KioskArguments = Readonly<{ kiosk: TransactionObjectArgument; cap: TransactionObjectArgument }>
+export type StackMergeGroup = Readonly<{ kiosk: string; target_id: string; source_ids: readonly string[] }>
+
+const merge_plan = (
+  groups: readonly StackMergeGroup[]
+): Readonly<{ actionable: readonly StackMergeGroup[]; kiosk: string | null }> => {
+  const actionable = groups.filter(({ source_ids }) => source_ids.length > 0)
+  const kiosk = actionable[0]?.kiosk ?? null
+  if (kiosk !== null && actionable.some((group) => group.kiosk !== kiosk))
+    throw new Error('One stack merge transaction cannot span kiosks.')
+  const objects = actionable.flatMap(({ target_id, source_ids }) => [target_id, ...source_ids])
+  if (new Set(objects).size !== objects.length) throw new Error('The stack merge plan reuses an object.')
+  if (objects.length - actionable.length > 1_000)
+    throw new Error('One stack normalization transaction cannot exceed 1000 merges.')
+  return Object.freeze({ actionable, kiosk })
+}
+
 const package_id = (sdk: Sdk): string => {
   const value = sdk.pins.package
   if (typeof value !== 'string' || !value) throw new Error('Stack actions need a published game package.')
@@ -59,6 +75,7 @@ export type StackActions = Readonly<{
   merge: (
     input: Readonly<{ kiosk: string; target_id: string; source_id: string }>
   ) => Promise<Readonly<{ digest: string }>>
+  merge_many: (groups: readonly StackMergeGroup[]) => Promise<Readonly<{ digest: string | null }>>
 }>
 
 export const stack_actions = (sdk: Sdk, { kiosk_cap }: StackContext): StackActions => {
@@ -84,6 +101,17 @@ export const stack_actions = (sdk: Sdk, { kiosk_cap }: StackContext): StackActio
       const tx = sdk.tx()
       sdk.with_owner_kiosk(tx, await cap(kiosk), (kiosk_arg, cap_arg) => {
         merge_stacks_ptb(sdk, tx, { kiosk: kiosk_arg, cap: cap_arg }, { target_id, source_id })
+      })
+      return Object.freeze({ digest: receipt_digest(await sdk.execute(tx)) })
+    },
+    merge_many: async (groups) => {
+      const { actionable, kiosk } = merge_plan(groups)
+      if (kiosk === null) return Object.freeze({ digest: null })
+      const tx = sdk.tx()
+      sdk.with_owner_kiosk(tx, await cap(kiosk), (kiosk_arg, cap_arg) => {
+        for (const { target_id, source_ids } of actionable)
+          for (const source_id of source_ids)
+            merge_stacks_ptb(sdk, tx, { kiosk: kiosk_arg, cap: cap_arg }, { target_id, source_id })
       })
       return Object.freeze({ digest: receipt_digest(await sdk.execute(tx)) })
     },

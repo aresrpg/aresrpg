@@ -12,6 +12,7 @@ import { encumbered_asset_ids, stack_merge_target_row } from '../inventory_stack
 import { dispatch_app, useAppStore } from '../store.ts'
 import { toast } from '../toast.ts'
 import { format_sui } from '../wallet_amount.ts'
+import { run_direct_transaction } from '../transaction_guard.ts'
 
 import { ShopCard, type ShopCardSale } from './ShopCard.tsx'
 import { ShopAmountModal, ShopSuccessModal } from './ShopModals.tsx'
@@ -79,12 +80,9 @@ export default function ShopPage({
   const purchase = (sale: ShopCardSale, quantity: number): void => {
     const { wallet } = session
     if (!wallet || busy) return
-    set_selected(null)
-    set_busy(sale.item_type)
-    const pending = toast.loading(t('buy_pending'))
     const existing = stack_merge_target_row(session.inventory, encumbered_asset_ids(listings, trades), sale.item_type)
-    void wallet
-      .buy_shop_item({
+    const transaction = run_direct_transaction(() =>
+      wallet.buy_shop_item({
         item_type: sale.item_type,
         category: sale.item.category,
         price_mist: BigInt(sale.price) * 1_000_000_000n,
@@ -92,6 +90,12 @@ export default function ShopPage({
         existing_item_id: existing?.id ?? null,
         existing_kiosk_id: existing?.kiosk ?? null,
       })
+    )
+    if (!transaction) return
+    set_selected(null)
+    set_busy(sale.item_type)
+    const pending = toast.loading(t('buy_pending'))
+    void transaction
       .then(() => {
         dispatch_app({ type: 'shop/purchased', item_type: sale.item_type, quantity })
         // the minted item STREAMS from the server (ItemWritten — projection-driven);

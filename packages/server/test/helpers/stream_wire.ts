@@ -117,7 +117,7 @@ export const wire = ({
           },
         ]
       if (cypher.includes(':FRIEND')) return []
-      if (cypher.includes('RESULT_FOR')) return []
+      if (/RESULT_FOR|CLOSABLE_FOR/.test(cypher)) return []
       if (cypher.includes('[:HOLDS]->(i:Item)')) return []
       if (cypher.includes('HOLDS_CLAIM') || cypher.includes('HOLDS_VOUCHER')) return []
       if (cypher.includes('MATCH (s:Sale)') || cypher.includes('MATCH (a:Airdrop)')) return []

@@ -610,15 +610,28 @@ pub struct KioskItemKey {
 
 /// `aresrpg::trade::Trade` — the p2p escrow that replaced transferred PurchaseCaps
 /// (owner 2026-08-12): caps park as dof children; these fields are the negotiation state.
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+pub enum TradePhase {
+    Requested,
+    Negotiating,
+    Settling,
+    Cancelled,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TradeState {
+    pub a: Addr,
+    pub b: Addr,
+    pub phase: TradePhase,
+    pub offer_revision: u64,
+    pub accept_a: bool,
+    pub accept_b: bool,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Trade {
     pub id: Id,
-    pub a: Addr,
-    pub b: Addr,
-    pub version: u64,
-    pub accept_a: bool,
-    pub accept_b: bool,
-    pub locked: bool,
+    pub state: TradeState,
     pub sui_a: Balance,
     pub sui_b: Balance,
     pub caps_a: Vec<Id>,

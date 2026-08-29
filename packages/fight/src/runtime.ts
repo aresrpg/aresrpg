@@ -11,11 +11,11 @@ import type {
   RenderIdentityState,
 } from './types.ts'
 
+export const initial_effect_id = (seat: number, index: number): string => `initial:effect:${seat}:${index}`
+
 export const create_render_ids = (contract: FightContract): RenderIdentityState => ({
   next: 0n,
-  effects: contract.fighters.map((fighter, seat) =>
-    fighter.effects.map((_, index) => `initial:effect:${seat}:${index}`)
-  ),
+  effects: contract.fighters.map((fighter, seat) => fighter.effects.map((_, index) => initial_effect_id(seat, index))),
   zones: contract.zones.map((_, index) => `initial:zone:${index}`),
 })
 

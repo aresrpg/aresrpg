@@ -16,6 +16,7 @@ import { mob_icon } from '../content/assets.ts'
 import type { AppCopy } from '../i18n/copy.ts'
 import { useFightPrompt } from '../game/core/fight_prompt_feed.ts'
 import { dispatch_app, useAppStore } from '../store.ts'
+import { run_direct_transaction } from '../transaction_guard.ts'
 import { selected_character } from '../modules/session.ts'
 import type { FightSessionState } from '../modules/fight.ts'
 import { selected_party } from '../modules/party.ts'
@@ -28,6 +29,9 @@ const ACCESS_GROUP = 1
 const ACCESS_INVITED = 2
 const ACCESS_UNSET = 255
 const PLACEMENT_WINDOW_MS = 60_000
+
+const join_can_submit = (wallet: unknown, character: string | null, checkpoint: unknown, pending: boolean): boolean =>
+  Boolean(wallet && character && checkpoint && !pending)
 
 type FightAccess = Readonly<{
   phase: string
@@ -282,6 +286,7 @@ const FightModal = ({ close, copy, fight_id }: Readonly<{ close: () => void; cop
   const selected_character_id = useAppStore((state) => state.session.selected_character_id)
   const own_row = useAppStore((state) => selected_character(state.session))
   const party = useAppStore(selected_party)
+  const [joining, set_joining] = useState(false)
   const [, force_tick] = useState(0)
   // a COMMIT (join/spectate) hands the session over to the board — the teardown below must not
   // then disarm the very stream the committed surface lives on
@@ -345,14 +350,14 @@ const FightModal = ({ close, copy, fight_id }: Readonly<{ close: () => void; cop
   const joinable_teams = admitted_teams.filter(
     (team): team is 0 | 1 => !already_seated && (team === 0 || team === 1) && team_has_room(team)
   )
-  const can_submit = !!wallet && !!selected_character_id && !!checkpoint
+  const can_submit = join_can_submit(wallet, selected_character_id, checkpoint, joining)
 
   const join = (team: number): void => {
     if (!wallet || !selected_character_id) return
     const custody = own_row ? { kiosk: own_row.kiosk, kiosk_cap: own_row.kiosk_cap } : undefined
     const grouped = Number(team === 0 ? access_a : access_b) === ACCESS_GROUP
-    void wallet.fight
-      .join({
+    const transaction = run_direct_transaction(() =>
+      wallet.fight.join({
         fight: fight_id,
         character_id: selected_character_id,
         custody,
@@ -360,13 +365,20 @@ const FightModal = ({ close, copy, fight_id }: Readonly<{ close: () => void; cop
         access: 0,
         ...(grouped && party ? { party: party.id } : {}),
       })
+    )
+    if (!transaction) return
+    set_joining(true)
+    void transaction
       .then(() => {
         // no mount dispatch: the seat we just took mounts the board on its own checkpoint
         // (fight.ts derives it). This click only hands the armed stream over to the board.
         committed.current = true
         close()
       })
-      .catch((error: unknown) => console.error('The fight join failed.', error))
+      .catch((error: unknown) => {
+        set_joining(false)
+        console.error('The fight join failed.', error)
+      })
   }
 
   const spectate = (): void => {

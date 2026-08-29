@@ -3,7 +3,7 @@ name = "aresrpg-indexer"
 version = "0.1.0"
 edition = "2021"
 license = "LicenseRef-AresRPG-Source-Available"
-description = "AresRPG chain projectionist — streams Sui checkpoints into FalkorDB (graph + sales history + live pub/sub)."
+description = "AresRPG chain projectionist — streams Sui checkpoints into FalkorDB graph, analytics, history, and live pub/sub."
 
 [[bin]]
 name = "aresrpg-indexer"

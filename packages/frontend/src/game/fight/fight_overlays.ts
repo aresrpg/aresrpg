@@ -42,6 +42,57 @@ const fighter_seat_of = (entity_id: string): number | null => {
   return Number.isInteger(seat) && seat >= 0 ? seat : null
 }
 
+type FightFighter = HydratedFightCheckpoint['contract']['fighters'][number]
+
+const effects_after_start_cue = (
+  fighter: Readonly<FightFighter>,
+  seat: number,
+  cue: Readonly<FightPresentationCue>
+): FightFighter['effects'] | null => {
+  if (cue.type === 'status') return [...cue.effects]
+  if (cue.type !== 'visibility') return null
+  const invisible = fighter.effects.some(({ kind }) => kind === EFFECT_KINDS.invis)
+  if (invisible === cue.invisible) return null
+  return cue.invisible
+    ? [
+        ...fighter.effects,
+        Object.freeze({
+          kind: EFFECT_KINDS.invis,
+          element: '',
+          value: 0n,
+          turns_left: 0n,
+          source: BigInt(seat),
+          stat: 0n,
+        }),
+      ]
+    : fighter.effects.filter(({ kind }) => kind !== EFFECT_KINDS.invis)
+}
+
+const start_fighter_projection = (
+  checkpoint: Readonly<HydratedFightCheckpoint>,
+  cue: Readonly<FightPresentationCue>
+): Readonly<{ seat: number; fighter: FightFighter }> | null => {
+  if (cue.type !== 'status' && cue.type !== 'visibility') return null
+  const seat = fighter_seat_of(cue.entity_id)
+  const fighter = seat === null ? null : checkpoint.contract.fighters[seat]
+  if (seat === null || !fighter) return null
+  const effects = effects_after_start_cue(fighter, seat, cue)
+  return effects ? Object.freeze({ seat, fighter: Object.freeze({ ...fighter, effects }) }) : null
+}
+
+const with_fighter = (
+  checkpoint: Readonly<HydratedFightCheckpoint>,
+  seat: number,
+  fighter: Readonly<FightFighter>
+): HydratedFightCheckpoint =>
+  Object.freeze({
+    ...checkpoint,
+    contract: Object.freeze({
+      ...checkpoint.contract,
+      fighters: checkpoint.contract.fighters.map((candidate, index) => (index === seat ? fighter : candidate)),
+    }),
+  })
+
 /** Advance display truth only when its matching cue has actually played. Canonical state may
  * already contain the whole mob wave; cards, rings, and bodies must not reveal its future. */
 export const fight_visual_checkpoint_after_cue = (
@@ -49,34 +100,9 @@ export const fight_visual_checkpoint_after_cue = (
   cue: Readonly<FightPresentationCue>,
   phase: 'start' | 'complete'
 ): HydratedFightCheckpoint => {
-  if (cue.type === 'visibility' && phase === 'start') {
-    const seat = fighter_seat_of(cue.entity_id)
-    const fighter = seat === null ? null : checkpoint.contract.fighters[seat]
-    if (seat === null || !fighter) return checkpoint
-    const invisible = fighter.effects.some(({ kind }) => kind === EFFECT_KINDS.invis)
-    if (invisible === cue.invisible) return checkpoint
-    const effects: typeof fighter.effects = cue.invisible
-      ? [
-          ...fighter.effects,
-          Object.freeze({
-            kind: EFFECT_KINDS.invis,
-            element: '',
-            value: 0n,
-            turns_left: 0n,
-            source: BigInt(seat),
-            stat: 0n,
-          }),
-        ]
-      : fighter.effects.filter(({ kind }) => kind !== EFFECT_KINDS.invis)
-    return Object.freeze({
-      ...checkpoint,
-      contract: Object.freeze({
-        ...checkpoint.contract,
-        fighters: checkpoint.contract.fighters.map((candidate, index) =>
-          index === seat ? Object.freeze({ ...fighter, effects }) : candidate
-        ),
-      }),
-    })
+  if (phase === 'start') {
+    const projection = start_fighter_projection(checkpoint, cue)
+    if (projection) return with_fighter(checkpoint, projection.seat, projection.fighter)
   }
   if (phase !== 'complete') return checkpoint
   const entity_id =
@@ -97,13 +123,7 @@ export const fight_visual_checkpoint_after_cue = (
       : cue.type === 'death'
         ? Object.freeze({ ...fighter, hp: 0n, dead: true })
         : Object.freeze({ ...fighter, cell: BigInt(cell!) })
-  return Object.freeze({
-    ...checkpoint,
-    contract: Object.freeze({
-      ...checkpoint.contract,
-      fighters: checkpoint.contract.fighters.map((candidate, index) => (index === seat ? next : candidate)),
-    }),
-  })
+  return with_fighter(checkpoint, seat, next)
 }
 
 const with_zones = (
@@ -148,8 +168,8 @@ export const fight_zone_visual_state = (
 
 const unique_cells = (cells: readonly bigint[]): readonly number[] => Object.freeze([...new Set(cells.map(Number))])
 
-// A subtle team ring under every living fighter; the viewer's own playing character breathes
-// stronger. Reads the PRESENTED checkpoint so rings lag with the animation, like zones.
+// A subtle team ring under every visible living fighter; the active character breathes
+// stronger. Reads the PRESENTED checkpoint so visibility and rings change in cue order.
 const team_ring_overlays = (
   checkpoint: Readonly<HydratedFightCheckpoint>,
   presented_turn_seat: bigint | null
@@ -157,7 +177,7 @@ const team_ring_overlays = (
   const active_seat = presented_turn_seat ?? checkpoint.contract.queue[Number(checkpoint.contract.turn_ptr)]
   return Object.freeze(
     checkpoint.contract.fighters.flatMap((fighter, seat) => {
-      if (fighter.dead) return []
+      if (fighter.dead || fighter.effects.some(({ kind }) => kind === EFFECT_KINDS.invis)) return []
       const active = BigInt(seat) === active_seat && checkpoint.contract.round !== 0n
       const side = fighter.team === 0n ? 'a' : 'b'
       const preset = active ? (`team_${side}_active` as const) : (`team_${side}` as const)

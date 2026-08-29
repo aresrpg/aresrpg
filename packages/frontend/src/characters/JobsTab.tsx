@@ -11,10 +11,12 @@
 
 import { useMemo, useState, type ReactNode } from 'react'
 import {
+  craft_batch_limit,
   craft_required_level,
   craft_success_percent,
   gather_quantity_bounds,
   gather_xp,
+  item_is_stackable,
   job_groups,
   job_level_from_xp,
   job_max_level,
@@ -23,7 +25,7 @@ import {
   type JobSlug,
 } from '@aresrpg/immutable'
 import type { CharacterRow, ItemRow } from '@aresrpg/protocol'
-import { X } from 'lucide-react'
+import { ArrowRightLeft, X } from 'lucide-react'
 
 import { ItemDetailView } from '../components/ItemDetailView.tsx'
 import { item_icon } from '../content/assets.ts'
@@ -31,17 +33,21 @@ import { encyclopedia_catalog, titleize, type SeedRecipe } from '../content/cata
 import { encyclopedia_text } from '../encyclopedia/copy.ts'
 import { copy_text, type AppCopy, type CopyText } from '../i18n/copy.ts'
 import {
-  allocate_stack_amount,
   available_item_stacks,
+  coalesced_stack_groups,
+  craft_output_stack_plan,
+  craft_stack_plan,
   encumbered_asset_ids,
-  stack_merge_target,
 } from '../inventory_stacks.ts'
 import { dispatch_app, useAppStore } from '../store.ts'
 import { toast } from '../toast.ts'
+import { retry_after_version_race, run_direct_transaction } from '../transaction_guard.ts'
 
 import './jobs.css'
+import './jobs_adviser.css'
 
 const CATEGORY_ORDER = Object.freeze(Object.keys(job_groups) as JobKind[])
+const JOBS = Object.freeze(CATEGORY_ORDER.flatMap((kind) => job_groups[kind]))
 const CATEGORY_LABEL_KEY: Readonly<Record<JobKind, string>> = Object.freeze({
   gathering: 'jobs.category.gathering',
   weapon_craft: 'jobs.category.weapon',
@@ -106,6 +112,30 @@ const kind_of = (job: JobSlug): JobKind =>
     jobs.includes(job)
   )![0]
 
+export const job_from_path = (pathname: string): JobSlug => {
+  const selected = new URLSearchParams(pathname.split('?')[1]?.split('#')[0] ?? '').get('job')
+  return selected && JOBS.includes(selected as JobSlug) ? (selected as JobSlug) : 'FARMER'
+}
+
+export const job_path = (job: JobSlug): string => `/characters/jobs?job=${encodeURIComponent(job)}`
+
+export const craft_result_tone = (successes: number): 'error' | 'success' => (successes === 0 ? 'error' : 'success')
+
+export const better_job_character = (
+  characters: readonly Pick<CharacterRow, 'id' | 'name' | 'jobs'>[],
+  current_character_id: string,
+  job: JobSlug
+): Readonly<{ id: string; name: string; level: number }> | null => {
+  const current = characters.find(({ id }) => id === current_character_id)
+  const current_level = job_level_from_xp(Number(current?.jobs[job] ?? 0))
+  return characters.reduce<Readonly<{ id: string; name: string; level: number }> | null>((best, candidate) => {
+    if (candidate.id === current_character_id) return best
+    const level = job_level_from_xp(Number(candidate.jobs[job] ?? 0))
+    if (level <= current_level || (best && best.level >= level)) return best
+    return Object.freeze({ id: candidate.id, name: candidate.name, level })
+  }, null)
+}
+
 /** Inline craft controls — the bill of materials + the real Craft button, as detail children. */
 const CraftControls = ({
   recipe,
@@ -126,50 +156,73 @@ const CraftControls = ({
   const trades = useAppStore(({ trade }) => trade.rows)
   const encumbered = encumbered_asset_ids(listings, trades)
   const [pending, set_pending] = useState(false)
+  const [attempts, set_attempts] = useState(1)
+  const output = encyclopedia_catalog.item(recipe.output_type)!.item
+  const stackable_output = item_is_stackable(output.category)
+  const batch_limit = craft_batch_limit(output.category)
+  const stack_plan = craft_stack_plan(recipe.inputs, attempts, inventory, encumbered, character.kiosk)
 
-  const rows = Object.entries(recipe.inputs).map(([item_type, need]) => {
+  const rows = Object.entries(recipe.inputs).map(([item_type, per_attempt]) => {
     const stacks = available_item_stacks(inventory, encumbered, item_type, character.kiosk)
-    const allocation = allocate_stack_amount(stacks, need)
+    const need = per_attempt * attempts
     return {
       item_type,
       need,
       have: stacks.reduce((total, stack) => total + stack.amount, 0),
-      allocation,
-      enough: allocation !== null,
+      enough: stacks.reduce((total, stack) => total + stack.amount, 0) >= need,
     }
   })
   const required = recipe_required_level(recipe)
   const level_ok = level >= required
-  const affordable = rows.every(({ enough }) => enough)
+  const affordable = stack_plan !== null
   const can_craft = !!wallet && level_ok && affordable && !pending
   const success_chance = craft_success_percent(level)
-  const output = encyclopedia_catalog.item(recipe.output_type)?.item
 
   const on_craft = (): void => {
-    if (!can_craft || !wallet) return
-    set_pending(true)
-    const name = output?.name ?? titleize(recipe.output_type)
-    const pending_toast = toast.loading(t('jobs.craft.craft_tooltip', { name }))
-    const existing = stack_merge_target(inventory, encumbered, recipe.output_type, character.kiosk)
-    void wallet.character
-      .craft({
-        character_id: character.id,
-        output_type: recipe.output_type,
-        input_item_ids: rows.flatMap(({ allocation }) => allocation?.map(({ item_id }) => item_id) ?? []),
-        existing,
-        custody: { kiosk: character.kiosk, kiosk_cap: character.kiosk_cap },
+    if (!can_craft || !wallet || !stack_plan) return
+    const input_ids = new Set(stack_plan.flatMap(({ target_id, source_ids }) => [target_id, ...source_ids]))
+    const output_plan = craft_output_stack_plan(
+      inventory,
+      encumbered,
+      recipe.output_type,
+      character.kiosk,
+      attempts,
+      input_ids
+    )
+    const merge_groups = coalesced_stack_groups(inventory, encumbered)
+      .filter(({ target }) => target.kiosk === character.kiosk)
+      .map(({ target, source_ids }) => ({ kiosk: target.kiosk, target_id: target.id, source_ids }))
+    const transaction = run_direct_transaction(() =>
+      retry_after_version_race(() => wallet.stacks.merge_many(merge_groups)).then(() => {
+        dispatch_app({ type: 'inventory/stacks_merged', groups: merge_groups })
+        return retry_after_version_race(() =>
+          wallet.character.craft({
+            character_id: character.id,
+            output_type: recipe.output_type,
+            input_item_ids: stack_plan.map(({ target_id }) => target_id),
+            existing: output_plan?.target_id ?? null,
+            attempts,
+            custody: { kiosk: character.kiosk, kiosk_cap: character.kiosk_cap },
+          })
+        )
       })
-      .then(({ success, job_xp_gained }) => {
+    )
+    if (!transaction) return
+    set_pending(true)
+    const { name } = output
+    const pending_toast = toast.loading(t('jobs.craft.prepare_tooltip', { count: attempts, name }))
+    void transaction
+      .then(({ attempts: completed_attempts, successes, job_xp_gained }) => {
         dispatch_app({
           type: 'character/crafted',
           character_id: character.id,
           job,
           xp: job_xp_gained,
-          inputs: rows.flatMap(({ allocation }) => allocation ?? []),
+          inputs: stack_plan.map(({ target_id, amount }) => ({ item_id: target_id, amount })),
         })
-        // the roll is the outcome — inputs burned and xp credited either way (crafting.move)
-        if (success) pending_toast.success(t('jobs.craft.craft_success', { name }))
-        else pending_toast.error(new Error(t('jobs.craft.roll_failed', { name, chance: success_chance })))
+        const message = t('jobs.craft.craft_result', { attempts: completed_attempts, successes, name })
+        if (craft_result_tone(successes) === 'error') pending_toast.error(message)
+        else pending_toast.success(message)
       })
       .catch(pending_toast.error)
       .finally(() => set_pending(false))
@@ -197,11 +250,26 @@ const CraftControls = ({
       </div>
 
       <div className="jobs__craft-chance">
-        <span className="jobs__craft-chance-label">{t('jobs.craft.success_chance')}</span>
+        <span className="jobs__craft-chance-label">{t('jobs.craft.starting_chance')}</span>
         <span className="jobs__craft-chance-value hud-num">{success_chance}%</span>
       </div>
 
-      <div className="jobs__craft-bar">
+      <div className="jobs__craft-bar" data-stackable-output={String(stackable_output)}>
+        <label className="jobs__craft-amount" hidden={!stackable_output}>
+          <span className="jobs__craft-amount-label">{t('jobs.craft.amount')}</span>
+          <input
+            aria-label={t('jobs.craft.amount')}
+            className="jobs__craft-input hud-num"
+            disabled={pending}
+            max={batch_limit}
+            min={1}
+            onChange={({ currentTarget }) =>
+              set_attempts(Math.max(1, Math.min(batch_limit, Math.floor(Number(currentTarget.value)))))
+            }
+            type="number"
+            value={attempts}
+          />
+        </label>
         <button
           className="btn-gold jobs__craft-btn"
           disabled={!can_craft}
@@ -211,14 +279,17 @@ const CraftControls = ({
               ? t('jobs.craft.requires_level', { job: titleize(job), required, level })
               : !affordable
                 ? t('jobs.craft.not_enough')
-                : t('jobs.craft.craft_tooltip', { name: output?.name ?? titleize(recipe.output_type) })
+                : t('jobs.craft.craft_tooltip', {
+                    count: attempts,
+                    name: output.name,
+                  })
           }
           type="button"
         >
           {pending
             ? t('jobs.craft.crafting')
             : level_ok
-              ? t('jobs.craft.craft_button')
+              ? t('jobs.craft.craft_button', { count: attempts })
               : t('jobs.craft.locked_level', { level: required })}
         </button>
       </div>
@@ -229,7 +300,10 @@ const CraftControls = ({
 export default function JobsTab({ character, copy }: Readonly<{ character: Readonly<CharacterRow>; copy: AppCopy }>) {
   const t = copy_text(copy.characters_page)
   const encyclopedia = encyclopedia_text(copy)
-  const [selected_job, set_selected_job] = useState<JobSlug>('FARMER')
+  const characters = useAppStore(({ session }) => session.characters)
+  const crafting_locked = useAppStore(({ settings }) => !!settings.always_craft_from_character_id)
+  const pathname = useAppStore(({ navigation }) => navigation.pathname)
+  const [selected_job, set_selected_job] = useState<JobSlug>(() => job_from_path(pathname))
   const [selected, set_selected] = useState<Readonly<{ item_type: string; recipe: SeedRecipe | null }> | null>(null)
 
   const xp_of = (job: JobSlug): number => Number(character.jobs[job] ?? 0)
@@ -291,24 +365,51 @@ export default function JobsTab({ character, copy }: Readonly<{ character: Reado
               </span>
               {t(CATEGORY_LABEL_KEY[kind])}
             </div>
-            {job_groups[kind].map((job) => (
-              <button
-                className={`jobs__list-row${selected_job === job ? ' is-selected' : ''}`}
-                key={job}
-                onClick={() => {
-                  set_selected_job(job)
-                  set_selected(null)
-                }}
-                type="button"
-              >
-                <span className="jobs__list-id">
-                  <span className="jobs__list-name">{titleize(job)}</span>
-                  <span className="jobs__list-sub">{covers_label(job) || t('jobs.recipes_fallback')}</span>
-                </span>
-                {active_job_id === job && <span className="jobs__list-tag">{t('jobs.equipped')}</span>}
-                <span className="jobs__list-lvl hud-num">{level_of(job)}</span>
-              </button>
-            ))}
+            {job_groups[kind].map((job) => {
+              const better = crafting_locked ? null : better_job_character(characters, character.id, job)
+              return (
+                <div className="jobs__list-entry" key={job}>
+                  <div className="jobs__alternate-slot">
+                    {better && (
+                      <aside className="jobs__alternate" data-better-job-character={better.id}>
+                        <span>
+                          {t('jobs.better_character', {
+                            name: better.name,
+                            job: titleize(job),
+                            level: better.level,
+                          })}
+                        </span>
+                        <button
+                          aria-label={t('jobs.switch_to_character', { name: better.name })}
+                          onClick={() => dispatch_app({ type: 'character/select', character_id: better.id })}
+                          title={t('jobs.switch_to_character', { name: better.name })}
+                          type="button"
+                        >
+                          <ArrowRightLeft aria-hidden="true" size={10} />
+                          {t('jobs.switch')}
+                        </button>
+                      </aside>
+                    )}
+                  </div>
+                  <button
+                    className={`jobs__list-row${selected_job === job ? ' is-selected' : ''}`}
+                    onClick={() => {
+                      set_selected_job(job)
+                      set_selected(null)
+                      dispatch_app({ type: 'path/open', pathname: job_path(job) })
+                    }}
+                    type="button"
+                  >
+                    <span className="jobs__list-id">
+                      <span className="jobs__list-name">{titleize(job)}</span>
+                      <span className="jobs__list-sub">{covers_label(job) || t('jobs.recipes_fallback')}</span>
+                    </span>
+                    {active_job_id === job && <span className="jobs__list-tag">{t('jobs.equipped')}</span>}
+                    <span className="jobs__list-lvl hud-num">{level_of(job)}</span>
+                  </button>
+                </div>
+              )
+            })}
           </div>
         ))}
       </div>
@@ -448,6 +549,7 @@ export default function JobsTab({ character, copy }: Readonly<{ character: Reado
                     <CraftControls
                       character={character}
                       job={selected_job}
+                      key={selected.recipe.output_type}
                       level={level}
                       recipe={selected.recipe}
                       t={t}

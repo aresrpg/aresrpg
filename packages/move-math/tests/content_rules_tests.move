@@ -31,6 +31,7 @@ fun pet_food_is_not_a_category_and_rune_keeps_its_twin_law() {
   assert!(!content_rules::is_stackable(&b"pet_food".to_string()));
   assert!(content_rules::is_category(&b"rune".to_string()));
   assert!(content_rules::is_stackable(&b"rune".to_string()));
+  assert!(content_rules::is_stackable(&b"key".to_string()));
   let foods = vector[b"wheat".to_string(), b"quartz".to_string()];
   assert!(content_rules::pet_accepts(&foods, &b"quartz".to_string()));
   assert!(!content_rules::pet_accepts(&foods, &b"aloe_vera".to_string()));
@@ -46,8 +47,16 @@ fun curated_equipment_jobs_and_slots_are_exact() {
   assert!(content_rules::category_fits(&b"weapon".to_string(), &b"spear".to_string()));
   assert!(content_rules::category_fits(&b"cloak".to_string(), &b"cloak".to_string()));
   assert!(content_rules::craft_job_of(&b"axe".to_string()) == option::some(b"FORGER".to_string()));
+  assert!(content_rules::craft_job_of(&b"sword".to_string()) == option::some(b"FORGER".to_string()));
+  assert!(content_rules::craft_job_of(&b"daggers".to_string()) == option::some(b"FORGER".to_string()));
   assert!(content_rules::craft_job_of(&b"bow".to_string()) == option::some(b"CARVER".to_string()));
+  assert!(content_rules::craft_job_of(&b"spear".to_string()) == option::some(b"CARVER".to_string()));
   assert!(content_rules::craft_job_of(&b"hat".to_string()) == option::some(b"TAILOR".to_string()));
+  assert!(content_rules::craft_job_of(&b"cloak".to_string()) == option::some(b"TAILOR".to_string()));
+  assert!(content_rules::craft_job_of(&b"belt".to_string()) == option::some(b"TANNER".to_string()));
+  assert!(content_rules::craft_job_of(&b"boots".to_string()) == option::some(b"TANNER".to_string()));
+  assert!(content_rules::craft_job_of(&b"ring".to_string()) == option::some(b"JEWELER".to_string()));
+  assert!(content_rules::craft_job_of(&b"amulet".to_string()) == option::some(b"JEWELER".to_string()));
 }
 
 #[test]
@@ -70,6 +79,9 @@ fun every_class_has_the_authored_five_family_affinity() {
 #[test]
 fun weapon_areas_are_the_five_authored_shapes() {
   let lines = vector[item_damages::new(1, 1, b"melee".to_string(), b"earth".to_string())];
+  let bow_level = weapon::strike_of(&b"bow".to_string(), &lines, false);
+  assert!(spell_effect::range_min(&bow_level) == 2);
+  assert!(spell_effect::range_max(&bow_level) == 6);
   let sword = spell_effect::effects(&weapon::strike_of(&b"sword".to_string(), &lines, false));
   let daggers = spell_effect::effects(&weapon::strike_of(&b"daggers".to_string(), &lines, false));
   let spear = spell_effect::effects(&weapon::strike_of(&b"spear".to_string(), &lines, false));

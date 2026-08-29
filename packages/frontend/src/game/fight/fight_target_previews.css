@@ -80,6 +80,26 @@
   color: #ff9d3c;
   font-weight: 800;
 }
+.ent-tt__resists {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  margin-top: 5px;
+  padding-top: 5px;
+  border-top: 1px solid var(--color-border);
+}
+.ent-tt__resist {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  color: var(--resist-color);
+  font-family: var(--font-mono, 'JetBrains Mono', monospace);
+  font-size: 0.68rem;
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  line-height: 1;
+}
 .ent-tt > .fight-effect-lines {
   margin-top: 5px;
   padding-top: 5px;

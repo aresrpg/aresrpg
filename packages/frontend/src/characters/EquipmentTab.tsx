@@ -14,7 +14,6 @@ import type { CharacterRow, ItemRow } from '@aresrpg/protocol'
 
 import { EquipmentDoll } from '../components/EquipmentDoll.tsx'
 import { ItemDetailView } from '../components/ItemDetailView.tsx'
-import { item_icon } from '../content/assets.ts'
 import { encyclopedia_catalog, titleize } from '../content/catalog.ts'
 import { encyclopedia_text } from '../encyclopedia/copy.ts'
 import { character_max_hp, fold_equipment_stats, projected_hp } from '../game/character_stats.ts'
@@ -22,6 +21,7 @@ import { copy_text, stat_name, type AppCopy } from '../i18n/copy.ts'
 import { encumbered_asset_ids } from '../inventory_stacks.ts'
 import { dispatch_app, useAppStore } from '../store.ts'
 import { toast } from '../toast.ts'
+import { run_direct_transaction } from '../transaction_guard.ts'
 
 import {
   equip_refusal,
@@ -33,6 +33,7 @@ import {
   type EquipmentMap,
 } from './equipment_stage.ts'
 import { InventoryActionOverlays, is_loot_box, type ItemMenuState } from './InventoryOverlays.tsx'
+import { InventoryItemCell } from './InventoryItemCell.tsx'
 
 const BAG_CATEGORIES = ['equipment', 'consumables', 'resources'] as const
 type BagCategory = (typeof BAG_CATEGORIES)[number]
@@ -41,6 +42,16 @@ const bag_category_of = (item: Readonly<ItemRow>): BagCategory => {
   if (item.category === 'consumable') return 'consumables'
   if (item.category === 'resource' || item.category === 'rune' || item.category === 'key') return 'resources'
   return 'equipment'
+}
+
+const consumable_action = (item: Readonly<ItemRow>, character: Readonly<CharacterRow>) => {
+  const effect = encyclopedia_catalog.item(item.item_type)?.item.consumable
+  if (!effect || effect.type === 'loot_box') return null
+  return Object.freeze({
+    effect,
+    already_full: effect.type === 'heal' && projected_hp(character, Date.now()) >= character_max_hp(character),
+    heal: effect.type === 'heal' ? effect.amount : 0,
+  })
 }
 
 const MIN_GRID_CELLS = 40
@@ -121,30 +132,33 @@ export default function EquipmentTab({
   }
 
   const drink = (item: Readonly<ItemRow>): void => {
-    const seed = encyclopedia_catalog.item(item.item_type)?.item
-    const effect = seed?.consumable
-    if (!effect || effect.type === 'loot_box' || !wallet) return
-    if (effect.type === 'heal' && projected_hp(character, Date.now()) >= character_max_hp(character))
-      return void toast.add(t('already_full_hp'), 'info')
-    const pending = toast.loading(t('consume_pending'))
-    void wallet.character
-      .use_consumable({
+    const action = consumable_action(item, character)
+    if (!action || !wallet) return
+    if (action.already_full) return void toast.add(t('already_full_hp'), 'info')
+    const transaction = run_direct_transaction(() =>
+      wallet.character.use_consumable({
         character_id: character.id,
         item_id: item.id,
         item_type: item.item_type,
         custody: { kiosk: character.kiosk, kiosk_cap: character.kiosk_cap },
       })
+    )
+    if (!transaction) return
+    set_committing(true)
+    const pending = toast.loading(t('consume_pending'))
+    void transaction
       .then(() => {
         dispatch_app({
           type: 'character/consumed',
           character_id: character.id,
           item_id: item.id,
-          effect: effect.type,
-          heal: effect.type === 'heal' ? effect.amount : 0,
+          effect: action.effect.type,
+          heal: action.heal,
         })
         pending.success(t('consume_success'))
       })
       .catch(pending.error)
+      .finally(() => set_committing(false))
   }
 
   const activate = (item: Readonly<ItemRow>): void => {
@@ -157,15 +171,18 @@ export default function EquipmentTab({
 
   const accept = (): void => {
     if (!dirty || committing || !wallet) return
-    set_committing(true)
-    const pending = toast.loading(t('equip_pending'))
-    void wallet.character
-      .equip({
+    const transaction = run_direct_transaction(() =>
+      wallet.character.equip({
         character_id: character.id,
         to_equip: changes.to_equip,
         to_unequip: changes.to_unequip,
         custody: { kiosk: character.kiosk, kiosk_cap: character.kiosk_cap },
       })
+    )
+    if (!transaction) return
+    set_committing(true)
+    const pending = toast.loading(t('equip_pending'))
+    void transaction
       .then(() => {
         dispatch_app({
           type: 'character/equip_folded',
@@ -329,9 +346,10 @@ export default function EquipmentTab({
         </div>
         <div className="chr-equip__grid">
           {grid_items.map((item) => (
-            <button
-              className={`chr-cell ${selected_id === item.id ? 'is-selected' : ''} ${listed_ids.has(item.id) ? 'is-listed' : ''}`}
+            <InventoryItemCell
+              class_name={`${selected_id === item.id ? 'is-selected' : ''} ${listed_ids.has(item.id) ? 'is-listed' : ''}`.trim()}
               draggable
+              item={item}
               key={item.id}
               onClick={() => set_selected_id(item.id)}
               onDoubleClick={() => activate(item)}
@@ -345,17 +363,8 @@ export default function EquipmentTab({
                 set_selected_id(item.id)
                 set_menu({ x: event.clientX, y: event.clientY, item })
               }}
-              title={item.name}
-              type="button"
-            >
-              {item_icon(item.item_type) ? (
-                <img alt="" className="chr-cell__art" draggable={false} src={item_icon(item.item_type)!} />
-              ) : (
-                <span className="chr-cell__fallback">{item.name.slice(0, 1).toUpperCase()}</span>
-              )}
-              {item.amount > 1 && <span className="chr-cell__amount tabular-nums">×{item.amount}</span>}
-              <span className="chr-cell__lvl tabular-nums">{item.level}</span>
-            </button>
+              show_level
+            />
           ))}
           {Array.from({ length: empty_cells }, (_, index) => (
             <span aria-hidden="true" className="chr-cell chr-cell--empty" key={`empty-${index}`} />

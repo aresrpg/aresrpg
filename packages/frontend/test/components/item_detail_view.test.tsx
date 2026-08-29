@@ -62,3 +62,32 @@ test('the shared item detail exposes click-to-edit fields without changing read-
   expect(readonly).not.toContain('data-item-detail-editable=""')
   expect(readonly).not.toContain('data-item-stat="wisdom"')
 })
+
+test('rune item details show the exact stat points added by one rune', () => {
+  const pa_vi = renderToStaticMarkup(
+    <ItemDetailView
+      category="rune"
+      damages={[]}
+      item_type="rune_vitality_pa"
+      labels={labels}
+      level={20}
+      name="Rune Pa Vi"
+    />
+  )
+  const ba_do = renderToStaticMarkup(
+    <ItemDetailView
+      category="rune"
+      damages={[]}
+      item_type="rune_raw_damage_ba"
+      labels={labels}
+      level={20}
+      name="Rune Ba Do"
+    />
+  )
+
+  expect(pa_vi).toContain('data-rune-effect=""')
+  expect(pa_vi).toContain('+10')
+  expect(pa_vi).toContain('Vitality')
+  expect(ba_do).toContain('+1')
+  expect(ba_do).toContain('Raw Damage')
+})

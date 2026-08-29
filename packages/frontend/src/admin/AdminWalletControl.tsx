@@ -13,13 +13,13 @@ export const AdminWalletControl = ({ copy }: Readonly<{ copy: Readonly<Record<st
   const text = (key: string, fallback: string): string => copy[key] || fallback
   if (wallet.session)
     return (
-      <div className="flex h-8 shrink-0 items-center gap-2.5 border border-white/10 bg-white/[0.025] px-3">
-        <span className="h-1.5 w-1.5 bg-[#5ecf8d]/80 shadow-[0_0_7px_rgba(94,207,141,0.45)]" />
+      <div className="flex h-7 shrink-0 items-center gap-2 border border-border bg-white/2 px-2.5">
+        <span className="size-1.5 rounded-full bg-[#5ecf8d]/80" />
         <span className="font-mono text-[8px] text-[#a9bad0]" title={wallet.session.address}>
           {short_address(wallet.session.address)}
         </span>
         <button
-          className="ml-2 cursor-pointer px-1 py-1 text-[7px] tracking-[0.1em] text-[#626873] uppercase transition hover:text-[#c9c4bb]"
+          className="ml-1 cursor-pointer px-1 py-1 text-[7px] tracking-[0.1em] text-[#626873] uppercase transition hover:text-[#c9c4bb]"
           disabled={wallet.status === 'connecting'}
           onClick={() => dispatch_app({ type: 'admin/wallet_disconnect' })}
           type="button"
@@ -32,7 +32,7 @@ export const AdminWalletControl = ({ copy }: Readonly<{ copy: Readonly<Record<st
     <div className="flex shrink-0 items-center gap-1">
       {wallet.status === 'ready' && wallet.wallets.length > 0 && (
         <button
-          className="h-9 cursor-pointer border border-[#c8963c]/35 bg-gradient-to-r from-[#c8963c]/12 to-[#4a9eff]/8 px-3 text-[8px] tracking-[0.13em] text-[#efc15a] uppercase hover:border-[#efbd45]/60 disabled:opacity-40"
+          className="h-7 cursor-pointer border border-[#c8963c]/35 bg-[#c8963c]/6 px-3 text-[8px] tracking-[0.13em] text-[#c8963c] uppercase hover:border-[#c8963c]/60 disabled:opacity-40"
           onClick={() => set_show_wallets(true)}
           type="button"
         >

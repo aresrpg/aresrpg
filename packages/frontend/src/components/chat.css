@@ -57,6 +57,18 @@
   padding: 2px 4px 2px 7px;
 }
 
+.chat__line--party span,
+.chat-tok--party {
+  color: #e0a33a;
+}
+
+.chat__line--whisper,
+.chat__line--whisper span,
+.chat-tok--whisper {
+  color: #ff78b7;
+  font-style: italic;
+}
+
 .chat__filters {
   display: flex;
   gap: 8px;
@@ -160,6 +172,19 @@
 .chat-tok--clickable:hover {
   text-decoration: underline;
 }
+
+.chat-tok--position,
+.chat-tok--item {
+  color: #67d8d0;
+  cursor: pointer;
+  text-decoration: underline dotted color-mix(in srgb, currentColor 55%, transparent);
+  text-underline-offset: 2px;
+}
+
+.chat-tok--item {
+  color: #efbd45;
+}
+
 /* the speaker's OWN name — blue sets your lines apart from the gold of everyone else */
 .chat-tok--self {
   color: var(--chat-target);

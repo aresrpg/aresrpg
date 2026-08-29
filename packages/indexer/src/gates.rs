@@ -141,6 +141,8 @@ mod tests {
         ("spell_effect", "Effect"),
         ("spell_effect", "SpellLevel"),
         ("mob_data", "LootEntry"),
+        ("trade_state", "TradePhase"),
+        ("trade_state", "TradeState"),
     ];
 
     /// Events the projection DELIBERATELY does not route — each entry needs a
@@ -190,13 +192,15 @@ mod tests {
 
     #[test]
     fn game_package_keeps_publish_headroom() {
-        // The testnet dry run rejected 96,111 raw bytes as a 103,109-byte package object.
-        // Keeping raw bytecode below 95 KB leaves room for Sui's linkage/type-origin metadata.
-        // 96_000 (2026-08-23): the living-content split moved the template rows to the seed
-        // package and the freed bytes paid for DEOBFUSCATION (89 compressed fight/item/
-        // character names restored, +863B) — core sits at ~91.1KB with ~4.9KB slack here
-        // and >11KB to Sui's 102,400-byte object limit.
-        const MAX_GAME_BYTECODE_BYTES: u64 = 96_000;
+        // The 2026-08-30 transaction rejected 97,048 raw bytes as a 102,559-byte package
+        // object. The shared 96,000-byte ceiling preserves roughly 1 KB below Sui's 102,400-byte
+        // object limit after the observed linkage/type-origin metadata.
+        let max_game_bytecode_bytes = serde_json::from_str::<serde_json::Value>(include_str!(
+            "../../move/package-size-budget.json"
+        ))
+        .expect("parsing the shared game package-size budget")["max_game_bytecode_bytes"]
+            .as_u64()
+            .expect("game package-size budget is a u64");
 
         let root = repo_root();
         let install_dir =
@@ -239,8 +243,8 @@ mod tests {
         std::fs::remove_dir_all(&install_dir).expect("removing package-size build");
 
         assert!(
-            bytes <= MAX_GAME_BYTECODE_BYTES,
-            "game bytecode is {bytes} bytes; the {MAX_GAME_BYTECODE_BYTES}-byte budget leaves \
+            bytes <= max_game_bytecode_bytes,
+            "game bytecode is {bytes} bytes; the {max_game_bytecode_bytes}-byte budget leaves \
              room for Sui package metadata under the 102,400-byte object limit"
         );
     }
@@ -454,6 +458,7 @@ mod tests {
     fn every_emitted_move_event_is_routed_or_deferred() {
         let mut emitted: Vec<(String, String)> = vec![];
         for sources in [
+            repo_root().join("packages/move-math/sources"),
             repo_root().join("packages/move/sources"),
             repo_root().join("packages/seed/sources"),
         ] {
@@ -467,7 +472,8 @@ mod tests {
                     .lines()
                     .find_map(|line| {
                         line.trim()
-                            .strip_prefix("module aresrpg::")
+                            .strip_prefix("module aresrpg_math::")
+                            .or_else(|| line.trim().strip_prefix("module aresrpg::"))
                             .or_else(|| line.trim().strip_prefix("module aresrpg_seed::"))
                             .map(|rest| rest.trim_end_matches(';').to_string())
                     })
@@ -625,7 +631,7 @@ mod tests {
     /// here before it ships.
     #[test]
     fn only_the_own_cap_withdraw_doors_return_a_purchase_cap() {
-        const ALLOWED: &[&str] = &["trade_take_i", "trade_take_c"];
+        const ALLOWED: &[&str] = &["trade_take_i", "trade_recover_i"];
         let sources = repo_root().join("packages/move/sources");
         let mut leaks = vec![];
         for entry in std::fs::read_dir(&sources).expect("listing move sources") {

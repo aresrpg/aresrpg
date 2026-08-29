@@ -26,7 +26,7 @@ mock.module('../../src/content/catalog.ts', () => ({
       },
     ],
   },
-  titleize: (value: string) => value.replaceAll('_', ' '),
+  titleize: (value: string) => value.replaceAll('_', ' ').replace(/\b\w/g, (letter) => letter.toUpperCase()),
 }))
 
 const { PopulationEditor } = await import('../../src/editor/PopulationEditor.tsx')

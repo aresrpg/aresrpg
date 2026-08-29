@@ -5,6 +5,8 @@
   --fh-ink: #e8e4dc;
   --fh-muted: #6b7280;
   --fh-edge: var(--color-border);
+  --fh-chat-width: min(38%, 440px);
+  --fh-lane-gap: 12px;
   position: absolute;
   inset: 0;
   z-index: 4;
@@ -207,21 +209,6 @@
   scrollbar-width: thin;
 }
 
-/* The one game Chat, placed by the fight hud (palette + line anatomy live in chat.css) */
-.fight-hud .chat {
-  position: absolute;
-  bottom: 12px;
-  left: 12px;
-  width: min(380px, 30vw);
-  height: 220px;
-  overflow: hidden;
-  border: 1px solid var(--fh-edge);
-  border-top-color: rgba(79, 214, 160, 0.42);
-  background: linear-gradient(165deg, rgba(18, 18, 26, 0.95), rgba(7, 7, 11, 0.92));
-  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.58);
-  pointer-events: auto;
-}
-
 .fight-hud__turn {
   position: relative;
   display: flex;
@@ -357,6 +344,17 @@
   display: flex;
   transform: translateX(-50%);
   align-items: flex-end;
+}
+
+.fight-hud > .gw-worldchat {
+  width: var(--fh-chat-width);
+}
+
+.fight-hud:not(.fight-hud--overworld) .fight-hud__bottom {
+  right: 10px;
+  left: calc(10px + var(--fh-chat-width) + var(--fh-lane-gap));
+  justify-content: center;
+  transform: none;
 }
 
 .fight-hud__controls {
@@ -824,6 +822,22 @@
   }
   .fight-hud__bottom {
     transform: translateX(-50%) scale(0.8);
+    transform-origin: bottom center;
+  }
+  .fight-hud:not(.fight-hud--overworld) {
+    --fh-chat-width: clamp(220px, 30%, 280px);
+  }
+  .fight-hud:not(.fight-hud--overworld) .fight-hud__bottom {
+    transform: scale(0.62);
+  }
+}
+
+@media (min-width: 901px) and (max-width: 1200px) {
+  .fight-hud:not(.fight-hud--overworld) {
+    --fh-chat-width: clamp(260px, 30%, 340px);
+  }
+  .fight-hud:not(.fight-hud--overworld) .fight-hud__bottom {
+    transform: scale(0.78);
     transform-origin: bottom center;
   }
 }

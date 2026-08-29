@@ -10,10 +10,14 @@ import { character_render_source, load_character_appearance } from '../game/char
 import {
   browser_position_storage,
   chain_anchor_changed,
-  create_position_writer,
+  create_owned_position_cache,
   resolve_world_boot_position,
 } from '../game/core/position_store.ts'
-import { pose_matches_character, read_pose, subscribe_pose } from '../game/core/pose_feed.ts'
+import { read_pose, subscribe_pose } from '../game/core/pose_feed.ts'
+import {
+  read_owned_character_positions,
+  subscribe_owned_character_positions,
+} from '../game/core/owned_character_feed.ts'
 import { publish_scene, submit_scene_entities, subscribe_scene } from '../game/core/scene_feed.ts'
 import { create_presence_renderer } from '../game/presence_entities.ts'
 import { create_resource_renderer } from '../game/resource_nodes.ts'
@@ -27,12 +31,16 @@ import { engage_sword_markers, live_spawns, mob_group_id, resource_pack_id } fro
 import {
   selected_anchor,
   selected_character_in_dungeon,
+  selected_checkpoint_position,
+  selected_live_position,
   selected_position,
   selected_world,
   sync_dungeon_scene,
+  world_presence_rows,
 } from './engine_selection.ts'
 import { sword_fights } from './world_engage.ts'
-import { is_world_page } from './navigation.ts'
+import { is_world_page, world_scene_active } from './navigation.ts'
+import { run_to_target } from './run_to.ts'
 import { selected_world_action_lock } from './world_gather.ts'
 
 export type EngineState = EngineStatus
@@ -67,12 +75,15 @@ const observe = ({ events, dispatch, get_state, signal }: Parameters<NonNullable
   const storage = browser_position_storage()
 
   const resolve_selected_position = async (state: AppState): Promise<Readonly<{ x: number; z: number }> | null> => {
-    const checkpoint = selected_position(state)
+    const live = state.session.link_status === 'ready' ? selected_live_position(state) : null
+    const checkpoint = live ?? selected_checkpoint_position(state)
     if (!checkpoint) return null
+    if (state.session.link_status !== 'ready') return checkpoint
     const identity = selected_anchor(state)
     if (!identity) return checkpoint
     try {
       return await resolve_world_boot_position({
+        live,
         checkpoint,
         chain_anchor: identity.anchor,
         load: () => storage.load(identity.character_id, identity.world),
@@ -85,7 +96,7 @@ const observe = ({ events, dispatch, get_state, signal }: Parameters<NonNullable
 
   const sync_activity = (state: AppState): void => {
     if (!world) return
-    world.set_active(is_world_page(state.navigation.page))
+    world.set_active(world_scene_active(state.navigation.page, state.fight.mounted))
     world.set_interactive(
       is_world_page(state.navigation.page) && (!!state.session.wallet || state.navigation.guest_spectating)
     )
@@ -98,20 +109,15 @@ const observe = ({ events, dispatch, get_state, signal }: Parameters<NonNullable
     world.set_flattened(state.settings.flat_mode)
   }
 
-  const sync_target = (state: AppState): void => {
+  const sync_target = (state: AppState, checkpoint_only = false): void => {
     if (!world) return
-    const position = selected_position(state)
+    const position = checkpoint_only ? selected_checkpoint_position(state) : selected_position(state)
     if (!position) {
       world.release()
       sync_activity(get_state())
       return
     }
-    // The saved local pose (IndexedDB) wins over the checkpoint only while it explains
-    // itself against the current chain anchor; the arbitration is async, so the point is
-    // deferred and guarded against a selection change in flight.
     const identity = selected_anchor(state)
-    // Stop publishing the previous controlled pose while the new character's persisted
-    // position resolves. Selection may change synchronously; IndexedDB cannot.
     world.release()
     target_generation += 1
     const own_generation = target_generation
@@ -120,7 +126,7 @@ const observe = ({ events, dispatch, get_state, signal }: Parameters<NonNullable
       world.point_at(resumed ?? position)
       sync_activity(get_state())
     }
-    if (!identity) {
+    if (!identity || checkpoint_only) {
       point(null)
       return
     }
@@ -183,12 +189,14 @@ const observe = ({ events, dispatch, get_state, signal }: Parameters<NonNullable
 
   const sync_presence = (state: AppState): void => {
     const in_dungeon = selected_character_in_dungeon(state)
-    presence?.update(in_dungeon ? Object.freeze({}) : state.world.players, state.session.selected_character_id)
+    const ground_height = (x: number, z: number): number =>
+      world?.ground_height(chain_to_client_coordinate(x), chain_to_client_coordinate(z)) ?? 0
+    presence?.update(
+      in_dungeon ? Object.freeze({}) : world_presence_rows(state, ground_height),
+      state.session.selected_character_id
+    )
   }
-
-  /** The tracked zones' LIVE mob groups, in client space — what the seed drew minus what the
-   *  chain says is already taken. A group the player engaged stops being rendered the moment
-   *  its bit lands, without waiting for anything to be re-sent. */
+  /** The tracked zones' live groups, minus what chain truth says is already taken. */
   const sync_spawns = (state: AppState): void => {
     if (!spawns) return
     const world_name = selected_world(state)
@@ -329,6 +337,7 @@ const observe = ({ events, dispatch, get_state, signal }: Parameters<NonNullable
     sync_dungeon_scene(world, state)
     sync_pet(state)
     sync_fights(state)
+    world?.set_run_target(run_to_target(state))
     // The published demo's target is its known origin. The player app must likewise resolve
     // its real first target before workers receive a batch, rather than mesh origin then cancel.
     if (initial_position) {
@@ -364,8 +373,6 @@ const observe = ({ events, dispatch, get_state, signal }: Parameters<NonNullable
     if (import.meta.env.DEV) visual_global.__ares_visual__ = undefined
   }
 
-  // ── SELF NAMETAG — the crown tag shows only while the cursor hovers our own body: the same
-  // screen-space rule as the player pick, projected from our live pose (owner 2026-08-21) ──
   const self_tag_element = typeof document === 'undefined' ? null : document.createElement('div')
   let self_tag_on = false
   const set_self_tag = (focused: boolean): void => {
@@ -376,8 +383,6 @@ const observe = ({ events, dispatch, get_state, signal }: Parameters<NonNullable
     world?.set_entity_label(character_id, focused ? self_tag_element : null)
     publish_self_tag(focused ? self_tag_element : null)
   }
-  /** THE ONE HOVER VERDICT — right-click and the self nametag both read this; no surface
-   *  runs its own detection. Null when the world is not live. */
   const hover_under_cursor = (event: MouseEvent): WorldHover | null => {
     const view = world?.camera_frame()
     const own = read_pose()
@@ -402,7 +407,6 @@ const observe = ({ events, dispatch, get_state, signal }: Parameters<NonNullable
   // right-click on a nearby BODY opens the player context menu; anywhere else keeps the
   // camera's right-drag untouched
   const on_context_menu = (event: MouseEvent): void => {
-    // in-game the browser menu never belongs on the canvas — a missed pick must not leak it
     event.preventDefault()
     const hover = hover_under_cursor(event)
     if (!hover?.target) return
@@ -457,10 +461,11 @@ const observe = ({ events, dispatch, get_state, signal }: Parameters<NonNullable
           quality: get_state().settings.quality,
           initial_focus: initial_position ? [initial_position.x, initial_position.z] : [0, 0],
           on_travel: () => dispatch({ type: 'dialog/open', dialog: 'travel' }),
+          on_run_stopped: (reason) =>
+            dispatch({ type: 'run_to/stopped', reason, restore_flat: get_state().run_to.restore_flat }),
         })
         world = created
-        // the running scene becomes reachable to the surfaces that draw into it — the fight
-        // board mounts INSIDE this engine rather than standing a second one in front of it
+        // Publish the running scene; the fight board mounts inside this engine, never a second one.
         publish_scene(created)
         presence = create_presence_renderer({
           // presence no longer writes the entity list directly: it holds it only while no
@@ -508,35 +513,25 @@ const observe = ({ events, dispatch, get_state, signal }: Parameters<NonNullable
         })
       })
   }
-
-  // ── the resume cache's write half: debounced saves from the pose lane, fight-gated ──
-  const writer = create_position_writer({
-    save: (identity, row) => {
-      void storage
-        .save(identity.character_id, identity.world, row)
-        .catch((error: unknown) => console.warn('The position cache write failed.', error))
-    },
-  })
-  // the entity list changed hands (a board mounted, or gave it back) — presence rebuilds only on
-  // a store delta, so without this the world's crowd stays empty until somebody moves
+  const position_cache = create_owned_position_cache({ storage, on_error: console.warn })
+  const persist_owned_positions = (state: AppState): void =>
+    position_cache.note_all(state.session.characters, Object.values(read_owned_character_positions()))
   const unsubscribe_scene = subscribe_scene(() => {
     sync_presence(get_state())
     sync_spawns(get_state())
     sync_resources(get_state())
     sync_dungeon_scene(world, get_state())
   })
+  const unsubscribe_owned_positions = subscribe_owned_character_positions(() => {
+    const state = get_state()
+    persist_owned_positions(state)
+    sync_presence(state)
+  })
   const unsubscribe_pose = subscribe_pose(() => {
-    const pose = read_pose()
-    if (!pose) return
     const state = get_state()
     spawns?.refresh()
     sync_resources(state)
-    if (state.fight.mounted || selected_character_in_dungeon(state)) return
-    const identity = selected_anchor(state)
-    if (!identity || !pose_matches_character(pose, identity.character_id)) return
-    writer.note(pose, identity.anchor, identity)
   })
-
   events.on('engine/canvas_attached', ({ canvas: next_canvas }) => mount(next_canvas))
   events.on('engine/canvas_detached', ({ canvas: previous_canvas }) => {
     if (canvas !== previous_canvas) return
@@ -546,8 +541,20 @@ const observe = ({ events, dispatch, get_state, signal }: Parameters<NonNullable
     canvas = null
     dispose_world()
   })
+  const sync_position_cache = (state: AppState, previous: AppState): void => {
+    if (state.session.link_status === 'ready' && previous.session.link_status !== 'ready')
+      return void position_cache.restore(state.session.characters)
+    if (state.session.link_status === 'ready' || previous.session.link_status !== 'ready') return
+    position_cache.invalidate(state.session.characters)
+    sync_target(state, true)
+  }
+  const sync_run_to = (state: AppState, previous: AppState): void => {
+    if (state.run_to.run !== previous.run_to.run) world?.set_run_target(run_to_target(state))
+  }
   events.on('STATE_UPDATED', (state, previous) => {
     sync_activity(state)
+    sync_position_cache(state, previous)
+    sync_run_to(state, previous)
     if (state.settings !== previous.settings) sync_settings(state)
     const selection_changed = state.session.selected_character_id !== previous.session.selected_character_id
     const target_became_available = selected_position(previous) === null && selected_position(state) !== null
@@ -568,8 +575,6 @@ const observe = ({ events, dispatch, get_state, signal }: Parameters<NonNullable
       sync_fights(state)
     }
     if (selection_changed || state.world.players !== previous.world.players) sync_presence(state)
-    // the population and the consumption are two facts on the wire — either moving changes what
-    // is alive, so the renderer folds on both
     if (
       selection_changed ||
       state.world.spawns !== previous.world.spawns ||
@@ -584,8 +589,9 @@ const observe = ({ events, dispatch, get_state, signal }: Parameters<NonNullable
       sync_fights(state)
   })
   signal.addEventListener('abort', () => {
-    writer.flush()
+    position_cache.flush()
     unsubscribe_pose()
+    unsubscribe_owned_positions()
     unsubscribe_scene()
     dispose_world()
   })

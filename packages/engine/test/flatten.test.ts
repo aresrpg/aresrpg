@@ -5,12 +5,19 @@ import { expect, test } from 'bun:test'
 
 import {
   create_flat_projection,
+  effective_flattened,
   flat_terrain_amount,
   flat_water_visibility,
   project_height,
   set_flat_projection,
   step_flat_projection,
 } from '../src/flatten.ts'
+
+test('the terrain-less grid backend always forces the gameplay projection flat', () => {
+  expect(effective_flattened(false, 'grid')).toBeTrue()
+  expect(effective_flattened(false, 'webgpu')).toBeFalse()
+  expect(effective_flattened(true, 'webgpu')).toBeTrue()
+})
 
 test('the flat projection reverses without resetting its progress', () => {
   let projection = set_flat_projection(create_flat_projection(), true)

@@ -59,3 +59,7 @@ export const remember_selected_character = (character_id: string): void => {
     console.warn('Character-tab storage is unavailable; the selection will not survive a reload.', error)
   }
 }
+
+export const remember_selected_character_change = (current: string | null, previous: string | null): void => {
+  if (current && current !== previous) remember_selected_character(current)
+}

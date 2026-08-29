@@ -15,6 +15,7 @@ import {
   craft_job_of,
   craft_max_ingredients,
   craft_required_level,
+  craft_batch_limit,
   craft_xp_at_level,
   craft_xp_from_ingredient_count,
   dofus_weapon_damage_envelope,
@@ -181,6 +182,7 @@ describe('immutable vocabularies', () => {
     expect(item_is_stackable('pet_food')).toBe(false)
     expect(item_categories).toContain('rune')
     expect(item_is_stackable('rune')).toBe(true)
+    expect(item_is_stackable('key')).toBe(true)
   })
 
   test('craft professions derive from strict item categories and preserve authored fallback categories', () => {
@@ -204,6 +206,16 @@ describe('immutable vocabularies', () => {
       item_categories.map((category) => [category, move_jobs.get(category) ?? null] as const)
     )
   })
+})
+
+test('craft batch caps follow output object cost', () => {
+  expect(craft_batch_limit('resource')).toBe(1_000)
+  expect(craft_batch_limit('hat')).toBe(1)
+  const math = readFileSync(resolve(import.meta.dir, '../../move-math/sources/craft_batch.move'), 'utf8')
+  const game = readFileSync(resolve(import.meta.dir, '../../move/sources/crafting.move'), 'utf8')
+  expect(math).toContain('MAX_STACKABLE_ATTEMPTS: u16 = 1_000')
+  expect(math).toContain('MAX_UNIQUE_ATTEMPTS: u16 = 1')
+  expect(game).toContain('craft_batch::shape(')
 })
 
 describe('Dofus Retro item power', () => {
@@ -302,24 +314,26 @@ describe('Dofus Retro mob power', () => {
       p75: 765,
       p90: 800,
     })
-    expect(mob_power_cohort_of_role('protector')).toBe('protector')
+    expect(mob_power_cohort_of_role('protector')).toBe('regular')
     expect(mob_power_cohort_of_role('boss')).toBe('boss')
   })
 
-  test('falls back to same-level regular grades before borrowing a distant role cohort', () => {
+  test('uses ordinary same-level monsters for protector references', () => {
     expect(dofus_mob_power_envelope(3, 'protector')).toMatchObject({
-      requested_cohort: 'protector',
+      requested_cohort: 'regular',
       cohort: 'regular',
       level_min: 3,
       level_max: 3,
-      damage: { average: 9, p25: 4, median: 6, p75: 12, p90: 22 },
+      damage: { average: 9 },
     })
     expect(dofus_mob_power_envelope(10, 'protector')).toMatchObject({
-      requested_cohort: 'protector',
-      cohort: 'protector',
+      requested_cohort: 'regular',
+      cohort: 'regular',
       level_min: 10,
       level_max: 10,
-      damage: { average: 90 },
+      hp: { average: 73 },
+      xp: { average: 1_365 },
+      damage: { average: 22 },
     })
   })
 })

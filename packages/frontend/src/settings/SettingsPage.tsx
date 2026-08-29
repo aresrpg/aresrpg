@@ -2,7 +2,7 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
 import { get_quality_profile } from '@aresrpg/engine'
-import { Mountain, Music2, Settings as SettingsIcon } from 'lucide-react'
+import { Hammer, Mountain, Music2, Settings as SettingsIcon, Swords } from 'lucide-react'
 
 import {
   effective_render_distance,
@@ -11,7 +11,7 @@ import {
   type GameSettings,
 } from '../game/core/settings.ts'
 import { copy_text, type AppCopy } from '../i18n/copy.ts'
-import { dispatch_app } from '../store.ts'
+import { dispatch_app, useAppStore } from '../store.ts'
 
 const Toggle = ({
   checked,
@@ -34,10 +34,22 @@ const Toggle = ({
 
 export default function SettingsPage({ copy, settings }: Readonly<{ copy: AppCopy; settings: GameSettings }>) {
   const t = copy_text(copy.settings_page)
+  const characters = useAppStore(({ session }) => session.characters)
+  const selected_character_id = useAppStore(({ session }) => session.selected_character_id)
+  const craft_character_id = characters.find(({ id }) => id === settings.always_craft_from_character_id)?.id ?? null
+  const default_craft_character_id =
+    characters.find(({ id }) => id === selected_character_id)?.id ?? characters[0]?.id ?? null
   const change_music = (music_enabled: boolean): void =>
     dispatch_app({ type: 'settings/changed', settings: Object.freeze({ ...settings, music_enabled }) })
+  const change_auto_switch = (auto_switch_fighter: boolean): void =>
+    dispatch_app({ type: 'settings/changed', settings: Object.freeze({ ...settings, auto_switch_fighter }) })
   const change_render_distance = (render_distance: number): void =>
     dispatch_app({ type: 'settings/changed', settings: Object.freeze({ ...settings, render_distance }) })
+  const change_craft_character = (always_craft_from_character_id: string | null): void =>
+    dispatch_app({
+      type: 'settings/changed',
+      settings: Object.freeze({ ...settings, always_craft_from_character_id }),
+    })
   const render_distance = effective_render_distance(
     get_quality_profile(settings.quality).chunks.far_radius,
     settings.render_distance
@@ -64,6 +76,52 @@ export default function SettingsPage({ copy, settings }: Readonly<{ copy: AppCop
           </div>
         </div>
         <Toggle change={change_music} checked={settings.music_enabled} label={t('music_label')} />
+      </div>
+
+      <div className="mt-4 flex max-w-lg items-center justify-between gap-5 border border-border bg-surface/80 p-4 lg:p-5">
+        <div className="flex min-w-0 items-center gap-3">
+          <Swords className="shrink-0 text-gold opacity-70" size={15} />
+          <div className="min-w-0">
+            <div className="text-[11px] tracking-wide text-text">{t('auto_switch_fighter_label')}</div>
+            <div className="mt-1 text-[9px] leading-5 tracking-wide text-muted">{t('auto_switch_fighter_hint')}</div>
+          </div>
+        </div>
+        <Toggle
+          change={change_auto_switch}
+          checked={settings.auto_switch_fighter !== false}
+          label={t('auto_switch_fighter_label')}
+        />
+      </div>
+
+      <div className="mt-4 flex max-w-lg items-center justify-between gap-5 border border-border bg-surface/80 p-4 lg:p-5">
+        <div className="flex min-w-0 items-center gap-3">
+          <Hammer className="shrink-0 text-gold opacity-70" size={15} />
+          <div className="min-w-0">
+            <div className="text-[11px] tracking-wide text-text">{t('always_craft_from_label')}</div>
+            <div className="mt-1 text-[9px] leading-5 tracking-wide text-muted">{t('always_craft_from_hint')}</div>
+          </div>
+        </div>
+        <div className="flex shrink-0 items-center gap-3">
+          <select
+            aria-label={t('always_craft_from_picker')}
+            className="min-w-40 border border-border bg-bg px-2 py-1.5 text-[9px] text-text disabled:opacity-40"
+            disabled={craft_character_id === null}
+            onChange={(event) => change_craft_character(event.target.value || null)}
+            value={craft_character_id ?? ''}
+          >
+            <option value="">{t('always_craft_from_none')}</option>
+            {characters.map((character) => (
+              <option key={character.id} value={character.id}>
+                {character.name} · LV.{character.level}
+              </option>
+            ))}
+          </select>
+          <Toggle
+            change={(checked) => change_craft_character(checked ? default_craft_character_id : null)}
+            checked={craft_character_id !== null}
+            label={t('always_craft_from_label')}
+          />
+        </div>
       </div>
 
       <div className="mt-4 flex max-w-lg items-center justify-between gap-5 border border-border bg-surface/80 p-4 lg:p-5">

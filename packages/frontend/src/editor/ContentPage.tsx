@@ -39,7 +39,9 @@ import {
   reordered_spell_levels,
   row_address,
   spell_class_rows,
+  spell_row_has_effects,
 } from './content_list.ts'
+import { useContentEditorRoute } from './content_route.ts'
 import type { ItemRecipeBinding } from './ItemRecipeEditor.tsx'
 import {
   entity_asset_reference,
@@ -206,18 +208,40 @@ const content_gate = (status: SeedEditorStatus): Readonly<{ class_name: string; 
     })
   return null
 }
+const result_row_class = (selected: boolean, effectless: boolean): string => {
+  if (selected)
+    return effectless
+      ? 'border-[#4a9eff] bg-amber-400/10 text-amber-100 ring-1 ring-inset ring-amber-400/30'
+      : 'border-[#4a9eff] bg-[#4a9eff]/6 text-[#b9d8ff]'
+  return effectless
+    ? 'border-amber-400/70 bg-amber-400/[0.07] text-amber-200 hover:bg-amber-400/[0.12]'
+    : 'border-transparent text-[#969ba7] hover:bg-white/[0.045] hover:text-[#ebe7df]'
+}
+const is_effectless_spell_row = (domain: string, row: SeedEntityRow): boolean =>
+  domain === 'spells' && !spell_row_has_effects(row)
+const data_presence = (value: boolean): true | undefined => (value ? true : undefined)
+const EffectlessSpellBadge = ({ visible }: Readonly<{ visible: boolean }>) =>
+  visible ? (
+    <span className="shrink-0 border border-amber-400/30 bg-amber-400/10 px-1.5 py-0.5 text-[6px] font-semibold tracking-[0.1em] text-amber-300 uppercase">
+      No effects
+    </span>
+  ) : null
 export const ContentPage = ({ text }: Readonly<{ text: Readonly<Record<string, string>> }>) => {
   const editor = useAppStore((state) => state.editor)
   const [item_filter, set_item_filter] = useState<string | null>(null)
   const [mob_filter, set_mob_filter] = useState<string | null>(null)
   const [hide_protectors, set_hide_protectors] = useState(false)
-  const [spell_classe, set_spell_classe] = useState<string | null>(null)
   const [drag_from, set_drag_from] = useState<number | null>(null)
   const [drag_over, set_drag_over] = useState<number | null>(null)
   const file = editor.files[editor.domain]
   const rows = useMemo(
     () => order_content_rows(editor.domain, file ? entity_rows(editor.domain, file.value) : []),
     [editor.domain, file]
+  )
+  const { spell_classe, select_domain, select_row, select_spell_classe } = useContentEditorRoute(
+    editor.domain,
+    editor.entity_id,
+    rows
   )
   const categories = useMemo(() => (editor.domain === 'items' ? item_category_rows(rows) : []), [editor.domain, rows])
   const recipe_rows = useMemo(
@@ -339,7 +363,7 @@ export const ContentPage = ({ text }: Readonly<{ text: Readonly<Record<string, s
                   : 'border-transparent text-[#858b98] hover:bg-white/[0.045] hover:text-[#e6e2da]'
               }`}
               key={domain.id}
-              onClick={() => dispatch_app({ type: 'editor/domain_selected', domain: domain.id })}
+              onClick={() => select_domain(domain.id)}
               type="button"
             >
               <span className="flex items-center gap-2">
@@ -398,10 +422,7 @@ export const ContentPage = ({ text }: Readonly<{ text: Readonly<Record<string, s
       {editor.domain === 'spells' && (
         <FacetRail
           all_label="All spells"
-          on_select={(value) => {
-            set_spell_classe(value)
-            dispatch_app({ type: 'editor/entity_selected', entity_id: null })
-          }}
+          on_select={select_spell_classe}
           options={classes.map(({ classe, count }) => ({ count, label: classe.toUpperCase(), value: classe }))}
           selected={spell_classe}
           total={rows.length}
@@ -450,53 +471,55 @@ export const ContentPage = ({ text }: Readonly<{ text: Readonly<Record<string, s
             content_result_columns(editor.domain) === 2 ? 'grid grid-cols-2 content-start' : ''
           }`}
         >
-          {filtered.map((row, index) => (
-            <button
-              className={`flex w-full items-center gap-2 border-l-2 px-2 py-1.5 text-left text-[9px] ${
-                selected && row_address(selected) === row_address(row)
-                  ? 'border-[#4a9eff] bg-[#4a9eff]/6 text-[#b9d8ff]'
-                  : 'border-transparent text-[#969ba7] hover:bg-white/[0.045] hover:text-[#ebe7df]'
-              } ${ladder_reorder ? 'cursor-grab active:cursor-grabbing' : ''} ${
-                drag_from === index ? 'opacity-40' : ''
-              } ${
-                drag_from !== null && drag_from !== index && drag_over === index
-                  ? drag_from < index
-                    ? 'shadow-[inset_0_-2px_0_0_#c8963c]'
-                    : 'shadow-[inset_0_2px_0_0_#c8963c]'
-                  : ''
-              }`}
-              draggable={ladder_reorder}
-              key={row_address(row)}
-              onClick={() => dispatch_app({ type: 'editor/entity_selected', entity_id: row_address(row) })}
-              onDragEnd={() => {
-                set_drag_from(null)
-                set_drag_over(null)
-              }}
-              onDragOver={(event) => {
-                if (drag_from === null) return
-                event.preventDefault()
-                set_drag_over(index)
-              }}
-              onDragStart={(event) => {
-                event.dataTransfer.setData('text/plain', String(index))
-                set_drag_from(index)
-              }}
-              onDrop={(event) => {
-                event.preventDefault()
-                drop_spell(index)
-              }}
-              title={row.label}
-              type="button"
-            >
-              <EntityIcon reference={entity_asset_reference(editor.domain, row.value)} />
-              <span className="min-w-0 flex-1 truncate">{row.label}</span>
-              {content_row_level_label(editor.domain, row) !== null && (
-                <span className="shrink-0 text-[7px] text-[#626670] uppercase">
-                  {content_row_level_label(editor.domain, row)}
-                </span>
-              )}
-            </button>
-          ))}
+          {filtered.map((row, index) => {
+            const active = selected !== undefined && row_address(selected) === row_address(row)
+            const effectless = is_effectless_spell_row(editor.domain, row)
+            return (
+              <button
+                className={`flex w-full items-center gap-2 border-l-2 px-2 py-1.5 text-left text-[9px] ${result_row_class(active, effectless)} ${ladder_reorder ? 'cursor-grab active:cursor-grabbing' : ''} ${
+                  drag_from === index ? 'opacity-40' : ''
+                } ${
+                  drag_from !== null && drag_from !== index && drag_over === index
+                    ? drag_from < index
+                      ? 'shadow-[inset_0_-2px_0_0_#c8963c]'
+                      : 'shadow-[inset_0_2px_0_0_#c8963c]'
+                    : ''
+                }`}
+                data-effectless-spell={data_presence(effectless)}
+                draggable={ladder_reorder}
+                key={row_address(row)}
+                onClick={() => select_row(row)}
+                onDragEnd={() => {
+                  set_drag_from(null)
+                  set_drag_over(null)
+                }}
+                onDragOver={(event) => {
+                  if (drag_from === null) return
+                  event.preventDefault()
+                  set_drag_over(index)
+                }}
+                onDragStart={(event) => {
+                  event.dataTransfer.setData('text/plain', String(index))
+                  set_drag_from(index)
+                }}
+                onDrop={(event) => {
+                  event.preventDefault()
+                  drop_spell(index)
+                }}
+                title={row.label}
+                type="button"
+              >
+                <EntityIcon reference={entity_asset_reference(editor.domain, row.value)} />
+                <span className="min-w-0 flex-1 truncate">{row.label}</span>
+                <EffectlessSpellBadge visible={effectless} />
+                {content_row_level_label(editor.domain, row) !== null && (
+                  <span className="shrink-0 text-[7px] text-[#626670] uppercase">
+                    {content_row_level_label(editor.domain, row)}
+                  </span>
+                )}
+              </button>
+            )
+          })}
         </div>
       </aside>
 

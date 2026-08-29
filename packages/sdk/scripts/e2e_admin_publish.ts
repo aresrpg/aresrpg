@@ -284,7 +284,7 @@ const main = async (): Promise<void> => {
     if (next.state !== 'ready')
       throw new Error(`Seed batch ${next.id} is blocked: ${next.missing_dependencies.join(', ')}`)
     console.log(`SEED ${next.id} ${next.targets}`)
-    const result = await delegated.execute(next.id)
+    const result = await delegated.execute(next.id, Object.freeze({ ...state.seed_ledger }))
     state = await save_state(append_digest(state, { digest: result.digest }))
     const { snapshot: updated_snapshot } = result
     snapshot = updated_snapshot

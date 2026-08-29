@@ -2,10 +2,8 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 /// Character-policy rule: a character changes owners NAKED (owner 2026-08-12) and at level 30
 /// or above (owner 2026-08-26) — worn gear is the seller's property and must never ride along
-/// a sale or trade, and a barely-played character is not a market good. Enforced at TRANSFER
-/// RESOLUTION (public market + trade claims, one law), with a fail-fast twin at the trade
-/// deposit door: without it a disqualified character would pass the trade lock and then abort
-/// every claim — locked forever, the exact ghost-lock the escrow exists to kill.
+/// a sale, and a barely-played character is not a market good. Enforced at marketplace TRANSFER
+/// RESOLUTION, the only path where a character changes owners.
 /// Buyer flow (same PTB as the purchase): lock into your kiosk → borrow → `prove` → confirm.
 module aresrpg::naked_rule;
 
@@ -26,8 +24,8 @@ public fun add(policy: &mut TransferPolicy<Character>, cap: &TransferPolicyCap<C
   transfer_policy::add_rule(NakedRule {}, policy, cap, NakedConfig {});
 }
 
-/// The sale law's one home — the trade deposit door fail-fasts through it too.
-public(package) fun assert_sellable(chr: &Character) {
+/// The marketplace sale law's one home.
+fun assert_sellable(chr: &Character) {
   assert!(!equipment::has_any_equipped(chr), ENotNaked);
   assert!(chr.level() >= MIN_SALE_LEVEL, ELevelTooLow);
 }
@@ -39,3 +37,6 @@ public fun prove(purchased: &Character, request: &mut TransferRequest<Character>
   assert_sellable(purchased);
   transfer_policy::add_receipt(NakedRule {}, request);
 }
+
+#[test_only]
+public(package) fun assert_sellable_for_testing(chr: &Character) { assert_sellable(chr); }

@@ -105,6 +105,24 @@ export const created_object_id = (receipt: Receipt, suffix: string): string | nu
   )
 }
 
+/** Every live object touched by a successful receipt whose concrete type ends in `suffix`.
+ *  Unlike `created_object_id`, this includes existing objects mutated by the transaction. */
+export const changed_object_ids = (receipt: Receipt, suffix: string): readonly string[] => {
+  const transaction = receipt.Transaction
+  const types = transaction?.objectTypes ?? {}
+  const ids =
+    transaction?.effects?.changedObjects
+      ?.filter(
+        ({ objectId, idOperation, outputState }) =>
+          typeof objectId === 'string' &&
+          idOperation !== 'Deleted' &&
+          outputState !== 'DoesNotExist' &&
+          types[objectId]?.endsWith(suffix)
+      )
+      .map(({ objectId }) => normalizeSuiObjectId(objectId!)) ?? []
+  return Object.freeze([...new Set(ids)])
+}
+
 /** A fetched core-client Object (a hydrate row). */
 export type FetchedObject = {
   objectId?: string

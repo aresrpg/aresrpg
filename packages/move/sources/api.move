@@ -2,8 +2,8 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 /// The game's public composition surface (legacy api.move pattern — born the day a door
 /// composed two modules). Single-module doors stay public in their own homes; doors that
-/// CROSS modules live here. Every character lives KIOSK-LOCKED in a personal kiosk — public
-/// doors take the kiosk and borrow through the owner's cap.
+/// CROSS modules live here. Character authority follows custody: ordinary doors borrow from
+/// the personal kiosk, while explicit Fight variants prove the controlled custody seat.
 module aresrpg::api;
 
 use aresrpg_seed::{item_rows::{Self, ItemTemplate}, recipe_rows::Recipe};
@@ -365,9 +365,23 @@ public fun place_fighter(f: &mut Fight, fighter_idx: u64, cell: u64, version: &V
   fight::place(f, fighter_idx, cell, ctx);
 }
 
-public fun ready_fighter(f: &mut Fight, fighter_idx: u64, version: &Version, ctx: &TxContext) {
+/// Ready this seat and atomically start an ordinary/dungeon fight when it was the final
+/// missing player. The decision reads current shared truth, so concurrent ready transactions
+/// cannot both stop on the stale belief that somebody else remains unready.
+entry fun ready_and_start_fight(
+  f: &mut Fight,
+  fighter_idx: u64,
+  r: &Random,
+  version: &Version,
+  clock: &Clock,
+  ctx: &mut TxContext,
+) {
   version.assert_latest();
-  fight::ready(f, fighter_idx, ctx);
+  assert!(!fight::is_wagered(f), EManagedFight);
+  if (fight::ready(f, fighter_idx, ctx)) {
+    let mut gen = r.new_generator(ctx);
+    fight::start(f, &mut gen, clock);
+  };
 }
 
 /// All ready — or anyone once the 60s window closes. Plants the crank entropy. ENTRY:
@@ -500,43 +514,66 @@ entry fun close_fight(f: Fight, version: &Version, ctx: &TxContext) {
 }
 
 // ╔════════════════ [ Party ] ════════════════════════════════════════════════ ]
-// Each door borrows the acting character out of the sender's kiosk (custody = the proof),
-// then hands the reference to party. A wallet may hold several characters, hence several slots.
+// Every door hands a custody-proven character id to Party. Kiosk variants borrow through the
+// owner's cap; Fight variants validate sender + seat + expected character id.
 
-public fun create_party(registry: &mut FriendRegistry, kiosk: &Kiosk, cap: &KioskOwnerCap, character_id: ID, version: &Version, ctx: &mut TxContext) {
-  version.assert_latest();
-  let chr: &Character = kiosk.borrow(cap, character_id);
-  party::create(registry, chr, ctx);
+fun kiosk_actor(kiosk: &Kiosk, cap: &KioskOwnerCap, character_id: ID): ID {
+  character::id(kiosk.borrow<Character>(cap, character_id))
 }
 
-public fun party_invitation(p: &mut Party, kiosk: &Kiosk, cap: &KioskOwnerCap, actor_id: ID, invited_character: ID, present: bool, version: &Version) {
+/// The first invitation creates the shared party and its pending target in one transaction.
+/// Acceptance remains the same custody-proven door used by every later invitation.
+public fun create_party_invitation(
+  registry: &mut FriendRegistry,
+  kiosk: &Kiosk,
+  cap: &KioskOwnerCap,
+  character_id: ID,
+  invited_character: ID,
+  version: &Version,
+  ctx: &mut TxContext,
+) {
   version.assert_latest();
-  let actor: &Character = kiosk.borrow(cap, actor_id);
-  party::i(p, actor, invited_character, present);
+  party::create_inviting(registry, kiosk_actor(kiosk, cap, character_id), invited_character, ctx);
+}
+
+public fun party_invitation(registry: &FriendRegistry, p: &mut Party, kiosk: &Kiosk, cap: &KioskOwnerCap, actor_id: ID, invited_character: ID, present: bool, version: &Version) {
+  version.assert_latest();
+  party::i(registry, p, kiosk_actor(kiosk, cap, actor_id), invited_character, present);
+}
+
+public fun party_invitation_from_fight(
+  registry: &FriendRegistry,
+  p: &mut Party,
+  f: &Fight,
+  fighter_idx: u64,
+  actor_id: ID,
+  invited_character: ID,
+  version: &Version,
+  ctx: &TxContext,
+) {
+  version.assert_latest();
+  fight::assert_controlled_character(f, fighter_idx, actor_id, ctx);
+  party::i(registry, p, actor_id, invited_character, true);
 }
 
 public fun party_accept(registry: &mut FriendRegistry, p: &mut Party, kiosk: &Kiosk, cap: &KioskOwnerCap, character_id: ID, version: &Version) {
   version.assert_latest();
-  let chr: &Character = kiosk.borrow(cap, character_id);
-  party::accept(registry, p, chr);
+  party::accept(registry, p, kiosk_actor(kiosk, cap, character_id));
 }
 
 public fun party_leave(registry: &mut FriendRegistry, p: &mut Party, kiosk: &Kiosk, cap: &KioskOwnerCap, character_id: ID, version: &Version) {
   version.assert_latest();
-  let chr: &Character = kiosk.borrow(cap, character_id);
-  party::leave(registry, p, chr);
+  party::leave(registry, p, kiosk_actor(kiosk, cap, character_id));
 }
 
 public fun party_kick(registry: &mut FriendRegistry, p: &mut Party, kiosk: &Kiosk, cap: &KioskOwnerCap, leader_id: ID, target_character: ID, version: &Version) {
   version.assert_latest();
-  let leader: &Character = kiosk.borrow(cap, leader_id);
-  party::kick(registry, p, leader, target_character);
+  party::kick(registry, p, kiosk_actor(kiosk, cap, leader_id), target_character);
 }
 
 public fun party_disband(registry: &mut FriendRegistry, p: Party, kiosk: &Kiosk, cap: &KioskOwnerCap, leader_id: ID, version: &Version) {
   version.assert_latest();
-  let leader: &Character = kiosk.borrow(cap, leader_id);
-  party::disband(registry, p, leader);
+  party::disband(registry, p, kiosk_actor(kiosk, cap, leader_id));
 }
 
 /// Use one unit of a consumable on your character — heal, reset stat/spell points, or recall
@@ -634,9 +671,9 @@ public fun resolve_ambush(
 
 // ╔════════════════ [ Crafting ] ═════════════════════════════════════════════ ]
 
-/// Craft a live recipe: the exact ingredient tally burns (success OR failure), the roll
-/// runs off your job level, a success mints into your kiosk (merged into `existing` under
-/// the no-dust law). ENTRY: `&Random` law.
+/// Craft a bounded batch: aggregate inputs burn once, each attempt rolls against the job
+/// level reached by its preceding XP, and successes mint with the fewest legal objects.
+/// ENTRY: `&Random` law.
 entry fun craft(
   recipe: &Recipe,
   kiosk: &mut Kiosk,
@@ -645,6 +682,7 @@ entry fun craft(
   input_item_ids: vector<ID>,
   output_template: &ItemTemplate,
   existing: Option<ID>,
+  attempts: u16,
   protected_item: &AresRPG_TransferPolicy<Item>,
   item_policy: &TransferPolicy<Item>,
   r: &Random,
@@ -663,6 +701,7 @@ entry fun craft(
     input_item_ids,
     output_template,
     existing,
+    attempts,
     protected_item,
     item_policy,
     &mut gen,
@@ -1068,6 +1107,24 @@ public fun join_kolizeum(
   kolizeum::join(lobby, f, pledge, side, protected, kiosk, cap, character_id, clock, ctx);
 }
 
+/// Ready this arena seat and atomically take the cut + start from current shared truth when
+/// it was the final missing player. The non-starting ready door is deliberately not public.
+entry fun ready_and_start_kolizeum(
+  lobby: &mut Kolizeum,
+  f: &mut Fight,
+  fighter_idx: u64,
+  r: &Random,
+  version: &Version,
+  clock: &Clock,
+  ctx: &mut TxContext,
+) {
+  version.assert_latest();
+  if (fight::ready(f, fighter_idx, ctx)) {
+    let mut gen = r.new_generator(ctx);
+    kolizeum::start(lobby, f, &mut gen, clock, ctx);
+  };
+}
+
 /// Begin the arena fight — the 10% cut goes to the treasury. ENTRY: `&Random` law.
 entry fun start_kolizeum(lobby: &mut Kolizeum, f: &mut Fight, r: &Random, version: &Version, clock: &Clock, ctx: &mut TxContext) {
   version.assert_latest();
@@ -1183,67 +1240,29 @@ public fun set_friend(list: &mut FriendList, addr: address, present: bool, versi
 // Replaces transferred PurchaseCaps (owner 2026-08-12). Caps are created 0-price by the
 // caller's own kiosk in the SAME PTB (`list_with_purchase_cap` via the kiosk sdk) and parked
 // here; claiming chains the 0-price purchase + royalty floor + relock, also one PTB. The
-// generator models no generics, so the two tradable types each get concrete doors.
+// Trade is item-and-SUI-only; characters change owners through the marketplace.
 
-public fun trade_create(counterparty: address, version: &Version, ctx: &mut TxContext) {
-  version.assert_latest();
-  trade::create(counterparty, ctx);
-}
-
-public fun trade_put_i(t: &mut Trade, cap: PurchaseCap<Item>, version: &Version, ctx: &TxContext) {
-  version.assert_latest();
-  trade::pc(t, cap, ctx);
-}
-
-/// A character trades NAKED and at sale level (naked_rule law): the fail-fast twin of the
-/// policy rule — a disqualified character parked here would pass the lock and then abort
-/// every claim, locked forever. The depositor's own kiosk proves the state (immutable borrow
-/// works while listed).
-public fun trade_put_c(
+public fun trade_put_i(
   t: &mut Trade,
-  cap: PurchaseCap<Character>,
-  kiosk: &Kiosk,
-  kiosk_cap: &KioskOwnerCap,
+  cap: PurchaseCap<Item>,
+  seen_offer_revision: u64,
   version: &Version,
   ctx: &TxContext,
 ) {
   version.assert_latest();
-  let chr: &Character = kiosk.borrow(kiosk_cap, sui::kiosk::purchase_cap_item(&cap));
-  naked_rule::assert_sellable(chr);
-  trade::pc(t, cap, ctx);
+  trade::put_item(t, cap, seen_offer_revision, ctx);
 }
 
 /// Withdraw the caller's own offer. The SDK returns this cap to its source kiosk atomically.
-public fun trade_take_i(t: &mut Trade, item: ID, version: &Version, ctx: &TxContext): PurchaseCap<Item> {
-  version.assert_latest();
-  trade::tc<Item>(t, item, ctx)
-}
-
-public fun trade_take_c(
+public fun trade_take_i(
   t: &mut Trade,
   item: ID,
+  seen_offer_revision: u64,
   version: &Version,
   ctx: &TxContext,
-): PurchaseCap<Character> {
+): PurchaseCap<Item> {
   version.assert_latest();
-  trade::tc<Character>(t, item, ctx)
-}
-
-public fun trade_put_s(t: &mut Trade, coin: Coin<SUI>, version: &Version, ctx: &TxContext) {
-  version.assert_latest();
-  trade::ps(t, coin, ctx);
-}
-
-public fun trade_take_s(t: &mut Trade, amount: u64, version: &Version, ctx: &mut TxContext): Coin<SUI> {
-  version.assert_latest();
-  trade::ts(t, amount, ctx)
-}
-
-/// `seen_version` is the trade version the caller READ — a stale accept aborts (never lock
-/// on a state you did not see).
-public fun trade_accept(t: &mut Trade, seen_version: u64, version: &Version, ctx: &TxContext) {
-  version.assert_latest();
-  trade::a(t, seen_version, ctx);
+  trade::take_item(t, item, seen_offer_revision, ctx)
 }
 
 /// Post-lock: consume the counterparty's cap inside this door. The returned TransferRequest
@@ -1256,27 +1275,10 @@ public fun trade_get_i(
   ctx: &mut TxContext,
 ): (Item, TransferRequest<Item>) {
   version.assert_latest();
-  trade::gc<Item>(t, item, source, ctx)
+  trade::claim_item(t, item, source, ctx)
 }
 
-public fun trade_get_c(
-  t: &mut Trade,
-  item: ID,
-  source: &mut Kiosk,
-  version: &Version,
-  ctx: &mut TxContext,
-): (Character, TransferRequest<Character>) {
+public fun trade_recover_i(t: &mut Trade, item: ID, version: &Version, ctx: &TxContext): PurchaseCap<Item> {
   version.assert_latest();
-  trade::gc<Character>(t, item, source, ctx)
-}
-
-public fun trade_get_s(t: &mut Trade, version: &Version, ctx: &mut TxContext): Coin<SUI> {
-  version.assert_latest();
-  trade::gs(t, ctx)
-}
-
-/// Sweep a drained trade (either party, any phase once empty).
-public fun trade_destroy(t: Trade, version: &Version, ctx: &TxContext) {
-  version.assert_latest();
-  trade::d(t, ctx);
+  trade::recover_item(t, item, ctx)
 }

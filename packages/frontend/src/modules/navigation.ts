@@ -60,28 +60,49 @@ export const is_world_page = (page: Page): boolean => page === 'world'
 /** The pages able to host the mounted fight board (the arena route shares the world's board). */
 export const is_fight_board_page = (page: Page): boolean => is_world_page(page) || page === 'kolizeum'
 
+export const is_jobs_pathname = (pathname: string): boolean => normalize_pathname(pathname) === '/characters/jobs'
+
+/** The persistent world renderer runs for ordinary world play and while the Kolizeum route
+ *  presents its mounted board. Other routes keep the renderer paused even if a fight continues
+ *  in the background. */
+export const world_scene_active = (page: Page, fight_mounted: boolean): boolean =>
+  is_world_page(page) || (is_fight_board_page(page) && fight_mounted)
+
+const open_page = (state: AppState, page: Page): AppState => {
+  if (page === 'admin' && !is_admin_address(state.session.wallet?.address ?? null)) return state
+  return Object.freeze({
+    ...state,
+    navigation: Object.freeze({ ...state.navigation, page, pathname: pathname_for_page(page) }),
+  })
+}
+
+const open_path = (state: AppState, requested_pathname: string): AppState => {
+  const pathname = normalize_pathname(requested_pathname)
+  const page = page_from_pathname(pathname)
+  if (page === 'admin' && !is_admin_address(state.session.wallet?.address ?? null))
+    return Object.freeze({
+      ...state,
+      navigation: Object.freeze({ ...state.navigation, page: 'world', pathname: '/' }),
+    })
+  return Object.freeze({
+    ...state,
+    navigation: Object.freeze({ ...state.navigation, page, pathname }),
+  })
+}
+
+const return_from_kolizeum_fight = (
+  state: AppState,
+  input: Extract<AppInput, { type: 'fight_result/checkpoint' }>
+): AppState => {
+  const selected = input.character_id === state.session.selected_character_id
+  const managed = state.fight.kolizeum_by_fight[input.checkpoint.contract.id] !== undefined
+  return selected && input.checkpoint.contract.ended && managed ? open_page(state, 'world') : state
+}
+
 const reduce = (state: AppState, input: AppInput): AppState => {
-  if (input.type === 'page/open') {
-    if (input.page === 'admin' && !is_admin_address(state.session.wallet?.address ?? null)) return state
-    const pathname = pathname_for_page(input.page)
-    return Object.freeze({
-      ...state,
-      navigation: Object.freeze({ ...state.navigation, page: input.page, pathname }),
-    })
-  }
-  if (input.type === 'path/open' || input.type === 'route/changed') {
-    const pathname = normalize_pathname(input.pathname)
-    const page = page_from_pathname(pathname)
-    if (page === 'admin' && !is_admin_address(state.session.wallet?.address ?? null))
-      return Object.freeze({
-        ...state,
-        navigation: Object.freeze({ ...state.navigation, page: 'world', pathname: '/' }),
-      })
-    return Object.freeze({
-      ...state,
-      navigation: Object.freeze({ ...state.navigation, page, pathname }),
-    })
-  }
+  if (input.type === 'fight_result/checkpoint') return return_from_kolizeum_fight(state, input)
+  if (input.type === 'page/open') return open_page(state, input.page)
+  if (input.type === 'path/open' || input.type === 'route/changed') return open_path(state, input.pathname)
   if (input.type === 'dialog/open')
     return Object.freeze({ ...state, navigation: Object.freeze({ ...state.navigation, dialog: input.dialog }) })
   if (input.type === 'spectate/changed')

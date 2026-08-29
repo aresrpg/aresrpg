@@ -22,7 +22,8 @@ test('the rounded FPS card owns the persistent public/party fight toggle', () =>
       change_quality={() => undefined}
       copy={copy}
       fight_access={1}
-      flattened={false}
+      flatten_locked
+      flattened
       party_available
       quality="medium"
       toggle_fight_access={() => undefined}
@@ -32,4 +33,7 @@ test('the rounded FPS card owns the persistent public/party fight toggle', () =>
   expect(html).toContain('data-fight-access=""')
   expect(html).toContain('Party')
   expect(html).toContain('rounded-[9px]')
+  expect(html).toContain('w-6 text-right')
+  expect(html).toContain('data-flat-locked="true"')
+  expect(html).toContain('disabled=""')
 })

@@ -7,7 +7,7 @@
 ///   • SCRIBE (`scribe`) — apply ONE rune to a kiosk-held gear item. The rune is a stackable
 ///     item whose `item_type` maps to its catalog coords (`rune_of`); exactly 1 unit burns
 ///     BEFORE the roll (identical write-set every outcome). Gate: the gear's CATEGORY names its
-///     forgery job (owner: "its category defines the job to scribe"); that job must be ≥ 1 while testing. The
+///     forgery job (owner: "its category defines the job to scribe"); that job must be ≥ 70. The
 ///     3-outcome puits gamble runs off `apply_rune`; the new rolled block + the per-item
 ///     `ForgeState` DF (puits + application counts) are written; job xp banks on the forgery job.
 ///
@@ -41,8 +41,7 @@ use sui::{
 
 // ╔════════════════ [ Constants ] ════════════════════════════════════════════ ]
 
-/// Temporary test unlock: restore the production mastery gate after the character flow pass.
-const RUNE_UNLOCK_LEVEL: u64 = 1;
+const RUNE_UNLOCK_LEVEL: u64 = 70;
 /// Forgemagie has NO progression (owner 2026-08-11): the craft job only gates access, it never
 /// improves the odds. The ported `apply_rune` takes a runic level (Dofus fed the forgemage's own
 /// level), so we PIN it at the production mastery level — everyone scribes at qualified-master competence,
@@ -86,6 +85,7 @@ public struct CrushClaim has key {
 // ╔════════════════ [ Events ] ═══════════════════════════════════════════════ ]
 
 /// ONE shape for every scribe outcome (write-set parity): the outcome is DATA, never a shape.
+/// `applied_value` is the actual capped gain, so the receipt fully explains the item write.
 public struct RuneScribed has copy, drop {
   item: ID,
   stat: u8,
@@ -120,10 +120,9 @@ public(package) fun scribe(
   let (rune_stat, rune_tier) = cat::rune_of(rune_type);
 
   // the forgery job from the gear's category — a pure gate (no odds scaling)
-  let job = fj(item_rows::template_category(gear_template));
-  {
+  let job = {
     let chr: &Character = kiosk.borrow(cap, character_id);
-    assert!(progression::job_level_of(chr, job) >= RUNE_UNLOCK_LEVEL, EScribeLocked);
+    fj(chr, item_rows::template_category(gear_template))
   };
 
   // consume exactly one rune unit BEFORE the roll — identical write whatever the outcome
@@ -196,7 +195,7 @@ public(package) fun crush(
     let gid = gear_ids[i];
     let raw = {
       let g: &Item = kiosk.borrow(cap, gid);
-      assert!(item::has_stats(g), ENoStats);
+      assert_crushable(item::category(g), item::has_stats(g));
       item::stats(g).to_raw()
     };
     raws.append(raw); // one stat_count-stride block per gear — fixed work, no crush_lines here
@@ -246,13 +245,33 @@ public(package) fun discard_claim(mut claim: CrushClaim) {
 
 // forgery_job
 /// The gear's forgery job = the SAME job that crafts it — read from the ONE hardcoded map in
-/// `item::craft_job_of` (shared with crafting, so a sword is `FORGER` for both, no drift).
+/// `content_rules::craft_job_of` (shared with crafting, so a sword is `FORGER` for both, no drift).
 /// Only craftable gear is forgeable; a category with no job aborts. (A non-gear category that DOES
 /// carry a job, e.g. `key`, still fails scribe later on `has_stats` — keys carry no rolled block.)
-fun fj(category: String): String {
+fun fj(chr: &Character, category: String): String {
   let job = content_rules::craft_job_of(&category);
   assert!(job.is_some(), ENotForgeable);
-  job.destroy_some()
+  let job = job.destroy_some();
+  assert!(progression::job_level_of(chr, job) >= RUNE_UNLOCK_LEVEL, EScribeLocked);
+  job
+}
+
+fun assert_crushable(category: String, has_stats: bool) {
+  assert!(has_stats, ENoStats);
+  assert!(
+    !content_rules::is_stackable(&category) && content_rules::craft_job_of(&category).is_some(),
+    ENotForgeable,
+  );
+}
+
+#[test_only]
+public(package) fun assert_crushable_for_testing(category: String, has_stats: bool) {
+  assert_crushable(category, has_stats);
+}
+
+#[test_only]
+public(package) fun assert_scribe_job_for_testing(chr: &Character, category: String) {
+  fj(chr, category);
 }
 
 // ensure_revealed

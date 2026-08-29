@@ -8,7 +8,7 @@ import { describe, expect, test } from 'bun:test'
 import { GRID_CELLS, mask_from_cells, mask_get } from '../src/combat_grid.ts'
 import { deal } from '../src/damage.ts'
 import { resolve_rows } from '../src/effects.ts'
-import { KINDS, STATS, sheet_of } from '../src/fighters.ts'
+import { fighter_resistances, KINDS, STATS, sheet_of } from '../src/fighters.ts'
 import { create_runtime } from '../src/runtime.ts'
 import { CONTRACT_CONSTANTS } from '../src/move_contract.gen.ts'
 import { apply_pool_effects, tick_turn_end, tick_turn_start } from '../src/turn_effects.ts'
@@ -53,6 +53,19 @@ const push_row = (value: bigint): SpellEffect => ({
 })
 
 describe('fight turn effects', () => {
+  test('fighter resistance projection includes element and generic active rows', () => {
+    const checkpoint = structuredClone(create_fixture().checkpoint)
+    const player = checkpoint.contract.fighters[0]!
+    const mob = checkpoint.contract.fighters[1]!
+    checkpoint.sources.players['0xc1']!.folded_stats.earth_resistance = 32_778n
+    player.effects = [{ ...lasting(KINDS.add, STATS.resist, 3n), element: '' }]
+    if (mob.kind.type === 'mob') mob.kind.snapshot.earth_res = 32_788n
+    mob.effects = [{ ...lasting(KINDS.remove, STATS.resist, 5n), element: 'earth' }]
+
+    expect(fighter_resistances(checkpoint, 0n)).toEqual({ earth: 13n, fire: 3n, water: 3n, air: 3n })
+    expect(fighter_resistances(checkpoint, 1n)).toEqual({ earth: 15n, fire: 0n, water: 0n, air: 0n })
+  })
+
   test('a one-turn row remains visible and effective until that turn actually ends', () => {
     const checkpoint = structuredClone(create_fixture().checkpoint)
     checkpoint.contract.fighters[0]!.effects = [
@@ -308,6 +321,29 @@ describe('fight turn effects', () => {
     )
   })
 
+  test('a push centered on its target is a soft stop without collision damage', () => {
+    const checkpoint = structuredClone(create_fixture().checkpoint)
+    const target = checkpoint.contract.fighters[1]!
+    target.hp = 100n
+    const origin = target.cell
+    const runtime = create_runtime(checkpoint)
+
+    resolve_rows({
+      runtime,
+      caster: 0n,
+      sheet: sheet_of(runtime, 0n),
+      rows: [{ ...push_row(3n), area_shape: 0n, area_size: 0n }],
+      anchor: origin,
+      origin,
+      cursor: { state: 1n },
+      cast_level: 1n,
+      cause: 'spell',
+    })
+
+    expect(runtime.contract.fighters[1]).toMatchObject({ cell: origin, hp: 100n })
+    expect(runtime.render_actions.some(({ type }) => type === 'push_collided')).toBeFalse()
+  })
+
   test('elemental shields scale from their matching caster characteristic without raw damage', () => {
     const shield_value = (agility: bigint): bigint => {
       const checkpoint = structuredClone(create_fixture().checkpoint)
@@ -450,6 +486,62 @@ describe('fight turn effects', () => {
     })
 
     expect(runtime.contract.fighters[1]!.ap).toBe(4n)
+    expect(runtime.contract.fighters[1]!.effects).toEqual([])
+  })
+
+  test('fixed removal drains the live pool without a Wisdom contest', () => {
+    const checkpoint = structuredClone(create_fixture().checkpoint)
+    checkpoint.contract.queue = [1n, 0n]
+    checkpoint.contract.turn_ptr = 0n
+    checkpoint.contract.fighters[1]!.ap = 6n
+    checkpoint.sources.players['0xc1']!.wisdom = 0n
+    const runtime = create_runtime(checkpoint)
+
+    resolve_rows({
+      runtime,
+      caster: 0n,
+      sheet: sheet_of(runtime, 0n),
+      rows: [
+        {
+          kind: KINDS.fixed_remove,
+          element: '',
+          value: 100n,
+          value_max: 100n,
+          area_shape: 0n,
+          area_size: 0n,
+          target_filter: 1n,
+          chance_bp: 10_000n,
+          turns: 3n,
+          stat: STATS.ap,
+        },
+      ],
+      anchor: checkpoint.contract.fighters[1]!.cell,
+      origin: checkpoint.contract.fighters[0]!.cell,
+      cursor: { state: 1n },
+      cast_level: 1n,
+      cause: 'spell',
+    })
+
+    expect(runtime.contract.fighters[1]!.ap).toBe(0n)
+    expect(runtime.contract.fighters[1]!.effects).toEqual([
+      expect.objectContaining({ kind: KINDS.fixed_remove, stat: STATS.ap, value: 100n, turns_left: 3n }),
+    ])
+
+    tick_turn_end(runtime, 1n)
+    runtime.contract.fighters[1]!.ap = 6n
+    apply_pool_effects(runtime, 1n)
+    expect(runtime.contract.fighters[1]!.ap).toBe(0n)
+    expect(runtime.contract.fighters[1]!.effects[0]?.turns_left).toBe(2n)
+
+    tick_turn_end(runtime, 1n)
+    runtime.contract.fighters[1]!.ap = 6n
+    apply_pool_effects(runtime, 1n)
+    expect(runtime.contract.fighters[1]!.ap).toBe(0n)
+
+    tick_turn_end(runtime, 1n)
+    runtime.contract.fighters[1]!.ap = 6n
+    apply_pool_effects(runtime, 1n)
+    expect(runtime.contract.fighters[1]!.ap).toBe(6n)
     expect(runtime.contract.fighters[1]!.effects).toEqual([])
   })
 

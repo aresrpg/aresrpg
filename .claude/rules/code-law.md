@@ -56,8 +56,13 @@ the census found mass — a cleaned domain gets promoted, never the reverse.
 - **L-C2 — Functions are values.** First-class, lambda-shaped; no `function` callback machinery, no
   needless wrappers (`x => f(x)` is `f`). → `prefer-arrow-callback` **ERROR** +
   `functional/prefer-tacit` WARN (typed tier).
-- **L-C3 — Small composable units.** Cyclomatic complexity ≤30 (target far lower), nesting ≤5,
-  files ≤600 LoC. → `complexity` · `max-depth` · `max-lines` **WARN**.
+- **L-C3 — Small composable units.** Prefer cognitive complexity ≤10 and cyclomatic complexity
+  ≤8; new code never exceeds 15/12. The exact inherited hotspot distribution is a downward-only
+  baseline: a score increase reds, a reduction must ratchet the baseline, and a new soft hotspot
+  needs explicit review. Nesting is normally ≤3 and never exceeds 4; files remain ≤600 LoC.
+  Moving the same decisions into helpers is not a reduction. → `complexity-gate/cognitive` ·
+  `complexity-gate/cyclomatic` · `max-depth` **ERROR**; `max-lines` **WARN**; judgment verifies
+  that branches or concepts actually disappeared.
 - **L-C4 — Fold, don't iterate — where honest.** `map/filter/reduce` express intent; a loop is a
   perf tool, not a default. Engine hot paths (voxel meshing, gen) are sanctioned loop country. →
   `functional/no-loop-statements` WARN on api/; judgment elsewhere.

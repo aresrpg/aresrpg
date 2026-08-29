@@ -22,7 +22,8 @@ fun is_tool(category: &String): bool {
 public fun is_stackable(category: &String): bool {
   *category == b"consumable".to_string() ||
     *category == b"resource".to_string() ||
-    *category == b"rune".to_string()
+    *category == b"rune".to_string() ||
+    *category == b"key".to_string()
 }
 
 /// A pet diet is an authored list of resource item types, never a global food category.
@@ -42,8 +43,7 @@ public fun is_category(category: &String): bool {
     *category == b"title".to_string() ||
     is_weapon(category) ||
     is_tool(category) ||
-    is_stackable(category) ||
-    *category == b"key".to_string()
+    is_stackable(category)
 }
 
 public fun craft_job_of(category: &String): Option<String> {

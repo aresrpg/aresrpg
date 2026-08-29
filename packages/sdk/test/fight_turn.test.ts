@@ -40,6 +40,34 @@ test('a group-gated fight join presents the selected Party to the grouped chain 
   expect(calls[0]).toMatchObject({ character_id: id(2), shared_party: id(3), team: 0 })
 })
 
+test('owned party followers join through repeated grouped doors in one kiosk transaction', async () => {
+  const calls: Record<string, unknown>[] = []
+  let executions = 0
+  const sdk = {
+    tx: () => ({}),
+    hydrate_unknown: async () => undefined,
+    with_owner_kiosk: (_tx: unknown, _cap: unknown, compose: (kiosk: string, cap: string) => void) =>
+      compose(id(40), id(41)),
+    execute: async () => {
+      executions += 1
+      return { Transaction: { digest: 'joined' } }
+    },
+    doors: {
+      join_fight_grouped: (_tx: unknown, args: Record<string, unknown>) => calls.push(args),
+    },
+  }
+  await fight_actions(sdk as never, { kiosk_cap: async () => null }).join_many({
+    fight: id(1),
+    character_ids: [id(2), id(3)],
+    team: 0,
+    party: id(4),
+    custody: { kiosk: id(5), kiosk_cap: id(6) },
+  })
+
+  expect(calls.map(({ character_id }) => character_id)).toEqual([id(2), id(3)])
+  expect(executions).toBe(1)
+})
+
 test('a drafted turn executes in order inside one transaction', async () => {
   const calls: string[] = []
   const gas_scopes: (string | undefined)[] = []
@@ -117,15 +145,13 @@ test('Ready plus Start projects its receipt phase and turn witnesses immediately
       },
     }),
     doors: {
-      ready_fighter: () => calls.push('ready'),
-      start_fight: () => calls.push('start'),
+      ready_and_start_fight: () => calls.push('ready_and_start'),
     },
   }
   const receipt = await fight_actions(sdk as never, { kiosk_cap: async () => null }).ready({
     fight: id(9),
     fighter_idx: 0n,
-    and_start: true,
   })
-  expect(calls).toEqual(['ready', 'start'])
+  expect(calls).toEqual(['ready_and_start'])
   expect(receipt).toEqual({ digest: 'started', started: true, turn_witnesses: [{ fighter: 1n, seed: 77n }] })
 })

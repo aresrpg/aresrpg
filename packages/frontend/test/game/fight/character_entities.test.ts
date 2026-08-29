@@ -9,12 +9,31 @@ import { encyclopedia_catalog } from '../../../src/content/catalog.ts'
 import {
   character_entity_sources,
   fight_character_entity_sources,
+  fight_character_roster_key,
 } from '../../../src/game/fight/character_entity_sources.ts'
 import { fight_character_entities_from_loaded } from '../../../src/game/fight/character_entities.ts'
 import { fight_mob_entity_sources } from '../../../src/game/fight/mob_entity_sources.ts'
 import { mob_model_scalar_for_roll } from '../../../src/game/mob_entities.ts'
 
 describe('fight character projection', () => {
+  test('placement joins change the appearance roster key without making movement reload models', () => {
+    const source = create_character_source({ classe: 'senshi', level: 1n })
+    const checkpoint = structuredClone(
+      create_fight({
+        mode: 'local',
+        setup: { players: [{ character: 'first', owner: 'mine', team: 0n, hp: 55n, source }], mobs: [] },
+      }).state()
+    )
+    const initial = fight_character_roster_key(checkpoint)
+    checkpoint.contract.fighters[0]!.cell += 1n
+    expect(fight_character_roster_key(checkpoint)).toBe(initial)
+    checkpoint.contract.fighters.push({
+      ...structuredClone(checkpoint.contract.fighters[0]!),
+      kind: { type: 'player', character: 'joined', owner: 'mine', level: 1n },
+    })
+    expect(fight_character_roster_key(checkpoint)).not.toBe(initial)
+  })
+
   test('reprojects a new cell synchronously from an already-loaded appearance', () => {
     const appearance = {
       body_url: '/body.glb',
@@ -68,16 +87,29 @@ describe('fight character projection', () => {
 
     // Checkpoint players project too, falling back to senshi for missing appearance data.
     const source = create_character_source({ classe: 'yogan', level: 1n })
+    const missing_source = create_character_source({
+      classe: 'yogan',
+      sex: 'female',
+      color_1: 0x123456,
+      color_2: 0x789abc,
+      color_3: 0xdef012,
+      level: 1n,
+    })
     const checkpoint = create_fight({
       mode: 'local',
       setup: {
         players: [
           { character: 'known', owner: 'mine', team: 0n, hp: 55n, source },
-          { character: 'missing', owner: 'other', team: 1n, hp: 55n, source },
+          { character: 'missing', owner: 'other', team: 1n, hp: 55n, source: missing_source },
         ],
         mobs: [],
       },
     }).state()
+    checkpoint.sources.players.missing = {
+      ...checkpoint.sources.players.missing!,
+      hat: 'solomonk',
+      cloak: 'cape_fuwa_black',
+    } as never
     const sources = fight_character_entity_sources(checkpoint, [
       {
         id: 'known',
@@ -90,7 +122,14 @@ describe('fight character projection', () => {
 
     expect(sources).toHaveLength(2)
     expect(sources[0]).toMatchObject({ id: 'fight_character_0', classe: 'senshi', male: false, side: 'a' })
-    expect(sources[1]).toMatchObject({ id: 'fight_character_1', classe: 'yogan', male: true, side: 'b' })
+    expect(sources[1]).toMatchObject({
+      id: 'fight_character_1',
+      classe: 'yogan',
+      male: false,
+      colors: ['#123456', '#789abc', '#def012'],
+      loadout: { hat: 'solomonk', cloak: 'cape_fuwa_black' },
+      side: 'b',
+    })
   })
 
   test('projects allied invisibility as the shared engine visual effect', () => {

@@ -72,7 +72,12 @@ export type MeshFact =
   | { kind: 'who'; address: string; world: string; zx: number; zz: number }
 
 /** What rides `chat:world:` / `chat:party:` / `chat:user:` channels. */
-export type ChatFact = { address: string; character: string; text: string }
+export type ChatFact = {
+  address: string
+  character_id: string
+  character: string
+  parts: readonly import('@aresrpg/protocol').ChatMessagePart[]
+}
 
 /** What rides an `act:fight:` channel. */
 export type FightActionFact =

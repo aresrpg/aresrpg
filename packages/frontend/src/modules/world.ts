@@ -79,7 +79,6 @@ export type WorldState = Readonly<{
   fights: Readonly<Record<string, FightRow>>
   pending_engages: Readonly<Record<string, PendingEngage>>
   pending_zone_searches: Readonly<Record<string, true>>
-  fight_access: 0 | 1
   player_menu: PlayerMenu | null
   /** Optimistic immediately, then corrected to the chain checkpoint's future timestamp. */
   gathering: PendingGather | null
@@ -119,15 +118,16 @@ export type PendingEngage = Readonly<{
 /** Only a menu opened on a nearby body may offer a distance-proven duel. */
 export type PlayerMenu = Readonly<{
   character_id: string
+  name?: string
+  owner?: string
   x: number
   y: number
-  source: 'body' | 'chat'
+  source: 'body' | 'chat' | 'party'
 }>
 
 export type WorldInput =
   | Readonly<{ type: 'server/packet'; packet: Readonly<ServerPacket> }>
   | Readonly<{ type: 'world/player_menu'; menu: PlayerMenu | null }>
-  | Readonly<{ type: 'world/fight_access'; access: 0 | 1 }>
   /** search the zone the character is standing in; the chain proves the walk */
   | Readonly<{ type: 'world/search_zone'; target: ZoneSearchTarget }>
   | Readonly<{ type: 'world/search_zone_failed'; key: string }>
@@ -157,7 +157,6 @@ export const initial_world_state = (): WorldState =>
     fights: {},
     pending_engages: {},
     pending_zone_searches: {},
-    fight_access: 0,
     player_menu: null,
     gathering: null,
     zone_reveal: null,
@@ -283,8 +282,6 @@ const reduce = (state: AppState, input: AppInput): AppState => {
   if (input.type === 'auth/disconnected' || input.type === 'auth/rejected')
     return with_world(state, initial_world_state())
   if (input.type === 'character/select') return with_world(state, project_world_window(state.world, input.character_id))
-  if (input.type === 'world/fight_access')
-    return with_world(state, Object.freeze({ ...state.world, fight_access: input.access }))
   if (input.type === 'world/player_menu')
     return with_world(state, Object.freeze({ ...state.world, player_menu: input.menu }))
   if (input.type === 'world/search_zone')

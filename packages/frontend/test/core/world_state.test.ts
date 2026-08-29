@@ -27,6 +27,7 @@ const settings: GameSettings = Object.freeze({
   flat_mode: false,
   music_enabled: true,
   render_distance: null,
+  fight_access: 0,
 })
 const app_state = (): ReturnType<typeof initial_app_state> => {
   const state = initial_app_state(settings)
@@ -304,11 +305,6 @@ test('only the matching reveal timer may clear the current zone discovery', () =
 
   expect(world.reduce!(replaced, { type: 'world/zone_reveal_cleared', id: first.id }).world.zone_reveal).toEqual(second)
   expect(world.reduce!(replaced, { type: 'world/zone_reveal_cleared', id: second.id }).world.zone_reveal).toBeNull()
-})
-
-test('the HUD owns one explicit public-or-party engage preference', () => {
-  const state = world.reduce!(app_state(), { type: 'world/fight_access', access: 1 })
-  expect(state.world.fight_access).toBe(1)
 })
 
 test('dungeon portals project from the zone population into client-space markers', () => {

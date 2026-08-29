@@ -62,10 +62,10 @@ jobs:
         run: bun run lint
       - name: typecheck
         run: bun run typecheck
-      - name: test
+      - name: test + native coverage
         run: bun run test
   tests_move:
-    # The on-chain game's own suite: both Move packages must build AND test clean.
+    # The on-chain game's own suite: every Move package must build, test, and retain coverage.
     name: tests (move)
     runs-on: ubuntu-latest
     timeout-minutes: 15
@@ -78,6 +78,7 @@ jobs:
             packages/move-math
             packages/control
             packages/seed
+            scripts/coverage_move.sh
       - name: sui version pin
         id: sui_version
         # Pinned release (brew left the runner image, 2026-08-19). Bump deliberately with the
@@ -98,27 +99,26 @@ jobs:
               | tar -xz -C "$HOME/sui-bin" ./sui
             "$HOME/sui-bin/sui" --version
           fi
-      - name: move-math — build + test
-        run: |
-          sui move build --path packages/move-math
-          sui move test --path packages/move-math
-      - name: seed — build + test
+      - name: move-math — build
+        run: sui move build --path packages/move-math
+      - name: control + seed — build
         run: |
           sui move build --path packages/control
-          sui move test --path packages/control
           sui move build --path packages/seed
-          sui move test --path packages/seed
-      - name: move — build + test
-        run: |
-          sui move build --path packages/move
-          sui move test --path packages/move
+      - name: move — build
+        run: sui move build --path packages/move
+      - name: coverage (all Move packages)
+        run: sh scripts/coverage_move.sh
       - name: move — gas ratchet
         # The ÷10 plan's micro-ratchet: one complete three-mob wave runs under its own
         # unit-test gas ceiling. It guards instruction growth; executed receipt benchmarks
         # separately own transaction floors, storage, and rebates. A fight-path inflation reds HERE
-        # before it reaches a player. The ceiling only ratchets DOWN.
+        # before it reaches a player. The craft siblings use the same eight-input fixture at one
+        # and 1,000 attempts, proving the amount field adds no linear work. Ceilings only ratchet DOWN.
         run: |
           sui move test --path packages/move one_three_mob_wave --gas-limit 120000000 --statistics
+          sui move test --path packages/move single_stackable_craft --gas-limit 1100000 --statistics
+          sui move test --path packages/move maximum_stackable_craft --gas-limit 1100000 --statistics
   tests_indexer:
     # The chain projectionist's suite + the Move↔indexer parity gates (packages/indexer/
     # src/gates.rs): the layout snapshot and the event census read the COMPILED Move build,
@@ -137,6 +137,7 @@ jobs:
             packages/control
             packages/seed
             packages/indexer
+            scripts/coverage_indexer.sh
       - name: sui version pin
         id: sui_version
         # Pinned release (brew left the runner image, 2026-08-19). Bump deliberately with the
@@ -169,8 +170,9 @@ jobs:
           path: |
             ~/.cargo/registry
             ~/.cargo/git
+            ~/.cargo/bin/cargo-llvm-cov
             packages/indexer/target
-          key: cargo-${{ runner.os }}-${{ hashFiles('packages/indexer/Cargo.lock') }}
+          key: cargo-${{ runner.os }}-${{ hashFiles('packages/indexer/Cargo.lock') }}-llvm-cov-0.9.0
           restore-keys: cargo-${{ runner.os }}-
       - name: cargo fmt --check
         working-directory: packages/indexer
@@ -178,9 +180,14 @@ jobs:
       - name: cargo clippy
         working-directory: packages/indexer
         run: cargo clippy --all-targets -- -D warnings
-      - name: cargo test (includes the Move-parity gates)
-        working-directory: packages/indexer
-        run: cargo test
+      - name: install pinned cargo-llvm-cov
+        run: |
+          rustup component add llvm-tools-preview
+          if ! cargo llvm-cov --version 2>/dev/null | grep -qx 'cargo-llvm-cov 0.9.0'; then
+            cargo install cargo-llvm-cov --version 0.9.0 --locked
+          fi
+      - name: cargo test + LLVM coverage (includes the Move-parity gates)
+        run: sh scripts/coverage_indexer.sh
   bundle-gate:
     # Reproduces the deploy build on PULL REQUESTS so a bundle-tripping commit fails before it
     # lands; on pushes the deploy workflow's own build is the proof, so this job skips there.

@@ -2,7 +2,7 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 /* eslint-disable complexity -- the app root explicitly composes mutually exclusive route surfaces. */
 
-import type { EngineQuality } from '@aresrpg/engine'
+import { effective_flattened, type EngineQuality } from '@aresrpg/engine'
 import type { CharacterCreateInput } from '@aresrpg/sdk/character'
 import { CHARACTER_PRICE_MIST } from '@aresrpg/sdk/character-price'
 import { MAX_TRACKED_CHARACTERS } from '@aresrpg/protocol'
@@ -12,12 +12,20 @@ import { ThinkingOrb } from 'thinking-orbs'
 
 import { AddFundsModal } from './components/AddFundsModal.tsx'
 import { AppShell } from './components/AppShell.tsx'
-import { CANVAS_OVERLAY_CLASS, WORLD_FRAME_LAYER, world_frame_visibility } from './components/app_layout.ts'
+import {
+  CANVAS_OVERLAY_CLASS,
+  dungeon_lobby_visible,
+  social_hud_visible,
+  WORLD_FRAME_LAYER,
+  world_frame_visibility,
+} from './components/app_layout.ts'
 import { CharacterCreateModal } from './components/CharacterCreateModal.tsx'
-import { Chat } from './components/Chat.tsx'
+import { WorldChat } from './components/Chat.tsx'
 import { CompassStrip } from './game/hud/CompassStrip.tsx'
+import { RunToProgress } from './game/hud/RunToProgress.tsx'
 import { Minimap } from './game/hud/Minimap.tsx'
 import { OverworldVitals } from './game/hud/OverworldVitals.tsx'
+import { fight_access_from } from './game/core/settings.ts'
 import { GatherProgress } from './game/hud/GatherProgress.tsx'
 import { BiomeMusic } from './game/audio/BiomeMusic.tsx'
 import { MountPrompt } from './components/MountPrompt.tsx'
@@ -48,10 +56,14 @@ import { format_sui } from './wallet_amount.ts'
 import { FightLevelUpCard, FightResultCard } from './game/fight/FightResultCard.tsx'
 import { FriendsPanel } from './components/FriendsPanel.tsx'
 import { PartyFrame } from './components/PartyFrame.tsx'
+import { CrushResultModal } from './characters/CrushResultModal.tsx'
+import { SessionIndexingCatchup } from './components/IndexingCatchupModal.tsx'
+import {
+  character_creation_failure_message,
+  character_creation_funding_text,
+  character_creation_insufficient,
+} from './character_creation_funding.ts'
 
-// Creation moves CHARACTER_PRICE_MIST on-chain and burns gas on top — the margin keeps the
-// gate honest for the whole transaction, not just the price.
-const CREATE_GAS_MARGIN_MIST = 20_000_000n
 const GoogleIcon = () => (
   <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
     <path
@@ -179,7 +191,10 @@ const Welcome = ({
         {funding_address && (
           <div className="mt-5 border border-[#c8963c]/35 bg-[#c8963c]/6 p-4">
             <p className="text-[11px] leading-6 text-[#d9af57]">
-              {copy.welcome_need_sui.replaceAll('{{price}}', format_sui(CHARACTER_PRICE_MIST, 0))}
+              {character_creation_funding_text(copy.welcome_need_sui).replaceAll(
+                '{{price}}',
+                format_sui(CHARACTER_PRICE_MIST, 0)
+              )}
             </p>
             <div className="mt-3 flex items-center gap-2 border border-white/10 bg-black/30 px-3 py-2">
               <span className="min-w-0 flex-1 font-mono text-[10px] break-all text-[#c8963c] select-all">
@@ -225,8 +240,11 @@ export function App() {
     )
   })
   const dungeon_active = useAppStore((state) => selected_dungeon_run(state) !== null)
-  const fight_access = useAppStore((state) => state.world.fight_access)
+  const dungeon_lobby_open = dungeon_lobby_visible(navigation.page, fight_active, dungeon_active)
+  const social_hud_open = social_hud_visible(navigation.page, fight_active, dungeon_active)
+  const fight_access = fight_access_from(settings.fight_access)
   const party_available = useAppStore((state) => selected_party(state) !== null)
+  const flatten_locked = engine_status.backend === 'grid'
   const { wallet } = session
   const [show_wallets, set_show_wallets] = useState(false)
   const [graphics_notice_dismissed, set_graphics_notice_dismissed] = useState(false)
@@ -279,14 +297,14 @@ export function App() {
         dispatch_app({ type: 'dialog/open', dialog: null })
         dispatch_app({ type: 'wallet/refresh' })
       } catch (error) {
-        pending.error(error)
+        pending.error(character_creation_failure_message(error, copy))
+        dispatch_app({ type: 'wallet/refresh' })
         throw error
       }
     },
     [copy, session.characters.length, wallet]
   )
-  const sui_insufficient =
-    session.sui_balance_mist !== null && session.sui_balance_mist < CHARACTER_PRICE_MIST + CREATE_GAS_MARGIN_MIST
+  const sui_insufficient = character_creation_insufficient(session.sui_balance_mist)
   const world_unavailable = engine_status.issue?.code === 'world_unavailable'
   const show_graphics_notice =
     (engine_status.state === 'failed' && !world_unavailable) ||
@@ -298,6 +316,7 @@ export function App() {
     <main className="fixed inset-0 overflow-hidden bg-bg font-mono text-[#e8e4dc]">
       <div
         aria-hidden={navigation.page !== 'world' && !(navigation.page === 'kolizeum' && fight_active)}
+        data-world-frame=""
         className={`fixed overflow-hidden transition-opacity duration-150 ${WORLD_FRAME_LAYER} ${world_frame_visibility(navigation.page, fight_active)} ${
           in_app
             ? 'top-[46px] right-3 bottom-3 left-[224px] rounded-[14px] shadow-[0_18px_50px_rgba(0,0,0,0.55),0_0_0_1px_rgba(255,255,255,0.06),inset_0_0_0_1px_rgba(255,255,255,0.04)]'
@@ -309,8 +328,6 @@ export function App() {
 
         {in_app && navigation.page === 'world' && !fight_active && !dungeon_active && (
           <div className={`${CANVAS_OVERLAY_CLASS} z-[105]`}>
-            <PlayerContextMenu copy={copy} />
-            <PartyFrame copy={copy} />
             <MountPrompt copy={copy} />
             <FightPrompt copy={copy} />
             <DungeonPortalPrompt copy={copy} />
@@ -319,20 +336,18 @@ export function App() {
             <SpawnNametag copy={copy} />
             <AmbushPrompt copy={copy} />
             <CompassStrip copy={copy} />
+            <RunToProgress copy={copy} />
             <ZonePrompt copy={copy} />
             <ZoneRevealBanner copy={copy} />
             <Minimap copy={copy} />
             <OverworldVitals />
             <GatherProgress copy={copy} />
-            <div className="gw-worldchat">
-              <Chat text={{ ...copy.simulator_page, ...copy.fight_hud }} />
-            </div>
+            <WorldChat copy={copy} />
           </div>
         )}
-        {in_app && navigation.page === 'world' && !fight_active && dungeon_active && (
+        {in_app && dungeon_lobby_open && (
           <div className={`${CANVAS_OVERLAY_CLASS} z-[105]`}>
             <DungeonLobby key={session.selected_character_id} copy={copy} />
-            <PartyFrame copy={copy} />
           </div>
         )}
         <div className={`${CANVAS_OVERLAY_CLASS} z-[110]`}>
@@ -342,16 +357,21 @@ export function App() {
               change_quality={change_quality}
               copy={copy}
               fight_access={party_available ? fight_access : 0}
-              flattened={settings.flat_mode}
+              flatten_locked={flatten_locked}
+              flattened={effective_flattened(settings.flat_mode, engine_status.backend)}
               party_available={party_available}
               quality={settings.quality}
               toggle_fight_access={() =>
-                dispatch_app({ type: 'world/fight_access', access: fight_access === 0 ? 1 : 0 })
+                dispatch_app({
+                  type: 'settings/changed',
+                  settings: Object.freeze({ ...settings, fight_access: fight_access === 0 ? 1 : 0 }),
+                })
               }
               toggle_flattened={toggle_flattened}
             />
-            {in_app && navigation.page === 'world' && !fight_active && <FriendsPanel copy={copy} />}
+            {in_app && social_hud_open && <FriendsPanel copy={copy} />}
           </div>
+          {in_app && social_hud_open && <PartyFrame copy={copy} />}
         </div>
 
         {loading_universe && (
@@ -368,8 +388,15 @@ export function App() {
             funding_address={sui_insufficient && wallet ? wallet.address : null}
           />
         )}
+        {in_app && (navigation.page === 'world' || navigation.page === 'kolizeum') && (
+          <>
+            <FightResultCard copy={copy} />
+            <FightLevelUpCard copy={copy} />
+          </>
+        )}
       </div>
       <div className="pointer-events-none fixed inset-0 z-[100] bg-[repeating-linear-gradient(0deg,transparent,transparent_2px,rgba(200,150,60,0.014)_2px,rgba(200,150,60,0.014)_4px)]" />
+      <PlayerContextMenu copy={copy} />
       {in_app && wallet && navigation.dialog === 'top_up' && (
         <AddFundsModal
           address={wallet.address}
@@ -396,12 +423,8 @@ export function App() {
         )}
       {in_app && navigation.dialog === 'travel' && <TravelModal copy={copy} />}
       <Toasts />
-      {in_app && (navigation.page === 'world' || navigation.page === 'kolizeum') && (
-        <>
-          <FightResultCard copy={copy} />
-          <FightLevelUpCard copy={copy} />
-        </>
-      )}
+      <CrushResultModal copy={copy} />
+      <SessionIndexingCatchup copy={copy} indexing_lag={session.indexing_lag} status={session.link_status} />
 
       {show_graphics_notice && (
         <section className="fixed inset-0 z-[200] grid place-items-center bg-bg/88 p-5 backdrop-blur-lg">

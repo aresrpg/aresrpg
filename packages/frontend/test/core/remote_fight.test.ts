@@ -415,7 +415,7 @@ describe('the remote fight fold', () => {
     expect(state.fight.end_turn_submitted).toBeFalse()
   })
 
-  test("the LAST seat's ready carries the start and receipt witness in the same transaction", async () => {
+  test("Ready lets the chain's current shared state decide the atomic start", async () => {
     const listeners = new Map<string, ((payload: never) => void)[]>()
     const ready_calls: unknown[] = []
     const base = initial_app_state(settings)
@@ -467,7 +467,7 @@ describe('the remote fight fold', () => {
     emit({ type: 'fight/input', fight: '0xf1', origin: 'local', input: { type: 'ready', fighter: 0n } })
     await Promise.resolve()
     await Promise.resolve()
-    expect(ready_calls).toEqual([{ fight: '0xf1', fighter_idx: 0n, and_start: true }])
+    expect(ready_calls).toEqual([{ fight: '0xf1', fighter_idx: 0n }])
     expect(state.fight.checkpoint?.contract.round).toBe(1n)
   })
 

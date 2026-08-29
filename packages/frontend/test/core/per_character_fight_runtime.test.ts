@@ -328,6 +328,21 @@ test('a queued background turn remains executable without its FightLayer mounted
   // a background fight stores no animation replay — only its live state and the queued turn
   expect(state.fight.environments['0xfa']?.presentations).toEqual([])
   expect(queued_end_turn(state, '0xfa', 10_000)).toEqual({ fighter: 0n, delay_ms: 0 })
+
+  state = reduce_app_state(state, {
+    type: 'fight/reconciled',
+    mode: 'remote',
+    checkpoint: active,
+    zone_ids: [],
+    events: [],
+    presentation_batch: 1,
+    error: null,
+    awaiting_turn_witness: true,
+    project: false,
+  })
+  // A stale presentation witness may block local replay, but never the authoritative chain
+  // submission. Otherwise this exact account state leaves the turn to force-crank.
+  expect(queued_end_turn(state, '0xfa', 10_000)).toEqual({ fighter: 0n, delay_ms: 0 })
 })
 
 test('the transaction observer drains A queued turn while B remains visible', async () => {
@@ -403,7 +418,8 @@ test('the transaction observer drains A queued turn while B remains visible', as
   expect(state.fight.checkpoint?.contract.id).toBe('0xfb')
 })
 
-test('a pre-submission too-soon refusal restores the runtime before requeueing', async () => {
+test('a pre-submission too-soon refusal retains the draft before requeueing', async () => {
+  const commits: unknown[] = []
   const base = initial_app_state(settings)
   const raw = checkpoint('0xfa', '0xa')
   const active = {
@@ -419,12 +435,14 @@ test('a pre-submission too-soon refusal restores the runtime before requeueing',
       wallet: {
         address: '0xme',
         fight: {
-          commit_turn: async () =>
-            Promise.reject(
-              new Error(
+          commit_turn: async (input: unknown) => {
+            commits.push(input)
+            if (commits.length === 1)
+              throw new Error(
                 "Transaction resolution failed: MoveAbort in 1st command, abort code: 1724, in '0xgame::fight::commit_turn' (transaction NOT submitted)"
               )
-            ),
+            return { digest: 'retried' }
+          },
         },
       } as never,
     },
@@ -454,12 +472,36 @@ test('a pre-submission too-soon refusal restores the runtime before requeueing',
     type: 'fight/input',
     fight: '0xfa',
     origin: 'local',
+    input: { type: 'move_to', fighter: 0n, path: [1n] },
+  })
+  expect(state.fight.checkpoint?.contract.fighters[0]?.cell).toBe(1n)
+  dispatch({
+    type: 'fight/input',
+    fight: '0xfa',
+    origin: 'local',
     input: { type: 'end_turn', fighter: 0n, observed_ms: 10_000n },
   })
   expect(state.fight.awaiting_turn_witness).toBeTrue()
   await new Promise((resolve) => setTimeout(resolve, 0))
 
   expect(state.fight.awaiting_turn_witness).toBeFalse()
+  expect(state.fight.checkpoint?.contract.fighters[0]?.cell).toBe(1n)
   expect(state.fight.end_turn_queued).toBeTrue()
   expect(state.fight.end_turn_submitted).toBeFalse()
+
+  dispatch({
+    type: 'fight/input',
+    fight: '0xfa',
+    origin: 'local',
+    input: { type: 'end_turn', fighter: 0n, observed_ms: 10_500n },
+  })
+  dispatch({ type: 'fight/end_turn_queued', fight: '0xfa', queued: false })
+  await new Promise((resolve) => setTimeout(resolve, 0))
+
+  expect(commits).toEqual([
+    { fight: '0xfa', actions: [{ type: 'move', path: [1n] }], ended: false },
+    { fight: '0xfa', actions: [{ type: 'move', path: [1n] }], ended: false },
+  ])
+  expect(state.fight.awaiting_turn_witness).toBeTrue()
+  expect(state.fight.end_turn_queued).toBeFalse()
 })

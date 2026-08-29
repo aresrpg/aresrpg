@@ -25,6 +25,7 @@ const settings: GameSettings = Object.freeze({
   flat_mode: false,
   music_enabled: true,
   render_distance: null,
+  fight_access: 0,
 })
 
 const character = (world: string | undefined): CharacterRow =>

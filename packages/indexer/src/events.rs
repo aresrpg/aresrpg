@@ -225,7 +225,15 @@ events! {
         => |_: &GiftcardMinted| "evt:economy".to_string(),
     shop::GiftcardRedeemed { giftcard: Id, redeemer: Addr }
         => |_: &GiftcardRedeemed| "evt:economy".to_string(),
-    crafting::Crafted { recipe: Id, crafter: Addr, output_template: Id, success: bool, job_xp_gained: u64 }
+    crafting::Crafted {
+        recipe: Id,
+        character: Id,
+        crafter: Addr,
+        output_template: Id,
+        attempts: u16,
+        successes: u16,
+        job_xp_gained: u64,
+    }
         => |_: &Crafted| "evt:economy".to_string(),
     forgemagie::RuneScribed { item: Id, stat: u8, tier: u8, outcome: u8, applied_value: u64, lost_stat: u8, lost_amount: u64, new_puits: u64, xp: u64 }
         => |_: &RuneScribed| "evt:economy".to_string(),

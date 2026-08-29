@@ -11,7 +11,7 @@ const OWNER: address = @0xA11CE;
 
 fun invisible_after_cast(placement: bool): bool {
   let mut scenario = test_scenario::begin(OWNER);
-  let hidden = fight::invisible_after_damage_cast_for_testing(placement, scenario.ctx());
+  let hidden = fight::invisible_after_damage_cast_for_testing(placement, false, scenario.ctx());
   scenario.end();
   hidden
 }
@@ -32,4 +32,12 @@ fun mob_searches_when_every_enemy_is_invisible() {
   let cells = fight::mob_searches_for_invisible_enemy_for_testing(scenario.ctx());
   assert!(cells[0] != cells[1], 0);
   scenario.end();
+}
+
+#[test]
+#[expected_failure(abort_code = 1721, location = aresrpg::fight)]
+fun an_invisible_occupant_still_consumes_the_per_target_cap() {
+  let mut scenario = test_scenario::begin(OWNER);
+  fight::invisible_after_damage_cast_for_testing(false, true, scenario.ctx());
+  abort 999
 }

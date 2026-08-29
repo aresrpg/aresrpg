@@ -3,6 +3,14 @@
 
 import { QUALITY_OPTIONS, type EngineQuality } from '@aresrpg/engine'
 
+import {
+  CHAT_CHANNELS,
+  chat_speak_channel_from,
+  chat_visible_channels_from,
+  type ChatChannel,
+  type ChatSpeakChannel,
+} from './chat_preferences.ts'
+
 export const SETTINGS_STORAGE_KEY = 'aresrpg.settings'
 
 // render_distance: the player's chunk radius override (null = the quality tier's default)
@@ -17,7 +25,15 @@ export type GameSettings = Readonly<{
   quality: EngineQuality
   flat_mode: boolean
   music_enabled: boolean
+  follow_leader?: boolean
+  chat_visible_channels?: readonly ChatChannel[]
+  chat_speak_channel?: ChatSpeakChannel
+  auto_switch_fighter?: boolean
+  /** Null/absent disables the Jobs-tab character lock. */
+  always_craft_from_character_id?: string | null
+  placement_gas_warning_disabled?: boolean
   render_distance: number | null
+  fight_access?: 0 | 1
 }>
 
 type SettingsStorage = Readonly<{
@@ -36,6 +52,11 @@ const browser_storage = (): SettingsStorage | null => {
 
 const is_quality = (value: unknown): value is EngineQuality => QUALITY_OPTIONS.includes(value as EngineQuality)
 
+export const fight_access_from = (value: unknown): 0 | 1 => (value === 1 ? 1 : 0)
+export const auto_switch_fighter_from = (value: unknown): boolean => value !== false
+export const craft_character_id_from = (value: unknown): string | null =>
+  typeof value === 'string' && value.length > 0 ? value : null
+
 export const load_game_settings = (
   default_quality: EngineQuality,
   quality_override: string | null = null,
@@ -45,7 +66,14 @@ export const load_game_settings = (
     quality: default_quality,
     flat_mode: false,
     music_enabled: true,
+    follow_leader: false,
+    chat_visible_channels: CHAT_CHANNELS,
+    chat_speak_channel: 'general' as const,
+    auto_switch_fighter: true,
+    always_craft_from_character_id: null,
+    placement_gas_warning_disabled: false,
     render_distance: null,
+    fight_access: 0 as const,
   })
   try {
     const parsed: unknown = JSON.parse(storage?.getItem(SETTINGS_STORAGE_KEY) ?? 'null')
@@ -57,7 +85,16 @@ export const load_game_settings = (
         : defaults.quality
     const flat_mode = Reflect.get(record, 'flat_mode')
     const music_enabled = Reflect.get(record, 'music_enabled')
+    const follow_leader = Reflect.get(record, 'follow_leader') === true
+    const chat_visible_channels = chat_visible_channels_from(Reflect.get(record, 'chat_visible_channels'))
+    const chat_speak_channel = chat_speak_channel_from(Reflect.get(record, 'chat_speak_channel'))
+    const auto_switch_fighter = auto_switch_fighter_from(Reflect.get(record, 'auto_switch_fighter'))
+    const always_craft_from_character_id = craft_character_id_from(
+      Reflect.get(record, 'always_craft_from_character_id')
+    )
+    const placement_gas_warning_disabled = Reflect.get(record, 'placement_gas_warning_disabled') === true
     const stored_distance = Reflect.get(record, 'render_distance')
+    const fight_access = fight_access_from(Reflect.get(record, 'fight_access'))
     const render_distance =
       typeof stored_distance === 'number' &&
       Number.isInteger(stored_distance) &&
@@ -69,7 +106,14 @@ export const load_game_settings = (
       quality,
       flat_mode: typeof flat_mode === 'boolean' ? flat_mode : defaults.flat_mode,
       music_enabled: typeof music_enabled === 'boolean' ? music_enabled : defaults.music_enabled,
+      follow_leader,
+      chat_visible_channels,
+      chat_speak_channel,
+      auto_switch_fighter,
+      always_craft_from_character_id,
+      placement_gas_warning_disabled,
       render_distance,
+      fight_access,
     })
   } catch (error) {
     console.warn('Saved game settings are invalid; using defaults.', error)

@@ -1,7 +1,15 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
-import { class_names, craft_job_of, gatherable_of, item_categories, job_groups, job_slugs } from '@aresrpg/immutable'
+import {
+  class_names,
+  craft_job_of,
+  gatherable_catalog,
+  gatherable_of,
+  item_categories,
+  job_groups,
+  job_slugs,
+} from '@aresrpg/immutable'
 
 import {
   derive_mob_filter_rows,
@@ -36,6 +44,18 @@ export const content_row_category = (row: SeedEntityRow): string => {
 export const content_row_classe = (row: SeedEntityRow): string => {
   const classe = record_value(row.value)?.classe
   return typeof classe === 'string' ? classe : ''
+}
+
+export const spell_row_has_effects = (row: SeedEntityRow): boolean => {
+  const levels = record_value(row.value)?.levels
+  if (!Array.isArray(levels)) return false
+  return levels.some((level) => {
+    const spell_level = record_value(level)
+    return (
+      (Array.isArray(spell_level?.effects) && spell_level.effects.length > 0) ||
+      (Array.isArray(spell_level?.crit_effects) && spell_level.crit_effects.length > 0)
+    )
+  })
 }
 
 export const content_row_level = (domain: SeedDomain, row: SeedEntityRow): number | null => {
@@ -324,21 +344,11 @@ export const mob_filter_rows = (
     return Object.freeze({ world: world_id, biome_names, mobs: roaming, protectors })
   })
   const filters = derive_mob_filter_rows(mobs, world_sources)
-  const protector_pairs = world_rows.flatMap((world_row) => {
-    const resources = record_value(world_row.value)?.resources
-    return Array.isArray(resources)
-      ? resources.flatMap((entry) => {
-          const row = record_value(entry)
-          const gatherable = typeof row?.item_type === 'string' ? gatherable_of(row.item_type) : null
-          return gatherable ? [Object.freeze({ mob_type: gatherable.protector, job: gatherable.job })] : []
-        })
-      : []
-  })
   const protectors = job_slugs.flatMap((job): readonly MobFilterRow[] => {
     const members = unique(
-      protector_pairs
-        .filter((entry) => entry.job === job && mob_ids.has(entry.mob_type))
-        .map(({ mob_type }) => mob_type)
+      gatherable_catalog
+        .filter((gatherable) => gatherable.job === job && mob_ids.has(gatherable.protector))
+        .map(({ protector }) => protector)
     )
     return members.length
       ? [Object.freeze({ kind: 'protector', id: job, count: members.length, mob_types: members })]

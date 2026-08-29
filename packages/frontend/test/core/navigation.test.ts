@@ -5,7 +5,12 @@ import { describe, expect, test } from 'bun:test'
 import { DEFAULT_ADMIN_ADDRESS } from '@aresrpg/protocol'
 
 import { initial_app_state, reduce_app_state, type AppState } from '../../src/store.ts'
-import navigation, { normalize_pathname, page_from_pathname, pathname_for_page } from '../../src/modules/navigation.ts'
+import navigation, {
+  normalize_pathname,
+  page_from_pathname,
+  pathname_for_page,
+  world_scene_active,
+} from '../../src/modules/navigation.ts'
 
 describe('app navigation routes', () => {
   test('maps browser paths to reducer-owned pages', () => {
@@ -20,6 +25,38 @@ describe('app navigation routes', () => {
     expect(pathname_for_page('world')).toBe('/')
     expect(pathname_for_page('encyclopedia')).toBe('/encyclopedia/items')
     expect(normalize_pathname('/encyclopedia/items/aberrant_edge/')).toBe('/encyclopedia/items/aberrant_edge')
+  })
+
+  test('keeps the world scene running for a mounted Kolizeum board', () => {
+    expect(world_scene_active('world', false)).toBeTrue()
+    expect(world_scene_active('kolizeum', false)).toBeFalse()
+    expect(world_scene_active('kolizeum', true)).toBeTrue()
+    expect(world_scene_active('characters', true)).toBeFalse()
+  })
+
+  test('returns a terminal Kolizeum fighter to World for the result card', () => {
+    const base = initial_app_state(
+      Object.freeze({ quality: 'medium', flat_mode: false, music_enabled: true, render_distance: null })
+    )
+    const state = {
+      ...base,
+      navigation: { ...base.navigation, page: 'kolizeum' as const, pathname: '/kolizeum' },
+      session: { ...base.session, selected_character_id: '0xcharacter' },
+      fight: {
+        ...base.fight,
+        kolizeum_by_fight: { '0xfight': { id: '0xkolizeum', pledge_mist: 200_000_000n } },
+      },
+    }
+    const returned = navigation.reduce!(
+      state as AppState,
+      {
+        type: 'fight_result/checkpoint',
+        character_id: '0xcharacter',
+        checkpoint: { contract: { id: '0xfight', ended: true } },
+      } as never
+    )
+
+    expect(returned.navigation).toMatchObject({ page: 'world', pathname: '/' })
   })
 
   test('folds sidebar and browser navigation through the same reducer', () => {

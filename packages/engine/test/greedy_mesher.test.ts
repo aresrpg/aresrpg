@@ -139,13 +139,14 @@ describe('binary greedy voxel meshing', () => {
       [0, 0, 1, 4],
     ] as const
 
-    for (let y = 0; y < CHUNK_EDGE; y += 1)
-      for (let z = 0; z < CHUNK_EDGE; z += 1)
-        for (let x = 0; x < CHUNK_EDGE; x += 1) {
-          if (!solid_at(x, y, z)) continue
-          for (const [dx, dy, dz, face] of directions)
-            if (!solid_at(x + dx, y + dy, z + dz)) expected.add([x, y, z, face].join(':'))
-        }
+    for (let cell = 0; cell < CHUNK_EDGE ** 3; cell += 1) {
+      const x = cell % CHUNK_EDGE
+      const z = Math.floor(cell / CHUNK_EDGE) % CHUNK_EDGE
+      const y = Math.floor(cell / CHUNK_EDGE ** 2)
+      if (!solid_at(x, y, z)) continue
+      for (const [dx, dy, dz, face] of directions)
+        if (!solid_at(x + dx, y + dy, z + dz)) expected.add([x, y, z, face].join(':'))
+    }
 
     for (let index = 0; index < mesh.quad_count; index += 1) {
       const word = mesh.quads[index * 2]!

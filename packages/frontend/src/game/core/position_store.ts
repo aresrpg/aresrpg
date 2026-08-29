@@ -1,6 +1,10 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 /* eslint-disable functional/prefer-immutable-types -- this browser storage boundary accepts the platform's mutable position shape. */
+import { chain_to_client_coordinate, client_to_chain_coordinate } from '@aresrpg/immutable'
+import type { CharacterRow } from '@aresrpg/protocol'
+
+import { record_owned_character_position } from './owned_character_feed.ts'
 // Local resume position — the finer-grained "exactly where you stood" cache over the chain
 // checkpoint (the only authoritative anchor). A saved pose is honored ONLY while it can
 // explain itself against the chain: same character/world, captured under the SAME chain
@@ -25,6 +29,7 @@ export type SavedPosition = Readonly<{
 export type PositionStorage = Readonly<{
   load: (character_id: string, world: string) => Promise<SavedPosition | null>
   save: (character_id: string, world: string, row: SavedPosition) => Promise<void>
+  remove: (character_id: string, world: string) => Promise<void>
 }>
 export type PositionIdentity = Readonly<{ character_id: string; world: string }>
 
@@ -77,6 +82,10 @@ export const browser_position_storage = (factory: IDBFactory | null = globalThis
       if (!factory) return
       await in_transaction(factory, 'readwrite', (store) => store.put(row, row_key(character_id, world)))
     },
+    remove: async (character_id, world) => {
+      if (!factory) return
+      await in_transaction(factory, 'readwrite', (store) => store.delete(row_key(character_id, world)))
+    },
   })
 
 const is_saved_position = (value: unknown): value is SavedPosition => {
@@ -115,14 +124,17 @@ export const resume_position = (
 /** Resolve the first real terrain focus before the render loop starts. The app previously
  * scheduled origin chunks while IndexedDB decided between the checkpoint and saved pose. */
 export const resolve_world_boot_position = async ({
+  live,
   checkpoint,
   chain_anchor,
   load,
 }: Readonly<{
+  live?: Readonly<{ x: number; z: number }> | null
   checkpoint: Readonly<{ x: number; z: number }>
   chain_anchor: ChainAnchor | null
   load: () => Promise<SavedPosition | null>
 }>): Promise<Readonly<{ x: number; z: number }>> => {
+  if (live) return live
   const resumed = resume_position(await load(), chain_anchor)
   return resumed ? Object.freeze({ x: resumed.x, z: resumed.z }) : checkpoint
 }
@@ -142,6 +154,7 @@ export const create_position_writer = ({
 }>): Readonly<{
   note: (pose: Readonly<{ x: number; y: number; z: number }>, anchor: ChainAnchor, identity: PositionIdentity) => void
   flush: () => void
+  discard: () => void
 }> => {
   let last_write = 0
   let pending: Readonly<{ identity: PositionIdentity; row: SavedPosition }> | null = null
@@ -166,5 +179,127 @@ export const create_position_writer = ({
       if (settle_timer) clearTimeout(settle_timer)
       write()
     },
+    discard: () => {
+      if (settle_timer) clearTimeout(settle_timer)
+      settle_timer = null
+      pending = null
+    },
+  })
+}
+
+type ChainPosition = Readonly<{ character_id: string; world: string; x: number; y: number; z: number }>
+
+const cache_anchor = (character: Readonly<CharacterRow> | undefined, world: string): ChainAnchor | null => {
+  if (!character) return null
+  if (character.world !== world || character.world !== character.checkpoint_world) return null
+  if (![character.x, character.z].every((coordinate) => Number.isFinite(coordinate))) return null
+  if ([character.active_fight, character.dungeon_run].some(Boolean)) return null
+  return Object.freeze({ x: character.x!, z: character.z!, at_ms: character.at_ms ?? 0 })
+}
+
+const same_chain_position = (before: ChainPosition | undefined, current: ChainPosition): boolean =>
+  before?.character_id === current.character_id &&
+  before.world === current.world &&
+  before.x === current.x &&
+  before.y === current.y &&
+  before.z === current.z
+
+/** One cache lane per owned character. Manual and automated movement enter through the same
+ * position feed, while serialized I/O guarantees disconnect invalidation is the last write. */
+export const create_owned_position_cache = ({
+  storage,
+  on_error,
+}: Readonly<{
+  storage: PositionStorage
+  on_error: (message: string, error: unknown) => void
+}>): Readonly<{
+  note: (character: Readonly<CharacterRow> | undefined, position: ChainPosition) => void
+  note_all: (characters: readonly Readonly<CharacterRow>[], positions: readonly ChainPosition[]) => void
+  restore: (characters: readonly Readonly<CharacterRow>[]) => Promise<void>
+  invalidate: (characters: readonly Readonly<CharacterRow>[]) => void
+  flush: () => void
+}> => {
+  const writers = new Map<string, ReturnType<typeof create_position_writer>>()
+  const noted = new Map<string, ChainPosition>()
+  let generation = 0
+  let io: Promise<void> = Promise.resolve()
+  const enqueue = (operation: () => Promise<void>, failure: string): void => {
+    io = io.then(operation).catch((error: unknown) => on_error(failure, error))
+  }
+  const writer_for = (character_id: string) => {
+    const existing = writers.get(character_id)
+    if (existing) return existing
+    const created = create_position_writer({
+      save: (identity, row) =>
+        enqueue(() => storage.save(identity.character_id, identity.world, row), 'The position cache write failed.'),
+    })
+    writers.set(character_id, created)
+    return created
+  }
+  const restore_character = async (character: Readonly<CharacterRow>, own_generation: number): Promise<void> => {
+    const world = character.world
+    if (!world) return
+    const anchor = cache_anchor(character, world)
+    if (!anchor) return
+    try {
+      const resumed = resume_position(await storage.load(character.id, world), anchor)
+      if (!resumed || own_generation !== generation || noted.has(character.id)) return
+      const position = Object.freeze({
+        character_id: character.id,
+        world,
+        x: client_to_chain_coordinate(resumed.x),
+        y: resumed.y,
+        z: client_to_chain_coordinate(resumed.z),
+      })
+      noted.set(character.id, position)
+      record_owned_character_position(character.id, world, position)
+    } catch (error) {
+      on_error('The saved position could not be read.', error)
+    }
+  }
+  const note = (character: Readonly<CharacterRow> | undefined, position: ChainPosition): void => {
+    if (same_chain_position(noted.get(position.character_id), position)) return
+    const anchor = cache_anchor(character, position.world)
+    if (!character?.world || !anchor) return
+    noted.set(character.id, position)
+    writer_for(character.id).note(
+      Object.freeze({
+        x: chain_to_client_coordinate(position.x),
+        y: position.y,
+        z: chain_to_client_coordinate(position.z),
+      }),
+      anchor,
+      Object.freeze({ character_id: character.id, world: character.world })
+    )
+  }
+  return Object.freeze({
+    note,
+    note_all: (characters, positions) =>
+      positions.forEach((position) =>
+        note(
+          characters.find(({ id }) => id === position.character_id),
+          position
+        )
+      ),
+    restore: async (characters) => {
+      const own_generation = generation
+      await io
+      if (own_generation !== generation) return
+      await Promise.all(characters.map((character) => restore_character(character, own_generation)))
+    },
+    invalidate: (characters) => {
+      generation += 1
+      writers.forEach((writer) => writer.discard())
+      writers.clear()
+      noted.clear()
+      characters.forEach((character) => {
+        if (character.world)
+          enqueue(
+            () => storage.remove(character.id, character.world!),
+            'The stale position cache could not be removed.'
+          )
+      })
+    },
+    flush: () => writers.forEach((writer) => writer.flush()),
   })
 }

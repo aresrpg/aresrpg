@@ -6,8 +6,16 @@ import type { AppInput, AppModule, AppState } from '../store.ts'
 
 export type SettingsInput = Readonly<{ type: 'settings/changed'; settings: GameSettings }>
 
-const reduce = (state: AppState, input: AppInput): AppState =>
-  input.type === 'settings/changed' ? Object.freeze({ ...state, settings: input.settings }) : state
+const reduce = (state: AppState, input: AppInput): AppState => {
+  if (input.type === 'settings/changed') return Object.freeze({ ...state, settings: input.settings })
+  if (input.type !== 'server/packet' || input.packet.type !== 'packet/characters') return state
+  const character_id = state.settings.always_craft_from_character_id
+  if (!character_id || input.packet.characters.some(({ id }) => id === character_id)) return state
+  return Object.freeze({
+    ...state,
+    settings: Object.freeze({ ...state.settings, always_craft_from_character_id: null }),
+  })
+}
 
 const observe = ({ events }: Parameters<NonNullable<AppModule['observe']>>[0]): void => {
   events.on('STATE_UPDATED', (state, previous) => {

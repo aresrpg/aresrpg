@@ -3,27 +3,29 @@
 // The bag's item actions: the right-click context menu (feed / consume / crush / destroy)
 // and its modals. Every action composes ONE SDK transaction and folds the proven receipt
 // through the session reducer. The grind-safe claims a box open or a crush lands are settled
-// by the SILENT claimer (modules/claims.ts) — no claim UI exists; the results arrive back
-// through the server's item stream.
+// by the SILENT claimer (modules/claims.ts); the receipt and item stream reunite in the
+// crush-result modal.
 
 import { useEffect, useMemo, useState } from 'react'
 import type { ItemRow } from '@aresrpg/protocol'
-import { Cat, ExternalLink, Gift, Hammer, Loader2, Trash2 } from 'lucide-react'
+import { Cat, ExternalLink, Gift, Hammer, Loader2, MessageSquarePlus, Trash2 } from 'lucide-react'
 
 import { ModalFrame } from '../components/ModalFrame.tsx'
 import { env } from '../env.ts'
 import { explorer_object_url } from '../explorer.ts'
 import { PET_MAX_FEEDS } from '../game/character_stats.ts'
-import { item_icon } from '../content/assets.ts'
 import { encyclopedia_catalog } from '../content/catalog.ts'
 import { item_detail_icon } from '../content/item_detail_assets.ts'
 import { copy_text, type AppCopy } from '../i18n/copy.ts'
 import { encumbered_asset_ids } from '../inventory_stacks.ts'
 import { dispatch_app, useAppStore } from '../store.ts'
 import { toast } from '../toast.ts'
+import { crush_results } from '../crush_result.ts'
+import { run_direct_transaction } from '../transaction_guard.ts'
 
 import { BoxReveal } from './BoxReveal.tsx'
 import { is_forge_gear } from './forge_eligibility.ts'
+import { InventoryItemCell } from './InventoryItemCell.tsx'
 
 export type ItemMenuState = Readonly<{ x: number; y: number; item: ItemRow }> | null
 
@@ -51,15 +53,18 @@ const FeedPetModal = ({ pet, copy, close }: Readonly<{ pet: Readonly<ItemRow>; c
 
   const feed = (food: Readonly<ItemRow>): void => {
     if (!wallet || feeding || gate) return
-    set_feeding(true)
-    const pending = toast.loading(t('feed_pending'))
-    void wallet.character
-      .feed_pet({
+    const transaction = run_direct_transaction(() =>
+      wallet.character.feed_pet({
         pet_id: pet.id,
         pet_item_type: pet.item_type,
         food_id: food.id,
         custody: { kiosk: pet.kiosk },
       })
+    )
+    if (!transaction) return
+    set_feeding(true)
+    const pending = toast.loading(t('feed_pending'))
+    void transaction
       .then(() => {
         dispatch_app({ type: 'inventory/pet_fed', pet_id: pet.id, food_id: food.id })
         pending.success(t('feed_success'))
@@ -98,21 +103,7 @@ const FeedPetModal = ({ pet, copy, close }: Readonly<{ pet: Readonly<ItemRow>; c
             ) : (
               <div className="grid grid-cols-[repeat(auto-fill,minmax(52px,1fr))] gap-2">
                 {foods.map((food) => (
-                  <button
-                    className="chr-cell"
-                    disabled={feeding}
-                    key={food.id}
-                    onClick={() => feed(food)}
-                    title={food.name}
-                    type="button"
-                  >
-                    {item_icon(food.item_type) ? (
-                      <img alt="" className="chr-cell__art" src={item_icon(food.item_type)!} />
-                    ) : (
-                      <span className="chr-cell__fallback">{food.name.slice(0, 1).toUpperCase()}</span>
-                    )}
-                    {food.amount > 1 && <span className="chr-cell__amount tabular-nums">×{food.amount}</span>}
-                  </button>
+                  <InventoryItemCell disabled={feeding} item={food} key={food.id} onClick={() => feed(food)} />
                 ))}
               </div>
             )}
@@ -131,6 +122,7 @@ const ConfirmModal = ({
   copy,
   confirm,
   close,
+  soft = false,
 }: Readonly<{
   title: string
   body: string
@@ -139,8 +131,9 @@ const ConfirmModal = ({
   copy: AppCopy
   confirm: () => void
   close: () => void
+  soft?: boolean
 }>) => (
-  <ModalFrame close={close} close_label={copy.wallet_close} label={title}>
+  <ModalFrame close={close} close_label={copy.wallet_close} label={title} soft={soft}>
     <div className="flex flex-col gap-4 p-6">
       <p className="text-[10px] tracking-[0.22em] text-gold uppercase">{title}</p>
       <p className="text-[10px] leading-6 text-text">{body}</p>
@@ -195,26 +188,31 @@ export const InventoryActionOverlays = ({
 
   const crush = (item: Readonly<ItemRow>): void => {
     if (!wallet || busy) return
+    const transaction = run_direct_transaction(() =>
+      wallet.character.crush_gear({ gear_ids: [item.id], custody: { kiosk: item.kiosk } })
+    )
+    if (!transaction) return
+    set_crush_target(null)
+    crush_results.start(item)
     set_busy(true)
-    const pending = toast.loading(t('crush_pending'))
-    void wallet.character
-      .crush_gear({ gear_ids: [item.id], custody: { kiosk: item.kiosk } })
+    void transaction
       .then(({ claim_id }) => {
         // the fold lands the claim; the SILENT claimer redeems it and the yield rides the stream
         dispatch_app({ type: 'inventory/gear_crushed', gear_ids: [item.id], claim_id })
-        set_crush_target(null)
-        pending.success(t('crush_success'))
       })
-      .catch(pending.error)
+      .catch(crush_results.fail)
       .finally(() => set_busy(false))
   }
 
   const destroy = (item: Readonly<ItemRow>): void => {
     if (!wallet || busy) return
+    const transaction = run_direct_transaction(() =>
+      wallet.character.destroy_item({ item_id: item.id, amount: item.amount, custody: { kiosk: item.kiosk } })
+    )
+    if (!transaction) return
     set_busy(true)
     const pending = toast.loading(t('destroy_pending'))
-    void wallet.character
-      .destroy_item({ item_id: item.id, amount: item.amount, custody: { kiosk: item.kiosk } })
+    void transaction
       .then(() => {
         dispatch_app({ type: 'inventory/destroyed', item_id: item.id, amount: item.amount })
         set_destroy_target(null)
@@ -248,7 +246,7 @@ export const InventoryActionOverlays = ({
           className="fixed z-[60] flex min-w-[150px] flex-col border border-border bg-surface-low shadow-[0_14px_40px_rgba(0,0,0,0.6)]"
           style={{
             left: Math.min(menu.x, globalThis.innerWidth - 170),
-            top: Math.min(menu.y, globalThis.innerHeight - (entries.length + 1) * 34 - 10),
+            top: Math.min(menu.y, globalThis.innerHeight - (entries.length + 2) * 34 - 10),
           }}
         >
           <a
@@ -261,6 +259,17 @@ export const InventoryActionOverlays = ({
             <ExternalLink className="opacity-60" size={11} />
             {t('menu_explorer')}
           </a>
+          <button
+            className="flex cursor-pointer items-center gap-2.5 px-3.5 py-2 text-left text-[9px] tracking-[0.16em] text-text uppercase hover:bg-gold/10 hover:text-gold"
+            onClick={() => {
+              close_menu()
+              dispatch_app({ type: 'chat/link_item', item: { id: menu.item.id, name: menu.item.name } })
+            }}
+            type="button"
+          >
+            <MessageSquarePlus className="opacity-60" size={11} />
+            {t('menu_link_chat')}
+          </button>
           {entries.map(({ key, Icon, label, act }) => (
             <button
               className="flex cursor-pointer items-center gap-2.5 px-3.5 py-2 text-left text-[9px] tracking-[0.16em] text-text uppercase hover:bg-gold/10 hover:text-gold"
@@ -287,6 +296,7 @@ export const InventoryActionOverlays = ({
           confirm={() => crush(crush_target)}
           copy={copy}
           cta={t('crush_cta')}
+          soft
           title={t('crush_title')}
         />
       )}

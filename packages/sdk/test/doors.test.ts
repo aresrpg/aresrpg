@@ -16,6 +16,7 @@ const digest = '11111111111111111111111111111111'
 const pin = (n: number) => ({ id: id(n), shared_version: '1' })
 const pins = {
   package: id(1),
+  math_package: id(2),
   version: pin(3),
   name_registry: pin(4),
   character_policy: pin(5),
@@ -63,6 +64,16 @@ const move_calls = (tx: Transaction) =>
 const inputs_of = (tx: Transaction) => tx.getData().inputs
 
 describe('generated doors through the bound resolver', () => {
+  test('every pinned SDK transaction starts with the AresRPG header', () => {
+    const [header] = game().tx().getData().commands
+
+    expect(header?.MoveCall).toMatchObject({
+      package: pins.math_package,
+      module: 'aresrpg',
+      function: 'aresrpg',
+    })
+  })
+
   test('create_character: right target, 14 args, every object input PRE-RESOLVED', () => {
     const sdk = game()
     const tx = sdk.tx()
@@ -78,7 +89,7 @@ describe('generated doors through the bound resolver', () => {
       color_3: 3,
       first_world: id(14),
     })
-    const [call] = move_calls(tx)
+    const [, call] = move_calls(tx)
     expect(call.package).toBe(pins.package)
     expect(call.module).toBe('api')
     expect(call.function).toBe('create_character')
@@ -126,7 +137,7 @@ describe('generated doors through the bound resolver', () => {
     })
     const grown = sdk.doors.add_fight_mob(tx, { build, template: id(16) })
     sdk.doors.launch_fight(tx, { build: grown })
-    const calls = move_calls(tx)
+    const calls = move_calls(tx).slice(1)
     expect(calls.map((c) => c.function)).toEqual(['engage_fight', 'add_fight_mob', 'launch_fight'])
     const chained = (argument: (typeof calls)[number]['arguments'][number]) =>
       argument.$kind === 'Result' || argument.$kind === 'NestedResult'

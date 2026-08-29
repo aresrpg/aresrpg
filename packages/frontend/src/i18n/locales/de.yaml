@@ -3,6 +3,10 @@ body: Die vollständige Welt benötigt WebGPU. Stattdessen läuft ein leichtes R
 fatal: Dieser Browser kann weder einen WebGPU- noch einen WebGL-Grafikkontext erstellen.
 world_unavailable_title: Welt nicht verfügbar
 world_unavailable: Für diese Welt wurde noch kein Terrainrezept erstellt.
+mobile_unavailable_label: Mobiler Zugriff
+mobile_unavailable_title: AresRPG ist auf Mobilgeräten noch nicht verfügbar
+mobile_unavailable_body: Wir schmieden ein eigenes mobiles Erlebnis. Betritt die Welt vorerst über einen Desktop-Browser.
+mobile_unavailable_status: Desktop-Version online
 chrome: 'Chrome oder Edge: Browser aktualisieren, unter Einstellungen → System „Grafikbeschleunigung verwenden, falls verfügbar“ aktivieren und neu starten.'
 other: Hardwarebeschleunigung aktivieren, Browser und Grafiktreiber aktualisieren und den Browser neu starten.
 continue: Mit Raster fortfahren
@@ -49,17 +53,26 @@ latency_unit: ms
 indexing_health: Indexierungsstatus
 online_players: Spieler online
 indexing_lag_warning: Aktionen im Spiel können verzögert erscheinen
+indexing_block_title: Welt wird synchronisiert
+indexing_block_body: Der Verlauf der Chain wird noch indexiert. Das Spiel wird automatisch freigeschaltet, sobald der Server das sichere Live-Fenster erreicht.
+indexing_block_progress: Fortschritt
+indexing_block_remaining: Verbleibende Checkpoints
+indexing_block_eta: Geschätzte Zeit
+indexing_block_estimating: Berechnung…
 game_frozen: Das Spiel ist derzeit eingefroren. Weitere Informationen findest du auf Discord.
 gas_budget_toast: Diese Aktion war zu schwer für die reservierte Netzwerkgebühr. Sie wurde nicht ausgeführt und hat dich nichts gekostet — bitte melde es.
 game_paused_toast: Das Spiel ist für ein Update pausiert. Deine Aktion wurde nicht ausgeführt — versuche es in ein paar Minuten erneut.
 movement_sync_toast: Deine Position wird noch synchronisiert. Bewege dich normal weiter und versuche es gleich noch einmal.
+fight_path_changed_toast: Das Spielfeld hat sich vor deinem Zug geändert. Dein Zug wurde wiederhergestellt — versuche es erneut.
+party_member_unavailable_toast: Dieser Charakter ist bereits in einer Gruppe.
+fight_turn_already_forced_toast: Jemand hat diesen Zug bereits zwangsweise beendet.
 network_testnet: TESTNET
 page_pending_title: Diese Seite wird neu aufgebaut
 page_pending_body: Ihr Platz bleibt sichtbar, während wir sie sauber wiederherstellen.
 welcome_title: Willkommen bei AresRPG
 welcome_body: AresRPG ist ein vollständig On-Chain-MMORPG mit einer spielergesteuerten Wirtschaft. Erstelle deinen ersten Charakter, betrete die Welt und finde Monster zum Kämpfen.
-welcome_need_sui: Du brauchst etwas SUI zum Spielen — jede Aktion ist eine On-Chain-Transaktion, und dein erster Charakter kostet {{price}} SUI. Zahle etwas SUI auf deine Adresse unten ein, um zu beginnen.
-insufficient_sui: Nicht genug SUI in deiner Wallet
+welcome_need_sui: Du brauchst etwas SUI zum Spielen — dein erster Charakter kostet {{price}} SUI, und mindestens {{fee}} SUI müssen für Gebühren in deinem Guthaben bleiben. Zahle etwas SUI auf deine Adresse unten ein, um zu beginnen.
+insufficient_sui: Mindestens {{fee}} SUI müssen für Gebühren in deinem Guthaben bleiben.
 create_character: Charakter erstellen
 create_title: Erstelle deinen Charakter
 create_lead: Wähle eine Klasse, deine Farben und einen Namen. Die Welt lebt bereits hinter dir.
@@ -107,15 +120,20 @@ kolizeum_page:
   access_friends: Freunde
   status_open: Offen
   status_started: Läuft
-  status_settling: Abrechnung
+  status_settling: Kampf beendet
   empty: Keine Lobbys
   selected: Ausgewählte Lobby
   side_a: Seite A
   side_b: Seite B
   total_pot: Aktueller Pot
+  settlement_remaining: Verbleibender Treuhandbetrag
+  paid_out: Ausgezahlt
   free: Kostenlos
   join_a: Seite A beitreten
   join_b: Seite B beitreten
+  join_confirm_title: Kolizeum-Einsatz bestätigen
+  join_confirm_body: '{{character}} setzt {{amount}} SUI und tritt {{side}} bei. Diese Transaktion bindet den Einsatz.'
+  join_confirm_cta: '{{amount}} SUI setzen · {{side}} beitreten'
   create_title: Lobby erstellen
   form_format: Format
   form_access: Zugang
@@ -144,7 +162,7 @@ friends_panel:
 party_panel:
   title: Gruppe
   adventurer: Abenteurer
-  invited_by: '{{name}} hat dich eingeladen'
+  invited_by: '{{name}} hat dich eingeladen, seiner Gruppe beizutreten'
   accept: Annehmen
   decline: Ablehnen
   leader: Anführer
@@ -153,25 +171,51 @@ party_panel:
   kick: Entfernen
   rescind: Einladung zurückziehen
   invite_owned: Eigenen Charakter einladen
+  follow_leader: Anführer folgen
+  run_to_position: Zur Position laufen
+  run_to_started: Du läufst zur letzten On-Chain-Position von {{name}}. Dies ist möglicherweise nicht die aktuelle Live-Position.
+  run_to_started_position: Du läufst zur verlinkten Position.
+  run_to_progress: Lauf zur Position
+  run_to_position_wrong_world: Die verlinkte Position liegt nicht in deiner aktuellen Welt.
+  run_to_wrong_world: Dieses Gruppenmitglied befindet sich nicht in deiner aktuellen Welt.
+  run_to_unavailable: Die On-Chain-Position dieses Gruppenmitglieds ist nicht verfügbar.
 trade_panel:
-  inbox: Handel
   close: Schließen
   title: Spielerhandel
-  locked: Gesperrt · Ansprüche bleiben bestehen
-  negotiating: Verhandlung · jede Änderung setzt Zusagen zurück
+  invite_sent: Handelseinladung gesendet
+  invited_by: '{{name}} lädt dich zum Handel ein'
+  request_waiting: Warte auf die Annahme durch {{name}}
+  accept_request: Annehmen
+  decline: Ablehnen
+  cancel_request: Anfrage abbrechen
+  trades: Handel
   your_offer: Dein Angebot
   their_offer: Gegenangebot
   accepted: Akzeptiert
   reviewing: Prüft
-  add_item: Gegenstand hinzufügen
-  add_character: Charakter hinzufügen
-  sui: SUI hinzufügen
-  withdraw: Zurücknehmen
-  withdraw_sui: Meine SUI zurücknehmen
-  accept: Diese Version akzeptieren
-  claim: Beanspruchen
-  claim_sui: '{{amount}} SUI beanspruchen'
-  finish: Handel abschließen
+  remove_item: Aus Angebot entfernen
+  drop_items: Gegenstände hier ablegen
+  empty_offer: Keine Gegenstände angeboten
+  offer_item_unavailable: Ein vorgemerktes Item ist nicht mehr verfügbar. Prüfe dein Angebot und versuche es erneut.
+  sui: Angebotene SUI
+  inventory: Dein Inventar
+  drag_hint: Ziehen oder doppelklicken
+  amount_title: Menge wählen
+  amount_for: 'Menge von {{name}}'
+  amount_add: Zum Angebot hinzufügen
+  amount_cancel: Abbrechen
+  confirm_changes: Änderungen bestätigen
+  discard_changes: Änderungen verwerfen
+  empty_inventory: Keine handelbaren Werte
+  accept: Angebot annehmen
+  cancel: Handel abbrechen
+  accept_notice: Die Annahme autorisiert eine Abschluss-Transaktion. {{count}} eingehende Werte kosten {{amount}} SUI Lizenzgebühr plus Gas.
+  settle: Handel abschließen
+  recover: Angebot zurückholen
+  settle_notice: Erhalte alle verbleibenden Werte und SUI in einer Transaktion.
+  recover_notice: Hole dein gesamtes Angebot in einer Transaktion zurück.
+  waiting_counterparty: Deine Seite ist abgeschlossen. Warte auf die Gegenpartei.
+  finalizing: Wird abgeschlossen…
 world_hud:
   compass_label: Kompass
   zone: ZONE
@@ -189,6 +233,10 @@ world_hud:
   menu_friend: Freund hinzufügen
   menu_trade: Handeln
   menu_message: Nachricht senden
+  message_title: 'Nachricht an {{name}}'
+  message_placeholder: Private Nachricht schreiben…
+  message_send: Senden
+  message_cancel: Abbrechen
   mount_prompt: 'Drücke {{key}} zum Aufsteigen'
   portal_prompt: 'Drücke {{key}}, um in eine andere Welt zu reisen'
   dungeon_portal: Dungeonportal
@@ -381,6 +429,7 @@ marketplace_page:
   delist_success: Angebot entfernt
   buy_pending: Angebot wird gekauft…
   buy_success: Kauf abgeschlossen
+  sold_toast: 'Verkauft: {{amount}} {{name}} für {{price}}'
   character_roster_full: Ein 7. Charakter passt nicht in deine Liste — 6 ist das Maximum
   collect_pending: Erlöse werden abgeholt…
   collect_success: Erlöse abgeholt
@@ -448,6 +497,12 @@ settings_page:
   subtitle: 'Deine AresRPG-Einstellungen'
   music_label: 'Musik'
   music_hint: 'Spielt die Musik der Welt und der Kämpfe.'
+  auto_switch_fighter_label: Kämpfer automatisch wechseln
+  auto_switch_fighter_hint: Wählt automatisch deinen Charakter aus, sobald sein Kampfzug beginnt.
+  always_craft_from_label: Immer herstellen mit
+  always_craft_from_hint: Sperrt den Berufe-Tab und jede Herstellung auf einen eigenen Charakter.
+  always_craft_from_picker: Handwerkscharakter
+  always_craft_from_none: Deaktiviert
   render_distance_label: Sichtweite
   render_distance_hint: Wie weit die Welt um dich herum lädt. Mehr kostet Leistung.
 admin_page:
@@ -490,6 +545,88 @@ admin_page:
   confirm_claim: Abhebung bestätigen
   disconnect_admin_wallet: Trennen
   claim_digest: Abhebungstransaktion
+  range_24h: 24 Stunden
+  range_7d: 7 Tage
+  range_30d: 30 Tage
+  range_90d: 90 Tage
+  range_1y: 1 Jahr
+  overview_title: Übersicht
+  overview_body: Spieleraktivität und Einnahmen ohne Leitstandrauschen.
+  overview_unavailable: Übersicht nicht verfügbar
+  loading_overview: Übersicht wird geladen…
+  all_systems_current: Alle Systeme sind aktuell
+  checkpoint: Checkpoint
+  refresh: Aktualisieren
+  retry: Erneut versuchen
+  active_players: Aktive Spieler
+  active_players_bucket: Aktive Spieler pro Intervall
+  daily_active: Täglich aktive Spieler
+  active_interval: Aktiv pro Intervall
+  active_30d: 30 Tage aktive Spieler
+  active_last_30d: aktiv in den letzten 30 Tagen
+  player_activity: Spieleraktivität
+  player_activity_body: Tägliche Aktivität und gleitende 30-Tage-Reichweite
+  stickiness: DAU / 30T
+  online_players: Spieler online
+  online_players_body: Durchschnittliche und maximale authentifizierte Verbindungen
+  online_now: Spieler online
+  average: Durchschnitt
+  peak: Spitze
+  revenue: Einnahmen
+  revenue_over_time: Einnahmen im Zeitverlauf
+  revenue_over_time_body: Shop-Einnahmen und Marktplatzgebühren
+  shop: Shop
+  shop_sales: Shop-Verkäufe
+  item_royalties: Objektgebühren
+  character_royalties: Charaktergebühren
+  game_transactions: Spieltransaktionen
+  game_transactions_over_time: Transaktionen im Zeitverlauf
+  game_transactions_body: Erfolgreiche AresRPG-Transaktionen, einmal pro PTB gezählt
+  today: Heute
+  selected_period: Gewählter Zeitraum
+  lifetime: insgesamt
+  average_order: durchschnittliche Bestellung
+  chart_revenue: Einnahmen
+  chart_players: Spieler
+  chart_online: Online
+  bucket_15m: 15-Minuten-Intervalle
+  bucket_hour: Stündliche Intervalle
+  bucket_day: Tagesintervalle
+  bucket_week: Wöchentliche Intervalle
+  bucket_month: Monatliche Intervalle
+  unique_addresses: Eindeutige Adressen
+  unique_addresses_body: Adressen mit erfolgreichen AresRPG-Modulaufrufen
+  unique_addresses_over_time: Eindeutige Adressen im Zeitverlauf
+  successful_game_calls: Aufrufer von Spielmodulen
+  total_characters: Charaktere insgesamt
+  current_characters: Aktuelle On-Chain-Charaktere
+  total_characters_body: Aktuelle On-Chain-Character-Objekte
+  characters_over_time: Charaktere im Zeitverlauf
+  revenue_30d: Umsatz der letzten 30 Tage
+  revenue_mtd: Umsatz im laufenden Monat
+  last_30_days: Letzte 30 Tage
+  calendar_month_to_date: Laufender Kalendermonat
+  recent_shop_sales: Neueste Shop-Verkäufe
+  sales_history: Shop-Verkaufsverlauf
+  sales_retention: Exakte Transaktionsdetails werden 90 Tage aufbewahrt
+  view_all_sales: Alle Verkäufe anzeigen
+  buyer: Käufer
+  item: Objekt
+  quantity: Menge
+  unit_price: Stückpreis
+  total: Gesamt
+  when: Zeitpunkt
+  transaction: Transaktion
+  treasury: Schatzkammer
+  treasury_body: Aktuelle Guthaben, getrennt von verdienten Einnahmen
+  available_balance: Verfügbares Guthaben
+  claim: Abheben
+  close: Schließen
+  loading: Wird geladen…
+  load_more: Mehr laden
+  transactions: Transaktionen
+  no_sales_history: Keine Verkäufe in diesem Zeitraum
+  end_of_history: Ende des gespeicherten Verlaufs
 simulator_page:
   title: Kampfsimulator
   local_only: Lokale deterministische Aufstellung
@@ -584,6 +721,10 @@ fight_hud:
   turn_order: Zugreihenfolge
   placement_title: Bereit zum Kampf
   placement_hint: Platziere deine Kämpfer und markiere sie als bereit
+  placement_gas_title: Kämpfer erneut verschieben?
+  placement_gas_body: Jeder Zellenwechsel führt eine Transaktion aus und kostet Gas. Vermeide unnötige Platzierungswechsel.
+  placement_gas_hide: Nicht mehr anzeigen
+  placement_gas_confirm: Trotzdem verschieben
   placement_ready: Bereit
   placement_waiting: Warten auf die anderen…
   placement_starting: Kampf startet…
@@ -628,13 +769,21 @@ fight_hud:
   chat_title: Chat
   chat_tab_general: Allgemein
   chat_tab_party: Gruppe
+  chat_tab_private: Privat
   chat_tab_combat: Kampf
   chat_placeholder: Sag etwas…
+  chat_fetching_item: Werte werden On-Chain geladen…
+  chat_item_unavailable: Dieser Gegenstand ist On-Chain nicht verfügbar.
   chat_you: Du
   chat_line: '{name}: {message}'
+  chat_party_line: '(party) {name}: {message}'
+  chat_whisper_to: '(an {name}) {message}'
   result_title: Kampfergebnis
   result_duration: Dauer
   result_gas_spent: Gas-Kosten
+  result_wager_won: SUI gewonnen
+  result_wager_lost: SUI verloren
+  result_wager_even: Wetteinsatz
   result_party: Deine Gruppe
   result_enemies: Gegner
   result_victory: Sieg
@@ -1010,20 +1159,20 @@ encyclopedia_page:
     success_rate: ERFOLGSRATE
     success_rate_desc: 'Der Erfolg hängt davon ab, wie nah der Wert am Maximum ist: nahe 0% sind ~99% Erfolg, nahe Max sind ~50%, und exotische Stats liegen unabhängig vom Level bei ~1%. Ob ein Erfolg Kritisch (kein Verlust) oder Neutral (Gewicht bezahlt) ausfällt, verschiebt sich genauso, plus kleine +0,2% pro Berufsstufe über 1. Es gibt keine Obergrenze dafür, an welchem Gegenstandslevel dein Beruf arbeiten kann.'
     puits: SENKE (PUITS)
-    puits_desc: Ein in der Oberfläche angezeigter Gewichtszähler, der sich ansammelt, wenn Werteverluste das Runengewicht übersteigen. Er absorbiert zukünftige Verluste, bevor andere Werte betroffen sind. Setzt sich zurück, wenn der Gegenstand die Forgemagie-Werkbank verlässt.
+    puits_desc: Ein in der Oberfläche angezeigter Gewichtszähler, der sich ansammelt, wenn Werteverluste das Runengewicht übersteigen. Er absorbiert zukünftige Verluste, bevor andere Werte betroffen sind. Er bleibt am Gegenstand und folgt ihm zwischen Werkbänken und Besitzern.
     over_maging: ÜBER-SCHMIEDEN
     over_maging_desc: Treibe Werte über ihr natürliches Maximum. Jede Wertzeile ist auf 101 zusätzliches Gewicht begrenzt. Das maximale Über-Schmieden hängt vom Einheitsgewicht des Stats ab — ein leichter Stat wie Vitalität (Gewicht 0,25) kann um ~404 Punkte überschritten werden, ein schwerer wie Weisheit (Gewicht 3) nur um ~33.
     forgemagie_tips: TIPPS
-    forgemagie_tips_desc: 'Für Exo/Over-Mage: Entferne zuerst günstige Stats, um eine große Senke aufzubauen, dann setze den schweren Stat mit Puffer durch, dann füge verlorene Stats wieder hinzu (einfach, da weit unter Maximum). Bewege den Gegenstand nicht während einer Sitzung. Die Senke wird zurückgesetzt. Over-Mage- und exotische Stats gehen bei Fehlschlägen zuerst verloren.'
+    forgemagie_tips_desc: 'Für Exo/Over-Mage: Entferne zuerst günstige Stats, um eine große Senke aufzubauen, dann setze den schweren Stat mit Puffer durch, dann füge verlorene Stats wieder hinzu (einfach, da weit unter Maximum). Over-Mage- und exotische Stats gehen bei Fehlschlägen zuerst verloren.'
     forgemagie_xp: ERFAHRUNG
     forgemagie_xp_desc: 'EP werden nur bei Erfolg vergeben (Kritisch oder Neutral). Höherstufige Gegenstände und schwerere Runen geben deutlich mehr EP. Ra-Runen gewähren doppelte EP im Vergleich zu Ba- und Pa-Runen. Formel: max(1, Runengewicht × (1 + Gegenstandslevel / 50) × Stufenmultiplikator), wobei der Multiplikator 2 für Ra und 1 sonst beträgt.'
     action_points: AKTIONSPUNKTE (AP)
     movement_points: BEWEGUNGSPUNKTE (BP)
     critical_stat: KRITISCH
     wisdom_xp: WEISHEITS-XP-BONUS
-    wisdom_xp_desc: Je 6 Weisheit erhöhen die erhaltenen EP um 1 %. Bei 600 Weisheit erhältst du doppelte EP.
+    wisdom_xp_desc: Jeder Punkt effektiver Weisheit, einschließlich aktiver Effekte, erhöht die erhaltenen EP um 1 %. Bei 100 effektiver Weisheit erhältst du doppelte EP.
     chance_loot: GLÜCK & BEUTE
-    chance_loot_desc: Das durchschnittliche Glück des Siegerteams multipliziert jede aufgelöste Droprate. Bei durchschnittlich 600 Glück verdoppelt sich die Rate. Sie kann niemals 100% überschreiten.
+    chance_loot_desc: Das durchschnittliche effektive Glück des Siegerteams, einschließlich aktiver Effekte, multipliziert jede aufgelöste Droprate. Bei durchschnittlich 600 Glück verdoppelt sich die Rate. Sie kann niemals 100% überschreiten.
     mob_loot_band: MONSTERLEVEL & DROPRATE
     mob_loot_band_desc: Die festgelegte Chance ist der Mittelpunkt. Ein Monster auf Mindestlevel nutzt 80%, eines auf Höchstlevel 120%, gedeckelt bei 100%. Monster mit festem Level nutzen exakt die festgelegte Chance. Die Dropmenge skaliert nicht mit dem Level.
   dropped_by: GEDROPPT VON
@@ -1382,7 +1531,7 @@ characters_page:
   max: Max
   resources: Ressourcen
   back: Zurück
-  gate_note: Erfordert vorübergehend den Handwerksberuf des Gegenstands auf Stufe 1
+  gate_note: Erfordert den Handwerksberuf des Gegenstands auf Stufe {{level}}
   detail_title: Gegenstand
   forge_title: Schmiede
   inventory_title: Inventar
@@ -1394,10 +1543,14 @@ characters_page:
   one_rune_note: Pro Versuch wird eine Rune verbraucht
   apply: Rune anwenden
   scribing: Gravur…
-  outcome_success: Die Rune hat gewirkt
-  outcome_neutral: Die Rune ist verpufft — nichts hat sich geändert
-  outcome_failure: Die Rune ging schief — ein Attribut ging verloren
-  requires_job: 'Erfordert {{job}} Stufe 1'
+  outcome_critical_success: Kritischer Erfolg
+  outcome_neutral_success: Neutraler Erfolg
+  outcome_critical_failure: Kritischer Fehlschlag
+  runeforge_history: Verlauf
+  runeforge_history_empty: Wende eine Rune an, um den Verlauf dieses Gegenstands zu beginnen
+  runeforge_puits: Puits
+  runeforge_no_stat_change: Kein Attribut geändert
+  requires_job: 'Erfordert {{job}} Stufe {{level}}'
   clear: Entfernen
   inspect_empty: Wähle ein Ausrüstungsstück zum Ansehen
   no_forge_gear: Keine schmiedbare Ausrüstung im Beutel
@@ -1407,6 +1560,7 @@ characters_page:
   menu_crush: Zerschlagen
   menu_destroy: Zerstören
   menu_explorer: Im Explorer ansehen
+  menu_link_chat: Im Chat verlinken
   feed_title: Begleiter füttern
   feed_power_label: Stärke
   feed_power: '{{count}} / {{max}}'
@@ -1422,6 +1576,8 @@ characters_page:
   crush_cta: Zerschlagen
   crush_pending: Wird zerschlagen…
   crush_success: Ausrüstung zerschlagen
+  crush_result_title: Ergebnis des Zerschlagens
+  crush_result_empty: Mehr Glück beim nächsten Mal.
   destroy_title: Gegenstand zerstören
   destroy_confirm_body: '{{name}} ×{{amount}} zerstören? Das kann nicht rückgängig gemacht werden.'
   destroy_cta: Zerstören
@@ -1545,6 +1701,9 @@ characters_page:
       consumable: 'Verbrauchsgüter-Handwerk'
     recipes_fallback: 'Rezepte'
     equipped: 'Ausgerüstet'
+    better_character: '{{name}} ist {{job}} St. {{level}}'
+    switch: 'Wechseln'
+    switch_to_character: 'Zu {{name}} wechseln'
     table:
       tier: 'Stufe'
       req_lvl: 'Ben. Lv.'
@@ -1562,12 +1721,13 @@ characters_page:
       ingredients_head: 'Zutaten'
       requires_level: 'Erfordert {{job}} St {{required}} (du bist St {{level}})'
       not_enough: 'Nicht genug Zutaten'
-      success_chance: 'Erfolgschance'
-      craft_tooltip: '{{name}} herstellen'
-      craft_button: 'Herstellen'
+      starting_chance: 'Anfangschance'
+      amount: 'Versuche'
+      prepare_tooltip: '{{count}} × {{name}} vorbereiten'
+      craft_tooltip: '{{count}} × {{name}} herstellen'
+      craft_button: 'Herstellen ×{{count}}'
       crafting: 'Wird hergestellt…'
-      craft_success: '{{name}} hergestellt'
-      roll_failed: 'Der Herstellungswurf für {{name}} ist fehlgeschlagen ({{chance}}% Chance) — die Zutaten wurden verbraucht'
+      craft_result: '{{successes}} / {{attempts}} {{name}} hergestellt'
       locked_level: 'Gesperrt · St {{level}}'
     detail:
       close_aria: 'Objektdetails schließen'
@@ -1592,3 +1752,244 @@ characters_page:
     experience: 'Erfahrung'
     confirm: 'Bestätigen'
     max: 'MAX'
+spell_names:
+  'Absorption': 'Absorption'
+  'Absorptive Arrow': 'Absorbierender Pfeil'
+  'Acceleration': 'Beschleunigung'
+  'Aggressive Brambles': 'Aggressive Ranken'
+  'Aggressive Glyph': 'Glyphe der Aggression'
+  'Alcoholic Breath': 'Alkoholischer Atem'
+  'All or Nothing': 'Alles oder nichts'
+  'Chimeric Venom': 'Chimärengift'
+  'Animal Healing': 'Tierpflege'
+  'Aqueous Armour': 'Panzer der Fluten'
+  'Aqueous Vulnerability': 'Wässrige Verwundbarkeit'
+  'Art of Staff': 'Künste des Steckens'
+  "Asobi's Fate": 'Asobis Schicksal'
+  "Asobi's Luck": 'Asobis Glück'
+  'Assault': 'Sturmangriff'
+  'Atonement Arrow': 'Sühnepfeil'
+  'Attraction': 'Anziehung'
+  'Backlash': 'Gegenangriff'
+  'Bamboo Milk': 'Bambusmilch'
+  "Bat's Eye": 'Maulwurfssicht'
+  'Bear Cry': 'Bärenschrei'
+  'Blazing Fist': 'Flammenfaust'
+  'Blazing Vulnerability': 'Glühende Verwundbarkeit'
+  'Blinding Protection': 'Blendender Schutzschild'
+  'Blindness': 'Blindheit'
+  'Bloodthirsty Madness': 'Blutdurstiger Wahnsinn'
+  'Blow': 'Hauch'
+  'Bluff': 'Bluff'
+  'Bold Punishment': 'Gewagte Bestrafung'
+  'Boozer': 'Trunkenheit'
+  'Bow Skill': 'Meister des Bogens'
+  'Bramble': 'Ranken'
+  'Bravery Guide': 'Leitfaden der Tapferkeit'
+  'Bribery': 'Bestechung'
+  'Bubble': 'Blase'
+  'Burning Arrow': 'Flammenpfeil'
+  'Burning Glyph': 'Glyphe des Infernos'
+  'Bush Fire': 'Buschfeuer'
+  'Celestial Sword': 'Himmlisches Schwert'
+  'Chakra Concentration': 'Chakra konzentrieren'
+  'Chakra Impulse': 'Chakra-Impuls'
+  'Hurl': 'Hurl'
+  'Claw of Ceangal': 'Klaue von Ceangal'
+  'Clock': 'Uhrwerk'
+  'Cloudy Attack': 'Nebelhafter Angriff'
+  'Clover': 'Kleeblatt'
+  'Clumsiness': 'Ungeschicklichkeit'
+  'Coins Throwing': 'Münzenwurf'
+  'Compulsion': 'Zwang'
+  'Con': 'Betrug'
+  'Concentration': 'Konzentration'
+  'Cooperation': 'Kooperieren'
+  'Counter': 'Konter'
+  'Critical Shooting': 'Zielschuss'
+  'Crow': 'Rabe'
+  'Curative Word': 'Wort der Heilung'
+  'Cut': 'Schneiden'
+  'Dark Ray': 'Dunkelstrahl'
+  'Destructive Arrow': 'Zerstörender Pfeil'
+  'Destructive Sword': 'Zerstörerisches Schwert'
+  'Deviousness': 'Heimtücke'
+  'Devotion': 'Hingabe'
+  'Dissolution': 'Auflösung'
+  'Distant Shooting': 'Weitschuss'
+  'Divine Sword': 'Göttliches Schwert'
+  'Dolly Sacrifice': 'Puppenhaftes Opfer'
+  'Shadowstep': 'Shadowstep'
+  'Draining Word': 'Entziehendes Wort'
+  'Earth Armour': 'Erd-Panzer'
+  'Earth Vulnerability': 'Erdverwundbarkeit'
+  'Earthquake': 'Beben'
+  'Bloodstep': 'Bloodstep'
+  'Explosive Arrow': 'Explosionspfeil'
+  'Explosive Flask': 'Explosivfläschchen'
+  'Fangs of Boowolf': 'Fangzähne des WuWulfs'
+  'Fear': 'Angst'
+  'Feline Leap': 'Katzensprung'
+  'Feline Movement': 'Katzenhafte Bewegung'
+  'Feline Spirit': 'Katzengeist'
+  'Flight': 'Flucht'
+  'Blood Blade': 'Blood Blade'
+  'Forbidden Word': 'Verbotenes Wort'
+  'Forced Punishment': 'Kräftige Bestrafung'
+  'Fortune': 'Glück'
+  'Bonding Word': 'Bonding Word'
+  'Frightening Word': 'Wort der Furcht'
+  'Frostbite': 'Einfrieren'
+  'Frozen Arrow': 'Eispfeil'
+  'Fury': 'Wut'
+  'Ghostly Claw': 'Geisterklaue'
+  'Ghostly Shovel': 'Phantomschaufel'
+  'Glowing Armour': 'Flammender Panzer'
+  'Glyph of Blindness': 'Glyphe der Blindheit'
+  'Glyph of Silence': 'Glyphe der Stille'
+  'Greed': 'Gier'
+  'Hand': 'Zeiger'
+  'Hangover': 'Kater'
+  'Haziness': 'Verschwommenheit'
+  'Heads or Tails': 'Kopf oder Zahl'
+  'Healing Word': 'Pflegendes Wort'
+  'High-Energy Shot': 'Motivationsspritze'
+  'Clockwork Pursuit': 'Clockwork Pursuit'
+  "Ikari's Foot": 'Ikaris Fuß'
+  'Immunity': 'Immunität'
+  'Increase': 'Verstärkung'
+  'Insidious Poison': 'Scheinangriff'
+  'Insolent Bramble': 'Bodenlose Rankenheit'
+  'Intimidation': 'Einschüchterung'
+  'Invisibility': 'Unsichtbarkeit'
+  'Invisibility of Others': 'Unsichtbarkeit verleihen'
+  'Jump': 'Sprung'
+  'Undertow': 'Undertow'
+  'Toxic Knowledge': 'Toxic Knowledge'
+  'Lashing Arrow': 'Peitschender Pfeil'
+  'Lashing Claw': 'Zupackende Kralle'
+  'Lethal Attack': 'Tödlicher Angriff'
+  'Lethal Trap': 'Todesfalle'
+  'Life Transfer': 'Leben übertragen'
+  'Lifting Word': 'Wort des Abhebens'
+  'Dead Weight': 'Dead Weight'
+  'Golden Fever': 'Golden Fever'
+  'Shovel Uprising': 'Shovel Uprising'
+  'Silent Mark': 'Silent Mark'
+  'Loss of Motivation': 'Motivationsmangel'
+  'Magic Arrow': 'Magischer Pfeil'
+  'Manifold Bramble': 'Rankengewirr'
+  'Mass Clumsiness': 'Massenungeschicklichkeit'
+  'Mass Trap': 'Massenfalle'
+  'Melancholy': 'Melancholie'
+  'Mistake': 'Verirrung'
+  'Mound': 'Aufhäufen'
+  'Mummification': 'Mumifizierung'
+  'Mutilation': 'Gemetzel'
+  'Natural Attack': 'Natürlicher Angriff'
+  'Blood Scent': 'Blood Scent'
+  'Nimble Punishment': 'Geschickte Bestrafung'
+  'Pandatak': 'Pandatak'
+  'Pandiniuras': 'Pandiniuras'
+  "Pandora's Box": 'Pandoras Box'
+  'Paralyzing Arrow': 'Lähmpfeil'
+  'Paralyzing Glyph': 'Glyphe der Lähmung'
+  'Paralyzing Poison': 'Lähmgift'
+  'Paralyzing Trap': 'Lähmfalle'
+  'Paralyzing Word': 'Wort der Lähmung'
+  'Read the Table': 'Read the Table'
+  'Plaguing Arrow': 'Plagender Pfeil'
+  'Playful Claw': 'Spielkralle'
+  'Poisoned Arrow': 'Giftpfeil'
+  'Poisoned Trap': 'Giftfalle'
+  'Poisoned Wind': 'Giftiger Windstrom'
+  'Power': 'Macht'
+  'Powerful Shooting': 'Powerschuss'
+  'Pressure': 'Druck'
+  'Preventing Word': 'Verhütendes Wort'
+  'Prime of Life': 'Kraft des Alters'
+  'Mountain Punch': 'Bergschlag'
+  'Punishment': 'Bestrafung'
+  'Punitive Arrow': 'Strafender Pfeil'
+  'Reducing Key': 'Schlüssel der Kürzungen'
+  'Reflex': 'Reflexe'
+  'Regenerating Word': 'Wort der Regeneration'
+  'Rekop': 'Rekop'
+  'Repelling Trap': 'Rückstoßfalle'
+  'Repercussion': 'Nachwirkung'
+  'Retreat Arrow': 'Rückstoßpfeil'
+  'Revitalising Word': 'Wort der Stärkung'
+  'Rough Tongue': 'Raue Zunge'
+  'Roulette': 'Roulette'
+  'Sacrifice': 'Opfer'
+  "Senshi's Sword": 'Senshis Schwert'
+  "Senshi's Wrath": 'Senshis Wut'
+  'Shovel Kiss': 'Herumwirbelnde Schaufel'
+  'Shovel of Judgement': 'Schaufel der Verurteilung'
+  'Shovel Throwing': 'Schaufel werfen'
+  'Shriveling': 'Verwelken'
+  "Shugo's Shield": 'Shugos Schild'
+  "Shugo's Teleportation": 'Shugos Teleportation'
+  'Slaughtering Shovel': 'Mörderschaufel'
+  'Slow Down': 'Verlangsamen'
+  'Slow Down Arrow': 'Verlangsamungspfeil'
+  'Smell': 'Geruchssinn'
+  'Soothing Bramble': 'Besänftigende Ranken'
+  'Spell Rebound': 'Zauber zurückwerfen'
+  'Spirit Rift': 'Spirit Rift'
+  'Spiritual Punishment': 'Geistige Bestrafung'
+  'Rooted Guard': 'Rooted Guard'
+  'Stain': 'Befleckung'
+  'Stimulating Word': 'Stimulierendes Wort'
+  'Strengthstorm': 'Sturm der Macht'
+  'Lucky Pounce': 'Lucky Pounce'
+  'Stampede': 'Stampede'
+  'Suppressing Roar': 'Suppressing Roar'
+  'Seismic Command': 'Seismic Command'
+  'Rending Pounce': 'Rending Pounce'
+  'Binding Howl': 'Binding Howl'
+  'Primal Cataclysm': 'Primal Cataclysm'
+  'Pack Totem': 'Rudeltotem'
+  'Swap': 'Tausch'
+  'Sword of Fate': 'Schicksalsschwert'
+  'Sword of Judgement': 'Schwert der Verurteilung'
+  'Sylvan Power': 'Macht der Waldgeister'
+  'Tear': 'Träne'
+  'Temporal Dust': 'Zeitstaub'
+  'Terror': 'Schrecken'
+  'Root Snare': 'Root Snare'
+  'Reviving Spores': 'Reviving Spores'
+  'Maddening Spores': 'Maddening Spores'
+  'Sacrificial Bloom': 'Sacrificial Bloom'
+  'Overgrowth': 'Overgrowth'
+  'Time Theft': 'Zeitdieb'
+  'Toad': 'Kröte'
+  'Temporal Dial': 'Temporal Dial'
+  "Tokei's Punch": 'Tokeis Faust'
+  "Tokei's Sandglass": 'Tokeis Sanduhr'
+  "Tokei's Teleportation": 'Tokeis Teleportation'
+  'Topkaj': 'Topkaj'
+  'Tormenting Arrow': 'Heimsuchender Pfeil'
+  'Transposition': 'Versetzung'
+  'Trap of Silence': 'Stille Falle'
+  'Tree': 'Baum'
+  'Tricky Blow': 'Tückischer Angriff'
+  'Tricky Trap': 'Tückische Falle'
+  'Truce': 'Waffenstillstand'
+  'Unsummoning': 'Rückruf'
+  'Vampiric Word': 'Vampirhaftes Wort'
+  'Vital Exchange': 'Vital Exchange'
+  'Second Wind': 'Second Wind'
+  'Wheel of Fortune': 'Glücksrad'
+  'Whip': 'Peitsche'
+  'Wild Grass': 'Wuchernde Gräser'
+  'Wind Armour': 'Wirbelwind-Panzer'
+  'Wind Vulnerability': 'Windverwundbarkeit'
+  'Word of Altruism': 'Wort der Nächstenliebe'
+  'Word of Recovery': 'Wort der Genesung'
+  'Word of Sacrifice': 'Wort des Opferns'
+  'Word of Silence': 'Wort der Stille'
+  'Word of Thorn': 'Stacheliges Wort'
+  'Word of Youth': 'Wort der Verjüngung'
+  'Wounding Word': 'Verletzendes Wort'
+  'Zatoishwan Stance': 'Zatoishwan Stance'

@@ -21,6 +21,11 @@ export const fight_turn_announcement_after_cue = (
   return current?.key === cue.turn_key ? current : Object.freeze({ key: cue.turn_key, seat: BigInt(seat) })
 }
 
+export const fight_turn_announcement_after_submission = (
+  current: FightTurnAnnouncement | null,
+  submitted: boolean
+): FightTurnAnnouncement | null => (submitted ? null : current)
+
 export const fight_turn_card_view = (
   fighters: readonly FightFighterView[],
   announcement: FightTurnAnnouncement | null

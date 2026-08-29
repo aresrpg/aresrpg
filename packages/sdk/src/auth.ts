@@ -22,6 +22,8 @@ import PINS from '../../../pins.json' with { type: 'json' }
 
 import { canonical_suins_name } from './suins.ts'
 import { character_claim_id, character_create, character_id, type CharacterCreateInput } from './character.ts'
+import { read_character_checkpoint as read_checkpoint, type CharacterCheckpoint } from './character_checkpoint.ts'
+import { create_item_snapshot_reader, type ItemSnapshot } from './item_snapshot.ts'
 import { gas_mist_from_receipt } from './gas.ts'
 import { SDK, type Pins, type SuiTransport } from './client.ts'
 import type { SeedAdminConfig, SeedAdminSession } from './seed_admin.ts'
@@ -49,13 +51,13 @@ import {
   type GameDeployment,
 } from './deployment_admin.ts'
 
-export type { CharacterActions } from './character_actions.ts'
+export type { CharacterActions, ScribeOutcome } from './character_actions.ts'
 export type { FightActions } from './fight.ts'
 export type { DungeonActions } from './dungeon.ts'
 export type { KolizeumActions } from './kolizeum.ts'
 export type { FriendsActions } from './friends.ts'
 export type { PartyActions } from './party.ts'
-
+export type { ItemSnapshot } from './item_snapshot.ts'
 export type AuthSession = Readonly<{
   address: string
   wallet_name: string
@@ -76,9 +78,14 @@ export type AuthSession = Readonly<{
   party: PartyActions
   /** the character-upkeep chain hand — equipment, stats, spells, consumables, runes */
   character: CharacterActions
+  read_character_checkpoint: (character_id: string, expected_world: string) => Promise<CharacterCheckpoint | null>
+  read_item: (item_id: string) => Promise<ItemSnapshot>
   marketplace: MarketplaceActions
   stacks: StackActions
-  create_trade: (counterparty: string) => Promise<Readonly<{ digest: string; trade: TradeRow }>>
+  create_trade: (
+    counterparty: string,
+    cleanup?: readonly string[]
+  ) => Promise<Readonly<{ digest: string; trade: TradeRow }>>
   trade: (trade: TradeRow) => TradeActions
   resolve_suins_address: (name: string) => Promise<string | null>
   estimate_sui_transfer: (recipient: string, amount_mist: bigint, drain: boolean) => Promise<bigint>
@@ -197,6 +204,7 @@ const create_wallet_session = (
     network,
     sign_transaction,
   })
+  const read_item = create_item_snapshot_reader(client, sdk.game_type_package)
   const registry_pin = (PINS as Record<string, { name_registry?: { id?: string | null } }>)[network]?.name_registry?.id
   // The found cap is cached for the session (kiosks are for life); an EMPTY answer is never
   // cached — the player whose first purchase creates their kiosk must be found on the next call.
@@ -272,9 +280,11 @@ const create_wallet_session = (
     friends: friends_actions(sdk, { address: account.address }),
     party: party_actions(sdk, { kiosk_cap }),
     character: character_actions(sdk, { kiosk_cap }),
+    read_character_checkpoint: (id, world) => read_checkpoint(client, sdk.game_type_package, id, world),
+    read_item,
     marketplace: marketplace_actions(sdk, { address: account.address, kiosk_cap }),
     stacks: stack_actions(sdk, { kiosk_cap }),
-    create_trade: (counterparty) => trade_create(sdk, { address: account.address, counterparty }),
+    create_trade: (counterparty, cleanup) => trade_create(sdk, { address: account.address, counterparty, cleanup }),
     trade: (trade) => trade_actions(sdk, { trade, address: account.address, kiosk_cap }),
     create_character: (character, first_world) =>
       personal_kiosk_action(async (kiosk_cap) => {
@@ -411,7 +421,7 @@ const create_wallet_session = (
 
       return Object.freeze({
         refresh: super_session.refresh,
-        execute: async (batch) => (await delegated_session()).execute(batch),
+        execute: async (batch, ledger) => (await delegated_session()).execute(batch, ledger),
         check_changes: super_session.check_changes,
         address_book: super_session.address_book,
         read_frozen: super_session.read_frozen,

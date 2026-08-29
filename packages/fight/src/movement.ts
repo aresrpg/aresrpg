@@ -251,7 +251,6 @@ export const displace = ({
     : toward_dir(origin, runtime.contract.fighters[Number(target)].cell)
   let remaining = cells
   let blocked = false
-  let trap_stopped = false
   while (remaining > 0n) {
     const current = runtime.contract.fighters[Number(target)].cell
     if (!push && manhattan(current, origin) <= 1n) break
@@ -262,7 +261,7 @@ export const displace = ({
       mask_get(runtime.contract.closed, next) ||
       fighter_at(runtime, next) !== null
     ) {
-      blocked = true
+      blocked = current !== origin
       break
     }
     runtime.contract.fighters[Number(target)].cell = next
@@ -275,10 +274,9 @@ export const displace = ({
       source,
       mp_spent: 0n,
     })
-    trap_stopped = on_enter(runtime, target, current)
-    if (trap_stopped || runtime.contract.fighters[Number(target)].dead) break
+    if (on_enter(runtime, target, current) || runtime.contract.fighters[Number(target)].dead) break
   }
-  if (push && blocked && remaining > 0n && !trap_stopped) {
+  if (push && blocked && remaining > 0n) {
     const damage = push_collision_damage(sheet.level, remaining, draw(cursor))
     emit(runtime, 'push_collided', { source, target, blocked_cells: remaining, damage })
     hit(runtime, { target, amount: damage, source, cause: 'push_collision' })

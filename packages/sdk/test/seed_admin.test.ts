@@ -110,6 +110,7 @@ describe('seed admin progress', () => {
 
     expect(transaction.getData().commands.map(({ $kind }) => $kind)).toEqual([
       'MoveCall',
+      'MoveCall',
       'SplitCoins',
       'TransferObjects',
     ])
@@ -198,12 +199,41 @@ describe('seed admin progress', () => {
       config: { admin_cap: admin_cap_id, content_root: content_root_id },
     })
 
-    const result = await session.execute('boards:catalog')
+    const result = await session.execute('boards:catalog', {})
 
     expect(executions).toBe(1)
     expect(post_publish_reads).toBe(2)
     expect(result.digest).toBe('CATALOG_CREATED')
     expect(result.snapshot.batches.find(({ id }) => id === 'boards:catalog')?.state).toBe('complete')
+  })
+
+  test('creation batches refuse immutable identity errors from the current lineage ledger', async () => {
+    const spells = class_names.flatMap((classe) =>
+      class_spell_unlocks.map((unlock_level, index) => ({
+        name: `${classe}_${index}`,
+        classe,
+        unlock_level,
+        levels: [],
+      }))
+    )
+    let executions = 0
+    const session = await create_seed_admin({
+      sdk: sdk_with(new Set([admin_cap_id, content_root_id]), {}, { execute: () => (executions += 1) }),
+      content: { ...content, spells },
+      config: { admin_cap: admin_cap_id, content_root: content_root_id },
+    })
+    const next = next_seed_batch(await session.refresh())
+
+    const incompatible_ledger = {
+      legacy: { hash: 'old', label: 'spell Legacy Name', domain: 'spell' as const },
+    }
+    await expect(session.execute(next!.id, incompatible_ledger)).rejects.toThrow(
+      'spell Legacy Name was removed from the files'
+    )
+    await expect(session.apply_changes(incompatible_ledger)).rejects.toThrow(
+      'spell Legacy Name was removed from the files'
+    )
+    expect(executions).toBe(0)
   })
 
   test('the permanent freeze verifies four distinct caps against their active packages', async () => {

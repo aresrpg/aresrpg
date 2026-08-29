@@ -9,6 +9,7 @@ const sale = (side: 'sold' | 'bought', ts_ms: number, price_mist: string): strin
   `1:2:3|${JSON.stringify({
     object: '0xitem',
     kind: 'item',
+    name: 'Aberrant Edge',
     item_type: 'aberrant_edge',
     amount: 1,
     price_mist,
@@ -30,6 +31,7 @@ describe('market history projection', () => {
       { address: '0xme', now_ms }
     )
     expect(result.sales).toHaveLength(1)
+    expect(result.sales[0]).toMatchObject({ id: '1:2:3', name: 'Aberrant Edge' })
     expect(result.revenue_30d_mist).toBe('12')
     expect(result.total).toBe(1)
     expect(result.profits).toEqual([{ kiosk: '0xkiosk', amount_mist: '77' }])

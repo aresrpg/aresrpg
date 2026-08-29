@@ -1,17 +1,34 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
+import { readFileSync } from 'node:fs'
+
 import { expect, test } from 'bun:test'
 import { renderToStaticMarkup } from 'react-dom/server'
 
 import { AppShell } from '../../src/components/AppShell.tsx'
-import { CharacterTabs, character_tab_invite_enabled } from '../../src/components/CharacterTabs.tsx'
+import {
+  CharacterTabs,
+  character_tab_invite_enabled,
+  character_tab_locked,
+} from '../../src/components/CharacterTabs.tsx'
 import { owned_party_invite_view } from '../../src/modules/party.ts'
 import { Sidebar } from '../../src/components/Sidebar.tsx'
 import { ConnectionCard, indexing_health_tone } from '../../src/components/SidebarCards.tsx'
 import type { AuthSession } from '../../src/auth.ts'
 import { load_app_copy } from '../../src/i18n/copy.ts'
 import { initial_session_state } from '../../src/modules/session.ts'
+
+const shell_source = readFileSync(new URL('../../src/components/AppShell.tsx', import.meta.url), 'utf8')
+
+test('switching tabs inside one fight does not remount its presentation layer', () => {
+  const key_selector = shell_source.slice(
+    shell_source.indexOf('const environment_key'),
+    shell_source.indexOf('// a previewing modal')
+  )
+  expect(key_selector).toContain('state.fight.checkpoint?.contract.id')
+  expect(key_selector).not.toContain('selected_character_id')
+})
 
 test('the account card sits below navigation and above language with row actions', async () => {
   const copy = await load_app_copy('en')
@@ -31,6 +48,8 @@ test('the account card sits below navigation and above language with row actions
     friends: {} as never,
     party: {} as never,
     character: {} as never,
+    read_character_checkpoint: async () => null,
+    read_item: async () => ({}) as never,
     marketplace: {} as never,
     stacks: {} as never,
     create_trade: async () => ({ digest: '', trade: {} as never }),
@@ -260,6 +279,37 @@ test('a character tab may invite another owned kiosk character, never itself', (
   const view = owned_party_invite_view(characters, '0xa', {}, null)
   expect(character_tab_invite_enabled('0xa', view)).toBeFalse()
   expect(character_tab_invite_enabled('0xb', view)).toBeTrue()
+})
+
+test('the Jobs route locks every character tab except the configured crafter', () => {
+  expect(character_tab_locked('/characters/jobs?job=TAILOR', '0xb', '0xa')).toBeTrue()
+  expect(character_tab_locked('/characters/jobs', '0xb', '0xb')).toBeFalse()
+  expect(character_tab_locked('/characters/stats', '0xb', '0xa')).toBeFalse()
+  expect(character_tab_locked('/characters/jobs', null, '0xa')).toBeFalse()
+})
+
+test('an accepted non-leader may invite another owned character', () => {
+  const characters = [
+    { id: '0xa', custody: 'kiosk', name: 'A' },
+    { id: '0xb', custody: 'kiosk', name: 'B' },
+    { id: '0xc', custody: 'kiosk', name: 'C' },
+  ] as never
+  const party = {
+    id: '0xp',
+    members: [
+      { character_id: '0xa', name: 'A' },
+      { character_id: '0xb', name: 'B' },
+    ],
+    invited: [],
+  }
+  const view = owned_party_invite_view(characters, '0xb', { '0xa': '0xp', '0xb': '0xp' }, party)
+  const outsider = owned_party_invite_view(characters, '0xc', {}, party)
+
+  expect(character_tab_invite_enabled('0xc', view)).toBeTrue()
+  expect(outsider.enabled).toBeFalse()
+  expect(
+    owned_party_invite_view([{ id: '0xb', custody: 'fight', name: 'B' }] as never, '0xb', {}, null).enabled
+  ).toBeFalse()
 })
 
 test('a replaced link renders red with its own label and never as reconnecting', async () => {

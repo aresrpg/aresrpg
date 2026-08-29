@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
+import { readFileSync } from 'node:fs'
+
 import { expect, mock, test } from 'bun:test'
 import { renderToStaticMarkup } from 'react-dom/server'
 
@@ -8,8 +10,14 @@ import type { SeedSpell } from '../../src/content/catalog.ts'
 
 mock.module('../../src/content/assets.ts', () => ({ spell_icon: () => '/spell.webp' }))
 
+test('the editor authors Châtiment duration from the generated Move constant', () => {
+  const source = readFileSync(new URL('../../src/encyclopedia/SpellCardEffects.tsx', import.meta.url), 'utf8')
+  expect(source).toContain('Number(CONTRACT_CONSTANTS.chatiment_turns)')
+  expect(source).not.toMatch(/chatiment\).*turns !== 5/)
+})
+
 const spell = Object.freeze({
-  name: 'Ruinstroke',
+  name: 'Destructive Sword',
   classe: 'senshi',
   unlock_level: 21,
   levels: Object.freeze([
@@ -91,7 +99,7 @@ test('the shared spell card keeps its read layout at every size and opens on the
   const small_html = renderToStaticMarkup(<SpellCard initial_level={2} small spell={small_spell} />)
 
   expect(small_html).toContain('data-spell-small=""')
-  expect(small_html).toContain('Ruinstroke')
+  expect(small_html).toContain('Destructive Sword')
   expect(small_html).toContain('Critical')
   expect(small_html).toContain('1 / 3')
   expect(small_html).toContain('data-spell-effects=""')
@@ -160,7 +168,12 @@ test('optional duration and guaranteed chance remain editable at their zero/defa
 test('the class spell list owns unlock order and keeps unlock levels outside the card header', async () => {
   const { ClassesTab } = await import('../../src/encyclopedia/ClassesTab.tsx')
   const html = renderToStaticMarkup(
-    <ClassesTab selected_id="senshi" select_class={() => undefined} text={(key) => key} />
+    <ClassesTab
+      selected_id="senshi"
+      select_class={() => undefined}
+      spell_name={(identity) => identity}
+      text={(key) => key}
+    />
   )
   const unlock_levels = [...html.matchAll(/Lv\. (\d+)/g)].map(([, level]) => Number(level))
 
@@ -218,10 +231,13 @@ test('every effect kind reads as player prose, never as a raw stat row', async (
       never: ['Adds'],
     },
     {
-      why: 'damage reduction reads as a shield and never leaks its ignored stat field',
-      effects: [{ ...base_effect, kind: 14, stat: 0, value: 12, value_max: 12, turns: 1, target_filter: 3 }],
-      reads: ['Reduces damage by', '12'],
-      never: ['Strength'],
+      why: 'universal damage reduction uses a shield icon and never leaks an Earth identity from its ignored stat',
+      effects: [
+        { ...base_effect, kind: 14, element: '', stat: 0, value: 12, value_max: 12, turns: 1, target_filter: 3 },
+      ],
+      edit: true,
+      reads: ['Reduces damage by', '12', 'All elements'],
+      never: ['Strength', 'Earth'],
     },
     {
       why: 'reflect names the fixed non-elemental damage Move applies',

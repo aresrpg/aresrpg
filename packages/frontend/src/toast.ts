@@ -10,11 +10,13 @@ export const toast_glass_class =
 export type ToastType = 'error' | 'info' | 'pending' | 'success'
 
 export type ToastAction = Readonly<{ label: string; onClick: () => void }>
+export type ToastPart = Readonly<{ text: string; tone: 'default' | 'gold' | 'primary' | 'sui' }>
 
 export type Toast = Readonly<{
   id: string
   message: string
   type: ToastType
+  parts?: readonly ToastPart[]
   /** Optional authored art for concrete rewards; status chrome remains the fallback. */
   icon?: string
   /** inline buttons on the toast's own line — the toast grows, never stacks (owner 2026-08-21) */
@@ -32,15 +34,18 @@ const message_of = (message: unknown): string =>
 
 /** The Sui SDK's gas-refusal vocabulary — a failed ATTEMPT is the only trigger for the
  *  top-up prompt (never a balance poll: first logins stay unbothered). */
-const GAS_EMPTY_PATTERN = /gas coin|no valid gas|insufficientgas|gasbalancetoolow|unable to select a gas/i
+const GAS_EMPTY_PATTERN =
+  /gas coin|no valid gas|insufficientgas|gasbalancetoolow|unable to select a gas|gas selection.*insufficient sui balance/i
 const gas_empty_cell: { listener: (() => void) | null } = { listener: null }
 /** Registered by the session observer (injection breaks the store↔toast cycle). */
 export const on_gas_empty = (listener: (() => void) | null): void => {
   // eslint-disable-next-line functional/immutable-data -- the one injection cell of this module
   gas_empty_cell.listener = listener
 }
-const notice_gas_empty = (type: ToastType, message: string): void => {
-  if (type === 'error' && GAS_EMPTY_PATTERN.test(message)) gas_empty_cell.listener?.()
+const notice_gas_empty = (type: ToastType, message: string): boolean => {
+  if (type !== 'error' || !GAS_EMPTY_PATTERN.test(message) || !gas_empty_cell.listener) return false
+  gas_empty_cell.listener()
+  return true
 }
 
 const translate_cell: { translate: ((message: string) => string | null) | null } = { translate: null }
@@ -64,9 +69,15 @@ export const toast = Object.freeze({
   },
   remove,
   add: (message: unknown, type: Exclude<ToastType, 'pending'> = 'error'): void => {
+    const text = message_of(message)
+    if (notice_gas_empty(type, text)) return
     const id = crypto.randomUUID()
-    notice_gas_empty(type, message_of(message))
-    show(Object.freeze({ id, message: translated(type, message_of(message)), type }))
+    show(Object.freeze({ id, message: translated(type, text), type }))
+    setTimeout(() => remove(id), 5_000)
+  },
+  rich: (message: string, parts: readonly ToastPart[], type: Exclude<ToastType, 'pending'> = 'info'): void => {
+    const id = crypto.randomUUID()
+    show(Object.freeze({ id, message, parts: Object.freeze(parts), type }))
     setTimeout(() => remove(id), 5_000)
   },
   persistent: (
@@ -82,8 +93,12 @@ export const toast = Object.freeze({
     const id = crypto.randomUUID()
     show(Object.freeze({ id, message, type: 'pending', persistent: true }))
     const finish = (next: unknown, type: 'error' | 'success', icon?: string): void => {
-      notice_gas_empty(type, message_of(next))
-      show(Object.freeze({ id, message: translated(type, message_of(next)), type, ...(icon ? { icon } : {}) }))
+      const text = message_of(next)
+      if (notice_gas_empty(type, text)) {
+        remove(id)
+        return
+      }
+      show(Object.freeze({ id, message: translated(type, text), type, ...(icon ? { icon } : {}) }))
       setTimeout(() => remove(id), type === 'success' ? (icon ? 3_000 : 1_400) : 5_000)
     }
     return Object.freeze({

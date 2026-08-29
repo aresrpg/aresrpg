@@ -10,6 +10,7 @@ import {
   dependency_artifact_changed,
   deployment_can_publish,
   deployment_compile_target,
+  game_upgrade_step,
   republish_needs_seed_cleanup,
 } from '../../src/admin/admin_deployment.ts'
 import { RPC_PROPAGATION_MS, wait_for_rpc_propagation } from '../../src/rpc_propagation.ts'
@@ -40,6 +41,8 @@ const auth_session = (address = '0xowner'): AuthSession =>
     friends: {} as never,
     party: {} as never,
     character: {} as never,
+    read_character_checkpoint: async () => null,
+    read_item: async () => ({}) as never,
     marketplace: {} as never,
     stacks: {} as never,
     create_trade: async () => ({ digest: '', trade: {} as never }),
@@ -113,7 +116,7 @@ describe('app state', () => {
     ).toBeTrue()
   })
 
-  test('a selective republish compiles math before any consumer of its published ABI', () => {
+  test('package publication compiles math before any consumer of its published ABI', () => {
     expect(deployment_compile_target(null)).toBe('math')
     expect(
       deployment_compile_target({
@@ -127,17 +130,23 @@ describe('app state', () => {
     ).toBe('math')
   })
 
-  test('a retained dependency without the matching artifact fingerprint must republish', () => {
+  test('a retained dependency without the matching artifact fingerprint must publish fresh', () => {
     const artifact = { package_name: 'aresrpg_math', digest: [0x01, 0xab], modules: [], dependencies: [] } as const
     expect(dependency_artifact_changed(null, artifact)).toBeTrue()
     expect(dependency_artifact_changed('deadbeef', artifact)).toBeTrue()
     expect(dependency_artifact_changed('01ab', artifact)).toBeFalse()
   })
 
-  test('a dependency republication invalidates a previously compiled core artifact', () => {
+  test('a fresh dependency publication invalidates a previously compiled core artifact', () => {
     const artifact = { package_name: 'aresrpg', digest: [], modules: [], dependencies: [] } as const
     expect(can_reuse_core_artifact(artifact, false)).toBeTrue()
     expect(can_reuse_core_artifact(artifact, true)).toBeFalse()
+  })
+
+  test('an upgraded artifact with a stale live Version resumes at activation', () => {
+    expect(game_upgrade_step({ artifact_changed: true, current_version: 7, source_version: 7 })).toBe('upgrade')
+    expect(game_upgrade_step({ artifact_changed: false, current_version: 7, source_version: 8 })).toBe('activate')
+    expect(game_upgrade_step({ artifact_changed: false, current_version: 8, source_version: 8 })).toBe('unchanged')
   })
 
   test('a game package published before bootstrap can resume without its in-memory artifact', () => {
@@ -288,7 +297,7 @@ describe('app state', () => {
       const authenticated = connect(DEFAULT_ADMIN_ADDRESS)
       const opened = reduce_app_state(authenticated, { type: 'page/open', page: 'admin' })
       const loading = reduce_app_state(opened, { type: 'admin/refresh' })
-      const ready = reduce_app_state(loading, {
+      const inspected = reduce_app_state(loading, {
         type: 'admin/refreshed',
         snapshot: {
           batches: [
@@ -297,6 +306,19 @@ describe('app state', () => {
           ],
         },
       })
+      const compared = reduce_app_state(inspected, {
+        type: 'admin/changes_checked',
+        changes: {
+          new_count: 10,
+          changed: [],
+          board_removals: [],
+          removed: [],
+          fixed: [],
+          unchanged: 0,
+          errors: [],
+        },
+      })
+      const ready = reduce_app_state(compared, { type: 'admin/frozen_discovered', frozen: false })
 
       expect(opened.navigation.page).toBe('admin')
       expect(reduce_app_state(ready, { type: 'admin/execute', batch: 'items:1' })).toBe(ready)
@@ -429,6 +451,15 @@ describe('app state', () => {
         admin: {
           ...create_state().admin,
           status: 'ready' as const,
+          changes: {
+            new_count: 2,
+            changed: [],
+            board_removals: [],
+            removed: [],
+            fixed: [],
+            unchanged: 0,
+            errors: [],
+          },
           snapshot: {
             sealed: false,
             batches: [{ id: 'items:0', phase: 'items', state: 'ready' as const, targets: 2, missing_dependencies: [] }],
@@ -436,6 +467,11 @@ describe('app state', () => {
         },
       }
       expect(reduce_app_state(inspected, { type: 'admin/publish_all' }).admin.operation).toEqual({ type: 'all' })
+      const invalid = {
+        ...inspected,
+        admin: { ...inspected.admin, changes: { ...inspected.admin.changes, errors: ['immutable identity changed'] } },
+      }
+      expect(reduce_app_state(invalid, { type: 'admin/publish_all' }).admin.operation).toBeNull()
     }
 
     // completed seed inspection exposes an explicit recoverable cleanup operation
@@ -451,11 +487,30 @@ describe('app state', () => {
           batches: [{ id: 'items:0', phase: 'items', state: 'complete', targets: 2, missing_dependencies: [] }],
         },
       })
-      const releasing = reduce_app_state(inspected, { type: 'admin/release' })
+      expect(inspected.admin.status).toBe('loading')
+      expect(inspected.admin.progress).toEqual(progressing.admin.progress)
+      const compared = reduce_app_state(inspected, {
+        type: 'admin/changes_checked',
+        changes: {
+          new_count: 0,
+          changed: [],
+          board_removals: [],
+          removed: [],
+          fixed: [],
+          unchanged: 1,
+          errors: [],
+        },
+      })
+      expect(compared.admin.status).toBe('loading')
+      expect(compared.admin.progress).toEqual(progressing.admin.progress)
+      const finalized = reduce_app_state(compared, { type: 'admin/frozen_discovered', frozen: false })
+      const releasing = reduce_app_state(finalized, { type: 'admin/release' })
       const released = reduce_app_state(releasing, { type: 'admin/released' })
 
       expect(progressing.admin.progress).toMatchObject({ current: 4, total: 10, label: 'spells:3' })
-      expect(inspected.admin.cleanup).toBe('needed')
+      expect(finalized.admin.status).toBe('ready')
+      expect(finalized.admin.progress).toBeNull()
+      expect(finalized.admin.cleanup).toBe('needed')
       expect(releasing.admin.operation).toEqual({ type: 'release' })
       expect(released.admin.cleanup).toBe('closed')
     }

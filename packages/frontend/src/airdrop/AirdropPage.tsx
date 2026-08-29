@@ -12,6 +12,7 @@ import type { SessionState } from '../modules/session.ts'
 import { encumbered_asset_ids, stack_merge_target_row } from '../inventory_stacks.ts'
 import { dispatch_app, useAppStore } from '../store.ts'
 import { toast } from '../toast.ts'
+import { run_direct_transaction } from '../transaction_guard.ts'
 
 const glyphs: Readonly<Record<string, LucideIcon>> = Object.freeze({
   pet_glb: Cat,
@@ -63,17 +64,20 @@ export default function AirdropPage({ copy, session }: Readonly<{ copy: AppCopy;
   const claim = (drop: (typeof content_catalog.airdrop.drops)[number]): void => {
     const { wallet } = session
     if (!wallet || busy || !drop.item) return
-    set_busy(drop.id)
-    const pending = toast.loading(t('pending_claim'))
     const existing = stack_merge_target_row(session.inventory, encumbered_asset_ids(listings, trades), drop.item_type)
-    void wallet
-      .claim_airdrop({
+    const transaction = run_direct_transaction(() =>
+      wallet.claim_airdrop({
         drop_id: drop.id,
         item_type: drop.item_type,
         category: drop.item.category,
         existing_item_id: existing?.id ?? null,
         existing_kiosk_id: existing?.kiosk ?? null,
       })
+    )
+    if (!transaction) return
+    set_busy(drop.id)
+    const pending = toast.loading(t('pending_claim'))
+    void transaction
       .then(() => {
         dispatch_app({ type: 'airdrop/claimed', drop_id: drop.id })
         pending.success(t('toast_claimed'))

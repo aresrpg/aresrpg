@@ -146,7 +146,7 @@ export const DungeonLobby = ({ copy }: Readonly<{ copy: AppCopy }>) => {
             </div>
           </div>
           <div className="h-56 shrink-0 [&_.chat]:h-full [&_.chat]:overflow-hidden [&_.chat]:rounded-lg">
-            <Chat text={{ ...copy.simulator_page, ...copy.fight_hud }} />
+            <Chat copy={copy} />
           </div>
         </div>
 

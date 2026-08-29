@@ -15,13 +15,15 @@ import { EffectLines, effect_color, type SpellCardEdit, type SpellCardValue } fr
 
 export type { SpellCardEdit, SpellCardPath, SpellCardValue } from './SpellCardEffects.tsx'
 
-type SpellCardLevel = SpellLevel & Readonly<{ mp_cost?: number }>
-type SpellCardSpell = Readonly<{
+export type SpellCardLevel = SpellLevel & Readonly<{ mp_cost?: number }>
+export type SpellCardSpell = Readonly<{
   classe: string
   name: string
   unlock_level: number
   levels: readonly SpellCardLevel[]
 }>
+type EffectsFooter = (context: Readonly<{ level: SpellCardLevel; level_index: number }>) => ReactNode
+const displayed_name = (spell: SpellCardSpell, display_name: string | undefined): string => display_name ?? spell.name
 
 const field_class =
   'h-8 border border-white/12 bg-bg px-2 text-[10px] text-[#e8e4dc] outline-none focus:border-[#c8963c]/60'
@@ -201,22 +203,44 @@ const Constraint = ({ label, children }: Readonly<{ label: string; children: Rea
   </div>
 )
 
+const SpellEffects = ({
+  level,
+  level_index,
+  edit,
+  footer,
+}: Readonly<{
+  level: SpellCardLevel
+  level_index: number
+  edit?: SpellCardEdit
+  footer?: EffectsFooter
+}>) => (
+  <>
+    <EffectLines critical_effects={level.crit_effects} edit={edit} effects={level.effects} level_index={level_index} />
+    {footer?.({ level, level_index })}
+  </>
+)
+
 export const SpellCard = ({
   spell,
   text = english,
   edit,
   initial_level = 1,
   small = false,
+  effects_footer,
+  display_name,
 }: Readonly<{
   spell: SpellCardSpell
   text?: EncyclopediaText
   edit?: SpellCardEdit
   initial_level?: number
   small?: boolean
+  effects_footer?: EffectsFooter
+  display_name?: string
 }>) => {
   const [level_index, set_level_index] = useState(Math.max(0, initial_level - 1))
   const safe_index = Math.min(level_index, spell.levels.length - 1)
   const level = spell.levels[safe_index]
+  const name = displayed_name(spell, display_name)
   if (!level) return null
   if (small)
     return (
@@ -228,7 +252,7 @@ export const SpellCard = ({
       >
         <header className="flex items-center justify-between gap-5 border-b border-white/9 pb-3">
           <h3 className="min-w-0 truncate text-[13px] font-semibold tracking-[0.13em] text-[#e6bf79] uppercase">
-            {spell.name}
+            {name}
           </h3>
           <span className="flex shrink-0 items-center gap-2 text-[9px] tracking-[0.12em] text-[#858994] uppercase">
             <Sparkles className="text-[#f0c35a]" size={13} strokeWidth={1.6} />
@@ -251,14 +275,12 @@ export const SpellCard = ({
   return (
     <article className="mx-auto w-full max-w-3xl space-y-4" data-spell-detail-card="">
       <header className="flex min-h-20 items-center gap-4">
-        <EntityIcon label={spell.name} size="size-18" src={spell_icon(spell.classe, spell.name)} />
+        <EntityIcon label={name} size="size-18" src={spell_icon(spell.classe, spell.name)} />
         <div className="min-w-0 flex-1">
           <InlineField
             class_name="block max-w-full"
             display={
-              <h3 className="truncate text-[14px] font-semibold tracking-[0.13em] text-[#e6bf79] uppercase">
-                {spell.name}
-              </h3>
+              <h3 className="truncate text-[14px] font-semibold tracking-[0.13em] text-[#e6bf79] uppercase">{name}</h3>
             }
             edit={edit}
             editor={
@@ -370,12 +392,7 @@ export const SpellCard = ({
 
           <section className="space-y-2" data-spell-effects="">
             <h4 className="text-[9px] font-semibold tracking-[0.2em] text-[#777b86] uppercase">{text('effects')}</h4>
-            <EffectLines
-              critical_effects={level.crit_effects}
-              edit={edit}
-              effects={level.effects}
-              level_index={safe_index}
-            />
+            <SpellEffects edit={edit} footer={effects_footer} level={level} level_index={safe_index} />
           </section>
 
           <section className="space-y-2 border-t border-white/8 pt-4">

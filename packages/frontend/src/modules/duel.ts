@@ -36,10 +36,23 @@ export const duels_awaiting = (state: AppState): readonly FightRow[] => {
   return Object.values(state.world.fights).filter((fight) => fight.phase === 'placement' && fight.opener_b === own)
 }
 
-const observe: NonNullable<AppModule['observe']> = ({ events, get_state, dispatch }) => {
+const reconcile_challenge_locks = (
+  character_ids: readonly string[],
+  state: Readonly<AppState>,
+  previous: Readonly<AppState>
+): readonly string[] =>
+  state.session.wallet !== previous.session.wallet
+    ? character_ids
+    : character_ids.filter((character_id) => {
+        const character = state.session.characters.find(({ id }) => id === character_id)
+        return character?.custody !== 'kiosk' || !!character.active_fight
+      })
+
+const observe: NonNullable<AppModule['observe']> = ({ events, get_state, dispatch, signal }) => {
   /** answered invitations — tab-local machinery, never state: a declined fight keeps streaming
    *  until its window closes, and one refusal must not re-open the prompt on every tick */
   const answered = new Set<string>()
+  const challenging = new Set<string>()
   const shown = new Map<string, () => void>()
   const text = (key: string, values?: Readonly<Record<string, string>>) => {
     const { copy } = get_state()
@@ -56,12 +69,15 @@ const observe: NonNullable<AppModule['observe']> = ({ events, get_state, dispatc
   events.on('duel/challenged', ({ character_id, name }) => {
     const state = get_state()
     const { wallet, selected_character_id } = state.session
-    if (!wallet || !selected_character_id) return
+    const character = selected_character(state.session)
+    if (!wallet || !selected_character_id || character?.custody !== 'kiosk' || challenging.has(selected_character_id))
+      return
     const pose = read_pose()
     if (!pose) {
       toast.add(text('duel_no_position'))
       return
     }
+    challenging.add(selected_character_id)
     toast.add(text('duel_challenging', { name }), 'info')
     void wallet.fight
       .challenge_duel({
@@ -72,12 +88,18 @@ const observe: NonNullable<AppModule['observe']> = ({ events, get_state, dispatc
         z: Math.round(client_to_chain_coordinate(pose.z)),
       })
       .then(({ fight }) => dispatch({ type: 'fight/watch', character_id: selected_character_id, fight }))
-      .catch((error: unknown) => toast.add(error))
+      .catch((error: unknown) => {
+        challenging.delete(selected_character_id)
+        toast.add(error)
+      })
   })
 
   // THE CHALLENGED: the invitation is a fight in the world, so the prompt follows the id SET —
   // it survives a reconnect, it cannot arrive twice, and it dies when the fight leaves.
   events.on('STATE_UPDATED', (state, previous) => {
+    reconcile_challenge_locks([...challenging], state, previous).forEach((character_id) =>
+      challenging.delete(character_id)
+    )
     if (state.world.fights === previous.world.fights && state.session === previous.session) return
     const live = new Set(duels_awaiting(state).map(({ id }) => id))
     for (const [fight, dismiss] of shown)
@@ -130,6 +152,7 @@ const observe: NonNullable<AppModule['observe']> = ({ events, get_state, dispatc
       )
     }
   })
+  signal.addEventListener('abort', () => challenging.clear(), { once: true })
 }
 
 // the no-op reduce keeps the MODULES union uniform: this domain owns no state at all

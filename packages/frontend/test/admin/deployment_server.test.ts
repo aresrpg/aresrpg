@@ -14,6 +14,7 @@ import {
   merge_deployment_pins,
   merge_seed_ledger_pins,
   next_package_version_source,
+  package_version_from_source,
   parse_contract_artifact,
   reset_deployment_pins,
   seed_ledger_from_pins,
@@ -30,6 +31,18 @@ describe('local deployment compiler', () => {
       dependencies: ['0x2'],
       digest: [1, 2, 3],
     })
+  })
+
+  test('refuses oversized game bytecode before asking the wallet to publish it', () => {
+    const oversized = JSON.stringify({
+      modules: [Buffer.alloc(96_001).toString('base64')],
+      dependencies: ['0x2'],
+      digest: [1, 2, 3],
+    })
+
+    expect(() => parse_contract_artifact('aresrpg', oversized)).toThrow(
+      'Game bytecode is 96001B; 96000B max preserves Sui metadata headroom'
+    )
   })
 
   test('surfaces compiler output instead of the child-process wrapper', () => {
@@ -128,11 +141,20 @@ describe('local deployment compiler', () => {
     expect(() => next_package_version_source(source, 8)).toThrow('behind the published game version')
   })
 
+  test('reads the desired game version for interrupted activation recovery', () => {
+    expect(package_version_from_source('module aresrpg::version { const PACKAGE_VERSION: u64 = 8; }')).toBe(8)
+  })
+
   test('republish clears only the selected network deployment', () => {
     const pins = {
       testnet: {
         package: '0xtest',
         math_package: '0xmath',
+        seed_package: '0xseed',
+        seed_package_original: '0xseedoriginal',
+        seed_upgrade_cap: '0xseedcap',
+        seed_artifact_digest: 'seed-digest',
+        content_root: { id: '0xroot', shared_version: '1' },
         worlds: { shore: { id: '0xworld' } },
         seed_ledgers: { '0xroot': { '0xitem': { hash: 'abc', label: 'item wheat' } } },
         seed_addresses: { '0xroot': { '0xitem': 'item wheat' } },
@@ -142,11 +164,18 @@ describe('local deployment compiler', () => {
 
     const reset = reset_deployment_pins(pins, 'testnet')
     expect(reset.mainnet).toEqual(pins.mainnet)
-    expect(reset.testnet.math_package).toBe('0xmath')
+    expect(reset.testnet.math_package).toBeNull()
+    expect(reset.testnet.seed_package).toBeNull()
+    expect(reset.testnet.control_package).toBeNull()
     expect(reset.testnet.package).toBeNull()
     expect(reset.testnet.worlds).toBeUndefined()
     expect(reset.testnet.seed_ledgers).toEqual(pins.testnet.seed_ledgers)
     expect(reset.testnet.seed_addresses).toEqual(pins.testnet.seed_addresses)
+
+    expect(reset.testnet.seed_package_original).toBeNull()
+    expect(reset.testnet.seed_upgrade_cap).toBeNull()
+    expect(reset.testnet.seed_artifact_digest).toBeNull()
+    expect(reset.testnet.content_root).toEqual({ id: null, shared_version: null })
   })
 
   test('pin writes stay inside the admin reducer instead of reloading the app through HMR', async () => {

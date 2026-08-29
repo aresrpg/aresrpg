@@ -8,6 +8,7 @@ import { chain_to_client_coordinate } from '@aresrpg/immutable'
 import { useEffect, useMemo, useRef, useState } from 'react'
 
 import { world_terrain } from '../../content/worlds.ts'
+import { world_scene_active } from '../../modules/navigation.ts'
 import { useAppStore } from '../../store.ts'
 import { useWorldPose } from '../core/pose_feed.ts'
 import {
@@ -30,7 +31,7 @@ export const BiomeMusic = () => {
   const pose = useWorldPose()
   const page = useAppStore(({ navigation }) => navigation.page)
   const enabled = useAppStore(({ settings }) => settings.music_enabled)
-  const fight_active = useAppStore(({ fight }) => fight.mode !== null && fight.mounted) && page === 'world'
+  const fight_active = useAppStore(({ fight }) => fight.mode !== null && fight.mounted)
   const character = useAppStore(({ session }) =>
     session.characters.find(({ id }) => id === session.selected_character_id)
   )
@@ -71,7 +72,9 @@ export const BiomeMusic = () => {
 
   const biome_key = biome_follow.armed
   const source =
-    enabled && page === 'world' && biome_key ? biome_music_pair(biome_key)[fight_active ? 'battle' : 'roam'] : null
+    enabled && world_scene_active(page, fight_active) && biome_key
+      ? biome_music_pair(biome_key)[fight_active ? 'battle' : 'roam']
+      : null
 
   useEffect(() => {
     const player = player_ref.current

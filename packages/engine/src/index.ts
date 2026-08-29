@@ -19,12 +19,18 @@ export { CHUNK_EDGE } from './voxel_data.ts'
 export { CELESTIAL_CYCLE_MS, DAY_FRAC } from './sky/celestial_motion.ts'
 export { MATERIAL_PRESETS, material_pattern } from './material_presets.ts'
 export { create_world_preview } from './world_preview.ts'
-export { DUNGEON_PORTAL_LABEL_HEIGHT } from './dungeon_portals.ts'
+export { DUNGEON_PORTAL_LABEL_HEIGHT, DUNGEON_PORTAL_ROOT_HEIGHT } from './dungeon_portals.ts'
 export { preload_mob_model } from './mob_model.ts'
 export { create_terrain_planner } from './terrain_planner.ts'
 export { structure_voxels } from './structure_placement.ts'
 export { STRUCTURE_PACKS, STRUCTURE_TYPES } from './structures.ts'
-export { create_flat_projection, project_height, set_flat_projection, step_flat_projection } from './flatten.ts'
+export {
+  create_flat_projection,
+  effective_flattened,
+  project_height,
+  set_flat_projection,
+  step_flat_projection,
+} from './flatten.ts'
 // the engine's deterministic-placement PRNG, shared upward: the world's chain-driven spawns seed
 // their own scatter and wander from it, so a mob stands where it stood last reload and never
 // grows a second copy of this algorithm

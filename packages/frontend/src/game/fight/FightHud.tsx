@@ -10,7 +10,7 @@ import { lazy, Suspense, useEffect, useMemo, useState } from 'react'
 
 import { ModalFrame } from '../../components/ModalFrame.tsx'
 import { content_catalog } from '../../content/catalog.ts'
-import type { AppCopy } from '../../i18n/copy.ts'
+import { spell_name, type AppCopy } from '../../i18n/copy.ts'
 import { dispatch_app, useAppStore } from '../../store.ts'
 import { END_TURN_SUBMIT_GUARD_MS } from '../../modules/fight_lifecycle.ts'
 import { ActionSlots } from '../hud/ActionSlots.tsx'
@@ -28,7 +28,7 @@ import {
 } from './fight_projection.ts'
 import { FightTimeline, type MobIconLookup } from './FightTimeline.tsx'
 import { fight_turn_card_view, FightTurnCard, type FightTurnAnnouncement } from './FightTurnCard.tsx'
-import { Chat } from '../../components/Chat.tsx'
+import { WorldChat } from '../../components/Chat.tsx'
 import './fight_hud.css'
 
 const LazyFightSpell = lazy(() => import('./FightSpell.tsx').then(({ FightSpell }) => ({ default: FightSpell })))
@@ -50,12 +50,14 @@ const FightVitals = ({
   selected_action,
   select_action,
   text,
+  copy,
 }: Readonly<{
   fighter: FightFighterView
   can_act: boolean
   selected_action: FightActionSelection
   select_action: (action: FightActionSelection) => void
   text: Readonly<Record<string, string>>
+  copy: AppCopy
 }>) => {
   const weapon_label = fighter.weapon?.bare_hands ? text.bare_hands : text.weapon_attack
   const weapon_spell: FightSpellView | null = fighter.weapon
@@ -75,6 +77,7 @@ const FightVitals = ({
         {weapon_spell && (
           <Suspense fallback={<div className="fight-hud__spell disabled" />}>
             <LazyFightSpell
+              display_name={weapon_spell.name}
               disabled={!can_act || fighter.ap < weapon_spell.details.ap_cost}
               fallback_icon={<Swords aria-hidden="true" size={25} strokeWidth={1.6} />}
               select={() => select_action(selected_action?.type === 'weapon' ? null : { type: 'weapon' })}
@@ -88,6 +91,7 @@ const FightVitals = ({
           return (
             <Suspense fallback={<div className={`fight-hud__spell${disabled ? ' disabled' : ''}`} />} key={spell.name}>
               <LazyFightSpell
+                display_name={spell_name(copy, spell.name)}
                 disabled={disabled}
                 select={() =>
                   select_action(
@@ -111,6 +115,25 @@ const FightVitals = ({
 const BANNER_BUTTON = 'mt-1 rounded-[6px] px-4 py-1.5 text-[10px] tracking-[0.14em]'
 export const end_turn_wait_ms = (observed_at_ms: number, now_ms: number): number =>
   Math.max(0, observed_at_ms + Number(CONTRACT_CONSTANTS.turn_min_ms) + END_TURN_SUBMIT_GUARD_MS - now_ms)
+
+export const end_turn_intent = ({
+  can_end_turn,
+  actions_locked,
+  min_turn_ready,
+  end_turn_queued,
+  end_turn_submitted,
+  transaction_pending,
+}: Readonly<{
+  can_end_turn: boolean
+  actions_locked: boolean
+  min_turn_ready: boolean
+  end_turn_queued: boolean
+  end_turn_submitted: boolean
+  transaction_pending: boolean
+}>): 'queue' | 'submit' | null => {
+  if (!can_end_turn || actions_locked || end_turn_queued || end_turn_submitted || transaction_pending) return null
+  return min_turn_ready ? 'submit' : 'queue'
+}
 
 type CrankAttempt = Readonly<{ turn_key: string; restore_serial: number }>
 
@@ -333,6 +356,8 @@ export const FightHud = ({
   if (!view || !fight.checkpoint) return null
   const fight_id = fight.checkpoint.contract.id
   const command_fight = fight.mode === 'remote' ? fight_id : null
+  const chat_names = Object.freeze(Object.fromEntries(view.timeline.map(({ seat, name }) => [Number(seat), name])))
+  const chat = <WorldChat copy={copy} fight={fight_id} names={chat_names} />
   if (view.phase === 'placement') {
     const own_seat = view.selected?.seat
     const own_ready =
@@ -379,18 +404,26 @@ export const FightHud = ({
           sides_manned={view.sides_manned}
           text={copy.fight_hud}
         />
+        {chat}
       </div>
     )
   }
   if (view.phase !== 'active' || !view.selected) return null
   const selected = view.selected
+  const turn_intent = end_turn_intent({
+    can_end_turn: view.can_end_turn,
+    actions_locked,
+    min_turn_ready,
+    end_turn_queued: fight.end_turn_queued,
+    end_turn_submitted: fight.end_turn_submitted,
+    transaction_pending: fight.transaction_pending,
+  })
   const queue_or_end_turn = (): void => {
-    if (fight.transaction_pending || fight.end_turn_queued || fight.end_turn_submitted) return
-    if (actions_locked || !min_turn_ready) {
+    if (turn_intent === 'queue') {
       dispatch_app({ type: 'fight/end_turn_queued', fight: fight_id, queued: true })
       return
     }
-    submit_end_turn(command_fight, selected.seat)
+    if (turn_intent === 'submit') submit_end_turn(command_fight, selected.seat)
   }
   const forfeit = (): void => {
     set_forfeit_open(false)
@@ -449,21 +482,13 @@ export const FightHud = ({
             : null
         }
       />
-      <Chat
-        fight={fight_id}
-        names={Object.fromEntries(view.timeline.map(({ seat, name }) => [Number(seat), name]))}
-        // stat_* display names live in ONE home (simulator_page, stat_name's section) — the
-        // chat resolves them through this merge instead of carrying duplicate rows
-        text={{ ...copy.simulator_page, ...copy.fight_hud }}
-      />
+      {chat}
       <div className="fight-hud__bottom">
         <div className="fight-hud__bar">
           <div className="fight-hud__controls">
             <button
               className={`fight-hud__end-turn${fight.end_turn_queued ? ' queued' : ''}`}
-              disabled={
-                !view.can_end_turn || fight.end_turn_queued || fight.end_turn_submitted || fight.transaction_pending
-              }
+              disabled={turn_intent === null}
               onClick={queue_or_end_turn}
               type="button"
             >
@@ -491,6 +516,7 @@ export const FightHud = ({
           </div>
           <FightVitals
             can_act={view.can_end_turn && !actions_locked}
+            copy={copy}
             fighter={selected}
             select_action={select_action}
             selected_action={selected_action}

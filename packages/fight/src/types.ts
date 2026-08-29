@@ -21,6 +21,16 @@ export type SpellEffect = {
   stat: MoveInteger
 }
 
+export type NumberRowInput = Readonly<{
+  runtime: FightRuntime
+  caster: MoveInteger
+  sheet: FightSheet
+  row: SpellEffect
+  target: MoveInteger
+  cursor: PrngCursor
+  cast_level: MoveInteger
+}>
+
 export type SpellLevel = {
   ap_cost: MoveInteger
   range_min: MoveInteger
@@ -181,6 +191,12 @@ export type WeaponSource = {
 export type PlayerSource = {
   name: string
   classe: string
+  sex: string
+  color_1: number
+  color_2: number
+  color_3: number
+  hat: string | null
+  cloak: string | null
   level: MoveInteger
   experience: MoveInteger
   vitality: MoveInteger
@@ -462,6 +478,12 @@ export type ResolveRows = (input: ResolveRowsInput) => void
 export type CharacterSourceInput = {
   name?: string
   classe: string
+  sex?: string
+  color_1?: number
+  color_2?: number
+  color_3?: number
+  hat?: string | null
+  cloak?: string | null
   level?: MoveInteger
   experience?: MoveInteger
   vitality?: MoveInteger

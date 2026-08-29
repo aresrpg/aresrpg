@@ -10,6 +10,7 @@ import {
   create_flat_projection,
   create_engine,
   create_terrain_planner,
+  effective_flattened,
   parse_world_recipe,
   project_height,
   sample_world_column,
@@ -37,6 +38,7 @@ import {
   create_fight_addon,
   create_follow_addon,
   create_spectate_addon,
+  time_of_day_for_camera_mode,
   type CameraAnchor,
   type CameraFrame,
   type FightBoardFrame,
@@ -51,6 +53,7 @@ import { fight_prompt_targets, publish_fight_prompt } from './fight_prompt_feed.
 import { dungeon_portal_targets, publish_dungeon_portal_prompt } from './dungeon_portal_feed.ts'
 import { publish_pose } from './pose_feed.ts'
 import { pet_seat_height, pet_vertical_offset, type PetLocomotion } from './pet_locomotion.ts'
+import { run_to_input } from './run_to.ts'
 import type { DungeonPortalMarker } from '../../modules/world.ts'
 
 export type WorldView = Readonly<{
@@ -93,6 +96,7 @@ export const create_world = ({
   world,
   quality,
   on_travel,
+  on_run_stopped,
   initial_focus = [0, 0],
 }: Readonly<{
   canvas: HTMLCanvasElement
@@ -100,6 +104,7 @@ export const create_world = ({
   quality: EngineQuality
   /** fired when T is pressed beside the star gate — the app owns what travel means */
   on_travel?: () => void
+  on_run_stopped?: (reason: 'arrived' | 'manual' | 'blocked' | 'inactive') => void
   initial_focus?: readonly [number, number]
 }>) => {
   const compiled = compile_world_recipe(parse_world_recipe(world))
@@ -129,6 +134,11 @@ export const create_world = ({
   // One projection state drives both the renderer and collision. The engine owns the pure
   // projection law; game core owns this one current frame snapshot.
   let flat_projection = create_flat_projection()
+  let requested_flattened = false
+  const sync_flat_projection = (): void => {
+    const next = effective_flattened(requested_flattened, engine.backend())
+    if ((flat_projection.target === 1) !== next) flat_projection = set_flat_projection(flat_projection, next)
+  }
   const projected_surface_y = (x: number, z: number): number => project_height(surface_y(x, z), flat_projection.amount)
   const structure_chunks = new Map<string, ReadonlyMap<number, number>>()
   const structure_material_at = (x: number, y: number, z: number): number | undefined => {
@@ -206,6 +216,7 @@ export const create_world = ({
   let active = false
   let enabled = false
   let action_lock: Readonly<{ character_id: string; animation: 'gather' | null }> | null = null
+  let run_target: Readonly<{ x: number; z: number }> | null = null
   let action_animation_timer: ReturnType<typeof setInterval> | null = null
   let dragging: 'pan' | 'orbit' | null = null
   let pointer = [0, 0] as [number, number]
@@ -240,6 +251,26 @@ export const create_world = ({
     mouse_forward = false
     character.set_input({ forward: 0, strafe: 0, jump: false, glide: false, walk: false })
   }
+  const stop_run = (reason: 'arrived' | 'manual' | 'blocked' | 'inactive' = 'manual', notify = true): void => {
+    if (!run_target) return
+    run_target = null
+    clear_movement()
+    if (notify) on_run_stopped?.(reason)
+  }
+  const stop_run_for_manual_input = (event: KeyboardEvent, down: boolean): void => {
+    if (down && (MOVE_KEYS[event.code] !== undefined || event.code === 'Space')) stop_run()
+  }
+  const stop_run_for_action_lock = (next: typeof action_lock): void => {
+    if (next) stop_run('blocked')
+  }
+  const apply_run_input = (position: Readonly<Vec3>): void => {
+    const run = run_target ? run_to_input({ x: position[0], z: position[2] }, run_target) : null
+    if (run?.arrived) stop_run('arrived')
+    else if (run) {
+      footsteps.unlock()
+      character.set_input({ yaw: run.yaw, forward: 1, strafe: 0 })
+    } else character.set_input({ yaw: director.active().get_yaw() })
+  }
 
   const submitted_entities = (): readonly EntityRender[] =>
     // A MOUNTED BOARD SHOWS ITS FIGHTERS AND NOBODY ELSE (owner 2026-08-21). Your overworld
@@ -253,6 +284,7 @@ export const create_world = ({
 
   const set_mode = (next: typeof mode): void => {
     if (next === mode) return
+    if (next !== 'follow') stop_run('inactive')
     if (next !== 'follow') {
       publish_pose(null)
       engine.set_character_anchor(null)
@@ -336,6 +368,7 @@ export const create_world = ({
     if (!enabled || mode !== 'follow') return
     if (action_lock) return
     const move = MOVE_KEYS[event.code]
+    stop_run_for_manual_input(event, down)
     if (move !== undefined) {
       const bucket = pressed[move.axis]
       if (down) bucket.add(String(move.sign))
@@ -579,9 +612,11 @@ export const create_world = ({
   }
 
   const tick = (now: number, delta_seconds: number): void => {
+    sync_flat_projection()
     const previous_flat = flat_projection
     flat_projection = step_flat_projection(flat_projection, delta_seconds)
     engine.set_flatten_amount(flat_projection.amount)
+    const world_time_of_day = pinned_time ?? (now / CELESTIAL_CYCLE_MS + 0.31) % 1
     let anchor: CameraAnchor
     if (mode === 'spectate') {
       anchor = {
@@ -599,7 +634,7 @@ export const create_world = ({
       const next_ground = project_height(source_ground, flat_projection.amount)
       character.reconcile_ground(previous_ground, next_ground)
       follow_addon.translate_y(next_ground - previous_ground)
-      character.set_input({ yaw: director.active().get_yaw() })
+      apply_run_input(before)
       character.tick(delta_seconds)
       const transform = character.get_transform()
       const character_changed = render_character(transform)
@@ -631,7 +666,7 @@ export const create_world = ({
         z: anchor.z,
         yaw: director.active().get_yaw(),
         riding,
-        time_of_day: pinned_time ?? (performance.now() / CELESTIAL_CYCLE_MS + 0.31) % 1,
+        time_of_day: world_time_of_day,
       })
       // the night lantern (and any character-anchored presentation) follows the FEET, never
       // the camera target — the follow camera leads ahead of the body
@@ -659,7 +694,7 @@ export const create_world = ({
     const focus = mode === 'follow' ? ([anchor.x, anchor.z] as const) : ([view.target[0], view.target[2]] as const)
     chunks.set_focus(focus[0], focus[1])
     chunks.tick()
-    engine.set_time_of_day(pinned_time ?? (performance.now() / CELESTIAL_CYCLE_MS + 0.31) % 1)
+    engine.set_time_of_day(time_of_day_for_camera_mode(mode, world_time_of_day))
   }
 
   canvas.addEventListener('pointerdown', on_pointer_down)
@@ -803,7 +838,14 @@ export const create_world = ({
         displayed_chunks: engine.chunk_count(),
       }),
     set_flattened: (next: boolean) => {
-      flat_projection = set_flat_projection(flat_projection, next)
+      requested_flattened = next
+      sync_flat_projection()
+    },
+    set_run_target: (next: Readonly<{ x: number; z: number }> | null) => {
+      stop_run('manual', false)
+      if (!next) return
+      clear_movement()
+      run_target = Object.freeze(next)
     },
     set_active: (next: boolean) => {
       if (next === active) return
@@ -811,6 +853,7 @@ export const create_world = ({
       director.set_enabled(next)
       if (next) engine.start(({ now, delta_seconds }) => tick(now, delta_seconds))
       else {
+        stop_run('inactive')
         clear_movement()
         footsteps.reset()
         dragging = null
@@ -820,7 +863,10 @@ export const create_world = ({
     },
     set_interactive: (next: boolean) => {
       enabled = next
-      if (!next) clear_movement()
+      if (!next) {
+        stop_run('inactive')
+        clear_movement()
+      }
       canvas.style.cursor = next ? 'grab' : 'default'
     },
     set_action_lock: (next: Readonly<{ character_id: string; animation: 'gather' | null }> | null) => {
@@ -830,6 +876,7 @@ export const create_world = ({
       if (action_animation_timer) clearInterval(action_animation_timer)
       action_animation_timer = null
       action_lock = next
+      stop_run_for_action_lock(next)
       clear_movement()
       if (next?.animation !== 'gather') return
       const play = (): void => {

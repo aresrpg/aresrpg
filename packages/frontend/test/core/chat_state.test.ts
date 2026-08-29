@@ -3,7 +3,12 @@
 
 import { expect, test } from 'bun:test'
 
-import { chat_line_in_fight, chat_line_in_party, type ChatLine } from '../../src/modules/chat.ts'
+import {
+  chat_line_in_fight,
+  chat_line_in_party,
+  chat_message_from_draft,
+  type ChatLine,
+} from '../../src/modules/chat.ts'
 import { chat_line_tokens } from '../../src/components/Chat.tsx'
 import { initial_app_state, reduce_app_state } from '../../src/store.ts'
 
@@ -23,18 +28,81 @@ test('party lines render only for the selected character party', () => {
   expect(chat_line_in_party(party, '0xother')).toBeFalse()
 })
 
-test('spoken names retain their owner address for right-click friend actions', () => {
+test('spoken names retain their owner address for the left-click context menu', () => {
   const tokens = chat_line_tokens(
     {
       id: 'chat',
       channel: 'general',
       key: 'chat_line',
-      values: { name: { text: 'Aiko', cls: 'name', owner: '0xaiko' }, message: { text: 'Hi', cls: 'says' } },
+      values: {
+        name: { text: 'Aiko', cls: 'name', owner: '0xaiko', character_id: '0xcharacter' },
+        message: { text: 'Hi', cls: 'says' },
+      },
     },
     { chat_line: '{name}: {message}' },
     {}
   )
-  expect(tokens.find(({ cls }) => cls === 'name')).toMatchObject({ text: 'Aiko', owner: '0xaiko' })
+  expect(tokens.find(({ cls }) => cls === 'name')).toMatchObject({
+    text: 'Aiko',
+    owner: '0xaiko',
+    character_id: '0xcharacter',
+  })
+})
+
+test('party and private lines keep their channel-wide presentation', () => {
+  const party = chat_line_tokens(
+    {
+      id: 'party',
+      channel: 'party',
+      party: '0xp',
+      key: 'chat_party_line',
+      values: { name: { text: 'Sceat', cls: 'party' }, message: { text: 'Ready', cls: 'party' } },
+    },
+    { chat_party_line: '(party) {name}: {message}' },
+    {}
+  )
+  expect(party.map(({ text }) => text).join('')).toBe('(party) Sceat: Ready')
+  expect(party.every(({ cls }) => cls === 'party')).toBeTrue()
+
+  const whisper = chat_line_tokens(
+    {
+      id: 'whisper',
+      channel: 'whisper',
+      key: 'chat_line',
+      values: { name: { text: 'Aiko', cls: 'whisper' }, message: { text: 'Psst', cls: 'whisper' } },
+    },
+    { chat_line: '{name}: {message}' },
+    {}
+  )
+  expect(whisper.every(({ cls }) => cls === 'whisper')).toBeTrue()
+})
+
+test('rich message parts retain position and exact item interaction data', () => {
+  const tokens = chat_line_tokens(
+    {
+      id: 'rich',
+      channel: 'general',
+      key: 'chat_line',
+      values: {
+        name: { text: 'Aiko', cls: 'name' },
+        message: {
+          text: '',
+          parts: [
+            { kind: 'position', world: 'nauvis', x: 50_010.47, z: 49_990.91 },
+            { kind: 'text', text: ' ' },
+            { kind: 'item', id: '0xhat', name: 'Fuwa Hat' },
+          ],
+        },
+      },
+    },
+    { chat_line: '{name}: {message}' },
+    {}
+  )
+  expect(tokens.find(({ position }) => position)).toMatchObject({
+    text: '[nauvis · 10, -9]',
+    position: { world: 'nauvis', x: 50_010.47, z: 49_990.91 },
+  })
+  expect(tokens.find(({ item }) => item)?.item).toEqual({ id: '0xhat', name: 'Fuwa Hat' })
 })
 
 test('the chat appends capped history and corrects only through the replaces door', () => {
@@ -71,4 +139,18 @@ test('combat lines render only inside their own fight', () => {
   expect(
     chat_line_in_fight({ id: 'g', channel: 'general', key: 'chat_line', values: Object.freeze({}) }, '0xfb')
   ).toBeTrue()
+})
+
+test('inventory links append to the one chat draft and preserve multiple object identities', () => {
+  const base = initial_app_state(settings)
+  const one = reduce_app_state(base, { type: 'chat/link_item', item: { id: '0xhat', name: 'Fuwa Hat' } })
+  const two = reduce_app_state(one, { type: 'chat/link_item', item: { id: '0xwool', name: 'Fuwa Wool' } })
+  expect(two.chat.draft.text).toBe('[Fuwa Hat] [Fuwa Wool]')
+  expect(chat_message_from_draft(two.chat.draft)).toEqual({
+    text: '[Fuwa Hat] [Fuwa Wool]',
+    items: [
+      { id: '0xhat', name: 'Fuwa Hat' },
+      { id: '0xwool', name: 'Fuwa Wool' },
+    ],
+  })
 })

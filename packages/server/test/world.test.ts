@@ -296,13 +296,12 @@ describe('the world module', () => {
       first.sent.some((packet) => packet.type === 'packet/player_moved' && packet.character_id === '0xb')
     ).toBeTrue()
 
-    second_player.on_message(JSON.stringify({ type: 'packet/chat', character_id: '0xb', text: 'hello' }))
+    second_player.on_message(
+      JSON.stringify({ type: 'packet/chat', character_id: '0xb', parts: [{ kind: 'text', text: 'hello' }] })
+    )
     await flush()
-    expect(
-      first.sent.some(
-        (packet) => packet.type === 'packet/chat_message' && packet.character === 'nox' && packet.text === 'hello'
-      )
-    ).toBeTrue()
+    const chat = first.sent.find((packet) => packet.type === 'packet/chat_message' && packet.character === 'nox')
+    expect(chat).toMatchObject({ parts: [{ kind: 'text', text: 'hello' }] })
     void first_player
   })
 

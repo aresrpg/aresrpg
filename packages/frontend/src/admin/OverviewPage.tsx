@@ -1,131 +1,414 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
+import type {
+  AdminAddressesOverview,
+  AdminBucket,
+  AdminCharactersOverview,
+  AdminOnlineOverview,
+  AdminPlayersOverview,
+  AdminRangeDays,
+  AdminRevenueOverview,
+  AdminTransactionsOverview,
+} from '@aresrpg/protocol'
+
+import { PANEL } from '../encyclopedia/components.tsx'
 import { dispatch_app, useAppStore } from '../store.ts'
 import { format_sui } from '../wallet_amount.ts'
 
-import { AdminWalletPanel, useAdminRevenue } from './AdminWalletPanel.tsx'
+import { admin_range_label, AdminRangeSelector } from './AdminRangeSelector.tsx'
+import { useAdminRevenue } from './AdminWalletPanel.tsx'
+import type { AdminRevenue } from './AdminWalletPanel.tsx'
+import type { AdminOverviewState } from './admin_state.ts'
+import { MetricChart, type MetricSeries } from './MetricChart.tsx'
 
-const card_class =
-  'rounded-xl border border-white/[0.075] bg-[linear-gradient(145deg,rgba(255,255,255,0.045),rgba(255,255,255,0.012))]'
+const COLORS = Object.freeze({ gold: '#c8963c', blue: '#70bdf2', violet: '#ac8dde', white: '#e8e4dc' })
+const text = (copy: Readonly<Record<string, string>>, key: string, fallback: string): string => copy[key] || fallback
+const sui_number = (mist: string): number => Number(BigInt(mist)) / 1_000_000_000
+const display_count = (value: number | null | undefined): string =>
+  typeof value === 'number' && Number.isFinite(value) ? value.toLocaleString() : '—'
+const bucket_label = (copy: Readonly<Record<string, string>>, bucket: AdminBucket): string =>
+  text(copy, `bucket_${bucket}`, bucket === '15m' ? '15-minute buckets' : `${bucket} buckets`)
+
+const Stat = ({ label, value }: Readonly<{ label: string; value: string }>) => (
+  <div className="min-w-0 border-r border-border px-3 last:border-r-0">
+    <span className="block truncate text-[7px] tracking-[0.14em] text-[#6b7280] uppercase">{label}</span>
+    <strong className="mt-1 block truncate text-[11px] font-medium text-[#e8e4dc] tabular-nums">{value}</strong>
+  </div>
+)
 
 const KpiCard = ({
+  detail,
   label,
+  tone,
   value,
-  unit,
-  gold = false,
-  title,
-}: Readonly<{ label: string; value: string; unit?: string; gold?: boolean; title?: string }>) => (
-  <div className={`${card_class} min-h-28 px-4 py-4`} title={title}>
-    <p className="text-[8px] tracking-[0.13em] text-[#858993] uppercase">{label}</p>
-    <p className={`mt-5 text-[26px] font-light leading-none ${gold ? 'text-[#efbd45]' : 'text-[#e4dfd6]'}`}>
+}: Readonly<{ detail: string; label: string; tone?: 'gold' | 'blue' | 'green'; value: string }>) => (
+  <article
+    className={`${PANEL} flex min-h-24 min-w-0 flex-col justify-between bg-[linear-gradient(145deg,rgba(200,150,60,0.035),transparent_62%)] p-4`}
+  >
+    <span className="truncate text-[8px] tracking-[0.16em] text-[#6b7280] uppercase">{label}</span>
+    <strong
+      className={`mt-3 truncate text-xl font-semibold tracking-[-0.035em] tabular-nums ${
+        tone === 'gold'
+          ? 'text-[#c8963c]'
+          : tone === 'blue'
+            ? 'text-[#70bdf2]'
+            : tone === 'green'
+              ? 'text-[#77d99a]'
+              : 'text-[#e8e4dc]'
+      }`}
+    >
       {value}
-      {unit && <span className="ml-2 text-[9px] tracking-[0.12em] text-[#8a8172] uppercase">{unit}</span>}
-    </p>
-  </div>
+    </strong>
+    <span className="mt-1 truncate text-[8px] text-[#555b66]">{detail}</span>
+  </article>
 )
 
-const EmptyVolumeChart = () => (
-  <div className={`${card_class} flex min-h-[430px] flex-col p-5 xl:col-span-8`}>
-    <div className="flex items-start justify-between gap-4">
-      <div>
-        <p className="text-[9px] tracking-[0.18em] text-[#d8d3ca] uppercase">Daily shop volume</p>
-        <p className="mt-2 text-[8px] text-[#626771]">30 days</p>
-      </div>
-      <span className="text-[8px] tracking-[0.1em] text-[#555b65] uppercase">SUI</span>
-    </div>
-    <div className="mt-8 grid min-h-0 flex-1 grid-cols-[28px_1fr] gap-3">
-      <div className="flex flex-col justify-between pb-5 text-right text-[7px] text-[#4f545d]">
-        <span>—</span>
-        <span>—</span>
-        <span>0</span>
-      </div>
-      <div className="relative min-h-72 border-b border-l border-white/[0.08]">
-        <div className="absolute inset-0 grid grid-rows-4">
-          {Array.from({ length: 4 }, (_, index) => (
-            <span className="border-t border-white/[0.035]" key={index} />
-          ))}
-        </div>
-        <div className="absolute inset-x-3 inset-y-0 grid grid-cols-[repeat(30,minmax(2px,1fr))] items-end gap-1">
-          {Array.from({ length: 30 }, (_, index) => (
-            <span
-              className="h-px bg-gradient-to-t from-[#c8963c]/35 to-[#efbd45]/60"
-              key={index}
-              title="No volume projection"
-            />
-          ))}
-        </div>
-      </div>
-    </div>
-    <div className="ml-10 mt-3 flex justify-between text-[7px] tracking-[0.08em] text-[#555b65] uppercase">
-      <span>30 days ago</span>
-      <span>Today</span>
-    </div>
-  </div>
-)
-
-const PlayersCard = ({
-  online,
-  indexed,
+const ChartPanel = ({
+  copy,
+  title,
+  subtitle,
+  days,
+  change,
+  series,
+  bucket,
   loading,
-}: Readonly<{ online: number | null; indexed: number | undefined; loading: boolean }>) => (
-  <section className={`${card_class} p-5`}>
-    <div className="flex items-center justify-between gap-4">
-      <p className="text-[9px] tracking-[0.18em] text-[#d8d3ca] uppercase">Players</p>
-      <button
-        className="cursor-pointer text-[8px] tracking-[0.12em] text-[#67adff] uppercase disabled:cursor-not-allowed disabled:opacity-35"
-        disabled={loading}
-        onClick={() => dispatch_app({ type: 'admin/overview_refresh' })}
-        type="button"
-      >
-        {loading ? 'Reading…' : 'Refresh'}
-      </button>
+}: Readonly<{
+  copy: Readonly<Record<string, string>>
+  title: string
+  subtitle: string
+  days: AdminRangeDays
+  change: (days: AdminRangeDays) => void
+  series: readonly MetricSeries[]
+  bucket: AdminBucket
+  loading: boolean
+}>) => (
+  <section className={`${PANEL} min-w-0 overflow-hidden`}>
+    <header className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2 border-b border-border px-4 py-3">
+      <div className="min-w-0">
+        <h2 className="truncate text-[10px] font-semibold tracking-[0.16em] text-[#d9d5cd] uppercase">{title}</h2>
+        <p className="mt-1 truncate text-[8px] text-[#6b7280]">{subtitle}</p>
+      </div>
+      <AdminRangeSelector change={change} copy={copy} days={days} />
+    </header>
+    <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 px-4 pt-3">
+      <span className="flex flex-wrap gap-x-3 gap-y-1 text-[7px] tracking-[0.08em] text-[#777b86] uppercase">
+        {series.map((row) => (
+          <span className="inline-flex items-center gap-1" key={row.label}>
+            <i className="size-1.5" style={{ background: row.color }} />
+            {row.label}
+          </span>
+        ))}
+      </span>
+      <span className="text-[7px] tracking-[0.12em] text-[#555b66] uppercase">
+        {loading ? text(copy, 'loading', 'Loading…') : bucket_label(copy, bucket)}
+      </span>
     </div>
-    <div className="mt-4 flex min-h-11 items-center justify-between border-b border-white/[0.055] py-2">
-      <span className="text-[8px] tracking-[0.08em] text-[#858993] uppercase">Online now</span>
-      <span className="text-sm text-[#67adff]">{online?.toLocaleString() ?? '—'}</span>
-    </div>
-    <div className="flex min-h-11 items-center justify-between py-2">
-      <span className="text-[8px] tracking-[0.08em] text-[#858993] uppercase">Indexed users</span>
-      <span className="text-sm text-[#d8d3ca]">{indexed?.toLocaleString() ?? '—'}</span>
+    <div className="px-4 py-3">
+      <MetricChart className="h-44" label={title} series={series} />
     </div>
   </section>
 )
 
-export const OverviewPage = ({ copy }: Readonly<{ copy: Readonly<Record<string, string>> }>) => {
-  const admin = useAppStore((state) => state.admin)
-  const online = useAppStore((state) => state.session.online)
-  const revenue = useAdminRevenue(copy)
-  const collectable = revenue.royalties.length > 0 && !revenue.reading ? format_sui(revenue.claimable, 4) : '—'
+const revenue_series = (
+  copy: Readonly<Record<string, string>>,
+  revenue: AdminRevenueOverview
+): readonly MetricSeries[] =>
+  Object.freeze([
+    Object.freeze({
+      label: text(copy, 'shop', 'Shop'),
+      color: COLORS.gold,
+      values: revenue.money.map((row) => sui_number(row.shop_mist)),
+    }),
+    Object.freeze({
+      label: text(copy, 'item_royalties', 'Item royalties'),
+      color: COLORS.violet,
+      values: revenue.money.map((row) => sui_number(row.item_royalty_mist)),
+    }),
+    Object.freeze({
+      label: text(copy, 'character_royalties', 'Character royalties'),
+      color: COLORS.white,
+      values: revenue.money.map((row) => sui_number(row.character_royalty_mist)),
+    }),
+  ])
 
+const player_series = (
+  copy: Readonly<Record<string, string>>,
+  players: AdminPlayersOverview
+): readonly MetricSeries[] =>
+  Object.freeze([
+    Object.freeze({
+      label: text(copy, 'active_players_bucket', 'Active players per bucket'),
+      color: COLORS.blue,
+      values: players.activity.map(({ active }) => active),
+      area: true,
+    }),
+  ])
+
+const transaction_series = (
+  copy: Readonly<Record<string, string>>,
+  transactions: AdminTransactionsOverview
+): readonly MetricSeries[] =>
+  Object.freeze([
+    Object.freeze({
+      label: text(copy, 'game_transactions', 'Game transactions'),
+      color: COLORS.white,
+      values: transactions.transactions.map((row) => row.transactions),
+      area: true,
+    }),
+  ])
+
+const online_series = (copy: Readonly<Record<string, string>>, online: AdminOnlineOverview): readonly MetricSeries[] =>
+  Object.freeze([
+    Object.freeze({
+      label: text(copy, 'average', 'Average'),
+      color: COLORS.blue,
+      values: online.online.map((row) => row.average),
+      area: true,
+    }),
+    Object.freeze({
+      label: text(copy, 'peak', 'Peak'),
+      color: COLORS.white,
+      values: online.online.map((row) => row.peak),
+    }),
+  ])
+
+const address_series = (
+  copy: Readonly<Record<string, string>>,
+  addresses: AdminAddressesOverview
+): readonly MetricSeries[] =>
+  Object.freeze([
+    {
+      label: text(copy, 'unique_addresses', 'Unique addresses'),
+      color: COLORS.violet,
+      values: addresses.addresses.map(({ total }) => total),
+      area: true,
+    },
+  ])
+
+const character_series = (
+  copy: Readonly<Record<string, string>>,
+  characters: AdminCharactersOverview
+): readonly MetricSeries[] =>
+  Object.freeze([
+    {
+      label: text(copy, 'total_characters', 'Total characters'),
+      color: COLORS.gold,
+      values: characters.characters.map(({ total }) => total),
+      area: true,
+    },
+  ])
+
+const claim_label = (copy: Readonly<Record<string, string>>, revenue: AdminRevenue, claimable: bigint): string => {
+  if (revenue.claiming) return text(copy, 'claiming', 'Claiming…')
+  if (revenue.claim_armed) return text(copy, 'confirm_claim', 'Confirm claim')
+  return `${text(copy, 'claim', 'Claim')} ${claimable > 0n ? `${format_sui(claimable, 3)} SUI` : ''}`
+}
+const treasury_value = (revenue: AdminRevenue): string =>
+  revenue.treasury_mist === null ? '—' : `${format_sui(revenue.treasury_mist, 3)} SUI`
+const claim_disabled = (revenue: AdminRevenue): boolean =>
+  !revenue.connected || revenue.claimable <= 0n || revenue.claiming
+
+const TreasuryStrip = ({
+  copy,
+  revenue,
+}: Readonly<{ copy: Readonly<Record<string, string>>; revenue: AdminRevenue }>) => {
+  const item = revenue.royalties.find((row) => row.kind === 'item')?.balance_mist ?? 0n
+  const character = revenue.royalties.find((row) => row.kind === 'character')?.balance_mist ?? 0n
+  const { claimable } = revenue
   return (
-    <div className="min-h-0 flex-1 overflow-y-auto bg-[linear-gradient(180deg,rgba(200,150,60,0.025),transparent_28%)] p-5 md:p-7">
-      <div className="mx-auto max-w-7xl">
-        <section className="grid grid-cols-2 gap-3 lg:grid-cols-5">
-          <KpiCard
-            gold
-            label="Collectable now"
-            title="Withdrawable marketplace royalties"
-            unit="SUI"
-            value={collectable}
-          />
-          <KpiCard gold label="Shop volume 30d" title="No volume projection" unit="SUI" value="—" />
-          <KpiCard label="Sales 30d" title="No sales projection" value="—" />
-          <KpiCard label="MAU" title="No monthly-active-player projection" value="—" />
-          <KpiCard label="DAU" title="No daily-active-player projection" value="—" />
-        </section>
+    <section className={`${PANEL} flex flex-wrap items-center gap-x-5 gap-y-2 px-4 py-3`}>
+      <div className="mr-auto min-w-0">
+        <span className="text-[8px] tracking-[0.15em] text-[#6b7280] uppercase">
+          {text(copy, 'treasury', 'Treasury')}
+        </span>
+        <strong className="ml-3 text-[12px] font-medium text-[#c8963c] tabular-nums">{treasury_value(revenue)}</strong>
+      </div>
+      <Stat label={text(copy, 'item_royalties', 'Item royalties')} value={`${format_sui(item, 3)} SUI`} />
+      <Stat
+        label={text(copy, 'character_royalties', 'Character royalties')}
+        value={`${format_sui(character, 3)} SUI`}
+      />
+      <button
+        className="h-8 shrink-0 border border-[#c8963c]/40 bg-[#c8963c]/8 px-4 text-[8px] tracking-[0.12em] text-[#c8963c] uppercase disabled:opacity-30"
+        disabled={claim_disabled(revenue)}
+        onClick={revenue.claim_armed ? revenue.claim : revenue.arm_claim}
+        type="button"
+      >
+        {claim_label(copy, revenue, claimable)}
+      </button>
+    </section>
+  )
+}
 
-        <section className="mt-4 grid gap-4 xl:grid-cols-12">
-          <EmptyVolumeChart />
-          <aside className="flex flex-col gap-4 xl:col-span-4">
-            <AdminWalletPanel copy={copy} revenue={revenue} />
-            <PlayersCard
-              indexed={admin.overview.counts.User}
-              loading={admin.overview.status === 'loading'}
-              online={online}
-            />
-          </aside>
-        </section>
+const LoadingOverview = ({
+  copy,
+  overview,
+}: Readonly<{ copy: Readonly<Record<string, string>>; overview: AdminOverviewState }>) => (
+  <div className="grid min-h-0 flex-1 place-items-center bg-surface/50 text-[9px] tracking-[0.14em] text-[#6b7280] uppercase">
+    <div className="text-center">
+      <p>
+        {overview.status === 'failed'
+          ? text(copy, 'overview_unavailable', 'Overview unavailable')
+          : text(copy, 'loading_overview', 'Loading overview…')}
+      </p>
+      {overview.error && <p className="mt-2 text-[#ff8caa]">{overview.error}</p>}
+      {overview.status === 'failed' && (
+        <button
+          className="mt-4 border border-border px-3 py-2 text-[#c8963c]"
+          onClick={() => dispatch_app({ type: 'admin/overview_refresh' })}
+          type="button"
+        >
+          {text(copy, 'retry', 'Retry')}
+        </button>
+      )}
+    </div>
+  </div>
+)
+
+export const OverviewPage = ({ copy }: Readonly<{ copy: Readonly<Record<string, string>> }>) => {
+  const overview = useAppStore((state) => state.admin.overview)
+  const revenue_wallet = useAdminRevenue(copy)
+  const { result } = overview
+  if (!result) return <LoadingOverview copy={copy} overview={overview} />
+  const { revenue, players, transactions, online, addresses, characters } = result
+  return (
+    <div className="min-h-0 flex-1 overflow-y-auto bg-surface/50 p-4">
+      <div className="flex items-center gap-3 px-1 text-[8px] tracking-[0.12em] text-[#6b7280] uppercase">
+        <span className="text-[#77d99a]">● {text(copy, 'all_systems_current', 'All systems current')}</span>
+        <span>
+          {text(copy, 'checkpoint', 'Checkpoint')} {result.as_of_checkpoint?.toLocaleString() ?? '—'}
+        </span>
+        <button
+          className="ml-auto text-[#c8963c]"
+          onClick={() => dispatch_app({ type: 'admin/overview_refresh' })}
+          type="button"
+        >
+          ↻ {text(copy, 'refresh', 'Refresh')}
+        </button>
+      </div>
+      <div className="mt-3 grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-5" data-admin-kpis="">
+        <KpiCard
+          detail={text(copy, 'last_30_days', 'Last 30 days')}
+          label={text(copy, 'revenue_30d', '30-day revenue')}
+          tone="gold"
+          value={`${format_sui(BigInt(revenue.last_30d_revenue_mist), 2)} SUI`}
+        />
+        <KpiCard
+          detail={text(copy, 'calendar_month_to_date', 'Calendar month to date')}
+          label={text(copy, 'revenue_mtd', 'Month-to-date revenue')}
+          tone="gold"
+          value={`${format_sui(BigInt(revenue.month_to_date_revenue_mist), 2)} SUI`}
+        />
+        <KpiCard
+          detail={admin_range_label(copy, overview.ranges.revenue)}
+          label={text(copy, 'shop_sales', 'Shop sales')}
+          value={BigInt(revenue.shop_orders).toLocaleString()}
+        />
+        <KpiCard
+          detail={text(copy, 'today', 'Today')}
+          label={text(copy, 'daily_active', 'Daily active players')}
+          tone="blue"
+          value={players.dau.toLocaleString()}
+        />
+        <KpiCard
+          detail={text(copy, 'active_last_30d', 'Active in the last 30 days')}
+          label={text(copy, 'active_30d', '30-day active players')}
+          tone="blue"
+          value={players.rolling_30d.toLocaleString()}
+        />
+        <KpiCard
+          detail={`${text(copy, 'peak', 'Peak')} ${display_count(online.online_peak)}`}
+          label={text(copy, 'online_now', 'Players online')}
+          tone="green"
+          value={display_count(online.online_now)}
+        />
+        <KpiCard
+          detail={text(copy, 'successful_game_calls', 'Successful game-module callers')}
+          label={text(copy, 'unique_addresses', 'Unique addresses')}
+          value={addresses.total.toLocaleString()}
+        />
+        <KpiCard
+          detail={text(copy, 'current_characters', 'Current on-chain characters')}
+          label={text(copy, 'total_characters', 'Total characters')}
+          value={characters.total.toLocaleString()}
+        />
+        <KpiCard
+          detail={admin_range_label(copy, overview.ranges.transactions)}
+          label={text(copy, 'game_transactions', 'Game transactions')}
+          value={transactions.total.toLocaleString()}
+        />
+      </div>
+      <div className="mt-3">
+        <TreasuryStrip copy={copy} revenue={revenue_wallet} />
+      </div>
+      <div className="mt-3 flex flex-col gap-3" data-admin-charts="">
+        <div className="grid gap-3 xl:grid-cols-2">
+          <ChartPanel
+            bucket={revenue.bucket}
+            change={(days) => dispatch_app({ type: 'admin/overview_range_changed', section: 'revenue', days })}
+            copy={copy}
+            days={overview.ranges.revenue}
+            loading={!!overview.pending.revenue}
+            series={revenue_series(copy, revenue)}
+            subtitle={text(copy, 'revenue_over_time_body', 'Shop revenue and marketplace royalties')}
+            title={text(copy, 'revenue_over_time', 'Revenue over time')}
+          />
+          <ChartPanel
+            bucket={transactions.bucket}
+            change={(days) => dispatch_app({ type: 'admin/overview_range_changed', section: 'transactions', days })}
+            copy={copy}
+            days={overview.ranges.transactions}
+            loading={!!overview.pending.transactions}
+            series={transaction_series(copy, transactions)}
+            subtitle={text(copy, 'game_transactions_body', 'Successful AresRPG transactions, counted once per PTB')}
+            title={text(copy, 'game_transactions_over_time', 'Transactions over time')}
+          />
+        </div>
+        <div className="grid gap-3 xl:grid-cols-2">
+          <ChartPanel
+            bucket={players.bucket}
+            change={(days) => dispatch_app({ type: 'admin/overview_range_changed', section: 'players', days })}
+            copy={copy}
+            days={overview.ranges.players}
+            loading={!!overview.pending.players}
+            series={player_series(copy, players)}
+            subtitle={text(copy, 'player_activity_body', 'Daily activity and rolling 30-day reach')}
+            title={text(copy, 'player_activity', 'Player activity')}
+          />
+          <ChartPanel
+            bucket={online.bucket}
+            change={(days) => dispatch_app({ type: 'admin/overview_range_changed', section: 'online', days })}
+            copy={copy}
+            days={overview.ranges.online}
+            loading={!!overview.pending.online}
+            series={online_series(copy, online)}
+            subtitle={text(copy, 'online_players_body', 'Average and peak authenticated connections')}
+            title={text(copy, 'online_players', 'Online players')}
+          />
+        </div>
+        <div className="grid gap-3 xl:grid-cols-2">
+          <ChartPanel
+            bucket={addresses.bucket}
+            change={(days) => dispatch_app({ type: 'admin/overview_range_changed', section: 'addresses', days })}
+            copy={copy}
+            days={overview.ranges.addresses}
+            loading={!!overview.pending.addresses}
+            series={address_series(copy, addresses)}
+            subtitle={text(copy, 'unique_addresses_body', 'Addresses with successful AresRPG module calls')}
+            title={text(copy, 'unique_addresses_over_time', 'Unique addresses over time')}
+          />
+          <ChartPanel
+            bucket={characters.bucket}
+            change={(days) => dispatch_app({ type: 'admin/overview_range_changed', section: 'characters', days })}
+            copy={copy}
+            days={overview.ranges.characters}
+            loading={!!overview.pending.characters}
+            series={character_series(copy, characters)}
+            subtitle={text(copy, 'total_characters_body', 'Current on-chain Character objects')}
+            title={text(copy, 'characters_over_time', 'Characters over time')}
+          />
+        </div>
       </div>
     </div>
   )

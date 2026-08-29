@@ -3,6 +3,10 @@ body: Для повного світу потрібен WebGPU. Натоміст
 fatal: Цей браузер не може створити графічний контекст WebGPU або WebGL.
 world_unavailable_title: Світ недоступний
 world_unavailable: Для цього світу ще не створено рецепт рельєфу.
+mobile_unavailable_label: Мобільний доступ
+mobile_unavailable_title: AresRPG поки що недоступна на мобільних пристроях
+mobile_unavailable_body: Ми створюємо окрему мобільну версію. А поки що заходьте у світ через браузер на комп’ютері.
+mobile_unavailable_status: Версія для комп’ютера онлайн
 chrome: 'Chrome або Edge: оновіть браузер, увімкніть «Використовувати апаратне прискорення» в Налаштування → Система та перезапустіть його.'
 other: Увімкніть апаратне прискорення, оновіть браузер і графічний драйвер та перезапустіть браузер.
 continue: Продовжити із сіткою
@@ -49,17 +53,26 @@ latency_unit: мс
 indexing_health: Стан індексації
 online_players: Гравці онлайн
 indexing_lag_warning: Дії в грі можуть відображатися із затримкою
+indexing_block_title: Синхронізація світу
+indexing_block_body: Історія ланцюжка ще індексується. Гра автоматично розблокується, коли сервер досягне безпечного активного вікна.
+indexing_block_progress: Прогрес
+indexing_block_remaining: Залишилося контрольних точок
+indexing_block_eta: Орієнтовний час
+indexing_block_estimating: Обчислення…
 game_frozen: Гру наразі заморожено. Докладнішу інформацію дивіться в Discord.
 gas_budget_toast: Ця дія перевищила зарезервовану мережеву комісію. Її не виконано, і вона нічого вам не коштувала — будь ласка, повідомте про це.
 game_paused_toast: Гру призупинено для оновлення. Вашу дію не виконано — спробуйте ще раз за кілька хвилин.
 movement_sync_toast: Ваша позиція ще синхронізується. Рухайтеся як звичайно та спробуйте ще раз за мить.
+fight_path_changed_toast: Поле змінилося до надсилання руху. Ваш хід відновлено — спробуйте ще раз.
+party_member_unavailable_toast: Цей персонаж уже перебуває в групі.
+fight_turn_already_forced_toast: Хтось уже примусово завершив цей хід.
 network_testnet: TESTNET
 page_pending_title: Ця сторінка відновлюється
 page_pending_body: Її місце залишається видимим, поки ми чисто її відновлюємо.
 welcome_title: Ласкаво просимо до AresRPG
 welcome_body: AresRPG — це повністю ончейнова MMORPG з економікою, якою керують гравці. Створіть першого персонажа, увійдіть у світ і знайдіть монстрів для бою.
-welcome_need_sui: Для гри потрібно трохи SUI — кожна дія є ончейн-транзакцією, а перший персонаж коштує {{price}} SUI. Поповніть свою адресу нижче, щоб почати.
-insufficient_sui: Недостатньо SUI у вашому гаманці
+welcome_need_sui: Для гри потрібно трохи SUI — перший персонаж коштує {{price}} SUI, а для комісій на балансі має залишатися щонайменше {{fee}} SUI. Поповніть свою адресу нижче, щоб почати.
+insufficient_sui: Для комісій на балансі має залишатися щонайменше {{fee}} SUI.
 create_character: Створити персонажа
 create_title: Створіть свого персонажа
 create_lead: Оберіть клас, кольори та ім’я. Світ уже живе позаду.
@@ -107,15 +120,20 @@ kolizeum_page:
   access_friends: Друзі
   status_open: Відкрите
   status_started: Триває
-  status_settling: Розрахунок
+  status_settling: Бій завершено
   empty: Лобі немає
   selected: Вибране лобі
   side_a: Сторона A
   side_b: Сторона B
   total_pot: Поточний банк
+  settlement_remaining: Залишок в ескроу
+  paid_out: Виплачено
   free: Безкоштовно
   join_a: Приєднатися до сторони A
   join_b: Приєднатися до сторони B
+  join_confirm_title: Підтвердити ставку Колізеуму
+  join_confirm_body: '{{character}} поставить {{amount}} SUI і приєднається до {{side}}. Ця транзакція фіксує ставку.'
+  join_confirm_cta: 'Поставити {{amount}} SUI · Приєднатися до {{side}}'
   create_title: Створити лобі
   form_format: Формат
   form_access: Доступ
@@ -144,7 +162,7 @@ friends_panel:
 party_panel:
   title: Група
   adventurer: Мандрівник
-  invited_by: '{{name}} запрошує вас'
+  invited_by: '{{name}} запросив вас приєднатися до своєї групи'
   accept: Прийняти
   decline: Відхилити
   leader: Лідер
@@ -153,25 +171,51 @@ party_panel:
   kick: Виключити
   rescind: Скасувати запрошення
   invite_owned: Запросити свого персонажа
+  follow_leader: Слідувати за лідером
+  run_to_position: Бігти до позиції
+  run_to_started: Ви біжите до останньої ончейн-позиції {{name}}. Вона може не збігатися з поточною позицією наживо.
+  run_to_started_position: Ви біжите до пов’язаної позиції.
+  run_to_progress: Біг до позиції
+  run_to_position_wrong_world: Пов’язана позиція розташована не у вашому поточному світі.
+  run_to_wrong_world: Цей учасник групи перебуває не у вашому поточному світі.
+  run_to_unavailable: Ончейн-позиція цього учасника групи недоступна.
 trade_panel:
-  inbox: Обміни
   close: Закрити
   title: Обмін між гравцями
-  locked: Заблоковано · отримання безстрокове
-  negotiating: Переговори · кожна зміна скидає згоду
+  invite_sent: Запрошення на обмін надіслано
+  invited_by: '{{name}} запрошує вас до обміну'
+  request_waiting: Очікування згоди {{name}}
+  accept_request: Прийняти
+  decline: Відхилити
+  cancel_request: Скасувати запит
+  trades: Обміни
   your_offer: Ваша пропозиція
   their_offer: Їхня пропозиція
   accepted: Прийнято
   reviewing: Перевіряється
-  add_item: Додати предмет
-  add_character: Додати персонажа
-  sui: Додати SUI
-  withdraw: Забрати
-  withdraw_sui: Забрати мої SUI
-  accept: Прийняти цю версію
-  claim: Отримати
-  claim_sui: Отримати {{amount}} SUI
-  finish: Завершити обмін
+  remove_item: Прибрати з пропозиції
+  drop_items: Перетягніть предмети сюди
+  empty_offer: Предмети не запропоновано
+  offer_item_unavailable: Один із підготовлених предметів більше недоступний. Перевірте пропозицію та спробуйте ще раз.
+  sui: Запропоновані SUI
+  inventory: Ваш інвентар
+  drag_hint: Перетягніть або двічі клацніть
+  amount_title: Вибрати кількість
+  amount_for: 'Кількість {{name}}'
+  amount_add: Додати до пропозиції
+  amount_cancel: Скасувати
+  confirm_changes: Підтвердити зміни
+  discard_changes: Відкинути зміни
+  empty_inventory: Немає активів для обміну
+  accept: Прийняти пропозицію
+  cancel: Скасувати обмін
+  accept_notice: Згода дозволяє одну фінальну транзакцію. {{count}} активів коштують {{amount}} SUI роялті та газ.
+  settle: Завершити обмін
+  recover: Повернути пропозицію
+  settle_notice: Отримайте всі залишкові активи та SUI однією транзакцією.
+  recover_notice: Поверніть всю свою пропозицію однією транзакцією.
+  waiting_counterparty: Ваша сторона завершена. Очікування іншого гравця.
+  finalizing: Завершення…
 world_hud:
   compass_label: Компас
   zone: ЗОНА
@@ -189,6 +233,10 @@ world_hud:
   menu_friend: Додати друга
   menu_trade: Торгувати
   menu_message: Надіслати повідомлення
+  message_title: 'Повідомлення для {{name}}'
+  message_placeholder: Напишіть приватне повідомлення…
+  message_send: Надіслати
+  message_cancel: Скасувати
   mount_prompt: 'Натисніть {{key}}, щоб осідлати'
   portal_prompt: 'Натисніть {{key}}, щоб подорожувати до іншого світу'
   dungeon_portal: Портал підземелля
@@ -381,6 +429,7 @@ marketplace_page:
   delist_success: Оголошення знято
   buy_pending: Купівля…
   buy_success: Купівлю завершено
+  sold_toast: 'Продано: {{amount}} {{name}} за {{price}}'
   character_roster_full: Сьомий персонаж не поміститься у ваш список — межа 6
   collect_pending: Отримання виручки…
   collect_success: Виручку отримано
@@ -448,6 +497,12 @@ settings_page:
   subtitle: 'Твої налаштування AresRPG'
   music_label: 'Музика'
   music_hint: 'Відтворює музику світу та боїв.'
+  auto_switch_fighter_label: Автоперемикання бійця
+  auto_switch_fighter_hint: Автоматично вибирає вашого персонажа на початку його ходу.
+  always_craft_from_label: Завжди виготовляти з
+  always_craft_from_hint: Закріплює вкладку професій і кожне виготовлення за одним власним персонажем.
+  always_craft_from_picker: Персонаж-ремісник
+  always_craft_from_none: Вимкнено
   render_distance_label: Відстань промальовування
   render_distance_hint: Наскільки далеко завантажується світ навколо вас. Більше — коштує продуктивності.
 admin_page:
@@ -490,6 +545,88 @@ admin_page:
   confirm_claim: Підтвердити виведення
   disconnect_admin_wallet: Відключити
   claim_digest: Транзакція виведення
+  range_24h: 24 години
+  range_7d: 7 днів
+  range_30d: 30 днів
+  range_90d: 90 днів
+  range_1y: 1 рік
+  overview_title: Огляд
+  overview_body: Активність гравців і дохід без зайвого шуму панелі керування.
+  overview_unavailable: Огляд недоступний
+  loading_overview: Завантаження огляду…
+  all_systems_current: Усі системи актуальні
+  checkpoint: контрольна точка
+  refresh: Оновити
+  retry: Повторити
+  active_players: Активні гравці
+  active_players_bucket: Активні гравці за інтервал
+  daily_active: Активні гравці за день
+  active_interval: Активні за інтервал
+  active_30d: Активні гравці за 30 днів
+  active_last_30d: активні за останні 30 днів
+  player_activity: Активність гравців
+  player_activity_body: Денна активність і ковзне охоплення за 30 днів
+  stickiness: DAU / 30Д
+  online_players: Гравці онлайн
+  online_players_body: Середня та пікова кількість автентифікованих з’єднань
+  online_now: Гравці онлайн
+  average: Середнє
+  peak: Пік
+  revenue: Дохід
+  revenue_over_time: Дохід у часі
+  revenue_over_time_body: Дохід магазину та роялті ринку
+  shop: Магазин
+  shop_sales: Продажі магазину
+  item_royalties: Роялті предметів
+  character_royalties: Роялті персонажів
+  game_transactions: Ігрові транзакції
+  game_transactions_over_time: Транзакції в часі
+  game_transactions_body: Успішні транзакції AresRPG, пораховані один раз на PTB
+  today: Сьогодні
+  selected_period: Вибраний період
+  lifetime: за весь час
+  average_order: середнє замовлення
+  chart_revenue: Дохід
+  chart_players: Гравці
+  chart_online: Онлайн
+  bucket_15m: 15-хвилинні інтервали
+  bucket_hour: Погодинні інтервали
+  bucket_day: Денні інтервали
+  bucket_week: Тижневі інтервали
+  bucket_month: Місячні інтервали
+  unique_addresses: Унікальні адреси
+  unique_addresses_body: Адреси з успішними викликами модулів AresRPG
+  unique_addresses_over_time: Унікальні адреси в часі
+  successful_game_calls: Виконавці викликів ігрових модулів
+  total_characters: Усього персонажів
+  current_characters: Поточні ончейн-персонажі
+  total_characters_body: Поточні ончейн-об’єкти Character
+  characters_over_time: Персонажі в часі
+  revenue_30d: Дохід за 30 днів
+  revenue_mtd: Дохід від початку місяця
+  last_30_days: Останні 30 днів
+  calendar_month_to_date: Від початку календарного місяця
+  recent_shop_sales: Останні продажі магазину
+  sales_history: Історія продажів магазину
+  sales_retention: Точні деталі транзакцій зберігаються 90 днів
+  view_all_sales: Переглянути всі продажі
+  buyer: Покупець
+  item: Предмет
+  quantity: Кількість
+  unit_price: Ціна за одиницю
+  total: Разом
+  when: Коли
+  transaction: Транзакція
+  treasury: Казначейство
+  treasury_body: Поточні баланси окремо від заробленого доходу
+  available_balance: Доступний баланс
+  claim: Вивести
+  close: Закрити
+  loading: Завантаження…
+  load_more: Завантажити ще
+  transactions: транзакцій
+  no_sales_history: За цей період продажів немає
+  end_of_history: Кінець збереженої історії
 simulator_page:
   title: Симулятор бою
   local_only: Локальне детерміноване налаштування
@@ -584,6 +721,10 @@ fight_hud:
   turn_order: Порядок ходів
   placement_title: Приготуйтеся до бою
   placement_hint: Розмістіть бійців і позначте їх готовими
+  placement_gas_title: Перемістити бійця ще раз?
+  placement_gas_body: Кожна зміна клітинки виконує транзакцію та потребує сплати газу. Уникайте зайвих переміщень.
+  placement_gas_hide: Більше не показувати
+  placement_gas_confirm: Усе одно перемістити
   placement_ready: Готовий
   placement_waiting: Очікування інших…
   placement_starting: Початок бою…
@@ -628,13 +769,21 @@ fight_hud:
   chat_title: Чат
   chat_tab_general: Загальний
   chat_tab_party: Група
+  chat_tab_private: Приватні
   chat_tab_combat: Бій
   chat_placeholder: Скажіть щось…
+  chat_fetching_item: Отримання характеристик з блокчейну…
+  chat_item_unavailable: Цей предмет недоступний у блокчейні.
   chat_you: Ви
   chat_line: '{name}: {message}'
+  chat_party_line: '(party) {name}: {message}'
+  chat_whisper_to: '(для {name}) {message}'
   result_title: Результат бою
   result_duration: Тривалість
   result_gas_spent: Витрати газу
+  result_wager_won: Виграно SUI
+  result_wager_lost: Втрачено SUI
+  result_wager_even: Результат ставки
   result_party: Ваша група
   result_enemies: Вороги
   result_victory: Перемога
@@ -1008,20 +1157,20 @@ encyclopedia_page:
     success_rate: ШАНС УСПІХУ
     success_rate_desc: 'Успіх залежить від того, наскільки близька характеристика до максимуму: близько до 0% — це ~99% успіху, близько до максимуму — ~50%, а екзотичні характеристики залишаються на ~1% незалежно від рівня. Чи стане успіх Критичним (без втрат), чи Нейтральним (вага сплачена), змінюється так само, плюс невеликі +0,2% за кожен рівень професії понад 1. Немає обмеження на те, з яким рівнем предметів може працювати ваша професія.'
     puits: ПОГЛИНАЧ (PUITS)
-    puits_desc: Лічильник ваги, показаний в інтерфейсі, що накопичується, коли втрати характеристик перевищують вагу руни. Поглинає майбутні втрати перед тим, як інші характеристики постраждають. Скидається, коли предмет залишає верстат форжемагії.
+    puits_desc: Лічильник ваги, показаний в інтерфейсі, що накопичується, коли втрати характеристик перевищують вагу руни. Поглинає майбутні втрати перед тим, як інші характеристики постраждають. Зберігається на предметі та переходить з ним між верстатами й власниками.
     over_maging: НАД-МАГІЯ
     over_maging_desc: Підвищуйте характеристики вище їх природного максимуму. Кожна лінія характеристики обмежена 101 додатковою вагою. Максимум над-магії залежить від одиничної ваги характеристики — легку характеристику, як-от Живучість (вага 0,25), можна перевищити приблизно на 404 очок, важку, як-от Мудрість (вага 3), лише приблизно на 33.
     forgemagie_tips: ПОРАДИ
-    forgemagie_tips_desc: 'Для екзотичного/овер-мейджу: спершу зніміть дешеві характеристики, щоб накопичити великий колодязь, потім проведіть складну характеристику з буфером, потім додайте втрачені характеристики назад (легко, бо далеко від максимуму). Не переміщуйте предмет під час сесії. Колодязь скидається. Овер-мейдж та екзотичні характеристики втрачаються першими при невдачі.'
+    forgemagie_tips_desc: 'Для екзотичного/овер-мейджу: спершу зніміть дешеві характеристики, щоб накопичити великий колодязь, потім проведіть складну характеристику з буфером, потім додайте втрачені характеристики назад (легко, бо далеко від максимуму). Овер-мейдж та екзотичні характеристики втрачаються першими при невдачі.'
     forgemagie_xp: ДОСВІД
     forgemagie_xp_desc: 'Досвід нараховується лише при успіху (Критичному або Нейтральному). Предмети вищого рівня та важчі руни дають значно більше досвіду. Руни Ra дають подвійний досвід порівняно з рунами Ba та Pa. Формула: max(1, вагаРуни × (1 + рівеньПредмета / 50) × множникТіру), де множник дорівнює 2 для Ra, 1 для інших.'
     action_points: ОЧКИ ДІЇ (ОД)
     movement_points: ОЧКИ РУХУ (ОР)
     critical_stat: КРИТИЧНИЙ УДАР
     wisdom_xp: БОНУС ДОСВІДУ ВІД МУДРОСТІ
-    wisdom_xp_desc: Кожні 6 Мудрості додають 1 % до отриманого XP. За 600 Мудрості ви отримуєте подвійний XP.
+    wisdom_xp_desc: Кожне очко ефективної Мудрості, включно з активними ефектами, додає 1 % до отриманого XP. За 100 ефективної Мудрості ви отримуєте подвійний XP.
     chance_loot: УДАЧА ТА ЗДОБИЧ
-    chance_loot_desc: Середня Удача команди-переможця множить кожен розрахований шанс випадіння. За середньої Удачі 600 шанс подвоюється і ніколи не перевищує 100%.
+    chance_loot_desc: Середня ефективна Удача команди-переможця, включно з активними ефектами, множить кожен розрахований шанс випадіння. За середньої Удачі 600 шанс подвоюється і ніколи не перевищує 100%.
     mob_loot_band: РІВЕНЬ МОНСТРА І ШАНС ЗДОБИЧІ
     mob_loot_band_desc: Заданий шанс є серединою діапазону. Монстр мінімального рівня використовує 80%, а максимального — 120%, з обмеженням 100%. Монстри фіксованого рівня використовують заданий шанс без змін. Кількість не масштабується з рівнем.
   dropped_by: ВИПАДАЄ З
@@ -1380,7 +1529,7 @@ characters_page:
   max: Макс
   resources: Ресурси
   back: Назад
-  gate_note: Тимчасово потрібен 1 рівень ремісничої професії предмета
+  gate_note: Потрібен {{level}} рівень ремісничої професії предмета
   detail_title: Предмет
   forge_title: Кузня
   inventory_title: Інвентар
@@ -1392,10 +1541,14 @@ characters_page:
   one_rune_note: Одна руна витрачається за спробу
   apply: Застосувати руну
   scribing: Гравіювання…
-  outcome_success: Руна прижилася
-  outcome_neutral: Руна схибила — нічого не змінилося
-  outcome_failure: Руна зірвалася — характеристику втрачено
-  requires_job: 'Потрібно {{job}} рівня 1'
+  outcome_critical_success: Критичний успіх
+  outcome_neutral_success: Нейтральний успіх
+  outcome_critical_failure: Критична невдача
+  runeforge_history: Історія
+  runeforge_history_empty: Застосуйте руну, щоб почати історію цього предмета
+  runeforge_puits: Пюї
+  runeforge_no_stat_change: Характеристики не змінилися
+  requires_job: 'Потрібно {{job}} рівня {{level}}'
   clear: Прибрати
   inspect_empty: Оберіть спорядження для огляду
   no_forge_gear: У сумці немає спорядження для кування
@@ -1405,6 +1558,7 @@ characters_page:
   menu_crush: Розтрощити
   menu_destroy: Знищити
   menu_explorer: Переглянути в оглядачі
+  menu_link_chat: Додати посилання в чат
   feed_title: Годування улюбленця
   feed_power_label: Сила
   feed_power: '{{count}} / {{max}}'
@@ -1420,6 +1574,8 @@ characters_page:
   crush_cta: Розтрощити
   crush_pending: Трощення…
   crush_success: Спорядження розтрощено
+  crush_result_title: Результат розтрощення
+  crush_result_empty: Нехай наступного разу пощастить.
   destroy_title: Знищити предмет
   destroy_confirm_body: 'Знищити {{name}} ×{{amount}}? Цю дію не можна скасувати.'
   destroy_cta: Знищити
@@ -1543,6 +1699,9 @@ characters_page:
       consumable: 'Виготовлення витратних матеріалів'
     recipes_fallback: 'Рецепти'
     equipped: 'Споряджено'
+    better_character: '{{name}} — {{job}}, рів. {{level}}'
+    switch: 'Перемкнути'
+    switch_to_character: 'Перемкнутися на {{name}}'
     table:
       tier: 'Рівень'
       req_lvl: 'Потр. рів.'
@@ -1560,12 +1719,13 @@ characters_page:
       ingredients_head: 'Інгредієнти'
       requires_level: 'Потрібен {{job}} Рв {{required}} (у вас Рв {{level}})'
       not_enough: 'Недостатньо інгредієнтів'
-      success_chance: 'Шанс успіху'
-      craft_tooltip: 'Виготовити {{name}}'
-      craft_button: 'Виготовити'
+      starting_chance: 'Початковий шанс'
+      amount: 'Спроби'
+      prepare_tooltip: 'Підготувати {{count}} × {{name}}'
+      craft_tooltip: 'Виготовити {{count}} × {{name}}'
+      craft_button: 'Виготовити ×{{count}}'
       crafting: 'Виготовлення…'
-      craft_success: '{{name}} виготовлено'
-      roll_failed: 'Кидок виготовлення для {{name}} не вдався ({{chance}}% шансу) — інгредієнти витрачено'
+      craft_result: 'Виготовлено {{successes}} / {{attempts}} {{name}}'
       locked_level: 'Заблоковано · Рв {{level}}'
     detail:
       close_aria: 'Закрити деталі предмета'
@@ -1590,3 +1750,244 @@ characters_page:
     experience: 'Досвід'
     confirm: 'Підтвердити'
     max: 'МАКС'
+spell_names:
+  'Absorption': 'Поглинання'
+  'Absorptive Arrow': 'Поглинальна стріла'
+  'Acceleration': 'Прискорення'
+  'Aggressive Brambles': 'Агресивні колючки'
+  'Aggressive Glyph': 'Агресивний гліф'
+  'Alcoholic Breath': 'Алкогольний подих'
+  'All or Nothing': 'Все або нічого'
+  'Chimeric Venom': 'Химерична отрута'
+  'Animal Healing': 'Лікування тварин'
+  'Aqueous Armour': 'Водяна броня'
+  'Aqueous Vulnerability': 'Водяна вразливість'
+  'Art of Staff': 'Мистецтво посоха'
+  "Asobi's Fate": 'Доля Асобі'
+  "Asobi's Luck": 'Удача Асобі'
+  'Assault': 'Штурм'
+  'Atonement Arrow': 'Спокутна стріла'
+  'Attraction': 'Притягання'
+  'Backlash': 'Удар у відповідь'
+  'Bamboo Milk': 'Бамбукове молоко'
+  "Bat's Eye": 'Око кажана'
+  'Bear Cry': 'Ведмежий крик'
+  'Blazing Fist': 'Палаючий кулак'
+  'Blazing Vulnerability': 'Вогняна вразливість'
+  'Blinding Protection': 'Сліпучий захист'
+  'Blindness': 'Осліплення'
+  'Bloodthirsty Madness': 'Кровожерне божевілля'
+  'Blow': 'Подих'
+  'Bluff': 'Блеф'
+  'Bold Punishment': 'Сміливе покарання'
+  'Boozer': 'Пияцтво'
+  'Bow Skill': 'Майстерність лука'
+  'Bramble': 'Колючка'
+  'Bravery Guide': 'Провідник хоробрості'
+  'Bribery': 'Підкуп'
+  'Bubble': 'Бульбашка'
+  'Burning Arrow': 'Палаюча стріла'
+  'Burning Glyph': 'Палаючий гліф'
+  'Bush Fire': 'Лісова пожежа'
+  'Celestial Sword': 'Небесний меч'
+  'Chakra Concentration': 'Концентрація чакри'
+  'Chakra Impulse': 'Імпульс чакри'
+  'Hurl': 'Hurl'
+  'Claw of Ceangal': 'Кіготь Кеангала'
+  'Clock': 'Годинник'
+  'Cloudy Attack': 'Хмарна атака'
+  'Clover': 'Конюшина'
+  'Clumsiness': 'Незграбність'
+  'Coins Throwing': 'Кидок монет'
+  'Compulsion': 'Примус'
+  'Con': 'Шахрайство'
+  'Concentration': 'Зосередження'
+  'Cooperation': 'Співпраця'
+  'Counter': 'Контрудар'
+  'Critical Shooting': 'Критичний постріл'
+  'Crow': 'Ворон'
+  'Curative Word': 'Цілюще слово'
+  'Cut': 'Поріз'
+  'Dark Ray': 'Темний промінь'
+  'Destructive Arrow': 'Руйнівна стріла'
+  'Destructive Sword': 'Руйнівний меч'
+  'Deviousness': 'Підступність'
+  'Devotion': 'Відданість'
+  'Dissolution': 'Розчинення'
+  'Distant Shooting': 'Далекий постріл'
+  'Divine Sword': 'Божественний меч'
+  'Dolly Sacrifice': 'Лялькова жертва'
+  'Shadowstep': 'Shadowstep'
+  'Draining Word': 'Виснажливе слово'
+  'Earth Armour': 'Земляна броня'
+  'Earth Vulnerability': 'Земляна вразливість'
+  'Earthquake': 'Землетрус'
+  'Bloodstep': 'Bloodstep'
+  'Explosive Arrow': 'Вибухова стріла'
+  'Explosive Flask': 'Вибухова фляга'
+  'Fangs of Boowolf': 'Ікла буововка'
+  'Fear': 'Страх'
+  'Feline Leap': 'Котячий стрибок'
+  'Feline Movement': 'Котячий рух'
+  'Feline Spirit': 'Котячий дух'
+  'Flight': 'Політ'
+  'Blood Blade': 'Blood Blade'
+  'Forbidden Word': 'Заборонене слово'
+  'Forced Punishment': 'Примусове покарання'
+  'Fortune': 'Фортуна'
+  'Bonding Word': 'Bonding Word'
+  'Frightening Word': 'Слово страху'
+  'Frostbite': 'Обмороження'
+  'Frozen Arrow': 'Крижана стріла'
+  'Fury': 'Лють'
+  'Ghostly Claw': 'Примарний кіготь'
+  'Ghostly Shovel': 'Примарна лопата'
+  'Glowing Armour': 'Вогняна броня'
+  'Glyph of Blindness': 'Гліф осліплення'
+  'Glyph of Silence': 'Гліф мовчання'
+  'Greed': 'Жадібність'
+  'Hand': 'Стрілка'
+  'Hangover': 'Похмілля'
+  'Haziness': 'Туманність'
+  'Heads or Tails': 'Орел чи решка'
+  'Healing Word': 'Лікувальне слово'
+  'High-Energy Shot': 'Високоенергетичний постріл'
+  'Clockwork Pursuit': 'Clockwork Pursuit'
+  "Ikari's Foot": 'Удар ногою Ікарі'
+  'Immunity': 'Імунітет'
+  'Increase': 'Підсилення'
+  'Insidious Poison': 'Підступна отрута'
+  'Insolent Bramble': 'Зухвала колючка'
+  'Intimidation': 'Залякування'
+  'Invisibility': 'Невидимість'
+  'Invisibility of Others': 'Невидимість іншого'
+  'Jump': 'Стрибок'
+  'Undertow': 'Undertow'
+  'Toxic Knowledge': 'Toxic Knowledge'
+  'Lashing Arrow': 'Стримуюча стріла'
+  'Lashing Claw': 'Стримуючий кіготь'
+  'Lethal Attack': 'Смертельна атака'
+  'Lethal Trap': 'Смертельна пастка'
+  'Life Transfer': 'Передача життя'
+  'Lifting Word': 'Піднесене слово'
+  'Dead Weight': 'Dead Weight'
+  'Golden Fever': 'Golden Fever'
+  'Shovel Uprising': 'Shovel Uprising'
+  'Silent Mark': 'Silent Mark'
+  'Loss of Motivation': 'Втрата мотивації'
+  'Magic Arrow': 'Магічна стріла'
+  'Manifold Bramble': 'Множинні колючки'
+  'Mass Clumsiness': 'Масова незграбність'
+  'Mass Trap': 'Масова пастка'
+  'Melancholy': 'Меланхолія'
+  'Mistake': 'Помилка'
+  'Mound': 'Насип'
+  'Mummification': 'Муміфікація'
+  'Mutilation': 'Каліцтво'
+  'Natural Attack': 'Природна атака'
+  'Blood Scent': 'Blood Scent'
+  'Nimble Punishment': 'Спритне покарання'
+  'Pandatak': 'Пандатак'
+  'Pandiniuras': 'Пандініурас'
+  "Pandora's Box": 'Скринька Пандори'
+  'Paralyzing Arrow': 'Паралізуюча стріла'
+  'Paralyzing Glyph': 'Паралізуючий гліф'
+  'Paralyzing Poison': 'Паралізуюча отрута'
+  'Paralyzing Trap': 'Паралізуюча пастка'
+  'Paralyzing Word': 'Паралізуюче слово'
+  'Read the Table': 'Read the Table'
+  'Plaguing Arrow': 'Надокучлива стріла'
+  'Playful Claw': 'Грайливий кіготь'
+  'Poisoned Arrow': 'Отруєна стріла'
+  'Poisoned Trap': 'Отруєна пастка'
+  'Poisoned Wind': 'Отруєний вітер'
+  'Power': 'Міць'
+  'Powerful Shooting': 'Потужний постріл'
+  'Pressure': 'Тиск'
+  'Preventing Word': 'Захисне слово'
+  'Prime of Life': 'Розквіт сил'
+  'Mountain Punch': 'Гірський удар'
+  'Punishment': 'Покарання'
+  'Punitive Arrow': 'Караюча стріла'
+  'Reducing Key': 'Зменшувальний ключ'
+  'Reflex': 'Рефлекс'
+  'Regenerating Word': 'Відновлювальне слово'
+  'Rekop': 'Рекоп'
+  'Repelling Trap': 'Відштовхувальна пастка'
+  'Repercussion': 'Віддача'
+  'Retreat Arrow': 'Стріла відступу'
+  'Revitalising Word': 'Оживляюче слово'
+  'Rough Tongue': 'Шорсткий язик'
+  'Roulette': 'Рулетка'
+  'Sacrifice': 'Жертва'
+  "Senshi's Sword": 'Меч Сенші'
+  "Senshi's Wrath": 'Лють Сенші'
+  'Shovel Kiss': 'Поцілунок лопати'
+  'Shovel of Judgement': 'Лопата правосуддя'
+  'Shovel Throwing': 'Кидок лопати'
+  'Shriveling': 'Висушення'
+  "Shugo's Shield": 'Щит Шуго'
+  "Shugo's Teleportation": 'Телепортація Шуго'
+  'Slaughtering Shovel': 'Забійна лопата'
+  'Slow Down': 'Сповільнення'
+  'Slow Down Arrow': 'Сповільнювальна стріла'
+  'Smell': 'Нюх'
+  'Soothing Bramble': 'Заспокійлива колючка'
+  'Spell Rebound': 'Відбиття закляття'
+  'Spirit Rift': 'Spirit Rift'
+  'Spiritual Punishment': 'Духовне покарання'
+  'Rooted Guard': 'Rooted Guard'
+  'Stain': 'Заплямування'
+  'Stimulating Word': 'Стимулююче слово'
+  'Strengthstorm': 'Буря сили'
+  'Lucky Pounce': 'Lucky Pounce'
+  'Stampede': 'Stampede'
+  'Suppressing Roar': 'Suppressing Roar'
+  'Seismic Command': 'Seismic Command'
+  'Rending Pounce': 'Rending Pounce'
+  'Binding Howl': 'Binding Howl'
+  'Primal Cataclysm': 'Primal Cataclysm'
+  'Pack Totem': 'Тотем зграї'
+  'Swap': 'Обмін'
+  'Sword of Fate': 'Меч долі'
+  'Sword of Judgement': 'Меч правосуддя'
+  'Sylvan Power': 'Лісова сила'
+  'Tear': 'Сльоза'
+  'Temporal Dust': 'Часовий пил'
+  'Terror': 'Жах'
+  'Root Snare': 'Root Snare'
+  'Reviving Spores': 'Reviving Spores'
+  'Maddening Spores': 'Maddening Spores'
+  'Sacrificial Bloom': 'Sacrificial Bloom'
+  'Overgrowth': 'Overgrowth'
+  'Time Theft': 'Крадіжка часу'
+  'Toad': 'Жаба'
+  'Temporal Dial': 'Temporal Dial'
+  "Tokei's Punch": 'Удар Токеі'
+  "Tokei's Sandglass": 'Пісочний годинник Токеі'
+  "Tokei's Teleportation": 'Телепортація Токеі'
+  'Topkaj': 'Топкаж'
+  'Tormenting Arrow': 'Мученицька стріла'
+  'Transposition': 'Транспозиція'
+  'Trap of Silence': 'Пастка мовчання'
+  'Tree': 'Дерево'
+  'Tricky Blow': 'Підступний удар'
+  'Tricky Trap': 'Підступна пастка'
+  'Truce': 'Перемир’я'
+  'Unsummoning': 'Розвтілення'
+  'Vampiric Word': 'Вампіричне слово'
+  'Vital Exchange': 'Vital Exchange'
+  'Second Wind': 'Second Wind'
+  'Wheel of Fortune': 'Колесо фортуни'
+  'Whip': 'Батіг'
+  'Wild Grass': 'Дика трава'
+  'Wind Armour': 'Повітряна броня'
+  'Wind Vulnerability': 'Повітряна вразливість'
+  'Word of Altruism': 'Слово альтруїзму'
+  'Word of Recovery': 'Слово одужання'
+  'Word of Sacrifice': 'Слово жертви'
+  'Word of Silence': 'Слово мовчання'
+  'Word of Thorn': 'Слово шипа'
+  'Word of Youth': 'Слово молодості'
+  'Wounding Word': 'Раняче слово'
+  'Zatoishwan Stance': 'Zatoishwan Stance'

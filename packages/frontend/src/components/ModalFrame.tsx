@@ -1,28 +1,17 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-// Extracted house dialog shell: one scrim, one card, and the same three dismiss doors.
+// Extracted house dialog shell: one scrim and one card; passing no close door makes an operation modal terminal.
 
 /* eslint-disable functional/prefer-immutable-types -- DOM lifecycle boundary. */
 import { X } from 'lucide-react'
-import { useEffect, type ReactNode } from 'react'
+import { useEffect, type MouseEvent as ReactMouseEvent, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 
-export const ModalFrame = ({
-  children,
-  close,
-  close_label,
-  label,
-  max_width = 'max-w-md',
-  soft = false,
-}: Readonly<{
-  children: ReactNode
-  close: () => void
-  close_label: string
-  label: string
-  max_width?: string
-  soft?: boolean
-}>) => {
+type CloseDoor = (() => void) | null
+
+const useModalDismissal = (close: CloseDoor): void => {
   useEffect(() => {
+    if (!close) return
     const keydown = (event: KeyboardEvent): void => {
       if (event.key === 'Escape') close()
     }
@@ -34,13 +23,45 @@ export const ModalFrame = ({
       document.body.style.overflow = previous
     }
   }, [close])
+}
+
+const dismiss_scrim = (event: Readonly<ReactMouseEvent<HTMLDivElement>>, close: CloseDoor): void => {
+  if (close && event.target === event.currentTarget) close()
+}
+
+const CloseButton = ({ close, label }: Readonly<{ close: CloseDoor; label: string }>) =>
+  close ? (
+    <button
+      aria-label={label}
+      className="absolute top-4 right-4 z-10 cursor-pointer opacity-40 transition-opacity hover:opacity-80"
+      onClick={close}
+      type="button"
+    >
+      <X className="text-muted" size={16} />
+    </button>
+  ) : null
+
+export const ModalFrame = ({
+  children,
+  close,
+  close_label,
+  label,
+  max_width = 'max-w-md',
+  soft = false,
+}: Readonly<{
+  children: ReactNode
+  close: CloseDoor
+  close_label: string
+  label: string
+  max_width?: string
+  soft?: boolean
+}>) => {
+  useModalDismissal(close)
 
   return createPortal(
     <div
       className="fixed inset-0 z-50 flex items-center justify-center"
-      onClick={(event) => {
-        if (event.target === event.currentTarget) close()
-      }}
+      onClick={(event) => dismiss_scrim(event, close)}
       role="presentation"
       style={{ backgroundColor: soft ? 'rgba(0,0,0,0.68)' : 'rgba(0,0,0,0.85)', backdropFilter: 'blur(8px)' }}
     >
@@ -58,14 +79,7 @@ export const ModalFrame = ({
             : '0 0 30px rgba(200,150,60,0.12), inset 0 0 30px rgba(200,150,60,0.03)',
         }}
       >
-        <button
-          aria-label={close_label}
-          className="absolute top-4 right-4 z-10 cursor-pointer opacity-40 transition-opacity hover:opacity-80"
-          onClick={close}
-          type="button"
-        >
-          <X className="text-muted" size={16} />
-        </button>
+        <CloseButton close={close} label={close_label} />
         {children}
       </div>
     </div>,

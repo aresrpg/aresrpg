@@ -142,26 +142,38 @@ export const mob_scalar_for_level = (template: MobTemplateSource, requested_leve
   return range === 0n ? 0n : ((level - low) * 100n + range - 1n) / range
 }
 
-export const create_character_source = ({
-  name = '',
-  classe,
-  level = 1n,
-  experience = 0n,
-  vitality = 0n,
-  wisdom = 0n,
-  strength = 0n,
-  intelligence = 0n,
-  chance = 0n,
-  agility = 0n,
-  spell_levels = {},
-  folded_stats = {},
-  weapon = null,
-}: CharacterSourceInput): PlayerSource =>
-  normalize_sources({
+const character_source_appearance = ({
+  sex = 'male',
+  color_1 = 0xffffff,
+  color_2 = 0xd9af57,
+  color_3 = 0x8b6539,
+  hat = null,
+  cloak = null,
+}: CharacterSourceInput) => Object.freeze({ sex, color_1, color_2, color_3, hat, cloak })
+
+export const create_character_source = (input: CharacterSourceInput): PlayerSource => {
+  const {
+    name = '',
+    classe,
+    level = 1n,
+    experience = 0n,
+    vitality = 0n,
+    wisdom = 0n,
+    strength = 0n,
+    intelligence = 0n,
+    chance = 0n,
+    agility = 0n,
+    spell_levels = {},
+    folded_stats = {},
+    weapon = null,
+  } = input
+  const appearance = character_source_appearance(input)
+  return normalize_sources({
     players: {
       character: {
         name,
         classe,
+        ...appearance,
         level,
         experience,
         vitality,
@@ -179,6 +191,7 @@ export const create_character_source = ({
     },
     spells: {},
   }).players.character
+}
 
 export const player_max_hp = (source: Readonly<PlayerSource>): bigint => {
   const base = BASE_HP + HP_PER_LEVEL * source.level + source.vitality

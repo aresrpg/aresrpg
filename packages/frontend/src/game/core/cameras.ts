@@ -571,6 +571,13 @@ export const create_camera_director = (initial: CameraAddon, canvas: HTMLElement
 
 export type CameraMode = 'spectate' | 'follow' | 'fight'
 
+/** Noon on the 3:1 celestial orbit. Fight presentation pins this phase while the live world
+ * clock continues underneath and becomes visible again as soon as the board releases camera. */
+export const FIGHT_TIME_OF_DAY = 3 / 8
+
+export const time_of_day_for_camera_mode = (mode: CameraMode, world_time_of_day: number): number =>
+  mode === 'fight' ? FIGHT_TIME_OF_DAY : world_time_of_day
+
 /** WHO OWNS THE CAMERA — a MOUNTED BOARD does, until its own door hands the camera back.
  *  Pointing the world at a character is ASYNCHRONOUS (the saved pose is read from IndexedDB),
  *  so on a refresh into a live fight the handover can land AFTER the board mounted and quietly

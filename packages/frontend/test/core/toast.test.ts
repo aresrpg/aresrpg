@@ -3,7 +3,14 @@
 
 import { describe, expect, test } from 'bun:test'
 
-import { on_error_translate, TOAST_CONTAINER_CLASS, toast, toast_glass_class, type Toast } from '../../src/toast.ts'
+import {
+  on_error_translate,
+  on_gas_empty,
+  TOAST_CONTAINER_CLASS,
+  toast,
+  toast_glass_class,
+  type Toast,
+} from '../../src/toast.ts'
 
 describe('app toast effects', () => {
   test('a persistent toast is a show/remove event pair with no second store', () => {
@@ -55,6 +62,53 @@ describe('app toast effects', () => {
       icon: '/item/ivory_shrooms.png',
       type: 'success',
     })
+    unsubscribe()
+  })
+
+  test('a rich toast retains its accessible sentence and colored semantic parts', () => {
+    const events: unknown[] = []
+    const unsubscribe = toast.subscribe((event) => events.push(event))
+    toast.rich(
+      'Sold ×1 Rune PA for 2.00 SUI',
+      [
+        { text: 'Sold ', tone: 'default' },
+        { text: '×1', tone: 'gold' },
+        { text: ' Rune PA', tone: 'primary' },
+        { text: ' for ', tone: 'default' },
+        { text: '2.00 SUI', tone: 'sui' },
+      ],
+      'success'
+    )
+    const shown = events[0] as Readonly<{ type: 'show'; toast: Toast }>
+
+    expect(shown.toast).toMatchObject({ message: 'Sold ×1 Rune PA for 2.00 SUI', type: 'success' })
+    expect(shown.toast.parts?.slice(0, 2)).toEqual([
+      { text: 'Sold ', tone: 'default' },
+      { text: '×1', tone: 'gold' },
+    ])
+    unsubscribe()
+  })
+
+  test('an empty gas balance opens funding without exposing the SDK refusal', () => {
+    const events: unknown[] = []
+    let funding_requests = 0
+    const unsubscribe = toast.subscribe((event) => events.push(event))
+    on_gas_empty(() => {
+      funding_requests += 1
+    })
+    const error = new Error(
+      'Unable to perform gas selection due to insufficient SUI balance (in address balance or coins) for account 0x1 to satisfy required budget 200000000.'
+    )
+
+    toast.add(error)
+    const pending = toast.loading('Submitting…')
+    pending.error(error)
+    on_gas_empty(null)
+
+    expect(funding_requests).toBe(2)
+    expect(events).toHaveLength(2)
+    expect(events[0]).toMatchObject({ type: 'show', toast: { message: 'Submitting…', type: 'pending' } })
+    expect(events[1]).toMatchObject({ type: 'remove' })
     unsubscribe()
   })
 })

@@ -8,10 +8,12 @@ import type { Graph } from '../graph.ts'
 import type { GraphBus } from '../pubsub_bus.ts'
 
 const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1_000
+const nullable_string = (value: unknown): string | null => (typeof value === 'string' ? value : null)
 
 const parse_sale = (member: string): MarketSaleRow & Readonly<{ side: string }> => {
   const separator = member.indexOf('|')
   if (separator < 0) throw new Error('sales history member has no coordinate separator')
+  const id = member.slice(0, separator)
   try {
     const row = JSON.parse(member.slice(separator + 1)) as Record<string, unknown>
     if (
@@ -23,12 +25,14 @@ const parse_sale = (member: string): MarketSaleRow & Readonly<{ side: string }> 
     )
       throw new Error('sales history member has an invalid shape')
     return {
+      id,
       object: row.object,
       kind: row.kind,
-      item_type: typeof row.item_type === 'string' ? row.item_type : null,
+      name: nullable_string(row.name),
+      item_type: nullable_string(row.item_type),
       amount: Number(row.amount) || 1,
       price_mist: row.price_mist,
-      counterparty: typeof row.counterparty === 'string' ? row.counterparty : null,
+      counterparty: nullable_string(row.counterparty),
       ts_ms: row.ts_ms,
       side: row.side,
     }

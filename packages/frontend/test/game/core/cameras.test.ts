@@ -3,7 +3,7 @@
 
 import { expect, test } from 'bun:test'
 
-import { camera_mode_after } from '../../../src/game/core/cameras.ts'
+import { camera_mode_after, FIGHT_TIME_OF_DAY, time_of_day_for_camera_mode } from '../../../src/game/core/cameras.ts'
 
 // REPORTED 2026-08-21: refresh into a live fight and the board is drawn, the player walks
 // around freely, and their overworld avatar stands on the board beside their own fighter. One
@@ -20,4 +20,11 @@ test('the board hands its own camera back, and outside a fight nothing is held',
   expect(camera_mode_after('follow', { mode: 'fight', from: 'board' })).toBe('fight')
   expect(camera_mode_after('follow', { mode: 'spectate', from: 'character' })).toBe('spectate')
   expect(camera_mode_after('spectate', { mode: 'follow', from: 'character' })).toBe('follow')
+})
+
+test('fight presentation pins noon without changing the live world clock outside combat', () => {
+  expect(FIGHT_TIME_OF_DAY).toBe(3 / 8)
+  expect(time_of_day_for_camera_mode('fight', 0.9)).toBe(FIGHT_TIME_OF_DAY)
+  expect(time_of_day_for_camera_mode('follow', 0.9)).toBe(0.9)
+  expect(time_of_day_for_camera_mode('spectate', 0.9)).toBe(0.9)
 })

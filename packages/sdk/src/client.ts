@@ -33,12 +33,14 @@ import {
 import { create_balance_cache } from './balance.ts'
 import { coin_of, receipt_personal_kiosk_cap, with_kiosk, with_personal_kiosk } from './ptb.ts'
 import { create_gas_ledger, log_transaction_receipt } from './gas.ts'
+import { GAS_BUDGET_MIST } from './gas_budget.ts'
 
 export { doors }
 export { DOORS } from './doors.gen.ts'
 export * from './ptb.ts'
 export * from './cache.ts'
 export * from './gas.ts'
+export * from './gas_budget.ts'
 
 export type SharedPin = { id: string | null; shared_version: string | null }
 export type Pins = Readonly<Record<string, unknown>> & {
@@ -102,12 +104,6 @@ export interface SuiTransport {
 }
 
 export type SdkNetwork = 'testnet' | 'mainnet'
-
-/** The one gas budget, for every transaction (owner 2026-08-21: "it should never go above that
- *  anyway"). A budget is RESERVED, not spent — the unused part never leaves the address — and
- *  pinning it is what removes the estimation dry run. A PTB that outgrows it is refused at the
- *  dry run with `GasBudgetExceeded`, never submitted. */
-export const GAS_BUDGET_MIST = 200_000_000n
 
 export type TransactionSigner = (
   transaction: Transaction
@@ -272,7 +268,15 @@ export function SDK({
     },
   })
 
-  // ── game-object resolver: cache → pre-resolved input; unknown → THROW ──────────────────
+  // ── transaction factory + game-object resolver ────────────────────────────────────
+  const create_transaction = (): Transaction => {
+    const transaction = new Transaction()
+    const { math_package } = pins
+    if (typeof math_package === 'string' && math_package)
+      transaction.moveCall({ target: `${math_package}::aresrpg::aresrpg` })
+    return transaction
+  }
+
   const resolve = (tx: Transaction, value: Resolvable, mutable: boolean): TransactionObjectArgument => {
     if (typeof value !== 'string') {
       // already an in-PTB argument (a result, a resolved input) or an explicit ref object
@@ -522,7 +526,7 @@ export function SDK({
     (Object.keys(doors.DOORS) as DoorName[]).map((name) => [
       name,
       async (args: Record<string, unknown>, opts?: { budget?: bigint | 'estimate'; include?: object }) => {
-        const tx = new Transaction()
+        const tx = create_transaction()
         ;(bound_doors[name] as (transaction: Transaction, input: never) => unknown)(tx, args as never)
         return execute(tx, opts)
       },
@@ -566,7 +570,7 @@ export function SDK({
     simulate,
     /** Freshest known owned ref (receipt-fed), or undefined. */
     ref: (object_id: string) => owned_ref(cache, object_id),
-    tx: () => new Transaction(),
+    tx: create_transaction,
     door_context: ctx,
     doors: bound_doors,
     call,

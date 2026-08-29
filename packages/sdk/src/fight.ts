@@ -211,26 +211,54 @@ export const fight_actions = (sdk: GameSdk, { kiosk_cap }: FightActionsCtx) => {
       return project_receipt(receipt)
     },
 
+    join_many: async ({
+      fight,
+      character_ids,
+      custody,
+      team,
+      access = 0,
+      party,
+    }: {
+      fight: string
+      character_ids: readonly string[]
+      custody: KioskCustody
+      team: number
+      access?: number
+      party?: string
+    }): Promise<FightReceipt> => {
+      if (character_ids.length === 0) throw new Error('A grouped fight join needs at least one character')
+      await hydrate_fight(fight)
+      if (party) await sdk.hydrate_unknown([party])
+      const receipt = await with_kiosk(
+        (tx, kiosk, cap) => {
+          character_ids.forEach((character_id) => {
+            if (party)
+              sdk.doors.join_fight_grouped(tx, {
+                f: fight,
+                kiosk,
+                cap,
+                character_id,
+                team,
+                shared_party: party,
+              })
+            else sdk.doors.join_fight(tx, { f: fight, kiosk, cap, character_id, team, access })
+          })
+        },
+        { custody, gas_scope: scope_of(fight) }
+      )
+      return project_receipt(receipt)
+    },
+
     place: async ({ fight, fighter_idx, cell }: { fight: string; fighter_idx: bigint; cell: bigint }) => {
       await hydrate_fight(fight)
       return submit(fight, (tx) => sdk.doors.place_fighter(tx, { f: fight, fighter_idx, cell }))
     },
 
-    /** The LAST seat's ready starts the fight in the same transaction (`and_start`) — the
-     *  chain has no auto-start on ready, and start's &Random door legally follows ready. */
-    ready: async ({
-      fight,
-      fighter_idx,
-      and_start = false,
-    }: {
-      fight: string
-      fighter_idx: bigint
-      and_start?: boolean
-    }) => {
+    /** Current shared truth decides whether this ready is the atomic final ready + start. */
+    ready: async ({ fight, fighter_idx }: { fight: string; fighter_idx: bigint }) => {
       await hydrate_fight(fight)
       const tx = sdk.tx()
-      sdk.doors.ready_fighter(tx, { f: fight, fighter_idx })
-      if (and_start) sdk.doors.start_fight(tx, { f: fight })
+      sdk.doors.ready_and_start_fight(tx, { f: fight, fighter_idx })
       const receipt = await sdk.execute(tx, { gas_scope: scope_of(fight) })
       return project_fight_boundary_receipt(receipt)
     },

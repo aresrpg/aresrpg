@@ -51,7 +51,7 @@ describe('pinned Move math classes', () => {
     expect(xp_for_player(1_200n, 0n, 1n, 1n, 12n, 12n, 1n)).toBe(1_100n)
     expect(xp_for_player(1_200n, 0n, 20n, 20n, 12n, 12n, 1n)).toBe(720n)
     expect(xp_for_player(1_200n, 0n, 40n, 40n, 12n, 12n, 1n)).toBe(270n)
-    expect(xp_for_player(1_000n, 600n, 12n, 12n, 12n, 12n, 1n)).toBe(2_000n)
+    expect(xp_for_player(1_000n, 100n, 12n, 12n, 12n, 12n, 1n)).toBe(2_000n)
   })
 
   // The crit seam: `crit_denominator` divides by the integer `ln_e6`, so a silent edit to the

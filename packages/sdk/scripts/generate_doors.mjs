@@ -38,6 +38,7 @@ import prettier from 'prettier'
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..')
 export const API_MOVE_PATH = join(root, '../move/sources/api.move')
+export const TRADE_MOVE_PATH = join(root, '../move/sources/trade.move')
 export const DOORS_OUT_PATH = join(root, 'src/doors.gen.ts')
 export const CHARACTER_MOVE_PATH = join(root, '../move/sources/character.move')
 export const CHARACTER_PRICE_OUT_PATH = join(root, 'src/character_price.ts')
@@ -295,6 +296,41 @@ export const generate = async (move_source) => {
   return prettier.format(raw, { ...config, parser: 'typescript' })
 }
 
+const TRADE_DOORS = Object.freeze({
+  create: 'trade_create',
+  join: 'trade_join',
+  cancel: 'trade_cancel',
+  put_sui: 'trade_put_s',
+  take_sui: 'trade_take_s',
+  accept: 'trade_accept',
+  claim_sui: 'trade_get_s',
+  recover_sui: 'trade_recover_s',
+  close: 'trade_close',
+})
+
+export const generate_game_doors = async (api_source, trade_source) => {
+  const names = new Set([...Object.keys(TRADE_DOORS), 'end_request'])
+  const trade = parse_doors(trade_source, names).flatMap((door) => {
+    const projected = {
+      ...door,
+      params: door.params.map((param) => (param.name === 'trade' ? { ...param, name: 't' } : param)),
+      module: 'trade',
+    }
+    return door.name === 'end_request'
+      ? [
+          { ...projected, export_name: 'trade_cancel_request' },
+          { ...projected, export_name: 'trade_decline_request' },
+        ]
+      : [{ ...projected, export_name: TRADE_DOORS[door.name] }]
+  })
+  const raw = emit_doors([...parse_doors(api_source), ...trade], {
+    source: 'packages/move/sources/{api,trade}.move',
+    description: 'public game doors',
+  })
+  const config = await prettier.resolveConfig(DOORS_OUT_PATH)
+  return prettier.format(raw, { ...config, parser: 'typescript' })
+}
+
 /** Project the fixed character mint price without giving it a second authored home. */
 export const generate_character_price = async (move_source) => {
   const match = move_source.match(/const PRICE: u64 = ([\d_]+);/)
@@ -320,7 +356,7 @@ export const generate_projected_doors = async (doors, output_path, options = {})
 
 const invoked_directly = import.meta.main ?? (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1])
 if (invoked_directly) {
-  const out = await generate(readFileSync(API_MOVE_PATH, 'utf8'))
+  const out = await generate_game_doors(readFileSync(API_MOVE_PATH, 'utf8'), readFileSync(TRADE_MOVE_PATH, 'utf8'))
   writeFileSync(DOORS_OUT_PATH, out)
   writeFileSync(CHARACTER_PRICE_OUT_PATH, await generate_character_price(readFileSync(CHARACTER_MOVE_PATH, 'utf8')))
   const count = (out.match(/^export const /gm) || []).length

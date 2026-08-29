@@ -37,6 +37,25 @@ const glb_nodes = (path: string): readonly string[] => {
   return Object.freeze((json.nodes ?? []).flatMap(({ name }) => (name ? [name] : [])))
 }
 
+const glb_scene_nodes = (path: string): readonly string[] => {
+  const bytes = readFileSync(path)
+  const json_length = bytes.readUInt32LE(12)
+  const json = JSON.parse(
+    bytes
+      .subarray(20, 20 + json_length)
+      .toString()
+      .replace(/\0+$/u, '')
+  ) as Readonly<{
+    scene?: number
+    scenes?: readonly Readonly<{ nodes?: readonly number[] }>[]
+    nodes?: readonly Readonly<{ name?: string }>[]
+  }>
+  const scene = json.scenes?.[json.scene ?? 0]
+  return Object.freeze(
+    (scene?.nodes ?? []).flatMap((node) => (json.nodes?.[node]?.name ? [json.nodes[node]!.name!] : []))
+  )
+}
+
 const glb_variants = (path: string): readonly string[] => {
   const bytes = readFileSync(path)
   const json_length = bytes.readUInt32LE(12)
@@ -101,6 +120,10 @@ describe('shipped content assets', () => {
       expect(Math.max(thumbnail.width, thumbnail.height)).toBe(64)
       expect(Math.min(thumbnail.width, thumbnail.height)).toBeGreaterThan(0)
     }
+  })
+
+  test('the white ant scene contains no exported helper plane', () => {
+    expect(glb_scene_nodes(seed('models/mobs/ant_white.glb'))).toEqual(['Armature'])
   })
 
   test('new item art uses the 512px detail and 64px runtime convention', () => {
@@ -184,8 +207,8 @@ describe('shipped content assets', () => {
   })
 
   test('spell icon identity ignores word-boundary underscores in seed filenames', () => {
-    expect(spell_asset_basename('yogan', 'Adder Shaft')).toBe('yogan_adder_shaft')
-    expect(spell_asset_key('yogan', 'Sunpiercer')).toBe(indexed_asset_key('yogan_sun_piercer'))
+    expect(spell_asset_basename('yogan', 'Poisoned Arrow')).toBe('yogan_poisoned_arrow')
+    expect(spell_asset_key('yogan', 'Paralyzing Arrow')).toBe(indexed_asset_key('yogan_paralyzing_arrow'))
     const spell_icons = basenames(seed('icons/spells'), '.webp')
     expect(spells_source.every(({ classe, name }) => spell_icons.has(spell_asset_basename(classe, name)))).toBeTrue()
   })

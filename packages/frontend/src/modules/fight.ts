@@ -12,6 +12,7 @@ import {
 import type { AppInput, AppModule, AppState } from '../store.ts'
 
 import { holds_character_seat } from './fight_identity.ts'
+import { same_fight_turn } from './fight_lifecycle.ts'
 import { is_fight_board_page } from './navigation.ts'
 import { observe_fights } from './fight_observer.ts'
 export { create_fight_session, type ActiveFightSession } from './fight_session.ts'
@@ -20,6 +21,7 @@ export { fight_should_close, terminal_remote_draft_needs_commit } from './fight_
 
 export type FightPresentationBatch = Readonly<{
   batch: number
+  before: HydratedFightCheckpoint
   checkpoint: HydratedFightCheckpoint
   zone_ids: readonly string[]
   events: readonly FightEvent[]
@@ -32,6 +34,7 @@ type FightEnvironment = Readonly<{
   canonical_ended: boolean
   started_at_ms: number | null
   transaction_pending: boolean
+  placement_changed_seats: Readonly<Record<number, true>>
   ready_submitted_seat: number | null
   end_turn_queued: boolean
   end_turn_submitted: boolean
@@ -39,11 +42,13 @@ type FightEnvironment = Readonly<{
   awaiting_turn_witness: boolean
 }>
 
+export type FightKolizeumManager = Readonly<{ id: string; pledge_mist: bigint }>
+
 export type FightSessionState = Readonly<{
   cached: Readonly<Record<string, HydratedFightCheckpoint>>
   environments: Readonly<Record<string, FightEnvironment>>
-  /** Wager manager identity, projected beside the fight machine and cached per fight. */
-  kolizeum_by_fight: Readonly<Record<string, string>>
+  /** Immutable wager manager terms, projected beside the fight machine and cached per fight. */
+  kolizeum_by_fight: Readonly<Record<string, FightKolizeumManager>>
   mode: FightMode | null
   checkpoint: HydratedFightCheckpoint | null
   zone_ids: readonly string[]
@@ -76,12 +81,13 @@ export type FightSessionInput =
       seed?: bigint
     }>
   | Readonly<{ type: 'fight/input'; fight: string | null; input: FightInput; origin: 'local' | 'streamed' }>
+  | Readonly<{ type: 'fight/cancel_pending_turn'; fight: string }>
   | Readonly<{ type: 'fight/runtime_input'; fight: string; input: FightInput }>
   | Readonly<{ type: 'fight/reset_turn'; fight: string | null }>
   | Readonly<{ type: 'fight/replaced'; checkpoint: HydratedFightCheckpoint }>
   | Readonly<{ type: 'fight/cached'; checkpoint: HydratedFightCheckpoint }>
   | Readonly<{ type: 'fight/uncached'; fight: string }>
-  | Readonly<{ type: 'fight/kolizeum'; fight: string; kolizeum: string | null }>
+  | Readonly<{ type: 'fight/kolizeum'; fight: string; kolizeum: FightKolizeumManager | null }>
   /** authoritative rollback after a refused remote transaction; pending witnesses are discarded */
   | Readonly<{ type: 'fight/restored'; checkpoint: HydratedFightCheckpoint }>
   | Readonly<{
@@ -138,6 +144,7 @@ const initial_fight_environment = (): FightEnvironment =>
     canonical_ended: false,
     started_at_ms: null,
     transaction_pending: false,
+    placement_changed_seats: Object.freeze({}),
     ready_submitted_seat: null,
     end_turn_queued: false,
     end_turn_submitted: false,
@@ -145,8 +152,18 @@ const initial_fight_environment = (): FightEnvironment =>
     awaiting_turn_witness: false,
   })
 
+const presentation_start_checkpoint = (
+  previous: Readonly<HydratedFightCheckpoint> | undefined,
+  current: Readonly<HydratedFightCheckpoint>
+): Readonly<HydratedFightCheckpoint> => previous ?? current
+
 export const fight_environment = (fight: Readonly<FightSessionState>, fight_id: string): FightEnvironment =>
   fight.environments[fight_id] ?? initial_fight_environment()
+
+export const fight_placement_changes = (
+  fight: Readonly<FightSessionState>,
+  fight_id: string | null
+): Readonly<Record<number, true>> => fight_environment(fight, fight_id ?? '').placement_changed_seats
 
 const update_fight_environment = (
   state: AppState,
@@ -213,12 +230,13 @@ const reconcile_fight = (
           ...previous.presentations,
           Object.freeze({
             batch: input.presentation_batch,
+            before: presentation_start_checkpoint(previous_checkpoint, input.checkpoint),
             checkpoint: input.checkpoint,
             zone_ids: Object.freeze([...input.zone_ids]),
             events: Object.freeze([...input.events]),
           }),
         ])
-  const same_turn = previous_checkpoint?.contract.turn_started_ms === input.checkpoint.contract.turn_started_ms
+  const same_turn = same_fight_turn(previous_checkpoint?.contract, input.checkpoint.contract)
   // Ready is irreversible during placement. Keep the latch through receipt success and stale
   // streamed placement rows; only starting the fight or an explicit refusal restores it.
   const ready_confirmed = input.checkpoint.contract.round !== 0n
@@ -231,6 +249,7 @@ const reconcile_fight = (
       previous.started_at_ms ??
       (input.checkpoint.contract.started_ms === null ? null : Number(input.checkpoint.contract.started_ms)),
     transaction_pending: previous.transaction_pending,
+    placement_changed_seats: previous.placement_changed_seats,
     ready_submitted_seat: ready_confirmed ? null : previous.ready_submitted_seat,
     end_turn_queued: same_turn ? previous.end_turn_queued : false,
     end_turn_submitted: same_turn ? previous.end_turn_submitted : false,
@@ -480,6 +499,15 @@ const close_requested_fight = (state: AppState, fight: string | null): AppState 
 
 const reduce_local_fight_latch = (state: AppState, input: AppInput): AppState | null => {
   if (input.type !== 'fight/input' || input.origin !== 'local' || !input.fight) return null
+  if (input.input.type === 'place') {
+    const fighter = Number(input.input.fighter)
+    return update_fight_environment(state, input.fight, (environment) =>
+      Object.freeze({
+        ...environment,
+        placement_changed_seats: Object.freeze({ ...environment.placement_changed_seats, [fighter]: true }),
+      })
+    )
+  }
   if (input.input.type === 'ready') {
     const fighter = Number(input.input.fighter)
     return update_fight_environment(state, input.fight, (environment) =>

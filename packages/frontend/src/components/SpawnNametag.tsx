@@ -156,7 +156,7 @@ export const SpawnNametag = ({ copy }: Readonly<{ copy: AppCopy }>) => {
   const ids = Object.keys(spawns)
   const target = useInteractionTarget(ids, state)
   const has_party = selected_party(state) !== null
-  const effective_access = has_party ? world.fight_access : 0
+  const effective_access = has_party ? (state.settings.fight_access ?? 0) : 0
 
   useEffect(() => {
     const on_key = (event: KeyboardEvent): void => {

@@ -11,9 +11,10 @@ import type { DungeonPortalMarker } from './types.ts'
 import { sample_world_column, type CompiledWorld } from './world_recipe.ts'
 
 const RADIUS = 6.8
-const LABEL_LIFT = 0.5
-/** Portal root sits at 0.2R and its crown at another R; the tag clears that crown modestly. */
-export const DUNGEON_PORTAL_LABEL_HEIGHT = RADIUS * 1.2 + LABEL_LIFT
+export const DUNGEON_PORTAL_ROOT_HEIGHT = RADIUS * 0.2 + 2
+const LABEL_DROP_FROM_CROWN = 2.5
+/** The tag sits inside the portal's tall silhouette instead of floating above the screen center. */
+export const DUNGEON_PORTAL_LABEL_HEIGHT = RADIUS * 1.2 - LABEL_DROP_FROM_CROWN
 const CULL_RANGE_SQUARED = 120 * 120
 const PARTICLES = 22
 const BLUE = [0.08, 0.48, 1] as const
@@ -95,7 +96,11 @@ export const create_dungeon_portals = ({ scene, world }: Readonly<{ scene: Scene
     const particles = new Points(particle_geometry(hash(marker.id)), particle_material)
     disc.renderOrder = 2
     root.add(disc, particles)
-    root.position.set(marker.x, project_height(base_y, flat_terrain_amount(flatten)) + RADIUS * 0.2, marker.z)
+    root.position.set(
+      marker.x,
+      project_height(base_y, flat_terrain_amount(flatten)) + DUNGEON_PORTAL_ROOT_HEIGHT,
+      marker.z
+    )
     root.visible = false
     scene.add(root)
     slots.set(marker.id, Object.freeze({ root, particles, base_y }))
@@ -113,7 +118,7 @@ export const create_dungeon_portals = ({ scene, world }: Readonly<{ scene: Scene
       markers.forEach((marker) => {
         const slot = slots.get(marker.id)
         if (!slot) return
-        slot.root.position.y = project_height(slot.base_y, flat_terrain_amount(flatten)) + RADIUS * 0.2
+        slot.root.position.y = project_height(slot.base_y, flat_terrain_amount(flatten)) + DUNGEON_PORTAL_ROOT_HEIGHT
       })
     },
     set_active: (next: boolean): void => {

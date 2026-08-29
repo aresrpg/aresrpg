@@ -31,7 +31,7 @@ export type LoadedCharacterRender = Readonly<{
   appearance: CharacterAppearanceRender
 }>
 
-const color_hex = (value: number): string => `#${value.toString(16).padStart(6, '0').slice(-6)}`
+export const character_color_hex = (value: number): string => `#${value.toString(16).padStart(6, '0').slice(-6)}`
 
 export const character_render_source = (character: CharacterRenderRow): CharacterRenderSource =>
   Object.freeze({
@@ -39,9 +39,9 @@ export const character_render_source = (character: CharacterRenderRow): Characte
     classe: character.classe,
     male: character.sex === 'male',
     colors: Object.freeze([
-      color_hex(character.color_1),
-      color_hex(character.color_2),
-      color_hex(character.color_3),
+      character_color_hex(character.color_1),
+      character_color_hex(character.color_2),
+      character_color_hex(character.color_3),
     ] as const),
     loadout: Object.freeze(Object.fromEntries(character.equipment.map(({ slot, item_type }) => [slot, item_type]))),
   })
@@ -52,7 +52,11 @@ export const presence_render_source = (row: Readonly<PresenceRow>): CharacterRen
     id: row.character_id,
     classe: row.classe,
     male: row.sex === 'male',
-    colors: Object.freeze([color_hex(row.color_1), color_hex(row.color_2), color_hex(row.color_3)] as const),
+    colors: Object.freeze([
+      character_color_hex(row.color_1),
+      character_color_hex(row.color_2),
+      character_color_hex(row.color_3),
+    ] as const),
     loadout: Object.freeze({
       ...(row.hat ? { hat: row.hat } : {}),
       ...(row.cloak ? { cloak: row.cloak } : {}),

@@ -6,11 +6,14 @@ import { renderToStaticMarkup } from 'react-dom/server'
 
 import { FightTargetPreviews } from '../../../src/game/fight/FightTargetPreviews.tsx'
 import { active_effect_lines, FightEffectLines } from '../../../src/game/fight/FightEffectLines.tsx'
+import { load_app_copy } from '../../../src/i18n/copy.ts'
 
-test('spell aiming restores the fighter nametag with exact resolved HP and status previews', () => {
+test('spell aiming restores the fighter nametag with exact resolved HP, resistance, and status previews', async () => {
+  const copy = await load_app_copy('en')
   const html = renderToStaticMarkup(
     <FightTargetPreviews
       anchors={Object.freeze({ fight_mob_1: Object.freeze({ x: 320, y: 180 }) })}
+      copy={copy}
       critical
       targets={Object.freeze([
         Object.freeze({
@@ -32,6 +35,7 @@ test('spell aiming restores the fighter nametag with exact resolved HP and statu
           active_effects: Object.freeze([
             Object.freeze({ kind: 4n, element: '', value: 9n, turns_left: 0n, source: 0n, stat: 9n }),
           ]),
+          resistances: Object.freeze({ earth: 13n, fire: -4n, water: 0n, air: 8n }),
           effects: Object.freeze([
             Object.freeze({ kind: 0n, channel: 12n, element: 'earth', value: 40n, turns: 0n }),
             Object.freeze({ kind: 5n, channel: 6n, element: '', value: 2n, turns: 2n }),
@@ -60,6 +64,10 @@ test('spell aiming restores the fighter nametag with exact resolved HP and statu
   expect(html).not.toContain('fight-hud__effect')
   expect(html).not.toContain('cast_cost')
   expect(html).toContain('ent-tt__delta--crit')
+  expect(html).toContain('data-fight-resistances="true"')
+  expect(html).toContain('title="Earth resistance"')
+  expect(compact_text).toContain('13%')
+  expect(compact_text).toContain('−4%')
 })
 
 test('the compact turn status names a state and keeps the legacy damage-over-time wording', () => {

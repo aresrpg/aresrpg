@@ -5,7 +5,15 @@
 
 import { describe, expect, test } from 'bun:test'
 
-import { create_cache, absorb_receipt, absorb_object, owned_ref, shared_ref, type Receipt } from '../src/cache.ts'
+import {
+  create_cache,
+  absorb_receipt,
+  absorb_object,
+  changed_object_ids,
+  owned_ref,
+  shared_ref,
+  type Receipt,
+} from '../src/cache.ts'
 
 type ChangedRow = NonNullable<NonNullable<Receipt['effects']>['changedObjects']>[number]
 
@@ -104,5 +112,29 @@ describe('resolution cache', () => {
     const cache = create_cache()
     expect(absorb_receipt(cache, {})).toBe(cache)
     expect(absorb_receipt(cache, undefined)).toBe(cache)
+  })
+
+  test('changed object ids select only live objects of the requested receipt type', () => {
+    const rune_stack = id(3)
+    const claim = id(4)
+    const deleted_stack = id(5)
+    const receipt: Receipt = {
+      Transaction: {
+        objectTypes: {
+          [rune_stack]: `${id(8)}::item::Item`,
+          [claim]: `${id(8)}::forgemagie::CrushClaim`,
+          [deleted_stack]: `${id(8)}::item::Item`,
+        },
+        effects: {
+          changedObjects: [
+            owned(rune_stack, '2', 'rune'),
+            owned(claim, '2', 'claim'),
+            { objectId: deleted_stack, idOperation: 'Deleted', outputState: 'DoesNotExist' },
+          ],
+        },
+      },
+    }
+
+    expect(changed_object_ids(receipt, '::item::Item')).toEqual([rune_stack])
   })
 })

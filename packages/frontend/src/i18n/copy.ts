@@ -11,6 +11,10 @@ export type AppCopy = Readonly<{
   fatal: string
   world_unavailable_title: string
   world_unavailable: string
+  mobile_unavailable_label: string
+  mobile_unavailable_title: string
+  mobile_unavailable_body: string
+  mobile_unavailable_status: string
   chrome: string
   other: string
   continue: string
@@ -57,10 +61,19 @@ export type AppCopy = Readonly<{
   indexing_health: string
   online_players: string
   indexing_lag_warning: string
+  indexing_block_title: string
+  indexing_block_body: string
+  indexing_block_progress: string
+  indexing_block_remaining: string
+  indexing_block_eta: string
+  indexing_block_estimating: string
   game_frozen: string
   gas_budget_toast: string
   game_paused_toast: string
   movement_sync_toast: string
+  fight_path_changed_toast: string
+  party_member_unavailable_toast: string
+  fight_turn_already_forced_toast: string
   network_testnet: string
   page_pending_title: string
   page_pending_body: string
@@ -118,6 +131,7 @@ export type AppCopy = Readonly<{
   settings_page: Readonly<Record<string, string>>
   demo_page: Readonly<Record<string, string>>
   world_hud: Readonly<Record<string, string>>
+  spell_names: Readonly<Record<string, string>>
 }>
 
 export type CopyNode = Readonly<Record<string, unknown>>
@@ -140,6 +154,7 @@ export const copy_text =
   }
 
 export const stat_name = (copy: AppCopy, stat: StatName): string => copy.simulator_page[`stat_${stat}`] ?? stat
+export const spell_name = (copy: AppCopy, identity: string): string => copy.spell_names[identity] ?? identity
 
 const loaders: Readonly<Record<Locale, () => Promise<{ default: unknown }>>> = Object.freeze({
   de: () => import('./locales/de.yaml'),

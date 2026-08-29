@@ -39,7 +39,9 @@ overruled row.
   SCREAMING_SNAKE_CASE is for constants. React hooks remain `useX`.
 - No classes or `this`, except React error boundaries, `extends Error`, and Three.js
   `extends PhysicalLightingModel`.
-- Keep cyclomatic complexity at most 30, nesting at most 5, and files at most 600 lines; aim lower.
+- Prefer cognitive complexity at most 10 and cyclomatic complexity at most 8. New code never
+  exceeds 15/12, inherited hotspot scores never rise, nesting never exceeds 4, and files stay at
+  most 600 lines. Extraction without removing decisions is not a complexity reduction.
 - Await promises or explicitly discard them with `void`. Never swallow a failure.
 - Handle discriminated unions exhaustively.
 - Every ESLint disable names the rule and gives the local reason.
@@ -94,10 +96,16 @@ bun run dev
 bun run lint
 bun run typecheck
 bun run test
+bun run coverage:all
 ```
 
-`bun run test` is the canonical repository suite. The complete gate also includes both Move
-packages, indexer parity/package-size tests, and the production frontend build.
+`bun run test` is the canonical repository suite and includes Bun's native 60% line / 75% function
+coverage gate over handwritten JS/TS. `bun run coverage:all` additionally runs the Rust indexer's
+65% LLVM line floor and Sui-native Move floors: control 60%, seed 30%, math 30%, and game 25%.
+Every lane targets more than 80%; raise its enforced floor in the same change as meaningful test
+coverage gains, and never lower a floor. No authored module is excluded. Rust coverage requires `cargo-llvm-cov` 0.9.0 plus
+`llvm-tools-preview` or Homebrew LLVM. The complete CI gate also includes indexer parity/package-size
+tests and the production frontend build.
 
 After every edit under `packages/move` or `packages/move-math`, run both:
 
@@ -115,7 +123,13 @@ Before opening a PR, run `.claude/skills/review/SKILL.md` over the actual diff.
 
 ## Git and deployment
 
-- Never stage, commit, push, branch, tag, or rewrite history for the owner.
+- Main agents and ordinary subagents never stage, commit, push, branch, tag, or rewrite history for
+  the owner.
+- Exception: when the owner explicitly invokes `$ship` or asks to ship already-staged work, the
+  dedicated `git_operator` may commit and push exactly that staged index under the `$ship` skill.
+  The invocation is the required authorization; do not request duplicate confirmation because of
+  the staged file count. A changed staged set, secret risk, failed hook, conflict, or destructive
+  recovery still stops the operation.
 - Leave verified changes for owner review.
 - `edge` is integration; `master` receives only release promotion. Production, mainnet, permanent
   freeze, and deployment actions require explicit owner approval.

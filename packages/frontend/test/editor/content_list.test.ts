@@ -22,8 +22,10 @@ import {
   order_content_rows,
   reordered_spell_levels,
   row_address,
+  spell_row_has_effects,
 } from '../../src/editor/content_list.ts'
-import { replace_json_value, type SeedEntityRow } from '../../src/editor/seed_editor.ts'
+import { spell_editor_hash, spell_editor_route } from '../../src/editor/content_route_model.ts'
+import { replace_json_value, type JsonValue, type SeedEntityRow } from '../../src/editor/seed_editor.ts'
 
 const row = (id: string, name: string, category: string, level: number): SeedEntityRow =>
   Object.freeze({ id, label: name, path: Object.freeze([]), value: Object.freeze({ name, category, level }) })
@@ -219,6 +221,17 @@ test('mob facets derive world biomes, families, elements, and protector professi
       path: Object.freeze([2]),
       value: Object.freeze({ mob_type: 'ant__samurai', family: 'ant', element: 'fire', role: 'archi' }),
     }),
+    Object.freeze({
+      id: 'protector_obsidianite',
+      label: 'Obsidine',
+      path: Object.freeze([3]),
+      value: Object.freeze({
+        mob_type: 'protector_obsidianite',
+        family: 'protector',
+        element: 'earth',
+        role: 'protector',
+      }),
+    }),
   ]
   const worlds: SeedEntityRow[] = [
     Object.freeze({
@@ -245,10 +258,21 @@ test('mob facets derive world biomes, families, elements, and protector professi
     },
     { kind: 'biome', id: 'nauvis:forest', parent: 'nauvis', count: 1, mob_types: ['protector_wheat_bricheton'] },
     { kind: 'family', id: 'ant', count: 2, mob_types: ['ant', 'ant__samurai'] },
-    { kind: 'family', id: 'protector', count: 1, mob_types: ['protector_wheat_bricheton'] },
-    { kind: 'element', id: 'earth', count: 1, mob_types: ['protector_wheat_bricheton'] },
+    {
+      kind: 'family',
+      id: 'protector',
+      count: 2,
+      mob_types: ['protector_wheat_bricheton', 'protector_obsidianite'],
+    },
+    {
+      kind: 'element',
+      id: 'earth',
+      count: 2,
+      mob_types: ['protector_wheat_bricheton', 'protector_obsidianite'],
+    },
     { kind: 'element', id: 'fire', count: 2, mob_types: ['ant', 'ant__samurai'] },
     { kind: 'protector', id: 'FARMER', count: 1, mob_types: ['protector_wheat_bricheton'] },
+    { kind: 'protector', id: 'MINER', count: 1, mob_types: ['protector_obsidianite'] },
   ])
 
   expect(mob_types_for_protector_visibility(mobs, null, true)).toEqual(new Set(['ant', 'ant__samurai']))
@@ -284,6 +308,20 @@ test('mobs order by level-band midpoint then name', () => {
 
 const spell = (index: number, name: string, unlock_level: number): SeedEntityRow =>
   Object.freeze({ id: name, label: name, path: Object.freeze([index]), value: Object.freeze({ name, unlock_level }) })
+
+test('effectless spell rows derive their warning from both normal and critical books', () => {
+  const spell_with = (effects: readonly JsonValue[], crit_effects: readonly JsonValue[]): SeedEntityRow =>
+    Object.freeze({
+      id: 'spell',
+      label: 'Spell',
+      path: Object.freeze([0]),
+      value: Object.freeze({ levels: Object.freeze([{ effects, crit_effects }]) }),
+    })
+
+  expect(spell_row_has_effects(spell_with([], []))).toBeFalse()
+  expect(spell_row_has_effects(spell_with([{ kind: 0 }], []))).toBeTrue()
+  expect(spell_row_has_effects(spell_with([], [{ kind: 0 }]))).toBeTrue()
+})
 
 test('dragging a spell re-stamps the class ladder instead of storing an order', () => {
   // the ladder (1, 6, 21, 42) never changes — only which spell sits on each rung
@@ -331,4 +369,11 @@ test('class and query filters compose without fighting each other', () => {
   ])
   expect(filter_content_rows([senshi, mystic, other], 'HEAL', null, 'mystic').map(({ id }) => id)).toEqual(['heal'])
   expect(filter_content_rows([senshi, mystic, other], 'slash', null, 'senshi').map(({ id }) => id)).toEqual(['slash'])
+})
+
+test('spell editor routes survive reload with class and spell identity', () => {
+  expect(spell_editor_hash('shugo', 'Truce')).toBe('#content/spells/shugo/Truce')
+  expect(spell_editor_route('#content/spells/shugo/Truce')).toEqual({ classe: 'shugo', spell: 'Truce' })
+  expect(spell_editor_route('#content/spells/shugo')).toEqual({ classe: 'shugo', spell: null })
+  expect(spell_editor_route('#content/items')).toBeNull()
 })

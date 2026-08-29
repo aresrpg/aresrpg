@@ -9,10 +9,10 @@
 // facts this player's own transactions did not cause.
 
 import type { KioskOwnerCap } from '@mysten/kiosk'
-import type { CharacteristicName } from '@aresrpg/immutable'
+import { craft_stackable_batch_limit, type CharacteristicName } from '@aresrpg/immutable'
 
 import type { SDK } from './client.ts'
-import { created_object_id, receipt_digest, receipt_event } from './cache.ts'
+import { changed_object_ids, created_object_id, receipt_digest, receipt_event } from './cache.ts'
 import { living_content } from './client.ts'
 import { create_kiosk_runner, type KioskCapLoader, type KioskCustody } from './kiosk_runner.ts'
 import { created_fight_id, type FightCreatedReceipt } from './fight.ts'
@@ -28,9 +28,58 @@ import {
 
 type GameSdk = ReturnType<typeof SDK>
 
+const CLAIM_PROPAGATION_DELAYS_MS = Object.freeze([500, 1_000, 2_000])
+const retryable_object_resolution = (error: unknown): boolean =>
+  error instanceof Error &&
+  !error.message.includes('[sdk] transaction ') &&
+  /object .* not found|unresolved object/i.test(error.message)
+
+export const retry_object_propagation = async <T>(
+  action: () => Promise<T>,
+  pause: (delay_ms: number) => Promise<void>
+): Promise<T> => {
+  let attempt = 0
+  for (;;) {
+    try {
+      return await action()
+    } catch (error) {
+      const delay = CLAIM_PROPAGATION_DELAYS_MS[attempt]
+      if (delay === undefined || !retryable_object_resolution(error)) throw error
+      await pause(delay)
+      attempt += 1
+    }
+  }
+}
+
 export type CharacterReceipt = { digest: string }
 
 export type EquipChange = Readonly<{ slot: string; item_id: string }>
+
+const craft_outcome = (
+  receipt: Parameters<typeof receipt_event>[0],
+  expected: Readonly<{ recipe: string; character: string; output_template: string; attempts: number }>
+): Readonly<{ attempts: number; successes: number; job_xp_gained: number }> => {
+  const event = receipt_event(receipt, '::crafting::Crafted')
+  if (!event) throw new Error('The craft receipt carried no Crafted event')
+  const attempts = Number(event.attempts)
+  const successes = Number(event.successes)
+  const job_xp_gained = Number(event.job_xp_gained)
+  const identity_matches = [
+    event.recipe === expected.recipe,
+    event.character === expected.character,
+    event.output_template === expected.output_template,
+    attempts === expected.attempts,
+  ].every(Boolean)
+  const totals_are_valid = [
+    Number.isSafeInteger(successes),
+    successes >= 0,
+    successes <= attempts,
+    Number.isSafeInteger(job_xp_gained),
+    job_xp_gained >= 0,
+  ].every(Boolean)
+  if (!identity_matches || !totals_are_valid) throw new Error('The craft receipt did not match the submitted batch')
+  return Object.freeze({ attempts, successes, job_xp_gained })
+}
 
 /** The RuneScribed event, projected — the ONLY truth about a scribe's random outcome. */
 export type ScribeOutcome = Readonly<{
@@ -42,6 +91,7 @@ export type ScribeOutcome = Readonly<{
   applied_value: number
   lost_stat: number
   lost_amount: number
+  new_puits: number
 }>
 
 export type CharacterActionsCtx = {
@@ -171,8 +221,8 @@ export const character_actions = (sdk: GameSdk, { kiosk_cap }: CharacterActionsC
       )
       const event = receipt_event(receipt, '::forgemagie::RuneScribed')
       if (!event) throw new Error('The scribe receipt carried no RuneScribed event')
-      // the event's applied_value is the rune's NOMINAL value — the chain writes the CAPPED
-      // gain; the gear's real block reaches the client through the server's item stream
+      // The event carries exact capped gain/loss and the new puits. The client folds those
+      // certified deltas immediately; the streamed Item remains the complete reconciliation.
       return Object.freeze({
         digest: receipt_digest(receipt),
         stat: Number(event.stat),
@@ -180,6 +230,7 @@ export const character_actions = (sdk: GameSdk, { kiosk_cap }: CharacterActionsC
         applied_value: Number(event.applied_value),
         lost_stat: Number(event.lost_stat),
         lost_amount: Number(event.lost_amount),
+        new_puits: Number(event.new_puits),
       })
     },
 
@@ -285,59 +336,74 @@ export const character_actions = (sdk: GameSdk, { kiosk_cap }: CharacterActionsC
       claim_id,
       runes,
       custody,
+      pause,
     }: {
       claim_id: string
       runes: readonly Readonly<{ item_type: string; existing: string | null }>[]
       custody?: KioskCustody
-    }): Promise<Readonly<{ digest: string }>> => {
+      pause: (delay_ms: number) => Promise<void>
+    }): Promise<Readonly<{ digest: string; item_ids: readonly string[] }>> => {
       if (!runes.length) throw new Error('The rune roster is empty')
       const { content_root, seed_package_original } = living_content(sdk, 'Character transaction')
       const templates = runes.map(({ item_type }) => item_template_id(content_root, seed_package_original, item_type))
-      await sdk.hydrate_unknown([claim_id, ...templates])
-      const receipt = await with_kiosk(
-        (tx, kiosk, cap) => {
-          runes.forEach(({ existing }, index) =>
-            sdk.doors.redeem_rune(tx, { claim: claim_id, template: templates[index]!, existing, kiosk, cap })
-          )
-          sdk.doors.discard_crush_claim(tx, { claim: claim_id })
-        },
-        { custody }
-      )
-      return Object.freeze({ digest: receipt_digest(receipt) })
+      const receipt = await retry_object_propagation(async () => {
+        await sdk.hydrate_unknown([claim_id, ...templates])
+        return with_kiosk(
+          (tx, kiosk, cap) => {
+            runes.forEach(({ existing }, index) =>
+              sdk.doors.redeem_rune(tx, { claim: claim_id, template: templates[index]!, existing, kiosk, cap })
+            )
+            sdk.doors.discard_crush_claim(tx, { claim: claim_id })
+          },
+          { include: { objectTypes: true }, custody }
+        )
+      }, pause)
+      return Object.freeze({ digest: receipt_digest(receipt), item_ids: changed_object_ids(receipt, '::item::Item') })
     },
 
-    /** Craft ONE unit: burn the exact ingredient stacks, roll the chain's success curve, mint
-     *  the output on a pass (crafting.move — xp credits either way). The Crafted event is the
-     *  roll's one truth; the minted output STREAMS from the server (projection-driven). */
+    /** Craft one bounded batch: inputs and XP aggregate, while each attempt keeps its exact
+     *  evolving-level roll. The aggregate Crafted event is receipt truth; minted outputs
+     *  continue to stream from the projection. */
     craft: async ({
       character_id,
       output_type,
       input_item_ids,
       existing,
+      attempts,
       custody,
     }: {
       character_id: string
       output_type: string
       input_item_ids: readonly string[]
       existing: string | null
+      attempts: number
       custody?: KioskCustody
-    }): Promise<Readonly<{ digest: string; success: boolean; job_xp_gained: number }>> => {
+    }): Promise<Readonly<{ digest: string; attempts: number; successes: number; job_xp_gained: number }>> => {
       if (!input_item_ids.length) throw new Error('The craft has no ingredients')
+      if (!Number.isSafeInteger(attempts) || attempts < 1 || attempts > craft_stackable_batch_limit)
+        throw new Error(`Craft attempts must be an integer from 1 to ${craft_stackable_batch_limit}`)
       const { content_root, seed_package_original } = living_content(sdk, 'Character transaction')
       const recipe = recipe_id(content_root, seed_package_original, output_type)
       const output_template = item_template_id(content_root, seed_package_original, output_type)
       await sdk.hydrate_unknown([recipe, output_template])
       const receipt = await with_terminal_kiosk(
         (tx, kiosk, personal) =>
-          sdk.doors.craft(tx, { recipe, kiosk, personal, character_id, input_item_ids, output_template, existing }),
+          sdk.doors.craft(tx, {
+            recipe,
+            kiosk,
+            personal,
+            character_id,
+            input_item_ids,
+            output_template,
+            existing,
+            attempts,
+          }),
         { custody }
       )
-      const event = receipt_event(receipt, '::crafting::Crafted')
-      if (!event) throw new Error('The craft receipt carried no Crafted event')
+      const outcome = craft_outcome(receipt, { recipe, character: character_id, output_template, attempts })
       return Object.freeze({
         digest: receipt_digest(receipt),
-        success: Boolean(event.success),
-        job_xp_gained: Number(event.job_xp_gained),
+        ...outcome,
       })
     },
 

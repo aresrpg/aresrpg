@@ -50,6 +50,17 @@ export type FightWeaponView = Readonly<{
 
 export type FightActionSelection = Readonly<{ type: 'spell'; name: string }> | Readonly<{ type: 'weapon' }> | null
 
+export const fight_fighter_name = (
+  checkpoint: Readonly<HydratedFightCheckpoint>,
+  seat: bigint | number,
+  name_of: (identity: string) => string | undefined
+): string => {
+  const fighter = checkpoint.contract.fighters[Number(seat)]!
+  const identity = fighter.kind.type === 'player' ? fighter.kind.character : fighter.kind.snapshot.mob_type
+  const player_source = fighter.kind.type === 'player' ? checkpoint.sources.players[fighter.kind.character] : null
+  return name_of(identity) ?? player_source?.name ?? identity
+}
+
 export type FightFighterView = Readonly<{
   seat: bigint
   team: bigint
@@ -86,7 +97,21 @@ export type FightView = Readonly<{
   show_turn_timer: boolean
 }>
 
-export type FightFighterDisplay = Readonly<{ seat: number; hp: string; dead: boolean }>
+export type FightFighterDisplay = Readonly<{
+  seat: number
+  hp: string
+  dead: boolean
+  effects: readonly ActiveEffect[]
+}>
+
+const placement_deadline = (
+  contract: Readonly<Pick<FightContract, 'placement_ms'>>,
+  phase: FightView['phase'],
+  mode: FightMode
+): bigint | null => {
+  if (phase !== 'placement' || mode !== 'remote' || contract.placement_ms === 0n) return null
+  return contract.placement_ms + CONTRACT_CONSTANTS.placement_force_ms
+}
 
 export const fight_view_with_display = (
   view: Readonly<FightView>,
@@ -97,7 +122,14 @@ export const fight_view_with_display = (
   const timeline = Object.freeze(
     view.timeline.map((fighter) => {
       const row = by_seat.get(Number(fighter.seat))
-      return row ? Object.freeze({ ...fighter, hp: BigInt(row.hp), dead: row.dead }) : fighter
+      return row
+        ? Object.freeze({
+            ...fighter,
+            hp: BigInt(row.hp),
+            dead: row.dead,
+            effects: Object.freeze([...row.effects]),
+          })
+        : fighter
     })
   )
   const selected = view.selected ? (timeline.find(({ seat }) => seat === view.selected?.seat) ?? view.selected) : null
@@ -199,13 +231,12 @@ export const select_fight_view = ({
   const project = (seat: bigint): FightFighterView => {
     const fighter = contract.fighters[Number(seat)]!
     const character_id = fighter.kind.type === 'player' ? fighter.kind.character : null
-    const fallback_name = fighter.kind.type === 'player' ? fighter.kind.character : fighter.kind.snapshot.mob_type
     const player_source = fighter.kind.type === 'player' ? checkpoint.sources.players[fighter.kind.character] : null
     const weapon_level = weapon_level_of(checkpoint, seat)
     return Object.freeze({
       seat,
       team: fighter.team,
-      name: names[character_id ?? fallback_name] ?? player_source?.name ?? fallback_name,
+      name: fight_fighter_name(checkpoint, seat, (identity) => names[identity]),
       level:
         fighter.kind.type === 'mob'
           ? fighter.kind.snapshot.level
@@ -240,8 +271,7 @@ export const select_fight_view = ({
     active_seat,
     selected,
     timeline,
-    placement_deadline_ms:
-      phase === 'placement' && mode === 'remote' ? contract.placement_ms + CONTRACT_CONSTANTS.placement_force_ms : null,
+    placement_deadline_ms: placement_deadline(contract, phase, mode),
     can_end_turn: phase === 'active' && selected?.seat === active_seat && !!selected.owned,
     can_forfeit: phase !== 'ended' && !!selected?.owned && !selected.dead && !selected.settled,
     // Both sides hold a living fighter. The chain refuses to start otherwise — "nobody fights

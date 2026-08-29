@@ -245,12 +245,23 @@ const normalize_folded_stats = (input: unknown = {}): Record<ItemStatField, bigi
   ) as Record<ItemStatField, bigint>
 }
 
+const normalize_player_appearance = (player: Readonly<Record<string, unknown>>) => ({
+  sex: String(player.sex ?? 'male'),
+  color_1: Number(player.color_1 ?? 0xffffff),
+  color_2: Number(player.color_2 ?? 0xd9af57),
+  color_3: Number(player.color_3 ?? 0x8b6539),
+  hat: typeof player.hat === 'string' ? player.hat : null,
+  cloak: typeof player.cloak === 'string' ? player.cloak : null,
+})
+
 const normalize_player = (input: unknown): PlayerSource => {
   const player = raw_record(input)
   const weapon = player.weapon ? raw_record(player.weapon) : null
+  const appearance = normalize_player_appearance(player)
   return {
     name: typeof player.name === 'string' ? player.name : '',
     classe: String(player.classe),
+    ...appearance,
     level: as_bigint(player.level, 'player.level'),
     experience: as_bigint(player.experience ?? 0, 'player.experience'),
     vitality: as_bigint(player.vitality ?? 0, 'player.vitality'),

@@ -30,14 +30,19 @@ export default {
       return false
     }
 
-    events.on('packet/chat', ({ character_id, text }: Extract<PlayerAction, { type: 'packet/chat' }>) => {
+    events.on('packet/chat', ({ character_id, parts }: Extract<PlayerAction, { type: 'packet/chat' }>) => {
       const character = get_state().characters[character_id]?.presence
       if (!character) return
       if (flood_gated()) return
-      void pubsub.mesh.publish(mesh.chat_world(character.world), { address, character: character.name, text })
+      void pubsub.mesh.publish(mesh.chat_world(character.world), {
+        address,
+        character_id,
+        character: character.name,
+        parts,
+      })
     })
 
-    events.on('packet/chat_party', ({ character_id, text }: Extract<PlayerAction, { type: 'packet/chat_party' }>) => {
+    events.on('packet/chat_party', ({ character_id, parts }: Extract<PlayerAction, { type: 'packet/chat_party' }>) => {
       const tracked = get_state().characters[character_id]
       if (!tracked) return
       const { presence: character, party } = tracked
@@ -46,16 +51,21 @@ export default {
         return
       }
       if (flood_gated()) return
-      void pubsub.mesh.publish(mesh.chat_party(party), { address, character: character.name, text })
+      void pubsub.mesh.publish(mesh.chat_party(party), { address, character_id, character: character.name, parts })
     })
 
     events.on(
       'packet/chat_whisper',
-      ({ character_id, to, text }: Extract<PlayerAction, { type: 'packet/chat_whisper' }>) => {
+      ({ character_id, to, parts }: Extract<PlayerAction, { type: 'packet/chat_whisper' }>) => {
         const character = get_state().characters[character_id]?.presence
         if (!character) return
         if (flood_gated()) return
-        void pubsub.mesh.publish(mesh.chat_user(to), { address, character: character.name, text })
+        void pubsub.mesh.publish(mesh.chat_user(to), {
+          address,
+          character_id,
+          character: character.name,
+          parts,
+        })
       }
     )
 
@@ -66,8 +76,9 @@ export default {
         channel: 'world',
         scope: null,
         from: fact.address,
+        character_id: fact.character_id,
         character: fact.character,
-        text: fact.text,
+        parts: fact.parts,
       })
     }
 
@@ -90,8 +101,9 @@ export default {
         channel: 'whisper',
         scope: null,
         from: fact.address,
+        character_id: fact.character_id,
         character: fact.character,
-        text: fact.text,
+        parts: fact.parts,
       })
     }
     watch(mesh.chat_user(address), forward_whisper as (payload: never) => void)

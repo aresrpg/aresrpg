@@ -3,9 +3,9 @@
 /// PARTY — the character-keyed social group (legacy port, stripped down: one flat
 /// package needs no type pinning). Six accepted CHARACTERS max — one wallet may hold several
 /// slots. Leadership is `members[0]` (derive, don't store a role); a leaving leader passes
-/// it to the oldest survivor. The api door proves custody by borrowing the acting character
-/// from the sender's personal kiosk and hands the reference here — possession IS the
-/// authorization. The fight's group-gated sides read `is_member`.
+/// it to the oldest survivor. The api door proves custody in the acting character's current
+/// home, then hands only that verified character id here. The
+/// fight's group-gated sides read `is_member`.
 module aresrpg::party;
 
 use aresrpg::{character::{Self, Character}, friends::{Self, FriendRegistry}};
@@ -13,7 +13,7 @@ use sui::dynamic_field as df;
 
 const MAX_MEMBERS: u64 = 6;
 
-const ENotLeader: u64 = 2001; // invite/kick/disband: the acting character does not lead
+const ENotLeader: u64 = 2001; // rescind/kick/disband: the acting character does not lead
 const EAlreadyMember: u64 = 2002;
 const EAlreadyInvited: u64 = 2003;
 const EPartyFull: u64 = 2004;
@@ -35,37 +35,42 @@ public struct Party has key {
 
 // ╔════════════════ [ Doors (api proves custody, then calls) ] ═══════════════ ]
 
-/// A shared party is born around its leader.
-public(package) fun create(registry: &mut FriendRegistry, chr: &Character, ctx: &mut TxContext) {
+/// The first invitation births the party with that same pending intent. This is the same
+/// invite/accept rule as every later member, without asking a second transaction to rediscover
+/// a shared object created milliseconds earlier.
+public(package) fun create_inviting(
+  registry: &mut FriendRegistry,
+  actor: ID,
+  invited: ID,
+  ctx: &mut TxContext,
+) {
   let party = Party {
     id: object::new(ctx),
-    members: vector[character::id(chr)],
-    pending: vector[],
+    members: vector[actor],
+    pending: vector[invited],
   };
-  cm(registry, character::id(chr));
+  cm(registry, actor);
+  af(registry, invited);
   transfer::share_object(party);
 }
 
-/// The leader records an invitation — intent only, membership waits for `accept`.
-public(package) fun i(party: &mut Party, actor: &Character, invited: ID, present: bool) {
+/// Any accepted member records an invitation — intent only, membership waits for `accept`.
+public(package) fun i(registry: &FriendRegistry, party: &mut Party, actor: ID, invited: ID, present: bool) {
   if (present) {
-    assert!(il(party, actor), ENotLeader);
-    assert!(!m(party, invited), EAlreadyMember);
+    assert!(m(party, actor), ENotMember);
+    af(registry, invited);
     assert!(!party.pending.contains(&invited), EAlreadyInvited);
-    assert!(party.members.length() < MAX_MEMBERS, EPartyFull);
-    assert!(party.pending.length() < MAX_MEMBERS, EPartyFull);
+    assert!(party.members.length() < MAX_MEMBERS && party.pending.length() < MAX_MEMBERS, EPartyFull);
     party.pending.push_back(invited);
   } else {
-    assert!(character::id(actor) == invited || il(party, actor), ENotLeader);
+    assert!(actor == invited || party.members[0] == actor, ENotLeader);
     rp(party, invited);
   };
 }
 
 /// The invited character's CURRENT owner takes the slot.
-public(package) fun accept(registry: &mut FriendRegistry, party: &mut Party, chr: &Character) {
-  let id = character::id(chr);
+public(package) fun accept(registry: &mut FriendRegistry, party: &mut Party, id: ID) {
   rp(party, id);
-  assert!(!m(party, id), EAlreadyMember);
   assert!(party.members.length() < MAX_MEMBERS, EPartyFull);
   cm(registry, id);
   party.members.push_back(id);
@@ -73,9 +78,8 @@ public(package) fun accept(registry: &mut FriendRegistry, party: &mut Party, chr
 
 /// Leave by proven character. A leaving leader passes the lead to the oldest survivor; a
 /// solo leader disbands instead — a live party never dangles.
-public(package) fun leave(registry: &mut FriendRegistry, party: &mut Party, chr: &Character) {
-  let id = character::id(chr);
-  let (found, idx) = mp1(party, id);
+public(package) fun leave(registry: &mut FriendRegistry, party: &mut Party, id: ID) {
+  let (found, idx) = party.members.index_of(&id);
   assert!(found, ENotMember);
   if (idx == 0) assert!(party.members.length() > 1, ELeaderAlone);
   rm(registry, id);
@@ -83,9 +87,9 @@ public(package) fun leave(registry: &mut FriendRegistry, party: &mut Party, chr:
 }
 
 /// The leader removes an accepted member — consent is not a kick authority.
-public(package) fun kick(registry: &mut FriendRegistry, party: &mut Party, leader: &Character, target: ID) {
-  assert!(il(party, leader), ENotLeader);
-  let (found, idx) = mp1(party, target);
+public(package) fun kick(registry: &mut FriendRegistry, party: &mut Party, leader: ID, target: ID) {
+  assert!(party.members[0] == leader, ENotLeader);
+  let (found, idx) = party.members.index_of(&target);
   assert!(found, ENotMember);
   assert!(idx != 0, ECannotKickLeader);
   rm(registry, target);
@@ -93,11 +97,10 @@ public(package) fun kick(registry: &mut FriendRegistry, party: &mut Party, leade
 }
 
 /// Delete a SOLO party — multi-member leaders `leave` and pass the lead instead.
-public(package) fun disband(registry: &mut FriendRegistry, party: Party, leader: &Character) {
-  assert!(il(&party, leader), ENotLeader);
+public(package) fun disband(registry: &mut FriendRegistry, party: Party, leader: ID) {
+  assert!(party.members[0] == leader, ENotLeader);
   assert!(party.members.length() == 1, EPartyNotSolo);
-  let id = character::id(leader);
-  rm(registry, id);
+  rm(registry, leader);
   let Party { id: uid, .. } = party;
   uid.delete();
 }
@@ -106,16 +109,10 @@ public(package) fun disband(registry: &mut FriendRegistry, party: Party, leader:
 
 /// The fight's group gate is the only reader — a member check by character id.
 public fun m(party: &Party, chr: ID): bool {
-  let (found, _) = mp1(party, chr);
-  found
+  party.members.contains(&chr)
 }
 
 // ╔════════════════ [ Internals ] ════════════════════════════════════════════ ]
-
-// is_leader
-fun il(party: &Party, chr: &Character): bool {
-  party.members[0] == character::id(chr)
-}
 
 // remove_pending
 /// Drop `id` from the pending list (accept/decline/rescind share this) — absent aborts.
@@ -123,16 +120,6 @@ fun rp(party: &mut Party, id: ID) {
   let (found, idx) = party.pending.index_of(&id);
   assert!(found, EInviteNotFound);
   party.pending.remove(idx);
-}
-
-// member_position
-fun mp1(party: &Party, chr: ID): (bool, u64) {
-  let mut i = 0;
-  while (i < party.members.length()) {
-    if (party.members[i] == chr) return (true, i);
-    i = i + 1;
-  };
-  (false, 0)
 }
 
 fun cm(registry: &mut FriendRegistry, character: ID) {
@@ -169,4 +156,24 @@ public(package) fun release_membership_for_testing(registry: &mut FriendRegistry
 #[test_only]
 public(package) fun destroy_registry_for_testing(registry: FriendRegistry) {
   friends::destroy_registry_for_testing(registry);
+}
+
+#[test_only]
+public(package) fun inviting_for_testing(
+  registry: &mut FriendRegistry,
+  chr: &Character,
+  invited: ID,
+  ctx: &mut TxContext,
+): Party {
+  assert!(character::id(chr) != invited, EAlreadyMember);
+  af(registry, invited);
+  let actor = character::id(chr);
+  let party = Party { id: object::new(ctx), members: vector[actor], pending: vector[invited] };
+  cm(registry, actor);
+  party
+}
+
+#[test_only]
+public(package) fun shape_for_testing(party: &Party): (ID, ID, u64, u64) {
+  (party.members[0], party.pending[0], party.members.length(), party.pending.length())
 }

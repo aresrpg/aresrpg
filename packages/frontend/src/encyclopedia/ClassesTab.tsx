@@ -15,10 +15,12 @@ export const ClassesTab = ({
   selected_id,
   select_class,
   text,
+  spell_name: display_spell_name,
 }: Readonly<{
   selected_id: string | null
   select_class: (id: string) => void
   text: EncyclopediaText
+  spell_name: (identity: string) => string
 }>) => {
   const [spell_name, set_spell_name] = useState<string | null>(null)
   const detail = selected_id ? encyclopedia_catalog.class(selected_id) : null
@@ -123,7 +125,9 @@ export const ClassesTab = ({
                       {spell_icon(row.classe, row.name) && (
                         <img alt="" className="size-5 shrink-0 object-cover" src={spell_icon(row.classe, row.name)!} />
                       )}
-                      <span className="min-w-0 flex-1 truncate text-[9px] tracking-[0.1em] uppercase">{row.name}</span>
+                      <span className="min-w-0 flex-1 truncate text-[9px] tracking-[0.1em] uppercase">
+                        {display_spell_name(row.name)}
+                      </span>
                       <span className="shrink-0 text-[7px] tracking-[0.08em] text-[#777b86] uppercase">
                         Lv. {row.unlock_level}
                       </span>
@@ -132,7 +136,9 @@ export const ClassesTab = ({
                 })}
               </div>
               <div className="min-w-0 flex-1 p-5">
-                {spell && <SpellCard key={spell.name} spell={spell} text={text} />}
+                {spell && (
+                  <SpellCard display_name={display_spell_name(spell.name)} key={spell.name} spell={spell} text={text} />
+                )}
               </div>
             </div>
           </div>

@@ -1,17 +1,12 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-/// TRADE — the p2p escrow that REPLACES transferred PurchaseCaps (owner 2026-08-12: a cap
-/// sent to a ghost locks the item forever; a cap parked HERE is withdrawable until the lock).
-/// One shared object pinned to two addresses. Each side parks 0-price PurchaseCaps (the items
-/// stay exclusively listed in their OWNER'S kiosk) and optional SUI. Every mutation bumps
-/// `version` and clears both accepts; `accept` names the version it saw — a stale accept
-/// aborts, so nobody ever locks on a state they did not read. Both accepts at the same
-/// version LOCK the trade: from that instant nothing moves except each side CLAIMING the
-/// other side's caps and SUI — claims never expire, so asymmetric execution cannot rug.
-/// The public claim door consumes the cap into an asset + TransferRequest; the SDK must then
-/// pay the royalty floor and relock, exactly the public-market path.
+/// Durable p2p escrow. Pure lifecycle lives in move-math; this object owns balances, caps,
+/// kiosk transfers, and the terminal shrinking lattice.
 module aresrpg::trade;
 
+use aresrpg::version::{Self, Version};
+use aresrpg::item::Item;
+use aresrpg_math::trade_state::{Self, TradeState};
 use sui::balance::{Self, Balance};
 use sui::coin::{Self, Coin};
 use sui::dynamic_object_field as dof;
@@ -19,229 +14,164 @@ use sui::kiosk::{Self, Kiosk, PurchaseCap};
 use sui::sui::SUI;
 use sui::transfer_policy::TransferRequest;
 
-const ENotAParty: u64 = 2601; // every door: the caller is neither side of this trade
-const ELocked: u64 = 2602; // deposits/withdrawals/accepts after the lock
-const ENotLocked: u64 = 2603; // claims before the lock
-const EPricedCap: u64 = 2604; // deposit: a cap with min_price > 0 is a hidden price tag
-const ECapNotFound: u64 = 2605; // withdraw/claim: the id is not in that side's manifest
-const EStaleAccept: u64 = 2606; // accept: the trade changed since the caller read it
-const ENotDrained: u64 = 2607; // destroy: caps or SUI remain
-const ECapLimit: u64 = 2608; // deposit: one side already carries the maximum twenty assets
-
-const MAX_CAPS_PER_SIDE: u64 = 20;
-
-// ╔════════════════ [ Types ] ════════════════════════════════════════════════ ]
-
-/// The escrow. Caps live as dynamic object fields keyed by their item id; the manifests
-/// mirror them so both players (and the projection) always see exactly what a lock buys.
 public struct Trade has key {
   id: UID,
-  a: address,
-  b: address,
-  /// bumped by EVERY mutation; accepts are only valid against the current value
-  version: u64,
-  accept_a: bool,
-  accept_b: bool,
-  /// both accepts at one version — terminal: only claims (and the drained destroy) remain
-  locked: bool,
+  state: TradeState,
   sui_a: Balance<SUI>,
   sui_b: Balance<SUI>,
-  /// item ids of the caps each side parked (the cap itself sits under its item ID)
   caps_a: vector<ID>,
   caps_b: vector<ID>,
 }
 
-// ╔════════════════ [ Doors ] ════════════════════════════════════════════════ ]
-
-/// A trade is born pinned to its two players — nobody else can ever touch it.
-public(package) fun create(counterparty: address, ctx: &mut TxContext) {
-  let trade = Trade {
-    id: object::new(ctx),
-    a: ctx.sender(),
-    b: counterparty,
-    version: 0,
-    accept_a: false,
-    accept_b: false,
-    locked: false,
-    sui_a: balance::zero(),
-    sui_b: balance::zero(),
-    caps_a: vector[],
-    caps_b: vector[],
-  };
-  transfer::share_object(trade);
+public fun create(counterparty: address, version: &Version, ctx: &mut TxContext) {
+  version.assert_latest();
+  transfer::share_object(Trade { id: object::new(ctx), state: trade_state::new(ctx.sender(), counterparty),
+    sui_a: balance::zero(), sui_b: balance::zero(), caps_a: vector[], caps_b: vector[] });
 }
-
-/// Park a cap on the caller's side. 0-price only: trades are barter + escrowed SUI — a
-/// priced cap would make a "free" claim cost money the counterparty never agreed to see.
-public(package) fun pc<T: key + store>(
-  trade: &mut Trade,
-  cap: PurchaseCap<T>,
-  ctx: &TxContext,
-) {
-  assert!(!trade.locked, ELocked);
-  assert!(kiosk::purchase_cap_min_price(&cap) == 0, EPricedCap);
+public fun join(trade: &mut Trade, seen: u64, version: &Version, ctx: &TxContext) {
+  version.assert_latest();
+  trade_state::join(&mut trade.state, seen, ctx.sender());
+}
+public fun end_request(trade: Trade, seen: u64, version: &Version, ctx: &TxContext) {
+  version.assert_latest();
+  trade_state::assert_request_exit(&trade.state, seen, ctx.sender());
+  destroy_drained(trade, ctx);
+}
+public fun cancel(trade: &mut Trade, seen: u64, version: &Version, ctx: &TxContext) {
+  version.assert_latest();
+  trade_state::cancel(&mut trade.state, seen, ctx.sender());
+}
+public(package) fun put_item(trade: &mut Trade, cap: PurchaseCap<Item>, seen: u64, ctx: &TxContext) {
+  trade_state::assert_editable(&trade.state, seen, ctx.sender());
+  trade_state::assert_zero_price(kiosk::purchase_cap_min_price(&cap));
   let item = kiosk::purchase_cap_item(&cap);
   {
-    let manifest = mm(trade, ctx);
-    assert!(manifest.length() < MAX_CAPS_PER_SIDE, ECapLimit);
+    let manifest = my_manifest(trade, ctx.sender());
+    trade_state::assert_cap_room(manifest.length());
     manifest.push_back(item);
   };
   dof::add(&mut trade.id, item, cap);
-  t1(trade);
+  trade_state::touch(&mut trade.state);
 }
-
-/// Take the caller's parked cap back before lock. The SDK returns it to its source kiosk in
-/// the same PTB; unlike a claim, raw misuse can strand only the caller's own asset.
-public(package) fun tc<T: key + store>(
+public(package) fun take_item(trade: &mut Trade, item: ID, seen: u64, ctx: &TxContext): PurchaseCap<Item> {
+  trade_state::assert_editable(&trade.state, seen, ctx.sender());
+  remove_from(my_manifest(trade, ctx.sender()), item);
+  let cap = dof::remove(&mut trade.id, item);
+  trade_state::touch(&mut trade.state);
+  cap
+}
+public fun put_sui(trade: &mut Trade, coin: Coin<SUI>, seen: u64, version: &Version, ctx: &TxContext) {
+  version.assert_latest();
+  trade_state::assert_editable(&trade.state, seen, ctx.sender());
+  trade_state::assert_positive(coin.value());
+  my_balance(trade, ctx.sender()).join(coin.into_balance());
+  trade_state::touch(&mut trade.state);
+}
+public fun take_sui(
   trade: &mut Trade,
-  item: ID,
-  ctx: &TxContext,
-): PurchaseCap<T> {
-  assert!(!trade.locked, ELocked);
-  rf(mm(trade, ctx), item);
-  t1(trade);
-  dof::remove(&mut trade.id, item)
-}
-
-public(package) fun ps(trade: &mut Trade, coin: Coin<SUI>, ctx: &TxContext) {
-  assert!(!trade.locked, ELocked);
-  mb1(trade, ctx).join(coin.into_balance());
-  t1(trade);
-}
-
-public(package) fun ts(trade: &mut Trade, amount: u64, ctx: &mut TxContext): Coin<SUI> {
-  assert!(!trade.locked, ELocked);
-  let coin = coin::from_balance(mb1(trade, ctx).split(amount), ctx);
-  t1(trade);
+  amount: u64,
+  seen: u64,
+  version: &Version,
+  ctx: &mut TxContext,
+): Coin<SUI> {
+  version.assert_latest();
+  trade_state::assert_editable(&trade.state, seen, ctx.sender());
+  trade_state::assert_positive(amount);
+  let coin = coin::from_balance(my_balance(trade, ctx.sender()).split(amount), ctx);
+  trade_state::touch(&mut trade.state);
   coin
 }
-
-/// Accept the trade AS READ: `version` is the state the caller is agreeing to — any change
-/// since aborts. The second matching accept locks the escrow terminally.
-public(package) fun a(trade: &mut Trade, version: u64, ctx: &TxContext) {
-  assert!(!trade.locked, ELocked);
-  assert!(trade.version == version, EStaleAccept);
+public fun accept(trade: &mut Trade, seen: u64, version: &Version, ctx: &TxContext) {
+  version.assert_latest();
+  trade_state::accept(&mut trade.state, seen, ctx.sender());
+}
+public(package) fun claim_item(trade: &mut Trade, item: ID, source: &mut Kiosk, ctx: &mut TxContext): (Item, TransferRequest<Item>) {
+  source.purchase_with_cap(take_terminal_cap(trade, item, false, ctx.sender()), coin::zero<SUI>(ctx))
+}
+public fun claim_sui(trade: &mut Trade, version: &Version, ctx: &mut TxContext): Coin<SUI> {
+  version.assert_latest();
+  take_terminal_sui(trade, false, ctx)
+}
+public(package) fun recover_item(trade: &mut Trade, item: ID, ctx: &TxContext): PurchaseCap<Item> {
+  take_terminal_cap(trade, item, true, ctx.sender())
+}
+public fun recover_sui(trade: &mut Trade, version: &Version, ctx: &mut TxContext): Coin<SUI> {
+  version.assert_latest();
+  take_terminal_sui(trade, true, ctx)
+}
+fun take_terminal_cap(trade: &mut Trade, item: ID, own: bool, sender: address): PurchaseCap<Item> {
+  trade_state::assert_phase(&trade.state, if (own) trade_state::cancelled() else trade_state::settling());
+  trade_state::assert_party(&trade.state, sender);
+  let manifest = if (trade_state::is_a(&trade.state, sender) == own) &mut trade.caps_a else &mut trade.caps_b;
+  remove_from(manifest, item);
+  dof::remove(&mut trade.id, item)
+}
+fun take_terminal_sui(trade: &mut Trade, own: bool, ctx: &mut TxContext): Coin<SUI> {
+  trade_state::assert_phase(&trade.state, if (own) trade_state::cancelled() else trade_state::settling());
   let sender = ctx.sender();
-  ap2(trade, sender);
-  if (sender == trade.a) trade.accept_a = true else trade.accept_b = true;
-  if (trade.accept_a && trade.accept_b) {
-    trade.locked = true;
-  };
+  trade_state::assert_party(&trade.state, sender);
+  let balance = if (trade_state::is_a(&trade.state, sender) == own) &mut trade.sui_a else &mut trade.sui_b;
+  trade_state::assert_positive(balance.value());
+  coin::from_balance(balance.withdraw_all(), ctx)
+}
+public fun close(trade: Trade, version: &Version, ctx: &TxContext) {
+  version.assert_latest();
+  trade_state::assert_terminal(&trade.state);
+  destroy_drained(trade, ctx);
+}
+
+fun my_manifest(trade: &mut Trade, sender: address): &mut vector<ID> {
+  if (trade_state::is_a(&trade.state, sender)) &mut trade.caps_a else &mut trade.caps_b
+}
+fun my_balance(trade: &mut Trade, sender: address): &mut Balance<SUI> {
+  if (trade_state::is_a(&trade.state, sender)) &mut trade.sui_a else &mut trade.sui_b
+}
+fun remove_from(manifest: &mut vector<ID>, item: ID) {
+  let index = trade_state::item_index(manifest, item);
+  manifest.remove(index);
+}
+fun destroy_drained(trade: Trade, ctx: &TxContext) {
+  trade_state::assert_party(&trade.state, ctx.sender());
+  let Trade { id, sui_a, sui_b, caps_a, caps_b, .. } = trade;
+  trade_state::assert_drained(caps_a.length(), caps_b.length());
+  sui_a.destroy_zero(); sui_b.destroy_zero(); id.delete();
 }
 
 #[test_only]
-public(package) fun trade_for_testing(
-  a: address,
-  b: address,
-  sui_a: u64,
-  sui_b: u64,
-  ctx: &mut TxContext,
-): Trade {
-  Trade {
-    id: object::new(ctx), a, b, version: 0, accept_a: false, accept_b: false, locked: false,
-    sui_a: balance::create_for_testing(sui_a), sui_b: balance::create_for_testing(sui_b),
-    caps_a: vector[], caps_b: vector[],
-  }
+public(package) fun trade_for_testing(a: address, b: address, phase: u8, revision: u64, sui_a: u64, sui_b: u64, ctx: &mut TxContext): Trade {
+  Trade { id: object::new(ctx), state: trade_state::state_for_testing(a, b, phase, revision),
+    sui_a: balance::create_for_testing(sui_a), sui_b: balance::create_for_testing(sui_b), caps_a: vector[], caps_b: vector[] }
 }
-
 #[test_only]
-public(package) fun accept_as_for_testing(trade: &mut Trade, version: u64, sender: address) {
-  assert!(!trade.locked, ELocked);
-  assert!(trade.version == version, EStaleAccept);
-  ap2(trade, sender);
-  if (sender == trade.a) trade.accept_a = true else trade.accept_b = true;
-  if (trade.accept_a && trade.accept_b) trade.locked = true;
+public(package) fun join_for_testing(trade: &mut Trade, seen: u64, sender: address) {
+  trade_state::join(&mut trade.state, seen, sender);
 }
-
 #[test_only]
-public(package) fun touch_for_testing(trade: &mut Trade) { t1(trade); }
-
+public(package) fun end_request_for_testing(trade: Trade, seen: u64, sender: address, ctx: &TxContext) {
+  trade_state::assert_request_exit(&trade.state, seen, sender); destroy_drained(trade, ctx);
+}
+#[test_only]
+public(package) fun accept_as_for_testing(trade: &mut Trade, seen: u64, sender: address) { trade_state::accept(&mut trade.state, seen, sender); }
+#[test_only]
+public(package) fun cancel_as_for_testing(trade: &mut Trade, seen: u64, sender: address) { trade_state::cancel(&mut trade.state, seen, sender); }
+#[test_only]
+public(package) fun touch_for_testing(trade: &mut Trade, seen: u64, sender: address) {
+  trade_state::assert_editable(&trade.state, seen, sender); trade_state::touch(&mut trade.state);
+}
 #[test_only]
 public(package) fun state_for_testing(trade: &Trade): vector<u64> {
-  vector[
-    trade.version,
-    if (trade.accept_a) 1 else 0,
-    if (trade.accept_b) 1 else 0,
-    if (trade.locked) 1 else 0,
-  ]
+  let (accept_a, accept_b) = trade_state::accepts(&trade.state);
+  vector[trade_state::to_u8(trade_state::phase(&trade.state)), trade_state::offer_revision(&trade.state),
+    if (accept_a) 1 else 0, if (accept_b) 1 else 0]
 }
-
 #[test_only]
-public(package) fun destroy_for_testing(trade: Trade, ctx: &TxContext) { d(trade, ctx); }
-
-/// Claim one COUNTERPARTY cap post-lock by purchasing at zero inside this module. The returned
-/// TransferRequest forces royalty payment and relock before the PTB may complete.
-public(package) fun gc<T: key + store>(
-  trade: &mut Trade,
-  item: ID,
-  source: &mut Kiosk,
-  ctx: &mut TxContext,
-): (T, TransferRequest<T>) {
-  assert!(trade.locked, ENotLocked);
-  rf(tm(trade, ctx), item);
-  source.purchase_with_cap(dof::remove(&mut trade.id, item), coin::zero<SUI>(ctx))
+public(package) fun close_for_testing(trade: Trade, ctx: &TxContext) {
+  trade_state::assert_terminal(&trade.state); destroy_drained(trade, ctx);
 }
-
-/// Claim the COUNTERPARTY's whole escrowed SUI (post-lock).
-public(package) fun gs(trade: &mut Trade, ctx: &mut TxContext): Coin<SUI> {
-  assert!(trade.locked, ENotLocked);
-  let balance = tb(trade, ctx).withdraw_all();
-  coin::from_balance(balance, ctx)
-}
-
-/// Delete a DRAINED trade — pre-lock after both sides withdrew, or post-lock after both
-/// sides claimed. Either player may sweep it.
-public(package) fun d(trade: Trade, ctx: &TxContext) {
-  ap2(&trade, ctx.sender());
-  let Trade { id, sui_a, sui_b, caps_a, caps_b, .. } = trade;
-  assert!(caps_a.is_empty() && caps_b.is_empty(), ENotDrained);
-  sui_a.destroy_zero();
-  sui_b.destroy_zero();
-  id.delete();
-}
-
-// ╔════════════════ [ Internals ] ════════════════════════════════════════════ ]
-
-// assert_party
-fun ap2(trade: &Trade, who: address) {
-  assert!(who == trade.a || who == trade.b, ENotAParty);
-}
-
-// touch
-/// Every mutation reopens negotiation: bump the version, void both signatures.
-fun t1(trade: &mut Trade) {
-  trade.version = trade.version + 1;
-  trade.accept_a = false;
-  trade.accept_b = false;
-}
-
-// my_manifest
-fun mm(trade: &mut Trade, ctx: &TxContext): &mut vector<ID> {
-  ap2(trade, ctx.sender());
-  if (ctx.sender() == trade.a) &mut trade.caps_a else &mut trade.caps_b
-}
-
-// their_manifest
-fun tm(trade: &mut Trade, ctx: &TxContext): &mut vector<ID> {
-  ap2(trade, ctx.sender());
-  if (ctx.sender() == trade.a) &mut trade.caps_b else &mut trade.caps_a
-}
-
-// my_balance
-fun mb1(trade: &mut Trade, ctx: &TxContext): &mut Balance<SUI> {
-  ap2(trade, ctx.sender());
-  if (ctx.sender() == trade.a) &mut trade.sui_a else &mut trade.sui_b
-}
-
-// their_balance
-fun tb(trade: &mut Trade, ctx: &TxContext): &mut Balance<SUI> {
-  ap2(trade, ctx.sender());
-  if (ctx.sender() == trade.a) &mut trade.sui_b else &mut trade.sui_a
-}
-
-// remove_from
-fun rf(manifest: &mut vector<ID>, item: ID) {
-  let (found, index) = manifest.index_of(&item);
-  assert!(found, ECapNotFound);
-  manifest.remove(index);
+#[test_only]
+public(package) fun assert_claimable_sui_for_testing(trade: &Trade, sender: address) {
+  trade_state::assert_phase(&trade.state, trade_state::settling());
+  trade_state::assert_party(&trade.state, sender);
+  let balance = if (trade_state::is_a(&trade.state, sender)) &trade.sui_b else &trade.sui_a;
+  trade_state::assert_positive(balance.value());
 }

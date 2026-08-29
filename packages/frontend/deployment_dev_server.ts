@@ -13,6 +13,9 @@ import { promisify } from 'node:util'
 import type { ContractArtifact } from '@aresrpg/sdk/deployment-admin'
 import type { Plugin } from 'vite'
 
+import { assert_deployment_package_size } from './deployment_package_size.ts'
+import { full_republish_pin_patch } from './deployment_reset.ts'
+
 type Network = 'testnet' | 'mainnet'
 type PackagePublication = Readonly<{
   package: string
@@ -44,13 +47,20 @@ const execute: Execute = async (command, args, cwd) => {
 const revision_of = (source: string): string => createHash('sha256').update(source).digest('hex')
 
 const PACKAGE_VERSION_PATTERN = /(const\s+PACKAGE_VERSION\s*:\s*u64\s*=\s*)(\d+)(\s*;)/
+export const package_version_from_source = (source: string): number => {
+  const match = source.match(PACKAGE_VERSION_PATTERN)
+  if (!match) throw new Error('packages/move/sources/version.move has no PACKAGE_VERSION constant')
+  const version = Number(match[2])
+  if (!Number.isSafeInteger(version) || version < 1)
+    throw new Error('packages/move/sources/version.move has an invalid PACKAGE_VERSION constant')
+  return version
+}
+
 export const next_package_version_source = (
   source: string,
   published_version: number
 ): Readonly<{ source: string; version: number; changed: boolean }> => {
-  const match = source.match(PACKAGE_VERSION_PATTERN)
-  if (!match) throw new Error('packages/move/sources/version.move has no PACKAGE_VERSION constant')
-  const source_version = Number(match[2])
+  const source_version = package_version_from_source(source)
   if (!Number.isSafeInteger(published_version) || published_version < 1)
     throw new Error('The published game version must be a positive integer')
   if (source_version < published_version)
@@ -80,6 +90,7 @@ export const parse_contract_artifact = (
     !parsed.digest.every((value) => Number.isInteger(value) && Number(value) >= 0 && Number(value) <= 255)
   )
     throw new Error(`${package_name} compiler output is incomplete`)
+  assert_deployment_package_size(package_name, parsed.modules)
   return Object.freeze({
     package_name,
     modules: Object.freeze(parsed.modules),
@@ -252,7 +263,8 @@ export const create_contract_build_service = ({
     }
     return next.version
   }
-  return Object.freeze({ compile_math, compile_control, compile_seed, compile_game, prepare_upgrade })
+  const game_version = async (): Promise<number> => package_version_from_source(await readFile(version_path, 'utf8'))
+  return Object.freeze({ compile_math, compile_control, compile_seed, compile_game, prepare_upgrade, game_version })
 }
 
 type PinsFile = Readonly<Record<Network, Readonly<Record<string, unknown>>>>
@@ -311,29 +323,13 @@ export const merge_deployment_pins = (
   patch: Readonly<Record<string, unknown>>
 ): PinsFile => Object.freeze({ ...pins, [network]: Object.freeze({ ...pins[network], ...patch }) })
 
-const empty_shared_pin = Object.freeze({ id: null, shared_version: null })
 export const reset_deployment_pins = (pins: PinsFile, network: Network): PinsFile => {
   const { worlds: _obsolete_world_pins, ...retained } = pins[network]
   return Object.freeze({
     ...pins,
     [network]: Object.freeze({
       ...retained,
-      package: null,
-      package_original: null,
-      package_artifact_digest: null,
-      kiosk_package: null,
-      upgrade_cap: null,
-      publisher: null,
-      item_publisher: null,
-      character_publisher: null,
-      version: empty_shared_pin,
-      loot_registry: empty_shared_pin,
-      name_registry: empty_shared_pin,
-      friend_registry: empty_shared_pin,
-      item_policy: empty_shared_pin,
-      character_policy: empty_shared_pin,
-      item_protected_policy: empty_shared_pin,
-      character_protected_policy: empty_shared_pin,
+      ...full_republish_pin_patch,
     }),
   })
 }
@@ -549,14 +545,16 @@ export const deployment_dev_plugin = ({ repo_dir }: Readonly<{ repo_dir: string 
               }
             }
             if (request.method === 'POST' && body.action === 'compile_game_probe') {
+              const artifact = await builds.compile_game(
+                body.network,
+                parse_publication(body.math),
+                parse_publication(body.control),
+                parse_publication(body.seed),
+                parse_publication(body.game)
+              )
               return {
-                artifact: await builds.compile_game(
-                  body.network,
-                  parse_publication(body.math),
-                  parse_publication(body.control),
-                  parse_publication(body.seed),
-                  parse_publication(body.game)
-                ),
+                artifact,
+                version: await builds.game_version(),
               }
             }
             if (request.method === 'POST' && body.action === 'reset') {

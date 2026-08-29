@@ -112,7 +112,7 @@ public fun xp(data: &MobData): u64 { data.xp }
 
 public fun new_loot_entry(item_type: String, chance_bp: u16, min_qty: u8, max_qty: u8): LootEntry {
   assert!(chance_bp <= 10_000, EInvalidChance);
-  assert!(min_qty <= max_qty && max_qty > 0, EInvalidQty);
+  assert!(min_qty > 0 && min_qty <= max_qty, EInvalidQty);
   LootEntry { item_type, chance_bp, min_qty, max_qty }
 }
 

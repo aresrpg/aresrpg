@@ -29,6 +29,7 @@ services:
       SEED_PACKAGE_ORIGINAL: ${SEED_PACKAGE_ORIGINAL:?SEED_PACKAGE_ORIGINAL is required}
       REDIS_URL: redis://aresrpg-falkordb:6379
       REMOTE_STORE_URL: https://checkpoints.testnet.sui.io
+      STREAMING_URL: https://fullnode.testnet.sui.io:443
       GRAPHQL_URL: https://graphql.testnet.sui.io/graphql
       INGEST_MAX_CONCURRENCY: '16'
       RUST_LOG: info

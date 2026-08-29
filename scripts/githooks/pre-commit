@@ -1,8 +1,14 @@
 #!/bin/sh
-# The ONE pre-commit gate: eslint + prettier over the staged files. Nothing else, ever.
+# Fast staged-file style checks, plus each implementation language's coverage gate when it changes.
 set -e
 staged=$(git diff --cached --name-only --diff-filter=ACMR)
 [ -z "$staged" ] && exit 0
 js=$(printf '%s\n' "$staged" | grep -E '\.(js|mjs|cjs|jsx|ts|tsx)$' || true)
 if [ -n "$js" ]; then printf '%s\n' "$js" | xargs bunx eslint; fi
 printf '%s\n' "$staged" | xargs bunx prettier --check --ignore-unknown
+typescript_inputs=$(printf '%s\n' "$staged" | grep -E '(^|/)(package\.json|bunfig\.toml|bun\.lock|.*\.(js|mjs|cjs|jsx|ts|tsx))$' || true)
+indexer_inputs=$(printf '%s\n' "$staged" | grep -E '^(packages/indexer/(Cargo\.(toml|lock)|.*\.rs)|scripts/coverage_indexer\.sh)$' || true)
+move_inputs=$(printf '%s\n' "$staged" | grep -E '^(packages/(control|seed|move-math|move)/(Move\.(toml|lock)|.*\.move)|scripts/coverage_move\.sh)$' || true)
+if [ -n "$typescript_inputs" ]; then bun run coverage:typescript; fi
+if [ -n "$indexer_inputs" ]; then bun run coverage:indexer; fi
+if [ -n "$move_inputs" ]; then bun run coverage:move; fi

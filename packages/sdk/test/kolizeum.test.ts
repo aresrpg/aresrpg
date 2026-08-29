@@ -119,8 +119,7 @@ test('ready starts a partial lobby through the manager and projects the start wi
       },
     }),
     doors: {
-      ready_fighter: () => calls.push('ready'),
-      start_kolizeum: () => calls.push('start_kolizeum'),
+      ready_and_start_kolizeum: () => calls.push('ready_and_start_kolizeum'),
     },
   }
 
@@ -128,10 +127,9 @@ test('ready starts a partial lobby through the manager and projects the start wi
     kolizeum,
     fight,
     fighter_idx: 0n,
-    and_start: true,
   })
 
-  expect(calls).toEqual(['ready', 'start_kolizeum'])
+  expect(calls).toEqual(['ready_and_start_kolizeum'])
   expect(hydrated).toEqual([[kolizeum, fight]])
   expect(receipt).toEqual({ digest, started: true, turn_witnesses: [{ fighter: 1n, seed: 9n }] })
 })

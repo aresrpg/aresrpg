@@ -59,6 +59,7 @@ describe('procedural footsteps', () => {
       wood: 'solid',
       sand: 'aggregate',
       snow: 'aggregate',
+      frozen_grass: 'aggregate',
       water: 'liquid',
     } as const
     Object.entries(RESPONSES).forEach(([preset, response]) => {

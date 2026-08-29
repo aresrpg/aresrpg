@@ -8,6 +8,7 @@ import { normalizeStructTag, normalizeSuiObjectId } from '@mysten/sui/utils'
 
 import { receipt_events, type Receipt } from './cache.ts'
 import type { Sdk } from './client.ts'
+import { ROYALTY_FLOOR_MIST } from './marketplace.ts'
 
 export type ContractArtifact = Readonly<{
   package_name: 'aresrpg_math' | 'aresrpg_control' | 'aresrpg_seed' | 'aresrpg'
@@ -93,7 +94,7 @@ export const create_package_upgrade_transaction = ({
   upgrade_cap: string
   policy: number
 }>): Transaction => {
-  const transaction = sdk.tx()
+  const transaction = new Transaction()
   const capability = sdk.door_context.obj(transaction, upgrade_cap, false)
   const ticket = transaction.moveCall({
     target: '0x2::package::authorize_upgrade',
@@ -122,7 +123,7 @@ export const create_version_admin_transaction = ({
   admin_cap: string
   action: 'pause' | 'resume'
 }>): Transaction => {
-  const transaction = sdk.tx()
+  const transaction = new Transaction()
   transaction.moveCall({
     target: `${package_id}::version::${action === 'pause' ? 'admin_freeze' : 'admin_update'}`,
     arguments: [sdk.door_context.obj(transaction, version, true), sdk.door_context.obj(transaction, admin_cap, false)],
@@ -143,7 +144,7 @@ export const create_deployment_bootstrap_transaction = async ({
   publisher: string
   recipient: string
 }>): Promise<Transaction> => {
-  const transaction = sdk.tx()
+  const transaction = new Transaction()
   const display_registry = sdk.door_context.obj(transaction, DISPLAY_REGISTRY_ID, true)
   const publisher_arg = sdk.door_context.obj(transaction, publisher, false)
   const item_type = `${package_id}::item::Item`
@@ -175,7 +176,7 @@ export const create_deployment_bootstrap_transaction = async ({
   ): Promise<void> => {
     const policy = sdk.transfer_policy_transaction(transaction, kiosk_package)
     await policy.create({ type, publisher, skipCheck: true })
-    policy.addRoyaltyRule(1000, 10_000_000)
+    policy.addRoyaltyRule(1000, Number(ROYALTY_FLOOR_MIST))
     policy.addPersonalKioskRule()
     policy.addLockRule()
     if (!policy.policy || !policy.policyCap) throw new Error(`Transfer policy for ${type} was not created`)

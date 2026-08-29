@@ -174,7 +174,9 @@ public fun apply_rune(
     };
   };
 
-  let applied_value = if (outcome != OUTCOME_CF) rune_value else 0;
+  // Report the points the capped write ACTUALLY added, not the rune's nominal amount. The
+  // certified event and every client history row must stay exact at an overmage cap.
+  let applied_value = if (outcome != OUTCOME_CF) gained - cur else 0;
   ForgeResult { outcome, new_stats: stats, new_puits, applied_stat: rune_stat, applied_value, lost_stat, lost_amount }
 }
 

@@ -170,7 +170,7 @@ export const GameplayTab = ({ text }: Readonly<{ text: EncyclopediaText }>) => {
             </div>
             <Subheading>{text('gameplay.wisdom_xp')}</Subheading>
             <Text>{text('gameplay.wisdom_xp_desc')}</Text>
-            <Formula>XP₂ = XP × (600 + WIS) / 600</Formula>
+            <Formula>XP₂ = XP × (100 + WIS) / 100</Formula>
           </WikiSection>
 
           <WikiSection id="stats" title={text('gameplay.section_stats')}>
@@ -207,7 +207,7 @@ export const GameplayTab = ({ text }: Readonly<{ text: EncyclopediaText }>) => {
             <Subheading>{text('gameplay.groups_xp')}</Subheading>
             <Text>{text('gameplay.groups_xp_desc')}</Text>
             <Formula>
-              XP = base-XP pool × party coefficient × level balance × player level / party level × (600 + WIS) / 600
+              XP = base-XP pool × party coefficient × level balance × player level / party level × (100 + WIS) / 100
             </Formula>
             <div className="grid grid-cols-3 gap-1 sm:grid-cols-6">
               {RETRO_GROUP_XP_TENTHS.map((coefficient, index) => (

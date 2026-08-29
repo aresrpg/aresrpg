@@ -371,15 +371,16 @@
   {
     "output_type": "cape_fuwa__white",
     "inputs": {
-      "fuwa_wool": 1,
-      "fuwa_hide": 1
+      "fuwa_wool": 80,
+      "fuwa_hide": 30
     }
   },
   {
     "output_type": "coiffe_fuwa__white",
     "inputs": {
-      "fuwa_horn": 1,
-      "fuwa_eye": 1
+      "fuwa_horn": 30,
+      "fuwa_eye": 20,
+      "fuwa_wool": 50
     }
   },
   {
@@ -395,6 +396,23 @@
     "inputs": {
       "fuwa_wool": 1,
       "fuwa_hide": 1
+    }
+  },
+  {
+    "output_type": "coiffe_fuwa__black",
+    "inputs": {
+      "nifuwa_wool": 70,
+      "nifuwa_hide": 40,
+      "fuwa_horn": 20
+    }
+  },
+  {
+    "output_type": "cape_fuwa__black",
+    "inputs": {
+      "nifuwa_wool": 100,
+      "fuwa_eye": 30,
+      "fuwa_hide": 30,
+      "nifuwa_hide": 30
     }
   }
 ]

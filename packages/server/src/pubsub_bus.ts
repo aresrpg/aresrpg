@@ -28,6 +28,23 @@ export type BusRedis = {
   scan: (cursor: string, match: 'MATCH', pattern: string, count: 'COUNT', size: number) => Promise<[string, string[]]>
   mget: (keys: string[]) => Promise<(string | null)[]>
   zrevrange: (key: string, start: number, stop: number) => Promise<string[]>
+  zrange: (key: string, start: number, stop: string, with_scores: 'WITHSCORES') => Promise<string[]>
+  zrevrangebyscore: (
+    key: string,
+    max: number,
+    min: number,
+    limit: 'LIMIT',
+    offset: number,
+    count: number
+  ) => Promise<string[]>
+  zadd: (key: string, condition: 'GT', score: number, member: string) => Promise<unknown>
+  zcount: (key: string, min: number, max: number) => Promise<number>
+  zcard: (key: string) => Promise<number>
+  hgetall: (key: string) => Promise<Record<string, string>>
+  hvals: (key: string) => Promise<string[]>
+  expireat: (key: string, at_seconds: number) => Promise<unknown>
+  smembers: (key: string) => Promise<string[]>
+  scard: (key: string) => Promise<number>
   disconnect: () => void
 }
 
@@ -46,6 +63,12 @@ export type GraphBus = Omit<Bus, 'publish'> & {
   indexed_checkpoint: () => Promise<number | null>
   /** Immutable retained sale rows for one player, newest first. */
   sales_history: (address: string) => Promise<readonly string[]>
+  analytics_hashes?: (keys: readonly string[]) => Promise<readonly Readonly<Record<string, string>>[]>
+  analytics_sets?: (keys: readonly string[]) => Promise<readonly (readonly string[])[]>
+  analytics_counts?: (keys: readonly string[]) => Promise<readonly number[]>
+  analytics_sums?: (keys: readonly string[]) => Promise<readonly number[]>
+  analytics_cumulative_counts?: (key: string, maxes: readonly number[]) => Promise<readonly number[]>
+  shop_sales?: (min_ms: number, max_ms: number, offset: number, count: number) => Promise<readonly string[]>
 }
 
 export type MeshBus = Bus & {
@@ -55,6 +78,8 @@ export type MeshBus = Bus & {
   heartbeat: (server_id: string, online: number) => Promise<void>
   /** Cluster-wide online count — the sum of every live `server:*` key (cached 4s). */
   cluster_online: () => Promise<number>
+  record_online?: (online: number, at_ms: number) => Promise<void>
+  online_samples?: (keys: readonly string[]) => Promise<readonly (readonly number[])[]>
 }
 
 /** The pair every player context carries — chain truth and player ephemera, never mixed. */
@@ -65,6 +90,20 @@ type BusWires = Readonly<{ subscriber: BusRedis; publisher: BusRedis; unsubscrib
 /** Legacy synchronizer law: movement removes demand immediately, but Redis subscriptions cool
  * down later. This breaks the packet-rate → Redis-command coupling at zone boundaries. */
 const UNSUBSCRIBE_GRACE_MS = 10_000
+const sum_checkpoint_counts = (values: readonly string[]): number =>
+  values.reduce((sum, value) => {
+    const count = Number(value)
+    const next = sum + count
+    if (!Number.isSafeInteger(count) || count < 0 || !Number.isSafeInteger(next))
+      throw new Error('analytics transaction bucket contains an invalid checkpoint count')
+    return next
+  }, 0)
+const online_sample_values = (values: readonly string[]): readonly number[] => {
+  const samples = values.filter((_, index) => index % 2 === 1).map(Number)
+  if (samples.some((value) => !Number.isFinite(value) || value < 0))
+    throw new Error('online analytics contains an invalid sample')
+  return samples
+}
 
 const create_bus = ({
   subscriber,
@@ -161,6 +200,14 @@ export const create_graph_bus = ({
   return {
     ...doors,
     sales_history: (address) => publisher.zrevrange(`sales:${address}`, 0, 499),
+    analytics_hashes: (keys) => Promise.all(keys.map((key) => publisher.hgetall(key))),
+    analytics_sets: (keys) => Promise.all(keys.map((key) => publisher.smembers(key))),
+    analytics_counts: (keys) => Promise.all(keys.map((key) => publisher.scard(key))),
+    analytics_sums: (keys) => Promise.all(keys.map(async (key) => sum_checkpoint_counts(await publisher.hvals(key)))),
+    analytics_cumulative_counts: (key, maxes) =>
+      Promise.all([...maxes.map((max) => publisher.zcount(key, 0, max)), publisher.zcard(key)]),
+    shop_sales: (min_ms, max_ms, offset, count) =>
+      publisher.zrevrangebyscore('analytics:shop:sales', max_ms, min_ms, 'LIMIT', offset, count),
     indexed_checkpoint: async () => {
       try {
         return parse_indexed_checkpoint(await publisher.get(INDEXED_CHECKPOINT_KEY))
@@ -195,6 +242,30 @@ export const create_mesh_bus = ({ subscriber, publisher, unsubscribe_grace_ms }:
       online_cache.at_ms = Date.now()
       return online_cache.value
     },
+    record_online: async (online, at_ms) => {
+      const minute = Math.floor(at_ms / 60_000) * 60_000
+      const interval = Math.floor(at_ms / 900_000) * 900_000
+      const hour = Math.floor(at_ms / 3_600_000) * 3_600_000
+      const day = Math.floor(at_ms / 86_400_000) * 86_400_000
+      const week = Math.floor((at_ms - 4 * 86_400_000) / (7 * 86_400_000)) * (7 * 86_400_000) + 4 * 86_400_000
+      const date = new Date(at_ms)
+      const month = Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), 1)
+      const buckets = [
+        [`analytics:online:15m:${interval}`, minute, interval + 2 * 86_400_000],
+        [`analytics:online:hour:${hour}`, minute, hour + 8 * 86_400_000],
+        [`analytics:online:day:${day}`, hour, day + 401 * 86_400_000],
+        [`analytics:online:week:${week}`, hour, week + 105 * 86_400_000],
+        [`analytics:online:month:${month}`, hour, month + 401 * 86_400_000],
+      ] as const
+      await Promise.all(
+        buckets.flatMap(([key, sample_at, expires_ms]) => [
+          publisher.zadd(key, 'GT', online, String(sample_at)),
+          publisher.expireat(key, Math.floor(expires_ms / 1_000)),
+        ])
+      )
+    },
+    online_samples: (keys) =>
+      Promise.all(keys.map(async (key) => online_sample_values(await publisher.zrange(key, 0, '-1', 'WITHSCORES')))),
   }
 }
 

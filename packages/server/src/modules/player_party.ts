@@ -42,8 +42,9 @@ export default {
         channel: 'party',
         scope: party,
         from: fact.address,
+        character_id: fact.character_id,
         character: fact.character,
-        text: fact.text,
+        parts: fact.parts,
       })
     }
 

@@ -9,6 +9,8 @@ import type { Sdk } from './client.ts'
 import { created_object_id, receipt_digest } from './cache.ts'
 import { merge_stacks_ptb, split_stack_ptb } from './stacks.ts'
 
+export const ROYALTY_FLOOR_MIST = 10_000_000n
+
 export type MarketplaceAsset = Readonly<{
   kind: 'item' | 'character'
   id: string

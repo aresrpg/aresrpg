@@ -69,7 +69,7 @@ export type SeedBatchReceipt = Readonly<{
 
 export type SeedAdminSession = Readonly<{
   refresh: (on_progress?: (progress: SeedInspectionProgress) => void) => Promise<SeedAdminSnapshot>
-  execute: (batch: string) => Promise<SeedBatchReceipt>
+  execute: (batch: string, ledger: SeedLedger) => Promise<SeedBatchReceipt>
   /** chain truth of the permanent freeze — read at page refresh, no polling */
   read_frozen: () => Promise<boolean>
   /** compare the authored files against the last chain write — new / changed / removed / fixed */
@@ -307,10 +307,9 @@ export const create_seed_admin = async ({
     address_book,
     read_frozen,
     apply_changes: async (ledger) => {
-      await hydrate_ids(sync_addresses)
-      const board_len = await read_board_len()
-      const view = seed_sync_view(sync_rows, ledger, exists, board_len)
+      const view = await check_changes(ledger)
       if (view.errors.length) throw new Error(`Nothing was written — fix the files first: ${view.errors.join(' · ')}`)
+      const board_len = await read_board_len()
       await hydrate_ids(view.changed.flatMap(({ hydrate }) => hydrate))
       const transactions = seed_update_transactions(sdk, view.changed, context, {
         chain_len: board_len,
@@ -339,8 +338,10 @@ export const create_seed_admin = async ({
       )
       return seed_ledger_after(sync_rows, ledger, created, exists)
     },
-    execute: async (batch_id) => {
-      if (law_errors.length) throw new Error(`Nothing was written — fix the files first: ${law_errors.join(' · ')}`)
+    execute: async (batch_id, ledger) => {
+      const changes = await check_changes(ledger)
+      if (changes.errors.length)
+        throw new Error(`Nothing was written — fix the files first: ${changes.errors.join(' · ')}`)
       const before = await refresh()
       const view = before.batches.find(({ id }) => id === batch_id)
       if (next_seed_batch(before)?.id !== batch_id || view?.state !== 'ready')

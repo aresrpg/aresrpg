@@ -1,13 +1,16 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
-import { decode_fight_action, type HydratedFightCheckpoint } from '@aresrpg/fight'
+import { decode_fight_action, type FightInput, type HydratedFightCheckpoint } from '@aresrpg/fight'
+import type { FightStateRow } from '@aresrpg/protocol'
 
 import { catalog_spell_sources } from '../content/fight_sources.ts'
 import { project_fight_chat_lines } from '../game/fight/fight_chat_lines.ts'
-import type { AppModule } from '../store.ts'
+import { auto_switch_fighter_from } from '../game/core/settings.ts'
+import type { AppModule, AppState } from '../store.ts'
 
-import { holds_character_seat } from './fight_identity.ts'
+import { active_owned_character, holds_character_seat } from './fight_identity.ts'
+import type { FightKolizeumManager } from './fight.ts'
 import { fight_should_close, terminal_remote_draft_needs_commit } from './fight_lifecycle.ts'
 import { create_fight_session, type ActiveFightSession } from './fight_session.ts'
 
@@ -20,6 +23,48 @@ export const fight_checkpoint_phase_rank = (contract: unknown): FightPhaseRank =
 
 export const fight_state_regresses = (floor: FightPhaseRank, contract: unknown) =>
   fight_checkpoint_phase_rank(contract) < floor
+
+const kolizeum_manager = (row: FightStateRow['kolizeum']): FightKolizeumManager | null =>
+  row ? Object.freeze({ id: row.id, pledge_mist: BigInt(row.pledge_mist) }) : null
+
+export const streamed_witness_boundary = (
+  checkpoint: Readonly<HydratedFightCheckpoint>,
+  observed_ms: bigint
+): FightInput | null => {
+  if (checkpoint.contract.round === 0n) return Object.freeze({ type: 'start', observed_ms })
+  const fighter = checkpoint.contract.queue[Number(checkpoint.contract.turn_ptr)]
+  return fighter === undefined ? null : Object.freeze({ type: 'end_turn', fighter, observed_ms })
+}
+
+export const apply_streamed_witness = (
+  session: Pick<ReturnType<typeof create_fight_session>, 'apply' | 'state'>,
+  witness: Readonly<Extract<FightInput, { type: 'turn_seed' }>>,
+  observed_ms: bigint
+): void => {
+  session.apply(witness)
+  if (session.state()?.error?.code !== 'unexpected_turn_seed') return
+  const checkpoint = session.state()?.checkpoint
+  const boundary = checkpoint ? streamed_witness_boundary(checkpoint, observed_ms) : null
+  if (boundary) session.apply(boundary)
+  session.apply(witness)
+}
+
+const viewed_owned_turn = (state: Readonly<AppState>): string | null => {
+  const checkpoint = state.fight.mode === 'remote' ? state.fight.checkpoint : null
+  const selected = state.session.selected_character_id
+  const owner = state.session.wallet?.address ?? null
+  if (!checkpoint || !holds_character_seat(checkpoint, selected, owner)) return null
+  return active_owned_character(checkpoint, owner, new Set(state.session.characters.map(({ id }) => id)))
+}
+
+export const automatic_turn_character = (state: Readonly<AppState>, previous: Readonly<AppState>): string | null => {
+  if (!auto_switch_fighter_from(state.settings.auto_switch_fighter)) return null
+  const active = viewed_owned_turn(state)
+  if (!active || active === state.session.selected_character_id) return null
+  const previous_active =
+    previous.fight.checkpoint?.contract.id === state.fight.checkpoint?.contract.id ? viewed_owned_turn(previous) : null
+  return active === previous_active ? null : active
+}
 
 export const observe_fights = ({
   dispatch,
@@ -176,6 +221,7 @@ export const observe_fights = ({
     if (fight) sessions.get(fight)?.reset_turn()
     else local_session?.reset_turn()
   })
+  events.on('fight/cancel_pending_turn', ({ fight }) => sessions.get(fight)?.cancel_pending_turn())
   events.on('server/packet', ({ packet }) => {
     if (packet.type === 'packet/characters') {
       packet.characters.forEach((character) => {
@@ -192,7 +238,11 @@ export const observe_fights = ({
         packet.fight,
         Math.max(floor, fight_checkpoint_phase_rank(packet.state.contract)) as FightPhaseRank
       )
-      dispatch({ type: 'fight/kolizeum', fight: packet.fight, kolizeum: packet.state.kolizeum })
+      dispatch({
+        type: 'fight/kolizeum',
+        fight: packet.fight,
+        kolizeum: kolizeum_manager(packet.state.kolizeum),
+      })
       const wire_checkpoint = {
         contract: packet.state.contract,
         sources: { players: packet.state.players, spells: catalog_spell_sources() },
@@ -263,11 +313,7 @@ export const observe_fights = ({
       const witness_key = `${witness.fighter}:${witness.seed}`
       const applied = witnesses.get(packet.fight)
       if (applied?.has(witness_key)) return
-      session.apply(witness)
-      if (session.state()?.error?.code === 'unexpected_turn_seed') {
-        session.apply({ type: 'crank', observed_ms: BigInt(Date.now()) })
-        session.apply(witness)
-      }
+      apply_streamed_witness(session, witness, BigInt(Date.now()))
       if (session.state()?.error?.code !== 'unexpected_turn_seed') applied?.add(witness_key)
     }
   })
@@ -299,6 +345,10 @@ export const observe_fights = ({
     const character = state.session.characters.find(({ id }) => id === character_id)
     const fight_id = character?.active_fight?.id ?? state.fight.spectating_by_character[character_id]
     if (fight_id) project_session(fight_id)
+  })
+  events.on('STATE_UPDATED', (state, previous) => {
+    const character_id = automatic_turn_character(state, previous)
+    if (character_id) dispatch({ type: 'character/select', character_id })
   })
   events.on('fight/spectating', ({ character_id, fight }) => {
     if (get_state().session.selected_character_id === character_id) project_session(fight)

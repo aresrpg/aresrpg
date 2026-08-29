@@ -19,7 +19,7 @@ import { SpellRow } from '../components/SpellRow.tsx'
 import { StatIdentity } from '../components/StatIdentity.tsx'
 import { spell_icon } from '../content/assets.ts'
 import { encyclopedia_catalog, titleize, type SeedSpell } from '../content/catalog.ts'
-import { copy_text, stat_name, type AppCopy } from '../i18n/copy.ts'
+import { copy_text, spell_name, stat_name, type AppCopy } from '../i18n/copy.ts'
 import { element_colors } from '../visual_identity.ts'
 import {
   CHARACTER_STATS,
@@ -276,11 +276,11 @@ function SpellEditor({ character, copy }: Readonly<{ character: SimulatorCharact
                 color={view.color}
                 icon={spell_icon(character.classe, spell.name)}
                 key={spell.name}
-                name={spell.name}
+                name={spell_name(copy, spell.name)}
                 right={
                   <select
                     className="template-input w-24 cursor-pointer"
-                    aria-label={template(text.spell_level, { name: spell.name })}
+                    aria-label={template(text.spell_level, { name: spell_name(copy, spell.name) })}
                     value={level}
                     onChange={(event) =>
                       dispatch_app({

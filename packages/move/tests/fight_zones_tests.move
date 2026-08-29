@@ -91,8 +91,16 @@ fun stepping_off_the_edge_of_a_trap_area_stays_silent() {
 #[test]
 fun overlapping_damage_trap_resolves_before_push_trap() {
   let mut scenario = test_scenario::begin(OWNER);
-  let result = fight::layered_traps_damage_before_push_for_testing(scenario.ctx());
+  let result = fight::layered_traps_damage_before_push_for_testing(false, scenario.ctx());
   assert!(result[0] < 100, 0);
   assert!(result[1] == result[2], 1);
+  scenario.end();
+}
+
+#[test]
+fun a_push_centered_on_its_target_is_a_soft_stop() {
+  let mut scenario = test_scenario::begin(OWNER);
+  let result = fight::layered_traps_damage_before_push_for_testing(true, scenario.ctx());
+  assert!(result == vector[100, result[2], result[2]], 0);
   scenario.end();
 }

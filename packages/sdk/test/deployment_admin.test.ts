@@ -36,7 +36,7 @@ describe('deployment admin', () => {
   test('upgrading authorizes and commits against the current package object', () => {
     const sdk = SDK({
       address: id('9'),
-      pins: { package: id('1') } satisfies Pins,
+      pins: { package: id('1'), math_package: id('5') } satisfies Pins,
       client: {
         core: {
           resolveTransactionPlugin: () => resolve_transaction,
@@ -99,7 +99,7 @@ describe('deployment admin', () => {
   test('pause and resume call the existing version administration doors', () => {
     const sdk = SDK({
       address: id('9'),
-      pins: { package: id('1') } satisfies Pins,
+      pins: { package: id('1'), math_package: id('5') } satisfies Pins,
       client: {
         core: {
           resolveTransactionPlugin: () => resolve_transaction,
@@ -127,7 +127,7 @@ describe('deployment admin', () => {
   test('bootstraps every post-publish object in one PTB without a Move wrapper', async () => {
     const sdk = SDK({
       address: id('9'),
-      pins: { package: id('0') } satisfies Pins,
+      pins: { package: id('0'), math_package: id('5') } satisfies Pins,
       client: {
         core: {
           resolveTransactionPlugin: () => resolve_transaction,
@@ -158,6 +158,11 @@ describe('deployment admin', () => {
       kiosk_package: id('8'),
       publisher: id('4'),
       recipient: id('9'),
+    })
+    expect(transaction.getData().commands[0]?.MoveCall).toMatchObject({
+      package: id('1'),
+      module: 'admin',
+      function: 'create_item_display',
     })
     const calls = transaction.getData().commands.flatMap((command) => (command.MoveCall ? [command.MoveCall] : []))
     const local_calls = calls

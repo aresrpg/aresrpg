@@ -15,9 +15,10 @@ import { encyclopedia_catalog, titleize, type SeedSpell, type SpellLevel } from 
 import { encyclopedia_text } from '../encyclopedia/copy.ts'
 import { SpellCard } from '../encyclopedia/SpellCard.tsx'
 import { effect_color } from '../encyclopedia/SpellCardEffects.tsx'
-import { copy_text, type AppCopy } from '../i18n/copy.ts'
+import { copy_text, spell_name, type AppCopy } from '../i18n/copy.ts'
 import { dispatch_app, useAppStore } from '../store.ts'
 import { toast } from '../toast.ts'
+import { run_direct_transaction } from '../transaction_guard.ts'
 
 import './spellbook.css'
 
@@ -29,6 +30,7 @@ const spell_tint = (level: Readonly<SpellLevel> | undefined): string => {
 export default function SpellsTab({ character, copy }: Readonly<{ character: Readonly<CharacterRow>; copy: AppCopy }>) {
   const t = copy_text(copy.characters_page)
   const encyclopedia = encyclopedia_text(copy)
+  const display_name = (identity: string): string => spell_name(copy, identity)
   const wallet = useAppStore(({ session }) => session.wallet)
   const [selected_name, set_selected_name] = useState<string | null>(null)
   const [raising, set_raising] = useState(false)
@@ -63,17 +65,20 @@ export default function SpellsTab({ character, copy }: Readonly<{ character: Rea
 
   const raise = (): void => {
     if (!can_raise || !wallet || !selected) return
-    set_raising(true)
-    const pending = toast.loading(t('spells.upgrading'))
-    void wallet.character
-      .raise_spell({
+    const transaction = run_direct_transaction(() =>
+      wallet.character.raise_spell({
         character_id: character.id,
         spell: selected.name,
         custody: { kiosk: character.kiosk, kiosk_cap: character.kiosk_cap },
       })
+    )
+    if (!transaction) return
+    set_raising(true)
+    const pending = toast.loading(t('spells.upgrading'))
+    void transaction
       .then(() => {
         dispatch_app({ type: 'character/spell_raised', character_id: character.id, spell: selected.name })
-        pending.success(t('spells.upgrade_success', { spell: titleize(selected.name) }))
+        pending.success(t('spells.upgrade_success', { spell: display_name(selected.name) }))
       })
       .catch(pending.error)
       .finally(() => set_raising(false))
@@ -135,7 +140,7 @@ export default function SpellsTab({ character, copy }: Readonly<{ character: Rea
                         <SpellRow
                           color={spell_tint(spell.levels[Math.max(0, level - 1)])}
                           icon={spell_icon(character.classe, spell.name)}
-                          name={titleize(spell.name)}
+                          name={display_name(spell.name)}
                           right={
                             locked ? (
                               <span className="sb__lockchip">
@@ -163,6 +168,7 @@ export default function SpellsTab({ character, copy }: Readonly<{ character: Rea
           {selected ? (
             <>
               <SpellCard
+                display_name={display_name(selected.name)}
                 initial_level={Math.max(1, current)}
                 key={`${selected.name}:${current}`}
                 spell={selected}

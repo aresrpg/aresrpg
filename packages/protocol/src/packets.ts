@@ -11,6 +11,7 @@
 // rate-limited requests exist only for facts that cannot be derived, such as current custody.
 
 import { is_item_category, type ItemCategory } from '@aresrpg/immutable'
+import { experience_progress } from '@aresrpg/immutable'
 import { parse_fight_wire_action, type FightWireAction } from '@aresrpg/fight'
 
 export type { FightWireAction } from '@aresrpg/fight'
@@ -212,6 +213,13 @@ export type FightPlayerSourceRow = {
   /** the graph-resolved character name — the modal renders it, never a raw id */
   name: string
   classe: string
+  sex: string
+  color_1: number
+  color_2: number
+  color_3: number
+  /** Immutable visible equipment while fight custody prevents loadout changes. */
+  hat: string | null
+  cloak: string | null
   level: number
   experience: string
   vitality: number
@@ -232,8 +240,8 @@ export type FightPlayerSourceRow = {
 export type FightStateRow = {
   contract: unknown
   players: Record<string, FightPlayerSourceRow>
-  /** Manager identity stays outside the fight core; null for ordinary fights and dungeons. */
-  kolizeum: string | null
+  /** Immutable wager terms stay beside, never inside, the wager-blind fight core. */
+  kolizeum: Readonly<{ id: string; pledge_mist: string }> | null
 }
 
 /** The equipment slots OTHER players can see (owner 2026-08-12) — everything else is
@@ -287,14 +295,127 @@ export type ListingRow = {
 
 /** One immutable realised marketplace sale from the player's retained history. */
 export type MarketSaleRow = {
+  id: string
   object: string
   kind: 'item' | 'character'
+  name: string | null
   item_type: string | null
   amount: number
   price_mist: string
   counterparty: string | null
   ts_ms: number
 }
+
+export type AdminRangeDays = 1 | 7 | 30 | 90 | 365
+export type AdminBucket = '15m' | 'hour' | 'day' | 'week' | 'month'
+
+export type AdminMoneyPoint = Readonly<{
+  at_ms: number
+  shop_mist: string
+  shop_orders: string
+  item_royalty_mist: string
+  character_royalty_mist: string
+}>
+
+export type AdminActivityPoint = Readonly<{
+  at_ms: number
+  active: number
+}>
+
+export type AdminTransactionPoint = Readonly<{ at_ms: number; transactions: number }>
+
+export type AdminOnlinePoint = Readonly<{ at_ms: number; average: number; peak: number }>
+export type AdminTotalPoint = Readonly<{ at_ms: number; total: number }>
+
+export type AdminShopSaleRow = Readonly<{
+  id: string
+  checkpoint: number
+  tx_digest: string
+  timestamp_ms: number
+  sale_id: string
+  buyer: string
+  item_type: string
+  quantity: number
+  unit_price_mist: string
+  total_mist: string
+  remaining_supply: string
+}>
+
+export type AdminRevenueOverview = Readonly<{
+  days: AdminRangeDays
+  bucket: AdminBucket
+  shop_mist: string
+  shop_orders: string
+  item_royalty_mist: string
+  character_royalty_mist: string
+  last_30d_revenue_mist: string
+  month_to_date_revenue_mist: string
+  money: readonly AdminMoneyPoint[]
+}>
+
+export type AdminPlayersOverview = Readonly<{
+  days: AdminRangeDays
+  bucket: AdminBucket
+  dau: number
+  rolling_30d: number
+  activity: readonly AdminActivityPoint[]
+}>
+
+export type AdminTransactionsOverview = Readonly<{
+  days: AdminRangeDays
+  bucket: AdminBucket
+  total: number
+  transactions: readonly AdminTransactionPoint[]
+}>
+
+export type AdminOnlineOverview = Readonly<{
+  days: AdminRangeDays
+  bucket: AdminBucket
+  online_now: number
+  online_average: number
+  online_peak: number
+  online: readonly AdminOnlinePoint[]
+}>
+
+export type AdminAddressesOverview = Readonly<{
+  days: AdminRangeDays
+  bucket: AdminBucket
+  total: number
+  addresses: readonly AdminTotalPoint[]
+}>
+
+export type AdminCharactersOverview = Readonly<{
+  days: AdminRangeDays
+  bucket: AdminBucket
+  total: number
+  characters: readonly AdminTotalPoint[]
+}>
+
+export type AdminOverviewResult = Readonly<{
+  as_of_checkpoint: number | null
+  as_of_ms: number
+  revenue: AdminRevenueOverview
+  players: AdminPlayersOverview
+  transactions: AdminTransactionsOverview
+  online: AdminOnlineOverview
+  addresses: AdminAddressesOverview
+  characters: AdminCharactersOverview
+}>
+
+export type AdminOverviewSection = 'revenue' | 'players' | 'transactions' | 'online' | 'addresses' | 'characters'
+export type AdminOverviewSectionResult =
+  | Readonly<{ section: 'revenue'; data: AdminRevenueOverview }>
+  | Readonly<{ section: 'players'; data: AdminPlayersOverview }>
+  | Readonly<{ section: 'transactions'; data: AdminTransactionsOverview }>
+  | Readonly<{ section: 'online'; data: AdminOnlineOverview }>
+  | Readonly<{ section: 'addresses'; data: AdminAddressesOverview }>
+  | Readonly<{ section: 'characters'; data: AdminCharactersOverview }>
+
+export type AdminShopSalesResult = Readonly<{
+  as_of_checkpoint: number | null
+  rows: readonly AdminShopSaleRow[]
+  next_cursor: string | null
+}>
 
 /** The exact chain categories wanted by the current browse group. `characters` is separate
  * because Character is not an Item category. Null closes the marketplace subscription. */
@@ -318,33 +439,33 @@ export type PartyRow = {
 
 export type FriendRow = Readonly<{ address: string; characters: readonly string[] }>
 
-/** One parked cap inside a trade — the item the counterparty will receive. */
+/** One parked item cap inside a trade — characters remain marketplace-only. */
 export type TradeCapRow = {
   object: string
-  kind: 'item' | 'character'
   name: string
   level: number
   amount: number
-  classe: string | null
-  item_type: string | null
-  category: string | null
+  item_type: string
+  category: string
   kiosk: string
 }
 
 /** The p2p escrow as projected (trade.move Trade — the graph node, manifests enriched). */
+export type TradePhase = 'requested' | 'negotiating' | 'settling' | 'cancelled'
+
 export type TradeRow = {
   id: string
   a: string
   b: string
-  /** bumped by every mutation; accept intents must name it (stale accepts abort on-chain) */
-  version: number
+  phase: TradePhase
+  /** Exact identity of the editable offer. Terminal escrow shrinks without changing it. */
+  offer_revision: number
   accept_a: boolean
   accept_b: boolean
-  locked: boolean
   sui_a: string
   sui_b: string
-  caps_a: TradeCapRow[]
-  caps_b: TradeCapRow[]
+  caps_a: readonly TradeCapRow[]
+  caps_b: readonly TradeCapRow[]
 }
 
 /** A pending grind-safe claim (soulbound — the app redeems it silently). A box claim
@@ -497,6 +618,78 @@ export const travel_proof_ready = ({
 /** Chat limits — shared so the client pre-limits what the server's flood gate enforces. */
 export const CHAT_MAX_LENGTH = 240
 export const CHAT_MIN_INTERVAL_MS = 1000
+export const CHAT_MAX_ITEM_LINKS = 16
+
+export type ChatItemLink = Readonly<{ id: string; name: string }>
+export type ChatMessage = Readonly<{ text: string; items: readonly ChatItemLink[] }>
+export type ChatMessagePart =
+  | Readonly<{ kind: 'text'; text: string }>
+  | Readonly<{ kind: 'position'; world: string; x: number; z: number }>
+  | Readonly<{ kind: 'item'; id: string; name: string }>
+
+export type ChatMacroContext = Readonly<{
+  classe: string
+  level: number
+  experience: string
+  world: string
+  x: number
+  z: number
+}>
+
+const class_name = (classe: string): string =>
+  classe
+    .split('_')
+    .filter(Boolean)
+    .map((part) => `${part.slice(0, 1).toUpperCase()}${part.slice(1)}`)
+    .join(' ')
+
+/** Resolve sender-owned chat macros once. Item markers consume their matching submitted link
+ *  in order, so two objects with the same display name remain distinct. */
+export const expand_chat_message = (
+  message: Readonly<ChatMessage>,
+  context: Readonly<ChatMacroContext>
+): readonly ChatMessagePart[] => {
+  const pending = [...message.items]
+  const parts: ChatMessagePart[] = []
+  const push_text = (text: string): void => {
+    if (!text) return
+    const previous = parts.at(-1)
+    if (previous?.kind === 'text') parts[parts.length - 1] = Object.freeze({ kind: 'text', text: previous.text + text })
+    // eslint-disable-next-line fp-law/no-mutating-methods -- local construction of the returned immutable parts.
+    else parts.push(Object.freeze({ kind: 'text', text }))
+  }
+  let cursor = 0
+  while (cursor < message.text.length) {
+    const candidates = [
+      { at: message.text.indexOf('%pos%', cursor), kind: 'position' as const, item: -1 },
+      { at: message.text.indexOf('%xp%', cursor), kind: 'xp' as const, item: -1 },
+      ...pending.map((item, index) => ({
+        at: message.text.indexOf(`[${item.name}]`, cursor),
+        kind: 'item' as const,
+        item: index,
+      })),
+    ].filter(({ at }) => at >= 0)
+    const [next] = candidates.sort((left, right) => left.at - right.at || left.item - right.item)
+    if (!next) {
+      push_text(message.text.slice(cursor))
+      break
+    }
+    push_text(message.text.slice(cursor, next.at))
+    if (next.kind === 'position') {
+      parts.push(Object.freeze({ kind: 'position', world: context.world, x: context.x, z: context.z }))
+      cursor = next.at + '%pos%'.length
+    } else if (next.kind === 'xp') {
+      const { percent } = experience_progress(Number(context.experience))
+      push_text(`${class_name(context.classe)} Lvl ${context.level} (${percent}%)`)
+      cursor = next.at + '%xp%'.length
+    } else {
+      const [item] = pending.splice(next.item, 1)
+      parts.push(Object.freeze({ kind: 'item', id: item!.id, name: item!.name }))
+      cursor = next.at + item!.name.length + 2
+    }
+  }
+  return Object.freeze(parts)
+}
 
 /** The owner's admin address — ONE home: the server's `ADMIN_ADDRESSES` default and the
  *  client's admin-page gate both derive from it. UI-side gating is cosmetic; authority stays
@@ -513,11 +706,11 @@ export type ClientPackets = {
   /** The player's live position — drives zone tracking, visibility, and the presence mesh. */
   'packet/position': { character_id: string; x: number; y: number; z: number; riding: boolean }
   /** World chat — heard by everyone standing in the same world, never stored. */
-  'packet/chat': { character_id: string; text: string }
+  'packet/chat': { character_id: string; parts: readonly ChatMessagePart[] }
   /** Party chat — rides the party's channel; refused when partyless. */
-  'packet/chat_party': { character_id: string; text: string }
+  'packet/chat_party': { character_id: string; parts: readonly ChatMessagePart[] }
   /** Whisper — rides the target address's own channel. */
-  'packet/chat_whisper': { character_id: string; to: string; text: string }
+  'packet/chat_whisper': { character_id: string; to: string; parts: readonly ChatMessagePart[] }
   /** A live fight action relayed to the other fighters. The fight package owns its shape. */
   'packet/fight_action': { fight: string; action: FightWireAction }
   /** A rejected drafted turn asks every watcher to replace from indexed chain truth. */
@@ -533,7 +726,19 @@ export type ClientPackets = {
    *  so this narrowly asks the indexed owner of that exact object. */
   'packet/character_owner_request': { id: number; character_id: string }
   /** Privileged dashboard request — whitelisted addresses only; everyone else gets a refusal. */
-  'packet/admin_request': { id: number; kind: 'stats'; params?: Record<string, unknown> }
+  'packet/admin_request':
+    | {
+        id: number
+        kind: 'overview'
+        revenue_days: AdminRangeDays
+        players_days: AdminRangeDays
+        transactions_days: AdminRangeDays
+        online_days: AdminRangeDays
+        addresses_days: AdminRangeDays
+        characters_days: AdminRangeDays
+      }
+    | { id: number; kind: 'overview_section'; section: AdminOverviewSection; days: AdminRangeDays }
+    | { id: number; kind: 'shop_sales'; days: AdminRangeDays; cursor: string | null }
   /** Authenticated transport probe. The server echoes the opaque id; neither side stores it. */
   'packet/ping': { id: number }
 }
@@ -564,6 +769,7 @@ export type ServerPackets = {
   'packet/listings': { listings: ListingRow[] }
   /** The player's OPEN trades (either side) — the escrow replaces transferred caps. */
   'packet/trades': { trades: TradeRow[] }
+  'packet/trade_destroyed': { trade: string }
   /** Current mutable shop state; immutable presentation remains the local seed catalog. */
   'packet/shop_state': ShopState
 
@@ -604,6 +810,8 @@ export type ServerPackets = {
   /** One of the player's items changed in a way its receipt could not carry (capped scribe
    *  roll, pet feed scaling, a fresh mint's rolled stats) — the projected row, whole. */
   'packet/item_updated': { item: ItemRow }
+  /** One formerly held item left this wallet's kiosks or was destroyed. */
+  'packet/item_removed': { item: string }
 
   // ── live world stream (indexer facts other players caused) ──
   /** A fight was born in a tracked zone. It ships the PROJECTED row, never an id plus a few
@@ -622,8 +830,9 @@ export type ServerPackets = {
     channel: 'world' | 'party' | 'whisper'
     scope: string | null
     from: string
+    character_id: string
     character: string
-    text: string
+    parts: readonly ChatMessagePart[]
   }
 
   // ── the fight stream (own fight auto-watched via FighterJoined; spectate by intent) ──
@@ -660,7 +869,7 @@ export type ServerPackets = {
   'packet/market_listed': { listing: ListingRow }
   'packet/market_delisted': { object: string }
   /** One of YOUR listings sold (the buyer's transaction — money arrived in your kiosk). */
-  'packet/listing_sold': { object: string; price_mist: string }
+  'packet/listing_sold': { sale: MarketSaleRow }
 
   // ── primary shop stream (other players' transactions only) ──
   'packet/shop_supply': { item_type: string; supply: string }
@@ -670,7 +879,10 @@ export type ServerPackets = {
   'packet/kolizeums': { lobbies: KolizeumLobbyRow[] }
 
   // ── admin ──
-  'packet/admin_response': { id: number; result: unknown }
+  'packet/admin_response':
+    | { id: number; kind: 'overview'; result: AdminOverviewResult }
+    | { id: number; kind: 'overview_section'; result: AdminOverviewSectionResult }
+    | { id: number; kind: 'shop_sales'; result: AdminShopSalesResult }
 
   // ── refusals — instruments THROW server-side, the wire answers honestly ──
   'packet/error': { id?: number; reason: string }
@@ -694,6 +906,7 @@ export const SESSION_PACKETS = [
   'packet/claims',
   'packet/giftcards',
   'packet/item_updated',
+  'packet/item_removed',
   'packet/shop_state',
   'packet/server_info',
   'packet/game_state',
@@ -745,7 +958,7 @@ export const MARKET_PACKETS = [
 export const KOLIZEUM_PACKETS = ['packet/kolizeums'] as const
 export const FRIEND_PACKETS = ['packet/friends'] as const
 export const PARTY_PACKETS = ['packet/party', 'packet/party_invites'] as const
-export const TRADE_PACKETS = ['packet/trades'] as const
+export const TRADE_PACKETS = ['packet/trades', 'packet/trade_destroyed'] as const
 
 /** Parseable but folded by NO store — arrives only on surfaces without a UI yet. */
 export const IGNORED_PACKETS = ['packet/admin_response'] as const
@@ -815,13 +1028,60 @@ const is_finite_number = (value: unknown): value is number => Number.isFinite(va
 
 const is_id = (value: unknown): value is string => typeof value === 'string' && value.startsWith('0x')
 
-/** A sendable chat text: non-empty after trim, within the shared length law. */
-const assert_chat_text = (text: unknown): string => {
-  if (typeof text !== 'string') throw new Error('chat needs a text')
-  const trimmed = text.trim()
-  if (trimmed.length === 0) throw new Error('chat text is empty')
-  if (trimmed.length > CHAT_MAX_LENGTH) throw new Error(`chat text exceeds ${CHAT_MAX_LENGTH}`)
-  return trimmed
+const chat_part_record = (part: unknown): Record<string, unknown> => {
+  if (typeof part !== 'object' || part === null || Array.isArray(part)) throw new Error('chat part is invalid')
+  return part as Record<string, unknown>
+}
+
+const parse_chat_text_part = (part: Readonly<Record<string, unknown>>): ChatMessagePart => {
+  if (typeof part.text !== 'string') throw new Error('chat text part is invalid')
+  return Object.freeze({ kind: 'text', text: part.text })
+}
+
+const parse_chat_position_part = (part: Readonly<Record<string, unknown>>): ChatMessagePart => {
+  const { world, x, z } = part
+  if (
+    typeof world !== 'string' ||
+    world.length === 0 ||
+    world.length > 64 ||
+    !is_finite_number(x) ||
+    !is_finite_number(z)
+  )
+    throw new Error('chat position part is invalid')
+  return Object.freeze({ kind: 'position', world, x, z })
+}
+
+const parse_chat_item_part = (part: Readonly<Record<string, unknown>>): ChatMessagePart => {
+  const { id, name } = part
+  if (!is_id(id) || typeof name !== 'string' || name.length === 0 || name.length > 80)
+    throw new Error('chat item part is invalid')
+  return Object.freeze({ kind: 'item', id, name })
+}
+
+const parse_chat_part = (part: unknown): ChatMessagePart => {
+  const row = chat_part_record(part)
+  if (row.kind === 'text') return parse_chat_text_part(row)
+  if (row.kind === 'position') return parse_chat_position_part(row)
+  if (row.kind === 'item') return parse_chat_item_part(row)
+  throw new Error('chat part kind is invalid')
+}
+
+const chat_part_length = (part: Readonly<ChatMessagePart>): number => {
+  if (part.kind === 'text') return part.text.length
+  if (part.kind === 'item') return part.name.length + 2
+  return part.world.length + String(part.x).length + String(part.z).length + 6
+}
+
+const meaningful_chat_part = (part: Readonly<ChatMessagePart>): boolean =>
+  part.kind !== 'text' || part.text.trim().length > 0
+
+const assert_chat_parts = (value: unknown): readonly ChatMessagePart[] => {
+  if (!Array.isArray(value) || value.length === 0 || value.length > 64) throw new Error('chat needs bounded parts')
+  const parts = value.map(parse_chat_part)
+  const display_length = parts.reduce((total, part) => total + chat_part_length(part), 0)
+  if (!parts.some(meaningful_chat_part)) throw new Error('chat text is empty')
+  if (display_length > CHAT_MAX_LENGTH) throw new Error(`chat text exceeds ${CHAT_MAX_LENGTH}`)
+  return Object.freeze(parts)
 }
 
 const assert_bounded_json = (value: unknown, depth = 0): void => {
@@ -846,6 +1106,104 @@ const parse_fight_action_packet = (
     throw new Error('packet/fight_action needs an action object')
   assert_bounded_json(packet.action)
   return { type: 'packet/fight_action', fight: packet.fight, action: parse_fight_wire_action(packet.action) }
+}
+
+const parse_market_observe_packet = (
+  packet: Readonly<Record<string, unknown>>
+): Extract<ClientPacket, { type: 'packet/market_observe' }> => {
+  if (packet.observation === null) return { type: 'packet/market_observe', observation: null }
+  if (typeof packet.observation !== 'object' || Array.isArray(packet.observation))
+    throw new Error('packet/market_observe needs an observation or null')
+  const observation = packet.observation as Record<string, unknown>
+  if (
+    !Array.isArray(observation.categories) ||
+    observation.categories.length > 32 ||
+    !observation.categories.every((category) => typeof category === 'string' && is_item_category(category)) ||
+    typeof observation.characters !== 'boolean'
+  )
+    throw new Error('packet/market_observe needs valid categories and characters')
+  return {
+    type: 'packet/market_observe',
+    observation: {
+      categories: [...new Set(observation.categories)] as ItemCategory[],
+      characters: observation.characters,
+    },
+  }
+}
+
+const valid_sales_cursor = (cursor: unknown): cursor is string | null =>
+  cursor === null || (typeof cursor === 'string' && cursor.length <= 64)
+const valid_admin_range = (days: unknown): days is AdminRangeDays =>
+  typeof days === 'number' && [1, 7, 30, 90, 365].includes(days)
+const valid_overview_ranges = (packet: Readonly<Record<string, unknown>>): boolean =>
+  [
+    packet.revenue_days,
+    packet.players_days,
+    packet.transactions_days,
+    packet.online_days,
+    packet.addresses_days,
+    packet.characters_days,
+  ].every(valid_admin_range)
+
+const ADMIN_OVERVIEW_SECTIONS: readonly AdminOverviewSection[] = Object.freeze([
+  'revenue',
+  'players',
+  'transactions',
+  'online',
+  'addresses',
+  'characters',
+])
+
+type ParsedAdminRequest = Extract<ClientPacket, { type: 'packet/admin_request' }>
+type AdminRequestParser = (packet: Readonly<Record<string, unknown>>, id: number) => ParsedAdminRequest
+
+const parse_overview_request: AdminRequestParser = (packet, id) => {
+  if (!valid_overview_ranges(packet)) throw new Error('packet/admin_request needs supported overview ranges')
+  return {
+    type: 'packet/admin_request',
+    id,
+    kind: 'overview',
+    revenue_days: packet.revenue_days as AdminRangeDays,
+    players_days: packet.players_days as AdminRangeDays,
+    transactions_days: packet.transactions_days as AdminRangeDays,
+    online_days: packet.online_days as AdminRangeDays,
+    addresses_days: packet.addresses_days as AdminRangeDays,
+    characters_days: packet.characters_days as AdminRangeDays,
+  }
+}
+
+const parse_overview_section_request: AdminRequestParser = (packet, id) => {
+  if (!ADMIN_OVERVIEW_SECTIONS.includes(packet.section as AdminOverviewSection) || !valid_admin_range(packet.days))
+    throw new Error('packet/admin_request needs a supported overview section and range')
+  return {
+    type: 'packet/admin_request',
+    id,
+    kind: 'overview_section',
+    section: packet.section as AdminOverviewSection,
+    days: packet.days,
+  }
+}
+
+const parse_shop_sales_request: AdminRequestParser = (packet, id) => {
+  if (!valid_admin_range(packet.days)) throw new Error('packet/admin_request needs a supported day range')
+  if (!valid_sales_cursor(packet.cursor)) throw new Error('packet/admin_request needs a bounded sales cursor')
+  return { type: 'packet/admin_request', id, kind: 'shop_sales', days: packet.days, cursor: packet.cursor }
+}
+
+const ADMIN_REQUEST_PARSERS: Readonly<Record<string, AdminRequestParser>> = Object.freeze({
+  overview: parse_overview_request,
+  overview_section: parse_overview_section_request,
+  shop_sales: parse_shop_sales_request,
+})
+
+const parse_admin_request_packet = (
+  packet: Readonly<Record<string, unknown>>
+): Extract<ClientPacket, { type: 'packet/admin_request' }> => {
+  if (!Number.isInteger(packet.id)) throw new Error('packet/admin_request needs an integer id')
+  const id = packet.id as number
+  const parser = ADMIN_REQUEST_PARSERS[String(packet.kind)]
+  if (!parser) throw new Error(`unknown admin kind "${String(packet.kind)}"`)
+  return parser(packet, id)
 }
 
 /** Parse one raw client message into a declared packet, or throw — never coerce. The server
@@ -881,38 +1239,19 @@ export function parse_client_packet(raw: string | Buffer): ClientPacket {
   }
   if (type === 'packet/chat' || type === 'packet/chat_party') {
     if (!is_id(packet.character_id)) throw new Error(`${type} needs a character_id`)
-    return { type, character_id: packet.character_id, text: assert_chat_text(packet.text) }
+    return { type, character_id: packet.character_id, parts: assert_chat_parts(packet.parts) }
   }
   if (type === 'packet/chat_whisper') {
     if (!is_id(packet.character_id)) throw new Error('packet/chat_whisper needs a character_id')
     if (!is_id(packet.to)) throw new Error('packet/chat_whisper needs a target address')
-    return { type, character_id: packet.character_id, to: packet.to, text: assert_chat_text(packet.text) }
+    return { type, character_id: packet.character_id, to: packet.to, parts: assert_chat_parts(packet.parts) }
   }
   if (type === 'packet/fight_action') return parse_fight_action_packet(packet)
   if (type === 'packet/fight_resync') {
     if (!is_id(packet.fight)) throw new Error('packet/fight_resync needs a fight id')
     return { type, fight: packet.fight }
   }
-  if (type === 'packet/market_observe') {
-    if (packet.observation === null) return { type, observation: null }
-    if (typeof packet.observation !== 'object' || Array.isArray(packet.observation))
-      throw new Error('packet/market_observe needs an observation or null')
-    const observation = packet.observation as Record<string, unknown>
-    if (
-      !Array.isArray(observation.categories) ||
-      observation.categories.length > 32 ||
-      !observation.categories.every((category) => typeof category === 'string' && is_item_category(category)) ||
-      typeof observation.characters !== 'boolean'
-    )
-      throw new Error('packet/market_observe needs valid categories and characters')
-    return {
-      type,
-      observation: {
-        categories: [...new Set(observation.categories)] as ItemCategory[],
-        characters: observation.characters,
-      },
-    }
-  }
+  if (type === 'packet/market_observe') return parse_market_observe_packet(packet)
   if (type === 'packet/spectate' || type === 'packet/fight_preview') {
     if (!is_id(packet.character_id)) throw new Error('packet/spectate needs a character_id')
     if (packet.fight !== null && !is_id(packet.fight)) throw new Error('packet/spectate needs a fight id or null')
@@ -923,11 +1262,7 @@ export function parse_client_packet(raw: string | Buffer): ClientPacket {
     if (!is_id(packet.character_id)) throw new Error('packet/character_owner_request needs a character id')
     return packet as ClientPacket
   }
-  if (type === 'packet/admin_request') {
-    if (packet.kind !== 'stats') throw new Error(`unknown admin kind "${String(packet.kind)}"`)
-    if (!Number.isInteger(packet.id)) throw new Error('packet/admin_request needs an integer id')
-    return packet as ClientPacket
-  }
+  if (type === 'packet/admin_request') return parse_admin_request_packet(packet)
   if (type === 'packet/ping') {
     if (!Number.isSafeInteger(packet.id) || Number(packet.id) < 0) throw new Error('packet/ping needs a safe id')
     return packet as ClientPacket

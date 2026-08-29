@@ -268,6 +268,28 @@ fn child_set(
     ));
 }
 
+/// A remembered per-world checkpoint may be replayed after the character has left that world.
+/// Without this guard it overwrites the active anchor and the client correctly refuses control.
+fn child_set_in_world(
+    cypher: &mut Vec<String>,
+    label: &str,
+    id: &Id,
+    ckpt: u64,
+    world: &str,
+    assigns: &[String],
+) {
+    let mut set = format!("v.ckpt = {ckpt}");
+    for assign in assigns {
+        set.push_str(", ");
+        set.push_str(assign);
+    }
+    cypher.push(format!(
+        "MATCH (v:{label} {{id: {id}}}) WHERE v.world = {world} SET {set}",
+        id = q_id(id),
+        world = q(world),
+    ));
+}
+
 fn emit_object(
     cypher: &mut Vec<String>,
     o: &ObjView<'_>,
@@ -535,6 +557,25 @@ fn game_key(game: &str, path: &str) -> String {
     format!("{game}::{path}")
 }
 
+fn current_world_output(
+    outputs: &[ObjView<'_>],
+    parent: &Id,
+    game: &str,
+) -> anyhow::Result<Option<String>> {
+    let current_key = game_key(game, "world::CurrentWorldKey");
+    for candidate in outputs {
+        if !matches!(candidate.owner, OwnerKind::Object(owner) if owner == *parent)
+            || field_key(candidate.type_key) != Some(current_key.as_str())
+        {
+            continue;
+        }
+        let field = decode::from_bytes::<Field<MarkerKey, String>>(candidate.bytes)
+            .map_err(|error| drift(&current_key, candidate.id, error))?;
+        return Ok(Some(field.value));
+    }
+    Ok(None)
+}
+
 fn emit_field(
     cypher: &mut Vec<String>,
     o: &ObjView<'_>,
@@ -686,23 +727,24 @@ fn emit_field(
         };
         let f = decode::from_bytes::<Field<decode::CheckpointKey, decode::Checkpoint>>(o.bytes)
             .map_err(|e| drift(key, o.id, e))?;
-        // `checkpoint_world` names which world this position belongs to — the
-        // consumer trusts x/z only when it equals `world` (both land in the
-        // same tx, so they cohere; no read-modify-write needed here).
-        child_set(
-            cypher,
-            co_present,
-            "Character",
-            &parent,
-            ckpt,
-            &[
-                format!("v.checkpoint_world = {}", q(&f.name.0)),
-                format!("v.x = {}", f.value.x),
-                format!("v.z = {}", f.value.z),
-                format!("v.at_ms = {}", f.value.at_ms),
-                format!("v.pet = {}", f.value.pet),
-            ],
-        );
+        let current = current_world_output(outputs, &parent, game)?;
+        if current.as_ref().is_some_and(|world| world != &f.name.0) {
+            return Ok(());
+        }
+        let assigns = [
+            format!("v.checkpoint_world = {}", q(&f.name.0)),
+            format!("v.x = {}", f.value.x),
+            format!("v.z = {}", f.value.z),
+            format!("v.at_ms = {}", f.value.at_ms),
+            format!("v.pet = {}", f.value.pet),
+        ];
+        // Travel writes CurrentWorld beside the destination checkpoint. That sibling makes the
+        // update order-free. A lone checkpoint mutation must match the already-current world.
+        if current.is_some() {
+            child_set(cypher, co_present, "Character", &parent, ckpt, &assigns);
+        } else {
+            child_set_in_world(cypher, "Character", &parent, ckpt, &f.name.0, &assigns);
+        }
         return Ok(());
     }
     if key == game_key(game, "dungeon::DungeonRunKey") {
@@ -1226,6 +1268,15 @@ fn emit_fight_seat_teams(
 
 /// The escrow's whole negotiation state on ONE node — the realtime layer enriches the cap
 /// manifests from the Item/Character nodes it already has.
+fn trade_phase(phase: &decode::TradePhase) -> &'static str {
+    match phase {
+        decode::TradePhase::Requested => "requested",
+        decode::TradePhase::Negotiating => "negotiating",
+        decode::TradePhase::Settling => "settling",
+        decode::TradePhase::Cancelled => "cancelled",
+    }
+}
+
 fn emit_trade(cypher: &mut Vec<String>, o: &ObjView<'_>, ckpt: u64) -> anyhow::Result<()> {
     let t =
         decode::from_bytes::<decode::Trade>(o.bytes).map_err(|e| drift("trade::Trade", o.id, e))?;
@@ -1239,12 +1290,12 @@ fn emit_trade(cypher: &mut Vec<String>, o: &ObjView<'_>, ckpt: u64) -> anyhow::R
         &t.id,
         ckpt,
         &[
-            format!("v.a = {}", q(&t.a.hex())),
-            format!("v.b = {}", q(&t.b.hex())),
-            format!("v.version = {}", t.version),
-            format!("v.accept_a = {}", t.accept_a),
-            format!("v.accept_b = {}", t.accept_b),
-            format!("v.locked = {}", t.locked),
+            format!("v.a = {}", q(&t.state.a.hex())),
+            format!("v.b = {}", q(&t.state.b.hex())),
+            format!("v.phase = {}", q(trade_phase(&t.state.phase))),
+            format!("v.offer_revision = {}", t.state.offer_revision),
+            format!("v.accept_a = {}", t.state.accept_a),
+            format!("v.accept_b = {}", t.state.accept_b),
             format!("v.sui_a = {}", q(&t.sui_a.value.to_string())),
             format!("v.sui_b = {}", q(&t.sui_b.value.to_string())),
             format!("v.caps_a = {}", q(&ids(&t.caps_a))),
@@ -1578,6 +1629,105 @@ mod tests {
         let cypher = project(&view(&outputs, &[], &[]), GAME).unwrap();
         let hp_write = cypher.iter().find(|c| c.contains("v.hp = '137'")).unwrap();
         assert!(hp_write.contains("v.hp_ms = 5"));
+    }
+
+    #[test]
+    fn only_the_current_world_checkpoint_can_own_the_active_anchor() {
+        let character = Id([1; 32]);
+        let current_key = format!("{GAME}::world::CurrentWorldKey");
+        let checkpoint_key = format!("{GAME}::world::CheckpointKey");
+        let checkpoint_value = format!("{GAME}::world::Checkpoint");
+        let current_ty = t(
+            crate::ownership::SUI_FRAMEWORK,
+            "dynamic_field",
+            "Field",
+            &[&current_key, "0x1::string::String"],
+        );
+        let checkpoint_ty = t(
+            crate::ownership::SUI_FRAMEWORK,
+            "dynamic_field",
+            "Field",
+            &[&checkpoint_key, &checkpoint_value],
+        );
+        let current_yakutia = bcs::to_bytes(&Field {
+            id: Id([8; 32]),
+            name: false,
+            value: "yakutia".to_string(),
+        })
+        .unwrap();
+        let checkpoint_nauvis = bcs::to_bytes(&Field {
+            id: Id([9; 32]),
+            name: decode::CheckpointKey("nauvis".to_string()),
+            value: decode::Checkpoint {
+                x: 100,
+                z: 200,
+                at_ms: 300,
+                pet: false,
+            },
+        })
+        .unwrap();
+        let checkpoint_yakutia = bcs::to_bytes(&Field {
+            id: Id([7; 32]),
+            name: decode::CheckpointKey("yakutia".to_string()),
+            value: decode::Checkpoint {
+                x: 400,
+                z: 500,
+                at_ms: 600,
+                pet: true,
+            },
+        })
+        .unwrap();
+
+        let lone_checkpoint = [ObjView {
+            id: Id([9; 32]),
+            owner: OwnerKind::Object(character),
+            type_key: &checkpoint_ty,
+            bytes: &checkpoint_nauvis,
+        }];
+        let lone = project(&view(&lone_checkpoint, &[], &[]), GAME).unwrap();
+        assert!(lone[0].contains("WHERE v.world = 'nauvis'"));
+
+        let stale_outputs = [
+            ObjView {
+                id: Id([9; 32]),
+                owner: OwnerKind::Object(character),
+                type_key: &checkpoint_ty,
+                bytes: &checkpoint_nauvis,
+            },
+            ObjView {
+                id: Id([8; 32]),
+                owner: OwnerKind::Object(character),
+                type_key: &current_ty,
+                bytes: &current_yakutia,
+            },
+        ];
+        let stale = project(&view(&stale_outputs, &[], &[]), GAME).unwrap();
+        assert!(!stale
+            .iter()
+            .any(|write| write.contains("v.checkpoint_world")));
+
+        let current_outputs = [
+            ObjView {
+                id: Id([7; 32]),
+                owner: OwnerKind::Object(character),
+                type_key: &checkpoint_ty,
+                bytes: &checkpoint_yakutia,
+            },
+            ObjView {
+                id: Id([8; 32]),
+                owner: OwnerKind::Object(character),
+                type_key: &current_ty,
+                bytes: &current_yakutia,
+            },
+        ];
+        let current = project(&view(&current_outputs, &[], &[]), GAME).unwrap();
+        let active = current
+            .iter()
+            .find(|write| write.contains("v.checkpoint_world"))
+            .unwrap();
+        assert!(active.contains("v.checkpoint_world = 'yakutia'"));
+        assert!(active.contains("v.x = 400"));
+        assert!(!active.contains("WHERE v.world"));
     }
 
     /// A World is id + NAME — all a zone needs from it (slim by law, Lever 2).

@@ -46,6 +46,7 @@ test('combat lines enter chat only after their presentation batch completes', ()
   ]
   const presentation: FightPresentationBatch = Object.freeze({
     batch: 1,
+    before: checkpoint,
     checkpoint,
     zone_ids: Object.freeze([]),
     events,

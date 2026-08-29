@@ -16,7 +16,6 @@ import { HACK_LATTICE, HACK_PALETTE } from './hack_palette.ts'
 
 export type HackPresentation = Readonly<{
   tick: (delta_seconds: number, camera: PerspectiveCamera) => void
-  set_ground_y: (y: number) => void
   dispose: () => void
 }>
 
@@ -93,8 +92,12 @@ void main() {
 
 const grid_vertex = `
 varying vec2 v_local;
+varying vec2 v_world;
+varying vec2 v_camera_relative;
 void main() {
   v_local = position.xz;
+  v_world = (modelMatrix * vec4(position, 1.0)).xz;
+  v_camera_relative = v_world - cameraPosition.xz;
   gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
 }
 `
@@ -110,6 +113,8 @@ uniform vec3 grid_major;
 uniform vec3 ridge_rim;
 uniform vec3 sun_top;
 varying vec2 v_local;
+varying vec2 v_world;
+varying vec2 v_camera_relative;
 
 float phase(float hz) { return u_time * hz * 6.28318530718 * u_motion; }
 float lattice(vec2 p, vec2 px, float spacing, float half_width) {
@@ -124,11 +129,11 @@ float lattice(vec2 p, vec2 px, float spacing, float half_width) {
 void main() {
   vec2 p = v_local;
   vec2 px = fwidth(p);
-  float distance_from_camera = length(p);
+  float distance_from_camera = length(v_camera_relative);
   float fade = 1.0 - smoothstep(140.0, 400.0, distance_from_camera);
   vec3 mid_live = mix(bg_mid, bg_drift, sin(phase(0.011)) * 0.5 + 0.5);
   vec3 base = mix(ground, mid_live, smoothstep(400.0, 2600.0, distance_from_camera));
-  float shimmer = sin(p.y * 0.05 - u_time * 1.1 * u_motion) * 0.12 + 0.88;
+  float shimmer = sin(v_world.y * 0.05 - u_time * 1.1 * u_motion) * 0.12 + 0.88;
   float breath = sin(phase(0.25)) * 0.12 + 1.0;
   float pulse = sin(distance_from_camera * 6.28318530718 / 110.0 - phase(0.13));
   float pulse_gain = smoothstep(0.55, 1.0, pulse) * 0.45 + 1.0;
@@ -173,9 +178,6 @@ export const create_hack_presentation = (scene: Scene): HackPresentation => {
       sky.position.copy(camera.position)
       grid.position.x = Math.round(camera.position.x / HACK_LATTICE.major_m) * HACK_LATTICE.major_m
       grid.position.z = Math.round(camera.position.z / HACK_LATTICE.major_m) * HACK_LATTICE.major_m
-    },
-    set_ground_y: (y: number) => {
-      grid.position.y = y
     },
     dispose: () => {
       scene.remove(sky, grid)

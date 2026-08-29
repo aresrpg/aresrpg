@@ -2,10 +2,10 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
 import type { EntityVisualEffect, FightSide } from '@aresrpg/engine'
-import type { HydratedFightCheckpoint } from '@aresrpg/fight'
+import type { HydratedFightCheckpoint, PlayerSource } from '@aresrpg/fight'
 import { EFFECT_KINDS } from '@aresrpg/fight/move_contract'
 
-import type { CharacterRenderSource } from '../character_entities.ts'
+import { character_color_hex, type CharacterRenderSource } from '../character_entities.ts'
 
 export type FightCharacterRenderSource = CharacterRenderSource &
   Readonly<{
@@ -15,6 +15,26 @@ export type FightCharacterRenderSource = CharacterRenderSource &
   }>
 
 export type FightCharacterAppearance = CharacterRenderSource
+
+type CheckpointAppearance = Readonly<
+  Pick<PlayerSource, 'classe' | 'sex' | 'color_1' | 'color_2' | 'color_3' | 'hat' | 'cloak'>
+>
+const DEFAULT_APPEARANCE: CheckpointAppearance = Object.freeze({
+  classe: 'senshi',
+  sex: 'male',
+  color_1: 0xffffff,
+  color_2: 0xd9af57,
+  color_3: 0x8b6539,
+  hat: null,
+  cloak: null,
+})
+
+export const fight_character_roster_key = (checkpoint: Readonly<HydratedFightCheckpoint> | null): string =>
+  checkpoint
+    ? checkpoint.contract.fighters
+        .flatMap((fighter, seat) => (fighter.kind.type === 'player' ? [`${seat}:${fighter.kind.character}`] : []))
+        .join('|')
+    : ''
 
 export const character_entity_sources = (
   characters: readonly FightCharacterAppearance[],
@@ -30,7 +50,23 @@ export const character_entity_sources = (
   )
 }
 
-const DEFAULT_COLORS = Object.freeze(['#ffffff', '#d9af57', '#8b6539'] as const)
+const checkpoint_appearance = (character_id: string, source: Readonly<PlayerSource> | undefined) => {
+  const appearance = source ?? DEFAULT_APPEARANCE
+  return Object.freeze({
+    id: character_id,
+    classe: appearance.classe,
+    male: appearance.sex !== 'female',
+    colors: Object.freeze([
+      character_color_hex(appearance.color_1),
+      character_color_hex(appearance.color_2),
+      character_color_hex(appearance.color_3),
+    ] as const),
+    loadout: Object.freeze({
+      ...(appearance.hat ? { hat: appearance.hat } : {}),
+      ...(appearance.cloak ? { cloak: appearance.cloak } : {}),
+    }),
+  })
+}
 
 export const fight_character_entity_sources = (
   checkpoint: Readonly<HydratedFightCheckpoint>,
@@ -45,15 +81,7 @@ export const fight_character_entity_sources = (
       if (invisible && viewer_team !== fighter.team) return []
       const known = by_id.get(fighter.kind.character)
       const source = checkpoint.sources.players[fighter.kind.character]
-      const appearance =
-        known ??
-        Object.freeze({
-          id: fighter.kind.character,
-          classe: source?.classe ?? 'senshi',
-          male: true,
-          colors: DEFAULT_COLORS,
-          loadout: Object.freeze({}),
-        })
+      const appearance = known ?? checkpoint_appearance(fighter.kind.character, source)
       return [
         Object.freeze({
           ...appearance,

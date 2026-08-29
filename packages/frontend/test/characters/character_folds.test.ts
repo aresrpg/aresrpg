@@ -115,6 +115,36 @@ describe('equipment staging', () => {
 })
 
 describe('character receipt folds', () => {
+  test('an authoritative removal drops a burned or transferred item from inventory', () => {
+    const state = seeded_state([character()], [item({ id: '0xgone' }), item({ id: '0xkept' })])
+    const next = reduce_app_state(state, {
+      type: 'server/packet',
+      packet: { type: 'packet/item_removed', item: '0xgone' },
+    })
+    expect(next.session.inventory.map(({ id }) => id)).toEqual(['0xkept'])
+  })
+
+  test('stack preparation folds sources into the target before the craft burn', () => {
+    const target = item({ id: '0xtarget', category: 'resource', item_type: 'wool', amount: 5 })
+    const source = item({ id: '0xsource', category: 'resource', item_type: 'wool', amount: 3 })
+    const state = seeded_state([character({ jobs: { TAILOR: '0' } })], [target, source])
+    const merged = reduce_app_state(state, {
+      type: 'inventory/stacks_merged',
+      groups: [{ target_id: target.id, source_ids: [source.id] }],
+    })
+    expect(merged.session.inventory).toEqual([{ ...target, amount: 8 }])
+
+    const crafted = reduce_app_state(merged, {
+      type: 'character/crafted',
+      character_id: '0xchar',
+      job: 'TAILOR',
+      xp: 20,
+      inputs: [{ item_id: target.id, amount: 6 }],
+    })
+    expect(crafted.session.inventory).toEqual([{ ...target, amount: 2 }])
+    expect(crafted.session.characters[0]!.jobs.TAILOR).toBe('20')
+  })
+
   test('equip fold moves the item into equipment, refolds gear stats, frees the slot back', () => {
     const title = item({ stats: { vitality: SHIFT + 20 } })
     const state = seeded_state([character()], [title])
@@ -226,18 +256,35 @@ describe('character receipt folds', () => {
     expect(after_spells.available_spell_points).toBe(9)
   })
 
-  test('scribe fold burns ONLY the rune — the capped block arrives via the item stream', () => {
-    const gear = item({ id: '0xgear', stats: { vitality: SHIFT + 10 } })
-    const rune = item({ id: '0xrune', category: 'rune', item_type: 'rune_vitality_ba', amount: 1 })
+  test('a certified scribe folds its exact stat, puits, app-count, and rune deltas immediately', () => {
+    const gear = item({
+      id: '0xgear',
+      stats: { vitality: SHIFT + 10, chance: SHIFT + 5 },
+      puits: '4',
+      apps: Array.from({ length: 15 }, () => 0),
+    })
+    const rune = item({ id: '0xrune', category: 'rune', item_type: 'rune_vitality_ba', amount: 2 })
     const state = seeded_state([character()], [gear, rune])
     const next = reduce_app_state(state, {
-      type: 'character/rune_scribed',
-      gear_id: '0xgear',
-      rune_item_id: '0xrune',
+      type: 'runeforge/scribed',
+      gear_before: gear,
+      rune_before: rune,
+      outcome: {
+        digest: '0xdigest',
+        stat: 0,
+        outcome: 1,
+        applied_value: 3,
+        lost_stat: 4,
+        lost_amount: 2,
+        new_puits: 7,
+      },
     })
-    expect(next.session.inventory.find(({ id }) => id === '0xgear')!.stats).toEqual(gear.stats)
-    expect(next.session.inventory.find(({ id }) => id === '0xrune')).toBeUndefined()
-    // the server's item stream then replaces the row with the chain's CAPPED truth
+    const folded = next.session.inventory.find(({ id }) => id === '0xgear')!
+    expect(folded.stats).toMatchObject({ vitality: SHIFT + 13, chance: SHIFT + 3 })
+    expect(folded.puits).toBe('7')
+    expect(folded.apps?.[0]).toBe(1)
+    expect(next.session.inventory.find(({ id }) => id === '0xrune')!.amount).toBe(1)
+    // The server stream remains the authoritative reconciliation and replaces the complete row.
     const streamed = reduce_app_state(next, {
       type: 'server/packet',
       packet: {
@@ -246,6 +293,50 @@ describe('character receipt folds', () => {
       } as ServerPacket,
     })
     expect(streamed.session.inventory.find(({ id }) => id === '0xgear')!.stats).toEqual({ vitality: SHIFT + 13 })
+  })
+
+  test('a projection that wins the scribe race cannot receive the certified deltas twice', () => {
+    const apps_before = Array.from({ length: 15 }, () => 0)
+    const apps_after = apps_before.map((value, index) => value + (index === 0 ? 1 : 0))
+    const gear = item({
+      id: '0xgear',
+      stats: { vitality: SHIFT + 10, chance: SHIFT + 5 },
+      puits: '4',
+      apps: apps_before,
+    })
+    const rune = item({ id: '0xrune', category: 'rune', item_type: 'rune_vitality_ba', amount: 2 })
+    const state = seeded_state([character()], [gear, rune])
+    const projected_gear = item({
+      ...gear,
+      stats: { vitality: SHIFT + 13, chance: SHIFT + 3 },
+      puits: '7',
+      apps: apps_after,
+    })
+    const gear_first = reduce_app_state(state, {
+      type: 'server/packet',
+      packet: { type: 'packet/item_updated', item: projected_gear } as ServerPacket,
+    })
+    const projection_first = reduce_app_state(gear_first, {
+      type: 'server/packet',
+      packet: { type: 'packet/item_updated', item: { ...rune, amount: 1 } } as ServerPacket,
+    })
+    const receipt_after = reduce_app_state(projection_first, {
+      type: 'runeforge/scribed',
+      gear_before: gear,
+      rune_before: rune,
+      outcome: {
+        digest: '0xdigest',
+        stat: 0,
+        outcome: 1,
+        applied_value: 3,
+        lost_stat: 4,
+        lost_amount: 2,
+        new_puits: 7,
+      },
+    })
+
+    expect(receipt_after.session.inventory.find(({ id }) => id === '0xgear')).toEqual(projected_gear)
+    expect(receipt_after.session.inventory.find(({ id }) => id === '0xrune')!.amount).toBe(1)
   })
 
   test('a replace change-set folds through: same slot unequipped and equipped in one receipt', () => {

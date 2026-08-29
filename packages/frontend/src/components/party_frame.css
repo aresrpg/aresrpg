@@ -4,14 +4,20 @@
 .party-frame {
   pointer-events: auto;
   position: absolute;
-  top: 238px;
-  left: 16px;
-  width: 205px;
-  overflow: hidden;
+  top: 340px;
+  right: 16px;
+  width: max-content;
+  min-width: 205px;
+  max-width: calc(100vw - 32px);
+  max-height: 220px;
+  overflow: hidden auto;
   border: 1px solid var(--color-border);
   border-radius: 9px;
   background: rgba(10, 10, 15, 0.9);
   box-shadow: 0 14px 36px rgba(0, 0, 0, 0.35);
+}
+main:has(.party-frame) .trade-hud {
+  top: max(574px, calc(var(--safe-top) + 1rem));
 }
 .party-frame > header {
   display: flex;
@@ -50,7 +56,9 @@
 }
 .party-frame__member {
   display: grid;
-  grid-template-columns: 14px minmax(0, 1fr) 18px;
+  width: 100%;
+  box-sizing: border-box;
+  grid-template-columns: 14px minmax(72px, 1fr) max-content;
   align-items: center;
   gap: 5px;
   padding: 7px 9px;
@@ -62,10 +70,17 @@
 .party-frame__member.is-invited {
   opacity: 0.5;
 }
+.party-frame__member.can-run {
+  cursor: pointer;
+}
+.party-frame__member.can-run:hover {
+  background: rgba(103, 173, 255, 0.1);
+}
 .party-frame__member svg {
   color: var(--color-gold);
 }
 .party-frame__member b {
+  max-width: 120px;
   overflow: hidden;
   color: #d6d1c8;
   font-size: 9px;
@@ -86,16 +101,80 @@
 .party-frame__member button:hover {
   color: #ff5a6f;
 }
-.party-invite-card {
-  pointer-events: auto;
-  position: fixed;
-  z-index: 160;
-  top: 60px;
-  left: 50%;
+.party-follow-toggle {
   display: flex;
   align-items: center;
+  justify-content: flex-end;
+  gap: 5px;
+  color: #7d838d;
+  cursor: pointer;
+  font-size: 7px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.party-follow-toggle input {
+  width: 20px;
+  height: 10px;
+  appearance: none;
+  cursor: pointer;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.35);
+}
+.party-follow-toggle input::before {
+  display: block;
+  width: 6px;
+  height: 6px;
+  margin: 1px;
+  content: '';
+  border-radius: 50%;
+  background: #6b7280;
+  transition: transform 120ms ease;
+}
+.party-follow-toggle input:checked {
+  border-color: rgba(74, 158, 255, 0.5);
+  background: rgba(74, 158, 255, 0.14);
+}
+.party-follow-toggle input:checked::before {
+  background: #67adff;
+  transform: translateX(10px);
+}
+.party-distance-progress {
+  display: grid;
+  grid-template-columns: minmax(48px, 1fr) 24px;
+  gap: 5px;
+  align-items: center;
+}
+.party-distance-progress i {
+  height: 4px;
+  overflow: hidden;
+  background: rgba(0, 0, 0, 0.45);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+.party-distance-progress em {
+  display: block;
+  height: 100%;
+  background: #67adff;
+  box-shadow: 0 0 6px rgba(74, 158, 255, 0.45);
+}
+.party-distance-progress.is-running em {
+  background: #4fd6a0;
+  box-shadow: 0 0 6px rgba(79, 214, 160, 0.45);
+}
+.party-distance-progress small {
+  color: #7d838d;
+  font-size: 7px;
+  font-style: normal;
+  text-align: right;
+}
+.party-invite-card {
+  pointer-events: auto;
+  display: flex;
+  width: 260px;
+  flex-wrap: wrap;
+  align-items: center;
   gap: 8px;
-  transform: translateX(-50%);
   overflow: hidden;
   border: 1px solid rgba(74, 158, 255, 0.35);
   border-radius: 9px;
@@ -104,8 +183,10 @@
   box-shadow: 0 14px 36px rgba(0, 0, 0, 0.4);
 }
 .party-invite-card span {
+  flex: 1 0 100%;
   color: #d6d1c8;
   font-size: 9px;
+  line-height: 1.5;
 }
 .party-invite-card button {
   padding: 6px 9px;

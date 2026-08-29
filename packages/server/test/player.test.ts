@@ -62,6 +62,7 @@ const wire = () => {
           equipment: [],
           label: 'User',
           count: 1,
+          total: 1,
         },
       ]
     },
@@ -80,8 +81,23 @@ const wire = () => {
   }
   const pubsub = {
     emitter,
-    graph: { ...bus, indexed_checkpoint: async () => 1, sales_history: async () => [] },
-    mesh: { ...bus, heartbeat: async () => {}, cluster_online: async () => 7 },
+    graph: {
+      ...bus,
+      indexed_checkpoint: async () => 1,
+      sales_history: async () => [],
+      analytics_hashes: async (keys: readonly string[]) => keys.map(() => ({})),
+      analytics_sets: async (keys: readonly string[]) => keys.map(() => []),
+      analytics_counts: async (keys: readonly string[]) => keys.map(() => 0),
+      analytics_sums: async (keys: readonly string[]) => keys.map(() => 0),
+      analytics_cumulative_counts: async (_key: string, maxes: readonly number[]) => [...maxes.map(() => 0), 0],
+      shop_sales: async () => [],
+    },
+    mesh: {
+      ...bus,
+      heartbeat: async () => {},
+      cluster_online: async () => 7,
+      online_samples: async (keys: readonly string[]) => keys.map(() => []),
+    },
   }
   return { sent, ws, graph, pubsub, queries, published }
 }
@@ -181,7 +197,19 @@ describe('the player harness (push model)', () => {
     const player = create_player({ ws, address: '0xme', admin: false, graph, pubsub })
     await flush()
     const loads = queries.length
-    player.on_message(JSON.stringify({ id: 2, type: 'packet/admin_request', kind: 'stats' }))
+    player.on_message(
+      JSON.stringify({
+        id: 2,
+        type: 'packet/admin_request',
+        kind: 'overview',
+        revenue_days: 30,
+        players_days: 30,
+        transactions_days: 30,
+        online_days: 1,
+        addresses_days: 30,
+        characters_days: 30,
+      })
+    )
     await flush()
     expect(sent.find((packet) => 'id' in packet && packet.id === 2)).toEqual({
       type: 'packet/error',
@@ -195,12 +223,25 @@ describe('the player harness (push model)', () => {
     const { sent, ws, graph, pubsub } = wire()
     const player = create_player({ ws, address: '0xboss', admin: true, graph, pubsub })
     await flush()
-    player.on_message(JSON.stringify({ id: 3, type: 'packet/admin_request', kind: 'stats' }))
+    player.on_message(
+      JSON.stringify({
+        id: 3,
+        type: 'packet/admin_request',
+        kind: 'overview',
+        revenue_days: 30,
+        players_days: 30,
+        transactions_days: 30,
+        online_days: 1,
+        addresses_days: 30,
+        characters_days: 30,
+      })
+    )
     await flush()
-    expect(sent.find((packet) => 'id' in packet && packet.id === 3)).toEqual({
+    expect(sent.find((packet) => 'id' in packet && packet.id === 3)).toMatchObject({
       type: 'packet/admin_response',
       id: 3,
-      result: { User: 1 },
+      kind: 'overview',
+      result: { as_of_checkpoint: 1, online: { online_now: 7 } },
     })
   })
 
@@ -298,12 +339,20 @@ describe('the player harness (push model)', () => {
     await flush()
 
     pubsub.emitter.emit('evt:economy', { type: 'ItemWritten', data: { item: '0xcape', holder: '0xk' } })
-    pubsub.emitter.emit('evt:economy', { type: 'ItemWritten', data: { item: '0xforeign', holder: '0xtheirs' } })
+    pubsub.emitter.emit('evt:economy', {
+      type: 'ItemWritten',
+      data: { item: '0xforeign', holder: '0xtheirs', previous_holder: '0xk' },
+    })
+    pubsub.emitter.emit('evt:economy', { type: 'ItemRemoved', data: { item: '0xburned', holder: '0xk' } })
     await flush()
 
     const updates = sent.filter((packet) => packet.type === 'packet/item_updated')
     expect(updates).toHaveLength(1)
     expect(updates[0]).toMatchObject({ type: 'packet/item_updated', item: { id: '0xcape', kiosk: '0xk' } })
+    expect(sent.filter((packet) => packet.type === 'packet/item_removed')).toEqual([
+      { type: 'packet/item_removed', item: '0xburned' },
+      { type: 'packet/item_removed', item: '0xforeign' },
+    ])
     player.on_close()
   })
 })

@@ -39,6 +39,44 @@ const Step = ({
   </section>
 )
 
+const RepublishControls = ({
+  armed,
+  deploy_busy,
+  published,
+  wallet,
+}: Readonly<{ armed: boolean; deploy_busy: boolean; published: boolean; wallet: boolean }>) => {
+  const busy = deploy_busy || !published || !wallet
+  return armed ? (
+    <>
+      <button
+        className={`${action_class} border-[#ff5a8b]/70 bg-[#ff5a8b]/14 text-[#ffd0dc]`}
+        disabled={busy}
+        onClick={() => dispatch_app({ type: 'admin/contracts_republish' })}
+        type="button"
+      >
+        Confirm republish
+      </button>
+      <button
+        className={`${action_class} border-white/10 text-[#777d87]`}
+        disabled={busy}
+        onClick={() => dispatch_app({ type: 'admin/republish_armed', armed: false })}
+        type="button"
+      >
+        Cancel
+      </button>
+    </>
+  ) : (
+    <button
+      className={`${action_class} border-[#ff5a8b]/30 text-[#ff8caa]`}
+      disabled={busy}
+      onClick={() => dispatch_app({ type: 'admin/republish_armed', armed: true })}
+      type="button"
+    >
+      Republish
+    </button>
+  )
+}
+
 // eslint-disable-next-line complexity -- One linear deployment checklist renders mutually exclusive lifecycle states.
 export const PublishPage = () => {
   const admin = useAppStore((state) => state.admin)
@@ -166,7 +204,7 @@ export const PublishPage = () => {
         </Step>
 
         <Step
-          body="Upgrade preserves package lineages. Republish replaces core and each changed dependency, while reusing unchanged packages."
+          body="Upgrade preserves every package and content lineage. Republish replaces math, control, seed Registry, and core together."
           number="04"
           state={
             deployment.status === 'upgrading' ? 'upgrading' : deployment.status === 'resetting' ? 'resetting' : 'ready'
@@ -188,38 +226,15 @@ export const PublishPage = () => {
               </span>
             </div>
             <div className="flex flex-wrap items-center gap-3 border-t border-white/6 pt-3">
-              {!deployment.republish_armed ? (
-                <button
-                  className={`${action_class} border-[#ff5a8b]/30 text-[#ff8caa]`}
-                  disabled={deploy_busy || !published || !wallet}
-                  onClick={() => dispatch_app({ type: 'admin/republish_armed', armed: true })}
-                  type="button"
-                >
-                  Republish core
-                </button>
-              ) : (
-                <>
-                  <button
-                    className={`${action_class} border-[#ff5a8b]/70 bg-[#ff5a8b]/14 text-[#ffd0dc]`}
-                    disabled={deploy_busy}
-                    onClick={() => dispatch_app({ type: 'admin/contracts_republish' })}
-                    type="button"
-                  >
-                    Abandon local deployment
-                  </button>
-                  <button
-                    className={`${action_class} border-white/10 text-[#777d87]`}
-                    disabled={deploy_busy}
-                    onClick={() => dispatch_app({ type: 'admin/republish_armed', armed: false })}
-                    type="button"
-                  >
-                    Cancel
-                  </button>
-                </>
-              )}
+              <RepublishControls
+                armed={deployment.republish_armed}
+                deploy_busy={deploy_busy}
+                published={published}
+                wallet={!!wallet}
+              />
               <span className="max-w-lg text-[8px] leading-4 text-[#8c6570]">
-                Clears this network&apos;s local pins after returning temporary seed-session SUI. Recreate FalkorDB and
-                the indexer for the replacement package.
+                Republish abandons every active package and the current Registry while retaining historical ledgers.
+                Recreate FalkorDB and the indexer afterward.
               </span>
             </div>
           </div>
@@ -244,7 +259,9 @@ export const PublishPage = () => {
               {next && (
                 <button
                   className={`${action_class} border-[#4a9eff]/45 bg-[#4a9eff]/9 text-[#72b5ff]`}
-                  disabled={seed_busy || next.state !== 'ready' || !wallet}
+                  disabled={
+                    seed_busy || next.state !== 'ready' || !wallet || !admin.changes || admin.changes.errors.length > 0
+                  }
                   onClick={() => dispatch_app({ type: 'admin/publish_all' })}
                   type="button"
                 >

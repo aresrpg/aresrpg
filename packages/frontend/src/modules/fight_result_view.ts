@@ -28,6 +28,16 @@ export const fight_result_surface = (
   result: Readonly<Pick<FightResult, 'result_open' | 'level_up_open'>>
 ): 'result' | 'level_up' | null => (result.result_open ? 'result' : result.level_up_open ? 'level_up' : null)
 
+export const kolizeum_wager_outcome = (
+  wager: Readonly<{ stake_mist: bigint; payout_mist: bigint | null }> | null
+): Readonly<{ kind: 'won' | 'lost' | 'even'; mist: bigint }> | null => {
+  if (!wager || wager.payout_mist === null) return null
+  if (wager.payout_mist > 0n) return Object.freeze({ kind: 'won', mist: wager.payout_mist })
+  return wager.stake_mist > 0n
+    ? Object.freeze({ kind: 'lost', mist: wager.stake_mist })
+    : Object.freeze({ kind: 'even', mist: 0n })
+}
+
 export const result_xp_progress = (experience_before: number, experience_after: number) => {
   const before = experience_progress(experience_before)
   const after = experience_progress(experience_after)

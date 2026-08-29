@@ -134,11 +134,9 @@ const ready = (runtime: FightRuntime, action: ReadyAction): FightRuntime => {
 const start = (runtime: FightRuntime, options: CommandOptions): FightRuntime => {
   if (!placement_open(runtime)) return fail(runtime, 'not_placement')
   const now = options.observed_ms!
-  if (
-    !players_ready_after(runtime.contract.fighters, null) &&
-    now < runtime.contract.placement_ms + CONTRACT_CONSTANTS.placement_force_ms
-  )
-    return fail(runtime, 'not_ready')
+  const force_ready =
+    runtime.contract.placement_ms !== 0n && now >= runtime.contract.placement_ms + CONTRACT_CONSTANTS.placement_force_ms
+  if (!players_ready_after(runtime.contract.fighters, null) && !force_ready) return fail(runtime, 'not_ready')
   if (living_count(runtime.contract.fighters, 0n) < 1n || living_count(runtime.contract.fighters, 1n) < 1n)
     return fail(runtime, 'empty_side')
   runtime.contract.queue = weave(runtime.contract)
