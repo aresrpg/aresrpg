@@ -55,6 +55,7 @@ const auth_session = (address = '0xowner'): AuthSession =>
     create_seed_admin: async () => {
       throw new Error('unused in reducer tests')
     },
+    authorize_temp_admin: async () => ({ digest: '', admin_cap: {} as never }),
     publish_contract: async () => ({ receipt: {}, objects: [] }),
     upgrade_contract: async () => ({ receipt: {} }),
     read_package_upgrade: async () => ({ package: '', version: 1, policy: 0 }),

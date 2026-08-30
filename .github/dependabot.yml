@@ -1,8 +1,7 @@
 # SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 # © 2026 Sceat — All rights reserved. See LICENSE.
 #
-# Every entry targets `edge`: nothing PRs into master except an edge→master promotion
-# (#1783 — four dependabot PRs opened against master directly). Minors and patches ride one
+# Every entry targets the repository's only persistent branch, `edge`. Minors and patches ride one
 # grouped PR per ecosystem; MAJORS are deliberately left out of every group so each arrives as
 # its own review row, read against its breaking-change notes and landed through the normal
 # train — never batched, never auto-merged.

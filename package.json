@@ -1,6 +1,6 @@
 {
   "name": "aresrpg",
-  "version": "1.0.6",
+  "version": "2.1.0",
   "private": true,
   "type": "module",
   "workspaces": [
@@ -8,6 +8,9 @@
   ],
   "scripts": {
     "prepare": "git config core.hooksPath scripts/githooks",
+    "preversion": "bun scripts/release_preflight.mjs",
+    "version": "bun scripts/release_finalize.mjs",
+    "postversion": "git push origin edge --follow-tags",
     "dev:app": "bun run --cwd packages/frontend dev --host 127.0.0.1 --port 5173 --strictPort",
     "dev:frontend": "bun run dev:app",
     "dev": "bun run dev:app",

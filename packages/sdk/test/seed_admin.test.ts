@@ -117,6 +117,35 @@ describe('seed admin progress', () => {
     expect(SEED_SESSION_GAS).toBe(50_000_000_000n)
   })
 
+  test('temporary delegation accepts a smaller bounded working balance', () => {
+    const sdk = sdk_with(new Set())
+    sdk.cache.owned.set(admin_cap_id, {
+      objectId: admin_cap_id,
+      version: '1',
+      digest: '11111111111111111111111111111111',
+    })
+    const transaction = create_seed_session_authorization_transaction({
+      sdk,
+      admin_cap: admin_cap_id,
+      recipient: object_id(8),
+      funding_mist: 100_000_000n,
+    })
+    expect(transaction.getData().commands.map(({ $kind }) => $kind)).toEqual([
+      'MoveCall',
+      'MoveCall',
+      'SplitCoins',
+      'TransferObjects',
+    ])
+    expect(() =>
+      create_seed_session_authorization_transaction({
+        sdk,
+        admin_cap: admin_cap_id,
+        recipient: object_id(8),
+        funding_mist: SEED_SESSION_GAS + 1n,
+      })
+    ).toThrow('between 1 MIST')
+  })
+
   test('projects the temporary AdminCap exact ref from its authorization receipt', () => {
     const created = object_id(12)
     const receipt: Receipt = {

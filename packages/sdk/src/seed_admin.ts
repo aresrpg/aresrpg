@@ -102,7 +102,10 @@ export const create_seed_session_authorization_transaction = ({
   sdk,
   admin_cap,
   recipient,
-}: Readonly<{ sdk: Sdk; admin_cap: string; recipient: string }>) => {
+  funding_mist = SEED_SESSION_GAS,
+}: Readonly<{ sdk: Sdk; admin_cap: string; recipient: string; funding_mist?: bigint }>) => {
+  if (funding_mist <= 0n || funding_mist > SEED_SESSION_GAS)
+    throw new Error(`Temporary admin funding must be between 1 MIST and ${SEED_SESSION_GAS} MIST`)
   const transaction = sdk.tx()
   transaction.moveCall({
     target: `${sdk.pins.control_package}::admin::mint_temp_admin_cap`,
@@ -111,7 +114,7 @@ export const create_seed_session_authorization_transaction = ({
       sdk.door_context.pure.address(transaction, recipient),
     ],
   })
-  const [funding] = transaction.splitCoins(transaction.gas, [SEED_SESSION_GAS])
+  const [funding] = transaction.splitCoins(transaction.gas, [funding_mist])
   transaction.transferObjects([funding], recipient)
   return transaction
 }

@@ -62,6 +62,7 @@ test('the account card sits below navigation and above language with row actions
     create_seed_admin: async () => {
       throw new Error('not used while rendering')
     },
+    authorize_temp_admin: async () => ({ digest: '', admin_cap: {} as never }),
     publish_contract: async () => ({ receipt: {}, objects: [] }),
     upgrade_contract: async () => ({ receipt: {} }),
     read_package_upgrade: async () => ({ package: '', version: 1, policy: 0 }),
@@ -180,23 +181,26 @@ test('the sidebar connection card renders reducer-owned link phases', async () =
 
 test('the shell blocks a paused game with the maintenance modal', async () => {
   const copy = await load_app_copy('en')
-  const html = renderToStaticMarkup(
-    <AppShell
-      change_locale={() => undefined}
-      copy={copy}
-      disconnect={() => undefined}
-      locale="en"
-      network="testnet"
-      open_page={() => undefined}
-      open_path={() => undefined}
-      page="world"
-      pathname="/"
-      create_character={() => undefined}
-      select_character={() => undefined}
-      session={Object.freeze({ ...initial_session_state(), game_frozen: true })}
-      settings={Object.freeze({ quality: 'medium', flat_mode: false, music_enabled: true, render_distance: null })}
-    />
-  )
+  const render_paused = (page: 'world' | 'admin') =>
+    renderToStaticMarkup(
+      <AppShell
+        change_locale={() => undefined}
+        copy={copy}
+        disconnect={() => undefined}
+        locale="en"
+        network="testnet"
+        open_page={() => undefined}
+        open_path={() => undefined}
+        page={page}
+        pathname="/"
+        create_character={() => undefined}
+        select_character={() => undefined}
+        session={Object.freeze({ ...initial_session_state(), game_frozen: true })}
+        settings={Object.freeze({ quality: 'medium', flat_mode: false, music_enabled: true, render_distance: null })}
+      />
+    )
+  const html = render_paused('world')
+  const admin_html = render_paused('admin')
 
   expect(html).toContain('data-game-maintenance=""')
   expect(html).toContain('aria-modal="true"')
@@ -205,6 +209,7 @@ test('the shell blocks a paused game with the maintenance modal', async () => {
   expect(html).toContain('from-[#d92d20]')
   expect(html).not.toContain('data-game-frozen')
   expect(html).not.toContain('bg-[#8f1028]')
+  expect(admin_html).not.toContain('data-game-maintenance')
 })
 
 test('the character tab strip lives on character-scoped pages and selects through its tabs', async () => {

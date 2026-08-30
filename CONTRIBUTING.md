@@ -14,56 +14,40 @@ bun run lint       # eslint + prettier + the constraint gates
 History is linear by law; nothing ever rewrites what landed.
 
 1. Branch off `edge`, one branch per feature/fix.
-2. **Always rebase** — keep your branch rebased on the latest `edge`; a merge commit never
-   enters a branch. **This is enforced by construction:** landings are fast-forward pushes, and
-   an unrebased branch cannot fast-forward. `/promote` lands the PR NOW when every check is
-   green and the branch is current; otherwise it refuses with the reason (not green, or stale —
-   the bot posts the exact rebase command). Fix the branch, then comment `/promote` again —
-   nothing lands unattended, and nothing waits in a queue.
-3. Landings on BOTH hops are `/promote` — the repository owner's explicit word (on his own
-   PRs the comment itself is the approval, since GitHub forbids self-review; on contributor
-   PRs his approving review is required first). The **master hop is deploy-class**; the edge
-   hop is routine integration. The bot pushes the
-   exact approved SHA — your commits land byte-identical, so your signatures survive
-   untouched (the merge buttons are ceremonial; UI rebase-merge would re-create commits
-   unsigned — and so would a server-side API rebase, which is exactly why the queue never
-   rebases for you: your local rebase is the one that keeps them signed).
-4. `edge` → `master` is the same mechanic — the rebase discipline's terminal form — and each
-   master promotion re-aligns `edge` so the branches never drift at release points.
-5. Feature work reaches `edge` exclusively via a pull request + `/promote` — never a direct
-   push. Direct pushes to `edge` are reserved for operator alignment acts (branch recreation,
-   post-squash alignment) and are expected to be rare and always signed.
-6. Landed branches are deleted automatically the moment they land (GitHub's
+2. **Always rebase** — keep your branch rebased on the latest `edge`; merge commits never enter
+   the branch. The ruleset requires a current branch and linear signed history.
+3. Every contributor change reaches `edge` through a pull request. It needs the owner's CODEOWNER
+   approval, approval after the latest push, resolved conversations, and every required CI check.
+4. `edge` is the only persistent branch and repository default. The owner is its sole human bypass
+   and may push signed commits directly.
+5. Landed branches are deleted automatically the moment they land (GitHub's
    `delete_branch_on_merge` setting doesn't cover this flow, since a landing is a fast-forward
-   push, never a merge-button click). Only `master` and `edge` persist — every feature/fix
-   branch is disposable once promoted.
-7. **Issue closing is commit-native.** A commit that resolves an issue says so in its message
-   body — `Closes #N` — and GitHub closes the issue the moment that commit reaches `master`
-   at promotion (PR-body keywords never fire here: PRs merge into `edge`, which is not the
-   default branch). A bare `#N` mention links but never closes; use the keyword. One issue
+   push, never a merge-button click). Every feature/fix branch is disposable once merged.
+6. **Issue closing is commit-native.** A commit that resolves an issue says so in its message
+   body — `Closes #N` — and GitHub closes the issue when that commit reaches the default `edge`
+   branch. A bare `#N` mention links but never closes; use the keyword. One issue
    per closing line; the keyword rides the commit that actually contains the fix.
 
 ## Releases & rollback
 
-`master` deploys to Vercel **production** — and only on a release. Interim work and hotfixes
-accumulate on `edge` until a release promotes them; nothing else ever reaches production.
+Every `edge` commit deploys to `edge.aresrpg.world`. Production changes only from an owner-created
+semver tag; a normal `edge` push never moves `aresrpg.world`.
 
-1. The publisher bumps `packages/frontend/package.json` and adds
-   `changelog/NNN-RELEASE-vX.Y.Z.md` as `edge`'s **final** commit, titled `release: vX.Y.Z`.
-2. `/promote` the standing edge→master draft PR (opened automatically after the previous
-   release — see `promote.yml`). The bot refuses the hop unless the promoted commit's subject
-   matches `release: vX.Y.Z` — master cannot carry a non-release tip.
-3. The push triggers `release.yml`: it tags `vX.Y.Z`, builds only semantically version-bumped
-   server/indexer packages into public GHCR, and creates a production-variable Vercel deployment
-   with `--skip-domain`. The GitHub Release remains draft and production still serves the previous
-   version.
-4. During the maintenance window, the owner pauses gameplay, publishes content, and manually runs
-   the prepared Kubernetes Helmfile sync. The composite game+seed projection identity decides
-   whether that is a store-preserving roll or an automatic fresh repin.
-5. The owner triggers `activate-production.yml`. It verifies the retained preparation manifest,
-   promotes the staged Vercel deployment without rebuilding, checks production, publishes the
-   GitHub Release, and announces on Discord. `packages/frontend/vercel.json` still refuses any
-   production-variable build whose head is not release-tipped.
+1. Populate and commit `changelog/NEXT.md`. When Move changed, prepare compatible upgrades or a
+   testnet republish first, then commit the receipt-derived hardcoded `pins.json` values to `edge`.
+2. From a clean, current `edge`, run `bun pm version patch` (or `minor`/`major`). Its lifecycle
+   validates the branch, creates the numbered player changelog, commits and tags the root version,
+   then pushes `edge` and the tag with `--follow-tags`.
+3. The tag triggers `release.yml`. It waits for the exact SHA's green gate, builds only changed
+   server/indexer images into public GHCR, and creates a production-variable Vercel deployment
+   with `--skip-domain`. The GitHub Release remains draft and production stays unchanged.
+4. During the maintenance window, the owner reconciles changed content and applies the prepared
+   Kubernetes Helmfile diff. The composite game+seed projection identity chooses a store-preserving
+   roll or a fresh repin.
+5. The owner manually triggers `activate-production.yml` with the prepared version. It verifies the
+   retained manifest, promotes the staged Vercel deployment without rebuilding, checks production,
+   publishes the GitHub Release, and announces on Discord. Gameplay resumes only after these checks
+   pass.
 
 **AUDIENCE LAW** (maintainer ruling 2026-07-21): `changelog/NNN-RELEASE-vX.Y.Z.md` is not
 internal release notes — GitHub Releases and Discord post it **verbatim**, so it's written for

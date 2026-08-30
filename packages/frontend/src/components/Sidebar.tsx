@@ -15,7 +15,7 @@ import {
   type LucideIcon,
 } from 'lucide-react'
 
-import { version } from '../../package.json'
+import { version } from '../../../../package.json'
 import type { AppCopy } from '../i18n/copy.ts'
 import type { Network } from '../env.ts'
 import type { Page } from '../modules/navigation.ts'

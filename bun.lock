@@ -4,6 +4,7 @@
   "workspaces": {
     "": {
       "name": "aresrpg",
+      "version": "2.1.0",
       "devDependencies": {
         "@eslint/js": "^10.0.1",
         "@types/node": "^26.2.0",
@@ -40,7 +41,7 @@
     },
     "packages/frontend": {
       "name": "@aresrpg/frontend",
-      "version": "2.2.0",
+      "version": "0.0.0",
       "dependencies": {
         "@aresrpg/engine": "workspace:*",
         "@aresrpg/fight": "workspace:*",

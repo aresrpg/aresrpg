@@ -130,13 +130,14 @@ Before opening a PR, run `.claude/skills/review/SKILL.md` over the actual diff.
   A changed staged set, secret risk, failed hook, conflict, or destructive recovery still stops the
   operation.
 - Leave verified changes for owner review.
-- `edge` is integration; `master` receives only release promotion. Production, mainnet, permanent
+- `edge` is the only persistent branch and the repository default. Contributor PRs target `edge`;
+  owner-signed semver tags are the production release boundary. Production, mainnet, permanent
   freeze, and deployment actions require explicit owner approval.
-- For a production content release, use `CONTENT_UPGRADES.md` as the sole runbook and remind the
-  owner of the next unfinished manual action: pause gameplay, publish content, run the prepared
-  Helmfile sync, activate the staged Vercel deployment, verify production, then unpause. Never
-  infer that a later step completed from an earlier one.
-- Preserve linear history and follow `CONTRIBUTING.md` for promotion and release mechanics.
+- For a production release, use `CONTENT_UPGRADES.md` as the sole runbook. The fixed order is:
+  prepare hardcoded chain pins, create the root semver tag with `bun pm version`, wait for its CI
+  manifest, reconcile content and Kubernetes, manually activate that Vercel version, verify
+  production, then resume gameplay. Never infer a later step completed from an earlier one.
+- Preserve linear history and follow `CONTRIBUTING.md` for contribution and release mechanics.
 
 ## Trust and security
 

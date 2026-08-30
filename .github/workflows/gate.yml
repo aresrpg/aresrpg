@@ -1,15 +1,15 @@
 # SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 # © 2026 Sceat — All rights reserved. See LICENSE.
-# The CI gate — every PR and push into edge/master passes it. A GREEN edge push then deploys
+# The CI gate — every PR and push into edge passes it. A GREEN edge push then deploys
 # through deploy.yml; production deploys through release.yml on a fresh semver tag only
 # (prebuilt Vercel output built in CI — the git integration is retired).
 # Fork-safe by construction: no secrets in this workflow, ever.
 name: gate
 on:
   pull_request:
-    branches: [edge, master]
+    branches: [edge]
   push:
-    branches: [edge, master]
+    branches: [edge]
 permissions:
   contents: read
 jobs:
@@ -239,6 +239,6 @@ jobs:
         working-directory: packages/frontend
         run: |
           bunx vite build
-          ! find dist -name "*.map" | grep .
-          ! grep -RlE --include="*.js" --include="*.css" --include="*.html" --include="*.json" \
-            "rpc\.aresrpg\.world|sponsor\.aresrpg\.world|suiprivkey1[a-z0-9]{20,}|BEGIN PRIVATE KEY" dist
+          if find dist -name "*.map" | grep .; then exit 1; fi
+          if grep -RlE --include="*.js" --include="*.css" --include="*.html" --include="*.json" \
+            "rpc\.aresrpg\.world|sponsor\.aresrpg\.world|suiprivkey1[a-z0-9]{20,}|BEGIN PRIVATE KEY" dist; then exit 1; fi

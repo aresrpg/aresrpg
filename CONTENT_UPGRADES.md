@@ -47,21 +47,23 @@ snapshots.
 4. Open /demo#boards and inspect every generated board.
 5. Run the relevant package tests, Move builds/tests, indexer parity, lint, and type checks.
 6. Confirm no wagered fight would be unfairly changed by the planned spell or mob update.
-7. Promote the release-tipped SHA to `master`; wait for CI to publish any semantically
-   version-bumped backend images to public GHCR and stage the production-variable Vercel build.
-8. Confirm the retained preparation manifest names that exact SHA, package lineages, image
+7. If Move changed, prepare its compatible upgrades or testnet republish and push the resulting
+   hardcoded pins to `edge` before versioning.
+8. From clean, current `edge`, run `bun pm version patch` (or the intended semver level). Wait for
+   tag CI to publish changed backend images to public GHCR and stage the production Vercel build.
+9. Confirm the retained preparation manifest names that exact SHA, package lineages, image
    versions/digests, and staged Vercel URL.
-9. Pause gameplay.
-10. Apply content batches in deterministic order.
-11. Record every successful transaction digest.
-12. Never retry a transaction that executed and returned a digest.
-13. If a batch stops, inspect chain state and resume only the missing rows.
-14. Run the prepared Kubernetes repository's Helmfile diff and sync. The composite game+seed
+10. Pause gameplay when content or package work requires it.
+11. Apply content batches in deterministic order.
+12. Record every successful transaction digest.
+13. Never retry a transaction that executed and returned a digest.
+14. If a batch stops, inspect chain state and resume only the missing rows.
+15. Run the prepared Kubernetes repository's Helmfile diff and sync. The composite game+seed
     projection identity decides whether this retains the store or replaces it for a repin.
-15. Trigger the manual production-activation workflow; it promotes the staged Vercel deployment
+16. Trigger the manual production-activation workflow; it promotes the staged Vercel deployment
     without rebuilding, verifies production, publishes the draft release, and announces it.
-16. Exercise one affected action against chain truth.
-17. Resume gameplay.
+17. Exercise one affected action against chain truth.
+18. Resume gameplay.
 
 ## Partial failures
 

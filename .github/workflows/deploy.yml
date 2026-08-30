@@ -4,12 +4,12 @@
 # actions cache in seconds, and ships to Vercel as a PREBUILT output (`vercel deploy
 # --prebuilt`) — Vercel's own git builds are retired because their uncacheable full clone of
 # the 1.9GB tree burned 20+ minutes per push. A plain `push` trigger, NOT workflow_run:
-# workflow_run only fires from the DEFAULT branch's copy of this file, which left edge
-# deploys dead until a master promotion. The gate dependency is explicit instead — the first
+# workflow_run only fires from the DEFAULT branch's copy of this file. The gate dependency is
+# explicit instead — the first
 # step waits for the gate workflow to conclude GREEN on this exact sha; red cannot deploy.
 # THE SPLIT (owner 2026-08-20): edge.aresrpg.world deploys HERE on every edge commit;
-# aresrpg.world (production) deploys ONLY from release.yml when a master push mints a fresh
-# semver tag (`bun version patch` → land → tag → deploy). This file carries the deploy
+# aresrpg.world (production) deploys ONLY from release.yml when the owner pushes a fresh
+# semver tag (`bun pm version patch`). This file carries the deploy
 # secret, so it lives OUTSIDE gate.yml (fork-safe, no-secrets by its own law); push events
 # on edge only come from this repo's owners.
 name: deploy

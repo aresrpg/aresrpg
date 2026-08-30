@@ -165,7 +165,7 @@ export const AppShell = ({
   return (
     <div className="pointer-events-none fixed inset-0 z-[10] flex h-dvh flex-col gap-3 overflow-hidden p-3">
       {session.link_status === 'replaced' && <SessionReplacedModal copy={copy} />}
-      {session.game_frozen === true && <MaintenanceModal copy={copy} />}
+      {session.game_frozen === true && page !== 'admin' && <MaintenanceModal copy={copy} />}
       <div className="flex min-h-0 flex-1 gap-3 overflow-hidden">
         <div className="pointer-events-auto flex min-h-0 shrink-0 flex-col gap-3 overflow-hidden">
           <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto">

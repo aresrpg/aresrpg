@@ -40,7 +40,7 @@ import { dungeon_actions, type DungeonActions } from './dungeon.ts'
 import { kolizeum_actions, type KolizeumActions } from './kolizeum.ts'
 import { friends_actions, type FriendsActions } from './friends.ts'
 import { party_actions, type PartyActions } from './party.ts'
-import { receipt_digest, receipt_digest_or_null, type Receipt } from './cache.ts'
+import { receipt_digest, receipt_digest_or_null, type OwnedRef, type Receipt } from './cache.ts'
 import { create_personal_kiosk_runner } from './ptb.ts'
 import {
   create_deployment_bootstrap_transaction,
@@ -93,6 +93,7 @@ export type AuthSession = Readonly<{
   buy_shop_item: (purchase: ShopPurchase) => Promise<Readonly<{ digest: string }>>
   claim_airdrop: (claim: AirdropClaim) => Promise<Readonly<{ digest: string }>>
   create_seed_admin: (content: SeedContent, config: SeedAdminConfig, pins?: Pins) => Promise<SeedAdminSession>
+  authorize_temp_admin: (to: string, mist: bigint) => Promise<Readonly<{ digest: string; admin_cap: OwnedRef }>>
   publish_contract: (artifact: ContractArtifact) => Promise<
     Readonly<{
       receipt: Receipt
@@ -158,7 +159,6 @@ const installed_wallets = (): readonly Wallet[] =>
         !('enoki:getSession' in wallet.features) &&
         isWalletWithRequiredFeatureSet(wallet, ['sui:signPersonalMessage', 'sui:signTransaction'])
     )
-
 const request_wallet_accounts = async (wallet: Wallet, silent = false): Promise<readonly WalletAccount[]> => {
   const connect_feature = wallet.features['standard:connect'] as {
     connect: (options?: { silent?: boolean }) => Promise<{ accounts: readonly WalletAccount[] }>
@@ -167,7 +167,6 @@ const request_wallet_accounts = async (wallet: Wallet, silent = false): Promise<
   if (!accounts.length) throw new Error(`${wallet.name} returned no account`)
   return accounts
 }
-
 const create_wallet_session = (
   wallet: Wallet,
   account: WalletAccount,
@@ -432,6 +431,7 @@ const create_wallet_session = (
         release,
       })
     },
+    authorize_temp_admin: async (to, mist) => (await import('./delegated_admin.ts')).delegate(sdk, to, mist),
     publish_contract: async (artifact) => {
       const receipt = await sdk.execute(create_package_publish_transaction({ artifact, recipient: account.address }), {
         budget: 'estimate',

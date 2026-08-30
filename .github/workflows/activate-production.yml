@@ -1,10 +1,15 @@
 # SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 # © 2026 Sceat — All rights reserved. See LICENSE.
-# Manual final door: every artifact was already built from the release-tipped master SHA.
+# Manual final door: every artifact was already built from the owner-pushed release tag.
 # This workflow only verifies that immutable preparation record and moves Vercel's domains.
 name: activate production
 on:
   workflow_dispatch:
+    inputs:
+      version:
+        description: 'Prepared release version without the v prefix, for example 2.3.0'
+        required: true
+        type: string
 
 permissions:
   actions: read
@@ -16,7 +21,6 @@ concurrency:
 
 jobs:
   activate:
-    if: github.ref == 'refs/heads/master'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     env:
@@ -38,25 +42,32 @@ jobs:
           }
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          ref: v${{ inputs.version }}
+          fetch-depth: 0
           filter: blob:none
           sparse-checkout: |
-            packages/frontend/package.json
+            package.json
             changelog
             .github/assets/discord_banner.png
             .github/scripts/announce-release.sh
       - name: setup Bun
         uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
-      - name: locate this master's successful preparation
+      - name: locate this tag's successful preparation
         id: release
         run: |
-          version=$(node -p "require('./packages/frontend/package.json').version")
-          run_id=$(gh run list --workflow=release.yml --branch=master --limit 20 \
+          version=$(node -p "require('./package.json').version")
+          test "$version" = "${{ inputs.version }}" || { echo "::error::tag version $version does not match requested ${{ inputs.version }}"; exit 1; }
+          source_sha=$(git rev-parse HEAD)
+          run_id=$(gh run list --workflow=release.yml --limit 50 \
             --json databaseId,headSha,status,conclusion \
-            --jq ".[] | select(.headSha == \"$GITHUB_SHA\" and .status == \"completed\" and .conclusion == \"success\") | .databaseId" \
+            --jq ".[] | select(.headSha == \"$source_sha\" and .status == \"completed\" and .conclusion == \"success\") | .databaseId" \
             | head -1)
-          [ -n "$run_id" ] || { echo "::error::no successful production preparation exists for $GITHUB_SHA"; exit 1; }
-          echo "version=$version" >> "$GITHUB_OUTPUT"
-          echo "run_id=$run_id" >> "$GITHUB_OUTPUT"
+          [ -n "$run_id" ] || { echo "::error::no successful production preparation exists for v$version ($source_sha)"; exit 1; }
+          {
+            echo "version=$version"
+            echo "source_sha=$source_sha"
+            echo "run_id=$run_id"
+          } >> "$GITHUB_OUTPUT"
       - name: download immutable release manifest
         run: |
           mkdir -p "$RUNNER_TEMP/production-release"
@@ -67,20 +78,17 @@ jobs:
         id: manifest
         run: |
           manifest="$RUNNER_TEMP/production-release/release-manifest.json"
-          jq -e --arg sha "$GITHUB_SHA" --arg version "${{ steps.release.outputs.version }}" \
+          jq -e --arg sha "${{ steps.release.outputs.source_sha }}" --arg version "${{ steps.release.outputs.version }}" \
             '.status == "prepared" and .source_sha == $sha and .version == $version and (.vercel.staged_url | length > 0)' \
             "$manifest" >/dev/null
           for image in server indexer; do
-            built=$(jq -r ".images.$image.built" "$manifest")
             digest=$(jq -r ".images.$image.digest" "$manifest")
             repository=$(jq -r ".images.$image.repository" "$manifest")
-            if [ "$built" = true ]; then
-              [ -n "$digest" ] && [ "$digest" != null ] || { echo "::error::$image digest is missing"; exit 1; }
-              docker manifest inspect "$repository@$digest" >/dev/null || {
-                echo "::error::$repository@$digest is not anonymously pullable; make the GHCR package public"
-                exit 1
-              }
-            fi
+            [ -n "$digest" ] && [ "$digest" != null ] || { echo "::error::$image digest is missing"; exit 1; }
+            docker manifest inspect "$repository@$digest" >/dev/null || {
+              echo "::error::$repository@$digest is not anonymously pullable; make the GHCR package public"
+              exit 1
+            }
           done
           echo "url=$(jq -r .vercel.staged_url "$manifest")" >> "$GITHUB_OUTPUT"
       - name: inspect the staged production deployment
