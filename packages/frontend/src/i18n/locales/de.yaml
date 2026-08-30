@@ -376,6 +376,13 @@ demo_page:
 marketplace_page:
   title: Marktplatz
   subtitle: Spielerangebote auf Sui
+  disclaimer_kicker: Vor dem Handeln
+  disclaimer_title: Handle für deinen Fortschritt, nicht für Profit
+  disclaimer_body: Gegenstände werden direkt zwischen Spielern gegen SUI gehandelt.
+  disclaimer_supply: Gegenstände sind keine langfristigen Anlagen. Wenn mehr Spieler sie farmen, steigt das Angebot und Preise können fallen.
+  disclaimer_fun: Kaufe und verkaufe passend zu deinem Fortschritt aus Spaß und für den Spielnutzen, nicht in Erwartung eines Gewinns.
+  disclaimer_wallet: Bewahre in AresRPG nur SUI auf, die du verwenden möchtest. Lege größere Ersparnisse in einer getrennten selbstverwahrten Wallet ab, deren Wiederherstellungsschlüssel du kontrollierst.
+  disclaimer_acknowledge: Verstanden
   tab_buy: Kaufen
   tab_sell: Verkaufen
   tab_history: Verlauf

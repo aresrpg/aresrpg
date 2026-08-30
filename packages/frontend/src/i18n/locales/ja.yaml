@@ -376,6 +376,13 @@ demo_page:
 marketplace_page:
   title: マーケット
   subtitle: Sui上のプレイヤー出品
+  disclaimer_kicker: 取引を始める前に
+  disclaimer_title: 利益ではなく、冒険の進行のために取引しましょう
+  disclaimer_body: アイテムはプレイヤー同士でSUIを使って直接取引されます。
+  disclaimer_supply: アイテムは長期的な投資ではありません。多くのプレイヤーが入手するほど供給が増え、価格が下がる可能性があります。
+  disclaimer_fun: 利益を期待するのではなく、ゲームの進行や楽しみのために売買してください。
+  disclaimer_wallet: AresRPGには使用予定のSUIだけを保管してください。大切な資産は、復元キーを自分で管理する別の自己管理型ウォレットで保管してください。
+  disclaimer_acknowledge: 理解しました
   tab_buy: 購入
   tab_sell: 出品
   tab_history: 履歴

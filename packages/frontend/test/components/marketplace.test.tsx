@@ -4,6 +4,9 @@
 import { readFileSync } from 'node:fs'
 
 import { expect, test } from 'bun:test'
+import { renderToStaticMarkup } from 'react-dom/server'
+
+import { MarketplaceDisclaimer } from '../../src/marketplace/MarketplaceDisclaimer.tsx'
 
 const source = readFileSync(new URL('../../src/marketplace/MarketplacePage.tsx', import.meta.url), 'utf8')
 const browse = readFileSync(new URL('../../src/marketplace/BrowsePanel.tsx', import.meta.url), 'utf8')
@@ -17,6 +20,28 @@ test('the restored marketplace keeps BUY, SELL, and HISTORY without the retired 
   expect(source).toContain("const tabs: readonly Tab[] = ['BUY', 'SELL', 'HISTORY']")
   expect(source).not.toContain('INBOX')
   expect(source).not.toContain('SEND')
+})
+
+test('the first marketplace visit explains item supply and wallet custody before trading', () => {
+  const values: Readonly<Record<string, string>> = Object.freeze({
+    disclaimer_kicker: 'Before you trade',
+    disclaimer_title: 'Trade for progression, not profit',
+    disclaimer_body: 'Items are traded directly between players for SUI.',
+    disclaimer_supply: 'Farming increases supply and can dilute prices.',
+    disclaimer_fun: 'Trade alongside your progression for fun.',
+    disclaimer_wallet: 'Keep savings in a wallet whose recovery keys you control.',
+    disclaimer_acknowledge: 'I understand',
+  })
+  const html = renderToStaticMarkup(
+    <MarketplaceDisclaimer acknowledge={() => undefined} text={(key) => values[key] ?? key} />
+  )
+
+  expect(html).toContain('data-marketplace-disclaimer=""')
+  expect(html).toContain('border-t-[#c8963c]')
+  expect(html).toContain('Trade for progression, not profit')
+  expect(html).toContain('Farming increases supply and can dilute prices')
+  expect(html).toContain('recovery keys you control')
+  expect(html).toContain('I understand')
 })
 
 test('BUY restores the archived four-column browser and listing-row presentation', () => {

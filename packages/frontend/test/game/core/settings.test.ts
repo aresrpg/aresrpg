@@ -27,6 +27,7 @@ describe('game settings', () => {
       auto_switch_fighter: true,
       always_craft_from_character_id: null,
       placement_gas_warning_disabled: false,
+      marketplace_disclaimer_acknowledged: false,
       render_distance: null,
       fight_access: 0,
     })
@@ -61,6 +62,7 @@ describe('game settings', () => {
       auto_switch_fighter: false,
       always_craft_from_character_id: '0xcrafter',
       placement_gas_warning_disabled: true,
+      marketplace_disclaimer_acknowledged: false,
       render_distance: 8,
       fight_access: 1,
     })
@@ -79,6 +81,7 @@ describe('game settings', () => {
       auto_switch_fighter: true,
       always_craft_from_character_id: null,
       placement_gas_warning_disabled: false,
+      marketplace_disclaimer_acknowledged: false,
       render_distance: null,
       fight_access: 0,
     })
@@ -96,6 +99,14 @@ describe('game settings', () => {
 
     expect(load_game_settings('medium', null, valid).always_craft_from_character_id).toBe('0xcrafter')
     expect(load_game_settings('medium', null, malformed).always_craft_from_character_id).toBeNull()
+  })
+
+  test('persists marketplace disclaimer acknowledgement only from an explicit true value', () => {
+    const accepted = memory_storage(JSON.stringify({ marketplace_disclaimer_acknowledged: true }))
+    const malformed = memory_storage(JSON.stringify({ marketplace_disclaimer_acknowledged: 'yes' }))
+
+    expect(load_game_settings('medium', null, accepted).marketplace_disclaimer_acknowledged).toBeTrue()
+    expect(load_game_settings('medium', null, malformed).marketplace_disclaimer_acknowledged).toBeFalse()
   })
 
   test('rejects malformed chat preferences while preserving an intentional empty filter set', () => {

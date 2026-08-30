@@ -376,6 +376,13 @@ demo_page:
 marketplace_page:
   title: Mercado
   subtitle: Anuncios de jugadores en Sui
+  disclaimer_kicker: Antes de comerciar
+  disclaimer_title: Comercia para progresar, no para obtener beneficios
+  disclaimer_body: Los objetos se intercambian directamente entre jugadores a cambio de SUI.
+  disclaimer_supply: Los objetos no son inversiones a largo plazo. Cuantos más jugadores los obtengan, mayor será la oferta y más podrán bajar los precios.
+  disclaimer_fun: Compra y vende durante tu progresión por diversión y utilidad, no esperando obtener beneficios.
+  disclaimer_wallet: Mantén en AresRPG solo los SUI que piensas utilizar. Guarda los ahorros importantes en una cartera de autocustodia separada cuyas claves de recuperación controles.
+  disclaimer_acknowledge: Entendido
   tab_buy: Comprar
   tab_sell: Vender
   tab_history: Historial

@@ -10,6 +10,7 @@ import { dispatch_app, useAppStore } from '../store.ts'
 
 import { BrowsePanel } from './BrowsePanel.tsx'
 import { HistoryPanel } from './HistoryPanel.tsx'
+import { MarketplaceDisclaimer } from './MarketplaceDisclaimer.tsx'
 import { SellPanel } from './SellPanel.tsx'
 
 type Tab = 'BUY' | 'SELL' | 'HISTORY'
@@ -19,10 +20,23 @@ const colors: Readonly<Record<Tab, string>> = Object.freeze({ BUY: '#c8963c', SE
 export default function MarketplacePage({ copy, locale }: Readonly<{ copy: AppCopy; locale: Locale }>) {
   const text = copy_text(copy.marketplace_page)
   const group = useAppStore(({ marketplace }) => marketplace.group)
+  const settings = useAppStore((state) => state.settings)
   const [tab, set_tab] = useState<Tab>('BUY')
   useEffect(() => {
     dispatch_app({ type: 'market/group_selected', group })
   }, [group])
+  if (settings.marketplace_disclaimer_acknowledged !== true)
+    return (
+      <MarketplaceDisclaimer
+        acknowledge={() =>
+          dispatch_app({
+            type: 'settings/changed',
+            settings: Object.freeze({ ...settings, marketplace_disclaimer_acknowledged: true }),
+          })
+        }
+        text={text}
+      />
+    )
   return (
     <section className="pointer-events-auto relative flex min-h-full min-w-0 flex-1 flex-col overflow-hidden border border-border bg-surface/98 shadow-[0_18px_50px_rgba(0,0,0,0.24)]">
       <i className="pointer-events-none absolute top-1 left-1 size-3 border-t border-l border-[#c8963c]/45" />

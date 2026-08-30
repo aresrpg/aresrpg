@@ -376,6 +376,13 @@ demo_page:
 marketplace_page:
   title: Marketplace
   subtitle: Player listings on Sui
+  disclaimer_kicker: Before you trade
+  disclaimer_title: Trade for progression, not profit
+  disclaimer_body: Items are traded directly between players for SUI.
+  disclaimer_supply: Items are not long-term investments. As more players farm them, supply grows and prices can be diluted.
+  disclaimer_fun: Buy and sell alongside your progression for fun and utility, not with an expectation of profit.
+  disclaimer_wallet: Keep only the SUI you plan to use in AresRPG. Store meaningful savings in a separate self-custody wallet whose recovery keys you control.
+  disclaimer_acknowledge: I understand
   tab_buy: Buy
   tab_sell: Sell
   tab_history: History
