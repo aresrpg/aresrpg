@@ -386,8 +386,8 @@
   {
     "output_type": "old_hoe",
     "inputs": {
-      "fuwa_wool": 1,
-      "fuwa_hide": 1
+      "fuwa_hide": 5,
+      "fuwa_horn": 5
     },
     "job": "HANDYMAN"
   },
