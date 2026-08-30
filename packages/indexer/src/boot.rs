@@ -151,27 +151,36 @@ pub async fn has_watermark(conn: &mut MultiplexedConnection) -> Result<bool> {
     Ok(stored.is_some())
 }
 
-/// Bind the store to its ORIGINAL package id (the chain-id guard's sibling): a
-/// restart pointed at a different game against the same store would silently
-/// advance the old graph's watermark over foreign state. Local, network-free.
-/// The LATEST id may legitimately change (upgrade day) and is not bound.
-pub async fn bind_package(conn: &mut MultiplexedConnection, original: &str) -> Result<()> {
-    const KEY: &str = "idx:package_original";
+fn projection_identity(game_original: &str, seed_original: &str) -> String {
+    format!("{game_original}:{seed_original}")
+}
+
+/// Bind the store to both ORIGINAL package ids (the chain-id guard's sibling):
+/// reusing a watermark after either game or content lineage changed would skip
+/// the new package's early objects and events. Latest ids may change on a
+/// compatible upgrade and are deliberately not bound.
+pub async fn bind_projection(
+    conn: &mut MultiplexedConnection,
+    game_original: &str,
+    seed_original: &str,
+) -> Result<()> {
+    const KEY: &str = "idx:projection_originals";
+    let wanted = projection_identity(game_original, seed_original);
     let stored: Option<String> = redis::cmd("GET")
         .arg(KEY)
         .query_async(conn)
         .await
         .context("reading package binding")?;
     match stored {
-        Some(bound) if bound == original => Ok(()),
+        Some(bound) if bound == wanted => Ok(()),
         Some(bound) => Err(anyhow!(
-            "this store is bound to package {bound}, refusing to index {original} into it — \
-             point at a fresh store or restore the original id"
+            "this store is bound to projection {bound}, refusing to index {wanted} into it — \
+             point at a fresh store or restore both original ids"
         )),
         None => {
             let _: () = redis::cmd("SET")
                 .arg(KEY)
-                .arg(original)
+                .arg(wanted)
                 .query_async(conn)
                 .await
                 .context("writing package binding")?;
@@ -219,8 +228,20 @@ pub async fn ensure_indexes(conn: &mut MultiplexedConnection) -> Result<()> {
 
 #[cfg(test)]
 mod tests {
-    use super::{lineage_contains, publish_checkpoint_from};
+    use super::{lineage_contains, projection_identity, publish_checkpoint_from};
     use serde_json::json;
+
+    #[test]
+    fn projection_identity_changes_with_either_original_package() {
+        assert_ne!(
+            projection_identity("0xgame", "0xseed-a"),
+            projection_identity("0xgame", "0xseed-b")
+        );
+        assert_ne!(
+            projection_identity("0xgame-a", "0xseed"),
+            projection_identity("0xgame-b", "0xseed")
+        );
+    }
 
     #[test]
     fn decodes_the_current_sui_graphql_package_versions_after_shape() {

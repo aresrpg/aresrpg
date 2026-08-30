@@ -154,6 +154,67 @@ const ConfirmModal = ({
   </ModalFrame>
 )
 
+type InventoryMenuEntry = Readonly<{ key: string; Icon: typeof Cat; label: string; act: () => void }>
+
+export const InventoryMenu = ({
+  copy,
+  menu,
+  close_menu,
+  entries,
+}: Readonly<{
+  copy: AppCopy
+  menu: Exclude<ItemMenuState, null>
+  close_menu: () => void
+  entries: readonly InventoryMenuEntry[]
+}>) => {
+  const t = copy_text(copy.characters_page)
+  return (
+    <div
+      className="fixed z-[60] flex min-w-[150px] flex-col border border-border bg-surface-low shadow-[0_14px_40px_rgba(0,0,0,0.6)]"
+      style={{
+        left: Math.min(menu.x, globalThis.innerWidth - 170),
+        top: Math.min(menu.y, globalThis.innerHeight - (entries.length + 2) * 34 - 10),
+      }}
+    >
+      <a
+        className="flex items-center gap-2.5 px-3.5 py-2 text-left text-[9px] tracking-[0.16em] text-text uppercase hover:bg-gold/10 hover:text-gold"
+        href={explorer_object_url(env.network, menu.item.id)}
+        onClick={close_menu}
+        rel="noopener noreferrer"
+        target="_blank"
+      >
+        <ExternalLink className="opacity-60" size={11} />
+        {t('menu_explorer')}
+      </a>
+      <button
+        className="flex cursor-pointer items-center gap-2.5 px-3.5 py-2 text-left text-[9px] tracking-[0.16em] text-text uppercase hover:bg-gold/10 hover:text-gold"
+        onClick={() => {
+          close_menu()
+          dispatch_app({ type: 'chat/link_item', item: { id: menu.item.id, name: menu.item.name } })
+        }}
+        type="button"
+      >
+        <MessageSquarePlus className="opacity-60" size={11} />
+        {t('menu_link_chat')}
+      </button>
+      {entries.map(({ key, Icon, label, act }) => (
+        <button
+          className="flex cursor-pointer items-center gap-2.5 px-3.5 py-2 text-left text-[9px] tracking-[0.16em] text-text uppercase hover:bg-gold/10 hover:text-gold"
+          key={key}
+          onClick={() => {
+            close_menu()
+            act()
+          }}
+          type="button"
+        >
+          <Icon className="opacity-60" size={11} />
+          {label}
+        </button>
+      ))}
+    </div>
+  )
+}
+
 /** The bag's right-click surface: menu + every modal + the transactions they fire. */
 export const InventoryActionOverlays = ({
   copy,
@@ -241,51 +302,7 @@ export const InventoryActionOverlays = ({
 
   return (
     <>
-      {menu && (
-        <div
-          className="fixed z-[60] flex min-w-[150px] flex-col border border-border bg-surface-low shadow-[0_14px_40px_rgba(0,0,0,0.6)]"
-          style={{
-            left: Math.min(menu.x, globalThis.innerWidth - 170),
-            top: Math.min(menu.y, globalThis.innerHeight - (entries.length + 2) * 34 - 10),
-          }}
-        >
-          <a
-            className="flex items-center gap-2.5 px-3.5 py-2 text-left text-[9px] tracking-[0.16em] text-text uppercase hover:bg-gold/10 hover:text-gold"
-            href={explorer_object_url(env.network, menu.item.id)}
-            onClick={close_menu}
-            rel="noopener noreferrer"
-            target="_blank"
-          >
-            <ExternalLink className="opacity-60" size={11} />
-            {t('menu_explorer')}
-          </a>
-          <button
-            className="flex cursor-pointer items-center gap-2.5 px-3.5 py-2 text-left text-[9px] tracking-[0.16em] text-text uppercase hover:bg-gold/10 hover:text-gold"
-            onClick={() => {
-              close_menu()
-              dispatch_app({ type: 'chat/link_item', item: { id: menu.item.id, name: menu.item.name } })
-            }}
-            type="button"
-          >
-            <MessageSquarePlus className="opacity-60" size={11} />
-            {t('menu_link_chat')}
-          </button>
-          {entries.map(({ key, Icon, label, act }) => (
-            <button
-              className="flex cursor-pointer items-center gap-2.5 px-3.5 py-2 text-left text-[9px] tracking-[0.16em] text-text uppercase hover:bg-gold/10 hover:text-gold"
-              key={key}
-              onClick={() => {
-                close_menu()
-                act()
-              }}
-              type="button"
-            >
-              <Icon className="opacity-60" size={11} />
-              {label}
-            </button>
-          ))}
-        </div>
-      )}
+      {menu && <InventoryMenu close_menu={close_menu} copy={copy} entries={entries} menu={menu} />}
       {feed_pet && <FeedPetModal close={() => set_feed_pet(null)} copy={copy} pet={feed_pet} />}
       {reveal_box && <BoxReveal box={reveal_box} close={() => set_reveal_box(null)} copy={copy} />}
       {crush_target && (

@@ -6,7 +6,11 @@
 /packages/move/     @Sceat
 # The deterministic core + the replay gate — the correctness spine.
 /packages/fight/    @Sceat
-# Workflows are the rails (the inviolable gate lives here).
+# CI and release control are execution policy.
+/.github/workflows/ @Sceat
+/.github/scripts/   @Sceat
+/.github/CODEOWNERS @Sceat
+# Every remaining GitHub surface stays owner-held.
 /.github/           @Sceat
 # The identity class.
 /LICENSE            @Sceat

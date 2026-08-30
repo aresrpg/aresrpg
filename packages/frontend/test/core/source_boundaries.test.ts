@@ -8,6 +8,7 @@ import { describe, expect, test } from 'bun:test'
 import ts from 'typescript'
 
 const source_root = resolve(import.meta.dir, '../../src')
+const test_root = resolve(import.meta.dir, '..')
 
 const source_files = async (directory: string): Promise<readonly string[]> =>
   (
@@ -32,6 +33,19 @@ const presentation_files = async (directory: string): Promise<readonly string[]>
   ).flat()
 
 describe('frontend source boundaries', () => {
+  test('test files do not install process-global module mocks', async () => {
+    const marker = `mock${'.'}module(`
+    const violations = (
+      await Promise.all(
+        (await source_files(test_root)).map(async (file) =>
+          (await readFile(file, 'utf8')).includes(marker) ? [file] : []
+        )
+      )
+    ).flat()
+
+    expect(violations).toEqual([])
+  })
+
   test('the shared surface palette has one literal home', async () => {
     const token_file = resolve(source_root, 'tailwind.css')
     const env_file = resolve(source_root, 'env.ts')

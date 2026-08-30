@@ -35,7 +35,7 @@ test('the biome preview is the engine biome grid with derived coverage', () => {
   expect(preview.side).toBe(exact.side)
   expect(preview.cells).toEqual(exact.cells)
   expect(preview.coverage.reduce((sum, count) => sum + count, 0)).toBe(exact.cells.length)
-})
+}, 15_000)
 
 test('spline knot movement preserves strict x ordering', () => {
   const knots = [

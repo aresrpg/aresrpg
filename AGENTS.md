@@ -132,6 +132,10 @@ Before opening a PR, run `.claude/skills/review/SKILL.md` over the actual diff.
 - Leave verified changes for owner review.
 - `edge` is integration; `master` receives only release promotion. Production, mainnet, permanent
   freeze, and deployment actions require explicit owner approval.
+- For a production content release, use `CONTENT_UPGRADES.md` as the sole runbook and remind the
+  owner of the next unfinished manual action: pause gameplay, publish content, run the prepared
+  Helmfile sync, activate the staged Vercel deployment, verify production, then unpause. Never
+  infer that a later step completed from an earlier one.
 - Preserve linear history and follow `CONTRIBUTING.md` for promotion and release mechanics.
 
 ## Trust and security

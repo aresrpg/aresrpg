@@ -1,18 +1,11 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
-import { expect, mock, test } from 'bun:test'
+import { expect, test } from 'bun:test'
 import { renderToStaticMarkup } from 'react-dom/server'
 
 import type { AppCopy } from '../../src/i18n/copy.ts'
-import type { ZoneReveal } from '../../src/modules/world.ts'
-
-const reveal_cell: { reveal: ZoneReveal | null } = { reveal: null }
-mock.module('../../src/store.ts', () => ({
-  useAppStore: (select: (state: unknown) => unknown) => select({ world: { zone_reveal: reveal_cell.reveal } }),
-}))
-
-const { ZoneRevealBanner } = await import('../../src/components/ZoneRevealBanner.tsx')
+import { ZoneRevealContent } from '../../src/components/ZoneRevealBanner.tsx'
 
 const copy = {
   world_hud: {
@@ -25,8 +18,8 @@ const copy = {
 } as unknown as AppCopy
 
 test('zone discovery restores the center reveal with population findings', () => {
-  reveal_cell.reveal = Object.freeze({ id: 'nauvis:97:98:s7', zx: 97, zz: 98, mobs: 3, resources: 9, dungeon: true })
-  const html = renderToStaticMarkup(<ZoneRevealBanner copy={copy} />)
+  const reveal = Object.freeze({ id: 'nauvis:97:98:s7', zx: 97, zz: 98, mobs: 3, resources: 9, dungeon: true })
+  const html = renderToStaticMarkup(<ZoneRevealContent copy={copy} reveal={reveal} />)
 
   expect(html).toContain('gw-reveal')
   expect(html).toContain('ZONE REVEALED')
@@ -35,6 +28,5 @@ test('zone discovery restores the center reveal with population findings', () =>
 })
 
 test('zone discovery has no generic toast-shaped fallback', () => {
-  reveal_cell.reveal = null
-  expect(renderToStaticMarkup(<ZoneRevealBanner copy={copy} />)).toBe('')
+  expect(renderToStaticMarkup(<ZoneRevealContent copy={copy} reveal={null} />)).toBe('')
 })

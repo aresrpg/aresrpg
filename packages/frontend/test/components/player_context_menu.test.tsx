@@ -3,38 +3,16 @@
 
 import { readFileSync } from 'node:fs'
 
-import { expect, mock, test } from 'bun:test'
+import { expect, test } from 'bun:test'
 import { renderToStaticMarkup } from 'react-dom/server'
 
 import type { AppCopy } from '../../src/i18n/copy.ts'
-import type { PlayerMenu } from '../../src/modules/world.ts'
-
-const menu_cell: { menu: PlayerMenu | null } = { menu: null }
-const target_cell = { visible: true }
-const party_cell: { party: null | Readonly<{ id: string; members: readonly unknown[]; invited: readonly unknown[] }> } =
-  {
-    party: null,
-  }
-const target = Object.freeze({ character_id: 'chr-1', name: 'Aiko', owner: '0xaiko' })
-mock.module('../../src/store.ts', () => ({
-  dispatch_app: () => undefined,
-  useAppStore: (select: (state: unknown) => unknown) =>
-    select({
-      world: { player_menu: menu_cell.menu, players: target_cell.visible ? { 'chr-1': target } : {} },
-      session: { characters: [{ id: 'own' }], selected_character_id: 'own', wallet: { address: '0xme' } },
-      friends: { rows: [] },
-      party: {
-        by_id: party_cell.party ? { [party_cell.party.id]: party_cell.party } : {},
-        party_by_character: party_cell.party ? { own: party_cell.party.id } : {},
-        invitation_ids_by_character: {},
-        pending_by_character: {},
-      },
-      trade: { rows: [] },
-    }),
-}))
-
-const { menu_target, party_invite_visible, PlayerContextMenu } =
-  await import('../../src/components/PlayerContextMenu.tsx')
+import {
+  menu_target,
+  party_invite_visible,
+  PlayerSocialRows,
+  RunToRow,
+} from '../../src/components/PlayerContextMenu.tsx'
 
 const copy = {
   party_panel: { run_to_position: 'RUN TO POSITION' },
@@ -47,10 +25,24 @@ const copy = {
   },
 } as unknown as AppCopy
 
-const render_for = (source: PlayerMenu['source']): string => {
-  menu_cell.menu = Object.freeze({ character_id: 'chr-1', x: 10, y: 20, source })
-  return renderToStaticMarkup(<PlayerContextMenu copy={copy} />)
-}
+const noop = (): void => undefined
+const render_for = (source: 'body' | 'chat' | 'party', can_invite = true): string =>
+  renderToStaticMarkup(
+    <PlayerSocialRows
+      add_friend={noop}
+      already_friend={false}
+      can_invite={can_invite}
+      copy={copy}
+      duel={noop}
+      invite={noop}
+      invite_visible
+      message={noop}
+      source={source}
+      trade={noop}
+      trade_disabled={false}
+      visible
+    />
+  )
 
 // A duel needs the two characters standing together — the chain proves the walk to the fight
 // cell — so a name clicked in the chat log, which says nothing about distance, is not a
@@ -66,8 +58,7 @@ test('every other social door stays on both menus', () => {
 })
 
 test('chat uses the wire identity even when the speaker is absent from world presence', () => {
-  target_cell.visible = false
-  menu_cell.menu = Object.freeze({
+  const menu = Object.freeze({
     character_id: 'chr-1',
     name: 'Aiko',
     owner: '0xaiko',
@@ -75,9 +66,9 @@ test('chat uses the wire identity even when the speaker is absent from world pre
     y: 20,
     source: 'chat',
   })
-  const markup = renderToStaticMarkup(<PlayerContextMenu copy={copy} />)
+  expect(menu_target(menu, {})).toBe(menu)
+  const markup = render_for('chat')
   for (const label of ['FRIEND', 'GROUP', 'TRADE', 'MESSAGE']) expect(markup).toContain(label)
-  target_cell.visible = true
 })
 
 test('the chat fallback returns its stored snapshot without allocating', () => {
@@ -97,7 +88,7 @@ test('a current or invited party member is not offered another invitation', () =
 })
 
 test('an accepted non-leader can invite from the shared menu', () => {
-  party_cell.party = {
+  const party = {
     id: 'party',
     members: [
       { character_id: 'leader', name: 'Leader' },
@@ -105,17 +96,16 @@ test('an accepted non-leader can invite from the shared menu', () => {
     ],
     invited: [],
   }
-  const group_button = render_for('chat').match(/<button[^>]*>GROUP<\/button>/)?.[0]
+  expect(party_invite_visible(party, { character_id: 'target' })).toBeTrue()
+  const group_button = render_for('chat', true).match(/<button[^>]*>GROUP<\/button>/)?.[0]
   expect(group_button).toBeDefined()
   expect(group_button).not.toContain('disabled=""')
-  party_cell.party = null
 })
 
 test('the shared player menu owns the party run action', () => {
-  target_cell.visible = false
-  expect(render_for('party')).toContain('RUN TO POSITION')
-  expect(render_for('party')).not.toContain('MESSAGE')
-  target_cell.visible = true
+  const markup = renderToStaticMarkup(<RunToRow label="RUN TO POSITION" run={noop} visible />)
+  expect(markup).toContain('RUN TO POSITION')
+  expect(markup).not.toContain('MESSAGE')
 })
 
 test('the one menu host is global instead of disappearing during fights', () => {

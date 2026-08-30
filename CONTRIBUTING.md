@@ -53,13 +53,17 @@ accumulate on `edge` until a release promotes them; nothing else ever reaches pr
 2. `/promote` the standing edge→master draft PR (opened automatically after the previous
    release — see `promote.yml`). The bot refuses the hop unless the promoted commit's subject
    matches `release: vX.Y.Z` — master cannot carry a non-release tip.
-3. The push triggers `release.yml`: it tags `vX.Y.Z` from `package.json`, publishes the GitHub
-   Release (notes = the newest changelog file), and announces on Discord.
-4. Vercel builds **production** from that same push. `packages/frontend/vercel.json`'s
-   `ignoreCommand` skips the build whenever `$VERCEL_ENV=production` and the head commit isn't
-   release-tipped — the two gates (this one and step 2's) enforce the same law independently.
-   Preview deployments (every PR, every branch) are unaffected; the check only activates in
-   production.
+3. The push triggers `release.yml`: it tags `vX.Y.Z`, builds only semantically version-bumped
+   server/indexer packages into public GHCR, and creates a production-variable Vercel deployment
+   with `--skip-domain`. The GitHub Release remains draft and production still serves the previous
+   version.
+4. During the maintenance window, the owner pauses gameplay, publishes content, and manually runs
+   the prepared Kubernetes Helmfile sync. The composite game+seed projection identity decides
+   whether that is a store-preserving roll or an automatic fresh repin.
+5. The owner triggers `activate-production.yml`. It verifies the retained preparation manifest,
+   promotes the staged Vercel deployment without rebuilding, checks production, publishes the
+   GitHub Release, and announces on Discord. `packages/frontend/vercel.json` still refuses any
+   production-variable build whose head is not release-tipped.
 
 **AUDIENCE LAW** (maintainer ruling 2026-07-21): `changelog/NNN-RELEASE-vX.Y.Z.md` is not
 internal release notes — GitHub Releases and Discord post it **verbatim**, so it's written for

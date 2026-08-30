@@ -3,12 +3,10 @@
 
 import { readFileSync } from 'node:fs'
 
-import { expect, mock, test } from 'bun:test'
+import { expect, test } from 'bun:test'
 import { renderToStaticMarkup } from 'react-dom/server'
 
 import type { SeedSpell } from '../../src/content/catalog.ts'
-
-mock.module('../../src/content/assets.ts', () => ({ spell_icon: () => '/spell.webp' }))
 
 test('the editor authors Châtiment duration from the generated Move constant', () => {
   const source = readFileSync(new URL('../../src/encyclopedia/SpellCardEffects.tsx', import.meta.url), 'utf8')

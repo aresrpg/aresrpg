@@ -1,14 +1,12 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
-import { expect, mock, test } from 'bun:test'
+import { expect, test } from 'bun:test'
 import type { SpellEffect, SpellLevel } from '@aresrpg/fight'
 import { createElement } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 
 import type { FightSpellView } from '../../../src/game/fight/fight_projection.ts'
-
-mock.module('../../../src/content/assets.ts', () => ({ spell_icon: () => '/spell.webp' }))
 
 const effect: SpellEffect = {
   kind: 0n,

@@ -47,14 +47,21 @@ snapshots.
 4. Open /demo#boards and inspect every generated board.
 5. Run the relevant package tests, Move builds/tests, indexer parity, lint, and type checks.
 6. Confirm no wagered fight would be unfairly changed by the planned spell or mob update.
-7. Pause gameplay.
-8. Build and deploy the server and frontend from the same edited repository; drain old processes.
-9. Apply content batches in deterministic order.
-10. Record every successful transaction digest.
-11. Never retry a transaction that executed and returned a digest.
-12. If a batch stops, inspect chain state and resume only the missing rows.
-13. Exercise one affected action against chain truth.
-14. Resume gameplay.
+7. Promote the release-tipped SHA to `master`; wait for CI to publish any semantically
+   version-bumped backend images to public GHCR and stage the production-variable Vercel build.
+8. Confirm the retained preparation manifest names that exact SHA, package lineages, image
+   versions/digests, and staged Vercel URL.
+9. Pause gameplay.
+10. Apply content batches in deterministic order.
+11. Record every successful transaction digest.
+12. Never retry a transaction that executed and returned a digest.
+13. If a batch stops, inspect chain state and resume only the missing rows.
+14. Run the prepared Kubernetes repository's Helmfile diff and sync. The composite game+seed
+    projection identity decides whether this retains the store or replaces it for a repin.
+15. Trigger the manual production-activation workflow; it promotes the staged Vercel deployment
+    without rebuilding, verifies production, publishes the draft release, and announces it.
+16. Exercise one affected action against chain truth.
+17. Resume gameplay.
 
 ## Partial failures
 

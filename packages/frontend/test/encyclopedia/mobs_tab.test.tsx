@@ -1,14 +1,8 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
-import { expect, mock, test } from 'bun:test'
+import { expect, test } from 'bun:test'
 import { renderToStaticMarkup } from 'react-dom/server'
-
-mock.module('../../src/content/assets.ts', () => ({
-  item_icon: (id: string) => `/items/${id}.webp`,
-  mob_icon: (id: string) => `/mobs/${id}.webp`,
-  spell_icon: () => null,
-}))
 
 test('protector detail retains icon stats, horizontal spell tabs, and its resource world', async () => {
   const { MobsTab } = await import('../../src/encyclopedia/MobsTab.tsx')

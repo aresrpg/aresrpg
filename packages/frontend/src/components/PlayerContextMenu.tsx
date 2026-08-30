@@ -135,7 +135,7 @@ const WhisperModal = ({
   )
 }
 
-const PlayerSocialRows = ({
+export const PlayerSocialRows = ({
   visible,
   source,
   already_friend,

@@ -29,6 +29,9 @@ const dismiss_scrim = (event: Readonly<ReactMouseEvent<HTMLDivElement>>, close: 
   if (close && event.target === event.currentTarget) close()
 }
 
+const mount_modal = (content: ReactNode): ReactNode =>
+  typeof document === 'undefined' ? content : createPortal(content, document.body)
+
 const CloseButton = ({ close, label }: Readonly<{ close: CloseDoor; label: string }>) =>
   close ? (
     <button
@@ -58,7 +61,7 @@ export const ModalFrame = ({
 }>) => {
   useModalDismissal(close)
 
-  return createPortal(
+  const content = (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center"
       onClick={(event) => dismiss_scrim(event, close)}
@@ -82,7 +85,7 @@ export const ModalFrame = ({
         <CloseButton close={close} label={close_label} />
         {children}
       </div>
-    </div>,
-    document.body
+    </div>
   )
+  return mount_modal(content)
 }

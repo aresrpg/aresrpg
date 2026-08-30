@@ -1,13 +1,10 @@
 # SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 # © 2026 Sceat — All rights reserved. See LICENSE.
-# Release bookkeeping — every master push tags vX.Y.Z from package.json and publishes the GitHub
-# Release. PRODUCTION IS RELEASE-ONLY (maintainer ruling): master only reaches Vercel production
-# on a release-tipped push. Two independent gates enforce it — promote.yml's master-hop refuses
-# to even push a SHA that isn't a `release: vX.Y.Z` commit, and packages/frontend/vercel.json's
-# ignoreCommand separately skips the Vercel production build for any commit that isn't (defense
-# in depth for whatever path could still land on master). The tag itself is STILL never the
-# deploy trigger — it's minted by THIS workflow, after the push already happened — it's the
-# release-shaped commit subject Vercel keys off, not the tag.
+# Release preparation — every master push tags vX.Y.Z, publishes changed backend images to GHCR,
+# and stages a production-variable Vercel deployment without moving aresrpg.world. The separate
+# manual activation workflow promotes that exact deployment, publishes the draft GitHub Release,
+# and announces only after production answers. Master accepts only a release-tipped SHA, while
+# packages/frontend/vercel.json independently refuses non-release production builds.
 # Tags are never created locally (a tag ruleset restricts creation to the Actions app); the
 # promotion PR's package.json bump is the only human-touched version artifact.
 #
@@ -44,6 +41,7 @@ jobs:
     timeout-minutes: 5
     outputs:
       created: ${{ steps.tag.outputs.created }}
+      prepare: ${{ steps.tag.outputs.prepare }}
       version: ${{ steps.v.outputs.version }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -71,34 +69,37 @@ jobs:
         run: |
           TAG="v${{ steps.v.outputs.version }}"
           if git rev-parse -q --verify "refs/tags/$TAG" >/dev/null; then
-            echo "tag $TAG already exists — no-op (announce is gated on created=true, so no re-announce)"
+            target=$(git rev-list -n 1 "$TAG")
+            [ "$target" = "$GITHUB_SHA" ] || {
+              echo "::error::$TAG points at $target instead of this release $GITHUB_SHA"
+              exit 1
+            }
+            echo "tag $TAG already identifies this release — resuming preparation"
             echo "created=false" >> "$GITHUB_OUTPUT"
+            echo "prepare=true" >> "$GITHUB_OUTPUT"
             exit 0
           fi
           # Release notes = the newest release-changelog when the publisher has written one
           # (changelog/NNN-RELEASE-*.md, NNN zero-padded monotonic); else GitHub-generated notes.
-          NOTES_FILE=$(ls changelog/*-RELEASE-*.md 2>/dev/null | sort | tail -1 || true)
+          NOTES_FILE=$(find changelog -maxdepth 1 -type f -name '*-RELEASE-*.md' | sort | tail -1)
           if [ -n "$NOTES_FILE" ]; then
-            gh release create "$TAG" --title "$TAG" --notes-file "$NOTES_FILE" --target "$GITHUB_SHA"
+            gh release create "$TAG" --draft --title "$TAG" --notes-file "$NOTES_FILE" --target "$GITHUB_SHA"
           else
-            gh release create "$TAG" --title "$TAG" --generate-notes --target "$GITHUB_SHA"
+            gh release create "$TAG" --draft --title "$TAG" --generate-notes --target "$GITHUB_SHA"
           fi
           echo "created=true" >> "$GITHUB_OUTPUT"
-      - name: announce on Discord (skip-quiet without the secret — forks never fail)
-        # Fires ONLY when THIS run minted a fresh tag (created=true) OR on an explicit
-        # announce_only dispatch. A master push that re-runs release.yml against an
-        # already-existing tag (e.g. a promotion merge that didn't bump the version) skips
-        # it — that is the duplicate-announce fix. The step's own DELIVERY errors (the webhook
-        # POST) are non-blocking; the collapse assert below is not — a stub body is a logic
-        # failure and fails the step RED before anything is posted.
-        if: ${{ steps.tag.outputs.created == 'true' || inputs.announce_only }}
+          echo "prepare=true" >> "$GITHUB_OUTPUT"
+      - name: re-announce on Discord when explicitly requested
+        # Fresh releases announce only after manual production activation. This retained
+        # dispatch path re-posts an already-live release without touching tags or deployments.
+        if: ${{ inputs.announce_only }}
         env:
           DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
         run: |
           if [ -z "$DISCORD_WEBHOOK" ]; then echo "no webhook secret — skipping announce"; exit 0; fi
           TAG="v${{ steps.v.outputs.version }}"
           URL="https://github.com/${GITHUB_REPOSITORY}/releases/tag/${TAG}"
-          NOTES_FILE=$(ls changelog/*-RELEASE-*.md 2>/dev/null | sort | tail -1 || true)
+          NOTES_FILE=$(find changelog -maxdepth 1 -type f -name '*-RELEASE-*.md' | sort | tail -1)
           if [ -n "$NOTES_FILE" ]; then BODY=$(cat "$NOTES_FILE"); else BODY="AresRPG ${TAG} is live."; fi
           SOURCE_LEN=${#BODY} # pre-truncation size — the collapse assert's reference point
           # Strip the changelog's own leading H1, then open every message with the version
@@ -140,14 +141,16 @@ jobs:
             "$DISCORD_WEBHOOK" \
             || echo "webhook POST failed (non-blocking — the release itself already succeeded)"
 
-  # PRODUCTION DEPLOY (owner 2026-08-20): aresrpg.world ships ONLY when this master push minted
-  # a fresh semver tag (`bun version patch` → land → tag) — a promotion that carries no version
-  # bump deploys nothing. Edge deploys per-commit in deploy.yml; this job is the prod half.
-  deploy-production:
+  # PRODUCTION PREPARE: master builds with production variables but never moves aresrpg.world.
+  # The manual activate-production workflow promotes this exact staged deployment after the
+  # owner has paused gameplay, published content, and rolled the prepared Helm release.
+  prepare-production:
     needs: tag-and-release
-    if: needs.tag-and-release.outputs.created == 'true'
+    if: needs.tag-and-release.outputs.prepare == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    outputs:
+      url: ${{ steps.deploy.outputs.url }}
     env:
       VERCEL_ORG_ID: team_ir5eY7QCUS7qgcTBq81H89FM
       VERCEL_PROJECT_ID: prj_sBuXZOg6DJTciA0SYyTQZhESAekP
@@ -203,5 +206,307 @@ jobs:
         run: bunx vercel pull --yes --environment=production --token="$VERCEL_TOKEN"
       - name: build
         run: bunx vercel build --prod --token="$VERCEL_TOKEN"
-      - name: deploy v${{ needs.tag-and-release.outputs.version }} to production
-        run: bunx vercel deploy --prebuilt --prod --token="$VERCEL_TOKEN"
+      - name: stage v${{ needs.tag-and-release.outputs.version }} without moving production domains
+        id: deploy
+        run: echo "url=$(bunx vercel deploy --prebuilt --prod --skip-domain --token="$VERCEL_TOKEN")" >> "$GITHUB_OUTPUT"
+
+  backend-plan:
+    needs: tag-and-release
+    if: needs.tag-and-release.outputs.prepare == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    permissions:
+      actions: read
+      contents: read
+    outputs:
+      previous_tag: ${{ steps.plan.outputs.previous_tag }}
+      server: ${{ steps.plan.outputs.server }}
+      server_version: ${{ steps.plan.outputs.server_version }}
+      indexer: ${{ steps.plan.outputs.indexer }}
+      indexer_version: ${{ steps.plan.outputs.indexer_version }}
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: wait for the gate to conclude GREEN on this sha
+        run: |
+          for i in $(seq 1 60); do
+            conclusion=$(gh api "repos/${GITHUB_REPOSITORY}/actions/workflows/gate.yml/runs?head_sha=${GITHUB_SHA}&per_page=1" \
+              --jq '.workflow_runs[0] | select(.status == "completed") | .conclusion' 2>/dev/null || true)
+            if [ "$conclusion" = "success" ]; then echo "gate green"; exit 0; fi
+            if [ -n "$conclusion" ]; then echo "::error::gate concluded '$conclusion' — refusing image publication"; exit 1; fi
+            echo "gate still running ($i/60)…"; sleep 20
+          done
+          echo "::error::gate never concluded within 20 minutes"; exit 1
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          filter: blob:none
+          sparse-checkout: |
+            package.json
+            packages/engine
+            packages/fight
+            packages/immutable
+            packages/indexer
+            packages/protocol
+            packages/sdk/package.json
+            packages/server
+            seed/content
+            seed/structures
+      - name: derive changed backend packages from semantic versions
+        id: plan
+        run: |
+          current_tag="v${{ needs.tag-and-release.outputs.version }}"
+          previous_tag=$(git tag --list 'v[0-9]*' --sort=-version:refname | grep -Fxv "$current_tag" | head -1 || true)
+          server_version=$(node -p "require('./packages/server/package.json').version")
+          indexer_version=$(awk -F'"' '/^version = / { print $2; exit }' packages/indexer/Cargo.toml)
+          server=true
+          indexer=true
+
+          if [ -n "$previous_tag" ]; then
+            server_previous=$(git show "$previous_tag:packages/server/package.json" | node -e \
+              "let value=''; process.stdin.on('data', chunk => value += chunk).on('end', () => console.log(JSON.parse(value).version))")
+            indexer_previous=$(git show "$previous_tag:packages/indexer/Cargo.toml" | awk -F'"' '/^version = / { print $2; exit }')
+            server=false
+            indexer=false
+            [ "$server_version" != "$server_previous" ] && server=true
+            [ "$indexer_version" != "$indexer_previous" ] && indexer=true
+
+            if ! git diff --quiet "$previous_tag" "$GITHUB_SHA" -- \
+              package.json \
+              packages/engine/package.json packages/engine/src \
+              packages/fight/package.json packages/fight/src \
+              packages/immutable/package.json packages/immutable/src \
+              packages/protocol/package.json packages/protocol/src \
+              packages/sdk/package.json \
+              packages/server/package.json packages/server/src packages/server/Dockerfile \
+              seed/content seed/structures; then
+              [ "$server" = true ] || { echo "::error::server inputs changed without a server version bump"; exit 1; }
+            fi
+            if ! git diff --quiet "$previous_tag" "$GITHUB_SHA" -- \
+              packages/indexer/Cargo.toml packages/indexer/Cargo.lock packages/indexer/Dockerfile packages/indexer/src; then
+              [ "$indexer" = true ] || { echo "::error::indexer inputs changed without an indexer version bump"; exit 1; }
+            fi
+          fi
+
+          {
+            echo "previous_tag=$previous_tag"
+            echo "server=$server"
+            echo "server_version=$server_version"
+            echo "indexer=$indexer"
+            echo "indexer_version=$indexer_version"
+          } >> "$GITHUB_OUTPUT"
+
+  build-server:
+    needs: backend-plan
+    if: needs.backend-plan.outputs.server == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      attestations: write
+      contents: read
+      id-token: write
+      packages: write
+    outputs:
+      digest: ${{ steps.image.outputs.digest || steps.build.outputs.digest }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          filter: blob:none
+          sparse-checkout: |
+            /*
+            !seed/icons
+            !seed/models
+            !music
+          sparse-checkout-cone-mode: false
+      - name: authenticate to GHCR
+        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: create Buildx builder
+        uses: docker/setup-buildx-action@37fe631027851001ddb9b187196cc803df7f5f0e # v4
+      - name: reuse this immutable server semver on a preparation rerun
+        id: image
+        run: |
+          image="ghcr.io/${{ github.repository_owner }}/server:${{ needs.backend-plan.outputs.server_version }}"
+          if docker manifest inspect "$image" >/dev/null 2>&1; then
+            revision=$(docker buildx imagetools inspect "$image" --format '{{json .Image.Config.Labels}}' \
+              | jq -r '.["org.opencontainers.image.revision"]')
+            [ "$revision" = "$GITHUB_SHA" ] || {
+              echo "::error::$image already belongs to source $revision, refusing semver reuse for $GITHUB_SHA"
+              exit 1
+            }
+            digest=$(docker buildx imagetools inspect "$image" --format '{{json .Manifest.Digest}}' | tr -d '"')
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+            echo "digest=$digest" >> "$GITHUB_OUTPUT"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+      - name: build and push server
+        id: build
+        if: steps.image.outputs.exists != 'true'
+        uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7
+        with:
+          context: .
+          file: packages/server/Dockerfile
+          platforms: linux/amd64
+          push: true
+          tags: ghcr.io/${{ github.repository_owner }}/server:${{ needs.backend-plan.outputs.server_version }}
+          labels: |
+            org.opencontainers.image.source=https://github.com/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
+            org.opencontainers.image.version=${{ needs.backend-plan.outputs.server_version }}
+            org.opencontainers.image.licenses=LicenseRef-AresRPG-Source-Available
+          cache-from: type=registry,ref=ghcr.io/${{ github.repository_owner }}/server:buildcache
+          cache-to: type=registry,ref=ghcr.io/${{ github.repository_owner }}/server:buildcache,mode=max
+          provenance: false
+          sbom: true
+      - name: attest server provenance
+        if: steps.image.outputs.exists != 'true'
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4
+        with:
+          subject-name: ghcr.io/${{ github.repository_owner }}/server
+          subject-digest: ${{ steps.build.outputs.digest }}
+          push-to-registry: true
+
+  build-indexer:
+    needs: backend-plan
+    if: needs.backend-plan.outputs.indexer == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    permissions:
+      attestations: write
+      contents: read
+      id-token: write
+      packages: write
+    outputs:
+      digest: ${{ steps.image.outputs.digest || steps.build.outputs.digest }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          filter: blob:none
+          sparse-checkout: packages/indexer
+      - name: authenticate to GHCR
+        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: create Buildx builder
+        uses: docker/setup-buildx-action@37fe631027851001ddb9b187196cc803df7f5f0e # v4
+      - name: reuse this immutable indexer semver on a preparation rerun
+        id: image
+        run: |
+          image="ghcr.io/${{ github.repository_owner }}/indexer:${{ needs.backend-plan.outputs.indexer_version }}"
+          if docker manifest inspect "$image" >/dev/null 2>&1; then
+            revision=$(docker buildx imagetools inspect "$image" --format '{{json .Image.Config.Labels}}' \
+              | jq -r '.["org.opencontainers.image.revision"]')
+            [ "$revision" = "$GITHUB_SHA" ] || {
+              echo "::error::$image already belongs to source $revision, refusing semver reuse for $GITHUB_SHA"
+              exit 1
+            }
+            digest=$(docker buildx imagetools inspect "$image" --format '{{json .Manifest.Digest}}' | tr -d '"')
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+            echo "digest=$digest" >> "$GITHUB_OUTPUT"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+      - name: build and push indexer
+        id: build
+        if: steps.image.outputs.exists != 'true'
+        uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7
+        with:
+          context: packages/indexer
+          file: packages/indexer/Dockerfile
+          platforms: linux/amd64
+          push: true
+          tags: ghcr.io/${{ github.repository_owner }}/indexer:${{ needs.backend-plan.outputs.indexer_version }}
+          labels: |
+            org.opencontainers.image.source=https://github.com/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
+            org.opencontainers.image.version=${{ needs.backend-plan.outputs.indexer_version }}
+            org.opencontainers.image.licenses=LicenseRef-AresRPG-Source-Available
+          cache-from: type=registry,ref=ghcr.io/${{ github.repository_owner }}/indexer:buildcache
+          cache-to: type=registry,ref=ghcr.io/${{ github.repository_owner }}/indexer:buildcache,mode=max
+          provenance: false
+          sbom: true
+      - name: attest indexer provenance
+        if: steps.image.outputs.exists != 'true'
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4
+        with:
+          subject-name: ghcr.io/${{ github.repository_owner }}/indexer
+          subject-digest: ${{ steps.build.outputs.digest }}
+          push-to-registry: true
+
+  release-manifest:
+    needs: [tag-and-release, backend-plan, build-server, build-indexer, prepare-production]
+    if: >-
+      always() &&
+      needs.tag-and-release.outputs.prepare == 'true' &&
+      needs.backend-plan.result == 'success' &&
+      needs.prepare-production.result == 'success' &&
+      (needs.build-server.result == 'success' || needs.build-server.result == 'skipped') &&
+      (needs.build-indexer.result == 'success' || needs.build-indexer.result == 'skipped')
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          filter: blob:none
+          sparse-checkout: pins.json
+      - name: write immutable release manifest
+        env:
+          VERSION: ${{ needs.tag-and-release.outputs.version }}
+          PREVIOUS_TAG: ${{ needs.backend-plan.outputs.previous_tag }}
+          SERVER_BUILT: ${{ needs.backend-plan.outputs.server }}
+          SERVER_VERSION: ${{ needs.backend-plan.outputs.server_version }}
+          SERVER_DIGEST: ${{ needs.build-server.outputs.digest }}
+          INDEXER_BUILT: ${{ needs.backend-plan.outputs.indexer }}
+          INDEXER_VERSION: ${{ needs.backend-plan.outputs.indexer_version }}
+          INDEXER_DIGEST: ${{ needs.build-indexer.outputs.digest }}
+          VERCEL_URL: ${{ needs.prepare-production.outputs.url }}
+        run: |
+          mkdir -p "$RUNNER_TEMP/production-release"
+          jq -n \
+            --arg version "$VERSION" \
+            --arg source_sha "$GITHUB_SHA" \
+            --arg previous_tag "$PREVIOUS_TAG" \
+            --arg vercel_url "$VERCEL_URL" \
+            --arg server_version "$SERVER_VERSION" \
+            --arg server_digest "$SERVER_DIGEST" \
+            --arg indexer_version "$INDEXER_VERSION" \
+            --arg indexer_digest "$INDEXER_DIGEST" \
+            --arg game_original "$(jq -r .testnet.package_original pins.json)" \
+            --arg game_latest "$(jq -r .testnet.package pins.json)" \
+            --arg seed_original "$(jq -r .testnet.seed_package_original pins.json)" \
+            --arg seed_latest "$(jq -r .testnet.seed_package pins.json)" \
+            --argjson server_built "$SERVER_BUILT" \
+            --argjson indexer_built "$INDEXER_BUILT" \
+            '{
+              schema: 1,
+              status: "prepared",
+              version: $version,
+              source_sha: $source_sha,
+              previous_tag: $previous_tag,
+              network: "testnet",
+              vercel: {staged_url: $vercel_url},
+              packages: {
+                game: {original: $game_original, latest: $game_latest},
+                seed: {original: $seed_original, latest: $seed_latest}
+              },
+              images: {
+                server: {repository: "ghcr.io/aresrpg/server", version: $server_version, digest: $server_digest, built: $server_built},
+                indexer: {repository: "ghcr.io/aresrpg/indexer", version: $indexer_version, digest: $indexer_digest, built: $indexer_built}
+              }
+            }' > "$RUNNER_TEMP/production-release/release-manifest.json"
+          cat "$RUNNER_TEMP/production-release/release-manifest.json" >> "$GITHUB_STEP_SUMMARY"
+      - name: retain the production activation record
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: production-release-v${{ needs.tag-and-release.outputs.version }}
+          path: ${{ runner.temp }}/production-release/release-manifest.json
+          if-no-files-found: error
+          retention-days: 90

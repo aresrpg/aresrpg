@@ -136,7 +136,7 @@ async fn main() -> Result<()> {
         .await
         .context("boot connection")?;
     boot::ensure_indexes(&mut boot_conn).await?;
-    boot::bind_package(&mut boot_conn, &package_original).await?;
+    boot::bind_projection(&mut boot_conn, &package_original, &seed_package_original).await?;
     // A RESUMING deploy (a watermark exists) never touches the network at boot
     // (README): lineage was validated when the store was fresh, and the store
     // itself is bound to its chain by the chain-id guard.
@@ -160,6 +160,7 @@ async fn main() -> Result<()> {
     info!(
         redis_url = %redacted_url(&args.redis_url),
         package_original = %package_original,
+        seed_package_original = %seed_package_original,
         package_latest = %package_latest,
         remote_store_url = %redacted_url(args.remote_store_url.as_str()),
         first_checkpoint = ?args.indexer.first_checkpoint,

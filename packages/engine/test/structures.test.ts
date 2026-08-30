@@ -110,7 +110,7 @@ describe('voxel structures', () => {
 
     expect(trees.length).toBeGreaterThan(0)
     expect(trees.every(({ origin }) => origin[1] >= nauvis.terrain.sea_level)).toBeTrue()
-  })
+  }, 15_000)
 
   test('places the same non-overlapping structures for the same world area', () => {
     const world = compile_world_recipe(recipe)

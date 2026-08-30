@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
-import { expect, mock, test } from 'bun:test'
+import { expect, test } from 'bun:test'
 import { renderToStaticMarkup } from 'react-dom/server'
 
 import items from '../../../../seed/content/items.json'
@@ -9,12 +9,6 @@ import mobs from '../../../../seed/content/mobs.json'
 import recipes from '../../../../seed/content/recipes.json'
 import type { ItemRecipeBinding } from '../../src/editor/ItemContentEditor.tsx'
 import type { JsonValue, SeedDomain } from '../../src/editor/seed_editor.ts'
-
-mock.module('../../src/content/assets.ts', () => ({
-  item_icon: (id: string) => `/items/${id}.webp`,
-  mob_icon: (id: string) => `/mobs/${id}.webp`,
-  spell_icon: () => '/spell.webp',
-}))
 
 const { ContentEntityEditor } = await import('../../src/editor/ContentEntityEditor.tsx')
 const { clone_mob_spell, same_family_spell_clones } = await import('../../src/editor/MobContentEditor.tsx')

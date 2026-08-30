@@ -4,12 +4,15 @@
 
 import type { AppCopy } from '../i18n/copy.ts'
 import { copy_text } from '../i18n/copy.ts'
+import type { ZoneReveal } from '../modules/world.ts'
 import { useAppStore } from '../store.ts'
 
 import './zone_reveal_banner.css'
 
-export const ZoneRevealBanner = ({ copy }: Readonly<{ copy: AppCopy }>) => {
-  const reveal = useAppStore(({ world }) => world.zone_reveal)
+export const ZoneRevealContent = ({
+  copy,
+  reveal,
+}: Readonly<{ copy: AppCopy; reveal: Readonly<ZoneReveal> | null }>) => {
   if (!reveal) return null
   const text = copy_text(copy.world_hud)
   const findings = [
@@ -24,4 +27,9 @@ export const ZoneRevealBanner = ({ copy }: Readonly<{ copy: AppCopy }>) => {
       <div className="gw-reveal__findings">{findings.join(' · ')}</div>
     </div>
   )
+}
+
+export const ZoneRevealBanner = ({ copy }: Readonly<{ copy: AppCopy }>) => {
+  const reveal = useAppStore(({ world }) => world.zone_reveal)
+  return <ZoneRevealContent copy={copy} reveal={reveal} />
 }

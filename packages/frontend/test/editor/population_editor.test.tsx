@@ -1,33 +1,8 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
-import { expect, mock, test } from 'bun:test'
+import { expect, test } from 'bun:test'
 import { renderToStaticMarkup } from 'react-dom/server'
-
-mock.module('../../src/content/assets.ts', () => ({
-  item_icon: (id: string) => `/items/${id}.webp`,
-  mob_icon: (id: string) => `/mobs/${id}.webp`,
-}))
-mock.module('../../src/content/catalog.ts', () => ({
-  encyclopedia_catalog: {
-    items: [
-      { item_type: 'wheat', name: 'Wheat', category: 'resource', level: 1 },
-      { item_type: 'golden_wheat', name: 'Golden Wheat', category: 'resource', level: 10 },
-    ],
-    mobs: [
-      { mob_type: 'ant_red', name: 'Red Ant', role: 'normal', element: 'fire', level_min: 1, level_max: 1 },
-      {
-        mob_type: 'protector_wheat',
-        name: 'Wheat Protector',
-        role: 'protector',
-        element: 'earth',
-        level_min: 1,
-        level_max: 10,
-      },
-    ],
-  },
-  titleize: (value: string) => value.replaceAll('_', ' ').replace(/\b\w/g, (letter) => letter.toUpperCase()),
-}))
 
 const { PopulationEditor } = await import('../../src/editor/PopulationEditor.tsx')
 const { SplineEditor } = await import('../../src/editor/BiomeControls.tsx')
