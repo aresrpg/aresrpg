@@ -1,9 +1,9 @@
 {
   "testnet": {
-    "package": "0x39c59ad6e3fcc57545a7f433bae2d417f707a07f492ef65ced8140b3ec094bc1",
+    "package": "0x086085427c4a3fca47b9a0ea5b7ed28ebb0af2fabd2f04ec7a471c1b50c8d839",
     "package_original": "0x39c59ad6e3fcc57545a7f433bae2d417f707a07f492ef65ced8140b3ec094bc1",
     "kiosk_package": "0x0717a13f43deaf5345682153e3633f76cdcf695405959697fcd63f63f289320b",
-    "math_package": "0x53d102be4fdd3bf89e8c6c0eeacf0cfe7bef002903a2eaca9c7d730297ad3ec8",
+    "math_package": "0x15d4ca71dc412a68b88ecbe6ac1d40c5c6957cd4fc72a9c9c4a286b0b400f798",
     "math_package_original": "0x53d102be4fdd3bf89e8c6c0eeacf0cfe7bef002903a2eaca9c7d730297ad3ec8",
     "upgrade_cap": "0x24502221ae801feb759b6816cd1f4873c9bd0f12bab0d01106ed4d85c5d396ae",
     "math_upgrade_cap": "0x5e17730c062b4a5afb6c653ed1fc07fa6a0967c9ae9e1e9e8bec554a05981465",
@@ -47,16 +47,16 @@
       "id": "0x156c01dcf482aa2a4547d4fb5bb7f5948dad8b25ae4b2f5461c034f670e40d52",
       "shared_version": "995736476"
     },
-    "package_artifact_digest": "1189ad6623322d5a3849fda10c6cf432f83c2195ce71c0af7eee2413a70b80a8",
+    "package_artifact_digest": "5767995c4bb060a48bba166d1a08b64e68532f6b3baf5bcab33a8d106abbb17b",
     "control_package": "0x3dea7d84bc5f1d69caec0b5d1362e5b402e80bdd6205a0879637edec5264c9a8",
     "control_package_original": "0x3dea7d84bc5f1d69caec0b5d1362e5b402e80bdd6205a0879637edec5264c9a8",
     "control_upgrade_cap": "0x9ff67509e0cd5d568e7ac0cb88323830d1fec6c10dc51c1657ee171211277f6b",
     "control_artifact_digest": "47abe99fa8b004ca27c2064c537ca0b07a9afddae340676bcba93ada841d0906",
-    "math_artifact_digest": "4eee9255fb2907edf89ff74416dfeb81be69898691f6cd2aa744591759186363",
-    "seed_package": "0x9f172e5ed984e48250429ec1de98503a1197550e1ead7885b8279fc02541bea6",
+    "math_artifact_digest": "5dd2bcd405015e90e0afdb4a0bbca05259dc0403cad20f4280fef32b53d8467b",
+    "seed_package": "0x3db4b73a511f0c5f32ce3cb29215e0b8e7904d26dc8e32f9a56dd71216431b20",
     "seed_package_original": "0x9f172e5ed984e48250429ec1de98503a1197550e1ead7885b8279fc02541bea6",
     "seed_upgrade_cap": "0x004ceb1ff4d76c093ddee6f9a20dac28151fc6dd826bc0bfe926fa19aeb95a89",
-    "seed_artifact_digest": "0549c7cf4b984d348f27b4403a7232f7747999f2eb3f498eb82ba52d0cd45c26",
+    "seed_artifact_digest": "fcb1a8d59e5664cf2896f246db7c94e0420114dac88e82d10f6f1507a7ccf597",
     "content_root": {
       "id": "0xc8af8ac6370836e8b6a9c4f8dd28914d9afa880bf321c126debb4b013e0c2241",
       "shared_version": "995736474"
