@@ -178,7 +178,7 @@ test('the sidebar connection card renders reducer-owned link phases', async () =
   expect(render(51)).toContain('Actions in the game can lag behind')
 })
 
-test('the shell makes a frozen game impossible to miss', async () => {
+test('the shell blocks a paused game with the maintenance modal', async () => {
   const copy = await load_app_copy('en')
   const html = renderToStaticMarkup(
     <AppShell
@@ -198,9 +198,13 @@ test('the shell makes a frozen game impossible to miss', async () => {
     />
   )
 
-  expect(html).toContain('data-game-frozen="true"')
-  expect(html).toContain('The game is currently frozen')
-  expect(html).toContain('bg-[#8f1028]')
+  expect(html).toContain('data-game-maintenance=""')
+  expect(html).toContain('aria-modal="true"')
+  expect(html).toContain('Maintenance in progress')
+  expect(html).toContain('The AresRPG smart contract is temporarily paused for maintenance')
+  expect(html).toContain('from-[#d92d20]')
+  expect(html).not.toContain('data-game-frozen')
+  expect(html).not.toContain('bg-[#8f1028]')
 })
 
 test('the character tab strip lives on character-scoped pages and selects through its tabs', async () => {

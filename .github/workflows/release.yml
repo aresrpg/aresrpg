@@ -37,6 +37,7 @@ permissions:
   actions: read # the prod-deploy job polls the gate run's conclusion
 jobs:
   tag-and-release:
+    if: github.ref == 'refs/heads/master'
     runs-on: ubuntu-latest
     timeout-minutes: 5
     outputs:
@@ -203,12 +204,12 @@ jobs:
       - name: install
         run: bun install --frozen-lockfile
       - name: pull the Vercel environment
-        run: bunx vercel pull --yes --environment=production --token="$VERCEL_TOKEN"
+        run: bunx vercel pull --yes --environment=production --scope aresrpg --token="$VERCEL_TOKEN"
       - name: build
-        run: bunx vercel build --prod --token="$VERCEL_TOKEN"
+        run: bunx vercel build --prod --scope aresrpg --token="$VERCEL_TOKEN"
       - name: stage v${{ needs.tag-and-release.outputs.version }} without moving production domains
         id: deploy
-        run: echo "url=$(bunx vercel deploy --prebuilt --prod --skip-domain --token="$VERCEL_TOKEN")" >> "$GITHUB_OUTPUT"
+        run: echo "url=$(bunx vercel deploy --prebuilt --prod --skip-domain --scope aresrpg --token="$VERCEL_TOKEN")" >> "$GITHUB_OUTPUT"
 
   backend-plan:
     needs: tag-and-release
@@ -302,6 +303,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     permissions:
+      artifact-metadata: write
       attestations: write
       contents: read
       id-token: write
@@ -376,6 +378,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 45
     permissions:
+      artifact-metadata: write
       attestations: write
       contents: read
       id-token: write

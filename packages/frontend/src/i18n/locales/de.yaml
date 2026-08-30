@@ -59,7 +59,8 @@ indexing_block_progress: Fortschritt
 indexing_block_remaining: Verbleibende Checkpoints
 indexing_block_eta: Geschätzte Zeit
 indexing_block_estimating: Berechnung…
-game_frozen: Das Spiel ist derzeit eingefroren. Weitere Informationen findest du auf Discord.
+game_maintenance_title: Wartungsarbeiten
+game_maintenance_body: Der AresRPG-Smart-Contract ist wegen Wartungsarbeiten vorübergehend pausiert. Aktuelle Informationen findest du auf Discord.
 gas_budget_toast: Diese Aktion war zu schwer für die reservierte Netzwerkgebühr. Sie wurde nicht ausgeführt und hat dich nichts gekostet — bitte melde es.
 game_paused_toast: Das Spiel ist für ein Update pausiert. Deine Aktion wurde nicht ausgeführt — versuche es in ein paar Minuten erneut.
 movement_sync_toast: Deine Position wird noch synchronisiert. Bewege dich normal weiter und versuche es gleich noch einmal.

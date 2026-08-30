@@ -67,7 +67,8 @@ export type AppCopy = Readonly<{
   indexing_block_remaining: string
   indexing_block_eta: string
   indexing_block_estimating: string
-  game_frozen: string
+  game_maintenance_title: string
+  game_maintenance_body: string
   gas_budget_toast: string
   game_paused_toast: string
   movement_sync_toast: string

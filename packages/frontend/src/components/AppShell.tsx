@@ -18,6 +18,7 @@ import { CharacterTabs, character_tabs_visible } from './CharacterTabs.tsx'
 import { SessionReplacedModal } from './SessionReplacedModal.tsx'
 import { Sidebar } from './Sidebar.tsx'
 import { ConnectionCard, DiscordCard, LanguageCard } from './SidebarCards.tsx'
+import { MaintenanceModal } from './MaintenanceModal.tsx'
 import { WalletCard } from './WalletCard.tsx'
 import { TradeInbox } from './TradeInbox.tsx'
 
@@ -164,15 +165,7 @@ export const AppShell = ({
   return (
     <div className="pointer-events-none fixed inset-0 z-[10] flex h-dvh flex-col gap-3 overflow-hidden p-3">
       {session.link_status === 'replaced' && <SessionReplacedModal copy={copy} />}
-      {session.game_frozen === true && (
-        <aside
-          className="pointer-events-auto border border-[#ff496c]/80 bg-[#8f1028] px-4 py-3 text-center text-[11px] font-bold tracking-[0.12em] text-white uppercase shadow-[0_0_30px_rgba(255,35,78,0.38)]"
-          data-game-frozen
-          role="alert"
-        >
-          {copy.game_frozen}
-        </aside>
-      )}
+      {session.game_frozen === true && <MaintenanceModal copy={copy} />}
       <div className="flex min-h-0 flex-1 gap-3 overflow-hidden">
         <div className="pointer-events-auto flex min-h-0 shrink-0 flex-col gap-3 overflow-hidden">
           <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto">

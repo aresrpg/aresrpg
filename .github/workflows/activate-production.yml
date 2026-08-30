@@ -84,9 +84,9 @@ jobs:
           done
           echo "url=$(jq -r .vercel.staged_url "$manifest")" >> "$GITHUB_OUTPUT"
       - name: inspect the staged production deployment
-        run: bunx vercel inspect "${{ steps.manifest.outputs.url }}" --token="$VERCEL_TOKEN"
+        run: bunx vercel inspect "${{ steps.manifest.outputs.url }}" --scope aresrpg --token="$VERCEL_TOKEN"
       - name: promote the prepared deployment without rebuilding
-        run: bunx vercel promote "${{ steps.manifest.outputs.url }}" --yes --token="$VERCEL_TOKEN"
+        run: bunx vercel promote "${{ steps.manifest.outputs.url }}" --yes --scope aresrpg --token="$VERCEL_TOKEN"
       - name: verify production answers
         run: curl --fail --silent --show-error --retry 6 --retry-all-errors --retry-delay 5 https://aresrpg.world/ >/dev/null
       - name: publish the prepared GitHub Release

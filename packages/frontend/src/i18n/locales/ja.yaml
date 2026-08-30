@@ -59,7 +59,8 @@ indexing_block_progress: 進捗
 indexing_block_remaining: 残りチェックポイント
 indexing_block_eta: 推定時間
 indexing_block_estimating: 計算中…
-game_frozen: 現在ゲームは凍結されています。詳しくはDiscordをご確認ください。
+game_maintenance_title: メンテナンス中
+game_maintenance_body: AresRPGのスマートコントラクトはメンテナンスのため一時停止中です。最新情報はDiscordをご確認ください。
 gas_budget_toast: このアクションは確保しているネットワーク手数料を超えました。実行されておらず、費用もかかっていません。ご報告ください。
 game_paused_toast: アップデートのためゲームは一時停止中です。アクションは実行されませんでした。数分後にもう一度お試しください。
 movement_sync_toast: 位置情報を同期しています。通常どおり移動し、少し待ってからもう一度お試しください。

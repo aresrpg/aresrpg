@@ -75,12 +75,12 @@ jobs:
       - name: install
         run: bun install --frozen-lockfile
       - name: pull the Vercel environment
-        run: bunx vercel pull --yes --environment=preview --git-branch=edge --token="$VERCEL_TOKEN"
+        run: bunx vercel pull --yes --environment=preview --git-branch=edge --scope aresrpg --token="$VERCEL_TOKEN"
       - name: build
-        run: bunx vercel build --token="$VERCEL_TOKEN"
+        run: bunx vercel build --scope aresrpg --token="$VERCEL_TOKEN"
       - name: deploy the prebuilt output
         id: deploy
-        run: echo "url=$(bunx vercel deploy --prebuilt --token="$VERCEL_TOKEN")" >> "$GITHUB_OUTPUT"
+        run: echo "url=$(bunx vercel deploy --prebuilt --scope aresrpg --token="$VERCEL_TOKEN")" >> "$GITHUB_OUTPUT"
       - name: point edge.aresrpg.world at the fresh edge deploy
         # `alias set` is the one CLI command that ignores VERCEL_ORG_ID and falls back to the
         # token's personal scope — the explicit team scope is mandatory here.

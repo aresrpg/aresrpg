@@ -59,7 +59,8 @@ indexing_block_progress: Progreso
 indexing_block_remaining: Puntos de control restantes
 indexing_block_eta: Tiempo estimado
 indexing_block_estimating: Calculando…
-game_frozen: El juego está actualmente congelado. Consulta Discord para más información.
+game_maintenance_title: Mantenimiento en curso
+game_maintenance_body: El contrato inteligente de AresRPG está temporalmente en pausa por mantenimiento. Consulta Discord para seguir las novedades.
 gas_budget_toast: Esta acción superó la tarifa de red que reservamos. No se ejecutó y no te costó nada — por favor, repórtalo.
 game_paused_toast: El juego está en pausa por una actualización. Tu acción no se ejecutó — inténtalo de nuevo en unos minutos.
 movement_sync_toast: Tu posición aún se está sincronizando. Sigue moviéndote con normalidad e inténtalo de nuevo en un momento.
