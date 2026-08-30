@@ -27286,7 +27286,7 @@
           }
         },
         "0xeb31a49a43dc287c41ae63ff9ce17bfc080b9219822c3ef2d65881338d5962bc": {
-          "hash": "645390c6de3b0ed6",
+          "hash": "bc678f34489d419a",
           "label": "spell Frightening Word",
           "addresses": ["0xeb31a49a43dc287c41ae63ff9ce17bfc080b9219822c3ef2d65881338d5962bc"],
           "domain": "spell",
@@ -28940,13 +28940,13 @@
           "domain": "mob"
         },
         "0x8d2b5730e4f7ae1931dc79ed52269e844bc1038b3f7f800a737740f4ea303d8c": {
-          "hash": "0c5fb12761ada462",
+          "hash": "b396af11d135ce3e",
           "label": "mob fuwa__white",
           "addresses": ["0x8d2b5730e4f7ae1931dc79ed52269e844bc1038b3f7f800a737740f4ea303d8c"],
           "domain": "mob"
         },
         "0x20b002d59b7e93be66c114c88483fb1aaadeb0b2720f70e3fddd26322c2ab56a": {
-          "hash": "fd5e8626be567b47",
+          "hash": "2b7e4cfd9d9a52a7",
           "label": "mob fuwa__black",
           "addresses": ["0x20b002d59b7e93be66c114c88483fb1aaadeb0b2720f70e3fddd26322c2ab56a"],
           "domain": "mob"
@@ -29216,7 +29216,7 @@
           "domain": "recipe"
         },
         "0xc31bcffa7f06b1f5d65c0fa87563e6ab173ca99df12108fad0057432039030da": {
-          "hash": "524d987495f1ddb7",
+          "hash": "d1b3947203dc03c3",
           "label": "recipe old_hoe",
           "addresses": ["0xc31bcffa7f06b1f5d65c0fa87563e6ab173ca99df12108fad0057432039030da"],
           "domain": "recipe"
