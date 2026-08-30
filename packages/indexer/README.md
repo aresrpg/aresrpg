@@ -41,15 +41,17 @@ and append the configured latest package to the stored activity lineage.
 ## Storage laws
 
 - Output objects, dynamic fields, custody, and deleted pre-state are the graph writers.
-- Events feed pub/sub, sales history, and analytics; successful game-package calls feed activity.
+- Events feed pub/sub, sales history, and analytics; successful non-deployment game-package calls feed activity.
   Realized market price remains the sole event-derived graph value because no object contains it.
 - Exact money and Character lifecycle observations are written once to daily hashes under their
   stable checkpoint coordinates. Replays overwrite the same fields. The server derives the five
   visible chart intervals at read time, while the current Character total comes from graph nodes.
 - Successful callers use ordinary address sets for active-player ranges and one first-interaction
   sorted-set entry for lifetime unique addresses. Successful game transaction volume uses one
-  numeric field per checkpoint in each visible bucket; replays overwrite that checkpoint's count.
-  There are no transaction digests, custom Lua, or analytics schema state.
+  numeric field per checkpoint in each visible bucket and one permanent all-time hash. Net gas for
+  every non-deployment game attempt uses parallel exact-MIST hashes, including failed executions;
+  publish, upgrade, seed, bootstrap, and pause/resume costs stay outside gameplay analytics. Replays
+  overwrite the same checkpoint fields. There are no transaction digests, custom Lua, or analytics schema state.
 - Shop details prune by timestamp to 90 days. Server-mesh online samples are best effort and expire.
 - Every large integer and money value is stored as a decimal string.
 - Writers update only the properties they own; sparse dynamic-field outputs never replace a node.

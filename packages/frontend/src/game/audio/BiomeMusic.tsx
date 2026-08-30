@@ -71,9 +71,13 @@ export const BiomeMusic = () => {
   }, [sampled_biome, world_name, pose])
 
   const biome_key = biome_follow.armed
+  const biome_keys = useMemo(
+    () => Object.freeze((compiled?.biomes ?? []).map(({ name }) => `${world_name ?? 'guest'}:${name}`)),
+    [compiled, world_name]
+  )
   const source =
     enabled && world_scene_active(page, fight_active) && biome_key
-      ? biome_music_pair(biome_key)[fight_active ? 'battle' : 'roam']
+      ? biome_music_pair(biome_key, biome_keys)[fight_active ? 'battle' : 'roam']
       : null
 
   useEffect(() => {

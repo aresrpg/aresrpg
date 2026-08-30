@@ -56,7 +56,10 @@ export const FpsPanel = ({
   }, [active])
 
   return (
-    <HudPanel className="pointer-events-auto flex w-fit items-stretch overflow-hidden !rounded-[9px] text-[8px] tracking-[0.14em] uppercase">
+    <HudPanel
+      className="pointer-events-auto flex w-fit items-stretch overflow-hidden !rounded-[9px] text-[8px] tracking-[0.14em] uppercase"
+      data-tutorial-target="fps"
+    >
       <div className="flex items-center gap-1.5 px-2 py-1.5">
         <span className="text-[#8d9099]">FPS</span>
         <output className="w-6 text-right text-[#67adff] tabular-nums">{fps ?? '—'}</output>

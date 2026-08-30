@@ -22,7 +22,14 @@ import type { AdminRevenue } from './AdminWalletPanel.tsx'
 import type { AdminOverviewState } from './admin_state.ts'
 import { MetricChart, type MetricSeries } from './MetricChart.tsx'
 
-const COLORS = Object.freeze({ gold: '#c8963c', blue: '#70bdf2', violet: '#ac8dde', white: '#e8e4dc' })
+const COLORS = Object.freeze({
+  gold: '#c8963c',
+  blue: '#70bdf2',
+  violet: '#ac8dde',
+  white: '#e8e4dc',
+  cyan: '#55c7b6',
+  orange: '#d97745',
+})
 const text = (copy: Readonly<Record<string, string>>, key: string, fallback: string): string => copy[key] || fallback
 const sui_number = (mist: string): number => Number(BigInt(mist)) / 1_000_000_000
 const display_count = (value: number | null | undefined): string =>
@@ -129,6 +136,16 @@ const revenue_series = (
       label: text(copy, 'character_royalties', 'Character royalties'),
       color: COLORS.white,
       values: revenue.money.map((row) => sui_number(row.character_royalty_mist)),
+    }),
+    Object.freeze({
+      label: text(copy, 'character_creation_revenue', 'Character creation'),
+      color: COLORS.cyan,
+      values: revenue.money.map((row) => sui_number(row.character_creation_mist)),
+    }),
+    Object.freeze({
+      label: text(copy, 'kolizeum_revenue', 'Kolizeum fees'),
+      color: COLORS.orange,
+      values: revenue.money.map((row) => sui_number(row.kolizeum_mist)),
     }),
   ])
 
@@ -334,9 +351,15 @@ export const OverviewPage = ({ copy }: Readonly<{ copy: Readonly<Record<string, 
           value={characters.total.toLocaleString()}
         />
         <KpiCard
-          detail={admin_range_label(copy, overview.ranges.transactions)}
+          detail={`${admin_range_label(copy, overview.ranges.transactions)} · ${text(copy, 'all_time', 'All time')} ${transactions.all_time.toLocaleString()}`}
           label={text(copy, 'game_transactions', 'Game transactions')}
           value={transactions.total.toLocaleString()}
+        />
+        <KpiCard
+          detail={`${text(copy, 'all_time', 'All time')} ${format_sui(BigInt(transactions.gas_all_time_mist), 4)} SUI`}
+          label={text(copy, 'game_gas_fees', 'Game gas fees (24h)')}
+          tone="gold"
+          value={`${format_sui(BigInt(transactions.gas_24h_mist), 4)} SUI`}
         />
       </div>
       <div className="mt-3">
@@ -351,7 +374,7 @@ export const OverviewPage = ({ copy }: Readonly<{ copy: Readonly<Record<string, 
             days={overview.ranges.revenue}
             loading={!!overview.pending.revenue}
             series={revenue_series(copy, revenue)}
-            subtitle={text(copy, 'revenue_over_time_body', 'Shop revenue and marketplace royalties')}
+            subtitle={text(copy, 'revenue_over_time_body', 'All protocol revenue by source')}
             title={text(copy, 'revenue_over_time', 'Revenue over time')}
           />
           <ChartPanel

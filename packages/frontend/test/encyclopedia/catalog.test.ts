@@ -4,14 +4,17 @@
 import { describe, expect, test } from 'bun:test'
 import { gatherable_catalog } from '@aresrpg/immutable'
 
+import items from '../../../../seed/content/items.json'
+import mobs from '../../../../seed/content/mobs.json'
 import recipes from '../../../../seed/content/recipes.json'
+import spells from '../../../../seed/content/spells.json'
 import { encyclopedia_catalog } from '../../src/content/catalog.ts'
 
 describe('local encyclopedia catalog', () => {
   test('projects every authored content corpus without a remote read model', () => {
-    expect(encyclopedia_catalog.items).toHaveLength(196)
-    expect(encyclopedia_catalog.mobs).toHaveLength(55)
-    expect(encyclopedia_catalog.spells).toHaveLength(240)
+    expect(encyclopedia_catalog.items).toHaveLength(items.length)
+    expect(encyclopedia_catalog.mobs).toHaveLength(mobs.length)
+    expect(encyclopedia_catalog.spells).toHaveLength(spells.length)
     expect(encyclopedia_catalog.recipes.map(({ output_type }) => output_type)).toEqual(
       recipes.map(({ output_type }) => output_type)
     )
@@ -19,41 +22,25 @@ describe('local encyclopedia catalog', () => {
   })
 
   test('derives item and mob cross-links from seed facts', () => {
+    const recipe = recipes.find(({ output_type }) => output_type === 'wheat_flour')
+    if (!recipe) throw new Error('wheat_flour has no authored recipe')
     const flour = encyclopedia_catalog.item('wheat_flour')
     expect(flour?.recipe?.job).toBe('FARMER')
-    expect(flour?.recipe?.ingredients.map(({ item_type, quantity }) => [item_type, quantity])).toEqual([
-      ['wheat', 2],
-      ['water', 1],
-    ])
+    expect(flour?.recipe?.ingredients.map(({ item_type, quantity }) => [item_type, quantity])).toEqual(
+      Object.entries(recipe.inputs)
+    )
 
     expect(encyclopedia_catalog.item('wheat')?.worlds.map(({ world }) => world)).toEqual(['nauvis'])
-    expect(
-      encyclopedia_catalog.mob('fuwa__white')?.loot.map(({ drop: { item_type, chance_bp } }) => [item_type, chance_bp])
-    ).toEqual([
-      ['fuwa_wool', 6_000],
-      ['fuwa_hide', 4_000],
-      ['fuwa_horn', 3_000],
-      ['fuwa_eye', 3_000],
-      ['key_of_tangled_aftermath', 200],
-    ])
-    expect(
-      encyclopedia_catalog.mob('fuwa__black')?.loot.map(({ drop: { item_type, chance_bp } }) => [item_type, chance_bp])
-    ).toEqual([
-      ['nifuwa_wool', 6_000],
-      ['nifuwa_hide', 4_000],
-      ['fuwa_horn', 4_000],
-      ['fuwa_eye', 4_000],
-      ['key_of_tangled_aftermath', 200],
-    ])
-    expect(
-      encyclopedia_catalog.mob('fuwa__fukuo')?.loot.map(({ drop: { item_type, chance_bp } }) => [item_type, chance_bp])
-    ).toEqual([
-      ['fuwa_hide', 8_000],
-      ['fuwa_horn', 8_000],
-      ['fuwa_eye', 8_000],
-      ['fukuo_tidal_horn', 10_000],
-      ['key_of_tangled_aftermath', 8_000],
-    ])
+    const source = mobs.find(({ mob_type }) => mob_type === 'fuwa__white')
+    if (!source) throw new Error('fuwa__white has no authored mob')
+    expect(encyclopedia_catalog.mob(source.mob_type)?.loot.map(({ drop }) => drop)).toEqual(source.loot)
+    source.loot.forEach((drop) =>
+      expect(
+        encyclopedia_catalog
+          .item(drop.item_type)
+          ?.dropped_by.some(({ mob, drop: reverse }) => mob.mob_type === source.mob_type && reverse === drop)
+      ).toBeTrue()
+    )
   })
 
   test('keeps pets absent and restores only the deterministic protector resource bags', () => {

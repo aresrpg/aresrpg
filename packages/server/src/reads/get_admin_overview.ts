@@ -31,6 +31,8 @@ const DAY_MS = 24 * 60 * 60 * 1_000
 const WEEK_MS = 7 * DAY_MS
 const SHOP_RETENTION_MS = 90 * DAY_MS
 const SHOP_PAGE = 30
+const TRANSACTIONS_ALL_KEY = 'analytics:transactions:all'
+const GAS_ALL_KEY = 'analytics:gas:all'
 
 const bucket_start = (at_ms: number, width_ms: number): number => Math.floor(at_ms / width_ms) * width_ms
 const bucket_range = (from_ms: number, to_ms: number, width_ms: number): readonly number[] => {
@@ -73,6 +75,13 @@ const range_buckets = (days: AdminRangeDays, now_ms: number) => {
 const bigint = (value: string | undefined): bigint => BigInt(value ?? '0')
 const integer = (value: string | undefined): number => Number.parseInt(value ?? '0', 10) || 0
 const average = (sum: number, count: number): number => (count > 0 ? Math.round(sum / count) : 0)
+const sum_hash_values = (rows: readonly Readonly<Record<string, string>>[]): bigint =>
+  rows.reduce((total, row) => total + Object.values(row).reduce((sum, value) => sum + BigInt(value), 0n), 0n)
+const safe_count = (value: bigint, label: string): number => {
+  const count = Number(value)
+  if (!Number.isSafeInteger(count) || count < 0) throw new Error(`${label} is outside the safe count range`)
+  return count
+}
 
 const graph_doors = (graph: GraphBus) => {
   const { analytics_hashes, analytics_counts, analytics_sums, analytics_sets, analytics_cumulative_counts } = graph
@@ -93,14 +102,27 @@ type MoneyObservation = Readonly<{
   shop_orders: string
   item_royalty_mist: string
   character_royalty_mist: string
+  character_creation_mist: string
+  kolizeum_mist: string
 }>
+
+const optional_revenue = (value: unknown): string => {
+  if (value === undefined) return '0'
+  if (typeof value !== 'string') throw new Error('admin money observation has an invalid revenue shape')
+  return value
+}
 
 const parse_money = (raw: string): MoneyObservation => {
   const row = JSON.parse(raw) as Record<string, unknown>
   const strings = ['shop_mist', 'shop_orders', 'item_royalty_mist', 'character_royalty_mist']
   if (typeof row.ts_ms !== 'number' || !strings.every((field) => typeof row[field] === 'string'))
     throw new Error('admin money observation has an invalid shape')
-  return row as MoneyObservation
+  const { character_creation_mist, kolizeum_mist } = row
+  return Object.freeze({
+    ...(row as Omit<MoneyObservation, 'character_creation_mist' | 'kolizeum_mist'>),
+    character_creation_mist: optional_revenue(character_creation_mist),
+    kolizeum_mist: optional_revenue(kolizeum_mist),
+  })
 }
 
 const money_point = (at_ms: number, rows: readonly MoneyObservation[]): AdminMoneyPoint =>
@@ -110,6 +132,8 @@ const money_point = (at_ms: number, rows: readonly MoneyObservation[]): AdminMon
     shop_orders: rows.reduce((sum, row) => sum + bigint(row.shop_orders), 0n).toString(),
     item_royalty_mist: rows.reduce((sum, row) => sum + bigint(row.item_royalty_mist), 0n).toString(),
     character_royalty_mist: rows.reduce((sum, row) => sum + bigint(row.character_royalty_mist), 0n).toString(),
+    character_creation_mist: rows.reduce((sum, row) => sum + bigint(row.character_creation_mist), 0n).toString(),
+    kolizeum_mist: rows.reduce((sum, row) => sum + bigint(row.kolizeum_mist), 0n).toString(),
   })
 
 const money_bucket = (tier: AdminBucket, at_ms: number): number => {
@@ -175,8 +199,17 @@ const sum_money = (rows: readonly AdminMoneyPoint[]) =>
       shop_orders: total.shop_orders + bigint(row.shop_orders),
       item_royalty_mist: total.item_royalty_mist + bigint(row.item_royalty_mist),
       character_royalty_mist: total.character_royalty_mist + bigint(row.character_royalty_mist),
+      character_creation_mist: total.character_creation_mist + bigint(row.character_creation_mist),
+      kolizeum_mist: total.kolizeum_mist + bigint(row.kolizeum_mist),
     }),
-    { shop_mist: 0n, shop_orders: 0n, item_royalty_mist: 0n, character_royalty_mist: 0n }
+    {
+      shop_mist: 0n,
+      shop_orders: 0n,
+      item_royalty_mist: 0n,
+      character_royalty_mist: 0n,
+      character_creation_mist: 0n,
+      kolizeum_mist: 0n,
+    }
   )
 
 const load_revenue = async (graph: GraphBus, days: AdminRangeDays, now_ms: number): Promise<AdminRevenueOverview> => {
@@ -203,7 +236,13 @@ const load_revenue = async (graph: GraphBus, days: AdminRangeDays, now_ms: numbe
     ),
   ])
   const revenue_total = (row: ReturnType<typeof sum_money>): string =>
-    (row.shop_mist + row.item_royalty_mist + row.character_royalty_mist).toString()
+    (
+      row.shop_mist +
+      row.item_royalty_mist +
+      row.character_royalty_mist +
+      row.character_creation_mist +
+      row.kolizeum_mist
+    ).toString()
   return Object.freeze({
     days,
     bucket: buckets.tier,
@@ -211,6 +250,8 @@ const load_revenue = async (graph: GraphBus, days: AdminRangeDays, now_ms: numbe
     shop_orders: selected.shop_orders.toString(),
     item_royalty_mist: selected.item_royalty_mist.toString(),
     character_royalty_mist: selected.character_royalty_mist.toString(),
+    character_creation_mist: selected.character_creation_mist.toString(),
+    kolizeum_mist: selected.kolizeum_mist.toString(),
     last_30d_revenue_mist: revenue_total(last_30d),
     month_to_date_revenue_mist: revenue_total(month_to_date),
     money,
@@ -250,10 +291,15 @@ const load_transactions = async (
   days: AdminRangeDays,
   now_ms: number
 ): Promise<AdminTransactionsOverview> => {
-  const { analytics_sums } = graph_doors(graph)
+  const { analytics_hashes, analytics_sums } = graph_doors(graph)
   const buckets = range_buckets(days, now_ms)
   const keys = buckets.values.map((bucket) => `analytics:transactions:${buckets.tier}:${bucket}`)
-  const counts = await analytics_sums(keys)
+  const gas_24h_keys = recent_buckets(now_ms, 96, INTERVAL_MS).map((bucket) => `analytics:gas:15m:${bucket}`)
+  const [counts, [all_transactions], gas] = await Promise.all([
+    analytics_sums(keys),
+    analytics_hashes([TRANSACTIONS_ALL_KEY]),
+    analytics_hashes([GAS_ALL_KEY, ...gas_24h_keys]),
+  ])
   const transactions = Object.freeze(
     buckets.values.map((at_ms, index) => Object.freeze({ at_ms, transactions: counts[index] ?? 0 }))
   )
@@ -261,6 +307,9 @@ const load_transactions = async (
     days,
     bucket: buckets.tier,
     total: transactions.reduce((total, point) => total + point.transactions, 0),
+    all_time: safe_count(sum_hash_values([all_transactions ?? {}]), 'all-time transaction count'),
+    gas_24h_mist: sum_hash_values(gas.slice(1)).toString(),
+    gas_all_time_mist: sum_hash_values(gas.slice(0, 1)).toString(),
     transactions,
   })
 }

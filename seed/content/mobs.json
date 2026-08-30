@@ -6330,7 +6330,19 @@
       },
       {
         "item_type": "key_of_tangled_aftermath",
-        "chance_bp": 200,
+        "chance_bp": 300,
+        "min_qty": 1,
+        "max_qty": 1
+      },
+      {
+        "item_type": "coiffe_fuwa__white",
+        "chance_bp": 50,
+        "min_qty": 1,
+        "max_qty": 1
+      },
+      {
+        "item_type": "cape_fuwa__white",
+        "chance_bp": 50,
         "min_qty": 1,
         "max_qty": 1
       }
@@ -6476,7 +6488,19 @@
       },
       {
         "item_type": "key_of_tangled_aftermath",
-        "chance_bp": 200,
+        "chance_bp": 300,
+        "min_qty": 1,
+        "max_qty": 1
+      },
+      {
+        "item_type": "cape_fuwa__black",
+        "chance_bp": 50,
+        "min_qty": 1,
+        "max_qty": 1
+      },
+      {
+        "item_type": "coiffe_fuwa__black",
+        "chance_bp": 50,
         "min_qty": 1,
         "max_qty": 1
       }

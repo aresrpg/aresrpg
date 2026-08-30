@@ -6,6 +6,7 @@
 import { CHANNELS, CONTRACT_CONSTANTS, EFFECT_KINDS } from './move_contract.gen.ts'
 import { xp_for_player } from './fight_math.ts'
 import { add_effect_id, effect_id_at, emit } from './runtime.ts'
+import { drop_owned_zones } from './zone_lifecycle.ts'
 import type {
   ActiveEffect,
   FightRuntime,
@@ -301,6 +302,7 @@ export const kill_fighter = (runtime: FightRuntime, seat: bigint, source: bigint
   fighter.dead = true
   fighter.hp = 0n
   if (!was_dead) emit(runtime, 'fighter_died', { fighter: seat, source, cause, cell: fighter.cell })
+  if (!was_dead) drop_owned_zones(runtime, seat, 'owner_died')
   if (!runtime.contract.ended && living_count(runtime.contract.fighters, fighter.team) === 0n) {
     runtime.contract.ended = true
     const team_a = living_count(runtime.contract.fighters, 0n) > 0n
@@ -415,7 +417,7 @@ export const heal_seat = (
   return healed
 }
 
-export const has_row = (runtime: FightRuntime, seat: bigint, kind: bigint): boolean =>
+export const has_row = (runtime: FightReadState, seat: bigint, kind: bigint): boolean =>
   runtime.contract.fighters[Number(seat)].effects.some((row) => row.kind === kind)
 
 export const sum_effect_rows = sum_rows

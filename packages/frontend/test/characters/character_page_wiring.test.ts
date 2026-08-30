@@ -43,3 +43,12 @@ test('character detail tabs have stable deep links for level-up allocation', () 
   expect(character_detail_tab('/characters/nope')).toBe('equipment')
   expect(character_detail_path('stats')).toBe('/characters/stats')
 })
+
+test('short and narrow screens scroll the whole stats sheet instead of clipping its pinned regions', () => {
+  const styles = source('stats_panels.css')
+
+  expect(styles).toContain('@media (max-height: 800px), (max-width: 700px)')
+  expect(styles).toContain('overflow-y: auto;')
+  expect(styles).toContain('overscroll-behavior: contain;')
+  expect(styles).toContain('grid-template-columns: repeat(2, 1fr);')
+})

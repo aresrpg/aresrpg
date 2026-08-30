@@ -33,15 +33,19 @@ export const party_run_distance = (run: RunTo | null, pose: WorldPose | null, ch
 
 const PartyDistanceProgress = ({ distance, running = false }: Readonly<{ distance: number; running?: boolean }>) => {
   const initial = useRef(distance)
+  const known = Number.isFinite(distance)
   const distance_percent = running
     ? run_to_progress_percent(initial.current, distance)
-    : Math.max(0, 100 - (Math.min(distance, 64) / 64) * 100)
+    : known
+      ? Math.max(0, 100 - (Math.min(distance, 64) / 64) * 100)
+      : 0
+  const label = known ? `${Math.ceil(distance)}m` : '—'
   return (
-    <span className={`party-distance-progress${running ? ' is-running' : ''}`} title={`${Math.ceil(distance)}m`}>
+    <span className={`party-distance-progress${running ? ' is-running' : ''}`} title={label}>
       <i>
         <em style={{ width: `${distance_percent}%` }} />
       </i>
-      <small>{Math.ceil(distance)}m</small>
+      <small>{label}</small>
     </span>
   )
 }

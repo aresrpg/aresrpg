@@ -70,6 +70,7 @@ describe('fight entity rendering', () => {
       new AnimationClip('Armature|FALL', 1),
       new AnimationClip('Armature|WALK', 1),
       new AnimationClip('IDLE', 1),
+      new AnimationClip('DANCE', 1),
     ])
     const cases: readonly { clips: readonly AnimationClip[]; requested: CharacterAnimationName; resolved: string }[] = [
       // The requested clip wins over an earlier compound jump clip.
@@ -79,6 +80,7 @@ describe('fight entity rendering', () => {
       { clips: namespaced, requested: 'FALL', resolved: 'Armature|FALL' },
       { clips: namespaced, requested: 'SWIM', resolved: 'Armature|WALK' },
       { clips: namespaced, requested: 'SIT', resolved: 'IDLE' },
+      { clips: namespaced, requested: 'DANCE', resolved: 'DANCE' },
     ]
 
     cases.forEach(({ clips: available, requested, resolved }) => {

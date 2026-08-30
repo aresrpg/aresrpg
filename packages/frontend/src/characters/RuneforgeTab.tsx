@@ -269,7 +269,7 @@ export default function RuneforgeTab({
   const pool = pool_tab === 'gear' ? gear : runes
 
   return (
-    <div className="chr-forge">
+    <div className="chr-forge" data-tutorial-target="character_runeforge">
       <div className="chr-forge__head">
         <span className="text-[11px] font-semibold tracking-[0.28em] text-gold uppercase">{t('tab_runeforge')}</span>
         <span className="text-[9px] tracking-[0.14em] text-muted uppercase">

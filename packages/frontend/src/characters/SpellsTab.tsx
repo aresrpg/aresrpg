@@ -85,7 +85,7 @@ export default function SpellsTab({ character, copy }: Readonly<{ character: Rea
   }
 
   return (
-    <div className="sb">
+    <div className="sb" data-tutorial-target="character_spells">
       {/* header — identity + spell-points capital */}
       <div className="sb__top">
         <div className="sb__crest">

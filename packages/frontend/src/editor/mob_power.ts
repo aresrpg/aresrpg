@@ -5,6 +5,7 @@ import { dofus_mob_power_envelope, item_stat_center } from '@aresrpg/immutable'
 import {
   mob_band_scaled,
   mob_centered_band_scaled,
+  mob_effect_value_scaled,
   mob_loot_chance_scaled,
   mob_pool_scaled,
   point_removal_chance,
@@ -54,6 +55,8 @@ const number = (value: JsonValue | undefined): number =>
   typeof value === 'number' && Number.isFinite(value) ? Math.floor(value) : 0
 const scaled = (value: number, low: number, high: number, level: number): number =>
   Number(mob_band_scaled(BigInt(value), BigInt(low), BigInt(high), BigInt(level)))
+const effect_scaled = (value: number, low: number, high: number, level: number): number =>
+  Number(mob_effect_value_scaled(BigInt(value), BigInt(low), BigInt(high), BigInt(level)))
 const pool_scaled = (value: number, low: number, high: number, level: number): number =>
   Number(mob_pool_scaled(BigInt(value), BigInt(low), BigInt(high), BigInt(level)))
 const ap_mp_dodge = (wisdom: number): number =>
@@ -89,8 +92,8 @@ const direct_damage = (effects: readonly JsonValue[], low: number, high: number,
       return kind === 0 || (kind === 6 && number(effect.stat) === 12 && number(effect.turns) === 0)
     })
     .reduce((sum, effect) => {
-      const from = scaled(number(effect.value), low, high, level)
-      const to = scaled(number(effect.value_max), low, high, level)
+      const from = effect_scaled(number(effect.value), low, high, level)
+      const to = effect_scaled(number(effect.value_max), low, high, level)
       return sum + ((from + to) / 2) * (number(effect.chance_bp) / 10_000)
     }, 0)
 

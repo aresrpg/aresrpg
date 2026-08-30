@@ -12,7 +12,9 @@ describe('next spell turn projection', () => {
   test('draws one stable critical result per spell for the whole turn', () => {
     const checkpoint = structuredClone(create_fixture().checkpoint)
     checkpoint.contract.turn_seed = 5n
-    checkpoint.sources.spells.slash!.levels[0]!.crit_1_in = 3n
+    const level = checkpoint.sources.spells.slash!.levels[0]!
+    level.crit_1_in = 3n
+    level.crit_effects = structuredClone(level.effects)
     checkpoint.sources.spells.stab = structuredClone(checkpoint.sources.spells.slash!)
 
     expect(project_spell_turn(checkpoint, 0n, 'slash')?.critical).toBeTrue()
@@ -21,6 +23,16 @@ describe('next spell turn projection', () => {
     checkpoint.contract.turn_slot = 9n
     expect(project_spell_turn(checkpoint, 0n, 'slash')?.critical).toBeTrue()
     expect(project_spell_turn(checkpoint, 0n, 'stab')?.critical).toBeFalse()
+  })
+
+  test('a successful draw without authored critical rows remains a normal cast', () => {
+    const checkpoint = structuredClone(create_fixture().checkpoint)
+    const level = checkpoint.sources.spells.slash.levels[0]!
+    checkpoint.contract.turn_seed = 5n
+    level.crit_1_in = 3n
+    level.crit_effects = []
+
+    expect(project_spell_turn(checkpoint, 0n, 'slash')?.critical).toBeFalse()
   })
 
   test('projects the effective critical denominator after active effects', () => {

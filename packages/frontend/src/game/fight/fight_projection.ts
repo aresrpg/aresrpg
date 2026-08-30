@@ -5,6 +5,7 @@
 
 import {
   CONTRACT_CONSTANTS,
+  fighter_resistances,
   living_count,
   player_max_hp,
   players_ready_after,
@@ -15,6 +16,7 @@ import {
   type Fighter,
   type FightContract,
   type FightMode,
+  type FighterResistances,
   type HydratedFightCheckpoint,
   type SpellLevel,
   type SpellSource,
@@ -24,6 +26,9 @@ import type { FightPresentationCue } from '@aresrpg/engine'
 
 export const turn_seconds_remaining = (turn_started_ms: bigint, now: number): number =>
   Math.max(0, Math.ceil((Number(turn_started_ms + CONTRACT_CONSTANTS.turn_max_ms) - now) / 1_000))
+
+export const turn_elapsed_percent = (turn_started_ms: bigint, now: number): number =>
+  Math.max(0, Math.min(100, ((now - Number(turn_started_ms)) / Number(CONTRACT_CONSTANTS.turn_max_ms)) * 100))
 
 /** Stable across a local prediction and its later chain checkpoint. Wall-clock timestamps are
  * accounting facts, not turn identity: the two clocks can legitimately differ. */
@@ -63,6 +68,7 @@ export const fight_fighter_name = (
 
 export type FightFighterView = Readonly<{
   seat: bigint
+  cell: bigint
   team: bigint
   name: string
   level: bigint
@@ -77,6 +83,7 @@ export type FightFighterView = Readonly<{
   ap: bigint
   mp: bigint
   effects: readonly ActiveEffect[]
+  resistances: FighterResistances
   weapon: FightWeaponView | null
   spells: readonly FightSpellView[]
 }>
@@ -235,6 +242,7 @@ export const select_fight_view = ({
     const weapon_level = weapon_level_of(checkpoint, seat)
     return Object.freeze({
       seat,
+      cell: fighter.cell,
       team: fighter.team,
       name: fight_fighter_name(checkpoint, seat, (identity) => names[identity]),
       level:
@@ -252,6 +260,7 @@ export const select_fight_view = ({
       ap: fighter.ap,
       mp: fighter.mp,
       effects: Object.freeze([...fighter.effects]),
+      resistances: fighter_resistances(checkpoint, seat),
       weapon:
         player_source && weapon_level
           ? Object.freeze({

@@ -17,12 +17,10 @@ import {
 import { fight_path_gait, type FightCastStyle, type FightPresentationCue } from '@aresrpg/engine'
 import { CHANNELS, CONTRACT_CONSTANTS, EFFECT_KINDS } from '@aresrpg/fight/move_contract'
 
+import { fight_entity_id as entity_id, fight_zone_change_cues } from './fight_cue_projection.ts'
 import { trap_placement_visible } from './trap_visibility.ts'
 
 type CastEvent = Extract<FightEvent, Readonly<{ type: 'spell_cast' }>>
-
-const entity_id = (checkpoint: Readonly<HydratedFightCheckpoint>, seat: bigint): string =>
-  checkpoint.contract.fighters[Number(seat)]?.kind.type === 'mob' ? `fight_mob_${seat}` : `fight_character_${seat}`
 
 const concealed_trap_placement = (
   checkpoint: Readonly<HydratedFightCheckpoint>,
@@ -464,17 +462,9 @@ export const project_fight_cues = ({
       )
       return
     }
-    if (event.type === 'trap_placed' || event.type === 'glyph_placed') {
-      cues.push(
-        Object.freeze({
-          id,
-          type: 'zone_placed',
-          action: event.type,
-          zone_id: event.payload.zone_id,
-          owner_id: entity_id(checkpoint, event.payload.owner),
-          cell: Number(event.payload.anchor),
-        })
-      )
+    const zone_changes = fight_zone_change_cues(checkpoint, event, id)
+    if (zone_changes !== null) {
+      cues.push(...zone_changes)
       return
     }
     const status = status_after_event(checkpoint, event, effect_ledger, id)

@@ -21,5 +21,6 @@ describe('wallet amounts', () => {
   test('formats MIST as stable fixed precision SUI', () => {
     expect(format_sui(1_234_567_890n, 2)).toBe('1.23')
     expect(format_sui(20_000_000n, 4)).toBe('0.0200')
+    expect(format_sui(-20_000_000n, 4)).toBe('-0.0200')
   })
 })

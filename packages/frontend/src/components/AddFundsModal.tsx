@@ -5,7 +5,12 @@ import { Check, ChevronDown, Copy, ExternalLink, Wallet, X } from 'lucide-react'
 import { useEffect, useState, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 
+import { env, type Network } from '../env.ts'
 import type { AppCopy } from '../i18n/copy.ts'
+
+export const SUI_FAUCET_URL = 'https://faucet.sui.io/'
+export const add_funds_surface = (network: Network): 'faucet' | 'providers' =>
+  network === 'testnet' ? 'faucet' : 'providers'
 
 export const ADD_FUNDS_PAYMENT_METHODS = Object.freeze([
   Object.freeze({
@@ -237,15 +242,39 @@ const PaymentMethodCard = ({
   )
 }
 
+const FundingContent = ({
+  copy,
+  providers,
+  testnet,
+}: Readonly<{ copy: AppCopy; providers: ReactNode; testnet: boolean }>) =>
+  testnet ? (
+    <section className="border border-[#6fc7ff]/35 bg-[#6fc7ff]/6 p-5" data-testnet-faucet="">
+      <p className="text-[11px] leading-6 tracking-wide text-text">{wallet_text(copy, 'testnet_faucet_body')}</p>
+      <a
+        className="mt-5 flex w-full items-center justify-center gap-2 border border-[#6fc7ff]/55 bg-[#6fc7ff]/10 px-4 py-3 text-[11px] font-semibold tracking-[0.16em] text-[#9dd9ff] uppercase transition-colors hover:border-[#9dd9ff] hover:bg-[#6fc7ff]/15"
+        href={SUI_FAUCET_URL}
+        rel="noopener noreferrer"
+        target="_blank"
+      >
+        {wallet_text(copy, 'testnet_faucet_action')}
+        <ExternalLink size={13} />
+      </a>
+    </section>
+  ) : (
+    providers
+  )
+
 export const AddFundsModal = ({
   address,
   copy,
+  network = env.network,
   on_close,
   warning,
-}: Readonly<{ address: string; copy: AppCopy; on_close: () => void; warning?: string }>) => {
+}: Readonly<{ address: string; copy: AppCopy; network?: Network; on_close: () => void; warning?: string }>) => {
   const [expanded, set_expanded] = useState<string | null>(null)
   const [show_exchanges, set_show_exchanges] = useState(false)
   const [show_faq, set_show_faq] = useState(true)
+  const testnet = add_funds_surface(network) === 'faucet'
 
   useEffect(() => {
     const handler = (event: Readonly<KeyboardEvent>): void => {
@@ -273,7 +302,7 @@ export const AddFundsModal = ({
       >
         <div className="flex shrink-0 items-center justify-between border-b border-border p-4">
           <h2 className="text-[13px] font-semibold tracking-[0.2em] text-gold uppercase">
-            {wallet_text(copy, 'add_funds')}
+            {wallet_text(copy, testnet ? 'testnet_faucet_title' : 'add_funds')}
           </h2>
           <button
             aria-label={copy.wallet_close}
@@ -293,98 +322,106 @@ export const AddFundsModal = ({
               {warning}
             </aside>
           )}
-          <section>
-            <h3 className="mb-1 text-[11px] font-semibold tracking-[0.2em] text-text uppercase">
-              {wallet_text(copy, 'how_to_pay')}
-            </h3>
-            <p className="text-[10px] tracking-wide text-muted">{wallet_text(copy, 'add_funds_desc')}</p>
-          </section>
-          <section>
-            <div className="grid grid-cols-2 gap-2 max-sm:grid-cols-1">
-              {ADD_FUNDS_PAYMENT_METHODS.map((method) => (
-                <PaymentMethodCard
-                  address={address}
-                  copy={copy}
-                  expanded={expanded === method.key}
-                  key={method.key}
-                  method={method}
-                  toggle={() => set_expanded((current) => (current === method.key ? null : method.key))}
-                />
-              ))}
-            </div>
-          </section>
-          <section>
-            <h3 className="mb-2 text-[11px] font-semibold tracking-[0.2em] text-gold uppercase">
-              {wallet_text(copy, 'your_address')}
-            </h3>
-            <WalletAddressBlock address={address} compact copy={copy} />
-          </section>
-          <section>
-            <button
-              className="group flex w-full cursor-pointer items-center justify-between"
-              onClick={() => set_show_exchanges(!show_exchanges)}
-              type="button"
-            >
-              <h3 className="text-[11px] font-semibold tracking-[0.2em] text-gold uppercase">
-                {wallet_text(copy, 'advanced_exchange')}
-              </h3>
-              <ChevronDown
-                className={`ml-2 shrink-0 text-muted opacity-40 transition-all group-hover:opacity-80 ${show_exchanges ? 'rotate-180' : ''}`}
-                size={14}
-              />
-            </button>
-            {show_exchanges && (
-              <div className="mt-3 space-y-3">
-                <p className="text-[10px] tracking-wide text-muted">{wallet_text(copy, 'withdraw_to_wallet')}</p>
-                <div className="grid grid-cols-3 gap-2">
-                  {EXCHANGES.map((exchange) => (
-                    <a
-                      className="group relative cursor-pointer border border-border bg-bg/50 p-3 transition-all hover:border-gold/40"
-                      href={exchange.url}
-                      key={exchange.name}
-                      rel="noopener noreferrer"
-                      target="_blank"
-                    >
-                      <ExternalLink
-                        className="absolute top-2 right-2 text-muted opacity-0 transition-opacity group-hover:opacity-40"
-                        size={12}
+          <FundingContent
+            copy={copy}
+            providers={
+              <>
+                <section>
+                  <h3 className="mb-1 text-[11px] font-semibold tracking-[0.2em] text-text uppercase">
+                    {wallet_text(copy, 'how_to_pay')}
+                  </h3>
+                  <p className="text-[10px] tracking-wide text-muted">{wallet_text(copy, 'add_funds_desc')}</p>
+                </section>
+                <section>
+                  <div className="grid grid-cols-2 gap-2 max-sm:grid-cols-1">
+                    {ADD_FUNDS_PAYMENT_METHODS.map((method) => (
+                      <PaymentMethodCard
+                        address={address}
+                        copy={copy}
+                        expanded={expanded === method.key}
+                        key={method.key}
+                        method={method}
+                        toggle={() => set_expanded((current) => (current === method.key ? null : method.key))}
                       />
-                      <span className="text-[11px] font-semibold tracking-wide text-text uppercase transition-colors group-hover:text-gold">
-                        {exchange.name}
-                      </span>
-                    </a>
-                  ))}
-                </div>
-              </div>
-            )}
-          </section>
-          <section>
-            <button
-              className="group flex w-full cursor-pointer items-center justify-between"
-              onClick={() => set_show_faq(!show_faq)}
-              type="button"
-            >
-              <h3 className="text-[11px] font-semibold tracking-[0.2em] text-gold uppercase">
-                {wallet_text(copy, 'faq')}
-              </h3>
-              <ChevronDown
-                className={`ml-2 shrink-0 text-muted opacity-40 transition-all group-hover:opacity-80 ${show_faq ? 'rotate-180' : ''}`}
-                size={14}
-              />
-            </button>
-            {show_faq && (
-              <div className="mt-3 border border-border">
-                {FAQ_KEYS.map((item, index) => (
-                  <FaqItem
-                    answer={wallet_text(copy, item.answer)}
-                    is_last={index === FAQ_KEYS.length - 1}
-                    key={item.question}
-                    question={wallet_text(copy, item.question)}
-                  />
-                ))}
-              </div>
-            )}
-          </section>
+                    ))}
+                  </div>
+                </section>
+                <section>
+                  <h3 className="mb-2 text-[11px] font-semibold tracking-[0.2em] text-gold uppercase">
+                    {wallet_text(copy, 'your_address')}
+                  </h3>
+                  <WalletAddressBlock address={address} compact copy={copy} />
+                </section>
+                <section>
+                  <button
+                    className="group flex w-full cursor-pointer items-center justify-between"
+                    onClick={() => set_show_exchanges(!show_exchanges)}
+                    type="button"
+                  >
+                    <h3 className="text-[11px] font-semibold tracking-[0.2em] text-gold uppercase">
+                      {wallet_text(copy, 'advanced_exchange')}
+                    </h3>
+                    <ChevronDown
+                      className={`ml-2 shrink-0 text-muted opacity-40 transition-all group-hover:opacity-80 ${show_exchanges ? 'rotate-180' : ''}`}
+                      size={14}
+                    />
+                  </button>
+                  {show_exchanges && (
+                    <div className="mt-3 space-y-3">
+                      <p className="text-[10px] tracking-wide text-muted">{wallet_text(copy, 'withdraw_to_wallet')}</p>
+                      <div className="grid grid-cols-3 gap-2">
+                        {EXCHANGES.map((exchange) => (
+                          <a
+                            className="group relative cursor-pointer border border-border bg-bg/50 p-3 transition-all hover:border-gold/40"
+                            href={exchange.url}
+                            key={exchange.name}
+                            rel="noopener noreferrer"
+                            target="_blank"
+                          >
+                            <ExternalLink
+                              className="absolute top-2 right-2 text-muted opacity-0 transition-opacity group-hover:opacity-40"
+                              size={12}
+                            />
+                            <span className="text-[11px] font-semibold tracking-wide text-text uppercase transition-colors group-hover:text-gold">
+                              {exchange.name}
+                            </span>
+                          </a>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </section>
+                <section>
+                  <button
+                    className="group flex w-full cursor-pointer items-center justify-between"
+                    onClick={() => set_show_faq(!show_faq)}
+                    type="button"
+                  >
+                    <h3 className="text-[11px] font-semibold tracking-[0.2em] text-gold uppercase">
+                      {wallet_text(copy, 'faq')}
+                    </h3>
+                    <ChevronDown
+                      className={`ml-2 shrink-0 text-muted opacity-40 transition-all group-hover:opacity-80 ${show_faq ? 'rotate-180' : ''}`}
+                      size={14}
+                    />
+                  </button>
+                  {show_faq && (
+                    <div className="mt-3 border border-border">
+                      {FAQ_KEYS.map((item, index) => (
+                        <FaqItem
+                          answer={wallet_text(copy, item.answer)}
+                          is_last={index === FAQ_KEYS.length - 1}
+                          key={item.question}
+                          question={wallet_text(copy, item.question)}
+                        />
+                      ))}
+                    </div>
+                  )}
+                </section>
+              </>
+            }
+            testnet={testnet}
+          />
         </div>
       </div>
     </div>,

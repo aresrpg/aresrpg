@@ -207,24 +207,14 @@ const create_wallet_session = (
   const registry_pin = (PINS as Record<string, { name_registry?: { id?: string | null } }>)[network]?.name_registry?.id
   // The found cap is cached for the session (kiosks are for life); an EMPTY answer is never
   // cached — the player whose first purchase creates their kiosk must be found on the next call.
-  let kiosk_caps: ReturnType<typeof sdk.get_owned_kiosks> | null = null
   /** Custody doors must present the kiosk that HOLDS the acted-on object — with several
    *  personal kiosks on one address (2026-08-21 legacy: broken lookups minted spares), the
    *  first cap is the wrong one whenever the character lives elsewhere. Callers that know
    *  the holding kiosk pass its id; the first personal cap remains the creation-time default. */
   const kiosk_cap = async (kiosk_id?: string) => {
-    const request = kiosk_caps ?? sdk.get_owned_kiosks(account.address)
-    kiosk_caps = request
-    try {
-      const { kioskOwnerCaps } = await request
-      const personal = kioskOwnerCaps.filter(({ isPersonal }) => isPersonal)
-      const cap = (kiosk_id ? personal.find(({ kioskId }) => kioskId === kiosk_id) : personal[0]) ?? null
-      if (!cap) kiosk_caps = null
-      return cap
-    } catch (error) {
-      kiosk_caps = null
-      throw error
-    }
+    const { kioskOwnerCaps } = await sdk.get_owned_kiosks(account.address)
+    const personal = kioskOwnerCaps.filter(({ isPersonal }) => isPersonal)
+    return (kiosk_id ? personal.find(({ kioskId }) => kioskId === kiosk_id) : personal[0]) ?? null
   }
   const personal_kiosk_action = create_personal_kiosk_runner(kiosk_cap)
   const require_registry = (): string => {

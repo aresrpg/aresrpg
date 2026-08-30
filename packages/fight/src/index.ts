@@ -8,6 +8,7 @@ export {
   create_mob_snapshot,
   mob_band_scaled,
   mob_centered_band_scaled,
+  mob_effect_value_scaled,
   mob_loot_chance_scaled,
   mob_pool_scaled,
   mob_scalar_for_level,

@@ -139,6 +139,12 @@ const with_zones = (
     zone_ids: Object.freeze([...zone_ids]),
   })
 
+const removed_zone_id = (cue: Readonly<FightPresentationCue>): string | null => {
+  if (cue.type === 'zone_removed') return cue.zone_id
+  if (cue.type === 'zone' && cue.action === 'trap_triggered') return cue.zone_id
+  return null
+}
+
 export const fight_zone_visual_state = (
   presented: Readonly<FightZoneVisualState> | null,
   canonical: Readonly<FightZoneVisualState> | null,
@@ -147,8 +153,9 @@ export const fight_zone_visual_state = (
 ): FightZoneVisualState | null => {
   if (!canonical) return null
   if (!presented || presented.checkpoint.contract.id !== canonical.checkpoint.contract.id) return canonical
-  if (cue.type === 'zone' && cue.action === 'trap_triggered' && phase === 'start') {
-    const index = presented.zone_ids.indexOf(cue.zone_id)
+  const removed_zone = removed_zone_id(cue)
+  if (removed_zone !== null && phase === 'start') {
+    const index = presented.zone_ids.indexOf(removed_zone)
     if (index < 0) return presented
     return with_zones(
       presented,

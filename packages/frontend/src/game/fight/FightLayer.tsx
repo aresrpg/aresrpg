@@ -6,8 +6,6 @@
 
 import type { CharacterEntityRender, FightPresentationCue } from '@aresrpg/engine'
 import {
-  fighter_resistances,
-  fight_path_to,
   movement_points_of,
   preview_spell_cast,
   preview_weapon_strike,
@@ -38,6 +36,7 @@ import {
   type FightCharacterAppearance,
 } from './character_entity_sources.ts'
 import { project_fight_cues } from './fight_cues.ts'
+import { apply_cell_selection, fight_cell_selection } from './fight_cell_selection.ts'
 import {
   fight_visual_checkpoint,
   fight_visual_checkpoint_after_cue,
@@ -58,13 +57,42 @@ import {
 } from './FightTurnCard.tsx'
 import { fight_mob_entity_sources, type FightMobRenderSource } from './mob_entity_sources.ts'
 import { fight_mob_entities } from './mob_entities.ts'
-import { placement_available, usePlacementGasWarning } from './PlacementGasWarning.tsx'
+import { usePlacementGasWarning } from './PlacementGasWarning.tsx'
 import { FightTargetPreviews, type FightTargetPreviewView } from './FightTargetPreviews.tsx'
 
 const zone_visual_state = (
   checkpoint: Readonly<HydratedFightCheckpoint> | null,
   zone_ids: readonly string[]
 ): FightZoneVisualState | null => (checkpoint ? Object.freeze({ checkpoint, zone_ids }) : null)
+
+const EMPTY_CELLS = Object.freeze<bigint[]>([])
+
+const timeline_targetable_cells = (
+  selected_spell: string | null,
+  targetable_cells: readonly bigint[] | undefined
+): readonly bigint[] => (selected_spell === null ? EMPTY_CELLS : (targetable_cells ?? EMPTY_CELLS))
+
+const focus_timeline_fighter = (
+  fighter: Readonly<{ cell: bigint; seat: bigint }> | null,
+  focus_seat: (seat: bigint | null) => void,
+  focus_cell: (cell: bigint | null) => void
+): void => {
+  focus_seat(fighter?.seat ?? null)
+  focus_cell(fighter?.cell ?? null)
+}
+
+const FightSimulatorExit = ({ copy, visible }: Readonly<{ copy: AppCopy; visible: boolean }>) => {
+  if (!visible) return null
+  return (
+    <button
+      className="absolute top-3 right-3 z-10 flex cursor-pointer items-center gap-2 border border-white/10 bg-black/55 px-3 py-2 text-[8px] tracking-[0.14em] text-[#a3a5ad] uppercase backdrop-blur hover:border-[#c8963c]/40 hover:text-[#c8963c]"
+      onClick={() => dispatch_app({ type: 'fight/closed', fight: null })}
+      type="button"
+    >
+      <RotateCcw size={12} /> {copy.simulator_page.back_to_setup}
+    </button>
+  )
+}
 
 export const FightLayer = ({ copy, scene }: Readonly<{ copy: AppCopy; scene: SceneHandle }>) => {
   const fight = useAppStore((state) => state.fight)
@@ -300,12 +328,14 @@ export const FightLayer = ({ copy, scene }: Readonly<{ copy: AppCopy; scene: Sce
         return [
           Object.freeze({
             ...target,
-            active_effects: Object.freeze([...fighter.effects]),
             entity_id:
               fighter.kind.type === 'player' ? `fight_character_${target.fighter}` : `fight_mob_${target.fighter}`,
+            level:
+              fighter.kind.type === 'mob'
+                ? fighter.kind.snapshot.level
+                : (checkpoint.sources.players[fighter.kind.character]?.level ?? 1n),
             name: fight_fighter_name(checkpoint, target.fighter, name_of),
             allied: fighter.team === caster_team,
-            resistances: fighter_resistances(checkpoint, target.fighter),
           }),
         ]
       })
@@ -420,6 +450,37 @@ export const FightLayer = ({ copy, scene }: Readonly<{ copy: AppCopy; scene: Sce
     [checkpoint?.contract.id]
   )
 
+  const select_cell = (cell: bigint | null): void => {
+    if (!checkpoint) return
+    apply_cell_selection(
+      fight_cell_selection({
+        actions_locked,
+        cell,
+        checkpoint,
+        owned_active_seat,
+        owned_placement_seat,
+        selected_action,
+        targetable_cells: spell_cells?.targetable ?? EMPTY_CELLS,
+      }),
+      {
+        clear: () => set_selected_action(null),
+        input: (input) => {
+          set_selected_action(null)
+          dispatch_app({ type: 'fight/input', fight: command_fight, origin: 'local', input })
+        },
+        place: (fighter, target_cell) => {
+          if (command_fight) return placement.place(command_fight, fighter, target_cell)
+          dispatch_app({
+            type: 'fight/input',
+            fight: null,
+            origin: 'local',
+            input: { type: 'place', fighter, cell: target_cell },
+          })
+        },
+      }
+    )
+  }
+
   useEffect(() => {
     if (fight.restore_serial === 0 || fight.restore_serial === restore_applied || !checkpoint) return
     set_restore_applied(fight.restore_serial)
@@ -457,6 +518,7 @@ export const FightLayer = ({ copy, scene }: Readonly<{ copy: AppCopy; scene: Sce
         label={copy.fight_hud.board_label}
         on_presentation_active={set_presentation_active}
         on_presentation_cue={(cue: FightPresentationCue, phase: FightCuePhase) => {
+          dispatch_app({ type: 'fight/presentation_cue', presentation, cue, phase })
           fight_audio(cue, phase, character_voices)
           if (
             cue.type === 'turn' &&
@@ -488,60 +550,7 @@ export const FightLayer = ({ copy, scene }: Readonly<{ copy: AppCopy; scene: Sce
               })
             : null
         }
-        on_cell_click={(cell) => {
-          if (!checkpoint || actions_locked) return
-          if (cell === null) {
-            if (selected_action !== null) set_selected_action(null)
-            return
-          }
-          // placement phase: clicking one of the own side's free start cells re-places the fighter
-          if (owned_placement_seat !== null) {
-            if (!placement_available(checkpoint, owned_placement_seat, cell)) return
-            if (!command_fight) {
-              dispatch_app({
-                type: 'fight/input',
-                fight: null,
-                origin: 'local',
-                input: { type: 'place', fighter: owned_placement_seat, cell },
-              })
-              return
-            }
-            placement.place(command_fight, owned_placement_seat, cell)
-            return
-          }
-          if (owned_active_seat === null) return
-          if (selected_action !== null) {
-            if (!spell_cells?.targetable.includes(cell)) {
-              set_selected_action(null)
-              return
-            }
-            const action = selected_action
-            set_selected_action(null)
-            dispatch_app({
-              type: 'fight/input',
-              fight: command_fight,
-              origin: 'local',
-              input:
-                action.type === 'weapon'
-                  ? { type: 'weapon_strike', fighter: owned_active_seat, target_cell: cell }
-                  : {
-                      type: 'cast_spell',
-                      fighter: owned_active_seat,
-                      spell: action.name,
-                      target_cell: cell,
-                    },
-            })
-            return
-          }
-          const path = fight_path_to(checkpoint, owned_active_seat, cell)
-          if (!path || path.length === 0) return
-          dispatch_app({
-            type: 'fight/input',
-            fight: command_fight,
-            origin: 'local',
-            input: { type: 'move_to', fighter: owned_active_seat, path },
-          })
-        }}
+        on_cell_click={select_cell}
         on_cell_hover={(cell) => {
           set_hovered_cell(cell)
           const seat = checkpoint.contract.fighters.findIndex(
@@ -556,7 +565,6 @@ export const FightLayer = ({ copy, scene }: Readonly<{ copy: AppCopy; scene: Sce
       />
       <FightTargetPreviews
         anchors={entity_anchors}
-        copy={copy}
         critical={spell_preview?.critical ?? false}
         targets={preview_targets}
       />
@@ -565,24 +573,20 @@ export const FightLayer = ({ copy, scene }: Readonly<{ copy: AppCopy; scene: Sce
         actions_locked={actions_locked}
         copy={copy}
         display_fighters={display_fighters}
-        focus_fighter={set_hovered_seat}
+        focus_fighter={(fighter) => {
+          focus_timeline_fighter(fighter, set_hovered_seat, set_hovered_cell)
+        }}
         mob_icon_for={mob_icon}
         presentation_queued={presentation_queued}
         presented_turn_seat={presented_turn_seat}
         turn_announcement={turn_announcement}
         select_action={set_selected_action}
         selected_action={selected_action}
+        target_fighter={({ cell }) => select_cell(cell)}
+        targetable_fighter_cells={timeline_targetable_cells(selected_spell, spell_cells?.targetable)}
       />
       {placement.warning}
-      {fight.mode === 'local' && (
-        <button
-          className="absolute top-3 right-3 z-10 flex cursor-pointer items-center gap-2 border border-white/10 bg-black/55 px-3 py-2 text-[8px] tracking-[0.14em] text-[#a3a5ad] uppercase backdrop-blur hover:border-[#c8963c]/40 hover:text-[#c8963c]"
-          onClick={() => dispatch_app({ type: 'fight/closed', fight: null })}
-          type="button"
-        >
-          <RotateCcw size={12} /> {copy.simulator_page.back_to_setup}
-        </button>
-      )}
+      <FightSimulatorExit copy={copy} visible={fight.mode === 'local'} />
     </section>
   )
 }

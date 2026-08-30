@@ -4,9 +4,10 @@
 import { coalesced_stack_groups, encumbered_asset_ids, stack_merge_target } from '../inventory_stacks.ts'
 import { toast } from '../toast.ts'
 import type { AppModule } from '../store.ts'
-import { retry_after_version_race } from '../transaction_guard.ts'
+import { retry_after_version_race, retry_close_after_projection_lag } from '../transaction_guard.ts'
 
 import { fight_resolution_dungeon, fight_result_available } from './fight_result_view.ts'
+import { fight_result_error_text } from './fight_result_error.ts'
 
 type Attempt = Readonly<{ latched: boolean }>
 
@@ -24,7 +25,7 @@ const kolizeum_payment = (kolizeum: string | null, receipt: unknown): bigint | n
 /** Settlement is a frontend effect boundary: live terminal truth starts immediately, while
  * RESULT_FOR is only the reconnect fallback. A certified receipt completes presentation. */
 const observe_with_wait = (
-  { events, dispatch, get_state }: Parameters<NonNullable<AppModule['observe']>>[0],
+  { events, dispatch, get_state, signal }: Parameters<NonNullable<AppModule['observe']>>[0],
   wait: (milliseconds: number) => Promise<void>
 ): void => {
   const attempts = new Map<string, Attempt>()
@@ -32,19 +33,22 @@ const observe_with_wait = (
   const close_notices = new Map<string, () => void>()
   const settled_kiosks = new Set<string>()
   let active: string | null = null
+  const locks = globalThis.navigator?.locks
+  let settlement_owner = !locks
+  let lease_address: string | null = null
+  let release_lease: (() => void) | null = null
   let normalizing_kiosk: string | null = null
   let observed_inventory = get_state().session.inventory
   const close_once = (row: Readonly<{ fight: string; kolizeum: string | null }>): void => {
     const { fight } = row
     const { wallet } = get_state().session
-    if (!wallet || closing.has(fight)) return
+    if (!settlement_owner || !wallet || closing.has(fight)) return
     closing.add(fight)
     close_notices.get(fight)?.()
     close_notices.delete(fight)
-    const transaction = row.kolizeum
-      ? wallet.kolizeum.close({ kolizeum: row.kolizeum, fight })
-      : wallet.fight.close({ fight })
-    void transaction
+    const transaction = () =>
+      row.kolizeum ? wallet.kolizeum.close({ kolizeum: row.kolizeum, fight }) : wallet.fight.close({ fight })
+    void retry_close_after_projection_lag(() => retry_after_version_race(transaction, wait), wait)
       .then(() => dispatch({ type: 'fight_result/close_succeeded', fight }))
       .catch((error: unknown) => {
         closing.delete(fight)
@@ -66,7 +70,7 @@ const observe_with_wait = (
 
   const normalize_settled_stacks = (): void => {
     const state = get_state()
-    if (normalizing_kiosk || state.session.inventory === observed_inventory) return
+    if (active || normalizing_kiosk || state.session.inventory === observed_inventory) return
     observed_inventory = state.session.inventory
     const { wallet } = state.session
     if (!wallet) return
@@ -97,7 +101,7 @@ const observe_with_wait = (
   }
 
   const sweep = (): void => {
-    if (active) return
+    if (!settlement_owner || active) return
     const state = get_state()
     const { wallet, inventory, characters } = state.session
     if (!wallet || state.session.link_status !== 'ready') return
@@ -148,6 +152,7 @@ const observe_with_wait = (
             fight: pending.fight,
             fighter_idx: BigInt(pending.fighter),
             custody,
+            last: false,
           })
         : pending.dungeon
           ? wallet.dungeon.settle_fight({
@@ -156,8 +161,15 @@ const observe_with_wait = (
               world: pending.dungeon.world,
               loot,
               custody,
+              last: false,
             })
-          : wallet.fight.settle({ fight: pending.fight, fighter_idx: BigInt(pending.fighter), loot, custody })
+          : wallet.fight.settle({
+              fight: pending.fight,
+              fighter_idx: BigInt(pending.fighter),
+              loot,
+              custody,
+              last: false,
+            })
     void retry_after_version_race(transaction, wait)
       .then((receipt) => {
         if (!pending.kolizeum) settled_kiosks.add(custody.kiosk)
@@ -168,21 +180,22 @@ const observe_with_wait = (
           fight: pending.fight,
           paid_mist: kolizeum_payment(pending.kolizeum, receipt),
         })
-        if (!pending.kolizeum && !pending.dungeon && settlement_needs_close(receipt))
-          close_once({ fight: pending.fight, kolizeum: null })
+        if (settlement_needs_close(receipt)) close_once({ fight: pending.fight, kolizeum: pending.kolizeum })
         return true
       })
       .catch((error: unknown) => {
         // Every refusal waits for the explicit Retry action. Re-entering sweep here would
         // reopen signing or dry-run the same doomed bytes in a tight loop.
         attempts.set(key, Object.freeze({ latched: true }))
+        const raw_error = error instanceof Error ? error.message : String(error)
         dispatch({
           type: 'fight_result/claim_failed',
           character_id: pending.character,
           fight: pending.fight,
-          error: error instanceof Error ? error.message : String(error),
+          error: raw_error,
         })
-        toast.add(error)
+        const copy = get_state().copy?.fight_hud
+        toast.add(copy ? new Error(fight_result_error_text(copy, raw_error)) : error)
         return false
       })
       .then((settled) => {
@@ -196,6 +209,43 @@ const observe_with_wait = (
           })
         active = null
         if (settled) sweep()
+        if (!active) normalize_settled_stacks()
+      })
+  }
+
+  const ready_wallet_address = (): string | null => {
+    const { session } = get_state()
+    return session.link_status === 'ready' ? (session.wallet?.address ?? null) : null
+  }
+  const ensure_settlement_lease = (): void => {
+    if (!locks || signal.aborted) return
+    const address = ready_wallet_address()
+    if (lease_address && lease_address !== address) release_lease?.()
+    if (!address || lease_address) return
+    lease_address = address
+    void locks
+      .request(`aresrpg:fight-settlement:${address}`, async () => {
+        if (signal.aborted || ready_wallet_address() !== address) {
+          lease_address = null
+          ensure_settlement_lease()
+          return
+        }
+        settlement_owner = true
+        get_state().fight_result.closable_fights.forEach(close_once)
+        sweep()
+        await new Promise<void>((resolve) => {
+          release_lease = resolve
+          if (signal.aborted) resolve()
+          else signal.addEventListener('abort', () => resolve(), { once: true })
+        })
+        settlement_owner = false
+        release_lease = null
+        lease_address = null
+        ensure_settlement_lease()
+      })
+      .catch((error: unknown) => {
+        lease_address = null
+        console.error('Fight settlement tab lease failed.', error)
       })
   }
 
@@ -216,6 +266,7 @@ const observe_with_wait = (
     sweep()
   })
   events.on('STATE_UPDATED', (state, previous) => {
+    ensure_settlement_lease()
     if (state.fight_result.closable_fights !== previous.fight_result.closable_fights)
       state.fight_result.closable_fights.forEach(close_once)
     normalize_settled_stacks()
@@ -229,6 +280,7 @@ const observe_with_wait = (
     )
       sweep()
   })
+  ensure_settlement_lease()
 }
 
 export const create_fight_result_observer =

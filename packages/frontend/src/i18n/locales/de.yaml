@@ -364,6 +364,10 @@ demo_page:
   ride_pet: Begleiter reiten
   dismount_pet: Absteigen
   mob_group: Monstergruppe
+  crowd_load: Crowd-Lasttest
+  crowd_benchmark: Messen
+  crowd_loading: Charaktermodelle werden geladen…
+  crowd_result: Phase
   mob: Monster
   hide_protectors: Beschützer ausblenden
   amount: Anzahl
@@ -505,6 +509,8 @@ settings_page:
   subtitle: 'Deine AresRPG-Einstellungen'
   music_label: 'Musik'
   music_hint: 'Spielt die Musik der Welt und der Kämpfe.'
+  footsteps_label: Schritte
+  footsteps_hint: Spielt Schrittgeräusche bei der Bewegung ab.
   auto_switch_fighter_label: Kämpfer automatisch wechseln
   auto_switch_fighter_hint: Wählt automatisch deinen Charakter aus, sobald sein Kampfzug beginnt.
   always_craft_from_label: Immer herstellen mit
@@ -513,6 +519,40 @@ settings_page:
   always_craft_from_none: Deaktiviert
   render_distance_label: Sichtweite
   render_distance_hint: Wie weit die Welt um dich herum lädt. Mehr kostet Leistung.
+tutorial:
+  progress: '{{current}} / {{total}}'
+  skip: Tutorial überspringen
+  back: Zurück
+  next: Weiter
+  finish: Abschließen
+  fight_enter: Kampf betreten
+  reset_title: Tutorials
+  reset_hint: Zeigt jede Einführung beim nächsten Besuch der jeweiligen Seite erneut.
+  reset_action: Zurücksetzen
+  world_compass_title: Welten und geteilte Zonen
+  world_compass_body: AresRPG enthält mehrere Welten, die du im Verlauf freischaltest. Jede Welt ist in Zonen mit Monstern, Ressourcen und Dungeons unterteilt. Jeder kann eine Zone entdecken, und diese Entdeckung wird mit allen Spielern geteilt.
+  world_hud_title: Leben und Schnellplätze
+  world_hud_body: Dieses HUD zeigt dein Leben und deine Schnellplätze für Gegenstände. Sobald ein Kampf beginnt, wird derselbe Bereich zu deiner Zauberleiste.
+  world_fps_title: Deine Weltsteuerung
+  world_fps_body: Das Gelände wird deterministisch aus veröffentlichten Daten erzeugt. Sui speichert die Welt und die verbindliche X/Z-Position, während das Gelände die Höhe lokal ableitet. Flach verändert daher nur die Darstellung. Hier kannst du außerdem die Qualität ändern und Weltkämpfe auf Gruppenmitglieder beschränken.
+  world_character_title: Spieler in der Welt
+  world_character_body: Das ist dein aktiver Charakter. Klicke mit der rechten Maustaste auf einen Charakter in der Nähe, um die verfügbaren Interaktionen zu öffnen.
+  world_character_tabs_title: Spiele mehrere Charaktere
+  world_character_tabs_body: Du kannst bis zu sechs Charaktere besitzen. Lade deine anderen Charaktere in eine Gruppe ein und aktiviere Gruppenfolge, damit sie mitreisen und geeigneten Weltkämpfen bei ihrer Ankunft automatisch beitreten.
+  fight_title: Dein erster On-Chain-Kampf
+  fight_body: Kämpfe sind rundenbasiert. Wähle Bewegung und Zauber, und deine Aktionen werden gemeinsam vorbereitet. Runde beenden übermittelt den vollständigen Zug als eine Sui-Transaktion und berechnet die folgenden Monsterzüge, bis wieder ein Spieler handeln kann. Der verbindliche Kampfzustand wird vollständig auf Sui abgewickelt. Nach dem Sieg nutzt eine letzte Sui-Transaktion On-Chain-Zufall, um die gemeinsame Beute auszuwürfeln und jede Belohnung dem zugewiesenen Inventar hinzuzufügen.
+  equipment_gear_title: Ausrüstung
+  equipment_gear_body: Ausgerüstete Gegenstände gehören zum ausgewählten Charakter. Ziehe Ausrüstung auf die Figur, prüfe die neuen Boni und bestätige anschließend alle Änderungen gemeinsam.
+  equipment_inventory_title: Geteiltes Inventar
+  equipment_inventory_body: Dein Inventar wird von allen Charakteren dieses Kontos geteilt. Wähle oben einen anderen Charakter, um ihm dieselben verfügbaren Gegenstände anzulegen.
+  stats_title: Eigenschaften
+  stats_body: Verteile Eigenschaftspunkte, um stärker zu werden. Vitalität erhöht Leben, Weisheit verbessert XP und Widerstand gegen AP/BP-Verlust, Chance verbessert Wasserschaden und Beutechance, und Agilität verbessert Luftschaden, kritische Treffer, Fesselung und Flucht.
+  spells_title: Zauber
+  spells_body: Neue Zauber werden mit dem Fortschritt deines Charakters freigeschaltet. Stufenaufstiege gewähren Zauberpunkte, die du hier zum Verbessern freigeschalteter Zauber ausgeben kannst.
+  jobs_title: Berufe
+  jobs_body: Verfolge Sammel- und Handwerksfortschritt, prüfe Rezepte und stelle verfügbare Gegenstände her. Bei mehreren Charakteren kannst du diese Seite in den Einstellungen auf einen festen Handwerker sperren.
+  runeforge_title: Runenschmiede
+  runeforge_body: Ab Berufsstufe 70 kann der passende Handwerksberuf Ausrüstung mit Runen verbessern. Runen erhältst du durch das Zerstören von Gegenständen und kannst sie hier anwenden.
 admin_page:
   kicker: Herausgeber
   title: Spielinhalte veröffentlichen
@@ -582,12 +622,16 @@ admin_page:
   peak: Spitze
   revenue: Einnahmen
   revenue_over_time: Einnahmen im Zeitverlauf
-  revenue_over_time_body: Shop-Einnahmen und Marktplatzgebühren
+  revenue_over_time_body: Alle Protokolleinnahmen nach Quelle
   shop: Shop
   shop_sales: Shop-Verkäufe
   item_royalties: Objektgebühren
   character_royalties: Charaktergebühren
+  character_creation_revenue: Charaktererstellung
+  kolizeum_revenue: Kolizeum-Gebühren
   game_transactions: Spieltransaktionen
+  game_gas_fees: Spiel-Gasgebühren (24 Std.)
+  all_time: Gesamt
   game_transactions_over_time: Transaktionen im Zeitverlauf
   game_transactions_body: Erfolgreiche AresRPG-Transaktionen, einmal pro PTB gezählt
   today: Heute
@@ -727,6 +771,8 @@ simulator_page:
 fight_hud:
   board_label: Kampffeld
   turn_order: Zugreihenfolge
+  turn_order_collapse: Zugreihenfolge einklappen
+  turn_order_expand: Zugreihenfolge ausklappen
   placement_title: Bereit zum Kampf
   placement_hint: Platziere deine Kämpfer und markiere sie als bereit
   placement_gas_title: Kämpfer erneut verschieben?
@@ -734,6 +780,10 @@ fight_hud:
   placement_gas_hide: Nicht mehr anzeigen
   placement_gas_confirm: Trotzdem verschieben
   placement_ready: Bereit
+  placement_ready_all: Alle bereit
+  placement_ready_all_progress: Alle bereit · {completed}/{total}
+  placement_ready_all_complete: Alle bereit · {completed}/{total}
+  placement_ready_all_failed: Bereitschaft unterbrochen · {completed}/{total}
   placement_waiting: Warten auf die anderen…
   placement_starting: Kampf startet…
   placement_force_prompt: Ein Spieler ist abwesend — Kampfstart erzwingen?
@@ -800,11 +850,15 @@ fight_hud:
   result_fallen: Gefallen
   result_survived: Überlebt
   result_collecting: Beute wird eingesammelt…
+  result_collecting_progress: Charakterbeute · {completed}/{total}
+  result_collecting_complete: Gesamte Beute eingesammelt · {completed}/{total}
+  result_collecting_failed: Einsammeln unterbrochen · {completed}/{total}
   result_continue: Weiter
   result_close: Schließen
   fight_finalize_pending: Der Kampf kann abgeschlossen werden.
   fight_finalize_button: Abschließen
   result_retry: Erneut versuchen
+  result_version_changed: Einige Spielobjekte haben sich beim Einsammeln der Kampfbelohnungen geändert. Nichts ging verloren. Versuche es erneut, um sie zu aktualisieren und die Belohnungen einzusammeln.
   level_up_title: Stufenaufstieg
   level_up_reached: Stufe erreicht
   level_up_stat_points: Statuspunkte
@@ -860,6 +914,9 @@ wallet_legacy:
     sie von oben), und wenn es immer noch nicht angezeigt wird, kontaktiere das Team
     auf Discord mit deiner Transaktions-ID für weitere Hilfe.
   add_funds: Guthaben aufladen
+  testnet_faucet_title: Testnet-SUI
+  testnet_faucet_body: AresRPG läuft im Sui Testnet. Testnet-SUI ist kostenlos und hat keinen Geldwert. Fordere Token beim offiziellen Sui Faucet an.
+  testnet_faucet_action: Sui Faucet öffnen
   how_to_pay: Wie möchtest du bezahlen?
   add_funds_desc: Wähle deine bevorzugte Zahlungsmethode. SUI wird direkt in dein
     Wallet geliefert.
@@ -1639,11 +1696,11 @@ characters_page:
       air: 'Luft'
     description:
       vitality: 'Erhöht dein maximales Leben'
-      wisdom: 'Erhöht deinen XP-Gewinn'
+      wisdom: 'Erhöht deinen XP-Gewinn und den Widerstand gegen AP/BP-Verlust'
       strength: 'Erhöht deinen Erdschaden'
       intelligence: 'Erhöht deinen Feuerschaden und deine Heilung'
       chance: 'Erhöht deinen Wasserschaden und deine Beutechance'
-      agility: 'Erhöht deinen Luftschaden, deine Fesselung und dein Ausweichen bei AP/BP-Verlust'
+      agility: 'Erhöht deinen Luftschaden, kritische Treffer, Fesselung und Flucht'
       critical_hit: 'Verbessert deine Chance auf einen kritischen Treffer'
       raw_damage: 'Fügt Schadens- und Lebensraub-Effekten einen festen Wert hinzu'
     add_point: '{{stat}} um einen Punkt erhöhen'

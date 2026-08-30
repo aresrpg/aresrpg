@@ -44,6 +44,16 @@ describe('biome music', () => {
     expect(tracks.size).toBeGreaterThan(1)
   })
 
+  test('Nauvis gives every authored biome a distinct track, including Plains and Highlands', () => {
+    const keys = ['plains', 'forest', 'rainforest', 'highlands', 'desert', 'ocean'].map((biome) => `nauvis:${biome}`)
+    const tracks = keys.map((key) => biome_music_track(key, keys))
+
+    expect(new Set(tracks).size).toBe(keys.length)
+    expect(biome_music_track('nauvis:plains', keys)).toBe('grassland')
+    expect(biome_music_track('nauvis:highlands', keys)).toBe('taiga')
+    expect(tracks[keys.indexOf('nauvis:plains')]).not.toBe(tracks[keys.indexOf('nauvis:highlands')])
+  })
+
   test('arms immediately and rejects a flapping biome border', () => {
     const shore = follow_biome_music(initial_biome_music_follow(), 'world:shore', 3)
     const hill_once = follow_biome_music(shore, 'world:hill', 3)

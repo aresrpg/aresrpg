@@ -136,7 +136,7 @@ export type WorldInput =
   | Readonly<{ type: 'world/zone_reveal_cleared'; id: string }>
   /** engage the mob group under the E prompt — `group` is a `mob_group_id` */
   | Readonly<{ type: 'world/engage'; group: string; access: 0 | 1; started_at_ms: number }>
-  | Readonly<{ type: 'world/engage_submitted'; group: string; fight: string }>
+  | Readonly<{ type: 'world/engage_submitted'; group: string; fight: string; character_id: string }>
   | Readonly<{ type: 'world/engage_failed'; group: string }>
   | Readonly<{ type: 'world/engage_confirmed'; group: string }>
   | WorldGatherInput
@@ -559,7 +559,7 @@ const observe: NonNullable<AppModule['observe']> = (context) => {
         mob_types: pending_engage.members.map(({ mob_type }) => mob_type),
       })
       .then(({ fight }) => {
-        dispatch({ type: 'world/engage_submitted', group, fight })
+        dispatch({ type: 'world/engage_submitted', group, fight, character_id: selected_character_id })
         awaiting.set(fight, {
           lock_key: group,
           notice,

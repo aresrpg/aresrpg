@@ -12,6 +12,7 @@ import { ModalFrame } from '../../components/ModalFrame.tsx'
 import { content_catalog } from '../../content/catalog.ts'
 import { spell_name, type AppCopy } from '../../i18n/copy.ts'
 import { dispatch_app, useAppStore } from '../../store.ts'
+import { owned_placement_readiness } from '../../modules/fight_identity.ts'
 import { END_TURN_SUBMIT_GUARD_MS } from '../../modules/fight_lifecycle.ts'
 import { ActionSlots } from '../hud/ActionSlots.tsx'
 import { VitalsDisplay } from '../hud/VitalsDisplay.tsx'
@@ -20,6 +21,7 @@ import {
   select_fight_view,
   fight_turn_key,
   fight_view_with_display,
+  turn_elapsed_percent,
   turn_seconds_remaining,
   type FightActionSelection,
   type FightFighterDisplay,
@@ -27,6 +29,7 @@ import {
   type FightSpellView,
 } from './fight_projection.ts'
 import { FightTimeline, type MobIconLookup } from './FightTimeline.tsx'
+import { FightPlacementBanner } from './FightPlacementBanner.tsx'
 import { fight_turn_card_view, FightTurnCard, type FightTurnAnnouncement } from './FightTurnCard.tsx'
 import { WorldChat } from '../../components/Chat.tsx'
 import './fight_hud.css'
@@ -113,8 +116,46 @@ const FightVitals = ({
 
 // 6px is the radius this HUD's own controls carry (`.fight-hud__controls button`)
 const BANNER_BUTTON = 'mt-1 rounded-[6px] px-4 py-1.5 text-[10px] tracking-[0.14em]'
+
+const placement_readiness = (
+  checkpoint: Parameters<typeof owned_placement_readiness>[0],
+  session: Readonly<{ wallet: Readonly<{ address: string }> | null; characters: readonly Readonly<{ id: string }>[] }>,
+  submitted: readonly number[],
+  remote: boolean
+) => {
+  const readiness = owned_placement_readiness(
+    checkpoint,
+    session.wallet?.address ?? null,
+    new Set(session.characters.map(({ id }) => id)),
+    submitted
+  )
+  return Object.freeze({
+    ...readiness,
+    show_all: remote && !checkpoint.contract.wagered && readiness.owned_count > 1,
+  })
+}
+
 export const end_turn_wait_ms = (observed_at_ms: number, now_ms: number): number =>
   Math.max(0, observed_at_ms + Number(CONTRACT_CONSTANTS.turn_min_ms) + END_TURN_SUBMIT_GUARD_MS - now_ms)
+
+const inactive_turn_clock = Object.freeze({ progress: null, seconds: null })
+
+const fight_turn_clock = (
+  mode: string | null,
+  visible: boolean | undefined,
+  presented_turn_seat: bigint | null,
+  turn_started_ms: bigint | undefined,
+  now: number
+): Readonly<{ progress: number | null; seconds: number | null }> => {
+  if (mode !== 'remote' || !visible || presented_turn_seat !== null || turn_started_ms === undefined)
+    return inactive_turn_clock
+  return Object.freeze({
+    progress: turn_elapsed_percent(turn_started_ms, now),
+    seconds: turn_seconds_remaining(turn_started_ms, now),
+  })
+}
+
+const spell_action_selected = (selected_action: FightActionSelection): boolean => selected_action?.type === 'spell'
 
 export const end_turn_intent = ({
   can_end_turn,
@@ -142,72 +183,6 @@ export const crank_prompt_hidden = (
   turn_key: string | null,
   restore_serial: number
 ): boolean => attempt !== null && attempt.turn_key === turn_key && attempt.restore_serial === restore_serial
-
-const PlacementBanner = ({
-  deadline,
-  text,
-  ready,
-  starting,
-  locked,
-  sides_manned,
-  can_forfeit,
-  on_ready,
-  on_force_start,
-  on_forfeit,
-}: Readonly<{
-  deadline: bigint | null
-  text: Readonly<Record<string, string>>
-  /** null hides the button (local fights pre-ready everyone); true disables it (already ready) */
-  ready: boolean | null
-  starting: boolean
-  locked: boolean
-  /** false = a side is empty, so the chain would refuse a start (fight.move `start`) */
-  sides_manned: boolean
-  can_forfeit: boolean
-  on_ready: () => void
-  on_force_start: () => void
-  on_forfeit: () => void
-}>) => {
-  const [now, set_now] = useState(() => Date.now())
-  useEffect(() => {
-    if (deadline === null) return undefined
-    const timer = setInterval(() => set_now(Date.now()), 1_000)
-    return () => clearInterval(timer)
-  }, [deadline])
-  const seconds = deadline === null ? null : Math.max(0, Math.ceil((Number(deadline) - now) / 1_000))
-  // the window closed with someone still unready — every participant may force the start
-  // (the chain door admits anyone once the placement deadline passes)
-  const stalled = sides_manned && ready !== null && seconds === 0
-  return (
-    <div className="fight-hud__placement" role="status">
-      <span>{text.placement_title}</span>
-      {/* an empty side has nobody to wait for: a countdown would be theatre */}
-      {seconds !== null && sides_manned && (
-        <strong className={seconds <= 10 ? 'urgent' : ''}>0:{String(seconds).padStart(2, '0')}</strong>
-      )}
-      <small>
-        {!sides_manned ? text.placement_no_opponent : stalled ? text.placement_force_prompt : text.placement_hint}
-      </small>
-      {sides_manned && ready !== null && !stalled && (
-        <button className={`btn-gold ${BANNER_BUTTON}`} disabled={ready || locked} onClick={on_ready} type="button">
-          {ready ? (starting ? text.placement_starting : text.placement_waiting) : text.placement_ready}
-        </button>
-      )}
-      {stalled && (
-        <button className={`btn-gold ${BANNER_BUTTON}`} disabled={locked} onClick={on_force_start} type="button">
-          {text.placement_force_button}
-        </button>
-      )}
-      {/* leaving is legal for the whole of placement, not only when a side is empty: an
-          opponent who joins and then vanishes strands you exactly the same way */}
-      {can_forfeit && (
-        <button className={`btn-outline ${BANNER_BUTTON}`} disabled={locked} onClick={on_forfeit} type="button">
-          {text.forfeit}
-        </button>
-      )}
-    </div>
-  )
-}
 
 /** The stall clearance — any non-acting participant may force a 45s-dead turn to pass. */
 const CrankBanner = ({
@@ -237,6 +212,8 @@ export const FightHud = ({
   copy,
   display_fighters = Object.freeze([]),
   focus_fighter,
+  target_fighter,
+  targetable_fighter_cells,
   selected_action,
   select_action,
   actions_locked,
@@ -247,7 +224,9 @@ export const FightHud = ({
 }: Readonly<{
   copy: AppCopy
   display_fighters?: readonly FightFighterDisplay[]
-  focus_fighter?: (fighter: bigint | null) => void
+  focus_fighter: (fighter: Pick<FightFighterView, 'cell' | 'seat'> | null) => void
+  target_fighter: (fighter: Pick<FightFighterView, 'cell' | 'seat'>) => void
+  targetable_fighter_cells: readonly bigint[]
   selected_action: FightActionSelection
   select_action: (action: FightActionSelection) => void
   actions_locked: boolean
@@ -295,6 +274,13 @@ export const FightHud = ({
   )
   const turn_key = fight.checkpoint && view ? fight_turn_key(fight.checkpoint.contract, view.active_seat) : null
   const displayed_turn_card = fight_turn_card_view(view?.timeline ?? Object.freeze([]), turn_announcement)
+  const turn_clock = fight_turn_clock(
+    fight.mode,
+    view?.show_turn_timer,
+    presented_turn_seat,
+    fight.checkpoint?.contract.turn_started_ms,
+    now
+  )
   const [observed_turn, set_observed_turn] = useState(() => ({ key: turn_key, at_ms: performance.now() }))
   const crank_hidden = crank_prompt_hidden(crank_attempt, turn_key, fight.restore_serial)
   useEffect(() => {
@@ -360,16 +346,22 @@ export const FightHud = ({
   const chat = <WorldChat copy={copy} fight={fight_id} names={chat_names} />
   if (view.phase === 'placement') {
     const own_seat = view.selected?.seat
+    const readiness = placement_readiness(
+      fight.checkpoint,
+      session,
+      fight.ready_submitted_seats,
+      fight.mode === 'remote'
+    )
     const own_ready =
       fight.mode === 'remote' && own_seat !== undefined
         ? (fight.checkpoint.contract.fighters[Number(own_seat)]?.ready ?? false) ||
-          fight.ready_submitted_seat === Number(own_seat)
+          fight.ready_submitted_seats.includes(Number(own_seat))
         : null
     // the `--fh-*` palette, the mono face and the card's own chrome are all declared on
     // `.fight-hud`; a banner rendered outside it inherits nothing and reads as bare text
     return (
       <div className="fight-hud">
-        <PlacementBanner
+        <FightPlacementBanner
           can_forfeit={view.can_forfeit}
           deadline={view.placement_deadline_ms}
           on_force_start={() =>
@@ -398,7 +390,13 @@ export const FightHud = ({
               input: { type: 'ready', fighter: own_seat },
             })
           }
+          on_ready_all={() =>
+            dispatch_app({ type: 'fight/ready_all', fight: fight_id, fighters: readiness.unready_seats })
+          }
           ready={own_ready}
+          ready_all={readiness.show_all}
+          ready_all_disabled={readiness.unready_seats.length === 0}
+          ready_all_progress={fight.ready_all_progress}
           starting={Boolean(own_ready && view.ready_starts_fight)}
           locked={actions_locked}
           sides_manned={view.sides_manned}
@@ -466,6 +464,9 @@ export const FightHud = ({
         />
       )}
       <FightTimeline
+        collapse_label={copy.fight_hud.turn_order_collapse}
+        copy={copy}
+        expand_label={copy.fight_hud.turn_order_expand}
         fighters={
           presented_turn_seat === null
             ? view.timeline
@@ -473,14 +474,14 @@ export const FightHud = ({
                 Object.freeze({ ...fighter, active: fighter.seat === presented_turn_seat })
               )
         }
-        focus={focus_fighter ?? (() => undefined)}
+        focus={focus_fighter}
         label={copy.fight_hud.turn_order}
         mob_icon_for={mob_icon_for}
-        turn_seconds={
-          fight.mode === 'remote' && view.show_turn_timer && presented_turn_seat === null
-            ? turn_seconds_remaining(fight.checkpoint.contract.turn_started_ms, now)
-            : null
-        }
+        target={target_fighter}
+        targetable_cells={targetable_fighter_cells}
+        targeting={spell_action_selected(selected_action)}
+        turn_progress={turn_clock.progress}
+        turn_seconds={turn_clock.seconds}
       />
       {chat}
       <div className="fight-hud__bottom">

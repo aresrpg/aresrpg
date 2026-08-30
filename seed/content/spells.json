@@ -31457,7 +31457,7 @@
             "value_max": 1,
             "area_shape": 0,
             "area_size": 0,
-            "target_filter": 1,
+            "target_filter": 0,
             "chance_bp": 10000,
             "turns": 0,
             "stat": 0
@@ -31485,7 +31485,7 @@
             "value_max": 1,
             "area_shape": 0,
             "area_size": 0,
-            "target_filter": 1,
+            "target_filter": 0,
             "chance_bp": 10000,
             "turns": 0,
             "stat": 0
@@ -31513,7 +31513,7 @@
             "value_max": 1,
             "area_shape": 0,
             "area_size": 0,
-            "target_filter": 1,
+            "target_filter": 0,
             "chance_bp": 10000,
             "turns": 0,
             "stat": 0
@@ -31541,7 +31541,7 @@
             "value_max": 1,
             "area_shape": 0,
             "area_size": 0,
-            "target_filter": 1,
+            "target_filter": 0,
             "chance_bp": 10000,
             "turns": 0,
             "stat": 0
@@ -31569,7 +31569,7 @@
             "value_max": 1,
             "area_shape": 0,
             "area_size": 0,
-            "target_filter": 1,
+            "target_filter": 0,
             "chance_bp": 10000,
             "turns": 0,
             "stat": 0
@@ -31597,7 +31597,7 @@
             "value_max": 1,
             "area_shape": 0,
             "area_size": 0,
-            "target_filter": 1,
+            "target_filter": 0,
             "chance_bp": 10000,
             "turns": 0,
             "stat": 0

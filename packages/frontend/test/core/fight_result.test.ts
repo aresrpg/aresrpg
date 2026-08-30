@@ -19,6 +19,7 @@ import {
 } from '../../src/modules/fight_result.ts'
 import fight_result_module from '../../src/modules/fight_result.ts'
 import { create_fight_result_observer, settlement_needs_close } from '../../src/modules/fight_result_observer.ts'
+import { fight_result_error_text } from '../../src/modules/fight_result_error.ts'
 import { initial_app_state, type AppState } from '../../src/store.ts'
 import { toast, type Toast } from '../../src/toast.ts'
 import { pre_submission_version_race, retry_after_version_race } from '../../src/transaction_guard.ts'
@@ -44,6 +45,14 @@ test('settlement retries one zero-gas object-version race without delaying the n
   )
   expect({ attempts, settled, waits }).toEqual({ attempts: 2, settled: 'settled', waits: [250] })
   expect(pre_submission_version_race(new Error('[sdk] transaction abc failed on-chain: version'))).toBeFalse()
+})
+
+test('a residual settlement version race is explained beside Retry without Sui internals', () => {
+  const raw = "provided version doesn't match for object 0x00d606, provided: 997517726 actual: 0x3b74e986"
+  const copy = { result_version_changed: 'Fight rewards changed. Retry safely.' }
+
+  expect(fight_result_error_text(copy, raw)).toBe('Fight rewards changed. Retry safely.')
+  expect(fight_result_error_text(copy, 'wallet cancelled')).toBe('wallet cancelled')
 })
 
 test('an ended fight keeps its result and settlement behind the terminal presentation', () => {
@@ -525,7 +534,13 @@ test('a wagered result settles through the Kolizeum escrow manager', async () =>
   await new Promise((resolve) => setTimeout(resolve, 0))
 
   expect(calls).toEqual([
-    { kolizeum: '0xk1', fight: '0xf1', fighter_idx: 0n, custody: { kiosk: '0xk', kiosk_cap: '0xcap' } },
+    {
+      kolizeum: '0xk1',
+      fight: '0xf1',
+      fighter_idx: 0n,
+      custody: { kiosk: '0xk', kiosk_cap: '0xcap' },
+      last: false,
+    },
   ])
   expect(dispatched).toContainEqual({
     type: 'fight_result/settled',

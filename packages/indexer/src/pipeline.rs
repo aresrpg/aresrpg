@@ -54,7 +54,7 @@ pub enum Write {
     Money(MoneyFact),
     /// One successful game-package sender projected into every dashboard activity tier.
     Activity(ActivityFact),
-    /// One checkpoint's successful game-package transaction count in every dashboard tier.
+    /// One checkpoint's successful game count plus net gas for every non-deployment game attempt.
     Transaction(TransactionFact),
     /// One replay-safe live-character counter delta.
     Character(CharacterFact),
@@ -148,6 +148,7 @@ struct OwnedTx {
     sender: Addr,
     digest: String,
     successful: bool,
+    gas_mist: i64,
     move_calls: Vec<String>,
     events: Vec<OwnedEvent>,
     inputs: Vec<OwnedObj>,
@@ -230,11 +231,35 @@ fn is_game_activity(
     calls: &[String],
     game_packages: &std::collections::HashSet<String>,
 ) -> bool {
-    successful
-        && calls.iter().any(|call| {
-            call.split_once("::")
-                .is_some_and(|(package, _)| game_packages.contains(package))
-        })
+    successful && is_game_transaction(calls, game_packages)
+}
+
+fn is_game_transaction(
+    calls: &[String],
+    game_packages: &std::collections::HashSet<String>,
+) -> bool {
+    let game_calls = calls
+        .iter()
+        .filter_map(|call| call.split_once("::"))
+        .filter(|(package, _)| game_packages.contains(*package))
+        .map(|(_, target)| target);
+    game_calls
+        .clone()
+        .any(|target| !is_deployment_only_target(target))
+}
+
+fn is_deployment_only_target(target: &str) -> bool {
+    matches!(
+        target,
+        "version::admin_update"
+            | "version::admin_freeze"
+            | "admin::create_item_display"
+            | "admin::create_character_display"
+            | "protected_policy::mint_and_share"
+            | "listing_rule::add"
+            | "lot_rule::add"
+            | "naked_rule::add"
+    )
 }
 
 fn game_activity_txs<'a>(
@@ -243,6 +268,14 @@ fn game_activity_txs<'a>(
 ) -> impl Iterator<Item = &'a OwnedTx> {
     txs.iter()
         .filter(|tx| is_game_activity(tx.successful, &tx.move_calls, game_packages))
+}
+
+fn game_gas_txs<'a>(
+    txs: &'a [OwnedTx],
+    game_packages: &'a std::collections::HashSet<String>,
+) -> impl Iterator<Item = &'a OwnedTx> {
+    txs.iter()
+        .filter(|tx| is_game_transaction(&tx.move_calls, game_packages))
 }
 
 fn is_character(obj: &OwnedObj, game: &str) -> bool {
@@ -335,6 +368,7 @@ fn lift(checkpoint: &Checkpoint) -> Vec<OwnedTx> {
                 sender: Addr(addr32(tx.transaction.as_v1().sender.as_ref())),
                 digest: tx.transaction.digest().to_string(),
                 successful: matches!(tx.effects.status(), ExecutionStatus::Success),
+                gas_mist: tx.effects.gas_cost_summary().net_gas_usage(),
                 move_calls: move_calls(&tx.transaction),
                 events,
                 inputs,
@@ -465,10 +499,17 @@ impl Processor for AresHandler {
                 ts_ms,
             }));
         }
-        if transaction_count > 0 {
+        let transaction_gas_mist =
+            game_gas_txs(&txs, &self.game_packages).try_fold(0i64, |total, tx| {
+                total
+                    .checked_add(tx.gas_mist)
+                    .ok_or_else(|| anyhow::anyhow!("game gas total overflow at checkpoint {ckpt}"))
+            })?;
+        if transaction_count > 0 || transaction_gas_mist != 0 {
             writes.push(Write::Transaction(TransactionFact {
                 checkpoint: ckpt,
                 count: transaction_count,
+                gas_mist: transaction_gas_mist,
                 ts_ms,
             }));
         }
@@ -593,6 +634,18 @@ impl Handler for AresHandler {
                             .await?;
                     }
                     Write::Transaction(fact) => {
+                        let _: () = redis::cmd("HSET")
+                            .arg(analytics::TRANSACTIONS_ALL_KEY)
+                            .arg(fact.checkpoint)
+                            .arg(fact.count)
+                            .query_async(conn.connection())
+                            .await?;
+                        let _: () = redis::cmd("HSET")
+                            .arg(analytics::GAS_ALL_KEY)
+                            .arg(fact.checkpoint)
+                            .arg(fact.gas_mist)
+                            .query_async(conn.connection())
+                            .await?;
                         for (tier, bucket, width, retention) in
                             analytics::activity_buckets(fact.ts_ms)
                         {
@@ -603,6 +656,13 @@ impl Handler for AresHandler {
                                 .arg(fact.count)
                                 .query_async(conn.connection())
                                 .await?;
+                            let gas_key = analytics::series_key("gas", tier, bucket);
+                            let _: () = redis::cmd("HSET")
+                                .arg(&gas_key)
+                                .arg(fact.checkpoint)
+                                .arg(fact.gas_mist)
+                                .query_async(conn.connection())
+                                .await?;
                             let keep = if tier == "day" || tier == "week" || tier == "month" {
                                 analytics::DAILY_ACTIVITY_RETENTION_MS
                             } else {
@@ -610,6 +670,11 @@ impl Handler for AresHandler {
                             };
                             let _: () = redis::cmd("EXPIREAT")
                                 .arg(key)
+                                .arg(analytics::expiry_seconds(bucket, width, keep))
+                                .query_async(conn.connection())
+                                .await?;
+                            let _: () = redis::cmd("EXPIREAT")
+                                .arg(gas_key)
                                 .arg(analytics::expiry_seconds(bucket, width, keep))
                                 .query_async(conn.connection())
                                 .await?;
@@ -701,11 +766,22 @@ mod tests {
         ];
         let old_call = vec![format!("{old_upgrade}::world::join")];
         let foreign_call = vec![format!("{}::kiosk::purchase", canonical("0x2").unwrap())];
+        let deployment_calls = vec![
+            format!("{game}::admin::create_item_display"),
+            format!("{game}::protected_policy::mint_and_share"),
+            format!("{game}::listing_rule::add"),
+        ];
+        let mixed_calls = vec![
+            format!("{game}::version::admin_update"),
+            format!("{game}::shop::buy"),
+        ];
         assert!(is_game_activity(true, &game_call, &packages));
         assert!(is_game_activity(true, &multi_call, &packages));
         assert!(is_game_activity(true, &old_call, &packages));
         assert!(!is_game_activity(false, &game_call, &packages));
         assert!(!is_game_activity(true, &foreign_call, &packages));
+        assert!(!is_game_activity(true, &deployment_calls, &packages));
+        assert!(is_game_activity(true, &mixed_calls, &packages));
     }
 
     #[test]
@@ -716,6 +792,7 @@ mod tests {
             sender: Addr([0; 32]),
             digest: String::new(),
             successful,
+            gas_mist: 7,
             move_calls,
             events: vec![],
             inputs: vec![],
@@ -737,7 +814,15 @@ mod tests {
             ),
         ];
 
-        assert_eq!(game_activity_txs(&txs, &packages).count(), 1);
+        let activity = game_activity_txs(&txs, &packages).collect::<Vec<_>>();
+        assert_eq!(activity.len(), 1);
+        assert_eq!(activity.iter().map(|tx| tx.gas_mist).sum::<i64>(), 7);
+        assert_eq!(
+            game_gas_txs(&txs, &packages)
+                .map(|tx| tx.gas_mist)
+                .sum::<i64>(),
+            14
+        );
     }
 
     #[test]
@@ -758,6 +843,7 @@ mod tests {
             sender: Addr([0; 32]),
             digest: String::new(),
             successful: true,
+            gas_mist: 0,
             move_calls: vec![],
             events: vec![],
             inputs,

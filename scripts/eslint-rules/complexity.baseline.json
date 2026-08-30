@@ -113,7 +113,7 @@
       "project_fight_cues > events.forEach[0](event,index)": [41]
     },
     "packages/frontend/src/game/fight/FightHud.tsx": {
-      "FightHud": [21],
+      "FightHud": [19],
       "FightHud > useEffect[0]() > keydown": [11]
     },
     "packages/frontend/src/game/fight/FightResultCard.tsx": {
@@ -132,8 +132,7 @@
       "stat_change_values": [16]
     },
     "packages/frontend/src/game/fight/FightLayer.tsx": {
-      "FightLayer": [17],
-      "FightLayer > anonymous(cell)": [16]
+      "FightLayer": [17]
     },
     "packages/frontend/src/game/core/cameras.ts": {
       "create_follow_addon > frame": [21]
@@ -249,7 +248,7 @@
       "reduce": [27]
     },
     "packages/frontend/src/modules/fight_chain.ts": {
-      "observe: NonNullable<AppModule['observe']> > events.on[1]({ fight, input, origin })": [14]
+      "observe: NonNullable<AppModule['observe']> > events.on[1]({ fight, input, origin })": [13]
     },
     "packages/frontend/src/modules/fight_result.ts": {
       "reduce": [11]
@@ -576,29 +575,31 @@
       "cast_rows": [13],
       "cast_style": [16],
       "pool_cue": [12],
-      "project_fight_cues > events.forEach[0](event,index)": [43]
+      "project_fight_cues > events.forEach[0](event,index)": [42]
     },
     "packages/frontend/src/game/fight/fight_presenter.ts": {
       "create_fight_presenter > present_one": [10]
     },
+    "packages/frontend/src/game/fight/FightPlacementBanner.tsx": {
+      "FightPlacementBanner": [11]
+    },
     "packages/frontend/src/game/fight/FightSpell.tsx": {
-      "FightSpell": [12]
+      "FightSpell": [10]
     },
     "packages/frontend/src/game/fight/FightHud.tsx": {
-      "FightHud": [46],
-      "FightHud > useEffect[0]() > keydown": [17],
-      "PlacementBanner": [17]
+      "FightHud": [44],
+      "FightHud > useEffect[0]() > keydown": [17]
     },
     "packages/frontend/src/game/fight/FightResultCard.tsx": {
       "FightLevelUpCard": [23],
-      "FightResultCard": [26]
+      "FightResultCard": [24]
     },
     "packages/frontend/src/game/fight/FightViewport.tsx": {
       "FightViewport": [9]
     },
     "packages/frontend/src/game/fight/fight_overlays.ts": {
       "fight_visual_checkpoint_after_cue": [18],
-      "fight_zone_visual_state": [12],
+      "fight_zone_visual_state": [11],
       "project_fight_overlays": [24]
     },
     "packages/frontend/src/game/fight/fight_projection.ts": {
@@ -611,7 +612,6 @@
     },
     "packages/frontend/src/game/fight/FightLayer.tsx": {
       "FightLayer": [55],
-      "FightLayer > anonymous(cell)": [15],
       "FightLayer > anonymous(cue: FightPresentationCue,phase: FightCuePhase)": [9],
       "FightLayer > useMemo[0]()": [11]
     },
@@ -883,7 +883,7 @@
       "observe: NonNullable<AppModule['observe']> > settle": [10]
     },
     "packages/frontend/src/modules/fight_chain.ts": {
-      "observe: NonNullable<AppModule['observe']> > events.on[1]({ fight, input, origin })": [25],
+      "observe: NonNullable<AppModule['observe']> > events.on[1]({ fight, input, origin })": [19],
       "queued_end_turn": [16]
     },
     "packages/frontend/src/modules/fight_result.ts": {

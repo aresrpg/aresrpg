@@ -8,6 +8,7 @@ import {
   FOOTSTEP_VOICES,
   RECORDED_FOOTSTEP_TREATMENT,
   advance_footstep_cadence,
+  create_footsteps,
   create_footstep_cadence,
   footstep_dynamics,
   footstep_friction_samples,
@@ -21,6 +22,22 @@ import {
 } from '../../../src/game/audio/footstep_recordings.ts'
 
 describe('procedural footsteps', () => {
+  test('disabling footsteps prevents cadence from opening an audio context', () => {
+    let context_requests = 0
+    const footsteps = create_footsteps(
+      () => 0.5,
+      () => {
+        context_requests += 1
+        return null
+      }
+    )
+    footsteps.set_enabled(false)
+    footsteps.tick({ position: [0, 0, 0], on_ground: true, preset: 'grass', speed: 5 })
+    footsteps.tick({ position: [1, 0, 0], on_ground: true, preset: 'grass', speed: 5 })
+
+    expect(context_requests).toBe(0)
+  })
+
   test('uses six non-repeating recordings for both stone and sand', () => {
     expect(Object.keys(FOOTSTEP_AUDIO_ASSETS)).toHaveLength(12)
     expect(recorded_footstep_preset('stone')).toBe(true)

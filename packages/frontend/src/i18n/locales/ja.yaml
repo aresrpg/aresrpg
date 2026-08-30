@@ -364,6 +364,10 @@ demo_page:
   ride_pet: ペットに乗る
   dismount_pet: 降りる
   mob_group: モブグループ
+  crowd_load: 群衆負荷テスト
+  crowd_benchmark: 計測
+  crowd_loading: キャラクターモデルを読み込み中…
+  crowd_result: フェーズ
   mob: モブ
   hide_protectors: プロテクターを非表示
   amount: 数量
@@ -505,6 +509,8 @@ settings_page:
   subtitle: 'AresRPGの設定'
   music_label: '音楽'
   music_hint: 'ワールドと戦闘の音楽を再生します。'
+  footsteps_label: 足音
+  footsteps_hint: 移動時の足音を再生します。
   auto_switch_fighter_label: 操作キャラクター自動切替
   auto_switch_fighter_hint: 所有キャラクターのターン開始時に自動で選択します。
   always_craft_from_label: 常にこのキャラで製作
@@ -513,6 +519,40 @@ settings_page:
   always_craft_from_none: 無効
   render_distance_label: 描画距離
   render_distance_hint: 周囲のワールドを読み込む範囲。広いほど負荷が上がります。
+tutorial:
+  progress: '{{current}} / {{total}}'
+  skip: チュートリアルをスキップ
+  back: 戻る
+  next: 次へ
+  finish: 完了
+  fight_enter: 戦闘に入る
+  reset_title: チュートリアル
+  reset_hint: 次に各ページを開いたとき、説明をもう一度表示します。
+  reset_action: リセット
+  world_compass_title: 世界と共有ゾーン
+  world_compass_body: AresRPGには、進行に応じて解放される複数の世界があります。各世界はモンスター、資源、ダンジョンが存在するゾーンに分かれています。誰でもゾーンを発見でき、その発見はすべてのプレイヤーに共有されます。
+  world_hud_title: 体力とクイックスロット
+  world_hud_body: このHUDには体力とクイック使用アイテムが表示されます。戦闘が始まると、同じ場所がスペルバーになります。
+  world_fps_title: 世界の表示設定
+  world_fps_body: 地形は公開データから決定論的に生成されます。Suiは世界と基準となるX/Z位置を保存し、高さは地形からローカルに導出されます。そのためフラットは同じ空間の表示だけを変えます。画質の変更や、世界の戦闘をパーティーメンバーだけに制限することもできます。
+  world_character_title: 世界のプレイヤー
+  world_character_body: これが現在操作しているキャラクターです。近くの別キャラクターを右クリックすると、利用できる交流メニューが開きます。
+  world_character_tabs_title: 複数のキャラクター
+  world_character_tabs_body: 最大6体のキャラクターを所有できます。ほかの所有キャラクターをパーティーに招待し、パーティー追従を有効にすると、一緒に移動して到着時に参加可能な世界戦闘へ自動参加します。
+  fight_title: 初めてのオンチェーン戦闘
+  fight_body: 戦闘はターン制です。移動とスペルを選ぶと、行動が1つのターンとしてまとめて準備されます。ターン終了で完全なターンが1つのSuiトランザクションとして送信され、次にプレイヤーが行動できるまでのモンスターターンも計算されます。戦闘の基準となる状態はすべてSui上で確定します。勝利後は最後のSuiトランザクションがオンチェーン乱数で共有戦利品を抽選し、各報酬を割り当てられたプレイヤーのインベントリに入れます。
+  equipment_gear_title: 装備
+  equipment_gear_body: 装備中のアイテムは選択中のキャラクターに属します。装備を人形へドラッグし、変化するボーナスを確認してからまとめて確定します。
+  equipment_inventory_title: 共有インベントリ
+  equipment_inventory_body: インベントリはこのアカウントの全キャラクターで共有されます。上で別のキャラクターを選ぶと、同じ利用可能なアイテムを装備できます。
+  stats_title: 特性
+  stats_body: 特性ポイントを使って強くなりましょう。生命力は体力、知恵はXPとAP/MP減少への耐性、運は水ダメージと戦利品率、素早さは風ダメージ、クリティカル、足止めと離脱を向上させます。
+  spells_title: スペル
+  spells_body: キャラクターの進行に応じて新しいスペルが解放されます。レベルアップで得たスペルポイントを使い、解放済みスペルを強化できます。
+  jobs_title: ジョブ
+  jobs_body: 採集と製作の進行、レシピ、製作可能なアイテムを確認できます。複数キャラクターがいる場合、設定でこのページを専任の職人1体に固定できます。
+  runeforge_title: ルーンフォージ
+  runeforge_body: ジョブレベル70になると、対応する製作職がルーンで装備を強化できます。アイテムを粉砕してルーンを入手し、ここで適用します。
 admin_page:
   kicker: パブリッシャー
   title: ゲームコンテンツを公開
@@ -582,12 +622,16 @@ admin_page:
   peak: ピーク
   revenue: 収益
   revenue_over_time: 収益の推移
-  revenue_over_time_body: ショップ収益とマーケットのロイヤリティ
+  revenue_over_time_body: 収益源別の全プロトコル収益
   shop: ショップ
   shop_sales: ショップ売上
   item_royalties: アイテムロイヤリティ
   character_royalties: キャラクターロイヤリティ
+  character_creation_revenue: キャラクター作成
+  kolizeum_revenue: コロシアム手数料
   game_transactions: ゲームトランザクション
+  game_gas_fees: ゲームガス代（24時間）
+  all_time: 累計
   game_transactions_over_time: トランザクションの推移
   game_transactions_body: 成功したAresRPGトランザクションをPTBごとに1回カウント
   today: 今日
@@ -727,6 +771,8 @@ simulator_page:
 fight_hud:
   board_label: 戦闘ボード
   turn_order: ターン順
+  turn_order_collapse: ターン順を折りたたむ
+  turn_order_expand: ターン順を展開する
   placement_title: 戦闘準備
   placement_hint: ファイターを配置して準備完了にしてください
   placement_gas_title: ファイターをもう一度移動しますか？
@@ -734,6 +780,10 @@ fight_hud:
   placement_gas_hide: 今後表示しない
   placement_gas_confirm: それでも移動
   placement_ready: 準備完了
+  placement_ready_all: 全員準備完了
+  placement_ready_all_progress: 全員準備 · {completed}/{total}
+  placement_ready_all_complete: 全員準備完了 · {completed}/{total}
+  placement_ready_all_failed: 準備が中断されました · {completed}/{total}
   placement_waiting: 他のプレイヤーを待っています…
   placement_starting: 戦闘を開始しています…
   placement_force_prompt: プレイヤーが不在です — 戦闘開始を強制しますか？
@@ -800,11 +850,15 @@ fight_hud:
   result_fallen: 戦闘不能
   result_survived: 生存
   result_collecting: 戦利品を回収中…
+  result_collecting_progress: キャラクターの戦利品 · {completed}/{total}
+  result_collecting_complete: 全キャラクターの戦利品を回収済み · {completed}/{total}
+  result_collecting_failed: 戦利品の回収が中断されました · {completed}/{total}
   result_continue: 続ける
   result_close: 閉じる
   fight_finalize_pending: 戦闘の後処理を完了できます。
   fight_finalize_button: 完了する
   result_retry: 再試行
+  result_version_changed: 戦闘報酬の回収中に一部のゲームオブジェクトが更新されました。失われたものはありません。再試行して最新状態を読み込み、報酬を回収してください。
   level_up_title: レベルアップ
   level_up_reached: レベル到達
   level_up_stat_points: ステータスポイント
@@ -840,6 +894,9 @@ wallet_legacy:
   faq_balance: SUIを送ったのに残高が更新されない？
   faq_balance_answer: ご安心ください。更新システムが一時的に遅れている場合があります。正しいアドレス（上記からコピー）にSUIを送金したことを確認し、それでも反映されない場合はトランザクションIDを添えてDiscordのチームまでお問い合わせください。
   add_funds: 残高を追加
+  testnet_faucet_title: テストネットSUI
+  testnet_faucet_body: AresRPGはSuiテストネットで稼働しています。テストネットSUIは無料で、金銭的価値はありません。公式Suiフォーセットからトークンを取得してください。
+  testnet_faucet_action: Suiフォーセットを開く
   how_to_pay: お支払い方法を選択してください
   add_funds_desc: ご希望のお支払い方法をお選びください。SUIは直接ウォレットに届きます。
   method_paypal: PayPal
@@ -1613,11 +1670,11 @@ characters_page:
       air: '風'
     description:
       vitality: '最大HPが増加する'
-      wisdom: '獲得経験値が増加する'
+      wisdom: '獲得経験値とAP/MP減少への耐性が増加する'
       strength: '土属性ダメージが増加する'
       intelligence: '火属性ダメージと回復量が増加する'
       chance: '水属性ダメージとアイテムのドロップ率が増加する'
-      agility: '風属性ダメージ、足止め、AP/MPロスの回避が増加する'
+      agility: '風属性ダメージ、クリティカル、足止め、離脱が増加する'
       critical_hit: 'クリティカルヒットの確率が上昇する'
       raw_damage: 'ダメージ効果とライフスティール効果に固定値を追加する'
     add_point: '{{stat}}に1ポイント追加'

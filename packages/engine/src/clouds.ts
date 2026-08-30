@@ -52,6 +52,8 @@ export const cloud_sample_xz = (
 }
 
 export const cloud_shadow_strength = (quality: EngineQuality): number => (quality === 'low' ? 0 : CLOUD_SHADOW[quality])
+export const cloud_layer_visible = (quality: EngineQuality, fight_active: boolean): boolean =>
+  quality !== 'low' && !fight_active
 
 export const cloud_coverage_threshold = (humidity: number): number => {
   const amount = Math.min(1, Math.max(0, humidity))
@@ -63,6 +65,7 @@ export type Clouds = Readonly<{
   set_focus: (x: number, z: number) => void
   set_humidity: (humidity: number) => void
   set_quality: (quality: EngineQuality) => void
+  set_active: (active: boolean) => void
   dispose: () => void
 }>
 
@@ -78,6 +81,8 @@ export const create_clouds = ({
   sky: Pick<ReturnType<typeof create_sky_node>, 'sample_sky_dome' | 'sun_direction'>
 }>): Clouds => {
   const seed_value = derive_sub_seed(seed, 'clouds') / 0xffffffff
+  let active = true
+  let current_quality = quality
   const seed_offset = vec2(seed_value * 173.7, seed_value * -91.3)
   const humidity = uniform(0.55)
   const shadow_strength = uniform(cloud_shadow_strength(quality))
@@ -131,7 +136,7 @@ export const create_clouds = ({
   mesh.frustumCulled = false
   mesh.matrixAutoUpdate = false
   mesh.position.y = CLOUD_HEIGHT
-  mesh.visible = quality !== 'low'
+  mesh.visible = cloud_layer_visible(quality, false)
   mesh.updateMatrix()
   scene.add(mesh)
 
@@ -145,8 +150,14 @@ export const create_clouds = ({
       humidity.value = Math.min(1, Math.max(0, value))
     },
     set_quality: (next: EngineQuality) => {
-      mesh.visible = next !== 'low'
-      shadow_strength.value = cloud_shadow_strength(next)
+      current_quality = next
+      mesh.visible = cloud_layer_visible(current_quality, !active)
+      shadow_strength.value = active ? cloud_shadow_strength(current_quality) : 0
+    },
+    set_active: (next: boolean) => {
+      active = next
+      mesh.visible = cloud_layer_visible(current_quality, !active)
+      shadow_strength.value = active ? cloud_shadow_strength(current_quality) : 0
     },
     dispose: () => {
       scene.remove(mesh)

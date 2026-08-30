@@ -24,6 +24,7 @@ import { dispatch_app, useAppStore } from '../store.ts'
 import SimulatorPage from '../simulator/SimulatorPage.tsx'
 
 import { BoardGallery } from './BoardGallery.tsx'
+import { CharacterCrowdLab } from './CharacterCrowdLab.tsx'
 import { DemoDevPage } from './DemoDevPage.tsx'
 
 type DemoView = 'world' | 'fight' | 'boards' | 'content' | 'biomes'
@@ -42,6 +43,7 @@ const initial_view = (): DemoView => {
   return (DEMO_VIEWS as readonly string[]).includes(hash) ? (hash as DemoView) : 'world'
 }
 type SpawnedGroup = Readonly<{ mob_type: string; amount: number; serial: number }>
+type DemoWorld = ReturnType<typeof create_world>
 
 const renderable_worlds = Object.freeze(content_catalog.worlds.filter(({ terrain }) => terrain !== undefined))
 const initial_world = renderable_worlds[0] ?? null
@@ -49,6 +51,48 @@ const initial_mob = initial_world?.mobs[0]?.mob_type ?? content_catalog.mobs[0]?
 const DEFAULT_COLORS = Object.freeze(['#f3eadb', '#2f8fe8', '#d9af57'] as const)
 const { hats, cloaks } = worn_equipment_options
 const pets = Object.freeze(content_catalog.items.filter(({ category }) => category === 'pet'))
+
+const update_demo_mobs = (world_api: DemoWorld | null, group: SpawnedGroup | null, crowd_active: boolean): void => {
+  if (!world_api || crowd_active) return
+  if (!group) return world_api.set_entities(Object.freeze([]))
+  const entities = mob_entities(
+    Array.from({ length: group.amount }, (_, index) => {
+      const angle = (index / group.amount) * Math.PI * 2
+      const x = Math.cos(angle) * 5
+      const z = Math.sin(angle) * 5
+      return Object.freeze({
+        id: `demo_mob_${group.serial}_${index}`,
+        mob_type: group.mob_type,
+        anchor: Object.freeze({
+          kind: 'world' as const,
+          position: Object.freeze([x, world_api.ground_height(x, z), z] as const),
+        }),
+        facing: Object.freeze({ kind: 'yaw' as const, yaw: Math.atan2(-x, -z) }),
+      })
+    })
+  )
+  world_api.set_entities(entities)
+}
+
+const WorldCrowdLab = ({
+  set_active,
+  text,
+  world_api,
+}: Readonly<{
+  set_active: (active: boolean) => void
+  text: AppCopy['demo_page']
+  world_api: DemoWorld | null
+}>) => {
+  if (!world_api) return null
+  return (
+    <CharacterCrowdLab
+      ground_height={world_api.ground_height}
+      set_active={set_active}
+      submit={world_api.set_entities}
+      text={text}
+    />
+  )
+}
 
 const field_class =
   'h-9 min-w-0 border border-white/10 bg-bg px-2 text-[9px] text-[#d5d2cb] outline-none focus:border-[#4a9eff]/45'
@@ -89,6 +133,7 @@ const WorldLab = ({ active, copy }: Readonly<{ active: boolean; copy: AppCopy }>
   const [mob_type, set_mob_type] = useState(initial_mob)
   const [mob_amount, set_mob_amount] = useState(3)
   const [spawned_group, set_spawned_group] = useState<SpawnedGroup | null>(null)
+  const [crowd_active, set_crowd_active] = useState(false)
   const selected_world = content_catalog.world(world_id)
   const mob_rows = useMemo(() => world_mob_rows(selected_world), [selected_world])
   const resource_rows = useMemo(
@@ -201,28 +246,8 @@ const WorldLab = ({ active, copy }: Readonly<{ active: boolean; copy: AppCopy }>
   }, [active, character_enabled, pet, world_api])
 
   useEffect(() => {
-    if (!world_api || !spawned_group) {
-      world_api?.set_entities(Object.freeze([]))
-      return
-    }
-    const entities = mob_entities(
-      Array.from({ length: spawned_group.amount }, (_, index) => {
-        const angle = (index / spawned_group.amount) * Math.PI * 2
-        const x = Math.cos(angle) * 5
-        const z = Math.sin(angle) * 5
-        return Object.freeze({
-          id: `demo_mob_${spawned_group.serial}_${index}`,
-          mob_type: spawned_group.mob_type,
-          anchor: Object.freeze({
-            kind: 'world' as const,
-            position: Object.freeze([x, world_api.ground_height(x, z), z] as const),
-          }),
-          facing: Object.freeze({ kind: 'yaw' as const, yaw: Math.atan2(-x, -z) }),
-        })
-      })
-    )
-    world_api.set_entities(entities)
-  }, [spawned_group, world_api])
+    update_demo_mobs(world_api, spawned_group, crowd_active)
+  }, [crowd_active, spawned_group, world_api])
 
   const change_quality = (quality: EngineQuality): void =>
     dispatch_app({ type: 'settings/changed', settings: Object.freeze({ ...settings, quality }) })
@@ -262,6 +287,8 @@ const WorldLab = ({ active, copy }: Readonly<{ active: boolean; copy: AppCopy }>
               </p>
             </div>
           </div>
+
+          <WorldCrowdLab set_active={set_crowd_active} text={text} world_api={world_api} />
 
           <div className="grid gap-3 border-b border-white/8 py-3">
             <label className={label_class}>

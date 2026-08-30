@@ -105,8 +105,8 @@ export type CharacterRow = {
    *  absent while the character never equipped anything (fold neutral) */
   folded_stats?: Record<string, number>
   kiosk: string
-  /** the personal kiosk cap's object id (graph `Kiosk.personal_cap`) — the client hands it to
-   *  the SDK for custody transactions; absent until the indexer first meets the cap object */
+  /** personal kiosk cap identity (graph `Kiosk.personal_cap`); the SDK refreshes its exact mutable
+   *  ref before custody transactions. Absent until the indexer first meets the cap object. */
   kiosk_cap?: string
   equipment: EquippedItem[]
   /** Current object custody. A seated character remains in the roster but cannot be listed. */
@@ -315,6 +315,8 @@ export type AdminMoneyPoint = Readonly<{
   shop_orders: string
   item_royalty_mist: string
   character_royalty_mist: string
+  character_creation_mist: string
+  kolizeum_mist: string
 }>
 
 export type AdminActivityPoint = Readonly<{
@@ -348,6 +350,8 @@ export type AdminRevenueOverview = Readonly<{
   shop_orders: string
   item_royalty_mist: string
   character_royalty_mist: string
+  character_creation_mist: string
+  kolizeum_mist: string
   last_30d_revenue_mist: string
   month_to_date_revenue_mist: string
   money: readonly AdminMoneyPoint[]
@@ -365,6 +369,9 @@ export type AdminTransactionsOverview = Readonly<{
   days: AdminRangeDays
   bucket: AdminBucket
   total: number
+  all_time: number
+  gas_24h_mist: string
+  gas_all_time_mist: string
   transactions: readonly AdminTransactionPoint[]
 }>
 

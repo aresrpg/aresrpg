@@ -24,6 +24,7 @@ import { create_far_terrain } from './far_terrain.ts'
 import { create_fight_board_layer } from './fight_board.ts'
 import { BOARD_WATER_DROP } from './fight_board_surface.ts'
 import { create_fight_sword_layer, fight_swords_visible } from './fight_swords.ts'
+import { create_character_crowd_layer, is_character_crowd_spec } from './character_crowd.ts'
 import { create_entity_layer } from './entities.ts'
 import { create_entity_label_layer } from './entity_labels.ts'
 import { create_fight_presentation } from './fight_presentation.ts'
@@ -101,7 +102,13 @@ export const create_webgpu_backend = async (
   const fight_board = create_fight_board_layer({ scene, camera, canvas })
   let fight_swords: ReturnType<typeof create_fight_sword_layer> | null = null
   const entities = create_entity_layer({ scene })
-  const entity_labels = create_entity_label_layer({ canvas, scene, camera, entities })
+  const character_crowd = create_character_crowd_layer({ scene })
+  const entity_anchors = Object.freeze({
+    live_crown: (id: string) => entities.live_crown(id) ?? character_crowd.live_crown(id),
+    world_anchor: (id: string) => entities.world_anchor(id) ?? character_crowd.world_anchor(id),
+    entity_height: (id: string) => entities.entity_height(id) ?? character_crowd.entity_height(id),
+  })
+  const entity_labels = create_entity_label_layer({ canvas, scene, camera, entities: entity_anchors })
   const effects = create_transient_effects({ scene, entities })
   const fight_presentation = create_fight_presentation({ entities, vfx: effects, shock: () => crit_shock() })
   const sun = new DirectionalLight(0xfff2dd, 3)
@@ -496,6 +503,7 @@ export const create_webgpu_backend = async (
         })
     }
     entities.tick(now)
+    character_crowd.tick(now)
     effects.tick(now)
     const show_resource_nodes =
       !dungeon_stage_active &&
@@ -661,6 +669,7 @@ export const create_webgpu_backend = async (
     },
     set_fight_board: (board) => {
       fight_board.set(board)
+      clouds.set_active(board === null)
       portal?.set_active(board === null && !dungeon_stage_active)
       dungeon_portals.set_active(board === null && !dungeon_stage_active)
       // the peephole arms with the board and remembers its footprint; disarming restores the
@@ -691,7 +700,10 @@ export const create_webgpu_backend = async (
     },
     set_entities: (next) => {
       has_dynamic_entities = next.length > 0
-      entities.set(next)
+      const crowd = next.flatMap((spec) => (spec.kind === 'character' && is_character_crowd_spec(spec) ? [spec] : []))
+      const individual = next.filter((spec) => spec.kind !== 'character' || !is_character_crowd_spec(spec))
+      character_crowd.set(Object.freeze(crowd))
+      entities.set(Object.freeze(individual))
       sun.shadow.needsUpdate = true
     },
     set_fight_swords: (url, impact_sound_url, markers) => {
@@ -738,13 +750,13 @@ export const create_webgpu_backend = async (
     play_fight_cue: fight_presentation.play,
     play_jump_puff: effects.play_jump_puff,
     project_entity: (id) => {
-      const anchor = entities.world_anchor(id)
+      const anchor = entity_anchors.world_anchor(id)
       return anchor ? project_screen_anchor(anchor, camera, canvas.getBoundingClientRect()) : null
     },
     set_entity_label: entity_labels.set,
     set_world_label: (id, element, position) =>
       entity_labels.set_static(id, element, new Vector3(...(position ?? [0, 0, 0]))),
-    entity_height: entities.entity_height,
+    entity_height: entity_anchors.entity_height,
     upsert_fight_blob: fight_board.upsert_blob,
     remove_fight_blob: fight_board.remove_blob,
     pick_fight_cell: fight_board.pick,
@@ -811,6 +823,7 @@ export const create_webgpu_backend = async (
       fight_board.dispose()
       effects.dispose()
       entities.dispose()
+      character_crowd.dispose()
       entity_labels.dispose()
       frame_renderer.dispose()
       hillaire?.dispose()

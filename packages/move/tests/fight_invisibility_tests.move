@@ -35,6 +35,13 @@ fun mob_searches_when_every_enemy_is_invisible() {
 }
 
 #[test]
+fun invisible_teammate_does_not_block_line_of_sight() {
+  let mut scenario = test_scenario::begin(OWNER);
+  assert!(fight::invisible_teammate_los_for_testing(scenario.ctx()), 0);
+  scenario.end();
+}
+
+#[test]
 #[expected_failure(abort_code = 1721, location = aresrpg::fight)]
 fun an_invisible_occupant_still_consumes_the_per_target_cap() {
   let mut scenario = test_scenario::begin(OWNER);

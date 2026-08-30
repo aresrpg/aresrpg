@@ -10,6 +10,7 @@ import {
   type ChatChannel,
   type ChatSpeakChannel,
 } from './chat_preferences.ts'
+import { completed_tutorials_from, type TutorialId } from '../../tutorial/tutorial.ts'
 
 export const SETTINGS_STORAGE_KEY = 'aresrpg.settings'
 
@@ -25,6 +26,9 @@ export type GameSettings = Readonly<{
   quality: EngineQuality
   flat_mode: boolean
   music_enabled: boolean
+  /** Absent means enabled for settings saved before the toggle existed. */
+  footsteps_enabled?: boolean
+  completed_tutorials?: readonly TutorialId[]
   follow_leader?: boolean
   chat_visible_channels?: readonly ChatChannel[]
   chat_speak_channel?: ChatSpeakChannel
@@ -67,6 +71,8 @@ export const load_game_settings = (
     quality: default_quality,
     flat_mode: false,
     music_enabled: true,
+    footsteps_enabled: true,
+    completed_tutorials: Object.freeze([]) as readonly TutorialId[],
     follow_leader: false,
     chat_visible_channels: CHAT_CHANNELS,
     chat_speak_channel: 'general' as const,
@@ -87,6 +93,8 @@ export const load_game_settings = (
         : defaults.quality
     const flat_mode = Reflect.get(record, 'flat_mode')
     const music_enabled = Reflect.get(record, 'music_enabled')
+    const footsteps_enabled = Reflect.get(record, 'footsteps_enabled')
+    const completed_tutorials = completed_tutorials_from(Reflect.get(record, 'completed_tutorials'))
     const follow_leader = Reflect.get(record, 'follow_leader') === true
     const chat_visible_channels = chat_visible_channels_from(Reflect.get(record, 'chat_visible_channels'))
     const chat_speak_channel = chat_speak_channel_from(Reflect.get(record, 'chat_speak_channel'))
@@ -109,6 +117,8 @@ export const load_game_settings = (
       quality,
       flat_mode: typeof flat_mode === 'boolean' ? flat_mode : defaults.flat_mode,
       music_enabled: typeof music_enabled === 'boolean' ? music_enabled : defaults.music_enabled,
+      footsteps_enabled: footsteps_enabled !== false,
+      completed_tutorials,
       follow_leader,
       chat_visible_channels,
       chat_speak_channel,

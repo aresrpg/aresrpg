@@ -93,6 +93,43 @@ test('an unaffordable spell does not display the turn-critical border', async ()
   expect(html).not.toContain('data-turn-critical')
 })
 
+test('a successful roll without a critical branch cannot promise a gold outcome', async () => {
+  const { FightSpell } = await import('../../../src/game/fight/FightSpell.tsx')
+  const details: SpellLevel = {
+    ap_cost: 3n,
+    range_min: 1n,
+    range_max: 4n,
+    modifiable_range: false,
+    line_of_sight: true,
+    line_launch: false,
+    free_cell: false,
+    casts_per_turn: 0n,
+    casts_per_target: 0n,
+    cooldown_turns: 0n,
+    crit_1_in: 3n,
+    effects: [effect],
+    crit_effects: [],
+  }
+  const spell: FightSpellView = Object.freeze({
+    name: 'Stain',
+    level: 1n,
+    details,
+    source: Object.freeze({ classe: 'shusen', unlock_level: 1n, levels: [details] }),
+    cooldown: 0n,
+    turn: Object.freeze({
+      critical: true,
+      crit_1_in: 3n,
+      effects: Object.freeze([{ ...effect, critical_only: false }]),
+    }),
+  })
+
+  const html = renderToStaticMarkup(
+    createElement(FightSpell, { spell, disabled: false, selected: false, select: () => {} })
+  )
+  expect(html).not.toContain(' critical')
+  expect(html).not.toContain('data-turn-critical')
+})
+
 test('an affordable turn-critical spell marks its socket shell for shared hover-detail styling', async () => {
   const { FightSpell } = await import('../../../src/game/fight/FightSpell.tsx')
   const details: SpellLevel = {

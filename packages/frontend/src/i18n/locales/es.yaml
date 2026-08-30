@@ -364,6 +364,10 @@ demo_page:
   ride_pet: Montar mascota
   dismount_pet: Desmontar
   mob_group: Grupo de monstruos
+  crowd_load: Prueba de carga de multitud
+  crowd_benchmark: Medir
+  crowd_loading: Cargando modelos de personajes…
+  crowd_result: Fase
   mob: Monstruo
   hide_protectors: Ocultar protectores
   amount: Cantidad
@@ -505,6 +509,8 @@ settings_page:
   subtitle: 'Tus preferencias de AresRPG'
   music_label: 'Música'
   music_hint: 'Reproduce la música del mundo y de los combates.'
+  footsteps_label: Pasos
+  footsteps_hint: Reproduce sonidos de pasos al moverse.
   auto_switch_fighter_label: Cambio automático de luchador
   auto_switch_fighter_hint: Selecciona automáticamente tu personaje cuando empieza su turno.
   always_craft_from_label: Fabricar siempre con
@@ -513,6 +519,40 @@ settings_page:
   always_craft_from_none: Desactivado
   render_distance_label: Distancia de renderizado
   render_distance_hint: Hasta dónde se carga el mundo a tu alrededor. Más lejos cuesta rendimiento.
+tutorial:
+  progress: '{{current}} / {{total}}'
+  skip: Omitir tutorial
+  back: Atrás
+  next: Siguiente
+  finish: Terminar
+  fight_enter: Entrar al combate
+  reset_title: Tutoriales
+  reset_hint: Vuelve a mostrar cada introducción la próxima vez que visites su página.
+  reset_action: Reiniciar
+  world_compass_title: Mundos y zonas compartidas
+  world_compass_body: AresRPG contiene varios mundos que se desbloquean durante tu progresión. Cada mundo se divide en zonas con monstruos, recursos y mazmorras. Cualquiera puede descubrir una zona, y el descubrimiento se comparte con todos los jugadores.
+  world_hud_title: Vida y accesos rápidos
+  world_hud_body: Este HUD muestra tu vida y los espacios de objetos rápidos. Cuando comienza un combate, la misma zona se convierte en tu barra de hechizos.
+  world_fps_title: Controles del mundo
+  world_fps_body: El terreno se genera de forma determinista a partir de datos publicados. Sui guarda el mundo y la posición X/Z autoritativa, mientras el terreno deriva la altura localmente. Plano solo cambia la presentación de ese mismo espacio. También puedes cambiar la calidad y restringir los combates del mundo a miembros del grupo.
+  world_character_title: Jugadores en el mundo
+  world_character_body: Este es tu personaje activo. Haz clic derecho sobre otro personaje cercano para abrir las interacciones disponibles.
+  world_character_tabs_title: Juega con varios personajes
+  world_character_tabs_body: Puedes tener hasta seis personajes. Invita a tus otros personajes a un grupo y activa Seguir grupo para que viajen contigo y se unan automáticamente a combates del mundo compatibles cuando lleguen.
+  fight_title: Tu primer combate on-chain
+  fight_body: Los combates son por turnos. Elige movimiento y hechizos, y tus acciones se preparan juntas. Terminar turno envía el turno completo como una transacción de Sui y calcula los siguientes turnos de monstruos hasta que otro jugador pueda actuar. Todo el estado autoritativo del combate se resuelve en Sui. Tras la victoria, una transacción final de Sui usa aleatoriedad on-chain para sortear el botín compartido y colocar cada recompensa en el inventario asignado.
+  equipment_gear_title: Equipo
+  equipment_gear_body: Los objetos equipados pertenecen al personaje seleccionado. Arrastra equipo al muñeco, revisa las bonificaciones resultantes y confirma todos los cambios juntos.
+  equipment_inventory_title: Inventario compartido
+  equipment_inventory_body: Todos los personajes de esta cuenta comparten el inventario. Selecciona otro personaje arriba para equiparle los mismos objetos disponibles.
+  stats_title: Características
+  stats_body: Gasta puntos de características para hacerte más fuerte. Vitalidad aumenta la vida, Sabiduría mejora la XP y la resistencia a pérdidas de PA/PM, Suerte mejora el daño de Agua y el botín, y Agilidad mejora el daño de Aire, los críticos, el placaje y la huida.
+  spells_title: Hechizos
+  spells_body: Desbloqueas nuevos hechizos durante la progresión. Al subir de nivel ganas puntos de hechizo que puedes gastar aquí para mejorar los hechizos desbloqueados.
+  jobs_title: Oficios
+  jobs_body: Consulta tu progreso de recolección y artesanía, revisa recetas y fabrica objetos disponibles. Si tienes varios personajes, Ajustes puede bloquear esta página a un artesano concreto.
+  runeforge_title: Forjamagia
+  runeforge_body: Al alcanzar el nivel 70 de un oficio, la profesión de artesanía correspondiente puede mejorar equipo con runas. Consigue runas triturando objetos y aplícalas aquí.
 admin_page:
   kicker: Editor
   title: Publicar contenido del juego
@@ -582,12 +622,16 @@ admin_page:
   peak: Pico
   revenue: Ingresos
   revenue_over_time: Ingresos a lo largo del tiempo
-  revenue_over_time_body: Ingresos de la tienda y regalías del mercado
+  revenue_over_time_body: Todos los ingresos del protocolo por fuente
   shop: Tienda
   shop_sales: Ventas de la tienda
   item_royalties: Regalías de objetos
   character_royalties: Regalías de personajes
+  character_creation_revenue: Creación de personajes
+  kolizeum_revenue: Comisiones del Koliseo
   game_transactions: Transacciones del juego
+  game_gas_fees: Gas del juego (24 h)
+  all_time: Histórico
   game_transactions_over_time: Transacciones a lo largo del tiempo
   game_transactions_body: Transacciones exitosas de AresRPG, contadas una vez por PTB
   today: Hoy
@@ -727,6 +771,8 @@ simulator_page:
 fight_hud:
   board_label: Tablero de combate
   turn_order: Orden de turnos
+  turn_order_collapse: Contraer el orden de turnos
+  turn_order_expand: Expandir el orden de turnos
   placement_title: Prepárate para el combate
   placement_hint: Coloca a tus luchadores y márcalos como listos
   placement_gas_title: ¿Mover al luchador otra vez?
@@ -734,6 +780,10 @@ fight_hud:
   placement_gas_hide: No volver a mostrar
   placement_gas_confirm: Mover de todos modos
   placement_ready: Listo
+  placement_ready_all: Todos listos
+  placement_ready_all_progress: Preparar todos · {completed}/{total}
+  placement_ready_all_complete: Todos listos · {completed}/{total}
+  placement_ready_all_failed: Preparación interrumpida · {completed}/{total}
   placement_waiting: Esperando a los demás…
   placement_starting: Iniciando combate…
   placement_force_prompt: Un jugador está ausente — ¿forzar el inicio del combate?
@@ -800,11 +850,15 @@ fight_hud:
   result_fallen: Caído
   result_survived: Sobrevivió
   result_collecting: Recogiendo botín…
+  result_collecting_progress: Botín de personajes · {completed}/{total}
+  result_collecting_complete: Todo el botín recogido · {completed}/{total}
+  result_collecting_failed: Recogida interrumpida · {completed}/{total}
   result_continue: Continuar
   result_close: Cerrar
   fight_finalize_pending: El combate está listo para finalizar.
   fight_finalize_button: Finalizar
   result_retry: Reintentar
+  result_version_changed: Algunos objetos del juego cambiaron mientras se recogían las recompensas. No se perdió nada. Reintenta para actualizarlos y recoger tus recompensas.
   level_up_title: Subida de nivel
   level_up_reached: Nivel alcanzado
   level_up_stat_points: Puntos de características
@@ -860,6 +914,9 @@ wallet_legacy:
     lento. Verifica que enviaste SUI a la direccion correcta (copiala de arriba),
     y si aun no aparece, contacta al equipo en Discord con tu ID de transaccion.
   add_funds: Añadir fondos
+  testnet_faucet_title: SUI de testnet
+  testnet_faucet_body: AresRPG funciona en la red de pruebas de Sui. El SUI de testnet es gratuito y no tiene valor monetario. Solicita tokens en el faucet oficial de Sui.
+  testnet_faucet_action: Abrir el faucet de Sui
   how_to_pay: '¿Cómo quieres pagar?'
   add_funds_desc: Elige tu método de pago preferido. El SUI llega directamente a tu
     billetera.
@@ -1639,11 +1696,11 @@ characters_page:
       air: 'Aire'
     description:
       vitality: 'Aumenta tu salud máxima'
-      wisdom: 'Aumenta tu ganancia de XP'
+      wisdom: 'Aumenta tu ganancia de XP y la resistencia a pérdidas de PA/PM'
       strength: 'Aumenta tu daño de Tierra'
       intelligence: 'Aumenta tu daño de Fuego y tus curaciones'
       chance: 'Aumenta tu daño de Agua y la probabilidad de obtener botín'
-      agility: 'Aumenta tu daño de Aire, placaje y esquiva de pérdida de PA/PM'
+      agility: 'Aumenta tu daño de Aire, golpes críticos, placaje y huida'
       critical_hit: 'Mejora tus probabilidades de golpe crítico'
       raw_damage: 'Añade una cantidad fija a los efectos de daño y robo de vida'
     add_point: 'Añadir un punto a {{stat}}'

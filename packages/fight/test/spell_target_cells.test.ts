@@ -45,6 +45,27 @@ describe('spell target cells', () => {
     expect(projection.targetable).not.toContain(105n)
   })
 
+  test('an invisible teammate does not block line of sight beyond their cell', () => {
+    const checkpoint = structuredClone(create_fixture().checkpoint)
+    checkpoint.contract.closed = checkpoint.contract.closed.map(() => 0n)
+    checkpoint.contract.board.obstacles = []
+    checkpoint.contract.fighters[0]!.cell = 100n
+    checkpoint.contract.fighters[0]!.ap = 6n
+    checkpoint.contract.fighters[1]!.cell = 102n
+    checkpoint.contract.fighters[1]!.team = checkpoint.contract.fighters[0]!.team
+    checkpoint.contract.fighters.push({ ...structuredClone(checkpoint.contract.fighters[1]!), team: 1n, cell: 104n })
+    checkpoint.sources.spells.slash.levels[0]!.line_of_sight = true
+    const visible = spell_target_cells(checkpoint, 0n, 'slash')
+    checkpoint.contract.fighters[1]!.effects = [
+      { kind: KINDS.invis, element: '', value: 0n, turns_left: 2n, source: 1n, stat: STATS.any },
+    ]
+
+    const invisible = spell_target_cells(checkpoint, 0n, 'slash')
+
+    expect(visible.targetable).not.toContain(104n)
+    expect(invisible.targetable).toContain(104n)
+  })
+
   test('range theft reduces a modifiable spell below its authored maximum', () => {
     const checkpoint = structuredClone(create_fixture().checkpoint)
     checkpoint.contract.closed = checkpoint.contract.closed.map(() => 0n)

@@ -10,6 +10,7 @@ import {
   create_mob_snapshot,
   mob_band_scaled,
   mob_centered_band_scaled,
+  mob_effect_value_scaled,
   mob_loot_chance_scaled,
   player_max_hp,
 } from '../src/create.ts'
@@ -105,6 +106,7 @@ describe('fight API', () => {
     expect(high.kit[0]?.level.effects[0]).toMatchObject({ value: 160n, value_max: 192n })
     expect(high.kit[0]).toMatchObject({ ordinal: 1n, level: { ap_cost: 3n } })
     expect(mob_band_scaled(1_000n, 10n, 20n, 15n)).toBe(1_100n)
+    expect(mob_effect_value_scaled(1n, 10n, 20n, 10n)).toBe(1n)
     expect(mob_centered_band_scaled(32_868n, 32_768n, 10n, 20n, 15n)).toBe(32_878n)
     expect(mob_centered_band_scaled(32_668n, 32_768n, 10n, 20n, 15n)).toBe(32_658n)
     expect(mob_loot_chance_scaled(5_000n, 10n, 20n, 15n)).toBe(5_000n)

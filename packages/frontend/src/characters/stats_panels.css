@@ -589,3 +589,33 @@
   font-size: 0.8rem;
   color: var(--fg);
 }
+
+/* Short/mobile layouts cannot afford two nested pinned regions. The complete sheet becomes the
+   one scroll owner so the secondary rows and allocation controls always remain reachable. */
+@media (max-height: 800px), (max-width: 700px) {
+  .stats {
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding-right: 2px;
+  }
+
+  .stats__scroll {
+    min-height: auto;
+    flex: none;
+    overflow: visible;
+    padding-right: 0;
+  }
+
+  .stats__assign {
+    flex-wrap: wrap;
+  }
+
+  .stats__assign-actions {
+    width: 100%;
+    justify-content: flex-end;
+  }
+
+  .stats__resists {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}

@@ -5,16 +5,17 @@
 
 import { client_to_chain_coordinate } from '@aresrpg/immutable'
 import type { HydratedFightCheckpoint } from '@aresrpg/fight'
-import type { CharacterRow, PartyRow } from '@aresrpg/protocol'
+import type { CharacterRow, FightRow, PartyRow } from '@aresrpg/protocol'
 
 import {
   PARTY_FOLLOW_JOIN_DISTANCE,
   read_party_follow,
   subscribe_party_follow,
   update_party_follow,
+  type PartyFollowPoint,
   type PartyFollowSnapshot,
 } from '../game/core/party_follow_feed.ts'
-import { clear_owned_character_positions } from '../game/core/owned_character_feed.ts'
+import { clear_owned_character_positions, owned_character_position } from '../game/core/owned_character_feed.ts'
 import { pose_matches_character, read_pose } from '../game/core/pose_feed.ts'
 import type { AppModule, AppState } from '../store.ts'
 import { toast } from '../toast.ts'
@@ -88,13 +89,12 @@ const leader_side = (
 const followers_at_leader = (
   followers: readonly CharacterRow[],
   seated: ReadonlySet<string>,
+  reserved: ReadonlySet<string>,
   positions: PartyFollowSnapshot
-): readonly CharacterRow[] | null => {
-  const waiting = followers.filter(({ id }) => !seated.has(id))
+): readonly CharacterRow[] => {
+  const waiting = followers.filter(({ id }) => !seated.has(id) && !reserved.has(id))
   const distances = new Map(positions.followers.map((row) => [row.character_id, row.distance]))
-  return waiting.length > 0 && waiting.every(({ id }) => (distances.get(id) ?? Infinity) <= PARTY_FOLLOW_JOIN_DISTANCE)
-    ? waiting
-    : null
+  return waiting.filter(({ id }) => (distances.get(id) ?? Infinity) <= PARTY_FOLLOW_JOIN_DISTANCE)
 }
 
 const placement_checkpoint = (state: Readonly<AppState>, fight_id: string): HydratedFightCheckpoint | null => {
@@ -107,10 +107,20 @@ const snapshot_matches_follow = (
   follow: NonNullable<ReturnType<typeof active_party_follow>>
 ): boolean => positions.party_id === follow.party.id && positions.leader_id === follow.leader.id
 
+const occupied_player_seats = (
+  contract: Readonly<FightContract>,
+  team: bigint,
+  seated: ReadonlySet<string>,
+  reserved: ReadonlySet<string>
+): number =>
+  contract.fighters.filter((fighter) => fighter.team === team && fighter_character(fighter) !== null).length +
+  [...reserved].filter((character) => !seated.has(character)).length
+
 export const party_follow_join_plan = (
   state: Readonly<AppState>,
   fight_id: string,
-  positions: Readonly<PartyFollowSnapshot>
+  positions: Readonly<PartyFollowSnapshot>,
+  reserved: ReadonlySet<string> = new Set()
 ): Readonly<{
   fight: string
   team: number
@@ -124,11 +134,8 @@ export const party_follow_join_plan = (
   const side = leader_side(checkpoint.contract, follow.leader.id)
   if (!side) return null
   const seated = player_characters(checkpoint.contract)
-  const waiting = followers_at_leader(follow.followers, seated, positions)
-  if (!waiting) return null
-  const occupied = checkpoint.contract.fighters.filter(
-    (fighter) => fighter.team === side.fighter.team && fighter_character(fighter) !== null
-  ).length
+  const waiting = followers_at_leader(follow.followers, seated, reserved, positions)
+  const occupied = occupied_player_seats(checkpoint.contract, side.fighter.team, seated, reserved)
   const followers = waiting.slice(0, Math.max(0, side.starts.length - occupied))
   if (followers.length === 0) return null
   return Object.freeze({
@@ -139,17 +146,45 @@ export const party_follow_join_plan = (
   })
 }
 
+const finite_character_point = (character: Readonly<CharacterRow>): PartyFollowPoint | null =>
+  typeof character.x === 'number' &&
+  Number.isFinite(character.x) &&
+  typeof character.z === 'number' &&
+  Number.isFinite(character.z)
+    ? Object.freeze({ x: character.x, y: 0, z: character.z })
+    : null
+
+const finite_fight_point = (fight: Readonly<FightRow> | null, world: string): PartyFollowPoint | null =>
+  fight?.world === world && Number.isFinite(fight.x) && Number.isFinite(fight.z)
+    ? Object.freeze({ x: fight.x, y: 0, z: fight.z })
+    : null
+
+export const party_follow_leader_target = (
+  leader: Readonly<CharacterRow>,
+  pose: ReturnType<typeof read_pose>,
+  fight: Readonly<FightRow> | null = null
+): PartyFollowPoint | null => {
+  if (pose_matches_character(pose, leader.id))
+    return Object.freeze({
+      x: client_to_chain_coordinate(pose.x),
+      y: pose.y,
+      z: client_to_chain_coordinate(pose.z),
+    })
+  if (!leader.world) return null
+  const live = owned_character_position(leader.id, leader.world)
+  if (live) return Object.freeze({ x: live.x, y: live.y, z: live.z })
+  return finite_fight_point(fight, leader.world) ?? finite_character_point(leader)
+}
+
 const follow_feed_input = (state: Readonly<AppState>) => {
   const follow = state.session.link_status === 'ready' ? active_party_follow(state) : null
   if (!follow) return null
-  const pose = read_pose()
-  const target = pose_matches_character(pose, follow.leader.id)
-    ? Object.freeze({
-        x: client_to_chain_coordinate(pose.x),
-        y: pose.y,
-        z: client_to_chain_coordinate(pose.z),
-      })
-    : null
+  // Entering a fight deliberately clears the overworld pose. The owned-position feed retains
+  // the leader's last accepted world point, so followers keep approaching that sword instead
+  // of treating an unknown target as zero metres away and remaining at their chain spawn.
+  const fight_id = follow.leader.active_fight?.id
+  const fight = fight_id ? (state.world.all_fights[fight_id] ?? state.world.fights[fight_id] ?? null) : null
+  const target = party_follow_leader_target(follow.leader, read_pose(), fight)
   const followers = follow.followers.flatMap((character) =>
     Number.isFinite(character.x) && Number.isFinite(character.z)
       ? [Object.freeze({ character_id: character.id, x: character.x!, y: target?.y ?? 0, z: character.z! })]
@@ -178,6 +213,9 @@ const auto_fight_expired = (state: Readonly<AppState>, fight: string): boolean =
   return !active_party_follow(state) || checkpoint?.contract.ended === true || (checkpoint?.contract.round ?? 0n) > 0n
 }
 
+export const party_leader_engaged = (state: Readonly<AppState>, character_id: string): boolean =>
+  active_party_follow(state)?.leader.id === character_id
+
 const join_followers = (
   wallet: NonNullable<AppState['session']['wallet']>,
   plan: NonNullable<ReturnType<typeof party_follow_join_plan>>,
@@ -194,24 +232,32 @@ const join_followers = (
 export const observe_party_follow: NonNullable<AppModule['observe']> = ({ events, get_state, dispatch, signal }) => {
   const auto_fights = new Set<string>()
   const joining_fights = new Set<string>()
+  const reserved_followers = new Map<string, Set<string>>()
 
   const try_auto_join = (fight: string): void => {
     if (joining_fights.has(fight)) return
     const state = get_state()
-    const plan = party_follow_join_plan(state, fight, read_party_follow())
+    const reserved = reserved_followers.get(fight) ?? new Set<string>()
+    const plan = party_follow_join_plan(state, fight, read_party_follow(), reserved)
     if (!plan) {
-      if (auto_fight_expired(state, fight)) auto_fights.delete(fight)
+      if (auto_fight_expired(state, fight)) {
+        auto_fights.delete(fight)
+        reserved_followers.delete(fight)
+      }
       return
     }
     const { wallet } = state.session
     if (!wallet) return
     joining_fights.add(fight)
-    auto_fights.delete(fight)
+    plan.followers.forEach(({ id }) => reserved.add(id))
+    reserved_followers.set(fight, reserved)
     void Promise.all(custody_groups(plan.followers).map((characters) => join_followers(wallet, plan, characters)))
       .then(() =>
         plan.followers.forEach((character) => dispatch({ type: 'fight/watch', character_id: character.id, fight }))
       )
       .catch((error: unknown) => {
+        plan.followers.forEach(({ id }) => reserved.delete(id))
+        auto_fights.delete(fight)
         if (get_state().session.wallet === wallet) toast.add(error)
       })
       .finally(() => joining_fights.delete(fight))
@@ -231,10 +277,12 @@ export const observe_party_follow: NonNullable<AppModule['observe']> = ({ events
   }
   const timer = setInterval(tick, FOLLOW_TICK_MS)
 
-  events.on('world/engage_submitted', ({ fight }) => {
+  events.on('world/engage_submitted', ({ fight, character_id }) => {
     const state = get_state()
-    const follow = active_party_follow(state)
-    if (!follow || state.session.selected_character_id !== follow.leader.id || follow.followers.length === 0) return
+    // The selected tab may have changed while the engage transaction was confirming. The actor
+    // captured at submission is the stable fact: remember the fight even when the only follower
+    // is temporarily controlled, then join it after control returns and it reaches the leader.
+    if (!party_leader_engaged(state, character_id)) return
     auto_fights.add(fight)
     try_auto_join(fight)
   })
@@ -259,6 +307,7 @@ export const observe_party_follow: NonNullable<AppModule['observe']> = ({ events
     update_party_follow(null)
     auto_fights.clear()
     joining_fights.clear()
+    reserved_followers.clear()
   })
 }
 

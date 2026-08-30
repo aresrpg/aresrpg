@@ -80,7 +80,9 @@ export const create_personal_kiosk_runner = (load: () => Promise<KioskOwnerCap |
   let tail = Promise.resolve()
   return <T>(action: (cap: KioskOwnerCap | null) => Promise<PersonalKioskAction<T>>): Promise<T> => {
     const pending = tail.then(async () => {
-      const result = await action(known ?? (await load()))
+      const loaded = await load()
+      const current = known && (!loaded || BigInt(known.version) >= BigInt(loaded.version)) ? known : loaded
+      const result = await action(current)
       known = result.kiosk_cap
       return result.value
     })

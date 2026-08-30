@@ -33,11 +33,11 @@ History is linear by law; nothing ever rewrites what landed.
 Every `edge` commit deploys to `edge.aresrpg.world`. Production changes only from an owner-created
 semver tag; a normal `edge` push never moves `aresrpg.world`.
 
-1. Populate and commit `changelog/NEXT.md`. When Move changed, prepare compatible upgrades or a
-   testnet republish first, then commit the receipt-derived hardcoded `pins.json` values to `edge`.
+1. When Move changed, prepare compatible upgrades or a testnet republish first, then commit the
+   receipt-derived hardcoded `pins.json` values to `edge`.
 2. From a clean, current `edge`, run `bun pm version patch` (or `minor`/`major`). Its lifecycle
-   validates the branch, creates the numbered player changelog, commits and tags the root version,
-   then pushes `edge` and the tag with `--follow-tags`.
+   validates the branch, commits and tags the root version, then pushes `edge` and the tag with
+   `--follow-tags`.
 3. The tag triggers `release.yml`. It waits for the exact SHA's green gate, builds only changed
    server/indexer images into public GHCR, and creates a production-variable Vercel deployment
    with `--skip-domain`. The GitHub Release remains draft and production stays unchanged.
@@ -46,31 +46,9 @@ semver tag; a normal `edge` push never moves `aresrpg.world`.
    roll or a fresh repin.
 5. The owner manually triggers `activate-production.yml` with the prepared version. It verifies the
    retained manifest, promotes the staged Vercel deployment without rebuilding, checks production,
-   publishes the GitHub Release, and announces on Discord. Gameplay resumes only after these checks
-   pass.
-
-**AUDIENCE LAW** (maintainer ruling 2026-07-21): `changelog/NNN-RELEASE-vX.Y.Z.md` is not
-internal release notes — GitHub Releases and Discord post it **verbatim**, so it's written for
-players, not for us. Players care about new content and new features; bug fixes get one line;
-infrastructure, CI, and repository internals stay out entirely.
-
-Structure: H1 title, then **New content** and/or **New features** first (skip a section only if
-it's truly empty — if both are empty, say plainly this is a maintenance release), optionally one
-highlighted fix players actually felt (a crash, not a refactor), then exactly one closing line
-pointing at the rest. Nothing else. Target ≤25 lines:
-
-```md
-# vX.Y.Z — short title
-
-## New features
-
-- Whatever players can now do.
-
-Also: 4 bug fixes and stability improvements — full notes → <compare URL>
-```
-
-Technical detail — pipeline changes, refactors, dependency bumps — lives in the compare link the
-closing line points to, never in the announce body.
+   and publishes the generated GitHub Release. Gameplay resumes only after these checks pass.
+6. Discord communication is separate from release mechanics. It happens only through the
+   owner-triggered manual announcement workflow with explicitly reviewed player-facing text.
 
 **Rollback:** every production deployment maps 1:1 to a release tag. Roll back with Vercel's
 instant rollback (dashboard → Deployments, or `vercel rollback`) to alias production onto the

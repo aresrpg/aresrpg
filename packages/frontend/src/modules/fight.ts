@@ -8,17 +8,17 @@ import {
   type FightSetup,
   type HydratedFightCheckpoint,
 } from '@aresrpg/fight'
+import type { FightPresentationCue } from '@aresrpg/engine'
 
 import type { AppInput, AppModule, AppState } from '../store.ts'
 
 import { holds_character_seat } from './fight_identity.ts'
+import { fight_latch } from './fight_latch.ts'
 import { same_fight_turn } from './fight_lifecycle.ts'
 import { is_fight_board_page } from './navigation.ts'
 import { observe_fights } from './fight_observer.ts'
 export { create_fight_session, type ActiveFightSession } from './fight_session.ts'
-
 export { fight_should_close, terminal_remote_draft_needs_commit } from './fight_lifecycle.ts'
-
 export type FightPresentationBatch = Readonly<{
   batch: number
   before: HydratedFightCheckpoint
@@ -26,8 +26,7 @@ export type FightPresentationBatch = Readonly<{
   zone_ids: readonly string[]
   events: readonly FightEvent[]
 }>
-
-type FightEnvironment = Readonly<{
+export type FightEnvironment = Readonly<{
   zone_ids: readonly string[]
   presentations: readonly FightPresentationBatch[]
   error: FightRuntimeError | null
@@ -35,15 +34,19 @@ type FightEnvironment = Readonly<{
   started_at_ms: number | null
   transaction_pending: boolean
   placement_changed_seats: Readonly<Record<number, true>>
-  ready_submitted_seat: number | null
+  ready_submitted_seats: readonly number[]
+  ready_all_progress: ReadyAllProgress | null
   end_turn_queued: boolean
   end_turn_submitted: boolean
   restore_serial: number
   awaiting_turn_witness: boolean
 }>
-
+export type ReadyAllProgress = Readonly<{
+  completed: number
+  total: number
+  status: 'running' | 'failed' | 'complete'
+}>
 export type FightKolizeumManager = Readonly<{ id: string; pledge_mist: bigint }>
-
 export type FightSessionState = Readonly<{
   cached: Readonly<Record<string, HydratedFightCheckpoint>>
   environments: Readonly<Record<string, FightEnvironment>>
@@ -52,7 +55,6 @@ export type FightSessionState = Readonly<{
   mode: FightMode | null
   checkpoint: HydratedFightCheckpoint | null
   zone_ids: readonly string[]
-  /** ordered remote/local cue batches; React consumes the head before the next can replace it */
   presentations: readonly FightPresentationBatch[]
   error: FightRuntimeError | null
   canonical_ended: boolean
@@ -65,13 +67,13 @@ export type FightSessionState = Readonly<{
   started_at_ms: number | null
   transaction_pending: boolean
   /** optimistic placement latch; receipt success does not reopen Ready before projection */
-  ready_submitted_seat: number | null
+  ready_submitted_seats: readonly number[]
+  ready_all_progress: ReadyAllProgress | null
   end_turn_queued: boolean
   end_turn_submitted: boolean
   restore_serial: number
   awaiting_turn_witness: boolean
 }>
-
 export type FightSessionInput =
   | Readonly<{
       type: 'fight/opened'
@@ -81,6 +83,15 @@ export type FightSessionInput =
       seed?: bigint
     }>
   | Readonly<{ type: 'fight/input'; fight: string | null; input: FightInput; origin: 'local' | 'streamed' }>
+  | Readonly<{ type: 'fight/ready_all'; fight: string; fighters: readonly bigint[] }>
+  | Readonly<{
+      type: 'fight/ready_all_progress'
+      fight: string
+      completed: number
+      total: number
+      status: ReadyAllProgress['status']
+      fighter?: bigint
+    }>
   | Readonly<{ type: 'fight/cancel_pending_turn'; fight: string }>
   | Readonly<{ type: 'fight/runtime_input'; fight: string; input: FightInput }>
   | Readonly<{ type: 'fight/reset_turn'; fight: string | null }>
@@ -102,6 +113,12 @@ export type FightSessionInput =
       project?: boolean
     }>
   | Readonly<{ type: 'fight/presented'; presentation: FightPresentationBatch }>
+  | Readonly<{
+      type: 'fight/presentation_cue'
+      presentation: FightPresentationBatch | null
+      cue: FightPresentationCue
+      phase: 'start' | 'complete'
+    }>
   | Readonly<{ type: 'fight/spectating'; character_id: string; fight: string }>
   | Readonly<{ type: 'fight/preview_closed'; character_id: string; fight: string }>
   | Readonly<{ type: 'fight/started_at'; fight: string; at_ms: number }>
@@ -129,7 +146,8 @@ export const initial_fight_session_state = (): FightSessionState =>
     spectating_by_character: Object.freeze({}),
     started_at_ms: null,
     transaction_pending: false,
-    ready_submitted_seat: null,
+    ready_submitted_seats: Object.freeze([]),
+    ready_all_progress: null,
     end_turn_queued: false,
     end_turn_submitted: false,
     restore_serial: 0,
@@ -145,7 +163,8 @@ const initial_fight_environment = (): FightEnvironment =>
     started_at_ms: null,
     transaction_pending: false,
     placement_changed_seats: Object.freeze({}),
-    ready_submitted_seat: null,
+    ready_submitted_seats: Object.freeze([]),
+    ready_all_progress: null,
     end_turn_queued: false,
     end_turn_submitted: false,
     restore_serial: 0,
@@ -156,6 +175,11 @@ const presentation_start_checkpoint = (
   previous: Readonly<HydratedFightCheckpoint> | undefined,
   current: Readonly<HydratedFightCheckpoint>
 ): Readonly<HydratedFightCheckpoint> => previous ?? current
+
+const ready_progress_after_reconcile = (
+  progress: ReadyAllProgress | null,
+  ready_confirmed: boolean
+): ReadyAllProgress | null => (ready_confirmed ? null : progress)
 
 export const fight_environment = (fight: Readonly<FightSessionState>, fight_id: string): FightEnvironment =>
   fight.environments[fight_id] ?? initial_fight_environment()
@@ -185,6 +209,8 @@ const update_fight_environment = (
             canonical_ended: environment.canonical_ended,
             started_at_ms: environment.started_at_ms,
             transaction_pending: environment.transaction_pending,
+            ready_submitted_seats: environment.ready_submitted_seats,
+            ready_all_progress: environment.ready_all_progress,
             end_turn_queued: environment.end_turn_queued,
             end_turn_submitted: environment.end_turn_submitted,
             restore_serial: environment.restore_serial,
@@ -250,7 +276,8 @@ const reconcile_fight = (
       (input.checkpoint.contract.started_ms === null ? null : Number(input.checkpoint.contract.started_ms)),
     transaction_pending: previous.transaction_pending,
     placement_changed_seats: previous.placement_changed_seats,
-    ready_submitted_seat: ready_confirmed ? null : previous.ready_submitted_seat,
+    ready_submitted_seats: ready_confirmed ? Object.freeze([]) : previous.ready_submitted_seats,
+    ready_all_progress: ready_progress_after_reconcile(previous.ready_all_progress, ready_confirmed),
     end_turn_queued: same_turn ? previous.end_turn_queued : false,
     end_turn_submitted: same_turn ? previous.end_turn_submitted : false,
     restore_serial: previous.restore_serial,
@@ -279,7 +306,8 @@ const reconcile_fight = (
       spectating_by_character: state.fight.spectating_by_character,
       started_at_ms: environment.started_at_ms,
       transaction_pending: environment.transaction_pending,
-      ready_submitted_seat: environment.ready_submitted_seat,
+      ready_submitted_seats: environment.ready_submitted_seats,
+      ready_all_progress: environment.ready_all_progress,
       end_turn_queued: environment.end_turn_queued,
       end_turn_submitted: environment.end_turn_submitted,
       restore_serial: environment.restore_serial,
@@ -367,7 +395,8 @@ const select_character_fight = (state: Readonly<AppState>, character_id: string)
         spectating_by_character: state.fight.spectating_by_character,
         started_at_ms: environment.started_at_ms,
         transaction_pending: environment.transaction_pending,
-        ready_submitted_seat: environment.ready_submitted_seat,
+        ready_submitted_seats: environment.ready_submitted_seats,
+        ready_all_progress: environment.ready_all_progress,
         end_turn_queued: environment.end_turn_queued,
         end_turn_submitted: environment.end_turn_submitted,
         restore_serial: environment.restore_serial,
@@ -498,27 +527,8 @@ const close_requested_fight = (state: AppState, fight: string | null): AppState 
   fight && state.fight.checkpoint?.contract.id !== fight ? state : close_fight(state)
 
 const reduce_local_fight_latch = (state: AppState, input: AppInput): AppState | null => {
-  if (input.type !== 'fight/input' || input.origin !== 'local' || !input.fight) return null
-  if (input.input.type === 'place') {
-    const fighter = Number(input.input.fighter)
-    return update_fight_environment(state, input.fight, (environment) =>
-      Object.freeze({
-        ...environment,
-        placement_changed_seats: Object.freeze({ ...environment.placement_changed_seats, [fighter]: true }),
-      })
-    )
-  }
-  if (input.input.type === 'ready') {
-    const fighter = Number(input.input.fighter)
-    return update_fight_environment(state, input.fight, (environment) =>
-      Object.freeze({ ...environment, ready_submitted_seat: fighter })
-    )
-  }
-  return input.input.type === 'end_turn'
-    ? update_fight_environment(state, input.fight, (environment) =>
-        Object.freeze({ ...environment, end_turn_submitted: true })
-      )
-    : null
+  const latch = fight_latch(state, input)
+  return latch ? update_fight_environment(state, latch.fight, latch.update) : null
 }
 
 const reduce = (state: AppState, input: AppInput): AppState => {
@@ -570,7 +580,7 @@ const reduce = (state: AppState, input: AppInput): AppState => {
         ...environment,
         end_turn_queued: false,
         end_turn_submitted: false,
-        ready_submitted_seat: null,
+        ready_submitted_seats: environment.ready_all_progress ? environment.ready_submitted_seats : Object.freeze([]),
         restore_serial: environment.restore_serial + 1,
       })
     )

@@ -5,12 +5,12 @@ import { decode_fight_action, type FightInput, type HydratedFightCheckpoint } fr
 import type { FightStateRow } from '@aresrpg/protocol'
 
 import { catalog_spell_sources } from '../content/fight_sources.ts'
-import { project_fight_chat_lines } from '../game/fight/fight_chat_lines.ts'
+import { fight_chat_lines_at_event, project_fight_chat_lines } from '../game/fight/fight_chat_lines.ts'
 import { auto_switch_fighter_from } from '../game/core/settings.ts'
 import type { AppModule, AppState } from '../store.ts'
 
 import { active_owned_character, holds_character_seat } from './fight_identity.ts'
-import type { FightKolizeumManager } from './fight.ts'
+import type { FightKolizeumManager, FightPresentationBatch } from './fight.ts'
 import { fight_should_close, terminal_remote_draft_needs_commit } from './fight_lifecycle.ts'
 import { create_fight_session, type ActiveFightSession } from './fight_session.ts'
 
@@ -76,6 +76,7 @@ export const observe_fights = ({
   const phase_floors = new Map<string, FightPhaseRank>()
   const phase_syncing = new Set<string>()
   const witnesses = new Map<string, Set<string>>()
+  const combat_line_ids = new Map<string, Set<string>>()
   const previews = new Map<string, string>()
   let local_session: Runtime | null = null
   let fight_instance = 0
@@ -90,6 +91,7 @@ export const observe_fights = ({
     sessions.get(fight)?.close()
     sessions.delete(fight)
     witnesses.delete(fight)
+    combat_line_ids.delete(fight)
     phase_floors.delete(fight)
     phase_syncing.delete(fight)
     const state = get_state()
@@ -153,16 +155,10 @@ export const observe_fights = ({
     reconcile(fight_id)(session.state() ?? current)
   }
 
-  events.on('fight/watch', ({ character_id, fight }) => {
-    const previous = previews.get(character_id)
-    if (fight) previews.set(character_id, fight)
-    else previews.delete(character_id)
-    if (previous && previous !== fight) evict_if_unreferenced(previous)
-  })
-  events.on('fight/opened', () => {
-    fight_instance += 1
-  })
-  events.on('fight/presented', ({ presentation }) => {
+  const dispatch_combat_lines = (
+    presentation: Readonly<FightPresentationBatch>,
+    event_index: number | null = null
+  ): void => {
     const { checkpoint, events: fight_events, batch } = presentation
     if (fight_events.length === 0) return
     const state = get_state()
@@ -177,11 +173,41 @@ export const observe_fights = ({
         `#${seat}`
       )
     }
-    project_fight_chat_lines(checkpoint, fight_events, `${fight_instance}.${batch}`, name_of).forEach((line) =>
+    const line_batch = `${fight_instance}.${batch}`
+    const lines =
+      event_index === null
+        ? project_fight_chat_lines(checkpoint, fight_events, line_batch, name_of)
+        : fight_chat_lines_at_event(checkpoint, fight_events, line_batch, event_index, name_of)
+    const emitted = combat_line_ids.get(checkpoint.contract.id) ?? new Set<string>()
+    lines.forEach((line) => {
+      if (emitted.has(line.id)) return
+      emitted.add(line.id)
       dispatch({ type: 'chat/line', line })
-    )
-    if (state.fight.mode === 'local') local_session?.acknowledge(batch)
+    })
+    combat_line_ids.set(checkpoint.contract.id, emitted)
+  }
+
+  events.on('fight/watch', ({ character_id, fight }) => {
+    const previous = previews.get(character_id)
+    if (fight) previews.set(character_id, fight)
+    else previews.delete(character_id)
+    if (previous && previous !== fight) evict_if_unreferenced(previous)
+  })
+  events.on('fight/opened', () => {
+    fight_instance += 1
+  })
+  events.on('fight/presented', ({ presentation }) => {
+    dispatch_combat_lines(presentation)
+    const { checkpoint, batch } = presentation
+    if (get_state().fight.mode === 'local') local_session?.acknowledge(batch)
     else sessions.get(checkpoint.contract.id)?.acknowledge(batch)
+  })
+  events.on('fight/presentation_cue', ({ presentation, cue, phase }) => {
+    if (!presentation || phase !== 'start') return
+    const prefix = `${presentation.checkpoint.contract.id}:${presentation.batch}:`
+    if (!cue.id.startsWith(prefix)) return
+    const event_index = Number.parseInt(cue.id.slice(prefix.length), 10)
+    if (Number.isInteger(event_index)) dispatch_combat_lines(presentation, event_index)
   })
   events.on('fight/opened', ({ mode, seed, setup, state }) => {
     if (mode === 'local') {

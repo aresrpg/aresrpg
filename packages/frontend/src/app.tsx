@@ -52,6 +52,7 @@ import type { Page } from './modules/navigation.ts'
 import { selected_dungeon_run } from './modules/dungeon.ts'
 import { selected_party } from './modules/party.ts'
 import { toast } from './toast.ts'
+import { TutorialHost } from './tutorial/TutorialHost.tsx'
 import { format_sui } from './wallet_amount.ts'
 import { FightLevelUpCard, FightResultCard } from './game/fight/FightResultCard.tsx'
 import { FriendsPanel } from './components/FriendsPanel.tsx'
@@ -480,21 +481,24 @@ export function App() {
       )}
 
       {session.wallet && (
-        <AppShell
-          change_locale={change_locale}
-          copy={copy}
-          create_character={() => dispatch_app({ type: 'dialog/open', dialog: 'character_create' })}
-          disconnect={disconnect}
-          locale={locale}
-          network={env.network}
-          open_page={open_page}
-          open_path={open_path}
-          page={navigation.page}
-          pathname={navigation.pathname}
-          select_character={select_character}
-          session={session}
-          settings={settings}
-        />
+        <>
+          <AppShell
+            change_locale={change_locale}
+            copy={copy}
+            create_character={() => dispatch_app({ type: 'dialog/open', dialog: 'character_create' })}
+            disconnect={disconnect}
+            locale={locale}
+            network={env.network}
+            open_page={open_page}
+            open_path={open_path}
+            page={navigation.page}
+            pathname={navigation.pathname}
+            select_character={select_character}
+            session={session}
+            settings={settings}
+          />
+          <TutorialHost blocked={show_graphics_notice} copy={copy} />
+        </>
       )}
     </main>
   )

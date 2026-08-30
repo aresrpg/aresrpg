@@ -20,6 +20,8 @@ import {
   type FightResult,
   type ResultParticipant,
 } from '../../modules/fight_result.ts'
+import { fight_result_error_text } from '../../modules/fight_result_error.ts'
+import { fight_settlement_progress, type FightSettlementProgress } from '../../modules/fight_result_view.ts'
 import { dispatch_app, useAppStore, type AppState } from '../../store.ts'
 import { format_sui } from '../../wallet_amount.ts'
 import { play_procedural_cue } from '../audio/procedural_cues.ts'
@@ -34,6 +36,88 @@ const selected_result = (state: AppState) => {
 }
 
 const WAGER_PREFIX = Object.freeze({ won: '+', lost: '-', even: '' })
+type SettlementView = Readonly<{
+  progress: FightSettlementProgress
+  failed_result: FightResult | null
+  all_settled: boolean
+  failed: boolean
+}>
+
+const failed_settlement_result = (
+  results: Readonly<Record<string, FightResult>>,
+  character_id: string | null
+): FightResult | null => (character_id ? (results[character_id] ?? null) : null)
+
+const settlements_complete = ({ completed, total }: FightSettlementProgress): boolean =>
+  total === 0 || completed === total
+
+const settlement_failed = (result: FightResult | null): boolean => result?.error !== null && result?.error !== undefined
+
+const settlement_view = (
+  results: Readonly<Record<string, FightResult>>,
+  result: FightResult | null
+): SettlementView => {
+  const progress = fight_settlement_progress(results, result?.fight ?? '')
+  const failed_result = failed_settlement_result(results, progress.failed_character)
+  return Object.freeze({
+    progress,
+    failed_result,
+    all_settled: settlements_complete(progress),
+    failed: settlement_failed(failed_result),
+  })
+}
+
+const collection_complete = (result: FightResult | null, settlement: SettlementView): boolean =>
+  fight_result_complete(result) && settlement.all_settled
+
+const settlement_text = (copy: AppCopy, settlement: SettlementView): string => {
+  const { progress } = settlement
+  const label = progress.failed_character
+    ? text_of(copy, 'result_collecting_failed')
+    : settlement.all_settled
+      ? text_of(copy, 'result_collecting_complete')
+      : text_of(copy, 'result_collecting_progress')
+  return label.replace('{completed}', String(progress.completed)).replace('{total}', String(progress.total))
+}
+
+const FightSettlementStatus = ({ copy, settlement }: Readonly<{ copy: AppCopy; settlement: SettlementView }>) => {
+  const { progress, failed_result } = settlement
+  if (progress.total <= 1) return null
+  const label = settlement_text(copy, settlement)
+  const retry = (): void => {
+    if (progress.failed_character) dispatch_app({ type: 'fight_result/retry', character_id: progress.failed_character })
+  }
+  return (
+    <>
+      <div className={`fe-settlement${settlement.failed ? ' failed' : settlement.all_settled ? ' complete' : ''}`}>
+        <div className="fe-settlement__label">
+          <span>{label}</span>
+          <b>
+            {progress.completed}/{progress.total}
+          </b>
+        </div>
+        <div
+          aria-label={label}
+          aria-valuemax={progress.total}
+          aria-valuemin={0}
+          aria-valuenow={progress.completed}
+          className="fe-settlement__bar"
+          role="progressbar"
+        >
+          <span style={{ width: `${(progress.completed / progress.total) * 100}%` }} />
+        </div>
+      </div>
+      {failed_result?.error && (
+        <div className="fe-error">
+          <span>{fight_result_error_text(copy.fight_hud, failed_result.error)}</span>
+          <button onClick={retry} type="button">
+            {text_of(copy, 'result_retry')}
+          </button>
+        </div>
+      )}
+    </>
+  )
+}
 
 const WagerFact = ({ copy, wager }: Readonly<{ copy: AppCopy; wager: FightResult['kolizeum_wager'] }>) => {
   const outcome = kolizeum_wager_outcome(wager)
@@ -106,11 +190,13 @@ const ResultRow = ({
 export const FightResultCard = ({ copy }: Readonly<{ copy: AppCopy }>) => {
   const result = useAppStore(selected_result)
   const fight = useAppStore((state) => state.fight)
+  const results = useAppStore((state) => state.fight_result.current_by_character)
   const selected_character_id = useAppStore((state) => state.session.selected_character_id)
   const available = !result || fight_result_available(fight, result.fight)
   const surface = result ? fight_result_surface(result) : null
-  const complete = fight_result_complete(result)
-  const failed = result?.error !== null
+  const settlement = settlement_view(results, result)
+  const complete = collection_complete(result, settlement)
+  const { failed } = settlement
   const own = !result || result.own_seat === null ? null : result.participants[result.own_seat]
   const victory = result ? (own ? result.winner === own.team : result.winner !== null) : false
   const fight_id = result?.fight ?? null
@@ -178,19 +264,7 @@ export const FightResultCard = ({ copy }: Readonly<{ copy: AppCopy }>) => {
             </div>
           </div>
         )}
-        {result.error && (
-          <div className="fe-error">
-            <span>{result.error}</span>
-            <button
-              onClick={() =>
-                own?.character_id && dispatch_app({ type: 'fight_result/retry', character_id: own.character_id })
-              }
-              type="button"
-            >
-              {text_of(copy, 'result_retry')}
-            </button>
-          </div>
-        )}
+        <FightSettlementStatus copy={copy} settlement={settlement} />
         <div className="fe-cta">
           <button disabled={!complete && !failed} onClick={close} type="button">
             {text_of(copy, failed ? 'result_close' : complete ? 'result_continue' : 'result_collecting')}

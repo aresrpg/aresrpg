@@ -161,6 +161,7 @@ export const create_presence_renderer = ({
           facing_yaw: slot.yaw,
           anim,
           gait_scale: time_scale,
+          presentation: 'crowd',
         })
       )
       if (!slot.loaded.pet) return [character]

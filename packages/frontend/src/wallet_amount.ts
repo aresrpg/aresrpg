@@ -14,8 +14,10 @@ export const parse_sui_amount = (input: string): bigint | null => {
 
 export const format_sui = (mist: bigint, fraction_digits = 2): string => {
   const digits = Math.max(0, Math.min(9, fraction_digits))
-  const whole = mist / MIST_PER_SUI
-  if (digits === 0) return whole.toString()
-  const fraction = (mist % MIST_PER_SUI).toString().padStart(9, '0').slice(0, digits)
-  return `${whole}.${fraction}`
+  const negative = mist < 0n
+  const absolute = negative ? -mist : mist
+  const whole = absolute / MIST_PER_SUI
+  if (digits === 0) return `${negative ? '-' : ''}${whole}`
+  const fraction = (absolute % MIST_PER_SUI).toString().padStart(9, '0').slice(0, digits)
+  return `${negative ? '-' : ''}${whole}.${fraction}`
 }

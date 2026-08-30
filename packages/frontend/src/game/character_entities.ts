@@ -100,11 +100,13 @@ export const world_character_entity = (
     anim: CharacterAnimationName
     gait_scale: number
     visible?: boolean
+    presentation?: 'individual' | 'crowd'
   }>
 ): CharacterEntityRender =>
   Object.freeze({
     id: character.id,
     kind: 'character',
+    ...(transform.presentation ? { presentation: transform.presentation } : {}),
     appearance: character.appearance,
     anchor: Object.freeze({ kind: 'world', position: transform.position }),
     facing: Object.freeze({ kind: 'yaw', yaw: transform.facing_yaw }),

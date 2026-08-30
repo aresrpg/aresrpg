@@ -121,6 +121,14 @@ const stat_change_values = (
   })
 }
 
+const visible_stat_change_values = (
+  event: Readonly<AppliedEvent>,
+  before: Readonly<FightEvent> | undefined,
+  name_of: NameOf,
+  pool_logged: ReadonlySet<string>
+): Readonly<Record<string, ChatLineValue>> | null =>
+  event.payload.value === 0n ? null : stat_change_values(event, before, name_of, pool_logged)
+
 export const project_fight_chat_lines = (
   checkpoint: Readonly<HydratedFightCheckpoint>,
   events: readonly FightEvent[],
@@ -204,7 +212,7 @@ export const project_fight_chat_lines = (
         ]
       }
       if (event.type === 'effect_applied') {
-        const values = stat_change_values(event, events[index - 1], name_of, pool_logged)
+        const values = visible_stat_change_values(event, events[index - 1], name_of, pool_logged)
         return values ? [line(index, 'log_stat_change', values)] : []
       }
       if (event.type === 'trap_placed')
@@ -227,3 +235,12 @@ export const project_fight_chat_lines = (
     })
   )
 }
+
+export const fight_chat_lines_at_event = (
+  checkpoint: Readonly<HydratedFightCheckpoint>,
+  events: readonly FightEvent[],
+  batch: string,
+  event_index: number,
+  name_of: NameOf
+): readonly ChatLine[] =>
+  project_fight_chat_lines(checkpoint, events, batch, name_of).filter(({ id }) => id.endsWith(`:${event_index}`))

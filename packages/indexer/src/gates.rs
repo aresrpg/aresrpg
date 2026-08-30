@@ -404,6 +404,28 @@ mod tests {
     }
 
     #[test]
+    fn character_creation_revenue_is_the_authored_price() {
+        let root = repo_root();
+        let source = std::fs::read_to_string(root.join("packages/move/sources/character.move"))
+            .expect("character.move is readable");
+        let declaration = source
+            .lines()
+            .map(str::trim)
+            .find_map(|line| line.strip_prefix("const PRICE: u64 = "))
+            .and_then(|value| value.split_once(';').map(|(literal, _)| literal))
+            .expect("character::PRICE keeps its canonical declaration");
+        let price = declaration
+            .replace('_', "")
+            .parse::<u64>()
+            .expect("character::PRICE is a u64 literal");
+        assert_eq!(
+            price,
+            crate::analytics::CHARACTER_CREATION_MIST,
+            "admin character revenue drifted from character::PRICE"
+        );
+    }
+
+    #[test]
     fn move_layouts_match_the_committed_snapshot() {
         let root = repo_root();
         let game = load_modules(&root.join("packages/move/build/aresrpg/bytecode_modules"));

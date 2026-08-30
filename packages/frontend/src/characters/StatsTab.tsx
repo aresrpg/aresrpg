@@ -105,7 +105,7 @@ export default function StatsTab({ character, copy }: Readonly<{ character: Read
   }
 
   return (
-    <div className="stats">
+    <div className="stats" data-tutorial-target="character_stats">
       {/* hero header — identity + class + experience */}
       <div className="stats__hero">
         <div className="stats__hero-body">

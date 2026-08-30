@@ -117,6 +117,8 @@ pub fn analyze_with_digests(
         route_kolizeum_writes(&mut wire, ckpt, ts_ms, tx, game)?;
         route_fight_writes(&mut wire, ckpt, ts_ms, tx, game)?;
         route_item_writes(&mut wire, ckpt, ts_ms, tx, game)?;
+        analyze_game_revenue(&mut wire, ckpt, ts_ms, tx, game)?;
+        analyze_kolizeum_revenue(&mut wire, ckpt, ts_ms, tx, game)?;
         analyze_kiosk_market(&mut wire, ckpt, ts_ms, tx, game)?;
 
         analyze_shop_sales(
@@ -129,6 +131,69 @@ pub fn analyze_with_digests(
         )?;
     }
     Ok(wire)
+}
+
+fn analyze_game_revenue(
+    wire: &mut Wire,
+    ckpt: u64,
+    ts_ms: u64,
+    tx: &TxView<'_>,
+    game: &str,
+) -> anyhow::Result<()> {
+    for event in tx.events.iter().filter(|event| event.package == game) {
+        let delta = match (event.module, event.name) {
+            ("character", "CharacterCreated") => MoneyDelta {
+                character_creation_mist: analytics::CHARACTER_CREATION_MIST,
+                ..MoneyDelta::default()
+            },
+            _ => continue,
+        };
+        wire.money.push(MoneyFact {
+            coordinate: format!("{ckpt}:{}:{}", tx.tx_index, event.index),
+            ts_ms,
+            delta,
+        });
+    }
+    Ok(())
+}
+
+fn analyze_kolizeum_revenue(
+    wire: &mut Wire,
+    ckpt: u64,
+    ts_ms: u64,
+    tx: &TxView<'_>,
+    game: &str,
+) -> anyhow::Result<()> {
+    let start = tx.move_calls.iter().any(|call| {
+        call.ends_with("::api::start_kolizeum") || call.ends_with("::api::ready_and_start_kolizeum")
+    });
+    if !start {
+        return Ok(());
+    }
+    for output in tx
+        .outputs
+        .iter()
+        .filter(|output| is_core(output, game, "kolizeum", "Kolizeum"))
+    {
+        let Some(input) = tx.inputs.iter().find(|input| input.id == output.id) else {
+            continue;
+        };
+        let before = decode::from_bytes::<decode::Kolizeum>(input.bytes)?;
+        let after = decode::from_bytes::<decode::Kolizeum>(output.bytes)?;
+        let cut = before.pot.value.saturating_sub(after.pot.value);
+        if cut == 0 {
+            continue;
+        }
+        wire.money.push(MoneyFact {
+            coordinate: format!("{ckpt}:{}:kolizeum:{}", tx.tx_index, output.id.hex()),
+            ts_ms,
+            delta: MoneyDelta {
+                kolizeum_mist: cut,
+                ..MoneyDelta::default()
+            },
+        });
+    }
+    Ok(())
 }
 
 fn is_core(view: &ObjView<'_>, game: &str, module: &str, name: &str) -> bool {
@@ -1430,6 +1495,91 @@ mod tests {
         assert_eq!(directory.len(), 1);
         let payload: serde_json::Value = serde_json::from_str(&directory[0].payload).unwrap();
         assert_eq!(payload["type"], "KolizeumChanged");
+    }
+
+    #[test]
+    fn character_creation_and_kolizeum_cut_are_exact_revenue_facts() {
+        #[derive(serde::Serialize)]
+        struct CharacterCreated {
+            character: Id,
+            owner: Addr,
+            name: String,
+            classe: String,
+        }
+        let lobby_type = ty(GAME, "kolizeum", "Kolizeum");
+        let character = bcs::to_bytes(&CharacterCreated {
+            character: Id([41; 32]),
+            owner: Addr([7; 32]),
+            name: "aiden".into(),
+            classe: "yajin".into(),
+        })
+        .unwrap();
+        let events = [EventView {
+            package: GAME,
+            module: "character",
+            name: "CharacterCreated",
+            type_params: &[],
+            bytes: &character,
+            index: 2,
+        }];
+        let before = bcs::to_bytes(&crate::decode::Kolizeum {
+            id: Id([42; 32]),
+            pot: crate::decode::Balance {
+                value: 2_000_000_000,
+            },
+            pledge: 1_000_000_000,
+            fight: Id([43; 32]),
+            format: 1,
+            level_min: 1,
+            level_max: 200,
+            allowed: None,
+        })
+        .unwrap();
+        let after = bcs::to_bytes(&crate::decode::Kolizeum {
+            id: Id([42; 32]),
+            pot: crate::decode::Balance {
+                value: 1_800_000_000,
+            },
+            pledge: 1_000_000_000,
+            fight: Id([43; 32]),
+            format: 1,
+            level_min: 1,
+            level_max: 200,
+            allowed: None,
+        })
+        .unwrap();
+        let input = ObjView {
+            id: Id([42; 32]),
+            owner: OwnerKind::Shared,
+            type_key: &lobby_type,
+            bytes: &before,
+        };
+        let output = ObjView {
+            id: Id([42; 32]),
+            owner: OwnerKind::Shared,
+            type_key: &lobby_type,
+            bytes: &after,
+        };
+        let start_call = "0x99::api::start_kolizeum".to_string();
+        let tx = TxView {
+            tx_index: 4,
+            sender: Addr([7; 32]),
+            move_calls: std::slice::from_ref(&start_call),
+            events: &events,
+            inputs: std::slice::from_ref(&input),
+            outputs: std::slice::from_ref(&output),
+        };
+
+        let wire = analyze(60, 4_000, &[tx], GAME, SEED).unwrap();
+
+        assert_eq!(wire.money.len(), 2);
+        assert_eq!(wire.money[0].coordinate, "60:4:2");
+        assert_eq!(wire.money[0].delta.character_creation_mist, 1_000_000_000);
+        assert_eq!(
+            wire.money[1].coordinate,
+            format!("60:4:kolizeum:{}", Id([42; 32]).hex())
+        );
+        assert_eq!(wire.money[1].delta.kolizeum_mist, 200_000_000);
     }
 
     #[test]

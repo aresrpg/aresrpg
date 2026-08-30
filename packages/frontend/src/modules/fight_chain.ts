@@ -8,10 +8,11 @@ import { type FightInput, type HydratedFightCheckpoint } from '@aresrpg/fight'
 import { CONTRACT_CONSTANTS } from '@aresrpg/fight/move_contract'
 import type { AuthSession, FightActions, KolizeumActions } from '@aresrpg/sdk/auth'
 
-import type { AppModule } from '../store.ts'
+import type { AppModule, AppState } from '../store.ts'
 import { toast } from '../toast.ts'
 
 import { fight_environment } from './fight.ts'
+import { owned_placement_readiness } from './fight_identity.ts'
 import { END_TURN_SUBMIT_GUARD_MS, fight_turn_identity } from './fight_lifecycle.ts'
 
 type TurnAction = Parameters<FightActions['commit_turn']>[0]['actions'][number]
@@ -23,6 +24,30 @@ type FightTransactionReceipt = Readonly<{
 }>
 
 const manager_id = (manager: Readonly<{ id: string }> | undefined): string | null => manager?.id ?? null
+
+const checkpoint_for = (state: Readonly<AppState>, fight: string): HydratedFightCheckpoint | null =>
+  state.fight.cached[fight] ?? (state.fight.checkpoint?.contract.id === fight ? state.fight.checkpoint : null)
+
+const remote_input_context = (state: Readonly<AppState>, fight: string | null, origin: 'local' | 'streamed') => {
+  const { wallet } = state.session
+  if (origin !== 'local' || !fight || state.fight.mode !== 'remote' || !wallet) return null
+  const checkpoint = checkpoint_for(state, fight)
+  return checkpoint ? Object.freeze({ fight, wallet, checkpoint }) : null
+}
+
+const ready_all_context = (state: Readonly<AppState>, fight: string) => {
+  const { wallet } = state.session
+  const checkpoint = checkpoint_for(state, fight)
+  if (
+    !wallet ||
+    state.fight.mode !== 'remote' ||
+    !checkpoint ||
+    checkpoint.contract.round !== 0n ||
+    checkpoint.contract.wagered
+  )
+    return null
+  return Object.freeze({ wallet, checkpoint })
+}
 
 export const queued_end_turn = (
   state: Parameters<NonNullable<AppModule['reduce']>>[0],
@@ -190,6 +215,41 @@ const observe: NonNullable<AppModule['observe']> = ({ events, dispatch, get_stat
     dispatch({ type: 'fight/end_turn_queued', fight, queued: false })
   }
 
+  const submit_readiness = (
+    fight: string,
+    checkpoint: Readonly<HydratedFightCheckpoint>,
+    transaction: Promise<FightTransactionReceipt>,
+    on_failure?: () => void
+  ): void => {
+    if (!confirmed.has(fight)) confirmed.set(fight, checkpoint)
+    in_flight.add(fight)
+    dispatch({ type: 'fight/transaction_pending', fight, pending: true })
+    void transaction
+      .then(({ turn_witnesses = [], started = false }) => {
+        if (started)
+          dispatch({
+            type: 'fight/runtime_input',
+            fight,
+            input: { type: 'start', observed_ms: BigInt(Date.now()) },
+          })
+        turn_witnesses.forEach(({ fighter, seed }) =>
+          dispatch({ type: 'fight/runtime_input', fight, input: { type: 'turn_seed', fighter, seed } })
+        )
+        const current = get_state().fight.cached[fight]
+        if (current) confirmed.set(fight, current)
+      })
+      .catch((error: unknown) => {
+        const rollback = confirmed.get(fight)
+        if (rollback) dispatch({ type: 'fight/restored', checkpoint: rollback })
+        on_failure?.()
+        toast.add(error)
+      })
+      .finally(() => {
+        in_flight.delete(fight)
+        dispatch({ type: 'fight/transaction_pending', fight, pending: false })
+      })
+  }
+
   events.on('server/packet', ({ packet }) => {
     if (packet.type !== 'packet/fight_state') return
     const current = get_state().fight.cached[packet.fight]
@@ -220,23 +280,54 @@ const observe: NonNullable<AppModule['observe']> = ({ events, dispatch, get_stat
   })
   signal.addEventListener('abort', () => queued_timers.forEach(clearTimeout))
 
+  events.on('fight/ready_all', ({ fight, fighters }) => {
+    const state = get_state()
+    const context = ready_all_context(state, fight)
+    const environment = fight_environment(state.fight, fight)
+    if (!context || environment.transaction_pending || in_flight.has(fight)) return
+    const { wallet, checkpoint } = context
+    const requested = new Set(fighters.map(String))
+    const roster = new Set(state.session.characters.map(({ id }) => id))
+    const readiness = owned_placement_readiness(checkpoint, wallet.address, roster)
+    const eligible = readiness.unready_seats.filter((seat) => requested.has(String(seat)))
+    if (eligible.length === 0) return
+    let completed = 0
+    const total = eligible.length
+    const transaction = wallet.fight.ready_many({
+      fight,
+      fighter_indices: eligible,
+      on_progress: (progress) => {
+        completed = progress.started ? progress.total : progress.completed
+        dispatch({
+          type: 'fight/ready_all_progress',
+          fight,
+          completed,
+          total: progress.total,
+          status: progress.started || progress.completed === progress.total ? 'complete' : 'running',
+          fighter: progress.fighter_idx,
+        })
+      },
+    })
+    submit_readiness(fight, checkpoint, transaction, () =>
+      dispatch({ type: 'fight/ready_all_progress', fight, completed, total, status: 'failed' })
+    )
+  })
+
   events.on('fight/input', ({ fight, input, origin }) => {
     const state = get_state()
-    const { wallet } = state.session
-    if (origin !== 'local' || !fight || state.fight.mode !== 'remote' || !wallet) return
-    const checkpoint =
-      state.fight.cached[fight] ?? (state.fight.checkpoint?.contract.id === fight ? state.fight.checkpoint : null)
-    if (!checkpoint) return
-    if (fight_environment(state.fight, fight).transaction_pending || in_flight.has(fight)) return
+    const context = remote_input_context(state, fight, origin)
+    if (!context) return
+    const { fight: fight_id, wallet, checkpoint } = context
+    if (fight_environment(state.fight, fight_id).transaction_pending || in_flight.has(fight_id)) return
     const action = turn_action(input)
     if (action) {
-      const draft = buffered.get(fight)
+      const draft = buffered.get(fight_id)
       const turn = fight_turn_identity(checkpoint.contract)
       const same_turn = draft?.turn === turn
       buffered.set(
-        fight,
+        fight_id,
         Object.freeze({
-          fight,
+          fight: fight_id,
           turn,
           actions: Object.freeze([...(same_turn ? draft.actions : []), action]),
         })
@@ -248,59 +339,57 @@ const observe: NonNullable<AppModule['observe']> = ({ events, dispatch, get_stat
     const character_id = fighter?.kind.type === 'player' ? fighter.kind.character : null
     const row = state.session.characters.find(({ id }) => id === character_id)
     const custody = row ? { kiosk: row.kiosk, kiosk_cap: row.kiosk_cap } : undefined
-    const kolizeum = manager_id(state.fight.kolizeum_by_fight[fight])
+    const kolizeum = manager_id(state.fight.kolizeum_by_fight[fight_id])
     const transaction = remote_transaction({
-      fight,
+      fight: fight_id,
       input,
       wallet,
       checkpoint,
       custody,
-      turn_actions: Object.freeze([...(buffered.get(fight)?.actions ?? [])]),
+      turn_actions: Object.freeze([...(buffered.get(fight_id)?.actions ?? [])]),
       kolizeum,
     })
     if (!transaction) return
-    const submitted_buffer = input.type === 'end_turn' ? (buffered.get(fight) ?? null) : null
-    if (input.type === 'forfeit') clear_buffer(fight)
-    if (!confirmed.has(fight)) confirmed.set(fight, checkpoint)
-    in_flight.add(fight)
-    dispatch({ type: 'fight/transaction_pending', fight, pending: true })
+    if (input.type === 'ready') {
+      submit_readiness(fight_id, checkpoint, transaction)
+      return
+    }
+    const submitted_buffer = input.type === 'end_turn' ? (buffered.get(fight_id) ?? null) : null
+    if (input.type === 'forfeit') clear_buffer(fight_id)
+    if (!confirmed.has(fight_id)) confirmed.set(fight_id, checkpoint)
+    in_flight.add(fight_id)
+    dispatch({ type: 'fight/transaction_pending', fight: fight_id, pending: true })
     let queue_after_refusal = false
     void transaction
-      .then(({ turn_witnesses = [], started = false }) => {
-        retry_not_before.delete(fight)
-        if (input.type === 'end_turn') clear_buffer(fight)
-        if (input.type === 'ready' && started)
-          dispatch({
-            type: 'fight/runtime_input',
-            fight,
-            input: { type: 'start', observed_ms: BigInt(Date.now()) },
-          })
+      .then(({ turn_witnesses = [] }) => {
+        retry_not_before.delete(fight_id)
+        if (input.type === 'end_turn') clear_buffer(fight_id)
         turn_witnesses.forEach(({ fighter, seed }) =>
-          dispatch({ type: 'fight/runtime_input', fight, input: { type: 'turn_seed', fighter, seed } })
+          dispatch({ type: 'fight/runtime_input', fight: fight_id, input: { type: 'turn_seed', fighter, seed } })
         )
-        const current = get_state().fight.cached[fight]
-        if (current) confirmed.set(fight, current)
+        const current = get_state().fight.cached[fight_id]
+        if (current) confirmed.set(fight_id, current)
       })
       .catch((error: unknown) => {
         if (input.type === 'end_turn' && turn_too_soon_refusal(error)) {
           // Nothing executed: cancel only the pending boundary, retaining movement/casts so
           // the same draft can retry after a bounded backoff despite client clock skew.
-          dispatch({ type: 'fight/cancel_pending_turn', fight })
-          retry_not_before.set(fight, Date.now() + END_TURN_SUBMIT_GUARD_MS)
+          dispatch({ type: 'fight/cancel_pending_turn', fight: fight_id })
+          retry_not_before.set(fight_id, Date.now() + END_TURN_SUBMIT_GUARD_MS)
           queue_after_refusal = true
           return
         }
-        retry_not_before.delete(fight)
-        if (input.type === 'end_turn') clear_buffer(fight)
-        const rollback = confirmed.get(fight)
+        retry_not_before.delete(fight_id)
+        if (input.type === 'end_turn') clear_buffer(fight_id)
+        const rollback = confirmed.get(fight_id)
         if (rollback) dispatch({ type: 'fight/restored', checkpoint: rollback })
-        if (submitted_buffer?.actions.length) dispatch({ type: 'fight/resync', fight })
+        if (submitted_buffer?.actions.length) dispatch({ type: 'fight/resync', fight: fight_id })
         toast.add(error)
       })
       .finally(() => {
-        in_flight.delete(fight)
-        dispatch({ type: 'fight/transaction_pending', fight, pending: false })
-        if (queue_after_refusal) dispatch({ type: 'fight/end_turn_queued', fight, queued: true })
+        in_flight.delete(fight_id)
+        dispatch({ type: 'fight/transaction_pending', fight: fight_id, pending: false })
+        if (queue_after_refusal) dispatch({ type: 'fight/end_turn_queued', fight: fight_id, queued: true })
       })
   })
 }

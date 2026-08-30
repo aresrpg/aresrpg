@@ -2,20 +2,10 @@
 # © 2026 Sceat — All rights reserved. See LICENSE.
 # Release preparation — every owner-pushed vX.Y.Z tag publishes changed backend images to GHCR,
 # and stages a production-variable Vercel deployment without moving aresrpg.world. The separate
-# manual activation workflow promotes that exact deployment, publishes the draft GitHub Release,
-# and announces only after production answers. The tag commit is already an edge commit produced by
-# `bun pm version`; Actions never creates or moves release tags.
-#
-# CHANGELOG CONVENTION: changelog/NNN-RELEASE-vX.Y.Z.md are PURE MARKDOWN — no YAML frontmatter.
-# The version/tag is derived from the root package.json;
-# the H1 is the human title. The newest file is posted verbatim to BOTH the GitHub release notes
-# and the Discord embed, so it must stay clean markdown — anything in it renders as-is.
-# AUDIENCE LAW (maintainer ruling 2026-07-21): the file IS the player announce — New content /
-# New features lead, at most one highlighted fix players felt, then exactly one closing
-# "Also: N bug fixes and stability improvements — full notes → <URL>" line. No infra/CI/pipeline
-# talk, ever — full structure + skeleton in CONTRIBUTING.md's AUDIENCE LAW.
-#
-# GITHUB_TOKEN only (plus the optional DISCORD_WEBHOOK for the announce).
+# manual activation workflow promotes that exact deployment and publishes the generated draft
+# GitHub Release after production answers. Discord communication is a separate owner-requested action.
+# The tag commit is already an edge commit produced by `bun pm version`; Actions never creates or
+# moves release tags.
 name: release
 on:
   push:
@@ -36,13 +26,11 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0 # tags visible for the idempotence check
-          # This job reads only the root version and newest release changelog — never art.
+          # This job reads only the root version — never art.
           filter: blob:none
           sparse-checkout: |
             bun.lock
             package.json
-            changelog
-            .github/assets/discord_banner.png
           sparse-checkout-cone-mode: false
       - name: resolve version
         id: v
@@ -65,14 +53,7 @@ jobs:
             echo "created=false" >> "$GITHUB_OUTPUT"
             exit 0
           fi
-          # Release notes = the newest release-changelog when the publisher has written one
-          # (changelog/NNN-RELEASE-*.md, NNN zero-padded monotonic); else GitHub-generated notes.
-          NOTES_FILE=$(find changelog -maxdepth 1 -type f -name '*-RELEASE-*.md' | sort | tail -1)
-          if [ -n "$NOTES_FILE" ]; then
-            gh release create "$TAG" --draft --title "$TAG" --notes-file "$NOTES_FILE" --target "$GITHUB_SHA"
-          else
-            gh release create "$TAG" --draft --title "$TAG" --generate-notes --target "$GITHUB_SHA"
-          fi
+          gh release create "$TAG" --draft --title "$TAG" --generate-notes --target "$GITHUB_SHA"
           echo "created=true" >> "$GITHUB_OUTPUT"
 
   # PRODUCTION PREPARE: the release tag builds with production variables but never moves aresrpg.world.

@@ -65,6 +65,17 @@ export const last_settler_refusal = (error: unknown): boolean => {
   return before_submission && /abort code:\s*1729/i.test(message)
 }
 
+export const execute_settlement_mode = async <T>(
+  last: boolean | undefined,
+  execute: (last: boolean) => Promise<T>
+): Promise<T> => {
+  if (last !== undefined) return execute(last)
+  return execute(true).catch((error: unknown) => {
+    if (!last_settler_refusal(error)) throw error
+    return execute(false)
+  })
+}
+
 export type FightActionsCtx = {
   /** async loader — the session's cached personal kiosk caps (kiosks are for life) */
   kiosk_cap: KioskCapLoader
@@ -86,6 +97,16 @@ export const fight_actions = (sdk: GameSdk, { kiosk_cap }: FightActionsCtx) => {
   /** External fight ids get one explicit read. Own fights already reconstruct their shared ref
    *  from the creation receipt; neither path polls a load-balanced node. */
   const hydrate_fight = (fight: string) => sdk.hydrate_unknown([fight])
+
+  /** Random makes ready_and_start terminal, so owned seats cannot share one PTB. Keep the
+   * sequence behind one SDK action and stop as soon as the final ready starts the fight. */
+  const ready = async ({ fight, fighter_idx }: { fight: string; fighter_idx: bigint }) => {
+    await hydrate_fight(fight)
+    const tx = sdk.tx()
+    sdk.doors.ready_and_start_fight(tx, { f: fight, fighter_idx })
+    const receipt = await sdk.execute(tx, { gas_scope: scope_of(fight) })
+    return project_fight_boundary_receipt(receipt)
+  }
 
   return {
     /** Open a duel at the caller's proven spot; side B is RESERVED for `target` — the
@@ -255,12 +276,30 @@ export const fight_actions = (sdk: GameSdk, { kiosk_cap }: FightActionsCtx) => {
     },
 
     /** Current shared truth decides whether this ready is the atomic final ready + start. */
-    ready: async ({ fight, fighter_idx }: { fight: string; fighter_idx: bigint }) => {
-      await hydrate_fight(fight)
-      const tx = sdk.tx()
-      sdk.doors.ready_and_start_fight(tx, { f: fight, fighter_idx })
-      const receipt = await sdk.execute(tx, { gas_scope: scope_of(fight) })
-      return project_fight_boundary_receipt(receipt)
+    ready,
+
+    ready_many: async ({
+      fight,
+      fighter_indices,
+      on_progress,
+    }: {
+      fight: string
+      fighter_indices: readonly bigint[]
+      on_progress?: (
+        progress: Readonly<{ completed: number; total: number; fighter_idx: bigint; started: boolean }>
+      ) => void
+    }) => {
+      const seats = [...new Set(fighter_indices)]
+      if (seats.length === 0) throw new Error('Ready all needs at least one fighter')
+      let latest: Awaited<ReturnType<typeof ready>> | null = null
+      let witnesses: readonly Readonly<{ fighter: bigint; seed: bigint }>[] = Object.freeze([])
+      for (const [index, fighter_idx] of seats.entries()) {
+        latest = await ready({ fight, fighter_idx })
+        witnesses = Object.freeze([...witnesses, ...(latest.turn_witnesses ?? [])])
+        on_progress?.({ completed: index + 1, total: seats.length, fighter_idx, started: latest.started === true })
+        if (latest.started) break
+      }
+      return Object.freeze({ ...latest!, turn_witnesses: witnesses })
     },
 
     start: async ({ fight }: { fight: string }) => {
@@ -338,11 +377,13 @@ export const fight_actions = (sdk: GameSdk, { kiosk_cap }: FightActionsCtx) => {
       fighter_idx,
       loot: requested_loot,
       custody,
+      last,
     }: {
       fight: string
       fighter_idx: bigint
       loot: readonly Readonly<{ item_type: string; existing: string | null }>[]
       custody?: KioskCustody
+      last?: boolean
     }): Promise<FightReceipt> => {
       const { content_root, seed_package_original } = living_content(sdk, 'Fight settlement')
       const loot = [...new Map(requested_loot.map((row) => [row.item_type, row])).values()]
@@ -360,10 +401,7 @@ export const fight_actions = (sdk: GameSdk, { kiosk_cap }: FightActionsCtx) => {
           },
           { custody, gas_scope: scope_of(fight) }
         )
-      const receipt = await execute_settlement(true).catch((error: unknown) => {
-        if (!last_settler_refusal(error)) throw error
-        return execute_settlement(false)
-      })
+      const receipt = await execute_settlement_mode(last, execute_settlement)
       return Object.freeze({
         ...project_receipt(receipt),
         closable: receipt_event(receipt, '::fight::FightClosable') !== null,

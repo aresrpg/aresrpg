@@ -363,6 +363,7 @@ type Footsteps = Readonly<{
     }>
   ) => void
   unlock: () => void
+  set_enabled: (enabled: boolean) => void
   reset: () => void
   dispose: () => void
 }>
@@ -384,6 +385,7 @@ export const create_footsteps = (
   context_factory: () => AudioContext | null = create_audio_context
 ): Footsteps => {
   let context: AudioContext | null = null
+  let enabled = true
   let cadence = create_footstep_cadence()
   let pan_right = false
   let recordings: ReadonlyMap<string, AudioBuffer> | null = null
@@ -523,12 +525,18 @@ export const create_footsteps = (
 
   return Object.freeze({
     tick: ({ position, on_ground, preset, speed }) => {
+      if (!enabled) return
       const result = advance_footstep_cadence(cadence, { x: position[0], z: position[2], on_ground }, random)
       cadence = result.cadence
       if (result.fired) play(preset, speed)
     },
     unlock: () => {
+      if (!enabled) return
       unlocked_context()
+    },
+    set_enabled: (next) => {
+      enabled = next
+      if (!next) cadence = create_footstep_cadence()
     },
     reset: () => {
       cadence = create_footstep_cadence()

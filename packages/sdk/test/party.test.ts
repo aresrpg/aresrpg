@@ -7,8 +7,17 @@ import type { CharacterRow } from '@aresrpg/protocol'
 import { party_actions } from '../src/party.ts'
 
 const id = (value: number) => `0x${String(value).padStart(64, '0')}`
+const digest = '11111111111111111111111111111111'
 const character = (value: number, name: string) =>
   ({ id: id(value), name, kiosk: id(value + 20), kiosk_cap: id(value + 30) }) as CharacterRow
+
+const cap_of = (row: CharacterRow) => ({
+  objectId: row.kiosk_cap!,
+  kioskId: row.kiosk,
+  isPersonal: true,
+  version: '1',
+  digest,
+})
 
 const fighting_character = (value: number, name: string, fight: number, seat: number) =>
   ({
@@ -40,9 +49,12 @@ test('every kiosk invitation returns certified completion without projecting Par
       party_accept: (_tx: unknown, args: Record<string, unknown>) => calls.push({ door: 'accept', args }),
     },
   }
-  const actions = party_actions(sdk as never, { kiosk_cap: async () => null })
   const leader = character(1, 'Ari')
   const invited = character(2, 'Bex')
+  const caps = [leader, invited].map(cap_of)
+  const actions = party_actions(sdk as never, {
+    kiosk_cap: async (kiosk) => caps.find(({ kioskId }) => kioskId === kiosk) ?? null,
+  })
   const created = await actions.invite(null, leader, { id: invited.id, name: invited.name })
   const party = {
     id: party_id,

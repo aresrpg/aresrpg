@@ -235,7 +235,7 @@ export default function EquipmentTab({
   return (
     <div className="chr-equip">
       {/* LEFT — identity chip, the paper-doll, equipped totals, the selected item's sheet */}
-      <div className="chr-equip__side">
+      <div className="chr-equip__side" data-tutorial-target="character_equipment">
         <div className="chr-equip__chip">
           <div className="min-w-0 flex-1">
             <div className="truncate text-[11px] font-semibold tracking-[0.14em] text-text uppercase">
@@ -330,7 +330,7 @@ export default function EquipmentTab({
       </div>
 
       {/* RIGHT — the bag: category tabs + grid */}
-      <div className="chr-equip__bag">
+      <div className="chr-equip__bag" data-tutorial-target="shared_inventory">
         <div className="chr-equip__bagtabs">
           {BAG_CATEGORIES.map((key) => (
             <button

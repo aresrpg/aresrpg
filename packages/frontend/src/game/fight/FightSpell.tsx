@@ -11,6 +11,8 @@ import type { FightSpellView } from './fight_projection.ts'
 const card_element = (element: string): '' | 'earth' | 'fire' | 'water' | 'air' =>
   element === 'earth' || element === 'fire' || element === 'water' || element === 'air' ? element : ''
 const displayed_name = (identity: string, display_name: string | undefined): string => display_name ?? identity
+const displays_critical = (spell: Readonly<FightSpellView>, disabled: boolean): boolean =>
+  spell.turn?.critical === true && spell.details.crit_effects.length > 0 && !disabled
 
 const number_effect = (effect: Readonly<FightSpellView['details']['effects'][number]>) =>
   Object.freeze({
@@ -85,7 +87,7 @@ export const FightSpell = ({
   const icon = spell_icon(spell.source.classe, spell.name)
   const name = displayed_name(spell.name, display_name)
   const detail = fight_spell_detail(spell)
-  const critical = spell.turn?.critical === true && !disabled
+  const critical = displays_critical(spell, disabled)
   const close_focus = (event: Readonly<FocusEvent<HTMLDivElement>>): void => {
     if (event.relatedTarget && event.currentTarget.contains(event.relatedTarget)) return
     set_detail_open(false)

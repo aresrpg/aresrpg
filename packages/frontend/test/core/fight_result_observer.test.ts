@@ -50,6 +50,7 @@ const fight_result = (own_seat: number, participants: readonly ResultParticipant
 test('owned fighters sharing one kiosk merge duplicate stacks after settlement projection', async () => {
   const listeners = new Map<string, ((...args: never[]) => void)[]>()
   const settlement_loot: unknown[] = []
+  const settlement_modes: unknown[] = []
   const merge_calls: unknown[] = []
   const base = initial_app_state({ quality: 'medium', flat_mode: false, music_enabled: true, render_distance: null })
   const participants = Object.freeze([participant(0, '0xc1'), participant(1, '0xc2')])
@@ -64,8 +65,9 @@ test('owned fighters sharing one kiosk merge duplicate stacks after settlement p
       ] as never,
       wallet: {
         fight: {
-          settle: async ({ loot }: { loot: unknown }) => {
+          settle: async ({ loot, last }: { loot: unknown; last: boolean }) => {
             settlement_loot.push(loot)
+            settlement_modes.push(last)
             return { digest: `settled-${settlement_loot.length}` }
           },
           gas_spent: () => 0n,
@@ -102,6 +104,7 @@ test('owned fighters sharing one kiosk merge duplicate stacks after settlement p
   emit_state({ ...state, fight_result: { ...state.fight_result, current_by_character: {} } })
   await new Promise((resolve) => setTimeout(resolve, 0))
   expect(settlement_loot).toEqual([[{ item_type: 'amber', existing: null }], [{ item_type: 'amber', existing: null }]])
+  expect(settlement_modes).toEqual([false, false])
 
   const previous = state
   state = {

@@ -9,7 +9,7 @@ import { walk_path } from './movement.ts'
 import { emit, fail } from './runtime.ts'
 import { run_until_player, weave } from './turns.ts'
 import { tick_cooldowns, tick_turn_end } from './turn_effects.ts'
-import { drop_owned_zones, on_enter } from './zones.ts'
+import { on_enter } from './zones.ts'
 import { resolve_rows } from './effects.ts'
 import { strike_of } from './weapon.ts'
 import type {
@@ -228,7 +228,6 @@ const forfeit = (runtime: FightRuntime, action: ForfeitAction): FightRuntime => 
   const fighter = runtime.contract.fighters[Number(action.fighter)]
   if (!fighter || !is_player(fighter) || fighter.settled) return fail(runtime, 'already_settled')
   const persistent_hp = runtime.contract.fighters.some(is_mob) ? 1n : null
-  drop_owned_zones(runtime, action.fighter, 'owner_left')
   fighter.settled = true
   fighter.forfeited = true
   emit(runtime, 'fighter_forfeited', { fighter: action.fighter, team: fighter.team })

@@ -9,10 +9,9 @@
 //     (personal_kiosk::borrow — nothing to return) and the kiosk resolves as its own shared
 //     object, keeping the Random door the last command of its transaction.
 //
-// CUSTODY IS WIRE TRUTH (owner 2026-08-21): the indexer projects each kiosk's personal cap and
-// the server pushes it on the character row — callers pass `{ kiosk, kiosk_cap }` and the SDK
-// queries NOTHING. The loader is the one fallback, for caps the indexer has not met yet
-// (historical objects surface only when a checkpoint next touches them) — cached, one query.
+// CUSTODY IDENTITY IS WIRE TRUTH: the server names the kiosk and PersonalKioskCap. Their exact
+// mutable ref is transaction-building state, so the SDK refreshes that one cap before composing;
+// another tab may have advanced it without this session receiving its receipt.
 
 import type { KioskOwnerCap } from '@mysten/kiosk'
 
@@ -20,22 +19,36 @@ import type { SDK } from './client.ts'
 import type { Receipt } from './cache.ts'
 
 type GameSdk = ReturnType<typeof SDK>
+type KioskObjectRef = Pick<KioskOwnerCap, 'objectId' | 'version' | 'digest'>
 
 /** The custody pair off the wire: the kiosk HOLDING the acted-on object + its personal cap. */
 export type KioskCustody = Readonly<{ kiosk: string; kiosk_cap?: string }>
 
-/** `kiosk_id` names the wanted kiosk — with several personal kiosks on one address the first
- *  cap is wrong whenever the object lives elsewhere. */
+/** Fresh cap loader. `kiosk_id` names the wanted kiosk — with several personal kiosks on one
+ * address the first cap is wrong whenever the object lives elsewhere. */
 export type KioskCapLoader = (kiosk_id?: string) => Promise<KioskOwnerCap | null>
 
 type RunOptions = Readonly<{ include?: object; custody?: KioskCustody; gas_scope?: string }>
 
-export const create_kiosk_runner = (sdk: GameSdk, kiosk_cap: KioskCapLoader) => {
-  const resolve_cap = async (custody?: KioskCustody): Promise<KioskOwnerCap | null> =>
-    custody?.kiosk_cap
-      ? ({ objectId: custody.kiosk_cap, kioskId: custody.kiosk, isPersonal: true } as KioskOwnerCap)
-      : kiosk_cap(custody?.kiosk)
+const same_object_id = (expected: string | undefined, current: string | undefined): boolean =>
+  expected === undefined || current?.toLowerCase() === expected.toLowerCase()
 
+const cap_matches_custody = (cap: KioskOwnerCap | null, custody: KioskCustody | undefined): boolean =>
+  same_object_id(custody?.kiosk, cap?.kioskId) && same_object_id(custody?.kiosk_cap, cap?.objectId)
+
+export const resolve_kiosk_cap = async (
+  kiosk_cap: KioskCapLoader,
+  custody?: KioskCustody
+): Promise<KioskOwnerCap | null> => {
+  const cap = await kiosk_cap(custody?.kiosk)
+  if (!cap_matches_custody(cap, custody)) throw new Error('The requested PersonalKioskCap is unavailable')
+  return cap
+}
+
+const object_ref = ({ objectId, version, digest }: KioskOwnerCap): KioskObjectRef =>
+  Object.freeze({ objectId, version, digest })
+
+export const create_kiosk_runner = (sdk: GameSdk, kiosk_cap: KioskCapLoader) => {
   return {
     with_kiosk: async (
       compose: (
@@ -45,7 +58,7 @@ export const create_kiosk_runner = (sdk: GameSdk, kiosk_cap: KioskCapLoader) => 
       ) => void,
       options: RunOptions = {}
     ): Promise<Receipt> => {
-      const cap = await resolve_cap(options.custody)
+      const cap = await resolve_kiosk_cap(kiosk_cap, options.custody)
       const tx = sdk.tx()
       sdk.with_owner_kiosk(tx, cap, (kiosk, owner_cap) => compose(tx, kiosk, owner_cap))
       return sdk.execute(tx, options)
@@ -54,16 +67,16 @@ export const create_kiosk_runner = (sdk: GameSdk, kiosk_cap: KioskCapLoader) => 
     /** &Random doors take the PACKED PersonalKioskCap — Move unpacks inside (api.move law,
      *  2026-08-21): no bracket, no borrow commands, the Random door stays the last command. */
     with_terminal_kiosk: async (
-      compose: (tx: ReturnType<GameSdk['tx']>, kiosk: string, personal: string) => void,
+      compose: (tx: ReturnType<GameSdk['tx']>, kiosk: string, personal: KioskObjectRef) => void,
       options: RunOptions = {}
     ): Promise<Receipt> => {
-      const personal = await resolve_cap(options.custody)
+      const personal = await resolve_kiosk_cap(kiosk_cap, options.custody)
       if (!personal) throw new Error('No personal kiosk exists for this session yet')
-      // Unknown external inputs read once. After any own transaction, the receipt-fed cache
-      // already holds the exact next cap ref; polling a load-balanced node may only regress it.
-      await sdk.hydrate_unknown([personal.objectId, personal.kioskId])
+      // The kiosk is shared and stable. The personal cap is owned and mutable, so pass the exact
+      // freshly loaded ref instead of asking the receipt cache to resolve yesterday's version.
+      await sdk.hydrate_unknown([personal.kioskId])
       const tx = sdk.tx()
-      compose(tx, personal.kioskId, personal.objectId)
+      compose(tx, personal.kioskId, object_ref(personal))
       return sdk.execute(tx, options)
     },
   }

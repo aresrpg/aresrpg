@@ -47,7 +47,7 @@ export const OverworldVitals = () => {
   return (
     <div className="fight-hud fight-hud--overworld">
       <div className="fight-hud__bottom">
-        <div className="fight-hud__bar fight-hud__bar--overworld">
+        <div className="fight-hud__bar fight-hud__bar--overworld" data-tutorial-target="overworld_hud">
           <div className="fight-hud__overworld-row">
             <VitalsDisplay
               ap={BigInt(action_points(character))}

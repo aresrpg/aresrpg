@@ -2,7 +2,7 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
 import { get_quality_profile } from '@aresrpg/engine'
-import { Hammer, Mountain, Music2, Settings as SettingsIcon, Swords } from 'lucide-react'
+import { Footprints, Hammer, Mountain, Music2, RotateCcw, Settings as SettingsIcon, Swords } from 'lucide-react'
 
 import {
   effective_render_distance,
@@ -34,6 +34,7 @@ const Toggle = ({
 
 export default function SettingsPage({ copy, settings }: Readonly<{ copy: AppCopy; settings: GameSettings }>) {
   const t = copy_text(copy.settings_page)
+  const tutorial = copy_text(copy.tutorial)
   const characters = useAppStore(({ session }) => session.characters)
   const selected_character_id = useAppStore(({ session }) => session.selected_character_id)
   const craft_character_id = characters.find(({ id }) => id === settings.always_craft_from_character_id)?.id ?? null
@@ -41,6 +42,8 @@ export default function SettingsPage({ copy, settings }: Readonly<{ copy: AppCop
     characters.find(({ id }) => id === selected_character_id)?.id ?? characters[0]?.id ?? null
   const change_music = (music_enabled: boolean): void =>
     dispatch_app({ type: 'settings/changed', settings: Object.freeze({ ...settings, music_enabled }) })
+  const change_footsteps = (footsteps_enabled: boolean): void =>
+    dispatch_app({ type: 'settings/changed', settings: Object.freeze({ ...settings, footsteps_enabled }) })
   const change_auto_switch = (auto_switch_fighter: boolean): void =>
     dispatch_app({ type: 'settings/changed', settings: Object.freeze({ ...settings, auto_switch_fighter }) })
   const change_render_distance = (render_distance: number): void =>
@@ -49,6 +52,11 @@ export default function SettingsPage({ copy, settings }: Readonly<{ copy: AppCop
     dispatch_app({
       type: 'settings/changed',
       settings: Object.freeze({ ...settings, always_craft_from_character_id }),
+    })
+  const reset_tutorials = (): void =>
+    dispatch_app({
+      type: 'settings/changed',
+      settings: Object.freeze({ ...settings, completed_tutorials: Object.freeze([]) }),
     })
   const render_distance = effective_render_distance(
     get_quality_profile(settings.quality).chunks.far_radius,
@@ -76,6 +84,17 @@ export default function SettingsPage({ copy, settings }: Readonly<{ copy: AppCop
           </div>
         </div>
         <Toggle change={change_music} checked={settings.music_enabled} label={t('music_label')} />
+      </div>
+
+      <div className="mt-4 flex max-w-lg items-center justify-between gap-5 border border-border bg-surface/80 p-4 lg:p-5">
+        <div className="flex min-w-0 items-center gap-3">
+          <Footprints className="shrink-0 text-gold opacity-70" size={15} />
+          <div className="min-w-0">
+            <div className="text-[11px] tracking-wide text-text">{t('footsteps_label')}</div>
+            <div className="mt-1 text-[9px] leading-5 tracking-wide text-muted">{t('footsteps_hint')}</div>
+          </div>
+        </div>
+        <Toggle change={change_footsteps} checked={settings.footsteps_enabled !== false} label={t('footsteps_label')} />
       </div>
 
       <div className="mt-4 flex max-w-lg items-center justify-between gap-5 border border-border bg-surface/80 p-4 lg:p-5">
@@ -145,6 +164,19 @@ export default function SettingsPage({ copy, settings }: Readonly<{ copy: AppCop
           />
           <output className="min-w-4 text-right text-[11px] text-gold tabular-nums">{render_distance}</output>
         </div>
+      </div>
+
+      <div className="mt-4 flex max-w-lg items-center justify-between gap-5 border border-border bg-surface/80 p-4 lg:p-5">
+        <div className="flex min-w-0 items-center gap-3">
+          <RotateCcw className="shrink-0 text-gold opacity-70" size={15} />
+          <div className="min-w-0">
+            <div className="text-[11px] tracking-wide text-text">{tutorial('reset_title')}</div>
+            <div className="mt-1 text-[9px] leading-5 tracking-wide text-muted">{tutorial('reset_hint')}</div>
+          </div>
+        </div>
+        <button className="btn-outline shrink-0 px-3 py-2 text-[9px] uppercase" onClick={reset_tutorials} type="button">
+          {tutorial('reset_action')}
+        </button>
       </div>
     </section>
   )

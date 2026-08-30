@@ -897,7 +897,6 @@ public(package) fun forfeit(
   assert_fighter_control(fight, fighter_idx, ctx);
   assert!(!fight.fighters[fighter_idx].settled, EAlreadySettled);
   let pvm = has_mobs(fight);
-  drop_owned_zones(fight, fighter_idx); // its traps/glyphs die with it — never orphan a dof read
   // `settled` is the "left the fight" mark — every live-member read gates on it (the enum
   // keeps the Player identity so its character can still be returned + re-join later).
   *&mut fight.fighters[fighter_idx].settled = true;
@@ -910,18 +909,6 @@ public(package) fun forfeit(
   if (pvm) progression::set_hp(&mut chr, 1, clock); // duels never touch persistent hp
   character::assert_personal_custody(kiosk); // re-lock only into a personal kiosk (soulbound custody)
   kiosk.lock(cap, policy, chr);
-}
-
-/// Purge every board zone a leaving fighter owns — a zone's trigger reads the owner through
-/// custody, so an orphaned zone would abort every later `on_enter` and brick the fight.
-fun drop_owned_zones(fight: &mut Fight, owner: u64) {
-  let mut kept = vector[];
-  let mut i = 0;
-  while (i < fight.zones.length()) {
-    if (fight.zones[i].owner_fighter != owner) kept.push_back(fight.zones[i]);
-    i = i + 1;
-  };
-  fight.zones = kept;
 }
 
 // ╔════════════════ [ Settlement — hp write-back, xp, loot, close ] ══════════ ]
@@ -1325,6 +1312,13 @@ fun kill(fight: &mut Fight, fighter_idx: u64) {
   let fighter = &mut fight.fighters[fighter_idx];
   fighter.dead = true;
   fighter.hp = 0;
+  let mut zones = vector[];
+  let mut i = 0;
+  while (i < fight.zones.length()) {
+    if (fight.zones[i].owner_fighter != fighter_idx) zones.push_back(fight.zones[i]);
+    i = i + 1;
+  };
+  fight.zones = zones; // dead seats never tick again; their zones die here
   let team = fight.fighters[fighter_idx].team;
   if (!fight.ended && living_count(fight, team) == 0) {
     fight.ended = true;
@@ -2244,12 +2238,15 @@ fun resolve(fight: &mut Fight, caster: u64, level: &SpellLevel, name: String, ta
 
   let slot = fight.turn_slot;
   let crit_roll = fight_math::spell_crit_roll(fight.turn_seed, &name);
-  let crit = fight_math::crit_at(crit_roll, level.crit_1_in() as u64, sheet.critical, sheet.agility);
+  let crit_rows = level.crit_effects();
+  // A successful draw with no authored critical branch is not an observable critical: it uses
+  // the normal rows and must not make the client promise a gold outcome that cannot occur.
+  let crit = !crit_rows.is_empty()
+    && fight_math::crit_at(crit_roll, level.crit_1_in() as u64, sheet.critical, sheet.agility);
   // a crit with NO authored crit rows falls back to the base rows — never an empty no-op, which
   // resolves cheaper than a normal hit and lets a tight-gas end_turn/crank OOG-filter the mob wave
   // FOR crits (free damage avoidance); base rows keep both outcomes the same work (audit 2026-08-11)
-  let crit_rows = level.crit_effects();
-  let rows = if (crit && !crit_rows.is_empty()) crit_rows else level.effects();
+  let rows = if (crit) crit_rows else level.effects();
   let (places, payload) = spell_effect::split_placements(&rows);
   if (!places.is_empty()) {
     assert!(anchor_available(&fight.zones, &places, target_cell, fighter_at(fight, target_cell).is_some()), EBadTargetCell);
@@ -2800,14 +2797,16 @@ fun legal_cell(fight: &Fight, cell: u64): bool {
   combat_grid::in_grid(cell) && !combat_grid::mask_get(&fight.closed, cell)
 }
 
-/// Sight is cut by obstacles and by living bodies — never by holes, the looker or the aim.
+/// Sight is cut by obstacles and visible living bodies — never by holes, invisible fighters,
+/// the looker or the aim.
 /// ONE home: the resolver's gate and the mob brain's pre-check both read this.
 fun sight_blockers(fight: &Fight, looker_seat: u64, target_cell: u64): vector<u64> {
   let mut out = fight.board.obstacles();
-  let bodies = living_cells(fight, looker_seat);
   let mut i = 0;
-  while (i < bodies.length()) {
-    if (bodies[i] != target_cell) out.push_back(bodies[i]);
+  while (i < fight.fighters.length()) {
+    let fighter = &fight.fighters[i];
+    if (i != looker_seat && !fighter.dead && !is_invisible(fight, i) && fighter.cell != target_cell)
+      out.push_back(fighter.cell);
     i = i + 1;
   };
   out
@@ -2923,6 +2922,49 @@ fun fighter_for_placement_test(team: u8, cell: u64, ap: u64): Fighter {
     effects: vector[],
     cooldowns: vector[],
   }
+}
+
+#[test_only]
+fun board_zone_for_test(owner_fighter: u64, trap: bool, anchor: u64): BoardZone {
+  BoardZone {
+    owner_fighter,
+    trap,
+    shape: spell_effect::shape_point(),
+    size: 0,
+    anchor,
+    turns_left: if (trap) 0 else 2,
+    effects: vector[],
+  }
+}
+
+#[test_only]
+public(package) fun zones_after_owner_death_for_testing(ctx: &mut TxContext): vector<u64> {
+  let board = combat_grid::generate(1, 0);
+  let cells = board.start_cells_a();
+  let fighters = vector[
+    fighter_for_placement_test(0, cells[0], 6),
+    fighter_for_placement_test(1, board.start_cells_b()[0], 6),
+  ];
+  let mut fight = Fight {
+    id: object::new(ctx), world: b"zone_death_test".to_string(), x: 0, z: 0,
+    closed: combat_grid::closed_mask(&board), board,
+    access_a: ACCESS_UNSET, access_b: ACCESS_UNSET,
+    opener_a: option::none(), opener_b: option::none(),
+    fighters, zones: vector[
+      board_zone_for_test(0, false, cells[0]),
+      board_zone_for_test(0, true, cells[0]),
+      board_zone_for_test(1, false, cells[0]),
+    ],
+    queue: vector[0, 1], turn_ptr: 0, round: 1,
+    ended: false, winner: option::none(), dungeon: option::none(), managed: false,
+    wagered: false, drops_rolled: false, turn_seed: 1, turn_slot: 0, turn_casts: vector[],
+    placement_ms: 0, turn_started_ms: 0,
+  };
+  kill(&mut fight, 0);
+  let answer = vector[fight.zones.length(), fight.zones[0].owner_fighter];
+  let Fight { id, .. } = fight;
+  id.delete();
+  answer
 }
 
 /// Test seam over the real resolver. `existing_kind` is 0 for no zone or 12/13; a distinct
@@ -3159,6 +3201,38 @@ public(package) fun mob_searches_for_invisible_enemy_for_testing(ctx: &mut TxCon
   let Fight { id, .. } = fight;
   id.delete();
   vector[mob_cell, after]
+}
+
+#[test_only]
+public(package) fun invisible_teammate_los_for_testing(ctx: &mut TxContext): bool {
+  let board = combat_grid::generate(1, 0);
+  let caster_cell = board.start_cells_a()[0];
+  let teammate_cell = board.start_cells_a()[1];
+  let mut teammate = fighter_for_placement_test(0, teammate_cell, 0);
+  teammate.effects.push_back(ActiveEffect {
+    kind: K_INVIS,
+    element: b"".to_string(),
+    value: 0,
+    turns_left: 2,
+    source: 1,
+    stat: 0,
+  });
+  let fight = Fight {
+    id: object::new(ctx), world: b"invisible_los_test".to_string(), x: 0, z: 0,
+    closed: combat_grid::closed_mask(&board), board,
+    access_a: ACCESS_UNSET, access_b: ACCESS_UNSET,
+    opener_a: option::none(), opener_b: option::none(),
+    fighters: vector[fighter_for_placement_test(0, caster_cell, 6), teammate],
+    zones: vector[], queue: vector[0, 1], turn_ptr: 0, round: 1,
+    ended: false, winner: option::none(), dungeon: option::none(), managed: false,
+    wagered: false, drops_rolled: false, turn_seed: 1, turn_slot: 0, turn_casts: vector[],
+    placement_ms: 0, turn_started_ms: 0,
+  };
+  let blockers = sight_blockers(&fight, 0, teammate_cell + 1);
+  let transparent = !blockers.contains(&teammate_cell);
+  let Fight { id, .. } = fight;
+  id.delete();
+  transparent
 }
 
 #[test_only]

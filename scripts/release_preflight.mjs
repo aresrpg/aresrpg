@@ -17,7 +17,3 @@ const [latest_tag] = git('tag', '--merged', 'HEAD', '--list', 'v[0-9]*', '--sort
   .filter(Boolean)
 if (latest_tag && latest_tag !== `v${current_version}`)
   throw new Error(`Root version ${String(current_version)} must match latest release ${latest_tag} before bumping`)
-
-const notes = await readFile(new URL('../changelog/NEXT.md', import.meta.url), 'utf8')
-if (/^# Next release\s+Replace this file/m.test(notes))
-  throw new Error('Write player-facing changelog/NEXT.md before versioning')

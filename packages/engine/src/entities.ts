@@ -104,6 +104,7 @@ const LOCOMOTION_PREFERENCES: Readonly<Record<EntityLocomotion, readonly string[
   FALL: Object.freeze(['FALL', 'JUMP']),
   SWIM: Object.freeze(['SWIM', 'WALK', 'IDLE']),
   SIT: Object.freeze(['SIT', 'IDLE']),
+  DANCE: Object.freeze(['DANCE', 'IDLE']),
 })
 
 const ACTION_PREFERENCES: Readonly<Record<'ATTACK' | 'BUFF' | 'DEATH', readonly string[]>> = Object.freeze({

@@ -112,5 +112,18 @@ describe('shared character rendering', () => {
       facing: { kind: 'yaw', yaw: Math.PI / 3 },
       animation: { name: 'JUMP_RUN', time_scale: 1.4 },
     })
+
+    expect(
+      world_character_entity(
+        Object.freeze({ id: '0xnearby', appearance }),
+        Object.freeze({
+          position: Object.freeze([4, 2, 8] as const),
+          facing_yaw: 0,
+          anim: 'IDLE',
+          gait_scale: 1,
+          presentation: 'crowd',
+        })
+      ).presentation
+    ).toBe('crowd')
   })
 })

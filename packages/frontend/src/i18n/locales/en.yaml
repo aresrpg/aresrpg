@@ -364,6 +364,10 @@ demo_page:
   ride_pet: Ride pet
   dismount_pet: Dismount
   mob_group: Mob group
+  crowd_load: Character crowd load test
+  crowd_benchmark: Benchmark
+  crowd_loading: Loading character models…
+  crowd_result: Phase
   mob: Mob
   hide_protectors: Hide protectors
   amount: Amount
@@ -505,6 +509,8 @@ settings_page:
   subtitle: 'Your AresRPG preferences'
   music_label: 'Music'
   music_hint: 'Play world and combat music.'
+  footsteps_label: Footsteps
+  footsteps_hint: Play movement step sounds.
   auto_switch_fighter_label: Auto-switch fighter
   auto_switch_fighter_hint: Select an owned character automatically when their fight turn begins.
   always_craft_from_label: Always craft from
@@ -513,6 +519,40 @@ settings_page:
   always_craft_from_none: Disabled
   render_distance_label: Render distance
   render_distance_hint: How far the world loads around you. Higher costs performance.
+tutorial:
+  progress: '{{current}} / {{total}}'
+  skip: Skip tutorial
+  back: Back
+  next: Next
+  finish: Finish
+  fight_enter: Enter the fight
+  reset_title: Tutorials
+  reset_hint: Show each introduction again when you next visit its page.
+  reset_action: Reset
+  world_compass_title: Worlds and shared zones
+  world_compass_body: AresRPG contains multiple worlds unlocked during your progression. Each world is divided into zones containing monsters, resources, and dungeons. Anyone can discover a zone, and that discovery is shared with every player.
+  world_hud_title: Health and quick slots
+  world_hud_body: This HUD shows your health and quick-use item slots. When a fight begins, the same area becomes your spell bar.
+  world_fps_title: Your world controls
+  world_fps_body: World terrain is generated deterministically from published data. Sui stores the world and authoritative X/Z position while terrain derives height locally, so Flat changes only the presentation of that same space. You can also change visual quality and restrict world fights to Party members.
+  world_character_title: Players in the world
+  world_character_body: This is your active character. Right-click another nearby character to open the available player interactions.
+  world_character_tabs_title: Play several characters
+  world_character_tabs_body: You can own up to six characters. Invite your other characters into a Party and enable Party Follow to make them travel with you and automatically join eligible world fights when they arrive.
+  fight_title: Your first on-chain fight
+  fight_body: Fights are turn-based. Choose movement and spells, and your actions are prepared together. End Turn submits the complete turn as one Sui transaction and computes the following monster turns until another player can act. All authoritative fight state is settled on Sui. After victory, a final Sui transaction uses on-chain randomness to roll shared loot and place each reward in its assigned player’s inventory.
+  equipment_gear_title: Equipment
+  equipment_gear_body: Equipped items belong to the selected character. Drag gear onto the doll, review the resulting bonuses, then confirm the changes together.
+  equipment_inventory_title: Shared inventory
+  equipment_inventory_body: Your inventory is shared by all characters on this account. Select another character above to equip those same available items on them.
+  stats_title: Characteristics
+  stats_body: Spend characteristic points to become stronger. Vitality increases health, Wisdom improves XP and resistance to AP/MP loss, Chance improves water damage and loot chance, and Agility improves air damage, critical hits, tackle, and tackle escape.
+  spells_title: Spells
+  spells_body: New spells unlock as your character progresses. Leveling grants spell points that you can spend here to upgrade unlocked spells.
+  jobs_title: Jobs
+  jobs_body: Track gathering and crafting progression, inspect recipes, and craft available items here. With several characters, Settings can lock this page to one dedicated crafter.
+  runeforge_title: Runeforge
+  runeforge_body: At job level 70, the matching crafting profession can improve equipment with runes. Obtain runes by crushing items, then apply them here.
 admin_page:
   kicker: Publisher
   title: Publish game content
@@ -582,12 +622,16 @@ admin_page:
   peak: Peak
   revenue: Revenue
   revenue_over_time: Revenue over time
-  revenue_over_time_body: Shop revenue and marketplace royalties
+  revenue_over_time_body: All protocol revenue by source
   shop: Shop
   shop_sales: Shop sales
   item_royalties: Item royalties
   character_royalties: Character royalties
+  character_creation_revenue: Character creation
+  kolizeum_revenue: Kolizeum fees
   game_transactions: Game transactions
+  game_gas_fees: Game gas fees (24h)
+  all_time: All time
   game_transactions_over_time: Transactions over time
   game_transactions_body: Successful AresRPG transactions, counted once per PTB
   today: Today
@@ -727,6 +771,8 @@ simulator_page:
 fight_hud:
   board_label: Fight board
   turn_order: Turn order
+  turn_order_collapse: Collapse turn order
+  turn_order_expand: Expand turn order
   placement_title: Prepare for battle
   placement_hint: Place your fighters and mark them ready
   placement_gas_title: Move fighter again?
@@ -734,6 +780,10 @@ fight_hud:
   placement_gas_hide: Do not show again
   placement_gas_confirm: Move anyway
   placement_ready: Ready
+  placement_ready_all: Ready all
+  placement_ready_all_progress: Ready all · {completed}/{total}
+  placement_ready_all_complete: All ready · {completed}/{total}
+  placement_ready_all_failed: Ready interrupted · {completed}/{total}
   placement_waiting: Waiting for the others…
   placement_starting: Starting fight…
   placement_force_prompt: A player is away — force the fight to start?
@@ -800,11 +850,15 @@ fight_hud:
   result_fallen: Fallen
   result_survived: Survived
   result_collecting: Collecting loot…
+  result_collecting_progress: Collecting character loot · {completed}/{total}
+  result_collecting_complete: All character loot collected · {completed}/{total}
+  result_collecting_failed: Loot collection interrupted · {completed}/{total}
   result_continue: Continue
   result_close: Close
   fight_finalize_pending: Fight cleanup is ready.
   fight_finalize_button: Finalize
   result_retry: Retry
+  result_version_changed: Some game objects changed while your fight rewards were being collected. Nothing was lost. Retry to refresh them and collect your rewards.
   level_up_title: Level up
   level_up_reached: Level reached
   level_up_stat_points: Stat points
@@ -859,6 +913,9 @@ wallet_legacy:
     still doesn't show up, contact the team on Discord with your transaction ID for
     further help.
   add_funds: Add Funds
+  testnet_faucet_title: Testnet SUI
+  testnet_faucet_body: AresRPG is running on Sui Testnet. Testnet SUI is free and has no monetary value. Request tokens from the official Sui faucet.
+  testnet_faucet_action: Open Sui Faucet
   how_to_pay: How would you like to pay?
   add_funds_desc: Choose your preferred payment method. SUI is delivered directly
     to your wallet.
@@ -1642,11 +1699,11 @@ characters_page:
       air: 'Air'
     description:
       vitality: 'Increases your max HP'
-      wisdom: 'Increases your XP gain'
+      wisdom: 'Increases your XP gain and resistance to AP/MP loss'
       strength: 'Increases your earth damage'
       intelligence: 'Increases your fire damage and healing'
       chance: 'Increases your water damage and loot drop chance'
-      agility: 'Increases your air damage, tackle, and dodge of AP/MP loss'
+      agility: 'Increases your air damage, critical hits, tackle, and tackle escape'
       critical_hit: 'Improves your odds of landing a critical hit'
       raw_damage: 'Adds a flat amount to damage and life-steal effects'
     add_point: 'Add a point to {{stat}}'

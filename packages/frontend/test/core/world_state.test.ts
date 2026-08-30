@@ -342,7 +342,12 @@ test('engage hides the mob and plants a reversible sword before the transaction 
     { id: `engage:${group}`, x: -300, z: 200, placement_ms: 12_345 },
   ])
 
-  const submitted = world.reduce!(pending, { type: 'world/engage_submitted', group, fight: '0xfight' })
+  const submitted = world.reduce!(pending, {
+    type: 'world/engage_submitted',
+    group,
+    fight: '0xfight',
+    character_id: '0xcharacter',
+  })
   expect(engage_sword_markers(submitted.world)).toHaveLength(1)
   const consumed = world.reduce!(submitted, {
     type: 'server/packet',

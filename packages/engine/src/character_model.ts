@@ -287,16 +287,21 @@ const placeholder_model = (): CharacterModel => {
   })
 }
 
-export const create_character_model = async (appearance: CharacterAppearanceRender): Promise<CharacterModel> => {
+export const create_character_model = async (
+  appearance: CharacterAppearanceRender,
+  { colorize = true }: Readonly<{ colorize?: boolean }> = {}
+): Promise<CharacterModel> => {
   if (!appearance.body_url) return placeholder_model()
   const body_gltf = await load_gltf_source(appearance.body_url)
   const root = clone_skinned(body_gltf.scene)
   const owned_materials = [...clone_materials(root)]
   const colorizers: Colorizer[] = []
   const min_y = prepare_character(root)
-  const body_colors = create_colorizer(root)
-  body_colors.set(appearance.colors)
-  colorizers.push(body_colors)
+  if (colorize) {
+    const body_colors = create_colorizer(root)
+    body_colors.set(appearance.colors)
+    colorizers.push(body_colors)
+  }
 
   let hair: Object3D | null = null
   if (appearance.hair_url) {
@@ -305,9 +310,11 @@ export const create_character_model = async (appearance: CharacterAppearanceRend
       const hair_gltf = await load_gltf_source(appearance.hair_url)
       hair = clone_skinned(hair_gltf.scene)
       owned_materials.push(...clone_materials(hair))
-      const hair_colors = create_colorizer(hair)
-      hair_colors.set(appearance.colors)
-      colorizers.push(hair_colors)
+      if (colorize) {
+        const hair_colors = create_colorizer(hair)
+        hair_colors.set(appearance.colors)
+        colorizers.push(hair_colors)
+      }
       head.add(hair)
     } else console.warn(`Character body ${appearance.body_url} has no Head bone; hair was skipped.`)
   }

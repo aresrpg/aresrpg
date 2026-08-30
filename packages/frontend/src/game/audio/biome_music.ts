@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-// Every world-biome identity receives one stable pseudo-random owned track and its battle twin.
+// Current biomes own semantic soundtrack pairs; future world rosters receive a stable,
+// collision-free assignment while enough tracks remain available.
 
 export const MUSIC_TRACKS = Object.freeze([
   'arctic',
@@ -14,6 +15,21 @@ export const MUSIC_TRACKS = Object.freeze([
   'tropical',
 ] as const)
 
+const AUTHORED_TRACKS: Readonly<Record<string, (typeof MUSIC_TRACKS)[number]>> = Object.freeze({
+  'nauvis:plains': 'grassland',
+  'nauvis:forest': 'temperate',
+  'nauvis:rainforest': 'tropical',
+  'nauvis:highlands': 'taiga',
+  'nauvis:desert': 'desert',
+  'nauvis:ocean': 'swamp',
+  'yakutia:taiga': 'taiga',
+  'yakutia:black_ice': 'glacier',
+  'yakutia:ice_peaks': 'arctic',
+  'yakutia:blue_steppe': 'grassland',
+  'yakutia:frostfen': 'swamp',
+  'yakutia:caldera': 'scorched',
+})
+
 const hash_string = (value: string): number => {
   let hash = 0x811c9dc5
   for (const character of value) {
@@ -23,11 +39,21 @@ const hash_string = (value: string): number => {
   return hash >>> 0
 }
 
-export const biome_music_track = (biome_key: string, tracks: readonly string[] = MUSIC_TRACKS): string =>
-  tracks[hash_string(biome_key) % tracks.length]!
+export const biome_music_track = (biome_key: string, biome_keys: readonly string[] = []): string => {
+  const authored = AUTHORED_TRACKS[biome_key]
+  if (authored) return authored
+  const index = biome_keys.indexOf(biome_key)
+  if (index < 0 || biome_keys.length > MUSIC_TRACKS.length)
+    return MUSIC_TRACKS[hash_string(biome_key) % MUSIC_TRACKS.length]!
+  const world = biome_key.split(':')[0] ?? biome_key
+  return MUSIC_TRACKS[(hash_string(world) + index) % MUSIC_TRACKS.length]!
+}
 
-export const biome_music_pair = (biome_key: string): Readonly<{ roam: string; battle: string }> => {
-  const track = biome_music_track(biome_key)
+export const biome_music_pair = (
+  biome_key: string,
+  biome_keys: readonly string[] = []
+): Readonly<{ roam: string; battle: string }> => {
+  const track = biome_music_track(biome_key, biome_keys)
   return Object.freeze({
     roam: `/music/${track}.mp3`,
     battle: `/music/${track}_battle.mp3`,

@@ -364,6 +364,10 @@ demo_page:
   ride_pet: Monter le familier
   dismount_pet: Descendre
   mob_group: Groupe de monstres
+  crowd_load: Test de charge de foule
+  crowd_benchmark: Mesurer
+  crowd_loading: Chargement des modèles de personnages…
+  crowd_result: Phase
   mob: Monstre
   hide_protectors: Masquer les protecteurs
   amount: Quantité
@@ -505,6 +509,8 @@ settings_page:
   subtitle: 'Tes préférences AresRPG'
   music_label: 'Musique'
   music_hint: 'Joue les musiques du monde et des combats.'
+  footsteps_label: Pas
+  footsteps_hint: Active les sons de pas pendant les déplacements.
   auto_switch_fighter_label: Changement auto de combattant
   auto_switch_fighter_hint: Sélectionne automatiquement votre personnage quand son tour commence.
   always_craft_from_label: Toujours fabriquer avec
@@ -513,6 +519,40 @@ settings_page:
   always_craft_from_none: Désactivé
   render_distance_label: Distance d'affichage
   render_distance_hint: Jusqu'où le monde se charge autour de vous. Plus loin coûte des performances.
+tutorial:
+  progress: '{{current}} / {{total}}'
+  skip: Passer le tutoriel
+  back: Retour
+  next: Suivant
+  finish: Terminer
+  fight_enter: Entrer dans le combat
+  reset_title: Tutoriels
+  reset_hint: Réafficher chaque introduction lors de votre prochaine visite de la page.
+  reset_action: Réinitialiser
+  world_compass_title: Mondes et zones partagées
+  world_compass_body: AresRPG contient plusieurs mondes débloqués au fil de votre progression. Chaque monde est divisé en zones contenant des monstres, des ressources et des donjons. Tout joueur peut découvrir une zone, et cette découverte est partagée avec tous.
+  world_hud_title: Vie et raccourcis
+  world_hud_body: Cette interface affiche votre vie et vos emplacements d’objets rapides. Lorsqu’un combat commence, cette même zone devient votre barre de sorts.
+  world_fps_title: Contrôles du monde
+  world_fps_body: Le terrain est généré de façon déterministe depuis les données publiées. Sui conserve le monde et la position X/Z de référence, tandis que le terrain détermine localement la hauteur. Le mode Plat ne change donc que l’affichage. Vous pouvez aussi régler la qualité et réserver les combats du monde aux membres du groupe.
+  world_character_title: Joueurs dans le monde
+  world_character_body: Voici votre personnage actif. Faites un clic droit sur un personnage proche pour ouvrir les interactions disponibles.
+  world_character_tabs_title: Jouez plusieurs personnages
+  world_character_tabs_body: Vous pouvez posséder jusqu’à six personnages. Invitez vos autres personnages dans un groupe et activez le suivi de groupe pour qu’ils voyagent avec vous et rejoignent automatiquement les combats du monde éligibles à leur arrivée.
+  fight_title: Votre premier combat on-chain
+  fight_body: Les combats se jouent au tour par tour. Choisissez vos déplacements et vos sorts, puis vos actions sont préparées ensemble. Fin du tour soumet le tour complet en une transaction Sui et calcule les tours de monstres suivants jusqu’à ce qu’un autre joueur puisse agir. Tout l’état de combat de référence est réglé sur Sui. Après la victoire, une dernière transaction Sui utilise le hasard on-chain pour tirer le butin partagé et placer chaque récompense dans l’inventaire du joueur désigné.
+  equipment_gear_title: Équipement
+  equipment_gear_body: Les objets équipés appartiennent au personnage sélectionné. Faites glisser l’équipement sur le mannequin, vérifiez les bonus obtenus, puis confirmez les changements ensemble.
+  equipment_inventory_title: Inventaire partagé
+  equipment_inventory_body: Votre inventaire est partagé entre tous les personnages de ce compte. Sélectionnez un autre personnage ci-dessus pour lui équiper les mêmes objets disponibles.
+  stats_title: Caractéristiques
+  stats_body: Dépensez vos points de caractéristiques pour devenir plus puissant. La Vitalité augmente la vie, la Sagesse améliore l’XP et la résistance aux pertes de PA/PM, la Chance améliore les dégâts Eau et le butin, et l’Agilité améliore les dégâts Air, les critiques, le tacle et la fuite.
+  spells_title: Sorts
+  spells_body: De nouveaux sorts se débloquent avec la progression du personnage. Les niveaux accordent des points de sorts à dépenser ici pour améliorer les sorts débloqués.
+  jobs_title: Métiers
+  jobs_body: Suivez votre progression de récolte et d’artisanat, consultez les recettes et fabriquez les objets disponibles. Avec plusieurs personnages, les paramètres peuvent verrouiller cette page sur un artisan dédié.
+  runeforge_title: Forgemagie
+  runeforge_body: Au niveau 70 d’un métier, la profession d’artisanat correspondante peut améliorer l’équipement avec des runes. Obtenez des runes en brisant des objets, puis appliquez-les ici.
 admin_page:
   kicker: Éditeur
   title: Publier le contenu du jeu
@@ -582,12 +622,16 @@ admin_page:
   peak: Pic
   revenue: Revenus
   revenue_over_time: Revenus au fil du temps
-  revenue_over_time_body: Revenus de la boutique et redevances du marché
+  revenue_over_time_body: Tous les revenus du protocole par source
   shop: Boutique
   shop_sales: Ventes de la boutique
   item_royalties: Redevances des objets
   character_royalties: Redevances des personnages
+  character_creation_revenue: Création de personnages
+  kolizeum_revenue: Frais du Kolizéum
   game_transactions: Transactions du jeu
+  game_gas_fees: Frais de gas du jeu (24 h)
+  all_time: Depuis toujours
   game_transactions_over_time: Transactions au fil du temps
   game_transactions_body: Transactions AresRPG réussies, comptées une fois par PTB
   today: Aujourd’hui
@@ -727,6 +771,8 @@ simulator_page:
 fight_hud:
   board_label: Plateau de combat
   turn_order: Ordre des tours
+  turn_order_collapse: Réduire l’ordre des tours
+  turn_order_expand: Déployer l’ordre des tours
   placement_title: Préparez-vous au combat
   placement_hint: Placez vos combattants et indiquez qu’ils sont prêts
   placement_gas_title: Déplacer encore le combattant ?
@@ -734,6 +780,10 @@ fight_hud:
   placement_gas_hide: Ne plus afficher
   placement_gas_confirm: Déplacer quand même
   placement_ready: Prêt
+  placement_ready_all: Tous prêts
+  placement_ready_all_progress: Tous prêts · {completed}/{total}
+  placement_ready_all_complete: Tous prêts · {completed}/{total}
+  placement_ready_all_failed: Préparation interrompue · {completed}/{total}
   placement_waiting: En attente des autres…
   placement_starting: Démarrage du combat…
   placement_force_prompt: Un joueur est absent — forcer le début du combat ?
@@ -800,11 +850,15 @@ fight_hud:
   result_fallen: Tombé
   result_survived: Survivant
   result_collecting: Récupération du butin…
+  result_collecting_progress: Butin des personnages · {completed}/{total}
+  result_collecting_complete: Tout le butin est récupéré · {completed}/{total}
+  result_collecting_failed: Récupération interrompue · {completed}/{total}
   result_continue: Continuer
   result_close: Fermer
   fight_finalize_pending: Le nettoyage du combat est prêt.
   fight_finalize_button: Finaliser
   result_retry: Réessayer
+  result_version_changed: Certains objets du jeu ont changé pendant la récupération des récompenses. Rien n’a été perdu. Réessayez pour les actualiser et récupérer vos récompenses.
   level_up_title: Niveau supérieur
   level_up_reached: Niveau atteint
   level_up_stat_points: Points de caractéristiques
@@ -862,6 +916,9 @@ wallet_legacy:
     ci-dessus), et si le problème persiste, contactez l'équipe sur Discord avec votre
     identifiant de transaction.
   add_funds: Ajouter des fonds
+  testnet_faucet_title: SUI de testnet
+  testnet_faucet_body: AresRPG fonctionne sur le testnet Sui. Le SUI de testnet est gratuit et n’a aucune valeur monétaire. Demandez des jetons au faucet officiel de Sui.
+  testnet_faucet_action: Ouvrir le faucet Sui
   how_to_pay: Comment souhaitez-vous payer ?
   add_funds_desc: Choisissez votre méthode de paiement. Le SUI est livré directement
     dans ton portefeuille.
@@ -1644,11 +1701,11 @@ characters_page:
       air: 'Air'
     description:
       vitality: 'Augmente votre Vie maximum'
-      wisdom: 'Augmente votre gain d’XP'
+      wisdom: 'Augmente votre gain d’XP et votre résistance aux pertes de PA/PM'
       strength: 'Augmente vos dégâts Terre'
       intelligence: 'Augmente vos dégâts Feu et vos soins'
       chance: 'Augmente vos dégâts Eau et vos chances d’obtenir du butin'
-      agility: 'Augmente vos dégâts Air, votre tacle et votre esquive de perte de PA/PM'
+      agility: 'Augmente vos dégâts Air, vos coups critiques, votre tacle et votre fuite'
       critical_hit: 'Améliore vos chances de coup critique'
       raw_damage: 'Ajoute un montant fixe aux effets de dégâts et de vol de vie'
     add_point: 'Ajouter un point à {{stat}}'

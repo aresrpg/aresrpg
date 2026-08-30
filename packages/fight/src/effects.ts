@@ -2,7 +2,6 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 /* eslint-disable no-param-reassign, fp-law/no-mutating-methods -- The Move twin updates only its reducer-owned structuredClone draft; caller snapshots stay immutable. */
 // The one spell/weapon/zone resolver, ported in fight.move mutation order.
-
 import { GRID_CELLS, in_grid, line_of_sight, manhattan, mask_get, same_line, zone_cells } from './combat_grid.ts'
 import { TARGET_FILTERS } from './move_contract.gen.ts'
 import { contest_points, deal, full_damage, life_steal, resist, roll_value } from './damage.ts'
@@ -13,6 +12,7 @@ import {
   add_ap,
   add_mp,
   heal_seat,
+  has_row,
   hit,
   max_hp_of,
   modifiable_range_max,
@@ -20,7 +20,7 @@ import {
   spend_ap,
   spend_mp,
 } from './fighters.ts'
-import { displace, fighter_at, living_cells } from './movement.ts'
+import { displace, fighter_at } from './movement.ts'
 import { draw } from './prng.ts'
 import { add_effect_id, add_zone_id, effect_id_at, emit, fail } from './runtime.ts'
 import { spell_level_of, spell_turn_rows, type FightReadState } from './spell_turn.ts'
@@ -38,7 +38,6 @@ import type {
 } from './types.ts'
 
 const NO_TARGET = 0xffff_ffffn
-
 export const legal_cell = (runtime: FightReadState, cell: bigint): boolean =>
   in_grid(cell) && !mask_get(runtime.contract.closed, cell)
 
@@ -102,7 +101,14 @@ export const casts_this_turn = (runtime: FightReadState, spell: string, target: 
 
 export const sight_blockers = (runtime: FightReadState, looker: bigint, target_cell: bigint): bigint[] => [
   ...runtime.contract.board.obstacles,
-  ...living_cells(runtime, looker).filter((cell) => cell !== target_cell),
+  ...runtime.contract.fighters.flatMap((fighter, index) =>
+    BigInt(index) === looker ||
+    fighter.dead ||
+    has_row(runtime, BigInt(index), KINDS.invis) ||
+    fighter.cell === target_cell
+      ? []
+      : [fighter.cell]
+  ),
 ]
 
 const visible_occupant = (runtime: FightReadState, caster: bigint, cell: bigint): bigint | null => {
@@ -110,7 +116,7 @@ const visible_occupant = (runtime: FightReadState, caster: bigint, cell: bigint)
   if (occupant === null) return null
   const fighter = runtime.contract.fighters[Number(occupant)]
   const caster_fighter = runtime.contract.fighters[Number(caster)]
-  const invisible = fighter.effects.some((row) => row.kind === KINDS.invis)
+  const invisible = has_row(runtime, occupant, KINDS.invis)
   return invisible && fighter.team !== caster_fighter.team ? null : occupant
 }
 

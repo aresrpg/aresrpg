@@ -107,8 +107,8 @@ const observe = ({ events, dispatch, get_state, signal }: Parameters<NonNullable
     if (!world) return
     world.set_quality(state.settings.quality, state.settings.render_distance)
     world.set_flattened(state.settings.flat_mode)
+    world.set_footsteps_enabled(state.settings.footsteps_enabled !== false)
   }
-
   const sync_target = (state: AppState, checkpoint_only = false): void => {
     if (!world) return
     const position = checkpoint_only ? selected_checkpoint_position(state) : selected_position(state)

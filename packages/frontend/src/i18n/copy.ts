@@ -116,6 +116,7 @@ export type AppCopy = Readonly<{
   wallet_send_failed: string
   wallet_close: string
   wallet_legacy: Readonly<Record<string, unknown>>
+  tutorial: Readonly<Record<string, string>>
   wallet_send_shared: Readonly<Record<string, string>>
   encyclopedia_page: Readonly<Record<string, unknown>>
   simulator_page: Readonly<Record<string, string>>

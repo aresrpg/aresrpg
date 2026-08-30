@@ -325,6 +325,51 @@
   cursor: pointer;
   border: 1px solid rgba(255, 90, 139, 0.35);
 }
+.fe-settlement {
+  display: grid;
+  gap: 6px;
+  margin-top: 14px;
+  padding: 9px 10px;
+  color: #8edcff;
+  background: rgba(74, 158, 255, 0.06);
+  border: 1px solid rgba(74, 158, 255, 0.25);
+}
+.fe-settlement__label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 9px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.fe-settlement__bar {
+  height: 6px;
+  overflow: hidden;
+  background: rgba(0, 0, 0, 0.48);
+  border: 1px solid rgba(74, 158, 255, 0.3);
+}
+.fe-settlement__bar > span {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, #2773ad, #67d4ff);
+  box-shadow: 0 0 10px rgba(85, 185, 238, 0.58);
+  transition: width 220ms ease;
+}
+.fe-settlement.complete {
+  color: #6ee7a2;
+  border-color: rgba(110, 231, 162, 0.35);
+}
+.fe-settlement.complete .fe-settlement__bar > span {
+  background: linear-gradient(90deg, #26845a, #6ee7a2);
+}
+.fe-settlement.failed {
+  color: #ff9ab8;
+  border-color: rgba(255, 90, 139, 0.4);
+}
+.fe-settlement.failed .fe-settlement__bar > span {
+  background: linear-gradient(90deg, #8c2548, #ff5a8b);
+}
 .fe-cta {
   display: flex;
   gap: 12px;

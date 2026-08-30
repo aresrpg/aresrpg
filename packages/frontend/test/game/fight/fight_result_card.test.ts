@@ -5,7 +5,22 @@ import { readFileSync } from 'node:fs'
 
 import { expect, test } from 'bun:test'
 
-import { compact_xp, result_participant_shows_progress, result_xp_progress } from '../../../src/modules/fight_result.ts'
+import {
+  compact_xp,
+  result_participant_shows_progress,
+  result_xp_progress,
+  type FightResult,
+} from '../../../src/modules/fight_result.ts'
+import { fight_settlement_progress } from '../../../src/modules/fight_result_view.ts'
+
+const settlement_result = (character_id: string, confirmed: boolean, error: string | null = null) =>
+  ({
+    fight: '0xf',
+    own_seat: 0,
+    participants: [{ character_id, forfeited: false }],
+    settlement_confirmed: confirmed,
+    error,
+  }) as unknown as FightResult
 
 test('the result row composes current XP and this fight gain on one progression bar', () => {
   const progress = result_xp_progress(20, 30)
@@ -35,6 +50,19 @@ test('large XP values stay compact enough for max-content columns', () => {
   expect(compact_xp(1_250_000)).toBe('1.3m')
 })
 
+test('multi-character settlement progress counts confirmations and identifies the failed character', () => {
+  expect(
+    fight_settlement_progress(
+      {
+        '0xc1': settlement_result('0xc1', true),
+        '0xc2': settlement_result('0xc2', false, 'stale object'),
+        '0xc3': { ...settlement_result('0xc3', false), fight: '0xother' },
+      },
+      '0xf'
+    )
+  ).toEqual({ completed: 1, total: 2, failed_character: '0xc2' })
+})
+
 test('the result card keeps every participant on one compact roster line', () => {
   const component = readFileSync(new URL('../../../src/game/fight/FightResultCard.tsx', import.meta.url), 'utf8')
   const css = readFileSync(new URL('../../../src/game/fight/fight_result.css', import.meta.url), 'utf8')
@@ -58,6 +86,8 @@ test('the result card keeps every participant on one compact roster line', () =>
   expect(component).toContain("'result_gas_spent'")
   expect(component).toContain('result_wager_${outcome.kind}')
   expect(component).toContain("'result_close'")
+  expect(component).toContain('role="progressbar"')
+  expect(component).toContain('result_collecting_progress')
   expect(component).toContain('result.gas_spent_mist, 3)')
   expect(css).toContain('.result.result--fe > :not(.rad-crn)')
   expect(css).toContain('62% {\n    opacity: 1;\n    transform: scale(1.06);')
@@ -72,6 +102,7 @@ test('the result card keeps every participant on one compact roster line', () =>
   expect(css).toContain('width: 24px')
   expect(css).toContain('max-width: none')
   expect(css).toContain('text-overflow: ellipsis')
+  expect(css).toContain('.fe-settlement__bar')
   expect(css).toContain('rgba(4, 5, 8, 0.48)')
   expect(css).toContain('position: absolute')
   expect(world_frame).toContain('<FightResultCard')

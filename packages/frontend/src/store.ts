@@ -192,6 +192,8 @@ export const create_app = () => {
     quality: 'medium',
     flat_mode: false,
     music_enabled: true,
+    footsteps_enabled: true,
+    completed_tutorials: Object.freeze([]),
     follow_leader: false,
     chat_visible_channels: CHAT_CHANNELS,
     chat_speak_channel: 'general',

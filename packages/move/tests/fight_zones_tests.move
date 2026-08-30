@@ -104,3 +104,10 @@ fun a_push_centered_on_its_target_is_a_soft_stop() {
   assert!(result == vector[100, result[2], result[2]], 0);
   scenario.end();
 }
+
+#[test]
+fun fighter_death_removes_every_owned_zone() {
+  let mut scenario = test_scenario::begin(OWNER);
+  assert!(fight::zones_after_owner_death_for_testing(scenario.ctx()) == vector[1, 1], 0);
+  scenario.end();
+}

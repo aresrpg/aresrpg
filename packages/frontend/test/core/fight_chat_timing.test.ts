@@ -14,7 +14,7 @@ const settings = Object.freeze({
   render_distance: null,
 } as const)
 
-test('combat lines enter chat only after their presentation batch completes', () => {
+test('combat lines enter chat when their cue starts and batch completion does not duplicate them', () => {
   const checkpoint = create_fight_state({
     fight_id: '0xf1',
     board_seed: 1n,
@@ -86,6 +86,22 @@ test('combat lines enter chat only after their presentation batch completes', ()
   })
   expect(state.chat.lines).toEqual([])
 
+  const cue = {
+    id: '0xf1:1:0',
+    type: 'damage' as const,
+    source_id: 'fight_character_0',
+    target_id: 'fight_character_0',
+    amount: 5,
+    hp_before: 100,
+    hp_after: 95,
+    element: 'earth',
+    cause: 'spell',
+    critical: false,
+  }
+  emit({ type: 'fight/presentation_cue', presentation, cue, phase: 'start' })
+  expect(state.chat.lines.map(({ key }) => key)).toEqual(['log_lost'])
+
+  emit({ type: 'fight/presentation_cue', presentation, cue, phase: 'complete' })
   emit({ type: 'fight/presented', presentation } as AppInput)
   expect(state.chat.lines.map(({ key }) => key)).toEqual(['log_lost'])
   expect(state.chat.lines[0]?.fight).toBe('0xf1')

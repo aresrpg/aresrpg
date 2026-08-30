@@ -85,6 +85,7 @@ export const CharacterTabs = ({
         aria-label={copy.characters}
         className="pointer-events-auto flex h-[22px] shrink-0 items-stretch overflow-x-auto border border-border bg-surface/95"
         data-character-tabs=""
+        data-tutorial-target="character_tabs"
       >
         {characters.map((character) => {
           const active = character.id === selected_character_id

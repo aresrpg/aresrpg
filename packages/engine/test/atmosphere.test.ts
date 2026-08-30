@@ -1,9 +1,11 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
+import { readFileSync } from 'node:fs'
+
 import { describe, expect, test } from 'bun:test'
 
-import { cloud_coverage_threshold, cloud_sample_xz, cloud_shadow_strength } from '../src/clouds.ts'
+import { cloud_coverage_threshold, cloud_layer_visible, cloud_sample_xz, cloud_shadow_strength } from '../src/clouds.ts'
 import { grade_rgb, grade_rgb_low_frequency } from '../src/grading.ts'
 import { distance_haze_factor } from '../src/distance_fog.ts'
 import { HEIGHT_FOG, height_fog_density } from '../src/height_fog.ts'
@@ -36,6 +38,14 @@ describe('fast cloud field', () => {
     expect(cloud_shadow_strength('high')).toBeGreaterThanOrEqual(0.5)
     expect(cloud_coverage_threshold(0)).toBeLessThanOrEqual(0.6)
     expect(cloud_coverage_threshold(1)).toBeLessThan(cloud_coverage_threshold(0))
+  })
+
+  test('fight boards disable the visible cloud deck regardless of quality', () => {
+    expect(cloud_layer_visible('high', false)).toBeTrue()
+    expect(cloud_layer_visible('high', true)).toBeFalse()
+    expect(cloud_layer_visible('low', false)).toBeFalse()
+    const backend = readFileSync(new URL('../src/webgpu_backend.ts', import.meta.url), 'utf8')
+    expect(backend).toContain('clouds.set_active(board === null)')
   })
 })
 

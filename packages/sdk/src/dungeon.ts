@@ -5,7 +5,7 @@
 import { SDK, living_content } from './client.ts'
 import { receipt_digest, receipt_event } from './cache.ts'
 import { create_kiosk_runner, type KioskCapLoader, type KioskCustody } from './kiosk_runner.ts'
-import { created_fight_id, last_settler_refusal } from './fight.ts'
+import { created_fight_id, execute_settlement_mode } from './fight.ts'
 import { board_catalog_id, item_template_id, mob_template_id, world_content_id, world_id } from './seed_ids.ts'
 
 type GameSdk = ReturnType<typeof SDK>
@@ -126,12 +126,14 @@ export const dungeon_actions = (sdk: GameSdk, { kiosk_cap }: DungeonActionsCtx) 
       world,
       loot: requested_loot,
       custody,
+      last,
     }: {
       fight: string
       fighter_idx: bigint
       world: string
       loot: readonly Readonly<{ item_type: string; existing: string | null }>[]
       custody?: KioskCustody
+      last?: boolean
     }) => {
       const { content_root, seed_package_original, wc } = world_refs(world, 'Dungeon settlement')
       const loot = [...new Map(requested_loot.map((row) => [row.item_type, row])).values()]
@@ -149,10 +151,7 @@ export const dungeon_actions = (sdk: GameSdk, { kiosk_cap }: DungeonActionsCtx) 
           },
           { custody, gas_scope: `fight:${fight}` }
         )
-      const receipt = await execute_settlement(true).catch((error: unknown) => {
-        if (!last_settler_refusal(error)) throw error
-        return execute_settlement(false)
-      })
+      const receipt = await execute_settlement_mode(last, execute_settlement)
       return Object.freeze({
         digest: receipt_digest(receipt),
         closable: receipt_event(receipt, '::fight::FightClosable') !== null,

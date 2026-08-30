@@ -60,3 +60,4 @@ packages/*/.coverage_map.mvcov
 # a symlinked node_modules slips past the directory-only rule above and dangles elsewhere
 packages/move/node_modules
 vfx/**.zip
+BETA_ANNOUNCEMENT.md

@@ -118,8 +118,11 @@ observations are stored once in daily buckets; the server derives chart interval
 reads the current Character count from the graph. Only high-volume active-player membership is
 pre-bucketed into 15-minute, hourly, daily, weekly, and calendar-month sets. Successful game
 transaction volume stores one replay-safe numeric count per checkpoint in those same visible
-buckets. Primary-shop details retain a strict rolling 90-day window. Rebuilding analytics means
-replaying that indexer from the original publication checkpoint.
+buckets plus a permanent all-time hash. Net gas uses the same checkpoint identity for every
+submitted gameplay attempt, including executed failures, while deployment-only core calls and
+publish, upgrade, and seed transactions contribute neither gas nor player/address activity.
+Primary-shop details retain a strict rolling 90-day window. Rebuilding analytics means replaying
+that indexer from the original publication checkpoint.
 
 Item deltas are bidirectional: current kiosk custody streams the complete row, while pre-state
 custody streams removal when an item moves away or is destroyed. Clients never retain absent graph rows.

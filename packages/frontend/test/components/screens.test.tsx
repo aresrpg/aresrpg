@@ -55,10 +55,12 @@ test('each standalone screen exposes only its own surface', async () => {
   expect(insufficient).toContain('You need at least 0.2 SUI left in your balance for fees.')
   expect(insufficient).toMatch(/<button[^>]*disabled=""[^>]*type="submit"/)
 
-  // Settings exposes only the music preference.
+  // Settings exposes the persisted audio preferences.
   const settings = renderToStaticMarkup(<SettingsPage copy={copy} settings={SETTINGS} />)
 
   expect(settings).toContain('Music')
+  expect(settings).toContain('Footsteps')
+  expect(settings).toContain('Tutorials')
   expect(settings).toContain('Always craft from')
   expect(settings).toContain('Crafting character')
   expect(settings).toContain('role="switch"')

@@ -5,7 +5,7 @@ import { expect, test } from 'bun:test'
 import { create_character_source, create_fight_state, type FightEvent } from '@aresrpg/fight'
 
 import { chat_line_tokens } from '../../../src/components/Chat.tsx'
-import { project_fight_chat_lines } from '../../../src/game/fight/fight_chat_lines.ts'
+import { fight_chat_lines_at_event, project_fight_chat_lines } from '../../../src/game/fight/fight_chat_lines.ts'
 
 const checkpoint = () =>
   create_fight_state({
@@ -109,6 +109,40 @@ test('the log speaks casts, merged reductions, returns, and stat changes — nev
   expect(lines[3]!.values.stat).toMatchObject({ copy_key: 'stat_range' })
 })
 
+test('a cast and its damage can be released on their own presentation cues', () => {
+  const state = checkpoint()
+  const events: readonly FightEvent[] = [
+    {
+      type: 'spell_cast',
+      payload: {
+        caster: 1n,
+        spell: 'bite',
+        cast_level: 1n,
+        target_cell: 9n,
+        slot: 0n,
+        ap_cost: 3n,
+        critical: false,
+        weapon: false,
+      },
+    },
+    {
+      type: 'damage_number',
+      payload: {
+        source: 1n,
+        target: 0n,
+        amount: 12n,
+        hp_before: 100n,
+        hp_after: 88n,
+        element: 'earth',
+        cause: 'spell',
+      },
+    },
+  ]
+
+  expect(fight_chat_lines_at_event(state, events, '4.9', 0, name_of).map(({ key }) => key)).toEqual(['log_cast'])
+  expect(fight_chat_lines_at_event(state, events, '4.9', 1, name_of).map(({ key }) => key)).toEqual(['log_lost'])
+})
+
 test('a chatiment trigger logs its per-trigger delta once, not the folded total', () => {
   const state = checkpoint()
   const events: readonly FightEvent[] = [
@@ -156,6 +190,18 @@ test('non-stat effects never interpret their unused channel zero as strength', (
         turns: 3n,
         source: 1n,
       },
+    },
+  ]
+
+  expect(project_fight_chat_lines(state, events, '1', name_of)).toEqual([])
+})
+
+test('zero-valued lasting stat effects never render negative zero', () => {
+  const state = checkpoint()
+  const events: readonly FightEvent[] = [
+    {
+      type: 'effect_applied',
+      payload: { target: 1n, effect_id: 'zero', kind: 4n, channel: 7n, element: '', value: 0n, turns: 2n, source: 0n },
     },
   ]
 

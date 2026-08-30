@@ -13,10 +13,14 @@ import {
   fight_turn_key,
   fight_view_with_display,
   select_fight_view,
+  turn_elapsed_percent,
   turn_seconds_remaining,
 } from '../../../src/game/fight/fight_projection.ts'
 import { crank_prompt_hidden, end_turn_intent, end_turn_wait_ms } from '../../../src/game/fight/FightHud.tsx'
+import { ready_all_progress_label } from '../../../src/game/fight/FightPlacementBanner.tsx'
+import { fight_cell_selection } from '../../../src/game/fight/fight_cell_selection.ts'
 import { fight_portrait_source, FightTimeline } from '../../../src/game/fight/FightTimeline.tsx'
+import { load_app_copy } from '../../../src/i18n/copy.ts'
 import {
   fight_turn_announcement_after_cue,
   fight_turn_announcement_after_submission,
@@ -25,6 +29,18 @@ import {
 } from '../../../src/game/fight/FightTurnCard.tsx'
 
 const source = create_character_source({ classe: 'senshi', level: 1n, spell_levels: { slash: 1n } })
+const spell_effect = {
+  kind: 0n,
+  element: 'earth',
+  value: 10n,
+  value_max: 20n,
+  area_shape: 0n,
+  area_size: 0n,
+  target_filter: 0n,
+  chance_bp: 10_000n,
+  turns: 0n,
+  stat: 0n,
+}
 const spell_level = {
   ap_cost: 2n,
   range_min: 1n,
@@ -37,22 +53,27 @@ const spell_level = {
   casts_per_target: 0n,
   cooldown_turns: 0n,
   crit_1_in: 1n,
-  effects: [
-    {
-      kind: 0n,
-      element: 'earth',
-      value: 10n,
-      value_max: 20n,
-      area_shape: 0n,
-      area_size: 0n,
-      target_filter: 0n,
-      chance_bp: 10_000n,
-      turns: 0n,
-      stat: 0n,
-    },
-  ],
-  crit_effects: [],
+  effects: [spell_effect],
+  crit_effects: [spell_effect],
 }
+
+const mob_snapshot = (mob_type: string, level = 1n, max_hp = 55n) =>
+  Object.freeze({
+    mob_type,
+    level,
+    max_hp,
+    ap: 6n,
+    mp: 3n,
+    agility: 0n,
+    wisdom: 0n,
+    earth_res: 100n,
+    fire_res: 100n,
+    water_res: 100n,
+    air_res: 100n,
+    kit: Object.freeze([]),
+    xp: 0n,
+    loot: Object.freeze([]),
+  })
 
 const started_checkpoint = () => {
   const fight = create_fight({
@@ -73,6 +94,16 @@ const started_checkpoint = () => {
 }
 
 describe('generic fight view', () => {
+  test('ready all reports running, completed, and interrupted transaction counts', () => {
+    const text = {
+      placement_ready_all_progress: 'Ready all · {completed}/{total}',
+      placement_ready_all_complete: 'All ready · {completed}/{total}',
+      placement_ready_all_failed: 'Ready interrupted · {completed}/{total}',
+    }
+    expect(ready_all_progress_label(text, { completed: 1, total: 3, status: 'running' })).toBe('Ready all · 1/3')
+    expect(ready_all_progress_label(text, { completed: 3, total: 3, status: 'complete' })).toBe('All ready · 3/3')
+    expect(ready_all_progress_label(text, { completed: 1, total: 3, status: 'failed' })).toBe('Ready interrupted · 1/3')
+  })
   test('a crank prompt stays dismissed after one tap and returns only on rollback', () => {
     const attempt = { turn_key: 'fight:1:1000', restore_serial: 4 }
     expect(crank_prompt_hidden(attempt, 'fight:1:1000', 4)).toBeTrue()
@@ -153,11 +184,12 @@ describe('generic fight view', () => {
     expect(fight_fighter_name(checkpoint, 2n, () => undefined)).toBe('Enemy Name')
   })
 
-  test('mob turn cards retain their asset identity and resolve its authored portrait', () => {
+  test('mob turn cards retain their asset identity and resolve its authored portrait', async () => {
+    const copy = await load_app_copy('en')
     const checkpoint = started_checkpoint()
     checkpoint.contract.fighters[2]!.kind = {
       type: 'mob',
-      snapshot: { mob_type: 'aragne__fire', level: 1n, max_hp: 55n },
+      snapshot: mob_snapshot('aragne__fire'),
     } as never
     const view = select_fight_view({ checkpoint, mode: 'remote', owner: 'mine', names: {} })
     const mob = view.timeline.find(({ seat }) => seat === 2n)!
@@ -166,20 +198,62 @@ describe('generic fight view', () => {
     const icon_for = (mob_type: string) => `/mob/${mob_type}.png`
     expect(fight_portrait_source(mob, icon_for)).toBe('/mob/aragne__fire.png')
     expect(fight_portrait_source(view.timeline[0]!, icon_for)).toBeNull()
-    expect(
-      renderToStaticMarkup(
-        FightTimeline({
-          fighters: view.timeline,
-          focus: () => undefined,
-          label: 'Turn order',
-          mob_icon_for: icon_for,
-          turn_seconds: null,
-        })
-      )
-    ).toContain('src="/mob/aragne__fire.png"')
+    const html = renderToStaticMarkup(
+      FightTimeline({
+        collapse_label: 'Collapse turn order',
+        copy,
+        expand_label: 'Expand turn order',
+        fighters: view.timeline,
+        focus: () => undefined,
+        label: 'Turn order',
+        mob_icon_for: icon_for,
+        target: () => undefined,
+        targetable_cells: [mob.cell],
+        targeting: true,
+        turn_progress: 50,
+        turn_seconds: null,
+      })
+    )
+    expect(html).toContain('src="/mob/aragne__fire.png"')
+    expect(html).toContain('fight-hud__turn enemy targetable')
+    expect(html).toContain('height:50%')
+    expect(html).toContain('data-fight-resistances="true"')
+    expect(html).toContain('title="Earth resistance"')
+    expect(mob.cell).toBe(checkpoint.contract.fighters[2]!.cell)
   })
 
-  test('a final-turn AP and Power buff remains visible on its timeline card', () => {
+  test('a timeline fighter cell resolves through the canonical spell target decision', () => {
+    const checkpoint = started_checkpoint()
+    const target_cell = checkpoint.contract.fighters[2]!.cell
+    const selection = fight_cell_selection({
+      actions_locked: false,
+      cell: target_cell,
+      checkpoint,
+      owned_active_seat: 0n,
+      owned_placement_seat: null,
+      selected_action: { type: 'spell', name: 'slash' },
+      targetable_cells: [target_cell],
+    })
+
+    expect(selection).toEqual({
+      type: 'input',
+      input: { type: 'cast_spell', fighter: 0n, spell: 'slash', target_cell },
+    })
+    expect(
+      fight_cell_selection({
+        actions_locked: false,
+        cell: target_cell,
+        checkpoint,
+        owned_active_seat: 0n,
+        owned_placement_seat: null,
+        selected_action: { type: 'spell', name: 'slash' },
+        targetable_cells: [],
+      })
+    ).toEqual({ type: 'clear' })
+  })
+
+  test('a final-turn AP and Power buff remains visible on its timeline card', async () => {
+    const copy = await load_app_copy('en')
     const checkpoint = started_checkpoint()
     checkpoint.contract.fighters[2]!.effects = [
       { kind: EFFECT_KINDS.add, element: '', value: 2n, turns_left: 1n, source: 1n, stat: CHANNELS.ap },
@@ -188,10 +262,17 @@ describe('generic fight view', () => {
     const view = select_fight_view({ checkpoint, mode: 'local', owner: 'mine', names: {} })
     const html = renderToStaticMarkup(
       FightTimeline({
+        collapse_label: 'Collapse turn order',
+        copy,
+        expand_label: 'Expand turn order',
         fighters: view.timeline,
         focus: () => undefined,
         label: 'Turn order',
         mob_icon_for: () => null,
+        target: () => undefined,
+        targetable_cells: [],
+        targeting: false,
+        turn_progress: null,
         turn_seconds: null,
       })
     )
@@ -206,7 +287,7 @@ describe('generic fight view', () => {
     const checkpoint = started_checkpoint()
     checkpoint.contract.fighters[2]!.kind = {
       type: 'mob',
-      snapshot: { mob_type: 'aragne__fire', level: 45n, max_hp: 55n },
+      snapshot: mob_snapshot('aragne__fire', 45n),
     } as never
     const view = select_fight_view({ checkpoint, mode: 'remote', owner: 'mine', names: { aragne__fire: 'Aragne' } })
     const presented = fight_turn_card_view(view.timeline, { key: 'fight:turn:1:2', seat: 2n })
@@ -305,7 +386,7 @@ describe('generic fight view', () => {
     const checkpoint = structuredClone(started_checkpoint())
     checkpoint.contract.fighters = [
       checkpoint.contract.fighters[0]!,
-      { ...checkpoint.contract.fighters[2]!, kind: { type: 'mob', snapshot: {} } } as never,
+      { ...checkpoint.contract.fighters[2]!, kind: { type: 'mob', snapshot: mob_snapshot('solo_mob') } } as never,
     ]
     checkpoint.contract.fighters[0]!.ready = false
     checkpoint.contract.round = 0n
@@ -344,6 +425,17 @@ describe('generic fight view', () => {
     expect(css).toContain('.fight-hud:not(.fight-hud--overworld) .fight-hud__bottom')
   })
 
+  test('turn cards keep their collapse arrow in-row and expose elapsed time as a strong curtain', () => {
+    const css = readFileSync(new URL('../../../src/game/fight/fight_hud.css', import.meta.url), 'utf8')
+    const timeline = readFileSync(new URL('../../../src/game/fight/FightTimeline.tsx', import.meta.url), 'utf8')
+
+    expect(css).toContain('grid-template-columns: minmax(0, auto) 26px')
+    expect(css).toContain('width: 114%')
+    expect(css).toContain('backdrop-filter: grayscale(1) brightness(0.58)')
+    expect(timeline).toContain('<ChevronRight')
+    expect(timeline).toContain('<ChevronLeft')
+  })
+
   test('the remote clock counts down from the chain 45-second window', () => {
     expect(
       select_fight_view({ checkpoint: started_checkpoint(), mode: 'remote', owner: 'mine', names: {} }).show_turn_timer
@@ -351,6 +443,9 @@ describe('generic fight view', () => {
     expect(turn_seconds_remaining(10_000n, 10_000)).toBe(45)
     expect(turn_seconds_remaining(10_000n, 54_001)).toBe(1)
     expect(turn_seconds_remaining(10_000n, 55_001)).toBe(0)
+    expect(turn_elapsed_percent(10_000n, 10_000)).toBe(0)
+    expect(turn_elapsed_percent(10_000n, 32_500)).toBe(50)
+    expect(turn_elapsed_percent(10_000n, 60_000)).toBe(100)
   })
 
   test('the same structural turn cue can never announce its profile twice', () => {

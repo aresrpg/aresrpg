@@ -17,9 +17,12 @@ pub const WEEKLY_RETENTION_MS: u64 = 105 * DAY_MS;
 pub const MONTHLY_RETENTION_MS: u64 = 400 * DAY_MS;
 pub const DAILY_ACTIVITY_RETENTION_MS: u64 = 400 * DAY_MS;
 pub const ROYALTY_FLOOR_MIST: u64 = 10_000_000;
+pub const CHARACTER_CREATION_MIST: u64 = 1_000_000_000;
 
 pub const SHOP_SALES_KEY: &str = "analytics:shop:sales";
 pub const ADDRESS_FIRST_SEEN_KEY: &str = "analytics:addresses";
+pub const TRANSACTIONS_ALL_KEY: &str = "analytics:transactions:all";
+pub const GAS_ALL_KEY: &str = "analytics:gas:all";
 
 pub fn bucket_15m(ts_ms: u64) -> u64 {
     ts_ms / BUCKET_15M_MS * BUCKET_15M_MS
@@ -99,6 +102,8 @@ pub struct MoneyDelta {
     pub shop_orders: u64,
     pub item_royalty_mist: u64,
     pub character_royalty_mist: u64,
+    pub character_creation_mist: u64,
+    pub kolizeum_mist: u64,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -116,6 +121,8 @@ impl MoneyFact {
             "shop_orders": self.delta.shop_orders.to_string(),
             "item_royalty_mist": self.delta.item_royalty_mist.to_string(),
             "character_royalty_mist": self.delta.character_royalty_mist.to_string(),
+            "character_creation_mist": self.delta.character_creation_mist.to_string(),
+            "kolizeum_mist": self.delta.kolizeum_mist.to_string(),
         })
         .to_string()
     }
@@ -131,6 +138,7 @@ pub struct ActivityFact {
 pub struct TransactionFact {
     pub checkpoint: u64,
     pub count: u64,
+    pub gas_mist: i64,
     pub ts_ms: u64,
 }
 

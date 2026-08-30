@@ -26,6 +26,11 @@ export const mob_band_scaled = (base: bigint, low: bigint, high: bigint, level: 
   return (base * (6n * span + 10n * (level - low))) / (10n * span)
 }
 
+export const mob_effect_value_scaled = (base: bigint, low: bigint, high: bigint, level: bigint): bigint => {
+  const scaled = mob_band_scaled(base, low, high, level)
+  return base > 0n && scaled === 0n ? 1n : scaled
+}
+
 export const mob_centered_band_scaled = (
   value: bigint,
   center: bigint,
@@ -66,8 +71,8 @@ const scale_mob_effect = (
   scalable_mob_effect(effect.kind)
     ? {
         ...effect,
-        value: mob_band_scaled(effect.value, low, high, level),
-        value_max: mob_band_scaled(effect.value_max, low, high, level),
+        value: mob_effect_value_scaled(effect.value, low, high, level),
+        value_max: mob_effect_value_scaled(effect.value_max, low, high, level),
       }
     : effect
 

@@ -1,0 +1,39 @@
+# SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+# © 2026 Sceat — All rights reserved. See LICENSE.
+# Manual communication only: never called by release or production activation.
+name: announce on Discord
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Released version without the v prefix'
+        required: true
+        type: string
+      message:
+        description: 'Player-facing Discord announcement'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  announce:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: assert sender is the authorized owner
+        run: |
+          test "${{ github.event.sender.id }}" = "11330271"
+          test "${{ github.actor }}" = "Sceat"
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          sparse-checkout: |
+            .github/assets/discord_banner.png
+            .github/scripts/announce-discord.sh
+      - name: post the requested announcement
+        env:
+          ANNOUNCEMENT: ${{ inputs.message }}
+          DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
+          TAG: v${{ inputs.version }}
+        run: bash .github/scripts/announce-discord.sh

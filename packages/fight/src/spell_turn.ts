@@ -26,12 +26,9 @@ export const spell_turn_rows = (
 ): Readonly<{ critical: boolean; crit_1_in: bigint; rows: readonly SpellEffect[] }> => {
   const sheet = sheet_of(runtime, caster)
   const crit_1_in = crit_denominator(level.crit_1_in, sheet.critical, sheet.agility)
-  const critical = crit_at(
-    spell_crit_roll(runtime.contract.turn_seed, name),
-    level.crit_1_in,
-    sheet.critical,
-    sheet.agility
-  )
-  const rows = critical && level.crit_effects.length > 0 ? level.crit_effects : level.effects
+  const critical =
+    level.crit_effects.length > 0 &&
+    crit_at(spell_crit_roll(runtime.contract.turn_seed, name), level.crit_1_in, sheet.critical, sheet.agility)
+  const rows = critical ? level.crit_effects : level.effects
   return Object.freeze({ critical, crit_1_in, rows: Object.freeze([...rows]) })
 }

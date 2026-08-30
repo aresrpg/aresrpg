@@ -354,7 +354,7 @@ export default function JobsTab({ character, copy }: Readonly<{ character: Reado
   }
 
   return (
-    <div className="jobs">
+    <div className="jobs" data-tutorial-target="character_jobs">
       {/* LEFT rail — jobs grouped by category, each a selectable row with a level chip */}
       <div className="jobs__list">
         {CATEGORY_ORDER.map((kind) => (

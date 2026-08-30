@@ -25,7 +25,6 @@ jobs:
     timeout-minutes: 10
     env:
       GH_TOKEN: ${{ github.token }}
-      DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
       VERCEL_ORG_ID: team_ir5eY7QCUS7qgcTBq81H89FM
       VERCEL_PROJECT_ID: prj_sBuXZOg6DJTciA0SYyTQZhESAekP
       VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
@@ -47,9 +46,6 @@ jobs:
           filter: blob:none
           sparse-checkout: |
             package.json
-            changelog
-            .github/assets/discord_banner.png
-            .github/scripts/announce-release.sh
       - name: setup Bun
         uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
       - name: locate this tag's successful preparation
@@ -99,7 +95,3 @@ jobs:
         run: curl --fail --silent --show-error --retry 6 --retry-all-errors --retry-delay 5 https://aresrpg.world/ >/dev/null
       - name: publish the prepared GitHub Release
         run: gh release edit "v${{ steps.release.outputs.version }}" --draft=false
-      - name: announce the now-live release
-        env:
-          TAG: v${{ steps.release.outputs.version }}
-        run: bash .github/scripts/announce-release.sh

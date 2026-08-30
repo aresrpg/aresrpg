@@ -65,7 +65,14 @@ const pins = {
   character_protected_policy: { id: id(11), shared_version: '1' },
 }
 
-const kiosk_cap = { objectId: id(3), kioskId: id(12), isPersonal: true } as KioskOwnerCap
+const kiosk_cap = {
+  objectId: id(3),
+  kioskId: id(12),
+  isPersonal: true,
+  version: '1',
+  digest,
+} satisfies KioskOwnerCap
+const kiosk_ref = { objectId: kiosk_cap.objectId, version: kiosk_cap.version, digest: kiosk_cap.digest }
 
 /** A TERMINAL (&Random) door's harness: those doors take the PACKED personal cap and compose
  *  with no borrow bracket, so the fake exposes exactly that shape. */
@@ -120,7 +127,7 @@ describe('the character builder', () => {
     const actions = gate_actions(sdk as never, {
       kiosk_cap: async (kiosk) => {
         requested = kiosk
-        return kiosk_cap
+        return { ...kiosk_cap, kioskId: kiosk! }
       },
     })
     await actions.raise_stats({
@@ -291,7 +298,7 @@ describe('the character builder', () => {
 
     expect(door_args).toMatchObject({
       kiosk: kiosk_cap.kioskId,
-      personal: kiosk_cap.objectId,
+      personal: kiosk_ref,
       character_id: id(20),
       gear_id: id(21),
       gear_template: item_template_id(id(61), id(60), 'straw_hat'),
@@ -336,7 +343,7 @@ describe('the character builder', () => {
 
     expect(door_args).toMatchObject({
       kiosk: kiosk_cap.kioskId,
-      personal: kiosk_cap.objectId,
+      personal: kiosk_ref,
       character_id: id(20),
       recipe: recipe_id(id(61), id(60), 'wheat_flour'),
       output_template: item_template_id(id(61), id(60), 'wheat_flour'),
@@ -399,7 +406,7 @@ describe('the character builder', () => {
 
     expect(door_args).toMatchObject({
       kiosk: kiosk_cap.kioskId,
-      personal: kiosk_cap.objectId,
+      personal: kiosk_ref,
       character_id: id(20),
       x: 49_700,
       z: 50_200,
@@ -552,7 +559,7 @@ describe('the character builder', () => {
       fighter_idx: 2n,
       plan: ['prepared-1', 'prepared-2'],
       kiosk: kiosk_cap.kioskId,
-      personal: kiosk_cap.objectId,
+      personal: kiosk_ref,
     })
     expect(hydrated).toHaveLength(2)
     expect(result.closable).toBeTrue()

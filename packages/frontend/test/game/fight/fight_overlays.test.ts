@@ -430,3 +430,23 @@ test('a trigger removes only its own trap zone, and never a persistent glyph', (
 
   expect(fight_zone_visual_state(visual, visual, glyph_cue, 'start')).toBe(visual)
 })
+
+test('an ordered zone-removal cue drops an expired or ownerless glyph when the cue starts', () => {
+  const state = structuredClone(checkpoint())
+  state.contract.zones = [
+    {
+      owner_fighter: 0n,
+      trap: false,
+      shape: AREA_SHAPES.point,
+      size: 0n,
+      anchor: state.contract.fighters[0]!.cell,
+      turns_left: 1n,
+      effects: [],
+    },
+  ]
+  const visual = Object.freeze({ checkpoint: state, zone_ids: Object.freeze(['zone:glyph']) })
+  const cue = { id: 'remove', type: 'zone_removed' as const, zone_id: 'zone:glyph' }
+
+  expect(fight_zone_visual_state(visual, visual, cue, 'complete')).toBe(visual)
+  expect(fight_zone_visual_state(visual, visual, cue, 'start')?.zone_ids).toEqual([])
+})

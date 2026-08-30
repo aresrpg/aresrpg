@@ -5,6 +5,27 @@ import { experience_progress } from '@aresrpg/immutable'
 
 import type { FightResult, ResultParticipant } from './fight_result.ts'
 
+export type FightSettlementProgress = Readonly<{
+  completed: number
+  total: number
+  failed_character: string | null
+}>
+
+export const fight_settlement_progress = (
+  results: Readonly<Record<string, FightResult>>,
+  fight: string
+): FightSettlementProgress => {
+  const eligible = Object.entries(results).filter(([, result]) => {
+    if (result.fight !== fight || result.own_seat === null) return false
+    return result.participants[result.own_seat]?.forfeited === false
+  })
+  return Object.freeze({
+    completed: eligible.filter(([, result]) => result.settlement_confirmed).length,
+    total: eligible.length,
+    failed_character: eligible.find(([, result]) => result.error !== null)?.[0] ?? null,
+  })
+}
+
 export const fight_result_available = (
   fight: Readonly<{ checkpoint: Readonly<{ contract: Readonly<{ id: string }> }> | null }>,
   result_fight: string

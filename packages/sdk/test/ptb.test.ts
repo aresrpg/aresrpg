@@ -117,7 +117,7 @@ describe('with_kiosk (the official KioskTransaction under the hood)', () => {
         return { value: 'second', kiosk_cap: current! }
       }),
     ])
-    expect(loads).toBe(1)
+    expect(loads).toBe(2)
     expect(seen).toEqual([null, created])
   })
 })

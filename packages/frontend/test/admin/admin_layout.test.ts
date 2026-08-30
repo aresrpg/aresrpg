@@ -21,7 +21,10 @@ test('the admin shell shares the Encyclopedia tabs and owns a separate sales rou
 test('overview restores KPI-first hierarchy and compact width-first charts', () => {
   const overview = source('OverviewPage.tsx')
   expect(overview.match(/<ChartPanel/g)).toHaveLength(6)
-  expect(overview.match(/<KpiCard/g)).toHaveLength(9)
+  expect(overview.match(/<KpiCard/g)).toHaveLength(10)
+  expect(overview).toContain('transactions.all_time')
+  expect(overview).toContain('transactions.gas_24h_mist')
+  expect(overview).toContain('transactions.gas_all_time_mist')
   expect(overview).toContain('data-admin-kpis=""')
   expect(overview).toContain('data-admin-charts=""')
   expect(overview.indexOf('data-admin-kpis')).toBeLessThan(overview.indexOf('data-admin-charts'))

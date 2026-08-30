@@ -80,7 +80,7 @@ const step_follower = (
 ): PartyFollowerView => {
   const current = previous.get(source.character_id) ?? owned_character_position(source.character_id, world) ?? source
   const point = { x: current.x, y: current.y, z: current.z }
-  const distance = 'distance' in current && typeof current.distance === 'number' ? current.distance : 0
+  const distance = 'distance' in current && typeof current.distance === 'number' ? current.distance : Infinity
   const stepped = target
     ? advance_party_follower(point, party_follower_target(target, index), elapsed_ms)
     : { ...point, distance }

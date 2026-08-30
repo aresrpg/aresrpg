@@ -100,7 +100,7 @@ export const CompassStrip = ({ copy }: Readonly<{ copy: AppCopy }>) => {
   const night = pose.time_of_day >= DAY_FRAC
 
   return (
-    <div className="gw-compass-wrap">
+    <div className="gw-compass-wrap" data-tutorial-target="compass">
       <div
         aria-label={text('compass_label')}
         className={`gw-compass${searchable ? ' gw-compass--searchable' : ''}`}

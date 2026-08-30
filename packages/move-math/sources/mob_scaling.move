@@ -34,7 +34,9 @@ fun scalable(kind: u8): bool { kind <= K_CHATIMENT || kind == K_REDUCE || kind =
 
 fun value(value: u32, low: u64, high: u64, level: u64): u32 {
   let scaled = fight_math::band_scaled(value as u64, low, high, level);
-  if (scaled > 0xffff_ffff) 0xffff_ffff else scaled as u32
+  if (value > 0 && scaled == 0) 1
+  else if (scaled > 0xffff_ffff) 0xffff_ffff
+  else scaled as u32
 }
 
 public fun effect(authored: &Effect, low: u64, high: u64, level: u64): Effect {

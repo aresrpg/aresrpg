@@ -21,6 +21,8 @@ describe('game settings', () => {
       quality: 'medium',
       flat_mode: false,
       music_enabled: true,
+      footsteps_enabled: true,
+      completed_tutorials: [],
       follow_leader: false,
       chat_visible_channels: ['general', 'party', 'whisper', 'combat'],
       chat_speak_channel: 'general',
@@ -40,6 +42,8 @@ describe('game settings', () => {
         quality: 'high',
         flat_mode: true,
         music_enabled: false,
+        footsteps_enabled: false,
+        completed_tutorials: ['world', 'fight'],
         follow_leader: true,
         chat_visible_channels: ['general', 'party'],
         chat_speak_channel: 'party',
@@ -56,6 +60,8 @@ describe('game settings', () => {
       quality: 'high',
       flat_mode: true,
       music_enabled: false,
+      footsteps_enabled: false,
+      completed_tutorials: ['world', 'fight'],
       follow_leader: true,
       chat_visible_channels: ['general', 'party'],
       chat_speak_channel: 'party',
@@ -75,6 +81,8 @@ describe('game settings', () => {
       quality: 'high',
       flat_mode: true,
       music_enabled: true,
+      footsteps_enabled: true,
+      completed_tutorials: [],
       follow_leader: false,
       chat_visible_channels: ['general', 'party', 'whisper', 'combat'],
       chat_speak_channel: 'general',
@@ -107,6 +115,12 @@ describe('game settings', () => {
 
     expect(load_game_settings('medium', null, accepted).marketplace_disclaimer_acknowledged).toBeTrue()
     expect(load_game_settings('medium', null, malformed).marketplace_disclaimer_acknowledged).toBeFalse()
+  })
+
+  test('keeps only known completed tutorial identities', () => {
+    const storage = memory_storage(JSON.stringify({ completed_tutorials: ['world', 'bad', 'characters_stats'] }))
+
+    expect(load_game_settings('medium', null, storage).completed_tutorials).toEqual(['world', 'characters_stats'])
   })
 
   test('rejects malformed chat preferences while preserving an intentional empty filter set', () => {

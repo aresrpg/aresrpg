@@ -4,7 +4,12 @@
 import { SDK, living_content } from './client.ts'
 import { receipt_digest, receipt_event, type Receipt } from './cache.ts'
 import { create_kiosk_runner, type KioskCapLoader, type KioskCustody } from './kiosk_runner.ts'
-import { last_settler_refusal, project_fight_boundary_receipt, type FightReceipt } from './fight.ts'
+import {
+  execute_settlement_mode,
+  last_settler_refusal,
+  project_fight_boundary_receipt,
+  type FightReceipt,
+} from './fight.ts'
 import { board_catalog_id } from './seed_ids.ts'
 import { friends_actions } from './friends.ts'
 import { owned_ref } from './cache.ts'
@@ -171,11 +176,13 @@ export const kolizeum_actions = (sdk: GameSdk, { kiosk_cap, address }: KolizeumA
       fight,
       fighter_idx,
       custody,
+      last,
     }: {
       kolizeum: string
       fight: string
       fighter_idx: bigint
       custody?: KioskCustody
+      last?: boolean
     }) => {
       await sdk.hydrate_unknown([kolizeum, fight])
       const execute_settlement = (last: boolean) =>
@@ -187,10 +194,7 @@ export const kolizeum_actions = (sdk: GameSdk, { kiosk_cap, address }: KolizeumA
           },
           { custody, gas_scope: `fight:${fight}` }
         )
-      const receipt = await execute_settlement(true).catch((error: unknown) => {
-        if (!last_settler_refusal(error)) throw error
-        return execute_settlement(false)
-      })
+      const receipt = await execute_settlement_mode(last, execute_settlement)
       return Object.freeze({
         digest: receipt_digest(receipt),
         paid_mist: BigInt(String(receipt_event(receipt, '::kolizeum::KolizeumPaid')?.amount ?? 0)),

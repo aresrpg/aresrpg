@@ -53,7 +53,7 @@ export type CharacterAppearanceRender = Readonly<{
   colors: readonly [string, string, string]
   worn: Readonly<{ head: WornModelRender | null; back: WornModelRender | null }>
 }>
-export type CharacterAnimationName = 'IDLE' | 'WALK' | 'RUN' | 'JUMP' | 'JUMP_RUN' | 'FALL' | 'SWIM' | 'SIT'
+export type CharacterAnimationName = 'IDLE' | 'WALK' | 'RUN' | 'JUMP' | 'JUMP_RUN' | 'FALL' | 'SWIM' | 'SIT' | 'DANCE'
 export type CharacterAnimationRender = Readonly<{ name: CharacterAnimationName; time_scale: number }>
 export type MobEntityRender = Readonly<{
   id: string
@@ -70,6 +70,8 @@ export type MobEntityRender = Readonly<{
 export type CharacterEntityRender = Readonly<{
   id: string
   kind: 'character'
+  /** World crowds batch compatible appearances; controlled and tactical actors stay individual. */
+  presentation?: 'individual' | 'crowd'
   appearance: CharacterAppearanceRender
   anchor: EntityAnchor
   facing: EntityFacing
@@ -292,6 +294,11 @@ export type FightPresentationCue =
       zone_id: string
       owner_id: string
       cell: number
+    }>
+  | Readonly<{
+      id: string
+      type: 'zone_removed'
+      zone_id: string
     }>
   | Readonly<{
       id: string

@@ -14,12 +14,17 @@ fun mob_numbers_scale_but_spell_geometry_does_not() {
   let push = spell_effect::new_effect(
     8, b"".to_string(), 3, 3, spell_effect::shape_point(), 0, 1, 10_000, 0, 0,
   );
+  let one_point_buff = spell_effect::new_effect(
+    4, b"".to_string(), 1, 1, spell_effect::shape_circle(), 2, 3, 10_000, 2, 7,
+  );
   let low = mob_scaling::effect(&damage, 10, 20, 10);
   let high = mob_scaling::effect(&damage, 10, 20, 20);
   let geometric = mob_scaling::effect(&push, 10, 20, 20);
+  let scaled_buff = mob_scaling::effect(&one_point_buff, 10, 20, 10);
   assert!(low.value() == 60 && low.value_max() == 72);
   assert!(high.value() == 160 && high.value_max() == 192);
   assert!(geometric.value() == 3);
+  assert!(scaled_buff.value() == 1 && scaled_buff.value_max() == 1);
 }
 
 #[test]
