@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
+import { execFileSync } from 'node:child_process'
 import { readdir, readFile, writeFile } from 'node:fs/promises'
+import { fileURLToPath } from 'node:url'
 
 const root = new URL('../', import.meta.url)
 const changelog = new URL('../changelog/', import.meta.url)
@@ -27,3 +29,6 @@ await writeFile(
   new URL('NEXT.md', changelog),
   '# Next release\n\nReplace this file with player-facing release notes before running `bun pm version patch`.\n'
 )
+execFileSync('git', ['add', '--', `changelog/${release_name}`, 'changelog/NEXT.md'], {
+  cwd: fileURLToPath(root),
+})
