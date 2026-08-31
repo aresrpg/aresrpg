@@ -111,6 +111,11 @@ Each indexer owns one private disposable FalkorDB and can run independently in a
 Nothing coordinates or migrates databases between indexers; a destroyed store replays from the
 original package publication and reconstructs every graph and chain-analytics projection.
 
+Production ingests historical checkpoints from the official HTTP checkpoint store, then follows
+the live edge through the fullnode gRPC checkpoint subscription. Helm requires that streaming
+endpoint, and the HTTP source remains only backfill and failure fallback; an omitted production
+stream is a render error, never a silent polling deployment.
+
 The same sequential checkpoint pass owns a separate rebuildable analytics projection in that
 indexer's FalkorDB. Successful calls across the game-package lineage write exact UTC activity
 membership plus one first-interaction timestamp per address. Exact money and Character lifecycle

@@ -448,7 +448,6 @@ marketplace_page:
 shop_page:
   title: 'Boutique'
   subtitle: 'Achetez des objets avec du SUI'
-  limited_edition_notice: 'Tous ces objets sont en édition limitée — une fois le stock épuisé, ils ne pourront plus jamais être obtenus. Échangez-les sur le marché contre du SUI.'
   remaining_of_cap: '{{remaining}} sur {{cap}} restants'
   processing: 'TRAITEMENT'
   sold_out: 'Épuisé'

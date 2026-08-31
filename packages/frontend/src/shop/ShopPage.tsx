@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
-import { Hourglass } from 'lucide-react'
 import { useMemo, useState } from 'react'
 
 import { AddFundsModal } from '../components/AddFundsModal.tsx'
@@ -124,10 +123,6 @@ export default function ShopPage({
               </div>
             </div>
           )}
-        </div>
-        <div className="mt-5 flex items-center gap-3 border-y border-white/8 py-3 text-[9px] leading-5 tracking-[0.08em] text-muted">
-          <Hourglass className="shrink-0 text-gold/60" size={15} />
-          {t('limited_edition_notice')}
         </div>
         <div className="mt-5 flex flex-wrap gap-1 border-b border-border">
           <button

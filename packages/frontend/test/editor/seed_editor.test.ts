@@ -78,12 +78,12 @@ describe('seed editor model', () => {
   })
 
   test('projects stable entity rows for every domain', () => {
-    expect(entity_rows('items', items)).toHaveLength(196)
+    expect(entity_rows('items', items)).toHaveLength(198)
     expect(entity_rows('mobs', mobs)).toHaveLength(55)
     expect(entity_rows('spells', spells)).toHaveLength(240)
     expect(entity_rows('recipes', recipes)).toHaveLength(recipes.length)
     expect(entity_rows('worlds', worlds)).toHaveLength(2)
-    expect(entity_rows('shop', shop)).toHaveLength(0)
+    expect(entity_rows('shop', shop)).toHaveLength(2)
     expect(entity_rows('airdrop', airdrop)).toHaveLength(0)
     expect(entity_rows('items', items)[0]?.label).toBe(items[0].name)
   })

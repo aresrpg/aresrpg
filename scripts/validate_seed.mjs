@@ -269,7 +269,7 @@ const category_counts = Object.fromEntries(
 )
 const expected_category_counts = {
   resource: 107,
-  consumable: 33,
+  consumable: 35,
   hat: 2,
   cloak: 2,
   rune: 35,
@@ -280,13 +280,13 @@ const expected_category_counts = {
   key: 1,
 }
 if (
-  items.length !== 196 ||
+  items.length !== 198 ||
   Object.keys(category_counts).length !== Object.keys(expected_category_counts).length ||
   Object.entries(expected_category_counts).some(([category, count]) => category_counts[category] !== count)
 )
   red(
     'CURATED-ITEMS',
-    `expected the 196-item hand-curation floor, got ${items.length}: ${JSON.stringify(category_counts)}`
+    `expected the 198-item hand-curation floor, got ${items.length}: ${JSON.stringify(category_counts)}`
   )
 for (const pet of items.filter(({ category }) => category === 'pet'))
   if (!existsSync(join(seed_dir, 'models', 'pets', `${pet.item_type}.glb`)))
@@ -835,15 +835,16 @@ if (new Set(shop.sales.map((row) => row.item_type)).size !== shop.sales.length)
 // airdrop.json — the airdrop domain (owner 2026-08-12: split from shop.json; shop = sales only):
 // `showcase` rows are the airdrop page's display data; `drops`/`giftcards` are the chain rows.
 const airdrop = load('airdrop.json')
+const expected_shop_items = ['scroll_of_oblivion', 'scroll_of_rebirth']
 if (
-  shop.sales.length !== 0 ||
+  JSON.stringify(shop.sales.map(({ item_type }) => item_type)) !== JSON.stringify(expected_shop_items) ||
   airdrop.showcase.length !== 0 ||
   airdrop.drops.length !== 0 ||
   airdrop.giftcards.length !== 0 ||
   airdrop.legacy_pool.length !== 0 ||
   airdrop.pending.length !== 0
 )
-  red('CURATED-SUPPLY', 'shop and every airdrop corpus must stay empty until their replacements are hand-authored')
+  red('CURATED-SUPPLY', 'shop must contain the two reset scrolls and every airdrop corpus must stay empty')
 for (const row of airdrop.showcase) {
   if (typeof row.id !== 'string' || row.id === '') red('A-SHOWCASE', `showcase row without an id`)
   if (typeof row.name !== 'string' || row.name === '') red('A-SHOWCASE', `showcase ${row.id}: empty name`)

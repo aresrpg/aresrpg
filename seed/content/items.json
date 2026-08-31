@@ -1302,6 +1302,24 @@
     "level": 30
   },
   {
+    "item_type": "scroll_of_oblivion",
+    "name": "Scroll of Oblivion",
+    "category": "consumable",
+    "level": 10,
+    "consumable": {
+      "type": "reset_spells"
+    }
+  },
+  {
+    "item_type": "scroll_of_rebirth",
+    "name": "Scroll of Rebirth",
+    "category": "consumable",
+    "level": 10,
+    "consumable": {
+      "type": "reset_stats"
+    }
+  },
+  {
     "item_type": "shiny_barley",
     "name": "Shiny Barley",
     "category": "resource",

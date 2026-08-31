@@ -448,7 +448,6 @@ marketplace_page:
 shop_page:
   title: 'Крамниця'
   subtitle: 'Купуйте предмети за SUI'
-  limited_edition_notice: 'Усі ці предмети — лімітована серія: щойно запас вичерпається, отримати їх буде вже неможливо. Обмінюйте їх на торговому майданчику на SUI.'
   remaining_of_cap: '{{remaining}} з {{cap}} залишилось'
   processing: 'ОБРОБКА'
   sold_out: 'Розпродано'

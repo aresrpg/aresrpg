@@ -448,7 +448,6 @@ marketplace_page:
 shop_page:
   title: 'Laden'
   subtitle: 'Gegenstände mit SUI kaufen'
-  limited_edition_notice: 'Alle diese Objekte sind limitierte Editionen — sobald der Vorrat aufgebraucht ist, sind sie für immer unerreichbar. Handle sie auf dem Marktplatz gegen SUI.'
   remaining_of_cap: '{{remaining}} von {{cap}} übrig'
   processing: 'VERARBEITUNG'
   sold_out: 'Ausverkauft'

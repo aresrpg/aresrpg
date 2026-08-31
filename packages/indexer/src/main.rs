@@ -28,6 +28,7 @@ use sui_indexer_alt_framework::ingestion::{
     IngestConcurrencyConfig, IngestionConfig,
 };
 use sui_indexer_alt_framework::pipeline::sequential::SequentialConfig;
+use sui_indexer_alt_framework::pipeline::IngestionConfig as PipelineIngestionConfig;
 use sui_indexer_alt_framework::{Indexer, IndexerArgs};
 use tracing::info;
 use url::Url;
@@ -163,6 +164,11 @@ async fn main() -> Result<()> {
         seed_package_original = %seed_package_original,
         package_latest = %package_latest,
         remote_store_url = %redacted_url(args.remote_store_url.as_str()),
+        streaming_url = ?args
+            .streaming
+            .streaming_url
+            .as_ref()
+            .map(|url| redacted_url(&url.to_string())),
         first_checkpoint = ?args.indexer.first_checkpoint,
         "starting AresRPG indexer"
     );
@@ -210,6 +216,9 @@ async fn main() -> Result<()> {
             // which is 0 under a 1-CPU container limit — mpsc::channel(0) panics at boot
             // (2026-08-19, first k8s deploy). Sized for one sequential pipeline, not cores.
             SequentialConfig {
+                ingestion: PipelineIngestionConfig {
+                    subscriber_channel_size: Some(4),
+                },
                 processor_channel_size: Some(4),
                 pipeline_depth: Some(4),
                 ..SequentialConfig::default()

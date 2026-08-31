@@ -448,7 +448,6 @@ marketplace_page:
 shop_page:
   title: 'Shop'
   subtitle: 'Purchase items with SUI'
-  limited_edition_notice: 'All these objects are limited edition — once fully minted they can never be obtained again. Trade them on the marketplace for SUI.'
   remaining_of_cap: '{{remaining}} of {{cap}} remaining'
   processing: 'PROCESSING'
   sold_out: 'Sold out'

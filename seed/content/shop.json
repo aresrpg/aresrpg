@@ -1,3 +1,16 @@
 {
-  "sales": []
+  "sales": [
+    {
+      "item_type": "scroll_of_oblivion",
+      "price": 5,
+      "supply": null,
+      "enabled": true
+    },
+    {
+      "item_type": "scroll_of_rebirth",
+      "price": 5,
+      "supply": null,
+      "enabled": true
+    }
+  ]
 }

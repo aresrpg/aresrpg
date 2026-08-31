@@ -448,7 +448,6 @@ marketplace_page:
 shop_page:
   title: 'Tienda'
   subtitle: 'Compra objetos con SUI'
-  limited_edition_notice: 'Todos estos objetos son de edición limitada — una vez agotado el suministro, nunca podrán obtenerse de nuevo. Intercámbialos en el mercado por SUI.'
   remaining_of_cap: '{{remaining}} de {{cap}} restantes'
   processing: 'PROCESANDO'
   sold_out: 'Agotado'

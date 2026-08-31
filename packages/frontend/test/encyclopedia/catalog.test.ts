@@ -65,7 +65,14 @@ describe('local encyclopedia catalog', () => {
         }))
       ).toEqual([{ item_type: bag.item_type, chance_bp: 10_000, min_qty: 1, max_qty: 1 }])
     }
-    expect(encyclopedia_catalog.shop.sales).toEqual([])
+    expect(encyclopedia_catalog.shop.sales.map(({ item: _item, ...sale }) => sale)).toEqual([
+      { item_type: 'scroll_of_oblivion', price: 5, supply: null, enabled: true },
+      { item_type: 'scroll_of_rebirth', price: 5, supply: null, enabled: true },
+    ])
+    expect(encyclopedia_catalog.shop.sales.map(({ item }) => item?.item_type)).toEqual([
+      'scroll_of_oblivion',
+      'scroll_of_rebirth',
+    ])
   })
 
   test('derives class and job views from immutable identities', () => {

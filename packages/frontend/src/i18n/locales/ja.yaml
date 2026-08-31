@@ -448,7 +448,6 @@ marketplace_page:
 shop_page:
   title: 'ショップ'
   subtitle: 'SUIでアイテムを購入'
-  limited_edition_notice: 'これらのアイテムはすべて数量限定です — 発行数に達すると二度と入手できなくなります。マーケットでSUIと交換しましょう。'
   remaining_of_cap: '残り {{remaining}} / {{cap}}'
   processing: '処理中'
   sold_out: '完売'

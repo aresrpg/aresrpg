@@ -25,8 +25,8 @@ resumes without a network-dependent boot query.
 | `PACKAGE_LATEST` | Latest game package upgrade ID; required |
 | `SEED_PACKAGE_ORIGINAL` | Original living-content package ID; required |
 | `REDIS_URL` | FalkorDB connection; defaults to local Redis |
-| `REMOTE_STORE_URL` | HTTP checkpoint backfill/polling source |
-| `STREAMING_URL` | Optional live gRPC checkpoint source |
+| `REMOTE_STORE_URL` | HTTP historical backfill and streaming-failure fallback |
+| `STREAMING_URL` | Live gRPC checkpoint source; required by production Helm |
 | `GRAPHQL_URL` | Boot-only lineage and publication lookup |
 | `INGEST_MAX_CONCURRENCY` | Checkpoint fetch ceiling |
 | `RUST_LOG` | Rust log filter |
