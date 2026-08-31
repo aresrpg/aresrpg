@@ -40,9 +40,9 @@
   "dependencies": {
     "@aresrpg/immutable": "workspace:*",
     "@aresrpg/protocol": "workspace:*",
-    "@mysten/enoki": "^1.2.3",
-    "@mysten/kiosk": "1.4.4",
-    "@mysten/sui": "2.26.2",
+    "@mysten/enoki": "^1.2.18",
+    "@mysten/kiosk": "1.4.6",
+    "@mysten/sui": "2.27.1",
     "@mysten/wallet-standard": "^0.21.5"
   },
   "devDependencies": {

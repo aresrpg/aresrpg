@@ -13,7 +13,7 @@
   },
   "devDependencies": {
     "typescript": "~6.0.3",
-    "@types/bun": "^1.3.14"
+    "@types/bun": "^1.4.0"
   },
   "dependencies": {
     "@aresrpg/fight": "workspace:*",
