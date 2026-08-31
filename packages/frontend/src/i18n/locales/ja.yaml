@@ -629,7 +629,7 @@ admin_page:
   character_creation_revenue: キャラクター作成
   kolizeum_revenue: コロシアム手数料
   game_transactions: ゲームトランザクション
-  game_gas_fees: ゲームガス代（24時間）
+  game_gas_fees: ゲームガス代
   all_time: 累計
   game_transactions_over_time: トランザクションの推移
   game_transactions_body: 成功したAresRPGトランザクションをPTBごとに1回カウント

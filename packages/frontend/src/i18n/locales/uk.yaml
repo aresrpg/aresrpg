@@ -629,7 +629,7 @@ admin_page:
   character_creation_revenue: Створення персонажів
   kolizeum_revenue: Комісії Колізеуму
   game_transactions: Ігрові транзакції
-  game_gas_fees: Ігрові витрати газу (24 год)
+  game_gas_fees: Ігрові витрати газу
   all_time: За весь час
   game_transactions_over_time: Транзакції в часі
   game_transactions_body: Успішні транзакції AresRPG, пораховані один раз на PTB

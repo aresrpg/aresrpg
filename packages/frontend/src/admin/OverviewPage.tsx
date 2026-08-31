@@ -36,6 +36,15 @@ const display_count = (value: number | null | undefined): string =>
   typeof value === 'number' && Number.isFinite(value) ? value.toLocaleString() : '—'
 const bucket_label = (copy: Readonly<Record<string, string>>, bucket: AdminBucket): string =>
   text(copy, `bucket_${bucket}`, bucket === '15m' ? '15-minute buckets' : `${bucket} buckets`)
+type KpiTone = 'gold' | 'blue' | 'green'
+const kpi_value_color = (tone?: KpiTone): string =>
+  tone === 'gold'
+    ? 'text-[#c8963c]'
+    : tone === 'blue'
+      ? 'text-[#70bdf2]'
+      : tone === 'green'
+        ? 'text-[#77d99a]'
+        : 'text-[#e8e4dc]'
 
 const Stat = ({ label, value }: Readonly<{ label: string; value: string }>) => (
   <div className="min-w-0 border-r border-border px-3 last:border-r-0">
@@ -49,25 +58,43 @@ const KpiCard = ({
   label,
   tone,
   value,
-}: Readonly<{ detail: string; label: string; tone?: 'gold' | 'blue' | 'green'; value: string }>) => (
+}: Readonly<{ detail: string; label: string; tone?: KpiTone; value: string }>) => (
   <article
     className={`${PANEL} flex min-h-24 min-w-0 flex-col justify-between bg-[linear-gradient(145deg,rgba(200,150,60,0.035),transparent_62%)] p-4`}
   >
     <span className="truncate text-[8px] tracking-[0.16em] text-[#6b7280] uppercase">{label}</span>
-    <strong
-      className={`mt-3 truncate text-xl font-semibold tracking-[-0.035em] tabular-nums ${
-        tone === 'gold'
-          ? 'text-[#c8963c]'
-          : tone === 'blue'
-            ? 'text-[#70bdf2]'
-            : tone === 'green'
-              ? 'text-[#77d99a]'
-              : 'text-[#e8e4dc]'
-      }`}
-    >
+    <strong className={`mt-3 truncate text-xl font-semibold tracking-[-0.035em] tabular-nums ${kpi_value_color(tone)}`}>
       {value}
     </strong>
     <span className="mt-1 truncate text-[8px] text-[#555b66]">{detail}</span>
+  </article>
+)
+
+export const SplitKpiCard = ({
+  label,
+  left,
+  right,
+  tone,
+}: Readonly<{
+  label: string
+  left: Readonly<{ label: string; value: string }>
+  right: Readonly<{ label: string; value: string }>
+  tone?: KpiTone
+}>) => (
+  <article
+    className={`${PANEL} flex min-h-24 min-w-0 flex-col bg-[linear-gradient(145deg,rgba(200,150,60,0.035),transparent_62%)] p-4`}
+  >
+    <span className="truncate text-[8px] tracking-[0.16em] text-[#6b7280] uppercase">{label}</span>
+    <div className="mt-3 grid min-w-0 flex-1 grid-cols-2">
+      {[left, right].map((row, index) => (
+        <div className={`min-w-0 ${index === 0 ? 'pr-3' : 'border-l border-border pl-3'}`} key={row.label}>
+          <span className="block truncate text-[7px] tracking-[0.12em] text-[#555b66] uppercase">{row.label}</span>
+          <strong className={`mt-1 block truncate text-sm font-semibold tabular-nums ${kpi_value_color(tone)}`}>
+            {row.value}
+          </strong>
+        </div>
+      ))}
+    </div>
   </article>
 )
 
@@ -350,16 +377,28 @@ export const OverviewPage = ({ copy }: Readonly<{ copy: Readonly<Record<string, 
           label={text(copy, 'total_characters', 'Total characters')}
           value={characters.total.toLocaleString()}
         />
-        <KpiCard
-          detail={`${admin_range_label(copy, overview.ranges.transactions)} · ${text(copy, 'all_time', 'All time')} ${transactions.all_time.toLocaleString()}`}
+        <SplitKpiCard
           label={text(copy, 'game_transactions', 'Game transactions')}
-          value={transactions.total.toLocaleString()}
+          left={Object.freeze({
+            label: admin_range_label(copy, overview.ranges.transactions),
+            value: transactions.total.toLocaleString(),
+          })}
+          right={Object.freeze({
+            label: text(copy, 'all_time', 'All time'),
+            value: transactions.all_time.toLocaleString(),
+          })}
         />
-        <KpiCard
-          detail={`${text(copy, 'all_time', 'All time')} ${format_sui(BigInt(transactions.gas_all_time_mist), 4)} SUI`}
-          label={text(copy, 'game_gas_fees', 'Game gas fees (24h)')}
+        <SplitKpiCard
+          label={text(copy, 'game_gas_fees', 'Game gas fees')}
+          left={Object.freeze({
+            label: admin_range_label(copy, overview.ranges.transactions),
+            value: `${format_sui(BigInt(transactions.gas_range_mist), 4)} SUI`,
+          })}
+          right={Object.freeze({
+            label: text(copy, 'all_time', 'All time'),
+            value: `${format_sui(BigInt(transactions.gas_all_time_mist), 4)} SUI`,
+          })}
           tone="gold"
-          value={`${format_sui(BigInt(transactions.gas_24h_mist), 4)} SUI`}
         />
       </div>
       <div className="mt-3">

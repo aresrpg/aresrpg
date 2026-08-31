@@ -39,7 +39,7 @@ test('overview derives exact active and money totals from the selected tier', as
       keys.map((key) => {
         if (key === 'analytics:transactions:all') return { '39': '12' }
         if (key === 'analytics:gas:all') return { '39': '250000000' }
-        if (key === `analytics:gas:15m:${now_ms}`) return { '40': '100000000' }
+        if (key === `analytics:gas:day:${now_ms}`) return { '40': '100000000' }
         if (key !== `analytics:money:day:${now_ms}`) return {}
         return {
           legacy: JSON.stringify({
@@ -86,7 +86,7 @@ test('overview derives exact active and money totals from the selected tier', as
   expect(result.players.rolling_30d).toBe(2)
   expect(result.transactions.total).toBe(5)
   expect(result.transactions.all_time).toBe(12)
-  expect(result.transactions.gas_24h_mist).toBe('100000000')
+  expect(result.transactions.gas_range_mist).toBe('100000000')
   expect(result.transactions.gas_all_time_mist).toBe('250000000')
   expect(result.revenue.shop_mist).toBe('120')
   expect(result.revenue.shop_orders).toBe('2')

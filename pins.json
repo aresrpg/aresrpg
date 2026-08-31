@@ -25708,6 +25708,24 @@
             "category": "rune"
           }
         },
+        "0xf514a743a11d4a43e175cf9353e3d5e4ca958eeb003040c7e3961bc7c6911791": {
+          "hash": "46e808d5b6908ea6",
+          "label": "item scroll_of_oblivion",
+          "addresses": ["0xf514a743a11d4a43e175cf9353e3d5e4ca958eeb003040c7e3961bc7c6911791"],
+          "domain": "item",
+          "item": {
+            "category": "consumable"
+          }
+        },
+        "0x800d2f4e1b6508509c9a0421336d681b3e1602c4aaa6f71fb53ee83e95e88d57": {
+          "hash": "2287f178e1f76fc6",
+          "label": "item scroll_of_rebirth",
+          "addresses": ["0x800d2f4e1b6508509c9a0421336d681b3e1602c4aaa6f71fb53ee83e95e88d57"],
+          "domain": "item",
+          "item": {
+            "category": "consumable"
+          }
+        },
         "0xd13c8dcfb21eb7e29e2d5a571b915c8a130780510711fda61cd9d8a75b78c5db": {
           "hash": "5114ddc83628ba05",
           "label": "item shiny_barley",
@@ -29484,6 +29502,26 @@
           "label": "board #37",
           "addresses": ["0x8c0ba107146fadfafae4007e6cfc4dc52a6e951fd770f57207ff3648c035625b"],
           "domain": "board"
+        },
+        "0x4f7fdfe3f1f8a71c8775db81db1e1ff80b3a08ae0942e515b6064c3117975d35": {
+          "hash": "f5acffd9f23e7e96",
+          "label": "sale scroll_of_oblivion",
+          "addresses": ["0x4f7fdfe3f1f8a71c8775db81db1e1ff80b3a08ae0942e515b6064c3117975d35"],
+          "domain": "sale",
+          "sale": {
+            "infinite": true,
+            "supply": 0
+          }
+        },
+        "0x6c2adb1673048e15e585cb5671a3d3aeda7620c092bb140eee2c24eedfbc4d31": {
+          "hash": "aacbd9b25d24ad9e",
+          "label": "sale scroll_of_rebirth",
+          "addresses": ["0x6c2adb1673048e15e585cb5671a3d3aeda7620c092bb140eee2c24eedfbc4d31"],
+          "domain": "sale",
+          "sale": {
+            "infinite": true,
+            "supply": 0
+          }
         }
       }
     },
@@ -32948,7 +32986,11 @@
         "0x815d3453b3f74927d11185784875947aa0800e8b12fe5b504ad715478e1b6481": "world nauvis",
         "0x48063408a75495c55b7c6dd8da6de2d5a81475ec6262558fb2f414ac520a1e77": "world yakutia",
         "0x7cafcac9d046f833ceb0315c422a23f57e7b21456fe9677e358f59bdd163f69e": "world yakutia",
-        "0x8c0ba107146fadfafae4007e6cfc4dc52a6e951fd770f57207ff3648c035625b": "fight board catalog"
+        "0x8c0ba107146fadfafae4007e6cfc4dc52a6e951fd770f57207ff3648c035625b": "fight board catalog",
+        "0xf514a743a11d4a43e175cf9353e3d5e4ca958eeb003040c7e3961bc7c6911791": "item scroll_of_oblivion",
+        "0x800d2f4e1b6508509c9a0421336d681b3e1602c4aaa6f71fb53ee83e95e88d57": "item scroll_of_rebirth",
+        "0x4f7fdfe3f1f8a71c8775db81db1e1ff80b3a08ae0942e515b6064c3117975d35": "sale scroll_of_oblivion",
+        "0x6c2adb1673048e15e585cb5671a3d3aeda7620c092bb140eee2c24eedfbc4d31": "sale scroll_of_rebirth"
       }
     }
   },

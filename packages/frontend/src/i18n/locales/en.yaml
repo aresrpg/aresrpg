@@ -629,7 +629,7 @@ admin_page:
   character_creation_revenue: Character creation
   kolizeum_revenue: Kolizeum fees
   game_transactions: Game transactions
-  game_gas_fees: Game gas fees (24h)
+  game_gas_fees: Game gas fees
   all_time: All time
   game_transactions_over_time: Transactions over time
   game_transactions_body: Successful AresRPG transactions, counted once per PTB

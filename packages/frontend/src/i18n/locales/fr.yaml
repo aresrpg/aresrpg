@@ -629,7 +629,7 @@ admin_page:
   character_creation_revenue: Création de personnages
   kolizeum_revenue: Frais du Kolizéum
   game_transactions: Transactions du jeu
-  game_gas_fees: Frais de gas du jeu (24 h)
+  game_gas_fees: Frais de gas du jeu
   all_time: Depuis toujours
   game_transactions_over_time: Transactions au fil du temps
   game_transactions_body: Transactions AresRPG réussies, comptées une fois par PTB

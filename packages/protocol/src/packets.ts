@@ -370,7 +370,7 @@ export type AdminTransactionsOverview = Readonly<{
   bucket: AdminBucket
   total: number
   all_time: number
-  gas_24h_mist: string
+  gas_range_mist: string
   gas_all_time_mist: string
   transactions: readonly AdminTransactionPoint[]
 }>

@@ -37,7 +37,7 @@ const overview: AdminOverviewResult = Object.freeze({
     bucket: 'day',
     total: 9,
     all_time: 21,
-    gas_24h_mist: '100000000',
+    gas_range_mist: '100000000',
     gas_all_time_mist: '500000000',
     transactions: Object.freeze([]),
   }),

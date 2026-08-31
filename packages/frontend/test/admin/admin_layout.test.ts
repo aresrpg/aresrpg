@@ -7,6 +7,7 @@ import { expect, test } from 'bun:test'
 import { createElement } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 
+import { SplitKpiCard } from '../../src/admin/OverviewPage.tsx'
 import { chart_hover_index, chart_point_values, MetricChart } from '../../src/admin/MetricChart.tsx'
 
 const source = (file: string): string => readFileSync(new URL(`../../src/admin/${file}`, import.meta.url), 'utf8')
@@ -21,9 +22,10 @@ test('the admin shell shares the Encyclopedia tabs and owns a separate sales rou
 test('overview restores KPI-first hierarchy and compact width-first charts', () => {
   const overview = source('OverviewPage.tsx')
   expect(overview.match(/<ChartPanel/g)).toHaveLength(6)
-  expect(overview.match(/<KpiCard/g)).toHaveLength(10)
+  expect(overview.match(/<KpiCard/g)).toHaveLength(8)
+  expect(overview.match(/<SplitKpiCard/g)).toHaveLength(2)
   expect(overview).toContain('transactions.all_time')
-  expect(overview).toContain('transactions.gas_24h_mist')
+  expect(overview).toContain('transactions.gas_range_mist')
   expect(overview).toContain('transactions.gas_all_time_mist')
   expect(overview).toContain('data-admin-kpis=""')
   expect(overview).toContain('data-admin-charts=""')
@@ -52,6 +54,22 @@ test('range controls wrap without a scrollbar and chart labels never stretch ins
   )
   expect(markup).toContain('grid-cols-[42px_minmax(0,1fr)]')
   expect(markup).not.toContain('<text')
+})
+
+test('transaction KPI cards split the selected range and all-time values equally', () => {
+  const markup = renderToStaticMarkup(
+    createElement(SplitKpiCard, {
+      label: 'Game transactions',
+      left: { label: '30 days', value: '42' },
+      right: { label: 'All time', value: '84' },
+    })
+  )
+  expect(markup).toContain('grid-cols-2')
+  expect(markup).toContain('border-l')
+  expect(markup).toContain('30 days')
+  expect(markup).toContain('All time')
+  expect(markup).toContain('42')
+  expect(markup).toContain('84')
 })
 
 test('chart hover resolves the nearest point and preserves every exact series value', () => {

@@ -294,11 +294,11 @@ const load_transactions = async (
   const { analytics_hashes, analytics_sums } = graph_doors(graph)
   const buckets = range_buckets(days, now_ms)
   const keys = buckets.values.map((bucket) => `analytics:transactions:${buckets.tier}:${bucket}`)
-  const gas_24h_keys = recent_buckets(now_ms, 96, INTERVAL_MS).map((bucket) => `analytics:gas:15m:${bucket}`)
+  const gas_keys = buckets.values.map((bucket) => `analytics:gas:${buckets.tier}:${bucket}`)
   const [counts, [all_transactions], gas] = await Promise.all([
     analytics_sums(keys),
     analytics_hashes([TRANSACTIONS_ALL_KEY]),
-    analytics_hashes([GAS_ALL_KEY, ...gas_24h_keys]),
+    analytics_hashes([GAS_ALL_KEY, ...gas_keys]),
   ])
   const transactions = Object.freeze(
     buckets.values.map((at_ms, index) => Object.freeze({ at_ms, transactions: counts[index] ?? 0 }))
@@ -308,7 +308,7 @@ const load_transactions = async (
     bucket: buckets.tier,
     total: transactions.reduce((total, point) => total + point.transactions, 0),
     all_time: safe_count(sum_hash_values([all_transactions ?? {}]), 'all-time transaction count'),
-    gas_24h_mist: sum_hash_values(gas.slice(1)).toString(),
+    gas_range_mist: sum_hash_values(gas.slice(1)).toString(),
     gas_all_time_mist: sum_hash_values(gas.slice(0, 1)).toString(),
     transactions,
   })

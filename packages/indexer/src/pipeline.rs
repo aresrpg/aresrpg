@@ -248,7 +248,7 @@ fn is_game_transaction(
         .any(|target| !is_deployment_only_target(target))
 }
 
-fn is_deployment_only_target(target: &str) -> bool {
+pub(crate) fn is_deployment_only_target(target: &str) -> bool {
     matches!(
         target,
         "version::admin_update"
@@ -259,6 +259,13 @@ fn is_deployment_only_target(target: &str) -> bool {
             | "listing_rule::add"
             | "lot_rule::add"
             | "naked_rule::add"
+            | "world::create"
+            | "shop::new_sale"
+            | "shop::set_sale"
+            | "shop::new_airdrop"
+            | "shop::new_giftcard"
+            | "loot_box::add_loot_reward"
+            | "loot_box::clear_loot_table"
     )
 }
 
@@ -767,9 +774,21 @@ mod tests {
         let old_call = vec![format!("{old_upgrade}::world::join")];
         let foreign_call = vec![format!("{}::kiosk::purchase", canonical("0x2").unwrap())];
         let deployment_calls = vec![
+            format!("{game}::version::admin_update"),
+            format!("{game}::version::admin_freeze"),
             format!("{game}::admin::create_item_display"),
+            format!("{game}::admin::create_character_display"),
             format!("{game}::protected_policy::mint_and_share"),
             format!("{game}::listing_rule::add"),
+            format!("{game}::lot_rule::add"),
+            format!("{game}::naked_rule::add"),
+            format!("{game}::world::create"),
+            format!("{game}::shop::new_sale"),
+            format!("{game}::shop::set_sale"),
+            format!("{game}::shop::new_airdrop"),
+            format!("{game}::shop::new_giftcard"),
+            format!("{game}::loot_box::add_loot_reward"),
+            format!("{game}::loot_box::clear_loot_table"),
         ];
         let mixed_calls = vec![
             format!("{game}::version::admin_update"),
@@ -781,7 +800,46 @@ mod tests {
         assert!(!is_game_activity(false, &game_call, &packages));
         assert!(!is_game_activity(true, &foreign_call, &packages));
         assert!(!is_game_activity(true, &deployment_calls, &packages));
+        assert!(!is_game_transaction(&deployment_calls, &packages));
         assert!(is_game_activity(true, &mixed_calls, &packages));
+    }
+
+    #[test]
+    fn package_content_and_authority_operations_never_count_as_gameplay_or_gas() {
+        let game = canonical("0xaa").unwrap();
+        let seed = canonical("0xbb").unwrap();
+        let control = canonical("0xcc").unwrap();
+        let system = canonical("0x2").unwrap();
+        let packages = std::collections::HashSet::from([game]);
+        let operations = [
+            vec![],
+            vec![format!("{system}::package::authorize_upgrade")],
+            vec![format!("{system}::package::commit_upgrade")],
+            vec![format!("{seed}::registry::write_item")],
+            vec![format!("{seed}::registry::write_sale")],
+            vec![format!("{control}::admin::mint_temp_admin_cap")],
+        ];
+        for calls in operations {
+            assert!(!is_game_activity(true, &calls, &packages));
+            assert!(!is_game_transaction(&calls, &packages));
+        }
+    }
+
+    #[test]
+    fn every_generated_game_package_seed_door_is_excluded_from_gameplay() {
+        const PREFIX: &str = "target: `${ctx.pins.package}::";
+        let source = include_str!("../../sdk/src/seed_doors.gen.ts");
+        let targets = source
+            .lines()
+            .filter_map(|line| line.trim().strip_prefix(PREFIX)?.strip_suffix("`,"))
+            .collect::<Vec<_>>();
+        assert_eq!(targets.len(), 7, "seed door target parser drifted");
+        for target in targets {
+            assert!(
+                is_deployment_only_target(target),
+                "game-package seed door {target} would count as player gameplay"
+            );
+        }
     }
 
     #[test]
