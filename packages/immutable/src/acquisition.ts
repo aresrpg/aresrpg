@@ -496,7 +496,7 @@ export const best_recipe_for_job_progression = (
           }),
         ]
       })
-      .toSorted(
+      .sort(
         (left, right) =>
           right.xp_per_second - left.xp_per_second ||
           right.xp - left.xp ||
