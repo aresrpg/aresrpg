@@ -7,9 +7,9 @@ import {
   acquisition_catalog,
   acquisition_target_range,
   acquisition_target_status,
-  intermediary_source_level,
+  best_recipe_for_job_progression,
   item_acquisition,
-  recipe_slot_issue,
+  recipe_progression_issues,
   type AcquisitionContent,
 } from '../src/acquisition.ts'
 
@@ -140,11 +140,51 @@ describe('content acquisition estimates', () => {
     )
   })
 
-  test('derives exact recipe slots from output level', () => {
-    expect(recipe_slot_issue(content.items[2]!, { output_type: 'hat', inputs: { a: 1, b: 1, c: 1, d: 1 } })).toBeNull()
-    expect(recipe_slot_issue(content.items[2]!, { output_type: 'hat', inputs: { a: 1, b: 1, c: 1 } })).toContain(
-      'requires 4 ingredients'
-    )
+  test('finds only real same-job XP deadlocks while treating other professions as available inputs', () => {
+    expect(
+      recipe_progression_issues(
+        [
+          { output_type: 'thread', inputs: { fiber: 1, dye: 1, water: 1 }, job: 'TAILOR' },
+          { output_type: 'hat', inputs: { thread: 2, needle: 1 }, job: 'TAILOR' },
+          { output_type: 'carved_head', inputs: { ore: 1, wood: 1, resin: 1, wool: 1 }, job: 'CARVER' },
+          { output_type: 'hoe', inputs: { carved_head: 1, handle: 1 }, job: 'HANDYMAN' },
+          { output_type: 'hammer', inputs: { ore: 1, handle: 1, leather: 1 }, job: 'HANDYMAN' },
+          { output_type: 'machine', inputs: { ore: 1, wood: 1, resin: 1, leather: 1 }, job: 'HANDYMAN' },
+        ],
+        ['TAILOR', 'HANDYMAN']
+      )
+    ).toEqual([
+      {
+        job: 'TAILOR',
+        level: 1,
+        slot_capacity: 2,
+        reachable_recipe_count: 0,
+      },
+    ])
+  })
+
+  test('recommends the reachable unlocked recipe with the best XP per acquisition second', () => {
+    const recipes = [
+      { output_type: 'slow_blade', inputs: { slow_ore: 2, handle: 1 }, job: 'FORGER' },
+      { output_type: 'fast_blade', inputs: { fast_ore: 1, handle: 1 }, job: 'FORGER' },
+      { output_type: 'alloy', inputs: { fast_ore: 1, coal: 1, water: 1 }, job: 'FORGER' },
+      { output_type: 'blocked_blade', inputs: { alloy: 1, handle: 1 }, job: 'FORGER' },
+      { output_type: 'carved_head', inputs: { wood: 1, resin: 1, hide: 1, water: 1 }, job: 'CARVER' },
+      { output_type: 'cross_job_blade', inputs: { carved_head: 1, handle: 1 }, job: 'FORGER' },
+    ]
+    const seconds = new Map([
+      ['slow_ore', 10],
+      ['fast_ore', 1],
+      ['handle', 1],
+      ['coal', 1],
+      ['water', 1],
+      ['carved_head', 5],
+    ])
+    const input_seconds = (item_type: string): number | null => seconds.get(item_type) ?? null
+
+    expect(best_recipe_for_job_progression(recipes, 'FORGER', 1, input_seconds)?.output_type).toBe('fast_blade')
+    expect(best_recipe_for_job_progression(recipes, 'FORGER', 10, input_seconds)?.output_type).toBe('alloy')
+    expect(best_recipe_for_job_progression(recipes, 'FORGER', 100, input_seconds)).toBeNull()
   })
 
   test('keeps provisional acquisition targets broad and level-aware', () => {
@@ -153,10 +193,5 @@ describe('content acquisition estimates', () => {
     expect(target).toEqual({ minimum_seconds: 1_200, maximum_seconds: 4_800 })
     expect(acquisition_target_status({ minimum_seconds: 1_500, maximum_seconds: 2_000 }, target)).toBe('within')
     expect(acquisition_target_status({ minimum_seconds: 100, maximum_seconds: 200 }, target)).toBe('below')
-  })
-
-  test('derives intermediary levels from distinct raw mob maxima', () => {
-    expect(intermediary_source_level('plate', content)).toBe(20)
-    expect(intermediary_source_level('hat', content)).toBeNull()
   })
 })

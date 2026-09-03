@@ -144,9 +144,8 @@ const refusal_error = (refusal: string): Error =>
 const transaction_resolution_error = (error: unknown): unknown => {
   const message = error instanceof Error ? error.message : String(error)
   if (GAS_BUDGET_REFUSAL.test(message)) return refusal_error(message)
-  if (!message.includes('NOT submitted') && /transaction resolution failed/i.test(message))
-    return refusal_error(message)
-  return error
+  if (message.includes('NOT submitted')) return error
+  return new Error(`[sdk] transaction resolution failed — NOT submitted: ${message}`, { cause: error })
 }
 
 /** What the resolver accepts: a bare id (cache-resolved), an explicit ref, or an in-PTB value. */

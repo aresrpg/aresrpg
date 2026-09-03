@@ -442,14 +442,56 @@
 }
 
 .jobs__recipe-block-head {
-  font-size: 0.6rem;
-  letter-spacing: 0.12em;
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.18em;
   text-transform: uppercase;
   color: var(--fg-muted);
 }
 
 .jobs__recipe-block-head.is-locked {
   color: var(--fg-faint);
+}
+
+.jobs__recipe-tiers,
+.jobs__recipe-tier {
+  display: flex;
+  flex-direction: column;
+}
+
+.jobs__recipe-tiers {
+  gap: var(--s-3);
+}
+
+.jobs__recipe-tier {
+  gap: var(--s-1);
+}
+
+.jobs__recipe-tier-head {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  font-size: 0.58rem;
+  font-weight: 400;
+  letter-spacing: 0.03em;
+  color: var(--fg-faint);
+}
+
+.jobs__recipe-tier-head span {
+  white-space: nowrap;
+}
+
+.jobs__recipe-tier-head span + span::before {
+  content: '·';
+  margin-right: var(--s-2);
+  color: var(--fg-faint);
+}
+
+.jobs__recipe-tier-head::after {
+  content: '';
+  height: 1px;
+  flex: 1;
+  background: var(--hair);
 }
 
 .jobs__recipe-grid {
@@ -491,6 +533,25 @@
   border-color: var(--accent);
 }
 
+.jobs__recipe.is-best-progress {
+  border-color: color-mix(in srgb, var(--good) 52%, var(--hair));
+}
+
+.jobs__recipe-progress {
+  flex: none;
+  border: 1px solid color-mix(in srgb, var(--good) 42%, transparent);
+  border-radius: var(--r-1);
+  padding: 2px 4px;
+  background: color-mix(in srgb, var(--good) 12%, transparent);
+  color: var(--good);
+  font-size: 0.46rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  line-height: 1;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
 .jobs__recipe-id {
   display: flex;
   flex-direction: column;
@@ -511,6 +572,14 @@
   font-size: 0.6rem;
   color: var(--fg-muted);
   text-transform: capitalize;
+}
+
+.jobs__recipe-meta-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-1);
+  min-width: 0;
 }
 
 /* NO QUALITY TIERS: the per-tier recipe dot + its q-* ramp died with the concept. */

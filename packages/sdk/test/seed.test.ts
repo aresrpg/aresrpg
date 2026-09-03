@@ -44,7 +44,10 @@ const content: SeedContent = {
   mastery: { offers: [] },
   airdrop: {
     drops: [{ id: 'launch', item_type: 'ore', amount_each: 2, whitelist: [`0x${'44'.repeat(32)}`] }],
-    giftcards: [{ id: 'press', item_type: 'ore', amount: 3, custody: `0x${'55'.repeat(32)}` }],
+    giftcards: [
+      { id: 'press', item_type: 'ore', amount: 3, custody: `0x${'55'.repeat(32)}` },
+      { id: 'partner', item_type: 'ore', amount: 4, custody: `0x${'66'.repeat(32)}` },
+    ],
   },
   biome_maps: [],
   boards: [],
@@ -100,15 +103,15 @@ const pure_u64s = (tx: Transaction): readonly bigint[] =>
   })
 
 describe('seed plan', () => {
-  test('publishes reward templates before boxes and gives every supply row a resumable target', () => {
+  test('publishes reward templates before boxes and batches independently resumable giftcards', () => {
     const plan = create_seed_plan(sdk, content)
     const phases = plan.batches.map(({ phase }) => phase)
     const supply = plan.batches.filter(({ phase }) => phase === 'supply')
 
     expect(phases.indexOf('items')).toBeLessThan(phases.indexOf('loot_boxes'))
     expect(supply).toHaveLength(2)
-    expect(supply.every(({ target_ids }) => target_ids.length === 1)).toBeTrue()
-    expect(new Set(supply.flatMap(({ target_ids }) => target_ids)).size).toBe(2)
+    expect(supply.map(({ target_ids }) => target_ids.length)).toEqual([1, 2])
+    expect(new Set(supply.flatMap(({ target_ids }) => target_ids)).size).toBe(3)
     expect(supply.every(({ dependencies }) => dependencies.length === 1)).toBeTrue()
   })
 

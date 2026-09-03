@@ -1387,9 +1387,9 @@ encyclopedia_page:
   no_worlds: Aucun monde sur la blockchain
   select_world: Sélectionnez un monde
   world_level_unknown: Tranche de niveau pas encore disponible
-  world_mob_roster: Liste des monstres
+  world_biomes: Biomes
   world_no_mobs: Aucun monstre connu
-  world_resources: Ressources
+  world_cities: Cités
   world_no_resources: Aucune ressource connue
   world_gap_note: Pas encore fourni par le RPC
   world_dungeon: Donjon
@@ -1810,7 +1810,9 @@ characters_page:
       empty_seed: "Les recettes de ce métier arrivent avec le contenu d'artisanat."
       unlocked: 'Débloquées'
       locked: 'Verrouillées'
-      meta: 'Niv {{level}} · {{category}}'
+      ingredients: '{{count}} ingrédients'
+      required_level: 'Métier niv. {{level}} requis'
+      best_progress: 'Idéal'
     gather:
       in_progress: 'Récolte de {{name}}…'
       button: 'Récolter {{name}}'

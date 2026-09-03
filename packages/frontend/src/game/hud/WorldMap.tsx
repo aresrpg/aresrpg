@@ -6,7 +6,7 @@
 // the player remain. Each LOD samples progressively in row bands and completed grids are cached.
 // Closes on the backdrop or Escape.
 
-import { useEffect, useMemo, useRef, useState, type WheelEvent } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { chain_to_client_coordinate, client_to_chain_coordinate } from '@aresrpg/immutable'
 import { ZONE_SIZE, zone_of } from '@aresrpg/protocol'
 import { city_map_overlays, type CompiledWorld } from '@aresrpg/engine'
@@ -36,6 +36,7 @@ const MAP_SIZE = 768
 const ROWS_PER_FRAME = 16
 const GRID_CACHE_LIMIT = 24
 const WHEEL_STEP_MS = 120
+export const WORLD_MAP_WHEEL_OPTIONS: AddEventListenerOptions = Object.freeze({ passive: false })
 
 /** Finished grids by world + LOD view — the map re-opens instantly on familiar ground. */
 const grid_cache = new Map<string, ReliefGrid>()
@@ -57,7 +58,7 @@ const opened_zone_center = (x: number, z: number): Readonly<{ x: number; z: numb
   })
 }
 
-const wheel_lod_direction = (event: Readonly<WheelEvent<HTMLDivElement>>, previous_at: number): -1 | 0 | 1 => {
+const wheel_lod_direction = (event: Readonly<WheelEvent>, previous_at: number): -1 | 0 | 1 => {
   if (event.deltaY === 0 || event.timeStamp - previous_at < WHEEL_STEP_MS) return 0
   return event.deltaY > 0 ? 1 : -1
 }
@@ -73,6 +74,7 @@ export const WorldMap = ({
     ({ session }) => session.characters.find(({ id }) => id === session.selected_character_id)?.world ?? null
   )
   const canvas_ref = useRef<HTMLCanvasElement | null>(null)
+  const panel_ref = useRef<HTMLDivElement | null>(null)
   const wheel_at = useRef(-Infinity)
   const text = copy_text(copy.world_hud)
   // The lens frames the zone the player stood in when it opened — a static snapshot.
@@ -122,6 +124,21 @@ export const WorldMap = ({
   }, [on_close])
 
   useEffect(() => {
+    const panel = panel_ref.current
+    if (!panel) return
+    const on_wheel = (event: Readonly<WheelEvent>): void => {
+      event.preventDefault()
+      const direction = wheel_lod_direction(event, wheel_at.current)
+      if (direction === 0) return
+      // eslint-disable-next-line functional/immutable-data -- React owns this interaction-local throttle cell
+      wheel_at.current = event.timeStamp
+      set_lod_level((level) => step_world_map_lod(level, direction))
+    }
+    panel.addEventListener('wheel', on_wheel, WORLD_MAP_WHEEL_OPTIONS)
+    return () => panel.removeEventListener('wheel', on_wheel)
+  }, [])
+
+  useEffect(() => {
     const canvas = canvas_ref.current
     if (!canvas || !pose) return
     const context = canvas.getContext('2d')
@@ -147,18 +164,10 @@ export const WorldMap = ({
   }, [cities, copy, grid, sampled_rows, pose, world_state, world_name])
 
   const change_lod = (direction: -1 | 1): void => set_lod_level((level) => step_world_map_lod(level, direction))
-  const on_wheel = (event: Readonly<WheelEvent<HTMLDivElement>>): void => {
-    event.preventDefault()
-    const direction = wheel_lod_direction(event, wheel_at.current)
-    if (direction === 0) return
-    // eslint-disable-next-line functional/immutable-data -- React owns this interaction-local throttle cell
-    wheel_at.current = event.timeStamp
-    change_lod(direction)
-  }
 
   return (
     <div aria-label={text('world_map')} className="gw-worldmap" onClick={on_close} role="dialog">
-      <div className="gw-worldmap__panel" onClick={(event) => event.stopPropagation()} onWheel={on_wheel}>
+      <div className="gw-worldmap__panel" onClick={(event) => event.stopPropagation()} ref={panel_ref}>
         <header className="gw-worldmap__header">
           <div className="gw-worldmap__title">{text('world_map')}</div>
           <div className="gw-worldmap__zoom">

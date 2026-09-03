@@ -5,6 +5,7 @@ import { describe, expect, test } from 'bun:test'
 
 import worlds from '../../../seed/content/worlds.json'
 import fuwage_map from '../src/cities/generated/fuwage_map.json'
+import thebes_map from '../src/cities/generated/thebes_map.json'
 import { generated_city_land_use, load_generated_city_artifacts } from '../src/cities/generated_city.ts'
 import {
   city_map_overlays,
@@ -148,6 +149,23 @@ describe('voxel structures', () => {
 
     expect(placements.length).toBeGreaterThan(0)
     expect(placements.every(({ bounds }) => distance_squared(bounds) > 10 * 10)).toBeTrue()
+  })
+
+  test('keeps generated city voxels outside the world-origin portal radius', async () => {
+    await load_generated_city_artifacts()
+    const nauvis = worlds.find(({ world }) => world === 'nauvis')
+    if (!nauvis?.terrain) throw new Error('Nauvis terrain is missing')
+    const terrain = {
+      ...structuredClone(nauvis.terrain),
+      structure_areas: [thebes_map.area],
+    }
+    const compiled = compile_world_recipe(parse_world_recipe(terrain))
+    const area = { min_x: -10, max_x: 10, min_z: -10, max_z: 10 }
+    const city_chunks = structure_placements(compiled, area).filter(({ pack }) => pack === 'city:thebes')
+    const voxels = structure_voxels(compiled, area)
+
+    expect(city_chunks.length).toBeGreaterThan(0)
+    expect(voxels.every(({ x, z }) => x * x + z * z > 10 * 10)).toBeTrue()
   })
 
   test('generated city land use covers both axes of rectangular landmarks', () => {

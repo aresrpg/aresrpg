@@ -4,8 +4,10 @@
 import {
   craft_required_level,
   craft_slot_capacity,
+  craft_xp_at_level,
   gather_quantity_bounds,
   gather_time_ms,
+  job_max_level,
   tier_unlock_level,
 } from './experience.ts'
 import { gatherable_catalog } from './gathering.ts'
@@ -33,6 +35,19 @@ export type AcquisitionEstimate = Readonly<{
   cycle: boolean
 }>
 export type AcquisitionTargetStatus = 'below' | 'within' | 'above' | 'unavailable'
+export type RecipeProgressionIssue = Readonly<{
+  job: string
+  level: number
+  slot_capacity: number
+  reachable_recipe_count: number
+}>
+export type RecipeProgressionInput = EconomyRecipe & Readonly<{ job: string }>
+export type RecipeProgressRecommendation = Readonly<{
+  output_type: string
+  xp: number
+  acquisition_seconds: number
+  xp_per_second: number
+}>
 
 type EconomyItem = Readonly<{ item_type: string; category: string; level: number }>
 type EconomyRecipe = Readonly<{ output_type: string; inputs: Readonly<Record<string, number>> }>
@@ -76,11 +91,6 @@ export type AcquisitionContent = Readonly<{
   dungeons: readonly EconomyDungeon[]
   spells?: readonly EconomySpell[]
 }>
-
-const WATER_ITEM_TYPE = 'water'
-const gatherable_item_types = new Set(
-  gatherable_catalog.flatMap(({ item_type, rare_item_type }) => [item_type, rare_item_type])
-)
 
 const ELEMENTS = Object.freeze(['earth', 'fire', 'water', 'air'] as const)
 const WEAPON_AP = Object.freeze({ daggers: 3, spear: 4, bow: 4, axe: 5, sword: 5 })
@@ -307,7 +317,7 @@ const craft_routes = (item_type: string, craft: AcquisitionRange | null): readon
   craft ? [Object.freeze({ kind: 'craft', source: item_type, range: craft })] : []
 const percent = (value: number | null): number | null => (value === null ? null : value * 100)
 
-const acquisition_estimator = (content: AcquisitionContent): ((item_type: string) => AcquisitionEstimate) => {
+export const acquisition_estimator = (content: AcquisitionContent): ((item_type: string) => AcquisitionEstimate) => {
   const items = new Map(content.items.map((item) => [item.item_type, item]))
   const recipes = new Map(content.recipes.map((recipe) => [recipe.output_type, recipe]))
   const mobs = new Map(content.mobs.map((mob) => [mob.mob_type, mob]))
@@ -390,43 +400,110 @@ export const acquisition_catalog = (content: AcquisitionContent): Readonly<Recor
   return Object.freeze(Object.fromEntries(content.items.map(({ item_type }) => [item_type, estimate(item_type)])))
 }
 
-/** Mob-derived intermediary level: nearest-integer mean of every distinct raw source mob's
- * maximum level. Gathering resources and the universal water catalyst do not contribute. */
-export const intermediary_source_level = (output_type: string, content: AcquisitionContent): number | null => {
-  const items = new Map(content.items.map((item) => [item.item_type, item]))
-  const recipes = new Map(content.recipes.map((recipe) => [recipe.output_type, recipe]))
-  const source_mobs = new Map<string, readonly EconomyMob[]>()
-  for (const mob of content.mobs.filter(({ role }) => role !== 'protector')) {
-    for (const { item_type } of mob.loot) {
-      source_mobs.set(item_type, Object.freeze([...(source_mobs.get(item_type) ?? []), mob]))
-    }
-  }
-  const sources_of = (item_type: string, visiting: ReadonlySet<string>): readonly EconomyMob[] => {
-    if (item_type === WATER_ITEM_TYPE || gatherable_item_types.has(item_type) || visiting.has(item_type)) return []
-    const recipe = recipes.get(item_type)
-    if (recipe && items.get(item_type)?.category === 'resource') {
-      const next = new Set([...visiting, item_type])
-      return Object.keys(recipe.inputs).flatMap((input_type) => sources_of(input_type, next))
-    }
-    return source_mobs.get(item_type) ?? []
-  }
-  const recipe = recipes.get(output_type)
-  if (!recipe || items.get(output_type)?.category !== 'resource') return null
-  const sources = new Map(
-    Object.keys(recipe.inputs)
-      .flatMap((item_type) => sources_of(item_type, new Set([output_type])))
-      .map((mob) => [mob.mob_type, mob])
+const reachable_recipe_outputs = (
+  recipes: readonly RecipeProgressionInput[],
+  recipes_by_output: ReadonlyMap<string, RecipeProgressionInput>,
+  job: string,
+  level: number
+): ReadonlySet<string> => {
+  const candidates = recipes.filter(
+    (recipe) => recipe.job === job && craft_required_level(Object.keys(recipe.inputs).length) <= level
   )
-  if (sources.size === 0) return null
-  return Math.round([...sources.values()].reduce((sum, { level_max }) => sum + level_max, 0) / sources.size)
+  const extend = (reachable: ReadonlySet<string>): ReadonlySet<string> => {
+    const unlocked = candidates.filter(
+      (recipe) =>
+        !reachable.has(recipe.output_type) &&
+        Object.keys(recipe.inputs).every((input_type) => {
+          const producer = recipes_by_output.get(input_type)
+          return !producer || producer.job !== job || reachable.has(input_type)
+        })
+    )
+    return unlocked.length === 0
+      ? reachable
+      : extend(new Set([...reachable, ...unlocked.map(({ output_type }) => output_type)]))
+  }
+  return extend(new Set())
 }
 
-export const recipe_slot_issue = (item: EconomyItem, recipe: EconomyRecipe): string | null => {
-  const expected = craft_slot_capacity(item.level)
-  const actual = Object.keys(recipe.inputs).length
-  return actual === expected
-    ? null
-    : `${recipe.output_type}: level ${item.level} requires ${expected} ingredients, got ${actual}`
+/** Simulate each profession independently from level 1 through 99. Other professions are valid
+ * external suppliers; only same-job recipe dependencies can deadlock this job's XP route. */
+export const recipe_progression_issues = (
+  recipes: readonly RecipeProgressionInput[],
+  jobs: readonly string[]
+): readonly RecipeProgressionIssue[] => {
+  const recipes_by_output = new Map(recipes.map((recipe) => [recipe.output_type, recipe]))
+  const levels = Array.from({ length: job_max_level - 1 }, (_, index) => index + 1)
+  return Object.freeze(
+    jobs.flatMap((job) => {
+      const blocked = levels.find((level) => {
+        const reachable = reachable_recipe_outputs(recipes, recipes_by_output, job, level)
+        return !recipes.some(
+          (recipe) =>
+            recipe.job === job &&
+            reachable.has(recipe.output_type) &&
+            craft_xp_at_level(Object.keys(recipe.inputs).length, level) > 0
+        )
+      })
+      if (blocked === undefined) return []
+      const reachable = reachable_recipe_outputs(recipes, recipes_by_output, job, blocked)
+      return [
+        Object.freeze({
+          job,
+          level: blocked,
+          slot_capacity: craft_slot_capacity(blocked),
+          reachable_recipe_count: reachable.size,
+        }),
+      ]
+    })
+  )
+}
+
+const recipe_acquisition_seconds = (
+  recipe: RecipeProgressionInput,
+  input_seconds: (item_type: string) => number | null
+): number | null => {
+  const rows = Object.entries(recipe.inputs).map(([item_type, quantity]) => {
+    const seconds = input_seconds(item_type)
+    return seconds === null ? null : seconds * quantity
+  })
+  return rows.some((seconds) => seconds === null) ? null : rows.reduce<number>((sum, seconds) => sum + seconds!, 0)
+}
+
+/** One removable recommendation: reachable now, still grants XP, and maximizes XP per expected
+ * active second spent obtaining one attempt's inputs. Owned inventory deliberately does not enter. */
+export const best_recipe_for_job_progression = (
+  recipes: readonly RecipeProgressionInput[],
+  job: string,
+  level: number,
+  input_seconds: (item_type: string) => number | null
+): RecipeProgressRecommendation | null => {
+  if (level >= job_max_level) return null
+  const recipes_by_output = new Map(recipes.map((recipe) => [recipe.output_type, recipe]))
+  const reachable = reachable_recipe_outputs(recipes, recipes_by_output, job, level)
+  return (
+    recipes
+      .filter((recipe) => recipe.job === job && reachable.has(recipe.output_type))
+      .flatMap((recipe): readonly RecipeProgressRecommendation[] => {
+        const xp = craft_xp_at_level(Object.keys(recipe.inputs).length, level)
+        const acquisition_seconds = recipe_acquisition_seconds(recipe, input_seconds)
+        if (xp <= 0 || acquisition_seconds === null) return []
+        return [
+          Object.freeze({
+            output_type: recipe.output_type,
+            xp,
+            acquisition_seconds,
+            xp_per_second: xp / Math.max(1, acquisition_seconds),
+          }),
+        ]
+      })
+      .toSorted(
+        (left, right) =>
+          right.xp_per_second - left.xp_per_second ||
+          right.xp - left.xp ||
+          left.acquisition_seconds - right.acquisition_seconds ||
+          left.output_type.localeCompare(right.output_type)
+      )[0] ?? null
+  )
 }
 
 export const acquisition_average_seconds = (value: AcquisitionRange): number =>

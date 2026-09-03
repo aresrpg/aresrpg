@@ -23,6 +23,7 @@ type CommandResult = Readonly<{ stdout: string; stderr: string }>
 type Execute = (command: string, args: readonly string[], cwd: string) => Promise<CommandResult>
 
 const exec_file = promisify(execFile)
+const MAX_COMPILER_OUTPUT_BYTES = 64 * 1024 * 1024
 export const command_failure_message = (error: unknown): string => {
   if (!(error instanceof Error)) return String(error)
   const output = error as Error & Readonly<{ stdout?: unknown; stderr?: unknown }>
@@ -33,12 +34,16 @@ export const command_failure_message = (error: unknown): string => {
     .join('\n')
   return details || error.message
 }
-const execute: Execute = async (command, args, cwd) => {
+export const run_build_command: Execute = async (command, args, cwd) => {
   try {
-    const result = await exec_file(command, [...args], { cwd, encoding: 'utf8', maxBuffer: 20 * 1024 * 1024 })
+    const result = await exec_file(command, [...args], {
+      cwd,
+      encoding: 'utf8',
+      maxBuffer: MAX_COMPILER_OUTPUT_BYTES,
+    })
     return Object.freeze({ stdout: result.stdout, stderr: result.stderr })
   } catch (error) {
-    throw new Error(command_failure_message(error), { cause: error })
+    throw new Error(`${command} failed: ${command_failure_message(error)}`, { cause: error })
   }
 }
 const revision_of = (source: string): string => createHash('sha256').update(source).digest('hex')
@@ -115,7 +120,7 @@ const dump_args = (path: string, network: Network, pubfile?: string): readonly s
 
 export const create_contract_build_service = ({
   repo_dir,
-  run = execute,
+  run = run_build_command,
 }: Readonly<{ repo_dir: string; run?: Execute }>) => {
   const math_dir = join(repo_dir, 'packages', 'move-math')
   const control_dir = join(repo_dir, 'packages', 'control')

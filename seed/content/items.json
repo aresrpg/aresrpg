@@ -66,6 +66,16 @@
     "level": 80
   },
   {
+    "item_type": "barley_bread",
+    "name": "Barley Bread",
+    "category": "consumable",
+    "level": 10,
+    "consumable": {
+      "type": "heal",
+      "amount": 25
+    }
+  },
+  {
     "item_type": "barley_flour",
     "name": "Barley Flour",
     "category": "resource",
@@ -448,6 +458,16 @@
     "name": "Malt Flour",
     "category": "resource",
     "level": 20
+  },
+  {
+    "item_type": "adjarian_khachapuri",
+    "name": "Adjarian Khachapuri",
+    "category": "consumable",
+    "level": 20,
+    "consumable": {
+      "type": "heal",
+      "amount": 50
+    }
   },
   {
     "item_type": "moonstone",
@@ -970,6 +990,16 @@
     "name": "Wheat Flour",
     "category": "resource",
     "level": 1
+  },
+  {
+    "item_type": "croissant",
+    "name": "Croissant",
+    "category": "consumable",
+    "level": 1,
+    "consumable": {
+      "type": "heal",
+      "amount": 10
+    }
   },
   {
     "item_type": "wheat_malt",
@@ -1791,7 +1821,7 @@
     "item_type": "mushroom_dyed_plume",
     "name": "Mushroom-Dyed Plume",
     "category": "resource",
-    "level": 10
+    "level": 7
   },
   {
     "item_type": "quartz_honed_beak",
@@ -3401,7 +3431,7 @@
     "item_type": "gale_lorito_plume",
     "name": "Gale Lorito Plume",
     "category": "resource",
-    "level": 10
+    "level": 7
   },
   {
     "item_type": "tide_lorito_plume",

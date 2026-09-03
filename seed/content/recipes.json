@@ -369,6 +369,33 @@
     "job": "MINER"
   },
   {
+    "output_type": "croissant",
+    "inputs": {
+      "wheat_flour": 2,
+      "water": 1
+    },
+    "job": "BAKER"
+  },
+  {
+    "output_type": "barley_bread",
+    "inputs": {
+      "barley_flour": 2,
+      "orchid_spore_blend": 2,
+      "water": 1
+    },
+    "job": "BAKER"
+  },
+  {
+    "output_type": "adjarian_khachapuri",
+    "inputs": {
+      "malt_flour": 2,
+      "green_mushroom_powder": 2,
+      "quartz_powder": 2,
+      "water": 2
+    },
+    "job": "BAKER"
+  },
+  {
     "output_type": "cape_fuwa__white",
     "inputs": {
       "fuwa_fleece": 12,
@@ -430,8 +457,7 @@
     "output_type": "mushroom_dyed_plume",
     "inputs": {
       "lorito_feather": 1,
-      "green_mushroom_powder": 1,
-      "wheat_flour": 1
+      "green_mushroom": 1
     },
     "job": "TAILOR"
   },
@@ -748,8 +774,7 @@
     "output_type": "gale_lorito_plume",
     "inputs": {
       "lorito_feather": 1,
-      "green_mushroom_powder": 1,
-      "wheat_flour": 1
+      "green_mushroom_powder": 1
     },
     "job": "TAILOR"
   },

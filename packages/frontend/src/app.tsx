@@ -38,6 +38,7 @@ import { DungeonLobby } from './components/DungeonLobby.tsx'
 import { PlayerNametag } from './components/PlayerNametag.tsx'
 import { ZonePrompt } from './components/ZonePrompt.tsx'
 import { ZoneRevealBanner } from './components/ZoneRevealBanner.tsx'
+import { CityArrivalBanner } from './components/CityArrivalBanner.tsx'
 import { SpawnNametag } from './components/SpawnNametag.tsx'
 import { AmbushPrompt } from './components/AmbushPrompt.tsx'
 import { PlayerContextMenu } from './components/PlayerContextMenu.tsx'
@@ -65,6 +66,9 @@ import {
   character_creation_funding_text,
   character_creation_insufficient,
 } from './character_creation_funding.ts'
+
+const city_arrival_active = (in_app: boolean, page: Page, fight_active: boolean, dungeon_active: boolean): boolean =>
+  in_app && page === 'world' && !fight_active && !dungeon_active
 
 const GoogleIcon = () => (
   <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
@@ -340,6 +344,10 @@ export function App() {
         }`}
       >
         <BiomeMusic />
+        <CityArrivalBanner
+          active={city_arrival_active(in_app, navigation.page, fight_active, dungeon_active)}
+          copy={copy}
+        />
         <canvas ref={attach_canvas} className="absolute inset-0 size-full touch-none" />
 
         {in_app && navigation.page === 'world' && !fight_active && !dungeon_active && (

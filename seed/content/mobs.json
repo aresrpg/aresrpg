@@ -259,7 +259,7 @@
         "levels": [
           {
             "ap_cost": 4,
-            "range_min": 3,
+            "range_min": 1,
             "range_max": 6,
             "modifiable_range": false,
             "line_of_sight": true,
@@ -558,7 +558,7 @@
         "levels": [
           {
             "ap_cost": 4,
-            "range_min": 3,
+            "range_min": 1,
             "range_max": 7,
             "modifiable_range": false,
             "line_of_sight": true,
@@ -1042,7 +1042,7 @@
         "levels": [
           {
             "ap_cost": 4,
-            "range_min": 3,
+            "range_min": 1,
             "range_max": 6,
             "modifiable_range": false,
             "line_of_sight": true,
@@ -1631,7 +1631,7 @@
         "levels": [
           {
             "ap_cost": 4,
-            "range_min": 3,
+            "range_min": 1,
             "range_max": 7,
             "modifiable_range": false,
             "line_of_sight": true,
@@ -1764,7 +1764,7 @@
         "levels": [
           {
             "ap_cost": 4,
-            "range_min": 3,
+            "range_min": 1,
             "range_max": 7,
             "modifiable_range": false,
             "line_of_sight": true,
@@ -1897,7 +1897,7 @@
         "levels": [
           {
             "ap_cost": 4,
-            "range_min": 3,
+            "range_min": 1,
             "range_max": 7,
             "modifiable_range": false,
             "line_of_sight": true,
@@ -2329,7 +2329,7 @@
         "levels": [
           {
             "ap_cost": 4,
-            "range_min": 3,
+            "range_min": 1,
             "range_max": 6,
             "modifiable_range": false,
             "line_of_sight": true,
@@ -2628,7 +2628,7 @@
         "levels": [
           {
             "ap_cost": 4,
-            "range_min": 3,
+            "range_min": 1,
             "range_max": 6,
             "modifiable_range": false,
             "line_of_sight": true,
@@ -2870,7 +2870,7 @@
         "levels": [
           {
             "ap_cost": 4,
-            "range_min": 3,
+            "range_min": 1,
             "range_max": 6,
             "modifiable_range": false,
             "line_of_sight": true,
@@ -3169,7 +3169,7 @@
         "levels": [
           {
             "ap_cost": 4,
-            "range_min": 3,
+            "range_min": 1,
             "range_max": 7,
             "modifiable_range": false,
             "line_of_sight": true,
@@ -3634,7 +3634,7 @@
         "levels": [
           {
             "ap_cost": 4,
-            "range_min": 3,
+            "range_min": 1,
             "range_max": 6,
             "modifiable_range": false,
             "line_of_sight": true,
@@ -5604,7 +5604,7 @@
         "levels": [
           {
             "ap_cost": 4,
-            "range_min": 2,
+            "range_min": 1,
             "range_max": 5,
             "modifiable_range": false,
             "line_of_sight": true,
@@ -5812,7 +5812,7 @@
         "levels": [
           {
             "ap_cost": 4,
-            "range_min": 2,
+            "range_min": 1,
             "range_max": 7,
             "modifiable_range": false,
             "line_of_sight": true,
@@ -7241,7 +7241,7 @@
         "levels": [
           {
             "ap_cost": 3,
-            "range_min": 2,
+            "range_min": 1,
             "range_max": 6,
             "modifiable_range": false,
             "line_of_sight": true,
@@ -7452,7 +7452,7 @@
         "levels": [
           {
             "ap_cost": 4,
-            "range_min": 2,
+            "range_min": 1,
             "range_max": 6,
             "modifiable_range": false,
             "line_of_sight": true,
@@ -8223,7 +8223,7 @@
         "levels": [
           {
             "ap_cost": 4,
-            "range_min": 2,
+            "range_min": 1,
             "range_max": 5,
             "modifiable_range": false,
             "line_of_sight": true,
@@ -8456,7 +8456,7 @@
         "levels": [
           {
             "ap_cost": 4,
-            "range_min": 3,
+            "range_min": 1,
             "range_max": 7,
             "modifiable_range": false,
             "line_of_sight": true,
@@ -9165,7 +9165,7 @@
         "levels": [
           {
             "ap_cost": 4,
-            "range_min": 3,
+            "range_min": 1,
             "range_max": 7,
             "modifiable_range": false,
             "line_of_sight": true,
@@ -9210,7 +9210,7 @@
         "levels": [
           {
             "ap_cost": 3,
-            "range_min": 2,
+            "range_min": 1,
             "range_max": 6,
             "modifiable_range": false,
             "line_of_sight": true,

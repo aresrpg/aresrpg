@@ -12,8 +12,13 @@ import {
   world_map_lod,
   world_map_zone_lod,
 } from '../../../src/game/hud/world_map_lod.ts'
+import { WORLD_MAP_WHEEL_OPTIONS } from '../../../src/game/hud/WorldMap.tsx'
 
 describe('world map LOD', () => {
+  test('wheel zoom owns a non-passive listener so it can suppress page scrolling', () => {
+    expect(WORLD_MAP_WHEEL_OPTIONS.passive).toBeFalse()
+  })
+
   test('starts at the current 3x3 zone lens and ends at the whole world', () => {
     expect(WORLD_MAP_RADII[0]).toBe(ZONE_SIZE * 1.5)
     expect(WORLD_MAP_RADII[WORLD_MAP_LAST_LOD]).toBe(world_size / 2)

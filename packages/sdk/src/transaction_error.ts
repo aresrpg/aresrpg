@@ -16,7 +16,7 @@ export const pre_submission_version_race = (error: unknown): boolean => {
   const stale_input =
     /provided version (?:doesn't|does not) match/i.test(message) ||
     /transaction needs to be rebuilt because object .* is unavailable for consumption, current version:/i.test(message)
-  return !message.includes('failed on-chain') && stale_input
+  return !message.includes('failed on-chain') && message.includes('NOT submitted') && stale_input
 }
 
 export const pre_submission_stale_owned_ref = (error: unknown): boolean => {

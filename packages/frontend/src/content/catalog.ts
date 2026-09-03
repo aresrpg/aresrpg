@@ -3,6 +3,9 @@
 // One seed-derived content projection shared by every frontend feature.
 
 import {
+  acquisition_average_seconds,
+  acquisition_estimator,
+  best_recipe_for_job_progression,
   class_names,
   craft_job_of,
   craft_xp_from_ingredient_count,
@@ -13,6 +16,8 @@ import {
   tier_unlock_level,
   type GatheringJob,
   type JobSlug,
+  type AcquisitionContent,
+  type RecipeProgressRecommendation,
   type StatName,
 } from '@aresrpg/immutable'
 import type {
@@ -182,6 +187,22 @@ const dungeon_mob_types = (dungeon: string): readonly string[] =>
   Object.freeze(dungeons_by_id[dungeon]?.rooms.flatMap((room) => room.map(({ mob_type }) => mob_type)) ?? [])
 const recipe_job = (recipe: SeedRecipe): string =>
   craft_job_of(items_by_type[recipe.output_type]?.category ?? '') ?? recipe.job ?? ''
+const acquisition = acquisition_estimator({
+  items,
+  recipes,
+  mobs,
+  worlds,
+  dungeons,
+  spells,
+} as unknown as AcquisitionContent)
+const progression_recipes = Object.freeze(
+  recipes.map((recipe) => Object.freeze({ ...recipe, job: recipe_job(recipe) }))
+)
+const progress_recipe = (job: JobSlug, level: number): RecipeProgressRecommendation | null =>
+  best_recipe_for_job_progression(progression_recipes, job, level, (item_type) => {
+    const estimate = acquisition(item_type).best
+    return estimate ? acquisition_average_seconds(estimate) : null
+  })
 
 const ingredient_recipes = group_entries(
   recipes.flatMap((recipe) => Object.keys(recipe.inputs).map((item_type) => [item_type, recipe] as const))
@@ -365,6 +386,7 @@ export const content_catalog = Object.freeze({
   job: (id: string): JobDetail | null => jobs_by_id[id] ?? null,
   world: (id: string): SeedWorld | null => worlds_by_id[id] ?? null,
   dungeon: (id: string): SeedDungeon | null => dungeons_by_id[id] ?? null,
+  progress_recipe,
 })
 
 export { content_catalog as encyclopedia_catalog }

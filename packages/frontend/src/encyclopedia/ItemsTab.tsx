@@ -11,6 +11,7 @@ import { encyclopedia_catalog, titleize, type ItemDetail } from '../content/cata
 import { filter_item_types } from '../content/item_filters.ts'
 
 import { Empty, encyclopedia_layout, EntityButton, EntityGrid, EntityIcon, SearchField } from './components.tsx'
+import { ConsumableEffectSection } from './ConsumableEffectSection.tsx'
 import type { EncyclopediaText } from './copy.ts'
 import { EncyclopediaItemIcon } from './EncyclopediaItemIcon.tsx'
 import { ItemFilterRail, type ItemFilterSelection } from './ItemFilterRail.tsx'
@@ -57,18 +58,6 @@ const RuneEffectSection = ({
       </div>
     </section>
   ) : null
-
-const consumable_effect_text = (
-  consumable: NonNullable<(typeof encyclopedia_catalog.items)[number]['consumable']>,
-  text: EncyclopediaText
-): string => {
-  if (consumable.type === 'heal') return text('consumable_heal', { amount: consumable.amount })
-  if (consumable.type === 'reset_stats') return text('consumable_reset_stats')
-  if (consumable.type === 'reset_spells') return text('consumable_reset_spells')
-  if (consumable.type === 'recall') return text('consumable_recall')
-  if (consumable.type === 'city') return text('consumable_city', { city: titleize(consumable.city) })
-  return text('consumable_loot_box')
-}
 
 const RecipeLink = ({
   index,
@@ -293,9 +282,7 @@ export const ItemsTab = ({
         {detail.item.consumable && (
           <>
             {(detail.item.consumable.type !== 'loot_box' || random_loot_box) && (
-              <div className="text-[10px] tracking-wide text-[#ff66b2]">
-                {consumable_effect_text(detail.item.consumable, text)}
-              </div>
+              <ConsumableEffectSection consumable={detail.item.consumable} text={text} />
             )}
             {detail.item.consumable.type === 'loot_box' && (
               <section className="flex flex-col gap-2">

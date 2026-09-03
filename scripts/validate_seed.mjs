@@ -30,9 +30,9 @@ import {
   item_categories,
   item_is_stackable,
   item_stat_center,
-  intermediary_source_level,
   job_slugs,
   model_variant_identity,
+  recipe_progression_issues,
   stat_names,
 } from '../packages/immutable/src/index.ts'
 const PARKED_CLASSES = []
@@ -188,6 +188,11 @@ const check_level = (where, level) => {
       if (effect.target_filter !== level.crit_effects[i].target_filter)
         red('C-CRIT-TARGET', `${where}.crit_effects[${i}]: target filter must inherit effects[${i}]`)
     })
+}
+
+const mob_level_targets_enemy = (level) => {
+  const rows = [...level.effects, ...level.crit_effects]
+  return rows.length > 0 && !rows.every(({ target_filter }) => target_filter === 3 || target_filter === 4)
 }
 
 // ╔════ [ The files ] ══════════════════════════════════════════════════════════════════════ ]
@@ -518,6 +523,11 @@ for (const mob of mobs) {
       check_level(`${where}.${spell.name}[${i}]`, level)
       if (level.ap_cost < 1)
         red('M2-MOB-AP', `${where}.${spell.name}[${i}]: mob spells cost at least 1 AP so AI turns terminate`)
+      if (mob_level_targets_enemy(level) && level.range_min > 1)
+        red(
+          'M2-MOB-MIN-RANGE',
+          `${where}.${spell.name}[${i}]: enemy-targeting mob spells must start at range 1, got ${level.range_min}–${level.range_max}`
+        )
     })
   }
   const spell_levels = mob.spells.flatMap(({ levels }) => levels)
@@ -604,6 +614,16 @@ for (const recipe of recipes) {
 if (new Set(recipes.map((row) => row.output_type)).size !== recipes.length)
   red('L-DUP', 'recipes.json holds two recipes for one output — RecipeKey derivation aborts on the second')
 
+const progression_recipes = recipes.map((recipe) => ({
+  ...recipe,
+  job: craft_job_of(categories_of.get(recipe.output_type)) ?? recipe.job,
+}))
+for (const issue of recipe_progression_issues(progression_recipes, job_slugs))
+  red(
+    'R-PROGRESSION',
+    `${issue.job}: no reachable XP recipe at level ${issue.level} with ${issue.slot_capacity} slots (${issue.reachable_recipe_count} recipes reachable)`
+  )
+
 const acquisition_content = { items, recipes, mobs, worlds, dungeons, spells }
 const acquisition = acquisition_catalog(acquisition_content)
 const intermediary_types = new Set(
@@ -611,13 +631,6 @@ const intermediary_types = new Set(
     .filter(({ item_type, category }) => category === 'resource' && recipe_outputs.has(item_type))
     .map(({ item_type }) => item_type)
 )
-for (const item_type of intermediary_types) {
-  const expected_level = intermediary_source_level(item_type, acquisition_content)
-  const item = items_by_type.get(item_type)
-  if (item && expected_level !== null && item.level !== expected_level)
-    red('R-INTERMEDIARY-LEVEL', `${item_type}: mob-source maxima require level ${expected_level}, got ${item.level}`)
-}
-
 const recipes_using = new Map()
 for (const recipe of recipes)
   for (const item_type of Object.keys(recipe.inputs))

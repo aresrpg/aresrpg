@@ -1,0 +1,78 @@
+/* SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available */
+/* © 2026 Sceat — All rights reserved. See LICENSE. */
+
+.city-arrival {
+  position: fixed;
+  top: 28%;
+  left: 50%;
+  z-index: 42;
+  display: flex;
+  width: min(78vw, 760px);
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  color: #f4d58a;
+  text-align: center;
+  pointer-events: none;
+  transform: translateX(-50%);
+  animation: city-arrival-title 4.8s ease-in-out forwards;
+}
+
+.city-arrival__title {
+  background: linear-gradient(180deg, #fff1bf 0%, #e8b94f 58%, #9d6220 100%);
+  background-clip: text;
+  color: transparent;
+  font-family: 'Palatino Linotype', 'Book Antiqua', Palatino, Georgia, serif;
+  font-size: clamp(2rem, 5vw, 4.8rem);
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: 0.055em;
+  text-wrap: balance;
+  text-shadow: 0 4px 18px rgba(0, 0, 0, 0.78);
+  filter: drop-shadow(0 0 18px rgba(214, 158, 54, 0.24));
+}
+
+.city-arrival__ornament {
+  width: min(62vw, 520px);
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(244, 213, 138, 0.72), transparent);
+  transform: scaleX(0.35);
+  animation: city-arrival-rule 4.8s ease-in-out forwards;
+}
+
+.city-arrival__ornament.is-lower {
+  opacity: 0.55;
+}
+
+@keyframes city-arrival-title {
+  0%,
+  100% {
+    opacity: 0;
+    transform: translateX(-50%) translateY(14px) scale(0.94);
+  }
+  13%,
+  72% {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0) scale(1);
+  }
+}
+
+@keyframes city-arrival-rule {
+  0%,
+  100% {
+    opacity: 0;
+    transform: scaleX(0.35);
+  }
+  18%,
+  70% {
+    opacity: 1;
+    transform: scaleX(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .city-arrival,
+  .city-arrival__ornament {
+    animation-timing-function: linear;
+  }
+}

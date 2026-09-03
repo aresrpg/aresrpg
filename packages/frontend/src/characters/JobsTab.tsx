@@ -1,13 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-// JOBS — the canon professions drawer, markup and classes ported from the proven Jobs panel
-// (jobs.css, verbatim): the LEFT rail groups the 11 jobs by category with per-job level
-// chips (job xp is chain truth on the CharacterRow); the RIGHT detail shows the job head +
-// xp bar, the gathering 11-tier resource table, and ALL recipes grouped Unlocked/Locked.
-// Clicking a resource or recipe opens the shared ItemDetailView in the right-section — and
-// a craftable recipe renders the inline bill of materials (GREEN/ORANGE owned rows) + the
-// REAL Craft button: one terminal transaction through the SDK, the same two gates the chain
-// asserts (job level + affordability), the roll reported honestly off the Crafted event.
+// Jobs drawer: chain-owned levels, gathering rows, recipes, ingredient navigation, and crafting.
 
 import { useMemo, useState, type ReactNode } from 'react'
 import {
@@ -30,6 +23,7 @@ import { ArrowRightLeft, X } from 'lucide-react'
 import { ItemDetailView } from '../components/ItemDetailView.tsx'
 import { item_icon } from '../content/assets.ts'
 import { encyclopedia_catalog, titleize, type SeedRecipe } from '../content/catalog.ts'
+import { ConsumableEffectSection } from '../encyclopedia/ConsumableEffectSection.tsx'
 import { encyclopedia_text } from '../encyclopedia/copy.ts'
 import { copy_text, type AppCopy, type CopyText } from '../i18n/copy.ts'
 import {
@@ -56,7 +50,6 @@ const CATEGORY_LABEL_KEY: Readonly<Record<JobKind, string>> = Object.freeze({
   consumable_craft: 'jobs.category.consumable',
 })
 
-/** Per-category accent glyph — the canon inline SVG paths (jobs_visuals). */
 const CATEGORY_GLYPH: Readonly<Record<JobKind, ReactNode>> = Object.freeze({
   gathering: <path d="M2 22 16 8M17 7l5-5M14 4l6 6M9 9l4 4" />,
   weapon_craft: <path d="M14.5 17.5 3 6V3h3l11.5 11.5M13 19l6-6M16 16l4 4" />,
@@ -79,7 +72,6 @@ const JobGlyph = ({ kind }: Readonly<{ kind: JobKind }>) => (
   </svg>
 )
 
-/** The drawer's item icon — real art with the canon diamond-glyph fallback. */
 const JobItemIcon = ({ icon, size = 28 }: Readonly<{ icon: string; size?: number }>) => {
   const url = item_icon(icon)
   if (!url)
@@ -107,6 +99,25 @@ const covers_label = (job: JobSlug): string => {
 
 const recipe_required_level = (recipe: Readonly<SeedRecipe>): number =>
   craft_required_level(Object.keys(recipe.inputs).length)
+const recipe_card_class = (locked: boolean, selected: boolean, best: boolean): string =>
+  `jobs__recipe${locked ? ' is-locked' : ''}${selected ? ' is-selected' : ''}${best ? ' is-best-progress' : ''}`
+const BestProgressBadge = ({ visible, label }: Readonly<{ visible: boolean; label: string }>) =>
+  visible ? <span className="jobs__recipe-progress">{label}</span> : null
+
+export const recipe_tiers = (recipes: readonly Readonly<SeedRecipe>[]) => {
+  const tiers = new Map<number, Readonly<SeedRecipe>[]>()
+  for (const recipe of recipes) {
+    const ingredient_count = Object.keys(recipe.inputs).length
+    tiers.set(ingredient_count, [...(tiers.get(ingredient_count) ?? []), recipe])
+  }
+  return Object.freeze(
+    [...tiers.entries()]
+      .sort(([left], [right]) => left - right)
+      .map(([ingredient_count, rows]) =>
+        Object.freeze({ ingredient_count, required_level: craft_required_level(ingredient_count), recipes: rows })
+      )
+  )
+}
 
 const kind_of = (job: JobSlug): JobKind =>
   (Object.entries(job_groups) as readonly (readonly [JobKind, readonly JobSlug[]])[]).find(([, jobs]) =>
@@ -339,12 +350,19 @@ export default function JobsTab({ character, copy }: Readonly<{ character: Reado
       locked: rows.filter((recipe) => level < recipe_required_level(recipe)),
     }
   }, [detail, level])
+  const best_progress = useMemo(() => encyclopedia_catalog.progress_recipe(selected_job, level), [level, selected_job])
+  const recipe_sections = [
+    { id: 'unlocked', rows: unlocked, groups: recipe_tiers(unlocked), locked: false },
+    { id: 'locked', rows: locked, groups: recipe_tiers(locked), locked: true },
+  ].filter(({ rows }) => rows.length > 0)
 
   const recipe_cell = (recipe: Readonly<SeedRecipe>, is_locked: boolean): ReactNode => {
     const output = encyclopedia_catalog.item(recipe.output_type)?.item
+    const is_best_progress = recipe.output_type === best_progress?.output_type
     return (
       <button
-        className={`jobs__recipe${is_locked ? ' is-locked' : ''}${recipe.output_type === selected?.item_type ? ' is-selected' : ''}`}
+        className={recipe_card_class(is_locked, recipe.output_type === selected?.item_type, is_best_progress)}
+        data-best-progress-recipe={String(is_best_progress)}
         key={recipe.output_type}
         onClick={() => set_selected({ item_type: recipe.output_type, recipe })}
         type="button"
@@ -352,8 +370,9 @@ export default function JobsTab({ character, copy }: Readonly<{ character: Reado
         <JobItemIcon icon={recipe.output_type} size={32} />
         <span className="jobs__recipe-id">
           <span className="jobs__recipe-name">{output?.name ?? titleize(recipe.output_type)}</span>
-          <span className="jobs__recipe-meta hud-num">
-            {t('jobs.lv_badge', { level: recipe_required_level(recipe) })} · {titleize(output?.category ?? '')}
+          <span className="jobs__recipe-meta-row">
+            <span className="jobs__recipe-meta">{titleize(output?.category ?? '')}</span>
+            <BestProgressBadge label={t('jobs.recipes.best_progress')} visible={is_best_progress} />
           </span>
         </span>
       </button>
@@ -507,22 +526,26 @@ export default function JobsTab({ character, copy }: Readonly<{ character: Reado
               <div className="jobs__recipe-empty">{t('jobs.recipes.empty_seed')}</div>
             ) : (
               <div className="jobs__recipes">
-                {unlocked.length > 0 && (
-                  <div className="jobs__recipe-block">
-                    <div className="jobs__recipe-block-head">
-                      {t('jobs.recipes.unlocked')} <span className="hud-num">({unlocked.length})</span>
+                {recipe_sections.map((section) => (
+                  <div className="jobs__recipe-block" key={section.id}>
+                    <div className={`jobs__recipe-block-head${section.locked ? ' is-locked' : ''}`}>
+                      {t(`jobs.recipes.${section.id}`)} <span className="hud-num">({section.rows.length})</span>
                     </div>
-                    <div className="jobs__recipe-grid">{unlocked.map((recipe) => recipe_cell(recipe, false))}</div>
-                  </div>
-                )}
-                {locked.length > 0 && (
-                  <div className="jobs__recipe-block">
-                    <div className="jobs__recipe-block-head is-locked">
-                      {t('jobs.recipes.locked')} <span className="hud-num">({locked.length})</span>
+                    <div className="jobs__recipe-tiers">
+                      {section.groups.map((group) => (
+                        <section className="jobs__recipe-tier" key={group.ingredient_count}>
+                          <div className="jobs__recipe-tier-head">
+                            <span>{t('jobs.recipes.ingredients', { count: group.ingredient_count })}</span>
+                            <span>{t('jobs.recipes.required_level', { level: group.required_level })}</span>
+                          </div>
+                          <div className="jobs__recipe-grid">
+                            {group.recipes.map((recipe) => recipe_cell(recipe, section.locked))}
+                          </div>
+                        </section>
+                      ))}
                     </div>
-                    <div className="jobs__recipe-grid">{locked.map((recipe) => recipe_cell(recipe, true))}</div>
                   </div>
-                )}
+                ))}
               </div>
             )}
           </div>
@@ -552,6 +575,7 @@ export default function JobsTab({ character, copy }: Readonly<{ character: Reado
                   name={selected_seed.name}
                   stats={selected_seed.stats}
                 >
+                  <ConsumableEffectSection consumable={selected_seed.consumable} text={encyclopedia} />
                   {selected.recipe && (
                     <CraftControls
                       character={character}

@@ -1380,9 +1380,9 @@ encyclopedia_page:
   no_worlds: No worlds on-chain
   select_world: Select a world
   world_level_unknown: Level range not yet available
-  world_mob_roster: Mob Roster
+  world_biomes: Biomes
   world_no_mobs: No mobs known
-  world_resources: Resources
+  world_cities: Cities
   world_no_resources: No resources known
   world_gap_note: Not yet projected by the RPC
   world_dungeon: Dungeon
@@ -1808,7 +1808,9 @@ characters_page:
       empty_seed: 'Recipes for this profession arrive with the crafting content seed.'
       unlocked: 'Unlocked'
       locked: 'Locked'
-      meta: 'Lv {{level}} · {{category}}'
+      ingredients: '{{count}} ingredients'
+      required_level: 'Requires job Lv {{level}}'
+      best_progress: 'Best'
     gather:
       in_progress: 'Gathering {{name}}…'
       button: 'Gather {{name}}'

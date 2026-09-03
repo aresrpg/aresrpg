@@ -35,7 +35,7 @@ test('settlement retries one zero-gas object-version race without delaying the n
   const settled = await retry_after_version_race(
     async () => {
       attempts += 1
-      if (attempts === 1) throw new Error("provided version doesn't match for object 0x1")
+      if (attempts === 1) throw new Error("[sdk] NOT submitted: provided version doesn't match")
       return 'settled'
     },
     async (milliseconds) => void waits.push(milliseconds)
@@ -44,7 +44,7 @@ test('settlement retries one zero-gas object-version race without delaying the n
   expect(pre_submission_version_race(new Error('[sdk] transaction abc failed on-chain: version'))).toBeFalse()
 })
 test('a residual settlement version race is explained beside Retry without Sui internals', () => {
-  const raw = "provided version doesn't match for object 0x00d606, provided: 997517726 actual: 0x3b74e986"
+  const raw = "[sdk] NOT submitted: provided version doesn't match"
   const copy = { result_version_changed: 'Fight rewards changed. Retry safely.' }
   expect(fight_result_error_text(copy, raw)).toBe('Fight rewards changed. Retry safely.')
   expect(fight_result_error_text(copy, 'wallet cancelled')).toBe('wallet cancelled')

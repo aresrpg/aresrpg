@@ -107,10 +107,13 @@ const city_clears = (world: CompiledWorld, placement: StructurePlacement): boole
 const overlaps = (left: StructureArea, right: StructureArea): boolean =>
   !(left.max_x < right.min_x || left.min_x > right.max_x || left.max_z < right.min_z || left.min_z > right.max_z)
 
+const clears_world_origin_portal_point = (x: number, z: number): boolean =>
+  x * x + z * z > WORLD_ORIGIN_PORTAL_CLEAR_RADIUS ** 2
+
 const clears_world_origin_portal = ({ bounds }: StructurePlacement): boolean => {
   const nearest_x = Math.max(bounds.min_x, Math.min(0, bounds.max_x))
   const nearest_z = Math.max(bounds.min_z, Math.min(0, bounds.max_z))
-  return nearest_x * nearest_x + nearest_z * nearest_z > WORLD_ORIGIN_PORTAL_CLEAR_RADIUS ** 2
+  return clears_world_origin_portal_point(nearest_x, nearest_z)
 }
 
 const contains_point = (area: StructureArea, x: number, z: number): boolean =>
@@ -233,7 +236,7 @@ export const structure_placements = (world: CompiledWorld, area: StructureArea):
     return placements
   })
   // Generated cities are stored in render chunks, not logical-building placements. Filtering
-  // those chunks here cuts houses in half; city generation must own any future portal exclusion.
+  // those chunks here cuts houses in half; final voxel emission owns their portal exclusion.
   const cities = city_placements(world, area)
   const accepted = candidates
     .filter(clears_world_origin_portal)
@@ -275,6 +278,11 @@ export const for_each_structure_voxel = (
     Math.floor((max_world_y - placement.origin[1] + anchor_y * placement.scale) / placement.scale)
   )
   if (min_y > max_y) return
+  const emit = clears_world_origin_portal(placement)
+    ? visit
+    : (x: number, y: number, z: number, material_id: number) => {
+        if (clears_world_origin_portal_point(x, z)) visit(x, y, z, material_id)
+      }
   const start = placement.type.y_offsets[min_y]!
   const end = placement.type.y_offsets[max_y + 1]!
   placement.type.packed_voxels.subarray(start, end).forEach((packed) => {
@@ -304,7 +312,9 @@ export const for_each_structure_voxel = (
             (z - anchor_z) * placement.scale + child_z,
             placement.rotation
           )
-          visit(placement.origin[0] + offset_x, world_y, placement.origin[2] + offset_z, material_id)
+          const world_x = placement.origin[0] + offset_x
+          const world_z = placement.origin[2] + offset_z
+          emit(world_x, world_y, world_z, material_id)
         }
     }
   })

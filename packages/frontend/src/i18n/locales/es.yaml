@@ -1381,9 +1381,9 @@ encyclopedia_page:
   no_worlds: No hay mundos on-chain
   select_world: Selecciona un mundo
   world_level_unknown: Rango de nivel aún no disponible
-  world_mob_roster: Lista de criaturas
+  world_biomes: Biomas
   world_no_mobs: No hay criaturas conocidas
-  world_resources: Recursos
+  world_cities: Ciudades
   world_no_resources: No hay recursos conocidos
   world_gap_note: Aún no proporcionado por el RPC
   world_dungeon: Mazmorra
@@ -1804,7 +1804,9 @@ characters_page:
       empty_seed: 'Las recetas de este oficio llegan con el contenido de fabricación.'
       unlocked: 'Desbloqueadas'
       locked: 'Bloqueadas'
-      meta: 'Nv {{level}} · {{category}}'
+      ingredients: '{{count}} ingredientes'
+      required_level: 'Requiere oficio Nv. {{level}}'
+      best_progress: 'Mejor'
     gather:
       in_progress: 'Recolectando {{name}}…'
       button: 'Recolectar {{name}}'

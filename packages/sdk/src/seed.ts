@@ -679,44 +679,44 @@ const supply_batches = (sdk: SeedSdk, content: SeedContent): readonly SeedBatch[
   const content_root = content_root_id_of(sdk)
   const seed_original = package_id_of(sdk, 'seed_package_original')
   const game_type = game_type_of(sdk)
-  const rows = [
-    ...content.airdrop.drops.map((drop) => ({ type: 'drop' as const, row: drop })),
-    ...content.airdrop.giftcards.map((card) => ({ type: 'giftcard' as const, row: card })),
-  ]
-  return rows.map((entry, index) =>
+  const drop_batches = content.airdrop.drops.map((drop, index) =>
     living_batch(sdk, {
-      id: `supply:${index}:${entry.row.id}`,
+      id: `airdrops:${index}:${drop.id}`,
       phase: 'supply',
-      rows: [entry],
-      target: (value) =>
-        value.type === 'drop'
-          ? airdrop_id(content_root, game_type, value.row.id)
-          : giftcard_id(content_root, game_type, value.row.id),
-      dependencies: (value) => [item_template_id(content_root, seed_original, value.row.item_type)],
-      compose: (game_sdk, tx, cap, root, value) => {
-        const template = item_template_id(content_root, seed_original, value.row.item_type)
-        if (value.type === 'drop')
-          game_sdk.seed_doors.new_airdrop(tx, {
-            cap,
-            root,
-            drop_id: value.row.id,
-            template,
-            amount_each: value.row.amount_each,
-            whitelist: value.row.whitelist,
-          })
-        else {
-          const card = game_sdk.seed_doors.new_giftcard(tx, {
-            cap,
-            root,
-            card_id: value.row.id,
-            template,
-            amount: value.row.amount,
-          })
-          tx.transferObjects([card], value.row.custody)
-        }
+      rows: [drop],
+      target: (row) => airdrop_id(content_root, game_type, row.id),
+      dependencies: (row) => [item_template_id(content_root, seed_original, row.item_type)],
+      compose: (game_sdk, tx, cap, root, row) =>
+        game_sdk.seed_doors.new_airdrop(tx, {
+          cap,
+          root,
+          drop_id: row.id,
+          template: item_template_id(content_root, seed_original, row.item_type),
+          amount_each: row.amount_each,
+          whitelist: row.whitelist,
+        }),
+    })
+  )
+  const giftcard_batches = pack(content.airdrop.giftcards, () => 2).map((rows, index) =>
+    living_batch(sdk, {
+      id: `giftcards:${index}`,
+      phase: 'supply',
+      rows,
+      target: (row) => giftcard_id(content_root, game_type, row.id),
+      dependencies: (row) => [item_template_id(content_root, seed_original, row.item_type)],
+      compose: (game_sdk, tx, cap, root, row) => {
+        const card = game_sdk.seed_doors.new_giftcard(tx, {
+          cap,
+          root,
+          card_id: row.id,
+          template: item_template_id(content_root, seed_original, row.item_type),
+          amount: row.amount,
+        })
+        tx.transferObjects([card], row.custody)
       },
     })
   )
+  return Object.freeze([...drop_batches, ...giftcard_batches])
 }
 
 const world_batches = (sdk: SeedSdk, content: SeedContent): readonly SeedBatch[] => {

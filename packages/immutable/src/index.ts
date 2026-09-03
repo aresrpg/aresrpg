@@ -86,19 +86,23 @@ export {
 } from './item_power.ts'
 export {
   acquisition_catalog,
+  acquisition_estimator,
   archimob_appearance_bp,
   acquisition_average_seconds,
   acquisition_target_range,
   acquisition_target_status,
-  intermediary_source_level,
   item_acquisition,
-  recipe_slot_issue,
+  best_recipe_for_job_progression,
+  recipe_progression_issues,
   type AcquisitionContent,
   type AcquisitionEstimate,
   type AcquisitionIngredient,
   type AcquisitionRange,
   type AcquisitionRoute,
   type AcquisitionTargetStatus,
+  type RecipeProgressionInput,
+  type RecipeProgressionIssue,
+  type RecipeProgressRecommendation,
 } from './acquisition.ts'
 export {
   dofus_mob_power_envelope,

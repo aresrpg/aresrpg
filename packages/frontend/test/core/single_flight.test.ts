@@ -63,7 +63,7 @@ test('a compound action retries one pre-submission object-version race after its
 
 test('URL-encoded unavailable object versions rebuild before submission', () => {
   const error =
-    'Error%20checking%20transaction%20input%20objects:%20Transaction%20needs%20to%20be%20rebuilt%20because%20object%200x1%20version%200x2%20is%20unavailable%20for%20consumption,%20current%20version:%200x3'
+    'NOT%20submitted:%20Error%20checking%20transaction%20input%20objects:%20Transaction%20needs%20to%20be%20rebuilt%20because%20object%200x1%20version%200x2%20is%20unavailable%20for%20consumption,%20current%20version:%200x3'
   expect(pre_submission_version_race(new Error(error))).toBeTrue()
   expect(fight_result_error_text({ result_version_changed: 'Retry safely.' }, error)).toBe('Retry safely.')
 })

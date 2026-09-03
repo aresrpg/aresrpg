@@ -4,19 +4,65 @@
 import { Globe2, Search } from 'lucide-react'
 import { useMemo, useState } from 'react'
 
-import { encyclopedia_catalog, titleize } from '../content/catalog.ts'
+import { encyclopedia_catalog, titleize, type SeedWorld } from '../content/catalog.ts'
 
-import {
-  category_pill,
-  Empty,
-  encyclopedia_layout,
-  EntityGrid,
-  Fact,
-  LinkChip,
-  SearchField,
-  Section,
-} from './components.tsx'
+import { category_pill, Empty, encyclopedia_layout, EntityGrid, LinkChip, SearchField, Section } from './components.tsx'
 import type { EncyclopediaText } from './copy.ts'
+
+export type WorldMobGroup = Readonly<{ id: string; mob_types: readonly string[] }>
+
+export const world_mob_groups = (
+  world: Readonly<SeedWorld>
+): Readonly<{ biomes: readonly WorldMobGroup[]; cities: readonly WorldMobGroup[] }> =>
+  Object.freeze({
+    biomes: Object.freeze(
+      (world.terrain?.biomes ?? []).map(({ name }) =>
+        Object.freeze({
+          id: name,
+          mob_types: Object.freeze(
+            world.mobs.filter(({ biomes }) => biomes.includes(name)).map(({ mob_type }) => mob_type)
+          ),
+        })
+      )
+    ),
+    cities: Object.freeze(
+      world.cities.map(({ city }) =>
+        Object.freeze({
+          id: city,
+          mob_types: Object.freeze(
+            world.mobs.filter(({ cities }) => cities.includes(city)).map(({ mob_type }) => mob_type)
+          ),
+        })
+      )
+    ),
+  })
+
+const WorldMobPanels = ({
+  groups,
+  select_mob,
+  text,
+}: Readonly<{ groups: readonly WorldMobGroup[]; select_mob: (id: string) => void; text: EncyclopediaText }>) => (
+  <div className="grid gap-3 sm:grid-cols-2">
+    {groups.map((group) => (
+      <article className="border border-border bg-white/2 p-3" key={group.id}>
+        <h4 className="mb-2 border-b border-border pb-2 text-[10px] font-semibold tracking-[0.14em] text-[#c8963c] uppercase">
+          {titleize(group.id)}
+        </h4>
+        {group.mob_types.length === 0 ? (
+          <p className="text-[9px] text-[#6b7280]">{text('world_no_mobs')}</p>
+        ) : (
+          <div className="flex flex-col gap-1">
+            {group.mob_types.map((mob_type) => (
+              <LinkChip key={mob_type} select={() => select_mob(mob_type)}>
+                {encyclopedia_catalog.mob(mob_type)?.mob.name ?? titleize(mob_type)}
+              </LinkChip>
+            ))}
+          </div>
+        )}
+      </article>
+    ))}
+  </div>
+)
 
 const world_band = (world_id: string): readonly [number, number] | null => {
   const world = encyclopedia_catalog.world(world_id)
@@ -34,13 +80,11 @@ const world_band = (world_id: string): readonly [number, number] | null => {
 
 export const WorldsTab = ({
   selected_id,
-  select_item,
   select_mob,
   select_world,
   text,
 }: Readonly<{
   selected_id: string | null
-  select_item: (id: string) => void
   select_mob: (id: string) => void
   select_world: (id: string) => void
   text: EncyclopediaText
@@ -72,7 +116,7 @@ export const WorldsTab = ({
       })
   }, [biome, search, sort])
   const detail = selected_id ? encyclopedia_catalog.world(selected_id) : null
-  const band = detail ? world_band(detail.world) : null
+  const groups = detail ? world_mob_groups(detail) : null
 
   const list = (
     <div className={encyclopedia_layout.list}>
@@ -126,87 +170,15 @@ export const WorldsTab = ({
           <h2 className="text-[14px] font-semibold tracking-[0.15em] text-[#c8963c] uppercase">
             {titleize(detail.world)}
           </h2>
-          <p className="text-[9px] tracking-[0.12em] text-[#6b7280] uppercase">
-            {band ? text('level_range', { min: band[0], max: band[1] }) : text('world_level_unknown')}
-          </p>
         </header>
-        <Section title={text('world_mob_roster')}>
-          {detail.mobs.length === 0 ? (
-            <p className="text-[9px] text-[#6b7280]">{text('world_no_mobs')}</p>
-          ) : (
-            <div className="grid gap-1 sm:grid-cols-2">
-              {detail.mobs.map((row) => {
-                const mob = encyclopedia_catalog.mob(row.mob_type)?.mob
-                return (
-                  <LinkChip key={row.mob_type} select={() => select_mob(row.mob_type)}>
-                    {mob?.name ?? titleize(row.mob_type)} · {(row.weight_bp / 100).toLocaleString('en-US')}%
-                  </LinkChip>
-                )
-              })}
-            </div>
-          )}
+        <Section title={text('world_biomes')}>
+          <WorldMobPanels groups={groups?.biomes ?? []} select_mob={select_mob} text={text} />
         </Section>
-        <Section title={text('world_resources')}>
-          {detail.resources.length === 0 ? (
-            <p className="text-[9px] text-[#6b7280]">{text('world_no_resources')}</p>
-          ) : (
-            <div className="grid gap-1 sm:grid-cols-2">
-              {detail.resources.map((row) => (
-                <LinkChip key={`${row.job}-${row.item_type}`} select={() => select_item(row.item_type)}>
-                  {encyclopedia_catalog.item(row.item_type)?.item.name ?? titleize(row.item_type)} ·{' '}
-                  {text('world_resource_tier', { tier: row.tier })}
-                </LinkChip>
-              ))}
-            </div>
-          )}
-        </Section>
-        {detail.terrain && (
-          <Section title={text('gameplay.game_mechanics')}>
-            <div className="grid gap-1 sm:grid-cols-2">
-              <Fact label={text('terrain_seed')} value={detail.terrain.seed} />
-              <Fact label={text('sea_level')} value={detail.terrain.sea_level} />
-            </div>
-            <div className="mt-2 flex flex-wrap gap-1">
-              {Object.entries(detail.terrain.materials).map(([name, material]) => (
-                <span
-                  className="flex items-center gap-2 border border-border px-2 py-1.5 text-[8px] text-[#9da0a9]"
-                  key={name}
-                >
-                  <span className="size-2" style={{ backgroundColor: material.color }} />
-                  {titleize(name)}
-                </span>
-              ))}
-            </div>
+        {groups && groups.cities.length > 0 && (
+          <Section title={text('world_cities')}>
+            <WorldMobPanels groups={groups.cities} select_mob={select_mob} text={text} />
           </Section>
         )}
-        {detail.cities.map((city) => {
-          const dungeon = encyclopedia_catalog.dungeon(city.dungeon)
-          if (!dungeon) return null
-          return (
-            <Section key={city.city} title={`${titleize(city.city)} · ${text('world_dungeon')}`}>
-              <Fact
-                label={text('world_dungeon')}
-                value={encyclopedia_catalog.item(dungeon.key)?.item.name ?? titleize(dungeon.key)}
-              />
-              <div className="mt-2 grid gap-2 sm:grid-cols-2">
-                {dungeon.rooms.map((room, index) => (
-                  <div className="border border-border bg-white/2 p-3" key={index}>
-                    <p className="mb-2 text-[8px] tracking-[0.15em] text-[#c8963c] uppercase">
-                      {text('world_dungeon_room', { n: index + 1 })}
-                    </p>
-                    <div className="flex flex-wrap gap-1">
-                      {room.map(({ mob_type }, seat) => (
-                        <LinkChip key={`${String(seat)}:${mob_type}`} select={() => select_mob(mob_type)}>
-                          {encyclopedia_catalog.mob(mob_type)?.mob.name ?? titleize(mob_type)}
-                        </LinkChip>
-                      ))}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </Section>
-          )
-        })}
       </div>
     </div>
   )

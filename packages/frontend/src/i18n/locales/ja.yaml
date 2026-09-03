@@ -1358,9 +1358,9 @@ encyclopedia_page:
   no_worlds: オンチェーンのワールドがありません
   select_world: ワールドを選択してください
   world_level_unknown: レベル帯はまだ利用できません
-  world_mob_roster: モンスター一覧
+  world_biomes: バイオーム
   world_no_mobs: 既知のモンスターなし
-  world_resources: 資源
+  world_cities: 都市
   world_no_resources: 既知の資源なし
   world_gap_note: RPCではまだ提供されていません
   world_dungeon: ダンジョン
@@ -1781,7 +1781,9 @@ characters_page:
       empty_seed: 'この職業のレシピはクラフトコンテンツと共に追加されます。'
       unlocked: '解放済み'
       locked: 'ロック中'
-      meta: 'Lv {{level}} · {{category}}'
+      ingredients: '材料{{count}}個'
+      required_level: '必要職業レベル {{level}}'
+      best_progress: '最適'
     gather:
       in_progress: '{{name}}を採集中…'
       button: '{{name}}を採集'

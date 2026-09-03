@@ -1379,9 +1379,9 @@ encyclopedia_page:
   no_worlds: Немає світів у мережі
   select_world: Виберіть світ
   world_level_unknown: Діапазон рівнів поки що недоступний
-  world_mob_roster: Список монстрів
+  world_biomes: Біоми
   world_no_mobs: Монстри невідомі
-  world_resources: Ресурси
+  world_cities: Міста
   world_no_resources: Ресурси невідомі
   world_gap_note: Ще не надається RPC
   world_dungeon: Підземелля
@@ -1802,7 +1802,9 @@ characters_page:
       empty_seed: "Рецепти цієї професії з'являться разом із контентом крафту."
       unlocked: 'Відкрито'
       locked: 'Заблоковано'
-      meta: 'Рв {{level}} · {{category}}'
+      ingredients: 'Інгредієнтів: {{count}}'
+      required_level: 'Потрібен рівень професії {{level}}'
+      best_progress: 'Найкраще'
     gather:
       in_progress: 'Збір {{name}}…'
       button: 'Зібрати {{name}}'

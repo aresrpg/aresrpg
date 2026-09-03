@@ -3,10 +3,10 @@
 
 import { readFileSync } from 'node:fs'
 
-import { job_xp_for_level } from '@aresrpg/immutable'
+import { craft_required_level, job_xp_for_level } from '@aresrpg/immutable'
 import { expect, test } from 'bun:test'
 
-import { better_job_character, craft_result_tone } from '../../src/characters/JobsTab.tsx'
+import { better_job_character, craft_result_tone, recipe_tiers } from '../../src/characters/JobsTab.tsx'
 import { ingredient_destination, job_from_path, job_path } from '../../src/characters/job_navigation.ts'
 
 const character = (id: string, name: string, farmer_level: number) => ({
@@ -37,6 +37,21 @@ test('the selected profession survives a character switch through the Jobs route
 test('zero crafted outputs are a failure even when the transaction succeeded', () => {
   expect(craft_result_tone(0)).toBe('error')
   expect(craft_result_tone(1)).toBe('success')
+})
+
+test('recipe subsections derive their ingredient count and required job level once', () => {
+  const tiers = recipe_tiers([
+    { output_type: 'ring', inputs: { ore: 1, coal: 1 } },
+    { output_type: 'amulet', inputs: { ore: 1, coal: 1 } },
+    { output_type: 'boots', inputs: { ore: 1, coal: 1, thread: 1 } },
+  ] as never)
+
+  expect(
+    tiers.map(({ ingredient_count, required_level, recipes }) => [ingredient_count, required_level, recipes.length])
+  ).toEqual([
+    [2, craft_required_level(2), 2],
+    [3, craft_required_level(3), 1],
+  ])
 })
 
 test('ingredient navigation opens intermediaries at their owning craft job and everything else in the encyclopedia', () => {

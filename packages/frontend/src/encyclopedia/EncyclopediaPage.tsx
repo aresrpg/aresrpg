@@ -99,7 +99,6 @@ export const EncyclopediaPage = ({
         )}
         {view.tab === 'worlds' && (
           <WorldsTab
-            select_item={(id) => navigate(route('items', id))}
             select_mob={(id) => navigate(route('bestiary', id))}
             select_world={(id) => navigate(route('worlds', id))}
             selected_id={view.id}

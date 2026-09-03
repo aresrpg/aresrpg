@@ -52,11 +52,13 @@ const resolve_gas =
   (
     calls: { resolutions: number; simulations: number },
     simulate_ok: boolean,
-    failure_message: string
+    failure_message: string,
+    resolution_failure?: string
   ): TransactionPlugin =>
   async (transaction_data, options, next) => {
     calls.resolutions += 1
     if (!options.onlyTransactionKind) {
+      if (resolution_failure) throw new Error(resolution_failure)
       calls.simulations += 1
       if (!simulate_ok) throw new Error(`[sdk] dry run failed — transaction NOT submitted: ${failure_message}`)
       transaction_data.gasData.price ??= '1000'
@@ -73,6 +75,7 @@ const fake_client = ({
   execution_gate,
   failure_branch = 'FailedTransaction',
   failure_message = 'MoveAbort(2701) — scribe locked',
+  resolution_failure,
   lag = new Map<string, number>(),
   owned_versions = new Map<string, string[]>(),
 }: {
@@ -81,6 +84,8 @@ const fake_client = ({
   execution_gate?: Promise<void>
   /** what the simulated failure says — the SDK reads it to tell OUR budget from THEIR wallet */
   failure_message?: string
+  /** raw error thrown while building, before signing or submission */
+  resolution_failure?: string
   /** objectId → how many reads this node answers empty before the object shows up */
   lag?: Map<string, number>
   /** objectId → versions returned across reads, for receipt-fresh node-lag tests */
@@ -101,7 +106,7 @@ const fake_client = ({
   return {
     calls,
     core: {
-      resolveTransactionPlugin: () => resolve_gas(calls, simulate_ok, failure_message),
+      resolveTransactionPlugin: () => resolve_gas(calls, simulate_ok, failure_message, resolution_failure),
       getCurrentSystemState: async () => ({ systemState: { epoch: '1', referenceGasPrice: '1000' } }),
       getChainIdentifier: async () => ({ chainIdentifier: digest }),
       getBalance: async () => {
@@ -197,9 +202,30 @@ const game = async (client: ReturnType<typeof fake_client>) => {
 
 describe('the execute gate (core interface)', () => {
   test('pre-sign resolution lag is classified without retrying inside the SDK', () => {
-    const lag = new Error('provided version does not match for object 0x1, provided: 10 actual: 0x9')
+    const lag = new Error(
+      '[sdk] transaction resolution failed — NOT submitted: provided version does not match for object 0x1, provided: 10 actual: 0x9'
+    )
     expect(pre_submission_version_race(lag)).toBeTrue()
+    expect(pre_submission_version_race(new Error('provided version does not match'))).toBeFalse()
     expect(pre_submission_version_race(new Error('[sdk] transaction DIGEST failed on-chain: stale'))).toBeFalse()
+    expect(
+      pre_submission_version_race(
+        new Error('[sdk] transaction DIGEST failed on-chain: NOT submitted; provided version does not match')
+      )
+    ).toBeFalse()
+  })
+
+  test('a raw build failure is marked as not submitted at the actual pre-sign boundary', async () => {
+    const client = fake_client({
+      simulate_ok: true,
+      resolution_failure: "provided version doesn't match for object 0x1, provided: 10 actual: 0x9",
+    })
+    const sdk = await game(client)
+
+    await expect(sdk.execute(sdk.tx())).rejects.toThrow(
+      /transaction resolution failed.*NOT submitted.*provided version/
+    )
+    expect(client.calls.executions).toBe(0)
   })
 
   test('game transactions reserve the owner-approved 0.2 SUI ceiling', () => {

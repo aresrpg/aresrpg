@@ -763,11 +763,10 @@
       "RuneforgeTab": [21]
     },
     "packages/frontend/src/characters/JobsTab.tsx": {
-      "JobsTab": [24],
+      "JobsTab": [22],
       "JobsTab > detail.resources .toSorted((left, right) => left.row.tier - right.row.tier) .map[0]({ row, required_level })": [
         9
-      ],
-      "JobsTab > recipe_cell": [9]
+      ]
     },
     "packages/frontend/src/characters/BoxReveal.tsx": {
       "BoxReveal": [19]
