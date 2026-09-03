@@ -196,26 +196,38 @@
   height: 5px;
 }
 
-.gw-compass__portal {
+.gw-compass__city {
   position: absolute;
   top: 28px;
   transform: translateX(-50%);
   display: flex;
   flex-direction: column;
   align-items: center;
-  color: #9bd4ff;
-  filter: drop-shadow(0 0 6px rgba(74, 158, 255, 0.72));
+  color: var(--color-gold-light);
+  filter: drop-shadow(0 0 6px rgba(200, 150, 60, 0.62));
   transition: left 0.17s linear;
 }
 
-.gw-compass__portal-icon {
-  font-size: 15px;
-  line-height: 14px;
+.gw-compass__city-icons {
+  display: flex;
+  height: 14px;
+  align-items: center;
+  gap: 2px;
 }
 
-.gw-compass__portal-distance {
+.gw-compass__city-dungeon {
+  color: #9bd4ff;
+  font-size: 11px;
+  line-height: 1;
+}
+
+.gw-compass__city-label {
+  max-width: 108px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   font-size: 8px;
-  color: #79b8ed;
+  color: #d8b66a;
   font-variant-numeric: tabular-nums;
 }
 

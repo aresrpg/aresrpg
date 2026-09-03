@@ -11,10 +11,12 @@
 import { DAY_FRAC } from '@aresrpg/engine'
 import { client_to_chain_coordinate, world_center } from '@aresrpg/immutable'
 import { ZONE_RESEARCH_TTL_MS, ZONE_SIZE, zone_of } from '@aresrpg/protocol'
+import { Building2 } from 'lucide-react'
 import type { CSSProperties } from 'react'
 
 import './compass_strip.css'
-import { city_at_position } from '../../content/worlds.ts'
+import { city_at_position, world_city_areas } from '../../content/worlds.ts'
+import { titleize } from '../../content/catalog.ts'
 import { copy_text, type AppCopy } from '../../i18n/copy.ts'
 import { spawn_markers, zone_key } from '../../modules/world.ts'
 import { useAppStore } from '../../store.ts'
@@ -36,33 +38,50 @@ import {
 } from './compass_math.ts'
 
 const ORIGIN_ZONE = zone_of(world_center, world_center)
-type PortalMarker = Readonly<{ distance: number; x: number }>
+export type CityCompassMarker = Readonly<{
+  id: string
+  label: string
+  distance: number
+  x: number
+  dungeon: boolean
+}>
 
-const city_portal_marker = (
+export const city_compass_markers = (
   world_name: string | null,
   pose: Readonly<{ x: number; z: number }>,
   heading: number
-): PortalMarker | null => {
-  const city = city_at_position(world_name, pose.x, pose.z)
-  if (!city) return null
-  const portal = compass_target(pose, { x: city.anchor_x, z: city.anchor_z }, heading)
-  return Object.freeze({ distance: portal.distance, x: portal.x })
+): readonly CityCompassMarker[] => {
+  const current = city_at_position(world_name, pose.x, pose.z)?.id ?? null
+  return Object.freeze(
+    world_city_areas(world_name).map((city) => {
+      const target = compass_target(pose, { x: city.anchor_x, z: city.anchor_z }, heading)
+      return Object.freeze({
+        id: city.id,
+        label: titleize(city.id),
+        distance: target.distance,
+        x: target.x,
+        dungeon: city.id === current,
+      })
+    })
+  )
 }
 
-const PortalCompassMarker = ({ marker, label }: Readonly<{ marker: PortalMarker | null; label: string }>) => {
-  if (!marker) return null
+const CityCompassMarkerView = ({ marker, city_label }: Readonly<{ marker: CityCompassMarker; city_label: string }>) => {
   const distance = Math.round(marker.distance)
   return (
     <span
-      aria-label={`${label} · ${distance}m`}
-      className="gw-compass__portal"
+      aria-label={`${city_label} · ${distance}m`}
+      className="gw-compass__city"
       style={{ left: `${marker.x * 100}%` }}
-      title={label}
+      title={city_label}
     >
-      <span aria-hidden="true" className="gw-compass__portal-icon">
-        ☠
+      <span aria-hidden="true" className="gw-compass__city-icons">
+        <Building2 size={13} strokeWidth={1.8} />
+        {marker.dungeon && <span className="gw-compass__city-dungeon">☠</span>}
       </span>
-      <span className="gw-compass__portal-distance">{distance}m</span>
+      <span className="gw-compass__city-label">
+        {marker.label} · {distance}m
+      </span>
     </span>
   )
 }
@@ -86,7 +105,7 @@ export const CompassStrip = ({ copy }: Readonly<{ copy: AppCopy }>) => {
   )
 
   const heading = camera_heading(pose.yaw)
-  const portal = city_portal_marker(world_name, pose, heading)
+  const city_markers = city_compass_markers(world_name, pose, heading)
   const marks = CARDINALS.map((cardinal) => ({
     ...cardinal,
     x: strip_x(relative_bearing(cardinal.bearing, heading)),
@@ -168,7 +187,13 @@ export const CompassStrip = ({ copy }: Readonly<{ copy: AppCopy }>) => {
               {pip.show_label && <span className="gw-compass__pip-dist">{pip.dist}m</span>}
             </span>
           ))}
-          <PortalCompassMarker label={text('dungeon_portal')} marker={portal} />
+          {city_markers.map((marker) => (
+            <CityCompassMarkerView
+              city_label={text('dungeon_city', { city: marker.label })}
+              key={marker.id}
+              marker={marker}
+            />
+          ))}
           {edge_markers.map((marker) => (
             <span
               className={`gw-compass__edge gw-compass__edge--${marker.discovered ? 'discovered' : 'undiscovered'}`}
